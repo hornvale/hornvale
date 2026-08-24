@@ -151,7 +151,7 @@
 //!
 //! **This section used to argue the opposite, and the reversal is the whole
 //! story of Task 4.** Before The Drift, `chamber_exists` gated on
-//! `branch_count_of(seed, cell, addr.entrance)` and every per-address stream
+//! `branch_count_of(seed, vertex, addr.entrance)` and every per-address stream
 //! carried `entrance`, so each entrance realized its OWN private sublattice —
 //! the committed witness summed existence over `0..drawn_entrances`, which is
 //! how seed 42 reached 21,328 (pre-Task-1) or 42,820 (post-Task-1, pre-Task-4)
@@ -279,7 +279,7 @@
 //! which is strictly more permissive.
 //!
 //! # MEASURED VALUES — AFTER TASK 5, 2026-08-23 (`branch_count_of`,
-//! # `character_of` and `barrier_of` re-keyed onto `(cell, band, ...)`, spec
+//! # `character_of` and `barrier_of` re-keyed onto `(vertex, band, ...)`, spec
 //! # amendment A.3) — THE CURRENT TREE
 //!
 //! ```text
@@ -313,7 +313,7 @@
 //! branch — now answers PER BAND instead of once per system. A branch that
 //! was globally admitted or globally refused before Task 5 can now be
 //! admitted at some bands and refused at others, so individual (branch,
-//! band) cells flip in both directions; the small net movement is the sum
+//! band) vertices flip in both directions; the small net movement is the sum
 //! of many small, band-local flips rather than one directional shift. `open
 //! entrances` fell slightly on every seed too (1154->1140 seed 42,
 //! 2250->2193 seed 7, 1728->1651 seed 1234) for the same reason —
@@ -496,7 +496,7 @@
 //! **The mode is 1 and the distribution reproduces C.1's authored weights —
 //! 60 / 25 / 10 / 5 — to within half a point on every seed.** That is the
 //! reading §6 wanted and it is worth one sentence of why it is not trivial:
-//! Task 5 re-keyed this draw from `(cell, entrance)` onto `(cell, band)`,
+//! Task 5 re-keyed this draw from `(vertex, entrance)` onto `(vertex, band)`,
 //! so a distribution measured over per-entrance draws is not evidence about
 //! the per-band one. Restricting the population to bands that actually
 //! realize a chamber does not move the mode either (59.90 / 60.37 / 60.11%
@@ -550,7 +550,7 @@
 //!        denominator is systems WITH an open mouth and these systems have
 //!        none.
 //!
-//! R3  the same mutation, narrowed to `width == 1 && cell.0 % 16 == 0` — the
+//! R3  the same mutation, narrowed to `width == 1 && vertex.0 % 16 == 0` — the
 //!     magnitude dial, so the defect sits where a REAL one would.
 //!                                 seed 42       seed 7      seed 1234
 //!       whole-world share          98.12%       97.58%        97.16%
@@ -605,7 +605,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{Band, CellId, Seed};
+use hornvale_kernel::{Band, Seed, Vertex};
 use hornvale_terrain::{Cave, GeothermalGradient, TerrainPins, rungs};
 use hornvale_worldgen::chamber::{
     BRANCHES_PER_SYSTEM, ChamberAddr, LEVELS_PER_BRANCH_CEILING, chamber_exists, entrance_count,
@@ -635,11 +635,11 @@ const SEEDS: [u64; 3] = [42, 7, 1234];
 /// module's header) while `reachable` rose to EXACTLY equal it: every one of
 /// the three panel seeds now reads 100.00% whole-world reachable, not merely
 /// past spec §6's 90% intent but at its ceiling. **Task 5 (re-keying
-/// `branch_count_of` onto `(cell, band)`, spec amendment A.3) moved it a
+/// `branch_count_of` onto `(vertex, band)`, spec amendment A.3) moved it a
 /// third time, to `(30537, 30537, 1140)`**: this movement is far smaller
 /// than either of the first two (a few tenths of a percent, not a
 /// multi-thousand-level jump) and comes from a different mechanism — no
-/// lattice shape changed, but individual `(branch, band)` cells that were
+/// lattice shape changed, but individual `(branch, band)` vertices that were
 /// globally admitted or refused before Task 5 now flip independently per
 /// band, so the net change is the sum of many small band-local flips.
 ///
@@ -1038,12 +1038,12 @@ struct SystemReach {
 /// Read one cave system through the shipped entry points only.
 fn read_system(
     seed: Seed,
-    cell: CellId,
+    vertex: Vertex,
     cave: &Cave,
     gradient: GeothermalGradient,
     ranks: &[u8],
 ) -> SystemReach {
-    let entrances = entrance_count(seed, cell);
+    let entrances = entrance_count(seed, vertex);
 
     // EXISTENCE, over the system's ONE shared lattice — walked once, not once
     // per drawn entrance (The Drift, amendment A.3: every entrance now
@@ -1056,20 +1056,20 @@ fn read_system(
     let mut existing: BTreeSet<ChamberAddr> = BTreeSet::new();
     // §6's FOURTH quantity, taken on the same sweep because it is a read of
     // the same gate's input: `chamber_exists` consults `branch_count_of` at
-    // exactly these `(cell, band)` pairs, so this is the draw's own shipped
+    // exactly these `(vertex, band)` pairs, so this is the draw's own shipped
     // distribution rather than a re-derivation of it.
     let mut branches_per_band: BTreeMap<u8, usize> = BTreeMap::new();
     let mut branches_per_realized_band: BTreeMap<u8, usize> = BTreeMap::new();
     for &rank in ranks {
         let band = Band::from_rank(rank).expect("ranks come from habitation_ranks()");
         *branches_per_band
-            .entry(branch_count_of(seed, cell, band))
+            .entry(branch_count_of(seed, vertex, band))
             .or_insert(0) += 1;
         let mut realized_here = false;
         for branch in 0..BRANCHES_PER_SYSTEM {
             for level in 0..LEVELS_PER_BRANCH_CEILING {
                 let addr = ChamberAddr {
-                    cell,
+                    vertex,
                     branch,
                     band,
                     level,
@@ -1083,7 +1083,7 @@ fn read_system(
         }
         if realized_here {
             *branches_per_realized_band
-                .entry(branch_count_of(seed, cell, band))
+                .entry(branch_count_of(seed, vertex, band))
                 .or_insert(0) += 1;
         }
     }
@@ -1106,17 +1106,17 @@ fn read_system(
 
     let mouths: Vec<ChamberAddr> = (0..entrances)
         .map(|entrance| {
-            let mouth = entrance_mouth(seed, cell, entrance);
+            let mouth = entrance_mouth(seed, vertex, entrance);
             let band =
                 Band::from_rank(mouth.band).expect("entrance_mouth only names a habitation rank");
             if mouth.branch > 0 {
                 drawn_side_mouths += 1;
-                if mouth.branch >= branch_count_of(seed, cell, band) {
+                if mouth.branch >= branch_count_of(seed, vertex, band) {
                     side_mouths_off_their_bands_width += 1;
                 }
             }
             ChamberAddr {
-                cell,
+                vertex,
                 branch: mouth.branch,
                 band,
                 level: mouth.floor,
@@ -1162,10 +1162,10 @@ fn read_system(
 struct ReachSummary {
     /// The seed this reading is of.
     seed: u64,
-    /// Cave-bearing LAND cells. Ocean caves are excluded and counted
+    /// Cave-bearing LAND vertices. Ocean caves are excluded and counted
     /// separately, exactly as the committed witness does.
     systems: usize,
-    /// Cave-bearing ocean cells, counted rather than silently dropped.
+    /// Cave-bearing ocean vertices, counted rather than silently dropped.
     ocean_systems: usize,
     /// Levels that exist, over every system and every drawn entrance.
     levels: usize,
@@ -1369,21 +1369,21 @@ fn reach_summary(seed: Seed, wc: &WorldComponents) -> ReachSummary {
         branches_per_realized_band: BTreeMap::new(),
     };
 
-    for cell in geo.cells() {
-        // `cave_at` refuses an ocean cell as its first act, so the ocean test
+    for vertex in geo.vertices() {
+        // `cave_at` refuses an ocean vertex as its first act, so the ocean test
         // is a COUNT of a case that never carries a cave today, not a guard
         // the walk depends on — and the day it does carry one, the artifact
         // and this probe both say so instead of silently including it.
-        let Some(cave) = terrain.cave_at(cell) else {
+        let Some(cave) = terrain.cave_at(vertex) else {
             continue;
         };
-        if terrain.is_ocean(cell) {
+        if terrain.is_ocean(vertex) {
             summary.ocean_systems += 1;
             continue;
         }
         summary.systems += 1;
-        let gradient = terrain.geothermal_gradient_at(cell);
-        let sys = read_system(seed, cell, &cave, gradient, &ranks);
+        let gradient = terrain.geothermal_gradient_at(vertex);
+        let sys = read_system(seed, vertex, &cave, gradient, &ranks);
 
         summary.drawn_entrances += sys.drawn_mouths;
         summary.open_entrances += sys.open_mouths;

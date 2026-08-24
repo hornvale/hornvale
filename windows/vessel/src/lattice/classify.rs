@@ -260,7 +260,7 @@ mod tests {
     use crate::brief::Brief;
     use crate::lattice::{allocate, embed_with, extent_for, grow};
     use crate::structure::structure_at;
-    use hornvale_kernel::{RoomAddr, Seed};
+    use hornvale_kernel::{Facet, Seed};
 
     const WALK: u32 = 12;
     /// Widened from Task 3's 24 in Task 4b. Rules 1, 2 and 8 are claims that the
@@ -270,8 +270,8 @@ mod tests {
     /// two dozen was uncomfortably close to the resolution of the check.
     const SEEDS: std::ops::Range<u64> = 0..192;
 
-    fn locale(n: u64) -> RoomAddr {
-        RoomAddr {
+    fn locale(n: u64) -> Facet {
+        Facet {
             face: 3,
             path: (0..WALK).map(|i| ((i as u64 + n) % 4) as u8).collect(),
         }

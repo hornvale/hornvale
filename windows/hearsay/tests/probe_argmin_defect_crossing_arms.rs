@@ -693,9 +693,9 @@ fn day_bits_of(c: &Claim) -> Option<u64> {
 // THE MEASUREMENT — S0b, over both `Crossing` arms, contact only.
 // ===========================================================================
 
-/// One (Crossing, Accumulation) cell's S0b counts.
+/// One (Crossing, Accumulation) vertex's S0b counts.
 #[derive(Clone, Copy, Default)]
-struct Cell {
+struct Vertex {
     /// Holders where the shipped answer was found in the enumerated set.
     compared: usize,
     /// ... of which it was not that set's argmin under the shipped key.
@@ -711,7 +711,7 @@ struct Cell {
     capped_endings: usize,
 }
 
-/// One defective `(holder, rule)` cell's IDENTITY: `(seed, rule index,
+/// One defective `(holder, rule)` vertex's IDENTITY: `(seed, rule index,
 /// subject, holder)`.
 ///
 /// The seed is part of the key because [`EntityId`]s are minted per world and
@@ -719,7 +719,7 @@ struct Cell {
 /// and a set keyed without the seed would silently merge them.
 type DefectId = (u64, usize, EntityId, EntityId);
 
-/// One seed's whole contribution: [`Cell`], indexed by [`Crossing::ALL`] then
+/// One seed's whole contribution: [`Vertex`], indexed by [`Crossing::ALL`] then
 /// [`Accumulation::ALL`].
 #[derive(Clone, Default)]
 struct SeedRow {
@@ -727,14 +727,14 @@ struct SeedRow {
     endings: usize,
     /// ... of which the attacker is of another people (control population).
     foreign: usize,
-    /// The cells.
-    cells: [[Cell; 3]; 2],
+    /// The vertices.
+    vertices: [[Vertex; 3]; 2],
     /// Up to a few not-argmin samples, for the readout.
     samples: Vec<String>,
-    /// **WHICH** cells were defective, per [`Crossing`] arm — not how many.
+    /// **WHICH** vertices were defective, per [`Crossing`] arm — not how many.
     ///
-    /// [`Cell::not_argmin`] is a COUNT, and a count cannot distinguish "the
-    /// same cells are defective under both arms" from "two disjoint sets of
+    /// [`Vertex::not_argmin`] is a COUNT, and a count cannot distinguish "the
+    /// same vertices are defective under both arms" from "two disjoint sets of
     /// the same size are". The readout draws a set-level conclusion, so it
     /// needs a set-level measurement; this is it.
     defects: [BTreeSet<DefectId>; 2],
@@ -763,9 +763,9 @@ fn measure_seed(seed: u64, led: &Ledger, read: &WorldRead) -> SeedRow {
         for (ci, cross) in Crossing::ALL.iter().enumerate() {
             for (ri, rule) in Accumulation::ALL.iter().enumerate() {
                 let cands = enumerator.enumerate(&read.ladders, *rule, *cross, e.subject);
-                let cell = &mut row.cells[ci][ri];
+                let vertex = &mut row.vertices[ci][ri];
                 if cands.capped {
-                    cell.capped_endings += 1;
+                    vertex.capped_endings += 1;
                     continue;
                 }
 
@@ -790,26 +790,26 @@ fn measure_seed(seed: u64, led: &Ledger, read: &WorldRead) -> SeedRow {
                     shipped.iter().map(|c| (c.holder, c)).collect();
                 let mine_set: BTreeSet<EntityId> = cands.per_holder.keys().copied().collect();
                 if shipped_by_holder.keys().copied().collect::<BTreeSet<_>>() != mine_set {
-                    cell.holder_set_mismatch += 1;
+                    vertex.holder_set_mismatch += 1;
                 }
 
                 for (holder, set) in &cands.per_holder {
                     let Some(cl) = shipped_by_holder.get(holder) else {
-                        cell.shipped_absent += 1;
+                        vertex.shipped_absent += 1;
                         continue;
                     };
                     let Some(d) = day_bits_of(cl) else {
-                        cell.shipped_absent += 1;
+                        vertex.shipped_absent += 1;
                         continue;
                     };
                     let matched_present = set.iter().any(|t| {
                         t.hops == cl.hops && t.rung == cl.precision.rung() && t.day_bits == d
                     });
                     if !matched_present {
-                        cell.shipped_absent += 1;
+                        vertex.shipped_absent += 1;
                         continue;
                     }
-                    cell.compared += 1;
+                    vertex.compared += 1;
 
                     let min_key = set[0].least_damage_key();
                     let tied_has_shipped = set
@@ -819,7 +819,7 @@ fn measure_seed(seed: u64, led: &Ledger, read: &WorldRead) -> SeedRow {
                             t.hops == cl.hops && t.rung == cl.precision.rung() && t.day_bits == d
                         });
                     if !tied_has_shipped {
-                        cell.not_argmin += 1;
+                        vertex.not_argmin += 1;
                         row.defects[ci].insert((seed, ri, e.subject, *holder));
                         if row.samples.len() < 6 {
                             row.samples.push(format!(
@@ -848,10 +848,10 @@ fn sum<F: Fn(&SeedRow) -> usize>(rows: &[SeedRow], f: F) -> usize {
     rows.iter().map(f).sum()
 }
 
-fn fold_cell(rows: &[SeedRow], ci: usize, ri: usize) -> Cell {
-    let mut out = Cell::default();
+fn fold_vertex(rows: &[SeedRow], ci: usize, ri: usize) -> Vertex {
+    let mut out = Vertex::default();
     for r in rows {
-        let c = r.cells[ci][ri];
+        let c = r.vertices[ci][ri];
         out.compared += c.compared;
         out.not_argmin += c.not_argmin;
         out.shipped_absent += c.shipped_absent;
@@ -897,10 +897,10 @@ fn does_the_crossing_penalty_change_the_non_argmin_defect() {
         "\n  {:<20} {:>9} {:>12} {:>14} {:>9} {:>8}",
         "arm", "rule", "compared", "not the argmin", "share", "capped"
     );
-    let mut totals: [Cell; 2] = [Cell::default(); 2];
+    let mut totals: [Vertex; 2] = [Vertex::default(); 2];
     for (ci, cross) in Crossing::ALL.iter().enumerate() {
         for (ri, rule) in Accumulation::ALL.iter().enumerate() {
-            let c = fold_cell(&rows, ci, ri);
+            let c = fold_vertex(&rows, ci, ri);
             println!(
                 "  {:<20} {:>9} {:>12} {:>14} {:>8.4}% {:>8}",
                 cross.label(),
@@ -927,7 +927,7 @@ fn does_the_crossing_penalty_change_the_non_argmin_defect() {
     }
 
     // CAVEAT (fix round 1, Important 3): capped_endings drops the SAME small
-    // set of foreign endings from every cell above, on BOTH arms — and a
+    // set of foreign endings from every vertex above, on BOTH arms — and a
     // capped ending is by construction the densest one, the one with the MOST
     // routes reaching it, which is exactly where a route-count-dependent
     // defect like this one is most likely to bite. So every rate printed
@@ -938,9 +938,9 @@ fn does_the_crossing_penalty_change_the_non_argmin_defect() {
     // like-for-like even though neither side's absolute number is complete.
     // (Re-derived against the merge product the cap binds 2 of 102 foreign
     // endings, where it bound 14 of 138 before main was absorbed.)
-    let capped_per_rule = fold_cell(&rows, 0, 0).capped_endings;
+    let capped_per_rule = fold_vertex(&rows, 0, 0).capped_endings;
     println!(
-        "\n  CAVEAT: {capped_per_rule} of {foreign} foreign endings ({:.1}%) are capped on EVERY cell above and excluded before any comparison runs. Capped endings are the densest ones by construction (most routes reaching them), which is where this defect is most likely -- so the absolute shares above are FLOORS over the reachable subpopulation, not point estimates over the full population. The free-vs-contact-weighted RATIO is unaffected: both arms drop the identical {capped_per_rule} endings, so the comparison stays like-for-like even though neither side's absolute count is complete.",
+        "\n  CAVEAT: {capped_per_rule} of {foreign} foreign endings ({:.1}%) are capped on EVERY vertex above and excluded before any comparison runs. Capped endings are the densest ones by construction (most routes reaching them), which is where this defect is most likely -- so the absolute shares above are FLOORS over the reachable subpopulation, not point estimates over the full population. The free-vs-contact-weighted RATIO is unaffected: both arms drop the identical {capped_per_rule} endings, so the comparison stays like-for-like even though neither side's absolute count is complete.",
         pct(capped_per_rule, foreign)
     );
 
@@ -976,8 +976,8 @@ fn does_the_crossing_penalty_change_the_non_argmin_defect() {
     let only_free = free_set.difference(&cw_set).count();
     let only_cw = cw_set.difference(&free_set).count();
     println!(
-        "\n  WHICH CELLS, NOT HOW MANY (the set-level comparison the counts above cannot make): \
-         free {} defective (holder, rule) cells, contact-weighted {}, in BOTH {}, free-only {}, \
+        "\n  WHICH VERTICES, NOT HOW MANY (the set-level comparison the counts above cannot make): \
+         free {} defective (holder, rule) vertices, contact-weighted {}, in BOTH {}, free-only {}, \
          contact-weighted-only {} — symmetric difference {}. Two equal counts are consistent \
          with two disjoint sets, so this is the measurement a claim about the penalty NOT \
          MOVING the defect actually rests on.",

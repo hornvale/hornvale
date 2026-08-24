@@ -1,11 +1,11 @@
 //! The action layer is reachable as its own module, not through `liveness`.
 
-use hornvale_kernel::room::RoomAddr;
+use hornvale_kernel::room::Facet;
 use hornvale_vessel::action::{Action, is_movement, plan_to_water};
 
 #[test]
 fn the_action_layer_has_its_own_module() {
-    let here = RoomAddr {
+    let here = Facet {
         face: 0,
         path: vec![0],
     };

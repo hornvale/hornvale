@@ -2651,3 +2651,39 @@ this file never invents a measured value it does not hold.
 | 2026-08-24T16:52:01Z | sluice:clients | 428.993 | 5262.927 | 83.261 | 12.46 | 0 | f12462bf1 |  | lefford | 40 |
 | 2026-08-24T17:24:40Z | rebaseline | 129.084 | 246.749 | 11.596 | 2.00 | 0 | 511deebc8 | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-24T17:28:22Z | quick | 28.257 | 52.175 | 32.828 | 3.01 | 0 | 511deebc8 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T17:56:47Z | gate-commit | 23.238 | 17.899 | 4.558 | 0.97 | 0 | 834fb910d | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T17:57:22Z | gate-commit | 15.588 | 16.913 | 4.279 | 1.36 | 0 | 834fb910d | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T17:58:08Z | gate-commit | 36.874 | 120.745 | 23.232 | 3.90 | 0 | 834fb910d | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T18:08:00Z | gate-commit | 122.306 | 811.765 | 64.859 | 7.17 | 0 | 600bf2a3c | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T18:09:06Z | rebaseline | 60.420 | 231.663 | 11.306 | 4.02 | 0 | b16381579 | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T20:02:19Z | rebaseline | 103.375 | 237.098 | 10.379 | 2.39 | 0 | da524ef9e | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T20:08:41Z | rebaseline | 99.635 | 241.561 | 10.080 | 2.53 | 0 | da524ef9e | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T20:17:15Z | quick | 36.796 | 48.866 | 39.978 | 2.41 | 0 | da524ef9e | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T20:18:47Z | rebaseline | 83.560 | 242.848 | 12.620 | 3.06 | 0 | da524ef9e | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T20:25:30Z | gate-commit | 28.995 | 51.106 | 12.714 | 2.20 | 0 | da524ef9e | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T20:36:22Z | vessel-check | 42.924 | 68.857 | 3.903 | 1.70 | 0 | 1bf250dbe | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T20:37:06Z | world-check | 43.973 | 68.986 | 3.783 | 1.65 | 0 | 1bf250dbe | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T20:43:48Z | game-check | 401.982 | 2192.470 | 27.007 | 5.52 | 0 | 1bf250dbe | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T20:44:21Z | gate-commit | 19.884 | 47.420 | 12.162 | 3.00 | 0 | 1bf250dbe | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T21:10:23Z | rebaseline | 57.868 | 242.100 | 11.589 | 4.38 | 0 | bb1163cda | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T21:30:34Z | gate-commit | 43.531 | 78.005 | 55.835 | 3.07 | 0 | 2cd6f5e79 | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T17:21:14Z | sluice:artifacts | 61.261 | 551.758 | 20.220 | 9.34 | 0 | f274278a5 |  | lefford | 40 |
+| 2026-08-24T17:21:54Z | sluice:outboard | 39.890 | 24.890 | 38.764 | 1.60 | 0 | 06a9a77d2 |  | lefford | 40 |
+| 2026-08-24T17:27:59Z | sluice:gate | 365.233 | 10363.058 | 363.865 | 29.37 | 0 | a25091fd4 |  | lefford | 40 |
+| 2026-08-24T18:04:30Z | gate-commit | 120.159 | 1867.698 | 179.725 | 17.04 | 0 | 66b3ce381 | fix/gitignore-pi | lefford | 40 |
+| 2026-08-24T18:05:55Z | sluice:artifacts | 62.150 | 547.410 | 22.006 | 9.16 | 0 | 1ef760fad |  | lefford | 40 |
+| 2026-08-24T18:06:35Z | sluice:outboard | 39.070 | 24.484 | 38.130 | 1.60 | 0 | a8c4d956d |  | lefford | 40 |
+| 2026-08-24T18:12:49Z | sluice:gate | 374.825 | 10384.171 | 367.906 | 28.69 | 0 | 941938956 |  | lefford | 40 |
+| 2026-08-24T18:19:44Z | sluice:clients | 414.662 | 5191.040 | 73.323 | 12.70 | 0 | 0240b5055 |  | lefford | 40 |
+| 2026-08-24T21:34:36Z | rebaseline | 71.943 | 239.632 | 10.455 | 3.48 | 0 | 061473e3f | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T21:36:31Z | gate-commit | 29.069 | 51.170 | 12.324 | 2.18 | 0 | b639666e8 | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T21:50:30Z | sluice:artifacts | 138.465 | 1330.157 | 66.974 | 10.09 | 0 | ea436c227 |  | lefford | 40 |
+| 2026-08-24T21:51:13Z | sluice:outboard | 42.556 | 29.597 | 42.089 | 1.68 | 0 | e5772b897 |  | lefford | 40 |
+| 2026-08-24T21:58:38Z | sluice:gate | 444.452 | 12266.248 | 507.369 | 28.74 | 0 | 3e36028b2 |  | lefford | 40 |
+| 2026-08-24T22:05:56Z | sluice:clients | 438.347 | 5447.220 | 100.208 | 12.66 | 0 | 1a021d49e |  | lefford | 40 |
+| 2026-08-24T22:36:03Z | quick | 13.442 | 27.257 | 23.730 | 3.79 | 0 | f6457cf1c | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T22:36:46Z | quick | 6.701 | 9.873 | 7.111 | 2.53 | 0 | f6457cf1c | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T22:38:06Z | quick | 29.804 | 39.373 | 21.111 | 2.03 | 0 | f6457cf1c | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T22:38:43Z | quick | 27.743 | 14.814 | 0.473 | 0.55 | 0 | f6457cf1c | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T22:39:35Z | quick | 30.827 | 14.246 | 0.434 | 0.48 | 0 | f6457cf1c | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T23:02:05Z | quick | 29.947 | 29.617 | 17.870 | 1.59 | 0 | f6457cf1c | campaign/the-granary | MacBookPro | 10 |

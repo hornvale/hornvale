@@ -3,9 +3,9 @@
 //! [`crate::Horizon`] keeps its five stratigraphic rungs and its entire
 //! archival job (`Era`, `RockClass`, `unconformity`); it is not modified and
 //! nothing here reads it. This is a **second, independent ladder**: its rungs
-//! are placed at temperature offsets above the cell's surface datum, so a
+//! are placed at temperature offsets above the vertex's surface datum, so a
 //! rung's depth in metres is derived from
-//! [`crate::strata::geothermal_gradient`] and therefore *varies by cell* — the
+//! [`crate::strata::geothermal_gradient`] and therefore *varies by vertex* — the
 //! same rung sits twice as deep under an ancient craton (15 K/km) as under
 //! young thin crust (30 K/km). Neither ladder derives the other.
 //!
@@ -22,7 +22,7 @@
 //! `windows/worldgen/tests/underworld_ladder_probe.rs`'s module doc — the
 //! second of that file's two tables, taken after a cave's depth became a
 //! budget in metres (spec §4.0). Seeds 42 / 7 / 1234; 874 / 1681 / 1266
-//! cave-bearing land cells.
+//! cave-bearing land vertices.
 //!
 //! The first of those two tables is retained there as a before-arm and is
 //! **not** the input to this table. It was taken while depth was a band index,
@@ -47,7 +47,7 @@
 //! bin `[10, 11)` holds **39.9% of seed 42**, and 19.6% of that seed lies
 //! within ±0.5 K of the edge. See [`DEEPS_TOP_K`] for the move and its rule.
 //!
-//! Per-class share of cave-bearing cells, seeds 42 / 7 / 1234:
+//! Per-class share of cave-bearing vertices, seeds 42 / 7 / 1234:
 //!
 //! ```text
 //! rung        ΔT (K)      seed 42        seed 7         seed 1234
@@ -94,7 +94,7 @@
 //! ## Nadir: a refused split, and its true bound
 //!
 //! [`Band::Nadir`] is the open-ended leftover bin, and leftover bins are
-//! large by construction: 38.65% of cave-bearing land cells terminate here
+//! large by construction: 38.65% of cave-bearing land vertices terminate here
 //! (24.49 / 43.25 / 42.34% on seeds 42 / 7 / 1234), which falsified the
 //! campaign's own prediction that reaching it would be uncommon.
 //!
@@ -129,11 +129,11 @@ use hornvale_kernel::Band;
 ///
 /// **Authored, not derived.** Spec §4.1 fixes this value in the spec *before*
 /// any fit precisely so that no measurement can be read as having produced it:
-/// 50 K puts a temperate cell's chamber near 60 °C, past sustained human
+/// 50 K puts a temperate vertex's chamber near 60 °C, past sustained human
 /// tolerance, and lands the ladder's floor at 1.7–3.3 km over the 15–30 K/km
 /// gradient band — the same order as the deepest worked mines on Earth. It is
 /// a fidelity choice and is recorded as one. The measured distribution is what
-/// tells us the class is *occupied* (24.5 / 43.2 / 42.3% of cave-bearing cells
+/// tells us the class is *occupied* (24.5 / 43.2 / 42.3% of cave-bearing vertices
 /// on seeds 42 / 7 / 1234); it did not choose the number.
 /// type-audit: bare-ok(diagnostic-value)
 pub const HABITABLE_CEILING_K: f64 = 50.0;
@@ -186,7 +186,7 @@ const SHALLOWS_TOP_K: f64 = 2.0;
 /// metric-chasing this move is not.
 ///
 /// *Effect on the table:* `Deeps` gains the `[8, 10)` caves from `Shallows` —
-/// 18 / 40 / 18 cells — so its thinnest seed goes 4.8% → 7.2% and the table's
+/// 18 / 40 / 18 vertices — so its thinnest seed goes 4.8% → 7.2% and the table's
 /// minimum class 4.8% → 5.0%. The rung names, arity and ordering are
 /// unchanged, so `chamber/v2`'s key spellings do not move with it.
 /// type-audit: bare-ok(diagnostic-value)
@@ -196,7 +196,7 @@ const DEEPS_TOP_K: f64 = 8.0;
 ///
 /// **An a-priori bin, kept.** Spec §4.1 published `25 – 50 K` before Task 1
 /// ran, the probe binned against it, and the class holds 6.1 / 8.9 / 10.2% of
-/// cave-bearing cells on seeds 42 / 7 / 1234 — occupied on every seed, which
+/// cave-bearing vertices on seeds 42 / 7 / 1234 — occupied on every seed, which
 /// is the claim.
 ///
 /// It is not in a valley the way [`SHALLOWS_TOP_K`] and [`DEEPS_TOP_K`] are:
@@ -269,7 +269,7 @@ pub fn delta_t_range_of(rung: Band) -> (f64, Option<f64>) {
 /// The rung a ΔT (K above the surface datum) falls in.
 ///
 /// **Total.** A negative ΔT — a surface datum warmer than the rock beneath it,
-/// which a cold-season or high-albedo cell can genuinely produce — and a
+/// which a cold-season or high-albedo vertex can genuinely produce — and a
 /// non-finite ΔT both resolve to the top habitation rung rather than
 /// panicking, because the ladder is a classification of places and every place
 /// is somewhere. Never returns [`Band::Surface`]; see the module docs.
@@ -286,7 +286,7 @@ pub fn rung_at_delta_t(delta_t_k: f64) -> Band {
     found
 }
 
-/// The rung a depth below the surface falls in, for a cell with this
+/// The rung a depth below the surface falls in, for a vertex with this
 /// geothermal gradient.
 ///
 /// ΔT = gradient × depth, the same expression
@@ -432,11 +432,11 @@ mod tests {
     }
 
     /// A rung is a class of *place*, so the depth it occupies must move with
-    /// the cell's gradient rather than being a fixed metre band. Asserted as
+    /// the vertex's gradient rather than being a fixed metre band. Asserted as
     /// an inequality on the boundary depth, not on a rung lookup, so it says
     /// something about the mapping itself.
     #[test]
-    fn a_rungs_depth_in_metres_varies_by_cell() {
+    fn a_rungs_depth_in_metres_varies_by_vertex() {
         let (deeps_low, _) = delta_t_range_of(Band::Deeps);
         let craton = GeothermalGradient::new(15.0);
         let young = GeothermalGradient::new(30.0);

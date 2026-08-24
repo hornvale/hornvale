@@ -330,7 +330,7 @@ mod tests {
             vec![
                 // The Deep Realm: the underworld chamber derivation. Born at
                 // v1, versioned from birth like `settlement/disposition v1`
-                // below, because its key (a ChamberAddr's cell, entrance,
+                // below, because its key (a ChamberAddr's vertex, entrance,
                 // branch, band NAME and floor — see `windows/worldgen/src/
                 // chamber.rs`'s `chamber_key`) is a save-format contract
                 // the moment anything commits a chamber fact, which that
@@ -364,7 +364,7 @@ mod tests {
                 // existing key moves and no world's existing draws change.
                 //
                 // Versioned from birth like every sibling here, because its
-                // KEY is a save-format contract: cell, branch, band NAME and
+                // KEY is a save-format contract: vertex, branch, band NAME and
                 // the ROLE word (`child`/`parent`) — see
                 // `windows/worldgen/src/chamber.rs`'s `descent_key`. The role
                 // is in the key because one place in the lattice answers two
@@ -384,7 +384,7 @@ mod tests {
                 //
                 // Versioned from birth for the same reason `chamber` and
                 // `entity/identity` are: its KEY is a save-format contract
-                // (a RunAddr's cell, entrance, branch and band NAME — see
+                // (a RunAddr's vertex, entrance, branch and band NAME — see
                 // `windows/worldgen/src/chamber.rs`'s `run_key`), and
                 // re-shaping it re-decides how long every run in every world
                 // is.
@@ -399,7 +399,7 @@ mod tests {
                 // `entrance` left `RunAddr` entirely — an entrance is which
                 // aperture a player used, not a coordinate in a system's own
                 // lattice — so the key dropped a whole segment
-                // (`cell/branch/band` instead of `cell/entrance/branch/band`).
+                // (`vertex/branch/band` instead of `vertex/entrance/branch/band`).
                 // Unlike `chamber v3` (a display formatter with no production
                 // reader, per A.6), this IS a live production leg —
                 // `levels_in_branch` is `chamber_exists`'s own drawn-length
@@ -429,7 +429,7 @@ mod tests {
                 // The two Task 5 entrance legs (amendment C.3): how many
                 // apertures a system opens, and which branch each opens on.
                 // Both were additive NEW labels at v1, both keyed on stable
-                // lattice places (cell; cell + entrance index). See
+                // lattice places (vertex; vertex + entrance index). See
                 // `windows/worldgen/src/streams.rs`'s ENTRANCE_COUNT /
                 // ENTRANCE_MOUTH.
                 //
@@ -460,7 +460,7 @@ mod tests {
                 "chamber/entrance-count v2",
                 "chamber/entrance-mouth v2",
                 "chamber/run-floors v2",
-                // The Toponym: a cell's characteristic variant, what a
+                // The Toponym: a vertex's characteristic variant, what a
                 // settlement there is named for. Additive — a new label
                 // perturbs no existing stream.
                 "climate/variant/cell v1",
@@ -473,12 +473,12 @@ mod tests {
                 // entity in every world renumbers. See
                 // `kernel/src/streams.rs`'s `ENTITY_IDENTITY`.
                 "entity/identity v1",
-                // The Repose: the per-cell hazard-event draw. Additive at
+                // The Repose: the per-vertex hazard-event draw. Additive at
                 // v1 — a NEW label, perturbing no existing stream, and C0
                 // commits nothing (spec §3.3: an event is recomputed on
                 // demand and never stored, like the volcano below).
                 // Versioned from birth because its KEY is a contract the
-                // moment anything narrates an event: the cell, the process,
+                // moment anything narrates an event: the vertex, the process,
                 // and the index of a fixed 1,000-year block of world time —
                 // NOT the window a caller asked about. Keying on the window
                 // would make a narrower query draw an unrelated set rather
@@ -507,7 +507,7 @@ mod tests {
                 // byte-identical — *nothing moved at all*, which is the
                 // empty epoch 0089 warns against writing into the
                 // manifest. Here the derivation genuinely moved (measured:
-                // cell 1400's rendered layer draws Seed(11388647889657673426)
+                // vertex 1400's rendered layer draws Seed(11388647889657673426)
                 // under the old key and Seed(10641468697408252209) under
                 // the new one), and a reader re-rendering `hornvale history
                 // --site` off an older save under newer code gets different
@@ -608,8 +608,8 @@ mod tests {
                 // same reason `chamber v1` and `settlement/disposition v1`
                 // above are: its KEY is a contract the moment anything
                 // narrates or commits a volcano — the edifice's SOURCE
-                // CONTACT cell, never the query cell (an edifice spans 1-2
-                // cells, so keying on the query cell would give the two
+                // CONTACT vertex, never the query vertex (an edifice spans 1-2
+                // vertices, so keying on the query vertex would give the two
                 // halves of one mountain two identities and two names). See
                 // `windows/worldgen/src/volcano.rs`'s `volcano_key`.
                 "volcano v1",

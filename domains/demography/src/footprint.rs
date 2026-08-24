@@ -1,7 +1,7 @@
-//! Kleiber home-range scaling: a cell's fractional occupancy per individual
+//! Kleiber home-range scaling: a vertex's fractional occupancy per individual
 //! (the "grain" of a species — super-linear with body mass). A small species
-//! (mice) might occupy <0.01 cells/individual (many pack per cell); a large
-//! species (deer) ~1 cell/individual; a large predator or megafauna many cells
+//! (mice) might occupy <0.01 vertices/individual (many pack per vertex); a large
+//! species (deer) ~1 vertex/individual; a large predator or megafauna many vertices
 //! per individual. Allometry follows [Kleiber's law](https://en.wikipedia.org/wiki/Kleiber's_law):
 //! home range scales super-linearly with body mass.
 
@@ -17,15 +17,15 @@ use hornvale_kernel::math;
 const EXPONENT: f64 = 1.25;
 
 // AUTHORED prior (not swept/calibrated against any census): scale constant
-// chosen so a mid-body (e.g. 40 kg, goblin-sized) lands near 1 cell/
+// chosen so a mid-body (e.g. 40 kg, goblin-sized) lands near 1 vertex/
 // individual (the transition between high-density small species and
 // low-density large ones). Formula: 1 / (40^EXPONENT) ≈ 0.01.
 const A: f64 = 0.01;
 
-/// Home range in cells per individual (Kleiber super-linear allometry in mass).
+/// Home range in vertices per individual (Kleiber super-linear allometry in mass).
 /// Returns the fractional occupancy of a single individual of the given mass:
-/// values << 1.0 mean many pack per cell; values >> 1.0 mean one individual
-/// spans many cells.
+/// values << 1.0 mean many pack per vertex; values >> 1.0 mean one individual
+/// spans many vertices.
 ///
 /// type-audit: bare-ok(ratio: return)
 pub fn home_range(mass: Mass) -> f64 {

@@ -30,7 +30,7 @@
 //! ## P2 — does it DIFFERENTIATE?
 //!
 //! Gnoll's mean pairwise Pearson correlation against every other **peopled**
-//! kind, over every land cell, must **fall** when the affinity is declared.
+//! kind, over every land vertex, must **fall** when the affinity is declared.
 //!
 //! - **Falsifier:** it does not fall, or falls on fewer than 2 of the 3 seeds.
 //!   That would mean the affinity binds (P1″) without buying spatial
@@ -38,9 +38,9 @@
 //! - **Seeds 42, 7, 1234** — The Delvers' own seed set, so these numbers are
 //!   comparable with its published table.
 //! - **Scope limit.** Pearson `r` is invariant under a positive affine
-//!   rescale, so it measures how two fields *sort* cells, not how large they
+//!   rescale, so it measures how two fields *sort* vertices, not how large they
 //!   are. A pair reading `1.0` still admits wholly different absolute
-//!   capacities. "Differentiates" here means "the world ranks cells
+//!   capacities. "Differentiates" here means "the world ranks vertices
 //!   differently for these two kinds", nothing more.
 //!
 //! ## What "arid" means, fixed before the first measurement
@@ -158,7 +158,7 @@
 //! ## P2 — CONFIRMED on 3 of 3 seeds
 //!
 //! Gnoll's mean pairwise Pearson `r` against the other eight peopled kinds,
-//! over every land cell:
+//! over every land vertex:
 //!
 //! ```text
 //!   seed    before     after     delta
@@ -204,7 +204,7 @@
 //! ```
 //!
 //! The bake is a multi-era **competition** for ground, so suppressing one
-//! people frees cells the rest immediately contest, and the cascade is far
+//! people frees vertices the rest immediately contest, and the cascade is far
 //! larger than the suppression that started it — on seed 7 gnoll's own count
 //! does not move at all while bugbear triples. This is the mechanism working
 //! rather than misbehaving, but it means "declaring one kind's affinity" is not
@@ -305,7 +305,7 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{CellId, ComponentStore, Seed, Value};
+use hornvale_kernel::{ComponentStore, Seed, Value, Vertex};
 use hornvale_species::BiomeAffinity;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::components::WorldComponents;
@@ -395,7 +395,7 @@ impl Tally {
 ///
 /// Biome is resolved from the settlement's committed `cell-id` through
 /// `climate.biome_at`, NOT from its `biome` text fact: the descriptor facts are
-/// written by the naming pass, and reading the cell keeps this measurement
+/// written by the naming pass, and reading the vertex keeps this measurement
 /// independent of which build depth committed which descriptor.
 ///
 /// **`Full` depth, and the shallower rung is not an option.** `Settlements`
@@ -434,15 +434,15 @@ fn tally(seed: u64, arm: Arm, species: &str) -> Tally {
         if founder.as_deref() != Some(species) {
             continue;
         }
-        let cell = match world
+        let vertex = match world
             .ledger
-            .value_of(fact.subject, hornvale_settlement::CELL_ID)
+            .value_of(fact.subject, hornvale_settlement::VERTEX_ID)
         {
-            Some(Value::Number(n)) => CellId(*n as u32),
+            Some(Value::Number(n)) => Vertex(*n as u32),
             _ => panic!("a committed settlement must carry a cell-id"),
         };
         t.total += 1;
-        if ARID.contains(&climate.biome_at(cell).name()) {
+        if ARID.contains(&climate.biome_at(vertex).name()) {
             t.arid += 1;
         }
     }
@@ -462,7 +462,7 @@ fn tally(seed: u64, arm: Arm, species: &str) -> Tally {
 }
 
 /// Every settlement of the world at `seed` under `arm`, as
-/// `(founding people, cell)` in ledger-commit order — the whole placement, not
+/// `(founding people, vertex)` in ledger-commit order — the whole placement, not
 /// one people's slice.
 fn placement(seed: u64, arm: Arm) -> Vec<(String, u32)> {
     let built = build_world_to_with_artifacts(
@@ -482,14 +482,14 @@ fn placement(seed: u64, arm: Arm) -> Vec<(String, u32)> {
         .map(|f| {
             let who = hornvale_species::species_of(world, f.subject)
                 .expect("a committed settlement names its people at Full depth");
-            let cell = match world
+            let vertex = match world
                 .ledger
-                .value_of(f.subject, hornvale_settlement::CELL_ID)
+                .value_of(f.subject, hornvale_settlement::VERTEX_ID)
             {
                 Some(Value::Number(n)) => *n as u32,
                 _ => panic!("a committed settlement must carry a cell-id"),
             };
-            (who, cell)
+            (who, vertex)
         })
         .collect()
 }
@@ -528,7 +528,7 @@ fn pearson(xs: &[f64], ys: &[f64]) -> f64 {
 }
 
 /// Gnoll's mean pairwise correlation against every other peopled kind, over the
-/// land cells of the world at `seed`, under `arm`.
+/// land vertices of the world at `seed`, under `arm`.
 ///
 /// Returns `(mean_r, per_pair)` with `per_pair` ascending by the other kind's
 /// name. The peopled set is `SocialForm::Settled` read off the biosphere store —
@@ -613,7 +613,7 @@ fn gnoll_mean_correlation(seed: u64, arm: Arm) -> (f64, Vec<(String, f64)>) {
         &species_affinity,
     );
 
-    let land: Vec<CellId> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+    let land: Vec<Vertex> = geo.vertices().filter(|&c| !terrain.is_ocean(c)).collect();
     let column = |name: &str| -> Vec<f64> {
         let idx = roster
             .iter()
@@ -797,7 +797,7 @@ fn the_affinity_differentiates_gnoll_from_the_other_peoples() {
 /// than trusted:
 ///
 /// 1. **Uniformity is a provable no-op for placement.** Genesis and `best_home`
-///    rank cells in the kind's own units, so a constant factor cannot reorder
+///    rank vertices in the kind's own units, so a constant factor cannot reorder
 ///    anything — a uniform row would move the world's absolute numbers and
 ///    nobody's location.
 /// 2. **A misspelled key is inert.** `BiomeAffinity::factor` falls back to
@@ -900,7 +900,7 @@ fn every_authored_affinity_row_is_well_formed() {
         assert!(
             distinct.len() >= 2,
             "{kind:?}'s affinity is UNIFORM across every biome, which is a \
-             provable no-op for placement: genesis ranks cells in the kind's \
+             provable no-op for placement: genesis ranks vertices in the kind's \
              own units, so a constant factor reorders nothing"
         );
     }
@@ -913,7 +913,7 @@ fn every_authored_affinity_row_is_well_formed() {
 /// competitive placement, not just gnoll's share of it — measured on seed 7,
 /// gnoll's own count is unchanged at 4 while bugbear goes 49 → 153, goblin
 /// 48 → 7 and kobold 38 → 5. The bake is a multi-era competition for ground, so
-/// suppressing one people frees cells the rest then contest. With two occupants
+/// suppressing one people frees vertices the rest then contest. With two occupants
 /// declared in one commit, "which row caused that?" has no answer unless one of
 /// them is proven placement-inert — which is exactly why the second occupant was
 /// chosen from the fauna (`SocialForm::Gregarious`), outside the bake's
@@ -956,7 +956,7 @@ fn the_fauna_occupant_moves_no_settlement() {
 /// `sovereignty_floor(mass, potency)` and floors elevation by `0.0`. A floored
 /// axis never reads below its floor; the unfloored one peaks at its own
 /// `devotion`. So `elevation.devotion < sovereignty_floor` makes elevation the
-/// minimum at every cell of every world, and the other three curves contribute
+/// minimum at every vertex of every world, and the other three curves contribute
 /// nothing at all.
 ///
 /// Asserted rather than left to the authoring comment because the inputs live

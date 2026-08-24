@@ -7,7 +7,7 @@
 //! whatever unit its author typed into it — only a real bake, committed to a
 //! real ledger and read back by a real consumer, can disagree with itself.
 
-use hornvale_kernel::{CellId, EntityId, Seed, Value};
+use hornvale_kernel::{EntityId, Seed, Value, Vertex};
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world, build_world_to,
     occupation_records,
@@ -214,7 +214,7 @@ fn the_two_disposition_paths_agree_on_a_real_world() {
         // founding year and people label.
         let via_key = hornvale_worldgen::disposition::people_disposition(
             world.seed,
-            CellId(record.core.site.0),
+            Vertex(record.core.site.0),
             hornvale_worldgen::disposition::occupation_draw_key(record.core.founded),
             record.core.people.0,
             &psyche,

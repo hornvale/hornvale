@@ -8,7 +8,7 @@ How a world's occupation record accumulates: strata, tenure, and how much of it 
 
 ### `dominant-hazard`
 
-The most common hazard kind among land-cell vestiges by layer count (The Vestige, spec §9.2); Absent where no land cell bears a vestige
+The most common hazard kind among land-vertex vestiges by layer count (The Vestige, spec §9.2); Absent where no land vertex bears a vestige
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -200,7 +200,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `forgotten-fraction`
 
-Over land cells with a non-empty vestige stack, the fraction whose most-dread layer is Forgotten rather than Venerated (The Vestige, spec §9.2); 0.0 where no land cell bears a vestige
+Over land vertices with a non-empty vestige stack, the fraction whose most-dread layer is Forgotten rather than Venerated (The Vestige, spec §9.2); 0.0 where no land vertex bears a vestige
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -220,7 +220,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `mean-warning-legibility`
 
-Mean warning_legibility over every land-cell vestige layer (The Vestige, spec §9.2); 0.0 where no land cell bears a vestige
+Mean warning_legibility over every land-vertex vestige layer (The Vestige, spec §9.2); 0.0 where no land vertex bears a vestige
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -230,7 +230,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `vestige-density`
 
-Fraction of land cells with a non-empty vestige stack (The Vestige, spec §9.2)
+Fraction of land vertices with a non-empty vestige stack (The Vestige, spec §9.2)
 
 n = 1000 present, 0 absent (of 1000 worlds)
 

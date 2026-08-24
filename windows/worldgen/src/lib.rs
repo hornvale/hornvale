@@ -135,7 +135,7 @@ pub use history_emit::{
     GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, bake_year_of_ledger_day,
     collapse_events, emit_history, emit_now, goblinoid_overlap, goblinoid_region_overlap,
     ledger_day_of_bake_year, migration_events, occupation_records, occupations_at,
-    occupations_by_cell, present_frame, present_year, ruins_of_people, stratigraphy,
+    occupations_by_vertex, present_frame, present_year, ruins_of_people, stratigraphy,
     sundered_landmasses, territories,
 };
 /// The demography fit's result, re-exported so a caller that only depends on
@@ -423,8 +423,8 @@ struct HistoryPlacement {
     id: EntityId,
     /// Build-local `species_set` index of this settlement's people.
     tag: usize,
-    /// The Geosphere cell the settlement sits on.
-    cell: hornvale_kernel::CellId,
+    /// The Geosphere vertex the settlement sits on.
+    vertex: hornvale_kernel::Vertex,
     /// The settlement's committed population (the occupation's peak).
     population: u32,
 }
@@ -542,9 +542,9 @@ pub fn terrain_of(world: &World) -> Result<GeneratedTerrain, BuildError> {
 }
 
 /// Map a terrain boundary contact to the seafloor feature climate consumes
-/// (only ocean cells use it): ocean–ocean convergent arcs become trenches;
+/// (only ocean vertices use it): ocean–ocean convergent arcs become trenches;
 /// oceanic ridges become vent-bearing ridges; everything else is featureless.
-fn seafloor_feature(boundary: Option<hornvale_terrain::CellBoundary>) -> SeafloorFeature {
+fn seafloor_feature(boundary: Option<hornvale_terrain::VertexBoundary>) -> SeafloorFeature {
     use hornvale_terrain::BoundaryKind;
     match boundary.map(|b| b.kind) {
         Some(BoundaryKind::IslandArc) => SeafloorFeature::Trench,
@@ -656,7 +656,7 @@ const MOISTURE_FLOOR_WEIGHT: f64 = 0.2;
 /// one definition — they must never diverge.
 const CONDENSATION_THRESHOLD: f64 = 1.7;
 
-/// Settlers a maximal-suitability cell supports: the scale that turns
+/// Settlers a maximal-suitability vertex supports: the scale that turns
 /// `demography::carrying_capacity`'s dimensionless suitability (~[0, 1.7])
 /// into the headcount capacity the deep-history bake reasons in
 /// (`pressure = population / eff_capacity`). Tuned with the bake's genesis
@@ -668,7 +668,7 @@ const CONDENSATION_THRESHOLD: f64 = 1.7;
 /// type-audit: bare-ok(ratio)
 pub const SETTLERS_PER_CAPACITY: f64 = 100.0;
 
-/// The bare per-cell carrying-capacity inputs, shared across species (spec
+/// The bare per-vertex carrying-capacity inputs, shared across species (spec
 /// §2): the same terrain/climate reads the retired suitability scatter used.
 /// Each species folds its own psychology on top via `species_carrying_input`.
 /// Exposed (not inlined at the one call site) so a Lab metric can recompute
@@ -678,7 +678,7 @@ pub fn carrying_inputs_of(
     geo: &Geosphere,
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
-) -> hornvale_kernel::CellMap<hornvale_demography::CarryingInput> {
+) -> hornvale_kernel::VertexMap<hornvale_demography::CarryingInput> {
     carrying_inputs_at(
         geo,
         terrain,
@@ -693,7 +693,7 @@ pub fn carrying_inputs_of(
 /// Two of the inputs move with the era and the rest do not:
 ///
 /// - **`temperature_c`** gains the era's albedo-cooling offset. This is the term
-///   that makes an ice age reduce productivity instead of switching cells off.
+///   that makes an ice age reduce productivity instead of switching vertices off.
 /// - **`is_land` and `coastal`** are taken against the era's sea level rather
 ///   than today's, so a glacial low-stand exposes continental shelf *as land
 ///   that grows food* — matching [`substrate_field_at`]'s elevation re-datum, so
@@ -723,24 +723,24 @@ pub fn carrying_inputs_at(
     climate: &GeneratedClimate,
     adjust: &EraAdjust,
     mask: ChannelMask,
-) -> hornvale_kernel::CellMap<hornvale_demography::CarryingInput> {
+) -> hornvale_kernel::VertexMap<hornvale_demography::CarryingInput> {
     debug_assert!(!mask.andosol, "{}", ablation::ANDOSOL_HAS_NO_SEAM);
-    let is_ocean_at = |c: hornvale_kernel::CellId| terrain.elevation_at(c) < adjust.sea_level;
+    let is_ocean_at = |c: hornvale_kernel::Vertex| terrain.elevation_at(c) < adjust.sea_level;
 
     // The Confluence: freshwater rides proximity to the real river network,
     // not a smooth drainage/moisture proxy — so K spikes near rivers and
     // settlements condense there (emergent). A moisture floor keeps
     // riverless-but-wet regions habitable.
-    let water_kind = hornvale_kernel::CellMap::from_fn(geo, |c| terrain.water_kind_at(c));
+    let water_kind = hornvale_kernel::VertexMap::from_fn(geo, |c| terrain.water_kind_at(c));
     let river_prox =
         hornvale_terrain::river_proximity(geo, &water_kind, hornvale_terrain::RIVER_REACH);
-    hornvale_kernel::CellMap::from_fn(geo, |cell| {
-        let coastal = geo.neighbors(cell).iter().any(|n| is_ocean_at(*n));
-        let moisture = climate.moisture_at(cell);
+    hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
+        let coastal = geo.neighbors(vertex).iter().any(|n| is_ocean_at(*n));
+        let moisture = climate.moisture_at(vertex);
         // Seawater is not freshwater: coastal access is priced by the
         // coast bonus in carrying_capacity, not smuggled in here.
         let freshwater = (moisture * MOISTURE_FLOOR_WEIGHT)
-            .max(*river_prox.get(cell))
+            .max(*river_prox.get(vertex))
             .clamp(0.0, 1.0);
         // ARIDITY NO LONGER FOLDS IN (The Tilth, stage 1). Moisture was counted
         // TWICE: once as the Liebig limiter inside `carrying_capacity`, and again
@@ -757,18 +757,18 @@ pub fn carrying_inputs_at(
         let hostility = if mask.hostility {
             0.0
         } else {
-            terrain.unrest_at(cell).clamp(0.0, 1.0)
+            terrain.unrest_at(vertex).clamp(0.0, 1.0)
         };
         hornvale_demography::CarryingInput {
             // LAND, not habitability (step B): the habitability mask conflated
             // land with a temperate band and a moisture floor, and the latter two
             // are already graded by `npp`/`hostility` inside `carrying_capacity`.
-            is_land: !is_ocean_at(cell),
-            temperature_c: (climate.mean_temperature_at(cell) + adjust.temp_offset).get(),
+            is_land: !is_ocean_at(vertex),
+            temperature_c: (climate.mean_temperature_at(vertex) + adjust.temp_offset).get(),
             // The REAL annual total, not normalised moisture: `precip_at` already
             // maps the moisture field to Earth-ranged mm/yr with its provenance
             // cited, and Lieth's precipitation term is defined on that total.
-            precip_mm_yr: climate.precip_at(cell).get(),
+            precip_mm_yr: climate.precip_at(vertex).get(),
             freshwater,
             coastal,
             hostility,
@@ -776,9 +776,9 @@ pub fn carrying_inputs_at(
     })
 }
 
-/// Soil order per cell — the climate-coupled projection of The Ground
+/// Soil order per vertex — the climate-coupled projection of The Ground
 /// (spec §4). Pure: reads terrain lithology + climate temperature/moisture.
-/// Every cell (ocean included) gets a classification from `classify_soil`;
+/// Every vertex (ocean included) gets a classification from `classify_soil`;
 /// ocean floors read whatever their (irrelevant but harmless) depth/slope
 /// inputs classify to — callers that care about land only should guard
 /// with `terrain.is_ocean`.
@@ -786,19 +786,19 @@ pub fn soil_of(
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
     geo: &Geosphere,
-) -> hornvale_kernel::CellMap<hornvale_terrain::SoilOrder> {
-    hornvale_kernel::CellMap::from_fn(geo, |cell| {
-        let mat = terrain.material_at(cell);
-        let here = terrain.elevation_at(cell).get();
+) -> hornvale_kernel::VertexMap<hornvale_terrain::SoilOrder> {
+    hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
+        let mat = terrain.material_at(vertex);
+        let here = terrain.elevation_at(vertex).get();
         let slope = geo
-            .neighbors(cell)
+            .neighbors(vertex)
             .iter()
             .map(|n| here - terrain.elevation_at(*n).get())
             .fold(0.0_f64, f64::max);
         hornvale_terrain::classify_soil(
-            terrain.rock_at(cell),
-            climate.mean_temperature_at(cell).get(),
-            climate.moisture_at(cell),
+            terrain.rock_at(vertex),
+            climate.mean_temperature_at(vertex).get(),
+            climate.moisture_at(vertex),
             slope,
             &mat.soil_depth,
         )
@@ -813,17 +813,17 @@ pub fn deposit_of(
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
     geo: &Geosphere,
-    cell: hornvale_kernel::CellId,
+    vertex: hornvale_kernel::Vertex,
 ) -> Option<Deposit> {
-    if let Some(d) = terrain.deposit_at(cell) {
+    if let Some(d) = terrain.deposit_at(vertex) {
         return Some(d); // a primary/areal deposit wins
     }
-    if terrain.is_ocean(cell) {
+    if terrain.is_ocean(vertex) {
         return None;
     }
     let _ = geo;
-    let hot = climate.mean_temperature_at(cell).get() > 22.0;
-    let wet = climate.moisture_at(cell) > 0.6;
+    let hot = climate.mean_temperature_at(vertex).get() > 22.0;
+    let wet = climate.moisture_at(vertex) > 0.6;
     if hot && wet {
         return Some(Deposit {
             process: DepositProcess::Lateritic,
@@ -868,8 +868,8 @@ pub fn species_carrying_input(
 
 /// **The terrestrial-supply frame (The Tumult's land mask).** Each of the five
 /// *terrestrial* resource-supply axes carries this frame: the resource a
-/// land-dwelling forager can reach, defined on cells above the world's sea
-/// level and **zero on submerged cells**. This is a property of those supply
+/// land-dwelling forager can reach, defined on vertices above the world's sea
+/// level and **zero on submerged vertices**. This is a property of those supply
 /// fields, not a rule about who may live where — the roster's habitat comes out
 /// of what it eats, so nothing needs a per-species exemption.
 ///
@@ -888,9 +888,9 @@ pub fn species_carrying_input(
 /// placeholder zero. The two that did not — `MINERAL` (a prospectivity read,
 /// which terrain defines on the seafloor too) and `DETRITUS` (a global
 /// constant) — leaked, and were only *incidentally* masked by a bug: before
-/// The Tumult's elevation re-datum, an ocean cell sat ~4 km from every
+/// The Tumult's elevation re-datum, an ocean vertex sat ~4 km from every
 /// authored elevation optimum, so the condition term zeroed the seafloor for
-/// everyone. Correcting the datum put ocean cells only ~1100 m below sea
+/// everyone. Correcting the datum put ocean vertices only ~1100 m below sea
 /// level and exposed the gap — 85 % of the otyugh's, 86 % of the rust
 /// monster's and 74 % of the xorn's total K landed on the seabed. The mask is
 /// stated here instead, on the supply, where it survives any change to the
@@ -916,7 +916,7 @@ pub fn species_carrying_input(
 ///
 /// The consequence for anyone counting settlements: **a settlement is no
 /// longer necessarily on land.** The Repose measured 33,544 of 59,690 stack
-/// settlements over thirty seeds sitting on cells that are not settleable land
+/// settlements over thirty seeds sitting on vertices that are not settleable land
 /// (`giant-squid` alone 30,971 of them), after a readout that assumed
 /// otherwise silently banded every marine settlement into its lowest elevation
 /// band. Filter both sides of any land-relative statistic.
@@ -942,14 +942,14 @@ const FORAGE_FRACTION: f64 = 0.5;
 /// already-computed field.
 ///
 /// Land-masked transitively, and therefore taking no `terrain`: `base_carrying`
-/// is already 0 on submerged cells (see [`DETRITUS_AMBIENT`]'s terrestrial-
+/// is already 0 on submerged vertices (see [`DETRITUS_AMBIENT`]'s terrestrial-
 /// supply frame), and a scale of 0 is 0.
 /// type-audit: bare-ok(count: base_carrying), bare-ok(count: return)
 pub fn forage_supply_field(
     geo: &Geosphere,
-    base_carrying: &hornvale_kernel::CellMap<f64>,
-) -> hornvale_kernel::CellMap<f64> {
-    hornvale_kernel::CellMap::from_fn(geo, |c| base_carrying.get(c) * FORAGE_FRACTION)
+    base_carrying: &hornvale_kernel::VertexMap<f64>,
+) -> hornvale_kernel::VertexMap<f64> {
+    hornvale_kernel::VertexMap::from_fn(geo, |c| base_carrying.get(c) * FORAGE_FRACTION)
 }
 
 /// Fraction of grazable forage that becomes prey biomass available to a
@@ -969,18 +969,18 @@ const PREY_FRACTION: f64 = 0.1;
 /// Replaces a hard-coded `0.0` that had kept every obligate predator in the
 /// roster — the three chromatic dragons and the owlbear — out of every world
 /// ever generated. Land-masked transitively (forage is already 0 on submerged
-/// cells); marine predators eat `MARINE_FORAGE` instead. Pure, deterministic,
+/// vertices); marine predators eat `MARINE_FORAGE` instead. Pure, deterministic,
 /// no RNG — a direct scale of an already-computed field.
 /// type-audit: bare-ok(count: forage), bare-ok(count: return)
 pub fn prey_supply_field(
     geo: &Geosphere,
-    forage: &hornvale_kernel::CellMap<f64>,
-) -> hornvale_kernel::CellMap<f64> {
-    hornvale_kernel::CellMap::from_fn(geo, |c| forage.get(c) * PREY_FRACTION)
+    forage: &hornvale_kernel::VertexMap<f64>,
+) -> hornvale_kernel::VertexMap<f64> {
+    hornvale_kernel::VertexMap::from_fn(geo, |c| forage.get(c) * PREY_FRACTION)
 }
 
 /// The `DETRITUS` supply field (The Tumult): [`DETRITUS_AMBIENT`] on land,
-/// **0 on submerged cells** — the terrestrial-supply frame stated as a field
+/// **0 on submerged vertices** — the terrestrial-supply frame stated as a field
 /// rather than as a bare constant, so the detritus axis carries the same land
 /// mask the photosynthate/forage axes already carried through
 /// `carrying_capacity`. Pure, deterministic — a mask, no float ordering.
@@ -988,8 +988,8 @@ pub fn prey_supply_field(
 pub fn detritus_supply_field(
     geo: &Geosphere,
     terrain: &GeneratedTerrain,
-) -> hornvale_kernel::CellMap<f64> {
-    hornvale_kernel::CellMap::from_fn(geo, |c| {
+) -> hornvale_kernel::VertexMap<f64> {
+    hornvale_kernel::VertexMap::from_fn(geo, |c| {
         if terrain.is_ocean(c) {
             0.0
         } else {
@@ -999,12 +999,12 @@ pub fn detritus_supply_field(
 }
 
 /// The `MARINE_FORAGE` supply field (The Vacancy): marine primary production
-/// and the prey web it supports, **0 on every land cell** — the exact mirror
+/// and the prey web it supports, **0 on every land vertex** — the exact mirror
 /// of the terrestrial axes' land mask (see [`DETRITUS_AMBIENT`]'s
 /// terrestrial-supply frame), stated on the supply so no consumer needs a
 /// per-species exemption.
 ///
-/// Derived from what climate already computes, never drawn: the cell's marine
+/// Derived from what climate already computes, never drawn: the vertex's marine
 /// biome class sets a productivity multiplier (`Upwelling` highest — climate
 /// documents it as the high-productivity class — then `CoralReef` and
 /// `KelpForest`, then the sunlit `Epipelagic`, falling through the aphotic
@@ -1019,9 +1019,9 @@ pub fn marine_forage_supply_field(
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
     scale: f64,
-) -> hornvale_kernel::CellMap<f64> {
+) -> hornvale_kernel::VertexMap<f64> {
     let biome = climate.biome_map();
-    hornvale_kernel::CellMap::from_fn(geo, |c| {
+    hornvale_kernel::VertexMap::from_fn(geo, |c| {
         if !terrain.is_ocean(c) {
             return 0.0;
         }
@@ -1045,13 +1045,13 @@ pub fn marine_forage_supply_field(
 }
 
 /// The `MINERAL` supply field (BIO-35 Stage 1: The Demesne, task T1): The
-/// Ground's per-cell mineral prospectivity ([`GeneratedTerrain::prospectivity_at`],
+/// Ground's per-vertex mineral prospectivity ([`GeneratedTerrain::prospectivity_at`],
 /// `[0,1]`) scaled to the supply range so it is comparable to `base_carrying`
 /// in the weighted sum T2 builds (`scale` is the mineral supply amplitude —
 /// the one calibration knob, re-fit in T3). Pure, deterministic — a direct
 /// read, no float ordering involved (`total_cmp`-free).
 ///
-/// **Land-masked (The Tumult): 0 on submerged cells.** Terrain derives
+/// **Land-masked (The Tumult): 0 on submerged vertices.** Terrain derives
 /// prospectivity on the seafloor as readily as on land — it is honest
 /// geology — but it is not supply a land forager can reach, and this is the
 /// terrestrial supply field. See [`DETRITUS_AMBIENT`] for the frame and why
@@ -1061,7 +1061,7 @@ pub fn mineral_supply_field(
     geo: &Geosphere,
     terrain: &GeneratedTerrain,
     scale: f64,
-) -> hornvale_kernel::CellMap<f64> {
+) -> hornvale_kernel::VertexMap<f64> {
     mineral_supply_field_masked(geo, terrain, scale, ChannelMask::NONE)
 }
 
@@ -1088,9 +1088,9 @@ pub fn mineral_supply_field_masked(
     terrain: &GeneratedTerrain,
     scale: f64,
     mask: ChannelMask,
-) -> hornvale_kernel::CellMap<f64> {
+) -> hornvale_kernel::VertexMap<f64> {
     debug_assert!(!mask.andosol, "{}", ablation::ANDOSOL_HAS_NO_SEAM);
-    hornvale_kernel::CellMap::from_fn(geo, |c| {
+    hornvale_kernel::VertexMap::from_fn(geo, |c| {
         if terrain.is_ocean(c) {
             0.0
         } else if mask.mineral_unrest {
@@ -1118,8 +1118,8 @@ const MINERAL_SUPPLY_SCALE: f64 = 1.0;
 /// The `MARINE_FORAGE` supply amplitude — the campaign's single marine
 /// calibration knob, following The Demesne's one-knob-per-axis precedent.
 ///
-/// Set so a productive shallow marine cell supplies roughly what a productive
-/// land cell supplies, making marine and terrestrial K comparable rather than
+/// Set so a productive shallow marine vertex supplies roughly what a productive
+/// land vertex supplies, making marine and terrestrial K comparable rather than
 /// one silently dominating. Fit in Task 6 Step 4 against the measured
 /// land/sea supply ratio, not chosen by taste. If one constant cannot make the
 /// two comparable, that is a finding to report (spec §11) — not an invitation
@@ -1127,15 +1127,15 @@ const MINERAL_SUPPLY_SCALE: f64 = 1.0;
 /// type-audit: bare-ok(ratio)
 const MARINE_SUPPLY_SCALE: f64 = 1.0;
 
-/// The per-axis resource supply for one niche at one cell (BIO-35 Stage 1:
+/// The per-axis resource supply for one niche at one vertex (BIO-35 Stage 1:
 /// The Demesne, task T2): the dot product of the species' uptake vector
-/// (`niche`) with the per-cell supply vector (`per_axis`) — the
-/// rank-restored replacement for the old `base_carrying(cell) × Σuptake`
+/// (`niche`) with the per-vertex supply vector (`per_axis`) — the
+/// rank-restored replacement for the old `base_carrying(vertex) × Σuptake`
 /// scalar, which collapsed every species' spatial pattern onto the same
 /// single field (differing only by an overall magnitude). A niche direction
-/// now SELECTS which cells supply it — a photosynthate-heavy niche peaks
+/// now SELECTS which vertices supply it — a photosynthate-heavy niche peaks
 /// where `PHOTOSYNTHATE` supply peaks, a mineral-heavy niche peaks where
-/// `MINERAL` supply peaks, even when those are different cells. Pure; no
+/// `MINERAL` supply peaks, even when those are different vertices. Pure; no
 /// RNG, no float ordering (a plain weighted sum, not a comparison).
 /// type-audit: bare-ok(ratio: per_axis), bare-ok(ratio: return)
 pub fn axis_supply(
@@ -1148,7 +1148,7 @@ pub fn axis_supply(
         .sum()
 }
 
-/// The axis order the two per-cell capacity loops build their `per_axis`
+/// The axis order the two per-vertex capacity loops build their `per_axis`
 /// supply arrays in, and therefore the order their hoisted niche weights are
 /// resolved in. A single constant so the two cannot drift apart silently;
 /// `the_supply_axis_order_matches_both_capacity_loops` asserts the loops
@@ -1166,9 +1166,9 @@ pub const SUPPLY_AXIS_ORDER: [hornvale_kernel::ResourceAxis; 6] = [
 /// product, hoisted.
 ///
 /// **Why this exists.** `axis_supply` re-reads all six weights out of the
-/// niche's `BTreeMap` on every call, and its two callers call it *per cell,
+/// niche's `BTreeMap` on every call, and its two callers call it *per vertex,
 /// per species*. But a niche is a property of the SPECIES: the weights are
-/// loop-invariant, and only the supplies move with the cell. A samply
+/// loop-invariant, and only the supplies move with the vertex. A samply
 /// flamegraph of the heaviest `hornvale-vessel` test attributed **8.6%** of the
 /// whole test to `ResourceVector::weight` — 7.3% of it under
 /// [`per_species_capacity_at`] alone — essentially all of it inside
@@ -1208,7 +1208,7 @@ pub fn axis_supply_with(weights: &[f64], per_axis: &[(hornvale_kernel::ResourceA
 ///
 /// - **Floor elevation too** (The Tilth stage 6.1). Fixes the real pathology
 ///   below, but nothing can then be excluded by anything: goblin read capacity
-///   ~37 on a −50 °C cell, per-cell species diversity went to 3.55 against a
+///   ~37 on a −50 °C vertex, per-vertex species diversity went to 3.55 against a
 ///   [1.5, 3.0] band ("oatmeal" is ~4), and kobold — a deliberate highland
 ///   specialist — took 17.9% of settlements against a 10% cap.
 /// - **Unfloor temperature instead** (stage 7). Makes cold exclude, and
@@ -1375,11 +1375,11 @@ pub fn tolerance_tiered(
 /// store (unrestricted at every biome) or `Some` of its declared
 /// [`hornvale_species::BiomeAffinity`]; an index past the slice's end
 /// defaults to `None`, the same "unrestricted" default. Resolved against a
-/// cell's biome name via [`hornvale_species::BiomeAffinity::factor`] — see
+/// vertex's biome name via [`hornvale_species::BiomeAffinity::factor`] — see
 /// the placement note below on why this multiplies outside
 /// [`tolerance_liebig`] rather than folding into it.
 ///
-/// For each species and cell: `saturate(axis_supply(niche, per_axis))` (the
+/// For each species and vertex: `saturate(axis_supply(niche, per_axis))` (the
 /// resource-supply term — BIO-35 Stage 1's rank-restored per-axis dot
 /// product: `PHOTOSYNTHATE` rides the existing NPP-based `base_carrying`
 /// (keeps its conditioning), `PLANT_FORAGE`/`MINERAL`/`DETRITUS` read their
@@ -1389,13 +1389,13 @@ pub fn tolerance_tiered(
 /// marine supply field though no shipped kind weights it yet; see
 /// [`axis_supply`], Type-II-saturated so intake plateaus) multiplied by the
 /// four condition-response terms (temperature/moisture/insolation/elevation),
-/// each [`hornvale_kernel::ConditionResponse::eval`]'d against that cell's
+/// each [`hornvale_kernel::ConditionResponse::eval`]'d against that vertex's
 /// [`substrate_field`] reading. Temperature/moisture/insolation are
 /// buffer-able (floored by the species'
 /// [`hornvale_kernel::sovereignty_floor`]); elevation is hard (floor 0.0) —
 /// sovereignty buffers physiology but not geometry.
 ///
-/// **K is 0 on every submerged cell for the whole roster today** (The
+/// **K is 0 on every submerged vertex for the whole roster today** (The
 /// Tumult's land mask), and by construction rather than by decree: five of
 /// the six supply axes are terrestrial (see [`DETRITUS_AMBIENT`]'s
 /// terrestrial-supply frame) and the sixth, `MARINE_FORAGE` (The Vacancy),
@@ -1417,7 +1417,7 @@ pub fn per_species_suitability(
     species_biosphere: &[&hornvale_species::BiosphereTraits],
     species_realm: &[hornvale_species::HabitatRealm],
     species_affinity: &[Option<hornvale_species::BiomeAffinity>],
-) -> Vec<(u32, hornvale_kernel::CellMap<f64>)> {
+) -> Vec<(u32, hornvale_kernel::VertexMap<f64>)> {
     per_species_suitability_masked(
         geo,
         terrain,
@@ -1462,7 +1462,7 @@ pub fn per_species_suitability_masked(
     species_realm: &[hornvale_species::HabitatRealm],
     species_affinity: &[Option<hornvale_species::BiomeAffinity>],
     mask: ChannelMask,
-) -> Vec<(u32, hornvale_kernel::CellMap<f64>)> {
+) -> Vec<(u32, hornvale_kernel::VertexMap<f64>)> {
     debug_assert!(!mask.andosol, "{}", ablation::ANDOSOL_HAS_NO_SEAM);
     debug_assert_eq!(
         species_realm.len(),
@@ -1487,10 +1487,10 @@ pub fn per_species_suitability_masked(
         insolation_scalar,
         regime,
     );
-    // The Warren: the subterranean reading of every cell, hoisted exactly as
+    // The Warren: the subterranean reading of every vertex, hoisted exactly as
     // the surface `substrate` is. Built unconditionally and read only by a
     // `Subterranean` kind; the derivation is pure, so this costs one map and
-    // no draws. The Underworld moved the per-cell inputs (depth, gradient,
+    // no draws. The Underworld moved the per-vertex inputs (depth, gradient,
     // water table, porosity) into `subterranean_substrate_field` so this call
     // site and `per_species_capacity_at`'s cannot derive them differently.
     let subterranean = subterranean_substrate_field(geo, terrain, &substrate);
@@ -1498,12 +1498,12 @@ pub fn per_species_suitability_masked(
     // loop below — each is a pure function of terrain/climate, built once
     // and shared by every species' dot product.
     let mineral = mineral_supply_field_masked(geo, terrain, MINERAL_SUPPLY_SCALE, mask);
-    let forage = forage_supply_field(geo, base_carrying.as_cell_map());
+    let forage = forage_supply_field(geo, base_carrying.as_vertex_map());
     let detritus = detritus_supply_field(geo, terrain);
     let marine = marine_forage_supply_field(geo, terrain, climate, MARINE_SUPPLY_SCALE);
     let prey = prey_supply_field(geo, &forage);
-    // The Range: the biome at every cell, hoisted exactly as the other
-    // per-cell fields above — read only by a kind with a declared affinity
+    // The Range: the biome at every vertex, hoisted exactly as the other
+    // per-vertex fields above — read only by a kind with a declared affinity
     // (see the `affinity` factor below); a clone of the already-computed
     // field, so this costs no new draws and no new sculpting.
     let biome = climate.biome_map();
@@ -1516,7 +1516,7 @@ pub fn per_species_suitability_masked(
             let cn = &bio.condition_niche;
             // Loop-invariant: the niche belongs to the SPECIES, so its six
             // weights are resolved once here rather than re-read out of a
-            // `BTreeMap` on every cell (see `axis_supply_with`). The order
+            // `BTreeMap` on every vertex (see `axis_supply_with`). The order
             // matches `per_axis` inside the closure exactly, which is what
             // makes the hoisted dot product bit-identical.
             let niche_weights = SUPPLY_AXIS_ORDER.map(|axis| bio.niche.weight(axis));
@@ -1524,19 +1524,19 @@ pub fn per_species_suitability_masked(
                 .get(tag)
                 .copied()
                 .unwrap_or(hornvale_species::HabitatRealm::SURFACE);
-            let k = hornvale_kernel::CellMap::from_fn(geo, |cell| {
+            let k = hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
                 // The Warren: which realm's substrate this kind is scored
                 // against, and — for a subterranean kind only — whether the
-                // cell actually holds a cave at all. A `Surface` kind's
+                // vertex actually holds a cave at all. A `Surface` kind's
                 // arithmetic is UNTOUCHED: same field, same reading, and the
                 // `availability` factor below is exactly 1.0, an IEEE-754
                 // no-op (verified over the roster's real values, bit-
                 // difference 0).
                 let (s, availability) = match realm {
-                    hornvale_species::HabitatRealm::Surface => (substrate.get(cell), 1.0),
+                    hornvale_species::HabitatRealm::Surface => (substrate.get(vertex), 1.0),
                     hornvale_species::HabitatRealm::Subterranean => (
-                        subterranean.get(cell),
-                        if terrain.cave_at(cell).is_some() {
+                        subterranean.get(vertex),
+                        if terrain.cave_at(vertex).is_some() {
                             1.0
                         } else {
                             0.0
@@ -1552,12 +1552,12 @@ pub fn per_species_suitability_masked(
                 // that entry i's weight is the hoisted `niche_weights[i]`.
                 // `the_supply_axis_order_matches_both_capacity_loops` pins it.
                 let per_axis = [
-                    (PHOTOSYNTHATE, base_carrying.at(cell)),
-                    (PLANT_FORAGE, *forage.get(cell)),
-                    (MINERAL, *mineral.get(cell)),
-                    (DETRITUS, *detritus.get(cell)),
-                    (ANIMAL_PREY, *prey.get(cell)),
-                    (MARINE_FORAGE, *marine.get(cell)),
+                    (PHOTOSYNTHATE, base_carrying.at(vertex)),
+                    (PLANT_FORAGE, *forage.get(vertex)),
+                    (MINERAL, *mineral.get(vertex)),
+                    (DETRITUS, *detritus.get(vertex)),
+                    (ANIMAL_PREY, *prey.get(vertex)),
+                    (MARINE_FORAGE, *marine.get(vertex)),
                 ];
                 let supply = axis_supply_with(&niche_weights, &per_axis);
                 // THIS LINE IS WHERE THE MAGNITUDE GOES (decision 0103 §4).
@@ -1575,7 +1575,7 @@ pub fn per_species_suitability_masked(
                 //
                 // THE WARREN's `availability` stays OUTSIDE that minimum, and
                 // deliberately. It is not a tolerance — it is a presence mask
-                // in {0.0, 1.0} answering "does this cell hold a cave at all",
+                // in {0.0, 1.0} answering "does this vertex hold a cave at all",
                 // and folding it into `tolerance_liebig` would type it as a
                 // fifth environmental axis, which it is not. (Arithmetically
                 // the two agree: for a mask in {0,1} against a tolerance in
@@ -1588,7 +1588,7 @@ pub fn per_species_suitability_masked(
                 // for a different reason than `availability`'s: it is not a
                 // presence mask, it is a GRADED factor in [0, 1] — an
                 // authored per-biome preference, resolved by
-                // `BiomeAffinity::factor` against this cell's biome name.
+                // `BiomeAffinity::factor` against this vertex's biome name.
                 // Where a mask in {0,1} makes `min` and `*` agree, a graded
                 // factor does not: folding it into `tolerance_liebig` would
                 // let it be silently overridden whenever some other axis
@@ -1599,7 +1599,7 @@ pub fn per_species_suitability_masked(
                 let affinity = species_affinity
                     .get(tag)
                     .and_then(|a| a.as_ref())
-                    .map_or(1.0, |a| a.factor(biome.get(cell).name()));
+                    .map_or(1.0, |a| a.factor(biome.get(vertex).name()));
                 saturated * tolerance_liebig(cn, s, floor_buf) * availability * affinity
             });
             (tag as u32, k)
@@ -1618,7 +1618,7 @@ pub fn per_species_suitability_masked(
 pub const CAPACITY_V_MAX: f64 = 140.2;
 
 /// Half-saturation supply for [`CAPACITY_V_MAX`]. DERIVED: the median
-/// `axis_supply` over land (n = 401,148 cell-species samples over five seeds). A
+/// `axis_supply` over land (n = 401,148 vertex-species samples over five seeds). A
 /// half-saturation constant belongs where the supply it half-saturates actually
 /// sits.
 /// type-audit: bare-ok(ratio)
@@ -1642,7 +1642,7 @@ pub const CAPACITY_K_M: f64 = 0.03004;
 /// decision 0103 doing exactly the work it was ratified for.
 ///
 /// **The Range: `species_realm` gates a `Subterranean` kind's capacity to zero
-/// on every cell without a cave**, the same direction
+/// on every vertex without a cave**, the same direction
 /// [`per_species_suitability`] enforces — this is that gate reaching the
 /// dimensional path settlement placement actually consumes, which is this
 /// campaign's whole point (see the module-level founding measurement).
@@ -1697,21 +1697,21 @@ pub fn per_species_capacity(
 /// today it cannot vary, not because it never could; a marine people or an era
 /// biome model would move it out of this struct.
 ///
-/// Every field is a dimensionless per-cell supply or insolation ratio, which is
+/// Every field is a dimensionless per-vertex supply or insolation ratio, which is
 /// what the axis dot product in [`axis_supply`] consumes.
 /// type-audit: bare-ok(ratio: insolation), bare-ok(ratio: mineral), bare-ok(ratio: detritus), bare-ok(ratio: marine)
 #[derive(Debug, Clone)]
 pub struct EraInvariantSupply {
-    /// Annual-mean insolation per cell — ~100% of the pipeline's cost, and a
+    /// Annual-mean insolation per vertex — ~100% of the pipeline's cost, and a
     /// pure function of latitude and obliquity, neither of which the era series
     /// varies.
-    pub insolation: hornvale_kernel::CellMap<f64>,
+    pub insolation: hornvale_kernel::VertexMap<f64>,
     /// Mineral supply — terrain only.
-    pub mineral: hornvale_kernel::CellMap<f64>,
+    pub mineral: hornvale_kernel::VertexMap<f64>,
     /// Detritus supply — terrain only.
-    pub detritus: hornvale_kernel::CellMap<f64>,
+    pub detritus: hornvale_kernel::VertexMap<f64>,
     /// Marine forage supply — see the caveat above.
-    pub marine: hornvale_kernel::CellMap<f64>,
+    pub marine: hornvale_kernel::VertexMap<f64>,
 }
 
 impl EraInvariantSupply {
@@ -1747,7 +1747,7 @@ impl EraInvariantSupply {
 /// that will use it (`era_substrate.rs` asserts it).
 ///
 /// **The Range: `species_realm` gates a `Subterranean` kind's capacity to zero
-/// on every cell without a cave**, mirroring [`per_species_suitability`]'s
+/// on every vertex without a cave**, mirroring [`per_species_suitability`]'s
 /// gate exactly — this is the entry point [`bake_history_from`] actually
 /// calls, so before this parameter existed the gate could move the readout
 /// and leave settlement placement untouched. `species_realm` is a parallel
@@ -1787,13 +1787,13 @@ pub fn per_species_capacity_at(
     );
     let substrate = substrate_field_at(geo, terrain, climate, &hoisted.insolation, adjust);
     // The Warren, carried to the capacity path: the subterranean reading of
-    // every cell, hoisted exactly as `per_species_suitability` hoists it —
+    // every vertex, hoisted exactly as `per_species_suitability` hoists it —
     // and since The Underworld, through the same shared derivation, so the
     // two paths cannot disagree about a chamber's depth or hydrology.
     let subterranean = subterranean_substrate_field(geo, terrain, &substrate);
-    let forage = forage_supply_field(geo, base_carrying.as_cell_map());
+    let forage = forage_supply_field(geo, base_carrying.as_vertex_map());
     let prey = prey_supply_field(geo, &forage);
-    // The Range, carried to the capacity path: the biome at every cell,
+    // The Range, carried to the capacity path: the biome at every vertex,
     // hoisted exactly as `per_species_suitability` hoists it.
     let biome = climate.biome_map();
 
@@ -1806,7 +1806,7 @@ pub fn per_species_capacity_at(
             // Two loop-invariant hoists from two campaigns, kept together
             // because they are complementary rather than competing: The Range
             // lifts the realm lookup, The Whetstone the niche weights. Both are
-            // read inside the per-cell closure below (`realm` by the cave gate,
+            // read inside the per-vertex closure below (`realm` by the cave gate,
             // `niche_weights` by `axis_supply_with`), so dropping either at the
             // merge would have been a silent regression rather than a build
             // error.
@@ -1815,19 +1815,19 @@ pub fn per_species_capacity_at(
                 .copied()
                 .unwrap_or(hornvale_species::HabitatRealm::SURFACE);
             // Loop-invariant, as in `per_species_suitability` above: six
-            // `BTreeMap` reads per species instead of six per cell per species.
+            // `BTreeMap` reads per species instead of six per vertex per species.
             let niche_weights = SUPPLY_AXIS_ORDER.map(|axis| bio.niche.weight(axis));
-            let raw = hornvale_kernel::CellMap::from_fn(geo, |cell| {
+            let raw = hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
                 // The Warren: which realm's substrate this kind is scored
                 // against, and — for a subterranean kind only — whether the
-                // cell actually holds a cave at all. A `Surface` kind's
+                // vertex actually holds a cave at all. A `Surface` kind's
                 // arithmetic is UNTOUCHED, exactly as `per_species_suitability`
                 // documents at its matching match.
                 let (s, availability) = match realm {
-                    hornvale_species::HabitatRealm::Surface => (substrate.get(cell), 1.0),
+                    hornvale_species::HabitatRealm::Surface => (substrate.get(vertex), 1.0),
                     hornvale_species::HabitatRealm::Subterranean => (
-                        subterranean.get(cell),
-                        if terrain.cave_at(cell).is_some() {
+                        subterranean.get(vertex),
+                        if terrain.cave_at(vertex).is_some() {
                             1.0
                         } else {
                             0.0
@@ -1839,12 +1839,12 @@ pub fn per_species_capacity_at(
                 };
                 // ORDER IS LOAD-BEARING — see the sibling loop.
                 let per_axis = [
-                    (PHOTOSYNTHATE, base_carrying.at(cell)),
-                    (PLANT_FORAGE, *forage.get(cell)),
-                    (MINERAL, *hoisted.mineral.get(cell)),
-                    (DETRITUS, *hoisted.detritus.get(cell)),
-                    (ANIMAL_PREY, *prey.get(cell)),
-                    (MARINE_FORAGE, *hoisted.marine.get(cell)),
+                    (PHOTOSYNTHATE, base_carrying.at(vertex)),
+                    (PLANT_FORAGE, *forage.get(vertex)),
+                    (MINERAL, *hoisted.mineral.get(vertex)),
+                    (DETRITUS, *hoisted.detritus.get(vertex)),
+                    (ANIMAL_PREY, *prey.get(vertex)),
+                    (MARINE_FORAGE, *hoisted.marine.get(vertex)),
                 ];
                 let supply = axis_supply_with(&niche_weights, &per_axis);
                 let headcount = CAPACITY_V_MAX * supply / (CAPACITY_K_M + supply);
@@ -1862,7 +1862,7 @@ pub fn per_species_capacity_at(
                 let affinity = species_affinity
                     .get(tag)
                     .and_then(|a| a.as_ref())
-                    .map_or(1.0, |a| a.factor(biome.get(cell).name()));
+                    .map_or(1.0, |a| a.factor(biome.get(vertex).name()));
                 headcount * tolerance_liebig(cn, s, floor_buf) * availability * affinity
             });
             let map = hornvale_kernel::ecology::CapacityMap::new(raw)
@@ -2004,10 +2004,10 @@ pub(crate) fn demography_report_with_beta_from(
 /// omnivore at `0.5` is NOT a predator by this threshold. Authored.
 const CARNIVORE_THRESHOLD: f64 = 0.5;
 
-/// The per-cell PREDATOR-PRESSURE field (The Quarry) — the ambient risk a quarry
+/// The per-vertex PREDATOR-PRESSURE field (The Quarry) — the ambient risk a quarry
 /// senses of predator territory: the REALIZED density (the coexistence stack, not
 /// mere carrying capacity) of CARNIVORE species (diet niche `ANIMAL_PREY`-dominant,
-/// see [`CARNIVORE_THRESHOLD`]) summed per cell and normalized to `[0, 1]` by the
+/// see [`CARNIVORE_THRESHOLD`]) summed per vertex and normalized to `[0, 1]` by the
 /// field's own maximum. Density, not capacity, is the honest signal: it is
 /// competition-aware (peoples outcompete predators near their settlements, so
 /// settled ground reads LOW even where the land COULD support carnivores) and
@@ -2027,7 +2027,7 @@ pub fn predator_pressure_from(
     wc: &WorldComponents,
     terrain: &hornvale_terrain::GeneratedTerrain,
     report: &hornvale_demography::DemographyReport,
-) -> hornvale_kernel::CellMap<f64> {
+) -> hornvale_kernel::VertexMap<f64> {
     let geo = terrain.geosphere();
     // Carnivore tags: the enumeration index into `wc.biosphere` (the same
     // build-local dense index the stack uses), for prey-dominant diets.
@@ -2040,36 +2040,39 @@ pub fn predator_pressure_from(
         })
         .map(|(i, _)| i as u32)
         .collect();
-    // Sum carnivore REALIZED density (the stack) per cell.
-    let carnivore_density: Vec<&hornvale_kernel::CellMap<f64>> = report
+    // Sum carnivore REALIZED density (the stack) per vertex.
+    let carnivore_density: Vec<&hornvale_kernel::VertexMap<f64>> = report
         .stack
         .density
         .iter()
         .filter(|(tag, _)| carnivore.contains(tag))
         .map(|(_, d)| d)
         .collect();
-    let raw = hornvale_kernel::CellMap::from_fn(geo, |cell| {
-        carnivore_density.iter().map(|d| *d.get(cell)).sum::<f64>()
+    let raw = hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
+        carnivore_density
+            .iter()
+            .map(|d| *d.get(vertex))
+            .sum::<f64>()
     });
     let max = raw.iter().map(|(_, v)| *v).fold(0.0_f64, f64::max);
-    hornvale_kernel::CellMap::from_fn(geo, |cell| {
+    hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
         if max > 0.0 {
-            (*raw.get(cell) / max).clamp(0.0, 1.0)
+            (*raw.get(vertex) / max).clamp(0.0, 1.0)
         } else {
             0.0
         }
     })
 }
 
-/// The per-cell VESTIGE-DREAD field (The Vestige) — the ambient dread a cell's
-/// subsurface palimpsest radiates: the MAX dread over the cell's vestige
-/// stack ([`vestiges_at`]'s per-cell semantics; an empty stack reads `0.0`),
+/// The per-vertex VESTIGE-DREAD field (The Vestige) — the ambient dread a vertex's
+/// subsurface palimpsest radiates: the MAX dread over the vertex's vestige
+/// stack ([`vestiges_at`]'s per-vertex semantics; an empty stack reads `0.0`),
 /// already `[0, 1]` (each [`Vestige::dread`] is authored in-range, so no
 /// field-wide normalization is needed here — max, not sum, because dread is a
 /// warning signal a wanderer SENSES, not an additive hazard load). Built over
 /// [`vestiges_field`] (one ledger scan for the whole world) rather than
-/// calling `vestiges_at` per cell, which would rescan the ledger's committed
-/// occupation history once per cell. Derived from committed history
+/// calling `vestiges_at` per vertex, which would rescan the ledger's committed
+/// occupation history once per vertex. Derived from committed history
 /// (occupation records) and terrain (the pre-human gate-scar presence test):
 /// no seed, no facts, byte-identical across calls. EXPOSED but not yet
 /// consumed: this is the hook (spec §9.2) — wiring it into the vessel's
@@ -2078,16 +2081,22 @@ pub fn predator_pressure_from(
 // Named construction site (decision 0092): reconstructs terrain for its own
 // readout.
 #[allow(clippy::disallowed_methods)]
-pub fn vestige_dread(world: &World) -> Result<hornvale_kernel::CellMap<f64>, BuildError> {
+pub fn vestige_dread(world: &World) -> Result<hornvale_kernel::VertexMap<f64>, BuildError> {
     let terrain = terrain_of(world)?;
     let field = vestiges_field(world, &terrain);
-    Ok(hornvale_kernel::CellMap::from_fn(
+    Ok(hornvale_kernel::VertexMap::from_fn(
         terrain.geosphere(),
-        |cell| field.get(cell).iter().map(|v| v.dread).fold(0.0, f64::max),
+        |vertex| {
+            field
+                .get(vertex)
+                .iter()
+                .map(|v| v.dread)
+                .fold(0.0, f64::max)
+        },
     ))
 }
 
-/// The per-cell PREY-PRESSURE field (The Teeth) — the ambient draw a HUNTER
+/// The per-vertex PREY-PRESSURE field (The Teeth) — the ambient draw a HUNTER
 /// senses of prey territory, the anti-symmetric DUAL of [`predator_pressure_from`].
 /// Where the predator field sums CARNIVORE realized density (so a quarry flees
 /// it), this sums the PREY BASE's realized density (so a carnivore's hunger is
@@ -2110,7 +2119,7 @@ pub fn prey_pressure_from(
     wc: &WorldComponents,
     terrain: &hornvale_terrain::GeneratedTerrain,
     report: &hornvale_demography::DemographyReport,
-) -> hornvale_kernel::CellMap<f64> {
+) -> hornvale_kernel::VertexMap<f64> {
     let geo = terrain.geosphere();
     // Prey-base tags (the dense stack index): a mobile-beast, non-carnivore
     // species — not a settling people (`social_form != Settled`), not a
@@ -2130,21 +2139,21 @@ pub fn prey_pressure_from(
         })
         .map(|(i, _)| i as u32)
         .collect();
-    // Sum prey-base REALIZED density (the stack) per cell.
-    let prey_density: Vec<&hornvale_kernel::CellMap<f64>> = report
+    // Sum prey-base REALIZED density (the stack) per vertex.
+    let prey_density: Vec<&hornvale_kernel::VertexMap<f64>> = report
         .stack
         .density
         .iter()
         .filter(|(tag, _)| prey.contains(tag))
         .map(|(_, d)| d)
         .collect();
-    let raw = hornvale_kernel::CellMap::from_fn(geo, |cell| {
-        prey_density.iter().map(|d| *d.get(cell)).sum::<f64>()
+    let raw = hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
+        prey_density.iter().map(|d| *d.get(vertex)).sum::<f64>()
     });
     let max = raw.iter().map(|(_, v)| *v).fold(0.0_f64, f64::max);
-    hornvale_kernel::CellMap::from_fn(geo, |cell| {
+    hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
         if max > 0.0 {
-            (*raw.get(cell) / max).clamp(0.0, 1.0)
+            (*raw.get(vertex) / max).clamp(0.0, 1.0)
         } else {
             0.0
         }
@@ -2153,7 +2162,7 @@ pub fn prey_pressure_from(
 
 /// The `k` densest WILD concentrations (The Wilding) — the herds and lairs of
 /// distinct MOBILE BEAST species, as `(species label, unit-sphere position)`.
-/// From [`demography_report_from`]'s coexistence-stack settlements (the per-cell
+/// From [`demography_report_from`]'s coexistence-stack settlements (the per-vertex
 /// density condensations), keeps those whose DOMINANT species is a mobile beast —
 /// *not* a settling people (`social_form != Settled`) and *not*
 /// a rooted `Autotroph` (a plant is placed but never an *agent* that walks and
@@ -2214,7 +2223,7 @@ pub fn wild_concentrations_from(
     // Each mobile beast's DENSEST home — the stack settlement where its local
     // abundance (its composition fraction × the catchment biomass) peaks. So a
     // charismatic beast present but never *dominant* (an apex over a wide range,
-    // a herd sharing its patch) still gets a home, not only the cell-dominators.
+    // a herd sharing its patch) still gets a home, not only the vertex-dominators.
     let mut best: std::collections::BTreeMap<String, ([f64; 3], f64)> =
         std::collections::BTreeMap::new();
     for s in &report.stack_settlements {
@@ -2385,8 +2394,9 @@ pub fn climate_from(
     let sky = sky_of(world)?;
     let geo = terrain.geosphere();
     let elevation = &terrain.globe().elevation;
-    let seafloor =
-        hornvale_kernel::CellMap::from_fn(geo, |cell| seafloor_feature(terrain.boundary_at(cell)));
+    let seafloor = hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
+        seafloor_feature(terrain.boundary_at(vertex))
+    });
     let (insolation, obliquity_deg, regime, year_length_std, year_phase_offset) =
         stellar_inputs(&sky);
     Ok(GeneratedClimate::generate(&ClimateInputs {
@@ -2404,7 +2414,7 @@ pub fn climate_from(
     }))
 }
 
-/// The four v1 environmental fields at one cell — the substrate the habitat
+/// The four v1 environmental fields at one vertex — the substrate the habitat
 /// model (The Niche) scores a species' condition niche against.
 /// type-audit: bare-ok(diagnostic-value: temperature_c), bare-ok(ratio: moisture), bare-ok(diagnostic-value: insolation)
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -2419,7 +2429,7 @@ pub struct Substrate {
     /// Height above this world's sea level, metres — NOT the raw
     /// [`hornvale_kernel::ReferenceElevation`], whose isostatic datum sits
     /// 1.7–3.5 km below sea level and moves from world to world. Negative on
-    /// ocean cells (they are still scored; the supply term is what empties
+    /// ocean vertices (they are still scored; the supply term is what empties
     /// them). A [`SeaLevelHeight`], not a bare `f64` (The Benchmark) — the
     /// datum this field's name once merely claimed, the type now enforces.
     pub height_asl_m: SeaLevelHeight,
@@ -2430,7 +2440,7 @@ pub struct Substrate {
 /// standard daily-mean insolation geometric factor (Milankovitch-cycle solar
 /// forcing, the same formula climatology textbooks use for
 /// latitude-by-latitude annual insolation) over `N` uniform samples of the
-/// orbit — a static v1 approximation; seasonal `K(cell, t)` is deferred (The
+/// orbit — a static v1 approximation; seasonal `K(vertex, t)` is deferred (The
 /// Niche spec §8). All transcendentals route through `hornvale_kernel::math`
 /// for cross-platform byte-identity (decision 0041).
 /// type-audit: bare-ok(diagnostic-value: latitude_deg), bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar), bare-ok(diagnostic-value: return)
@@ -2463,7 +2473,7 @@ pub fn annual_mean_insolation(
     insolation_scalar * geom
 }
 
-/// The per-cell substrate field for a built world's terrain/climate/sky — the
+/// The per-vertex substrate field for a built world's terrain/climate/sky — the
 /// four environmental readings The Niche's habitat model scores each
 /// species' condition niche against. Pure: draws nothing from the seed, only
 /// the world's already-committed terrain/climate/sky.
@@ -2493,7 +2503,7 @@ pub fn substrate_field(
     obliquity_deg: f64,
     insolation_scalar: f64,
     regime: &RotationRegime,
-) -> hornvale_kernel::CellMap<Substrate> {
+) -> hornvale_kernel::VertexMap<Substrate> {
     let insolation = insolation_field(geo, obliquity_deg, insolation_scalar, regime);
     substrate_field_at(
         geo,
@@ -2504,12 +2514,12 @@ pub fn substrate_field(
     )
 }
 
-/// The per-cell insolation field, split out of [`substrate_field`] so it can be
+/// The per-vertex insolation field, split out of [`substrate_field`] so it can be
 /// **hoisted** (The Tense §3.1).
 ///
 /// It is ~100% of `substrate_field`'s cost and ~82% of the whole capacity
 /// pipeline's: `annual_mean_insolation` integrates 48 orbital samples with ~9
-/// libm transcendentals each, about 430 per cell and 17.6M per field, while
+/// libm transcendentals each, about 430 per vertex and 17.6M per field, while
 /// temperature, moisture and elevation together measure 0.0 ms.
 ///
 /// It is also **era-invariant under the era model that exists**: `bake_eras`
@@ -2519,7 +2529,7 @@ pub fn substrate_field(
 /// cost of an era is the ~2 ms of everything else. If a later campaign makes
 /// obliquity vary per era — orbital forcing does change it — this becomes
 /// era-varying and the cost returns; memoising the integral on the exact
-/// latitude bit pattern would recover ~4× of it byte-identically (40,962 cells
+/// latitude bit pattern would recover ~4× of it byte-identically (40,962 vertices
 /// carry only 10,301 distinct latitudes).
 /// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar), bare-ok(ratio: return)
 pub fn insolation_field(
@@ -2527,13 +2537,13 @@ pub fn insolation_field(
     obliquity_deg: f64,
     insolation_scalar: f64,
     regime: &RotationRegime,
-) -> hornvale_kernel::CellMap<f64> {
-    hornvale_kernel::CellMap::from_fn(geo, |cell| match regime {
+) -> hornvale_kernel::VertexMap<f64> {
+    hornvale_kernel::VertexMap::from_fn(geo, |vertex| match regime {
         RotationRegime::Spinning { .. } => {
-            annual_mean_insolation(geo.coord(cell).latitude, obliquity_deg, insolation_scalar)
+            annual_mean_insolation(geo.coord(vertex).latitude, obliquity_deg, insolation_scalar)
         }
         RotationRegime::Locked => {
-            insolation_scalar * hornvale_climate::substellar_cosine(geo.position(cell)).max(0.0)
+            insolation_scalar * hornvale_climate::substellar_cosine(geo.position(vertex)).max(0.0)
         }
     })
 }
@@ -2579,23 +2589,23 @@ pub fn substrate_field_at(
     geo: &Geosphere,
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
-    insolation: &hornvale_kernel::CellMap<f64>,
+    insolation: &hornvale_kernel::VertexMap<f64>,
     adjust: &EraAdjust,
-) -> hornvale_kernel::CellMap<Substrate> {
-    hornvale_kernel::CellMap::from_fn(geo, |cell| Substrate {
-        temperature_c: (climate.mean_temperature_at(cell) + adjust.temp_offset).get(),
-        moisture: climate.moisture_at(cell),
-        // Hoisted, not recomputed per cell: insolation is era-INVARIANT and
+) -> hornvale_kernel::VertexMap<Substrate> {
+    hornvale_kernel::VertexMap::from_fn(geo, |vertex| Substrate {
+        temperature_c: (climate.mean_temperature_at(vertex) + adjust.temp_offset).get(),
+        moisture: climate.moisture_at(vertex),
+        // Hoisted, not recomputed per vertex: insolation is era-INVARIANT and
         // ~100% of this pipeline's cost, so it is built once and passed in.
         // Main's side computes it inline per rotation regime, which is the
         // pre-hoist shape this campaign replaced.
-        insolation: *insolation.get(cell),
+        insolation: *insolation.get(vertex),
         // The re-datum, taking MAIN's named conversion (`ReferenceElevation::
         // above`, decision 0008) over this branch's raw typed subtraction —
         // same signed metre difference, better named — but against THIS ERA's
         // sea level rather than today's. That era-varying half must survive the
         // rename: a glacial low-stand exposes shelf as land with no mask.
-        height_asl_m: terrain.elevation_at(cell).above(adjust.sea_level),
+        height_asl_m: terrain.elevation_at(vertex).above(adjust.sea_level),
     })
 }
 
@@ -2675,7 +2685,7 @@ const SEEPAGE_REACH_M: f64 = 225.0;
 /// A chamber's environmental substrate (The Deep Realm, Task 6) — what
 /// [`hornvale_species::ConditionNiche`] axes a subterranean species is scored
 /// against, derived from `surface`, the already-built [`Substrate`] of the
-/// cell the chamber lies beneath. Pure and seed-free: two calls with the same
+/// vertex the chamber lies beneath. Pure and seed-free: two calls with the same
 /// `surface` are byte-identical.
 ///
 /// **This function never constructs a [`hornvale_climate::facets::BiomeExpr`]
@@ -2710,7 +2720,7 @@ const SEEPAGE_REACH_M: f64 = 225.0;
 /// rather than this function growing a second, redundant depth coordinate that
 /// could disagree with the first.
 ///
-/// **That advice was written naming spec §4.6's `(CellId, Rung)` re-key as the
+/// **That advice was written naming spec §4.6's `(Vertex, Rung)` re-key as the
 /// obvious caller, and the re-key shipped without taking it.** Task 8
 /// ([`delve_seating`]) needs a depth per rung and uses the rung's **top**
 /// (`delta_t_range_of(rung).0`), matching `chamber`'s `stratum_at` so the
@@ -2723,10 +2733,10 @@ const SEEPAGE_REACH_M: f64 = 225.0;
 /// Each axis:
 ///
 /// - **temperature** is [`hornvale_terrain::temperature_at_depth`] of the
-///   surface datum at `depth_m` under this cell's `gradient`. The datum is
+///   surface datum at `depth_m` under this vertex's `gradient`. The datum is
 ///   still [`GeneratedClimate::mean_temperature_at`]'s annual mean; what is
 ///   new is that the rock's own heat is added to it, so a chamber is warmer
-///   than the cell above it by `gradient × depth` and **two chambers at equal
+///   than the vertex above it by `gradient × depth` and **two chambers at equal
 ///   depth under different crust differ** — 700 m down is +10.5 K under a
 ///   15 K/km craton and +21 K under 30 K/km young crust. This is the axis the
 ///   pre-Underworld model passed through unchanged, and passing it through was
@@ -2742,7 +2752,7 @@ const SEEPAGE_REACH_M: f64 = 225.0;
 ///   where one of five environmental axes has collapsed. Do not invent light
 ///   underground to make this axis look busier.
 /// - **height_asl_m** is `surface.height_asl_m` UNCHANGED — height above sea
-///   level of the cell the chamber sits beneath. (The Benchmark renamed this
+///   level of the vertex the chamber sits beneath. (The Benchmark renamed this
 ///   field from `elevation` and typed it `SeaLevelHeight`.) The chamber's
 ///   depth is now a real parameter, but it is *not* subtracted from this
 ///   field: `height_asl_m` is scored against species elevation niches
@@ -2762,17 +2772,17 @@ const SEEPAGE_REACH_M: f64 = 225.0;
 /// carry more than one chamber reading, which pre-change was impossible by
 /// construction. (The distinct-pair count rises too — 691 → 807, 1323 → 1483,
 /// 1030 → 1172 — but only modestly, because the surface temperature already
-/// varied per cell and so the pre-change reading was never one value. An
+/// varied per vertex and so the pre-change reading was never one value. An
 /// earlier draft of this doc said it was; that claim had no control behind
 /// it.) The reason nothing moved is that the live consumer cannot see any of
 /// it. [`tolerance_liebig`] (The Tilth, stage 5) floors temperature, moisture
 /// and insolation by the sovereignty floor and calls elevation with floor
-/// `0.0`, so on a cave-bearing cell the unfloored elevation term sits below the
+/// `0.0`, so on a cave-bearing vertex the unfloored elevation term sits below the
 /// others and **is** the minimum; improving the three floored axes changes
 /// nothing. `warren_readout`'s P1 tripwire pins exactly this as a falsified
 /// prediction and reads `ratio = 1.000` for rust-monster, xorn and drow both
 /// before and after this task (pooled means 0.039860 / 0.015078 / 0.029498,
-/// unchanged to six figures over 40,362 cave-bearing cells across 25 seeds).
+/// unchanged to six figures over 40,362 cave-bearing vertices across 25 seeds).
 ///
 /// So this task ships a **derivation whose consumer has not arrived**, which
 /// in a campaign whose headline finding is dangling seams has to be said out
@@ -2780,7 +2790,7 @@ const SEEPAGE_REACH_M: f64 = 225.0;
 /// consumers are named and in this spec: §4.5's `EnvironmentNiche` states a
 /// kind's preference in the same basis, and §4.6's realm-aware capacity scores
 /// an underworld community against the chamber's conditions rather than the
-/// surface cell's. Neither can be built on a constant, which is why this comes
+/// surface vertex's. Neither can be built on a constant, which is why this comes
 /// first; but until one of them lands, the difference measured here is real
 /// and unread.
 ///
@@ -2788,7 +2798,7 @@ const SEEPAGE_REACH_M: f64 = 225.0;
 /// deliberate.** That is the rule that a `ChamberOrigin::Made` chamber is dry
 /// regardless of the water table (spec §4.2.1 clause 2). It does not gain a
 /// caller here: no origin is available at this call site — the live callers
-/// derive one substrate *per cell*, before any chamber address exists — so
+/// derive one substrate *per vertex*, before any chamber address exists — so
 /// consuming `is_sump` would mean passing a literal `ChamberOrigin::Found`, at
 /// which point the call is exactly `is_phreatic` with a constant discriminant.
 /// That would read as closing the disclosed gap while closing nothing.
@@ -2892,11 +2902,11 @@ pub fn chamber_moisture_at_reach(
     VADOSE_DRY_MOISTURE + (PHREATIC_MOISTURE - VADOSE_DRY_MOISTURE) * seepage
 }
 
-/// [`subterranean_substrate`] over every cell of the globe — the field a
+/// [`subterranean_substrate`] over every vertex of the globe — the field a
 /// `Subterranean` kind is scored against, hoisted exactly as the surface
 /// `substrate` field is.
 ///
-/// Extracted rather than inlined at each caller because the four per-cell
+/// Extracted rather than inlined at each caller because the four per-vertex
 /// inputs a chamber reading needs (gradient, porosity, water table, depth) are
 /// four opportunities for two call sites to disagree, and this crate has two:
 /// [`per_species_suitability_masked`] (the siting/readout path) and
@@ -2905,9 +2915,9 @@ pub fn chamber_moisture_at_reach(
 /// to one and not the other moved a readout while leaving placement untouched;
 /// one derivation with two callers cannot reproduce that.
 ///
-/// **The cell's depth is its cave's `depth_reach_m` — the deepest point the
+/// **The vertex's depth is its cave's `depth_reach_m` — the deepest point the
 /// void actually reaches (spec §4.0's budget in metres).** A column offers a
-/// range of depths and one `Substrate` per cell has to pick one; the reach is
+/// range of depths and one `Substrate` per vertex has to pick one; the reach is
 /// the choice that is already load-bearing elsewhere (`chamber::chamber_exists`
 /// gates the lattice's floor on exactly this number through `rung_at_depth`),
 /// so the substrate and the lattice agree about how deep a column goes rather
@@ -2917,9 +2927,9 @@ pub fn chamber_moisture_at_reach(
 ///
 /// **A per-rung substrate is still deferred, and this doc used to defer it to
 /// a task that has since shipped without doing it.** Spec §4.6's
-/// `(CellId, Rung)` re-key landed (Task 8, [`delve_seating`]); it re-keyed the
+/// `(Vertex, Rung)` re-key landed (Task 8, [`delve_seating`]); it re-keyed the
 /// node index and added **no** per-rung substrate at all. This field is still
-/// evaluated once per cell at `depth_reach_m`, and
+/// evaluated once per vertex at `depth_reach_m`, and
 /// [`delve_seating::chamber_fit`] scores a rung against the corpus rather than
 /// against a substrate read at that rung's depth. So the deferral is real and
 /// now points nowhere: **it is unowned work, not scheduled work**, and it is
@@ -2930,34 +2940,36 @@ pub fn chamber_moisture_at_reach(
 /// a row of spikes rather than a spread — seed 42's fattest single value holds
 /// 23.1% of its caves (`underworld_ladder_probe`) — and a term derived from
 /// reach alone inherits that. Temperature does not, because the gradient and
-/// the surface datum both vary across those cells; a future term that reads
-/// reach *without* a per-cell co-factor should expect the atom and check for
+/// the surface datum both vary across those vertices; a future term that reads
+/// reach *without* a per-vertex co-factor should expect the atom and check for
 /// it, the way Task 2 learned to.
 ///
-/// A cell with no cave gets `0.0` — there is no chamber, so any depth would be
+/// A vertex with no cave gets `0.0` — there is no chamber, so any depth would be
 /// a claim about a place that does not exist, and zero is the only one that
-/// asserts nothing. Every live consumer multiplies such a cell by an
-/// `availability` of `0.0`; the readout batteries that score all land cells
-/// read it as "the surface cell's own temperature with cave hydrology", which
+/// asserts nothing. Every live consumer multiplies such a vertex by an
+/// `availability` of `0.0`; the readout batteries that score all land vertices
+/// read it as "the surface vertex's own temperature with cave hydrology", which
 /// is the honest counterfactual for a column that never opened.
 pub fn subterranean_substrate_field(
     geo: &Geosphere,
     terrain: &GeneratedTerrain,
-    surface: &hornvale_kernel::CellMap<Substrate>,
-) -> hornvale_kernel::CellMap<Substrate> {
-    hornvale_kernel::CellMap::from_fn(geo, |cell| {
-        let s = *surface.get(cell);
-        let porosity = terrain.material_at(cell).porosity;
+    surface: &hornvale_kernel::VertexMap<Substrate>,
+) -> hornvale_kernel::VertexMap<Substrate> {
+    hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
+        let s = *surface.get(vertex);
+        let porosity = terrain.material_at(vertex).porosity;
         let water_table_m = hornvale_terrain::water_table_depth_m(
-            terrain.drainage_at(cell),
+            terrain.drainage_at(vertex),
             porosity,
             s.height_asl_m.get(),
         );
-        let depth_m = terrain.cave_at(cell).map_or(0.0, |cave| cave.depth_reach_m);
+        let depth_m = terrain
+            .cave_at(vertex)
+            .map_or(0.0, |cave| cave.depth_reach_m);
         subterranean_substrate(
             s,
             depth_m,
-            terrain.geothermal_gradient_at(cell),
+            terrain.geothermal_gradient_at(vertex),
             water_table_m,
             porosity,
         )
@@ -2973,7 +2985,7 @@ const ICE_STEP_DAYS: f64 = 2_000.0 * 365.25;
 const CLIMATE_ERAS: usize = 25;
 
 /// Absolute freezing threshold for the deep-time snowline diagnostic
-/// (`hornvale_paleoclimate::glaciated`), °C. A cell is under ice once its
+/// (`hornvale_paleoclimate::glaciated`), °C. A vertex is under ice once its
 /// temperature drops below this; the present temperature field varies by
 /// latitude (~+45 °C equator to ~−15 °C pole — see
 /// `domains/climate/src/temperature.rs`), so this absolute threshold —
@@ -2982,7 +2994,7 @@ const CLIMATE_ERAS: usize = 25;
 /// or bare at once. Deliberately set colder than
 /// `hornvale_climate::habitability::HABITABLE_MIN_C` (−5 °C, not directly
 /// importable across the domain boundary, but a known constant): equal
-/// thresholds would partition every land cell into exactly "iced" or
+/// thresholds would partition every land vertex into exactly "iced" or
 /// "habitable" with no remainder, leaving no land cold-but-bare enough to
 /// read as pure fossil shoreline once the ice and refugia masks are laid on
 /// top (`render::paleo_ascii`'s priority order is envelope > refugium >
@@ -3004,9 +3016,9 @@ struct EraContext<'a> {
     /// The shared geosphere (terrain's, reused for climate's grid).
     geo: &'a Geosphere,
     /// Present relief; elevation does not change across eras.
-    elevation: &'a hornvale_kernel::CellMap<ReferenceElevation>,
-    /// Seafloor feature per cell, derived once from terrain's boundaries.
-    seafloor: &'a hornvale_kernel::CellMap<SeafloorFeature>,
+    elevation: &'a hornvale_kernel::VertexMap<ReferenceElevation>,
+    /// Seafloor feature per vertex, derived once from terrain's boundaries.
+    seafloor: &'a hornvale_kernel::VertexMap<SeafloorFeature>,
     /// Insolation relative to Earth, from the world's sky (constant per world).
     insolation: f64,
     /// The world's rotation regime (constant per world).
@@ -3021,7 +3033,7 @@ struct EraContext<'a> {
     /// `paleoclimate_of`'s present-temperature field against [`FREEZE_C`],
     /// no albedo offset) — the baseline every era's advance is measured
     /// against.
-    present_ice: &'a hornvale_kernel::CellMap<bool>,
+    present_ice: &'a hornvale_kernel::VertexMap<bool>,
     /// The absolute snowline threshold ([`FREEZE_C`], wrapped once).
     freeze: Temperature,
     /// The world seed — threaded through so `glacial_maximum_habitable`'s
@@ -3086,7 +3098,7 @@ fn climate_at_era(ctx: &EraContext, inputs: &EraInputs) -> EraClimate {
     // production path for combining the two, together with `Sub` —
     // decision 0008).
     let era_temperature =
-        hornvale_kernel::CellMap::from_fn(geo, |c| *mean_temp.get(c) + inputs.temp_offset);
+        hornvale_kernel::VertexMap::from_fn(geo, |c| *mean_temp.get(c) + inputs.temp_offset);
     // Ice is diagnosed against an ABSOLUTE snowline (`ctx.freeze`), not an
     // anomaly, so the same global cooling offset produces a spatially
     // structured mask (high latitudes ice first) rather than an all-or-
@@ -3103,17 +3115,17 @@ fn climate_at_era(ctx: &EraContext, inputs: &EraInputs) -> EraClimate {
     let era_ice =
         hornvale_paleoclimate::glaciated(geo, elevation, &era_temperature, ctx.freeze, sea_level);
     let advance =
-        hornvale_kernel::CellMap::from_fn(geo, |c| *era_ice.get(c) && !*ctx.present_ice.get(c));
+        hornvale_kernel::VertexMap::from_fn(geo, |c| *era_ice.get(c) && !*ctx.present_ice.get(c));
     // This same `advance` mask is both summarized into `ice_fraction` below
     // and stored on the returned `EraClimate` unchanged, so
     // `strata::extract`'s envelope (an OR-union of every era's `ice` field)
-    // can never disagree with `ice_fraction` about which cells this era
+    // can never disagree with `ice_fraction` about which vertices this era
     // advanced — one mask, two consumers.
     let land = geo
-        .cells()
+        .vertices()
         .filter(|c| *elevation.get(*c) >= sea_level)
         .count();
-    let advanced = geo.cells().filter(|c| *advance.get(*c)).count();
+    let advanced = geo.vertices().filter(|c| *advance.get(*c)).count();
     let ice_fraction = if land == 0 {
         0.0
     } else {
@@ -3124,7 +3136,7 @@ fn climate_at_era(ctx: &EraContext, inputs: &EraInputs) -> EraClimate {
         ice: advance,
         // Placeholder — see the doc comment above. Filled in for the
         // glacial-maximum era only, by `glacial_maximum_habitable`.
-        habitable: hornvale_kernel::CellMap::from_fn(geo, |_| false),
+        habitable: hornvale_kernel::VertexMap::from_fn(geo, |_| false),
         sea_level,
         ice_fraction,
     }
@@ -3140,7 +3152,7 @@ fn climate_at_era(ctx: &EraContext, inputs: &EraInputs) -> EraClimate {
 fn glacial_maximum_habitable(
     ctx: &EraContext,
     inputs: &EraInputs,
-) -> hornvale_kernel::CellMap<bool> {
+) -> hornvale_kernel::VertexMap<bool> {
     let geo = ctx.geo;
     let elevation = ctx.elevation;
     let sea_level = inputs.sea_level;
@@ -3157,10 +3169,10 @@ fn glacial_maximum_habitable(
         seed: ctx.seed,
         greenhouse_forcing_k: ctx.greenhouse_forcing_k,
     });
-    let era_temperature = hornvale_kernel::CellMap::from_fn(geo, |c| {
+    let era_temperature = hornvale_kernel::VertexMap::from_fn(geo, |c| {
         climate.mean_temperature_at(c) + inputs.temp_offset
     });
-    hornvale_kernel::CellMap::from_fn(geo, |c| {
+    hornvale_kernel::VertexMap::from_fn(geo, |c| {
         hornvale_climate::is_habitable(
             *era_temperature.get(c),
             climate.moisture_at(c),
@@ -3208,8 +3220,9 @@ pub fn paleoclimate_from(
     };
     let forcing = &system.forcing;
 
-    let seafloor =
-        hornvale_kernel::CellMap::from_fn(geo, |cell| seafloor_feature(terrain.boundary_at(cell)));
+    let seafloor = hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
+        seafloor_feature(terrain.boundary_at(vertex))
+    });
     // `mean_temperature` (used just below, for the present, and inside
     // `climate_at_era` for every other era) does not read obliquity at all
     // — only the seasonal-swing/moisture terms do, and neither the ice
@@ -3221,7 +3234,7 @@ pub fn paleoclimate_from(
     let greenhouse_forcing = greenhouse_forcing_k(&sky);
 
     // The world's own unforced present temperature (era_day = 0, no albedo
-    // offset), one per cell, absolute — the field every era's offset is
+    // offset), one per vertex, absolute — the field every era's offset is
     // added to, and (via `present_ice` below) the baseline every era's
     // advance is measured against (see `climate_at_era`). Read directly off
     // `hornvale_climate::temperature::mean_temperature` — the same function
@@ -3232,7 +3245,7 @@ pub fn paleoclimate_from(
     // (astronomy's forcing contract), the same value `stellar_inputs`
     // returns, so this reproduces `climate_of`'s present reading
     // byte-for-byte with no full regeneration at all. Already a
-    // `CellMap<Temperature>`, so no wrapping is needed before `glaciated`.
+    // `VertexMap<Temperature>`, so no wrapping is needed before `glaciated`.
     let present_temperature = hornvale_climate::temperature::mean_temperature(
         geo,
         &elevation,
@@ -3338,7 +3351,7 @@ pub fn paleoclimate_from(
 }
 
 /// The habitability series the deep-history bake replays. The bake's live
-/// mask needs a full habitability field for EVERY era (a cell's effective
+/// mask needs a full habitability field for EVERY era (a vertex's effective
 /// capacity is `capacity * factor(era)`, and `factor` reads both the era's
 /// ice and its habitable mask) — but `paleoclimate_of` fills only the
 /// glacial-maximum era's habitable field (every other era's is a discarded
@@ -3350,7 +3363,7 @@ pub fn paleoclimate_from(
 ///   temperature (that era's mean field plus its albedo-cooling offset) sits
 ///   at or above the freezing snowline. That is precisely the mask whose
 ///   swing drives displacement — a colder era pushes the snowline equatorward
-///   and turns high-latitude cells hostile, forcing migration — and it costs
+///   and turns high-latitude vertices hostile, forcing migration — and it costs
 ///   one mean-temperature field per era (no moisture/biome work), the same
 ///   order the coarse ice diagnostic already pays.
 /// - **The day-axis is re-based onto the bake's `[start_year, end_year)`
@@ -3359,15 +3372,15 @@ pub fn paleoclimate_from(
 ///   millennia rather than seeing every era stamped in deep-negative time.
 ///
 /// On the constant sky (no orbital forcing) there is no deep time: a single
-/// present-era mask is returned and the bake sees a stable world — no cell
+/// present-era mask is returned and the bake sees a stable world — no vertex
 /// ever flips habitability, so climate displacement cannot fire at all. What
 /// displacement remains is **predation**: The Tumult made crowding a growth
 /// term only (it no longer starts fights), and a raid keys off the *value*
-/// gradient between neighbouring cells, which a frozen mask preserves intact.
+/// gradient between neighbouring vertices, which a frozen mask preserves intact.
 /// A constant-sky world is therefore quiet in migrations and not in conquests.
 ///
 /// The `ice` field is left empty on every era: the snowline is already folded
-/// into `habitable` (an iced cell reads below-freezing, hence not habitable),
+/// into `habitable` (an iced vertex reads below-freezing, hence not habitable),
 /// so `factor` gates purely on habitability and never double-counts ice.
 // Returns the era series AND the per-era `EraAdjust` beside it (The Tense
 // §3.1). `EraClimate` carries `sea_level` but NOT the albedo temperature
@@ -3391,7 +3404,7 @@ fn bake_eras(
     let freeze = Temperature::new(FREEZE_C).expect("FREEZE_C is finite");
 
     // The era's snowline. **The bake no longer reads this** (The Tense, step 4):
-    // `Bake::factor` gates on ice alone, and whether a cell can hold a people is
+    // `Bake::factor` gates on ice alone, and whether a vertex can hold a people is
     // now asked of that people's own capacity there. This is kept, and kept
     // honest, as a DIAGNOSTIC — the value is real and anything inspecting an
     // `EraClimate` still gets the snowline it claims to carry — but it binds
@@ -3399,7 +3412,7 @@ fn bake_eras(
     //
     // Historical note, since the two halves went separately. **The land test
     // that used to be conjoined here went at step 2**: `carrying_inputs_at` now takes `is_land` against the era's
-    // own sea level, so a cell that is sea this era already has zero base
+    // own sea level, so a vertex that is sea this era already has zero base
     // carrying capacity, zero forage and zero prey — and therefore zero
     // per-species capacity, which `vacant_for` and `eff_capacity` both gate on.
     // Keeping the test here as well made the mask a second, redundant oracle for
@@ -3411,12 +3424,12 @@ fn bake_eras(
     // level never rises above the present's, so ocean-at-this-era implies
     // ocean-at-present, and the two supply fields that are still computed
     // against the present shoreline (mineral, detritus) are zero there. If the
-    // ice model ever admits a high-stand, a drowned present-land cell would keep
+    // ice model ever admits a high-stand, a drowned present-land vertex would keep
     // non-zero mineral and detritus supply and become settleable sea. That is
     // asserted, not trusted — `era_substrate.rs::ocean_is_never_settleable_at_any_era`.
     let livable_mask = |sea_level: ReferenceElevation,
                         offset: hornvale_kernel::TempAnomaly|
-     -> hornvale_kernel::CellMap<bool> {
+     -> hornvale_kernel::VertexMap<bool> {
         let mean = hornvale_climate::temperature::mean_temperature(
             geo,
             &elevation,
@@ -3425,7 +3438,7 @@ fn bake_eras(
             &regime,
             greenhouse_forcing,
         );
-        hornvale_kernel::CellMap::from_fn(geo, |c| (*mean.get(c) + offset).get() >= freeze.get())
+        hornvale_kernel::VertexMap::from_fn(geo, |c| (*mean.get(c) + offset).get() >= freeze.get())
     };
 
     // No forcing to replay (constant sky) → one present-era mask, no swing.
@@ -3437,7 +3450,7 @@ fn bake_eras(
         return Ok((
             vec![EraClimate {
                 day: cfg.start_year,
-                ice: hornvale_kernel::CellMap::from_fn(geo, |_| false),
+                ice: hornvale_kernel::VertexMap::from_fn(geo, |_| false),
                 habitable,
                 sea_level: present_sea_level,
                 ice_fraction: 0.0,
@@ -3485,7 +3498,7 @@ fn bake_eras(
             + (e as f64) * (cfg.end_year - cfg.start_year) / (CLIMATE_ERAS as f64 - 1.0);
         eras.push(EraClimate {
             day: bake_day,
-            ice: hornvale_kernel::CellMap::from_fn(geo, |_| false),
+            ice: hornvale_kernel::VertexMap::from_fn(geo, |_| false),
             habitable,
             sea_level,
             ice_fraction: 0.0,
@@ -3536,9 +3549,9 @@ const DIURNAL_PEAK_SAMPLES: u32 = 200;
 
 /// The diurnal-range headline lines for the almanac's Land section (The
 /// Turning, spec §2): the peak-to-peak day/night swing at two sample
-/// sites — the driest interior land cell (the globe's largest diurnal
-/// amplitude) and the genuinely open-ocean cell (the globe's SMALLEST
-/// diurnal amplitude among ocean cells — a coastal cell's nontrivial
+/// sites — the driest interior land vertex (the globe's largest diurnal
+/// amplitude) and the genuinely open-ocean vertex (the globe's SMALLEST
+/// diurnal amplitude among ocean vertices — a coastal vertex's nontrivial
 /// continentality still gives it a small-but-nonzero swing, understating
 /// the "small" claim the line makes) — so the reader sees both ends of the
 /// range. Empty for tidally locked worlds and worlds with no land at all:
@@ -3582,37 +3595,37 @@ fn diurnal_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) ->
             .fold(f64::MIN, f64::max)
     };
 
-    let mut driest: Option<(hornvale_kernel::CellId, f64)> = None;
-    let mut ocean: Option<(hornvale_kernel::CellId, f64)> = None;
-    for cell in geo.cells() {
-        let amp = climate.diurnal_amp_at(cell);
-        if terrain.is_ocean(cell) {
-            // Genuinely open ocean is the MINIMUM-amplitude ocean cell — a
-            // coastal cell's nontrivial continentality still gives it a
+    let mut driest: Option<(hornvale_kernel::Vertex, f64)> = None;
+    let mut ocean: Option<(hornvale_kernel::Vertex, f64)> = None;
+    for vertex in geo.vertices() {
+        let amp = climate.diurnal_amp_at(vertex);
+        if terrain.is_ocean(vertex) {
+            // Genuinely open ocean is the MINIMUM-amplitude ocean vertex — a
+            // coastal vertex's nontrivial continentality still gives it a
             // small-but-nonzero swing, understating the "small" claim.
-            // `geo.cells()` is in CellId order, so `amp < best` (strict)
-            // keeps the first-seen cell on ties, a deterministic tie-break.
+            // `geo.vertices()` is in Vertex order, so `amp < best` (strict)
+            // keeps the first-seen vertex on ties, a deterministic tie-break.
             if ocean.is_none_or(|(_, best)| amp < best) {
-                ocean = Some((cell, amp));
+                ocean = Some((vertex, amp));
             }
             continue;
         }
         if driest.is_none_or(|(_, best)| amp > best) {
-            driest = Some((cell, amp));
+            driest = Some((vertex, amp));
         }
     }
 
     let mut lines = Vec::new();
-    if let Some((cell, amp)) = driest {
-        let lat = geo.coord(cell).latitude;
+    if let Some((vertex, amp)) = driest {
+        let lat = geo.coord(vertex).latitude;
         lines.push(hornvale_almanac::render_diurnal_range_line(
             "The driest interior",
             amp,
             geo_peak_at(lat),
         ));
     }
-    if let Some((cell, amp)) = ocean {
-        let lat = geo.coord(cell).latitude;
+    if let Some((vertex, amp)) = ocean {
+        let lat = geo.coord(vertex).latitude;
         lines.push(hornvale_almanac::render_diurnal_range_line(
             "The open ocean",
             amp,
@@ -3627,7 +3640,7 @@ fn dot3(a: [f64; 3], b: [f64; 3]) -> f64 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
 
-/// The unit northward tangent at a cell, given its unit-sphere `position`
+/// The unit northward tangent at a vertex, given its unit-sphere `position`
 /// and eastward tangent: `normalize(cross(position, east))` — the same
 /// (east, north) frame [`hornvale_scene`]'s `current_east`/`current_north`
 /// project onto (The Gyre). Zero wherever `east` is zero (the poles).
@@ -3661,8 +3674,8 @@ fn cardinal_current_direction(east: f64, north: f64) -> &'static str {
 
 /// The seas' headline line for the almanac's Land section (The Gyre, spec
 /// companion to The Turning): the dominant offshore current direction at a
-/// coastal ocean sample site — the first ordinary coastal-fringe ocean cell
-/// (>= 1 land neighbor, `CellId` order, the same coastal-walk convention
+/// coastal ocean sample site — the first ordinary coastal-fringe ocean vertex
+/// (>= 1 land neighbor, `Vertex` order, the same coastal-walk convention
 /// `domains/terrain`'s carve stage uses) carrying a nonzero current. Empty
 /// for tidally locked worlds (no circulation bands to drive a current) and
 /// for worlds with no such site (landless, or a coast whose current
@@ -3682,19 +3695,19 @@ pub fn seas_lines(world: &World) -> Result<Vec<String>, BuildError> {
 /// climate (The Single Sculpt). Byte-identical to `seas_lines`.
 fn seas_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) -> Vec<String> {
     let geo = terrain.geosphere();
-    for cell in geo.cells() {
-        if !terrain.is_ocean(cell) {
+    for vertex in geo.vertices() {
+        if !terrain.is_ocean(vertex) {
             continue;
         }
-        if !geo.neighbors(cell).iter().any(|&n| !terrain.is_ocean(n)) {
+        if !geo.neighbors(vertex).iter().any(|&n| !terrain.is_ocean(n)) {
             continue;
         }
-        let current = climate.current_at(cell);
+        let current = climate.current_at(vertex);
         if dot3(current, current) < 1e-12 {
             continue;
         }
-        let east = hornvale_climate::circulation::wind_east_tangent(geo, cell);
-        let north = tangent_north(geo.position(cell), east);
+        let east = hornvale_climate::circulation::wind_east_tangent(geo, vertex);
+        let north = tangent_north(geo.position(vertex), east);
         let direction = cardinal_current_direction(dot3(current, east), dot3(current, north));
         return vec![format!(
             "The seas: a current runs {direction} along the coast."
@@ -3727,12 +3740,12 @@ fn regime_word(regime: PrecipRegime) -> &'static str {
 /// The rains' headline lines for the almanac's Land section (The Rains,
 /// spec §2/§7): annual precipitation, phase (rain/snow), and seasonal
 /// regime at the same two sample sites `diurnal_lines` reports — the
-/// driest interior land cell (highest diurnal amplitude, a continentality
-/// proxy) and the open ocean cell (lowest diurnal amplitude among ocean
-/// cells) — completing that section's thermal picture with the year's
+/// driest interior land vertex (highest diurnal amplitude, a continentality
+/// proxy) and the open ocean vertex (lowest diurnal amplitude among ocean
+/// vertices) — completing that section's thermal picture with the year's
 /// moisture total. Unlike `diurnal_lines`, never empty: precipitation,
 /// snow fraction, and regime are all defined regardless of rotation regime
-/// (a tidally locked world's single day–night cell still carries a
+/// (a tidally locked world's single day–night vertex still carries a
 /// moisture field and a `Uniform`-biased regime — `precip_regime`'s
 /// `band == 0` default).
 /// type-audit: bare-ok(prose: return)
@@ -3751,34 +3764,34 @@ pub fn rains_lines(world: &World) -> Result<Vec<String>, BuildError> {
 fn rains_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) -> Vec<String> {
     let geo = terrain.geosphere();
 
-    let mut driest: Option<(hornvale_kernel::CellId, f64)> = None;
-    let mut ocean: Option<(hornvale_kernel::CellId, f64)> = None;
-    for cell in geo.cells() {
-        let amp = climate.diurnal_amp_at(cell);
-        if terrain.is_ocean(cell) {
+    let mut driest: Option<(hornvale_kernel::Vertex, f64)> = None;
+    let mut ocean: Option<(hornvale_kernel::Vertex, f64)> = None;
+    for vertex in geo.vertices() {
+        let amp = climate.diurnal_amp_at(vertex);
+        if terrain.is_ocean(vertex) {
             // Same tie-break convention as `diurnal_lines`: strict `<`
-            // keeps the first-seen (lowest `CellId`) cell on ties.
+            // keeps the first-seen (lowest `Vertex`) vertex on ties.
             if ocean.is_none_or(|(_, best)| amp < best) {
-                ocean = Some((cell, amp));
+                ocean = Some((vertex, amp));
             }
             continue;
         }
         if driest.is_none_or(|(_, best)| amp > best) {
-            driest = Some((cell, amp));
+            driest = Some((vertex, amp));
         }
     }
 
     let mut lines = Vec::new();
-    if let Some((cell, _)) = driest {
-        lines.push(rains_line("The driest interior", climate, cell));
+    if let Some((vertex, _)) = driest {
+        lines.push(rains_line("The driest interior", climate, vertex));
     }
-    if let Some((cell, _)) = ocean {
-        lines.push(rains_line("The open ocean", climate, cell));
+    if let Some((vertex, _)) = ocean {
+        lines.push(rains_line("The open ocean", climate, vertex));
     }
     lines
 }
 
-/// Below this annual total (mm/yr) a cell is effectively rainless, and its
+/// Below this annual total (mm/yr) a vertex is effectively rainless, and its
 /// seasonal-regime label — a categorical circulation classification computed
 /// independently of the amount (spec §2) — carries no meaning: a "monsoon"
 /// with no rain reads as a contradiction. The regime parenthetical is dropped
@@ -3790,10 +3803,10 @@ const REGIME_FLOOR_MM: f64 = 50.0;
 /// (rain/snow), and — above the arid floor, where it means something — the
 /// seasonal regime word (see [`rains_lines`] and [`REGIME_FLOOR_MM`]).
 /// type-audit: bare-ok(prose: site), bare-ok(prose: return)
-fn rains_line(site: &str, climate: &GeneratedClimate, cell: hornvale_kernel::CellId) -> String {
-    let mm = climate.precip_at(cell).get();
-    let phase = precip_phase_word(climate.snow_fraction_at(cell));
-    // "about 0 mm" reads oddly for a cell that rounds to nothing; name the
+fn rains_line(site: &str, climate: &GeneratedClimate, vertex: hornvale_kernel::Vertex) -> String {
+    let mm = climate.precip_at(vertex).get();
+    let phase = precip_phase_word(climate.snow_fraction_at(vertex));
+    // "about 0 mm" reads oddly for a vertex that rounds to nothing; name the
     // bound instead.
     let amount = if mm < 1.0 {
         "under 1 mm".to_string()
@@ -3803,7 +3816,7 @@ fn rains_line(site: &str, climate: &GeneratedClimate, cell: hornvale_kernel::Cel
     if mm < REGIME_FLOOR_MM {
         format!("{site} receives {amount} of {phase} a year.")
     } else {
-        let regime = regime_word(climate.regime_at(cell));
+        let regime = regime_word(climate.regime_at(vertex));
         format!("{site} receives {amount} of {phase} a year ({regime}).")
     }
 }
@@ -3847,27 +3860,27 @@ pub fn firmament_lines(world: &World) -> Result<Vec<String>, BuildError> {
 fn firmament_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) -> Vec<String> {
     let geo = terrain.geosphere();
 
-    let mut driest: Option<(hornvale_kernel::CellId, f64)> = None;
-    let mut ocean: Option<(hornvale_kernel::CellId, f64)> = None;
-    for cell in geo.cells() {
-        let amp = climate.diurnal_amp_at(cell);
-        if terrain.is_ocean(cell) {
+    let mut driest: Option<(hornvale_kernel::Vertex, f64)> = None;
+    let mut ocean: Option<(hornvale_kernel::Vertex, f64)> = None;
+    for vertex in geo.vertices() {
+        let amp = climate.diurnal_amp_at(vertex);
+        if terrain.is_ocean(vertex) {
             if ocean.is_none_or(|(_, best)| amp < best) {
-                ocean = Some((cell, amp));
+                ocean = Some((vertex, amp));
             }
             continue;
         }
         if driest.is_none_or(|(_, best)| amp > best) {
-            driest = Some((cell, amp));
+            driest = Some((vertex, amp));
         }
     }
 
     let mut lines = Vec::new();
-    if let Some((cell, _)) = driest {
-        lines.push(weather_line_for("The driest interior", climate, cell));
+    if let Some((vertex, _)) = driest {
+        lines.push(weather_line_for("The driest interior", climate, vertex));
     }
-    if let Some((cell, _)) = ocean {
-        lines.push(weather_line_for("The open ocean", climate, cell));
+    if let Some((vertex, _)) = ocean {
+        lines.push(weather_line_for("The open ocean", climate, vertex));
     }
     lines
 }
@@ -3877,10 +3890,10 @@ fn firmament_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) 
 fn weather_line_for(
     site: &str,
     climate: &GeneratedClimate,
-    cell: hornvale_kernel::CellId,
+    vertex: hornvale_kernel::Vertex,
 ) -> String {
-    let state = climate.weather_at(cell, 0.0);
-    let cloud = climate.cloud_type_at(cell, 0.0);
+    let state = climate.weather_at(vertex, 0.0);
+    let cloud = climate.cloud_type_at(vertex, 0.0);
     hornvale_almanac::render_weather_line(site, sky_phrase(state, cloud))
 }
 
@@ -4026,11 +4039,11 @@ pub fn commodity_name(commodity: Commodity) -> &'static str {
     }
 }
 
-/// Land-cell karst-hydrology share above which "karst country" is a notable
+/// Land-vertex karst-hydrology share above which "karst country" is a notable
 /// ground feature for the almanac (The Ground, spec §3/§6) — a chosen prose
 /// threshold, not a physical constant.
 const GROUND_KARST_NOTABLE: f64 = 0.05;
-/// Land-cell andosol share above which "volcanic soils" is a notable ground
+/// Land-vertex andosol share above which "volcanic soils" is a notable ground
 /// feature for the almanac.
 const GROUND_ANDOSOL_NOTABLE: f64 = 0.1;
 
@@ -4062,20 +4075,20 @@ fn ground_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) -> 
         std::collections::BTreeMap::new();
     let (mut land, mut karst, mut andosol) = (0usize, 0usize, 0usize);
     let mut salt_flats = false;
-    for cell in geo.cells() {
-        if terrain.is_ocean(cell) {
+    for vertex in geo.vertices() {
+        if terrain.is_ocean(vertex) {
             continue;
         }
         land += 1;
-        let rock = terrain.rock_at(cell);
+        let rock = terrain.rock_at(vertex);
         *rocks.entry(rock).or_insert(0) += 1;
-        if terrain.hydro_at(cell) == hornvale_terrain::Hydro::Karst {
+        if terrain.hydro_at(vertex) == hornvale_terrain::Hydro::Karst {
             karst += 1;
         }
-        if terrain.is_endorheic(cell) && rock == hornvale_terrain::RockClass::Evaporite {
+        if terrain.is_endorheic(vertex) && rock == hornvale_terrain::RockClass::Evaporite {
             salt_flats = true;
         }
-        let order = *soils.get(cell);
+        let order = *soils.get(vertex);
         *orders.entry(order).or_insert(0) += 1;
         if order == hornvale_terrain::SoilOrder::Andosol {
             andosol += 1;
@@ -4131,14 +4144,14 @@ pub fn deep_lines_from(
     let geo = terrain.geosphere();
     let (mut land, mut dtb_sum, mut gaps) = (0usize, 0.0f64, 0usize);
     let (mut grad_min, mut grad_max) = (f64::INFINITY, f64::NEG_INFINITY);
-    for cell in geo.cells() {
-        if !terrain.is_ocean(cell) {
+    for vertex in geo.vertices() {
+        if !terrain.is_ocean(vertex) {
             land += 1;
-            dtb_sum += terrain.depth_to_basement_at(cell);
-            let g = terrain.geothermal_gradient_at(cell).get();
+            dtb_sum += terrain.depth_to_basement_at(vertex);
+            let g = terrain.geothermal_gradient_at(vertex).get();
             grad_min = grad_min.min(g);
             grad_max = grad_max.max(g);
-            if terrain.unconformity_at(cell) {
+            if terrain.unconformity_at(vertex) {
                 gaps += 1;
             }
         }
@@ -4163,7 +4176,7 @@ pub fn deep_lines_from(
     // Optional deep-time refinement: glaciated strata recorded in the cover.
     let paleo = paleoclimate_from(world, terrain)?;
     if paleo.max_ice_fraction > 0.0 {
-        let iced = geo.cells().filter(|c| *paleo.envelope.get(*c)).count();
+        let iced = geo.vertices().filter(|c| *paleo.envelope.get(*c)).count();
         lines.push(format!(
             "Glaciated strata lie in the cover over {iced} cells — the ice left its mark."
         ));
@@ -4190,16 +4203,16 @@ pub fn lode_lines_from(
     let (mut land, mut cave_land, mut ore_land, mut colocated) = (0usize, 0usize, 0usize, 0usize);
     let mut commodities: std::collections::BTreeMap<Commodity, usize> =
         std::collections::BTreeMap::new();
-    for cell in geo.cells() {
-        if terrain.is_ocean(cell) {
+    for vertex in geo.vertices() {
+        if terrain.is_ocean(vertex) {
             continue;
         }
         land += 1;
-        let has_cave = terrain.cave_at(cell).is_some();
+        let has_cave = terrain.cave_at(vertex).is_some();
         if has_cave {
             cave_land += 1;
         }
-        if let Some(deposit) = deposit_of(terrain, climate, geo, cell) {
+        if let Some(deposit) = deposit_of(terrain, climate, geo, vertex) {
             ore_land += 1;
             *commodities.entry(deposit.commodity).or_insert(0) += 1;
             if has_cave {
@@ -4266,8 +4279,8 @@ fn hazard_name(hazard: HazardKind) -> &'static str {
 /// the venerated-vs-forgotten valence split, prominent pre-human gate-scars,
 /// and the residue's dominant hazard (The Vestige). Reads the batched
 /// [`vestiges_field`] once for the whole world (rather than calling
-/// [`vestiges_at`] per cell, which would rescan the ledger's committed
-/// occupation history once per cell). Land-only, mirroring the Lode/Deep
+/// [`vestiges_at`] per vertex, which would rescan the ledger's committed
+/// occupation history once per vertex). Land-only, mirroring the Lode/Deep
 /// sections; empty for a landless world, or for land with no residue at all.
 /// type-audit: bare-ok(prose: return)
 pub fn vestige_lines_from(
@@ -4277,21 +4290,21 @@ pub fn vestige_lines_from(
     let geo = terrain.geosphere();
     let field = vestiges_field(world, terrain);
 
-    let (mut land, mut residue_cells) = (0usize, 0usize);
+    let (mut land, mut residue_vertices) = (0usize, 0usize);
     let (mut sealed, mut delvings, mut buried_ruins, mut gate_scars) =
         (0usize, 0usize, 0usize, 0usize);
     let (mut venerated, mut forgotten) = (0usize, 0usize);
     let mut hazard_counts = [0usize; 6];
-    for cell in geo.cells() {
-        if terrain.is_ocean(cell) {
+    for vertex in geo.vertices() {
+        if terrain.is_ocean(vertex) {
             continue;
         }
         land += 1;
-        let stack = field.get(cell);
+        let stack = field.get(vertex);
         if stack.is_empty() {
             continue;
         }
-        residue_cells += 1;
+        residue_vertices += 1;
         for vestige in stack {
             match vestige.kind {
                 VestigeKind::SealedVault | VestigeKind::NaturalSeal => sealed += 1,
@@ -4314,17 +4327,17 @@ pub fn vestige_lines_from(
             hazard_counts[idx] += 1;
         }
     }
-    if land == 0 || residue_cells == 0 {
+    if land == 0 || residue_vertices == 0 {
         return Ok(Vec::new());
     }
 
     let mut lines = vec![format!(
         "The underworld's residue marks {:.0}% of the land — the buried palimpsest of ages before.",
-        residue_cells as f64 / land as f64 * 100.0
+        residue_vertices as f64 / land as f64 * 100.0
     )];
     if sealed > 0 {
         lines.push(format!(
-            "{sealed} cells hold a sealed ward — the deep still shut."
+            "{sealed} vertices hold a sealed ward — the deep still shut."
         ));
     }
     if delvings + buried_ruins > 0 {
@@ -4391,12 +4404,12 @@ fn water_lines_from(terrain: &GeneratedTerrain) -> Vec<String> {
     let geo = terrain.geosphere();
     let globe = terrain.globe();
     let (mut land, mut fresh) = (0usize, 0usize);
-    for cell in geo.cells() {
-        if terrain.is_ocean(cell) {
+    for vertex in geo.vertices() {
+        if terrain.is_ocean(vertex) {
             continue;
         }
         land += 1;
-        if *globe.water_kind.get(cell) == hornvale_terrain::WaterKind::River {
+        if *globe.water_kind.get(vertex) == hornvale_terrain::WaterKind::River {
             fresh += 1;
         }
     }
@@ -4454,7 +4467,7 @@ fn phenomena_sources(world: &World) -> Result<Vec<Box<dyn PhenomenaSource>>, Bui
 /// [`phenomena_sources`], but reusing an ALREADY-BUILT tier-1 climate rather
 /// than re-deriving one. Deriving a `GeneratedClimate` runs the full terrain
 /// sculpting pipeline plus the temperature/moisture/biome fields over the
-/// whole globe (~O(cells), hundreds of ms) — so a genesis stage that already
+/// whole globe (~O(vertices), hundreds of ms) — so a genesis stage that already
 /// holds the world's climate (the peopling stage builds it once) passes it
 /// here instead of paying that cost per observation. Byte-identical to the
 /// plain path: the reused climate is the same `climate_of(world)` value the
@@ -4600,7 +4613,7 @@ pub fn occlusion(
 }
 
 /// The occlusion lens over a placed observer at `day` — the single place a
-/// cell's weather becomes a lens, so the phenomena paths cannot drift apart.
+/// vertex's weather becomes a lens, so the phenomena paths cannot drift apart.
 /// The identity lens for a position-blind observation: nowhere in particular
 /// has no weather.
 // Named construction site (decision 0092): reconstructs terrain for its own
@@ -4618,10 +4631,10 @@ fn occlusion_lens_at(
     let Ok(terrain) = terrain_of(world) else {
         return PerceptionLens::identity();
     };
-    let cell = terrain.nearest_cell(coord.latitude, coord.longitude);
+    let vertex = terrain.nearest_vertex(coord.latitude, coord.longitude);
     let (lens, _) = occlusion(
-        climate.weather_at(cell, day),
-        climate.cloud_type_at(cell, day),
+        climate.weather_at(vertex, day),
+        climate.cloud_type_at(vertex, day),
     );
     lens
 }
@@ -4819,7 +4832,7 @@ fn observed_phenomena_from_with_climate(
 
 /// The observation itself, factored out with an explicit `position` so
 /// glossed settlement naming (Task 9) can observe from the settlement's own
-/// cell coordinate BEFORE the settlement entity exists — names are drawn
+/// vertex coordinate BEFORE the settlement entity exists — names are drawn
 /// ahead of `hornvale_settlement::genesis`'s (functional, one-shot) `name`
 /// fact, when `hornvale_terrain::places` still finds nothing. The vantage's
 /// hemisphere culls the sky (SEQ-5) exactly as it will for the committed
@@ -5094,7 +5107,7 @@ fn gazetteer_by_class(
         by_class.entry(f.id.class).or_default().push(f);
     }
     for feats in by_class.values_mut() {
-        feats.sort_unstable_by_key(|f| (std::cmp::Reverse(f.magnitude), f.id.cell));
+        feats.sort_unstable_by_key(|f| (std::cmp::Reverse(f.magnitude), f.id.vertex));
     }
     Ok(by_class)
 }
@@ -5389,9 +5402,9 @@ fn placed_species(world: &World) -> std::collections::BTreeSet<String> {
         .collect()
 }
 
-/// The Geosphere cells a species has settled: every committed settlement
+/// The Geosphere vertices a species has settled: every committed settlement
 /// `peopled-by` this species, read back by its `cell-id` fact.
-fn settled_cells(world: &World, species: &str) -> Vec<hornvale_kernel::CellId> {
+fn settled_vertices(world: &World, species: &str) -> Vec<hornvale_kernel::Vertex> {
     world
         .ledger
         .find(hornvale_settlement::IS_SETTLEMENT)
@@ -5399,37 +5412,37 @@ fn settled_cells(world: &World, species: &str) -> Vec<hornvale_kernel::CellId> {
         .filter_map(|f| {
             match world
                 .ledger
-                .value_of(f.subject, hornvale_settlement::CELL_ID)
+                .value_of(f.subject, hornvale_settlement::VERTEX_ID)
             {
-                Some(Value::Number(n)) => Some(hornvale_kernel::CellId(*n as u32)),
+                Some(Value::Number(n)) => Some(hornvale_kernel::Vertex(*n as u32)),
                 _ => None,
             }
         })
         .collect()
 }
 
-/// Whether some cell within `max_hops` of `start` (inclusive of `start`
-/// itself) satisfies `pred` — the "lies within N cells" proximity test
+/// Whether some vertex within `max_hops` of `start` (inclusive of `start`
+/// itself) satisfies `pred` — the "lies within N vertices" proximity test
 /// `exposure_from` uses for `sea`. A plain breadth-first walk over the
 /// Geosphere's adjacency; `max_hops` is small (2) so this is cheap per
-/// settled cell.
+/// settled vertex.
 fn within_hops(
     geo: &Geosphere,
-    start: hornvale_kernel::CellId,
+    start: hornvale_kernel::Vertex,
     max_hops: u32,
-    pred: impl Fn(hornvale_kernel::CellId) -> bool,
+    pred: impl Fn(hornvale_kernel::Vertex) -> bool,
 ) -> bool {
     use std::collections::BTreeSet;
     if pred(start) {
         return true;
     }
-    let mut visited: BTreeSet<hornvale_kernel::CellId> = BTreeSet::new();
+    let mut visited: BTreeSet<hornvale_kernel::Vertex> = BTreeSet::new();
     visited.insert(start);
     let mut frontier = vec![start];
     for _ in 0..max_hops {
         let mut next = Vec::new();
-        for cell in &frontier {
-            for &n in geo.neighbors(*cell) {
+        for vertex in &frontier {
+            for &n in geo.neighbors(*vertex) {
                 if visited.insert(n) {
                     if pred(n) {
                         return true;
@@ -5443,21 +5456,21 @@ fn within_hops(
     false
 }
 
-/// The size (in cells) of the contiguous non-ocean landmass reachable from
+/// The size (in vertices) of the contiguous non-ocean landmass reachable from
 /// `start` by land, capped at `cap + 1` — a plain breadth-first walk that
-/// stops early once it has visited more than `cap` cells, so a full
+/// stops early once it has visited more than `cap` vertices, so a full
 /// continent costs the same bounded work as a small island (`exposure_from`'s
-/// `island` gate). `start` is assumed land (a settled cell); the result
+/// `island` gate). `start` is assumed land (a settled vertex); the result
 /// saturates at `cap + 1` rather than continuing to the mainland's true
 /// size, which the caller only needs to compare against `cap`.
 fn landmass_size_capped(
     geo: &Geosphere,
     terrain: &GeneratedTerrain,
-    start: hornvale_kernel::CellId,
+    start: hornvale_kernel::Vertex,
     cap: usize,
 ) -> usize {
     use std::collections::BTreeSet;
-    let mut visited: BTreeSet<hornvale_kernel::CellId> = BTreeSet::new();
+    let mut visited: BTreeSet<hornvale_kernel::Vertex> = BTreeSet::new();
     visited.insert(start);
     let mut frontier = vec![start];
     // The cap check lives entirely in the inner early return — once
@@ -5467,8 +5480,8 @@ fn landmass_size_capped(
     // only other exit.
     while !frontier.is_empty() {
         let mut next = Vec::new();
-        for cell in &frontier {
-            for &n in geo.neighbors(*cell) {
+        for vertex in &frontier {
+            for &n in geo.neighbors(*vertex) {
                 if !terrain.is_ocean(n) && visited.insert(n) {
                     if visited.len() > cap {
                         return visited.len();
@@ -5483,109 +5496,109 @@ fn landmass_size_capped(
 }
 
 /// The wetness floor (`drainage_at`) `marsh` sits above (see
-/// [`is_marsh_cell`]) — a module constant so `exposure_of_impl` and
+/// [`is_marsh_vertex`]) — a module constant so `exposure_of_impl` and
 /// [`settlement_site_concepts`] read the identical threshold rather than
 /// two literals that could drift apart.
 const MARSH_MIN_DRAINAGE: f64 = 5.0;
 
-/// The small-landmass ceiling `island` sits under (see [`is_island_cell`])
+/// The small-landmass ceiling `island` sits under (see [`is_island_vertex`])
 /// — a module constant for the same single-source reason as
 /// [`MARSH_MIN_DRAINAGE`].
-const ISLAND_CELL_CAP: usize = 200;
+const ISLAND_VERTEX_CAP: usize = 200;
 
-/// Whether `cell` is a real river channel: `water_kind_at` is exactly
+/// Whether `vertex` is a real river channel: `water_kind_at` is exactly
 /// `River`. The Confluence's carrying-capacity term spikes NEAR a river
 /// (within `RIVER_REACH` hops, `river_proximity`'s decay radius —
 /// "adjacent to rivers, not necessarily on it", `water.rs:96-99`) rather
-/// than only on the channel cell itself, so this gate is narrower than that
+/// than only on the channel vertex itself, so this gate is narrower than that
 /// siting pressure, not identical to it. Shared by `exposure_of_impl`
 /// (looping over a species' whole settled history) and
-/// [`settlement_site_concepts`] (checking one settlement's own cell) — the
-/// single definition of "is this cell a river."
-fn is_river_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
-    terrain.water_kind_at(cell) == hornvale_terrain::WaterKind::River
+/// [`settlement_site_concepts`] (checking one settlement's own vertex) — the
+/// single definition of "is this vertex a river."
+fn is_river_vertex(terrain: &GeneratedTerrain, vertex: hornvale_kernel::Vertex) -> bool {
+    terrain.water_kind_at(vertex) == hornvale_terrain::WaterKind::River
 }
 
-/// Whether `cell` is `river` narrowed to the drainage band below the
+/// Whether `vertex` is `river` narrowed to the drainage band below the
 /// waterfall threshold (`carve::WATERFALL_MIN_DRAINAGE`) — "where a river
-/// runs shallow enough to cross" read literally: a river cell whose flow
+/// runs shallow enough to cross" read literally: a river vertex whose flow
 /// hasn't reached waterfall-scale drainage is, by definition, the class
 /// this slice models as fordable.
-fn is_ford_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
-    is_river_cell(terrain, cell)
-        && terrain.drainage_at(cell) < hornvale_terrain::carve::WATERFALL_MIN_DRAINAGE
+fn is_ford_vertex(terrain: &GeneratedTerrain, vertex: hornvale_kernel::Vertex) -> bool {
+    is_river_vertex(terrain, vertex)
+        && terrain.drainage_at(vertex) < hornvale_terrain::carve::WATERFALL_MIN_DRAINAGE
 }
 
-/// Whether `cell` is a STRICT local elevation maximum over its FULL
+/// Whether `vertex` is a STRICT local elevation maximum over its FULL
 /// neighbor ring, with any ocean neighbor's elevation clamped up to sea
 /// level rather than excluded or read at its true depth.
 ///
 /// History (Task 4 review, two rounds): the first version compared against
 /// ALL neighbors with real elevation, so every ocean neighbor (by
-/// definition lower than any land cell, `is_ocean` is `elevation_at <
+/// definition lower than any land vertex, `is_ocean` is `elevation_at <
 /// sea_level`) trivially satisfied `hill` — every coastal promontory passed
 /// regardless of relief. EXCLUDING ocean neighbors (round 1's fix) cured
 /// that but broke `valley` worse: it removed the very thing that had been
-/// disqualifying a shoreline cell (a lower ocean neighbor breaks "all
-/// neighbors higher"), so `valley` started firing for any coastal cell with
-/// few, higher, land neighbors — measured at seed 42, a land-degree-3 cell
+/// disqualifying a shoreline vertex (a lower ocean neighbor breaks "all
+/// neighbors higher"), so `valley` started firing for any coastal vertex with
+/// few, higher, land neighbors — measured at seed 42, a land-degree-3 vertex
 /// was 79x more likely to pass than a land-degree-6 one, and every settled
-/// `valley` hit was a partial-ring coastal cell, none a full interior
+/// `valley` hit was a partial-ring coastal vertex, none a full interior
 /// basin. CLAMPING (this version) keeps the full ring — an ocean neighbor
 /// still counts, but at sea level rather than its true depth, so it still
-/// correctly disqualifies a coastal cell from `valley` (a shoreline cell's
+/// correctly disqualifies a coastal vertex from `valley` (a shoreline vertex's
 /// clamped-lower ocean neighbor breaks "all higher" exactly as it should)
-/// while still letting a genuinely elevated coastal cell — a real headland,
+/// while still letting a genuinely elevated coastal vertex — a real headland,
 /// higher than the sea AND every land neighbor it has — count as `hill`.
-/// Re-measured over all 11,066 seed-42 land cells: `valley` now fires ONLY
+/// Re-measured over all 11,066 seed-42 land vertices: `valley` now fires ONLY
 /// at land-degree 6 (zero ocean adjacency — a true interior basin), 48
-/// cells, 0.43% — eliminating the coastal skew entirely (0% at every degree
+/// vertices, 0.43% — eliminating the coastal skew entirely (0% at every degree
 /// 0-5, where the land-only version peaked at 41% and 292 of 344 total hits
-/// sat). `hill` stays close to its round-1 rate (173 vs 167 cells, ~1.4-1.6%
+/// sat). `hill` stays close to its round-1 rate (173 vs 167 vertices, ~1.4-1.6%
 /// flat from land-degree 3 up) with a real, accepted allowance for small
 /// islets/headlands at very low land-degree. Full table in the Task 4
 /// report. Shared by `exposure_of_impl` and [`settlement_site_concepts`] —
-/// the single definition of "is this cell a hill."
-fn is_hill_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+/// the single definition of "is this vertex a hill."
+fn is_hill_vertex(terrain: &GeneratedTerrain, vertex: hornvale_kernel::Vertex) -> bool {
     let geo = terrain.geosphere();
     let sea_level = terrain.sea_level().get();
-    let here = terrain.elevation_at(cell).get();
-    let neighbors = geo.neighbors(cell);
+    let here = terrain.elevation_at(vertex).get();
+    let neighbors = geo.neighbors(vertex);
     !neighbors.is_empty()
         && neighbors
             .iter()
             .all(|&n| terrain.elevation_at(n).get().max(sea_level) < here)
 }
 
-/// The symmetric counterpart of [`is_hill_cell`]: a STRICT local elevation
+/// The symmetric counterpart of [`is_hill_vertex`]: a STRICT local elevation
 /// minimum over the full, sea-level-clamped neighbor ring. See that
 /// function's doc comment for the two-round history behind the clamp. The
-/// single definition of "is this cell a valley," shared the same way.
-fn is_valley_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+/// single definition of "is this vertex a valley," shared the same way.
+fn is_valley_vertex(terrain: &GeneratedTerrain, vertex: hornvale_kernel::Vertex) -> bool {
     let geo = terrain.geosphere();
     let sea_level = terrain.sea_level().get();
-    let here = terrain.elevation_at(cell).get();
-    let neighbors = geo.neighbors(cell);
+    let here = terrain.elevation_at(vertex).get();
+    let neighbors = geo.neighbors(vertex);
     !neighbors.is_empty()
         && neighbors
             .iter()
             .all(|&n| terrain.elevation_at(n).get().max(sea_level) > here)
 }
 
-/// Whether `cell` is land meaningfully wetter than typical dry ground but
+/// Whether `vertex` is land meaningfully wetter than typical dry ground but
 /// hasn't channelized into a river: `water_kind_at` is `DryLand` and
 /// `drainage_at` clears [`MARSH_MIN_DRAINAGE`] — `water.rs`'s own
-/// calibration comment puts the median LAND cell at drainage ~2 and the
-/// 90th percentile at ~11 against `RIVER_MIN_DRAINAGE`'s 15, so a cell
+/// calibration comment puts the median LAND vertex at drainage ~2 and the
+/// 90th percentile at ~11 against `RIVER_MIN_DRAINAGE`'s 15, so a vertex
 /// accumulating runoff above the median but below the river threshold is
 /// genuinely damper than ordinary dry land without yet being a channel.
-/// The single definition of "is this cell a marsh," shared the same way.
-fn is_marsh_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
-    terrain.water_kind_at(cell) == hornvale_terrain::WaterKind::DryLand
-        && terrain.drainage_at(cell) >= MARSH_MIN_DRAINAGE
+/// The single definition of "is this vertex a marsh," shared the same way.
+fn is_marsh_vertex(terrain: &GeneratedTerrain, vertex: hornvale_kernel::Vertex) -> bool {
+    terrain.water_kind_at(vertex) == hornvale_terrain::WaterKind::DryLand
+        && terrain.drainage_at(vertex) >= MARSH_MIN_DRAINAGE
 }
 
-/// Whether `cell` reads directly as `Hydro::Spring` — "where an aquifer
+/// Whether `vertex` reads directly as `Hydro::Spring` — "where an aquifer
 /// meets the surface with flow." Previously a Karst proxy (`hydro_at ==
 /// Karst && drainage_at >= RIVER_MIN_DRAINAGE`), because `Hydro::Spring`
 /// was analytically unreachable under the original carbonate-scale gate
@@ -5597,45 +5610,45 @@ fn is_marsh_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> b
 /// Both are fixed now: `hydrogeology` gates on a clastic-scale porosity
 /// threshold measured on the correct population, and `Spring` is no longer
 /// a drainage split at all — it is a geometric descending contact
-/// (`GeneratedTerrain::hydro_at` promotes an `Aquifer` cell with a lower
+/// (`GeneratedTerrain::hydro_at` promotes an `Aquifer` vertex with a lower
 /// non-`Aquifer` neighbour), so `spring` is the independent signal it was
 /// always meant to be rather than `river` partitioned by rock type. The
-/// single definition of "is this cell a spring," shared the same way.
-fn is_spring_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
-    terrain.hydro_at(cell) == hornvale_terrain::Hydro::Spring
+/// single definition of "is this vertex a spring," shared the same way.
+fn is_spring_vertex(terrain: &GeneratedTerrain, vertex: hornvale_kernel::Vertex) -> bool {
+    terrain.hydro_at(vertex) == hornvale_terrain::Hydro::Spring
 }
 
-/// Whether `cell` sits on a real small landmass: a bounded flood-fill of
-/// non-ocean cells from `cell` stays under [`ISLAND_CELL_CAP`]. Tests
+/// Whether `vertex` sits on a real small landmass: a bounded flood-fill of
+/// non-ocean vertices from `vertex` stays under [`ISLAND_VERTEX_CAP`]. Tests
 /// landmass size underfoot, not proximity to open water (that's
-/// [`is_coast_cell`]) — a mainland coastal settlement is `coast` but not
+/// [`is_coast_vertex`]) — a mainland coastal settlement is `coast` but not
 /// `island`. 200 sits in a real gap: seed 42's full landmass census (30
 /// components) runs 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 4, 4, 7, 13, 22, 32,
 /// 40, 66, 104, then jumps to 356 and up. The single definition of "is this
-/// cell an island," shared the same way.
-fn is_island_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+/// vertex an island," shared the same way.
+fn is_island_vertex(terrain: &GeneratedTerrain, vertex: hornvale_kernel::Vertex) -> bool {
     let geo = terrain.geosphere();
-    landmass_size_capped(geo, terrain, cell, ISLAND_CELL_CAP) <= ISLAND_CELL_CAP
+    landmass_size_capped(geo, terrain, vertex, ISLAND_VERTEX_CAP) <= ISLAND_VERTEX_CAP
 }
 
-/// Whether `cell` lies within two hops of an ocean cell — the shore as a
+/// Whether `vertex` lies within two hops of an ocean vertex — the shore as a
 /// PLACE, not the water (`sea` covers the water; toponymy wants the
-/// former, cosmology the latter). The single definition of "is this cell
+/// former, cosmology the latter). The single definition of "is this vertex
 /// coastal," shared the same way.
-fn is_coast_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+fn is_coast_vertex(terrain: &GeneratedTerrain, vertex: hornvale_kernel::Vertex) -> bool {
     let geo = terrain.geosphere();
-    within_hops(geo, cell, 2, |c| terrain.is_ocean(c))
+    within_hops(geo, vertex, 2, |c| terrain.is_ocean(c))
 }
 
-/// Whether `cell` lies within two hops of a `SaltBasin` cell — this water
+/// Whether `vertex` lies within two hops of a `SaltBasin` vertex — this water
 /// model's only standing-water class distinct from a through-flow river
 /// (documented verbatim as "the evaporative salt lake / playa"; a
-/// freshwater through-flow lake reads as `River`, so [`is_river_cell`]
-/// already covers that case). The single definition of "is this cell near
+/// freshwater through-flow lake reads as `River`, so [`is_river_vertex`]
+/// already covers that case). The single definition of "is this vertex near
 /// a lake," shared the same way.
-fn is_lake_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+fn is_lake_vertex(terrain: &GeneratedTerrain, vertex: hornvale_kernel::Vertex) -> bool {
     let geo = terrain.geosphere();
-    within_hops(geo, cell, 2, |c| {
+    within_hops(geo, vertex, 2, |c| {
         terrain.water_kind_at(c) == hornvale_terrain::WaterKind::SaltBasin
     })
 }
@@ -5650,7 +5663,7 @@ fn is_lake_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bo
 ///   own name, and so on, `hornvale_language::universal_stratum`); every
 ///   body-pack and kin-pack entry (always in ladder — unranked); every
 ///   color-pack entry within the species' `pack_depths`; the biome of
-///   every cell the species has settled; the species' own living-kind
+///   every vertex the species has settled; the species' own living-kind
 ///   concept (`"<species>-kind"` — a people always knows itself); and, once
 ///   the species has settled anywhere, the living kind of every species
 ///   placed in this world (coexistence in one shared world is exposure —
@@ -5666,19 +5679,19 @@ fn is_lake_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bo
 ///   on the real terrain query that put a settlement there rather than on
 ///   roster membership: `river` (`water_kind_at` is `River`), `ford`
 ///   (`river` narrowed to drainage below the waterfall threshold —
-///   shallow enough to cross), `hill`/`valley` (the settled cell is a
+///   shallow enough to cross), `hill`/`valley` (the settled vertex is a
 ///   strict local elevation max/min among its immediate neighbors),
-///   `island` (a capped landmass flood-fill from the settled cell stays
+///   `island` (a capped landmass flood-fill from the settled vertex stays
 ///   under the small-landmass cap), `marsh` (dry land whose drainage
 ///   clears a wetness floor without reaching the river threshold), and
 ///   `spring` (`hydro_at` is `Spring`, a real but rare porosity-gated
 ///   landform).
-/// - **KnowsOf**: the biome of every cell adjacent to a settled cell (that
+/// - **KnowsOf**: the biome of every vertex adjacent to a settled vertex (that
 ///   isn't already `Steeped` from the species' own settlements); `sea`, if
-///   any settled cell lies within two cells of a below-sea-level (ocean)
-///   cell; `coast`, on the same two-cell gate (the shore as a place, not
-///   the water); and `lake`, on the same two-cell gate against a
-///   `SaltBasin` cell (this slice's only standing-water class — a
+///   any settled vertex lies within two vertices of a below-sea-level (ocean)
+///   vertex; `coast`, on the same two-vertex gate (the shore as a place, not
+///   the water); and `lake`, on the same two-vertex gate against a
+///   `SaltBasin` vertex (this slice's only standing-water class — a
 ///   through-flow freshwater lake reads as `River`, so it is already
 ///   covered there); and the four intercardinal bearings
 ///   (`hornvale_language::bearing_compounds`) **unconditionally** — the only
@@ -5734,7 +5747,7 @@ pub fn exposure_from_in(
     climate: &GeneratedClimate,
 ) -> Result<std::collections::BTreeMap<String, hornvale_language::ExposureClass>, BuildError> {
     let name = resolve_kind(wc, species)?;
-    let settled = settled_cells(world, species);
+    let settled = settled_vertices(world, species);
     // `exposure_of_impl` alone owns the "coexisting counts only once the
     // querying species has settled" rule; the outer gate this replaced was
     // vestigial belt-and-suspenders from the merge reconciliation.
@@ -5750,7 +5763,7 @@ pub fn exposure_from_in(
 /// `name` fact is functional — it can only be committed once, with its
 /// final value — and before `peopled-by` facts exist at all (species
 /// entities mint last, entity-id stability, spec §8 of Y2-1)), so the
-/// ledger-backed `settled_cells`/`placed_species` this species' own
+/// ledger-backed `settled_vertices`/`placed_species` this species' own
 /// `exposure_from` normally reads would see nothing yet. `settled` and
 /// `coexisting` carry exactly what those two ledger reads would have
 /// produced, sourced one step earlier from the in-memory placement scatter
@@ -5759,7 +5772,7 @@ fn exposure_of_impl(
     world: &World,
     wc: &WorldComponents,
     name: &'static str,
-    settled: &[hornvale_kernel::CellId],
+    settled: &[hornvale_kernel::Vertex],
     coexisting: &std::collections::BTreeSet<String>,
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
@@ -5822,32 +5835,32 @@ fn exposure_of_impl(
         classes.insert(entry.concept.to_string(), class);
     }
 
-    // Steeped: the biome of every settled cell.
-    for &cell in settled {
-        let name = climate.biome_at(cell).concept_name().to_string();
+    // Steeped: the biome of every settled vertex.
+    for &vertex in settled {
+        let name = climate.biome_at(vertex).concept_name().to_string();
         classes.insert(name, ExposureClass::Steeped);
     }
 
-    // Steeped: the VARIANT of every settled cell (The Toponym). A people that
+    // Steeped: the VARIANT of every settled vertex (The Toponym). A people that
     // has lived in a grass sward has a word for a grass sward, by exactly the
     // reasoning that gives them a word for the savanna it is a kind of — and
-    // it is the same cell-scale draw their settlements are named from, so the
+    // it is the same vertex-scale draw their settlements are named from, so the
     // word and the name agree.
     //
     // Merge note (2026-07-29): this composes with The Wearing's nine terrain
     // gates further down rather than competing with them, and the two are
     // additive by construction — they steep a people in disjoint concept sets
     // (53 formation sub-types here, nine landforms there) drawn from disjoint
-    // sources (a cell-scale variant draw here, terrain queries there), and
+    // sources (a vertex-scale variant draw here, terrain queries there), and
     // every write is an `insert` on a concept name no other rule claims. Both
     // rules read the SAME `settled` slice, which is the substantive agreement:
-    // a people is steeped in the terrain AND the variant of the cells it
+    // a people is steeped in the terrain AND the variant of the vertices it
     // actually settled, by one notion of "lived here".
-    for &cell in settled {
-        let expr = climate.biome_expr_at(cell);
-        if let Some(v) = hornvale_climate::variant_at_cell(
+    for &vertex in settled {
+        let expr = climate.biome_expr_at(vertex);
+        if let Some(v) = hornvale_climate::variant_at_vertex(
             world.seed,
-            cell,
+            vertex,
             expr.formation,
             expr.stratum,
             hornvale_climate::GroundKind::Ordinary,
@@ -5856,34 +5869,34 @@ fn exposure_of_impl(
         }
     }
 
-    // Steeped/Unknown: the STAPLE of every settled cell (The Watershed). A
+    // Steeped/Unknown: the STAPLE of every settled vertex (The Watershed). A
     // people that raises a crop has a word for it; one that fishes, herds, or
     // forages has met the plant but never named it as a staple, which is an
     // EXPERIENTIAL gap, not a perceptual one — their eyes are fine, their
-    // living is elsewhere. Subsistence is read per cell, so a people farming
+    // living is elsewhere. Subsistence is read per vertex, so a people farming
     // one valley and fishing another is steeped in the valley's grain.
     //
     // The gate lives HERE and not at the naming site on purpose: `holds_word`
     // filters a namer's candidates against the lexicon, so a consumer-side
     // gate can only subtract from a set exposure already decided. Gating at
     // the naming site was measured and moved exactly zero bytes.
-    for &cell in settled {
-        let expr = climate.biome_expr_at(cell);
+    for &vertex in settled {
+        let expr = climate.biome_expr_at(vertex);
         let Some(crop) = hornvale_climate::crop_at(
             expr.formation,
-            climate.mean_temperature_at(cell),
-            climate.moisture_at(cell),
+            climate.mean_temperature_at(vertex),
+            climate.moisture_at(vertex),
         ) else {
             continue;
         };
-        let coastal = geo.neighbors(cell).iter().any(|n| terrain.is_ocean(*n));
+        let coastal = geo.neighbors(vertex).iter().any(|n| terrain.is_ocean(*n));
         let subsistence =
-            hornvale_culture::subsistence(biome_class(climate.biome_at(cell)), coastal);
+            hornvale_culture::subsistence(biome_class(climate.biome_at(vertex)), coastal);
         let concept = crop.concept_name().to_string();
         if subsistence == hornvale_culture::Subsistence::Farming {
             classes.insert(concept, ExposureClass::Steeped);
         } else {
-            // Never downgrade: another cell may have steeped this crop.
+            // Never downgrade: another vertex may have steeped this crop.
             classes.entry(concept).or_insert(ExposureClass::Unknown {
                 reason: GapReason::Experiential(format!(
                     "{species} lives by {} here and raises no staple",
@@ -5922,20 +5935,20 @@ fn exposure_of_impl(
         }
     }
 
-    // KnowsOf: the biome of every cell adjacent to a settled cell, unless
+    // KnowsOf: the biome of every vertex adjacent to a settled vertex, unless
     // it is already Steeped (the species' own settled biome wins).
-    for &cell in settled {
-        for &n in geo.neighbors(cell) {
+    for &vertex in settled {
+        for &n in geo.neighbors(vertex) {
             let name = climate.biome_at(n).concept_name().to_string();
             classes.entry(name).or_insert(ExposureClass::KnowsOf);
         }
     }
 
-    // KnowsOf: sea, if any settled cell lies within two cells of ocean.
+    // KnowsOf: sea, if any settled vertex lies within two vertices of ocean.
     if world.registry.concept("sea").is_some() {
         let near_sea = settled
             .iter()
-            .any(|&cell| within_hops(geo, cell, 2, |c| terrain.is_ocean(c)));
+            .any(|&vertex| within_hops(geo, vertex, 2, |c| terrain.is_ocean(c)));
         if near_sea {
             classes
                 .entry("sea".to_string())
@@ -5947,9 +5960,11 @@ fn exposure_of_impl(
     // know the shore without living on it; `coast` is the shore as a
     // PLACE, where `sea` is the water — two concepts, deliberately, because
     // toponymy wants the former ("Seaside") and cosmology wants the latter.
-    // Gate logic: [`is_coast_cell`].
+    // Gate logic: [`is_coast_vertex`].
     if world.registry.concept("coast").is_some() {
-        let near_coast = settled.iter().any(|&cell| is_coast_cell(terrain, cell));
+        let near_coast = settled
+            .iter()
+            .any(|&vertex| is_coast_vertex(terrain, vertex));
         if near_coast {
             classes
                 .entry("coast".to_string())
@@ -5957,10 +5972,12 @@ fn exposure_of_impl(
         }
     }
 
-    // KnowsOf: lake, on the same two-hop gate against a `SaltBasin` cell.
-    // Gate logic: [`is_lake_cell`].
+    // KnowsOf: lake, on the same two-hop gate against a `SaltBasin` vertex.
+    // Gate logic: [`is_lake_vertex`].
     if world.registry.concept("lake").is_some() {
-        let near_lake = settled.iter().any(|&cell| is_lake_cell(terrain, cell));
+        let near_lake = settled
+            .iter()
+            .any(|&vertex| is_lake_vertex(terrain, vertex));
         if near_lake {
             classes
                 .entry("lake".to_string())
@@ -5991,55 +6008,55 @@ fn exposure_of_impl(
     }
 
     // Steeped: river, the terrain a people actually lives on. Gate logic
-    // (and the `RIVER_REACH` disclosure): [`is_river_cell`].
-    for &cell in settled {
-        if is_river_cell(terrain, cell) {
+    // (and the `RIVER_REACH` disclosure): [`is_river_vertex`].
+    for &vertex in settled {
+        if is_river_vertex(terrain, vertex) {
             classes.insert("river".to_string(), ExposureClass::Steeped);
         }
     }
 
     // Steeped: ford, `river` narrowed to the sub-waterfall drainage band.
-    // Gate logic: [`is_ford_cell`].
-    for &cell in settled {
-        if is_ford_cell(terrain, cell) {
+    // Gate logic: [`is_ford_vertex`].
+    for &vertex in settled {
+        if is_ford_vertex(terrain, vertex) {
             classes.insert("ford".to_string(), ExposureClass::Steeped);
         }
     }
 
-    // Steeped: hill/valley, a settled cell that is a STRICT local
+    // Steeped: hill/valley, a settled vertex that is a STRICT local
     // elevation extremum over its FULL, sea-level-clamped neighbor ring.
-    // Gate logic and the two-round clamp history: [`is_hill_cell`] /
-    // [`is_valley_cell`].
-    for &cell in settled {
-        if is_hill_cell(terrain, cell) {
+    // Gate logic and the two-round clamp history: [`is_hill_vertex`] /
+    // [`is_valley_vertex`].
+    for &vertex in settled {
+        if is_hill_vertex(terrain, vertex) {
             classes.insert("hill".to_string(), ExposureClass::Steeped);
         }
-        if is_valley_cell(terrain, cell) {
+        if is_valley_vertex(terrain, vertex) {
             classes.insert("valley".to_string(), ExposureClass::Steeped);
         }
     }
 
     // Steeped: marsh, land wetter than typical dry ground but not yet
-    // channelized. Gate logic: [`is_marsh_cell`].
-    for &cell in settled {
-        if is_marsh_cell(terrain, cell) {
+    // channelized. Gate logic: [`is_marsh_vertex`].
+    for &vertex in settled {
+        if is_marsh_vertex(terrain, vertex) {
             classes.insert("marsh".to_string(), ExposureClass::Steeped);
         }
     }
 
     // Steeped: spring, `Hydro::Spring` directly — reachable since The
-    // Witness's F5 repair. Gate logic: [`is_spring_cell`].
-    for &cell in settled {
-        if is_spring_cell(terrain, cell) {
+    // Witness's F5 repair. Gate logic: [`is_spring_vertex`].
+    for &vertex in settled {
+        if is_spring_vertex(terrain, vertex) {
             classes.insert("spring".to_string(), ExposureClass::Steeped);
         }
     }
 
     // Steeped: island, a real landmass-size test — proximity to open water
-    // ([`is_coast_cell`]) and the size of the ground underfoot
-    // ([`is_island_cell`]) are deliberately different concepts.
-    for &cell in settled {
-        if is_island_cell(terrain, cell) {
+    // ([`is_coast_vertex`]) and the size of the ground underfoot
+    // ([`is_island_vertex`]) are deliberately different concepts.
+    for &vertex in settled {
+        if is_island_vertex(terrain, vertex) {
             classes.insert("island".to_string(), ExposureClass::Steeped);
             break;
         }
@@ -6580,7 +6597,7 @@ pub fn deity_site_concepts(
     concepts
 }
 
-/// The `*-kind` concept of the people who held `cell` before `current` — the
+/// The `*-kind` concept of the people who held `vertex` before `current` — the
 /// deepest occupation layer at a settlement's site that belongs to someone
 /// else, resolved to a registered concept via
 /// [`hornvale_species::kind_concept`].
@@ -6592,7 +6609,7 @@ pub fn deity_site_concepts(
 ///
 /// EARLIEST wins, not deepest-by-count: `OCC_FOUNDED` is the founding day, and
 /// the people who were here first are what a predecessor name means. Ties
-/// cannot occur — two occupations of one cell founded on the identical day
+/// cannot occur — two occupations of one vertex founded on the identical day
 /// would be the same layer.
 ///
 /// The `occ-founded` object is read **raw** here and is not crossed back into
@@ -6600,13 +6617,13 @@ pub fn deity_site_concepts(
 /// year↔day map is monotone, so the winner is the same number of conversions
 /// later. Nothing about the value itself reaches the name.
 ///
-/// Returns `None` when the cell has no foreign occupation, exactly as a
+/// Returns `None` when the vertex has no foreign occupation, exactly as a
 /// settlement away from water carries no hydrology concept. A people whose
 /// kind concept is unregistered also yields `None` rather than an invented
 /// one — `kind_concept` reads the registry's own roster.
 fn predecessor_people(
     world: &World,
-    cell: hornvale_kernel::CellId,
+    vertex: hornvale_kernel::Vertex,
     current: &str,
 ) -> Option<&'static str> {
     let mut earliest: Option<(f64, String)> = None;
@@ -6617,7 +6634,7 @@ fn predecessor_people(
         let hornvale_kernel::Value::Number(n) = &f.object else {
             continue;
         };
-        if (*n as u32) != cell.0 {
+        if (*n as u32) != vertex.0 {
             continue;
         }
         let Some(people) = world
@@ -6675,15 +6692,15 @@ fn predecessor_people(
 /// offers").
 ///
 /// Order, and why: the nine terrain gates split into two kinds. A
-/// `Steeped` gate (`exposure_of_impl`) is a direct claim about THIS cell
+/// `Steeped` gate (`exposure_of_impl`) is a direct claim about THIS vertex
 /// (it IS a hill); a `KnowsOf` gate is a claim about its neighborhood (it
 /// is NEAR the sea). A direct claim is the more specific fact, so every
 /// direct gate precedes both proximity gates. Within the direct gates,
 /// narrower physical criteria come first, ordered by the shipped gates'
-/// own measurements over seed 42's ~11,066 land cells (see
-/// [`is_hill_cell`]'s doc comment for the round-3 clamp fix these numbers
-/// come from): `valley` (48 cells, 0.43% of land — the rarest of the nine,
-/// a full-ring strict elevation minimum) and `hill` (173 cells, ~1.56% —
+/// own measurements over seed 42's ~11,066 land vertices (see
+/// [`is_hill_vertex`]'s doc comment for the round-3 clamp fix these numbers
+/// come from): `valley` (48 vertices, 0.43% of land — the rarest of the nine,
+/// a full-ring strict elevation minimum) and `hill` (173 vertices, ~1.56% —
 /// the symmetric maximum); `spring` (a karst/drainage
 /// intersection) and `ford` (`river` narrowed to a sub-waterfall drainage
 /// band — both proper narrowings of a broader condition); `island` (a
@@ -6695,9 +6712,9 @@ fn predecessor_people(
 /// report).
 ///
 /// **The variant, and why it sits where it does** (merge reconciliation with
-/// The Toponym, 2026-07-29). The Toponym gave a cell a *variant* — one of 53
+/// The Toponym, 2026-07-29). The Toponym gave a vertex a *variant* — one of 53
 /// named sub-types of the formation it sits in (`old-growth`,
-/// `mossy-deadfall`, `forest-gap`), drawn at cell scale on its own stream
+/// `mossy-deadfall`, `forest-gap`), drawn at vertex scale on its own stream
 /// label. That campaign built its site vector as `[biome, presiding,
 /// variant]`; this one built `[…nine terrain gates…, biome, presiding]`. Both
 /// belong, and the joint order resolves on this rule: a variant is a **strict
@@ -6706,13 +6723,13 @@ fn predecessor_people(
 /// of the temperate forest"). It sits *after* every terrain gate because the
 /// gates are the rarer, sharper claims — `valley` fires on 0.43% of seed 42's
 /// land and `hill` on 1.56%, where a variant is available on essentially every
-/// cell that has a formation at all — and the convention this vector documents
+/// vertex that has a formation at all — and the convention this vector documents
 /// is sharpest-first. Both campaigns' internal orders survive intact; only the
 /// splice point was decided here.
 ///
 /// The variant is the one entry that is **drawn** rather than read: every other
-/// entry is a terrain/climate fact already true of the settled cell, while
-/// `hornvale_climate::variant_at_cell` makes a cell-scale draw off the world
+/// entry is a terrain/climate fact already true of the settled vertex, while
+/// `hornvale_climate::variant_at_vertex` makes a vertex-scale draw off the world
 /// seed. That is why this function takes the seed. It derives the variant
 /// *itself* rather than accepting it as a parameter, deliberately reversing The
 /// Toponym's shape: that campaign's own account records that its real
@@ -6723,55 +6740,55 @@ fn predecessor_people(
 ///
 /// Biome and the presiding sky phenomenon close the whole vector: every
 /// settlement has one of each, so they are the least discriminating facts a
-/// cell carries.
+/// vertex carries.
 /// type-audit: bare-ok(identifier-text: presiding), bare-ok(identifier-text: species), bare-ok(identifier-text: return)
 pub fn settlement_site_concepts(
     world: &World,
     seed: &Seed,
     species: &str,
-    cell: hornvale_kernel::CellId,
+    vertex: hornvale_kernel::Vertex,
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
     presiding: Option<&'static str>,
 ) -> Vec<&'static str> {
     // Up to 12: the nine terrain concepts, the variant, the biome, presiding.
     let mut concepts: Vec<&'static str> = Vec::with_capacity(12);
-    if is_valley_cell(terrain, cell) {
+    if is_valley_vertex(terrain, vertex) {
         concepts.push("valley");
     }
-    if is_hill_cell(terrain, cell) {
+    if is_hill_vertex(terrain, vertex) {
         concepts.push("hill");
     }
-    if is_spring_cell(terrain, cell) {
+    if is_spring_vertex(terrain, vertex) {
         concepts.push("spring");
     }
-    if is_ford_cell(terrain, cell) {
+    if is_ford_vertex(terrain, vertex) {
         concepts.push("ford");
     }
-    if is_island_cell(terrain, cell) {
+    if is_island_vertex(terrain, vertex) {
         concepts.push("island");
     }
-    if is_marsh_cell(terrain, cell) {
+    if is_marsh_vertex(terrain, vertex) {
         concepts.push("marsh");
     }
-    if is_river_cell(terrain, cell) {
+    if is_river_vertex(terrain, vertex) {
         concepts.push("river");
     }
-    if is_coast_cell(terrain, cell) {
+    if is_coast_vertex(terrain, vertex) {
         concepts.push("coast");
     }
-    if is_lake_cell(terrain, cell) {
+    if is_lake_vertex(terrain, vertex) {
         concepts.push("lake");
     }
     // The Toponym's variant, immediately before the biome it refines. Drawn,
     // not read — see this function's doc comment for both halves of that.
     // `GroundKind::Ordinary` matches the draw the settlement pass made before
     // this function existed, so the variant a place is named for is the same
-    // one its cell has.
-    let expr = climate.biome_expr_at(cell);
-    if let Some(variant) = hornvale_climate::variant_at_cell(
+    // one its vertex has.
+    let expr = climate.biome_expr_at(vertex);
+    if let Some(variant) = hornvale_climate::variant_at_vertex(
         *seed,
-        cell,
+        vertex,
         expr.formation,
         expr.stratum,
         hornvale_climate::GroundKind::Ordinary,
@@ -6784,12 +6801,12 @@ pub fn settlement_site_concepts(
     // simply has no word to name its home with, and agriculture gets no
     // special case in the namer — it is gated exactly where colour and
     // kinship are.
-    let expr = climate.biome_expr_at(cell);
+    let expr = climate.biome_expr_at(vertex);
     concepts.extend(
         hornvale_climate::crop_at(
             expr.formation,
-            climate.mean_temperature_at(cell),
-            climate.moisture_at(cell),
+            climate.mean_temperature_at(vertex),
+            climate.moisture_at(vertex),
         )
         .map(|c| c.concept_name()),
     );
@@ -6798,8 +6815,8 @@ pub fn settlement_site_concepts(
     // place" more specifically than the biome does. Offered unconditionally
     // for the same reason the staple is — `holds_word` decides, so a people
     // with no word for the gnolls simply does not name its home for them.
-    concepts.extend(predecessor_people(world, cell, species));
-    concepts.push(climate.biome_at(cell).concept_name());
+    concepts.extend(predecessor_people(world, vertex, species));
+    concepts.push(climate.biome_at(vertex).concept_name());
     concepts.extend(presiding);
     concepts
 }
@@ -6934,7 +6951,7 @@ impl hornvale_religion::DeityNamer for LanguageDeityNamer<'_, '_, '_> {
 /// Build a complete world against a given component set `wc` (the world's
 /// kinds): mint the world entity and record its sky choice and scenario pins
 /// first; run sky genesis for `Generated`; commit the terrain pins and run
-/// tectonic genesis; then assemble per-cell site inputs from terrain and
+/// tectonic genesis; then assemble per-vertex site inputs from terrain and
 /// climate, place a spaced scatter of settlements (honoring the settlement
 /// pins' suitability floor), commit each as its own place entity, and run the
 /// culture/religion cascade on the flagship (the most-suitable settlement,
@@ -7106,9 +7123,9 @@ fn bake_history_from(
     // scaling on this path — every valuation the bake makes, genesis siting
     // included, now reads a per-people headcount field from
     // `per_species_capacity`. Decision 0103's point, arrived at: a capacity is a
-    // property of a people on a cell, and the blind field could not express that
+    // property of a people on a vertex, and the blind field could not express that
     // however it was scaled.
-    let water_kind = hornvale_kernel::CellMap::from_fn(geo, |c| terrain.water_kind_at(c));
+    let water_kind = hornvale_kernel::VertexMap::from_fn(geo, |c| terrain.water_kind_at(c));
     let river_prox =
         hornvale_terrain::river_proximity(geo, &water_kind, hornvale_terrain::RIVER_REACH);
     let paleo = paleoclimate_from(world, terrain)?;
@@ -7177,7 +7194,7 @@ fn bake_history_from(
         &regime,
     );
     // THE DELVE SEATING (The Underworld, spec §4.6). Which rung of the ladder
-    // each settling people occupies at each cell, and the factor its capacity
+    // each settling people occupies at each vertex, and the factor its capacity
     // there is scaled by. Built here because it is the one derivation that
     // needs terrain, the species registries and the underworld corpus at once,
     // which is the composition root's whole job.
@@ -7188,7 +7205,7 @@ fn bake_history_from(
     // widening `from_stores`' arity for every caller would buy nothing.
     //
     // A people absent from that registry — which is every surface people, and
-    // both subterranean FAUNA kinds — seats at `Surface` on every cell at
+    // both subterranean FAUNA kinds — seats at `Surface` on every vertex at
     // multiplier 1.0, so this is an exact no-op for it.
     let niches = hornvale_species::environment_niche_registry();
     let seatings: Vec<crate::delve_seating::Seating> = peoples
@@ -7219,7 +7236,7 @@ fn bake_history_from(
             .into_iter()
             // REALM-AWARE CAPACITY (spec §4.6): "capacity for an underworld
             // community is computed against the chamber's conditions and its
-            // energy base, not the surface cell's". `per_species_capacity_at`
+            // energy base, not the surface vertex's". `per_species_capacity_at`
             // already scores a subterranean kind against the subterranean
             // substrate and gates it on a cave existing; what the seating adds
             // is the two things only a rung can say — how well the chamber's
@@ -7274,7 +7291,7 @@ fn bake_history_from(
         .iter()
         .filter_map(|&k| wc.psyche.get(&k).map(|p| (k, p.time_horizon)))
         .collect();
-    let current = hornvale_kernel::CellMap::from_fn(geo, |c| climate.current_at(c));
+    let current = hornvale_kernel::VertexMap::from_fn(geo, |c| climate.current_at(c));
     let elevation = &terrain.globe().elevation;
     let graphs: Vec<hornvale_topology::ConnectionGraph> = eras
         .iter()
@@ -7289,14 +7306,14 @@ fn bake_history_from(
             )
         })
         .collect();
-    let seating_rungs: Vec<hornvale_kernel::CellMap<hornvale_kernel::Band>> =
+    let seating_rungs: Vec<hornvale_kernel::VertexMap<hornvale_kernel::Band>> =
         seatings.into_iter().map(|s| s.rung).collect();
     // The Granary T2: the coarse biome class of every cell, built once here
     // (the composition root's own `biome_class` mapping over the climate's
     // biome map) and handed to the bake so each community's harvest curve can
     // key its amplitude on the biome it actually stands in at open.
     let climate_biomes = climate.biome_map();
-    let biomes = hornvale_kernel::CellMap::from_fn(geo, |c| biome_class(*climate_biomes.get(c)));
+    let biomes = hornvale_kernel::VertexMap::from_fn(geo, |c| biome_class(*climate_biomes.get(c)));
     Ok(history_bake::bake(
         seed,
         geo,
@@ -7329,9 +7346,9 @@ fn bake_history_from(
 fn scale_capacity(
     geo: &Geosphere,
     capacity: &hornvale_kernel::ecology::CapacityMap,
-    multiplier: &hornvale_kernel::CellMap<f64>,
+    multiplier: &hornvale_kernel::VertexMap<f64>,
 ) -> hornvale_kernel::ecology::CapacityMap {
-    hornvale_kernel::ecology::CapacityMap::new(hornvale_kernel::CellMap::from_fn(geo, |c| {
+    hornvale_kernel::ecology::CapacityMap::new(hornvale_kernel::VertexMap::from_fn(geo, |c| {
         capacity.at(c) * multiplier.get(c)
     }))
     .expect("a validated capacity scaled by a [0, 1] seating multiplier stays valid")
@@ -7609,7 +7626,7 @@ fn build_to(
     // released before those passes commit again. Commit order (records order,
     // alive filtered) is deterministic, so this vec is stable across builds.
     let placements: Vec<HistoryPlacement> = {
-        let raw: Vec<(EntityId, String, hornvale_kernel::CellId, u32)> = world
+        let raw: Vec<(EntityId, String, hornvale_kernel::Vertex, u32)> = world
             .ledger
             .find(hornvale_settlement::IS_SETTLEMENT)
             .map(|f| f.subject)
@@ -7619,8 +7636,8 @@ fn build_to(
                     .text_of(id, hornvale_history::OCC_PEOPLE)
                     .expect("a history settlement carries occ-people")
                     .to_string();
-                let cell = match world.ledger.value_of(id, hornvale_settlement::CELL_ID) {
-                    Some(Value::Number(n)) => hornvale_kernel::CellId(*n as u32),
+                let vertex = match world.ledger.value_of(id, hornvale_settlement::VERTEX_ID) {
+                    Some(Value::Number(n)) => hornvale_kernel::Vertex(*n as u32),
                     _ => unreachable!("a history settlement carries a numeric cell-id"),
                 };
                 let population = match world.ledger.value_of(id, hornvale_settlement::POPULATION)
@@ -7628,11 +7645,11 @@ fn build_to(
                     Some(Value::Number(n)) => *n as u32,
                     _ => unreachable!("a history settlement carries a numeric population"),
                 };
-                (id, people, cell, population)
+                (id, people, vertex, population)
             })
             .collect();
         raw.into_iter()
-            .map(|(id, people, cell, population)| {
+            .map(|(id, people, vertex, population)| {
                 let tag = species_set
                     .iter()
                     .position(|&n| n == people)
@@ -7640,7 +7657,7 @@ fn build_to(
                 HistoryPlacement {
                     id,
                     tag,
-                    cell,
+                    vertex,
                     population,
                 }
             })
@@ -7650,7 +7667,7 @@ fn build_to(
     // Each placed species' phonology, drawn once from the world seed and
     // its authored articulation vector, and a `Namer` built over it. Every
     // name below — settlement, then deity/epithet — is a single
-    // deterministic draw salted by the entity's own id (the settlement cell,
+    // deterministic draw salted by the entity's own id (the settlement vertex,
     // the belief). No shared "used" set threads through them: names are pure
     // functions of seed+species+kind+salt+(site, lexicon, corpus). Since The
     // Wearing that last argument means a settlement name is NO LONGER
@@ -7685,15 +7702,15 @@ fn build_to(
         std::collections::BTreeMap::new();
     for (tag, &name) in species_set.iter().enumerate() {
         // Each occupation is single-people (history places one community per
-        // site), so a species is "settled" at exactly the cells its own alive
+        // site), so a species is "settled" at exactly the vertices its own alive
         // occupations sit on — the `people`-tagged settlements this build
         // emitted. `exposure_of_impl` alone owns the "coexisting counts only
         // once the querying species has settled" rule; `coexisting_now` spans
         // every people that placed any alive settlement this build.
-        let settled_now: Vec<hornvale_kernel::CellId> = placements
+        let settled_now: Vec<hornvale_kernel::Vertex> = placements
             .iter()
             .filter(|s| s.tag == tag)
-            .map(|s| s.cell)
+            .map(|s| s.vertex)
             .collect();
         let coexisting_now: std::collections::BTreeSet<String> = placements
             .iter()
@@ -7786,7 +7803,7 @@ fn build_to(
         id: EntityId,
         species: &'static str,
         salt: u64,
-        cell: hornvale_kernel::CellId,
+        vertex: hornvale_kernel::Vertex,
         latitude: f64,
         longitude: f64,
         concepts: Vec<&'static str>,
@@ -7817,8 +7834,8 @@ fn build_to(
     };
     for s in &placements {
         let name = species_set[s.tag];
-        let coord = geo.coord(s.cell);
-        let salt = u64::from(s.cell.0);
+        let coord = geo.coord(s.vertex);
+        let salt = u64::from(s.vertex.0);
         let namer = namers
             .get(name)
             .expect("a Namer was built for every placed species");
@@ -7826,11 +7843,11 @@ fn build_to(
             .get(name)
             .expect("a lexicon was built for every placed species");
         // The presiding phenomenon is observed from THIS settlement's own
-        // cell coordinate — its hemisphere culls the sky (SEQ-5), so the
+        // vertex coordinate — its hemisphere culls the sky (SEQ-5), so the
         // committed gloss is truthful to the sky this settlement actually
         // lives under (spec §9.3), and per-settlement skies widen the
         // descriptor space. The OBSERVATION stays a pure function of the
-        // entity's own (cell, facts) — pin-isolated by construction (spec
+        // entity's own (vertex, facts) — pin-isolated by construction (spec
         // §8); it is the corpus below, not this, that ends the property for
         // the resulting name. The place id
         // is unread by the observer — the coordinate does the culling — so
@@ -7838,7 +7855,7 @@ fn build_to(
         // exists, but observation never reads it) — see `observed_phenomena_from`.
         let seen = observe_with_sources(&world, wc, name, world_entity, Some(coord), &sources)?;
         let presiding = seen.first().and_then(phenomenon_concept);
-        let concepts = settlement_site_concepts(&world, &world.seed, name, s.cell, &terrain, &climate, presiding);
+        let concepts = settlement_site_concepts(&world, &world.seed, name, s.vertex, &terrain, &climate, presiding);
         // Which concepts this name will actually be built from — exactly
         // what its gloss will name, reported without rendering anything.
         // `glossed_name` replays the same picks off the same stream (wear
@@ -7863,7 +7880,7 @@ fn build_to(
             id: s.id,
             species: name,
             salt,
-            cell: s.cell,
+            vertex: s.vertex,
             latitude: coord.latitude,
             longitude: coord.longitude,
             concepts,
@@ -7916,7 +7933,7 @@ fn build_to(
         descriptors.push(SettlementDescriptor {
             id: s.id,
             name: generated.roman,
-            biome: climate.biome_at(s.cell).name().to_string(),
+            biome: climate.biome_at(s.vertex).name().to_string(),
             latitude: s.latitude,
             longitude: s.longitude,
             gloss,
@@ -8027,13 +8044,16 @@ fn build_to(
                 continue; // a species may place nothing on a hostile world
             };
             let flagship = placements[pos].id;
-            let fcell = placements[pos].cell;
-            let coastal = geo.neighbors(fcell).iter().any(|n| terrain.is_ocean(*n));
-            let moisture = climate.moisture_at(fcell);
-            let class = biome_class(climate.biome_at(fcell));
+            let flagship_vertex = placements[pos].vertex;
+            let coastal = geo
+                .neighbors(flagship_vertex)
+                .iter()
+                .any(|n| terrain.is_ocean(*n));
+            let moisture = climate.moisture_at(flagship_vertex);
+            let class = biome_class(climate.biome_at(flagship_vertex));
             let subsistence = hornvale_culture::subsistence(class, coastal);
             let surplus = (hornvale_culture::fertility(class) * moisture).clamp(0.0, 1.0);
-            let threat = terrain.unrest_at(fcell).clamp(0.0, 1.0);
+            let threat = terrain.unrest_at(flagship_vertex).clamp(0.0, 1.0);
             let env = hornvale_culture::EnvSummary {
                 subsistence,
                 surplus,
@@ -8814,12 +8834,12 @@ pub fn culture_lines(world: &World, flagship: &hornvale_settlement::VillageInfo)
 /// The single construction site for the provider (Constitution §2.4 tiers).
 ///
 /// Appends a weather clause (The Firmament, spec Weather Program C4): the
-/// felt sky at the world's representative cell — the first settlement's
+/// felt sky at the world's representative vertex — the first settlement's
 /// location, the same "first place" vantage `calendar_lines` and
 /// `night_sky_lines` already read via [`place_coord`] — rendered through
 /// [`sky_phrase`], the one weather vocabulary the almanac's headline lines
 /// share. A placeless world (no settlement has been placed, or has no
-/// committed coordinate) falls back to cell 0 — still informative, just not
+/// committed coordinate) falls back to vertex 0 — still informative, just not
 /// settlement-anchored, mirroring the fallback-free-but-defaulting posture
 /// `night_sky_lines`' heliacal latitude uses. `windows/vessel/src/vantage.rs`
 /// turns the rendered `description` into `Vantage.sky`, so a possessed
@@ -8831,14 +8851,14 @@ pub fn culture_lines(world: &World, flagship: &hornvale_settlement::VillageInfo)
 pub fn sky_report(world: &World, time: WorldTime) -> Result<SkyReport, BuildError> {
     let terrain = terrain_of(world)?;
     let climate = climate_from(world, &terrain)?;
-    let at = flagship_cell(world, &terrain);
+    let at = flagship_vertex(world, &terrain);
     sky_report_from(world, time, &terrain, &climate, at)
 }
 
-/// The canonical-grid cell of the world's flagship settlement, if it has one.
+/// The canonical-grid vertex of the world's flagship settlement, if it has one.
 /// `None` for a settlement-less world — seed 123 generates one, and its sky is
-/// honestly placeless rather than cell 0's by accident.
-fn flagship_cell(world: &World, terrain: &GeneratedTerrain) -> Option<hornvale_kernel::CellId> {
+/// honestly placeless rather than vertex 0's by accident.
+fn flagship_vertex(world: &World, terrain: &GeneratedTerrain) -> Option<hornvale_kernel::Vertex> {
     hornvale_terrain::places(world)
         .into_iter()
         .find(|p| {
@@ -8848,16 +8868,16 @@ fn flagship_cell(world: &World, terrain: &GeneratedTerrain) -> Option<hornvale_k
                 .is_some()
         })
         .and_then(|p| place_coord(world, p.id))
-        .map(|c| terrain.nearest_cell(c.latitude, c.longitude))
+        .map(|c| terrain.nearest_vertex(c.latitude, c.longitude))
 }
 
 /// The sky report given already-derived terrain and climate — the reuse seam
 /// so callers holding the providers don't re-derive them (The Retainer).
 ///
-/// `at` is the OBSERVER's cell: whose weather this sky describes, and whose
+/// `at` is the OBSERVER's vertex: whose weather this sky describes, and whose
 /// occlusion dims it. It used to be resolved here from the flagship
 /// settlement, so a walker a thousand miles away still got the capital's
-/// weather — and a settlement-less world silently borrowed cell 0's. `None`
+/// weather — and a settlement-less world silently borrowed vertex 0's. `None`
 /// means nowhere in particular, which has no weather at all: the sky comes
 /// back unobstructed and unannotated.
 pub fn sky_report_from(
@@ -8865,13 +8885,13 @@ pub fn sky_report_from(
     time: WorldTime,
     _terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
-    at: Option<hornvale_kernel::CellId>,
+    at: Option<hornvale_kernel::Vertex>,
 ) -> Result<SkyReport, BuildError> {
-    let Some(cell) = at else {
+    let Some(vertex) = at else {
         return Ok(sky_of(world)?.sky_at_visibility(time, Visibility::CLEAR));
     };
-    let state = climate.weather_at(cell, time.day());
-    let cloud = climate.cloud_type_at(cell, time.day());
+    let state = climate.weather_at(vertex, time.day());
+    let cloud = climate.cloud_type_at(vertex, time.day());
     let (_, vis) = occlusion(state, cloud);
     let mut report = sky_of(world)?.sky_at_visibility(time, vis);
     report.description = format!(
@@ -9407,9 +9427,9 @@ pub fn rendered_beliefs(
 /// almanac section that names every settlement in the world at once.
 ///
 /// The almanac window cannot build these itself: `PlaceInfo` carries an
-/// `EntityId` but no `CellId`, `AlmanacContext` holds no `&World`, and a
+/// `EntityId` but no `Vertex`, `AlmanacContext` holds no `&World`, and a
 /// window may not reach back to this root. So the root resolves each place
-/// to its cell and hands the finished labels over.
+/// to its vertex and hands the finished labels over.
 ///
 /// The list prints `- **{name}** — {biome}`, so the biome is part of every
 /// line and [`hornvale_almanac::qualify::SiteLabels::for_lines`] groups by
@@ -9417,36 +9437,53 @@ pub fn rendered_beliefs(
 /// At seed 42 that qualifies **120** of 169 entries where grouping by name
 /// alone would have qualified 129, and it is also why no line can come out
 /// as `- **Roa (taiga)** — taiga` (the biome rung cannot separate a group
-/// whose members already share a biome, so it is never chosen). All 120 are
-/// coordinates; the seed-42 Land list contains no biome or people rung at
-/// all.
+/// whose members already share a biome, so it is never chosen).
 ///
-/// A place with no committed `cell-id` — no generated world has one, since
-/// every place is a placed settlement — cannot be qualified and keeps its
+/// A vertex can hold TWO settlements (first observed at seed 42 after The
+/// Lexicon-of-Place: three pairs among 389 places). [`SiteLabels`] is keyed
+/// by vertex, so only the first claimant wears its label; a later co-tenant
+/// keeps its own name below.
+///
+/// A place with no committed `cell-id` cannot be qualified and keeps its
 /// bare name.
 /// type-audit: bare-ok(prose: return)
 fn land_list_labels(world: &World) -> Vec<String> {
     let places = hornvale_terrain::places(world);
-    let cells: Vec<Option<hornvale_kernel::CellId>> = places
+    let vertices: Vec<Option<hornvale_kernel::Vertex>> = places
         .iter()
         .map(
-            |p| match world.ledger.value_of(p.id, hornvale_settlement::CELL_ID) {
-                Some(hornvale_kernel::Value::Number(n)) => Some(hornvale_kernel::CellId(*n as u32)),
+            |p| match world.ledger.value_of(p.id, hornvale_settlement::VERTEX_ID) {
+                Some(hornvale_kernel::Value::Number(n)) => Some(hornvale_kernel::Vertex(*n as u32)),
                 _ => None,
             },
         )
         .collect();
-    let lines: Vec<(hornvale_kernel::CellId, String)> = places
+    let lines: Vec<(hornvale_kernel::Vertex, String)> = places
         .iter()
-        .zip(&cells)
-        .filter_map(|(p, cell)| Some(((*cell)?, p.biome.clone())))
+        .zip(&vertices)
+        .filter_map(|(p, vertex)| Some(((*vertex)?, p.biome.clone())))
         .collect();
     let labels = hornvale_almanac::qualify::SiteLabels::for_lines(world, &lines);
+    let mut labelled: std::collections::BTreeSet<hornvale_kernel::Vertex> =
+        std::collections::BTreeSet::new();
     places
         .iter()
-        .zip(&cells)
-        .map(|(p, cell)| match cell {
-            Some(cell) => labels.label(*cell),
+        .zip(&vertices)
+        .map(|(p, vertex)| match vertex {
+            Some(vertex) => {
+                // Two settlements can stand on one vertex (first observed at
+                // seed 42 after The Lexicon-of-Place: three pairs among 389
+                // places). The label map is keyed by vertex, so only the
+                // first claimant can wear it — a later co-tenant keeps its
+                // own name, which differs by construction of the naming
+                // draw, or the Land list would print one place under the
+                // other's name.
+                if labelled.insert(*vertex) {
+                    labels.label(*vertex)
+                } else {
+                    p.name.clone()
+                }
+            }
             None => p.name.clone(),
         })
         .collect()
@@ -9506,7 +9543,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
     }
     // The document is voiced by the flagship people — the species peopling
     // the world's flagship settlement, the same first-placed predicate
-    // `flagship_cell` resolves the observer's cell from. A window may not
+    // `flagship_vertex` resolves the observer's vertex from. A window may not
     // reach back to this root, so `AlmanacContext::speaker` is filled here
     // rather than derived, the same reason `place_labels` is. `terrain` and
     // `climate` are the Single Sculpt's already-built providers, so
@@ -9548,7 +9585,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
             WorldTime::GENESIS,
             &terrain,
             &climate,
-            flagship_cell(world, &terrain),
+            flagship_vertex(world, &terrain),
         )?,
         climate: climate_report(world),
         // The almanac PRESENTS the sky, so it reads the occluded observation:
@@ -9756,11 +9793,11 @@ mod tests {
     }
 
     /// claim: behaviour — a chamber deeper on the delve ladder is warmer than
-    /// a shallower one beneath the SAME surface cell.
+    /// a shallower one beneath the SAME surface vertex.
     ///
     /// The defect this campaign exists to fix (metaplan §3.5): temperature
     /// passed through unchanged at every depth, so every chamber in a column
-    /// read exactly as the cell above it and the ladder said nothing.
+    /// read exactly as the vertex above it and the ladder said nothing.
     ///
     /// The depths are chosen one inside each habitation rung under a 25 K/km
     /// gradient, and the test **asserts that they really do land on five
@@ -9798,7 +9835,7 @@ mod tests {
             );
             previous = sub.temperature_c;
         }
-        // And the shallowest chamber is already warmer than the cell above it:
+        // And the shallowest chamber is already warmer than the vertex above it:
         // "unchanged at every depth" must fail at the very first rung, not
         // only once the depths get large.
         let shallowest = subterranean_substrate(surface, depths[0], gradient, 400.0, 0.40);
@@ -9811,23 +9848,23 @@ mod tests {
         );
     }
 
-    /// claim: behaviour — two cells at the SAME rung and the SAME depth read
+    /// claim: behaviour — two vertices at the SAME rung and the SAME depth read
     /// different chamber temperatures when their crust differs.
     ///
     /// This is what makes chambers tellable apart, and it is the property a
     /// rung-sampled temperature could not have: 700 m lands in `Deeps` under
     /// both a 15 K/km craton and a 30 K/km young crust, so a reading taken at
-    /// any landmark of that rung would be identical for the two cells. Taken
+    /// any landmark of that rung would be identical for the two vertices. Taken
     /// at the depth itself, they differ by the full 10.5 K the crust is worth.
     #[test]
-    fn two_cells_at_one_rung_differ_when_their_crust_differs() {
+    fn two_vertices_at_one_rung_differ_when_their_crust_differs() {
         let surface = chamber_test_surface();
         let craton = hornvale_terrain::GeothermalGradient::new(15.0);
         let young = hornvale_terrain::GeothermalGradient::new(30.0);
         let depth_m = 700.0;
 
         // The premise: same depth, same rung. Without this the test would be
-        // satisfied by the two cells merely sitting on different rungs, which
+        // satisfied by the two vertices merely sitting on different rungs, which
         // is a weaker and different claim.
         assert_eq!(
             hornvale_terrain::rung_at_depth(depth_m, craton),
@@ -10077,9 +10114,9 @@ mod tests {
         let mut found = 0;
         for block in src.split("let per_axis = [").skip(1) {
             let body = block.split("];").next().expect("a closed array literal");
-            // Only the two per-cell capacity loops: they are the arrays whose
-            // entries read a supply field at `cell`.
-            if !body.contains("(cell)") {
+            // Only the two per-vertex capacity loops: they are the arrays whose
+            // entries read a supply field at `vertex`.
+            if !body.contains("(vertex)") {
                 continue;
             }
             let order: Vec<&str> = body
@@ -10099,7 +10136,10 @@ mod tests {
             assert_eq!(order, expected, "a capacity loop's per_axis order drifted");
             found += 1;
         }
-        assert_eq!(found, 2, "expected exactly the two per-cell capacity loops");
+        assert_eq!(
+            found, 2,
+            "expected exactly the two per-vertex capacity loops"
+        );
     }
 
     /// The `(wc, terrain, report)` prelude the pressure/report `_from` family
@@ -10525,12 +10565,12 @@ mod tests {
         //
         // THE UNDERWORLD (Task 8, spec §4.6): 366 -> 317, and the three counts
         // above are again UNCHANGED at 145 — the same split, one campaign on.
-        // The node index is re-keyed on `(cell, rung)`, so drow (the roster's
+        // The node index is re-keyed on `(vertex, rung)`, so drow (the roster's
         // one settled subterranean people) stops competing for the surface
-        // cell it used to displace someone from. The peopled ROSTER does not
+        // vertex it used to displace someone from. The peopled ROSTER does not
         // move, which is why the pantheon and the three counts do not; what
         // moves is settlement VOLUME, because every people seeded after drow
-        // in genesis order now draws from a different pool of vacant cells
+        // in genesis order now draws from a different pool of vacant vertices
         // (521 occupations across 217 sites, against 826 across 302). -49
         // glosses against -305 occupations and -85 sites: a gloss is emitted
         // per generated NAME, so it tracks distinct sites rather than
@@ -10556,7 +10596,7 @@ mod tests {
         // `"fracture-cave"`, so two of the three formations never matched
         // their own rows and read the genus-blind fallback. Repairing the join
         // changes which rung drow seats at in karst and fracture columns,
-        // which changes which surface cells it leaves free, which changes
+        // which changes which surface vertices it leaves free, which changes
         // settlement VOLUME again — this time upward. The peopled ROSTER is
         // untouched, which is again why the pantheon and the three counts do
         // not move. Post-unblinding re-measure, declared per decision 0016.
@@ -10571,25 +10611,37 @@ mod tests {
         // when — settlement VOLUME again, not the peopled ROSTER. More of
         // seed 42's re-contested ground holds this time, so more names are
         // glossed. Post-unblinding re-measure, declared per decision 0016.
-        assert_eq!(count("name-gloss"), 320);
+        //
+        // THE LEXICON-OF-PLACE ABSORPTION (The Granary post-merge
+        // re-measure): 320 -> 514. Two levers compound: the merged campaign's
+        // own world adds named things (place-lexicon naming moves the count
+        // by construction — this is the documented "a moving campaign added
+        // names" class), AND The Granary's phase-timed raids are still in the
+        // path underneath it, re-deciding settlement volume as in Task 4.
+        // The three counts above are UNCHANGED at 145 for the fifth campaign
+        // running — the peopled ROSTER did not move, so the pantheon and its
+        // two derived counts hold while the gloss count tracks the merged
+        // world's larger named population. Post-unblinding re-measure,
+        // declared per decision 0016.
+        assert_eq!(count("name-gloss"), 514);
     }
 
     #[test]
     fn two_places_can_have_different_skies_on_the_same_day() {
         // The assertion that could not hold while weather was resolved from
-        // the flagship settlement: every cell reported the capital's sky.
+        // the flagship settlement: every vertex reported the capital's sky.
         let world = vigil_world();
         let terrain = terrain_of(&world).unwrap();
         let climate = climate_from(&world, &terrain).unwrap();
         let day = WorldTime::GENESIS;
         let mut seen = std::collections::BTreeSet::new();
-        for cell in terrain.geosphere().cells().take(400) {
-            let r = sky_report_from(&world, day, &terrain, &climate, Some(cell)).unwrap();
+        for vertex in terrain.geosphere().vertices().take(400) {
+            let r = sky_report_from(&world, day, &terrain, &climate, Some(vertex)).unwrap();
             seen.insert(r.description);
         }
         assert!(
             seen.len() > 1,
-            "every cell reported an identical sky — weather is still pinned to one place"
+            "every vertex reported an identical sky — weather is still pinned to one place"
         );
     }
 
@@ -10601,7 +10653,7 @@ mod tests {
         let r = sky_report_from(&world, WorldTime::GENESIS, &terrain, &climate, None).unwrap();
         assert!(
             !r.description.contains("The sky is"),
-            "a placeless observation must not borrow a cell's weather: {}",
+            "a placeless observation must not borrow a vertex's weather: {}",
             r.description
         );
     }
@@ -11056,7 +11108,7 @@ mod tests {
         // THE LONG AGE (spec 6, mutation M1). Decision 0066 ships as
         // "drift = f(sociality x lifespan)", and until this campaign the
         // Settled row of that product was CONSTANT in lifespan -- exactly the
-        // cell an elf was meant to probe. This is the assertion that goes RED
+        // vertex an elf was meant to probe. This is the assertion that goes RED
         // if the Settled arm stops consulting lifespan at all.
         let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
         let human = wc.biosphere.get_by_label("human").expect("human has a row");
@@ -11108,7 +11160,7 @@ mod tests {
     #[test]
     fn predator_pressure_is_deterministic_and_nontrivial() {
         // THE QUARRY: the carnivore-density field is byte-identical across calls
-        // (no seed, pure over committed facts) and genuinely varies — some cells
+        // (no seed, pure over committed facts) and genuinely varies — some vertices
         // carry predator mass (the wild), many carry none (ocean / settled land).
         let world = build_world(
             hornvale_kernel::Seed(42),
@@ -11126,9 +11178,9 @@ mod tests {
         assert_eq!(va, vb, "two calls produce byte-identical fields");
         assert!(
             va.iter().any(|v| *v > 0.5),
-            "some cells are dense predator territory"
+            "some vertices are dense predator territory"
         );
-        assert!(va.contains(&0.0), "many cells carry no predators");
+        assert!(va.contains(&0.0), "many vertices carry no predators");
     }
 
     #[test]
@@ -11136,8 +11188,8 @@ mod tests {
         // THE VESTIGE: the derived dread field is byte-identical across calls
         // (no seed, pure over committed history + terrain), stays in [0,1] (each
         // Vestige::dread is authored in-range and the fold is a max, not a sum),
-        // and reads strictly higher at a cell carrying a breached/forgotten
-        // vestige than at a cell whose stack is empty.
+        // and reads strictly higher at a vertex carrying a breached/forgotten
+        // vestige than at a vertex whose stack is empty.
         let world = build_world(
             hornvale_kernel::Seed(42),
             &hornvale_astronomy::SkyPins::default(),
@@ -11153,56 +11205,56 @@ mod tests {
         assert_eq!(va, vb, "two calls produce byte-identical fields");
         assert!(
             va.iter().all(|v| (0.0..=1.0).contains(v)),
-            "every cell's dread stays in [0,1]"
+            "every vertex's dread stays in [0,1]"
         );
 
-        // The most-dreaded cell that carries any vestige at all.
+        // The most-dreaded vertex that carries any vestige at all.
         //
-        // SEARCHED, not pinned. This read `CellId(21966)` — the single
-        // pre-human gate-scar cell `vestige.rs` had pinned, whose stack's only
+        // SEARCHED, not pinned. This read `Vertex(21966)` — the single
+        // pre-human gate-scar vertex `vestige.rs` had pinned, whose stack's only
         // layer is breached + forgotten at dread 0.9. The terrain epoch of
-        // decision 0134 turned that cell to ocean, and seed 42 now carries NO
+        // decision 0134 turned that vertex to ocean, and seed 42 now carries NO
         // pre-human scar anywhere (the finding is recorded on
-        // `vestige::PREHUMAN_SEED`), so there is no seed-42 cell to move the
+        // `vestige::PREHUMAN_SEED`), so there is no seed-42 vertex to move the
         // pin to.
         //
-        // The claim below does not need a pre-human cell in particular: it is
-        // that a haunted cell reads strictly higher than an unhaunted one, and
+        // The claim below does not need a pre-human vertex in particular: it is
+        // that a haunted vertex reads strictly higher than an unhaunted one, and
         // seed 42's people-made vestiges — abandoned delvings, buried ruins,
         // sealed vaults — are haunted ground too. Taking the MAXIMUM makes the
         // comparison the sharpest one the world offers rather than whichever
-        // cell a scan happens to reach first.
+        // vertex a scan happens to reach first.
         //
-        // Both cells come out of ONE `vestiges_field` scan rather than a
-        // per-cell `vestiges_at` sweep. That is what the batched field exists
+        // Both vertices come out of ONE `vestiges_field` scan rather than a
+        // per-vertex `vestiges_at` sweep. That is what the batched field exists
         // for, and the difference is not cosmetic: `vestiges_at` walks the
-        // ledger per cell, and a whole-globe sweep of it took this test from
+        // ledger per vertex, and a whole-globe sweep of it took this test from
         // 3.8 s to 132 s when it was written that way.
         let terrain = terrain_of(&world).unwrap();
         let geo = terrain.geosphere();
         let stacks = crate::vestige::vestiges_field(&world, &terrain);
-        let haunted_cell = geo
-            .cells()
+        let haunted_vertex = geo
+            .vertices()
             .filter(|&c| !stacks.get(c).is_empty())
             .max_by(|&x, &y| a.get(x).total_cmp(a.get(y)))
-            .expect("some cell in a seed-42 world carries a vestige");
+            .expect("some vertex in a seed-42 world carries a vestige");
         assert!(
-            !stacks.get(haunted_cell).is_empty(),
-            "the fixture cell must carry at least one vestige layer"
+            !stacks.get(haunted_vertex).is_empty(),
+            "the fixture vertex must carry at least one vestige layer"
         );
 
-        // A genuinely empty-stack cell: land or ocean, no pre-human scar, no
+        // A genuinely empty-stack vertex: land or ocean, no pre-human scar, no
         // occupation ever founded there.
-        let empty_cell = geo
-            .cells()
-            .find(|&cell| stacks.get(cell).is_empty())
-            .expect("some cell in a seed-42 world has no vestige at all");
+        let empty_vertex = geo
+            .vertices()
+            .find(|&vertex| stacks.get(vertex).is_empty())
+            .expect("some vertex in a seed-42 world has no vestige at all");
 
-        let haunted_dread = *a.get(haunted_cell);
-        let empty_dread = *a.get(empty_cell);
+        let haunted_dread = *a.get(haunted_vertex);
+        let empty_dread = *a.get(empty_vertex);
         assert!(
             haunted_dread > empty_dread,
-            "a haunted cell must read strictly higher than an empty one ({haunted_dread} vs {empty_dread})"
+            "a haunted vertex must read strictly higher than an empty one ({haunted_dread} vs {empty_dread})"
         );
         assert_eq!(empty_dread, 0.0, "an empty stack folds to zero dread");
     }
@@ -11230,17 +11282,17 @@ mod tests {
         assert_eq!(va, vb, "two calls produce byte-identical fields");
         assert!(
             va.iter().any(|v| *v > 0.5),
-            "some cells are dense prey territory"
+            "some vertices are dense prey territory"
         );
         // A gradient exists for a hunter to climb: density varies from a sparse
-        // floor (~0.005) up to the normalized peak, so a prey-poor cell has a
+        // floor (~0.005) up to the normalized peak, so a prey-poor vertex has a
         // prey-richer neighbour to forage toward.
         let min = va.iter().cloned().fold(f64::INFINITY, f64::min);
         assert!(
             min < 0.2,
-            "prey density varies — prey-poor cells exist to leave"
+            "prey density varies — prey-poor vertices exist to leave"
         );
-        // The prey field is not the predator field: at least some cells differ
+        // The prey field is not the predator field: at least some vertices differ
         // (the two populations do not perfectly coincide).
         let pred: Vec<f64> = predator_pressure_from(&wc, &terrain, &report)
             .iter()
@@ -11808,7 +11860,7 @@ mod tests {
         // (with review) whenever a deliberate bake/carrying-capacity change
         // moves world identity.
         // The Tense re-pin (2026-08-05): 118 -> 68. Capacity gained an era
-        // axis, so a cell's worth is now the binding era's rather than the
+        // axis, so a vertex's worth is now the binding era's rather than the
         // present day's, and the flagship's millennia of growth compound
         // against a lower ceiling. Exactly the "deliberate bake/carrying-
         // capacity change moves world identity" case this comment anticipates.
@@ -11896,15 +11948,15 @@ mod tests {
             &SettlementPins::default(),
         )
         .unwrap();
-        let cells = |w: &World| {
+        let vertices = |w: &World| {
             hornvale_terrain::places(w)
                 .iter()
                 .map(|p| p.name.clone())
                 .collect::<Vec<_>>()
         };
         assert_ne!(
-            cells(&spinning),
-            cells(&locked),
+            vertices(&spinning),
+            vertices(&locked),
             "people must reorganize under a different sky"
         );
     }
@@ -11958,12 +12010,12 @@ mod tests {
         assert!(!hornvale_culture::castes_of(&world, village.id).is_empty());
         // The flagship's own pantheon (not the world total — a default world
         // now carries one pantheon per species-flagship, spec §5). The Living
-        // Community epoch's final placement puts the flagship on a cell whose
+        // Community epoch's final placement puts the flagship on a vertex whose
         // vantage observes one salient phenomenon — re-pin to 1 (measured; a
         // cascade smoke test, the exact belief count is incidental to "the
         // cascade runs").
         // The Tumult (predation epoch, 2026-07-26): predation reseats the
-        // flagship onto a cell whose vantage observes two salient phenomena —
+        // flagship onto a vertex whose vantage observes two salient phenomena —
         // re-pinned 1 -> 2 on the same "incidental count" basis.
         //
         // The Generalist re-pin (2026-08-03): human joining the coexistence
@@ -12097,8 +12149,8 @@ mod tests {
         //
         // The shoreline is checked against a baseline record, not against
         // zero: `derive_sea_level` (terrain/src/elevation.rs) places sea
-        // level at the exact elevation of one grid cell (a quantile pick),
-        // so that cell always sits inside `extract`'s inclusive
+        // level at the exact elevation of one grid vertex (a quantile pick),
+        // so that vertex always sits inside `extract`'s inclusive
         // `[min_sea, max_sea]` band even when every era's sea level equals
         // the present stand — that is the ordinary present coastline, not a
         // symptom of migration, and would appear with or without any deep
@@ -12579,7 +12631,7 @@ mod tests {
         let a = terrain_of(&world).unwrap();
         let b = terrain_of(&world).unwrap();
         assert_eq!(a.globe(), b.globe());
-        assert_eq!(a.geosphere().level(), hornvale_terrain::GLOBE_LEVEL);
+        assert_eq!(a.geosphere().depth(), hornvale_terrain::GLOBE_LEVEL);
     }
 
     #[test]
@@ -12597,7 +12649,7 @@ mod tests {
         )
         .expect("level-4 world builds");
         let terrain = terrain_of(&world).expect("terrain");
-        assert_eq!(terrain.geosphere().level(), 4);
+        assert_eq!(terrain.geosphere().depth(), 4);
     }
 
     #[test]
@@ -12636,8 +12688,8 @@ mod tests {
         //       0.7    0.68881   -0.01119
         //       0.8    0.79454   -0.00546
         //
-        // Sea level is an order statistic over a finite cell grid and the
-        // sculpting that follows it moves cells across the shoreline, so a
+        // Sea level is an order statistic over a finite vertex grid and the
+        // sculpting that follows it moves vertices across the shoreline, so a
         // pinned ocean fraction has always been a TARGET rather than a
         // guarantee — which is decision 0053's own word for it. What the epoch
         // changed is the size of that residual, by delivering the continental
@@ -12750,8 +12802,8 @@ mod tests {
         let a = climate_of(&world).unwrap();
         let b = climate_of(&world).unwrap();
         assert_eq!(a.biome_map(), b.biome_map());
-        assert_eq!(a.geosphere().level(), hornvale_terrain::GLOBE_LEVEL);
-        // A generated spinning world has a band count; ocean cells are marine.
+        assert_eq!(a.geosphere().depth(), hornvale_terrain::GLOBE_LEVEL);
+        // A generated spinning world has a band count; ocean vertices are marine.
         assert!(
             a.band_count().is_some()
                 || matches!(a.regime(), hornvale_climate::RotationRegime::Locked)
@@ -12928,17 +12980,17 @@ mod tests {
         // its regime label.
         assert!(
             !lines[0].contains('('),
-            "a near-rainless cell must not claim a seasonal regime: {}",
+            "a near-rainless vertex must not claim a seasonal regime: {}",
             lines[0]
         );
         assert!(
             !lines[0].contains("about 0 mm"),
-            "a cell that rounds to zero should read 'under 1 mm', not 'about 0 mm': {}",
+            "a vertex that rounds to zero should read 'under 1 mm', not 'about 0 mm': {}",
             lines[0]
         );
         assert!(
             lines[1].contains('('),
-            "a wet cell above the arid floor still names its regime: {}",
+            "a wet vertex above the arid floor still names its regime: {}",
             lines[1]
         );
 
@@ -12999,11 +13051,11 @@ mod tests {
     fn constant_sky_world_still_has_a_climate() {
         let world = constant(42);
         let climate = climate_of(&world).unwrap();
-        assert!(climate.geosphere().cell_count() > 0);
+        assert!(climate.geosphere().vertex_count() > 0);
     }
 
     #[test]
-    fn soil_of_land_cells_show_at_least_two_orders() {
+    fn soil_of_land_vertices_show_at_least_two_orders() {
         use std::collections::BTreeSet;
         let world = generated(42);
         let terrain = terrain_of(&world).unwrap();
@@ -13011,11 +13063,11 @@ mod tests {
         let geo = terrain.geosphere();
         let soil = soil_of(&terrain, &climate, geo);
         let land_orders: BTreeSet<_> = geo
-            .cells()
+            .vertices()
             .filter(|c| !terrain.is_ocean(*c))
             .map(|c| *soil.get(c))
             .collect();
-        assert!(!land_orders.is_empty(), "seed 42 has no land cells");
+        assert!(!land_orders.is_empty(), "seed 42 has no land vertices");
         assert!(
             land_orders.len() >= 2,
             "soil felt monolithic: {land_orders:?}"
@@ -13026,10 +13078,10 @@ mod tests {
     /// area-mean-zero latitude profile (replacing the old +30/-30 profile,
     /// whose equator ran unrealistically hot) cools seed 42's equator from
     /// ~44 °C to ~26 °C at the Earth anchor, and this seed's own drawn
-    /// insolation sits below `S = 1`; its warmest land cell now reads only
+    /// insolation sits below `S = 1`; its warmest land vertex now reads only
     /// 20.77 °C, below this test's 22 °C `hot` threshold, so no witness for
     /// the laterite-overlay branch survives there. Seed 1 has 585 qualifying
-    /// hot+wet land cells (measured), comfortably clearing both branches this
+    /// hot+wet land vertices (measured), comfortably clearing both branches this
     /// test needs. Nothing about `deposit_of` changed; only which seed's
     /// climate still exhibits a hot, wet coastline.
     #[test]
@@ -13040,24 +13092,24 @@ mod tests {
         let geo = terrain.geosphere();
         let mut saw_primary_passthrough = false;
         let mut saw_laterite_overlay = false;
-        for cell in geo.cells() {
-            if terrain.is_ocean(cell) {
-                assert_eq!(deposit_of(&terrain, &climate, geo, cell), None);
+        for vertex in geo.vertices() {
+            if terrain.is_ocean(vertex) {
+                assert_eq!(deposit_of(&terrain, &climate, geo, vertex), None);
                 continue;
             }
-            let combined = deposit_of(&terrain, &climate, geo, cell);
-            match terrain.deposit_at(cell) {
+            let combined = deposit_of(&terrain, &climate, geo, vertex);
+            match terrain.deposit_at(vertex) {
                 Some(primary) => {
                     assert_eq!(
                         combined,
                         Some(primary),
-                        "a primary deposit must pass through unchanged at {cell:?}"
+                        "a primary deposit must pass through unchanged at {vertex:?}"
                     );
                     saw_primary_passthrough = true;
                 }
                 None => {
-                    let hot = climate.mean_temperature_at(cell).get() > 22.0;
-                    let wet = climate.moisture_at(cell) > 0.6;
+                    let hot = climate.mean_temperature_at(vertex).get() > 22.0;
+                    let wet = climate.moisture_at(vertex) > 0.6;
                     if hot && wet {
                         assert_eq!(
                             combined,
@@ -13068,7 +13120,7 @@ mod tests {
                                 grade: 0.4,
                                 tonnage: 0.6,
                             }),
-                            "a hot+wet land cell with no primary deposit gets a laterite overlay at {cell:?}"
+                            "a hot+wet land vertex with no primary deposit gets a laterite overlay at {vertex:?}"
                         );
                         saw_laterite_overlay = true;
                     } else {
@@ -13079,22 +13131,22 @@ mod tests {
         }
         assert!(
             saw_laterite_overlay,
-            "seed 42 has no hot+wet land cell without a primary deposit to overlay"
+            "seed 42 has no hot+wet land vertex without a primary deposit to overlay"
         );
         assert!(
             saw_primary_passthrough,
-            "seed 42 has no land cell with a primary deposit to pass through"
+            "seed 42 has no land vertex with a primary deposit to pass through"
         );
     }
 
-    /// The flagship's cell, read back from its committed `CELL_ID` fact
+    /// The flagship's vertex, read back from its committed `VERTEX_ID` fact
     /// (independent of `placements`, which build_world already consumed).
-    fn flagship_cell(world: &World, village_id: EntityId) -> hornvale_kernel::CellId {
+    fn flagship_vertex(world: &World, village_id: EntityId) -> hornvale_kernel::Vertex {
         match world
             .ledger
-            .value_of(village_id, hornvale_settlement::CELL_ID)
+            .value_of(village_id, hornvale_settlement::VERTEX_ID)
         {
-            Some(Value::Number(n)) => hornvale_kernel::CellId(*n as u32),
+            Some(Value::Number(n)) => hornvale_kernel::Vertex(*n as u32),
             _ => panic!("flagship has no cell-id fact"),
         }
     }
@@ -13114,14 +13166,14 @@ mod tests {
         let climate = climate_of(&world).unwrap();
         let geo = terrain.geosphere();
         let village = hornvale_settlement::village_info(&world).expect("flagship settlement");
-        let cell = flagship_cell(&world, village.id);
+        let vertex = flagship_vertex(&world, village.id);
 
-        let coastal = geo.neighbors(cell).iter().any(|n| terrain.is_ocean(*n));
-        let moisture = climate.moisture_at(cell);
-        let class = biome_class(climate.biome_at(cell));
+        let coastal = geo.neighbors(vertex).iter().any(|n| terrain.is_ocean(*n));
+        let moisture = climate.moisture_at(vertex);
+        let class = biome_class(climate.biome_at(vertex));
         let subsistence = hornvale_culture::subsistence(class, coastal);
         let surplus = (hornvale_culture::fertility(class) * moisture).clamp(0.0, 1.0);
-        let threat = terrain.unrest_at(cell).clamp(0.0, 1.0);
+        let threat = terrain.unrest_at(vertex).clamp(0.0, 1.0);
         let env = hornvale_culture::EnvSummary {
             subsistence,
             surplus,
@@ -13129,7 +13181,7 @@ mod tests {
             threat,
         };
 
-        // The Branches (4-species roster): the globally most-suitable cell
+        // The Branches (4-species roster): the globally most-suitable vertex
         // is not necessarily goblin's a priori (at seed 42, under the
         // current world, it happens to be), so the recomputed structure
         // must use the flagship's OWN species' psychology and role
@@ -13430,7 +13482,7 @@ mod tests {
         };
         // The head deity reorganizes with the sun's rotation regime. The
         // A15a niche cutover had pinned the locked head to Eternal (the
-        // fixed sun) at the then-flagship cell; The Living Community epoch's
+        // fixed sun) at the then-flagship vertex; The Living Community epoch's
         // re-placement REVERSED that — a survey of seeds 1..=25 finds the
         // locked head is now dominantly the felt-tide "Ambient" default
         // (24/25 seeds; Eternal survives only at the odd seed 16). The
@@ -13696,18 +13748,18 @@ mod tests {
         // the naming pass itself calls does NOT pin the composition against
         // a future change to that function: `terrain_of`/`climate_from`
         // reconstruct the identical terrain and climate the build used, and
-        // `CELL_ID` is the same cell, so the recomputed vector is
+        // `VERTEX_ID` is the same vertex, so the recomputed vector is
         // bit-identical to what the naming pass saw BY CONSTRUCTION — a bug
         // inside `settlement_site_concepts` itself would be silently
         // absorbed by both sides of this check (review round 1, Important
         // 2). What this test actually pins: that `glossed_name` draws ONLY
         // from the vector it is handed (no concept the gloss names is
         // absent from the recomputed site vector), that the gloss was
-        // committed against the settlement whose own `CELL_ID` it carries,
+        // committed against the settlement whose own `VERTEX_ID` it carries,
         // and — the anchor the widening had silently dropped, restored
         // below — that a biome token in the gloss agrees with the
         // settlement's own committed `BIOME` fact rather than some other
-        // cell's.
+        // vertex's.
         let world = generated(42);
         let terrain = terrain_of(&world).expect("seed 42 builds terrain");
         let climate = climate_from(&world, &terrain).expect("seed 42 builds climate");
@@ -13719,8 +13771,8 @@ mod tests {
                 continue;
             };
             checked_any = true;
-            let cell = match world.ledger.value_of(id, hornvale_settlement::CELL_ID) {
-                Some(Value::Number(n)) => hornvale_kernel::CellId(*n as u32),
+            let vertex = match world.ledger.value_of(id, hornvale_settlement::VERTEX_ID) {
+                Some(Value::Number(n)) => hornvale_kernel::Vertex(*n as u32),
                 _ => panic!("a settlement carries a numeric cell-id"),
             };
             let species = hornvale_species::species_of(&world, id)
@@ -13732,7 +13784,7 @@ mod tests {
                 &world,
                 &world.seed,
                 &species,
-                cell,
+                vertex,
                 &terrain,
                 &climate,
                 presiding,
@@ -13741,14 +13793,14 @@ mod tests {
             for concept in &site {
                 remainder = remainder.replacen(concept, "", 1);
             }
-            // The Toponym stripped the cell's VARIANT here with its own
+            // The Toponym stripped the vertex's VARIANT here with its own
             // re-derivation, because on that branch the site vector did not
             // carry it. It does now (`settlement_site_concepts` derives it),
             // so the loop above already removed it and a second strip would be
             // the sixth copy of a derivation this merge exists to reduce to
             // one. Deleting it strengthens the test rather than weakening it:
             // a variant in the gloss must now come from the SAME composition
-            // the namer used, not merely be re-derivable at the same cell.
+            // the namer used, not merely be re-derivable at the same vertex.
             assert!(
                 remainder.chars().all(|c| c == '-'),
                 "gloss {gloss:?} for settlement {id:?} names a concept outside its own site \
@@ -13757,11 +13809,11 @@ mod tests {
             // The restored BIOME anchor: if the gloss names the settlement's
             // biome concept at all, that concept must match the settlement's
             // own committed `BIOME` fact — catching a gloss committed
-            // against the wrong cell, which the remainder check above
+            // against the wrong vertex, which the remainder check above
             // cannot (it only checks the gloss against a FRESHLY
-            // re-derived vector at the SAME `cell`, so a `CELL_ID`/`BIOME`
+            // re-derived vector at the SAME `vertex`, so a `VERTEX_ID`/`BIOME`
             // mismatch introduced upstream would sail through it silently).
-            let biome_concept = climate.biome_at(cell).concept_name();
+            let biome_concept = climate.biome_at(vertex).concept_name();
             if gloss.contains(biome_concept) {
                 let committed_biome = world
                     .ledger
@@ -13791,8 +13843,8 @@ mod tests {
         let mut vectors: Vec<Vec<&'static str>> = Vec::new();
         for f in world.ledger.find(hornvale_settlement::IS_SETTLEMENT) {
             let id = f.subject;
-            let cell = match world.ledger.value_of(id, hornvale_settlement::CELL_ID) {
-                Some(Value::Number(n)) => hornvale_kernel::CellId(*n as u32),
+            let vertex = match world.ledger.value_of(id, hornvale_settlement::VERTEX_ID) {
+                Some(Value::Number(n)) => hornvale_kernel::Vertex(*n as u32),
                 _ => panic!("a settlement carries a numeric cell-id"),
             };
             let species = hornvale_species::species_of(&world, id)
@@ -13804,7 +13856,7 @@ mod tests {
                 &world,
                 &world.seed,
                 &species,
-                cell,
+                vertex,
                 &terrain,
                 &climate,
                 presiding,
@@ -13835,9 +13887,9 @@ mod tests {
         // duration (Task 1), so a reorder landing in a later task would go
         // completely unobserved without a direct pin.
         //
-        // An earlier version of this test pinned one hardcoded cell's exact
+        // An earlier version of this test pinned one hardcoded vertex's exact
         // vector (`30793`, a kobold hill Task 4's review had measured). The
-        // absorb of main at `166d4ad9` un-settled that cell and the test
+        // absorb of main at `166d4ad9` un-settled that vertex and the test
         // died on its own fixture — so the pin is written against the
         // CONTRACT instead of against one world's accident: the biome and
         // the presiding phenomenon trail, in that order, and everything
@@ -13862,11 +13914,11 @@ mod tests {
             .find(hornvale_settlement::IS_SETTLEMENT)
             .map(|f| f.subject)
         {
-            let Some(Value::Number(n)) = world.ledger.value_of(id, hornvale_settlement::CELL_ID)
+            let Some(Value::Number(n)) = world.ledger.value_of(id, hornvale_settlement::VERTEX_ID)
             else {
                 continue;
             };
-            let cell = hornvale_kernel::CellId(*n as u32);
+            let vertex = hornvale_kernel::Vertex(*n as u32);
             let Some(species) = hornvale_species::species_of(&world, id) else {
                 continue;
             };
@@ -13879,12 +13931,12 @@ mod tests {
                 &world,
                 &world.seed,
                 &species,
-                cell,
+                vertex,
                 &terrain,
                 &climate,
                 presiding,
             );
-            let biome = climate.biome_at(cell).concept_name();
+            let biome = climate.biome_at(vertex).concept_name();
 
             // The trailing pair, in order: presiding last when it exists,
             // biome immediately before it (or last when it does not).
@@ -13893,24 +13945,24 @@ mod tests {
                     assert_eq!(
                         site.last().copied(),
                         Some(p),
-                        "settlement {id:?} (cell {}): the presiding phenomenon must be LAST — \
-                         it is the least discriminating fact a cell carries. Vector: {site:?}",
-                        cell.0
+                        "settlement {id:?} (vertex {}): the presiding phenomenon must be LAST — \
+                         it is the least discriminating fact a vertex carries. Vector: {site:?}",
+                        vertex.0
                     );
                     assert_eq!(
                         site.get(site.len() - 2).copied(),
                         Some(biome),
-                        "settlement {id:?} (cell {}): the biome must sit immediately before \
+                        "settlement {id:?} (vertex {}): the biome must sit immediately before \
                          the presiding phenomenon. Vector: {site:?}",
-                        cell.0
+                        vertex.0
                     );
                 }
                 None => assert_eq!(
                     site.last().copied(),
                     Some(biome),
-                    "settlement {id:?} (cell {}): with no presiding phenomenon the biome must \
+                    "settlement {id:?} (vertex {}): with no presiding phenomenon the biome must \
                      be LAST. Vector: {site:?}",
-                    cell.0
+                    vertex.0
                 ),
             }
             // Nothing ahead of the trailing pair may be the biome or the
@@ -13920,15 +13972,15 @@ mod tests {
             for (i, concept) in site.iter().enumerate().take(site.len() - trailing) {
                 assert_ne!(
                     *concept, biome,
-                    "settlement {id:?} (cell {}): biome appears at index {i}, ahead of the \
+                    "settlement {id:?} (vertex {}): biome appears at index {i}, ahead of the \
                      trailing pair. Vector: {site:?}",
-                    cell.0
+                    vertex.0
                 );
                 assert!(
                     presiding != Some(*concept),
-                    "settlement {id:?} (cell {}): the presiding concept appears at index {i}, \
+                    "settlement {id:?} (vertex {}): the presiding concept appears at index {i}, \
                      ahead of the trailing pair. Vector: {site:?}",
-                    cell.0
+                    vertex.0
                 );
             }
             if site.len() > trailing {
@@ -14155,8 +14207,8 @@ mod tests {
             insolation_scalar,
             &regime,
         );
-        for cell in geo.cells() {
-            let s = field.get(cell);
+        for vertex in geo.vertices() {
+            let s = field.get(vertex);
             assert!(s.temperature_c.is_finite());
             assert!((0.0..=1.0).contains(&s.moisture));
             assert!(s.insolation.is_finite() && s.insolation >= 0.0);
@@ -14177,20 +14229,20 @@ mod tests {
         let climate = climate_of(&world).unwrap();
         let geo = terrain.geosphere();
         let marine = marine_forage_supply_field(geo, &terrain, &climate, MARINE_SUPPLY_SCALE);
-        for cell in geo.cells() {
-            if !terrain.is_ocean(cell) {
+        for vertex in geo.vertices() {
+            if !terrain.is_ocean(vertex) {
                 assert_eq!(
-                    *marine.get(cell),
+                    *marine.get(vertex),
                     0.0,
-                    "land cell {cell:?} must read exactly 0.0 on MARINE_FORAGE"
+                    "land vertex {vertex:?} must read exactly 0.0 on MARINE_FORAGE"
                 );
             }
         }
         assert!(
-            geo.cells()
+            geo.vertices()
                 .filter(|&c| terrain.is_ocean(c))
                 .any(|c| *marine.get(c) > 0.0),
-            "at least one ocean cell must have positive marine supply, or the \
+            "at least one ocean vertex must have positive marine supply, or the \
              sea is open in name only and Task 8's kinds would all be ghosts"
         );
     }
@@ -14255,9 +14307,9 @@ mod tests {
     }
 
     /// SKY-24 guard: on a `Locked` world, `substrate_field`'s insolation
-    /// rewards the substellar geometry — peaking at the substellar cell,
-    /// zero at the antistellar cell (`cos_theta < 0`, floored), and
-    /// strictly between the two at a terminator-ring cell.
+    /// rewards the substellar geometry — peaking at the substellar vertex,
+    /// zero at the antistellar vertex (`cos_theta < 0`, floored), and
+    /// strictly between the two at a terminator-ring vertex.
     #[test]
     fn locked_insolation_peaks_at_substellar_and_zeroes_on_night_side() {
         let world = build_world(
@@ -14290,55 +14342,55 @@ mod tests {
             &regime,
         );
 
-        // Locate the substellar cell (max substellar_cosine), the
-        // antistellar cell (min), and the cell nearest the terminator
+        // Locate the substellar vertex (max substellar_cosine), the
+        // antistellar vertex (min), and the vertex nearest the terminator
         // (cosine closest to zero) by scanning the geosphere.
         let mut substellar = None;
         let mut antistellar = None;
         let mut terminator = None;
-        for cell in geo.cells() {
-            let cos = hornvale_climate::substellar_cosine(geo.position(cell));
+        for vertex in geo.vertices() {
+            let cos = hornvale_climate::substellar_cosine(geo.position(vertex));
             if substellar.map(|(_, best)| cos > best).unwrap_or(true) {
-                substellar = Some((cell, cos));
+                substellar = Some((vertex, cos));
             }
             if antistellar.map(|(_, best)| cos < best).unwrap_or(true) {
-                antistellar = Some((cell, cos));
+                antistellar = Some((vertex, cos));
             }
             if terminator
                 .map(|(_, best): (_, f64)| cos.abs() < best.abs())
                 .unwrap_or(true)
             {
-                terminator = Some((cell, cos));
+                terminator = Some((vertex, cos));
             }
         }
-        let (substellar_cell, _) = substellar.unwrap();
-        let (antistellar_cell, antistellar_cos) = antistellar.unwrap();
-        let (terminator_cell, _) = terminator.unwrap();
+        let (substellar_vertex, _) = substellar.unwrap();
+        let (antistellar_vertex, antistellar_cos) = antistellar.unwrap();
+        let (terminator_vertex, _) = terminator.unwrap();
         assert!(
             antistellar_cos < 0.0,
-            "the antistellar cell must sit on the night side"
+            "the antistellar vertex must sit on the night side"
         );
 
         let ins = |c| field.get(c).insolation;
         assert!(
-            ins(substellar_cell) > ins(terminator_cell),
+            ins(substellar_vertex) > ins(terminator_vertex),
             "substellar {} must exceed terminator {}",
-            ins(substellar_cell),
-            ins(terminator_cell)
+            ins(substellar_vertex),
+            ins(terminator_vertex)
         );
         assert!(
-            ins(terminator_cell) >= 0.0,
+            ins(terminator_vertex) >= 0.0,
             "terminator insolation must not be negative"
         );
         assert_eq!(
-            ins(antistellar_cell),
+            ins(antistellar_vertex),
             0.0,
-            "the antistellar cell reads zero insolation (Lambert floor)"
+            "the antistellar vertex reads zero insolation (Lambert floor)"
         );
     }
 
     /// SKY-24 hard guard: on a `Spinning` world, `substrate_field`'s
-    /// insolation is EXACTLY `annual_mean_insolation` per cell — the
+    /// insolation is EXACTLY `annual_mean_insolation` per vertex — the
     /// Spinning arm is the unmodified pre-fix computation, so no spinning
     /// world's save bytes may move.
     #[test]
@@ -14362,13 +14414,16 @@ mod tests {
             insolation_scalar,
             &regime,
         );
-        for cell in geo.cells() {
-            let expected =
-                annual_mean_insolation(geo.coord(cell).latitude, obliquity_deg, insolation_scalar);
+        for vertex in geo.vertices() {
+            let expected = annual_mean_insolation(
+                geo.coord(vertex).latitude,
+                obliquity_deg,
+                insolation_scalar,
+            );
             assert_eq!(
-                field.get(cell).insolation,
+                field.get(vertex).insolation,
                 expected,
-                "cell {cell:?}: spinning insolation must equal the unchanged latitude-only formula exactly"
+                "vertex {vertex:?}: spinning insolation must equal the unchanged latitude-only formula exactly"
             );
         }
     }
@@ -14414,16 +14469,16 @@ mod tests {
         let k_cool = &ks.iter().find(|(tag, _)| *tag == kobold_tag).unwrap().1;
         let k_warm = &ks.iter().find(|(tag, _)| *tag == bugbear_tag).unwrap().1;
 
-        // Over cells where both are positive, the ratio k_cool/k_warm is NOT
+        // Over vertices where both are positive, the ratio k_cool/k_warm is NOT
         // constant — the direct refutation of flat-NPP proportionality.
         let mut ratios: Vec<f64> = geo
-            .cells()
+            .vertices()
             .filter_map(|c| {
                 let (a, b) = (*k_cool.get(c), *k_warm.get(c));
                 (a > 0.0 && b > 0.0).then_some(a / b)
             })
             .collect();
-        assert!(ratios.len() > 10, "need enough co-occupied cells");
+        assert!(ratios.len() > 10, "need enough co-occupied vertices");
         ratios.sort_by(f64::total_cmp);
         let (lo, hi) = (ratios.first().unwrap(), ratios.last().unwrap());
         assert!(
@@ -14435,12 +14490,12 @@ mod tests {
     #[test]
     fn land_stays_fully_occupied_after_the_gate() {
         // P5 (spec §5): "Land stays fully occupied — every one of the 11,066
-        // land cells has a dominant before and after." The Tumult's land mask
+        // land vertices has a dominant before and after." The Tumult's land mask
         // (five of the six supply axes are terrestrial; the sixth,
         // MARINE_FORAGE, is marine and unweighted by every shipped kind)
-        // takes cells OUT of contention for kinds whose whole uptake vector
+        // takes vertices OUT of contention for kinds whose whole uptake vector
         // finds no supply there; P5's claim is that it never empties a LAND
-        // cell of every kind — every land cell keeps at least one kind with
+        // vertex of every kind — every land vertex keeps at least one kind with
         // K > 0.
         let world = generated(42);
         let terrain = terrain_of(&world).unwrap();
@@ -14464,24 +14519,24 @@ mod tests {
             &realm,
             &affinity,
         );
-        let land: Vec<_> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+        let land: Vec<_> = geo.vertices().filter(|&c| !terrain.is_ocean(c)).collect();
         // THE GLASSHOUSE re-pin (Stage B, decision 0134): 11_066 -> 11_283.
         // The craton rescale delivers its budget, so seed 42's ocean fraction
-        // falls slightly and the land mask grows by 217 cells (+1.96%). This is
+        // falls slightly and the land mask grows by 217 vertices (+1.96%). This is
         // a COUNT of the population P5's claim quantifies over, not the claim
-        // itself: the assertion below — that no land cell is emptied of every
+        // itself: the assertion below — that no land vertex is emptied of every
         // kind — is what this test is for, and it holds over the larger mask.
         // Post-unblinding re-measure, declared per decision 0016.
-        assert_eq!(land.len(), 11_283, "P5's land-cell count (spec §1)");
+        assert_eq!(land.len(), 11_283, "P5's land-vertex count (spec §1)");
 
-        let undominated: Vec<hornvale_kernel::CellId> = land
+        let undominated: Vec<hornvale_kernel::Vertex> = land
             .iter()
             .copied()
             .filter(|&c| !ks.iter().any(|(_, k)| *k.get(c) > 0.0))
             .collect();
         assert!(
             undominated.is_empty(),
-            "P5: every land cell must have at least one kind with K > 0 after \
+            "P5: every land vertex must have at least one kind with K > 0 after \
              the gate; {} did not (first: {:?})",
             undominated.len(),
             undominated.first()
@@ -14491,7 +14546,7 @@ mod tests {
     /// The three build-local reads
     /// [`menagerie_full_roster_dominant_breakdown`] returns: every kind's
     /// name (biosphere order, the `tag`-indexable slice), the per-kind
-    /// dominant-cell count, and that count re-keyed by name and sorted for
+    /// dominant-vertex count, and that count re-keyed by name and sorted for
     /// a readable failure message.
     type DominantBreakdown = (
         Vec<&'static str>,
@@ -14505,18 +14560,18 @@ mod tests {
     /// show the menagerie breaking the goblinoid "oatmeal"? Packs the whole
     /// roster through the exact `per_species_suitability` -> `coexist::pack`
     /// pipeline settlement genesis and `demography_report_from` share (same
-    /// frozen `BETA`/`FLOOR`), then reads the per-cell DOMINANT species —
+    /// frozen `BETA`/`FLOOR`), then reads the per-vertex DOMINANT species —
     /// the greatest realized individual density, tie-broken to the lowest
     /// species id (`report.stack.density` is already tag-ascending, so
     /// "replace only on strictly greater" keeps the first-seen id on an
     /// exact tie, matching `total_cmp`'s determinism).
     ///
     /// CALIBRATION FINDING (2026-07-16, seed 42): this does NOT emerge.
-    /// Exactly 2 distinct dominants (`twig-blight`: 1801 cells, `rust-
-    /// monster`: 1685 cells) sweep all 3486 dominated land cells; every one
+    /// Exactly 2 distinct dominants (`twig-blight`: 1801 vertices, `rust-
+    /// monster`: 1685 vertices) sweep all 3486 dominated land vertices; every one
     /// of the other 14 species (the 4 peoples AND the 10 other fauna,
     /// including `treant`, `xorn`, and all three chromatic dragons) is
-    /// PRESENT with positive density at nearly every land cell but never
+    /// PRESENT with positive density at nearly every land vertex but never
     /// the local arg-max, so each holds zero strongholds. This is not
     /// richer than the peopled-only 2-way split (goblin/hobgoblin,
     /// `beta_calibration_freeze`/Task 5) — it is the SAME shape, just with
@@ -14529,7 +14584,7 @@ mod tests {
     /// understory cousin `twig-blight` (5 kg) is a 360x mass ratio ->
     /// ~1568x home-range ratio; `white/red/black-dragon` (2200-2700 kg) vs
     /// `owlbear` (450 kg) is a ~5-6x mass ratio -> ~7x home-range ratio.
-    /// Observed max per-cell density confirms the direction: `treant`
+    /// Observed max per-vertex density confirms the direction: `treant`
     /// 0.00728 vs `twig-blight` 0.613 (~84x), `xorn` 0.0367 vs
     /// `rust-monster` 0.307 (~8x) — the mighty specialists' resource-share
     /// advantage (potency-bought sovereignty floor, obligate niche fit)
@@ -14556,7 +14611,7 @@ mod tests {
     /// uptake — it now dot-products the uptake vector against per-axis
     /// supply fields (`axis_supply`; `windows/worldgen/tests/demesne.rs`).
     /// Re-measured post-repoint: distinct dominants rose 2 -> 4 (`xorn`
-    /// 29136 cells, `rust-monster` 9551, `twig-blight` 1328, `goblin` 947)
+    /// 29136 vertices, `rust-monster` 9551, `twig-blight` 1328, `goblin` 947)
     /// — `xorn`'s pure-`MINERAL` niche now tracks its own spatial supply
     /// field instead of a rescaled copy of everyone else's. `treant` is
     /// STILL swept by `twig-blight` (the Kleiber home-range root cause
@@ -14571,7 +14626,7 @@ mod tests {
     /// count investigation (`FORAGE_FRACTION` swept 0.5..3.0, kept at 0.5 —
     /// see `windows/worldgen/tests/confluence.rs`'s settlement-count test
     /// for the full writeup; the sweep left `per_species_suitability`'s
-    /// per-cell dominance unchanged from T2's reading). The breakdown is
+    /// per-vertex dominance unchanged from T2's reading). The breakdown is
     /// BYTE-IDENTICAL to T2's: `[xorn: 29136, rust-monster: 9551,
     /// twig-blight: 1328, goblin: 947]`, 4 distinct dominants. Splitting
     /// this test three ways rather than un-ignoring the whole thing, per
@@ -14581,13 +14636,13 @@ mod tests {
     ///   repoint baseline of 2 (the-demesne's own emergence claim, mirrored
     ///   from `demesne.rs`'s `settlements_and_dominants_diversify_on_seed_42`),
     ///   and `xorn` — the pure-`MINERAL` niche the per-axis supply was built
-    ///   to unlock — holds a real, large stronghold (29136 cells). Both are
+    ///   to unlock — holds a real, large stronghold (29136 vertices). Both are
     ///   Stage-1-reachable and both clear.
     /// - **Still `#[ignore]`d, mass/sovereignty calibration (NOT Stage 2)**:
     ///   `treant` holds ZERO strongholds. Measured, not faked: the
     ///   per-axis supply gave `treant` its OWN photosynthate-tracking
     ///   field (unlike the old shared-scalar model), but `twig-blight`
-    ///   still wins every contested cell — the root cause traced above
+    ///   still wins every contested vertex — the root cause traced above
     ///   (Kleiber home-range scaling: `treant` at 1800 kg has a ~1568x
     ///   larger home range than `twig-blight` at 5 kg, so `treant`'s
     ///   resource-share advantage never survives the per-INDIVIDUAL
@@ -14596,7 +14651,7 @@ mod tests {
     ///   confirmed still true after the-demesne; it awaits a body-mass /
     ///   sovereignty-devotion retune, not a resource-supply change.
     /// - **Still `#[ignore]`d at the time, Stage 2 (`ANIMAL_PREY` field)**: no
-    ///   chromatic dragon (or `owlbear`) ever wins a cell — their pure-
+    ///   chromatic dragon (or `owlbear`) ever wins a vertex — their pure-
     ///   `ANIMAL_PREY` niche reads Stage 1's placeholder-zero supply, so
     ///   they can never out-compete a species riding a real axis. Trophic
     ///   wiring is explicitly Stage 2's job.
@@ -14611,7 +14666,7 @@ mod tests {
     /// hobgoblin/bugbear all carry nonzero `ANIMAL_PREY` weights — see
     /// `confluence.rs`'s settlement-count test). The dragon bullet's
     /// "awaits Stage 2" reasoning is now stale in the direction that
-    /// mattered least: viability was never the same bar as per-cell
+    /// mattered least: viability was never the same bar as per-vertex
     /// dominance. Dragons ARE viable now (`non_void_roster.rs`'s allowlist
     /// is deleted; see the occupancy readout), but still never win the
     /// arg-max — the SAME Kleiber home-range effect that keeps `treant` from
@@ -14623,7 +14678,7 @@ mod tests {
     /// comment for the measured detail.
     ///
     /// Returns every kind's name (biosphere order, the `tag`-indexable
-    /// slice), the per-kind dominant-cell count, and that count re-keyed by
+    /// slice), the per-kind dominant-vertex count, and that count re-keyed by
     /// name and sorted for a readable failure message ([`DominantBreakdown`]).
     fn menagerie_full_roster_dominant_breakdown(seed: u64) -> DominantBreakdown {
         let world = generated(seed);
@@ -14638,14 +14693,14 @@ mod tests {
 
         let geo = terrain.geosphere();
 
-        // Per-cell dominant species id: greatest density wins; deterministic
+        // Per-vertex dominant species id: greatest density wins; deterministic
         // tie-break to the lowest species id.
         let mut dominant_counts: std::collections::BTreeMap<u32, usize> =
             std::collections::BTreeMap::new();
-        for cell in geo.cells() {
+        for vertex in geo.vertices() {
             let mut best: Option<(u32, f64)> = None;
             for (id, density) in &report.stack.density {
-                let d = *density.get(cell);
+                let d = *density.get(vertex);
                 if d <= 0.0 {
                     continue;
                 }
@@ -14700,7 +14755,7 @@ mod tests {
     const PREREGISTERED_DISTINCT_DOMINANTS_TARGET: usize = 6;
 
     /// STAGE-1-REACHABLE (un-ignored, BIO-35 the-demesne T3): the per-axis
-    /// vector supply diversifies full-roster (fauna-included) per-cell
+    /// vector supply diversifies full-roster (fauna-included) per-vertex
     /// dominance to the measured Stage-1 achievement
     /// ([`STAGE1_DISTINCT_DOMINANTS_42`] = 4, up from the baseline 2), and
     /// one of the two pure-`MINERAL` specialists — the mineral supply field
@@ -14712,7 +14767,7 @@ mod tests {
     ///
     /// **UPDATE (The Deep Realm, Task 6).** `xorn` and `rust-monster` share
     /// this one `MINERAL` resource niche, so which of the two wins a
-    /// contested cell has always been a function of their `condition_niche`
+    /// contested vertex has always been a function of their `condition_niche`
     /// curves, not the resource axis this test is really about. Task 6
     /// honestly re-authored both curves against real subterranean conditions
     /// (`domains/species/src/lib.rs`): `rust-monster`'s condition preferences
@@ -14722,7 +14777,7 @@ mod tests {
     /// unchanged by Task 6, just no longer faked via a biased insolation
     /// optimum). Scored against the SURFACE substrate — chambers are not
     /// wired into placement yet, spec §6 — a flatter competitor no longer
-    /// wins any contested cell against a sharper one, so `rust-monster` now
+    /// wins any contested vertex against a sharper one, so `rust-monster` now
     /// sweeps every stronghold this axis produces at seed 42 and `xorn` holds
     /// none. That is a measured consequence of Task 6's re-authoring, not a
     /// regression in the per-axis supply field this test otherwise pins, so
@@ -14740,7 +14795,7 @@ mod tests {
              {distinct_dominants}: {breakdown:?}"
         );
 
-        let dominates_a_cell = |name: &str| {
+        let dominates_a_vertex = |name: &str| {
             let id = names
                 .iter()
                 .position(|n| *n == name)
@@ -14751,7 +14806,7 @@ mod tests {
         //
         // The sibling of `demesne::settlements_and_dominants_diversify_on_seed_42`,
         // and it falls the same way for the same reason — see that test for the
-        // full argument. Xorn holds no cell on this tree; it clears on `main`.
+        // full argument. Xorn holds no vertex on this tree; it clears on `main`.
         //
         // The DIVERSITY half of this test is untouched and in fact improved:
         // five distinct full-roster dominants against the Stage-1 achievement
@@ -14763,9 +14818,9 @@ mod tests {
         // under the corrected Lieth productivity model while a pure-MINERAL
         // niche did not move.
         assert!(
-            dominates_a_cell("xorn") || dominates_a_cell("rust-monster"),
+            dominates_a_vertex("xorn") || dominates_a_vertex("rust-monster"),
             "the shared pure-MINERAL niche (xorn, rust-monster) should hold a stronghold \
-             somewhere — neither specialist dominates any cell: {breakdown:?}"
+             somewhere — neither specialist dominates any vertex: {breakdown:?}"
         );
     }
 
@@ -14815,7 +14870,7 @@ mod tests {
                 .superpowers/sdd/task-6-report.md and this test group's module doc."]
     fn menagerie_treant_stronghold_awaits_mass_calibration() {
         let (names, dominant_counts, breakdown) = menagerie_full_roster_dominant_breakdown(42);
-        let dominates_a_cell = |name: &str| {
+        let dominates_a_vertex = |name: &str| {
             let id = names
                 .iter()
                 .position(|n| *n == name)
@@ -14823,7 +14878,7 @@ mod tests {
             dominant_counts.get(&id).copied().unwrap_or(0) > 0
         };
         assert!(
-            dominates_a_cell("treant"),
+            dominates_a_vertex("treant"),
             "the photosynthate specialist (treant) should hold a stronghold: {breakdown:?}"
         );
     }
@@ -14835,7 +14890,7 @@ mod tests {
     /// now measurably viable — `every_kind_is_viable_somewhere`
     /// (`non_void_roster.rs`) passes with no allowlist, and the occupancy
     /// readout shows each dragon and the owlbear present on ~114k-143k
-    /// cells across 10 biomes. But viable is not the same bar as this test:
+    /// vertices across 10 biomes. But viable is not the same bar as this test:
     /// re-measured post-wiring, the full-roster dominant breakdown is
     /// `[xorn: 4277, rust-monster: 3873, twig-blight: 2263, kobold: 653]` —
     /// still zero dragons. The root cause is the SAME Kleiber home-range
@@ -14844,7 +14899,7 @@ mod tests {
     /// chromatic dragon (2200-2700 kg) has a home range large enough that
     /// its resource-share advantage never survives the per-INDIVIDUAL
     /// density conversion `coexist::pack` applies, so a numerous
-    /// small-bodied competitor with any nonzero share on the same cell
+    /// small-bodied competitor with any nonzero share on the same vertex
     /// always wins the arg-max. Prey supply fixed VIABILITY (K > 0
     /// somewhere); it was never going to fix DOMINANCE, which is a body-mass
     /// /sovereignty-devotion question orthogonal to which resource axis is
@@ -14853,12 +14908,12 @@ mod tests {
     #[test]
     #[ignore = "mass/sovereignty calibration (re-measured, The Vacancy task 6b): ANIMAL_PREY \
                 supply is real now (prey_supply_field) and all four pure-ANIMAL_PREY kinds are \
-                viable, but no dragon wins a per-cell dominance comparison — same Kleiber \
+                viable, but no dragon wins a per-vertex dominance comparison — same Kleiber \
                 home-range effect documented for treant, a body-mass/sovereignty-devotion \
                 retune orthogonal to the resource-axis fix this task made."]
     fn menagerie_dragon_stronghold_awaits_animal_prey_stage_2() {
         let (names, dominant_counts, breakdown) = menagerie_full_roster_dominant_breakdown(42);
-        let dominates_a_cell = |name: &str| {
+        let dominates_a_vertex = |name: &str| {
             let id = names
                 .iter()
                 .position(|n| *n == name)
@@ -14866,9 +14921,9 @@ mod tests {
             dominant_counts.get(&id).copied().unwrap_or(0) > 0
         };
         assert!(
-            dominates_a_cell("white-dragon")
-                || dominates_a_cell("red-dragon")
-                || dominates_a_cell("black-dragon"),
+            dominates_a_vertex("white-dragon")
+                || dominates_a_vertex("red-dragon")
+                || dominates_a_vertex("black-dragon"),
             "at least one chromatic dragon (mighty apex) should hold a stronghold: {breakdown:?}"
         );
     }

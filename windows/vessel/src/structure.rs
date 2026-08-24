@@ -6,10 +6,10 @@
 //! address is identity, not shape (law 3), so two chambers being triangle
 //! neighbours means nothing and is not consulted.
 
-use crate::band::chamber_depth;
 use crate::brief::Brief;
+use crate::depth::chamber_depth;
 use crate::streams::ROOM_CHAMBERS;
-use hornvale_kernel::{RoomAddr, Seed};
+use hornvale_kernel::{Facet, Seed};
 
 /// The most chambers one structure may have in v1. A bound, not a target: the
 /// point of law 1 is that deep addresses are SPARSE, and an unbounded count
@@ -18,7 +18,7 @@ use hornvale_kernel::{RoomAddr, Seed};
 pub const MAX_CHAMBERS: usize = 4;
 
 // The collision scan in `structure_at` varies only the LAST base-4 digit
-// (`RoomAddr.path` holds child indices 0..4; `pack` rejects anything else), so
+// (`Facet.path` holds child indices 0..4; `pack` rejects anything else), so
 // it can only guarantee a free value while `MAX_CHAMBERS <= 4`: with at most
 // `MAX_CHAMBERS - 1` prior chambers sharing a prefix, pigeonhole leaves one of
 // the four digit values open. Raising `MAX_CHAMBERS` past 4 without widening the
@@ -43,9 +43,9 @@ const _: () = assert!(MAX_CHAMBERS <= 4);
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Structure {
     /// The chamber `enter` arrives in from the locale.
-    pub threshold: RoomAddr,
+    pub threshold: Facet,
     /// Every chamber, threshold included. Length is `1..=MAX_CHAMBERS`.
-    pub chambers: Vec<RoomAddr>,
+    pub chambers: Vec<Facet>,
     /// Undirected apertures as index pairs into `chambers`. Connected, so
     /// every chamber is reachable from `threshold`.
     pub links: Vec<(usize, usize)>,
@@ -58,7 +58,7 @@ pub struct Structure {
 /// locale's draw can perturb it.
 /// type-audit: bare-ok(count: walk_depth)
 pub fn structure_at(
-    locale: &RoomAddr,
+    locale: &Facet,
     brief: &Brief,
     seed: Seed,
     walk_depth: u32,
@@ -86,7 +86,7 @@ pub fn structure_at(
     // on collisions).
     let depth = chamber_depth(walk_depth);
     let extra = (depth - locale.depth()) as usize;
-    let mut chambers: Vec<RoomAddr> = Vec::with_capacity(count);
+    let mut chambers: Vec<Facet> = Vec::with_capacity(count);
     for _ in 0..count {
         let draw = stream.next_u64();
         let mut candidate = child_path(locale, draw, extra);
@@ -110,12 +110,12 @@ pub fn structure_at(
 
 /// Extend `locale`'s path by `extra` child digits taken from `draw`, two bits
 /// at a time. Integer only.
-fn child_path(locale: &RoomAddr, draw: u64, extra: usize) -> RoomAddr {
+fn child_path(locale: &Facet, draw: u64, extra: usize) -> Facet {
     let mut path = locale.path.clone();
     for i in 0..extra {
         path.push(((draw >> (2 * i)) & 0b11) as u8);
     }
-    RoomAddr {
+    Facet {
         face: locale.face,
         path,
     }
@@ -129,8 +129,8 @@ mod tests {
 
     const WALK: u32 = 12;
 
-    fn locale() -> hornvale_kernel::RoomAddr {
-        hornvale_kernel::RoomAddr {
+    fn locale() -> hornvale_kernel::Facet {
+        hornvale_kernel::Facet {
             face: 3,
             path: (0..WALK).map(|i| (i % 4) as u8).collect(),
         }
@@ -199,7 +199,7 @@ mod tests {
         let here = structure_at(&locale(), &built_brief(), Seed(42), WALK).expect("built");
         let mut elsewhere_path = locale().path;
         elsewhere_path[0] = (elsewhere_path[0] + 1) % 4;
-        let elsewhere = hornvale_kernel::RoomAddr {
+        let elsewhere = hornvale_kernel::Facet {
             face: 3,
             path: elsewhere_path,
         };

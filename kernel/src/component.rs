@@ -1,6 +1,6 @@
 //! The entity-space component store: a typed table of component `C` keyed by
-//! an identity `K`. The generalization of [`crate::CellMap`] from a fixed
-//! `CellId` key to any ordered key — the storage substrate an ECS component
+//! an identity `K`. The generalization of [`crate::VertexMap`] from a fixed
+//! `Vertex` key to any ordered key — the storage substrate an ECS component
 //! registry is built on. Deterministic ascending-by-key iteration (the
 //! no-`HashMap` rule's dividend); `BTreeMap`-backed. The dense-`Vec` backend
 //! for dense keys and the permutation indexes are the query engine's work

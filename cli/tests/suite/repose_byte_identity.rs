@@ -53,7 +53,7 @@
 //!
 //! The almanac is a **summary** document — aggregate statistics and a
 //! fifteen-row roster of chief settlements — so it is nearly blind to a
-//! per-cell terrain move and to a name change that lands late in the ledger,
+//! per-vertex terrain move and to a name change that lands late in the ledger,
 //! and it is the *only* one of the three that sees a rendering change. Keep
 //! all three: they cover different halves, and no single one of them is the
 //! byte-identity claim.

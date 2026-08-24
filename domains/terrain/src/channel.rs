@@ -5,21 +5,21 @@
 //!
 //! This is the repair for the type error named in the campaign's keystone —
 //! a river stored as a *face* is as wide as the face, so every river in
-//! Hornvale was one cell (~110 km) across at every zoom. Nothing here refines
+//! Hornvale was one vertex (~110 km) across at every zoom. Nothing here refines
 //! the mesh; the channel is a one-dimensional feature carried alongside it,
 //! and the band predicate evaluates at any position without traversal.
 //!
 //! **Everything in this module is angular.** `domains/terrain` works on the
 //! unit sphere and no planet radius exists anywhere in the codebase, so a
 //! "channel width in metres" has no defined meaning here. Widths are radians,
-//! expressed as fractions of the local cell spacing — which is the better
+//! expressed as fractions of the local vertex spacing — which is the better
 //! statement of the campaign's claim anyway, since the claim is about the
-//! *ratio* of channel width to cell width.
+//! *ratio* of channel width to vertex width.
 
 use crate::crust::SphereFbm;
 use crate::globe::TectonicGlobe;
 use crate::water::WaterKind;
-use hornvale_kernel::{CellId, Geosphere, Seed, SphericalPolyline, band, math};
+use hornvale_kernel::{Geosphere, Seed, SphericalPolyline, Vertex, band, math};
 use std::collections::BTreeSet;
 
 /// Where a point sits across a channel, outward from the centreline. The
@@ -94,18 +94,18 @@ impl Transverse {
 /// type-audit: bare-ok(ratio)
 pub const CHANNEL_WIDTH_EXPONENT: f64 = 0.5;
 
-/// The `a` of `w = a·Q^b`, as a fraction of the local cell spacing.
+/// The `a` of `w = a·Q^b`, as a fraction of the local vertex spacing.
 ///
 /// **Calibrated once, in the open** (spec §10, H1): fitted so the widest
 /// channel seed 42 actually produces on the canonical `Geosphere::new(6)` is
-/// **1/100 of a canonical cell edge** across. That world's largest drainage
+/// **1/100 of a canonical vertex edge** across. That world's largest drainage
 /// is 146, and at the pre-fit placeholder `5.0e-4` its widest channel was
 /// 1.1127e-4 rad — 1/169.7 of the 0.018886-rad canonical edge. Scaling to hit
 /// 1/100 exactly wants 8.4864e-4; `8.5e-4` is that rounded to two figures and
 /// lands the widest channel at 1/99.8 of an edge, which is inside the width
 /// law's own precision.
 ///
-/// The cell edge very nearly cancels out of the fit (`w = a·edge·√Q` against
+/// The vertex edge very nearly cancels out of the fit (`w = a·edge·√Q` against
 /// a target of `edge/100` gives `a ≈ 1/(100·√Q_max)` = 8.276e-4); the 2.5%
 /// residual is the local spacing at the widest vertex differing from the
 /// world-mean edge. So this coefficient is essentially a statement about the
@@ -126,7 +126,7 @@ pub const BANK_WIDTH_RATIO: f64 = 0.5;
 /// Floodplain half-width, as a multiple of channel width, at zero
 /// confinement (a perfectly flat reach). Terrestrial floodplains run tens of
 /// channel widths across; 20 sits inside that range and keeps the widest
-/// valley a fifth of a cell rather than a whole one.
+/// valley a fifth of a vertex rather than a whole one.
 /// type-audit: bare-ok(ratio)
 pub const FLOODPLAIN_MAX_RATIO: f64 = 20.0;
 
@@ -142,8 +142,8 @@ pub const TERRACE_WIDTH_RATIO: f64 = 0.5;
 /// there is no length scale to make it dimensionless.
 ///
 /// **Measured, not assumed** (Task 4 probe, seeds 42/7/1234 at the canonical
-/// `Geosphere::new(6)`, over every `WaterKind::River` cell with a downhill
-/// target): the river-cell gradient distribution is p05 ≈ 2.0e3,
+/// `Geosphere::new(6)`, over every `WaterKind::River` vertex with a downhill
+/// target): the river-vertex gradient distribution is p05 ≈ 2.0e3,
 /// p50 ≈ 1.1–1.5e4, p75 ≈ 2.0–2.6e4, p90 ≈ 3.2–3.7e4, **p95 ≈ 4.0–4.2e4**,
 /// p99 ≈ 5.7e4, max ≈ 6.7–8.5e4. The same statistic at level 5 is within
 /// ~15% of the level-6 value, so this is a property of the terrain rather
@@ -151,7 +151,7 @@ pub const TERRACE_WIDTH_RATIO: f64 = 0.5;
 ///
 /// 4.0e4 is that p95. The choice is what makes the confinement term actually
 /// *discriminate*: it puts the median river at confinement ≈ 0.7, the steep
-/// quartile below 0.4, and about 5% of river cells in true gorges.
+/// quartile below 0.4, and about 5% of river vertices in true gorges.
 /// Normalizing on the maximum instead would compress the whole population
 /// into confinement ∈ [0.7, 1.0] and the law would be a near no-op;
 /// normalizing on the median would make gorges of over half the world's
@@ -161,7 +161,7 @@ pub const GORGE_SLOPE: f64 = 40_000.0;
 
 /// Meander noise spatial frequency on the unit sphere. The value-noise
 /// lattice spacing is `1/f` radians, so 24 puts a meander wavelength at
-/// ~0.04 rad — a couple of canonical cells, which is the scale a mainstem
+/// ~0.04 rad — a couple of canonical vertices, which is the scale a mainstem
 /// wanders on.
 /// type-audit: bare-ok(ratio)
 pub const MEANDER_FREQUENCY: f64 = 24.0;
@@ -170,22 +170,22 @@ pub const MEANDER_FREQUENCY: f64 = 24.0;
 /// type-audit: bare-ok(count)
 pub const MEANDER_OCTAVES: u32 = 4;
 
-/// Peak meander displacement as a fraction of the local cell spacing, at
+/// Peak meander displacement as a fraction of the local vertex spacing, at
 /// full confinement-free (flat) gradient. A quarter keeps a wandering
-/// channel inside the pair of cells the vertex joins.
+/// channel inside the pair of vertices the vertex joins.
 /// type-audit: bare-ok(ratio)
 pub const MEANDER_AMPLITUDE_RATIO: f64 = 0.25;
 
 /// Half the channel width for a reach carrying `drainage`, in radians, given
-/// the local angular `cell_edge`. Downstream hydraulic geometry
-/// `w = a·Q^b` with `a` a fraction of the cell edge, so the result stays
-/// angular. **Unconditional in `drainage`**: a creek carrying one cell's runoff
+/// the local angular `vertex_edge`. Downstream hydraulic geometry
+/// `w = a·Q^b` with `a` a fraction of the vertex edge, so the result stays
+/// angular. **Unconditional in `drainage`**: a creek carrying one vertex's runoff
 /// is a narrow channel, not an absent one (The Rill, decision 0130).
 ///
 /// This function used to return exactly `0.0` below
 /// [`crate::water::RIVER_MIN_DRAINAGE`], on the grounds that a sub-threshold
 /// trickle is not a channel. That was right for a network that rendered only
-/// river cells — every band edge derives from this half-width, so a
+/// river vertices — every band edge derives from this half-width, so a
 /// sub-threshold line would have read `Dry` at its own centre and carried no
 /// bank, floodplain or terrace — and it is wrong for one that renders the whole
 /// flow tree. See the decision record for what the short-circuit was protecting
@@ -193,50 +193,50 @@ pub const MEANDER_AMPLITUDE_RATIO: f64 = 0.25;
 ///
 /// # THIS LAW IS ALREADY A FUNCTION OF DRAINED AREA. DO NOT "FIX" IT.
 ///
-/// `drainage` is an upstream **cell count**, which reads like a grid-dependent
+/// `drainage` is an upstream **vertex count**, which reads like a grid-dependent
 /// quantity that would make every width wrong by a scale factor once anything
-/// renders below cell scale. It is not, and the reason is that `cell_edge`
+/// renders below vertex scale. It is not, and the reason is that `vertex_edge`
 /// already carries the conversion.
 ///
-/// `N` cells tile the sphere, so their mean area is `4π/N`; and a locally
-/// hexagonal tiling of cells of area `A` has nearest-neighbour spacing
+/// `N` vertices tile the sphere, so their mean area is `4π/N`; and a locally
+/// hexagonal tiling of vertices of area `A` has nearest-neighbour spacing
 /// `d = √(2/√3)·√A = 1.0746·√A`. That is geometric necessity, not a fitted
 /// coincidence — which is what makes it safe to build on. Measured over the
-/// real mesh, `cell_spacing / √(4π/cell_count)` is **1.078208 / 1.078231 /
+/// real mesh, `vertex_spacing / √(4π/vertex_count)` is **1.078208 / 1.078231 /
 /// 1.078237 / 1.078238** at levels 4 / 5 / 6 / 7: constant to five figures
 /// across a 64× change of resolution, and 0.34% above the planar value
 /// because of the twelve pentagons and the curvature. So
 ///
 /// ```text
-///   a · edge · √count  =  a · (edge/√A_cell) · √(count · A_cell)
+///   a · edge · √count  =  a · (edge/√A_vertex) · √(count · A_vertex)
 ///                      =  (a · 1.0746) · √(drained area)
 /// ```
 ///
 /// and the count never appears on its own. The `edge` factor **is** the
-/// `count → area` conversion, wearing `√A_cell`'s clothes.
+/// `count → area` conversion, wearing `√A_vertex`'s clothes.
 ///
 /// ## The trap, named because this campaign walked into it
 ///
 /// The Rill's original plan proposed exactly the "fix" the paragraph above
 /// rules out: make `drainage` a drained area in steradians and **keep**
-/// `cell_edge`. That multiplies the grid factor in twice. Every width would be
+/// `vertex_edge`. That multiplies the grid factor in twice. Every width would be
 /// rescaled by `√(N₆/N_L)` — **×2 at level 5, ×1/64 at level 12** — which is
 /// the scale error the change was meant to remove, with the sign flipped. The
-/// same trap wearing a different coat: a sub-cell drainage count paired with
-/// the *parent* cell's spacing, which is that factor the other way up.
+/// same trap wearing a different coat: a sub-vertex drainage count paired with
+/// the *parent* vertex's spacing, which is that factor the other way up.
 ///
 /// `tests/rill_properties.rs` is the guard, and it has been shown to catch
-/// this: mutating this line to `cell_edge * cell_edge` (dimensionally the same
-/// defect, since `A_cell ∝ edge²`) reddens it at a relative 5.000e-1 per
+/// this: mutating this line to `vertex_edge * vertex_edge` (dimensionally the same
+/// defect, since `A_vertex ∝ edge²`) reddens it at a relative 5.000e-1 per
 /// doubling.
 ///
 /// ## What Tier 2 inherits
 ///
 /// **The measured size of the problem, so a subdivision knows what it is for**
 /// (The Rill, Task 3; decision 0130 carries the same table with its
-/// denominator). Tier 1 made every land cell carry a channel, which put a
+/// denominator). Tier 1 made every land vertex carry a channel, which put a
 /// polyline through **1.237%** of the walk-depth rooms over seed 42's land, up
-/// from 0.0845% — a 14.6x gain that tracks the count of rendered cells. But
+/// from 0.0845% — a 14.6x gain that tracks the count of rendered vertices. But
 /// only **0.1716%** of those rooms read [`Transverse::Channel`] at their own
 /// centroid, which is the only question any consumer asks: `windows/locale`'s
 /// `describe`, `crossing_between` and `transverse_of` all query
@@ -248,21 +248,21 @@ pub const MEANDER_AMPLITUDE_RATIO: f64 = 0.25;
 /// **7.35e-6 rad** at level 6 against a **2.83e-4 rad** walk-depth room edge:
 /// **one thirty-eighth of a room**. Rendering a reach is not resolving it, and
 /// no change to the width law closes that gap without making creeks wrong.
-/// **1.237% is the number a sub-cell subdivision is trying to recover, not
+/// **1.237% is the number a sub-vertex subdivision is trying to recover, not
 /// 0.1716%** — a prediction stated against the centroid figure sets the target
 /// an order of magnitude low.
 ///
-/// Mind the denominators when re-measuring: a [`hornvale_kernel::RoomAddr`] is
+/// Mind the denominators when re-measuring: a [`hornvale_kernel::Facet`] is
 /// a **face** of the icosphere (`20·4^depth` of them) while
-/// [`Geosphere::cell_count`] is its **dual** (`10·4^level + 2`), so the two
+/// [`Geosphere::vertex_count`] is its **dual** (`10·4^level + 2`), so the two
 /// counts differ by ~2x and mixing them has already produced one spurious
 /// factor-of-two disagreement between two measurements of this quantity.
 ///
 /// Scale-freeness holds **only when the count and the spacing are at the same
-/// level**. There is no [`Geosphere`] to ask below cell scale — level 12 would
-/// be `10·4¹² + 2 = 167,772,162` cells — so a subdivision cannot obtain its
+/// level**. There is no [`Geosphere`] to ask below vertex scale — level 12 would
+/// be `10·4¹² + 2 = 167,772,162` vertices — so a subdivision cannot obtain its
 /// spacing by building a finer globe. It must derive the spacing from
-/// [`hornvale_kernel::RoomAddr::corners`], which returns the three unit-sphere
+/// [`hornvale_kernel::Facet::corners`], which returns the three unit-sphere
 /// corners of a room's own triangle at its own depth, and accumulate drainage
 /// in those same sub-triangle units. Take the two from different depths and
 /// the cancellation above is exactly what breaks.
@@ -278,13 +278,13 @@ pub const MEANDER_AMPLITUDE_RATIO: f64 = 0.25;
 ///
 /// The threshold itself is untouched and still gates
 /// [`crate::water::classify`]'s `WaterKind::River`, which is a different
-/// question: whether a cell is *named* a river. A cell may carry a rendered
+/// question: whether a vertex is *named* a river. A vertex may carry a rendered
 /// watercourse and still classify `DryLand`, and that disagreement is
 /// deliberate — The Ford measured it at ~49.6% before this task and this task
 /// widens it on purpose.
-/// type-audit: bare-ok(count: drainage), pending(wave-1: cell_edge), pending(wave-1: return)
-pub fn channel_half_width(drainage: f64, cell_edge: f64) -> f64 {
-    0.5 * CHANNEL_WIDTH_COEFF * cell_edge * math::powf(drainage, CHANNEL_WIDTH_EXPONENT)
+/// type-audit: bare-ok(count: drainage), pending(wave-1: vertex_edge), pending(wave-1: return)
+pub fn channel_half_width(drainage: f64, vertex_edge: f64) -> f64 {
+    0.5 * CHANNEL_WIDTH_COEFF * vertex_edge * math::powf(drainage, CHANNEL_WIDTH_EXPONENT)
 }
 
 /// How unconfined a reach is, in `[0, 1]`: `1` on the flat, falling linearly
@@ -305,9 +305,9 @@ pub fn confinement(slope: f64) -> f64 {
 /// floodplain/terrace, terrace/dry. Non-decreasing by construction, so
 /// [`hornvale_kernel::band`] reads them directly; a gorge collapses the
 /// second and third to the same value and its floodplain band is empty.
-/// type-audit: bare-ok(count: drainage), pending(wave-2: slope), pending(wave-1: cell_edge), pending(wave-1: return)
-pub fn band_edges(drainage: f64, slope: f64, cell_edge: f64) -> [f64; 4] {
-    let half = channel_half_width(drainage, cell_edge);
+/// type-audit: bare-ok(count: drainage), pending(wave-2: slope), pending(wave-1: vertex_edge), pending(wave-1: return)
+pub fn band_edges(drainage: f64, slope: f64, vertex_edge: f64) -> [f64; 4] {
+    let half = channel_half_width(drainage, vertex_edge);
     let width = 2.0 * half;
     let bank = half + BANK_WIDTH_RATIO * width;
     let valley = bank + FLOODPLAIN_MAX_RATIO * width * confinement(slope);
@@ -343,15 +343,15 @@ fn angle(a: [f64; 3], b: [f64; 3]) -> f64 {
     math::acos(dot(a, b).clamp(-1.0, 1.0))
 }
 
-/// Mean angular separation of a cell from its neighbours — the local cell
+/// Mean angular separation of a vertex from its neighbours — the local vertex
 /// spacing every width in this module is a fraction of.
 ///
 /// `pub(crate)` for `branch.rs`: a Tier 2 branch's width is fed the **same**
 /// spacing as the trunk vertex it attaches to, because its discharge is
-/// expressed in the same cell units. Two definitions of "the local spacing"
+/// expressed in the same vertex units. Two definitions of "the local spacing"
 /// would be two levels, which is exactly the pairing trap
 /// [`channel_half_width`]'s doc names.
-pub(crate) fn cell_spacing(geo: &Geosphere, c: CellId) -> f64 {
+pub(crate) fn vertex_spacing(geo: &Geosphere, c: Vertex) -> f64 {
     let neighbors = geo.neighbors(c);
     if neighbors.is_empty() {
         return 0.0;
@@ -365,10 +365,10 @@ pub(crate) fn cell_spacing(geo: &Geosphere, c: CellId) -> f64 {
 /// target. `0.0` where there is no target (a terminal sink), which reads as
 /// perfectly unconfined — the wide, flat margin of a playa.
 ///
-/// `pub(crate)` for `branch.rs`, for the reason [`cell_spacing`] is: a branch
-/// takes its confinement from the cell it is a share of, so that a rill in a
+/// `pub(crate)` for `branch.rs`, for the reason [`vertex_spacing`] is: a branch
+/// takes its confinement from the vertex it is a share of, so that a rill in a
 /// gorge has no floodplain for the same reason the trunk beside it has none.
-pub(crate) fn local_slope(globe: &TectonicGlobe, geo: &Geosphere, c: CellId) -> f64 {
+pub(crate) fn local_slope(globe: &TectonicGlobe, geo: &Geosphere, c: Vertex) -> f64 {
     let Some(target) = *globe.downhill.get(c) else {
         return 0.0;
     };
@@ -390,16 +390,16 @@ pub(crate) fn local_slope(globe: &TectonicGlobe, geo: &Geosphere, c: CellId) -> 
 #[derive(Clone, Debug)]
 pub struct ChannelNetwork {
     /// One polyline per maximal downhill run of reaches, in build order
-    /// (ascending head `CellId`). A tributary's run ends *on* the cell where
+    /// (ascending head `Vertex`). A tributary's run ends *on* the vertex where
     /// it joins its trunk, and `build`'s explicit **confluence repair** pass
     /// then places that mouth vertex exactly on the trunk's own vertex for
-    /// that cell, so the network is geometrically connected.
+    /// that vertex, so the network is geometrically connected.
     ///
-    /// This doc previously said the shared cell alone made the network
+    /// This doc previously said the shared vertex alone made the network
     /// connected "without any confluence special case". That was the false
-    /// inference — shared *cell* does not imply shared *point* — and it is
+    /// inference — shared *vertex* does not imply shared *point* — and it is
     /// what produced the H2 defect: the tributary's mouth was anchored at the
-    /// cell's undisplaced position while the trunk's vertex for the same cell
+    /// vertex's undisplaced position while the trunk's vertex for the same vertex
     /// was meander-displaced, leaving the two runs a median 4.5 channel
     /// half-widths apart. The special case exists precisely because geometric
     /// connectedness does not follow from graph connectedness, and a reader
@@ -407,54 +407,54 @@ pub struct ChannelNetwork {
     /// type-audit: pending(wave-1: polylines)
     pub polylines: Vec<SphericalPolyline>,
     /// Per polyline, per vertex, the four [`band_edges`] borders for that
-    /// vertex's discharge, gradient and cell spacing. Parallel to
+    /// vertex's discharge, gradient and vertex spacing. Parallel to
     /// `polylines`: `band_edges[i].len() == polylines[i].points.len()`.
     ///
-    /// **One vertex per line does not read its own cell's values: the
-    /// terminal one**, where that cell is the non-river outlet the run drains
-    /// into. It carries the last *river* cell's edges instead, because the
+    /// **One vertex per line does not read its own vertex's values: the
+    /// terminal one**, where that vertex is the non-river outlet the run drains
+    /// into. It carries the last *river* vertex's edges instead, because the
     /// sea's drainage is 0 (a zero-width mouth) and a salt basin's is its
     /// whole catchment's at zero gradient (a mouth flared into a valley an
     /// order of magnitude too broad). See the comment at the borrow in
     /// [`ChannelNetwork::build`] for both measured on seed 42.
     pub band_edges: Vec<Vec<[f64; 4]>>,
-    /// Per polyline, per vertex, the cell that vertex was placed from — the
+    /// Per polyline, per vertex, the vertex that vertex was placed from — the
     /// downhill run the polyline is a rendering of. Parallel to `polylines`:
-    /// `run_cells[i].len() == polylines[i].points.len()`.
+    /// `run_vertices[i].len() == polylines[i].points.len()`.
     ///
-    /// **The last cell of a run is usually not a reach.** A run includes
-    /// the cell it drains into, so its final entry is normally the ocean or
-    /// salt-basin outlet at its mouth (or, at a confluence, the trunk cell it
-    /// joins). A consumer reading a per-cell field off these — drainage, say —
+    /// **The last vertex of a run is usually not a reach.** A run includes
+    /// the vertex it drains into, so its final entry is normally the ocean or
+    /// salt-basin outlet at its mouth (or, at a confluence, the trunk vertex it
+    /// joins). A consumer reading a per-vertex field off these — drainage, say —
     /// must expect the sea's value there, and should read the reach's
-    /// discharge off the *previous* cell, which is the same borrow
+    /// discharge off the *previous* vertex, which is the same borrow
     /// `band_edges` makes.
     ///
     /// Published because a polyline's *geometry* alone cannot say where two
     /// lines meet. Since the confluence repair a tributary's mouth vertex is
-    /// placed **exactly** on the trunk's vertex for the shared cell, so a
+    /// placed **exactly** on the trunk's vertex for the shared vertex, so a
     /// consumer could in principle recover the join by looking for coincident
     /// points — but that is an inference from a float equality, and it cannot
     /// tell a confluence from two lines that merely pass through the same
-    /// place. The cell correspondence states the topology outright, which is
+    /// place. The vertex correspondence states the topology outright, which is
     /// what a longitudinal-connectivity measurement needs if it is not to be
     /// measuring its own guess.
-    pub run_cells: Vec<Vec<CellId>>,
+    pub run_vertices: Vec<Vec<Vertex>>,
     /// The meander displacement field. Derived once and reused for every
     /// vertex (the `Fbm` derive-once pattern), and — the point of it being a
     /// field at all — **continuous in position**, so a walker crosses a band
     /// edge once instead of flickering across it room by room.
     meander: SphereFbm,
-    /// Per cell, the `(polyline, vertex)` of the run that **claimed** it and
-    /// continued past it — the inverse of `run_cells`, as a dense `Vec` over
-    /// the `CellId` index. `None` for a cell no run continues past: an ocean
-    /// cell, or the outlet at a real mouth.
+    /// Per vertex, the `(polyline, vertex)` of the run that **claimed** it and
+    /// continued past it — the inverse of `run_vertices`, as a dense `Vec` over
+    /// the `Vertex` index. `None` for a vertex no run continues past: an ocean
+    /// vertex, or the outlet at a real mouth.
     ///
     /// Private and read through [`ChannelNetwork::trunk_vertex`]. It is an
     /// index over build order, so it is subject to the same rule as
     /// `BankReading::line`: **never serialized**. Kept rather than recomputed
     /// because the alternative is an `O(network)` scan per query, and Tier 2
-    /// asks this question once per cell per reading.
+    /// asks this question once per vertex per reading.
     trunk_vertex: Vec<Option<(u32, u32)>>,
     /// The spherical bucket grid over this network's vertices that
     /// [`ChannelNetwork::nearest_line`] narrows its candidate line set with,
@@ -490,7 +490,7 @@ const CAP_PAD: f64 = 1.0e-9;
 /// can be satisfied at. A network whose segments are all degenerate measures
 /// `L_max == 0`, and a search that opened at zero and grew by multiplication
 /// would never grow at all — so the opening radius has a floor. It is far below
-/// any real network's cell spacing, so it never widens an ordinary first
+/// any real network's vertex spacing, so it never widens an ordinary first
 /// gather.
 const MIN_SEARCH_RADIUS: f64 = 1.0e-6;
 
@@ -587,7 +587,7 @@ impl VertexGrid {
     ///
     /// The grid is sized to the network: `lat_bands = sqrt(V / 2)` puts roughly
     /// one vertex in each of the `2 * lat_bands^2 ~ V` buckets, so the bucket
-    /// edge tracks the mesh's own cell spacing as the level changes rather than
+    /// edge tracks the mesh's own vertex spacing as the level changes rather than
     /// being tuned to one of them. The ceiling exists because the memory is
     /// `O(buckets)` and a pathological network should not be able to ask for an
     /// unbounded allocation; the floor keeps a one-vertex network legal.
@@ -721,8 +721,8 @@ impl VertexGrid {
 /// tie-break and the nearest-vertex scan, and would then agree with the
 /// others only by luck.
 ///
-/// **`cell` and `line` are in-process handles, not document fields.** `cell`
-/// names the canonical grid cell the winning vertex was placed from, so a
+/// **`vertex` and `line` are in-process handles, not document fields.** `vertex`
+/// names the canonical grid vertex the winning vertex was placed from, so a
 /// caller can read that reach's discharge (`GeneratedTerrain::drainage_at`)
 /// without searching for the vertex a second time; `line` names the polyline
 /// the reading is *about*, so a caller holding two readings can tell whether
@@ -730,8 +730,8 @@ impl VertexGrid {
 /// **neither may ever be serialized**; the durable things here are the signed
 /// distance and the edges.
 ///
-/// An earlier draft carried `cell` and withheld `line`, on the grounds that
-/// the polyline index is build order. So is `cell`, and the argument for
+/// An earlier draft carried `vertex` and withheld `line`, on the grounds that
+/// the polyline index is build order. So is `vertex`, and the argument for
 /// publishing one is the argument for publishing the other — the rule the
 /// campaign actually holds is *never serialize either*, which omission does
 /// not enforce. What omission did instead was push a consumer comparing two
@@ -749,12 +749,12 @@ pub struct BankReading {
     /// polyline: channel/bank, bank/floodplain, floodplain/terrace,
     /// terrace/dry.
     pub band_edges: [f64; 4],
-    /// The canonical grid cell that vertex was placed from — the reach whose
+    /// The canonical grid vertex that vertex was placed from — the reach whose
     /// discharge and gradient produced `band_edges`, **except at a run's
-    /// terminal vertex**, where the cell is the non-river outlet and the
-    /// edges are the last river cell's (see [`ChannelNetwork::band_edges`]).
-    /// A caller reading this cell's own drainage at a mouth reads the sea's.
-    pub cell: CellId,
+    /// terminal vertex**, where the vertex is the non-river outlet and the
+    /// edges are the last river vertex's (see [`ChannelNetwork::band_edges`]).
+    /// A caller reading this vertex's own drainage at a mouth reads the sea's.
+    pub vertex: Vertex,
     /// The winning polyline's index in [`ChannelNetwork::polylines`] — the
     /// same index [`ChannelNetwork::nearest_line`] reports. An in-process
     /// handle, **never serialized**: two readings are about the same channel
@@ -779,30 +779,30 @@ impl BankReading {
 impl ChannelNetwork {
     /// Build the network from a generated globe.
     ///
-    /// Walks every **reach** in ascending `CellId` order — a reach being a land
-    /// cell with somewhere to send its water — starting runs at *heads* (reaches
+    /// Walks every **reach** in ascending `Vertex` order — a reach being a land
+    /// vertex with somewhere to send its water — starting runs at *heads* (reaches
     /// no other reach drains into) and following `downhill` to the sea, a
-    /// terminal sink, or an already-claimed trunk. **A run includes the cell it
-    /// drains into**, so a run's last cell is the outlet (an ocean or
-    /// salt-basin cell) or the trunk cell it joins.
+    /// terminal sink, or an already-claimed trunk. **A run includes the vertex it
+    /// drains into**, so a run's last vertex is the outlet (an ocean or
+    /// salt-basin vertex) or the trunk vertex it joins.
     ///
     /// **THE REACH PREDICATE IS NOT `WaterKind::River`, AND THAT IS THE POINT**
     /// (The Rill, Task 3, decision 0130). `downhill` and `drainage` are
-    /// computed for every land cell; this used to render only the ~6.7% above
+    /// computed for every land vertex; this used to render only the ~6.7% above
     /// `RIVER_MIN_DRAINAGE` and discard the rest, so the world computed a
     /// complete space-filling flow tree and drew one fifteenth of it. It now
     /// draws all of it. Nothing upstream changed — the branches were always
-    /// there — and `water::classify` is untouched, so a cell may carry a
+    /// there — and `water::classify` is untouched, so a vertex may carry a
     /// rendered watercourse and still classify `DryLand`. That disagreement is
     /// deliberate; do not "repair" it by widening `WaterKind::River`.
     ///
-    /// A consequence worth naming: **the one-cell filter below is now
+    /// A consequence worth naming: **the one-vertex filter below is now
     /// unreachable**. A reach has a downhill target by definition, so its run
-    /// pushes at least that target and is at least two cells long. The filter
+    /// pushes at least that target and is at least two vertices long. The filter
     /// is kept as a statement of what a polyline is, not because anything
-    /// reaches it — before this change it excluded a river cell with no
+    /// reaches it — before this change it excluded a river vertex with no
     /// downhill target and no river inflow, which was already rare, and such a
-    /// cell is now not a reach at all and never starts a run.
+    /// vertex is now not a reach at all and never starts a run.
     ///
     /// A final pass moves every **confluence mouth** onto the trunk vertex it
     /// joins, so runs that meet in the drainage graph also meet in space; see
@@ -825,14 +825,14 @@ impl ChannelNetwork {
         // `elevation < sea_level`. The `downhill` half excludes terminal sinks,
         // which is what keeps a salt basin an OUTLET a run drains into rather
         // than a reach that drains onward — it has nowhere to drain onward to.
-        let is_reach = |c: CellId| {
+        let is_reach = |c: Vertex| {
             !matches!(*globe.water_kind.get(c), WaterKind::Ocean) && globe.downhill.get(c).is_some()
         };
 
-        // In-degree within the reach subgraph, as a dense Vec (CellId is a
+        // In-degree within the reach subgraph, as a dense Vec (Vertex is a
         // dense 0..N index — kernel/CLAUDE.md).
-        let mut has_inflow = vec![false; geo.cell_count()];
-        for c in geo.cells() {
+        let mut has_inflow = vec![false; geo.vertex_count()];
+        for c in geo.vertices() {
             if !is_reach(c) {
                 continue;
             }
@@ -841,14 +841,14 @@ impl ChannelNetwork {
             }
         }
 
-        let mut claimed: BTreeSet<CellId> = BTreeSet::new();
-        let mut runs: Vec<Vec<CellId>> = Vec::new();
+        let mut claimed: BTreeSet<Vertex> = BTreeSet::new();
+        let mut runs: Vec<Vec<Vertex>> = Vec::new();
         // Pass 0 starts only at heads, so a run is maximal upstream. Pass 1
         // sweeps anything still unclaimed: the downhill graph is strictly
         // descending and therefore acyclic, so pass 1 should find nothing —
         // it is here so the walk is total regardless.
         for heads_only in [true, false] {
-            for c in geo.cells() {
+            for c in geo.vertices() {
                 if !is_reach(c) || claimed.contains(&c) {
                     continue;
                 }
@@ -859,22 +859,22 @@ impl ChannelNetwork {
                 claimed.insert(c);
                 let mut current = c;
                 while let Some(target) = *globe.downhill.get(current) {
-                    // EVERY TERMINATION KEEPS THE CELL IT STOPPED ON (The
-                    // Rill, Task 2). A run must include the cell it drains
+                    // EVERY TERMINATION KEEPS THE VERTEX IT STOPPED ON (The
+                    // Rill, Task 2). A run must include the vertex it drains
                     // into, and the two ways a run ends are the same rule:
-                    // push the shared cell, then stop.
+                    // push the shared vertex, then stop.
                     //
                     // This loop used to `break` BEFORE pushing a non-river
-                    // target, which ended every run one cell short of its
+                    // target, which ended every run one vertex short of its
                     // mouth. Two consequences, both measured on seed 42 at
-                    // level 6: the outlet cell carried no channel, and a
-                    // river cell whose downhill target is not a river and
-                    // which has no river inflow became a ONE-cell run and was
-                    // dropped by the length filter below — 39 river cells with
+                    // level 6: the outlet vertex carried no channel, and a
+                    // river vertex whose downhill target is not a river and
+                    // which has no river inflow became a ONE-vertex run and was
+                    // dropped by the length filter below — 39 river vertices with
                     // no polyline at all, exactly the 39 that read `Dry` at
                     // their own centres. Under a network that renders every
-                    // land cell the deficit grows, because the number of runs
-                    // terminating at a non-river cell rises with it.
+                    // land vertex the deficit grows, because the number of runs
+                    // terminating at a non-river vertex rises with it.
                     run.push(target);
                     if !is_reach(target) {
                         // The outlet this run drains into — the sea, or a
@@ -903,13 +903,13 @@ impl ChannelNetwork {
             let mut points = Vec::with_capacity(base.len());
             let mut edges = Vec::with_capacity(base.len());
             for (i, &c) in run.iter().enumerate() {
-                let spacing = cell_spacing(geo, c);
+                let spacing = vertex_spacing(geo, c);
                 let slope = local_slope(globe, geo, c);
                 if is_reach(c) {
                     edges.push(band_edges(*globe.drainage.get(c), slope, spacing));
                 } else {
-                    // THE BORROWED TERMINAL VERTEX. A non-reach cell is a
-                    // run's LAST cell by construction — the walk above stops
+                    // THE BORROWED TERMINAL VERTEX. A non-reach vertex is a
+                    // run's LAST vertex by construction — the walk above stops
                     // the moment it pushes one — so this is the outlet, and
                     // the outlet's own hydraulics are not this reach's.
                     // Measured on seed 42 at level 6, over the 129 runs that
@@ -920,21 +920,21 @@ impl ChannelNetwork {
                     // other 24 are salt basins, which are worse than useless
                     // rather than merely empty: a basin accumulates its whole
                     // catchment and is a terminal sink, so it reads a larger
-                    // drainage at zero gradient — cell 10666 gives
+                    // drainage at zero gradient — vertex 10666 gives
                     // `[7.59e-5, 1.52e-4, 3.19e-3, 4.78e-3]` against the
                     // feeding reach's `[5.28e-5, 1.06e-4, 2.47e-4, 3.71e-4]`,
                     // a mouth 1.4x as wide inside a valley 12.9x as broad.
-                    // So the terminal vertex carries the last river cell's
+                    // So the terminal vertex carries the last river vertex's
                     // band geometry: the mouth is as wide as the river that
                     // arrives at it.
                     edges.push(*edges.last().expect(
-                        "a non-river cell is never a run's first cell, so an earlier vertex \
+                        "a non-river vertex is never a run's first vertex, so an earlier vertex \
                          has already pushed its edges",
                     ));
                 }
                 if i == 0 || i + 1 == base.len() {
                     // A source and a mouth are anchored: the head must stay in
-                    // its own cell and the mouth must stay on the coast. A
+                    // its own vertex and the mouth must stay on the coast. A
                     // mouth that is a CONFLUENCE rather than a coast is moved
                     // onto its trunk by the pass below.
                     points.push(base[i]);
@@ -963,9 +963,9 @@ impl ChannelNetwork {
             all_edges.push(edges);
         }
 
-        // THE CONFLUENCE REPAIR. A tributary's mouth sits on a cell the TRUNK
+        // THE CONFLUENCE REPAIR. A tributary's mouth sits on a vertex the TRUNK
         // carries as an interior vertex, so the anchoring rule above would
-        // leave the tributary's copy at the cell's undisplaced position while
+        // leave the tributary's copy at the vertex's undisplaced position while
         // the trunk's copy is meander-displaced. The two runs are then joined
         // in the drainage graph and separated in space — measured at a median
         // 4.5 channel half-widths on seed 42, which put a walker out of the
@@ -976,26 +976,26 @@ impl ChannelNetwork {
         // `owner[c]` is the (line, vertex) of the run that CLAIMED `c` and
         // continued past it, never one that merely terminates on it. That
         // distinction is the whole of confluence topology, and it makes the
-        // map unambiguous: once a cell is claimed only the claiming run walks
-        // on, so a cell is a non-final vertex of at most one run. A mouth
-        // whose cell no run continues from is a REAL mouth — the sea or a
+        // map unambiguous: once a vertex is claimed only the claiming run walks
+        // on, so a vertex is a non-final vertex of at most one run. A mouth
+        // whose vertex no run continues from is a REAL mouth — the sea or a
         // terminal sink — and stays anchored where it is.
         //
         // THE TERMINAL VERTEX (Task 2) IS INERT HERE, and the reason is the
         // same rule rather than a new exception. `owner` records only
-        // NON-FINAL vertices; a non-reach outlet is a run's last cell by
+        // NON-FINAL vertices; a non-reach outlet is a run's last vertex by
         // construction, so it can never be one, and `owner[outlet]` is
         // therefore always `None`. Every run that gained a mouth falls into
         // the `else { continue }` arm below and keeps that mouth anchored on
-        // its outlet cell — which is what a real mouth wants. Two runs
-        // draining into the same sea cell both end there and neither is moved
+        // its outlet vertex — which is what a real mouth wants. Two runs
+        // draining into the same sea vertex both end there and neither is moved
         // onto the other, exactly as before; they are not a confluence,
         // because neither continues past it.
         //
         // Order-independent by construction: only final vertices are moved and
         // only non-final vertices are read, so no relocation can be the source
         // of another.
-        let mut owner: Vec<Option<(usize, usize)>> = vec![None; geo.cell_count()];
+        let mut owner: Vec<Option<(usize, usize)>> = vec![None; geo.vertex_count()];
         for (i, run) in runs.iter().enumerate() {
             for (j, &c) in run.iter().enumerate() {
                 if j + 1 < run.len() {
@@ -1016,10 +1016,10 @@ impl ChannelNetwork {
         // The same `owner` relation, kept: it is what a Tier 2 branch attaches
         // to. Built from `runs` rather than from `owner` above so that this
         // survives a future change to the confluence pass, and asserted
-        // functional (one claiming run per cell) by
+        // functional (one claiming run per vertex) by
         // `tests/rill_properties.rs`'s R-4 rather than here, where a panic in
         // genesis would be the wrong instrument.
-        let mut trunk_vertex: Vec<Option<(u32, u32)>> = vec![None; geo.cell_count()];
+        let mut trunk_vertex: Vec<Option<(u32, u32)>> = vec![None; geo.vertex_count()];
         for (i, run) in runs.iter().enumerate() {
             for (j, &c) in run.iter().enumerate() {
                 if j + 1 < run.len() && trunk_vertex[c.0 as usize].is_none() {
@@ -1048,7 +1048,7 @@ impl ChannelNetwork {
     fn assemble(
         polylines: Vec<SphericalPolyline>,
         band_edges: Vec<Vec<[f64; 4]>>,
-        run_cells: Vec<Vec<CellId>>,
+        run_vertices: Vec<Vec<Vertex>>,
         meander: SphereFbm,
         trunk_vertex: Vec<Option<(u32, u32)>>,
     ) -> ChannelNetwork {
@@ -1056,27 +1056,27 @@ impl ChannelNetwork {
         ChannelNetwork {
             polylines,
             band_edges,
-            run_cells,
+            run_vertices,
             meander,
             trunk_vertex,
             grid,
         }
     }
 
-    /// The `(polyline, vertex)` of the run that carries `cell` and continues
-    /// past it — where a Tier 2 branch of `cell`'s catchment attaches, and
-    /// `None` for a cell no run continues past.
+    /// The `(polyline, vertex)` of the run that carries `vertex` and continues
+    /// past it — where a Tier 2 branch of `vertex`'s catchment attaches, and
+    /// `None` for a vertex no run continues past.
     ///
     /// The vertex is never the polyline's last, so `points[vertex + 1]` is
     /// always the next one downstream. **An in-process handle, never
     /// serialized**, for the reason [`BankReading::line`] gives.
     /// type-audit: bare-ok(index: return)
-    pub fn trunk_vertex(&self, cell: CellId) -> Option<(usize, usize)> {
+    pub fn trunk_vertex(&self, vertex: Vertex) -> Option<(usize, usize)> {
         // `get` rather than an index: a network built by hand for a test
-        // carries no index at all, and "this cell has no trunk" is the right
+        // carries no index at all, and "this vertex has no trunk" is the right
         // answer there rather than a panic.
         self.trunk_vertex
-            .get(cell.0 as usize)
+            .get(vertex.0 as usize)
             .copied()
             .flatten()
             .map(|(line, vertex)| (line as usize, vertex as usize))
@@ -1104,7 +1104,7 @@ impl ChannelNetwork {
     /// The whole reading at `position`: the **signed** distance
     /// [`ChannelNetwork::bank_signed_distance`] reports, paired with the four
     /// [`band_edges`] borders that apply *there* — those of the nearest vertex
-    /// of the winning polyline — and the cell that vertex was placed from.
+    /// of the winning polyline — and the vertex that vertex was placed from.
     /// `None` on an empty network.
     ///
     /// **This is the one implementation of "which vertex's edges apply here",
@@ -1122,11 +1122,11 @@ impl ChannelNetwork {
     ///
     /// The vertex scan is by *undisplaced angular separation* from the vertex,
     /// not by the segment the signed distance was measured against: band
-    /// geometry is a per-vertex property (discharge, gradient, cell spacing),
+    /// geometry is a per-vertex property (discharge, gradient, vertex spacing),
     /// and the nearest vertex is the reach whose hydraulics a point actually
     /// sits in.
     ///
-    /// [`BankReading::cell`] is here for the same reason the edges are: a
+    /// [`BankReading::vertex`] is here for the same reason the edges are: a
     /// consumer asking whether a channel can be forded needs that reach's
     /// **discharge** as well as its width, and a second nearest-vertex search
     /// to find it would be a second chance to answer about a different reach
@@ -1151,7 +1151,7 @@ impl ChannelNetwork {
         Some(BankReading {
             signed_distance: signed,
             band_edges: self.band_edges[line_index][nearest],
-            cell: self.run_cells[line_index][nearest],
+            vertex: self.run_vertices[line_index][nearest],
             line: line_index,
         })
     }
@@ -1309,7 +1309,7 @@ impl ChannelNetwork {
     /// is not a durable referent: the polyline *index* is build order and must
     /// never be serialized. But the vertex order within a line is not an
     /// accident — [`ChannelNetwork::build`] starts every run at a head and
-    /// appends each `downhill` target in turn, so `run_cells[i]` and the
+    /// appends each `downhill` target in turn, so `run_vertices[i]` and the
     /// parallel `polylines[i].points` run downstream, from source toward the
     /// sea. Left of travel is therefore left facing downstream: hydrology's
     /// own convention, the term a person would use, and stable across builds
@@ -1338,7 +1338,7 @@ impl ChannelNetwork {
     /// pre-Task-2 network** — 13 lines, 46 vertices, 26 endpoints, 1
     /// confluence, terrace edge (the outermost band) 2.0e-4 rad at its
     /// narrowest, 3.5e-3 median, **6.9e-3 at its widest**. That network is now
-    /// 22 lines and 76 vertices (The Rill, Task 2: a run includes the cell it
+    /// 22 lines and 76 vertices (The Rill, Task 2: a run includes the vertex it
     /// drains into), so the *counts* below have moved and have not been
     /// re-measured. What the paragraph is here to say has not: a sign change
     /// out beyond an endpoint is a fact about the polyline soup rather than
@@ -1424,14 +1424,14 @@ mod tests {
         normalize([x, y, z])
     }
 
-    /// The **measured** mean angular separation between neighbouring cells on
+    /// The **measured** mean angular separation between neighbouring vertices on
     /// the canonical `Geosphere::new(6)`, radians. Do not try to re-derive it
     /// and conclude it is wrong: it is not `sqrt(4π/N)` (0.01752), not the
     /// equal-area circle diameter (0.01976), and not a hexagon edge (0.0109).
-    /// It is the mean over every cell of the mean angle to its neighbours,
-    /// taken from the Task 4 probe — the same quantity `cell_spacing` computes
-    /// per cell at build time. (Level 5, for reference: 0.037769.)
-    const CANONICAL_CELL_EDGE: f64 = 0.018_886;
+    /// It is the mean over every vertex of the mean angle to its neighbours,
+    /// taken from the Task 4 probe — the same quantity `vertex_spacing` computes
+    /// per vertex at build time. (Level 5, for reference: 0.037769.)
+    const CANONICAL_VERTEX_EDGE: f64 = 0.018_886;
 
     /// The largest drainage the canonical grid actually produces, from the
     /// same probe: max 146 / 177 / 173 on seeds 42 / 7 / 1234, p99 ≈ 117–138,
@@ -1449,12 +1449,12 @@ mod tests {
     /// the constant is deliberately left at the older, lower value because the
     /// test below asserts `joins * 2 >= CONFLUENCES_AT_LEVEL_6` — an
     /// anti-vacuity floor, not a count. What moved it was The Rill's Task 2:
-    /// before it, a run stopped one cell short of its outlet, so a trunk's last
-    /// river cell was that trunk's FINAL vertex and the owner map never
+    /// before it, a run stopped one vertex short of its outlet, so a trunk's last
+    /// river vertex was that trunk's FINAL vertex and the owner map never
     /// recorded it; a tributary joining exactly there was not recognised as a
     /// confluence at all. Extending every run to its outlet makes those joins
     /// visible — 5 more on seed 42, 18 on seed 7. They were harmless while
-    /// invisible (both copies of the shared cell were anchored, so they
+    /// invisible (both copies of the shared vertex were anchored, so they
     /// coincided by accident), and they are now repaired explicitly.
     ///
     /// Level 6 rather than the level 5 the rest of this file uses, because
@@ -1465,7 +1465,7 @@ mod tests {
     /// 0.63 s for both worlds, in line with the rest of this suite.
     const CONFLUENCES_AT_LEVEL_6: usize = 67;
 
-    /// Roughly how many cell centres
+    /// Roughly how many vertex centres
     /// [`the_gather_covers_every_line_with_a_vertex_in_the_cap`] probes per
     /// level. A budget rather than a stride, because the assertion is
     /// `O(positions x radii x lines x vertices)` and both `lines` and
@@ -1473,7 +1473,7 @@ mod tests {
     const CAP_COVERAGE_POSITIONS: usize = 40;
 
     /// A hand-built two-segment polyline on the equator, with band edges from
-    /// the REAL laws at a deliberately coarse synthetic cell (spacing 1.0
+    /// the REAL laws at a deliberately coarse synthetic vertex (spacing 1.0
     /// rad). The coarseness is the point: it puts every band wide enough for
     /// the monotone sweep to resolve. Drainage 36 is an ordinary river on the
     /// canonical grid (p50 ≈ 23, p90 ≈ 55) and slope 0 is a flat, fully
@@ -1493,13 +1493,13 @@ mod tests {
                 points: points.clone(),
             }],
             vec![vec![edges; points.len()]],
-            vec![(0..points.len() as u32).map(CellId).collect()],
+            vec![(0..points.len() as u32).map(Vertex).collect()],
             SphereFbm::new(
                 Seed(42).derive(streams::CHANNEL_MEANDER),
                 MEANDER_FREQUENCY,
                 MEANDER_OCTAVES,
             ),
-            // These hand-built networks have no `CellId` domain to index, and
+            // These hand-built networks have no `Vertex` domain to index, and
             // nothing in this module's own tests asks about a trunk vertex.
             Vec::new(),
         )
@@ -1519,15 +1519,15 @@ mod tests {
             ],
             vec![vec![edges; first_len], vec![edges; second_len]],
             vec![
-                (0..first_len as u32).map(CellId).collect(),
-                (0..second_len as u32).map(CellId).collect(),
+                (0..first_len as u32).map(Vertex).collect(),
+                (0..second_len as u32).map(Vertex).collect(),
             ],
             SphereFbm::new(
                 Seed(42).derive(streams::CHANNEL_MEANDER),
                 MEANDER_FREQUENCY,
                 MEANDER_OCTAVES,
             ),
-            // These hand-built networks have no `CellId` domain to index, and
+            // These hand-built networks have no `Vertex` domain to index, and
             // nothing in this module's own tests asks about a trunk vertex.
             Vec::new(),
         )
@@ -1561,8 +1561,8 @@ mod tests {
     }
 
     /// The campaign's whole claim, as an assertion: the largest river the
-    /// canonical grid ACTUALLY PRODUCES is a small FRACTION of a cell edge,
-    /// not a cell. Stated over the measured discharge ceiling (~180), not a
+    /// canonical grid ACTUALLY PRODUCES is a small FRACTION of a vertex edge,
+    /// not a vertex. Stated over the measured discharge ceiling (~180), not a
     /// hypothetical one. Task 6's calibration moved the coefficient 1.70x
     /// (5.0e-4 -> 8.5e-4) and this test stayed green with room to spare: the
     /// widest channel at the ceiling discharge is now 2.154e-4 rad against a
@@ -1572,12 +1572,12 @@ mod tests {
     /// order of magnitude inside it, which is why fitting one did not
     /// threaten the other.
     #[test]
-    fn the_widest_channel_is_far_narrower_than_a_cell() {
-        let cell_edge = CANONICAL_CELL_EDGE;
-        let widest = channel_half_width(CANONICAL_MAX_DRAINAGE, cell_edge) * 2.0;
+    fn the_widest_channel_is_far_narrower_than_a_vertex() {
+        let vertex_edge = CANONICAL_VERTEX_EDGE;
+        let widest = channel_half_width(CANONICAL_MAX_DRAINAGE, vertex_edge) * 2.0;
         assert!(
-            widest < cell_edge / 10.0,
-            "widest channel {widest} rad is not << cell edge {cell_edge} rad"
+            widest < vertex_edge / 10.0,
+            "widest channel {widest} rad is not << vertex edge {vertex_edge} rad"
         );
         assert!(widest > 0.0, "width law produced a non-positive width");
     }
@@ -1585,7 +1585,7 @@ mod tests {
     /// Width must be MONOTONE in discharge — a bigger river is never narrower.
     #[test]
     fn width_increases_with_discharge() {
-        let e = CANONICAL_CELL_EDGE;
+        let e = CANONICAL_VERTEX_EDGE;
         // Across the range the world actually spans: threshold to ceiling.
         let small = channel_half_width(crate::water::RIVER_MIN_DRAINAGE, e);
         let big = channel_half_width(CANONICAL_MAX_DRAINAGE, e);
@@ -1601,17 +1601,17 @@ mod tests {
     /// exact opposite; it is superseded rather than deleted so the reversal is
     /// visible where the old claim lived.
     ///
-    /// The lower bound is the point. A creek carrying the runoff of one cell —
-    /// `drainage` is a land-cell count and every land cell drains at least
+    /// The lower bound is the point. A creek carrying the runoff of one vertex —
+    /// `drainage` is a land-vertex count and every land vertex drains at least
     /// itself, so 1.0 is the floor the world can produce — must still have a
     /// positive width, because every band edge derives from this half-width and
     /// a zero here reads `Dry` at the channel's own centre.
     #[test]
     fn a_sub_threshold_trickle_is_a_narrow_channel_not_an_absent_one() {
-        let e = CANONICAL_CELL_EDGE;
+        let e = CANONICAL_VERTEX_EDGE;
         let threshold = channel_half_width(crate::water::RIVER_MIN_DRAINAGE, e);
         let trickle = channel_half_width(crate::water::RIVER_MIN_DRAINAGE - 1.0, e);
-        // The floor of the world's discharge range: one land cell's own runoff.
+        // The floor of the world's discharge range: one land vertex's own runoff.
         let headwater = channel_half_width(1.0, e);
         assert!(headwater > 0.0, "a headwater creek has no channel at all");
         assert!(trickle > headwater, "width is not monotone below threshold");
@@ -1620,11 +1620,11 @@ mod tests {
             "a trickle is not narrower than a river"
         );
         // And it is narrow in the sense that matters: a headwater channel is
-        // orders of magnitude below the cell that carries it, which is the
+        // orders of magnitude below the vertex that carries it, which is the
         // campaign's own claim extended to the smallest reach in the world.
         assert!(
             headwater * 2.0 < e / 1_000.0,
-            "a headwater channel {} rad is not << cell edge {e} rad",
+            "a headwater channel {} rad is not << vertex edge {e} rad",
             headwater * 2.0
         );
     }
@@ -1706,7 +1706,7 @@ mod tests {
                 MEANDER_FREQUENCY,
                 MEANDER_OCTAVES,
             ),
-            // These hand-built networks have no `CellId` domain to index, and
+            // These hand-built networks have no `Vertex` domain to index, and
             // nothing in this module's own tests asks about a trunk vertex.
             Vec::new(),
         );
@@ -1876,17 +1876,17 @@ mod tests {
             let net = terrain.channels();
             let geo = terrain.geosphere();
 
-            // Positions: cell centres across the whole globe, plus the poles and
+            // Positions: vertex centres across the whole globe, plus the poles and
             // a ladder of latitudes closing on them — the region the window
-            // formula is most sensitive in. The cell stride is chosen from the
-            // cell COUNT rather than being a fixed constant, so the position
+            // formula is most sensitive in. The vertex stride is chosen from the
+            // vertex COUNT rather than being a fixed constant, so the position
             // budget stays flat as the level rises: the inner assertion is
             // `O(positions x radii x lines x vertices)`, and a fixed stride
             // would make level 7 sixteen times level 5's cost for no extra
             // coverage of the window formula.
-            let stride = (geo.cell_count() / CAP_COVERAGE_POSITIONS).max(1);
+            let stride = (geo.vertex_count() / CAP_COVERAGE_POSITIONS).max(1);
             let mut positions: Vec<[f64; 3]> = geo
-                .cells()
+                .vertices()
                 .step_by(stride)
                 .map(|c| geo.position(c))
                 .collect();
@@ -1994,14 +1994,14 @@ mod tests {
     /// vertices, and a query sitting exactly on a vertex.
     #[test]
     fn a_non_empty_network_always_has_a_nearest_line() {
-        // A network of arbitrary polylines, with band edges and run cells kept
+        // A network of arbitrary polylines, with band edges and run vertices kept
         // parallel so nothing that reads them can trip.
         let network = |lines: Vec<Vec<[f64; 3]>>| {
             let edges = band_edges(36.0, 0.0, 1.0);
             let band = lines.iter().map(|l| vec![edges; l.len()]).collect();
-            let cells = lines
+            let vertices = lines
                 .iter()
-                .map(|l| (0..l.len() as u32).map(CellId).collect())
+                .map(|l| (0..l.len() as u32).map(Vertex).collect())
                 .collect();
             ChannelNetwork::assemble(
                 lines
@@ -2009,7 +2009,7 @@ mod tests {
                     .map(|points| SphericalPolyline { points })
                     .collect(),
                 band,
-                cells,
+                vertices,
                 SphereFbm::new(
                     Seed(42).derive(streams::CHANNEL_MEANDER),
                     MEANDER_FREQUENCY,
@@ -2128,7 +2128,7 @@ mod tests {
     /// The two arcs are each ~86.6 degrees, so `L_max` is ~1.51 rad and the
     /// half-segment term alone is ~0.76 — a large fraction of `pi`, which is
     /// exactly why the question is worth asking here and would not be worth
-    /// asking on a real network (where `L_max` is a cell spacing, ~2e-2 rad).
+    /// asking on a real network (where `L_max` is a vertex spacing, ~2e-2 rad).
     ///
     /// `D + L_max / 2` is the **widest** radius `nearest_line`'s loop can ever
     /// reach for a query whose answer is at distance `D`: the loop opens at
@@ -2208,7 +2208,7 @@ mod tests {
     /// `Terrace`. A flat reach of the same river has a broad one.
     #[test]
     fn a_gorge_has_no_floodplain_and_a_flat_reach_has_a_broad_one() {
-        let spacing = CANONICAL_CELL_EDGE;
+        let spacing = CANONICAL_VERTEX_EDGE;
         let gorge = band_edges(100.0, GORGE_SLOPE, spacing);
         assert_eq!(
             gorge[1], gorge[2],
@@ -2236,7 +2236,7 @@ mod tests {
     fn band_edges_are_non_decreasing_at_every_gradient() {
         for step in 0..40 {
             let slope = f64::from(step) * 2_500.0;
-            let e = band_edges(60.0, slope, CANONICAL_CELL_EDGE);
+            let e = band_edges(60.0, slope, CANONICAL_VERTEX_EDGE);
             assert!(
                 e[0] <= e[1] && e[1] <= e[2] && e[2] <= e[3],
                 "edges out of order at slope {slope}: {e:?}"
@@ -2307,7 +2307,7 @@ mod tests {
             unit(1.0, 0.5, 0.0),
             unit(0.5, 1.0, 0.0),
         ];
-        let run_cells = vec![(0..points.len() as u32).map(CellId).collect()];
+        let run_vertices = vec![(0..points.len() as u32).map(Vertex).collect()];
         let net = ChannelNetwork::assemble(
             vec![SphericalPolyline { points }],
             vec![vec![
@@ -2315,13 +2315,13 @@ mod tests {
                 band_edges(200.0, 0.0, 1.0),
                 band_edges(4_000.0, 0.0, 1.0),
             ]],
-            run_cells,
+            run_vertices,
             SphereFbm::new(
                 Seed(42).derive(streams::CHANNEL_MEANDER),
                 MEANDER_FREQUENCY,
                 MEANDER_OCTAVES,
             ),
-            // These hand-built networks have no `CellId` domain to index, and
+            // These hand-built networks have no `Vertex` domain to index, and
             // nothing in this module's own tests asks about a trunk vertex.
             Vec::new(),
         );
@@ -2356,10 +2356,10 @@ mod tests {
     /// universal over every join in both worlds and the floor below asserts
     /// the population it ran on.
     ///
-    /// THE CONFLUENCE REPAIR, as a property. Where a run ends on a cell some
+    /// THE CONFLUENCE REPAIR, as a property. Where a run ends on a vertex some
     /// other run continues past, the two polylines must meet **exactly** —
     /// not merely nearby. Before the repair the tributary's mouth sat at the
-    /// cell's undisplaced position and the trunk's copy was meander-displaced,
+    /// vertex's undisplaced position and the trunk's copy was meander-displaced,
     /// a median 4.5 channel half-widths apart, which is what falsified H2.
     ///
     /// Exact equality is the right assertion because the repair is an
@@ -2390,18 +2390,18 @@ mod tests {
             let net =
                 ChannelNetwork::build(&outcome.globe, &geo, outcome.globe.channel_noise_seed());
             // The same owner map `build` uses, rebuilt from the published
-            // `run_cells` rather than from anything private.
-            let mut owner: Vec<Option<(usize, usize)>> = vec![None; geo.cell_count()];
-            for (i, run) in net.run_cells.iter().enumerate() {
+            // `run_vertices` rather than from anything private.
+            let mut owner: Vec<Option<(usize, usize)>> = vec![None; geo.vertex_count()];
+            for (i, run) in net.run_vertices.iter().enumerate() {
                 for (j, &c) in run.iter().enumerate() {
                     if j + 1 < run.len() {
                         owner[c.0 as usize] = Some((i, j));
                     }
                 }
             }
-            for (i, cells) in net.run_cells.iter().enumerate() {
-                let last = cells.len() - 1;
-                let Some((trunk, vertex)) = owner[cells[last].0 as usize] else {
+            for (i, vertices) in net.run_vertices.iter().enumerate() {
+                let last = vertices.len() - 1;
+                let Some((trunk, vertex)) = owner[vertices[last].0 as usize] else {
                     continue;
                 };
                 if trunk == i {
@@ -2410,8 +2410,8 @@ mod tests {
                 joins += 1;
                 assert_eq!(
                     net.polylines[i].points[last], net.polylines[trunk].points[vertex],
-                    "seed {seed}: tributary {i} does not meet trunk {trunk} at cell {:?}",
-                    cells[last]
+                    "seed {seed}: tributary {i} does not meet trunk {trunk} at vertex {:?}",
+                    vertices[last]
                 );
             }
         }
@@ -2429,7 +2429,7 @@ mod tests {
     #[test]
     fn a_built_network_is_well_formed_and_deterministic() {
         // Level 5, not the canonical 6: level 4 is too coarse to accumulate
-        // `RIVER_MIN_DRAINAGE` anywhere (seed 42 has zero river cells there),
+        // `RIVER_MIN_DRAINAGE` anywhere (seed 42 has zero river vertices there),
         // and level 6 is Task 6's measurement, not this test's.
         let geo = Geosphere::new(5);
         let outcome =
@@ -2445,21 +2445,21 @@ mod tests {
             !net.polylines.is_empty(),
             "no channels on a level-5 seed 42"
         );
-        assert_eq!(net.run_cells.len(), net.polylines.len());
-        for (line, cells) in net.polylines.iter().zip(&net.run_cells) {
+        assert_eq!(net.run_vertices.len(), net.polylines.len());
+        for (line, vertices) in net.polylines.iter().zip(&net.run_vertices) {
             assert_eq!(
                 line.points.len(),
-                cells.len(),
-                "run cells parallel to points"
+                vertices.len(),
+                "run vertices parallel to points"
             );
-            // A run follows `downhill`, so consecutive cells are adjacent and
+            // A run follows `downhill`, so consecutive vertices are adjacent and
             // strictly descending — the property that makes a polyline a
             // rendering OF that run rather than an unrelated line beside it.
-            for pair in cells.windows(2) {
+            for pair in vertices.windows(2) {
                 assert_eq!(
                     *outcome.globe.downhill.get(pair[0]),
                     Some(pair[1]),
-                    "run cells are not a downhill chain"
+                    "run vertices are not a downhill chain"
                 );
             }
         }
@@ -2475,11 +2475,11 @@ mod tests {
                 assert!(e[0] > 0.0, "a river vertex with zero channel width");
             }
         }
-        // Every river cell is covered by the network: it sits inside the
+        // Every river vertex is covered by the network: it sits inside the
         // channel band of the polyline it belongs to, or is one of the
         // dropped isolated singletons.
-        let on_line: BTreeSet<CellId> = geo
-            .cells()
+        let on_line: BTreeSet<Vertex> = geo
+            .vertices()
             .filter(|&c| {
                 matches!(*outcome.globe.water_kind.get(c), WaterKind::River)
                     && matches!(net.transverse_at(geo.position(c)).0, Transverse::Channel)
@@ -2487,7 +2487,7 @@ mod tests {
             .collect();
         assert!(
             !on_line.is_empty(),
-            "no river cell reads as Channel at its own centre"
+            "no river vertex reads as Channel at its own centre"
         );
     }
 }

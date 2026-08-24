@@ -48,7 +48,7 @@
 //! `rows.csv` snapshots". It is not reimplemented here; that would be the
 //! exact duplication this campaign exists to stop.
 //!
-//! The per-PAIR movement above is a raw string comparison of two CSV cells,
+//! The per-PAIR movement above is a raw string comparison of two CSV vertices,
 //! which `render_diff` cannot express (it summarises a whole arm's
 //! distribution, not one seed's row) and which is not a differ in any
 //! meaningful sense.

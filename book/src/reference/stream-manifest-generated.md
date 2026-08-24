@@ -47,7 +47,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | Label | Meaning |
 |---|---|
 | `climate/weather/phase/v1` | drifting weather-phase noise seed (The Firmament) |
-| `climate/variant/cell/v1` | the characteristic variant of a cell (The Toponym) |
+| `climate/variant/cell/v1` | the characteristic variant of a vertex (The Toponym) |
 
 ### hornvale-culture
 
@@ -79,11 +79,11 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `language/<species>/phonology/inventory` | per-species phoneme inventory draw under the articulation envelope; for a family's shared proto-language (e.g. goblinoid) a family name occupies the <species> slot — a language with no speakers |
 | `language/<species>/phonology/phonotactics` | per-species syllable phonotactic templates (onsets, nuclei, codas) |
 | `language/<species>/phonology/tones` | the phonology epoch's tone-inventory draw: which contrastive level tone (High/Low) joins Neutral for a partly-tonal species (tonality → 2 tones); atonal (1) and fully tonal (3) draw nothing here |
-| `language/<species>/name/settlement` | (retired at The Words, superseded by name/settlement/v2) per-settlement name (salted by cell id): a bare stem |
+| `language/<species>/name/settlement` | (retired at The Words, superseded by name/settlement/v2) per-settlement name (salted by vertex id): a bare stem |
 | `language/<species>/name/deity` | (retired at The Words, superseded by name/deity/v2) per-deity name (salted by belief id): a bare stem biased toward closed syllables |
 | `language/<species>/name/epithet` | (retired at The Words, superseded by name/epithet/v2) per-deity epithet (salted by belief id): a descriptive root, optionally reduplicated and honorific-prefixed |
 | `language/<species>/name/person` | (The Particular, Task 2) per-founder name: a bare stem, like the settlement v1 draw above. Not an epoch of `name/settlement` — a fourth, disjoint `NameKind`, so it consumes nothing from any existing stream |
-| `language/<species>/name/landform` | (The Repose, Task 3) per-landform name, keyed at the composition root by (seed, cell, species) rather than by the landform's own identity — one landform has many names, one per people with a word for it: a bare 2-3 syllable stem, like the settlement/person v1 draw above. A fifth, disjoint `NameKind` — no epoch suffix, since this label is new rather than a regeneration (decision 0084) |
+| `language/<species>/name/landform` | (The Repose, Task 3) per-landform name, keyed at the composition root by (seed, vertex, species) rather than by the landform's own identity — one landform has many names, one per people with a word for it: a bare 2-3 syllable stem, like the settlement/person v1 draw above. A fifth, disjoint `NameKind` — no epoch suffix, since this label is new rather than a regeneration (decision 0084) |
 | `language/<species>/name/settlement/v2` | (retired at The Wearing, superseded by name/settlement/v3) the glossed settlement name (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the bare-stem v1 draw above, PLUS a per-salt 2-3 syllable drawn stem that v3 retires |
 | `language/<species>/name/deity/v2` | (retired at The Wearing, superseded by name/deity/v3) the glossed deity name (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the bare-stem v1 draw above |
 | `language/<species>/name/epithet/v2` | (retired at The Wearing, superseded by name/epithet/v3) the glossed epithet (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the v1 draw above |
@@ -123,7 +123,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 
 | Label | Meaning |
 |---|---|
-| `locale/regime/micro` | room sub-cell micro-field |
+| `locale/regime/micro` | room sub-vertex micro-field |
 | `locale/regime/variety` | room descriptor variety draw |
 | `locale/regime/substrate` | room substrate-detail draw |
 | `locale/strangeness/place` | world rarity-budget placement pass |
@@ -169,7 +169,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `terrain/cratons` | margin draw (scales the ocean-fraction-derived budget, Task 9 iteration 3'), craton count, then per-craton center/radius/age |
 | `terrain/plate-weights` | per-plate heavy-tailed Voronoi weight draws |
 | `terrain/plate-edge` | plate-edge noise (hash-noise only; no stream draws) |
-| `terrain/lithology` | lithology sub-cell hash-noise (hash-noise only; no stream draws) |
+| `terrain/lithology` | lithology sub-vertex hash-noise (hash-noise only; no stream draws) |
 | `terrain/features` | subsurface features point-process hash-noise (hash-noise only; no stream draws) |
 | `terrain/terranes` | terrane count, then per terrane host-craton index/bearing/size/age |
 | `terrain/microcontinents` | fixed candidate count, then per candidate position/radius/age |
@@ -182,7 +182,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `terrain/slice-2` | third of three orthogonal crust noise slices (hash-noise only; no stream draws) |
 | `terrain/crenulation` | rift crenulation-noise sub-leg (hash-noise only; no stream draws) |
 | `terrain/channel-meander` | channel meander displacement field (hash-noise only; no stream draws) |
-| `terrain/rill-partition` | where a sub-cell catchment divides between its two branches (hash-noise only; no stream draws) |
+| `terrain/rill-partition` | where a sub-vertex catchment divides between its two branches (hash-noise only; no stream draws) |
 
 ### hornvale-vessel
 
@@ -213,15 +213,15 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `religion/deity/v2` | the deity-naming stream, epoch v2 |
 | `settlement/disposition/v1` | the per-settlement disposition draw, keyed on the occupation's (site, founded-year) |
 | `chamber/v3` | a display-only address formatter; the underworld's real derivation key is RUN_FLOORS and the per-branch legs |
-| `chamber/run-floors/v2` | how many levels one run realizes, keyed on (cell, branch, band) |
-| `chamber/branch-character/v2` | which character one branch carries, keyed on (cell, branch, band) |
-| `chamber/branch-barrier/v2` | the barrier thinness of one branch, keyed on (cell, branch, band) |
-| `chamber/branch-count/v2` | how many branches one cave system realizes, keyed on (cell, band) |
-| `chamber/entrance-count/v2` | how large one cave system's FREE aperture set is, keyed on cell (the shipped count is this raised to the top band's branch width) |
-| `chamber/entrance-mouth/v2` | which top-band branch one aperture opens on, keyed on (cell, aperture, role) |
-| `chamber/band-descent/v1` | which branches of an adjacent band one branch connects to, keyed on (cell, branch, band, role) |
-| `volcano/v1` | the volcano-identity derivation, keyed on the edifice's source contact cell |
-| `hazard/event/v1` | the per-cell hazard-event draw, keyed on (cell, process, world-time block) |
+| `chamber/run-floors/v2` | how many levels one run realizes, keyed on (vertex, branch, band) |
+| `chamber/branch-character/v2` | which character one branch carries, keyed on (vertex, branch, band) |
+| `chamber/branch-barrier/v2` | the barrier thinness of one branch, keyed on (vertex, branch, band) |
+| `chamber/branch-count/v2` | how many branches one cave system realizes, keyed on (vertex, band) |
+| `chamber/entrance-count/v2` | how large one cave system's FREE aperture set is, keyed on vertex (the shipped count is this raised to the top band's branch width) |
+| `chamber/entrance-mouth/v2` | which top-band branch one aperture opens on, keyed on (vertex, aperture, role) |
+| `chamber/band-descent/v1` | which branches of an adjacent band one branch connects to, keyed on (vertex, branch, band, role) |
+| `volcano/v1` | the volcano-identity derivation, keyed on the edifice's source contact vertex |
+| `hazard/event/v1` | the per-vertex hazard-event draw, keyed on (vertex, process, world-time block) |
 
 ### hornvale-kernel (internal)
 

@@ -6,20 +6,20 @@
 //!
 //! **Why climate alone cannot supply this.** Every climate accessor
 //! (`biome_expr_at`, `snow_fraction_at`, `temperature_at`, `moisture_at`) is
-//! keyed on a canonical-grid [`CellId`], and a walk-depth room addresses six
+//! keyed on a canonical-grid [`Vertex`], and a walk-depth room addresses six
 //! refinement levels below that grid — `4^6` rooms share one corner. A cover
 //! model built from climate alone would therefore return one colour for
 //! every room in a band, exactly reproducing the bedrock-era defect this
-//! campaign exists to fix (H1's own baseline: 31 cells, 1 colour). So
+//! campaign exists to fix (H1's own baseline: 31 vertices, 1 colour). So
 //! [`cover_weights`] takes the room's own [`MicroField`] as well as the
-//! cell's climate, and lets the micro-field modulate a climate-set *regime*
+//! vertex's climate, and lets the micro-field modulate a climate-set *regime*
 //! rather than replace it — see [`cover_weights`]'s own doc for the split
 //! and the bound kept on how far the modulation is allowed to move things.
 
 use crate::regime::MicroField;
 use hornvale_climate::{Formation, GeneratedClimate, Realm};
 use hornvale_kernel::color::Reflectance;
-use hornvale_kernel::{CellId, WorldTime};
+use hornvale_kernel::{Vertex, WorldTime};
 
 /// Visible-band reflectance curves for surface cover, the surface analogue
 /// of [`hornvale_terrain::lithology::endmembers`]. Authored constants, not
@@ -116,7 +116,7 @@ struct Component {
     weight: f64,
 }
 
-/// A land formation's base "how green can this cell get" ceiling, `[0, 1]`,
+/// A land formation's base "how green can this vertex get" ceiling, `[0, 1]`,
 /// at full vegetative cover (before the room's own [`MicroField::openness`]
 /// splits it into chlorophyll vs. litter, and before snow occludes it
 /// seasonally). Ordinal against the [`Formation`] roster's own sense of
@@ -179,8 +179,8 @@ fn bare_ground_share(formation: Formation) -> f64 {
 /// and (partly) `wetness` are address noise (`regime.rs`'s own doc) — a
 /// continuous read of them produces a continuous colour, which is a
 /// continuum of near-unique colours over a walk band that shares one
-/// canonical cell (address noise has no reason to repeat between
-/// neighbouring rooms), exactly the "31 cells, 31 colours" ceiling breach
+/// canonical vertex (address noise has no reason to repeat between
+/// neighbouring rooms), exactly the "31 vertices, 31 colours" ceiling breach
 /// the campaign warns against. Banding into three tiers caps how many
 /// distinguishable covers one climate regime can produce, independent of
 /// how many rooms sample it.
@@ -197,7 +197,7 @@ fn tier3(axis: f64) -> f64 {
 /// How far the snow weight moves per aspect tier, as a fraction of it. A
 /// sunlit face (`aspect` tier `+1`) sheds snow faster than a shaded one
 /// (tier `-1`) — bounded small so this perturbs the climate-set snow
-/// regime, it does not decide whether a cell has snow at all.
+/// regime, it does not decide whether a vertex has snow at all.
 const ASPECT_SNOW_SWING: f64 = 0.2;
 
 /// How far the chlorophyll share of the vegetation total moves per openness
@@ -212,8 +212,8 @@ const OPENNESS_CANOPY_SWING: f64 = 0.3;
 /// than a wider, continuous swing.
 const WETNESS_TIER_DELTA: f64 = 0.2;
 
-/// The cover components at `cell` on `at`, modulated by this room's own
-/// sub-cell [`MicroField`] — the weighted endmember/weight pairs
+/// The cover components at `vertex` on `at`, modulated by this room's own
+/// sub-vertex [`MicroField`] — the weighted endmember/weight pairs
 /// [`crate::LocaleContext::reflectance_mixture_at`] appends to the mineral
 /// mixture, plus the class each one came from (kept internal; see
 /// [`cover_weights`] and [`cover_class_at`] for the two public-in-crate
@@ -222,10 +222,10 @@ const WETNESS_TIER_DELTA: f64 = 0.2;
 /// **Climate sets the regime; micro modulates within it.** Snow, the
 /// vegetation ceiling, and the bare-ground share are all read from `climate`
 /// (formation, moisture, frozen/snow fraction) — the same value for every
-/// room sharing this cell. `micro`'s three address-noise axes (`aspect`,
+/// room sharing this vertex. `micro`'s three address-noise axes (`aspect`,
 /// `openness`, and — grounded, since The Rill — `wetness`) then perturb that
 /// shared regime by a bounded amount each, which is what makes two rooms in
-/// one canonical cell differ at all without repainting raw noise: the
+/// one canonical vertex differ at all without repainting raw noise: the
 /// perturbation is capped well under the regime's own swing (deserts vs.
 /// rainforest, frozen vs. not), so a band shows a handful of distinguishable
 /// covers, not a continuum of 31 unique ones.
@@ -236,7 +236,7 @@ const WETNESS_TIER_DELTA: f64 = 0.2;
 /// `remaining_after_snow` split below. `is_frozen_at` is the seasonal gate
 /// (no snow lying on unfrozen ground); `snow_fraction_at` sets how much of
 /// the year's precipitation the climate expects as snow at all, so a
-/// marginal, rain-heavy cell doesn't go fully white the moment it dips below
+/// marginal, rain-heavy vertex doesn't go fully white the moment it dips below
 /// freezing.
 ///
 /// Every weight is non-negative and the returned total never exceeds `1.0`
@@ -244,20 +244,20 @@ const WETNESS_TIER_DELTA: f64 = 0.2;
 /// non-negative too).
 fn cover_components(
     climate: &GeneratedClimate,
-    cell: CellId,
+    vertex: Vertex,
     micro: &MicroField,
     at: WorldTime,
 ) -> Vec<Component> {
-    let expr = climate.biome_expr_at(cell);
+    let expr = climate.biome_expr_at(vertex);
 
     // --- Snow: seasonal gate x annual propensity x a bounded aspect swing.
-    let frozen = climate.is_frozen_at(cell, at.day());
-    let annual_snow = climate.snow_fraction_at(cell).clamp(0.0, 1.0);
+    let frozen = climate.is_frozen_at(vertex, at.day());
+    let annual_snow = climate.snow_fraction_at(vertex).clamp(0.0, 1.0);
     let aspect_factor = (1.0 - ASPECT_SNOW_SWING * tier3(micro.aspect)).clamp(0.0, 2.0);
-    // A frozen cell always carries a snow floor (SNOW_FLOOR) even at zero
+    // A frozen vertex always carries a snow floor (SNOW_FLOOR) even at zero
     // recorded snow_fraction — ground frost / rime rather than bare frozen
     // dirt — topped up toward SNOW_CEILING by how snow-heavy the climate
-    // expects this cell to be.
+    // expects this vertex to be.
     const SNOW_FLOOR: f64 = 0.25;
     const SNOW_CEILING: f64 = 0.85;
     let snow_weight = if frozen {
@@ -323,7 +323,7 @@ fn cover_components(
             // wetness tier: -1 (dry) .. +1 (wet). Climate moisture sets the
             // base split; the room's own (partly grounded) wetness axis
             // perturbs it by one of three fixed deltas.
-            let base_wet = climate.moisture_at(cell).clamp(0.0, 1.0);
+            let base_wet = climate.moisture_at(vertex).clamp(0.0, 1.0);
             let wet_share = (base_wet + WETNESS_TIER_DELTA * tier3(micro.wetness)).clamp(0.0, 1.0);
             let silt_weight = bare_total * wet_share;
             let sand_weight = bare_total - silt_weight;
@@ -347,8 +347,8 @@ fn cover_components(
     out
 }
 
-/// The surface cover at `cell` on `at`, modulated by this room's own
-/// sub-cell micro-field, as endmember/weight pairs summing to the covered
+/// The surface cover at `vertex` on `at`, modulated by this room's own
+/// sub-vertex micro-field, as endmember/weight pairs summing to the covered
 /// fraction. The bare-ground remainder is the caller's mineral mixture,
 /// weighted `1 - covered` — see [`crate::LocaleContext::
 /// reflectance_mixture_at`] for the composition. See [`cover_components`]
@@ -356,11 +356,11 @@ fn cover_components(
 /// the class tag a colour caller has no use for.
 pub(crate) fn cover_weights(
     climate: &GeneratedClimate,
-    cell: CellId,
+    vertex: Vertex,
     micro: &MicroField,
     at: WorldTime,
 ) -> Vec<(Reflectance, f64)> {
-    cover_components(climate, cell, micro, at)
+    cover_components(climate, vertex, micro, at)
         .into_iter()
         .map(|c| {
             (
@@ -371,7 +371,7 @@ pub(crate) fn cover_weights(
         .collect()
 }
 
-/// The dominant cover class at `cell` on `at` — the categorical read a
+/// The dominant cover class at `vertex` on `at` — the categorical read a
 /// consumer that wants "what covers this room" (Task 9) can take instead of
 /// a blended colour. `Bare` when [`cover_components`] returns nothing (the
 /// mineral ground shows through undisturbed). Ties break toward whichever
@@ -380,16 +380,16 @@ pub(crate) fn cover_weights(
 /// [`crate::dominant_corner`] uses for a room's categorical corner, chosen
 /// here rather than left to `Iterator::max_by`'s "last on a tie" default.
 /// Called from production code via [`crate::LocaleContext::cover_class_at`]
-/// (Task 9), which resolves `cell` from a `RoomAddr` the same way
+/// (Task 9), which resolves `vertex` from a `Facet` the same way
 /// [`crate::LocaleContext::reflectance_mixture_at`] does.
 pub(crate) fn cover_class_at(
     climate: &GeneratedClimate,
-    cell: CellId,
+    vertex: Vertex,
     micro: &MicroField,
     at: WorldTime,
 ) -> CoverClass {
     let mut best: Option<(CoverClass, f64)> = None;
-    for c in cover_components(climate, cell, micro, at) {
+    for c in cover_components(climate, vertex, micro, at) {
         match best {
             Some((_, w)) if w >= c.weight => {}
             _ => best = Some((c.class, c.weight)),
@@ -406,7 +406,7 @@ mod tests {
 
     /// Seed 42's tier-1 climate, built the same way [`crate::LocaleContext::
     /// build`] does — but standalone, so these tests don't need a full
-    /// `LocaleContext` (a `GeneratedClimate` and a `CellId` are all
+    /// `LocaleContext` (a `GeneratedClimate` and a `Vertex` are all
     /// [`cover_weights`]/[`cover_class_at`] take). `World::new` (no sky pin
     /// committed) defaults to `ConstantSun`, which is fine here: these tests
     /// probe the cover model's shape, not the seasonal swing H2 measures
@@ -431,13 +431,15 @@ mod tests {
         }
     }
 
-    /// The first cell (in ascending `CellId` order, for a deterministic
-    /// pick) whose climate satisfies `pred` — a real cell, not a synthetic
+    /// The first vertex (in ascending `Vertex` order, for a deterministic
+    /// pick) whose climate satisfies `pred` — a real vertex, not a synthetic
     /// one, because every accessor `cover_weights` reads is inherent on
     /// `GeneratedClimate` and cannot be mocked.
-    fn find_cell(climate: &GeneratedClimate, pred: impl Fn(CellId) -> bool) -> Option<CellId> {
+    fn find_vertex(climate: &GeneratedClimate, pred: impl Fn(Vertex) -> bool) -> Option<Vertex> {
         let geo = climate.geosphere();
-        (0..geo.cell_count() as u32).map(CellId).find(|&c| pred(c))
+        (0..geo.vertex_count() as u32)
+            .map(Vertex)
+            .find(|&c| pred(c))
     }
 
     /// FINDING 4 (fix round 1): `LEGEND`, `index()`, and `name()` are three
@@ -486,33 +488,39 @@ mod tests {
             openness: -1.0,
         };
         let mut sampled = 0;
-        for i in (0..geo.cell_count() as u32).step_by(29) {
-            let cell = CellId(i);
+        for i in (0..geo.vertex_count() as u32).step_by(29) {
+            let vertex = Vertex(i);
             for day in [0.0, 91.0, 182.0, 273.0] {
                 let at = WorldTime::new(day).expect("finite day");
-                let cover = cover_weights(&climate, cell, &micro, at);
+                let cover = cover_weights(&climate, vertex, &micro, at);
                 let covered: f64 = cover.iter().map(|(_, w)| w).sum();
                 assert!(
                     (0.0..=1.0 + 1e-9).contains(&covered),
-                    "cell {cell:?} day {day} covered={covered} out of [0, 1]"
+                    "vertex {vertex:?} day {day} covered={covered} out of [0, 1]"
                 );
                 for (_, w) in &cover {
-                    assert!(*w >= 0.0, "cell {cell:?} day {day} has a negative weight");
+                    assert!(
+                        *w >= 0.0,
+                        "vertex {vertex:?} day {day} has a negative weight"
+                    );
                 }
                 sampled += 1;
             }
         }
-        assert!(sampled > 100, "too few cells sampled to trust this sweep");
+        assert!(
+            sampled > 100,
+            "too few vertices sampled to trust this sweep"
+        );
     }
 
     #[test]
-    fn a_frozen_cell_carries_snow_and_reads_snow_dominant() {
+    fn a_frozen_vertex_carries_snow_and_reads_snow_dominant() {
         let climate = climate_seed_42();
-        let cell = find_cell(&climate, |c| climate.is_frozen_at(c, 0.0))
-            .expect("seed 42 has at least one cell frozen at day 0");
+        let vertex = find_vertex(&climate, |c| climate.is_frozen_at(c, 0.0))
+            .expect("seed 42 has at least one vertex frozen at day 0");
         let micro = neutral();
         let at = WorldTime::GENESIS;
-        let cover = cover_weights(&climate, cell, &micro, at);
+        let cover = cover_weights(&climate, vertex, &micro, at);
         let snow_weight: f64 = cover
             .iter()
             .find(|(r, _)| r.get() == &endmembers::SNOW)
@@ -520,53 +528,59 @@ mod tests {
             .unwrap_or(0.0);
         assert!(
             snow_weight > 0.0,
-            "a frozen cell must carry a nonzero snow weight"
+            "a frozen vertex must carry a nonzero snow weight"
         );
-        assert_eq!(cover_class_at(&climate, cell, &micro, at), CoverClass::Snow);
+        assert_eq!(
+            cover_class_at(&climate, vertex, &micro, at),
+            CoverClass::Snow
+        );
     }
 
     #[test]
-    fn an_unfrozen_open_water_cell_is_bare() {
+    fn an_unfrozen_open_water_vertex_is_bare() {
         let climate = climate_seed_42();
-        let cell = find_cell(&climate, |c| {
+        let vertex = find_vertex(&climate, |c| {
             climate.biome_expr_at(c).realm == Realm::WATERWORLD && !climate.is_frozen_at(c, 0.0)
         })
-        .expect("seed 42 has at least one unfrozen water cell");
+        .expect("seed 42 has at least one unfrozen water vertex");
         let micro = neutral();
         let at = WorldTime::GENESIS;
-        let cover = cover_weights(&climate, cell, &micro, at);
+        let cover = cover_weights(&climate, vertex, &micro, at);
         assert!(
             cover.is_empty(),
-            "an unfrozen water cell should carry no surface cover: {cover:?}"
+            "an unfrozen water vertex should carry no surface cover: {cover:?}"
         );
-        assert_eq!(cover_class_at(&climate, cell, &micro, at), CoverClass::Bare);
+        assert_eq!(
+            cover_class_at(&climate, vertex, &micro, at),
+            CoverClass::Bare
+        );
     }
 
     #[test]
-    fn a_desert_cell_leans_sand_or_silt_not_vegetation() {
+    fn a_desert_vertex_leans_sand_or_silt_not_vegetation() {
         let climate = climate_seed_42();
-        let cell = find_cell(&climate, |c| {
+        let vertex = find_vertex(&climate, |c| {
             climate.biome_expr_at(c).formation == Formation::Desert && !climate.is_frozen_at(c, 0.0)
         })
         // FINDING 5 (Task 2b fix round): this used to `return` silently on
         // `None`, on the reasoning that "seed 42 may simply have no desert
-        // cell" is a legitimate finding. Measured: seed 42 has 15 Desert
-        // cells of 40962 (0.037%) — rare, but real, so a silent skip here
+        // vertex" is a legitimate finding. Measured: seed 42 has 15 Desert
+        // vertices of 40962 (0.037%) — rare, but real, so a silent skip here
         // was one climate tune away from this test going permanently green
         // without ever running its own assertions. `expect` makes that
-        // failure loud instead: a future seed/tune with zero desert cells
+        // failure loud instead: a future seed/tune with zero desert vertices
         // now fails this test explicitly, which is the correct outcome —
-        // it means the test needs a different cell-finding strategy, not
+        // it means the test needs a different vertex-finding strategy, not
         // that it should quietly stop checking anything.
-        .expect("seed 42 must have at least one unfrozen Desert cell (measured: 15 of 40962)");
+        .expect("seed 42 must have at least one unfrozen Desert vertex (measured: 15 of 40962)");
         let micro = neutral();
-        let cover = cover_weights(&climate, cell, &micro, WorldTime::GENESIS);
+        let cover = cover_weights(&climate, vertex, &micro, WorldTime::GENESIS);
         let has_chlorophyll = cover
             .iter()
             .any(|(r, _)| r.get() == &endmembers::CHLOROPHYLL);
         assert!(
             !has_chlorophyll,
-            "a desert cell should carry no chlorophyll weight: {cover:?}"
+            "a desert vertex should carry no chlorophyll weight: {cover:?}"
         );
         let mineral_like: f64 = cover
             .iter()
@@ -575,24 +589,24 @@ mod tests {
             .sum();
         assert!(
             mineral_like > 0.0,
-            "a desert cell should carry some sand/silt weight: {cover:?}"
+            "a desert vertex should carry some sand/silt weight: {cover:?}"
         );
     }
 
     #[test]
     fn openness_moves_the_chlorophyll_litter_split_but_not_the_total() {
         let climate = climate_seed_42();
-        let cell = find_cell(&climate, |c| {
+        let vertex = find_vertex(&climate, |c| {
             let expr = climate.biome_expr_at(c);
             expr.realm == Realm::OVERWORLD
                 && vegetation_ceiling(expr.formation) > 0.0
                 && !climate.is_frozen_at(c, 0.0)
         })
-        .expect("seed 42 has at least one unfrozen vegetated land cell");
+        .expect("seed 42 has at least one unfrozen vegetated land vertex");
         let at = WorldTime::GENESIS;
         let closed = cover_weights(
             &climate,
-            cell,
+            vertex,
             &MicroField {
                 relief: 0.0,
                 aspect: 0.0,
@@ -603,7 +617,7 @@ mod tests {
         );
         let open = cover_weights(
             &climate,
-            cell,
+            vertex,
             &MicroField {
                 relief: 0.0,
                 aspect: 0.0,
@@ -630,7 +644,7 @@ mod tests {
         };
         assert!(
             green(&closed) > green(&open),
-            "a closed canopy must read greener than an open one at the same cell"
+            "a closed canopy must read greener than an open one at the same vertex"
         );
         assert!(
             (veg_total(&closed) - veg_total(&open)).abs() < 1e-9,

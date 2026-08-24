@@ -47,7 +47,7 @@ seed 42
   derivation      chamber/v3 over chamber/run-floors/v2
   lattice         4 branches per system, 5 bands, 20 levels admitted per run
   entrances       1626 drawn across 874 systems, 499 multi-entrance (chamber/entrance-count/v2)
-  cave systems    874  (ocean-cell caves skipped: 0)
+  cave systems    874  (ocean-vertex caves skipped: 0)
   floors drawn    113799
   chambers        30537
   reachable       30537 from 1626 open entrances
@@ -61,7 +61,7 @@ seed 42
   the first three cave systems, run by run
   (key = the floor-0 address's spelling, not a derivation key; # exists, . refused, _ past the run's drawn floors, ~ past the system's drawn branch count)
 
-  cell 30 — fracture cave, reach 2145.7358 m, gradient 26.007865 K/km
+  vertex 30 — fracture cave, reach 2145.7358 m, gradient 26.007865 K/km
     30/0/undercroft/0            regolith     3 floors  ###_________________
     30/0/shallows/0              cover        5 floors  #####_______________
     30/0/deeps/0                 basement    14 floors  ##############______
@@ -83,7 +83,7 @@ seed 42
     30/3/underdeep/0             -           10 floors  ~~~~~~~~~~__________
     30/3/nadir/0                 -            5 floors  ~~~~~_______________
 
-  cell 111 — karst cave, reach 252.0545 m, gradient 24.69077 K/km
+  vertex 111 — karst cave, reach 252.0545 m, gradient 24.69077 K/km
     111/0/undercroft/0           basement     4 floors  ####________________
     111/0/shallows/0             basement     3 floors  ###_________________
     111/0/deeps/0                -           13 floors  ............._______
@@ -105,7 +105,7 @@ seed 42
     111/3/underdeep/0            -            7 floors  ~~~~~~~_____________
     111/3/nadir/0                -            1 floors  ~___________________
 
-  cell 282 — karst cave, reach 483.46851 m, gradient 22.399271 K/km
+  vertex 282 — karst cave, reach 483.46851 m, gradient 22.399271 K/km
     282/0/undercroft/0           basement     3 floors  ###_________________
     282/0/shallows/0             basement     6 floors  ######______________
     282/0/deeps/0                basement    13 floors  #############_______
@@ -131,7 +131,7 @@ seed 7
   derivation      chamber/v3 over chamber/run-floors/v2
   lattice         4 branches per system, 5 bands, 20 levels admitted per run
   entrances       3177 drawn across 1681 systems, 962 multi-entrance (chamber/entrance-count/v2)
-  cave systems    1681  (ocean-cell caves skipped: 0)
+  cave systems    1681  (ocean-vertex caves skipped: 0)
   floors drawn    219277
   chambers        59227
   reachable       59227 from 3177 open entrances
@@ -145,7 +145,7 @@ seed 7
   the first three cave systems, run by run
   (key = the floor-0 address's spelling, not a derivation key; # exists, . refused, _ past the run's drawn floors, ~ past the system's drawn branch count)
 
-  cell 52 — karst cave, reach 249.24025 m, gradient 24.917192 K/km
+  vertex 52 — karst cave, reach 249.24025 m, gradient 24.917192 K/km
     52/0/undercroft/0            regolith     5 floors  #####_______________
     52/0/shallows/0              cover        3 floors  ###_________________
     52/0/deeps/0                 -           19 floors  ..................._
@@ -167,7 +167,7 @@ seed 7
     52/3/underdeep/0             -            5 floors  ~~~~~_______________
     52/3/nadir/0                 -            2 floors  ..__________________
 
-  cell 70 — fracture cave, reach 2230.3734 m, gradient 24.795713 K/km
+  vertex 70 — fracture cave, reach 2230.3734 m, gradient 24.795713 K/km
     70/0/undercroft/0            regolith     2 floors  ##__________________
     70/0/shallows/0              basement     5 floors  #####_______________
     70/0/deeps/0                 basement     8 floors  ########____________
@@ -189,7 +189,7 @@ seed 7
     70/3/underdeep/0             -            9 floors  ~~~~~~~~~___________
     70/3/nadir/0                 -            3 floors  ~~~_________________
 
-  cell 92 — karst cave, reach 1409.9429 m, gradient 26.976856 K/km
+  vertex 92 — karst cave, reach 1409.9429 m, gradient 26.976856 K/km
     92/0/undercroft/0            regolith     5 floors  #####_______________
     92/0/shallows/0              cover        7 floors  #######_____________
     92/0/deeps/0                 basement     5 floors  #####_______________
@@ -215,7 +215,7 @@ seed 1234
   derivation      chamber/v3 over chamber/run-floors/v2
   lattice         4 branches per system, 5 bands, 20 levels admitted per run
   entrances       2331 drawn across 1266 systems, 733 multi-entrance (chamber/entrance-count/v2)
-  cave systems    1266  (ocean-cell caves skipped: 0)
+  cave systems    1266  (ocean-vertex caves skipped: 0)
   floors drawn    164033
   chambers        48294
   reachable       48294 from 2331 open entrances
@@ -229,7 +229,7 @@ seed 1234
   the first three cave systems, run by run
   (key = the floor-0 address's spelling, not a derivation key; # exists, . refused, _ past the run's drawn floors, ~ past the system's drawn branch count)
 
-  cell 18 — fracture cave, reach 2694.0137 m, gradient 21.180804 K/km
+  vertex 18 — fracture cave, reach 2694.0137 m, gradient 21.180804 K/km
     18/0/undercroft/0            regolith     1 floors  #___________________
     18/0/shallows/0              basement    10 floors  ##########__________
     18/0/deeps/0                 basement     8 floors  ########____________
@@ -251,7 +251,7 @@ seed 1234
     18/3/underdeep/0             -            7 floors  ~~~~~~~_____________
     18/3/nadir/0                 -            5 floors  ~~~~~_______________
 
-  cell 19 — fracture cave, reach 1699.8077 m, gradient 22.357908 K/km
+  vertex 19 — fracture cave, reach 1699.8077 m, gradient 22.357908 K/km
     19/0/undercroft/0            regolith     2 floors  ##__________________
     19/0/shallows/0              cover       10 floors  ##########__________
     19/0/deeps/0                 cover       16 floors  ################____
@@ -273,7 +273,7 @@ seed 1234
     19/3/underdeep/0             -            9 floors  ~~~~~~~~~___________
     19/3/nadir/0                 -            5 floors  ~~~~~_______________
 
-  cell 49 — fracture cave, reach 2039.1218 m, gradient 26.05835 K/km
+  vertex 49 — fracture cave, reach 2039.1218 m, gradient 26.05835 K/km
     49/0/undercroft/0            basement     2 floors  ##__________________
     49/0/shallows/0              basement     4 floors  ####________________
     49/0/deeps/0                 basement    12 floors  ############________

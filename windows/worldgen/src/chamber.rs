@@ -17,29 +17,29 @@
 //! **The lattice's depth axis is the DELVE ladder, not the stratigraphic one**
 //! (spec §4.1, The Underworld). `ChamberAddr.band` indexes
 //! [`hornvale_kernel::Band`]'s habitation rungs — ΔT classes above the
-//! cell's surface datum — so the same rung sits at different metre depths in
-//! different cells, and how far down the lattice a cave reaches is a fact
-//! about its budget *and* its cell's geothermal gradient. That is why both
+//! vertex's surface datum — so the same rung sits at different metre depths in
+//! different vertices, and how far down the lattice a cave reaches is a fact
+//! about its budget *and* its vertex's geothermal gradient. That is why both
 //! entry points now take a [`GeothermalGradient`]: the lattice cannot place an
-//! address in a cell it knows nothing about.
+//! address in a vertex it knows nothing about.
 //!
 //! The stratigraphic ladder is still reported — [`Chamber`] carries both a
 //! `rung` and a `stratum` — but the two are computed from different inputs and
 //! **neither derives the other** (spec §4.1). The rung comes from the address;
-//! the stratum comes from the cell's own column, read at the depth the rung
+//! the stratum comes from the vertex's own column, read at the depth the rung
 //! begins at.
 
 use std::collections::BTreeMap;
 
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{Band, CellId, Seed, Stream};
+use hornvale_kernel::{Band, Seed, Stream, Vertex};
 use hornvale_terrain::{
     Cave, GeneratedTerrain, GeothermalGradient, Horizon, StratigraphicColumn, delta_t_range_of,
     rung_at_depth,
 };
 
 /// Branch columns in the fixed lattice, beneath one cave-system address
-/// (`cell` alone — amendment A.3 dissolved the per-entrance sublattice: an
+/// (`vertex` alone — amendment A.3 dissolved the per-entrance sublattice: an
 /// entrance is which aperture a player used, not a coordinate in the
 /// system's own address space). Constant regardless of what any particular
 /// cave realizes — rule 1a: this is the lattice's own size, never a count of
@@ -73,7 +73,7 @@ pub const BRANCHES_PER_SYSTEM: u8 = 4;
 /// **Renamed from `FLOORS_PER_RUN_CEILING` by The Drift** (spec amendment
 /// A.3): `floor` becomes `level` throughout the address (spec §4.3 — "a
 /// screen-filling map", not a storey of a building), and "run" becomes
-/// "branch" now that a run's own coordinates are `(cell, band, branch)` with
+/// "branch" now that a run's own coordinates are `(vertex, band, branch)` with
 /// no `entrance` to distinguish it from the branch it belongs to.
 ///
 /// **This is deliberately NOT the realized level count, and the distinction is
@@ -95,19 +95,19 @@ pub const BRANCHES_PER_SYSTEM: u8 = 4;
 pub const LEVELS_PER_BRANCH_CEILING: u8 = 20;
 
 /// An address in the chamber lattice — a **place**, never a construction
-/// step (spec §3.1). Four coordinates name: which cell, which branch (a
+/// step (spec §3.1). Four coordinates name: which vertex, which branch (a
 /// column persisting downward), which depth band, and which level of that
 /// branch within that band.
 ///
 /// **The Drift's amendment A dropped `entrance`, and this is why.** Task 0's
-/// baseline found that the shipped lattice keyed every draw on `(cell,
+/// baseline found that the shipped lattice keyed every draw on `(vertex,
 /// entrance)`, so each entrance of a cave system realized its OWN private
 /// sublattice — but the campaign's own worked example (a Blacksmith's Cellar
 /// and a Cave under the Well, two Undercroft entrances, both descending into
 /// the SAME Spider Cave) requires one lattice per SYSTEM with several
 /// apertures into it. An entrance survives only as *which aperture a player
-/// came in by* — [`entrance_count`] (keyed on the cell) and
-/// [`entrance_mouth`] (keyed on `(cell, entrance)`) still answer that
+/// came in by* — [`entrance_count`] (keyed on the vertex) and
+/// [`entrance_mouth`] (keyed on `(vertex, entrance)`) still answer that
 /// question; it is no longer a coordinate of the place itself.
 ///
 /// **The Stope's epoch (`chamber/v3`) reshaped this type before that**, and
@@ -132,7 +132,7 @@ pub const LEVELS_PER_BRANCH_CEILING: u8 = 20;
 /// the address space wider than the realized one — landed in this campaign
 /// (spec §4.0) and made the situation worse, not better: with a metre budget
 /// capped at 3 km, `deepest_horizon` reached exactly `Basement` on 97.3–99.0% of
-/// cave-bearing cells across seeds 42 / 7 / 1234, so the lattice's depth axis
+/// cave-bearing vertices across seeds 42 / 7 / 1234, so the lattice's depth axis
 /// carried almost no information at all. Re-pointing it at the delve ladder is
 /// what restores it: the same three seeds spread across all five rungs
 /// (`[77, 131, 399, 53, 214]`, `[84, 599, 121, 150, 727]`,
@@ -152,8 +152,8 @@ pub const LEVELS_PER_BRANCH_CEILING: u8 = 20;
 /// type-audit: bare-ok(index: branch), bare-ok(index: level)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ChamberAddr {
-    /// Which surface cell this chamber lies beneath.
-    pub cell: CellId,
+    /// Which surface vertex this chamber lies beneath.
+    pub vertex: Vertex,
     /// Which branch of that cave system this chamber sits on
     /// (`0..BRANCHES_PER_SYSTEM`) — a column persisting downward through the
     /// bands, and the thing a character and a barrier state attach to (spec
@@ -180,7 +180,7 @@ impl ChamberAddr {
     /// from.
     pub fn run(self) -> RunAddr {
         RunAddr {
-            cell: self.cell,
+            vertex: self.vertex,
             branch: self.branch,
             band: self.band,
         }
@@ -198,7 +198,7 @@ impl ChamberAddr {
 /// would let a caller believe the answer depended on which level they
 /// happened to pass.
 ///
-/// Every component is a coordinate in the fixed lattice — cell, branch,
+/// Every component is a coordinate in the fixed lattice — vertex, branch,
 /// band — and none of them is a generation ordinal (decision 0102). The draw
 /// keyed on this is therefore a fact about a *place*, readable by anyone who
 /// can name the place, in any order, with nothing generated first.
@@ -213,8 +213,8 @@ impl ChamberAddr {
 /// type-audit: bare-ok(index: branch)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RunAddr {
-    /// Which surface cell this run lies beneath.
-    pub cell: CellId,
+    /// Which surface vertex this run lies beneath.
+    pub vertex: Vertex,
     /// Which branch of that cave system this run sits on
     /// (`0..BRANCHES_PER_SYSTEM`).
     pub branch: u8,
@@ -279,7 +279,7 @@ pub enum ChamberOrigin {
 /// address must come out identical no matter which cave (shallow or deep) was
 /// asked, for every address both caves admit. The gradient and column are
 /// properties of the *place*, not of the cave, so admitting them does not
-/// weaken that: they are constant for a given `addr.cell`.
+/// weaken that: they are constant for a given `addr.vertex`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Chamber {
     /// The address this content was derived for.
@@ -289,9 +289,9 @@ pub struct Chamber {
     /// typed [`Band`] (Task 4). A pure function of the address.
     pub rung: Band,
     /// The rock stratum this chamber sits in — the *archive* answer, read off
-    /// the cell's own stratigraphic column at the depth [`Chamber::rung`]
+    /// the vertex's own stratigraphic column at the depth [`Chamber::rung`]
     /// begins at. **Not derived from `rung`, and `rung` is not derived from
-    /// it** (spec §4.1): the same rung is a different band in a cell with a
+    /// it** (spec §4.1): the same rung is a different band in a vertex with a
     /// different gradient or a different column.
     ///
     /// **Never overridable** — see [`ChamberOrigin`]'s own docs for why: this
@@ -319,7 +319,7 @@ pub struct Chamber {
 ///
 /// **Made `pub` by The Underworld's Task 8**, which needs it for the same
 /// reason [`chamber_exists`] does and must not grow a second copy: the
-/// `ChamberOrigin::Made` writer turns a settled community's `(cell, rung)`
+/// `ChamberOrigin::Made` writer turns a settled community's `(vertex, rung)`
 /// seat into the [`ChamberAddr`]es beneath it, and that translation is exactly
 /// this mapping. Rule 1a's "one explicit mapping, in one place" is what makes
 /// widening it the right move rather than duplicating it in
@@ -369,13 +369,13 @@ pub(crate) fn rung_name(rung: Band) -> &'static str {
     }
 }
 
-/// The stratigraphic band a chamber at `rung` sits in, for a cell with this
+/// The stratigraphic band a chamber at `rung` sits in, for a vertex with this
 /// column and gradient — the *archive* answer, kept strictly separate from the
 /// rung itself (spec §4.1: "neither derives the other").
 ///
 /// The rung fixes a ΔT; the gradient turns that into a depth in metres for
-/// **this** cell; the column says what rock is at that depth. Two chambers on
-/// the same rung under different cells can therefore sit in different bands,
+/// **this** vertex; the column says what rock is at that depth. Two chambers on
+/// the same rung under different vertices can therefore sit in different bands,
 /// and two chambers in the same band can sit on different rungs — which is the
 /// whole reason both are reported.
 ///
@@ -391,9 +391,9 @@ pub(crate) fn rung_name(rung: Band) -> &'static str {
 /// is a constant, and the "neither ladder derives the other" independence
 /// [`Chamber::stratum`] claims is **vacuous for that one rung**: it holds for
 /// ranks 1–4, where the same rung genuinely straddles different rock in
-/// different cells, and says nothing at rank 0. That is a property of taking
+/// different vertices, and says nothing at rank 0. That is a property of taking
 /// the top rather than a defect in the ladder — the midpoint of a rung, or its
-/// bottom, would give rank 0 a cell-varying stratum at the cost of naming a
+/// bottom, would give rank 0 a vertex-varying stratum at the cost of naming a
 /// depth no chamber is actually at. Whichever a later task picks, it should
 /// pick knowing this is the trade, not discover it from a constant column.
 fn stratum_at(rung: Band, gradient: GeothermalGradient, column: &StratigraphicColumn) -> Horizon {
@@ -434,7 +434,7 @@ fn stratum_of_band(band: Horizon) -> hornvale_climate::Stratum {
 /// entrance is which aperture a player used, not a coordinate in the
 /// address, so the key no longer spells one at all.
 ///
-/// **`cell`, `branch` and `level` are genuine integers naming a
+/// **`vertex`, `branch` and `level` are genuine integers naming a
 /// place and are spelled decimal. `band` is spelled by its [`Band`] NAME,
 /// never its numeric index.** An index is a declaration position: if the delve ladder
 /// ever gains a rung in the middle (spec §4.1 permits 4 to 6, so there is
@@ -470,7 +470,7 @@ fn stratum_of_band(band: Horizon) -> hornvale_climate::Stratum {
 pub(crate) fn chamber_key(addr: ChamberAddr) -> String {
     format!(
         "{}/{}/{}/{}",
-        addr.cell.0,
+        addr.vertex.0,
         addr.branch,
         rung_name(addr.band),
         addr.level
@@ -511,7 +511,7 @@ fn levels_range(rung: Band) -> Option<(u8, u8)> {
 /// discipline one axis over, and its own save-format contract.
 ///
 /// Spelled to the same rules as a chamber key and for the same reasons:
-/// `cell` and `branch` are integers naming a place and are decimal; `band` is
+/// `vertex` and `branch` are integers naming a place and are decimal; `band` is
 /// spelled by its [`Band`] **name** through [`rung_name`]'s explicit table,
 /// because an index is a declaration position and a mid-ladder insertion
 /// would silently re-key every run below it.
@@ -526,7 +526,7 @@ fn levels_range(rung: Band) -> Option<(u8, u8)> {
 /// derivation — unlike [`chamber_key`], [`levels_in_branch`] is the shipped
 /// entry point `chamber_exists` reads — so the label epoch moved with it.
 fn run_key(run: RunAddr) -> String {
-    format!("{}/{}/{}", run.cell.0, run.branch, rung_name(run.band))
+    format!("{}/{}/{}", run.vertex.0, run.branch, rung_name(run.band))
 }
 
 /// The stream a run's level count is drawn from — [`run_key`] composed under
@@ -549,7 +549,7 @@ fn run_stream(seed: Seed, run: RunAddr) -> Stream {
 /// one branch within one band, and "run" now means exactly that place.
 ///
 /// **It takes a [`RunAddr`], not a [`ChamberAddr`] and not a bare band.** The
-/// draw keys on cell, branch and band, and a function cannot key on what it
+/// draw keys on vertex, branch and band, and a function cannot key on what it
 /// is not given — so every component of the key is a parameter, and the
 /// parameter type is the one that *cannot* carry a level, because a run is
 /// precisely the thing that has no level yet.
@@ -646,11 +646,11 @@ impl DescentRole {
 /// The one place the `chamber/band-descent/v1` key is spelled — [`run_key`]'s
 /// discipline with a role appended, and its own save-format contract.
 ///
-/// `cell` and `branch` are integers naming a place and are decimal; `band` is
+/// `vertex` and `branch` are integers naming a place and are decimal; `band` is
 /// spelled by its [`Band`] **name** through [`rung_name`], never its rank,
 /// for the reason `chamber_key`/`run_key` both state: a rank is a
 /// declaration position, and a mid-ladder insertion would silently re-key
-/// every band below it. Field order is `RunAddr`'s own (cell, branch, band),
+/// every band below it. Field order is `RunAddr`'s own (vertex, branch, band),
 /// the spelling every re-keyed leg in this crate agrees on, with
 /// [`DescentRole`]'s word last.
 ///
@@ -659,8 +659,8 @@ impl DescentRole {
 /// my parent" keyed at the Deeps; the Shallows↔Deeps pair therefore reads
 /// one key at each end rather than two keys at the same end. That keeps a
 /// key naming a band the branch actually occupies.
-fn descent_key(cell: CellId, branch: u8, band: Band, role: DescentRole) -> String {
-    format!("{}/{branch}/{}/{}", cell.0, rung_name(band), role.word())
+fn descent_key(vertex: Vertex, branch: u8, band: Band, role: DescentRole) -> String {
+    format!("{}/{branch}/{}/{}", vertex.0, rung_name(band), role.word())
 }
 
 /// One band-descent draw: which of `width` branches in the adjacent band
@@ -673,7 +673,7 @@ fn descent_key(cell: CellId, branch: u8, band: Band, role: DescentRole) -> Strin
 /// pair before reaching here, so no draw is ever taken over an empty range.
 fn descent_pick(
     seed: Seed,
-    cell: CellId,
+    vertex: Vertex,
     branch: u8,
     band: Band,
     role: DescentRole,
@@ -682,7 +682,9 @@ fn descent_pick(
     debug_assert!(width >= 1, "descent_pick needs a non-empty target band");
     let drawn = seed
         .derive(crate::streams::BAND_DESCENT)
-        .derive(StreamLabel::dynamic(&descent_key(cell, branch, band, role)))
+        .derive(StreamLabel::dynamic(&descent_key(
+            vertex, branch, band, role,
+        )))
         .stream()
         .range_u32(0, u32::from(width - 1));
     // `range_u32` is inclusive and `width - 1` came from a `u8`, so this
@@ -704,7 +706,7 @@ fn descent_pick(
 /// Empty for [`Band::Surface`] (not a habitation band, so it has no branches
 /// to connect), for [`Band::Nadir`] (nothing below it on the ladder), and
 /// for a zero width on either side (no pair of branches to join).
-fn descent_edges(seed: Seed, cell: CellId, band: Band, upper: u8, lower: u8) -> Vec<(u8, u8)> {
+fn descent_edges(seed: Seed, vertex: Vertex, band: Band, upper: u8, lower: u8) -> Vec<(u8, u8)> {
     if band == Band::Surface || upper == 0 || lower == 0 {
         return Vec::new();
     }
@@ -714,12 +716,12 @@ fn descent_edges(seed: Seed, cell: CellId, band: Band, upper: u8, lower: u8) -> 
     let mut edges: Vec<(u8, u8)> = Vec::with_capacity(usize::from(upper) + usize::from(lower));
     // Every branch above draws one child below, so nothing dead-ends.
     for from in 0..upper {
-        let to = descent_pick(seed, cell, from, band, DescentRole::Child, lower);
+        let to = descent_pick(seed, vertex, from, band, DescentRole::Child, lower);
         edges.push((from, to));
     }
     // Every branch below draws one parent above, so nothing is orphaned.
     for to in 0..lower {
-        let from = descent_pick(seed, cell, to, below, DescentRole::Parent, upper);
+        let from = descent_pick(seed, vertex, to, below, DescentRole::Parent, upper);
         edges.push((from, to));
     }
     // Deterministic answer order, and the dedup is what makes the union a
@@ -752,22 +754,22 @@ fn descent_edges(seed: Seed, cell: CellId, band: Band, upper: u8, lower: u8) -> 
 /// existence.
 ///
 /// **A place, never an ordinal** (decision 0102): the answer for one branch
-/// is a fact about `(cell, band, branch)` alone, independent of what has
+/// is a fact about `(vertex, band, branch)` alone, independent of what has
 /// been asked before it.
 /// type-audit: bare-ok(index: branch), bare-ok(index: return)
-pub fn descents_from(seed: Seed, cell: CellId, band: Band, branch: u8) -> Vec<u8> {
+pub fn descents_from(seed: Seed, vertex: Vertex, band: Band, branch: u8) -> Vec<u8> {
     if band == Band::Surface || branch >= BRANCHES_PER_SYSTEM {
         return Vec::new();
     }
     let Some(below) = band.deeper() else {
         return Vec::new();
     };
-    let upper = crate::character::branch_count_of(seed, cell, band);
+    let upper = crate::character::branch_count_of(seed, vertex, band);
     if branch >= upper {
         return Vec::new();
     }
-    let lower = crate::character::branch_count_of(seed, cell, below);
-    descent_edges(seed, cell, band, upper, lower)
+    let lower = crate::character::branch_count_of(seed, vertex, below);
+    descent_edges(seed, vertex, band, upper, lower)
         .into_iter()
         .filter(|&(from, _)| from == branch)
         .map(|(_, to)| to)
@@ -787,7 +789,7 @@ pub fn descents_from(seed: Seed, cell: CellId, band: Band, branch: u8) -> Vec<u8
 /// two-derivations-that-must-agree shape spec §3.2 calls the one genuinely
 /// hard problem, and [`passages_from`]'s own doc says the temptation to
 /// special-case a direction *is* the bug. Both directions call
-/// [`descent_edges`] for the same `(cell, upper band)` pair and filter it on
+/// [`descent_edges`] for the same `(vertex, upper band)` pair and filter it on
 /// opposite coordinates, so the two can no more disagree than a set can
 /// disagree with itself.
 ///
@@ -796,7 +798,7 @@ pub fn descents_from(seed: Seed, cell: CellId, band: Band, branch: u8) -> Vec<u8
 /// test that wants the parent set can re-derive it from the public
 /// [`descents_from`] over the band above — which is a genuinely independent
 /// check rather than a re-invocation of the code under test.
-fn ascents_from(seed: Seed, cell: CellId, band: Band, branch: u8) -> Vec<u8> {
+fn ascents_from(seed: Seed, vertex: Vertex, band: Band, branch: u8) -> Vec<u8> {
     if band == Band::Surface || branch >= BRANCHES_PER_SYSTEM {
         return Vec::new();
     }
@@ -809,12 +811,12 @@ fn ascents_from(seed: Seed, cell: CellId, band: Band, branch: u8) -> Vec<u8> {
         // taken for a band that has none.
         return Vec::new();
     }
-    let lower = crate::character::branch_count_of(seed, cell, band);
+    let lower = crate::character::branch_count_of(seed, vertex, band);
     if branch >= lower {
         return Vec::new();
     }
-    let upper = crate::character::branch_count_of(seed, cell, above);
-    descent_edges(seed, cell, above, upper, lower)
+    let upper = crate::character::branch_count_of(seed, vertex, above);
+    descent_edges(seed, vertex, above, upper, lower)
         .into_iter()
         .filter(|&(_, to)| to == branch)
         .map(|(from, _)| from)
@@ -829,19 +831,19 @@ fn ascents_from(seed: Seed, cell: CellId, band: Band, branch: u8) -> Vec<u8> {
 // well and the blacksmith's cellar are two entrances whose mapped floors are
 // the main line's head and a branch's root. One mechanism, both readings.
 //
-// Terrain reports one cave per cell with no aperture count
+// Terrain reports one cave per vertex with no aperture count
 // (`hornvale_terrain::GeneratedTerrain::cave_at`), so both quantities below
 // are DERIVED here at the composition root from what the cave already
 // carries — exactly what [`ChamberAddr::entrance`]'s own doc anticipated.
 //
 // Both draws key on stable lattice places (decision 0102): the count on the
-// system's cell alone, the mouth on `(cell, entrance index)`.
+// system's vertex alone, the mouth on `(vertex, entrance index)`.
 
 /// Where one entrance opens into its system's lattice (C.3): a branch, a
 /// band rank and a floor, all coordinates the system actually realizes —
 /// an aperture opens INTO a place, never onto a construction step.
 ///
-/// The system's canonical lattice is `(cell, entrance 0)` and every mouth
+/// The system's canonical lattice is `(vertex, entrance 0)` and every mouth
 /// addresses INTO it, so two entrances land in ONE shared graph — two
 /// breadth-first walks from two mouths overlap, which is why a consumer
 /// counting reachability must union them rather than sum
@@ -883,7 +885,7 @@ pub struct EntranceMouth {
 /// `some_system_draws_more_than_one_entrance` and the panel artifact measure
 /// the composition rather than the weights alone.
 ///
-/// Keyed on the SYSTEM's cell alone under [`crate::streams::ENTRANCE_COUNT`]
+/// Keyed on the SYSTEM's vertex alone under [`crate::streams::ENTRANCE_COUNT`]
 /// — no entrance index, because the count is a fact about the system as a
 /// whole and an entrance index cannot be named before this draw answers.
 ///
@@ -892,15 +894,15 @@ pub struct EntranceMouth {
 /// which is exactly the case an epoch exists to record. See
 /// [`crate::streams::ENTRANCE_COUNT`].
 /// type-audit: bare-ok(count: return)
-pub fn entrance_count(seed: Seed, cell: CellId) -> u8 {
-    aperture_count_at(seed, cell, top_band_width(seed, cell))
+pub fn entrance_count(seed: Seed, vertex: Vertex) -> u8 {
+    aperture_count_at(seed, vertex, top_band_width(seed, vertex))
 }
 
 /// The top band's drawn branch width — the ONE read [`entrance_count`] and
 /// [`entrance_mouth`] share, so the two can never disagree about how many
 /// branches there are to cover.
-fn top_band_width(seed: Seed, cell: CellId) -> u8 {
-    crate::character::branch_count_of(seed, cell, top_band())
+fn top_band_width(seed: Seed, vertex: Vertex) -> u8 {
+    crate::character::branch_count_of(seed, vertex, top_band())
 }
 
 /// [`entrance_count`] at an **explicitly given** top-band width — the seam
@@ -909,10 +911,10 @@ fn top_band_width(seed: Seed, cell: CellId) -> u8 {
 /// reading them. A guarantee constructed over every width the lattice admits
 /// is a guarantee; the same guarantee found absent on a seed panel is
 /// evidence about that panel (spec §6).
-fn aperture_count_at(seed: Seed, cell: CellId, width: u8) -> u8 {
+fn aperture_count_at(seed: Seed, vertex: Vertex, width: u8) -> u8 {
     let r = seed
         .derive(crate::streams::ENTRANCE_COUNT)
-        .derive(StreamLabel::dynamic(&format!("{}", cell.0)))
+        .derive(StreamLabel::dynamic(&format!("{}", vertex.0)))
         .stream()
         .next_f64();
     let free = if r < 0.70 {
@@ -980,7 +982,7 @@ fn aperture_count_at(seed: Seed, cell: CellId, width: u8) -> u8 {
 /// written as a literal: a sixth rung, or a rung inserted above the
 /// Undercroft, moves every door without an edit here.
 ///
-/// Keyed on the entrance's place `(cell, entrance index)` under
+/// Keyed on the entrance's place `(vertex, entrance index)` under
 /// [`crate::streams::ENTRANCE_MOUTH`] (decision 0102), **with the role that
 /// place is playing appended** — see [`mouth_key`].
 ///
@@ -989,9 +991,9 @@ fn aperture_count_at(seed: Seed, cell: CellId, width: u8) -> u8 {
 /// branches, so both the key and the meaning moved. Every door in every
 /// world moves with them.
 /// type-audit: bare-ok(index: entrance)
-pub fn entrance_mouth(seed: Seed, cell: CellId, entrance: u8) -> EntranceMouth {
+pub fn entrance_mouth(seed: Seed, vertex: Vertex, entrance: u8) -> EntranceMouth {
     EntranceMouth {
-        branch: aperture_branch_at(seed, cell, entrance, top_band_width(seed, cell)),
+        branch: aperture_branch_at(seed, vertex, entrance, top_band_width(seed, vertex)),
         band: rung_rank(top_band()).expect("a habitation band always has a rank"),
         floor: 0,
     }
@@ -1012,7 +1014,7 @@ pub fn entrance_mouth(seed: Seed, cell: CellId, entrance: u8) -> EntranceMouth {
 /// * `width..` are the FREE apertures, each drawing a side branch on its
 ///   own, independently and possibly onto a branch another door already
 ///   opens on.
-fn aperture_branch_at(seed: Seed, cell: CellId, entrance: u8, width: u8) -> u8 {
+fn aperture_branch_at(seed: Seed, vertex: Vertex, entrance: u8, width: u8) -> u8 {
     if entrance == 0 || width <= 1 {
         // Entrance 0 is the main line's head by definition; and where no
         // side branch exists to open into, every other door joins it — a
@@ -1021,12 +1023,12 @@ fn aperture_branch_at(seed: Seed, cell: CellId, entrance: u8, width: u8) -> u8 {
         return 0;
     }
     if entrance < width {
-        return shared_out_branch(seed, cell, entrance, width);
+        return shared_out_branch(seed, vertex, entrance, width);
     }
     let picked = seed
         .derive(crate::streams::ENTRANCE_MOUTH)
         .derive(StreamLabel::dynamic(&mouth_key(
-            cell,
+            vertex,
             entrance,
             ApertureRole::Free,
         )))
@@ -1050,7 +1052,7 @@ fn aperture_branch_at(seed: Seed, cell: CellId, entrance: u8, width: u8) -> u8 {
 /// The pool cannot run dry: it starts at `width - 1` branches and the caller
 /// guarantees `entrance < width`, so step `e` still has `width - e >= 1`
 /// left. `expect` states that rather than masking it.
-fn shared_out_branch(seed: Seed, cell: CellId, entrance: u8, width: u8) -> u8 {
+fn shared_out_branch(seed: Seed, vertex: Vertex, entrance: u8, width: u8) -> u8 {
     debug_assert!(
         entrance >= 1 && entrance < width,
         "shared_out_branch is for the guaranteed apertures only"
@@ -1065,7 +1067,7 @@ fn shared_out_branch(seed: Seed, cell: CellId, entrance: u8, width: u8) -> u8 {
         let picked = seed
             .derive(crate::streams::ENTRANCE_MOUTH)
             .derive(StreamLabel::dynamic(&mouth_key(
-                cell,
+                vertex,
                 e,
                 ApertureRole::Share,
             )))
@@ -1101,7 +1103,7 @@ impl ApertureRole {
 }
 
 /// The one place the `chamber/entrance-mouth/v2` key is spelled — the
-/// aperture's place (cell, index) with its role appended, and its own
+/// aperture's place (vertex, index) with its role appended, and its own
 /// save-format contract.
 ///
 /// **The role is a question, not an ordinal** — the same argument
@@ -1110,8 +1112,8 @@ impl ApertureRole {
 /// a given index asks one or the other depends on the top band's width, so
 /// one key answering both would mean one stream serving two questions at two
 /// widths. Spelling the role out makes them different keys instead.
-fn mouth_key(cell: CellId, entrance: u8, role: ApertureRole) -> String {
-    format!("{}/{entrance}/{}", cell.0, role.word())
+fn mouth_key(vertex: Vertex, entrance: u8, role: ApertureRole) -> String {
+    format!("{}/{entrance}/{}", vertex.0, role.word())
 }
 
 /// The shallowest habitation band — where every entrance lands (spec §4.6).
@@ -1128,7 +1130,7 @@ fn top_band() -> Band {
 }
 
 /// Whether a chamber exists at `addr`, under `cave`'s measured depth
-/// budget in this cell. Sparse and derived: no chamber is ever stored, so
+/// budget in this vertex. Sparse and derived: no chamber is ever stored, so
 /// "exists" is a per-address predicate — **true for every address the
 /// lattice's own shape admits** (spec §4.1's keystone: "there is no level 7
 /// that does not exist"), gated so `addr.band` reaches no deeper on the delve
@@ -1142,9 +1144,9 @@ fn top_band() -> Band {
 /// nothing left to tune in the passage graph (spec §3.2: connectivity was
 /// never randomized), only a spurious draw to remove.
 ///
-/// **`gradient` is the cell's own geothermal gradient**, and it is what makes
+/// **`gradient` is the vertex's own geothermal gradient**, and it is what makes
 /// this a question about a *place* rather than about a length. A 480 m budget
-/// is the Deeps under a 24 K/km cell and the Shallows under a 15 K/km one, so
+/// is the Deeps under a 24 K/km vertex and the Shallows under a 15 K/km one, so
 /// the same cave reaches a different distance down the lattice depending on
 /// where it is. Callers get it from
 /// `hornvale_terrain::GeneratedTerrain::geothermal_gradient_at`.
@@ -1167,7 +1169,7 @@ fn top_band() -> Band {
 ///
 /// **Task 5 removed the transitional literal `0` this doc used to describe**
 /// (amendment A.3 — Task 4/5 coupling). `branch_count_of` is now keyed on
-/// `(cell, band)`, so this gate reads `addr.band` directly: a branch is
+/// `(vertex, band)`, so this gate reads `addr.band` directly: a branch is
 /// admitted only up to however many that SPECIFIC band's own draw realized,
 /// not a single system-wide width. This is what lets one system be two
 /// branches wide in the Undercroft and one wide in the Shallows — the same
@@ -1215,7 +1217,7 @@ pub fn chamber_exists(
     // Branch 0 is always inside the count at every band
     // (`branch_count_of` draws 1..=BRANCHES_PER_SYSTEM), so the main line
     // survives this gate everywhere.
-    if addr.branch >= crate::character::branch_count_of(seed, addr.cell, addr.band) {
+    if addr.branch >= crate::character::branch_count_of(seed, addr.vertex, addr.band) {
         return false;
     }
     // `Band`'s derived `Ord` orders shallow -> deep (see its own doc), so
@@ -1367,8 +1369,8 @@ pub fn is_sump(origin: ChamberOrigin, depth_m: f64, water_table_m: f64) -> bool 
 /// `Realm::UNDERDARK.strata()[addr.band]` — a pure function of the address,
 /// i.e. the address restated in another vocabulary — and that identity was
 /// the defect spec §4.1 removed, not a property to preserve. It is now read
-/// off the cell's own column at the depth the rung begins ([`stratum_at`]),
-/// so it depends on `gradient` and `column` and varies between cells that
+/// off the vertex's own column at the depth the rung begins ([`stratum_at`]),
+/// so it depends on `gradient` and `column` and varies between vertices that
 /// share an address. Two chambers on the same rung can sit in different rock,
 /// which is the entire point of carrying both.
 pub fn chamber_at(
@@ -1424,7 +1426,7 @@ pub fn chamber_at(
 /// exactly two shapes of step:
 ///
 /// - **inside a run** — level `f` joins level `f ± 1` of the same
-///   `(cell, band, branch)`, while the run's drawn length
+///   `(vertex, band, branch)`, while the run's drawn length
 ///   ([`levels_in_branch`]) has levels left;
 /// - **across a band seam** — a run's **bottom** level joins **level 0** of
 ///   each branch [`descents_from`] names in the band below, and level 0 of a
@@ -1497,7 +1499,7 @@ pub fn passages_from(
             ..addr
         });
     } else if let Some(deeper) = addr.band.deeper() {
-        for to in descents_from(seed, addr.cell, addr.band, addr.branch) {
+        for to in descents_from(seed, addr.vertex, addr.band, addr.branch) {
             candidates.push(ChamberAddr {
                 band: deeper,
                 branch: to,
@@ -1516,9 +1518,9 @@ pub fn passages_from(
             ..addr
         });
     } else if let Some(shallower) = addr.band.shallower() {
-        for from in ascents_from(seed, addr.cell, addr.band, addr.branch) {
+        for from in ascents_from(seed, addr.vertex, addr.band, addr.branch) {
             let parent = RunAddr {
-                cell: addr.cell,
+                vertex: addr.vertex,
                 branch: from,
                 band: shallower,
             };
@@ -1554,7 +1556,7 @@ pub fn passages_from(
 ///
 /// **THE CONSTRAINT: a junction is DERIVED, never drawn.** The body consumes
 /// no stream leg of its own. Every input it reads is a fact already in the
-/// world — cell adjacency from the geosphere, each cell's cave budget and
+/// world — vertex adjacency from the geosphere, each vertex's cave budget and
 /// geothermal gradient, each branch's already-drawn character, each
 /// endpoint's already-gated existence ([`chamber_exists`], which travels its
 /// own pre-existing address key). Same inputs give the same links with no
@@ -1568,17 +1570,17 @@ pub fn passages_from(
 /// copy: two systems are joined at a shared delve band **on a shared
 /// branch** exactly when
 ///
-/// 1. both cells are cave-bearing — and being LAND cells is *entailed by*
+/// 1. both vertices are cave-bearing — and being LAND vertices is *entailed by*
 ///    that, not gated beside it:
 ///    [`hornvale_terrain::GeneratedTerrain::cave_at`] answers `None` for an
-///    ocean cell as its first act, so an ocean system has no cave to join
+///    ocean vertex as its first act, so an ocean system has no cave to join
 ///    with, let alone a surface one can walk in from. This clause read as
 ///    two independent gates for one review round, and the second one was
 ///    dead code the whole time (Task 6, review round 1),
-/// 2. the two cells are adjacent on the geosphere,
+/// 2. the two vertices are adjacent on the geosphere,
 /// 3. both systems realize an existing chamber at the shared `(band,
 ///    branch)` — canonical endpoints `(addr.branch, level 0)`, gated by
-///    [`chamber_exists`] under each cell's OWN cave and gradient, and
+///    [`chamber_exists`] under each vertex's OWN cave and gradient, and
 /// 4. the characters of both those branches can occupy the shared rung:
 ///    [`crate::character::bands_of`] of each side contains the rung at
 ///    [`ChamberAddr::band`]. A drow-tier Underdeep may open into wild cave;
@@ -1591,7 +1593,7 @@ pub fn passages_from(
 /// # THE SCOPE IS `(band, branch)` NOW, NOT `band` ALONE (The Drift, §4.6)
 ///
 /// It used to project every address of a system onto its MAIN LINE — branch
-/// 0 — so a junction was a fact about `(cell, band)` and every branch of a
+/// 0 — so a junction was a fact about `(vertex, band)` and every branch of a
 /// system at one band stood on the same far side of the same doors. That
 /// reading was correct while the branch axis was a corridor: with the
 /// lateral `branch ± 1` rule live, anyone at any branch could walk to branch
@@ -1603,7 +1605,7 @@ pub fn passages_from(
 /// junction attributed to branch 0 would be a door **the walker cannot
 /// get to** from branch 2 — and, worse, would hand a traversal a link
 /// between two systems that neither side can enter. So the rule is now
-/// stated over `(cell, band, branch)`: a junction joins branch *b* of one
+/// stated over `(vertex, band, branch)`: a junction joins branch *b* of one
 /// system to branch *b* of its neighbour, at the same band, and the two
 /// systems' other branches are joined only if their own `(band, branch)`
 /// pair satisfies the rule in its own right.
@@ -1631,7 +1633,7 @@ pub fn passages_from(
 ///
 /// **`addr`'s `level` is ignored by the PROJECTION, and `branch` no longer
 /// is** (The Drift, Task 7; the `branch` half of this note is what changed).
-/// Which junctions this address has depends on `(addr.cell, addr.band,
+/// Which junctions this address has depends on `(addr.vertex, addr.band,
 /// addr.branch)`; every level of one run stands on the same far side of the
 /// same doors, so the answer is projected onto level 0 and `level` never
 /// reaches it. But *whether* there is anyone standing there to ask is a
@@ -1650,13 +1652,13 @@ pub fn junctions_at(seed: Seed, terrain: &GeneratedTerrain, addr: ChamberAddr) -
         return Vec::new();
     }
     let rung = addr.band;
-    // `cave_at` refuses an ocean cell before anything else it does, so this
+    // `cave_at` refuses an ocean vertex before anything else it does, so this
     // is the land gate as well as the cave gate — a second `is_ocean` test
     // beside it could never fire.
-    let Some(here_cave) = terrain.cave_at(addr.cell) else {
+    let Some(here_cave) = terrain.cave_at(addr.vertex) else {
         return Vec::new();
     };
-    let here_gradient = terrain.geothermal_gradient_at(addr.cell);
+    let here_gradient = terrain.geothermal_gradient_at(addr.vertex);
     // Nowhere has no junctions, matching `passages_from`'s convention for
     // the intra-system graph. This gate is about the ASKING address — its
     // branch and level included — and is why a `branch: 99` address answers
@@ -1678,7 +1680,7 @@ pub fn junctions_at(seed: Seed, terrain: &GeneratedTerrain, addr: ChamberAddr) -
     }
 
     let mut joined = Vec::new();
-    for &neighbour in terrain.geosphere().neighbors(addr.cell) {
+    for &neighbour in terrain.geosphere().neighbors(addr.vertex) {
         // No `is_ocean` test here either, for the same reason as above: it
         // was strictly redundant with `cave_at`'s own first gate.
         let Some(cave) = terrain.cave_at(neighbour) else {
@@ -1688,7 +1690,7 @@ pub fn junctions_at(seed: Seed, terrain: &GeneratedTerrain, addr: ChamberAddr) -
         // thing that keeps the predicate symmetric in its two arguments.
         let there = ChamberAddr {
             level: 0,
-            cell: neighbour,
+            vertex: neighbour,
             ..addr
         };
         if !chamber_exists(
@@ -1706,8 +1708,8 @@ pub fn junctions_at(seed: Seed, terrain: &GeneratedTerrain, addr: ChamberAddr) -
         joined.push(there);
     }
     // Deterministic answer order regardless of the geosphere's neighbour
-    // ordering; `CellId` is an integer newtype, so `sort_by_key` is total.
-    joined.sort_by_key(|a| a.cell);
+    // ordering; `Vertex` is an integer newtype, so `sort_by_key` is total.
+    joined.sort_by_key(|a| a.vertex);
     joined
 }
 
@@ -1745,7 +1747,7 @@ mod tests {
     fn the_chamber_key_spelling_is_pinned() {
         assert_eq!(
             chamber_key(ChamberAddr {
-                cell: CellId(9),
+                vertex: Vertex(9),
                 branch: 3,
                 band: Band::Deeps,
                 level: 0,
@@ -1754,7 +1756,7 @@ mod tests {
         );
         assert_eq!(
             chamber_key(ChamberAddr {
-                cell: CellId(0),
+                vertex: Vertex(0),
                 branch: 0,
                 band: Band::Undercroft,
                 level: 0,
@@ -1765,7 +1767,7 @@ mod tests {
         // rather than only its zero value.
         assert_eq!(
             chamber_key(ChamberAddr {
-                cell: CellId(9),
+                vertex: Vertex(9),
                 branch: 3,
                 band: Band::Deeps,
                 level: 7,
@@ -1781,7 +1783,7 @@ mod tests {
     #[test]
     fn the_chamber_key_drops_the_entrance_and_names_the_band() {
         let addr = ChamberAddr {
-            cell: CellId(31942),
+            vertex: Vertex(31942),
             band: Band::Deeps,
             branch: 2,
             level: 3,
@@ -1799,7 +1801,7 @@ mod tests {
         // collision would make the second assertion below fire for the wrong
         // reason.
         let key = chamber_key(ChamberAddr {
-            cell: CellId(7),
+            vertex: Vertex(7),
             branch: 1,
             band: Band::Underdeep,
             level: 2,
@@ -1824,7 +1826,7 @@ mod tests {
         let stratigraphic = ["regolith", "cover", "basement", "roots", "underneath"];
         for &band in Band::habitation() {
             let key = chamber_key(ChamberAddr {
-                cell: CellId(1),
+                vertex: Vertex(1),
                 branch: 0,
                 band,
                 level: 0,
@@ -1873,7 +1875,7 @@ mod tests {
     ///   are both in the basement;
     /// - one rung sits in DIFFERENT strata under different gradients (so
     ///   `stratum` cannot be a function of `addr.band`) — `Deeps` is 533 m
-    ///   under a 15 K/km cell and 267 m under a 30 K/km one, straddling the
+    ///   under a 15 K/km vertex and 267 m under a 30 K/km one, straddling the
     ///   401 m contact.
     #[test]
     fn the_rung_to_stratum_map_is_many_to_one_and_gradient_dependent() {
@@ -1911,7 +1913,7 @@ mod tests {
             cool, hot,
             "the Deeps sits at 533 m under 15 K/km and 267 m under 30 K/km, \
              which straddle this column's 401 m contact — a `stratum` read \
-             from the cell must differ, and one derived from `addr.band` \
+             from the vertex must differ, and one derived from `addr.band` \
              cannot"
         );
     }
@@ -1927,7 +1929,7 @@ mod tests {
     #[test]
     fn the_key_spells_the_level() {
         let base = ChamberAddr {
-            cell: CellId(9),
+            vertex: Vertex(9),
             branch: 3,
             band: Band::Deeps,
             level: 0,
@@ -1958,13 +1960,13 @@ mod tests {
     fn the_key_is_injective_over_the_lattice() {
         let mut keys = std::collections::BTreeSet::new();
         let mut count = 0usize;
-        for cell in 0..3u32 {
+        for vertex in 0..3u32 {
             for branch in 0..BRANCHES_PER_SYSTEM {
                 for &band in Band::habitation() {
                     for level in 0..LEVELS_PER_BRANCH_CEILING {
                         count += 1;
                         keys.insert(chamber_key(ChamberAddr {
-                            cell: CellId(cell),
+                            vertex: Vertex(vertex),
                             branch,
                             band,
                             level,
@@ -2036,11 +2038,11 @@ mod tests {
     ///   lattice with the same branch-1 width, because `chamber_exists`
     ///   passes a transitional literal `0` where `entrance` used to travel
     ///   (see its own doc) — `branch_count_of`'s key is unaffected by that
-    ///   literal, since it was already `"{cell}/0"` for entrance 0.
+    ///   literal, since it was already `"{vertex}/0"` for entrance 0.
     /// - **The VALUES did NOT survive, and that is worth stating rather than
     ///   assuming.** `run_key` (`RUN_FLOORS`'s leg) dropped `entrance` from
-    ///   its format string entirely — `"{cell}/{branch}/{band}"` instead of
-    ///   `"{cell}/{entrance}/{branch}/{band}"` — so even the addresses that
+    ///   its format string entirely — `"{vertex}/{branch}/{band}"` instead of
+    ///   `"{vertex}/{entrance}/{branch}/{band}"` — so even the addresses that
     ///   were already at entrance 0 hash to a DIFFERENT string now, and
     ///   `levels_in_branch` draws a different count from it. The masks below
     ///   are therefore genuinely new numbers, not a copy of the old entrance-0
@@ -2073,7 +2075,7 @@ mod tests {
         let cave = Cave::from_reach(hornvale_terrain::CaveKind::Karst, 3000.0, &column);
         let gradient = GeothermalGradient::new(24.0);
 
-        // Cell 9's ONE shared lattice (The Drift collapsed every entrance's
+        // Vertex 9's ONE shared lattice (The Drift collapsed every entrance's
         // sublattice into this one). Row-major over (branch 0..4, band
         // 0..5), so each line below is one branch's undercroft / shallows /
         // deeps / underdeep / nadir. Decimal, matching what `assert_eq!`
@@ -2081,8 +2083,8 @@ mod tests {
         //
         // A zero is a legitimate reading, not a hole in the pin. **Re-baselined
         // by The Drift, Task 5**: `branch_count_of` is now keyed on
-        // `(cell, band)`, and this cell is the demonstration that the width
-        // genuinely varies by band — cell 9 draws width 1 at Undercroft
+        // `(vertex, band)`, and this vertex is the demonstration that the width
+        // genuinely varies by band — vertex 9 draws width 1 at Undercroft
         // (branch 1's Undercroft column is 0) but a wider count at Deeps and
         // at Underdeep (branch 1's Deeps column is nonzero, and branch 2's
         // Underdeep column is nonzero too), so the SAME system is narrower
@@ -2104,7 +2106,7 @@ mod tests {
                         &cave,
                         gradient,
                         ChamberAddr {
-                            cell: CellId(9),
+                            vertex: Vertex(9),
                             branch,
                             band,
                             level,
@@ -2118,7 +2120,7 @@ mod tests {
         }
         assert_eq!(
             got, expected,
-            "the realized-floor masks of cell 9's lattice moved off their pin"
+            "the realized-floor masks of vertex 9's lattice moved off their pin"
         );
     }
 
@@ -2141,7 +2143,7 @@ mod tests {
         let cave = Cave::from_reach(hornvale_terrain::CaveKind::Karst, 3000.0, &column);
         let gradient = GeothermalGradient::new(24.0);
         let base = ChamberAddr {
-            cell: CellId(1),
+            vertex: Vertex(1),
             branch: 0,
             band: Band::Undercroft,
             level: 0,
@@ -2178,13 +2180,13 @@ mod tests {
     fn a_runs_levels_are_contiguous() {
         let seed = Seed(42);
         let column = fixture_column();
-        // At the reach ceiling under a 24 K/km cell, every habitation band is
+        // At the reach ceiling under a 24 K/km vertex, every habitation band is
         // inside budget, so the BAND gate can never be what truncates the
         // run below — only the drawn level count can.
         let cave = Cave::from_reach(hornvale_terrain::CaveKind::Karst, 3000.0, &column);
         let gradient = GeothermalGradient::new(24.0);
         let base = ChamberAddr {
-            cell: CellId(31942),
+            vertex: Vertex(31942),
             branch: 0,
             band: Band::Undercroft,
             level: 0,
@@ -2358,10 +2360,10 @@ mod tests {
             let mut seen = std::collections::BTreeSet::new();
             for raw_seed in [1u64, 2, 3] {
                 let seed = Seed(raw_seed);
-                for raw_cell in 0u32..40 {
+                for raw_vertex in 0u32..40 {
                     for branch in 0..BRANCHES_PER_SYSTEM {
                         let run = RunAddr {
-                            cell: CellId(raw_cell),
+                            vertex: Vertex(raw_vertex),
                             branch,
                             band,
                         };
@@ -2398,17 +2400,17 @@ mod tests {
     fn a_runs_level_count_is_deterministic_for_one_address() {
         let seed = Seed(90210);
         let run = RunAddr {
-            cell: CellId(9),
+            vertex: Vertex(9),
             branch: 3,
             band: Band::Deeps,
         };
         let first = levels_in_branch(seed, run);
-        for raw_cell in 0u32..20 {
+        for raw_vertex in 0u32..20 {
             for &band in Band::habitation() {
                 let _ = levels_in_branch(
                     seed,
                     RunAddr {
-                        cell: CellId(raw_cell),
+                        vertex: Vertex(raw_vertex),
                         branch: 0,
                         band,
                     },
@@ -2424,7 +2426,7 @@ mod tests {
     }
 
     /// **Every component of the run key is load-bearing.** Varying exactly one
-    /// of `cell`, `branch`, `band` must be able to change the answer; a
+    /// of `vertex`, `branch`, `band` must be able to change the answer; a
     /// component the key dropped would make its column here constant, and
     /// the whole point of keying on a place is that each coordinate of the
     /// place names a different run.
@@ -2440,24 +2442,24 @@ mod tests {
     fn every_component_of_the_run_key_is_load_bearing() {
         let seed = Seed(4242);
         let base = RunAddr {
-            cell: CellId(0),
+            vertex: Vertex(0),
             branch: 0,
             band: Band::Deeps,
         };
 
-        let vary_cell = (0u32..200).any(|c| {
+        let vary_vertex = (0u32..200).any(|c| {
             levels_in_branch(
                 seed,
                 RunAddr {
-                    cell: CellId(c),
+                    vertex: Vertex(c),
                     ..base
                 },
             ) != levels_in_branch(seed, base)
         });
-        assert!(vary_cell, "`cell` never changed a run's level count");
+        assert!(vary_vertex, "`vertex` never changed a run's level count");
 
-        // `branch` has only BRANCHES_PER_SYSTEM values, so one cell is not
-        // enough to be sure two of them differ; sweep cells until a cell whose
+        // `branch` has only BRANCHES_PER_SYSTEM values, so one vertex is not
+        // enough to be sure two of them differ; sweep vertices until a vertex whose
         // branches disagree turns up. This is the brief's own clause: two
         // different branches in one band may differ.
         let vary_branch = (0u32..200).any(|c| {
@@ -2466,7 +2468,7 @@ mod tests {
                     levels_in_branch(
                         seed,
                         RunAddr {
-                            cell: CellId(c),
+                            vertex: Vertex(c),
                             branch,
                             ..base
                         },
@@ -2477,7 +2479,7 @@ mod tests {
         });
         assert!(
             vary_branch,
-            "no cell had two branches whose runs differed in length — `branch` \
+            "no vertex had two branches whose runs differed in length — `branch` \
              is not in the key, so a whole system is one column again"
         );
 
@@ -2501,7 +2503,7 @@ mod tests {
     fn the_run_key_spelling_is_pinned() {
         assert_eq!(
             run_key(RunAddr {
-                cell: CellId(9),
+                vertex: Vertex(9),
                 branch: 3,
                 band: Band::Deeps,
             }),
@@ -2509,7 +2511,7 @@ mod tests {
         );
         assert_eq!(
             run_key(RunAddr {
-                cell: CellId(0),
+                vertex: Vertex(0),
                 branch: 0,
                 band: Band::Undercroft,
             }),
@@ -2528,12 +2530,12 @@ mod tests {
     fn the_run_key_is_injective_over_the_lattice() {
         let mut keys = std::collections::BTreeSet::new();
         let mut count = 0usize;
-        for cell in 0..5u32 {
+        for vertex in 0..5u32 {
             for branch in 0..BRANCHES_PER_SYSTEM {
                 for &band in Band::habitation() {
                     count += 1;
                     keys.insert(run_key(RunAddr {
-                        cell: CellId(cell),
+                        vertex: Vertex(vertex),
                         branch,
                         band,
                     }));
@@ -2633,11 +2635,11 @@ mod tests {
         let seed = Seed(90210);
         let mut disagreed = false;
         let mut probed = 0usize;
-        for raw_cell in 0u32..40 {
+        for raw_vertex in 0u32..40 {
             for branch in 0..BRANCHES_PER_SYSTEM {
                 for &band in Band::habitation() {
                     let run = RunAddr {
-                        cell: CellId(raw_cell),
+                        vertex: Vertex(raw_vertex),
                         branch,
                         band,
                     };
@@ -2693,14 +2695,14 @@ mod tests {
     #[test]
     fn the_run_draw_is_byte_pinned_for_known_keys() {
         let seed = Seed(42);
-        for (cell, branch, band, expected) in [
+        for (vertex, branch, band, expected) in [
             (9u32, 3u8, Band::Deeps, 16u8), // 9/3/deeps,      range 5-20
             (0, 0, Band::Undercroft, 4),    // 0/0/undercroft, range 1-5
             (17, 2, Band::Nadir, 2),        // 17/2/nadir,     range 1-5
             (5, 1, Band::Underdeep, 5),     // 5/1/underdeep,  range 5-10
         ] {
             let run = RunAddr {
-                cell: CellId(cell),
+                vertex: Vertex(vertex),
                 branch,
                 band,
             };
@@ -2784,11 +2786,11 @@ mod tests {
 
         let mut realized_below = 0usize;
         let mut runs_shorter_than_the_ceiling = 0usize;
-        for raw_cell in 0u32..20 {
+        for raw_vertex in 0u32..20 {
             for branch in 0..BRANCHES_PER_SYSTEM {
                 for &band in Band::habitation() {
                     let run = RunAddr {
-                        cell: CellId(raw_cell),
+                        vertex: Vertex(raw_vertex),
                         branch,
                         band,
                     };
@@ -2798,7 +2800,7 @@ mod tests {
                     }
                     for level in 0..LEVELS_PER_BRANCH_CEILING {
                         let addr = ChamberAddr {
-                            cell: run.cell,
+                            vertex: run.vertex,
                             branch: run.branch,
                             band: run.band,
                             level,
@@ -2866,14 +2868,14 @@ mod tests {
     // --- Task 5: entrances become plural (spec amendment C.3) ---
 
     /// The entrance-count draw is **non-vacuous**: across a sweep of seeds
-    /// and cells, some system draws MORE than one aperture. A draw that
+    /// and vertices, some system draws MORE than one aperture. A draw that
     /// always answered 1 would make every test below pass and plural
     /// entrances not exist.
-    /// claim: rate(seed x cell sweep) — some system draws >1 aperture
+    /// claim: rate(seed x vertex sweep) — some system draws >1 aperture
     #[test]
     fn some_system_draws_more_than_one_entrance() {
         let multi = (0u64..8)
-            .flat_map(|s| (0u32..60).map(move |c| entrance_count(Seed(s * 1000 + 7), CellId(c))))
+            .flat_map(|s| (0u32..60).map(move |c| entrance_count(Seed(s * 1000 + 7), Vertex(c))))
             .any(|n| n > 1);
         assert!(
             multi,
@@ -2894,21 +2896,21 @@ mod tests {
     /// mouths of one system differ) and its meaning narrowed with the
     /// design — keeping the old name would have described a disagreement
     /// that can no longer occur.
-    /// claim: rate(seed x cell sweep) — some pair of mouths disagrees
+    /// claim: rate(seed x vertex sweep) — some pair of mouths disagrees
     #[test]
     fn two_entrances_of_one_system_may_open_on_different_branches() {
         let mut found = None;
         'outer: for s in 0u64..40 {
             for c in 0u32..80 {
                 let seed = Seed(s * 1000 + 7);
-                let cell = CellId(c);
-                if entrance_count(seed, cell) < 2 {
+                let vertex = Vertex(c);
+                if entrance_count(seed, vertex) < 2 {
                     continue;
                 }
-                let first = entrance_mouth(seed, cell, 0);
-                let second = entrance_mouth(seed, cell, 1);
+                let first = entrance_mouth(seed, vertex, 0);
+                let second = entrance_mouth(seed, vertex, 1);
                 if first != second {
-                    found = Some((seed, cell, first, second));
+                    found = Some((seed, vertex, first, second));
                     break 'outer;
                 }
             }
@@ -2929,12 +2931,12 @@ mod tests {
         for s in 0u64..4 {
             for c in 0u32..30 {
                 let seed = Seed(s * 1000 + 7);
-                let cell = CellId(c);
-                let once = entrance_mouth(seed, cell, 1);
-                let twice = entrance_mouth(seed, cell, 1);
+                let vertex = Vertex(c);
+                let once = entrance_mouth(seed, vertex, 1);
+                let twice = entrance_mouth(seed, vertex, 1);
                 assert_eq!(
                     once, twice,
-                    "entrance 1 of cell {c} moved between two identical asks"
+                    "entrance 1 of vertex {c} moved between two identical asks"
                 );
                 distinct_heads.insert(once);
             }
@@ -2947,7 +2949,7 @@ mod tests {
     }
 
     /// Entrance 0 is the main line's head by definition, with no draw —
-    /// C.3's first reading. It is the same at every cell, which is what
+    /// C.3's first reading. It is the same at every vertex, which is what
     /// makes `delve_at`'s pinned `branch = 0, band = 0, floor = 0` descent
     /// the primary entrance.
     /// claim: invariant(forall-swept-seed) — mouth 0 is the head everywhere
@@ -2956,13 +2958,13 @@ mod tests {
         for s in 0u64..3 {
             for c in 0u32..20 {
                 assert_eq!(
-                    entrance_mouth(Seed(s * 1000 + 7), CellId(c), 0),
+                    entrance_mouth(Seed(s * 1000 + 7), Vertex(c), 0),
                     EntranceMouth {
                         branch: 0,
                         band: 0,
                         floor: 0
                     },
-                    "entrance 0 of cell {c} is not the main-line head"
+                    "entrance 0 of vertex {c} is not the main-line head"
                 );
             }
         }
@@ -2980,12 +2982,12 @@ mod tests {
     ///
     /// **Re-baselined again by Task 7** (spec §4.6), and the shape of the
     /// movement is worth reading: exactly ONE field of ONE row moved —
-    /// cell 5's `floor: 3` became `floor: 0`. Every `branch` is unchanged,
+    /// vertex 5's `floor: 3` became `floor: 0`. Every `branch` is unchanged,
     /// because the side-branch pick still travels the same leg with the
     /// same key over the same width; what retired is the second half, where
     /// `root_floor_of` then landed the door at a band and floor drawn
     /// independently. A door now opens at level 0 of the top habitation
-    /// band, so `band` and `floor` are no longer drawn at all. Cells 9 and
+    /// band, so `band` and `floor` are no longer drawn at all. Vertices 9 and
     /// 31 were already `0/0` (the head, and a width-one fallback), which is
     /// why they do not move.
     ///
@@ -2993,23 +2995,23 @@ mod tests {
     /// this time BOTH legs moved, because both took an epoch — a new label
     /// is a new parent seed, so every raw draw is different even where the
     /// dynamic key reads the same. Counts: 1/2/3/1 became 2/4/1/2. Mouths:
-    /// cell 6 is a width-FOUR system, so its three side doors now share out
+    /// vertex 6 is a width-FOUR system, so its three side doors now share out
     /// branches 3, 2 and 1 — a drawn permutation, not an assignment, which
-    /// is why aperture 1 does not simply take branch 1. Cells 31 and 17 are
-    /// width-one and keep the head. Cell 6's aperture 2 is pinned as well as
+    /// is why aperture 1 does not simply take branch 1. Vertices 31 and 17 are
+    /// width-one and keep the head. Vertex 6's aperture 2 is pinned as well as
     /// its aperture 1: a single row could be satisfied by a plain
     /// `branch = entrance` map, and two of them from the same system cannot.
     #[test]
     fn the_entrance_draws_are_byte_pinned_for_known_keys() {
         let seed = Seed(42);
-        for (cell, expected) in [(9u32, 2u8), (6, 4), (17, 1), (5, 2)] {
+        for (vertex, expected) in [(9u32, 2u8), (6, 4), (17, 1), (5, 2)] {
             assert_eq!(
-                entrance_count(seed, CellId(cell)),
+                entrance_count(seed, Vertex(vertex)),
                 expected,
-                "cell {cell} moved off its entrance-count pin"
+                "vertex {vertex} moved off its entrance-count pin"
             );
         }
-        for (cell, entrance, expected) in [
+        for (vertex, entrance, expected) in [
             (
                 9u32,
                 0u8,
@@ -3057,9 +3059,9 @@ mod tests {
             ),
         ] {
             assert_eq!(
-                entrance_mouth(seed, CellId(cell), entrance),
+                entrance_mouth(seed, Vertex(vertex), entrance),
                 expected,
-                "cell {cell} entrance {entrance} moved off its mouth pin"
+                "vertex {vertex} entrance {entrance} moved off its mouth pin"
             );
         }
     }
@@ -3082,9 +3084,9 @@ mod tests {
         // --- entrance count ---
         let mut count_disagreed = false;
         for c in 0u32..40 {
-            let cell = CellId(c);
-            let width = crate::character::branch_count_of(seed, cell, top_band());
-            let shipped = entrance_count(seed, cell);
+            let vertex = Vertex(c);
+            let width = crate::character::branch_count_of(seed, vertex, top_band());
+            let shipped = entrance_count(seed, vertex);
             let own = seed
                 .derive(crate::streams::ENTRANCE_COUNT)
                 .derive(StreamLabel::dynamic(&format!("{}", c)))
@@ -3093,7 +3095,7 @@ mod tests {
             assert_eq!(
                 shipped,
                 count_from_raw(own).max(width),
-                "entrance_count does not travel the ENTRANCE_COUNT leg at cell {c}"
+                "entrance_count does not travel the ENTRANCE_COUNT leg at vertex {c}"
             );
             let sibling = seed
                 .derive(crate::streams::BRANCH_COUNT)
@@ -3112,29 +3114,29 @@ mod tests {
         // --- entrance mouth ---
         let mut mouth_disagreed = false;
         for c in 0u32..200 {
-            let cell = CellId(c);
+            let vertex = Vertex(c);
             // A width-two system cannot disagree: its single side branch is
             // the only thing either leg could pick. Only a wider system
             // discriminates the legs. Aperture 1 is a `share` draw at every
             // width above one, and `entrance_count` now guarantees it
             // exists there, so no count filter is needed.
-            let width = crate::character::branch_count_of(seed, cell, top_band());
+            let width = crate::character::branch_count_of(seed, vertex, top_band());
             if width < 3 {
                 continue;
             }
-            let shipped = entrance_mouth(seed, cell, 1);
+            let shipped = entrance_mouth(seed, vertex, 1);
             let own = seed
                 .derive(crate::streams::ENTRANCE_MOUTH)
                 .derive(StreamLabel::dynamic(&mouth_key(
-                    cell,
+                    vertex,
                     1,
                     ApertureRole::Share,
                 )))
                 .stream();
             assert_eq!(
                 Some(shipped),
-                mouth_from_raw(seed, cell, own),
-                "entrance_mouth does not travel the ENTRANCE_MOUTH leg at cell {c}"
+                mouth_from_raw(seed, vertex, own),
+                "entrance_mouth does not travel the ENTRANCE_MOUTH leg at vertex {c}"
             );
             // The sibling leg was `BRANCH_ROOT` until The Drift's Task 7
             // retired that label; `ENTRANCE_COUNT` serves the same purpose
@@ -3143,12 +3145,12 @@ mod tests {
             let sib = seed
                 .derive(crate::streams::ENTRANCE_COUNT)
                 .derive(StreamLabel::dynamic(&mouth_key(
-                    cell,
+                    vertex,
                     1,
                     ApertureRole::Share,
                 )))
                 .stream();
-            if Some(shipped) != mouth_from_raw(seed, cell, sib) {
+            if Some(shipped) != mouth_from_raw(seed, vertex, sib) {
                 mouth_disagreed = true;
             }
         }
@@ -3182,13 +3184,13 @@ mod tests {
     /// aperture 1 alone, which is why this helper takes no aperture index.
     fn mouth_from_raw(
         seed: Seed,
-        cell: CellId,
+        vertex: Vertex,
         mut stream: hornvale_kernel::Stream,
     ) -> Option<EntranceMouth> {
         // Same top-band reference `entrance_mouth` itself uses, read off the
         // ladder rather than named.
         let top = top_band();
-        let branches = crate::character::branch_count_of(seed, cell, top);
+        let branches = crate::character::branch_count_of(seed, vertex, top);
         if branches <= 1 {
             return Some(EntranceMouth {
                 branch: 0,
@@ -3215,9 +3217,13 @@ mod tests {
     /// A one-line composition of the two shipped width-parameterised halves,
     /// because the probed path must be the shipped path: a test-only
     /// reimplementation would assert a guarantee about code no world runs.
-    fn aperture_branches_at(seed: Seed, cell: CellId, width: u8) -> std::collections::BTreeSet<u8> {
-        (0..aperture_count_at(seed, cell, width))
-            .map(|entrance| aperture_branch_at(seed, cell, entrance, width))
+    fn aperture_branches_at(
+        seed: Seed,
+        vertex: Vertex,
+        width: u8,
+    ) -> std::collections::BTreeSet<u8> {
+        (0..aperture_count_at(seed, vertex, width))
+            .map(|entrance| aperture_branch_at(seed, vertex, entrance, width))
             .collect()
     }
 
@@ -3233,20 +3239,20 @@ mod tests {
     /// construction.
     ///
     /// **Constructed over every width the top band can realize**, and over
-    /// several cells, for the reason [`every_branch_has_at_least_one_parent`]
+    /// several vertices, for the reason [`every_branch_has_at_least_one_parent`]
     /// states: `branch_count_of` is weighted 60% toward width 1, where this
     /// guarantee is trivial, so a seed-panel scan would spend nearly all its
     /// evidence on the one case that cannot fail.
     #[test]
     fn every_top_band_branch_is_named_by_an_entrance() {
         let seed = Seed(42);
-        for cell in [0u32, 5, 6, 7, 9, 17, 31, 4096] {
+        for vertex in [0u32, 5, 6, 7, 9, 17, 31, 4096] {
             for width in 1..=BRANCHES_PER_SYSTEM {
-                let named = aperture_branches_at(seed, CellId(cell), width);
+                let named = aperture_branches_at(seed, Vertex(vertex), width);
                 for branch in 0..width {
                     assert!(
                         named.contains(&branch),
-                        "cell {cell}, top-band width {width}: branch {branch} is named \
+                        "vertex {vertex}, top-band width {width}: branch {branch} is named \
                          by no entrance, so nothing enters it and everything hanging \
                          beneath it is orphaned (spec amendment E.2). Named: {named:?}"
                     );
@@ -3269,12 +3275,12 @@ mod tests {
     /// `entrance` out of the lattice entirely, so it is gone here too.
     fn descent_edges_for(
         seed: Seed,
-        cell: CellId,
+        vertex: Vertex,
         band: Band,
         upper: u8,
         lower: u8,
     ) -> Vec<(u8, u8)> {
-        descent_edges(seed, cell, band, upper, lower)
+        descent_edges(seed, vertex, band, upper, lower)
     }
 
     /// GUARANTEE 1 (spec §4.5): **every branch descends.** Nothing dead-ends
@@ -3292,7 +3298,7 @@ mod tests {
         let seed = Seed(42);
         for upper in 1..=BRANCHES_PER_SYSTEM {
             for lower in 1..=BRANCHES_PER_SYSTEM {
-                let edges = descent_edges_for(seed, CellId(7), Band::Deeps, upper, lower);
+                let edges = descent_edges_for(seed, Vertex(7), Band::Deeps, upper, lower);
                 for b in 0..upper {
                     assert!(
                         edges.iter().any(|&(from, _)| from == b),
@@ -3313,7 +3319,7 @@ mod tests {
         let seed = Seed(42);
         for upper in 1..=BRANCHES_PER_SYSTEM {
             for lower in 1..=BRANCHES_PER_SYSTEM {
-                let edges = descent_edges_for(seed, CellId(7), Band::Deeps, upper, lower);
+                let edges = descent_edges_for(seed, Vertex(7), Band::Deeps, upper, lower);
                 for b in 0..lower {
                     assert!(
                         edges.iter().any(|&(_, to)| to == b),
@@ -3334,21 +3340,21 @@ mod tests {
     /// below its own arity. Upper bound `upper + lower`: exactly that many
     /// edges are pushed before the dedup, which can only remove.
     ///
-    /// Swept over several cells and every adjacent band pair, so a
+    /// Swept over several vertices and every adjacent band pair, so a
     /// coincidence at one place cannot carry it.
     #[test]
     fn the_edge_count_sits_between_its_construction_bounds() {
         let seed = Seed(42);
-        for cell in [0u32, 7, 9, 4096] {
+        for vertex in [0u32, 7, 9, 4096] {
             for &band in Band::habitation() {
                 let Some(_) = band.deeper() else { continue };
                 for upper in 1..=BRANCHES_PER_SYSTEM {
                     for lower in 1..=BRANCHES_PER_SYSTEM {
-                        let edges = descent_edges_for(seed, CellId(cell), band, upper, lower);
+                        let edges = descent_edges_for(seed, Vertex(vertex), band, upper, lower);
                         let n = u8::try_from(edges.len()).expect("at most 8 edges");
                         assert!(
                             n >= upper.max(lower) && n <= upper + lower,
-                            "cell {cell} {band:?} {upper}x{lower}: {n} edges is outside \
+                            "vertex {vertex} {band:?} {upper}x{lower}: {n} edges is outside \
                              [{}, {}]",
                             upper.max(lower),
                             upper + lower
@@ -3369,15 +3375,15 @@ mod tests {
     #[test]
     fn the_band_descent_key_spelling_is_pinned() {
         assert_eq!(
-            descent_key(CellId(9), 3, Band::Deeps, DescentRole::Child),
+            descent_key(Vertex(9), 3, Band::Deeps, DescentRole::Child),
             "9/3/deeps/child"
         );
         assert_eq!(
-            descent_key(CellId(0), 0, Band::Undercroft, DescentRole::Parent),
+            descent_key(Vertex(0), 0, Band::Undercroft, DescentRole::Parent),
             "0/0/undercroft/parent"
         );
         assert_eq!(
-            descent_key(CellId(12), 1, Band::Nadir, DescentRole::Parent),
+            descent_key(Vertex(12), 1, Band::Nadir, DescentRole::Parent),
             "12/1/nadir/parent"
         );
     }
@@ -3393,12 +3399,12 @@ mod tests {
     /// re-key an existing band.
     #[test]
     fn every_component_of_the_band_descent_key_is_load_bearing() {
-        let base = descent_key(CellId(9), 1, Band::Deeps, DescentRole::Child);
+        let base = descent_key(Vertex(9), 1, Band::Deeps, DescentRole::Child);
         for other in [
-            descent_key(CellId(8), 1, Band::Deeps, DescentRole::Child),
-            descent_key(CellId(9), 2, Band::Deeps, DescentRole::Child),
-            descent_key(CellId(9), 1, Band::Shallows, DescentRole::Child),
-            descent_key(CellId(9), 1, Band::Deeps, DescentRole::Parent),
+            descent_key(Vertex(8), 1, Band::Deeps, DescentRole::Child),
+            descent_key(Vertex(9), 2, Band::Deeps, DescentRole::Child),
+            descent_key(Vertex(9), 1, Band::Shallows, DescentRole::Child),
+            descent_key(Vertex(9), 1, Band::Deeps, DescentRole::Parent),
         ] {
             assert_ne!(base, other, "a key component is not load-bearing");
         }
@@ -3442,7 +3448,7 @@ mod tests {
     /// become `Parent`, with all 47 tests still green. **The second is the
     /// serious one**, and it is exactly what the role word exists to prevent:
     /// under it the child draws for the pair `(B, B.deeper())` land in
-    /// `{cell}/{i}/{B}/parent`, the key space the parent draws for the pair
+    /// `{vertex}/{i}/{B}/parent`, the key space the parent draws for the pair
     /// `(B.shallower(), B)` already occupy — one key answering two different
     /// questions at two different widths.
     ///
@@ -3463,15 +3469,15 @@ mod tests {
     #[test]
     fn the_descent_edges_are_byte_pinned_for_known_calls() {
         assert_eq!(
-            descent_edges(Seed(42), CellId(9), Band::Deeps, 2, 3),
+            descent_edges(Seed(42), Vertex(9), Band::Deeps, 2, 3),
             vec![(0, 0), (1, 0), (1, 1), (1, 2)]
         );
         assert_eq!(
-            descent_edges(Seed(42), CellId(9), Band::Shallows, 3, 2),
+            descent_edges(Seed(42), Vertex(9), Band::Shallows, 3, 2),
             vec![(0, 0), (0, 1), (1, 0), (2, 0)]
         );
         assert_eq!(
-            descent_edges(Seed(42), CellId(0), Band::Undercroft, 4, 4),
+            descent_edges(Seed(42), Vertex(0), Band::Undercroft, 4, 4),
             vec![
                 (0, 3),
                 (1, 2),
@@ -3484,7 +3490,7 @@ mod tests {
             ]
         );
         assert_eq!(
-            descent_edges(Seed(90210), CellId(7), Band::Underdeep, 2, 4),
+            descent_edges(Seed(90210), Vertex(7), Band::Underdeep, 2, 4),
             vec![(0, 0), (0, 2), (1, 0), (1, 1), (1, 3)]
         );
     }
@@ -3504,12 +3510,18 @@ mod tests {
         let seed = Seed(42);
         let width = BRANCHES_PER_SYSTEM;
         let mut sibling_disagreed = false;
-        for cell in 0u32..64 {
+        for vertex in 0u32..64 {
             for &band in Band::habitation() {
                 for branch in 0..BRANCHES_PER_SYSTEM {
-                    let key = descent_key(CellId(cell), branch, band, DescentRole::Child);
-                    let shipped =
-                        descent_pick(seed, CellId(cell), branch, band, DescentRole::Child, width);
+                    let key = descent_key(Vertex(vertex), branch, band, DescentRole::Child);
+                    let shipped = descent_pick(
+                        seed,
+                        Vertex(vertex),
+                        branch,
+                        band,
+                        DescentRole::Child,
+                        width,
+                    );
                     let own = seed
                         .derive(crate::streams::BAND_DESCENT)
                         .derive(StreamLabel::dynamic(&key))
@@ -3545,15 +3557,15 @@ mod tests {
     fn nothing_descends_from_the_bottom_or_the_top_of_the_ladder() {
         let seed = Seed(42);
         assert_eq!(Band::Nadir.deeper(), None, "Nadir is the bottom rung");
-        for cell in 0u32..64 {
+        for vertex in 0u32..64 {
             for branch in 0..BRANCHES_PER_SYSTEM {
                 assert!(
-                    descents_from(seed, CellId(cell), Band::Nadir, branch).is_empty(),
-                    "cell {cell} branch {branch} descends below the Nadir"
+                    descents_from(seed, Vertex(vertex), Band::Nadir, branch).is_empty(),
+                    "vertex {vertex} branch {branch} descends below the Nadir"
                 );
                 assert!(
-                    descents_from(seed, CellId(cell), Band::Surface, branch).is_empty(),
-                    "cell {cell} branch {branch} descends out of the overworld"
+                    descents_from(seed, Vertex(vertex), Band::Surface, branch).is_empty(),
+                    "vertex {vertex} branch {branch} descends out of the overworld"
                 );
             }
         }
@@ -3571,31 +3583,31 @@ mod tests {
     fn a_branch_its_band_does_not_realize_descends_nowhere() {
         let seed = Seed(42);
         let mut saw_a_realized_branch = false;
-        for cell in 0u32..256 {
+        for vertex in 0u32..256 {
             for &band in Band::habitation() {
                 if band.deeper().is_none() {
                     continue;
                 }
-                let width = crate::character::branch_count_of(seed, CellId(cell), band);
+                let width = crate::character::branch_count_of(seed, Vertex(vertex), band);
                 for branch in 0..BRANCHES_PER_SYSTEM {
-                    let d = descents_from(seed, CellId(cell), band, branch);
+                    let d = descents_from(seed, Vertex(vertex), band, branch);
                     if branch >= width {
                         assert!(
                             d.is_empty(),
-                            "cell {cell} {band:?} branch {branch} is past width {width} \
+                            "vertex {vertex} {band:?} branch {branch} is past width {width} \
                              and still descends"
                         );
                     } else {
                         assert!(
                             !d.is_empty(),
-                            "cell {cell} {band:?} branch {branch} is inside width {width} \
+                            "vertex {vertex} {band:?} branch {branch} is inside width {width} \
                              and descends nowhere"
                         );
                         saw_a_realized_branch = true;
                     }
                 }
                 // And an out-of-lattice branch is refused outright.
-                assert!(descents_from(seed, CellId(cell), band, BRANCHES_PER_SYSTEM).is_empty());
+                assert!(descents_from(seed, Vertex(vertex), band, BRANCHES_PER_SYSTEM).is_empty());
             }
         }
         assert!(saw_a_realized_branch, "the sweep realized no branch at all");
@@ -3609,23 +3621,23 @@ mod tests {
     #[test]
     fn descents_from_answers_inside_the_lower_bands_drawn_width() {
         let seed = Seed(42);
-        for cell in 0u32..256 {
+        for vertex in 0u32..256 {
             for &band in Band::habitation() {
                 let Some(below) = band.deeper() else { continue };
-                let lower = crate::character::branch_count_of(seed, CellId(cell), below);
+                let lower = crate::character::branch_count_of(seed, Vertex(vertex), below);
                 for branch in 0..BRANCHES_PER_SYSTEM {
-                    let d = descents_from(seed, CellId(cell), band, branch);
+                    let d = descents_from(seed, Vertex(vertex), band, branch);
                     let mut sorted = d.clone();
                     sorted.sort_unstable();
                     sorted.dedup();
                     assert_eq!(
                         d, sorted,
-                        "cell {cell} {band:?} branch {branch} is not a set"
+                        "vertex {vertex} {band:?} branch {branch} is not a set"
                     );
                     for to in d {
                         assert!(
                             to < lower,
-                            "cell {cell} {band:?} branch {branch} descends into branch {to}, \
+                            "vertex {vertex} {band:?} branch {branch} descends into branch {to}, \
                              past the lower band's width {lower}"
                         );
                     }
@@ -3645,7 +3657,7 @@ mod tests {
     /// check on a composition whose underlying property is already proved by
     /// construction — it is the half the constructed tests cannot reach.
     ///
-    /// claim: structural(3 seeds x 256 cells x every adjacent band pair) —
+    /// claim: structural(3 seeds x 256 vertices x every adjacent band pair) —
     /// the composition hands `descent_edges` the two bands' own widths, so
     /// the union it returns spans exactly the branches those bands realize.
     /// The seeds are a wiring witness, not a population estimate: the
@@ -3653,17 +3665,17 @@ mod tests {
     #[test]
     fn the_shipped_composition_keeps_both_guarantees_over_a_panel() {
         for seed in [Seed(42), Seed(7), Seed(90210)] {
-            for cell in 0u32..256 {
+            for vertex in 0u32..256 {
                 for &band in Band::habitation() {
                     let Some(below) = band.deeper() else { continue };
-                    let upper = crate::character::branch_count_of(seed, CellId(cell), band);
-                    let lower = crate::character::branch_count_of(seed, CellId(cell), below);
+                    let upper = crate::character::branch_count_of(seed, Vertex(vertex), band);
+                    let lower = crate::character::branch_count_of(seed, Vertex(vertex), below);
                     let mut parented: Vec<u8> = Vec::new();
                     for branch in 0..upper {
-                        let d = descents_from(seed, CellId(cell), band, branch);
+                        let d = descents_from(seed, Vertex(vertex), band, branch);
                         assert!(
                             !d.is_empty(),
-                            "seed {seed:?} cell {cell} {band:?} branch {branch} dead-ends"
+                            "seed {seed:?} vertex {vertex} {band:?} branch {branch} dead-ends"
                         );
                         parented.extend(d);
                     }
@@ -3672,7 +3684,7 @@ mod tests {
                     let want: Vec<u8> = (0..lower).collect();
                     assert_eq!(
                         parented, want,
-                        "seed {seed:?} cell {cell} {band:?}: branches below are not all reached"
+                        "seed {seed:?} vertex {vertex} {band:?}: branches below are not all reached"
                     );
                 }
             }
@@ -3688,15 +3700,15 @@ mod tests {
     #[test]
     fn the_descent_edges_are_the_same_however_the_lattice_is_queried() {
         let seed = Seed(42);
-        let subject = descents_from(seed, CellId(9), Band::Deeps, 0);
-        for cell in 0u32..64 {
+        let subject = descents_from(seed, Vertex(9), Band::Deeps, 0);
+        for vertex in 0u32..64 {
             for &band in Band::habitation() {
                 for branch in 0..BRANCHES_PER_SYSTEM {
-                    let _ = descents_from(seed, CellId(cell), band, branch);
+                    let _ = descents_from(seed, Vertex(vertex), band, branch);
                     let _ = levels_in_branch(
                         seed,
                         RunAddr {
-                            cell: CellId(cell),
+                            vertex: Vertex(vertex),
                             branch,
                             band,
                         },
@@ -3706,7 +3718,7 @@ mod tests {
         }
         assert_eq!(
             subject,
-            descents_from(seed, CellId(9), Band::Deeps, 0),
+            descents_from(seed, Vertex(9), Band::Deeps, 0),
             "the descent edges moved when unrelated places were queried"
         );
     }
@@ -3719,7 +3731,7 @@ mod tests {
     /// and the only assertion is the by-construction bound, so nothing in
     /// this test can be satisfied by fitting the draw.
     ///
-    /// claim: readout(3 seeds x 512 cells x every adjacent band pair) — the
+    /// claim: readout(3 seeds x 512 vertices x every adjacent band pair) — the
     /// edge-count distribution and mean out-degree are REPORTED, and the only
     /// gate is the by-construction bound `max(upper, lower) <= n <= upper +
     /// lower`. Spec §8 leaves the extra-edge count open; a test that gated it
@@ -3740,12 +3752,12 @@ mod tests {
         // never reach it at all.
         let mut at_minimum_total = 0usize;
         for seed in [Seed(42), Seed(7), Seed(90210)] {
-            for cell in 0u32..512 {
+            for vertex in 0u32..512 {
                 for &band in Band::habitation() {
                     let Some(below) = band.deeper() else { continue };
-                    let upper = crate::character::branch_count_of(seed, CellId(cell), band);
-                    let lower = crate::character::branch_count_of(seed, CellId(cell), below);
-                    let n = descent_edges(seed, CellId(cell), band, upper, lower).len();
+                    let upper = crate::character::branch_count_of(seed, Vertex(vertex), band);
+                    let lower = crate::character::branch_count_of(seed, Vertex(vertex), below);
+                    let n = descent_edges(seed, Vertex(vertex), band, upper, lower).len();
                     assert!(
                         n >= usize::from(upper.max(lower)) && n <= usize::from(upper + lower),
                         "edge count {n} outside its construction bounds at {upper}x{lower}"
@@ -3766,7 +3778,7 @@ mod tests {
         }
         // Reported, never gated (spec §6's "REPORTED, NEVER GATED" clause
         // applies to a shape the design deliberately left open).
-        println!("band-descent edge shape over 3 seeds x 512 cells x 4 band pairs");
+        println!("band-descent edge shape over 3 seeds x 512 vertices x 4 band pairs");
         println!("  band pairs measured        {pairs_total}");
         println!("  edges drawn                {edges_total}");
         println!(
@@ -3817,7 +3829,7 @@ mod tests {
     /// differs from the source branch — the `crossings` control, without
     /// which the whole sweep is satisfiable by the old rule.
     /// claim: invariant(forall-swept-seed) — the descent rule over a
-    /// hand-built lattice (3 seeds x 40 cells, builds no world)
+    /// hand-built lattice (3 seeds x 40 vertices, builds no world)
     #[test]
     fn descent_leaves_from_the_bottom_level_and_arrives_at_the_top() {
         let column = fixture_column();
@@ -3830,14 +3842,21 @@ mod tests {
 
         for raw_seed in [42u64, 7, 90210] {
             let seed = Seed(raw_seed);
-            for raw_cell in 0u32..40 {
-                let cell = CellId(raw_cell);
+            for raw_vertex in 0u32..40 {
+                let vertex = Vertex(raw_vertex);
                 for &band in Band::habitation() {
                     for branch in 0..BRANCHES_PER_SYSTEM {
-                        let levels = levels_in_branch(seed, RunAddr { cell, branch, band });
+                        let levels = levels_in_branch(
+                            seed,
+                            RunAddr {
+                                vertex,
+                                branch,
+                                band,
+                            },
+                        );
                         for level in 0..levels {
                             let addr = ChamberAddr {
-                                cell,
+                                vertex,
                                 branch,
                                 band,
                                 level,
@@ -3870,10 +3889,10 @@ mod tests {
                                 continue;
                             };
                             let expected: std::collections::BTreeSet<ChamberAddr> =
-                                descents_from(seed, cell, band, branch)
+                                descents_from(seed, vertex, band, branch)
                                     .into_iter()
                                     .map(|to| ChamberAddr {
-                                        cell,
+                                        vertex,
                                         branch: to,
                                         band: below,
                                         level: 0,
@@ -3914,7 +3933,7 @@ mod tests {
     /// satisfied vacuously by a `passages_from` that returns nothing at all,
     /// and this is a function whose whole job is to return neighbours.
     /// claim: invariant(forall-swept-seed) — no lateral passage, over a
-    /// hand-built lattice (3 seeds x 40 cells, builds no world)
+    /// hand-built lattice (3 seeds x 40 vertices, builds no world)
     #[test]
     fn no_passage_is_a_sideways_step_between_branches() {
         let column = fixture_column();
@@ -3924,13 +3943,13 @@ mod tests {
 
         for raw_seed in [42u64, 7, 90210] {
             let seed = Seed(raw_seed);
-            for raw_cell in 0u32..40 {
-                let cell = CellId(raw_cell);
+            for raw_vertex in 0u32..40 {
+                let vertex = Vertex(raw_vertex);
                 for &band in Band::habitation() {
                     for branch in 0..BRANCHES_PER_SYSTEM {
                         for level in 0..LEVELS_PER_BRANCH_CEILING {
                             let addr = ChamberAddr {
-                                cell,
+                                vertex,
                                 branch,
                                 band,
                                 level,
@@ -3970,24 +3989,24 @@ mod tests {
     /// the upper branch names the lower one. A second draw for the upward
     /// direction — the obvious wrong implementation — fails this at once.
     /// claim: invariant(forall-swept-seed) — the two seam directions agree,
-    /// over the drawn edges alone (3 seeds x 64 cells, builds no world)
+    /// over the drawn edges alone (3 seeds x 64 vertices, builds no world)
     #[test]
     fn the_two_seam_directions_read_one_edge_set() {
         let mut agreements = 0u32;
         let mut edges = 0u32;
         for raw_seed in [42u64, 7, 90210] {
             let seed = Seed(raw_seed);
-            for raw_cell in 0u32..64 {
-                let cell = CellId(raw_cell);
+            for raw_vertex in 0u32..64 {
+                let vertex = Vertex(raw_vertex);
                 for &band in Band::habitation() {
                     let Some(below) = band.deeper() else { continue };
                     for up in 0..BRANCHES_PER_SYSTEM {
                         for down in 0..BRANCHES_PER_SYSTEM {
-                            let descends = descents_from(seed, cell, band, up).contains(&down);
-                            let ascends = ascents_from(seed, cell, below, down).contains(&up);
+                            let descends = descents_from(seed, vertex, band, up).contains(&down);
+                            let ascends = ascents_from(seed, vertex, below, down).contains(&up);
                             assert_eq!(
                                 descends, ascends,
-                                "seed {raw_seed} cell {raw_cell}: {band:?} branch {up} -> \
+                                "seed {raw_seed} vertex {raw_vertex}: {band:?} branch {up} -> \
                                  {below:?} branch {down} reads {descends} downward and \
                                  {ascends} upward — the two directions are two derivations"
                             );
@@ -4026,27 +4045,27 @@ mod tests {
     /// `drift_reach_probe` re-measures the panel share the prose above
     /// quotes.
     /// claim: invariant(forall-swept-seed) — every drawn mouth names a branch
-    /// its landing band realizes (4 seeds x 256 cells, builds no world)
+    /// its landing band realizes (4 seeds x 256 vertices, builds no world)
     #[test]
     fn a_drawn_mouth_names_a_branch_its_landing_band_realizes() {
         let mut side_doors = 0u32;
         for raw_seed in [42u64, 7, 90210, 1234] {
             let seed = Seed(raw_seed);
-            for raw_cell in 0u32..256 {
-                let cell = CellId(raw_cell);
-                for entrance in 0..entrance_count(seed, cell) {
-                    let mouth = entrance_mouth(seed, cell, entrance);
+            for raw_vertex in 0u32..256 {
+                let vertex = Vertex(raw_vertex);
+                for entrance in 0..entrance_count(seed, vertex) {
+                    let mouth = entrance_mouth(seed, vertex, entrance);
                     let band = Band::from_rank(mouth.band)
                         .expect("a mouth only ever names a habitation rank");
                     assert!(
-                        mouth.branch < crate::character::branch_count_of(seed, cell, band),
-                        "seed {raw_seed} cell {raw_cell} entrance {entrance}: mouth \
+                        mouth.branch < crate::character::branch_count_of(seed, vertex, band),
+                        "seed {raw_seed} vertex {raw_vertex} entrance {entrance}: mouth \
                          {mouth:?} names a branch {band:?} does not realize"
                     );
                     assert_eq!(
                         band,
                         top_band(),
-                        "seed {raw_seed} cell {raw_cell} entrance {entrance}: mouth \
+                        "seed {raw_seed} vertex {raw_vertex} entrance {entrance}: mouth \
                          {mouth:?} landed outside the top habitation band"
                     );
                     assert_eq!(mouth.floor, 0, "a mouth landed below its run's head");
