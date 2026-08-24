@@ -311,7 +311,7 @@ mod tests {
         let w = world();
         let mk = |day: f64| {
             let mut o = PossessOpts::default();
-            o.day = hornvale_kernel::WorldTime::new(day).expect("a day value is finite");
+            o.day = hornvale_kernel::WorldTime::from_std_days(day).expect("a day value is finite");
             Session::start(&w, &o).unwrap().0.purview(0).unwrap()
         };
         // Noon against a genuine ABOVE-horizon low sun, at the flagship's own

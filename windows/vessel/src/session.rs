@@ -1142,7 +1142,7 @@ impl<'w> Session<'w> {
         Ok(SessionSnapshot {
             schema: SESSION_SCHEMA.to_string(),
             turn: self.turn,
-            day: self.day.day(),
+            day: self.day.as_std_days(),
             me: SelfChannel {
                 agent: self.agent.id.0,
                 species: self.agent.species.clone(),
@@ -1575,7 +1575,7 @@ impl<'w> Session<'w> {
         );
         let ticks = cost_ticks(action, self.body_mass_kg, terrain_factor);
         let days = days_of(ticks, self.day_length_std());
-        match WorldTime::new(self.day.day() + days) {
+        match WorldTime::from_std_days(self.day.as_std_days() + days) {
             Ok(d) => {
                 self.day = d;
                 Ok(())
@@ -1650,7 +1650,7 @@ impl<'w> Session<'w> {
         let fact = agent_at_fact(
             self.agent_entity(),
             &self.agent.position,
-            self.day.day(),
+            self.day.as_std_days(),
             provenance,
         );
         self.ledger
@@ -1690,16 +1690,25 @@ impl<'w> Session<'w> {
         if let Err(e) = self.charge(&Action::Rest, 1.0) {
             return Turn::Out(e);
         }
-        let fact = rested_fact(self.agent_entity(), self.day.day(), SLEPT_PROVENANCE);
+        let fact = rested_fact(
+            self.agent_entity(),
+            self.day.as_std_days(),
+            SLEPT_PROVENANCE,
+        );
         self.ledger
             .commit(fact, &self.registry)
             .expect("RESTED is registered every session and non-functional");
         let wake = {
             let activity = species_activity(self.world, &self.agent.species);
             let terrain = self.terrain_here();
-            next_awake_day(activity, &terrain, &self.agent.position, self.day.day())
+            next_awake_day(
+                activity,
+                &terrain,
+                &self.agent.position,
+                self.day.as_std_days(),
+            )
         };
-        self.wake_at = WorldTime::new(wake).ok();
+        self.wake_at = WorldTime::from_std_days(wake).ok();
         Turn::Out(SLEEP_REPLY.to_string())
     }
 
@@ -2330,7 +2339,7 @@ impl<'w> Session<'w> {
         Ok(format!(
             "[room {}, day {}]\n{}\n{closing}",
             v.locale.id,
-            self.day.day(),
+            self.day.as_std_days(),
             f.prose,
         ))
     }
@@ -2868,7 +2877,7 @@ impl<'w> Session<'w> {
         Ok(format!(
             "[chamber {}, day {}]\n{}\nWays on: {}.",
             id,
-            self.day.day(),
+            self.day.as_std_days(),
             crate::chamber_prose::describe_chamber(&interior, &brief),
             ways.join(", ")
         ))
@@ -3494,7 +3503,7 @@ impl<'w> Session<'w> {
         // parse-site guard above cannot see it (fix round 1, The Ell Task 2
         // review: reachable live from `possess` stdin via two `wait 1e308`s).
         // Route it through `wait`'s own error channel rather than expecting.
-        self.day = match WorldTime::new(self.day.day() + days) {
+        self.day = match WorldTime::from_std_days(self.day.as_std_days() + days) {
             Ok(d) => d,
             Err(e) => return Turn::Out(format!("error: {e}")),
         };
@@ -3952,7 +3961,7 @@ impl<'w> Session<'w> {
             self.agent.species,
             self.agent.village.name,
             self.agent.id.0,
-            self.day.day(),
+            self.day.as_std_days(),
             self.agent
                 .position
                 .pack()
@@ -4316,9 +4325,9 @@ impl<'w> Session<'w> {
     /// falls back to the re-sculpting bare form on the `None` a failed
     /// build at `start` would leave.
     fn consult(&self) -> String {
-        let day = self.day.day().trunc() as u64;
+        let day = self.day.as_std_days().trunc() as u64;
         let mut lines = vec![format!("The Reckoning, at day {day}.")];
-        let at = hornvale_astronomy::StdDays::new(self.day.day())
+        let at = hornvale_astronomy::StdDays::new(self.day.as_std_days())
             .expect("a session's day is always finite and non-negative");
         let epoch = match (self.wctx.terrain.as_ref(), self.wctx.climate.as_ref()) {
             (Some(t), Some(c)) => hornvale_book::reckoning_at_from(self.world, at, t, c),
@@ -5016,8 +5025,8 @@ mod tests {
     fn wait_routes_a_clock_overflow_instead_of_panicking() {
         // Fix round 1 (The Ell, Task 2 review, Important finding): `wait`
         // validates its PARSED argument (`d.is_finite() && d > 0.0`), but the
-        // day it feeds `WorldTime::new` is an ACCUMULATION
-        // (`self.day.day() + days`), which can overflow to infinity even when
+        // day it feeds `WorldTime::from_std_days` is an ACCUMULATION
+        // (`self.day.as_std_days() + days`), which can overflow to infinity even when
         // both operands are individually finite. That used to `.expect()`,
         // so a long enough possession session (or a single adversarial `wait
         // 1e308` twice, driven live from `possess`'s stdin) panicked the
@@ -5027,7 +5036,7 @@ mod tests {
         // reaching this range.
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
-        session.day = WorldTime::new(f64::MAX).expect("f64::MAX is finite");
+        session.day = WorldTime::from_std_days(f64::MAX).expect("f64::MAX is finite");
         match session.wait(&f64::MAX.to_string(), Perceiving::Body) {
             Turn::Out(msg) => assert!(
                 msg.contains("finite") || msg.to_lowercase().contains("day"),

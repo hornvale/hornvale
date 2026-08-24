@@ -325,7 +325,7 @@ fn a_band_change_charges_time_and_commits_nothing() {
         ("out", "[room "),
     ] {
         let facts_before = s.committed_fact_count();
-        let day_before = s.day().day();
+        let day_before = s.day().as_std_days();
         let reply = out(s.handle(verb));
         assert!(
             reply.contains(expected),
@@ -333,11 +333,11 @@ fn a_band_change_charges_time_and_commits_nothing() {
              expected a `{expected}` line, got: {reply}"
         );
         assert!(
-            s.day().day() > day_before,
+            s.day().as_std_days() > day_before,
             "`{verb}` is an in-character act and must charge time \
              (decision 0069 forbids the commit, not the charge): \
              day {day_before} -> {}",
-            s.day().day()
+            s.day().as_std_days()
         );
         assert_eq!(
             s.committed_fact_count(),

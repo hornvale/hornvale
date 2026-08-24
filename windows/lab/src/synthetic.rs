@@ -82,7 +82,7 @@ impl Terrain for SyntheticTerrain {
         match self.temps.get(room) {
             None => f64::INFINITY,
             Some(&hot) => match self.calm_after {
-                Some((until, calm)) if day.day() >= until => calm,
+                Some((until, calm)) if day.as_std_days() >= until => calm,
                 _ => hot,
             },
         }
@@ -291,7 +291,7 @@ pub fn stranded_from_known_water() -> Scenario {
             place_agent(
                 e,
                 &exile,
-                WorldTime::new(0.5).expect("a day value is finite"),
+                WorldTime::from_std_days(0.5).expect("a day value is finite"),
             ),
             reg,
         )
@@ -327,7 +327,7 @@ pub fn stranded_in_a_hot_waste() -> Scenario {
             place_agent(
                 e,
                 &exile,
-                WorldTime::new(0.5).expect("a day value is finite"),
+                WorldTime::from_std_days(0.5).expect("a day value is finite"),
             ),
             &registry,
         )
@@ -561,7 +561,7 @@ pub fn a_stricken_and_a_healthy_people() -> Scenario {
             place_agent(
                 stricken,
                 &exile,
-                WorldTime::new(0.5).expect("a day value is finite"),
+                WorldTime::from_std_days(0.5).expect("a day value is finite"),
             ),
             &registry,
         )
@@ -661,7 +661,7 @@ fn a_stranded_pair(colocated: bool) -> Scenario {
             place_agent(
                 stricken,
                 &exile,
-                WorldTime::new(0.5).expect("a day value is finite"),
+                WorldTime::from_std_days(0.5).expect("a day value is finite"),
             ),
             &registry,
         )

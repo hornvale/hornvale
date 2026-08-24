@@ -280,7 +280,7 @@ mod tests {
         let agent = crate::mint_flagship(&world, &ctx).expect("seed 42 has a settlement");
         ctx.describe(
             &agent.position,
-            WorldTime::new(0.5).expect("a day value is finite"),
+            WorldTime::from_std_days(0.5).expect("a day value is finite"),
         )
         .expect("the minted position describes")
     }

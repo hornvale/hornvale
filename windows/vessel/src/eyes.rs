@@ -79,7 +79,7 @@ pub fn daylight_at(
     latitude: f64,
 ) -> (Illuminant, f64) {
     let altitude = calendar.and_then(|cal| {
-        StdDays::new(day.day())
+        StdDays::new(day.as_std_days())
             .ok()
             .and_then(|t| cal.solar_altitude_at(t, latitude))
     });
