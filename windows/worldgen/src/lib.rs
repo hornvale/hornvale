@@ -15446,6 +15446,13 @@ mod tests {
             // separation test currently skips, lowers this floor with it. Asserted
             // rather than only stated, so that coupling breaks loudly.
             const VISIBILITY_FRACTION: f64 = 0.5;
+            /// How many standard errors of sampling noise an extreme pair may
+            /// carry before the demanded floor is UNDECIDABLE for that world
+            /// (reported and skipped, never silently failed). Post-unblinding:
+            /// adopted in the same commit that observed seed 3 undecidable,
+            /// disclosed here so the guard's provenance is readable as what it
+            /// is — a re-measure-era addition, not original design.
+            const VISIBILITY_UNDECIDABLE_SES: f64 = 2.0;
             let most = peoples
                 .iter()
                 .max_by(|a, b| a.1.total_cmp(&b.1))
@@ -15490,7 +15497,12 @@ mod tests {
             let se_of_spread = (most.2 * (1.0 - most.2) / most.3 as f64
                 + least.2 * (1.0 - least.2) / least.3 as f64)
                 .sqrt();
-            if floor <= INVERSION_SIGNIFICANCE_K * se_of_spread {
+            // The multiplier gets its OWN frozen constant rather than reusing
+            // INVERSION_SIGNIFICANCE_K: the two answer different questions
+            // (evidence AGAINST the model vs noise-vs-floor decidability), and
+            // retuning one must not silently move the other. Frozen at author,
+            // post-unblinding — see the disclosure above.
+            if floor <= VISIBILITY_UNDECIDABLE_SES * se_of_spread {
                 println!(
                     "   seed {seed}: visibility check UNRESOLVED — {} vs {} need a spread of \
                      {floor:.3} but their samples ({}, {}) carry {:+.3} SE of noise, so the \

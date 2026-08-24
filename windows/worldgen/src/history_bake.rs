@@ -3139,10 +3139,13 @@ impl<'a> Bake<'a> {
     /// exactly as a mid-epoch opening always has.
     ///
     /// Determinism: phases ascending outermost, communities in the caller's
-    /// snapshot order within each phase, `BTreeMap`/`Vec` containers only,
+    /// snapshot order within a phase, `BTreeMap`/`Vec` containers only,
     /// `total_cmp` tie-breaks unchanged inside `maybe_raid` — and no new
     /// stream draws anywhere in the loop (`maybe_raid` itself consumes none),
     /// so the draw sequence moves only where an actual raid's outcome does.
+    /// Within a phase, order is LOAD-BEARING for stores too: a raider stepped
+    /// before its target reads the target's PRE-step stores, so swapping the
+    /// snapshot order changes who can afford whom at that phase.
     fn raid_phases(&mut self, snapshot: &[usize], era: &EraClimate, year: f64) {
         // Frozen per-community curve shares: read once, before any raid can
         // open or close communities, so a phase never sees a share another
