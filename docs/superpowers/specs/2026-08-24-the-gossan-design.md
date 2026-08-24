@@ -260,24 +260,98 @@ to it.
 and committed GREEN before the type is touched. The split then lands as a
 second commit changing ~100 sites and moving zero golden bytes.
 
-### 5.3 Positive controls — run and recorded, not predicted
+### 5.3 Positive controls — run and recorded
+
+Three mutations, applied one at a time with `scripts/mutate.py`, each test run
+once, each mutation reverted with `git checkout --` before the next began. The
+tree was verified clean (`git status --short`) between controls.
+
+**C1 — the blind spot (this is the one that matters).** Gave `Unmodelled` the
+endotherm's thirst model in `rise_at` — exactly the defect a naive
+`Autotroph -> Endothermic` mapping would have introduced — while leaving
+allometry untouched:
 
 ```
-C1  Autotroph -> Endothermic (instead of Unmodelled)
-    species golden GREEN, drive pin RED on 3 kinds
-    proves instrument 2 exists AND that instrument 1's blind spot is real
-C2  Ectotherm -> Endothermic
-    species golden RED on kobold, drive pin RED
-    proves instrument 1 can fail at all
-C3  Ametabolic -> (None, Heterotrophic), an unsanctioned pair
-    the §4.4 pair table RED
-    proves the 16-vs-4 guard is not decorative
+python3 scripts/mutate.py windows/vessel/src/liveness.rs \
+  "        ThermalStrategy::Unmodelled | ThermalStrategy::Absent => base," \
+  "        ThermalStrategy::Absent => base,
+        ThermalStrategy::Unmodelled => {
+            let excess = (temp - THERMONEUTRAL_C).max(0.0);
+            base * (1.0 + ENDOTHERM_HEAT_K * excess / HEAT_SCALE_C)
+        }"
+cargo nextest run -p hornvale-species -E 'test(life_history_golden)'
+cargo nextest run -p hornvale-vessel -E 'test(rise_at_couples_heat_to_thirst_per_metabolic_class)'
 ```
 
-**If C1 comes back green on both instruments, instrument 2 is broken and the
-campaign stops until it is not.** A control is a measurement; each result is
-recorded with its command, and a surprise is a finding rather than a thing to
-re-run until it agrees.
+Result: **species golden GREEN** (2 tests run, 2 passed — `rise_at` produces
+no species-level life-history quantity, so this mutation is invisible to
+instrument 1, exactly as predicted). **Drive pin RED**:
+
+```
+thread 'liveness::tests::rise_at_couples_heat_to_thirst_per_metabolic_class' panicked at windows/vessel/src/liveness.rs:8299:9:
+assertion failed: (rise_at(80.0, Unmodelled, &p) - base).abs() < 1e-12
+```
+
+Matches the prediction exactly. This is the demonstration, not an argument:
+instrument 1 is structurally blind to a purely thermal-behaviour defect on
+`Unmodelled`, and instrument 2 catches it. That asymmetry is why this campaign
+built two instruments instead of trusting the one that already existed.
+
+**C2 — instrument 1 can fail at all.** Gave `Ectothermic` the endotherm's
+basal metabolic rate in allometry:
+
+```
+python3 scripts/mutate.py domains/species/src/allometry.rs \
+  "        ThermalStrategy::Ectothermic => B0_ENDOTHERM * ECTOTHERM_METABOLIC_FRACTION," \
+  "        ThermalStrategy::Ectothermic => B0_ENDOTHERM,"
+cargo nextest run -p hornvale-species -E 'test(life_history_golden)'
+```
+
+Result: **species golden RED**, as predicted:
+
+```
+golden mismatch: domains/species/tests/fixtures/life-history-all-kinds.txt
+first divergence at line 9:
+  committed: giant-constrictor-snake44.938279169.2271433.845428174.4599410.89965667
+  actual:    giant-constrictor-snake359.50623169.2271433.845428174.4599410.89965667
+```
+
+**One thing differed from the prediction, and it is worth recording rather
+than smoothing over.** The prediction said the failure would name `kobold`;
+the actual panic names `giant-constrictor-snake` instead, because the golden
+check aborts at the *first* divergent line and the fixture is sorted
+alphabetically by kind — `giant-constrictor-snake` sorts before `kobold`, so
+it fires first. To confirm `kobold` was still among the affected rows (not
+merely that the prediction picked the wrong headline name), the mutation was
+re-run under `REBASELINE=1` to see the full diff, then the regenerated
+fixture was discarded with `git checkout --` before continuing. Eight kinds
+moved — every `Ectothermic` kind in the corpus: `giant-constrictor-snake`,
+`giant-crocodile`, `giant-octopus`, `giant-scorpion`, `giant-squid`, `kobold`,
+`reef-shark`, `rust-monster`. `kobold` is there, so the substance of the
+prediction holds; the finding is that the golden check's first-divergence
+panic names whichever affected kind sorts first, not necessarily the one a
+prediction names by example. Anyone reading a single golden-mismatch panic in
+this repo should not conclude that the named kind is the *only* one that
+moved.
+
+**C3 — the pair guard is not decorative.** Already run as Task 6 Step 4, not
+re-run here: setting `goblin` to `(Absent, Heterotrophic)`, an unsanctioned
+pair, reddened `every_kind_carries_a_sanctioned_pair` by name:
+
+```
+thread 'metabolic_pairs::every_kind_carries_a_sanctioned_pair' panicked at
+domains/species/tests/suite/metabolic_pairs.rs:32:9:
+goblin carries (Absent, Heterotrophic), which is not a sanctioned pair. The
+split admits 16 combinations and only these are meaningful; if this one
+genuinely is, add it to SANCTIONED deliberately and say why.
+```
+
+Matches the prediction exactly (Task 6 report,
+`.superpowers/sdd/2026-08-24-the-gossan/task-6-report.md`).
+
+**All three mutations were reverted** (`git checkout --` on each touched
+file, including the fixture regenerated under `REBASELINE=1` for the C2
+investigation) and the tree confirmed clean before this section was written.
 
 ### 5.4 Determinism
 
