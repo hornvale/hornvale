@@ -441,3 +441,14 @@ holds unchanged from a fourth: the question is open, the instrument is
 underpowered, and the fix is more pairs rather than a moved bar. The registry
 row's status is unchanged by this re-read, exactly as it was unchanged by the
 second.
+
+## Postscript 4 — re-read at The Granary's close (2026-08-24)
+
+The Granary's sub-year raid timing moved the worlds again (its fixtures were
+re-authored against the new history), and with them the tally: **70/120 =
+0.5833, −0.37 SE** from the bar. The report was untouched. Five readings of
+one unchanged report now read: −0.75, +0.19, 0.00, +0.19, −0.37 SE — noise
+scattered on both sides of the line, never two consecutive readings on the
+same side. The underpower diagnosis holds from a fifth reading; the registry
+row's status is unchanged, exactly as it was unchanged by each of the four
+before this one.
