@@ -170,8 +170,33 @@ dimension (2.17 across 100→200 agents). It is recorded as
   cargo workspace, so `cargo check --workspace`, `gate-commit` and a full
   `nextest run --workspace` all build vessel and never build its consumer.
   With no CI since decision 0125, `make game-check` is the only thing that
-  would have caught it, and it is in no gate rung (it costs 303 s, which is
-  presumably why). The break would have reached main.
+  builds it, and **no local rung runs that** — `gate-commit` and `make quick`
+  are fmt, `clippy --workspace`, type-audit and the sub-floor tier, none of
+  which reach outside the workspace.
+
+  > **Corrected before merge, and the correction is the more useful half.** A
+  > first draft of this entry said the break "would have reached main" and
+  > that `make game-check` "is in no gate rung". Both are false, and the merge
+  > queue's operator refused them with file:line rather than agreeing:
+  > `scripts/lane-sets.tsv:44` makes `clients` a lane set,
+  > `sluice-run.sh:360-361` puts it in **both** `merge_phases` and
+  > `stage_phases`, and `Makefile:876-879`'s `clients-check-run` fans out to
+  > `game-check-run`. **The chamber builds and tests `clients/game/bin` on
+  > every merge and every stage**, so this break would have reddened there
+  > even unfixed. Verified here rather than accepted.
+  >
+  > The real finding is narrower and survives: the gap is **local feedback
+  > latency**, not coverage. You can break that client and stay green through
+  > every check you would plausibly run before pushing, and learn about it
+  > minutes into a chamber run. One genuine hole remains — a **prose-only**
+  > candidate skips the `clients` phase entirely (`sluice-run.sh:394-395`),
+  > which is correct on its face but means the phase is not universal.
+  >
+  > Recording the distinction because the strong version is actively harmful:
+  > someone reading "invisible to every phase" would go add a gate rung the
+  > chamber already covers. This is the campaign's own recurring failure in
+  > its last available form — a true local observation over-generalised into a
+  > false global one, and caught only because someone ran the commands.
 
   The general shape is worth more than the instance: **a green gate says
   nothing about a consumer the gate does not compile.** Decision 0125 named
