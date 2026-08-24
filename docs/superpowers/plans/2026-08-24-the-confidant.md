@@ -156,6 +156,10 @@ git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
 
 ## Task 4: The lexical gap — the nearest word a culture has
 
+**Depends on Task 3** — the six affect concepts must be registered before a
+culture can have or lack a word for one. If they are absent, that is Task 3
+incomplete, not a lexicon problem.
+
 **Read first:** `domains/language/src/lexicon.rs` — `build_lexicon`,
 `LexEntry`, `ExposureClass`, `GapReason`, `proto_root_universe`. The two-pass
 assembly and the `Steeped`/`KnowsOf`/`Unknown` exposure classes are the
@@ -186,8 +190,10 @@ discarded ranks are what the creature cannot perceive about itself. This is the
 half Nathan required be SURFACED, not merely modelled.
 
 - [ ] **Step 1: Write the failing test.** A creature with two active drives
-  reports only the dominant one, and the suppressed drive is retrievable by the
-  INSTRUMENT (Task 7) while being absent from the utterance.
+  reports only the dominant one, and the suppressed drive is retrievable
+  **through the accessor THIS task introduces** while being absent from the
+  utterance. Do NOT depend on Task 7's instrument — it does not exist yet.
+  Task 7 consumes what you expose here; it does not define it.
 - [ ] **Step 2: Behavioural red.**
 - [ ] **Step 3: Implement the filter** between arbitration and the lexicon
   lookup.
@@ -247,9 +253,12 @@ per-people so the fifteen modelled peoples are comparable:
 
 One dispatch, five independent edits, reviewed as one diff.
 
-- [ ] `windows/vessel/src/session.rs` ~1391-1413 — the doc comment on
-  `place_creature_at_me` is duplicated back to back. Delete one copy. Verify
-  the sibling `place_creature_out_of_my_sight` is untouched.
+- [ ] `windows/vessel/src/session.rs` — the doc comment on
+  `place_creature_at_me` is duplicated back to back. **Locate it by CONTENT,
+  not by line**: the paragraph beginning "A test seam, not a verb" appears
+  twice above the same fn. Tasks 2, 5 and 6 all edit this file first, so any
+  line number quoted here is already stale. Delete one copy; verify the
+  sibling `place_creature_out_of_my_sight` keeps its own.
 - [ ] `windows/vessel/src/plan.rs` — an eaten backslash continuation (a run of
   literal spaces mid-string), one occurrence, pre-existing on main from
   `72784fea1`. Re-derive the line number; it was 821 when found. Confirm it is
