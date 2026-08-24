@@ -126,6 +126,17 @@ rather than rediscovering them.**
    order and the change justified as its own decision. Same-day sightings are
    not exotic — the action clock can charge less than a day for a step.
 
+**`agent_sightings` is the hub, and the work is to DELETE it, not cache it.**
+Five of the six folds route through that one function (thirst, hunger, hazard,
+belief, the emitter scan), which makes it look like the obvious thing to
+maintain incrementally. It is not: its output is a `Vec<(f64, RoomAddr)>`
+timeline, O(history) in *size* however cheaply it is kept up to date, so caching
+it bounds nothing at all. The bounded objects are the *reductions over* it — an
+accumulator, a set, a map — so each consumer gets its own and the shared
+timeline goes away. That is why stage 3 is named "delete the hub" rather than
+"migrate six call sites": it is a smaller piece of work than the call-site count
+suggests.
+
 **Past-`t` queries are real and are already documented in the tree.**
 `last_fact_day_at_or_before` (`:4451`) exists precisely because catch-up's
 replay loop evaluates many instants across a span, and its doc says why a
@@ -332,13 +343,13 @@ conflation §6.4 itself caught §6.2 making.
 Strangler-fig, each stage measurement-gated on the one before, per the
 metaplan's own discipline.
 
-| # | stage | delivers | gate to enter |
-|---|---|---|---|
-| 1 | The instrument and the attribution | `session_length_scaling.rs` — **the instrument half is done and §4 reports it**; what remains is a `samply` profile attributing `k` across the six folds in cost order | — |
-| 2 | The primitive | the incremental ledger fold, kernel-side; FOLD ≡ SCAN, advance-exactly-once, chaos-rebuild | **met for `drive_at`** (§4); the profile decides whether stage 4 is also entered |
-| 3 | The reset-partitioned drives | thirst, hunger, fatigue onto the fold; `last_fact_day_at_or_before` becomes O(1) | stage 2's properties green |
-| 4 | Belief and hazard | `believed_water` (× peers), `hazard_memory_memo`, `build_emitter_scan` | stage 1's profile says these carry a material share of `k` |
-| 5 | The readout | re-run the instrument; H2/H3; state what 7b and 7c may now assume | stages 3–4 |
+| # | stage | delivers | gate to enter | blocked by |
+|---|---|---|---|---|
+| 1 | The instrument and the attribution | `session_length_scaling.rs` — **done, §4 reports it**; what remains is a `samply` profile attributing `k` across the six folds in cost order | — | nothing |
+| 2 | The primitive | the incremental ledger fold, kernel-side; FOLD ≡ SCAN, advance-exactly-once, chaos-rebuild | **met for `drive_at`** (§4) | nothing — see §10 |
+| 3 | Delete the hub | remove `agent_sightings` and give thirst, hunger and fatigue their own bounded accumulators; `last_fact_day_at_or_before` becomes O(1) | stage 2's properties green | the Escapement |
+| 4 | Belief and hazard | `believed_water` (× peers), `hazard_memory_memo`, `build_emitter_scan` | stage 1's profile says these carry a material share of `k` | the Escapement |
+| 5 | The readout | re-run the instrument; H2/H3; state what 7b and 7c may now assume | stages 3–4 | stages 3–4 |
 
 Stage 4 is the one that may not be entered, and that is deliberate: if the
 profile says the three drives carry `k` and belief/hazard do not, migrating
@@ -387,8 +398,14 @@ Numbered from the reserved block at ratification.
   → i64 ticks, its decision 0186), 176 of 333 sites in `windows/vessel`,
   committed the same day this spec was written and with uncommitted edits to
   `liveness.rs` in its worktree. Its diff touches `agent_sightings`,
-  `integrate_thirst` and `latest_committed_position` directly. Stages 2–5 must
-  sequence behind it; stage 1 adds only a new file, which cannot conflict.
+  `integrate_thirst` and `latest_committed_position` directly. **Stages 3–5
+  sequence behind it; stages 1 and 2 do not.** Stage 1 adds only a new file.
+  Stage 2 is a new kernel module plus two one-line registrations, and this
+  design gives `Ledger::commit` no hook — so it never touches
+  `kernel/src/ledger.rs`, the one kernel path the hold-off names. Checked
+  against the actual diff: The Escapement's `kernel/src/lib.rs` change is
+  confined to the `pub use units::{…}` block, so the worst case is a
+  three-line-context conflict on two registration lines.
   Expect every `f64` day in §2's arithmetic to become an integer tick count,
   which makes the accumulator's arithmetic *exact* and is a simplification, not
   a cost.
