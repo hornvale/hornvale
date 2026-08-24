@@ -1,81 +1,30 @@
-//! The accession register: which *generation* each concept joined the
-//! registry in.
+//! Mechanical enforcement of `domains/language/src/accession.rs`'s own
+//! absolute rule: "Never edit an existing cohort" (the module doc, and the
+//! withdrawn-exception section beneath it). Nothing before this test
+//! checked that mechanically — `no_concept_appears_in_two_cohorts` and the
+//! parity tests in `accession_properties.rs` are set-difference checks
+//! against the UNION of all cohorts, so they cannot see a concept that
+//! moved from one existing cohort to another while the union stayed the
+//! same, which is exactly the churn the epoch-first ordering exists to
+//! prevent (a concept's accession epoch is what an assignment is sorted
+//! by).
 //!
-//! A concept's proto-root is assigned by a global ordered walk with
-//! rejection-probing ([`crate::etymology::assign_proto_roots`]), so an
-//! assignment depends on every concept sorted at or before it. Ordering by
-//! name alone therefore makes registry growth *probabilistically* additive:
-//! a concept inserted mid-alphabet can take a form some later concept would
-//! have drawn, forcing it to probe, and every word derived from it moves.
-//! (Measured before this module existed: of twelve species kinds added at
-//! once, ten were free, `treant` moved 5 facts and `otyugh` 65.)
-//!
-//! Sorting by accession epoch first makes a new concept land **strictly
-//! last**, the one position that provably displaces nothing — so growth
-//! becomes additive by construction. See The Accession spec §3.
-//!
-//! # Appending a cohort
-//!
-//! Add a new `&[...]` to the end of [`EPOCH_COHORTS`]. **Never edit an
-//! existing cohort**: a concept that changed epoch would re-sort, which is
-//! exactly the churn this module exists to prevent. Retired concepts stay
-//! listed — their slot is spent either way.
-//!
-//! # A withdrawn exception, kept here because the withdrawal is the lesson
-//!
-//! For two days (2026-07-27 → 2026-07-29) this doc carried an exception: a
-//! campaign that bumps `ROOT_EPOCH` was said to be free to **re-found cohort
-//! 0**, on the reasoning that a bump reseeds every root anyway so there is no
-//! churn left to prevent. The Wearing exercised it, folding The Actants'
-//! cohort back into a 76-concept baseline and adding its own nineteen
-//! toponymic concepts there. It has been withdrawn, and the rule above is
-//! absolute again. Three things went wrong, and each is worth more than the
-//! exception was.
-//!
-//! **The fidelity argument that motivated it was false.** Ledger #9 held that
-//! placing basic words like `hill` and `river` in a later cohort would mark
-//! them as audibly borrowed, via LANG-55's coda carve. Measured
-//! (`.superpowers/sdd/loanword-claim-measurement.md`, seeds 1..=250 × 4
-//! proto-root units, 123 000 roots per epoch population): epoch-0 roots
-//! already end closed 48.18 % of the time against epoch-1+'s 60.20 %, so a
-//! closed-final word is ~4.5× likelier to be *old* than new; 99.99 % of
-//! later-epoch roots have a CV skeleton epoch-0 roots also have; and the carve
-//! is structurally inert in **74.6 %** of drawn languages, because
-//! `draw_phonotactics` gives a language one or two coda templates of length
-//! 0–1 and any single-template language is degenerate by construction. There
-//! is no marking to avoid.
-//!
-//! **The epoch label does not cause a regeneration; it documents one.**
-//! `ROOT_EPOCH` exists so that a deliberate change to the *assignment
-//! algorithm* forces fresh draws rather than silently corrupting saves. The
-//! Wearing never changed the algorithm — it changed the phonology the
-//! algorithm draws from (Task 8's nucleus template set), which reseeds every
-//! root whether or not any label moves. Reading "the epoch is bumped anyway,
-//! so cohort placement is free" backwards into "a bump licenses a
-//! re-founding" made a *documentation* suffix into a permission slip.
-//!
-//! **The exception could not be scoped.** Its own text had to spend twenty
-//! lines forbidding the reading it invited ("the bump must be independently
-//! necessitated — it is not a lever to pull for this"). A rule that needs a
-//! second rule to stop it from swallowing the first is not a scoped exception;
-//! it is the first rule repealed with extra steps. The Toponym appended its 53
-//! concepts as an ordinary cohort on the same day, at no cost, which is the
-//! demonstration that the exception bought nothing that appending does not
-//! already give.
-//!
-//! See `.superpowers/sdd/decision-ledger.md` #9 and its 2026-07-29 amendment.
-#![warn(missing_docs)]
+//! So this test pins the exact, ordered contents of every cohort that
+//! existed before Task 3 of The Confidant (2026-08-24) as a literal
+//! snapshot (`FROZEN_HISTORICAL_COHORTS`, a verbatim copy of
+//! `EPOCH_COHORTS`'s first 12 entries at that commit) and asserts the live
+//! table still starts with exactly that prefix, in order. A campaign that
+//! appends a new cohort at the end never has to touch this file; a
+//! campaign that edits, reorders, or removes anything inside cohorts 0-11
+//! makes it fail.
 
-/// Concepts grouped by accession epoch: cohort `i` is epoch `i`. Cohort 0 is
-/// the registry as it stood when The Accession landed (2026-07-27); every
-/// later campaign appends its own cohort rather than editing an earlier one.
-///
-/// `cli/tests/accession.rs` asserts this table and the concept registry agree
-/// in both directions — a concept registered with no cohort entry would
-/// silently default to epoch 0 and re-open the churn, which is the one
-/// failure mode an authored table has.
-/// type-audit: bare-ok(identifier-text)
-pub const EPOCH_COHORTS: &[&[&str]] = &[
+use hornvale_language::EPOCH_COHORTS;
+
+/// Verbatim copy of `EPOCH_COHORTS[0..=11]` as committed by Task 2 of The
+/// Confidant (the epoch-11 action-suite cohort), before this task appended
+/// epoch 12. Never edit this array — it is the frozen half of the
+/// invariant under test, not a roster to keep in sync with future growth.
+const FROZEN_HISTORICAL_COHORTS: &[&[&str]] = &[
     // Epoch 0 — the baseline roster at The Accession (76 concepts).
     &[
         "abyssal",
@@ -442,99 +391,40 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "chart", "help", "identify", "know", "lens", "look", "provoke", "read", "recount", "sense",
         "soothe", "survey", "wait", "write",
     ],
-    // Epoch 12 — The Confidant (2026-08-24), Task 3: the six felt states of
-    // the vessel window's affect circumplex (`AffectLabel`, spec §7),
-    // registered so a culture can have — or lack — a word for one, the same
-    // shape the spectral classes (epoch 6) and the action suite (epoch 11)
-    // already use. One concept per variant
-    // (`hornvale_language::felt_state_pack`); kept in step with
-    // `AffectLabel` by a test in `windows/vessel`, not by an import, because
-    // a domain cannot depend on a window (`domains/CLAUDE.md`'s one rule).
-    // Appended, never merged into an earlier cohort, per this module's
-    // absolute rule.
-    &[
-        "content",
-        "eager",
-        "frustrated",
-        "helpless",
-        "lost",
-        "searching",
-    ],
 ];
 
-/// The accession epoch of `concept`: the index of the cohort listing it, or
-/// `0` for a name no cohort mentions.
-///
-/// Defaulting to `0` is deliberate and fail-*safe*: an unlisted name keeps
-/// today's ordering rather than jumping the queue, and the synthetic ids the
-/// language unit tests use need no cohort entry. It is emphatically not
-/// fail-*loud* — loudness is the parity test's job, because a panic here
-/// would fire inside the world-generation draw path.
-/// type-audit: bare-ok(identifier-text: concept), bare-ok(count: return)
-pub fn concept_epoch(concept: &str) -> u32 {
-    for (epoch, cohort) in EPOCH_COHORTS.iter().enumerate() {
-        if cohort.contains(&concept) {
-            return epoch as u32;
-        }
-    }
-    0
+/// The live table must still carry every historical cohort, unchanged and
+/// in order, as its own prefix. `EPOCH_COHORTS` is allowed to be LONGER
+/// (a legitimate append), never different in its first 12 entries.
+#[test]
+fn existing_cohorts_are_never_edited() {
+    assert!(
+        EPOCH_COHORTS.len() >= FROZEN_HISTORICAL_COHORTS.len(),
+        "EPOCH_COHORTS shrank below the frozen historical cohort count \
+         ({}); a cohort was removed",
+        FROZEN_HISTORICAL_COHORTS.len()
+    );
+    assert_eq!(
+        &EPOCH_COHORTS[..FROZEN_HISTORICAL_COHORTS.len()],
+        FROZEN_HISTORICAL_COHORTS,
+        "an existing cohort's contents changed -- append a NEW cohort at \
+         the end of EPOCH_COHORTS instead of editing one already there \
+         (see accession.rs's module doc and its withdrawn-exception \
+         section for what this costs)"
+    );
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::collections::BTreeSet;
-
-    /// Cohort 0 is frozen forever: it is the roster whose assignments every
-    /// later cohort is defined not to disturb, so its SIZE is the invariant,
-    /// not the number of cohorts above it. (An earlier version of this test
-    /// also pinned `EPOCH_COHORTS.len() == 1`, which was true the day The
-    /// Accession landed and wrong the moment The Actants appended a cohort —
-    /// the count is expected to grow, the baseline is not.)
-    ///
-    /// This pin was moved to 110 by The Wearing's cohort-0 re-founding and
-    /// moved back here on 2026-07-29 when that re-founding was withdrawn (see
-    /// this module's doc, and ledger #9's amendment). "Forever" in the sentence
-    /// above is meant literally again: there is no bump, no campaign and no
-    /// argument that re-opens this number.
-    #[test]
-    fn cohort_zero_stays_the_frozen_landing_roster() {
-        assert_eq!(
-            EPOCH_COHORTS[0].len(),
-            76,
-            "cohort 0 is the 76-concept roster frozen at The Accession; \
-             growing it would re-sort concepts that already have assignments — \
-             append a NEW cohort instead"
-        );
-    }
-
-    /// Appending is the only legal growth, so later cohorts must be non-empty
-    /// (an empty cohort is a placeholder nobody filled) and the table must
-    /// only ever grow at the end.
-    #[test]
-    fn later_cohorts_are_non_empty() {
-        for (epoch, cohort) in EPOCH_COHORTS.iter().enumerate().skip(1) {
-            assert!(!cohort.is_empty(), "cohort {epoch} is empty");
-        }
-    }
-
-    #[test]
-    fn no_concept_appears_in_two_cohorts() {
-        // A concept that changed epoch would re-sort and reshuffle every
-        // assignment after it -- the churn this module prevents.
-        let mut seen: BTreeSet<&str> = BTreeSet::new();
-        for cohort in EPOCH_COHORTS {
-            for name in *cohort {
-                assert!(seen.insert(name), "{name} is listed in two cohorts");
-            }
-        }
-    }
-
-    #[test]
-    fn a_listed_concept_reports_its_cohort_and_an_unlisted_one_reports_zero() {
-        assert_eq!(concept_epoch("water"), 0);
-        assert_eq!(concept_epoch("goblin-kind"), 0);
-        // Synthetic ids used by the etymology unit tests are unlisted.
-        assert_eq!(concept_epoch("zzz-late"), 0);
-    }
+/// Growth is legal: a new cohort appended after the frozen prefix does not
+/// fail the check above. Anti-vacuity for `existing_cohorts_are_never_edited`
+/// itself -- without this, an implementation that always compared
+/// `EPOCH_COHORTS` to itself (e.g. by mistakenly slicing to its own length)
+/// would pass trivially forever.
+#[test]
+fn the_live_table_has_grown_past_the_frozen_prefix() {
+    assert!(
+        EPOCH_COHORTS.len() > FROZEN_HISTORICAL_COHORTS.len(),
+        "EPOCH_COHORTS has no cohort beyond the frozen historical prefix; \
+         this test needs at least one appended cohort to be a meaningful \
+         check of append-only growth rather than a check of exact equality"
+    );
 }

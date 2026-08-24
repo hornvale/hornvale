@@ -19,6 +19,7 @@ closed-canopy: Noapa /noapa/
 coast: Neoda /neoda/
 cold: Gao /gao/
 cold-upwelling: Goe /goe/
+content: Nooqo /nooqo/
 coral-head: Naono /naono/
 coral-reef: Nae /nae/
 crevasse-field: Teadoe /teadoe/
@@ -32,6 +33,7 @@ die: No /no/
 dire-wolf-kind: Qaa /qaa/
 drink: Qeego /qeego/
 drow-kind: Genoa /genoa/
+eager: Nene /nene/
 earth: Pode /pode/
 east: Paenao /paenao/
 eat: Noanoe /noanoe/
@@ -47,6 +49,7 @@ foot: Ke /ke/
 ford: Naadee /naadee/
 forest-gap: Goa /goa/
 frost-heave: Qeedeo /qeedeo/
+frustrated: Qoneo /qoneo/
 gallery-forest: Takee /takee/
 giant-constrictor-snake-kind: Noko /noko/
 giant-crocodile-kind: Deeneo /deeneo/
@@ -69,6 +72,7 @@ hamada: Neto /neto/
 hand: Goona /goona/
 hearth: Kono /kono/
 heat: Taa /taa/
+helpless: Neda /neda/
 high: Neapoa /neapoa/
 high-elf-kind: Doe /doe/
 hill: Noono /noono/
@@ -92,6 +96,7 @@ light: Noaqaa /noaqaa/
 lightless-water: Pao /pao/
 little: Neodoe /neodoe/
 look: Gogo /gogo/
+lost: Nona /nona/
 low: Keono /keono/
 many: Naona /naona/
 marine-snow: Qeapao /qeapao/
@@ -145,6 +150,7 @@ scoured-ice: Do /do/
 sea: Qae /qae/
 sea-elf-kind: Pe /pe/
 sea-ice: Qoono /qoono/
+searching: Konea /konea/
 sense: Naetoa /naetoa/
 shadow: Nano /nano/
 shrieker-kind: Goo /goo/

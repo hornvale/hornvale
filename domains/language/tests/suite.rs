@@ -9,6 +9,8 @@
 //! `tests/suite/`). This collapses 6 separate integration-test
 //! binaries into 1.
 
+#[path = "suite/accession_append_only.rs"]
+mod accession_append_only;
 #[path = "suite/accession_properties.rs"]
 mod accession_properties;
 #[path = "suite/anthroponym.rs"]
