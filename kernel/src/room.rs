@@ -666,6 +666,26 @@ pub struct RoomMeshMemo {
     /// release builds and fails loudly in tests/debug.
     /// type-audit: bare-ok(count)
     corner_weights_geo_level: Option<u32>,
+    /// How many `corner_weights_memo` calls, ever, found the address already
+    /// cached — the scaling property's own deterministic witness (the-forebay
+    /// Task 1), never a wall-clock proxy. A cached `None` (an above-the-grid
+    /// room) counts as a hit here, matching `corner_weights_lookup`'s
+    /// `Option<Option<_>>`: the outer `Some` is what "cached" means, and the
+    /// inner value is irrelevant to hit/miss accounting.
+    /// type-audit: bare-ok(count)
+    corner_weights_hits: u64,
+    /// How many `corner_weights_memo` calls, ever, filled a fresh entry —
+    /// the complement of `corner_weights_hits`. Never reset.
+    /// type-audit: bare-ok(count)
+    corner_weights_misses: u64,
+    /// How many `neighbors_memo` calls, ever, found the address already
+    /// cached. Same deterministic-witness shape as `corner_weights_hits`.
+    /// type-audit: bare-ok(count)
+    neighbors_hits: u64,
+    /// How many `neighbors_memo` calls, ever, filled a fresh entry — the
+    /// complement of `neighbors_hits`. Never reset.
+    /// type-audit: bare-ok(count)
+    neighbors_misses: u64,
 }
 
 impl RoomMeshMemo {
@@ -703,6 +723,36 @@ impl RoomMeshMemo {
     pub fn corner_weights_geo_level(&self) -> Option<u32> {
         self.corner_weights_geo_level
     }
+
+    /// How many `corner_weights_memo` calls, ever, hit an already-cached
+    /// entry (a cached `None` counts as a hit — see the field doc). Never
+    /// reset; this campaign's instrument for whether the memo's reuse is
+    /// real (the-forebay Task 1).
+    /// type-audit: bare-ok(count: return)
+    pub fn corner_weights_hits(&self) -> u64 {
+        self.corner_weights_hits
+    }
+
+    /// How many `corner_weights_memo` calls, ever, filled a fresh entry.
+    /// Never reset.
+    /// type-audit: bare-ok(count: return)
+    pub fn corner_weights_misses(&self) -> u64 {
+        self.corner_weights_misses
+    }
+
+    /// How many `neighbors_memo` calls, ever, hit an already-cached entry.
+    /// Never reset.
+    /// type-audit: bare-ok(count: return)
+    pub fn neighbors_hits(&self) -> u64 {
+        self.neighbors_hits
+    }
+
+    /// How many `neighbors_memo` calls, ever, filled a fresh entry. Never
+    /// reset.
+    /// type-audit: bare-ok(count: return)
+    pub fn neighbors_misses(&self) -> u64 {
+        self.neighbors_misses
+    }
 }
 
 impl RoomAddr {
@@ -720,8 +770,10 @@ impl RoomAddr {
         memo: &mut RoomMeshMemo,
     ) -> Option<[(CellId, u64); 3]> {
         if let Some(&cached) = memo.corner_weights.get(self) {
+            memo.corner_weights_hits += 1;
             return cached;
         }
+        memo.corner_weights_misses += 1;
         let level = geo.level();
         match memo.corner_weights_geo_level {
             None => memo.corner_weights_geo_level = Some(level),
@@ -745,8 +797,10 @@ impl RoomAddr {
     /// `neighbors_memo_bit_equals_recomputation` below.
     pub fn neighbors_memo(&self, memo: &mut RoomMeshMemo) -> [RoomAddr; 3] {
         if let Some(cached) = memo.neighbors.get(self) {
+            memo.neighbors_hits += 1;
             return cached.clone();
         }
+        memo.neighbors_misses += 1;
         let computed = self.neighbors();
         memo.neighbors.insert(self.clone(), computed.clone());
         computed
@@ -1564,5 +1618,70 @@ mod tests {
             path: vec![1, 0, 3, 1, 2, 3],
         };
         let _ = other.corner_weights_memo(&geo_b, &index_b, &mut memo);
+    }
+
+    #[test]
+    fn memo_counts_hits_and_misses_separately_per_half() {
+        let geo = Geosphere::new(3);
+        let index = NearestCellIndex::new(&geo);
+        let addr = RoomAddr {
+            face: 0,
+            path: vec![0, 0, 0],
+        };
+        let mut memo = RoomMeshMemo::new();
+
+        // Cold: one miss on each half, no hits.
+        let _ = addr.corner_weights_memo(&geo, &index, &mut memo);
+        let _ = addr.neighbors_memo(&mut memo);
+        assert_eq!(memo.corner_weights_misses(), 1);
+        assert_eq!(memo.corner_weights_hits(), 0);
+        assert_eq!(memo.neighbors_misses(), 1);
+        assert_eq!(memo.neighbors_hits(), 0);
+
+        // Warm: the same address hits both halves and adds no miss.
+        let _ = addr.corner_weights_memo(&geo, &index, &mut memo);
+        let _ = addr.neighbors_memo(&mut memo);
+        assert_eq!(memo.corner_weights_hits(), 1);
+        assert_eq!(memo.corner_weights_misses(), 1);
+        assert_eq!(memo.neighbors_hits(), 1);
+        assert_eq!(memo.neighbors_misses(), 1);
+    }
+
+    #[test]
+    fn a_cached_none_counts_as_a_hit_not_a_miss() {
+        // An above-the-grid room caches Some(None) -- a cached ABSENCE. Reading it
+        // again must count a HIT: conflating a cached None with "not looked up
+        // yet" is the exact distinction corner_weights_lookup's Option<Option<_>>
+        // exists to draw, and a counter that got it wrong would report a
+        // permanently cold cache for every above-the-grid room.
+        let geo = Geosphere::new(5);
+        let index = NearestCellIndex::new(&geo);
+        let shallow = RoomAddr {
+            face: 0,
+            path: vec![0],
+        };
+        assert!(
+            shallow.depth() < geo.level(),
+            "this address must be above the grid"
+        );
+
+        let mut memo = RoomMeshMemo::new();
+        assert!(
+            shallow
+                .corner_weights_memo(&geo, &index, &mut memo)
+                .is_none()
+        );
+        assert_eq!(memo.corner_weights_misses(), 1);
+        assert!(
+            shallow
+                .corner_weights_memo(&geo, &index, &mut memo)
+                .is_none()
+        );
+        assert_eq!(
+            memo.corner_weights_hits(),
+            1,
+            "a cached absence must read as a hit"
+        );
+        assert_eq!(memo.corner_weights_misses(), 1, "and must not re-miss");
     }
 }
