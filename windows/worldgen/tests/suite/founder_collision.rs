@@ -119,7 +119,7 @@
 //! is where a liveness guard belongs.
 //!
 use hornvale_astronomy::SkyPins;
-use hornvale_history::record::{Founding, FoundingCoords};
+use hornvale_history::record::{Founding, FoundingCoords, founding_key};
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::person_promote::{MEMORY_DEPTH, select_founders};
@@ -410,4 +410,126 @@ fn a_dropped_founder_is_not_backfilled() {
          remembered ({available} available, cap {MEMORY_DEPTH}), not backfilled \
          to it"
     );
+}
+
+/// **The Granary, Task 6: can the discrimination tail retire?** The shipped
+/// handle is identity (`record::founding_key`: where, when, by whom, out of
+/// which community, plus the one ancestry hop) plus a tail that folds `ended`
+/// (presence-tagged, through `day_key`) then `peak_population`, with
+/// `FOUNDER_ROLE` last. The tail exists because same-year twin foundings — a
+/// raided attempt and the community that took, same people, same site, same
+/// year, same parent — are identical in every *founding-side* field, so only a
+/// post-founding fact separates them.
+///
+/// The Granary hypothesis is that T4's day-grain founding stamps already
+/// separate those twins naturally, making the tail redundant. This sweep
+/// measures the **tail-less** handle — identity key only, `FOUNDER_ROLE`
+/// folded on top (which cannot change collision behaviour: it is one fixed
+/// constant mixed after the identity, so two records tie under
+/// identity+role exactly when they tie under identity) — over the full
+/// 0–2999 range, using the same protocol every prior sweep in this file used:
+/// `BuildDepth::Settlements`, default pins, run OFFLINE with `--ignored`.
+///
+/// For each world the promoted cast is re-derived the way
+/// `select_founders` derives it — per people, `(peak_population DESC, site
+/// ASC, founded ASC)` with the candidate handle as final tiebreak, cut to
+/// `MEMORY_DEPTH` — and duplicates of the tail-less key across the kept set
+/// are counted. Two numbers come out, matching The Ell's three-arm table's
+/// axes: colliding worlds and founders lost.
+///
+/// Results are printed and written to
+/// `CARGO_TARGET_TMPDIR/tail-sweep-results.txt` so the counts survive the
+/// run and can be read back into this file's prose by whoever pays for it.
+///
+/// claim: structural() — a measurement harness, not an assertion battery:
+/// everything it learns lands in prose, never in a pinned value.
+#[test]
+#[ignore = "the full 0-2999 sweep costs ~800 s wall on ten threads (prior sweeps: \
+           692.89/744.21/768.72/798.87 s) -- offline measurement, never in the \
+           normal test run"]
+fn granary_tail_less_sweep_writes_its_counts() {
+    const SEEDS: u64 = 3000;
+    const THREADS: usize = 10;
+
+    // One world's verdict under the tail-less handle: does its PROMOTED cast
+    // carry a duplicate identity key, and how many founders would that cost?
+    fn tail_less(seed: u64) -> (bool, usize) {
+        let w = build(seed, BuildDepth::Settlements);
+        let occs = occupation_records(&w);
+        let coords: BTreeMap<hornvale_kernel::EntityId, FoundingCoords<'static>> = occs
+            .iter()
+            .map(|o| (o.id, hornvale_history::record::founding_coords(&o.core)))
+            .collect();
+        let parent_of = |r: &hornvale_history::record::OccupationRecord| match r.founded_from {
+            Founding::From(e) => coords.get(&e).copied(),
+            Founding::Genesis(_) => None,
+        };
+        // The tail-less candidate handle: identity + role, nothing else.
+        let keys: Vec<u64> = occs
+            .iter()
+            .map(|r| founding_key(&r.core, parent_of(r)))
+            .collect();
+
+        let mut by_people: BTreeMap<&'static str, Vec<usize>> = BTreeMap::new();
+        for (i, r) in occs.iter().enumerate() {
+            by_people.entry(r.core.people.0).or_default().push(i);
+        }
+        let mut kept: Vec<u64> = Vec::new();
+        for idxs in by_people.values_mut() {
+            idxs.sort_by(|&a, &b| {
+                let (x, y) = (&occs[a], &occs[b]);
+                y.core
+                    .peak_population
+                    .cmp(&x.core.peak_population)
+                    .then(x.core.site.0.cmp(&y.core.site.0))
+                    .then(x.core.founded.total_cmp(&y.core.founded))
+                    .then(keys[a].cmp(&keys[b]))
+            });
+            kept.extend(idxs.iter().take(MEMORY_DEPTH).map(|&i| keys[i]));
+        }
+        kept.sort_unstable();
+        let distinct =
+            kept.windows(2).filter(|p| p[0] != p[1]).count() + usize::from(!kept.is_empty());
+        let dropped = kept.len() - distinct;
+        (dropped > 0, dropped)
+    }
+
+    let next = std::sync::atomic::AtomicU64::new(0);
+    let totals: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let lost: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let positives: std::sync::Mutex<Vec<u64>> = std::sync::Mutex::default();
+
+    std::thread::scope(|scope| {
+        for _ in 0..THREADS {
+            scope.spawn(|| {
+                loop {
+                    let seed = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    if seed >= SEEDS {
+                        break;
+                    }
+                    let (collides, drops) = tail_less(seed);
+                    if collides {
+                        totals.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        lost.fetch_add(drops as u64, std::sync::atomic::Ordering::Relaxed);
+                        positives.lock().unwrap().push(seed);
+                    }
+                }
+            });
+        }
+    });
+
+    let mut positives = positives.into_inner().unwrap();
+    positives.sort_unstable();
+    let report = format!(
+        "The Granary T6 tail-less sweep (seeds 0-{}, BuildDepth::Settlements, \
+         default pins): {} colliding worlds, {} founders lost, positive seeds \
+         {positives:?}\n",
+        SEEDS - 1,
+        totals.load(std::sync::atomic::Ordering::Relaxed),
+        lost.load(std::sync::atomic::Ordering::Relaxed),
+    );
+    println!("{report}");
+    let path = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("tail-sweep-results.txt");
+    std::fs::write(&path, &report).expect("write sweep results");
+    println!("written to {}", path.display());
 }
