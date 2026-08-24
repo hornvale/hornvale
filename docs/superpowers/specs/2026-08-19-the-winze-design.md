@@ -410,3 +410,145 @@ This changes **placement**, so every world's history moves — a larger blast
 radius than the reclassification design had, and the reason B.3 keeps genesis
 out of scope. Re-pin in the commit that causes the move; treat an *absence*
 of drift as a stop.
+
+---
+
+# AMENDMENT, 2026-08-24: what came through MAY persist and travel — the campaign permits it and models none of it
+
+§4.4 was read, by the session resuming this campaign, as a guarantee that a
+breach's consequence stays with the finders. **It never said that.** Grepped
+before writing this: the document above contains no occurrence of *spread*,
+*contagion*, *propagate*, or *containment*. §4.4 refuses exactly one thing — a
+**permanent penalty on the ground** — and §7 names the same refusal as
+"avoidance-as-placement-penalty… a cell that is forever unsettleable is a scar
+on the map."
+
+Nathan's clarification, 2026-08-24, in conversation: the ruling was that the
+harm **could** stay with the finders, not that it necessarily does. Evil that
+spreads through several underworld systems is wanted, not refused. This
+amendment records the permission, states what bounds it, and defers all of it.
+
+## C.1 What occasioned it: the premise moved while the campaign was parked
+
+Ledger #21 parked this campaign behind The Stope. The Stope merged; The Drift
+merged 2026-08-24. Re-measured against the substrate that now exists
+(`windows/worldgen/tests/suite/winze_scale_probe.rs`, seeds 42/7/1234,
+pooled, per land cell):
+
+```
+                       pre-Drift            post-Drift
+  chambers        1.648x / 2.361x           3.264x     falsified
+  reachable                 0.172x          3.264x     falsified
+  runs                      0.253x          0.502x     survives
+```
+
+The surface half did not move (11283/19332/11684 land cells, byte-identical),
+so every ratio moved because its numerator did. `chamber_exists`'s existence
+coin (`EXISTENCE_DENSITY = 0.5`) was deleted, which doubled every count; the
+`entrance` axis was deleted, which merged two of the four readings; and
+reachability went **7.28% -> 100%**, which moved the third across the line.
+
+`BIO-underworld-has-no-energy`'s **size** clause is falsified: the sole
+surviving reading is RUNS, and a run is a container of places rather than a
+place. Its **energy** clause is untouched, and C.3 is why that is the half
+that matters. Junctions additionally link systems laterally — 4,165 links,
+largest network 119 systems at one band, on seed 42.
+
+## C.2 The position the spec never enumerated
+
+What comes through a breach can sit in one of three places, and §4 considered
+two of them:
+
+```
+  ABSTRACT     a recorded event with no referent          <- what §4.4/§4.6 ship
+  MECHANICAL   a permanent penalty on the ground          <- what §7 REFUSES
+  ALIVE        a tenant that eats, spreads, and can be
+               killed, fled, or bargained with            <- never considered
+```
+
+A mind flayer colony, an aboleth, a balrog are the third position. They are
+**not** the second: a live tenant is a thing a later people can meet, and a
+placement penalty is a number on a cell that nobody can meet. §7's refusal
+survives this amendment unchanged, and so does §4.4's sentence as written.
+
+**The connectivity is what makes the third position interesting rather than
+decorative.** Pre-Drift, 92.7% of the lattice was unreachable, so a tenant
+would have been sealed in a pocket by the geometry — alive in name and
+abstract in effect. At 100% intra-system reachability plus lateral junctions,
+range is a real quantity for the first time.
+
+## C.3 What bounds it, and why it must be DERIVED
+
+Nathan's constraint, same conversation: not every world may become *DOOM*, the
+same way not every world may become *The Walking Dead*. Carpenter's Apocalypse
+Trilogy is the shape wanted — three world-ending scenarios that differ from
+each other, rather than one that arrives in every world at the same hour.
+
+**A tuned ceiling cannot deliver that and a derived one can.** A constant
+capping how far a horror ranges is a knob whose value is the same in every
+world by construction; varying it per world is authoring, not simulating.
+What varies per world already is the **rock**.
+
+The bounding quantity is therefore the underworld's own productive base —
+`BIO-subterranean-energy-sources`' "an Underworld as lush as the Overworld
+needs its own productive base" — and the campaign that builds it inherits two
+results from this one:
+
+- **How much space it must feed:** 3.264x the surface, all of it reachable.
+- **That its inputs are real:** ledger #22 established the six lithology axes
+  carry genuine independent signal (the earlier "everything correlates"
+  reading was an instrument artifact — the vectors had been sorted
+  independently before correlating, which by the rearrangement inequality
+  computes the maximum correlation over any pairing rather than the
+  correlation of the data). `winze_energy_probe`'s M4 assertions now pin that
+  corrected verdict.
+
+**The bound should be symmetric, and this is the amendment's one design
+claim.** Flip the polarity of "a spreading horror" and the positive analogue
+is a spreading *ecology* — the lush underworld the same row asks for. Both eat
+the same rock. One budget with two kinds of consumer is a mechanism; a
+special-case cap on monsters is a knob wearing a mechanism's clothes. A world
+whose rock feeds a balrog far is the same world whose chemotrophic ecology is
+rich, and that coupling is content rather than a cost.
+
+## C.4 What this amendment changes, and what it does not
+
+**Changes — one sentence of permission, no machinery:**
+
+> A breach's consequence **may** persist beyond the delving that caused it,
+> and may travel the lattice it was released into. This campaign records that
+> a delving ended by breaching and models neither the tenant nor its range.
+> §4.6's "nothing is named" is what defers it: nothing knows what came
+> through, so nothing can yet say how far it went.
+
+**Does not change:**
+
+- §4.1–4.3. The function derivation, the committed depth, and the
+  per-increment hazard are untouched by connectivity — nothing in them
+  selects on depth or on reachability.
+- §4.4's own sentence. It refuses a placement penalty and continues to.
+- §4.5. Knowledge still transmits, decays, and can be wrong. The amendment
+  sharpens one case rather than altering it: 57% of cave systems are
+  multi-entrance (1.87 apertures per system, pooled), so a maintained ward
+  reading safe is now **provably** insufficient rather than merely fallible.
+- §4.6 and §7. Nothing is named; `thaumic` stays 0.0; no metaphysics.
+- §6. **No save-format consequence.** The permission adds no field, no
+  variant, and no draw — recording that a delving ended by breaching is
+  already §6's enumeration. A tenant with a range would add all three, which
+  is a second reason it belongs to its own campaign and its own epoch.
+
+## C.5 Provenance
+
+Two `ideonomy-plain` passes, 2026-08-24. The first
+(dimension-identification + combination over a matrix; cardinality,
+reversibility, materiality) established that the consequential substrate move
+is **connectivity, not scale**, and that the materiality axis — a chamber is a
+place, a run is a coordinate — is what the size clause actually failed on.
+
+The second (substitution + organon-construction over a graph; intentionality,
+polarity, animacy) produced C.2's three-position ladder and C.3's symmetry
+claim, and found the graph's shape: the delving/depth/finders/knowledge
+cluster touches the energy cluster at **exactly one node, the breach**. Two
+ideas under one name, joined at a single point — which is why building this
+campaign without the energy model is the natural cut rather than a
+compromise.
