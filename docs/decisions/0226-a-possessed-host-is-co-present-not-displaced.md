@@ -46,11 +46,20 @@ cheap-looking one was the foreclosing one.
   mode varies with which seed's population the body was drawn from, not merely
   with elapsed time — arbitration observably ran, rather than a constant being
   stored.
-- **The gap between what the host wanted and what the body did is derivable
-  from this moment on, with no new machinery.** Every tick now computes both.
-  That gap is the substrate under `PLAY-host-may-refuse`, `PLAY-soul-autonomy`
-  and `PLAY-motive-drift`; none of them needs a mechanism this arc did not
-  ship.
+- **The host's own commitment mode is computed and retained every tick — the
+  substrate the gap needs — but the gap itself is not yet readable.**
+  `Session::driven_mode` holds the `Mode` the driven body's own arbitration
+  reached (`Pursuing(Fatigue)`, `Idle`, and the rest): **drive** granularity,
+  not the action. The `Intent` arbitration chose never leaves `advance_one`,
+  which returns `bool`; `Intent` does not appear in `session.rs` at all. So
+  reading "it wanted to run and you made it stay" additionally needs the intent
+  surfaced out of `advance_one` — a signature change, and therefore a small
+  piece of new machinery this arc did not ship. An earlier draft of this bullet
+  claimed the gap was derivable "with no new machinery" and that every tick
+  computes both halves; the retained half is the mode, and that claim is
+  withdrawn. What is true is the load-bearing part: `PLAY-host-may-refuse`,
+  `PLAY-soul-autonomy` and `PLAY-motive-drift` all rest on a possessed body
+  having a computed inner state at all, and it now does.
 - **The driven walk's facts are discarded, and that is not displacement.**
   What the player types is what the body *does* and it commits through the
   ordinary verb path (decision 0168); the walk supplies only what the host

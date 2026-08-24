@@ -305,7 +305,7 @@ fn needs_reports_a_colocated_npcs_felt_state_and_it_differs_across_the_drive_cyc
     // 0, rising at SUSTENANCE's 0.15/day (act 0.85, sated 0.15).
     //
     // The Hand, Task 3: the possessed body's own settlement no longer
-    // guarantees a co-located NPC (see task-3-report.md) -- `bodies()[1]`
+    // guarantees a co-located NPC (see docs/retrospectives/the-hand.md) -- `bodies()[1]`
     // is placed explicitly through the test seam, `place_creature_at_me`.
     let w = world();
     let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
@@ -393,7 +393,7 @@ fn provoke_commits_one_player_authored_disposition_fact() {
     // provenance is what tells the two apart).
     //
     // The Hand, Task 3: the possessed body's own settlement no longer
-    // guarantees a co-located NPC (see task-3-report.md); `bodies()[1]` is
+    // guarantees a co-located NPC (see docs/retrospectives/the-hand.md); `bodies()[1]` is
     // placed explicitly through the test seam.
     let w = world();
     let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
@@ -422,7 +422,7 @@ fn a_repeat_same_day_provoke_is_a_ledger_no_op_and_the_narration_says_so() {
     // narration must be honest that nothing further landed.
     //
     // The Hand, Task 3: `bodies()[1]` is placed explicitly through the test
-    // seam (see task-3-report.md) since the settlement no longer guarantees
+    // seam (see docs/retrospectives/the-hand.md) since the settlement no longer guarantees
     // co-location on its own.
     let w = world();
     let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
@@ -595,7 +595,7 @@ fn a_wild_beast_walks_away_from_water_and_is_observed() {
 /// `GRIEVANCE_NPC` (`bugbear of Doaba`) WAS the possessed-body duplicate this
 /// task deletes, co-located by construction. `bodies()[1]` (`hobgoblin of
 /// Noaba` at seed 42) is placed explicitly through the test seam
-/// (`Session::place_creature_at_me`, see task-3-report.md) instead, and is
+/// (`Session::place_creature_at_me`, see docs/retrospectives/the-hand.md) instead, and is
 /// RE-placed before every `!provoke`/`!soothe` below rather than trusted to
 /// stay put across a `wait` — its own drive-seeking is free to walk it away
 /// from the flagship the moment a tick runs, unlike the twin, whose home

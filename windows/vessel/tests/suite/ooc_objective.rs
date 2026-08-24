@@ -390,7 +390,7 @@ fn a_bare_plan_drawn_with_the_eyes_off_is_not_captioned_either() {
 #[test]
 fn the_objective_needs_reads_a_creature_the_body_cannot_sense() {
     // The Hand, Task 3: constructed directly through the test seam rather
-    // than searched for (see task-3-report.md) — `bodies()[1]` is placed
+    // than searched for (see docs/retrospectives/the-hand.md) — `bodies()[1]` is placed
     // co-located but specifically out of the chamber's own shadowcast.
     let w = world();
     let (mut s, _) = Session::start(&w, &PossessOpts::default()).unwrap();
@@ -430,7 +430,7 @@ fn the_objective_needs_reads_a_creature_the_body_cannot_sense() {
 #[test]
 fn the_objective_examine_answers_for_a_creature_the_body_cannot_sense() {
     // The Hand, Task 3: constructed directly through the test seam rather
-    // than searched for (see task-3-report.md).
+    // than searched for (see docs/retrospectives/the-hand.md).
     let w = world();
     let (mut s, _) = Session::start(&w, &PossessOpts::default()).unwrap();
     s.handle("wait");
@@ -471,7 +471,7 @@ fn the_objective_examine_answers_for_a_creature_the_body_cannot_sense() {
 #[test]
 fn the_objective_wait_narrates_a_departure_the_body_could_not_see() {
     // The Hand, Task 3: constructed directly through the test seam rather
-    // than searched for (see task-3-report.md). A SETTLED companion
+    // than searched for (see docs/retrospectives/the-hand.md). A SETTLED companion
     // (`bodies()[1]`/`[2]`) placed at the flagship simply stays there —
     // measured: ten waits, never departs, because the flagship itself
     // satisfies its needs. A WILD one (`bodies()[3]`, "a wild rust-monster"
@@ -522,7 +522,7 @@ fn the_objective_wait_narrates_a_departure_the_body_could_not_see() {
 /// 1 proved the gap rather than reasoning about it — rewiring the `sensed_now`
 /// computation to `Perceiving::Body` left all 579 vessel tests green.
 #[test]
-#[ignore = "The Hand Task 3: the seam does not serve this one (task-3-report.md). place_creature_at_me/place_creature_out_of_my_sight only place a body at the possessions OWN room, so they can manufacture co-location but not an ARRIVAL, which needs before=false at the wait's own start and after=true from the TICK's own commit -- something only the drive simulation can produce mid-call. Measured: placed at the flagship then relocated by its own drive-seeking, a wild creature departs reliably (see the departure test above) but never returns in 8 subsequent waits; six placed or unplaced companions (2 settled, 4 wild) produce zero arrivals across 40 unmodified waits. Fixing this needs either a day-parameterised placement seam able to pre-stage a same-tick position change, or accepting the null -- a design decision beyond a co-location fixture."]
+#[ignore = "The Hand Task 3: NEITHER route to this test works, and the second one is a finding about the sim (docs/retrospectives/the-hand.md). (1) THE SEAM DOES NOT SERVE IT: place_creature_at_me/place_creature_out_of_my_sight only place a body at the possessions OWN room, so they can manufacture co-location but not an ARRIVAL, which needs before=false at the wait's own start and after=true from the TICK's own commit -- something only the drive simulation can produce mid-call. Measured: placed at the flagship then relocated by its own drive-seeking, a wild creature departs reliably (see the departure test above) but never returns in 8 subsequent waits; six placed or unplaced companions (2 settled, 4 wild) produce zero arrivals across 40 unmodified waits. (2) THE SEED SEARCH STILL IN THIS FILE PASSED ON MAIN AND NOW FAILS ON EVERY SEED: world_where_an_unsensed_creature_arrives exhausts 0..64 and panics with its own message, re-measured 2026-08-24 at 233.72 s -- so, in that panics own words, either the arrival narration or the sight narrowing regressed, or no world in the range exercises the pair any more. That is a finding about the sim, not a flaky fixture. CONSEQUENCE, RECORDED DELIBERATELY: !wait's ARRIVAL narration has NO witness of any kind right now -- the departure half is covered, the arrival half is not. Closing this needs either a day-parameterised placement seam able to pre-stage a same-tick position change, or a measurement of why the search went empty, or accepting the null -- a design decision beyond a co-location fixture."]
 fn the_objective_wait_narrates_an_arrival_the_body_could_not_see() {
     let (seed, w, hidden) = world_where_an_unsensed_creature_arrives();
 

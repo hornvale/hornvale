@@ -57,10 +57,13 @@ world does.
 That is a fidelity question wearing a refactor's clothes, and it was answered
 as one: a settlement of eighty people that contains exactly one simulated
 creature is a design decision, not a bug to be patched inside a type merge —
-particularly since tick cost was measured superlinear in agent count. The
-twenty-one tests now state their co-location through a documented seam instead
-of inheriting it from a duplicate that no longer exists, and the population
-question is left standing, visible, for a campaign that will measure it.
+particularly since tick cost was measured superlinear in agent count. Twenty of
+the twenty-one now state their co-location through a documented seam instead of
+inheriting it from a duplicate that no longer exists. The twenty-first is
+silenced, because the seam cannot serve it — it needs a position change
+occurring *inside* a tick, which only the drive simulation itself produces — and
+the population question is left standing, visible, for a campaign that will
+measure it.
 
 ## Widening the trait until it could carry a decision
 
@@ -122,10 +125,17 @@ the cheap-looking option was the one that quietly foreclosed a published
 branch of the design, and this arc chose co-presence on purpose and recorded
 it as a decision rather than letting it happen (decision 0226).
 
-The payoff is available from the moment this lands and by no other route.
-Every tick now computes both what the host *wanted*, from its own drives, and
-what the body *did*, from you. The gap between them needs no new machinery to
-read: *you made it stay when it wanted to run.*
+What arrives with this is the substrate for the payoff, and it is worth being
+exact about how much of the payoff that is. Every tick computes what the host
+*wanted*, from its own drives, alongside what the body *did*, from you, and the
+session keeps the host's commitment *mode* — the drive it was pursuing, or its
+idleness. What it does not keep is the *action* arbitration chose: the intent
+never leaves the decision function, which returns a bare boolean. So the
+sentence one wants to be able to write — *you made it stay when it wanted to
+run* — is one signature change away rather than already in hand. The inner life
+is being computed and recorded, at the granularity of the drive; reading it back
+as a refusal is the next arc's work, and it is small work, which is a different
+claim from no work.
 
 ## A measurement that could not measure what it claimed
 

@@ -703,9 +703,14 @@ walls — held across 1505 settlements over eight seeds, at a median of 41 `u8`
 steps out of 255. The tenth percentile is 1, and every sampled flagship
 settlement stands on the same rock class, plausibly because the biggest
 settlements go where the rivers are ([The Confluence](./chronicle/the-confluence.md)).
-So the population varies and the head of it does not, and a possession always
-starts at the head. A divergence claim measured over a population is not
-automatically a claim about what anyone will see.
+So the population varies and the head of it does not, and a possession starts
+at the head *by default*. That default has been a parameter since decision
+0116 — `--target most-populous-settlement` picks a different settlement's
+head — and The Hand widened it again: `--creature <ID>` names any already-
+derived roster member, so a possession need not start at a head at all. The
+caution therefore narrows rather than dissolving: a divergence claim measured
+over a population is not automatically a claim about what anyone will see, and
+what anyone sees now depends on which body they asked for.
 
 **Population has a physically-grounded, self-checking prior.** Every
 settlement used to carry a population number a formula handed it, with no

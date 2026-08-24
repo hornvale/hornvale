@@ -95,7 +95,7 @@ const GRIEVANCE_NPC: &str = "hobgoblin of Noaba";
 
 /// Places `bodies()[1]` (The Hand, Task 3's manufactured companion) at the
 /// possessed body's own room, through the test seam
-/// (`Session::place_creature_at_me`, see task-3-report.md) — nothing is
+/// (`Session::place_creature_at_me`, see docs/retrospectives/the-hand.md) — nothing is
 /// co-located with a fresh flagship possession by default any more. Called
 /// before every `!provoke`/`!soothe` below that follows a `wait`, because
 /// the companion's own drive-seeking runs on every tick and is free to walk

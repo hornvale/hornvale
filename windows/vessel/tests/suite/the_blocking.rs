@@ -229,7 +229,7 @@ fn a_creatures_noun_answers_the_same_line_on_both_sides_of_a_doorway() {
     // now across a band as well as across two grains.
     //
     // The Hand, Task 3: constructed directly through the test seam rather than
-    // searched for (see task-3-report.md) — `bodies()[1]` is placed at the
+    // searched for (see docs/retrospectives/the-hand.md) — `bodies()[1]` is placed at the
     // possession's own room outdoors, then re-placed once indoors so it picks
     // up a fine-layer anchor the walk-band placement alone does not need.
     let w = world();
@@ -285,7 +285,7 @@ fn every_noun_the_plan_depicts_is_examinable() {
     // reading as coverage.
     //
     // The Hand, Task 3: constructed directly through the test seam rather
-    // than searched for (see task-3-report.md) — `bodies()[1]` is placed
+    // than searched for (see docs/retrospectives/the-hand.md) — `bodies()[1]` is placed
     // once indoors, so it picks up a fine-layer anchor and is drawn.
     let w = world();
     let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();

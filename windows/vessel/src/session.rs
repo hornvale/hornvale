@@ -6630,7 +6630,7 @@ mod tests {
         // refused and must not be drawn.
         //
         // The Hand, Task 3: constructed directly through the test seam
-        // (`place_creature_at_me`, see task-3-report.md) rather than searched
+        // (`place_creature_at_me`, see docs/retrospectives/the-hand.md) rather than searched
         // for. Both `bodies()[1]` and `bodies()[2]` are placed through it in
         // turn: the seam's own anchor choice is deterministic (the first LIT
         // chamber anchor), so both land at the SAME room-interior anchor —
@@ -6733,7 +6733,7 @@ mod tests {
         //
         // The Hand, Task 3: `seam_world()` (a plain seed-42 build) rather than
         // a search, since nothing here needs a naturally co-located creature
-        // any more (see task-3-report.md) — `who` is placed explicitly, and
+        // any more (see docs/retrospectives/the-hand.md) — `who` is placed explicitly, and
         // the near/far anchor derivation below is a pure read of the entered
         // chamber's own geometry, unrelated to who (if anyone) stands there.
         // seed 42's chamber is confirmed (empirically, `place_creature_out_of_
@@ -6980,7 +6980,7 @@ mod tests {
         // `known` must be byte-identical.
         //
         // The Hand, Task 3: constructed directly through the test seam
-        // (`place_creature_at_me`, see task-3-report.md) rather than searched
+        // (`place_creature_at_me`, see docs/retrospectives/the-hand.md) rather than searched
         // for. `bodies()[1]` is placed once at a LIT cell (the seam's own
         // choice), and stays in sight under the perturbed placement too —
         // confirmed by the assertion below, which is this test's OWN positive

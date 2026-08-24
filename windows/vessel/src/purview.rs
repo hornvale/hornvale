@@ -485,7 +485,7 @@ mod tests {
         );
     }
 
-    /// **The Hand, Task 3 finding (task-3-report.md).** Before this task,
+    /// **The Hand, Task 3 finding (docs/retrospectives/the-hand.md).** Before this task,
     /// `derive_npcs`'s home-settlement body was a SEPARATE `Agent` twin that
     /// always started in the possessed body's own room — the duplicate Task
     /// 2 proved and this task deletes. With it gone, nothing derived starts

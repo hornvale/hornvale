@@ -44,9 +44,21 @@ consulted.
 - **`PlayerController::intend` is `self.pending.take()`**, and nothing pending
   is `Intent::Hold`, never a GOAP fallback. A driven body with nothing queued
   waits on the player; it does not quietly act for itself.
-- **A controller is consulted exactly once per decision point, for every body
-  alike.** The driven body enters the same per-body loop as any other. The
-  loop is therefore not "creatures, plus a special case".
+- **A controller is consulted exactly once per decision point, and the shared
+  object is the decision function, not the loop.** Every body — driven or
+  not — reaches `advance_one`, and `advance_one` arbitrates first and asks the
+  controller second, so no body is decided by a different rule. The *loop* is
+  two calls: `Session::wait` runs `step_with_occupancy` over the other bodies
+  and then `step_one_with_controller` over the driven one, in a solo
+  band-of-one walk. That separation is deliberate and `step_one_with_controller`
+  says so in its own doc — folding the driven body into the shared population
+  would let its history reach `alarm_field_memo` and `WalkState::begin`'s band,
+  changing another creature's committed trail depending on who is being
+  ridden. An earlier draft of this bullet claimed the driven body "enters the
+  same per-body loop as any other" and that the loop is therefore "not
+  creatures, plus a special case". The code is two calls and labels the second
+  one an exception, so that claim is withdrawn; 0226 already states the
+  defensible version — the same `advance_one`, reached by a solo walk.
 - **The controller answers only *what happens*, never *what the body feels*.**
   `resolution.mode` and `resolution.affect` are settled before `intend` is
   called and are not the controller's to change. That split is what lets 0226's
@@ -56,9 +68,18 @@ consulted.
   handed to a pre-pass: routing the catch-up walk through the live controller
   would let it take a queued action, break out of its own loop, discard it, and
   leave the real tick with nothing — the player's action silently vanishing.
-  The catch-up walk gets a fresh controller for exactly this reason. The hazard
-  is dormant today only because `queue()` has no callers yet, and it is
-  recorded here because the next caller is what wakes it.
+  The catch-up walk gets a fresh controller for exactly this reason, which
+  closes the hazard **by construction** rather than by the absence of a
+  caller — a fresh controller has nothing to consume, whatever the live one is
+  holding. `catch_up_does_not_consume_the_controllers_pending_action`
+  (`liveness.rs`) exercises exactly the hazard: it queues a real `Drink` before
+  the call and stages a three-day gap so catch-up's loop actually runs, and it
+  asserts the action survives to be committed. What remains dormant is
+  `queue()`'s use *in production* — the verb loop does not queue yet — so the
+  hazard is recorded here for the shape of it, not because the fix is
+  outstanding. An earlier draft of this bullet said the hazard was "dormant
+  today only because `queue()` has no callers yet", which reads as though
+  nothing had been done about it.
 - **The mind-flayer shape falls out of this and must not be foreclosed.** If
   the intent source is a property of the *relationship* rather than of the
   body, "body A is driven by mind B" has the same structure as "body A is

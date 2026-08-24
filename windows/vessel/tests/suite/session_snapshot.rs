@@ -469,7 +469,7 @@ fn a_creature_standing_in_the_chamber_reaches_the_plan() {
     // fine-layer position and the embedding has nothing to place.
     //
     // The Hand, Task 3: constructed directly through the test seam rather
-    // than searched for (see task-3-report.md) — `bodies()[1]` is placed once
+    // than searched for (see docs/retrospectives/the-hand.md) — `bodies()[1]` is placed once
     // indoors, so it picks up a fine-layer anchor and is drawn.
     let world = world();
     let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
@@ -567,7 +567,7 @@ fn the_client_fixtures_are_current() {
 
     // The Hand, Task 3: the occupied fixture's mark is placed directly
     // through the test seam rather than relied on as a natural property of
-    // OCCUPIED_SEED (see task-3-report.md) — the possessed-body duplicate
+    // OCCUPIED_SEED (see docs/retrospectives/the-hand.md) — the possessed-body duplicate
     // this task deletes was the only thing that ever reliably drew one.
     // `clients/vessel/src/pane_plan_marks_test.ts` reads this fixture's mark
     // coordinate FROM the fixture, never pinned, precisely so a regenerated

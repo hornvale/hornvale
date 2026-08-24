@@ -61,11 +61,36 @@ asserted equal field by field, which is what licensed removing one of them.
   The type is what had to be one; the local vocabulary for "the ones you are
   not driving" is still accurate, because `other_bodies` excludes the driven
   body by construction.
-- **What 0167 listed as missing is now present.** A possessed body has drives,
-  has affect, appears in occupancy, and is a legal argument to every function
-  that takes a body. The one thing that deliberately did *not* change is
-  "who else is here": `colocated_npcs`/`sensed_npcs` exclude `driven` so the
-  player's own felt state is not reported among the others'. That exclusion is
-  a placeholder that says so in a comment naming its successor — a
-  component-shaped exclusion served by an indexed query — and it is Penstock-
-  lineage work, not this arc's.
+- **What 0167 listed as missing is closed in part, and the record has to say
+  which part.** Closed outright: 0167's **type-level** complaint — 23 functions
+  took `&Npc`/`&[Npc]` and a possessed body could be passed to none of them,
+  where now it is a legal argument to every one — and the **first** of its four
+  measured consequences, since a possessed body's own arbitration runs over the
+  same drive stack every creature's does. Its second and third are **not**
+  closed, and an earlier draft of this bullet claimed they were:
+  - **Affect is computed and then dropped.** The `Resolution` the driven
+    body's walk reaches carries an `affect`, but only its `mode` is retained
+    (`Session::driven_mode`); nothing stores the affect and `Session` exposes
+    no accessor for it. `needs` still maps over `sensed_npcs`, which excludes
+    `driven`, so it reads other creatures' feelings and never its own body's —
+    exactly as 0167 described. What this arc changed is that the affect now
+    *exists* to be surfaced; surfacing it is `PLAY-host-is-a-narrator`'s work.
+  - **It still does not appear in occupancy.** `other_bodies` filters the
+    driven index out of the population `step_with_occupancy` walks, and the
+    solo band-of-one walk builds a throwaway `Occupancy` it never returns
+    (`step_one_with_controller` returns `(Vec<Fact>, Mode)`). Creatures
+    therefore still do not see a possessed body as an occupant, and 0167's
+    third bullet stands unamended.
+
+  0167's fourth consequence — *which predicates* a possessed body commits — is
+  **not adjudicated here**, because this arc did not measure it, and the two
+  mechanisms it depends on point opposite ways: a possessed body is now a
+  `Body` that the drive layer could commit for, and its own walk's facts are
+  discarded unconditionally (decision 0226). A claim either way would be
+  unchecked, so this record makes none.
+- **"Who else is here" also did not change, and that one is deliberate.**
+  `colocated_npcs`/`sensed_npcs` exclude `driven` so the player's own felt
+  state is not reported among the others'. That exclusion is a placeholder
+  that says so in a comment naming its successor — a component-shaped
+  exclusion served by an indexed query — and it is Penstock-lineage work, not
+  this arc's.

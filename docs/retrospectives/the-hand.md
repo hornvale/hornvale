@@ -258,6 +258,57 @@ only when someone tried to implement it.
 - **F-H7 · `plan.rs:821` carries an eaten backslash continuation from
   `72784fea1`, which is on `origin/main`.** Genuinely pre-existing and out of
   this campaign's scope. A candidate for the board lane.
+- **F-H8 · co-presence is pinned by tests and invisible to a player.**
+  `Session::driven_mode()`'s only caller anywhere is
+  `windows/vessel/tests/suite/controller_swap.rs`. The retained mode is real
+  and asserted — that is what makes 0226 a shipped claim rather than an
+  intention — but no CLI verb, no client, and no prose reads it, so nothing a
+  player can do surfaces the host's inner state. *Observation only; the remedy
+  is `PLAY-host-is-a-narrator`'s and is deliberately not proposed here.*
+- **F-H9 · `Body` carries the same datum by two routes, and nothing asserts
+  the round trip.** `Body.activity` comes from `species_activity`, a read of
+  the committed `species-activity-cycle` fact; `Body.perception.activity` comes
+  straight from `perception_registry()`. They lived on *different types* before
+  0229 put them on one struct, so nobody had ever had to look at them side by
+  side.
+  **The review that raised this called them "two independent sources", and
+  they are not** — worth recording, because the wrong version is the alarming
+  one. `windows/worldgen` commits that fact *from* `perception.activity` at
+  genesis, so the registry is the single upstream author and the ledger read is
+  a round trip through it. They therefore agree by construction today, and the
+  two fallbacks coincide as well: a missing fact yields `Diurnal` and an
+  unresolved species yields `PerceptionVector::MANIKIN`, whose `activity` is
+  also `Diurnal`.
+  What survives as a real observation is narrower and still worth a followup:
+  nothing asserts the round trip, so a future writer of either path can
+  diverge silently. And that coincidence is not hypothetical — Task 3's fix
+  round 1 *deleted* an assertion comparing the two fields precisely because it
+  was mutation-vacuous (`windows/vessel/tests/suite/body_fields.rs` says so:
+  replacing the whole perception resolution with `MANIKIN` still passed,
+  because seed 42's hobgoblins are `Diurnal` too). The replacement asserts
+  against the authored registry directly, which is the right assertion for
+  *perception* and is not a round-trip check. *No remedy proposed: a cheap one
+  would compare the two fields and be vacuous for the reason just given, so
+  the honest version asserts the committed fact against the registry vector
+  the genesis path wrote it from.*
+- **F-H10 · `windows/lab/src/synthetic.rs` hardcodes an inline copy of
+  `PerceptionVector::MANIKIN`** — `{ Diurnal, 0.5, 0.5 }` written out rather
+  than the named constant, so a change to the constant silently stops being
+  reflected in synthetic scenarios. Measured, trivial, and left alone because
+  this wave changed no behaviour.
+- **F-H11 · a test name that says `mints` after 0227 says selection.**
+  `the_most_populous_target_mints_at_a_different_settlement_than_flagship`
+  (`clients/game/bin/tests/driver.rs`) survives the rename to selection.
+  Its doc comment is corrected; the *name* is not, because a rename is a code
+  change and this wave was prose. **The first draft of this followup gave the
+  wrong reason for that** — it cited the commit-gate hazard, that
+  `docs/timings/subfloor-roster.tsv` selects by exact name and a stale id
+  drops tests silently. That hazard does not apply here: `clients/game/bin` is
+  in root `Cargo.toml`'s `exclude` list, so the roster contains no `game`
+  entry at all and only `make game-check` ever runs this test. Worth recording
+  because the wrong reason was the *more* cautious one and would have made the
+  rename look expensive. *Remedy (reasoned, not run): rename it, and run
+  `make game-check`, which is the only thing that names it.*
 
 **Deferred minors, each with a home rather than a memory:**
 

@@ -204,3 +204,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0227](0227-possession-selects-a-body-it-does-not-mint-one.md) | Possession selects a body; it does not mint one | Accepted |
 | [0228](0228-a-controller-is-a-parameter-of-the-tick.md) | A controller is a parameter of the tick, not a property of the body | Accepted |
 | [0229](0229-one-body-type.md) | One body type | Accepted |
+| [0230](0230-a-query-bound-is-quantized-to-read-a-quantized-store.md) | A query bound is quantized to read a quantized store | Accepted |
