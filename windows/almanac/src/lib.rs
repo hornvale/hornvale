@@ -289,7 +289,7 @@ pub struct AlmanacContext {
 /// Render one species' life-history line for the almanac (BIO-2, spec §5/§6):
 /// its basal metabolism, plus a pace-of-life headline and lifespan/maturity
 /// figures when the species has biological traits at all. Suppressed for
-/// `Ametabolic` species (constructs, undead), which carry no mass-derived
+/// ametabolic species (constructs, undead), which carry no mass-derived
 /// life-history to report — only the metabolic clause renders for those.
 /// type-audit: bare-ok(identifier-text: name), bare-ok(prose: return)
 pub fn render_life_history_line(

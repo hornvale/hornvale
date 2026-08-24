@@ -242,7 +242,7 @@ pub fn select_founders(records: &[OccupationRecord]) -> FounderCast {
 /// years once, at the top of the loop below. The
 /// `person-died` fact is committed only once that day has passed at `now`; a
 /// living person is the absence of one. A species with no lifespan
-/// (`Ametabolic`) yields no death fact either, which reads as "not known to have
+/// (ametabolic) yields no death fact either, which reads as "not known to have
 /// died", and one with no maturity falls back to founding day as birth.
 pub fn promote(
     world: &mut hornvale_kernel::World,

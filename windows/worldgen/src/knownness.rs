@@ -165,9 +165,9 @@ const MEMORY_HORIZON_HALF_LIVES: f64 = 10.0;
 /// same statement the rest of the roster is measured against instead of a
 /// second, unrelated opinion about how long a generation is.
 ///
-/// **It is reached only by an `Ametabolic` holder** — a construct, which has
-/// no mass-derived life history at all (`life_history` nulls every biological
-/// field for that class). No such kind founds a settlement on today's roster,
+/// **It is reached only by an AMETABOLIC holder** (`ThermalStrategy::Absent`)
+/// — a construct, which has no mass-derived life history at all
+/// (`life_history` nulls every biological field for that value). No such kind founds a settlement on today's roster,
 /// so this constant is exercised by
 /// `a_holder_with_no_generation_length_falls_back_on_the_allometry_anchor`
 /// and by nothing else; that test also fails the moment the anchor moves, so

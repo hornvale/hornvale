@@ -80,7 +80,7 @@ fn the_life_history_table_is_not_vacuous() {
     );
     assert!(
         rows.iter().any(|r| r.contains("\t-\t")),
-        "no row has an absent life-history column — the Ametabolic branch of \
+        "no row has an absent life-history column — the ametabolic branch of \
          `life_history` is not represented, so this fixture cannot witness it"
     );
     assert!(
