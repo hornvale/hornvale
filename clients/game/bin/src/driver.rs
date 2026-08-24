@@ -330,6 +330,13 @@ pub struct Driver {
     /// stands, ground truth, always known to the client that draws the
     /// map), gated by [`Self::discovered`] at draw time, never here.
     settlements: BTreeSet<CellId>,
+    /// Every cell carrying a cave mouth, scanned once here at `start` for
+    /// the same reason `settlements` is: `plate::draw_point_sites`
+    /// PROJECTS each site rather than asking every screen cell whether its
+    /// sample happens to be one, so it needs the roster up front. A
+    /// per-render scan of all 40,962 cells would be the cost the projection
+    /// exists to avoid.
+    caves: BTreeSet<CellId>,
     /// Every walk-band room the possession has stood in this session
     /// (spec Amendment 1 §A4a: "where have I been"). Never consulted by
     /// [`Self::discovered`] and never consults it — see `discovery`'s
@@ -497,6 +504,16 @@ impl Driver {
             })
             .collect();
 
+        // The cave roster, scanned once. `cave_at` is a pure read of the
+        // cell's own stratigraphic column, so this is a scan of the mesh
+        // rather than a derivation — and doing it here rather than per
+        // render is the whole point of projecting sites instead of
+        // sampling for them.
+        let caves: BTreeSet<CellId> = (0..geo.cell_count())
+            .map(|i| CellId(i as u32))
+            .filter(|&c| terrain.cave_at(c).is_some())
+            .collect();
+
         // The Portolan part II: the projection's central line is derived
         // from the world's own physics (spec §3.1), not assumed —
         // `TIDALLY_LOCKED` is committed only when the world's rotation
@@ -555,6 +572,7 @@ impl Driver {
             plate_cache: None,
             seed: world_ref.seed,
             settlements,
+            caves,
             visited: Visited::default(),
             discovered: Discovered::default(),
             plate_height: FLOOR_PLATE_CONTENT_HEIGHT,
@@ -684,6 +702,7 @@ impl Driver {
             plate_width,
             plate_height,
             &self.settlements,
+            &self.caves,
             &self.discovered,
         )
     }
