@@ -287,7 +287,7 @@ pub fn promote(
             // matures later at unchanged mass, so passing the kind's own
             // schedule (rather than ALLOMETRIC) is what keeps a founder's birth
             // day consistent with the species it belongs to.
-            .map(|b| hornvale_species::life_history(b.mass, b.metabolic_class, b.schedule));
+            .map(|b| hornvale_species::life_history(b.mass, b.thermal_strategy, b.schedule));
         // A founder was already grown when they founded, so birth precedes the
         // founding by a maturity. This goes NEGATIVE for day-0 settlements —
         // the history record begins at day 0 and the founder did not. Honest,

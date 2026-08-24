@@ -160,7 +160,7 @@ use hornvale_kernel::{
 };
 use hornvale_lab::health::{AffectTrace, health_report, run_simulation};
 use hornvale_locale::LocaleContext;
-use hornvale_species::{ActivityCycle, MetabolicClass};
+use hornvale_species::{ActivityCycle, ThermalStrategy};
 use hornvale_vessel::body::Body;
 use hornvale_vessel::liveness::{
     AGENT_AT, DRANK, EATEN, LocaleTerrain, RESTED, Terrain, ThreatNiche, built_rooms, derive_npcs,
@@ -385,7 +385,7 @@ fn creature(entity: EntityId, home: RoomAddr, species: &str, niche: ConditionRes
         temperature_niche: niche,
         deliberation_latency: 0.5,
         time_horizon: 0.0,
-        metabolic_class: MetabolicClass::Endotherm,
+        thermal_strategy: ThermalStrategy::Endothermic,
         // A balanced omnivore fed by the terrain's default productivity (The
         // Provender), so hunger stays quiet — these scenarios probe thermal
         // distress only.

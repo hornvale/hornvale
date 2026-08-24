@@ -4346,7 +4346,7 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Full(|v: &FullView| distinguishable_capacity_metric(v, "kobold")),
         },
         // --- BIO-2 (Task 6): the six life-history traits (spec §4/§5), a
-        // pure f(Mass, MetabolicClass) with zero draws — every row of a
+        // pure f(Mass, ThermalStrategy) with zero draws — every row of a
         // study reads the same value for a given roster. Registered per
         // species (goblin, kobold), matching the `tone-count-{species}`
         // family's convention (see above) — the campaign's headline
@@ -8749,8 +8749,8 @@ fn confusable_homophony(v: &FullView, species: &str) -> MetricValue {
 }
 
 /// `species`' derived life-history profile (BIO-2 spec §5), read from the
-/// biosphere component's `mass`/`metabolic_class` — a pure `f(Mass,
-/// MetabolicClass)`, no draws. `None` if `species` is off-roster.
+/// biosphere component's `mass`/`thermal_strategy` — a pure `f(Mass,
+/// ThermalStrategy)`, no draws. `None` if `species` is off-roster.
 fn species_life_history(v: &FullView, species: &str) -> Option<hornvale_species::LifeHistory> {
     let bio = v
         .components()
@@ -8760,7 +8760,7 @@ fn species_life_history(v: &FullView, species: &str) -> Option<hornvale_species:
         .map(|(_, b)| b)?;
     Some(hornvale_species::life_history(
         bio.mass,
-        bio.metabolic_class,
+        bio.thermal_strategy,
         bio.schedule,
     ))
 }

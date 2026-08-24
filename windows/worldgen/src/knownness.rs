@@ -711,7 +711,7 @@ mod tests {
         );
         let anchor = hornvale_species::life_history(
             hornvale_kernel::Mass::new(40.0).expect("a positive mass"),
-            hornvale_species::MetabolicClass::Endotherm,
+            hornvale_species::ThermalStrategy::Endothermic,
             hornvale_species::LifeSchedule::Allometric,
         )
         .generation_length

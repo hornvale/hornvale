@@ -30,7 +30,7 @@ use hornvale_species::{biosphere_registry, life_history};
 fn render() -> String {
     let mut out = String::from("kind\tbmr_w\tlifespan_y\tmaturity_y\ttempo\tgeneration_y\tpace\n");
     for (kind, bio) in biosphere_registry().iter() {
-        let lh = life_history(bio.mass, bio.metabolic_class, bio.schedule);
+        let lh = life_history(bio.mass, bio.thermal_strategy, bio.schedule);
         let opt = |v: Option<f64>| match v {
             Some(x) => format!("{}", quantize(x)),
             None => "-".to_string(),

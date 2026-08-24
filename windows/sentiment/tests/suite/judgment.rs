@@ -12,8 +12,8 @@ use hornvale_kernel::{ConditionResponse, Mass, PLANT_FORAGE, ResourceVector};
 use hornvale_language::speech::{ArticulationVector, ExoticManner};
 use hornvale_sentiment::{Axis, Emotion, PeopleTraits, snap_judgment, weight_vector};
 use hornvale_species::{
-    ActivityCycle, ConditionNiche, HabitatRealm, LifeSchedule, MetabolicClass, MindVector,
-    PerceptionVector, Sociality, SocietyVector, StatusBasis,
+    ActivityCycle, ConditionNiche, HabitatRealm, LifeSchedule, MindVector, PerceptionVector,
+    Sociality, SocietyVector, StatusBasis, ThermalStrategy, TrophicMode,
 };
 
 /// A synthetic, self-consistent `PeopleTraits` for probing weight-vector and
@@ -48,7 +48,8 @@ fn synthetic(id: &'static str) -> PeopleTraits {
             },
         },
         mass: Mass::new(70.0).expect("valid mass"),
-        metabolic_class: MetabolicClass::Endotherm,
+        thermal_strategy: ThermalStrategy::Endothermic,
+        trophic_mode: TrophicMode::Heterotrophic,
         schedule: LifeSchedule::Allometric,
         society: SocietyVector {
             sociality: Sociality::Communal,

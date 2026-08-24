@@ -366,7 +366,7 @@ fn a_long_lived_people_founds_by_siblings_where_a_short_lived_one_founds_by_desc
         .expect("goblin has a biosphere row");
     let mut slow = goblin.clone();
     slow.schedule = hornvale_species::LifeSchedule::paced(11.0).expect("11.0 is a valid factor");
-    let long = hornvale_species::life_history(slow.mass, slow.metabolic_class, slow.schedule)
+    let long = hornvale_species::life_history(slow.mass, slow.thermal_strategy, slow.schedule)
         .generation_length
         .expect("still not Ametabolic")
         .get();

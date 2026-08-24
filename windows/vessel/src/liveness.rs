@@ -20,7 +20,7 @@ use hornvale_kernel::{
     ResourceVector, RoomAddr, RoomId, RoomMeshMemo, TickSystem, Value, World, WorldTime,
 };
 use hornvale_locale::LocaleContext;
-use hornvale_species::{ActivityCycle, MetabolicClass};
+use hornvale_species::{ActivityCycle, ThermalStrategy};
 
 /// A game-layer predicate: an agent's room position on a day. Non-functional
 /// (position changes over sim time — c5's kind-change shape); the current
@@ -318,12 +318,12 @@ const PREDATOR_LATENT_SCALE: f64 = 0.5;
 /// all (`0` — it IS one). The defendedness (mass/potency) refinement is reserved.
 fn derive_threat_niche(
     temperature_niche: &ConditionResponse,
-    class: MetabolicClass,
+    class: ThermalStrategy,
     diet_niche: &ResourceVector,
 ) -> ThreatNiche {
     let optimum = temperature_niche.optimum;
     ThreatNiche {
-        uncanny: if matches!(class, MetabolicClass::Ametabolic) {
+        uncanny: if matches!(class, ThermalStrategy::Absent) {
             0.0
         } else {
             1.0
@@ -780,23 +780,23 @@ const ECTOTHERM_FLOOR: f64 = 0.2;
 /// principle: symmetric, floored); autotrophs are flat (a deferred seam). An
 /// unreadable cell (non-finite temperature — undescribable/unplanted) couples
 /// as neutral (base rate), mirroring the thermal drive's `is_finite` guard.
-fn rise_at(temp: f64, class: MetabolicClass, p: &DriveParams) -> f64 {
+fn rise_at(temp: f64, class: ThermalStrategy, p: &DriveParams) -> f64 {
     let base = p.rise;
     if !temp.is_finite() {
         return base;
     }
     match class {
-        MetabolicClass::Endotherm => {
+        ThermalStrategy::Endothermic => {
             let excess = (temp - THERMONEUTRAL_C).max(0.0);
             base * (1.0 + ENDOTHERM_HEAT_K * excess / HEAT_SCALE_C)
         }
-        MetabolicClass::Ectotherm => {
+        ThermalStrategy::Ectothermic => {
             let factor = 1.0 + ECTOTHERM_K * (temp - THERMONEUTRAL_C) / HEAT_SCALE_C;
             base * factor.max(ECTOTHERM_FLOOR)
         }
-        // Autotroph: a deferred seam (transpiration is its own later work).
-        // Ametabolic: never reaches here (no thirst drive); arm kept total.
-        MetabolicClass::Autotroph | MetabolicClass::Ametabolic => base,
+        // Unmodelled: a deferred seam (transpiration is its own later work).
+        // Absent: never reaches here (no thirst drive); arm kept total.
+        ThermalStrategy::Unmodelled | ThermalStrategy::Absent => base,
     }
 }
 
@@ -838,7 +838,7 @@ fn integrate_thirst(
     last_drank: f64,
     t: f64,
     terrain: &dyn Terrain,
-    class: MetabolicClass,
+    class: ThermalStrategy,
     p: &DriveParams,
 ) -> f64 {
     if t <= last_drank {
@@ -888,7 +888,7 @@ pub fn drive_at(
     t: WorldTime,
     p: &DriveParams,
     terrain: &dyn Terrain,
-    class: MetabolicClass,
+    class: ThermalStrategy,
 ) -> f64 {
     let last_drank = ledger
         .facts_of(entity, DRANK)
@@ -2412,7 +2412,7 @@ pub fn hunger_at(
     home: &RoomAddr,
     t: WorldTime,
     terrain: &dyn Terrain,
-    class: MetabolicClass,
+    class: ThermalStrategy,
 ) -> f64 {
     let last_ate = ledger
         .facts_of(entity, EATEN)
@@ -3738,7 +3738,7 @@ pub fn affect_of_memo_occupied(
         day,
         &SUSTENANCE,
         terrain,
-        npc.metabolic_class,
+        npc.thermal_strategy,
     );
     let visited = std::collections::BTreeSet::new();
     let explore_step = lowest_unvisited_neighbor_memo(&pos, &visited, terrain, mesh_memo);
@@ -3791,7 +3791,7 @@ pub fn affect_of_memo_occupied(
             &npc.home,
             day,
             terrain,
-            npc.metabolic_class,
+            npc.thermal_strategy,
         ),
         niche: npc.niche.clone(),
         terrain,
@@ -3826,7 +3826,7 @@ pub fn affect_of_memo_occupied(
     // ONLY consumer of a home plan, and it is never pushed onto `drives` for
     // an ametabolic creature — see `decide_step`'s identical gate for the
     // full rationale.
-    let ametabolic = matches!(npc.metabolic_class, MetabolicClass::Ametabolic);
+    let ametabolic = matches!(npc.thermal_strategy, ThermalStrategy::Absent);
     // Affiliation (The Belonging): loneliness + the home-step, read from the
     // cross-tick cache instead of an unconditional `plan_to_room` (the-waymark,
     // Task 4) — precomputed once so the drive's urgency stays O(1) either way.
@@ -4220,7 +4220,7 @@ fn hold_step(
 ) -> HoldStep {
     let rate_here = rise_at(
         terrain.temperature(pos, WorldTime::new(day).expect("a day value is finite")),
-        npc.metabolic_class,
+        npc.thermal_strategy,
         params,
     );
     let next_act = day + (params.act - drive) / rate_here;
@@ -4329,7 +4329,7 @@ fn decide_step(
         last_drank,
         day,
         terrain,
-        npc.metabolic_class,
+        npc.thermal_strategy,
         params,
     );
     let hunger_urgency = integrate_thirst(
@@ -4338,7 +4338,7 @@ fn decide_step(
         last_ate,
         day,
         terrain,
-        npc.metabolic_class,
+        npc.thermal_strategy,
         &HUNGER,
     );
     let explore_step = lowest_unvisited_neighbor_memo(pos, visited, terrain, mesh_memo);
@@ -4381,7 +4381,7 @@ fn decide_step(
     // call itself (not merely caching its result) is the "lazy AND cached"
     // half of the campaign spec's Stage 3 clause — an ametabolic creature now
     // never even touches the cache, let alone runs a search.
-    let ametabolic = matches!(npc.metabolic_class, MetabolicClass::Ametabolic);
+    let ametabolic = matches!(npc.thermal_strategy, ThermalStrategy::Absent);
     let social = if ametabolic {
         Social {
             loneliness: 0.0,
@@ -5523,10 +5523,10 @@ pub fn body_at(
         .get_by_label(&species)
         .map(|t| t.condition_niche.temperature)
         .unwrap_or(DEFAULT_TEMPERATURE_NICHE);
-    let metabolic_class = biosphere
+    let thermal_strategy = biosphere
         .get_by_label(&species)
-        .map(|t| t.metabolic_class)
-        .unwrap_or(MetabolicClass::Endotherm);
+        .map(|t| t.thermal_strategy)
+        .unwrap_or(ThermalStrategy::Endothermic);
     let niche = biosphere
         .get_by_label(&species)
         .map(|t| t.niche.clone())
@@ -5556,7 +5556,7 @@ pub fn body_at(
         .unwrap_or(BOLDNESS_STEADY);
     // The threat niche (The Bane): derived from the temperature niche +
     // metabolic class already on hand — no fresh authoring.
-    let threat_niche = derive_threat_niche(&temperature_niche, metabolic_class, &niche);
+    let threat_niche = derive_threat_niche(&temperature_niche, thermal_strategy, &niche);
     // The same perception vector a possessed body resolves — an unresolved
     // species falls back to the manikin's neutral perception, the same way
     // every other per-species trait above falls back rather than
@@ -5576,7 +5576,7 @@ pub fn body_at(
         temperature_niche,
         deliberation_latency,
         time_horizon,
-        metabolic_class,
+        thermal_strategy,
         niche,
         boldness,
         threat_niche,
@@ -5692,10 +5692,10 @@ pub fn derive_wild_npcs(
                 .get_by_label(&species)
                 .map(|t| t.condition_niche.temperature)
                 .unwrap_or(DEFAULT_TEMPERATURE_NICHE);
-            let metabolic_class = biosphere
+            let thermal_strategy = biosphere
                 .get_by_label(&species)
-                .map(|t| t.metabolic_class)
-                .unwrap_or(MetabolicClass::Endotherm);
+                .map(|t| t.thermal_strategy)
+                .unwrap_or(ThermalStrategy::Endothermic);
             let niche = biosphere
                 .get_by_label(&species)
                 .map(|t| t.niche.clone())
@@ -5718,7 +5718,7 @@ pub fn derive_wild_npcs(
                 .get_by_label(&species)
                 .map(|p| p.threat_response)
                 .unwrap_or(BOLDNESS_STEADY);
-            let threat_niche = derive_threat_niche(&temperature_niche, metabolic_class, &niche);
+            let threat_niche = derive_threat_niche(&temperature_niche, thermal_strategy, &niche);
             // A wild species is plain fauna, not one of the six settling
             // peoples or the three dragons `perception_registry` actually
             // rosters (see `agent::mint_at`'s comment on that roster), so this
@@ -5761,7 +5761,7 @@ pub fn derive_wild_npcs(
                 temperature_niche,
                 deliberation_latency,
                 time_horizon,
-                metabolic_class,
+                thermal_strategy,
                 niche,
                 boldness,
                 threat_niche,
@@ -6122,7 +6122,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -6175,7 +6175,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -6224,7 +6224,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -6277,7 +6277,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -6321,7 +6321,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -6393,7 +6393,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -6448,7 +6448,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -6481,7 +6481,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -7996,7 +7996,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -8184,7 +8184,7 @@ mod tests {
                 WorldTime::new(2.0).expect("a day value is finite"),
                 &p,
                 &terrain,
-                MetabolicClass::Endotherm
+                ThermalStrategy::Endothermic
             ) - (p.rise * 2.0))
                 .abs()
                 < 1e-9
@@ -8211,7 +8211,7 @@ mod tests {
                 WorldTime::new(6.0).expect("a day value is finite"),
                 &p,
                 &terrain,
-                MetabolicClass::Endotherm
+                ThermalStrategy::Endothermic
             ) - (p.rise * 1.0))
                 .abs()
                 < 1e-9
@@ -8252,7 +8252,7 @@ mod tests {
                 WorldTime::new(1_000.0).expect("a day value is finite"),
                 &p,
                 &terrain,
-                MetabolicClass::Endotherm
+                ThermalStrategy::Endothermic
             ),
             1.0
         );
@@ -8260,49 +8260,49 @@ mod tests {
 
     #[test]
     fn rise_at_couples_heat_to_thirst_per_metabolic_class() {
-        use MetabolicClass::*;
+        use ThermalStrategy::*;
         let p = SUSTENANCE;
         let base = p.rise;
-        // Endotherm — heat-only (sweating): base at/below thermoneutral,
+        // Endothermic — heat-only (sweating): base at/below thermoneutral,
         // accelerating above.
-        assert!((rise_at(THERMONEUTRAL_C, Endotherm, &p) - base).abs() < 1e-12);
+        assert!((rise_at(THERMONEUTRAL_C, Endothermic, &p) - base).abs() < 1e-12);
         assert!(
-            (rise_at(0.0, Endotherm, &p) - base).abs() < 1e-12,
+            (rise_at(0.0, Endothermic, &p) - base).abs() < 1e-12,
             "cold does not slow an endotherm"
         );
         assert!(
-            (rise_at(THERMONEUTRAL_C + HEAT_SCALE_C, Endotherm, &p)
+            (rise_at(THERMONEUTRAL_C + HEAT_SCALE_C, Endothermic, &p)
                 - base * (1.0 + ENDOTHERM_HEAT_K))
                 .abs()
                 < 1e-12,
             "one scale above thermoneutral applies the full multiplier"
         );
-        // Ectotherm — symmetric (rate tracks ambient, CAP-1), floored.
+        // Ectothermic — symmetric (rate tracks ambient, CAP-1), floored.
         assert!(
-            rise_at(THERMONEUTRAL_C + HEAT_SCALE_C, Ectotherm, &p)
-                > rise_at(THERMONEUTRAL_C, Ectotherm, &p),
+            rise_at(THERMONEUTRAL_C + HEAT_SCALE_C, Ectothermic, &p)
+                > rise_at(THERMONEUTRAL_C, Ectothermic, &p),
             "heat speeds an ectotherm"
         );
         assert!(
-            rise_at(-100.0, Ectotherm, &p) < base,
+            rise_at(-100.0, Ectothermic, &p) < base,
             "deep cold slows an ectotherm below base (torpor)"
         );
         assert!(
-            (rise_at(-100.0, Ectotherm, &p) - base * ECTOTHERM_FLOOR).abs() < 1e-12,
+            (rise_at(-100.0, Ectothermic, &p) - base * ECTOTHERM_FLOOR).abs() < 1e-12,
             "but never below the floor"
         );
-        // Autotroph flat; an unreadable cell couples as neutral.
-        assert!((rise_at(80.0, Autotroph, &p) - base).abs() < 1e-12);
-        assert!((rise_at(f64::INFINITY, Endotherm, &p) - base).abs() < 1e-12);
-        // Ametabolic flat, in BOTH directions. `rise_at` never reaches here in
+        // Unmodelled flat; an unreadable cell couples as neutral.
+        assert!((rise_at(80.0, Unmodelled, &p) - base).abs() < 1e-12);
+        assert!((rise_at(f64::INFINITY, Endothermic, &p) - base).abs() < 1e-12);
+        // Absent flat, in BOTH directions. `rise_at` never reaches here in
         // production (a construct has no thirst drive) and the arm is kept
         // total; asserting it anyway is what makes this test an instrument for
         // THE GOSSAN, which needs every thermal branch pinned before the type
-        // splits. Autotroph and Ametabolic share this arm today, and that is
+        // splits. Unmodelled and Absent share this arm today, and that is
         // exactly the grouping `basal_metabolic_rate_w` does NOT use — the
         // disagreement `ThermalStrategy::Unmodelled` exists to express.
-        assert!((rise_at(80.0, Ametabolic, &p) - base).abs() < 1e-12);
-        assert!((rise_at(-100.0, Ametabolic, &p) - base).abs() < 1e-12);
+        assert!((rise_at(80.0, Absent, &p) - base).abs() < 1e-12);
+        assert!((rise_at(-100.0, Absent, &p) - base).abs() < 1e-12);
     }
 
     #[test]
@@ -8313,14 +8313,14 @@ mod tests {
         let home = raddr(1.0);
         let hot = PlantedTerrain::thermal([(home.clone(), 45.0)]); // 2× rate (endotherm)
         let temperate = PlantedTerrain::thermal([(home.clone(), 20.0)]); // < thermoneutral → base
-        let d_hot = integrate_thirst(&[], &home, 0.0, 3.0, &hot, MetabolicClass::Endotherm, &p);
+        let d_hot = integrate_thirst(&[], &home, 0.0, 3.0, &hot, ThermalStrategy::Endothermic, &p);
         let d_temp = integrate_thirst(
             &[],
             &home,
             0.0,
             3.0,
             &temperate,
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
             &p,
         );
         assert!(
@@ -8369,7 +8369,7 @@ mod tests {
             t,
             &p,
             &terrain,
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
         );
         let b = drive_at(
             &ledger,
@@ -8378,7 +8378,7 @@ mod tests {
             t,
             &p,
             &terrain,
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
         );
         assert_eq!(a, b);
         let json = serde_json::to_string(&ledger).unwrap();
@@ -8391,7 +8391,7 @@ mod tests {
                 t,
                 &p,
                 &terrain,
-                MetabolicClass::Endotherm
+                ThermalStrategy::Endothermic
             ),
             a,
             "drive re-derives identically after reload"
@@ -8582,7 +8582,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -8672,7 +8672,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -8761,7 +8761,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -8864,7 +8864,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -8946,7 +8946,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -9037,7 +9037,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -9113,7 +9113,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -9384,7 +9384,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -9573,7 +9573,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: BOLDNESS_STEADY,
             threat_niche: mortal_threat_niche(),
@@ -9595,7 +9595,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: BOLDNESS_STEADY,
             threat_niche: mortal_threat_niche(),
@@ -9845,7 +9845,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: BOLDNESS_STEADY,
             threat_niche: mortal_threat_niche(),
@@ -10118,7 +10118,7 @@ mod tests {
     fn mortal_threat_niche() -> ThreatNiche {
         derive_threat_niche(
             &DEFAULT_TEMPERATURE_NICHE,
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
             &default_diet_niche(),
         )
     }
@@ -10249,7 +10249,7 @@ mod tests {
             &home,
             WorldTime::new(5.0).expect("a day value is finite"),
             &t,
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
         );
         assert!(before > 0.0, "hunger accrues without a meal");
         // Eat on day 5 → hunger is 0 right after.
@@ -10260,7 +10260,7 @@ mod tests {
             &home,
             WorldTime::new(5.0).expect("a day value is finite"),
             &t,
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
         );
         assert_eq!(after, 0.0, "a meal resets hunger");
     }
@@ -10326,8 +10326,8 @@ mod tests {
         let mut ledger = Ledger::default(); // no eaten, no sightings → held at home
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let day = WorldTime::new(3.0).expect("a day value is finite");
-        let hot_h = hunger_at(&ledger, e, &home, day, &hot, MetabolicClass::Endotherm);
-        let mild_h = hunger_at(&ledger, e, &home, day, &mild, MetabolicClass::Endotherm);
+        let hot_h = hunger_at(&ledger, e, &home, day, &hot, ThermalStrategy::Endothermic);
+        let mild_h = hunger_at(&ledger, e, &home, day, &mild, ThermalStrategy::Endothermic);
         assert!(
             hot_h.total_cmp(&mild_h).is_gt(),
             "heat hastens hunger for an endotherm"
@@ -10764,7 +10764,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness,
             threat_niche: mortal_threat_niche(),
@@ -10941,7 +10941,7 @@ mod tests {
                 temperature_niche: test_niche(),
                 deliberation_latency: 0.5,
                 time_horizon: 0.0,
-                metabolic_class: MetabolicClass::Endotherm,
+                thermal_strategy: ThermalStrategy::Endothermic,
                 niche: default_diet_niche(),
                 boldness: BOLDNESS_STEADY,
                 threat_niche: mortal_threat_niche(),
@@ -10968,7 +10968,7 @@ mod tests {
                 temperature_niche: test_niche(),
                 deliberation_latency: 0.5,
                 time_horizon: 0.0,
-                metabolic_class: MetabolicClass::Endotherm,
+                thermal_strategy: ThermalStrategy::Endothermic,
                 niche: default_diet_niche(),
                 boldness: BOLDNESS_STEADY,
                 threat_niche: ThreatNiche {
@@ -11107,12 +11107,12 @@ mod tests {
         };
         let cold = derive_threat_niche(
             &cold_adapted,
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
             &default_diet_niche(),
         );
         let warm = derive_threat_niche(
             &warm_adapted,
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
             &default_diet_niche(),
         );
         // A cold-adapted creature dreads HEAT more than a warm one; the reverse
@@ -11123,7 +11123,7 @@ mod tests {
         assert_eq!(cold.uncanny, 1.0, "a mortal fears the eldritch");
         let elemental = derive_threat_niche(
             &cold_adapted,
-            MetabolicClass::Ametabolic,
+            ThermalStrategy::Absent,
             &default_diet_niche(),
         );
         assert_eq!(elemental.uncanny, 0.0, "an elemental IS the eldritch");
@@ -11150,7 +11150,7 @@ mod tests {
                 width: 20.0,
                 devotion: 0.5,
             },
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
             &default_diet_niche(),
         );
         let warm_adapted = derive_threat_niche(
@@ -11159,7 +11159,7 @@ mod tests {
                 width: 20.0,
                 devotion: 0.5,
             },
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
             &default_diet_niche(),
         );
         let fears = Danger {
@@ -11200,7 +11200,7 @@ mod tests {
         let omnivore = ResourceVector::new(&[(PLANT_FORAGE, 0.5), (ANIMAL_PREY, 0.5)]).unwrap();
         let apex = ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap();
         let w = |diet: &ResourceVector| {
-            derive_threat_niche(&temp, MetabolicClass::Endotherm, diet).predator
+            derive_threat_niche(&temp, ThermalStrategy::Endothermic, diet).predator
         };
         assert!(
             (w(&herbivore) - PREDATOR_LATENT_SCALE).abs() < 1e-9,
@@ -11232,12 +11232,12 @@ mod tests {
         let temp = DEFAULT_TEMPERATURE_NICHE;
         let herbivore = derive_threat_niche(
             &temp,
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
             &ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap(),
         );
         let apex = derive_threat_niche(
             &temp,
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
             &ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
         );
         // A coward (boldness 0 → ×2) to lift the latent-scaled dread above act.
@@ -11416,7 +11416,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Ametabolic,
+            thermal_strategy: ThermalStrategy::Absent,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -11535,7 +11535,7 @@ mod tests {
                 temperature_niche: test_niche(),
                 deliberation_latency: 0.5,
                 time_horizon: 0.0,
-                metabolic_class: MetabolicClass::Endotherm,
+                thermal_strategy: ThermalStrategy::Endothermic,
                 niche: default_diet_niche(),
                 boldness: 0.5,
                 threat_niche: mortal_threat_niche(),
@@ -11627,7 +11627,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -12592,7 +12592,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Ametabolic,
+            thermal_strategy: ThermalStrategy::Absent,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -12612,7 +12612,7 @@ mod tests {
         assert_eq!(a.label, AffectLabel::Content, "the deathless are still");
         assert_eq!(a.object, None, "no drive is engaged");
         let meta = Body {
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -12659,7 +12659,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Ametabolic,
+            thermal_strategy: ThermalStrategy::Absent,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -12677,7 +12677,7 @@ mod tests {
         );
         assert_eq!(a.label, AffectLabel::Content, "a construct does not flinch");
         let meta = Body {
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             ..base.clone()
         };
         let b = affect_of(
@@ -13268,7 +13268,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             // An EMPTY diet niche: the hunger drive's niche-gate
             // (`!npc.niche.is_zero()`) never engages it, one fewer drive to
             // rule out.
@@ -13652,7 +13652,7 @@ mod tests {
             temperature_niche: niche,
             deliberation_latency: 0.0,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             // An EMPTY diet niche: no hunger drive to rule out.
             niche: ResourceVector::new(&[]).unwrap(),
             boldness: 0.5,
@@ -14055,7 +14055,7 @@ mod tests {
             temperature_niche: niche,
             deliberation_latency: 0.0,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             // An EMPTY diet: no hunger drive to rule out.
             niche: ResourceVector::new(&[]).unwrap(),
             boldness: 0.5,

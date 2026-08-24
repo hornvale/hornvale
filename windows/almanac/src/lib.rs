@@ -298,7 +298,7 @@ pub fn render_life_history_line(
 ) -> String {
     let history = hornvale_species::life_history(
         biosphere.mass,
-        biosphere.metabolic_class,
+        biosphere.thermal_strategy,
         biosphere.schedule,
     );
     let mut line = format!(
@@ -1482,13 +1482,13 @@ mod tests {
     #[test]
     fn render_life_history_line_suppresses_the_clause_for_ametabolic_species() {
         use hornvale_kernel::Mass;
-        use hornvale_species::MetabolicClass;
+        use hornvale_species::ThermalStrategy;
 
         let mut construct = hornvale_species::biosphere_registry()
             .get(&hornvale_kernel::KindId("goblin"))
             .expect("goblin is in the registry")
             .clone();
-        construct.metabolic_class = MetabolicClass::Ametabolic;
+        construct.thermal_strategy = ThermalStrategy::Absent;
         construct.mass = Mass::new(500.0).unwrap();
         let line = render_life_history_line("goblin", &construct);
         assert!(

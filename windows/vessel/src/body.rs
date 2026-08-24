@@ -5,7 +5,7 @@
 
 use crate::liveness::ThreatNiche;
 use hornvale_kernel::{ConditionResponse, EntityId, ResourceVector, RoomAddr};
-use hornvale_species::{ActivityCycle, MetabolicClass};
+use hornvale_species::{ActivityCycle, ThermalStrategy};
 
 /// A derived non-player agent: a minted entity, a home and a resource room,
 /// its species, and that species' activity-cycle. Derived from the genesis
@@ -46,13 +46,15 @@ pub struct Body {
     /// `0` is myopic (acts only once the need bites). Threaded from
     /// `psyche_registry` at derivation, beside `deliberation_latency`.
     pub time_horizon: f64,
-    /// The species' `MetabolicClass` (The Kindling): gates which homeostatic
-    /// drives the creature has and how its thirst couples to temperature. An
-    /// `Ametabolic` creature (construct/undead/elemental) has no homeostatic
-    /// drives at all; a metabolizing one's thirst rate couples to ambient heat
-    /// per class (`rise_at`). Threaded from `biosphere_registry` at derivation,
-    /// beside the niche.
-    pub metabolic_class: MetabolicClass,
+    /// The species' [`ThermalStrategy`] (The Kindling; split off
+    /// `MetabolicClass` by THE GOSSAN): gates which homeostatic drives the
+    /// creature has and how its thirst couples to temperature. A
+    /// [`ThermalStrategy::Absent`] creature (construct/undead/elemental) has
+    /// no homeostatic drives at all; a metabolizing one's thirst rate couples
+    /// to ambient heat per strategy (`rise_at`). Threaded from
+    /// `biosphere_registry` at derivation, beside the niche. The trophic axis
+    /// is deliberately NOT carried here: nothing at this layer reads it.
+    pub thermal_strategy: ThermalStrategy,
     /// The species' diet niche (`Taxon.niche`, a `ResourceVector` over the
     /// resource axes): the dial the hunger drive reads to decide WHAT is food
     /// (The Provender). An omnivore weights forage+prey, an autotroph

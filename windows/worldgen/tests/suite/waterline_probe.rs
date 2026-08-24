@@ -198,7 +198,7 @@ fn waterline_probe() {
     let mut prod_vec: Vec<f64> = vec![0.0; cells.len()];
     for &prey_tag in &dragon_prey {
         let b = bio[prey_tag as usize];
-        let lh = hornvale_species::life_history(b.mass, b.metabolic_class, b.schedule);
+        let lh = hornvale_species::life_history(b.mass, b.thermal_strategy, b.schedule);
         let Some(r) = lh.reproductive_tempo else {
             continue;
         };

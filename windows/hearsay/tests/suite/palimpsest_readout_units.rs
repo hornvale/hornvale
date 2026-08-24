@@ -408,7 +408,7 @@ fn read_world(
         let Some(bio) = components.biosphere.get_by_label(people) else {
             continue;
         };
-        let life = hornvale_species::life_history(bio.mass, bio.metabolic_class, bio.schedule);
+        let life = hornvale_species::life_history(bio.mass, bio.thermal_strategy, bio.schedule);
         let to_days = |years: hornvale_kernel::Years| StdDays::new(years.get() * year_days).ok();
         let generation = life.generation_length.and_then(to_days);
         let lifespan = life.lifespan.and_then(to_days);

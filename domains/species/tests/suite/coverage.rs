@@ -24,7 +24,7 @@
 //! letting one rot, forces a deliberate edit here.
 
 use hornvale_species::{
-    ActivityCycle, HabitatRealm, LifeSchedule, MetabolicClass, SocialForm, StatusBasis,
+    ActivityCycle, HabitatRealm, LifeSchedule, SocialForm, StatusBasis, ThermalStrategy,
     biosphere_registry, habitat_realm_registry, perception_registry, psyche_registry,
     society_registry,
 };
@@ -38,11 +38,11 @@ enum Rung {
     Witnessed,
 }
 
-/// The witnesses of each `MetabolicClass`, ascending by `KindId`.
-fn metabolic_witnesses(class: MetabolicClass) -> Vec<&'static str> {
+/// The witnesses of each `ThermalStrategy`, ascending by `KindId`.
+fn thermal_witnesses(strategy: ThermalStrategy) -> Vec<&'static str> {
     biosphere_registry()
         .iter()
-        .filter(|(_, b)| b.metabolic_class == class)
+        .filter(|(_, b)| b.thermal_strategy == strategy)
         .map(|(k, _)| k.0)
         .collect()
 }
@@ -76,9 +76,9 @@ fn status_basis_witnesses(basis: StatusBasis) -> Vec<&'static str> {
 
 #[test]
 fn metabolic_class_coverage_matches_the_table() {
-    let expected: &[(MetabolicClass, Rung, &[&str])] = &[
+    let expected: &[(ThermalStrategy, Rung, &[&str])] = &[
         (
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
             Rung::Witnessed,
             &[
                 "black-dragon",
@@ -117,7 +117,7 @@ fn metabolic_class_coverage_matches_the_table() {
             ],
         ),
         (
-            MetabolicClass::Ectotherm,
+            ThermalStrategy::Ectothermic,
             Rung::Witnessed,
             &[
                 "giant-constrictor-snake",
@@ -130,19 +130,20 @@ fn metabolic_class_coverage_matches_the_table() {
                 "rust-monster",
             ],
         ),
-        // WITNESSED but NOT exercised: allometry computes Autotroph exactly as
-        // Endotherm despite the class doc's surface-limited claim. See BIO-autotroph-physics
-        // and `autotroph_is_computed_as_an_endotherm_today` in this file.
+        // WITNESSED but NOT exercised: allometry computes the old `Autotroph`
+        // exactly as an endotherm despite the class doc's surface-limited
+        // claim. See BIO-autotroph-physics and
+        // `autotroph_is_computed_as_an_endotherm_today` in this file.
         (
-            MetabolicClass::Autotroph,
+            ThermalStrategy::Unmodelled,
             Rung::Witnessed,
             &["shrieker", "treant", "twig-blight"],
         ),
         // The sole carrier of the `None` life-history branch.
-        (MetabolicClass::Ametabolic, Rung::Witnessed, &["xorn"]),
+        (ThermalStrategy::Absent, Rung::Witnessed, &["xorn"]),
     ];
     for (class, rung, witnesses) in expected {
-        let actual = metabolic_witnesses(*class);
+        let actual = thermal_witnesses(*class);
         assert_eq!(&actual, witnesses, "{class:?} witnesses");
         let actual_rung = if actual.is_empty() {
             Rung::Declared
@@ -538,7 +539,8 @@ fn the_dark_trait_combinations_are_named() {
 #[test]
 fn autotroph_is_computed_as_an_endotherm_today() {
     // A KNOWN DIVERGENCE, pinned deliberately so BIO-autotroph-physics's fix is a visible
-    // diff rather than a silent change. `MetabolicClass::Autotroph`'s doc says
+    // diff rather than a silent change. THE GOSSAN renamed the value; the
+    // divergence it pins is unchanged. `ThermalStrategy::Unmodelled`'s doc says
     // a phototroph's basal rate is surface/area-limited so Kleiber's 3/4 mass
     // exponent does not apply; `allometry.rs` nonetheless gives it
     // `B0_ENDOTHERM` and a pace multiplier of 1.0. This test asserts the
@@ -549,13 +551,13 @@ fn autotroph_is_computed_as_an_endotherm_today() {
 
     let mass = Mass::new(1800.0).expect("positive mass");
     assert_eq!(
-        basal_metabolic_rate_w(mass, MetabolicClass::Autotroph),
-        basal_metabolic_rate_w(mass, MetabolicClass::Endotherm),
+        basal_metabolic_rate_w(mass, ThermalStrategy::Unmodelled),
+        basal_metabolic_rate_w(mass, ThermalStrategy::Endothermic),
         "Autotroph BMR is identical to Endotherm today (BIO-autotroph-physics)"
     );
     assert_eq!(
-        lifespan(mass, MetabolicClass::Autotroph, LifeSchedule::ALLOMETRIC),
-        lifespan(mass, MetabolicClass::Endotherm, LifeSchedule::ALLOMETRIC),
+        lifespan(mass, ThermalStrategy::Unmodelled, LifeSchedule::ALLOMETRIC),
+        lifespan(mass, ThermalStrategy::Endothermic, LifeSchedule::ALLOMETRIC),
         "Autotroph lifespan is identical to Endotherm today (BIO-autotroph-physics)"
     );
 }

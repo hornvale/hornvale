@@ -2123,8 +2123,8 @@ pub fn prey_pressure_from(
             bio.niche.weight(hornvale_kernel::ANIMAL_PREY) <= CARNIVORE_THRESHOLD
                 && bio.social_form != hornvale_species::SocialForm::Settled
                 && !matches!(
-                    bio.metabolic_class,
-                    hornvale_species::MetabolicClass::Autotroph
+                    bio.thermal_strategy,
+                    hornvale_species::ThermalStrategy::Unmodelled
                 )
         })
         .map(|(i, _)| i as u32)
@@ -6246,7 +6246,7 @@ fn cascade_regime_of(bio: &hornvale_species::BiosphereTraits) -> hornvale_langua
     // `Ametabolic` kind, which has no mass-derived lifespan at all. The bare
     // `lifespan` call this used to make returned a number for a construct
     // (xorn: 64.97 yr) that the model says does not exist.
-    let long_lived = hornvale_species::life_history(bio.mass, bio.metabolic_class, bio.schedule)
+    let long_lived = hornvale_species::life_history(bio.mass, bio.thermal_strategy, bio.schedule)
         .lifespan
         .is_some_and(|l| l.get() >= LIFESPAN_THRESHOLD_YEARS);
     match bio.social_form {
@@ -11045,7 +11045,7 @@ mod tests {
         assert!(
             hornvale_species::lifespan(
                 long_lived.mass,
-                long_lived.metabolic_class,
+                long_lived.thermal_strategy,
                 long_lived.schedule
             )
             .get()
@@ -11067,8 +11067,8 @@ mod tests {
         let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
         let xorn = wc.biosphere.get_by_label("xorn").expect("xorn has a row");
         assert_eq!(
-            xorn.metabolic_class,
-            hornvale_species::MetabolicClass::Ametabolic
+            xorn.thermal_strategy,
+            hornvale_species::ThermalStrategy::Absent
         );
         assert_eq!(
             cascade_regime_of(xorn),
