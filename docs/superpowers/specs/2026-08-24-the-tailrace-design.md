@@ -379,21 +379,58 @@ run's 200 ticks, uncorrelated with the `agent-at` count it is plotted against.
 It carries no material share of anything.
 
 **Absolute magnitude, not just shape, is what stage 4's gate asks about — and
-here the five history-proportional folds separate sharply.** At the final
-band, `hunger_at` costs almost exactly what `drive_at` costs across every run
-(within ~1–30% of it — the two are structural twins over the same
-`integrate_thirst` machinery, differing only in which predicate resets the
-fold, so this is the expected result, not a surprise). `believed_water` and
-`shared_believed_water` cost **5–8× `drive_at`'s own per-call figure**
-across the four runs, not because they walk more history — the x-axis is
-identical — but because `believed_water`'s inner loop calls the terrain's
-water-truth check once per raw `agent-at` posting, where `integrate_thirst`
-only evaluates terrain at *segment* boundaries (`bounds.dedup()`-collapsed),
-strictly fewer than the raw posting count. `hazard_memory_memo` is the
-extreme case: **72–160× `drive_at`'s per-call figure** across the four runs,
-because `build_emitter_scan` — reached only through this fold, and timed as
-part of it per the interface note above — scans every one of the 50 roster
-members' own full histories on every single call.
+here the five history-proportional folds separate sharply. All ratios below
+are the same method throughout: the ratio of each fold's own final-band raw
+µs/call to `drive_at`'s own final-band raw µs/call, run by run across the
+four runs — stated explicitly so a reader can recompute it from the table
+above rather than trust it.** At the final band, `hunger_at` costs almost
+exactly what `drive_at` costs across every run (within ~1–30% of it — the two
+are structural twins over the same `integrate_thirst` machinery, differing
+only in which predicate resets the fold, so this is the expected result, not
+a surprise).
+
+`believed_water` costs **5.0–6.3× `drive_at`'s own per-call figure**
+(8878.72/1772.14=5.01, 4416.68/764.55=5.78, 4344.16/809.35=5.37,
+6324.77/1011.08=6.26) and `shared_believed_water` costs **5.8–6.7×**
+(10199.48/1772.14=5.76, 4983.09/764.55=6.52, 5349.93/809.35=6.61,
+6804.43/1011.08=6.73). **Two candidate mechanisms could drive this, and this
+task can only rule one IN and the other OUT for the specific probe agent
+measured, not rank them in general:**
+
+1. `believed_water`'s outer fold calls the terrain's water-truth check
+   (`is_water`) once per raw `agent-at` posting, where `integrate_thirst`
+   only evaluates terrain at *segment* boundaries (`bounds.dedup()`-
+   collapsed) — strictly fewer than the raw posting count. This candidate
+   applies to every call, regardless of what the fold finds.
+2. `believed_water` also runs a bounded `plan_to_room` A* search **per
+   distinct water room found** (`liveness.rs:908-931`, the `seen.into_iter
+   ().filter_map(|r| plan_to_room(...))` line) — a real cost `integrate_thirst`
+   has no equivalent of, and one a reviewer flagged as plausibly the larger
+   driver.
+
+**For THIS probe agent, candidate 2 is ruled out, not merely unmeasured.** A
+temporary diagnostic (added to a local working copy only, reverted before
+this commit — not part of the measured instrument) reconstructed
+`believed_water`'s own water-membership fold using the crate's public
+`is_fresh_water`/`RoomId::unpack` (the same decode technique
+`fold_depth_sweep.rs` already uses for the private `room_from_text`) and
+counted the probe agent's DISTINCT water rooms at the final band: **zero**.
+That is consistent with the "probe agent has no known water" diagnostic this
+task's own probe functions already print at every band, in every run — the
+`seen` set `believed_water`/`shared_believed_water` fold over is empty
+throughout this entire run, so `plan_to_room` is called **zero times** for
+this probe. Candidate 1 (the per-posting vs. per-segment terrain-check
+count) is therefore the sole applicable explanation for the 5–7× figures
+measured here. Candidate 2 remains a real, unmeasured cost for a
+DIFFERENT — better-water-located — agent: this task did not measure a probe
+that ever finds water, so it cannot say how much `plan_to_room` would add for
+one, only that it adds nothing to the specific numbers reported above.
+
+`hazard_memory_memo` is the extreme case: **72–96× `drive_at`'s own per-call
+figure** (127122.78/1772.14=71.7, 73460.38/764.55=96.1, 75564.65/809.35=93.4,
+96630.13/1011.08=95.6), because `build_emitter_scan` — reached only through
+this fold, and timed as part of it per the interface note above — scans
+every one of the 50 roster members' own full histories on every single call.
 
 **A caveat on that last number that changes how it should be read, not
 whether it matters.** Production shares ONE `PrimaryAfraidMemo` per tick
@@ -534,56 +571,78 @@ because its own cost is `a·H + b·(RESET_EVERY)·H` — linear in `H` for any
 `H`, with no crossover.
 
 **Bounding the crossover from `fold_depth_sweep.rs`'s own single-reset table
-(Task 1's report), without fitting a precise value the data does not pin.**
-Local elasticity between adjacent swept depths (`ln(y₂/y₁)/ln(x₂/x₁)`, a
-model-free finite difference, not a fit):
+(Task 1's report), without fitting a precise value the data does not pin —
+fix round 2 correction: Task 1's report holds TWO such tables, from its own
+two fix rounds, described there as equally legitimate noisy re-measurements
+of the same sweep, neither superseding the other. The original submission of
+this section used only round 1's table without naming it as one of two; both
+are reported here.** Local elasticity between adjacent swept depths
+(`ln(y₂/y₁)/ln(x₂/x₁)`, a model-free finite difference, not a fit), computed
+from each table independently:
 
-| interval | local elasticity |
-|---|---|
-| 10 → 32 | 0.52 |
-| 32 → 100 | 1.19 |
-| 100 → 320 | 1.57 |
-| 320 → 1,000 | 1.80 |
-| 1,000 → 3,200 | 1.96 |
-| 3,200 → 10,000 | 2.09 |
+| interval | round 1 local elasticity | round 2 local elasticity |
+|---|---|---|
+| 10 → 32 | 0.52 | 0.55 |
+| 32 → 100 | 1.19 | 1.25 |
+| 100 → 320 | 1.57 | 1.49 |
+| 320 → 1,000 | 1.80 | 1.80 |
+| 1,000 → 3,200 | 1.96 | 1.96 |
+| 3,200 → 10,000 | 2.09 | 2.09 |
 
-The sequence climbs monotonically from below 1.0 toward 2.0, crossing 1.5
-somewhere inside the 100 → 320 interval (1.19 at the 32–100 step, 1.57 at the
-100–320 step). **That places the crossover on the order of one to a few
-hundred facts of single-reset history** — this task's own data supports that
-range and no narrower a claim; interpolating a single point from a two-point
-finite difference would be manufacturing precision the measurement does not
-have.
+Both sequences climb monotonically from below 1.0 toward 2.0. **Applying the
+"first interval whose local elasticity exceeds 1.5" rule literally to each
+table separately gives DIFFERENT brackets** — round 1 crosses inside 100→320
+(1.19 → 1.57); round 2 crosses one interval later, inside 320→1,000 (1.49 →
+1.80, since round 2's 100→320 step reads 1.49, just under the 1.5 line). That
+disagreement is exactly why presenting only one of the two tables, without
+naming it, understated how sensitive the literal bracket rule is to
+which noisy re-measurement happens to be on hand — it is not that either
+table is wrong; §4's own module doc already documents this class of run-to-
+run scatter at microsecond scale.
 
-This bound is what reconciles the two instruments. `fold_depth_sweep.rs`'s
-`320` depth reads 31.7 µs/call (single-reset) against the periodic sweep's
-8.1 µs/call at the same depth — a 3.9× gap that is real and growing, but the
-depths above 320 (1,000, 3,200, 10,000) are where the elasticity actually
-reaches the ~2.0 asymptote (Task 1's report). Task 2's probe agent, over a
-real 200-tick session, reached only `H = 322` — landing almost exactly at the
-upper edge of the same 100–320 window this bound identifies, i.e. **right
-around the crossover itself**, not safely below it. That is exactly why its
-own measured elasticity (median ≈0.98, but ranging 0.18–1.33 across four
-runs) reads close to but not cleanly at 1.0: at the crossover, a small amount
-of run-to-run noise is enough to read anywhere from "still linear" to
-"visibly climbing," because the true curve is bending there, not flat. Both
-`fold_depth_sweep.rs`'s ~2.0 at depth ≥1,000 and `session_length_scaling.rs`'s
-~1.0 at depth ≤322 are correct readings of the SAME `a·H + b·H²` mechanism —
-they differ because they sample different, non-overlapping windows of the
-same curve, one below the bend and one above it. Neither instrument is wrong,
-and this is precisely the shape §4's own model (`ms/tick = C + k·h`, an affine
-fit with no single power-law exponent) already warned a naive log-log read
-would misrepresent.
+**A rule that reads a mechanical "first interval past 1.5" is more brittle
+than the underlying question needs, so the robust statement is a
+central-difference interpolation across BOTH tables instead of a single
+bracket.** Interpolating (in log-depth, between each interval's own
+geometric-mean representative point) for where local elasticity crosses
+exactly 1.5 lands near **H ≈ 190 under both tables** — inside the 100–320
+window either way, regardless of which table supplies the bracket. **The
+claim this task can actually support is therefore "the crossover sits on the
+order of a couple of hundred facts of single-reset history"** — not a
+specific bracket, and not the more precise-sounding "H=322 sits almost
+exactly at the upper edge of the 100–320 window" framing the original
+submission used, which was an artifact of applying the bracket rule to one
+of the two available tables rather than a robust reading of both.
+
+This bound is what reconciles the two instruments, and the campaign-level
+conclusion survives however the crossover is stated precisely: **a crossover
+around a couple of hundred facts per agent means a production agent enters
+the quadratic regime early in an ordinary session, not late.**
+`fold_depth_sweep.rs`'s `320` depth already reads 31.7–32.0 µs/call
+(single-reset, both tables) against the periodic sweep's 8.1–10.6 µs/call at
+the same depth — a real and growing gap — and Task 2's own probe agent, over
+a real 200-tick session, reached `H = 322`, inside that same couple-hundred-
+fact window. Its own measured elasticity (median ≈0.98, ranging 0.18–1.33
+across four runs) reading close to but not cleanly at 1.0 is consistent with
+sitting near a bend in the curve rather than safely below it, without this
+task asserting a more specific position on that curve than the data
+supports. Both `fold_depth_sweep.rs`'s ~2.0 at depth ≥1,000 and
+`session_length_scaling.rs`'s figures at depth ≤322 are correct readings of
+the SAME `a·H + b·H²` mechanism — they differ because they sample different
+windows of the same curve. Neither instrument is wrong, and this is precisely
+the shape §4's own model (`ms/tick = C + k·h`, an affine fit with no single
+power-law exponent) already warned a naive log-log read would misrepresent.
 
 This also connects to the selection-effect finding directly above: the
 ORIGINAL decisive-measurement runs quoted earlier in this section, like this
 task's own, used the same max-history probe selection — so it is likely that
 they, too, were reading a single-reset-regime agent at `H` in the low
-hundreds, i.e. at or near the same crossover, rather than a periodic-regime
-agent safely inside the linear-only zone. The ~1.0 elasticity those runs
-report is therefore consistent with — not independent evidence against —
-the crossover bound above, not a demonstration that this fold's cost is
-linear at every depth a production session could reach.
+hundreds, i.e. at or near the same couple-hundred-fact crossover region,
+rather than a periodic-regime agent safely inside the linear-only zone. The
+~1.0 elasticity those runs report is therefore consistent with — not
+independent evidence against — the crossover bound above, not a
+demonstration that this fold's cost is linear at every depth a production
+session could reach.
 
 ## 5. Preregistration
 
