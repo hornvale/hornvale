@@ -1236,6 +1236,7 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::d8_fires_on_exactly_alchemy_
 hornvale-lab::hornvale_lab$domesday::detect::tests::defensibility_capacity_rank_corr_still_exists_in_the_registry
 hornvale-lab::hornvale_lab$domesday::detect::tests::direct_references_match_measured_crates
 hornvale-lab::hornvale_lab$domesday::detect::tests::domain_crates_are_still_exactly_this_list
+hornvale-lab::hornvale_lab$domesday::detect::tests::findings_are_sorted_by_detector_then_metric
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_reads_a_nontrivial_correlation_and_its_sign
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_returns_none_for_a_constant_column
 hornvale-lab::hornvale_lab$domesday::detect::tests::the_live_census_reproduces_the_preregistered_findings
@@ -2557,6 +2558,7 @@ hornvale-vessel::hornvale_vessel$liveness::tests::soft_maslow_severe_cold_beats_
 hornvale-vessel::hornvale_vessel$liveness::tests::the_fatigue_drive_rests_in_place_wherever_the_creature_is
 hornvale-vessel::hornvale_vessel$liveness::tests::the_herd_bolts_borrowed_alarm_makes_a_calm_creature_flee_then_settle
 hornvale-vessel::hornvale_vessel$liveness::tests::the_hoisted_walk_emits_exactly_what_the_loop_emitted
+hornvale-vessel::hornvale_vessel$liveness::tests::the_phantom_detours_around_a_passed_alarm_then_relearns_the_ground_safe
 hornvale-vessel::hornvale_vessel$liveness::tests::the_predator_weight_derives_from_carnivory
 hornvale-vessel::hornvale_vessel$liveness::tests::the_recount_surfaces_the_drives_own_provenance_for_the_full_round_trip
 hornvale-vessel::hornvale_vessel$liveness::tests::the_shudder_is_felt_on_the_phantom_then_discharged_then_disproven
@@ -2623,6 +2625,7 @@ hornvale-vessel::hornvale_vessel$underworld_level::region::tests::never_exceeds_
 hornvale-vessel::hornvale_vessel$underworld_level::tests::a_sump_gets_a_flooded_region_a_made_chamber_never_does
 hornvale-vessel::hornvale_vessel$underworld_level::tests::chamber_origin_is_never_mutated_by_geometry
 hornvale-vessel::hornvale_vessel$underworld_level::tests::every_cell_of_the_extent_has_a_kind
+hornvale-vessel::hornvale_vessel$underworld_level::tests::every_character_engine_keeps_every_level_connected
 hornvale-vessel::hornvale_vessel$underworld_level::tests::every_level_but_the_first_has_stairs_up_every_level_has_stairs_down
 hornvale-vessel::hornvale_vessel$underworld_level::tests::every_walkable_cell_is_reachable_from_every_other
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generate_descent_produces_one_level_per_rung
