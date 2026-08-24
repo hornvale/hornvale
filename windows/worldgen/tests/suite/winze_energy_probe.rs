@@ -10,31 +10,41 @@
 //! oxidation`/metamorphic grade, `methanogenesis`/carbonate+porosity, `iron
 //! reduction`/mafic, `geothermal`/gradient×depth).
 //!
-//! # STALE AFTER THE STOPE'S EPOCH — `chamber_count` NO LONGER MEANS WHAT IT
-//! # MEANT WHEN THESE FIGURES WERE TAKEN
+//! # `chamber_count` COUNTS RUNS, NOT CHAMBERS — STILL TRUE, AND THE GAP HAS
+//! # WIDENED TWICE SINCE IT WAS FIRST WRITTEN
 //!
 //! This probe was written against the pre-`chamber/v3` lattice, where one
-//! `(cell, entrance, band, slot)` **was** one chamber. The Stope added a
-//! `floor` rung: a band-branch now holds a drawn run of up to
-//! `FLOORS_PER_RUN_CEILING` floors. The loop below was mechanically updated
-//! to the new address (`slot` -> `branch`, `floor: 0`) so the crate compiles,
-//! and it therefore still counts **band-branches, not chambers** — deliberately,
-//! because silently changing a committed measurement inside a merge commit is
-//! worse than leaving it stale and saying so.
+//! `(cell, entrance, band, slot)` **was** one chamber. Two epochs have moved
+//! underneath it since, and the loop below has been repointed for each
+//! without changing what it COUNTS — deliberately, because silently changing
+//! a committed measurement inside a merge commit is worse than leaving it
+//! stale and saying so:
 //!
-//! The gap is more than an order of magnitude: The Stope's own witness
-//! measures seed 42 at **21,328 chambers**, where this loop counts roughly
-//! 1,700. **Every M2/M3 figure denominated in `chamber_count` — the energy
-//! total at `SURVIVE_K`, the per-place parity, the land-cells-per-chamber
-//! ratio — therefore understates the underworld it is trying to feed**, and
-//! the M4 branch-pinning assertions below pin the OLD population.
+//! - **The Stope** added a level rung, so a band-branch became a drawn RUN of
+//!   up to `LEVELS_PER_BRANCH_CEILING` levels rather than one point.
+//! - **The Drift** deleted `entrance` from the address (amendment A.3) and
+//!   deleted the chamber existence draw (`EXISTENCE_DENSITY = 0.5`,
+//!   `c4e08ba98`). The first removed the `entrance: 0` pin below; the second
+//!   roughly doubled every count the lattice realizes.
+//!
+//! So this loop counts **runs, not chambers**, and the gap is now 6.8x rather
+//! than an order of magnitude in the other direction. Measured 2026-08-24,
+//! seed 42: this loop counts **4,512**, where the committed witness
+//! `docs/audits/underworld-lattice-seed-panel.md` measures **30,537**
+//! chambers. (Its 4,512 reproduces `winze_scale_probe`'s independently
+//! derived U1 exactly, on all three seeds — 4512 / 9353 / 7372 — so the
+//! counter is right about the population it names.) **Every M2/M3 figure
+//! denominated in `chamber_count` — the energy total at `SURVIVE_K`, the
+//! per-place parity, the land-cells-per-chamber ratio — therefore understates
+//! the underworld it is trying to feed by that factor.**
 //!
 //! Re-running it is campaign work under preregistration discipline, not a
-//! merge-time fixup: the decision is whether "the Underworld to be fed" is
-//! every existing chamber, every *reachable* chamber (The Stope measured
-//! 0.359% of branches reaching the Nadir at all), or the band-branch count
-//! this still reports. Those are three different denominators and they give
-//! three different designs.
+//! merge-time fixup. **The choice of denominator has narrowed to two, and
+//! The Drift is what narrowed it**: "every reachable chamber" and "every
+//! existing chamber" were different denominators when reachability was 7.28%,
+//! and are now the same number (`winze_scale_probe`, 100% on all three
+//! seeds). What is left is chambers (30,537 on seed 42) or runs (4,512), and
+//! a run is a container of places rather than a place.
 //!
 //! Five measurements, M4 first because it is the stop condition: the whole
 //! point of plural sources is that they are distributed *differently*, and
@@ -69,9 +79,10 @@
 //! Cave-bearing-cell enumeration copied from `underworld_lithology_probe.rs`
 //! (`geo.cells()` filtered by `terrain.cave_at(cell).is_some()`, ocean cells
 //! excluded first since `cave_at` already refuses them). Chamber addressing
-//! copied from `delve_seating.rs::made_chambers` (`ChamberAddr { cell,
-//! entrance: 0, band, slot }`, `chamber_exists` gating existence, never
-//! assumed).
+//! copied from `delve_seating.rs::made_chambers` (`ChamberAddr { cell, band,
+//! branch, level }`, `chamber_exists` gating existence, never assumed —
+//! `entrance` was a field of that address when this was copied and is not
+//! one now).
 //!
 //! Test fixture (decision 0092): calls the sculpt/fit derivation entry
 //! points directly to build its own world state, once per test — the
@@ -268,14 +279,20 @@ fn measure(seed_value: u64) -> SeedMeasurement {
             .cave_at(cell)
             .expect("cave_cells only holds cave-bearing cells");
         let gradient = terrain.geothermal_gradient_at(cell);
-        for &band in &habitation_ranks() {
+        for &rank in &habitation_ranks() {
+            let band = hornvale_kernel::Band::from_rank(rank)
+                .expect("habitation_ranks() yields real habitation ranks");
             for branch in 0..BRANCHES_PER_SYSTEM {
+                // LEVEL 0 ONLY, and that is the population's whole definition:
+                // this counter has always been BAND-BRANCHES, never chambers.
+                // The Drift deleted `entrance` from the address (amendment
+                // A.3), so the old `entrance: 0` pin is gone with it — one
+                // shared lattice per system, addressed by every aperture.
                 let addr = ChamberAddr {
                     cell,
-                    entrance: 0,
                     band,
                     branch,
-                    floor: 0,
+                    level: 0,
                 };
                 if chamber_exists(seed, &cave, gradient, addr) {
                     chamber_count += 1;
@@ -469,27 +486,50 @@ fn winze_energy_probe() {
          collapse (branch 1). Re-derive the M4 branch table: 'plural sources not \
          reachable from lithology' may now be the answer."
     );
-    // 2. LANDS branch 2 ("fields vary but are strongly inter-correlated").
-    //    Measured: no pairwise |r| below 0.5488 (seed 42, carbonate vs
-    //    metamorphic_grade) across all 45 seed x pair combinations, and a
-    //    majority (29/45, 64%) are >= 0.8. `induration` and `porosity` are
-    //    literally defined as weighted sums of the other buffer axes
-    //    (`domains/terrain/src/lithology.rs`'s `induration_at`/
-    //    `assemble_material`), so the correlation is structural, not
-    //    incidental to these three seeds. Guard: if some future change
-    //    genuinely decouples the six axes, this reddens and the branch
-    //    table must be re-walked (it would then land in branch 3, and
-    //    plural sources would become reachable).
+    // 2. LANDS BRANCH 3 ("the fields carry genuine independent signal"), and
+    //    the two assertions here USED TO PIN BRANCH 2. That reversal is this
+    //    campaign's decision-ledger entry #22 and it is worth stating in
+    //    full, because the branch-2 pins were not merely superseded — they
+    //    were measuring an artifact.
+    //
+    //    The probe that produced "no pairwise |r| below 0.5488, 29/45 at
+    //    >= 0.8" sorted each field's vector INDEPENDENTLY before computing
+    //    `pearson`, which destroys the per-cell pairing. By the rearrangement
+    //    inequality that computes the MAXIMUM correlation achievable over any
+    //    pairing of two multisets, not the correlation of the data — so two
+    //    unrelated fields with similar marginal shapes score near 1.0. A
+    //    sibling probe computed the paired correlations correctly and caught
+    //    it. The corrected matrix (seed 1234): `silica`x`porosity` -0.0279,
+    //    `silica`x`carbonate` 0.1983, `grain`x`metamorphic_grade` 0.0988.
+    //    What IS coupled is exactly what the source says should be —
+    //    `induration`x`metamorphic_grade` 0.9818, since `induration_at` takes
+    //    grade as an input, and porosity's ties to both, since porosity is
+    //    arithmetic on them (`domains/terrain/src/lithology.rs`).
+    //
+    //    So the pins invert: a HIGH floor on the minimum |r| was the branch-2
+    //    claim and is now known false; what branch 3 asserts is that at least
+    //    one pair is genuinely decoupled, and that the strongly-correlated
+    //    pairs are a MINORITY rather than a majority. Both are stated as the
+    //    direction they enforce, so neither can be read as a guarantee of the
+    //    other: this pins DECOUPLING EXISTS, not that any particular pair is
+    //    independent.
     assert!(
-        min_abs_corr_over_all_seeds > 0.5,
-        "a pairwise |correlation| fell to {min_abs_corr_over_all_seeds:.4} (<= 0.5) — \
-         that would be genuine independent signal between two lithology axes. \
-         Re-derive the M4 branch table: branch 2 (STOP, co-located sources) may no \
-         longer be the right verdict."
+        min_abs_corr_over_all_seeds < 0.5,
+        "the weakest pairwise |correlation| across all seeds is \
+         {min_abs_corr_over_all_seeds:.4} (>= 0.5) — every lithology axis now \
+         moves with every other, which is the branch-2 world this probe was \
+         corrected OUT of (ledger #22). Re-derive the M4 branch table before \
+         trusting branch 3; and check first that the correlation is being \
+         computed on PAIRED vectors, since computing it on independently \
+         sorted ones is exactly how branch 2 was reached the first time."
     );
     assert!(
-        pairs_at_least_0_8 * 2 >= pairs_total,
-        "only {pairs_at_least_0_8}/{pairs_total} field pairs now correlate >= 0.8 \
-         (previously a majority, 29/45) — re-derive the M4 branch table."
+        pairs_at_least_0_8 * 2 < pairs_total,
+        "{pairs_at_least_0_8}/{pairs_total} field pairs correlate >= 0.8, a \
+         majority — measured 12/45 (26.7%) when branch 3 was adopted. The \
+         strongly-coupled pairs are the ones the source defines as arithmetic \
+         on each other (`induration`/`metamorphic_grade`/`porosity`); a \
+         majority means something has coupled the axes that are supposed to \
+         be drawn apart. Re-derive the M4 branch table."
     );
 }

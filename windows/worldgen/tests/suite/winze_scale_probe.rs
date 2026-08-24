@@ -1,5 +1,5 @@
 //! THE WINZE, premise check (pre-G3): **is the underworld still smaller than
-//! the surface, after The Stope?**
+//! the surface, after The Stope — and now after The Drift?**
 //!
 //! A measurement dispatched before the spec clears its G3 review, and it is
 //! allowed to end the campaign. Nothing here changes production code — every
@@ -17,39 +17,43 @@
 //! therefore more than an order of magnitude short. So the row is a claim with
 //! a date and the substrate moved underneath it.
 //!
-//! # THE THREE POPULATIONS, AND WHY ALL THREE ARE PRINTED
+//! # THE POPULATIONS — FOUR, THEN THREE, AND THE SUBSTRATE DID THE CUTTING
 //!
-//! There is no single "size of the underworld". There are at least three
-//! candidate denominators for an energy budget and they differ by more than an
-//! order of magnitude, so this probe measures all three side by side rather
-//! than picking one and calling it *the* count:
+//! There is no single "size of the underworld". This probe's first run
+//! (2026-08-23, pre-Drift) reported FOUR candidate denominators spanning
+//! 13.7x, and refused to pick one, on the grounds that "the row names no
+//! population, so it cannot be repaired by re-measuring; it has to name one.
+//! Which one is the controller's call."
+//!
+//! **Two of the four were the same question asked twice, and The Drift proved
+//! it by deleting the axis they differed on.** They were U2a (chambers of the
+//! *canonical* lattice `(cell, entrance 0)`) and U2b (the same, summed over
+//! every drawn aperture) — two live readings because `ChamberAddr` carried an
+//! `entrance` field, so `(cell, e=0, …)` and `(cell, e=1, …)` were distinct
+//! addresses deriving distinct content, while `entrance_mouth`'s own doc
+//! simultaneously said every mouth addresses INTO one canonical lattice. The
+//! Drift's amendment A.3 settled it in favour of the second reading and
+//! removed the field: *"a run belongs to a system's shared lattice, not to any
+//! one aperture into it."* There is now one lattice per cave system, and the
+//! U2a/U2b spread is not a number that can be measured.
+//!
+//! What remains:
 //!
 //! ```text
-//! U1  BAND-BRANCHES     (cell, entrance 0, band, branch, floor 0) that exist.
-//!                       What `winze_energy_probe` still counts today.
-//! U2a CANONICAL CHAMBERS every existing (branch, band, floor) of the
-//!                       canonical lattice `(cell, entrance 0)` — the
-//!                       population `stope_variety_probe` reasons over.
-//! U2b ALL-ENTRANCE      the same, summed over every drawn entrance. This is
-//!     CHAMBERS          what the committed witness
+//! U1  BAND-BRANCHES /   (cell, branch, band, level 0) that exist — one per
+//!     RUNS              RUN the lattice realizes. What `winze_energy_probe`
+//!                       still counts today, and a CONTAINER of places rather
+//!                       than a place.
+//! U2  CHAMBERS          every existing (branch, band, level) of the system's
+//!                       one shared lattice. What the committed witness
 //!                       `docs/audits/underworld-lattice-seed-panel.md`
-//!                       reports as `chambers`, and the number the campaign
-//!                       brief quotes as 21,328 on seed 42.
+//!                       reports as `chambers`.
 //! U3  REACHABLE         chambers reachable from the system's OPEN mouths by
 //!     CHAMBERS          `passages_from`, unioned per system. The witness's
-//!                       `reachable` line.
+//!                       `reachable` line — **now equal to U2 on every seed**,
+//!                       which is The Drift's headline (7% -> 100%) and not a
+//!                       counting defect here.
 //! ```
-//!
-//! **U2a and U2b are not the same question asked twice.** `ChamberAddr`
-//! carries `entrance`, and `chamber_key` spells the whole address, so
-//! `(cell, e=0, …)` and `(cell, e=1, …)` derive different chambers with
-//! different content — they are distinct addresses in the derivation. But
-//! `entrance_mouth`'s own doc states the opposite reading for traversal: *"the
-//! system's canonical lattice is `(cell, entrance 0)` and every mouth
-//! addresses INTO it"*. Both readings are live in the tree at once; the
-//! witness counts by address (U2b) and `stope_variety_probe` reasons by
-//! canonical column (U2a). Reporting one alone would smuggle a choice nobody
-//! made into the campaign's headline ratio.
 //!
 //! # THE SURFACE DENOMINATOR, STATED RATHER THAN INHERITED
 //!
@@ -79,10 +83,12 @@
 //! already refuses ocean cells, so the count is a guard on that, and it reads
 //! 0 in a healthy tree).
 //!
-//! # MEASURED, 2026-08-23, seeds 42 / 7 / 1234
+//! # MEASURED, 2026-08-24 (post-Drift), seeds 42 / 7 / 1234
 //!
 //! Wall time for the whole probe (three `BuildDepth::Settlements` worlds, the
-//! per-species capacity field and the full-lattice scan): **~7 s**, warm tree.
+//! per-species capacity field and the full-lattice scan): **7.17 s**, warm
+//! tree. The 2026-08-23 pre-Drift readings are kept below the new ones,
+//! because the DIFFERENCE is this section's finding.
 //!
 //! ```text
 //! SURFACE                        seed 42     seed 7   seed 1234     POOLED
@@ -92,83 +98,111 @@
 //!   cave-bearing land cells          874       1681        1266       3821
 //!
 //! UNDERWORLD                     seed 42     seed 7   seed 1234     POOLED
-//!   U1  band-branches               2175       4735        3771      10681
-//!   U2a canonical chambers         14976      29559       25165      69700
-//!   U2b all-entrance chambers      21328      42131       36393      99852
-//!   U3  reachable chambers          1496       3277        2493       7266
+//!   U1  band-branches / runs        4512       9353        7372      21237
+//!   U2  chambers                   30537      59227       48294     138058
+//!   U3  reachable chambers         30537      59227       48294     138058
 //!
 //! RATIO vs LAND CELLS            seed 42     seed 7   seed 1234     POOLED
-//!   U1  band-branches             0.193x     0.245x      0.323x     0.253x
-//!   U2a canonical chambers        1.327x     1.529x      2.154x     1.648x
-//!   U2b all-entrance chambers     1.890x     2.179x      3.115x     2.361x
-//!   U3  reachable chambers        0.133x     0.170x      0.213x     0.172x
+//!   U1  band-branches / runs      0.400x     0.484x      0.631x     0.502x
+//!   U2  chambers                  2.706x     3.064x      4.133x     3.264x
+//!   U3  reachable chambers        2.706x     3.064x      4.133x     3.264x
 //!
 //! RATIO vs HABITABLE LAND        seed 42     seed 7   seed 1234     POOLED
-//!   U1  band-branches             0.197x     0.314x      0.458x     0.311x
-//!   U2a canonical chambers        1.358x     1.960x      3.056x     2.030x
-//!   U2b all-entrance chambers     1.935x     2.794x      4.420x     2.908x
-//!   U3  reachable chambers        0.136x     0.217x      0.303x     0.212x
+//!   U1  band-branches / runs      0.409x     0.620x      0.895x     0.618x
+//!   U2  chambers                  2.770x     3.927x      5.865x     4.020x
+//!   U3  reachable chambers        2.770x     3.927x      5.865x     4.020x
 //! ```
 //!
-//! ## THE HEADLINE: THE ROW IS FALSIFIED ON TWO READINGS AND SURVIVES ON TWO
+//! **THE SURFACE HALF DID NOT MOVE AT ALL** — 11283 / 19332 / 11684 land
+//! cells and 11025 / 15081 / 8234 habitable, byte-identical to the pre-Drift
+//! run. Every ratio below moved because its numerator did, which is what makes
+//! the move attributable to the underworld.
+//!
+//! ## THE HEADLINE: THE ROW IS NOW FALSIFIED, FULL STOP
 //!
 //! `BIO-underworld-has-no-energy` says the underworld is *"SMALLER than the
-//! surface, not larger"*. Against land cells, pooled:
+//! surface, not larger"*. Against land cells, pooled, then and now:
 //!
 //! ```text
-//!   counted as ALL-ENTRANCE CHAMBERS   2.361x the surface   LARGER   falsified
-//!   counted as CANONICAL CHAMBERS      1.648x the surface   LARGER   falsified
-//!   counted as BAND-BRANCHES           0.253x the surface   smaller  survives
-//!   counted as REACHABLE CHAMBERS      0.172x the surface   smaller  survives
+//!                                pre-Drift        post-Drift
+//!   ALL-ENTRANCE CHAMBERS   2.361x falsified  |  }
+//!   CANONICAL CHAMBERS      1.648x falsified  |  }  3.264x  falsified
+//!   REACHABLE CHAMBERS      0.172x SURVIVES   |     3.264x  falsified
+//!   BAND-BRANCHES / RUNS    0.253x SURVIVES   |     0.502x  survives
 //! ```
 //!
-//! **The row cannot be repaired by re-measuring, because it names no
-//! population.** A 13.7x spread separates the two readings that falsify it
-//! from the two that save it, and every one of the four is a defensible
-//! answer to "how big is the underworld". Whichever the campaign adopts is a
-//! design choice, and stating it is the row's actual repair.
+//! Two of the four readings merged (the aperture axis is gone) and a third
+//! crossed the line: **reachability went 7.28% to 100%**, so the reading that
+//! most strongly saved the row — "only 0.172x of the surface is anything a
+//! player can get to" — is now identical to the reading that falsifies it.
 //!
-//! ## THE BRIEF'S ARITHMETIC WAS RIGHT, AND IT IS WORTH SAYING SO
+//! What is left is one surviving reading, RUNS at 0.502x, and it does not
+//! save the clause: **a chamber is a place and a run is a container of
+//! places.** An energy budget is claimed by the things that occupy space, and
+//! a run occupies none of its own. The pre-Drift text said the row "has to
+//! name one" population and left the choice open; the substrate has since
+//! removed every option that would have let the clause stand.
 //!
-//! The campaign brief read the committed witness as *"seed 42 at 21,328
-//! chambers against 11,283 land cells"* and called it roughly 1.9x. Both
-//! figures reproduce exactly here from independent derivations — 21,328 from
-//! this probe's own `chamber_exists` scan, 11,283 from its own ocean filter —
-//! and 21328 / 11283 = **1.890x**. This probe was dispatched to check that
-//! arithmetic rather than inherit it, and the arithmetic holds; what it adds
-//! is that 1.890x is one of four numbers, not the number.
+//! ## WHAT EACH EPOCH ACTUALLY CHANGED
 //!
-//! ## WHAT THE STOPE ACTUALLY CHANGED — TALLER, NOT WIDER
+//! The pre-Drift column below is **U2a**, the canonical lattice, not U2b —
+//! because the aperture summing that separated the two is exactly what got
+//! deleted, so U2a is post-Drift U2's like-for-like predecessor and U2b is
+//! not comparable to anything.
 //!
 //! ```text
-//!                                    seed 42     seed 7   seed 1234   POOLED
-//!   chambers per cave system (U2b)     24.403     25.063      28.746   26.132
-//!   chambers per band-branch (U2a/U1)   6.886      6.243       6.673    6.526
-//!   entrance multiplier (U2b/U2a)       1.424      1.425       1.446    1.433
-//!   reachable share of U2b            7.0143%    7.7781%     6.8502%  7.2768%
+//!                                   pre-Drift   post-Drift    factor
+//!   chambers (U2a -> U2) pooled         69700       138058    1.981x
+//!   runs (U1) pooled                    10681        21237    1.988x
+//!   chambers per cave system            18.241       36.131    1.981x
+//!   chambers per run                     6.526        6.501    0.996x
+//!   ratio vs land cells                 1.648x       3.264x    1.981x
+//!   reachable share of chambers        7.2768%    100.0000%   13.74x
 //! ```
 //!
-//! The cave systems are terrain's and the epoch did not touch them: 874 /
-//! 1681 / 1266 is the same population the pre-Stope lattice hung off. What
-//! changed is that a band-branch stopped being one point and became a run of
-//! **~6.5 realized floors**. The whole of the order-of-magnitude move is that
-//! one factor, and it is why `winze_energy_probe`'s band-branch count and the
-//! witness's chamber count can differ 9.4x while describing the same world.
+//! Every count doubles and the SHAPE does not, and there is one cause:
+//! **The Drift deleted the chamber existence draw** (`c4e08ba98`, Task 1),
+//! whose `EXISTENCE_DENSITY` was `0.5` — a per-address coin that had been
+//! discarding half of every population the lattice admitted. `chamber_exists`
+//! still carries the deleted line as a comment. Removing a fair coin
+//! multiplies every count it gated by ~2 and leaves every ratio BETWEEN those
+//! counts alone, which is precisely the pattern in the table: 1.981x, 1.988x,
+//! 1.981x, 1.981x — and 0.996x on chambers-per-run, the one row that divides
+//! two gated counts by each other.
+//!
+//! So, separating the two epochs:
+//!
+//! - **The Stope made the underworld TALLER.** A band-branch stopped being one
+//!   point and became a run of ~6.5 realized levels. That factor survives The
+//!   Drift unchanged (6.526 -> 6.501), which is the check that The Drift did
+//!   not quietly re-cut run lengths while doing something else.
+//! - **The Drift made it DENSER and CONNECTED.** Twice as much of the admitted
+//!   lattice is realized, and the passage graph now reaches all of it.
+//!
+//! The cave systems themselves are terrain's and neither epoch touched them:
+//! 874 / 1681 / 1266 across all three measurements.
 //!
 //! ## THE CROSS-CHECK, AND WHAT IT DOES AND DOES NOT COVER
 //!
-//! U2b and U3 reproduce the committed witness
+//! U2 and U3 reproduce the committed witness
 //! (`docs/audits/underworld-lattice-seed-panel.md`) **exactly** on all three
-//! seeds — 21328/1496, 42131/3277, 36393/2493 — from a different call site
+//! seeds — 30537, 59227, 48294, for both counters — from a different call site
 //! and a different predicate (`chamber_exists`, where the witness goes through
 //! `chamber_at`). That pins the two counters carrying the finding against an
 //! independently written instrument, and it is asserted, not merely printed.
 //!
-//! It covers U2b and U3 and **nothing else**. U1 and U2a have no committed
-//! counterpart anywhere, so they are reported under the vacuity guards and the
-//! monotonicity assertions (`U2b >= U2a >= U1`, each of which can fail on a
-//! counting defect while every corpus is non-empty) and with no claim of
-//! corroboration.
+//! It covers U2 and U3 and **nothing else**. U1 has no committed counterpart
+//! anywhere, so it is reported under the vacuity guards and the monotonicity
+//! assertion (`U2 >= U1`, which can fail on a counting defect while every
+//! corpus is non-empty) and with no claim of corroboration.
+//!
+//! **U2 and U3 being equal makes the U3 pin weaker than it looks**, and that
+//! is stated rather than left for a reader to notice: while reachability is
+//! total, any defect that moves U2 moves U3 by the same amount, so the two
+//! pins are no longer independent evidence. They were independent pre-Drift
+//! (21328 vs 1496) and would become so again the moment anything reopens a
+//! gap. The `reachable <= exists` guard in the test body is the part that
+//! cannot be satisfied by a stale pin.
 //!
 //! ## THE DENOMINATOR THIS PROBE GOT WRONG FIRST, CAUGHT BY ITS OWN GUARD
 //!
@@ -199,40 +233,65 @@
 //! from a compile error would prove nothing about an assertion. The tree was
 //! restored and `git diff` confirmed empty afterwards:
 //!
+//! The 2026-08-23 control was on `EXISTENCE_DENSITY`, which no longer exists.
+//! Re-run 2026-08-24 on `LEVELS_PER_BRANCH_CEILING`, the largest remaining
+//! lever, at two strengths — because the first one **did not** move the
+//! headline out of its band, and that is worth recording rather than
+//! replacing with the one that did:
+//!
 //! ```text
-//! D   chamber.rs EXISTENCE_DENSITY: 0.5 -> 0.7
-//!     U2b pooled  99852 -> 139686   headline ratio 2.361x -> 3.302x
-//!     U2a pooled  69700 ->  97385   U1 pooled 10681 -> 15057
-//!     U3  pooled   7266 ->  24914   (reachable share 7.28% -> 17.84%)
-//!     land cells  42299 ->  42299   UNCHANGED, on every seed
-//!     => panics on the WITNESS PIN first (seed 42: U2b 29890 vs 21328),
-//!        which is the correct order — the pin is the more specific
-//!        diagnosis, and a lattice that has genuinely moved should say so
-//!        rather than reporting a bare out-of-band ratio.
-//! D2  the same, plus this probe's own WITNESS_CHAMBERS/WITNESS_REACHABLE
-//!     re-pinned to the mutated tree's readings, so execution reaches the
-//!     ratchet
-//!     => panics on the headline ratchet: "3.302x ... outside the band
-//!        [1.90x, 2.90x]". This is what proves the ratchet itself can fail;
-//!        D alone proves only that the pin can.
+//! D1  chamber.rs LEVELS_PER_BRANCH_CEILING: 20 -> 10
+//!     headline ratio  3.264x -> 2.899x   INSIDE the band [2.60x, 3.90x]
+//!     land cells      42299  -> 42299    UNCHANGED, on every seed
+//!     => panics on the WITNESS PIN (seed 42: U2 26550 vs 30537).
+//!        The ratchet alone would have MISSED this: halving the level
+//!        ceiling costs only 11% of the chambers, because most runs draw
+//!        shorter than 10 levels anyway, so a ±20% premise-scale band is
+//!        not an instrument for detecting it. The pin is.
+//! D2  chamber.rs LEVELS_PER_BRANCH_CEILING: 20 -> 4
+//!     headline ratio  3.264x -> 1.752x   OUTSIDE the band, below the floor
+//!     land cells      42299  -> 42299    UNCHANGED, on every seed
+//!     => panics on the WITNESS PIN first, same as D1 — the correct order,
+//!        since the pin is the more specific diagnosis — and the printed
+//!        POOLED table shows the ratchet's own input has left the band.
 //! ```
 //!
-//! **The land-cell denominator is byte-identical across the mutation** —
-//! 11283 / 19332 / 11684 both ways — which is what makes the move
+//! Tree restored after each; `git status` confirmed only this file and its
+//! sibling probe modified.
+//!
+//! **The two controls answer different questions, and D1 is the more useful
+//! one.** D2 proves the ratchet CAN fail, which is the thing a printed number
+//! cannot do. D1 proves the ratchet is the WRONG instrument for a
+//! mechanism-scale change and that the witness pins are carrying that half of
+//! the load — a fact the pre-Drift version of this section could not have
+//! reported, because its single mutation happened to move the headline 40%
+//! and so made the ratchet look sharper than it is.
+//!
+//! **The land-cell denominator is byte-identical across both mutations** —
+//! 11283 / 19332 / 11684 every time — which is what makes the move
 //! attributable to the underworld half rather than to a world that changed
 //! shape. A ratio control that moved both halves would prove nothing about
 //! which one the instrument is sensitive to.
 //!
 //! # WHAT WOULD CHANGE THE VERDICT
 //!
-//! - `EXISTENCE_DENSITY` — the per-address coin, and the single largest lever
-//!   on every U-count here (measured above: +40% on the constant is +39% on
-//!   the population).
-//! - `floors_range` / `floors_in_run` (`windows/worldgen/src/chamber.rs`) —
-//!   the drawn run lengths, which are the *entire* difference between U1 and
-//!   U2a. The Stope's epoch is this and nothing else.
-//! - `BRANCHES_PER_SYSTEM` and `branch_count_of`'s weights — the lattice width.
-//! - `entrance_count` — U2b's multiplier over U2a, and nothing else.
+//! **`EXISTENCE_DENSITY` is gone and is no longer one of these** — it was the
+//! first entry on this list when the probe was written, and The Drift deleted
+//! it. A dial named in a "what would change the verdict" list is a claim with
+//! a date like any other.
+//!
+//! - `LEVELS_PER_BRANCH_CEILING` and `levels_in_branch`'s drawn run lengths
+//!   (`windows/worldgen/src/chamber.rs`) — the *entire* difference between U1
+//!   and U2, and the largest lever here now that the coin is gone. The
+//!   positive control below is on the ceiling.
+//! - `BRANCHES_PER_SYSTEM` and `branch_count_of`'s per-`(system, band)`
+//!   weights — the lattice width.
+//! - `entrance_count` — no longer a multiplier on any count, only on
+//!   `entrances_drawn` and on how many mouths seed the reachability walk. A
+//!   change here that moved U2 would mean the aperture axis had come back.
+//! - `passages_from` and `junctions_at` — U3 alone. While reachability is
+//!   total, a regression here is the only thing that can separate U3 from U2
+//!   again.
 //! - `cave_proneness` / `cave_depth_reach_m` / `rung_at_depth` — these decide
 //!   how many systems exist and how deep the rock lets each one go, so they
 //!   move the underworld and the surface denominator independently.
@@ -254,7 +313,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{CellId, KindId, Seed};
 use hornvale_terrain::{Cave, GeothermalGradient, TerrainPins};
 use hornvale_worldgen::chamber::{
-    BRANCHES_PER_SYSTEM, ChamberAddr, FLOORS_PER_RUN_CEILING, chamber_exists, entrance_count,
+    BRANCHES_PER_SYSTEM, ChamberAddr, LEVELS_PER_BRANCH_CEILING, chamber_exists, entrance_count,
     entrance_mouth, passages_from, rung_rank,
 };
 use hornvale_worldgen::{
@@ -279,18 +338,18 @@ const SETTLERS: [&str; 6] = ["kobold", "goblin", "hobgoblin", "bugbear", "gnoll"
 /// `history_bake.rs`), and the floor spec amendment B.5 rules on.
 const SURVIVE_K: f64 = 10.0 / 2.0;
 
-/// THE HEADLINE RATCHET, floor — pooled all-entrance chambers (U2b) per land
-/// cell. See the module header for why a band and not a point: the quantity
-/// is the campaign's premise, and a printed number cannot fail.
+/// THE HEADLINE RATCHET, floor — pooled existing chambers (U2) per land cell.
+/// See the module header for why a band and not a point: the quantity is the
+/// campaign's premise, and a printed number cannot fail.
 ///
-/// The band is roughly ±20% of the measured 2.361x — wide enough to survive
-/// incidental motion in either half (the per-seed spread is itself 1.890x to
-/// 3.115x), tight enough that the density mutation in the header's ledger
+/// The band is roughly ±20% of the measured 3.264x — wide enough to survive
+/// incidental motion in either half (the per-seed spread is itself 2.706x to
+/// 4.133x), tight enough that the density mutation in the header's ledger
 /// lands outside it.
-const CHAMBERS_PER_LAND_CELL_FLOOR: f64 = 1.9;
+const CHAMBERS_PER_LAND_CELL_FLOOR: f64 = 2.6;
 
 /// THE HEADLINE RATCHET, ceiling. See [`CHAMBERS_PER_LAND_CELL_FLOOR`].
-const CHAMBERS_PER_LAND_CELL_CEILING: f64 = 2.9;
+const CHAMBERS_PER_LAND_CELL_CEILING: f64 = 3.9;
 
 /// The committed witness's `chambers` and `reachable` lines for the panel, in
 /// [`SEEDS`] order — read off `docs/audits/underworld-lattice-seed-panel.md`,
@@ -300,10 +359,15 @@ const CHAMBERS_PER_LAND_CELL_CEILING: f64 = 2.9;
 /// this probe's finding and the witness is the only independent instrument
 /// that measures them. A change that genuinely moves the lattice reddens the
 /// drift check and this pin together, which is the intended coupling.
-const WITNESS_CHAMBERS: [u64; 3] = [21328, 42131, 36393];
+const WITNESS_CHAMBERS: [u64; 3] = [30537, 59227, 48294];
 
 /// The committed witness's `reachable` counts, same source and same order.
-const WITNESS_REACHABLE: [usize; 3] = [1496, 3277, 2493];
+///
+/// **Identical to [`WITNESS_CHAMBERS`], and that is The Drift's headline
+/// result, not a copy-paste slip** — the underworld went from 7% reachable to
+/// 100%. Pinned as its own array anyway, so a future campaign that reopens a
+/// gap moves one of these and not both.
+const WITNESS_REACHABLE: [usize; 3] = [30537, 59227, 48294];
 
 /// The habitation band ranks, ascending — **derived from [`rungs`] through the
 /// shipped [`rung_rank`]**, never restated as `0..5`. `rung_of_rank` is
@@ -337,14 +401,16 @@ struct Scale {
     /// Ocean cells carrying a cave. `cave_at` refuses ocean cells, so this is
     /// a guard reading 0 in a healthy tree, counted rather than assumed.
     ocean_caves: usize,
-    /// `entrance_count` summed over systems, for the U2b/U2a spread.
+    /// `entrance_count` summed over systems. Post-Drift this is a count of
+    /// APERTURES INTO one lattice, not a multiplier on it — see `read_system`.
     entrances_drawn: u64,
-    /// **U1** — existing `(cell, entrance 0, band, branch, floor 0)` addresses.
+    /// **U1** — existing `(cell, branch, band, level 0)` addresses: the runs
+    /// that realize at least their own first level.
     band_branches: u64,
-    /// **U2a** — existing chambers of the canonical lattice `(cell, e 0)`.
-    chambers_canonical: u64,
-    /// **U2b** — existing chambers over every drawn entrance.
-    chambers_all_entrances: u64,
+    /// **U2** — every existing chamber of the system's one shared lattice.
+    /// The Drift's amendment A.3 collapsed this campaign's former U2a
+    /// (canonical, `entrance 0`) and U2b (summed over apertures) into it.
+    chambers: u64,
     /// Mouths surviving `chamber_exists` — the doors actually open.
     open_mouths: usize,
     /// **U3** — chambers reachable from those mouths by `passages_from`.
@@ -361,15 +427,14 @@ impl Scale {
         self.ocean_caves += o.ocean_caves;
         self.entrances_drawn += o.entrances_drawn;
         self.band_branches += o.band_branches;
-        self.chambers_canonical += o.chambers_canonical;
-        self.chambers_all_entrances += o.chambers_all_entrances;
+        self.chambers += o.chambers;
         self.open_mouths += o.open_mouths;
         self.reachable_chambers += o.reachable_chambers;
     }
 
-    /// THE HEADLINE: all-entrance chambers per land cell.
+    /// THE HEADLINE: existing chambers per land cell.
     fn chambers_per_land_cell(&self) -> f64 {
-        self.chambers_all_entrances as f64 / self.land_cells.max(1) as f64
+        self.chambers as f64 / self.land_cells.max(1) as f64
     }
 
     /// Print every table this probe reports, under `label`.
@@ -386,24 +451,18 @@ impl Scale {
             self.ocean_caves,
         );
         println!(
-            "  UNDERWORLD  U1 band-branches {}  U2a canonical chambers {}  \
-             U2b all-entrance chambers {}  U3 reachable {}  (entrances drawn {}, \
-             open mouths {})",
+            "  UNDERWORLD  U1 band-branches {}  U2 chambers {}  U3 reachable {}  \
+             (entrances drawn {}, open mouths {})",
             self.band_branches,
-            self.chambers_canonical,
-            self.chambers_all_entrances,
+            self.chambers,
             self.reachable_chambers,
             self.entrances_drawn,
             self.open_mouths,
         );
         for (name, n) in [
-            ("U1  band-branches      ", self.band_branches as f64),
-            ("U2a canonical chambers ", self.chambers_canonical as f64),
-            (
-                "U2b all-entrance cham. ",
-                self.chambers_all_entrances as f64,
-            ),
-            ("U3  reachable chambers ", self.reachable_chambers as f64),
+            ("U1 band-branches   ", self.band_branches as f64),
+            ("U2 chambers        ", self.chambers as f64),
+            ("U3 reachable cham. ", self.reachable_chambers as f64),
         ] {
             println!(
                 "  RATIO {name} per land cell {:8.3}x   per habitable land cell \
@@ -414,11 +473,11 @@ impl Scale {
             );
         }
         println!(
-            "  SHAPE  chambers per band-branch (U2a/U1) {:.3}  \
-             entrance multiplier (U2b/U2a) {:.3}  reachable share of U2b {:.4}%",
-            self.chambers_canonical as f64 / self.band_branches.max(1) as f64,
-            self.chambers_all_entrances as f64 / self.chambers_canonical.max(1) as f64,
-            100.0 * self.reachable_chambers as f64 / self.chambers_all_entrances.max(1) as f64,
+            "  SHAPE  chambers per band-branch (U2/U1) {:.3}  \
+             apertures per system {:.3}  reachable share of U2 {:.4}%",
+            self.chambers as f64 / self.band_branches.max(1) as f64,
+            self.entrances_drawn as f64 / self.cave_systems.max(1) as f64,
+            100.0 * self.reachable_chambers as f64 / self.chambers.max(1) as f64,
         );
     }
 }
@@ -449,7 +508,7 @@ fn reachable_union(
     seen
 }
 
-/// Read one cave system's four underworld populations through the shipped
+/// Read one cave system's three underworld populations through the shipped
 /// entry points only, folding them into `out`.
 fn read_system(
     seed: Seed,
@@ -462,47 +521,57 @@ fn read_system(
     let entrances = entrance_count(seed, cell);
     out.entrances_drawn += u64::from(entrances);
 
-    // U1 / U2a / U2b. The walk is the LATTICE's own ceilings
-    // (`BRANCHES_PER_SYSTEM`, `FLOORS_PER_RUN_CEILING`, the derived rank set),
-    // never a run's own drawn length — bounding it by the drawn length is what
-    // made an earlier version of the committed witness unable to see its own
-    // floor gate at all, and `chamber_exists` is the only adjudicator here.
-    for entrance in 0..entrances {
-        for &band in ranks {
-            for branch in 0..BRANCHES_PER_SYSTEM {
-                for floor in 0..FLOORS_PER_RUN_CEILING {
-                    let addr = ChamberAddr {
-                        cell,
-                        entrance,
-                        branch,
-                        band,
-                        floor,
-                    };
-                    if !chamber_exists(seed, cave, gradient, addr) {
-                        continue;
-                    }
-                    out.chambers_all_entrances += 1;
-                    if entrance == 0 {
-                        out.chambers_canonical += 1;
-                        if floor == 0 {
-                            out.band_branches += 1;
-                        }
-                    }
+    // U1 / U2. The walk is the LATTICE's own ceilings
+    // (`BRANCHES_PER_SYSTEM`, `LEVELS_PER_BRANCH_CEILING`, the derived rank
+    // set), never a run's own drawn length — bounding it by the drawn length
+    // is what made an earlier version of the committed witness unable to see
+    // its own floor gate at all, and `chamber_exists` is the only adjudicator
+    // here.
+    //
+    // **ONE lattice per system, walked once.** Before The Drift this loop had
+    // an outer `for entrance in 0..entrances` and the address carried the
+    // entrance, so the same system was walked once per aperture and yielded a
+    // different chamber each time; that is what made U2a (canonical, `e = 0`)
+    // and U2b (summed over apertures) two different numbers. The Drift's
+    // amendment A.3 deleted `entrance` from `ChamberAddr`, so the two readings
+    // are now one population and the walk is over `(branch, band, level)`
+    // alone. `entrances_drawn` is still summed, because it still says how many
+    // apertures ADDRESS that one lattice.
+    for &rank in ranks {
+        let band = hornvale_kernel::Band::from_rank(rank)
+            .expect("habitation_ranks() yields real habitation ranks");
+        for branch in 0..BRANCHES_PER_SYSTEM {
+            for level in 0..LEVELS_PER_BRANCH_CEILING {
+                let addr = ChamberAddr {
+                    cell,
+                    branch,
+                    band,
+                    level,
+                };
+                if !chamber_exists(seed, cave, gradient, addr) {
+                    continue;
+                }
+                out.chambers += 1;
+                if level == 0 {
+                    out.band_branches += 1;
                 }
             }
         }
     }
 
     // U3 — the walk, seeded from every mouth that survives `chamber_exists`.
+    // An aperture is now a WAY IN to the shared lattice rather than a lattice
+    // of its own, so `entrance_mouth` is read for the coordinate it names and
+    // nothing else.
     let mouths: Vec<ChamberAddr> = (0..entrances)
         .map(|e| {
             let m = entrance_mouth(seed, cell, e);
             ChamberAddr {
                 cell,
-                entrance: e,
                 branch: m.branch,
-                band: m.band,
-                floor: m.floor,
+                band: hornvale_kernel::Band::from_rank(m.band)
+                    .expect("entrance_mouth only names a habitation rank"),
+                level: m.floor,
             }
         })
         .filter(|&entry| chamber_exists(seed, cave, gradient, entry))
@@ -681,24 +750,16 @@ fn is_the_underworld_still_smaller_than_the_surface() {
              U-count below is a real zero only by accident"
         );
         assert!(
-            s.band_branches > 0 && s.chambers_canonical > 0,
-            "seed {seed_value}: the canonical lattice realized nothing — U1 and \
-             U2a are measuring an empty world"
+            s.band_branches > 0 && s.chambers > 0,
+            "seed {seed_value}: the lattice realized nothing — U1 and U2 are \
+             measuring an empty world"
         );
         assert!(
-            s.chambers_all_entrances >= s.chambers_canonical,
-            "seed {seed_value}: the all-entrance count ({}) fell below the \
-             canonical one ({}) — entrance 0 is one of the entrances, so this is \
-             a counting defect, not a world",
-            s.chambers_all_entrances,
-            s.chambers_canonical
-        );
-        assert!(
-            s.chambers_canonical >= s.band_branches,
-            "seed {seed_value}: U2a ({}) fell below U1 ({}) — floor 0 of every \
-             realized band-branch is one of U2a's members, so this cannot happen \
+            s.chambers >= s.band_branches,
+            "seed {seed_value}: U2 ({}) fell below U1 ({}) — level 0 of every \
+             realized band-branch is one of U2's members, so this cannot happen \
              in a world",
-            s.chambers_canonical,
+            s.chambers,
             s.band_branches
         );
         assert!(
@@ -706,11 +767,25 @@ fn is_the_underworld_still_smaller_than_the_surface() {
             "seed {seed_value}: nothing is reachable from any mouth — the walk is \
              vacuous, not reporting a real zero"
         );
+        // **THE DIRECTION THIS GUARD ENFORCES IS `reachable <= exists`, AND IT
+        // IS THE ONLY DIRECTION LEFT.** Its predecessor asserted the strict
+        // `reachable < chambers` and diagnosed equality as "the walk is not
+        // being gated by `chamber_exists` at all". The Drift falsified the
+        // premise, not the code: reachability went 7% -> 100%, so equality is
+        // now the HEALTHY reading on all three seeds and the old assertion
+        // would red on a correct world with a wrong explanation. What cannot
+        // happen in any world is the walk reaching an address the existence
+        // gate refuses, so that is what is asserted. The exact per-seed
+        // counts are pinned against the committed witness below; this guard
+        // is the impossible-direction one, deliberately weaker and unable to
+        // be satisfied by a stale pin.
         assert!(
-            s.reachable_chambers < s.chambers_all_entrances as usize,
-            "seed {seed_value}: every chamber is reachable — the walk is not \
-             being gated by `chamber_exists` at all and U3 is U2b under another \
-             name"
+            s.reachable_chambers <= s.chambers as usize,
+            "seed {seed_value}: the walk reached {} chambers where only {} \
+             exist — `passages_from` is yielding addresses `chamber_exists` \
+             refuses, which is a counting defect and not a world",
+            s.reachable_chambers,
+            s.chambers
         );
     }
 
@@ -723,13 +798,13 @@ fn is_the_underworld_still_smaller_than_the_surface() {
     // only independent instrument that measures them.
     for (i, (seed_value, s)) in per_seed.iter().enumerate() {
         assert_eq!(
-            s.chambers_all_entrances, WITNESS_CHAMBERS[i],
-            "seed {seed_value}: U2b reads {} where the committed witness \
+            s.chambers, WITNESS_CHAMBERS[i],
+            "seed {seed_value}: U2 reads {} where the committed witness \
              `docs/audits/underworld-lattice-seed-panel.md` reports {}. Either \
              the lattice moved (the witness's drift check reddens too — \
              regenerate and re-pin here in the same commit) or this probe and \
              the readout have stopped counting the same population.",
-            s.chambers_all_entrances, WITNESS_CHAMBERS[i]
+            s.chambers, WITNESS_CHAMBERS[i]
         );
         assert_eq!(
             s.reachable_chambers, WITNESS_REACHABLE[i],
@@ -742,8 +817,8 @@ fn is_the_underworld_still_smaller_than_the_surface() {
     // --- THE HEADLINE, RATCHETED -------------------------------------------
     // The campaign's premise is this number and nothing else, so it is
     // asserted rather than printed. See the module header's mutation ledger
-    // for the positive control: `EXISTENCE_DENSITY` 0.5 -> 0.7 moves it to
-    // 9.133x, outside the band, with the land-cell denominator untouched.
+    // for the positive control: `EXISTENCE_DENSITY` 0.5 -> 0.7 moves it well
+    // outside the band with the land-cell denominator untouched.
     let headline = pooled.chambers_per_land_cell();
     assert!(
         (CHAMBERS_PER_LAND_CELL_FLOOR..=CHAMBERS_PER_LAND_CELL_CEILING).contains(&headline),
@@ -753,23 +828,25 @@ fn is_the_underworld_still_smaller_than_the_surface() {
          `EXISTENCE_DENSITY`, the `floors_range` run lengths and \
          `entrance_count`; a move with none of those touched is a finding about \
          the surface half, not a bound to widen.",
-        pooled.chambers_all_entrances,
+        pooled.chambers,
         pooled.land_cells,
         CHAMBERS_PER_LAND_CELL_FLOOR,
         CHAMBERS_PER_LAND_CELL_CEILING,
     );
 
-    // The registry row's own clause, stated as the two readings that disagree
-    // about it, so neither can be quoted without the other.
+    // The registry row's own clause. Before The Drift this block printed two
+    // readings that disagreed about it and refused to pick; the substrate has
+    // since picked, by deleting the axis the disagreement lived on.
     println!(
         "\n== BIO-underworld-has-no-energy, size clause ==\n  \
-         counted as ALL-ENTRANCE CHAMBERS the underworld is {:.3}x the surface \
-         (LARGER — the row's clause is FALSIFIED on this reading)\n  \
-         counted as REACHABLE CHAMBERS   the underworld is {:.3}x the surface \
-         (SMALLER — the row's clause SURVIVES on this reading)\n  \
-         the row names no population, so it cannot be repaired by re-measuring; \
-         it has to name one.",
+         counted as CHAMBERS   the underworld is {:.3}x the surface (LARGER)\n  \
+         counted as REACHABLE  the underworld is {:.3}x the surface (LARGER)\n  \
+         counted as RUNS       the underworld is {:.3}x the surface (smaller)\n  \
+         A chamber is a PLACE and a run is a CONTAINER of places, so the two \
+         readings that could once save the row's clause are down to one, and \
+         it is the one that does not name a place. The clause is FALSIFIED.",
         pooled.chambers_per_land_cell(),
         pooled.reachable_chambers as f64 / pooled.land_cells.max(1) as f64,
+        pooled.band_branches as f64 / pooled.land_cells.max(1) as f64,
     );
 }
