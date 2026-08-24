@@ -57,7 +57,11 @@ pub struct WorldTime { day: f64 }              // UNCHANGED in Phase A
 
 pub const fn from_ticks(t: i64) -> WorldTime   // stores t as f64 / TICKS_PER_STD_DAY
 pub fn ticks(self) -> i64                      // (self.day * TICKS_PER_STD_DAY).round() as i64
-pub fn from_std_days(d: f64) -> Result<..>     // stores d EXACTLY — no rounding yet
+pub fn from_std_days(d: f64) -> Result<..>     // stores d EXACTLY — no rounding yet;
+                                               // REJECTS non-finite AND out-of-tick-range
+                                               // (Ruling 9 — the one deliberate Phase A
+                                               //  behaviour change, front-loaded so Phase B
+                                               //  is purely representational)
 pub fn as_std_days(self) -> f64                // returns self.day
 pub fn whole_days(self) -> i64                 // floor, via as_std_days
 pub fn tick_of_day(self) -> i64                // rem_euclid over ticks()
