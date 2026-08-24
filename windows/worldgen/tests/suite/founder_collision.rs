@@ -70,8 +70,8 @@
 //! left it, and inside the observed range of 2 → 6 → 2 → 3 → 6 → 2.
 //!
 //! It is legible for exactly the reason the paragraph above is, running the
-//! other way: re-keying the node index on `(cell, rung)` takes drow out of the
-//! competition for surface cells, and seed 42 falls from 826 occupations across
+//! other way: re-keying the node index on `(vertex, rung)` takes drow out of the
+//! competition for surface vertices, and seed 42 falls from 826 occupations across
 //! 302 sites to **625 across 264**. Fewer occupations are fewer chances that
 //! two of them agree on every material fact `founder_handle` reads. The
 //! independent quantity and the collision rate have now moved together, in the
@@ -171,7 +171,7 @@ fn build(seed: u64, depth: BuildDepth) -> hornvale_kernel::World {
 /// 1439, 1892, 2031 and 2871 — and 1892's four-epoch run finally ends. Only
 /// 2465 survives, joined by one newcomer. That tracks the module header's
 /// reading rather than contradicting it: re-keying the node index takes drow
-/// out of the competition for surface cells and seed 42's settlement volume
+/// out of the competition for surface vertices and seed 42's settlement volume
 /// falls by a third (521 occupations across 217 sites, against 826 across
 /// 302), and fewer occupations are fewer chances for two of them to collide.
 /// **BOTH positives are built here, not three of six** — there is no third.

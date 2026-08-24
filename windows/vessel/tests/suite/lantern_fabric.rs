@@ -2,7 +2,7 @@
 //!
 //! MEASURED ON REAL TERRAIN, NOT FIXTURES. Every reflectance in this file
 //! comes from a world this battery builds — `GeneratedTerrain::material_at`
-//! and `rock_at` at the cell a *generated* settlement actually condensed on.
+//! and `rock_at` at the vertex a *generated* settlement actually condensed on.
 //! No `MaterialBuffer` is authored anywhere in it. The Beholding's
 //! 28-of-255 on authored fixtures collapsed to 2-of-255 on real terrain, and
 //! this claim is exactly the one that failure mode would fake.
@@ -14,8 +14,8 @@
 //! worldgen (`session_snapshot.rs`, `possession_moves.rs`), so it is the
 //! shallowest crate that can hold both halves of the measurement.
 //!
-//! **Which cell a settlement is on.** A settlement carries its own
-//! `hornvale_settlement::CELL_ID` fact, and that is the identical cell the
+//! **Which vertex a settlement is on.** A settlement carries its own
+//! `hornvale_settlement::VERTEX_ID` fact, and that is the identical vertex the
 //! composition root read `climate.biome_at` at when it committed the
 //! settlement's biome (`settlement_descriptor_facts`' caller). So fabric and
 //! biome cannot disagree here — they are not two calculations that happen to
@@ -37,7 +37,7 @@
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::color::{Illuminant, Observer, Reflectance, blackbody, standard_observer};
-use hornvale_kernel::{CellId, Seed, Value};
+use hornvale_kernel::{Seed, Value, Vertex};
 use hornvale_terrain::TerrainPins;
 use hornvale_vessel::fabric::{self, Fabric, FabricContext};
 use hornvale_vessel::lens::{self, Lens};
@@ -77,11 +77,11 @@ fn srgb_under_reference_light(observer: &Observer, refl: &Reflectance) -> [u8; 3
 }
 
 /// The ground under every generated settlement of one seed's world, read at
-/// the settlement's own committed cell.
+/// the settlement's own committed vertex.
 ///
 /// Builds the world; never authors a placement, a buffer or a rock class.
 /// **No land-only filter**: settlements can be marine (founded on land that
-/// later drowned), and `rock_at` answers for any cell, so filtering here
+/// later drowned), and `rock_at` answers for any vertex, so filtering here
 /// would silently drop real settlements.
 fn settlement_ground(seed: u64) -> Vec<FabricContext> {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
@@ -115,11 +115,11 @@ fn settlement_ground(seed: u64) -> Vec<FabricContext> {
     settlements
         .iter()
         .map(|s| {
-            let cell = match world.ledger.value_of(s.id, hornvale_settlement::CELL_ID) {
-                Some(Value::Number(n)) => CellId(*n as u32),
+            let vertex = match world.ledger.value_of(s.id, hornvale_settlement::VERTEX_ID) {
+                Some(Value::Number(n)) => Vertex(*n as u32),
                 _ => panic!("settlement {} has no cell-id fact", s.id.0),
             };
-            FabricContext::at(terrain, climate, cell)
+            FabricContext::at(terrain, climate, vertex)
         })
         .collect()
 }

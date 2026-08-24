@@ -315,7 +315,7 @@ impl Ledger {
         // *before* the idempotency and contradiction checks, so dedup compares
         // canonical values (see the `quantize` module: last-ULP libm divergence
         // between platforms otherwise reaches the serialized ledger and breaks
-        // cross-platform byte-identity). Integer-valued facts (cell ids,
+        // cross-platform byte-identity). Integer-valued facts (vertex ids,
         // populations, counts) are unaffected — they quantize to themselves.
         if let Value::Number(n) = fact.object {
             fact.object = Value::Number(crate::quantize::quantize(n));

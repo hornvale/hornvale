@@ -42,7 +42,7 @@ pub const IS_OCCUPATION: &str = "is-occupation";
 /// Predicate: the people (`KindId`) occupying the site (functional, Text).
 /// type-audit: bare-ok(identifier-text)
 pub const OCC_PEOPLE: &str = "occ-people";
-/// Predicate: the Geosphere cell the occupation sits on (functional, Number).
+/// Predicate: the Geosphere vertex the occupation sits on (functional, Number).
 /// type-audit: bare-ok(identifier-text)
 pub const OCC_SITE: &str = "occ-site";
 /// Predicate: the standard day the occupation began (functional, Number).
@@ -100,7 +100,12 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     )?;
     registry.register_predicate(IS_OCCUPATION, true, "subject is an occupation record")?;
     registry.register_predicate(OCC_PEOPLE, true, "the people occupying the site")?;
-    registry.register_predicate(OCC_SITE, true, "the Geosphere cell the occupation sits on")?;
+    registry.register_predicate(
+        OCC_SITE,
+        true,
+        // lexicon: FROZEN — a predicate description is serialized into every world
+        "the Geosphere cell the occupation sits on",
+    )?;
     registry.register_predicate(OCC_FOUNDED, true, "the standard day the occupation began")?;
     registry.register_predicate(
         OCC_ENDED,

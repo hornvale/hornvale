@@ -5,12 +5,12 @@
 //!
 //! [`draw`]/[`draw_with`] paint exactly one thing: land vs ocean, one
 //! glyph per grid cell. Each screen cell takes the AREA-MAJORITY of the
-//! terrain cells its own footprint covers, not merely the nearest cell to
+//! terrain vertices its own footprint covers, not merely the nearest vertex to
 //! its centre — Nathan's ruling, fix round 1 of this task, after the
-//! task report's H1' investigation found nearest-cell sampling
+//! task report's H1' investigation found nearest-vertex sampling
 //! (equivalent to a footprint of exactly one query point) made a
 //! coastline character land-or-water at random at the 40x20 floor rung,
-//! where roughly 51 real terrain cells sit behind every character. See
+//! where roughly 51 real terrain vertices sit behind every character. See
 //! [`SUBSAMPLES_PER_AXIS`]'s own doc for how the footprint is sampled,
 //! and the task report's "fix round 1" section for the H1'' measurement
 //! this produced.
@@ -18,33 +18,33 @@
 //! The glyph vocabulary (`~` ocean, `.` land) is the spike's own
 //! (`windows/worldgen/examples/portolan_spike.rs`, `glyph_for`, line
 //! 171 -- deleted at this campaign's close, git history at `0292de87f^`)
-//! — reused rather than invented — even though the cell-lookup
+//! — reused rather than invented — even though the vertex-lookup
 //! mechanism underneath it is not: `glyph_for` asked
-//! [`hornvale_terrain::GeneratedTerrain::nearest_cell`], an O(cell count)
+//! [`hornvale_terrain::GeneratedTerrain::nearest_vertex`], an O(vertex count)
 //! brute-force scan the spike didn't have to care about (it renders three
 //! static frames and exits). This module asks
-//! [`hornvale_kernel::NearestCellIndex`] instead — the real-code idiom
+//! [`hornvale_kernel::NearestVertexIndex`] instead — the real-code idiom
 //! `bin/src/driver.rs` already established for exactly this "screen
-//! position to nearest terrain cell" query
-//! (`Driver::resolve_walk_band`) — and `NearestCellIndex::nearest`'s own
-//! doc guarantees it returns the bit-identical cell the brute-force scan
-//! would (same max dot product, same first-in-CellId-order tie-break), so
+//! position to nearest terrain vertex" query
+//! (`Driver::resolve_walk_band`) — and `NearestVertexIndex::nearest`'s own
+//! doc guarantees it returns the bit-identical vertex the brute-force scan
+//! would (same max dot product, same first-in-Vertex-order tie-break), so
 //! this is a performance choice, not a behavioural one.
 //!
 //! **The index is built ONCE by the caller and passed in, never rebuilt
 //! per call.** Fix round 1's other half: point sampling already made a
-//! per-call `NearestCellIndex::new(geo)` (~200ms by the task report's own
+//! per-call `NearestVertexIndex::new(geo)` (~200ms by the task report's own
 //! measurement) wasteful, and area sampling multiplies the per-cell query
 //! count by [`SUBSAMPLES_PER_AXIS`] squared, so rebuilding it inside
 //! `draw_with` on every redraw (Task 3 wires this into the live redraw
 //! path) would have compounded a wasteful cost into a much larger one.
-//! `driver.rs` already builds its own `NearestCellIndex` once, at
+//! `driver.rs` already builds its own `NearestVertexIndex` once, at
 //! `Driver::start`, and reuses it for the session's lifetime
 //! (`self.nearest`) — this module follows the same idiom rather than
 //! caching one internally.
 
 use hornvale_game_core::{Cell, Grid, Ink, Source, Weight};
-use hornvale_kernel::{CellId, Geosphere, NearestCellIndex};
+use hornvale_kernel::{Geosphere, NearestVertexIndex, Vertex};
 use hornvale_terrain::GeneratedTerrain;
 use std::collections::BTreeSet;
 
@@ -69,7 +69,7 @@ use crate::mercator::{self, Frame};
 pub struct Window {
     /// The zoom level, `0..=`[`MAX_ZOOM`]. `0` is the whole planet (the
     /// virtual chart is exactly the drawn plate's own size, so there is
-    /// nothing to scroll); [`MAX_ZOOM`] is one character per terrain cell
+    /// nothing to scroll); [`MAX_ZOOM`] is one character per terrain vertex
     /// (see that constant's doc). See [`virtual_dims`] for the formula.
     pub zoom: u8,
     /// The window's origin column, in VIRTUAL chart cells (see
@@ -85,7 +85,7 @@ pub struct Window {
 }
 
 /// Task 1's own measurement: walking the equator at `GLOBE_LEVEL` (seed
-/// 42) crosses 385 distinct terrain cells — not spec §4.3's ~364 estimate.
+/// 42) crosses 385 distinct terrain vertices — not spec §4.3's ~364 estimate.
 /// This is the zoom ladder's ceiling: beyond a virtual chart this wide, a
 /// character would be drawing detail the mesh does not have (decision
 /// 0123: disclose a resolution, never invent detail below it). Believed
@@ -100,13 +100,13 @@ pub struct Window {
 /// implies and never reaches the mesh's real detail on that axis at all.
 /// Measured on seed 42, best case (finest zoom, scrolled across the WHOLE
 /// virtual chart, no plate size limiting what is on screen): only 70.5%
-/// of the planet's 40,962 terrain cells are EVER an `area_majority`
+/// of the planet's 40,962 terrain vertices are EVER an `area_majority`
 /// representative at all -- 29.5% are undrawable by construction on this
 /// axis alone, no matter how the plate scrolls. Of the planet's 874 cave
-/// cells specifically, under that same best case, 330 (37.8%) are among
+/// vertices specifically, under that same best case, 330 (37.8%) are among
 /// the undrawable ones. **A real plate is worse than the best case**,
 /// because it shows one screen's worth at a time rather than scrolling
-/// everywhere at once: only **5.7% of all cells are ever drawable at the
+/// everywhere at once: only **5.7% of all vertices are ever drawable at the
 /// design plate's coarsest rung** (zoom 0, no scrolling), and only **1.1%
 /// at the 80x24 floor's coarsest rung** -- i.e. 94.3% and 98.9%
 /// undrawable respectively, at those two sizes, at that one rung.
@@ -206,23 +206,23 @@ const CAVE_COLOR: [u8; 3] = [130, 120, 110];
 
 /// Sub-samples per axis for area-majority sampling: each screen cell
 /// takes the majority vote of `SUBSAMPLES_PER_AXIS * SUBSAMPLES_PER_AXIS`
-/// nearest-cell queries spread evenly across its own footprint, in place
-/// of the single nearest-cell query at its centre the previous,
+/// nearest-vertex queries spread evenly across its own footprint, in place
+/// of the single nearest-vertex query at its centre the previous,
 /// point-sampled scheme used.
 ///
 /// **This generalises the old code rather than replacing it (Nathan's
 /// own framing).** At the projection's own ceiling — roughly one screen
-/// cell per terrain cell — every sub-sample within a footprint lands on
-/// the same nearest cell, so the majority is unanimous and the answer is
+/// cell per terrain vertex — every sub-sample within a footprint lands on
+/// the same nearest vertex, so the majority is unanimous and the answer is
 /// identical to the old point-sampled one; the two are the same function
 /// evaluated at different resolutions, not two code paths that happen to
 /// agree.
 ///
 /// `7` (49 samples — always odd, so a tie is impossible) approximates the
-/// ~51 real terrain cells the task report's H1' investigation measured
+/// ~51 real terrain vertices the task report's H1' investigation measured
 /// behind each character at the 40x20 floor rung (`sqrt(51) ≈ 7.1`,
 /// rounded down). It is a fixed constant, not derived from
-/// `GeneratedTerrain`'s actual cell count — threading that count through
+/// `GeneratedTerrain`'s actual vertex count — threading that count through
 /// just to pick a sampling density would be more machinery than a fixed
 /// approximation buys here, and the floor rung is the only resolution
 /// this task measures.
@@ -247,13 +247,13 @@ const SUBSAMPLES_PER_AXIS: u32 = 7;
 pub fn draw(
     terrain: &GeneratedTerrain,
     geo: &Geosphere,
-    index: &NearestCellIndex,
+    index: &NearestVertexIndex,
     f: &Frame,
     win: &Window,
     w: u16,
     h: u16,
-    settlements: &BTreeSet<CellId>,
-    caves: &BTreeSet<CellId>,
+    settlements: &BTreeSet<Vertex>,
+    caves: &BTreeSet<Vertex>,
     discovered: &Discovered,
 ) -> Grid {
     let colour_allowed = Ink::from_wire(Some([0, 0, 0])) != Ink::Plain;
@@ -279,14 +279,14 @@ pub fn draw(
 /// The Chroma's fix round `389d498de` established the need for — threaded
 /// tests mutating `NO_COLOR` under each other).
 ///
-/// `index` must be built over the SAME `geo` (`NearestCellIndex::new(geo)`
+/// `index` must be built over the SAME `geo` (`NearestVertexIndex::new(geo)`
 /// — see the module doc for why it is a caller-owned parameter rather
 /// than being built or cached here).
 ///
 /// For every cell of the returned `w`x`h` grid, this samples
 /// [`SUBSAMPLES_PER_AXIS`] squared points spread evenly across that
 /// cell's own footprint (see that constant's doc for exactly how), looks
-/// up each sample's nearest terrain cell, and draws ocean or land by
+/// up each sample's nearest terrain vertex, and draws ocean or land by
 /// MAJORITY vote across the samples.
 ///
 /// **`w`/`h` are the drawn plate's own size — the screen window —
@@ -333,14 +333,14 @@ pub fn draw(
 pub fn draw_with(
     terrain: &GeneratedTerrain,
     geo: &Geosphere,
-    index: &NearestCellIndex,
+    index: &NearestVertexIndex,
     f: &Frame,
     win: &Window,
     w: u16,
     h: u16,
     colour_allowed: bool,
-    settlements: &BTreeSet<CellId>,
-    caves: &BTreeSet<CellId>,
+    settlements: &BTreeSet<Vertex>,
+    caves: &BTreeSet<Vertex>,
     discovered: &Discovered,
 ) -> Grid {
     let mut grid = Grid::new(w, h);
@@ -350,12 +350,12 @@ pub fn draw_with(
 
     for row in 0..height {
         for col in 0..width {
-            let (ocean, cell) =
+            let (ocean, vertex) =
                 area_majority(terrain, geo, index, f, win, virtual_w, virtual_h, row, col);
             // TERRAIN ONLY. Sites are PROJECTED in a second pass below —
             // see `draw_point_sites` for why asking each screen cell "is
             // your representative a site?" dropped 37.8% of caves.
-            let _ = cell;
+            let _ = vertex;
             let (glyph, color) = if ocean {
                 (OCEAN_GLYPH, OCEAN_COLOR)
             } else {
@@ -396,9 +396,9 @@ pub fn draw_with(
 /// one.
 ///
 /// **Why the direction matters.** The sampled scheme drew a site only when
-/// its exact cell won the majority vote for some character. Measured on seed
-/// 42: only 70.5% of the planet's 40,962 cells are ever a representative at
-/// any zoom or scroll position, so **37.8% of cave cells were undrawable by
+/// its exact vertex won the majority vote for some character. Measured on seed
+/// 42: only 70.5% of the planet's 40,962 vertices are ever a representative at
+/// any zoom or scroll position, so **37.8% of cave vertices were undrawable by
 /// construction** — a player could walk into a cave the map could never show,
 /// at any rung. Terrain is a texture and belongs to sampling; a settlement or
 /// a cave mouth is a landmark and belongs to projection, the same way a real
@@ -423,19 +423,19 @@ fn draw_point_sites(
     w: u16,
     h: u16,
     colour_allowed: bool,
-    settlements: &BTreeSet<CellId>,
-    caves: &BTreeSet<CellId>,
+    settlements: &BTreeSet<Vertex>,
+    caves: &BTreeSet<Vertex>,
     discovered: &Discovered,
     grid: &mut Grid,
 ) {
     let width = u32::from(w);
     let height = u32::from(h);
 
-    let place = |cell: CellId, id: FeatureId, glyph: char, color: [u8; 3], grid: &mut Grid| {
+    let place = |vertex: Vertex, id: FeatureId, glyph: char, color: [u8; 3], grid: &mut Grid| {
         if !discovered.contains(id) {
             return;
         }
-        let g = geo.coord(cell);
+        let g = geo.coord(vertex);
         let Some((plate_row, plate_col)) =
             mercator::project(f, g.latitude, g.longitude, virtual_w, virtual_h)
         else {
@@ -463,13 +463,19 @@ fn draw_point_sites(
         );
     };
 
-    for &cell in caves {
-        place(cell, FeatureId::Cave(cell), CAVE_GLYPH, CAVE_COLOR, grid);
-    }
-    for &cell in settlements {
+    for &vertex in caves {
         place(
-            cell,
-            FeatureId::Settlement(cell),
+            vertex,
+            FeatureId::Cave(vertex),
+            CAVE_GLYPH,
+            CAVE_COLOR,
+            grid,
+        );
+    }
+    for &vertex in settlements {
+        place(
+            vertex,
+            FeatureId::Settlement(vertex),
             SETTLEMENT_GLYPH,
             SETTLEMENT_COLOR,
             grid,
@@ -481,11 +487,11 @@ fn draw_point_sites(
 /// (screen-relative, before `win.origin_row`/`origin_col` are added) —
 /// SHARED by [`draw_with`] (which paints the winning class as a glyph)
 /// and `bin`'s world-view resolver (Task 3b fix round 1, Finding 2: the
-/// resolver must never name a cell whose class contradicts the glyph the
+/// resolver must never name a vertex whose class contradicts the glyph the
 /// player is looking at).
 ///
 /// Returns whether the majority is ocean, and the [`hornvale_kernel::
-/// CellId`] of the MAJORITY-class sample nearest the screen cell's own
+/// Vertex`] of the MAJORITY-class sample nearest the screen cell's own
 /// true centre — the `(3, 3)` sub-sample, since [`SUBSAMPLES_PER_AXIS`]
 /// is odd (`7`) and index `3` of `0..7` is the exact centre. That
 /// sub-sample's own `unproject` call is provably identical to a direct
@@ -508,14 +514,14 @@ fn draw_point_sites(
 pub(crate) fn area_majority(
     terrain: &GeneratedTerrain,
     geo: &Geosphere,
-    index: &NearestCellIndex,
+    index: &NearestVertexIndex,
     f: &Frame,
     win: &Window,
     virtual_w: u32,
     virtual_h: u32,
     row: u32,
     col: u32,
-) -> (bool, hornvale_kernel::CellId) {
+) -> (bool, hornvale_kernel::Vertex) {
     let plate_row = win.origin_row + row;
     let plate_col = win.origin_col + col;
     let sub_width = virtual_w * SUBSAMPLES_PER_AXIS;
@@ -523,21 +529,21 @@ pub(crate) fn area_majority(
 
     let mut land_votes = 0u32;
     let mut ocean_votes = 0u32;
-    let mut samples: Vec<(u32, u32, bool, hornvale_kernel::CellId)> =
+    let mut samples: Vec<(u32, u32, bool, hornvale_kernel::Vertex)> =
         Vec::with_capacity((SUBSAMPLES_PER_AXIS * SUBSAMPLES_PER_AXIS) as usize);
     for i in 0..SUBSAMPLES_PER_AXIS {
         for j in 0..SUBSAMPLES_PER_AXIS {
             let sub_row = plate_row * SUBSAMPLES_PER_AXIS + i;
             let sub_col = plate_col * SUBSAMPLES_PER_AXIS + j;
             let (lat, lon) = mercator::unproject(f, sub_row, sub_col, sub_width, sub_height);
-            let cell = index.nearest(geo, lat, lon);
-            let ocean = terrain.is_ocean(cell);
+            let vertex = index.nearest(geo, lat, lon);
+            let ocean = terrain.is_ocean(vertex);
             if ocean {
                 ocean_votes += 1;
             } else {
                 land_votes += 1;
             }
-            samples.push((i, j, ocean, cell));
+            samples.push((i, j, ocean, vertex));
         }
     }
 
@@ -550,10 +556,10 @@ pub(crate) fn area_majority(
     let nearest = samples
         .into_iter()
         .filter(|&(_, _, sample_ocean, _)| sample_ocean == ocean)
-        .map(|(i, j, _, cell)| {
+        .map(|(i, j, _, vertex)| {
             let di = i64::from(i) - CENTRE;
             let dj = i64::from(j) - CENTRE;
-            (di * di + dj * dj, i, j, cell)
+            (di * di + dj * dj, i, j, vertex)
         })
         .min()
         .expect("the majority class always has at least one matching sample, by definition")
@@ -590,7 +596,7 @@ mod tests {
     #[test]
     fn a_settlement_outranks_a_cave_on_the_same_cell() {
         let (terrain, geo) = test_world();
-        let index = NearestCellIndex::new(&geo);
+        let index = NearestVertexIndex::new(&geo);
         let f = crate::mercator::frame_for(false);
         let win = Window {
             zoom: 0,
@@ -601,15 +607,15 @@ mod tests {
         let (vw, vh) = virtual_dims(&win, w);
 
         let shared = geo
-            .cells()
+            .vertices()
             .find(|&c| {
                 let g = geo.coord(c);
                 crate::mercator::project(&f, g.latitude, g.longitude, vw, vh)
                     .is_some_and(|(r, cc)| r < u32::from(h) && cc < u32::from(w))
             })
-            .expect("some cell projects on-plate");
+            .expect("some vertex projects on-plate");
 
-        let both: BTreeSet<CellId> = std::iter::once(shared).collect();
+        let both: BTreeSet<Vertex> = std::iter::once(shared).collect();
         let mut discovered = Discovered::default();
         discovered.record(FeatureId::Settlement(shared));
         discovered.record(FeatureId::Cave(shared));
@@ -638,19 +644,19 @@ mod tests {
 
     /// THE INVERSION, AS A TEST. Sites used to be drawn by asking each
     /// SCREEN CELL "is your area-majority representative a site?" — so a
-    /// site whose cell never won a vote was never drawn at any zoom.
-    /// Measured before this change: only 70.5% of cells are ever a
-    /// representative, so 37.8% of cave cells were undrawable by
+    /// site whose vertex never won a vote was never drawn at any zoom.
+    /// Measured before this change: only 70.5% of vertices are ever a
+    /// representative, so 37.8% of cave vertices were undrawable by
     /// construction.
     ///
     /// This test finds a cave the OLD scheme could not draw — one whose
-    /// cell is not the representative of the screen cell it falls in — and
-    /// asserts it draws now. It searches rather than hardcoding a cell, so
+    /// vertex is not the representative of the screen cell it falls in — and
+    /// asserts it draws now. It searches rather than hardcoding a vertex, so
     /// it cannot rot into a tautology if the sampling changes.
     #[test]
     fn a_cave_that_wins_no_vote_is_still_drawn() {
         let (terrain, geo) = test_world();
-        let index = NearestCellIndex::new(&geo);
+        let index = NearestVertexIndex::new(&geo);
         let f = crate::mercator::frame_for(false);
         let win = Window {
             zoom: 0,
@@ -660,9 +666,9 @@ mod tests {
         let (w, h) = (104u16, 52u16);
         let (vw, vh) = virtual_dims(&win, w);
 
-        // Every cave cell, and the screen cell each projects into.
-        let caves: BTreeSet<CellId> = (0..geo.cell_count())
-            .map(|i| CellId(i as u32))
+        // Every cave vertex, and the screen cell each projects into.
+        let caves: BTreeSet<Vertex> = (0..geo.vertex_count())
+            .map(|i| Vertex(i as u32))
             .filter(|&c| terrain.cave_at(c).is_some())
             .collect();
         assert!(!caves.is_empty(), "seed 42 must have caves to test with");
@@ -714,7 +720,7 @@ mod tests {
     #[test]
     fn the_plate_fits_the_eighty_by_twenty_four_floor_exactly() {
         let (terrain, geo) = test_world();
-        let index = NearestCellIndex::new(&geo);
+        let index = NearestVertexIndex::new(&geo);
         let f = crate::mercator::frame_for(false);
         let win = Window {
             zoom: 0,
@@ -751,7 +757,7 @@ mod tests {
     #[test]
     fn a_land_cell_tints_when_colour_is_allowed_and_is_plain_when_it_is_not() {
         let (terrain, geo) = test_world();
-        let index = NearestCellIndex::new(&geo);
+        let index = NearestVertexIndex::new(&geo);
         let f = crate::mercator::frame_for(false);
         let win = Window {
             zoom: 0,
@@ -811,18 +817,18 @@ mod tests {
     /// sampling.** A tiny window (2x2) over the whole planet at a coarse
     /// virtual resolution means each screen cell's SUBSAMPLES_PER_AXIS^2
     /// sub-samples are close enough together (relative to the mesh's own
-    /// cell size) that every sub-sample within a cell lands on the same
-    /// nearest terrain cell — so the majority is unanimous and equals
+    /// vertex spacing) that every sub-sample within a cell lands on the same
+    /// nearest terrain vertex — so the majority is unanimous and equals
     /// what a single centre-point query would have returned. This is the
     /// behavioural claim `SUBSAMPLES_PER_AXIS`'s own doc makes ("the two
     /// are the same function evaluated at different resolutions"),
     /// checked directly rather than only asserted in prose: every drawn
-    /// cell's glyph must equal the glyph a plain nearest-cell query at
+    /// cell's glyph must equal the glyph a plain nearest-vertex query at
     /// that same cell's own centre would have produced.
     #[test]
     fn at_a_fine_enough_window_area_majority_agrees_with_point_sampling() {
         let (terrain, geo) = test_world();
-        let index = NearestCellIndex::new(&geo);
+        let index = NearestVertexIndex::new(&geo);
         let f = crate::mercator::frame_for(false);
         let win = Window {
             zoom: 0,
@@ -831,7 +837,7 @@ mod tests {
         };
         // 400x200: fine enough that a single screen cell's footprint (a
         // fraction of a degree) is much smaller than the mesh's own
-        // typical cell spacing at GLOBE_LEVEL, so every sub-sample within
+        // typical vertex spacing at GLOBE_LEVEL, so every sub-sample within
         // one cell's footprint should agree.
         let (w, h) = (400u16, 200u16);
         let empty_settlements = BTreeSet::new();
@@ -856,8 +862,8 @@ mod tests {
             for col in 0..u32::from(w) {
                 let (lat, lon) =
                     crate::mercator::unproject(&f, row, col, u32::from(w), u32::from(h));
-                let point_cell = index.nearest(&geo, lat, lon);
-                let point_ocean = terrain.is_ocean(point_cell);
+                let point_vertex = index.nearest(&geo, lat, lon);
+                let point_ocean = terrain.is_ocean(point_vertex);
                 let expected = if point_ocean { OCEAN_GLYPH } else { LAND_GLYPH };
                 let got = g.get(col as u16, row as u16).unwrap().glyph.unwrap();
                 total += 1;
@@ -887,48 +893,48 @@ mod tests {
     /// draws a discovered one** — the real test the discovery gate exists
     /// for (spec Amendment 1 §A3/§A7, "nothing is drawn and then hidden"):
     /// the gate lives inside the paint loop, not a filter pass afterward.
-    /// Uses a real cave cell (real terrain, not a
+    /// Uses a real cave vertex (real terrain, not a
     /// fixture) at a window fine enough that `area_majority`'s vote
     /// collapses to point sampling (the same technique
     /// `at_a_fine_enough_window_area_majority_agrees_with_point_sampling`
     /// already establishes), so the screen position resolving to
-    /// `cave_cell` is found by direct search rather than assumed.
+    /// `cave_vertex` is found by direct search rather than assumed.
     #[test]
     fn draw_with_gates_a_point_site_on_discovery() {
         let (terrain, geo) = test_world();
-        let index = NearestCellIndex::new(&geo);
+        let index = NearestVertexIndex::new(&geo);
         let f = crate::mercator::frame_for(false);
         let win = Window {
             zoom: 0,
             origin_col: 0,
             origin_row: 0,
         };
-        let cave_cell = geo
-            .cells()
+        let cave_vertex = geo
+            .vertices()
             .find(|&c| terrain.cave_at(c).is_some())
-            .expect("seed 42 at GLOBE_LEVEL has at least one cave cell");
+            .expect("seed 42 at GLOBE_LEVEL has at least one cave vertex");
         let settlements = BTreeSet::new();
         // The cave roster this test's subject must be IN — sites are
         // PROJECTED from the roster now, not sampled for, so an empty
         // roster would make this test vacuous rather than failing.
-        let caves: BTreeSet<CellId> = std::iter::once(cave_cell).collect();
+        let caves: BTreeSet<Vertex> = std::iter::once(cave_vertex).collect();
         let (w, h) = (400u16, 200u16);
         let (virtual_w, virtual_h) = virtual_dims(&win, w);
 
-        // Find the screen position area_majority resolves to `cave_cell`.
+        // Find the screen position area_majority resolves to `cave_vertex`.
         let mut found = None;
         'search: for row in 0..u32::from(h) {
             for col in 0..u32::from(w) {
-                let (_ocean, cell) = area_majority(
+                let (_ocean, vertex) = area_majority(
                     &terrain, &geo, &index, &f, &win, virtual_w, virtual_h, row, col,
                 );
-                if cell == cave_cell {
+                if vertex == cave_vertex {
                     found = Some((row, col));
                     break 'search;
                 }
             }
         }
-        let (row, col) = found.expect("cave_cell's own screen position is on this fine a plate");
+        let (row, col) = found.expect("cave_vertex's own screen position is on this fine a plate");
 
         let undiscovered = Discovered::default();
         let g_before = draw_with(
@@ -951,7 +957,7 @@ mod tests {
         );
 
         let mut discovered = Discovered::default();
-        discovered.record(FeatureId::Cave(cave_cell));
+        discovered.record(FeatureId::Cave(cave_vertex));
         let g_after = draw_with(
             &terrain,
             &geo,

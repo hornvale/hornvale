@@ -21,7 +21,7 @@
 //! not read at all.
 
 use hornvale_history::record::{Function, Notability, TechHorizon};
-use hornvale_kernel::{CellId, Geosphere, KindId, NearestCellIndex, RoomAddr, World};
+use hornvale_kernel::{Facet, Geosphere, KindId, NearestVertexIndex, Vertex, World};
 
 /// What macro history says about a place, reduced to the axes micro generation
 /// indexes. A COORDINATE in a small orthogonal space — never a label drawn from
@@ -85,28 +85,28 @@ impl Brief {
     }
 }
 
-/// The geosphere cell a place sits in: the maximum-weight corner of its
-/// barycentric blend, tie-broken by ascending `CellId`.
+/// The geosphere vertex a place sits in: the maximum-weight corner of its
+/// barycentric blend, tie-broken by ascending `Vertex`.
 ///
 /// Integer weights only (`corner_weights` returns `u64` numerators), so the
 /// choice is cross-platform exact — no float comparison enters world identity.
 /// Returns `None` for a place coarser than the canonical grid.
 ///
-/// `pub(crate)` since The Lantern, which needs the same cell to read the ground
+/// `pub(crate)` since The Lantern, which needs the same vertex to read the ground
 /// a building's fabric is derived from. Shared rather than re-derived on
 /// purpose: a second copy of this rule is exactly how a room's *prose* ("granite
 /// lowland") and its *picture* would come to disagree about which ground it
 /// stands on.
-pub(crate) fn containing_cell(
-    place: &RoomAddr,
+pub(crate) fn containing_vertex(
+    place: &Facet,
     geo: &Geosphere,
-    index: &NearestCellIndex,
-) -> Option<CellId> {
+    index: &NearestVertexIndex,
+) -> Option<Vertex> {
     let weights = place.corner_weights(geo, index)?;
     weights
         .iter()
         .max_by(|a, b| a.1.cmp(&b.1).then(b.0.0.cmp(&a.0.0)))
-        .map(|&(cell, _)| cell)
+        .map(|&(vertex, _)| vertex)
 }
 
 /// Derive the brief for `place`. Every read is taken at the walk band, so a
@@ -116,23 +116,23 @@ pub(crate) fn containing_cell(
 pub fn brief_of(
     world: &World,
     geo: &Geosphere,
-    index: &NearestCellIndex,
-    place: &RoomAddr,
+    index: &NearestVertexIndex,
+    place: &Facet,
     terrain: &dyn crate::liveness::Terrain,
     walk_depth: u32,
 ) -> Brief {
-    let locale = crate::band::truncate_to_walk(place, walk_depth);
+    let locale = crate::depth::truncate_to_walk(place, walk_depth);
     let built = terrain.is_built(&locale);
     let cold = terrain.is_cold(&locale);
-    let alive = containing_cell(&locale, geo, index)
-        .and_then(|cell| {
-            // NOTE ON COST: this derives the whole per-cell occupation map on
+    let alive = containing_vertex(&locale, geo, index)
+        .and_then(|vertex| {
+            // NOTE ON COST: this derives the whole per-vertex occupation map on
             // every call. Correct but wasteful, and `brief_of` will be called
             // per descent. If a profile shows it mattering, hoist the map to
             // the caller (the session can hold it for the possession's life) —
             // do NOT memoize inside this function, because a hidden cache in a
             // derivation path is how derived state stops being derived.
-            hornvale_worldgen::occupations_by_cell(world).remove(&cell)
+            hornvale_worldgen::occupations_by_vertex(world).remove(&vertex)
         })
         .and_then(|occs| occs.into_iter().find(|o| o.core.ended.is_none()));
     match alive {

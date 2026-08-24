@@ -33,7 +33,7 @@
 //! kernel traits are `pub`) — an example is a separate crate compiled
 //! against the public API only, same as an external consumer, so it cannot
 //! reach them. [`BenchNavSpace`] below is a from-scratch, deliberately
-//! FAITHFUL reimplementation: same state (`RoomAddr`), same action shape
+//! FAITHFUL reimplementation: same state (`Facet`), same action shape
 //! (the destination room), same uniform cost (`1`, matching `move_cost`
 //! with an always-empty avoid set — `NavSpace`'s own doc: "Empty ⇒
 //! byte-identical"), same zero heuristic, same `successors_memo` override
@@ -44,7 +44,7 @@
 //! framing.
 //!
 //! **Subject placement: a bounded local random walk from one shared hub.**
-//! `dest` is one fixed room (`RoomAddr::containing([1.0, 0.0, 0.0],
+//! `dest` is one fixed room (`Facet::containing([1.0, 0.0, 0.0],
 //! walk_depth)`) — every subject in every backend shares it, which is what
 //! backend D's "single-source per shared goal" framing means concretely.
 //! Each subject's `start` is a `[HOP_MIN, HOP_MAX]`-hop walk from `dest`,
@@ -67,7 +67,7 @@
 //! **Four backends, same [`BenchNavSpace`]/subjects, differing only in
 //! solver + caching strategy:**
 //! - `astar-fresh` — [`AStarSolver`], `memo: None`, one call per subject.
-//!   The uncached floor: every call recomputes `RoomAddr::neighbors()` from
+//!   The uncached floor: every call recomputes `Facet::neighbors()` from
 //!   scratch (an O(depth) icosphere-subdivision walk) on every expansion.
 //! - `astar-memo` — [`AStarSolver`] with ONE [`RoomMeshMemo`] shared across
 //!   all `N` subjects' searches (Task 6's win: a memo hit skips the
@@ -112,7 +112,7 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{
-    AStarSolver, FieldSolver, RoomAddr, RoomMeshMemo, SearchSpace, Seed, Solver, Stream,
+    AStarSolver, Facet, FieldSolver, RoomMeshMemo, SearchSpace, Seed, Solver, Stream,
 };
 use hornvale_locale::LocaleContext;
 use hornvale_terrain::TerrainPins;
@@ -159,14 +159,14 @@ const MEM_CEILING_FRACTION: f64 = 0.80;
 struct BenchNavSpace {
     /// The single shared destination every subject in every backend plans
     /// toward (backend D's "single-source per shared goal").
-    dest: RoomAddr,
+    dest: Facet,
 }
 
 impl SearchSpace for BenchNavSpace {
-    type State = RoomAddr;
-    type Action = RoomAddr;
+    type State = Facet;
+    type Action = Facet;
 
-    fn successors(&self, s: &RoomAddr) -> Vec<(RoomAddr, RoomAddr, u64)> {
+    fn successors(&self, s: &Facet) -> Vec<(Facet, Facet, u64)> {
         s.neighbors()
             .into_iter()
             .map(|n| (n.clone(), n, 1))
@@ -175,9 +175,9 @@ impl SearchSpace for BenchNavSpace {
 
     fn successors_memo(
         &self,
-        s: &RoomAddr,
+        s: &Facet,
         memo: Option<&mut RoomMeshMemo>,
-    ) -> Vec<(RoomAddr, RoomAddr, u64)> {
+    ) -> Vec<(Facet, Facet, u64)> {
         let neighbors = match memo {
             Some(m) => s.neighbors_memo(m),
             None => s.neighbors(),
@@ -185,11 +185,11 @@ impl SearchSpace for BenchNavSpace {
         neighbors.into_iter().map(|n| (n.clone(), n, 1)).collect()
     }
 
-    fn goal(&self, s: &RoomAddr) -> bool {
+    fn goal(&self, s: &Facet) -> bool {
         *s == self.dest
     }
 
-    fn heuristic(&self, _s: &RoomAddr) -> u64 {
+    fn heuristic(&self, _s: &Facet) -> u64 {
         0
     }
 }
@@ -199,7 +199,7 @@ impl SearchSpace for BenchNavSpace {
 /// draws from `stream` (a dedicated bench-local stream — see the module
 /// doc). Sequential and deterministic: the same `stream` state produces the
 /// same `n` subjects every run.
-fn generate_subjects(dest: &RoomAddr, n: usize, stream: &mut Stream) -> Vec<RoomAddr> {
+fn generate_subjects(dest: &Facet, n: usize, stream: &mut Stream) -> Vec<Facet> {
     let mut out = Vec::with_capacity(n);
     for _ in 0..n {
         let hops = stream.range_u32(HOP_MIN, HOP_MAX);
@@ -261,9 +261,9 @@ struct BenchResult {
 }
 
 /// Backend A — the uncached floor: one fresh `AStarSolver` call per
-/// subject, no memo, no cache. Every call recomputes `RoomAddr::neighbors`
+/// subject, no memo, no cache. Every call recomputes `Facet::neighbors`
 /// from scratch on every expansion.
-fn run_astar_fresh(space: &BenchNavSpace, subjects: &[RoomAddr]) -> BenchResult {
+fn run_astar_fresh(space: &BenchNavSpace, subjects: &[Facet]) -> BenchResult {
     let mut searches = 0u64;
     let mut found = 0u64;
     let t0 = Instant::now();
@@ -283,7 +283,7 @@ fn run_astar_fresh(space: &BenchNavSpace, subjects: &[RoomAddr]) -> BenchResult 
 
 /// Backend B — `AStarSolver` sharing ONE `RoomMeshMemo` across all
 /// subjects' searches (Task 6's win).
-fn run_astar_memo(space: &BenchNavSpace, subjects: &[RoomAddr]) -> BenchResult {
+fn run_astar_memo(space: &BenchNavSpace, subjects: &[Facet]) -> BenchResult {
     let mut memo = RoomMeshMemo::new();
     let mut searches = 0u64;
     let mut found = 0u64;
@@ -308,7 +308,7 @@ fn run_astar_memo(space: &BenchNavSpace, subjects: &[RoomAddr]) -> BenchResult {
 /// Backend D — `FieldSolver`, otherwise identical call shape to
 /// `run_astar_memo` (see the module doc for why this measures, and is
 /// expected to fail to realize, an "amortized" story).
-fn run_field(space: &BenchNavSpace, subjects: &[RoomAddr]) -> BenchResult {
+fn run_field(space: &BenchNavSpace, subjects: &[Facet]) -> BenchResult {
     let mut memo = RoomMeshMemo::new();
     let mut searches = 0u64;
     let mut found = 0u64;
@@ -347,13 +347,13 @@ fn run_field(space: &BenchNavSpace, subjects: &[RoomAddr]) -> BenchResult {
 /// too.
 fn run_cached_mix(
     space: &BenchNavSpace,
-    subjects: &[RoomAddr],
+    subjects: &[Facet],
     move_stream: &mut Stream,
 ) -> BenchResult {
     let n = subjects.len();
     let mut memo = RoomMeshMemo::new();
-    let mut positions: Vec<RoomAddr> = subjects.to_vec();
-    let mut cached_pos: Vec<Option<RoomAddr>> = vec![None; n];
+    let mut positions: Vec<Facet> = subjects.to_vec();
+    let mut cached_pos: Vec<Option<Facet>> = vec![None; n];
     let mut searches = 0u64;
     let mut found = 0u64;
     let t0 = Instant::now();
@@ -407,12 +407,12 @@ struct Row {
 /// [`MEM_CEILING_FRACTION`] of the box's memory.
 fn drive_ladder<F>(
     backend: &'static str,
-    subjects_all: &[RoomAddr],
+    subjects_all: &[Facet],
     mem_ceiling_kb: Option<u64>,
     mut run: F,
 ) -> Vec<Row>
 where
-    F: FnMut(&[RoomAddr]) -> BenchResult,
+    F: FnMut(&[Facet]) -> BenchResult,
 {
     let mut rows = Vec::new();
     let mut prev: Option<(usize, f64)> = None;
@@ -506,7 +506,7 @@ fn main() {
         ctx.globe_level()
     );
 
-    let dest = RoomAddr::containing([1.0, 0.0, 0.0], depth);
+    let dest = Facet::containing([1.0, 0.0, 0.0], depth);
     let max_n = *RUNGS.iter().max().expect("RUNGS is non-empty");
     let mut subject_stream = Seed(42)
         .derive(StreamLabel::dynamic("nav_bench/subjects"))

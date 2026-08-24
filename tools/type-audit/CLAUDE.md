@@ -41,7 +41,7 @@ name.
 ## The footgun (learned the hard way this session)
 
 The tool tracks tag **positions**. When you **move a tagged primitive** — e.g.
-lift a `plate_of: &CellMap<u32>` param out of three functions into a new
+lift a `plate_of: &VertexMap<u32>` param out of three functions into a new
 struct field — the old functions' tags go **stale** ("stale tag position")
 and the new struct field is **untagged**. Both fail `check`, and the committed
 report goes stale too. This is invisible to unit tests and to a
@@ -53,7 +53,7 @@ gate`.** A commit that skipped this briefly left `main` gate-failing.
 
 ## Only primitives at `pub` edges
 
-Newtypes (`Au`, `Mm`, `StdDays`, …) and non-primitive types (`&CellMap<T>`
+Newtypes (`Au`, `Mm`, `StdDays`, …) and non-primitive types (`&VertexMap<T>`
 where `T` is an enum/struct) don't need tags — only bare primitives. If you
 find yourself tagging a lot of bare `f64`s that form a coherent unit, the
 right fix may be a newtype (decision 0008/0044), not more tags.

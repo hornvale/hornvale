@@ -36,7 +36,7 @@
 //!   are [`crate::chamber::levels_in_branch`]'s `RUN_FLOORS` leg and
 //!   `crate::character`'s three per-branch legs.
 //! - **Integers**, almost entirely. The only floats that cross this emit
-//!   boundary are a cave's depth budget and its cell's geothermal gradient,
+//!   boundary are a cave's depth budget and its vertex's geothermal gradient,
 //!   and both go through [`hornvale_kernel::quantize`] here at the boundary —
 //!   never in the compute path the lattice actually reads.
 //!
@@ -64,7 +64,7 @@
 //!
 //! **The per-entrance branch/band/level walk this section used to describe is
 //! GONE.** Before The Drift, `chamber_exists` keyed the branch-count gate on
-//! `(cell, entrance)`, so each entrance realized its OWN private sublattice —
+//! `(vertex, entrance)`, so each entrance realized its OWN private sublattice —
 //! this readout walked every drawn entrance's full lattice and summed them,
 //! which is exactly the shape amendment A.1/A.2 found could not express two
 //! doors into ONE Spider Cave. With `entrance` gone from `ChamberAddr`, there
@@ -73,8 +73,8 @@
 //!
 //! Every system's entrance loop survives only for what C.3 says an entrance
 //! actually is: **which aperture a player used**. [`entrance_count`] (keyed
-//! on the cell) still says how many a system opens, and [`entrance_mouth`]
-//! (keyed on `(cell, entrance)`) still says which coordinate each one opens
+//! on the vertex) still says how many a system opens, and [`entrance_mouth`]
+//! (keyed on `(vertex, entrance)`) still says which coordinate each one opens
 //! INTO — both of those coordinates now name a place in the ONE shared
 //! lattice rather than a private one. `windows/vessel`'s `delve_at` is still
 //! pinned at `entrance: 0` (the primary mouth, literal by C.3), so the
@@ -151,7 +151,7 @@
 //!   where it had to be fixed.
 //!
 //! **Cost.** One `BuildDepth::Terrain` world per seed, and a scan of the
-//! lattice over cave-bearing land cells. See `scripts/regenerate-artifacts.sh`
+//! lattice over cave-bearing land vertices. See `scripts/regenerate-artifacts.sh`
 //! for the seed panel it is rendered over.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -358,9 +358,9 @@ struct RunRow {
 
 /// Everything the readout tallies for one world.
 struct Tallies {
-    /// Cave-bearing land cells — one cave system apiece.
+    /// Cave-bearing land vertices — one cave system apiece.
     systems: usize,
-    /// Cave-bearing **ocean** cells, which this readout skips.
+    /// Cave-bearing **ocean** vertices, which this readout skips.
     ///
     /// Counted rather than silently dropped, for the same reason
     /// [`Tallies::off_ladder_rock`] is: spec B.1 measures this at zero on all
@@ -495,31 +495,31 @@ fn reachable_union(
 /// traversable component, and a number in the costume of a measurement is
 /// this campaign's signature defect.
 fn junction_network(seed: Seed, terrain: &GeneratedTerrain) -> (usize, usize, usize) {
-    // Unordered `(lo, hi)` cell pairs, keyed by the band they join at. The
+    // Unordered `(lo, hi)` vertex pairs, keyed by the band they join at. The
     // per-band split is not presentation: it is what keeps the component
     // sweep below inside one traversable layer.
-    let mut by_band: BTreeMap<u8, BTreeSet<(hornvale_kernel::CellId, hornvale_kernel::CellId)>> =
+    let mut by_band: BTreeMap<u8, BTreeSet<(hornvale_kernel::Vertex, hornvale_kernel::Vertex)>> =
         BTreeMap::new();
-    for cell in terrain.geosphere().cells() {
-        // `cave_at` refuses an ocean cell as its first act, so it is the land
+    for vertex in terrain.geosphere().vertices() {
+        // `cave_at` refuses an ocean vertex as its first act, so it is the land
         // gate too; an `is_ocean` test beside it could never fire.
-        if terrain.cave_at(cell).is_none() {
+        if terrain.cave_at(vertex).is_none() {
             continue;
         }
         for (rank, _) in habitation_bands() {
             let band = hornvale_kernel::Band::from_rank(rank)
                 .expect("habitation_bands() yields real ranks");
             let addr = ChamberAddr {
-                cell,
+                vertex,
                 branch: 0,
                 band,
                 level: 0,
             };
             for far in crate::chamber::junctions_at(seed, terrain, addr) {
-                let pair = if cell < far.cell {
-                    (cell, far.cell)
+                let pair = if vertex < far.vertex {
+                    (vertex, far.vertex)
                 } else {
-                    (far.cell, cell)
+                    (far.vertex, vertex)
                 };
                 by_band.entry(rank).or_default().insert(pair);
             }
@@ -541,15 +541,15 @@ fn junction_network(seed: Seed, terrain: &GeneratedTerrain) -> (usize, usize, us
 /// determinism is constitutional even where iteration order cannot change
 /// the answer.
 fn largest_component(
-    edges: &BTreeSet<(hornvale_kernel::CellId, hornvale_kernel::CellId)>,
+    edges: &BTreeSet<(hornvale_kernel::Vertex, hornvale_kernel::Vertex)>,
 ) -> usize {
-    let mut adjacency: BTreeMap<hornvale_kernel::CellId, BTreeSet<hornvale_kernel::CellId>> =
+    let mut adjacency: BTreeMap<hornvale_kernel::Vertex, BTreeSet<hornvale_kernel::Vertex>> =
         BTreeMap::new();
     for &(lo, hi) in edges {
         adjacency.entry(lo).or_default().insert(hi);
         adjacency.entry(hi).or_default().insert(lo);
     }
-    let mut visited: BTreeSet<hornvale_kernel::CellId> = BTreeSet::new();
+    let mut visited: BTreeSet<hornvale_kernel::Vertex> = BTreeSet::new();
     let mut largest = 0usize;
     for start in adjacency.keys().copied().collect::<Vec<_>>() {
         if visited.contains(&start) {
@@ -559,9 +559,9 @@ fn largest_component(
         visited.insert(start);
         let mut i = 0;
         while i < component.len() {
-            let cell = component[i];
+            let vertex = component[i];
             i += 1;
-            for &next in &adjacency[&cell] {
+            for &next in &adjacency[&vertex] {
                 if visited.insert(next) {
                     component.push(next);
                 }
@@ -575,7 +575,7 @@ fn largest_component(
 /// Render one world's chamber lattice as the committed underworld witness.
 ///
 /// The world must be built to at least `BuildDepth::Terrain`; a chamber needs
-/// a cave's depth budget, its cell's geothermal gradient and its cell's
+/// a cave's depth budget, its vertex's geothermal gradient and its vertex's
 /// stratigraphic column, and nothing above terrain.
 ///
 /// **Byte-identical for a given `(seed, terrain)`**, and asserted as such
@@ -607,26 +607,26 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
         reachable: 0,
         open_entrances: 0,
     };
-    // The first `TRANSECT_SYSTEMS` cave systems in cell order, walked in full.
-    let mut transect: Vec<(hornvale_kernel::CellId, String, Vec<RunRow>)> = Vec::new();
+    // The first `TRANSECT_SYSTEMS` cave systems in vertex order, walked in full.
+    let mut transect: Vec<(hornvale_kernel::Vertex, String, Vec<RunRow>)> = Vec::new();
     // THE OVERRIDE SOURCE, named rather than inlined: this is the one line
     // Task 4 replaces to put `ChamberOrigin::Made` into the artifact. Empty
     // today, so `by_origin[1]` is 0 by construction — see the module doc.
     let overrides = crate::chamber::ChamberOverrides::new();
 
-    for cell in terrain.geosphere().cells() {
-        let Some(cave) = terrain.cave_at(cell) else {
+    for vertex in terrain.geosphere().vertices() {
+        let Some(cave) = terrain.cave_at(vertex) else {
             continue;
         };
-        if terrain.is_ocean(cell) {
+        if terrain.is_ocean(vertex) {
             // Counted, not silently dropped. Zero on all three panel seeds
             // today; the day it is not, the artifact says so.
             tallies.ocean_systems += 1;
             continue;
         }
         tallies.systems += 1;
-        let gradient = terrain.geothermal_gradient_at(cell);
-        let column = terrain.column_at(cell);
+        let gradient = terrain.geothermal_gradient_at(vertex);
+        let column = terrain.column_at(vertex);
         let want_transect = transect.len() < TRANSECT_SYSTEMS;
         let mut rows: Vec<RunRow> = Vec::new();
 
@@ -643,7 +643,7 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
         // level walk follows.
         //
         // **Read per BAND, not once per system** (The Drift, Task 5):
-        // `branch_count_of` is now keyed on `(cell, band)`, so a system can
+        // `branch_count_of` is now keyed on `(vertex, band)`, so a system can
         // realize a different branch width at each band — the width used
         // below must match the band the gate below is actually reporting
         // against, exactly as `chamber_exists` itself reads `addr.band`.
@@ -651,8 +651,12 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
             for (rank, _) in habitation_bands() {
                 let band = hornvale_kernel::Band::from_rank(rank)
                     .expect("habitation_bands() yields real ranks");
-                let realized_branches = crate::character::branch_count_of(seed, cell, band);
-                let run = RunAddr { cell, branch, band };
+                let realized_branches = crate::character::branch_count_of(seed, vertex, band);
+                let run = RunAddr {
+                    vertex,
+                    branch,
+                    band,
+                };
                 let drawn = levels_in_branch(seed, run);
                 tallies.drawn_floors += usize::from(drawn);
 
@@ -663,7 +667,7 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
                 // gate unfalsifiable.
                 for level in 0..LEVELS_PER_BRANCH_CEILING {
                     let addr = ChamberAddr {
-                        cell,
+                        vertex,
                         branch,
                         band,
                         level,
@@ -703,7 +707,7 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
                 if want_transect {
                     rows.push(RunRow {
                         key: chamber_key(ChamberAddr {
-                            cell,
+                            vertex,
                             branch,
                             band,
                             level: 0,
@@ -723,7 +727,7 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
         // the drift invisible. Entrances survive The Drift only as WHICH
         // APERTURE a player used (amendment A.3): each one still resolves to
         // a coordinate in the ONE shared lattice walked above.
-        let drawn_entrances = crate::chamber::entrance_count(seed, cell);
+        let drawn_entrances = crate::chamber::entrance_count(seed, vertex);
         tallies.entrances += usize::from(drawn_entrances);
         if drawn_entrances > 1 {
             tallies.multi_entrance_systems += 1;
@@ -734,11 +738,11 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
             // head, every other opens into its drawn branch root — but the
             // mouth ADDRESS in the lattice is what reachability seeds on,
             // so it is read from the shipped mapping rather than restated.
-            let mouth = crate::chamber::entrance_mouth(seed, cell, entrance);
+            let mouth = crate::chamber::entrance_mouth(seed, vertex, entrance);
             let band = hornvale_kernel::Band::from_rank(mouth.band)
                 .expect("entrance_mouth only names a habitation rank");
             let entry = ChamberAddr {
-                cell,
+                vertex,
                 branch: mouth.branch,
                 band,
                 level: mouth.floor,
@@ -766,7 +770,7 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
                 quantize(cave.depth_reach_m),
                 quantize(gradient.get())
             );
-            transect.push((cell, head, rows));
+            transect.push((vertex, head, rows));
         }
     }
 
@@ -790,7 +794,7 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
         crate::streams::ENTRANCE_COUNT.as_str(),
     ));
     out.push_str(&format!(
-        "  cave systems    {}  (ocean-cell caves skipped: {})\n",
+        "  cave systems    {}  (ocean-vertex caves skipped: {})\n",
         tallies.systems, tallies.ocean_systems
     ));
     out.push_str(&format!("  floors drawn    {}\n", tallies.drawn_floors));
@@ -839,8 +843,8 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
          the run's drawn floors, {GLYPH_PAST_BRANCH} past the system's drawn \
          branch count)\n"
     ));
-    for (cell, head, rows) in &transect {
-        out.push_str(&format!("\n  cell {} — {head}\n", cell.0));
+    for (vertex, head, rows) in &transect {
+        out.push_str(&format!("\n  vertex {} — {head}\n", vertex.0));
         for row in rows {
             out.push_str(&format!(
                 "    {:<28} {:<11} {:>2} floors  {}\n",

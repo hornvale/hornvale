@@ -105,8 +105,8 @@ use std::collections::{BTreeMap, BTreeSet};
 /// ```
 ///
 /// **Moved a fifth time by The Underworld (Task 8, 2026-08-17), back to seed
-/// 1.** Spec §4.6 re-keys the deep-history node index on `(cell, rung)`, so a
-/// subterranean people stops competing for the surface cell it used to
+/// 1.** Spec §4.6 re-keys the deep-history node index on `(vertex, rung)`, so a
+/// subterranean people stops competing for the surface vertex it used to
 /// displace someone from — and the genesis pool every later people draws from
 /// therefore re-rolls. Seed 5 dropped to **zero** colliding material-core
 /// groups (866 occupations), so the guard reddened rather than letting the

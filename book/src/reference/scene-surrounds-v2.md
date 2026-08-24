@@ -572,7 +572,7 @@ Each element of `legend` (`LegendEntry`) is an object, in this field order:
 **Room ids are u64 and can exceed JavaScript's safe integer range.**
 `observer.room` and every cell's `room` are packed room ids: a sentinel bit,
 two bits per path element, and five bits for the face (see
-`RoomAddr::pack` in `kernel/src/room.rs`). Past roughly depth 24 that packed
+`Facet::pack` in `kernel/src/room.rs`). Past roughly depth 24 that packed
 value exceeds 2^53, the largest integer a JavaScript `Number` can represent
 exactly, so a browser client parsing this schema with plain `JSON.parse`
 can silently corrupt a room id at deep radii — the same hazard the seed

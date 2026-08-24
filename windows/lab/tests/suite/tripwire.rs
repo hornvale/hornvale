@@ -17,7 +17,7 @@
 //! `census_fixture_matches_live_run`. This bounds staleness, it does not
 //! eliminate it (spec §10). **Nor does it reach along the column axis**:
 //! `GUARDED` names 4 of the census's 190 columns, so this guard compares 12
-//! of 190,000 cells (3 seeds × 4 columns, against 1,000 rows × 190 columns) —
+//! of 190,000 vertices (3 seeds × 4 columns, against 1,000 rows × 190 columns) —
 //! about 0.006%. A drift that moves any of the other 186 columns, even on
 //! seed 0 itself, is invisible to this test, and the 24 pre-existing
 //! calibration checks in `windows/lab/tests/calibration.rs` that read the
@@ -39,9 +39,9 @@
 //! (regenerated on the canonical host, lefford).
 //!
 //! **The tripwire catches a genuine value drift.** With the fixture
-//! untouched, the test passes in 11.330s. Editing exactly one cell — seed 0's
+//! untouched, the test passes in 11.330s. Editing exactly one vertex — seed 0's
 //! `crisis-fires` value in the committed `rows.csv`, from `true` to `false`,
-//! leaving every other cell untouched — turns the test red with this verbatim
+//! leaving every other vertex untouched — turns the test red with this verbatim
 //! output:
 //!
 //! ```text
@@ -53,12 +53,12 @@
 //!      right: Flag(false)
 //! ```
 //!
-//! Restoring the cell (`git checkout` of the fixture, confirmed clean with
+//! Restoring the vertex (`git checkout` of the fixture, confirmed clean with
 //! `git diff --exit-code`) returns the test to green (11.409s). The guard
 //! fires on the exact metric, seed, and both values, as designed.
 //!
 //! **The refusal-skip gap is real, and confirmed rather than assumed.**
-//! Restoring the fixture first, then setting seed 0's `refusal` cell (the
+//! Restoring the fixture first, then setting seed 0's `refusal` vertex (the
 //! last CSV column, empty by default) to a non-empty probe string —
 //! `"probe: refusal-staleness test"` — while leaving `crisis-fires` at its
 //! true, correct value: the test still **passes** (7.209s — about 4s faster,

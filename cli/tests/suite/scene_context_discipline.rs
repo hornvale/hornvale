@@ -37,7 +37,7 @@ const WHY: &str = "\n\n\
     to an `_in` variant is byte-identical and just as slow as the `&World` \
     form — it is the regression this guard exists to catch, and no golden or \
     equivalence test can see it, because only the cost changes.\n\
-    Deriving a context is terrain plus climate plus both nearest-cell indices, \
+    Deriving a context is terrain plus climate plus both nearest-vertex indices, \
     ~638 ms, 91.6% of a region patch (The Sextant's measurement), so a \
     per-call rebuild re-derives the entire planet on every scene request the \
     client makes — precisely the cost The Cistern removed (11.1x on region \

@@ -210,7 +210,7 @@ const FROZEN_HISTORICAL_COHORTS: &[&[&str]] = &[
         "wooded-grassland",
     ],
     // Epoch 4 — The Wearing (2026-07-27, re-seated 2026-07-29): the nineteen
-    // words a place-name is built out of. Nine landforms a settled cell can BE
+    // words a place-name is built out of. Nine landforms a settled vertex can BE
     // or sit beside (`hill`, `valley`, `river`, `ford`, `spring`, `marsh`,
     // `island`, `coast`, `lake`), gated on the real terrain query that put a
     // settlement there; and the ten relative/evaluative modifiers every

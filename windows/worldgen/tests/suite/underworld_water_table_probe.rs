@@ -39,7 +39,7 @@
 //!
 //! **The inputs carry one atom the derivation inherits:** 16.4–18.6% of
 //! cave-bearing columns sit at `height_asl_m == 0.0` exactly, because the
-//! carve's marine trim pins cells to sea level.
+//! carve's marine trim pins vertices to sea level.
 //!
 //! **Rung dryness, looked at only after the two above** (spec §4.2.1 requires
 //! that order, and the calibration was committed before this probe was run so
@@ -224,7 +224,7 @@ fn atoms(values: &[f64], take: usize) -> Vec<String> {
 
 /// claim: readout(off-gate, heavy:, prints the distribution, asserts only the
 /// preregistered H3 bounds) — the water table over every cave-bearing land
-/// cell of the three preregistered seeds.
+/// vertex of the three preregistered seeds.
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn the_water_table_is_not_degenerate() {
@@ -281,16 +281,16 @@ fn the_water_table_is_not_degenerate() {
         // Columns whose whole cave is above the table: dry to the bottom.
         let mut wholly_vadose = 0usize;
 
-        for cell in geo.cells() {
-            if terrain.is_ocean(cell) {
+        for vertex in geo.vertices() {
+            if terrain.is_ocean(vertex) {
                 continue;
             }
-            let Some(cave) = terrain.cave_at(cell) else {
+            let Some(cave) = terrain.cave_at(vertex) else {
                 continue;
             };
-            let height_asl_m = terrain.elevation_at(cell).get() - sea;
-            let drainage = terrain.drainage_at(cell);
-            let porosity = terrain.material_at(cell).porosity;
+            let height_asl_m = terrain.elevation_at(vertex).get() - sea;
+            let drainage = terrain.drainage_at(vertex);
+            let porosity = terrain.material_at(vertex).porosity;
             let table = water_table_depth_m(drainage, porosity, height_asl_m);
 
             if is_phreatic(cave.depth_reach_m, table) {
@@ -298,10 +298,10 @@ fn the_water_table_is_not_degenerate() {
             } else {
                 wholly_vadose += 1;
             }
-            let gradient = terrain.geothermal_gradient_at(cell).get();
+            let gradient = terrain.geothermal_gradient_at(vertex).get();
             for (index, rung) in rungs().iter().filter(|r| **r != Band::Surface).enumerate() {
                 // The rung's own top, the depth `chamber.rs` places a chamber
-                // at: its ΔT floor divided by this cell's gradient.
+                // at: its ΔT floor divided by this vertex's gradient.
                 let top_m = 1000.0 * delta_t_range_of(*rung).0 / gradient;
                 if top_m > cave.depth_reach_m {
                     continue;
@@ -384,7 +384,7 @@ fn the_water_table_is_not_degenerate() {
         );
         println!("  distinct 0.1 m values={distinct}");
         println!("  atoms: {}", atom_line.join(", "));
-        // The one atom the INPUTS carry: the carve's marine trim pins cells to
+        // The one atom the INPUTS carry: the carve's marine trim pins vertices to
         // exactly sea level, so a share of land sits at height_asl_m == 0.0.
         // That population's table depth is proportional to RELIEF_SOFT_M,
         // which is why that constant is not the free parameter it looks like.
@@ -485,7 +485,7 @@ const POROSITY_CEILING_TOLERANCE: f64 = 0.03;
 /// The swept quantity is `gain * earth_table_depth_m(..)`, which is the shipped
 /// `water_table_depth_m`'s definition, so the gain-1 row is a positive control
 /// rather than a separate computation — it is asserted against the shipped
-/// function cell by cell.
+/// function vertex by vertex.
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn how_far_does_the_dryness_gain_reach() {
@@ -525,20 +525,20 @@ fn how_far_does_the_dryness_gain_reach() {
         // than not having two traversals.
         let mut columns: Vec<(f64, f64, f64, f64, f64)> = Vec::new();
         let mut ceiling = f64::MIN;
-        for cell in geo.cells() {
-            if terrain.is_ocean(cell) {
+        for vertex in geo.vertices() {
+            if terrain.is_ocean(vertex) {
                 continue;
             }
-            let Some(cave) = terrain.cave_at(cell) else {
+            let Some(cave) = terrain.cave_at(vertex) else {
                 continue;
             };
-            let porosity = terrain.material_at(cell).porosity;
+            let porosity = terrain.material_at(vertex).porosity;
             ceiling = ceiling.max(porosity);
             columns.push((
-                terrain.drainage_at(cell),
+                terrain.drainage_at(vertex),
                 porosity,
-                terrain.elevation_at(cell).get() - sea,
-                1000.0 / terrain.geothermal_gradient_at(cell).get(),
+                terrain.elevation_at(vertex).get() - sea,
+                1000.0 / terrain.geothermal_gradient_at(vertex).get(),
                 cave.depth_reach_m,
             ));
         }

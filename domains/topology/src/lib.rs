@@ -1,9 +1,9 @@
 //! Topology: the world's derived transport connection graph — a legible,
-//! byte-identical structure over the geosphere's cells (routes, not roads).
+//! byte-identical structure over the geosphere's vertices (routes, not roads).
 #![warn(missing_docs)]
 
 pub mod graph;
 pub mod route;
 
 pub use graph::{ConnectionGraph, Edge, EdgeKind};
-pub use route::{CellRoute, CostSweep, least_cost, least_cost_from};
+pub use route::{CostSweep, VertexRoute, least_cost, least_cost_from};

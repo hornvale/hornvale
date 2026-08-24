@@ -13,7 +13,7 @@ fn an_unlisted_biome_takes_the_default() {
 }
 
 /// A UNIFORM affinity is a no-op for placement: genesis and `best_home` rank
-/// cells in the kind's OWN units, so a constant factor cannot reorder anything
+/// vertices in the kind's OWN units, so a constant factor cannot reorder anything
 /// (spec §3.1, task 0). Only the SHAPE across biomes matters. Asserted rather
 /// than trusted, because an all-equal authored row is inert by construction and
 /// would otherwise look like a working declaration.

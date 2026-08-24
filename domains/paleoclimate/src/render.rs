@@ -1,11 +1,11 @@
 //! Deterministic paleoclimate renders: an equirectangular PNG and a 72×24
 //! ASCII map of the strata (ice envelope, refugia, fossil shorelines) over the
 //! present globe. Same record, same bytes — a changed artifact means changed
-//! behavior. Projection uses the kernel's `NearestCellIndex`, as the biome and
+//! behavior. Projection uses the kernel's `NearestVertexIndex`, as the biome and
 //! elevation renderers do.
 
 use crate::strata::PaleoRecord;
-use hornvale_kernel::{CellId, Geosphere, NearestCellIndex};
+use hornvale_kernel::{Geosphere, NearestVertexIndex, Vertex};
 
 /// Raster width, pixels (equirectangular → height is half).
 /// type-audit: bare-ok(render-internal)
@@ -17,27 +17,27 @@ pub const ASCII_WIDTH: u32 = 72;
 /// type-audit: bare-ok(render-internal)
 pub const ASCII_HEIGHT: u32 = 24;
 
-/// RGB triple for a cell's stratum (ice → white, refugium → green,
+/// RGB triple for a vertex's stratum (ice → white, refugium → green,
 /// shoreline → blue, else → grey), in envelope>refugium>shoreline priority.
-fn color(record: &PaleoRecord, cell: CellId) -> [u8; 3] {
-    if *record.envelope.get(cell) {
+fn color(record: &PaleoRecord, vertex: Vertex) -> [u8; 3] {
+    if *record.envelope.get(vertex) {
         [235, 235, 245]
-    } else if *record.refugia.get(cell) {
+    } else if *record.refugia.get(vertex) {
         [70, 160, 80]
-    } else if *record.shoreline.get(cell) {
+    } else if *record.shoreline.get(vertex) {
         [70, 110, 200]
     } else {
         [90, 90, 90]
     }
 }
 
-/// ASCII glyph for a cell's stratum.
-fn glyph(record: &PaleoRecord, cell: CellId) -> char {
-    if *record.envelope.get(cell) {
+/// ASCII glyph for a vertex's stratum.
+fn glyph(record: &PaleoRecord, vertex: Vertex) -> char {
+    if *record.envelope.get(vertex) {
         '#'
-    } else if *record.refugia.get(cell) {
+    } else if *record.refugia.get(vertex) {
         '*'
-    } else if *record.shoreline.get(cell) {
+    } else if *record.shoreline.get(vertex) {
         '~'
     } else {
         '.'
@@ -48,14 +48,14 @@ fn glyph(record: &PaleoRecord, cell: CellId) -> char {
 /// type-audit: bare-ok(artifact)
 pub fn paleo_pixels(geo: &Geosphere, record: &PaleoRecord) -> Vec<u8> {
     let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
-    let index = NearestCellIndex::new(geo);
+    let index = NearestVertexIndex::new(geo);
     let mut out = Vec::with_capacity((width * height * 3) as usize);
     for py in 0..height {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
         for px in 0..width {
             let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
-            let cell = index.nearest(geo, latitude, longitude);
-            out.extend_from_slice(&color(record, cell));
+            let vertex = index.nearest(geo, latitude, longitude);
+            out.extend_from_slice(&color(record, vertex));
         }
     }
     out
@@ -70,14 +70,14 @@ pub fn paleo_png(geo: &Geosphere, record: &PaleoRecord) -> Vec<u8> {
 /// 72×24 ASCII strata map, one newline per row.
 /// type-audit: bare-ok(artifact)
 pub fn paleo_ascii(geo: &Geosphere, record: &PaleoRecord) -> String {
-    let index = NearestCellIndex::new(geo);
+    let index = NearestVertexIndex::new(geo);
     let mut out = String::with_capacity(((ASCII_WIDTH + 1) * ASCII_HEIGHT) as usize);
     for py in 0..ASCII_HEIGHT {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(ASCII_HEIGHT) * 180.0;
         for px in 0..ASCII_WIDTH {
             let longitude = (f64::from(px) + 0.5) / f64::from(ASCII_WIDTH) * 360.0 - 180.0;
-            let cell = index.nearest(geo, latitude, longitude);
-            out.push(glyph(record, cell));
+            let vertex = index.nearest(geo, latitude, longitude);
+            out.push(glyph(record, vertex));
         }
         out.push('\n');
     }
@@ -88,7 +88,7 @@ pub fn paleo_ascii(geo: &Geosphere, record: &PaleoRecord) -> String {
 mod tests {
     use super::*;
     use crate::strata::{EraClimate, extract};
-    use hornvale_kernel::{CellMap, ReferenceElevation};
+    use hornvale_kernel::{ReferenceElevation, VertexMap};
 
     /// Test-only helper: a validated `ReferenceElevation`.
     fn e(m: f64) -> ReferenceElevation {
@@ -96,11 +96,11 @@ mod tests {
     }
 
     fn record(geo: &Geosphere) -> PaleoRecord {
-        let elev = CellMap::from_fn(geo, |_| e(100.0));
+        let elev = VertexMap::from_fn(geo, |_| e(100.0));
         let eras = vec![EraClimate {
             day: 0.0,
-            ice: CellMap::from_fn(geo, |c| geo.coord(c).latitude.abs() > 60.0),
-            habitable: CellMap::from_fn(geo, |c| geo.coord(c).latitude.abs() < 30.0),
+            ice: VertexMap::from_fn(geo, |c| geo.coord(c).latitude.abs() > 60.0),
+            habitable: VertexMap::from_fn(geo, |c| geo.coord(c).latitude.abs() < 30.0),
             sea_level: e(-40.0),
             ice_fraction: 0.3,
         }];

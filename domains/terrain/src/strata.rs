@@ -34,7 +34,7 @@ impl GeothermalGradient {
     }
 }
 
-/// The geothermal gradient for a cell: hot under young/thin crust, cool under
+/// The geothermal gradient for a vertex: hot under young/thin crust, cool under
 /// ancient thick cratons. Pure function of the crust fields terrain owns.
 /// Oceanic crust runs the hot end regardless of thickness (`thickness_norm` is
 /// 0 there); thickness only cools the continental side.
@@ -56,7 +56,7 @@ pub fn geothermal_gradient(
 }
 
 /// Temperature at a depth below the surface, given the surface datum and the
-/// cell's gradient. Pure; the surface datum is the caller's (climate's) to
+/// vertex's gradient. Pure; the surface datum is the caller's (climate's) to
 /// supply, so terrain stays climate-free.
 /// type-audit: bare-ok(ratio: depth_km)
 pub fn temperature_at_depth(
@@ -101,7 +101,7 @@ pub enum Horizon {
     Underneath,
 }
 
-/// One band of a cell's column.
+/// One band of a vertex's column.
 /// type-audit: bare-ok(diagnostic-value: top_depth_m)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BandSample {
@@ -115,7 +115,7 @@ pub struct BandSample {
     pub rock: RockClass,
 }
 
-/// A cell's coarse stratigraphic column: the vertical dimension and the
+/// A vertex's coarse stratigraphic column: the vertical dimension and the
 /// deep-time archive, as a pure projection over terrain's fields.
 /// type-audit: bare-ok(diagnostic-value: depth_to_basement_m), bare-ok(flag: unconformity)
 #[derive(Debug, Clone, PartialEq)]
@@ -146,7 +146,7 @@ pub fn unconformity(depth_to_basement_m: f64, crust_age: f64) -> bool {
     depth_to_basement_m < UNCONFORMITY_COVER_M && crust_age > UNCONFORMITY_AGE
 }
 
-/// Build a cell's column from fields terrain already owns. Pure; no draws.
+/// Build a vertex's column from fields terrain already owns. Pure; no draws.
 /// Bands are stamped so that era is monotone non-decreasing with depth (the
 /// archive's ordering), the deepest band always `Primordial`. Band top-depths
 /// assume `moho_m >= depth_to_basement_m` — always true for real crust (the

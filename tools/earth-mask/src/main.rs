@@ -11,7 +11,7 @@
 //! `hornvale_kernel::math`; in practice the point-in-polygon test below
 //! needs no transcendentals at all, only comparisons and linear
 //! interpolation, so the question is moot in this tool's own code. The one
-//! transcendental-touching step — converting a cell's unit-sphere position
+//! transcendental-touching step — converting a vertex's unit-sphere position
 //! to latitude/longitude — is delegated entirely to
 //! `hornvale_kernel::Geosphere::coord`, which already routes through the
 //! portable `hornvale_kernel::math` (decision 0041).
@@ -37,7 +37,7 @@
 //!
 //! ## Method
 //!
-//! For every L6 cell (ascending `CellId`), take its geographic center
+//! For every L6 vertex (ascending `Vertex`), take its geographic center
 //! (`Geosphere::coord`) and test it against every ring (outer boundaries
 //! and holes, of every `Polygon`/`MultiPolygon` feature) with an even-odd
 //! ray cast in longitude/latitude degrees: a horizontal ray from the point
@@ -49,13 +49,13 @@
 //! before testing (the 110m dataset's rings already split at the
 //! antimeridian, so no edge needs to wrap). Antarctica's own ring closes
 //! over the south pole with an explicit flat edge from `(180, -90)` to
-//! `(-180, -90)`, so the standard planar algorithm resolves polar cells
+//! `(-180, -90)`, so the standard planar algorithm resolves polar vertices
 //! without any special-casing; each ring's precomputed latitude bounding
 //! box is still checked first; purely an optimization, since a ray whose
 //! latitude falls outside a ring's own latitude span cannot cross any of
-//! that ring's edges. A cell center landing exactly on a ring edge is
+//! that ring's edges. A vertex center landing exactly on a ring edge is
 //! whatever the ray cast happens to decide — determinism is the only
-//! requirement here, not geodetic perfection (the same cell always gets
+//! requirement here, not geodetic perfection (the same vertex always gets
 //! the same answer, because the mesh and the data are both fixed).
 
 use hornvale_kernel::Geosphere;
@@ -204,12 +204,13 @@ fn is_land(rings: &[Ring], lon: f64, lat: f64) -> bool {
 fn main() {
     let rings = load_rings();
     let geo = Geosphere::new(GLOBE_LEVEL);
+    // lexicon: CSV fixture header, frozen (book/src/laboratory/generated/earth-mask-l6/rows.csv)
     let mut out = String::from("cell,land\n");
-    for cell in geo.cells() {
-        let coord = geo.coord(cell);
+    for vertex in geo.vertices() {
+        let coord = geo.coord(vertex);
         let lon = normalize_lon(coord.longitude);
         let land = is_land(&rings, lon, coord.latitude);
-        out.push_str(&format!("{},{}\n", cell.0, land as u8));
+        out.push_str(&format!("{},{}\n", vertex.0, land as u8));
     }
     print!("{out}");
 }
