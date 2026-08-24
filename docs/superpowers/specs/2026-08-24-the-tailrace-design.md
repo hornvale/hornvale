@@ -276,10 +276,33 @@ wrong one.
 linear in history, so **total session cost is quadratic in session length.**
 
 **Does not establish** which of the six folds carry the term beyond `drive_at`
-itself, which is stage 1's remaining deliverable (the attribution profile). Nor
-does it connect to §6.4's 8.76 ms/agent-tick, which is a level claim about a
-different bench at a different agent count; joining the two would repeat the
-level-vs-shape conflation §6.4 itself identified in §6.2.
+itself — that is stage 1's attribution profile. Nor does it connect to §6.4's
+8.76 ms/agent-tick, which is a level claim about a different bench at a
+different agent count; joining the two would repeat the level-vs-shape
+conflation §6.4 itself identified in §6.2.
+
+**A known limitation with a known remedy, stated rather than apologised for.**
+This instrument *observes* history rather than *controlling* it: the sim grows
+the history and the bench watches cost follow. Two consequences. The sampled
+range is only 2.48×, which is why `C` is not identifiable and why the elasticity
+leads. And history depth is perfectly correlated with wall-clock order, because
+history only grows — so a band's condition cannot be revisited, and any drift in
+machine availability arrives disguised as a history effect. The `calibrate()`
+yardstick divides out CPU speed and demonstrably not memory-bandwidth
+contention.
+
+The remedy is a **synthetic depth sweep**: build ledgers at chosen depths and
+time `drive_at` against each, **interleaved** (10, 10,000, 10, 10,000, …) so
+depth and elapsed time are uncorrelated by construction. That widens the range
+from 2.48× to ~1000×, makes `C` identifiable, and turns H2 into a paired
+before/after comparison at identical depths. `kernel/examples/query_scaling.rs`
+is the same construction for the same reason, so the pattern is already in the
+tree. It is stage 1's third deliverable.
+
+It does **not** replace this instrument. A synthetic sweep has no real tick, so
+it cannot produce the 70–80% share — and that share is the number that makes the
+campaign worth doing. One answers *is this real and does it matter*; the other
+answers *what exactly is the law*.
 
 ## 5. Preregistration
 
@@ -345,7 +368,7 @@ metaplan's own discipline.
 
 | # | stage | delivers | gate to enter | blocked by |
 |---|---|---|---|---|
-| 1 | The instrument and the attribution | `session_length_scaling.rs` — **done, §4 reports it**; what remains is a `samply` profile attributing `k` across the six folds in cost order | — | nothing |
+| 1 | The instruments and the attribution | `session_length_scaling.rs` — **done, §4 reports it**. Remaining: a `samply` profile attributing `k` across the six folds in cost order, and an **interleaved synthetic depth sweep** to identify `C` over a ~1000× range (§4's limitations note) | — | nothing |
 | 2 | The primitive | the incremental ledger fold, kernel-side; FOLD ≡ SCAN, advance-exactly-once, chaos-rebuild | **met for `drive_at`** (§4) | nothing — see §10 |
 | 3 | Delete the hub | remove `agent_sightings` and give thirst, hunger and fatigue their own bounded accumulators; `last_fact_day_at_or_before` becomes O(1) | stage 2's properties green | the Escapement |
 | 4 | Belief and hazard | `believed_water` (× peers), `hazard_memory_memo`, `build_emitter_scan` | stage 1's profile says these carry a material share of `k` | the Escapement |
