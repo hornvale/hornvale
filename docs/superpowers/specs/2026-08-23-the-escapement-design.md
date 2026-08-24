@@ -33,17 +33,29 @@ nothing in the tree says so.
 
 Measured against the real `quantize` (`kernel/examples`, run and discarded):
 
-| world age | committed time resolution |
+| world age | spacing between storable instants |
 |---|---|
-| 100 yr | 43.2 s |
-| 2,000 yr | 7.2 min |
-| 20,000 yr | 1.2 h |
-| 200,000 yr | **12 h** |
-| 4.5 Myr | 50 days |
+| 100 yr | 86.4 s |
+| 2,000 yr | 14.4 min |
+| 20,000 yr | 2.4 h |
+| 200,000 yr | **24 h** |
+| 4.5 Myr | 100 days |
+
+**A note on which quantity this is, because the spec got it wrong once.** These
+are the **full spacing** between adjacent storable values — the distance at
+which two instants stop being the same stored number. An earlier draft of this
+table listed *half* that (43.2 s, 7.2 min, 1.2 h, 12 h, 50 days), which is the
+distance you must move to change the stored value, i.e. the gap to the nearest
+rounding boundary. Both are meaningful; mixing them in one document is not, and
+this section did exactly that once §1.1 was added below in full-spacing units.
+Everything here is now full spacing. The corrected figures make the argument
+*stronger*, not weaker: at world-year 200,000 the old encoding could not
+separate two instants a day apart at all.
 
 The 200,000-year row is not hypothetical: `windows/worldgen/src/hazard.rs`
-constructs a `WorldTime` at exactly that horizon. At that point **a committed
-fact cannot distinguish day from night.**
+constructs a `WorldTime` at exactly that horizon. At that point **two
+committed facts a full day apart can collapse to the same stored instant** —
+not merely day from night, but any two moments within the same day.
 
 The same decay reaches a cross-repo schema. `scene/eclipses/v1`
 (`windows/scene/src/lib.rs`) emits `day`, `from_day` and `until_day` as bare
