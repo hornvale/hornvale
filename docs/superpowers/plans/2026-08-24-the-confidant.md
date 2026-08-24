@@ -250,8 +250,10 @@ One dispatch, five independent edits, reviewed as one diff.
 - [ ] `windows/vessel/src/session.rs` ~1391-1413 — the doc comment on
   `place_creature_at_me` is duplicated back to back. Delete one copy. Verify
   the sibling `place_creature_out_of_my_sight` is untouched.
-- [ ] `domains/.../plan.rs:821` — an eaten backslash continuation (a run of
-  literal spaces mid-string). Pre-existing on main; re-derive the line number.
+- [ ] `windows/vessel/src/plan.rs` — an eaten backslash continuation (a run of
+  literal spaces mid-string), one occurrence, pre-existing on main from
+  `72784fea1`. Re-derive the line number; it was 821 when found. Confirm it is
+  still the only one in that file before and after.
 - [ ] `windows/lab/src/synthetic.rs` ~253 — an inline copy of
   `PerceptionVector::MANIKIN`; use the named constant.
 - [ ] `clients/game/bin/tests/driver.rs` — a test name saying `mints` after
