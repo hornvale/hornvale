@@ -60,7 +60,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `history` | root stream for history: reserved for the deep-history bake (run at the composition root); no draw is made against it directly |
 | `history/residue` | flesh::residue_of's deterministic flavor draws |
 | `history/structures` | flesh::structures_of's dwelling-count variance draws |
-| `history/bake/v2` | the deep-history bake's epoch dynamics: grow/found/migrate/raid/collapse draws, taken sequentially from one stream in commit order at the composition root; bumped from history/bake by The Contour's position-aware conflict, which changes committed history without moving stream consumption order (decision 0006: an epoch suffix, never a rename) |
+| `history/bake/v3` | the deep-history bake's epoch dynamics: grow/found/migrate/raid/collapse draws, taken sequentially from one stream in commit order at the composition root; bumped from history/bake/v2 by The Granary's sub-year phase placement, which changes committed history — raid outcomes move when raids fire at store-trough phases — without moving stream consumption order (decision 0006: an epoch suffix, never a rename) |
 | `history/genesis` | the deep-history bake's genesis draws: proto-community count, site picks, and tech-advance offset; further derives a per-people sub-stream history/genesis/<people-kind> via StreamLabel::dynamic |
 | `history/flesh/v2` | the per-occupation flesh seed the legibility surface derives before expanding residue/structures on demand (never committed); keyed on the occupation's material core, bumped from history/flesh by The Salt |
 

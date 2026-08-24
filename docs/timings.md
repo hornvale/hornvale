@@ -2339,3 +2339,8 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T13:38:42Z | quick | 4.183 | 4.126 | 0.504 | 1.11 | 0 | ae04b5d3f | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-24T13:40:25Z | quick | 26.437 | 39.414 | 29.222 | 2.60 | 0 | ae04b5d3f | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-24T13:47:51Z | quick | 26.579 | 39.671 | 30.361 | 2.63 | 0 | ae04b5d3f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T13:48:37Z | gate-commit | 38.211 | 141.996 | 34.633 | 4.62 | 0 | ae04b5d3f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T13:55:05Z | quick | 25.309 | 39.106 | 29.379 | 2.71 | 0 | 1f5a2f13f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T13:57:12Z | gate-commit | 31.360 | 90.453 | 34.919 | 4.00 | 0 | 1f5a2f13f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T14:04:02Z | quick | 19.043 | 24.535 | 15.865 | 2.12 | 0 | e8b373891 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T14:04:46Z | gate-commit | 29.622 | 108.783 | 30.526 | 4.70 | 0 | e8b373891 | campaign/the-granary | MacBookPro | 10 |
