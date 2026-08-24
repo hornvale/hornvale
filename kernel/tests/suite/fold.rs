@@ -83,8 +83,16 @@ fn the_probe_fold_is_order_sensitive() {
     assert_ne!(forward, backward, "the probe fold must not commute");
 }
 
+/// A self-consistency check, NOT the FOLD-equals-SCAN oracle: `Folded::rebuild`
+/// is implemented by calling `advance_to` (see `Folded::rebuild`'s body), so a
+/// bug inside `advance_to` is applied identically to both the "incremental"
+/// and the "scan" side here and can cancel. This test pins that advancing in
+/// two bites equals advancing in one — a real property, worth keeping — but a
+/// tenant copying this file for its own FOLD-equals-SCAN test should copy
+/// `one_fact_at_a_time_equals_folding_from_scratch` below instead, which is
+/// the one that reaches the state through a path independent of `advance_to`.
 #[test]
-fn advancing_in_two_steps_equals_folding_from_scratch() {
+fn advancing_in_two_bites_equals_advancing_in_one() {
     let l = ledger_of(20);
     let scan: Folded<Probe> = Folded::rebuild(&l);
 
@@ -98,6 +106,15 @@ fn advancing_in_two_steps_equals_folding_from_scratch() {
     assert_eq!(incremental.position(), scan.position());
 }
 
+/// The actual FOLD-equals-SCAN oracle, and the test to copy for a tenant's own
+/// fold: `absorb_at` is a path independent of `advance_to`, so this is the one
+/// test in this file that cannot be fooled by a bug shared between the
+/// "incremental" and "scan" sides (unlike
+/// `advancing_in_two_bites_equals_advancing_in_one` above, whose "scan" side
+/// calls `advance_to` internally). A mutation confined to `advance_to` — for
+/// example, an off-by-one in the skip count — moves this test's `one_by_one`
+/// side but not `Folded::rebuild`'s, so the two disagree and the test catches
+/// it.
 #[test]
 fn one_fact_at_a_time_equals_folding_from_scratch() {
     let l = ledger_of(20);

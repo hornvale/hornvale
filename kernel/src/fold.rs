@@ -40,7 +40,16 @@
 //!   prefix from scratch. The primitive cannot prove this of a tenant's
 //!   `absorb` — one that read a clock, or that depended on how many facts
 //!   arrived in a batch, would break it — so every tenant owes the property
-//!   test. [`Folded::rebuild`] exists to make writing it cheap.
+//!   test. [`Folded::rebuild`] exists to make writing it cheap. **The oracle
+//!   must reach the state through a path independent of the one under test.**
+//!   [`Folded::rebuild`] itself is implemented by calling [`Folded::advance_to`],
+//!   so a test that only ever drives production usage through `advance_to` and
+//!   then compares it against `rebuild` is comparing `advance_to` against
+//!   itself: a bug confined to `advance_to` is applied identically to both
+//!   sides and cancels. Pair [`Folded::absorb_at`]'s per-fact path against
+//!   `rebuild` instead — see the sibling tests in `kernel/tests/suite/fold.rs`
+//!   for a worked example of the vacuous comparison and the independent one
+//!   side by side.
 //! - **Determinism.** A state holding a `HashMap` would put an unstable
 //!   iteration order under a byte-identity guarantee. `clippy.toml`'s
 //!   `disallowed-types` already refuses that workspace-wide; it is restated
@@ -160,6 +169,21 @@ impl<S: LedgerFold> Folded<S> {
 
     /// Fold only the ledger's first `position` facts — the general answer to a
     /// query about an earlier position, at O(position).
+    ///
+    /// A `position` beyond the ledger's length is not treated as a caller
+    /// error the way [`Self::absorb_at`]'s mismatch is: `take` silently folds
+    /// however many facts actually exist and stops there. Silence is the
+    /// right answer here, unlike `absorb_at`'s loud assert, because the two
+    /// guards are protecting against different things. `absorb_at`'s position
+    /// argument is the caller's claim about *this fold's own state* — a
+    /// mismatch means the caller skipped or repeated a fact, which is always a
+    /// bug. `rebuild_upto`'s `position` argument is a claim about *the
+    /// ledger* — "fold up to here" — and an append-only ledger can validly be
+    /// shorter than a query asked of it (the facts have not been committed
+    /// yet). Truncating is therefore a legitimate answer, not a corrupted one,
+    /// and it is never silent in the way that matters: the returned
+    /// [`Self::position`] honestly reports how far the fold actually got, so a
+    /// caller that cares can compare it against the `position` it asked for.
     /// type-audit: bare-ok(count: position)
     pub fn rebuild_upto(ledger: &Ledger, position: u64) -> Self {
         let mut folded = Self::new();
