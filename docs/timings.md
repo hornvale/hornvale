@@ -2607,3 +2607,7 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T19:22:58Z | gate-commit | 28.014 | 49.457 | 12.520 | 2.21 | 0 | 80ecb2bf1 | campaign/the-gossan | MacBookPro | 10 |
 | 2026-08-24T19:51:16Z | gate-commit | 44.666 | 67.236 | 22.301 | 2.00 | 0 | 668db4fa6 | campaign/the-gossan | MacBookPro | 10 |
 | 2026-08-24T19:52:06Z | gate-commit | 37.666 | 49.580 | 11.879 | 1.63 | 0 | 668db4fa6 | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T20:10:37Z | gate-commit | 18.253 | 33.983 | 21.181 | 3.02 | 0 | e3fb21cdb | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T20:11:16Z | gate-commit | 18.526 | 25.356 | 10.764 | 1.95 | 0 | e3fb21cdb | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T20:12:10Z | gate-commit | 40.295 | 169.101 | 31.210 | 4.97 | 0 | e3fb21cdb | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T20:13:20Z | gate-commit | 23.125 | 48.136 | 12.710 | 2.63 | 0 | e3fb21cdb | campaign/the-gossan | MacBookPro | 10 |
