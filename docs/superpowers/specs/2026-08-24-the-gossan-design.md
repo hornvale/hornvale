@@ -134,6 +134,29 @@ vocabulary ("the variant or branch exists; no kind carries it"), asserted as
 such. Rung 2's success condition is that it becomes `Witnessed` — written
 down, in a test, on this campaign's branch.
 
+### 4.5 An unread axis is how the original enum rotted, and the guard is the answer
+
+Rung 1 ships `TrophicMode` with **no consumer**. That is deliberate (§7) and
+it is also the exact condition that produced the defect this campaign exists
+to fix. `MetabolicClass::Autotroph`'s own doc says so:
+
+> The class was witnessed by The Menagerie without the modelling decision ever
+> being made, and this doc claimed "unused seam" for three campaigns after it
+> stopped being one.
+
+A vocabulary nobody reads drifts, and the drift is invisible because nothing
+consults it. `Ametabolic`'s doc still says "Unused seam" while four sites read
+it; the autotroph count in the doc is stale by one kind. Both are the same
+failure.
+
+**§4.4's pair table is what stops the recurrence, and that is its real job.**
+It is not merely a guard against the 16-vs-4 widening — it is a READER. Every
+kind's `TrophicMode` is consulted by an assertion on every commit-gate run, so
+a value that stops being true reddens instead of rotting quietly. The
+`Declared`/`Witnessed` assertion on `Chemotrophic` does the same for the
+variant that has no kind at all. Stating this converts a property the design
+had by luck into one it has on purpose.
+
 ## 5. Preregistration
 
 ### 5.1 The instrument does not exist, and the obvious one is vacuous
@@ -218,7 +241,14 @@ are what demonstrate it.
 - **No consumer for `TrophicMode`.** Giving it a reader is rung 2 by
   definition.
 - **No unification with `windows/locale`'s `EnergySource`.** Deferred; see the
-  metaplan §5.
+  metaplan §5. One reason belongs here rather than there, because it is about
+  THIS type: locale's enum is `{ Sunlit, Chemosynthetic, Geothermal }`, and
+  `Sunlit`/`Chemosynthetic` name *how life captures energy* while `Geothermal`
+  names *where heat comes from* — a different kind of answer. That is the same
+  shape of conflation this campaign is removing from `MetabolicClass`.
+  Unifying now would import a second conflation into the type we just
+  decarbonized. Rung 2 may well fix locale's axis too; rung 1 must not inherit
+  it.
 - **No census refresh, no authored chemotroph kind.**
 
 ## 8. Task shape
