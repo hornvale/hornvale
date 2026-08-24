@@ -5,7 +5,7 @@
 //! §2.3) made mechanical.
 
 use crate::body_fields::seed_42;
-use hornvale_vessel::liveness::Mode;
+use hornvale_vessel::liveness::{DriveKind, Mode};
 use hornvale_vessel::{PossessOpts, PossessTarget, Session};
 
 /// The Bridle's Arc II acceptance test: swap controllers and both paths
@@ -46,45 +46,87 @@ fn a_creature_on_player_input_and_a_body_on_goap_both_act() {
 /// Co-present (spec §2.3): the host has feelings while you ride it. This is
 /// the mechanical content of that decision, and nothing else observes it
 /// yet — so if this test is deleted the decision silently stops holding.
+///
+/// **D4 (Task 5 fix round 2's review): the assertion used to be
+/// `matches!(mode, Pursuing(_) | Homing | Idle)`** — exhaustive over every
+/// `Mode` variant, so it could never fail; the only thing actually load-
+/// bearing was the `.expect(...)` a call earlier. This now asserts a
+/// SPECIFIC, empirically-verified value: seed 42's flagship body, waited 30
+/// days from a fresh session, arbitrates to `Pursuing(Fatigue)` every time
+/// (confirmed stable across single calls of 1/5/30 days, both before and
+/// after D5's `catch_up` fix) — a real computation over this body's actual
+/// state, discriminating against every other `Mode` value rather than
+/// vacuously accepting all of them.
 #[test]
 fn a_driven_body_still_arbitrates_its_own_drives() {
     let (world, _ctx) = seed_42();
     let (mut s, _) = Session::start(&world, &PossessOpts::default()).unwrap();
     s.handle("!wait 30");
     let mode = s.driven_mode().expect("a driven body has a mode");
-    assert!(
-        matches!(mode, Mode::Pursuing(_) | Mode::Homing | Mode::Idle),
-        "the driven body's own arbitration produced a mode: {mode:?}"
+    assert_eq!(
+        mode,
+        Mode::Pursuing(DriveKind::Fatigue),
+        "the driven body's own arbitration produced: {mode:?}"
     );
 }
 
-/// The mechanical content of spec §5.2's "commits on `Do`, nothing on
-/// `Hold`" argument: a driven body's own arbitration runs every `!wait` (the
-/// test above), but nothing it decides ever reaches the ledger while the
-/// player has queued nothing — the body waits ON THE PLAYER, not on its own
-/// drives. This is the assertion the other two in this file cannot make:
-/// both pass whether or not the driven body's own walk is wired in at all
-/// (see the Task 5 fix-round report's first mutation proof), because neither
-/// reads the DRIVEN body's own committed facts across a `!wait`. This one
-/// does, and DOES redden under "the driven body removed from the loop"
-/// (mutation proof 2 in the report).
+/// **D1 (Task 5 fix round 2), the decisive finding.** An independent
+/// reviewer replaced the ENTIRE `step_one_with_controller` call in
+/// `Session::wait` with `let _ = PlayerController::new(); self.driven_mode =
+/// Some(Mode::Idle);` and the whole crate stayed green — the driven walk had
+/// a real mechanism underneath (proven at the unit level by
+/// `liveness::tests::a_default_controller_passes_through_and_a_player_controller_holds`)
+/// but nothing observed its OWN OUTPUT changing tick to tick, so a literal
+/// could stand in for the entire call undetected. That is round 0's defect
+/// in a thinner form: a mechanism nothing observes is one refactor away from
+/// deletion while the suite stays green.
 ///
-/// **It does NOT redden under "swap the driven body's controller for
-/// `DefaultController`", and that was verified empirically, not assumed.**
-/// Seed 42's flagship body, walked solo (band-of-one — see
-/// `DriveMovements::step_one_with_controller`'s own doc for why), reaches
-/// `Mode::Pursuing(Fatigue)` with a BLOCKED proposal on its very first
-/// arbitration this session ever runs, so `resolution.intent` is already
-/// `Hold` before any controller is asked — `DefaultController` and
-/// `PlayerController` are indistinguishable here because arbitration itself
-/// never proposes a `Do` for this specific body at this specific starting
-/// state. The genuine, deterministic proof that `DefaultController` is a
-/// pass-through and `PlayerController` overrides a real `Do` is
-/// `liveness::tests::a_default_controller_passes_through_and_a_player_controller_holds`,
-/// which constructs a body it KNOWS wants to act rather than relying on
-/// seed 42's own population to happen to want one.
+/// This pins the CONTENT: the driven body's reported mode legitimately
+/// changes as real time passes and its own drives evolve (here, fatigue
+/// served first, thirst rising to take over) — a hardcoded `Mode::Idle` (or
+/// any other constant) cannot reproduce this, because it never reads
+/// `self.ledger`/`self.day` at all. Verified as this round's acceptance
+/// criterion: `scripts/mutate.py` applied to the reviewer's exact
+/// substitution reddens this test (quoted verbatim in the fix-round report).
 #[test]
-fn a_driven_body_does_not_act_on_its_own_drives_while_the_player_says_nothing() {
+fn a_driven_bodys_mode_tracks_its_own_state_as_time_passes() {
+    let (world, _ctx) = seed_42();
+    let (mut s, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    s.handle("!wait 1");
+    let early = s.driven_mode().expect("a driven body has a mode");
+    s.handle("!wait 30");
+    let later = s.driven_mode().expect("a driven body has a mode");
+    assert_ne!(
+        early, later,
+        "the driven body's own arbitration must track its OWN evolving state \
+         across ticks, not report a fixed value ({early:?} both times)"
+    );
+}
+
+/// **Relabelled honestly (D2, Task 5 fix round 2's review).** This used to
+/// claim it carried "the mechanical content of spec §5.2's commits-on-`Do`
+/// argument". It does not, and the review's own mutation proves it: forcing
+/// the driven walk's controller to answer `Intent::Do(Action::Rest)`
+/// unconditionally leaves this test GREEN, because `Session::wait` discards
+/// `step_one_with_controller`'s returned facts UNCONDITIONALLY — regardless
+/// of what the walk decided, nothing it computes ever reaches
+/// `self.ledger`. That discard is the coordinator's own ruling, and it is
+/// correct (the player's verbs are what the body DOES; the walk supplies
+/// what the host WANTS — committing both would give the driven body two
+/// competing position sources) — but it means spec §5.2's argument is not
+/// actually testable in THIS design: the invariant this test guards is
+/// structural (a discard) and seed-independent, not a live Hold-vs-Do gate.
+/// Spec §5.2 is being corrected at Task 8; this comment records the
+/// mechanism as it actually is rather than as the spec currently claims.
+///
+/// What this test actually guards: a regression where some future change
+/// makes `Session::wait` commit the driven walk's own facts CONDITIONALLY
+/// (e.g. "only when the controller says Hold" becomes "only when it says
+/// Do") would very likely show up here, since real GOAP arbitration over 200
+/// days does eventually want to act. It is a legitimate guard against
+/// reintroducing the double-position-source risk, not a proof of spec §5.2.
+#[test]
+fn the_driven_walks_own_facts_never_reach_the_ledger_while_the_player_says_nothing() {
     let (world, _ctx) = seed_42();
     let (mut s, _) = Session::start(&world, &PossessOpts::default()).unwrap();
     let who = s.agent_entity();
@@ -97,8 +139,9 @@ fn a_driven_body_does_not_act_on_its_own_drives_while_the_player_says_nothing() 
     assert_eq!(
         s.committed_fact_count_for(who),
         before,
-        "a driven body must not act on its own GOAP (any predicate — agent-at, \
-         drank, rested, eaten) while the player says nothing (spec 2.3/5.2: it \
-         waits on the player, PlayerController answers Hold)"
+        "the driven body's own walk must never reach the ledger while the \
+         player says nothing — Session::wait discards its facts \
+         unconditionally (D2: this is a structural guard, not spec 5.2's \
+         Hold-vs-Do argument)"
     );
 }

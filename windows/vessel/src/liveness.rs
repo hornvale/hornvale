@@ -4085,7 +4085,7 @@ pub fn alarm_field_memo(
 /// pathological distance genuinely gives up (`Intent::Hold`) rather than
 /// paying for a global search — the one search-budget judgment call
 /// (spec §8).
-pub(crate) const PLAN_BUDGET: usize = 1_000;
+const PLAN_BUDGET: usize = 1_000;
 
 /// Catch-up's own step cap (The Threshold task 7, spec §5.3): the most
 /// replay iterations — each either a replayed [`Action::MoveWithin`] hop or
@@ -4621,6 +4621,7 @@ fn catch_up(
     day_length_std: Option<f64>,
     mesh_memo: &mut RoomMeshMemo,
     home_nav_cache: &mut HomeNavCache,
+    controller: &mut dyn Controller,
 ) -> Mode {
     let mut day = entry_day;
     let mut steps = 0usize;
@@ -4666,7 +4667,20 @@ fn catch_up(
             home_nav_cache,
         );
         mode = resolution.mode;
-        match resolution.intent {
+        // THE CONTROLLER SEAM, extended to catch-up (The Hand, Task 5 fix
+        // round 2, item 7): `catch_up` commits nothing regardless (decision
+        // 0069 — it only ever touches ephemeral `Occupancy`, never the
+        // ledger), so routing it through `controller` costs no new
+        // committed-trail risk, but leaves the intent source genuinely
+        // singular: `DefaultController` (every NPC's own catch-up, and
+        // every existing call site in this module's own tests) is a
+        // byte-identical pass-through, and `PlayerController` (the driven
+        // body's own catch-up, `DriveMovements::step_one_with_controller`)
+        // Holds here too — a possessed body's own within-room autopilot
+        // does not creep forward on its own account while unwatched, any
+        // more than its coarse position does.
+        let intent = controller.intend(npc, &resolution);
+        match intent {
             // Requirement 1, straight from the source: an action reaches
             // this arm only when `is_replayable_in_catch_up` says its
             // effect is ephemeral — today exactly `MoveWithin`, checked
@@ -4905,6 +4919,10 @@ impl<'a> DriveMovements<'a> {
                 self.day_length_std,
                 mesh_memo,
                 home_nav_cache,
+                // Every body here is GOAP-driven (the driven body's own
+                // catch-up runs separately — see `step_one_with_controller`),
+                // so a fresh, stateless pass-through changes nothing.
+                &mut DefaultController,
             );
 
             queue.insert((from_ticks, npc.entity));
@@ -5418,6 +5436,49 @@ impl<'a> DriveMovements<'a> {
             seam_kind(self.terrain.is_built(&st.pos)),
         );
         let mut out = Vec::new();
+        // THE THRESHOLD's catch-up (The Hand, Task 5 fix round 2, D5):
+        // `step_with_occupancy`'s own setup loop runs this for every OTHER
+        // body before the shared clock opens, and it is what moves `st.mode`
+        // off `WalkState::begin`'s hardcoded `Mode::Idle` — reconstructing
+        // what this body's own decisions would have been across the gap
+        // between its last committed room-entry and `self.from` ("now"),
+        // exactly the observer-effect gap `catch_up`'s own doc names. Omitting
+        // it here left the driven body's FIRST arbitration each tick starting
+        // cold at `Idle` regardless of how much unwatched time had actually
+        // passed, which is a real asymmetry with every other body's walk, not
+        // a difference the trait or the band-of-one scoping requires — this
+        // reconstruction reads only `frozen` and this body's own locals
+        // (never another creature's state), so nothing about running it here
+        // needs the shared population `step_one_with_controller` deliberately
+        // does not join.
+        st.mode = catch_up(
+            room_entry_day(frozen, body, self.from),
+            self.from.day(),
+            &st.pos,
+            body,
+            self.terrain,
+            &mut st.believed,
+            &memory,
+            &alarm,
+            &st.visited,
+            &mut occupancy,
+            &st.interior,
+            st.mode,
+            &self.params,
+            PLAN_BUDGET,
+            frozen,
+            &out,
+            CATCH_UP_STEP_CAP,
+            self.day_length_std,
+            mesh_memo,
+            home_nav_cache,
+            // The SAME controller `advance_one` below is asked with — a
+            // reborrow, not a second controller: `PlayerController` (the
+            // live path) must Hold here too, so the driven body's own
+            // within-room autopilot does not creep forward unwatched any
+            // more than its coarse position does.
+            &mut *controller,
+        );
         while self.advance_one(
             frozen,
             body,
@@ -5475,7 +5536,7 @@ fn nearer_to_home(
 /// fix round, Finding 2) and the stateless health-sampler read
 /// [`affect_of_memo_occupied`] (rider (b)) — both thread whatever memo THEIR
 /// own caller supplies, never build one silently inline.
-pub(crate) fn lowest_unvisited_neighbor_memo(
+fn lowest_unvisited_neighbor_memo(
     from: &RoomAddr,
     visited: &std::collections::BTreeSet<RoomAddr>,
     terrain: &dyn Terrain,
@@ -8712,7 +8773,8 @@ mod tests {
         );
         assert!(
             default_facts.iter().any(|f| f.predicate == DRANK),
-            "DefaultController is a pass-through of the body's own arbitration              (which wants water) — it must act: {default_facts:?}"
+            "DefaultController is a pass-through of the body's own arbitration \
+             (which wants water) — it must act: {default_facts:?}"
         );
 
         let (player_facts, _mode) = sys.step_one_with_controller(
@@ -8724,7 +8786,8 @@ mod tests {
         );
         assert!(
             player_facts.is_empty(),
-            "PlayerController holds the body regardless of what its own              arbitration wants, and commits nothing: {player_facts:?}"
+            "PlayerController holds the body regardless of what its own \
+             arbitration wants, and commits nothing: {player_facts:?}"
         );
     }
 
@@ -14256,6 +14319,7 @@ mod tests {
             None,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut DefaultController,
         );
         let after = ledger.len();
 
@@ -14469,6 +14533,7 @@ mod tests {
                 None,
                 &mut RoomMeshMemo::new(),
                 &mut HomeNavCache::new(),
+                &mut DefaultController,
             );
             occ.at(npc.entity)
         };
