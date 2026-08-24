@@ -13,5 +13,7 @@
 mod derived;
 #[path = "suite/determinism.rs"]
 mod determinism;
+#[path = "suite/fold.rs"]
+mod fold;
 #[path = "suite/golden_harness.rs"]
 mod golden_harness;
