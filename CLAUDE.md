@@ -671,8 +671,13 @@ contradicts, lower ("coarse constrains fine").
   format. **Time is carved out of this contract** (decision 0188, The
   Escapement): significant-digit rounding buys constant absolute precision
   only for a magnitude-bounded quantity, and time is unbounded, so a
-  committed day's resolution decayed with world age under this scheme (43.2 s
-  at world-year 100, 24 hours at world-year 200,000). `Ledger::commit`'s
+  committed day's resolution decayed with world age under this scheme: adjacent
+  storable instants were 86.4 s apart at world-year 100 and **24 hours** apart
+  at world-year 200,000, a horizon `windows/worldgen/src/hazard.rs` actually
+  constructs. (Both figures are the FULL spacing between storable values. Half
+  that — the distance you must move to change the stored number — is an equally
+  real quantity and mixing the two in one sentence is how this line read before
+  it was corrected.) `Ledger::commit`'s
   day-quantization block is deleted outright rather than made a no-op; every
   other quantized surface 0033 named — `Value::Number` in a committed
   `Fact`, the lab CSV, the scene/ephemeris `f64` fields — is unchanged.
