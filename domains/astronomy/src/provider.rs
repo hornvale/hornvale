@@ -1230,6 +1230,28 @@ mod tests {
         let ratio = scanned_period / rate_period;
         assert!((0.75..=1.25).contains(&ratio), "ratio {ratio}");
     }
+
+    /// The clamp at the WorldTime -> StdDays funnel is a DECISION, not an
+    /// accident. Whatever it is, it must be asserted somewhere, because
+    /// today it is stated only in a comment and nothing would notice if it
+    /// changed.
+    #[test]
+    fn a_pre_genesis_query_has_a_documented_answer() {
+        let (sky, _t) = night_sky();
+        let before = WorldTime::from_ticks(-1);
+        let at_genesis = WorldTime::GENESIS;
+
+        // Decision 0187: a pre-genesis query is CLAMPED to genesis,
+        // deliberately -- the sky before the world exists is not a physical
+        // question, and an Option or an error at this depth would force
+        // every caller to handle a case no caller can produce (traced: the
+        // only unclamped call sites pass a hardcoded StdDays::new(0.0)).
+        assert_eq!(
+            sky.sky_at(before),
+            sky.sky_at(at_genesis),
+            "a pre-genesis query answers as genesis, per decision 0187"
+        );
+    }
 }
 
 /// Phenomenon kind for the annual daylight cycle.
@@ -1486,10 +1508,15 @@ impl GeneratedSky {
         &self.notes
     }
 
-    // Clamps negative time to 0.0; NaN also maps to 0.0 via f64::max
-    // semantics — genesis-time queries never predate the world.
+    /// This domain's ONE crossing from exact kernel ticks to continuous
+    /// standard days. Everything downstream of here works in `StdDays`.
+    ///
+    /// Clamps a pre-genesis instant to genesis, per decision 0187 — the sky
+    /// before the world exists is not a physical question. The NaN half of
+    /// the old `max(0.0)` guard is gone by construction: a `WorldTime` is an
+    /// integer and cannot be NaN.
     fn t(&self, time: WorldTime) -> StdDays {
-        StdDays(time.day().max(0.0))
+        StdDays(time.as_std_days().max(0.0))
     }
 
     /// The sky at a moment, rendered under an unobstructed view.

@@ -300,6 +300,32 @@ mod tests {
         assert_eq!(g.tick_of_day(), 0);
     }
 
+    /// The Escapement's whole motivation is negative-time correctness, but
+    /// nothing in the tree exercised a NEGATIVE, non-tick-aligned `f64` day
+    /// -- one whose tick value does not land on a day boundary -- and
+    /// checked that `whole_days()` and `tick_of_day()` still agree with
+    /// `ticks()`. A reviewer hand-checked several values and found no
+    /// disagreement; this makes that check a test instead of a memory.
+    #[test]
+    fn whole_days_and_tick_of_day_agree_with_ticks_for_a_negative_off_boundary_day() {
+        // -2.75 days = -275,000 ticks exactly (2.75 = 11/4, representable
+        // without rounding), and 275,000 is not a multiple of
+        // TICKS_PER_STD_DAY, so this instant does not land on a day
+        // boundary.
+        let t = WorldTime::from_std_days(-2.75).expect("finite, in range");
+        assert_eq!(t.ticks(), -275_000);
+
+        let whole = t.whole_days();
+        let tick_of_day = t.tick_of_day();
+        assert_eq!(whole, -3, "floors, not truncates, toward negative infinity");
+        assert_eq!(tick_of_day, 25_000);
+        assert_eq!(
+            whole * WorldTime::TICKS_PER_STD_DAY + tick_of_day,
+            t.ticks(),
+            "whole_days and tick_of_day must reconstruct the exact tick count"
+        );
+    }
+
     #[test]
     fn a_difference_of_two_instants_is_a_signed_span() {
         let a = WorldTime::from_ticks(10);

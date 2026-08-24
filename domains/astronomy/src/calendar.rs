@@ -71,6 +71,40 @@ mod tests {
         assert!((fraction - expected).abs() < 1e-12);
     }
 
+    /// `local as u64` SATURATES: every negative local day collapsed to 0 and
+    /// the returned fraction went negative. Latent rather than live -- no
+    /// caller can reach it today (traced in the spec) -- but it is a
+    /// landmine on a public API with zero coverage, and this is the first
+    /// test ever to pass a negative `StdDays` to a calendar method.
+    #[test]
+    fn local_day_floors_for_a_pre_genesis_instant_instead_of_saturating() {
+        let cal = calendar_of(&spinning_system());
+        let day_len = cal
+            .day_length()
+            .expect("a spinning world has a local day")
+            .0;
+
+        // `StdDays::new` rejects negative values (decision 0187's funnel is
+        // what keeps a negative instant from reaching this API from the
+        // outside), but the tuple field is `pub(crate)`: several in-crate
+        // sites already build a `StdDays` this way without going through the
+        // validating constructor (`eclipses.rs`'s node/phase arithmetic, for
+        // one), so a negative value CAN reach `local_day` internally even
+        // though no external caller can produce one today.
+        let (idx, frac) = cal
+            .local_day(StdDays(-1.5 * day_len))
+            .expect("a spinning world answers");
+
+        assert!(
+            idx < 0,
+            "a pre-genesis instant is a NEGATIVE local day, not day 0"
+        );
+        assert!(
+            (0.0..1.0).contains(&frac),
+            "the fraction of a day is always in [0,1), even before genesis: got {frac}"
+        );
+    }
+
     #[test]
     fn locked_worlds_have_no_local_day_and_no_daylight_cycle() {
         let cal = calendar_of(&locked_system());
@@ -572,12 +606,21 @@ impl Calendar {
         self.year
     }
     /// Local day index and fraction at absolute time `t`.
-    /// type-audit: bare-ok(ratio)
-    pub fn local_day(&self, t: StdDays) -> Option<(u64, f64)> {
+    ///
+    /// Floors, so a pre-genesis instant is a negative day index and the
+    /// fraction stays in `[0, 1)`. The previous `local as u64` SATURATED
+    /// every negative value to day 0 and returned a negative fraction
+    /// (The Escapement); negative days are legal per decision 0126.
+    /// type-audit: bare-ok(count: return), bare-ok(ratio: return)
+    pub fn local_day(&self, t: StdDays) -> Option<(i64, f64)> {
         let day = self.day?;
         let local = t.0 / day.0;
-        let fraction = (local.fract() + self.forcing.day_phase_offset).fract();
-        Some((local as u64, fraction))
+        let index = local.floor();
+        if !index.is_finite() || index < i64::MIN as f64 || index > i64::MAX as f64 {
+            return None;
+        }
+        let fraction = (local - index + self.forcing.day_phase_offset).rem_euclid(1.0);
+        Some((index as i64, fraction))
     }
     /// Fraction of the year elapsed at `t`.
     /// type-audit: bare-ok(ratio)
