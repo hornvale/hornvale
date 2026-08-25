@@ -1252,6 +1252,7 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::domain_crates_are_still_exac
 hornvale-lab::hornvale_lab$domesday::detect::tests::findings_are_sorted_by_detector_then_metric
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_reads_a_nontrivial_correlation_and_its_sign
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_returns_none_for_a_constant_column
+hornvale-lab::hornvale_lab$domesday::detect::tests::the_live_census_reproduces_the_preregistered_findings
 hornvale-lab::hornvale_lab$domesday::guard::every_emitted_detector_name_is_declared
 hornvale-lab::hornvale_lab$domesday::guard::loading_never_builds_a_world
 hornvale-lab::hornvale_lab$domesday::render::tests::a_bare_citation_outside_any_paren_is_redacted_with_its_possessive
@@ -1293,6 +1294,7 @@ hornvale-lab::hornvale_lab$metrics::tests::average_ranks_gives_ties_the_mean_of_
 hornvale-lab::hornvale_lab$metrics::tests::belief_kind_is_per_species_and_the_world_belief_is_gone
 hornvale-lab::hornvale_lab$metrics::tests::chorus_metrics_are_registered
 hornvale-lab::hornvale_lab$metrics::tests::classify_homophony_counts_core_confusable_and_splits_draw_from_merger
+hornvale-lab::hornvale_lab$metrics::tests::confidant_metrics_are_not_registered_in_the_lab_registry
 hornvale-lab::hornvale_lab$metrics::tests::connectivity_is_a_reading_of_the_joins
 hornvale-lab::hornvale_lab$metrics::tests::every_first_day_metric_is_registered
 hornvale-lab::hornvale_lab$metrics::tests::every_registered_first_day_metric_is_in_the_frozen_roster
@@ -1748,7 +1750,10 @@ hornvale-language::hornvale_language$typology::tests::every_family_names_a_real_
 hornvale-language::hornvale_language$typology::tests::no_harmony_is_the_identity
 hornvale-language::hornvale_language$typology::tests::the_concatenative_bundle_is_the_status_quo
 hornvale-language::hornvale_language$typology::tests::the_first_vowel_sets_the_harmony_class
+hornvale-language::suite$accession_append_only::existing_cohorts_are_never_edited
+hornvale-language::suite$accession_append_only::the_live_table_has_grown_past_the_frozen_prefix
 hornvale-language::suite$accession_properties::appending_the_elf_cohort_displaces_no_existing_proto_root
+hornvale-language::suite$accession_properties::appending_the_felt_state_cohort_displaces_no_existing_proto_root
 hornvale-language::suite$accession_properties::later_epoch_roots_degrade_to_epoch_zero_when_no_closed_coda_exists
 hornvale-language::suite$accession_properties::later_epoch_roots_end_closed_when_the_phonology_admits_both
 hornvale-language::suite$anthroponym::a_name_is_an_ordered_list_and_order_is_meaningful
@@ -2491,6 +2496,7 @@ hornvale-vessel::hornvale_vessel$liveness::tests::arbitrate_in_a_comfortable_cel
 hornvale-vessel::hornvale_vessel$liveness::tests::arbitrate_prefers_the_move_that_serves_both_drives
 hornvale-vessel::hornvale_vessel$liveness::tests::arbitrates_proposal_cache_matches_a_fresh_recompute
 hornvale-vessel::hornvale_vessel$liveness::tests::arbitration_is_deterministic_reload_stable_and_breaks_ties_by_ascending_room_addr
+hornvale-vessel::hornvale_vessel$liveness::tests::arbitration_reports_only_the_dominant_drive_and_keeps_the_suppressed_one_retrievable
 hornvale-vessel::hornvale_vessel$liveness::tests::arriving_into_an_empty_interior_is_a_no_op_not_a_panic
 hornvale-vessel::hornvale_vessel$liveness::tests::asleep_a_creature_rests_and_wakes_only_for_survival
 hornvale-vessel::hornvale_vessel$liveness::tests::believed_hazard_clears_a_disproven_phantom
@@ -2625,7 +2631,10 @@ hornvale-vessel::hornvale_vessel$purview::tests::agent_salience_outranks_every_s
 hornvale-vessel::hornvale_vessel$session::tests::every_bare_verb_help_lists_is_classified
 hornvale-vessel::hornvale_vessel$session::tests::further_in_is_the_deeper_aperture_and_stops_at_the_last_chamber
 hornvale-vessel::hornvale_vessel$session::tests::neighbours_reads_the_link_graph_in_both_directions
+hornvale-vessel::hornvale_vessel$session::tests::render_testimony_direct_reports_the_word_and_its_own_concept
+hornvale-vessel::hornvale_vessel$session::tests::render_testimony_none_says_nothing_and_lands_nothing
 hornvale-vessel::hornvale_vessel$session::tests::session_control_is_never_an_in_character_verb
+hornvale-vessel::hornvale_vessel$session::tests::the_arbitration_never_reaches_a_divergent_utterance
 hornvale-vessel::hornvale_vessel$structure::tests::a_built_locale_has_a_bounded_chamber_set
 hornvale-vessel::hornvale_vessel$structure::tests::a_different_locale_gives_a_different_structure
 hornvale-vessel::hornvale_vessel$structure::tests::an_unbuilt_locale_has_no_structure
@@ -2634,6 +2643,8 @@ hornvale-vessel::hornvale_vessel$structure::tests::derivation_is_pure
 hornvale-vessel::hornvale_vessel$structure::tests::every_chamber_sits_at_the_chamber_depth_under_this_locale
 hornvale-vessel::hornvale_vessel$structure::tests::the_draw_is_keyed_to_the_world_seed
 hornvale-vessel::hornvale_vessel$structure::tests::the_threshold_is_a_chamber_and_the_graph_is_connected
+hornvale-vessel::hornvale_vessel$testimony::tests::circumplex_positions_match_the_authored_docs
+hornvale-vessel::hornvale_vessel$testimony::tests::frustrated_and_helpless_coincide_on_the_circumplex
 hornvale-vessel::hornvale_vessel$underworld_level::carve::tests::carving_is_deterministic
 hornvale-vessel::hornvale_vessel$underworld_level::carve::tests::carving_never_touches_outside_the_rect
 hornvale-vessel::hornvale_vessel$underworld_level::carve::tests::cellular_cave_output_is_internally_connected
@@ -2653,7 +2664,6 @@ hornvale-vessel::hornvale_vessel$underworld_level::tests::every_level_but_the_fi
 hornvale-vessel::hornvale_vessel$underworld_level::tests::every_walkable_cell_is_reachable_from_every_other
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generate_descent_produces_one_level_per_rung
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generation_is_deterministic
-hornvale-vessel::hornvale_vessel$underworld_level::tests::made_chambers_lean_worked_found_chambers_lean_natural
 hornvale-vessel::hornvale_vessel$underworld_level::tests::stairs_down_and_stairs_up_never_share_a_cell
 hornvale-vessel::hornvale_vessel$underworld_level::tests::two_rungs_with_the_same_origin_and_kind_still_differ
 hornvale-vessel::hornvale_vessel$underworld_level::tests::worked_fraction_has_inertia_across_rungs
@@ -2671,6 +2681,7 @@ hornvale-vessel::suite$course_properties::a_due_north_course_never_leaves_its_me
 hornvale-vessel::suite$course_properties::a_fixed_priority_exit_matching_cycle_traps_in_a_closed_room_set
 hornvale-vessel::suite$course_properties::a_memoryless_walk_leaves_the_meridian_that_h1_pins
 hornvale-vessel::suite$course_properties::bearing_based_resolution_escapes_the_fixed_priority_attractor
+hornvale-vessel::suite$felt_state_concepts::every_affect_label_has_exactly_one_registered_felt_state_concept
 hornvale-vessel::suite$gate_table::in_character_is_refused_while_asleep_and_permitted_awake
 hornvale-vessel::suite$gate_table::out_of_character_is_permitted_in_every_body_state
 hornvale-vessel::suite$lantern_lens::the_lens_can_be_declined
@@ -2687,6 +2698,9 @@ hornvale-vessel::suite$session_snapshot::the_fixture_is_taken_at_the_transcript_
 hornvale-vessel::suite$submerged::a_rock_stratum_is_not_submerged
 hornvale-vessel::suite$submerged::a_water_stratum_is_submerged
 hornvale-vessel::suite$submerged::the_surface_and_the_absent_case_are_unchanged
+hornvale-vessel::suite$testimony::a_culture_with_no_felt_state_words_reports_none
+hornvale-vessel::suite$testimony::the_fallback_fires_only_when_the_culture_lacks_the_word
+hornvale-vessel::suite$testimony::two_cultures_report_different_words_for_the_same_true_state
 hornvale-vessel::suite$the_blocking::a_locale_composition_is_untouched_by_the_role_layer
 hornvale-vessel::suite$the_blocking::a_role_admits_a_different_composition_not_a_bigger_one
 hornvale-vessel::suite$the_blocking::the_role_table_reads_a_different_room_for_every_role
