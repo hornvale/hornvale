@@ -26,6 +26,45 @@
 //! computes what it expects from the world it just read (the people's own
 //! Common word, its own numerals, its own lexicon) rather than from a
 //! literal.
+//!
+//! # Three limits this file demonstrates rather than hides
+//!
+//! A demonstration is only honest if it says what it does NOT show. All
+//! three are visible in the pair of sentences it produces, so recording
+//! them here is cheaper than letting the next reader rediscover them.
+//!
+//! 1. **The tongue does not mark roles at all.** Common chooses a surface
+//!    per role — a preposition for the site, a trailing clause for the
+//!    ending. The tongue does not: `grammar::realize_adjuncts` matches on
+//!    `adjunct.argument` and **never reads `adjunct.role`**, and the deep
+//!    realizer appends each resolved word as a free token after the clause.
+//!    So a tongue tail of three numerals is AMBIGUOUS between the site, the
+//!    founding and the ending — recoverable only from the spec's order.
+//!    A per-role construction table for tongues (the tongue-side twin of
+//!    `clause::common_role_surface`) does not exist. This is a different
+//!    absence from the `TongueClause`-keeps-a-`String`-subject asymmetry the
+//!    Task 7 brief records, and it is recorded nowhere else.
+//! 2. **The subject takes a liberty.** The clause's subject is the PEOPLE's
+//!    autonym, used as the holding's headword, because the ledger names
+//!    neither the occupation nor its site (the almanac's own history page
+//!    calls a site "the clearing at vertex 5585"). A subject must be either
+//!    a proper name or a word of the tongue — an English noun phrase there
+//!    would put English straight into the tongue rendering — and the
+//!    autonym is the only proper name in reach. If a later campaign commits
+//!    a name for an occupation or its site, that is the honest subject and
+//!    this clause should move to it.
+//! 3. **The flagship sentence exercises none of the deep realizer's
+//!    marking machinery.** `realize_tongue_deep` can affix or particle-mark
+//!    evidentiality and noun class, and can carry an overt copula. Whichever
+//!    people this file selects, all three are DRAWN, so which paths run is a
+//!    property of the world, not of this test — and at the time of writing
+//!    the selected people (hobgoblin, seed 42) draws `MorphDepth::None` on
+//!    both axes and no copula, so its tongue line is the bare floor
+//!    assembly. The marking paths are covered by unit tests in
+//!    `domains/language/src/grammar.rs`; they are not covered here, and this
+//!    file must not be read as if they were. The assertions below are
+//!    written to survive a draw that DOES mark — see the positive control in
+//!    [`the_tongue_shares_no_word_with_common_but_the_autonym_and_the_numerals`].
 
 use hornvale_history::{IS_OCCUPATION, OCC_ENDED, OCC_FOUNDED, OCC_PEOPLE, OCC_SITE};
 use hornvale_kernel::{Seed, Value, World};
@@ -45,10 +84,10 @@ const REFERENCE_SEED: u64 = 42;
 /// A real, fully generated world at [`REFERENCE_SEED`]. `BuildDepth::Full` is
 /// required and not merely convenient: occupations are committed by the
 /// deep-time stage, which is the last rung.
-// Named construction site (decision 0092): this file's whole point is a REAL
-// world, so it builds one — the sanctioned test-fixture posture, the same one
-// `windows/worldgen/tests/suite/solitary_tongue.rs` takes.
-#[allow(clippy::disallowed_methods)]
+// No `#[allow(clippy::disallowed_methods)]` here on purpose: `build_world` is
+// not on `clippy.toml`'s disallowed list (only the derivation entry points
+// `terrain_of`/`climate_from` are — see `tongue_of`), and that attribute IS
+// the greppable sanctioned-site index, so a spurious one pollutes it.
 fn generated_world() -> World {
     build_world(
         Seed(REFERENCE_SEED),
@@ -127,8 +166,12 @@ fn an_occupation_with_a_tongue(world: &World, placed: &[&str]) -> Occupation {
 
 /// A people's autonym: the `NAME` committed on its collective entity — its
 /// own word for itself, and the ONLY proper name the ledger attaches to an
-/// occupation's people. Read exactly the way `windows/book`'s
-/// `autonym_by_kind` reads it.
+/// occupation's people.
+///
+/// Takes the FIRST `instance-of` fact naming this kind. `windows/book`'s
+/// `autonym_by_kind` builds a map and so keeps the LAST; the two agree on
+/// every world where a kind has exactly one collective (seed 42 does), and
+/// this is deliberately not claimed to be the same read.
 fn autonym_of(world: &World, people: &str) -> String {
     world
         .ledger
@@ -146,10 +189,17 @@ fn autonym_of(world: &World, people: &str) -> String {
 /// why it is the one word the two renderings are ALLOWED to share. Its
 /// complement is `"home"`, a core concept every placed people's lexicon
 /// holds as a real word rather than a gap. Its four role bindings are the
-/// occupation's own facts, under the occupation predicates' own ids: how
-/// each surfaces — a preposition here, a trailing clause there, a bare
-/// affixed numeral in the tongue — is each language's business and no
-/// caller's.
+/// occupation's own facts, under the occupation predicates' own ids.
+///
+/// **What the two languages do with those ids differs, and the difference
+/// is not symmetric.** Common chooses a surface PER ROLE — `occ-site`
+/// becomes a prepositional phrase, `occ-ended` a trailing clause — through
+/// `clause::common_role_surface`. The tongue does not choose at all:
+/// `grammar::realize_adjuncts` matches on the ARGUMENT and never reads the
+/// role, and the deep realizer appends each resolved word as a free token
+/// (never an affix). So the tongue's tail is three bare numerals in spec
+/// order, ambiguous between the site, the founding and the ending. See this
+/// module's doc, limit 1.
 fn clause_for(occupation: &Occupation, autonym: &str) -> ClauseSpec {
     ClauseSpec {
         predicate: hornvale_kernel::world::IS_A.to_string(),
@@ -278,6 +328,13 @@ fn words(sentence: &str) -> BTreeSet<String> {
 /// renderers (`CommonVocabulary::word_for`, `cardinal`) rather than written
 /// out, so this test says "the fact reached the sentence" and never "the
 /// sentence is this string".
+///
+/// **Asserted on WHOLE TOKENS, not on substrings of the sentence**, and the
+/// difference is not pedantic: a vertex and a year share digits routinely,
+/// so a founding of `83` beside a site of `1837` would satisfy a
+/// `contains("83")` off the VERTEX alone — deleting the `occ-founded`
+/// construction entirely and leaving this test green. [`words`] is the same
+/// tokenizer property 2 uses, so both properties agree on what a word is.
 #[test]
 fn a_real_occupation_reaches_the_common_sentence_with_its_people_site_and_both_years() {
     let world = generated_world();
@@ -286,30 +343,40 @@ fn a_real_occupation_reaches_the_common_sentence_with_its_people_site_and_both_y
     let autonym = autonym_of(&world, &occupation.people);
     let vocab = CommonVocabulary::build(&world.registry).expect("Common is total on the registry");
     let common = realize_common(&clause_for(&occupation, &autonym), &vocab);
+    let tokens = words(&common);
 
-    let people_word = vocab.word_for(&format!("{}-kind", occupation.people));
+    // The people arrives PLURALIZED (`occ-people` renders the role's concept
+    // through the complement slot's own plural rule), so accept either
+    // number: the exact surface is pinned by `clause.rs`'s own unit test, and
+    // what this test asks is only whether the fact arrived at all.
+    let people_word = vocab
+        .word_for(&format!("{}-kind", occupation.people))
+        .to_lowercase();
     assert!(
-        common.contains(&people_word),
-        "the people ({people_word}) is missing from {common:?}"
+        tokens.contains(&people_word) || tokens.contains(&format!("{people_word}s")),
+        "the people ({people_word}) is not a word of {common:?}"
     );
+    // A vertex is an identifier and renders as bare digits; a year is a count
+    // and goes through `cardinal`, which is a WORD at or below twelve. Each
+    // expectation is built with the same renderer Common used.
     assert!(
-        common.contains(&occupation.site.to_string()),
-        "the site (vertex {}) is missing from {common:?}",
+        tokens.contains(&occupation.site.to_string()),
+        "the site (vertex {}) is not a word of {common:?}",
         occupation.site
     );
     assert!(
-        common.contains(&cardinal(occupation.founded)),
-        "the founding year ({}) is missing from {common:?}",
+        tokens.contains(&cardinal(occupation.founded)),
+        "the founding year ({}) is not a word of {common:?}",
         occupation.founded
     );
     assert!(
-        common.contains(&cardinal(occupation.ended)),
-        "the ending year ({}) is missing from {common:?}",
+        tokens.contains(&cardinal(occupation.ended)),
+        "the ending year ({}) is not a word of {common:?}",
         occupation.ended
     );
     assert!(
-        common.contains(&autonym),
-        "the subject ({autonym}) is missing from {common:?}"
+        tokens.contains(&autonym.to_lowercase()),
+        "the subject ({autonym}) is not a word of {common:?}"
     );
 }
 
@@ -339,6 +406,28 @@ fn a_real_occupation_reaches_the_common_sentence_with_its_people_site_and_both_y
 /// tongue's lexicalized words (its word for `"home"` and its word for the
 /// people) must be present in the tongue sentence and absent from the Common
 /// one, so an empty intersection can never be reached by an empty rendering.
+/// Mutation-checked in review: leaking Common into the tongue reds the
+/// intersection, degenerating the tongue reds the control, and neutralising
+/// the control turns a degenerate one-word rendering GREEN — so the control
+/// is load-bearing rather than decorative.
+///
+/// **The two halves of that control are asserted differently, because the
+/// realizer treats them differently.** The people's word rides an ADJUNCT,
+/// and `grammar::realize_adjuncts` appends a resolved adjunct verbatim — it
+/// is never marked, so it must appear as a whole token. The `"home"` word is
+/// the COMPLEMENT, which is the one word `realize_tongue_deep` may bind a
+/// marker onto: noun-class marking always targets the complement noun, and a
+/// zero-copula tongue also encliticizes the evidential onto it. At
+/// `MorphDepth::Affix` that produces `Qoqeba`, not `Qoqe`, so an
+/// equality check here would be latently flaky at the draw weights
+/// `morphology.rs` uses (`[55, 15, 30]` for noun class, `[60, 25, 15]` for
+/// evidentiality — roughly a third of peoples would mark), and would fail
+/// with a message that reads like truncation or a leak. Containment is the
+/// right relation and is GUARANTEED, not hoped for: `morphology::affix`
+/// concatenates segment lists and re-renders the whole, and
+/// `naming::render_views_with` is per-segment except for `capitalize_first`
+/// and a boundary apostrophe, so a marked complement always contains the
+/// bare root once both sides are lowercased.
 #[test]
 fn the_tongue_shares_no_word_with_common_but_the_autonym_and_the_numerals() {
     let world = generated_world();
@@ -355,22 +444,40 @@ fn the_tongue_shares_no_word_with_common_but_the_autonym_and_the_numerals() {
         .expect("the chosen people can say its own home");
 
     // Positive control: the tongue really did lexicalize two concepts, and
-    // neither word is Common's.
-    let home_word = tongue_speaker.lexicon.entry("home").and_then(word_of);
+    // neither word is Common's. See this test's doc for why the complement
+    // half is a containment and the adjunct half an equality.
+    let home_word = tongue_speaker
+        .lexicon
+        .entry("home")
+        .and_then(word_of)
+        .expect("the chosen people has a word for home")
+        .to_lowercase();
     let people_word = tongue_speaker
         .lexicon
         .entry(&format!("{}-kind", occupation.people))
-        .and_then(word_of);
+        .and_then(word_of)
+        .expect("the chosen people has a word for itself")
+        .to_lowercase();
     let tongue_words = words(&tongue);
     let common_words = words(&common);
-    for lexicalized in [home_word, people_word] {
-        let word = lexicalized.expect("the chosen people has a word for both bound concepts");
+
+    assert!(
+        tongue_words.iter().any(|token| token.contains(&home_word)),
+        "the tongue's word for home ({home_word}) is in no token of {tongue:?} — either the \
+         complement never reached the sentence, or `affix` no longer leaves the bare root \
+         inside a marked complement (evidential depth {:?}, noun-class depth {:?})",
+        tongue_speaker.morph.evidential_depth,
+        tongue_speaker.morph.noun_class_depth
+    );
+    assert!(
+        tongue_words.contains(&people_word),
+        "the tongue's word for its own people ({people_word}) is not a whole token of \
+         {tongue:?} — an adjunct is appended verbatim and is never marked, so this is a \
+         missing adjunct, not affixation"
+    );
+    for word in [&home_word, &people_word] {
         assert!(
-            tongue_words.contains(&word.to_lowercase()),
-            "{word} is a lexicalized word of this tongue but is absent from {tongue:?}"
-        );
-        assert!(
-            !common_words.contains(&word.to_lowercase()),
+            !common_words.iter().any(|token| token.contains(word)),
             "{word} is a tongue word and leaked into the Common rendering {common:?}"
         );
     }
