@@ -380,7 +380,7 @@
         0.8,
         0.9
       ],
-      "doc": "Fraction of globe cells below sea level",
+      "doc": "Fraction of globe vertices below sea level",
       "domain": "terrain",
       "kind": "numeric",
       "name": "ocean-fraction",
@@ -396,7 +396,7 @@
         0.2,
         0.3
       ],
-      "doc": "Fraction of land cells standing above 2000 m over the sea",
+      "doc": "Fraction of land vertices standing above 2000 m over the sea",
       "domain": "terrain",
       "kind": "numeric",
       "name": "mountain-coverage",
@@ -412,7 +412,7 @@
         2000.0,
         3000.0
       ],
-      "doc": "Mean elevation above sea level over land cells, m — the term the lapse rate turns into a temperature penalty. Land is `e >= sea`, matching `mountain-coverage`'s land definition; `mean-land-temperature-c` uses `!is_ocean(cell)`, which is the same condition (`is_ocean` is `e < sea`), so the two metrics ARE mutually comparable — this is the coupling the campaign's lapse-rate regression rests on. Absent on a landless world",
+      "doc": "Mean elevation above sea level over land vertices, m — the term the lapse rate turns into a temperature penalty. Land is `e >= sea`, matching `mountain-coverage`'s land definition; `mean-land-temperature-c` uses `!is_ocean(vertex)`, which is the same condition (`is_ocean` is `e < sea`), so the two metrics ARE mutually comparable — this is the coupling the campaign's lapse-rate regression rests on. Absent on a landless world",
       "domain": "terrain",
       "kind": "numeric",
       "name": "mean-land-elevation-m",
@@ -437,7 +437,7 @@
         0.4,
         0.5
       ],
-      "doc": "Fraction of cells that are habitable (land, water, tolerable season)",
+      "doc": "Fraction of vertices that are habitable (land, water, tolerable season)",
       "domain": "climate",
       "kind": "numeric",
       "name": "habitable-fraction",
@@ -453,7 +453,7 @@
         0.3,
         0.5
       ],
-      "doc": "Fraction of cells with tectonic unrest above 0.3",
+      "doc": "Fraction of vertices with tectonic unrest above 0.3",
       "domain": "terrain",
       "kind": "numeric",
       "name": "unrest-coverage",
@@ -461,7 +461,7 @@
       "rung": "terrain"
     },
     {
-      "doc": "The most common land rock class by cell count, spec §4's fine taxonomy (The Ground); Absent on a landless world",
+      "doc": "The most common land rock class by vertex count, spec §4's fine taxonomy (The Ground); Absent on a landless world",
       "domain": "terrain",
       "kind": "categorical",
       "name": "dominant-rock",
@@ -477,7 +477,7 @@
         0.2,
         0.3
       ],
-      "doc": "Fraction of land cells whose hydrogeology classifies as karst (The Ground, spec §3)",
+      "doc": "Fraction of land vertices whose hydrogeology classifies as karst (The Ground, spec §3)",
       "domain": "hydrology",
       "kind": "numeric",
       "name": "karst-fraction",
@@ -501,7 +501,7 @@
         0.3,
         0.4
       ],
-      "doc": "Fraction of land cells whose hydrogeology classifies as an aquifer (The Ground, spec §3)",
+      "doc": "Fraction of land vertices whose hydrogeology classifies as an aquifer (The Ground, spec §3)",
       "domain": "hydrology",
       "kind": "numeric",
       "name": "aquifer-fraction",
@@ -533,7 +533,7 @@
         0.2,
         0.3
       ],
-      "doc": "Fraction of land cells recording a nonconformity (missing time) — the archive's floating gaps.",
+      "doc": "Fraction of land vertices recording a nonconformity (missing time) — the archive's floating gaps.",
       "domain": "terrain",
       "kind": "numeric",
       "name": "unconformity-fraction",
@@ -565,7 +565,7 @@
         0.2,
         0.3
       ],
-      "doc": "Fraction of land cells with a cave (The Lode, spec §5; MAP-10's lab candidate)",
+      "doc": "Fraction of land vertices with a cave (The Lode, spec §5; MAP-10's lab candidate)",
       "domain": "terrain",
       "kind": "numeric",
       "name": "cave-fraction",
@@ -581,7 +581,7 @@
         0.2,
         0.3
       ],
-      "doc": "Fraction of land cells with an ore deposit (The Lode, spec §5)",
+      "doc": "Fraction of land vertices with an ore deposit (The Lode, spec §5)",
       "domain": "terrain",
       "kind": "numeric",
       "name": "deposit-density",
@@ -589,7 +589,7 @@
       "rung": "terrain"
     },
     {
-      "doc": "The most common land ore commodity by cell count (The Lode, spec §5); Absent where no land cell has a deposit",
+      "doc": "The most common land ore commodity by vertex count (The Lode, spec §5); Absent where no land vertex has a deposit",
       "domain": "terrain",
       "kind": "categorical",
       "name": "dominant-commodity",
@@ -605,7 +605,7 @@
         0.6,
         0.8
       ],
-      "doc": "Mean ore grade [0,1] over land cells with a deposit (The Lode, spec §5); 0.0 where no land cell has a deposit",
+      "doc": "Mean ore grade [0,1] over land vertices with a deposit (The Lode, spec §5); 0.0 where no land vertex has a deposit",
       "domain": "terrain",
       "kind": "numeric",
       "name": "mean-ore-grade",
@@ -621,7 +621,7 @@
         0.2,
         0.3
       ],
-      "doc": "Fraction of land cells with a non-empty vestige stack (The Vestige, spec §9.2)",
+      "doc": "Fraction of land vertices with a non-empty vestige stack (The Vestige, spec §9.2)",
       "domain": "history",
       "kind": "numeric",
       "name": "vestige-density",
@@ -651,7 +651,7 @@
         0.6,
         0.8
       ],
-      "doc": "Over land cells with a non-empty vestige stack, the fraction whose most-dread layer is Forgotten rather than Venerated (The Vestige, spec §9.2); 0.0 where no land cell bears a vestige",
+      "doc": "Over land vertices with a non-empty vestige stack, the fraction whose most-dread layer is Forgotten rather than Venerated (The Vestige, spec §9.2); 0.0 where no land vertex bears a vestige",
       "domain": "history",
       "kind": "numeric",
       "name": "forgotten-fraction",
@@ -659,7 +659,7 @@
       "rung": "full"
     },
     {
-      "doc": "The most common hazard kind among land-cell vestiges by layer count (The Vestige, spec §9.2); Absent where no land cell bears a vestige",
+      "doc": "The most common hazard kind among land-vertex vestiges by layer count (The Vestige, spec §9.2); Absent where no land vertex bears a vestige",
       "domain": "history",
       "kind": "categorical",
       "name": "dominant-hazard",
@@ -674,7 +674,7 @@
         0.6,
         0.8
       ],
-      "doc": "Mean warning_legibility over every land-cell vestige layer (The Vestige, spec §9.2); 0.0 where no land cell bears a vestige",
+      "doc": "Mean warning_legibility over every land-vertex vestige layer (The Vestige, spec §9.2); 0.0 where no land vertex bears a vestige",
       "domain": "history",
       "kind": "numeric",
       "name": "mean-warning-legibility",
@@ -986,7 +986,7 @@
       "rung": "full"
     },
     {
-      "doc": "The most common land biome by cell count, kebab-case",
+      "doc": "The most common land biome by vertex count, kebab-case",
       "domain": "climate",
       "kind": "categorical",
       "name": "dominant-land-biome",
@@ -1003,7 +1003,7 @@
         20.0,
         30.0
       ],
-      "doc": "Annual-mean temperature averaged over land cells, °C; Absent if the world has no land",
+      "doc": "Annual-mean temperature averaged over land vertices, °C; Absent if the world has no land",
       "domain": "climate",
       "kind": "numeric",
       "name": "mean-land-temperature-c",
@@ -1011,7 +1011,7 @@
       "rung": "terrain"
     },
     {
-      "doc": "The most common land soil order by cell count, spec §4's soil taxonomy (The Ground); Absent on a landless world",
+      "doc": "The most common land soil order by vertex count, spec §4's soil taxonomy (The Ground); Absent on a landless world",
       "domain": "climate",
       "kind": "categorical",
       "name": "dominant-soil-order",
@@ -1028,7 +1028,7 @@
         0.6,
         0.8
       ],
-      "doc": "Fraction of land cells whose soil fertility's grain-suitability exceeds 0.6 (The Ground, spec §3/§4)",
+      "doc": "Fraction of land vertices whose soil fertility's grain-suitability exceeds 0.6 (The Ground, spec §3/§4)",
       "domain": "climate",
       "kind": "numeric",
       "name": "fertile-land-fraction",
@@ -1094,7 +1094,7 @@
         40.0,
         60.0
       ],
-      "doc": "The carrying-capacity field's headline calibration (design spec §5): the ratio of mean per-land-cell K (summed over the roster's PEOPLED kinds' individual fields, each species' own psychology folded in — fauna kinds have no psychology and are excluded, preserving this metric's pre-menagerie population) in the low-latitude band (|latitude| < 30) to the polar band (|latitude| > 60), the polar mean floored at POLE_FLOOR (1% of the K formula's baseline unit) so an exactly-zero polar band — the Miami NPP proxy's honest reading of hard cold, not a bug — reports a large-but-bounded ratio rather than a division blowup. A field grounded in the real biomass gradient reads well above 1 here; Absent if either band has no land cells (a wholly ocean or wholly polar world)",
+      "doc": "The carrying-capacity field's headline calibration (design spec §5): the ratio of mean per-land-vertex K (summed over the roster's PEOPLED kinds' individual fields, each species' own psychology folded in — fauna kinds have no psychology and are excluded, preserving this metric's pre-menagerie population) in the low-latitude band (|latitude| < 30) to the polar band (|latitude| > 60), the polar mean floored at POLE_FLOOR (1% of the K formula's baseline unit) so an exactly-zero polar band — the Miami NPP proxy's honest reading of hard cold, not a bug — reports a large-but-bounded ratio rather than a division blowup. A field grounded in the real biomass gradient reads well above 1 here; Absent if either band has no land vertices (a wholly ocean or wholly polar world)",
       "domain": "settlement",
       "kind": "numeric",
       "name": "capacity-by-abs-latitude",
@@ -1111,7 +1111,7 @@
         6.0,
         8.0
       ],
-      "doc": "Mean per-cell species diversity of the coexistence density stack (task A16a; feeds the A16b β calibration): the mean, over habitable land cells, of the demography report's `byproducts.strife` field — already the per-cell inverse-Herfindahl diversity 1/Σ frac_s² (1.0 when one species dominates a cell, →N when N species share it evenly). Recomputed via `hornvale_worldgen::demography_report_from`, which reconstructs the IDENTICAL report the settlement-genesis path builds internally (the shared-assembly refactor of task A16a), so this measures the stack the world actually ships, not a parallel one. Absent if the report fails to build or the world has no habitable cells",
+      "doc": "Mean per-vertex species diversity of the coexistence density stack (task A16a; feeds the A16b β calibration): the mean, over habitable land vertices, of the demography report's `byproducts.strife` field — already the per-vertex inverse-Herfindahl diversity 1/Σ frac_s² (1.0 when one species dominates a vertex, →N when N species share it evenly). Recomputed via `hornvale_worldgen::demography_report_from`, which reconstructs the IDENTICAL report the settlement-genesis path builds internally (the shared-assembly refactor of task A16a), so this measures the stack the world actually ships, not a parallel one. Absent if the report fails to build or the world has no habitable vertices",
       "domain": "settlement",
       "kind": "numeric",
       "name": "per-cell-diversity",
@@ -1185,7 +1185,7 @@
       "rung": "settlements"
     },
     {
-      "doc": "Whether the goblin flagship settlement's cell borders an ocean cell, recomputed from the terrain provider; Absent if there is no goblin flagship",
+      "doc": "Whether the goblin flagship settlement's vertex borders an ocean vertex, recomputed from the terrain provider; Absent if there is no goblin flagship",
       "domain": "settlement",
       "kind": "flag",
       "name": "flagship-coastal",
@@ -1217,7 +1217,7 @@
         0.2,
         0.3
       ],
-      "doc": "Fraction of land cells that are endorheic (interior-draining)",
+      "doc": "Fraction of land vertices that are endorheic (interior-draining)",
       "domain": "hydrology",
       "kind": "numeric",
       "name": "endorheic-coverage",
@@ -1321,7 +1321,7 @@
         0.8,
         1.0
       ],
-      "doc": "The goblin flagship cell's subsistence surplus, recomputed from providers as fertility(biome_class) × moisture (the independent column the slave calibration needs); Absent if goblins placed no settlement",
+      "doc": "The goblin flagship vertex's subsistence surplus, recomputed from providers as fertility(biome_class) × moisture (the independent column the slave calibration needs); Absent if goblins placed no settlement",
       "domain": "settlement",
       "kind": "numeric",
       "name": "goblin-flagship-surplus",
@@ -1337,7 +1337,7 @@
         0.8,
         1.0
       ],
-      "doc": "The kobold flagship cell's subsistence surplus, recomputed from providers as fertility(biome_class) × moisture (the independent column the slave calibration needs); Absent if kobolds placed no settlement",
+      "doc": "The kobold flagship vertex's subsistence surplus, recomputed from providers as fertility(biome_class) × moisture (the independent column the slave calibration needs); Absent if kobolds placed no settlement",
       "domain": "settlement",
       "kind": "numeric",
       "name": "kobold-flagship-surplus",
@@ -1345,7 +1345,7 @@
       "rung": "settlements"
     },
     {
-      "doc": "Whether the goblin flagship settlement's cell borders an ocean cell, recomputed from the terrain provider; Absent if goblins placed no settlement",
+      "doc": "Whether the goblin flagship settlement's vertex borders an ocean vertex, recomputed from the terrain provider; Absent if goblins placed no settlement",
       "domain": "settlement",
       "kind": "flag",
       "name": "goblin-flagship-coastal",
@@ -1353,7 +1353,7 @@
       "rung": "settlements"
     },
     {
-      "doc": "Whether the kobold flagship settlement's cell borders an ocean cell, recomputed from the terrain provider; Absent if kobolds placed no settlement",
+      "doc": "Whether the kobold flagship settlement's vertex borders an ocean vertex, recomputed from the terrain provider; Absent if kobolds placed no settlement",
       "domain": "settlement",
       "kind": "flag",
       "name": "kobold-flagship-coastal",
@@ -1722,7 +1722,7 @@
       "rung": "full"
     },
     {
-      "doc": "Whether every committed settlement name-gloss fact in this world is a truthful composition of that SAME settlement's own re-derived site concepts — up to twelve: the nine toponymic terrain concepts its own cell offers (hydrography, elevation extrema, landmass size, wetness), The Toponym's characteristic climate variant, the biome, and the presiding sky phenomenon. The Wearing's Task 5 widened this vector past the original biome + presiding pair, and the close merge with The Toponym added the variant. Rather than restate the vector, this metric re-derives it by calling worldgen's own settlement_site_concepts, so there is no hand-maintained parallel definition to go stale — only this sentence, which has now gone stale twice; Absent if no settlement in this world carries a gloss",
+      "doc": "Whether every committed settlement name-gloss fact in this world is a truthful composition of that SAME settlement's own re-derived site concepts — up to twelve: the nine toponymic terrain concepts its own vertex offers (hydrography, elevation extrema, landmass size, wetness), The Toponym's characteristic climate variant, the biome, and the presiding sky phenomenon. The Wearing's Task 5 widened this vector past the original biome + presiding pair, and the close merge with The Toponym added the variant. Rather than restate the vector, this metric re-derives it by calling worldgen's own settlement_site_concepts, so there is no hand-maintained parallel definition to go stale — only this sentence, which has now gone stale twice; Absent if no settlement in this world carries a gloss",
       "domain": "naming",
       "kind": "flag",
       "name": "name-gloss-true",
@@ -1940,7 +1940,7 @@
         1.0,
         1.5
       ],
-      "doc": "Multi-scale coastline-roughness slope, unbanded: the least-squares slope of ln(shoreline development) against mesh level, measured at L4/L5/L6 by projecting each level's cells onto the canonical L6 land/ocean truth (NearestCellIndex). A companion to shoreline-development, not a replacement — that estimator is unchanged. Positive means roughness concentrates at fine scales, which makes this slope immune to the single-hex land/ocean alternation exploit that inflates shoreline-development without changing the coast's coarse shape; Absent if any of the three levels has no shoreline",
+      "doc": "Multi-scale coastline-roughness slope, unbanded: the least-squares slope of ln(shoreline development) against mesh level, measured at L4/L5/L6 by projecting each level's vertices onto the canonical L6 land/ocean truth (NearestVertexIndex). A companion to shoreline-development, not a replacement — that estimator is unchanged. Positive means roughness concentrates at fine scales, which makes this slope immune to the single-hex land/ocean alternation exploit that inflates shoreline-development without changing the coast's coarse shape; Absent if any of the three levels has no shoreline",
       "domain": "hydrology",
       "kind": "numeric",
       "name": "coast-roughness-slope",
@@ -1973,7 +1973,7 @@
         0.2,
         0.3
       ],
-      "doc": "Fraction of cells within the shelf band (±200 m) of sea level — the populated shelf Earth's hypsometry keeps",
+      "doc": "Fraction of vertices within the shelf band (±200 m) of sea level — the populated shelf Earth's hypsometry keeps",
       "domain": "hydrology",
       "kind": "numeric",
       "name": "shelf-fraction",
@@ -1991,7 +1991,7 @@
         8.0,
         12.0
       ],
-      "doc": "Connected land components at least 0.5% of the world's total land cells (Task 9 iteration 3's size floor, Earth-calibrated: Greenland is ~1.4% of Earth's land and qualifies, Iceland ~0.07% does not) — the unfloored fringe of sub-floor fragments is preserved separately by landmass-count",
+      "doc": "Connected land components at least 0.5% of the world's total land vertices (Task 9 iteration 3's size floor, Earth-calibrated: Greenland is ~1.4% of Earth's land and qualifies, Iceland ~0.07% does not) — the unfloored fringe of sub-floor fragments is preserved separately by landmass-count",
       "domain": "terrain",
       "kind": "numeric",
       "name": "continent-count",
@@ -2007,7 +2007,7 @@
         0.8,
         0.9
       ],
-      "doc": "Largest land component's share of all land cells; Absent on a landless world",
+      "doc": "Largest land component's share of all land vertices; Absent on a landless world",
       "domain": "terrain",
       "kind": "numeric",
       "name": "largest-continent-share",
@@ -2024,7 +2024,7 @@
         0.5,
         0.6
       ],
-      "doc": "Gini coefficient over plate cell counts (Earth's plate sizes are heavy-tailed; uniform Voronoi scores low)",
+      "doc": "Gini coefficient over plate vertex counts (Earth's plate sizes are heavy-tailed; uniform Voronoi scores low)",
       "domain": "terrain",
       "kind": "numeric",
       "name": "plate-size-gini",
@@ -2060,7 +2060,7 @@
         6.0,
         8.0
       ],
-      "doc": "Median shelf width over PASSIVE-margin coast land cells (Passive/Interior/Oceanic, mirroring the carve's own wedge-reach margin split): hops seaward from the coast cell, each hop to the deepest ocean neighbor, until depth first exceeds twice the sediment wedge's freeboard cap or 8 hops are spent — spec §8's passive/active shelf asymmetry battery (passive median should exceed active); Absent if the world has no passive-margin coast",
+      "doc": "Median shelf width over PASSIVE-margin coast land vertices (Passive/Interior/Oceanic, mirroring the carve's own wedge-reach margin split): hops seaward from the coast vertex, each hop to the deepest ocean neighbor, until depth first exceeds twice the sediment wedge's freeboard cap or 8 hops are spent — spec §8's passive/active shelf asymmetry battery (passive median should exceed active); Absent if the world has no passive-margin coast",
       "domain": "hydrology",
       "kind": "numeric",
       "name": "shelf-width-passive-median",
@@ -2078,7 +2078,7 @@
         6.0,
         8.0
       ],
-      "doc": "Median shelf width over ACTIVE-margin coast land cells: hops seaward from the coast cell, each hop to the deepest ocean neighbor, until depth first exceeds twice the sediment wedge's freeboard cap or 8 hops are spent — spec §8's passive/active shelf asymmetry battery (active median should be narrower than passive); Absent if the world has no active-margin coast",
+      "doc": "Median shelf width over ACTIVE-margin coast land vertices: hops seaward from the coast vertex, each hop to the deepest ocean neighbor, until depth first exceeds twice the sediment wedge's freeboard cap or 8 hops are spent — spec §8's passive/active shelf asymmetry battery (active median should be narrower than passive); Absent if the world has no active-margin coast",
       "domain": "hydrology",
       "kind": "numeric",
       "name": "shelf-width-active-median",
@@ -2095,7 +2095,7 @@
         1600000.0,
         3200000.0
       ],
-      "doc": "Total deposited sediment volume proxy: Σ sediment thickness (meters) over every cell, one cell-area unit per cell — the carve's own volume-proxy convention (spec §5): repose's receiver-side gains, routing's floodplain/ playa deposit, the marine wedge/delta fill, and atoll cap material, all summed",
+      "doc": "Total deposited sediment volume proxy: Σ sediment thickness (meters) over every vertex, one vertex-area unit per vertex — the carve's own volume-proxy convention (spec §5): repose's receiver-side gains, routing's floodplain/ playa deposit, the marine wedge/delta fill, and atoll cap material, all summed",
       "domain": "terrain",
       "kind": "numeric",
       "name": "sediment-volume",
@@ -2111,7 +2111,7 @@
         8.0,
         16.0
       ],
-      "doc": "Count of waterfall (knickpoint) sites the carve found: land cells where a high-drainage watercourse crosses a sharp PRE-carve induration step (spec §5's derived point observations)",
+      "doc": "Count of waterfall (knickpoint) sites the carve found: land vertices where a high-drainage watercourse crosses a sharp PRE-carve induration step (spec §5's derived point observations)",
       "domain": "hydrology",
       "kind": "numeric",
       "name": "waterfall-count",
@@ -2127,7 +2127,7 @@
         8.0,
         16.0
       ],
-      "doc": "Count of cells a river-mouth delta lobe raised above sea level (spec §5's top-K discrete deltas) — a cell count, not a mouth count: each of the top-K mouths can raise the mouth cell itself plus up to two adjacent hop-1 ocean cells",
+      "doc": "Count of vertices a river-mouth delta lobe raised above sea level (spec §5's top-K discrete deltas) — a vertex count, not a mouth count: each of the top-K mouths can raise the mouth vertex itself plus up to two adjacent hop-1 ocean vertices",
       "domain": "hydrology",
       "kind": "numeric",
       "name": "delta-count",
@@ -2143,7 +2143,7 @@
         0.3,
         0.5
       ],
-      "doc": "The A→B→C escalation diagnostic (spec §8, preregistered, a permanent census column): the flux-weighted fraction of the world's 20 largest pre-carve rivers' mainstem cells whose downhill target changed across the carve. Thresholds: < 0.10 engine A self-consistent; 0.10-0.30 flag, Nathan decides; > 0.30 A rejected as sole engine, engine B enters evaluation",
+      "doc": "The A→B→C escalation diagnostic (spec §8, preregistered, a permanent census column): the flux-weighted fraction of the world's 20 largest pre-carve rivers' mainstem vertices whose downhill target changed across the carve. Thresholds: < 0.10 engine A self-consistent; 0.10-0.30 flag, Nathan decides; > 0.30 A rejected as sole engine, engine B enters evaluation",
       "domain": "hydrology",
       "kind": "numeric",
       "name": "rerouted-flow-fraction",
@@ -2159,7 +2159,7 @@
         0.0005,
         0.001
       ],
-      "doc": "H1's axis (The Ford, spec §10): the fraction of LAND AREA the channel network occupies — the area of the river tube (every polyline segment's arc length times its channel width) over the land area (land cells over all cells, times 4π). Preregistered interval [0.005%, 0.5%]; below it rivers are invisible at room scale, above it a river is still effectively as wide as the cell carrying it. NOT a per-cell reading: the polylines run THROUGH cell centres, so sampling at them overstates this by ~127x. ABSENT ONLY ON A WORLD WITH NO LAND: unlike its four Ford siblings, which go Absent whenever the network is empty, this column reads a true Number(0.0) on a land-bearing world that happens to have no channels. The asymmetry is deliberate — zero channel area over positive land area is a measurement, while a connectivity or monotonicity fraction over zero transects has no denominator to divide by — but a consumer reading the five columns together must not treat a 0.0 here as the same state as an Absent there",
+      "doc": "H1's axis (The Ford, spec §10): the fraction of LAND AREA the channel network occupies — the area of the river tube (every polyline segment's arc length times its channel width) over the land area (land vertices over all vertices, times 4π). Preregistered interval [0.005%, 0.5%]; below it rivers are invisible at room scale, above it a river is still effectively as wide as the vertex carrying it. NOT a per-vertex reading: the polylines run THROUGH vertex centres, so sampling at them overstates this by ~127x. ABSENT ONLY ON A WORLD WITH NO LAND: unlike its four Ford siblings, which go Absent whenever the network is empty, this column reads a true Number(0.0) on a land-bearing world that happens to have no channels. The asymmetry is deliberate — zero channel area over positive land area is a measurement, while a connectivity or monotonicity fraction over zero transects has no denominator to divide by — but a consumer reading the five columns together must not treat a 0.0 here as the same state as an Absent there",
       "domain": "hydrology",
       "kind": "numeric",
       "name": "channel-land-fraction",
@@ -2175,7 +2175,7 @@
         0.95,
         0.99
       ],
-      "doc": "H2's axis (The Ford, spec §10): the fraction of downstream walks — one per channel run, each starting at a headwater — that reach the sea or a terminal sink without ever leaving the `channel` band. Preregistered floor 0.95: a river you fall out of is not a river. Travelling along a run is in-channel by construction, so this measures the JOINS. It first read 0.862-0.953 (falsified; 4 of 64 probe worlds cleared the floor), which diagnosed an anchoring asymmetry: a tributary's mouth sat at its cell's undisplaced position while the trunk's vertex for that same cell was meander-displaced. **Since the confluence repair this column is a CONSTANT: 1.0 on every world with a channel network, Absent on every world without one.** Both of its failure branches are unreachable — a join is now a zero-length crossing, and the walk can no longer leave the network because `build` pushes a cell onto its claiming run BEFORE testing whether it was already claimed, so any cell the flow continues past is necessarily a non-final vertex of a kept run and always has an owner. Read a 1.0 here as a tripwire that the repair is still in place, never as a measurement of the world. **THE RILL'S TASK 3 THEN LEFT THAT TRIPWIRE LARGELY UNARMED, AND THE MILLRACE MEASURED AND REPAIRED IT.** The walk used to continue only while the next cell classified as `River`, while `ChannelNetwork::build`'s reach predicate is `!Ocean && downhill.is_some()` — strictly wider once Task 3 rendered the whole land flow tree (3,606 runs at seed 42, from 183). A run ending on a SUB-THRESHOLD trunk — rendered as a narrow channel, but not classified a river — stopped the walk BEFORE its join was examined, and that walk scored intact with nothing tested. **Measured at last (The Millrace, prediction P3, seed 42 at the canonical grid): 2,987 of 3,606 walks — 82.83% — had a false FIRST continuation test**, 0.749-0.850 across the 64 probe worlds; The Rill's review had guessed ~3,500 and rightly declined to assert it. The walk now asks `build`'s own reach predicate, so it stops only where the flow stops: on seed 42 alone the joins actually crossed go 853 -> 2,333 (2.74x), and summed over all 64 probe worlds they go 90,537 -> 219,763 (2.43x). **The value did not move.** The two rules are bit-identical on all 64 probe worlds, both 1.0, so this is a vacuous 1.0 converted into a tested 1.0 — which is why the repair landed in this column rather than beside it in a second one, and why no census value changed. The 0.95 floor is The Ford's preregistration, scored against The Ford's network; it is neither restated, retuned, nor re-scored here. Above all, do not read this column's stillness across a change as evidence that joins are sound: it is a constant by construction, and a column that did not move because it became vacuous is not the same reassurance as one that did not move because nothing broke",
+      "doc": "H2's axis (The Ford, spec §10): the fraction of downstream walks — one per channel run, each starting at a headwater — that reach the sea or a terminal sink without ever leaving the `channel` band. Preregistered floor 0.95: a river you fall out of is not a river. Travelling along a run is in-channel by construction, so this measures the JOINS. It first read 0.862-0.953 (falsified; 4 of 64 probe worlds cleared the floor), which diagnosed an anchoring asymmetry: a tributary's mouth sat at its vertex's undisplaced position while the trunk's vertex for that same vertex was meander-displaced. **Since the confluence repair this column is a CONSTANT: 1.0 on every world with a channel network, Absent on every world without one.** Both of its failure branches are unreachable — a join is now a zero-length crossing, and the walk can no longer leave the network because `build` pushes a vertex onto its claiming run BEFORE testing whether it was already claimed, so any vertex the flow continues past is necessarily a non-final vertex of a kept run and always has an owner. Read a 1.0 here as a tripwire that the repair is still in place, never as a measurement of the world. **THE RILL'S TASK 3 THEN LEFT THAT TRIPWIRE LARGELY UNARMED, AND THE MILLRACE MEASURED AND REPAIRED IT.** The walk used to continue only while the next vertex classified as `River`, while `ChannelNetwork::build`'s reach predicate is `!Ocean && downhill.is_some()` — strictly wider once Task 3 rendered the whole land flow tree (3,606 runs at seed 42, from 183). A run ending on a SUB-THRESHOLD trunk — rendered as a narrow channel, but not classified a river — stopped the walk BEFORE its join was examined, and that walk scored intact with nothing tested. **Measured at last (The Millrace, prediction P3, seed 42 at the canonical grid): 2,987 of 3,606 walks — 82.83% — had a false FIRST continuation test**, 0.749-0.850 across the 64 probe worlds; The Rill's review had guessed ~3,500 and rightly declined to assert it. The walk now asks `build`'s own reach predicate, so it stops only where the flow stops: on seed 42 alone the joins actually crossed go 853 -> 2,333 (2.74x), and summed over all 64 probe worlds they go 90,537 -> 219,763 (2.43x). **The value did not move.** The two rules are bit-identical on all 64 probe worlds, both 1.0, so this is a vacuous 1.0 converted into a tested 1.0 — which is why the repair landed in this column rather than beside it in a second one, and why no census value changed. The 0.95 floor is The Ford's preregistration, scored against The Ford's network; it is neither restated, retuned, nor re-scored here. Above all, do not read this column's stillness across a change as evidence that joins are sound: it is a constant by construction, and a column that did not move because it became vacuous is not the same reassurance as one that did not move because nothing broke",
       "domain": "hydrology",
       "kind": "numeric",
       "name": "channel-connectivity",
@@ -2712,7 +2712,7 @@
         80.0,
         100.0
       ],
-      "doc": "Goblin's maximum lifespan in years (BIO-2 spec §4); Absent if goblin is off-roster or Ametabolic",
+      "doc": "Goblin's maximum lifespan in years (BIO-2 spec §4); Absent if goblin is off-roster or ametabolic",
       "domain": "biology",
       "kind": "numeric",
       "name": "lifespan-years-goblin",
@@ -2727,7 +2727,7 @@
         80.0,
         100.0
       ],
-      "doc": "Kobold's maximum lifespan in years (BIO-2 spec §4); Absent if kobold is off-roster or Ametabolic",
+      "doc": "Kobold's maximum lifespan in years (BIO-2 spec §4); Absent if kobold is off-roster or ametabolic",
       "domain": "biology",
       "kind": "numeric",
       "name": "lifespan-years-kobold",
@@ -2742,7 +2742,7 @@
         20.0,
         25.0
       ],
-      "doc": "Goblin's age at first reproduction in years (BIO-2 spec §4); Absent if goblin is off-roster or Ametabolic",
+      "doc": "Goblin's age at first reproduction in years (BIO-2 spec §4); Absent if goblin is off-roster or ametabolic",
       "domain": "biology",
       "kind": "numeric",
       "name": "age-at-maturity-years-goblin",
@@ -2757,7 +2757,7 @@
         20.0,
         25.0
       ],
-      "doc": "Kobold's age at first reproduction in years (BIO-2 spec §4); Absent if kobold is off-roster or Ametabolic",
+      "doc": "Kobold's age at first reproduction in years (BIO-2 spec §4); Absent if kobold is off-roster or ametabolic",
       "domain": "biology",
       "kind": "numeric",
       "name": "age-at-maturity-years-kobold",
@@ -2802,7 +2802,7 @@
         0.8,
         1.0
       ],
-      "doc": "Goblin's reproductive output on the r-K axis, 0 (fast/prolific) ... 1 (slow/sparse) (BIO-2 spec §4/CAP-2); Absent if goblin is off-roster or Ametabolic",
+      "doc": "Goblin's reproductive output on the r-K axis, 0 (fast/prolific) ... 1 (slow/sparse) (BIO-2 spec §4/CAP-2); Absent if goblin is off-roster or ametabolic",
       "domain": "biology",
       "kind": "numeric",
       "name": "reproductive-tempo-goblin",
@@ -2817,7 +2817,7 @@
         0.8,
         1.0
       ],
-      "doc": "Kobold's reproductive output on the r-K axis, 0 (fast/prolific) ... 1 (slow/sparse) (BIO-2 spec §4/CAP-2); Absent if kobold is off-roster or Ametabolic",
+      "doc": "Kobold's reproductive output on the r-K axis, 0 (fast/prolific) ... 1 (slow/sparse) (BIO-2 spec §4/CAP-2); Absent if kobold is off-roster or ametabolic",
       "domain": "biology",
       "kind": "numeric",
       "name": "reproductive-tempo-kobold",
@@ -2832,7 +2832,7 @@
         40.0,
         50.0
       ],
-      "doc": "Goblin's generation length in years (BIO-2 spec §5, MEM-7's handle); Absent if goblin is off-roster or Ametabolic",
+      "doc": "Goblin's generation length in years (BIO-2 spec §5, MEM-7's handle); Absent if goblin is off-roster or ametabolic",
       "domain": "biology",
       "kind": "numeric",
       "name": "generation-length-years-goblin",
@@ -2847,7 +2847,7 @@
         40.0,
         50.0
       ],
-      "doc": "Kobold's generation length in years (BIO-2 spec §5, MEM-7's handle); Absent if kobold is off-roster or Ametabolic",
+      "doc": "Kobold's generation length in years (BIO-2 spec §5, MEM-7's handle); Absent if kobold is off-roster or ametabolic",
       "domain": "biology",
       "kind": "numeric",
       "name": "generation-length-years-kobold",
@@ -3010,7 +3010,7 @@
         0.3,
         0.6
       ],
-      "doc": "M4: Spearman rank correlation between a habitable cell's weakest-point defensibility and its carrying capacity, BOTH READ FROM PRESENT-DAY terrain, climate, and connection graph — NOT the bake's own final era, which can differ on a world with real orbital forcing (spec §2.4 amendment 4). Checks §2.2's structural claim that defensible ground is also poor ground, on the geography as it stands today. Ties get average ranks; Absent if fewer than 2 habitable cells, or if either series is constant (no variance, so no correlation is defined)",
+      "doc": "M4: Spearman rank correlation between a habitable vertex's weakest-point defensibility and its carrying capacity, BOTH READ FROM PRESENT-DAY terrain, climate, and connection graph — NOT the bake's own final era, which can differ on a world with real orbital forcing (spec §2.4 amendment 4). Checks §2.2's structural claim that defensible ground is also poor ground, on the geography as it stands today. Ties get average ranks; Absent if fewer than 2 habitable vertices, or if either series is constant (no variance, so no correlation is defined)",
       "domain": "society",
       "kind": "numeric",
       "name": "defensibility-capacity-rank-corr",
@@ -3195,7 +3195,7 @@
   },
   "rows": {
     "count": 20,
-    "fnv1a64": "0xb917e5f406944ba9"
+    "fnv1a64": "0x782052a4f9ca2db0"
   },
   "schema_version": 1,
   "study": {
