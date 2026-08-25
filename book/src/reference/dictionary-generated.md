@@ -2149,7 +2149,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `forest-gap` | A break in the canopy where light reaches the ground. | Sabax | /sabax/ | Sadax | Sadax → no change → Sabax |
 | `frost-heave` | Ground churned and patterned by freezing. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'frost-heave' |
 | `frustrated` | negative: blocked with a known target out of reach | Sasax | /sasax/ | Zasax | Zasax → no change → Sasax |
-| `gallery-forest` | Forest following a watercourse. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'gallery-forest' |
+| `gallery-forest` | Forest following a watercourse. | Vataq | /vataq/ | Vataq | Vataq → no change → Vataq |
 | `giant-constrictor-snake-kind` | a giant constrictor snake | — | — | — | gap (experiential): hill-dwarf has no exposure to 'giant-constrictor-snake-kind' |
 | `giant-crocodile-kind` | a giant crocodile | — | — | — | gap (experiential): hill-dwarf has no exposure to 'giant-crocodile-kind' |
 | `giant-elk-kind` | a giant elk | — | — | — | gap (experiential): hill-dwarf has no exposure to 'giant-elk-kind' |
@@ -2351,7 +2351,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `cold` | felt, biting chill | — | — | — | gap (experiential): hobgoblin has no exposure to 'cold' |
 | `cold-upwelling` | Cold nutrient-rich water rising from below. | — | — | — | gap (experiential): hobgoblin has no exposure to 'cold-upwelling' |
 | `content` | positive, low arousal: needs met, at rest | Nooqo | /nooqo/ | Nooqo | Nooqo → no change → Nooqo |
-| `coral-head` | A massive coral colony standing proud of the reef. | — | — | — | gap (experiential): hobgoblin has no exposure to 'coral-head' |
+| `coral-head` | A massive coral colony standing proud of the reef. | Naono | /naono/ | Naono | Naono → no change → Naono |
 | `coral-reef` | a biome class | Nae | /nae/ | Nae | Nae → no change → Nae |
 | `crevasse-field` | Ice split by crevasses. | — | — | — | gap (experiential): hobgoblin has no exposure to 'crevasse-field' |
 | `damp-hollow` | A shaded, wet fold in the forest floor. | Boba | /boba/ | Popa | Popa → no change → Boba |
@@ -2843,7 +2843,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `foot` | the walking limb-end | Xoxo | /xoxo/ | Xoxo | Xoxo → no change → Xoxo |
 | `ford` | where a river runs shallow enough to cross | Roroaraa | /roroaraa/ | Roroaraa | Roroaraa → no change → Roroaraa |
 | `forest-gap` | A break in the canopy where light reaches the ground. | Roaroaro | /roaroaro/ | Roaroaro | Roaroaro → no change → Roaroaro |
-| `frost-heave` | Ground churned and patterned by freezing. | — | — | — | gap (experiential): kobold has no exposure to 'frost-heave' |
+| `frost-heave` | Ground churned and patterned by freezing. | Raxa | /raxa/ | Raxa | Raxa → no change → Raxa |
 | `frustrated` | negative: blocked with a known target out of reach | Roxoxao | /roxoxao/ | Roxoxao | Roxoxao → no change → Roxoxao |
 | `gallery-forest` | Forest following a watercourse. | — | — | — | gap (experiential): kobold has no exposure to 'gallery-forest' |
 | `giant-constrictor-snake-kind` | a giant constrictor snake | — | — | — | gap (experiential): kobold has no exposure to 'giant-constrictor-snake-kind' |
