@@ -8,7 +8,7 @@ The living things a world supports, from biome cover to the life-history traits 
 
 ### `age-at-maturity-years-goblin`
 
-Goblin's age at first reproduction in years; Absent if goblin is off-roster or Ametabolic
+Goblin's age at first reproduction in years; Absent if goblin is off-roster or ametabolic
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -18,7 +18,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `age-at-maturity-years-kobold`
 
-Kobold's age at first reproduction in years; Absent if kobold is off-roster or Ametabolic
+Kobold's age at first reproduction in years; Absent if kobold is off-roster or ametabolic
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -48,7 +48,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `generation-length-years-goblin`
 
-Goblin's generation length in years; Absent if goblin is off-roster or Ametabolic
+Goblin's generation length in years; Absent if goblin is off-roster or ametabolic
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -58,7 +58,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `generation-length-years-kobold`
 
-Kobold's generation length in years; Absent if kobold is off-roster or Ametabolic
+Kobold's generation length in years; Absent if kobold is off-roster or ametabolic
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -88,7 +88,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `lifespan-years-goblin`
 
-Goblin's maximum lifespan in years; Absent if goblin is off-roster or Ametabolic
+Goblin's maximum lifespan in years; Absent if goblin is off-roster or ametabolic
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -98,7 +98,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `lifespan-years-kobold`
 
-Kobold's maximum lifespan in years; Absent if kobold is off-roster or Ametabolic
+Kobold's maximum lifespan in years; Absent if kobold is off-roster or ametabolic
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -128,7 +128,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `reproductive-tempo-goblin`
 
-Goblin's reproductive output on the r-K axis, 0 (fast/prolific) ... 1 (slow/sparse); Absent if goblin is off-roster or Ametabolic
+Goblin's reproductive output on the r-K axis, 0 (fast/prolific) ... 1 (slow/sparse); Absent if goblin is off-roster or ametabolic
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -138,7 +138,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `reproductive-tempo-kobold`
 
-Kobold's reproductive output on the r-K axis, 0 (fast/prolific) ... 1 (slow/sparse); Absent if kobold is off-roster or Ametabolic
+Kobold's reproductive output on the r-K axis, 0 (fast/prolific) ... 1 (slow/sparse); Absent if kobold is off-roster or ametabolic
 
 n = 1000 present, 0 absent (of 1000 worlds)
 

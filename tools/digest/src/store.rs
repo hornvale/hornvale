@@ -161,7 +161,7 @@ mod tests {
     fn a_fact_carrying_time_is_rejected() {
         let mut led = ProjectLedger::new(registry());
         let mut f = fact(eid(1), "status", Value::Text("accepted".into()));
-        f.day = Some(hornvale_kernel::field::WorldTime::new(1.0).expect("finite"));
+        f.day = Some(hornvale_kernel::field::WorldTime::from_std_days(1.0).expect("finite"));
         let err = led.assert(f).expect_err("time must be rejected");
         assert!(matches!(err, StoreError::TimeIsGits));
     }

@@ -350,3 +350,27 @@ only when someone tried to implement it.
   through the `Npc`→`Body` rename. The one site with semantic risk
   (`DriveMovements.npcs`) was checked and is accurate by construction, since
   `other_bodies` excludes the driven body.
+
+## What The Confidant discharged (2026-08-25)
+
+Recorded here because this register is where a reader looks for a followup's
+fate, and a followup nobody marks closed gets re-opened.
+
+- **F-H1 · discharged, and widened.** Both cross-seed pins were hardened to
+  assert over three seeds rather than `assert_ne!` on a chosen pair — the
+  affect pin as well as the mode pin, because a 20-seed probe found only 3 of
+  `AffectLabel`'s 6 variants reachable at the checkpoint and a randomly redrawn
+  pair colliding ~49% of the time. Both were then mutation-proved to *still
+  discriminate*: substituting a constant reddens each. That check is the point.
+  A test made robust by being made weaker would have gone quietly green.
+- **F-H7 · discharged.** `plan.rs`'s eaten backslash continuation is repaired.
+- **F-H8 · discharged.** A possessed host's inner state now has a player-facing
+  route: the verb `ask`, answered in the host's own tongue. It is deliberately
+  *not* a faithful route — see decisions 0256 and 0258.
+- **F-H10 · still open.** `windows/lab/src/synthetic.rs`'s inline copy of
+  `PerceptionVector::MANIKIN` was left alone a second time, deliberately: a
+  parallel campaign was restructuring that file. Carried forward in
+  [The Confidant's retrospective](the-confidant.md).
+- **F-H11 · discharged.** The client test is renamed off `mints` per decision
+  0227, and `make game-check` — the only thing that runs it — was run by hand,
+  green.

@@ -1,22 +1,21 @@
 # The Contested Clearing of Seed 42
 
 A site read back out of the ledger by the `history` verb: the stratigraphy
-of every people that ever settled one cell, oldest layer deepest, and the
+of every people that ever settled one vertex, oldest layer deepest, and the
 derived flesh — the structures they raised, the residue in the grass
 today. Nothing here replays the deep-history bake; it is all a
 *present-as-query* over committed occupation facts, with the flesh
 (structures, residue) derived on demand and never committed.
 
-This is a real clearing on the world of seed 42 — cell 10626 — and
-twelve kobold steadings have risen on it, one settling atop the ruins
-of the last, from the year 200 down to the present. No other people
-ever touched this ground: it is a people with only itself to fight,
-and it has fought itself here for eighteen centuries. Seven of the
-eleven completed layers ended at kobold hands; four were not
-evictions at all — the occupants drove rival kobolds off better
-ground nearby (once off cell 2666, three times off cell 10628) and
-carried the settlement onto the land they had taken, so the layer
-closes on a departure rather than a defeat.
+This is a real clearing on the world of seed 42 — vertex 5585 — and
+six hobgoblin steadings have risen on it, one settling atop the ruins of
+the last, from the year 100 down to the present. Every one of the five
+completed layers ended at the hands of other hobgoblins, but the split
+is uneven. Two were not evictions at all: the occupants had taken
+better ground from a neighbour and carried the settlement onto it, so
+the layer closes on a departure. The other three fell to a rival band.
+This is a people with only itself to fight, and on this rise it has
+been the taken rather more often than the taker.
 
 The cold is in this column, but never as an ending. Not one layer
 fell to ice. Every layer instead *arrived* fleeing it — all twelve,
@@ -31,69 +30,40 @@ people in one stack of earth. The twelfth was founded in the year
 ruin yet to read.
 
 ```text
-The clearing at cell 10626
-==========================
+=======
+The clearing at vertex 5585
+===========================
 
 12 lives have passed over this ground, one settling atop the ruins of the last.
 
-The deepest layer — a neolithic kobold steading, an ordinary place, neither famed nor forgotten, at its height a mere eight souls.
-  Its founders fled the ice of the clearing at cell 10628, kobolds looking for kinder ground.
-  Founded in the year 200, it held for 0 years, until the year 200.
-  They fled — put to flight by kobolds — and did not return.
+The deepest layer — a bronze-working hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height some 22 souls.
+  Its founders fled the ice of the clearing at vertex 22170, hobgoblins looking for kinder ground.
+  Founded in the year 100, it held for 250 years, until the year 350.
+  They fled — put to flight by hobgoblins — and did not return.
 
-Above it — a neolithic kobold steading, an ordinary place, neither famed nor forgotten, at its height some 25 souls.
-  Its founders fled the ice of the clearing at cell 10628, kobolds looking for kinder ground.
-  Founded in the year 200, it held for 25 years, until the year 225.
-  They were not driven from this ground — they left it: in that same year they drove the kobolds off the clearing at cell 2666, and carried the settlement onto the land they had taken.
+Above it — a bronze-working hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height some 55 souls.
+  Its founders fled the ice of the clearing at vertex 22170, hobgoblins looking for kinder ground.
+  Founded in the year 350, it held for 75 years, until the year 425.
+  They were not driven from this ground — they left it: in that same year they drove the hobgoblins off the clearing at vertex 22170, and carried the settlement onto the land they had taken.
 
-Higher still — a bronze-working kobold steading, an ordinary place, neither famed nor forgotten, at its height some ten souls.
-  Its founders fled the ice of the clearing at cell 2666, kobolds looking for kinder ground.
-  Founded in the year 225, it held for 125 years, until the year 350.
-  They fled — put to flight by kobolds — and did not return.
+Higher still — a bronze-working hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height some 20 souls.
+  Its founders fled the ice of the clearing at vertex 22170, hobgoblins looking for kinder ground.
+  Founded in the year 425, it held for 250 years, until the year 675.
+  They fled — put to flight by hobgoblins — and did not return.
 
-Above that again — a bronze-working kobold steading, an ordinary place, neither famed nor forgotten, at its height some 22 souls.
-  Its founders fled the ice of the clearing at cell 2666, kobolds looking for kinder ground.
-  Founded in the year 350, it held for 25 years, until the year 375.
-  They were not driven from this ground — they left it: in that same year they drove the kobolds off the clearing at cell 10628, and carried the settlement onto the land they had taken.
+Above that again — an iron-working hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height some 52 souls.
+  Its founders fled the ice of the clearing at vertex 22170, hobgoblins looking for kinder ground.
+  Founded in the year 675, it held for 25 years, until the year 700.
+  They were not driven from this ground — they left it: in that same year they drove the hobgoblins off the clearing at vertex 22193, and carried the settlement onto the land they had taken.
 
-And later — an iron-working kobold steading, an ordinary place, neither famed nor forgotten, at its height some 24 souls.
-  Its founders fled the ice of the clearing at cell 10628, kobolds looking for kinder ground.
-  Founded in the year 425, it held for 375 years, until the year 800.
-  They were not driven from this ground — they left it: in that same year they drove the kobolds off the clearing at cell 10628, and carried the settlement onto the land they had taken.
+And later — an iron-working hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height some 27 souls.
+  Its founders fled the ice of the clearing at vertex 22169, hobgoblins looking for kinder ground.
+  Founded in the year 775, it held for 25 years, until the year 800.
+  They fled — put to flight by hobgoblins — and did not return.
 
-And later — an iron-working kobold steading, an ordinary place, neither famed nor forgotten, at its height a mere eight souls.
-  Its founders fled the ice of the clearing at cell 10628, kobolds looking for kinder ground.
-  Founded in the year 1025, it held for 0 years, until the year 1025.
-  They fled — put to flight by kobolds — and did not return.
-
-And later — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height some 32 souls.
-  Its founders fled the ice of the clearing at cell 2666, kobolds looking for kinder ground.
-  Founded in the year 1025, it held for 550 years, until the year 1575.
-  They fled — put to flight by kobolds — and did not return.
-
-And later — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height some 29 souls.
-  Its founders fled the ice of the clearing at cell 2666, kobolds looking for kinder ground.
-  Founded in the year 1575, it held for 50 years, until the year 1625.
-  They were not driven from this ground — they left it: in that same year they drove the kobolds off the clearing at cell 10628, and carried the settlement onto the land they had taken.
-
-And later — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height some 15 souls.
-  Its founders fled the ice of the clearing at cell 10628, kobolds looking for kinder ground.
-  Founded in the year 1625, it held for 0 years, until the year 1625.
-  They fled — put to flight by kobolds — and did not return.
-
-And later — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height some 26 souls.
-  Its founders fled the ice of the clearing at cell 10627, kobolds looking for kinder ground.
-  Founded in the year 1625, it held for 250 years, until the year 1875.
-  They fled — put to flight by kobolds — and did not return.
-
-And later — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height some 21 souls.
-  Its founders fled the ice of the clearing at cell 2666, kobolds looking for kinder ground.
-  Founded in the year 1875, it held for 0 years, until the year 1875.
-  They fled — put to flight by kobolds — and did not return.
-
-The last of them — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height some 24 souls.
-  Its founders fled the ice of the clearing at cell 10638, kobolds looking for kinder ground.
-  Founded in the year 1875, it stands yet — 125 years and counting.
+The last of them — a classical hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height some 84 souls.
+  Its founders fled the ice of the clearing at vertex 22169, hobgoblins looking for kinder ground. It was founded by Venggomnwen.
+  Founded in the year 800, it stands yet — 1200 years and counting.
   It has never ended; the people are there still.
 
 In the grass today

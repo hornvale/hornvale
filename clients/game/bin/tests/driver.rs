@@ -49,19 +49,14 @@ fn handle_return_value_reports_whether_the_session_released() {
 /// **Neither body is minted.** Possession SELECTS an already-derived roster
 /// member (The Hand, decision 0227): `Session` is `{ bodies, driven }`, the
 /// `AgentId` draw is retired, and the variant chooses which settlement's
-/// existing resident is driven. The test's name still says `mints` and is left
-/// alone deliberately: the rename is a code change and belongs in its own
-/// commit, not folded into a prose correction. It is cheap when someone does
-/// it — this crate is outside the cargo workspace, so no `nextest` filter and
-/// no `subfloor-roster.tsv` entry names this test; only `make game-check` runs
-/// it. Carried as a followup in `docs/retrospectives/the-hand.md`.
+/// existing resident is driven.
 ///
 /// The two settlements' names and populations are **not** restated here: they
 /// are a reading of one world rather than an invariant, and `PossessTarget`'s
 /// own doc carries them along with the campaign that last moved them. This
 /// asserts only the property the variant needs, which is that the two differ.
 #[test]
-fn the_most_populous_target_mints_at_a_different_settlement_than_flagship() {
+fn the_most_populous_target_selects_a_different_settlement_than_flagship() {
     let flagship = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
     let popular =
         Driver::start(42, hornvale_vessel::PossessTarget::MostPopulousSettlement).unwrap();

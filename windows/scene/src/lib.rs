@@ -10,7 +10,7 @@
 #![warn(missing_docs)]
 
 use hornvale_climate::{Biome, GeneratedClimate};
-use hornvale_kernel::{NearestVertexIndex, Seed, VertexMap, World};
+use hornvale_kernel::{NearestVertexIndex, Seed, VertexMap, World, WorldTime};
 use hornvale_terrain::GeneratedTerrain;
 use serde::Serialize;
 
@@ -1347,12 +1347,40 @@ pub struct GroundTrackElem {
 }
 
 /// One dated eclipse.
-/// type-audit: pending(wave-2: day), bare-ok(count: moon_index), bare-ok(identifier-text: body), bare-ok(identifier-text: kind)
+///
+/// **The `*_ticks` fields are deliberately bare `i64` and NOT `WorldTime`**
+/// (The Escapement, ruling 12 — the same reasoning governs
+/// [`EclipsesScene`]'s `from_day_ticks`/`until_day_ticks`). `WorldTime` is
+/// `#[serde(transparent)]`, so typing them as `WorldTime` would serialize
+/// identically and shed three type-audit tags and one `.ticks()` call. That
+/// is a real simplification and it is refused, because `scene/eclipses/v1` is
+/// a **cross-repo, additive-or-versioned-only contract** that the external
+/// Orrery consumes from a released catalog.
+///
+/// The two options fail *differently*, and that is the whole argument. With a
+/// bare `i64` and an explicit `.ticks()`, a future change to `WorldTime`'s
+/// representation breaks at **compile time**, at the one line that has to
+/// make a decision. With a `serde(transparent)` `WorldTime`, the same change
+/// is a **silent wire break**, discovered by a sibling repo reading a catalog
+/// that was already released. "Fails loudly at the boundary" beats "three
+/// fewer tags" by a wide margin here — and coupling a published schema to the
+/// kernel's internal representation is the exact class of coupling this
+/// campaign spent itself undoing. If a later pass sees redundant tags and a
+/// manual conversion: that redundancy is the point, and the cost of being
+/// wrong about it was priced at three tags and one call.
+/// type-audit: pending(wave-2: day), bare-ok(count: moon_index), bare-ok(identifier-text: body), bare-ok(identifier-text: kind), bare-ok(count: day_ticks)
 #[derive(Debug, Serialize)]
 pub struct EclipseElem {
-    /// The syzygy, absolute standard days.
+    /// The syzygy, absolute standard days, quantized to 8 significant
+    /// digits. Kept for the external Orrery's existing consumers
+    /// (additive-or-versioned-only, spec §5); resolvable only to ~2.4 hours
+    /// at world-year 20,000.
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub day: f64,
+    /// The syzygy as an exact tick count (The Escapement, decision 0188):
+    /// added beside `day` rather than replacing it, since an integer needs
+    /// no quantization and does not decay with world age.
+    pub day_ticks: i64,
     /// Distance-sorted index into the system's moons.
     pub moon_index: usize,
     /// "solar" or "lunar".
@@ -1367,7 +1395,11 @@ pub struct EclipseElem {
 }
 
 /// One `scene/eclipses/v1` document: the dated eclipses in a queried window.
-/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), pending(wave-2: from_day), pending(wave-2: until_day)
+///
+/// `from_day_ticks`/`until_day_ticks` are bare `i64` rather than `WorldTime`
+/// for the reason set out on [`EclipseElem`]: on a cross-repo wire, a
+/// compile-time break beats a silent one.
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), pending(wave-2: from_day), pending(wave-2: until_day), bare-ok(count: from_day_ticks), bare-ok(count: until_day_ticks)
 #[derive(Debug, Serialize)]
 pub struct EclipsesScene {
     /// Always `scene/eclipses/v1`.
@@ -1377,9 +1409,14 @@ pub struct EclipsesScene {
     /// The queried window start, echoed back (standard days).
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub from_day: f64,
+    /// The queried window start as an exact tick count, added beside
+    /// `from_day` for the same reason as `EclipseElem::day_ticks`.
+    pub from_day_ticks: i64,
     /// The queried window end.
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub until_day: f64,
+    /// The queried window end as an exact tick count.
+    pub until_day_ticks: i64,
     /// The dated eclipses, day-ascending.
     pub events: Vec<EclipseElem>,
 }
@@ -1411,6 +1448,9 @@ pub fn eclipses_scene(world: &World, from: f64, until: f64) -> Result<EclipsesSc
                 });
             EclipseElem {
                 day: ev.day.get(),
+                day_ticks: WorldTime::from_std_days(ev.day.get())
+                    .expect("an eclipse's own StdDays is finite and in range")
+                    .ticks(),
                 moon_index: ev.moon,
                 body: match ev.body {
                     hornvale_astronomy::EclipseBody::Solar => "solar",
@@ -1430,7 +1470,13 @@ pub fn eclipses_scene(world: &World, from: f64, until: f64) -> Result<EclipsesSc
         schema: ECLIPSES_SCHEMA.to_string(),
         seed: world.seed.0,
         from_day: from,
+        from_day_ticks: WorldTime::from_std_days(from_day.get())
+            .map_err(|e| SceneError::Build(e.to_string()))?
+            .ticks(),
         until_day: until,
+        until_day_ticks: WorldTime::from_std_days(until_day.get())
+            .map_err(|e| SceneError::Build(e.to_string()))?
+            .ticks(),
         events,
     })
 }
@@ -2285,6 +2331,57 @@ mod tests {
         assert_eq!(
             eclipses_json(&a),
             eclipses_json(&eclipses_scene(&w, 0.0, 2000.0).unwrap())
+        );
+    }
+
+    /// scene/eclipses/v1 emits an eclipse's time as an f64 day quantized to 8
+    /// SIGNIFICANT digits, so at world-year 20,000 a minutes-long event is
+    /// resolvable only to ~2.4 hours. The f64 field stays for compatibility
+    /// -- this is a cross-repo contract -- and an exact tick field is ADDED
+    /// beside it. Additive at v1, so no existing consumer breaks.
+    #[test]
+    fn an_eclipse_carries_an_exact_tick_alongside_its_quantized_day() {
+        let w = mooned_world();
+        let scene = eclipses_scene(&w, 0.0, 2000.0).expect("mooned world has eclipses");
+        let json = serde_json::to_value(&scene).expect("serializes");
+
+        assert_eq!(
+            json["schema"], "scene/eclipses/v1",
+            "still v1: the addition is additive"
+        );
+        assert!(json["from_day"].is_f64(), "the f64 field is unchanged");
+        assert!(
+            json["from_day_ticks"].is_i64(),
+            "and an exact tick sits beside it"
+        );
+        assert!(json["until_day"].is_f64());
+        assert!(json["until_day_ticks"].is_i64());
+
+        assert!(
+            !scene.events.is_empty(),
+            "seed 42's moons eclipse within 2000 days"
+        );
+        let elem = &json["events"][0];
+        assert!(elem["day"].is_f64());
+        assert!(elem["day_ticks"].is_i64());
+
+        // The tick fields are exact conversions of the standard-day window
+        // bounds and event days actually passed/produced, not the quantized
+        // f64 round-tripped back through ticks.
+        assert_eq!(
+            scene.from_day_ticks,
+            WorldTime::from_std_days(0.0).unwrap().ticks()
+        );
+        assert_eq!(
+            scene.until_day_ticks,
+            WorldTime::from_std_days(2000.0).unwrap().ticks()
+        );
+        assert_eq!(
+            scene.events[0].day_ticks,
+            WorldTime::from_std_days(scene.events[0].day)
+                .unwrap()
+                .ticks(),
+            "an event's tick field agrees with converting its own emitted day"
         );
     }
 

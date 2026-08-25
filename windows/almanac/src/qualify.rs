@@ -230,13 +230,9 @@ impl SiteLabels {
     ///
     /// Vertices holding no settlement are left out — they render as bare vertex
     /// ids and cannot collide. Where two settlements claim the same vertex, the
-    /// first in ledger commit order wins; that WAS only defence (not observed
-    /// in any generated world sampled — 953 settlements over seven seeds, all
-    /// on distinct vertices) until seed 42's post-Lexicon-of-Place world
-    /// produced three co-located pairs among 389 places. `for_lines` still
-    /// keys by vertex — one label per vertex — so a caller rendering
-    /// per-place lines must give later co-tenants their own names (the Land
-    /// list does; see its `land_list_labels`).
+    /// first in ledger commit order wins; that has not been observed in any
+    /// generated world sampled (953 settlements over seven seeds, all on
+    /// distinct vertices), so this is defence, not a path anything walks.
     pub fn for_document(world: &World, vertices: &[Vertex]) -> SiteLabels {
         let lines: Vec<(Vertex, String)> = vertices.iter().map(|&c| (c, String::new())).collect();
         SiteLabels::for_lines(world, &lines)
@@ -339,7 +335,7 @@ impl SiteLabels {
         self.labels
             .get(&vertex)
             .cloned()
-            .unwrap_or_else(|| format!("cell {}", vertex.0))
+            .unwrap_or_else(|| format!("vertex {}", vertex.0))
     }
 }
 

@@ -1,9 +1,18 @@
 //! The ACTION CLOCK: what an action costs, in exact integer ticks.
 //!
-//! Scheduling is integer and internal; committing is `f64` days and unchanged
-//! (spec §4). `Ticks` is never serialized — it exists so the scheduler's
-//! ordering is a total order with exact arithmetic, the same reason
-//! `kernel/src/astar.rs` uses `u64` costs.
+//! Scheduling is integer and internal. `Ticks` is never serialized — it
+//! exists so the scheduler's ordering is a total order with exact
+//! arithmetic, the same reason `kernel/src/astar.rs` uses `u64` costs.
+//!
+//! **This clock is NOT the kernel's clock, despite sharing its rate.** The
+//! Escapement (decision 0186) retyped `hornvale_kernel::WorldTime` to exact
+//! ticks at the same 100,000/std-day granularity `BASE_TICKS_PER_STD_DAY`
+//! declares here, but the two are separate literals and vessel still crosses
+//! between them through `f64` days ([`days_of`], then
+//! `WorldTime::from_std_days`), so a charge round-trips through the
+//! continuous domain and rounds. Unifying them is deferred vessel work, not
+//! something that campaign did; an earlier draft of its spec claimed this
+//! bridge had been deleted and the spec now corrects itself at §3.1.
 
 use crate::action::Action;
 use hornvale_kernel::KindId;
@@ -92,9 +101,12 @@ const CLIMB_SCALE_M: f64 = 500.0;
 /// type-audit: bare-ok(ratio)
 const MAX_CLIMB_FACTOR: f64 = 4.0;
 
-/// `t` in STANDARD days — the conversion at the commit boundary, where floats
-/// belong. A local day of `day_length_std` is exactly
-/// [`ticks_per_local_day`] ticks, so this is that ratio scaled.
+/// `t` in STANDARD days — the surviving bridge out of the scheduler's
+/// integer domain into the `f64` days vessel still accumulates and commits
+/// through. A local day of `day_length_std` is exactly
+/// [`ticks_per_local_day`] ticks, so this is that ratio scaled. It is lossy
+/// in the round trip (`Ticks -> f64 days -> WorldTime` rounds back to a
+/// kernel tick); see this module's header.
 /// type-audit: bare-ok(ratio: day_length_std), bare-ok(ratio: return)
 pub fn days_of(t: Ticks, day_length_std: Option<f64>) -> f64 {
     let per_day = ticks_per_local_day(day_length_std);

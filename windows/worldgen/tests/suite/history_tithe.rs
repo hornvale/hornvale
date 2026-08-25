@@ -665,7 +665,7 @@ fn no_emitted_tribute_fact_predates_either_party() {
             Value::Entity(patron) => (
                 f.subject,
                 patron,
-                f.day.expect("a dated relation fact").day(),
+                f.day.expect("a dated relation fact").as_std_days(),
             ),
             ref other => panic!("pays-tribute-to must carry an entity, got {other:?}"),
         })

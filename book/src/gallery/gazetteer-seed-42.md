@@ -6,7 +6,7 @@ Every named landscape feature, capped at the 10 largest per class (magnitude des
 
 showing the 10 largest of 208 volcanoes
 
-| # | cell | magnitude | names |
+| # | vertex | magnitude | names |
 |---|---|---|---|
 | 1 | 1152 | 4 | Dvookvo, Neagngop, Ṅjoṅvjamṅoṅ, Qraožraḳrar, Zmafgzashmaf, Nesax, Gfoktxat, Brallalgral, Ngatngobjak, Bengxamnlam, Rerogva, Xarara, Qeqe, Ṅaoṅṅaṅfroṅ, Sjonsjuṅdjoj |
 | 2 | 1847 | 4 | Vngaavngovnga, Sopshed, Ṅjaṅvjaṅmaṅ, Drašrar, Snaovpzhax, Ngevxnoxze, Kxogzh'notgfak, Qrajlelbrej, Mogjotmag, Voxa, Pverogxo, Roorara, Nrodu, Froṅṅafroṅ, Tjaangjongjaj |
@@ -23,7 +23,7 @@ showing the 10 largest of 208 volcanoes
 
 showing the 10 largest of 10 landmasses
 
-| # | cell | magnitude | names |
+| # | vertex | magnitude | names |
 |---|---|---|---|
 | 1 | 21 | 3106 | Vngashngatva, Maegzhop, Vjumṅoṅ, Grordrar, Psaovshmafqzof, Ngovngo, Zh'nebzh'nebzh'mog, Trelpral, Maotjob, Nlongmwangwa, Kfege, Raxo, Bunrabo, Froṅfroṅfra, Tjoṅtjontjoṅ |
 | 2 | 5 | 2384 | Bvaoshnga, Ngoqshed, Vjomvjuṅṅjom, Ḳroaqro, Qsazmatsa, Vnavfngo, Qxaqzh'negsh'ngot, Jaajqreltrel, Joagjob, Xongto, Reraga, Xaoxa, Banro, Froṅṅaṅ, Zjaujtjun |
@@ -40,7 +40,7 @@ showing the 10 largest of 10 landmasses
 
 showing the 1 largest of 1 sea
 
-| # | cell | magnitude | names |
+| # | vertex | magnitude | names |
 |---|---|---|---|
 | 1 | 0 | 29667 | Shngaoshngovngo, Noopzhog, Vjaṅmjem, Šrakrarsrar, Gzhoozhnoxdzhax, Naxzhenof, Tfogsh'notzh'ngoq, Qralprej, Jotjatjaq, Nwafan, Pverore, Raxaro, Bonro, Fraṅṅa, Sjajzjoṅzjon |
 
@@ -48,7 +48,7 @@ showing the 1 largest of 1 sea
 
 showing the 10 largest of 80 salt lakes
 
-| # | cell | magnitude | names |
+| # | vertex | magnitude | names |
 |---|---|---|---|
 | 1 | 4824 | 2 | Shngooshngabvo, Zhodsagseg, Vjamvjuṅṅjom, Ḳraqrorḳra, Pshaxqzogzov, Ngafsaxsef, Bfoqbxotzh'neb, Jajdrojtroj, Jooqngagjoq, Fembontang, Gvago, Raora, Nrodo, Froṅo, Zjoankjojgjoj |
 | 2 | 361 | 1 | Shngagva, Ngeatmeq, Vjaṅvjemvjim, Praaḳrosrar, Dzhaofzhmofzno, Vnexvne, Zh'ngebzh'notzh'nat, Loalbrol, Jabjot, Voxeton, Rogveto, Raxara, Nrunranro, Ṅaaṅaṅṅo, Gjaṅqjuj |
@@ -65,7 +65,7 @@ showing the 10 largest of 80 salt lakes
 
 showing the 10 largest of 106 rivers
 
-| # | cell | magnitude | names |
+| # | vertex | magnitude | names |
 |---|---|---|---|
 | 1 | 30690 | 160 | Vngashngo, Nogzhopshod, Vjummjommom, Droarkrar, Dzhaznof, Nonoxfnga, Sh'ngobzh'noq, Qroajjojjol, Joobmag, Xovamlen, Kvoare, Xaoxa, Nrobanro, Fraṅfroṅ, Kjeajsjejtjiṅ |
 | 2 | 11134 | 140 | Shngoovngashnga, Shoogngap, Mjuṅṅomvjoṅ, Ḳraorḳrorḳra, Smazmo, Zangex, Txegtxeqsh'ngok, Laeljeldrel, Maaqmaqngoq, Vonwon, Pxoorakve, Xara, Nrapanro, Fraoṅa, Qjauntjujsjuṅ |

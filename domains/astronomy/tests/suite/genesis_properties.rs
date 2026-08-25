@@ -416,7 +416,7 @@ fn a_spinning_worlds_sky_is_whole_from_any_placed_vantage() {
         let sky = GeneratedSky::new(outcome);
         let obs = ObserverContext::at_position(
             EntityId::new(1).unwrap(),
-            WorldTime::new(3.5).expect("a day value is finite"),
+            WorldTime::from_std_days(3.5).expect("a day value is finite"),
             GeoCoord {
                 latitude: 55.0,
                 longitude: -120.0,

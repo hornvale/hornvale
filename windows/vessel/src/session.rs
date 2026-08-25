@@ -17,13 +17,15 @@ use crate::snapshot::{
     KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
     SensedChannel, SessionSnapshot, SocialEntry, SpatialChannel,
 };
+use crate::testimony::{FeltStateWord, testify};
 use crate::{
     Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, PossessTarget, Projection,
     TemplateFocalizer, Turn, VesselError, absorb_common, most_populous_settlement, observable,
     reader_set,
 };
 use hornvale_kernel::{
-    ConceptRegistry, EntityId, Facet, FacetId, Fact, Ledger, Seed, Value, World, WorldTime, tick,
+    ConceptRegistry, EntityId, Facet, FacetId, Fact, Ledger, Seed, TickSpan, Value, World,
+    WorldTime, tick,
 };
 use hornvale_locale::{Compass, Direction, ExitKind, LocaleContext};
 
@@ -97,9 +99,9 @@ const SESSION_CONTROL: [&str; 3] = ["release", "quit", "exit"];
 /// `every_bare_verb_help_lists_is_classified` asserts the two agree in **both**
 /// directions: every verb `HELP` lists is in this roster or in
 /// [`SESSION_CONTROL`], and every entry of this roster is listed by `HELP`.
-const IN_CHARACTER_VERBS: [&str; 17] = [
-    "back", "climb", "consult", "delve", "dive", "enter", "examine", "go", "knows", "look", "map",
-    "needs", "out", "sleep", "surface", "wait", "write",
+const IN_CHARACTER_VERBS: [&str; 18] = [
+    "ask", "back", "climb", "consult", "delve", "dive", "enter", "examine", "go", "knows", "look",
+    "map", "needs", "out", "sleep", "surface", "wait", "write",
 ];
 
 /// The provenance a walk-band step commits under (The Deed, Task 7).
@@ -136,6 +138,43 @@ const SLEEP_REPLY: &str = "You lie down and let go of the day. Time still passes
 /// `dive`'s own refusal set).
 const SLEEP_ARGUMENT_REFUSAL: &str = "Sleep takes no length: you lie down until your own cycle wakes you. Say 'sleep' \
      on its own, or 'wait N' to let N days pass while you are awake.";
+
+/// Advance an instant by a DURATION in standard days, on the tick lattice, and
+/// report every failure as a caller-facing string rather than panicking.
+///
+/// **Two callers, one guard.** `charge` and `wait` both accumulate onto the
+/// session clock, and the guard predates The Escapement: `days` is validated
+/// finite and positive at its parse site, but the SUM is an accumulation the
+/// parse-site guard cannot see, and a live `possess` stdin can reach it with
+/// two `wait 1e308`s.
+///
+/// **What the flip changed is the failure MODE, not the guard.** The sum used
+/// to be an `f64` addition that could reach infinity; it is now an `i64` tick
+/// addition that can overflow, so it is `checked_add` rather than trusted. The
+/// crossing from the continuous domain onto the lattice happens ONCE, on the
+/// duration, before any arithmetic (spec §2.1) — never by re-deriving a float
+/// day from the instant, adding, and re-rounding.
+fn advanced_by(day: WorldTime, days: f64) -> Result<WorldTime, String> {
+    let span = TickSpan::from_std_days(days).map_err(|e| format!("error: {e}"))?;
+    day.ticks()
+        .checked_add(span.ticks())
+        .map(WorldTime::from_ticks)
+        .ok_or_else(|| {
+            // Names the SUM, and both of its operands, because that is what
+            // failed: `days` was already accepted as representable by the
+            // crossing above, so blaming it here would send a reader looking at
+            // a valid number (fix round 1, code review Minor 7). This text is
+            // deliberately DISTINCT from the crossing's own rejection, so a
+            // test can tell the two arms apart — they were indistinguishable by
+            // message, which is why the accumulation arm sat uncovered while a
+            // test appeared to exercise it.
+            format!(
+                "error: advancing day {} by {days} standard days leaves the \
+                 representable tick range",
+                day.as_std_days()
+            )
+        })
+}
 
 /// What the body says when the gate refuses. The reason itself comes from
 /// [`crate::gate::verdict`], so a new [`BodyState`] row cannot reach a player
@@ -310,6 +349,8 @@ verbs:
                    cycle wakes it, and only '!' verbs answer meanwhile
   knows            everything they have seen
   needs            read the felt state of anyone sharing this room
+  ask              ask the body you are wearing how it feels; it may answer
+                   truthfully, or in words its own tongue and mind allow
   write <sentence> speak a line of Common; you absorb what it says, written
                    into your own margin
   consult          read the Book's Reckoning at your own day, and whatever
@@ -672,6 +713,22 @@ pub struct Session<'w> {
     /// one. Set by [`Self::wait`], the only place the driven body's own
     /// arbitration runs; read back by [`Self::driven_mode`].
     driven_mode: Option<Mode>,
+    /// The driven body's own felt state as of the most recent `!wait` (The
+    /// Confidant, Task 2) — `None` before the first one. Set alongside
+    /// `driven_mode`, by the SAME [`Self::wait`] call into
+    /// [`DriveMovements::step_one_with_controller`], from the SAME
+    /// resolution — never a second, drift-prone derivation. Read back by
+    /// [`Self::driven_affect`].
+    driven_affect: Option<Affect>,
+    /// The driven body's own arbitration's discarded ranks as of the most
+    /// recent `!wait` (The Confidant, Task 5) — the OTHER drives that were
+    /// active but not pursued, empty before the first one. Set alongside
+    /// `driven_affect`, by the SAME [`Self::wait`] call into
+    /// [`DriveMovements::step_one_with_controller`], from the SAME
+    /// resolution — never a second, drift-prone derivation. This is the
+    /// residue [`Self::driven_affect`] itself never carries: read back by
+    /// [`Self::suppressed_drives`].
+    driven_suppressed: Vec<DriveKind>,
 }
 
 /// Where the possession is while indoors. `FRAME`-tier in its entirety: derived
@@ -1041,6 +1098,8 @@ impl<'w> Session<'w> {
             mesh_memo: hornvale_kernel::RoomMeshMemo::new(),
             home_nav_cache: HomeNavCache::new(),
             driven_mode: None,
+            driven_affect: None,
+            driven_suppressed: Vec::new(),
         };
         session.absorb_here()?;
         let opening = session.describe_here()?;
@@ -1091,6 +1150,29 @@ impl<'w> Session<'w> {
     /// to report on yet).
     pub fn driven_mode(&self) -> Option<Mode> {
         self.driven_mode
+    }
+
+    /// The driven body's own felt state, as of the most recent `!wait` tick
+    /// (The Confidant, Task 2) — the same co-present computation
+    /// [`Self::driven_mode`] documents, read back via its
+    /// [`AffectLabel`] rather than the full [`Affect`]: later tasks turn the
+    /// label into speech, and the richer `arousal`/`valence`/`object` fields
+    /// stay internal to arbitration until a caller actually needs them.
+    /// `None` before the first `!wait`.
+    pub fn driven_affect(&self) -> Option<AffectLabel> {
+        self.driven_affect.map(|affect| affect.label)
+    }
+
+    /// The driven body's own arbitration's discarded ranks, as of the most
+    /// recent `!wait` tick (The Confidant, Task 5) — the SAME resolution
+    /// [`Self::driven_affect`] reads, its OTHER active drives rather than
+    /// its winner. This is the residue the creature cannot introspect: a
+    /// host-facing utterance must draw from [`Self::driven_affect`] alone,
+    /// and nothing routes this accessor's contents into one, by
+    /// construction. Empty before the first `!wait`, and also whenever no
+    /// other drive was active alongside the pursued one.
+    pub fn suppressed_drives(&self) -> &[DriveKind] {
+        &self.driven_suppressed
     }
 
     /// The accumulated knowledge (read-only).
@@ -1304,7 +1386,7 @@ impl<'w> Session<'w> {
         Ok(SessionSnapshot {
             schema: SESSION_SCHEMA.to_string(),
             turn: self.turn,
-            day: self.day.day(),
+            day: self.day.as_std_days(),
             me: SelfChannel {
                 agent: self.driven_body().entity.0.get(),
                 species: self.driven_body().species.clone(),
@@ -1383,25 +1465,6 @@ impl<'w> Session<'w> {
             .count()
     }
 
-    /// Commit `who` — another body from this session's own [`Self::bodies`]
-    /// — into the ledger at the DRIVEN body's current position, through the
-    /// same `agent-at` constructor ([`crate::liveness::place_agent`]) a real
-    /// arrival commits with, so a manufactured co-location is
-    /// indistinguishable from one the world produced.
-    ///
-    /// **A test seam, not a verb — `handle` never reaches this.** The Hand's
-    /// Task 3 deleted the possessed body's duplicate representation, and
-    /// with it went the only thing that ever guaranteed a fresh possession
-    /// starts co-located with anything: every other settlement lives
-    /// elsewhere, and wild concentrations are scattered independently
-    /// (confirmed live: seed 42's flagship possession still finds nobody to
-    /// provoke after sixty `wait`s). The fidelity ruling on that finding
-    /// (idea registry: `SOC-one-creature-per-settlement`) is that changing
-    /// world population to restore an incidental co-location guarantee is
-    /// its own campaign — The Penstock already measured tick cost
-    /// superlinear in exactly that dimension — so a test that needs a
-    /// co-located body now asks for one explicitly, through here, rather
-    /// than relying on a population side effect.
     /// Commit `who` — another body from this session's own [`Self::bodies`]
     /// — into the ledger at the DRIVEN body's current position, through the
     /// same `agent-at` constructor ([`crate::liveness::place_agent`]) a real
@@ -1913,12 +1976,12 @@ impl<'w> Session<'w> {
         );
         let ticks = cost_ticks(action, self.body_mass_kg, terrain_factor);
         let days = days_of(ticks, self.day_length_std());
-        match WorldTime::new(self.day.day() + days) {
+        match advanced_by(self.day, days) {
             Ok(d) => {
                 self.day = d;
                 Ok(())
             }
-            Err(e) => Err(format!("error: {e}")),
+            Err(e) => Err(e),
         }
     }
 
@@ -1987,7 +2050,12 @@ impl<'w> Session<'w> {
     /// ([`Self::position`]), and committing this fact **is** the update
     /// (spec §3.1).
     fn commit_agent_at(&mut self, position: &Facet, provenance: &str) {
-        let fact = agent_at_fact(self.agent_entity(), position, self.day.day(), provenance);
+        let fact = agent_at_fact(
+            self.agent_entity(),
+            position,
+            self.day.as_std_days(),
+            provenance,
+        );
         self.ledger
             .commit(fact, &self.registry)
             .expect("AGENT_AT is registered every session and non-functional");
@@ -2025,16 +2093,20 @@ impl<'w> Session<'w> {
         if let Err(e) = self.charge(&Action::Rest, 1.0) {
             return Turn::Out(e);
         }
-        let fact = rested_fact(self.agent_entity(), self.day.day(), SLEPT_PROVENANCE);
+        let fact = rested_fact(
+            self.agent_entity(),
+            self.day.as_std_days(),
+            SLEPT_PROVENANCE,
+        );
         self.ledger
             .commit(fact, &self.registry)
             .expect("RESTED is registered every session and non-functional");
         let wake = {
             let activity = species_activity(self.world, &self.driven_body().species);
             let terrain = self.terrain_here();
-            next_awake_day(activity, &terrain, &self.position(), self.day.day())
+            next_awake_day(activity, &terrain, &self.position(), self.day.as_std_days())
         };
-        self.wake_at = WorldTime::new(wake).ok();
+        self.wake_at = WorldTime::from_std_days(wake).ok();
         Turn::Out(SLEEP_REPLY.to_string())
     }
 
@@ -2284,6 +2356,12 @@ impl<'w> Session<'w> {
                 "wait" => self.wait(rest, Perceiving::Body),
                 "knows" => Turn::Out(self.knows()),
                 "needs" => Turn::Out(self.needs(Perceiving::Body)),
+                // The verb this campaign adds (The Confidant, Task 6): ask
+                // the possessed body itself, rather than reading its felt
+                // state through the arbitration `needs` uses. `Self::ask`
+                // is the whole of the tongue and gap machinery; this arm is
+                // only dispatch.
+                "ask" => Turn::Out(self.ask()),
                 // The one verb this arc adds (The Deed, Task 7): the
                 // acceptance test needs a body that can stop obeying, and
                 // none of spec §3.2's 26 could produce one. Routed to the
@@ -2710,7 +2788,7 @@ impl<'w> Session<'w> {
         Ok(format!(
             "[room {}, day {}]\n{}\n{closing}",
             v.locale.id,
-            self.day.day(),
+            self.day.as_std_days(),
             f.prose,
         ))
     }
@@ -3257,7 +3335,7 @@ impl<'w> Session<'w> {
         Ok(format!(
             "[chamber {}, day {}]\n{}\nWays on: {}.",
             id,
-            self.day.day(),
+            self.day.as_std_days(),
             crate::chamber_prose::describe_chamber(&interior, &brief),
             ways.join(", ")
         ))
@@ -3881,13 +3959,14 @@ impl<'w> Session<'w> {
             .collect();
         let from = self.day;
         // `days` was validated as finite and positive above, but the SUM can
-        // still overflow to infinity — an accumulation, not a parse, so the
-        // parse-site guard above cannot see it (fix round 1, The Ell Task 2
-        // review: reachable live from `possess` stdin via two `wait 1e308`s).
-        // Route it through `wait`'s own error channel rather than expecting.
-        self.day = match WorldTime::new(self.day.day() + days) {
+        // still leave the representable range — an accumulation, not a parse,
+        // so the parse-site guard above cannot see it (fix round 1, The Ell
+        // Task 2 review: reachable live from `possess` stdin via two `wait
+        // 1e308`s). Route it through `wait`'s own error channel rather than
+        // expecting.
+        self.day = match advanced_by(self.day, days) {
             Ok(d) => d,
-            Err(e) => return Turn::Out(format!("error: {e}")),
+            Err(e) => return Turn::Out(e),
         };
         // Prefill the session-owned geometry memo (the-waymark fix round,
         // Finding 1) for each NPC's CURRENT position (`before`, captured
@@ -3977,14 +4056,17 @@ impl<'w> Session<'w> {
         // cannot coexist with the `&mut self.mesh_memo`/`&mut
         // self.home_nav_cache` borrows this call needs.
         let driven_npc = self.driven_body().clone();
-        let (_driven_facts, driven_mode) = sys.step_one_with_controller(
-            &self.ledger,
-            &driven_npc,
-            &mut self.mesh_memo,
-            &mut self.home_nav_cache,
-            &mut PlayerController::new(),
-        );
+        let (_driven_facts, driven_mode, driven_affect, driven_suppressed) = sys
+            .step_one_with_controller(
+                &self.ledger,
+                &driven_npc,
+                &mut self.mesh_memo,
+                &mut self.home_nav_cache,
+                &mut PlayerController::new(),
+            );
         self.driven_mode = Some(driven_mode);
+        self.driven_affect = Some(driven_affect);
+        self.driven_suppressed = driven_suppressed;
         match tick(&self.ledger, &[&sys], &["drive-movements"], &self.registry) {
             Ok(next) => {
                 let moved = next.len() - self.ledger.len();
@@ -4384,7 +4466,7 @@ impl<'w> Session<'w> {
             npc.species,
             village_or_fallback(npc).name,
             npc.entity.0,
-            self.day.day(),
+            self.day.as_std_days(),
             self.position()
                 .pack()
                 .map(|r| r.0.to_string())
@@ -4749,6 +4831,73 @@ impl<'w> Session<'w> {
             .join("\n")
     }
 
+    /// Ask the possessed body how it feels (The Confidant, Task 6): the
+    /// pipeline's visible end. `Self::driven_affect` is the arbitration's
+    /// TRUE answer (Task 2); this asks the driven body's own culture
+    /// (`hornvale_worldgen::lexicon_from_in`) what it can say about that
+    /// state at all (`crate::testimony::testify`, Task 4/4b) — its own word
+    /// if the lexicon has one, the nearest state it CAN name otherwise, or
+    /// nothing if it has no felt-state word whatsoever. Only the answer
+    /// reaches the player; the arbitration itself never does
+    /// ([`render_testimony`] holds that invariant, not this method).
+    ///
+    /// Lands the reported concept in `self.knowledge` under the SAME
+    /// `"{subject}::{predicate}"` heard shape [`absorb_common`] writes
+    /// (`windows/vessel/src/knowledge.rs`'s own contract: heard is not
+    /// verified, and a listener may already hold a false belief there — this
+    /// adds no second store and no truth flag). A body with nothing to say
+    /// (no `!wait` yet, or a lexicon with no felt-state word at all) lands
+    /// nothing.
+    ///
+    /// **The tongue decision (spec §5.3), made rather than deferred:**
+    /// `absorb_common` parses Common, and Common has no speakers at all
+    /// (`hornvale_language::common_vocab`'s own doc: "the author's register,
+    /// not a people's tongue") — so "scope to hosts speaking Common" would
+    /// scope to the empty set; no host of any species ever qualifies. The
+    /// campaign is instead scoped the OTHER way: the word actually spoken
+    /// (`FeltStateWord`'s `WordViews.roman`, a real conlang string) is
+    /// untranslatable by construction and is used for display ONLY, never
+    /// landed in `self.knowledge`. What lands is the CONCEPT the utterance
+    /// reports (`testimony::concept_id`), the same short id
+    /// `hornvale_language`'s Common vocabulary already derives a word from
+    /// for every registered concept (a total map — no gap is possible on
+    /// this half). That keeps a later `misreport_distance` reading heard
+    /// knowledge comparing concept ids to concept ids, never a concept id to
+    /// an untranslated foreign string — the exact conflation spec §5.3 warns
+    /// against.
+    fn ask(&mut self) -> String {
+        let Some(label) = self.driven_affect() else {
+            return "It has not settled into anything yet; wait, then ask.".to_string();
+        };
+        let testimony = match (
+            self.wctx.terrain.as_ref(),
+            self.wctx.climate.as_ref(),
+            self.wctx.wc.as_ref(),
+        ) {
+            (Some(terrain), Some(climate), Some(wc)) => {
+                match hornvale_worldgen::lexicon_from_in(
+                    self.world,
+                    wc,
+                    &self.driven_body().species,
+                    terrain,
+                    climate,
+                ) {
+                    Ok(lexicon) => testify(&lexicon, label),
+                    Err(_) => None,
+                }
+            }
+            _ => None,
+        };
+        let body_label = self.driven_body().label.clone();
+        let (turn, heard_value) = render_testimony(&body_label, label, testimony);
+        if let Some(value) = heard_value {
+            self.knowledge
+                .0
+                .insert(format!("{body_label}::feels"), value);
+        }
+        turn
+    }
+
     /// Write a Common sentence into the margin: the session absorbs its own
     /// spoken line into its `Knowledge` via the transfer seam (The Echo
     /// T4). Renamed from `tell` at the Vessel Stitch (T2, G3 exchange) —
@@ -4792,9 +4941,13 @@ impl<'w> Session<'w> {
     /// falls back to the re-sculpting bare form on the `None` a failed
     /// build at `start` would leave.
     fn consult(&self) -> String {
-        let day = self.day.day().trunc() as u64;
+        // `whole_days()` FLOORS where `trunc() as u64` truncated toward zero
+        // and then saturated (The Escapement, decision 0186). A session's day
+        // is non-negative in practice, so the two agree here — but "day -1
+        // reads as day 0" is not a property this line should depend on.
+        let day = self.day.whole_days();
         let mut lines = vec![format!("The Reckoning, at day {day}.")];
-        let at = hornvale_astronomy::StdDays::new(self.day.day())
+        let at = hornvale_astronomy::StdDays::new(self.day.as_std_days())
             .expect("a session's day is always finite and non-negative");
         let epoch = match (self.wctx.terrain.as_ref(), self.wctx.climate.as_ref()) {
             (Some(t), Some(c)) => hornvale_book::reckoning_at_from(self.world, at, t, c),
@@ -4910,6 +5063,64 @@ fn felt_phrase(affect: &Affect) -> String {
             "has given up on ever getting home",
             "has given up",
         ),
+    }
+}
+
+/// The pure rendering half of `ask` (The Confidant, Task 6), split out of
+/// [`Session::ask`] so it can be pinned directly against hand-built
+/// [`FeltStateWord`]s rather than only through a real, world-generated
+/// culture that may or may not exercise the divergent arm — the same
+/// rationale `windows/vessel/tests/suite/testimony.rs`'s own doc gives for
+/// hand-supplying `ExposureClass`es instead of a real exposure pipeline.
+///
+/// Returns the player-facing turn text and, when the body said anything at
+/// all, the concept id to land in `Knowledge` under `"{body_label}::feels"`
+/// (`Session::ask` does the landing; this function only decides what to
+/// land).
+///
+/// **THE INVARIANT THIS FUNCTION EXISTS TO HOLD (Task 6 Step 5):** `label`
+/// — the arbitration's TRUE answer — is read only to gloss the [`Direct`]
+/// arm, where reporting it is CORRECT (a culture that has the word for its
+/// own true state is, truthfully, using it). The [`Nearest`] arm below never
+/// reads `label` at all — only `reported_as`, which [`testify`] guarantees
+/// differs from whatever it was asked about (`nearest` skips its own query
+/// candidate) — so a divergent testimony can never carry the true label into
+/// the returned text. `tests/suite/ask_verb.rs`'s
+/// `the_arbitration_never_reaches_a_divergent_utterance` mutation-proves
+/// this by substituting `label` for `reported_as` in that arm and watching
+/// the test catch it.
+///
+/// [`Direct`]: FeltStateWord::Direct
+/// [`Nearest`]: FeltStateWord::Nearest
+fn render_testimony(
+    body_label: &str,
+    label: AffectLabel,
+    testimony: Option<FeltStateWord>,
+) -> (String, Option<String>) {
+    match testimony {
+        None => (
+            format!("{body_label} has no word for how it feels, and says nothing at all."),
+            None,
+        ),
+        Some(FeltStateWord::Direct(word)) => {
+            let concept = crate::testimony::concept_id(label);
+            (
+                format!("{body_label} says, \"{}\": {concept}.", word.roman),
+                Some(concept.to_string()),
+            )
+        }
+        Some(FeltStateWord::Nearest {
+            word, reported_as, ..
+        }) => {
+            let concept = crate::testimony::concept_id(reported_as);
+            (
+                format!(
+                    "{body_label} says, \"{}\": {concept}, near enough.",
+                    word.roman
+                ),
+                Some(concept.to_string()),
+            )
+        }
     }
 }
 
@@ -5449,28 +5660,151 @@ mod tests {
     }
 
     #[test]
-    fn wait_routes_a_clock_overflow_instead_of_panicking() {
+    fn wait_routes_a_construction_failure_instead_of_panicking() {
         // Fix round 1 (The Ell, Task 2 review, Important finding): `wait`
         // validates its PARSED argument (`d.is_finite() && d > 0.0`), but the
-        // day it feeds `WorldTime::new` is an ACCUMULATION
-        // (`self.day.day() + days`), which can overflow to infinity even when
-        // both operands are individually finite. That used to `.expect()`,
-        // so a long enough possession session (or a single adversarial `wait
-        // 1e308` twice, driven live from `possess`'s stdin) panicked the
-        // whole process instead of failing one verb. `self.day` starts at
-        // `WorldTime::GENESIS` and only this test's own setup pushes it to
-        // `f64::MAX`, so nothing else in the suite depends on the clock
-        // reaching this range.
+        // day it feeds `WorldTime::from_std_days` is an ACCUMULATION
+        // (`self.day.as_std_days() + days`), so a single adversarial `wait
+        // 1e308` driven live from `possess`'s stdin can build a value
+        // `from_std_days` rejects even though every individual operand it
+        // saw was finite. That used to `.expect()`, so it panicked the
+        // whole process instead of failing one verb.
+        //
+        // The Escapement's Ruling 9 (kernel/src/field.rs) changed WHICH
+        // rejection is reachable here, and this test used to assert on the
+        // wrong one. `from_std_days` now checks the representable tick
+        // range as well as finiteness, and that range is roughly 294
+        // orders of magnitude narrower than f64's own range
+        // (`i64::MAX / TICKS_PER_STD_DAY` is ~9.22e13 days; `f64::MAX` is
+        // ~1.80e308) — so two constructible `WorldTime`s can never sum to
+        // `f64::MAX`, let alone overflow it to infinity: overflow-to-infinity
+        // is no longer reachable through this accumulation at all.
+        //
+        // **WHICH ARM THIS TEST REACHES, stated exactly** (fix round 1, code
+        // review Important 2). An earlier version of this comment claimed the
+        // rejection came "from the exact same `Err` arm of the exact same
+        // `from_std_days` call" as before. That is no longer true, and the
+        // claim was hiding a coverage hole: post-flip the INCREMENT and the SUM
+        // are checked by two different calls in `advanced_by` —
+        // `TickSpan::from_std_days`'s range check, then `i64::checked_add` —
+        // and waiting `f64::MAX` from genesis is rejected by the FIRST, before
+        // any accumulation happens. So this test covers the crossing, not the
+        // accumulation; `wait_routes_a_tick_overflow_in_the_accumulation`
+        // covers the other arm. What this one still proves, and what it exists
+        // for, is the ROUTING: a construction failure inside `wait` returns
+        // through `wait`'s own error channel, never a panic and never a
+        // release. Starting from `WorldTime::GENESIS` (day 0.0) and
+        // waiting `f64::MAX` days is now the adversarial case itself,
+        // closer to The Ell's original "a single `wait 1e308`" than the
+        // old setup's hand-built `f64::MAX` starting day, and it needs no
+        // unconstructible state to get there.
         let world = seam_world();
-        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
-        session.day = WorldTime::new(f64::MAX).expect("f64::MAX is finite");
+        let (mut session, _) = Session::start(
+            &world,
+            &PossessOpts {
+                day: WorldTime::GENESIS,
+                ..PossessOpts::default()
+            },
+        )
+        .unwrap();
         match session.wait(&f64::MAX.to_string(), Perceiving::Body) {
             Turn::Out(msg) => assert!(
-                msg.contains("finite") || msg.to_lowercase().contains("day"),
-                "expected an error naming the clock overflow, got: {msg}"
+                msg.contains("outside the representable tick range"),
+                "expected an error naming the tick-range rejection, got: {msg}"
             ),
-            Turn::Released(_) => panic!("an overflowing wait must not release the session"),
+            Turn::Released(_) => panic!("a rejected wait must not release the session"),
         }
+    }
+
+    #[test]
+    fn wait_routes_a_tick_overflow_in_the_accumulation() {
+        // THE ARM THE TEST ABOVE DOES NOT REACH (fix round 1, code review
+        // Important 2). `advanced_by` checks the increment and the sum
+        // separately, and only an increment that PASSES the range check can
+        // exercise the sum's `checked_add`. Here the increment is tiny and
+        // obviously valid — 20 ticks — while the session's clock already sits
+        // ten ticks below `i64::MAX`, so the SUM is what fails. That is the
+        // accumulation The Ell's finding was about, now with an integer failure
+        // mode instead of an `f64` one, and it asserts the half the unit test
+        // below cannot: that the overflow routes through `wait`'s OWN error
+        // channel rather than panicking or releasing the session.
+        //
+        // **Starting near the ceiling rather than accumulating up to it is a
+        // COST decision, and it was measured, not guessed.** The obvious
+        // spelling — successive `wait`s until the sum overflows — costs a full
+        // drive tick per wait over an enormous window, and the cost tracks the
+        // total simulated span rather than the number of waits: ten `wait
+        // 1e13`s measured 49.2 s and two `wait 9e13`s measured 41.8 s, against
+        // 4.7 s for `Session::start` plus one rejected wait. This spelling pays
+        // only that 4.7 s floor, because the window it simulates is 20 ticks
+        // wide. Asserted on the SUM's own message, which is deliberately
+        // distinct from the increment's: while both arms read "outside the
+        // representable tick range" no test could tell which one it had
+        // reached, and this arm had zero coverage while appearing to have some.
+        let world = seam_world();
+        let near_ceiling = WorldTime::from_ticks(i64::MAX - 10);
+        let (mut session, _) = Session::start(
+            &world,
+            &PossessOpts {
+                day: near_ceiling,
+                ..PossessOpts::default()
+            },
+        )
+        .unwrap();
+
+        // The increment is valid on its own — so what fails below is the sum.
+        let increment = WorldTime::from_ticks(20).as_std_days();
+        assert!(
+            advanced_by(WorldTime::GENESIS, increment).is_ok(),
+            "a 20-tick increment must be representable, or this test proves nothing"
+        );
+
+        match session.wait(&increment.to_string(), Perceiving::Body) {
+            Turn::Out(msg) => assert!(
+                msg.contains("leaves the representable tick range"),
+                "expected the ACCUMULATION arm's message, got: {msg}"
+            ),
+            Turn::Released(_) => panic!("a rejected wait must not release the session"),
+        }
+    }
+
+    /// The accumulation guard at the unit level: both arms of [`advanced_by`]
+    /// and the boundary between them. The two `wait` tests above prove the
+    /// ROUTING; this proves the arithmetic — in particular that an overflow is
+    /// an `Err`, not a debug panic and not a silent release-build wraparound.
+    #[test]
+    fn advanced_by_checks_the_increment_and_the_sum_separately() {
+        // An ordinary advance is exact on the lattice.
+        let day = WorldTime::from_std_days(1.5).expect("finite");
+        assert_eq!(
+            advanced_by(day, 0.25).expect("representable").ticks(),
+            175_000
+        );
+
+        // Arm one: the INCREMENT is unrepresentable, named by the crossing.
+        let e = advanced_by(WorldTime::GENESIS, f64::MAX).expect_err("f64::MAX is out of range");
+        assert!(e.contains("outside the representable tick range"), "{e}");
+        assert!(advanced_by(WorldTime::GENESIS, f64::NAN).is_err(), "NaN");
+
+        // Arm two: the increment is fine and the SUM overflows — named
+        // distinctly, so the two arms are not confusable by message.
+        let near = WorldTime::from_ticks(i64::MAX - 10);
+        let e = advanced_by(near, 1.0).expect_err("the sum must overflow i64");
+        assert!(e.contains("leaves the representable tick range"), "{e}");
+        assert!(
+            !e.contains("is not a valid quantity"),
+            "the overflow arm must not borrow the increment arm's wording: {e}"
+        );
+
+        // The boundary itself: landing exactly on `i64::MAX` still succeeds, so
+        // the guard rejects overflow rather than merely being conservative.
+        let one_short = WorldTime::from_ticks(i64::MAX - 1);
+        assert_eq!(
+            advanced_by(one_short, WorldTime::from_ticks(1).as_std_days())
+                .expect("exactly reaching i64::MAX is representable")
+                .ticks(),
+            i64::MAX
+        );
     }
 
     #[test]
@@ -6662,42 +6996,32 @@ mod tests {
     }
 
     /// Commit an `agent-at` putting `who` in `room` as of the session's current
-    /// day, then move the session's clock to the day the LEDGER actually
-    /// stored.
+    /// day.
     ///
-    /// **The second half is the whole reason this helper exists.**
-    /// `Ledger::commit` quantizes a fact's day to 8 significant digits
-    /// (decision 0033), and that rounding can go UP: measured,
-    /// `quantize(1.5117199997382882) == 1.5117200000000000` — strictly LATER
+    /// **This helper used to carry a clock-nudging second half, and The
+    /// Escapement (decision 0186) deleted the defect it compensated for.**
+    /// `Ledger::commit` quantized a fact's day to 8 significant digits and that
+    /// rounding could go UP — measured then,
+    /// `quantize(1.5117199997382882) == 1.5117200000000000`, strictly LATER
     /// than the day handed in. `latest_committed_position` selects on
-    /// `f.day <= t`, so a fact committed at `now` and read back at `now` is
-    /// invisible, and the fixture silently describes a creature that never
-    /// moved. Both callers below construct exactly that shape, and both went
-    /// red the moment `enter` began charging time and left the session on a
-    /// day with more than eight significant digits (Task 7 fix round, B1).
+    /// `f.day <= t`, so a fact committed at `now` was invisible when read back
+    /// at `now`, and the fixture silently described a creature that never
+    /// moved. The repair was to advance the session to whatever the ledger
+    /// actually stored.
     ///
-    /// Advancing by those few ULP is the honest fixture repair: it puts the
-    /// session at the moment the ledger records, which is what a test
-    /// asserting on that record means. It is **not** a fix for the general
-    /// edge — any caller that commits at `now` and reads at `now` still has
-    /// it, `Session::wait`'s own tick included — and that is recorded as a
-    /// finding rather than papered over here.
+    /// A `WorldTime` is an exact `i64` tick count now and `commit` canonicalizes
+    /// no day at all, so what is stored IS what was handed in: the comparison
+    /// `stored > session.day` could never again be true, and the compensation
+    /// was deleted rather than left as a permanent no-op with a live-sounding
+    /// rationale. This is the paired deletion spec §1 asks the second merger to
+    /// make — a workaround outliving its cause, the same shape as The Hand's
+    /// `quantize(t.day())`.
     fn place_agent_now(session: &mut Session<'_>, who: EntityId, room: &Facet) {
         let fact = crate::liveness::place_agent(who, room, session.day);
         session
             .ledger
             .commit(fact, &session.registry)
             .expect("agent-at is registered");
-        let stored = session
-            .ledger
-            .find(AGENT_AT)
-            .filter(|f| f.subject == who)
-            .last()
-            .and_then(|f| f.day)
-            .expect("the fact just committed carries the day it was committed at");
-        if stored > session.day {
-            session.day = stored;
-        }
     }
 
     /// The marks this session's snapshot draws.
@@ -7114,6 +7438,102 @@ mod tests {
             before.sensed.present, after.sensed.present,
             "nor may it move who is REPORTED here — the placed companion must \
              stay in sight under both placements"
+        );
+    }
+
+    /// A hand-built [`WordViews`] for [`render_testimony`]'s tests — the
+    /// three surface views are display-only for this fn, so a fixed dummy
+    /// suffices, the same freedom `testimony.rs`'s own tests take with
+    /// `ExposureClass`.
+    fn dummy_word(roman: &str) -> hornvale_language::WordViews {
+        hornvale_language::WordViews {
+            roman: roman.to_string(),
+            ipa: String::new(),
+            espeak: String::new(),
+        }
+    }
+
+    /// The DIRECT arm (The Confidant, Task 6): a culture that has the word
+    /// for its own true state reports it, and the truth SHOULD be visible
+    /// here — the invariant is about a DIVERGENT report, not about hiding
+    /// truth that was correctly spoken.
+    #[test]
+    fn render_testimony_direct_reports_the_word_and_its_own_concept() {
+        let (turn, heard) = render_testimony(
+            "the herder",
+            AffectLabel::Content,
+            Some(FeltStateWord::Direct(dummy_word("Vrenn"))),
+        );
+        assert!(
+            turn.contains("Vrenn"),
+            "the turn must carry the actual spoken word, got: {turn}"
+        );
+        assert!(
+            turn.contains("content"),
+            "a Direct report's gloss is the true state's own concept, got: {turn}"
+        );
+        assert_eq!(
+            heard,
+            Some("content".to_string()),
+            "the heard value must be the concept id, not the raw conlang word"
+        );
+    }
+
+    /// A culture with no felt-state word at all says nothing, and lands
+    /// nothing — `testify` returning `None` must not fabricate a report.
+    #[test]
+    fn render_testimony_none_says_nothing_and_lands_nothing() {
+        let (turn, heard) = render_testimony("the herder", AffectLabel::Lost, None);
+        assert!(
+            !turn.is_empty(),
+            "a body with no word at all must still answer SOMETHING"
+        );
+        assert_eq!(
+            heard, None,
+            "nothing was said, so nothing may land as heard"
+        );
+    }
+
+    /// **THE DESIGN INVARIANT (Task 6 Step 5, spec §3.1): the player is
+    /// NEVER shown the arbitration.** A divergent testimony (host truly
+    /// `Helpless`, culture has no word for it, nearest known word is
+    /// `Eager`'s) must carry `Eager`'s concept and word ONLY — `Helpless`
+    /// must appear nowhere in the rendered turn or the heard value, in any
+    /// casing. This is mutation-proved in the Task 6 report: substituting
+    /// `label` for `reported_as` in `render_testimony`'s `Nearest` arm turns
+    /// this test red.
+    #[test]
+    fn the_arbitration_never_reaches_a_divergent_utterance() {
+        let true_label = AffectLabel::Helpless;
+        let (turn, heard) = render_testimony(
+            "the herder",
+            true_label,
+            Some(FeltStateWord::Nearest {
+                word: dummy_word("Grenth"),
+                reported_as: AffectLabel::Eager,
+                reason: hornvale_language::GapReason::Experiential(
+                    "this test culture never named it".to_string(),
+                ),
+            }),
+        );
+        let lowered = turn.to_lowercase();
+        assert!(
+            !lowered.contains("helpless"),
+            "the true state must never appear in a divergent turn, got: {turn}"
+        );
+        assert!(
+            turn.contains("Grenth"),
+            "the actually-spoken word must still appear, got: {turn}"
+        );
+        assert!(
+            turn.contains("eager"),
+            "the REPORTED concept must appear (the lie, not the truth), got: {turn}"
+        );
+        assert_eq!(
+            heard,
+            Some("eager".to_string()),
+            "the heard entry must record what was actually SAID (eager), never the \
+             true state (helpless)"
         );
     }
 }

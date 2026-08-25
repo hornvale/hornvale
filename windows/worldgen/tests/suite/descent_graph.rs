@@ -145,8 +145,8 @@ fn generation_length_of_is_none_for_a_species_outside_the_roster() {
 
 /// `forebear_of` must return `None`, not a guessed `Kinship::Sibling`, when
 /// the daughter's species has no derivable generation length. Seed 42's real
-/// roster cannot reach this path — every `Settled` people is `Endotherm` or
-/// `Ectotherm`, never `Ametabolic` or absent from the roster — so this
+/// roster cannot reach this path — every `Settled` people is `Endothermic` or
+/// `Ectothermic`, never ametabolic or absent from the roster — so this
 /// constructs the case directly: a minimal two-occupation ledger whose
 /// daughter's `occ-people` names a species outside the roster, built without
 /// going through a full world build.
@@ -366,9 +366,9 @@ fn a_long_lived_people_founds_by_siblings_where_a_short_lived_one_founds_by_desc
         .expect("goblin has a biosphere row");
     let mut slow = goblin.clone();
     slow.schedule = hornvale_species::LifeSchedule::paced(11.0).expect("11.0 is a valid factor");
-    let long = hornvale_species::life_history(slow.mass, slow.metabolic_class, slow.schedule)
+    let long = hornvale_species::life_history(slow.mass, slow.thermal_strategy, slow.schedule)
         .generation_length
-        .expect("still not Ametabolic")
+        .expect("still not ametabolic")
         .get();
     assert!(
         long > 100.0,
@@ -423,7 +423,9 @@ fn a_people_outside_the_canonical_roster_still_gets_distinct_founders() {
                         predicate: predicate.to_string(),
                         object,
                         place: Some(id),
-                        day: Some(WorldTime::new(day).expect("test fixture day is finite")),
+                        day: Some(
+                            WorldTime::from_std_days(day).expect("test fixture day is finite"),
+                        ),
                         provenance: "test-fixture".to_string(),
                     },
                     &world.registry,

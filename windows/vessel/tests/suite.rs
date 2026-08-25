@@ -21,6 +21,8 @@ mod common;
 mod action_module;
 #[path = "suite/action_mood.rs"]
 mod action_mood;
+#[path = "suite/ask_verb.rs"]
+mod ask_verb;
 #[path = "suite/body_fields.rs"]
 mod body_fields;
 #[path = "suite/body_mass.rs"]
@@ -31,6 +33,8 @@ mod controller_swap;
 mod course_properties;
 #[path = "suite/display_handle.rs"]
 mod display_handle;
+#[path = "suite/felt_state_concepts.rs"]
+mod felt_state_concepts;
 #[path = "suite/gate_table.rs"]
 mod gate_table;
 #[path = "suite/lantern_fabric.rs"]
@@ -67,6 +71,8 @@ mod session_snapshot;
 mod submerged;
 #[path = "suite/submerged_before_arm.rs"]
 mod submerged_before_arm;
+#[path = "suite/testimony.rs"]
+mod testimony;
 #[path = "suite/the_blocking.rs"]
 mod the_blocking;
 #[path = "suite/the_first_mark.rs"]

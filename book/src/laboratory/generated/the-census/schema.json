@@ -2713,7 +2713,7 @@
         80.0,
         100.0
       ],
-      "doc": "Goblin's maximum lifespan in years (BIO-2 spec §4); Absent if goblin is off-roster or Ametabolic",
+      "doc": "Goblin's maximum lifespan in years (BIO-2 spec §4); Absent if goblin is off-roster or ametabolic",
       "domain": "biology",
       "kind": "numeric",
       "name": "lifespan-years-goblin",
@@ -2728,7 +2728,7 @@
         80.0,
         100.0
       ],
-      "doc": "Kobold's maximum lifespan in years (BIO-2 spec §4); Absent if kobold is off-roster or Ametabolic",
+      "doc": "Kobold's maximum lifespan in years (BIO-2 spec §4); Absent if kobold is off-roster or ametabolic",
       "domain": "biology",
       "kind": "numeric",
       "name": "lifespan-years-kobold",
@@ -2743,7 +2743,7 @@
         20.0,
         25.0
       ],
-      "doc": "Goblin's age at first reproduction in years (BIO-2 spec §4); Absent if goblin is off-roster or Ametabolic",
+      "doc": "Goblin's age at first reproduction in years (BIO-2 spec §4); Absent if goblin is off-roster or ametabolic",
       "domain": "biology",
       "kind": "numeric",
       "name": "age-at-maturity-years-goblin",
@@ -2758,7 +2758,7 @@
         20.0,
         25.0
       ],
-      "doc": "Kobold's age at first reproduction in years (BIO-2 spec §4); Absent if kobold is off-roster or Ametabolic",
+      "doc": "Kobold's age at first reproduction in years (BIO-2 spec §4); Absent if kobold is off-roster or ametabolic",
       "domain": "biology",
       "kind": "numeric",
       "name": "age-at-maturity-years-kobold",
@@ -2803,7 +2803,7 @@
         0.8,
         1.0
       ],
-      "doc": "Goblin's reproductive output on the r-K axis, 0 (fast/prolific) ... 1 (slow/sparse) (BIO-2 spec §4/CAP-2); Absent if goblin is off-roster or Ametabolic",
+      "doc": "Goblin's reproductive output on the r-K axis, 0 (fast/prolific) ... 1 (slow/sparse) (BIO-2 spec §4/CAP-2); Absent if goblin is off-roster or ametabolic",
       "domain": "biology",
       "kind": "numeric",
       "name": "reproductive-tempo-goblin",
@@ -2818,7 +2818,7 @@
         0.8,
         1.0
       ],
-      "doc": "Kobold's reproductive output on the r-K axis, 0 (fast/prolific) ... 1 (slow/sparse) (BIO-2 spec §4/CAP-2); Absent if kobold is off-roster or Ametabolic",
+      "doc": "Kobold's reproductive output on the r-K axis, 0 (fast/prolific) ... 1 (slow/sparse) (BIO-2 spec §4/CAP-2); Absent if kobold is off-roster or ametabolic",
       "domain": "biology",
       "kind": "numeric",
       "name": "reproductive-tempo-kobold",
@@ -2833,7 +2833,7 @@
         40.0,
         50.0
       ],
-      "doc": "Goblin's generation length in years (BIO-2 spec §5, MEM-7's handle); Absent if goblin is off-roster or Ametabolic",
+      "doc": "Goblin's generation length in years (BIO-2 spec §5, MEM-7's handle); Absent if goblin is off-roster or ametabolic",
       "domain": "biology",
       "kind": "numeric",
       "name": "generation-length-years-goblin",
@@ -2848,7 +2848,7 @@
         40.0,
         50.0
       ],
-      "doc": "Kobold's generation length in years (BIO-2 spec §5, MEM-7's handle); Absent if kobold is off-roster or Ametabolic",
+      "doc": "Kobold's generation length in years (BIO-2 spec §5, MEM-7's handle); Absent if kobold is off-roster or ametabolic",
       "domain": "biology",
       "kind": "numeric",
       "name": "generation-length-years-kobold",
@@ -3164,7 +3164,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0x9d61df647f25151f"
+    "fnv1a64": "0x6656a4de1e759a29"
   },
   "schema_version": 1,
   "study": {

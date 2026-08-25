@@ -92,7 +92,7 @@ fn a_founding_fact_is_stamped_on_the_day_it_records() {
         let Value::Number(founded) = f.object else {
             panic!("occ-founded carries a number");
         };
-        let stamp = f.day.expect("an occupation fact is dated").day();
+        let stamp = f.day.expect("an occupation fact is dated").as_std_days();
         assert_eq!(
             founded, stamp,
             "occ-founded's object and its own Fact.day stamp must be the same \
@@ -299,7 +299,7 @@ fn a_founder_is_founded_the_same_day_as_their_community() {
         let Value::Entity(community) = f.object else {
             panic!("person-founded's object is always the community entity");
         };
-        let person_day = f.day.expect("person-founded carries a day").day();
+        let person_day = f.day.expect("person-founded carries a day").as_std_days();
         let community_day = world
             .ledger
             .facts_about(community)

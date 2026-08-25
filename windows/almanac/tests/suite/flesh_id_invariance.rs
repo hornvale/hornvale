@@ -96,7 +96,7 @@ fn commit_occupation(world: &mut World, id: EntityId, core: &Occupation) {
                     predicate: predicate.to_string(),
                     object,
                     place: Some(id),
-                    day: Some(WorldTime::new(day).expect("test fixture day is finite")),
+                    day: Some(WorldTime::from_std_days(day).expect("test fixture day is finite")),
                     provenance: "test-fixture".to_string(),
                 },
                 &world.registry,

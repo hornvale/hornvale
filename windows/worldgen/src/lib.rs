@@ -1010,9 +1010,13 @@ pub fn detritus_supply_field(
 /// `KelpForest`, then the sunlit `Epipelagic`, falling through the aphotic
 /// classes to near-zero at `Abyssal` and `HadalTrench`), and `SeaIce` is
 /// suppressed. `HydrothermalVent` is deliberately left near-zero rather than
-/// productive: a real vent community is CHEMOTROPHIC, which is a metabolic
-/// class the enum does not have (BIO-chemotrophy), so making it productive here would
-/// feed vent biomass to photosynthesis-based consumers.
+/// productive: a real vent community is CHEMOTROPHIC. THE GOSSAN — rung 1 of
+/// BIO-chemotrophy — shipped `hornvale_species::TrophicMode::Chemotrophic`, so
+/// the vocabulary now EXISTS; what does not exist yet is a kind that carries it
+/// or an energy field to feed one. This field is a PHOTOSYNTHESIS supply, and
+/// making the vent productive on it would feed vent biomass to
+/// photosynthesis-based consumers. The fix is rung 2's own chemotrophic
+/// supply field, not a number raised here.
 /// type-audit: bare-ok(ratio: scale), bare-ok(count: return)
 pub fn marine_forage_supply_field(
     geo: &Geosphere,
@@ -2103,8 +2107,14 @@ pub fn vestige_dread(world: &World) -> Result<hornvale_kernel::VertexMap<f64>, B
 /// drawn UP it): the coexistence-stack density of **mobile-beast, non-carnivore**
 /// species — the herbivores and omnivore-beasts a carnivore hunts. Peoples are
 /// excluded from the v1 prey base (a carnivore is drawn to the WILD, not toward
-/// settlements — the acute-hunt tier owns predators-stalk-towns), and autotrophs
-/// are excluded (a plant is not a carnivore's prey). Realized density, not
+/// settlements — the acute-hunt tier owns predators-stalk-towns), and
+/// PHOTOTROPHS are excluded (a plant is not a carnivore's prey) — asked of the
+/// TROPHIC axis, which is the axis that question is about. THE GOSSAN's field
+/// split first routed this through `ThermalStrategy::Unmodelled`, which is
+/// today the same three kinds but is a coincidence with an expiry date: when
+/// BIO-autotroph-physics gives the autotrophs a real thermal model they stop
+/// being `Unmodelled` and would have re-entered the prey base silently.
+/// Realized density, not
 /// capacity, so it concentrates on genuine wild prey ground (the same honesty
 /// `predator_pressure_from` paid for). Normalized to `[0, 1]` by its own maximum.
 /// Derived from the committed demography stack — no seed, no epoch, byte-identical
@@ -2123,8 +2133,8 @@ pub fn prey_pressure_from(
     let geo = terrain.geosphere();
     // Prey-base tags (the dense stack index): a mobile-beast, non-carnivore
     // species — not a settling people (`social_form != Settled`), not a
-    // rooted `Autotroph`, and not itself prey-dominant (`ANIMAL_PREY <=
-    // threshold`).
+    // rooted phototroph (`trophic_mode != Phototrophic`), and not itself
+    // prey-dominant (`ANIMAL_PREY <= threshold`).
     let prey: std::collections::BTreeSet<u32> = wc
         .biosphere
         .iter()
@@ -2132,10 +2142,7 @@ pub fn prey_pressure_from(
         .filter(|(_, (_kind, bio))| {
             bio.niche.weight(hornvale_kernel::ANIMAL_PREY) <= CARNIVORE_THRESHOLD
                 && bio.social_form != hornvale_species::SocialForm::Settled
-                && !matches!(
-                    bio.metabolic_class,
-                    hornvale_species::MetabolicClass::Autotroph
-                )
+                && bio.trophic_mode != hornvale_species::TrophicMode::Phototrophic
         })
         .map(|(i, _)| i as u32)
         .collect();
@@ -2165,7 +2172,7 @@ pub fn prey_pressure_from(
 /// From [`demography_report_from`]'s coexistence-stack settlements (the per-vertex
 /// density condensations), keeps those whose DOMINANT species is a mobile beast —
 /// *not* a settling people (`social_form != Settled`) and *not*
-/// a rooted `Autotroph` (a plant is placed but never an *agent* that walks and
+/// a rooted phototroph (a plant is placed but never an *agent* that walks and
 /// flees) — then takes the densest concentration of each DISTINCT species (a herd
 /// leader, a lone apex; not five of the same twig-blight) up to `k`, by biomass.
 /// Deterministic (mass-descending, label tie-break) and seed-free. Encapsulates
@@ -2194,7 +2201,7 @@ pub fn wild_concentrations_from(
     let is_mobile_beast = |label: &str| -> bool {
         // A mobile beast: a WILD, non-sessile, non-settling kind — `social_form`
         // is `Solitary` or `Gregarious` (not `Settled`, the peoplehood axis; not
-        // `Sessile`, a rooted `Autotroph` that is placed but never agentified).
+        // `Sessile`, a rooted phototroph that is placed but never agentified).
         //
         // …and not a SEA creature. The Vacancy opened the ocean to the habitat
         // model, but the walk layer this feeds is a terrestrial surface game:
@@ -4178,7 +4185,7 @@ pub fn deep_lines_from(
     if paleo.max_ice_fraction > 0.0 {
         let iced = geo.vertices().filter(|c| *paleo.envelope.get(*c)).count();
         lines.push(format!(
-            "Glaciated strata lie in the cover over {iced} cells — the ice left its mark."
+            "Glaciated strata lie in the cover over {iced} vertices — the ice left its mark."
         ));
     }
     Ok(lines)
@@ -4255,7 +4262,7 @@ pub fn lode_lines_from(
     }
     if colocated > 0 {
         lines.push(format!(
-            "{colocated} cells hold both cave and ore — the deep worked twice."
+            "{colocated} vertices hold both cave and ore — the deep worked twice."
         ));
     }
     Ok(lines)
@@ -4515,7 +4522,7 @@ pub fn observed_phenomena(world: &World, day: f64) -> Result<Vec<Phenomenon>, Bu
     // callers below, which always pass a literal. A non-finite value must
     // fail through this function's existing `Result`, not panic (The Ell's
     // Task 1 fix round: this used to be an `.expect()`).
-    let time = WorldTime::new(day).map_err(|e| BuildError::Pins(e.to_string()))?;
+    let time = WorldTime::from_std_days(day).map_err(|e| BuildError::Pins(e.to_string()))?;
     Ok(observe(
         &sources,
         &ObserverContext {
@@ -4554,7 +4561,7 @@ fn observed_phenomena_occluded(
         &sources,
         &ObserverContext {
             place,
-            time: WorldTime::new(day).expect("a day value is finite"),
+            time: WorldTime::from_std_days(day).expect("a day value is finite"),
             lens: occlusion_lens_at(world, climate, position, day),
             position,
         },
@@ -4886,7 +4893,7 @@ fn observe_with_sources(
         sources,
         &ObserverContext {
             place,
-            time: WorldTime::new(day).expect("a day value is finite"),
+            time: WorldTime::from_std_days(day).expect("a day value is finite"),
             // NO occlusion here, deliberately. This is the observation GENESIS
             // derives from — settlement name glosses and the deities a people
             // believe in (`derived-from-phenomenon` is a committed predicate).
@@ -5935,6 +5942,82 @@ fn exposure_of_impl(
         }
     }
 
+    // Steeped: the six felt states (`hornvale_language::felt_state_pack`,
+    // Task 4b), derived from the species' own `MindVector` rather than
+    // authored per species — a table of who-lacks-what would make the
+    // deficiency distribution this task exists to expose *circular* (spec
+    // §5.1). `MindVector` carries exactly three `[0, 1]` scalars, each with
+    // a MEANINGFUL midpoint (0.5, the manikin's own neutral reading), and
+    // `felt_state_pack` carries exactly three valence-opposed PAIRS — so
+    // one scalar governs one pair, by which side of the midpoint the
+    // species falls on:
+    //
+    // - `threat_response` (flee 0 <-> stand 1): a species that meets a
+    //   blockage by STANDING keeps pushing at a target it can still see —
+    //   `frustrated` (blocked, target known, still trying). One that meets
+    //   it by FLEEING disengages entirely, with nothing left to aim at —
+    //   `lost` (blocked, no target). `> 0.5` Steeps `frustrated`; `< 0.5`
+    //   Steeps `lost`.
+    // - `deliberation_latency` (fast 0 <-> slow 1): a SLOW, considered
+    //   species rests once a need is met — `content` (needs met, at rest).
+    //   A FAST, opportunistic one is always mid-pursuit of the next
+    //   satisfiable want — `eager` (chasing a satisfiable need). `> 0.5`
+    //   Steeps `content`; `< 0.5` Steeps `eager`.
+    // - `time_horizon` (immediate 0 <-> generational 1): a GENERATIONAL
+    //   planner can hold a drive across a span long enough to watch it fail
+    //   anyway — `helpless` (given up despite an active drive). An
+    //   IMMEDIATE opportunist is always working a gradient toward the next
+    //   thing, with no fixed aim to give up on — `searching` (seeking with
+    //   a gradient). `> 0.5` Steeps `helpless`; `< 0.5` Steeps `searching`.
+    //
+    // Exactly AT the midpoint (the manikin's own reading, and goblin's
+    // authored one on every axis) earns neither pole: no lean, no root.
+    // That is a real reading, not an omission — those concepts fall
+    // through to the generic Experiential catch-all below like any other
+    // unclaimed concept, the same way every other rule in this function
+    // leaves what it doesn't classify to the rule that runs last.
+    //
+    // Deliberately `MindVector` alone, not `SocietyVector` too: three
+    // scalars times two poles is exactly six, one clean rule per pair.
+    // `SocietyVector`'s fields are categorical (`Sociality`, `StatusBasis`)
+    // or would have to double up on its one scalar (`in_group_radius`) to
+    // reach six — a worse fit than the one already exact.
+    //
+    // `wc.psyche` is guaranteed present here: the nested-capacity chain
+    // this function's own perception lookup already relies on is speech
+    // subset-of perception subset-of mind, so any species that reached this
+    // far (it has perception) already has a `MindVector`. The `if let` is
+    // defensive, matching this function's existing `Option`-gated rules,
+    // not a live branch.
+    //
+    // `windows/lab/src/metrics.rs`'s `independently_steeped_concepts` carries
+    // a SECOND, independently-derived copy of exactly this rule (the same
+    // discipline the toponymic gates and staple/variant rules above are
+    // already held to, spec §9.2: a check that called this function would
+    // assert nothing). If you change this block, that copy needs the same
+    // change — `exposure_classification_agrees_with_the_independent_
+    // rederivation` (`windows/lab/src/metrics.rs`, `mod tests`) sweeps
+    // several seeds and every placed people comparing this function's
+    // verdict against the lab's, and reddens on the first concept where the
+    // two disagree.
+    if let Some(mind) = wc.psyche.get(&KindId(name)) {
+        if mind.threat_response > 0.5 {
+            classes.insert("frustrated".to_string(), ExposureClass::Steeped);
+        } else if mind.threat_response < 0.5 {
+            classes.insert("lost".to_string(), ExposureClass::Steeped);
+        }
+        if mind.deliberation_latency > 0.5 {
+            classes.insert("content".to_string(), ExposureClass::Steeped);
+        } else if mind.deliberation_latency < 0.5 {
+            classes.insert("eager".to_string(), ExposureClass::Steeped);
+        }
+        if mind.time_horizon > 0.5 {
+            classes.insert("helpless".to_string(), ExposureClass::Steeped);
+        } else if mind.time_horizon < 0.5 {
+            classes.insert("searching".to_string(), ExposureClass::Steeped);
+        }
+    }
+
     // KnowsOf: the biome of every vertex adjacent to a settled vertex, unless
     // it is already Steeped (the species' own settled biome wins).
     for &vertex in settled {
@@ -6261,10 +6344,11 @@ const LIFESPAN_THRESHOLD_YEARS: f64 = 120.0;
 /// never speaks and is inert at `SETTLED`. Total over `SocialForm`.
 fn cascade_regime_of(bio: &hornvale_species::BiosphereTraits) -> hornvale_language::CascadeRegime {
     // `life_history` is the honest source: it returns `None` for an
-    // `Ametabolic` kind, which has no mass-derived lifespan at all. The bare
+    // ametabolic kind (`ThermalStrategy::Absent`), which has no mass-derived
+    // lifespan at all. The bare
     // `lifespan` call this used to make returned a number for a construct
     // (xorn: 64.97 yr) that the model says does not exist.
-    let long_lived = hornvale_species::life_history(bio.mass, bio.metabolic_class, bio.schedule)
+    let long_lived = hornvale_species::life_history(bio.mass, bio.thermal_strategy, bio.schedule)
         .lifespan
         .is_some_and(|l| l.get() >= LIFESPAN_THRESHOLD_YEARS);
     match bio.social_form {
@@ -8890,8 +8974,8 @@ pub fn sky_report_from(
     let Some(vertex) = at else {
         return Ok(sky_of(world)?.sky_at_visibility(time, Visibility::CLEAR));
     };
-    let state = climate.weather_at(vertex, time.day());
-    let cloud = climate.cloud_type_at(vertex, time.day());
+    let state = climate.weather_at(vertex, time.as_std_days());
+    let cloud = climate.cloud_type_at(vertex, time.as_std_days());
     let (_, vis) = occlusion(state, cloud);
     let mut report = sky_of(world)?.sky_at_visibility(time, vis);
     report.description = format!(
@@ -11126,7 +11210,7 @@ mod tests {
         assert!(
             hornvale_species::lifespan(
                 long_lived.mass,
-                long_lived.metabolic_class,
+                long_lived.thermal_strategy,
                 long_lived.schedule
             )
             .get()
@@ -11142,14 +11226,14 @@ mod tests {
 
     #[test]
     fn an_ametabolic_kind_is_never_asked_for_a_lifespan() {
-        // xorn is Ametabolic: life_history reports no lifespan at all, yet the
+        // xorn is ametabolic: life_history reports no lifespan at all, yet the
         // bare allometry returns 64.97 yr for its mass. The regime must not be
         // decided by that number. Solitary + no lifespan banks at SETTLED.
         let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
         let xorn = wc.biosphere.get_by_label("xorn").expect("xorn has a row");
         assert_eq!(
-            xorn.metabolic_class,
-            hornvale_species::MetabolicClass::Ametabolic
+            xorn.thermal_strategy,
+            hornvale_species::ThermalStrategy::Absent
         );
         assert_eq!(
             cascade_regime_of(xorn),
@@ -12263,7 +12347,7 @@ mod tests {
         let world = generated(42);
         let report = sky_report(
             &world,
-            hornvale_kernel::WorldTime::new(10.0).expect("a day value is finite"),
+            hornvale_kernel::WorldTime::from_std_days(10.0).expect("a day value is finite"),
         )
         .unwrap();
         let text = &report.description;
@@ -12276,7 +12360,7 @@ mod tests {
 
         let again = sky_report(
             &world,
-            hornvale_kernel::WorldTime::new(10.0).expect("a day value is finite"),
+            hornvale_kernel::WorldTime::from_std_days(10.0).expect("a day value is finite"),
         )
         .unwrap();
         assert_eq!(report, again, "the weather clause is deterministic");

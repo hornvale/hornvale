@@ -289,7 +289,7 @@ pub struct AlmanacContext {
 /// Render one species' life-history line for the almanac (BIO-2, spec §5/§6):
 /// its basal metabolism, plus a pace-of-life headline and lifespan/maturity
 /// figures when the species has biological traits at all. Suppressed for
-/// `Ametabolic` species (constructs, undead), which carry no mass-derived
+/// ametabolic species (constructs, undead), which carry no mass-derived
 /// life-history to report — only the metabolic clause renders for those.
 /// type-audit: bare-ok(identifier-text: name), bare-ok(prose: return)
 pub fn render_life_history_line(
@@ -298,7 +298,7 @@ pub fn render_life_history_line(
 ) -> String {
     let history = hornvale_species::life_history(
         biosphere.mass,
-        biosphere.metabolic_class,
+        biosphere.thermal_strategy,
         biosphere.schedule,
     );
     let mut line = format!(
@@ -1482,13 +1482,13 @@ mod tests {
     #[test]
     fn render_life_history_line_suppresses_the_clause_for_ametabolic_species() {
         use hornvale_kernel::Mass;
-        use hornvale_species::MetabolicClass;
+        use hornvale_species::ThermalStrategy;
 
         let mut construct = hornvale_species::biosphere_registry()
             .get(&hornvale_kernel::KindId("goblin"))
             .expect("goblin is in the registry")
             .clone();
-        construct.metabolic_class = MetabolicClass::Ametabolic;
+        construct.thermal_strategy = ThermalStrategy::Absent;
         construct.mass = Mass::new(500.0).unwrap();
         let line = render_life_history_line("goblin", &construct);
         assert!(

@@ -322,7 +322,7 @@ use hornvale_kernel::{
 };
 use hornvale_species::{
     AxisPreference, BiosphereTraits, ConditionNiche, EnvironmentNiche, HabitatRealm, LifeSchedule,
-    MetabolicClass, SocialForm,
+    SocialForm, ThermalStrategy, TrophicMode,
 };
 use hornvale_terrain::{CaveKind, TerrainPins, rungs, water_table_depth_m};
 use hornvale_worldgen::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, chamber_exists, rung_rank};
@@ -538,7 +538,8 @@ fn duergar_niche() -> EnvironmentNiche {
 fn mountain_dwarf_traits() -> BiosphereTraits {
     BiosphereTraits {
         mass: Mass::new(72.0).unwrap(),
-        metabolic_class: MetabolicClass::Endotherm,
+        thermal_strategy: ThermalStrategy::Endothermic,
+        trophic_mode: TrophicMode::Heterotrophic,
         niche: ResourceVector::new(&[(DETRITUS, 0.55), (PLANT_FORAGE, 0.25), (ANIMAL_PREY, 0.20)])
             .unwrap(),
         condition_niche: mountain_dwarf_condition_niche(),
@@ -554,7 +555,8 @@ fn mountain_dwarf_traits() -> BiosphereTraits {
 fn duergar_traits() -> BiosphereTraits {
     BiosphereTraits {
         mass: Mass::new(72.0).unwrap(),
-        metabolic_class: MetabolicClass::Endotherm,
+        thermal_strategy: ThermalStrategy::Endothermic,
+        trophic_mode: TrophicMode::Heterotrophic,
         niche: ResourceVector::new(&[(DETRITUS, 0.60), (ANIMAL_PREY, 0.40)]).unwrap(),
         condition_niche: duergar_condition_niche(),
         potency: 0.0,

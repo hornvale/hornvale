@@ -16,9 +16,21 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 branch="${1:?usage: sluice-request.sh <branch> <full-sha> [merge|stage|census]}"
 ref="${2:?usage: sluice-request.sh <branch> <full-sha> [merge|stage|census]}"
 kind="${3:-merge}"
+# THREE KINDS, AND THIS LIST IS THE ONE THAT DECIDES. `kind=census` shipped in
+# d41c2e08a with the usage strings above widened and THIS case left alone, so
+# `make sluice-census` advertised a kind it then refused:
+#
+#     $ make sluice-census BRANCH=... REF=...
+#     sluice-request: unknown kind 'census' (merge|stage)
+#
+# It survived a green four-phase merge because the tests exercised
+# `sluice-queue.sh add census` — the half that was widened — and never the
+# request path a caller actually takes. Both halves a human READS (the usage
+# string, the Makefile target) advertised the feature; only the half that
+# DECIDES refused it, which is why it looked live from every angle except use.
 case "$kind" in
-    merge|stage) ;;
-    *) echo "sluice-request: unknown kind '$kind' (merge|stage)" >&2; exit 2 ;;
+    merge|stage|census) ;;
+    *) echo "sluice-request: unknown kind '$kind' (merge|stage|census)" >&2; exit 2 ;;
 esac
 host="$(cat "$repo_root/scripts/census-canonical-host.txt")"
 remote_dir="${HV_SLUICE_REMOTE_DIR:-~/Projects/hornvale}"

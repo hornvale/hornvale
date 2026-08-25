@@ -290,7 +290,7 @@ mod tests {
         let npc = crate::liveness::body_at(&world, &ctx, &village, entity);
         ctx.describe(
             &npc.home,
-            WorldTime::new(0.5).expect("a day value is finite"),
+            WorldTime::from_std_days(0.5).expect("a day value is finite"),
         )
         .expect("the minted position describes")
     }

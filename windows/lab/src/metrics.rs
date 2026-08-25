@@ -445,6 +445,36 @@ impl AsRef<AstronomyView> for SettlementView {
 pub struct FullView {
     /// The settlement rung this view extends.
     pub settlement: SettlementView,
+    /// This view's own per-species lexicon builds, computed on first demand
+    /// by [`lex`] and then reused (The Confidant, Task 7 followup: three
+    /// metric families — `reportable-fraction-*`, `collapse-ratio-*`,
+    /// `misreport-distance-*` — each called `lex(v, species)` independently
+    /// for all fifteen `society_registry()` peoples, so a world paid for 45
+    /// uncached `lexicon_from_in` builds instead of 15. Measured at ≈2.9
+    /// ms/metric/world, ≈133 ms/world aggregate — see this task's report).
+    ///
+    /// **Scoping is the whole safety argument, so it is stated here, the
+    /// same way [`TerrainView::band_transects`] states it.** The map is a
+    /// private field of the view, so its lifetime is exactly one world's
+    /// evaluation: `build_row` constructs a `BuiltView` per (seed, pin set),
+    /// applies every metric to it, and drops it. There is no key to
+    /// collide, no `static` to outlive a world, and no way to hand this
+    /// cache a lexicon other than the one `lex`'s own uncached body builds
+    /// for THIS view's `world()`/`components()`/`terrain()`/`climate()`.
+    /// `RefCell` (never a `Mutex`) is deliberate: it is `!Sync`, so a view
+    /// carrying a filled cache cannot be shared across the runner's worker
+    /// threads even by accident — the same reasoning
+    /// [`TerrainView::band_transects`] documents for its `OnceCell`, applied
+    /// here to a per-species keyed cache instead of one global cell (a
+    /// species not yet built simply has no entry, so there is no need for
+    /// the `Option`-inside-the-cell trick that field uses — absence of a key
+    /// already distinguishes "not yet built" from every real answer). Keyed
+    /// by species name rather than a fixed-size array so this stays correct
+    /// for any roster, not only the shipped fifteen. `BTreeMap`, never a
+    /// `HashMap` (the project-wide ban): lookups are a handful of species
+    /// per world, so ordering has no cost here worth trading away.
+    lexicon_cache:
+        std::cell::RefCell<std::collections::BTreeMap<String, hornvale_language::Lexicon>>,
 }
 
 impl FullView {
@@ -462,6 +492,7 @@ impl FullView {
         let climate = ClimateView::build_to(seed, pins, wc, BuildDepth::Full)?;
         Ok(FullView {
             settlement: SettlementView { climate },
+            lexicon_cache: std::cell::RefCell::new(std::collections::BTreeMap::new()),
         })
     }
 
@@ -4346,7 +4377,7 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Full(|v: &FullView| distinguishable_capacity_metric(v, "kobold")),
         },
         // --- BIO-2 (Task 6): the six life-history traits (spec §4/§5), a
-        // pure f(Mass, MetabolicClass) with zero draws — every row of a
+        // pure f(Mass, ThermalStrategy) with zero draws — every row of a
         // study reads the same value for a given roster. Registered per
         // species (goblin, kobold), matching the `tone-count-{species}`
         // family's convention (see above) — the campaign's headline
@@ -4355,7 +4386,7 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "lifespan-years-goblin",
             doc: "Goblin's maximum lifespan in years (BIO-2 spec §4); Absent \
-                   if goblin is off-roster or Ametabolic",
+                   if goblin is off-roster or ametabolic",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[20.0, 40.0, 60.0, 80.0, 100.0],
             },
@@ -4366,7 +4397,7 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "lifespan-years-kobold",
             doc: "Kobold's maximum lifespan in years (BIO-2 spec §4); Absent \
-                   if kobold is off-roster or Ametabolic",
+                   if kobold is off-roster or ametabolic",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[20.0, 40.0, 60.0, 80.0, 100.0],
             },
@@ -4377,7 +4408,7 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "age-at-maturity-years-goblin",
             doc: "Goblin's age at first reproduction in years (BIO-2 spec §4); \
-                   Absent if goblin is off-roster or Ametabolic",
+                   Absent if goblin is off-roster or ametabolic",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[5.0, 10.0, 15.0, 20.0, 25.0],
             },
@@ -4388,7 +4419,7 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "age-at-maturity-years-kobold",
             doc: "Kobold's age at first reproduction in years (BIO-2 spec §4); \
-                   Absent if kobold is off-roster or Ametabolic",
+                   Absent if kobold is off-roster or ametabolic",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[5.0, 10.0, 15.0, 20.0, 25.0],
             },
@@ -4426,7 +4457,7 @@ pub fn registry() -> Vec<Metric> {
             name: "reproductive-tempo-goblin",
             doc: "Goblin's reproductive output on the r-K axis, 0 (fast/prolific) \
                    ... 1 (slow/sparse) (BIO-2 spec §4/CAP-2); Absent if goblin is \
-                   off-roster or Ametabolic",
+                   off-roster or ametabolic",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.2, 0.4, 0.6, 0.8, 1.0],
             },
@@ -4438,7 +4469,7 @@ pub fn registry() -> Vec<Metric> {
             name: "reproductive-tempo-kobold",
             doc: "Kobold's reproductive output on the r-K axis, 0 (fast/prolific) \
                    ... 1 (slow/sparse) (BIO-2 spec §4/CAP-2); Absent if kobold is \
-                   off-roster or Ametabolic",
+                   off-roster or ametabolic",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.2, 0.4, 0.6, 0.8, 1.0],
             },
@@ -4449,7 +4480,7 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "generation-length-years-goblin",
             doc: "Goblin's generation length in years (BIO-2 spec §5, MEM-7's \
-                   handle); Absent if goblin is off-roster or Ametabolic",
+                   handle); Absent if goblin is off-roster or ametabolic",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[10.0, 20.0, 30.0, 40.0, 50.0],
             },
@@ -4460,7 +4491,7 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "generation-length-years-kobold",
             doc: "Kobold's generation length in years (BIO-2 spec §5, MEM-7's \
-                   handle); Absent if kobold is off-roster or Ametabolic",
+                   handle); Absent if kobold is off-roster or ametabolic",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[10.0, 20.0, 30.0, 40.0, 50.0],
             },
@@ -5122,8 +5153,8 @@ fn first_day(world: &World, predicate: &str, object: Option<&str>) -> MetricValu
         }
         let Some(d) = f.day else { continue };
         best = Some(match best {
-            Some(b) if b <= d.day() => b,
-            _ => d.day(),
+            Some(b) if b <= d.as_std_days() => b,
+            _ => d.as_std_days(),
         });
     }
     match best {
@@ -6355,13 +6386,46 @@ fn referent_is_nameable(
     )
 }
 
+#[cfg(test)]
+thread_local! {
+    /// Test-only diagnostic (The Confidant, Task 7 followup): counts calls to
+    /// [`lex`]'s uncached build path, i.e. actual `lexicon_from_in`
+    /// invocations. A `thread_local`, not a `static AtomicUsize` — nextest is
+    /// process-per-test (`windows/lab/CLAUDE.md`) so a plain `static` would
+    /// already be exclusive to one test, but a thread-local also survives if
+    /// that ever changes to a multi-threaded test harness without becoming a
+    /// cross-test race. Exists to let a test measure the 45-vs-15
+    /// lexicon-rebuild finding directly (by counting, not by reading the
+    /// call graph) and then guard the memoised path against silently
+    /// regressing back to one build per metric.
+    static LEX_BUILD_CALLS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+}
+
 /// This world's `species` lexicon, reusing the view's already-built terrain
 /// and climate instead of re-sculpting the globe inside `exposure_from` — the
 /// census's dominant cost once the name-gloss sculpts were removed (the
 /// terrain pipeline ran twice per `lexicon_from` call, ~14 metrics deep). The
 /// Single Sculpt, applied to the lexicon path; byte-identical to
 /// `lex(v, species)`.
+///
+/// **Memoised per view, against `v`'s own [`FullView::lexicon_cache`]** —
+/// see that field's doc for the scoping argument (The Confidant, Task 7
+/// followup). Every call site in this file goes through this one function
+/// (this crate's own `lex(...)` convention), so they all share the fix: a
+/// species already built for this view clones its cached
+/// [`hornvale_language::Lexicon`] instead of paying for a second
+/// `lexicon_from_in`. Cloning a `Lexicon` is a `BTreeMap` clone plus a few
+/// small owned fields — far cheaper than re-deriving it. Only the `Ok` path
+/// is cached; a species that fails to resolve is recomputed (and re-fails)
+/// on every call, which costs nothing extra in practice — `lexicon_from_in`
+/// fails before any sculpting, and no shipped `society_registry()` people
+/// ever takes this branch (this function's own doc has always said so).
 fn lex(v: &FullView, species: &str) -> Result<hornvale_language::Lexicon, BuildError> {
+    if let Some(cached) = v.lexicon_cache.borrow().get(species) {
+        return Ok(cached.clone());
+    }
+    #[cfg(test)]
+    LEX_BUILD_CALLS.with(|c| c.set(c.get() + 1));
     // `lexicon_from_in` against THIS VIEW's own component set, not
     // `lexicon_from`'s freshly-assembled canonical one (The Delvers, F1).
     // A lexicon is a function of the roster: its family's daughter list and
@@ -6371,7 +6435,301 @@ fn lex(v: &FullView, species: &str) -> Result<hornvale_language::Lexicon, BuildE
     // and it PANICS on `goblin-twin-solo`, whose re-keyed kind the canonical
     // registry cannot resolve at all. Identical on the default roster, where
     // `v.components()` IS the assembled canonical set.
-    hornvale_worldgen::lexicon_from_in(v.world(), v.components(), species, v.terrain(), v.climate())
+    let built = hornvale_worldgen::lexicon_from_in(
+        v.world(),
+        v.components(),
+        species,
+        v.terrain(),
+        v.climate(),
+    )?;
+    v.lexicon_cache
+        .borrow_mut()
+        .insert(species.to_string(), built.clone());
+    Ok(built)
+}
+
+/// Every [`hornvale_vessel::liveness::AffectLabel`] variant, in the SAME
+/// declaration order `windows/vessel/src/testimony.rs`'s own private
+/// `ALL_LABELS` walks — mirrored here rather than imported (that const is
+/// private to its crate, the same reason `windows/worldgen/tests/suite/
+/// solitary_tongue.rs` mirrors `GOBLINOID_DAUGHTERS`). Order only matters
+/// for [`felt_state_index`] staying consistent with itself; the three
+/// metric families below never rely on `nearest`'s own tie-break order,
+/// since they read `testify`'s already-resolved answer.
+const ALL_FELT_STATES: [hornvale_vessel::liveness::AffectLabel; 6] = [
+    hornvale_vessel::liveness::AffectLabel::Content,
+    hornvale_vessel::liveness::AffectLabel::Eager,
+    hornvale_vessel::liveness::AffectLabel::Searching,
+    hornvale_vessel::liveness::AffectLabel::Frustrated,
+    hornvale_vessel::liveness::AffectLabel::Lost,
+    hornvale_vessel::liveness::AffectLabel::Helpless,
+];
+
+/// `label`'s position in [`ALL_FELT_STATES`]'s declaration order — a small
+/// fixed lookup rather than a `BTreeMap<AffectLabel, _>` keyed collection
+/// (`AffectLabel` derives neither `Ord` nor `Hash`, and the project bans
+/// `HashMap`/`HashSet` outright), so [`collapse_ratio_for`] tallies into a
+/// plain `[u32; 6]` indexed by this.
+fn felt_state_index(label: hornvale_vessel::liveness::AffectLabel) -> usize {
+    use hornvale_vessel::liveness::AffectLabel::*;
+    match label {
+        Content => 0,
+        Eager => 1,
+        Searching => 2,
+        Frustrated => 3,
+        Lost => 4,
+        Helpless => 5,
+    }
+}
+
+/// `species`'s testimony (Task 6's `testify`, `windows/vessel/src/
+/// testimony.rs`) about each of [`ALL_FELT_STATES`], in that order — the
+/// SAME mechanism a live `ask` verb consults, so the three metric families
+/// below measure what the game actually says rather than a parallel
+/// derivation. `None` only when `species` cannot be resolved against this
+/// view's roster (never true for one of the fifteen `society_registry()`
+/// peoples; defensive here the same way `lex`'s own `Result` is).
+fn felt_testimonies(
+    v: &FullView,
+    species: &str,
+) -> Option<[Option<hornvale_vessel::testimony::FeltStateWord>; 6]> {
+    let lexicon = lex(v, species).ok()?;
+    Some(ALL_FELT_STATES.map(|state| hornvale_vessel::testimony::testify(&lexicon, state)))
+}
+
+/// `reportable_fraction` (spec §3.4): of the six reachable felt states, the
+/// share `species` has its OWN word for — `testify` returning
+/// `FeltStateWord::Direct`, never a `Nearest` substitute. **Capped at 50% by
+/// construction, and that ceiling is an artifact of Task 4b's exposure rule,
+/// not a finding about impoverished creature minds**: `MindVector` carries
+/// exactly three `[0, 1]` scalars, each governing one valence-opposed pair,
+/// and a species Steeps at most one pole per pair — never both, so no
+/// people can ever hold more than 3 of the 6 words. Real tongues have words
+/// for both frustration and hopelessness at once; this mapping forbids it by
+/// construction. A real, non-Absent zero is a valid reading (goblin's
+/// `MindVector` sits exactly at the manikin on every axis, Task 4b), so this
+/// never returns `Absent` for any of the fifteen.
+fn reportable_fraction_for(v: &FullView, species: &str) -> MetricValue {
+    let Some(testimonies) = felt_testimonies(v, species) else {
+        return MetricValue::Absent;
+    };
+    let known = testimonies
+        .iter()
+        .filter(|t| {
+            matches!(
+                t,
+                Some(hornvale_vessel::testimony::FeltStateWord::Direct(_))
+            )
+        })
+        .count();
+    MetricValue::Number(known as f64 / ALL_FELT_STATES.len() as f64)
+}
+
+/// `collapse_ratio` (spec §3.4): the largest number of the six reachable
+/// felt states that end up reported through the SAME word in `species`'s
+/// tongue — conflation, the two-or-more true feelings a culture cannot tell
+/// apart in speech. A state with its own word always reports itself (group
+/// size >= 1); a wordless state reports whichever known state `testify`'s
+/// `nearest` search picks, joining that state's group. **Deliberately the
+/// MAX group size, not `6 / distinct reported words`**: every known word
+/// reports itself, so the distinct-word count is always exactly the known-
+/// word count and `6 / known` collapses to `1 / reportable_fraction` by
+/// construction — a value with no information `reportable_fraction` doesn't
+/// already carry, exactly the "reports a default rather than a measurement"
+/// failure this campaign's brief warns about. The max, by contrast, depends
+/// on which particular states cluster onto which word (circumplex adjacency
+/// and `nearest`'s tie-breaks), so it varies independently — hobgoblin's 2
+/// known words split 4-and-2, desert-dwarf's 3 split 3-and-2-and-1, not the
+/// even split a mean would imply. `Absent` only when `species` has no word
+/// for any felt state at all (goblin): there is then no reported word to
+/// group states onto, so no ratio is defined.
+fn collapse_ratio_for(v: &FullView, species: &str) -> MetricValue {
+    let Some(testimonies) = felt_testimonies(v, species) else {
+        return MetricValue::Absent;
+    };
+    let mut counts = [0u32; 6];
+    let mut has_word = false;
+    for (state, testimony) in ALL_FELT_STATES.into_iter().zip(testimonies) {
+        let reported = match testimony {
+            Some(hornvale_vessel::testimony::FeltStateWord::Direct(_)) => state,
+            Some(hornvale_vessel::testimony::FeltStateWord::Nearest { reported_as, .. }) => {
+                reported_as
+            }
+            None => continue,
+        };
+        counts[felt_state_index(reported)] += 1;
+        has_word = true;
+    }
+    if !has_word {
+        return MetricValue::Absent;
+    }
+    MetricValue::Number(counts.into_iter().max().unwrap_or(0) as f64)
+}
+
+/// `misreport_distance` (spec §3.4): the mean circumplex distance (Task 4's
+/// `circumplex_distance`, now `pub` for exactly this caller) between each of
+/// the six reachable felt states and what `species`'s tongue actually
+/// reports for it — 0 for a state with its own word (`testify` returns
+/// `Direct`), `circumplex_distance(state, reported_as)` for a substituted
+/// one. **Unweighted mean over the reachable state space**, deliberately not
+/// a frequency-weighted mean over a simulated trajectory: nothing in the
+/// authored mechanism assigns the six states different a-priori weights, and
+/// weighting by a live simulation's visitation frequency would need either a
+/// live `Session` or the stateless `affect_of`/`affect_of_memo_occupied`
+/// snapshot path threaded per species — machinery this task's brief flagged
+/// as a possible forward dependency and which turns out to be unnecessary:
+/// every term this metric needs (`testify`'s per-state answer) is already
+/// fully determined by the lexicon alone, with no simulated trajectory
+/// required. See this task's report for the fuller justification, including
+/// why this reads the design spec's "per utterance" phrasing as a nuance
+/// deliberately not implemented here. `Absent` only when `species` has no
+/// word for any felt state at all (goblin): every state is then a `None`
+/// testimony (nothing said), so no mean is defined.
+fn misreport_distance_for(v: &FullView, species: &str) -> MetricValue {
+    let Some(testimonies) = felt_testimonies(v, species) else {
+        return MetricValue::Absent;
+    };
+    let mut total = 0i32;
+    let mut n = 0i32;
+    for (state, testimony) in ALL_FELT_STATES.into_iter().zip(testimonies) {
+        match testimony {
+            Some(hornvale_vessel::testimony::FeltStateWord::Direct(_)) => n += 1,
+            Some(hornvale_vessel::testimony::FeltStateWord::Nearest { reported_as, .. }) => {
+                total += hornvale_vessel::testimony::circumplex_distance(state, reported_as);
+                n += 1;
+            }
+            None => {}
+        }
+    }
+    if n == 0 {
+        return MetricValue::Absent;
+    }
+    MetricValue::Number(f64::from(total) / f64::from(n))
+}
+
+/// The fifteen settled peoples The Confidant's instrument (Task 7, spec
+/// §3.4) compares — `hornvale_species::society_registry()`'s exact roster,
+/// alphabetical (pinned by that crate's own
+/// `society_registry_holds_exactly_the_settled_peoples` test). Dragons carry
+/// a `MindVector` but never settle or speak (no `SocietyVector` row), so
+/// they sit outside this instrument entirely — Task 4b's own finding, not an
+/// oversight here. Production scope, not `#[cfg(test)]`: [`render_confidant_report`]
+/// walks it too, not only the tests that used to be its only reader before
+/// the Task 7 reshape moved the instrument out of the metric registry.
+const CONFIDANT_PEOPLES: [&str; 15] = [
+    "bugbear",
+    "desert-dwarf",
+    "desert-elf",
+    "drow",
+    "gnoll",
+    "goblin",
+    "gully-dwarf",
+    "high-elf",
+    "hill-dwarf",
+    "hobgoblin",
+    "human",
+    "kobold",
+    "sea-elf",
+    "snow-elf",
+    "wood-elf",
+];
+
+/// Render one of [`reportable_fraction_for`]/[`collapse_ratio_for`]/
+/// [`misreport_distance_for`]'s values as a markdown table field for
+/// [`render_confidant_report`] — quantized to the platform-stable canonical
+/// form at this emit boundary (decision 0033), the same as `runner.rs`'s
+/// `render_csv` does at the census's own emit boundary. `Absent` (goblin's
+/// `collapse_ratio` and `misreport_distance`: no felt-state word at all, so
+/// nothing to aggregate) renders as an em dash rather than a blank field, so
+/// a reader cannot mistake a deliberately-undefined value for a zero that
+/// failed to render.
+fn confidant_field(value: &MetricValue) -> String {
+    match value {
+        MetricValue::Number(n) => hornvale_kernel::quantize(*n).to_string(),
+        MetricValue::Absent => "—".to_string(),
+        other => unreachable!(
+            "reportable_fraction_for/collapse_ratio_for/misreport_distance_for only ever \
+             return Number or Absent, got {other:?}"
+        ),
+    }
+}
+
+/// Render The Confidant's report (Task 7 reshape, spec §3.4): fifteen rows,
+/// one per [`CONFIDANT_PEOPLES`], three columns — `reportable_fraction`,
+/// `collapse_ratio`, `misreport_distance` — computed once, at `Seed(42)`,
+/// rather than assembled across a census's ~2000 worlds.
+///
+/// **Why one seed is sufficient, and why this is a window's job rather than
+/// a metric's:** the three families this reads (`reportable_fraction_for`/
+/// `collapse_ratio_for`/`misreport_distance_for`) were registered as lab
+/// metrics for one task of this campaign, and a 1000-seed census run found
+/// all 45 resulting columns CONSTANT across every seed. The reason is
+/// structural, not coincidental: `felt_testimonies`'s branch on whether
+/// `species` *has* a word for a felt state reads `MindVector`, an authored,
+/// species-level constant (Task 4b) — never a world-drawn one. A word's
+/// FORM can vary by seed (the lexicon's phonology draws from the seed);
+/// whether the word EXISTS at all does not, and existence — not form — is
+/// everything these three metrics read. So the derivation is world-
+/// invariant in exactly `windows/sentiment`'s sense ("a pure, world-
+/// invariant derivation … computable before any seed exists"), and belongs
+/// where that crate's module doc puts one: computed once, not re-paid for
+/// on every world of a census that could never see it move, and — the
+/// sharper cost — incapable of detecting drift as a census column, since a
+/// constant column never moves no matter what regresses.
+///
+/// `Seed(42)` only because *some* seed must build the [`FullView`] this
+/// reads `lex(v, species)` from (`lexicon_from_in` still takes a world's
+/// terrain and climate as arguments, even though its felt-state answers do
+/// not vary with them) — any seed reads identically, and this repository's
+/// standing convention for "the one seed a world-invariant reader needs" is
+/// 42 (the three committed seed-42 almanacs, the `first_light` example, the
+/// lens-purity fixture).
+/// type-audit: bare-ok(artifact: return)
+pub fn render_confidant_report() -> Result<String, BuildError> {
+    let view = FullView::build(Seed(42), &SkyPins::default())?;
+    let mut out = String::new();
+    out.push_str(
+        "<!-- GENERATED FILE — do not edit. Regenerate with `hornvale lab confidant`. -->\n\n",
+    );
+    out.push_str("# The Confidant: felt-state reportability by people\n\n");
+    out.push_str(
+        "One row per one of the fifteen `hornvale_species::society_registry()` peoples \
+         (dragons carry a `MindVector` but never settle or speak, so they sit outside this \
+         instrument — Task 4b). Three columns, spec §3.4:\n\n",
+    );
+    out.push_str(
+        "- **`reportable_fraction`** — of the six reachable felt states, the share `species` \
+         has its own word for (`testify` returns `Direct`, never a `Nearest` substitute). \
+         **Capped at 50% by construction**: `MindVector` carries three `[0, 1]` scalars, one \
+         per valence-opposed pair, and a species Steeps at most one pole per pair — never \
+         both — so no people can ever hold more than 3 of the 6 words. That ceiling is an \
+         artifact of Task 4b's exposure mapping, not a finding about impoverished minds.\n",
+    );
+    out.push_str(
+        "- **`collapse_ratio`** — the largest number of the six reachable felt states that \
+         resolve to the SAME reported word (conflation). `Absent` when `species` has no word \
+         for any felt state at all, since there is then nothing to collapse onto.\n",
+    );
+    out.push_str(
+        "- **`misreport_distance`** — the mean circumplex distance between each reachable \
+         felt state and what `species`'s tongue actually reports for it (0 for a state with \
+         its own word). `Absent` for the same reason as `collapse_ratio`.\n\n",
+    );
+    out.push_str(
+        "Computed once, at `Seed(42)` — see this function's own doc for why a single world \
+         suffices; every value here is world-invariant.\n\n",
+    );
+    out.push_str("| people | reportable_fraction | collapse_ratio | misreport_distance |\n");
+    out.push_str("|---|---|---|---|\n");
+    for species in CONFIDANT_PEOPLES {
+        out.push_str(&format!(
+            "| {species} | {} | {} | {} |\n",
+            confidant_field(&reportable_fraction_for(&view, species)),
+            confidant_field(&collapse_ratio_for(&view, species)),
+            confidant_field(&misreport_distance_for(&view, species)),
+        ));
+    }
+    Ok(out)
 }
 
 /// A settlement's own re-derived site concepts: calls worldgen's own
@@ -8005,6 +8363,21 @@ const TOPONYMIC_GATES: [(&str, TerrainGate); 7] = [
 /// the same reason as [`TOPONYMIC_GATES`].
 const FIXED_STEEPED_CONCEPTS: [&str; 4] = ["home", "hearth", "god", "spirit"];
 
+/// The six felt-state concepts (`hornvale_language::felt_state_pack`, The
+/// Confidant's Task 4b) and the `MindVector` scalar that governs each
+/// valence-opposed pair, in `(above-midpoint, below-midpoint)` order —
+/// declared once, here, for the same reason as [`TOPONYMIC_GATES`]: a second
+/// copy of this table in [`steepable_concept_roster`] is exactly the drift
+/// this file exists to stop. Mirrors `windows/worldgen/src/lib.rs`'s Task 4b
+/// block field-for-field; that block's own doc carries the reasoning for why
+/// three scalars times two poles, not the code, which this file must not
+/// share (see the function doc below).
+const FELT_STATE_PAIRS: [(&str, &str); 3] = [
+    ("frustrated", "lost"),
+    ("content", "eager"),
+    ("helpless", "searching"),
+];
+
 /// The concepts an INDEPENDENT re-derivation of `species`' exposure would
 /// classify `Steeped` — duplicating `exposure_from`'s own Steeped rules
 /// (`windows/worldgen/src/lib.rs`) directly from ledger/roster/terrain/
@@ -8022,6 +8395,21 @@ const FIXED_STEEPED_CONCEPTS: [&str; 4] = ["home", "hearth", "god", "spirit"];
 /// module note above `LAB_MARSH_MIN_DRAINAGE` for how they are restated
 /// and why that keeps the second opinion second. `None` if `species` is
 /// not in this world's roster.
+///
+/// **The Confidant (Task 4b):** this function re-derives the six felt-state
+/// concepts independently from `species`' own `MindVector`
+/// (`v.components().psyche`) rather than calling
+/// `hornvale_worldgen::exposure_of_impl`'s felt-state block directly — same
+/// discipline as every other rule here, restated from `MindVector`'s three
+/// `[0, 1]` scalars rather than imported from the function that classifies
+/// them. **What actually keeps the two copies in step** is
+/// `exposure_classification_agrees_with_the_independent_rederivation`
+/// (below, in this module's `tests`), which sweeps several seeds and every
+/// placed people comparing `hornvale_worldgen::exposure_from`'s verdict
+/// against this function's — the question `windows/lab/tests/suite/
+/// calibration.rs`'s `lexicon_is_exposure_sound_for_both_species` doc leaves
+/// open ("the repair, its regen, and the question of what keeps the two
+/// copies in step are a campaign, not a followup").
 fn independently_steeped_concepts(
     v: &FullView,
     species: &str,
@@ -8144,6 +8532,40 @@ fn independently_steeped_concepts(
         }
     }
 
+    // Steeped: the six felt states (`hornvale_language::felt_state_pack`,
+    // The Confidant's Task 4b), re-derived independently from `species`' own
+    // `MindVector` (`v.components().psyche`) — the same lookup pattern
+    // `perception` above already uses, not `hornvale_worldgen::
+    // exposure_of_impl`'s felt-state block. One scalar governs one
+    // valence-opposed pair ([`FELT_STATE_PAIRS`]), by which side of the
+    // midpoint (0.5, the manikin's own neutral reading) `species` falls on;
+    // exactly AT the midpoint earns neither pole — a real reading, not an
+    // omission, matching `exposure_of_impl`'s own gate exactly. Registered
+    // unconditionally at genesis (`hornvale_language::register_concepts`),
+    // so — like the universal stratum above — no `registry.concept(..)
+    // .is_some()` guard is needed here, matching `exposure_of_impl`'s own
+    // ungated inserts.
+    if let Some((_, mind)) = v.components().psyche.iter().find(|(k, _)| k.0 == species) {
+        let (above, below) = FELT_STATE_PAIRS[0];
+        if mind.threat_response > 0.5 {
+            steeped.insert(above.to_string());
+        } else if mind.threat_response < 0.5 {
+            steeped.insert(below.to_string());
+        }
+        let (above, below) = FELT_STATE_PAIRS[1];
+        if mind.deliberation_latency > 0.5 {
+            steeped.insert(above.to_string());
+        } else if mind.deliberation_latency < 0.5 {
+            steeped.insert(below.to_string());
+        }
+        let (above, below) = FELT_STATE_PAIRS[2];
+        if mind.time_horizon > 0.5 {
+            steeped.insert(above.to_string());
+        } else if mind.time_horizon < 0.5 {
+            steeped.insert(below.to_string());
+        }
+    }
+
     // The seven toponymic terrain gates (Task 4), each fired by a settled
     // vertex that actually satisfies it. The tuple table is deliberate: the
     // rules are uniform ("any settled vertex where this predicate holds
@@ -8178,9 +8600,9 @@ fn independently_steeped_concepts(
 ///
 /// Built from exactly the same tables `independently_steeped_concepts`
 /// reads for its unconditional/static rules ([`TOPONYMIC_GATES`],
-/// [`FIXED_STEEPED_CONCEPTS`]) so there is only one copy of each list, plus
-/// the closed catalogs the *dynamic per-vertex* rules draw their concept
-/// names from:
+/// [`FIXED_STEEPED_CONCEPTS`], [`FELT_STATE_PAIRS`]) so there is only one
+/// copy of each list, plus the closed catalogs the *dynamic per-vertex*
+/// rules draw their concept names from:
 ///
 /// - `biome`/`variant`/`staple` are read per settled VERTEX (a species is
 ///   steeped in whichever biome/variant/crop that vertex's geography and
@@ -8229,6 +8651,10 @@ pub fn steepable_concept_roster() -> std::collections::BTreeSet<String> {
     }
     for concept in FIXED_STEEPED_CONCEPTS {
         roster.insert(concept.to_string());
+    }
+    for (above, below) in FELT_STATE_PAIRS {
+        roster.insert(above.to_string());
+        roster.insert(below.to_string());
     }
 
     for biome in hornvale_climate::biome::ALL {
@@ -8869,8 +9295,8 @@ fn confusable_homophony(v: &FullView, species: &str) -> MetricValue {
 }
 
 /// `species`' derived life-history profile (BIO-2 spec §5), read from the
-/// biosphere component's `mass`/`metabolic_class` — a pure `f(Mass,
-/// MetabolicClass)`, no draws. `None` if `species` is off-roster.
+/// biosphere component's `mass`/`thermal_strategy` — a pure `f(Mass,
+/// ThermalStrategy)`, no draws. `None` if `species` is off-roster.
 fn species_life_history(v: &FullView, species: &str) -> Option<hornvale_species::LifeHistory> {
     let bio = v
         .components()
@@ -8880,14 +9306,14 @@ fn species_life_history(v: &FullView, species: &str) -> Option<hornvale_species:
         .map(|(_, b)| b)?;
     Some(hornvale_species::life_history(
         bio.mass,
-        bio.metabolic_class,
+        bio.thermal_strategy,
         bio.schedule,
     ))
 }
 
 /// `species`' maximum lifespan in years (BIO-2 spec §4/§5). `Absent` if
-/// `species` is off-roster or `Ametabolic` (a construct has no mass-derived
-/// lifespan).
+/// `species` is off-roster or ametabolic (`ThermalStrategy::Absent` — a
+/// construct has no mass-derived lifespan).
 fn species_lifespan_metric(v: &FullView, species: &str) -> MetricValue {
     match species_life_history(v, species).and_then(|lh| lh.lifespan) {
         Some(years) => MetricValue::Number(years.get()),
@@ -8896,7 +9322,7 @@ fn species_lifespan_metric(v: &FullView, species: &str) -> MetricValue {
 }
 
 /// `species`' age at first reproduction in years (BIO-2 spec §4/§5). `Absent`
-/// if `species` is off-roster or `Ametabolic`.
+/// if `species` is off-roster or ametabolic (`ThermalStrategy::Absent`).
 fn species_age_at_maturity_metric(v: &FullView, species: &str) -> MetricValue {
     match species_life_history(v, species).and_then(|lh| lh.age_at_maturity) {
         Some(years) => MetricValue::Number(years.get()),
@@ -8905,7 +9331,7 @@ fn species_age_at_maturity_metric(v: &FullView, species: &str) -> MetricValue {
 }
 
 /// `species`' reference-temperature basal metabolic rate in watts (BIO-2
-/// spec §4). Always present — `0.0` for `Ametabolic`, never `None`. `Absent`
+/// spec §4). Always present — `0.0` for an ametabolic species, never `None`. `Absent`
 /// only if `species` is off-roster.
 fn species_basal_metabolic_rate_metric(v: &FullView, species: &str) -> MetricValue {
     match species_life_history(v, species) {
@@ -8916,7 +9342,7 @@ fn species_basal_metabolic_rate_metric(v: &FullView, species: &str) -> MetricVal
 
 /// `species`' reproductive output on the r–K axis, 0 (fast/prolific) … 1
 /// (slow/sparse) (BIO-2 spec §4/CAP-2). `Absent` if `species` is off-roster
-/// or `Ametabolic`.
+/// or ametabolic (`ThermalStrategy::Absent`).
 fn species_reproductive_tempo_metric(v: &FullView, species: &str) -> MetricValue {
     match species_life_history(v, species).and_then(|lh| lh.reproductive_tempo) {
         Some(tempo) => MetricValue::Number(tempo),
@@ -8925,7 +9351,7 @@ fn species_reproductive_tempo_metric(v: &FullView, species: &str) -> MetricValue
 }
 
 /// `species`' generation length in years (BIO-2 spec §5, MEM-7's handle).
-/// `Absent` if `species` is off-roster or `Ametabolic`.
+/// `Absent` if `species` is off-roster or ametabolic (`ThermalStrategy::Absent`).
 fn species_generation_length_metric(v: &FullView, species: &str) -> MetricValue {
     match species_life_history(v, species).and_then(|lh| lh.generation_length) {
         Some(years) => MetricValue::Number(years.get()),
@@ -8935,7 +9361,7 @@ fn species_generation_length_metric(v: &FullView, species: &str) -> MetricValue 
 
 /// `species`' overall life-history speed, 0 (fast) … 1 (slow) — an absolute,
 /// roster-independent position defined for anything with mass (BIO-2 spec
-/// §5), so this is present even for `Ametabolic`. `Absent` only if `species`
+/// §5), so this is present even for an ametabolic species. `Absent` only if `species`
 /// is off-roster.
 fn species_pace_of_life_metric(v: &FullView, species: &str) -> MetricValue {
     match species_life_history(v, species) {
@@ -9804,6 +10230,30 @@ mod tests {
         // bake's raid-ending day-of-year stamps; both read committed history
         // records only, so no sweep cost beyond the bake itself.
         assert_eq!(registry().len(), 226);
+        //
+        // THE CONFIDANT (Task 7) registered +45 here — `reportable-
+        // fraction-<species>`, `collapse-ratio-<species>`,
+        // `misreport-distance-<species>`, one triple per one of the fifteen
+        // `society_registry()` peoples — and then UNREGISTERED them again in
+        // the same campaign's reshape (Task 7 reshape): a census run showed
+        // all 45 columns constant across every one of 1000 seeds, because
+        // `felt_testimonies`' branch on whether a culture *has* a felt-state
+        // word is exposure-determined (`MindVector`, a species-level
+        // authored constant), never world-determined. A metric registry
+        // entry that is byte-identical on every world of a `"metrics":
+        // "all"` study is dead weight in the census (paid on ~2000 worlds
+        // for one world's worth of information) and, worse, cannot detect
+        // drift (a constant column never moves). The instrument survives —
+        // `reportable_fraction_for`/`collapse_ratio_for`/
+        // `misreport_distance_for` are unchanged and mutation-proven, still
+        // reading Task 6's `testify` over `lex(v, species)` — but its home
+        // is now [`render_confidant_report`], a world-invariant artifact
+        // (one [`FullView::build`] at `Seed(42)`, fifteen rows) following
+        // `windows/sentiment`'s precedent: a world-invariant quantity is a
+        // window's job, not a per-world census column. See this task's
+        // report for the full account and the proof the moved values are
+        // unchanged.
+        assert_eq!(registry().len(), 224);
     }
 
     // --- The Ford (spec §10): the estimators behind the three channel
@@ -12744,8 +13194,8 @@ mod tests {
         // (goblin + kobold both registered) so the campaign's headline
         // cross-species claim (ectotherm kobold vs endotherm goblinoids) is
         // queryable. Both species are always on the default roster and
-        // neither is `Ametabolic` (goblin is Endotherm, kobold is
-        // Ectotherm), so these read `Number` at seed 42, but `Absent` stays
+        // neither is ametabolic (goblin is Endothermic, kobold is
+        // Ectothermic), so these read `Number` at seed 42, but `Absent` stays
         // a legal kind for a roster where a species is missing or
         // ametabolic.
         let names: std::collections::BTreeSet<&str> =
@@ -13019,7 +13469,7 @@ mod tests {
             .ledger
             .find("is-settlement")
             .filter_map(|f| f.day)
-            .map(|d| d.day())
+            .map(|d| d.as_std_days())
             .collect();
         assert!(
             days.len() > 1,
@@ -13111,7 +13561,7 @@ mod tests {
                 std::collections::BTreeMap::new();
             for f in v.world().ledger.find("occ-people") {
                 if let (Value::Text(t), Some(d)) = (&f.object, f.day) {
-                    per.entry(t.clone()).or_default().push(d.day());
+                    per.entry(t.clone()).or_default().push(d.as_std_days());
                 }
             }
             for (species, mut days) in per {
@@ -13149,7 +13599,7 @@ mod tests {
             // corroborated rather than load-bearing alone.
             .filter(|f| matches!(&f.object, Value::Text(t) if t == "bugbear"))
             .filter_map(|f| f.day)
-            .map(|d| d.day())
+            .map(|d| d.as_std_days())
             .collect();
         assert!(
             days.len() > 1,
@@ -13217,7 +13667,7 @@ mod tests {
             .ledger
             .find("occ-tech")
             .filter_map(|f| f.day)
-            .map(|d| d.day())
+            .map(|d| d.as_std_days())
             .collect();
         assert!(
             !unfiltered_days.is_empty(),
@@ -13232,7 +13682,7 @@ mod tests {
             .find("occ-tech")
             .filter(|f| matches!(&f.object, Value::Text(t) if t == "iron"))
             .filter_map(|f| f.day)
-            .map(|d| d.day())
+            .map(|d| d.as_std_days())
             .collect();
         assert!(
             days.len() > 1,
@@ -14558,5 +15008,297 @@ mod tests {
                  worldgen does — the duplicate is stale again"
             );
         }
+    }
+
+    /// **The Confidant, the campaign `calibration.rs`'s
+    /// `lexicon_is_exposure_sound_for_both_species` doc calls for**: "the
+    /// repair, its regen, and the question of what keeps the two copies in
+    /// step are a campaign, not a followup." This is that third thing —
+    /// F13 recurred three times (Task 4's toponymic gates, The Toponym's
+    /// variants, The Watershed's staples) purely because nothing checked
+    /// `independently_steeped_concepts` against `hornvale_worldgen::
+    /// exposure_from` directly; every prior repair only checked one axis
+    /// (the staple sweep above checks staples, the toponymic test checks
+    /// toponyms) and left the general case to the census.
+    ///
+    /// Sweeps several seeds and every placed people, and for every concept
+    /// `exposure_from` classifies (its full `BTreeMap`, not a curated
+    /// subset) asserts the two agree on the one bit `exposure_sound` cares
+    /// about — is this concept `Steeped`. Concepts the lab's independent
+    /// reading deliberately never reproduces (the `KnowsOf`-only rules —
+    /// biome-of-neighbor, sea/coast/lake proximity, the intercardinal
+    /// bearings; see `independently_steeped_concepts`'s own doc) still pass:
+    /// `exposure_from` classifies those `KnowsOf`, never `Steeped`, so
+    /// "does the lab's set contain it" (`false`) agrees with "is it
+    /// `Steeped`" (`false`) without needing to know the rule that produced
+    /// either reading.
+    ///
+    /// Failure names the seed, species and concept that disagree — the loud
+    /// version of the silent drift F13 recurred as three times, caught here
+    /// instead of on the next census's `exposure-sound-*` column.
+    ///
+    /// claim: invariant(forall-seed) — over [1,5,7,26,42,83,100]
+    #[test]
+    fn exposure_classification_agrees_with_the_independent_rederivation() {
+        let mut checked = 0usize;
+        for seed in [1u64, 5, 7, 26, 42, 83, 100] {
+            let Ok(view) = FullView::build(Seed(seed), &SkyPins::default()) else {
+                continue;
+            };
+            let (world, terrain, climate) = (view.world(), view.terrain(), view.climate());
+            for species in all_daughters(&view) {
+                let Ok(authoritative) =
+                    hornvale_worldgen::exposure_from(world, species, terrain, climate)
+                else {
+                    continue;
+                };
+                let Some(independent) = independently_steeped_concepts(&view, species) else {
+                    continue;
+                };
+                for (concept, class) in &authoritative {
+                    let worldgen_steeped =
+                        matches!(class, hornvale_language::ExposureClass::Steeped);
+                    let lab_steeped = independent.contains(concept);
+                    assert_eq!(
+                        worldgen_steeped, lab_steeped,
+                        "seed {seed}, species {species}, concept {concept}: \
+                         hornvale_worldgen::exposure_from says Steeped={worldgen_steeped}, \
+                         independently_steeped_concepts says {lab_steeped} — the two \
+                         exposure derivations have diverged"
+                    );
+                    checked += 1;
+                }
+            }
+        }
+        assert!(
+            checked > 0,
+            "no (seed, species, concept) triples were checked — the sweep is vacuous"
+        );
+    }
+
+    /// Extract a metric's `f64`, panicking on anything else — a test
+    /// convenience mirroring `extract_from`'s own "fail loudly, don't guess"
+    /// posture.
+    fn number_of(value: &MetricValue) -> f64 {
+        match value {
+            MetricValue::Number(n) => *n,
+            other => panic!("expected Number, got {other:?}"),
+        }
+    }
+
+    /// **Task 7 reshape.** The census found all 45 of these columns constant
+    /// across 1000 seeds, so they were unregistered — this is the check that
+    /// proves unregistration is COMPLETE, the exact condition
+    /// `assert_eq!(registry().len(), 224)` above states in aggregate but
+    /// cannot localize by name. Replaces the pre-reshape
+    /// `confidant_metrics_are_registered_for_all_fifteen_peoples`, which
+    /// asserted the opposite.
+    #[test]
+    fn confidant_metrics_are_not_registered_in_the_lab_registry() {
+        let reg = registry();
+        for species in CONFIDANT_PEOPLES {
+            for prefix in [
+                "reportable-fraction",
+                "collapse-ratio",
+                "misreport-distance",
+            ] {
+                let name = format!("{prefix}-{species}");
+                assert!(
+                    !reg.iter().any(|m| m.name == name),
+                    "{name} is still registered as a lab metric — Task 7's reshape moved \
+                     this instrument to render_confidant_report precisely because every one \
+                     of its 45 columns read constant across a 1000-seed census, so it must \
+                     not re-enter the registry a `\"metrics\": \"all\"` study would pick up"
+                );
+            }
+        }
+    }
+
+    /// The artifact [`render_confidant_report`] now carries what the
+    /// registry used to: one row per one of the fifteen
+    /// [`CONFIDANT_PEOPLES`], with all three columns present, and no second
+    /// derivation — every field is built with the exact same
+    /// [`confidant_field`] call the renderer itself makes over the exact same
+    /// helper functions the pinned constraint tests below exercise directly.
+    /// goblin's `Absent` columns (no felt-state word at all) are covered by
+    /// this same loop, not a special case: [`confidant_field`] renders them
+    /// as the em-dash marker, and this test confirms the report contains
+    /// that exact rendering rather than a blank field or a manufactured
+    /// zero.
+    #[test]
+    fn render_confidant_report_carries_every_peoples_three_columns() {
+        let report = render_confidant_report().unwrap();
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        for species in CONFIDANT_PEOPLES {
+            let rf = confidant_field(&reportable_fraction_for(&view, species));
+            let cr = confidant_field(&collapse_ratio_for(&view, species));
+            let md = confidant_field(&misreport_distance_for(&view, species));
+            let row = format!("| {species} | {rf} | {cr} | {md} |");
+            assert!(
+                report.contains(&row),
+                "render_confidant_report is missing the expected row {row:?} in:\n{report}"
+            );
+        }
+    }
+
+    /// Same standing as `windows/sentiment`'s `catalog_is_deterministic`:
+    /// this artifact is a pure function of `Seed(42)` and the authored
+    /// catalogs `lex` reads through, so two calls must be byte-identical —
+    /// the same guarantee the drift check over `docs/generated-paths.txt`
+    /// relies on to make a stale committed copy detectable at all.
+    #[test]
+    fn render_confidant_report_is_deterministic() {
+        assert_eq!(
+            render_confidant_report().unwrap(),
+            render_confidant_report().unwrap()
+        );
+    }
+
+    /// **Task 7 brief constraint 1: the 50% ceiling is an artifact of Task
+    /// 4b's exposure rule, not a finding, and must be reported as such.**
+    /// `reportable_fraction` can never exceed 3/6 for any of the fifteen.
+    /// Also the non-degenerate case constraint 3 demands: goblin's exact
+    /// `0.0` is real (its `MindVector` sits at the manikin on every axis,
+    /// Task 4b), not a bug and not `Absent`; and the roster's distribution
+    /// spans three distinct values (0, 1/6, 1/3), never collapsing to one
+    /// number shared by all fifteen.
+    #[test]
+    fn reportable_fraction_never_exceeds_the_construction_ceiling_at_seed_42() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let mut distinct_sixths = std::collections::BTreeSet::new();
+        for species in CONFIDANT_PEOPLES {
+            let value = number_of(&reportable_fraction_for(&view, species));
+            assert!(
+                value <= 0.5 + 1.0e-12,
+                "{species}'s reportable_fraction {value} exceeds the 3-of-6 construction \
+                 ceiling — Task 4b's exposure rule Steeps at most one pole per pair"
+            );
+            // f64 has no total order for a BTreeSet key; every value this
+            // metric can produce is an exact multiple of 1/6 by construction
+            // (a plain count over six states), so round-tripping through
+            // sixths is exact, not an approximation.
+            distinct_sixths.insert((value * 6.0).round() as i64);
+        }
+        assert!(
+            distinct_sixths.len() > 1,
+            "reportable_fraction reads the same for all fifteen peoples — a uniform value \
+             across the whole roster is a finding (probably a bug), not a pass"
+        );
+        assert_eq!(
+            number_of(&reportable_fraction_for(&view, "goblin")),
+            0.0,
+            "goblin's MindVector sits exactly at the manikin on every axis (Task 4b): a \
+             real zero, not a rounding artifact"
+        );
+        assert!(
+            (number_of(&reportable_fraction_for(&view, "snow-elf")) - 1.0 / 6.0).abs() < 1.0e-12
+        );
+        assert!(
+            (number_of(&reportable_fraction_for(&view, "hobgoblin")) - 1.0 / 3.0).abs() < 1.0e-12
+        );
+    }
+
+    /// **Constraint 3's non-degenerate case for `collapse_ratio`.** `goblin`
+    /// has no word for anything, so the metric is undefined for it —
+    /// `Absent`, not a manufactured zero. `snow-elf` (one known word,
+    /// `helpless`) fully collapses: all six reachable states report through
+    /// it, so the max group size hits the metric's own ceiling of 6.
+    #[test]
+    fn collapse_ratio_is_absent_for_the_wordless_and_full_for_the_single_worded() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        assert_eq!(collapse_ratio_for(&view, "goblin"), MetricValue::Absent);
+        assert_eq!(
+            number_of(&collapse_ratio_for(&view, "snow-elf")),
+            6.0,
+            "snow-elf holds exactly one felt-state word (helpless); every other reachable \
+             state must report through it"
+        );
+    }
+
+    /// **`collapse_ratio` is not a disguised `reportable_fraction`.** Two
+    /// peoples holding the SAME NUMBER of felt-state words (0.5 == 3/6, the
+    /// modal reading eleven of fifteen share) can still collapse their other
+    /// three states onto their known words very differently, because the max
+    /// group size this metric reads depends on WHICH words a people has, not
+    /// merely how many: bugbear's three
+    /// (`eager`/`frustrated`/`searching`) sit at three distinct circumplex
+    /// points and split the remaining three states 2-and-1; drow's three
+    /// (`content`/`frustrated`/`helpless`) sit at only TWO distinct points —
+    /// `frustrated` and `helpless` coincide on the circumplex (Task 4's own
+    /// pinned `frustrated_and_helpless_coincide_on_the_circumplex`) — so one
+    /// of drow's "three" words carries double duty and the split is 4-and-1.
+    /// This is the mutation-provable seam: deriving `collapse_ratio` from
+    /// `6 / known_word_count` instead of the actual per-state mapping would
+    /// pass every OTHER test in this file yet fail this one, because it
+    /// would force bugbear and drow to the same reading.
+    #[test]
+    fn collapse_ratio_varies_independently_of_reportable_fraction_at_seed_42() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        assert_eq!(
+            number_of(&reportable_fraction_for(&view, "bugbear")),
+            number_of(&reportable_fraction_for(&view, "drow")),
+            "this test's whole point needs equal reportable_fraction going in"
+        );
+        let bugbear = number_of(&collapse_ratio_for(&view, "bugbear"));
+        let drow = number_of(&collapse_ratio_for(&view, "drow"));
+        assert_ne!(
+            bugbear, drow,
+            "equal reportable_fraction (0.5) produced equal collapse_ratio ({bugbear}) — \
+             the metric would carry no information reportable_fraction doesn't already"
+        );
+        assert_eq!(bugbear, 2.0);
+        assert_eq!(drow, 4.0);
+    }
+
+    /// **Constraint 3's non-degenerate case for `misreport_distance`.**
+    /// `Absent` exactly when there is no word to report through (goblin); a
+    /// real, non-zero mean elsewhere, and NOT the same number for every
+    /// non-goblin people — bugbear's three known words sit closer, on
+    /// average, to the states they stand in for than drow's do (the same
+    /// `frustrated`/`helpless` coincidence `collapse_ratio`'s sibling test
+    /// documents changes drow's effective coverage, not just its count).
+    #[test]
+    fn misreport_distance_is_absent_for_goblin_and_varies_elsewhere_at_seed_42() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        assert_eq!(misreport_distance_for(&view, "goblin"), MetricValue::Absent);
+        let bugbear = number_of(&misreport_distance_for(&view, "bugbear"));
+        let drow = number_of(&misreport_distance_for(&view, "drow"));
+        assert!(
+            bugbear > 0.0 && drow > 0.0,
+            "both peoples hold words but still misreport at least one reachable state"
+        );
+        assert_ne!(bugbear, drow);
+        assert!((bugbear - 2.0 / 3.0).abs() < 1.0e-12);
+        assert!((drow - 1.0).abs() < 1.0e-12);
+    }
+
+    /// **Confirms, by direct measurement, the redundant-build finding this
+    /// task's report names and then guards the fix against regressing.**
+    /// Before memoisation, this test measured **45** (`LEX_BUILD_CALLS`
+    /// incremented once per `reportable_fraction_for`/`collapse_ratio_for`/
+    /// `misreport_distance_for` call across the fifteen
+    /// `society_registry()` peoples — 3 families x 15 species, each paying
+    /// its own uncached `lexicon_from_in`). After adding [`FullView`]'s
+    /// `lexicon_cache`, it is **15**: one build per species, shared by all
+    /// three families through [`lex`]'s memoised body. A future change that
+    /// reintroduces a second uncached path (a new family bypassing `lex`, or
+    /// a cache keyed wrong) would move this number back toward 45 and this
+    /// test would catch it, the same way `windows/lab/CLAUDE.md`'s Rill
+    /// section describes for `TerrainView::band_transects`.
+    #[test]
+    fn felt_testimony_metrics_share_one_lexicon_build_per_species() {
+        LEX_BUILD_CALLS.with(|c| c.set(0));
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        for species in CONFIDANT_PEOPLES {
+            let _ = reportable_fraction_for(&view, species);
+            let _ = collapse_ratio_for(&view, species);
+            let _ = misreport_distance_for(&view, species);
+        }
+        let calls = LEX_BUILD_CALLS.with(|c| c.get());
+        assert_eq!(
+            calls, 15,
+            "expected one lexicon build per species (15), shared across all three metric \
+             families by FullView's per-view cache — {calls} means the memoisation regressed"
+        );
     }
 }

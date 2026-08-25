@@ -950,7 +950,7 @@ fn exposure_rows_masked(
     // property of the roster rather than of the world (its `world` argument is
     // unused today), so resolving it per settlement would cost ~26,000
     // registry assemblies to learn five values. `None` is a real answer, not
-    // a lookup failure: an `Ametabolic` kind has no mass-derived life history,
+    // a lookup failure: an ametabolic kind has no mass-derived life history,
     // and `memory_half_life` has an authored fallback for exactly that.
     let mut generations: BTreeMap<&'static str, Option<hornvale_kernel::Years>> = BTreeMap::new();
 
@@ -1001,7 +1001,7 @@ fn exposure_rows_masked(
         // people knew before it existed.
         //
         // `present_frame` (not a hand-written
-        // `WorldTime::new(ledger_day_of_bake_year(present_year(&world)))`
+        // `WorldTime::from_std_days(ledger_day_of_bake_year(present_year(&world)))`
         // here): that hand-written composition used to live at this exact
         // line and reported `tools/seam-guard`'s `ledger_day_of_bake_year`
         // seam UNGUARDED — the call was reachable only from this file's
@@ -1049,7 +1049,7 @@ fn exposure_rows_masked(
             //
             // `None` FROM THIS LOOKUP HAS TWO CAUSES AND ONLY ONE IS LEGAL
             // (fix round 1). `generation_length_of` returns `None` both for an
-            // `Ametabolic` kind — no mass-derived life history, the case
+            // ametabolic kind — no mass-derived life history, the case
             // `memory_half_life`'s authored fallback exists for — and for a
             // species absent from the roster, which is a genuine lookup
             // failure. An `.ok()` on the constructor conflated the two and
@@ -1060,7 +1060,7 @@ fn exposure_rows_masked(
                 assert!(
                     wc.biosphere.get_by_label(people).is_some(),
                     "{people} founds settlements in this world yet carries no biosphere row \
-                     — a roster lookup failure, NOT the Ametabolic case the knownness \
+                     — a roster lookup failure, NOT the ametabolic case the knownness \
                      fallback is authored for"
                 );
                 generation_length_of(&world, people).map(|y| {

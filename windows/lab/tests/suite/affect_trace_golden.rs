@@ -32,6 +32,19 @@
 //! fixture stays a base-generated witness, not one authored by the code it
 //! is meant to check.
 
+//! **Regenerated again by The Escapement** (decision 0186), which retyped
+//! `WorldTime` from fractional `f64` days to an exact `i64` tick count.
+//! Adjudicated rather than accepted: **5 of the fixture's 411 lines moved, all
+//! of them in the arousal digits alone** — not one label, object or valence
+//! changed, so no creature felt a different thing on any tick. Max delta
+//! 2.5e-7, against a predicted ceiling of ~1.5e-6 (`FATIGUE_RISE` is 0.3/day
+//! and an instant now moves by at most half a tick, 0.432 s). The path is the
+//! same long one the section below describes, entered one step earlier: the
+//! walk band's emitted `drank`/`rested`/`eaten` fact days land on the tick
+//! lattice, `last_drank`/`last_rested`/`last_ate` read them back, and the
+//! drive integration carries the sub-second shift into arousal. Spec §2.1
+//! ratified exactly this ("committed artifacts move") before the flip.
+//!
 //! ## Why a change to ONE species' niche drifts EVERY creature's trace
 //!
 //! Recorded because it is not obvious and it has now cost one investigation

@@ -536,7 +536,7 @@ for four campaigns.
 
 **The coverage table and the non-void rule.** That discovery is why the roster
 now ships with two instruments beside it. A committed table names every declared
-state of this model — each `MetabolicClass`, `SocialForm`, `ActivityCycle`,
+state of this model — each `ThermalStrategy`, `SocialForm`, `ActivityCycle`,
 `StatusBasis`, and `LifeSchedule` variant, plus the trait *combinations* that
 matter — and records
 which kinds witness it, so a state cannot silently lose its witness or gain an
