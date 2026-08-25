@@ -7392,7 +7392,7 @@ fn bake_history_from(
         .collect();
     let seating_rungs: Vec<hornvale_kernel::VertexMap<hornvale_kernel::Band>> =
         seatings.into_iter().map(|s| s.rung).collect();
-    // The Granary T2: the coarse biome class of every cell, built once here
+    // The Granary T2: the coarse biome class of every vertex, built once here
     // (the composition root's own `biome_class` mapping over the climate's
     // biome map) and handed to the bake so each community's harvest curve can
     // key its amplitude on the biome it actually stands in at open.

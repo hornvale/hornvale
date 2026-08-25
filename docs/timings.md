@@ -2866,3 +2866,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-25T17:04:51Z | census | 897.790 | 29856.631 | 285.353 | 33.57 | 0 | b1fc9f390 |  | lefford | 40 |
 | 2026-08-25T17:50:26Z | quick | 11.933 | 11.443 | 0.280 | 0.98 | 0 | 13695c4ae | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-25T17:56:36Z | quick | 11.171 | 10.906 | 0.655 | 1.03 | 0 | 13695c4ae | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-25T18:14:16Z | quick | 20.560 | 26.555 | 16.493 | 2.09 | 0 | 3c04f44c2 | campaign/the-granary | MacBookPro | 10 |

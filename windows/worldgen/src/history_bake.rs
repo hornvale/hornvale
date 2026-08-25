@@ -988,7 +988,7 @@ struct Community {
     ///
     /// Live bake state only: like `rung` and `disposition` it is a pure
     /// function of committed inputs (`site` → latitude through the globe,
-    /// cell → biome class through the composition root's map), so committing
+    /// vertex → biome class through the composition root's map), so committing
     /// it would add a save-format surface for a value that can be re-derived
     /// exactly. No draws feed it; determinism is untouched.
     /// Consumed by [`Bake::raid_phases`], which samples it once per epoch
@@ -1158,7 +1158,7 @@ struct Bake<'a> {
     /// harvest curve (The Granary T2) — `geo.coord(site).latitude`, the same
     /// path every other latitude reader uses.
     geo: &'a Geosphere,
-    /// The coarse biome class of every cell ([`crate::biome_class`] applied to
+    /// The coarse biome class of every vertex ([`crate::biome_class`] applied to
     /// the climate's biome map), built once by the composition root and
     /// borrowed here. The other half of a community's curve key at open.
     biomes: &'a VertexMap<hornvale_culture::BiomeClass>,
@@ -2349,13 +2349,13 @@ impl<'a> Bake<'a> {
         let rung = self.rung_for(people_idx, site);
         // The Granary T2: this community's seasonal production curve, keyed on
         // the place it actually stands. Both inputs are genuinely reachable
-        // here — the globe gives the cell's latitude directly, and the
-        // composition root hands in the coarse biome class of every cell (its
+        // here — the globe gives the vertex's latitude directly, and the
+        // composition root hands in the coarse biome class of every vertex (its
         // own `biome_class` mapping, total by construction) — so the curve is
         // the real key, not a nearest-match approximation.
         let coord = self.geo.coord(site);
         let latitude =
-            LatDeg::new(coord.latitude).expect("a geosphere cell's latitude lies in [-90, 90]");
+            LatDeg::new(coord.latitude).expect("a geosphere vertex's latitude lies in [-90, 90]");
         let curve = Curve::new(latitude, *self.biomes.get(site));
         self.communities.push(Community {
             record: record_idx,
@@ -4152,15 +4152,15 @@ mod tests {
 
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
-        // The raider sits on poor ground next to a rich cell: the prize is
+        // The raider sits on poor ground next to a rich vertex: the prize is
         // strictly better land (`Spoil::Evict`), which is what stamps both
         // sides' crossing day on their records.
-        let target_cell = *geo
+        let target_vertex = *geo
             .neighbors(Vertex(0))
             .iter()
             .next()
-            .expect("cell 0 has a neighbour");
-        let caps = caps_from_fn(&geo, |c| if c == target_cell { RICH } else { POOR });
+            .expect("vertex 0 has a neighbour");
+        let caps = caps_from_fn(&geo, |c| if c == target_vertex { RICH } else { POOR });
         let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
         let refugia = VertexMap::from_fn(&geo, |_| false);
         let era = EraClimate {
@@ -4197,7 +4197,7 @@ mod tests {
             tally: BakeCensus::default(),
         };
 
-        // Raider on poor cell 0 (population 30, no stores); target on the
+        // Raider on poor vertex 0 (population 30, no stores); target on the
         // rich neighbour (population 20). Dominance reads
         // `30 > (20 + STORE_WEIGHT × s) × defensibility × RAID_MARGIN`, so
         // with unit-conductance defensibility ≈ DEF_MIN = 0.75 the raid only
@@ -4217,10 +4217,10 @@ mod tests {
         );
         let t_idx = bake.open(
             people,
-            target_cell,
+            target_vertex,
             100.0,
             TARGET_POP,
-            Founding::Genesis(target_cell),
+            Founding::Genesis(target_vertex),
             None,
             0.0,
         );
@@ -4241,7 +4241,7 @@ mod tests {
         // Replay the exact store walk to find where the dominance threshold
         // is first crossed (the raid fires at the FIRST such phase, since the
         // raider is asked every phase in ascending order).
-        let d = defensibility_for_test(&graphs[0], Vertex(0), target_cell);
+        let d = defensibility_for_test(&graphs[0], Vertex(0), target_vertex);
         let threshold = (RAIDER_POP / (RAID_MARGIN * d) - TARGET_POP) / STORE_WEIGHT;
         assert!(
             threshold > 0.0 && threshold < OPENING_HOARD,
@@ -4266,7 +4266,7 @@ mod tests {
 
         // The raid fired, and it fired AT the depleted phase: the loser's
         // record ends `Fled` at the crossing timestamp, and the raider's new
-        // seat on the taken cell is founded at that same moment — not at the
+        // seat on the taken vertex is founded at that same moment — not at the
         // epoch boundary, where the target's hoard still out-muscles him.
         let stamp = 100.0 + expected_phase as f64 / PHASES_PER_YEAR as f64;
         let loser = bake
@@ -4274,7 +4274,7 @@ mod tests {
             .iter()
             .find(|r| r.core.cause == Some(CauseOfEnd::Fled))
             .expect("the depleted-phase raid must fire");
-        assert_eq!(loser.core.site, target_cell);
+        assert_eq!(loser.core.site, target_vertex);
         assert_eq!(loser.core.ended, Some(stamp));
         match loser.ended_by {
             Ended::By(raider) => {
@@ -4283,7 +4283,7 @@ mod tests {
                     .iter()
                     .find(|r| r.founded_from == Founding::From(raider))
                     .expect("the raider seated itself on the prize");
-                assert_eq!(seat.core.site, target_cell);
+                assert_eq!(seat.core.site, target_vertex);
                 assert_eq!(seat.core.founded, stamp, "founding stamps the crossing day");
             }
             Ended::Nature => panic!("the fled record must name its raider"),
@@ -4556,7 +4556,7 @@ mod tests {
     /// The fixture globe every hand-built [`Bake`]'s curve reads. Held at
     /// `'static` so the fixture helpers can borrow it — and so a hand-built
     /// bake's `geo` field can point at it even where the test owns its own
-    /// local globe for graphs/capacity (the mesh is deterministic, so the cell
+    /// local globe for graphs/capacity (the mesh is deterministic, so the vertex
     /// latitudes are identical; the bake reads only coordinates off this
     /// reference, never adjacency).
     fn fixture_geo() -> &'static Geosphere {
@@ -4564,7 +4564,7 @@ mod tests {
         G.get_or_init(|| Geosphere::new(1))
     }
 
-    /// The default biome-class map a hand-built [`Bake`] is given: every cell
+    /// The default biome-class map a hand-built [`Bake`] is given: every vertex
     /// at [`hornvale_culture::BiomeClass::Grassland`], so every community's
     /// curve carries the grassland amplitude and the pre-campaign tests that
     /// never read a curve see nothing change.
@@ -4579,7 +4579,7 @@ mod tests {
 
     /// The northernmost and southernmost vertices of the fixture globe — the pair
     /// the hemisphere-phase and amplitude tests open their communities on.
-    fn extreme_latitude_cells() -> (Vertex, Vertex) {
+    fn extreme_latitude_vertices() -> (Vertex, Vertex) {
         let geo = Geosphere::new(1);
         geo.vertices().fold((Vertex(0), Vertex(0)), |(n, s), c| {
             let lat = geo.coord(c).latitude;
@@ -4602,9 +4602,9 @@ mod tests {
         let refugia = VertexMap::from_fn(fixture_geo(), |_| false);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
 
-        let (north_cell, south_cell) = extreme_latitude_cells();
-        let north_lat = fixture_geo().coord(north_cell).latitude;
-        let south_lat = fixture_geo().coord(south_cell).latitude;
+        let (north_vertex, south_vertex) = extreme_latitude_vertices();
+        let north_lat = fixture_geo().coord(north_vertex).latitude;
+        let south_lat = fixture_geo().coord(south_vertex).latitude;
         assert!(
             north_lat > 0.0 && south_lat < 0.0,
             "the fixture globe must straddle the equator ({north_lat}, {south_lat})"
@@ -4612,21 +4612,21 @@ mod tests {
 
         let north_idx = bake.open(
             KindId("goblin"),
-            north_cell,
+            north_vertex,
             0.0,
             10.0,
-            Founding::Genesis(north_cell),
+            Founding::Genesis(north_vertex),
             None,
             0.0,
         );
         // A second, independent community opened directly at the southern site
-        // — a distinct cell, so the one-alive-per-site index takes both.
+        // — a distinct vertex, so the one-alive-per-site index takes both.
         let south_idx = bake.open(
             KindId("goblin"),
-            south_cell,
+            south_vertex,
             0.0,
             10.0,
-            Founding::Genesis(south_cell),
+            Founding::Genesis(south_vertex),
             None,
             0.0,
         );
@@ -4648,11 +4648,11 @@ mod tests {
         let capacity = caps_from_fn(fixture_geo(), |_| 100.0);
         let river_prox = VertexMap::from_fn(fixture_geo(), |_| 0.0);
         let refugia = VertexMap::from_fn(fixture_geo(), |_| false);
-        let (north_cell, south_cell) = extreme_latitude_cells();
+        let (north_vertex, south_vertex) = extreme_latitude_vertices();
         let biomes = VertexMap::from_fn(fixture_geo(), |c| {
-            if c == north_cell {
+            if c == north_vertex {
                 hornvale_culture::BiomeClass::Forest
-            } else if c == south_cell {
+            } else if c == south_vertex {
                 hornvale_culture::BiomeClass::Arid
             } else {
                 hornvale_culture::BiomeClass::Grassland
@@ -4685,19 +4685,19 @@ mod tests {
 
         let north_idx = bake.open(
             KindId("goblin"),
-            north_cell,
+            north_vertex,
             0.0,
             10.0,
-            Founding::Genesis(north_cell),
+            Founding::Genesis(north_vertex),
             None,
             0.0,
         );
         let south_idx = bake.open(
             KindId("goblin"),
-            south_cell,
+            south_vertex,
             0.0,
             10.0,
-            Founding::Genesis(south_cell),
+            Founding::Genesis(south_vertex),
             None,
             0.0,
         );
