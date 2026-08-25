@@ -339,3 +339,25 @@ Confidence Gradient re-score if a bet moved, registry flips
 predecessor campaign a task wrote "final review should triage" into the ledger,
 nothing carried the list forward, and the item shipped looking exactly like one
 that had been consciously accepted.
+
+---
+
+## Status: COMPLETE (2026-08-25)
+
+All nine tasks landed, plus a Task 4b added mid-flight (a culture must be able
+to *hold* a feeling-word before the instrument can measure who lacks one), and
+a Task 7 reshape that moved the instrument out of the census.
+
+Task 9's close delivered: six decision records (0256–0261, from the reserved
+block 0256–0265), the chronicle `book/src/chronicle/the-confidant.md` wired
+into `SUMMARY.md`, the retrospective `docs/retrospectives/the-confidant.md`,
+a freshness sweep, a Confidence Gradient re-score, and the registry flips.
+
+Registry flips made: `PLAY-affect-becomes-testimony`, `PLAY-host-is-the-voice`
+and `PLAY-told-channel-already-fits` → `shipped`; `PLAY-host-is-a-narrator`
+kept `elaborated` with the partial landing recorded (one of its three named
+channels routed, two still unrouted); `KNOW-needs-oracle` annotated —
+`needs` itself is unchanged, the campaign built a fallible sibling beside it.
+New backlog row `TOOL-duplicated-rulebook-audit`. The Hand's F-H1, F-H7, F-H8
+and F-H11 are discharged in that campaign's own register; F-H10 stays open and
+is carried forward.

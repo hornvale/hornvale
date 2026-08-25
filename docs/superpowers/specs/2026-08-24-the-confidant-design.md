@@ -274,3 +274,40 @@ Brainstormed 2026-08-24 with Nathan under campaign autopilot. Ledger:
 `PLAY-host-speech-budget`, `KNOW-needs-oracle`, `NARR-delivery`,
 `NARR-delivery-study`. Predecessor: The Hand (decisions 0226-0230). Sibling
 program: The Cant (`windows/sentiment`, evaluative beliefs, layer 1 of 3).
+
+---
+
+## 11. Outcome (2026-08-25)
+
+**Shipped.** The verb is `ask`. Felt states are registered concepts on an
+appended cohort; a culture's word for one is derived from `MindVector`; the
+cognitive gap is the retained residue of arbitration's discarded ranks; and the
+per-people distribution is published as `docs/audits/the-confidant-report.md`.
+
+§6's four decisions became five records — 0256, 0257, 0258, 0259 — plus 0261
+for the deliberately duplicated exposure rulebook, which the campaign found by
+a red test rather than by looking.
+
+**§3.4 did not survive as written, and the correction is 0260.** The three
+metrics were built as forty-five census columns and measured **constant across
+1000 worlds** — correctly seed-invariant, since they branch on whether a
+culture *has* a concept and exposure derives from authored attributes. A
+constant column cannot detect drift, which is the census's whole job, so they
+were reshaped into a window that computes them once. §3.4's requirement — each
+reported per people, the fifteen comparable — is met; its assumed home was
+wrong.
+
+**Two things §5 got right and one it missed.** §5.1's circularity constraint
+held: the deficiency distribution is derived, never authored. §5.3's tongue
+question was answered by taking the second branch — the host's spoken word is
+display-only and only the reported *concept* enters knowledge — after the first
+branch ("scope to Common-speaking hosts") turned out to scope to the empty set,
+Common having no speakers. What §5.2 missed is that its own instruction was
+about a *class*: it named the universe rule, that grep was run and found two
+sites, and nobody asked the same question about the **exposure** rule this
+campaign actually changed.
+
+**§9's scope additions:** four of the five bundled minors landed;
+`synthetic.rs`'s inline manikin copy was deferred a second time (a parallel
+campaign held the file) and is carried in the retrospective. F-H8 is
+discharged — a possessed host's inner state now has a player-facing route.
