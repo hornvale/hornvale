@@ -2777,3 +2777,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-25T13:23:30Z | sluice:clients | 428.984 | 5363.667 | 87.317 | 12.71 | 0 | ad8163865 |  | lefford | 40 |
 | 2026-08-25T13:40:56Z | rebaseline | 139.547 | 238.886 | 12.953 | 1.80 | 0 | 16ef8ec4a | campaign/the-escapement | ambrose | 12 |
 | 2026-08-25T13:41:55Z | quick | 31.574 | 48.087 | 29.248 | 2.45 | 0 | 16ef8ec4a | campaign/the-escapement | ambrose | 12 |
+| 2026-08-25T14:34:00Z | census | 895.464 | 29296.878 | 304.697 | 33.06 | 0 | 7d4732b89 |  | lefford | 40 |
