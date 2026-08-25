@@ -103,6 +103,24 @@ merchant's "I don't know why he killed her" is not a construction to be
 special-cased; it is the honest rendering of a level-3 model with a hole in it,
 at the granularity of one predicate.
 
+### 2.1 The epistemic layer already exists, and it already speaks facts
+
+Found while planning, and it is the strongest evidence for the foundation
+above. `domains/language/src/account.rs` is **the epistemic account** (C4,
+LANG-36): the four-filter stack a culture's knowledge of ground truth passes
+through — lexicon, then knowledge, then ontology, then valence. It operates on
+**facts**. It treats `"is-a"` as one predicate among many. And it yields
+dispositions like `Substituted { truth: "planet", theirs: "earth" }` when a
+culture's own world-carving substitutes a different category.
+
+Two consequences:
+
+- The machinery the merchant needs — a culture holding a distorted or absent
+  version of a true fact — is prototyped, in this crate, today.
+- `Frame::Classify` is a **second, weaker encoding** of a relation the same
+  crate already handles as data. Making `ClauseSpec` carry a `predicate` is not
+  speculative generality; it is making `clause.rs` agree with `account.rs`.
+
 ## 3. The three commitments
 
 These exist to answer one question — *how do we know we are not building bad
