@@ -12,6 +12,7 @@
 #![allow(clippy::module_name_repetitions)]
 
 use crate::common_vocab::CommonVocabulary;
+use hornvale_kernel::world::IS_A;
 
 /// Grammatical number of the subject.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -160,8 +161,16 @@ pub struct Construction {
 }
 
 /// The Common construction inventory, keyed by **predicate id**. One entry
-/// today (`"is-a"`, the classification); every future predicate adds an
-/// entry, never a second code path.
+/// today ([`hornvale_kernel::world::IS_A`], the classification); every future
+/// predicate adds an entry, never a second code path.
+///
+/// **The key is the kernel's constant, not a local literal**, and that is
+/// load-bearing rather than tidy. `Frame::Classify` made this lookup
+/// statically total: an unhandled variant was a compile error. A string key
+/// moves that check to runtime ([`realize_common`] panics on a miss), so the
+/// only thing left holding the two ends together is that the producer and
+/// this table name the same constant. A kernel epoch bump of `IS_A` must
+/// break the render, not recompile cleanly and panic on every gallery page.
 /// type-audit: bare-ok(identifier-text)
 pub fn common_constructions() -> &'static [Construction] {
     const CLASSIFY: &[Part] = &[
@@ -175,7 +184,7 @@ pub fn common_constructions() -> &'static [Construction] {
         Part::Literal("."),
     ];
     &[Construction {
-        predicate: "is-a",
+        predicate: IS_A,
         parts: CLASSIFY,
     }]
 }
@@ -494,7 +503,9 @@ pub fn parse_common_with_tail(
     };
     Ok((
         ClauseSpec {
-            predicate: "is-a".to_string(),
+            // The kernel's constant, matching the construction this walk
+            // inverted — never a literal, so the two ends cannot drift.
+            predicate: IS_A.to_string(),
             subject,
             object: Argument::Concept(complement_concept),
             number,
@@ -657,7 +668,11 @@ mod tests {
     fn classify_has_one_declared_construction() {
         let inv = common_constructions();
         assert_eq!(inv.len(), 1);
-        assert_eq!(inv[0].predicate, "is-a");
+        // Against the KERNEL's constant, not the literal it happens to
+        // equal: the table's key and every producer's key are the same
+        // `const` by construction, which is what replaced the static
+        // totality `Frame::Classify` used to give this lookup.
+        assert_eq!(inv[0].predicate, hornvale_kernel::world::IS_A);
         assert_eq!(
             inv[0].parts,
             &[

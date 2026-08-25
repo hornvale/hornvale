@@ -1970,11 +1970,21 @@ impl std::fmt::Display for LineError {
 impl std::error::Error for LineError {}
 
 /// `cardinal`'s inverse (a private table, not shared with
-/// `domains/language::clause`'s — see this module's `indefinite_article`
-/// for the established precedent of duplicating a small presentation-layer
-/// table across the aggregation seam rather than widening the domain's
-/// public surface for a book-only need): word (`"two"`) or digits
-/// (`"13"`) to the count.
+/// `domains/language::clause`'s): word (`"two"`) or digits (`"13"`) to the
+/// count.
+///
+/// **It survives a duplication its own precedent did not.** The doc here
+/// used to cite this module's `indefinite_article` as the established case
+/// for keeping a small presentation-layer table on the book side of the
+/// aggregation seam. The Interlinear deleted that function, and the seam
+/// with it: article selection was never a book concern, it was English
+/// leaking into a window because `ClauseSpec` could not carry structure.
+/// This table stays for a different and narrower reason — it runs
+/// BACKWARD, and the direction is the whole argument. [`fact_for`] must
+/// recognize text the program did not generate (it backs
+/// `windows/vessel`'s spoken-to-heard seam), and recognition is a later
+/// campaign's subject. When Common learns to recognize its own role
+/// constructions, this goes with `fact_for`.
 fn uncardinal(word: &str) -> Option<u64> {
     const WORDS: [&str; 13] = [
         "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
@@ -2435,10 +2445,11 @@ pub enum ReckoningLine {
 /// recovered word against, to hand back the same `'static` [`LexemeId`]
 /// these were minted from (a `LexemeId` wraps a `&'static str`, so a
 /// runtime-parsed word can never be boxed into one directly) — duplicated
-/// from `domains/language::schemas`'s own closed table, the same
-/// aggregation-seam precedent [`indefinite_article`]/[`uncardinal`] set for
-/// small closed tables a book-only need doesn't warrant widening the
-/// domain's public surface for.
+/// from `domains/language::schemas`'s own closed table, the same precedent
+/// [`uncardinal`] sets for a small closed table a book-only need doesn't
+/// warrant widening the domain's public surface for. (This cited
+/// `indefinite_article` alongside it until The Interlinear deleted that
+/// function — see [`uncardinal`] for why the two were never the same case.)
 const AGENTIVE_LEXEMES: &[LexemeId] = &[
     LexemeId("walks"),
     LexemeId("strides"),
