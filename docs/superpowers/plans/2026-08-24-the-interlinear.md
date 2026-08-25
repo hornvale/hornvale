@@ -839,10 +839,25 @@ world.
 - Modify: `cli/tests/suite/sentence_corpus.rs`
 - Create: `docs/audits/sentence-coverage.md`
 
-- [ ] **Step 1: Write the resolver test.** For each corpus entry, a demand is
-      **covered** if this campaign implements it (`classify` only), **not yet**
-      otherwise. Assert the count of covered entries equals a frozen constant,
-      and that constant is small.
+- [ ] **Step 1: Write the resolver test, WITH A POSITIVE CONTROL.** For each
+      corpus entry, a demand is **covered** if this campaign implements it
+      (`classify` only), **not yet** otherwise.
+
+      **No merchant entry demands `classify`** — every line of that dialogue
+      needs something this campaign does not build — so the merchant corpus
+      scores **zero**, honestly. That is the expected result and also a trap: a
+      measurement whose only possible answer is zero cannot tell a working
+      resolver from a broken one.
+
+      So assert **two** things, and the second is the one that matters:
+
+      1. merchant coverage is exactly 0 of 12;
+      2. the resolver reports **covered** for a synthetic entry demanding only
+         `classify`, constructed inline in the test — the positive control.
+
+      Without (2) this test passes if `resolve` returns "not yet"
+      unconditionally, which is the same defect class as a guard that has never
+      gone red.
 - [ ] **Step 2: Write the report** to `docs/audits/sentence-coverage.md`: total
       entries, covered, not-yet, and the per-demand tally.
 
