@@ -621,7 +621,16 @@ checks AS (
   -- The Underworld resync, 0063/0079: 0.50869314782 -> 0.507408222281.
   -- The Burr resync (ROOT_EPOCH v4, census committed as 635d116d):
   -- 0.507408222281 -> 0.5081441944999995.
-         collision_mean, 0.5081441944999995, abs(collision_mean - 0.5081441944999995) < 1e-6 FROM agg
+  -- The Escapement's re-pin ON THE MERGE PRODUCT (2026-08-25), discharging
+  -- the pending re-pin above: chamber census against the merge of main into
+  -- campaign/the-escapement (request req-7d4732b89de9, goldens on
+  -- census/7d4732b89de9-20260825T143401Z). Mover is 3bc4fd871's
+  -- Calendar::local_day day-fraction fix (NOT the WorldTime representation
+  -- flip); see docs/audits/the-escapement-census-attribution.md. Against a
+  -- newer main it moves the same three census table entries the campaign's
+  -- earlier census moved. zero/nonzero/absent unmoved at 0/1000/0.
+  -- 0.5081441944999995 -> 0.5081323953399994. Tolerance unchanged at 1e-6.
+         collision_mean, 0.5081323953399994, abs(collision_mean - 0.5081323953399994) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 771 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 766 -> 767.
@@ -903,7 +912,14 @@ checks AS (
   -- The Underworld resync, 0063/0079: 0.7039082305 -> 0.70681747181.
   -- The Burr resync (ROOT_EPOCH v4, census committed as 635d116d):
   -- 0.70681747181 -> 0.7135540799000004.
-         transparency_mean, 0.7135540799000004, abs(transparency_mean - 0.7135540799000004) < 1e-6 FROM agg
+  -- The Escapement's re-pin ON THE MERGE PRODUCT (2026-08-25), discharging
+  -- the pending re-pin above: same chamber census, same mover and same
+  -- disposition as the name-collision-rate pin above (request
+  -- req-7d4732b89de9). Only seed 267 moves in this metric; present/absent
+  -- unmoved at 1000/0 and the min/max spread pins below are unmoved.
+  -- 0.7135540799000004 -> 0.7135625544800003. Still emphatically not 1.0.
+  -- Tolerance unchanged at 1e-6.
+         transparency_mean, 0.7135625544800003, abs(transparency_mean - 0.7135625544800003) < 1e-6 FROM agg
   UNION ALL
   -- The min and max are the SPREAD pins the deferred note asked for. A floor
   -- of 0.154 against a ceiling of 1.0 is what proves the 0.816 mean describes

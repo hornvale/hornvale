@@ -730,7 +730,7 @@
           "Text": "generated"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "scenario"
       },
       {
@@ -740,7 +740,7 @@
           "Text": "yellow dwarf (G)"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "astronomy"
       },
       {
@@ -750,7 +750,7 @@
           "Number": 0.8798799803519574
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "astronomy"
       },
       {
@@ -760,7 +760,7 @@
           "Number": 368.05357093462703
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "astronomy"
       },
       {
@@ -770,7 +770,7 @@
           "Number": 0.9593056670606165
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "astronomy"
       },
       {
@@ -780,7 +780,7 @@
           "Number": 2.0
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "astronomy"
       },
       {
@@ -790,7 +790,7 @@
           "Number": 0.04116143676389656
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "astronomy"
       },
       {
@@ -800,7 +800,7 @@
           "Number": 0.12690199868208984
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "astronomy"
       },
       {
@@ -810,7 +810,7 @@
           "Number": 15.993805342676167
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "astronomy"
       },
       {
@@ -820,7 +820,7 @@
           "Number": 32.55499951908771
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "astronomy"
       },
       {
@@ -830,7 +830,7 @@
           "Text": "a smoldering red star at 68 light-years"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "astronomy"
       },
       {
@@ -840,7 +840,7 @@
           "Text": "a warm yellow star at 4 light-years"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "astronomy"
       },
       {
@@ -850,7 +850,7 @@
           "Text": "a deep orange star at 39 light-years"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "astronomy"
       },
       {
@@ -860,7 +860,7 @@
           "Text": "a dim red star at 58 light-years"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "astronomy"
       },
       {
@@ -870,7 +870,7 @@
           "Text": "a pale white star at 67 light-years"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "astronomy"
       },
       {
@@ -880,7 +880,7 @@
           "Number": 16.0
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "terrain"
       },
       {
@@ -890,7 +890,7 @@
           "Number": 0.7324741261472368
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "terrain"
       },
       {
@@ -900,7 +900,7 @@
           "Number": 409.0054089516639
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "terrain"
       },
       {
@@ -910,7 +910,7 @@
           "Number": 4328.497184910964
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "terrain"
       },
       {
@@ -920,7 +920,7 @@
           "Text": "Xnebsvobned"
         },
         "place": 2,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -930,7 +930,7 @@
           "Flag": true
         },
         "place": 2,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -940,7 +940,7 @@
           "Text": "temperate-rainforest"
         },
         "place": 2,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -950,7 +950,7 @@
           "Flag": true
         },
         "place": 2,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -960,7 +960,7 @@
           "Number": 359.0
         },
         "place": 2,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -970,7 +970,7 @@
           "Number": 4109.0
         },
         "place": 2,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -980,7 +980,7 @@
           "Number": -23.502371327110584
         },
         "place": 2,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -990,7 +990,7 @@
           "Number": 146.0873629471159
         },
         "place": 2,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1000,7 +1000,7 @@
           "Text": "Fnadnetned"
         },
         "place": 3,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1010,7 +1010,7 @@
           "Flag": true
         },
         "place": 3,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1020,7 +1020,7 @@
           "Text": "temperate-rainforest"
         },
         "place": 3,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1030,7 +1030,7 @@
           "Flag": true
         },
         "place": 3,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1040,7 +1040,7 @@
           "Number": 458.0
         },
         "place": 3,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1050,7 +1050,7 @@
           "Number": 8269.0
         },
         "place": 3,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1060,7 +1060,7 @@
           "Number": 22.21586468804764
         },
         "place": 3,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1070,7 +1070,7 @@
           "Number": -10.214355301392398
         },
         "place": 3,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1080,7 +1080,7 @@
           "Text": "Xngatnebvnedned"
         },
         "place": 4,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1090,7 +1090,7 @@
           "Flag": true
         },
         "place": 4,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1100,7 +1100,7 @@
           "Text": "temperate-rainforest"
         },
         "place": 4,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1110,7 +1110,7 @@
           "Flag": true
         },
         "place": 4,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1120,7 +1120,7 @@
           "Number": 504.0
         },
         "place": 4,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1130,7 +1130,7 @@
           "Number": 242.0
         },
         "place": 4,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1140,7 +1140,7 @@
           "Number": -23.553615682934776
         },
         "place": 4,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1150,7 +1150,7 @@
           "Number": 84.84757676561699
         },
         "place": 4,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1160,7 +1160,7 @@
           "Text": "Raxaxoxokrrorat"
         },
         "place": 5,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1170,7 +1170,7 @@
           "Flag": true
         },
         "place": 5,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1180,7 +1180,7 @@
           "Text": "temperate-rainforest"
         },
         "place": 5,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1190,7 +1190,7 @@
           "Flag": true
         },
         "place": 5,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1200,7 +1200,7 @@
           "Number": 425.0
         },
         "place": 5,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1210,7 +1210,7 @@
           "Number": 4331.0
         },
         "place": 5,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1220,7 +1220,7 @@
           "Number": -20.1599769278465
         },
         "place": 5,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1230,7 +1230,7 @@
           "Number": 169.86862275327974
         },
         "place": 5,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1240,7 +1240,7 @@
           "Text": "Xoxoxoq"
         },
         "place": 6,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1250,7 +1250,7 @@
           "Flag": true
         },
         "place": 6,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1260,7 +1260,7 @@
           "Text": "temperate-rainforest"
         },
         "place": 6,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1270,7 +1270,7 @@
           "Flag": true
         },
         "place": 6,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1280,7 +1280,7 @@
           "Number": 371.0
         },
         "place": 6,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1290,7 +1290,7 @@
           "Number": 3240.0
         },
         "place": 6,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1300,7 +1300,7 @@
           "Number": 17.02699696412
         },
         "place": 6,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1310,7 +1310,7 @@
           "Number": 66.10676274603495
         },
         "place": 6,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1320,7 +1320,7 @@
           "Text": "Nobnebnadnob"
         },
         "place": 7,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1330,7 +1330,7 @@
           "Flag": true
         },
         "place": 7,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1340,7 +1340,7 @@
           "Text": "temperate-forest"
         },
         "place": 7,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1350,7 +1350,7 @@
           "Flag": true
         },
         "place": 7,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1360,7 +1360,7 @@
           "Number": 403.0
         },
         "place": 7,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1370,7 +1370,7 @@
           "Number": 2886.0
         },
         "place": 7,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1380,7 +1380,7 @@
           "Number": 21.24567236215713
         },
         "place": 7,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1390,7 +1390,7 @@
           "Number": 146.12318482446048
         },
         "place": 7,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1400,7 +1400,7 @@
           "Text": "Raxarorrat"
         },
         "place": 8,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1410,7 +1410,7 @@
           "Flag": true
         },
         "place": 8,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1420,7 +1420,7 @@
           "Text": "temperate-rainforest"
         },
         "place": 8,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1430,7 +1430,7 @@
           "Flag": true
         },
         "place": 8,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1440,7 +1440,7 @@
           "Number": 461.0
         },
         "place": 8,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1450,7 +1450,7 @@
           "Number": 4499.0
         },
         "place": 8,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1460,7 +1460,7 @@
           "Number": 8.164366757257802
         },
         "place": 8,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1470,7 +1470,7 @@
           "Number": 158.45432471028363
         },
         "place": 8,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1480,7 +1480,7 @@
           "Text": "Xoraxaratrratrra"
         },
         "place": 9,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1490,7 +1490,7 @@
           "Flag": true
         },
         "place": 9,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1500,7 +1500,7 @@
           "Text": "temperate-rainforest"
         },
         "place": 9,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1510,7 +1510,7 @@
           "Flag": true
         },
         "place": 9,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1520,7 +1520,7 @@
           "Number": 436.0
         },
         "place": 9,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1530,7 +1530,7 @@
           "Number": 3058.0
         },
         "place": 9,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1540,7 +1540,7 @@
           "Number": 9.55999480637511
         },
         "place": 9,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1550,7 +1550,7 @@
           "Number": 104.14797593663339
         },
         "place": 9,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1560,7 +1560,7 @@
           "Text": "Xorokroxa"
         },
         "place": 10,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1570,7 +1570,7 @@
           "Flag": true
         },
         "place": 10,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1580,7 +1580,7 @@
           "Text": "temperate-rainforest"
         },
         "place": 10,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1590,7 +1590,7 @@
           "Flag": true
         },
         "place": 10,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1600,7 +1600,7 @@
           "Number": 375.0
         },
         "place": 10,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1610,7 +1610,7 @@
           "Number": 8092.0
         },
         "place": 10,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1620,7 +1620,7 @@
           "Number": -11.250000000000002
         },
         "place": 10,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1630,7 +1630,7 @@
           "Number": -31.71747441146101
         },
         "place": 10,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1640,7 +1640,7 @@
           "Text": "Sfebxnodngotnednadnob"
         },
         "place": 11,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1650,7 +1650,7 @@
           "Flag": true
         },
         "place": 11,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1660,7 +1660,7 @@
           "Text": "temperate-forest"
         },
         "place": 11,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1670,7 +1670,7 @@
           "Flag": true
         },
         "place": 11,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1680,7 +1680,7 @@
           "Number": 357.0
         },
         "place": 11,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1690,7 +1690,7 @@
           "Number": 7271.0
         },
         "place": 11,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1700,7 +1700,7 @@
           "Number": 17.462420029540223
         },
         "place": 11,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1710,7 +1710,7 @@
           "Number": -93.6936584812188
         },
         "place": 11,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1720,7 +1720,7 @@
           "Text": "Raxaxoxaxoq"
         },
         "place": 12,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1730,7 +1730,7 @@
           "Flag": true
         },
         "place": 12,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1740,7 +1740,7 @@
           "Text": "temperate-rainforest"
         },
         "place": 12,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1750,7 +1750,7 @@
           "Flag": true
         },
         "place": 12,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1760,7 +1760,7 @@
           "Number": 308.0
         },
         "place": 12,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1770,7 +1770,7 @@
           "Number": 4473.0
         },
         "place": 12,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1780,7 +1780,7 @@
           "Number": -7.0122776569309355
         },
         "place": 12,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1790,7 +1790,7 @@
           "Number": 164.54956291367418
         },
         "place": 12,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1800,7 +1800,7 @@
           "Text": "Vnatzhxoksvotned"
         },
         "place": 13,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1810,7 +1810,7 @@
           "Flag": true
         },
         "place": 13,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1820,7 +1820,7 @@
           "Text": "temperate-forest"
         },
         "place": 13,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1830,7 +1830,7 @@
           "Flag": true
         },
         "place": 13,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1840,7 +1840,7 @@
           "Number": 485.0
         },
         "place": 13,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1850,7 +1850,7 @@
           "Number": 1690.0
         },
         "place": 13,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1860,7 +1860,7 @@
           "Number": 20.050501136718882
         },
         "place": 13,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1870,7 +1870,7 @@
           "Number": -28.12783237205863
         },
         "place": 13,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1880,7 +1880,7 @@
           "Text": "Xoraxaratro"
         },
         "place": 14,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1890,7 +1890,7 @@
           "Flag": true
         },
         "place": 14,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1900,7 +1900,7 @@
           "Text": "temperate-rainforest"
         },
         "place": 14,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1910,7 +1910,7 @@
           "Flag": true
         },
         "place": 14,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1920,7 +1920,7 @@
           "Number": 346.0
         },
         "place": 14,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1930,7 +1930,7 @@
           "Number": 2635.0
         },
         "place": 14,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1940,7 +1940,7 @@
           "Number": 19.579571911276428
         },
         "place": 14,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1950,7 +1950,7 @@
           "Number": 119.35539173220852
         },
         "place": 14,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1960,7 +1960,7 @@
           "Text": "Raxaxaxorragrorog"
         },
         "place": 15,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1970,7 +1970,7 @@
           "Flag": true
         },
         "place": 15,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1980,7 +1980,7 @@
           "Text": "tropical-rainforest"
         },
         "place": 15,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -1990,7 +1990,7 @@
           "Flag": true
         },
         "place": 15,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2000,7 +2000,7 @@
           "Number": 420.0
         },
         "place": 15,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2010,7 +2010,7 @@
           "Number": 3023.0
         },
         "place": 15,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2020,7 +2020,7 @@
           "Number": 1.9136048438561617
         },
         "place": 15,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2030,7 +2030,7 @@
           "Number": 93.16789001916773
         },
         "place": 15,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2040,7 +2040,7 @@
           "Text": "Xngokzhvabvngetnednotngok"
         },
         "place": 16,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2050,7 +2050,7 @@
           "Flag": true
         },
         "place": 16,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2060,7 +2060,7 @@
           "Text": "tropical-rainforest"
         },
         "place": 16,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2070,7 +2070,7 @@
           "Flag": true
         },
         "place": 16,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2080,7 +2080,7 @@
           "Number": 379.0
         },
         "place": 16,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2090,7 +2090,7 @@
           "Number": 7377.0
         },
         "place": 16,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2100,7 +2100,7 @@
           "Number": -13.338988558851433
         },
         "place": 16,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2110,7 +2110,7 @@
           "Number": -68.9275773304838
         },
         "place": 16,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2120,7 +2120,7 @@
           "Text": "Xaxoraxaxotxora"
         },
         "place": 17,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2130,7 +2130,7 @@
           "Flag": true
         },
         "place": 17,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2140,7 +2140,7 @@
           "Text": "tropical-rainforest"
         },
         "place": 17,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2150,7 +2150,7 @@
           "Flag": true
         },
         "place": 17,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2160,7 +2160,7 @@
           "Number": 295.0
         },
         "place": 17,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2170,7 +2170,7 @@
           "Number": 3183.0
         },
         "place": 17,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2180,7 +2180,7 @@
           "Number": 3.7874354571590123
         },
         "place": 17,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2190,7 +2190,7 @@
           "Number": 69.49895238864995
         },
         "place": 17,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2200,7 +2200,7 @@
           "Text": "Xoraxaxoxaxa"
         },
         "place": 18,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2210,7 +2210,7 @@
           "Flag": true
         },
         "place": 18,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2220,7 +2220,7 @@
           "Text": "temperate-rainforest"
         },
         "place": 18,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2230,7 +2230,7 @@
           "Flag": true
         },
         "place": 18,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2240,7 +2240,7 @@
           "Number": 439.0
         },
         "place": 18,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2250,7 +2250,7 @@
           "Number": 3545.0
         },
         "place": 18,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2260,7 +2260,7 @@
           "Number": -13.378668995958813
         },
         "place": 18,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2270,7 +2270,7 @@
           "Number": 71.03699015878657
         },
         "place": 18,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2280,7 +2280,7 @@
           "Text": "Zvebnobnednadnob"
         },
         "place": 19,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2290,7 +2290,7 @@
           "Flag": true
         },
         "place": 19,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2300,7 +2300,7 @@
           "Text": "temperate-forest"
         },
         "place": 19,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2310,7 +2310,7 @@
           "Flag": true
         },
         "place": 19,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2320,7 +2320,7 @@
           "Number": 391.0
         },
         "place": 19,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2330,7 +2330,7 @@
           "Number": 2603.0
         },
         "place": 19,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2340,7 +2340,7 @@
           "Number": 24.384971326213584
         },
         "place": 19,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2350,7 +2350,7 @@
           "Number": 132.8226604366843
         },
         "place": 19,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2360,7 +2360,7 @@
           "Text": "Zxakngaknadnob"
         },
         "place": 20,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2370,7 +2370,7 @@
           "Flag": true
         },
         "place": 20,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2380,7 +2380,7 @@
           "Text": "temperate-forest"
         },
         "place": 20,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2390,7 +2390,7 @@
           "Flag": true
         },
         "place": 20,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2400,7 +2400,7 @@
           "Number": 452.0
         },
         "place": 20,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2410,7 +2410,7 @@
           "Number": 9921.0
         },
         "place": 20,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2420,7 +2420,7 @@
           "Number": 15.09754062262958
         },
         "place": 20,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2430,7 +2430,7 @@
           "Number": 1.9768345310273459
         },
         "place": 20,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2440,7 +2440,7 @@
           "Text": "Fnotxnebzhvoknednotngok"
         },
         "place": 21,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2450,7 +2450,7 @@
           "Flag": true
         },
         "place": 21,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2460,7 +2460,7 @@
           "Text": "tropical-rainforest"
         },
         "place": 21,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2470,7 +2470,7 @@
           "Flag": true
         },
         "place": 21,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2480,7 +2480,7 @@
           "Number": 453.0
         },
         "place": 21,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2490,7 +2490,7 @@
           "Number": 4187.0
         },
         "place": 21,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2500,7 +2500,7 @@
           "Number": -10.34574283220534
         },
         "place": 21,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2510,7 +2510,7 @@
           "Number": 139.71023518209074
         },
         "place": 21,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2520,7 +2520,7 @@
           "Text": "Zxedzhfebxnodned"
         },
         "place": 22,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2530,7 +2530,7 @@
           "Flag": true
         },
         "place": 22,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2540,7 +2540,7 @@
           "Text": "tropical-rainforest"
         },
         "place": 22,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2550,7 +2550,7 @@
           "Flag": true
         },
         "place": 22,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2560,7 +2560,7 @@
           "Number": 441.0
         },
         "place": 22,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2570,7 +2570,7 @@
           "Number": 9946.0
         },
         "place": 22,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2580,7 +2580,7 @@
           "Number": 11.395722542196214
         },
         "place": 22,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2590,7 +2590,7 @@
           "Number": 15.603584876639715
         },
         "place": 22,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2600,7 +2600,7 @@
           "Text": "Zhxotxngaknotngokned"
         },
         "place": 23,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2610,7 +2610,7 @@
           "Flag": true
         },
         "place": 23,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2620,7 +2620,7 @@
           "Text": "tropical-rainforest"
         },
         "place": 23,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2630,7 +2630,7 @@
           "Flag": true
         },
         "place": 23,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2640,7 +2640,7 @@
           "Number": 427.0
         },
         "place": 23,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2650,7 +2650,7 @@
           "Number": 3362.0
         },
         "place": 23,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2660,7 +2660,7 @@
           "Number": -1.8857132715533125
         },
         "place": 23,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2670,7 +2670,7 @@
           "Number": 119.12018577617177
         },
         "place": 23,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2680,7 +2680,7 @@
           "Text": "Vngobngobxnotnednotngok"
         },
         "place": 24,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2690,7 +2690,7 @@
           "Flag": true
         },
         "place": 24,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2700,7 +2700,7 @@
           "Text": "tropical-rainforest"
         },
         "place": 24,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2710,7 +2710,7 @@
           "Flag": true
         },
         "place": 24,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2720,7 +2720,7 @@
           "Number": 429.0
         },
         "place": 24,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2730,7 +2730,7 @@
           "Number": 3680.0
         },
         "place": 24,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2740,7 +2740,7 @@
           "Number": -11.515966704019254
         },
         "place": 24,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2750,7 +2750,7 @@
           "Number": 85.19615917865326
         },
         "place": 24,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2760,7 +2760,7 @@
           "Text": "Sfobsxatnotngok"
         },
         "place": 25,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2770,7 +2770,7 @@
           "Flag": true
         },
         "place": 25,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2780,7 +2780,7 @@
           "Text": "tropical-rainforest"
         },
         "place": 25,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2790,7 +2790,7 @@
           "Flag": true
         },
         "place": 25,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2800,7 +2800,7 @@
           "Number": 409.0
         },
         "place": 25,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2810,7 +2810,7 @@
           "Number": 10206.0
         },
         "place": 25,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2820,7 +2820,7 @@
           "Number": 10.223082137956482
         },
         "place": 25,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2830,7 +2830,7 @@
           "Number": 29.671857548541112
         },
         "place": 25,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2840,7 +2840,7 @@
           "Text": "Raxaxatro"
         },
         "place": 26,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2850,7 +2850,7 @@
           "Flag": true
         },
         "place": 26,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2860,7 +2860,7 @@
           "Text": "temperate-rainforest"
         },
         "place": 26,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2870,7 +2870,7 @@
           "Flag": true
         },
         "place": 26,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2880,7 +2880,7 @@
           "Number": 379.0
         },
         "place": 26,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2890,7 +2890,7 @@
           "Number": 7444.0
         },
         "place": 26,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2900,7 +2900,7 @@
           "Number": -5.7366010446711115
         },
         "place": 26,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2910,7 +2910,7 @@
           "Number": -95.55847723680819
         },
         "place": 26,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2920,7 +2920,7 @@
           "Text": "Netngobnotngok"
         },
         "place": 27,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2930,7 +2930,7 @@
           "Flag": true
         },
         "place": 27,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2940,7 +2940,7 @@
           "Text": "tropical-rainforest"
         },
         "place": 27,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2950,7 +2950,7 @@
           "Flag": true
         },
         "place": 27,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2960,7 +2960,7 @@
           "Number": 377.0
         },
         "place": 27,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2970,7 +2970,7 @@
           "Number": 1054.0
         },
         "place": 27,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2980,7 +2980,7 @@
           "Number": 4.621501613475574
         },
         "place": 27,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -2990,7 +2990,7 @@
           "Number": 134.66070327825318
         },
         "place": 27,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3000,7 +3000,7 @@
           "Text": "Nadnednaknotngokned"
         },
         "place": 28,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3010,7 +3010,7 @@
           "Flag": true
         },
         "place": 28,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3020,7 +3020,7 @@
           "Text": "tropical-rainforest"
         },
         "place": 28,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3030,7 +3030,7 @@
           "Flag": true
         },
         "place": 28,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3040,7 +3040,7 @@
           "Number": 281.0
         },
         "place": 28,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3050,7 +3050,7 @@
           "Number": 8067.0
         },
         "place": 28,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3060,7 +3060,7 @@
           "Number": -2.3255043189194233
         },
         "place": 28,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3070,7 +3070,7 @@
           "Number": -51.85338020058564
         },
         "place": 28,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3080,7 +3080,7 @@
           "Text": "Rraraxaxokrraqrrot"
         },
         "place": 29,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3090,7 +3090,7 @@
           "Flag": true
         },
         "place": 29,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3100,7 +3100,7 @@
           "Text": "temperate-forest"
         },
         "place": 29,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3110,7 +3110,7 @@
           "Flag": true
         },
         "place": 29,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3120,7 +3120,7 @@
           "Number": 278.0
         },
         "place": 29,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3130,7 +3130,7 @@
           "Number": 4775.0
         },
         "place": 29,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3140,7 +3140,7 @@
           "Number": 22.983739852540882
         },
         "place": 29,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3150,7 +3150,7 @@
           "Number": 22.565779948880138
         },
         "place": 29,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3160,7 +3160,7 @@
           "Text": "Ngedzfadned"
         },
         "place": 30,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3170,7 +3170,7 @@
           "Flag": true
         },
         "place": 30,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3180,7 +3180,7 @@
           "Text": "tropical-rainforest"
         },
         "place": 30,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3190,7 +3190,7 @@
           "Flag": true
         },
         "place": 30,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3200,7 +3200,7 @@
           "Number": 374.0
         },
         "place": 30,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3210,7 +3210,7 @@
           "Number": 10105.0
         },
         "place": 30,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3220,7 +3220,7 @@
           "Number": 8.105581853946937
         },
         "place": 30,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3230,7 +3230,7 @@
           "Number": 43.61212601672358
         },
         "place": 30,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3240,7 +3240,7 @@
           "Text": "Xaxoxokrrag"
         },
         "place": 31,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3250,7 +3250,7 @@
           "Flag": true
         },
         "place": 31,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3260,7 +3260,7 @@
           "Text": "tropical-rainforest"
         },
         "place": 31,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3270,7 +3270,7 @@
           "Flag": true
         },
         "place": 31,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3280,7 +3280,7 @@
           "Number": 278.0
         },
         "place": 31,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3290,7 +3290,7 @@
           "Number": 8420.0
         },
         "place": 31,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3300,7 +3300,7 @@
           "Number": 6.993729562561996
         },
         "place": 31,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3310,7 +3310,7 @@
           "Number": -23.588263756365375
         },
         "place": 31,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3320,7 +3320,7 @@
           "Text": "Raxarraxo"
         },
         "place": 32,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3330,7 +3330,7 @@
           "Flag": true
         },
         "place": 32,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3340,7 +3340,7 @@
           "Text": "temperate-forest"
         },
         "place": 32,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3350,7 +3350,7 @@
           "Flag": true
         },
         "place": 32,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3360,7 +3360,7 @@
           "Number": 337.0
         },
         "place": 32,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3370,7 +3370,7 @@
           "Number": 4875.0
         },
         "place": 32,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3380,7 +3380,7 @@
           "Number": 23.162710160154766
         },
         "place": 32,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3390,7 +3390,7 @@
           "Number": 38.28455072139304
         },
         "place": 32,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3400,7 +3400,7 @@
           "Text": "Vnedxngedzhvedned"
         },
         "place": 33,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3410,7 +3410,7 @@
           "Flag": true
         },
         "place": 33,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3420,7 +3420,7 @@
           "Text": "tropical-rainforest"
         },
         "place": 33,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3430,7 +3430,7 @@
           "Flag": true
         },
         "place": 33,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3440,7 +3440,7 @@
           "Number": 308.0
         },
         "place": 33,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3450,7 +3450,7 @@
           "Number": 4450.0
         },
         "place": 33,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3460,7 +3460,7 @@
           "Number": -3.435592921728038
         },
         "place": 33,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3470,7 +3470,7 @@
           "Number": 150.30102997643996
         },
         "place": 33,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3480,7 +3480,7 @@
           "Text": "Raxarrarotxo"
         },
         "place": 34,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3490,7 +3490,7 @@
           "Flag": true
         },
         "place": 34,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3500,7 +3500,7 @@
           "Text": "temperate-forest"
         },
         "place": 34,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3510,7 +3510,7 @@
           "Flag": true
         },
         "place": 34,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3520,7 +3520,7 @@
           "Number": 400.0
         },
         "place": 34,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3530,7 +3530,7 @@
           "Number": 6540.0
         },
         "place": 34,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3540,7 +3540,7 @@
           "Number": 17.531702374680066
         },
         "place": 34,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3550,7 +3550,7 @@
           "Number": -43.426036606656844
         },
         "place": 34,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3560,7 +3560,7 @@
           "Text": "Ngebzveksxetnoknek"
         },
         "place": 35,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3570,7 +3570,7 @@
           "Flag": true
         },
         "place": 35,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3580,7 +3580,7 @@
           "Text": "tropical-seasonal-forest"
         },
         "place": 35,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3590,7 +3590,7 @@
           "Flag": true
         },
         "place": 35,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3600,7 +3600,7 @@
           "Number": 386.0
         },
         "place": 35,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3610,7 +3610,7 @@
           "Number": 1142.0
         },
         "place": 35,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3620,7 +3620,7 @@
           "Number": 6.113249806291626
         },
         "place": 35,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3630,7 +3630,7 @@
           "Number": 56.28823569723753
         },
         "place": 35,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3640,7 +3640,7 @@
           "Text": "Vnabnebzfadnadnobned"
         },
         "place": 36,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3650,7 +3650,7 @@
           "Flag": true
         },
         "place": 36,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3660,7 +3660,7 @@
           "Text": "temperate-forest"
         },
         "place": 36,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3670,7 +3670,7 @@
           "Flag": true
         },
         "place": 36,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3680,7 +3680,7 @@
           "Number": 314.0
         },
         "place": 36,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3690,7 +3690,7 @@
           "Number": 1960.0
         },
         "place": 36,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3700,7 +3700,7 @@
           "Number": -24.097206364288894
         },
         "place": 36,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3710,7 +3710,7 @@
           "Number": -57.81467208224929
         },
         "place": 36,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3720,7 +3720,7 @@
           "Text": "Raxarrograkxo"
         },
         "place": 37,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3730,7 +3730,7 @@
           "Flag": true
         },
         "place": 37,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3740,7 +3740,7 @@
           "Text": "temperate-forest"
         },
         "place": 37,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3750,7 +3750,7 @@
           "Flag": true
         },
         "place": 37,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3760,7 +3760,7 @@
           "Number": 290.0
         },
         "place": 37,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3770,7 +3770,7 @@
           "Number": 4612.0
         },
         "place": 37,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3780,7 +3780,7 @@
           "Number": 20.772859011505687
         },
         "place": 37,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3790,7 +3790,7 @@
           "Number": 52.52241562342213
         },
         "place": 37,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3800,7 +3800,7 @@
           "Text": "Rraxatra"
         },
         "place": 38,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3810,7 +3810,7 @@
           "Flag": true
         },
         "place": 38,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3820,7 +3820,7 @@
           "Text": "temperate-forest"
         },
         "place": 38,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3830,7 +3830,7 @@
           "Flag": true
         },
         "place": 38,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3840,7 +3840,7 @@
           "Number": 340.0
         },
         "place": 38,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3850,7 +3850,7 @@
           "Number": 7667.0
         },
         "place": 38,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3860,7 +3860,7 @@
           "Number": -17.489289603145643
         },
         "place": 38,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3870,7 +3870,7 @@
           "Number": -88.7582867962038
         },
         "place": 38,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3880,7 +3880,7 @@
           "Text": "Raxarrorra"
         },
         "place": 39,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3890,7 +3890,7 @@
           "Flag": true
         },
         "place": 39,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3900,7 +3900,7 @@
           "Text": "temperate-forest"
         },
         "place": 39,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3910,7 +3910,7 @@
           "Flag": true
         },
         "place": 39,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3920,7 +3920,7 @@
           "Number": 271.0
         },
         "place": 39,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3930,7 +3930,7 @@
           "Number": 6989.0
         },
         "place": 39,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3940,7 +3940,7 @@
           "Number": 9.532983565984527
         },
         "place": 39,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3950,7 +3950,7 @@
           "Number": -71.64683819668028
         },
         "place": 39,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3960,7 +3960,7 @@
           "Text": "Raxarrarrarroxaq"
         },
         "place": 40,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3970,7 +3970,7 @@
           "Flag": true
         },
         "place": 40,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3980,7 +3980,7 @@
           "Text": "temperate-forest"
         },
         "place": 40,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -3990,7 +3990,7 @@
           "Flag": true
         },
         "place": 40,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4000,7 +4000,7 @@
           "Number": 349.0
         },
         "place": 40,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4010,7 +4010,7 @@
           "Number": 1650.0
         },
         "place": 40,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4020,7 +4020,7 @@
           "Number": 13.723032816197948
         },
         "place": 40,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4030,7 +4030,7 @@
           "Number": -58.73308433875728
         },
         "place": 40,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4040,7 +4040,7 @@
           "Text": "Rraraxarrarra"
         },
         "place": 41,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4050,7 +4050,7 @@
           "Flag": true
         },
         "place": 41,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4060,7 +4060,7 @@
           "Text": "temperate-forest"
         },
         "place": 41,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4070,7 +4070,7 @@
           "Flag": true
         },
         "place": 41,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4080,7 +4080,7 @@
           "Number": 260.0
         },
         "place": 41,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4090,7 +4090,7 @@
           "Number": 9896.0
         },
         "place": 41,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4100,7 +4100,7 @@
           "Number": 26.979963167890705
         },
         "place": 41,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4110,7 +4110,7 @@
           "Number": 8.489080171305755
         },
         "place": 41,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4120,7 +4120,7 @@
           "Text": "Rrarragxoq"
         },
         "place": 42,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4130,7 +4130,7 @@
           "Flag": true
         },
         "place": 42,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4140,7 +4140,7 @@
           "Text": "temperate-forest"
         },
         "place": 42,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4150,7 +4150,7 @@
           "Flag": true
         },
         "place": 42,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4160,7 +4160,7 @@
           "Number": 300.0
         },
         "place": 42,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4170,7 +4170,7 @@
           "Number": 885.0
         },
         "place": 42,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4180,7 +4180,7 @@
           "Number": -26.28693204677916
         },
         "place": 42,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4190,7 +4190,7 @@
           "Number": 67.51804525427592
         },
         "place": 42,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4200,7 +4200,7 @@
           "Text": "Raxaxarrarrog"
         },
         "place": 43,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4210,7 +4210,7 @@
           "Flag": true
         },
         "place": 43,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4220,7 +4220,7 @@
           "Text": "temperate-forest"
         },
         "place": 43,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4230,7 +4230,7 @@
           "Flag": true
         },
         "place": 43,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4240,7 +4240,7 @@
           "Number": 298.0
         },
         "place": 43,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4250,7 +4250,7 @@
           "Number": 6949.0
         },
         "place": 43,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4260,7 +4260,7 @@
           "Number": 3.828227537611713
         },
         "place": 43,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4270,7 +4270,7 @@
           "Number": -85.63948234694308
         },
         "place": 43,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4280,7 +4280,7 @@
           "Text": "Rraraxaxaqrrorra"
         },
         "place": 44,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4290,7 +4290,7 @@
           "Flag": true
         },
         "place": 44,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4300,7 +4300,7 @@
           "Text": "temperate-forest"
         },
         "place": 44,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4310,7 +4310,7 @@
           "Flag": true
         },
         "place": 44,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4320,7 +4320,7 @@
           "Number": 328.0
         },
         "place": 44,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4330,7 +4330,7 @@
           "Number": 7216.0
         },
         "place": 44,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4340,7 +4340,7 @@
           "Number": 23.40224890406364
         },
         "place": 44,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4350,7 +4350,7 @@
           "Number": -82.37582159005515
         },
         "place": 44,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4360,7 +4360,7 @@
           "Text": "Rraraxarotxotrro"
         },
         "place": 45,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4370,7 +4370,7 @@
           "Flag": true
         },
         "place": 45,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4380,7 +4380,7 @@
           "Text": "temperate-forest"
         },
         "place": 45,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4390,7 +4390,7 @@
           "Flag": true
         },
         "place": 45,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4400,7 +4400,7 @@
           "Number": 321.0
         },
         "place": 45,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4410,7 +4410,7 @@
           "Number": 7769.0
         },
         "place": 45,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4420,7 +4420,7 @@
           "Number": -14.018635498714644
         },
         "place": 45,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4430,7 +4430,7 @@
           "Number": -48.558208279724326
         },
         "place": 45,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4440,7 +4440,7 @@
           "Text": "Raxarakrot"
         },
         "place": 46,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4450,7 +4450,7 @@
           "Flag": true
         },
         "place": 46,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4460,7 +4460,7 @@
           "Text": "tundra"
         },
         "place": 46,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4470,7 +4470,7 @@
           "Flag": true
         },
         "place": 46,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4480,7 +4480,7 @@
           "Number": 229.0
         },
         "place": 46,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4490,7 +4490,7 @@
           "Number": 6734.0
         },
         "place": 46,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4500,7 +4500,7 @@
           "Number": 35.53009070782003
         },
         "place": 46,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4510,7 +4510,7 @@
           "Number": -71.69858337765088
         },
         "place": 46,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4520,7 +4520,7 @@
           "Text": "Rrarrogra"
         },
         "place": 47,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4530,7 +4530,7 @@
           "Flag": true
         },
         "place": 47,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4540,7 +4540,7 @@
           "Text": "temperate-forest"
         },
         "place": 47,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4550,7 +4550,7 @@
           "Flag": true
         },
         "place": 47,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4560,7 +4560,7 @@
           "Number": 265.0
         },
         "place": 47,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4570,7 +4570,7 @@
           "Number": 7340.0
         },
         "place": 47,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4580,7 +4580,7 @@
           "Number": -24.56000817310325
         },
         "place": 47,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4590,7 +4590,7 @@
           "Number": -73.59432848890023
         },
         "place": 47,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4600,7 +4600,7 @@
           "Text": "Zxakzxakzhxobngobned"
         },
         "place": 48,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4610,7 +4610,7 @@
           "Flag": true
         },
         "place": 48,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4620,7 +4620,7 @@
           "Text": "shrubland"
         },
         "place": 48,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4630,7 +4630,7 @@
           "Flag": true
         },
         "place": 48,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4640,7 +4640,7 @@
           "Number": 271.0
         },
         "place": 48,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4650,7 +4650,7 @@
           "Number": 4046.0
         },
         "place": 48,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4660,7 +4660,7 @@
           "Number": -30.73609028115227
         },
         "place": 48,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4670,7 +4670,7 @@
           "Number": 160.1189849652554
         },
         "place": 48,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4680,7 +4680,7 @@
           "Text": "Zxetnaknedngot"
         },
         "place": 49,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4690,7 +4690,7 @@
           "Flag": true
         },
         "place": 49,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4700,7 +4700,7 @@
           "Text": "taiga"
         },
         "place": 49,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4710,7 +4710,7 @@
           "Flag": true
         },
         "place": 49,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4720,7 +4720,7 @@
           "Number": 216.0
         },
         "place": 49,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4730,7 +4730,7 @@
           "Number": 7232.0
         },
         "place": 49,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4740,7 +4740,7 @@
           "Number": 29.640255231923266
         },
         "place": 49,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4750,7 +4750,7 @@
           "Number": -93.95359832397693
         },
         "place": 49,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4760,7 +4760,7 @@
           "Text": "Raxarararatrotxa"
         },
         "place": 50,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4770,7 +4770,7 @@
           "Flag": true
         },
         "place": 50,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4780,7 +4780,7 @@
           "Text": "tropical-seasonal-forest"
         },
         "place": 50,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4790,7 +4790,7 @@
           "Flag": true
         },
         "place": 50,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4800,7 +4800,7 @@
           "Number": 326.0
         },
         "place": 50,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4810,7 +4810,7 @@
           "Number": 1860.0
         },
         "place": 50,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4820,7 +4820,7 @@
           "Number": -7.657806953803067
         },
         "place": 50,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4830,7 +4830,7 @@
           "Number": -81.20424427877053
         },
         "place": 50,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4840,7 +4840,7 @@
           "Text": "Raxarraxoxat"
         },
         "place": 51,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4850,7 +4850,7 @@
           "Flag": true
         },
         "place": 51,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4860,7 +4860,7 @@
           "Text": "tropical-seasonal-forest"
         },
         "place": 51,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4870,7 +4870,7 @@
           "Flag": true
         },
         "place": 51,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4880,7 +4880,7 @@
           "Number": 252.0
         },
         "place": 51,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4890,7 +4890,7 @@
           "Number": 7284.0
         },
         "place": 51,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4900,7 +4900,7 @@
           "Number": -1.887411302070772
         },
         "place": 51,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4910,7 +4910,7 @@
           "Number": -64.85310177603176
         },
         "place": 51,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4920,7 +4920,7 @@
           "Text": "Rararaxarrorraqxo"
         },
         "place": 52,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4930,7 +4930,7 @@
           "Flag": true
         },
         "place": 52,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4940,7 +4940,7 @@
           "Text": "tropical-seasonal-forest"
         },
         "place": 52,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4950,7 +4950,7 @@
           "Flag": true
         },
         "place": 52,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4960,7 +4960,7 @@
           "Number": 304.0
         },
         "place": 52,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4970,7 +4970,7 @@
           "Number": 8153.0
         },
         "place": 52,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4980,7 +4980,7 @@
           "Number": 4.646100966637388
         },
         "place": 52,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -4990,7 +4990,7 @@
           "Number": -41.90597459613899
         },
         "place": 52,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5000,7 +5000,7 @@
           "Text": "Zhxakzhfobxngodngotned"
         },
         "place": 53,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5010,7 +5010,7 @@
           "Flag": true
         },
         "place": 53,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5020,7 +5020,7 @@
           "Text": "taiga"
         },
         "place": 53,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5030,7 +5030,7 @@
           "Flag": true
         },
         "place": 53,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5040,7 +5040,7 @@
           "Number": 195.0
         },
         "place": 53,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5050,7 +5050,7 @@
           "Number": 4833.0
         },
         "place": 53,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5060,7 +5060,7 @@
           "Number": 30.77342681417602
         },
         "place": 53,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5070,7 +5070,7 @@
           "Number": 62.34548203906075
         },
         "place": 53,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5080,7 +5080,7 @@
           "Text": "Vngebxngatned"
         },
         "place": 54,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5090,7 +5090,7 @@
           "Flag": true
         },
         "place": 54,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5100,7 +5100,7 @@
           "Text": "taiga"
         },
         "place": 54,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5110,7 +5110,7 @@
           "Flag": true
         },
         "place": 54,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5120,7 +5120,7 @@
           "Number": 185.0
         },
         "place": 54,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5130,7 +5130,7 @@
           "Number": 4032.0
         },
         "place": 54,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5140,7 +5140,7 @@
           "Number": -38.25
         },
         "place": 54,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5150,7 +5150,7 @@
           "Number": 148.282525588539
         },
         "place": 54,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5160,7 +5160,7 @@
           "Text": "Ngodvngobngotned"
         },
         "place": 55,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5170,7 +5170,7 @@
           "Flag": true
         },
         "place": 55,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5180,7 +5180,7 @@
           "Text": "taiga"
         },
         "place": 55,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5190,7 +5190,7 @@
           "Flag": true
         },
         "place": 55,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5200,7 +5200,7 @@
           "Number": 232.0
         },
         "place": 55,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5210,7 +5210,7 @@
           "Number": 3958.0
         },
         "place": 55,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5220,7 +5220,7 @@
           "Number": -31.964703932672272
         },
         "place": 55,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5230,7 +5230,7 @@
           "Number": 174.1698583515145
         },
         "place": 55,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5240,7 +5240,7 @@
           "Text": "Raraxarraxot"
         },
         "place": 56,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5250,7 +5250,7 @@
           "Flag": true
         },
         "place": 56,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5260,7 +5260,7 @@
           "Text": "shrubland"
         },
         "place": 56,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5270,7 +5270,7 @@
           "Flag": true
         },
         "place": 56,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5280,7 +5280,7 @@
           "Number": 180.0
         },
         "place": 56,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5290,7 +5290,7 @@
           "Number": 6922.0
         },
         "place": 56,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5300,7 +5300,7 @@
           "Number": 22.644412834561724
         },
         "place": 56,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5310,7 +5310,7 @@
           "Number": -68.27809230850458
         },
         "place": 56,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5320,7 +5320,7 @@
           "Text": "Vngokvnatned"
         },
         "place": 57,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5330,7 +5330,7 @@
           "Flag": true
         },
         "place": 57,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5340,7 +5340,7 @@
           "Text": "tundra"
         },
         "place": 57,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5350,7 +5350,7 @@
           "Flag": true
         },
         "place": 57,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5360,7 +5360,7 @@
           "Number": 229.0
         },
         "place": 57,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5370,7 +5370,7 @@
           "Number": 6841.0
         },
         "place": 57,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5380,7 +5380,7 @@
           "Number": 37.15806555037892
         },
         "place": 57,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5390,7 +5390,7 @@
           "Number": -34.2460427941681
         },
         "place": 57,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5400,7 +5400,7 @@
           "Text": "Zfatzfodngok"
         },
         "place": 58,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5410,7 +5410,7 @@
           "Flag": true
         },
         "place": 58,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5420,7 +5420,7 @@
           "Text": "tundra"
         },
         "place": 58,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5430,7 +5430,7 @@
           "Flag": true
         },
         "place": 58,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5440,7 +5440,7 @@
           "Number": 147.0
         },
         "place": 58,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5450,7 +5450,7 @@
           "Number": 6691.0
         },
         "place": 58,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5460,7 +5460,7 @@
           "Number": 33.955221797684956
         },
         "place": 58,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5470,7 +5470,7 @@
           "Number": -17.312109261625412
         },
         "place": 58,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5480,7 +5480,7 @@
           "Text": "Xoxarraratrroq"
         },
         "place": 59,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5490,7 +5490,7 @@
           "Flag": true
         },
         "place": 59,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5500,7 +5500,7 @@
           "Text": "tundra"
         },
         "place": 59,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5510,7 +5510,7 @@
           "Flag": true
         },
         "place": 59,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5520,7 +5520,7 @@
           "Number": 162.0
         },
         "place": 59,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5530,7 +5530,7 @@
           "Number": 1666.0
         },
         "place": 59,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5540,7 +5540,7 @@
           "Number": 26.632067552866125
         },
         "place": 59,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5550,7 +5550,7 @@
           "Number": -54.2313790283787
         },
         "place": 59,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5560,7 +5560,7 @@
           "Text": "Raxarragrraxot"
         },
         "place": 60,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5570,7 +5570,7 @@
           "Flag": true
         },
         "place": 60,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5580,7 +5580,7 @@
           "Text": "tundra"
         },
         "place": 60,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5590,7 +5590,7 @@
           "Flag": true
         },
         "place": 60,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5600,7 +5600,7 @@
           "Number": 172.0
         },
         "place": 60,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5610,7 +5610,7 @@
           "Number": 4763.0
         },
         "place": 60,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5620,7 +5620,7 @@
           "Number": 33.75
         },
         "place": 60,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5630,7 +5630,7 @@
           "Number": 31.717474411461016
         },
         "place": 60,
-        "day": 0.0,
+        "day": 0,
         "provenance": "settlement"
       },
       {
@@ -5640,7 +5640,7 @@
           "Text": "sun-temperate-rainforest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5650,7 +5650,7 @@
           "Text": "sun-temperate-rainforest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5660,7 +5660,7 @@
           "Text": "temperate-rainforest-sun"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5670,7 +5670,7 @@
           "Text": "temperate-rainforest-moon"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5680,7 +5680,7 @@
           "Text": "temperate-rainforest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5690,7 +5690,7 @@
           "Text": "temperate-forest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5700,7 +5700,7 @@
           "Text": "moon"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5710,7 +5710,7 @@
           "Text": "moon-temperate-rainforest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5720,7 +5720,7 @@
           "Text": "temperate-rainforest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5730,7 +5730,7 @@
           "Text": "sun-temperate-forest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5740,7 +5740,7 @@
           "Text": "temperate-rainforest-moon"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5750,7 +5750,7 @@
           "Text": "sun"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5760,7 +5760,7 @@
           "Text": "moon-temperate-rainforest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5770,7 +5770,7 @@
           "Text": "tropical-rainforest-moon"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5780,7 +5780,7 @@
           "Text": "sun-tropical-rainforest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5790,7 +5790,7 @@
           "Text": "moon-tropical-rainforest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5800,7 +5800,7 @@
           "Text": "moon-temperate-rainforest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5810,7 +5810,7 @@
           "Text": "sun-temperate-forest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5820,7 +5820,7 @@
           "Text": "temperate-forest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5830,7 +5830,7 @@
           "Text": "sun-tropical-rainforest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5840,7 +5840,7 @@
           "Text": "sun"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5850,7 +5850,7 @@
           "Text": "tropical-rainforest-sun"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5860,7 +5860,7 @@
           "Text": "sun-tropical-rainforest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5870,7 +5870,7 @@
           "Text": "tropical-rainforest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5880,7 +5880,7 @@
           "Text": "moon"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5890,7 +5890,7 @@
           "Text": "tropical-rainforest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5900,7 +5900,7 @@
           "Text": "tropical-rainforest-sun"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5910,7 +5910,7 @@
           "Text": "moon-temperate-forest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5920,7 +5920,7 @@
           "Text": "sun"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5930,7 +5930,7 @@
           "Text": "tropical-rainforest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5940,7 +5940,7 @@
           "Text": "moon"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5950,7 +5950,7 @@
           "Text": "sun"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5960,7 +5960,7 @@
           "Text": "temperate-forest-moon"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5970,7 +5970,7 @@
           "Text": "tropical-seasonal-forest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5980,7 +5980,7 @@
           "Text": "temperate-forest-sun"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -5990,7 +5990,7 @@
           "Text": "moon"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6000,7 +6000,7 @@
           "Text": "temperate-forest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6010,7 +6010,7 @@
           "Text": "moon"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6020,7 +6020,7 @@
           "Text": "temperate-forest-moon"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6030,7 +6030,7 @@
           "Text": "moon-temperate-forest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6040,7 +6040,7 @@
           "Text": "temperate-forest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6050,7 +6050,7 @@
           "Text": "moon"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6060,7 +6060,7 @@
           "Text": "moon-temperate-forest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6070,7 +6070,7 @@
           "Text": "moon-temperate-forest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6080,7 +6080,7 @@
           "Text": "moon"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6090,7 +6090,7 @@
           "Text": "temperate-forest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6100,7 +6100,7 @@
           "Text": "shrubland-sun"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6110,7 +6110,7 @@
           "Text": "sun-taiga"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6120,7 +6120,7 @@
           "Text": "tropical-seasonal-forest-moon"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6130,7 +6130,7 @@
           "Text": "moon"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6140,7 +6140,7 @@
           "Text": "moon-tropical-seasonal-forest"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6150,7 +6150,7 @@
           "Text": "taiga-sun"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6160,7 +6160,7 @@
           "Text": "sun"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6170,7 +6170,7 @@
           "Text": "taiga-sun"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6180,7 +6180,7 @@
           "Text": "moon-shrubland"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6190,7 +6190,7 @@
           "Text": "sun"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6200,7 +6200,7 @@
           "Text": "tundra"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6210,7 +6210,7 @@
           "Text": "tundra"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6220,7 +6220,7 @@
           "Text": "moon"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6230,7 +6230,7 @@
           "Text": "farming"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "culture"
       },
       {
@@ -6240,7 +6240,7 @@
           "Text": "slave"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "culture"
       },
       {
@@ -6250,7 +6250,7 @@
           "Text": "farmer"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "culture"
       },
       {
@@ -6260,7 +6260,7 @@
           "Text": "artisan"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "culture"
       },
       {
@@ -6270,7 +6270,7 @@
           "Text": "shaman"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "culture"
       },
       {
@@ -6280,7 +6280,7 @@
           "Text": "chief"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "culture"
       },
       {
@@ -6290,7 +6290,7 @@
           "Flag": true
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6300,7 +6300,7 @@
           "Text": "Ned"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6310,7 +6310,7 @@
           "Text": "ned"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6320,7 +6320,7 @@
           "Text": "Nabned"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6330,7 +6330,7 @@
           "Text": "nabned"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6340,7 +6340,7 @@
           "Text": "cyclic"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6350,7 +6350,7 @@
           "Entity": 2
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6360,7 +6360,7 @@
           "Text": "celestial-body"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6370,7 +6370,7 @@
           "Text": "organized"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6380,7 +6380,7 @@
           "Flag": true
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6390,7 +6390,7 @@
           "Flag": true
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6400,7 +6400,7 @@
           "Text": "Neb"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6410,7 +6410,7 @@
           "Text": "neb"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6420,7 +6420,7 @@
           "Text": "Xngodneb"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6430,7 +6430,7 @@
           "Text": "xŋodneb"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6440,7 +6440,7 @@
           "Text": "cyclic"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6450,7 +6450,7 @@
           "Entity": 2
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6460,7 +6460,7 @@
           "Text": "celestial-body"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6470,7 +6470,7 @@
           "Text": "organized"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6480,7 +6480,7 @@
           "Flag": true
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6490,7 +6490,7 @@
           "Text": "Neb"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6500,7 +6500,7 @@
           "Text": "neb"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6510,7 +6510,7 @@
           "Text": "Xnobneb"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6520,7 +6520,7 @@
           "Text": "xnobneb"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6530,7 +6530,7 @@
           "Text": "cyclic"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6540,7 +6540,7 @@
           "Entity": 2
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6550,7 +6550,7 @@
           "Text": "celestial-body"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6560,7 +6560,7 @@
           "Text": "organized"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6570,7 +6570,7 @@
           "Text": "sun"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6580,7 +6580,7 @@
           "Text": "moon"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6590,7 +6590,7 @@
           "Text": "moon"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6600,7 +6600,7 @@
           "Text": "farming"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "culture"
       },
       {
@@ -6610,7 +6610,7 @@
           "Text": "digger"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "culture"
       },
       {
@@ -6620,7 +6620,7 @@
           "Text": "shaper"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "culture"
       },
       {
@@ -6630,7 +6630,7 @@
           "Text": "keeper"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "culture"
       },
       {
@@ -6640,7 +6640,7 @@
           "Text": "elders"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "culture"
       },
       {
@@ -6650,7 +6650,7 @@
           "Flag": true
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6660,7 +6660,7 @@
           "Text": "Rro"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6670,7 +6670,7 @@
           "Text": "rro"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6680,7 +6680,7 @@
           "Text": "Rro"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6690,7 +6690,7 @@
           "Text": "rro"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6700,7 +6700,7 @@
           "Text": "cyclic"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6710,7 +6710,7 @@
           "Entity": 5
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6720,7 +6720,7 @@
           "Text": "celestial-body"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6730,7 +6730,7 @@
           "Text": "organized"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6740,7 +6740,7 @@
           "Flag": true
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6750,7 +6750,7 @@
           "Flag": true
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6760,7 +6760,7 @@
           "Text": "Raxa"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6770,7 +6770,7 @@
           "Text": "raxa"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6780,7 +6780,7 @@
           "Text": "Raxarro"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6790,7 +6790,7 @@
           "Text": "raxarro"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6800,7 +6800,7 @@
           "Text": "cyclic"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6810,7 +6810,7 @@
           "Entity": 5
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6820,7 +6820,7 @@
           "Text": "celestial-body"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6830,7 +6830,7 @@
           "Text": "organized"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6840,7 +6840,7 @@
           "Flag": true
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6850,7 +6850,7 @@
           "Text": "Rarro"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6860,7 +6860,7 @@
           "Text": "rarro"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6870,7 +6870,7 @@
           "Text": "Rrora"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6880,7 +6880,7 @@
           "Text": "rrora"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6890,7 +6890,7 @@
           "Text": "cyclic"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6900,7 +6900,7 @@
           "Entity": 5
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6910,7 +6910,7 @@
           "Text": "celestial-body"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6920,7 +6920,7 @@
           "Text": "organized"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "religion"
       },
       {
@@ -6930,7 +6930,7 @@
           "Text": "shadow"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6940,7 +6940,7 @@
           "Text": "moon"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6950,7 +6950,7 @@
           "Text": "shadow-sun"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "worldgen"
       },
       {
@@ -6960,7 +6960,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -6970,7 +6970,7 @@
           "Number": 0.5
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -6980,7 +6980,7 @@
           "Number": 0.5
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -6990,7 +6990,7 @@
           "Number": 0.5
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7000,7 +7000,7 @@
           "Number": 0.5
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7010,7 +7010,7 @@
           "Text": "hierarchic"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7020,7 +7020,7 @@
           "Text": "rank"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7030,7 +7030,7 @@
           "Text": "diurnal"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7040,7 +7040,7 @@
           "Number": 0.5
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7050,7 +7050,7 @@
           "Number": 0.5
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7060,7 +7060,7 @@
           "Number": 0.5
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7070,7 +7070,7 @@
           "Number": 0.5
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7080,7 +7080,7 @@
           "Number": 0.5
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7090,7 +7090,7 @@
           "Number": 0.5
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7100,7 +7100,7 @@
           "Number": 0.5
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7110,7 +7110,7 @@
           "Text": "none"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7120,7 +7120,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7130,7 +7130,7 @@
           "Number": 0.8
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7140,7 +7140,7 @@
           "Number": 0.7
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7150,7 +7150,7 @@
           "Number": 0.2
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7160,7 +7160,7 @@
           "Number": 0.8
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7170,7 +7170,7 @@
           "Text": "communal"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7180,7 +7180,7 @@
           "Text": "knowledge"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7190,7 +7190,7 @@
           "Text": "nocturnal"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7200,7 +7200,7 @@
           "Number": 0.9
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7210,7 +7210,7 @@
           "Number": 0.8
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7220,7 +7220,7 @@
           "Number": 0.1
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7230,7 +7230,7 @@
           "Number": 0.3
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7240,7 +7240,7 @@
           "Number": 0.6
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7250,7 +7250,7 @@
           "Number": 0.9
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7260,7 +7260,7 @@
           "Number": 0.2
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7270,7 +7270,7 @@
           "Text": "trill"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7280,7 +7280,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7290,7 +7290,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7300,7 +7300,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7310,7 +7310,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7320,7 +7320,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7330,7 +7330,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7340,7 +7340,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7350,7 +7350,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7360,7 +7360,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7370,7 +7370,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7380,7 +7380,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7390,7 +7390,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7400,7 +7400,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7410,7 +7410,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7420,7 +7420,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7430,7 +7430,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7440,7 +7440,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7450,7 +7450,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7460,7 +7460,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7470,7 +7470,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7480,7 +7480,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7490,7 +7490,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7500,7 +7500,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7510,7 +7510,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7520,7 +7520,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7530,7 +7530,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7540,7 +7540,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7550,7 +7550,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7560,7 +7560,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7570,7 +7570,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7580,7 +7580,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7590,7 +7590,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7600,7 +7600,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7610,7 +7610,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7620,7 +7620,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7630,7 +7630,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7640,7 +7640,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7650,7 +7650,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7660,7 +7660,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7670,7 +7670,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7680,7 +7680,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7690,7 +7690,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7700,7 +7700,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7710,7 +7710,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7720,7 +7720,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7730,7 +7730,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7740,7 +7740,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7750,7 +7750,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7760,7 +7760,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7770,7 +7770,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7780,7 +7780,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7790,7 +7790,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7800,7 +7800,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7810,7 +7810,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7820,7 +7820,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7830,7 +7830,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7840,7 +7840,7 @@
           "Text": "goblin"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7850,7 +7850,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       },
       {
@@ -7860,7 +7860,7 @@
           "Text": "kobold"
         },
         "place": null,
-        "day": 0.0,
+        "day": 0,
         "provenance": "species"
       }
     ],

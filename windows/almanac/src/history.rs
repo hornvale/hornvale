@@ -1277,7 +1277,8 @@ mod tests {
                     place: Some(place),
                     // Every call site below passes a hardcoded literal.
                     day: Some(
-                        hornvale_kernel::WorldTime::new(day).expect("test fixture day is finite"),
+                        hornvale_kernel::WorldTime::from_std_days(day)
+                            .expect("test fixture day is finite"),
                     ),
                     provenance: "test-fixture".to_string(),
                 },

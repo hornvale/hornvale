@@ -327,7 +327,7 @@ mod tests {
             &ctx,
             &npc,
             &position,
-            WorldTime::new(day).expect("a day value is finite"),
+            WorldTime::from_std_days(day).expect("a day value is finite"),
         )
         .unwrap()
     }

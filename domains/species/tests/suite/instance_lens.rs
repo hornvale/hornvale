@@ -22,7 +22,7 @@ fn override_fact(e: EntityId, pred: &str, n: f64) -> hornvale_kernel::Fact {
         predicate: pred.to_string(),
         object: Value::Number(n),
         place: None,
-        day: Some(WorldTime::new(1.0).expect("finite")),
+        day: Some(WorldTime::from_std_days(1.0).expect("finite")),
         provenance: "test".to_string(),
     }
 }
@@ -97,7 +97,7 @@ fn overrides_survive_kind_change() {
         .change_kind(
             e,
             "woolly-mammoth",
-            Some(WorldTime::new(2.0).expect("finite")),
+            Some(WorldTime::from_std_days(2.0).expect("finite")),
             "test",
             &w.registry,
         )
@@ -296,7 +296,7 @@ fn lens_demo_world_fact_count_is_pinned() {
         .change_kind(
             e,
             "woolly-mammoth",
-            Some(WorldTime::new(2.0).expect("finite")),
+            Some(WorldTime::from_std_days(2.0).expect("finite")),
             "budget",
             &w.registry,
         )

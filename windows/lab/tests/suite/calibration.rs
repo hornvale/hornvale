@@ -1994,6 +1994,28 @@ fn name_collision_rate_is_measured_and_pinned() {
         // such above), and the rate stays inside the range decision 0024
         // sanctions (see the note above).
         //
+        // The Escapement's re-pin (2026-08-23, canonical census on lefford):
+        // the mover is `3bc4fd871`, this campaign's fix to
+        // `Calendar::local_day`'s day-fraction — the old formula returned a
+        // *negative* fraction for a negative local day, which put a local
+        // day's start after its own sample. `domains/astronomy/src/
+        // heliacal.rs` reaches that path directly, since its `year_start` is
+        // negative at genesis for essentially every world; an instrumented
+        // build recorded 1,293,003 divergences in one seed-267 world alone,
+        // every one at `local < 0`. This is NOT the `WorldTime`
+        // representation flip landed earlier in the same campaign, which
+        // moved zero census table entries — bisected across the 701 commits since
+        // the previous refresh. The corrected fraction changes which
+        // heliacal events a scan finds, which changes the phenomena list, a
+        // settlement's presiding concept, and its gloss and name. Only two
+        // entries move in this metric (seed 267: 193/388 -> 191/388; seed 831:
+        // 0.43521595 -> 0.42857143), so zero/nonzero/absent are unmoved at
+        // 0/1000/0 (checked, not assumed). Mean:
+        // 0.508_151_833_319_999 -> 0.508_140_034_159_999. This row still
+        // carries no directional claim (H4 already failed and is recorded as
+        // such above), and the rate stays inside the range decision 0024
+        // sanctions (see the note above).
+        //
         // The Confidant (Arc III of The Bridle): six felt-state concepts
         // registered, each people given a `MindVector`-governed derived
         // exposure to some of them, so six new words can enter a species'
@@ -2007,7 +2029,34 @@ fn name_collision_rate_is_measured_and_pinned() {
         // directional claim (H4 already failed and is recorded as such
         // above), and the rate stays inside the range decision 0024
         // sanctions (see the note above).
-        (mean - 0.508_144_194_499_999).abs() < 1e-6,
+        //
+        // The Escapement's re-pin ON THE MERGE PRODUCT (2026-08-25, canonical
+        // census run in the chamber against the merge of main into this
+        // branch — request `req-7d4732b89de9`, goldens delivered on
+        // `census/7d4732b89de9-20260825T143401Z`). This DISCHARGES the
+        // pending re-pin the two paragraphs above left open: both movers are
+        // real, both apply to this product, and this is the census that
+        // measures them together. The campaign's own mover is unchanged from
+        // the paragraph above — `3bc4fd871`'s fix to `Calendar::local_day`'s
+        // day-fraction, which returned a *negative* fraction for a negative
+        // local day, a path `domains/astronomy/src/heliacal.rs` reaches at
+        // genesis for essentially every world; the bisect and instrumented-run
+        // record is committed at
+        // `docs/audits/the-escapement-census-attribution.md`. Run against a
+        // NEWER main than the campaign's earlier census, it moves exactly the
+        // same three census table entries that one did (seed 267
+        // name-collision-rate 0.49742268 -> 0.49226804 and name-transparency
+        // 0.89830508 -> 0.90677966; seed 831 name-collision-rate 0.43521595
+        // -> 0.42857143) — a clean confirmation, not a new reading. The
+        // zero/nonzero/absent partition is UNMOVED at 0/1000/0, checked
+        // against this fixture rather than assumed (the three assertions
+        // above pass unchanged). Mean: 0.508_144_194_499_999 ->
+        // 0.508_132_395_339_999_4. This row still carries no directional
+        // claim (H4 already failed and is recorded as such above, per
+        // decision 0016 — reportable, not adjusted); the tolerance is
+        // unchanged at 1e-6, and the rate stays inside the range decision
+        // 0024 sanctions (see the note above).
+        (mean - 0.508_132_395_339_999_4).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -2603,6 +2652,9 @@ fn name_syllable_distributions_are_measured_and_pinned() {
     }
 }
 
+/// claim: rate(census: name-transparency, all 1000 rows) — the share is pinned
+/// exactly at its census mean, every world's reading is a share in [0, 1], and
+/// the column stays a DISTRIBUTION rather than settling back to a uniform 1.0
 #[test]
 fn name_transparency_is_measured_and_pinned() {
     // NEW ROW — The Wearing (2026-07-28; lefford regen f32d6ce2, 0063). The
@@ -2777,6 +2829,19 @@ fn name_transparency_is_measured_and_pinned() {
         // emphatically NOT 1.0 — the claim this row exists to guard —
         // re-checked rather than assumed.
         //
+        // The Escapement's re-pin (2026-08-23, canonical census on lefford):
+        // same mover as the name-collision-rate re-pin above —
+        // `3bc4fd871`'s fix to `Calendar::local_day`'s day-fraction, which
+        // was returning a negative fraction for a negative local day
+        // (`domains/astronomy/src/heliacal.rs` reaches that path directly at
+        // genesis for essentially every world). Only seed 267 moves in this
+        // metric (106/118 -> 107/118); present/absent are unmoved at
+        // 1000/0. Mean: 0.714_474_321_670_000 -> 0.714_482_796_250_000.
+        // Still emphatically NOT 1.0 — the claim this row exists to guard —
+        // re-checked rather than assumed. Min and max are unmoved at
+        // 0.300_000_0 and 0.971_204_19 (checked directly against the
+        // committed census, not assumed).
+        //
         // The Confidant (Arc III of The Bridle): six felt-state concepts
         // registered, each people given a `MindVector`-governed derived
         // exposure to some of them, so six new Root words can enter a
@@ -2789,7 +2854,30 @@ fn name_transparency_is_measured_and_pinned() {
         // dictionary entries diluting a ~2000-entry-per-world compound
         // vocabulary. Still emphatically NOT 1.0 — re-checked rather than
         // assumed.
-        (mean - 0.713_554_079_900_000).abs() < 1e-9,
+        //
+        // The Escapement's re-pin ON THE MERGE PRODUCT (2026-08-25, canonical
+        // census run in the chamber against the merge of main into this
+        // branch — request `req-7d4732b89de9`, goldens delivered on
+        // `census/7d4732b89de9-20260825T143401Z`). This DISCHARGES the
+        // pending re-pin the two paragraphs above left open: both movers are
+        // real, both apply to this product, and this is the census that
+        // measures them together. Same mover as the name-collision-rate
+        // re-pin above — `3bc4fd871`'s fix to `Calendar::local_day`'s
+        // day-fraction (attribution recorded in
+        // `docs/audits/the-escapement-census-attribution.md`). Against a
+        // NEWER main than the campaign's earlier census it moves the same
+        // single census table entry in this metric (seed 267: 0.89830508 ->
+        // 0.90677966), a confirmation rather than a new reading, and the
+        // partition is checked rather than assumed: present/absent are UNMOVED
+        // at 1000/0, and so are the two SPREAD pins below — min
+        // 0.295_652_17 and max 0.971_204_19, read directly off this fixture.
+        // Mean: 0.713_554_079_900_000 ->
+        // 0.713_562_554_480_000_3, a rise of 8.5e-6. Still emphatically NOT
+        // 1.0 — the claim this row exists to guard — re-checked rather than
+        // assumed, and the tolerance is unchanged at 1e-9: this is a
+        // measured calibration re-pinned to what the instrument reports,
+        // never a bound widened to fit.
+        (mean - 0.713_562_554_480_000_3).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827

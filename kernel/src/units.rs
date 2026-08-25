@@ -7,6 +7,20 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::ops::{Add, Sub};
 
+/// The exclusive upper bound on a tick count, as an `f64`: 2^63.
+///
+/// **Not** `i64::MAX as f64`. `i64::MAX` is `2^63 - 1`, which is not
+/// representable in `f64` — the cast rounds it *up* to `2^63`. So a guard
+/// written `ticks > i64::MAX as f64` admits a `ticks` of exactly `2^63`,
+/// which then saturates to `i64::MAX` under `as i64` and yields a silently
+/// wrong instant instead of a refusal. Comparing `>=` against `2^63` itself
+/// closes that one-ULP hole. The negative edge needs no equivalent: `i64::MIN`
+/// is `-2^63` exactly, so `i64::MIN as f64` is lossless.
+///
+/// Shared by [`crate::field::WorldTime::from_std_days`] and
+/// [`TickSpan::from_std_days`] so the two range checks cannot drift apart.
+pub(crate) const TICKS_EXCLUSIVE_UPPER_BOUND: f64 = 9_223_372_036_854_775_808.0;
+
 /// Why a quantity constructor refused a value.
 /// type-audit: bare-ok(identifier-text: unit), bare-ok(diagnostic-value: value), bare-ok(identifier-text: reason)
 #[derive(Debug, Clone, PartialEq)]
@@ -375,6 +389,72 @@ impl Years {
     }
 }
 
+/// A signed difference between two [`crate::field::WorldTime`] instants, in
+/// ticks. Signed because a span is directional: `earlier - later` is negative
+/// and that ordering must not be silently lost.
+///
+/// Distinct from `Years`, which is a NON-NEGATIVE coarse span, and from
+/// astronomy's `StdDays`. The field is `pub(crate)` so the kernel's own `Sub`
+/// impl can build one without a fallible constructor, while no crate outside
+/// the kernel can bypass the named crossings.
+///
+/// The span is exact ticks (The Escapement, decision 0186), so it derives
+/// `Eq`/`Ord`/`Hash` alongside `WorldTime` and a difference of two instants
+/// carries no rounding at all.
+/// type-audit: bare-ok(count)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TickSpan(pub(crate) i64);
+
+impl TickSpan {
+    /// The span in ticks — an exact field read.
+    /// type-audit: bare-ok(count: return)
+    pub const fn ticks(self) -> i64 {
+        self.0
+    }
+
+    /// Build a span from an exact tick count.
+    /// type-audit: bare-ok(count: ticks)
+    pub const fn from_ticks(ticks: i64) -> TickSpan {
+        TickSpan(ticks)
+    }
+
+    /// Build a span from a DURATION in fractional standard days, rounding to
+    /// the nearest tick.
+    ///
+    /// The span twin of [`crate::field::WorldTime::from_std_days`], and it
+    /// exists for the same reason: spec §2.1 requires the crossing from the
+    /// continuous domain onto the lattice happen ONCE, explicitly. Without it
+    /// a caller holding an `f64` duration has no way to reach the lattice
+    /// except by re-deriving a float day from an instant, adding, and
+    /// re-rounding — two crossings where one belongs, and the arithmetic
+    /// happening in the domain the campaign left.
+    /// type-audit: bare-ok(constructor-edge: days)
+    pub fn from_std_days(days: f64) -> Result<TickSpan, UnitError> {
+        if !days.is_finite() {
+            return Err(UnitError {
+                unit: "standard days",
+                value: days,
+                reason: "must be finite",
+            });
+        }
+        let ticks = (days * crate::field::WorldTime::TICKS_PER_STD_DAY as f64).round();
+        if ticks < i64::MIN as f64 || ticks >= TICKS_EXCLUSIVE_UPPER_BOUND {
+            return Err(UnitError {
+                unit: "standard days",
+                value: days,
+                reason: "outside the representable tick range",
+            });
+        }
+        Ok(TickSpan(ticks as i64))
+    }
+
+    /// The span in fractional standard days.
+    /// type-audit: bare-ok(constructor-edge: return)
+    pub fn as_std_days(self) -> f64 {
+        self.0 as f64 / crate::field::WorldTime::TICKS_PER_STD_DAY as f64
+    }
+}
+
 /// Mean annual precipitation, millimetres per year, as an absolute
 /// non-negative quantity. 0 mm/yr is valid (a desert); only non-negative,
 /// finite values are physically meaningful.
@@ -578,5 +658,35 @@ mod tests {
         let h = floor.above(sea);
         assert!(h.get() < 0.0, "the sea floor is below sea level");
         assert!(h.depth() > 1000.0, "and its depth reads positive");
+    }
+
+    #[test]
+    fn a_tick_span_range_check_rejects_exactly_two_to_the_sixty_three() {
+        // The span twin of
+        // `field::tests::the_tick_range_check_rejects_exactly_two_to_the_sixty_three`,
+        // duplicated deliberately: the two constructors are separate bodies
+        // and a guard fixed in one is worth nothing to the other. Both now
+        // read TICKS_EXCLUSIVE_UPPER_BOUND, and both are pinned.
+        let per_day = crate::field::WorldTime::TICKS_PER_STD_DAY as f64;
+        let over = TICKS_EXCLUSIVE_UPPER_BOUND / per_day;
+        assert!(
+            TickSpan::from_std_days(over).is_err(),
+            "a span of 2^63 ticks is one past the axis; `as i64` would saturate it to i64::MAX"
+        );
+
+        let last = f64::from_bits(TICKS_EXCLUSIVE_UPPER_BOUND.to_bits() - 1);
+        assert_eq!(
+            TickSpan::from_std_days(last / per_day)
+                .expect("2^63 - 1024 ticks is a representable span")
+                .ticks(),
+            9_223_372_036_854_774_784,
+        );
+
+        assert_eq!(
+            TickSpan::from_std_days(-TICKS_EXCLUSIVE_UPPER_BOUND / per_day)
+                .expect("i64::MIN ticks is representable exactly")
+                .ticks(),
+            i64::MIN,
+        );
     }
 }

@@ -5076,8 +5076,8 @@ fn first_day(world: &World, predicate: &str, object: Option<&str>) -> MetricValu
         }
         let Some(d) = f.day else { continue };
         best = Some(match best {
-            Some(b) if b <= d.day() => b,
-            _ => d.day(),
+            Some(b) if b <= d.as_std_days() => b,
+            _ => d.as_std_days(),
         });
     }
     match best {
@@ -13346,7 +13346,7 @@ mod tests {
             .ledger
             .find("is-settlement")
             .filter_map(|f| f.day)
-            .map(|d| d.day())
+            .map(|d| d.as_std_days())
             .collect();
         assert!(
             days.len() > 1,
@@ -13438,7 +13438,7 @@ mod tests {
                 std::collections::BTreeMap::new();
             for f in v.world().ledger.find("occ-people") {
                 if let (Value::Text(t), Some(d)) = (&f.object, f.day) {
-                    per.entry(t.clone()).or_default().push(d.day());
+                    per.entry(t.clone()).or_default().push(d.as_std_days());
                 }
             }
             for (species, mut days) in per {
@@ -13476,7 +13476,7 @@ mod tests {
             // corroborated rather than load-bearing alone.
             .filter(|f| matches!(&f.object, Value::Text(t) if t == "bugbear"))
             .filter_map(|f| f.day)
-            .map(|d| d.day())
+            .map(|d| d.as_std_days())
             .collect();
         assert!(
             days.len() > 1,
@@ -13544,7 +13544,7 @@ mod tests {
             .ledger
             .find("occ-tech")
             .filter_map(|f| f.day)
-            .map(|d| d.day())
+            .map(|d| d.as_std_days())
             .collect();
         assert!(
             !unfiltered_days.is_empty(),
@@ -13559,7 +13559,7 @@ mod tests {
             .find("occ-tech")
             .filter(|f| matches!(&f.object, Value::Text(t) if t == "iron"))
             .filter_map(|f| f.day)
-            .map(|d| d.day())
+            .map(|d| d.as_std_days())
             .collect();
         assert!(
             days.len() > 1,

@@ -251,7 +251,7 @@ fn cover_components(
     let expr = climate.biome_expr_at(vertex);
 
     // --- Snow: seasonal gate x annual propensity x a bounded aspect swing.
-    let frozen = climate.is_frozen_at(vertex, at.day());
+    let frozen = climate.is_frozen_at(vertex, at.as_std_days());
     let annual_snow = climate.snow_fraction_at(vertex).clamp(0.0, 1.0);
     let aspect_factor = (1.0 - ASPECT_SNOW_SWING * tier3(micro.aspect)).clamp(0.0, 2.0);
     // A frozen vertex always carries a snow floor (SNOW_FLOOR) even at zero
@@ -491,7 +491,7 @@ mod tests {
         for i in (0..geo.vertex_count() as u32).step_by(29) {
             let vertex = Vertex(i);
             for day in [0.0, 91.0, 182.0, 273.0] {
-                let at = WorldTime::new(day).expect("finite day");
+                let at = WorldTime::from_std_days(day).expect("finite day");
                 let cover = cover_weights(&climate, vertex, &micro, at);
                 let covered: f64 = cover.iter().map(|(_, w)| w).sum();
                 assert!(

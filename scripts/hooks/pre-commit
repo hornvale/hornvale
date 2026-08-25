@@ -22,12 +22,29 @@
 # stages their trigger files. `make gate-commit` is last because it is the
 # only step that costs anything in the common case.
 #
-# NOTE — NONE OF THIS RUNS ON A MERGE COMMIT. Git does not invoke `pre-commit`
-# for `git merge`, so every guard here is blind to exactly the commit most
-# likely to need one: an absorption that mis-resolves a generated artifact
-# (which happened, 3 for 3, on a count table). That gap is why `post-merge`
-# exists beside this file — advisory, because a merge commit already exists by
-# the time a hook can see it.
+# NOTE — THE MERGE-COMMIT GAP IS REAL BUT IT IS THE OPPOSITE SHAPE FROM WHAT
+# THIS NOTE USED TO CLAIM. It said flatly "NONE OF THIS RUNS ON A MERGE
+# COMMIT"; The Escapement measured otherwise and the matrix is (git 2.50.1,
+# a scratch repo with both hooks installed under core.hooksPath):
+#
+#   automatic (non-conflicted) true merge commit -> `pre-merge-commit` ONLY
+#   fast-forward merge                           -> NEITHER (no commit exists)
+#   CONFLICTED merge, resolved by hand, concluded
+#     with an explicit `git commit`              -> `pre-commit` — THIS FILE
+#
+# The third row is an ordinary commit invocation as far as git is concerned,
+# and it is not hypothetical: a conflicted 47-commit absorption ran the full
+# gate through this hook (fmt, clippy, type-audit, 3 subfloor chunks, 3302
+# tests, rc=0, 50.1 s). `scripts/hooks/` holds no `pre-merge-commit`, so row
+# one is the ungated case and row three is gated.
+#
+# THAT INVERTS THE STATED RISK. The absorption most likely to mis-resolve a
+# generated artifact is the one where a human is hand-editing files — the
+# conflicted one — and that is exactly the one this hook DOES see. The blind
+# spot is the clean auto-merge, where nobody touched anything by hand. It is
+# still a blind spot (it happened, 3 for 3, on a count table), which is why
+# `post-merge` exists beside this file — advisory, because a merge commit
+# already exists by the time that hook can see it.
 #
 # This file absorbed the two features of a second, orphaned hook that used to
 # sit at the repo root (`hooks/pre-commit`, deleted 2026-07-31): the

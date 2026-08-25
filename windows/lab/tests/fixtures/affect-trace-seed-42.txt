@@ -33,12 +33,12 @@ creature 0 species=bugbear
   tick 31: label=Content arousal=0.269472 valence=1.0 object=None
   tick 32: label=Eager arousal=0.269472 valence=1.0 object=Some(Fatigue)
   tick 33: label=Eager arousal=0.30679821 valence=1.0 object=Some(Fatigue)
-  tick 34: label=Eager arousal=0.46238241 valence=1.0 object=Some(Fatigue)
-  tick 35: label=Eager arousal=0.61796662 valence=1.0 object=Some(Fatigue)
-  tick 36: label=Searching arousal=0.77355082 valence=0.0 object=Some(Thirst)
+  tick 34: label=Eager arousal=0.46238249 valence=1.0 object=Some(Fatigue)
+  tick 35: label=Eager arousal=0.61796678 valence=1.0 object=Some(Fatigue)
+  tick 36: label=Searching arousal=0.77355107 valence=0.0 object=Some(Thirst)
   tick 37: label=Eager arousal=0.869472 valence=1.0 object=Some(Fatigue)
-  tick 38: label=Content arousal=0.72966206 valence=1.0 object=None
-  tick 39: label=Eager arousal=0.83484993 valence=1.0 object=Some(Fatigue)
+  tick 38: label=Content arousal=0.72966216 valence=1.0 object=None
+  tick 39: label=Eager arousal=0.83485006 valence=1.0 object=Some(Fatigue)
 creature 1 species=hobgoblin
   tick 0: label=Content arousal=0.12459058 valence=1.0 object=None
   tick 1: label=Content arousal=0.2163761 valence=1.0 object=None

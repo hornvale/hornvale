@@ -2423,6 +2423,24 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-23T17:39:53Z | sluice:outboard | 38.199 | 23.637 | 37.067 | 1.59 | 0 | aa2817100 |  | lefford | 40 |
 | 2026-08-23T17:45:57Z | sluice:gate | 364.686 | 10246.247 | 350.239 | 29.06 | 0 | 67f23ca91 |  | lefford | 40 |
 | 2026-08-23T17:50:10Z | sluice:clients | 251.925 | 1441.846 | 17.245 | 5.79 | 0 | 7775d62e7 |  | lefford | 40 |
+| 2026-08-23T19:33:06Z | prewarm | 662.478 | 2082.513 | 136.074 | 3.35 | 0 | 92d2a0548 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-23T23:40:48Z | gate-commit | 4.914 | 6.471 | 1.397 | 1.60 | 0 | 5cbc3adf4 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-23T23:51:41Z | gate-commit | 5.280 | 3.023 | 0.945 | 0.75 | 0 | 5cbc3adf4 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T00:00:33Z | gate-commit | 41.934 | 81.857 | 13.110 | 2.26 | 0 | 5cbc3adf4 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T00:02:31Z | gate-commit | 95.721 | 62.079 | 49.815 | 1.17 | 0 | 5cbc3adf4 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T00:14:09Z | gate-commit | 276.576 | 771.478 | 105.770 | 3.17 | 0 | 5cbc3adf4 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T01:01:20Z | gate-commit | 142.427 | 123.633 | 52.734 | 1.24 | 0 | 5cbc3adf4 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T01:03:55Z | gate-commit | 103.307 | 64.023 | 37.670 | 0.98 | 0 | 5cbc3adf4 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T01:22:53Z | gate-commit | 28.499 | 41.347 | 14.009 | 1.94 | 0 | 545b53f46 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T01:26:17Z | gate-commit | 177.346 | 191.997 | 82.709 | 1.55 | 0 | 545b53f46 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T01:28:48Z | gate-commit | 107.541 | 66.249 | 39.031 | 0.98 | 0 | 545b53f46 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T01:55:43Z | gate-commit | 179.305 | 135.450 | 92.221 | 1.27 | 0 | 3bc4fd871 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T02:30:33Z | vessel-check | 41.916 | 59.743 | 5.165 | 1.55 | 0 | 0fbbce11c | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T02:31:19Z | world-check | 40.334 | 53.349 | 4.714 | 1.44 | 0 | 0fbbce11c | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T02:33:09Z | gate-commit | 89.375 | 199.522 | 41.275 | 2.69 | 0 | 0fbbce11c | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T02:35:20Z | gate-commit | 49.792 | 35.396 | 12.101 | 0.95 | 0 | 0fbbce11c | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T02:39:40Z | vessel-check | 28.425 | 32.014 | 1.387 | 1.18 | 0 | 26e2af764 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T02:40:14Z | world-check | 29.717 | 28.306 | 1.279 | 1.00 | 0 | 26e2af764 | campaign/the-escapement | ambrose | 12 |
 | 2026-08-23T18:30:32Z | gate-commit | 69.993 | 142.217 | 23.422 | 2.37 | 0 | b8574a0dc | campaign/the-lexicon | MacBookPro | 10 |
 | 2026-08-23T18:35:22Z | gate-commit | 25.253 | 53.292 | 18.378 | 2.84 | 0 | 95a56b42a | campaign/the-lexicon | MacBookPro | 10 |
 | 2026-08-23T18:44:01Z | gate-commit | 16.657 | 16.407 | 1.441 | 1.07 | 0 | fa56c6ebb | campaign/the-lexicon | MacBookPro | 10 |
@@ -2475,6 +2493,32 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-23T23:54:59Z | sluice:outboard | 37.674 | 23.890 | 37.623 | 1.63 | 0 | 39f10bfc0 |  | lefford | 40 |
 | 2026-08-24T00:01:44Z | sluice:gate | 405.025 | 10955.894 | 449.294 | 28.16 | 0 | c43dafe6e |  | lefford | 40 |
 | 2026-08-24T00:08:07Z | sluice:clients | 383.207 | 3450.336 | 46.161 | 9.12 | 0 | 91dc00fbc |  | lefford | 40 |
+| 2026-08-24T02:49:15Z | gate-commit | 94.863 | 306.385 | 40.668 | 3.66 | 0 | 05111264c | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T02:50:40Z | gate-commit | 50.113 | 35.499 | 12.241 | 0.95 | 0 | 05111264c | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T12:44:29Z | gate-commit | 117.478 | 69.730 | 42.415 | 0.95 | 0 | d3478b263 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T12:49:19Z | gate-commit | 95.481 | 65.257 | 39.209 | 1.09 | 0 | d3478b263 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T13:02:59Z | gate-commit | 113.151 | 70.981 | 45.084 | 1.03 | 0 | e0b07b3a5 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T13:36:34Z | gate-commit | 108.373 | 79.618 | 48.972 | 1.19 | 0 | 15f4444b2 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T14:43:02Z | rebaseline | 51.699 | 91.452 | 12.328 | 2.01 | 0 | 5cba6dada | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T14:44:27Z | rebaseline | 44.027 | 90.901 | 11.509 | 2.33 | 0 | 5cba6dada | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T14:47:20Z | rebaseline | 158.682 | 241.688 | 18.333 | 1.64 | 0 | 5cba6dada | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T15:23:39Z | gate-commit | 125.153 | 123.125 | 51.168 | 1.39 | 0 | 5cba6dada | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T15:25:51Z | gate-commit | 104.873 | 59.550 | 33.264 | 0.89 | 0 | 5cba6dada | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T15:29:51Z | gate-commit | 89.814 | 56.805 | 30.628 | 0.97 | 0 | 9ad5911a3 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T16:54:37Z | gate-commit | 89.785 | 56.140 | 30.330 | 0.96 | 0 | 06da80171 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T17:45:41Z | rebaseline | 165.322 | 255.076 | 18.200 | 1.65 | 0 | 49e8c3e20 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T17:53:06Z | gate-commit | 204.531 | 159.747 | 94.522 | 1.24 | 0 | 49e8c3e20 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T17:55:21Z | vessel-check | 40.435 | 52.910 | 4.370 | 1.42 | 0 | 49e8c3e20 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T17:56:13Z | vessel-check | 33.351 | 25.252 | 4.189 | 0.88 | 0 | 49e8c3e20 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T17:57:30Z | world-check | 71.083 | 71.274 | 7.964 | 1.11 | 0 | 49e8c3e20 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T18:00:21Z | gate-commit | 96.726 | 59.358 | 32.970 | 0.95 | 0 | 49e8c3e20 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T18:42:39Z | gate-commit | 99.178 | 59.068 | 32.533 | 0.92 | 0 | 583fe3132 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T19:02:48Z | census | 900.954 | 29533.133 | 316.906 | 33.13 | 0 | 6da5de512 |  | lefford | 40 |
+| 2026-08-24T20:00:07Z | gate-commit | 62.903 | 33.217 | 13.804 | 0.75 | 0 | 3de323813 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T20:19:52Z | gate-commit | 82.931 | 56.028 | 28.020 | 1.01 | 0 | f670fa6b7 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T20:39:07Z | gate-commit | 99.270 | 57.686 | 27.929 | 0.86 | 0 | f670fa6b7 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T21:14:52Z | gate-commit | 152.923 | 64.691 | 38.113 | 0.67 | 0 | f670fa6b7 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T21:24:11Z | gate-commit | 113.215 | 64.081 | 36.499 | 0.89 | 0 | f670fa6b7 | campaign/the-escapement | ambrose | 12 |
 | 2026-08-24T13:11:10Z | gate-commit | 83.826 | 526.411 | 38.170 | 6.74 | 0 | 379c1128c | campaign/the-lexicon | MacBookPro | 10 |
 | 2026-08-24T13:31:08Z | gate-commit | 19.577 | 46.530 | 12.063 | 2.99 | 0 | ec296a379 | campaign/the-lexicon | MacBookPro | 10 |
 | 2026-08-24T13:37:03Z | gate-commit | 20.573 | 44.184 | 10.418 | 2.65 | 0 | ec296a379 | campaign/the-lexicon | MacBookPro | 10 |
@@ -2660,6 +2704,8 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T18:06:35Z | sluice:outboard | 39.070 | 24.484 | 38.130 | 1.60 | 0 | a8c4d956d |  | lefford | 40 |
 | 2026-08-24T18:12:49Z | sluice:gate | 374.825 | 10384.171 | 367.906 | 28.69 | 0 | 941938956 |  | lefford | 40 |
 | 2026-08-24T18:19:44Z | sluice:clients | 414.662 | 5191.040 | 73.323 | 12.70 | 0 | 0240b5055 |  | lefford | 40 |
+| 2026-08-24T22:06:41Z | rebaseline | 285.340 | 252.948 | 18.804 | 0.95 | 0 | 168a2a9de | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T22:36:39Z | gate-commit | 147.600 | 177.823 | 69.796 | 1.68 | 0 | 168a2a9de | campaign/the-escapement | ambrose | 12 |
 | 2026-08-24T21:53:02Z | gate-commit | 184.120 | 630.440 | 113.969 | 4.04 | 0 | cfa3774b9 | campaign/the-confidant | MacBookPro | 10 |
 | 2026-08-24T21:34:36Z | rebaseline | 71.943 | 239.632 | 10.455 | 3.48 | 0 | 061473e3f | campaign/the-lexicon-of-place | MacBookPro | 10 |
 | 2026-08-24T21:36:31Z | gate-commit | 29.069 | 51.170 | 12.324 | 2.18 | 0 | b639666e8 | campaign/the-lexicon-of-place | MacBookPro | 10 |
@@ -2667,6 +2713,10 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T21:51:13Z | sluice:outboard | 42.556 | 29.597 | 42.089 | 1.68 | 0 | e5772b897 |  | lefford | 40 |
 | 2026-08-24T21:58:38Z | sluice:gate | 444.452 | 12266.248 | 507.369 | 28.74 | 0 | 3e36028b2 |  | lefford | 40 |
 | 2026-08-24T22:05:56Z | sluice:clients | 438.347 | 5447.220 | 100.208 | 12.66 | 0 | 1a021d49e |  | lefford | 40 |
+| 2026-08-24T22:46:19Z | rebaseline | 279.176 | 248.379 | 18.057 | 0.95 | 0 | f5e2ad5fd | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T23:23:58Z | vessel-check | 59.015 | 71.389 | 6.086 | 1.31 | 0 | f5e2ad5fd | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T23:24:57Z | world-check | 49.558 | 55.728 | 5.233 | 1.23 | 0 | f5e2ad5fd | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T23:30:46Z | gate-commit | 138.622 | 112.129 | 47.403 | 1.15 | 0 | f5e2ad5fd | campaign/the-escapement | ambrose | 12 |
 | 2026-08-24T22:47:32Z | gate-commit | 62.772 | 104.251 | 121.687 | 3.60 | 0 | 140d4d45e | campaign/the-confidant | MacBookPro | 10 |
 | 2026-08-24T22:52:27Z | gate-commit | 24.717 | 48.701 | 13.034 | 2.50 | 0 | 140d4d45e | campaign/the-confidant | MacBookPro | 10 |
 | 2026-08-24T23:05:52Z | gate-commit | 72.261 | 151.163 | 30.311 | 2.51 | 0 | f16659117 | campaign/the-confidant | MacBookPro | 10 |
@@ -2680,6 +2730,19 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T22:55:17Z | sluice:outboard | 38.935 | 24.010 | 38.371 | 1.60 | 0 | cc87d7008 |  | lefford | 40 |
 | 2026-08-24T23:02:23Z | sluice:gate | 424.945 | 11790.017 | 476.691 | 28.87 | 0 | 38663deca |  | lefford | 40 |
 | 2026-08-24T23:09:33Z | sluice:clients | 430.299 | 5298.559 | 84.678 | 12.51 | 0 | 96548b5b1 |  | lefford | 40 |
+| 2026-08-24T23:34:21Z | rebaseline | 127.499 | 238.032 | 13.592 | 1.97 | 0 | 308fb5e47 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T23:47:45Z | gate-commit | 89.024 | 82.505 | 37.133 | 1.34 | 0 | 308fb5e47 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T23:49:04Z | gate-commit | 70.795 | 47.924 | 22.215 | 0.99 | 0 | 534bf8b06 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T23:50:23Z | vessel-check | 42.982 | 43.237 | 3.117 | 1.08 | 0 | 534bf8b06 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T23:51:07Z | world-check | 43.088 | 36.852 | 2.916 | 0.92 | 0 | 534bf8b06 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-25T00:07:06Z | gate-commit | 209.674 | 431.413 | 102.592 | 2.55 | 0 | 7e614c6d3 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-25T00:10:26Z | gate-commit | 142.378 | 132.642 | 66.504 | 1.40 | 0 | 7e614c6d3 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-25T00:12:30Z | gate-commit | 74.555 | 50.267 | 24.756 | 1.01 | 0 | 7e614c6d3 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-25T01:35:15Z | gate-commit | 101.329 | 55.278 | 25.481 | 0.80 | 0 | 7ef4e73d5 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-25T02:04:50Z | gate-commit | 205.288 | 375.040 | 106.344 | 2.34 | 0 | 6a9c75665 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-25T02:17:42Z | rebaseline | 122.796 | 220.628 | 12.035 | 1.89 | 0 | 6a9c75665 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-25T02:20:51Z | gate-commit | 72.442 | 47.905 | 22.384 | 0.97 | 0 | 6a9c75665 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-25T02:25:04Z | gate-commit | 75.628 | 48.654 | 22.708 | 0.94 | 0 | daf3f5218 | campaign/the-escapement | ambrose | 12 |
 | 2026-08-25T00:08:29Z | gate-commit | 27.441 | 74.810 | 19.198 | 3.43 | 0 | 0200d977c | campaign/the-confidant | MacBookPro | 10 |
 | 2026-08-25T00:11:38Z | gate-commit | 28.322 | 65.930 | 18.299 | 2.97 | 0 | 0200d977c | campaign/the-confidant | MacBookPro | 10 |
 | 2026-08-25T00:12:43Z | rebaseline | 59.522 | 235.257 | 12.190 | 4.16 | 0 | 0200d977c | campaign/the-confidant | MacBookPro | 10 |
@@ -2712,3 +2775,11 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-25T13:08:58Z | sluice:outboard | 41.204 | 25.973 | 39.607 | 1.59 | 0 | 72a89141c |  | lefford | 40 |
 | 2026-08-25T13:16:20Z | sluice:gate | 442.376 | 12406.782 | 499.717 | 29.18 | 0 | 2c67ed2ff |  | lefford | 40 |
 | 2026-08-25T13:23:30Z | sluice:clients | 428.984 | 5363.667 | 87.317 | 12.71 | 0 | ad8163865 |  | lefford | 40 |
+| 2026-08-25T13:40:56Z | rebaseline | 139.547 | 238.886 | 12.953 | 1.80 | 0 | 16ef8ec4a | campaign/the-escapement | ambrose | 12 |
+| 2026-08-25T13:41:55Z | quick | 31.574 | 48.087 | 29.248 | 2.45 | 0 | 16ef8ec4a | campaign/the-escapement | ambrose | 12 |
+| 2026-08-25T13:50:14Z | gate-commit | 257.788 | 767.691 | 84.194 | 3.30 | 0 | 16ef8ec4a | campaign/the-escapement | ambrose | 12 |
+| 2026-08-25T14:34:00Z | census | 895.464 | 29296.878 | 304.697 | 33.06 | 0 | 7d4732b89 |  | lefford | 40 |
+| 2026-08-25T14:57:43Z | rebaseline | 56.978 | 246.460 | 13.734 | 4.57 | 0 | 4a4dd1405 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-25T15:02:34Z | gate-commit | 76.274 | 47.269 | 22.353 | 0.91 | 0 | 4a4dd1405 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-25T15:08:37Z | gate-commit | 88.208 | 67.656 | 25.719 | 1.06 | 0 | 4a4dd1405 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-25T15:10:23Z | gate-commit | 81.127 | 51.050 | 24.516 | 0.93 | 0 | 84ad6a077 | campaign/the-escapement | ambrose | 12 |

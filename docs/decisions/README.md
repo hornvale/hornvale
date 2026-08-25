@@ -198,6 +198,12 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0171](0171-a-players-acts-are-not-filtered-out-of-a-saved-world.md) | A player's acts are not filtered out of a saved played world | Accepted |
 | [0172](0172-a-concept-with-no-possible-referent-is-an-extradiegetic-gap.md) | A concept with no possible referent is lexicalised as an extradiegetic gap | Accepted |
 | [0176](0176-the-chamber-address-gains-a-floor-and-sunless-becomes-nadir.md) | The chamber address gains a floor, and `Sunless` becomes `Nadir`, on one `chamber/v3` epoch | Accepted |
+| [0186](0186-an-instant-is-an-exact-tick-count.md) | An instant is an exact tick count — the lattice is the time domain | Accepted |
+| [0187](0187-a-pre-genesis-sky-query-is-clamped-to-genesis.md) | A pre-genesis sky query is clamped to genesis, deliberately | Accepted |
+| [0188](0188-quantize-still-governs-magnitude-time-leaves-it.md) | Quantize still governs magnitude; time leaves the contract entirely | Accepted |
+| [0189](0189-a-pre-flip-world-file-does-not-load-and-that-is-the-point.md) | A pre-flip world file does not load, and that is the point | Accepted |
+| [0190](0190-a-reachability-trace-is-not-closed-by-finding-one-funnel.md) | A reachability trace is not closed by finding one funnel | Accepted |
+| [0191](0191-an-exact-store-needs-no-quantized-query-bound.md) | An exact store needs no quantized query bound | Accepted |
 | [0196](0196-a-map-is-a-fact-about-the-world-and-a-view-is-a-lens.md) | A map's frame is a fact about the world, and a view of the world is a lens | Accepted |
 | [0197](0197-co-location-is-not-discovery.md) | Co-location is not discovery | Accepted |
 | [0206](0206-a-derived-values-key-is-its-validity.md) | A derived value's key is its validity | Accepted |
@@ -208,7 +214,7 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0227](0227-possession-selects-a-body-it-does-not-mint-one.md) | Possession selects a body; it does not mint one | Accepted |
 | [0228](0228-a-controller-is-a-parameter-of-the-tick.md) | A controller is a parameter of the tick, not a property of the body | Accepted |
 | [0229](0229-one-body-type.md) | One body type | Accepted |
-| [0230](0230-a-query-bound-is-quantized-to-read-a-quantized-store.md) | A query bound is quantized to read a quantized store | Accepted |
+| [0230](0230-a-query-bound-is-quantized-to-read-a-quantized-store.md) | A query bound is quantized to read a quantized store | Superseded by 0191 |
 | [0246](0246-a-renamed-concept-keeps-its-serialized-spelling-forever.md) | A renamed concept keeps its serialized spelling forever, and the freeze needs a test that cannot be rebaselined | Accepted |
 | [0247](0247-a-mesh-vertex-is-a-vertex-and-a-face-is-a-facet.md) | A mesh vertex is a `Vertex` and a face is a `Facet` | Accepted |
 | [0256](0256-a-hosts-testimony-is-fallible-by-construction.md) | A host's testimony is fallible by construction, and the gap is the deliverable | Accepted |

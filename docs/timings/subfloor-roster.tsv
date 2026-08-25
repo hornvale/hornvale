@@ -889,7 +889,7 @@ hornvale-kernel::hornvale_kernel$ecology::tests::the_environment_basis_ids_are_a
 hornvale-kernel::hornvale_kernel$ecology::tests::zero_vector_is_legal_and_overlaps_nothing
 hornvale-kernel::hornvale_kernel$fact_index::tests::interner_round_trips
 hornvale-kernel::hornvale_kernel$fact_index::tests::objkey_orders_numbers_by_total_cmp_and_ranks_variants
-hornvale-kernel::hornvale_kernel$field::tests::a_world_time_cannot_be_built_from_a_non_finite_value
+hornvale-kernel::hornvale_kernel$field::tests::a_world_time_cannot_be_built_from_a_non_finite_number_of_days
 hornvale-kernel::hornvale_kernel$field::tests::a_world_time_may_be_negative_because_a_day_is_a_point_not_a_duration
 hornvale-kernel::hornvale_kernel$field::tests::constant_field_returns_its_value_everywhere
 hornvale-kernel::hornvale_kernel$field::tests::constant_field_works_for_non_numeric_types
@@ -910,12 +910,13 @@ hornvale-kernel::hornvale_kernel$geosphere::tests::subdivided_vertices_are_all_u
 hornvale-kernel::hornvale_kernel$geosphere::tests::subdivision_yields_the_icosphere_vertex_counts
 hornvale-kernel::hornvale_kernel$geosphere::tests::vertexmap_covers_every_vertex_and_indexes_by_id
 hornvale-kernel::hornvale_kernel$ledger::tests::a_different_parent_or_role_moves_the_path_hash
-hornvale-kernel::hornvale_kernel$ledger::tests::a_facts_day_is_typed_and_round_trips_as_a_bare_number
+hornvale-kernel::hornvale_kernel$ledger::tests::a_facts_day_is_typed_and_round_trips_as_a_bare_integer_tick_count
 hornvale-kernel::hornvale_kernel$ledger::tests::a_root_needs_no_parent_and_no_world_seed
 hornvale-kernel::hornvale_kernel$ledger::tests::an_id_is_a_function_of_lineage_not_of_call_order
 hornvale-kernel::hornvale_kernel$ledger::tests::an_inserted_mint_does_not_move_an_unrelated_id
 hornvale-kernel::hornvale_kernel$ledger::tests::commit_and_query_roundtrip
-hornvale-kernel::hornvale_kernel$ledger::tests::committed_numbers_and_days_are_quantized
+hornvale-kernel::hornvale_kernel$ledger::tests::committed_numbers_are_quantized_but_days_are_exact
+hornvale-kernel::hornvale_kernel$field::tests::world_time_is_ordered_and_equatable_so_it_can_key_a_map
 hornvale-kernel::hornvale_kernel$ledger::tests::entity_id_zero_is_unrepresentable
 hornvale-kernel::hornvale_kernel$ledger::tests::facts_about_yields_commit_order_not_index_key_order
 hornvale-kernel::hornvale_kernel$ledger::tests::facts_of_agrees_before_the_index_exists

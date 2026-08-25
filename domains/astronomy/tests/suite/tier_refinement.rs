@@ -14,7 +14,7 @@ use hornvale_kernel::{EntityId, ObserverContext, PhenomenaSource, Seed, Venue, W
 fn ctx(day: f64) -> ObserverContext {
     ObserverContext::at(
         EntityId::new(1).unwrap(),
-        WorldTime::new(day).expect("a day value is finite"),
+        WorldTime::from_std_days(day).expect("a day value is finite"),
     )
 }
 
@@ -123,14 +123,15 @@ fn the_sun_never_leaves_the_visible_bodies_list() {
         for seed in 0..32u64 {
             let sky = GeneratedSky::new(generate(Seed(seed), &pins).unwrap());
             for t in [0.0, 0.25, 10.5, 100.75] {
-                let report = sky.sky_at(WorldTime::new(t).expect("a day value is finite"));
+                let report =
+                    sky.sky_at(WorldTime::from_std_days(t).expect("a day value is finite"));
                 assert!(
                     report.bodies.contains(&"the sun".to_string()),
                     "seed {seed} t {t}: the generated sky retracted the sun"
                 );
                 assert_eq!(
                     report.description,
-                    sky.sky_at(WorldTime::new(t).expect("a day value is finite"))
+                    sky.sky_at(WorldTime::from_std_days(t).expect("a day value is finite"))
                         .description,
                     "seed {seed} t {t}: report must be deterministic"
                 );

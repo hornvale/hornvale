@@ -1001,7 +1001,7 @@ fn exposure_rows_masked(
         // people knew before it existed.
         //
         // `present_frame` (not a hand-written
-        // `WorldTime::new(ledger_day_of_bake_year(present_year(&world)))`
+        // `WorldTime::from_std_days(ledger_day_of_bake_year(present_year(&world)))`
         // here): that hand-written composition used to live at this exact
         // line and reported `tools/seam-guard`'s `ledger_day_of_bake_year`
         // seam UNGUARDED — the call was reachable only from this file's
