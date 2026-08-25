@@ -2686,3 +2686,6 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-25T02:37:22Z | gate-commit | 19.185 | 47.882 | 11.485 | 3.09 | 0 | 0346e0acb | campaign/the-interlinear | MacBookPro | 10 |
 | 2026-08-25T02:38:28Z | gate-commit | 19.217 | 47.953 | 11.830 | 3.11 | 0 | 0346e0acb | campaign/the-interlinear | MacBookPro | 10 |
 | 2026-08-25T02:45:06Z | gate-commit | 46.791 | 86.739 | 70.205 | 3.35 | 0 | 5acb5c89d | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T02:45:36Z | gate-commit | 19.141 | 47.947 | 11.757 | 3.12 | 0 | 5acb5c89d | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T03:01:10Z | rebaseline | 56.540 | 234.104 | 11.906 | 4.35 | 0 | 5aa0439f7 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T03:01:49Z | gate-commit | 32.513 | 70.143 | 45.333 | 3.55 | 0 | 5aa0439f7 | campaign/the-interlinear | MacBookPro | 10 |

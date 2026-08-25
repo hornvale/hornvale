@@ -316,10 +316,30 @@ pub enum AdjunctPosition {
 /// yet — the adjunct renders as nothing rather than leaking its key into
 /// prose, which is the same discipline `CommonVocabulary::word_for` follows.
 ///
-/// **These three moved here from `windows/book`'s `fragment_for`.** They lived
-/// in a window because `ClauseSpec` could not carry structure, which is also
-/// why that window had to duplicate `indefinite_article`. A role's surface is
-/// a fact about a language and belongs to the language.
+/// **The first three moved here from `windows/book`'s `fragment_for`.** They
+/// lived in a window because `ClauseSpec` could not carry structure, which is
+/// also why that window had to duplicate `indefinite_article`. A role's
+/// surface is a fact about a language and belongs to the language.
+///
+/// **The four `occ-*` roles are the deep-history occupation predicates**
+/// (`domains/history`'s `OCC_PEOPLE`/`OCC_SITE`/`OCC_FOUNDED`/`OCC_ENDED`),
+/// and they are spelled as LITERALS here for the same reason the astronomy
+/// roles above are: this crate is a domain, and a domain may not depend on a
+/// sibling domain, so the constants are out of reach. Contrast
+/// [`common_constructions`], whose one key IS the kernel's `IS_A` constant —
+/// the kernel is not a sibling. The pairing is therefore held by these
+/// strings agreeing with `domains/history`'s, and by the acceptance test that
+/// realizes a real occupation through them
+/// (`windows/almanac/tests/suite/interlinear.rs`, which reads the ids off
+/// the constants).
+///
+/// Position is chosen per role, which is the whole point of the return type:
+/// the people, the site and the founding are all part of the noun phrase
+/// being described, so they surface inline; the ending is a separate event
+/// and gets its own trailing clause, exactly as `day-length-std` does.
+/// A vertex renders as a bare integer rather than through [`cardinal`]
+/// because it is an IDENTIFIER, not a count — a year is a count of years and
+/// does go through `cardinal`.
 /// type-audit: bare-ok(prose: return)
 pub fn common_role_surface(
     adjunct: &Adjunct,
@@ -344,6 +364,25 @@ pub fn common_role_surface(
         ("day-length-std", Argument::Quantity(days)) => Some((
             AdjunctPosition::Trailing,
             format!("its day lasts {} standard days", quantity(*days)),
+        )),
+        // The plural goes through `surface_complement`, so Common has exactly
+        // one pluralization rule and this role cannot drift from the
+        // complement slot's.
+        ("occ-people", Argument::Concept(id)) => Some((
+            AdjunctPosition::Inline,
+            format!("of the {}", surface_complement(vocab, id, Number::Pl)),
+        )),
+        ("occ-site", Argument::Count(vertex)) => Some((
+            AdjunctPosition::Inline,
+            format!("in the clearing at vertex {vertex}"),
+        )),
+        ("occ-founded", Argument::Count(year)) => Some((
+            AdjunctPosition::Inline,
+            format!("founded in year {}", cardinal(*year)),
+        )),
+        ("occ-ended", Argument::Count(year)) => Some((
+            AdjunctPosition::Trailing,
+            format!("it ended in year {}", cardinal(*year)),
         )),
         _ => None,
     }
@@ -1072,6 +1111,76 @@ mod tests {
             realize_common(&spec, &v),
             "Hornvale is a planet with two moons, orbiting a yellow-white dwarf; \
              its day lasts about 1.5 standard days."
+        );
+    }
+
+    #[test]
+    fn common_names_an_occupations_people_in_the_plural() {
+        let v = CommonVocabulary::default();
+        let a = Adjunct {
+            role: "occ-people".into(),
+            argument: Argument::Concept("hobgoblin-kind".into()),
+        };
+        assert_eq!(
+            common_role_surface(&a, &v),
+            Some((AdjunctPosition::Inline, "of the hobgoblins".to_string()))
+        );
+    }
+
+    #[test]
+    fn common_places_an_occupation_at_its_vertex_as_a_bare_identifier() {
+        let v = CommonVocabulary::default();
+        let a = Adjunct {
+            role: "occ-site".into(),
+            argument: Argument::Count(8835),
+        };
+        assert_eq!(
+            common_role_surface(&a, &v),
+            Some((
+                AdjunctPosition::Inline,
+                "in the clearing at vertex 8835".to_string()
+            ))
+        );
+    }
+
+    /// A founding is inline — part of the noun phrase — and its year goes
+    /// through [`cardinal`], so a small year reads as a word.
+    #[test]
+    fn common_dates_a_founding_inline_through_the_cardinal() {
+        let v = CommonVocabulary::default();
+        let big = Adjunct {
+            role: "occ-founded".into(),
+            argument: Argument::Count(312),
+        };
+        let small = Adjunct {
+            role: "occ-founded".into(),
+            argument: Argument::Count(7),
+        };
+        assert_eq!(
+            common_role_surface(&big, &v),
+            Some((AdjunctPosition::Inline, "founded in year 312".to_string()))
+        );
+        assert_eq!(
+            common_role_surface(&small, &v),
+            Some((AdjunctPosition::Inline, "founded in year seven".to_string()))
+        );
+    }
+
+    /// An ending is a separate event, so it gets its own trailing clause —
+    /// the position `day-length-std` already established, chosen per role.
+    #[test]
+    fn an_occupations_ending_is_trailing_not_inline() {
+        let v = CommonVocabulary::default();
+        let a = Adjunct {
+            role: "occ-ended".into(),
+            argument: Argument::Count(900),
+        };
+        assert_eq!(
+            common_role_surface(&a, &v),
+            Some((
+                AdjunctPosition::Trailing,
+                "it ended in year 900".to_string()
+            ))
         );
     }
 
