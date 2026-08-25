@@ -96,10 +96,9 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                             } else {
                                 format!("land, {relative:.0} m above the sea")
                             };
-                            // lexicon: rendered REPL prose, kept "cell" (windows/almanac precedent)
                             writeln!(
                                 output,
-                                "cell {}: {surface}; plate {}; unrest {:.2}",
+                                "vertex {}: {surface}; plate {}; unrest {:.2}",
                                 vertex.0,
                                 terrain.plate_of(vertex),
                                 terrain.unrest_at(vertex)
@@ -132,10 +131,9 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                         Ok(terrain) => match world_builder::climate_from(world, &terrain) {
                             Ok(climate) => {
                                 let vertex = terrain.nearest_vertex(lat, lon);
-                                // lexicon: rendered REPL prose, kept "cell" (windows/almanac precedent)
                                 writeln!(
                                     output,
-                                    "cell {}: biome {} — {:.0}°C, moisture {:.2}",
+                                    "vertex {}: biome {} — {:.0}°C, moisture {:.2}",
                                     vertex.0,
                                     climate.biome_at(vertex).name(),
                                     climate.mean_temperature_at(vertex).get(),
@@ -240,8 +238,7 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                                     "{} — {} (entity {})",
                                     place.name, place.biome, place.id.0
                                 )?,
-                                // lexicon: rendered REPL prose, kept "cell" (windows/almanac precedent)
-                                None => writeln!(output, "no settlement on this cell")?,
+                                None => writeln!(output, "no settlement on this vertex")?,
                             }
                         }
                         Err(e) => writeln!(output, "error: {e}")?,

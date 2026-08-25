@@ -45,7 +45,7 @@ fn kinship_reports_sibling_at_zero_and_ancestor_above() {
 
 #[test]
 fn a_nonpositive_generation_length_yields_zero_rather_than_infinity() {
-    // An Ametabolic kind has generation_length None; a caller that
+    // An ametabolic kind has generation_length None; a caller that
     // substitutes 0.0 must not produce NaN, Infinity, or a panic.
     assert_eq!(remove(50.0, 0.0), 0);
     assert_eq!(remove(50.0, -3.0), 0);

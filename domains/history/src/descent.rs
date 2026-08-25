@@ -33,7 +33,7 @@ pub enum Kinship {
 ///
 /// Rounds to nearest, so a gap under half a generation is zero. Total by
 /// construction: a non-positive or non-finite `generation_length_years`
-/// (an `Ametabolic` kind has no generation length at all) and a negative
+/// (an ametabolic kind has no generation length at all) and a negative
 /// `gap_years` both yield `0` rather than a panic, a NaN, or a `u32`
 /// underflow.
 /// type-audit: bare-ok(count: gap_years), bare-ok(count: generation_length_years), bare-ok(count: return)

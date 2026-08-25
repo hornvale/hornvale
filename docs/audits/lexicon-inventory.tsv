@@ -5,15 +5,14 @@
 # square, a markdown-table cell) or a frozen serialized literal.
 # A number may fall freely. Raising one needs a human's reason.
 cli/src/concepts.rs	14
-cli/src/main.rs	9
-cli/src/repl.rs	4
+cli/src/main.rs	2
+cli/src/repl.rs	1
 cli/src/streams.rs	4
 cli/src/systems.rs	12
 cli/src/tropes.rs	23
 cli/tests/suite/branches_coverage.rs	1
 cli/tests/suite/docs_consistency.rs	61
 cli/tests/suite/graph_cost.rs	1
-cli/tests/suite/history_render.rs	2
 cli/tests/suite/id_shift_invariance.rs	1
 cli/tests/suite/repose_byte_identity.rs	1
 cli/tests/suite/session_cost.rs	13
@@ -63,10 +62,6 @@ kernel/src/room.rs	1
 tools/board/src/store.rs	4
 tools/digest/src/render/delta.rs	2
 tools/earth-mask/src/main.rs	1
-windows/almanac/src/connections.rs	8
-windows/almanac/src/gazetteer.rs	2
-windows/almanac/src/history.rs	3
-windows/almanac/src/qualify.rs	1
 windows/book/src/lib.rs	6
 windows/hearsay/tests/probe_crossing_scale.rs	2
 windows/lab/src/domesday/anomaly.rs	1
@@ -130,7 +125,7 @@ windows/worldgen/src/graph_derive.rs	5
 windows/worldgen/src/hazard.rs	3
 windows/worldgen/src/history_bake.rs	1
 windows/worldgen/src/history_emit.rs	1
-windows/worldgen/src/lib.rs	16
+windows/worldgen/src/lib.rs	14
 windows/worldgen/src/streams.rs	1
 windows/worldgen/src/volcano.rs	5
 windows/worldgen/tests/suite/beta_calibration_sweep.rs	2
