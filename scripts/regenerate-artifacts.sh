@@ -70,7 +70,13 @@ set -euo pipefail
 #   no world at all). `systems report`/`matrix` (The Compendium) joined this
 #   group later still, and builds no world at all — not even its own —
 #   because its anchors resolve against the digest, the idea registry, and
-#   the filesystem, never a genesis. All of these are safe to co-schedule with B:
+#   the filesystem, never a genesis. `lab confidant` (The Confidant, Task 7
+#   reshape) joined it the same way `first_light` did: it builds its own
+#   internal `Seed(42)` `FullView`, never touches $w42/$wsky/$wlocked, and
+#   its answers are world-invariant by measurement (a 1000-seed census run
+#   found all three metric families it reads constant across every seed), so
+#   any seed would do and Group A's already-built worlds are simply not
+#   needed. All of these are safe to co-schedule with B:
 #   distinct write targets, and no read dependency on B's or A's outputs.
 #
 #   GROUP D — the lab studies (`lab run`, traced: internally parallel across
@@ -798,6 +804,10 @@ spawn run -p hornvale -- tropes --corpus tropes/tvtropes-2012.trope.json report 
 spawn run -p hornvale -- tropes matrix > docs/audits/trope-matrix.md
 spawn run -p hornvale -- systems report > docs/audits/system-coverage-wolverson-2021.md
 spawn run -p hornvale -- systems matrix > docs/audits/system-matrix.md
+# The Confidant, Task 7 reshape: world-invariant (builds its own internal
+# Seed(42), like `first_light` above), so it belongs in Group C alongside
+# the other world-free/self-contained dumps rather than among $w42's readers.
+spawn run -p hornvale -- lab confidant > docs/audits/the-confidant-report.md
 spawn run --manifest-path tools/digest/Cargo.toml -- render delta \
   > docs/digest/intent-vs-reality.md
 spawn gen_underworld_lattice > docs/audits/underworld-lattice-seed-panel.md

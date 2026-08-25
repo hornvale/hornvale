@@ -70,7 +70,7 @@ windows/almanac/src/qualify.rs	1
 windows/book/src/lib.rs	6
 windows/hearsay/tests/probe_crossing_scale.rs	2
 windows/lab/src/domesday/anomaly.rs	1
-windows/lab/src/metrics.rs	10
+windows/lab/src/metrics.rs	22
 windows/lab/src/tongue_distance.rs	1
 windows/lab/tests/suite/rung_selection.rs	1
 windows/lab/tests/suite/the_fare_calibration.rs	1

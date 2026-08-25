@@ -87,7 +87,18 @@ fn circumplex_position(label: AffectLabel) -> (i32, i32) {
 }
 
 /// Manhattan distance between two labels' [`circumplex_position`]s.
-fn circumplex_distance(a: AffectLabel, b: AffectLabel) -> i32 {
+///
+/// `pub` since The Confidant, Task 7: `misreport_distance_for`
+/// (`windows/lab/src/metrics.rs`, read by `render_confidant_report` — the
+/// Task 7 reshape moved this instrument out of the lab metric registry into
+/// a rendered artifact, but the caller of this function is unchanged) needs
+/// the SAME distance this module's own [`nearest`] search already uses to
+/// pick a substitute word — re-deriving it would risk the two silently
+/// diverging (the universe-rule duplication risk spec §5.2 names for a
+/// sibling case). `circumplex_position` itself stays private: no caller
+/// outside this module needs a raw position, only the distance between two.
+/// type-audit: bare-ok(count: return)
+pub fn circumplex_distance(a: AffectLabel, b: AffectLabel) -> i32 {
     let (av, aa) = circumplex_position(a);
     let (bv, ba) = circumplex_position(b);
     (av - bv).abs() + (aa - ba).abs()
