@@ -406,6 +406,13 @@ pub fn common_role_surface(
 
 ---
 
+> **Tasks 4 and 5 land in ONE commit.** Deleting `ClauseSpec.modifiers` breaks
+> `windows/book`, which constructs `ClauseSpec` and touches `modifiers` in 18
+> places — and `make gate-commit` runs `cargo clippy --workspace --all-targets`,
+> so a Task 4 that commits alone commits a red tree. They are split here for
+> readability, not for landing: a reviewer cannot meaningfully approve one
+> without the other. Do both, then commit once.
+
 ### Task 4: `ClauseSpec` becomes fact-shaped, and Common realizes it
 
 **Files:**
