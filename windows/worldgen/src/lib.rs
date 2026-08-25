@@ -4184,7 +4184,7 @@ pub fn deep_lines_from(
     if paleo.max_ice_fraction > 0.0 {
         let iced = geo.vertices().filter(|c| *paleo.envelope.get(*c)).count();
         lines.push(format!(
-            "Glaciated strata lie in the cover over {iced} cells — the ice left its mark."
+            "Glaciated strata lie in the cover over {iced} vertices — the ice left its mark."
         ));
     }
     Ok(lines)
@@ -4261,7 +4261,7 @@ pub fn lode_lines_from(
     }
     if colocated > 0 {
         lines.push(format!(
-            "{colocated} cells hold both cave and ore — the deep worked twice."
+            "{colocated} vertices hold both cave and ore — the deep worked twice."
         ));
     }
     Ok(lines)
@@ -5938,6 +5938,82 @@ fn exposure_of_impl(
             if world.registry.concept(concept).is_some() {
                 classes.insert(concept.to_string(), ExposureClass::Steeped);
             }
+        }
+    }
+
+    // Steeped: the six felt states (`hornvale_language::felt_state_pack`,
+    // Task 4b), derived from the species' own `MindVector` rather than
+    // authored per species — a table of who-lacks-what would make the
+    // deficiency distribution this task exists to expose *circular* (spec
+    // §5.1). `MindVector` carries exactly three `[0, 1]` scalars, each with
+    // a MEANINGFUL midpoint (0.5, the manikin's own neutral reading), and
+    // `felt_state_pack` carries exactly three valence-opposed PAIRS — so
+    // one scalar governs one pair, by which side of the midpoint the
+    // species falls on:
+    //
+    // - `threat_response` (flee 0 <-> stand 1): a species that meets a
+    //   blockage by STANDING keeps pushing at a target it can still see —
+    //   `frustrated` (blocked, target known, still trying). One that meets
+    //   it by FLEEING disengages entirely, with nothing left to aim at —
+    //   `lost` (blocked, no target). `> 0.5` Steeps `frustrated`; `< 0.5`
+    //   Steeps `lost`.
+    // - `deliberation_latency` (fast 0 <-> slow 1): a SLOW, considered
+    //   species rests once a need is met — `content` (needs met, at rest).
+    //   A FAST, opportunistic one is always mid-pursuit of the next
+    //   satisfiable want — `eager` (chasing a satisfiable need). `> 0.5`
+    //   Steeps `content`; `< 0.5` Steeps `eager`.
+    // - `time_horizon` (immediate 0 <-> generational 1): a GENERATIONAL
+    //   planner can hold a drive across a span long enough to watch it fail
+    //   anyway — `helpless` (given up despite an active drive). An
+    //   IMMEDIATE opportunist is always working a gradient toward the next
+    //   thing, with no fixed aim to give up on — `searching` (seeking with
+    //   a gradient). `> 0.5` Steeps `helpless`; `< 0.5` Steeps `searching`.
+    //
+    // Exactly AT the midpoint (the manikin's own reading, and goblin's
+    // authored one on every axis) earns neither pole: no lean, no root.
+    // That is a real reading, not an omission — those concepts fall
+    // through to the generic Experiential catch-all below like any other
+    // unclaimed concept, the same way every other rule in this function
+    // leaves what it doesn't classify to the rule that runs last.
+    //
+    // Deliberately `MindVector` alone, not `SocietyVector` too: three
+    // scalars times two poles is exactly six, one clean rule per pair.
+    // `SocietyVector`'s fields are categorical (`Sociality`, `StatusBasis`)
+    // or would have to double up on its one scalar (`in_group_radius`) to
+    // reach six — a worse fit than the one already exact.
+    //
+    // `wc.psyche` is guaranteed present here: the nested-capacity chain
+    // this function's own perception lookup already relies on is speech
+    // subset-of perception subset-of mind, so any species that reached this
+    // far (it has perception) already has a `MindVector`. The `if let` is
+    // defensive, matching this function's existing `Option`-gated rules,
+    // not a live branch.
+    //
+    // `windows/lab/src/metrics.rs`'s `independently_steeped_concepts` carries
+    // a SECOND, independently-derived copy of exactly this rule (the same
+    // discipline the toponymic gates and staple/variant rules above are
+    // already held to, spec §9.2: a check that called this function would
+    // assert nothing). If you change this block, that copy needs the same
+    // change — `exposure_classification_agrees_with_the_independent_
+    // rederivation` (`windows/lab/src/metrics.rs`, `mod tests`) sweeps
+    // several seeds and every placed people comparing this function's
+    // verdict against the lab's, and reddens on the first concept where the
+    // two disagree.
+    if let Some(mind) = wc.psyche.get(&KindId(name)) {
+        if mind.threat_response > 0.5 {
+            classes.insert("frustrated".to_string(), ExposureClass::Steeped);
+        } else if mind.threat_response < 0.5 {
+            classes.insert("lost".to_string(), ExposureClass::Steeped);
+        }
+        if mind.deliberation_latency > 0.5 {
+            classes.insert("content".to_string(), ExposureClass::Steeped);
+        } else if mind.deliberation_latency < 0.5 {
+            classes.insert("eager".to_string(), ExposureClass::Steeped);
+        }
+        if mind.time_horizon > 0.5 {
+            classes.insert("helpless".to_string(), ExposureClass::Steeped);
+        } else if mind.time_horizon < 0.5 {
+            classes.insert("searching".to_string(), ExposureClass::Steeped);
         }
     }
 

@@ -335,7 +335,7 @@ impl SiteLabels {
         self.labels
             .get(&vertex)
             .cloned()
-            .unwrap_or_else(|| format!("cell {}", vertex.0))
+            .unwrap_or_else(|| format!("vertex {}", vertex.0))
     }
 }
 

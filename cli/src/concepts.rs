@@ -358,6 +358,7 @@ fn kind_kebab(kind: hornvale_kernel::ConceptKind) -> &'static str {
         hornvale_kernel::ConceptKind::Kin => "kin",
         hornvale_kernel::ConceptKind::Quality => "quality",
         hornvale_kernel::ConceptKind::Act => "act",
+        hornvale_kernel::ConceptKind::Affect => "affect",
     }
 }
 

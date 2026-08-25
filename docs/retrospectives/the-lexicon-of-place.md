@@ -198,6 +198,17 @@ anyway, and all three are contracts *by accident*:
 | what moved | why it was not on the list |
 |---|---|
 | almanac prose ("992 cells") | it is prose that happens to be rendered into a committed artifact |
+
+**Postscript, and it reverses this campaign's own call.** The fix I chose for
+the first row was to keep rendered prose on "cell" and annotate each site.
+Nathan overruled it: one word per concept, everywhere, player-facing text
+included. The reasoning is worth more than the ruling — a second word for one
+concept is the defect a vocabulary campaign exists to remove, and splitting it
+by audience reintroduces the defect with a boundary that has to be
+re-adjudicated at every new call site. The wire is the real exception, and it
+is a save-format argument, not a readability one. The passage that carried the
+reversal is [The Word](the-word.md).
+
 | four predicate descriptions | it is documentation that happens to sit inside the serialized registry |
 | a test's dump header | it is a label that happens to be pinned by a byte-golden |
 

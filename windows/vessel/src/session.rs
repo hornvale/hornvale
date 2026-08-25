@@ -17,6 +17,7 @@ use crate::snapshot::{
     KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
     SensedChannel, SessionSnapshot, SocialEntry, SpatialChannel,
 };
+use crate::testimony::{FeltStateWord, testify};
 use crate::{
     Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, PossessTarget, Projection,
     TemplateFocalizer, Turn, VesselError, absorb_common, most_populous_settlement, observable,
@@ -98,9 +99,9 @@ const SESSION_CONTROL: [&str; 3] = ["release", "quit", "exit"];
 /// `every_bare_verb_help_lists_is_classified` asserts the two agree in **both**
 /// directions: every verb `HELP` lists is in this roster or in
 /// [`SESSION_CONTROL`], and every entry of this roster is listed by `HELP`.
-const IN_CHARACTER_VERBS: [&str; 17] = [
-    "back", "climb", "consult", "delve", "dive", "enter", "examine", "go", "knows", "look", "map",
-    "needs", "out", "sleep", "surface", "wait", "write",
+const IN_CHARACTER_VERBS: [&str; 18] = [
+    "ask", "back", "climb", "consult", "delve", "dive", "enter", "examine", "go", "knows", "look",
+    "map", "needs", "out", "sleep", "surface", "wait", "write",
 ];
 
 /// The provenance a walk-band step commits under (The Deed, Task 7).
@@ -348,6 +349,8 @@ verbs:
                    cycle wakes it, and only '!' verbs answer meanwhile
   knows            everything they have seen
   needs            read the felt state of anyone sharing this room
+  ask              ask the body you are wearing how it feels; it may answer
+                   truthfully, or in words its own tongue and mind allow
   write <sentence> speak a line of Common; you absorb what it says, written
                    into your own margin
   consult          read the Book's Reckoning at your own day, and whatever
@@ -710,6 +713,22 @@ pub struct Session<'w> {
     /// one. Set by [`Self::wait`], the only place the driven body's own
     /// arbitration runs; read back by [`Self::driven_mode`].
     driven_mode: Option<Mode>,
+    /// The driven body's own felt state as of the most recent `!wait` (The
+    /// Confidant, Task 2) — `None` before the first one. Set alongside
+    /// `driven_mode`, by the SAME [`Self::wait`] call into
+    /// [`DriveMovements::step_one_with_controller`], from the SAME
+    /// resolution — never a second, drift-prone derivation. Read back by
+    /// [`Self::driven_affect`].
+    driven_affect: Option<Affect>,
+    /// The driven body's own arbitration's discarded ranks as of the most
+    /// recent `!wait` (The Confidant, Task 5) — the OTHER drives that were
+    /// active but not pursued, empty before the first one. Set alongside
+    /// `driven_affect`, by the SAME [`Self::wait`] call into
+    /// [`DriveMovements::step_one_with_controller`], from the SAME
+    /// resolution — never a second, drift-prone derivation. This is the
+    /// residue [`Self::driven_affect`] itself never carries: read back by
+    /// [`Self::suppressed_drives`].
+    driven_suppressed: Vec<DriveKind>,
 }
 
 /// Where the possession is while indoors. `FRAME`-tier in its entirety: derived
@@ -1079,6 +1098,8 @@ impl<'w> Session<'w> {
             mesh_memo: hornvale_kernel::RoomMeshMemo::new(),
             home_nav_cache: HomeNavCache::new(),
             driven_mode: None,
+            driven_affect: None,
+            driven_suppressed: Vec::new(),
         };
         session.absorb_here()?;
         let opening = session.describe_here()?;
@@ -1129,6 +1150,29 @@ impl<'w> Session<'w> {
     /// to report on yet).
     pub fn driven_mode(&self) -> Option<Mode> {
         self.driven_mode
+    }
+
+    /// The driven body's own felt state, as of the most recent `!wait` tick
+    /// (The Confidant, Task 2) — the same co-present computation
+    /// [`Self::driven_mode`] documents, read back via its
+    /// [`AffectLabel`] rather than the full [`Affect`]: later tasks turn the
+    /// label into speech, and the richer `arousal`/`valence`/`object` fields
+    /// stay internal to arbitration until a caller actually needs them.
+    /// `None` before the first `!wait`.
+    pub fn driven_affect(&self) -> Option<AffectLabel> {
+        self.driven_affect.map(|affect| affect.label)
+    }
+
+    /// The driven body's own arbitration's discarded ranks, as of the most
+    /// recent `!wait` tick (The Confidant, Task 5) — the SAME resolution
+    /// [`Self::driven_affect`] reads, its OTHER active drives rather than
+    /// its winner. This is the residue the creature cannot introspect: a
+    /// host-facing utterance must draw from [`Self::driven_affect`] alone,
+    /// and nothing routes this accessor's contents into one, by
+    /// construction. Empty before the first `!wait`, and also whenever no
+    /// other drive was active alongside the pursued one.
+    pub fn suppressed_drives(&self) -> &[DriveKind] {
+        &self.driven_suppressed
     }
 
     /// The accumulated knowledge (read-only).
@@ -1421,25 +1465,6 @@ impl<'w> Session<'w> {
             .count()
     }
 
-    /// Commit `who` — another body from this session's own [`Self::bodies`]
-    /// — into the ledger at the DRIVEN body's current position, through the
-    /// same `agent-at` constructor ([`crate::liveness::place_agent`]) a real
-    /// arrival commits with, so a manufactured co-location is
-    /// indistinguishable from one the world produced.
-    ///
-    /// **A test seam, not a verb — `handle` never reaches this.** The Hand's
-    /// Task 3 deleted the possessed body's duplicate representation, and
-    /// with it went the only thing that ever guaranteed a fresh possession
-    /// starts co-located with anything: every other settlement lives
-    /// elsewhere, and wild concentrations are scattered independently
-    /// (confirmed live: seed 42's flagship possession still finds nobody to
-    /// provoke after sixty `wait`s). The fidelity ruling on that finding
-    /// (idea registry: `SOC-one-creature-per-settlement`) is that changing
-    /// world population to restore an incidental co-location guarantee is
-    /// its own campaign — The Penstock already measured tick cost
-    /// superlinear in exactly that dimension — so a test that needs a
-    /// co-located body now asks for one explicitly, through here, rather
-    /// than relying on a population side effect.
     /// Commit `who` — another body from this session's own [`Self::bodies`]
     /// — into the ledger at the DRIVEN body's current position, through the
     /// same `agent-at` constructor ([`crate::liveness::place_agent`]) a real
@@ -2331,6 +2356,12 @@ impl<'w> Session<'w> {
                 "wait" => self.wait(rest, Perceiving::Body),
                 "knows" => Turn::Out(self.knows()),
                 "needs" => Turn::Out(self.needs(Perceiving::Body)),
+                // The verb this campaign adds (The Confidant, Task 6): ask
+                // the possessed body itself, rather than reading its felt
+                // state through the arbitration `needs` uses. `Self::ask`
+                // is the whole of the tongue and gap machinery; this arm is
+                // only dispatch.
+                "ask" => Turn::Out(self.ask()),
                 // The one verb this arc adds (The Deed, Task 7): the
                 // acceptance test needs a body that can stop obeying, and
                 // none of spec §3.2's 26 could produce one. Routed to the
@@ -4025,14 +4056,17 @@ impl<'w> Session<'w> {
         // cannot coexist with the `&mut self.mesh_memo`/`&mut
         // self.home_nav_cache` borrows this call needs.
         let driven_npc = self.driven_body().clone();
-        let (_driven_facts, driven_mode) = sys.step_one_with_controller(
-            &self.ledger,
-            &driven_npc,
-            &mut self.mesh_memo,
-            &mut self.home_nav_cache,
-            &mut PlayerController::new(),
-        );
+        let (_driven_facts, driven_mode, driven_affect, driven_suppressed) = sys
+            .step_one_with_controller(
+                &self.ledger,
+                &driven_npc,
+                &mut self.mesh_memo,
+                &mut self.home_nav_cache,
+                &mut PlayerController::new(),
+            );
         self.driven_mode = Some(driven_mode);
+        self.driven_affect = Some(driven_affect);
+        self.driven_suppressed = driven_suppressed;
         match tick(&self.ledger, &[&sys], &["drive-movements"], &self.registry) {
             Ok(next) => {
                 let moved = next.len() - self.ledger.len();
@@ -4797,6 +4831,73 @@ impl<'w> Session<'w> {
             .join("\n")
     }
 
+    /// Ask the possessed body how it feels (The Confidant, Task 6): the
+    /// pipeline's visible end. `Self::driven_affect` is the arbitration's
+    /// TRUE answer (Task 2); this asks the driven body's own culture
+    /// (`hornvale_worldgen::lexicon_from_in`) what it can say about that
+    /// state at all (`crate::testimony::testify`, Task 4/4b) — its own word
+    /// if the lexicon has one, the nearest state it CAN name otherwise, or
+    /// nothing if it has no felt-state word whatsoever. Only the answer
+    /// reaches the player; the arbitration itself never does
+    /// ([`render_testimony`] holds that invariant, not this method).
+    ///
+    /// Lands the reported concept in `self.knowledge` under the SAME
+    /// `"{subject}::{predicate}"` heard shape [`absorb_common`] writes
+    /// (`windows/vessel/src/knowledge.rs`'s own contract: heard is not
+    /// verified, and a listener may already hold a false belief there — this
+    /// adds no second store and no truth flag). A body with nothing to say
+    /// (no `!wait` yet, or a lexicon with no felt-state word at all) lands
+    /// nothing.
+    ///
+    /// **The tongue decision (spec §5.3), made rather than deferred:**
+    /// `absorb_common` parses Common, and Common has no speakers at all
+    /// (`hornvale_language::common_vocab`'s own doc: "the author's register,
+    /// not a people's tongue") — so "scope to hosts speaking Common" would
+    /// scope to the empty set; no host of any species ever qualifies. The
+    /// campaign is instead scoped the OTHER way: the word actually spoken
+    /// (`FeltStateWord`'s `WordViews.roman`, a real conlang string) is
+    /// untranslatable by construction and is used for display ONLY, never
+    /// landed in `self.knowledge`. What lands is the CONCEPT the utterance
+    /// reports (`testimony::concept_id`), the same short id
+    /// `hornvale_language`'s Common vocabulary already derives a word from
+    /// for every registered concept (a total map — no gap is possible on
+    /// this half). That keeps a later `misreport_distance` reading heard
+    /// knowledge comparing concept ids to concept ids, never a concept id to
+    /// an untranslated foreign string — the exact conflation spec §5.3 warns
+    /// against.
+    fn ask(&mut self) -> String {
+        let Some(label) = self.driven_affect() else {
+            return "It has not settled into anything yet; wait, then ask.".to_string();
+        };
+        let testimony = match (
+            self.wctx.terrain.as_ref(),
+            self.wctx.climate.as_ref(),
+            self.wctx.wc.as_ref(),
+        ) {
+            (Some(terrain), Some(climate), Some(wc)) => {
+                match hornvale_worldgen::lexicon_from_in(
+                    self.world,
+                    wc,
+                    &self.driven_body().species,
+                    terrain,
+                    climate,
+                ) {
+                    Ok(lexicon) => testify(&lexicon, label),
+                    Err(_) => None,
+                }
+            }
+            _ => None,
+        };
+        let body_label = self.driven_body().label.clone();
+        let (turn, heard_value) = render_testimony(&body_label, label, testimony);
+        if let Some(value) = heard_value {
+            self.knowledge
+                .0
+                .insert(format!("{body_label}::feels"), value);
+        }
+        turn
+    }
+
     /// Write a Common sentence into the margin: the session absorbs its own
     /// spoken line into its `Knowledge` via the transfer seam (The Echo
     /// T4). Renamed from `tell` at the Vessel Stitch (T2, G3 exchange) —
@@ -4962,6 +5063,64 @@ fn felt_phrase(affect: &Affect) -> String {
             "has given up on ever getting home",
             "has given up",
         ),
+    }
+}
+
+/// The pure rendering half of `ask` (The Confidant, Task 6), split out of
+/// [`Session::ask`] so it can be pinned directly against hand-built
+/// [`FeltStateWord`]s rather than only through a real, world-generated
+/// culture that may or may not exercise the divergent arm — the same
+/// rationale `windows/vessel/tests/suite/testimony.rs`'s own doc gives for
+/// hand-supplying `ExposureClass`es instead of a real exposure pipeline.
+///
+/// Returns the player-facing turn text and, when the body said anything at
+/// all, the concept id to land in `Knowledge` under `"{body_label}::feels"`
+/// (`Session::ask` does the landing; this function only decides what to
+/// land).
+///
+/// **THE INVARIANT THIS FUNCTION EXISTS TO HOLD (Task 6 Step 5):** `label`
+/// — the arbitration's TRUE answer — is read only to gloss the [`Direct`]
+/// arm, where reporting it is CORRECT (a culture that has the word for its
+/// own true state is, truthfully, using it). The [`Nearest`] arm below never
+/// reads `label` at all — only `reported_as`, which [`testify`] guarantees
+/// differs from whatever it was asked about (`nearest` skips its own query
+/// candidate) — so a divergent testimony can never carry the true label into
+/// the returned text. `tests/suite/ask_verb.rs`'s
+/// `the_arbitration_never_reaches_a_divergent_utterance` mutation-proves
+/// this by substituting `label` for `reported_as` in that arm and watching
+/// the test catch it.
+///
+/// [`Direct`]: FeltStateWord::Direct
+/// [`Nearest`]: FeltStateWord::Nearest
+fn render_testimony(
+    body_label: &str,
+    label: AffectLabel,
+    testimony: Option<FeltStateWord>,
+) -> (String, Option<String>) {
+    match testimony {
+        None => (
+            format!("{body_label} has no word for how it feels, and says nothing at all."),
+            None,
+        ),
+        Some(FeltStateWord::Direct(word)) => {
+            let concept = crate::testimony::concept_id(label);
+            (
+                format!("{body_label} says, \"{}\": {concept}.", word.roman),
+                Some(concept.to_string()),
+            )
+        }
+        Some(FeltStateWord::Nearest {
+            word, reported_as, ..
+        }) => {
+            let concept = crate::testimony::concept_id(reported_as);
+            (
+                format!(
+                    "{body_label} says, \"{}\": {concept}, near enough.",
+                    word.roman
+                ),
+                Some(concept.to_string()),
+            )
+        }
     }
 }
 
@@ -7279,6 +7438,102 @@ mod tests {
             before.sensed.present, after.sensed.present,
             "nor may it move who is REPORTED here — the placed companion must \
              stay in sight under both placements"
+        );
+    }
+
+    /// A hand-built [`WordViews`] for [`render_testimony`]'s tests — the
+    /// three surface views are display-only for this fn, so a fixed dummy
+    /// suffices, the same freedom `testimony.rs`'s own tests take with
+    /// `ExposureClass`.
+    fn dummy_word(roman: &str) -> hornvale_language::WordViews {
+        hornvale_language::WordViews {
+            roman: roman.to_string(),
+            ipa: String::new(),
+            espeak: String::new(),
+        }
+    }
+
+    /// The DIRECT arm (The Confidant, Task 6): a culture that has the word
+    /// for its own true state reports it, and the truth SHOULD be visible
+    /// here — the invariant is about a DIVERGENT report, not about hiding
+    /// truth that was correctly spoken.
+    #[test]
+    fn render_testimony_direct_reports_the_word_and_its_own_concept() {
+        let (turn, heard) = render_testimony(
+            "the herder",
+            AffectLabel::Content,
+            Some(FeltStateWord::Direct(dummy_word("Vrenn"))),
+        );
+        assert!(
+            turn.contains("Vrenn"),
+            "the turn must carry the actual spoken word, got: {turn}"
+        );
+        assert!(
+            turn.contains("content"),
+            "a Direct report's gloss is the true state's own concept, got: {turn}"
+        );
+        assert_eq!(
+            heard,
+            Some("content".to_string()),
+            "the heard value must be the concept id, not the raw conlang word"
+        );
+    }
+
+    /// A culture with no felt-state word at all says nothing, and lands
+    /// nothing — `testify` returning `None` must not fabricate a report.
+    #[test]
+    fn render_testimony_none_says_nothing_and_lands_nothing() {
+        let (turn, heard) = render_testimony("the herder", AffectLabel::Lost, None);
+        assert!(
+            !turn.is_empty(),
+            "a body with no word at all must still answer SOMETHING"
+        );
+        assert_eq!(
+            heard, None,
+            "nothing was said, so nothing may land as heard"
+        );
+    }
+
+    /// **THE DESIGN INVARIANT (Task 6 Step 5, spec §3.1): the player is
+    /// NEVER shown the arbitration.** A divergent testimony (host truly
+    /// `Helpless`, culture has no word for it, nearest known word is
+    /// `Eager`'s) must carry `Eager`'s concept and word ONLY — `Helpless`
+    /// must appear nowhere in the rendered turn or the heard value, in any
+    /// casing. This is mutation-proved in the Task 6 report: substituting
+    /// `label` for `reported_as` in `render_testimony`'s `Nearest` arm turns
+    /// this test red.
+    #[test]
+    fn the_arbitration_never_reaches_a_divergent_utterance() {
+        let true_label = AffectLabel::Helpless;
+        let (turn, heard) = render_testimony(
+            "the herder",
+            true_label,
+            Some(FeltStateWord::Nearest {
+                word: dummy_word("Grenth"),
+                reported_as: AffectLabel::Eager,
+                reason: hornvale_language::GapReason::Experiential(
+                    "this test culture never named it".to_string(),
+                ),
+            }),
+        );
+        let lowered = turn.to_lowercase();
+        assert!(
+            !lowered.contains("helpless"),
+            "the true state must never appear in a divergent turn, got: {turn}"
+        );
+        assert!(
+            turn.contains("Grenth"),
+            "the actually-spoken word must still appear, got: {turn}"
+        );
+        assert!(
+            turn.contains("eager"),
+            "the REPORTED concept must appear (the lie, not the truth), got: {turn}"
+        );
+        assert_eq!(
+            heard,
+            Some("eager".to_string()),
+            "the heard entry must record what was actually SAID (eager), never the \
+             true state (helpless)"
         );
     }
 }

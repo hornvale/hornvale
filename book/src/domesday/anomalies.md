@@ -8,6 +8,23 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ## Top worlds
 
+### Seed `619`
+
+Score **20**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+
+| metric | depth | value |
+|---|---|---|
+| `goblin-flagship-population` | 0 | 2 |
+| `mean-warning-legibility` | 0 | 0.046997699 |
+| `name-collision-rate` | 0 | 0.1 |
+| `rank-size-slope` | 0 | -1.1270738 |
+| `name-people-recoverability` | 0.0005005005 | 0.6 |
+| `settlement-count` | 0.001001001 | 37 |
+| `first-day-pays-tribute-to` | 0.001003009 | 703106.25 |
+| `chorus-variance` | 0.0015015015 | 0.0062652122 |
+| `largest-holding-share` | 0.002002002 | 0.06133829 |
+| `peoples-alive-at-bake-end` | 0.002002002 | 10 |
+
 ### Seed `39`
 
 Score **20**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
@@ -24,23 +41,6 @@ Score **20**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 
 | `mean-warning-legibility` | 0.003003003 | 0.067366233 |
 | `defensibility-capacity-rank-corr` | 0.004004004 | -0.37787615 |
 | `forgotten-fraction` | 0.004004004 | 0.95483871 |
-
-### Seed `619`
-
-Score **19**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
-
-| metric | depth | value |
-|---|---|---|
-| `goblin-flagship-population` | 0 | 2 |
-| `mean-warning-legibility` | 0 | 0.046997699 |
-| `name-collision-rate` | 0 | 0.1 |
-| `rank-size-slope` | 0 | -1.1270738 |
-| `name-people-recoverability` | 0.0005005005 | 0.6 |
-| `settlement-count` | 0.001001001 | 37 |
-| `first-day-pays-tribute-to` | 0.001003009 | 703106.25 |
-| `chorus-variance` | 0.0015015015 | 0.0062652122 |
-| `largest-holding-share` | 0.002002002 | 0.06133829 |
-| `peoples-alive-at-bake-end` | 0.002002002 | 10 |
 
 ### Seed `652`
 
@@ -379,8 +379,8 @@ Score **8**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 c
 | `endorheic-coverage` | 0.007007007 | 0.15394609 |
 | `total-population` | 0.007007007 | 15355 |
 | `settlement-count` | 0.009009009 | 468 |
-| `homophony-count-bugbear` | 0.01001001 | 1 |
 | `vestige-density` | 0.012012012 | 0.041653134 |
+| `deposit-density` | 0.014014014 | 0.27728158 |
 
 ### Seed `907`
 
@@ -466,9 +466,9 @@ Every numeric/integer census column with a domain and a role that this report di
 | `core-homophony-bugbear` | frozen: min == max across 1000 worlds |
 | `core-homophony-kobold` | frozen: min == max across 1000 worlds |
 | `homophony-merger-share-goblin` | frozen: min == max across 790 worlds |
-| `homophony-merger-share-hobgoblin` | frozen: min == max across 745 worlds |
+| `homophony-merger-share-hobgoblin` | frozen: min == max across 752 worlds |
 | `homophony-merger-share-bugbear` | frozen: min == max across 998 worlds |
-| `homophony-merger-share-kobold` | frozen: min == max across 664 worlds |
+| `homophony-merger-share-kobold` | frozen: min == max across 670 worlds |
 | `confusable-homophony-goblin` | frozen: min == max across 1000 worlds |
 | `confusable-homophony-hobgoblin` | frozen: min == max across 1000 worlds |
 | `confusable-homophony-bugbear` | frozen: min == max across 1000 worlds |

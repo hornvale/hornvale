@@ -130,12 +130,23 @@ produced. Three separate things moved committed output, and each is a class
 the freeze inventory did not have:
 
 **Rendered prose is a serialization boundary.** Sweepers renamed "992 cells"
-to "992 vertices" inside almanac and connections output. The almanac ended up
-saying *both* words in one sentence — "region holds only 1 vertex … run 1876,
-1654, 914, 638, and 417 cells" — because some sites had already been protected
-and some had not. A player reads that string; `vertex` is engine vocabulary.
-Rendered prose stays "cell", and every such site now carries a comment saying
-why.
+to "992 vertices" inside almanac and connections output, and the almanac ended
+up saying *both* words in one sentence — "region holds only 1 vertex … run
+1876, 1654, 914, 638, and 417 cells" — because some sites had been protected
+and some had not.
+
+The campaign's first answer was to keep rendered prose on "cell", on the
+grounds that a player reads it and `vertex` is engine vocabulary. **Nathan
+reversed that, and the reversal is the more interesting half:** one word per
+concept, everywhere, including the text a player reads. A second word for the
+same thing is the exact defect a vocabulary campaign removes, and an
+audience-based carve-out reintroduces it deliberately, with a boundary nobody
+can locate at the next call site. The genuine exception is not the audience but
+the **wire** — a string that is serialized stays frozen forever, and that is a
+save-format argument rather than a readability one.
+
+So the almanac says vertex now, and [The Word](the-word.md) is the passage that
+made it so.
 
 **A predicate's description travels in every world.** Four moved — `cell-id`,
 `occ-site`, `ocean-fraction`, `highest-elevation-m` — and `world-seed-42.json`

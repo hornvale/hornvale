@@ -796,6 +796,12 @@
         "kind": "Substance",
         "doc": "Cold nutrient-rich water rising from below."
       },
+      "content": {
+        "name": "content",
+        "domain": "language",
+        "kind": "Affect",
+        "doc": "positive, low arousal: needs met, at rest"
+      },
       "coral-head": {
         "name": "coral-head",
         "domain": "climate",
@@ -873,6 +879,12 @@
         "domain": "species",
         "kind": "Living",
         "doc": "a drow"
+      },
+      "eager": {
+        "name": "eager",
+        "domain": "language",
+        "kind": "Affect",
+        "doc": "positive, high arousal: chasing a satisfiable need"
       },
       "earth": {
         "name": "earth",
@@ -963,6 +975,12 @@
         "domain": "climate",
         "kind": "Substance",
         "doc": "Ground churned and patterned by freezing."
+      },
+      "frustrated": {
+        "name": "frustrated",
+        "domain": "language",
+        "kind": "Affect",
+        "doc": "negative: blocked with a known target out of reach"
       },
       "gallery-forest": {
         "name": "gallery-forest",
@@ -1101,6 +1119,12 @@
         "domain": "language",
         "kind": "Act",
         "doc": "to list the operator's own instructions — `!help`"
+      },
+      "helpless": {
+        "name": "helpless",
+        "domain": "language",
+        "kind": "Affect",
+        "doc": "negative and persistent: given up despite an active drive"
       },
       "high": {
         "name": "high",
@@ -1251,6 +1275,12 @@
         "domain": "language",
         "kind": "Act",
         "doc": "to visually attend to something, near or far — `look`, `examine`"
+      },
+      "lost": {
+        "name": "lost",
+        "domain": "language",
+        "kind": "Affect",
+        "doc": "negative: blocked with no target to move toward"
       },
       "low": {
         "name": "low",
@@ -1605,6 +1635,12 @@
         "domain": "climate",
         "kind": "Terrain",
         "doc": "a biome class"
+      },
+      "searching": {
+        "name": "searching",
+        "domain": "language",
+        "kind": "Affect",
+        "doc": "neutral, mid arousal: seeking with a gradient"
       },
       "sense": {
         "name": "sense",

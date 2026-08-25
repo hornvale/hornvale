@@ -172,18 +172,18 @@ fn isolation_paragraph(site: Vertex, graph: &ConnectionGraph, label: &str) -> St
     if size == largest {
         format!(
             "{label} sits within the largest connected stretch of the known world ({size} \
-             vertex{}, the largest of {notable_regions} real region{} the map resolves into) \
+             {}, the largest of {notable_regions} real region{} the map resolves into) \
              -- well-linked, nothing here is stranded.\n",
-            plural(size),
+            vertex_noun(size),
             plural(notable_regions),
         )
     } else {
         format!(
-            "{label}'s region holds only {size} cell{} -- cut off from the wider world: no \
+            "{label}'s region holds only {size} {} -- cut off from the wider world: no \
              route this graph knows of crosses the gap that separates it from the largest \
-             region ({largest} cells). {notable_regions} real regions divide the known world \
-             in all.\n",
-            plural(size),
+             region ({largest} vertices). {notable_regions} real regions divide the known \
+             world in all.\n",
+            vertex_noun(size),
         )
     }
 }
@@ -191,6 +191,16 @@ fn isolation_paragraph(site: Vertex, graph: &ConnectionGraph, label: &str) -> St
 /// "s" unless `n == 1`.
 fn plural(n: usize) -> &'static str {
     if n == 1 { "" } else { "s" }
+}
+
+/// "vertex" or "vertices" — an irregular plural [`plural`] cannot spell.
+///
+/// The Lexicon of Place's sweep renamed the noun here and left `plural(size)`
+/// behind it, which rendered "5548 vertexs". Byte-identity could not catch it:
+/// seed 42's sampled sites all sit OUTSIDE the largest region, so the branch
+/// carrying it is never taken by any committed artifact.
+fn vertex_noun(n: usize) -> &'static str {
+    if n == 1 { "vertex" } else { "vertices" }
 }
 
 /// A world-level overview of the transport topology's reachability: how many
@@ -241,9 +251,9 @@ pub fn render_overview(graph: &ConnectionGraph) -> String {
     let rest = &sizes[1..];
     out.push_str(&format!(
         "Natural travel divides the known world into {} real regions (below \
-         {MIN_NOTABLE_REGION_SIZE} cells, a \"region\" is just an island cell no sea-lane \
-         reaches -- not counted here). The largest spans {largest} cells; the rest, smaller \
-         and cut off from it, run {}.\n",
+         {MIN_NOTABLE_REGION_SIZE} vertices, a \"region\" is just an island vertex no \
+         sea-lane reaches -- not counted here). The largest spans {largest} vertices; the \
+         rest, smaller and cut off from it, run {}.\n",
         sizes.len(),
         join_sizes(rest),
     ));
@@ -259,12 +269,11 @@ fn join_sizes(sizes: &[usize]) -> String {
     let shown: Vec<String> = sizes.iter().take(CAP).map(|n| n.to_string()).collect();
     let joined = crate::history::join_prose(&shown);
     if sizes.len() > CAP {
-        // RENDERED PROSE, deliberately still "cell" (The Lexicon of Place).
-        // The engine calls this a Vertex now; the almanac must not, because
-        // "vertex" is engine vocabulary and this string is read by a person.
-        // Changing it also moves the committed gallery almanacs.
-        format!("{joined} cells -- plus {} smaller still", sizes.len() - CAP)
+        format!(
+            "{joined} vertices -- plus {} smaller still",
+            sizes.len() - CAP
+        )
     } else {
-        format!("{joined} cells")
+        format!("{joined} vertices")
     }
 }
