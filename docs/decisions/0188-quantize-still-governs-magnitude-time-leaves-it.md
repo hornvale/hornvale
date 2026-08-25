@@ -57,7 +57,14 @@ without knowing this campaign existed (spec §1, "the second motivation").
 - The scene/ephemeris JSON's `f64` fields — including `scene/eclipses/v1`'s
   `day`, `from_day` and `until_day` — still quantize, **deliberately**, even
   though the sibling `*_ticks: i64` fields this campaign adds beside them
-  carry the same instants exactly. The `f64` fields are a cross-repo
+  carry each instant as an exact tick count. (Corrected in place before merge,
+  final-review Minor 7: an earlier draft of this line read "carry the same
+  instants exactly", which overstates them. An eclipse day was never a
+  `WorldTime` — it is a continuous `f64` off the orbital solve, and `day_ticks`
+  is `WorldTime::from_std_days` of it, i.e. **rounded** to the nearest 0.864 s.
+  "Exact as a tick count" is true; "the same instant exactly" is not, and this
+  campaign's whole thesis is that exact and finely-rounded are different
+  quantities.) The `f64` fields are a cross-repo
   contract the external Orrery consumes from the released catalog, additive-
   or-versioned-only (spec §5); quantizing them was never about time's
   representation being lattice-exact internally, it is about giving an

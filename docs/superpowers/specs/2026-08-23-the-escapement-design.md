@@ -316,6 +316,19 @@ kernel's instant and vessel's scheduler, pointing the other way. A power of two 
 arithmetic and rejected: no existing precedent, and 1 tick = 0.864 s is
 legible where 1/131072 day is not.
 
+A **third** alternative was discarded and is recorded here because it answers
+the first question a future reader asks — *why is this an emit-boundary change
+rather than a compute-path one?* The pair **(exact anchor + small `f64`
+offset)** would have kept a lossless integer anchor and carried the sub-tick
+remainder as a float beside it. Rejected on YAGNI plus measurement: **an `f64`
+ULP at the deepest horizon this code actually uses (200,000 years) is 1.3 ms,
+and at 4.5 Myr it is 0.02 s.** Both are far below the 0.864 s a tick resolves,
+so the **compute path has no precision defect to fix at all** — the entire
+defect is at the quantize emit boundary, where 8 significant digits give
+resolution proportional to magnitude. This is a discard, not a gap: the
+anchor+offset shape is the right answer to a problem this project does not
+have.
+
 ### 3.2 The types
 
 ```rust
@@ -340,6 +353,16 @@ today. Consequences, all deletions:
 - The accumulation guard at `windows/vessel/src/session.rs` (reachable live
   from `possess` stdin via two `wait 1e308`s, per its own comment) becomes
   unreachable; integer addition cannot reach infinity.
+  **Corrected after the fact (The Escapement, final-review Minor 10): this
+  prediction was wrong.** The guard did not become unreachable — `8d2ab4d35`
+  retargeted it at the tick-range overflow instead, and
+  `advanced_by_checks_the_increment_and_the_sum_separately`
+  (`windows/vessel/src/session.rs`) reaches **both** of its arms: an
+  unrepresentable increment and a representable increment whose sum overflows
+  `i64`. Integer addition cannot reach infinity, but it can overflow, and the
+  guard now names that instead. Left in place with this note rather than
+  rewritten, because a design document that quietly loses its falsified
+  predictions teaches nothing.
 
 The accessor is **`ticks() -> i64`**, not `day() -> i64`. Decision 0126 exists
 *because* a year stamped into a day-typed slot made `person-died`

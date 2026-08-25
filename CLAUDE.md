@@ -841,11 +841,33 @@ idle. `HV_PUSH_OK=1` is the hotfix escape and the refusal names it.
 and so does a human pushing by hand there, so "am I on lefford" would have
 allowed the very landing that prompted this (`ca6f34310`, 2026-08-19) while
 blocking a legitimate hotfix from the Mac. Holding the claim answers the host
-question for free. **`pre-commit` cannot do this job at all** — verified: a
+question for free. **`pre-commit` cannot do this job at all** — a
 fast-forward merge, which is how main advances locally, creates no commit and
-fires no hook; a true merge commit fires `pre-merge-commit`, never
-`pre-commit`. The push is the only choke point every route to `origin/main`
+fires no hook. The push is the only choke point every route to `origin/main`
 passes through.
+
+**The second half of that sentence used to read "a true merge commit fires
+`pre-merge-commit`, never `pre-commit`", labelled *verified*, and it is
+false.** The Escapement measured the full matrix on git 2.50.1 in a scratch
+repo with both hooks installed under `core.hooksPath`:
+
+| merge shape | hook that fires |
+| --- | --- |
+| fast-forward | **neither** — no commit is created |
+| automatic (non-conflicted) true merge commit | `pre-merge-commit` only |
+| **conflicted** merge, resolved by hand, concluded with an explicit `git commit` | **`pre-commit`** |
+
+A conflicted merge is an ordinary `git commit` invocation as far as git is
+concerned. This is not hypothetical: a conflicted 47-commit absorption ran the
+full gate through `pre-commit` (fmt, clippy, type-audit, 3 subfloor chunks,
+3302 tests, rc=0, 50.1 s), and `scripts/hooks/` holds no `pre-merge-commit` at
+all. **The gap is real but the opposite shape from the old warning**: the
+ungated case is the CLEAN auto-merge, where nobody hand-edited anything; the
+conflicted absorption — where someone is resolving files by hand and is most
+likely to mis-resolve a generated artifact — is the one that IS gated. Worth
+knowing before deciding whether to gate by hand after an absorption. None of
+this changes the paragraph above: the push hook remains the only choke point,
+because the fast-forward row creates no commit for any hook to see.
 
 **Campaign branches absorb main at every plan-stage boundary**, not only at
 close: submit `make sluice-stage BRANCH=<branch> REF=<full-sha>`, which

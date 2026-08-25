@@ -1,7 +1,17 @@
 # 0187. A pre-genesis sky query is clamped to genesis, deliberately
 
 **Status:** Accepted (2026-08-23) · **Decider:** Nathan · **Campaign:** The
-Escapement · **Supersedes:** nothing
+Escapement · **Supersedes:** nothing · **Rationale amended by**
+[0190](0190-a-reachability-trace-is-not-closed-by-finding-one-funnel.md)
+
+> **The decision below stands; one sentence of its rationale does not.** The
+> "What was traced" paragraph's claim that no caller reaches the negative path
+> is **false** — `heliacal::at_local_fraction` reaches it, on essentially every
+> world, at genesis. [0190](0190-a-reachability-trace-is-not-closed-by-finding-one-funnel.md)
+> records the refutation and reproduces this record's structural argument to
+> show the *decision* does not depend on the refuted claim. This back-pointer
+> is added because 0187 is the one record in the log whose stated fact was
+> shown false, and a reader who greps for the clamp lands here first.
 
 In the context of `hornvale-astronomy`'s one crossing from `WorldTime` to
 `StdDays` (`GeneratedSky::t`, `provider.rs`) inheriting a bare
@@ -19,7 +29,8 @@ decision on record — only a comment beside the code. Nothing would have
 noticed if the clamp were removed, inverted, or replaced with a panic; no
 test exercised the negative branch at all.
 
-**What was traced.** No caller can reach the negative path today.
+**What was traced** (**RETRACTED — see the note under Status, and 0190**).
+No caller can reach the negative path today.
 `GeneratedSky::t` is the domain's only `WorldTime -> StdDays` funnel, and it
 clamps. The only sites in the workspace that bypass the funnel and construct
 a `StdDays` directly for a sky/calendar query (`windows/worldgen/src/lib.rs`,

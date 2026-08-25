@@ -298,8 +298,12 @@ as they were — bare `f64` standard days, still quantized to eight significant
 digits, because an external consumer of that wire format gets the same
 cross-platform stability every other quantized float on it already has. What
 was added instead is a sibling field beside each one — `day_ticks`,
-`from_day_ticks`, `until_day_ticks` — carrying the same instant exactly, for
-any client able to read a bare integer. Scene schemas are
+`from_day_ticks`, `until_day_ticks` — carrying each instant as an exact tick
+count, for any client able to read a bare integer. Exact *as a tick count*,
+which is not the same claim as "the same instant": an eclipse day was never a
+`WorldTime` to begin with, it is a continuous `f64` off the orbital solve, and
+the tick field rounds it to the nearest 0.864 seconds. The distinction is the
+campaign's own thesis turned back on its own output. Scene schemas are
 additive-or-versioned-only; adding a field beside an unchanged one costs
 nothing and breaks nothing, where bumping to `v2` for a precision fix most
 consumers do not need would have broken every one of them for free.

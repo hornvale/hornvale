@@ -7,6 +7,20 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::ops::{Add, Sub};
 
+/// The exclusive upper bound on a tick count, as an `f64`: 2^63.
+///
+/// **Not** `i64::MAX as f64`. `i64::MAX` is `2^63 - 1`, which is not
+/// representable in `f64` — the cast rounds it *up* to `2^63`. So a guard
+/// written `ticks > i64::MAX as f64` admits a `ticks` of exactly `2^63`,
+/// which then saturates to `i64::MAX` under `as i64` and yields a silently
+/// wrong instant instead of a refusal. Comparing `>=` against `2^63` itself
+/// closes that one-ULP hole. The negative edge needs no equivalent: `i64::MIN`
+/// is `-2^63` exactly, so `i64::MIN as f64` is lossless.
+///
+/// Shared by [`crate::field::WorldTime::from_std_days`] and
+/// [`TickSpan::from_std_days`] so the two range checks cannot drift apart.
+pub(crate) const TICKS_EXCLUSIVE_UPPER_BOUND: f64 = 9_223_372_036_854_775_808.0;
+
 /// Why a quantity constructor refused a value.
 /// type-audit: bare-ok(identifier-text: unit), bare-ok(diagnostic-value: value), bare-ok(identifier-text: reason)
 #[derive(Debug, Clone, PartialEq)]
@@ -424,7 +438,7 @@ impl TickSpan {
             });
         }
         let ticks = (days * crate::field::WorldTime::TICKS_PER_STD_DAY as f64).round();
-        if ticks < i64::MIN as f64 || ticks > i64::MAX as f64 {
+        if ticks < i64::MIN as f64 || ticks >= TICKS_EXCLUSIVE_UPPER_BOUND {
             return Err(UnitError {
                 unit: "standard days",
                 value: days,
@@ -644,5 +658,35 @@ mod tests {
         let h = floor.above(sea);
         assert!(h.get() < 0.0, "the sea floor is below sea level");
         assert!(h.depth() > 1000.0, "and its depth reads positive");
+    }
+
+    #[test]
+    fn a_tick_span_range_check_rejects_exactly_two_to_the_sixty_three() {
+        // The span twin of
+        // `field::tests::the_tick_range_check_rejects_exactly_two_to_the_sixty_three`,
+        // duplicated deliberately: the two constructors are separate bodies
+        // and a guard fixed in one is worth nothing to the other. Both now
+        // read TICKS_EXCLUSIVE_UPPER_BOUND, and both are pinned.
+        let per_day = crate::field::WorldTime::TICKS_PER_STD_DAY as f64;
+        let over = TICKS_EXCLUSIVE_UPPER_BOUND / per_day;
+        assert!(
+            TickSpan::from_std_days(over).is_err(),
+            "a span of 2^63 ticks is one past the axis; `as i64` would saturate it to i64::MAX"
+        );
+
+        let last = f64::from_bits(TICKS_EXCLUSIVE_UPPER_BOUND.to_bits() - 1);
+        assert_eq!(
+            TickSpan::from_std_days(last / per_day)
+                .expect("2^63 - 1024 ticks is a representable span")
+                .ticks(),
+            9_223_372_036_854_774_784,
+        );
+
+        assert_eq!(
+            TickSpan::from_std_days(-TICKS_EXCLUSIVE_UPPER_BOUND / per_day)
+                .expect("i64::MIN ticks is representable exactly")
+                .ticks(),
+            i64::MIN,
+        );
     }
 }

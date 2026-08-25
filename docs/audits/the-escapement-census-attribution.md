@@ -5,8 +5,10 @@ forensic investigation decision
 [0190](../decisions/0190-a-reachability-trace-is-not-closed-by-finding-one-funnel.md)
 summarizes, and the evidence behind the spec's §1 correction and both
 calibration re-pins. It was written to the campaign's git-ignored scratch and
-promoted here unchanged (bar this header) before the worktree was recycled: a
-durable record may not cite a path that dies with a worktree.
+promoted here unchanged (bar this header, and the appendix in §9) before the
+worktree was recycled: a durable record may not cite a path that dies with a
+worktree. §9 is a **second, separate investigation** of the same flip, rescued
+from the same scratch on the campaign's last commit.
 
 **Investigated**: 2026-08-24, worktree `.claude/worktrees/the-escapement`, branch
 `campaign/the-escapement` (HEAD `6da5de512`).
@@ -243,3 +245,110 @@ whole 227 x 1000 census.
 - All builds `cargo build --release -p hornvale` in a throwaway detached
   worktree; removed afterwards. The campaign worktree was never modified.
 - No census was run and `HV_CENSUS` was never set.
+
+---
+
+# Appendix — §9. The walk-band `189 → 190` A/B (a separate investigation)
+
+**Scope note.** Sections 1–8 attribute three moved *census* cells and conclude
+the representation flip (`9ad5911a3`) moved none of them. This appendix is a
+different question about the same flip: why the seed-42 possession walk's
+`wait 90` reported **190** committed facts where it had reported **189**. It is
+recorded here because it is the campaign's other piece of forensic evidence and
+the chronicle keeps only its story. The two investigations share a subject and
+nothing else.
+
+**Why it is worth committing.** Rediscovery is expensive and getting more so:
+both sides of a landed flip must be built (the pre-flip tree is now reachable
+only by checkout of `5cba6dada`), the drive tick re-instrumented, and the
+gallery walk re-run. It is also the campaign's cleanest instance of its own
+through-line — **two confident causal guesses and one measurement, and the
+measurement disagreed with both.**
+
+## 9.1 Method
+
+`Session::wait` was instrumented on both sides of the flip to dump every fact
+the homeostatic drive tick commits. The pre-flip tree was exported with
+`git archive 5cba6dada`, built, and the *same* transcript run on each — each
+against a world built by its own binary, so nothing is cross-format:
+
+```
+scripts/possession-walk.txt, seed 42, `possess --world <wsky>`
+  pre-flip  (5cba6dada) : 189 facts
+  post-flip (9ad5911a3) : 190 facts
+```
+
+## 9.2 The per-predicate table, which killed both guesses at once
+
+```
+per-predicate     old   new
+  agent-at         10    10
+  drank            77    77
+  eaten            21    21
+  rested           81    82   <- the only one that moved
+per-entity: 5 of 6 identical; 9630022852472602624 (a wild rust-monster) 7 -> 8
+```
+
+**`agent-at` being UNCHANGED is the single load-bearing datum.** Both standing
+explanations were position-path mechanisms, and a position-path mechanism has
+to show up here:
+
+- *the window-boundary explanation* (the implementer's original claim) — a
+  window-end shift admits or drops an action at the boundary; it did not;
+- *the `d <= t` / `npc.home` fallback* (the reviewer's leading candidate, and
+  the same class of bug The Hand had found independently) — `Ledger::commit`'s
+  upward day-rounding making a fact invisible to its own filter, so the
+  creature falls back to `npc.home`.
+
+A probe that restored the deleted quantize block verbatim also returned 190.
+**That probe proves nothing and the reason is recorded deliberately**: post-flip
+a tick's `as_std_days()` is already an 8-significant-digit-clean decimal at
+these magnitudes, so the restored block is a no-op — verified directly,
+`quantize(0.01172) == 0.01172` and `quantize(90.39858) == 90.39858`. A
+confirming result known to be vacuous was refused rather than counted.
+
+## 9.3 The real cause: a fact-day feedback loop that compounds
+
+A drive fact's day is now rounded onto the tick lattice **at emission** instead
+of to 8 significant digits **at commit**. The homeostatic loop reads its own
+committed fact days back (`last_drank` / `last_rested` / `last_ate`) to decide
+when the next threshold is crossed, so that perturbation feeds itself:
+
+```
+  #  action   old day       new day       divergence
+  1  rested   7.813555      7.81356              0.5 ticks
+  2  rested   10.92545      10.92546             0.6
+  3  drank    15.47436      15.47411            25.0
+  4  rested   15.47596      15.47571            25.0
+  5  drank    30.81292      30.78            3,292.4
+  6  rested   30.81452      30.7816          3,292.4
+  7  rested   38.82369      38.41732        40,636.6
+  8  rested   —             45.95916        (NEW: fits inside the 90-day window)
+```
+
+Monotone, ~50–130× per action. By day 38 the accumulated divergence is
+**0.41 days**, and a sixth `rested` fits where five did before.
+
+## 9.4 The magnitude, and the two independent derivations
+
+**The first divergence is half a tick, and that is 562× the mechanism
+originally named** — matching the reviewer's independently-derived 560×. Half a
+tick is 5.0e-6 days; the session clock's own f64→lattice shift is 8.9e-9 days,
+i.e. 0.00089 ticks. Two people reasoning from different starting points reached
+the same order for a divergence neither had correctly attributed.
+
+## 9.5 What is and is not established
+
+**Established**: the extra fact is one `rested` by one entity, produced by
+compounding of the emission-lattice change through the drive loop, with the
+divergence measured at every step.
+
+**Not established**: a closed-form reason why *that* creature and not another.
+It is the one whose fatigue threshold sat nearest a crossing, which is a
+property of the seed rather than of the change.
+
+**Open, and filed nowhere else** (final-review Minor 8): whether 0.41 days of
+accumulated drift over 38 simulated days, near genesis, is acceptable. The
+chronicle explains the mechanism and never asks. Spec §1 concedes this is the
+region where the removed encoding was the finer of the two, which is precisely
+where the question bites.

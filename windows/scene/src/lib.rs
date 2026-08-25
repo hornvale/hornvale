@@ -1347,6 +1347,27 @@ pub struct GroundTrackElem {
 }
 
 /// One dated eclipse.
+///
+/// **The `*_ticks` fields are deliberately bare `i64` and NOT `WorldTime`**
+/// (The Escapement, ruling 12 — the same reasoning governs
+/// [`EclipsesScene`]'s `from_day_ticks`/`until_day_ticks`). `WorldTime` is
+/// `#[serde(transparent)]`, so typing them as `WorldTime` would serialize
+/// identically and shed three type-audit tags and one `.ticks()` call. That
+/// is a real simplification and it is refused, because `scene/eclipses/v1` is
+/// a **cross-repo, additive-or-versioned-only contract** that the external
+/// Orrery consumes from a released catalog.
+///
+/// The two options fail *differently*, and that is the whole argument. With a
+/// bare `i64` and an explicit `.ticks()`, a future change to `WorldTime`'s
+/// representation breaks at **compile time**, at the one line that has to
+/// make a decision. With a `serde(transparent)` `WorldTime`, the same change
+/// is a **silent wire break**, discovered by a sibling repo reading a catalog
+/// that was already released. "Fails loudly at the boundary" beats "three
+/// fewer tags" by a wide margin here — and coupling a published schema to the
+/// kernel's internal representation is the exact class of coupling this
+/// campaign spent itself undoing. If a later pass sees redundant tags and a
+/// manual conversion: that redundancy is the point, and the cost of being
+/// wrong about it was priced at three tags and one call.
 /// type-audit: pending(wave-2: day), bare-ok(count: moon_index), bare-ok(identifier-text: body), bare-ok(identifier-text: kind), bare-ok(count: day_ticks)
 #[derive(Debug, Serialize)]
 pub struct EclipseElem {
@@ -1374,6 +1395,10 @@ pub struct EclipseElem {
 }
 
 /// One `scene/eclipses/v1` document: the dated eclipses in a queried window.
+///
+/// `from_day_ticks`/`until_day_ticks` are bare `i64` rather than `WorldTime`
+/// for the reason set out on [`EclipseElem`]: on a cross-repo wire, a
+/// compile-time break beats a silent one.
 /// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), pending(wave-2: from_day), pending(wave-2: until_day), bare-ok(count: from_day_ticks), bare-ok(count: until_day_ticks)
 #[derive(Debug, Serialize)]
 pub struct EclipsesScene {

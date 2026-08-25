@@ -96,7 +96,9 @@ impl WorldTime {
         // `round` is IEEE-exact and platform-stable (see kernel/src/math.rs's
         // module doc); only transcendentals need the libm crate.
         let ticks = (days * Self::TICKS_PER_STD_DAY as f64).round();
-        if ticks < i64::MIN as f64 || ticks > i64::MAX as f64 {
+        // The upper bound is exclusive and is 2^63, NOT `i64::MAX as f64` —
+        // see `units::TICKS_EXCLUSIVE_UPPER_BOUND` for why those differ.
+        if ticks < i64::MIN as f64 || ticks >= crate::units::TICKS_EXCLUSIVE_UPPER_BOUND {
             return Err(crate::units::UnitError {
                 unit: "standard days",
                 value: days,
@@ -249,10 +251,60 @@ mod tests {
     #[test]
     fn a_world_time_cannot_be_built_from_days_beyond_the_tick_range() {
         // 1e300 days is ~1e305 ticks: far outside i64. Must be a typed error,
-        // never a saturating `as` cast. The range check runs in Phase A too,
-        // even though storage doesn't round yet (see from_std_days's doc).
+        // never a saturating `as` cast. The exact boundary — where "far
+        // outside" becomes "one step outside" — is pinned by the test below.
         assert!(WorldTime::from_std_days(1e300).is_err());
         assert!(WorldTime::from_std_days(-1e300).is_err());
+    }
+
+    #[test]
+    fn the_tick_range_check_rejects_exactly_two_to_the_sixty_three() {
+        // The campaign's own defect class, one level down: a check that looks
+        // exact and is off by one representable step. `i64::MAX` is 2^63 - 1,
+        // which `f64` CANNOT represent — `i64::MAX as f64` rounds UP to 2^63.
+        // So a guard written `ticks > i64::MAX as f64` admits a tick count of
+        // exactly 2^63, and `as i64` then SATURATES it to `i64::MAX`: a
+        // silently wrong instant one step past the end of the axis, where a
+        // typed refusal belongs.
+        let two_pow_63 = 9_223_372_036_854_775_808.0_f64;
+        assert_eq!(
+            i64::MAX as f64,
+            two_pow_63,
+            "the cast rounds up, and that is the entire hazard"
+        );
+
+        let per_day = WorldTime::TICKS_PER_STD_DAY as f64;
+        let over = two_pow_63 / per_day;
+        assert_eq!(
+            (over * per_day).round(),
+            two_pow_63,
+            "this day count really does land on 2^63 ticks"
+        );
+        assert!(
+            WorldTime::from_std_days(over).is_err(),
+            "2^63 ticks is one past the axis, not the last point on it"
+        );
+
+        // ...and the guard must not over-reject: the largest `f64` strictly
+        // below 2^63 is 2^63 - 1024, a perfectly legal tick count.
+        let last = f64::from_bits(two_pow_63.to_bits() - 1);
+        let under = last / per_day;
+        assert_eq!(
+            WorldTime::from_std_days(under)
+                .expect("2^63 - 1024 ticks is inside the axis")
+                .ticks(),
+            9_223_372_036_854_774_784,
+        );
+
+        // The negative edge needs no equivalent care and is pinned here so a
+        // future tightening cannot quietly narrow it: `i64::MIN` is -2^63
+        // exactly, so it is representable and legal.
+        assert_eq!(
+            WorldTime::from_std_days(-two_pow_63 / per_day)
+                .expect("i64::MIN ticks is on the axis")
+                .ticks(),
+            i64::MIN,
+        );
     }
 
     #[test]
