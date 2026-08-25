@@ -211,3 +211,9 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0230](0230-a-query-bound-is-quantized-to-read-a-quantized-store.md) | A query bound is quantized to read a quantized store | Accepted |
 | [0246](0246-a-renamed-concept-keeps-its-serialized-spelling-forever.md) | A renamed concept keeps its serialized spelling forever, and the freeze needs a test that cannot be rebaselined | Accepted |
 | [0247](0247-a-mesh-vertex-is-a-vertex-and-a-face-is-a-facet.md) | A mesh vertex is a `Vertex` and a face is a `Facet` | Accepted |
+| [0256](0256-a-hosts-testimony-is-fallible-by-construction.md) | A host's testimony is fallible by construction, and the gap is the deliverable | Accepted |
+| [0257](0257-felt-states-are-concepts.md) | Felt states are concepts, and they accede as an appended cohort | Accepted |
+| [0258](0258-introspective-access-is-bounded.md) | Introspective access is bounded — a creature cannot perceive what its own arbitration suppressed | Accepted |
+| [0259](0259-conceptual-deficiency-is-derived-not-authored.md) | Conceptual deficiency is derived from authored psychology, never authored per people | Accepted |
+| [0260](0260-a-seed-invariant-derivation-is-a-window.md) | A seed-invariant derivation is a window, not a census metric | Accepted |
+| [0261](0261-a-rule-duplicated-on-purpose-carries-a-two-way-agreement-test.md) | A rule duplicated on purpose carries a pointer in both copies and a two-way agreement test | Accepted |
