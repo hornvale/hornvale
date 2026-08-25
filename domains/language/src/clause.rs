@@ -47,6 +47,37 @@ pub enum Subject {
     Pronoun(&'static str),
 }
 
+/// What an adjunct's role is bound to. Deliberately small: these are the
+/// argument shapes the ledger's own `Value` already carries, minus the ones
+/// no construction needs yet. A new variant is added when a role needs it,
+/// never speculatively.
+/// type-audit: bare-ok(identifier-text: Concept.0), bare-ok(prose: Name.0), bare-ok(count: Count.0), bare-ok(diagnostic-value: Quantity.0)
+#[derive(Clone, Debug, PartialEq)]
+pub enum Argument {
+    /// A concept id, resolved through the realizing language's vocabulary.
+    Concept(String),
+    /// An already-resolved proper name, passed through unresolved.
+    Name(String),
+    /// A whole count, rendered as the language's cardinal.
+    Count(u64),
+    /// A continuous quantity, rendered at the language's grain.
+    Quantity(f64),
+}
+
+/// One role binding on a clause: a **registered predicate** bound to an
+/// argument. How it surfaces — a preposition, a case affix, a trailing
+/// clause, or nothing at all — is the realizing language's business, not the
+/// caller's. This is what replaced `modifiers: Vec<String>`, whose English
+/// could not cross a language boundary.
+/// type-audit: bare-ok(identifier-text: role)
+#[derive(Clone, Debug, PartialEq)]
+pub struct Adjunct {
+    /// The role's predicate id, e.g. `"moon-count"`, `"occ-site"`.
+    pub role: String,
+    /// What the role is bound to.
+    pub argument: Argument,
+}
+
 /// A language-neutral clause: predicate-argument structure plus features.
 /// The per-language realizer decides how (and whether) each feature surfaces.
 /// type-audit: bare-ok(identifier-text: complement_concept), bare-ok(prose: modifiers)
@@ -362,6 +393,17 @@ pub fn parse_common(text: &str, ctx: &ParseContext) -> Result<ClauseSpec, ParseE
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// An adjunct binds a registered predicate (its role) to an argument.
+    #[test]
+    fn an_adjunct_binds_a_registered_predicate_to_an_argument() {
+        let a = Adjunct {
+            role: "moon-count".to_string(),
+            argument: Argument::Count(2),
+        };
+        assert_eq!(a.role, "moon-count");
+        assert_eq!(a.argument, Argument::Count(2));
+    }
 
     /// Common resolves its complement through the vocabulary, exactly as the
     /// tongue path resolves through a lexicon. Symmetry is the point: before
