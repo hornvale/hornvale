@@ -145,6 +145,7 @@ hornvale-astronomy::hornvale_astronomy$calendar::tests::daylight_follows_the_dec
 hornvale-astronomy::hornvale_astronomy$calendar::tests::equatorial_daylight_is_a_flat_half_all_year
 hornvale-astronomy::hornvale_astronomy$calendar::tests::genesis_day_zero_is_not_a_grand_alignment
 hornvale-astronomy::hornvale_astronomy$calendar::tests::high_latitude_reaches_polar_day_and_night
+hornvale-astronomy::hornvale_astronomy$calendar::tests::local_day_floors_for_a_pre_genesis_instant_instead_of_saturating
 hornvale-astronomy::hornvale_astronomy$calendar::tests::local_days_advance_with_absolute_time
 hornvale-astronomy::hornvale_astronomy$calendar::tests::locked_worlds_have_no_local_day_and_no_daylight_cycle
 hornvale-astronomy::hornvale_astronomy$calendar::tests::locked_worlds_have_no_solar_position
@@ -298,6 +299,7 @@ hornvale-astronomy::hornvale_astronomy$provider::tests::a_mooned_sky_promises_bl
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_night_sky_reports_each_body_as_its_own_phrase
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_placed_observer_sees_a_heliacal_rising_across_a_year
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_placed_observer_sees_a_wandering_star_across_two_synodic_periods
+hornvale-astronomy::hornvale_astronomy$provider::tests::a_pre_genesis_query_has_a_documented_answer
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_small_moon_leaves_a_burning_ring
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_spinning_placed_observer_sees_the_whole_sky
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_spinning_sun_is_periodic_and_top_salience
@@ -889,13 +891,23 @@ hornvale-kernel::hornvale_kernel$ecology::tests::the_environment_basis_ids_are_a
 hornvale-kernel::hornvale_kernel$ecology::tests::zero_vector_is_legal_and_overlaps_nothing
 hornvale-kernel::hornvale_kernel$fact_index::tests::interner_round_trips
 hornvale-kernel::hornvale_kernel$fact_index::tests::objkey_orders_numbers_by_total_cmp_and_ranks_variants
+hornvale-kernel::hornvale_kernel$field::tests::a_difference_of_two_instants_is_a_signed_span
+hornvale-kernel::hornvale_kernel$field::tests::a_tick_count_round_trips_exactly_where_an_f64_day_could_not
+hornvale-kernel::hornvale_kernel$field::tests::a_tick_count_round_trips_through_from_ticks_and_ticks
 hornvale-kernel::hornvale_kernel$field::tests::a_world_time_cannot_be_built_from_a_non_finite_number_of_days
+hornvale-kernel::hornvale_kernel$field::tests::a_world_time_cannot_be_built_from_days_beyond_the_tick_range
 hornvale-kernel::hornvale_kernel$field::tests::a_world_time_may_be_negative_because_a_day_is_a_point_not_a_duration
+hornvale-kernel::hornvale_kernel$field::tests::adding_a_span_panics_rather_than_wrapping_at_the_i64_boundary
 hornvale-kernel::hornvale_kernel$field::tests::constant_field_returns_its_value_everywhere
 hornvale-kernel::hornvale_kernel$field::tests::constant_field_works_for_non_numeric_types
 hornvale-kernel::hornvale_kernel$field::tests::noise_field_is_deterministic_and_bounded
 hornvale-kernel::hornvale_kernel$field::tests::noise_field_scale_stretches_space
 hornvale-kernel::hornvale_kernel$field::tests::position_and_time_serialize_roundtrip
+hornvale-kernel::hornvale_kernel$field::tests::subtracting_instants_panics_rather_than_wrapping_at_the_i64_boundary
+hornvale-kernel::hornvale_kernel$field::tests::the_tick_range_check_rejects_exactly_two_to_the_sixty_three
+hornvale-kernel::hornvale_kernel$field::tests::whole_days_and_tick_of_day_agree_with_ticks_for_a_negative_off_boundary_day
+hornvale-kernel::hornvale_kernel$field::tests::whole_days_and_tick_of_day_floor_rather_than_truncate
+hornvale-kernel::hornvale_kernel$field::tests::world_time_is_ordered_and_equatable_so_it_can_key_a_map
 hornvale-kernel::hornvale_kernel$field::tests::world_time_serializes_as_a_bare_scalar_not_an_object
 hornvale-kernel::hornvale_kernel$geosphere::tests::a1_grid_matches_the_full_band_scan_over_a_dense_sweep
 hornvale-kernel::hornvale_kernel$geosphere::tests::adjacency_is_mutual_and_has_the_right_valence
@@ -916,7 +928,6 @@ hornvale-kernel::hornvale_kernel$ledger::tests::an_id_is_a_function_of_lineage_n
 hornvale-kernel::hornvale_kernel$ledger::tests::an_inserted_mint_does_not_move_an_unrelated_id
 hornvale-kernel::hornvale_kernel$ledger::tests::commit_and_query_roundtrip
 hornvale-kernel::hornvale_kernel$ledger::tests::committed_numbers_are_quantized_but_days_are_exact
-hornvale-kernel::hornvale_kernel$field::tests::world_time_is_ordered_and_equatable_so_it_can_key_a_map
 hornvale-kernel::hornvale_kernel$ledger::tests::entity_id_zero_is_unrepresentable
 hornvale-kernel::hornvale_kernel$ledger::tests::facts_about_yields_commit_order_not_index_key_order
 hornvale-kernel::hornvale_kernel$ledger::tests::facts_of_agrees_before_the_index_exists
@@ -1108,6 +1119,7 @@ hornvale-kernel::hornvale_kernel$units::temperature_tests::get_is_raw_celsius_an
 hornvale-kernel::hornvale_kernel$units::temperature_tests::temperature_plus_anomaly_round_trips
 hornvale-kernel::hornvale_kernel$units::tests::a_sea_floor_reading_yields_a_positive_depth
 hornvale-kernel::hornvale_kernel$units::tests::a_sea_level_height_reports_its_metres
+hornvale-kernel::hornvale_kernel$units::tests::a_tick_span_range_check_rejects_exactly_two_to_the_sixty_three
 hornvale-kernel::hornvale_kernel$units::tests::depth_is_the_positive_downward_reading
 hornvale-kernel::hornvale_kernel$units::tests::heights_order_deterministically
 hornvale-kernel::hornvale_kernel$units::tests::mass_rejects_negative_and_reports_ratio
@@ -1191,7 +1203,6 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::partitioning_columns_are_all_covered_by_d2_or_d4
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
@@ -1261,7 +1272,6 @@ hornvale-lab::hornvale_lab$domesday::render::tests::a_detector_that_fired_nothin
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_page_carries_the_generated_header_and_only_computed_numbers
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_with_no_metrics_renders_the_no_metrics_notice_verbatim
 hornvale-lab::hornvale_lab$domesday::render::tests::a_flag_metric_always_renders_both_true_and_false_rows
-hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two
 hornvale-lab::hornvale_lab$domesday::render::tests::a_novel_detector_name_reaches_the_rendered_index
 hornvale-lab::hornvale_lab$domesday::render::tests::a_removed_parenthetical_directly_before_a_period_does_not_leave_a_dangling_space
 hornvale-lab::hornvale_lab$domesday::render::tests::an_ellipsis_survives_the_space_dot_space_cleanup_untouched
@@ -2629,6 +2639,7 @@ hornvale-vessel::hornvale_vessel$plan::tests::the_projection_is_deterministic
 hornvale-vessel::hornvale_vessel$plan::tests::the_standing_cell_is_carried_verbatim
 hornvale-vessel::hornvale_vessel$plan::tests::two_walls_at_different_light_levels_get_different_palette_entries
 hornvale-vessel::hornvale_vessel$purview::tests::agent_salience_outranks_every_settlement_salience
+hornvale-vessel::hornvale_vessel$session::tests::advanced_by_checks_the_increment_and_the_sum_separately
 hornvale-vessel::hornvale_vessel$session::tests::every_bare_verb_help_lists_is_classified
 hornvale-vessel::hornvale_vessel$session::tests::further_in_is_the_deeper_aperture_and_stops_at_the_last_chamber
 hornvale-vessel::hornvale_vessel$session::tests::neighbours_reads_the_link_graph_in_both_directions
@@ -2665,6 +2676,7 @@ hornvale-vessel::hornvale_vessel$underworld_level::tests::every_level_but_the_fi
 hornvale-vessel::hornvale_vessel$underworld_level::tests::every_walkable_cell_is_reachable_from_every_other
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generate_descent_produces_one_level_per_rung
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generation_is_deterministic
+hornvale-vessel::hornvale_vessel$underworld_level::tests::made_chambers_lean_worked_found_chambers_lean_natural
 hornvale-vessel::hornvale_vessel$underworld_level::tests::stairs_down_and_stairs_up_never_share_a_cell
 hornvale-vessel::hornvale_vessel$underworld_level::tests::two_rungs_with_the_same_origin_and_kind_still_differ
 hornvale-vessel::hornvale_vessel$underworld_level::tests::worked_fraction_has_inertia_across_rungs
