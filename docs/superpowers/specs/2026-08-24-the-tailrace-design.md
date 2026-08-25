@@ -70,27 +70,27 @@ Every one of these reduces an unbounded history to bounded state. Read on
 
 | fold | line | what it walks | what it reduces to | bounded by |
 |---|---|---|---|---|
-| `agent_sightings` → `integrate_thirst`, via `drive_at` | 806, 835, 884 | every `agent-at` ≤ `t` | the accumulated integral, plus the last sighting's day and room | the interval since the last `drank` |
-| `hunger_at` | 2399 | the same trail, `HUNGER` params | likewise | the interval since the last `eaten` |
-| `fatigue_at` | 2228 | every `rested` fact | the latest `rested` day | O(1) — a max |
-| `believed_water` | 908 | every `agent-at` ≤ `t`, ∩ water | a `BTreeSet<Facet>` | reachable water rooms |
-| `hazard_memory_memo` | 1176 | every `agent-at` ≤ `t` | a `BTreeMap<Facet, f64>`, latest-visit-wins | facets visited |
-| `build_emitter_scan` | 985 | every roster member's `agent-at` ≤ `t` | a `BTreeSet<Facet>` of alarm facets, plus per-emitter timelines | facets visited × emitters |
+| `agent_sightings` → `integrate_thirst`, via `drive_at` | 807, 836, 885 | every `agent-at` ≤ `t` | the accumulated integral, plus the last sighting's day and room | the interval since the last `drank` |
+| `hunger_at` | 2400 | the same trail, `HUNGER` params | likewise | the interval since the last `eaten` |
+| `fatigue_at` | 2229 | every `rested` fact | the latest `rested` day | O(1) — a max |
+| `believed_water` | 909 | every `agent-at` ≤ `t`, ∩ water | a `BTreeSet<Facet>` | reachable water rooms |
+| `hazard_memory_memo` | 1177 | every `agent-at` ≤ `t` | a `BTreeMap<Facet, f64>`, latest-visit-wins | facets visited |
+| `build_emitter_scan` | 986 | every roster member's `agent-at` ≤ `t` | a `BTreeSet<Facet>` of alarm facets, plus per-emitter timelines | facets visited × emitters |
 
 Three multipliers make this worse than the table suggests, and all three are
 in the same call path:
 
-- `shared_believed_water` (`:1323`) calls `believed_water` **once per
+- `shared_believed_water` (`:1324`) calls `believed_water` **once per
   co-located peer**, so the history walk is multiplied by band size.
 - `build_emitter_scan` is threaded the **full roster**, so it is O(agents ×
   history) inside a per-agent call — the O(agents²) term the sibling bench
   suspected and the history term, compounded.
-- `step_with_occupancy`'s `begin` (`:4945`) folds `DRANK`, `RESTED` and
+- `step_with_occupancy`'s `begin` (`:4946`) folds `DRANK`, `RESTED` and
   `EATEN` from scratch per creature per tick.
 
 **The thirst integral is exactly incrementalisable, and this is the load-bearing
 claim of the design.** Reading `integrate_thirst`'s own segmentation
-(`:848–856`): the bounds are `last_drank`, each sighting strictly inside
+(`:849–857`): the bounds are `last_drank`, each sighting strictly inside
 `(last_drank, t)`, then `t`. So
 
 ```
@@ -101,7 +101,7 @@ where `A(d_n)` is the accumulation through the last sighting `(d_n, p_n)`, and a
 `drank` fact sets `A := 0`. Three scalars and one room, queryable at any `t`
 ahead of the frontier in O(1).
 
-**Four traps found while reading, recorded here so the plan inherits them
+**Five traps found while reading, recorded here so the plan inherits them
 rather than rediscovering them.**
 
 1. **Clamp at read, never incrementally.** `integrate_thirst` clamps to
@@ -117,7 +117,7 @@ rather than rediscovering them.**
    sum.
 4. **`agent_sightings` SORTS, and the sort is not commit order.** It sorts by
    `(day, Facet)` — `a.0.total_cmp(&b.0).then_with(|| a.1.cmp(&b.1))`
-   (`:820`, and again at `:4310` where the tick folds `frozen` plus its own emitted moves). A fold advancing in commit order would break same-day ties
+   (`:821`, and again at `:4311` where the tick folds `frozen` plus its own emitted moves). A fold advancing in commit order would break same-day ties
    differently, and the tie-break selects the *position* that governs the next
    segment, hence its temperature, hence the integral. **This is a live
    divergence, not a theoretical one**, and it is precisely what the FOLD ≡
@@ -125,6 +125,24 @@ rather than rediscovering them.**
    sorted order's tie-break, or the batch function must be changed to commit
    order and the change justified as its own decision. Same-day sightings are
    not exotic — the action clock can charge less than a day for a step.
+5. **The reset day itself is folded with no `<= t` filter, unlike the
+   sightings it governs.** `drive_at` (`liveness.rs:894-897`), `hunger_at`
+   (`:2408-2411`) and `fatigue_at` (`:2230-2233`) each compute `last_drank` /
+   `last_ate` / `last_rested` as a fold-max over **every** `DRANK` / `EATEN` /
+   `RESTED` fact in the ledger, with no bound on `t` at all — while
+   `agent_sightings` on the very next line *does* filter its sightings to
+   `d <= t`. Decision 0237 states the intended rule ("a past-position read is
+   served from the last reset at or before it") correctly; it is the
+   **current code** that does not implement it. A stage-3 implementer who
+   reads 0237 and reasons "find the last reset `<= t`" verbatim, without
+   separately noticing that today's reset lookup has no such filter, would
+   silently change behaviour on the replay path: a past-`t` query today can
+   pick up a reset lying in `t`'s *future*, and an incremental fold that
+   correctly bounds itself to resets `<= t` would stop reproducing that.
+   Whether today's unfiltered behaviour or 0237's filtered one is the
+   intended semantics is a question for whoever implements stage 3, not
+   settled by this campaign — but the divergence must be noticed, not
+   inherited by accident.
 
 **`agent_sightings` is the hub, and the work is to DELETE it, not cache it.**
 Five of the six folds route through that one function (thirst, hunger, hazard,
@@ -138,7 +156,7 @@ timeline goes away. That is why stage 3 is named "delete the hub" rather than
 suggests.
 
 **Past-`t` queries are real and are already documented in the tree.**
-`last_fact_day_at_or_before` (`:4436`) exists precisely because catch-up's
+`last_fact_day_at_or_before` (`:4437`) exists precisely because catch-up's
 replay loop evaluates many instants across a span, and its doc says why a
 whole-history fold cannot serve it: the folded value "could be looking
 chronologically PAST the day it is being asked about." So the primitive must be
@@ -235,11 +253,19 @@ per fact across runs; the elasticity is the stable statistic and `k` the
 load-sensitive one, which is why H2 below is written against the elasticity.
 
 **`C` is deliberately not quoted as a floor.** The sampled range starts at 130
-facts, so the intercept is an extrapolation far outside the data and comes out
-negative on two of three runs. An earlier draft of the instrument printed "the
-history term is 106.5% of the total" from exactly that; the share is now
-suppressed when `C < 0` and the elasticity leads, because it needs no
-intercept.
+facts, so the intercept is an extrapolation far outside the data. **This
+section's own text used to say "negative on two of three runs" — stale prose
+from when this table had three columns; it has four now, and no surviving
+record from this campaign retains the per-run `C` for this specific table.**
+`report_affine`'s printed output for each of the four runs behind the table
+above kept `k`, `r²` and the derived elasticity (all quoted above) but not the
+intercept itself, so it cannot be honestly restated here without re-running
+the instrument and reporting a fifth, different measurement in its place. What
+is known, and is the reason `C` is not trusted as a floor regardless of its
+exact value: an earlier draft of the instrument printed "the history term is
+106.5% of the total" from a negative intercept on at least one run, which is
+why the share is now suppressed whenever `C < 0` and the elasticity leads
+instead, needing no intercept.
 
 **In absolute terms: one `drive_at` call costs 0.74–1.02 ms at 322 facts of
 history**, and `drive_at` is called more than once per creature per tick.
@@ -351,7 +377,7 @@ higher load, exactly as §4's own history with `drive_at` predicts.
 
 | fold | elasticity (run1/run2/run3/run4) | r² (run1/run2/run3/run4) | final-band µs/call (run1/run2/run3/run4) |
 |---|---|---|---|
-| `drive_at` (decisive, restated) | 0.18/1.14/0.81/1.33 | 0.010/0.824/0.544/0.861 | 1772.14/764.55/809.35/1011.08 |
+| `drive_at` (decisive column, re-measured on this task's runs) | 0.18/1.14/0.81/1.33 | 0.010/0.824/0.544/0.861 | 1772.14/764.55/809.35/1011.08 |
 | `hunger_at` | 0.21/1.09/1.22/0.79 | 0.012/0.824/0.913/0.372 | 2375.58/770.26/770.28/1018.29 |
 | `fatigue_at` | -0.86/0.53/-0.18/-0.20 | 0.019/0.050/0.031/0.025 | 0.98/0.13/0.14/0.19 |
 | `believed_water` | 0.37/1.01/1.10/1.39 | 0.124/0.763/0.881/0.882 | 8878.72/4416.68/4344.16/6324.77 |
@@ -407,7 +433,7 @@ measured, not rank them in general:**
    collapsed) — strictly fewer than the raw posting count. This candidate
    applies to every call, regardless of what the fold finds.
 2. `believed_water` also runs a bounded `plan_to_room` A* search **per
-   distinct water room found** (`liveness.rs:908-931`, the `seen.into_iter
+   distinct water room found** (`liveness.rs:909-932`, the `seen.into_iter
    ().filter_map(|r| plan_to_room(...))` line) — a real cost `integrate_thirst`
    has no equivalent of, and one a reviewer flagged as plausibly the larger
    driver.
@@ -439,7 +465,7 @@ every one of the 50 roster members' own full histories on every single call.
 **A caveat on that last number that changes how it should be read, not
 whether it matters.** Production shares ONE `PrimaryAfraidMemo` per tick
 across the whole 50-agent roster (`DriveMovements::step_with_occupancy`,
-`windows/vessel/src/liveness.rs:4701`: `afraid_memo` is built once and passed
+`windows/vessel/src/liveness.rs:4687`: `afraid_memo` is built once and passed
 by `&mut` into every creature's `hazard_memory_memo` call for that tick), so
 `build_emitter_scan`'s O(roster × history) cost is paid **once per tick**,
 amortized over 50 creatures. This probe's fresh-memo-per-call design — required
@@ -575,11 +601,12 @@ because its own cost is `a·H + b·(RESET_EVERY)·H` — linear in `H` for any
 `H`, with no crossover.
 
 **Bounding the crossover from `fold_depth_sweep.rs`'s own single-reset table
-(Task 1's report), without fitting a precise value the data does not pin —
-fix round 2 correction: Task 1's report holds TWO such tables, from its own
-two fix rounds, described there as equally legitimate noisy re-measurements
-of the same sweep, neither superseding the other. The original submission of
-this section used only round 1's table without naming it as one of two; both
+(its module doc's "Raw per-depth medians, both rounds, both regimes"
+section), without fitting a precise value the data does not pin — fix round
+2 correction: that section holds TWO such tables, from its own two fix
+rounds, described there as equally legitimate noisy re-measurements of the
+same sweep, neither superseding the other. The original submission of this
+section used only round 1's table without naming it as one of two; both
 are reported here.** Local elasticity between adjacent swept depths
 (`ln(y₂/y₁)/ln(x₂/x₁)`, a model-free finite difference, not a fit), computed
 from each table independently:
@@ -692,12 +719,26 @@ enterable.
 because "falls toward zero" is unfalsifiable. On the same instrument, same seed,
 same 50 agents, same 200 ticks, ≥3 runs:
 
-- **`drive_at`'s elasticity drops below 0.20**, against the 0.86–1.24 measured
-  now. That is the primary criterion: it says the fold stopped being a walk over
-  history.
-- **`C` becomes identifiable and positive** on the decisive column — currently
-  negative on two of three runs precisely because there is almost no fixed part
-  to find. A real O(1) fold has a real floor.
+- **`drive_at`'s MEDIAN elasticity across runs drops below 0.20, counting only
+  runs that reach `r² ≥ 0.5`** — against the 0.86–1.24 **decisive-table**
+  range measured now (§4's first, decisive table; the attribution table's own
+  `drive_at` row — a re-measurement of the same fold, on a different four
+  runs — spans the wider 0.18–1.33). That is the primary criterion: it says the fold
+  stopped being a walk over history. **The `r² ≥ 0.5` floor is not
+  decoration: without it, this criterion can be met by a bad run instead of a
+  real fix.** §4's own attribution table reports `drive_at` at elasticity
+  0.18, `r² = 0.010` on its noisiest run (load average 14.8–16.3) — a
+  *pre-fix* measurement of the same quantity, already under the post-fix
+  0.20 threshold, for a reason that has nothing to do with the fold's shape.
+  A stage-5 run on a similarly loaded box could report H2's primary success
+  criterion MET on pure noise if the criterion did not exclude it; requiring
+  `r² ≥ 0.5` per run is the same quality gate §4 already applies when it
+  reads the attribution table against runs 2–4 and sets run 1 aside.
+- **`C` becomes identifiable and positive** on the decisive column. §4's own
+  four runs did not retain a per-run `C` for this table (see §4), but the
+  instrument's suppressed-share behaviour confirms at least one run came out
+  negative, precisely because there is almost no fixed part to find at this
+  history depth. A real O(1) fold has a real floor.
 - **The whole-tick history share falls below 20%**, against 70–80% now.
 
 Any one of those failing while the others pass is a finding to report, not a
@@ -727,14 +768,14 @@ metaplan's own discipline.
 
 | # | stage | delivers | gate to enter | blocked by |
 |---|---|---|---|---|
-| 1 | The instruments and the attribution | `session_length_scaling.rs` — **done, §4 reports it**. Remaining: a `samply` profile attributing `k` across the six folds in cost order, and an **interleaved synthetic depth sweep** to identify `C` over a ~1000× range (§4's limitations note) | — | nothing |
+| 1 | The instruments and the attribution | `session_length_scaling.rs` — **done, §4 reports it**. Also done: the six-fold attribution (direct timing, not a `samply` profile — §4 explains why) and the **interleaved synthetic depth sweep** (`fold_depth_sweep.rs`) identifying `C` over a ~1000× range (§4's limitations note) | — | nothing |
 | 2 | The primitive | the incremental ledger fold, kernel-side; FOLD ≡ SCAN, advance-exactly-once, chaos-rebuild | **met for `drive_at`** (§4) | nothing — see §10 |
 | 3 | Delete the hub | remove `agent_sightings` and give thirst, hunger and fatigue their own bounded accumulators; `last_fact_day_at_or_before` becomes O(1) | stage 2's properties green | the Escapement |
-| 4 | Belief and hazard | `believed_water` (× peers), `hazard_memory_memo`, `build_emitter_scan` | stage 1's profile says these carry a material share of `k` | the Escapement |
+| 4 | Belief and hazard | `believed_water` (× peers), `hazard_memory_memo`, `build_emitter_scan` | stage 1's attribution says these carry a material share of `k` | the Escapement |
 | 5 | The readout | re-run the instrument; H2/H3; state what 7b and 7c may now assume | stages 3–4 | stages 3–4 |
 
 Stage 4 is the one that may not be entered, and that is deliberate: if the
-profile says the three drives carry `k` and belief/hazard do not, migrating
+attribution says the three drives carry `k` and belief/hazard do not, migrating
 them is unmotivated memory for no measured gain — the same judgement §6.5 made
 against stage 2 of the parent program.
 

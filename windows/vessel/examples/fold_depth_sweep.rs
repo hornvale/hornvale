@@ -52,10 +52,15 @@
 //! the six production folds. The old single-reset sweep committed exactly
 //! one `drank` at the start, so every posting is a sighting since that one
 //! drink: `S == H`, and the measured cost is dominated by the quadratic
-//! `S*H == H^2` term -- a real pathology, but not the regime a production
-//! agent actually runs in (one that drinks regularly keeps `S` small and
-//! bounded while `H` grows, which is why the spec's own in-situ measurement
-//! read an elasticity of 0.86-1.24, not ~2).
+//! `S*H == H^2` term -- a real pathology, and (per the roster measurement in
+//! spec §4) the WORST-CASE regime a production agent can run in, not a
+//! synthetic impossibility: at the final band of a 50-agent roster, 23 of 50
+//! agents (46%) had drunk zero times in 200 ticks and so sit exactly in this
+//! regime, the probe agent among them. It is not the TYPICAL regime either --
+//! the median agent drank 9 times, which keeps `S` small and bounded while `H`
+//! grows, and is why the spec's own in-situ measurement of that half reads an
+//! elasticity of 0.86-1.24, not ~2. See spec §4's "roster's own `drank`
+//! distribution" for the full breakdown.
 //!
 //! So this bench now sweeps BOTH regimes, driven by the same `DEPTHS`/
 //! `PASSES`/`FOLD_REPS` machinery, clearly labelled so neither is mistaken
@@ -77,12 +82,19 @@
 //! regime until it is grounded.** This bench is synthetic and knows its own
 //! reset cadence by construction, which is exactly why it cannot tell you
 //! whether 20 is close to how often a real agent actually drinks. The
-//! production postings-per-drink ratio is UNMEASURED as of this bench. The
-//! measurement that would settle it -- a `drank`-per-agent-per-tick column
-//! alongside the existing `folded/a` column in `session_length_scaling.rs`
-//! -- is scoped to a later task in this campaign, not this one. Read the
-//! periodic sweep below as "what the O(H) term looks like at a plausible,
-//! unverified cadence," not as a closed comparison to spec §4.
+//! production postings-per-drink ratio was UNMEASURED as of this bench, and
+//! HAS SINCE BEEN MEASURED, by a later task in this campaign: a `drank`-count
+//! column added to `session_length_scaling.rs` reports, at the final band of
+//! a 50-agent roster, min 0 / median 9 / max 47 `drank` facts, with 23 of 50
+//! agents (46%) never having drunk at all (spec §4 has the full breakdown).
+//! So `RESET_EVERY = 20` describes neither half well: the never-drinks 46%
+//! keep no reset within the run's horizon, and the drinking half's own median
+//! (9 events / 200 ticks) is closer to "every 22 ticks" than "every 20
+//! postings" -- ticks and postings are not the same unit, and this bench does
+//! not know the conversion for that half specifically. Read the periodic
+//! sweep below as "what the O(H) term looks like at a plausible, but still
+//! only approximately grounded, cadence," not as a closed comparison to spec
+//! §4.
 //!
 //! ## Reconciling with spec §4, with numbers (measured; expect wall-clock noise to move these on a re-run, and it did)
 //!
@@ -124,11 +136,58 @@
 //!
 //! **Conclusion:** the periodic regime's high-depth elasticity lands inside
 //! spec §4's in-situ range, so the two instruments agree about the regime
-//! production actually runs in -- SUBJECT TO `RESET_EVERY`'s cadence being a
-//! reasonable stand-in for reality, which is an open item, not something
-//! this bench closes (see `RESET_EVERY`'s doc). The single-reset regime's ~2
-//! exponent is real but belongs to a "never drinks" regime production does
-//! not reach.
+//! the DRINKING half of production runs in -- SUBJECT TO `RESET_EVERY`'s
+//! cadence being a reasonable stand-in for reality, which is an open item,
+//! not something this bench closes (see `RESET_EVERY`'s doc). The
+//! single-reset regime's ~2 exponent is real, and belongs to a "never drinks"
+//! regime that production DOES reach: the roster measurement in spec §4
+//! found 46% of a 50-agent roster (23/50) had drunk zero times at the final
+//! band, the probe agent among them. So this is the WORST CASE, reached by
+//! nearly half the roster, not a synthetic impossibility -- it is simply not
+//! the TYPICAL case, since the median agent drank 9 times and so sits in the
+//! periodic-ish regime instead.
+//!
+//! ## Raw per-depth medians, both rounds, both regimes
+//!
+//! The durable source for spec §4's crossover-reconciliation subsection,
+//! which cites specific absolute figures from these tables (depth 320 reads
+//! 31.7-32.0 µs/call single-reset against the periodic sweep's 8.1-10.6
+//! µs/call at the same depth). Recorded here, in the tree, rather than left
+//! to live only in a task transcript: `.superpowers/sdd/` is git-ignored and
+//! dies with the worktree that produced it, so a spec citing "Task 1's
+//! report" for a number is citing something that will not outlive the
+//! campaign that wrote it. This file is the durable home for these numbers;
+//! the spec should cite it, not the transcript.
+//!
+//! ```text
+//! PERIODIC RESETS -- median us/call by depth:
+//!    depth      round 1      round 2
+//!       10        0.825        0.816
+//!       32        1.863        1.179
+//!      100        3.029        3.093
+//!      320        8.089       10.560
+//!     1000       25.275       28.981
+//!     3200      113.317       83.558
+//!    10000      291.544      342.463
+//!
+//! SINGLE EARLY RESET -- median us/call by depth:
+//!    depth      round 1      round 2
+//!       10        0.725        0.731
+//!       32        1.320        1.378
+//!      100        5.122        5.695
+//!      320       31.693       32.022
+//!     1000      247.102      247.545
+//!     3200     2408.472     2426.205
+//!    10000    25998.897    26202.435
+//! ```
+//!
+//! Round 1's figures are from the fix-round-1 measurement that first split
+//! the sweep into the periodic and single-reset regimes; round 2's are the
+//! independent re-run taken for the model-free-elasticity fix round (the
+//! "TWO SEPARATE RUNS" elasticity table above is derived from these same two
+//! sets of medians). Both are genuine measurements of the same sweep, run at
+//! different times on the same box; neither supersedes the other, which is
+//! why both are kept.
 //!
 //! ## What this bench does, and does not, measure
 //!
@@ -178,9 +237,15 @@ const FOLD_REPS: u32 = 50;
 /// module doc's notation) stays bounded near this value while the whole
 /// history (`H`) grows across `DEPTHS` -- isolating the `O(H)` term from the
 /// `O(S*H)` one the single-reset sweep exposes. Below `RESET_EVERY` postings
-/// (the `DEPTHS` entries of 10) no reset ever triggers, so the periodic
-/// sweep is identical to the single-reset one at that one depth -- expected,
-/// not a bug, and worth knowing when reading that row.
+/// (the `DEPTHS` entries of 10) no reset ever triggers, so at that one depth
+/// the periodic sweep COMPUTES the exact same thing the single-reset sweep
+/// does -- the same code path, not merely a similar one. That is why the two
+/// depth-10 rows can print DIFFERENT measured timings (e.g. 0.825 vs 0.725
+/// µs/call) without that being a discrepancy: they are two separately-timed
+/// runs of identical computation, and the gap between them is ordinary
+/// wall-clock noise at microsecond scale, not evidence the two regimes
+/// diverge at depth 10. Expected, not a bug, and worth knowing when reading
+/// that row.
 ///
 /// **THIS IS AN AUTHORED GUESS, NOT A MEASURED OR DERIVED NUMBER.** Nothing
 /// in this bench (or its sibling `session_length_scaling.rs`) establishes

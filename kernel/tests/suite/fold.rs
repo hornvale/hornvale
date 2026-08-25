@@ -195,7 +195,11 @@ fn skipping_a_position_panics() {
 /// accumulated state away and rebuild it from the ledger prefix — then carry
 /// on. If the fold is genuinely a fold, the end state is identical to never
 /// having discarded anything, for every possible discard schedule. This is the
-/// most aggressive schedule there is.
+/// most aggressive schedule there is — but "most aggressive" is not "most
+/// diagnostic": this schedule alone gives NO signal on `absorb_at`'s own
+/// purity, because a bug confined to `absorb_at` can cancel out when the
+/// rebuild happens immediately after every single absorb (see the sparser,
+/// every-third-position sibling test below, and spec §11, for why).
 #[test]
 fn discarding_the_state_at_every_position_is_unobservable() {
     let l = ledger_of(24);

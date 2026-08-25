@@ -151,7 +151,10 @@ impl<S: LedgerFold> Folded<S> {
     /// individual facts. A ledger shorter than this fold's position absorbs
     /// nothing: an append-only log cannot shrink, so that means the caller
     /// passed a different ledger, and folding nothing is a better failure than
-    /// folding a prefix of the wrong log.
+    /// folding a prefix of the wrong log. The guard is asymmetric: a
+    /// *different* ledger that happens to be at least as long as this fold's
+    /// position is not detected at all, and `skip` silently absorbs whatever
+    /// facts sit at those positions in the wrong log.
     pub fn advance_to(&mut self, ledger: &Ledger) {
         for fact in ledger.iter().skip(self.position as usize) {
             self.state.absorb(fact);
