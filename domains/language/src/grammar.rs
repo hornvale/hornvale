@@ -887,6 +887,68 @@ mod tests {
     }
 
     #[test]
+    fn shallow_identity_holds_with_nonempty_adjuncts() {
+        // `realize_tongue_marks_by_depth`'s own shallow-identity assertion
+        // (and `hornvale-book`'s `shallow_species_lines_are_byte_identical_to_c3`)
+        // only ever exercise `adjuncts: vec![]` — a proof that would still
+        // pass even if the deep realizer's adjunct handling diverged from
+        // the floor realizer's. This test is the one that actually depends
+        // on the adjunct path agreeing between the two realizers.
+        let lex = tiny_lexicon_with(&[
+            ("goblin-kind", ExposureClass::Steeped),
+            ("yellow-white-dwarf", ExposureClass::Steeped),
+        ]);
+        let star_word = match lex.entry("yellow-white-dwarf").unwrap() {
+            LexEntry::Root { views, .. } => views.roman.clone(),
+            other => panic!("expected a Root, got {other:?}"),
+        };
+        let clause = TongueClause {
+            subject: "Vavako".into(),
+            complement_concept: "goblin-kind".into(),
+            evidential: Evidential::Witnessed,
+            adjuncts: vec![Adjunct {
+                role: "star-class".into(),
+                argument: Argument::Concept("yellow-white-dwarf".into()),
+            }],
+        };
+        let grammar = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: Some("gha".into()),
+            copula_segments: None,
+            articles: false,
+        };
+        let shallow = TongueMorphology {
+            evidential_depth: MorphDepth::None,
+            noun_class_depth: MorphDepth::None,
+            class_position: ClassPosition::Suffix,
+            evidential: BTreeMap::new(),
+            class: BTreeMap::new(),
+        };
+        let noun_class_of = |_: &str| NounClass::Inanimate;
+
+        let floor = realize_tongue(&clause, &grammar, &lex).unwrap();
+        let deep = realize_tongue_deep(
+            &clause,
+            &grammar,
+            &shallow,
+            &noun_class_of,
+            &lex,
+            Orthography::Digraph,
+        )
+        .unwrap();
+
+        assert!(
+            floor.contains(&star_word),
+            "sanity: the adjunct's own word must actually appear: {floor}"
+        );
+        assert_eq!(
+            deep, floor,
+            "MorphDepth::None on both axes must reproduce the floor surface \
+             exactly, including a non-empty adjunct list"
+        );
+    }
+
+    #[test]
     fn realize_tongue_exhaustive_orders_and_copula() {
         // All 6 orders × copula Some/None = 12 exact-string assertions for a
         // fixed clause — pins every transform's exact surface shape.
