@@ -15015,8 +15015,8 @@ mod tests {
         // staple bands, with (145, hobgoblin) and (145, bugbear) behind it.
         let view = FullView::build(Seed(133), &SkyPins::default()).unwrap();
         let lexicon = lex(&view, "hobgoblin").expect("hobgoblins hold a lexicon");
-        let steeped = independently_steeped_concepts(&view, "hobgoblin")
-            .expect("hobgoblin is placed");
+        let steeped =
+            independently_steeped_concepts(&view, "hobgoblin").expect("hobgoblin is placed");
         for staple in STAPLE_CONCEPTS {
             // The sweep's own criterion, asserted rather than assumed: this
             // test bites only where WORLDGEN steeps the staple, and a lexicon
@@ -15328,5 +15328,3 @@ mod tests {
         );
     }
 }
-
-

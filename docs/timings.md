@@ -2868,3 +2868,6 @@ this file never invents a measured value it does not hold.
 | 2026-08-25T17:56:36Z | quick | 11.171 | 10.906 | 0.655 | 1.03 | 0 | 13695c4ae | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-25T18:14:16Z | quick | 20.560 | 26.555 | 16.493 | 2.09 | 0 | 3c04f44c2 | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-25T19:26:34Z | quick | 13.869 | 14.408 | 2.122 | 1.19 | 0 | b43fb53bd | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-25T20:59:57Z | quick | 2.486 | 2.168 | 0.107 | 0.92 | 0 | 660e5e26c | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-25T21:00:08Z | quick | 2.273 | 2.165 | 0.080 | 0.99 | 0 | 660e5e26c | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-25T21:00:32Z | quick | 14.495 | 15.154 | 2.316 | 1.21 | 0 | 660e5e26c | campaign/the-granary | MacBookPro | 10 |
