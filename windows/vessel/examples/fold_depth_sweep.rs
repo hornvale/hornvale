@@ -144,7 +144,7 @@
 
 use hornvale_kernel::registry::ConceptRegistry;
 use hornvale_kernel::{EntityId, Facet, Fact, Ledger, Value, WorldTime};
-use hornvale_species::MetabolicClass;
+use hornvale_species::ThermalStrategy;
 use hornvale_vessel::liveness::{AGENT_AT, DRANK, SUSTENANCE, Terrain, drive_at};
 use std::collections::BTreeMap;
 // The measurement harness times a derivation call for a diagnostic (never
@@ -492,7 +492,7 @@ fn run_sweep(
     let entity = EntityId::new(1).expect("1 is nonzero");
     let home = room_for(0);
     let terrain = FlatTerrain;
-    let class = MetabolicClass::Endotherm;
+    let class = ThermalStrategy::Endothermic;
 
     let mut by_depth: BTreeMap<usize, Vec<f64>> = BTreeMap::new();
     for &d in DEPTHS {

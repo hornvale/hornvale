@@ -75,7 +75,7 @@
 use hornvale_kernel::Facet;
 use hornvale_kernel::{EntityId, Fact, Ledger, RoomMeshMemo, Value, World, WorldTime};
 use hornvale_locale::LocaleContext;
-use hornvale_species::MetabolicClass;
+use hornvale_species::ThermalStrategy;
 // `Body` reads as private everywhere else in this file's own comments (an
 // earlier assumption, carried into this campaign's task brief too) but is
 // in fact reachable at `hornvale_vessel::body::Body` -- `pub mod body` in
@@ -209,7 +209,7 @@ fn probe_fold_us(
     home: &Facet,
     t: WorldTime,
     terrain: &dyn Terrain,
-    class: MetabolicClass,
+    class: ThermalStrategy,
 ) -> f64 {
     #[allow(clippy::disallowed_types)] // benchmark harness
     let t0 = Instant::now();
@@ -237,7 +237,7 @@ fn probe_hunger_us(
     home: &Facet,
     t: WorldTime,
     terrain: &dyn Terrain,
-    class: MetabolicClass,
+    class: ThermalStrategy,
 ) -> f64 {
     #[allow(clippy::disallowed_types)] // benchmark harness
     let t0 = Instant::now();
@@ -993,7 +993,7 @@ fn run(
     // choice can silently land on one. The fourth element is the same
     // member's index into `npcs`, kept so the five `&Body`/`&[Body]` folds
     // below can read `&npcs[idx]` without a second search.
-    let mut probe: Option<(EntityId, Facet, MetabolicClass, usize)> = None;
+    let mut probe: Option<(EntityId, Facet, ThermalStrategy, usize)> = None;
 
     let mut bands: Vec<Band> = Vec::new();
     let mut band_facts_before = ledger.len();
@@ -1048,7 +1048,7 @@ fn run(
                     .enumerate()
                     .max_by_key(|(_, c)| **c)
                     .expect("the roster is non-empty");
-                probe = Some((roster[i], npcs[i].home.clone(), npcs[i].metabolic_class, i));
+                probe = Some((roster[i], npcs[i].home.clone(), npcs[i].thermal_strategy, i));
             }
             let (p_entity, p_home, p_class, p_idx) = probe
                 .clone()
