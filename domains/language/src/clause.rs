@@ -477,6 +477,12 @@ pub fn parse_common(text: &str, ctx: &ParseContext) -> Result<ClauseSpec, ParseE
 /// product: a caller that asks for a `ClauseSpec` should not be handed
 /// English it then has to recognize, and the one caller that does own a
 /// recognizer should have to say so at the call site.
+///
+/// **Deletion condition, named rather than left in prose alone:** this
+/// function and its caller's recognizer (`windows/book::fact_for`) are a
+/// matched pair that goes away together, when Common learns to recognize
+/// its own role constructions instead of only its clause skeleton — see the
+/// idea-registry row `LANG-recognition-seam`.
 /// type-audit: bare-ok(prose: text), bare-ok(prose: return)
 pub fn parse_common_with_tail(
     text: &str,

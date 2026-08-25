@@ -85,7 +85,7 @@ there was anything to measure against.
 
 ## The honest limits
 
-Three, recorded here because a chronicle that only reports the good sentence is
+Five, recorded here because a chronicle that only reports the good sentence is
 a worse record than one that says where the sentence stops.
 
 **The tongue has no role marking.** Look again at `8835 25 375`. Common
@@ -110,6 +110,15 @@ shape from `ClauseSpec` — it carries an already-surfaced subject and a bare
 complement concept. Collapsing them is attractive and was deliberately not done
 here, because it is a second restructuring riding on a refactor that already took
 a fix round.
+
+**The interlingua's speaker features are two of five.** The spec promised
+`ClauseSpec` would carry number, definiteness, polarity, mood and evidential;
+it carries number and definiteness. Polarity and mood exist nowhere in the
+domain, and evidential lives only on `TongueClause`, so a projection from
+`ClauseSpec` has to supply it out of band rather than read it off the clause.
+The right call was to add nothing speculative — `Argument`'s own doc already
+states the discipline, a variant is added "when a role needs it, never
+speculatively" — so this is a deviation recorded rather than a defect fixed.
 
 ## The instrument that outlives it
 

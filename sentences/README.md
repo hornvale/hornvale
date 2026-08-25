@@ -24,19 +24,24 @@ the corpus is a deliberate act: bump the asserted count in the same commit
 and say why in the commit message. A corpus that drifts silently under a
 measurement makes every earlier score incomparable with the next one.
 
-## A verdict is three-valued
+## A verdict is two-valued today; a third is reserved
 
-Resolving a corpus entry against the grammar yields one of three answers,
-never two:
+Resolving a corpus entry against the grammar today yields one of two
+answers — `entry_covered` (`cli/tests/suite/sentence_corpus.rs`) is a bare
+`bool`, and the report emits only:
 
 - **covered** — today's grammar can produce or parse this demand;
-- **not yet** — it can't, and nothing says that's fine;
-- **declared-out-of-scope-with-a-reason** — it's excluded on purpose, and the
-  reason is recorded next to the exclusion.
+- **not yet** — it can't, and nothing says that's fine.
 
-A reasonless exclusion is a failure, not a pass — the same rule `seam-guard`'s
-`expect(survives: …)` and the trope corpora's `inapplicable` verdict already
-enforce: silence cannot stand in for a judgment call.
+A third value is reserved for when a corpus needs it —
+**declared-out-of-scope-with-a-reason**, for a demand excluded on purpose
+rather than one nobody has built yet. It does not exist: the schema carries
+no reason field, and nothing can fail on a reasonless exclusion because there
+is no out-of-scope arm to be reasonless in. When it does arrive, it should
+carry the same rule `seam-guard`'s `expect(survives: …)` and the trope
+corpora's `inapplicable` verdict already enforce — a reasonless exclusion is
+a failure, not a pass — with its own test to keep that honest, the same way
+`STALE-DECL` keeps `seam-guard`'s declarations honest.
 
 ## A low score is the starting state, not a defect
 

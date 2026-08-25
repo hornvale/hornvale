@@ -186,8 +186,9 @@ pub struct TongueClause {
     /// complement already followed. There is no per-role construction table
     /// yet (contrast `clause::common_role_surface`): each resolved word is
     /// appended in order by [`realize_tongue`]/[`realize_tongue_deep`]. This
-    /// is a deliberate asymmetry with the now fact-shaped `ClauseSpec` — see
-    /// the Task 7 brief — not an oversight.
+    /// is a deliberate asymmetry with the now fact-shaped `ClauseSpec` —
+    /// see "And Common is not yet a peer in full" in
+    /// `book/src/chronicle/the-interlinear.md` — not an oversight.
     pub adjuncts: Vec<Adjunct>,
 }
 

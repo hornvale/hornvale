@@ -42,8 +42,10 @@
 //!    founding and the ending — recoverable only from the spec's order.
 //!    A per-role construction table for tongues (the tongue-side twin of
 //!    `clause::common_role_surface`) does not exist. This is a different
-//!    absence from the `TongueClause`-keeps-a-`String`-subject asymmetry the
-//!    Task 7 brief records, and it is recorded nowhere else.
+//!    absence from the `TongueClause`-keeps-a-`String`-subject asymmetry that
+//!    "And Common is not yet a peer in full"
+//!    (`book/src/chronicle/the-interlinear.md`) records, and it is recorded
+//!    nowhere else.
 //! 2. **The subject takes a liberty.** The clause's subject is the PEOPLE's
 //!    autonym, used as the holding's headword, because the ledger names
 //!    neither the occupation nor its site (the almanac's own history page

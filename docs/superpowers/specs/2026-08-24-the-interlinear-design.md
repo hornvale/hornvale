@@ -1,6 +1,6 @@
 # The Interlinear — design
 
-**Date:** 2026-08-24 · **Status:** DRAFT, awaiting G3 · **Decider:** Nathan ·
+**Date:** 2026-08-24 · **Status:** SHIPPED (see `book/src/chronicle/the-interlinear.md`) · **Decider:** Nathan ·
 **Author:** Claude (campaign-autopilot)
 
 > An *interlinear* is the artifact where a foreign sentence, its
