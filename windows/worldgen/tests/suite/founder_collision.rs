@@ -92,6 +92,12 @@
 //! tree, so every pinned per-seed value is still exact. What has not been
 //! re-established post-repair is the *completeness* claim — that `[2208, 2465]`
 //! is the whole 0–2999 positive set — because that needs a fresh full sweep and
+//!
+//! **The Granary re-sweep (2026-08-25, post Escapement+Lexicon absorbs):** the
+//! merged world's sub-year raid timing re-placed every settlement again;
+//! fresh full sweep found `[1057, 2852]`, one drop each. 1892 — the seed that
+//! survived four epochs — is finally cleared. Rate holds small: 2 in 3000.
+//! Read the rate, never the membership.
 //! this wave did not pay for one. Read the table as "these nineteen seeds drop
 //! exactly these counts", which is what it asserts, and not as "no other seed
 //! in 0–2999 drops a founder", which it does not.
@@ -196,12 +202,12 @@ fn build(seed: u64, depth: BuildDepth) -> hornvale_kernel::World {
 /// 302), and fewer occupations are fewer chances for two of them to collide.
 /// **BOTH positives are built here, not three of six** — there is no third.
 ///
-/// claim: structural(seed: [2208, 2465]) — two named worlds, built once each.
+/// claim: structural(seed: [1057, 2852]) — two named worlds, built once each.
 /// No search: the seeds come from a completed 0–2999 sweep, not from this
 /// test.
 #[test]
 fn a_colliding_seed_builds_to_full_depth_instead_of_panicking() {
-    for seed in [2208u64, 2465] {
+    for seed in [1057u64, 2852] {
         let w = build(seed, BuildDepth::Full);
         let people = w.ledger.find("is-person").count();
         assert!(
@@ -300,8 +306,8 @@ fn the_dropped_founders_are_pinned_per_seed() {
         (1892, 0),
         (2031, 0),
         (2078, 0),
-        (2208, 1),
-        (2465, 1),
+        (1057, 1),
+        (2852, 1),
         (2634, 0),
         (2793, 0),
         (2871, 0),
@@ -404,13 +410,13 @@ fn the_dropped_founders_are_pinned_per_seed() {
 /// changes as little as the measurement permits. 2208 is held in reserve.
 #[test]
 fn a_dropped_founder_is_not_backfilled() {
-    let w = build(2465, BuildDepth::Settlements);
+    let w = build(1057, BuildDepth::Settlements);
     let occs = occupation_records(&w);
     let cast = select_founders(&occs);
     let dropped = cast
         .unremembered
         .first()
-        .expect("seed 2465 drops exactly one founder");
+        .expect("seed 1057 drops exactly one founder");
     let people = dropped.people;
     let promoted = cast
         .remembered
@@ -420,7 +426,7 @@ fn a_dropped_founder_is_not_backfilled() {
     let available = occs.iter().filter(|o| o.core.people == people).count();
     assert!(
         available > 1,
-        "seed 2465's {people:?} must hold more than one occupation \
+        "seed 1057's {people:?} must hold more than one occupation \
          ({available}), or there is nothing a backfill could have reached for"
     );
     assert_eq!(

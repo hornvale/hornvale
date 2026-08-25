@@ -91,17 +91,29 @@ fn world() -> hornvale_kernel::World {
 /// from `book/src/gallery/possession-seed-42.md`, regenerated at this
 /// commit. Both copies moved together — see `the_two_grievance_npc_copies_
 /// agree` below, which is exactly the guard the ninth rename asked for.
-const GRIEVANCE_NPC: &str = "hobgoblin of Noaba";
+const GRIEVANCE_NPC: &str = "hobgoblin of Naabeena";
 
-/// Places `bodies()[1]` (The Hand, Task 3's manufactured companion) at the
-/// possessed body's own room, through the test seam
-/// (`Session::place_creature_at_me`, see docs/retrospectives/the-hand.md) — nothing is
-/// co-located with a fresh flagship possession by default any more. Called
-/// before every `!provoke`/`!soothe` below that follows a `wait`, because
-/// the companion's own drive-seeking runs on every tick and is free to walk
-/// it away — unlike the pre-Hand duplicate, whose home WAS the flagship.
+/// Places the `GRIEVANCE_NPC` body at the possessed body's own room, through
+/// the test seam (`Session::place_creature_at_me`, see
+/// docs/retrospectives/the-hand.md) — nothing is co-located with a fresh
+/// flagship possession by default any more. Called before every
+/// `!provoke`/`!soothe` below that follows a `wait`, because the companion's
+/// own drive-seeking runs on every tick and is free to walk it away — unlike
+/// the pre-Hand duplicate, whose home WAS the flagship.
+///
+/// Resolved BY LABEL, not by `bodies()[1]`: that index used to be the
+/// grievance NPC by construction, but a later world merge inserted another
+/// body ahead of it (`hobgoblin of Na` at [1], Naabeena pushed to [2]), and
+/// every provoke silently became "no one here to provoke or soothe" — the
+/// same loud-but-misleading failure shape as a stale label. The label lookup
+/// cannot drift independently of `GRIEVANCE_NPC` itself.
 fn place_companion(s: &mut Session) {
-    let who = s.bodies()[1].entity;
+    let who = s
+        .bodies()
+        .iter()
+        .find(|b| b.label == GRIEVANCE_NPC)
+        .expect("GRIEVANCE_NPC must be a body — see the fixture guard above")
+        .entity;
     s.place_creature_at_me(who);
 }
 
