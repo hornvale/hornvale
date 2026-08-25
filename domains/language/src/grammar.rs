@@ -19,6 +19,7 @@
 //! authored surface text anywhere in a generated tongue (the program
 //! thesis).
 
+use crate::clause::{Adjunct, Argument};
 use crate::lexicon::{LexEntry, Lexicon};
 use crate::morphology::{
     ClassPosition, Evidential, MorphDepth, MorphForm, NounClass, TongueMorphology, affix,
@@ -166,7 +167,7 @@ pub fn tongue_grammar(seed: &Seed, species: &str, ph: &Phonology) -> TongueGramm
 /// (autonym / proper name — tongue words already) and the complement as a
 /// CONCEPT id to lexicalize in the speaker's lexicon.
 /// type-audit: bare-ok(identifier-text)
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct TongueClause {
     /// The subject, already in surface form.
     pub subject: String,
@@ -178,6 +179,16 @@ pub struct TongueClause {
     /// entirely — only [`realize_tongue_deep`] reads it, and only when
     /// `morph`'s evidential depth is not [`MorphDepth::None`].
     pub evidential: Evidential,
+    /// Role bindings on this clause, realized through the tongue's own
+    /// lexicon rather than Common's `common_role_surface` table — a tongue
+    /// that lacks a bound concept gaps the WHOLE clause (spec §4: renders
+    /// fully or gaps entirely, never partially), the same discipline the
+    /// complement already followed. There is no per-role construction table
+    /// yet (contrast `clause::common_role_surface`): each resolved word is
+    /// appended in order by [`realize_tongue`]/[`realize_tongue_deep`]. This
+    /// is a deliberate asymmetry with the now fact-shaped `ClauseSpec` — see
+    /// the Task 7 brief — not an oversight.
+    pub adjuncts: Vec<Adjunct>,
 }
 
 /// A whole-sentence gap: the tongue could not say this clause because its
@@ -193,9 +204,49 @@ pub struct TongueGap {
     pub reason: String,
 }
 
+/// Realize a clause's adjuncts through the tongue's own lexicon, shared by
+/// both [`realize_tongue`] and [`realize_tongue_deep`] so the two agree on
+/// adjunct handling exactly (the shallow-identity guarantee needs this: with
+/// no adjuncts the two functions must already produce identical text, and
+/// with adjuncts present they still must, at `MorphDepth::None`).
+///
+/// An [`Argument::Concept`] resolves via `lexicon`, with the same
+/// `LexEntry` matching (and the same recountable-gap surfacing) the
+/// complement itself uses — **the whole clause gaps** on the first unknown
+/// adjunct concept, never a partial render (spec §4). The other `Argument`
+/// variants pass through directly: a tongue's own numeral/name system is
+/// out of this task's scope, so `Count`/`Quantity` render as bare digits and
+/// `Name` passes through unresolved, exactly as `realize_common` does for
+/// the complement slot.
+fn realize_adjuncts(adjuncts: &[Adjunct], lexicon: &Lexicon) -> Result<Vec<String>, TongueGap> {
+    adjuncts
+        .iter()
+        .map(|adjunct| match &adjunct.argument {
+            Argument::Concept(id) => match lexicon.entry(id) {
+                Some(LexEntry::Root { views, .. }) | Some(LexEntry::Compound { views, .. }) => {
+                    Ok(views.roman.clone())
+                }
+                Some(LexEntry::Gap { reason }) => Err(TongueGap {
+                    concept: id.clone(),
+                    reason: reason.to_string(),
+                }),
+                None => Err(TongueGap {
+                    concept: id.clone(),
+                    reason: "no entry in this lexicon".to_string(),
+                }),
+            },
+            Argument::Name(text) => Ok(text.clone()),
+            Argument::Count(n) => Ok(n.to_string()),
+            Argument::Quantity(x) => Ok(x.to_string()),
+        })
+        .collect()
+}
+
 /// Realize a nominal-predication clause in a tongue: lexicalize the
 /// complement, order the constituents per the grammar, include the copula
-/// if the tongue bears one. Renders fully or gaps entirely (spec §4).
+/// if the tongue bears one, then append each adjunct's own resolved word.
+/// Renders fully or gaps entirely (spec §4) — a gap on the complement OR on
+/// any adjunct concept fails the whole clause.
 /// type-audit: bare-ok(prose)
 pub fn realize_tongue(
     clause: &TongueClause,
@@ -223,6 +274,7 @@ pub fn realize_tongue(
             });
         }
     };
+    let adjunct_words = realize_adjuncts(&clause.adjuncts, lexicon)?;
     let s = clause.subject.as_str();
     let v = grammar.copula.as_deref();
     let o = complement.as_str();
@@ -238,7 +290,13 @@ pub fn realize_tongue(
     .into_iter()
     .flatten()
     .collect();
-    Ok(format!("{}.", ordered.join(" ")))
+    let mut out = ordered.join(" ");
+    for word in &adjunct_words {
+        out.push(' ');
+        out.push_str(word);
+    }
+    out.push('.');
+    Ok(out)
 }
 
 /// A word mid-assembly: its segments when known (so a further affix layer
@@ -354,6 +412,7 @@ pub fn realize_tongue_deep(
             });
         }
     };
+    let adjunct_words = realize_adjuncts(&clause.adjuncts, lexicon)?;
 
     // Noun-class marking: always on the complement noun.
     let class_value = match noun_class_of(&clause.complement_concept) {
@@ -467,12 +526,17 @@ pub fn realize_tongue_deep(
         }
     }
 
-    let sentence = ordered
+    let mut sentence = ordered
         .into_iter()
         .map(|(_, token)| token)
         .collect::<Vec<_>>()
         .join(" ");
-    Ok(format!("{sentence}."))
+    for word in &adjunct_words {
+        sentence.push(' ');
+        sentence.push_str(word);
+    }
+    sentence.push('.');
+    Ok(sentence)
 }
 
 #[cfg(test)]
@@ -654,6 +718,7 @@ mod tests {
             subject: "Vavako".into(),
             complement_concept: "goblin-kind".into(),
             evidential: Evidential::Witnessed,
+            adjuncts: vec![],
         };
         let svo = TongueGrammar {
             order: ConstituentOrder::Svo,
@@ -694,6 +759,7 @@ mod tests {
             subject: "Vavako".into(),
             complement_concept: "planet".into(),
             evidential: Evidential::Witnessed,
+            adjuncts: vec![],
         };
         let g = TongueGrammar {
             order: ConstituentOrder::Svo,
@@ -735,6 +801,7 @@ mod tests {
             subject: "Vavako".into(),
             complement_concept: "blue".into(),
             evidential: Evidential::Witnessed,
+            adjuncts: vec![],
         };
         let g = TongueGrammar {
             order: ConstituentOrder::Svo,
@@ -758,6 +825,68 @@ mod tests {
     }
 
     #[test]
+    fn a_tongue_realizes_an_adjunct_whose_concept_it_knows() {
+        let lex = tiny_lexicon_with(&[
+            ("planet", ExposureClass::Steeped),
+            ("yellow-white-dwarf", ExposureClass::Steeped),
+        ]);
+        let star_word = match lex.entry("yellow-white-dwarf").unwrap() {
+            LexEntry::Root { views, .. } => views.roman.clone(),
+            other => panic!("expected a Root, got {other:?}"),
+        };
+        let clause = TongueClause {
+            subject: "Vavako".into(),
+            complement_concept: "planet".into(),
+            evidential: Evidential::Witnessed,
+            adjuncts: vec![Adjunct {
+                role: "star-class".into(),
+                argument: Argument::Concept("yellow-white-dwarf".into()),
+            }],
+        };
+        let g = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: Some("gha".into()),
+            copula_segments: None,
+            articles: false,
+        };
+        let out = realize_tongue(&clause, &g, &lex).expect("both concepts are known");
+        assert!(
+            out.contains(&star_word),
+            "the tongue's own word for the star class must appear: {out}"
+        );
+        assert!(
+            !out.contains("orbiting"),
+            "Common's role surface must not leak into a tongue: {out}"
+        );
+    }
+
+    #[test]
+    fn a_tongue_gaps_on_an_adjunct_concept_it_lacks_rather_than_emitting_common() {
+        // The COMPLEMENT is known; only the ADJUNCT's concept is missing, so a
+        // partial render is the tempting wrong answer. Spec section 4 of this
+        // module: renders fully or gaps entirely, never partially.
+        let lex = tiny_lexicon_with(&[("planet", ExposureClass::Steeped)]);
+        let clause = TongueClause {
+            subject: "Vavako".into(),
+            complement_concept: "planet".into(),
+            evidential: Evidential::Witnessed,
+            adjuncts: vec![Adjunct {
+                role: "star-class".into(),
+                argument: Argument::Concept("yellow-white-dwarf".into()),
+            }],
+        };
+        let g = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: Some("gha".into()),
+            copula_segments: None,
+            articles: false,
+        };
+        let gap = realize_tongue(&clause, &g, &lex).unwrap_err();
+        assert_eq!(gap.concept, "yellow-white-dwarf");
+        assert!(!gap.reason.is_empty(), "recountable reason required");
+    }
+
+    #[test]
     fn realize_tongue_exhaustive_orders_and_copula() {
         // All 6 orders × copula Some/None = 12 exact-string assertions for a
         // fixed clause — pins every transform's exact surface shape.
@@ -770,6 +899,7 @@ mod tests {
             subject: "Vavako".into(),
             complement_concept: "goblin-kind".into(),
             evidential: Evidential::Witnessed,
+            adjuncts: vec![],
         };
         let cases: [(ConstituentOrder, Option<&str>, String); 12] = [
             (
@@ -852,6 +982,7 @@ mod tests {
             subject: "Vavako".into(),
             complement_concept: "goblin-kind".into(),
             evidential: Evidential::Witnessed,
+            adjuncts: vec![],
         };
         let noun_class_of = |_: &str| NounClass::Inanimate;
 
@@ -1069,6 +1200,7 @@ mod tests {
             subject: "Vavako".into(),
             complement_concept: "goblin-kind".into(),
             evidential: Evidential::Inferred,
+            adjuncts: vec![],
         };
         let noun_class_of = |_: &str| NounClass::Inanimate;
 

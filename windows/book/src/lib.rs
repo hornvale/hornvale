@@ -393,6 +393,9 @@ pub fn render_volume_from(
             // lived experience (its autonym and own-kind concept are
             // Steeped by construction) — Witnessed (C7's readout law).
             evidential: Evidential::Witnessed,
+            // No role bindings on the self-statement today — this task adds
+            // the capability, not new adjunct data for existing callers.
+            adjuncts: Vec::new(),
         };
         let tongue_line = realize_tongue_deep(
             &self_statement,
@@ -1829,6 +1832,8 @@ fn probe_tongue(
             // Every probe states a claim grounded in the same
             // lived-experience footing as the self-statement above.
             evidential: Evidential::Witnessed,
+            // No role bindings on a C3 probe today.
+            adjuncts: Vec::new(),
         },
         grammar,
         morph,
@@ -1879,6 +1884,8 @@ fn world_statement(
         subject: planet_name.to_string(),
         complement_concept: "earth".to_string(),
         evidential,
+        // No role bindings on the world-statement today.
+        adjuncts: Vec::new(),
     };
     realize_tongue_deep(&clause, grammar, morph, noun_class_of, lexicon, orth).unwrap_or_else(
         |gap| {
