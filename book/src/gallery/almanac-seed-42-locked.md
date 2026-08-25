@@ -233,14 +233,14 @@ Fresh water (rivers, including endorheic feeders bound for a salt sink) reaches 
 The archive runs 39 m to basement on average.
 Geothermal gradient spans 21–30 K/km — the deep's warmth.
 43% of the land records an unconformity — an age the rock forgot.
-Glaciated strata lie in the cover over 992 cells — the ice left its mark.
+Glaciated strata lie in the cover over 992 vertices — the ice left its mark.
 
 ## The Lode
 
 The land's lode is dominantly salt, found across 34% of it.
 Notable ore: copper, gold, lead-zinc, coal, gems, bauxite.
 8% of the land is cave country.
-241 cells hold both cave and ore — the deep worked twice.
+241 vertices hold both cave and ore — the deep worked twice.
 
 ## The Vestige
 

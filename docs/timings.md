@@ -2685,3 +2685,12 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-25T00:12:43Z | rebaseline | 59.522 | 235.257 | 12.190 | 4.16 | 0 | 0200d977c | campaign/the-confidant | MacBookPro | 10 |
 | 2026-08-25T00:22:27Z | gate-commit | 19.770 | 47.961 | 11.894 | 3.03 | 0 | 0200d977c | campaign/the-confidant | MacBookPro | 10 |
 | 2026-08-25T00:23:42Z | gate-commit | 26.521 | 60.715 | 22.784 | 3.15 | 0 | 0200d977c | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-24T22:58:04Z | rebaseline | 56.722 | 233.210 | 11.254 | 4.31 | 0 | 2d66a91f5 | passage/one-word-per-concept | MacBookPro | 10 |
+| 2026-08-24T23:16:14Z | rebaseline | 63.086 | 235.482 | 10.973 | 3.91 | 0 | 2d66a91f5 | passage/one-word-per-concept | MacBookPro | 10 |
+| 2026-08-24T23:17:56Z | gate-commit | 30.155 | 61.421 | 30.854 | 3.06 | 0 | 2d66a91f5 | passage/one-word-per-concept | MacBookPro | 10 |
+| 2026-08-24T23:19:20Z | rebaseline | 45.308 | 230.173 | 10.272 | 5.31 | 0 | 2d66a91f5 | passage/one-word-per-concept | MacBookPro | 10 |
+| 2026-08-24T23:19:53Z | gate-commit | 20.092 | 47.802 | 12.199 | 2.99 | 0 | 2d66a91f5 | passage/one-word-per-concept | MacBookPro | 10 |
+| 2026-08-24T23:57:28Z | sluice:artifacts | 103.926 | 800.223 | 37.856 | 8.06 | 0 | d4c397fd5 |  | lefford | 40 |
+| 2026-08-24T23:58:08Z | sluice:outboard | 39.507 | 24.065 | 36.618 | 1.54 | 0 | 3746a5655 |  | lefford | 40 |
+| 2026-08-25T00:04:44Z | sluice:gate | 396.233 | 10615.410 | 420.804 | 27.85 | 0 | 235cc075b |  | lefford | 40 |
+| 2026-08-25T00:11:45Z | sluice:clients | 420.802 | 5290.572 | 74.777 | 12.75 | 0 | 2d0d050f8 |  | lefford | 40 |

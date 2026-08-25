@@ -4184,7 +4184,7 @@ pub fn deep_lines_from(
     if paleo.max_ice_fraction > 0.0 {
         let iced = geo.vertices().filter(|c| *paleo.envelope.get(*c)).count();
         lines.push(format!(
-            "Glaciated strata lie in the cover over {iced} cells — the ice left its mark."
+            "Glaciated strata lie in the cover over {iced} vertices — the ice left its mark."
         ));
     }
     Ok(lines)
@@ -4261,7 +4261,7 @@ pub fn lode_lines_from(
     }
     if colocated > 0 {
         lines.push(format!(
-            "{colocated} cells hold both cave and ore — the deep worked twice."
+            "{colocated} vertices hold both cave and ore — the deep worked twice."
         ));
     }
     Ok(lines)

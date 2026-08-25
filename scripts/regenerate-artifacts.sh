@@ -529,12 +529,12 @@ gen_history() {
     printf '# The Contested Clearing of Seed 42\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
     printf 'A site read back out of the ledger by the `history` verb: the stratigraphy\n'
-    printf 'of every people that ever settled one cell, oldest layer deepest, and the\n'
+    printf 'of every people that ever settled one vertex, oldest layer deepest, and the\n'
     printf 'derived flesh — the structures they raised, the residue in the grass\n'
     printf 'today. Nothing here replays the deep-history bake; it is all a\n'
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
     printf '(structures, residue) derived on demand and never committed.\n\n'
-    printf 'This is a real clearing on the world of seed 42 — cell %s — and\n' "$history_site"
+    printf 'This is a real clearing on the world of seed 42 — vertex %s — and\n' "$history_site"
     printf 'six hobgoblin steadings have risen on it, one settling atop the ruins of\n'
     printf 'the last, from the year 100 down to the present. Every one of the five\n'
     printf 'completed layers ended at the hands of other hobgoblins, but the split\n'
@@ -588,7 +588,7 @@ gen_connections() {
     run -p hornvale -- connections --world "$wsky" --site 13980
     printf '```\n\n'
     printf '## A hub on a different shore\n\n'
-    printf 'Cell 28435 sits on a *separate* landmass under natural travel -- close\n'
+    printf 'Vertex 28435 sits on a *separate* landmass under natural travel -- close\n'
     printf 'enough to its neighbors to reach several by both sea-lane and land route,\n'
     printf 'but with no natural corridor at all bridging it back to the flagship'\''s\n'
     printf 'larger region.\n\n'
