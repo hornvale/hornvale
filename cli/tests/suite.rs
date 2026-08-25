@@ -78,6 +78,8 @@ mod scene_cost;
 mod scene_moons_cli;
 #[path = "suite/scene_surrounds_colour_cli.rs"]
 mod scene_surrounds_colour_cli;
+#[path = "suite/sentence_corpus.rs"]
+mod sentence_corpus;
 #[path = "suite/session_cost.rs"]
 mod session_cost;
 #[path = "suite/sky_exit_criterion.rs"]

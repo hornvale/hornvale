@@ -1,0 +1,30 @@
+{
+  "name": "the-merchant",
+  "provenance": "Nathan, 2026-08-24, in the brainstorm that opened The Interlinear. Recorded verbatim as an aspirational target; its coverage starts near zero on purpose.",
+  "entries": [
+    { "id": "m01", "speaker": "player",   "text": "How's it going?",
+      "demands": ["wh-question"] },
+    { "id": "m02", "speaker": "merchant", "text": "Everything was fine until last night.",
+      "demands": ["past-tense", "temporal-adverbial"] },
+    { "id": "m03", "speaker": "player",   "text": "What happened last night?",
+      "demands": ["wh-question", "temporal-adverbial"] },
+    { "id": "m04", "speaker": "merchant", "text": "Last night, there was a death in the marketplace.",
+      "demands": ["existential", "past-tense", "temporal-adverbial"] },
+    { "id": "m05", "speaker": "merchant", "text": "A guard killed a woman.",
+      "demands": ["transitive-frame", "past-tense"] },
+    { "id": "m06", "speaker": "merchant", "text": "I don't know why he killed her.",
+      "demands": ["negation", "embedded-clause", "pronoun-reference", "epistemic-hedge"] },
+    { "id": "m07", "speaker": "merchant", "text": "Seeing it confused and upset me.",
+      "demands": ["coordination", "embedded-clause", "pronoun-reference"] },
+    { "id": "m08", "speaker": "player",   "text": "Did you know the woman?",
+      "demands": ["polar-question", "past-tense"] },
+    { "id": "m09", "speaker": "merchant", "text": "I think her name was Gilda.",
+      "demands": ["epistemic-hedge", "past-tense", "pronoun-reference"] },
+    { "id": "m10", "speaker": "merchant", "text": "I didn't know her.",
+      "demands": ["negation", "past-tense", "pronoun-reference"] },
+    { "id": "m11", "speaker": "player",   "text": "Did anyone else see this?",
+      "demands": ["polar-question", "witness-set"] },
+    { "id": "m12", "speaker": "merchant", "text": "Stewie, Frank, Donkey Dick Doug, and 'The Big Bopper' were there.",
+      "demands": ["named-entity-list", "witness-set", "past-tense"] }
+  ]
+}
