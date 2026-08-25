@@ -813,3 +813,69 @@ Numbered from the reserved block at ratification.
   instance: a `make` target that reaches into the main checkout runs the main
   checkout's *code*, at whatever revision it happens to be parked on — so an
   error it prints says nothing about the branch you are working in.
+
+## 11. What stage 2 shipped
+
+`kernel/src/fold.rs`: the `LedgerFold` trait (`empty`, `absorb`) and the
+`Folded<S>` holder (`new`, `resume`, `state`, `position`, `absorb_at`,
+`advance_to`, `rebuild`, `rebuild_upto`, plus `Default`) — the incremental
+ledger fold, kernel-side, exactly as scoped in §6's stage table.
+
+**Two determinism contracts from §7, confirmed directly rather than left for
+a reader to re-derive from the diff:**
+
+- **`Ledger` was not modified.** The primitive reads a ledger through its
+  existing public iteration surface; `Ledger::commit` gained no hook for it.
+- **Nothing entered the save.** `Folded<S>` has no `Serialize`/`Deserialize`
+  impl and is not reachable from `World`. §7's "no serialized surface" clause
+  holds by construction, not by omission that happens to be safe today.
+
+**Properties pinned, in `kernel/tests/suite/fold.rs`'s ten tests:**
+
+- **FOLD equals SCAN, in two forms.** `advancing_in_two_bites_equals_advancing_in_one`
+  pins that advancing in two calls to `advance_to` equals advancing in one —
+  a real property, but not the oracle, because `Folded::rebuild` is
+  implemented by calling `advance_to`, so a bug confined to `advance_to`
+  applies identically to both sides and cancels. The actual oracle is
+  `one_fact_at_a_time_equals_folding_from_scratch`, which reaches the state
+  through `absorb_at` — a path independent of `advance_to` — and compares it
+  against `rebuild`.
+- **Both position-guard directions.** `absorbing_the_same_position_twice_panics`
+  and `skipping_a_position_panics` pin that `absorb_at` asserts loudly on
+  either of the two silent bugs it can have.
+- **The checkpoint round-trip** (decision 0237).
+  `resuming_from_a_checkpoint_reaches_the_same_place_as_folding_throughout`
+  pins that `resume`, given a state and position taken from `rebuild_upto`,
+  reaches the same end state as folding the whole ledger.
+- **`rebuild_upto` clamping.** `rebuilding_upto_a_position_equals_the_prefix_it_names`
+  pins the ordinary case; `rebuilding_upto_beyond_the_ledger_stops_at_the_ledger`
+  pins that a position past the ledger's end silently stops at the ledger
+  rather than erroring — the deliberate asymmetry with `absorb_at`'s loud
+  assert that the module doc argues for.
+- **Both chaos schedules.** `discarding_the_state_at_every_position_is_unobservable`
+  and `discarding_the_state_at_every_third_position_is_unobservable` pin that
+  discarding and rebuilding the state at every position, and at every third
+  position, are both unobservable — the metaplan §7 chaos-eviction rung,
+  applied to folds.
+
+**The properties are pinned by mutation, not by assertion alone.** Reviewers
+applied type-checking mutations to `fold.rs` and confirmed each intended test
+went red. Two findings from that pass are recorded here because they are what
+a future tenant copying this file most needs to know, not because they
+indicate a defect that shipped:
+
+1. A test comparing `advance_to` against `Folded::rebuild` is **not** an
+   independent oracle, because `rebuild` is implemented by calling
+   `advance_to` — a bug in `advance_to` cancels on both sides of such a
+   comparison. This was found by mutation and fixed by renaming (not
+   deleting) the test: `advancing_in_two_bites_equals_advancing_in_one` is
+   kept as a real, separately-worth-pinning property, and
+   `one_fact_at_a_time_equals_folding_from_scratch` — which reaches the state
+   via `absorb_at` — is the test a future tenant should copy as the actual
+   oracle.
+2. The every-position chaos schedule gives **no signal** on `absorb_at`'s own
+   purity, because the state is discarded and replaced every iteration before
+   the next `absorb_at` call runs against it. Confirmed by an
+   `absorb_at`-confined mutation that passed the every-position schedule and
+   was caught by the sparser every-third-position schedule — which is why
+   both schedules are pinned, not just the more aggressive-looking one.
