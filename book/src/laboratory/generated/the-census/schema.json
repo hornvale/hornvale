@@ -3109,6 +3109,38 @@
     {
       "buckets": [
         0.0,
+        0.1,
+        0.2,
+        0.3,
+        0.5,
+        0.7
+      ],
+      "doc": "Circular (Rayleigh-style) concentration R of this world's raid-caused occupation endings' day-of-year stamps (The Granary T8): the mean resultant length of the phases, 0 when uniformly spread around the year and approaching 1 as all raids land at one moment. Day-of-year is the fractional part of the record's bake-year `ended` stamp. Absent on a world with fewer than 5 raid-caused endings — below that floor the concentration statistic is noise, not signal.",
+      "domain": "society",
+      "kind": "numeric",
+      "name": "granary-raid-phase-concentration",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.25,
+        0.4,
+        0.5,
+        0.6,
+        0.75
+      ],
+      "doc": "Fraction of this world's raid-caused occupation endings whose day-of-year stamp falls in the DEPLETED half of the victim site's authored harvest curve (The Granary T8): the half-year starting half a year past the curve peak, where `Curve::at` returns exactly zero and a settlement lives off stores. The curve is keyed exactly as the bake keys it at open — `geo.coord(site).latitude` and `biome_class(climate.biome_map())` through `worldgen::harvest::Curve` — so the column measures the same seasonality the granary integrates. Uniform raids give 0.5; hunger-side clustering gives > 0.5. Absent under the same 5-ending floor as `granary-raid-phase-concentration`.",
+      "domain": "society",
+      "kind": "numeric",
+      "name": "granary-raids-in-depleted-half",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
         1.0,
         5.0,
         25.0,
@@ -3164,7 +3196,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0x6656a4de1e759a29"
+    "fnv1a64": "0xccb3d80a8d12ed73"
   },
   "schema_version": 1,
   "study": {
