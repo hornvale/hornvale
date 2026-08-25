@@ -2030,23 +2030,33 @@ fn name_collision_rate_is_measured_and_pinned() {
         // above), and the rate stays inside the range decision 0024
         // sanctions (see the note above).
         //
-        // PENDING RE-PIN (The Escapement's absorb of main, 2026-08-25). BOTH
-        // paragraphs above describe real, independent movers that BOTH apply
-        // to this merge product, but NEITHER pinned value does: main's is
-        // The Confidant's census, and this campaign's was measured before
-        // The Confidant landed. The value below is main's, held as a
-        // placeholder. The merge product's true value is not knowable off the
-        // canonical box (decision 0079), so it is deliberately NOT guessed
-        // locally; the chamber census requested at this merge authors it, and
-        // this pin and `tools/census/queries/calibrate/golden-pins.sql` are
-        // re-pinned together from that run. NOTE THIS ASSERTION IS GREEN, and
-        // that is not the same as correct: it reads the COMMITTED census,
-        // which is main's, so pin and fixture are a consistent PAIR. What is
-        // stale is the pair itself — neither reflects this campaign's
-        // `local_day` fix. The chamber census moves the fixture and this pin
-        // moves with it; a green here today is a placeholder, not a check
-        // that has passed on the merge product.
-        (mean - 0.508_144_194_499_999).abs() < 1e-6,
+        // The Escapement's re-pin ON THE MERGE PRODUCT (2026-08-25, canonical
+        // census run in the chamber against the merge of main into this
+        // branch — request `req-7d4732b89de9`, goldens delivered on
+        // `census/7d4732b89de9-20260825T143401Z`). This DISCHARGES the
+        // pending re-pin the two paragraphs above left open: both movers are
+        // real, both apply to this product, and this is the census that
+        // measures them together. The campaign's own mover is unchanged from
+        // the paragraph above — `3bc4fd871`'s fix to `Calendar::local_day`'s
+        // day-fraction, which returned a *negative* fraction for a negative
+        // local day, a path `domains/astronomy/src/heliacal.rs` reaches at
+        // genesis for essentially every world; the bisect and instrumented-run
+        // record is committed at
+        // `docs/audits/the-escapement-census-attribution.md`. Run against a
+        // NEWER main than the campaign's earlier census, it moves exactly the
+        // same three census table entries that one did (seed 267
+        // name-collision-rate 0.49742268 -> 0.49226804 and name-transparency
+        // 0.89830508 -> 0.90677966; seed 831 name-collision-rate 0.43521595
+        // -> 0.42857143) — a clean confirmation, not a new reading. The
+        // zero/nonzero/absent partition is UNMOVED at 0/1000/0, checked
+        // against this fixture rather than assumed (the three assertions
+        // above pass unchanged). Mean: 0.508_144_194_499_999 ->
+        // 0.508_132_395_339_999_4. This row still carries no directional
+        // claim (H4 already failed and is recorded as such above, per
+        // decision 0016 — reportable, not adjusted); the tolerance is
+        // unchanged at 1e-6, and the rate stays inside the range decision
+        // 0024 sanctions (see the note above).
+        (mean - 0.508_132_395_339_999_4).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -2845,23 +2855,29 @@ fn name_transparency_is_measured_and_pinned() {
         // vocabulary. Still emphatically NOT 1.0 — re-checked rather than
         // assumed.
         //
-        // PENDING RE-PIN (The Escapement's absorb of main, 2026-08-25). BOTH
-        // paragraphs above describe real, independent movers that BOTH apply
-        // to this merge product, but NEITHER pinned value does: main's is
-        // The Confidant's census, and this campaign's was measured before
-        // The Confidant landed. The value below is main's, held as a
-        // placeholder. The merge product's true value is not knowable off the
-        // canonical box (decision 0079), so it is deliberately NOT guessed
-        // locally; the chamber census requested at this merge authors it, and
-        // this pin and `tools/census/queries/calibrate/golden-pins.sql` are
-        // re-pinned together from that run. NOTE THIS ASSERTION IS GREEN, and
-        // that is not the same as correct: it reads the COMMITTED census,
-        // which is main's, so pin and fixture are a consistent PAIR. What is
-        // stale is the pair itself — neither reflects this campaign's
-        // `local_day` fix. The chamber census moves the fixture and this pin
-        // moves with it; a green here today is a placeholder, not a check
-        // that has passed on the merge product.
-        (mean - 0.713_554_079_900_000).abs() < 1e-9,
+        // The Escapement's re-pin ON THE MERGE PRODUCT (2026-08-25, canonical
+        // census run in the chamber against the merge of main into this
+        // branch — request `req-7d4732b89de9`, goldens delivered on
+        // `census/7d4732b89de9-20260825T143401Z`). This DISCHARGES the
+        // pending re-pin the two paragraphs above left open: both movers are
+        // real, both apply to this product, and this is the census that
+        // measures them together. Same mover as the name-collision-rate
+        // re-pin above — `3bc4fd871`'s fix to `Calendar::local_day`'s
+        // day-fraction (attribution recorded in
+        // `docs/audits/the-escapement-census-attribution.md`). Against a
+        // NEWER main than the campaign's earlier census it moves the same
+        // single census table entry in this metric (seed 267: 0.89830508 ->
+        // 0.90677966), a confirmation rather than a new reading, and the
+        // partition is checked rather than assumed: present/absent are UNMOVED
+        // at 1000/0, and so are the two SPREAD pins below — min
+        // 0.295_652_17 and max 0.971_204_19, read directly off this fixture.
+        // Mean: 0.713_554_079_900_000 ->
+        // 0.713_562_554_480_000_3, a rise of 8.5e-6. Still emphatically NOT
+        // 1.0 — the claim this row exists to guard — re-checked rather than
+        // assumed, and the tolerance is unchanged at 1e-9: this is a
+        // measured calibration re-pinned to what the instrument reports,
+        // never a bound widened to fit.
+        (mean - 0.713_562_554_480_000_3).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
