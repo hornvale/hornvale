@@ -315,6 +315,12 @@ mod tests {
         // changes every generated world's committed history, so the label
         // takes an epoch suffix per decision 0006 (an epoch suffix, never a
         // rename). See `domains/history/src/streams.rs`'s `BAKE` doc.
+        //
+        // The Granary (sub-year phase placement) bumps it to `v3`: raid
+        // outcomes move when raids fire at store-trough phases, so committed
+        // history changes while stream consumption order is untouched — the
+        // same decision-0006 epoch suffix. See `domains/history/src/
+        // streams.rs`'s `BAKE` doc.
         let rows: Vec<String> = versioned_labels()
             .into_iter()
             .map(|(k, v)| format!("{k} {v}"))
@@ -481,7 +487,7 @@ mod tests {
                 // property exists to hold shut. See
                 // `windows/worldgen/src/hazard.rs`'s `event_key`.
                 "hazard/event v1",
-                "history/bake v2",
+                "history/bake v3",
                 // The Salt re-keys the flesh seed from the occupation's
                 // entity id onto its material core, so residue and
                 // structures stop moving when an id moves. Taking the

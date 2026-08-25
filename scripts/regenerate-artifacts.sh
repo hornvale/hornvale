@@ -514,6 +514,15 @@ gen_chart_reference() {
 # moved the bake — so this cell's stratigraphy is a different one and the
 # framing prose below was re-derived from the new block rather than patched.
 #
+#
+# RE-READ 2026-08-24 (The Granary, T7): the campaign's sub-year phase
+# placement moved seed-42's raid/founding outcomes, and 5585 now renders an
+# EMPTY column — the showcase had nothing to show. Repointed to 10626, found
+# by dumping candidate cells through `history --site`: TWELVE kobold
+# occupations from the year 200 to the present, seven put to flight by other
+# kobolds, four departures that carried the settlement onto land taken from
+# neighbours (2666 once, 10628 three times), one still standing.
+#
 # Read off the live block for 5585: SIX layers from the year 100, five
 # completed, and the split is no longer even — THREE were put to flight, TWO
 # left because they had taken a neighbour's ground and carried the settlement
@@ -524,7 +533,7 @@ gen_chart_reference() {
 # shorter arc than before: bronze at the base, then iron, then classical, with
 # no neolithic layer left. The standing sixth was founded in 800 by
 # Venggomnjen and holds 84 souls.
-history_site=5585
+history_site=10626
 gen_history() {
     printf '# The Contested Clearing of Seed 42\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
@@ -535,26 +544,26 @@ gen_history() {
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
     printf '(structures, residue) derived on demand and never committed.\n\n'
     printf 'This is a real clearing on the world of seed 42 — vertex %s — and\n' "$history_site"
-    printf 'six hobgoblin steadings have risen on it, one settling atop the ruins of\n'
-    printf 'the last, from the year 100 down to the present. Every one of the five\n'
-    printf 'completed layers ended at the hands of other hobgoblins, but the split\n'
-    printf 'is uneven. Two were not evictions at all: the occupants had taken\n'
-    printf 'better ground from a neighbour and carried the settlement onto it, so\n'
-    printf 'the layer closes on a departure. The other three fell to a rival band.\n'
-    printf 'This is a people with only itself to fight, and on this rise it has\n'
-    printf 'been the taken rather more often than the taker.\n\n'
+    printf 'twelve kobold steadings have risen on it, one settling atop the ruins\n'
+    printf 'of the last, from the year 200 down to the present. No other people\n'
+    printf 'ever touched this ground: it is a people with only itself to fight,\n'
+    printf 'and it has fought itself here for eighteen centuries. Seven of the\n'
+    printf 'eleven completed layers ended at kobold hands; four were not\n'
+    printf 'evictions at all — the occupants drove rival kobolds off better\n'
+    printf 'ground nearby (once off vertex 2666, three times off vertex 10628) and\n'
+    printf 'carried the settlement onto the land they had taken, so the layer\n'
+    printf 'closes on a departure rather than a defeat.\n\n'
     printf 'The cold is in this column, but never as an ending. Not one layer\n'
-    printf 'here fell to ice. Every layer instead *arrived* fleeing it — all\n'
-    printf 'six, the deepest included, driven off one of two neighbouring\n'
-    printf 'clearings, and one of those two is the clearing this ground took\n'
-    printf 'from in return. No one ever broke this soil by choice: it has been\n'
-    printf 'a refuge from its first layer to its last, and a staging ground for\n'
-    printf 'the next advance rather less often than a last resort. Read bottom\n'
-    printf 'to top, the column carries a technological arc that starts already\n'
-    printf 'underway: bronze at the base, then iron, then classical, with no\n'
-    printf 'neolithic layer left to read. The sixth was founded in the year 800\n'
-    printf 'by Venggomnjen and stands yet, 1200 years on: some 84 souls, two\n'
-    printf 'huts and a granary, and no ruin yet to read.\n\n'
+    printf 'fell to ice. Every layer instead *arrived* fleeing it — all twelve,\n'
+    printf 'the deepest included, driven off one of four neighbouring clearings\n'
+    printf '(2666 and 10628 most often, 10627 and 10638 once each). No one ever\n'
+    printf 'broke this soil by choice: it has been a refuge from its first layer\n'
+    printf 'to its last. Read bottom to top, the column carries a complete\n'
+    printf 'technological arc — two neolithic layers at the base, then bronze,\n'
+    printf 'iron, and six classical layers on top, the whole craft history of a\n'
+    printf 'people in one stack of earth. The twelfth was founded in the year\n'
+    printf '1875 and stands yet: some 24 souls, two huts and a granary, and no\n'
+    printf 'ruin yet to read.\n\n'
     printf '```text\n'
     run -p hornvale -- history --world "$wsky" --site "$history_site"
     printf '```\n'

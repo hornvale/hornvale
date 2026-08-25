@@ -60,7 +60,27 @@ use std::collections::{BTreeMap, BTreeSet};
 /// `#[ignore]`d code, not widening `scope()`.
 /// type-audit: bare-ok(count: year), bare-ok(count: return)
 pub fn ledger_day_of_bake_year(year: f64) -> f64 {
-    year * hornvale_kernel::Years::DAYS_PER_YEAR
+    // The crossing quantizes (decision 0033), and must, for two reasons that
+    // both post-date the original two-line body:
+    //
+    // The Escapement (decision 0186) split the ledger's canonicalizations:
+    // a committed `Value::Number` object still rounds to 8 significant digits
+    // while `Fact.day` became an exact tick count. Every caller commits the
+    // result BOTH ways — as an `occ-founded` object and as its own day stamp —
+    // so an unquantized crossing let one instant present as two values a
+    // half-ULP apart (`155261.6875` as a day, `155261.69` as the object), and
+    // any consumer ordering events by `Fact.day` against a founding object
+    // read inversions into same-instant pairs: 7 of seed 42's 157 tribute
+    // facts predated the very patron whose seating instant they carried.
+    // Quantizing here makes the forward map idempotent under commit, so the
+    // object and the day agree to the last bit.
+    //
+    // The Granary's sub-year stamps (`year + phase / PHASES_PER_YEAR`) also
+    // ended the old guarantee that bake crossings were coarse enough to
+    // survive 8-digit quantization unchanged (`k · 9131.25` days); folding the
+    // rounding into the crossing is what keeps the round trip through
+    // `bake_year_of_ledger_day` lossless for them.
+    hornvale_kernel::quantize(year * hornvale_kernel::Years::DAYS_PER_YEAR)
 }
 
 /// The inverse read: a standard DAY off the ledger becomes the bake-side YEAR
@@ -76,10 +96,11 @@ pub fn ledger_day_of_bake_year(year: f64) -> f64 {
 /// has both sides move together.
 ///
 /// **Losslessness is a property of the bake, not of this function.** The
-/// forward map passes through `Ledger::commit`'s 8-significant-digit
-/// quantization, and the round trip is exact only while foundings stay coarse
-/// enough to survive it — they are (25-year epochs ⇒ `k · 9131.25` days, at
-/// most 8 significant digits). `windows/worldgen/tests/history_units.rs`'s
+/// forward map quantizes to 8 significant digits itself (see above), so it is
+/// idempotent under `Ledger::commit` and the round trip is exact for any year
+/// whose crossing survives that rounding — whole epoch years always did; The
+/// Granary's sub-year stamps do because the rounding now happens here, once,
+/// rather than at the object boundary alone. `windows/worldgen/tests/history_units.rs`'s
 /// `reading_a_founding_back_out_of_the_ledger_is_lossless` asserts that
 /// property on a real world, because if it ever stops holding, every founder
 /// handle and every flesh seed in every world moves and nothing else says so.
@@ -341,14 +362,17 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
         let patron = *bake_to_ledger
             .get(&rel.patron)
             .expect("a tribute patron names a community minted in this history");
+        // `ledger_day_of_bake_year` quantizes the crossing (see there for why
+        // The Escapement makes that load-bearing): the day below therefore
+        // carries the SAME canonical instant as each party's committed founding
+        // object, so the invariant this fact must honour — a relation is never
+        // dated before either community it names — cannot be inverted by the
+        // two surfaces disagreeing about one instant.
         world.ledger.commit(
             fact(
                 subject,
                 hornvale_history::PAYS_TRIBUTE_TO,
                 Value::Entity(patron),
-                // `TributeRelation::since` is a bake YEAR like every other time
-                // the bake carries — the same crossing as the founding stamp
-                // above.
                 ledger_day_of_bake_year(rel.since),
             ),
             &world.registry,

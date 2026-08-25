@@ -238,13 +238,17 @@ fn the_two_disposition_paths_agree_on_a_real_world() {
 
 /// The days→years read is lossless for every world this project builds.
 ///
-/// `Ledger::commit` quantizes objects to 8 significant digits, so the
-/// round trip year → day → quantize → year is exact only while the bake's
-/// foundings stay coarse enough to survive it. They do: `epoch_years = 25`, so
-/// every founding is a whole multiple of 25 years and its day form
-/// (`k · 9131.25`) needs at most 8 significant digits. This asserts the
-/// property rather than the arithmetic behind it — if a future bake steps in
-/// finer units, every founder handle and every flesh seed in the world moves
+/// The round trip year → day → year is exact exactly while the bake's stamps
+/// survive the crossing's 8-significant-digit quantization (decision 0033)
+/// unchanged. They did unconditionally under whole-epoch foundings
+/// (`k · 9131.25` days), but The Granary's sub-year stamps (`year + phase /
+/// PHASES_PER_YEAR`, T4) end the wholeness — a phase-4 ending reads back as
+/// `1600.333…` years, and rightly so, no longer a whole year. What must STILL
+/// hold, and what this asserts now: every stamp read back off the ledger is a
+/// FIXED POINT of the crossing pair — re-crossing it to days and back returns
+/// the very same f64 — so the read is stable under repetition and a consumer
+/// that crosses twice cannot drift from one that crosses once. If that ever
+/// fails, every founder handle and every flesh seed in the world moves
 /// silently, and this is what says so out loud.
 #[test]
 fn reading_a_founding_back_out_of_the_ledger_is_lossless() {
@@ -254,17 +258,21 @@ fn reading_a_founding_back_out_of_the_ledger_is_lossless() {
     for r in &records {
         assert_eq!(
             r.core.founded,
-            r.core.founded.round(),
-            "a founding read back off the ledger must still be the whole year \
-             the bake wrote: {}",
+            hornvale_worldgen::bake_year_of_ledger_day(hornvale_worldgen::ledger_day_of_bake_year(
+                r.core.founded
+            )),
+            "a founding read back off the ledger must be a fixed point of the \
+             day crossing — drift would move every founder handle: {}",
             r.core.founded
         );
         if let Some(ended) = r.core.ended {
             assert_eq!(
                 ended,
-                ended.round(),
-                "an ending read back off the ledger must still be the whole \
-                 year the bake wrote: {ended}"
+                hornvale_worldgen::bake_year_of_ledger_day(
+                    hornvale_worldgen::ledger_day_of_bake_year(ended)
+                ),
+                "an ending read back off the ledger must be a fixed point of \
+                 the day crossing: {ended}"
             );
         }
     }

@@ -22,6 +22,7 @@ const SKY_FLAGS: &str =
   [--spin prograde|retrograde]             pin the spin direction (spinning worlds)
 ";
 
+// lexicon: this help text is rendered CLI prose a person reads, kept "cell"
 // (windows/almanac precedent) even where it names a mesh vertex.
 const USAGE: &str = "\
 usage:
@@ -444,6 +445,7 @@ fn cmd_connections(args: &[String]) -> Result<(), String> {
         print!("{}", hornvale_almanac::connections::render_overview(&graph));
         return Ok(());
     }
+    // lexicon: user-facing CLI text, kept "cell" (windows/almanac precedent)
     let raw = flag_value(args, "--site")
         .ok_or("connections: --site <VERTEX> is required (or pass --overview)")?;
     let vertex: u32 = raw.parse().map_err(|_| {

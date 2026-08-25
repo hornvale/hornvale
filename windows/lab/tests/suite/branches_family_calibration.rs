@@ -799,11 +799,29 @@ fn homophony_count_is_measured_and_pinned() {
     // before — 3.664x (21.393/5.839) against 3.345x, and 3.576x over
     // hobgoblin (21.393/5.982) against 3.4675x — both margins WIDENED, so the
     // falsification-threshold warning above stands unspent.
-    assert!((mg - 5.839).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 5.982).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 21.393).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    // kobold 5.688 -> 6.113 (The Confidant's re-pin, same mechanism as above).
-    assert!((mk - 6.113).abs() < 1e-9, "kobold mean drifted: {mk}");
+    // The Granary (2026-08-24, canonical census on lefford at c54fb62c9,
+    // goldens refreshed at the Granary's merged SHA): all four rise together —
+    // goblin 5.839 -> 5.861, hobgoblin 5.982 -> 6.040, bugbear
+    // 21.393 -> 21.510, kobold 6.113 -> 6.279. The mover is the sub-year raid
+    // timing: raids now resolve at a phase within the year rather than at its
+    // boundary, which changes which settlements survive each contest — and
+    // each daughter's surviving periphery, and the naming draws over it, move
+    // with the name populations. No seed-derivation label or hash constant
+    // changed; this is history-data movement against unchanged derivation,
+    // the roster-competition signature again rather than one daughter moving.
+    // The claim this row guards is re-checked, not assumed: bugbear leads
+    // goblin by 3.670x (21.510/5.861) against 3.664x — WIDENED a third
+    // consecutive regen — and hobgoblin by 3.561x against 3.576x, narrowed
+    // but far above the 3x falsification line, so the warning above stands
+    // unspent. These re-pin the witnesses, not the observation. Each mean is
+    // again an exact integer count over the 1000-seed census divided by 1000
+    // (5861, 6040, 21510, 6279). Post-unblinding re-measure, declared per
+    // decision 0016.
+    assert!((mg - 5.861).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 6.040).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 21.510).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    // kobold 6.113 -> 6.279 (The Granary's re-pin, same mechanism as above).
+    assert!((mk - 6.279).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

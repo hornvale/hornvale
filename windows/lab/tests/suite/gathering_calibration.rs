@@ -388,9 +388,22 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     //
     // THE ASSERTED CLAIM IS UNCHANGED AND STILL HOLDS: 17.3397 is below the
     // uniform-sphere baseline of 32.7.
+    //
+    // THE GRANARY (canonical census on lefford, goldens c54fb62c9):
+    // 17.3397 -> 17.2505, a fifth consecutive NARROWING (margin 15.36 ->
+    // 15.45 degrees; ratio 1.886x -> 1.888x). The condition the paragraph
+    // above set fires: this is now a question about the FLOOR OF THE TREND,
+    // not a re-pin to keep quiet — but the movement is also the smallest
+    // step in the whole sequence (-0.089 degrees), so the trend's rate is
+    // decelerating even as its direction persists. The cause is stated no
+    // more narrowly than the campaign's own mechanism: sub-year raid timing
+    // changes which settlements survive the bake, and nothing here measured
+    // where by latitude the survivors sit. The preregistered directional
+    // claim asserted above — below the uniform-sphere baseline of 32.7 —
+    // is untouched and still clears the baseline by better than 1.8x.
     assert!(
-        (mean - 17.3397).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.3397)"
+        (mean - 17.2505).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.2505)"
     );
 }
 

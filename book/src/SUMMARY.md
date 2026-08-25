@@ -285,6 +285,7 @@
 - [The Accession](./chronicle/the-accession.md)
 - [The Lintel](./chronicle/the-lintel.md)
 - [The Shelf-Mark](./chronicle/the-shelf-mark.md)
+- [The Granary](./chronicle/the-granary.md)
 - [The Actants](./chronicle/the-actants.md)
 - [The Vacancy](./chronicle/the-vacancy.md)
 - [The Hoist](./chronicle/the-hoist.md)

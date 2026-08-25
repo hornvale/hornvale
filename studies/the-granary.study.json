@@ -1,0 +1,10 @@
+{
+  "name": "the-granary",
+  "description": "The Granary T8 preregistered readout: do raids land on the hunger side of the year? Two aggregate per-world metrics over 1,000 default-pin worlds (seeds 0-999): the circular concentration of raid-ending day-of-year stamps, and the fraction falling in the depleted half of each victim site's authored harvest curve. Hypothesis (frozen before this study ran): raids cluster on the hunger side.",
+  "seeds": { "from": 0, "count": 1000 },
+  "pin_sets": [ { "label": "default", "pins": [] } ],
+  "metrics": [
+    "granary-raid-phase-concentration",
+    "granary-raids-in-depleted-half"
+  ]
+}

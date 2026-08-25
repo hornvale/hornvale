@@ -125,6 +125,16 @@ Below the table is no better a home, because `timed.sh` appends new rows with
 `>> "$LEDGER"` — anything at the file's end is overtaken by the next run. So
 the preamble is the only position that survives both Markdown and the writer.
 
+**The Granary T6 tail-less founder sweep (2026-08-24, `campaign/the-granary`,
+MacBookPro, ten threads) — wall 974 s**, run as the `#[ignore]`d harness
+`granary_tail_less_sweep_writes_its_counts` in
+`windows/worldgen/tests/suite/founder_collision.rs` over seeds 0–2999 at
+`BuildDepth::Settlements`. Result: 2261 colliding worlds, 5039 founders lost
+under the identity-only handle — the discrimination tail stays. Full report
+written to that test's `CARGO_TARGET_TMPDIR/tail-sweep-results.txt`; only the
+wall time is ledgered here because the harness is not `timed.sh`-wrapped and
+this file never invents a measured value it does not hold.
+
 | when (UTC) | label | wall_s | user_s | sys_s | cpu_ratio | waited_s | commit | branch | host | cores |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 2026-07-13T00:00:00Z | suite-full (pre-tiering, backfilled) | 2610.89 | 9246.93 | 36.88 | 3.56 | a2d39fa | main | m1max | 10 |
@@ -2423,6 +2433,55 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-23T17:39:53Z | sluice:outboard | 38.199 | 23.637 | 37.067 | 1.59 | 0 | aa2817100 |  | lefford | 40 |
 | 2026-08-23T17:45:57Z | sluice:gate | 364.686 | 10246.247 | 350.239 | 29.06 | 0 | 67f23ca91 |  | lefford | 40 |
 | 2026-08-23T17:50:10Z | sluice:clients | 251.925 | 1441.846 | 17.245 | 5.79 | 0 | 7775d62e7 |  | lefford | 40 |
+| 2026-08-23T19:19:56Z | quick | 1.914 | 1.622 | 0.097 | 0.90 | 0 | ecda35e7f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-23T19:20:15Z | quick | 12.704 | 22.705 | 12.299 | 2.76 | 0 | ecda35e7f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-23T19:21:25Z | quick | 19.265 | 36.785 | 16.498 | 2.77 | 0 | ecda35e7f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-23T19:22:18Z | quick | 17.271 | 23.812 | 12.534 | 2.10 | 0 | ecda35e7f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-23T19:22:46Z | quick | 13.000 | 10.530 | 0.305 | 0.83 | 0 | ecda35e7f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-23T19:26:37Z | quick | 20.765 | 11.273 | 0.367 | 0.56 | 0 | ecda35e7f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-23T19:28:08Z | gate-commit | 78.271 | 334.468 | 24.713 | 4.59 | 0 | ecda35e7f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-23T19:34:35Z | quick | 56.291 | 41.639 | 20.636 | 1.11 | 0 | a243e8e40 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-23T19:35:46Z | gate-commit | 66.412 | 70.541 | 31.264 | 1.53 | 0 | a243e8e40 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-23T19:53:52Z | quick | 50.382 | 27.487 | 11.954 | 0.78 | 0 | 43f4ac4f8 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-23T20:02:58Z | quick | 67.988 | 25.459 | 10.313 | 0.53 | 0 | 43f4ac4f8 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-23T20:04:42Z | gate-commit | 79.111 | 60.491 | 30.264 | 1.15 | 0 | 43f4ac4f8 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T00:57:22Z | quick | 1.763 | 1.558 | 0.100 | 0.94 | 0 | 07c948b94 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T00:57:30Z | quick | 3.811 | 3.771 | 0.536 | 1.13 | 0 | 07c948b94 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T00:58:18Z | quick | 12.816 | 27.676 | 20.516 | 3.76 | 0 | 07c948b94 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T00:58:56Z | quick | 19.311 | 35.185 | 13.347 | 2.51 | 0 | 07c948b94 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T01:04:07Z | gate-commit | 81.351 | 203.862 | 46.268 | 3.07 | 0 | 07c948b94 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T01:05:18Z | gate-commit | 53.777 | 95.016 | 44.543 | 2.60 | 0 | 07c948b94 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T13:36:49Z | quick | 3.169 | 2.228 | 0.141 | 0.75 | 0 | ae04b5d3f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T13:38:42Z | quick | 4.183 | 4.126 | 0.504 | 1.11 | 0 | ae04b5d3f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T13:40:25Z | quick | 26.437 | 39.414 | 29.222 | 2.60 | 0 | ae04b5d3f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T13:47:51Z | quick | 26.579 | 39.671 | 30.361 | 2.63 | 0 | ae04b5d3f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T13:48:37Z | gate-commit | 38.211 | 141.996 | 34.633 | 4.62 | 0 | ae04b5d3f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T13:55:05Z | quick | 25.309 | 39.106 | 29.379 | 2.71 | 0 | 1f5a2f13f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T13:57:12Z | gate-commit | 31.360 | 90.453 | 34.919 | 4.00 | 0 | 1f5a2f13f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T14:04:02Z | quick | 19.043 | 24.535 | 15.865 | 2.12 | 0 | e8b373891 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T14:04:46Z | gate-commit | 29.622 | 108.783 | 30.526 | 4.70 | 0 | e8b373891 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T14:07:01Z | gate-commit | 19.345 | 44.385 | 14.194 | 3.03 | 0 | e8b373891 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T14:15:14Z | quick | 2.320 | 1.761 | 0.111 | 0.81 | 0 | eeaa011fd | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T14:15:21Z | quick | 2.350 | 1.777 | 0.115 | 0.81 | 0 | eeaa011fd | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T14:15:43Z | quick | 16.524 | 12.875 | 0.566 | 0.81 | 0 | eeaa011fd | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T14:16:27Z | gate-commit | 38.119 | 87.604 | 14.369 | 2.68 | 0 | eeaa011fd | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T14:34:38Z | quick | 12.249 | 11.219 | 0.503 | 0.96 | 0 | cb6ab95bd | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T14:35:14Z | gate-commit | 33.268 | 88.501 | 15.434 | 3.12 | 0 | cb6ab95bd | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T14:40:13Z | rebaseline | 58.326 | 211.351 | 10.073 | 3.80 | 0 | 1413bf960 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T14:44:14Z | quick | 19.404 | 24.423 | 15.514 | 2.06 | 0 | 1413bf960 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T14:58:08Z | quick | 10.915 | 10.232 | 0.446 | 0.98 | 0 | 1413bf960 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T14:58:58Z | gate-commit | 31.278 | 73.353 | 33.910 | 3.43 | 0 | 1413bf960 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T15:28:38Z | quick | 2.769 | 2.324 | 0.122 | 0.88 | 0 | 76765b594 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T15:28:45Z | quick | 2.272 | 2.120 | 0.085 | 0.97 | 0 | 76765b594 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T15:29:06Z | quick | 15.561 | 15.330 | 2.088 | 1.12 | 0 | 76765b594 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T15:29:49Z | gate-commit | 34.747 | 118.595 | 11.722 | 3.75 | 0 | 76765b594 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T15:31:07Z | quick | 18.142 | 15.492 | 2.166 | 0.97 | 0 | 76765b594 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T15:31:44Z | gate-commit | 31.780 | 31.499 | 7.667 | 1.23 | 0 | 76765b594 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T16:45:02Z | quick | 39.241 | 45.806 | 35.167 | 2.06 | 0 | 9fdbe4b0e | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T16:52:03Z | quick | 18.794 | 15.276 | 4.177 | 1.04 | 0 | b24eb5353 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T16:53:18Z | gate-commit | 75.104 | 422.146 | 35.233 | 6.09 | 0 | b24eb5353 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T16:54:40Z | quick | 11.907 | 11.418 | 0.304 | 0.98 | 0 | b24eb5353 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T16:55:04Z | gate-commit | 14.987 | 25.327 | 5.146 | 2.03 | 0 | b24eb5353 | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-23T19:33:06Z | prewarm | 662.478 | 2082.513 | 136.074 | 3.35 | 0 | 92d2a0548 | campaign/the-escapement | ambrose | 12 |
 | 2026-08-23T23:40:48Z | gate-commit | 4.914 | 6.471 | 1.397 | 1.60 | 0 | 5cbc3adf4 | campaign/the-escapement | ambrose | 12 |
 | 2026-08-23T23:51:41Z | gate-commit | 5.280 | 3.023 | 0.945 | 0.75 | 0 | 5cbc3adf4 | campaign/the-escapement | ambrose | 12 |
@@ -2651,6 +2710,8 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T16:38:11Z | sluice:outboard | 39.403 | 24.647 | 38.347 | 1.60 | 0 | 730de5266 |  | lefford | 40 |
 | 2026-08-24T16:44:52Z | sluice:gate | 401.448 | 10689.372 | 405.570 | 27.64 | 0 | 547788055 |  | lefford | 40 |
 | 2026-08-24T16:52:01Z | sluice:clients | 428.993 | 5262.927 | 83.261 | 12.46 | 0 | f12462bf1 |  | lefford | 40 |
+| 2026-08-24T17:24:40Z | rebaseline | 129.084 | 246.749 | 11.596 | 2.00 | 0 | 511deebc8 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T17:28:22Z | quick | 28.257 | 52.175 | 32.828 | 3.01 | 0 | 511deebc8 | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-24T17:57:05Z | gate-commit | 243.611 | 1063.653 | 73.493 | 4.67 | 0 | 5ccde4bb1 | campaign/the-gossan | MacBookPro | 10 |
 | 2026-08-24T17:59:36Z | gate-commit | 21.283 | 48.285 | 12.140 | 2.84 | 0 | d849bbe62 | campaign/the-gossan | MacBookPro | 10 |
 | 2026-08-24T18:00:50Z | gate-commit | 21.688 | 49.178 | 12.963 | 2.87 | 0 | b30ce2dfc | campaign/the-gossan | MacBookPro | 10 |
@@ -2713,6 +2774,13 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T21:51:13Z | sluice:outboard | 42.556 | 29.597 | 42.089 | 1.68 | 0 | e5772b897 |  | lefford | 40 |
 | 2026-08-24T21:58:38Z | sluice:gate | 444.452 | 12266.248 | 507.369 | 28.74 | 0 | 3e36028b2 |  | lefford | 40 |
 | 2026-08-24T22:05:56Z | sluice:clients | 438.347 | 5447.220 | 100.208 | 12.66 | 0 | 1a021d49e |  | lefford | 40 |
+| 2026-08-24T22:36:03Z | quick | 13.442 | 27.257 | 23.730 | 3.79 | 0 | f6457cf1c | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T22:36:46Z | quick | 6.701 | 9.873 | 7.111 | 2.53 | 0 | f6457cf1c | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T22:38:06Z | quick | 29.804 | 39.373 | 21.111 | 2.03 | 0 | f6457cf1c | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T22:38:43Z | quick | 27.743 | 14.814 | 0.473 | 0.55 | 0 | f6457cf1c | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T22:39:35Z | quick | 30.827 | 14.246 | 0.434 | 0.48 | 0 | f6457cf1c | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T23:02:05Z | quick | 29.947 | 29.617 | 17.870 | 1.59 | 0 | f6457cf1c | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T23:05:09Z | quick | 21.158 | 13.311 | 0.407 | 0.65 | 0 | 9058be735 | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-24T22:46:19Z | rebaseline | 279.176 | 248.379 | 18.057 | 0.95 | 0 | f5e2ad5fd | campaign/the-escapement | ambrose | 12 |
 | 2026-08-24T23:23:58Z | vessel-check | 59.015 | 71.389 | 6.086 | 1.31 | 0 | f5e2ad5fd | campaign/the-escapement | ambrose | 12 |
 | 2026-08-24T23:24:57Z | world-check | 49.558 | 55.728 | 5.233 | 1.23 | 0 | f5e2ad5fd | campaign/the-escapement | ambrose | 12 |
@@ -2787,3 +2855,20 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-25T15:21:45Z | sluice:outboard | 41.211 | 26.613 | 39.127 | 1.60 | 0 | c4960e8c3 |  | lefford | 40 |
 | 2026-08-25T15:29:11Z | sluice:gate | 445.483 | 12397.259 | 505.042 | 28.96 | 0 | c9f4b6c35 |  | lefford | 40 |
 | 2026-08-25T15:36:25Z | sluice:clients | 434.245 | 5373.878 | 81.896 | 12.56 | 0 | 5c9fcbe0f |  | lefford | 40 |
+| 2026-08-25T16:11:01Z | quick | 12.231 | 21.595 | 18.258 | 3.26 | 0 | 58bc2bd3a | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-25T16:11:27Z | quick | 4.785 | 5.263 | 0.562 | 1.22 | 0 | 58bc2bd3a | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-25T16:12:29Z | quick | 12.702 | 17.346 | 19.287 | 2.88 | 0 | 58bc2bd3a | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-25T16:17:41Z | quick | 29.307 | 50.355 | 33.610 | 2.87 | 0 | 58bc2bd3a | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-25T16:18:08Z | quick | 11.719 | 11.378 | 0.243 | 0.99 | 0 | 58bc2bd3a | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-25T16:18:37Z | quick | 11.689 | 11.369 | 0.244 | 0.99 | 0 | 58bc2bd3a | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-25T16:29:36Z | quick | 11.920 | 11.537 | 0.244 | 0.99 | 0 | de5e60a70 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-25T16:36:42Z | quick | 12.221 | 11.655 | 0.388 | 0.99 | 0 | de5e60a70 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-25T17:04:51Z | census | 897.790 | 29856.631 | 285.353 | 33.57 | 0 | b1fc9f390 |  | lefford | 40 |
+| 2026-08-25T17:50:26Z | quick | 11.933 | 11.443 | 0.280 | 0.98 | 0 | 13695c4ae | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-25T17:56:36Z | quick | 11.171 | 10.906 | 0.655 | 1.03 | 0 | 13695c4ae | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-25T18:14:16Z | quick | 20.560 | 26.555 | 16.493 | 2.09 | 0 | 3c04f44c2 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-25T19:26:34Z | quick | 13.869 | 14.408 | 2.122 | 1.19 | 0 | b43fb53bd | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-25T20:59:57Z | quick | 2.486 | 2.168 | 0.107 | 0.92 | 0 | 660e5e26c | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-25T21:00:08Z | quick | 2.273 | 2.165 | 0.080 | 0.99 | 0 | 660e5e26c | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-25T21:00:32Z | quick | 14.495 | 15.154 | 2.316 | 1.21 | 0 | 660e5e26c | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-25T23:22:24Z | quick | 31.706 | 47.270 | 42.205 | 2.82 | 0 | 000bc15da | campaign/the-granary | MacBookPro | 10 |
