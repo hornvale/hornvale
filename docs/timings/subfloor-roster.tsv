@@ -1188,7 +1188,9 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_world_with_no_flagged_col
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_columns_are_never_evaluable
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_226_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::partitioning_columns_are_all_covered_by_d2_or_d4
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
@@ -1197,6 +1199,7 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neit
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_clamps_a_value_outside_the_census_range
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_is_zero_at_the_extremes_and_half_at_the_median
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::the_log_guard_holds_for_a_real_extreme_holding_world
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::too_few_present_values_is_excluded_with_its_reason
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_count_panics_loudly_on_an_unknown_metric_rather_than_reporting_all_absent
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_values_are_counted_not_skipped
@@ -1262,7 +1265,6 @@ hornvale-lab::hornvale_lab$domesday::render::tests::a_removed_parenthetical_dire
 hornvale-lab::hornvale_lab$domesday::render::tests::an_ellipsis_survives_the_space_dot_space_cleanup_untouched
 hornvale-lab::hornvale_lab$domesday::render::tests::an_empty_exclusion_roster_says_so_rather_than_rendering_an_empty_table
 hornvale-lab::hornvale_lab$domesday::render::tests::an_integer_metric_reports_its_exact_mode
-hornvale-lab::hornvale_lab$domesday::render::tests::d8_findings_appear_on_the_index_and_not_on_any_domain_page
 hornvale-lab::hornvale_lab$domesday::render::tests::drops_a_short_citation_only_parenthetical_to_nothing
 hornvale-lab::hornvale_lab$domesday::render::tests::drops_a_trailing_parenthetical_citation_entirely
 hornvale-lab::hornvale_lab$domesday::render::tests::drops_two_citations_in_one_parenthetical

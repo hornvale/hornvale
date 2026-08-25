@@ -2934,5 +2934,47 @@ else
     bad "failed census: rc=$rc_fail, branches $after_n -> $after_fail (expected non-zero and no branch)"
 fi
 
+echo "== request path: every kind the usage string offers is a kind it ACCEPTS =="
+# THE DEFECT THIS PINS, and it is the reason this test is shaped as a LOOP over
+# the advertised kinds rather than three hand-written cases. `kind=census`
+# shipped with sluice-request.sh's usage strings widened and its validating
+# `case` left alone, so `make sluice-census` printed
+# "unknown kind 'census' (merge|stage)" — a feature whose documentation and
+# whose entry point both worked and whose validation did not. It survived a
+# green four-phase merge because the census tests exercised
+# `sluice-queue.sh add census`, the half that HAD been widened, and never the
+# request path a caller takes.
+#
+# So the assertion is not "census is accepted". It is "the usage string and the
+# validation agree", derived from the script itself, which cannot drift the way
+# a hand-listed set can: add a fourth kind to the usage text and forget the
+# case, and this reddens without anyone editing this file.
+req="$repo_root/scripts/sluice-request.sh"
+advertised="$(grep -om1 '\[merge[a-z|]*\]' "$req" | tr -d '[]' | tr '|' ' ')"
+if [ -z "$advertised" ]; then
+    bad "could not read the advertised kinds out of sluice-request.sh's usage string"
+else
+    ok "usage string advertises: $advertised"
+    rejected=""
+    for k in $advertised; do
+        # A bogus REF: we want the KIND check's verdict, and it runs before any
+        # network or host work, so an invalid sha is enough to stop it there.
+        out="$(bash "$req" some/branch not-a-sha "$k" 2>&1 || true)"
+        case "$out" in
+            *"unknown kind"*) rejected="$rejected $k" ;;
+        esac
+    done
+    if [ -n "$rejected" ]; then
+        bad "sluice-request.sh ADVERTISES these kinds and REFUSES them:$rejected"
+    else
+        ok "every advertised kind survives the validating case (no usage/validation drift)"
+    fi
+    out="$(bash "$req" some/branch not-a-sha definitely-not-a-kind 2>&1 || true)"
+    case "$out" in
+        *"unknown kind"*) ok "a bogus kind is still rejected (the widening kept its teeth)" ;;
+        *) bad "a bogus kind was NOT rejected — the kind check has stopped checking" ;;
+    esac
+fi
+
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
