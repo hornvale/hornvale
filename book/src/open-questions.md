@@ -105,6 +105,35 @@ already the bet's — but it extends where the clause is known to apply, from
 checks that fire to **claims of no change**, which is the shape every
 determinism argument in this project takes.
 
+**Four more instances from The Interlinear (2026-08-25), and the useful part
+is that three of the four were caught by a *reviewer* rather than by the author
+of the check.** A positive control on a "no shared words between the two
+renderings" assertion — neutralise it and a degenerate one-word output passes;
+a coverage measurement whose only possible answer was zero, and so could not
+distinguish a working resolver from one hardcoded to say "not yet"; a
+byte-identity proof between two realizers that passed an empty list at every
+call site, and would have survived the two diverging; and a complement
+assertion that passed by luck of the draw, which probing all fifteen placed
+peoples showed would fail for 33% of them for a reason that was not the one it
+names.
+
+**The score does not move; the practice gains a second reader.** Every one of
+these was invisible to re-reading and died to running something — a probe
+across fifteen peoples, a mutation, one `grep`. What is new is *who* ran it: the
+implementer's own report said it plainly — *"neither would have been caught by
+re-reading my own work"* — and the campaign's habit of asking each reviewer to
+**verify a named mechanism** rather than form an opinion is what converted that
+into findings. The clause already says make it fail on command; this extends
+where the command should come from.
+
+**A confirming instance on The Begat's path, too.** This campaign's correctness
+case was also a claim of no change — a refactor that deleted a field from the
+clause structure and rewrote every construction site across two crates, with
+`make rebaseline` moving nothing. It was handled as the clause asks: the empty
+diff is only evidence because `the-book.md` is rewritten on every rebaseline and
+carries three distinct tail shapes, including one with no trailing clause at
+all. An empty diff over a file nothing regenerates would have proved nothing.
+
 **A note from The Staff (2026-08-14), amended by The Sluice (2026-08-15),
 since this score is read against an instrument this passage names by a label
 that no longer exists.** Both halves of Sexton's pairing — the census
