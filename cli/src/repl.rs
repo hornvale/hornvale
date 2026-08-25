@@ -50,7 +50,7 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
             "help" => write!(output, "{HELP}")?,
             "sky" => {
                 let day = argument.and_then(|a| a.parse().ok()).unwrap_or(0.0);
-                match WorldTime::new(day) {
+                match WorldTime::from_std_days(day) {
                     Ok(time) => match world_builder::sky_report(world, time) {
                         Ok(report) => writeln!(output, "{}", report.description)?,
                         Err(e) => writeln!(output, "error: {e}")?,
@@ -710,7 +710,7 @@ mod tests {
 
     /// `f64::from_str` accepts `inf`/`-inf`/`nan`/`infinity`, which are not
     /// finite days — a value typed at repl stdin, not a bug in any caller.
-    /// Before the fix round this reached `WorldTime::new(day).expect(...)`
+    /// Before the fix round this reached `WorldTime::from_std_days(day).expect(...)`
     /// and panicked the process; it must instead fail through the same
     /// `error: {e}` path every other malformed-input arm uses.
     #[test]

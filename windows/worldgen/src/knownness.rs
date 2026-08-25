@@ -241,7 +241,7 @@ pub fn knownness(
     }
     let half_life_days = memory_half_life(generation_length).days();
     let horizon_days = MEMORY_HORIZON_HALF_LIVES * half_life_days;
-    let start = WorldTime::new(now.day() - horizon_days)
+    let start = WorldTime::from_std_days(now.as_std_days() - horizon_days)
         .expect("a finite horizon before a finite present is a finite day");
     // `.rev()` IS THE SOURCE RULE, not a style choice: `events_in` returns
     // time-ordered events, so reversing before `find` takes the MOST RECENT
@@ -259,7 +259,10 @@ pub fn knownness(
         // negatives and the only zero it could take is a zero generation
         // length, which the allometry cannot produce (maturity is positive
         // for any positive mass).
-        Some(event) => math::powf(0.5, (now.day() - event.day.day()) / half_life_days),
+        Some(event) => math::powf(
+            0.5,
+            (now.as_std_days() - event.day.as_std_days()) / half_life_days,
+        ),
         None => 0.0,
     };
     Knownness { stock, holder }
@@ -336,7 +339,7 @@ mod tests {
 
     /// A day, as a [`WorldTime`].
     fn at(day: f64) -> WorldTime {
-        WorldTime::new(day).expect("a finite day")
+        WorldTime::from_std_days(day).expect("a finite day")
     }
 
     /// This vertex's eruptions over a long span of world time, in order.
@@ -361,7 +364,7 @@ mod tests {
         for source in cones(geo, terrain).keys() {
             let events = eruptions(seed, terrain, *source);
             for pair in events.windows(2) {
-                let gap = pair[1].day.day() - pair[0].day.day();
+                let gap = pair[1].day.as_std_days() - pair[0].day.as_std_days();
                 if gap >= min_gap_days {
                     return (*source, pair[0], gap);
                 }
@@ -392,7 +395,7 @@ mod tests {
         for source in cones(geo, terrain).keys() {
             let events = eruptions(seed, terrain, *source);
             for pair in events.windows(2) {
-                let gap = pair[1].day.day() - pair[0].day.day();
+                let gap = pair[1].day.as_std_days() - pair[0].day.as_std_days();
                 if gap > lower && gap < upper {
                     return (*source, pair[0], pair[1]);
                 }
@@ -428,7 +431,7 @@ mod tests {
             "aeldrin",
             test_generation(),
             vertex,
-            at(event.day.day() + 1.0),
+            at(event.day.as_std_days() + 1.0),
         );
         assert!(
             just_after.stock > 0.999,
@@ -441,7 +444,7 @@ mod tests {
             "aeldrin",
             test_generation(),
             vertex,
-            at(event.day.day() + half_life_days()),
+            at(event.day.as_std_days() + half_life_days()),
         );
         assert!(
             (one_half_life.stock - 0.5).abs() < 1e-9,
@@ -485,12 +488,12 @@ mod tests {
     fn the_most_recent_eruption_wins_over_an_earlier_one_in_the_same_horizon() {
         let (geo, terrain) = globe();
         let (vertex, earlier, later) = two_eruptions_inside_one_horizon(42, &geo, &terrain);
-        let now = at(later.day.day() + 1.0);
+        let now = at(later.day.as_std_days() + 1.0);
 
         // Non-vacuity, asserted rather than argued: BOTH eruptions must lie
         // inside the window the fold actually reads, or the later one wins
         // for the trivial reason that the earlier one was never a candidate.
-        let elapsed_since_earlier = now.day() - earlier.day.day();
+        let elapsed_since_earlier = now.as_std_days() - earlier.day.as_std_days();
         assert!(
             elapsed_since_earlier < horizon_days(),
             "the earlier eruption is {elapsed_since_earlier} days back, outside the \
@@ -507,7 +510,10 @@ mod tests {
             now,
         )
         .stock;
-        let from_later = math::powf(0.5, (now.day() - later.day.day()) / half_life_days());
+        let from_later = math::powf(
+            0.5,
+            (now.as_std_days() - later.day.as_std_days()) / half_life_days(),
+        );
         let from_earlier = math::powf(0.5, elapsed_since_earlier / half_life_days());
         assert!(
             (stock - from_later).abs() < 1e-9,
@@ -551,7 +557,7 @@ mod tests {
             "aeldrin",
             test_generation(),
             vertex,
-            at(event.day.day() + horizon - 1.0),
+            at(event.day.as_std_days() + horizon - 1.0),
         );
         assert!(
             inside.stock > 0.0,
@@ -570,7 +576,7 @@ mod tests {
             "aeldrin",
             test_generation(),
             vertex,
-            at(event.day.day() + horizon + 1.0),
+            at(event.day.as_std_days() + horizon + 1.0),
         );
         assert_eq!(
             outside.stock, 0.0,
@@ -692,7 +698,7 @@ mod tests {
 
         let (geo, terrain) = globe();
         let (vertex, event, _) = eruption_with_quiet_after(42, &geo, &terrain, horizon_days());
-        let now = at(event.day.day() + memory_half_life(Some(short)).days());
+        let now = at(event.day.as_std_days() + memory_half_life(Some(short)).days());
         let quick = knownness(Seed(42), &terrain, "aeldrin", Some(short), vertex, now);
         let slow = knownness(Seed(42), &terrain, "khorrun", Some(long), vertex, now);
         assert!(
@@ -739,7 +745,7 @@ mod tests {
     fn knownness_is_pure_and_carries_no_state() {
         let (geo, terrain) = globe();
         let (vertex, event, _) = eruption_with_quiet_after(42, &geo, &terrain, half_life_days());
-        let now = at(event.day.day() + 1.0);
+        let now = at(event.day.as_std_days() + 1.0);
         let first = knownness(
             Seed(42),
             &terrain,
@@ -880,7 +886,7 @@ mod tests {
                     assert!(
                         (0.0..=1.0).contains(&stock),
                         "seed {seed}: {source:?} at day {} reads a stock of {stock}",
-                        now.day()
+                        now.as_std_days()
                     );
                 }
             }

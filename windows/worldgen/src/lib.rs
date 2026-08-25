@@ -4521,7 +4521,7 @@ pub fn observed_phenomena(world: &World, day: f64) -> Result<Vec<Phenomenon>, Bu
     // callers below, which always pass a literal. A non-finite value must
     // fail through this function's existing `Result`, not panic (The Ell's
     // Task 1 fix round: this used to be an `.expect()`).
-    let time = WorldTime::new(day).map_err(|e| BuildError::Pins(e.to_string()))?;
+    let time = WorldTime::from_std_days(day).map_err(|e| BuildError::Pins(e.to_string()))?;
     Ok(observe(
         &sources,
         &ObserverContext {
@@ -4560,7 +4560,7 @@ fn observed_phenomena_occluded(
         &sources,
         &ObserverContext {
             place,
-            time: WorldTime::new(day).expect("a day value is finite"),
+            time: WorldTime::from_std_days(day).expect("a day value is finite"),
             lens: occlusion_lens_at(world, climate, position, day),
             position,
         },
@@ -4892,7 +4892,7 @@ fn observe_with_sources(
         sources,
         &ObserverContext {
             place,
-            time: WorldTime::new(day).expect("a day value is finite"),
+            time: WorldTime::from_std_days(day).expect("a day value is finite"),
             // NO occlusion here, deliberately. This is the observation GENESIS
             // derives from — settlement name glosses and the deities a people
             // believe in (`derived-from-phenomenon` is a committed predicate).
@@ -5938,6 +5938,82 @@ fn exposure_of_impl(
             if world.registry.concept(concept).is_some() {
                 classes.insert(concept.to_string(), ExposureClass::Steeped);
             }
+        }
+    }
+
+    // Steeped: the six felt states (`hornvale_language::felt_state_pack`,
+    // Task 4b), derived from the species' own `MindVector` rather than
+    // authored per species — a table of who-lacks-what would make the
+    // deficiency distribution this task exists to expose *circular* (spec
+    // §5.1). `MindVector` carries exactly three `[0, 1]` scalars, each with
+    // a MEANINGFUL midpoint (0.5, the manikin's own neutral reading), and
+    // `felt_state_pack` carries exactly three valence-opposed PAIRS — so
+    // one scalar governs one pair, by which side of the midpoint the
+    // species falls on:
+    //
+    // - `threat_response` (flee 0 <-> stand 1): a species that meets a
+    //   blockage by STANDING keeps pushing at a target it can still see —
+    //   `frustrated` (blocked, target known, still trying). One that meets
+    //   it by FLEEING disengages entirely, with nothing left to aim at —
+    //   `lost` (blocked, no target). `> 0.5` Steeps `frustrated`; `< 0.5`
+    //   Steeps `lost`.
+    // - `deliberation_latency` (fast 0 <-> slow 1): a SLOW, considered
+    //   species rests once a need is met — `content` (needs met, at rest).
+    //   A FAST, opportunistic one is always mid-pursuit of the next
+    //   satisfiable want — `eager` (chasing a satisfiable need). `> 0.5`
+    //   Steeps `content`; `< 0.5` Steeps `eager`.
+    // - `time_horizon` (immediate 0 <-> generational 1): a GENERATIONAL
+    //   planner can hold a drive across a span long enough to watch it fail
+    //   anyway — `helpless` (given up despite an active drive). An
+    //   IMMEDIATE opportunist is always working a gradient toward the next
+    //   thing, with no fixed aim to give up on — `searching` (seeking with
+    //   a gradient). `> 0.5` Steeps `helpless`; `< 0.5` Steeps `searching`.
+    //
+    // Exactly AT the midpoint (the manikin's own reading, and goblin's
+    // authored one on every axis) earns neither pole: no lean, no root.
+    // That is a real reading, not an omission — those concepts fall
+    // through to the generic Experiential catch-all below like any other
+    // unclaimed concept, the same way every other rule in this function
+    // leaves what it doesn't classify to the rule that runs last.
+    //
+    // Deliberately `MindVector` alone, not `SocietyVector` too: three
+    // scalars times two poles is exactly six, one clean rule per pair.
+    // `SocietyVector`'s fields are categorical (`Sociality`, `StatusBasis`)
+    // or would have to double up on its one scalar (`in_group_radius`) to
+    // reach six — a worse fit than the one already exact.
+    //
+    // `wc.psyche` is guaranteed present here: the nested-capacity chain
+    // this function's own perception lookup already relies on is speech
+    // subset-of perception subset-of mind, so any species that reached this
+    // far (it has perception) already has a `MindVector`. The `if let` is
+    // defensive, matching this function's existing `Option`-gated rules,
+    // not a live branch.
+    //
+    // `windows/lab/src/metrics.rs`'s `independently_steeped_concepts` carries
+    // a SECOND, independently-derived copy of exactly this rule (the same
+    // discipline the toponymic gates and staple/variant rules above are
+    // already held to, spec §9.2: a check that called this function would
+    // assert nothing). If you change this block, that copy needs the same
+    // change — `exposure_classification_agrees_with_the_independent_
+    // rederivation` (`windows/lab/src/metrics.rs`, `mod tests`) sweeps
+    // several seeds and every placed people comparing this function's
+    // verdict against the lab's, and reddens on the first concept where the
+    // two disagree.
+    if let Some(mind) = wc.psyche.get(&KindId(name)) {
+        if mind.threat_response > 0.5 {
+            classes.insert("frustrated".to_string(), ExposureClass::Steeped);
+        } else if mind.threat_response < 0.5 {
+            classes.insert("lost".to_string(), ExposureClass::Steeped);
+        }
+        if mind.deliberation_latency > 0.5 {
+            classes.insert("content".to_string(), ExposureClass::Steeped);
+        } else if mind.deliberation_latency < 0.5 {
+            classes.insert("eager".to_string(), ExposureClass::Steeped);
+        }
+        if mind.time_horizon > 0.5 {
+            classes.insert("helpless".to_string(), ExposureClass::Steeped);
+        } else if mind.time_horizon < 0.5 {
+            classes.insert("searching".to_string(), ExposureClass::Steeped);
         }
     }
 
@@ -8890,8 +8966,8 @@ pub fn sky_report_from(
     let Some(vertex) = at else {
         return Ok(sky_of(world)?.sky_at_visibility(time, Visibility::CLEAR));
     };
-    let state = climate.weather_at(vertex, time.day());
-    let cloud = climate.cloud_type_at(vertex, time.day());
+    let state = climate.weather_at(vertex, time.as_std_days());
+    let cloud = climate.cloud_type_at(vertex, time.as_std_days());
     let (_, vis) = occlusion(state, cloud);
     let mut report = sky_of(world)?.sky_at_visibility(time, vis);
     report.description = format!(
@@ -12213,7 +12289,7 @@ mod tests {
         let world = generated(42);
         let report = sky_report(
             &world,
-            hornvale_kernel::WorldTime::new(10.0).expect("a day value is finite"),
+            hornvale_kernel::WorldTime::from_std_days(10.0).expect("a day value is finite"),
         )
         .unwrap();
         let text = &report.description;
@@ -12226,7 +12302,7 @@ mod tests {
 
         let again = sky_report(
             &world,
-            hornvale_kernel::WorldTime::new(10.0).expect("a day value is finite"),
+            hornvale_kernel::WorldTime::from_std_days(10.0).expect("a day value is finite"),
         )
         .unwrap();
         assert_eq!(report, again, "the weather clause is deterministic");

@@ -617,7 +617,7 @@ pub fn surrounds_scene_in(
     Ok(SurroundsScene {
         schema: SURROUNDS_SCHEMA.to_string(),
         seed: world.seed.0,
-        day: at.day(),
+        day: at.as_std_days(),
         observer: SurroundsObserver {
             room: observer_room,
             face: room.face,

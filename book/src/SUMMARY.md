@@ -401,9 +401,11 @@
 - [The Gossan](./chronicle/the-gossan.md)
 - [The Mirror](./chronicle/the-mirror.md)
 - [The Portolan, part II — the world map](./chronicle/the-portolan-world-map.md)
+- [The Escapement](./chronicle/the-escapement.md)
 - [The Forebay](./chronicle/the-forebay.md)
 - [The Lexicon of Place](./chronicle/the-lexicon-of-place.md)
 - [The Word](./chronicle/the-word.md)
+- [The Confidant](./chronicle/the-confidant.md)
 
 # Appendix: The Frontier
 

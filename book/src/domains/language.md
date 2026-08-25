@@ -652,8 +652,15 @@ the vocabulary is part of its identity. Each carries the generation in which
 it joined, and generation sorts ahead of everything else, placing a newly
 named thing last in the queue where it can displace nothing. A world's
 vocabulary can therefore grow without disturbing a single word already
-spoken: naming the world's twelve unnamed beasts leaves every existing name,
-in every language, exactly as it was. The price is that priority now follows
+spoken: naming the world's twelve unnamed beasts leaves every existing *word*,
+in every language, exactly as it was. **Proper names are the exception, and it
+took The Confidant to notice.** A settlement's name is repaired against the
+attested tier described below — its species' whole standing vocabulary — so
+growing that vocabulary changes which forms are attested and therefore which
+repairs are identity. Six new concepts moved two settlement names in this
+world. The guarantee is exact about words and silent about the names built
+out of them, which is a coupling worth stating once rather than rediscovering.
+The price of the guarantee itself is that priority now follows
 arrival before frequency — a latecomer takes the forms left over, however
 common it proves — which is close enough to how real tongues treat their
 newest coinages to be worth the guarantee. The cascade's target is fixed and deliberate: it
@@ -700,6 +707,22 @@ eyes are tuned for the dark and the color ladder never reached that far
 down regardless of how thoroughly the world exposed the color. Two
 provenances, never a shrug: a lexicon is allowed to be silent, but never
 silently.
+
+**Exposure need not come from outside.** Since The Confidant a species is also
+exposed — or not — to its own **felt states**: the six positions of the affect
+circumplex its own minds actually reach are registered concepts like any other,
+and a culture holds a word for one, or does not. What decides it is not the
+world at all but the species' own authored psychology, three scalars with a
+meaningful midpoint governing three valence-opposed pairs. A people that meets
+a blockage by standing has a word for *frustrated*; one that flees has a word
+for *lost*. A slow deliberator names the rest at the end of a satisfied need;
+a fast one names the chase. A generational planner has a word for giving up on
+something it can still want; an immediate opportunist has one for working the
+gradient instead. Nobody authored which people lacks which feeling — the
+distribution falls out of numbers written long before the question existed,
+which is the only version in which measuring it means anything. A creature at
+the neutral midpoint on all three axes earns no word for any of the six, and
+goblins are authored exactly there.
 
 **Glossed names (as Campaign 27, The Words, built them — the drawn stem
 below has since been retired; see "Names you can say," below).** A proper

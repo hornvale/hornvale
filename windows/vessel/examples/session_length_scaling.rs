@@ -967,7 +967,7 @@ fn run(
     let npcs = derive_npcs(world, ctx, &mut ledger, AGENTS, home_settlement);
     let mut mesh_memo = RoomMeshMemo::new();
     let mut home_nav_cache = HomeNavCache::new();
-    let mut day = WorldTime::new(0.5).expect("0.5 is finite");
+    let mut day = WorldTime::from_std_days(0.5).expect("0.5 is a finite day count");
 
     // NO SINGLE PROBE AGENT. An earlier draft reported one agent's own
     // `agent-at` count (`npcs.first()`), and it read 0 for every band of
@@ -1002,7 +1002,11 @@ fn run(
 
     for tick in 0..TICKS {
         let from = day;
-        day = WorldTime::new(day.day() + 1.0).expect("day advance stays finite");
+        // Advance by exactly one day in TICKS, not by adding 1.0 to a float day.
+        // Post-Escapement (`WorldTime` is an i64 tick count) this is exact by
+        // construction and cannot drift across a long run; the float round-trip
+        // it replaces was only accidentally exact for whole-day steps.
+        day = WorldTime::from_ticks(day.ticks() + WorldTime::TICKS_PER_STD_DAY);
         let mesh_snapshot = mesh_memo.clone();
         let terrain = LocaleTerrain::with_fields(ctx, None, None, None, None, Some(&mesh_snapshot));
         let sys = DriveMovements {

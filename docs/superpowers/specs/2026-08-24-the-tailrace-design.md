@@ -65,22 +65,24 @@ what it measured.
 
 ## 2. The six folds, and why each is bounded
 
+> **Line citations in this section are as of `efb2ab304` (`origin/main`, 2026-08-25).** They went stale on all three of this campaign's absorptions of `main` — a uniform +1 after The Gossan, and by 1 to 61 lines after The Escapement's tick epoch. `windows/vessel/src/liveness.rs` is ~15,000 lines under continuous churn, so a bare line number in a durable spec rots by default. **The function names are the stable handle — grep those.** The numbers are kept because they are faster when fresh, and dating them means a stale one reads as historical rather than as wrong.
+
 Every one of these reduces an unbounded history to bounded state. Read on
 `origin/main`; line numbers are `windows/vessel/src/liveness.rs`.
 
 | fold | line | what it walks | what it reduces to | bounded by |
 |---|---|---|---|---|
-| `agent_sightings` → `integrate_thirst`, via `drive_at` | 807, 836, 885 | every `agent-at` ≤ `t` | the accumulated integral, plus the last sighting's day and room | the interval since the last `drank` |
-| `hunger_at` | 2400 | the same trail, `HUNGER` params | likewise | the interval since the last `eaten` |
-| `fatigue_at` | 2229 | every `rested` fact | the latest `rested` day | O(1) — a max |
-| `believed_water` | 909 | every `agent-at` ≤ `t`, ∩ water | a `BTreeSet<Facet>` | reachable water rooms |
-| `hazard_memory_memo` | 1177 | every `agent-at` ≤ `t` | a `BTreeMap<Facet, f64>`, latest-visit-wins | facets visited |
-| `build_emitter_scan` | 986 | every roster member's `agent-at` ≤ `t` | a `BTreeSet<Facet>` of alarm facets, plus per-emitter timelines | facets visited × emitters |
+| `agent_sightings` → `integrate_thirst`, via `drive_at` | 808, 837, 889 | every `agent-at` ≤ `t` | the accumulated integral, plus the last sighting's day and room | the interval since the last `drank` |
+| `hunger_at` | 2427 | the same trail, `HUNGER` params | likewise | the interval since the last `eaten` |
+| `fatigue_at` | 2256 | every `rested` fact | the latest `rested` day | O(1) — a max |
+| `believed_water` | 921 | every `agent-at` ≤ `t`, ∩ water | a `BTreeSet<Facet>` | reachable water rooms |
+| `hazard_memory_memo` | 1197 | every `agent-at` ≤ `t` | a `BTreeMap<Facet, f64>`, latest-visit-wins | facets visited |
+| `build_emitter_scan` | 1006 | every roster member's `agent-at` ≤ `t` | a `BTreeSet<Facet>` of alarm facets, plus per-emitter timelines | facets visited × emitters |
 
 Three multipliers make this worse than the table suggests, and all three are
 in the same call path:
 
-- `shared_believed_water` (`:1324`) calls `believed_water` **once per
+- `shared_believed_water` (`:1343`) calls `believed_water` **once per
   co-located peer**, so the history walk is multiplied by band size.
 - `build_emitter_scan` is threaded the **full roster**, so it is O(agents ×
   history) inside a per-agent call — the O(agents²) term the sibling bench
@@ -90,7 +92,7 @@ in the same call path:
 
 **The thirst integral is exactly incrementalisable, and this is the load-bearing
 claim of the design.** Reading `integrate_thirst`'s own segmentation
-(`:849–857`): the bounds are `last_drank`, each sighting strictly inside
+(`:851–857`): the bounds are `last_drank`, each sighting strictly inside
 `(last_drank, t)`, then `t`. So
 
 ```
@@ -117,7 +119,7 @@ rather than rediscovering them.**
    sum.
 4. **`agent_sightings` SORTS, and the sort is not commit order.** It sorts by
    `(day, Facet)` — `a.0.total_cmp(&b.0).then_with(|| a.1.cmp(&b.1))`
-   (`:821`, and again at `:4311` where the tick folds `frozen` plus its own emitted moves). A fold advancing in commit order would break same-day ties
+   (`:822`, and again at `:4372` where the tick folds `frozen` plus its own emitted moves). A fold advancing in commit order would break same-day ties
    differently, and the tie-break selects the *position* that governs the next
    segment, hence its temperature, hence the integral. **This is a live
    divergence, not a theoretical one**, and it is precisely what the FOLD ≡
@@ -126,8 +128,8 @@ rather than rediscovering them.**
    order and the change justified as its own decision. Same-day sightings are
    not exotic — the action clock can charge less than a day for a step.
 5. **The reset day itself is folded with no `<= t` filter, unlike the
-   sightings it governs.** `drive_at` (`liveness.rs:894-897`), `hunger_at`
-   (`:2408-2411`) and `fatigue_at` (`:2230-2233`) each compute `last_drank` /
+   sightings it governs.** `drive_at` (`liveness.rs:898-901`), `hunger_at`
+   (`:2436-2439`) and `fatigue_at` (`:2258-2261`) each compute `last_drank` /
    `last_ate` / `last_rested` as a fold-max over **every** `DRANK` / `EATEN` /
    `RESTED` fact in the ledger, with no bound on `t` at all — while
    `agent_sightings` on the very next line *does* filter its sightings to
@@ -156,7 +158,7 @@ timeline goes away. That is why stage 3 is named "delete the hub" rather than
 suggests.
 
 **Past-`t` queries are real and are already documented in the tree.**
-`last_fact_day_at_or_before` (`:4437`) exists precisely because catch-up's
+`last_fact_day_at_or_before` (`:4498`) exists precisely because catch-up's
 replay loop evaluates many instants across a span, and its doc says why a
 whole-history fold cannot serve it: the folded value "could be looking
 chronologically PAST the day it is being asked about." So the primitive must be
@@ -433,7 +435,7 @@ measured, not rank them in general:**
    collapsed) — strictly fewer than the raw posting count. This candidate
    applies to every call, regardless of what the fold finds.
 2. `believed_water` also runs a bounded `plan_to_room` A* search **per
-   distinct water room found** (`liveness.rs:909-932`, the `seen.into_iter
+   distinct water room found** (`liveness.rs:921-945`, the `seen.into_iter
    ().filter_map(|r| plan_to_room(...))` line) — a real cost `integrate_thirst`
    has no equivalent of, and one a reviewer flagged as plausibly the larger
    driver.
@@ -465,7 +467,7 @@ every one of the 50 roster members' own full histories on every single call.
 **A caveat on that last number that changes how it should be read, not
 whether it matters.** Production shares ONE `PrimaryAfraidMemo` per tick
 across the whole 50-agent roster (`DriveMovements::step_with_occupancy`,
-`windows/vessel/src/liveness.rs:4687`: `afraid_memo` is built once and passed
+`windows/vessel/src/liveness.rs:4748`: `afraid_memo` is built once and passed
 by `&mut` into every creature's `hazard_memory_memo` call for that tick), so
 `build_emitter_scan`'s O(roster × history) cost is paid **once per tick**,
 amortized over 50 creatures. This probe's fresh-memo-per-call design — required

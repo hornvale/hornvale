@@ -98,7 +98,7 @@ fn fact(subject: EntityId, predicate: &str, object: Value, community: EntityId, 
         object,
         place: Some(community),
         day: Some(
-            hornvale_kernel::WorldTime::new(day)
+            hornvale_kernel::WorldTime::from_std_days(day)
                 .expect("a person's day derives from an already-committed world time"),
         ),
         provenance: "person".to_string(),
@@ -249,7 +249,7 @@ mod tests {
             world.ledger.find(crate::PERSON_FOUNDED).collect();
         assert_eq!(founded.len(), 2, "every founder carries a founding fact");
         for f in &founded {
-            let day = f.day.expect("person-founded carries a day").day();
+            let day = f.day.expect("person-founded carries a day").as_std_days();
             assert_ne!(
                 day,
                 if f.subject == ids[0] { 10.0 } else { 20.0 },
@@ -285,7 +285,7 @@ mod tests {
                 .find(|f| f.predicate == p)
                 .and_then(|f| f.day)
                 .expect("every person fact carries a day")
-                .day()
+                .as_std_days()
         };
         assert_eq!(
             day_of(crate::PERSON_BORN),

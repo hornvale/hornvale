@@ -110,7 +110,7 @@ that is the difference.
 
 ## Supply
 
-318 registered tokens no situation in this corpus requires.
+324 registered tokens no situation in this corpus requires.
 
 **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires
 *and no readout consumes*; the second half is not implemented. So this list
@@ -141,6 +141,7 @@ missing half before this list can serve it.
 - `concept:coast` (terrain)
 - `concept:cold` (climate)
 - `concept:cold-upwelling` (climate)
+- `concept:content` (language)
 - `concept:coral-head` (climate)
 - `concept:coral-reef` (climate)
 - `concept:crevasse-field` (climate)
@@ -153,6 +154,7 @@ missing half before this list can serve it.
 - `concept:dire-wolf-kind` (species)
 - `concept:drink` (language)
 - `concept:drow-kind` (species)
+- `concept:eager` (language)
 - `concept:earth` (language)
 - `concept:east` (language)
 - `concept:eat` (language)
@@ -168,6 +170,7 @@ missing half before this list can serve it.
 - `concept:ford` (terrain)
 - `concept:forest-gap` (climate)
 - `concept:frost-heave` (climate)
+- `concept:frustrated` (language)
 - `concept:gallery-forest` (climate)
 - `concept:giant-constrictor-snake-kind` (species)
 - `concept:giant-crocodile-kind` (species)
@@ -190,6 +193,7 @@ missing half before this list can serve it.
 - `concept:hearth` (settlement)
 - `concept:heat` (climate)
 - `concept:help` (language)
+- `concept:helpless` (language)
 - `concept:high` (language)
 - `concept:high-elf-kind` (species)
 - `concept:hill` (terrain)
@@ -215,6 +219,7 @@ missing half before this list can serve it.
 - `concept:lightless-water` (climate)
 - `concept:little` (language)
 - `concept:look` (language)
+- `concept:lost` (language)
 - `concept:low` (language)
 - `concept:many` (language)
 - `concept:marine-snow` (climate)
@@ -271,6 +276,7 @@ missing half before this list can serve it.
 - `concept:sea` (terrain)
 - `concept:sea-elf-kind` (species)
 - `concept:sea-ice` (climate)
+- `concept:searching` (language)
 - `concept:sense` (language)
 - `concept:shadow` (language)
 - `concept:shrieker-kind` (species)

@@ -709,9 +709,31 @@ contradicts, lower ("coarse constrains fine").
   because reload re-derives from the lossless seed — never seed a chaotic
   forward-integrator from quantized ledger floats; resumption re-derives
   from the seed, and any chaotic checkpoint needs its own full-precision
-  format.
-- **No wall-clock time anywhere**. Time is `WorldTime { day: f64 }` —
-  absolute standard days.
+  format. **Time is carved out of this contract** (decision 0188, The
+  Escapement): significant-digit rounding buys constant absolute precision
+  only for a magnitude-bounded quantity, and time is unbounded, so a
+  committed day's resolution decayed with world age under this scheme: adjacent
+  storable instants were 86.4 s apart at world-year 100 and **24 hours** apart
+  at world-year 200,000, a horizon `windows/worldgen/src/hazard.rs` actually
+  constructs. (Both figures are the FULL spacing between storable values. Half
+  that — the distance you must move to change the stored number — is an equally
+  real quantity and mixing the two in one sentence is how this line read before
+  it was corrected.) `Ledger::commit`'s
+  day-quantization block is deleted outright rather than made a no-op; every
+  other quantized surface 0033 named — `Value::Number` in a committed
+  `Fact`, the lab CSV, the scene/ephemeris `f64` fields — is unchanged.
+- **No wall-clock time anywhere**. Time is `WorldTime { ticks: i64 }` — an
+  exact tick count since genesis, 100,000 ticks per standard day, one tick =
+  0.864 s (decision 0186). Negative ticks are legal (a founder can be born
+  before the history record begins, decision 0126); `TickSpan(i64)` is the
+  signed difference between two instants. Being an exact integer, `WorldTime`
+  needs no quantization at any magnitude and is a legal `BTreeMap` key
+  (`Ord`/`Eq`/`Hash` all derive). The kernel hosts one named, world-independent
+  hatch between ticks and `f64` standard days for continuous consumers
+  (astronomy, climate, lab); ticks→`f64` is lossless below ~2.47e8 years,
+  `f64`→ticks always rounds and the rounding rule is named at the call. A
+  world file written before this flip does not load (decision 0189,
+  deliberately) — regenerate it from its seed and pins.
 - No `HashMap`/`HashSet` — `BTreeMap`/`BTreeSet`/`Vec` only. Float sorting
   uses `total_cmp` with deterministic tie-breaks. (This ban and the
   wall-clock one are enforced workspace-wide by `clippy.toml`
@@ -819,11 +841,33 @@ idle. `HV_PUSH_OK=1` is the hotfix escape and the refusal names it.
 and so does a human pushing by hand there, so "am I on lefford" would have
 allowed the very landing that prompted this (`ca6f34310`, 2026-08-19) while
 blocking a legitimate hotfix from the Mac. Holding the claim answers the host
-question for free. **`pre-commit` cannot do this job at all** — verified: a
+question for free. **`pre-commit` cannot do this job at all** — a
 fast-forward merge, which is how main advances locally, creates no commit and
-fires no hook; a true merge commit fires `pre-merge-commit`, never
-`pre-commit`. The push is the only choke point every route to `origin/main`
+fires no hook. The push is the only choke point every route to `origin/main`
 passes through.
+
+**The second half of that sentence used to read "a true merge commit fires
+`pre-merge-commit`, never `pre-commit`", labelled *verified*, and it is
+false.** The Escapement measured the full matrix on git 2.50.1 in a scratch
+repo with both hooks installed under `core.hooksPath`:
+
+| merge shape | hook that fires |
+| --- | --- |
+| fast-forward | **neither** — no commit is created |
+| automatic (non-conflicted) true merge commit | `pre-merge-commit` only |
+| **conflicted** merge, resolved by hand, concluded with an explicit `git commit` | **`pre-commit`** |
+
+A conflicted merge is an ordinary `git commit` invocation as far as git is
+concerned. This is not hypothetical: a conflicted 47-commit absorption ran the
+full gate through `pre-commit` (fmt, clippy, type-audit, 3 subfloor chunks,
+3302 tests, rc=0, 50.1 s), and `scripts/hooks/` holds no `pre-merge-commit` at
+all. **The gap is real but the opposite shape from the old warning**: the
+ungated case is the CLEAN auto-merge, where nobody hand-edited anything; the
+conflicted absorption — where someone is resolving files by hand and is most
+likely to mis-resolve a generated artifact — is the one that IS gated. Worth
+knowing before deciding whether to gate by hand after an absorption. None of
+this changes the paragraph above: the push hook remains the only choke point,
+because the fast-forward row creates no commit for any hook to see.
 
 **Campaign branches absorb main at every plan-stage boundary**, not only at
 close: submit `make sluice-stage BRANCH=<branch> REF=<full-sha>`, which

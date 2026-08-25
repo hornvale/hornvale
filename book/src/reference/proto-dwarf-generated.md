@@ -55,6 +55,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `coast` | where the land meets the sea | *Sasaz | /sasaz/ |
 | `cold` | felt, biting chill | *Baxat | /baxat/ |
 | `cold-upwelling` | Cold nutrient-rich water rising from below. | *Gaxab | /gaxab/ |
+| `content` | positive, low arousal: needs met, at rest | *Tabat | /tabat/ |
 | `coral-head` | A massive coral colony standing proud of the reef. | *Xajab | /xajab/ |
 | `coral-reef` | a biome class | *Zangad | /zaŋad/ |
 | `crevasse-field` | Ice split by crevasses. | *Xashav | /xaʃav/ |
@@ -68,6 +69,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `dire-wolf-kind` | a dire wolf | *Gaxang | /gaxaŋ/ |
 | `drink` | to swallow liquid | *Nangaj | /naŋaj/ |
 | `drow-kind` | a drow | *Shavaz | /ʃavaz/ |
+| `eager` | positive, high arousal: chasing a satisfiable need | *Zaxav | /zaxav/ |
 | `earth` | the ground underfoot | *Zavag | /zavag/ |
 | `east` | the direction of increasing longitude | *Gashagav | /gaʃagav/ |
 | `eat` | to consume food | *Shadang | /ʃadaŋ/ |
@@ -83,6 +85,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `ford` | where a river runs shallow enough to cross | *Shaxas | /ʃaxas/ |
 | `forest-gap` | A break in the canopy where light reaches the ground. | *Sadax | /sadax/ |
 | `frost-heave` | Ground churned and patterned by freezing. | *Vagav | /vagav/ |
+| `frustrated` | negative: blocked with a known target out of reach | *Zasax | /zasax/ |
 | `gallery-forest` | Forest following a watercourse. | *Vataq | /vataq/ |
 | `giant-constrictor-snake-kind` | a giant constrictor snake | *Gazaz | /gazaz/ |
 | `giant-crocodile-kind` | a giant crocodile | *Sangag | /saŋag/ |
@@ -105,6 +108,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `hand` | the manipulating limb-end | *Javas | /javas/ |
 | `hearth` | the fire at the center of a home | *Xadat | /xadat/ |
 | `heat` | felt, oppressive warmth | *Naxaz | /naxaz/ |
+| `helpless` | negative and persistent: given up despite an active drive | *Qagash | /qagaʃ/ |
 | `high` | far above the ground | *Nganas | /ŋanas/ |
 | `high-elf-kind` | a high elf | *Qaxav | /qaxav/ |
 | `hill` | ground that rises above what surrounds it | *Shagag | /ʃagag/ |
@@ -128,6 +132,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `lightless-water` | Water below all light. | *Xavab | /xavab/ |
 | `little` | small in size or extent | *Danag | /danag/ |
 | `look` | to visually attend to something, near or far — `look`, `examine` | *Qashad | /qaʃad/ |
+| `lost` | negative: blocked with no target to move toward | *Jasab | /jasab/ |
 | `low` | near the ground | *Xasash | /xasaʃ/ |
 | `many` | an indefinitely large count | *Dangang | /daŋaŋ/ |
 | `marine-snow` | Organic debris drifting endlessly down. | *Zadas | /zadas/ |
@@ -181,6 +186,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `sea` | a body of salt water | *Shaqash | /ʃaqaʃ/ |
 | `sea-elf-kind` | a sea elf | *Ngatax | /ŋatax/ |
 | `sea-ice` | a biome class | *Vangang | /vaŋaŋ/ |
+| `searching` | neutral, mid arousal: seeking with a gradient | *Shangaj | /ʃaŋaj/ |
 | `sense` | to perceive another's felt bodily state — `needs` | *Xashax | /xaʃax/ |
 | `shadow` | cast dark, distinct from open gloom | *Naxav | /naxav/ |
 | `shrieker-kind` | a shrieker | *Vaxas | /vaxas/ |

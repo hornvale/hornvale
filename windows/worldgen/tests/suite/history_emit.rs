@@ -207,7 +207,10 @@ fn a_standing_tribute_relation_is_committed_as_a_dated_entity_fact() {
         fact.day,
         // The Ell: `TributeRelation::since` is a bake YEAR and `Fact.day` is a
         // standard DAY, so the stamp is the crossing of the two.
-        Some(WorldTime::new(hornvale_worldgen::ledger_day_of_bake_year(120.0)).expect("finite")),
+        Some(
+            WorldTime::from_std_days(hornvale_worldgen::ledger_day_of_bake_year(120.0))
+                .expect("finite")
+        ),
         "dated by the day the relation was established, not by `now`"
     );
     assert!(
@@ -252,9 +255,9 @@ fn end_of_life_facts_are_day_stamped_at_ended_not_founded() {
     // rather than as 328725.0/36525.0 so the two claims stay separable — this
     // test is about WHICH event dates a fact, and the unit is stated, not
     // baked into a literal.
-    let ended_day = WorldTime::new(hornvale_worldgen::ledger_day_of_bake_year(900.0))
+    let ended_day = WorldTime::from_std_days(hornvale_worldgen::ledger_day_of_bake_year(900.0))
         .expect("a bake year crosses to a finite day");
-    let founded_day = WorldTime::new(hornvale_worldgen::ledger_day_of_bake_year(100.0))
+    let founded_day = WorldTime::from_std_days(hornvale_worldgen::ledger_day_of_bake_year(100.0))
         .expect("a bake year crosses to a finite day");
 
     let is_ruin = w
@@ -330,7 +333,7 @@ fn the_present_fallback_reads_back_in_years_too() {
 }
 
 /// `present_frame` = `present_year` crossed forward into a standard day
-/// (`WorldTime::new(ledger_day_of_bake_year(present_year(world)))`) — the
+/// (`WorldTime::from_std_days(ledger_day_of_bake_year(present_year(world)))`) — the
 /// composition that used to be hand-written at
 /// `windows/worldgen/tests/repose_exposure.rs`'s TASK 7 call, reachable only
 /// from that file's `heavy:`-ignored batteries. `tools/seam-guard` reported
@@ -346,7 +349,7 @@ fn the_present_fallback_reads_back_in_years_too() {
 /// SCALED by `Years::DAYS_PER_YEAR`, not the bare year reinterpreted as a
 /// day.** Dropping the crossing (`identity(0)` on `ledger_day_of_bake_year`
 /// — exactly the mutation `tools/seam-guard` applies) makes `present_frame`
-/// return `WorldTime::new(900.0)` instead of `WorldTime::new(900.0 *
+/// return `WorldTime::from_std_days(900.0)` instead of `WorldTime::from_std_days(900.0 *
 /// 365.25)`, which both assertions below catch.
 #[test]
 fn present_frame_crosses_the_bake_year_by_days_per_year() {
@@ -364,7 +367,7 @@ fn present_frame_crosses_the_bake_year_by_days_per_year() {
     );
 
     let frame = hornvale_worldgen::present_frame(&w);
-    let expected = WorldTime::new(hornvale_worldgen::ledger_day_of_bake_year(900.0))
+    let expected = WorldTime::from_std_days(hornvale_worldgen::ledger_day_of_bake_year(900.0))
         .expect("a bake year crosses to a finite day");
     assert_eq!(
         frame, expected,
@@ -377,11 +380,11 @@ fn present_frame_crosses_the_bake_year_by_days_per_year() {
     // check that does not depend on `WorldTime`'s `PartialEq` alone to carry
     // the finding.
     assert!(
-        frame.day() > year * 300.0,
+        frame.as_std_days() > year * 300.0,
         "the day ({}) must be the bake year ({year}) scaled by \
          Years::DAYS_PER_YEAR (365.25), not the bare year reinterpreted as a \
          day",
-        frame.day()
+        frame.as_std_days()
     );
 }
 

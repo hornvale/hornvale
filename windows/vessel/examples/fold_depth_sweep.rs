@@ -322,7 +322,8 @@ fn agent_at(entity: EntityId, i: usize) -> Fact {
         object: Value::Text(room_to_text(&room_for(i))),
         place: None,
         day: Some(
-            WorldTime::new(i as f64 + 1.0).expect("i + 1 is finite for every depth in DEPTHS"),
+            WorldTime::from_std_days(i as f64 + 1.0)
+                .expect("i + 1 is finite for every depth in DEPTHS"),
         ),
         provenance: "synthetic".to_string(),
     }
@@ -337,7 +338,7 @@ fn drank_at(entity: EntityId, day: f64) -> Fact {
         predicate: DRANK.to_string(),
         object: Value::Flag(true),
         place: None,
-        day: Some(WorldTime::new(day).expect("day is finite")),
+        day: Some(WorldTime::from_std_days(day).expect("day is finite")),
         provenance: "synthetic".to_string(),
     }
 }
@@ -575,7 +576,7 @@ fn run_sweep(
             let ledger = synthetic_ledger(entity, depth, reset_every, registry);
             // One past the last posted day, so the fold walks every one of
             // this depth's `depth` segments.
-            let t = WorldTime::new(depth as f64 + 1.0).expect("depth + 1 is finite");
+            let t = WorldTime::from_std_days(depth as f64 + 1.0).expect("depth + 1 is finite");
 
             #[allow(clippy::disallowed_types)] // benchmark harness
             let t0 = Instant::now();

@@ -779,11 +779,31 @@ fn homophony_count_is_measured_and_pinned() {
     // 3.345x (19.528/5.839), against the 3.2699x recorded at the prior regen
     // — WIDENED, not narrowed, so the falsification-threshold warning above
     // stands unspent.
+    //
+    // The Confidant (Arc III of The Bridle, re-pin verified against `main`
+    // before touching a literal): six felt-state concepts were registered
+    // and each people given a `MindVector`-governed derived exposure to some
+    // of them (`windows/lab/src/metrics.rs`'s `FELT_STATE_PAIRS`), so six new
+    // Root lexicon entries can enter a species' dictionary. `homophony_count`
+    // (`windows/lab/src/metrics.rs`) is `\u{2211} n*(n-1)/2` over surface-form
+    // buckets across the WHOLE lexicon, not a per-name statistic — so a
+    // handful of new Root entries move it combinatorially (each new entry
+    // that lands in an already-populated bucket adds a pair per existing
+    // occupant), unlike the roughly-linear name-length/syllable/collision-
+    // rate rows below, which moved by about one part in ten thousand at this
+    // same regen. Goblin's own mean is UNMOVED at 5.839 (its `MindVector`
+    // scalars evidently cross none of the three midpoints, so it gains no
+    // new Steeped word), while hobgoblin 5.632 -> 5.982, bugbear
+    // 19.528 -> 21.393, kobold 5.688 -> 6.113. The claim this row guards is
+    // re-checked, not assumed: bugbear still leads goblin, and by MORE than
+    // before — 3.664x (21.393/5.839) against 3.345x, and 3.576x over
+    // hobgoblin (21.393/5.982) against 3.4675x — both margins WIDENED, so the
+    // falsification-threshold warning above stands unspent.
     assert!((mg - 5.839).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 5.632).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 19.528).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    // kobold 5.816 -> 5.688 (same Burr regen as above).
-    assert!((mk - 5.688).abs() < 1e-9, "kobold mean drifted: {mk}");
+    assert!((mh - 5.982).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 21.393).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    // kobold 5.688 -> 6.113 (The Confidant's re-pin, same mechanism as above).
+    assert!((mk - 6.113).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

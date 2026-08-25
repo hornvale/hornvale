@@ -1,6 +1,10 @@
 # 0230. A query bound is quantized to read a quantized store
 
-**Status:** Accepted (2026-08-24) · **Decider:** Nathan · **Relates:**
+**Status:** Superseded by
+[0191](0191-an-exact-store-needs-no-quantized-query-bound.md) (2026-08-24;
+accepted 2026-08-24 — The Escapement removed the quantized store this record's
+premise rests on; the ruling was correct on the tree it was made against) ·
+**Decider:** Nathan · **Relates:**
 [0033](0033-serialized-floats-are-quantized-for-cross-platform-determinism.md)
 (the rule this narrows) · [0126](0126-fact-day-is-a-typed-world-time.md)
 (what `Fact.day` is) · [0069](0069-fine-position-is-never-serialized.md) (why a
