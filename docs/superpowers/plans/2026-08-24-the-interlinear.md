@@ -465,11 +465,22 @@ fn adjuncts_reproduce_the_modifier_tail_byte_for_byte() {
 ```
 
       Then re-key `common_constructions()` from `frame: Frame` to
-      `predicate: &'static str`, with the single existing entry keyed `"is-a"`,
-      and change `Part::Complement`'s realization to render `spec.object`
-      through the same resolution `surface_complement` already performs for a
-      `Concept`. Keep `surface_complement`'s naive plural — number is the next
-      campaign and this one must not absorb it.
+      `predicate: &'static str`, with the single existing entry keyed `"is-a"`.
+
+      **`Part::Complement` renders `spec.object`, and every `Argument` variant
+      has an answer** — no variant panics, because a clause whose object is a
+      quantity is a sentence we cannot say *yet*, not a crash:
+
+      | variant | renders as |
+      |---|---|
+      | `Concept(id)` | exactly as today — `surface_complement(vocab, id, number)` |
+      | `Name(text)` | verbatim, unresolved |
+      | `Count(n)` | `cardinal(n)` |
+      | `Quantity(x)` | `quantity(x)` |
+
+      Every caller today passes a `Concept`, so no committed byte moves.
+      Keep `surface_complement`'s naive plural — number is the next campaign
+      and this one must not absorb it.
 
       Also add:
 
@@ -508,9 +519,11 @@ fn adjuncts_reproduce_the_modifier_tail_byte_for_byte() {
             }
 ```
 
-- [ ] **Step 5: Fix every construction site** the compiler names — each
-      `ClauseSpec { .. modifiers: ..}` becomes `adjuncts: Vec::new()` unless a
-      later task gives it real adjuncts. `cargo check -p hornvale-language --all-targets`.
+- [ ] **Step 5: Fix every construction site** the compiler names. Each site
+      loses `frame` and `complement_concept` and gains all three of
+      `predicate: "is-a".into()`, `object: Argument::Concept(<the old
+      complement_concept>)`, and `adjuncts: Vec::new()` — unless a later task
+      gives it real adjuncts. `cargo check -p hornvale-language --all-targets`.
 - [ ] **Step 6: Run the crate suite.**
       `cargo nextest run -p hornvale-language --no-fail-fast > /tmp/hv-lang.txt 2>&1; echo "exit=$?"`
       then grep it. Expected: PASS.
@@ -772,7 +785,10 @@ followup; do not do it here.
 ### Task 8: The target — a real occupation, both ways
 
 **Files:**
-- Create: `windows/almanac/tests/suite/interlinear.rs` (+ declare it)
+- Create: `windows/almanac/tests/suite/interlinear.rs` (+ declare it in
+  `windows/almanac/tests/suite.rs`)
+- Modify: `domains/language/src/clause.rs` (Step 2 adds four role constructions
+  and their tests)
 
 **Interfaces:**
 - Consumes: everything above. Lives in `windows/almanac` because a **window**
@@ -828,9 +844,16 @@ world.
       otherwise. Assert the count of covered entries equals a frozen constant,
       and that constant is small.
 - [ ] **Step 2: Write the report** to `docs/audits/sentence-coverage.md`: total
-      entries, covered, not-yet, and the per-demand tally. Add the path to
-      `docs/generated-paths.txt` **and `git add` it in the same commit** — a
-      `git diff --exit-code` against an untracked path is silently vacuous.
+      entries, covered, not-yet, and the per-demand tally.
+
+      **Do NOT add it to `docs/generated-paths.txt`.** Nothing in
+      `scripts/regenerate-artifacts.sh` writes it, so a drift check over it
+      would be silently vacuous — and the precedent is two days old:
+      `docs/audits/lexicon-inventory.tsv` is written by a test under
+      `HV_LEXICON_REBASELINE=1` and is deliberately not declared. Follow it
+      exactly: the report is rewritten under `HV_SENTENCE_REBASELINE=1`, and the
+      test otherwise asserts the covered count against a frozen constant, so the
+      number is guarded even if the prose file goes stale.
 - [ ] **Step 3: Run, `cargo fmt`, `make gate-commit`, commit.**
 
 **Success:** a number that is honestly near zero, and a map of the program.
