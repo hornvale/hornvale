@@ -2525,6 +2525,23 @@ its honest size.
    of architecture guarantees the sparse, focalized, unreliable account with a
    teller that would not. The human read is the real gate, and it is allowed
    to withhold a pass.
+   **Re-scored by [The Confidant](./chronicle/the-confidant.md) (2026-08-25):
+   one of the three named guardrails now has a mechanism, and the honest
+   scoring of that is narrower than it sounds.** *Unreliability* had never been
+   built. Every account the world produced was either true or absent. There is
+   now a teller whose account diverges from the truth in two independent,
+   inspectable ways — it cannot perceive what its own arbitration suppressed,
+   and its culture may hold no word for what it feels — and the divergence is
+   *derived*, from psychological attributes authored before the question
+   existed, rather than authored as a distribution of unreliability. That is
+   what makes it a property of the teller rather than a randomizer. The
+   *focalization* guardrail arrives with it, since an account with a speaker is
+   focalized by construction. **What has not moved is the bet.** This is one
+   creature answering one question about itself, not a historiography, and
+   *worth reading* was never gated on whether unreliability was expressible.
+   What changes is that the guardrail is no longer a promissory note, so the
+   taste half can now be judged against something that exists. The row stays
+   low-confidence and the human read stays the gate.
 
 ## The standing horizon
 
@@ -3587,3 +3604,40 @@ point it misses against was a free parameter frozen before the measurement, not 
 substrate fact. So "zero admiration" scores the current axes and the current
 neutral point together; it is a floor beneath the thread, not a wall.
 
+
+### A constant column looks exactly like a well-behaved one (2026-08-25)
+
+[The Confidant](./chronicle/the-confidant.md) staked no headline bet of its
+own — it built an instrument — and the reason it belongs in this chapter is
+what the instrument did to the accounting when it was pointed at itself.
+
+Three measures of conceptual deficiency were registered as forty-five census
+columns, one family per people. A thousand-seed run returned **every one of
+them constant on every row**. The mechanism was then checked rather than the
+number accepted, because constant-across-seeds has one benign cause and one
+broken one: these read the real per-world vocabulary and then branch on
+whether the culture *has* the concept, which is exposure-determined and
+derives from authored species attributes. The word's form varies with the
+seed; its existence does not. **Correctly seed-invariant, not a broken read.**
+
+The entry above records that a column's value being stable across campaigns is
+evidence about the world only if something independent establishes the column
+can move at all. This is that observation's twin, one level down and cheaper
+to check: a column can be constant *within a single run*, and it will look
+identical in the drift check to the healthiest column in the table. It cannot
+detect drift, which is the census's whole job — it moves all thousand rows at
+once or never — and it will keep costing whatever it costs, forever, on every
+world of every all-metrics study. Both halves of the diagnosis were paid for
+in canonical-box time, six runs against an authorisation given for one.
+
+The remedy is one question asked before registration rather than after: *does
+this column take more than one value across the seeds it will be computed on?*
+The measures themselves were not wrong and did not change — they moved home,
+into a window that computes them once and publishes fifteen rows (decision
+0260). The precedent for that home had been in the repository the whole time.
+
+**What this does to the chapter's own confidence accounting.** Nothing in the
+standing gate asks a new metric whether it can vary, and nothing asks an
+existing one whether it still does. Until something does, a census column's
+stability is a claim about the instrument and the world jointly, and this
+chapter should not read a flat column as agreement between them.

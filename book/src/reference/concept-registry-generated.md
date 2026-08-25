@@ -178,6 +178,7 @@
 | `coast` | terrain | terrain | where the land meets the sea |
 | `cold` | climate | quality | felt, biting chill |
 | `cold-upwelling` | climate | substance | Cold nutrient-rich water rising from below. |
+| `content` | language | affect | positive, low arousal: needs met, at rest |
 | `coral-head` | climate | substance | A massive coral colony standing proud of the reef. |
 | `coral-reef` | climate | terrain | a biome class |
 | `crevasse-field` | climate | substance | Ice split by crevasses. |
@@ -191,6 +192,7 @@
 | `dire-wolf-kind` | species | living | a dire wolf |
 | `drink` | language | act | to swallow liquid |
 | `drow-kind` | species | living | a drow |
+| `eager` | language | affect | positive, high arousal: chasing a satisfiable need |
 | `earth` | language | terrain | the ground underfoot |
 | `east` | language | quality | the direction of increasing longitude |
 | `eat` | language | act | to consume food |
@@ -206,6 +208,7 @@
 | `ford` | terrain | terrain | where a river runs shallow enough to cross |
 | `forest-gap` | climate | substance | A break in the canopy where light reaches the ground. |
 | `frost-heave` | climate | substance | Ground churned and patterned by freezing. |
+| `frustrated` | language | affect | negative: blocked with a known target out of reach |
 | `gallery-forest` | climate | substance | Forest following a watercourse. |
 | `giant-constrictor-snake-kind` | species | living | a giant constrictor snake |
 | `giant-crocodile-kind` | species | living | a giant crocodile |
@@ -229,6 +232,7 @@
 | `hearth` | settlement | social | the fire at the center of a home |
 | `heat` | climate | quality | felt, oppressive warmth |
 | `help` | language | act | to list the operator's own instructions — `!help` |
+| `helpless` | language | affect | negative and persistent: given up despite an active drive |
 | `high` | language | quality | far above the ground |
 | `high-elf-kind` | species | living | a high elf |
 | `hill` | terrain | terrain | ground that rises above what surrounds it |
@@ -254,6 +258,7 @@
 | `lightless-water` | climate | substance | Water below all light. |
 | `little` | language | quality | small in size or extent |
 | `look` | language | act | to visually attend to something, near or far — `look`, `examine` |
+| `lost` | language | affect | negative: blocked with no target to move toward |
 | `low` | language | quality | near the ground |
 | `many` | language | quality | an indefinitely large count |
 | `marine-snow` | climate | substance | Organic debris drifting endlessly down. |
@@ -313,6 +318,7 @@
 | `sea` | terrain | terrain | a body of salt water |
 | `sea-elf-kind` | species | living | a sea elf |
 | `sea-ice` | climate | terrain | a biome class |
+| `searching` | language | affect | neutral, mid arousal: seeking with a gradient |
 | `sense` | language | act | to perceive another's felt bodily state — `needs` |
 | `shadow` | language | quality | cast dark, distinct from open gloom |
 | `shrieker-kind` | species | living | a shrieker |

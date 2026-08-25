@@ -46,6 +46,12 @@ pub enum ConceptKind {
     /// creature *does*, not a property it *has*, and the GOAP action roster
     /// reconciles against exactly this class.
     Act,
+    /// A felt state a creature undergoes — content, frustrated, lost. Distinct
+    /// from [`ConceptKind::Quality`], which an unclassed felt state would
+    /// otherwise fall under: `frustrated` is something a creature *undergoes*,
+    /// not a property it *has*, and the vessel window's affect circumplex
+    /// (`AffectLabel`) reconciles against exactly this class.
+    Affect,
 }
 
 /// Definition of a named concept: the word-level vocabulary entry

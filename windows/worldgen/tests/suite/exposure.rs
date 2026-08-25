@@ -1601,3 +1601,57 @@ fn no_other_domain_claims_an_extradiegetic_concept_name() {
         );
     }
 }
+
+/// Task 4b: felt-state exposure must DERIVE from a species' `MindVector`
+/// (spec §5.1) rather than fall through `exposure_of_impl`'s catch-all —
+/// which is what every one of `felt_state_pack`'s six concepts did before
+/// this task, for every species in every world (Task 4's own finding).
+/// Behavioural red: two authored peoples whose `MindVector`s differ must
+/// come out with DIFFERENT felt-state exposure, not merely different
+/// values in a table nobody reads through `exposure_from`.
+///
+/// goblin's `MindVector` (`domains/species/src/lib.rs`'s `psyche_registry`)
+/// sits exactly at the manikin's neutral midpoint on all three scalars
+/// (`threat_response`/`deliberation_latency`/`time_horizon` == 0.5), so the
+/// mapping's doc comment on `exposure_of_impl` predicts no pole
+/// predominates and all six stay Unknown. kobold's is `0.8`/`0.7`/`0.8` --
+/// clearing the midpoint on the "high" side on every scalar -- so the same
+/// mapping predicts exactly `frustrated`/`content`/`helpless` Steeped and
+/// `eager`/`lost`/`searching` left Unknown.
+#[test]
+fn felt_state_exposure_derives_from_mind_vector_and_differs_by_species() {
+    let w = world();
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    let goblin = exposure_from(&w, "goblin", &terrain, &climate).unwrap();
+    let kobold = exposure_from(&w, "kobold", &terrain, &climate).unwrap();
+
+    for (concept, _doc) in hornvale_language::felt_state_pack() {
+        assert!(
+            matches!(goblin.get(*concept), Some(ExposureClass::Unknown { .. })),
+            "expected goblin's neutral MindVector to leave '{concept}' Unknown, got {:?}",
+            goblin.get(*concept)
+        );
+    }
+
+    for concept in ["frustrated", "content", "helpless"] {
+        assert!(
+            matches!(kobold.get(concept), Some(ExposureClass::Steeped)),
+            "expected kobold's high-side MindVector to Steep '{concept}', got {:?}",
+            kobold.get(concept)
+        );
+    }
+    for concept in ["eager", "lost", "searching"] {
+        assert!(
+            matches!(kobold.get(concept), Some(ExposureClass::Unknown { .. })),
+            "expected kobold to stay Unknown in the low-side pole '{concept}', got {:?}",
+            kobold.get(concept)
+        );
+    }
+
+    assert_ne!(
+        goblin.get("content"),
+        kobold.get("content"),
+        "goblin (neutral) and kobold (high deliberation_latency) must differ on 'content'"
+    );
+}

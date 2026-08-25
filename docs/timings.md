@@ -2561,6 +2561,23 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T13:19:24Z | sluice:outboard | 39.476 | 23.297 | 32.213 | 1.41 | 0 | b48505c47 |  | lefford | 40 |
 | 2026-08-24T13:26:34Z | sluice:gate | 429.438 | 11612.714 | 492.426 | 28.19 | 0 | 5220517ee |  | lefford | 40 |
 | 2026-08-24T13:33:38Z | sluice:clients | 423.516 | 4108.800 | 61.388 | 9.85 | 0 | 0b0fb182f |  | lefford | 40 |
+| 2026-08-24T15:32:34Z | gate-commit | 109.820 | 610.082 | 47.207 | 5.99 | 0 | 8db07eeb6 | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-24T15:36:45Z | gate-commit | 19.185 | 46.732 | 11.904 | 3.06 | 0 | 8db07eeb6 | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-24T16:01:03Z | gate-commit | 11.478 | 11.176 | 0.227 | 0.99 | 0 | 3eee6e59a | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-24T16:02:41Z | rebaseline | 62.783 | 233.231 | 12.187 | 3.91 | 0 | 3eee6e59a | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-24T16:06:44Z | gate-commit | 79.494 | 513.313 | 47.915 | 7.06 | 0 | 3eee6e59a | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-24T16:08:06Z | gate-commit | 19.061 | 46.471 | 11.875 | 3.06 | 0 | 3eee6e59a | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-24T16:28:23Z | gate-commit | 39.423 | 84.767 | 61.605 | 3.71 | 0 | 2176c0209 | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-24T16:29:50Z | gate-commit | 19.562 | 47.025 | 12.159 | 3.03 | 0 | 2176c0209 | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-24T16:44:59Z | rebaseline | 78.127 | 247.359 | 13.739 | 3.34 | 0 | 927c8bda5 | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-24T16:49:37Z | gate-commit | 50.976 | 133.859 | 59.341 | 3.79 | 0 | 927c8bda5 | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-24T16:50:22Z | gate-commit | 22.078 | 48.678 | 13.076 | 2.80 | 0 | 927c8bda5 | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-24T16:54:23Z | gate-commit | 21.099 | 48.034 | 12.916 | 2.89 | 0 | 927c8bda5 | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-24T17:22:14Z | gate-commit | 36.215 | 95.233 | 24.088 | 3.29 | 0 | fa47ba7a5 | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-24T17:23:36Z | gate-commit | 32.119 | 49.779 | 13.089 | 1.96 | 0 | fa47ba7a5 | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-24T17:50:02Z | gate-commit | 7.202 | 6.811 | 3.282 | 1.40 | 0 | 01ee7a5c0 | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-24T17:51:08Z | gate-commit | 31.069 | 93.628 | 22.958 | 3.75 | 0 | 01ee7a5c0 | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-24T17:54:04Z | gate-commit | 42.249 | 53.330 | 13.607 | 1.58 | 0 | 01ee7a5c0 | campaign/the-confidant | MacBookPro | 10 |
 | 2026-08-24T14:36:42Z | gate-commit | 121.616 | 646.957 | 96.424 | 6.11 | 0 | 0b4850dfb | fix/marquee-ticks-on-time | MacBookPro | 10 |
 | 2026-08-24T14:37:02Z | gate-commit | 20.139 | 47.282 | 12.183 | 2.95 | 0 | 0b4850dfb | fix/marquee-ticks-on-time | MacBookPro | 10 |
 | 2026-08-24T15:23:42Z | gate-commit | 32.680 | 50.904 | 12.959 | 1.95 | 0 | 70c05214f | fix/marquee-ticks-on-time | MacBookPro | 10 |
@@ -2643,12 +2660,19 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T18:06:35Z | sluice:outboard | 39.070 | 24.484 | 38.130 | 1.60 | 0 | a8c4d956d |  | lefford | 40 |
 | 2026-08-24T18:12:49Z | sluice:gate | 374.825 | 10384.171 | 367.906 | 28.69 | 0 | 941938956 |  | lefford | 40 |
 | 2026-08-24T18:19:44Z | sluice:clients | 414.662 | 5191.040 | 73.323 | 12.70 | 0 | 0240b5055 |  | lefford | 40 |
+| 2026-08-24T21:53:02Z | gate-commit | 184.120 | 630.440 | 113.969 | 4.04 | 0 | cfa3774b9 | campaign/the-confidant | MacBookPro | 10 |
 | 2026-08-24T21:34:36Z | rebaseline | 71.943 | 239.632 | 10.455 | 3.48 | 0 | 061473e3f | campaign/the-lexicon-of-place | MacBookPro | 10 |
 | 2026-08-24T21:36:31Z | gate-commit | 29.069 | 51.170 | 12.324 | 2.18 | 0 | b639666e8 | campaign/the-lexicon-of-place | MacBookPro | 10 |
 | 2026-08-24T21:50:30Z | sluice:artifacts | 138.465 | 1330.157 | 66.974 | 10.09 | 0 | ea436c227 |  | lefford | 40 |
 | 2026-08-24T21:51:13Z | sluice:outboard | 42.556 | 29.597 | 42.089 | 1.68 | 0 | e5772b897 |  | lefford | 40 |
 | 2026-08-24T21:58:38Z | sluice:gate | 444.452 | 12266.248 | 507.369 | 28.74 | 0 | 3e36028b2 |  | lefford | 40 |
 | 2026-08-24T22:05:56Z | sluice:clients | 438.347 | 5447.220 | 100.208 | 12.66 | 0 | 1a021d49e |  | lefford | 40 |
+| 2026-08-24T22:47:32Z | gate-commit | 62.772 | 104.251 | 121.687 | 3.60 | 0 | 140d4d45e | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-24T22:52:27Z | gate-commit | 24.717 | 48.701 | 13.034 | 2.50 | 0 | 140d4d45e | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-24T23:05:52Z | gate-commit | 72.261 | 151.163 | 30.311 | 2.51 | 0 | f16659117 | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-24T23:08:08Z | gate-commit | 32.233 | 57.015 | 13.026 | 2.17 | 0 | f16659117 | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-24T23:18:02Z | game-check | 588.605 | 2213.804 | 21.894 | 3.80 | 0 | f16659117 | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-24T23:19:19Z | gate-commit | 27.162 | 50.182 | 12.627 | 2.31 | 0 | f16659117 | campaign/the-confidant | MacBookPro | 10 |
 | 2026-08-24T22:27:07Z | gate-commit | 33.222 | 87.253 | 37.142 | 3.74 | 0 | b4f886ebd | campaign/the-gossan | MacBookPro | 10 |
 | 2026-08-24T22:30:37Z | gate-commit | 26.455 | 51.270 | 14.362 | 2.48 | 0 | 861f6ce90 | campaign/the-gossan | MacBookPro | 10 |
 | 2026-08-24T22:39:40Z | gate-commit | 42.207 | 53.353 | 13.097 | 1.57 | 0 | 91ccff8ba | campaign/the-gossan | MacBookPro | 10 |
@@ -2656,6 +2680,11 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T22:55:17Z | sluice:outboard | 38.935 | 24.010 | 38.371 | 1.60 | 0 | cc87d7008 |  | lefford | 40 |
 | 2026-08-24T23:02:23Z | sluice:gate | 424.945 | 11790.017 | 476.691 | 28.87 | 0 | 38663deca |  | lefford | 40 |
 | 2026-08-24T23:09:33Z | sluice:clients | 430.299 | 5298.559 | 84.678 | 12.51 | 0 | 96548b5b1 |  | lefford | 40 |
+| 2026-08-25T00:08:29Z | gate-commit | 27.441 | 74.810 | 19.198 | 3.43 | 0 | 0200d977c | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-25T00:11:38Z | gate-commit | 28.322 | 65.930 | 18.299 | 2.97 | 0 | 0200d977c | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-25T00:12:43Z | rebaseline | 59.522 | 235.257 | 12.190 | 4.16 | 0 | 0200d977c | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-25T00:22:27Z | gate-commit | 19.770 | 47.961 | 11.894 | 3.03 | 0 | 0200d977c | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-25T00:23:42Z | gate-commit | 26.521 | 60.715 | 22.784 | 3.15 | 0 | 0200d977c | campaign/the-confidant | MacBookPro | 10 |
 | 2026-08-24T22:58:04Z | rebaseline | 56.722 | 233.210 | 11.254 | 4.31 | 0 | 2d66a91f5 | passage/one-word-per-concept | MacBookPro | 10 |
 | 2026-08-24T23:16:14Z | rebaseline | 63.086 | 235.482 | 10.973 | 3.91 | 0 | 2d66a91f5 | passage/one-word-per-concept | MacBookPro | 10 |
 | 2026-08-24T23:17:56Z | gate-commit | 30.155 | 61.421 | 30.854 | 3.06 | 0 | 2d66a91f5 | passage/one-word-per-concept | MacBookPro | 10 |
@@ -2665,8 +2694,17 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T23:58:08Z | sluice:outboard | 39.507 | 24.065 | 36.618 | 1.54 | 0 | 3746a5655 |  | lefford | 40 |
 | 2026-08-25T00:04:44Z | sluice:gate | 396.233 | 10615.410 | 420.804 | 27.85 | 0 | 235cc075b |  | lefford | 40 |
 | 2026-08-25T00:11:45Z | sluice:clients | 420.802 | 5290.572 | 74.777 | 12.75 | 0 | 2d0d050f8 |  | lefford | 40 |
+| 2026-08-25T00:31:49Z | gate-commit | 56.949 | 170.878 | 71.073 | 4.25 | 0 | 249b0162d | campaign/the-confidant | MacBookPro | 10 |
 | 2026-08-25T00:37:36Z | gate-commit | 140.262 | 2735.801 | 222.937 | 21.09 | 0 | dac9c930f | fix/sluice-request-accepts-census | lefford | 40 |
 | 2026-08-25T00:38:48Z | sluice:artifacts | 65.726 | 554.660 | 26.847 | 8.85 | 0 | d23affb00 |  | lefford | 40 |
 | 2026-08-25T00:39:27Z | sluice:outboard | 38.358 | 24.105 | 37.073 | 1.59 | 0 | 3447d3a7f |  | lefford | 40 |
 | 2026-08-25T00:45:34Z | sluice:gate | 366.711 | 10361.278 | 357.276 | 29.23 | 0 | 10e7d1135 |  | lefford | 40 |
 | 2026-08-25T00:52:31Z | sluice:clients | 417.028 | 5192.015 | 69.550 | 12.62 | 0 | 1a6b4ddaa |  | lefford | 40 |
+| 2026-08-25T00:54:12Z | gate-commit | 19.434 | 48.071 | 11.951 | 3.09 | 0 | c3fda3e5d | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-25T01:10:43Z | census | 909.459 | 29461.697 | 317.291 | 32.74 | 0 | 34365155e |  | lefford | 40 |
+| 2026-08-25T01:36:47Z | gate-commit | 49.423 | 142.522 | 61.729 | 4.13 | 0 | 3e49a8ed1 | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-25T01:39:20Z | gate-commit | 20.896 | 29.571 | 7.837 | 1.79 | 0 | 3e49a8ed1 | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-25T01:52:47Z | gate-commit | 14.946 | 25.791 | 5.020 | 2.06 | 0 | 3e49a8ed1 | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-25T12:46:55Z | gate-commit | 19.899 | 44.926 | 10.307 | 2.78 | 0 | ca1e6851d | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-25T12:48:37Z | gate-commit | 19.494 | 48.273 | 11.729 | 3.08 | 0 | ca1e6851d | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-25T13:04:50Z | gate-commit | 19.545 | 48.188 | 12.159 | 3.09 | 0 | ca1e6851d | campaign/the-confidant | MacBookPro | 10 |

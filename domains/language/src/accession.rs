@@ -442,6 +442,24 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "chart", "help", "identify", "know", "lens", "look", "provoke", "read", "recount", "sense",
         "soothe", "survey", "wait", "write",
     ],
+    // Epoch 12 — The Confidant (2026-08-24), Task 3: the six felt states of
+    // the vessel window's affect circumplex (`AffectLabel`, spec §7),
+    // registered so a culture can have — or lack — a word for one, the same
+    // shape the spectral classes (epoch 6) and the action suite (epoch 11)
+    // already use. One concept per variant
+    // (`hornvale_language::felt_state_pack`); kept in step with
+    // `AffectLabel` by a test in `windows/vessel`, not by an import, because
+    // a domain cannot depend on a window (`domains/CLAUDE.md`'s one rule).
+    // Appended, never merged into an earlier cohort, per this module's
+    // absolute rule.
+    &[
+        "content",
+        "eager",
+        "frustrated",
+        "helpless",
+        "lost",
+        "searching",
+    ],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or

@@ -145,6 +145,8 @@ usage:
   hornvale lab domesday                    render the Domesday survey (book/src/domesday/) from the committed census
   hornvale lab anomalies [--seed N]        render the anomaly report (book/src/domesday/anomalies.md); --seed N prints
                                             one world's report instead, writing nothing
+  hornvale lab confidant                   render The Confidant's felt-state reportability report (world-invariant,
+                                            builds its own Seed(42); docs/audits/the-confidant-report.md)
   hornvale ci-record                       record this run's durations as the host baseline
 
 sky flags (shared by new and scout):
@@ -1521,7 +1523,7 @@ fn cmd_book(args: &[String]) -> Result<(), String> {
 
 /// Dispatch `lab` subcommands: `run <PATH>`, `diff <STUDY> <OLD_CSV> <NEW_CSV>`,
 /// `backfill-schema <STUDY_JSON> <ROWS_CSV>`, `list-metrics`, `domesday`,
-/// `anomalies [--seed N]`, and `claim-status`.
+/// `anomalies [--seed N]`, `confidant`, and `claim-status`.
 fn cmd_lab(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
         Some("run") => cmd_lab_run(args),
@@ -1530,6 +1532,7 @@ fn cmd_lab(args: &[String]) -> Result<(), String> {
         Some("list-metrics") => cmd_lab_list_metrics(),
         Some("domesday") => cmd_lab_domesday(),
         Some("anomalies") => cmd_lab_anomalies(args),
+        Some("confidant") => cmd_lab_confidant(),
         Some("claim-status") => {
             // Answers "is a heavy run holding the box right now?" without
             // ps | grep (decision 0081). `scripts/census-run.sh status` and
@@ -1540,7 +1543,7 @@ fn cmd_lab(args: &[String]) -> Result<(), String> {
         }
         Some(other) => Err(format!("lab: unknown subcommand '{other}'\n{}", usage())),
         None => Err(format!(
-            "lab: requires a subcommand (run <PATH>|diff <STUDY> <OLD_CSV> <NEW_CSV>|backfill-schema <STUDY_JSON> <ROWS_CSV>|list-metrics|domesday|anomalies [--seed N]|claim-status)\n{}",
+            "lab: requires a subcommand (run <PATH>|diff <STUDY> <OLD_CSV> <NEW_CSV>|backfill-schema <STUDY_JSON> <ROWS_CSV>|list-metrics|domesday|anomalies [--seed N]|confidant|claim-status)\n{}",
             usage()
         )),
     }
@@ -1639,6 +1642,23 @@ fn cmd_lab_backfill_schema(args: &[String]) -> Result<(), String> {
 
 fn cmd_lab_list_metrics() -> Result<(), String> {
     print!("{}", hornvale_lab::render_metric_list());
+    Ok(())
+}
+
+/// Render The Confidant's report (Task 7 reshape): fifteen felt-state
+/// reportability rows, one per `hornvale_species::society_registry()`
+/// people. Prints to stdout, like every other `render`-shaped `lab`
+/// subcommand — `scripts/regenerate-artifacts.sh` owns the `>` redirect
+/// into the committed `docs/audits/the-confidant-report.md`. Builds its own
+/// `Seed(42)` world internally (a Group C artifact in that script's
+/// classification, the same shape as the `first_light` example): the values
+/// are world-invariant (see `hornvale_lab::render_confidant_report`'s own
+/// doc), so no `--world`/`--seed` flag is needed here.
+fn cmd_lab_confidant() -> Result<(), String> {
+    print!(
+        "{}",
+        hornvale_lab::render_confidant_report().map_err(|e| e.to_string())?
+    );
     Ok(())
 }
 
