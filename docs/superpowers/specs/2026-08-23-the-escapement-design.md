@@ -60,7 +60,7 @@ not merely day from night, but any two moments within the same day.
 The same decay reaches a cross-repo schema. `scene/eclipses/v1`
 (`windows/scene/src/lib.rs`) emits `day`, `from_day` and `until_day` as bare
 `f64` under `quantize_serde::f64_field`. An eclipse is a minutes-long event;
-at world-year 20,000 its emitted time is good to 1.2 hours.
+at world-year 20,000 its emitted time is good to 2.4 hours.
 
 ### The second motivation, found independently by another campaign
 
@@ -193,7 +193,7 @@ Measured, not argued: instrumenting `local_day` to compare the old and fixed
 fraction formulas while building a single seed-267 world (`hornvale new`)
 found **1,293,003 fraction divergences out of 2,776,344 probe calls, every
 one at `local < 0`, zero at `local >= 0`**
-(`.superpowers/sdd/2026-08-23-the-escapement/census-attribution.md` has the
+(`docs/audits/the-escapement-census-attribution.md` has the
 full instrumentation and backtrace). The negative path was not a corner case
 sitting behind an unreachable guard — it was the common case for the early
 part of every year scan, on almost every world the domain has ever built.
@@ -282,8 +282,26 @@ magnitude; it is that it amends a constitutional rule and moves committed bytes.
 **100,000 ticks per standard day** — one tick = 0.864 s. The constant is
 *promoted*, not invented: it is `BASE_TICKS_PER_STD_DAY` in
 `windows/vessel/src/clock.rs`, already tested, already the clock vessel runs
-on. Promoting it means vessel's clock becomes the kernel's clock and the
-lossy `days_of` bridge is deleted rather than moved.
+on. Promoting it means the kernel's instant and vessel's scheduler beat at
+the same rate, so no *scale* conversion sits between them.
+
+**What promotion did not do — corrected after the fact.** An earlier draft of
+this section claimed the promotion made "vessel's clock become the kernel's
+clock" and that "the lossy `days_of` bridge is deleted rather than moved."
+Neither happened, and the merged tree is the evidence:
+`windows/vessel/src/clock.rs` still declares its own
+`BASE_TICKS_PER_STD_DAY: u64 = 100_000` — a second, independent copy of the
+literal, tied to `WorldTime::TICKS_PER_STD_DAY` by nothing but agreement;
+`days_of` is live at eight-plus call sites; `Session::charge` still converts
+`Ticks -> f64 days -> WorldTime` on every action; and the walk loop still
+accumulates an `f64` `st.day` and compares it against a tick-derived bound
+(`st.day > self.to.as_std_days()` at `windows/vessel/src/liveness.rs:5079`,
+`:5164`, `:5223`). §3.4 below states the surviving half correctly, so this
+document contradicted itself until this paragraph was added. What the
+campaign actually delivered at the quantum is a kernel that keeps time in
+exact ticks and a vessel that keeps its own clock at the same rate; unifying
+the two is a vessel campaign, carried as a follow-up in this campaign's
+retrospective, not work this one did.
 
 - `Years::DAYS_PER_YEAR` is 365.25, so a year is exactly 36,525,000 ticks.
   No repeating fraction.
@@ -293,8 +311,8 @@ lossy `days_of` bridge is deleted rather than moved.
   project has ever used.
 
 Seconds was considered and rejected: at 86,400/day it is *coarser* than the
-clock vessel already runs, and it would leave the lossy bridge in place
-pointing the other way. A power of two (2^17) was considered for mask/shift
+clock vessel already runs, and it would put a scale conversion between the
+kernel's instant and vessel's scheduler, pointing the other way. A power of two (2^17) was considered for mask/shift
 arithmetic and rejected: no existing precedent, and 1 tick = 0.864 s is
 legible where 1/131072 day is not.
 
@@ -398,7 +416,7 @@ consumption order** — all three verified directly, index by index, not
 merely argued: `World.derived_under`, the concept registry, the fact count,
 and the `(subject, predicate, provenance)` sequence are identical between a
 pre- and post-campaign world at the same seed
-(`.superpowers/sdd/2026-08-23-the-escapement/census-attribution.md`). Only
+(`docs/audits/the-escapement-census-attribution.md`). Only
 `object.Text` values differ, at the same indices — nothing inserted, dropped,
 or reordered.
 
@@ -527,7 +545,7 @@ moves must be attributed, not assumed. **This rule caught exactly the case it
 exists for, late.** The census refresh that closed this campaign moved three
 cells, and the closing narrative first assumed they were attributable to the
 day encoding (the representation flip). They were not: attribution
-(`.superpowers/sdd/2026-08-23-the-escapement/census-attribution.md`) traced
+(`docs/audits/the-escapement-census-attribution.md`) traced
 them to `3bc4fd871`'s `local_day` bugfix, landed a stage earlier — a real
 attribution, just not the first guess. "STOP and attribute" was the right
 instinct; the miss was treating the first plausible cause as the attribution

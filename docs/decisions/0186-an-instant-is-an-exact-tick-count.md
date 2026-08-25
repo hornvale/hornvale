@@ -9,7 +9,8 @@ In the context of `WorldTime` being emitted through `quantize` like every
 other float at 8 *significant* digits — precision proportional to
 MAGNITUDE — facing the fact that time is the only unbounded quantity in the
 system, so a committed day's resolution decayed with world age (measured at
-43.2 s at world-year 100 and **12 hours** at world-year 200,000, a horizon
+a full lattice spacing of 86.4 s between adjacent storable instants at
+world-year 100 and **24 hours** at world-year 200,000, a horizon
 `windows/worldgen/src/hazard.rs` actually constructs), we decided that **an
 instant is an exact `i64` tick count** (100,000 ticks per standard day, one
 tick = 0.864 s), not a quantized `f64` day, and that **the tick lattice is

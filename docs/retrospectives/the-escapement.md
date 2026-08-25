@@ -172,10 +172,23 @@ each for a stated reason.
    0126 exists to fix, surviving one layer down — it is the structural reason
    decision 0187's clamp is *forced*, not freely chosen, and in-crate code
    already bypasses the validation via the `pub(crate)` tuple field
-   (`eclipses.rs`) to construct negative values anyway, so the invariant is
-   not even held internally. Splitting `StdDays` into an instant type and a
-   duration type is its own campaign; worth an idea-registry row.
+   (`eclipses.rs`, `heliacal.rs`) to construct negative values anyway, so the
+   invariant is not even held internally. It is the structural reason decision
+   0187 chose a clamp over an `Option` — stated that way deliberately, because
+   0187 goes out of its way to disclaim the word *forced*: the clamp is not
+   forced at `GeneratedSky::t`'s own call site, which builds its `StdDays`
+   through the `pub(crate)` tuple field and bypasses `new` entirely. Splitting
+   `StdDays` into an instant type and a duration type is its own campaign;
+   worth an idea-registry row.
 6. **The wire message to a `the-hand` session expired unapproved and was
-   never delivered.** If that campaign becomes reachable, ask whether its
-   `Body` refactor moves where time lives in `windows/vessel`, and post the
-   answer to the board — the wire itself stores nothing.
+   never delivered — and the question it carried has since been answered by
+   the merge itself.** `campaign/the-hand` landed on `main` at `fb1f39127`
+   while this campaign was in flight, and this branch absorbed it. The answer
+   to "does its `Body` refactor move where time lives in `windows/vessel`" is
+   **yes**: `latest_committed_position` and `agent_position` now take `&Body`
+   rather than `&Npc`, and `room_entry_day` is new. The absorb also settled
+   the paired workaround spec §1 flagged — The Hand merged first, so this
+   branch deleted its half, `let t = hornvale_kernel::quantize(t.day())` in
+   `latest_committed_position`, which had become a no-op over an exact tick
+   count. Decision 0191 supersedes 0230, the record that installed it. Closed;
+   nothing to carry forward except follow-up 2's vessel work.

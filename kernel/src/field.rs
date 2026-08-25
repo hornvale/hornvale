@@ -24,8 +24,9 @@ pub struct Position {
 /// [`crate::quantize`] like every other float, and 8 *significant* digits
 /// give precision proportional to MAGNITUDE. Time is the only unbounded
 /// quantity in the system, so a committed day decayed with world age,
-/// measured at 43.2 s of resolution at world-year 100 and **12 hours** at
-/// 200,000, a horizon `windows/worldgen/src/hazard.rs` actually constructs.
+/// measured as a full lattice spacing of 86.4 s between adjacent storable
+/// instants at world-year 100 and **24 hours** at 200,000, a horizon
+/// `windows/worldgen/src/hazard.rs` actually constructs.
 /// Ticks do not decay: `Ledger::commit` no longer canonicalises a day at
 /// all, because an integer needs no canonicalisation.
 ///
@@ -56,8 +57,12 @@ impl WorldTime {
     /// Ticks per STANDARD day; one tick is 0.864 s.
     ///
     /// Promoted from `windows/vessel`'s scheduler clock (`BASE_TICKS_PER_STD_DAY`)
-    /// rather than invented, so the walk band's clock and the kernel's agree by
-    /// construction instead of by a lossy bridge. `Years::DAYS_PER_YEAR` is
+    /// rather than invented, so the walk band's clock and the kernel's beat at
+    /// the same rate and no change of scale sits between them. They are still
+    /// two independent literals, not one constant: vessel keeps its own copy
+    /// and still bridges through `f64` days (`clock::days_of`), which The
+    /// Escapement did not unify and its retrospective carries as follow-up
+    /// work. `Years::DAYS_PER_YEAR` is
     /// 365.25, so a year is exactly 36,525,000 ticks — no repeating fraction.
     /// type-audit: bare-ok(count)
     pub const TICKS_PER_STD_DAY: i64 = 100_000;
@@ -271,7 +276,8 @@ mod tests {
     #[test]
     fn a_tick_count_round_trips_exactly_where_an_f64_day_could_not() {
         // The whole point of the campaign: at deep time, an f64 day quantized
-        // to 8 significant digits lost sub-12-hour resolution. Ticks do not.
+        // to 8 significant digits could not separate two instants less than a
+        // full day apart. Ticks do not decay.
         let deep = 200_000.0 * crate::units::Years::DAYS_PER_YEAR;
         let t = WorldTime::from_std_days(deep).expect("finite");
         let one_tick_later = WorldTime::from_ticks(t.ticks() + 1);

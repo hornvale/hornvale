@@ -324,8 +324,8 @@ impl Ledger {
         // value is already platform-stable and already equal to itself. The
         // block that used to sit here was actively harmful — 8 SIGNIFICANT
         // digits give precision proportional to magnitude, and time is the only
-        // unbounded quantity in the system, so a committed day decayed to
-        // 12-hour resolution at world-year 200,000; worse, the rounding went
+        // unbounded quantity in the system, so at world-year 200,000 adjacent
+        // storable instants were a full 24 hours apart; worse, the rounding went
         // UPWARD as often as down, so a fact committed at exactly `t` could
         // fail its own `day <= t` filter on read-back.
         if let Value::Number(n) = fact.object {

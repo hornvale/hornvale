@@ -1352,7 +1352,7 @@ pub struct GroundTrackElem {
 pub struct EclipseElem {
     /// The syzygy, absolute standard days, quantized to 8 significant
     /// digits. Kept for the external Orrery's existing consumers
-    /// (additive-or-versioned-only, spec §5); resolvable only to ~1.2 hours
+    /// (additive-or-versioned-only, spec §5); resolvable only to ~2.4 hours
     /// at world-year 20,000.
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub day: f64,
@@ -2311,7 +2311,7 @@ mod tests {
 
     /// scene/eclipses/v1 emits an eclipse's time as an f64 day quantized to 8
     /// SIGNIFICANT digits, so at world-year 20,000 a minutes-long event is
-    /// resolvable only to ~1.2 hours. The f64 field stays for compatibility
+    /// resolvable only to ~2.4 hours. The f64 field stays for compatibility
     /// -- this is a cross-repo contract -- and an exact tick field is ADDED
     /// beside it. Additive at v1, so no existing consumer breaks.
     #[test]

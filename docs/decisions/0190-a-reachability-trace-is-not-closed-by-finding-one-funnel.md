@@ -55,7 +55,7 @@ finds for 2 of 354 seed-267 settlements (1 of 274 in seed 831), which changes
 `presiding` for those cells, which changes the settlement's drawn name — the
 three cells the campaign's census refresh moved. Full instrumentation,
 backtrace, and the arithmetic closure over the census's `fnv1a64` hash are in
-`.superpowers/sdd/2026-08-23-the-escapement/census-attribution.md`.
+`docs/audits/the-escapement-census-attribution.md`.
 
 **What this does and does not change.**
 
@@ -99,8 +99,9 @@ refresh) surfaced it downstream.
 of, not the substance); decision 0186 (the tick-lattice migration whose Task
 5 fixed the underlying `local_day` defect); `docs/superpowers/specs/
 2026-08-23-the-escapement-design.md` §1 (the corrected spec text) and §6
-(the corrected stage 2 exit criterion); `.superpowers/sdd/2026-08-23-
-the-escapement/census-attribution.md` (the forensic investigation this
-record summarizes); `docs/retrospectives/the-escapement.md` (the process
+(the corrected stage 2 exit criterion);
+`docs/audits/the-escapement-census-attribution.md` (the forensic
+investigation this record summarizes, promoted out of the campaign's
+git-ignored scratch so this citation outlives the worktree); `docs/retrospectives/the-escapement.md` (the process
 lesson — a verified claim and a verified consequence of that claim are two
 different things).

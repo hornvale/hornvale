@@ -72,10 +72,16 @@ mod tests {
     }
 
     /// `local as u64` SATURATES: every negative local day collapsed to 0 and
-    /// the returned fraction went negative. Latent rather than live -- no
-    /// caller can reach it today (traced in the spec) -- but it is a
-    /// landmine on a public API with zero coverage, and this is the first
-    /// test ever to pass a negative `StdDays` to a calendar method.
+    /// the returned fraction went negative. **Live, not latent** -- an
+    /// earlier trace called this unreachable, and decision 0190 records why
+    /// that was wrong: `heliacal.rs` reaches `local_day` directly, beneath
+    /// the clamping funnel, with a `year_start` it constructs itself, and an
+    /// instrumented seed-267 build measured 1,293,003 diverging fractions,
+    /// every one of them at `local < 0`. The defect was the common case for
+    /// the early part of every year scan, and it moved three committed
+    /// census values.
+    /// This is also the first test ever to pass a negative `StdDays` to a
+    /// calendar method.
     #[test]
     fn local_day_floors_for_a_pre_genesis_instant_instead_of_saturating() {
         let cal = calendar_of(&spinning_system());
@@ -88,9 +94,10 @@ mod tests {
         // what keeps a negative instant from reaching this API from the
         // outside), but the tuple field is `pub(crate)`: several in-crate
         // sites already build a `StdDays` this way without going through the
-        // validating constructor (`eclipses.rs`'s node/phase arithmetic, for
-        // one), so a negative value CAN reach `local_day` internally even
-        // though no external caller can produce one today.
+        // validating constructor -- `heliacal.rs`'s `year_start` scan, which
+        // is the path decision 0190 measured, and `eclipses.rs`'s node/phase
+        // arithmetic. So a negative value reaches `local_day` internally in
+        // ordinary worldgen even though no external caller can produce one.
         let (idx, frac) = cal
             .local_day(StdDays(-1.5 * day_len))
             .expect("a spinning world answers");

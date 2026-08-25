@@ -73,7 +73,7 @@ this schema is held to the same additive-or-versioned-only discipline as
 every other scene schema (see "Stability" below). The kernel's `WorldTime`
 retyped to an exact `i64` tick count (100,000 ticks per standard day) so that
 a committed instant no longer loses resolution as a world ages — the `f64`
-`day` field, still quantized to 8 significant digits, is good to only ~1.2
+`day` field, still quantized to 8 significant digits, is good to only ~2.4
 hours by world-year 20,000, where the same instant's `day_ticks` is exact at
 every horizon the project has ever used. The `f64` fields stay quantized
 deliberately: quantizing them was never about the kernel's own

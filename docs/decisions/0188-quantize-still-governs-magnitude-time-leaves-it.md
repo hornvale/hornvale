@@ -36,8 +36,9 @@ no rounding step required to make them agree. Quantizing an already-exact
 integer would not improve its cross-platform stability — there is nothing
 left to erase — and section 1 of this campaign's spec found that applying
 significant-digit rounding to a magnitude that grows without bound
-(committed day, world age unbounded) let precision *decay*: 43.2 s of
-resolution at world-year 100, degrading to 12 hours at 200,000. Deleting the
+(committed day, world age unbounded) let precision *decay*: adjacent
+storable instants a full 86.4 s apart at world-year 100, degrading to 24
+hours at 200,000. Deleting the
 quantize call did not just stop being necessary; keeping it was actively
 harmful, and worse, quantize's rounding went upward as often as down, so a
 fact committed at exactly `t` could fail its own `day <= t` filter on

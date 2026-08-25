@@ -68,9 +68,12 @@ The fix does not make the old encoding more precise. It replaces the encoding.
 `WorldTime` is now `{ ticks: i64 }` — an exact count of ticks since genesis,
 at **100,000 ticks per standard day** (one tick = 0.864 s). The constant is
 not new: it is `windows/vessel`'s own `BASE_TICKS_PER_STD_DAY`, already tested
-and already the granularity the action clock runs on. Promoting it means
-vessel's clock becomes the kernel's clock, and the lossy bridge that used to
-sit between them is deleted rather than moved. A year is exactly 36,525,000
+and already the granularity the action clock runs on. Promoting it means the
+kernel's instant and vessel's action clock now beat at the same rate, so no
+change of scale sits between them — though the reconciliation stops there:
+vessel still holds its own copy of the constant and still accumulates its
+walk in `f64` days, which is a later campaign's work and is carried as such.
+A year is exactly 36,525,000
 ticks — no repeating fraction — and `i64` ticks stay exactly representable in
 `f64` out to about 2.47×10⁸ years, so converting a tick count back to a
 standard-day float loses nothing at any horizon the project has ever
@@ -306,7 +309,7 @@ consumers do not need would have broken every one of them for free.
 The physical magnitude of everything in this campaign is nothing — 0.864
 seconds of jitter on events drawn across ten thousand to two hundred thousand
 years, in a simulation whose calendar does not resolve finer than that
-already. What justified four decision records and an internal save-format
+already. What justified five decision records and an internal save-format
 epoch was never the magnitude. It was that a rule written as constitutional
 (decision 0033: quantize never touches the compute path) turned out to have
 an unstated exception the moment a truly unbounded quantity tried to live
