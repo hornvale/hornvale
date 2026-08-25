@@ -252,6 +252,55 @@ pub fn quantity(x: f64) -> String {
     format!("about {truncated:.1}")
 }
 
+/// Where a realized adjunct attaches. A language decides this, not a caller:
+/// Common puts a day-length in a trailing clause and a moon-count inline, and
+/// another tongue may do the opposite.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AdjunctPosition {
+    /// Inside the clause, after the complement.
+    Inline,
+    /// After the clause, semicolon-joined.
+    Trailing,
+}
+
+/// Common's role constructions: how each registered role surfaces in the
+/// author's register. `None` means Common has no construction for this role
+/// yet — the adjunct renders as nothing rather than leaking its key into
+/// prose, which is the same discipline `CommonVocabulary::word_for` follows.
+///
+/// **These three moved here from `windows/book`'s `fragment_for`.** They lived
+/// in a window because `ClauseSpec` could not carry structure, which is also
+/// why that window had to duplicate `indefinite_article`. A role's surface is
+/// a fact about a language and belongs to the language.
+/// type-audit: bare-ok(prose: return)
+pub fn common_role_surface(
+    adjunct: &Adjunct,
+    vocab: &CommonVocabulary,
+) -> Option<(AdjunctPosition, String)> {
+    match (adjunct.role.as_str(), &adjunct.argument) {
+        ("moon-count", Argument::Count(n)) => Some((
+            AdjunctPosition::Inline,
+            format!(
+                "with {} moon{}",
+                cardinal(*n),
+                if *n == 1 { "" } else { "s" }
+            ),
+        )),
+        ("star-class", Argument::Concept(id)) => {
+            let display = vocab.word_for(id);
+            Some((
+                AdjunctPosition::Inline,
+                format!("orbiting {} {display}", indefinite_article(&display)),
+            ))
+        }
+        ("day-length-std", Argument::Quantity(days)) => Some((
+            AdjunctPosition::Trailing,
+            format!("its day lasts {} standard days", quantity(*days)),
+        )),
+        _ => None,
+    }
+}
+
 /// The closed complement set a parse call recognizes — **concept ids**, plus
 /// the vocabulary that says how each one surfaces. Parsing is the inverse of
 /// [`realize_common`], so it recovers the id the realizer started from, not
@@ -806,5 +855,69 @@ mod tests {
             expected_combos,
             "generator did not cover every combo: {covered:?}"
         );
+    }
+
+    #[test]
+    fn common_renders_a_moon_count_exactly_as_the_book_did() {
+        let v = CommonVocabulary::default();
+        let one = Adjunct {
+            role: "moon-count".into(),
+            argument: Argument::Count(1),
+        };
+        let two = Adjunct {
+            role: "moon-count".into(),
+            argument: Argument::Count(2),
+        };
+        assert_eq!(
+            common_role_surface(&one, &v),
+            Some((AdjunctPosition::Inline, "with one moon".to_string()))
+        );
+        assert_eq!(
+            common_role_surface(&two, &v),
+            Some((AdjunctPosition::Inline, "with two moons".to_string()))
+        );
+    }
+
+    #[test]
+    fn common_renders_a_star_class_through_the_vocabulary_with_its_article() {
+        let mut v = CommonVocabulary::default();
+        v.declare("yellow-white-dwarf", "yellow-white dwarf");
+        let a = Adjunct {
+            role: "star-class".into(),
+            argument: Argument::Concept("yellow-white-dwarf".into()),
+        };
+        assert_eq!(
+            common_role_surface(&a, &v),
+            Some((
+                AdjunctPosition::Inline,
+                "orbiting a yellow-white dwarf".to_string()
+            ))
+        );
+    }
+
+    #[test]
+    fn a_day_length_is_trailing_not_inline() {
+        let v = CommonVocabulary::default();
+        let a = Adjunct {
+            role: "day-length-std".into(),
+            argument: Argument::Quantity(1.5),
+        };
+        assert_eq!(
+            common_role_surface(&a, &v),
+            Some((
+                AdjunctPosition::Trailing,
+                "its day lasts about 1.5 standard days".to_string()
+            ))
+        );
+    }
+
+    #[test]
+    fn an_unknown_role_surfaces_as_nothing_rather_than_as_a_key() {
+        let v = CommonVocabulary::default();
+        let a = Adjunct {
+            role: "not-a-role".into(),
+            argument: Argument::Count(1),
+        };
+        assert_eq!(common_role_surface(&a, &v), None);
     }
 }
