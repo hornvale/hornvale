@@ -5988,6 +5988,17 @@ fn exposure_of_impl(
     // far (it has perception) already has a `MindVector`. The `if let` is
     // defensive, matching this function's existing `Option`-gated rules,
     // not a live branch.
+    //
+    // `windows/lab/src/metrics.rs`'s `independently_steeped_concepts` carries
+    // a SECOND, independently-derived copy of exactly this rule (the same
+    // discipline the toponymic gates and staple/variant rules above are
+    // already held to, spec §9.2: a check that called this function would
+    // assert nothing). If you change this block, that copy needs the same
+    // change — `exposure_classification_agrees_with_the_independent_
+    // rederivation` (`windows/lab/src/metrics.rs`, `mod tests`) sweeps
+    // several seeds and every placed people comparing this function's
+    // verdict against the lab's, and reddens on the first concept where the
+    // two disagree.
     if let Some(mind) = wc.psyche.get(&KindId(name)) {
         if mind.threat_response > 0.5 {
             classes.insert("frustrated".to_string(), ExposureClass::Steeped);

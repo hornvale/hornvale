@@ -8245,6 +8245,21 @@ const TOPONYMIC_GATES: [(&str, TerrainGate); 7] = [
 /// the same reason as [`TOPONYMIC_GATES`].
 const FIXED_STEEPED_CONCEPTS: [&str; 4] = ["home", "hearth", "god", "spirit"];
 
+/// The six felt-state concepts (`hornvale_language::felt_state_pack`, The
+/// Confidant's Task 4b) and the `MindVector` scalar that governs each
+/// valence-opposed pair, in `(above-midpoint, below-midpoint)` order —
+/// declared once, here, for the same reason as [`TOPONYMIC_GATES`]: a second
+/// copy of this table in [`steepable_concept_roster`] is exactly the drift
+/// this file exists to stop. Mirrors `windows/worldgen/src/lib.rs`'s Task 4b
+/// block field-for-field; that block's own doc carries the reasoning for why
+/// three scalars times two poles, not the code, which this file must not
+/// share (see the function doc below).
+const FELT_STATE_PAIRS: [(&str, &str); 3] = [
+    ("frustrated", "lost"),
+    ("content", "eager"),
+    ("helpless", "searching"),
+];
+
 /// The concepts an INDEPENDENT re-derivation of `species`' exposure would
 /// classify `Steeped` — duplicating `exposure_from`'s own Steeped rules
 /// (`windows/worldgen/src/lib.rs`) directly from ledger/roster/terrain/
@@ -8262,6 +8277,21 @@ const FIXED_STEEPED_CONCEPTS: [&str; 4] = ["home", "hearth", "god", "spirit"];
 /// module note above `LAB_MARSH_MIN_DRAINAGE` for how they are restated
 /// and why that keeps the second opinion second. `None` if `species` is
 /// not in this world's roster.
+///
+/// **The Confidant (Task 4b):** this function re-derives the six felt-state
+/// concepts independently from `species`' own `MindVector`
+/// (`v.components().psyche`) rather than calling
+/// `hornvale_worldgen::exposure_of_impl`'s felt-state block directly — same
+/// discipline as every other rule here, restated from `MindVector`'s three
+/// `[0, 1]` scalars rather than imported from the function that classifies
+/// them. **What actually keeps the two copies in step** is
+/// `exposure_classification_agrees_with_the_independent_rederivation`
+/// (below, in this module's `tests`), which sweeps several seeds and every
+/// placed people comparing `hornvale_worldgen::exposure_from`'s verdict
+/// against this function's — the question `windows/lab/tests/suite/
+/// calibration.rs`'s `lexicon_is_exposure_sound_for_both_species` doc leaves
+/// open ("the repair, its regen, and the question of what keeps the two
+/// copies in step are a campaign, not a followup").
 fn independently_steeped_concepts(
     v: &FullView,
     species: &str,
@@ -8384,6 +8414,40 @@ fn independently_steeped_concepts(
         }
     }
 
+    // Steeped: the six felt states (`hornvale_language::felt_state_pack`,
+    // The Confidant's Task 4b), re-derived independently from `species`' own
+    // `MindVector` (`v.components().psyche`) — the same lookup pattern
+    // `perception` above already uses, not `hornvale_worldgen::
+    // exposure_of_impl`'s felt-state block. One scalar governs one
+    // valence-opposed pair ([`FELT_STATE_PAIRS`]), by which side of the
+    // midpoint (0.5, the manikin's own neutral reading) `species` falls on;
+    // exactly AT the midpoint earns neither pole — a real reading, not an
+    // omission, matching `exposure_of_impl`'s own gate exactly. Registered
+    // unconditionally at genesis (`hornvale_language::register_concepts`),
+    // so — like the universal stratum above — no `registry.concept(..)
+    // .is_some()` guard is needed here, matching `exposure_of_impl`'s own
+    // ungated inserts.
+    if let Some((_, mind)) = v.components().psyche.iter().find(|(k, _)| k.0 == species) {
+        let (above, below) = FELT_STATE_PAIRS[0];
+        if mind.threat_response > 0.5 {
+            steeped.insert(above.to_string());
+        } else if mind.threat_response < 0.5 {
+            steeped.insert(below.to_string());
+        }
+        let (above, below) = FELT_STATE_PAIRS[1];
+        if mind.deliberation_latency > 0.5 {
+            steeped.insert(above.to_string());
+        } else if mind.deliberation_latency < 0.5 {
+            steeped.insert(below.to_string());
+        }
+        let (above, below) = FELT_STATE_PAIRS[2];
+        if mind.time_horizon > 0.5 {
+            steeped.insert(above.to_string());
+        } else if mind.time_horizon < 0.5 {
+            steeped.insert(below.to_string());
+        }
+    }
+
     // The seven toponymic terrain gates (Task 4), each fired by a settled
     // vertex that actually satisfies it. The tuple table is deliberate: the
     // rules are uniform ("any settled vertex where this predicate holds
@@ -8418,9 +8482,9 @@ fn independently_steeped_concepts(
 ///
 /// Built from exactly the same tables `independently_steeped_concepts`
 /// reads for its unconditional/static rules ([`TOPONYMIC_GATES`],
-/// [`FIXED_STEEPED_CONCEPTS`]) so there is only one copy of each list, plus
-/// the closed catalogs the *dynamic per-vertex* rules draw their concept
-/// names from:
+/// [`FIXED_STEEPED_CONCEPTS`], [`FELT_STATE_PAIRS`]) so there is only one
+/// copy of each list, plus the closed catalogs the *dynamic per-vertex*
+/// rules draw their concept names from:
 ///
 /// - `biome`/`variant`/`staple` are read per settled VERTEX (a species is
 ///   steeped in whichever biome/variant/crop that vertex's geography and
@@ -8469,6 +8533,10 @@ pub fn steepable_concept_roster() -> std::collections::BTreeSet<String> {
     }
     for concept in FIXED_STEEPED_CONCEPTS {
         roster.insert(concept.to_string());
+    }
+    for (above, below) in FELT_STATE_PAIRS {
+        roster.insert(above.to_string());
+        roster.insert(below.to_string());
     }
 
     for biome in hornvale_climate::biome::ALL {
@@ -14817,6 +14885,72 @@ mod tests {
                  worldgen does — the duplicate is stale again"
             );
         }
+    }
+
+    /// **The Confidant, the campaign `calibration.rs`'s
+    /// `lexicon_is_exposure_sound_for_both_species` doc calls for**: "the
+    /// repair, its regen, and the question of what keeps the two copies in
+    /// step are a campaign, not a followup." This is that third thing —
+    /// F13 recurred three times (Task 4's toponymic gates, The Toponym's
+    /// variants, The Watershed's staples) purely because nothing checked
+    /// `independently_steeped_concepts` against `hornvale_worldgen::
+    /// exposure_from` directly; every prior repair only checked one axis
+    /// (the staple sweep above checks staples, the toponymic test checks
+    /// toponyms) and left the general case to the census.
+    ///
+    /// Sweeps several seeds and every placed people, and for every concept
+    /// `exposure_from` classifies (its full `BTreeMap`, not a curated
+    /// subset) asserts the two agree on the one bit `exposure_sound` cares
+    /// about — is this concept `Steeped`. Concepts the lab's independent
+    /// reading deliberately never reproduces (the `KnowsOf`-only rules —
+    /// biome-of-neighbor, sea/coast/lake proximity, the intercardinal
+    /// bearings; see `independently_steeped_concepts`'s own doc) still pass:
+    /// `exposure_from` classifies those `KnowsOf`, never `Steeped`, so
+    /// "does the lab's set contain it" (`false`) agrees with "is it
+    /// `Steeped`" (`false`) without needing to know the rule that produced
+    /// either reading.
+    ///
+    /// Failure names the seed, species and concept that disagree — the loud
+    /// version of the silent drift F13 recurred as three times, caught here
+    /// instead of on the next census's `exposure-sound-*` column.
+    ///
+    /// claim: invariant(forall-seed) — over [1,5,7,26,42,83,100]
+    #[test]
+    fn exposure_classification_agrees_with_the_independent_rederivation() {
+        let mut checked = 0usize;
+        for seed in [1u64, 5, 7, 26, 42, 83, 100] {
+            let Ok(view) = FullView::build(Seed(seed), &SkyPins::default()) else {
+                continue;
+            };
+            let (world, terrain, climate) = (view.world(), view.terrain(), view.climate());
+            for species in all_daughters(&view) {
+                let Ok(authoritative) =
+                    hornvale_worldgen::exposure_from(world, species, terrain, climate)
+                else {
+                    continue;
+                };
+                let Some(independent) = independently_steeped_concepts(&view, species) else {
+                    continue;
+                };
+                for (concept, class) in &authoritative {
+                    let worldgen_steeped =
+                        matches!(class, hornvale_language::ExposureClass::Steeped);
+                    let lab_steeped = independent.contains(concept);
+                    assert_eq!(
+                        worldgen_steeped, lab_steeped,
+                        "seed {seed}, species {species}, concept {concept}: \
+                         hornvale_worldgen::exposure_from says Steeped={worldgen_steeped}, \
+                         independently_steeped_concepts says {lab_steeped} — the two \
+                         exposure derivations have diverged"
+                    );
+                    checked += 1;
+                }
+            }
+        }
+        assert!(
+            checked > 0,
+            "no (seed, species, concept) triples were checked — the sweep is vacuous"
+        );
     }
 
     /// Extract a metric's `f64`, panicking on anything else — a test

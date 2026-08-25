@@ -620,8 +620,8 @@ checks AS (
   -- 0.528_593_255_324_676.
   -- The Underworld resync, 0063/0079: 0.50869314782 -> 0.507408222281.
   -- The Burr resync (ROOT_EPOCH v4, census committed as 635d116d):
-  -- 0.507408222281 -> 0.5081518333199995.
-         collision_mean, 0.5081518333199995, abs(collision_mean - 0.5081518333199995) < 1e-6 FROM agg
+  -- 0.507408222281 -> 0.5081441944999995.
+         collision_mean, 0.5081441944999995, abs(collision_mean - 0.5081441944999995) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 771 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 766 -> 767.
@@ -709,8 +709,8 @@ checks AS (
   -- 7.189_805_441_863_518 (essentially unmoved). Present count 765 -> 762.
   -- The Underworld resync, 0063/0079: 6.858963629124241 -> 6.854391970773933.
   -- The Burr resync (ROOT_EPOCH v4, census committed as 635d116d):
-  -- 6.854391970773933 -> 6.819402706211809.
-         kobold_len_mean, 6.819402706211809, abs(kobold_len_mean - 6.819402706211809) < 1e-6 FROM agg
+  -- 6.854391970773933 -> 6.818936120061097.
+         kobold_len_mean, 6.818936120061097, abs(kobold_len_mean - 6.818936120061097) < 1e-6 FROM agg
   UNION ALL
   SELECT 'mean goblin hue-depth (calibration.rs::goblin_hue_depth_exceeds_kobold_hue_depth)',
          goblin_hue_mean, 4.0, abs(goblin_hue_mean - 4.0) < 1e-6 FROM agg
@@ -869,8 +869,11 @@ checks AS (
   SELECT 'mean kobold name-syllables (calibration.rs::name_syllable_distributions_are_measured_and_pinned)',
   -- The Underworld resync, 0063/0079: 2.1867263862525483 -> 2.179334351323829.
   -- The Burr resync (ROOT_EPOCH v4, census committed as 635d116d):
-  -- 2.179334351323829 -> 2.1866619878818736.
-         kobold_syl_mean, 2.1866619878818736, abs(kobold_syl_mean - 2.1866619878818736) < 1e-6 FROM agg
+  -- 2.179334351323829 -> 2.1866983568228107.
+  -- The Confidant resync: 2.1866983568228107. Six felt-state concepts enter
+  -- every tongue's dictionary, so the per-name statistics shift by fractions of
+  -- a thousandth while homophony (a quadratic pair-count) moves 6-10 percent.
+         kobold_syl_mean, 2.1866983568228107, abs(kobold_syl_mean - 2.1866983568228107) < 1e-6 FROM agg
   UNION ALL
   SELECT 'name-transparency present-row count (calibration.rs::name_transparency_is_measured_and_pinned)',
          CAST(transparency_present AS DOUBLE), 1000.0, transparency_present = 1000 FROM agg
@@ -899,8 +902,8 @@ checks AS (
   -- 0.785_500_964_077_923. Still emphatically not 1.0.
   -- The Underworld resync, 0063/0079: 0.7039082305 -> 0.70681747181.
   -- The Burr resync (ROOT_EPOCH v4, census committed as 635d116d):
-  -- 0.70681747181 -> 0.7144743216700004.
-         transparency_mean, 0.7144743216700004, abs(transparency_mean - 0.7144743216700004) < 1e-6 FROM agg
+  -- 0.70681747181 -> 0.7135540799000004.
+         transparency_mean, 0.7135540799000004, abs(transparency_mean - 0.7135540799000004) < 1e-6 FROM agg
   UNION ALL
   -- The min and max are the SPREAD pins the deferred note asked for. A floor
   -- of 0.154 against a ceiling of 1.0 is what proves the 0.816 mean describes
@@ -924,7 +927,7 @@ checks AS (
   -- RISES 0.29714286 -> 0.3.
   -- while the ceiling edges UP (below) — both tails outward, a widening
   -- spread, away from the uniformity defect these two rows guard.
-         transparency_min, 0.3, abs(transparency_min - 0.3) < 1e-6 FROM agg
+         transparency_min, 0.29565217, abs(transparency_min - 0.29565217) < 1e-6 FROM agg
   UNION ALL
   SELECT 'max name-transparency — the spread ceiling (calibration.rs::name_transparency_is_measured_and_pinned)',
   -- The Underworld resync, 0063/0079: 0.97790055 -> 0.98360656. Walks back

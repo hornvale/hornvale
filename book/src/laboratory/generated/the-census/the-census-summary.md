@@ -1588,8 +1588,8 @@ Seeds 0..1000 × 1 pin set(s); 1000 rows; 0 refusals.
 
 | value | count | share |
 |---|---|---|
-| true | 0 | 0.0% |
-| false | 1000 | 100.0% |
+| true | 1000 | 100.0% |
+| false | 0 | 0.0% |
 
 ### hue-depth-goblin — default
 

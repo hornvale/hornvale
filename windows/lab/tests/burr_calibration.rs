@@ -65,7 +65,19 @@ const DICTIONARY: &str = "../../book/src/reference/dictionary-generated.md";
 /// campaign's thesis is unaffected: every typological stage still raised
 /// distinguishability, and the merged readout is the highest of the run. Pinned from
 /// the merged run per decision 0016; never tuned.
-const BASELINE: f64 = 0.7994579945799458;
+///
+/// The Confidant (Arc III of The Bridle): 0.7993421052631579. Accuracy **fell**
+/// 0.0116 percentage points — the smallest move this pin has recorded. Same
+/// mechanism the entry above names, from the other direction: that campaign
+/// registered six felt-state concepts and gave each people a derived exposure to
+/// some of them (`MindVector`-governed, at most one pole of each valence-opposed
+/// pair), so six new words enter every tongue's dictionary and the classifier
+/// reads a slightly larger corpus. Not a typological change and not a claim about
+/// distinguishability: The Burr's thesis is untouched, and a readout that moves by
+/// one part in ten thousand when the corpus grows is the pin behaving as designed.
+/// Re-pinned deliberately, per this test's own instruction, and recorded in the
+/// chronicle. Never tuned.
+const BASELINE: f64 = 0.7993421052631579;
 
 /// The chance floor for an 18-way assignment. Reported alongside the baseline
 /// because an accuracy figure without its denominator is not interpretable.

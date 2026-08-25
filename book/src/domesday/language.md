@@ -267,8 +267,8 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `true` | 0 | 0.0% |
-| `false` | 1000 | 100.0% |
+| `true` | 1000 | 100.0% |
+| `false` | 0 | 0.0% |
 
 ### `homophony-count-bugbear`
 
@@ -571,7 +571,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `exposure-sound-kobold`
 
-- **D1**: "false" holds 1000/1000 worlds (100.0%), at or above the 80% threshold
+- **D1**: "true" holds 1000/1000 worlds (100.0%), at or above the 80% threshold
 
 ### `homophony-merger-share-bugbear`
 

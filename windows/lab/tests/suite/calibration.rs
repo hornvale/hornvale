@@ -1993,7 +1993,21 @@ fn name_collision_rate_is_measured_and_pinned() {
         // carries no directional claim (H4 already failed and is recorded as
         // such above), and the rate stays inside the range decision 0024
         // sanctions (see the note above).
-        (mean - 0.508_151_833_319_999).abs() < 1e-6,
+        //
+        // The Confidant (Arc III of The Bridle): six felt-state concepts
+        // registered, each people given a `MindVector`-governed derived
+        // exposure to some of them, so six new words can enter a species'
+        // dictionary (`windows/lab/src/metrics.rs`'s `FELT_STATE_PAIRS`) —
+        // the wider naming vocabulary settlements draw compounds from.
+        // zero/nonzero/absent are unmoved at 0/1000/0. Mean:
+        // 0.508_151_833_319_999 -> 0.508_144_194_499_999, a fall of
+        // 7.6e-6 — one part in ~66,000, consistent with a handful of new
+        // dictionary entries nudging which words a per-settlement compound
+        // draws, not a structural change. This row still carries no
+        // directional claim (H4 already failed and is recorded as such
+        // above), and the rate stays inside the range decision 0024
+        // sanctions (see the note above).
+        (mean - 0.508_144_194_499_999).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -2334,7 +2348,17 @@ fn name_length_distributions_are_measured_and_pinned() {
         // (982 -> 982); mean 6.854_391_970_773_933 -> 6.819_402_706_211_809.
         // Still comfortably below the campaign's own <10-character claim
         // (spec §7) — re-checked rather than assumed.
-        ("kobold", 982u32, 6.819_402_706_211_809),
+        //
+        // The Confidant (Arc III of The Bridle): six felt-state concepts
+        // registered, each people given a `MindVector`-governed derived
+        // exposure to some of them, so six new words can enter a species'
+        // dictionary — a slightly wider vocabulary for the per-settlement
+        // compound draw. Present count does NOT move (982 -> 982); mean
+        // 6.819_402_706_211_809 -> 6.818_936_120_061_097, a fall of
+        // 4.7e-4 characters — a hair, as expected from six extra dictionary
+        // entries. Still comfortably below the campaign's own <10-character
+        // claim (spec §7) — re-checked rather than assumed.
+        ("kobold", 982u32, 6.818_936_120_061_097),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -2519,8 +2543,21 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // kobold 982); goblin 2.709_543_428_800_003 -> 2.724_187_402_399_996,
         // kobold 2.179_334_351_323_829 -> 2.186_661_987_881_874. The claim
         // (spec §8 criterion 2, mean in 2-3) still HOLDS at both species.
+        //
+        // The Confidant (Arc III of The Bridle): six felt-state concepts
+        // registered, each people given a `MindVector`-governed derived
+        // exposure to some of them, so six new words can enter a species'
+        // dictionary — a slightly wider vocabulary for the per-settlement
+        // compound draw. Present counts unmoved (goblin 1000, kobold 982);
+        // goblin is UNMOVED at 2.724_187_402_399_996 (same `MindVector`
+        // reading as the homophony row: goblin's scalars cross none of the
+        // three midpoints, so it gains no new Steeped word); kobold
+        // 2.186_661_987_881_874 -> 2.186_698_356_822_811, a rise of 3.6e-5
+        // syllables — a hair, as expected from six extra dictionary entries.
+        // The claim (spec §8 criterion 2, mean in 2-3) still HOLDS at both
+        // species — re-checked rather than assumed.
         ("goblin", 1000u32, 2.724_187_402_399_996),
-        ("kobold", 982u32, 2.186_661_987_881_874),
+        ("kobold", 982u32, 2.186_698_356_822_811),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -2739,7 +2776,20 @@ fn name_transparency_is_measured_and_pinned() {
         // mean 0.706_817_471_809_999 -> 0.714_474_321_670_000. Still
         // emphatically NOT 1.0 — the claim this row exists to guard —
         // re-checked rather than assumed.
-        (mean - 0.714_474_321_670_000).abs() < 1e-9,
+        //
+        // The Confidant (Arc III of The Bridle): six felt-state concepts
+        // registered, each people given a `MindVector`-governed derived
+        // exposure to some of them, so six new Root words can enter a
+        // species' dictionary and be drawn into the compound settlement
+        // names this metric reads — a wear cascade running over a slightly
+        // larger vocabulary. Present/absent unmoved at 1000/0; mean
+        // 0.714_474_321_670_000 -> 0.713_554_079_900_000, a fall of
+        // 9.2e-4 — the SAFE direction (away from the uniformity defect this
+        // row guards, not toward it), and small, as expected from six extra
+        // dictionary entries diluting a ~2000-entry-per-world compound
+        // vocabulary. Still emphatically NOT 1.0 — re-checked rather than
+        // assumed.
+        (mean - 0.713_554_079_900_000).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -2814,7 +2864,17 @@ fn name_transparency_is_measured_and_pinned() {
         // redraws every generated name; the floor RISES 0.297_142_86 ->
         // 0.300_000_0. Re-checked against the ceiling assertion below rather
         // than assumed to be the uniformity defect returning.
-        (min - 0.300_000_0).abs() < 1e-8,
+        //
+        // The Confidant (Arc III of The Bridle): six felt-state concepts
+        // registered, each people given a `MindVector`-governed derived
+        // exposure to some of them, widening the compound vocabulary the
+        // wear cascade runs over (same mechanism as the mean assertion
+        // above). The floor DROPS 0.300_000_0 -> 0.295_652_170_000_000 —
+        // the ceiling (asserted below) is UNMOVED, so this widens the span
+        // from below, away from the uniformity defect this row guards, not
+        // toward it. Re-checked against the ceiling assertion below rather
+        // than assumed to be the defect returning.
+        (min - 0.295_652_170_000_000).abs() < 1e-8,
         "name-transparency minimum drifted: {min:.15}"
     );
     assert!(
