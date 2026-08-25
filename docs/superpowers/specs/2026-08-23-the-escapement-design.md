@@ -5,7 +5,7 @@
 **Branch**: `campaign/the-escapement`
 **Base**: `27312e02c` (`origin/main`)
 **Decision block**: 0186–0195
-**Status**: spec, awaiting G3
+**Status**: SHIPPED — G3 approved 2026-08-23, G6 approved 2026-08-24. Decisions 0186–0191 minted; 0230 superseded by 0191. Chronicle `book/src/chronicle/the-escapement.md`, retrospective `docs/retrospectives/the-escapement.md`.
 
 An escapement is the part of a clock that converts continuous motion into
 countable discrete beats. That is this campaign.
