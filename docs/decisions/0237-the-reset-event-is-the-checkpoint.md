@@ -28,8 +28,8 @@ exists.
 A checkpoint is a **reset event**: a fact after which the fold's state is
 known by construction, independent of anything absorbed before it. Whether
 such an event exists, and which fact predicate marks it, is a property of
-the tenant's semantics — thirst resets on `drank`, hunger resets on `ate`,
-fatigue resets on `slept` — and none of that is visible to `kernel/src/fold.rs`,
+the tenant's semantics — thirst resets on `drank`, hunger resets on `eaten`,
+fatigue resets on `rested` — and none of that is visible to `kernel/src/fold.rs`,
 which only ever sees `LedgerFold::absorb` being called with a `&Fact` it does
 not interpret. Teaching the primitive to recognize a reset predicate would
 mean either a registry of tenant-specific rules living in the kernel (a
