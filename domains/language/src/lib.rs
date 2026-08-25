@@ -91,7 +91,8 @@ pub use account::{
     domain_distortion, identity_params, recoverability,
 };
 pub use clause::{
-    ClauseSpec, Definiteness, Frame, Number, ParseContext, ParseError, parse_common, realize_common,
+    Adjunct, AdjunctPosition, Argument, ClauseSpec, Definiteness, Number, ParseContext, ParseError,
+    parse_common, parse_common_with_tail, realize_common,
 };
 pub use common_vocab::{CommonVocabulary, MissingCommonWords};
 pub use etymology::{
