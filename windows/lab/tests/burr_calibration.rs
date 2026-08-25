@@ -77,7 +77,17 @@ const DICTIONARY: &str = "../../book/src/reference/dictionary-generated.md";
 /// one part in ten thousand when the corpus grows is the pin behaving as designed.
 /// Re-pinned deliberately, per this test's own instruction, and recorded in the
 /// chronicle. Never tuned.
-const BASELINE: f64 = 0.7993421052631579;
+///
+/// The Granary: sub-year raid timing moved settlement survival/naming; the
+/// canonical census re-pin (lefford, goldens c54fb62c9) reads
+/// 0.7980645161290323. Accuracy **fell** 0.0013 — the second-smallest move
+/// this pin has recorded. The Granary touches no language code; the mover is
+/// the same corpus effect the two entries above name — which settlements
+/// survive to be named changes which words populate the dictionary the
+/// classifier reads. The Burr's thesis (typological stages raise
+/// distinguishability) is untouched. Re-pinned deliberately, per this test's
+/// own instruction. Never tuned.
+const BASELINE: f64 = 0.7980645161290323;
 
 /// The chance floor for an 18-way assignment. Reported alongside the baseline
 /// because an accuracy figure without its denominator is not interpretable.
