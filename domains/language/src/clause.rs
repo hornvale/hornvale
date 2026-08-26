@@ -13,6 +13,7 @@
 
 use crate::common_vocab::CommonVocabulary;
 use crate::morphology::Evidential;
+use crate::packs::EAT;
 use hornvale_kernel::world::IS_A;
 
 /// Grammatical number of the subject.
@@ -137,7 +138,17 @@ pub struct Clause {
     pub subject: Subject,
     /// What the predicate relates the subject to.
     pub object: Argument,
-    /// Subject number.
+    /// The clause's grammatical number — the SUBJECT's, and, because a
+    /// clause states exactly one, also the number its object slot realizes
+    /// at.
+    ///
+    /// In a classification the two are one referent (`the Vavako are
+    /// goblins`) so nothing is lost. In a **transitive** clause they are not,
+    /// and this field states only one of them: `X eats the breads` shares its
+    /// number with the subject. A clause that needs *guards ate a woman* —
+    /// plural subject, singular object — is what earns a second field; no
+    /// caller and no corpus line needs one today, and inventing it before
+    /// then would be authoring a distinction nothing states.
     pub number: Number,
     /// Complement definiteness.
     pub definiteness: Definiteness,
@@ -207,6 +218,18 @@ pub enum Part {
     /// place stating the same fact. A language whose negator is a free
     /// particle in its own slot is what would earn the variant.
     Copula,
+    /// The lexical verb slot: the clause's own **predicate**, resolved
+    /// through the realizing vocabulary and inflected for `Clause.tense`,
+    /// `Clause.number` and `Clause.polarity` together — see
+    /// [`VERB_PARADIGM`].
+    ///
+    /// A construction carries either this or [`Part::Copula`], never both:
+    /// they are the same slot filled two ways, which is why
+    /// [`verb_group_forms`] can enumerate a construction's verb surfaces by
+    /// asking which of the two it contains. `ConstituentOrder`'s
+    /// `Sov/Svo/Vso/…` were always built around a V that the copula stood
+    /// in for; this is the first construction that supplies a real one.
+    Verb,
     /// The determiner slot (`the `/`a `/`an `/bare), from definiteness + number.
     Determiner,
     /// The complement lexeme.
@@ -256,6 +279,67 @@ fn copula_surface(tense: Tense, number: Number, polarity: Polarity) -> &'static 
         .expect("the copula paradigm is total over tense x number x polarity")
 }
 
+/// One row of [`VERB_PARADIGM`]: a prefix and a suffix that wrap a verb
+/// **stem**, paired with the three features the resulting group realizes
+/// forward and recovers backward.
+///
+/// A pair rather than a single form because a lexical verb's surface is
+/// stem-dependent, which is the one way this table differs from
+/// [`COPULA_PARADIGM`]: the copula is suppletive, so its rows carry literal
+/// words, while `eat` needs `("", "s")` applied to it. English negation is
+/// periphrastic, so the negative rows put the whole auxiliary in the
+/// PREFIX and leave the stem bare — which is also why negation needs no
+/// `Part::Negator` here any more than it did for the copula.
+/// type-audit: bare-ok(prose: VerbRow)
+pub type VerbRow = (&'static str, &'static str, Tense, Number, Polarity);
+
+/// Common's lexical-verb paradigm: `{Present, Past} × {Sg, Pl} × {Pos, Neg}`
+/// → the affixes wrapping a verb stem. **One table, read in both
+/// directions**, exactly as [`COPULA_PARADIGM`] is — [`realize_common`]
+/// looks a row up by its features, and [`parse_common_with_tail`] generates
+/// every row's surface for every construction's stem and searches for one.
+///
+/// **Past tense is the naive regular rule (append `ed`), and third-person
+/// singular present the naive `s`** — the same deliberate naivety
+/// [`surface_complement`]'s plural carries, and for the same reason: an
+/// irregular table is a separate concern from *where inflection lives*, and
+/// this is the seam it lives at. `eat` therefore surfaces as `eated` in the
+/// positive past, which
+/// `a_transitive_verb_inflects_for_tense_number_and_polarity` asserts
+/// outright so an irregular table arrives as a red test rather than a
+/// silent correction. Note the corpus's own line is unaffected: negation is
+/// periphrastic, so *"did not know"* is already right.
+///
+/// **Not injective, unlike the copula's.** The past neutralizes number in
+/// both polarities (`killed`, `did not kill`), so eight rows yield six
+/// forms. The parse direction therefore recovers a candidate SET of numbers
+/// from the verb group and lets the object's own plural decide — see
+/// [`parse_common_with_tail`].
+/// type-audit: bare-ok(prose: VERB_PARADIGM)
+pub const VERB_PARADIGM: &[VerbRow] = &[
+    ("", "s", Tense::Present, Number::Sg, Polarity::Pos),
+    ("", "", Tense::Present, Number::Pl, Polarity::Pos),
+    ("", "ed", Tense::Past, Number::Sg, Polarity::Pos),
+    ("", "ed", Tense::Past, Number::Pl, Polarity::Pos),
+    ("does not ", "", Tense::Present, Number::Sg, Polarity::Neg),
+    ("do not ", "", Tense::Present, Number::Pl, Polarity::Neg),
+    ("did not ", "", Tense::Past, Number::Sg, Polarity::Neg),
+    ("did not ", "", Tense::Past, Number::Pl, Polarity::Neg),
+];
+
+/// The verb slot's surface for one stem and one clause's features — the
+/// forward read of [`VERB_PARADIGM`]. Panics only if the table is missing a
+/// row, which the `verb_paradigm_is_total_and_syncretic_in_the_past` test
+/// makes impossible.
+fn verb_surface(stem: &str, tense: Tense, number: Number, polarity: Polarity) -> String {
+    let (prefix, suffix) = VERB_PARADIGM
+        .iter()
+        .find(|(_, _, t, n, p)| *t == tense && *n == number && *p == polarity)
+        .map(|(prefix, suffix, _, _, _)| (*prefix, *suffix))
+        .expect("the verb paradigm is total over tense x number x polarity");
+    format!("{prefix}{stem}{suffix}")
+}
+
 /// A form↔meaning pairing: one predicate's surface as an ordered part
 /// list. The same entry realizes forward and parses backward — a future
 /// predicate is added HERE, and is bidirectional by construction.
@@ -268,17 +352,37 @@ pub struct Construction {
     pub parts: &'static [Part],
 }
 
-/// The Common construction inventory, keyed by **predicate id**. One entry
-/// today ([`hornvale_kernel::world::IS_A`], the classification); every future
-/// predicate adds an entry, never a second code path.
+/// The Common construction inventory, keyed by **predicate id**: the
+/// classification ([`hornvale_kernel::world::IS_A`]) and the transitive
+/// frame ([`EAT`]). Every future predicate adds an entry, never a second
+/// code path — this is the first exercise of that promise, and the shared
+/// `TRANSITIVE` part list is the shape it takes: a second transitive verb is
+/// **one row**, not one construction.
 ///
-/// **The key is the kernel's constant, not a local literal**, and that is
+/// **Why the table stays a closed list of exact predicate ids**, rather than
+/// a matcher that would catch any `ConceptKind::Act` predicate: the parse
+/// direction needs to ENUMERATE candidate verb surfaces. A lexical verb's
+/// surface is stem-dependent, so [`parse_common_with_tail`] recognizes a
+/// verb group by generating every row's form for every construction's stem
+/// and searching for one. A wildcard matcher leaves that enumeration with no
+/// domain — the parser would have to segment an arbitrary sentence, guess
+/// which token is the verb, un-inflect it, and only THEN ask whether the
+/// result names an act. It could not: [`CommonVocabulary`] carries no
+/// concept kinds (it is a declared-overrides map plus a naming convention),
+/// and this crate is a domain, so it may not reach sideways to a registry to
+/// learn them. The closed table is therefore not a concession to the
+/// bidirectionality discipline; it is what makes the inverse computable at
+/// all.
+///
+/// **Each key is its OWNER's constant, not a local literal**, and that is
 /// load-bearing rather than tidy. `Frame::Classify` made this lookup
 /// statically total: an unhandled variant was a compile error. A string key
 /// moves that check to runtime ([`realize_common`] panics on a miss), so the
 /// only thing left holding the two ends together is that the producer and
 /// this table name the same constant. A kernel epoch bump of `IS_A` must
-/// break the render, not recompile cleanly and panic on every gallery page.
+/// break the render, not recompile cleanly and panic on every gallery page;
+/// `EAT` lives in this crate's `packs.rs` because that is what registers the
+/// concept.
 /// type-audit: bare-ok(identifier-text)
 pub fn common_constructions() -> &'static [Construction] {
     const CLASSIFY: &[Part] = &[
@@ -291,10 +395,59 @@ pub fn common_constructions() -> &'static [Construction] {
         Part::ModifierTail,
         Part::Literal("."),
     ];
-    &[Construction {
-        predicate: IS_A,
-        parts: CLASSIFY,
-    }]
+    // The classification with a real verb where the copula stood. Shared by
+    // every transitive predicate: adding one is adding a ROW.
+    const TRANSITIVE: &[Part] = &[
+        Part::Subject,
+        Part::Literal(" "),
+        Part::Verb,
+        Part::Literal(" "),
+        Part::Determiner,
+        Part::Complement,
+        Part::ModifierTail,
+        Part::Literal("."),
+    ];
+    &[
+        Construction {
+            predicate: IS_A,
+            parts: CLASSIFY,
+        },
+        Construction {
+            predicate: EAT,
+            parts: TRANSITIVE,
+        },
+    ]
+}
+
+/// Every surface `construction`'s verb group can take, paired with the
+/// features each one realizes — the **backward** read of
+/// [`COPULA_PARADIGM`] and [`VERB_PARADIGM`], and the enumeration that makes
+/// [`parse_common_with_tail`] possible.
+///
+/// Which table applies is read off the construction's own parts, not off a
+/// second field that could disagree with them: a construction carries
+/// [`Part::Copula`] or [`Part::Verb`], and one that carries neither has no
+/// verb group and contributes no candidate (unreachable today, and returning
+/// an empty list rather than panicking keeps the parser's failure a
+/// [`ParseError`] rather than a crash).
+fn verb_group_forms(
+    construction: &Construction,
+    vocab: &CommonVocabulary,
+) -> Vec<(String, Tense, Number, Polarity)> {
+    if construction.parts.contains(&Part::Copula) {
+        COPULA_PARADIGM
+            .iter()
+            .map(|(form, t, n, p)| ((*form).to_string(), *t, *n, *p))
+            .collect()
+    } else if construction.parts.contains(&Part::Verb) {
+        let stem = vocab.word_for(construction.predicate);
+        VERB_PARADIGM
+            .iter()
+            .map(|(prefix, suffix, t, n, p)| (format!("{prefix}{stem}{suffix}"), *t, *n, *p))
+            .collect()
+    } else {
+        Vec::new()
+    }
 }
 
 /// Realize a Clause as a Common (≈ limited English) sentence, resolving
@@ -346,6 +499,15 @@ pub fn realize_common(spec: &Clause, vocab: &CommonVocabulary) -> String {
             Part::Copula => {
                 out.push_str(copula_surface(spec.tense, spec.number, spec.polarity));
             }
+            // The clause's own predicate, through the same vocabulary the
+            // complement goes through: Common resolves a concept id, it
+            // never echoes one.
+            Part::Verb => out.push_str(&verb_surface(
+                &vocab.word_for(&spec.predicate),
+                spec.tense,
+                spec.number,
+                spec.polarity,
+            )),
             Part::Determiner => match (spec.definiteness, spec.number) {
                 (Definiteness::Def, _) => out.push_str("the "),
                 (Definiteness::Indef, Number::Sg) => {
@@ -520,11 +682,17 @@ pub struct ParseContext {
 /// type-audit: bare-ok(prose: UnknownComplement.after)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ParseError {
-    /// No [`COPULA_PARADIGM`] form appears, so no subject/copula split
-    /// exists.
-    NoCopula,
+    /// No construction's verb group appears — neither a
+    /// [`COPULA_PARADIGM`] form nor any [`VERB_PARADIGM`] form of any
+    /// construction's stem — so no subject/verb split exists.
+    ///
+    /// Named `NoCopula` until Common gained a construction whose verb is
+    /// not the copula; the old name would now under-report what was
+    /// searched.
+    NoVerbGroup,
     /// The text after the determiner doesn't match (a prefix of) any
-    /// complement surface in the caller's `ParseContext`.
+    /// complement surface in the caller's `ParseContext`, at any of the
+    /// numbers the verb group left open.
     UnknownComplement {
         /// The unrecognized text following the determiner.
         after: String,
@@ -537,7 +705,9 @@ pub enum ParseError {
 impl std::fmt::Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ParseError::NoCopula => write!(f, "no copula from the paradigm found"),
+            ParseError::NoVerbGroup => {
+                write!(f, "no construction's verb group found in the sentence")
+            }
             ParseError::UnknownComplement { after } => {
                 write!(f, "no registered complement matches '{after}'")
             }
@@ -549,12 +719,13 @@ impl std::fmt::Display for ParseError {
 impl std::error::Error for ParseError {}
 
 /// Invert `realize_common`: parse a Common sentence back into the
-/// `Clause` that would realize it. Walks the `Classify` construction's
-/// entry backward — the boundaries come from the construction's shape, and
-/// the subject/copula split happens at the EARLIEST occurrence of any
-/// [`COPULA_PARADIGM`] form (so a subject itself never contains the copula
-/// word), longest form winning a tie on position. `tense` and `polarity`
-/// come back off that form.
+/// `Clause` that would realize it. Walks a construction's entry backward —
+/// the boundaries come from the construction's shape, and the subject/verb
+/// split happens at the EARLIEST occurrence of any construction's verb-group
+/// form (so a subject itself never contains the verb word), longest form
+/// winning a tie on position. `predicate`, `tense` and `polarity` come back
+/// off that form; `number` comes off it too unless the form is syncretic
+/// (`VERB_PARADIGM`'s past), in which case the object's own plural decides.
 /// Complement surfaces in `ctx` must not begin with a determiner word
 /// (`"a "`/`"an "`/`"the "`) — the bare-plural path would misparse them;
 /// today's vocabulary (single words and hyphenated compounds) satisfies
@@ -607,29 +778,46 @@ pub fn parse_common_with_tail(
 ) -> Result<(Clause, Vec<String>), ParseError> {
     // Terminal literal first.
     let body = text.strip_suffix('.').ok_or(ParseError::Unterminated)?;
-    // Subject | Copula: split at the EARLIEST occurrence of any
-    // `COPULA_PARADIGM` form (so a subject never contains the copula word),
-    // and at a tie on position take the LONGEST form — `" is not "` and
-    // `" is "` start at the same index, and the negated reading is the one
-    // that consumes the whole copular group.
-    let mut best: Option<(usize, &CopulaRow)> = None;
-    for entry in COPULA_PARADIGM {
-        let Some(at) = body.find(&format!(" {} ", entry.0)) else {
-            continue;
-        };
-        let better = match best {
-            None => true,
-            Some((best_at, best_entry)) => {
-                at < best_at || (at == best_at && entry.0.len() > best_entry.0.len())
+    // Subject | verb group: every construction contributes every surface its
+    // verb group can take (a copula form, or its own stem run through
+    // `VERB_PARADIGM`), and the sentence is searched for all of them at once.
+    // This is where the construction table's "bidirectional by construction"
+    // promise is actually cashed: the predicate comes back from the row that
+    // matched, never from an assumption about which construction this was.
+    let mut hits: Vec<(usize, String, &'static str, Tense, Number, Polarity)> = Vec::new();
+    for construction in common_constructions() {
+        for (form, tense, number, polarity) in verb_group_forms(construction, &ctx.vocabulary) {
+            if let Some(at) = body.find(&format!(" {form} ")) {
+                hits.push((at, form, construction.predicate, tense, number, polarity));
             }
-        };
-        if better {
-            best = Some((at, entry));
         }
     }
-    let Some((at, &(form, tense, number, polarity))) = best else {
-        return Err(ParseError::NoCopula);
+    // Split at the EARLIEST occurrence (so a subject never contains the verb
+    // group), and at a tie on position take the LONGEST form — `" is not "`
+    // and `" is "` start at the same index, and the negated reading is the
+    // one that consumes the whole group. A tie on both goes to the
+    // lexicographically first predicate: deterministic, and unreachable
+    // today, since it would need one construction's inflected verb to equal
+    // another's at the same offset. The sort is STABLE, so rows that tie on
+    // all three stay in paradigm order.
+    hits.sort_by(|a, b| {
+        a.0.cmp(&b.0)
+            .then_with(|| b.1.len().cmp(&a.1.len()))
+            .then_with(|| a.2.cmp(b.2))
+    });
+    let Some((at, form, predicate, tense, _, polarity)) = hits.first().cloned() else {
+        return Err(ParseError::NoVerbGroup);
     };
+    // Number is the one feature a verb group may leave underdetermined:
+    // `VERB_PARADIGM` is syncretic in the past (`killed` is both), so the
+    // winning form can name more than one row. Carry every candidate and let
+    // the object's own plural decide below — the copula is suppletive, so
+    // for a classification this list is always a singleton.
+    let numbers: Vec<Number> = hits
+        .iter()
+        .filter(|h| h.0 == at && h.1 == form && h.2 == predicate)
+        .map(|h| h.4)
+        .collect();
     // The needle was `" {form} "`, so the remainder starts one space past the
     // form, which itself started one space past `at`.
     let (subject_text, rest) = (&body[..at], &body[at + form.len() + 2..]);
@@ -648,27 +836,35 @@ pub fn parse_common_with_tail(
     } else {
         (Definiteness::Indef, rest) // bare plural generic
     };
-    // Complement: longest SURFACE match from the closed set of ids. Ties go
-    // to the last id in `complements`' (BTreeSet) order — deterministic, and
-    // unreachable today since no two ids share a surface.
-    let (complement_concept, surface) = ctx
-        .complements
-        .iter()
-        .map(|concept| {
-            (
-                concept,
-                surface_complement(&ctx.vocabulary, concept, number),
-            )
-        })
-        .filter(|(_, s)| {
-            after_det == s.as_str()
+    // Complement: longest SURFACE match over the closed set of ids CROSSED
+    // with the numbers the verb group left open. Ties go to the last
+    // (id, number) pair in iteration order — ids in `complements`' (BTreeSet)
+    // order, numbers in paradigm order — which reproduces `max_by_key`'s
+    // last-wins rule exactly; unreachable today, since no two ids share a
+    // surface (`cli/tests/suite/common_is_total.rs` guards that) and a
+    // concept's singular and plural surfaces always differ by the naive
+    // `'s'`. That last fact is what recovers number from a syncretic past.
+    let mut best_complement: Option<(String, Number, String)> = None;
+    for concept in &ctx.complements {
+        for &candidate in &numbers {
+            let s = surface_complement(&ctx.vocabulary, concept, candidate);
+            let matched = after_det == s.as_str()
                 || after_det
                     .strip_prefix(s.as_str())
-                    .is_some_and(|r| r.starts_with(' '))
-        })
-        .max_by_key(|(_, s)| s.len())
-        .map(|(concept, s)| (concept.clone(), s))
-        .ok_or_else(|| ParseError::UnknownComplement {
+                    .is_some_and(|r| r.starts_with(' '));
+            if !matched {
+                continue;
+            }
+            if best_complement
+                .as_ref()
+                .is_none_or(|(_, _, best)| s.len() >= best.len())
+            {
+                best_complement = Some((concept.clone(), candidate, s));
+            }
+        }
+    }
+    let (complement_concept, number, surface) =
+        best_complement.ok_or_else(|| ParseError::UnknownComplement {
             after: after_det.to_string(),
         })?;
     // Adjunct tail: '' or ' m1' or ' m1, m2, …'. The complement filter
@@ -682,9 +878,11 @@ pub fn parse_common_with_tail(
     };
     Ok((
         Clause {
-            // The kernel's constant, matching the construction this walk
-            // inverted — never a literal, so the two ends cannot drift.
-            predicate: IS_A.to_string(),
+            // The construction this walk actually inverted, read off the
+            // verb group that matched — never a literal and no longer an
+            // assumption, so a second construction cannot silently come back
+            // as the first.
+            predicate: predicate.to_string(),
             subject,
             object: Argument::Concept(complement_concept),
             number,
@@ -1023,16 +1221,20 @@ mod tests {
     }
 
     #[test]
-    fn classify_has_one_declared_construction() {
+    fn the_construction_table_is_keyed_by_predicate() {
         let inv = common_constructions();
-        assert_eq!(inv.len(), 1);
-        // Against the KERNEL's constant, not the literal it happens to
+        // Against each OWNER's constant, not the literal it happens to
         // equal: the table's key and every producer's key are the same
         // `const` by construction, which is what replaced the static
-        // totality `Frame::Classify` used to give this lookup.
-        assert_eq!(inv[0].predicate, hornvale_kernel::world::IS_A);
+        // totality `Frame::Classify` used to give this lookup. `IS_A` is the
+        // kernel's; `EAT` is this crate's, because `packs.rs` is what
+        // registers that concept.
+        let classify = inv
+            .iter()
+            .find(|c| c.predicate == hornvale_kernel::world::IS_A)
+            .expect("the classification construction");
         assert_eq!(
-            inv[0].parts,
+            classify.parts,
             &[
                 Part::Subject,
                 Part::Literal(" "),
@@ -1044,6 +1246,161 @@ mod tests {
                 Part::Literal("."),
             ]
         );
+        let transitive = inv
+            .iter()
+            .find(|c| c.predicate == EAT)
+            .expect("the transitive construction");
+        assert_eq!(
+            transitive.parts,
+            &[
+                Part::Subject,
+                Part::Literal(" "),
+                Part::Verb,
+                Part::Literal(" "),
+                Part::Determiner,
+                Part::Complement,
+                Part::ModifierTail,
+                Part::Literal("."),
+            ]
+        );
+        // Every row's predicate is distinct: `realize_common` takes the
+        // FIRST match, so a duplicate key would make one row unreachable
+        // and the table's "add a row, never a code path" promise a lie.
+        let keys: std::collections::BTreeSet<&str> = inv.iter().map(|c| c.predicate).collect();
+        assert_eq!(keys.len(), inv.len());
+    }
+
+    /// The transitive demonstration clause: `Nwamvam <eat> the bread`. The
+    /// predicate is `eat` because it is `ConceptKind::Act`, `ladder_rank: 0`
+    /// and universal (spec §4.3) — the flagship must not be built on a
+    /// vocabulary gap.
+    fn eat_clause(tense: Tense, number: Number, polarity: Polarity) -> Clause {
+        Clause {
+            predicate: EAT.to_string(),
+            subject: Subject::Name("Nwamvam".to_string()),
+            object: Argument::Concept("bread".to_string()),
+            number,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense,
+            polarity,
+            adjuncts: Vec::new(),
+        }
+    }
+
+    /// The first construction that is not the copula: the clause's own
+    /// PREDICATE surfaces as a lexical verb between subject and object,
+    /// resolved through the same vocabulary the complement goes through.
+    #[test]
+    fn a_transitive_clause_surfaces_its_predicate_as_a_verb() {
+        let vocab = CommonVocabulary::default();
+        assert_eq!(
+            realize_common(
+                &eat_clause(Tense::Present, Number::Sg, Polarity::Pos),
+                &vocab
+            ),
+            "Nwamvam eats the bread."
+        );
+    }
+
+    /// The verb group across the whole `tense x number x polarity` space —
+    /// the same three features the copula carries, one level up because the
+    /// surface is STEM-dependent.
+    ///
+    /// **`eated` is asserted deliberately, not overlooked.** Common's past
+    /// rule is the naive regular one (append `ed`), exactly as
+    /// `surface_complement`'s plural rule is the naive regular `s`. Pinning
+    /// the wrong output is what makes an irregular table a red test to
+    /// update rather than a latent defect: nothing silently depends on the
+    /// naive form being right. Note where it does NOT bite — English
+    /// negation is periphrastic, so the negative past leaves the stem bare
+    /// (`did not eat`), which is the shape the merchant corpus's own line
+    /// (*"I didn't know her"*) uses.
+    #[test]
+    fn a_transitive_verb_inflects_for_tense_number_and_polarity() {
+        let vocab = CommonVocabulary::default();
+        for (tense, number, polarity, verb) in [
+            (Tense::Present, Number::Sg, Polarity::Pos, "eats"),
+            (Tense::Present, Number::Pl, Polarity::Pos, "eat"),
+            (Tense::Past, Number::Sg, Polarity::Pos, "eated"),
+            (Tense::Past, Number::Pl, Polarity::Pos, "eated"),
+            (Tense::Present, Number::Sg, Polarity::Neg, "does not eat"),
+            (Tense::Present, Number::Pl, Polarity::Neg, "do not eat"),
+            (Tense::Past, Number::Sg, Polarity::Neg, "did not eat"),
+            (Tense::Past, Number::Pl, Polarity::Neg, "did not eat"),
+        ] {
+            let plural = match number {
+                Number::Sg => "",
+                Number::Pl => "s",
+            };
+            assert_eq!(
+                realize_common(&eat_clause(tense, number, polarity), &vocab),
+                format!("Nwamvam {verb} the bread{plural}."),
+                "verb group wrong for {tense:?}/{number:?}/{polarity:?}"
+            );
+        }
+    }
+
+    /// [`VERB_PARADIGM`]'s totality, and the one place it is deliberately
+    /// NOT injective. `copula_paradigm_is_total_and_unambiguous` asserts
+    /// eight distinct forms; this table has eight rows and only **six**
+    /// distinct forms, because English lexical verbs neutralize number in
+    /// the past (`was`/`were` vs. a single `killed`). That is a fact about
+    /// the target language, not a hole — and it is why the parse direction
+    /// carries a candidate SET of numbers and lets the object's own surface
+    /// break the tie.
+    #[test]
+    fn verb_paradigm_is_total_and_syncretic_in_the_past() {
+        let mut forms: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+        let mut combinations = 0usize;
+        for tense in [Tense::Present, Tense::Past] {
+            for number in [Number::Sg, Number::Pl] {
+                for polarity in [Polarity::Pos, Polarity::Neg] {
+                    forms.insert(verb_surface("kill", tense, number, polarity));
+                    combinations += 1;
+                }
+            }
+        }
+        assert_eq!(combinations, 8);
+        assert_eq!(VERB_PARADIGM.len(), 8);
+        assert_eq!(
+            forms.len(),
+            6,
+            "the past neutralizes number in both polarities: {forms:?}"
+        );
+        assert!(forms.contains("killed"));
+        assert!(forms.contains("did not kill"));
+    }
+
+    /// The construction table realizes forward and parses backward, and
+    /// **that promise now has a second instance**: the parse recovers the
+    /// PREDICATE from the verb group it matched, rather than assuming
+    /// `is-a`. The past's number syncretism is recovered from the object's
+    /// own plural, so the round trip is complete over the whole space.
+    #[test]
+    fn common_round_trips_a_transitive_clause() {
+        let mut seen = 0usize;
+        for tense in [Tense::Present, Tense::Past] {
+            for polarity in [Polarity::Pos, Polarity::Neg] {
+                for number in [Number::Sg, Number::Pl] {
+                    for definiteness in [Definiteness::Def, Definiteness::Indef] {
+                        let spec = Clause {
+                            definiteness,
+                            ..eat_clause(tense, number, polarity)
+                        };
+                        let ctx = ctx_from(&spec);
+                        let text = realize_common(&spec, &ctx.vocabulary);
+                        assert_eq!(
+                            parse_common(&text, &ctx),
+                            Ok(spec.clone()),
+                            "round-trip failed for {text:?}"
+                        );
+                        seen += 1;
+                    }
+                }
+            }
+        }
+        assert_eq!(seen, 16);
     }
 
     /// A parse context over `concepts` (concept ids, not words) with the
@@ -1102,11 +1459,12 @@ mod tests {
             Err(ParseError::UnknownComplement { .. })
         ));
         // "wordless" has no terminal '.', hitting Unterminated before the
-        // copula search ever runs — the terminal check is the FIRST gate.
-        // NoCopula needs a terminated sentence that still lacks " is "/" are ".
+        // verb-group search ever runs — the terminal check is the FIRST
+        // gate. NoVerbGroup needs a terminated sentence that still carries
+        // no copula form and no construction's inflected verb.
         assert!(matches!(
             parse_common("wordless.", &ctx(&["planet"])),
-            Err(ParseError::NoCopula)
+            Err(ParseError::NoVerbGroup)
         ));
         assert!(matches!(
             parse_common("wordless", &ctx(&["planet"])),

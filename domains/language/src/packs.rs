@@ -20,6 +20,16 @@ use hornvale_kernel::{
     RegistryError, Void,
 };
 
+/// The `eat` concept's id.
+///
+/// Named once so the pack entry that REGISTERS the concept and the Common
+/// construction that REALIZES it cannot drift apart — the same discipline
+/// `hornvale_kernel::world::IS_A` carries for the classification, applied at
+/// the layer that actually owns this concept. A future epoch bump must break
+/// the render rather than recompile cleanly and panic at every call site.
+/// type-audit: bare-ok(identifier-text)
+pub const EAT: &str = "eat";
+
 /// One entry in a vocabulary pack: a concept id, its broad category, a doc,
 /// and its rank on whichever acquisition ladder it belongs to (0 for
 /// entries outside any ladder — always in the lexicon once the pack is
@@ -116,7 +126,7 @@ pub fn universal_stratum() -> &'static [PackEntry] {
             ladder_rank: 0,
         },
         PackEntry {
-            concept: "eat",
+            concept: EAT,
             kind: ConceptKind::Act,
             doc: "to consume food",
             ladder_rank: 0,
