@@ -302,6 +302,25 @@ invisible to the mouth, the chamber, and every peer.
 **Interfaces:**
 - Consumes: `Band`, `delta_t_range_of(rung) -> (f64, Option<f64>)`,
   `GeothermalGradient`, `HABITABLE_CEILING_K`.
+
+**Three things the controller verified in the tree that every test sketch in
+this plan depends on** (`domains/terrain/src/`, at `cccb5c6a7`):
+
+1. **`GeothermalGradient::new(f64) -> GeothermalGradient` is INFALLIBLE** —
+   it returns `Self`, not `Result`, and validates with
+   `debug_assert!(k_per_km.is_finite() && k_per_km > 0.0)` (`strata.rs:26`).
+   Do not write `.expect(...)` after it; that does not compile. Do not pass
+   `0.0`; that trips the assert in a debug build, which is what tests are.
+2. **`rungs()` INCLUDES `Band::Surface`** — it returns `ALL_RUNGS`, Surface
+   first, and its own doc says "Callers that want only the habitation rungs
+   filter `Surface` out". Any loop over `rungs()` expecting a `Some` back
+   from `rung_evaluation_depth_m` must filter it.
+3. **`delta_t_range_of(Band::Surface)` returns `(0.0, Some(0.0))`**, not
+   `(_, None)` — a degenerate closed interval at the datum
+   (`delve.rs:258-266`). Surface is therefore NOT caught by an
+   `if let Some(hi)` filter; only `Nadir` is.
+
+The test module to extend is at `domains/terrain/src/delve.rs:305`.
 - Produces:
   `pub fn rung_evaluation_depth_m(rung: Band, gradient: GeothermalGradient, depth_reach_m: f64) -> Option<f64>`
   — the depth at which a rung's conditions are read. `None` for
@@ -323,7 +342,7 @@ Add to `domains/terrain/src/delve.rs`'s test module:
 ```rust
 #[test]
 fn the_surface_rung_has_no_evaluation_depth() {
-    let g = GeothermalGradient::new(25.0).expect("a plausible gradient");
+    let g = GeothermalGradient::new(25.0);
     assert_eq!(rung_evaluation_depth_m(Band::Surface, g, 800.0), None);
 }
 
@@ -333,7 +352,7 @@ fn nadir_is_evaluated_at_the_caves_own_reach() {
     // `depth_reach_m`; after the per-rung change the deepest rung still
     // must, so its substrate and moisture are byte-identical across the
     // change and every movement is attributable to a shallower rung.
-    let g = GeothermalGradient::new(25.0).expect("a plausible gradient");
+    let g = GeothermalGradient::new(25.0);
     for reach in [120.0, 800.0, 2500.0] {
         assert_eq!(
             rung_evaluation_depth_m(Band::Nadir, g, reach),
@@ -345,8 +364,12 @@ fn nadir_is_evaluated_at_the_caves_own_reach() {
 
 #[test]
 fn a_bounded_rung_is_evaluated_at_its_delta_t_midpoint() {
-    let g = GeothermalGradient::new(25.0).expect("a plausible gradient");
-    for rung in rungs() {
+    let g = GeothermalGradient::new(25.0);
+    // `rungs()` INCLUDES `Band::Surface` (it returns ALL_RUNGS, Surface
+    // first) and Surface's range is the degenerate `(0.0, Some(0.0))`, so it
+    // survives the `hi` filter below and would then panic on the `expect`.
+    // Filter it explicitly.
+    for rung in rungs().iter().filter(|r| **r != Band::Surface) {
         let (lo, hi) = delta_t_range_of(*rung);
         let Some(hi) = hi else { continue }; // Nadir, covered above
         let depth = rung_evaluation_depth_m(*rung, g, 100_000.0)
@@ -365,7 +388,7 @@ fn a_bounded_rung_is_evaluated_at_its_delta_t_midpoint() {
 fn evaluation_depth_never_exceeds_the_caves_reach() {
     // A rung deeper than the cave goes is not a place. Whatever the ΔT
     // midpoint says, the answer is bounded by the column that exists.
-    let g = GeothermalGradient::new(25.0).expect("a plausible gradient");
+    let g = GeothermalGradient::new(25.0);
     for rung in rungs() {
         if let Some(d) = rung_evaluation_depth_m(*rung, g, 150.0) {
             assert!(d <= 150.0, "{rung:?} evaluated at {d} m in a 150 m column");
@@ -375,7 +398,7 @@ fn evaluation_depth_never_exceeds_the_caves_reach() {
 
 #[test]
 fn evaluation_depth_is_monotone_in_the_rung() {
-    let g = GeothermalGradient::new(25.0).expect("a plausible gradient");
+    let g = GeothermalGradient::new(25.0);
     let depths: Vec<f64> = rungs()
         .iter()
         .filter_map(|r| rung_evaluation_depth_m(*r, g, 100_000.0))
@@ -677,8 +700,11 @@ fn every_source_is_a_ratio() {
     for silica in [0.0, 0.25, 0.5, 0.75, 1.0] {
         for other in [0.0, 0.5, 1.0] {
             let m = buffer(silica, other, other, other);
-            for g in [0.0, 25.0, 120.0] {
-                let grad = GeothermalGradient::new(g).expect("plausible");
+            // NOT 0.0: `GeothermalGradient::new` carries
+            // `debug_assert!(k_per_km.is_finite() && k_per_km > 0.0)`, and
+            // tests run in debug. Use a small positive value at the cold end.
+            for g in [1.0, 25.0, 120.0] {
+                let grad = GeothermalGradient::new(g);
                 for source in EnergySource::ALL {
                     let v = source.yield_at(&m, grad, 500.0, other);
                     assert!(
@@ -696,7 +722,7 @@ fn the_three_silica_sources_peak_at_different_silica() {
     // The reduction above is honest only if the three bands are actually
     // distinct. If two peak together they are one source with two names.
     let peak = |s: EnergySource| {
-        let grad = GeothermalGradient::new(25.0).expect("plausible");
+        let grad = GeothermalGradient::new(25.0);
         (0..=100)
             .map(|i| i as f64 / 100.0)
             .max_by(|a, b| {
@@ -724,7 +750,7 @@ fn the_three_silica_sources_peak_at_different_silica() {
 fn a_water_rock_reaction_needs_water() {
     // Serpentinization and methanogenesis are water-rock reactions. In a dry
     // chamber they yield nothing, whatever the rock says.
-    let grad = GeothermalGradient::new(25.0).expect("plausible");
+    let grad = GeothermalGradient::new(25.0);
     let rich = buffer(0.1, 0.9, 0.9, 0.9);
     for source in [EnergySource::Serpentinization, EnergySource::Methanogenesis] {
         let wet = source.yield_at(&rich, grad, 500.0, 1.0);
@@ -739,7 +765,7 @@ fn sulphide_oxidation_peaks_at_intermediate_depth() {
     // It needs oxidant from above meeting sulphide from below, so it is the
     // one source that is neither rising nor falling in depth. This is what
     // makes the U's trough possible rather than imposed.
-    let grad = GeothermalGradient::new(25.0).expect("plausible");
+    let grad = GeothermalGradient::new(25.0);
     let m = buffer(0.5, 0.5, 0.5, 0.8);
     let at = |d: f64| EnergySource::SulphideOxidation.yield_at(&m, grad, d, 0.5);
     let depths: Vec<f64> = (0..=20).map(|i| i as f64 * 100.0).collect();
