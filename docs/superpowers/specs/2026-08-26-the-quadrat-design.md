@@ -200,11 +200,31 @@ Three changes:
    states for itself ("the acknowledgement is the map redrawing"). `driver.rs`'s
    existing comment already argues `map` is a mode gesture and not a fetch; the
    code simply does not do what the comment says.
-2. **`wrap` stops collapsing whitespace.** A line that fits the pane is
-   preserved verbatim; only a line exceeding the width is word-wrapped. This
-   fixes `map out N` too — which returns the same pre-formatted picture and does
-   *not* enter map focus, so fixing only the gesture would leave the defect
-   reachable.
+
+   **Only the BARE form changes, and that is load-bearing rather than
+   conventional.** `map out N` still returns the sim's own picture — which is
+   the diagnostic path that caught The Quire's wrong projection, where the
+   client and the sim were rendered side by side over the identical thirty-one
+   cells and only one was right. Removing every route to the sim's picture would
+   delete the comparison that guards §5's H2. The bare/argument split preserves
+   it for free.
+2. **`wrap` stops collapsing whitespace, and never re-flows a picture.** A line
+   that fits the pane is preserved verbatim. A line that *exceeds* it is
+   **clipped or horizontally scrolled, never word-wrapped** — prose may grow
+   downward, a picture may not grow at all, and re-flowing it is precisely the
+   defect. `strip.rs`'s existing marquee is the precedent for the scrolling
+   half. This fixes `map out N` too, which returns the same pre-formatted
+   picture and does *not* enter map focus, so fixing only the gesture would
+   leave the defect reachable.
+
+   **Named failure mode:** the wire carries no marker distinguishing a
+   pre-formatted block from prose, so this rule classifies *per line*, not per
+   block. A prose line long enough to exceed the pane is wrapped (correct); a
+   picture line long enough to exceed the pane is clipped (correct); a prose
+   line that happens to be short is preserved verbatim (identical to wrapping
+   it, so harmless). The residual risk is a picture narrower than the pane
+   sitting beside prose — which is the actual case today, and which the rule
+   handles.
 3. **The client requests the `terrain` lens**, which `surrounds_ascii.rs`
    guarantees is escape-free. The client applies its own ink from the wire's
    `color` field and has no use for SGR.
