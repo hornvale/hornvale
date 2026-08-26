@@ -114,11 +114,21 @@ replaces a rule an earlier draft of this spec proposed to police:
 The plate currently draws terrain and point sites in one pass. Split it into
 three layers with distinct cache keys and distinct owners:
 
-| layer | source | key | fogging |
-|---|---|---|---|
-| **terrain** | client-side from `terrain`/`geo`; no wire traffic | `(frame, rung, tile)` | none — a native knows the geography |
-| **features / discovery** | the ledger's settlements and caves, gated on discovery | discovery version | features hidden until visited |
-| **perception** | the per-turn `scene/surrounds` packet (31 cells) | the turn | what the eye resolves now |
+| layer | source | **drawn by** | key | fogging |
+|---|---|---|---|---|
+| **terrain** | client-side from `terrain`/`geo`; no wire traffic | `bin/plate.rs` | `(frame, rung, tile)` | none — a native knows the geography |
+| **features / discovery** | the ledger's settlements and caves, gated on discovery | `bin/plate.rs` | discovery version | features hidden until visited |
+| **perception** | the per-turn `scene/surrounds` packet (31 cells) | **`core/chart.rs`** | the turn | what the eye resolves now |
+
+**The third column is load-bearing and was missing from the first draft of this
+table.** Task 4 found the omission: the perception layer cannot be drawn by
+`bin/plate.rs`, because the plate has no perception input at all — that packet
+is rendered by `clients/game/core` into the *band* plate which the world plate
+is drawn **instead of**. Adding a `draw_perception_layer` beside the other two
+would have been a no-op with an untestable body. This is the same boundary
+Ruling 2 fixed for Task 6: `core` carries no hornvale crate, so terrain lives in
+`bin` and the wire packet lives in `core`, and the layers meet at
+`spread::compose` rather than inside one function.
 
 The split is not tidiness. `CLIENT-tiles-need-the-overlay-split` records the
 measured reason: a tile keyed on the discovery version is invalidated by every
