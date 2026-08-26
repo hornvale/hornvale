@@ -1301,13 +1301,37 @@ Add `CHEMOSYNTHATE` to the `v1_basis()` slice itself, **at the end**.
 
 - [ ] **Step 3: Extend `SUPPLY_AXIS_ORDER` to seven**
 
-`SUPPLY_AXIS_ORDER` is `[ResourceAxis; 6]` at `windows/worldgen/src/lib.rs:1160`
-and its **order is load-bearing**: it must match the `per_axis` arrays in
-*both* capacity loops, and
-`the_supply_axis_order_matches_both_capacity_loops` pins that. Append
-`CHEMOSYNTHATE` at the end and add the matching entry to **both** `per_axis`
-arrays (the first is near line 1556; find the second rather than assuming its
-line).
+`SUPPLY_AXIS_ORDER` is `[ResourceAxis; 6]` at
+`windows/worldgen/src/lib.rs:1161` and its **order is load-bearing**: it must
+match the `per_axis` arrays in *both* capacity loops. Append `CHEMOSYNTHATE`
+at the end, widen the type to `[_; 7]`, and add the matching entry to **both**
+`per_axis` arrays — currently at `lib.rs:1559` and `lib.rs:1846`.
+
+**THE GUARD THAT PINS THIS PARSES SOURCE TEXT, AND IT WILL BITE YOU.**
+`the_supply_axis_order_matches_both_capacity_loops` (`lib.rs:10273`)
+`include_str!`s its own file, splits on the literal `"let per_axis = ["`,
+keeps only blocks containing `(vertex)`, and translates identifiers to axis
+labels through a **hardcoded match arm**:
+
+```rust
+    "PHOTOSYNTHATE" => "photosynthate",
+    "PLANT_FORAGE"  => "plant forage",
+    ...
+    other => other,
+```
+
+**You must add `"CHEMOSYNTHATE" => "chemosynthate"` to that match.** Without
+it the identifier falls through `other => other` as the string
+`"CHEMOSYNTHATE"`, which will not equal the axis's `label`, and the test
+fails with *"a capacity loop's per_axis order drifted"* — a message that
+sends you hunting for an ordering bug that does not exist. So give the new
+axis the label **`"chemosynthate"`** (lowercase, matching its siblings'
+convention) and add the arm.
+
+Note also there are **three** `let per_axis = [` occurrences in that file, not
+two — the third is the test module's own fixture at `lib.rs:10247`. The
+`(vertex)` filter is what excludes it, and the test asserts `found == 2`. Do
+not "fix" that count.
 
 For now the new entry's supply is `0.0` at every vertex — Task 9 wires the
 real field. **A zero weight is an exact IEEE-754 no-op** (`x + 0.0 == x`
