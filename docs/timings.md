@@ -3004,3 +3004,6 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T19:34:04Z | gate-commit | 20.180 | 49.059 | 12.514 | 3.05 | 0 | 4b8394873 | campaign/the-sources | MacBookPro | 10 |
 | 2026-08-26T19:51:40Z | gate-commit | 50.993 | 89.283 | 83.375 | 3.39 | 0 | fcfe34ea0 | campaign/the-sources | MacBookPro | 10 |
 | 2026-08-26T19:52:32Z | gate-commit | 21.434 | 50.143 | 12.392 | 2.92 | 0 | fcfe34ea0 | campaign/the-sources | MacBookPro | 10 |
+| 2026-08-26T20:29:47Z | gate-commit | 70.363 | 168.276 | 106.722 | 3.91 | 0 | 996fb66cc | campaign/the-sources | MacBookPro | 10 |
+| 2026-08-26T20:31:06Z | gate-commit | 40.625 | 86.002 | 14.502 | 2.47 | 0 | 996fb66cc | campaign/the-sources | MacBookPro | 10 |
+| 2026-08-26T20:34:39Z | gate-commit | 52.342 | 87.404 | 84.540 | 3.29 | 0 | 996fb66cc | campaign/the-sources | MacBookPro | 10 |

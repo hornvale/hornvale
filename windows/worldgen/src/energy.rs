@@ -147,8 +147,9 @@
 //! module encodes one directly. Task 5's implementer should meet that
 //! deliberately rather than discover it.
 
-use hornvale_kernel::Band;
-use hornvale_terrain::{GeothermalGradient, MaterialBuffer, delta_t_range_of};
+use hornvale_kernel::{Band, Geosphere, VertexMap};
+use hornvale_terrain::delve::rung_evaluation_depth_m;
+use hornvale_terrain::{GeneratedTerrain, GeothermalGradient, MaterialBuffer, delta_t_range_of};
 
 /// Smoothstep, the third private copy in this tree (see the module-level
 /// note in the task report): `kernel/src/noise.rs` and
@@ -302,7 +303,16 @@ pub enum EnergySource {
     /// anchored to [`underdeep_delta_t_range`]'s low edge: geothermal supply
     /// crosses its own half-yield point exactly where the ladder places the
     /// onset of the deep, geothermally-driven chemistry regime — the same
-    /// boundary this round keys `SulphideOxidation`'s peak to.
+    /// boundary this round keys `SulphideOxidation`'s peak to. **This anchor
+    /// is a modelling choice, not an independent citation** (Task 5's
+    /// re-review, carried forward as its own step 3b): unlike
+    /// [`DETRITAL_IMPORT_DRAINAGE_REACH`], which cites a measured p90
+    /// drainage statistic, nothing independently measures where geothermal
+    /// supply *should* cross half-yield — it borrows `Underdeep`'s boundary,
+    /// which was built to classify habitability, not to calibrate
+    /// geothermal yield. Task 5's measured per-rung energy profile (see
+    /// `subterranean_energy_field_per_rung` and its probe) is what would
+    /// revise it, if it disagrees.
     Geothermal,
     /// Surface-sourced organic and mineral material (rockfall, percolating
     /// detritus) that thins out with distance from the entrance — the
@@ -400,6 +410,134 @@ impl EnergySource {
             }
         }
     }
+}
+
+/// The `ENERGY` ruler, `[0,1]`: every named source's yield
+/// ([`EnergySource::yield_at`]) at one point, combined by their **mean**.
+///
+/// **Mean, not a clamped sum — found empirically, not designed in.** A first
+/// cut summed the seven sources and clamped the total to `[0,1]`
+/// (`EnvironmentVector::new` rejects a value outside that ruler). Measured
+/// over the frozen seed set, that clamp pinned **every rung's median to
+/// exactly `1.0`**: with moisture near-saturated at most chambers, four to
+/// six of the seven sources (the depth/gradient/drainage-gated ones, largely
+/// independent of which silica band a vertex's rock falls in) are
+/// simultaneously non-trivial often enough that the raw sum blows past `1.0`
+/// at the *median*, not just the tail. A clamp that fires at the median
+/// erases whatever depth-shape the seven sources have — a flat ceiling at
+/// every rung cannot trough anywhere, so that combination rule would have
+/// been shaping the answer away, not measuring it (the module doc's "nothing
+/// here was shaped to produce a U" claim scopes each *source*; a clamped sum
+/// that saturates everywhere breaks that claim one level up, at the
+/// combination). The mean is a convex combination of seven `[0,1]` values,
+/// so it lands in `[0,1]` **without ever needing to clamp** — nothing here
+/// is truncated at any point, in the tail or at the median, and the U this
+/// module's tests measure is whatever the seven sources' own shapes produce.
+/// type-audit: bare-ok(diagnostic-value: depth_m), bare-ok(ratio: moisture), bare-ok(diagnostic-value: drainage), bare-ok(ratio: return)
+pub fn subterranean_energy(
+    material: &MaterialBuffer,
+    gradient: GeothermalGradient,
+    depth_m: f64,
+    moisture: f64,
+    drainage: f64,
+) -> f64 {
+    let total: f64 = EnergySource::ALL
+        .iter()
+        .map(|source| source.yield_at(material, gradient, depth_m, moisture, drainage))
+        .sum();
+    total / EnergySource::ALL.len() as f64
+}
+
+/// Which source contributes the most yield at one point — the scalar this
+/// module retains beside [`subterranean_energy`]'s single ruler value, so
+/// the seven sources' *differences* (which `BIO-subterranean-energy-sources`
+/// says motivate ecology, trade, exploration and mining) survive the sum
+/// rather than being discarded by it. `MARINE_FORAGE`'s own precedent,
+/// applied deliberately: one axis, one calibration knob, with the
+/// underlying distinction retained and retrievable beside it rather than
+/// thrown away.
+///
+/// On an exact tie, favours the source listed **later** in
+/// [`EnergySource::ALL`] — `Iterator::max_by`'s documented behaviour ("if
+/// several elements are equally maximum, the last element is returned").
+/// type-audit: bare-ok(diagnostic-value: depth_m), bare-ok(ratio: moisture), bare-ok(diagnostic-value: drainage)
+pub fn dominant_source(
+    material: &MaterialBuffer,
+    gradient: GeothermalGradient,
+    depth_m: f64,
+    moisture: f64,
+    drainage: f64,
+) -> EnergySource {
+    EnergySource::ALL
+        .iter()
+        .copied()
+        .max_by(|a, b| {
+            a.yield_at(material, gradient, depth_m, moisture, drainage)
+                .total_cmp(&b.yield_at(material, gradient, depth_m, moisture, drainage))
+        })
+        .expect("EnergySource::ALL is non-empty")
+}
+
+/// [`subterranean_energy`] over every band of the ladder and every vertex of
+/// the globe, indexed by `Band as usize` ([`Band::all`]'s own order:
+/// `Surface` through `Nadir`, six entries) — the field the module doc's
+/// opening line names as Task 5's job ("Task 5 consumes
+/// [`EnergySource::ALL`] for that").
+///
+/// A vertex with no cave gets `[None; 6]`; a cave-bearing vertex's
+/// [`Band::Surface`] slot is always `None` ([`rung_evaluation_depth_m`]
+/// returns `None` there — it names no chamber, same as
+/// [`crate::subterranean_substrate_field_per_rung`]'s own `Surface` slot).
+///
+/// **Derived exactly as [`crate::subterranean_substrate_field_per_rung`]
+/// derives its own per-rung reading**: same [`rung_evaluation_depth_m`] call
+/// for the evaluation depth, same [`crate::subterranean_substrate_at_rung`]
+/// call for the rung's moisture — so this field cannot disagree with that
+/// one about which rungs a chamber has, or read a different depth or
+/// moisture at one it does. `drainage` is read once per vertex
+/// ([`GeneratedTerrain::drainage_at`]) rather than per rung, because it is
+/// [`EnergySource::DetritalImport`]'s only input and does not vary with
+/// depth the way moisture does.
+///
+/// **This is where the module doc's "nothing here was shaped to produce a
+/// U" caveat becomes concrete, not merely theoretical.** `moisture` here is
+/// [`crate::Substrate::moisture`], itself depth-dependent via
+/// `chamber_moisture` (saturated below the water table, drying above it) —
+/// so the six moisture-gated sources inherit an *indirect* depth-dependence
+/// at exactly this boundary, even though [`EnergySource::yield_at`] itself
+/// never reads depth for any water gate.
+/// type-audit: bare-ok(ratio: return)
+pub fn subterranean_energy_field_per_rung(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    surface: &VertexMap<crate::Substrate>,
+) -> VertexMap<[Option<f64>; 6]> {
+    VertexMap::from_fn(geo, |vertex| {
+        let mut out = [None; 6];
+        let Some(cave) = terrain.cave_at(vertex) else {
+            return out;
+        };
+        let gradient = terrain.geothermal_gradient_at(vertex);
+        let material = terrain.material_at(vertex);
+        let drainage = terrain.drainage_at(vertex);
+        let s = *surface.get(vertex);
+        for &rung in Band::all() {
+            let Some(depth_m) = rung_evaluation_depth_m(rung, gradient, cave.depth_reach_m) else {
+                continue;
+            };
+            let Some(sub) = crate::subterranean_substrate_at_rung(s, rung, terrain, vertex) else {
+                continue;
+            };
+            out[rung as usize] = Some(subterranean_energy(
+                &material,
+                gradient,
+                depth_m,
+                sub.moisture,
+                drainage,
+            ));
+        }
+        out
+    })
 }
 
 #[cfg(test)]
