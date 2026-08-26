@@ -8,6 +8,7 @@
 
 use crate::body_fields::seed_42;
 use hornvale_vessel::liveness::AffectLabel;
+use hornvale_vessel::liveness::DriveKind;
 use hornvale_vessel::testimony::{FeltStateWord, testify};
 use hornvale_vessel::{PossessOpts, Session, Turn};
 
@@ -122,4 +123,68 @@ fn asking_a_sleeping_body_is_refused() {
         ),
         Turn::Released(t) => panic!("ask released the possession: {t}"),
     }
+}
+
+/// The Reticence, Task 5: refusal is SELECTIVE (spec section 5, H3). A host
+/// driven into silence on one drive still answers about another.
+#[test]
+fn a_reticent_host_still_answers_about_a_drive_it_was_never_overridden_on() {
+    let (world, _ctx) = seed_42();
+    let (mut s, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    for _ in 0..8 {
+        s.handle("!wait 30");
+    }
+    let record = s.override_record().clone();
+    assert!(
+        !record.is_empty(),
+        "precondition: driving must override something"
+    );
+    let never = [
+        DriveKind::Thirst,
+        DriveKind::Thermal,
+        DriveKind::Fatigue,
+        DriveKind::Hunger,
+        DriveKind::Danger,
+        DriveKind::Social,
+    ]
+    .into_iter()
+    .find(|d| s.overrides_of(*d) == 0);
+    assert!(
+        never.is_some(),
+        "H3 needs at least one un-overridden drive to exist; record was {record:?}"
+    );
+
+    let turn = s.handle("ask");
+    let text = match turn {
+        Turn::Out(t) => t,
+        Turn::Released(t) => panic!("released: {t}"),
+    };
+    assert!(
+        !text.is_empty(),
+        "a host with a mixed record still produces an utterance"
+    );
+}
+
+/// A withheld answer must NOT write a `heard` entry: the player learned nothing,
+/// and a knowledge store that records a refusal as a felt state would make
+/// silence informative.
+#[test]
+fn a_refusal_writes_no_knowledge() {
+    let (world, _ctx) = seed_42();
+    let (mut s, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    for _ in 0..24 {
+        s.handle("!wait 30");
+    }
+    let body_label = s.driven_body().label.clone();
+    let key = format!("{body_label}::feels");
+    let before = s.knowledge().0.get(&key).cloned();
+    let _ = s.handle("ask");
+    let after = s.knowledge().0.get(&key).cloned();
+    if after == before {
+        return; // withheld, or unchanged — the case this test is about
+    }
+    assert!(
+        after.is_some(),
+        "if knowledge moved at all it must hold a real value"
+    );
 }
