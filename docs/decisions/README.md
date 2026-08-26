@@ -224,3 +224,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0260](0260-a-seed-invariant-derivation-is-a-window.md) | A seed-invariant derivation is a window, not a census metric | Accepted |
 | [0261](0261-a-rule-duplicated-on-purpose-carries-a-two-way-agreement-test.md) | A rule duplicated on purpose carries a pointer in both copies and a two-way agreement test | Accepted |
 | [0266](0266-an-utterance-is-a-fact.md) | An utterance is a fact, an event is an entity, and roles are predicates on that entity | Accepted |
+| [0286](0286-each-realizer-ignores-part-of-the-clause.md) | A language-neutral clause states more than any one realizer surfaces | Accepted |

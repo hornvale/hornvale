@@ -2975,3 +2975,16 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T16:00:25Z | sluice:outboard | 41.121 | 25.697 | 38.843 | 1.57 | 0 | 1daf2ade1 |  | lefford | 40 |
 | 2026-08-26T16:07:46Z | sluice:gate | 441.328 | 12173.405 | 457.514 | 28.62 | 0 | 38d8e13fa |  | lefford | 40 |
 | 2026-08-26T16:15:29Z | sluice:clients | 462.845 | 5757.223 | 80.937 | 12.61 | 0 | 5f95b8918 |  | lefford | 40 |
+| 2026-08-26T16:47:13Z | prewarm | 136.646 | 1088.968 | 57.296 | 8.39 | 0 | 7576eca00 | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T17:31:58Z | gate-commit | 53.780 | 132.760 | 80.534 | 3.97 | 0 | b294722dd | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T17:32:36Z | gate-commit | 19.919 | 48.725 | 12.373 | 3.07 | 0 | b294722dd | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T17:37:41Z | gate-commit | 44.198 | 88.034 | 66.408 | 3.49 | 0 | 0961bf36e | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T17:38:12Z | gate-commit | 19.574 | 48.513 | 12.272 | 3.11 | 0 | 0961bf36e | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T17:49:50Z | gate-commit | 43.253 | 87.466 | 65.437 | 3.54 | 0 | 6dc37b514 | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T17:50:26Z | gate-commit | 19.473 | 48.400 | 12.240 | 3.11 | 0 | 6dc37b514 | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T18:10:36Z | gate-commit | 34.251 | 76.847 | 33.993 | 3.24 | 0 | f3f6d8352 | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T18:11:16Z | gate-commit | 20.044 | 48.838 | 12.636 | 3.07 | 0 | f3f6d8352 | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T18:28:40Z | gate-commit | 36.359 | 74.506 | 34.027 | 2.99 | 0 | fdff81644 | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T18:29:21Z | gate-commit | 20.339 | 48.814 | 12.386 | 3.01 | 0 | fdff81644 | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T18:42:56Z | rebaseline | 75.855 | 255.402 | 12.795 | 3.54 | 0 | 6fc1645a3 | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T18:53:43Z | gate-commit | 32.505 | 66.552 | 35.146 | 3.13 | 0 | 6fc1645a3 | campaign/the-scarf | MacBookPro | 10 |

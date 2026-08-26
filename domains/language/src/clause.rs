@@ -487,6 +487,14 @@ impl std::error::Error for ParseError {}
 /// owns an English recognizer of its own) takes it from
 /// [`parse_common_with_tail`], which is the same walk with the tail
 /// returned instead of dropped.
+///
+/// **Caller-less by design, and deliberately kept.** Nothing in the
+/// workspace calls this: it is the "give me a clause, not English" front
+/// door, and The Interlinear's reviewer recommended keeping it against a
+/// dead-code sweep that would see an undefended `pub fn`. Its inverse,
+/// [`realize_common`], is what makes the pairing bidirectional by
+/// construction; deleting this half would make a future `parse_tongue` a
+/// new invention rather than a second instance.
 /// type-audit: bare-ok(prose)
 pub fn parse_common(text: &str, ctx: &ParseContext) -> Result<Clause, ParseError> {
     parse_common_with_tail(text, ctx).map(|(spec, _)| spec)
