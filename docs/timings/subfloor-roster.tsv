@@ -1214,6 +1214,7 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
@@ -1573,6 +1574,7 @@ hornvale-language::hornvale_language$clause::tests::classify_has_one_declared_co
 hornvale-language::hornvale_language$clause::tests::classify_singular_indefinite
 hornvale-language::hornvale_language$clause::tests::classify_with_modifier_tail
 hornvale-language::hornvale_language$clause::tests::common_dates_a_founding_inline_through_the_cardinal
+hornvale-language::hornvale_language$clause::tests::common_ignores_the_evidential
 hornvale-language::hornvale_language$clause::tests::common_names_an_occupations_people_in_the_plural
 hornvale-language::hornvale_language$clause::tests::common_places_an_occupation_at_its_vertex_as_a_bare_identifier
 hornvale-language::hornvale_language$clause::tests::common_renders_a_moon_count_exactly_as_the_book_did
@@ -1634,12 +1636,18 @@ hornvale-language::hornvale_language$exemplars::tests::every_hue_concept_has_an_
 hornvale-language::hornvale_language$exemplars::tests::red_leans_long_and_blue_leans_short
 hornvale-language::hornvale_language$exemplars::tests::the_hue_concepts_are_exactly_the_color_packs_hue_ladder
 hornvale-language::hornvale_language$exemplars::tests::the_luminance_ladder_has_no_exemplars
+hornvale-language::hornvale_language$grammar::tests::a_non_lexical_object_bears_no_morphology_and_does_not_panic
+hornvale-language::hornvale_language$grammar::tests::a_tongue_gaps_on_a_pronoun_subject_and_names_the_missing_inventory
 hornvale-language::hornvale_language$grammar::tests::a_tongue_gaps_on_an_adjunct_concept_it_lacks_rather_than_emitting_common
+hornvale-language::hornvale_language$grammar::tests::a_tongue_ignores_number_and_definiteness
+hornvale-language::hornvale_language$grammar::tests::a_tongue_panics_on_an_uncovered_predicate_rather_than_gapping
+hornvale-language::hornvale_language$grammar::tests::a_tongue_predicates_a_bare_count_in_the_object_slot
 hornvale-language::hornvale_language$grammar::tests::a_tongue_realizes_an_adjunct_whose_concept_it_knows
 hornvale-language::hornvale_language$grammar::tests::articles_presence_rate_matches_authored_weight
 hornvale-language::hornvale_language$grammar::tests::constituent_order_weights_favor_sov_and_svo
 hornvale-language::hornvale_language$grammar::tests::copula_form_is_nonempty_and_deterministic
 hornvale-language::hornvale_language$grammar::tests::copula_presence_rate_matches_authored_weight
+hornvale-language::hornvale_language$grammar::tests::every_argument_shape_resolves_the_same_way_in_either_slot
 hornvale-language::hornvale_language$grammar::tests::inferred_is_defined_and_loud
 hornvale-language::hornvale_language$grammar::tests::layer_affix_panics_on_a_segmentless_word
 hornvale-language::hornvale_language$grammar::tests::realize_tongue_exhaustive_orders_and_copula
@@ -2699,7 +2707,6 @@ hornvale-vessel::hornvale_vessel$underworld_level::tests::every_level_but_the_fi
 hornvale-vessel::hornvale_vessel$underworld_level::tests::every_walkable_cell_is_reachable_from_every_other
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generate_descent_produces_one_level_per_rung
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generation_is_deterministic
-hornvale-vessel::hornvale_vessel$underworld_level::tests::made_chambers_lean_worked_found_chambers_lean_natural
 hornvale-vessel::hornvale_vessel$underworld_level::tests::stairs_down_and_stairs_up_never_share_a_cell
 hornvale-vessel::hornvale_vessel$underworld_level::tests::two_rungs_with_the_same_origin_and_kind_still_differ
 hornvale-vessel::hornvale_vessel$underworld_level::tests::worked_fraction_has_inertia_across_rungs
