@@ -21,6 +21,28 @@
 //! history effect -- which is exactly what happened there: three runs of its
 //! whole-tick column disagreed about the sign.
 //!
+//! ## Why there are TWO instruments, and why neither may be deleted
+//!
+//! The distinction is **internal vs ecological validity**, and it is the
+//! reason these two files are complements rather than duplicates.
+//!
+//! This bench has INTERNAL validity: depth is set directly and decorrelated
+//! from elapsed time by construction, so the history term can be isolated and
+//! `C` identified. What it CANNOT do is say what fraction of a REAL tick that
+//! term is -- because it has no real tick. There is no roster, no A* search,
+//! no occupancy bookkeeping, no commit; the denominator such a share would be
+//! taken against does not exist here. Any "share of a tick" number from this
+//! file would be a number about this file.
+//!
+//! `session_length_scaling.rs` has ECOLOGICAL validity and little internal
+//! validity: it ticks a real 50-agent session, so its "70-80% of a tick" is a
+//! claim about the system as it runs -- at the cost of a narrow, time-
+//! correlated depth range.
+//!
+//! **So a shape finding wants this bench and a share finding wants the
+//! sibling, and a future campaign that deletes either one loses a claim the
+//! other cannot make.** Neither is the "better" instrument.
+//!
 //! This bench sets depth directly instead of growing it, over a ~1000x span
 //! that starts at 10, and visits every depth on EVERY pass, alternating the
 //! sweep direction each pass so depth and elapsed time are decorrelated by
@@ -49,7 +71,7 @@
 //! -- a backward linear scan of the FULL `H`-length sightings vector, not an
 //! indexed or incrementally-tracked lookup. So the real cost is
 //! `O(H + S*H)`, not the `O(history)` the sibling benches' docs narrate for
-//! the six production folds. The old single-reset sweep committed exactly
+//! the five trail-walking folds. The old single-reset sweep committed exactly
 //! one `drank` at the start, so every posting is a sighting since that one
 //! drink: `S == H`, and the measured cost is dominated by the quadratic
 //! `S*H == H^2` term -- a real pathology, and (per the roster measurement in

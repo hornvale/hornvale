@@ -3679,9 +3679,12 @@ does not disturb that. What it disturbs is a reading of it — that a substrate
 whose *writes* are boring has therefore been priced.
 
 Appending a fact is O(1) and always was. Reading a fold over the accumulated
-facts is not, and Hornvale's creature-drive stack recomputes six such folds
-from the beginning of an agent's history on every evaluation, per agent, per
-tick. Measured on a fixed roster over two hundred ticks, with the
+facts is not, and Hornvale's creature-drive stack recomputes five such folds
+over an agent's entire committed position trail on every evaluation, per agent,
+per tick — plus a sixth that does it once per co-located peer. (A sibling fold
+over `rested` events is timed alongside them and is the one that is cleanly
+*not* history-proportional; the count here is the trail-walkers, which is the
+set that makes the cost grow.) Measured on a fixed roster over two hundred ticks, with the
 deterministic columns held as a control and flat, the history term is **70 to
 80 per cent of a tick**, which makes total session cost quadratic in session
 length. That is a cost of the log, and nothing in the tier above was ever

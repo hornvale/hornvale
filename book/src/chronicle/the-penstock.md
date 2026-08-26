@@ -95,11 +95,14 @@ The second was measuring the wrong mechanism, and
 
 Path length prices **abstention**: how many per-step facts a per-errand commit
 would avoid writing. That is a storage saving, and it is real. But it is not
-available, because six folds in the creature-drive stack read the per-step
+available, because five folds in the creature-drive stack read the per-step
 trail as *semantics* rather than as cache — the thirst and hunger path
-integrals, fatigue, the water belief, the fear memory, the alarm scan. Abstain
-and the world behaves differently, and no committed artifact would redden to
-say so.
+integrals, the water belief, the fear memory, the alarm scan — and a sixth,
+the band's shared water belief, reads it once per co-located peer. (Fatigue is
+*not* one of them, though an earlier draft of this postscript said it was: it
+folds `rested` events only, and abstaining from the position trail would not
+move it by one bit.) Abstain and the world behaves differently, and no
+committed artifact would redden to say so.
 
 And it is not the larger number. The folds are recomputed from the beginning of
 an agent's history on every evaluation, per agent per tick, so the log costs

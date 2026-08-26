@@ -16,17 +16,45 @@
 //! an O(agents^2) shape. `tick_commit_budget.rs` sweeps ticks but measures
 //! only facts committed, never TIME.
 //!
-//! So nothing in the tree measures the third axis: **six production folds in
-//! `liveness.rs` walk an agent's committed history on every evaluation** —
-//! `agent_sightings`/`integrate_thirst` via `drive_at` (the thirst path
-//! integral), `hunger_at` (the same trail, `HUNGER` params), `fatigue_at`
-//! (over `rested`), `believed_water` (the water belief), `hazard_memory_memo`
-//! (latest-visit-per-facet) and `build_emitter_scan` (alarm halos). The ledger
-//! is append-only, so each is O(history), and history grows every tick. Three
+//! So nothing in the tree measures the third axis: **FIVE production folds in
+//! `liveness.rs` walk an agent's committed `agent-at` TRAIL on every
+//! evaluation** — `agent_sightings`/`integrate_thirst` via `drive_at` (the
+//! thirst path integral), `hunger_at` (the same trail, `HUNGER` params),
+//! `believed_water` (the water belief), `hazard_memory_memo`
+//! (latest-visit-per-facet) and `build_emitter_scan` (alarm halos). A sixth,
+//! `shared_believed_water`, walks it once per co-located peer. `fatigue_at`
+//! is timed alongside them but is NOT a trail-walker: it folds `rested`
+//! events only, so it is O(rests), not O(trail) -- and it measures as the
+//! one fold with no stable elasticity sign. The ledger is append-only, so
+//! each trail-walker is O(history), and history grows every tick. Three
 //! multipliers sit in the same call path: `shared_believed_water` calls
 //! `believed_water` once per co-located peer, `build_emitter_scan` is threaded
 //! the full roster inside a per-agent call, and `begin` re-folds `DRANK`,
 //! `RESTED` and `EATEN` from scratch per creature per tick.
+//!
+//! ## Why there are TWO instruments, and why neither may be deleted
+//!
+//! This bench and `fold_depth_sweep.rs` are complements, not duplicates, and
+//! the distinction is **internal vs ecological validity**.
+//!
+//! The synthetic sweep has INTERNAL validity: it sets depth directly, over a
+//! ~1000x span from 10, decorrelated from wall-clock time by construction, so
+//! it can isolate the history term and identify the affine intercept `C`. What
+//! it CANNOT do is say what fraction of a REAL tick that term is -- because it
+//! has no real tick. There is no roster, no A* search, no occupancy
+//! bookkeeping, no commit; the denominator the share would be taken against
+//! does not exist in it.
+//!
+//! This bench has ECOLOGICAL validity and little internal validity: it ticks a
+//! real 50-agent session forward, so its "70-80% of a tick" share is a claim
+//! about the system as it actually runs -- but it can only observe the depths
+//! a 200-tick run happens to pass through (a 2.48x span, starting well above
+//! zero), which makes `C` unidentifiable and makes depth perfectly correlated
+//! with elapsed time.
+//!
+//! **So a shape finding wants the sweep and a share finding wants this bench,
+//! and a future campaign that deletes either one loses a claim the other
+//! cannot make.** Neither is the "better" instrument.
 //!
 //! That predicts a cost curve rising with SESSION LENGTH even when the
 //! population is held perfectly still — a term neither sibling bench can see,

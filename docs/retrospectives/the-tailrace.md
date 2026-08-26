@@ -1,13 +1,17 @@
 # The Tailrace — retrospective
 
-**Merged:** pending. Process lessons only; what shipped is in
-[the chronicle](../../book/src/chronicle/the-tailrace.md).
+Process lessons only; what shipped is in
+[the chronicle](../../book/src/chronicle/the-tailrace.md). Stages 1-2 of
+Penstock stage 7; stages 3-5 deferred with homes (below).
 
-## Nine controller-side errors, and all nine were the same error
+## Ten controller-side errors, and all ten were the same error
 
 None was invented. Each was a **true thing generalised one step too far**, and
 each was settled — usually by someone else — by running the check the claim
-implied.
+implied. **Row 10 was added by the pre-merge review of this very file**, which
+is the table's own thesis arriving on schedule: nine of these were caught during
+the campaign, and the tenth had already reached a ratified decision record and
+two published chapters before anyone read the function it described.
 
 | # | the claim | what was actually true |
 |---|---|---|
@@ -20,6 +24,7 @@ implied.
 | 7 | `home = room_for(0)` is never read at depth ≥ 10 | it is read once per call at every depth — the first segment starts at `s = 0.0` and no posting precedes it. Harmless only because the terrain is constant |
 | 8 | a 643 s timings row is a mild outlier against kernel-layer rows | that commit is docs-only, so the comparison is the docs-only floor: a 4–9× anomaly |
 | 9 | the spec's citations were re-dated | the commit carrying that edit was refused, and the `git merge --abort` that followed discarded the working-tree edit with it. Reported as done |
+| 10 | six folds walk the `agent-at` trail | **five** do. `fatigue_at` folds `rested` only, so abstaining from `agent-at` would not move it by one bit — and `shared_believed_water`, which walks the trail once per co-located peer, was missing from the enumeration instead. The campaign's own §2 table and §4 attribution had this right ("O(1) — a max"; "the one fold that is cleanly NOT" history-scaling); §0's headline generalised *fatigue is one of the six folds we timed* into *therefore it walks the trail*, and that spread to six files including a ratified decision record. Caught by a reviewer reading the function, at the last possible moment |
 
 Two lessons, and the first is not "be more careful".
 
@@ -45,74 +50,75 @@ normally and that I would adjudicate against my own ruling — and it then
 confirmed, unprompted, that it would have approved the split on its own
 judgment. Give a reviewer the reasoning, never the verdict.
 
-## Mutation testing found three things review-by-reading did not
+## A hold-off blocks *stages*, not campaigns, and asking per-stage is what shipped this
 
-Reviewers applied type-checking mutations to the new kernel module and required
-the intended test to go red, confirming each hunk applied before trusting a
-result and confirming a clean tree after reverting.
+The most reusable thing this campaign produced, and it was nearly lost: it lived
+only in the git-ignored scratch, because it is a *method* finding rather than a
+measurement and the sweep looks for measurements.
 
-1. **A test compared a function against itself.** An off-by-one in the skip
-   count reddened one fold-equals-scan test and left its sibling green, because
-   `rebuild` is *implemented by calling* `advance_to` — a bug inside
-   `advance_to` applies identically to both sides of that comparison and
-   cancels. Both sides absorbed facts 1–19, both missed fact 0, and both
-   agreed. Not a coverage hole (an independent path caught it) but a naming and
-   advice defect, and the advice was the dangerous half: the module doc tells
-   every future tenant to use `rebuild` to make its own property test cheap.
-2. **The most aggressive chaos schedule is not the most diagnostic.** An
-   implementer *self-reported* that discarding state at every position gives
-   almost no signal on the per-fact absorb step, because the state is replaced
-   immediately after every absorb. It had not tested its own claim. The reviewer
-   built the mutation and settled it: the every-position schedule stayed green,
-   the every-third-position schedule went red.
-3. **The claim "I checked three broken implementations" was reasoning, not
-   running.** An implementer reported that three hypothetical bugs would be
-   caught. A reviewer was asked to verify by applying a mutation instead, and
-   that is the pass that found item 1.
+Ledger entry #1 read a concurrent campaign's `hold-off` as a campaign-level
+verdict and concluded **"spec now, implement after The Escapement lands."** Entry
+#10 overturned it by asking the same question **per stage** instead: stage 2 —
+the core deliverable, the kernel primitive — turned out enterable *immediately*,
+on a conflict risk of two registration lines. Nothing about the hold-off had
+changed; the unit of the question had.
 
-The generalisable rule: on any check whose failure mode is silence, *reasoning
-about a mutation is not evidence.* Every one of these was found by making a
-green test go red on command.
+**A hold-off is a claim about a region of the tree, and a campaign is not the
+unit that touches a region — a stage is.** Reading it at campaign granularity
+takes the maximum over every stage's risk and blocks on the worst one, which is
+how a two-line risk in one stage blocks a kernel-layer stage that never goes
+near it. The spec carries only the result, so the re-framing itself would have
+evaporated; it is why this campaign shipped anything at all rather than a spec.
 
-## Nine instrument defects, one lesson, and the one that is purely process
+Related, and one line because it is a data point rather than a lesson: **the
+ideonomy pass went two-for-two on premises this campaign** — it overturned
+*which campaign this was* (#2) and *its sequencing* (#10), and separately added
+the synthetic depth sweep (#11). Whether the pass moves premises rather than
+answers is a standing open question, and a two-for-two run is evidence on it.
 
-The measurement side of this campaign produced nine defects and the code side
-produced none. They are narrated in
-[the chronicle](../../book/src/chronicle/the-tailrace.md) because they are
-findings about the world as much as about the process; what belongs here is the
-two that are purely about how work was done.
+## Mutation testing: the rule, not the narration
 
-**A mutation must prove it mutated.** One patch carried six edits, five of them
-asserting on their target line and one not. The un-asserted one silently did not
-apply, and the instrument printed eight column headers over ten columns with
-every value one heading to the left — a table that looked fine and was wrong
-everywhere. This is the project's own standing rule turned on its author: a
-patch that cannot fail loudly is a patch you have not applied.
+Mutation testing found three things review-by-reading did not — a test
+comparing a function against itself, a chaos schedule too aggressive to be
+diagnostic, and a "I checked three broken implementations" claim that turned out
+to be reasoning rather than running. The chronicle's *"The tests were checked by
+breaking the code"* narrates all three and narrates them better; what belongs
+here is the rule they share.
 
-**"The box is noisy" is the flattering explanation, and it was wrong.** A column
-disagreeing about its own sign across runs was diagnosed as contention on a
-loaded machine. Contention was real (a band ran 3.5× out of line while the
-calibration yardstick moved 19%) and it was not the cause; the cause was
-regressing against an x-axis that barely moved. Accepting the flattering
-diagnosis would have justified escalating the work to another machine and
-changing nothing. Before blaming the apparatus, check that the statistic is
-well-conditioned — and note that the yardstick built to detect exactly this
-contention could not see it, so its green reading was not evidence either.
+**On any check whose failure mode is silence, reasoning about a mutation is not
+evidence.** Every one of those three was found by making a green test go red on
+command, and two of the three were *self-reported* as verified by the
+implementer who had only reasoned about them.
 
-The generalisable form, which is also the shape of the other seven: **an
-instrument's own conditions are part of its output.** A fit's conditioning, an
-exclusion's declaration, a hardcoded constant standing in for a computed one,
-and whether a patch applied are all *results*. An instrument that does not
-report them will report the ones it does report confidently and wrongly.
+## Nine instrument defects, and the three rules worth keeping
 
-## One belief correction worth stating flatly
+The measurement side produced nine defects and the code side produced none.
+[The chronicle](../../book/src/chronicle/the-tailrace.md) narrates them, because
+they are findings about the world as much as about the process. Three rules are
+what belong here.
 
-An implementer attributed an unexplained commit to "the project's own gate/hook
-infrastructure … not something I authored by hand." **No hook in this repository
-auto-commits** — `git log` named the controller as that commit's author. The
-belief matters more than the instance: a session that thinks tooling makes
-commits will attribute a mystery commit to tooling instead of finding out who
-made it. Corrected in the review chain so the wrong version did not travel.
+- **A patch must prove it applied.** One patch carried six edits, five asserting
+  on their target line and one not; the un-asserted one silently did not apply
+  and the instrument printed a table that looked fine and was wrong everywhere.
+  The project's own standing rule, turned on its author.
+- **"The box is noisy" is the flattering explanation, and it was wrong.** A
+  column disagreeing about its own sign was diagnosed as contention; contention
+  was real and was not the cause — the cause was regressing against an x-axis
+  that barely moved. Accepting it would have justified escalating to another
+  machine and changing nothing. **Before blaming the apparatus, check the
+  statistic is well-conditioned** — and note the yardstick built to detect this
+  exact contention could not see it, so its green reading was not evidence
+  either.
+- **No hook in this repository auto-commits.** An implementer attributed an
+  unexplained commit to "the project's own gate/hook infrastructure"; `git log`
+  named the controller. A session that believes tooling makes commits will
+  attribute a mystery commit to tooling instead of finding out who made it.
+
+The generalisable form, and the shape of the other seven: **an instrument's own
+conditions are part of its output.** A fit's conditioning, an exclusion's
+declaration, a hardcoded constant standing in for a computed one, and whether a
+patch applied are all *results*. An instrument that does not report them will
+report the ones it does report confidently and wrongly.
 
 ## Five absorptions of `main`, and what a clean merge does not mean
 
@@ -207,83 +213,62 @@ than reporting as seen — the first draft of the spec asserted a syntax error o
 
 ## Deferred, with homes
 
-Every followup and parked finding is registered. New idea-registry rows carry
-the measurement that motivates them rather than a hunch:
+Every followup is registered, and the rows carry their motivating measurement.
+**Bare IDs on purpose** — the row says what the idea is, and restating it here
+is the duplication that had grown this section to sixty lines. Grep the
+registry.
 
-- **`TOOL-golden-pins-guarded-update`** — the guarded `--update` mode for
-  `golden-pins.sql`, the defect that cost this campaign a day. The reason no
-  *wholesale* regenerator can exist is the point of the row: the pinned literal
-  is a human ratification that a moved value is acceptable (~800 of that file's
-  1,091 lines are that ratification), so regenerating the literals from the
-  computation makes computed == pinned by construction and the tripwire never
-  fires again. A guarded mode that refuses to write until each moved pin has a
-  reason is the same shape as `make rebaseline-goldens`.
-- **`TOOL-penstock-7a-tenant-migration`** — stages 3–5 are now **unblocked**;
-  The Escapement landed 2026-08-25. Carries the crossover measurement and the
-  `agent_sightings` hub finding.
-- **`TOOL-interleaved-depth-sweep-attribution`** — stage 1's unfinished half:
-  which of the six folds carries the rest of `k`.
-- **`TOOL-calibrate-memory-bandwidth`** — the yardstick normalises CPU speed and
-  not memory bandwidth (one band 3.5× out of line on wall time while the
-  yardstick moved 19%).
-- **`TOOL-derived-bodies-commit-no-position`** — some derived bodies commit no
-  `agent-at` fact at all (min 0 across 50 agents over 200 ticks); uninvestigated,
-  and the reason a positionally-chosen probe read zero.
-- **`TOOL-make-target-runs-main-checkout-code`** — the `make worktree-take`
-  lesson above, as a durable row rather than a spec footnote.
-- **`TOOL-lexicon-guard-cell-substring-overmatch`** — `lexicon_guard`'s
-  `cell_tokens` counts any token containing "cell", so `cancelling`,
-  `excellent` and `cellar` each score 1. Demonstrated rather than inferred. The
-  over-match is deliberate (a `[Cc]ell` grep missed ~80 ALL-CAPS `CELL_ID`
-  occurrences), so this campaign reworded its prose around the guard rather
-  than misusing the reasoned-waiver mechanism, which means "this really is an
-  area".
-- Two existing rows already carried their homes: the per-tick memo clone
-  (`TOOL-agent-scaling-memo-clone-per-tick`, inherited unchanged by the new
-  instrument and deliberately kept outside its timed span) and
-  distinct-rooms-per-tick (`TOOL-scan-at-prefill-or-faster-scan`, which the new
-  instrument is now a few lines from reporting).
-- **The whole-tick column's x-axis is a mean over a wide spread** (per-agent
-  history min 0, max 420 against a mean of 143.9). Recorded in the spec's §4
-  limitations rather than as a row, because the decisive column avoids it by
-  probing one fixed agent — but if the whole-tick fit is ever load-bearing it
-  needs a median or the probe's own history.
+**Ten new rows** (nine `TOOL-*`, one `PROC-*`):
+`TOOL-incremental-ledger-fold` (stage 7a, shipped — the primitive);
+`TOOL-penstock-7a-tenant-migration` (stages 3-5, unblocked, with the corrected
+`agent_sightings` scope); `TOOL-windowed-fact-retention` (the unnamed middle of
+the forgetting spectrum, deliberately not taken);
+`TOOL-within-fold-cost-attribution-profile` (stage 1's unfinished half);
+`TOOL-golden-pins-guarded-update` (the defect that cost this campaign a day —
+and why no *wholesale* regenerator can exist);
+`TOOL-calibrate-memory-bandwidth`; `TOOL-derived-bodies-commit-no-position`;
+`TOOL-make-target-runs-main-checkout-code`;
+`TOOL-lexicon-guard-cell-substring-overmatch`; and
+`PROC-profiling-task-needs-a-reading-step` (a profile cannot be handed to a
+subagent, and the obstacle is the *reading* step, not the `--save-only` flag,
+which exists). Two existing rows already carried their homes:
+`TOOL-agent-scaling-memo-clone-per-tick` and
+`TOOL-scan-at-prefill-or-faster-scan`.
 
-**Three of the spec's four candidate decisions were minted, and the fourth
-deliberately was not.** 0236 (a fold advances; it is not invalidated), 0237 (the
-reset event is the checkpoint), and 0238 (stage 7 is three stages, and their
-order is forced) are records. **0238 was minted at close, and the reason it
-almost was not is the lesson.** The re-carve was ratified at G3, and it lived in
-the spec's §0 table and §9, in the registry rows for all three stages, and in a
-postscript on the parent program's own chronicle — four places, none of them
-`docs/decisions/`, which is the one place a future campaign greps before
-relitigating an architectural question. Being written down in four places that
-are not the index is not the same as being recorded. It amends another
-document's stage table, which is exactly the shape of thing the decision log
-exists to hold. "The trail's
-provenance is content" is likewise carried by the 7c row rather than as a
-record, which is what §9 itself proposed. If a later campaign wants either as a
-citable number, it mints it; nothing is lost in the meantime, but nothing
-enforces them either.
+**Nothing checks that a cited registry ID exists, and this very section proved
+it.** It shipped citing `TOOL-interleaved-depth-sweep-attribution`, which was
+never a row. A plausible ID is indistinguishable from a real one by eye and no
+gate reads prose citations, so: **grep every ID a retrospective cites against
+the registry before committing it.** That grep also found the list omitting
+`TOOL-windowed-fact-retention`, and the close reporting *eight* new rows against
+a verified **nine** — counted by diffing the set of row IDs against
+`origin/main` rather than by reading a total off either side, because two
+independent counting methods gave two different absolutes for the same delta.
+A bare list is what invites the grep; the sixty-line version did not.
 
-**Four deferred minors still stand**, and this list is their home:
+One finding stayed out of the registry deliberately: the whole-tick column's
+x-axis is a mean over a wide spread (per-agent history min 0, max 420, mean
+143.9), recorded in the spec's §4 limitations because the decisive column avoids
+it by probing one fixed agent.
 
-1. The corrected reading of `home = room_for(0)` — read once per call at every
-   depth, harmless because the terrain is constant (row 7 above). No code change
-   warranted; the wrong version must not travel.
-2. `fold_depth_sweep.rs`'s table prints only final-band absolute µs/call, not
-   first-band. Pre-existing `report_affine` behaviour, not a regression.
-3. Spec §4's amortized `hazard_memory_memo` range excludes run 1 while the
-   72–96× ratio range includes all four. Stated in the prose, so not an
-   inconsistency — but a future re-derivation needs to know which scoping
-   applies to which figure.
-4. `docs/timings.md`'s row for the docs-only commit `0f207e959` (643.4 s wall /
-   1,506.5 s user) is a 4–9× anomaly against the docs-only floor. Worth a glance
-   if the duration alarm ever reads it.
+**Three of the spec's four candidate decisions were minted, and 0238's near-miss
+is the lesson.** The stage-7 re-carve was ratified at G3 and lived in the spec's
+§0 and §9, in three registry rows, and in a postscript on the parent program's
+chronicle — four places, **none of them `docs/decisions/`**, the one place a
+future campaign greps before relitigating. Being written down in four places
+that are not the index is not the same as being recorded. (The fourth candidate,
+"the trail's provenance is content", is carried by the 7c row instead, as §9
+itself proposed.)
 
-Two others were closed by the final fix wave rather than deferred: the
-depth-10 doc line now carries its hedge, and the every-position chaos test now
-says in a comment that it gives no signal on the per-fact absorb step.
+**Four deferred minors:** the corrected `home = room_for(0)` reading (read once
+per call at every depth, harmless only because the terrain is constant — the
+wrong version must not travel); `fold_depth_sweep.rs` printing only final-band
+µs/call; spec §4's amortized `hazard_memory_memo` range excluding run 1 while
+the ratio range includes all four; and `docs/timings.md`'s docs-only commit
+`0f207e959` at 643.4 s, a 4-9x anomaly against the docs-only floor. Two others
+closed in the final fix waves: the depth-10 doc line now carries its hedge, and
+the every-position chaos test now says in a comment that it gives no signal on
+the per-fact absorb step.
 
 ## What went right, and is worth repeating
 

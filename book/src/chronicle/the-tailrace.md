@@ -11,8 +11,15 @@ the ledger is a tailrace with no channel: history that has already done its
 work, still standing against the wheel. This campaign is the read side of
 draining it, and it is worth being blunt about what that does and does not
 mean. **It removes no fact.** Committed bytes at the end of a session are
-byte-identical before and after, by construction and by the drift check. What
-it delivers is the precondition every plan to shrink the log silently assumes
+byte-identical before and after, and the reason is stronger than a drift check
+could give: the campaign adds **one module and one `pub mod` line**, modifies
+no existing production function, and the new module has no tenant anywhere
+outside the kernel's own tests. A campaign that adds one unreferenced module
+cannot change a byte a session commits. (The drift check is *not* the evidence,
+and this campaign's own finding is why — no committed artifact carries a ticked
+ledger, so nothing committed would redden either way. Citing the drift check
+here would have been citing an instrument structurally blind to the property.)
+What it delivers is the precondition every plan to shrink the log silently assumes
 and none of them had: that nothing depends on the raw history being there.
 
 ## The argument the program had not made
@@ -23,9 +30,11 @@ agent per tick and watched it hold across a hundred ticks), and a non-summable
 rate multiplied by unbounded time is an unbounded ledger. That argument is
 correct, and it is a projection: it describes a world nobody has run yet.
 
-There is a second argument, and unlike the first it is measurable today. Six
+There is a second argument, and unlike the first it is measurable today. Five
 folds in the creature-drive stack walk an agent's entire committed `agent-at`
-trail on every evaluation, and they run per agent per tick. So **the log costs
+trail on every evaluation — thirst, hunger, the water belief, the fear memory
+and the alarm scan — and a sixth, `shared_believed_water`, walks it once per
+co-located peer. They run per agent per tick. So **the log costs
 CPU while it sits there, before it ever costs a byte too many** — and total
 session cost is quadratic in session length, not linear.
 

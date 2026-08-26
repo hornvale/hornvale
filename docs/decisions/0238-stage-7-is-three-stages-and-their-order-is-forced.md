@@ -1,6 +1,9 @@
 # 0238. Stage 7 is three stages, and their order is forced
 
-**Status:** Accepted (2026-08-24) · **Decider:** Nathan · **Relates:**
+**Status:** Accepted (ratified at G3 2026-08-24; **record written 2026-08-26 at
+close** — see the retrospective: the re-carve lived in four places, none of them
+`docs/decisions/`, and this record exists because that is not the same as being
+recorded) · **Decider:** Nathan · **Relates:**
 [0236](0236-a-fold-advances-it-is-not-invalidated.md);
 [0237](0237-the-reset-event-is-the-checkpoint.md);
 [The Penstock metaplan](../superpowers/specs/2026-08-22-the-penstock-metaplan.md)
@@ -24,14 +27,21 @@ This amends the metaplan's §6 stage table. 7a shipped as The Tailrace.
 
 ## Why the order is forced rather than chosen
 
-**7c cannot precede 7a.** Six production folds in
+**7c cannot precede 7a.** **Five** production folds in
 `windows/vessel/src/liveness.rs` read the per-step `agent-at` trail as
 *semantics*, not as a cache: the thirst and hunger path integrals segment by
 sighting and integrate temperature × duration, `believed_water` folds every
 water facet the agent has stood in, `hazard_memory_memo` keeps
 latest-visit-per-facet, and `build_emitter_scan` derives alarm halos from
-other agents' positions. Removing facts — by abstention at the commit site or
-by compaction after it — silently changes all of them. The registry row that
+other agents' positions. A **sixth** trail-walker sits above them —
+`shared_believed_water` calls both `believed_water` and `agent_position` once
+per co-located peer, so it multiplies the walk by band size rather than adding
+a new reading of the trail. `fatigue_at` is **not** among them: it folds
+`rested` facts only (`liveness.rs`, `fatigue_at`), so abstaining from
+`agent-at` would not move it by one bit. It is one of the six folds the
+campaign *timed*, which is a different set — see the spec's §2 table, which
+has this right. Removing facts — by abstention at the commit site or by
+compaction after it — silently changes all of the trail-walkers. The registry row that
 proposed abstention described itself as "cheap, localized" with "zero
 committed-artifact blast radius"; the second half is true and is precisely
 why the first is not, because nothing committed would redden.

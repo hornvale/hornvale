@@ -11,16 +11,42 @@
 ## 0. What this campaign is, and the thing it is not
 
 **It does not remove a single fact from the ledger.** Committed bytes at the
-end of a session are byte-identical before and after this campaign, by
-construction and by the drift check. A reader who takes "log bounding" to mean
-"the log gets smaller" will find this campaign delivered nothing.
+end of a session are byte-identical before and after this campaign, **by
+construction** — and the construction is the whole argument, because the drift
+check cannot supply it:
+
+```
+$ git diff --name-only origin/main HEAD -- '*.rs' | grep -v /tests/ | grep -v /examples/
+kernel/src/fold.rs      # new file
+kernel/src/lib.rs       # +1 line: "pub mod fold;"
+```
+
+Zero existing production functions modified, and the new module has **no
+tenant**: nothing outside `kernel/tests` references `Folded`, `LedgerFold` or
+`fold::`. It derives `Debug, PartialEq` and nothing else, so nothing entered
+the save. A campaign that adds one unreferenced module cannot change a byte a
+session commits.
+
+**The drift check is deliberately NOT cited here**, and this campaign's own
+§5/H3 finding is why: no committed artifact carries a ticked ledger — the
+session fixtures in `docs/generated-paths.txt` are turn-0 and chamber-band
+scene *views* with no ledger — so "nothing committed would redden" regardless
+of what the folds do. The drift check is structurally blind to the property,
+and citing it would have been citing an instrument that cannot see the claim.
+
+A reader who takes "log bounding" to mean "the log gets smaller" will find this
+campaign delivered nothing.
 
 What it delivers is the **precondition** that both existing halves of stage 7
 silently assume and neither has: that *nothing depends on the raw history
-being there.* Today six production folds in `windows/vessel/src/liveness.rs`
-walk an agent's entire committed `agent-at` trail on every evaluation, so
-removing facts — by abstention at the commit site or by compaction after it —
-changes behaviour. That is not a storage question, and it is why stage 7 has
+being there.* Today **five** production folds in
+`windows/vessel/src/liveness.rs` walk an agent's entire committed `agent-at`
+trail on every evaluation — and a **sixth**, `shared_believed_water`, walks it
+once per co-located peer — so removing facts, by abstention at the commit site
+or by compaction after it, changes behaviour. (`fatigue_at` is one of the six
+folds §4 *times*, but it is not a trail-walker: it folds `rested` only. §2's
+table has this right; this paragraph said "six" for as long as it took a
+reviewer to read the function.) That is not a storage question, and it is why stage 7 has
 been carveable in two incompatible ways for as long as it has existed.
 
 So this campaign proposes a re-carve, and it is the first thing to accept or
@@ -70,6 +96,16 @@ what it measured.
 
 Every one of these reduces an unbounded history to bounded state. Read on
 `origin/main`; line numbers are `windows/vessel/src/liveness.rs`.
+
+**"The six folds" names two slightly different sets in this spec, and the
+difference is deliberate rather than sloppy — but it must be read, not
+assumed.** This table's six are the *structural* set: the folds whose reduction
+had to be characterised. §4's attribution probes a *measured* six that swaps
+`build_emitter_scan` (which needs the full roster threaded in a shape the probe
+harness does not build) for `shared_believed_water` (listed below as a
+multiplier). Neither set is "the folds that walk the trail" — that is **five**
+of this table's rows plus `shared_believed_water`, and *not* `fatigue_at`,
+whose row below says so.
 
 | fold | line | what it walks | what it reduces to | bounded by |
 |---|---|---|---|---|
@@ -147,16 +183,32 @@ rather than rediscovering them.**
    settled by this campaign — but the divergence must be noticed, not
    inherited by accident.
 
-**`agent_sightings` is the hub, and the work is to DELETE it, not cache it.**
-Five of the six folds route through that one function (thirst, hunger, hazard,
-belief, the emitter scan), which makes it look like the obvious thing to
-maintain incrementally. It is not: its output is a `Vec<(f64, Facet)>`
-timeline, O(history) in *size* however cheaply it is kept up to date, so caching
-it bounds nothing at all. The bounded objects are the *reductions over* it — an
-accumulator, a set, a map — so each consumer gets its own and the shared
-timeline goes away. That is why stage 3 is named "delete the hub" rather than
-"migrate six call sites": it is a smaller piece of work than the call-site count
-suggests.
+**`agent_sightings` is a hub, and the work is to DELETE it, not cache it — but
+deleting it does not reach most of the consumers.** It has exactly **three**
+call sites, verified by grep rather than inferred:
+
+```
+808:  fn agent_sightings(...)   # definition
+902:  drive_at
+2439: hunger_at
+4361: decide_step               # the live tick's thirst re-derivation
+```
+
+`believed_water`, `shared_believed_water`, `hazard_memory_memo` and
+`build_emitter_scan` each iterate `ledger.facts_of(entity, AGENT_AT)`
+**directly** and never used the hub at all. Caching the hub bounds nothing
+either way: its output is a `Vec<(f64, Facet)>` timeline, O(history) in *size*
+however cheaply it is kept up to date. The bounded objects are the *reductions
+over* the trail — an accumulator, a set, a map — so each consumer gets its own
+and the shared timeline goes away.
+
+So stage 3 is named "delete the hub" because the hub is the wrong object to
+maintain, **not** because that makes it small. Four of the consumers are not
+reached by the deletion at all and each needs its own accumulator written from
+scratch. An earlier draft of this paragraph said "five of the six folds route
+through that one function" and concluded the stage was "a smaller piece of work
+than the call-site count suggests"; both halves were wrong, and the second was
+wrong in the direction that matters to whoever plans stage 3.
 
 **Past-`t` queries are real and are already documented in the tree.**
 `last_fact_day_at_or_before` (`:4498`) exists precisely because catch-up's
@@ -763,9 +815,25 @@ result to average away.
 The saving is therefore a **change of order** — per-tick cost linear in history
 means total session cost quadratic in session length — not a constant factor.
 
-**H3 (the negative control, and it must be stated).** Committed bytes do not
-move. No fact is removed. A campaign that reduced the fact count would have
-changed behaviour and failed §0.
+**H3 (the negative control, and it must be stated).** **No world-state
+artifact moves** — committed bytes *at the end of a session* are byte-identical
+(§0's scoping, and the scoping is load-bearing). No fact is removed. A campaign
+that reduced the fact count would have changed behaviour and failed §0.
+
+**Stated bare as "committed bytes do not move", this is false against the
+repo**, and an earlier draft did state it bare. Two committed artifacts moved
+in this campaign — `docs/audits/type-audit-report.md` (the new module has
+`pub`-boundary items) and `docs/digest/decisions-in-force.md` (three decision
+records were minted) — both correctly, both by design. Neither is world state.
+
+**And the drift check is not H3's instrument**, which is the finding worth
+carrying forward: no committed artifact carries a ticked ledger — the session
+fixtures in `docs/generated-paths.txt` are turn-0 and chamber-band scene
+*views* with no ledger — so nothing committed would redden even if a fold's
+value *had* changed. H3 is established by §0's construction argument (one new
+module, no tenant, no existing production function modified), not by a green
+drift check. A green drift check here is compatible with the property holding
+and with it failing, which makes it not evidence.
 
 **Falsifier for the fix, not just the premise.** If `k` falls but `C` rises by
 more than the `k` saving at realistic session lengths, the fix is a
