@@ -153,15 +153,56 @@ exactly **1** `high-god` fact against 15 peoples, so a ranked-pantheon test woul
 have produced one live arm and one effectively dead one. This is recorded because
 the rejected option was the first one that looked right.
 
+**A negation pass corrected the axis, and the essay is the authority.** The
+first draft of this section read `god` and `spirit` as *the doctrine* — an
+organized cult "has" the god reading, a folk cult the spirit reading. The
+frontier essay draws the line somewhere else entirely
+(`book/src/frontier/frontier.md`, the possession section):
+
+> a people with the doctrine names you correctly and knows what to
+> do about it, and a people without one explains you with the words it has —
+> intrusive thoughts, a haunting, a fever, a god, a wandering ancestor.
+
+`god` is in the list of things a **doctrine-LESS** people reaches for. The real
+axis is *has a rider-doctrine* vs *improvises*, and `god`/`spirit` sit entirely on
+the improvising side.
+
+**Measured: no people in Hornvale has a rider-doctrine today.** The concept
+registry contains **zero** concepts for a rider, possession, haunting or soul, and
+the religion domain holds exactly two concepts, `god` and `spirit`
+(`hornvale concepts`). So every people in every world is currently on the
+improvising side, and this campaign ships that side.
+
 The resulting prior, in full:
 
 ```
-  no settlement           -> no god/spirit word; names the rider with a
-                             body-state word it has (gap-carrying Nearest)
-  settled, folk cult      -> "spirit"  (registry gloss: "a lesser or unseen
+  ANY people (today)      -> improvises; has no word for what you actually are
+    no settlement         -> no god/spirit word either; reaches for a body-state
+                             word it does have (gap-carrying, via LexEntry::Gap)
+    settled, folk cult    -> "spirit"  (gloss: "a lesser or unseen
                              supernatural presence")
-  settled, organized cult -> "god"     (registry gloss: "a deity")
+    settled, organized    -> "god"     (gloss: "a deity")
+
+  a people WITH a rider-doctrine -> names you correctly. NOT REACHABLE TODAY;
+                             requires registering a rider concept -- see 10.5
 ```
+
+**The prior's sign, which the first draft omitted entirely.** Naming the arms is
+not enough: a prior with no direction cannot move a stance, and the graph of this
+model had an unlabelled edge from *arm* to *cooperation*. The essay supplies the
+direction and it **inverts the intuitive reading** — a people with the doctrine
+"knows what to do about it", so doctrine is the *less* cooperative prior, not the
+more. Within the improvising side the same logic orders the arms:
+
+```
+  organized cult -> apparatus, precedent, a prescribed response  -> LESS cooperative
+  folk cult      -> a word, and no machinery behind it           -> MORE cooperative
+  no settlement  -> not even a word; nothing to invoke           -> MOST cooperative
+```
+
+The host that cannot name you is the one most willing to talk to you. That is
+the opposite of the reading this spec started with, and it is the one the essay
+and the registry both support.
 
 ### 3.3 The history fold is accumulated suppression
 
@@ -254,10 +295,13 @@ diverge the moment a `GapReason` variant is added, and this campaign adds none.
 
 Frozen before the code that would move it. A falsified prediction is a finding.
 
-**H1 — the doctrine arm is well-distributed.** Over seed 42's **15** peoples, the
-prior resolves to `organized` for **9** and `folk` for **6**, with **0** peoples
-resolving to more than one arm. *Criterion:* exact counts, not a ratio. Any
-people resolving to two arms falsifies the uniformity claim in §3.2.
+**H1 — the improvising arms are well-distributed.** Over seed 42's **15**
+peoples, the prior resolves to `organized` for **9** and `folk` for **6**, with
+**0** peoples resolving to more than one arm, and **0** peoples resolving to the
+doctrine arm (no rider concept is registered). *Criterion:* exact counts, not a
+ratio. Any people resolving to two arms falsifies the uniformity claim in §3.2;
+any people resolving to the doctrine arm means a rider concept was registered
+after all, and §10.5 was decided without this line being updated.
 
 **H2 — the fold discriminates per-drive.** After the rider overrides drive *d*
 some number of times, the host's stance on *d* moves and its stance on every other
@@ -364,7 +408,13 @@ derived lexicon state; if a value cannot be derived, it does not ship.
 3. **The 0261 hazard (§6).** The spec commits to sharing rather than copying. If
    the owner would rather this campaign not touch `testify`'s internals at all,
    the answer changes and §3.2 needs rework.
-4. **Sequencing against The Coercion (§7).** It shares this campaign's axis and
+5. **Should this campaign register a rider concept (§3.2)?** Today zero exist, so
+   the doctrine arm — a people that "names you correctly and knows what to do
+   about it" — is unreachable, and the campaign ships the improvising side only.
+   Registering one would make the arm live and is the natural home for
+   `PLAY-host-names-you`'s other half, but it is a concept-registry addition with
+   save-format reach, which is an owner call rather than autopilot's.
+6. **Sequencing against The Coercion (§7).** It shares this campaign's axis and
    is unshipped. Building this one first is defensible and was Nathan's stated
    priority; it is flagged because the duplicated-rulebook risk is real and
    points the other way.
