@@ -10,11 +10,21 @@
 
 **Spec:** `docs/superpowers/specs/2026-08-24-the-tailrace-design.md` (G3-approved 2026-08-24)
 
+**Status: COMPLETE.** All six tasks landed, reviewed, and fixed; the final
+whole-branch review's ten findings and both carried-forward minor items were
+addressed in one fix wave and re-reviewed. Scope was stages 1-2 only, as the
+Global Constraints below say. **Stages 3-5 are now UNBLOCKED** —
+`campaign/the-escapement` merged on 2026-08-25, so the second plan the
+constraint below promises can be written. What shipped is in the spec's §11 and
+in [the chronicle](../../../book/src/chronicle/the-tailrace.md); the process
+lessons, the four still-standing deferred minors and every registered followup
+are in [the retrospective](../../retrospectives/the-tailrace.md).
+
 > **A note for anyone reading this plan after 2026-08-24.** Tasks 1–5 were written and executed against a tree where the kernel's cell type was named `RoomAddr` and its packed form `RoomId`. Absorbing `main` mid-plan brought in The Lexicon of Place, which renamed them to **`Facet`** and **`FacetId`** (and `CellId` → `Vertex`, `NearestCellIndex` → `NearestVertexIndex`). The task text below is left as it was written, because it is the record of what was actually instructed at the time; the code and the spec carry the new names. Read `RoomAddr` as `Facet` throughout.
 
 ## Global Constraints
 
-- **Scope is stages 1–2 only.** The spec's stages 3–5 rewrite `windows/vessel/src/liveness.rs`, which `campaign/the-escapement` holds off with an unmerged `WorldTime` epoch (f64 fractional days to i64 ticks) touching the same functions. They get a **second plan**, written after that lands, because every `f64` day in their code would be wrong today.
+- **Scope is stages 1–2 only.** The spec's stages 3–5 rewrite `windows/vessel/src/liveness.rs`, which `campaign/the-escapement` holds off with an unmerged `WorldTime` epoch (f64 fractional days to i64 ticks) touching the same functions. They get a **second plan**, written after that lands, because every `f64` day in their code would be wrong today. **That landing happened on 2026-08-25**, so the second plan is writeable and the `f64` days in §2's arithmetic are now exact integer ticks — a simplification, as the spec's §10 predicted.
 - **Nothing here enters the save.** Serializing a fold state would be a new decision, not an implementation detail (spec §7).
 - **No `HashMap`/`HashSet`** — `BTreeMap`/`BTreeSet`/`Vec` only, enforced workspace-wide by `clippy.toml` `disallowed-types`. Float sorting uses `total_cmp`.
 - **No wall-clock time in sim code.** A benchmark harness may use `std::time::Instant` behind a scoped `#[allow(clippy::disallowed_types)]` with a comment — the pattern `agent_scaling.rs` and `session_length_scaling.rs` already use.

@@ -407,6 +407,7 @@
 - [The Lexicon of Place](./chronicle/the-lexicon-of-place.md)
 - [The Word](./chronicle/the-word.md)
 - [The Confidant](./chronicle/the-confidant.md)
+- [The Tailrace](./chronicle/the-tailrace.md)
 
 # Appendix: The Frontier
 

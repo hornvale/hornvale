@@ -106,3 +106,27 @@ key — was the thing that made the assertion necessary, and reading the
 migrated type showed the precondition was gone. Neither correction changed
 what the campaign built. Both changed what the campaign is honestly allowed
 to claim about it.
+
+## Postscript: the ledger class has a tenant it can never serve (2026-08-26)
+
+The store's `Ledger` validity class shipped with no tenant, on the expectation
+that belief and the social graph would make it hot. The first candidate to
+arrive was neither, and it exposed a boundary the class had not had to state.
+
+[The Tailrace](./the-tailrace.md) went looking for a home for six folds over an
+agent's committed movement history. A memo is the obvious fit and it is the
+wrong one, structurally rather than marginally: the watched dependency for such
+a fold is *that agent's own position*, which the tick commits every time the
+agent moves. The entry is stale every tick, every read is a miss, and every
+recomputation is the whole-history walk the cache existed to avoid — a cache
+with a guaranteed hundred per cent miss rate.
+
+What those folds want is not a memo at all. Invalidation asks *is this still
+true?*; accumulation asks *what does this become?* There is nowhere in a memo to
+put an update function, and adding one would change what the type is. So the
+answer was a sibling module in the kernel rather than a third validity class,
+and this store was left exactly as it shipped (decision 0236). The class is
+still expected to earn its tenant from belief and the social graph; what is now
+settled is that a dependency touched on every tick disqualifies a memo by
+construction, and that this is a property of the *read cadence against the
+write cadence*, not of how the value is computed.

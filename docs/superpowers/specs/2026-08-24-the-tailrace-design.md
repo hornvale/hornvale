@@ -3,7 +3,8 @@
 **Program:** The Penstock (`docs/superpowers/specs/2026-08-22-the-penstock-metaplan.md`), stage 7.
 **Branch:** `campaign/the-tailrace`, from `origin/main` @ `c39444ba6`.
 **Decision block:** 0236–0245.
-**Status:** G3 approved 2026-08-24. Planning.
+**Status:** G3 approved 2026-08-24. **Stages 1-2 COMPLETE and merged (The Tailrace, 2026-08-26)** — see §11 and
+[the chronicle](../../../book/src/chronicle/the-tailrace.md). Stages 3-5 are unstarted and now UNBLOCKED (below); they need their own plan.
 
 ---
 
@@ -331,6 +332,19 @@ It does **not** replace this instrument. A synthetic sweep has no real tick, so
 it cannot produce the 70–80% share — and that share is the number that makes the
 campaign worth doing. One answers *is this real and does it matter*; the other
 answers *what exactly is the law*.
+
+**A second known limitation of the whole-tick column specifically, stated for
+whoever re-derives it.** Its x-axis is `folded/a`, the **mean** per-agent
+folded history — and at the final band that mean is 143.9 against a spread of
+min 0 to max 420. So the whole-tick fit regresses against a statistic that
+describes few of its members, and the reason a member can read 0 is itself
+unexplained (some derived bodies commit no `agent-at` fact at all over 200
+ticks — uninvestigated, and the reason a positionally-chosen probe agent read
+zero history before the probe became the max-history member). The decisive
+column avoids this entirely by probing one fixed agent and using *its own*
+history. If the whole-tick fit is ever load-bearing for a decision rather than
+context, it needs a better summary than the mean — a median, or the probe
+agent's own history.
 
 ### Attribution across the six folds
 
@@ -772,14 +786,22 @@ metaplan's own discipline.
 |---|---|---|---|---|
 | 1 | The instruments and the attribution | `session_length_scaling.rs` — **done, §4 reports it**. Also done: the six-fold attribution (direct timing, not a `samply` profile — §4 explains why) and the **interleaved synthetic depth sweep** (`fold_depth_sweep.rs`) identifying `C` over a ~1000× range (§4's limitations note) | — | nothing |
 | 2 | The primitive | the incremental ledger fold, kernel-side; FOLD ≡ SCAN, advance-exactly-once, chaos-rebuild | **met for `drive_at`** (§4) | nothing — see §10 |
-| 3 | Delete the hub | remove `agent_sightings` and give thirst, hunger and fatigue their own bounded accumulators; `last_fact_day_at_or_before` becomes O(1) | stage 2's properties green | the Escapement |
-| 4 | Belief and hazard | `believed_water` (× peers), `hazard_memory_memo`, `build_emitter_scan` | stage 1's attribution says these carry a material share of `k` | the Escapement |
+| 3 | Delete the hub | remove `agent_sightings` and give thirst, hunger and fatigue their own bounded accumulators; `last_fact_day_at_or_before` becomes O(1) | stage 2's properties green — **met**, §11 | **nothing — The Escapement landed 2026-08-25** |
+| 4 | Belief and hazard | `believed_water` (× peers), `hazard_memory_memo`, `build_emitter_scan` | stage 1's attribution says these carry a material share of `k` | **nothing — The Escapement landed 2026-08-25**; read §4's attribution before entering |
 | 5 | The readout | re-run the instrument; H2/H3; state what 7b and 7c may now assume | stages 3–4 | stages 3–4 |
 
 Stage 4 is the one that may not be entered, and that is deliberate: if the
 attribution says the three drives carry `k` and belief/hazard do not, migrating
 them is unmotivated memory for no measured gain — the same judgement §6.5 made
 against stage 2 of the parent program.
+
+**Stages 1 and 2 are complete** (§11). **Stages 3-5's blocker is gone:**
+`campaign/the-escapement` merged on 2026-08-25, so `windows/vessel/` and
+`kernel/src/ledger.rs` are free and every `f64` day in §2's arithmetic is now an
+exact integer tick count — which makes the accumulators' arithmetic exact by
+construction, as §10 predicted. They are enterable and need their own plan; the
+hub to *delete* rather than cache is `agent_sightings` (§10's graph reading), and
+the crossover measurement in §4 is the motivating number.
 
 ## 7. Determinism contracts
 
@@ -823,8 +845,11 @@ Numbered from the reserved block at ratification.
 
 ## 10. Operational notes for the implementer
 
-- **`campaign/the-escapement` holds a live hold-off on `windows/vessel/` and
-  `kernel/src/ledger.rs`** — an unmerged `WorldTime` epoch (f64 fractional days
+- **HISTORICAL, RESOLVED 2026-08-25: `campaign/the-escapement` held a live
+  hold-off on `windows/vessel/` and `kernel/src/ledger.rs`.** It has merged; the
+  paths are free and stages 3-5 are enterable. The note is kept because it is
+  the record of why the campaign was carved as it was, and because the
+  prediction in its last sentence held. As written at the time — an unmerged `WorldTime` epoch (f64 fractional days
   → i64 ticks, its decision 0186), 176 of 333 sites in `windows/vessel`,
   committed the same day this spec was written and with uncommitted edits to
   `liveness.rs` in its worktree. Its diff touches `agent_sightings`,
