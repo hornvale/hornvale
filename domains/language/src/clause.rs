@@ -23,6 +23,35 @@ pub enum Number {
     /// plural
     Pl,
 }
+/// When the clause's content stands relative to the utterance.
+///
+/// **Stated, never derived** (spec 3.3). Number, definiteness and evidential
+/// are properties OF a clause; tense is a RELATION to a moment outside it —
+/// the first feature requiring a deictic centre. A [`Clause`] has no access to
+/// speech time and must not acquire one, so the caller, which knows both the
+/// fact's `WorldTime` and the utterance's, supplies the relation already
+/// computed. A future campaign that wants automatic tense adds a
+/// *caller-side* helper, never a clock inside the clause.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Tense {
+    /// Contemporaneous with the utterance.
+    Present,
+    /// Prior to the utterance.
+    Past,
+}
+
+/// Whether the clause asserts or denies.
+///
+/// Unlike [`Tense`] this is an ordinary property of the clause, recoverable
+/// from the surface, needing no deictic centre.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Polarity {
+    /// The clause asserts.
+    Pos,
+    /// The clause denies.
+    Neg,
+}
+
 /// Whether the complement is introduced with a/the or bare.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Definiteness {
@@ -121,6 +150,14 @@ pub struct Clause {
     /// Before The Scarf this field lived only on `TongueClause`, so a caller
     /// projecting a clause into a tongue had to invent a value out of band.
     pub evidential: Evidential,
+    /// When this clause's content stands relative to the utterance.
+    ///
+    /// **Supplied by the caller, never computed here** (spec §3.3): tense is
+    /// the first feature that is a relation to a moment OUTSIDE the clause,
+    /// and a `Clause` has no deictic centre to compute it against.
+    pub tense: Tense,
+    /// Whether this clause asserts or denies.
+    pub polarity: Polarity,
     /// Role bindings on this clause. How each surfaces — and whether it
     /// surfaces inline or trailing — is the realizing language's business.
     /// Replaced `modifiers: Vec<String>`, whose pre-rendered English could not
@@ -157,7 +194,18 @@ fn indefinite_article(word: &str) -> &'static str {
 pub enum Part {
     /// The subject slot (a `Subject::Name` or `Subject::Pronoun`).
     Subject,
-    /// The copula, agreeing with `Clause.number` (`is`/`are`).
+    /// The copula, carrying `Clause.tense`, `Clause.number` and
+    /// `Clause.polarity` together (`is`/`are`/`was`/`were`, plus `not`) —
+    /// see [`COPULA_PARADIGM`].
+    ///
+    /// **There is deliberately no `Part::Negator`.** English negates a copula
+    /// inside the copular word group (`isn't` is one word), and the parse
+    /// direction does not walk `parts` structurally — it is a hand-written
+    /// inverse whose first gate searches the surface for a copula. Recovering
+    /// `is not` therefore widens that one search from two candidates to
+    /// eight; a separate part would not remove that work, only add a second
+    /// place stating the same fact. A language whose negator is a free
+    /// particle in its own slot is what would earn the variant.
     Copula,
     /// The determiner slot (`the `/`a `/`an `/bare), from definiteness + number.
     Determiner,
@@ -168,6 +216,44 @@ pub enum Part {
     ModifierTail,
     /// A fixed literal (spacing, terminal punctuation).
     Literal(&'static str),
+}
+
+/// One row of [`COPULA_PARADIGM`]: a Common surface form paired with the
+/// three features it realizes forward and recovers backward.
+/// type-audit: bare-ok(prose: CopulaRow)
+pub type CopulaRow = (&'static str, Tense, Number, Polarity);
+
+/// Common's copula paradigm: `{Present, Past} × {Sg, Pl} × {Pos, Neg}` →
+/// surface form. **One table, read in both directions** — [`realize_common`]
+/// looks a row up by its features, and [`parse_common_with_tail`] searches a
+/// sentence for any row's form and reads the features off it. That is the
+/// same "bidirectional by construction" discipline [`common_constructions`]
+/// states for the clause skeleton, applied one level down: a copula form
+/// cannot be realizable but unrecognizable, or the reverse.
+///
+/// Negation is **appended to the copula** rather than given a slot of its
+/// own; see [`Part::Copula`] for why there is no `Part::Negator`.
+/// type-audit: bare-ok(prose: COPULA_PARADIGM)
+pub const COPULA_PARADIGM: &[CopulaRow] = &[
+    ("is", Tense::Present, Number::Sg, Polarity::Pos),
+    ("are", Tense::Present, Number::Pl, Polarity::Pos),
+    ("was", Tense::Past, Number::Sg, Polarity::Pos),
+    ("were", Tense::Past, Number::Pl, Polarity::Pos),
+    ("is not", Tense::Present, Number::Sg, Polarity::Neg),
+    ("are not", Tense::Present, Number::Pl, Polarity::Neg),
+    ("was not", Tense::Past, Number::Sg, Polarity::Neg),
+    ("were not", Tense::Past, Number::Pl, Polarity::Neg),
+];
+
+/// The copula slot's surface for one clause's features — the forward read of
+/// [`COPULA_PARADIGM`]. Panics only if the table is missing a row, which the
+/// `copula_paradigm_is_total` test makes impossible.
+fn copula_surface(tense: Tense, number: Number, polarity: Polarity) -> &'static str {
+    COPULA_PARADIGM
+        .iter()
+        .find(|(_, t, n, p)| *t == tense && *n == number && *p == polarity)
+        .map(|(form, _, _, _)| *form)
+        .expect("the copula paradigm is total over tense x number x polarity")
 }
 
 /// A form↔meaning pairing: one predicate's surface as an ordered part
@@ -257,10 +343,9 @@ pub fn realize_common(spec: &Clause, vocab: &CommonVocabulary) -> String {
                 Subject::Name(name) => name.as_str(),
                 Subject::Pronoun(pronoun) => pronoun,
             }),
-            Part::Copula => out.push_str(match spec.number {
-                Number::Sg => "is",
-                Number::Pl => "are",
-            }),
+            Part::Copula => {
+                out.push_str(copula_surface(spec.tense, spec.number, spec.polarity));
+            }
             Part::Determiner => match (spec.definiteness, spec.number) {
                 (Definiteness::Def, _) => out.push_str("the "),
                 (Definiteness::Indef, Number::Sg) => {
@@ -435,7 +520,7 @@ pub struct ParseContext {
 /// type-audit: bare-ok(prose: UnknownComplement.after)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ParseError {
-    /// Neither `" is "` nor `" are "` appears, so no subject/copula split
+    /// No [`COPULA_PARADIGM`] form appears, so no subject/copula split
     /// exists.
     NoCopula,
     /// The text after the determiner doesn't match (a prefix of) any
@@ -452,7 +537,7 @@ pub enum ParseError {
 impl std::fmt::Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ParseError::NoCopula => write!(f, "no ' is '/' are ' copula found"),
+            ParseError::NoCopula => write!(f, "no copula from the paradigm found"),
             ParseError::UnknownComplement { after } => {
                 write!(f, "no registered complement matches '{after}'")
             }
@@ -466,8 +551,10 @@ impl std::error::Error for ParseError {}
 /// Invert `realize_common`: parse a Common sentence back into the
 /// `Clause` that would realize it. Walks the `Classify` construction's
 /// entry backward — the boundaries come from the construction's shape, and
-/// the subject/copula split happens at the EARLIEST `" is "`/`" are "`
-/// occurrence (so a subject itself never contains the copula word).
+/// the subject/copula split happens at the EARLIEST occurrence of any
+/// [`COPULA_PARADIGM`] form (so a subject itself never contains the copula
+/// word), longest form winning a tie on position. `tense` and `polarity`
+/// come back off that form.
 /// Complement surfaces in `ctx` must not begin with a determiner word
 /// (`"a "`/`"an "`/`"the "`) — the bare-plural path would misparse them;
 /// today's vocabulary (single words and hyphenated compounds) satisfies
@@ -520,15 +607,32 @@ pub fn parse_common_with_tail(
 ) -> Result<(Clause, Vec<String>), ParseError> {
     // Terminal literal first.
     let body = text.strip_suffix('.').ok_or(ParseError::Unterminated)?;
-    // Subject | Copula: split at the earliest " is " / " are ".
-    let is_at = body.find(" is ");
-    let are_at = body.find(" are ");
-    let (subject_text, number, rest) = match (is_at, are_at) {
-        (Some(i), Some(a)) if i < a => (&body[..i], Number::Sg, &body[i + 4..]),
-        (Some(i), None) => (&body[..i], Number::Sg, &body[i + 4..]),
-        (_, Some(a)) => (&body[..a], Number::Pl, &body[a + 5..]),
-        (None, None) => return Err(ParseError::NoCopula),
+    // Subject | Copula: split at the EARLIEST occurrence of any
+    // `COPULA_PARADIGM` form (so a subject never contains the copula word),
+    // and at a tie on position take the LONGEST form — `" is not "` and
+    // `" is "` start at the same index, and the negated reading is the one
+    // that consumes the whole copular group.
+    let mut best: Option<(usize, &CopulaRow)> = None;
+    for entry in COPULA_PARADIGM {
+        let Some(at) = body.find(&format!(" {} ", entry.0)) else {
+            continue;
+        };
+        let better = match best {
+            None => true,
+            Some((best_at, best_entry)) => {
+                at < best_at || (at == best_at && entry.0.len() > best_entry.0.len())
+            }
+        };
+        if better {
+            best = Some((at, entry));
+        }
+    }
+    let Some((at, &(form, tense, number, polarity))) = best else {
+        return Err(ParseError::NoCopula);
     };
+    // The needle was `" {form} "`, so the remainder starts one space past the
+    // form, which itself started one space past `at`.
+    let (subject_text, rest) = (&body[..at], &body[at + form.len() + 2..]);
     let subject = match subject_text {
         "it" => Subject::Pronoun("it"),
         "its" => Subject::Pronoun("its"),
@@ -593,6 +697,10 @@ pub fn parse_common_with_tail(
             // agree; it is never read out of a parse as a claim about how
             // the original speaker was grounded.
             evidential: Evidential::Witnessed,
+            // Both READ OFF the copula, unlike `evidential`: Common has a
+            // construction for each, so neither needs a documented default.
+            tense,
+            polarity,
             adjuncts: Vec::new(),
         },
         tail_text,
@@ -619,6 +727,8 @@ mod tests {
             number: Number::Sg,
             definiteness: Definiteness::Def,
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts: Vec::new(),
         };
         let taught = Clause {
@@ -637,6 +747,117 @@ mod tests {
             realize_common(&base, &vocab),
             realize_common(&inferred, &vocab)
         );
+    }
+
+    /// `copula_surface` panics on a missing row, so the table's totality over
+    /// `tense x number x polarity` is what makes that panic unreachable. It
+    /// is asserted rather than assumed because the paradigm is a `const`
+    /// slice, not a match — the compiler cannot check its exhaustiveness the
+    /// way it checked `Frame`'s.
+    #[test]
+    fn copula_paradigm_is_total_and_unambiguous() {
+        let mut forms: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
+        let mut combinations = 0usize;
+        for tense in [Tense::Present, Tense::Past] {
+            for number in [Number::Sg, Number::Pl] {
+                for polarity in [Polarity::Pos, Polarity::Neg] {
+                    forms.insert(copula_surface(tense, number, polarity));
+                    combinations += 1;
+                }
+            }
+        }
+        assert_eq!(combinations, 8);
+        // Distinct forms: a repeated one would make the parse direction
+        // ambiguous, which is the failure this table's bidirectionality
+        // exists to prevent.
+        assert_eq!(forms.len(), COPULA_PARADIGM.len());
+        assert_eq!(COPULA_PARADIGM.len(), 8);
+    }
+
+    /// The campaign's motivating defect: a settlement whose people left six
+    /// hundred years ago was still said to *be* their home, because Common's
+    /// copula slot read `number` alone. Tense is STATED (spec 3.3) — the
+    /// caller, which knows both the fact's `WorldTime` and the utterance's,
+    /// supplies the relation; the realizer surfaces what it is told.
+    #[test]
+    fn a_past_clause_says_was() {
+        let vocab = CommonVocabulary::default();
+        let base = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Nwamvam".to_string()),
+            object: Argument::Concept("home".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert!(realize_common(&base, &vocab).contains(" is "));
+        let past = Clause {
+            tense: Tense::Past,
+            ..base.clone()
+        };
+        let out = realize_common(&past, &vocab);
+        assert!(out.contains(" was "), "past tense must say was: {out}");
+        assert!(!out.contains(" is "), "and must not also say is: {out}");
+    }
+
+    /// Polarity is a property OF the clause (spec 3.3), unlike tense, so it
+    /// needs no deictic centre and is recoverable from the surface.
+    #[test]
+    fn a_negated_clause_says_is_not() {
+        let vocab = CommonVocabulary::default();
+        let neg = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Nwamvam".to_string()),
+            object: Argument::Concept("home".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Neg,
+            adjuncts: Vec::new(),
+        };
+        let out = realize_common(&neg, &vocab);
+        assert!(out.contains("is not"), "got: {out}");
+    }
+
+    /// The Construction table realizes forward and parses backward. Both new
+    /// features are recoverable from the surface, unlike `evidential`, so the
+    /// round trip must return them unchanged across the whole
+    /// tense x polarity x number space — the copula paradigm is exactly where
+    /// the three interact, so enumerating all eight is the cheap complete
+    /// test rather than a sample.
+    #[test]
+    fn common_round_trips_tense_and_polarity() {
+        let mut seen = 0usize;
+        for tense in [Tense::Present, Tense::Past] {
+            for polarity in [Polarity::Pos, Polarity::Neg] {
+                for number in [Number::Sg, Number::Pl] {
+                    let spec = Clause {
+                        predicate: IS_A.to_string(),
+                        subject: Subject::Name("Nwamvam".to_string()),
+                        object: Argument::Concept("planet".to_string()),
+                        number,
+                        definiteness: Definiteness::Indef,
+                        evidential: Evidential::Witnessed,
+                        tense,
+                        polarity,
+                        adjuncts: Vec::new(),
+                    };
+                    let ctx = ctx_from(&spec);
+                    let text = realize_common(&spec, &ctx.vocabulary);
+                    assert_eq!(
+                        parse_common(&text, &ctx),
+                        Ok(spec.clone()),
+                        "round-trip failed for {text:?}"
+                    );
+                    seen += 1;
+                }
+            }
+        }
+        assert_eq!(seen, 8);
     }
 
     /// An adjunct binds a registered predicate (its role) to an argument.
@@ -665,6 +886,8 @@ mod tests {
             number: Number::Sg,
             definiteness: Definiteness::Indef,
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts: vec![],
         };
         assert_eq!(
@@ -685,6 +908,8 @@ mod tests {
             number: Number::Sg,
             definiteness: Definiteness::Indef,
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts: vec![],
         };
         let line = realize_common(&spec, &vocab);
@@ -704,6 +929,8 @@ mod tests {
             number: Number::Sg,
             definiteness: Definiteness::Indef,
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts: vec![],
         };
         assert_eq!(
@@ -720,6 +947,8 @@ mod tests {
             number: Number::Sg,
             definiteness: Definiteness::Indef,
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts: vec![],
         };
         assert_eq!(
@@ -739,6 +968,8 @@ mod tests {
             number: Number::Pl,
             definiteness: Definiteness::Indef,
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts: vec![],
         };
         assert_eq!(
@@ -762,6 +993,8 @@ mod tests {
             number: Number::Sg,
             definiteness: Definiteness::Indef,
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts: vec![
                 Adjunct {
                     role: "moon-count".into(),
@@ -1065,6 +1298,8 @@ mod tests {
                                 // and `parse_common_with_tail` returns the
                                 // same documented default.
                                 evidential: Evidential::Witnessed,
+                                tense: Tense::Present,
+                                polarity: Polarity::Pos,
                                 adjuncts,
                             };
                             let ctx = ctx_from(&spec);
@@ -1186,6 +1421,8 @@ mod tests {
             number: Number::Sg,
             definiteness: Definiteness::Indef,
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts: vec![
                 Adjunct {
                     role: "moon-count".into(),

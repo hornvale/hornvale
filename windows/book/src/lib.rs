@@ -18,8 +18,8 @@ use hornvale_kernel::{EntityId, Value, World};
 use hornvale_language::CommonVocabulary;
 use hornvale_language::account::{Account, AccountEntry, AccountParams, Disposition, Stance};
 use hornvale_language::clause::{
-    Adjunct, Argument, Clause, Definiteness, Number, ParseContext, ParseError, Subject, cardinal,
-    common_role_surface, parse_common_with_tail, quantity, realize_common,
+    Adjunct, Argument, Clause, Definiteness, Number, ParseContext, ParseError, Polarity, Subject,
+    Tense, cardinal, common_role_surface, parse_common_with_tail, quantity, realize_common,
 };
 use hornvale_language::numeracy::{NumeracyRung, render_quantity_at_rung};
 use hornvale_language::schemas::Manner;
@@ -302,6 +302,8 @@ pub fn render_volume_from(
                 // because Task 3 hands this same clause to a tongue, which
                 // does read it.
                 evidential: Evidential::Witnessed,
+                tense: Tense::Present,
+                polarity: Polarity::Pos,
                 adjuncts,
             },
             &vocab,
@@ -345,6 +347,8 @@ pub fn render_volume_from(
                 definiteness: Definiteness::Indef,
                 // Same god's-eye register as the classification loop above.
                 evidential: Evidential::Witnessed,
+                tense: Tense::Present,
+                polarity: Polarity::Pos,
                 adjuncts: Vec::new(),
             },
             &vocab,
@@ -407,6 +411,8 @@ pub fn render_volume_from(
             // lived experience (its autonym and own-kind concept are
             // Steeped by construction) — Witnessed (C7's readout law).
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             // No role bindings on the self-statement today — this task adds
             // the capability, not new adjunct data for existing callers.
             adjuncts: Vec::new(),
@@ -1061,6 +1067,8 @@ fn render_world_clause(
             // is the separate `doctrine_section` path, which already says
             // so at its own `world_statement` call.
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts,
         },
         vocab,
@@ -1125,6 +1133,8 @@ fn render_world_margin(
             // it is the record speaking: Witnessed, like the god's-eye
             // register it restores.
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts,
         },
         vocab,
@@ -1297,6 +1307,8 @@ fn render_people_clause(
             // A people subject's collective classification, in the same
             // emic register as `render_world_clause`.
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts: Vec::new(),
         },
         vocab,
@@ -1865,6 +1877,8 @@ fn probe_tongue(
             // Every probe states a claim grounded in the same
             // lived-experience footing as the self-statement above.
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             // No role bindings on a C3 probe today.
             adjuncts: Vec::new(),
         },
@@ -1922,6 +1936,8 @@ fn world_statement(
         number: Number::Sg,
         definiteness: Definiteness::Def,
         evidential,
+        tense: Tense::Present,
+        polarity: Polarity::Pos,
         // No role bindings on the world-statement today.
         adjuncts: Vec::new(),
     };
@@ -1985,6 +2001,8 @@ pub struct ParsedLine {
     pub facts: Vec<(String, Value)>,
     number: Number,
     definiteness: Definiteness,
+    tense: Tense,
+    polarity: Polarity,
 }
 
 /// Why [`parse_line`] could not invert a rendered line. Deliberately a
@@ -2293,6 +2311,12 @@ pub fn parse_line(line: &str, ctx: &ParseContext) -> Result<ParsedLine, LineErro
         facts,
         number: clause.number,
         definiteness: clause.definiteness,
+        // Recovered, not defaulted: Common has a copula construction for
+        // both, so unlike `evidential` these ARE observable in the surface
+        // and the rerender direction must carry them rather than assume a
+        // present-tense assertion.
+        tense: clause.tense,
+        polarity: clause.polarity,
     })
 }
 
@@ -2333,6 +2357,8 @@ pub fn rerender(parsed: &ParsedLine, vocab: &CommonVocabulary) -> String {
             // corpus law's two directions agree on the feature neither can
             // observe.
             evidential: Evidential::Witnessed,
+            tense: parsed.tense,
+            polarity: parsed.polarity,
             adjuncts,
         },
         vocab,

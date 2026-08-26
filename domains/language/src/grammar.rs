@@ -569,7 +569,7 @@ mod tests {
     // UNREAD (spec 3.2), so no non-test code in this module names them.
     // Importing them at module level would be an unused import outside
     // `cfg(test)`.
-    use crate::clause::{Definiteness, Number};
+    use crate::clause::{Definiteness, Number, Polarity, Tense};
     use crate::etymology::CascadeRegime;
     use crate::lexicon::{ExposureClass, LexEntry, build_lexicon};
     use crate::naming::render_views;
@@ -774,6 +774,8 @@ mod tests {
             number: Number::Sg,
             definiteness: Definiteness::Def,
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts: vec![],
         };
         let svo = TongueGrammar {
@@ -818,6 +820,8 @@ mod tests {
             number: Number::Sg,
             definiteness: Definiteness::Def,
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts: vec![],
         };
         let g = TongueGrammar {
@@ -863,6 +867,8 @@ mod tests {
             number: Number::Sg,
             definiteness: Definiteness::Def,
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts: vec![],
         };
         let g = TongueGrammar {
@@ -903,6 +909,8 @@ mod tests {
             number: Number::Sg,
             definiteness: Definiteness::Def,
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts: vec![Adjunct {
                 role: "star-class".into(),
                 argument: Argument::Concept("yellow-white-dwarf".into()),
@@ -938,6 +946,8 @@ mod tests {
             number: Number::Sg,
             definiteness: Definiteness::Def,
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts: vec![Adjunct {
                 role: "star-class".into(),
                 argument: Argument::Concept("yellow-white-dwarf".into()),
@@ -977,6 +987,8 @@ mod tests {
             number: Number::Sg,
             definiteness: Definiteness::Def,
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts: vec![Adjunct {
                 role: "star-class".into(),
                 argument: Argument::Concept("yellow-white-dwarf".into()),
@@ -1035,6 +1047,8 @@ mod tests {
             number: Number::Sg,
             definiteness: Definiteness::Def,
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts: vec![],
         };
         let cases: [(ConstituentOrder, Option<&str>, String); 12] = [
@@ -1121,6 +1135,8 @@ mod tests {
             number: Number::Sg,
             definiteness: Definiteness::Def,
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts: vec![],
         };
         let noun_class_of = |_: &str| NounClass::Inanimate;
@@ -1342,6 +1358,8 @@ mod tests {
             number: Number::Sg,
             definiteness: Definiteness::Def,
             evidential: Evidential::Inferred,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts: vec![],
         };
         let noun_class_of = |_: &str| NounClass::Inanimate;
@@ -1403,6 +1421,8 @@ mod tests {
             number: Number::Sg,
             definiteness: Definiteness::Def,
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts: Vec::new(),
         };
         let gap = realize_tongue(&clause, &grammar, &lex).unwrap_err();
@@ -1433,6 +1453,8 @@ mod tests {
             number: Number::Sg,
             definiteness: Definiteness::Def,
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts: Vec::new(),
         };
         // Impossible before The Scarf: tongue_view panicked on any object that
@@ -1457,6 +1479,8 @@ mod tests {
             number: Number::Sg,
             definiteness: Definiteness::Def,
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts: Vec::new(),
         };
         let plural_indef = Clause {
@@ -1487,6 +1511,8 @@ mod tests {
             number: Number::Sg,
             definiteness: Definiteness::Def,
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts: Vec::new(),
         };
         let _ = realize_tongue(&clause, &grammar, &lex);
@@ -1551,6 +1577,8 @@ mod tests {
             number: Number::Sg,
             definiteness: Definiteness::Def,
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
             adjuncts: Vec::new(),
         };
 

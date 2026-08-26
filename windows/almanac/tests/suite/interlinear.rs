@@ -74,7 +74,8 @@
 use hornvale_history::{IS_OCCUPATION, OCC_ENDED, OCC_FOUNDED, OCC_PEOPLE, OCC_SITE};
 use hornvale_kernel::{Seed, Value, World};
 use hornvale_language::clause::{
-    Adjunct, Argument, Clause, Definiteness, Number, Subject, cardinal, realize_common,
+    Adjunct, Argument, Clause, Definiteness, Number, Polarity, Subject, Tense, cardinal,
+    realize_common,
 };
 use hornvale_language::{
     CommonVocabulary, Evidential, SchemaId, realize_tongue_deep, tongue_grammar,
@@ -217,6 +218,8 @@ fn clause_for(occupation: &Occupation, autonym: &str) -> Clause {
         // takes. Stated HERE now that `Clause` carries the feature; it
         // used to be invented out of band inside `tongue_view`.
         evidential: Evidential::Witnessed,
+        tense: Tense::Present,
+        polarity: Polarity::Pos,
         adjuncts: vec![
             Adjunct {
                 role: OCC_PEOPLE.to_string(),
