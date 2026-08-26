@@ -2054,7 +2054,7 @@
         "subject": 10116603944055472128,
         "predicate": "day-length-std",
         "object": {
-          "Number": 0.87987998
+          "Number": 0.87988
         },
         "place": null,
         "day": 0,
