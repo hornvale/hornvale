@@ -136,28 +136,58 @@ wall time is ledgered here because the harness is not `timed.sh`-wrapped and
 this file never invents a measured value it does not hold.
 
 **The Quadrat Task 3's H1 readout (2026-08-26, `campaign/the-quadrat`,
-ambrose, twelve cores, load average 7–14) — the world plate's per-draw wall
-time, BEFORE and AFTER mesh-aligned terrain lookup.** Run as
+ambrose, twelve cores) — the world plate's per-draw wall time, BEFORE and
+AFTER mesh-aligned terrain lookup.** Run as
 `clients/game/bin/examples/rung_bench.rs` (`--release`, five runs, median),
 which is not `timed.sh`-wrapped, so only the numbers it printed are ledgered
-here — this file never invents a measured value it does not hold. The
-before/after pair was taken on the same box within fifteen minutes, at
-comparable load, against the same seed-42 world:
+here — this file never invents a measured value it does not hold.
 
-| plate | rung | before (ms) | after (ms) | speed-up | vertex scans before | after |
-|---|---|---|---|---|---|---|
-| 200x200 | 12 (band B) | 1249.583 | 31.298 | 39.9x | 1,960,000 | 90 |
-| 104x52 | 6 (globe) | 186.931 | 17.721 | 10.5x | 264,992 | 16,020 |
+**H1'S VERDICT IS RUNG-CONDITIONAL, AND AN EARLIER DRAFT OF THIS NOTE STATED
+IT UNCONDITIONALLY.** The preregistered bar is *"a 200x200 uncached terrain
+raster under 50 ms"* and names **no rung**; the first measurement was taken at
+rung 12 alone, because that is the rung the task brief named, and this note
+then read "H1 ... is SUPPORTED at 31.3 ms" with nothing qualifying it. That
+sentence was true and its scope was unstated, in a committed artifact a later
+reader would take as general. The sweep below is what replaces it.
 
-**H1 (preregistered: "a 200x200 uncached plate draws in under 50 ms") is
-SUPPORTED at 31.3 ms**, re-measured three more times at 29.6 / 30.6 / 29.9 ms
-median. The scan count is the kernel's own
-`RoomMeshMemo::corner_weights_misses` instrument times three, not a wall-clock
-proxy. The two rungs differ by three orders of magnitude in scans for the same
-reason they differ in speed-up: at band B thousands of tiles share one
-grid-level facet and the memo answers nearly every one, while at the globe
-rung a chart tile is already about the size of a facet, so there is little to
-share.
+Full rung sweep, 200x200, seed 42, one box, load average ~7 (an earlier sweep
+at load 22–24 read roughly 2x higher across the board and was discarded as
+contended — a second campaign was running a full suite on the same machine):
+
+| rung | wall ms (median) | wall ms (min) | memo misses / hits | vertex scans | vs the 50 ms bar |
+|---|---|---|---|---|---|
+| 6 (`GLOBE_RUNG`) | 91.541 | 91.306 | 29,662 / 10,338 | 88,986 | **1.8x OVER** |
+| 7 | 66.435 | 65.495 | 15,756 / 24,244 | 47,268 | **1.3x OVER** |
+| 8 | 44.522 | 42.282 | 4,717 / 35,283 | 14,151 | under, by 1.12x |
+| 10 | 30.523 | 30.117 | 333 / 39,667 | 999 | under, by 1.64x |
+| 12 (`BAND_B_RUNG`) | 29.985 | 29.191 | 30 / 39,970 | 90 | under, by 1.67x |
+
+**So: the bar holds at rungs >= 8 and FAILS at rungs 6 and 7, both of which
+ship** — the ladder runs `GLOBE_RUNG..=BAND_B_RUNG` and a player reaches the
+coarse end by holding `-`. The boundary is MEASURED, not interpolated: a review
+pass that measured rungs 6, 8 and 12 placed it at ">= 7", and rung 7's own
+66.435 ms says otherwise. Cross-validation on rung 6 between the two
+independent sweeps was 91.607 vs 91.541 ms, 0.07% apart.
+
+**The MECHANISM claim survives at every rung; only the 50 ms budget is
+rung-conditional.** Against the 1,960,000 vertex scans the replaced 49-point
+area-majority vote cost at every rung, the scan count falls by 21,778x at
+rung 12 and still 22x at rung 6. The reason the two ends differ so much is the
+same reason the wall times do: the memo saves exactly the reuse the rung
+offers, and at `GLOBE_RUNG` a 363x362 chart tile is already about the size of
+a grid-level facet, so 29,662 of 40,000 tiles find nothing to share.
+
+Before/after, at the two sizes originally measured:
+
+| plate | rung | before (ms) | after (ms) | speed-up | scans before -> after |
+|---|---|---|---|---|---|
+| 200x200 | 12 | 1249.583 | 31.298 | 39.9x | 1,960,000 -> 90 |
+| 104x52 | 6 | 186.931 | 17.721 | 10.5x | 264,992 -> 16,020 |
+
+Scan counts are the kernel's own `RoomMeshMemo::corner_weights_misses()`
+instrument times three (`corner_weights_memo` runs three
+`NearestVertexIndex::nearest_to_position` scans on a miss and none on a hit),
+never a wall-clock proxy.
 
 | when (UTC) | label | wall_s | user_s | sys_s | cpu_ratio | waited_s | commit | branch | host | cores |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -3009,3 +3039,5 @@ share.
 | 2026-08-26T21:04:31Z | gate-commit | 76.742 | 49.769 | 23.889 | 0.96 | 0 | 95fbd8f39 | campaign/the-quadrat | ambrose | 12 |
 | 2026-08-26T21:05:56Z | gate-commit | 76.800 | 49.457 | 24.100 | 0.96 | 0 | 95fbd8f39 | campaign/the-quadrat | ambrose | 12 |
 | 2026-08-26T22:07:33Z | gate-commit | 68.482 | 49.238 | 22.789 | 1.05 | 0 | a1339e537 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-26T22:09:06Z | gate-commit | 69.789 | 50.042 | 23.763 | 1.06 | 0 | a1339e537 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-26T22:54:58Z | gate-commit | 68.870 | 49.662 | 23.363 | 1.06 | 0 | c519a6cbe | campaign/the-quadrat | ambrose | 12 |

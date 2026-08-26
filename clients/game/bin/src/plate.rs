@@ -266,8 +266,20 @@ pub fn draw(
 /// it caches a pure function of `(Facet, Geosphere::level())`, so its
 /// lifetime is a performance choice and never a correctness one, and a
 /// per-draw memo keeps `draw`/`draw_with`'s public signatures unchanged
-/// while still collapsing the plate's scan count by three orders of
-/// magnitude (see the module doc).
+/// while still collapsing the plate's scan count.
+///
+/// **How MUCH it collapses is rung-conditional, and stating one figure
+/// unqualified is the mistake this sentence used to make.** The memo saves
+/// exactly the reuse the rung offers, which is how many tiles share a
+/// grid-level facet. Measured on a 200x200 plate (`examples/rung_bench.rs`,
+/// 2026-08-26), against the 1,960,000 scans the 49-point vote cost at every
+/// rung: **90 at [`BAND_B_RUNG`]** (three orders of magnitude, because
+/// thousands of tiles share one grid-level facet) but **88,986 at
+/// [`GLOBE_RUNG`]** (about 1.4 orders, because there a chart tile is already
+/// about the size of a facet and there is almost nothing to share). The
+/// mechanism holds at every rung — the coarse end is still 22x — but the
+/// magnitude does not, and `GLOBE_RUNG` is a shipped rung a player reaches
+/// by holding `-`. The module doc states the rule this is an instance of.
 ///
 /// **`w`/`h` are the drawn plate's own size — the screen window —
 /// never the virtual chart's.** [`virtual_dims`]`(win.depth)` gives the
@@ -520,9 +532,16 @@ pub struct TileTerrain {
 /// corners, so this reproduces what
 /// [`NearestVertexIndex::nearest`] would have returned at the tile's centre
 /// without asking it. `mesh_addressing_agrees_with_the_spatial_search`
-/// measures that agreement rather than asserting it, because the icosphere's
-/// dual is not exactly a Voronoi diagram and a seam-straddling point may
-/// disagree.
+/// ASSERTS that agreement exactly — `assert_eq!(agree, total)`, 5,000 of
+/// 5,000 cells. It was written to merely MEASURE a ratio, on the theory
+/// that the icosphere's dual is not exactly a Voronoi diagram and a
+/// seam-straddling point might disagree; no such point was found, so the
+/// test asserts what it actually observed rather than leaving a threshold
+/// that never gates. **Where the two DO disagree, off the shipped ladder,
+/// brute force says this path is the correct one and
+/// [`NearestVertexIndex::nearest`] is the wrong one** (37/37, all at
+/// latitude exactly 0.0 — a latent equator-band defect in the kernel's
+/// windowed scan, captured separately and deliberately not fixed here).
 ///
 /// **The weights [`Facet::corner_weights_memo`] also returns are
 /// deliberately unused.** They are the barycentric position of the ADDRESSED
@@ -555,9 +574,15 @@ pub fn terrain_at_tile(
     let facet = Facet::containing(pos, win.depth);
 
     // The address terrain is actually defined on. `GeneratedTerrain` lives
-    // on `Geosphere::new(GLOBE_LEVEL)`'s vertices and has nothing finer to
-    // disclose, so every rung at or below the grid resolves through the
-    // grid-level triangle.
+    // on the vertices of the `Geosphere` it was generated against and has
+    // nothing finer to disclose, so every rung at or below the grid resolves
+    // through the grid-level triangle.
+    //
+    // **Read from `geo`, never written as the literal `6` or as
+    // `GLOBE_RUNG`.** Today `hornvale_terrain::GLOBE_LEVEL == GLOBE_RUNG ==
+    // 6`, so all three are the same number and most of this suite cannot
+    // tell them apart — `the_grid_level_is_read_from_the_geosphere` builds a
+    // world at a DIFFERENT level precisely so one test can.
     let grid_level = geo.depth();
     let addr = match facet.ancestor(grid_level) {
         Some(anc) => anc,
@@ -606,7 +631,23 @@ mod tests {
     /// (grepped, not merely assumed), so this is the one this module
     /// owns.
     fn test_world() -> (GeneratedTerrain, Geosphere) {
-        let geo = Geosphere::new(hornvale_terrain::GLOBE_LEVEL);
+        test_world_at(hornvale_terrain::GLOBE_LEVEL)
+    }
+
+    /// [`test_world`] at an arbitrary globe level.
+    ///
+    /// **This parameter exists to break a three-way constant collision, not
+    /// to be general.** `hornvale_terrain::GLOBE_LEVEL`, [`GLOBE_RUNG`] and
+    /// the literal `6` are the same number today, so a mutation replacing
+    /// `geo.depth()` inside [`terrain_at_tile`] with either of the other two
+    /// is undetectable by construction — no test built on a level-6 world
+    /// can tell the three apart. `the_grid_level_is_read_from_the_geosphere`
+    /// is the one caller that passes anything else. `hornvale_terrain::
+    /// generate` takes the geosphere as a parameter and never consults
+    /// `GLOBE_LEVEL` itself, so a world at another level is a real world,
+    /// not a fixture.
+    fn test_world_at(level: u32) -> (GeneratedTerrain, Geosphere) {
+        let geo = Geosphere::new(level);
         let outcome = hornvale_terrain::generate(Seed(42), &geo, &TerrainPins::default())
             .expect("default pins generate seed 42");
         let terrain = GeneratedTerrain::new(geo.clone(), outcome);
@@ -1246,6 +1287,70 @@ mod tests {
             tiles,
             "every tile must consult the memo exactly once"
         );
+    }
+
+    /// **The grid level comes from the `Geosphere`, not from a constant that
+    /// happens to equal it.** `hornvale_terrain::GLOBE_LEVEL`, [`GLOBE_RUNG`]
+    /// and the literal `6` are all the same number, so every other test in
+    /// this module is blind to which one [`terrain_at_tile`] actually reads —
+    /// the third appearance in three tasks of one vacuity shape (Task 1's
+    /// all-ocean grids, Task 3's single-rung facet test, this).
+    ///
+    /// A world at `GLOBE_LEVEL - 1` breaks the tie. The instrument is the
+    /// memo's own KEY: [`RoomMeshMemo::corner_weights_lookup`] answers only
+    /// for the address the memo was filled at, so if `terrain_at_tile`
+    /// addressed through a hardcoded `6` on a level-5 world it would have
+    /// filled a DEPTH-6 key and this lookup at the level-5 address would come
+    /// back `None`. The resolved vertex alone cannot discriminate: a depth-6
+    /// facet's level-5 ancestor is the same triangle, so both spellings
+    /// return the same vertex and only the key differs.
+    #[test]
+    fn the_grid_level_is_read_from_the_geosphere() {
+        let level = hornvale_terrain::GLOBE_LEVEL - 1;
+        assert_ne!(
+            level, GLOBE_RUNG,
+            "this test is vacuous unless the world's level differs from the rung constant"
+        );
+        let (terrain, geo) = test_world_at(level);
+        assert_eq!(geo.depth(), level, "sanity: the world really is at {level}");
+        let index = NearestVertexIndex::new(&geo);
+        let mut memo = RoomMeshMemo::default();
+        let f = mercator::frame_for(false);
+        let win = Window {
+            depth: GLOBE_RUNG,
+            origin_col: 0,
+            origin_row: 0,
+        };
+        let (vw, vh) = virtual_dims(win.depth);
+        let got = terrain_at_tile(&terrain, &geo, &index, &mut memo, &f, &win, vw, vh, 0, 0);
+
+        assert_eq!(
+            memo.corner_weights_geo_level(),
+            Some(level),
+            "the memo must be filled against the world's OWN level"
+        );
+        let (lat, lon) = mercator::unproject(&f, 0, 0, vw, vh);
+        let pos = hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon);
+        let grid_addr = Facet::containing(pos, level);
+        assert_eq!(
+            grid_addr.depth(),
+            level,
+            "sanity: the grid-level address is at the world's level"
+        );
+        assert!(
+            memo.corner_weights_lookup(&grid_addr).is_some(),
+            "the memo must be keyed on the GRID-level address ({level}), not on a \
+             hardcoded depth"
+        );
+        // And the answer is still correct against the level-5 mesh's own
+        // spatial search -- a wrong grid level that somehow filled the right
+        // key would still have to survive this.
+        assert_eq!(
+            got.vertex,
+            index.nearest(&geo, lat, lon),
+            "the resolved vertex must be the level-{level} mesh's nearest"
+        );
+        assert_eq!(got.ocean, terrain.is_ocean(got.vertex));
     }
 
     // -- Task 5: point sites, gated inside `draw_with` --------------------
