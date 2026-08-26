@@ -912,11 +912,34 @@ git push
 - Consumes: Task 4's `EnergySource`; Task 2's `rung_evaluation_depth_m`;
   Task 3's per-rung moisture.
 - Produces:
-  `pub fn subterranean_energy(material: &MaterialBuffer, gradient: GeothermalGradient, depth_m: f64, moisture: f64) -> f64`
+  `pub fn subterranean_energy(material: &MaterialBuffer, gradient: GeothermalGradient, depth_m: f64, moisture: f64, drainage: f64) -> f64`
   (the `ENERGY` ruler, `[0,1]`),
-  `pub fn dominant_source(material: &MaterialBuffer, gradient: GeothermalGradient, depth_m: f64, moisture: f64) -> EnergySource`,
+  `pub fn dominant_source(material: &MaterialBuffer, gradient: GeothermalGradient, depth_m: f64, moisture: f64, drainage: f64) -> EnergySource`,
   and
   `pub fn subterranean_energy_field_per_rung(geo: &Geosphere, terrain: &GeneratedTerrain, surface: &VertexMap<Substrate>) -> VertexMap<[Option<f64>; 6]>`.
+
+**Two API facts the controller verified against the shipped module** (at
+`f53895693`), because the sketches below depend on both:
+
+1. **`EnergySource` does NOT derive `Ord`** — only
+   `Debug, Clone, Copy, PartialEq, Eq` (`energy.rs:260`). So it cannot key a
+   `BTreeMap`, and `HashMap` is banned workspace-wide. **Do not add an `Ord`
+   derive to make a map work.** These seven are *nominal* categories, not a
+   ranking — the kernel draws exactly this distinction with
+   `AxisValence::Nominal` ("the numeric value indexes an unordered set and is
+   never a magnitude"), and an `Ord` on them would assert a precedence that
+   does not exist. Tally into a fixed `[usize; EnergySource::ALL.len()]`
+   indexed by position in `ALL`, which is what the sketch does.
+2. **`yield_at` takes FIVE arguments** as shipped —
+   `(&self, buffer: &MaterialBuffer, gradient: GeothermalGradient, depth_m: f64, moisture: f64, drainage: f64)`
+   (`energy.rs:341`). `drainage` was added by a controller ruling in Task 4's
+   fix round; `dominant_source` and `subterranean_energy` must take it too,
+   and the field function must supply it from
+   `GeneratedTerrain::drainage_at`.
+
+Task 3's shipped names, which this task consumes:
+`subterranean_substrate_at_rung` (`lib.rs:3013`) and
+`subterranean_substrate_field_per_rung` (`lib.rs:3049`).
 
 **The claim this task is measured against, and it is not this campaign's
 claim.** `domains/climate/src/underworld.rs`'s module doc states that
@@ -1011,7 +1034,10 @@ question is not resolved.
 #[test]
 #[ignore = "heavy: live-worldgen battery over the frozen seed set"]
 fn more_than_one_source_dominates_somewhere() {
-    let mut histogram: BTreeMap<EnergySource, usize> = BTreeMap::new();
+    // A FIXED-SIZE TALLY INDEXED BY `EnergySource::ALL` POSITION, not a
+    // BTreeMap. `EnergySource` derives `Debug, Clone, Copy, PartialEq, Eq`
+    // and deliberately NOT `Ord` — see the controller note below.
+    let mut histogram = [0usize; EnergySource::ALL.len()];
     let mut chambers = 0usize;
     for seed in SEEDS {
         let (geo, terrain, surface) = world_at(seed);
@@ -1024,9 +1050,12 @@ fn more_than_one_source_dominates_somewhere() {
                 let Some(depth) = rung_evaluation_depth_m(*rung, g, cave.depth_reach_m)
                 else { continue };
                 let Some(sub) = moisture.get(vertex)[*rung as usize] else { continue };
-                *histogram
-                    .entry(dominant_source(&m, g, depth, sub.moisture))
-                    .or_default() += 1;
+                let winner = dominant_source(&m, g, depth, sub.moisture, drainage);
+                let slot = EnergySource::ALL
+                    .iter()
+                    .position(|s| *s == winner)
+                    .expect("a dominant source is one of ALL");
+                histogram[slot] += 1;
                 chambers += 1;
             }
         }
@@ -1035,11 +1064,14 @@ fn more_than_one_source_dominates_somewhere() {
     // Report BEFORE asserting: the histogram is the finding, the assertion
     // is only its floor.
     println!("dominant-source histogram over {chambers} chambers: {histogram:?}");
+    let occupied = histogram.iter().filter(|n| **n > 0).count();
     assert!(
-        histogram.len() > 1,
-        "one source dominates every chamber in every world ({histogram:?}). \
-         The other five are decoration. Record this in the chronicle as \
-         measured — do NOT retune a source to spread the histogram."
+        occupied > 1,
+        "one source dominates every chamber in every world ({histogram:?} \
+         over {:?}). The other six are decoration. Record this in the \
+         chronicle as measured — do NOT retune a source to spread the \
+         histogram.",
+        EnergySource::ALL
     );
 }
 ```
@@ -1047,6 +1079,23 @@ fn more_than_one_source_dominates_somewhere() {
 Its result is a finding, not a gate. If one source dominates everywhere,
 record the histogram and say so plainly in the chronicle; the floor asserted
 here is deliberately the weakest one that is not vacuous.
+
+- [ ] **Step 3b: Carry Task 4's one deferred minor**
+
+While you are in `energy.rs`, amend `GEOTHERMAL_REACH_K`'s doc. Task 4's
+re-review judged its anchor **real but interpretive** — it closed a circular
+justification, but unlike `DETRITAL_IMPORT_DRAINAGE_REACH` (which cites a
+measured p90 drainage statistic) nothing independently measures where
+geothermal supply *should* cross half-yield. It borrows `Underdeep`'s
+boundary, which was built to classify habitability, not to calibrate
+geothermal yield. The verdict was that the doc's confidence "slightly outruns
+its evidentiary weight".
+
+Add one sentence saying plainly that this is a **modelling choice, not an
+independent citation**, and that Task 5's measured profile is what would
+revise it. Do not remove the anchor and do not weaken the others — the two
+kinds of constant now sit side by side in this module and a reader should be
+able to tell which is which.
 
 - [ ] **Step 4: Verify, mutate, commit**
 
