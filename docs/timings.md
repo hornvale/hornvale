@@ -2874,3 +2874,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-25T23:22:24Z | quick | 31.706 | 47.270 | 42.205 | 2.82 | 0 | 000bc15da | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-25T23:53:13Z | sluice:artifacts | 104.484 | 846.818 | 37.492 | 8.46 | 0 | 6db5de3f2 |  | lefford | 40 |
 | 2026-08-25T23:53:53Z | sluice:outboard | 39.521 | 23.211 | 34.268 | 1.45 | 0 | 341f1e261 |  | lefford | 40 |
+| 2026-08-26T00:01:08Z | sluice:gate | 434.820 | 11961.571 | 448.346 | 28.54 | 0 | a0b0697c2 |  | lefford | 40 |
