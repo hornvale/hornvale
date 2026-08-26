@@ -19,7 +19,7 @@
 //! authored surface text anywhere in a generated tongue (the program
 //! thesis).
 
-use crate::clause::{Adjunct, Argument, Clause, Subject, Tense};
+use crate::clause::{Adjunct, Argument, Clause, Polarity, Subject, Tense};
 use crate::lexicon::{LexEntry, Lexicon};
 use crate::morphology::{
     ClassPosition, Evidential, MorphDepth, MorphForm, NounClass, TongueMorphology, affix,
@@ -393,18 +393,26 @@ enum Role {
 /// carried here by composition rather than duplicated as fields —
 /// `paradigm.rs` stays the one place they are defined and drawn.
 ///
-/// `tense` is keyed by the marked value's label — today only `"past"`,
-/// because present is the zero member (spec §4.1) and no present marker is
-/// drawn. A bundle missing the key degrades to "no tense marking" rather
-/// than panicking, exactly as [`TongueMorphology`]'s own marker maps do,
-/// which is what lets a synthetic fixture supply one value.
+/// Each axis map is keyed by the MARKED value's label — `tense` by
+/// `"past"`, `polarity` by `"negative"` — because the other member of each
+/// pair is the zero member (spec §4.1) and no marker is drawn for it. A
+/// bundle missing a key degrades to "no marking on that axis" rather than
+/// panicking, exactly as [`TongueMorphology`]'s own marker maps do, which is
+/// what lets a synthetic fixture supply one axis and leave the other empty.
+///
+/// **A new paradigm axis extends this bundle rather than adding a parameter
+/// to [`realize_tongue_deep`]** — the stated reason the depths were bundled
+/// here in the first place instead of passed as a signature full of options.
 /// type-audit: bare-ok(identifier-text)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TongueParadigm {
-    /// The tongue's drawn Number/Tense depths and attachment sides.
+    /// The tongue's drawn Number/Tense/Polarity depths and attachment sides.
     pub depths: ParadigmDepths,
     /// The family's tense marker forms, keyed by marked value (`"past"`).
     pub tense: BTreeMap<&'static str, MorphForm>,
+    /// The family's polarity marker forms, keyed by marked value
+    /// (`"negative"`).
+    pub polarity: BTreeMap<&'static str, MorphForm>,
 }
 
 /// The marked member of the tense axis for `tense`, or `None` when the
@@ -414,6 +422,17 @@ fn marked_tense_value(tense: Tense) -> Option<&'static str> {
     match tense {
         Tense::Present => None,
         Tense::Past => Some("past"),
+    }
+}
+
+/// The marked member of the polarity axis, or `None` when the clause is
+/// positive. Negative is the marked member and positive is zero — the same
+/// shape tense has, and for the same reason: only `negative` is drawn, and
+/// inventing a positive marker would be authoring.
+fn marked_polarity_value(polarity: Polarity) -> Option<&'static str> {
+    match polarity {
+        Polarity::Pos => None,
+        Polarity::Neg => Some("negative"),
     }
 }
 
@@ -444,8 +463,16 @@ fn marked_tense_value(tense: Tense) -> Option<&'static str> {
 /// function's pre-Inquest surface byte for byte — as does a `Some` bundle
 /// whose `tense_depth` is `MorphDepth::None`.
 ///
-/// The tense layer is applied BEFORE the evidential one so the evidential
-/// stays predicate-FINAL, which is the rule its own doc above states.
+/// Polarity marking (The Inquest) reads `paradigm`'s drawn `polarity_depth`
+/// and `polarity_position` and targets the same host tense does — the
+/// copula, or the predicate nominal under a zero copula. **Negative is the
+/// marked member and positive is zero**, exactly as past/present are on the
+/// tense axis: only a negative marker is drawn, and inventing a positive one
+/// would be authoring.
+///
+/// The tense layer is applied first, then polarity, then the evidential —
+/// the evidential last so it stays predicate-FINAL, which is the rule its
+/// own doc above states.
 ///
 /// `orth` is the tongue's own [`crate::phonology::Phonology::orthography`]
 /// (spec §3.6): a VIEW, so it changes only the `Affix`-depth marker joins'
@@ -539,6 +566,36 @@ pub fn realize_tongue_deep(
                 }
             }
             MorphDepth::Particle => tense_particle = Some(marker.roman.clone()),
+        }
+    }
+
+    // Polarity marking (The Inquest): negation marks the same host tense
+    // does -- the verb, i.e. the copula, falling to the predicate nominal
+    // under a zero copula. Positive is the zero member and draws no marker
+    // at all. Applied AFTER the tense layer (so an affixed negative sits
+    // outside an affixed tense marker) and BEFORE the evidential one (so
+    // the evidential stays predicate-final).
+    let mut polarity_particle: Option<String> = None;
+    if let Some(paradigm) = paradigm
+        && let Some(polarity_value) = marked_polarity_value(clause.polarity)
+        && let Some(marker) = paradigm.polarity.get(polarity_value)
+    {
+        let position = paradigm.depths.polarity_position;
+        match paradigm.depths.polarity_depth {
+            MorphDepth::None => {}
+            MorphDepth::Affix => {
+                if let Some(cop) = copula.take() {
+                    copula = Some(layer_affix(cop, marker, position, orth));
+                } else if object_concept.is_some() {
+                    // Zero copula, lexical object: the predicate nominal
+                    // bears it. The guard is on the CONCEPT ID, never on
+                    // `Marked.segments`, for the same reason the tense layer
+                    // above states -- a `Compound` has no segments either and
+                    // `layer_affix`'s panic on it is deliberate (spec §4.3).
+                    complement = layer_affix(complement, marker, position, orth);
+                }
+            }
+            MorphDepth::Particle => polarity_particle = Some(marker.roman.clone()),
         }
     }
 
@@ -642,6 +699,28 @@ pub fn realize_tongue_deep(
         }
     }
 
+    // Splice in the polarity particle beside "the predicate" on its own
+    // drawn side, after the tense particle and before the evidential one —
+    // the same ordering rule the tense splice above states, extended by one
+    // layer: each later splice lands nearer the predicate, so the evidential
+    // stays immediately adjacent to it and this one sits just outside.
+    if let Some(particle) = polarity_particle
+        && let Some(paradigm) = paradigm
+    {
+        let predicate_role = if grammar.copula.is_some() {
+            Role::Copula
+        } else {
+            Role::Complement
+        };
+        if let Some(idx) = ordered.iter().position(|(r, _)| *r == predicate_role) {
+            let insert_at = match paradigm.depths.polarity_position {
+                ClassPosition::Prefix => idx,
+                ClassPosition::Suffix => idx + 1,
+            };
+            ordered.insert(insert_at, (Role::Marker, particle));
+        }
+    }
+
     // Splice in the evidential particle immediately after "the predicate":
     // the copula token if the tongue is copula-bearing, else the complement
     // (the predicate nominal in a zero-copula clause). Tagging spliced
@@ -677,10 +756,10 @@ mod tests {
     // Test-only: `Number` and `Definiteness` reach a tongue realizer and go
     // UNREAD (spec 3.2), so no non-test code in this module names them.
     // Importing them at module level would be an unused import outside
-    // `cfg(test)`. `Tense` is NOT among them any more -- The Inquest made
-    // the realizer read it, so it is imported at module level via
-    // `use super::*`.
-    use crate::clause::{Definiteness, Number, Polarity};
+    // `cfg(test)`. `Tense` and `Polarity` are NOT among them any more --
+    // The Inquest made the realizer read both, so they are imported at
+    // module level via `use super::*`.
+    use crate::clause::{Definiteness, Number};
     use crate::etymology::CascadeRegime;
     use crate::lexicon::{ExposureClass, LexEntry, build_lexicon};
     use crate::naming::render_views;
@@ -1438,10 +1517,10 @@ mod tests {
     /// A `TongueParadigm` at `tense_depth`, with a synthetic `"past"`
     /// marker drawn from `ph` — the paradigm sibling of the marker fixtures
     /// `realize_tongue_marks_by_depth` builds, and built the same way (a
-    /// real drawn word via `proto_root`, not authored text). `number_depth`
-    /// is `None` throughout: this task wires TENSE only, and a number
-    /// depth nothing reads would be a fixture claiming coverage it has not
-    /// got.
+    /// real drawn word via `proto_root`, not authored text). Every OTHER
+    /// axis is `None` with an empty marker map, so a surface difference can
+    /// only come from tense — a fixture that marked a second axis would be
+    /// claiming coverage this test has not got.
     fn tense_paradigm(
         ph: &Phonology,
         tense_depth: MorphDepth,
@@ -1464,10 +1543,13 @@ mod tests {
                 depths: ParadigmDepths {
                     number_depth: MorphDepth::None,
                     tense_depth,
+                    polarity_depth: MorphDepth::None,
                     number_position: ClassPosition::Suffix,
                     tense_position,
+                    polarity_position: ClassPosition::Suffix,
                 },
                 tense,
+                polarity: BTreeMap::new(),
             },
             past_segments,
             past_roman,
@@ -1697,6 +1779,261 @@ mod tests {
         );
         assert!(
             !rendered.contains(&past_roman),
+            "and the marker must not appear anywhere: {rendered:?}"
+        );
+    }
+
+    /// A `TongueParadigm` at `polarity_depth`, with a synthetic
+    /// `"negative"` marker drawn from `ph` — the polarity sibling of
+    /// [`tense_paradigm`], built the same way (a real drawn word via
+    /// `proto_root`, not authored text). Every other axis is `None`, so a
+    /// surface difference can only come from polarity.
+    fn polarity_paradigm(
+        ph: &Phonology,
+        polarity_depth: MorphDepth,
+        polarity_position: ClassPosition,
+    ) -> (TongueParadigm, Vec<Segment>, String) {
+        use crate::etymology::proto_root;
+
+        let neg_segments = proto_root(&Seed(95), "goblin", "negative-marker", ph);
+        let neg_roman = render_views(&neg_segments).roman;
+        let mut polarity = BTreeMap::new();
+        polarity.insert(
+            "negative",
+            MorphForm {
+                segments: neg_segments.clone(),
+                roman: neg_roman.clone(),
+            },
+        );
+        (
+            TongueParadigm {
+                depths: ParadigmDepths {
+                    number_depth: MorphDepth::None,
+                    tense_depth: MorphDepth::None,
+                    polarity_depth,
+                    number_position: ClassPosition::Suffix,
+                    tense_position: ClassPosition::Suffix,
+                    polarity_position,
+                },
+                tense: BTreeMap::new(),
+                polarity,
+            },
+            neg_segments,
+            neg_roman,
+        )
+    }
+
+    /// The Inquest T3: the tongue READS its drawn `polarity_depth`.
+    ///
+    /// The assertion that makes this non-vacuous is DIFFERENTIAL, not an
+    /// equality: two paradigms identical except for `polarity_depth` must
+    /// render the same NEGATED clause differently. An equality test alone
+    /// would pass with the drawn field never read at all.
+    #[test]
+    fn realize_tongue_reads_its_drawn_polarity_depth() {
+        let ph = test_phonology();
+        let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
+        let complement_segments = match lex.entry("goblin-kind").unwrap() {
+            LexEntry::Root { derivation, .. } => derivation.modern.clone(),
+            other => panic!("goblin-kind should be a root, got {other:?}"),
+        };
+        let negated = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Concept("goblin-kind".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Neg,
+            adjuncts: vec![],
+        };
+        let positive = Clause {
+            polarity: Polarity::Pos,
+            ..negated.clone()
+        };
+        let noun_class_of = |_: &str| NounClass::Inanimate;
+        let morph = unmarked_morphology();
+        let grammar = overt_copula_grammar(&ph);
+
+        let (none_paradigm, _, _) = polarity_paradigm(&ph, MorphDepth::None, ClassPosition::Suffix);
+        let (affix_paradigm, neg_segments, neg_roman) =
+            polarity_paradigm(&ph, MorphDepth::Affix, ClassPosition::Suffix);
+
+        let render = |clause: &Clause, grammar: &TongueGrammar, paradigm: &TongueParadigm| {
+            realize_tongue_deep(
+                clause,
+                grammar,
+                &morph,
+                Some(paradigm),
+                &noun_class_of,
+                &lex,
+                Orthography::Digraph,
+            )
+            .unwrap()
+        };
+
+        // 1. THE DIFFERENTIAL. Same clause, same tongue, same marker forms —
+        // only the drawn depth differs, and the surface must differ with it.
+        let unmarked = render(&negated, &grammar, &none_paradigm);
+        let marked = render(&negated, &grammar, &affix_paradigm);
+        assert_ne!(
+            unmarked, marked,
+            "a tongue that draws Affix polarity depth must render a negated \
+             clause differently from one that draws None: {unmarked:?}"
+        );
+
+        // 2. `MorphDepth::None` on the polarity axis is the shallow surface —
+        // identical to passing no paradigm at all.
+        assert_eq!(
+            unmarked,
+            realize_tongue_deep(
+                &negated,
+                &grammar,
+                &morph,
+                None,
+                &noun_class_of,
+                &lex,
+                Orthography::Digraph,
+            )
+            .unwrap(),
+            "polarity_depth None must reproduce the no-paradigm surface exactly"
+        );
+
+        // 3. Affix + overt copula -> the negative marker is joined onto the
+        // COPULA at the segment level (spec §4.2: like tense, polarity marks
+        // the verb, and in a nominal clause the verb is the copula).
+        let copula_segments = grammar
+            .copula_segments
+            .clone()
+            .expect("overt_copula_grammar draws copula_segments alongside copula");
+        let expected_copula = affix(
+            &copula_segments,
+            &neg_segments,
+            ClassPosition::Suffix,
+            Orthography::Digraph,
+        )
+        .roman;
+        assert!(
+            marked.contains(&expected_copula),
+            "Affix polarity must suffix the negative marker onto the copula: \
+             {marked:?} (expected token {expected_copula:?})"
+        );
+
+        // 4. POSITIVE IS UNMARKED (spec §4.1's zero-member rule, applied to
+        // polarity). The same Affix tongue renders a positive clause exactly
+        // as a None tongue does — only `negative` is drawn, and inventing a
+        // positive marker would be authoring.
+        assert_eq!(
+            render(&positive, &grammar, &affix_paradigm),
+            render(&positive, &grammar, &none_paradigm),
+            "positive is the zero member: an Affix tongue must not mark it"
+        );
+
+        // 5. The drawn ATTACHMENT SIDE is read too, not assumed suffixing.
+        let (prefix_paradigm, _, _) =
+            polarity_paradigm(&ph, MorphDepth::Affix, ClassPosition::Prefix);
+        let expected_prefixed = affix(
+            &copula_segments,
+            &neg_segments,
+            ClassPosition::Prefix,
+            Orthography::Digraph,
+        )
+        .roman;
+        let prefixed = render(&negated, &grammar, &prefix_paradigm);
+        assert!(
+            prefixed.contains(&expected_prefixed),
+            "the drawn polarity_position must decide the side: {prefixed:?} \
+             (expected token {expected_prefixed:?})"
+        );
+
+        // 6. Particle depth -> a free word adjacent to the predicate (the
+        // copula here), on the drawn side.
+        let (particle_paradigm, _, _) =
+            polarity_paradigm(&ph, MorphDepth::Particle, ClassPosition::Suffix);
+        let particled = render(&negated, &grammar, &particle_paradigm);
+        let tokens: Vec<&str> = particled.trim_end_matches('.').split(' ').collect();
+        let copula_roman = grammar.copula.as_deref().unwrap();
+        let copula_idx = tokens
+            .iter()
+            .position(|t| *t == copula_roman)
+            .expect("the bare copula token must still be present, unmodified");
+        assert_eq!(
+            tokens.get(copula_idx + 1),
+            Some(&neg_roman.as_str()),
+            "the polarity particle must sit beside the predicate: {tokens:?}"
+        );
+
+        // 7. ZERO COPULA: no verb, so the negative falls to the predicate
+        // nominal — the same host tense and the evidential fall to there.
+        let zero_copula = TongueGrammar {
+            order: grammar.order,
+            copula: None,
+            copula_segments: None,
+            articles: grammar.articles,
+        };
+        let expected_enclitic = affix(
+            &complement_segments,
+            &neg_segments,
+            ClassPosition::Suffix,
+            Orthography::Digraph,
+        )
+        .roman;
+        let zero_marked = render(&negated, &zero_copula, &affix_paradigm);
+        assert!(
+            zero_marked.contains(&expected_enclitic),
+            "zero-copula Affix polarity must fall to the predicate nominal: \
+             {zero_marked:?} (expected token {expected_enclitic:?})"
+        );
+    }
+
+    /// The Inquest T3, spec §4.3's guard for the polarity axis: a
+    /// NON-LEXICAL object has no segments and must not be affixed. The guard
+    /// is on the concept id, never on `Marked.segments`, because a
+    /// `LexEntry::Compound` has `segments: None` too and its `layer_affix`
+    /// panic is deliberate.
+    #[test]
+    fn a_non_lexical_object_takes_no_polarity_affix_under_a_zero_copula() {
+        let ph = test_phonology();
+        let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Count(8835),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Neg,
+            adjuncts: vec![],
+        };
+        let noun_class_of = |_: &str| NounClass::Inanimate;
+        let morph = unmarked_morphology();
+        let zero_copula = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: None,
+            copula_segments: None,
+            articles: false,
+        };
+        let (affix_paradigm, _, neg_roman) =
+            polarity_paradigm(&ph, MorphDepth::Affix, ClassPosition::Suffix);
+
+        let rendered = realize_tongue_deep(
+            &clause,
+            &zero_copula,
+            &morph,
+            Some(&affix_paradigm),
+            &noun_class_of,
+            &lex,
+            Orthography::Digraph,
+        )
+        .expect("a numeral object must still realize");
+        assert_eq!(
+            rendered, "Vavako 8835.",
+            "a non-lexical object bears no polarity affix: {rendered:?}"
+        );
+        assert!(
+            !rendered.contains(&neg_roman),
             "and the marker must not appear anywhere: {rendered:?}"
         );
     }

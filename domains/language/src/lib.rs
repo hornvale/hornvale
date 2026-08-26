@@ -1128,6 +1128,14 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "The Residue: which side of the marked word the Tense affix binds",
         ),
         (
+            "language/<species>/grammar/depth/polarity",
+            "The Inquest: the species' drawn Polarity grammaticalization depth (None/Particle/Affix) — how a tongue marks a negated clause; an independent stream, added additively (spec §3.4)",
+        ),
+        (
+            "language/<species>/grammar/polarity-position",
+            "The Inquest: which side of the marked word the Polarity affix binds",
+        ),
+        (
             "language/family/<family>/morph/evidential/<value>",
             "C7: the family's one-syllable evidential-marker proto-form for <value> (witnessed/taught/inferred), drawn once per family and evolved per daughter via its own cascade — the cognate law",
         ),
@@ -1142,6 +1150,10 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         (
             "language/family/<family>/morph/tense/past",
             "The Residue: the family's Past-tense affix proto-form, shared by every daughter",
+        ),
+        (
+            "language/family/<family>/morph/polarity/negative",
+            "The Inquest: the family's Negative affix proto-form, shared by every daughter — negative is the marked member and positive is zero, so no positive form is ever drawn",
         ),
         (
             "language/<species>/grammar/numeracy-rung",
