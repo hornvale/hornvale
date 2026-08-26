@@ -205,6 +205,52 @@ pub struct TongueGap {
     pub reason: String,
 }
 
+/// Resolve one argument to its surface text in this tongue: a concept
+/// through the lexicon, everything else passed through or rendered at the
+/// tongue's own grain.
+///
+/// **Shared by the object slot and the adjunct slot**, and that sharing is
+/// the point. Before The Scarf the adjunct slot resolved all four shapes
+/// and the object slot resolved only `Concept`, so a tongue could say a
+/// bare numeral in an adjunct and not in the object — an accident of two
+/// clause structs drifting, never a design.
+fn resolve_argument(argument: &Argument, lexicon: &Lexicon) -> Result<String, TongueGap> {
+    match argument {
+        Argument::Concept(id) => Ok(resolve_concept_marked(id, lexicon)?.roman),
+        Argument::Name(text) => Ok(text.clone()),
+        Argument::Count(n) => Ok(n.to_string()),
+        Argument::Quantity(x) => Ok(x.to_string()),
+    }
+}
+
+/// Resolve a concept id to a word mid-assembly, keeping its segments when
+/// the lexicon has them so a later affix layer can join at the segment
+/// level. A [`LexEntry::Compound`] yields `segments: None` — a pre-existing
+/// lexicon gap, which [`layer_affix`] PANICS on rather than silently
+/// degrading.
+fn resolve_concept_marked(id: &str, lexicon: &Lexicon) -> Result<Marked, TongueGap> {
+    match lexicon.entry(id) {
+        Some(LexEntry::Root { derivation, views }) => Ok(Marked {
+            segments: Some(derivation.modern.clone()),
+            roman: views.roman.clone(),
+        }),
+        Some(LexEntry::Compound { views, .. }) => Ok(Marked {
+            segments: None,
+            roman: views.roman.clone(),
+        }),
+        // `GapReason`'s Display is the canonical recountable rendering —
+        // never `{reason:?}`; the reason is prose to recount, not debug.
+        Some(LexEntry::Gap { reason }) => Err(TongueGap {
+            concept: id.to_string(),
+            reason: reason.to_string(),
+        }),
+        None => Err(TongueGap {
+            concept: id.to_string(),
+            reason: "no entry in this lexicon".to_string(),
+        }),
+    }
+}
+
 /// Realize a clause's adjuncts through the tongue's own lexicon, shared by
 /// both [`realize_tongue`] and [`realize_tongue_deep`] so the two agree on
 /// adjunct handling exactly (the shallow-identity guarantee needs this: with
@@ -222,24 +268,7 @@ pub struct TongueGap {
 fn realize_adjuncts(adjuncts: &[Adjunct], lexicon: &Lexicon) -> Result<Vec<String>, TongueGap> {
     adjuncts
         .iter()
-        .map(|adjunct| match &adjunct.argument {
-            Argument::Concept(id) => match lexicon.entry(id) {
-                Some(LexEntry::Root { views, .. }) | Some(LexEntry::Compound { views, .. }) => {
-                    Ok(views.roman.clone())
-                }
-                Some(LexEntry::Gap { reason }) => Err(TongueGap {
-                    concept: id.clone(),
-                    reason: reason.to_string(),
-                }),
-                None => Err(TongueGap {
-                    concept: id.clone(),
-                    reason: "no entry in this lexicon".to_string(),
-                }),
-            },
-            Argument::Name(text) => Ok(text.clone()),
-            Argument::Count(n) => Ok(n.to_string()),
-            Argument::Quantity(x) => Ok(x.to_string()),
-        })
+        .map(|adjunct| resolve_argument(&adjunct.argument, lexicon))
         .collect()
 }
 
@@ -703,6 +732,31 @@ mod tests {
             &[],
             CascadeRegime::SETTLED,
         )
+    }
+
+    #[test]
+    fn every_argument_shape_resolves_the_same_way_in_either_slot() {
+        let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
+        // A concept goes through the lexicon; everything else is passed through
+        // or rendered at the tongue's own grain. This is what `realize_adjuncts`
+        // has always done -- naming it is what lets the OBJECT slot do it too.
+        assert_eq!(
+            resolve_argument(&Argument::Name("Nwamvam".to_string()), &lex).unwrap(),
+            "Nwamvam"
+        );
+        assert_eq!(
+            resolve_argument(&Argument::Count(8835), &lex).unwrap(),
+            "8835"
+        );
+        assert_eq!(
+            resolve_argument(&Argument::Quantity(1.5), &lex).unwrap(),
+            "1.5"
+        );
+        // A concept with no entry gaps, and the gap names the concept.
+        let gap =
+            resolve_argument(&Argument::Concept("no-such-concept".to_string()), &lex).unwrap_err();
+        assert_eq!(gap.concept, "no-such-concept");
+        assert_eq!(gap.reason, "no entry in this lexicon");
     }
 
     #[test]
