@@ -30,7 +30,13 @@ pub enum Stance {
 /// thresholds on a derived count rather than authored dispositions — the
 /// quantity itself is earned. Preregistered: the campaign reports whether the
 /// prior moves observable testimony at all (spec section 5, H4).
-fn patience(prior: Openness) -> u32 {
+///
+/// Public since The Reticence, Task 6: the per-people report
+/// (`hornvale_lab::render_reticence_report`) shows this threshold beside the
+/// [`Openness`] it is keyed on, so a reader sees the number `stance_for`
+/// actually uses rather than a second, hand-kept copy of it.
+/// type-audit: bare-ok(count: return)
+pub fn patience(prior: Openness) -> u32 {
     match prior {
         Openness::Guarded => 2,
         Openness::Wary => 4,

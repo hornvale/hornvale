@@ -80,7 +80,16 @@ pub fn improvised_name(world: &World, lexicon: &Lexicon, people: &str) -> Improv
 /// property of one world, not a guarantee, so this takes the first by ledger
 /// order and the task's own test asserts uniformity PER SPECIES — which is the
 /// denominator the campaign's numbers are quoted on.
-fn cult_form_of(world: &World, people: &str) -> Option<String> {
+///
+/// Public since The Reticence, Task 6: the per-people report
+/// (`hornvale_lab::render_reticence_report`) shows this raw value beside the
+/// [`ImprovisedName`] it collapses to (`Some("organized")` -> [`God`](ImprovisedName::God),
+/// everything else -> [`Spirit`](ImprovisedName::Spirit), which cannot
+/// distinguish "folk" from "no cult-form fact at all"). Re-deriving the join
+/// a second time in `windows/lab` instead of exposing this would duplicate
+/// the query this crate already owns.
+/// type-audit: bare-ok(identifier-text: people), bare-ok(identifier-text: return)
+pub fn cult_form_of(world: &World, people: &str) -> Option<String> {
     use hornvale_kernel::Value;
     use hornvale_religion::{CULT_FORM, HELD_BY};
     let sites: std::collections::BTreeSet<_> = world

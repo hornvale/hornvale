@@ -2987,3 +2987,7 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T18:56:19Z | gate-commit | 26.870 | 54.765 | 20.318 | 2.79 | 0 | 751a2c87e | campaign/the-reticence | MacBookPro | 10 |
 | 2026-08-26T19:07:11Z | rebaseline | 74.211 | 250.654 | 11.568 | 3.53 | 0 | eda32d6a9 | campaign/the-reticence | MacBookPro | 10 |
 | 2026-08-26T19:08:43Z | gate-commit | 39.183 | 109.870 | 20.502 | 3.33 | 0 | eda32d6a9 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T19:24:24Z | rebaseline | 58.048 | 262.460 | 13.531 | 4.75 | 0 | 4d2d568b5 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T19:27:01Z | rebaseline | 61.600 | 270.876 | 13.793 | 4.62 | 0 | 4d2d568b5 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T19:28:09Z | gate-commit | 33.203 | 86.878 | 22.300 | 3.29 | 0 | 4d2d568b5 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T19:29:33Z | gate-commit | 20.561 | 49.380 | 12.483 | 3.01 | 0 | 4d2d568b5 | campaign/the-reticence | MacBookPro | 10 |
