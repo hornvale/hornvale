@@ -301,6 +301,42 @@ pub fn rung_at_depth(depth_m: f64, gradient: GeothermalGradient) -> Band {
     rung_at_delta_t(gradient.get() * (depth_m / 1000.0))
 }
 
+/// The depth at which a rung's conditions are read, metres below the
+/// surface — the **ΔT midpoint** of the rung's band, converted through the
+/// vertex's own gradient, and never deeper than the cave actually reaches.
+///
+/// **The midpoint, not the top, and this is `MAP-per-rung-substrate`'s own
+/// prescription** rather than a fresh choice: the top of a rung makes its
+/// shallowest rank degenerate, because a rung's top ΔT is the next rung's
+/// bottom.
+///
+/// [`Band::Nadir`] has no midpoint — [`delta_t_range_of`] gives it an open
+/// top — so it reads `depth_reach_m`, which is where EVERY rung was read
+/// before per-rung resolution existed. That makes `Nadir` the positive
+/// control for the change: its answer must not move.
+///
+/// [`Band::Surface`] names no chamber and returns `None`.
+/// type-audit: bare-ok(diagnostic-value: depth_reach_m), bare-ok(diagnostic-value: return)
+pub fn rung_evaluation_depth_m(
+    rung: Band,
+    gradient: GeothermalGradient,
+    depth_reach_m: f64,
+) -> Option<f64> {
+    if rung == Band::Surface {
+        return None;
+    }
+    let (lo, hi) = delta_t_range_of(rung);
+    let depth = match hi {
+        // The open-ended bottom rung: read the column where it actually ends.
+        None => depth_reach_m,
+        Some(hi) => {
+            let midpoint_k = 0.5 * (lo + hi);
+            1000.0 * midpoint_k / gradient.get()
+        }
+    };
+    Some(depth.min(depth_reach_m).max(0.0))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -455,5 +491,76 @@ mod tests {
             Band::Shallows
         );
         assert_eq!(rung_at_depth(depth_under(craton), craton), Band::Deeps);
+    }
+
+    #[test]
+    fn the_surface_rung_has_no_evaluation_depth() {
+        let g = GeothermalGradient::new(25.0);
+        assert_eq!(rung_evaluation_depth_m(Band::Surface, g, 800.0), None);
+    }
+
+    #[test]
+    fn nadir_is_evaluated_at_the_caves_own_reach() {
+        // THE POSITIVE CONTROL FOR THE WHOLE CAMPAIGN. Today every rung reads
+        // `depth_reach_m`; after the per-rung change the deepest rung still
+        // must, so its substrate and moisture are byte-identical across the
+        // change and every movement is attributable to a shallower rung.
+        let g = GeothermalGradient::new(25.0);
+        for reach in [120.0, 800.0, 2500.0] {
+            assert_eq!(
+                rung_evaluation_depth_m(Band::Nadir, g, reach),
+                Some(reach),
+                "Nadir must read the cave's own reach, not a midpoint"
+            );
+        }
+    }
+
+    #[test]
+    fn a_bounded_rung_is_evaluated_at_its_delta_t_midpoint() {
+        let g = GeothermalGradient::new(25.0);
+        // `rungs()` INCLUDES `Band::Surface` (it returns ALL_RUNGS, Surface
+        // first) and Surface's range is the degenerate `(0.0, Some(0.0))`, so
+        // it survives the `hi` filter below and would then panic on the
+        // `expect`. Filter it explicitly.
+        for rung in rungs().iter().filter(|r| **r != Band::Surface) {
+            let (lo, hi) = delta_t_range_of(*rung);
+            let Some(hi) = hi else { continue }; // Nadir, covered above
+            let depth = rung_evaluation_depth_m(*rung, g, 100_000.0)
+                .expect("a habitation rung has an evaluation depth");
+            let delta_t = depth * g.get() / 1000.0;
+            assert!(
+                delta_t > lo && delta_t < hi,
+                "{rung:?}: evaluation ΔT {delta_t} is not strictly inside ({lo}, {hi}) \
+                 — the TOP of a rung is what MAP-per-rung-substrate says makes \
+                 rank 0 degenerate"
+            );
+        }
+    }
+
+    #[test]
+    fn evaluation_depth_never_exceeds_the_caves_reach() {
+        // A rung deeper than the cave goes is not a place. Whatever the ΔT
+        // midpoint says, the answer is bounded by the column that exists.
+        let g = GeothermalGradient::new(25.0);
+        for rung in rungs() {
+            if let Some(d) = rung_evaluation_depth_m(*rung, g, 150.0) {
+                assert!(d <= 150.0, "{rung:?} evaluated at {d} m in a 150 m column");
+            }
+        }
+    }
+
+    #[test]
+    fn evaluation_depth_is_monotone_in_the_rung() {
+        let g = GeothermalGradient::new(25.0);
+        let depths: Vec<f64> = rungs()
+            .iter()
+            .filter_map(|r| rung_evaluation_depth_m(*r, g, 100_000.0))
+            .collect();
+        for w in depths.windows(2) {
+            assert!(
+                w[0] < w[1],
+                "rung depths must increase with the ladder: {depths:?}"
+            );
+        }
     }
 }
