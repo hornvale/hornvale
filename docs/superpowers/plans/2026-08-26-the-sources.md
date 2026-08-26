@@ -1116,7 +1116,8 @@ git push
 
 **Interfaces:**
 - Consumes: Task 5's `subterranean_energy_field_per_rung`.
-- Produces: a number rung 3 inherits.
+- Produces: TWO numbers rung 3 inherits — the between-worlds separation
+  (frozen in the spec) and the within-world width (frozen below, 2026-08-26).
 
 **Frozen in the spec before any of this existed** (spec §6), and reproduced
 here verbatim so the implementer does not have to interpret it:
@@ -1135,7 +1136,75 @@ PREDICTION: separation >= 0.25
 usefully across the map and measured 75% of all land inside a band 0.0067
 wide. `mineral_supply_field` reads that very quantity.
 
-- [ ] **Step 1: Write the measurement exactly as the formula above**
+### The SECOND question, frozen 2026-08-26 (Nathan's ruling)
+
+**This is a NEW question, not a revision of anything.** Task 5 measured
+whether the field troughs in the ladder's middle; it does not, and that
+result stands recorded and untouched. Nathan's ruling on reading it:
+**nothing should be dead by default, but there must be a lot of variation** —
+"dry, dusty hallways where nothing has moved for generations and lush,
+richly carpeted fungal forests". A monotone median profile is compatible
+with both a world of identical chambers and a world of wildly different ones,
+and **everything measured so far is a median**, so nothing yet distinguishes
+them.
+
+The precedent for taking this seriously is the same one §6 already cites: ore
+prospectivity was assumed to vary usefully and measured 75% of all land
+inside a band **0.0067** wide.
+
+**Criterion S1, frozen before the code that would move it.** For rung `r`
+and seed `s`, let `E(r,s)` be the energy values over all cave-bearing
+vertices. Over the same frozen seed set `S`:
+
+```
+    width(r) = median({ p90(E(r,s)) - p10(E(r,s)) : s in S })
+
+    PREDICTION: width(r) >= 0.25 at every underground rung
+```
+
+**Why 0.25 and not a number I liked.** The `ENERGY` ruler is shared with
+`domains/climate/src/underworld.rs`'s authored corpus, whose five levels sit
+exactly 0.25 apart — `E_INERT` 0.0, `E_LEAN` 0.25, `E_FED` 0.5, `E_RICH`
+0.75, `E_TEEMING` 1.0. A p10–p90 width below one full band means the middle
+80% of chambers at that depth all read as the same authored level: not
+different kinds of place, one kind of place with rounding. The threshold is
+read off the existing table, not chosen.
+
+**Its blind zone, named rather than discovered.** p10–p90 discards both
+tails, so a world where 95% of chambers are identical and 5% are
+extraordinary reads as narrow — and that world is arguably exactly what
+"dusty hallways and fungal forests" describes. **So also report p1, p50, p99
+and min/max per rung**, and report them *before* the verdict.
+
+**Criterion S2 — is the field even on its own ruler? (diagnostic, not a
+prediction.)** Report the share of chambers falling in each of the corpus's
+five bands, per rung:
+
+```
+    [0, 0.125)  inert     [0.125, 0.375)  lean     [0.375, 0.625)  fed
+    [0.625, 0.875)  rich   [0.875, 1.0]  teeming
+```
+
+Task 5 measured per-rung medians of 0.169–0.281 under the shipped `mean`
+aggregation, so **the upper bands may be structurally unreachable**. If they
+are, that is a *calibration* finding distinct from a variation finding: a
+field that only ever produces the bottom third of a `[0,1]` ruler cannot be
+compared to a corpus that authors values across the whole of it. Report it
+plainly either way; do not rescale anything to fill the bands.
+
+**Criterion S3 — variety of KIND, not just amount (diagnostic).** Report the
+`dominant_source` histogram per rung. Task 5's diagnostic already found all
+seven sources occupied overall, with `SulphideOxidation` taking the deep end
+(0 → 1705 of 3821) and `DetritalImport` winning only 6.2% even at its best
+rung. Two chambers with the same energy but different dominant sources are
+different kinds of place, and that is variation the width statistic cannot
+see.
+
+**All three are reported before any verdict is drawn, and none of them may
+retune a source.** A narrow field is a finding rung 3 must inherit, exactly
+as a null on the between-worlds statistic would be.
+
+- [ ] **Step 1: Write both measurements exactly as the formulae above**
 
 Report the twelve per-seed medians **individually, before the verdict**. The
 spec names this criterion's blind zone: IQR-of-medians cannot see eleven

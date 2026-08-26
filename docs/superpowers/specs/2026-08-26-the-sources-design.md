@@ -334,6 +334,58 @@ per-seed medians are reported individually before the verdict is drawn.
 prediction is a finding; the count of post-unblinding changes is zero by
 construction because this paragraph is committed before the derivation is.
 
+## 6a. Nathan's ruling on the depth profile (2026-08-26, post-measurement)
+
+Recorded here because it changes what rung 3 inherits, and because it was
+made **after** Task 5's measurement — so its status as a ruling rather than a
+rescue has to be legible.
+
+Task 5 measured the derived per-rung profile and found it **monotone**:
+medians `0.169 / 0.201 / 0.265 / 0.281 / 0.281` from `Undercroft` to `Nadir`.
+§4.3's prediction that it would trough at `Deeps` is **falsified and stays
+falsified**; no source constant was changed and the committed test now
+asserts what was measured.
+
+**Nathan's ruling: "Nothing should be dead by default, but it's good to have
+a significant amount of variation."** So the trough was never a design goal —
+it was a prediction inherited from `underworld.rs`'s hand-authored corpus,
+and this spec's §2 treated that corpus as a target to reproduce. That
+framing was a choice of mine and it is the part that does not survive.
+
+Three consequences:
+
+1. **The monotone result serves the program's actual goal.** The Underworld
+   Larder exists because capacity was computed from insolation, so a people
+   800 m down was fed by sunlight. A field that rises with depth means the
+   deep underworld feeds itself, on rock, with no reference to the star. That
+   is the thing the arc was for.
+2. **The corpus and the field now disagree about the middle depths**, and
+   `energy_is_not_monotone_in_depth` still pins the corpus's version. That
+   disagreement is real and is NOT resolved here. A live possibility is that
+   it is not a contradiction at all: the corpus is 22 **named exemplar
+   communities**, the field describes **every chamber**, and "a flooded sump
+   gallery is poor" can be true while "the median chamber at that depth is
+   poor" is false. Comparing a median-over-all-chambers against a corpus of
+   recognizable named places may be a category error in this spec's §2.
+   Rung 3 should preregister that question properly rather than inherit this
+   spec's framing of it.
+3. **The success axis moves from SHAPE to SPREAD.** What the world needs is
+   dusty halls *and* fungal forests at the same depth — collapsed ecologies,
+   blighted ground, realms of the undead. Everything measured to date is a
+   median, which cannot distinguish a world of identical chambers from a
+   world of wildly varied ones. Task 6 gains criteria S1/S2/S3, frozen before
+   the code that would move them.
+
+**What energy structurally cannot supply, with its existing home**, so rung 3
+does not try to build it here: undead populations
+(`BIO-undead-palimpsest` — "carrying capacity is a function of history, not
+productivity"; `K = supply × PROD(condition)` cannot bind a population that
+consumes no supply); blight and ruin (`BIO-anthropogenic-community`'s
+origin-by-tenure grid, one cell of six populated); and collapsed ecology,
+which is a **disturbance history** rather than an energy level — the kernel's
+`DISTURBANCE` axis is declared, sits in the environment basis, and is
+occupied by nothing at all.
+
 ## 7. Blast radius
 
 Measured, not reasoned, and incomplete by design — the gaps are named:
