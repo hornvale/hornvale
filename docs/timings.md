@@ -2988,3 +2988,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T18:29:21Z | gate-commit | 20.339 | 48.814 | 12.386 | 3.01 | 0 | fdff81644 | campaign/the-scarf | MacBookPro | 10 |
 | 2026-08-26T18:42:56Z | rebaseline | 75.855 | 255.402 | 12.795 | 3.54 | 0 | 6fc1645a3 | campaign/the-scarf | MacBookPro | 10 |
 | 2026-08-26T18:53:43Z | gate-commit | 32.505 | 66.552 | 35.146 | 3.13 | 0 | 6fc1645a3 | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T19:06:51Z | sluice:artifacts | 111.351 | 835.387 | 35.707 | 7.82 | 0 | 479623228 |  | lefford | 40 |
