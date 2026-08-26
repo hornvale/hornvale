@@ -32,78 +32,123 @@
 //! than silently leaving the shallow half of underworld.rs's own claim
 //! unmodelled.
 //!
-//! **`DetritalImport` now reads a real `drainage: f64` parameter**, not a
-//! depth-only approximation. Fix round 1 corrected the original ruling: the
-//! first cut cited `GeneratedTerrain::drainage_at` as the physical driver but
-//! specified a `yield_at` signature with no `Vertex` and no terrain to call
-//! it on, so the implementation fell back to depth alone — which makes this
-//! source identical at every vertex sharing a depth, contributing a pure
-//! depth profile with no spatial signal. That is harmless for Task 5's U
-//! (a per-depth shape), but Task 6 measures energy variation *between
-//! worlds*, and a term with zero spatial variance would dilute exactly the
-//! separation that task is measuring, for a reason that was an artifact of
-//! this module's original signature rather than a fact about rock or water.
-//! `yield_at` now takes `drainage` directly (the caller supplies
-//! `GeneratedTerrain::drainage_at(vertex)`, or any value at this module's
-//! test boundary), and [`EnergySource::DetritalImport`] is the only variant
-//! that reads it.
-//!
+//! `DetritalImport` reads a real `drainage: f64` parameter — the caller
+//! supplies `GeneratedTerrain::drainage_at(vertex)` — rather than a
+//! depth-only approximation (fix round 1: a depth-only form would have made
+//! this source identical at every vertex sharing a depth, contributing no
+//! spatial signal to Task 6's between-world energy-variation measurement).
 //! The citation for treating drainage as the shallow-arm driver is the
-//! ENERGY axis's own level docs in `underworld.rs`, not just its WATER-axis
-//! aside about "what arrives": `E_FED` ("a working base") is glossed as *"a
-//! stream's organic load, or a modest chemical one"*, `E_RICH` explicitly
-//! names *"direct detrital delivery"* as one of the two things that reach it
-//! (the other being sulphide oxidation at depth — corroborating
-//! [`EnergySource::SulphideOxidation`]'s own calibration as a bonus), and
-//! `E_TEEMING`, the axis's richest level, is *"a whole channel's load at one
-//! point."* Flow accumulation (drainage) is the shipped proxy for "is there
-//! a stream here", which is exactly the quantity those three levels are
-//! staged against. This module's own calibration (see
-//! [`DETRITAL_IMPORT_DRAINAGE_REACH`]) anchors the half-yield point at the
-//! terrain crate's own documented p90 drainage figure
-//! (`hornvale_terrain::lithology::ALLUVIUM_DRAINAGE_MIN`'s doc comment: a
-//! 4-seed survey found land drainage p50=3, p90=12, p95=18, p99=47, max
-//! 338), so a genuinely high-flow vertex reads near `E_RICH`/`E_TEEMING` and
-//! a middling one reads near `E_FED`.
+//! ENERGY axis's own level docs in `underworld.rs`: `E_FED` ("a working
+//! base") is glossed as *"a stream's organic load, or a modest chemical
+//! one"*, `E_RICH` explicitly names *"direct detrital delivery"* as one of
+//! the two things that reach it (the other being sulphide oxidation at
+//! depth — corroborating [`EnergySource::SulphideOxidation`]'s own
+//! calibration below, unprompted), and `E_TEEMING`, the axis's richest
+//! level, is *"a whole channel's load at one point."* This module's own
+//! calibration (see [`DETRITAL_IMPORT_DRAINAGE_REACH`]) anchors the
+//! half-yield point at the terrain crate's own documented p90 drainage
+//! figure.
 //!
-//! # Every chemotrophic source is now moisture-gated (fix round 1, concern 2)
+//! **`DetritalImport` is not also gated on `moisture`, and the reason is
+//! narrower than an earlier draft of this doc claimed.** Zero drainage
+//! already forces zero yield on its own (`dr.max(0.0) / (dr.max(0.0) +
+//! reach)` is exactly `0.0` at `dr = 0`), so an additional moisture gate
+//! would be a redundant control, not new information. Drainage (surface
+//! flow-accumulation) and chamber moisture (`chamber_moisture`'s water-table
+//! saturation) are physically distinct quantities — a fix round corrected an
+//! earlier claim here that they were "the same fact under two names", which
+//! overstated the identity between them; the real reason is simply that the
+//! gate this source already has is sufficient.
 //!
-//! The original cut gated only [`EnergySource::Serpentinization`] and
-//! [`EnergySource::Methanogenesis`] on moisture, because those were the two
-//! the brief's own test named. On inspection every one of the row's six
-//! mechanisms is an aqueous process — serpentinization consumes water as a
-//! stoichiometric reactant; radiolysis splits porewater molecule by
-//! molecule; microbial iron reduction needs an aqueous medium for electron
-//! transfer; sulphide oxidation needs a connected fluid pathway to carry
-//! oxidant to the front; methanogenesis is a microbial reaction that
-//! consumes/produces water. And more fundamentally: this axis measures
-//! energy available for **primary production** (the kernel's own words for
-//! `ENERGY`) — life, not raw physical potential — and life needs water
-//! categorically, regardless of which disequilibrium is feeding it. So
-//! [`EnergySource::Geothermal`] is gated too: a bone-dry hot fracture has
-//! thermal potential but nothing here to eat it. Each variant's doc comment
-//! below states its own gate's shape and why; they are not identical (a
-//! stoichiometric reactant scales with water quantity, a medium-only
-//! requirement saturates at a trace, a connected-pathway requirement needs
-//! more than a film) — see each variant and the corresponding arm of
-//! [`EnergySource::yield_at`].
+//! # Every chemotrophic source is moisture-gated (fix round 1, concern 2)
 //!
-//! [`EnergySource::DetritalImport`] is the one exception, deliberately: its
-//! own water proxy **is** `drainage`, so gating it on `moisture` as well
-//! would double-count the same physical fact under two names, the same
-//! reason `induration` was excluded from the silica accounting above.
+//! Every one of the row's six mechanisms is an aqueous process —
+//! serpentinization consumes water as a stoichiometric reactant; radiolysis
+//! splits porewater molecule by molecule; microbial iron reduction needs an
+//! aqueous medium for electron transfer; sulphide oxidation needs a
+//! connected fluid pathway to carry oxidant to the front; methanogenesis is
+//! a microbial reaction that consumes/produces water. And more
+//! fundamentally: this axis measures energy available for **primary
+//! production** (the kernel's own words for `ENERGY`) — life, not raw
+//! physical potential — and life needs water categorically, regardless of
+//! which disequilibrium is feeding it. So [`EnergySource::Geothermal`] is
+//! gated too: a bone-dry hot fracture has thermal potential but nothing here
+//! to eat it. Each variant's doc comment states its own gate's shape and
+//! why; they are not identical (a stoichiometric reactant scales with water
+//! quantity, a medium-only requirement saturates at a trace, a
+//! connected-pathway requirement needs more than a film) — see each variant
+//! and the corresponding arm of [`EnergySource::yield_at`].
 //!
-//! # Nothing here was shaped to produce a U
+//! [`EnergySource::DetritalImport`] is the one exception, for the reason
+//! given above.
 //!
-//! Every gate below is a pure function of `moisture` (or, for
-//! `DetritalImport`, `drainage`) alone — none of them read `depth_m` — so
-//! none of them can shift where a source peaks in depth. Verified: the
-//! silica-separation and sulphide-oxidation-peaks-at-intermediate-depth
-//! tests both fix moisture at `0.5`, where every new gate is already fully
-//! saturated (`1.0`), so their assertions are unchanged in either value or
-//! meaning by this round's edit.
+//! # `SulphideOxidation`'s front is in ΔT, not metres (fix round 2, Critical)
+//!
+//! The first cut placed the redox front's peak at a **fixed metre depth**
+//! (700 m), symmetric in `depth_m` around that reach. The controller found
+//! this puts the peak in `Band::Deeps` at every gradient in the legal 15–30
+//! K/km range — and the frozen corpus this module already cites for its
+//! ENERGY calibration says `Deeps` is the **trough**: `sump-gallery`
+//! (`Deeps`) carries `E_INERT`, commented *"the corpus MINIMUM among wet
+//! rows, and the trough the inversion turns on"*, while `sulphuric-hall`
+//! (`Underdeep`, one rung deeper) carries `E_RICH`, commented *"sulphide
+//! oxidation driven from below by the geothermal gradient — chemolithotrophy
+//! proper, and richer than anything at `Deeps`"*. A metre-fixed front was
+//! strong enough to fight the very trough Task 5 is about to measure.
+//!
+//! **This module now expresses the front in ΔT (K above the surface datum)
+//! — the ladder's own native coordinate — rather than in metres, and that
+//! choice is deliberate, not merely a bug fix.** `domains/terrain/src/
+//! delve.rs` spaces its whole habitation ladder by heat precisely because a
+//! fixed metre depth is two different rungs at two different gradients ("at
+//! 1 km down a 15 K/km craton is 15 K above its datum and a 30 K/km young
+//! crust is 30 K above its own"); a metre-fixed front inherits exactly that
+//! instability, and the Critical is a direct instance of it. The
+//! counter-argument the controller raised — the descending "oxidant from
+//! above" term is a transport distance (metres) while the ascending
+//! "sulphide from below" term is geothermal (ΔT), so a single-coordinate
+//! peak mixes two physical quantities — is real, and is accepted rather than
+//! resolved: this module treats ΔT as the ladder's own working definition of
+//! "distance from the surface" (the same substitution `delve.rs` makes for
+//! every other purpose in this campaign), rather than modelling oxidant
+//! transport and sulphide supply as two genuinely independent coordinates,
+//! which would need a real two-axis field this task has no mandate to build.
+//! **What this choice buys, concretely:** the front's peak now lands in
+//! `Band::Underdeep` by construction, for every legal gradient, not by
+//! the luck of a metre value happening to fit — verified by
+//! `sulphide_oxidation_peaks_in_underdeep_across_the_legal_gradient_range`.
+//! A metre-fixed alternative was checked and rejected for this reason: with
+//! the legal gradient range spanning a factor of 2 (15–30 K/km) and
+//! `Underdeep` itself spanning almost exactly a factor of 2 in ΔT (25–50 K),
+//! there is essentially no metre depth whose ΔT stays inside `Underdeep`
+//! across the *whole* legal range — the two factors-of-2 leave no margin.
+//!
+//! The reach is **not a duplicated literal**: [`underdeep_delta_t_range`]
+//! reads `Band::Underdeep`'s bounds live from
+//! `hornvale_terrain::delta_t_range_of`, the same ladder `delve.rs` itself
+//! computes rungs from. `DEEPS_TOP_K` has already moved once in that file's
+//! own history (10 → 8, recorded in its doc comment); a duplicated literal
+//! here would have gone stale exactly as silently as the original,
+//! un-anchored 700 m did. [`EnergySource::Geothermal`]'s reach is anchored
+//! the same way, to the same range's low edge — see its own doc comment for
+//! why, and the IMPORTANT finding below for why it was not left as its
+//! original self-referential justification.
+//!
+//! # Nothing here was shaped to produce a U — and that claim is scoped
+//!
+//! Every gate in [`EnergySource::yield_at`] is a pure function of `moisture`
+//! (or, for `DetritalImport`, `drainage`) alone — none reads `depth_m` or
+//! `gradient` — so no gate can shift where a source peaks in depth. That is
+//! true **within this file**. It is not true once Task 5 wires these sources
+//! into a field: `moisture` there is `Substrate::moisture`, itself a
+//! function of depth via `chamber_moisture` (saturated below the water
+//! table, drying above it), so the six moisture-gated sources inherit an
+//! *indirect* depth-dependence once wired in, even though nothing in this
+//! module encodes one directly. Task 5's implementer should meet that
+//! deliberately rather than discover it.
 
-use hornvale_terrain::{GeothermalGradient, MaterialBuffer};
+use hornvale_kernel::Band;
+use hornvale_terrain::{GeothermalGradient, MaterialBuffer, delta_t_range_of};
 
 /// Smoothstep, the third private copy in this tree (see the module-level
 /// note in the task report): `kernel/src/noise.rs` and
@@ -137,6 +182,23 @@ fn water_gate(moisture: f64, saturate_at: f64) -> f64 {
     smoothstep(0.0, saturate_at, moisture)
 }
 
+/// `Band::Underdeep`'s ΔT range (K above the surface datum), read live from
+/// `delta_t_range_of` rather than duplicated as a literal — see the module
+/// doc's "fix round 2" section for why a duplicated literal is exactly the
+/// failure mode this replaces. Both [`EnergySource::SulphideOxidation`] and
+/// [`EnergySource::Geothermal`] anchor to this same call.
+///
+/// `Underdeep` is never the ladder's open-ended bottom rung (`Nadir` is), so
+/// its upper bound is always `Some`; the `.expect` documents that invariant
+/// rather than guarding against a case this module can reach.
+fn underdeep_delta_t_range() -> (f64, f64) {
+    let (low, high) = delta_t_range_of(Band::Underdeep);
+    (
+        low,
+        high.expect("Underdeep is not the ladder's open-ended bottom rung"),
+    )
+}
+
 /// Silica centre for [`EnergySource::Serpentinization`] — deep ultramafic
 /// (peridotite), the low end of the felsic index.
 const SERPENTINIZATION_SILICA_CENTER: f64 = 0.05;
@@ -161,11 +223,6 @@ const RADIOLYSIS_SILICA_HALF_WIDTH: f64 = 0.35;
 /// water suffices — the gentlest, fastest-saturating gate of the six.
 const RADIOLYSIS_MOISTURE_SATURATE: f64 = 0.1;
 
-/// Depth (m) at which [`EnergySource::SulphideOxidation`]'s redox front
-/// peaks — the reach both the falling "oxidant from above" term and the
-/// rising "sulphide from below" term share, which is what places the peak at
-/// their midpoint rather than at either endpoint.
-const SULPHIDE_OXIDATION_FRONT_REACH_M: f64 = 700.0;
 /// Moisture at which [`EnergySource::SulphideOxidation`]'s water gate
 /// saturates: the front needs oxidant physically carried from above to
 /// sulphide below, which needs an actually-connected, flowing fluid pathway
@@ -178,12 +235,6 @@ const SULPHIDE_OXIDATION_MOISTURE_SATURATE: f64 = 0.4;
 /// fracture has thermal potential but nothing here to exploit it, so even
 /// the gradient itself needs some water present.
 const GEOTHERMAL_MOISTURE_SATURATE: f64 = 0.2;
-/// Temperature rise (K) at which [`EnergySource::Geothermal`] reaches half
-/// its asymptotic yield — the saturating reach in the rational form, chosen
-/// so a cratonic gradient at a mid-depth rung reads a modest fraction rather
-/// than the full ruler (a chamber's own heat is one of seven terms, not the
-/// whole supply).
-const GEOTHERMAL_REACH_K: f64 = 50.0;
 
 /// Depth (m) at which [`EnergySource::DetritalImport`] falls to half its
 /// surface value — the shallow reach of gravity/water-borne surface material
@@ -226,10 +277,13 @@ pub enum EnergySource {
     /// dry chamber.
     Radiolysis,
     /// Pyrite and other sulphides oxidizing where descending oxidant meets
-    /// ascending reduced sulphur — an intermediate-depth redox front, not a
-    /// rock-class band. Needs an actually-connected, flowing fluid pathway
-    /// to carry oxidant to the front, not merely a damp film, so its gate is
-    /// the firmest threshold among the non-stoichiometric five
+    /// ascending reduced sulphur — an intermediate-**ΔT** redox front (fix
+    /// round 2: expressed in ΔT, not metres, so it peaks in `Band::Underdeep`
+    /// at every legal gradient rather than at a metre depth that only landed
+    /// there by luck — see the module doc), not a rock-class band. Needs an
+    /// actually-connected, flowing fluid pathway to carry oxidant to the
+    /// front, not merely a damp film, so its water gate is the firmest
+    /// threshold among the non-stoichiometric five
     /// ([`SULPHIDE_OXIDATION_MOISTURE_SATURATE`]). Yields nothing in a dry
     /// chamber.
     SulphideOxidation,
@@ -242,15 +296,21 @@ pub enum EnergySource {
     /// chemolithotroph can draw on, independent of local mineralogy. Gated
     /// on moisture too ([`GEOTHERMAL_MOISTURE_SATURATE`]): this axis
     /// measures energy available to *life*, and a bone-dry hot fracture has
-    /// thermal potential but nothing here to exploit it.
+    /// thermal potential but nothing here to exploit it. Its saturating
+    /// reach (fix round 2: previously justified only by its own effect on
+    /// the summed field, an IMPORTANT finding — see the module doc) is now
+    /// anchored to [`underdeep_delta_t_range`]'s low edge: geothermal supply
+    /// crosses its own half-yield point exactly where the ladder places the
+    /// onset of the deep, geothermally-driven chemistry regime — the same
+    /// boundary this round keys `SulphideOxidation`'s peak to.
     Geothermal,
     /// Surface-sourced organic and mineral material (rockfall, percolating
     /// detritus) that thins out with distance from the entrance — the
     /// registry row's missing shallow arm (controller Ruling P1; see the
     /// module doc for why this is not one of the row's six). Reads
-    /// `drainage`, not `moisture`: drainage **is** this source's own water
-    /// proxy, so gating it on moisture too would double-count the same fact
-    /// under two names. Yields nothing where no drainage reaches it,
+    /// `drainage`, not `moisture` — see the module doc for why the earlier
+    /// "double-counting" justification for that was overstated even though
+    /// its conclusion holds. Yields nothing where no drainage reaches it,
     /// whatever the depth.
     DetritalImport,
 }
@@ -272,10 +332,9 @@ impl EnergySource {
     /// (`[0,1]`, Task 3's [`Substrate::moisture`] / `chamber_moisture`) and
     /// overhead drainage (`hornvale_terrain::GeneratedTerrain::drainage_at`
     /// at the vertex above, or any nonnegative value at this module's own
-    /// test boundary). Six of seven ignore `drainage`; four of seven ignore
-    /// `moisture` only in the sense of not scaling by it directly (every
-    /// chemotrophic source still gates on it — see the module doc). Only
-    /// [`EnergySource::DetritalImport`] reads `drainage`.
+    /// test boundary). Only [`EnergySource::DetritalImport`] reads
+    /// `drainage`; every other source gates on `moisture` in its own way
+    /// (see the module doc).
     ///
     /// [`Substrate::moisture`]: crate::Substrate::moisture
     /// type-audit: bare-ok(diagnostic-value: depth_m), bare-ok(ratio: moisture), bare-ok(diagnostic-value: drainage), bare-ok(ratio: return)
@@ -310,14 +369,16 @@ impl EnergySource {
                 ) * water_gate(moisture, RADIOLYSIS_MOISTURE_SATURATE)
             }
             EnergySource::SulphideOxidation => {
-                let d = depth_m.max(0.0);
-                let r = SULPHIDE_OXIDATION_FRONT_REACH_M;
-                // 4rd/(r+d)^2: an oxidant term falling as r/(r+d) times a
-                // sulphide term rising as d/(r+d). Peaks at d=r with value
-                // 1.0 (AM-GM: for fixed product r*d, (r+d)^2 is minimized
-                // when r=d), so this is already normalized to [0,1] before
-                // scaling by metamorphic grade and the water gate.
-                let front = 4.0 * r * d / (r + d).powi(2);
+                let delta_t = gradient.get() * depth_m.max(0.0) / 1000.0;
+                let (underdeep_low, underdeep_top) = underdeep_delta_t_range();
+                let r = (underdeep_low + underdeep_top) / 2.0;
+                // 4r·ΔT/(r+ΔT)^2: an oxidant term falling as r/(r+ΔT) times a
+                // sulphide term rising as ΔT/(r+ΔT). Peaks at ΔT=r with value
+                // 1.0 (AM-GM: for fixed product r·ΔT, (r+ΔT)^2 is minimized
+                // when r=ΔT), so this is already normalized to [0,1] before
+                // scaling by metamorphic grade and the water gate. r is
+                // Underdeep's ΔT midpoint (see the module doc, fix round 2).
+                let front = 4.0 * r * delta_t / (r + delta_t).powi(2);
                 buffer.metamorphic_grade
                     * front
                     * water_gate(moisture, SULPHIDE_OXIDATION_MOISTURE_SATURATE)
@@ -325,7 +386,8 @@ impl EnergySource {
             EnergySource::Methanogenesis => buffer.carbonate * buffer.porosity * moisture,
             EnergySource::Geothermal => {
                 let temp_rise_k = depth_m.max(0.0) * gradient.get() / 1000.0;
-                (temp_rise_k / (temp_rise_k + GEOTHERMAL_REACH_K))
+                let (reach, _) = underdeep_delta_t_range();
+                (temp_rise_k / (temp_rise_k + reach))
                     * water_gate(moisture, GEOTHERMAL_MOISTURE_SATURATE)
             }
             EnergySource::DetritalImport => {
@@ -343,7 +405,7 @@ impl EnergySource {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_terrain::{Basement, MarginPolarity, SoilDepth};
+    use hornvale_terrain::{Basement, MarginPolarity, SoilDepth, rung_at_delta_t};
 
     /// A `MaterialBuffer` test fixture. Only `silica`, `carbonate`,
     /// `porosity` and `metamorphic_grade` are parameters — the four this
@@ -451,7 +513,14 @@ mod tests {
         let grad = GeothermalGradient::new(25.0);
         // Each source needs a buffer/depth favorable to its OWN non-water
         // axis, or "dry == 0" would be true for the wrong reason (its rock
-        // term already reading zero, not the water gate).
+        // term already reading zero, not the water gate). SulphideOxidation's
+        // depth is the metre depth that reaches Underdeep's ΔT midpoint at
+        // this test's 25 K/km gradient, read live rather than duplicated so
+        // it cannot drift from the real peak (fix round 2).
+        let sulphide_oxidation_depth_m = {
+            let (low, high) = underdeep_delta_t_range();
+            (low + high) / 2.0 * 1000.0 / 25.0
+        };
         let cases: [(EnergySource, MaterialBuffer, f64); 6] = [
             (
                 EnergySource::Serpentinization,
@@ -471,7 +540,7 @@ mod tests {
             (
                 EnergySource::SulphideOxidation,
                 buffer(0.5, 0.5, 0.5, 0.8),
-                SULPHIDE_OXIDATION_FRONT_REACH_M,
+                sulphide_oxidation_depth_m,
             ),
             (
                 EnergySource::Methanogenesis,
@@ -521,7 +590,13 @@ mod tests {
         // one source that is neither rising nor falling in depth. This is what
         // makes the U's trough possible rather than imposed. moisture is fixed
         // at 0.5, where the water gate is already saturated to 1.0, so this is
-        // unaffected by fix round 1's gating.
+        // unaffected by fix round 1's gating. Fix round 2 moved the front from
+        // metres to ΔT; at this test's fixed 25 K/km this grid still brackets
+        // the peak (ΔT=37.5 lands exactly on depth=1500m, i=15 of the 0..=2000
+        // sweep), so the interior-peak property still holds — see
+        // sulphide_oxidation_peaks_in_underdeep_across_the_legal_gradient_range
+        // below for the rung the peak lands in, which is the property that
+        // actually broke.
         let grad = GeothermalGradient::new(25.0);
         let m = buffer(0.5, 0.5, 0.5, 0.8);
         let at = |d: f64| EnergySource::SulphideOxidation.yield_at(&m, grad, d, 0.5, 0.0);
@@ -536,5 +611,41 @@ mod tests {
             "sulphide oxidation peaked at {best} m — an endpoint peak means it is \
              monotone, not an intermediate-depth redox front"
         );
+    }
+
+    #[test]
+    fn sulphide_oxidation_peaks_in_underdeep_across_the_legal_gradient_range() {
+        // Fix round 2, Critical: the controller found the original metre-fixed
+        // front peaked in Band::Deeps at every legal gradient — exactly the
+        // rung the frozen corpus (sump-gallery, E_INERT) calls the trough the
+        // inversion turns on, one rung shallower than where the corpus places
+        // sulphide oxidation's own richness (sulphuric-hall, Underdeep,
+        // E_RICH, "richer than anything at Deeps"). This pins the RUNG the
+        // front peaks in — the property the corpus actually constrains and
+        // the one that broke silently — not a metre value that only holds at
+        // the gradients someone happened to test.
+        let m = buffer(0.5, 0.5, 0.5, 0.8);
+        for gradient_k_per_km in [15.0, 22.5, 30.0] {
+            let grad = GeothermalGradient::new(gradient_k_per_km);
+            let at = |d: f64| EnergySource::SulphideOxidation.yield_at(&m, grad, d, 0.5, 0.0);
+            // 0..=3000 m: hornvale_terrain::CAVE_REACH_CEILING_M, the campaign's
+            // own ceiling on how deep a cave (and so this evaluation) reaches.
+            let depths: Vec<f64> = (0..=300).map(|i| i as f64 * 10.0).collect();
+            let best_depth = depths
+                .iter()
+                .copied()
+                .max_by(|a, b| at(*a).total_cmp(&at(*b)))
+                .expect("a non-empty sweep");
+            let delta_t = gradient_k_per_km * best_depth / 1000.0;
+            let rung = rung_at_delta_t(delta_t);
+            assert_eq!(
+                rung,
+                Band::Underdeep,
+                "at {gradient_k_per_km} K/km sulphide oxidation peaked at {best_depth} m \
+                 (ΔT={delta_t}), rung {rung:?} — expected Underdeep, the rung the frozen \
+                 corpus (sulphuric-hall, E_RICH) names richer than Deeps (sump-gallery, \
+                 E_INERT, the trough)"
+            );
+        }
     }
 }
