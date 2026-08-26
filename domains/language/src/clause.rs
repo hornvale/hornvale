@@ -1,4 +1,4 @@
-//! The clause layer: a language-neutral ClauseSpec and the Common realizer.
+//! The clause layer: a language-neutral Clause and the Common realizer.
 //! Generalizes the render_line seam from a bespoke tenet spec to any clause.
 //!
 //! Both realizers take a **concept id**. [`realize_common`] resolves it
@@ -83,9 +83,21 @@ pub struct Adjunct {
 /// struct had a `frame: Frame` enum standing in for one relation and a
 /// `modifiers: Vec<String>` of pre-rendered English, neither of which could
 /// cross a language boundary.
+///
+/// **Each realizer ignores some of these features, and that is the law**
+/// (The Scarf, spec 3.2). [`realize_common`] ignores `evidential`; every
+/// tongue realizer ignores `number` and `definiteness`. A language-neutral
+/// clause states more than any one language surfaces — so a feature going
+/// unread is not a gap to be closed by teaching a tongue English number.
+/// `number` in particular is what `paradigm.rs`'s drawn `number_depth` will
+/// consume when a campaign wires it; this struct is where it arrives.
+///
+/// Named `ClauseSpec` until The Scarf, where the `Spec` suffix lost its
+/// referent: it existed only to distinguish this from `TongueClause`, which
+/// no longer exists.
 /// type-audit: bare-ok(identifier-text: predicate)
 #[derive(Clone, Debug, PartialEq)]
-pub struct ClauseSpec {
+pub struct Clause {
     /// The relation this clause asserts, as a concept id — `"is-a"` for a
     /// classification. The same string a `Fact` would carry, which is the
     /// point: an utterance is a fact, so the clause names its predicate
@@ -145,7 +157,7 @@ fn indefinite_article(word: &str) -> &'static str {
 pub enum Part {
     /// The subject slot (a `Subject::Name` or `Subject::Pronoun`).
     Subject,
-    /// The copula, agreeing with `ClauseSpec.number` (`is`/`are`).
+    /// The copula, agreeing with `Clause.number` (`is`/`are`).
     Copula,
     /// The determiner slot (`the `/`a `/`an `/bare), from definiteness + number.
     Determiner,
@@ -199,7 +211,7 @@ pub fn common_constructions() -> &'static [Construction] {
     }]
 }
 
-/// Realize a ClauseSpec as a Common (≈ limited English) sentence, resolving
+/// Realize a Clause as a Common (≈ limited English) sentence, resolving
 /// `spec.object` through `vocab` when it names a concept.
 ///
 /// **Infallible, and deliberately so.** Common is the author's register, not
@@ -222,7 +234,7 @@ pub fn common_constructions() -> &'static [Construction] {
 /// caller must get right, and the same shape the `Frame` lookup had before
 /// The Interlinear made the key a string.
 /// type-audit: bare-ok(prose)
-pub fn realize_common(spec: &ClauseSpec, vocab: &CommonVocabulary) -> String {
+pub fn realize_common(spec: &Clause, vocab: &CommonVocabulary) -> String {
     let construction = common_constructions()
         .iter()
         .find(|c| c.predicate == spec.predicate)
@@ -327,7 +339,7 @@ pub enum AdjunctPosition {
 /// prose, which is the same discipline `CommonVocabulary::word_for` follows.
 ///
 /// **The first three moved here from `windows/book`'s `fragment_for`.** They
-/// lived in a window because `ClauseSpec` could not carry structure, which is
+/// lived in a window because `Clause` could not carry structure, which is
 /// also why that window had to duplicate `indefinite_article`. A role's
 /// surface is a fact about a language and belongs to the language.
 ///
@@ -452,7 +464,7 @@ impl std::fmt::Display for ParseError {
 impl std::error::Error for ParseError {}
 
 /// Invert `realize_common`: parse a Common sentence back into the
-/// `ClauseSpec` that would realize it. Walks the `Classify` construction's
+/// `Clause` that would realize it. Walks the `Classify` construction's
 /// entry backward — the boundaries come from the construction's shape, and
 /// the subject/copula split happens at the EARLIEST `" is "`/`" are "`
 /// occurrence (so a subject itself never contains the copula word).
@@ -476,7 +488,7 @@ impl std::error::Error for ParseError {}
 /// [`parse_common_with_tail`], which is the same walk with the tail
 /// returned instead of dropped.
 /// type-audit: bare-ok(prose)
-pub fn parse_common(text: &str, ctx: &ParseContext) -> Result<ClauseSpec, ParseError> {
+pub fn parse_common(text: &str, ctx: &ParseContext) -> Result<Clause, ParseError> {
     parse_common_with_tail(text, ctx).map(|(spec, _)| spec)
 }
 
@@ -484,7 +496,7 @@ pub fn parse_common(text: &str, ctx: &ParseContext) -> Result<ClauseSpec, ParseE
 /// `", "`-separated phrases that followed the complement, verbatim.
 ///
 /// Two functions rather than one because the tail is a **loss**, not a
-/// product: a caller that asks for a `ClauseSpec` should not be handed
+/// product: a caller that asks for a `Clause` should not be handed
 /// English it then has to recognize, and the one caller that does own a
 /// recognizer should have to say so at the call site.
 ///
@@ -497,7 +509,7 @@ pub fn parse_common(text: &str, ctx: &ParseContext) -> Result<ClauseSpec, ParseE
 pub fn parse_common_with_tail(
     text: &str,
     ctx: &ParseContext,
-) -> Result<(ClauseSpec, Vec<String>), ParseError> {
+) -> Result<(Clause, Vec<String>), ParseError> {
     // Terminal literal first.
     let body = text.strip_suffix('.').ok_or(ParseError::Unterminated)?;
     // Subject | Copula: split at the earliest " is " / " are ".
@@ -557,7 +569,7 @@ pub fn parse_common_with_tail(
         None => Vec::new(),
     };
     Ok((
-        ClauseSpec {
+        Clause {
             // The kernel's constant, matching the construction this walk
             // inverted — never a literal, so the two ends cannot drift.
             predicate: IS_A.to_string(),
@@ -592,7 +604,7 @@ mod tests {
     #[test]
     fn common_ignores_the_evidential() {
         let vocab = CommonVocabulary::default();
-        let base = ClauseSpec {
+        let base = Clause {
             predicate: IS_A.to_string(),
             subject: Subject::Name("Nwamvam".to_string()),
             object: Argument::Concept("home".to_string()),
@@ -601,11 +613,11 @@ mod tests {
             evidential: Evidential::Witnessed,
             adjuncts: Vec::new(),
         };
-        let taught = ClauseSpec {
+        let taught = Clause {
             evidential: Evidential::Taught,
             ..base.clone()
         };
-        let inferred = ClauseSpec {
+        let inferred = Clause {
             evidential: Evidential::Inferred,
             ..base.clone()
         };
@@ -638,7 +650,7 @@ mod tests {
     fn common_resolves_its_complement_through_the_vocabulary() {
         let mut vocab = CommonVocabulary::default();
         vocab.declare("yellow-white-dwarf", "yellow-white dwarf (F)");
-        let spec = ClauseSpec {
+        let spec = Clause {
             predicate: "is-a".to_string(),
             subject: Subject::Name("Elthandil".to_string()),
             object: Argument::Concept("yellow-white-dwarf".to_string()),
@@ -658,7 +670,7 @@ mod tests {
     #[test]
     fn a_key_never_reaches_prose_as_a_key() {
         let vocab = CommonVocabulary::default();
-        let spec = ClauseSpec {
+        let spec = Clause {
             predicate: "is-a".to_string(),
             subject: Subject::Name("X".to_string()),
             object: Argument::Concept("celestial-body".to_string()),
@@ -677,7 +689,7 @@ mod tests {
 
     #[test]
     fn classify_singular_indefinite() {
-        let s = ClauseSpec {
+        let s = Clause {
             predicate: "is-a".into(),
             subject: Subject::Name("Elthandil".into()),
             object: Argument::Concept("planet".into()),
@@ -693,7 +705,7 @@ mod tests {
     }
     #[test]
     fn a_becomes_an_before_vowel() {
-        let s = ClauseSpec {
+        let s = Clause {
             predicate: "is-a".into(),
             subject: Subject::Name("Aoth".into()),
             object: Argument::Concept("elemental".into()),
@@ -712,7 +724,7 @@ mod tests {
     /// Vernacular the caller pre-pluralized and handed the realizer a string.
     #[test]
     fn classify_generic_plural() {
-        let s = ClauseSpec {
+        let s = Clause {
             predicate: "is-a".into(),
             subject: Subject::Name("The Vavako".into()),
             object: Argument::Concept("goblin-kind".into()),
@@ -735,7 +747,7 @@ mod tests {
     fn classify_with_modifier_tail() {
         let mut vocab = CommonVocabulary::default();
         vocab.declare("yellow-white-dwarf", "yellow-white dwarf");
-        let s = ClauseSpec {
+        let s = Clause {
             predicate: "is-a".into(),
             subject: Subject::Name("Vebe".into()),
             object: Argument::Concept("planet".into()),
@@ -930,7 +942,7 @@ mod tests {
     /// declared concept whose word is the real surface minus one character
     /// (must NOT match at all: the boundary check requires the character
     /// after a matched prefix to be a space).
-    fn ctx_from(spec: &ClauseSpec) -> ParseContext {
+    fn ctx_from(spec: &Clause) -> ParseContext {
         let Argument::Concept(concept) = &spec.object else {
             panic!("the round-trip property only enumerates concept objects");
         };
@@ -1032,7 +1044,7 @@ mod tests {
                     for definiteness in [Definiteness::Indef, Definiteness::Def] {
                         for adjunct_count in 0..=3usize {
                             let adjuncts: Vec<Adjunct> = adjunct_pool[..adjunct_count].to_vec();
-                            let spec = ClauseSpec {
+                            let spec = Clause {
                                 predicate: "is-a".to_string(),
                                 subject: subject.clone(),
                                 object: Argument::Concept(complement.to_string()),
@@ -1058,7 +1070,7 @@ mod tests {
                                         .1
                                 })
                                 .collect();
-                            let skeleton = ClauseSpec {
+                            let skeleton = Clause {
                                 adjuncts: Vec::new(),
                                 ..spec.clone()
                             };
@@ -1159,7 +1171,7 @@ mod tests {
     fn adjuncts_reproduce_the_modifier_tail_byte_for_byte() {
         let mut v = CommonVocabulary::default();
         v.declare("yellow-white-dwarf", "yellow-white dwarf");
-        let spec = ClauseSpec {
+        let spec = Clause {
             predicate: "is-a".into(),
             subject: Subject::Name("Hornvale".into()),
             object: Argument::Concept("planet".into()),

@@ -3,7 +3,7 @@
 //! Everything else in this campaign is machinery. This file is the target it
 //! was built for — a real occupation out of seed 42's ledger (a people, a
 //! site, a founding year, an ending), turned into ONE
-//! [`hornvale_language::clause::ClauseSpec`] and realized twice: once through
+//! [`hornvale_language::clause::Clause`] and realized twice: once through
 //! Common (the author's register, total, infallible) and once through that
 //! people's own tongue (partial, fallible). The campaign's thesis is that an
 //! utterance is a fact; this is where it stops being a claim, because the
@@ -46,7 +46,7 @@
 //!    "And Common is not yet a peer in full"
 //!    (`book/src/chronicle/the-interlinear.md`) records — that was the
 //!    `TongueClause`-keeps-a-`String`-subject asymmetry, and The Scarf
-//!    closed it: both realizers now take the SAME `&ClauseSpec`, so this
+//!    closed it: both realizers now take the SAME `&Clause`, so this
 //!    file hands one spec to each rather than projecting between two
 //!    structs. This absence survived that collapse.
 //! 2. **The subject takes a liberty.** The clause's subject is the PEOPLE's
@@ -74,7 +74,7 @@
 use hornvale_history::{IS_OCCUPATION, OCC_ENDED, OCC_FOUNDED, OCC_PEOPLE, OCC_SITE};
 use hornvale_kernel::{Seed, Value, World};
 use hornvale_language::clause::{
-    Adjunct, Argument, ClauseSpec, Definiteness, Number, Subject, cardinal, realize_common,
+    Adjunct, Argument, Clause, Definiteness, Number, Subject, cardinal, realize_common,
 };
 use hornvale_language::{
     CommonVocabulary, Evidential, SchemaId, realize_tongue_deep, tongue_grammar,
@@ -205,8 +205,8 @@ fn autonym_of(world: &World, people: &str) -> String {
 /// (never an affix). So the tongue's tail is three bare numerals in spec
 /// order, ambiguous between the site, the founding and the ending. See this
 /// module's doc, limit 1.
-fn clause_for(occupation: &Occupation, autonym: &str) -> ClauseSpec {
-    ClauseSpec {
+fn clause_for(occupation: &Occupation, autonym: &str) -> Clause {
+    Clause {
         predicate: hornvale_kernel::world::IS_A.to_string(),
         subject: Subject::Name(autonym.to_string()),
         object: Argument::Concept("home".to_string()),
@@ -214,7 +214,7 @@ fn clause_for(occupation: &Occupation, autonym: &str) -> ClauseSpec {
         definiteness: Definiteness::Def,
         // The people saying where it lives and when: lived experience, so
         // Witnessed — the same reading `windows/book`'s self-statement
-        // takes. Stated HERE now that `ClauseSpec` carries the feature; it
+        // takes. Stated HERE now that `Clause` carries the feature; it
         // used to be invented out of band inside `tongue_view`.
         evidential: Evidential::Witnessed,
         adjuncts: vec![
@@ -251,7 +251,7 @@ impl Tongue {
     /// Realize a clause in this tongue — `realize_tongue_deep`, assembled
     /// exactly as `windows/book` assembles it, so this file speaks the same
     /// tongue the book prints.
-    fn say(&self, clause: &ClauseSpec) -> Result<String, hornvale_language::TongueGap> {
+    fn say(&self, clause: &Clause) -> Result<String, hornvale_language::TongueGap> {
         let noun_class_of =
             |concept: &str| hornvale_language::noun_class_with_sky(self.sky_animate, concept);
         realize_tongue_deep(

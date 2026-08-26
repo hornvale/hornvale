@@ -19,7 +19,7 @@
 //! authored surface text anywhere in a generated tongue (the program
 //! thesis).
 
-use crate::clause::{Adjunct, Argument, ClauseSpec, Subject};
+use crate::clause::{Adjunct, Argument, Clause, Subject};
 use crate::lexicon::{LexEntry, Lexicon};
 use crate::morphology::{
     ClassPosition, Evidential, MorphDepth, MorphForm, NounClass, TongueMorphology, affix,
@@ -286,7 +286,7 @@ fn assert_tongue_construction(predicate: &str) {
 /// any adjunct concept fails the whole clause.
 /// type-audit: bare-ok(prose)
 pub fn realize_tongue(
-    clause: &ClauseSpec,
+    clause: &Clause,
     grammar: &TongueGrammar,
     lexicon: &Lexicon,
 ) -> Result<String, TongueGap> {
@@ -402,7 +402,7 @@ enum Role {
 /// spelling, never `morph`/`grammar`/`lexicon` or which draw fired.
 /// type-audit: bare-ok(prose)
 pub fn realize_tongue_deep(
-    clause: &ClauseSpec,
+    clause: &Clause,
     grammar: &TongueGrammar,
     morph: &TongueMorphology,
     noun_class_of: &dyn Fn(&str) -> NounClass,
@@ -767,7 +767,7 @@ mod tests {
             LexEntry::Root { views, .. } => views.roman.clone(),
             other => panic!("goblin-kind should be a root, got {other:?}"),
         };
-        let clause = ClauseSpec {
+        let clause = Clause {
             predicate: IS_A.to_string(),
             subject: Subject::Name("Vavako".to_string()),
             object: Argument::Concept("goblin-kind".to_string()),
@@ -811,7 +811,7 @@ mod tests {
     #[test]
     fn realize_tongue_gaps_whole_sentence() {
         let lex = tiny_lexicon_with(&[]); // no entries → concept is a gap
-        let clause = ClauseSpec {
+        let clause = Clause {
             predicate: IS_A.to_string(),
             subject: Subject::Name("Vavako".to_string()),
             object: Argument::Concept("planet".to_string()),
@@ -856,7 +856,7 @@ mod tests {
             &[],
             CascadeRegime::SETTLED,
         );
-        let clause = ClauseSpec {
+        let clause = Clause {
             predicate: IS_A.to_string(),
             subject: Subject::Name("Vavako".to_string()),
             object: Argument::Concept("blue".to_string()),
@@ -896,7 +896,7 @@ mod tests {
             LexEntry::Root { views, .. } => views.roman.clone(),
             other => panic!("expected a Root, got {other:?}"),
         };
-        let clause = ClauseSpec {
+        let clause = Clause {
             predicate: IS_A.to_string(),
             subject: Subject::Name("Vavako".to_string()),
             object: Argument::Concept("planet".to_string()),
@@ -931,7 +931,7 @@ mod tests {
         // partial render is the tempting wrong answer. Spec section 4 of this
         // module: renders fully or gaps entirely, never partially.
         let lex = tiny_lexicon_with(&[("planet", ExposureClass::Steeped)]);
-        let clause = ClauseSpec {
+        let clause = Clause {
             predicate: IS_A.to_string(),
             subject: Subject::Name("Vavako".to_string()),
             object: Argument::Concept("planet".to_string()),
@@ -970,7 +970,7 @@ mod tests {
             LexEntry::Root { views, .. } => views.roman.clone(),
             other => panic!("expected a Root, got {other:?}"),
         };
-        let clause = ClauseSpec {
+        let clause = Clause {
             predicate: IS_A.to_string(),
             subject: Subject::Name("Vavako".to_string()),
             object: Argument::Concept("goblin-kind".to_string()),
@@ -1028,7 +1028,7 @@ mod tests {
             LexEntry::Root { views, .. } => views.roman.clone(),
             other => panic!("goblin-kind should be a root, got {other:?}"),
         };
-        let clause = ClauseSpec {
+        let clause = Clause {
             predicate: IS_A.to_string(),
             subject: Subject::Name("Vavako".to_string()),
             object: Argument::Concept("goblin-kind".to_string()),
@@ -1114,7 +1114,7 @@ mod tests {
             LexEntry::Root { derivation, .. } => derivation.modern.clone(),
             other => panic!("goblin-kind should be a root, got {other:?}"),
         };
-        let clause = ClauseSpec {
+        let clause = Clause {
             predicate: IS_A.to_string(),
             subject: Subject::Name("Vavako".to_string()),
             object: Argument::Concept("goblin-kind".to_string()),
@@ -1335,7 +1335,7 @@ mod tests {
         // explicitly: exhaustive-match future-proofing, not a live path.
         let ph = test_phonology();
         let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
-        let clause = ClauseSpec {
+        let clause = Clause {
             predicate: IS_A.to_string(),
             subject: Subject::Name("Vavako".to_string()),
             object: Argument::Concept("goblin-kind".to_string()),
@@ -1396,7 +1396,7 @@ mod tests {
     fn a_tongue_gaps_on_a_pronoun_subject_and_names_the_missing_inventory() {
         let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
         let grammar = svo_with_copula();
-        let clause = ClauseSpec {
+        let clause = Clause {
             predicate: IS_A.to_string(),
             subject: Subject::Pronoun("it"),
             object: Argument::Concept("goblin-kind".to_string()),
@@ -1426,7 +1426,7 @@ mod tests {
     fn a_tongue_predicates_a_bare_count_in_the_object_slot() {
         let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
         let grammar = svo_with_copula();
-        let clause = ClauseSpec {
+        let clause = Clause {
             predicate: IS_A.to_string(),
             subject: Subject::Name("Nwamvam".to_string()),
             object: Argument::Count(8835),
@@ -1450,7 +1450,7 @@ mod tests {
         // either half invites the wrong repair.
         let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
         let grammar = svo_with_copula();
-        let base = ClauseSpec {
+        let base = Clause {
             predicate: IS_A.to_string(),
             subject: Subject::Name("Vavako".to_string()),
             object: Argument::Concept("goblin-kind".to_string()),
@@ -1459,7 +1459,7 @@ mod tests {
             evidential: Evidential::Witnessed,
             adjuncts: Vec::new(),
         };
-        let plural_indef = ClauseSpec {
+        let plural_indef = Clause {
             number: Number::Pl,
             definiteness: Definiteness::Indef,
             ..base.clone()
@@ -1480,7 +1480,7 @@ mod tests {
         // put a false claim about a people into a rendered artifact.
         let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
         let grammar = svo_with_copula();
-        let clause = ClauseSpec {
+        let clause = Clause {
             predicate: "dwells-in".to_string(),
             subject: Subject::Name("Vavako".to_string()),
             object: Argument::Concept("goblin-kind".to_string()),
@@ -1544,7 +1544,7 @@ mod tests {
             copula_segments: None,
             articles: false,
         };
-        let clause = ClauseSpec {
+        let clause = Clause {
             predicate: IS_A.to_string(),
             subject: Subject::Name("Vavako".to_string()),
             object: Argument::Count(8835),

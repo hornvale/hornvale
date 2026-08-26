@@ -17,7 +17,7 @@ pub mod account;
 /// [`naming::NameKind::Person`] seed path a given name draws off. Plain data,
 /// kernel-only; it never learns which people a name belongs to.
 pub mod anthroponym;
-/// The clause layer: a language-neutral `ClauseSpec` and the Common
+/// The clause layer: a language-neutral `Clause` and the Common
 /// realizer that turns it into a sentence. Generalizes the `render_line`
 /// seam from a bespoke tenet spec to any clause.
 pub mod clause;
@@ -91,7 +91,7 @@ pub use account::{
     domain_distortion, identity_params, recoverability,
 };
 pub use clause::{
-    Adjunct, AdjunctPosition, Argument, ClauseSpec, Definiteness, Number, ParseContext, ParseError,
+    Adjunct, AdjunctPosition, Argument, Clause, Definiteness, Number, ParseContext, ParseError,
     parse_common, parse_common_with_tail, realize_common,
 };
 pub use common_vocab::{CommonVocabulary, MissingCommonWords};

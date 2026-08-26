@@ -2,7 +2,7 @@
 //! Common sentences. Reads only the ledger; realizes via `domains/language`.
 //!
 //! **This window states meaning; it no longer composes English** (The
-//! Interlinear). It used to own an aggregation seam: `ClauseSpec.modifiers`
+//! Interlinear). It used to own an aggregation seam: `Clause.modifiers`
 //! carried pre-rendered phrases, so the choice between a noun-modifier
 //! ("with two moons") and a trailing independent clause ("its day lasts
 //! about 1.5 standard days") — and the `"; "` join that assembled them —
@@ -18,8 +18,8 @@ use hornvale_kernel::{EntityId, Value, World};
 use hornvale_language::CommonVocabulary;
 use hornvale_language::account::{Account, AccountEntry, AccountParams, Disposition, Stance};
 use hornvale_language::clause::{
-    Adjunct, Argument, ClauseSpec, Definiteness, Number, ParseContext, ParseError, Subject,
-    cardinal, common_role_surface, parse_common_with_tail, quantity, realize_common,
+    Adjunct, Argument, Clause, Definiteness, Number, ParseContext, ParseError, Subject, cardinal,
+    common_role_surface, parse_common_with_tail, quantity, realize_common,
 };
 use hornvale_language::numeracy::{NumeracyRung, render_quantity_at_rung};
 use hornvale_language::schemas::Manner;
@@ -289,7 +289,7 @@ pub fn render_volume_from(
 
         let subject = subject_for(subject_entity, name, &mut named);
         let line = realize_common(
-            &ClauseSpec {
+            &Clause {
                 predicate: hornvale_kernel::world::IS_A.to_string(),
                 subject,
                 object: Argument::Concept(kind.clone()),
@@ -320,7 +320,7 @@ pub fn render_volume_from(
     for fact in world.ledger.find(hornvale_kernel::INSTANCE_OF) {
         // C2 T5: one collective per placed peopled species — "The
         // ⟨Autonym⟩ are ⟨species⟩." The subject carries its own leading
-        // "The " (there is no per-subject determiner slot in `ClauseSpec`;
+        // "The " (there is no per-subject determiner slot in `Clause`;
         // `definiteness` here governs only the bare-plural complement, per
         // the grammar's existing `classify_generic_plural` shape), so this
         // is the one place that article is written, never doubled.
@@ -337,7 +337,7 @@ pub fn render_volume_from(
         // The kind is the complement CONCEPT; `Number::Pl` is what pluralizes
         // it (the realizer's job since Task 4, not the caller's).
         let line = realize_common(
-            &ClauseSpec {
+            &Clause {
                 predicate: hornvale_kernel::world::IS_A.to_string(),
                 subject,
                 object: Argument::Concept(kind.clone()),
@@ -395,7 +395,7 @@ pub fn render_volume_from(
             |concept: &str| hornvale_worldgen::noun_class_with_sky(sky_animate, concept);
 
         let own_kind = format!("{kind}-kind");
-        let self_statement = ClauseSpec {
+        let self_statement = Clause {
             predicate: hornvale_kernel::world::IS_A.to_string(),
             subject: Subject::Name(autonym.clone()),
             object: Argument::Concept(own_kind),
@@ -1047,7 +1047,7 @@ fn render_world_clause(
     let name = is_a_entry.fact.subject.clone();
     let subject = subject_for_text(&name, name.clone(), seen);
     Some(realize_common(
-        &ClauseSpec {
+        &Clause {
             predicate: hornvale_kernel::world::IS_A.to_string(),
             subject,
             object: Argument::Concept(complement_concept),
@@ -1115,7 +1115,7 @@ fn render_world_margin(
         }
     }
     let line = realize_common(
-        &ClauseSpec {
+        &Clause {
             predicate: hornvale_kernel::world::IS_A.to_string(),
             subject: Subject::Name(is_a_entry.fact.subject.clone()),
             object: Argument::Concept(truth_kind.clone()),
@@ -1288,7 +1288,7 @@ fn render_people_clause(
     let display = format!("The {raw_name}");
     let subject = subject_for_text(&raw_name, display, seen);
     let mut line = realize_common(
-        &ClauseSpec {
+        &Clause {
             predicate: hornvale_kernel::world::IS_A.to_string(),
             subject,
             object: Argument::Concept(kind_text.clone()),
@@ -1855,7 +1855,7 @@ fn probe_tongue(
     orth: hornvale_language::Orthography,
 ) -> Result<String, hornvale_language::TongueGap> {
     realize_tongue_deep(
-        &ClauseSpec {
+        &Clause {
             predicate: hornvale_kernel::world::IS_A.to_string(),
             subject: Subject::Name(probe.subject.clone()),
             object: Argument::Concept(probe.concept.clone()),
@@ -1891,7 +1891,7 @@ fn planet_name_of(world: &World) -> Option<String> {
         .map(str::to_string)
 }
 
-/// C7 T3: build one tongue's emic world-statement — a `ClauseSpec` whose
+/// C7 T3: build one tongue's emic world-statement — a `Clause` whose
 /// subject is `Subject::Name(planet_name)`, whose object is
 /// `Argument::Concept("earth")`, carrying the given `evidential` — through the
 /// deep realizer, using that tongue's own already-derived grammar/morphology/
@@ -1914,7 +1914,7 @@ fn world_statement(
     lexicon: &hornvale_language::Lexicon,
     orth: hornvale_language::Orthography,
 ) -> String {
-    let clause = ClauseSpec {
+    let clause = Clause {
         predicate: hornvale_kernel::world::IS_A.to_string(),
         subject: Subject::Name(planet_name.to_string()),
         object: Argument::Concept("earth".to_string()),
@@ -2023,7 +2023,7 @@ impl std::error::Error for LineError {}
 /// for keeping a small presentation-layer table on the book side of the
 /// aggregation seam. The Interlinear deleted that function, and the seam
 /// with it: article selection was never a book concern, it was English
-/// leaking into a window because `ClauseSpec` could not carry structure.
+/// leaking into a window because `Clause` could not carry structure.
 /// This table stays for a different and narrower reason — it runs
 /// BACKWARD, and the direction is the whole argument. [`fact_for`] must
 /// recognize text the program did not generate (it backs
@@ -2321,7 +2321,7 @@ pub fn rerender(parsed: &ParsedLine, vocab: &CommonVocabulary) -> String {
         other => Subject::Name(other.to_string()),
     };
     realize_common(
-        &ClauseSpec {
+        &Clause {
             predicate: hornvale_kernel::world::IS_A.to_string(),
             subject,
             object: Argument::Concept(parsed.kind.clone()),

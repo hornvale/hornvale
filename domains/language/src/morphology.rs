@@ -4,7 +4,7 @@
 //! machinery every other root uses, and segment-level affixation. These are
 //! the primitives [`crate::grammar::realize_tongue_deep`] (C7's extended
 //! realizer, living in `grammar.rs` beside the [`crate::grammar::TongueGrammar`]
-//! it extends, over the [`crate::clause::ClauseSpec`] every realizer now
+//! it extends, over the [`crate::clause::Clause`] every realizer now
 //! takes) assembles into a rendered
 //! clause. Split into its own sibling module — rather than folding into
 //! `grammar.rs` directly — because C7 adds enough new surface area (four

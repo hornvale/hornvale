@@ -303,19 +303,19 @@ romanization states about one phoneme sequence, restated one level up about
 an entire told belief.
 
 The seam has since grown a second, more general storey: the **clause
-layer** (`clause.rs`), where a language-neutral `ClauseSpec` realizes into
+layer** (`clause.rs`), where a language-neutral `Clause` realizes into
 a Common sentence through a **construction inventory**: the grammar as
 data, an ordered list of surface parts one interpreter walks forward. The
 Self-Writing Book program builds on this layer ("Vebe is a planet with two
 moons…").
 
-Since The Interlinear the spec is **fact-shaped**, and the shape is the
+Since The Interlinear the clause is **fact-shaped**, and the shape is the
 claim: an utterance *is* a fact.
 
 | | Who | What relation | To what | Circumstances |
 |---|---|---|---|---|
 | `Fact` | subject | predicate | object | place / day, provenance |
-| `ClauseSpec` | subject | predicate | object | adjuncts, speaker features |
+| `Clause` | subject | predicate | object | adjuncts, speaker features |
 
 A clause therefore names its predicate — `is-a`, the kernel's own
 constant, the same string a committed fact carries — rather than hiding
