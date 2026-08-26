@@ -1224,7 +1224,7 @@ fn h1_the_improvising_arms_are_distributed_as_preregistered() {
     let mut god = 0usize;
     let mut spirit = 0usize;
     let mut wordless = 0usize;
-    for people in peoples_of(&world) {
+    for people in hornvale_species::society_registry() {
         let Ok(lexicon) = hornvale_worldgen::lexicon_from(&world, &people, &terrain, &climate)
         else {
             continue;
@@ -1240,11 +1240,15 @@ fn h1_the_improvising_arms_are_distributed_as_preregistered() {
 }
 ```
 
-`peoples_of` is the distinct `peopled-by` object set, in deterministic order;
-if the lab crate already has such a helper, call it rather than adding a second.
-`lexicon_from` takes a `&'static str` in the `ask` call site — if it will not
-accept a runtime `String` here, that is a real signature constraint, not a
-mistake in your work: report it and use whatever the crate actually offers.
+**Use `hornvale_species::society_registry()` for the fifteen peoples, not a
+ledger scan and not a `peoples_of` helper** — no such helper exists, and Task 6's
+`render_reticence_report` (`windows/lab/src/reticence.rs`) already established
+`society_registry()` as this campaign's canonical enumeration. Reuse it so H1's
+denominator is provably the same fifteen the committed report rows are.
+
+`lexicon_from(world: &World, species: &str, ...)` takes a plain `&str`
+(`windows/worldgen/src/lib.rs:6486`), so a runtime `String` is fine — an earlier
+draft of this plan warned it might be `&'static str`; it is not.
 
 Expected: PASS at 9/6/0.
 
