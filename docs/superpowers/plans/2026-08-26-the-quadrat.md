@@ -353,12 +353,18 @@ fn the_finest_rung_needs_no_subsampling() {
     let f = mercator::frame_for(false);
     let win = Window { depth: BAND_B_RUNG, origin_col: 0, origin_row: 0 };
     let (vw, vh) = virtual_dims(win.depth);
-    // Warm the memo so the ancestor lookup is not counted.
+    // Warm the memo so a warm ancestor is the common case.
     let _ = terrain_at_tile(&terrain, &geo, &index, &mut memo, &f, &win, vw, vh, 0, 0);
     let before = index.probe_count();
     let _ = terrain_at_tile(&terrain, &geo, &index, &mut memo, &f, &win, vw, vh, 0, 1);
-    assert_eq!(index.probe_count() - before, 0,
-        "the finest rung ran a vertex SEARCH; it should resolve by direct addressing");
+    // BOUNDED, not zero: tiles (0,0) and (0,1) are not guaranteed to share a
+    // globe-level ancestor, and a cold ancestor costs three corner probes. An
+    // exact-zero assertion would flake on an ancestor boundary rather than
+    // fail on a real regression. Three still discriminates the new path from
+    // the old one by more than an order of magnitude -- the old path was 49.
+    assert!(index.probe_count() - before <= 3,
+        "the finest rung ran {} vertex searches; direct addressing costs at most 3",
+        index.probe_count() - before);
 }
 ```
 
@@ -566,12 +572,37 @@ proceeding to Task 6.
 the only thing that has ever caught a wrong projection here (The Quire:
 "geometrically wrong under seventeen green tests"). Spec H2 is this task.
 
+**CONTROLLER RULING (pre-flight, binding on this task).** An earlier draft of
+this task said `clients/game/core/src/chart.rs` reprojects terrain onto the
+raster. **It cannot.** `hornvale-game-core` carries NO hornvale crate in its
+dependency graph by design — its own `chart.rs` module doc says so — so it has
+no access to `Facet::containing`, the geosphere or terrain. The task is
+restructured along what each crate can actually reach:
+
+- **`bin/src/plate.rs` draws the band-B TERRAIN raster**, exactly as it already
+  draws C/D/E. `spread::compose` receives a `world_plate` at band B too — the
+  existing `world_plate: Option<&Grid>` parameter already supports this, so no
+  new seam is needed.
+- **`core/src/chart.rs` keeps the PERCEPTION layer** — the 31 packet cells,
+  `here`/marks/NPCs — placed by `bearing_deg`/`distance_rad`, which needs no
+  mesh and is exactly why it works in `core`. Its PROJECTION changes; its data
+  source does not.
+- **`windows/scene/src/surrounds_ascii.rs` makes the SAME projection change**,
+  so the byte pin survives.
+- **The pin at `chart.rs:180` is kept and its subject is UNCHANGED.** It was
+  never a terrain comparison. The Quire's account is that "the simulation drew
+  five dense rows (5 + 7 + 9 + 7 + 3 = 31) and the client drew nine sparse
+  sheared rows" — it pins the PLACEMENT of the packet's 31 cells. Both sides
+  keep placing 31 cells; only the projection moves, and it must move
+  identically on both.
+
 **Files:**
-- Modify: `windows/scene/src/surrounds_ascii.rs`
-- Modify: `clients/game/core/src/chart.rs`
-- Modify: `clients/game/core/src/spread.rs` (band B dispatches to the raster)
+- Modify: `windows/scene/src/surrounds_ascii.rs` (projection only)
+- Modify: `clients/game/core/src/chart.rs` (projection only — perception layer)
+- Modify: `clients/game/core/src/spread.rs` (band B takes a `world_plate`)
+- Modify: `clients/game/bin/src/driver.rs` (`world_plate_for_redraw` supplies band B)
 - Modify: `clients/game/core/tests/fixtures/chart-reference-seed-42.txt` (REGENERATED, never hand-edited)
-- Test: `clients/game/core/tests/chart.rs`
+- Test: `clients/game/core/tests/chart.rs`, `clients/game/bin/src/driver.rs`
 
 - [ ] **Step 1: Write the failing test** — the existing
 `the_shape_matches_the_sims_own_ascii_render` IS the byte pin and will fail once
@@ -591,12 +622,35 @@ fn the_raster_has_no_holes_inside_the_band() {
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails** — Expected: FAIL, holes present.
+Add the assertion the controller ruling requires — that the two layers agree
+about which square a bearing/distance lands in. Without it, marks sit one cell
+off their ground and nothing objects:
 
-- [ ] **Step 3: Implement both sides together.** `render_surrounds_ascii` and
-`chart::draw` reproject onto the raster. **They must move in the SAME commit** —
-a commit where only one has moved leaves the pin red and is not a valid stopping
-point for review.
+```rust
+#[test]
+fn the_perception_overlay_lands_on_the_same_squares_as_the_terrain_raster() {
+    // The terrain raster (bin/plate.rs, mesh-aware) and the perception overlay
+    // (core/chart.rs, wire-only) are drawn by two crates that cannot share
+    // code -- core carries no hornvale crate by design. So the ONE thing that
+    // must agree between them is the projection, and nothing else in the build
+    // checks it: a disagreement puts every mark one square off its ground and
+    // leaves both suites green.
+    let (lat, lon) = a_known_offset_from_the_observer();
+    let from_raster = plate_square_for(lat, lon);
+    let from_overlay = chart_square_for_bearing_distance(bearing_of(lat, lon), distance_of(lat, lon));
+    assert_eq!(from_raster, from_overlay,
+        "the terrain raster and the perception overlay disagree about which square holds {lat},{lon}");
+}
+```
+
+- [ ] **Step 2: Run to verify it fails** — Expected: FAIL, holes present and the two layers disagree.
+
+- [ ] **Step 3: Implement.** `render_surrounds_ascii` and `chart::draw` change
+PROJECTION ONLY (both keep placing the packet's 31 cells); `plate.rs` gains
+band B as a rung it already knows how to draw; `spread::compose` and
+`world_plate_for_redraw` supply the plate at band B. **`surrounds_ascii.rs` and
+`chart.rs` must move in the SAME commit** — a commit where only one has moved
+leaves the pin red and is not a valid stopping point for review.
 
 - [ ] **Step 4: Regenerate the reference fixture**
 
