@@ -2983,6 +2983,83 @@ pub fn subterranean_substrate_field(
     })
 }
 
+/// [`subterranean_substrate`] evaluated at one rung of the delve ladder,
+/// rather than at a vertex's cave `depth_reach_m` the way
+/// [`subterranean_substrate_field`] does — the per-rung reading that
+/// function's own doc names as still-deferred (`MAP-per-rung-substrate`).
+///
+/// The evaluation depth comes from
+/// [`hornvale_terrain::delve::rung_evaluation_depth_m`], which is where the
+/// ΔT-midpoint choice and the [`hornvale_kernel::Band::Nadir`] special case
+/// (open top, so it reads `depth_reach_m` — exactly where
+/// [`subterranean_substrate_field`] evaluates every rung today) both live;
+/// this function adds no depth policy of its own.
+///
+/// `None` when the vertex has no cave (`terrain.cave_at` returns `None`) or
+/// when `rung` is [`hornvale_kernel::Band::Surface`], which names no chamber
+/// and has no evaluation depth.
+///
+/// **Porosity, the water table and the gradient are derived exactly as
+/// [`subterranean_substrate_field`] derives them** — same three calls, same
+/// order — so the two per-vertex and per-rung readings cannot disagree about
+/// a chamber's hydrology the way two independent derivations could.
+///
+/// **This function has no production caller yet.** It and
+/// [`subterranean_substrate_field_per_rung`] exist so Task 9 of
+/// `MAP-per-rung-substrate` has something to switch consumers onto;
+/// [`subterranean_substrate_field`] keeps its own body and both its
+/// production call sites unchanged by this addition.
+pub fn subterranean_substrate_at_rung(
+    surface: Substrate,
+    rung: hornvale_kernel::Band,
+    terrain: &GeneratedTerrain,
+    vertex: hornvale_kernel::Vertex,
+) -> Option<Substrate> {
+    let cave = terrain.cave_at(vertex)?;
+    let gradient = terrain.geothermal_gradient_at(vertex);
+    let depth_m =
+        hornvale_terrain::delve::rung_evaluation_depth_m(rung, gradient, cave.depth_reach_m)?;
+    let porosity = terrain.material_at(vertex).porosity;
+    let water_table_m = hornvale_terrain::water_table_depth_m(
+        terrain.drainage_at(vertex),
+        porosity,
+        surface.height_asl_m.get(),
+    );
+    Some(subterranean_substrate(
+        surface,
+        depth_m,
+        gradient,
+        water_table_m,
+        porosity,
+    ))
+}
+
+/// [`subterranean_substrate_at_rung`] over every band of the ladder and every
+/// vertex of the globe, indexed by `Band as usize`
+/// ([`hornvale_kernel::Band::all`]'s own order: `Surface` through `Nadir`,
+/// six entries).
+///
+/// A vertex with no cave gets `[None; 6]`; a cave-bearing vertex's
+/// [`hornvale_kernel::Band::Surface`] slot is always `None` (it names no
+/// chamber). By construction the [`hornvale_kernel::Band::Nadir`] slot
+/// equals [`subterranean_substrate_field`]'s reading at that same vertex
+/// bit-for-bit — both evaluate at `depth_reach_m` — which is exactly the
+/// positive control this task's tests assert.
+pub fn subterranean_substrate_field_per_rung(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    surface: &hornvale_kernel::VertexMap<Substrate>,
+) -> hornvale_kernel::VertexMap<[Option<Substrate>; 6]> {
+    hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
+        let s = *surface.get(vertex);
+        let mut out = [None; 6];
+        for &rung in hornvale_kernel::Band::all() {
+            out[rung as usize] = subterranean_substrate_at_rung(s, rung, terrain, vertex);
+        }
+        out
+    })
+}
+
 /// The deep-time window (1 Myr) and sampling, standard days. These, the era
 /// count, and the ice step order are save-format contracts (metaplan §9).
 const DEEP_TIME_WINDOW_DAYS: f64 = 1_000_000.0 * 365.25;
