@@ -59,6 +59,8 @@ mod one_roster;
 mod ooc_namespace;
 #[path = "suite/ooc_objective.rs"]
 mod ooc_objective;
+#[path = "suite/overrides.rs"]
+mod overrides;
 #[path = "suite/player_acts_commit.rs"]
 mod player_acts_commit;
 #[path = "suite/possess_target.rs"]

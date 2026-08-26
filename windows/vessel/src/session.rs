@@ -729,6 +729,13 @@ pub struct Session<'w> {
     /// residue [`Self::driven_affect`] itself never carries: read back by
     /// [`Self::suppressed_drives`].
     driven_suppressed: Vec<DriveKind>,
+    /// Every drive this body's own arbitration wanted and did not pursue,
+    /// counted across the WHOLE possession (The Reticence, Task 2) — unlike
+    /// `driven_suppressed`, which is a per-decision read overwritten by every
+    /// `advance_one` iteration. When the rider is driving, this is the record
+    /// of what the rider made this body ignore, and it is the only conduct
+    /// input the host's willingness to speak reads.
+    driven_overrides: std::collections::BTreeMap<DriveKind, u32>,
 }
 
 /// Where the possession is while indoors. `FRAME`-tier in its entirety: derived
@@ -1100,6 +1107,7 @@ impl<'w> Session<'w> {
             driven_mode: None,
             driven_affect: None,
             driven_suppressed: Vec::new(),
+            driven_overrides: std::collections::BTreeMap::new(),
         };
         session.absorb_here()?;
         let opening = session.describe_here()?;
@@ -1173,6 +1181,21 @@ impl<'w> Session<'w> {
     /// other drive was active alongside the pursued one.
     pub fn suppressed_drives(&self) -> &[DriveKind] {
         &self.driven_suppressed
+    }
+
+    /// How many decisions this possession has overridden `drive` — the count
+    /// of ticks on which arbitration found it active and did not pursue it
+    /// (The Reticence, Task 2). Zero before the first `!wait`, and zero for a
+    /// drive that has never lost.
+    /// type-audit: bare-ok(count)
+    pub fn overrides_of(&self, drive: DriveKind) -> u32 {
+        self.driven_overrides.get(&drive).copied().unwrap_or(0)
+    }
+
+    /// The whole override record, drive-ordered (The Reticence, Task 2).
+    /// type-audit: bare-ok(count)
+    pub fn override_record(&self) -> &std::collections::BTreeMap<DriveKind, u32> {
+        &self.driven_overrides
     }
 
     /// The accumulated knowledge (read-only).
@@ -4067,6 +4090,9 @@ impl<'w> Session<'w> {
         self.driven_mode = Some(driven_mode);
         self.driven_affect = Some(driven_affect);
         self.driven_suppressed = driven_suppressed;
+        for drive in &self.driven_suppressed {
+            *self.driven_overrides.entry(*drive).or_insert(0) += 1;
+        }
         match tick(&self.ledger, &[&sys], &["drive-movements"], &self.registry) {
             Ok(next) => {
                 let moved = next.len() - self.ledger.len();
