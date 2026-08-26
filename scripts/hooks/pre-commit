@@ -95,13 +95,23 @@ fi
 # golden-pins.sql` deliberately duplicates every pinned calibration constant
 # in the three calibration test files, checked against the committed census
 # fixture as an independent second path (its own header explains why). That
-# duplication has gone stale TWICE (2026-07-13 and 2026-07-20) because
-# `make census-check` is not part of `make gate` and nobody remembered to run
-# it by hand at re-pin time. Closing the gap by construction instead of by
-# memory: any commit that stages one of the four files below must pass
-# `make census-check` before it can land — ~2.5 minutes, only paid on the
-# rare commit that actually touches these.
-census_guard_files='windows/lab/tests/suite/calibration\.rs|windows/lab/tests/suite/branches_family_calibration\.rs|windows/lab/tests/suite/gathering_calibration\.rs|tools/census/queries/calibrate/golden-pins\.sql'
+# duplication has gone stale THREE times (2026-07-13, 2026-07-20, 2026-08-25)
+# because `make census-check` is not part of `make gate` and nobody remembered
+# to run it by hand at re-pin time.
+#
+# THE THIRD TIME IS WHY THE CENSUS ROWS ARE IN THIS LIST NOW, and it happened
+# because this guard watched the wrong half. A pin compares a value COMPUTED
+# FROM THE CENSUS against a hardcoded literal. The four Rust/SQL files below
+# hold the LITERAL; `book/src/laboratory/generated/*/rows.csv` is what
+# `computed` is read from. A census refresh therefore moves one side of every
+# pin while staging NONE of the four — which is exactly what `c54fb62c9`
+# (a Granary-era refresh) did, drifting 28 pins onto main with this hook
+# installed, firing on nothing, and the comment above still claiming the gap
+# was closed by construction.
+#
+# Guarding both sides is the whole fix: a pin can be falsified by an edit to
+# either operand, so the trigger has to name both operands.
+census_guard_files='windows/lab/tests/suite/calibration\.rs|windows/lab/tests/suite/branches_family_calibration\.rs|windows/lab/tests/suite/gathering_calibration\.rs|tools/census/queries/calibrate/golden-pins\.sql|book/src/laboratory/generated/[^/]+/rows\.csv'
 if git diff --cached --name-only | grep -qE "^(${census_guard_files})$"; then
     echo "pre-commit: a calibration-pin file is staged — running 'make census-check' (~2.5 min; this is the golden-pins.sql tripwire guard)..." >&2
     if ! make census-check; then
