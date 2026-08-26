@@ -93,10 +93,15 @@ fn virtual_dims_come_from_the_mesh_not_the_plate() {
     assert_eq!((w_a, h_a), (w_b, h_b));
 
     // Coarser rung => half the tiles. Each mesh level halves the edge length.
+    // Tolerance is +/-1 IN EITHER DIRECTION because each rung rounds
+    // independently: at the real numbers, rung 11 gives 11,623 and rung 12
+    // gives 23,245, so doubling the coarse rung OVERSHOOTS by one. A
+    // one-sided tolerance fails here, which is what the first draft of this
+    // assertion did.
     let (w_coarse, _) = virtual_dims(BAND_B_RUNG - 1);
     assert!(
-        w_coarse * 2 == w_a || w_coarse * 2 + 1 == w_a,
-        "rung {} gave {w_coarse} and rung {} gave {w_a}; expected a halving",
+        (w_coarse * 2).abs_diff(w_a) <= 1,
+        "rung {} gave {w_coarse} and rung {} gave {w_a}; expected a halving within 1",
         BAND_B_RUNG - 1, BAND_B_RUNG
     );
 }
