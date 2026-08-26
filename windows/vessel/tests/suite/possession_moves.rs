@@ -594,13 +594,13 @@ fn a_wild_beast_walks_away_from_water_and_is_observed() {
 /// **The Hand, Task 3: no longer the flagship's own twin.** The pre-Hand
 /// `GRIEVANCE_NPC` (`bugbear of Doaba`) WAS the possessed-body duplicate this
 /// task deletes, co-located by construction. `bodies()[1]` (`hobgoblin of
-/// Noaba` at seed 42) is placed explicitly through the test seam
+/// Naabeena` at seed 42) is placed explicitly through the test seam
 /// (`Session::place_creature_at_me`, see docs/retrospectives/the-hand.md) instead, and is
 /// RE-placed before every `!provoke`/`!soothe` below rather than trusted to
 /// stay put across a `wait` — its own drive-seeking is free to walk it away
 /// from the flagship the moment a tick runs, unlike the twin, whose home
 /// WAS the flagship.
-const GRIEVANCE_NPC: &str = "hobgoblin of Noaba";
+const GRIEVANCE_NPC: &str = "hobgoblin of Naabeena";
 
 #[test]
 fn grievance_accumulates_across_waits_and_crosses_the_hostility_threshold() {
@@ -637,7 +637,16 @@ fn grievance_accumulates_across_waits_and_crosses_the_hostility_threshold() {
     // runs on each `wait` and is free to walk it away from the flagship,
     // where the pre-Hand twin's own home kept it put.
     let (mut b, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
-    let companion = b.bodies()[1].entity;
+    // Resolved BY LABEL, not by `bodies()[1]` (see the_first_mark's
+    // place_companion doc): a later world merge inserted another body ahead
+    // of the grievance NPC, and index-based placement silently placed the
+    // wrong creature.
+    let companion = b
+        .bodies()
+        .iter()
+        .find(|bd| bd.label == GRIEVANCE_NPC)
+        .expect("GRIEVANCE_NPC has a body")
+        .entity;
     b.place_creature_at_me(companion);
     b.handle(&format!("!provoke {GRIEVANCE_NPC}")); // day 0.5: grievance 1
     b.handle("wait");

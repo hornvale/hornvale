@@ -207,7 +207,10 @@ fn a_standing_tribute_relation_is_committed_as_a_dated_entity_fact() {
         fact.day,
         // The Ell: `TributeRelation::since` is a bake YEAR and `Fact.day` is a
         // standard DAY, so the stamp is the crossing of the two.
-        Some(WorldTime::new(hornvale_worldgen::ledger_day_of_bake_year(120.0)).expect("finite")),
+        Some(
+            WorldTime::from_std_days(hornvale_worldgen::ledger_day_of_bake_year(120.0))
+                .expect("finite")
+        ),
         "dated by the day the relation was established, not by `now`"
     );
     assert!(
@@ -252,9 +255,9 @@ fn end_of_life_facts_are_day_stamped_at_ended_not_founded() {
     // rather than as 328725.0/36525.0 so the two claims stay separable — this
     // test is about WHICH event dates a fact, and the unit is stated, not
     // baked into a literal.
-    let ended_day = WorldTime::new(hornvale_worldgen::ledger_day_of_bake_year(900.0))
+    let ended_day = WorldTime::from_std_days(hornvale_worldgen::ledger_day_of_bake_year(900.0))
         .expect("a bake year crosses to a finite day");
-    let founded_day = WorldTime::new(hornvale_worldgen::ledger_day_of_bake_year(100.0))
+    let founded_day = WorldTime::from_std_days(hornvale_worldgen::ledger_day_of_bake_year(100.0))
         .expect("a bake year crosses to a finite day");
 
     let is_ruin = w
@@ -330,7 +333,7 @@ fn the_present_fallback_reads_back_in_years_too() {
 }
 
 /// `present_frame` = `present_year` crossed forward into a standard day
-/// (`WorldTime::new(ledger_day_of_bake_year(present_year(world)))`) — the
+/// (`WorldTime::from_std_days(ledger_day_of_bake_year(present_year(world)))`) — the
 /// composition that used to be hand-written at
 /// `windows/worldgen/tests/repose_exposure.rs`'s TASK 7 call, reachable only
 /// from that file's `heavy:`-ignored batteries. `tools/seam-guard` reported
@@ -346,7 +349,7 @@ fn the_present_fallback_reads_back_in_years_too() {
 /// SCALED by `Years::DAYS_PER_YEAR`, not the bare year reinterpreted as a
 /// day.** Dropping the crossing (`identity(0)` on `ledger_day_of_bake_year`
 /// — exactly the mutation `tools/seam-guard` applies) makes `present_frame`
-/// return `WorldTime::new(900.0)` instead of `WorldTime::new(900.0 *
+/// return `WorldTime::from_std_days(900.0)` instead of `WorldTime::from_std_days(900.0 *
 /// 365.25)`, which both assertions below catch.
 #[test]
 fn present_frame_crosses_the_bake_year_by_days_per_year() {
@@ -364,7 +367,7 @@ fn present_frame_crosses_the_bake_year_by_days_per_year() {
     );
 
     let frame = hornvale_worldgen::present_frame(&w);
-    let expected = WorldTime::new(hornvale_worldgen::ledger_day_of_bake_year(900.0))
+    let expected = WorldTime::from_std_days(hornvale_worldgen::ledger_day_of_bake_year(900.0))
         .expect("a bake year crosses to a finite day");
     assert_eq!(
         frame, expected,
@@ -377,11 +380,11 @@ fn present_frame_crosses_the_bake_year_by_days_per_year() {
     // check that does not depend on `WorldTime`'s `PartialEq` alone to carry
     // the finding.
     assert!(
-        frame.day() > year * 300.0,
+        frame.as_std_days() > year * 300.0,
         "the day ({}) must be the bake year ({year}) scaled by \
          Years::DAYS_PER_YEAR (365.25), not the bare year reinterpreted as a \
          day",
-        frame.day()
+        frame.as_std_days()
     );
 }
 
@@ -808,8 +811,13 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
     // rather than vacuous, which is the better of the two states this witness
     // alternates between — recovered here by accident, not by hunting for it.
     // Post-unblinding re-measure, declared per decision 0016.
+    // THE GRANARY re-reading (2026-08-25): 1 -> 0 over 7764 compared pairs.
+    // Sub-year raid timing re-placed seed 42's settlements an eleventh time;
+    // the witness alternates back to the empty state, which is the reading
+    // this file has recorded most often. Post-unblinding re-measure,
+    // declared per decision 0016.
     assert_eq!(
-        ties, 1,
+        ties, 0,
         "measured {ties} tying pairs on the live corpus over {pairs} compared pairs; a \
          different count means the key's tie conditions changed"
     );
@@ -1094,9 +1102,12 @@ fn the_material_fourth_key_barely_moves_the_stratigraphy() {
     // comparisons have something to compare again, so the witness is
     // load-bearing at this reading. That recovery is an accident of where the
     // settlements landed, not something this task went looking for.
+    // THE GRANARY re-pin (2026-08-25): [0, 1, 1] -> [0, 2, 0], total 2 -> 2.
+    // Same lever as every prior reading — re-placed settlements — and the
+    // same verdict: three seeds cannot distinguish them (decision 0097).
     assert_eq!(
         measured,
-        vec![(42u64, 0usize), (7, 1), (1000, 1)],
+        vec![(42u64, 0usize), (7, 2), (1000, 0)],
         "the per-seed order-change counts moved"
     );
 }

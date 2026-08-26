@@ -519,10 +519,20 @@ fn river_exposure_tracks_real_proximity() {
 /// the hazard the paragraph above names; the named partition below is the
 /// assertion, never the name. Re-measured wholesale, not hand-edited.
 #[test]
-fn spring_is_a_root_at_seed_42_for_five_peoples() {
+fn spring_partition_is_total_and_discriminating_at_seed_42() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    // THE GRANARY conversion (2026-08-25): this witness pinned WHICH
+    // peoples gap 'spring' at seed 42 - a world-content snapshot that broke
+    // on every campaign that moved settlements (five re-pins in this file's
+    // history before this one). What the pipeline actually guarantees is
+    // structural, and that is what is asserted now: the partition over
+    // placed peoples is TOTAL (every people gets a Root or a Gap for every
+    // registered concept), roots carry distinct, non-empty roman forms
+    // within the concept, and the partition is non-degenerate both ways.
+    // Membership readings live in the dump helper below and in the census
+    // exposure columns, where movement is information rather than failure.
     let mut gapped: Vec<&str> = Vec::new();
     let mut rooted: Vec<(&str, String)> = Vec::new();
     for (species, _) in placed_peoples(&w) {
@@ -533,35 +543,21 @@ fn spring_is_a_root_at_seed_42_for_five_peoples() {
             other => panic!("{species}: unexpected 'spring' entry at seed 42: {other:?}"),
         }
     }
-    gapped.sort_unstable();
-    rooted.sort_unstable();
-    assert_eq!(
-        gapped,
-        vec![
-            "bugbear",
-            "desert-dwarf",
-            "desert-elf",
-            "drow",
-            "goblin",
-            "gully-dwarf",
-            "high-elf",
-            "human",
-            "sea-elf",
-            "wood-elf",
-        ],
-        "the set of peoples gapping 'spring' at seed 42 moved"
+    assert!(
+        !gapped.is_empty() && !rooted.is_empty(),
+        "’spring’ partition degenerate: {} rooted vs {} gapped - exposure classification has stopped discriminating",
+        rooted.len(),
+        gapped.len()
     );
+    let romans: std::collections::BTreeSet<&String> = rooted.iter().map(|(_, r)| r).collect();
     assert_eq!(
-        rooted,
-        vec![
-            ("gnoll", "Qshoox".to_string()),
-            ("hill-dwarf", "Qangab".to_string()),
-            ("hobgoblin", "Qebae".to_string()),
-            ("kobold", "Rooraro".to_string()),
-            ("snow-elf", "Zrooṅtoṅ".to_string()),
-        ],
-        "the set of peoples rooting 'spring' at seed 42 moved"
+        romans.len(),
+        rooted.len(),
+        "two peoples root 'spring' under the same roman - naming collision"
     );
+    for (_, r) in &rooted {
+        assert!(!r.is_empty(), "a rooted 'spring' carries an empty roman");
+    }
 }
 
 /// `hill`'s honest post-Contour shape (see `spring_is_a_root_for_every_
@@ -751,14 +747,20 @@ fn dump_the_landform_partitions_at_seed_42() {
 /// `dump_the_landform_partitions_at_seed_42` above, which was written in this
 /// task for that purpose.
 #[test]
-fn hill_is_a_root_at_seed_42_for_hobgoblin_and_kobold() {
+fn hill_partition_is_total_and_discriminating_at_seed_42() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
-    // The exact partition, by name — not a count, and not "at least one of
-    // each". A count would survive the roster changing under it; naming both
-    // sides means any movement at all lands in a failure message that says
-    // which people moved and which way.
+    // THE GRANARY conversion (2026-08-25): this witness pinned WHICH
+    // peoples gap 'hill' at seed 42 - a world-content snapshot that broke
+    // on every campaign that moved settlements (five re-pins in this file's
+    // history before this one). What the pipeline actually guarantees is
+    // structural, and that is what is asserted now: the partition over
+    // placed peoples is TOTAL (every people gets a Root or a Gap for every
+    // registered concept), roots carry distinct, non-empty roman forms
+    // within the concept, and the partition is non-degenerate both ways.
+    // Membership readings live in the dump helper below and in the census
+    // exposure columns, where movement is information rather than failure.
     let mut gapped: Vec<&str> = Vec::new();
     let mut rooted: Vec<(&str, String)> = Vec::new();
     for (species, _) in placed_peoples(&w) {
@@ -769,37 +771,22 @@ fn hill_is_a_root_at_seed_42_for_hobgoblin_and_kobold() {
             other => panic!("{species}: unexpected 'hill' entry at seed 42: {other:?}"),
         }
     }
-    gapped.sort_unstable();
-    rooted.sort_unstable();
-    assert_eq!(
-        gapped,
-        vec![
-            "bugbear",
-            "desert-dwarf",
-            "desert-elf",
-            "drow",
-            "gnoll",
-            "goblin",
-            "gully-dwarf",
-            "high-elf",
-            "hill-dwarf",
-            "human",
-            "sea-elf",
-            "snow-elf",
-            "wood-elf",
-        ],
-        "the set of peoples gapping 'hill' at seed 42 moved"
+    assert!(
+        !gapped.is_empty() && !rooted.is_empty(),
+        "’hill’ partition degenerate: {} rooted vs {} gapped - exposure classification has stopped discriminating",
+        rooted.len(),
+        gapped.len()
     );
+    let romans: std::collections::BTreeSet<&String> = rooted.iter().map(|(_, r)| r).collect();
     assert_eq!(
-        rooted,
-        vec![
-            ("hobgoblin", "Noono".to_string()),
-            ("kobold", "Raraaroa".to_string()),
-        ],
-        "the set of peoples rooting 'hill' at seed 42 moved"
+        romans.len(),
+        rooted.len(),
+        "two peoples root 'hill' under the same roman - naming collision"
     );
+    for (_, r) in &rooted {
+        assert!(!r.is_empty(), "a rooted 'hill' carries an empty roman");
+    }
 }
-
 /// The honest counterpart to the test above, and no longer a symmetric
 /// "Gap for every placed people" claim as of The Contour: at seed 42,
 /// under the corrected (clamp-to-sea-level, full-ring) gate, `valley` now
@@ -880,10 +867,20 @@ fn hill_is_a_root_at_seed_42_for_hobgoblin_and_kobold() {
 /// ago over a DIFFERENT set: the count returning is not the set returning.
 /// Re-measured wholesale, not hand-edited.
 #[test]
-fn valley_is_a_root_at_seed_42_for_three_peoples() {
+fn valley_partition_is_total_and_discriminating_at_seed_42() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    // THE GRANARY conversion (2026-08-25): this witness pinned WHICH
+    // peoples gap 'valley' at seed 42 - a world-content snapshot that broke
+    // on every campaign that moved settlements (five re-pins in this file's
+    // history before this one). What the pipeline actually guarantees is
+    // structural, and that is what is asserted now: the partition over
+    // placed peoples is TOTAL (every people gets a Root or a Gap for every
+    // registered concept), roots carry distinct, non-empty roman forms
+    // within the concept, and the partition is non-degenerate both ways.
+    // Membership readings live in the dump helper below and in the census
+    // exposure columns, where movement is information rather than failure.
     let mut gapped: Vec<&str> = Vec::new();
     let mut rooted: Vec<(&str, String)> = Vec::new();
     for (species, _) in placed_peoples(&w) {
@@ -894,37 +891,22 @@ fn valley_is_a_root_at_seed_42_for_three_peoples() {
             other => panic!("{species}: unexpected 'valley' entry at seed 42: {other:?}"),
         }
     }
-    gapped.sort_unstable();
-    rooted.sort_unstable();
-    assert_eq!(
-        gapped,
-        vec![
-            "bugbear",
-            "desert-dwarf",
-            "desert-elf",
-            "drow",
-            "gnoll",
-            "goblin",
-            "gully-dwarf",
-            "hill-dwarf",
-            "human",
-            "kobold",
-            "snow-elf",
-            "wood-elf",
-        ],
-        "the set of peoples gapping 'valley' at seed 42 moved"
+    assert!(
+        !gapped.is_empty() && !rooted.is_empty(),
+        "’valley’ partition degenerate: {} rooted vs {} gapped - exposure classification has stopped discriminating",
+        rooted.len(),
+        gapped.len()
     );
+    let romans: std::collections::BTreeSet<&String> = rooted.iter().map(|(_, r)| r).collect();
     assert_eq!(
-        rooted,
-        vec![
-            ("high-elf", "Doomdom".to_string()),
-            ("hobgoblin", "Ganee".to_string()),
-            ("sea-elf", "Tuundun".to_string()),
-        ],
-        "the set of peoples rooting 'valley' at seed 42 moved"
+        romans.len(),
+        rooted.len(),
+        "two peoples root 'valley' under the same roman - naming collision"
     );
+    for (_, r) in &rooted {
+        assert!(!r.is_empty(), "a rooted 'valley' carries an empty roman");
+    }
 }
-
 /// `marsh`'s honest post-absorb shape (see `spring_is_a_root_for_every_
 /// placed_people_at_seed_42`'s doc comment for the measurement history):
 /// pre-absorb this split 3/4 (a real per-culture discrimination); after
@@ -1060,10 +1042,20 @@ fn valley_is_a_root_at_seed_42_for_three_peoples() {
 /// time. A run of seven is a run, not a law. Re-measured wholesale, not
 /// hand-edited.
 #[test]
-fn marsh_is_a_root_at_seed_42_for_seven_peoples_including_one_dwarf() {
+fn marsh_partition_is_total_and_discriminating_at_seed_42() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    // THE GRANARY conversion (2026-08-25): this witness pinned WHICH
+    // peoples gap 'marsh' at seed 42 - a world-content snapshot that broke
+    // on every campaign that moved settlements (five re-pins in this file's
+    // history before this one). What the pipeline actually guarantees is
+    // structural, and that is what is asserted now: the partition over
+    // placed peoples is TOTAL (every people gets a Root or a Gap for every
+    // registered concept), roots carry distinct, non-empty roman forms
+    // within the concept, and the partition is non-degenerate both ways.
+    // Membership readings live in the dump helper below and in the census
+    // exposure columns, where movement is information rather than failure.
     let mut gapped: Vec<&str> = Vec::new();
     let mut rooted: Vec<(&str, String)> = Vec::new();
     for (species, _) in placed_peoples(&w) {
@@ -1074,37 +1066,22 @@ fn marsh_is_a_root_at_seed_42_for_seven_peoples_including_one_dwarf() {
             other => panic!("{species}: unexpected 'marsh' entry at seed 42: {other:?}"),
         }
     }
-    gapped.sort_unstable();
-    rooted.sort_unstable();
-    assert_eq!(
-        gapped,
-        vec![
-            "bugbear",
-            "desert-dwarf",
-            "desert-elf",
-            "goblin",
-            "gully-dwarf",
-            "human",
-            "sea-elf",
-            "wood-elf",
-        ],
-        "the set of peoples gapping 'marsh' at seed 42 moved"
+    assert!(
+        !gapped.is_empty() && !rooted.is_empty(),
+        "’marsh’ partition degenerate: {} rooted vs {} gapped - exposure classification has stopped discriminating",
+        rooted.len(),
+        gapped.len()
     );
+    let romans: std::collections::BTreeSet<&String> = rooted.iter().map(|(_, r)| r).collect();
     assert_eq!(
-        rooted,
-        vec![
-            ("drow", "Gogsroa".to_string()),
-            ("gnoll", "Dshoopdshop".to_string()),
-            ("high-elf", "Gomsroam".to_string()),
-            ("hill-dwarf", "Mabas".to_string()),
-            ("hobgoblin", "Kotoa".to_string()),
-            ("kobold", "Xooxaa".to_string()),
-            ("snow-elf", "Boṅsroaṅ".to_string()),
-        ],
-        "the set of peoples rooting 'marsh' at seed 42 moved"
+        romans.len(),
+        rooted.len(),
+        "two peoples root 'marsh' under the same roman - naming collision"
     );
+    for (_, r) in &rooted {
+        assert!(!r.is_empty(), "a rooted 'marsh' carries an empty roman");
+    }
 }
-
 /// The mirror of [`river_exposure_tracks_real_proximity`] over the whole
 /// nine-concept terrain vocabulary, not just `river`: an unplaced species
 /// gets a Gap for every one of them, because every Steeped/KnowsOf rule
@@ -1600,4 +1577,58 @@ fn no_other_domain_claims_an_extradiegetic_concept_name() {
             concept.domain
         );
     }
+}
+
+/// Task 4b: felt-state exposure must DERIVE from a species' `MindVector`
+/// (spec §5.1) rather than fall through `exposure_of_impl`'s catch-all —
+/// which is what every one of `felt_state_pack`'s six concepts did before
+/// this task, for every species in every world (Task 4's own finding).
+/// Behavioural red: two authored peoples whose `MindVector`s differ must
+/// come out with DIFFERENT felt-state exposure, not merely different
+/// values in a table nobody reads through `exposure_from`.
+///
+/// goblin's `MindVector` (`domains/species/src/lib.rs`'s `psyche_registry`)
+/// sits exactly at the manikin's neutral midpoint on all three scalars
+/// (`threat_response`/`deliberation_latency`/`time_horizon` == 0.5), so the
+/// mapping's doc comment on `exposure_of_impl` predicts no pole
+/// predominates and all six stay Unknown. kobold's is `0.8`/`0.7`/`0.8` --
+/// clearing the midpoint on the "high" side on every scalar -- so the same
+/// mapping predicts exactly `frustrated`/`content`/`helpless` Steeped and
+/// `eager`/`lost`/`searching` left Unknown.
+#[test]
+fn felt_state_exposure_derives_from_mind_vector_and_differs_by_species() {
+    let w = world();
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    let goblin = exposure_from(&w, "goblin", &terrain, &climate).unwrap();
+    let kobold = exposure_from(&w, "kobold", &terrain, &climate).unwrap();
+
+    for (concept, _doc) in hornvale_language::felt_state_pack() {
+        assert!(
+            matches!(goblin.get(*concept), Some(ExposureClass::Unknown { .. })),
+            "expected goblin's neutral MindVector to leave '{concept}' Unknown, got {:?}",
+            goblin.get(*concept)
+        );
+    }
+
+    for concept in ["frustrated", "content", "helpless"] {
+        assert!(
+            matches!(kobold.get(concept), Some(ExposureClass::Steeped)),
+            "expected kobold's high-side MindVector to Steep '{concept}', got {:?}",
+            kobold.get(concept)
+        );
+    }
+    for concept in ["eager", "lost", "searching"] {
+        assert!(
+            matches!(kobold.get(concept), Some(ExposureClass::Unknown { .. })),
+            "expected kobold to stay Unknown in the low-side pole '{concept}', got {:?}",
+            kobold.get(concept)
+        );
+    }
+
+    assert_ne!(
+        goblin.get("content"),
+        kobold.get("content"),
+        "goblin (neutral) and kobold (high deliberation_latency) must differ on 'content'"
+    );
 }

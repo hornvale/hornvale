@@ -779,11 +779,49 @@ fn homophony_count_is_measured_and_pinned() {
     // 3.345x (19.528/5.839), against the 3.2699x recorded at the prior regen
     // — WIDENED, not narrowed, so the falsification-threshold warning above
     // stands unspent.
-    assert!((mg - 5.839).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 5.632).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 19.528).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    // kobold 5.816 -> 5.688 (same Burr regen as above).
-    assert!((mk - 5.688).abs() < 1e-9, "kobold mean drifted: {mk}");
+    //
+    // The Confidant (Arc III of The Bridle, re-pin verified against `main`
+    // before touching a literal): six felt-state concepts were registered
+    // and each people given a `MindVector`-governed derived exposure to some
+    // of them (`windows/lab/src/metrics.rs`'s `FELT_STATE_PAIRS`), so six new
+    // Root lexicon entries can enter a species' dictionary. `homophony_count`
+    // (`windows/lab/src/metrics.rs`) is `\u{2211} n*(n-1)/2` over surface-form
+    // buckets across the WHOLE lexicon, not a per-name statistic — so a
+    // handful of new Root entries move it combinatorially (each new entry
+    // that lands in an already-populated bucket adds a pair per existing
+    // occupant), unlike the roughly-linear name-length/syllable/collision-
+    // rate rows below, which moved by about one part in ten thousand at this
+    // same regen. Goblin's own mean is UNMOVED at 5.839 (its `MindVector`
+    // scalars evidently cross none of the three midpoints, so it gains no
+    // new Steeped word), while hobgoblin 5.632 -> 5.982, bugbear
+    // 19.528 -> 21.393, kobold 5.688 -> 6.113. The claim this row guards is
+    // re-checked, not assumed: bugbear still leads goblin, and by MORE than
+    // before — 3.664x (21.393/5.839) against 3.345x, and 3.576x over
+    // hobgoblin (21.393/5.982) against 3.4675x — both margins WIDENED, so the
+    // falsification-threshold warning above stands unspent.
+    // The Granary (2026-08-24, canonical census on lefford at c54fb62c9,
+    // goldens refreshed at the Granary's merged SHA): all four rise together —
+    // goblin 5.839 -> 5.861, hobgoblin 5.982 -> 6.040, bugbear
+    // 21.393 -> 21.510, kobold 6.113 -> 6.279. The mover is the sub-year raid
+    // timing: raids now resolve at a phase within the year rather than at its
+    // boundary, which changes which settlements survive each contest — and
+    // each daughter's surviving periphery, and the naming draws over it, move
+    // with the name populations. No seed-derivation label or hash constant
+    // changed; this is history-data movement against unchanged derivation,
+    // the roster-competition signature again rather than one daughter moving.
+    // The claim this row guards is re-checked, not assumed: bugbear leads
+    // goblin by 3.670x (21.510/5.861) against 3.664x — WIDENED a third
+    // consecutive regen — and hobgoblin by 3.561x against 3.576x, narrowed
+    // but far above the 3x falsification line, so the warning above stands
+    // unspent. These re-pin the witnesses, not the observation. Each mean is
+    // again an exact integer count over the 1000-seed census divided by 1000
+    // (5861, 6040, 21510, 6279). Post-unblinding re-measure, declared per
+    // decision 0016.
+    assert!((mg - 5.861).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 6.040).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 21.510).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    // kobold 6.113 -> 6.279 (The Granary's re-pin, same mechanism as above).
+    assert!((mk - 6.279).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

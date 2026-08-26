@@ -373,7 +373,7 @@ fn run_rung(
 
     let mut mesh_memo = RoomMeshMemo::new();
     let mut home_nav_cache = HomeNavCache::new();
-    let mut day = WorldTime::new(0.5).expect("0.5 is finite");
+    let mut day = WorldTime::from_std_days(0.5).expect("0.5 is finite");
 
     let facts_before = ledger.len();
     let searches_before = home_nav_cache.searches();
@@ -381,7 +381,7 @@ fn run_rung(
     let t0 = Instant::now();
     for _ in 0..TICKS {
         let from = day;
-        day = WorldTime::new(day.day() + 1.0).expect("day advance stays finite");
+        day = WorldTime::from_std_days(day.as_std_days() + 1.0).expect("day advance stays finite");
         // THE CACHE PRODUCTION ALWAYS PASSES. `LocaleTerrain::new` hard-codes
         // `cache: None`, so every drive's terrain read re-resolves room->vertex
         // through a full `NearestVertexIndex` scan — which a profile of the

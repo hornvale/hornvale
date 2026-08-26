@@ -54,7 +54,7 @@ fn world_with_a_living_community() -> World {
                     predicate: predicate.to_string(),
                     object,
                     place: Some(subject),
-                    day: Some(WorldTime::new(day).expect("test fixture day is finite")),
+                    day: Some(WorldTime::from_std_days(day).expect("test fixture day is finite")),
                     provenance: "history-units-test".to_string(),
                 },
                 &world.registry,

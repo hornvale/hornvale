@@ -16,7 +16,8 @@
 //! shape — instead.
 use hornvale_kernel::Seed;
 use hornvale_language::{
-    Envelope, ExoticSeg, Segment, assign_proto_roots_with_epoch_for_test, draw_phonology,
+    EPOCH_COHORTS, Envelope, ExoticSeg, Segment, assign_proto_roots_with_epoch_for_test,
+    draw_phonology,
 };
 
 /// A permissive envelope — every dimension maxed except tonality — so the
@@ -219,24 +220,46 @@ fn later_epoch_roots_degrade_to_epoch_zero_when_no_closed_coda_exists() {
     );
 }
 
-/// THE RADIATION (C2d): appending a cohort leaves every PRE-EXISTING
-/// concept's proto-root untouched, and folding the same six concepts into an
+/// THE RADIATION (C2d): appending a cohort leaves every proto-root assigned
+/// at an EARLIER epoch untouched, and folding the same six concepts into an
 /// earlier cohort does not.
 ///
 /// This is the campaign's save-format guard. `concept_epoch` sorts by epoch
-/// first, so an appended concept lands strictly last — the one position that
-/// provably displaces nothing. The alternative is not hypothetical: before
-/// this module existed, twelve species kinds added at once left ten free while
-/// `treant` moved 5 facts and `otyugh` 65, and omitting the cohort entirely
-/// changes which proto-root a concept draws (commit `ee4e6a00`).
+/// first, so a concept's assignment depends only on concepts sorted at or
+/// before it — appending a cohort can only ever perturb concepts at that
+/// cohort's epoch or LATER, never one processed earlier. The alternative is
+/// not hypothetical: before this module existed, twelve species kinds added
+/// at once left ten free while `treant` moved 5 facts and `otyugh` 65, and
+/// omitting the cohort entirely changes which proto-root a concept draws
+/// (commit `ee4e6a00`).
+///
+/// **Restricted to concepts strictly BEFORE the elf cohort's epoch, and this
+/// restriction is load-bearing, not cosmetic (The Confidant, Task 3).** The
+/// elf cohort (epoch 10) was the newest cohort when this test was written and
+/// every concept checked was therefore assigned after it in name only — the
+/// check actually held over the WHOLE remaining roster by chance, because no
+/// later cohort's forms happened to collide with what elf's presence changed
+/// downstream. Task 3 appended epoch 12 (the six felt-state concepts) and one
+/// of them, `lost`, DID collide: with elf present its probe walk lands on a
+/// different form than without, at seed 6, because `lost` is processed after
+/// elf and its draw depends on which forms elf already claimed. That is not a
+/// violation of additivity — it is additivity working exactly as designed,
+/// just for a direction this test wasn't checking. A concept processed AFTER
+/// the appended cohort was never guaranteed invariant to it; only concepts
+/// processed BEFORE it are. So the check below is scoped to `shipped_epoch(c)
+/// < elf_epoch`, which is the claim the algorithm's own ordering actually
+/// proves, permanently, no matter how many cohorts land after elf's.
 ///
 /// **The test discriminates by construction.** Two arms differ only in the
-/// epoch function: the shipped one (elf concepts at the new last cohort) and a
+/// epoch function: the shipped one (elf concepts at their real cohort) and a
 /// mutant that reports epoch 0 for them, i.e. exactly what folding them into
 /// cohort 0 would do. The shipped arm must reproduce the no-elf assignment
-/// EXACTLY on every seed; the mutant must break it on at least one. Without
-/// the second clause the first is satisfiable by an assignment that ignores
-/// epochs altogether.
+/// EXACTLY on every seed for every pre-elf concept; the mutant must break it
+/// on at least one. Without the second clause the first is satisfiable by an
+/// assignment that ignores epochs altogether. The anti-vacuity (`folded`)
+/// comparison stays over the FULL roster, not just the pre-elf slice — it is
+/// a contrast check ("does re-founding move ANYTHING"), not the additivity
+/// guarantee, so it is not subject to the same restriction.
 ///
 /// claim: invariant(forall-seed) — save-format contract. The additivity
 /// clause is a universal over seeds (it must hold for every one, so the loop
@@ -291,6 +314,27 @@ fn appending_the_elf_cohort_displaces_no_existing_proto_root() {
         }
     };
 
+    // The provable guarantee is one-directional: a concept processed BEFORE
+    // the elf cohort in the global (epoch, core, name) order can never be
+    // perturbed by elf's presence, but one processed after it can be — see
+    // this test's own doc for how Task 3 found that the hard way.
+    let elf_epoch = shipped_epoch(ELF_CONCEPTS[0]);
+    assert!(
+        ELF_CONCEPTS.iter().all(|c| shipped_epoch(c) == elf_epoch),
+        "the six elf concepts must share one accession epoch — they are one \
+         cohort, not six"
+    );
+    let concepts_before_elf: Vec<&str> = without_elves
+        .iter()
+        .copied()
+        .filter(|c| shipped_epoch(c) < elf_epoch)
+        .collect();
+    assert!(
+        !concepts_before_elf.is_empty(),
+        "no concept is assigned at an epoch before elf's — the restriction \
+         below would be vacuously true; re-derive elf_epoch"
+    );
+
     let mut folded_moved_somewhere = false;
     for raw in 1u64..=8 {
         let seed = Seed(raw);
@@ -329,16 +373,19 @@ fn appending_the_elf_cohort_displaces_no_existing_proto_root() {
             folded_epoch,
         );
 
-        for concept in &without_elves {
+        for concept in &concepts_before_elf {
             assert_eq!(
                 control.get(*concept),
                 appended.get(*concept),
                 "seed {raw}: appending the elf cohort moved `{concept}`'s \
-                 proto-root. Appending must be additive BY CONSTRUCTION — if \
-                 this fires, the six concepts are not in the LAST cohort, or \
-                 an existing cohort was edited. Do not re-pin this; fix the \
-                 table."
+                 proto-root, even though `{concept}` is assigned at an \
+                 earlier epoch than elf. Appending must be additive BY \
+                 CONSTRUCTION for every earlier-epoch concept — if this \
+                 fires, an existing cohort was edited or reordered. Do not \
+                 re-pin this; fix the table."
             );
+        }
+        for concept in &without_elves {
             if control.get(*concept) != folded.get(*concept) {
                 folded_moved_somewhere = true;
             }
@@ -351,5 +398,126 @@ fn appending_the_elf_cohort_displaces_no_existing_proto_root() {
          existing proto-root on any of eight seeds, so the additivity clause \
          above proves nothing — the epoch ordering is not reaching the \
          assignment at all. Investigate before trusting this test."
+    );
+}
+
+/// THE CONFIDANT (Task 3): appending the felt-state cohort (epoch 12, the six
+/// `AffectLabel` concepts) leaves every OTHER existing proto-root untouched,
+/// with no restriction needed — unlike the elf test above, epoch 12 is
+/// genuinely the LAST cohort in the live table, so every other concept in the
+/// roster is processed strictly before it and the full-roster guarantee
+/// actually holds. This is the positive control for the restriction that
+/// test needed: the same technique, applied to a cohort that really is last,
+/// needs no carve-out.
+///
+/// claim: invariant(forall-seed) — save-format contract, mirroring
+/// `appending_the_elf_cohort_displaces_no_existing_proto_root`'s shape and
+/// citing its own doc for the mechanism.
+#[test]
+fn appending_the_felt_state_cohort_displaces_no_existing_proto_root() {
+    const FELT_STATE_CONCEPTS: [&str; 6] = [
+        "content",
+        "eager",
+        "frustrated",
+        "helpless",
+        "lost",
+        "searching",
+    ];
+
+    let all: Vec<&'static str> = hornvale_language::EPOCH_COHORTS
+        .iter()
+        .flat_map(|cohort| cohort.iter().copied())
+        .collect();
+    assert!(
+        FELT_STATE_CONCEPTS.iter().all(|c| all.contains(c)),
+        "the felt-state cohort has not been appended yet"
+    );
+    let without_felt_states: Vec<&'static str> = all
+        .iter()
+        .copied()
+        .filter(|c| !FELT_STATE_CONCEPTS.contains(c))
+        .collect();
+    assert_eq!(
+        without_felt_states.len() + FELT_STATE_CONCEPTS.len(),
+        all.len(),
+        "the six felt-state concepts must appear exactly once each in the table"
+    );
+    assert_eq!(
+        *EPOCH_COHORTS.last().expect("non-empty"),
+        FELT_STATE_CONCEPTS.as_slice(),
+        "the felt-state cohort must be the LAST cohort — this test's lack of \
+         a before/after restriction depends on that"
+    );
+
+    let shipped_epoch = hornvale_language::concept_epoch;
+    let folded_epoch = |c: &str| {
+        if FELT_STATE_CONCEPTS.contains(&c) {
+            0
+        } else {
+            hornvale_language::concept_epoch(c)
+        }
+    };
+
+    let mut folded_moved_somewhere = false;
+    for raw in 1u64..=8 {
+        let seed = Seed(raw);
+        let ph = draw_phonology(
+            &seed,
+            "goblin",
+            &permissive_envelope(),
+            &hornvale_language::typology::concatenative(),
+        );
+
+        let control = assign_proto_roots_with_epoch_for_test(
+            &seed,
+            "goblinoid",
+            &ph,
+            &hornvale_language::typology::concatenative(),
+            &without_felt_states,
+            &[],
+            shipped_epoch,
+        );
+        let appended = assign_proto_roots_with_epoch_for_test(
+            &seed,
+            "goblinoid",
+            &ph,
+            &hornvale_language::typology::concatenative(),
+            &all,
+            &[],
+            shipped_epoch,
+        );
+        let folded = assign_proto_roots_with_epoch_for_test(
+            &seed,
+            "goblinoid",
+            &ph,
+            &hornvale_language::typology::concatenative(),
+            &all,
+            &[],
+            folded_epoch,
+        );
+
+        for concept in &without_felt_states {
+            assert_eq!(
+                control.get(*concept),
+                appended.get(*concept),
+                "seed {raw}: appending the felt-state cohort moved \
+                 `{concept}`'s proto-root. Appending must be additive BY \
+                 CONSTRUCTION — if this fires, the six concepts are not in \
+                 the LAST cohort, or an existing cohort was edited. Do not \
+                 re-pin this; fix the table."
+            );
+            if control.get(*concept) != folded.get(*concept) {
+                folded_moved_somewhere = true;
+            }
+        }
+    }
+
+    assert!(
+        folded_moved_somewhere,
+        "ANTI-VACUITY: folding the six felt-state concepts into cohort 0 \
+         moved no existing proto-root on any of eight seeds, so the \
+         additivity clause above proves nothing — the epoch ordering is not \
+         reaching the assignment at all. Investigate before trusting this \
+         test."
     );
 }

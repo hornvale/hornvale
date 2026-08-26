@@ -50,7 +50,7 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
             "help" => write!(output, "{HELP}")?,
             "sky" => {
                 let day = argument.and_then(|a| a.parse().ok()).unwrap_or(0.0);
-                match WorldTime::new(day) {
+                match WorldTime::from_std_days(day) {
                     Ok(time) => match world_builder::sky_report(world, time) {
                         Ok(report) => writeln!(output, "{}", report.description)?,
                         Err(e) => writeln!(output, "error: {e}")?,
@@ -96,6 +96,7 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                             } else {
                                 format!("land, {relative:.0} m above the sea")
                             };
+                            // lexicon: rendered REPL prose, kept "cell" (windows/almanac precedent)
                             writeln!(
                                 output,
                                 "vertex {}: {surface}; plate {}; unrest {:.2}",
@@ -710,7 +711,7 @@ mod tests {
 
     /// `f64::from_str` accepts `inf`/`-inf`/`nan`/`infinity`, which are not
     /// finite days — a value typed at repl stdin, not a bug in any caller.
-    /// Before the fix round this reached `WorldTime::new(day).expect(...)`
+    /// Before the fix round this reached `WorldTime::from_std_days(day).expect(...)`
     /// and panicked the process; it must instead fail through the same
     /// `error: {e}` path every other malformed-input arm uses.
     #[test]
@@ -835,11 +836,12 @@ mod tests {
         // Each fact line is tagged with the domain that asserted it. Under The
         // Living Community epoch the flagship settlement's
         // is-settlement/population/cell-id facts are committed by the
-        // deep-history bake (tag "(history/bake/v2)" since The Contour bumped
-        // the label — decision 0006, an epoch suffix, never a rename) rather
-        // than the settlement domain.
+        // deep-history bake (tag "(history/bake/vN)" — The Contour bumped the
+        // label to v2, The Granary to v3; decision 0006, an epoch suffix,
+        // never a rename) rather than the settlement domain. Match the prefix
+        // so the next epoch suffix doesn't repeat this edit.
         assert!(
-            out.contains("(history/bake/v2)") || out.contains("(terrain)"),
+            out.contains("(history/bake/") || out.contains("(terrain)"),
             "expected a domain-tagged fact line for {subject:?}: {out}"
         );
     }

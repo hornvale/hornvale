@@ -66,26 +66,24 @@ pub fn village_or_fallback(npc: &Body) -> hornvale_settlement::VillageInfo {
 /// Commit order is time order, so the last matching fact is the position held
 /// at `t` (the whole-history case — every fact ≤ `t` — is the absolute latest).
 ///
-/// **`t` is quantized before the comparison** (`KNOW-commit-read-same-instant`,
-/// The Hand Task 3 Step 2b). `Ledger::commit` quantizes a fact's `day` to 8
-/// significant digits, and that quantization rounds UPWARD as often as down
-/// (`quantize(0.011719999738288106) == 0.01172`, strictly greater) — so a fact
-/// committed at exactly `t` could fail its own `d <= t` filter, reading back as
-/// "no position committed yet" and falling to `npc.home`, one line away from
-/// the commit that just happened. Quantizing the query bound the same way the
-/// stored value already was makes the two directly comparable: a same-instant
-/// commit-then-read now finds itself, and every other case is unaffected — the
-/// tiny rounding quantization introduces cannot flip the ordering between a
-/// `t` and a `d` that were not already within one part in 10^8 of each other.
-/// Its own commit, ahead of The Hand's merge, because the merge is what makes
-/// this comparison run on the possessed body's OWN position every turn
-/// (previously a mutable field, byte-identical by construction) rather than
-/// only in the narrow `wait`/`narrate_motion` case that exposed it first.
+/// **The comparison is an exact tick comparison, and `t` is NOT rounded**
+/// (decision 0186; spec §1's paired workaround). The Hand carried
+/// `let t = quantize(t.day())` here, because `Ledger::commit` quantized a
+/// fact's `day` to 8 *significant* digits and that rounding went UPWARD as
+/// often as down (`quantize(0.011719999738288106)` is strictly greater), so a
+/// fact committed at exactly `t` could fail its own `d <= t` filter, read back
+/// as "no position committed yet", and fall to `npc.home` one line after the
+/// commit that made it. The Escapement removed the cause instead of the
+/// symptom: a [`WorldTime`] is an exact `i64` tick count, `Ledger::commit`
+/// stores it unrounded, and `1172 == 1172`. Rounding the query bound now would
+/// reintroduce the same mismatch in the opposite direction — a quantized bound
+/// compared against exactly-stored days — silently, with nothing going red,
+/// which is why spec §1 requires the second merger to delete this half rather
+/// than keep both.
 fn latest_committed_position(ledger: &Ledger, npc: &Body, t: WorldTime) -> Option<Facet> {
-    let t = hornvale_kernel::quantize(t.day());
     ledger
         .facts_of(npc.entity, AGENT_AT)
-        .filter(|f| f.day.map(|d| d.day() <= t).unwrap_or(false))
+        .filter(|f| f.day.map(|d| d <= t).unwrap_or(false))
         .last()
         .and_then(|f| match &f.object {
             Value::Text(s) => Some(room_from_text(s)),
@@ -470,7 +468,10 @@ const DEFAULT_FORAGE: f64 = 1.0;
 /// `Terrain::solar_altitude` default, and `LocaleTerrain`'s fallback when a
 /// world carries no calendar.
 fn fractional_day_sun(day: WorldTime) -> Option<f64> {
-    let frac = day.day() - day.day().floor();
+    // `tick_of_day()` IS the time of day (The Escapement, decision 0186): an
+    // exact tick within the day, correct for negative instants where
+    // `x - x.floor()` on an f64 day was not.
+    let frac = day.tick_of_day() as f64 / WorldTime::TICKS_PER_STD_DAY as f64;
     Some(90.0 * hornvale_kernel::math::cos(std::f64::consts::TAU * (frac - 0.5)))
 }
 
@@ -682,7 +683,7 @@ impl<'a> Terrain for LocaleTerrain<'a> {
         // fractional-day fallback. No `corner_weights` read here (a pure
         // astronomy calc over the room's centroid), so no cache to consult.
         match self.calendar {
-            Some(cal) => hornvale_astronomy::StdDays::new(day.day())
+            Some(cal) => hornvale_astronomy::StdDays::new(day.as_std_days())
                 .ok()
                 .and_then(|t| cal.solar_altitude_at(t, room.coord().latitude)),
             None => fractional_day_sun(day),
@@ -808,7 +809,7 @@ fn agent_sightings(ledger: &Ledger, entity: EntityId, upto: f64) -> Vec<(f64, Fa
     let mut v: Vec<(f64, Facet)> = ledger
         .facts_of(entity, AGENT_AT)
         .filter_map(|f| {
-            let d = f.day?.day();
+            let d = f.day?.as_std_days();
             if d > upto {
                 return None;
             }
@@ -867,7 +868,10 @@ fn integrate_thirst(
             .map(|(_, r)| r)
             .unwrap_or(home);
         let rate = rise_at(
-            terrain.temperature(pos, WorldTime::new(s).expect("a day value is finite")),
+            terrain.temperature(
+                pos,
+                WorldTime::from_std_days(s).expect("a day value is finite"),
+            ),
             class,
             p,
         );
@@ -894,9 +898,17 @@ pub fn drive_at(
     let last_drank = ledger
         .facts_of(entity, DRANK)
         .filter_map(|f| f.day)
-        .fold(0.0_f64, |acc, d| acc.max(d.day()));
-    let sightings = agent_sightings(ledger, entity, t.day());
-    integrate_thirst(&sightings, home, last_drank, t.day(), terrain, class, p)
+        .fold(0.0_f64, |acc, d| acc.max(d.as_std_days()));
+    let sightings = agent_sightings(ledger, entity, t.as_std_days());
+    integrate_thirst(
+        &sightings,
+        home,
+        last_drank,
+        t.as_std_days(),
+        terrain,
+        class,
+        p,
+    )
 }
 
 /// Belief (L1): the agent's nearest KNOWN water — a pure fold over its committed
@@ -947,8 +959,10 @@ pub fn believed_water(
 /// `frozen`, and `run_simulation` (the lab's headless sim) builds one per tick
 /// for its post-tick affect reads. This collapses the dominant within-tick
 /// re-derivation to O(roster × distinct-days) while keeping the verdict provably
-/// identical to a fresh `affect_of` (day quantized to its bit pattern, which
-/// recurs exactly across the `agent-at` days that key it).
+/// identical to a fresh `affect_of` (the day is an exact tick count, which
+/// recurs exactly across the `agent-at` days that key it — see the field docs
+/// below; this read "quantized to its bit pattern" until The Escapement,
+/// decision 0186, made the key the instant itself).
 ///
 /// It also caches the per-time EMITTER SCAN — which roster members could ever
 /// raise an alarm and where, plus their position timelines — since that scan is
@@ -956,10 +970,16 @@ pub fn believed_water(
 /// same fixed ledger (built once per tick instead of once per creature).
 #[derive(Default)]
 pub struct PrimaryAfraidMemo {
-    /// `(entity, day-bits) → emitted arousal` (`0.0` = not primary-afraid).
-    afraid: std::collections::BTreeMap<(EntityId, u64), f64>,
-    /// `t-day-bits → the emitter scan` over the (tick-fixed) roster and ledger.
-    scans: std::collections::BTreeMap<u64, EmitterScan>,
+    /// `(entity, instant) → emitted arousal` (`0.0` = not primary-afraid).
+    ///
+    /// Keyed on the `WorldTime` itself. It used to be keyed on
+    /// `day().to_bits()`, because an `f64` day has no total order and so could
+    /// not key a `BTreeMap`; a tick count is an exact `i64` and `WorldTime`
+    /// derives `Ord`/`Eq`/`Hash` (The Escapement, decision 0186).
+    afraid: std::collections::BTreeMap<(EntityId, WorldTime), f64>,
+    /// `t → the emitter scan` over the (tick-fixed) roster and ledger. Keyed on
+    /// the instant itself, same reason as `afraid`.
+    scans: std::collections::BTreeMap<WorldTime, EmitterScan>,
 }
 
 impl PrimaryAfraidMemo {
@@ -999,7 +1019,7 @@ fn build_emitter_scan(
         let mut timeline: Vec<(f64, Facet)> = ledger
             .facts_of(m.entity, AGENT_AT)
             .filter_map(|f| {
-                let d = f.day.filter(|d| *d <= t)?.day();
+                let d = f.day.filter(|d| *d <= t)?.as_std_days();
                 match &f.object {
                     Value::Text(s) => Some((d, room_from_text(s))),
                     _ => None,
@@ -1044,13 +1064,13 @@ fn build_emitter_scan(
 /// inner `affect_of` reads an EMPTY band, so its own `believed_hazard` is
 /// emitter-free and never re-enters this path (the recursion break).
 fn emitter_arousal(
-    afraid: &mut std::collections::BTreeMap<(EntityId, u64), f64>,
+    afraid: &mut std::collections::BTreeMap<(EntityId, WorldTime), f64>,
     frozen: &Ledger,
     npc: &Body,
     day: WorldTime,
     terrain: &dyn Terrain,
 ) -> f64 {
-    let key = (npc.entity, day.day().to_bits());
+    let key = (npc.entity, day);
     if let Some(&v) = afraid.get(&key) {
         return v;
     }
@@ -1186,7 +1206,7 @@ pub fn hazard_memory_memo(
     // visit, so a later safe visit clears an earlier phantom (the staleness rule).
     let mut latest: std::collections::BTreeMap<Facet, f64> = std::collections::BTreeMap::new();
     for f in ledger.facts_of(npc.entity, AGENT_AT) {
-        if let Some(fday) = f.day.filter(|d| *d <= t).map(WorldTime::day)
+        if let Some(fday) = f.day.filter(|d| *d <= t).map(WorldTime::as_std_days)
             && let Value::Text(s) = &f.object
         {
             latest
@@ -1204,13 +1224,12 @@ pub fn hazard_memory_memo(
     // timelines, and the rooms any alarm could reach) is IDENTICAL for every
     // creature's re-derivation at this time over this ledger — build it once and
     // cache it per `t` (see [`PrimaryAfraidMemo`]).
-    let tbits = t.day().to_bits();
     memo.scans
-        .entry(tbits)
+        .entry(t)
         .or_insert_with(|| build_emitter_scan(roster, ledger, terrain, t));
     // Disjoint field borrows: the scan (read) and the affect memo (write).
     let PrimaryAfraidMemo { afraid, scans } = memo;
-    let scan = &scans[&tbits];
+    let scan = &scans[&t];
 
     // The emitter's committed position AT `day`: the latest entry with day ≤ it,
     // else its home (the pre-history fallback) — `agent_position` over the
@@ -1238,7 +1257,7 @@ pub fn hazard_memory_memo(
                 &room,
                 npc,
                 terrain,
-                WorldTime::new(day).expect("a day value is finite"),
+                WorldTime::from_std_days(day).expect("a day value is finite"),
                 &[],
                 ledger,
             ) {
@@ -1289,7 +1308,7 @@ pub fn hazard_memory_memo(
                     afraid,
                     ledger,
                     m,
-                    WorldTime::new(day).expect("a day value is finite"),
+                    WorldTime::from_std_days(day).expect("a day value is finite"),
                     terrain,
                 );
             }
@@ -1639,6 +1658,14 @@ pub struct Resolution {
     pub mode: Mode,
     /// The felt state this decision expresses.
     pub affect: Affect,
+    /// The other drives arbitration found ACTIVE this decision but did not
+    /// pursue (The Confidant, Task 5) — the discarded ranks `affect`/
+    /// `object` never carry, kept here rather than dropped so a caller can
+    /// retrieve them. This is the residue the creature itself cannot
+    /// introspect: a host-facing utterance (the lexicon lookup,
+    /// `windows/vessel/src/testimony.rs`) must draw from `affect` alone,
+    /// never from this field.
+    pub suppressed: Vec<DriveKind>,
 }
 
 /// Thirst — the one authored (sustenance) drive, Drive #1. `urgency` is the
@@ -2196,7 +2223,7 @@ pub(crate) fn next_awake_day(
             activity,
             terrain,
             room,
-            WorldTime::new(t).expect("a day value is finite"),
+            WorldTime::from_std_days(t).expect("a day value is finite"),
         ) {
             return t;
         }
@@ -2230,8 +2257,8 @@ pub fn fatigue_at(ledger: &Ledger, entity: EntityId, t: WorldTime) -> f64 {
     let last_rested = ledger
         .facts_of(entity, RESTED)
         .filter_map(|f| f.day)
-        .fold(0.0_f64, |acc, d| acc.max(d.day()));
-    (FATIGUE_RISE * (t.day() - last_rested)).clamp(0.0, 1.0)
+        .fold(0.0_f64, |acc, d| acc.max(d.as_std_days()));
+    (FATIGUE_RISE * (t.as_std_days() - last_rested)).clamp(0.0, 1.0)
 }
 
 /// The rest (fatigue) drive, Drive #3 (The Slumber). A STOCK drive like thirst:
@@ -2408,9 +2435,17 @@ pub fn hunger_at(
     let last_ate = ledger
         .facts_of(entity, EATEN)
         .filter_map(|f| f.day)
-        .fold(0.0_f64, |acc, d| acc.max(d.day()));
-    let sightings = agent_sightings(ledger, entity, t.day());
-    integrate_thirst(&sightings, home, last_ate, t.day(), terrain, class, &HUNGER)
+        .fold(0.0_f64, |acc, d| acc.max(d.as_std_days()));
+    let sightings = agent_sightings(ledger, entity, t.as_std_days());
+    integrate_thirst(
+        &sightings,
+        home,
+        last_ate,
+        t.as_std_days(),
+        terrain,
+        class,
+        &HUNGER,
+    )
 }
 
 /// Hunger — the fourth drive (The Provender): a STOCK drive like thirst, but
@@ -3316,6 +3351,10 @@ pub fn arbitrate(
                 label: AffectLabel::Helpless,
                 object: Some(DriveKind::Thirst),
             },
+            // The short-circuit bypasses per-drive threshold engagement
+            // entirely (no `active` vector is ever computed on this path),
+            // so there are no OTHER ranks to have discarded this decision.
+            suppressed: Vec::new(),
         };
     }
 
@@ -3382,12 +3421,16 @@ pub fn arbitrate(
                 intent: feature.first_step.map(Intent::Do).unwrap_or(Intent::Hold),
                 mode: Mode::Homing,
                 affect,
+                // `active` is all-false on this path by construction (the
+                // guard above), so nothing was discarded.
+                suppressed: Vec::new(),
             };
         }
         return Resolution {
             intent: Intent::Hold,
             mode: Mode::Idle,
             affect,
+            suppressed: Vec::new(),
         };
     }
 
@@ -3466,6 +3509,19 @@ pub fn arbitrate(
         _ => loudest,
     };
     let pursued_kind = drives[pursued].kind();
+
+    // Arbitration's own discarded ranks (The Confidant, Task 5): every OTHER
+    // drive that crossed its own engagement threshold this decision but lost
+    // the contest for `pursued` — computed from the same `active`/
+    // `pursued_kind` this resolution already derived, not a second pass.
+    // THE FILTER: excludes `pursued_kind` itself, which is what keeps the
+    // winner and its residue disjoint — see `Resolution::suppressed`'s own
+    // doc for why nothing downstream may fold this back into `affect`/
+    // `object`.
+    let suppressed: Vec<DriveKind> = (0..drives.len())
+        .filter(|&i| active[i] && drives[i].kind() != pursued_kind)
+        .map(|i| drives[i].kind())
+        .collect();
 
     // Weight each active drive: the pursued drive at 1, every other active
     // drive at `latency` (grab 0 ↔ weigh 1). Then utility = weighted sum.
@@ -3566,6 +3622,7 @@ pub fn arbitrate(
                 label,
                 object,
             },
+            suppressed: suppressed.clone(),
         }
     } else {
         // Blocked: no candidate reduces the drive. With a KNOWN target it cannot
@@ -3586,6 +3643,7 @@ pub fn arbitrate(
                 label,
                 object,
             },
+            suppressed,
         }
     }
 }
@@ -3720,7 +3778,7 @@ pub fn affect_of_memo_occupied(
     let last_drank = frozen
         .facts_of(npc.entity, DRANK)
         .filter_map(|f| f.day)
-        .fold(0.0_f64, |acc, d| acc.max(d.day()));
+        .fold(0.0_f64, |acc, d| acc.max(d.as_std_days()));
     let believed = shared_believed_water(frozen, npc, band, day, terrain, PLAN_BUDGET);
     let drive = drive_at(
         frozen,
@@ -3851,7 +3909,7 @@ pub fn affect_of_memo_occupied(
         drives.push(&danger);
         drives.push(&social);
     }
-    let helpless = !ametabolic && learned_helplessness(last_drank, day.day());
+    let helpless = !ametabolic && learned_helplessness(last_drank, day.as_std_days());
     let disposition = Disposition {
         latency: npc.deliberation_latency,
         horizon: npc.time_horizon,
@@ -4068,7 +4126,7 @@ pub(crate) fn agent_at_fact(entity: EntityId, target: &Facet, day: f64, provenan
         predicate: AGENT_AT.to_string(),
         object: Value::Text(room_to_text(target)),
         place: None,
-        day: Some(WorldTime::new(day).expect("simulated day is finite")),
+        day: Some(WorldTime::from_std_days(day).expect("simulated day is finite")),
         provenance: provenance.to_string(),
     }
 }
@@ -4082,7 +4140,7 @@ pub(crate) fn agent_at_fact(entity: EntityId, target: &Facet, day: f64, provenan
 /// same seam, a hand-built scenario instead of a derived population. Typed
 /// throughout (no primitive at the boundary), so it needs no type-audit tag.
 pub fn place_agent(entity: EntityId, room: &Facet, day: WorldTime) -> Fact {
-    agent_at_fact(entity, room, day.day(), "harness-placement")
+    agent_at_fact(entity, room, day.as_std_days(), "harness-placement")
 }
 
 /// A committed `drank` fact: `entity` satisfied its sustenance goal on `day`.
@@ -4092,7 +4150,7 @@ fn drank_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
         predicate: DRANK.to_string(),
         object: Value::Flag(true),
         place: None,
-        day: Some(WorldTime::new(day).expect("simulated day is finite")),
+        day: Some(WorldTime::from_std_days(day).expect("simulated day is finite")),
         provenance: provenance.to_string(),
     }
 }
@@ -4105,7 +4163,7 @@ pub(crate) fn rested_fact(entity: EntityId, day: f64, provenance: &str) -> Fact 
         predicate: RESTED.to_string(),
         object: Value::Flag(true),
         place: None,
-        day: Some(WorldTime::new(day).expect("simulated day is finite")),
+        day: Some(WorldTime::from_std_days(day).expect("simulated day is finite")),
         provenance: provenance.to_string(),
     }
 }
@@ -4118,7 +4176,7 @@ fn eaten_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
         predicate: EATEN.to_string(),
         object: Value::Flag(true),
         place: None,
-        day: Some(WorldTime::new(day).expect("simulated day is finite")),
+        day: Some(WorldTime::from_std_days(day).expect("simulated day is finite")),
         provenance: provenance.to_string(),
     }
 }
@@ -4165,7 +4223,7 @@ fn room_entry_day(ledger: &Ledger, npc: &Body, t: WorldTime) -> f64 {
         .filter(|f| f.day.map(|d| d <= t).unwrap_or(false))
         .last()
         .and_then(|f| f.day)
-        .map(WorldTime::day)
+        .map(WorldTime::as_std_days)
         .unwrap_or(0.0)
 }
 
@@ -4205,7 +4263,10 @@ fn hold_step(
     ceiling: f64,
 ) -> HoldStep {
     let rate_here = rise_at(
-        terrain.temperature(pos, WorldTime::new(day).expect("a day value is finite")),
+        terrain.temperature(
+            pos,
+            WorldTime::from_std_days(day).expect("a day value is finite"),
+        ),
         npc.thermal_strategy,
         params,
     );
@@ -4303,9 +4364,9 @@ fn decide_step(
             && f.predicate == AGENT_AT
             && let Value::Text(s) = &f.object
             && let Some(d) = f.day
-            && d.day() <= day
+            && d.as_std_days() <= day
         {
-            sightings.push((d.day(), room_from_text(s)));
+            sightings.push((d.as_std_days(), room_from_text(s)));
         }
     }
     sightings.sort_by(|a, b| a.0.total_cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
@@ -4341,7 +4402,7 @@ fn decide_step(
     let thermal = Thermal {
         niche: npc.temperature_niche,
         terrain,
-        day: WorldTime::new(day).expect("a day value is finite"),
+        day: WorldTime::from_std_days(day).expect("a day value is finite"),
         interior,
     };
     let rest = Fatigue {
@@ -4351,7 +4412,7 @@ fn decide_step(
         urgency: hunger_urgency,
         niche: npc.niche.clone(),
         terrain,
-        day: WorldTime::new(day).expect("a day value is finite"),
+        day: WorldTime::from_std_days(day).expect("a day value is finite"),
     };
     let danger = Danger {
         terrain,
@@ -4407,7 +4468,7 @@ fn decide_step(
             npc.activity,
             terrain,
             pos,
-            WorldTime::new(day).expect("a day value is finite"),
+            WorldTime::from_std_days(day).expect("a day value is finite"),
         ),
     };
     let resolution = arbitrate(
@@ -4438,7 +4499,7 @@ fn last_fact_day_at_or_before(ledger: &Ledger, predicate: &str, entity: EntityId
     ledger
         .facts_of(entity, predicate)
         .filter_map(|f| f.day)
-        .map(WorldTime::day)
+        .map(WorldTime::as_std_days)
         .filter(|&d| d <= day)
         .fold(0.0_f64, f64::max)
 }
@@ -4613,7 +4674,7 @@ fn catch_up(
         let thermal = Thermal {
             niche: npc.temperature_niche,
             terrain,
-            day: WorldTime::new(horizon).expect("a day value is finite"),
+            day: WorldTime::from_std_days(horizon).expect("a day value is finite"),
             interior: occupancy.at(npc.entity).map(|a| (interior, a)),
         };
         if let Some(target) = thermal.preferred_anchor(pos, budget) {
@@ -4730,8 +4791,26 @@ impl<'a> DriveMovements<'a> {
             Some(d) => per_day / d,
             None => per_day,
         };
-        let to_ticks = (self.to.day() * scale).round() as u64;
-        let from_ticks = (self.from.day() * scale).round() as u64;
+        // Derived from the EXACT standard tick count rather than a re-derived
+        // f64 day (spec §2.1). The scheduler's lattice is LOCAL ticks; the
+        // kernel's is standard-day ticks.
+        let local_ticks_of = |t: WorldTime| -> u64 {
+            match self.day_length_std.filter(|d| d.is_finite() && *d > 0.0) {
+                // A rotation pin puts the two lattices at different rates, so
+                // this crossing is a genuine rescale and keeps the arithmetic
+                // it always had — bit for bit, now read off `ticks()`.
+                Some(d) => ((t.ticks() as f64 / WorldTime::TICKS_PER_STD_DAY as f64)
+                    * (per_day / d))
+                    .round() as u64,
+                // With no pin the two lattices COINCIDE, so the conversion is
+                // the identity — exactly, not to within a rounding budget.
+                // `max(0)` states what the old saturating `as u64` cast did
+                // silently for a pre-genesis instant.
+                None => t.ticks().max(0) as u64,
+            }
+        };
+        let to_ticks = local_ticks_of(self.to);
+        let from_ticks = local_ticks_of(self.from);
         for npc in &self.npcs {
             let mut st = WalkState::begin(frozen, npc, &self.npcs, self.from, self.terrain);
             // THE THRESHOLD's crossing: arrive at the landing anchor of the
@@ -4785,7 +4864,7 @@ impl<'a> DriveMovements<'a> {
             // queue — keeps the order-independence above trivially true.
             st.mode = catch_up(
                 room_entry_day(frozen, npc, self.from),
-                self.from.day(),
+                self.from.as_std_days(),
                 &st.pos,
                 npc,
                 self.terrain,
@@ -4914,6 +4993,21 @@ struct WalkState {
     steps: usize,
     /// The commitment mode carried across this walk's steps (hysteresis).
     mode: Mode,
+    /// The most recent resolution's felt state (The Confidant, Task 2) — NOT
+    /// hysteresis like `mode`: a pure per-decision read, overwritten by every
+    /// `advance_one` iteration and never fed back into `decide_step`. The
+    /// placeholder `begin` seeds it with is always overwritten before being
+    /// read, because `advance_one`'s loop runs at least once whenever any
+    /// time has elapsed (`Session::wait` validates `days > 0.0`, so
+    /// `st.day == from.day() < to.day()` after `catch_up` returns, and the
+    /// loop's own guard is `st.day > self.to.day()`).
+    affect: Affect,
+    /// The same resolution's discarded ranks (The Confidant, Task 5) —
+    /// alongside `affect`, a pure per-decision read overwritten every
+    /// `advance_one` iteration, never hysteresis. See that field's own doc
+    /// for why the placeholder `begin` seeds this with is always overwritten
+    /// before any caller reads it back.
+    suppressed: Vec<DriveKind>,
     /// The derived interior of the room at `pos` (The Threshold) — the anchor
     /// graph `Thermal`'s within-room branch routes over, and the graph the
     /// creature's `Occupancy` entry indexes into. Re-derived every time `pos`
@@ -4936,26 +5030,26 @@ impl WalkState {
         terrain: &dyn Terrain,
     ) -> WalkState {
         let pos = agent_position(frozen, npc, from);
-        let day = from.day();
+        let day = from.as_std_days();
         // A scratch ledger view isn't available; track drank locally: derive
         // the starting last-drank day from `frozen`, then simulate forward,
         // updating a local `last_drank` as we emit `DRANK` facts.
         let last_drank = frozen
             .facts_of(npc.entity, DRANK)
             .filter_map(|f| f.day)
-            .fold(0.0_f64, |acc, d| acc.max(d.day()));
+            .fold(0.0_f64, |acc, d| acc.max(d.as_std_days()));
         // Likewise the last rest day (The Slumber): fatigue is time since it,
         // reset when a `rested` fact is emitted.
         let last_rested = frozen
             .facts_of(npc.entity, RESTED)
             .filter_map(|f| f.day)
-            .fold(0.0_f64, |acc, d| acc.max(d.day()));
+            .fold(0.0_f64, |acc, d| acc.max(d.as_std_days()));
         // Likewise the last meal day (The Provender): hunger is a path
         // integral since it, reset when an `eaten` fact is emitted.
         let last_ate = frozen
             .facts_of(npc.entity, EATEN)
             .filter_map(|f| f.day)
-            .fold(0.0_f64, |acc, d| acc.max(d.day()));
+            .fold(0.0_f64, |acc, d| acc.max(d.as_std_days()));
         // Belief and exploration state, evolved locally across the walk (the
         // fold includes this tick's own emitted moves). Seed belief from the
         // pre-tick history; grow it whenever the agent stands in water.
@@ -4974,6 +5068,18 @@ impl WalkState {
         // `&mut Occupancy`, which is shared across the whole population and so
         // lives one level up rather than in this per-creature constructor.
         let interior = interior_of(&pos, terrain);
+        // A placeholder (spec §7's normal state, zeroed and objectless) —
+        // see the field's own doc for why this is always overwritten before
+        // any caller reads it back.
+        let affect = Affect {
+            arousal: 0.0,
+            valence: 0.0,
+            label: AffectLabel::Content,
+            object: None,
+        };
+        // A placeholder (nothing suppressed) — see the field's own doc for
+        // why this is always overwritten before any caller reads it back.
+        let suppressed = Vec::new();
         WalkState {
             pos,
             day,
@@ -4984,6 +5090,8 @@ impl WalkState {
             visited,
             steps,
             mode,
+            affect,
+            suppressed,
             interior,
         }
     }
@@ -5028,7 +5136,7 @@ impl<'a> DriveMovements<'a> {
         home_nav_cache: &mut HomeNavCache,
         controller: &mut dyn Controller,
     ) -> bool {
-        if st.day > self.to.day() || st.steps >= MAX_STEPS {
+        if st.day > self.to.as_std_days() || st.steps >= MAX_STEPS {
             return false;
         }
         st.steps += 1;
@@ -5068,6 +5176,16 @@ impl<'a> DriveMovements<'a> {
             home_nav_cache,
         );
         st.mode = resolution.mode;
+        // The felt state this same resolution carries (The Confidant, Task 2):
+        // recorded alongside `mode` from the identical computation, never a
+        // second derivation — see `Resolution`'s own doc.
+        st.affect = resolution.affect;
+        // The same resolution's discarded ranks (The Confidant, Task 5):
+        // recorded alongside `affect` from the identical computation, never
+        // a second derivation. `resolution` is still borrowed below
+        // (`controller.intend`), so this clones rather than moving the field
+        // out of it.
+        st.suppressed = resolution.suppressed.clone();
         // THE CONTROLLER SEAM (The Hand, Task 5 fix round 1, spec §3.3): the
         // walk arbitrates UNCONDITIONALLY, above — `resolution` is the body's
         // own felt state (mode, affect) and what its own drives would do,
@@ -5113,7 +5231,7 @@ impl<'a> DriveMovements<'a> {
                 _ => 1.0,
             };
             st.day += days_of(cost_ticks(action, npc.mass_kg, ground), self.day_length_std);
-            if st.day > self.to.day() {
+            if st.day > self.to.as_std_days() {
                 return false;
             }
         }
@@ -5172,7 +5290,7 @@ impl<'a> DriveMovements<'a> {
                 // Sleep through the off-phase in one jump to the next
                 // waking, rather than re-resting every step (The Slumber).
                 st.day = next_awake_day(npc.activity, self.terrain, &st.pos, st.day);
-                if st.day > self.to.day() {
+                if st.day > self.to.as_std_days() {
                     return false;
                 }
             }
@@ -5252,7 +5370,7 @@ impl<'a> DriveMovements<'a> {
                     self.terrain,
                     drive,
                     &self.params,
-                    self.to.day(),
+                    self.to.as_std_days(),
                 ) {
                     HoldStep::Stall => return true,
                     HoldStep::GiveUp => return false,
@@ -5287,9 +5405,16 @@ impl<'a> DriveMovements<'a> {
     /// Returns the facts this body's OWN walk would commit (empty under
     /// [`crate::controller::PlayerController`] with nothing queued — see that
     /// controller's own doc for why nothing here ever double-moves a body the
-    /// player drives through the verb loop) and the LAST commitment mode its
-    /// own arbitration reached this call: the host's felt state, independent
-    /// of whether the controller let it act on it.
+    /// player drives through the verb loop), the LAST commitment mode its own
+    /// arbitration reached this call, the [`Affect`] that SAME resolution
+    /// carried (The Confidant, Task 2) — the host's felt state, independent
+    /// of whether the controller let it act on it — and that SAME
+    /// resolution's discarded ranks (The Confidant, Task 5): the drives that
+    /// were active but not pursued, present so a caller can retrieve them
+    /// without a second arbitration. `advance_one`'s loop always runs at
+    /// least once whenever any time has elapsed (see [`WalkState`]'s own
+    /// `affect` field doc), so both always reflect a live decision this call
+    /// made, never `begin`'s placeholders.
     pub(crate) fn step_one_with_controller(
         &self,
         frozen: &Ledger,
@@ -5297,7 +5422,7 @@ impl<'a> DriveMovements<'a> {
         mesh_memo: &mut RoomMeshMemo,
         home_nav_cache: &mut HomeNavCache,
         controller: &mut dyn Controller,
-    ) -> (Vec<Fact>, Mode) {
+    ) -> (Vec<Fact>, Mode, Affect, Vec<DriveKind>) {
         let band = [body.clone()];
         let mut occupancy = Occupancy::default();
         let mut afraid_memo = PrimaryAfraidMemo::new();
@@ -5354,7 +5479,7 @@ impl<'a> DriveMovements<'a> {
         // controller ultimately governs that live decision.
         st.mode = catch_up(
             room_entry_day(frozen, body, self.from),
-            self.from.day(),
+            self.from.as_std_days(),
             &st.pos,
             body,
             self.terrain,
@@ -5387,7 +5512,7 @@ impl<'a> DriveMovements<'a> {
             home_nav_cache,
             controller,
         ) {}
-        (out, st.mode)
+        (out, st.mode, st.affect, st.suppressed)
     }
 }
 
@@ -6122,7 +6247,7 @@ mod tests {
             believed_water(
                 &ledger,
                 &npc,
-                WorldTime::new(5.0).expect("a day value is finite"),
+                WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
                 10_000
             ),
@@ -6134,7 +6259,7 @@ mod tests {
             believed_water(
                 &ledger,
                 &npc,
-                WorldTime::new(5.0).expect("a day value is finite"),
+                WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
                 10_000
             ),
@@ -6175,7 +6300,7 @@ mod tests {
             believed_water(
                 &ledger,
                 &npc,
-                WorldTime::new(5.0).expect("a day value is finite"),
+                WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
                 10_000
             ),
@@ -6224,7 +6349,7 @@ mod tests {
             believed_water(
                 &ledger,
                 &npc,
-                WorldTime::new(5.0).expect("a day value is finite"),
+                WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
                 10_000
             ),
@@ -6235,7 +6360,7 @@ mod tests {
             believed_water(
                 &ledger,
                 &npc,
-                WorldTime::new(5.0).expect("a day value is finite"),
+                WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
                 10_000
             ),
@@ -6277,7 +6402,7 @@ mod tests {
             believed_water(
                 &ledger,
                 &npc,
-                WorldTime::new(5.0).expect("a day value is finite"),
+                WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
                 10_000
             ),
@@ -6321,7 +6446,7 @@ mod tests {
             believed_water(
                 &ledger,
                 &npc,
-                WorldTime::new(5.0).expect("a day value is finite"),
+                WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
                 10_000
             ),
@@ -6332,7 +6457,7 @@ mod tests {
         let a = believed_water(
             &ledger,
             &npc,
-            WorldTime::new(5.0).expect("a day value is finite"),
+            WorldTime::from_std_days(5.0).expect("a day value is finite"),
             &t,
             10_000,
         );
@@ -6342,7 +6467,7 @@ mod tests {
             believed_water(
                 &reloaded,
                 &npc,
-                WorldTime::new(5.0).expect("a day value is finite"),
+                WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
                 10_000
             ),
@@ -6395,7 +6520,7 @@ mod tests {
         let got = believed_water(
             &ledger,
             &npc,
-            WorldTime::new(5.0).expect("a day value is finite"),
+            WorldTime::from_std_days(5.0).expect("a day value is finite"),
             &t,
             10_000,
         );
@@ -6410,7 +6535,7 @@ mod tests {
             believed_water(
                 &reloaded,
                 &npc,
-                WorldTime::new(5.0).expect("a day value is finite"),
+                WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
                 10_000
             ),
@@ -6491,7 +6616,7 @@ mod tests {
             believed_hazard(
                 &ledger,
                 &npc,
-                WorldTime::new(5.0).expect("a day value is finite"),
+                WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
                 &[]
             )
@@ -6521,7 +6646,7 @@ mod tests {
         let got = believed_hazard(
             &ledger,
             &npc,
-            WorldTime::new(5.0).expect("a day value is finite"),
+            WorldTime::from_std_days(5.0).expect("a day value is finite"),
             &t,
             &[],
         );
@@ -6551,7 +6676,7 @@ mod tests {
         let got = believed_hazard(
             &ledger,
             &npc,
-            WorldTime::new(5.0).expect("a day value is finite"),
+            WorldTime::from_std_days(5.0).expect("a day value is finite"),
             &t,
             &[],
         );
@@ -6591,7 +6716,7 @@ mod tests {
         c.boldness = 0.0;
         commit_agent_at(&mut ledger, &reg, c_e, &x, 0.5);
 
-        let now = WorldTime::new(10.0).expect("a day value is finite");
+        let now = WorldTime::from_std_days(10.0).expect("a day value is finite");
         let roster = [b.clone()];
         // A's most-recent visit to X was safe → the phantom is cleared.
         assert!(
@@ -6636,7 +6761,7 @@ mod tests {
         let mem = hazard_memory(
             &ledger,
             &a,
-            WorldTime::new(10.0).expect("a day value is finite"),
+            WorldTime::from_std_days(10.0).expect("a day value is finite"),
             &terrain,
             &[b],
         );
@@ -6681,7 +6806,7 @@ mod tests {
         let mem = hazard_memory(
             &ledger,
             &a,
-            WorldTime::new(10.0).expect("a day value is finite"),
+            WorldTime::from_std_days(10.0).expect("a day value is finite"),
             &terrain,
             &[],
         );
@@ -6714,7 +6839,7 @@ mod tests {
         a.boldness = 0.0;
         commit_agent_at(&mut ledger, &reg, a_e, &x, 0.5);
 
-        let now = WorldTime::new(10.0).expect("a day value is finite");
+        let now = WorldTime::from_std_days(10.0).expect("a day value is finite");
         let roster = [b];
         assert_eq!(
             believed_hazard(&ledger, &a, now, &terrain, &roster),
@@ -6761,7 +6886,7 @@ mod tests {
 
         // Early in the world, so the sustenance drives are quiet and the felt
         // state reports the fear rather than a louder thirst.
-        let now = WorldTime::new(0.6).expect("a day value is finite");
+        let now = WorldTime::from_std_days(0.6).expect("a day value is finite");
         let band = [a.clone(), b.clone(), c.clone()];
         let felt = affect_of(&ledger, &a, &band, now, &terrain);
         assert_eq!(
@@ -6803,7 +6928,7 @@ mod tests {
 
         // A really is dread-afraid here (the same fixture the felt test pins) —
         // so an empty field at X is the contagion block, not an empty memory.
-        let now = WorldTime::new(0.6).expect("a day value is finite");
+        let now = WorldTime::from_std_days(0.6).expect("a day value is finite");
         assert!(
             hazard_memory(&ledger, &a, now, &terrain, &[a.clone(), b.clone()])
                 .dread
@@ -6836,7 +6961,7 @@ mod tests {
         // lost has only ever been at `here`.
         commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
         let band = [knower.clone(), lost.clone()];
-        let now = WorldTime::new(1.0).expect("a day value is finite");
+        let now = WorldTime::from_std_days(1.0).expect("a day value is finite");
 
         // Alone, `lost` is ignorant.
         assert_eq!(believed_water(&ledger, &lost, now, &t, 10_000), None);
@@ -6898,7 +7023,7 @@ mod tests {
                     &scary,
                     &npc,
                     &t,
-                    WorldTime::new(day).expect("a day value is finite"),
+                    WorldTime::from_std_days(day).expect("a day value is finite"),
                     &[],
                     &ledger
                 ),
@@ -6909,7 +7034,7 @@ mod tests {
                     &mild,
                     &npc,
                     &t,
-                    WorldTime::new(day).expect("a day value is finite"),
+                    WorldTime::from_std_days(day).expect("a day value is finite"),
                     &[],
                     &ledger
                 ),
@@ -6944,7 +7069,7 @@ mod tests {
         let a_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let mut a = haunt_npc(a_e, x.clone());
         a.boldness = 0.0;
-        let day = WorldTime::new(0.5).expect("a day value is finite");
+        let day = WorldTime::from_std_days(0.5).expect("a day value is finite");
         // X read terrain-only (empty roster) is safe.
         assert!(
             !frightened_at(&x, &a, &terrain, day, &[], &ledger),
@@ -6984,7 +7109,7 @@ mod tests {
                 &x,
                 &a,
                 &terrain,
-                WorldTime::new(0.5).expect("a day value is finite"),
+                WorldTime::from_std_days(0.5).expect("a day value is finite"),
                 std::slice::from_ref(&b),
                 &ledger
             ),
@@ -6996,7 +7121,7 @@ mod tests {
                 &x,
                 &a,
                 &terrain,
-                WorldTime::new(9.5).expect("a day value is finite"),
+                WorldTime::from_std_days(9.5).expect("a day value is finite"),
                 std::slice::from_ref(&b),
                 &ledger
             ),
@@ -7020,7 +7145,7 @@ mod tests {
         commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
         commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
         commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
-        let now = WorldTime::new(1.0).expect("a day value is finite");
+        let now = WorldTime::from_std_days(1.0).expect("a day value is finite");
         let ab = [knower.clone(), lost.clone()];
         let ba = [lost.clone(), knower.clone()];
         let result = shared_believed_water(&ledger, &lost, &ab, now, &t, 10_000);
@@ -7046,7 +7171,7 @@ mod tests {
         let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
         commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
         commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
-        let now = WorldTime::new(1.0).expect("a day value is finite");
+        let now = WorldTime::from_std_days(1.0).expect("a day value is finite");
         let solo = believed_water(&ledger, &knower, now, &t, 10_000);
         assert_eq!(solo, Some(water));
 
@@ -7091,7 +7216,7 @@ mod tests {
         // lost stands at `here`.
         commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
         let band = [knower.clone(), lost.clone()];
-        let now = WorldTime::new(1.0).expect("a day value is finite");
+        let now = WorldTime::from_std_days(1.0).expect("a day value is finite");
 
         // sanity: knower does know water when consulted directly...
         assert_eq!(
@@ -7150,8 +7275,8 @@ mod tests {
 
         let sys = DriveMovements {
             npcs: vec![knower, lost],
-            from: WorldTime::new(1.0).expect("a day value is finite"),
-            to: WorldTime::new(40.0).expect("a day value is finite"),
+            from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
@@ -7182,7 +7307,7 @@ mod tests {
                     role(f.subject),
                     f.predicate,
                     f.object,
-                    f.day.map(|d| d.day().to_bits()),
+                    f.day.map(|d| d.ticks()),
                     f.provenance
                 )
             })
@@ -7195,8 +7320,12 @@ mod tests {
         // being hoisted out of `DriveMovements::step`'s loop into `WalkState` +
         // `advance_one`, and the claim is that this changes NOTHING. So the
         // emitted fact sequence — subject, predicate, object, the day's exact
-        // bits, and provenance, IN ORDER — is pinned here against the loop as it
-        // stood before the extraction. Written and passing BEFORE the hoist; it
+        // TICK COUNT, and provenance, IN ORDER — is pinned here against the loop
+        // as it stood before the extraction. (The day column read `f64` bits
+        // until The Escapement, decision 0186, made an instant an exact `i64`
+        // tick; every one of the eighty rows below moved from `to_bits()` to
+        // `round(day * 100_000)` of the very same instant, and nothing else in
+        // any row moved at all.) Written and passing BEFORE the hoist; it
         // must still pass after, or the extraction is wrong.
         //
         // It is a golden, deliberately: a self-consistency check (run twice, get
@@ -7245,86 +7374,86 @@ mod tests {
         // not, so the emitted stream is still a pure function of the pre-tick
         // ledger.
         const EXPECTED: &[&str] = &[
-            r#"knower|rested|Flag(true)|Some(4607189174199458464)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(4607189174199458464)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(4618178707890180369)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(4618178707890180369)|went down to the river it knew (thirst)"#,
-            r#"knower|rested|Flag(true)|Some(4618180396740040633)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(4618180396740040633)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180339")|Some(4618855936684146205)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(4618855936684146205)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(4618857625534006469)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(4618857625534006469)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(4618970215524690731)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(4618970215524690731)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(4619082805515374993)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(4619082805515374993)|walking home (sated)"#,
-            r#"knower|eaten|Flag(true)|Some(4622982359842724423)|grazed the productive ground (hunger sated)"#,
-            r#"lost|eaten|Flag(true)|Some(4622982359842724423)|grazed the productive ground (hunger sated)"#,
-            r#"knower|rested|Flag(true)|Some(4622983204267654555)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(4622983204267654555)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(4623152089253680950)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(4623152089253680950)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(4623208384249023081)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(4623208384249023081)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(4623209228673953213)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(4623209228673953213)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(4623265523669295344)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(4623265523669295344)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(4623321818664637475)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(4623321818664637475)|walking home (sated)"#,
-            r#"knower|rested|Flag(true)|Some(4625798470072218419)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(4625798470072218419)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(4625868838816396084)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(4625868838816396084)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(4625896986314067150)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(4625896986314067150)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(4625897408526532216)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(4625897408526532216)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(4625925556024203282)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(4625925556024203282)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(4625953703521874348)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(4625953703521874348)|walking home (sated)"#,
-            r#"knower|eaten|Flag(true)|Some(4627500877643860586)|grazed the productive ground (hunger sated)"#,
-            r#"lost|eaten|Flag(true)|Some(4627500877643860586)|grazed the productive ground (hunger sated)"#,
-            r#"knower|rested|Flag(true)|Some(4627501299856325652)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(4627501299856325652)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(4627557594851667784)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(4627557594851667784)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(4627585742349338850)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(4627585742349338850)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(4627586164561803916)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(4627586164561803916)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(4627614312059474982)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(4627614312059474982)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(4627642459557146048)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(4627642459557146048)|walking home (sated)"#,
-            r#"knower|rested|Flag(true)|Some(4629181611642296032)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(4629181611642296032)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(4629237906637638164)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(4629237906637638164)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(4629266054135309230)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(4629266054135309230)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(4629266476347774296)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(4629266476347774296)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(4629294623845445362)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(4629294623845445362)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(4629322771343116428)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(4629322771343116428)|walking home (sated)"#,
-            r#"knower|eaten|Flag(true)|Some(4630285181200986277)|grazed the productive ground (hunger sated)"#,
-            r#"lost|eaten|Flag(true)|Some(4630285181200986277)|grazed the productive ground (hunger sated)"#,
-            r#"knower|rested|Flag(true)|Some(4630285392307218810)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(4630285392307218810)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(4630313539804889875)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(4630313539804889875)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(4630327613553725408)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(4630327613553725408)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(4630327824659957941)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(4630327824659957941)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(4630341898408793474)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(4630341898408793474)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(4630355972157629007)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(4630355972157629007)|walking home (sated)"#,
+            r#"knower|rested|Flag(true)|Some(100150)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(100150)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(576667)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(576667)|went down to the river it knew (thirst)"#,
+            r#"knower|rested|Flag(true)|Some(576817)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(576817)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180339")|Some(636817)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(636817)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(636967)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(636967)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(646967)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(646967)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(656967)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(656967)|walking home (sated)"#,
+            r#"knower|eaten|Flag(true)|Some(1206633)|grazed the productive ground (hunger sated)"#,
+            r#"lost|eaten|Flag(true)|Some(1206633)|grazed the productive ground (hunger sated)"#,
+            r#"knower|rested|Flag(true)|Some(1206783)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(1206783)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(1236783)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(1236783)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(1246783)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(1246783)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(1246933)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(1246933)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(1256933)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(1256933)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(1266933)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(1266933)|walking home (sated)"#,
+            r#"knower|rested|Flag(true)|Some(1813750)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(1813750)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(1838750)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(1838750)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(1848750)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(1848750)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(1848900)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(1848900)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(1858900)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(1858900)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(1868900)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(1868900)|walking home (sated)"#,
+            r#"knower|eaten|Flag(true)|Some(2418567)|grazed the productive ground (hunger sated)"#,
+            r#"lost|eaten|Flag(true)|Some(2418567)|grazed the productive ground (hunger sated)"#,
+            r#"knower|rested|Flag(true)|Some(2418717)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(2418717)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(2438717)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(2438717)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(2448717)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(2448717)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(2448867)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(2448867)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(2458867)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(2458867)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(2468867)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(2468867)|walking home (sated)"#,
+            r#"knower|rested|Flag(true)|Some(3015683)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(3015683)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(3035683)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(3035683)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(3045683)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(3045683)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(3045833)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(3045833)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(3055833)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(3055833)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(3065833)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(3065833)|walking home (sated)"#,
+            r#"knower|eaten|Flag(true)|Some(3615500)|grazed the productive ground (hunger sated)"#,
+            r#"lost|eaten|Flag(true)|Some(3615500)|grazed the productive ground (hunger sated)"#,
+            r#"knower|rested|Flag(true)|Some(3615650)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(3615650)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(3635650)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(3635650)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(3645650)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(3645650)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(3645800)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(3645800)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(3655800)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(3655800)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(3665800)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(3665800)|walking home (sated)"#,
         ];
         let shape = hoist_walk_shape();
         assert_eq!(
@@ -7412,8 +7541,8 @@ mod tests {
             npc.mass_kg = mass_kg;
             let sys = DriveMovements {
                 npcs: vec![npc],
-                from: WorldTime::new(1.0).expect("a day value is finite"),
-                to: WorldTime::new(40.0).expect("a day value is finite"),
+                from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+                to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
                 params: SUSTENANCE,
                 day_length_std: None,
                 terrain: &terrain,
@@ -7451,8 +7580,8 @@ mod tests {
         let mass = npc.mass_kg;
         let sys = DriveMovements {
             npcs: vec![npc],
-            from: WorldTime::new(1.0).expect("a day value is finite"),
-            to: WorldTime::new(40.0).expect("a day value is finite"),
+            from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
             params: SUSTENANCE,
             day_length_std: None,
             terrain: &terrain,
@@ -7470,14 +7599,14 @@ mod tests {
             .filter(|f| f.predicate == AGENT_AT)
             .filter_map(|f| f.day)
             .filter(|d| *d <= drank_day)
-            .map(WorldTime::day)
+            .map(WorldTime::as_std_days)
             .fold(f64::NEG_INFINITY, f64::max);
         assert!(
             arrived.is_finite(),
             "it walked to the water before drinking"
         );
         assert!(
-            drank_day.day() > arrived,
+            drank_day.as_std_days() > arrived,
             "the drink still happens in the same instant as the arrival ({arrived})"
         );
         let expected = crate::clock::days_of(
@@ -7486,9 +7615,9 @@ mod tests {
             None,
         );
         assert!(
-            (drank_day.day() - arrived - expected).abs() < 1e-12,
+            (drank_day.as_std_days() - arrived - expected).abs() < 1e-12,
             "a drink should cost exactly {expected} days; the gap is {}",
-            drank_day.day() - arrived
+            drank_day.as_std_days() - arrived
         );
         // The same property across the WHOLE walk: one creature, so every fact
         // it emits must be strictly later than the one before. That also pins
@@ -7496,7 +7625,7 @@ mod tests {
         // `4622963782494261520`) as gone — a meal and lying down cost time too.
         let mut prev = f64::NEG_INFINITY;
         for f in &facts {
-            let d = f.day.expect("every emitted fact is dated").day();
+            let d = f.day.expect("every emitted fact is dated").as_std_days();
             assert!(
                 d > prev,
                 "`{}` at {d} did not advance the clock past {prev}",
@@ -7546,21 +7675,15 @@ mod tests {
         let run = |npcs: Vec<Body>| {
             let sys = DriveMovements {
                 npcs,
-                from: WorldTime::new(1.0).expect("a day value is finite"),
-                to: WorldTime::new(20.0).expect("a day value is finite"),
+                from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+                to: WorldTime::from_std_days(20.0).expect("a day value is finite"),
                 params: SUSTENANCE,
                 day_length_std: None,
                 terrain: &terrain,
             };
             sys.step(&ledger)
                 .iter()
-                .map(|f| {
-                    (
-                        f.subject,
-                        f.predicate.clone(),
-                        f.day.map(|d| d.day().to_bits()),
-                    )
-                })
+                .map(|f| (f.subject, f.predicate.clone(), f.day.map(|d| d.ticks())))
                 .collect::<Vec<_>>()
         };
         let forward = run(npcs.clone());
@@ -7590,8 +7713,8 @@ mod tests {
         let (ledger, terrain, npcs) = interleaving_fixture(&[4.375, 70.0]);
         let sys = DriveMovements {
             npcs,
-            from: WorldTime::new(1.0).expect("a day value is finite"),
-            to: WorldTime::new(20.0).expect("a day value is finite"),
+            from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(20.0).expect("a day value is finite"),
             params: SUSTENANCE,
             day_length_std: None,
             terrain: &terrain,
@@ -7621,7 +7744,7 @@ mod tests {
         let tick = crate::clock::days_of(crate::clock::Ticks(1), None);
         let mut prev = f64::NEG_INFINITY;
         for f in &facts {
-            let d = f.day.expect("every emitted fact is dated").day();
+            let d = f.day.expect("every emitted fact is dated").as_std_days();
             assert!(
                 d >= prev - tick,
                 "`{}` at {d} went back more than a tick past {prev} — \
@@ -7688,8 +7811,8 @@ mod tests {
 
         let sys = DriveMovements {
             npcs: vec![knower.clone(), lost.clone()],
-            from: WorldTime::new(1.0).expect("a day value is finite"),
-            to: WorldTime::new(40.0).expect("a day value is finite"),
+            from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
@@ -7992,7 +8115,7 @@ mod tests {
             from: WorldTime::GENESIS,
             // Deliberately enormous: rules out "it just needed a longer
             // wait" — a real session's `wait` would never span this.
-            to: WorldTime::new(100_000.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(100_000.0).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
@@ -8162,7 +8285,7 @@ mod tests {
                 &ledger,
                 e,
                 &home,
-                WorldTime::new(2.0).expect("a day value is finite"),
+                WorldTime::from_std_days(2.0).expect("a day value is finite"),
                 &p,
                 &terrain,
                 ThermalStrategy::Endothermic
@@ -8178,7 +8301,7 @@ mod tests {
                     predicate: DRANK.to_string(),
                     object: Value::Flag(true),
                     place: None,
-                    day: Some(WorldTime::new(5.0).expect("finite")),
+                    day: Some(WorldTime::from_std_days(5.0).expect("finite")),
                     provenance: "t".into(),
                 },
                 &reg,
@@ -8189,7 +8312,7 @@ mod tests {
                 &ledger,
                 e,
                 &home,
-                WorldTime::new(6.0).expect("a day value is finite"),
+                WorldTime::from_std_days(6.0).expect("a day value is finite"),
                 &p,
                 &terrain,
                 ThermalStrategy::Endothermic
@@ -8219,7 +8342,7 @@ mod tests {
                     predicate: DRANK.to_string(),
                     object: Value::Flag(true),
                     place: None,
-                    day: Some(WorldTime::new(1.0).expect("finite")),
+                    day: Some(WorldTime::from_std_days(1.0).expect("finite")),
                     provenance: "t".into(),
                 },
                 &reg,
@@ -8230,7 +8353,7 @@ mod tests {
                 &ledger,
                 e,
                 &home,
-                WorldTime::new(1_000.0).expect("a day value is finite"),
+                WorldTime::from_std_days(1_000.0).expect("a day value is finite"),
                 &p,
                 &terrain,
                 ThermalStrategy::Endothermic
@@ -8344,14 +8467,16 @@ mod tests {
                         predicate: DRANK.to_string(),
                         object: Value::Flag(true),
                         place: None,
-                        day: Some(WorldTime::new(day).expect("test fixture day is finite")),
+                        day: Some(
+                            WorldTime::from_std_days(day).expect("test fixture day is finite"),
+                        ),
                         provenance: "t".into(),
                     },
                     &reg,
                 )
                 .unwrap();
         }
-        let t = WorldTime::new(12.3).expect("a day value is finite");
+        let t = WorldTime::from_std_days(12.3).expect("a day value is finite");
         let a = drive_at(
             &ledger,
             e,
@@ -8594,7 +8719,7 @@ mod tests {
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
             from: WorldTime::GENESIS,
-            to: WorldTime::new(40.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
@@ -8677,13 +8802,13 @@ mod tests {
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
             from: WorldTime::GENESIS,
-            to: WorldTime::new(40.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
             params: SUSTENANCE,
             day_length_std: None,
             terrain: &t,
         };
 
-        let (default_facts, _mode) = sys.step_one_with_controller(
+        let (default_facts, _mode, _affect, _suppressed) = sys.step_one_with_controller(
             &ledger,
             &npc,
             &mut RoomMeshMemo::new(),
@@ -8696,7 +8821,7 @@ mod tests {
              (which wants water) — it must act: {default_facts:?}"
         );
 
-        let (player_facts, _mode) = sys.step_one_with_controller(
+        let (player_facts, _mode, _affect, _suppressed) = sys.step_one_with_controller(
             &ledger,
             &npc,
             &mut RoomMeshMemo::new(),
@@ -8761,19 +8886,19 @@ mod tests {
         let t = PlantedTerrain::default();
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
-            from: WorldTime::new(3.0).expect("a day value is finite"),
+            from: WorldTime::from_std_days(3.0).expect("a day value is finite"),
             // Slack beyond `from`: `Drink`'s own clock charge (`cost_ticks`)
             // must land at or before `to`, or `advance_one`'s interval guard
             // returns before ever reaching the commit match — a half-day is
             // generous next to `Drink`'s 150-tick base cost.
-            to: WorldTime::new(3.5).expect("a day value is finite"),
+            to: WorldTime::from_std_days(3.5).expect("a day value is finite"),
             params: SUSTENANCE,
             day_length_std: None,
             terrain: &t,
         };
         let mut player = PlayerController::new();
         player.queue(Action::Drink);
-        let (facts, _mode) = sys.step_one_with_controller(
+        let (facts, _mode, _affect, _suppressed) = sys.step_one_with_controller(
             &ledger,
             &npc,
             &mut RoomMeshMemo::new(),
@@ -8876,7 +9001,7 @@ mod tests {
         let sys = DriveMovements {
             npcs: vec![npc],
             from: WorldTime::GENESIS,
-            to: WorldTime::new(40.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
@@ -8954,7 +9079,7 @@ mod tests {
         let sys = DriveMovements {
             npcs: vec![npc],
             from: WorldTime::GENESIS,
-            to: WorldTime::new(10_000.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(10_000.0).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
@@ -9049,7 +9174,7 @@ mod tests {
         let sys = DriveMovements {
             npcs: vec![npc],
             from: WorldTime::GENESIS,
-            to: WorldTime::new(1_000_000.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(1_000_000.0).expect("a day value is finite"),
             params: degenerate,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
@@ -9116,7 +9241,7 @@ mod tests {
         let sys = DriveMovements {
             npcs: vec![npc],
             from: WorldTime::GENESIS,
-            to: WorldTime::new(10.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(10.0).expect("a day value is finite"),
             params: p,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
@@ -9398,8 +9523,8 @@ mod tests {
             commit_agent_at(&mut ledger, &reg, e, &start, 0.2); // now at start
             let sys = DriveMovements {
                 npcs: vec![npc_at(e)],
-                from: WorldTime::new(1.0).expect("a day value is finite"), // after the seeded history
-                to: WorldTime::new(60.0).expect("a day value is finite"), // several thirst cycles (act/rise ≈ 5.7 days)
+                from: WorldTime::from_std_days(1.0).expect("a day value is finite"), // after the seeded history
+                to: WorldTime::from_std_days(60.0).expect("a day value is finite"), // several thirst cycles (act/rise ≈ 5.7 days)
                 params: SUSTENANCE,
                 // No sky in a planted-terrain fixture: the action clock takes its
                 // base rate (spec §4.1).
@@ -9415,7 +9540,7 @@ mod tests {
             ledger
                 .find(AGENT_AT)
                 .filter(|f| f.subject == e)
-                .filter(|f| f.day.map(|d| d.day() >= 1.0).unwrap_or(false))
+                .filter(|f| f.day.map(|d| d.as_std_days() >= 1.0).unwrap_or(false))
                 .filter_map(|f| match &f.object {
                     Value::Text(s) => Some(room_from_text(s)),
                     _ => None,
@@ -9437,7 +9562,7 @@ mod tests {
             let hz = believed_hazard(
                 &fl,
                 &n,
-                WorldTime::new(1.0).expect("a day value is finite"),
+                WorldTime::from_std_days(1.0).expect("a day value is finite"),
                 &terrain,
                 &[],
             );
@@ -9605,7 +9730,7 @@ mod tests {
                     room,
                     &dummy,
                     &terrain,
-                    WorldTime::new(1.0).expect("a day value is finite"),
+                    WorldTime::from_std_days(1.0).expect("a day value is finite"),
                     &[],
                     &empty_ledger
                 ),
@@ -9631,7 +9756,7 @@ mod tests {
                 believed_hazard(
                     &fl,
                     &an,
-                    WorldTime::new(1.0).expect("a day value is finite"),
+                    WorldTime::from_std_days(1.0).expect("a day value is finite"),
                     &terrain,
                     &[]
                 )
@@ -9641,7 +9766,7 @@ mod tests {
             let hz = believed_hazard(
                 &fl,
                 &an,
-                WorldTime::new(1.0).expect("a day value is finite"),
+                WorldTime::from_std_days(1.0).expect("a day value is finite"),
                 &terrain,
                 std::slice::from_ref(&bn),
             );
@@ -9686,8 +9811,8 @@ mod tests {
             }
             let sys = DriveMovements {
                 npcs,
-                from: WorldTime::new(from_day).expect("a day value is finite"),
-                to: WorldTime::new(60.0).expect("a day value is finite"), // several thirst cycles (act/rise ≈ 5.7 days)
+                from: WorldTime::from_std_days(from_day).expect("a day value is finite"),
+                to: WorldTime::from_std_days(60.0).expect("a day value is finite"), // several thirst cycles (act/rise ≈ 5.7 days)
                 params: SUSTENANCE,
                 // No sky in a planted-terrain fixture: the action clock takes its
                 // base rate (spec §4.1).
@@ -9703,7 +9828,7 @@ mod tests {
             ledger
                 .find(AGENT_AT)
                 .filter(|f| f.subject == e)
-                .filter(|f| f.day.map(|d| d.day() >= from_day).unwrap_or(false))
+                .filter(|f| f.day.map(|d| d.as_std_days() >= from_day).unwrap_or(false))
                 .filter_map(|f| match &f.object {
                     Value::Text(s) => Some(room_from_text(s)),
                     _ => None,
@@ -9865,7 +9990,7 @@ mod tests {
         let a = npc_at(a_e, x.clone(), "rememberer");
         commit_agent_at(&mut ledger, &reg, a_e, &x, 0.45);
 
-        let now = WorldTime::new(0.6).expect("a day value is finite");
+        let now = WorldTime::from_std_days(0.6).expect("a day value is finite");
         let band = [a.clone(), b.clone()];
 
         // (1) FELT.
@@ -9917,7 +10042,7 @@ mod tests {
         let sys = DriveMovements {
             npcs: band.to_vec(),
             from: now,
-            to: WorldTime::new(now.day() + 1.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(now.as_std_days() + 1.0).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
@@ -9951,7 +10076,7 @@ mod tests {
         let after = hazard_memory(
             &next,
             &a,
-            WorldTime::new(now.day() + 1.0).expect("a day value is finite"),
+            WorldTime::from_std_days(now.as_std_days() + 1.0).expect("a day value is finite"),
             &terrain,
             &band,
         );
@@ -10126,7 +10251,7 @@ mod tests {
         let barren = rich.neighbors()[0].clone();
         let t = PlantedTerrain::forage([(rich.clone(), 1.0), (barren.clone(), 0.0)]);
         let omni = omnivore_niche();
-        let day = WorldTime::new(0.5).expect("a day value is finite"); // noon (sun up) — irrelevant to an omnivore
+        let day = WorldTime::from_std_days(0.5).expect("a day value is finite"); // noon (sun up) — irrelevant to an omnivore
         assert!(
             food_value(&omni, &t, &rich, day)
                 .total_cmp(&food_value(&omni, &t, &barren, day))
@@ -10151,7 +10276,7 @@ mod tests {
             [(preyful.clone(), 1.0), (empty.clone(), 1.0)],
             [(preyful.clone(), 1.0)],
         );
-        let day = WorldTime::new(0.5).expect("a day value is finite");
+        let day = WorldTime::from_std_days(0.5).expect("a day value is finite");
         let carnivore = ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap();
         let herbivore = ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap();
         assert!(
@@ -10184,7 +10309,7 @@ mod tests {
             .map(|r| (r, 1.0))
             .collect();
         let t = PlantedTerrain::forage_and_prey(uniform, [(prey_room.clone(), 1.0)]);
-        let day = WorldTime::new(0.5).expect("a day value is finite");
+        let day = WorldTime::from_std_days(0.5).expect("a day value is finite");
         let carnivore = ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap();
         let herbivore = ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap();
         assert_eq!(
@@ -10206,7 +10331,7 @@ mod tests {
         let room = raddr(1.0);
         let t = PlantedTerrain::forage([(room.clone(), 0.0)]); // no material food
         let autotroph = ResourceVector::new(&[(PHOTOSYNTHATE, 1.0)]).unwrap();
-        let noon = WorldTime::new(0.5).expect("a day value is finite"); // fractional_day_sun → +90°
+        let noon = WorldTime::from_std_days(0.5).expect("a day value is finite"); // fractional_day_sun → +90°
         let midnight = WorldTime::GENESIS; // → −90°
         assert!(
             food_value(&autotroph, &t, &room, noon) > 0.0,
@@ -10237,7 +10362,7 @@ mod tests {
             &ledger,
             e,
             &home,
-            WorldTime::new(5.0).expect("a day value is finite"),
+            WorldTime::from_std_days(5.0).expect("a day value is finite"),
             &t,
             ThermalStrategy::Endothermic,
         );
@@ -10248,7 +10373,7 @@ mod tests {
             &ledger,
             e,
             &home,
-            WorldTime::new(5.0).expect("a day value is finite"),
+            WorldTime::from_std_days(5.0).expect("a day value is finite"),
             &t,
             ThermalStrategy::Endothermic,
         );
@@ -10315,7 +10440,7 @@ mod tests {
         let mild = PlantedTerrain::thermal([(home.clone(), 25.0)]);
         let mut ledger = Ledger::default(); // no eaten, no sightings → held at home
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
-        let day = WorldTime::new(3.0).expect("a day value is finite");
+        let day = WorldTime::from_std_days(3.0).expect("a day value is finite");
         let hot_h = hunger_at(&ledger, e, &home, day, &hot, ThermalStrategy::Endothermic);
         let mild_h = hunger_at(&ledger, e, &home, day, &mild, ThermalStrategy::Endothermic);
         assert!(
@@ -10775,7 +10900,7 @@ mod tests {
             &ledger,
             &[npc_a, npc_b],
             &terrain,
-            WorldTime::new(0.5).expect("a day value is finite"),
+            WorldTime::from_std_days(0.5).expect("a day value is finite"),
         );
         assert!(
             field.is_empty(),
@@ -10800,7 +10925,7 @@ mod tests {
             &ledger,
             &[npc],
             &terrain,
-            WorldTime::new(0.5).expect("a day value is finite"),
+            WorldTime::from_std_days(0.5).expect("a day value is finite"),
         );
         for room in std::iter::once(&room).chain(ns.iter()) {
             let v = field.get(room).copied().unwrap_or(0.0);
@@ -10835,14 +10960,14 @@ mod tests {
             &ledger,
             &[a.clone(), b.clone()],
             &terrain,
-            WorldTime::new(0.5).expect("a day value is finite"),
+            WorldTime::from_std_days(0.5).expect("a day value is finite"),
         );
         // The field over A ALONE — the reference: B must add nothing.
         let a_only = alarm_field(
             &ledger,
             &[a],
             &terrain,
-            WorldTime::new(0.5).expect("a day value is finite"),
+            WorldTime::from_std_days(0.5).expect("a day value is finite"),
         );
         assert_eq!(
             both, a_only,
@@ -10980,8 +11105,8 @@ mod tests {
         // field haloes A's neighbourhood (B's room included), so B bolts.
         let sys1 = DriveMovements {
             npcs: vec![a.clone(), b.clone()],
-            from: WorldTime::new(0.30).expect("a day value is finite"),
-            to: WorldTime::new(0.40).expect("a day value is finite"),
+            from: WorldTime::from_std_days(0.30).expect("a day value is finite"),
+            to: WorldTime::from_std_days(0.40).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
@@ -11029,8 +11154,8 @@ mod tests {
         // (A still screams) but because B escaped the one-hop halo.
         let sys2 = DriveMovements {
             npcs: vec![a.clone(), b.clone()],
-            from: WorldTime::new(0.40).expect("a day value is finite"),
-            to: WorldTime::new(0.55).expect("a day value is finite"),
+            from: WorldTime::from_std_days(0.40).expect("a day value is finite"),
+            to: WorldTime::from_std_days(0.55).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
@@ -11057,8 +11182,8 @@ mod tests {
         let cb_entity = cb.entity;
         let csys = DriveMovements {
             npcs: vec![cb.clone()],
-            from: WorldTime::new(0.30).expect("a day value is finite"),
-            to: WorldTime::new(0.40).expect("a day value is finite"),
+            from: WorldTime::from_std_days(0.30).expect("a day value is finite"),
+            to: WorldTime::from_std_days(0.40).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
@@ -11414,7 +11539,7 @@ mod tests {
             &ledger,
             &base,
             &[],
-            WorldTime::new(0.5).expect("a day value is finite"),
+            WorldTime::from_std_days(0.5).expect("a day value is finite"),
             &terrain,
         );
         assert_eq!(
@@ -11533,8 +11658,8 @@ mod tests {
             // agent starts at home, not yet thirsty.
             let sys = DriveMovements {
                 npcs: vec![npc],
-                from: WorldTime::new(1.0).expect("a day value is finite"),
-                to: WorldTime::new(41.0).expect("a day value is finite"),
+                from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+                to: WorldTime::from_std_days(41.0).expect("a day value is finite"),
                 params: SUSTENANCE,
                 // No sky in a planted-terrain fixture: the action clock takes its
                 // base rate (spec §4.1).
@@ -11551,7 +11676,9 @@ mod tests {
                         .filter(|g| g.subject == e)
                         .filter(|g| g.day.is_some_and(|gd| gd <= d))
                         .filter_map(|g| match &g.object {
-                            Value::Text(s) => Some((g.day.unwrap().day(), room_from_text(s))),
+                            Value::Text(s) => {
+                                Some((g.day.unwrap().as_std_days(), room_from_text(s)))
+                            }
                             _ => None,
                         })
                         .max_by(|a, b| a.0.total_cmp(&b.0))
@@ -11624,7 +11751,7 @@ mod tests {
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
             from: WorldTime::GENESIS,
-            to: WorldTime::new(40.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
@@ -11643,7 +11770,7 @@ mod tests {
             believed_water(
                 &next,
                 &npc,
-                WorldTime::new(40.0).expect("a day value is finite"),
+                WorldTime::from_std_days(40.0).expect("a day value is finite"),
                 &terrain,
                 PLAN_BUDGET
             ),
@@ -11818,7 +11945,7 @@ mod tests {
         // twice is byte-identical.
         let home = raddr(1.0);
         let ns = home.neighbors();
-        let day = WorldTime::new(3.5).expect("a day value is finite");
+        let day = WorldTime::from_std_days(3.5).expect("a day value is finite");
         let t = PlantedTerrain::thermal([
             (home.clone(), -12.0),
             (ns[0].clone(), 4.0),
@@ -12282,6 +12409,85 @@ mod tests {
     }
 
     #[test]
+    fn arbitration_reports_only_the_dominant_drive_and_keeps_the_suppressed_one_retrievable() {
+        // THE COGNITIVE GAP (The Confidant, Task 5). The SAME two-drive
+        // conflict `grab_and_weigh_resolve_the_same_conflict_differently`
+        // pins above: thirst moderately active (eager_thirst, drive 0.5),
+        // thermal severely active (freezing home) and the louder single
+        // need. Under grab psychology (latency 0.0) arbitration commits to
+        // Thermal alone — `mode`/`affect.object` name only it. Thirst stays
+        // genuinely ACTIVE (it crosses its own engagement threshold) but
+        // loses the contest for `pursued`; this is the residue the creature
+        // itself cannot introspect. It must still be retrievable through
+        // `Resolution::suppressed` — the accessor this task introduces —
+        // even though nothing about `mode`/`affect` ever names it.
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let warm = ns[0].clone(); // pure warmth (loudest single relief)
+        let both = ns[1].clone(); // water + moderate warmth
+        let cold = ns[2].clone();
+        let day = WorldTime::GENESIS;
+        let terrain = PlantedTerrain::thermal([
+            (home.clone(), -20.0), // urgency 1.0 (capped 0.6)
+            (warm.clone(), 18.0),  // thermal serv 1.0
+            (both.clone(), 6.0),   // urgency 0.5 → thermal serv 0.5
+            (cold.clone(), -20.0),
+        ]);
+        let view = Perceived {
+            position: home.clone(),
+            drive: 0.5, // moderate thirst (capped 0.5), active under eager_thirst
+            fatigue: 0.0,
+            believed_water: Some(both.clone()),
+            believed_hazard: std::collections::BTreeSet::new(),
+            explore_step: None,
+        };
+        let thirst = Thirst {
+            params: eager_thirst(),
+        };
+        let thermal = Thermal {
+            niche: warm_niche(),
+            terrain: &terrain,
+            day,
+            interior: None,
+        };
+        let drives: [&dyn Drive; 2] = [&thirst, &thermal];
+        let resolution = arb(
+            &view,
+            &home,
+            &drives,
+            0.0,
+            0.0,
+            false,
+            true,
+            Mode::Idle,
+            PLAN_BUDGET,
+        );
+        assert_eq!(
+            resolution.mode,
+            Mode::Pursuing(DriveKind::Thermal),
+            "grab commits to the loudest single need, thermal: {resolution:?}"
+        );
+        assert_eq!(
+            resolution.affect.object,
+            Some(DriveKind::Thermal),
+            "what the host's felt state is ABOUT is the pursued drive alone: \
+             {resolution:?}"
+        );
+        assert_eq!(
+            resolution.suppressed,
+            vec![DriveKind::Thirst],
+            "thirst was genuinely active this decision and lost the contest \
+             for `pursued` — it must be retrievable through \
+             Resolution::suppressed: {resolution:?}"
+        );
+        assert!(
+            !resolution.suppressed.contains(&DriveKind::Thermal),
+            "the pursued drive must never also appear as suppressed — the \
+             two are disjoint by construction: {resolution:?}"
+        );
+    }
+
+    #[test]
     fn soft_maslow_severe_cold_beats_mild_thirst_but_dying_of_thirst_beats_any_cold() {
         // SOFT MASLOW via urgency ceilings (no priority table): comfort caps at
         // 0.6, survival reaches 1.0. Same freezing world, water and warmth in
@@ -12591,7 +12797,7 @@ mod tests {
             &ledger,
             &base,
             &[],
-            WorldTime::new(100.0).expect("a day value is finite"),
+            WorldTime::from_std_days(100.0).expect("a day value is finite"),
             &terrain,
         );
         assert_eq!(a.label, AffectLabel::Content, "the deathless are still");
@@ -12607,7 +12813,7 @@ mod tests {
             &ledger,
             &meta,
             &[],
-            WorldTime::new(100.0).expect("a day value is finite"),
+            WorldTime::from_std_days(100.0).expect("a day value is finite"),
             &terrain,
         );
         assert_ne!(
@@ -12657,7 +12863,7 @@ mod tests {
             &ledger,
             &base,
             &[],
-            WorldTime::new(0.5).expect("a day value is finite"),
+            WorldTime::from_std_days(0.5).expect("a day value is finite"),
             &terrain,
         );
         assert_eq!(a.label, AffectLabel::Content, "a construct does not flinch");
@@ -12669,7 +12875,7 @@ mod tests {
             &ledger,
             &meta,
             &[],
-            WorldTime::new(0.5).expect("a day value is finite"),
+            WorldTime::from_std_days(0.5).expect("a day value is finite"),
             &terrain,
         );
         assert_eq!(
@@ -12766,7 +12972,7 @@ mod tests {
         // dawn/dusk, down at midnight — the coarse cycle planted terrain uses.
         let t = PlantedTerrain::thermal([]);
         let r = raddr(1.0);
-        let at = |d: f64| WorldTime::new(d).expect("a day value is finite");
+        let at = |d: f64| WorldTime::from_std_days(d).expect("a day value is finite");
         // Noon (sun up): diurnal awake, nocturnal asleep. Midnight: the reverse.
         assert!(is_awake(Diurnal, &t, &r, at(3.5)));
         assert!(!is_awake(Nocturnal, &t, &r, at(3.5)));
@@ -12791,7 +12997,7 @@ mod tests {
             (fatigue_at(
                 &ledger,
                 e,
-                WorldTime::new(0.5).expect("a day value is finite")
+                WorldTime::from_std_days(0.5).expect("a day value is finite")
             ) - FATIGUE_RISE * 0.5)
                 .abs()
                 < 1e-9
@@ -12801,14 +13007,14 @@ mod tests {
             fatigue_at(
                 &ledger,
                 e,
-                WorldTime::new(2.0).expect("a day value is finite")
+                WorldTime::from_std_days(2.0).expect("a day value is finite")
             ) < 1e-9
         );
         assert!(
             (fatigue_at(
                 &ledger,
                 e,
-                WorldTime::new(3.0).expect("a day value is finite")
+                WorldTime::from_std_days(3.0).expect("a day value is finite")
             ) - FATIGUE_RISE)
                 .abs()
                 < 1e-9
@@ -12817,7 +13023,7 @@ mod tests {
             fatigue_at(
                 &ledger,
                 e,
-                WorldTime::new(100.0).expect("a day value is finite")
+                WorldTime::from_std_days(100.0).expect("a day value is finite")
             ),
             1.0
         );
@@ -13049,7 +13255,7 @@ mod tests {
         // 15-day learned-helplessness onset (which, being a pure function of
         // `last_drank`/day, would be identical alone or in-band and so could
         // never distinguish them).
-        let now = WorldTime::new(10.0).expect("a day value is finite");
+        let now = WorldTime::from_std_days(10.0).expect("a day value is finite");
 
         let alone = affect_of(&ledger, &lost, &[], now, &t);
         let in_band = affect_of(&ledger, &lost, &[knower.clone(), lost.clone()], now, &t);
@@ -13661,8 +13867,8 @@ mod tests {
             // Start mid-morning (`waking_offset(Diurnal)`), not midnight: The
             // Slumber wake-gates Thermal, so a diurnal creature simulated
             // from `day: 0.0` starts ASLEEP and never engages it at all.
-            from: WorldTime::new(0.35).expect("a day value is finite"),
-            to: WorldTime::new(1.35).expect("a day value is finite"),
+            from: WorldTime::from_std_days(0.35).expect("a day value is finite"),
+            to: WorldTime::from_std_days(1.35).expect("a day value is finite"),
             params: SUSTENANCE,
             day_length_std: None,
             terrain: &hearth_terrain,
@@ -13708,8 +13914,8 @@ mod tests {
             // Start mid-morning (`waking_offset(Diurnal)`), not midnight: The
             // Slumber wake-gates Thermal, so a diurnal creature simulated
             // from `day: 0.0` starts ASLEEP and never engages it at all.
-            from: WorldTime::new(0.35).expect("a day value is finite"),
-            to: WorldTime::new(1.35).expect("a day value is finite"),
+            from: WorldTime::from_std_days(0.35).expect("a day value is finite"),
+            to: WorldTime::from_std_days(1.35).expect("a day value is finite"),
             params: SUSTENANCE,
             day_length_std: None,
             terrain: &wild_terrain,
@@ -14098,7 +14304,7 @@ mod tests {
         // ledger) never crosses `FATIGUE_ACT` (0.85 at `FATIGUE_RISE`
         // 0.3/day ⇒ ~2.8 days) and competes for the arbitration this test
         // means to isolate to Thermal.
-        let now = WorldTime::new(entry_day + 1.0).expect("a day value is finite");
+        let now = WorldTime::from_std_days(entry_day + 1.0).expect("a day value is finite");
         let sys = DriveMovements {
             npcs: vec![npc],
             from: now,
@@ -14215,7 +14421,7 @@ mod tests {
             .find(DRANK)
             .filter(|f| f.subject == npc.entity)
             .filter_map(|f| f.day)
-            .fold(0.0_f64, |acc, d| acc.max(d.day()));
+            .fold(0.0_f64, |acc, d| acc.max(d.as_std_days()));
         assert_eq!(
             buggy_last_drank, drank_day,
             "sanity check: the unfiltered fold finds the FUTURE drink"
@@ -14367,7 +14573,7 @@ mod tests {
         // A ONE-day gap, same reasoning as the reconstruction test above:
         // generous for the 3-hop journey, short of Fatigue's own act
         // threshold.
-        let now = WorldTime::new(entry_day + 1.0).expect("a day value is finite");
+        let now = WorldTime::from_std_days(entry_day + 1.0).expect("a day value is finite");
         let forward = DriveMovements {
             npcs: vec![
                 cold_thermal_npc(a, home.clone(), niche),

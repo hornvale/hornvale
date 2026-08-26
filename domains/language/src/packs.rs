@@ -727,6 +727,45 @@ pub fn is_extradiegetic(concept: &str) -> bool {
         .any(|(name, _)| *name == concept)
 }
 
+/// The six felt states a creature can undergo, one per region of the vessel
+/// window's valence x arousal circumplex (`AffectLabel`, spec §7):
+/// `content`/`eager` (positive), `searching` (neutral seeking), `frustrated`/
+/// `lost` (the two negative shapes — a known target out of reach versus no
+/// target to move toward), and `helpless` (the persistent scar the other two
+/// upgrade into). `(concept, doc)` pairs, registered directly by
+/// [`register_concepts`] under [`hornvale_kernel::ConceptKind::Affect`],
+/// deliberately NOT chained into any Swadesh pack: nothing today grants a
+/// culture `ExposureClass::Steeped` or `KnowsOf` over another creature's felt
+/// state, so each registers an honest `Void::Gap` lexeme, the same footing
+/// [`action_suite_pack`] uses and for the same reason.
+///
+/// `hornvale_language` cannot import `AffectLabel` itself — it lives in
+/// `windows/vessel`, a window, and a domain depends on the kernel and
+/// nothing else (`domains/CLAUDE.md`'s one rule). The two rosters are kept
+/// in step by a test in `windows/vessel`, which already depends on this
+/// crate, rather than by an import running the wrong way across the
+/// kernel -> domains -> windows layering.
+/// type-audit: bare-ok(identifier-text)
+pub fn felt_state_pack() -> &'static [(&'static str, &'static str)] {
+    &[
+        ("content", "positive, low arousal: needs met, at rest"),
+        (
+            "eager",
+            "positive, high arousal: chasing a satisfiable need",
+        ),
+        (
+            "frustrated",
+            "negative: blocked with a known target out of reach",
+        ),
+        (
+            "helpless",
+            "negative and persistent: given up despite an active drive",
+        ),
+        ("lost", "negative: blocked with no target to move toward"),
+        ("searching", "neutral, mid arousal: seeking with a gradient"),
+    ]
+}
+
 /// Input to [`in_ladder`]: how many acquisition-ladder stages are unlocked,
 /// per ladder in [`color_pack`]. Derivation from a culture's perception
 /// vector lives in worldgen (Task 8) — this struct is just the input shape.
@@ -858,6 +897,31 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
             percept: Correspondent::Absent(Void::Imperceptible(
                 "the world never emits this as a phenomenon; it has no in-world referent",
             )),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })?;
+    }
+
+    // The six felt states (The Confidant, Task 3): honest `Void::Gap`
+    // lexemes for the same reason the action suite's in-character concepts
+    // get one — nothing grants any of these `Steeped`/`KnowsOf` today. See
+    // `felt_state_pack`'s own doc.
+    for (concept, doc) in felt_state_pack() {
+        if registry.concept(concept).is_some() {
+            continue;
+        }
+        registry.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: concept.to_string(),
+                domain: "language".to_string(),
+                kind: ConceptKind::Affect,
+                doc: doc.to_string(),
+            },
+            lexeme: Correspondent::Absent(Void::Gap(
+                "no exposure rule grants this concept Steeped or KnowsOf yet",
+            )),
+            percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
             cognition: Correspondent::Absent(Void::Uncognized {
                 pending_wave: "wave-cognition",
             }),

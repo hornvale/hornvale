@@ -423,7 +423,9 @@ fn a_people_outside_the_canonical_roster_still_gets_distinct_founders() {
                         predicate: predicate.to_string(),
                         object,
                         place: Some(id),
-                        day: Some(WorldTime::new(day).expect("test fixture day is finite")),
+                        day: Some(
+                            WorldTime::from_std_days(day).expect("test fixture day is finite"),
+                        ),
                         provenance: "test-fixture".to_string(),
                     },
                     &world.registry,

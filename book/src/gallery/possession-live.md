@@ -86,6 +86,11 @@ anything the chamber's prose or the floor plan's legend named),
 <code>back</code>,
 <code>wait</code> (the world moves too — a derived NPC keeps its own daily
 route, departing and returning), <code>knows</code>,
+<code>ask</code> (ask the body you are wearing how it feels; it answers in its
+own tongue, and what it says is <em>not</em> what its arbitration computed — it
+cannot perceive what that arbitration suppressed, and its culture may have no
+word for the state it is in, in which case it reaches for the nearest word it
+does have and says so — The Confidant),
 <code>sleep</code> (lie down and let go of the day; the body stops obeying
 until its own cycle wakes it — The Deed),
 and <code>release</code>, which ends the possession rather than doing anything

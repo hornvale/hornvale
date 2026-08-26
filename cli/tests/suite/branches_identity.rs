@@ -226,6 +226,17 @@ fn hobgoblin_and_bugbear_are_present() {
 /// out to zero by a stronger competitor. This is the one comparison this
 /// keystone makes against the OLD, two-peoples world, and the inequality
 /// is deliberate: "goblin structure unchanged" would be false.
+///
+/// **The fixture was RE-ENCODED, never re-derived, by The Escapement**
+/// (decision 0186). Retyping `WorldTime` to an exact `i64` tick count made a
+/// `"day": 0.0` in a frozen archive undeserializable, and nothing regenerates
+/// this file — it has one commit in its whole history and is deliberately not
+/// in `docs/generated-paths.txt`, because the code that produced it is gone.
+/// So every `day` scalar in it was rewritten in place as
+/// `round(day * TICKS_PER_STD_DAY)`: the same 714 instants in the new
+/// encoding, with **zero** non-day field differences across all 714 facts
+/// (verified fact by fact before the rewrite landed). The frozen witness is
+/// intact; only how it spells an instant changed.
 #[test]
 fn goblin_names_are_rebaselined_not_frozen() {
     let fixture: World =

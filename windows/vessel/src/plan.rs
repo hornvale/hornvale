@@ -818,7 +818,7 @@ mod tests {
         let sum = |c: [u8; 3]| u32::from(c[0]) + u32::from(c[1]) + u32::from(c[2]);
         assert!(
             sum(dim) < sum(lit),
-            "the skyglow ambient ({dim:?}) must render darker than torch light              at the same distance ({lit:?})"
+            "the skyglow ambient ({dim:?}) must render darker than torch light at the same distance ({lit:?})"
         );
     }
 

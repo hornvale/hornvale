@@ -14,7 +14,27 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| -0.43572544 | -0.17592153 | -0.11928184 | -0.057362523 | 0.44620851 | -0.11275554 |
+| -0.43378899 | -0.17579011 | -0.11931206 | -0.057290909 | 0.44602481 | -0.11292452 |
+
+### `granary-raid-phase-concentration`
+
+Circular (Rayleigh-style) concentration R of this world's raid-caused occupation endings' day-of-year stamps (The Granary T8): the mean resultant length of the phases, 0 when uniformly spread around the year and approaching 1 as all raids land at one moment. Day-of-year is the fractional part of the record's bake-year `ended` stamp. Absent on a world with fewer than 5 raid-caused endings — below that floor the concentration statistic is noise, not signal.
+
+n = 984 present, 16 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0.56387674 | 0.88756419 | 0.92280548 | 0.94886494 | 1 | 0.91399915 |
+
+### `granary-raids-in-depleted-half`
+
+Fraction of this world's raid-caused occupation endings whose day-of-year stamp falls in the DEPLETED half of the victim site's authored harvest curve (The Granary T8): the half-year starting half a year past the curve peak, where `Curve::at` returns exactly zero and a settlement lives off stores. The curve is keyed exactly as the bake keys it at open — `geo.coord(site).latitude` and `biome_class(climate.biome_map())` through `worldgen::harvest::Curve` — so the column measures the same seasonality the granary integrates. Uniform raids give 0.5; hunger-side clustering gives > 0.5. Absent under the same 5-ending floor as `granary-raid-phase-concentration`.
+
+n = 984 present, 16 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0 | 0.31464174 | 0.51145242 | 0.70955882 | 1 | 0.50663677 |
 
 ### `raid-attribution-unresolved`
 
@@ -34,7 +54,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.0017857143 | 0.19631902 | 0.27755523 | 0.32240437 | 0.41297468 | 0.24815537 |
+| 0 | 0.19361702 | 0.2757849 | 0.32520944 | 0.4235589 | 0.24795911 |
 
 ### `raid-victim-rate`
 
@@ -44,7 +64,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.0017857143 | 0.19926199 | 0.28628915 | 0.33529412 | 0.44224684 | 0.25712335 |
+| 0 | 0.19598965 | 0.28206487 | 0.33716751 | 0.45229425 | 0.25552067 |
 
 ### `tribute-relations-standing`
 
@@ -54,7 +74,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 51 | 81 | 111 | 225 | 81.479 |
+| 1 | 59 | 91 | 122 | 270 | 91.682 |
 
 ## Weaknesses found here
 
@@ -65,5 +85,5 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `tribute-relations-standing`
 
-- **D5 strength**: declared moderate tracking settlement-count, but observed r = +0.928 (1000 pairs) is dominant (positive)
+- **D5 strength**: declared moderate tracking settlement-count, but observed r = +0.943 (1000 pairs) is dominant (positive)
 

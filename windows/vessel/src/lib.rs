@@ -28,6 +28,7 @@ mod session;
 pub mod snapshot;
 pub mod streams;
 pub mod structure;
+pub mod testimony;
 pub mod underworld_level;
 mod vantage;
 pub use agent::{most_populous_settlement, walk_depth};
@@ -205,7 +206,7 @@ impl Default for PossessOpts {
     /// on the midnight boundary every integer day would.
     fn default() -> Self {
         PossessOpts {
-            day: hornvale_kernel::WorldTime::new(0.5).expect("a day value is finite"),
+            day: hornvale_kernel::WorldTime::from_std_days(0.5).expect("a day value is finite"),
             echo: false,
             wild_agents: true,
             eyes: eyes::Eyes::Own,

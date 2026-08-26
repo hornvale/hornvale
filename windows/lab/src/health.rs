@@ -122,8 +122,8 @@ pub fn run_simulation(
     for _ in 0..ticks {
         let sys = DriveMovements {
             npcs: npcs.to_vec(),
-            from: WorldTime::new(day).expect("a day value is finite"),
-            to: WorldTime::new(day + 1.0).expect("a day value is finite"),
+            from: WorldTime::from_std_days(day).expect("a day value is finite"),
+            to: WorldTime::from_std_days(day + 1.0).expect("a day value is finite"),
             params: SUSTENANCE,
             day_length_std,
             terrain,
@@ -158,7 +158,7 @@ pub fn run_simulation(
         // over a fixed ledger (see `PrimaryAfraidMemo`).
         let mut afraid_memo = PrimaryAfraidMemo::new();
         for (i, npc) in npcs.iter().enumerate() {
-            let now = WorldTime::new((day - 1.0) + waking_offset(npc.activity))
+            let now = WorldTime::from_std_days((day - 1.0) + waking_offset(npc.activity))
                 .expect("a day value is finite");
             traces[i].push(affect_of_memo_occupied(
                 &ledger,
@@ -225,7 +225,7 @@ pub fn run_simulation_with_locale(
             let pos = agent_position(
                 &ledger,
                 npc,
-                WorldTime::new(day).expect("a day value is finite"),
+                WorldTime::from_std_days(day).expect("a day value is finite"),
             );
             pos.corner_weights_memo(geo, index, &mut mesh_memo);
             for n in pos.neighbors_memo(&mut mesh_memo) {
@@ -240,8 +240,8 @@ pub fn run_simulation_with_locale(
             LocaleTerrain::with_fields(ctx, calendar, predator, prey, built, Some(&mesh_snapshot));
         let sys = DriveMovements {
             npcs: npcs.to_vec(),
-            from: WorldTime::new(day).expect("a day value is finite"),
-            to: WorldTime::new(day + 1.0).expect("a day value is finite"),
+            from: WorldTime::from_std_days(day).expect("a day value is finite"),
+            to: WorldTime::from_std_days(day + 1.0).expect("a day value is finite"),
             params: SUSTENANCE,
             day_length_std,
             terrain: &terrain,
@@ -255,7 +255,7 @@ pub fn run_simulation_with_locale(
         day += 1.0;
         let mut afraid_memo = PrimaryAfraidMemo::new();
         for (i, npc) in npcs.iter().enumerate() {
-            let now = WorldTime::new((day - 1.0) + waking_offset(npc.activity))
+            let now = WorldTime::from_std_days((day - 1.0) + waking_offset(npc.activity))
                 .expect("a day value is finite");
             traces[i].push(affect_of_memo_occupied(
                 &ledger,

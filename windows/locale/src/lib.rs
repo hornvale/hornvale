@@ -1196,7 +1196,7 @@ impl LocaleContext {
         let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
         let sum: f64 = weights
             .iter()
-            .map(|&(c, w)| w as f64 * self.climate.temperature_at(c, at.day()).get())
+            .map(|&(c, w)| w as f64 * self.climate.temperature_at(c, at.as_std_days()).get())
             .sum();
         sum / denom as f64
     }
@@ -2416,7 +2416,7 @@ mod tests {
         };
         let rooms = walk_visited(&start, 3);
         assert!(rooms.len() > 10, "fixture must cover a real neighborhood");
-        let at = WorldTime::new(12.5).expect("a day value is finite");
+        let at = WorldTime::from_std_days(12.5).expect("a day value is finite");
         let zero_field = hornvale_kernel::VertexMap::from_fn(ctx.climate().geosphere(), |_| 0.0f64);
 
         // Prefill only the EVEN-indexed rooms (under `&mut`) — the rest stay

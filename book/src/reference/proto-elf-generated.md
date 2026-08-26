@@ -57,6 +57,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `coast` | where the land meets the sea | *Shraong | /ʃraoŋ/ |
 | `cold` | felt, biting chill | *Shreng | /ʃreŋ/ |
 | `cold-upwelling` | Cold nutrient-rich water rising from below. | *Dangzhreang | /daŋʒreaŋ/ |
+| `content` | positive, low arousal: needs met, at rest | *Baengngang | /baeŋŋaŋ/ |
 | `coral-head` | A massive coral colony standing proud of the reef. | *Ngungngang | /ŋuŋŋaŋ/ |
 | `coral-reef` | a biome class | *Nguung | /ŋuuŋ/ |
 | `crevasse-field` | Ice split by crevasses. | *Zraangngeang | /zraaŋŋeaŋ/ |
@@ -70,6 +71,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `dire-wolf-kind` | a dire wolf | *Shruung | /ʃruuŋ/ |
 | `drink` | to swallow liquid | *Shrongngeng | /ʃroŋŋeŋ/ |
 | `drow-kind` | a drow | *Gong | /goŋ/ |
+| `eager` | positive, high arousal: chasing a satisfiable need | *Sraengngong | /sraeŋŋoŋ/ |
 | `earth` | the ground underfoot | *Shreangngaeng | /ʃreaŋŋaeŋ/ |
 | `east` | the direction of increasing longitude | *Peung | /peuŋ/ |
 | `eat` | to consume food | *Pangpeng | /paŋpeŋ/ |
@@ -85,6 +87,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `ford` | where a river runs shallow enough to cross | *Ngongshrang | /ŋoŋʃraŋ/ |
 | `forest-gap` | A break in the canopy where light reaches the ground. | *Tung | /tuŋ/ |
 | `frost-heave` | Ground churned and patterned by freezing. | *Shruongtuong | /ʃruoŋtuoŋ/ |
+| `frustrated` | negative: blocked with a known target out of reach | *Ngongsruung | /ŋoŋsruuŋ/ |
 | `gallery-forest` | Forest following a watercourse. | *Gang | /gaŋ/ |
 | `giant-constrictor-snake-kind` | a giant constrictor snake | *Gung | /guŋ/ |
 | `giant-crocodile-kind` | a giant crocodile | *Taongngaung | /taoŋŋauŋ/ |
@@ -107,6 +110,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `hand` | the manipulating limb-end | *Ngueng | /ŋueŋ/ |
 | `hearth` | the fire at the center of a home | *Deong | /deoŋ/ |
 | `heat` | felt, oppressive warmth | *Zruong | /zruoŋ/ |
+| `helpless` | negative and persistent: given up despite an active drive | *Ngongngeeng | /ŋoŋŋeeŋ/ |
 | `high` | far above the ground | *Shrongshraong | /ʃroŋʃraoŋ/ |
 | `high-elf-kind` | a high elf | *Zhrongsreung | /ʒroŋsreuŋ/ |
 | `hill` | ground that rises above what surrounds it | *Zhrangngung | /ʒraŋŋuŋ/ |
@@ -130,6 +134,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `lightless-water` | Water below all light. | *Ngangngung | /ŋaŋŋuŋ/ |
 | `little` | small in size or extent | *Ngoang | /ŋoaŋ/ |
 | `look` | to visually attend to something, near or far — `look`, `examine` | *Nguengngaong | /ŋueŋŋaoŋ/ |
+| `lost` | negative: blocked with no target to move toward | *Shroeng | /ʃroeŋ/ |
 | `low` | near the ground | *Puangngeng | /puaŋŋeŋ/ |
 | `many` | an indefinitely large count | *Shroung | /ʃrouŋ/ |
 | `marine-snow` | Organic debris drifting endlessly down. | *Tang | /taŋ/ |
@@ -183,6 +188,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `sea` | a body of salt water | *Zreung | /zreuŋ/ |
 | `sea-elf-kind` | a sea elf | *Ngoengdung | /ŋoeŋduŋ/ |
 | `sea-ice` | a biome class | *Sraungngong | /srauŋŋoŋ/ |
+| `searching` | neutral, mid arousal: seeking with a gradient | *Bengdung | /beŋduŋ/ |
 | `sense` | to perceive another's felt bodily state — `needs` | *Duang | /duaŋ/ |
 | `shadow` | cast dark, distinct from open gloom | *Bungteng | /buŋteŋ/ |
 | `shrieker-kind` | a shrieker | *Zruungzraang | /zruuŋzraaŋ/ |

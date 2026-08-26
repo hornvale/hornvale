@@ -427,9 +427,17 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // the `other` arm panics loudly on a cyclic head in a locked world, and
     // the run reached this assertion, so it never fired on any of the 1000
     // seeds.
+    //
+    // The Granary's close regen (canonical census on lefford, goldens
+    // committed as c54fb62c9): sub-year raid timing moves which settlements
+    // survive to seat a flagship pantheon, (152, 40) -> (149, 43). The
+    // invariant this test exists to guard is re-checked rather than assumed —
+    // the `other` arm panics loudly on a cyclic head in a locked world, and
+    // the run reached this assertion, so it never fired on any of the 1000
+    // seeds.
     assert_eq!(
         (locked_eternal, locked_ambient),
-        (152, 40),
+        (149, 43),
         "locked-world per-people head split (eternal, ambient) drifted"
     );
     // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20: 1 -> 2.
@@ -471,8 +479,13 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // of placement — the underworld epoch re-decides which settlements
     // survive to seat a flagship pantheon — which is the campaign's predicted
     // mechanism and the only one the census diff found.
+    // The Granary's close regen (canonical census on lefford, goldens
+    // c54fb62c9): 10 -> 12. WITNESS, not claim, as the paragraph above says:
+    // the guarded property is the conjunction asserted above (a frozen sky
+    // never heads a cyclic pantheon), which is unmoved; sub-year raid timing
+    // re-decides which settlements survive to seat a flagship pantheon.
     assert_eq!(
-        spinning_eternal, 10,
+        spinning_eternal, 12,
         "spinning-yet-eternal per-people head count drifted"
     );
 }
@@ -756,8 +769,16 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // `flagship-coastal`/`goblin-flagship-coastal` is no longer sitting on
     // the bar. That is a measurement moving away from an edge, not a
     // property being established.
-    assert_eq!(coastal, 181, "coastal flagship count drifted");
-    assert_eq!(inland, 819, "inland flagship count drifted");
+    // The Granary's close regen (canonical census on lefford, goldens
+    // c54fb62c9): sub-year raid timing changes which settlements survive
+    // the bake, so goblin's flagship re-seats on many worlds: 181 -> 190
+    // coastal, 819 -> 809 inland — and the two now sum to 999 rather than
+    // 1000: ONE world reports NEITHER flag (the first since The Radiation's
+    // zero-Absent reading), matching goblin's present-row counts elsewhere
+    // in this file falling 1000 -> 999. WITNESS, not claim — nothing here
+    // asserts a direction.
+    assert_eq!(coastal, 190, "coastal flagship count drifted");
+    assert_eq!(inland, 809, "inland flagship count drifted");
 }
 
 #[test]
@@ -1187,8 +1208,18 @@ fn blind_attribution_beats_chance_decisively() {
     // is really about, nearly double. The mooned-pair invariant below
     // (perfect attribution among spinning, mooned pairs) never fired either;
     // the run reaches it, and it is an `assert_eq!` that would have.
-    assert_eq!(correct, 888, "blind-attribution count drifted");
-    assert_eq!(total, 982, "attributable-pair count drifted");
+    // The Granary's close regen (canonical census on lefford, goldens
+    // c54fb62c9): sub-year raid timing reshapes settlement survival,
+    // shifting which worlds field an attributable goblin/kobold pair
+    // (982 -> 980 total) and which side several land on (888 -> 889
+    // correct); accuracy 0.9042769857433809 -> 0.9071428571428571 — the
+    // directional claim this test guards (blind attribution beats chance
+    // decisively) HOLDS, re-checked rather than assumed: 0.907 against the
+    // 0.75 floor asserted above. The mooned-pair invariant below (perfect
+    // attribution among spinning, mooned pairs) never fired either; the run
+    // reaches it, and it is an `assert_eq!` that would have.
+    assert_eq!(correct, 889, "blind-attribution count drifted");
+    assert_eq!(total, 980, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -1447,14 +1478,25 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // exactly empty (asserted above), so the detector reads true on all 1000
     // goblin worlds, and the inner `assert!` in the loop confirms it still
     // reads false on every one of the 969 kobold worlds that hold a pantheon.
+    // The Granary's close regen (canonical census on lefford, goldens
+    // c54fb62c9): sub-year raid timing moves which worlds hold a flagship
+    // pantheon at all: goblin 1000/0 -> 999/1 true/absent (one world loses
+    // its goblin flagship entirely — see
+    // `goblin_flagship_coastal_split_is_pinned`'s new neither-flag row),
+    // kobold 982/18 -> 980/20 false/absent. The claim this row guards is
+    // re-checked, not assumed — `g_false_seeds` is still exactly empty (the
+    // assertion above did not fire), so the detector reads true on every one
+    // of the 999 goblin worlds that hold a pantheon, and the inner `assert!`
+    // in the loop confirms it still reads false on every one of the 980
+    // kobold worlds that do.
     assert_eq!(
         (g_true, g_absent),
-        (1000, 0),
+        (999, 1),
         "goblin epithet-honorific true/absent split drifted"
     );
     assert_eq!(
         (k_false, k_absent),
-        (982, 18),
+        (980, 20),
         "kobold epithet-honorific false/absent split drifted"
     );
 }
@@ -1993,7 +2035,77 @@ fn name_collision_rate_is_measured_and_pinned() {
         // carries no directional claim (H4 already failed and is recorded as
         // such above), and the rate stays inside the range decision 0024
         // sanctions (see the note above).
-        (mean - 0.508_151_833_319_999).abs() < 1e-6,
+        //
+        // The Escapement's re-pin (2026-08-23, canonical census on lefford):
+        // the mover is `3bc4fd871`, this campaign's fix to
+        // `Calendar::local_day`'s day-fraction — the old formula returned a
+        // *negative* fraction for a negative local day, which put a local
+        // day's start after its own sample. `domains/astronomy/src/
+        // heliacal.rs` reaches that path directly, since its `year_start` is
+        // negative at genesis for essentially every world; an instrumented
+        // build recorded 1,293,003 divergences in one seed-267 world alone,
+        // every one at `local < 0`. This is NOT the `WorldTime`
+        // representation flip landed earlier in the same campaign, which
+        // moved zero census table entries — bisected across the 701 commits since
+        // the previous refresh. The corrected fraction changes which
+        // heliacal events a scan finds, which changes the phenomena list, a
+        // settlement's presiding concept, and its gloss and name. Only two
+        // entries move in this metric (seed 267: 193/388 -> 191/388; seed 831:
+        // 0.43521595 -> 0.42857143), so zero/nonzero/absent are unmoved at
+        // 0/1000/0 (checked, not assumed). Mean:
+        // 0.508_151_833_319_999 -> 0.508_140_034_159_999. This row still
+        // carries no directional claim (H4 already failed and is recorded as
+        // such above), and the rate stays inside the range decision 0024
+        // sanctions (see the note above).
+        //
+        // The Confidant (Arc III of The Bridle): six felt-state concepts
+        // registered, each people given a `MindVector`-governed derived
+        // exposure to some of them, so six new words can enter a species'
+        // dictionary (`windows/lab/src/metrics.rs`'s `FELT_STATE_PAIRS`) —
+        // the wider naming vocabulary settlements draw compounds from.
+        // zero/nonzero/absent are unmoved at 0/1000/0. Mean:
+        // 0.508_151_833_319_999 -> 0.508_144_194_499_999, a fall of
+        // 7.6e-6 — one part in ~66,000, consistent with a handful of new
+        // dictionary entries nudging which words a per-settlement compound
+        // draws, not a structural change. This row still carries no
+        // directional claim (H4 already failed and is recorded as such
+        // above), and the rate stays inside the range decision 0024
+        // sanctions (see the note above).
+        //
+        // The Escapement's re-pin ON THE MERGE PRODUCT (2026-08-25, canonical
+        // census run in the chamber against the merge of main into this
+        // branch — request `req-7d4732b89de9`, goldens delivered on
+        // `census/7d4732b89de9-20260825T143401Z`). This DISCHARGES the
+        // pending re-pin the two paragraphs above left open: both movers are
+        // real, both apply to this product, and this is the census that
+        // measures them together. The campaign's own mover is unchanged from
+        // the paragraph above — `3bc4fd871`'s fix to `Calendar::local_day`'s
+        // day-fraction, which returned a *negative* fraction for a negative
+        // local day, a path `domains/astronomy/src/heliacal.rs` reaches at
+        // genesis for essentially every world; the bisect and instrumented-run
+        // record is committed at
+        // `docs/audits/the-escapement-census-attribution.md`. Run against a
+        // NEWER main than the campaign's earlier census, it moves exactly the
+        // same three census table entries that one did (seed 267
+        // name-collision-rate 0.49742268 -> 0.49226804 and name-transparency
+        // 0.89830508 -> 0.90677966; seed 831 name-collision-rate 0.43521595
+        // -> 0.42857143) — a clean confirmation, not a new reading. The
+        // zero/nonzero/absent partition is UNMOVED at 0/1000/0, checked
+        // against this fixture rather than assumed (the three assertions
+        // above pass unchanged). Mean: 0.508_144_194_499_999 ->
+        // 0.508_132_395_339_999_4. This row still carries no directional
+        // claim (H4 already failed and is recorded as such above, per
+        // decision 0016 — reportable, not adjusted); the tolerance is
+        // unchanged at 1e-6, and the rate stays inside the range decision
+        // 0024 sanctions (see the note above).
+        // The Granary's close regen (canonical census on lefford, goldens
+        // c54fb62c9): sub-year raid timing reshapes which settlements are
+        // named on every world; zero/nonzero/absent unmoved at 0/1000/0.
+        // Mean: 0.508_140_034_159_999 -> 0.519_033_116_356_999. This row
+        // still carries no directional claim (H4 already failed and is
+        // recorded as such above), and the rate stays inside the range
+        // decision 0024 sanctions (see the note above).
+        (mean - 0.519_033_116_356_999).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -2222,7 +2334,16 @@ fn name_length_distributions_are_measured_and_pinned() {
         // (1000 -> 1000): mean 8.515_439_092_299_996 -> 8.546_439_147_599_997.
         // Still comfortably below the campaign's own <10-character claim
         // (spec §7) — re-checked rather than assumed.
-        ("goblin", 1000u32, 8.546_439_147_599_997),
+        //
+        // The Granary's close regen (canonical census on lefford, goldens
+        // c54fb62c9): sub-year raid timing moves which settlements survive
+        // to seat a flagship and which sites its names compound over: present
+        // 1000 -> 999 (one world loses its goblin flagship entirely — see
+        // `goblin_flagship_coastal_split_is_pinned`'s neither-flag row), mean
+        // 8.546_439_147_599_997 -> 8.523_035_457_757_757. Still comfortably
+        // below the campaign's own <10-character claim (spec §7) — re-checked
+        // rather than assumed.
+        ("goblin", 999u32, 8.523_035_457_757_757),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -2334,7 +2455,24 @@ fn name_length_distributions_are_measured_and_pinned() {
         // (982 -> 982); mean 6.854_391_970_773_933 -> 6.819_402_706_211_809.
         // Still comfortably below the campaign's own <10-character claim
         // (spec §7) — re-checked rather than assumed.
-        ("kobold", 982u32, 6.819_402_706_211_809),
+        //
+        // The Confidant (Arc III of The Bridle): six felt-state concepts
+        // registered, each people given a `MindVector`-governed derived
+        // exposure to some of them, so six new words can enter a species'
+        // dictionary — a slightly wider vocabulary for the per-settlement
+        // compound draw. Present count does NOT move (982 -> 982); mean
+        // 6.819_402_706_211_809 -> 6.818_936_120_061_097, a fall of
+        // 4.7e-4 characters — a hair, as expected from six extra dictionary
+        // entries. Still comfortably below the campaign's own <10-character
+        // claim (spec §7) — re-checked rather than assumed.
+        //
+        // The Granary's close regen (canonical census on lefford, goldens
+        // c54fb62c9): sub-year raid timing moves which settlements survive
+        // to seat a flagship and which sites its names compound over: present
+        // 982 -> 980, mean 6.818_936_120_061_097 -> 6.865_372_775_000_001.
+        // Still comfortably below the campaign's own <10-character claim
+        // (spec §7) — re-checked rather than assumed.
+        ("kobold", 980u32, 6.865_372_775_000_001),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -2519,8 +2657,30 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // kobold 982); goblin 2.709_543_428_800_003 -> 2.724_187_402_399_996,
         // kobold 2.179_334_351_323_829 -> 2.186_661_987_881_874. The claim
         // (spec §8 criterion 2, mean in 2-3) still HOLDS at both species.
-        ("goblin", 1000u32, 2.724_187_402_399_996),
-        ("kobold", 982u32, 2.186_661_987_881_874),
+        //
+        // The Confidant (Arc III of The Bridle): six felt-state concepts
+        // registered, each people given a `MindVector`-governed derived
+        // exposure to some of them, so six new words can enter a species'
+        // dictionary — a slightly wider vocabulary for the per-settlement
+        // compound draw. Present counts unmoved (goblin 1000, kobold 982);
+        // goblin is UNMOVED at 2.724_187_402_399_996 (same `MindVector`
+        // reading as the homophony row: goblin's scalars cross none of the
+        // three midpoints, so it gains no new Steeped word); kobold
+        // 2.186_661_987_881_874 -> 2.186_698_356_822_811, a rise of 3.6e-5
+        // syllables — a hair, as expected from six extra dictionary entries.
+        // The claim (spec §8 criterion 2, mean in 2-3) still HOLDS at both
+        // species — re-checked rather than assumed.
+        // The Granary's close regen (canonical census on lefford, goldens
+        // c54fb62c9): same sub-year-raid-timing mover as the name-length row
+        // above; the population tie with name-length is preserved row by row
+        // (the per-seed assertion between the two columns did not fire).
+        // Goblin: 1000 -> 999 present, mean 2.724_187_402_399_996 ->
+        // 2.716_477_110_510_511. Kobold: 982 -> 980 present, mean
+        // 2.186_698_356_822_811 -> 2.200_726_815_918_367. The claim (spec §8
+        // criterion 2, mean in 2-3) still HOLDS at both species — re-checked
+        // rather than assumed.
+        ("goblin", 999u32, 2.716_477_110_510_511),
+        ("kobold", 980u32, 2.200_726_815_918_367),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -2566,6 +2726,9 @@ fn name_syllable_distributions_are_measured_and_pinned() {
     }
 }
 
+/// claim: rate(census: name-transparency, all 1000 rows) — the share is pinned
+/// exactly at its census mean, every world's reading is a share in [0, 1], and
+/// the column stays a DISTRIBUTION rather than settling back to a uniform 1.0
 #[test]
 fn name_transparency_is_measured_and_pinned() {
     // NEW ROW — The Wearing (2026-07-28; lefford regen f32d6ce2, 0063). The
@@ -2739,7 +2902,63 @@ fn name_transparency_is_measured_and_pinned() {
         // mean 0.706_817_471_809_999 -> 0.714_474_321_670_000. Still
         // emphatically NOT 1.0 — the claim this row exists to guard —
         // re-checked rather than assumed.
-        (mean - 0.714_474_321_670_000).abs() < 1e-9,
+        //
+        // The Escapement's re-pin (2026-08-23, canonical census on lefford):
+        // same mover as the name-collision-rate re-pin above —
+        // `3bc4fd871`'s fix to `Calendar::local_day`'s day-fraction, which
+        // was returning a negative fraction for a negative local day
+        // (`domains/astronomy/src/heliacal.rs` reaches that path directly at
+        // genesis for essentially every world). Only seed 267 moves in this
+        // metric (106/118 -> 107/118); present/absent are unmoved at
+        // 1000/0. Mean: 0.714_474_321_670_000 -> 0.714_482_796_250_000.
+        // Still emphatically NOT 1.0 — the claim this row exists to guard —
+        // re-checked rather than assumed. Min and max are unmoved at
+        // 0.300_000_0 and 0.971_204_19 (checked directly against the
+        // committed census, not assumed).
+        //
+        // The Confidant (Arc III of The Bridle): six felt-state concepts
+        // registered, each people given a `MindVector`-governed derived
+        // exposure to some of them, so six new Root words can enter a
+        // species' dictionary and be drawn into the compound settlement
+        // names this metric reads — a wear cascade running over a slightly
+        // larger vocabulary. Present/absent unmoved at 1000/0; mean
+        // 0.714_474_321_670_000 -> 0.713_554_079_900_000, a fall of
+        // 9.2e-4 — the SAFE direction (away from the uniformity defect this
+        // row guards, not toward it), and small, as expected from six extra
+        // dictionary entries diluting a ~2000-entry-per-world compound
+        // vocabulary. Still emphatically NOT 1.0 — re-checked rather than
+        // assumed.
+        //
+        // The Escapement's re-pin ON THE MERGE PRODUCT (2026-08-25, canonical
+        // census run in the chamber against the merge of main into this
+        // branch — request `req-7d4732b89de9`, goldens delivered on
+        // `census/7d4732b89de9-20260825T143401Z`). This DISCHARGES the
+        // pending re-pin the two paragraphs above left open: both movers are
+        // real, both apply to this product, and this is the census that
+        // measures them together. Same mover as the name-collision-rate
+        // re-pin above — `3bc4fd871`'s fix to `Calendar::local_day`'s
+        // day-fraction (attribution recorded in
+        // `docs/audits/the-escapement-census-attribution.md`). Against a
+        // NEWER main than the campaign's earlier census it moves the same
+        // single census table entry in this metric (seed 267: 0.89830508 ->
+        // 0.90677966), a confirmation rather than a new reading, and the
+        // partition is checked rather than assumed: present/absent are UNMOVED
+        // at 1000/0, and so are the two SPREAD pins below — min
+        // 0.295_652_17 and max 0.971_204_19, read directly off this fixture.
+        // Mean: 0.713_554_079_900_000 ->
+        // 0.713_562_554_480_000_3, a rise of 8.5e-6. Still emphatically NOT
+        // 1.0 — the claim this row exists to guard — re-checked rather than
+        // assumed, and the tolerance is unchanged at 1e-9: this is a
+        // measured calibration re-pinned to what the instrument reports,
+        // never a bound widened to fit.
+        //
+        // The Granary's close regen (canonical census on lefford, goldens
+        // c54fb62c9): sub-year raid timing moves which settlements survive
+        // to be named; present/absent unmoved at 1000/0; mean
+        // 0.713_562_554_480_000_3 -> 0.714_363_700_030_002. Still emphatically
+        // NOT 1.0 — the claim this row exists to guard — re-checked rather
+        // than assumed.
+        (mean - 0.714_363_700_030_002).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -2814,7 +3033,23 @@ fn name_transparency_is_measured_and_pinned() {
         // redraws every generated name; the floor RISES 0.297_142_86 ->
         // 0.300_000_0. Re-checked against the ceiling assertion below rather
         // than assumed to be the uniformity defect returning.
-        (min - 0.300_000_0).abs() < 1e-8,
+        //
+        // The Confidant (Arc III of The Bridle): six felt-state concepts
+        // registered, each people given a `MindVector`-governed derived
+        // exposure to some of them, widening the compound vocabulary the
+        // wear cascade runs over (same mechanism as the mean assertion
+        // above). The floor DROPS 0.300_000_0 -> 0.295_652_170_000_000 —
+        // the ceiling (asserted below) is UNMOVED, so this widens the span
+        // from below, away from the uniformity defect this row guards, not
+        // toward it. Re-checked against the ceiling assertion below rather
+        // than assumed to be the defect returning.
+        // The Granary's close regen (canonical census on lefford, goldens
+        // c54fb62c9): the floor DROPS 0.295_652_170_000_000 -> 0.284_644_19
+        // — sub-year raid timing reshapes the named-settlement population,
+        // widening the span from below, away from the uniformity defect this
+        // row guards. Re-checked against the ceiling assertion below rather
+        // than assumed to be the defect returning.
+        (min - 0.284_644_19).abs() < 1e-8,
         "name-transparency minimum drifted: {min:.15}"
     );
     assert!(
@@ -2844,7 +3079,13 @@ fn name_transparency_is_measured_and_pinned() {
         // the floor rising and the ceiling falling, narrowing the span from
         // both sides while staying well clear of 1.0) is not the uniformity
         // defect returning.
-        (max - 0.971_204_19).abs() < 1e-8,
+        // The Granary's close regen (canonical census on lefford, goldens
+        // c54fb62c9): the ceiling RISES 0.971_204_19 -> 0.986_531_99 while
+        // the floor fell in the same refresh (asserted above), so the span
+        // widened overall — a rising ceiling alongside a falling floor is a
+        // widening distribution, not the uniformity defect this row guards;
+        // it stays well clear of 1.0.
+        (max - 0.986_531_99).abs() < 1e-8,
         "name-transparency maximum drifted: {max:.15}"
     );
 }
@@ -2946,8 +3187,15 @@ fn null_control_blind_attribution_is_at_chance() {
     // directional floors above are re-checked, not assumed — 326/387 = 0.842
     // is still mostly-indistinguishable, and the twin-pick rate below is
     // 31/61 = 0.508, well inside the ±0.2 chance band.
-    assert_eq!(indistinguishable, 458, "indistinguishable count drifted");
-    assert_eq!(decided, 42, "decided count drifted");
+    // The Granary's close regen (canonical census on lefford, goldens
+    // c54fb62c9): sub-year raid timing adds another path-dependent step to
+    // both solo builds' histories, separating one more pair: 458 -> 459
+    // indistinguishable, 42 -> 41 decided, and of those 20 pick the twin —
+    // a 0.488 split, well inside the ±0.2 chance band above. The
+    // directional floors are re-checked, not assumed: 459/500 = 0.918 is
+    // still mostly-indistinguishable.
+    assert_eq!(indistinguishable, 459, "indistinguishable count drifted");
+    assert_eq!(decided, 41, "decided count drifted");
     // The Tumult (predation) re-pin; lefford regen, 0063: 31 -> 32 of the 64
     // decided pairs pick the twin — an exact 0.500 split, i.e. the null
     // control lands even closer to chance than before (0.484).
@@ -2960,7 +3208,7 @@ fn null_control_blind_attribution_is_at_chance() {
     // 347945b4, 0063/0079): re-measured against the smaller decided pool of
     // 61 — 31 of 61 pick the twin, a 0.508 split, i.e. the null control lands
     // marginally closer to chance than the prior regen's 0.492.
-    assert_eq!(picks_twin, 21, "twin-pick count drifted");
+    assert_eq!(picks_twin, 20, "twin-pick count drifted");
 }
 
 #[test]
@@ -3049,8 +3297,13 @@ fn null_control_distributions_are_within_the_sampling_bound() {
     // magnitude inside the ±0.15 bound asserted above, which the run reaches
     // and does not fire. The naming-independent invariant on the line above
     // (head-domain TVD exactly 0) is likewise unmoved.
+    // The Granary's close regen (canonical census on lefford, goldens
+    // c54fb62c9): sub-year raid timing deepens the bake's path-dependence in
+    // both solo builds alike — 0.002_000_000_000_000_002 ->
+    // 0.004_000_000_000_000_002 (still an order of magnitude inside the
+    // ±0.15 bound asserted above, which the run reaches without firing).
     assert!(
-        (cult - 0.002000000000000002).abs() < 1e-9,
+        (cult - 0.004_000_000_000_000_002).abs() < 1e-9,
         "cult-form TVD drifted: {cult}"
     );
     // The Sundering (moving-sea epoch; lefford regen, 0063):
@@ -3069,8 +3322,12 @@ fn null_control_distributions_are_within_the_sampling_bound() {
     // movement above — -0.003_295_124_196_027_554_4 ->
     // -0.005_276_769_343_453_631, still ~38x inside the ±0.2 bound asserted
     // above, which the run reaches and does not fire.
+    // The Granary's close regen (canonical census on lefford, goldens
+    // c54fb62c9): same sub-year-raid-timing mover as the cult-form TVD above
+    // — -0.005_019_484_555_457_905 -> -0.004_020_397_467_157_86, still two
+    // orders of magnitude inside the ±0.2 bound asserted above.
     assert!(
-        (size - -0.005019484555457905).abs() < 1e-9,
+        (size - -0.004_020_397_467_157_86).abs() < 1e-9,
         "pantheon-size SMD drifted: {size}"
     );
 }
@@ -3265,7 +3522,15 @@ fn null_control_name_length_smd_is_pinned() {
         // `null_control_distributions_are_within_the_sampling_bound` asserts
         // — the null hypothesis this row exists to witness
         // (INDISTINGUISHABLE FROM ZERO) reads as true as it ever has.
-        (namelen - -0.016164814210766886).abs() < 1e-9,
+        // The Granary's close regen (canonical census on lefford, goldens
+        // c54fb62c9): the language epoch's names are redrawn under sub-year
+        // raid timing; the residual name-length gap shifts:
+        // -0.016_164_814_210_766_886 -> -0.024_799_776_460_672_038. Still
+        // ~8x inside the ±0.2 sampling-theory bound
+        // `null_control_distributions_are_within_the_sampling_bound` asserts
+        // — the null hypothesis this row exists to witness
+        // (INDISTINGUISHABLE FROM ZERO) reads as true as it ever has.
+        (namelen - -0.024_799_776_460_672_038).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

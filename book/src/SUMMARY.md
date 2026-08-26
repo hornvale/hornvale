@@ -285,6 +285,7 @@
 - [The Accession](./chronicle/the-accession.md)
 - [The Lintel](./chronicle/the-lintel.md)
 - [The Shelf-Mark](./chronicle/the-shelf-mark.md)
+- [The Granary](./chronicle/the-granary.md)
 - [The Actants](./chronicle/the-actants.md)
 - [The Vacancy](./chronicle/the-vacancy.md)
 - [The Hoist](./chronicle/the-hoist.md)
@@ -401,10 +402,13 @@
 - [The Gossan](./chronicle/the-gossan.md)
 - [The Mirror](./chronicle/the-mirror.md)
 - [The Portolan, part II — the world map](./chronicle/the-portolan-world-map.md)
+- [The Escapement](./chronicle/the-escapement.md)
 - [The Forebay](./chronicle/the-forebay.md)
 - [The Lexicon of Place](./chronicle/the-lexicon-of-place.md)
 - [The Word](./chronicle/the-word.md)
 - [The Interlinear](./chronicle/the-interlinear.md)
+- [The Confidant](./chronicle/the-confidant.md)
+- [The Tailrace](./chronicle/the-tailrace.md)
 
 # Appendix: The Frontier
 
