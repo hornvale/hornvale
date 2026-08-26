@@ -2928,3 +2928,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T14:12:06Z | rebaseline | 64.051 | 264.922 | 14.649 | 4.36 | 0 | 90960b2e0 | campaign/the-tailrace | ambrose | 12 |
 | 2026-08-26T14:14:58Z | gate-commit | 80.757 | 51.491 | 25.773 | 0.96 | 0 | 90960b2e0 | campaign/the-tailrace | ambrose | 12 |
 | 2026-08-26T14:26:00Z | gate-commit | 74.017 | 50.220 | 23.992 | 1.00 | 0 | adf602a88 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-26T14:34:56Z | sluice:artifacts | 115.418 | 905.339 | 45.883 | 8.24 | 0 | 3e5d8f494 |  | lefford | 40 |
