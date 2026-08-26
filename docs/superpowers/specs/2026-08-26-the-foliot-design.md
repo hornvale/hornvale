@@ -1,7 +1,7 @@
 # The Foliot — finishing the redenomination The Escapement began
 
-**Campaign:** The Foliot · **Date:** 2026-08-26 · **Status:** spec, awaiting
-review
+**Campaign:** The Foliot · **Date:** 2026-08-26 · **Status:** approved 2026-08-26;
+stage 1 revised in execution (see its note)
 
 The Escapement retyped the kernel's instant to an exact signed tick count
 (decisions 0186, 0188). Five surfaces below the kernel never followed. This
@@ -18,9 +18,14 @@ five times: **the kernel changed its unit of account and its dependents still
 quote the old currency, converting at the boundary.** Each conversion point
 fails differently.
 
+(Row 2 is stated as execution corrected it. The original spec said vessel
+"rounds every transaction"; measurement showed that rounding is symmetric and
+harmless, and that the real fault is a second lattice replayed in `f64` — see
+stage 1.)
+
 | # | surface | how the conversion fails |
 | --- | --- | --- |
-| 2 | `windows/vessel` | **rounds** every transaction |
+| 2 | `windows/vessel` | keeps a **second lattice**, and replays it in `f64` |
 | 5 | `StdDays` | **refuses legal values** (non-negative) and conflates two meanings |
 | 1 | `domains/climate` | **declares no unit at all** (bare `f64`) |
 | 3 | `windows/scene` | **posts both prices**, verdict unsettled |
@@ -91,31 +96,71 @@ only crossing. This is the design's load-bearing choice.
 Each stage ends at a sluice stage gate. Stage 1 is independent and lands value
 even if later stages slip.
 
-### Stage 1 — vessel's second lattice (follow-up 2)
+### Stage 1 — one tick, defined once (follow-up 2)
 
-`windows/vessel/src/clock.rs` maintains a private tick lattice
-(`BASE_TICKS_PER_STD_DAY = 100_000`) tied to the kernel's by nothing but
-agreement, and `Session::charge` crosses `Ticks -> f64 days -> WorldTime` on
-**every action**. `days_of`'s own doc comment concedes the round trip "is
-lossy."
+**Revised in execution, 2026-08-26.** This stage was specced as "delete the
+`f64` bridge in `Session::charge`, which is pure loss." Its own Task 1.1
+probe — written to prove the premise before the fix could act on it —
+**refuted that**, and the correction is why the stage grew.
 
-This is the only follow-up with present-tense demonstrated wrongness, and the
-registry row `TOOL-vessel-clock-duplicates-the-kernel-tick-lattice` already
-states it is "a live latent defect, not the rename chore the retrospective's
-follow-up 2 calls it." This spec adopts the registry's reading over the
-retrospective's.
+**What the spec got wrong.** It claimed a vessel tick and a kernel tick are
+the same unit. They are not. A local day is an exact integer of *vessel*
+ticks — that is what `ticks_per_local_day` exists to guarantee, so dawn does
+not beat against the day cycle — but it is `d * B` *kernel* ticks, which is
+not an integer. So one vessel tick is `d*B / round(d*B)` kernel ticks, and
+`days_of`'s conversion is **correct**. Implementing the planned identity
+would have introduced an error while claiming to remove one.
 
-Work: perform the local→standard conversion once, in one place, with the
-rounding rule **named at the call** (already required by 0186); produce a
-`TickSpan`; rename `Ticks` to end the collision with the kernel's concept;
-retire `liveness.rs`'s accumulated-`f64`-against-tick-derived-bound
-comparison.
+**What the round trip actually costs**, measured over 5,764 samples: 213
+losses, 211 gains, net **-2 ticks**; `round(d*B)` sits above `d*B` 651 times
+and below it 650. Symmetric rounding noise, not a leak, no accumulation. The
+registry row `TOOL-vessel-clock-duplicates-the-kernel-tick-lattice` ("one
+`Session::charge` rounding from observable") overstates it; The Escapement
+retrospective's "not wrong, just collidingly named" was closer to the truth.
 
-> **Determinism flag.** This changes world output — that is the fix. Five byte
-> goldens under `windows/vessel/tests/fixtures/` are expected to move.
-> Accepting them is `make rebaseline-goldens`, a deliberate act with Nathan
-> reviewing the diff. **Not** `make rebaseline`, which must never write a
-> golden.
+**The defect that IS real, found while checking the one that was not.**
+`Session::charge` converts once and adds integers — correct. The liveness
+catch-up replay does not: `liveness.rs:4644` and `:5233` run
+`day += days_of(...)` in a loop over a bare `f64`, never touching the
+lattice, and compare against a horizon. The site's own comment says a replay
+"that advanced time at a different rate than the walk it is reconstructing
+would drift from it by construction" — which is exactly what it does, since
+the live walk is integer-exact and the replay is not. Genuine accumulating
+drift.
+
+**The fix, at Nathan's direction: unify at the draw.** Two depths were put to
+him with their costs. The shallow one (vessel-only, defining vessel's day as
+`round(d*B)` kernel ticks) leaves vessel's day boundary drifting from
+astronomy's by 0.5 tick per day. He chose the deep one, explicitly accepting
+that every world regenerates:
+
+`Rotation::Spinning` stores `day: TickSpan`. A world's local day becomes an
+exact integer of kernel ticks, so there is genuinely **one lattice** and the
+conversion question disappears rather than being managed.
+
+- **The draw is unchanged.** `anchor.rs` still takes `stream.next_f64()`
+  twice in the same order; only the derived value is snapped to the lattice.
+  So **no seed label takes an epoch suffix** and the pin-isolation tests hold
+  unmodified. This is the most important scoping fact in the stage.
+- **`Calendar::day_length()` keeps returning `Option<StdDays>`**, now an exact
+  derived conversion, so its 31 call sites do not move.
+- vessel unifies for free: `ticks_per_local_day` reads the world's real tick
+  count, `Ticks` and `days_of` leave the charge path, `cost_ticks` returns
+  `TickSpan`, and liveness's `f64` accumulators become integer addition —
+  closing the genuine drift above.
+
+**What moves.** The derived day length shifts by up to **0.432 s**, and that
+propagates through every calendar computation into the sky, eclipses and
+climate's diurnal term. So: the five vessel byte goldens, the almanacs, and
+**census columns** (`day_length()` reaches `windows/lab/src/metrics.rs`).
+
+> **Epoch.** A save-format-adjacent change needing its own decision record.
+> Every world regenerates. Authorized by Nathan at the two-depth fork.
+
+> **Census carve-out, authorized.** One refresh on lefford at the pre-merge
+> close, standard discipline. Cost read from `docs/timings.md` rather than
+> CLAUDE.md's prose, per the project's own rule: the last six runs were
+> 895-918 s.
 
 ### Stage 2 — the split (follow-up 5)
 
@@ -222,15 +267,24 @@ involvement — the census is lab metrics and is untouched.
 
 ## 6. Flagged for review
 
-1. **Two byte-golden acceptances** — stage 1 (vessel, 5 fixtures) and stage 4
+1. **An EPOCH, and it leads this list.** Stage 1 makes a world's local day an
+   exact integer of kernel ticks, moving the derived day length by up to
+   0.432 s. Every world regenerates. The *draw* is untouched — same
+   `stream.next_f64()` calls in the same order — so no seed label takes an
+   epoch suffix and pin-isolation holds. Needs its own decision record.
+   Authorized by Nathan at the two-depth fork, with the cost stated.
+2. **Census regeneration, authorized** (an autopilot carve-out). The quantized
+   day length reaches `windows/lab/src/metrics.rs`. One refresh on lefford at
+   the pre-merge close; `docs/timings.md` puts the last six runs at 895-918 s.
+3. **Two byte-golden acceptances** — stage 1 (vessel, 5 fixtures) and stage 4
    (scene artifacts). Both legitimate; both need Nathan's eyes on the diff.
-2. **A ratified decision is superseded** — 0187, whose rationale 0190 has
+4. **A ratified decision is superseded** — 0187, whose rationale 0190 has
    already partly withdrawn.
-3. **A published schema breaks** — `scene/eclipses/v1` → v2, permitted only
+5. **A published schema breaks** — `scene/eclipses/v1` → v2, permitted only
    because both external consumers are out of scope by Nathan's ruling. This
    is a deliberate departure from the additive-or-versioned-only rule in
    CLAUDE.md, and the rule itself should be re-scoped to say "in-repo
    contracts" once the external clients are formally declared dead.
-4. **Capture** — four of the five follow-ups currently exist only in a
+6. **Capture** — four of the five follow-ups currently exist only in a
    retrospective. Registry rows are written for all of them regardless of
    which stages land.
