@@ -277,10 +277,56 @@ Expected: FAIL — `apply_zoom` still manipulates `world_view` and `zoom`.
 - [ ] **Step 3: Implement**
 
 `delta > 0` raises `depth` toward `BAND_B_RUNG`; `delta < 0` lowers it toward
-`GLOBE_RUNG`; both saturate. **Delete `self.world_view` and the two
-`Window { zoom: 0, .. }` resets** — band B is now a rung of the same ladder
-rather than a separate mode, which is the point of Task 1.
-`world_plate_for_redraw`'s gate becomes `Focus::Map` alone.
+`GLOBE_RUNG`; both saturate. **Delete the two `Window { zoom: 0, .. }`
+mode-flip resets.**
+
+**CONTROLLER RULING (pre-dispatch, binding): do NOT delete `self.world_view`.
+DERIVE it.** An earlier draft of this step said to delete the field outright.
+That is wrong at this point in the plan, and the reason is worth stating
+because it would have broken the walk band with no test to catch it.
+
+`world_view` is not merely a mode flag. Re-derived from the observable — `rg
+'world_view' clients/game/bin/src/driver.rs` — it has **ten** sites, not the
+three this step implied, and two of them pick between genuinely different
+renderers:
+
+| site | what it selects |
+|---|---|
+| `active_plate_dims` (~:1218) | the world plate's fitted size **vs** `PLATE_WIDTH` (40), the walk chart |
+| `resolve` (~:1493) | `resolve_world_view` (terrain, from the mesh) **vs** `resolve_walk_band` (the wire packet's chart) |
+| `resize` (~:762), `move_cursor` (~:1273), `recentre` (~:1370) | whether the scroll/anchor math applies at all |
+| `world_plate_for_redraw` (~:879) | the redraw gate |
+| the module doc (~:32), the field (~:315), the init (~:711) | declarations |
+
+Band B does not *become* a rung of the raster ladder until **Task 6** moves
+`spread::compose` and `plate.rs` to draw it. Deleting the distinction now would
+leave `active_plate_dims` and `resolve` unable to tell the two renderers apart,
+and the walk band would render as a mis-sized world plate.
+
+**So:** replace the stored `bool` with a derived method —
+
+```rust
+/// Whether the world plate, rather than the walk band's own chart, is what
+/// the current rung draws.
+///
+/// **Derived, never stored.** It was a `bool` set by a mode gesture, which
+/// is what made the zoom keys mean two different things at the ladder's
+/// ends. The rung alone decides now: every rung coarser than
+/// [`plate::BAND_B_RUNG`] is the raster; band B itself is still the walk
+/// band's chart until Task 6 moves it onto the raster too, at which point
+/// this method has no referent and goes away.
+fn world_view(&self) -> bool {
+    self.window.depth < plate::BAND_B_RUNG
+}
+```
+
+Every one of the ten sites reads `self.world_view()`. `world_plate_for_redraw`'s
+gate becomes `self.focus == Focus::Map && self.world_view()` — the gate stays,
+its SOURCE changes.
+
+This is what removes the reported "zooms based on criteria I have not
+identified": the two keys now change exactly one number, and which renderer
+appears is a function of that number rather than of hidden state.
 
 - [ ] **Step 4: Run to verify it passes**
 
