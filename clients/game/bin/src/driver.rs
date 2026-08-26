@@ -163,25 +163,34 @@ impl std::fmt::Display for DriverError {
 
 impl std::error::Error for DriverError {}
 
-/// Every input [`plate::draw_with`] reads that can CHANGE during a session,
-/// and nothing else — the memo in [`Driver::world_plate_for_redraw`] is only
-/// as correct as this key is complete.
+/// Every input [`plate::draw_terrain_layer`] reads that can CHANGE during a
+/// session, and nothing else — the memo in
+/// [`Driver::world_plate_for_redraw`] is only as correct as this key is
+/// complete.
+///
+/// **It keys the TERRAIN LAYER ALONE, and that narrowing is the whole point
+/// of The Quadrat's Task 4.** It used to key the composed plate, which meant
+/// carrying `discovered_len` — and a key carrying the discovery version is
+/// invalidated by every discovery, *the whole pyramid, for one settlement*
+/// (`CLIENT-tiles-need-the-overlay-split`, spec §3). That field is gone
+/// because the layer it belonged to is no longer cached at all:
+/// [`plate::draw_feature_layer`] is a handful of projections and redraws
+/// every frame, composed over whatever this key served. **Removing it is
+/// therefore not a loosening** — a discovery still changes the returned
+/// plate on the very next redraw; it simply no longer repaints the terrain
+/// under it.
 ///
 /// **Deliberately absent, because they are fixed for the process:** the
 /// terrain, the `Geosphere`, the `NearestVertexIndex`, the settlement roster
-/// (built once in `start`) and `colour_allowed` (resolved from `NO_COLOR`
-/// once per render by `plate::draw`, which cannot change under a running
-/// process). If any of those ever becomes mutable, it belongs here.
-///
-/// `discovered_len` stands in for the discovery set itself, which is sound
-/// only because that set is monotonic — see [`Discovered::len`].
+/// (built once in `start`) and `colour_allowed` (resolved from `NO_COLOR` by
+/// `plate::colour_allowed`, which cannot change under a running process). If
+/// any of those ever becomes mutable, it belongs here.
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct PlateKey {
     frame: Frame,
     window: Window,
     w: u16,
     h: u16,
-    discovered_len: usize,
 }
 
 /// One live game: an owned [`World`], the [`WorldContext`] derived from it
@@ -295,7 +304,9 @@ pub struct Driver {
     /// How many world plates have actually been rendered this session.
     /// See [`Driver::plate_renders`] for why this is observable.
     plate_renders: usize,
-    /// The last world plate drawn, with the inputs that produced it.
+    /// The last world plate's TERRAIN LAYER, with the inputs that produced
+    /// it. The feature layer is composed on top per redraw and is never
+    /// stored here — see [`PlateKey`].
     ///
     /// A cursor move inside the plate changes none of those inputs, and
     /// re-rendering the whole plate is still the most expensive thing a
@@ -318,7 +329,7 @@ pub struct Driver {
     /// map), gated by [`Self::discovered`] at draw time, never here.
     settlements: BTreeSet<Vertex>,
     /// Every vertex carrying a cave mouth, scanned once here at `start` for
-    /// the same reason `settlements` is: `plate::draw_point_sites`
+    /// the same reason `settlements` is: `plate::draw_feature_layer`
     /// PROJECTS each site rather than asking every screen cell whether its
     /// sample happens to be one, so it needs the roster up front. A
     /// per-render scan of all 40,962 vertices would be the cost the projection
@@ -826,8 +837,7 @@ impl Driver {
     /// doc) — but a full redraw is still a full redraw, so a caller
     /// reaching this directly still owns not paying it needlessly.
     pub fn world_plate(&self, w: u16, h: u16) -> hornvale_game_core::Grid {
-        let plate_width = hornvale_game_core::spread::world_plate_width(w, h);
-        let plate_height = plate_width / hornvale_game_core::spread::GLYPH_ASPECT;
+        let (plate_width, plate_height) = Self::world_plate_dims(w, h);
         plate::draw(
             &self.terrain,
             &self.geo,
@@ -840,6 +850,17 @@ impl Driver {
             &self.caves,
             &self.discovered,
         )
+    }
+
+    /// The world plate's own size for a `w`-by-`h` terminal — the SAME fit
+    /// `compose` applies, computed in one place because two callers now need
+    /// it ([`Self::world_plate`] draws a whole plate;
+    /// [`Self::world_plate_for_redraw`] draws its two layers separately and
+    /// must size both identically). A second copy of this arithmetic is the
+    /// bug shape `content_height`'s own doc warns about.
+    fn world_plate_dims(w: u16, h: u16) -> (u16, u16) {
+        let width = hornvale_game_core::spread::world_plate_width(w, h);
+        (width, width / hornvale_game_core::spread::GLYPH_ASPECT)
     }
 
     /// The world plate to hand [`hornvale_game_core::render_with`] for a
@@ -866,6 +887,18 @@ impl Driver {
     /// zooming out (`-` on [`Focus::Map`]) past band B. The GATE is
     /// unchanged; its SOURCE is a rung comparison rather than a stored flag
     /// (The Quadrat, Task 2).
+    ///
+    /// **Two layers, one key (The Quadrat, Task 4).** Only
+    /// [`plate::draw_terrain_layer`] is memoized, under a [`PlateKey`] that
+    /// no longer carries the discovery version;
+    /// [`plate::draw_feature_layer`] is composed over a CLONE of whatever
+    /// that memo served, on every call, hit or miss. So a discovery is
+    /// visible on the next redraw exactly as before — it just no longer
+    /// repaints the raster underneath, which is the whole of
+    /// `CLIENT-tiles-need-the-overlay-split`. This is also why the composed
+    /// grid is never stored back: the cache holds terrain, and a plate with
+    /// features already burned into it could not answer a later frame whose
+    /// discovery set had moved.
     pub fn world_plate_for_redraw(&mut self, w: u16, h: u16) -> Option<hornvale_game_core::Grid> {
         if !(self.focus == Focus::Map && self.world_view()) {
             return None;
@@ -875,16 +908,43 @@ impl Driver {
             window: self.window,
             w,
             h,
-            discovered_len: self.discovered.len(),
         };
-        if let Some((cached, grid)) = &self.plate_cache
-            && *cached == key
-        {
-            return Some(grid.clone());
+        let (plate_width, plate_height) = Self::world_plate_dims(w, h);
+        let hit = matches!(&self.plate_cache, Some((cached, _)) if *cached == key);
+        if !hit {
+            let mut memo = hornvale_kernel::RoomMeshMemo::default();
+            let terrain = plate::draw_terrain_layer(
+                &self.terrain,
+                &self.geo,
+                &self.nearest,
+                &mut memo,
+                &self.frame,
+                &self.window,
+                plate_width,
+                plate_height,
+                plate::colour_allowed(),
+            );
+            self.plate_renders += 1;
+            self.plate_cache = Some((key, terrain));
         }
-        let grid = self.world_plate(w, h);
-        self.plate_renders += 1;
-        self.plate_cache = Some((key, grid.clone()));
+        let mut grid = self
+            .plate_cache
+            .as_ref()
+            .expect("the miss branch above always fills the cache")
+            .1
+            .clone();
+        plate::draw_feature_layer(
+            &mut grid,
+            &self.geo,
+            &self.frame,
+            &self.window,
+            plate_width,
+            plate_height,
+            plate::colour_allowed(),
+            &self.settlements,
+            &self.caves,
+            &self.discovered,
+        );
         Some(grid)
     }
 
@@ -1813,12 +1873,18 @@ impl Driver {
         &self.visited
     }
 
-    /// How many times the world plate has actually been RENDERED (as
-    /// opposed to served from the memo). Exists because **a cache with no
-    /// observable hit is indistinguishable from a cache that never hits**:
-    /// every correctness test passes either way, so the counter is what
-    /// makes `a_cursor_move_inside_the_plate_does_not_re_render_it` a real
+    /// How many times the world plate's TERRAIN LAYER has actually been
+    /// RENDERED (as opposed to served from the memo). Exists because **a
+    /// cache with no observable hit is indistinguishable from a cache that
+    /// never hits**: every correctness test passes either way, so the
+    /// counter is what makes
+    /// `a_cursor_move_inside_the_plate_does_not_re_render_it` a real
     /// assertion rather than a hopeful one.
+    ///
+    /// **It counts the TERRAIN layer only, since The Quadrat's Task 4.** The
+    /// feature layer is redrawn on every single call and is deliberately not
+    /// counted — counting it would make this number constant and useless,
+    /// and the expensive half is the raster.
     pub fn plate_renders(&self) -> usize {
         self.plate_renders
     }
@@ -1929,14 +1995,24 @@ mod portolan_tests {
     /// where a client opening the map would put the window, and Task 7 makes
     /// that the shipped gesture.
     fn centre_window_on_the_player(d: &mut Driver, w: u16, h: u16) {
-        let (vw, vh) = plate::virtual_dims(d.window.depth);
         let c = d.session.position().coord();
-        let (row, col) = mercator::project(&d.frame, c.latitude, c.longitude, vw, vh)
+        centre_window_on(d, c.latitude, c.longitude, w, h)
             .expect("the flagship's own position is inside the projection's clamp");
+    }
+
+    /// [`centre_window_on_the_player`]'s own body, taking the point to
+    /// centre on rather than reading the possession's. `None` when the
+    /// point is above the projection's polar clamp and so is on no chart at
+    /// all — a caller choosing a vertex out of a roster has to skip those,
+    /// which the player's own position never is.
+    fn centre_window_on(d: &mut Driver, lat: f64, lon: f64, w: u16, h: u16) -> Option<()> {
+        let (vw, vh) = plate::virtual_dims(d.window.depth);
+        let (row, col) = mercator::project(&d.frame, lat, lon, vw, vh)?;
         d.window.origin_row = row
             .saturating_sub(u32::from(h) / 2)
             .min(vh.saturating_sub(u32::from(h)));
         d.window.origin_col = (col + vw - u32::from(w) / 2) % vw;
+        Some(())
     }
 
     // -- The world-plate memo (perf/world-plate-memo) ----------------
@@ -2013,15 +2089,79 @@ mod portolan_tests {
             "a re-centre changes the frame and must re-render"
         );
 
-        // discovery
+        // DISCOVERY IS DELIBERATELY NOT AN ARM HERE ANY MORE (The Quadrat,
+        // Task 4). It used to be, asserting that a discovery re-rendered the
+        // plate — and that is precisely the coupling
+        // `CLIENT-tiles-need-the-overlay-split` records as the defect: a key
+        // carrying the discovery version is invalidated by every discovery,
+        // the whole pyramid for one settlement. The property it was really
+        // reaching for — a discovery still reaches the drawn plate — is
+        // asserted, together with its new other half, by
+        // `a_discovery_redraws_the_features_without_re_rendering_the_terrain`
+        // below. It is not dropped; it is stated about the right layer.
+    }
+
+    /// **The layer split's own headline, as an assertion**: a discovery
+    /// changes what the player sees on the very next redraw, and does NOT
+    /// re-render the terrain raster underneath it.
+    ///
+    /// Both halves are load-bearing and each rescues the other from
+    /// vacuity. "Does not re-render" alone would pass on a cache that never
+    /// invalidated at all — including one that had stopped showing
+    /// discoveries entirely, which is a real regression this split could
+    /// introduce. "Changes the plate" alone would pass on the old,
+    /// discovery-keyed plate cache the split exists to remove.
+    ///
+    /// The site is a real cave mouth out of the driver's OWN roster (the
+    /// one `draw_feature_layer` projects from), and the window is moved to
+    /// it, because a site off screen would satisfy "does not re-render"
+    /// trivially — the `assert_ne!` is what refuses that.
+    #[test]
+    fn a_discovery_redraws_the_features_without_re_rendering_the_terrain() {
         let mut d = test_driver();
         enter_world_view(&mut d);
-        let _ = d.world_plate_for_redraw(104, 56);
-        let n = d.plate_renders();
+        let (w, h) = (104u16, 56u16);
+        let (plate_w, plate_h) = Driver::world_plate_dims(w, h);
+
+        // The first cave the projection actually places — a vertex above the
+        // polar clamp is on no chart at all, and skipping those is the
+        // clamp's own rule, not a search for a convenient answer.
+        let site = d
+            .caves
+            .iter()
+            .copied()
+            .find(|&v| {
+                let c = d.geo.coord(v);
+                let (vw, vh) = plate::virtual_dims(d.window.depth);
+                mercator::project(&d.frame, c.latitude, c.longitude, vw, vh).is_some()
+            })
+            .expect("seed 42 has at least one cave mouth inside the projection's clamp");
+        let c = d.geo.coord(site);
+        centre_window_on(&mut d, c.latitude, c.longitude, plate_w, plate_h)
+            .expect("the site just passed the clamp above");
+
+        let before = d
+            .world_plate_for_redraw(w, h)
+            .expect("the world view is on");
+        let renders = d.plate_renders();
+        assert!(renders > 0, "the first redraw must actually render");
+
         d.discovered_mut_for_test()
-            .record(crate::discovery::FeatureId::Settlement(Vertex(1)));
-        let _ = d.world_plate_for_redraw(104, 56);
-        assert!(d.plate_renders() > n, "a new discovery must re-render");
+            .record(crate::discovery::FeatureId::Cave(site));
+        let after = d
+            .world_plate_for_redraw(w, h)
+            .expect("the world view is on");
+
+        assert_ne!(
+            before.to_plain_text(),
+            after.to_plain_text(),
+            "a discovery never reached the drawn plate"
+        );
+        assert_eq!(
+            d.plate_renders(),
+            renders,
+            "a discovery re-rendered the TERRAIN layer — the whole pyramid, for one site"
+        );
     }
 
     /// A cache that returns a DIFFERENT grid than a fresh render is worse

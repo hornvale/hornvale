@@ -197,7 +197,7 @@ const OCEAN_COLOR: [u8; 3] = [20, 60, 160];
 const LAND_COLOR: [u8; 3] = [40, 120, 40];
 
 /// The glyph for a DISCOVERED settlement (Task 5, §A3's "point sites").
-/// Never drawn undiscovered — see [`draw_point_sites`]'s own doc for why
+/// Never drawn undiscovered — see [`draw_feature_layer`]'s own doc for why
 /// "not yet drawn" is the only state an undiscovered site is ever in.
 pub(crate) const SETTLEMENT_GLYPH: char = '#';
 /// The glyph for a DISCOVERED cave mouth. See [`SETTLEMENT_GLYPH`].
@@ -230,7 +230,6 @@ pub fn draw(
     caves: &BTreeSet<Vertex>,
     discovered: &Discovered,
 ) -> Grid {
-    let colour_allowed = Ink::from_wire(Some([0, 0, 0])) != Ink::Plain;
     draw_with(
         terrain,
         geo,
@@ -239,11 +238,26 @@ pub fn draw(
         win,
         w,
         h,
-        colour_allowed,
+        colour_allowed(),
         settlements,
         caves,
         discovered,
     )
+}
+
+/// Whether this terminal accepts colour — [`hornvale_game_core::Ink`]'s own
+/// `NO_COLOR` probe, asked in exactly one place.
+///
+/// **Named because two callers now need the same answer**, and a second
+/// spelling of it is the shape `content_height`'s own doc warns about
+/// elsewhere in this crate: [`draw`] resolves it for a whole plate, and
+/// `driver.rs`'s layered redraw path resolves it for the feature layer it
+/// composes over a cached terrain layer. Both must agree, so neither
+/// computes it. It is deliberately NOT a cache-key input anywhere:
+/// `NO_COLOR` cannot change under a running process (see `PlateKey`'s
+/// counterpart doc in `driver.rs`).
+pub(crate) fn colour_allowed() -> bool {
+    Ink::from_wire(Some([0, 0, 0])) != Ink::Plain
 }
 
 /// [`draw`]'s pure seam: `colour_allowed` is taken as an argument rather
@@ -312,15 +326,26 @@ pub fn draw(
 /// former ([`mercator::project`]'s own `None` branch checks the frame
 /// latitude, never the geographic one).
 ///
-/// **Task 5: point sites are gated HERE, not filtered afterward** — spec
-/// Amendment 1 §A7's "nothing is drawn and then hidden" refusal:
-/// `settlements`/`discovered` are consulted per screen cell,
-/// alongside the ocean/land vote, and an undiscovered site's glyph is
-/// simply never chosen — there is no suppression pass over an already-
-/// painted grid, because a site never drawn cannot leak. A discovered
-/// site's glyph OVERRIDES the terrain glyph at its own cell (§A3: a point
-/// site "is not in the terrain render at all," unlike a terrain-borne
-/// landmark, which draws regardless of discovery).
+/// **Since The Quadrat's Task 4 this function OWNS no drawing of its own:
+/// it is the composition of [`draw_terrain_layer`] and
+/// [`draw_feature_layer`]**, in that order, over one `Grid` and one memo.
+/// The split is not tidiness — it is the invalidation argument
+/// (`CLIENT-tiles-need-the-overlay-split`, spec §3): terrain and point
+/// sites drew in ONE pass, so a tile keyed on the discovery version was
+/// invalidated by every discovery, *the whole pyramid, for one settlement*.
+/// The terrain layer's parameter list is the statement of the fix — it does
+/// not take a `Discovered` at all, so no cache keyed on it can depend on
+/// one.
+///
+/// **Task 5: point sites are gated in [`draw_feature_layer`], not filtered
+/// afterward** — spec Amendment 1 §A7's "nothing is drawn and then hidden"
+/// refusal: `settlements`/`discovered` are consulted before a glyph is ever
+/// chosen, and an undiscovered site's glyph is simply never chosen — there
+/// is no suppression pass over an already-painted grid, because a site
+/// never drawn cannot leak. A discovered site's glyph OVERRIDES the terrain
+/// glyph at its own cell (§A3: a point site "is not in the terrain render
+/// at all," unlike a terrain-borne landmark, which draws regardless of
+/// discovery).
 #[allow(clippy::too_many_arguments)] // `index` (fix round 1: build-once-pass-in, per Nathan's ruling) pushed this to 8; Task 5's `settlements`/`discovered` push it to 10 — mirroring `hornvale_game_core::render_with`'s own allow
 pub fn draw_with(
     terrain: &GeneratedTerrain,
@@ -335,22 +360,77 @@ pub fn draw_with(
     caves: &BTreeSet<Vertex>,
     discovered: &Discovered,
 ) -> Grid {
+    // One memo for the whole plate — see this function's own doc for why
+    // its lifetime is free to be exactly this long.
+    let mut memo = RoomMeshMemo::default();
+    let mut grid = draw_terrain_layer(terrain, geo, index, &mut memo, f, win, w, h, colour_allowed);
+    draw_feature_layer(
+        &mut grid,
+        geo,
+        f,
+        win,
+        w,
+        h,
+        colour_allowed,
+        settlements,
+        caves,
+        discovered,
+    );
+    grid
+}
+
+/// LAYER ONE: the land/ocean raster, and NOTHING else (The Quadrat, Task 4).
+///
+/// **The parameter list IS the interface** — this function's whole point is
+/// what it cannot see. It reads only `(frame, win.depth, win.origin_col,
+/// win.origin_row, w, h, colour_allowed)` plus the world's own fixed
+/// terrain, so its output is a pure function of the rung and the window.
+/// There is no `Discovered` parameter, no settlement roster and no cave
+/// roster, which is what makes a tile keyed on `(frame, rung, tile)` sound:
+/// `CLIENT-tiles-need-the-overlay-split` recorded the measured reason the
+/// single pass could not be cached — a tile keyed on the discovery version
+/// is invalidated by every discovery, *the whole pyramid, for one
+/// settlement*. Adding a discovery-shaped argument here would silently undo
+/// that; `a_discovery_does_not_change_the_terrain_layer` is the assertion
+/// that says so, and it guards its own non-vacuity by first proving the
+/// window it chose really does hold a site the feature layer would draw.
+///
+/// `memo` is the caller's, not this function's, and that is deliberate:
+/// [`hornvale_kernel::RoomMeshMemo`] caches a pure function of `(Facet,
+/// Geosphere::level())`, so its lifetime is a performance choice and never a
+/// correctness one — Task 5's tile cache draws many tiles of one chart and
+/// wants one memo across all of them, where [`draw_with`] wants one per
+/// plate. See [`terrain_at_tile`] for what it saves and at which rungs.
+///
+/// Everything [`draw_with`]'s own doc says about `w`/`h` being the DRAWN
+/// plate's size, about the polar-fabrication obligation on `win.origin_row`,
+/// and about `origin_col` wrapping freely, is stated of this function: it is
+/// the one that paints those cells.
+#[allow(clippy::too_many_arguments)] // `index` and the caller-owned `memo` push this to 9 — mirrors `draw_with`'s own allow, one level down
+pub(crate) fn draw_terrain_layer(
+    terrain: &GeneratedTerrain,
+    geo: &Geosphere,
+    index: &NearestVertexIndex,
+    memo: &mut RoomMeshMemo,
+    f: &Frame,
+    win: &Window,
+    w: u16,
+    h: u16,
+    colour_allowed: bool,
+) -> Grid {
     let mut grid = Grid::new(w, h);
     let width = u32::from(w);
     let height = u32::from(h);
     let (virtual_w, virtual_h) = virtual_dims(win.depth);
-    // One memo for the whole plate — see this function's own doc for why
-    // its lifetime is free to be exactly this long.
-    let mut memo = RoomMeshMemo::default();
 
     for row in 0..height {
         for col in 0..width {
             let tile = terrain_at_tile(
-                terrain, geo, index, &mut memo, f, win, virtual_w, virtual_h, row, col,
+                terrain, geo, index, memo, f, win, virtual_w, virtual_h, row, col,
             );
-            // TERRAIN ONLY. Sites are PROJECTED in a second pass below —
-            // see `draw_point_sites` for why asking each screen cell "is
-            // your representative a site?" dropped 37.8% of caves.
+            // TERRAIN ONLY. Sites are PROJECTED by `draw_feature_layer` —
+            // see its doc for why asking each screen cell "is your
+            // representative a site?" dropped 37.8% of caves.
             let ocean = tile.ocean;
             let (glyph, color) = if ocean {
                 (OCEAN_GLYPH, OCEAN_COLOR)
@@ -369,27 +449,12 @@ pub fn draw_with(
             );
         }
     }
-
-    draw_point_sites(
-        geo,
-        f,
-        win,
-        virtual_w,
-        virtual_h,
-        w,
-        h,
-        colour_allowed,
-        settlements,
-        caves,
-        discovered,
-        &mut grid,
-    );
     grid
 }
 
-/// Draw every DISCOVERED point site by PROJECTING it, rather than by asking
-/// each screen cell whether its area-majority representative happens to be
-/// one.
+/// LAYER TWO: every DISCOVERED point site, drawn onto `dst` by PROJECTING
+/// it, rather than by asking each screen cell whether its area-majority
+/// representative happens to be one.
 ///
 /// **Why the direction matters.** The sampled scheme drew a site only when
 /// its exact vertex won the majority vote for some character. Measured on seed
@@ -402,7 +467,15 @@ pub fn draw_with(
 ///
 /// It is also far cheaper: one projection per site in the roster against
 /// one [`terrain_at_tile`] per screen cell (and, before The Quadrat, 49
-/// nearest-vertex searches per screen cell on top of that).
+/// nearest-vertex searches per screen cell on top of that). That cheapness
+/// is why this layer is REDRAWN every frame while
+/// [`draw_terrain_layer`]'s output is cached — a handful of projections is
+/// not worth an invalidation key, and giving it one is exactly the defect
+/// `CLIENT-tiles-need-the-overlay-split` records.
+///
+/// **`dst` is drawn ONTO, never replaced**, so this composes over whatever
+/// the terrain layer painted (or, at Task 5, over a tile served from a
+/// cache). It writes only the cells its own discovered sites project into.
 ///
 /// **Undiscovered sites are never drawn**, so §A7's "nothing is drawn and
 /// then hidden" still holds by construction — an undiscovered site is not
@@ -411,22 +484,21 @@ pub fn draw_with(
 /// Caves are drawn first and settlements second, so a settlement wins a cell
 /// they share — the same precedence the sampled scheme's `if/else` gave.
 #[allow(clippy::too_many_arguments)] // mirrors `draw_with`'s own parameter list, which this is lifted out of
-fn draw_point_sites(
+pub(crate) fn draw_feature_layer(
+    dst: &mut Grid,
     geo: &Geosphere,
     f: &Frame,
     win: &Window,
-    virtual_w: u32,
-    virtual_h: u32,
     w: u16,
     h: u16,
     colour_allowed: bool,
     settlements: &BTreeSet<Vertex>,
     caves: &BTreeSet<Vertex>,
     discovered: &Discovered,
-    grid: &mut Grid,
 ) {
     let width = u32::from(w);
     let height = u32::from(h);
+    let (virtual_w, virtual_h) = virtual_dims(win.depth);
 
     let place = |vertex: Vertex, id: FeatureId, glyph: char, color: [u8; 3], grid: &mut Grid| {
         if !discovered.contains(id) {
@@ -461,13 +533,7 @@ fn draw_point_sites(
     };
 
     for &vertex in caves {
-        place(
-            vertex,
-            FeatureId::Cave(vertex),
-            CAVE_GLYPH,
-            CAVE_COLOR,
-            grid,
-        );
+        place(vertex, FeatureId::Cave(vertex), CAVE_GLYPH, CAVE_COLOR, dst);
     }
     for &vertex in settlements {
         place(
@@ -475,7 +541,7 @@ fn draw_point_sites(
             FeatureId::Settlement(vertex),
             SETTLEMENT_GLYPH,
             SETTLEMENT_COLOR,
-            grid,
+            dst,
         );
     }
 }
@@ -816,7 +882,7 @@ mod tests {
 
     /// A settlement and a cave sharing one screen cell: the settlement
     /// wins. Precedence used to be the `if/else` order inside
-    /// `point_site_at`; it is now the DRAW ORDER in `draw_point_sites`,
+    /// `point_site_at`; it is now the DRAW ORDER in `draw_feature_layer`,
     /// which is easy to invert by accident and was covered by nothing
     /// after that function was removed.
     #[test]
@@ -1428,6 +1494,243 @@ mod tests {
             g_after.get(col, row).unwrap().glyph,
             Some(CAVE_GLYPH),
             "a discovered cave must be drawn at its own resolved screen position"
+        );
+    }
+
+    // -- Task 4: the layer split ------------------------------------------
+
+    /// A real point site, the window that shows it, and the screen cell it
+    /// lands in — the same route
+    /// [`tests::draw_with_gates_a_point_site_on_discovery`] takes (project
+    /// the vertex, then move the window to it), lifted out so the two layer
+    /// tests below share it rather than each hunting for a site.
+    ///
+    /// A CAVE vertex, because a cave is the one point site this module's
+    /// own inputs can find: `GeneratedTerrain::cave_at` answers from the
+    /// terrain alone, while the settlement roster is built from the
+    /// world's LEDGER by `driver.rs` and never reaches here. The roster
+    /// parameters are the caller's either way — `draw_feature_layer` takes
+    /// two `BTreeSet<Vertex>` and asks the terrain nothing — so the same
+    /// vertex exercises the settlement path when it is handed to the
+    /// settlement roster instead.
+    fn a_point_site(
+        terrain: &GeneratedTerrain,
+        geo: &Geosphere,
+        f: &Frame,
+        depth: u32,
+        w: u16,
+        h: u16,
+    ) -> (Vertex, Window, u16, u16) {
+        let vertex = geo
+            .vertices()
+            .find(|&c| terrain.cave_at(c).is_some())
+            .expect("seed 42 at GLOBE_LEVEL has at least one cave vertex");
+        let (virtual_w, virtual_h) = virtual_dims(depth);
+        let g = geo.coord(vertex);
+        let (row, col) = crate::mercator::project(f, g.latitude, g.longitude, virtual_w, virtual_h)
+            .expect("the site is inside the projection's clamp");
+        let (win, x, y) = window_showing(depth, row, col, w, h);
+        (vertex, win, x, y)
+    }
+
+    /// **The invalidation argument, as an assertion.** Terrain and point
+    /// sites drew in ONE pass, so a tile keyed on the discovery version was
+    /// invalidated by every discovery — the whole pyramid, for one
+    /// settlement. `draw_terrain_layer` does not take a `Discovered` at
+    /// all, which is the strongest form the property can take: the call
+    /// below COMPILING is half the test.
+    ///
+    /// **The other half is the guard, and it is why this test is not
+    /// vacuous.** A window containing no discoverable site would satisfy
+    /// "a discovery changes nothing" trivially and prove nothing at all —
+    /// the failure shape this campaign hit three times before. So the
+    /// window is positioned on a real cave and the test first PROVES the
+    /// feature layer draws there, before asserting the terrain layer's own
+    /// output is unmoved by that same discovery.
+    #[test]
+    fn a_discovery_does_not_change_the_terrain_layer() {
+        let (terrain, geo) = test_world();
+        let index = NearestVertexIndex::new(&geo);
+        let f = mercator::frame_for(false);
+        let (w, h) = (32u16, 16u16);
+        let (site, win, x, y) = a_point_site(&terrain, &geo, &f, GLOBE_RUNG, w, h);
+        let caves: BTreeSet<Vertex> = std::iter::once(site).collect();
+        let mut discovered = Discovered::default();
+        discovered.record(FeatureId::Cave(site));
+
+        let mut memo = RoomMeshMemo::default();
+        let bare = draw_terrain_layer(&terrain, &geo, &index, &mut memo, &f, &win, w, h, false);
+        let bare_text = bare.to_plain_text();
+
+        // GUARD: this window really does hold a site the feature layer
+        // draws. Without this, everything below passes on an empty ocean.
+        let mut overlaid = bare.clone();
+        draw_feature_layer(
+            &mut overlaid,
+            &geo,
+            &f,
+            &win,
+            w,
+            h,
+            false,
+            &BTreeSet::new(),
+            &caves,
+            &discovered,
+        );
+        assert_ne!(
+            bare.get(x, y).unwrap().glyph,
+            Some(CAVE_GLYPH),
+            "guard: the terrain layer must not already be drawing the site's glyph"
+        );
+        assert_eq!(
+            overlaid.get(x, y).unwrap().glyph,
+            Some(CAVE_GLYPH),
+            "guard: this window holds no site the feature layer would draw, so the \
+             assertion below would be vacuous"
+        );
+        assert_ne!(
+            overlaid.to_plain_text(),
+            bare_text,
+            "guard: the discovery must actually move the composed plate"
+        );
+
+        // THE PROPERTY: the terrain layer, redrawn with that discovery in
+        // hand, is byte-identical — it cannot see it, by signature.
+        let mut memo = RoomMeshMemo::default();
+        let after = draw_terrain_layer(&terrain, &geo, &index, &mut memo, &f, &win, w, h, false);
+        assert_eq!(
+            after.to_plain_text(),
+            bare_text,
+            "a discovery moved the terrain layer"
+        );
+    }
+
+    /// **Nothing is drawn and then hidden** (spec Amendment 1 §A7): the
+    /// undiscovered site's glyph is never chosen, so an undiscovered
+    /// roster leaves the terrain layer's grid untouched — not painted and
+    /// then cleared. Both rosters are exercised, because the two take
+    /// different `FeatureId` arms and a gate wired to one of them would
+    /// pass a single-roster test.
+    #[test]
+    fn the_feature_layer_draws_only_discovered_sites() {
+        let (terrain, geo) = test_world();
+        let index = NearestVertexIndex::new(&geo);
+        let f = mercator::frame_for(false);
+        let (w, h) = (32u16, 16u16);
+        let (site, win, x, y) = a_point_site(&terrain, &geo, &f, GLOBE_RUNG, w, h);
+        let roster: BTreeSet<Vertex> = std::iter::once(site).collect();
+        let empty = BTreeSet::new();
+        let mut memo = RoomMeshMemo::default();
+        let bare = draw_terrain_layer(&terrain, &geo, &index, &mut memo, &f, &win, w, h, false);
+        let bare_text = bare.to_plain_text();
+
+        for (settlements, caves, id, glyph) in [
+            (&empty, &roster, FeatureId::Cave(site), CAVE_GLYPH),
+            (
+                &roster,
+                &empty,
+                FeatureId::Settlement(site),
+                SETTLEMENT_GLYPH,
+            ),
+        ] {
+            let mut g = bare.clone();
+            draw_feature_layer(
+                &mut g,
+                &geo,
+                &f,
+                &win,
+                w,
+                h,
+                false,
+                settlements,
+                caves,
+                &Discovered::default(),
+            );
+            assert_eq!(
+                g.to_plain_text(),
+                bare_text,
+                "an UNdiscovered site was drawn ({glyph})"
+            );
+
+            let mut discovered = Discovered::default();
+            discovered.record(id);
+            draw_feature_layer(
+                &mut g,
+                &geo,
+                &f,
+                &win,
+                w,
+                h,
+                false,
+                settlements,
+                caves,
+                &discovered,
+            );
+            assert_eq!(
+                g.get(x, y).unwrap().glyph,
+                Some(glyph),
+                "a DISCOVERED site was not drawn"
+            );
+        }
+    }
+
+    /// **`draw_with` is still exactly its two layers, composed** — the
+    /// no-caller-changes half of the split. A composition that drew
+    /// something the layers do not (or dropped something they do) would
+    /// pass every test above and still break every existing caller.
+    #[test]
+    fn draw_with_is_the_composition_of_its_layers() {
+        let (terrain, geo) = test_world();
+        let index = NearestVertexIndex::new(&geo);
+        let f = mercator::frame_for(false);
+        let (w, h) = (32u16, 16u16);
+        let (site, win, _, _) = a_point_site(&terrain, &geo, &f, GLOBE_RUNG, w, h);
+        let caves: BTreeSet<Vertex> = std::iter::once(site).collect();
+        let settlements = BTreeSet::new();
+        let mut discovered = Discovered::default();
+        discovered.record(FeatureId::Cave(site));
+
+        let composed = draw_with(
+            &terrain,
+            &geo,
+            &index,
+            &f,
+            &win,
+            w,
+            h,
+            false,
+            &settlements,
+            &caves,
+            &discovered,
+        );
+
+        let mut memo = RoomMeshMemo::default();
+        let mut by_hand =
+            draw_terrain_layer(&terrain, &geo, &index, &mut memo, &f, &win, w, h, false);
+        // Sanity: the layers genuinely differ, so the equality below is not
+        // a comparison of a plate with itself.
+        let terrain_only = by_hand.to_plain_text();
+        draw_feature_layer(
+            &mut by_hand,
+            &geo,
+            &f,
+            &win,
+            w,
+            h,
+            false,
+            &settlements,
+            &caves,
+            &discovered,
+        );
+        assert_ne!(
+            by_hand.to_plain_text(),
+            terrain_only,
+            "sanity: the feature layer must have drawn something here"
+        );
+        assert_eq!(
+            composed.to_plain_text(),
+            by_hand.to_plain_text(),
+            "`draw_with` is no longer its two layers composed"
         );
     }
 }

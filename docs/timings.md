@@ -3041,3 +3041,6 @@ never a wall-clock proxy.
 | 2026-08-26T22:07:33Z | gate-commit | 68.482 | 49.238 | 22.789 | 1.05 | 0 | a1339e537 | campaign/the-quadrat | ambrose | 12 |
 | 2026-08-26T22:09:06Z | gate-commit | 69.789 | 50.042 | 23.763 | 1.06 | 0 | a1339e537 | campaign/the-quadrat | ambrose | 12 |
 | 2026-08-26T22:54:58Z | gate-commit | 68.870 | 49.662 | 23.363 | 1.06 | 0 | c519a6cbe | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-26T22:56:26Z | gate-commit | 69.239 | 49.607 | 23.722 | 1.06 | 0 | c519a6cbe | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-26T23:50:56Z | game-check | 712.964 | 2598.488 | 55.781 | 3.72 | 0 | bdf54dce7 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-26T23:52:38Z | gate-commit | 96.129 | 56.192 | 26.190 | 0.86 | 0 | bdf54dce7 | campaign/the-quadrat | ambrose | 12 |
