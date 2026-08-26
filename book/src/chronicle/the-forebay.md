@@ -113,8 +113,8 @@ The store's `Ledger` validity class shipped with no tenant, on the expectation
 that belief and the social graph would make it hot. The first candidate to
 arrive was neither, and it exposed a boundary the class had not had to state.
 
-[The Tailrace](./the-tailrace.md) went looking for a home for six folds over an
-agent's committed movement history. A memo is the obvious fit and it is the
+[The Tailrace](./the-tailrace.md) went looking for a home for the five folds
+that walk an agent's committed movement history. A memo is the obvious fit and it is the
 wrong one, structurally rather than marginally: the watched dependency for such
 a fold is *that agent's own position*, which the tick commits every time the
 agent moves. The entry is stale every tick, every read is a miss, and every
