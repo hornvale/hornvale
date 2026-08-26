@@ -224,7 +224,22 @@ framing hides. The DoD book sweep corrects it and says what is actually drawn.
 ## 5. Non-goals
 
 - **No role-marking.** `realize_adjuncts` still matches on the argument and
-  ignores `Adjunct.role`. The flagship line stays `Nwamvam Qoqe Bae 8835 25 375`.
+  ignores `Adjunct.role`. The flagship line keeps its shape — a name, two
+  lexicalized words, then three undifferentiated numerals.
+
+  **The numerals in that line are NOT what the chronicle records, and this
+  campaign did not move them.** The Interlinear's chronicle says
+  `Nwamvam Qoqe Bae 8835 25 375`; the live value is
+  `Nwamvam Qoqe Bae 18822 25 1600`. Verified as upstream world drift, not ours,
+  three ways: the numerals are `Argument::Count` adjuncts read straight off the
+  ledger (`occupation.site`, `.founded`, `.ended`); the **Common** line — through
+  `realize_common`, whose rendering this campaign does not touch — carries the
+  same new numbers; and the chronicle's own file was last written 2026-08-25
+  while `f633df521`, the merge of 202 commits of main into that branch, is dated
+  2026-08-26. The demonstration was authored, then main was absorbed, and the
+  line was never re-run. **Nothing could have caught it**: `git grep 8835 -- '*.rs'`
+  finds only synthetic test literals — no test asserts the flagship numerals at
+  all. §4.5's chronicle correction covers this alongside the `paradigm.rs` claim.
 - **No tense, polarity or mood.** Wiring `paradigm.rs` is the next campaign.
 - **No pronoun inventories.** A tongue gaps on `Subject::Pronoun`.
 - **No `parse_tongue`.** The collapse makes it namable; it does not build it.
@@ -280,7 +295,7 @@ skipped with a single stderr line and rc=0 (The Escapement's finding).
 | # | Stage | Deliverable |
 |---|-------|-------------|
 | 1 | Widen the clause | `evidential` onto `ClauseSpec`; `resolve_argument` extracted and shared by both slots; §4.3's no-morphology rule. `TongueClause` still exists. |
-| 2 | Retype the realizers | All three realizers take `&ClauseSpec`. Pronoun→gap, unknown-predicate→panic. Both `windows/book` sites and all 10 `grammar.rs` construction sites moved. |
+| 2 | Retype the realizers | All three realizers take `&ClauseSpec`. Pronoun→gap, unknown-predicate→panic. Both `windows/book` sites and all 9 `grammar.rs` construction sites moved. |
 | 3 | Cut the old timber | `TongueClause` and `tongue_view` deleted. The flagship test realizes one clause twice. Success criteria 1–5 green. |
 | 4 | Rename and sweep | `ClauseSpec` → `Clause`. Live book chapters swept; the-interlinear chronicle corrected per §4.5. Chronicle, retrospective, artifacts, §7 branch table. |
 
