@@ -575,10 +575,53 @@ fn shallower_rungs_are_cooler_than_the_deepest() {
 }
 ```
 
-`fixture_world()` — reuse whatever world-building helper
-`underworld_conditions_probe.rs` already has; do **not** add a second one.
-Read the file first and match its existing pattern, including its `#[ignore]`
-posture if the battery is heavy.
+**`fixture_world()` DOES NOT EXIST — the controller invented it.** Write the
+sketches against the real idiom, which is in the same file you are editing
+(`underworld_conditions_probe.rs:294-320`, the `cave_vertices` helper):
+
+```rust
+let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+let artifacts = build_world_to_with_artifacts(
+    hornvale_kernel::Seed(42),
+    &SkyPins::default(),
+    SkyChoice::Generated,
+    &TerrainPins::default(),
+    &SettlementPins::default(),
+    &wc,
+    BuildDepth::Terrain,          // <- Terrain, NOT Settlements
+).expect("probe seed builds");
+let terrain = artifacts.terrain.expect("terrain is Some at BuildDepth::Terrain");
+let climate = climate_of(&artifacts.world).expect("climate reconstructs");
+let geo = terrain.geosphere();
+let surface = substrate_field(
+    geo, &terrain, &climate,
+    climate.obliquity_deg(), climate.insolation(), &climate.regime(),
+);
+```
+
+**`BuildDepth::Terrain` is sufficient and is what the neighbouring probe
+uses.** Caves, lithology, the geothermal gradient and the substrate field all
+exist at that depth; nothing in this task needs settlements. Do not reach for
+`BuildDepth::Settlements` — it is strictly more expensive for nothing.
+
+**On `#[ignore]`:** that file's own
+`the_live_substrate_field_carries_depth` (line 377) builds a live world at
+`BuildDepth::Terrain` and is **NOT** `#[ignore]`d, while two heavier tests in
+the same file are. So measure before you decide: if your tests run in
+seconds, leave them in the ordinary suite; if they do not, use that file's
+exact reason string, which names a cost AND cites a decision:
+
+```rust
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+```
+
+Two API facts the controller verified so you do not have to:
+`VertexMap::get(&self, id: Vertex) -> &T` (`kernel/src/geosphere.rs:61`) —
+it returns a REFERENCE, so deref where you compare. And
+`GeneratedTerrain::cave_at(&self, id: Vertex) -> Option<Cave>`
+(`domains/terrain/src/provider.rs:386`) returns by VALUE, not by reference.
+`Band as usize` is already an established idiom here — see
+`windows/worldgen/tests/suite/underworld_capacity_probe.rs`.
 
 - [ ] **Step 2: Run and confirm the expected failure**
 
@@ -636,7 +679,9 @@ git push
 
 **Files:**
 - Create: `windows/worldgen/src/energy.rs`
-- Modify: `windows/worldgen/src/lib.rs` (add `pub mod energy;`)
+- Modify: `windows/worldgen/src/lib.rs` (add `pub mod energy;` — the module
+  list is alphabetical, so it goes between `disposition` and `gazetteer`,
+  around line 91)
 - Test: in-module `#[cfg(test)]`
 
 **Interfaces:**
@@ -801,6 +846,23 @@ and would have to route through `hornvale_kernel::math` for determinism,
 buying nothing".
 
 A silica band is a triangular or smoothstep window centred on its rock class.
+
+**`smoothstep` exists twice in this tree and you can reach NEITHER.**
+`kernel/src/noise.rs:18` and `domains/terrain/src/rift.rs:315` are both
+private `fn`s, and `domains/alchemy`'s `clamp01` is `pub(crate)`. Write a
+private helper in `energy.rs` rather than hunting for a reusable one or
+promoting somebody else's — a smoothstep is a three-term polynomial, and
+promoting a kernel private to serve one caller in `windows/` is a layering
+change this task has no mandate for. **Say in your report that you wrote a
+third copy deliberately and why**, so the reviewer does not flag it as
+duplication it should have reused; the controller has already checked that
+there is nothing to reuse.
+
+If you do want a transcendental after all, `hornvale_kernel::math` exposes
+`exp`, `powf`, `ln` and `tanh` (decision 0041 routes them through the pure-Rust
+`libm` for cross-platform bit-identity). Prefer the polynomial anyway, for
+the reason `chamber_moisture`'s doc gives about its own shape.
+
 The three centres must be far enough apart that
 `the_three_silica_sources_peak_at_different_silica` passes on its own terms —
 if it does not, that is a finding about spec §4.1's reduction and you should
@@ -1015,13 +1077,21 @@ Report the twelve per-seed medians **individually, before the verdict**. The
 spec names this criterion's blind zone: IQR-of-medians cannot see eleven
 worlds agreeing and one being extraordinary.
 
-- [ ] **Step 2: Run it — on lefford if it is slow**
+- [ ] **Step 2: Run it — and check the cost before assuming it is heavy**
 
-Twelve `BuildDepth::Settlements` worlds is a heavy battery. If it exceeds a
-few minutes locally it is a `heavy:` tier test and belongs behind
-`make heavy-remote REF=<full-sha>`. Note that the heavy tier is an
-*authoring* path with a canonical-host guard; dispatch it with a full SHA,
-never a branch name.
+**Build to `BuildDepth::Terrain`, not `Settlements`** (see Task 3's note).
+Everything this measures — caves, lithology, the gradient, the substrate
+field — exists at `Terrain` depth, and the neighbouring
+`underworld_conditions_probe` builds live worlds at that depth in a test it
+does not even mark `#[ignore]`. An earlier draft of this step called twelve
+worlds "a heavy battery" and priced it at `Settlements`; that was an
+assumption, not a measurement.
+
+Time one seed first, then multiply. If twelve seeds genuinely exceed a few
+minutes it is a `heavy:` tier test and belongs behind
+`make heavy-remote REF=<full-sha>` — the heavy tier is an *authoring* path
+with a canonical-host guard, dispatched with a full SHA, never a branch
+name.
 
 - [ ] **Step 3: Record the result either way**
 
