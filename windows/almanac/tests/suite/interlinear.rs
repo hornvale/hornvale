@@ -261,6 +261,9 @@ impl Tongue {
             clause,
             &self.grammar,
             &self.morph,
+            // The book prints only present-tense statements, so no tongue it
+            // assembles models tense today (The Inquest, spec §4.2).
+            None,
             &noun_class_of,
             &self.lexicon,
             self.orthography,

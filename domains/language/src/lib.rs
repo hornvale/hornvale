@@ -126,7 +126,8 @@ pub fn assign_proto_roots_with_epoch_for_test(
 }
 pub use exemplars::{HUE_CONCEPTS, hue_exemplar};
 pub use grammar::{
-    ConstituentOrder, TongueGap, TongueGrammar, realize_tongue, realize_tongue_deep, tongue_grammar,
+    ConstituentOrder, TongueGap, TongueGrammar, TongueParadigm, realize_tongue,
+    realize_tongue_deep, tongue_grammar,
 };
 pub use lexicon::{
     ExposureClass, GapReason, Headedness, LexEntry, Lexicon, WordViews, build_lexicon,

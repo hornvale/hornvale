@@ -421,6 +421,9 @@ pub fn render_volume_from(
             &self_statement,
             &grammar,
             &morph,
+            // The self-statement is present-tense by construction, so this
+            // caller models no tense (The Inquest, spec §4.2).
+            None,
             &noun_class_of,
             &lexicon,
             ph.orthography,
@@ -1884,6 +1887,8 @@ fn probe_tongue(
         },
         grammar,
         morph,
+        // Every probe is present-tense (spec §4.2): no paradigm to read.
+        None,
         noun_class_of,
         lexicon,
         orth,
@@ -1941,7 +1946,8 @@ fn world_statement(
         // No role bindings on the world-statement today.
         adjuncts: Vec::new(),
     };
-    realize_tongue_deep(&clause, grammar, morph, noun_class_of, lexicon, orth).unwrap_or_else(
+    // The world-statement is present-tense (spec §4.2): no paradigm to read.
+    realize_tongue_deep(&clause, grammar, morph, None, noun_class_of, lexicon, orth).unwrap_or_else(
         |gap| {
             panic!(
                 "the world-statement law is violated for {kind}: gap on {} ({}) — \"earth\" is \

@@ -19,12 +19,13 @@
 //! authored surface text anywhere in a generated tongue (the program
 //! thesis).
 
-use crate::clause::{Adjunct, Argument, Clause, Subject};
+use crate::clause::{Adjunct, Argument, Clause, Subject, Tense};
 use crate::lexicon::{LexEntry, Lexicon};
 use crate::morphology::{
     ClassPosition, Evidential, MorphDepth, MorphForm, NounClass, TongueMorphology, affix,
 };
 use crate::naming::{Namer, render_views_with, segments_of};
+use crate::paradigm::ParadigmDepths;
 use crate::phoneme::Segment;
 use crate::phonology::Phonology;
 use crate::streams;
@@ -32,6 +33,7 @@ use crate::typology::Orthography;
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::world::IS_A;
 use hornvale_kernel::{Seed, Stream};
+use std::collections::BTreeMap;
 
 /// The six constituent orders of a subject–copula–complement clause
 /// (a nominal-predication clause: "The Vavako are goblins").
@@ -375,8 +377,44 @@ enum Role {
     Copula,
     /// The lexicalized complement.
     Complement,
-    /// A spliced-in particle marker (evidential or noun-class).
+    /// A spliced-in particle marker (evidential, tense or noun-class).
     Marker,
+}
+
+/// A tongue's drawn paradigm bundle: its [`ParadigmDepths`] (how deeply
+/// Number and Tense grammaticalize, and which side each affix binds)
+/// together with the family's marker forms for each axis's MARKED member,
+/// already evolved into this daughter — the paradigm sibling of
+/// [`TongueMorphology`], and what [`realize_tongue_deep`] consumes when a
+/// caller models tense.
+///
+/// **This is the first consumer `paradigm.rs` has ever had.** Its whole
+/// public surface shipped drawn and unread; that is why the depths are
+/// carried here by composition rather than duplicated as fields —
+/// `paradigm.rs` stays the one place they are defined and drawn.
+///
+/// `tense` is keyed by the marked value's label — today only `"past"`,
+/// because present is the zero member (spec §4.1) and no present marker is
+/// drawn. A bundle missing the key degrades to "no tense marking" rather
+/// than panicking, exactly as [`TongueMorphology`]'s own marker maps do,
+/// which is what lets a synthetic fixture supply one value.
+/// type-audit: bare-ok(identifier-text)
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TongueParadigm {
+    /// The tongue's drawn Number/Tense depths and attachment sides.
+    pub depths: ParadigmDepths,
+    /// The family's tense marker forms, keyed by marked value (`"past"`).
+    pub tense: BTreeMap<&'static str, MorphForm>,
+}
+
+/// The marked member of the tense axis for `tense`, or `None` when the
+/// clause's tense is the zero member. Present is unmarked (spec §4.1): only
+/// `past` is drawn, and inventing a present marker would be authoring.
+fn marked_tense_value(tense: Tense) -> Option<&'static str> {
+    match tense {
+        Tense::Present => None,
+        Tense::Past => Some("past"),
+    }
 }
 
 /// Realize a nominal-predication clause with C7's full morphology bundle:
@@ -397,6 +435,18 @@ enum Role {
 /// `Affix` joins the marker onto it per `morph.class_position`; `Particle`
 /// places the marker as a free word on that same side of the noun.
 ///
+/// Tense marking (The Inquest) reads `paradigm`'s drawn `tense_depth` and
+/// `tense_position`. **Past marks the verb** (spec §4.2), which in a nominal
+/// clause is the copula; under a ZERO COPULA it falls to the predicate
+/// nominal, exactly as the evidential already does in that position.
+/// Present is the zero member and is never marked. `paradigm` is `None` for
+/// a caller that does not model tense at all, which reproduces this
+/// function's pre-Inquest surface byte for byte — as does a `Some` bundle
+/// whose `tense_depth` is `MorphDepth::None`.
+///
+/// The tense layer is applied BEFORE the evidential one so the evidential
+/// stays predicate-FINAL, which is the rule its own doc above states.
+///
 /// `orth` is the tongue's own [`crate::phonology::Phonology::orthography`]
 /// (spec §3.6): a VIEW, so it changes only the `Affix`-depth marker joins'
 /// spelling, never `morph`/`grammar`/`lexicon` or which draw fired.
@@ -405,6 +455,7 @@ pub fn realize_tongue_deep(
     clause: &Clause,
     grammar: &TongueGrammar,
     morph: &TongueMorphology,
+    paradigm: Option<&TongueParadigm>,
     noun_class_of: &dyn Fn(&str) -> NounClass,
     lexicon: &Lexicon,
     orth: Orthography,
@@ -449,6 +500,48 @@ pub fn realize_tongue_deep(
         }
     }
 
+    // The copula as a word mid-assembly, so the tense and evidential layers
+    // below join onto the SAME segments in turn rather than each re-reading
+    // the bare drawn form. `None` for a zero-copula tongue.
+    let mut copula: Option<Marked> = grammar.copula.as_ref().map(|roman| Marked {
+        segments: grammar.copula_segments.clone(),
+        roman: roman.clone(),
+    });
+
+    // Tense marking (The Inquest): past marks the VERB, which in a nominal
+    // clause is the copula; under a zero copula it falls to the predicate
+    // nominal (spec §4.2), the same host the evidential falls to there.
+    // Present is the zero member and draws no marker at all (spec §4.1).
+    // Applied BEFORE the evidential layer so the evidential stays
+    // predicate-final.
+    let mut tense_particle: Option<String> = None;
+    if let Some(paradigm) = paradigm
+        && let Some(tense_value) = marked_tense_value(clause.tense)
+        && let Some(marker) = paradigm.tense.get(tense_value)
+    {
+        let position = paradigm.depths.tense_position;
+        match paradigm.depths.tense_depth {
+            MorphDepth::None => {}
+            MorphDepth::Affix => {
+                if let Some(cop) = copula.take() {
+                    copula = Some(layer_affix(cop, marker, position, orth));
+                } else if object_concept.is_some() {
+                    // Zero copula, lexical object: the predicate nominal
+                    // bears it. A non-lexical object (`Name`/`Count`/
+                    // `Quantity`) has no segments BY NATURE, so the clause
+                    // goes unmarked for tense -- the same outcome a tongue
+                    // that drew `MorphDepth::None` already has. The guard is
+                    // on the CONCEPT ID, never on `Marked.segments`, because
+                    // a `Compound` has no segments either and that is a
+                    // lexicon BUG `layer_affix` must keep panicking on
+                    // (spec §4.3).
+                    complement = layer_affix(complement, marker, position, orth);
+                }
+            }
+            MorphDepth::Particle => tense_particle = Some(marker.roman.clone()),
+        }
+    }
+
     // Evidential marking: predicate-final — the overt copula, or (zero
     // copula) the predicate nominal, i.e. the (possibly already
     // class-marked) complement.
@@ -457,19 +550,13 @@ pub fn realize_tongue_deep(
         Evidential::Taught => "taught",
         Evidential::Inferred => "inferred",
     };
-    let mut copula_roman = grammar.copula.clone();
     let mut evidential_particle: Option<String> = None;
     if let Some(marker) = morph.evidential.get(evidential_value) {
         match morph.evidential_depth {
             MorphDepth::None => {}
             MorphDepth::Affix => {
-                if let Some(copula) = &grammar.copula {
-                    let cop = Marked {
-                        segments: grammar.copula_segments.clone(),
-                        roman: copula.clone(),
-                    };
-                    copula_roman =
-                        Some(layer_affix(cop, marker, ClassPosition::Suffix, orth).roman);
+                if let Some(cop) = copula.take() {
+                    copula = Some(layer_affix(cop, marker, ClassPosition::Suffix, orth));
                 } else if object_concept.is_some() {
                     // Zero copula: the marker falls to the predicate nominal.
                     // A non-lexical object cannot bear it, so the clause goes
@@ -481,6 +568,7 @@ pub fn realize_tongue_deep(
             MorphDepth::Particle => evidential_particle = Some(marker.roman.clone()),
         }
     }
+    let copula_roman = copula.map(|cop| cop.roman);
 
     let s = subject.as_str();
     let v = copula_roman.as_deref();
@@ -533,6 +621,27 @@ pub fn realize_tongue_deep(
         ordered.insert(insert_at, (Role::Marker, particle));
     }
 
+    // Splice in the tense particle beside "the predicate" (the copula, or
+    // the predicate nominal for a zero-copula tongue) on the drawn side.
+    // Spliced BEFORE the evidential particle so the evidential still lands
+    // immediately after the predicate and this one sits one further out.
+    if let Some(particle) = tense_particle
+        && let Some(paradigm) = paradigm
+    {
+        let predicate_role = if grammar.copula.is_some() {
+            Role::Copula
+        } else {
+            Role::Complement
+        };
+        if let Some(idx) = ordered.iter().position(|(r, _)| *r == predicate_role) {
+            let insert_at = match paradigm.depths.tense_position {
+                ClassPosition::Prefix => idx,
+                ClassPosition::Suffix => idx + 1,
+            };
+            ordered.insert(insert_at, (Role::Marker, particle));
+        }
+    }
+
     // Splice in the evidential particle immediately after "the predicate":
     // the copula token if the tongue is copula-bearing, else the complement
     // (the predicate nominal in a zero-copula clause). Tagging spliced
@@ -568,14 +677,15 @@ mod tests {
     // Test-only: `Number` and `Definiteness` reach a tongue realizer and go
     // UNREAD (spec 3.2), so no non-test code in this module names them.
     // Importing them at module level would be an unused import outside
-    // `cfg(test)`.
-    use crate::clause::{Definiteness, Number, Polarity, Tense};
+    // `cfg(test)`. `Tense` is NOT among them any more -- The Inquest made
+    // the realizer read it, so it is imported at module level via
+    // `use super::*`.
+    use crate::clause::{Definiteness, Number, Polarity};
     use crate::etymology::CascadeRegime;
     use crate::lexicon::{ExposureClass, LexEntry, build_lexicon};
     use crate::naming::render_views;
     use crate::phonology::{Envelope, ExoticSeg, draw_phonology};
     use hornvale_kernel::Seed;
-    use std::collections::BTreeMap;
 
     /// The manikin's articulation envelope — per `phonology.rs`'s own
     /// test-constructor pattern (`manikin_env`), reconstructed locally here
@@ -1014,6 +1124,7 @@ mod tests {
             &clause,
             &grammar,
             &shallow,
+            None,
             &noun_class_of,
             &lex,
             Orthography::Digraph,
@@ -1182,6 +1293,7 @@ mod tests {
                 &clause,
                 &grammar,
                 &shallow,
+                None,
                 &noun_class_of,
                 &lex,
                 Orthography::Digraph,
@@ -1216,6 +1328,7 @@ mod tests {
             &clause,
             &grammar,
             &affix_evidential,
+            None,
             &noun_class_of,
             &lex,
             Orthography::Digraph,
@@ -1240,6 +1353,7 @@ mod tests {
             &clause,
             &grammar,
             &particle_evidential,
+            None,
             &noun_class_of,
             &lex,
             Orthography::Digraph,
@@ -1277,6 +1391,7 @@ mod tests {
             &clause,
             &grammar,
             &class_affix_prefix,
+            None,
             &noun_class_of,
             &lex,
             Orthography::Digraph,
@@ -1307,6 +1422,7 @@ mod tests {
             &clause,
             &zero_copula_grammar,
             &affix_evidential,
+            None,
             &noun_class_of,
             &lex,
             Orthography::Digraph,
@@ -1316,6 +1432,272 @@ mod tests {
             zero_marked.contains(&expected_enclitic),
             "zero-copula Affix evidential must enclitic onto the predicate nominal: \
              {zero_marked:?} (expected token {expected_enclitic:?})"
+        );
+    }
+
+    /// A `TongueParadigm` at `tense_depth`, with a synthetic `"past"`
+    /// marker drawn from `ph` — the paradigm sibling of the marker fixtures
+    /// `realize_tongue_marks_by_depth` builds, and built the same way (a
+    /// real drawn word via `proto_root`, not authored text). `number_depth`
+    /// is `None` throughout: this task wires TENSE only, and a number
+    /// depth nothing reads would be a fixture claiming coverage it has not
+    /// got.
+    fn tense_paradigm(
+        ph: &Phonology,
+        tense_depth: MorphDepth,
+        tense_position: ClassPosition,
+    ) -> (TongueParadigm, Vec<Segment>, String) {
+        use crate::etymology::proto_root;
+
+        let past_segments = proto_root(&Seed(96), "goblin", "past-marker", ph);
+        let past_roman = render_views(&past_segments).roman;
+        let mut tense = BTreeMap::new();
+        tense.insert(
+            "past",
+            MorphForm {
+                segments: past_segments.clone(),
+                roman: past_roman.clone(),
+            },
+        );
+        (
+            TongueParadigm {
+                depths: ParadigmDepths {
+                    number_depth: MorphDepth::None,
+                    tense_depth,
+                    number_position: ClassPosition::Suffix,
+                    tense_position,
+                },
+                tense,
+            },
+            past_segments,
+            past_roman,
+        )
+    }
+
+    /// The morphology bundle that marks nothing — real marker maps left
+    /// empty so a surface difference can only come from the paradigm.
+    fn unmarked_morphology() -> TongueMorphology {
+        TongueMorphology {
+            evidential_depth: MorphDepth::None,
+            noun_class_depth: MorphDepth::None,
+            class_position: ClassPosition::Suffix,
+            evidential: BTreeMap::new(),
+            class: BTreeMap::new(),
+        }
+    }
+
+    /// The Inquest T2: the tongue READS its drawn `tense_depth`.
+    ///
+    /// The assertion that makes this non-vacuous is DIFFERENTIAL, not an
+    /// equality: two paradigms identical except for `tense_depth` must
+    /// render the same PAST clause differently. An equality test alone
+    /// would pass with the drawn field never read at all.
+    #[test]
+    fn realize_tongue_reads_its_drawn_tense_depth() {
+        let ph = test_phonology();
+        let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
+        let complement_segments = match lex.entry("goblin-kind").unwrap() {
+            LexEntry::Root { derivation, .. } => derivation.modern.clone(),
+            other => panic!("goblin-kind should be a root, got {other:?}"),
+        };
+        let past = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Concept("goblin-kind".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: vec![],
+        };
+        let present = Clause {
+            tense: Tense::Present,
+            ..past.clone()
+        };
+        let noun_class_of = |_: &str| NounClass::Inanimate;
+        let morph = unmarked_morphology();
+        let grammar = overt_copula_grammar(&ph);
+
+        let (none_paradigm, _, _) = tense_paradigm(&ph, MorphDepth::None, ClassPosition::Suffix);
+        let (affix_paradigm, past_segments, past_roman) =
+            tense_paradigm(&ph, MorphDepth::Affix, ClassPosition::Suffix);
+
+        let render = |clause: &Clause, grammar: &TongueGrammar, paradigm: &TongueParadigm| {
+            realize_tongue_deep(
+                clause,
+                grammar,
+                &morph,
+                Some(paradigm),
+                &noun_class_of,
+                &lex,
+                Orthography::Digraph,
+            )
+            .unwrap()
+        };
+
+        // 1. THE DIFFERENTIAL. Same clause, same tongue, same marker forms —
+        // only the drawn depth differs, and the surface must differ with it.
+        let unmarked = render(&past, &grammar, &none_paradigm);
+        let marked = render(&past, &grammar, &affix_paradigm);
+        assert_ne!(
+            unmarked, marked,
+            "a tongue that draws Affix tense depth must render a past clause \
+             differently from one that draws None: {unmarked:?}"
+        );
+
+        // 2. `MorphDepth::None` on the tense axis is the shallow surface —
+        // identical to passing no paradigm at all.
+        assert_eq!(
+            unmarked,
+            realize_tongue_deep(
+                &past,
+                &grammar,
+                &morph,
+                None,
+                &noun_class_of,
+                &lex,
+                Orthography::Digraph,
+            )
+            .unwrap(),
+            "tense_depth None must reproduce the no-paradigm surface exactly"
+        );
+
+        // 3. Affix + overt copula -> the past marker is joined onto the
+        // COPULA at the segment level (spec §4.2: tense marks the verb, and
+        // in a nominal clause the verb is the copula).
+        let copula_segments = grammar
+            .copula_segments
+            .clone()
+            .expect("overt_copula_grammar draws copula_segments alongside copula");
+        let expected_copula = affix(
+            &copula_segments,
+            &past_segments,
+            ClassPosition::Suffix,
+            Orthography::Digraph,
+        )
+        .roman;
+        assert!(
+            marked.contains(&expected_copula),
+            "Affix tense must suffix the past marker onto the copula: {marked:?} \
+             (expected token {expected_copula:?})"
+        );
+
+        // 4. PRESENT IS UNMARKED (spec §4.1). The same Affix tongue renders
+        // a present clause exactly as a None tongue does — only `past` is
+        // drawn, and there is no present marker to invent.
+        assert_eq!(
+            render(&present, &grammar, &affix_paradigm),
+            render(&present, &grammar, &none_paradigm),
+            "present is the zero member: an Affix tongue must not mark it"
+        );
+
+        // 5. The drawn ATTACHMENT SIDE is read too, not assumed suffixing.
+        let (prefix_paradigm, _, _) = tense_paradigm(&ph, MorphDepth::Affix, ClassPosition::Prefix);
+        let expected_prefixed = affix(
+            &copula_segments,
+            &past_segments,
+            ClassPosition::Prefix,
+            Orthography::Digraph,
+        )
+        .roman;
+        let prefixed = render(&past, &grammar, &prefix_paradigm);
+        assert!(
+            prefixed.contains(&expected_prefixed),
+            "the drawn tense_position must decide the side: {prefixed:?} \
+             (expected token {expected_prefixed:?})"
+        );
+
+        // 6. Particle depth -> a free word adjacent to the predicate (the
+        // copula here), on the drawn side.
+        let (particle_paradigm, _, _) =
+            tense_paradigm(&ph, MorphDepth::Particle, ClassPosition::Suffix);
+        let particled = render(&past, &grammar, &particle_paradigm);
+        let tokens: Vec<&str> = particled.trim_end_matches('.').split(' ').collect();
+        let copula_roman = grammar.copula.as_deref().unwrap();
+        let copula_idx = tokens
+            .iter()
+            .position(|t| *t == copula_roman)
+            .expect("the bare copula token must still be present, unmodified");
+        assert_eq!(
+            tokens.get(copula_idx + 1),
+            Some(&past_roman.as_str()),
+            "the tense particle must sit beside the predicate: {tokens:?}"
+        );
+
+        // 7. ZERO COPULA: no verb, so past falls to the predicate nominal —
+        // the same host the evidential falls to in that position (spec §4.2).
+        let zero_copula = TongueGrammar {
+            order: grammar.order,
+            copula: None,
+            copula_segments: None,
+            articles: grammar.articles,
+        };
+        let expected_enclitic = affix(
+            &complement_segments,
+            &past_segments,
+            ClassPosition::Suffix,
+            Orthography::Digraph,
+        )
+        .roman;
+        let zero_marked = render(&past, &zero_copula, &affix_paradigm);
+        assert!(
+            zero_marked.contains(&expected_enclitic),
+            "zero-copula Affix tense must fall to the predicate nominal: \
+             {zero_marked:?} (expected token {expected_enclitic:?})"
+        );
+    }
+
+    /// The Inquest T2, spec §4.3's guard: a NON-LEXICAL object has no
+    /// segments and must not be affixed — and the guard is on the concept
+    /// id, never on `Marked.segments`, because a `LexEntry::Compound` has
+    /// `segments: None` too and its `layer_affix` panic is deliberate
+    /// (`layer_affix_panics_on_a_segmentless_word`). A zero-copula tongue
+    /// with `Affix` tense has nowhere to put the marker here, so the clause
+    /// goes unmarked for tense rather than panicking.
+    #[test]
+    fn a_non_lexical_object_takes_no_tense_affix_under_a_zero_copula() {
+        let ph = test_phonology();
+        let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Count(8835),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: vec![],
+        };
+        let noun_class_of = |_: &str| NounClass::Inanimate;
+        let morph = unmarked_morphology();
+        let zero_copula = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: None,
+            copula_segments: None,
+            articles: false,
+        };
+        let (affix_paradigm, _, past_roman) =
+            tense_paradigm(&ph, MorphDepth::Affix, ClassPosition::Suffix);
+
+        let rendered = realize_tongue_deep(
+            &clause,
+            &zero_copula,
+            &morph,
+            Some(&affix_paradigm),
+            &noun_class_of,
+            &lex,
+            Orthography::Digraph,
+        )
+        .expect("a numeral object must still realize");
+        assert_eq!(
+            rendered, "Vavako 8835.",
+            "a non-lexical object bears no tense affix: {rendered:?}"
+        );
+        assert!(
+            !rendered.contains(&past_roman),
+            "and the marker must not appear anywhere: {rendered:?}"
         );
     }
 
@@ -1387,6 +1769,7 @@ mod tests {
             &clause,
             &grammar,
             &morph,
+            None,
             &noun_class_of,
             &lex,
             Orthography::Digraph,
@@ -1586,6 +1969,7 @@ mod tests {
             &clause,
             &zero_copula,
             &affixing,
+            None,
             &noun_class_of,
             &lex,
             Orthography::Digraph,
