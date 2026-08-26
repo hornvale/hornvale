@@ -699,11 +699,13 @@ mod reticence {
     use hornvale_vessel::stance::Stance;
     use hornvale_vessel::testimony::{Testimony, testify_with_stance};
 
-    /// Reuse whatever this file already builds for its Direct-arm cases. If it
-    /// has no reusable helper, EXTRACT one in this task rather than hand-rolling
-    /// a second lexicon builder, and say so in your report.
+    /// The file's existing builder, reused rather than duplicated:
+    /// `build(species, seed, steeped)` at `testimony.rs:82`. Steeping BOTH
+    /// `content` and `eager` gives the Direct arm for the dissembling claim
+    /// and for the costly-truth case, while leaving `helpless`/`frustrated`/
+    /// `lost` as Nearest — which is exactly the mix these four tests need.
     fn lexicon() -> hornvale_language::Lexicon {
-        super::direct_arm_lexicon()
+        super::build("hobgoblin", 7, &["content", "eager"])
     }
 
     #[test]
