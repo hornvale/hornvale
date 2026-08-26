@@ -2973,3 +2973,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T15:36:26Z | game-check | 398.826 | 2393.211 | 27.098 | 6.07 | 0 | f633df521 | campaign/the-interlinear | MacBookPro | 10 |
 | 2026-08-26T15:59:43Z | sluice:artifacts | 121.266 | 871.417 | 36.794 | 7.49 | 0 | db187c483 |  | lefford | 40 |
 | 2026-08-26T16:00:25Z | sluice:outboard | 41.121 | 25.697 | 38.843 | 1.57 | 0 | 1daf2ade1 |  | lefford | 40 |
+| 2026-08-26T16:07:46Z | sluice:gate | 441.328 | 12173.405 | 457.514 | 28.62 | 0 | 38d8e13fa |  | lefford | 40 |
