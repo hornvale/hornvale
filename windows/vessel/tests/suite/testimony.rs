@@ -187,3 +187,78 @@ fn a_culture_with_no_felt_state_words_reports_none() {
         "no known felt-state word anywhere in this lexicon; nothing to substitute"
     );
 }
+
+mod reticence {
+    use hornvale_vessel::liveness::{AffectLabel, DriveKind};
+    use hornvale_vessel::stance::Stance;
+    use hornvale_vessel::testimony::{Testimony, testify_with_stance};
+
+    /// The file's existing builder, reused rather than duplicated:
+    /// `build(species, seed, steeped)` at `testimony.rs:82`. Steeping BOTH
+    /// `content` and `eager` gives the Direct arm for the dissembling claim
+    /// and for the costly-truth case, while leaving `helpless`/`frustrated`/
+    /// `lost` as Nearest — which is exactly the mix these four tests need.
+    fn lexicon() -> hornvale_language::Lexicon {
+        super::build("hobgoblin", 7, &["content", "eager"])
+    }
+
+    #[test]
+    fn a_withholding_host_names_no_state_at_all() {
+        let t = testify_with_stance(
+            &lexicon(),
+            AffectLabel::Frustrated,
+            Stance::Withholding,
+            &[],
+        );
+        assert_eq!(t, Some(Testimony::Withheld));
+    }
+
+    #[test]
+    fn a_dissembling_host_claims_content_and_never_leaks_the_truth() {
+        let t = testify_with_stance(&lexicon(), AffectLabel::Helpless, Stance::Dissembling, &[])
+            .expect("a lexicon with felt-state words testifies");
+        match t {
+            Testimony::Falsehood { claimed, .. } => assert_eq!(
+                claimed,
+                AffectLabel::Content,
+                "the dissembling rule is the one lie: claim Content"
+            ),
+            other => panic!("expected a Falsehood, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_costly_truth_reveals_the_residue_a_forthcoming_host_withholds() {
+        let residue = [DriveKind::Thirst, DriveKind::Fatigue];
+        let costly = testify_with_stance(&lexicon(), AffectLabel::Eager, Stance::Costly, &residue)
+            .expect("testifies");
+        let plain = testify_with_stance(
+            &lexicon(),
+            AffectLabel::Eager,
+            Stance::Forthcoming,
+            &residue,
+        )
+        .expect("testifies");
+        match (costly, plain) {
+            (Testimony::Costly { revealed, .. }, Testimony::Spoken(_)) => {
+                assert_eq!(revealed, residue, "the costly arm carries the residue");
+            }
+            other => panic!("wrong arms: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn no_falsehood_ever_names_the_true_state() {
+        for truth in [
+            AffectLabel::Helpless,
+            AffectLabel::Frustrated,
+            AffectLabel::Lost,
+        ] {
+            let t = testify_with_stance(&lexicon(), truth, Stance::Dissembling, &[])
+                .expect("testifies");
+            if let Testimony::Falsehood { claimed, .. } = t {
+                assert_ne!(claimed, truth, "a falsehood must never name the true state");
+            }
+        }
+    }
+}
