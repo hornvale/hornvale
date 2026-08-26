@@ -2983,3 +2983,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T18:28:27Z | gate-commit | 23.501 | 50.129 | 12.824 | 2.68 | 0 | dd1f98243 | campaign/the-reticence | MacBookPro | 10 |
 | 2026-08-26T18:37:24Z | gate-commit | 12.039 | 11.681 | 0.241 | 0.99 | 0 | fd91c1a23 | campaign/the-reticence | MacBookPro | 10 |
 | 2026-08-26T18:38:06Z | gate-commit | 27.071 | 71.284 | 21.056 | 3.41 | 0 | fd91c1a23 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T18:47:20Z | gate-commit | 38.080 | 60.377 | 19.026 | 2.09 | 0 | 56d4641d6 | campaign/the-reticence | MacBookPro | 10 |

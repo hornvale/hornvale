@@ -493,12 +493,16 @@ Expected: PASS, both tests.
 - [ ] **Step 7: Prove the accumulation is real, not a constant**
 
 Mutate with `scripts/mutate.py` (never `sed` — it substitutes only if the target
-is found AND unique, which is what stops a silent no-op mutation):
+is found AND unique, which is what stops a silent no-op mutation). **The form is
+`mutate.py <file> <old> <new>`.** `--to` exists but means something else entirely
+— `--to <dest> <file> <old> <new>` writes the mutated text to a DIFFERENT file
+and leaves the original untouched, which is for mutating something executed from
+a path (a hook, a shell script), not something imported:
 
 ```bash
-python3 scripts/mutate.py --to '*self.driven_overrides.entry(*drive).or_insert(0) = 1;' \
-    windows/vessel/src/session.rs \
-    '*self.driven_overrides.entry(*drive).or_insert(0) += 1;'
+python3 scripts/mutate.py windows/vessel/src/session.rs \
+    '*self.driven_overrides.entry(*drive).or_insert(0) += 1;' \
+    '*self.driven_overrides.entry(*drive).or_insert(0) = 1;'
 ```
 
 Re-run the overrides filter. Expected: **RED** on
@@ -849,9 +853,9 @@ Expected: PASS, existing tests plus the four new ones.
 - [ ] **Step 5: Mutation-prove the falsehood cannot leak the truth**
 
 ```bash
-python3 scripts/mutate.py --to 'const DISSEMBLING_CLAIM: AffectLabel = AffectLabel::Helpless;' \
-    windows/vessel/src/testimony.rs \
-    'const DISSEMBLING_CLAIM: AffectLabel = AffectLabel::Content;'
+python3 scripts/mutate.py windows/vessel/src/testimony.rs \
+    'const DISSEMBLING_CLAIM: AffectLabel = AffectLabel::Content;' \
+    'const DISSEMBLING_CLAIM: AffectLabel = AffectLabel::Helpless;'
 ```
 
 Re-run the `testimony::reticence` filter. Expected: **RED**. Restore from your
