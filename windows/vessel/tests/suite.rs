@@ -33,6 +33,8 @@ mod controller_swap;
 mod course_properties;
 #[path = "suite/display_handle.rs"]
 mod display_handle;
+#[path = "suite/doctrine.rs"]
+mod doctrine;
 #[path = "suite/felt_state_concepts.rs"]
 mod felt_state_concepts;
 #[path = "suite/gate_table.rs"]

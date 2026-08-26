@@ -12,6 +12,7 @@ pub mod clock;
 pub mod controller;
 pub mod course;
 pub mod depth;
+pub mod doctrine;
 pub mod eyes;
 pub mod fabric;
 mod focalize;
