@@ -2992,3 +2992,7 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T19:07:32Z | sluice:outboard | 40.639 | 24.736 | 37.217 | 1.52 | 0 | 214b4bc25 |  | lefford | 40 |
 | 2026-08-26T19:14:54Z | sluice:gate | 441.681 | 11982.538 | 459.550 | 28.17 | 0 | d57b92b96 |  | lefford | 40 |
 | 2026-08-26T19:22:34Z | sluice:clients | 459.193 | 5690.223 | 98.628 | 12.61 | 0 | 2a95bb183 |  | lefford | 40 |
+| 2026-08-26T20:24:01Z | prewarm | 479.774 | 1633.666 | 96.893 | 3.61 | 0 | 5d8975d4b | campaign/the-foliot | ambrose | 12 |
+| 2026-08-26T21:13:54Z | gate-commit | 118.099 | 116.239 | 34.776 | 1.28 | 0 | 69dd78b72 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-26T21:15:23Z | gate-commit | 78.903 | 50.157 | 24.250 | 0.94 | 0 | 69dd78b72 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-26T22:20:40Z | gate-commit | 124.805 | 61.034 | 27.500 | 0.71 | 0 | 3dcc6d11f | campaign/the-foliot | ambrose | 12 |

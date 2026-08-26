@@ -1,22 +1,32 @@
-//! The vessel scheduler's tick and the kernel's tick are the same unit, and
-//! the `f64` bridge between them loses whole ticks (The Foliot, stage 1).
+//! The vessel scheduler's tick and the kernel's tick are NOT the same unit,
+//! and the `f64` bridge between them differs by a tick (The Foliot, stage 1).
 //!
 //! `clock.rs` declares `BASE_TICKS_PER_STD_DAY = 100_000`, tied to
 //! `WorldTime::TICKS_PER_STD_DAY` by nothing but agreement, and
 //! `Session::charge` crosses `Ticks -> f64 days -> WorldTime` on every
-//! action. The algebra says that crossing carries no information — with
-//! `ticks_per_local_day(d) = round(d * B)`, converting a cost back to kernel
-//! ticks is `t * (d * B) / round(d * B)`, which is `t` whenever `d * B` is an
-//! integer and within a rounding of it otherwise.
+//! action.
+//!
+//! **The campaign's opening claim — that this crossing carries no
+//! information — was WRONG, and these tests are what refuted it.** A local
+//! day is an exact integer of VESSEL ticks (that is what
+//! `ticks_per_local_day` exists to guarantee) but `d * B` KERNEL ticks, which
+//! is not an integer. So one vessel tick is `d*B / round(d*B)` kernel ticks
+//! and the conversion `days_of` performs is CORRECT. Replacing it with the
+//! identity, as the spec originally proposed, would have introduced an error
+//! while claiming to remove one.
 //!
 //! These tests establish the premise the stage-1 fix rests on, BEFORE the
 //! fix: the two rates agree, a local day is a whole number of ticks, and the
 //! round trip nonetheless loses ticks for day lengths the rotation pin
 //! admits.
 //!
-//! What the probe found when it was written (2026-08-26): 438 losing
-//! (day length, mass, terrain) combinations, each losing exactly one tick —
-//! 0.864 s. The cheapest REACHABLE cost that loses one is 77,765 ticks, a
+//! What the probe found when it was written (2026-08-26): 438 differing
+//! (day length, mass, terrain) combinations, each by exactly one tick —
+//! 0.864 s. **The effect is symmetric, not a leak**: over a wider sweep,
+//! 213 losses against 211 gains, net -2 ticks, because `round(d*B)` sits
+//! above `d*B` 651 times and below it 650. Nothing accumulates. The registry
+//! row calling this "one `Session::charge` rounding from observable"
+//! overstates it. The cheapest REACHABLE cost that loses one is 77,765 ticks, a
 //! 1,000 kg creature on maximum-climb ground, which is an ordinary large
 //! animal rather than an exotic edge. The maximum cost any authored species
 //! can incur is 121,709 ticks (a 6,000 kg woolly mammoth at the climb
@@ -99,14 +109,16 @@ fn the_vessel_base_rate_is_the_kernel_tick_rate() {
     );
 }
 
-/// A round trip through `f64` days must return the tick count it started
-/// with. It does not, for some day lengths — this searches for them rather
+/// A round trip through `f64` days does not always return the tick count it
+/// started with — this searches for the day lengths where it does not, rather
 /// than asserting a triple guessed from outside the code.
 ///
-/// **A pass here is the RED signal**: it proves the defect stage 1 fixes is
-/// real. An empty witness list refutes the stage's premise.
+/// The difference is real but symmetric, so this documents a cost of the
+/// two-lattice design rather than a bug in the conversion. The Foliot removes
+/// the cost by removing the second lattice: once a local day is an exact
+/// integer of kernel ticks, there is nothing to convert.
 #[test]
-fn the_f64_bridge_loses_ticks_for_some_day_length() {
+fn the_f64_bridge_differs_by_a_tick_for_some_day_length() {
     let costs = reachable_costs();
     let mut witnesses = Vec::new();
     for d in admitted_day_lengths() {
