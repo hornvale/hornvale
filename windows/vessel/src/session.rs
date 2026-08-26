@@ -17,7 +17,7 @@ use crate::snapshot::{
     KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
     SensedChannel, SessionSnapshot, SocialEntry, SpatialChannel,
 };
-use crate::testimony::{FeltStateWord, testify};
+use crate::testimony::{FeltStateWord, Testimony, testify_with_stance};
 use crate::{
     Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, PossessTarget, Projection,
     TemplateFocalizer, Turn, VesselError, absorb_common, most_populous_settlement, observable,
@@ -729,6 +729,13 @@ pub struct Session<'w> {
     /// residue [`Self::driven_affect`] itself never carries: read back by
     /// [`Self::suppressed_drives`].
     driven_suppressed: Vec<DriveKind>,
+    /// Every drive this body's own arbitration wanted and did not pursue,
+    /// counted across the WHOLE possession (The Reticence, Task 2) — unlike
+    /// `driven_suppressed`, which is a per-decision read overwritten by every
+    /// `advance_one` iteration. When the rider is driving, this is the record
+    /// of what the rider made this body ignore, and it is the only conduct
+    /// input the host's willingness to speak reads.
+    driven_overrides: std::collections::BTreeMap<DriveKind, u32>,
 }
 
 /// Where the possession is while indoors. `FRAME`-tier in its entirety: derived
@@ -1100,6 +1107,7 @@ impl<'w> Session<'w> {
             driven_mode: None,
             driven_affect: None,
             driven_suppressed: Vec::new(),
+            driven_overrides: std::collections::BTreeMap::new(),
         };
         session.absorb_here()?;
         let opening = session.describe_here()?;
@@ -1163,6 +1171,14 @@ impl<'w> Session<'w> {
         self.driven_affect.map(|affect| affect.label)
     }
 
+    /// Which drive the driven body's most recent felt state is ABOUT (The
+    /// Reticence, Task 5) — the affect's own object, so a topic-scoped refusal
+    /// names the axis the rider actually overrode. `None` before the first
+    /// `!wait`, and for a state with no object.
+    pub fn driven_affect_object(&self) -> Option<DriveKind> {
+        self.driven_affect.and_then(|affect| affect.object)
+    }
+
     /// The driven body's own arbitration's discarded ranks, as of the most
     /// recent `!wait` tick (The Confidant, Task 5) — the SAME resolution
     /// [`Self::driven_affect`] reads, its OTHER active drives rather than
@@ -1173,6 +1189,21 @@ impl<'w> Session<'w> {
     /// other drive was active alongside the pursued one.
     pub fn suppressed_drives(&self) -> &[DriveKind] {
         &self.driven_suppressed
+    }
+
+    /// How many decisions this possession has overridden `drive` — the count
+    /// of ticks on which arbitration found it active and did not pursue it
+    /// (The Reticence, Task 2). Zero before the first `!wait`, and zero for a
+    /// drive that has never lost.
+    /// type-audit: bare-ok(count)
+    pub fn overrides_of(&self, drive: DriveKind) -> u32 {
+        self.driven_overrides.get(&drive).copied().unwrap_or(0)
+    }
+
+    /// The whole override record, drive-ordered (The Reticence, Task 2).
+    /// type-audit: bare-ok(count)
+    pub fn override_record(&self) -> &std::collections::BTreeMap<DriveKind, u32> {
+        &self.driven_overrides
     }
 
     /// The accumulated knowledge (read-only).
@@ -4067,6 +4098,9 @@ impl<'w> Session<'w> {
         self.driven_mode = Some(driven_mode);
         self.driven_affect = Some(driven_affect);
         self.driven_suppressed = driven_suppressed;
+        for drive in &self.driven_suppressed {
+            *self.driven_overrides.entry(*drive).or_insert(0) += 1;
+        }
         match tick(&self.ledger, &[&sys], &["drive-movements"], &self.registry) {
             Ok(next) => {
                 let moved = next.len() - self.ledger.len();
@@ -4869,24 +4903,42 @@ impl<'w> Session<'w> {
         let Some(label) = self.driven_affect() else {
             return "It has not settled into anything yet; wait, then ask.".to_string();
         };
-        let testimony = match (
+        let lexicon = match (
             self.wctx.terrain.as_ref(),
             self.wctx.climate.as_ref(),
             self.wctx.wc.as_ref(),
         ) {
-            (Some(terrain), Some(climate), Some(wc)) => {
-                match hornvale_worldgen::lexicon_from_in(
-                    self.world,
-                    wc,
-                    &self.driven_body().species,
-                    terrain,
-                    climate,
-                ) {
-                    Ok(lexicon) => testify(&lexicon, label),
-                    Err(_) => None,
-                }
-            }
+            (Some(terrain), Some(climate), Some(wc)) => hornvale_worldgen::lexicon_from_in(
+                self.world,
+                wc,
+                &self.driven_body().species,
+                terrain,
+                climate,
+            )
+            .ok(),
             _ => None,
+        };
+        let testimony = match lexicon {
+            Some(lexicon) => {
+                // The Reticence: the host's willingness, between arbitration and
+                // the lexicon. The drive the answer is ABOUT is the pursued one —
+                // the affect's own object — so a host goes quiet on the axis it
+                // was overridden on, not globally.
+                let topic = self.driven_affect_object();
+                let prior = {
+                    let name = crate::doctrine::improvised_name(
+                        self.world,
+                        &lexicon,
+                        &self.driven_body().species,
+                    );
+                    crate::doctrine::openness(&name)
+                };
+                let overrides = topic.map(|d| self.overrides_of(d)).unwrap_or(0);
+                let stance = crate::stance::stance_for(prior, overrides);
+                let residue: Vec<_> = self.suppressed_drives().to_vec();
+                testify_with_stance(&lexicon, label, stance, &residue)
+            }
+            None => None,
         };
         let body_label = self.driven_body().label.clone();
         let (turn, heard_value) = render_testimony(&body_label, label, testimony);
@@ -5066,9 +5118,10 @@ fn felt_phrase(affect: &Affect) -> String {
     }
 }
 
-/// The pure rendering half of `ask` (The Confidant, Task 6), split out of
+/// The pure rendering half of `ask` (The Confidant, Task 6; widened to the
+/// four-arm [`Testimony`] at The Reticence, Task 5), split out of
 /// [`Session::ask`] so it can be pinned directly against hand-built
-/// [`FeltStateWord`]s rather than only through a real, world-generated
+/// [`Testimony`] values rather than only through a real, world-generated
 /// culture that may or may not exercise the divergent arm — the same
 /// rationale `windows/vessel/tests/suite/testimony.rs`'s own doc gives for
 /// hand-supplying `ExposureClass`es instead of a real exposure pipeline.
@@ -5076,42 +5129,100 @@ fn felt_phrase(affect: &Affect) -> String {
 /// Returns the player-facing turn text and, when the body said anything at
 /// all, the concept id to land in `Knowledge` under `"{body_label}::feels"`
 /// (`Session::ask` does the landing; this function only decides what to
-/// land).
+/// land). [`Testimony::Withheld`] lands nothing — a refusal that recorded a
+/// felt state would make silence informative.
 ///
-/// **THE INVARIANT THIS FUNCTION EXISTS TO HOLD (Task 6 Step 5):** `label`
-/// — the arbitration's TRUE answer — is read only to gloss the [`Direct`]
-/// arm, where reporting it is CORRECT (a culture that has the word for its
-/// own true state is, truthfully, using it). The [`Nearest`] arm below never
-/// reads `label` at all — only `reported_as`, which [`testify`] guarantees
-/// differs from whatever it was asked about (`nearest` skips its own query
+/// **THE INVARIANT THIS FUNCTION EXISTS TO HOLD (Task 6 Step 5, extended by
+/// The Reticence Task 5):** `label` — the arbitration's TRUE answer — is
+/// read only to gloss the [`Direct`] arm (via [`render_felt_state_word`]),
+/// where reporting it is CORRECT (a culture that has the word for its own
+/// true state is, truthfully, using it). The [`Nearest`] arm never reads
+/// `label` at all — only `reported_as`, which [`testify`](crate::testimony::testify) guarantees differs
+/// from whatever it was asked about (`nearest` skips its own query
 /// candidate) — so a divergent testimony can never carry the true label into
-/// the returned text. `tests/suite/ask_verb.rs`'s
-/// `the_arbitration_never_reaches_a_divergent_utterance` mutation-proves
-/// this by substituting `label` for `reported_as` in that arm and watching
-/// the test catch it.
+/// the returned text. This module's OWN test
+/// `the_arbitration_never_reaches_a_divergent_utterance` (in the `tests`
+/// module at the foot of this file — NOT in `tests/suite/ask_verb.rs`, which
+/// an earlier version of this doc misnamed) mutation-proves it by
+/// substituting `label` for `reported_as` in that arm and watching the test
+/// catch it. [`Testimony::Falsehood`] holds the same discipline for a
+/// deliberate lie — it glosses from `claimed`, never `label` — and
+/// `a_deliberate_lie_carries_the_claim_and_never_the_truth` beside it
+/// mutation-proves THAT arm the same way.
+///
+/// **All four arms are pinned in-module, and the fourth was not always.**
+/// `Withheld`, `Falsehood` and `Costly` shipped with no test constructing
+/// them at all; the `Falsehood` mutation above passed the entire 653-test
+/// vessel crate, silently reporting a lying host's true state. The three
+/// tests that close that gap sit beside the two named above.
 ///
 /// [`Direct`]: FeltStateWord::Direct
 /// [`Nearest`]: FeltStateWord::Nearest
 fn render_testimony(
     body_label: &str,
     label: AffectLabel,
-    testimony: Option<FeltStateWord>,
+    testimony: Option<Testimony>,
 ) -> (String, Option<String>) {
     match testimony {
         None => (
             format!("{body_label} has no word for how it feels, and says nothing at all."),
             None,
         ),
-        Some(FeltStateWord::Direct(word)) => {
+        Some(Testimony::Withheld) => (format!("{body_label} will not say how it feels."), None),
+        Some(Testimony::Spoken(word)) => render_felt_state_word(body_label, label, word),
+        Some(Testimony::Falsehood { word, claimed }) => {
+            // The Reticence, Task 5: the rendered gloss and the heard value
+            // both come from `claimed`, the state the word actually names —
+            // never `label`, the arbitration's true answer. That is the same
+            // discipline the `Nearest` arm below already holds for a lexical
+            // gap; here it holds for a deliberate lie instead.
+            let concept = crate::testimony::concept_id(claimed);
+            (
+                format!("{body_label} says, \"{}\": {concept}.", word.roman),
+                Some(concept.to_string()),
+            )
+        }
+        Some(Testimony::Costly { word, revealed }) => {
+            let (line, heard) = render_felt_state_word(body_label, label, word);
+            if revealed.is_empty() {
+                (line, heard)
+            } else {
+                let residue = revealed
+                    .iter()
+                    .map(|drive| format!("{drive:?}"))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                (
+                    format!("{line} It costs something to say: {residue}."),
+                    heard,
+                )
+            }
+        }
+    }
+}
+
+/// The ordinary lexical report shared by [`Testimony::Spoken`] and
+/// [`Testimony::Costly`] (The Reticence, Task 5) — split out of
+/// `render_testimony` so both arms hold the SAME true-label discipline
+/// [`render_testimony`]'s own doc invariant states: `label` glosses only the
+/// [`FeltStateWord::Direct`] arm, and [`FeltStateWord::Nearest`] never reads
+/// it at all.
+fn render_felt_state_word(
+    body_label: &str,
+    label: AffectLabel,
+    word: FeltStateWord,
+) -> (String, Option<String>) {
+    match word {
+        FeltStateWord::Direct(word) => {
             let concept = crate::testimony::concept_id(label);
             (
                 format!("{body_label} says, \"{}\": {concept}.", word.roman),
                 Some(concept.to_string()),
             )
         }
-        Some(FeltStateWord::Nearest {
+        FeltStateWord::Nearest {
             word, reported_as, ..
-        }) => {
+        } => {
             let concept = crate::testimony::concept_id(reported_as);
             (
                 format!(
@@ -7462,7 +7573,9 @@ mod tests {
         let (turn, heard) = render_testimony(
             "the herder",
             AffectLabel::Content,
-            Some(FeltStateWord::Direct(dummy_word("Vrenn"))),
+            Some(Testimony::Spoken(FeltStateWord::Direct(dummy_word(
+                "Vrenn",
+            )))),
         );
         assert!(
             turn.contains("Vrenn"),
@@ -7508,13 +7621,13 @@ mod tests {
         let (turn, heard) = render_testimony(
             "the herder",
             true_label,
-            Some(FeltStateWord::Nearest {
+            Some(Testimony::Spoken(FeltStateWord::Nearest {
                 word: dummy_word("Grenth"),
                 reported_as: AffectLabel::Eager,
                 reason: hornvale_language::GapReason::Experiential(
                     "this test culture never named it".to_string(),
                 ),
-            }),
+            })),
         );
         let lowered = turn.to_lowercase();
         assert!(
@@ -7535,5 +7648,159 @@ mod tests {
             "the heard entry must record what was actually SAID (eager), never the \
              true state (helpless)"
         );
+    }
+
+    /// The WITHHELD arm (The Reticence, Task 5). A refusal is the one arm
+    /// that lands nothing: a `heard` entry written on a refusal would make
+    /// silence informative, which is the exact property
+    /// [`render_testimony`]'s own doc names for this variant.
+    ///
+    /// FIRES WHEN: the refusal arm starts returning a concept id (from
+    /// `label` or from anywhere else), or the refusal text starts naming the
+    /// state the host declined to name.
+    #[test]
+    fn render_testimony_withheld_lands_nothing_and_names_no_state() {
+        let (turn, heard) = render_testimony(
+            "the herder",
+            AffectLabel::Helpless,
+            Some(Testimony::Withheld),
+        );
+        assert!(
+            !turn.is_empty(),
+            "a refusal is still a turn — the player must be told the host declined"
+        );
+        let lowered = turn.to_lowercase();
+        assert!(
+            !lowered.contains("helpless"),
+            "a refusal must not name the state it refused to name, got: {turn}"
+        );
+        assert_eq!(
+            heard, None,
+            "a refusal lands NOTHING: knowledge that recorded a felt state here \
+             would make silence informative"
+        );
+    }
+
+    /// **THE CAMPAIGN'S CENTRAL INVARIANT FOR A DELIBERATE LIE (The
+    /// Reticence, Task 5, spec §4.3): a host that lies is heard to have
+    /// lied.** A dissembling host truly [`AffectLabel::Helpless`] claims
+    /// [`AffectLabel::Content`] — so `content` must reach both the player's
+    /// ear and the `heard` value, and `helpless` must reach neither, in any
+    /// casing. This is the [`Testimony::Falsehood`] twin of
+    /// [`the_arbitration_never_reaches_a_divergent_utterance`] above, which
+    /// holds the same discipline for a lexical gap.
+    ///
+    /// MUTATION-PROVED (the final-fix wave): rewrite the argument of the
+    /// `Falsehood` arm's `concept_id` call from `claimed` to `label` — the
+    /// one-token change that makes a deliberate lie report the host's true
+    /// state — and this test turns RED on both the `helpless`-leak assertion
+    /// and the `heard` equality. Before this test existed the whole
+    /// 653-test vessel crate passed under that mutation, which fed the TRUE
+    /// state into the player's ear AND into
+    /// `Knowledge["{body_label}::feels"]`, inverting the campaign's premise
+    /// while every gate stayed green.
+    ///
+    /// (The repro command is deliberately NOT quoted verbatim here:
+    /// `scripts/mutate.py` refuses a target it finds twice, and a doc
+    /// comment holding the exact source line is the second occurrence.)
+    ///
+    /// FIRES WHEN: the lie's gloss is re-derived from the arbitration's true
+    /// answer instead of from the claim the spoken word actually names.
+    #[test]
+    fn a_deliberate_lie_carries_the_claim_and_never_the_truth() {
+        let true_label = AffectLabel::Helpless;
+        let (turn, heard) = render_testimony(
+            "the herder",
+            true_label,
+            Some(Testimony::Falsehood {
+                word: dummy_word("Sallim"),
+                claimed: AffectLabel::Content,
+            }),
+        );
+        let lowered = turn.to_lowercase();
+        assert!(
+            !lowered.contains("helpless"),
+            "the true state must never appear in a lie's turn text, got: {turn}"
+        );
+        assert!(
+            turn.contains("Sallim"),
+            "the word the host actually said must appear, got: {turn}"
+        );
+        assert!(
+            turn.contains("content"),
+            "the CLAIMED state's concept is what a listener hears, got: {turn}"
+        );
+        assert_eq!(
+            heard,
+            Some("content".to_string()),
+            "the heard entry must record the lie the host told (content), never \
+             the state it is actually in (helpless) — a knowledge store that \
+             recorded the truth here would make lying free"
+        );
+    }
+
+    /// The COSTLY arm (The Reticence, Task 5). Truth, plus the arbitration's
+    /// discarded ranks a forthcoming host never mentions — so this arm is
+    /// the ONE place the true label is both reported and accompanied by the
+    /// residue, and the residue must actually reach the text.
+    ///
+    /// Both directions are pinned, because only the pair discriminates: a
+    /// non-empty residue must be named, and an EMPTY one must render
+    /// byte-identically to the ordinary [`Testimony::Spoken`] answer rather
+    /// than emitting a dangling "it costs something to say:" with nothing
+    /// after it.
+    ///
+    /// FIRES WHEN: the residue is dropped from the rendered line, or the
+    /// empty-residue guard is removed.
+    #[test]
+    fn a_costly_truth_names_its_residue_and_an_empty_one_reads_as_ordinary() {
+        let (turn, heard) = render_testimony(
+            "the herder",
+            AffectLabel::Content,
+            Some(Testimony::Costly {
+                word: FeltStateWord::Direct(dummy_word("Vrenn")),
+                revealed: vec![DriveKind::Thirst, DriveKind::Fatigue],
+            }),
+        );
+        assert!(
+            turn.contains("Vrenn"),
+            "a costly answer is still an ordinary lexical report, got: {turn}"
+        );
+        assert!(
+            turn.contains("content"),
+            "a costly answer is TRUTHFUL — the true state's concept is correct here, got: {turn}"
+        );
+        assert_eq!(
+            heard,
+            Some("content".to_string()),
+            "a costly answer lands the true concept, exactly as a Spoken one does"
+        );
+        assert!(
+            turn.contains("Thirst") && turn.contains("Fatigue"),
+            "the residue is the WHOLE point of this arm and must reach the player, got: {turn}"
+        );
+
+        // The empty-residue half: identical to the plain Spoken rendering.
+        let (plain, plain_heard) = render_testimony(
+            "the herder",
+            AffectLabel::Content,
+            Some(Testimony::Spoken(FeltStateWord::Direct(dummy_word(
+                "Vrenn",
+            )))),
+        );
+        let (bare, bare_heard) = render_testimony(
+            "the herder",
+            AffectLabel::Content,
+            Some(Testimony::Costly {
+                word: FeltStateWord::Direct(dummy_word("Vrenn")),
+                revealed: Vec::new(),
+            }),
+        );
+        assert_eq!(
+            bare, plain,
+            "a costly answer with nothing to reveal must read exactly like an \
+             ordinary one, not trail an empty cost clause"
+        );
+        assert_eq!(bare_heard, plain_heard, "and land exactly the same concept");
     }
 }

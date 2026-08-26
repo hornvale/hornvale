@@ -10,6 +10,7 @@ pub mod domesday;
 pub mod health;
 mod metrics;
 pub mod publish;
+mod reticence;
 pub mod roster;
 pub mod runner;
 pub mod schema;
@@ -31,6 +32,7 @@ pub use metrics::{
     render_confidant_report, render_metric_list, steepable_concept_roster,
 };
 pub use publish::publish;
+pub use reticence::render_reticence_report;
 pub use roster::{
     awakened_owlbear_components, goblin_solo_components, goblin_twin_solo_components,
     serpent_tonal_solo_components,
