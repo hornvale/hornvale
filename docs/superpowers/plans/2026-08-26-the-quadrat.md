@@ -639,9 +639,18 @@ why in the key type's doc comment.
 - [ ] **Step 4: Run to verify it passes**
 
 - [ ] **Step 5: Re-run `rung_bench` WITH the cache** and record both numbers in
-`docs/timings.md`. If H1 was null in Task 3, this is where the budget is met or
-is not. **If 200x200 still misses the bar, STOP and report** rather than
-proceeding to Task 6.
+`docs/timings.md`.
+
+**BUDGET AGAINST 91.6 ms, NOT 31.3 ms (controller ruling, from Task 3's
+measurement).** H1 came back SUPPORTED but **rung-conditional**: 200x200 costs
+31.3 ms at band B, 42.2 ms at rung 8, and **91.6 ms at `GLOBE_RUNG` — 1.8x over
+the 50 ms bar.** The coarsest rung is where the memo has almost no reuse
+(29,662 misses for 40,000 tiles), and it is a rung a player reaches by holding
+`-`. **`GLOBE_RUNG` is therefore this task's hard case and its acceptance
+criterion** — a cache tuned on band B would be tuned on the easiest rung.
+
+Measure at rungs 6, 8 and 12. **If rung 6 at 200x200 still misses 50 ms with
+the cache warm, STOP and report** rather than proceeding to Task 6.
 
 - [ ] **Step 6: `cargo fmt --all`, `make gate-commit`, commit**
 

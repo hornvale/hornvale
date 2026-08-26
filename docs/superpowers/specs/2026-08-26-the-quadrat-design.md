@@ -316,6 +316,17 @@ be taken:
 - **H1** (§5): mesh-aligned terrain lookup removes the spatial search. Success:
   200×200 terrain raster under 50 ms uncached. Null: the tile cache carries it
   alone, reported as the headline.
+  **DISPOSED 2026-08-26 — SUPPORTED, AND RUNG-CONDITIONAL.** The bar as written
+  named no rung, which was a scoping defect in this line: the answer depends on
+  one. Measured (Task 3, before any cache existed):
+  rung 12 **31.3 ms**, rung 8 **42.2 ms**, rung 6 (`GLOBE_RUNG`) **91.6 ms —
+  1.8× OVER the bar**. `GLOBE_RUNG` is a shipped rung a player reaches by
+  holding `-`, and it is where the memo has almost no reuse (29,662 misses for
+  40,000 tiles). The **mechanism** claim holds at every rung — vertex scans fall
+  1,960,000 → 90 at band B and 1,960,000 → 88,986 (22×) at `GLOBE_RUNG`. So:
+  the search really does disappear; the 50 ms budget is met at rungs ≥ 7 and
+  missed at the coarsest one. **§5's task-5 cache budget is therefore sized
+  against 91.6 ms, not 31.3 ms.**
 - **H2:** the byte-for-byte client/sim projection pin survives the reprojection
   — i.e. the sim and the client still draw the identical picture afterwards.
   Failure here is a design failure, not a test failure.
