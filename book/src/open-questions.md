@@ -2599,6 +2599,26 @@ its honest size.
    What changes is that the guardrail is no longer a promissory note, so the
    taste half can now be judged against something that exists. The row stays
    low-confidence and the human read stays the gate.
+   **Re-scored again by [The Reticence](./chronicle/the-reticence.md)
+   (2026-08-26): a third, CHOSEN unreliability shipped, and the honest
+   scoring is again narrower than the mechanism sounds.** Where The
+   Confidant's two divergences are incapacities a host cannot help, this
+   campaign gives the same teller a reason to withhold, mislead, or reveal
+   *on purpose* — derived from what its own people believes it is riding and
+   what the rider has actually done to it, never authored per host. The
+   preregistered measurement found the conduct half genuinely discriminating
+   (a host goes quiet on the one subject it has actually been overridden on,
+   and stays forthcoming on every other) and the doctrine half **measurably
+   inert on the only path a player can currently interrogate** — a structural
+   fact about what a host can be asked, not a defect in the willingness
+   mechanism, which remains provably sensitive to doctrine at override counts
+   the shipped verb surface cannot reach. **What has not moved is the bet.**
+   A teller who can choose to lie is one more inspectable property of one
+   creature answering one question about itself, not evidence toward
+   *historiography worth reading*. The row stays low-confidence and the human
+   read stays the gate; what changes, again, is that one more named guardrail
+   moved from promissory note to a mechanism with a measured, partly-null
+   result.
 
 ## The standing horizon
 
