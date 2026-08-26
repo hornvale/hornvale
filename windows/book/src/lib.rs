@@ -295,6 +295,13 @@ pub fn render_volume_from(
                 object: Argument::Concept(kind.clone()),
                 number: Number::Sg,
                 definiteness: Definiteness::Indef,
+                // The god's-eye register states the committed record itself,
+                // so it is grounded the way an observation is — Witnessed.
+                // Common ignores the feature either way (spec §3.2); the
+                // value is stated honestly rather than left to convenience,
+                // because Task 3 hands this same clause to a tongue, which
+                // does read it.
+                evidential: Evidential::Witnessed,
                 adjuncts,
             },
             &vocab,
@@ -336,6 +343,8 @@ pub fn render_volume_from(
                 object: Argument::Concept(kind.clone()),
                 number: Number::Pl,
                 definiteness: Definiteness::Indef,
+                // Same god's-eye register as the classification loop above.
+                evidential: Evidential::Witnessed,
                 adjuncts: Vec::new(),
             },
             &vocab,
@@ -1039,6 +1048,14 @@ fn render_world_clause(
             object: Argument::Concept(complement_concept),
             number: Number::Sg,
             definiteness,
+            // The emic account is what this people HOLDS about the world,
+            // including a classification their own world-carving recast
+            // (`Disposition::Substituted`) — a carving is how a culture
+            // sees, not what it was told, so the whole register is
+            // Witnessed. The doctrinal register that is genuinely `Taught`
+            // is the separate `doctrine_section` path, which already says
+            // so at its own `world_statement` call.
+            evidential: Evidential::Witnessed,
             adjuncts,
         },
         vocab,
@@ -1099,6 +1116,10 @@ fn render_world_margin(
             object: Argument::Concept(truth_kind.clone()),
             number: Number::Sg,
             definiteness: Definiteness::Indef,
+            // The etic margin reads the ground fact's own object text, so
+            // it is the record speaking: Witnessed, like the god's-eye
+            // register it restores.
+            evidential: Evidential::Witnessed,
             adjuncts,
         },
         vocab,
@@ -1268,6 +1289,9 @@ fn render_people_clause(
             object: Argument::Concept(kind_text.clone()),
             number: Number::Pl,
             definiteness: Definiteness::Indef,
+            // A people subject's collective classification, in the same
+            // emic register as `render_world_clause`.
+            evidential: Evidential::Witnessed,
             adjuncts: Vec::new(),
         },
         vocab,
@@ -2289,6 +2313,12 @@ pub fn rerender(parsed: &ParsedLine, vocab: &CommonVocabulary) -> String {
             object: Argument::Concept(parsed.kind.clone()),
             number: parsed.number,
             definiteness: parsed.definiteness,
+            // A `ParsedLine` carries no evidential because Common's surface
+            // carries none to recover (spec §3.2). This is the same
+            // documented default `parse_common_with_tail` returns, so the
+            // corpus law's two directions agree on the feature neither can
+            // observe.
+            evidential: Evidential::Witnessed,
             adjuncts,
         },
         vocab,

@@ -12,6 +12,7 @@
 #![allow(clippy::module_name_repetitions)]
 
 use crate::common_vocab::CommonVocabulary;
+use crate::morphology::Evidential;
 use hornvale_kernel::world::IS_A;
 
 /// Grammatical number of the subject.
@@ -99,6 +100,15 @@ pub struct ClauseSpec {
     pub number: Number,
     /// Complement definiteness.
     pub definiteness: Definiteness,
+    /// How this clause's content was epistemically grounded.
+    ///
+    /// **Common ignores this and a tongue may not** — that asymmetry is the
+    /// law (spec §3.2), not a gap. A language-neutral clause states more than
+    /// any one language surfaces: Common has no evidential construction, and
+    /// `number`/`definiteness` run the other way, unread by every tongue.
+    /// Before The Scarf this field lived only on `TongueClause`, so a caller
+    /// projecting a clause into a tongue had to invent a value out of band.
+    pub evidential: Evidential,
     /// Role bindings on this clause. How each surfaces — and whether it
     /// surfaces inline or trailing — is the realizing language's business.
     /// Replaced `modifiers: Vec<String>`, whose pre-rendered English could not
@@ -555,6 +565,14 @@ pub fn parse_common_with_tail(
             object: Argument::Concept(complement_concept),
             number,
             definiteness,
+            // Common has no evidential construction (spec §3.2), so the
+            // surface carries nothing to recover one from: a round trip
+            // through Common is lossy in exactly this feature. `Witnessed`
+            // is the documented default the inverse direction
+            // (`windows/book`'s `rerender`) must also use, so the two ends
+            // agree; it is never read out of a parse as a claim about how
+            // the original speaker was grounded.
+            evidential: Evidential::Witnessed,
             adjuncts: Vec::new(),
         },
         tail_text,
@@ -564,6 +582,42 @@ pub fn parse_common_with_tail(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Spec 3.2: a language-neutral clause states more than any one language
+    /// surfaces. Common has no evidential construction, so the same clause
+    /// under all three groundings is the same sentence -- and this is the
+    /// law, not a gap to be fixed. A later campaign teaching Common an
+    /// evidential surface has to delete an assertion deliberately rather
+    /// than drift past it.
+    #[test]
+    fn common_ignores_the_evidential() {
+        let vocab = CommonVocabulary::default();
+        let base = ClauseSpec {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Nwamvam".to_string()),
+            object: Argument::Concept("home".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            adjuncts: Vec::new(),
+        };
+        let taught = ClauseSpec {
+            evidential: Evidential::Taught,
+            ..base.clone()
+        };
+        let inferred = ClauseSpec {
+            evidential: Evidential::Inferred,
+            ..base.clone()
+        };
+        assert_eq!(
+            realize_common(&base, &vocab),
+            realize_common(&taught, &vocab)
+        );
+        assert_eq!(
+            realize_common(&base, &vocab),
+            realize_common(&inferred, &vocab)
+        );
+    }
 
     /// An adjunct binds a registered predicate (its role) to an argument.
     #[test]
@@ -590,6 +644,7 @@ mod tests {
             object: Argument::Concept("yellow-white-dwarf".to_string()),
             number: Number::Sg,
             definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
             adjuncts: vec![],
         };
         assert_eq!(
@@ -609,6 +664,7 @@ mod tests {
             object: Argument::Concept("celestial-body".to_string()),
             number: Number::Sg,
             definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
             adjuncts: vec![],
         };
         let line = realize_common(&spec, &vocab);
@@ -627,6 +683,7 @@ mod tests {
             object: Argument::Concept("planet".into()),
             number: Number::Sg,
             definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
             adjuncts: vec![],
         };
         assert_eq!(
@@ -642,6 +699,7 @@ mod tests {
             object: Argument::Concept("elemental".into()),
             number: Number::Sg,
             definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
             adjuncts: vec![],
         };
         assert_eq!(
@@ -660,6 +718,7 @@ mod tests {
             object: Argument::Concept("goblin-kind".into()),
             number: Number::Pl,
             definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
             adjuncts: vec![],
         };
         assert_eq!(
@@ -682,6 +741,7 @@ mod tests {
             object: Argument::Concept("planet".into()),
             number: Number::Sg,
             definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
             adjuncts: vec![
                 Adjunct {
                     role: "moon-count".into(),
@@ -978,6 +1038,13 @@ mod tests {
                                 object: Argument::Concept(complement.to_string()),
                                 number,
                                 definiteness,
+                                // Not varied over: Common has no evidential
+                                // surface (spec §3.2), so there is nothing
+                                // for the parser to invert. The skeleton
+                                // below inherits this value through `..`,
+                                // and `parse_common_with_tail` returns the
+                                // same documented default.
+                                evidential: Evidential::Witnessed,
                                 adjuncts,
                             };
                             let ctx = ctx_from(&spec);
@@ -1098,6 +1165,7 @@ mod tests {
             object: Argument::Concept("planet".into()),
             number: Number::Sg,
             definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
             adjuncts: vec![
                 Adjunct {
                     role: "moon-count".into(),

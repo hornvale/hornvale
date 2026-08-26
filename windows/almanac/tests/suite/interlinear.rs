@@ -209,6 +209,11 @@ fn clause_for(occupation: &Occupation, autonym: &str) -> ClauseSpec {
         object: Argument::Concept("home".to_string()),
         number: Number::Sg,
         definiteness: Definiteness::Def,
+        // The people saying where it lives and when: lived experience, so
+        // Witnessed — the same reading `windows/book`'s self-statement
+        // takes. Stated HERE now that `ClauseSpec` carries the feature; it
+        // used to be invented out of band inside `tongue_view`.
+        evidential: Evidential::Witnessed,
         adjuncts: vec![
             Adjunct {
                 role: OCC_PEOPLE.to_string(),
@@ -245,9 +250,8 @@ fn tongue_view(spec: &ClauseSpec) -> TongueClause {
             Argument::Concept(id) => id.clone(),
             other => panic!("the interlinear's clause predicates a concept, not {other:?}"),
         },
-        // The people saying where it lives and when: lived experience, so
-        // Witnessed — the same reading `windows/book`'s self-statement takes.
-        evidential: Evidential::Witnessed,
+        // Forwarded, not invented: the spec states its own grounding now.
+        evidential: spec.evidential,
         adjuncts: spec.adjuncts.clone(),
     }
 }
