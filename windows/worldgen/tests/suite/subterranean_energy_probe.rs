@@ -40,7 +40,7 @@ use hornvale_worldgen::energy::{
 };
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, Substrate, WorldComponents,
-    build_world_to_with_artifacts, climate_of, substrate_field,
+    build_world_to_with_artifacts, climate_of, substrate_field, subterranean_substrate_at_rung,
     subterranean_substrate_field_per_rung,
 };
 
@@ -81,6 +81,99 @@ fn world_at(seed_value: u64, wc: &WorldComponents) -> (GeneratedTerrain, VertexM
         &climate.regime(),
     );
     (terrain, surface)
+}
+
+/// The one seed the positive-control guard below builds — named rather than
+/// spelled inline so it is obviously ONE world, no sweep. Mirrors
+/// `underworld_conditions_probe::LIVE_GUARD_SEED`'s own convention.
+const LIVE_GUARD_SEED: u64 = 42;
+
+/// claim: structural(seed: 42) — one world, one build, no sweep.
+///
+/// **THE POSITIVE CONTROL Task 5's fix round 1 needed.** A reviewer
+/// reproduced this file's own reported uncaught mutation — zeroing
+/// `depth_m` at `subterranean_energy_field_per_rung`'s call site — and
+/// found it real and structural: `derived_energy_is_monotone_not_a_trough`
+/// stays green (`[NaN, 0.159, 0.163, 0.167, 0.167, 0.167]`, still
+/// non-decreasing) because `Substrate::moisture`'s own indirect
+/// depth-dependence is enough to hold the shape up even with every
+/// depth-direct source neutered. The gap that mutation exposed is GENERAL,
+/// not specific to `depth_m`: nothing anywhere asserted that the field
+/// function threads ANY of its five arguments correctly to the pure
+/// function ([`subterranean_energy`]) it is supposed to be nothing but a
+/// per-rung evaluation of.
+///
+/// So: for every cave-bearing vertex and every rung it reaches, this
+/// independently recomputes each of `subterranean_energy`'s five arguments
+/// via the SAME public accessors the field function itself uses
+/// (`GeneratedTerrain::material_at`, `::geothermal_gradient_at`,
+/// `::drainage_at`, [`rung_evaluation_depth_m`],
+/// [`subterranean_substrate_at_rung`]'s `Substrate::moisture`) — written
+/// out explicitly here, not by calling
+/// [`subterranean_energy_field_per_rung`] a second time, so a
+/// mis-threaded argument inside that function's own call site has no way
+/// to be silently mirrored by this test's independent one — and asserts
+/// the field's own entry at that vertex/rung is bit-for-bit
+/// (`.to_bits()`) identical to calling [`subterranean_energy`] directly.
+/// A mis-threaded `depth_m`, a swapped `moisture`/`drainage` pair, a wrong
+/// `rung_evaluation_depth_m` call, or a vertex/rung index slip all diverge
+/// this comparison — see `task-5-report.md`'s fix-round-1 addendum for the
+/// two mutation controls (the reproduced `depth_m` zero and a second,
+/// different mis-threading) that prove it.
+#[test]
+fn every_field_entry_reproduces_the_pure_function_at_its_own_rung() {
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+    let (terrain, surface) = world_at(LIVE_GUARD_SEED, &wc);
+    let geo = terrain.geosphere();
+    let field = subterranean_energy_field_per_rung(geo, &terrain, &surface);
+    let mut compared = 0usize;
+    for vertex in geo.vertices() {
+        let entry = field.get(vertex);
+        let Some(cave) = terrain.cave_at(vertex) else {
+            for slot in entry {
+                assert!(
+                    slot.is_none(),
+                    "vertex {vertex:?} has no cave but the field entry is {slot:?}"
+                );
+            }
+            continue;
+        };
+        let gradient = terrain.geothermal_gradient_at(vertex);
+        let material = terrain.material_at(vertex);
+        let drainage = terrain.drainage_at(vertex);
+        let s = *surface.get(vertex);
+        for &rung in Band::all() {
+            let expected_depth = rung_evaluation_depth_m(rung, gradient, cave.depth_reach_m);
+            let expected_sub = expected_depth
+                .and_then(|_| subterranean_substrate_at_rung(s, rung, &terrain, vertex));
+            let (Some(depth_m), Some(sub)) = (expected_depth, expected_sub) else {
+                assert!(
+                    entry[rung as usize].is_none(),
+                    "vertex {vertex:?} rung {rung:?}: independent recomputation has no                      reading but the field entry is {:?}",
+                    entry[rung as usize]
+                );
+                continue;
+            };
+            let expected =
+                subterranean_energy(&material, gradient, depth_m, sub.moisture, drainage);
+            let actual = entry[rung as usize].unwrap_or_else(|| {
+                panic!(
+                    "vertex {vertex:?} rung {rung:?}: field entry is None but the                      independent recomputation has a reading ({expected})"
+                )
+            });
+            assert_eq!(
+                actual.to_bits(),
+                expected.to_bits(),
+                "vertex {vertex:?} rung {rung:?}: field entry {actual} does not                  reproduce subterranean_energy({material:?}, {gradient:?}, {depth_m},                  {}, {drainage}) = {expected} called directly with the same five                  arguments — a mis-threaded argument or a vertex/rung index slip",
+                sub.moisture
+            );
+            compared += 1;
+        }
+    }
+    assert!(
+        compared > 100,
+        "only {compared} vertex-rung entries compared — vacuous"
+    );
 }
 
 /// The median of a slice, sorted in place. `v.len() / 2` on an odd-length
