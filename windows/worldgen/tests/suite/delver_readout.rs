@@ -285,7 +285,9 @@ fn bind_shares(seed_value: u64, kinds: &[&'static str]) -> Vec<BindProfile> {
     let obliquity_deg = system.anchor.obliquity.get();
     let regime = match system.anchor.rotation {
         hornvale_astronomy::Rotation::Spinning { day, .. } => {
-            hornvale_climate::RotationRegime::Spinning { day_std: day.get() }
+            hornvale_climate::RotationRegime::Spinning {
+                day_std: day.as_std_days(),
+            }
         }
         hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
     };
@@ -434,7 +436,9 @@ fn pairwise_correlations(seed: u64, kinds: &[&str]) -> Vec<((String, String), f6
     let obliquity_deg = system.anchor.obliquity.get();
     let regime = match system.anchor.rotation {
         hornvale_astronomy::Rotation::Spinning { day, .. } => {
-            hornvale_climate::RotationRegime::Spinning { day_std: day.get() }
+            hornvale_climate::RotationRegime::Spinning {
+                day_std: day.as_std_days(),
+            }
         }
         hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
     };
@@ -598,7 +602,9 @@ fn supply_only_correlations(seed: u64, kinds: &[&str]) -> (PairCorrelations, usi
     let obliquity_deg = system.anchor.obliquity.get();
     let regime = match system.anchor.rotation {
         hornvale_astronomy::Rotation::Spinning { day, .. } => {
-            hornvale_climate::RotationRegime::Spinning { day_std: day.get() }
+            hornvale_climate::RotationRegime::Spinning {
+                day_std: day.as_std_days(),
+            }
         }
         hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
     };

@@ -19,7 +19,7 @@ fn main() {
     let system = sky.system().expect("system");
     let cal = sky.calendar().expect("calendar");
     let day_length = match &system.anchor.rotation {
-        hornvale_astronomy::Rotation::Spinning { day, .. } => day.get(),
+        hornvale_astronomy::Rotation::Spinning { day, .. } => day.as_std_days(),
         hornvale_astronomy::Rotation::Locked => f64::INFINITY,
     };
     let mut rows = Vec::new();
