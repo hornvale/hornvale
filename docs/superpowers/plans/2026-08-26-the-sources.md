@@ -179,9 +179,21 @@ git diff $(git merge-base main campaign/the-winze) campaign/the-winze \
   -- windows/worldgen/tests/suite.rs
 ```
 
-Add the five `mod` lines to `windows/worldgen/tests/suite.rs` by hand, in the
-file's existing alphabetical position. Do **not** cherry-pick the commits —
-they carry 403 commits of context you do not want.
+Add the declarations to `windows/worldgen/tests/suite.rs` by hand, in the
+file's existing alphabetical position. **Each is TWO lines, not one** — that
+file is a crate root, so its default module search looks beside itself in
+`tests/`, and every one of its 98 modules carries an explicit `#[path]`:
+
+```rust
+#[path = "suite/winze_scale_probe.rs"]
+mod winze_scale_probe;
+```
+
+A bare `mod winze_scale_probe;` does not compile. Copy the shape from
+`suite.rs:194-195` (`underworld_lithology_probe`), the nearest neighbour.
+
+Do **not** cherry-pick the commits — they carry 403 commits of context you do
+not want.
 
 - [ ] **Step 3: Make them compile against current main**
 
@@ -195,10 +207,21 @@ crate is never checked. **Iterate to zero before quoting any count.** This
 exact misreading understated The Gossan's blast radius by 2x on sites and 3x
 on files.
 
-Expect renames from The Gossan (`MetabolicClass` no longer exists; it is
-`ThermalStrategy` × `TrophicMode`) and from The Stope/The Drift (`slot` →
-`branch`, `floor` → `level`, `Sunless` → `Nadir`). Fix the call sites; do
-**not** change what a probe measures.
+**Do not go in expecting a particular breakage.** An earlier draft of this
+step predicted renames from The Gossan and The Stope/The Drift; the
+controller then grepped the five files and found **zero** occurrences of
+`MetabolicClass`, `Sunless`, `.slot`, `Endotherm` or `Ametabolic` across all
+of them — the probes were authored post-Drift and never used the old
+vocabulary. That draft would have sent you hunting for renames that are not
+there.
+
+What the controller DID verify (2026-08-26, at `7576eca00`): every symbol the
+two largest probes import from `hornvale_worldgen::chamber` —
+`BRANCHES_PER_SYSTEM`, `ChamberAddr`, `chamber_exists`, `rung_rank` — still
+exists on `main`. So the compile surface may well be empty.
+
+Run the check, read what it actually says, and fix whatever it names. Fix the
+call sites; do **not** change what a probe measures.
 
 - [ ] **Step 4: Commit the compile fix separately from the re-run**
 
@@ -249,7 +272,7 @@ Apply them by hand into main's table, carrying whatever Step 6 measured
 rather than the branch's figures where those differ.
 
 ```bash
-cargo nextest run -p hornvale --test suite -E 'test(docs_consistency)'
+cargo nextest run -p hornvale --test suite -E 'test(registry_ids_are_unique)'
 ```
 
 `registry_ids_are_unique` is the guard that catches a duplicated row, and it
@@ -597,7 +620,8 @@ git push
 - Consumes: `MaterialBuffer` (`silica`, `carbonate`, `porosity`,
   `metamorphic_grade`), `GeothermalGradient`, and a rung's moisture (Task 3).
 - Produces: `pub enum EnergySource` with a `yield_at` method, and
-  `pub const ALL: [EnergySource; 6]`. Each yield is `f64` in `[0,1]`.
+  `pub const ALL: [EnergySource; 7]` (six from the registry row plus
+  `DetritalImport` — see Ruling P1 below). Each yield is `f64` in `[0,1]`.
 
 **The accounting, stated so it is not rediscovered.** The registry row names
 six sources; mapped onto shipped axes they are **not six independent
@@ -616,6 +640,27 @@ geothermal          the gradient (ships)
 `induration x metamorphic_grade` at **0.9818**, so admitting both
 double-counts one signal under two names. `grain` is unused because no source
 names it.
+
+**A SEVENTH TERM, which the registry row does NOT name (controller Ruling
+P1).** `BIO-subterranean-energy-sources` names six sources and every one is
+lithological and chemotrophic. But `domains/climate/src/underworld.rs:65`
+says the underworld's supply is **detrital import near the surface AND
+chemolithotrophy off the geothermal gradient at depth** — both halves — and
+the row names only the half that was missing. Without an import term the sum
+has no shallow arm and **cannot** produce Task 5's U, so Task 5 would be
+measuring a field structurally incapable of the shape it tests for.
+
+So this module ships **seven** terms: the row's six, plus
+`EnergySource::DetritalImport`. Its input is overhead drainage
+(`GeneratedTerrain::drainage_at`, `domains/terrain/src/provider.rs:255`) —
+what `underworld.rs`'s own axis note calls "overhead `drainage`, what
+arrives" — and it **falls** with depth where the six do not. Its doc comment
+must state plainly that it is not one of the registry row's six and why it is
+here.
+
+Consequence for the tests below: `EnergySource::ALL` has **seven** entries,
+and `the_three_silica_sources_peak_at_different_silica` is unaffected because
+`DetritalImport` reads no silica.
 
 **Each source's doc comment names the rock and the reaction**, in the
 derivation-comment discipline `domains/climate/src/underworld.rs`'s corpus
@@ -1063,7 +1108,8 @@ not skip it.
 ### Task 8: Chemotrophy becomes witnessed
 
 **Files:**
-- Modify: `domains/species/src/lib.rs` (the `xorn` row, ~line 3417)
+- Modify: `domains/species/src/lib.rs` (the `xorn` row, ~line 3417) — its
+  `trophic_mode` ONLY; its `niche` is Task 9's (Ruling P2)
 - Modify: `domains/species/tests/suite/metabolic_pairs.rs`
 
 **Interfaces:**
@@ -1094,13 +1140,21 @@ argument, and a safety argument nobody re-ran is a claim, not a fact.
 `trophic_mode: TrophicMode::Absent` → `TrophicMode::Chemotrophic`.
 `thermal_strategy` is **unchanged**.
 
-Its `niche` gains a `CHEMOSYNTHATE` weight. **This is the part that moves a
-number, and it must**: declaring a chemotroph that eats no chemosynthate
-recreates exactly the rot The Gossan documented — `Autotroph` "witnessed by
-The Menagerie without the modelling decision ever being made", still called
-an unused seam three campaigns later. Choose the split between `MINERAL` and
-`CHEMOSYNTHATE` deliberately and justify it in the row's comment: mineral is
-what a xorn is *made of*, chemosynthate is what *powers* it.
+**The `niche` is NOT touched in this task (controller Ruling P2).** The
+obvious move — give xorn a `CHEMOSYNTHATE` weight here — would move a shipped
+number in a task Ruling 7 declares behaviour-preserving, and would move it in
+the *wrong direction*: Task 7 pinned that supply at `0.0` everywhere and Task
+9 has not yet wired the real field, so between here and there xorn would be a
+chemotroph eating a field of zeros and its capacity would simply drop.
+Nothing in this task would catch that — its only artifact check is the
+life-history fixture, which BMR holds still.
+
+So the niche edit lands in **Task 9**, in the same commit as the supply that
+feeds it. **Say in your report that the gap is open and owned by Task 9** — a
+witnessed variant nothing reads is exactly the rot The Gossan documented
+(`Autotroph` "witnessed by The Menagerie without the modelling decision ever
+being made", still an unused seam three campaigns later), and it is
+acceptable here only because it closes one task later by construction.
 
 - [ ] **Step 2: The two handoff tests The Gossan left**
 
@@ -1181,6 +1235,8 @@ git push
 
 **Files:**
 - Modify: `windows/worldgen/src/lib.rs` (both capacity loops, ~1500 and ~1797)
+- Modify: `domains/species/src/lib.rs` — xorn's `niche` (deferred from Task 8
+  by Ruling P2)
 - Modify: `book/src/frontier/idea-registry.md` (`MAP-per-rung-substrate`)
 
 **Interfaces:**
@@ -1282,7 +1338,21 @@ call are **placeholders for whatever the tree actually provides** — read
 `windows/worldgen/tests/suite/underworld_separation.rs`, which already
 iterates this structure, and use its spelling.
 
-- [ ] **Step 3: Make the switch**
+- [ ] **Step 3: Make the switch — including xorn's niche**
+
+Three things land together, and together is the point (Ruling P2):
+
+1. the `Subterranean` arm reads the best rung of the per-rung fields;
+2. `CHEMOSYNTHATE`'s entry in both `per_axis` arrays stops being `0.0` and
+   reads `subterranean_energy_field_per_rung`;
+3. **xorn's `niche` gains its `CHEMOSYNTHATE` weight** (deferred here from
+   Task 8). Choose the split against `MINERAL` deliberately and justify it in
+   the row's comment: mineral is what a xorn is *made of*, chemosynthate is
+   what *powers* it.
+
+Landing (3) without (2) makes xorn eat a field of zeros; landing (2) without
+(3) means the new axis has no consumer. Either alone is a number moved for a
+reason nobody would be able to attribute later.
 
 - [ ] **Step 4: Measure what moved — the whole point of the task**
 
@@ -1322,7 +1392,7 @@ Rewrite the row: what shipped, what it measured, and the `Nadir` control.
 Move its status off `raw`. Then:
 
 ```bash
-cargo nextest run -p hornvale --test suite -E 'test(docs_consistency)'
+cargo nextest run -p hornvale --test suite -E 'test(registry_ids_are_unique)'
 ```
 
 - [ ] **Step 7: Commit and push**
