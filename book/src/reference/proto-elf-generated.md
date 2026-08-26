@@ -125,6 +125,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `island` | land the water surrounds | *Ngeengsreng | /ŋeeŋsreŋ/ |
 | `kelp-canopy` | The floating canopy of a kelp forest. | *Ngengngoeng | /ŋeŋŋoeŋ/ |
 | `kelp-forest` | a biome class | *Zreangbung | /zreaŋbuŋ/ |
+| `kill` | to cause to cease living | *Shrungsreung | /ʃruŋsreuŋ/ |
 | `killer-whale-kind` | a killer whale | *Nguangtang | /ŋuaŋtaŋ/ |
 | `know` | to hold something in memory or understanding — `knows` | *Shraung | /ʃrauŋ/ |
 | `kobold-kind` | a kobold | *Zhreeng | /ʒreeŋ/ |

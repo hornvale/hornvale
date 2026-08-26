@@ -30,6 +30,23 @@ use hornvale_kernel::{
 /// type-audit: bare-ok(identifier-text)
 pub const EAT: &str = "eat";
 
+/// The `kill` concept's id.
+///
+/// Named for the same reason [`EAT`] is: the pack entry that REGISTERS the
+/// concept and the `clause::PREDICATE_VALENCE` row that REALIZES it must
+/// not drift apart, and a future epoch bump must break the render
+/// rather than recompile cleanly and panic at every call site.
+///
+/// **It is the causative of the core `die`, and it creates no obligation to
+/// implement combat.** `ConceptKind::Act`'s reconciliation runs in exactly
+/// one direction — `cli/src/concepts.rs`'s `orphan_acts` walks
+/// `Action::all()` and reports acts that no concept names, so it is
+/// structurally blind to a concept with no action. `kill` enters as
+/// vocabulary: the world gains the ability to *say* it long before anything
+/// can *do* it.
+/// type-audit: bare-ok(identifier-text)
+pub const KILL: &str = "kill";
+
 /// One entry in a vocabulary pack: a concept id, its broad category, a doc,
 /// and its rank on whichever acquisition ladder it belongs to (0 for
 /// entries outside any ladder — always in the lexicon once the pack is
@@ -141,6 +158,18 @@ pub fn universal_stratum() -> &'static [PackEntry] {
             concept: "die",
             kind: ConceptKind::Act,
             doc: "to cease living",
+            ladder_rank: 0,
+        },
+        // The causative of `die` above, and Swadesh-core on the same list
+        // that put `die` here. Universal stratum rather than a gated pack:
+        // there is no biome, climate or perception ladder a people's word
+        // for killing could hang off, so gating it would be authoring a
+        // silence rather than deriving one. `ladder_rank: 0` follows from
+        // the stratum — every member is unranked and unconditionally in.
+        PackEntry {
+            concept: KILL,
+            kind: ConceptKind::Act,
+            doc: "to cause to cease living",
             ladder_rank: 0,
         },
         PackEntry {

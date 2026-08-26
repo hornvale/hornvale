@@ -13,7 +13,7 @@
 
 use crate::common_vocab::CommonVocabulary;
 use crate::morphology::Evidential;
-use crate::packs::EAT;
+use crate::packs::{EAT, KILL};
 use hornvale_kernel::world::IS_A;
 use std::sync::OnceLock;
 
@@ -387,8 +387,15 @@ pub enum Valence {
 /// condition both realizers refuse on: [`realize_common`] panics and so does
 /// the tongue path, because a missing entry is an authoring hole in this
 /// repository rather than a fact about a people (spec §3.3).
-const PREDICATE_VALENCE: &[(&str, Valence)] =
-    &[(IS_A, Valence::Nominal), (EAT, Valence::Transitive)];
+///
+/// [`KILL`] is the promise in [`common_constructions`]'s doc being kept: a
+/// second transitive verb is **one row here**, no new construction, no new
+/// [`Valence`] variant and no second code path.
+const PREDICATE_VALENCE: &[(&str, Valence)] = &[
+    (IS_A, Valence::Nominal),
+    (EAT, Valence::Transitive),
+    (KILL, Valence::Transitive),
+];
 
 /// The valence of `predicate`, or `None` when no realizer covers it.
 ///
@@ -1402,7 +1409,7 @@ mod tests {
         // in one realizer and not the other.
         assert_eq!(
             inv.len(),
-            [IS_A, EAT]
+            [IS_A, EAT, KILL]
                 .iter()
                 .filter(|p| predicate_valence(p).is_some())
                 .count(),
@@ -1410,6 +1417,9 @@ mod tests {
         );
         assert_eq!(predicate_valence(IS_A), Some(Valence::Nominal));
         assert_eq!(predicate_valence(EAT), Some(Valence::Transitive));
+        // `kill` is the second transitive verb, and the reason it is only a
+        // row: it shares `eat`'s part list rather than earning one.
+        assert_eq!(predicate_valence(KILL), Some(Valence::Transitive));
         assert_eq!(predicate_valence("dwells-in"), None);
     }
 
@@ -1484,6 +1494,48 @@ mod tests {
         }
     }
 
+    /// The one-row promise, exercised. [`KILL`] was added to
+    /// `PREDICATE_VALENCE` and to no other table: it inherits `eat`'s part
+    /// list by valence, so it realizes and parses without a line of
+    /// construction code of its own. If a future campaign has to touch
+    /// `common_constructions` to add a transitive verb, this test is where
+    /// that shows up.
+    ///
+    /// It is also the one place `kill` surfaces REGULARLY where `eat` does
+    /// not: the naive `ed` rule is correct for this stem, so the past is
+    /// `killed` rather than `eated`.
+    #[test]
+    fn a_second_transitive_verb_is_one_row_and_no_new_construction() {
+        let vocab = CommonVocabulary::default();
+        let clause = |tense, polarity| Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Name("Nwamvam".to_string()),
+            object: Argument::Concept("person".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense,
+            polarity,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(
+            realize_common(&clause(Tense::Past, Polarity::Pos), &vocab),
+            "Nwamvam killed the person."
+        );
+        assert_eq!(
+            realize_common(&clause(Tense::Past, Polarity::Neg), &vocab),
+            "Nwamvam did not kill the person."
+        );
+        // Backward through the same table, and the predicate comes back.
+        let parsed = parse_common(
+            &realize_common(&clause(Tense::Past, Polarity::Pos), &vocab),
+            &ctx(&["person"]),
+        )
+        .expect("a kill clause parses");
+        assert_eq!(parsed.predicate, KILL);
+        assert_eq!(parsed.tense, Tense::Past);
+    }
+
     /// [`VERB_PARADIGM`]'s totality, and the one place it is deliberately
     /// NOT injective. `copula_paradigm_is_total_and_unambiguous` asserts
     /// eight distinct forms; this table has eight rows and only **six**
@@ -1499,7 +1551,7 @@ mod tests {
         for tense in [Tense::Present, Tense::Past] {
             for number in [Number::Sg, Number::Pl] {
                 for polarity in [Polarity::Pos, Polarity::Neg] {
-                    forms.insert(verb_surface("kill", tense, number, polarity));
+                    forms.insert(verb_surface(KILL, tense, number, polarity));
                     combinations += 1;
                 }
             }
