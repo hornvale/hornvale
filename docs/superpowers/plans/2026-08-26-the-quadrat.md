@@ -353,11 +353,36 @@ band B is simply the finest rung and the boolean has no referent."
 **This task carries the campaign's preregistered hypothesis. Measure BEFORE the
 tile cache exists, so the two effects cannot confound.**
 
+**CONTROLLER RULING (pre-dispatch, binding): do NOT add `probe_count` to
+`NearestVertexIndex`. The kernel already has this instrument.**
+
+An earlier draft of this task said to add a `Cell<u64>` probe counter to
+`NearestVertexIndex` in `kernel/src/geosphere.rs`. Do not. Two reasons, the
+second decisive:
+
+1. It puts mutable state into the determinism substrate for a client test, and
+   `Cell` would make the type `!Sync`. I checked: no parallel closure currently
+   captures a `NearestVertexIndex` by reference (`windows/lab`'s `map_seeds`
+   requires `F: Fn(u64) -> T + Sync`, and `windows/worldgen`'s `thread::scope`
+   suites do not touch it), so it would *probably* compile — "probably" is not
+   a reason to modify the kernel.
+2. **`RoomMeshMemo` already carries exactly this instrument, publicly.**
+   `kernel/src/room.rs:753-774`: `corner_weights_hits()`,
+   `corner_weights_misses()`, `neighbors_hits()`, `neighbors_misses()` — all
+   `pub`, documented, `type-audit`-tagged, and the doc says in as many words:
+   *"this campaign's instrument for whether the memo's reuse is real (the-forebay
+   Task 1)."* A prior campaign built this for the same question.
+
+`corner_weights_memo` calls `NearestVertexIndex::nearest_to_position` **three
+times on a miss and zero times on a hit**. So a memo hit *is* the absence of a
+vertex search, and `corner_weights_misses()` is the probe counter this task
+wanted — already public, already tested, no kernel edit.
+
 **Files:**
 - Modify: `clients/game/bin/src/plate.rs` (`area_majority` → `terrain_at_tile`)
-- Modify: `kernel/src/geosphere.rs` (add `probe_count`, a test instrument)
 - Create: `clients/game/bin/examples/rung_bench.rs` (kept)
 - Test: `clients/game/bin/src/plate.rs`
+- **`kernel/` is NOT modified by this task.**
 
 **Interfaces:**
 - Consumes: `hornvale_kernel::{Facet, RoomMeshMemo}`, `Facet::containing`,
@@ -404,25 +429,30 @@ fn the_finest_rung_needs_no_subsampling() {
     let f = mercator::frame_for(false);
     let win = Window { depth: BAND_B_RUNG, origin_col: 0, origin_row: 0 };
     let (vw, vh) = virtual_dims(win.depth);
-    // Warm the memo so a warm ancestor is the common case.
+    // The probe counter is `RoomMeshMemo::corner_weights_misses()`, which the
+    // kernel already exposes (room.rs:753-774, built by The Forebay for this
+    // exact question). `corner_weights_memo` runs three
+    // `nearest_to_position` scans on a MISS and none on a HIT, so a miss count
+    // IS a search count, divided by three.
+    //
+    // Warm the memo on the tile's own globe-level ancestor first.
     let _ = terrain_at_tile(&terrain, &geo, &index, &mut memo, &f, &win, vw, vh, 0, 0);
-    let before = index.probe_count();
+    let before = memo.corner_weights_misses();
     let _ = terrain_at_tile(&terrain, &geo, &index, &mut memo, &f, &win, vw, vh, 0, 1);
     // BOUNDED, not zero: tiles (0,0) and (0,1) are not guaranteed to share a
-    // globe-level ancestor, and a cold ancestor costs three corner probes. An
+    // globe-level ancestor, and a cold ancestor costs exactly one miss. An
     // exact-zero assertion would flake on an ancestor boundary rather than
-    // fail on a real regression. Three still discriminates the new path from
-    // the old one by more than an order of magnitude -- the old path was 49.
-    assert!(index.probe_count() - before <= 3,
-        "the finest rung ran {} vertex searches; direct addressing costs at most 3",
-        index.probe_count() - before);
+    // fail on a real regression. One miss is three vertex scans; the OLD path
+    // ran 49 unmemoised ones per tile, so this still discriminates by more
+    // than an order of magnitude.
+    assert!(memo.corner_weights_misses() - before <= 1,
+        "the finest rung took {} memo misses for one tile; direct addressing costs at most 1",
+        memo.corner_weights_misses() - before);
 }
 ```
 
-Add `probe_count` to `NearestVertexIndex`: a `Cell<u64>` incremented in
-`nearest`/`nearest_to_position`, exposed as `pub fn probe_count(&self) -> u64`,
-documented as **a test instrument, not a behaviour** — it must not affect any
-output. `Cell` is fine here: no threading, no determinism surface.
+No new instrument is needed. `RoomMeshMemo::corner_weights_misses()` is already
+`pub` and already tagged (`kernel/src/room.rs:761`). **Do not add one.**
 
 - [ ] **Step 2: Run to verify it fails**
 
