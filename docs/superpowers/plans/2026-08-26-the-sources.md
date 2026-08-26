@@ -830,6 +830,21 @@ fn sulphide_oxidation_peaks_at_intermediate_depth() {
 `buffer(silica, carbonate, porosity, metamorphic_grade)` is a local test
 helper building a `MaterialBuffer`; write it in the test module.
 
+**`MaterialBuffer` has ten fields, not four** — `silica`, `grain`,
+`induration`, `carbonate`, `metamorphic_grade`, `porosity`, `thaumic`, plus
+`margin: MarginPolarity`, `soil_depth: SoilDepth` and `basement: Basement`
+(`domains/terrain/src/lithology.rs:84`). Your four-argument helper fills the
+four this module reads and picks fixed values for the rest; say in the report
+which fixed values you chose, because a source that turns out to read one of
+them would silently be reading a constant.
+
+It derives `Debug, Clone, Copy, PartialEq`, so pass it by value or reference
+as convenient. Two existing test constructors show the shape —
+`domains/terrain/src/features.rs:715` (`fn buf(carbonate, silica)`) and
+`domains/terrain/src/cave_depth.rs:229` (`fn karstic()`) — but **both live in
+private test modules inside another crate and are not reachable from
+`windows/worldgen`**. Read them as models; write your own.
+
 - [ ] **Step 2: Run and confirm failure**
 
 ```bash
