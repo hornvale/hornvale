@@ -33,6 +33,8 @@ mod controller_swap;
 mod course_properties;
 #[path = "suite/display_handle.rs"]
 mod display_handle;
+#[path = "suite/doctrine.rs"]
+mod doctrine;
 #[path = "suite/felt_state_concepts.rs"]
 mod felt_state_concepts;
 #[path = "suite/gate_table.rs"]
@@ -57,6 +59,8 @@ mod one_roster;
 mod ooc_namespace;
 #[path = "suite/ooc_objective.rs"]
 mod ooc_objective;
+#[path = "suite/overrides.rs"]
+mod overrides;
 #[path = "suite/player_acts_commit.rs"]
 mod player_acts_commit;
 #[path = "suite/possess_target.rs"]
@@ -67,6 +71,8 @@ mod possession_moves;
 mod session;
 #[path = "suite/session_snapshot.rs"]
 mod session_snapshot;
+#[path = "suite/stance.rs"]
+mod stance;
 #[path = "suite/submerged.rs"]
 mod submerged;
 #[path = "suite/submerged_before_arm.rs"]
