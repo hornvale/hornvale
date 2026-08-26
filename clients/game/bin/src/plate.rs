@@ -147,9 +147,20 @@ fn tiles_around_a_great_circle(depth: u32) -> u32 {
 /// **This is the ONE function both [`draw_with`] (painting) and `bin`'s
 /// cursor resolver (`driver.rs`) call to turn a window position into a
 /// Mercator tile** — never a second copy of this arithmetic.
+///
+/// **`depth` is clamped at [`BAND_B_RUNG`], and that clamp is load-bearing,
+/// not tidiness.** The old body clamped `zoom` at `MAX_ZOOM` for the same
+/// reason and the field is still `pub` with no validation: [`area_majority`]
+/// computes `virtual_w * SUBSAMPLES_PER_AXIS` in `u32`, which overflows once
+/// the chart passes ~613 million tiles — depth 27 and up. `apply_zoom` never
+/// gets there, but Task 5's tile cache constructs [`Window`]s directly, so
+/// "unreachable" stops being true. A COARSER-than-`GLOBE_RUNG` depth is
+/// deliberately still honoured: nothing overflows downward, and
+/// `driver.rs`'s own disclosure test needs a rung coarser than the mesh to
+/// exercise at all.
 /// type-audit: bare-ok(count: depth), bare-ok(count: return)
 pub fn virtual_dims(depth: u32) -> (u32, u32) {
-    let w = tiles_around_a_great_circle(depth);
+    let w = tiles_around_a_great_circle(depth.min(BAND_B_RUNG));
     let aspect = (2.0 * mercator::mercator_y_max()) / (2.0 * std::f64::consts::PI);
     let h = ((f64::from(w) * aspect).round() as u32).max(1);
     (w, h)
@@ -626,6 +637,17 @@ mod tests {
             BAND_B_RUNG - 1,
             BAND_B_RUNG
         );
+
+        // The ceiling clamp `depth` no longer validates for itself: past
+        // BAND_B_RUNG the chart stops growing, so `area_majority`'s
+        // `virtual_w * SUBSAMPLES_PER_AXIS` can never leave `u32`. A caller
+        // building a `Window` by hand -- Task 5's tile cache -- is the one
+        // that can reach here.
+        assert_eq!(
+            virtual_dims(BAND_B_RUNG + 20),
+            (w_a, h_a),
+            "the chart must stop growing at BAND_B_RUNG"
+        );
     }
 
     #[test]
@@ -649,6 +671,17 @@ mod tests {
     /// so `draw_with(w = 8, ..)` drew an 8-column-wide whole planet rather
     /// than eight columns of a wide one, and this assertion could not have
     /// been written at all.
+    ///
+    /// **The origin is a mixed patch on purpose, and the vacuity guard below
+    /// is what keeps it honest.** The first draft of this test sat at
+    /// `(40, 20)`, which at [`GLOBE_RUNG`] is open arctic ocean: both plates
+    /// came back `land = 0`, so all 64 comparisons were `Some('~')` against
+    /// `Some('~')` and the test passed against a `draw_with` that ignored
+    /// `w`, ignored `origin_col`, or painted a constant. Nine later tasks
+    /// build on the guarantee this test is supposed to pin, so it is pinned
+    /// where the two plates could actually disagree — the same guard
+    /// `a_land_cell_tints_when_colour_is_allowed_and_is_plain_when_it_is_not`
+    /// keeps against two identical all-`Plain` grids.
     #[test]
     fn a_narrow_plate_draws_a_subrect_of_the_wide_one() {
         let (terrain, geo) = test_world();
@@ -656,8 +689,8 @@ mod tests {
         let f = mercator::frame_for(false);
         let win = Window {
             depth: GLOBE_RUNG,
-            origin_col: 40,
-            origin_row: 20,
+            origin_col: 289,
+            origin_row: 68,
         };
         let wide = draw_with(
             &terrain,
@@ -685,6 +718,21 @@ mod tests {
             &BTreeSet::new(),
             &Discovered::default(),
         );
+        // THE VACUITY GUARD: the compared region must straddle a real
+        // coastline. A monochrome patch makes every assertion below
+        // trivially true no matter what `draw_with` does with `w`.
+        let glyphs: Vec<Option<char>> = (0..8u16)
+            .flat_map(|y| (0..8u16).map(move |x| (x, y)))
+            .map(|(x, y)| narrow.get(x, y).and_then(|c| c.glyph))
+            .collect();
+        let land = glyphs.iter().filter(|g| **g == Some(LAND_GLYPH)).count();
+        let ocean = glyphs.iter().filter(|g| **g == Some(OCEAN_GLYPH)).count();
+        assert!(
+            land > 0 && ocean > 0,
+            "the compared 8x8 region must straddle a coastline or this test proves \
+             nothing: land={land} ocean={ocean}"
+        );
+
         for y in 0..8u16 {
             for x in 0..8u16 {
                 assert_eq!(
@@ -931,7 +979,7 @@ mod tests {
         let (terrain, geo) = test_world();
         let index = NearestVertexIndex::new(&geo);
         let f = crate::mercator::frame_for(false);
-        // GLOBE_RUNG's chart is 363x361 -- ~3.2 tiles per terrain vertex,
+        // GLOBE_RUNG's chart is 363x362 -- ~3.2 tiles per terrain vertex,
         // finer than the 2 tiles per vertex the old 400x200 whole-chart
         // draw achieved, so the claim is tested at least as sharply. The
         // PLATE is 100x50 and the window is parked near the equator, where

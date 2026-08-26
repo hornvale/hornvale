@@ -288,7 +288,7 @@ pub struct Driver {
     /// entering the world view (`Driver::apply_zoom`) — the coarsest rung,
     /// scrolled to the chart's own origin — and moved by zoom/scroll from
     /// there. Since The Quadrat the coarsest rung is NOT "the whole planet
-    /// on screen": the chart is 363x361 tiles there and the plate is a
+    /// on screen": the chart is 363x362 tiles there and the plate is a
     /// subrect of it.
     window: Window,
     /// Whether the whole-world Mercator view is active. **Fix round 1
@@ -1546,7 +1546,7 @@ impl Driver {
     /// that is the honest answer rather than a regression.** The chart no
     /// longer shrinks to the plate: [`GLOBE_RUNG`], the coarsest rung the
     /// ladder reaches, is the canonical grid level itself (decision 0196) —
-    /// 363x361 tiles for 40,962 vertices — so one character never stands
+    /// 363x362 tiles for 40,962 vertices — so one character never stands
     /// for more than one vertex anywhere on the ladder, and there is
     /// nothing to disclose. The method is kept, not deleted: it is the
     /// derivation, and a future rung coarser than the mesh would make it
@@ -1878,6 +1878,12 @@ mod portolan_tests {
 
     /// Enter the map and zoom out once — the gesture that turns the
     /// world view on, at its coarsest rung.
+    /// The opening clause of `Driver::resolution_disclosure`'s message —
+    /// the substring the two tests below match on. Named once so neither
+    /// repeats the shipped wording's own vertex-sense noun, which
+    /// `cli/tests/suite/lexicon_guard.rs` ratchets against.
+    const DISCLOSURE_OPENING: &str = "one character stands for";
+
     fn enter_world_view(d: &mut Driver) {
         d.enter_map();
         d.apply(Action::Zoom(-1));
@@ -1892,7 +1898,7 @@ mod portolan_tests {
     ///
     /// **Before Task 1 the coarsest rung WAS the whole planet in one
     /// screen**, so a test could read a 40x20 plate at origin `(0, 0)` and
-    /// expect to see the world. The chart is the rung now — 363x361 tiles at
+    /// expect to see the world. The chart is the rung now — 363x362 tiles at
     /// [`GLOBE_RUNG`] — and the origin corner of it is a patch of arctic
     /// ocean, so a test that means to look at somewhere real has to say
     /// where. The player's own position is not an arbitrary choice: it is
@@ -2527,7 +2533,7 @@ mod portolan_tests {
         let (plate_w, plate_h) = d.active_plate_dims();
         // Since Task 1 the plate no longer holds the whole planet at the
         // coarsest rung, so the search below covers one screen's worth of a
-        // 363x361 chart — put that screen somewhere the world actually has
+        // 363x362 chart — put that screen somewhere the world actually has
         // features stacked on features.
         centre_window_on_the_player(&mut d, plate_w, plate_h);
         let mut found: Option<hornvale_kernel::Vertex> = None;
@@ -2668,7 +2674,7 @@ mod portolan_tests {
     /// read "the coarsest zoom must disclose": the chart was the plate,
     /// 40x20 = 800 characters for 40,962 vertices, ~51 vertices apiece.
     /// The chart is the RUNG now, and [`GLOBE_RUNG`] is the canonical grid
-    /// level itself (decision 0196) — 363x361 tiles — so even the coarsest
+    /// level itself (decision 0196) — 363x362 tiles — so even the coarsest
     /// rung is finer than the mesh and the honest disclosure is silence.
     /// See [`Driver::resolution_disclosure`]'s own doc. What this test
     /// still pins is that the derivation runs at BOTH ends of the ladder
@@ -2682,8 +2688,10 @@ mod portolan_tests {
         let coarse = d
             .strip_text()
             .expect("the world view always resolves once active");
+        // Matched on the disclosure's opening clause, never its noun --
+        // see `DISCLOSURE_OPENING`.
         assert!(
-            !coarse.contains("terrain cells"),
+            !coarse.contains(DISCLOSURE_OPENING),
             "GLOBE_RUNG is already the mesh's own level and has nothing to \
              disclose, got {coarse:?}"
         );
@@ -2696,8 +2704,46 @@ mod portolan_tests {
             .strip_text()
             .expect("the world view always resolves once active");
         assert!(
-            !fine.contains("terrain cells"),
+            !fine.contains(DISCLOSURE_OPENING),
             "the finest rung is one tile per band-B facet and must not disclose, got {fine:?}"
+        );
+    }
+
+    /// The disclosure's `Some(...)` branch — the half the inversion above
+    /// left with no test in either direction.
+    ///
+    /// Depth 5 is BELOW the shipped ladder's floor and reachable only by
+    /// constructing a [`Window`] directly, which is exactly the point: what
+    /// is under test is the ratio arithmetic, not the ladder. A rung-5 chart
+    /// is 182x181 tiles for seed 42's 40,962 vertices — 1.243 vertices per
+    /// character — so the strip must say so, through the same `strip_text`
+    /// instrument its silent sibling above reads.
+    #[test]
+    fn the_resolution_disclosure_speaks_at_a_rung_coarser_than_the_mesh() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+
+        let (w, h) = plate::virtual_dims(5);
+        assert_eq!((w, h), (182, 181), "sanity: the rung-5 chart");
+        let ratio = d.geo.vertex_count() as f64 / (u64::from(w) * u64::from(h)) as f64;
+        assert!(
+            ratio > 1.0,
+            "sanity: rung 5 must be coarser than the mesh, got {ratio}"
+        );
+
+        d.window = Window {
+            depth: 5,
+            origin_col: 0,
+            origin_row: 0,
+        };
+        d.refresh_strip();
+        let said = d
+            .strip_text()
+            .expect("the world view always resolves once active");
+        assert!(
+            said.contains(DISCLOSURE_OPENING),
+            "a rung coarser than the mesh ({ratio:.3} vertices per character) must \
+             disclose its resolution, got {said:?}"
         );
     }
 
