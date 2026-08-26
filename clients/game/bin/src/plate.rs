@@ -4,16 +4,23 @@
 //! already-rendered [`hornvale_game_core::Grid`].
 //!
 //! [`draw`]/[`draw_with`] paint exactly one thing: land vs ocean, one
-//! glyph per grid cell. Each screen cell takes the AREA-MAJORITY of the
-//! terrain vertices its own footprint covers, not merely the nearest vertex to
-//! its centre — Nathan's ruling, fix round 1 of this task, after the
-//! task report's H1' investigation found nearest-vertex sampling
-//! (equivalent to a footprint of exactly one query point) made a
-//! coastline character land-or-water at random at the 40x20 floor rung,
-//! where roughly 51 real terrain vertices sit behind every character. See
-//! [`SUBSAMPLES_PER_AXIS`]'s own doc for how the footprint is sampled,
-//! and the task report's "fix round 1" section for the H1'' measurement
-//! this produced.
+//! glyph per grid cell. Since The Quadrat a tile is a MESH FACET and its
+//! terrain is read from that facet's own grid-level triangle by direct
+//! addressing — [`terrain_at_tile`] — never by resampling the screen.
+//!
+//! **This replaces 49-point area-majority sampling, and the premise that
+//! justified that sampling is the thing that expired.** Area majority was
+//! Nathan's ruling in The Portolan's fix round 1, because nearest-vertex
+//! sampling made a coastline character land-or-water at random at the
+//! 40x20 floor rung, where roughly 51 real terrain vertices sat behind
+//! every character. Task 1 made the chart a property of the RUNG rather
+//! than of the drawn plate, and the coarsest shipped rung
+//! ([`GLOBE_RUNG`]) is now a 363x362 chart against 40,962 vertices —
+//! about 3.2 tiles per vertex. There is no longer any shipped rung at
+//! which one character stands for many vertices, which is the same fact
+//! `Driver::resolution_disclosure` already reports by staying silent at
+//! every rung the raster draws. A footprint vote over a footprint smaller
+//! than a mesh cell buys nothing and costs 49 spatial searches.
 //!
 //! The glyph vocabulary (`~` ocean, `.` land) is the spike's own
 //! (`windows/worldgen/examples/portolan_spike.rs`, `glyph_for`, line
@@ -32,19 +39,25 @@
 //! this is a performance choice, not a behavioural one.
 //!
 //! **The index is built ONCE by the caller and passed in, never rebuilt
-//! per call.** Fix round 1's other half: point sampling already made a
-//! per-call `NearestVertexIndex::new(geo)` (~200ms by the task report's own
-//! measurement) wasteful, and area sampling multiplies the per-cell query
-//! count by [`SUBSAMPLES_PER_AXIS`] squared, so rebuilding it inside
-//! `draw_with` on every redraw (Task 3 wires this into the live redraw
-//! path) would have compounded a wasteful cost into a much larger one.
-//! `driver.rs` already builds its own `NearestVertexIndex` once, at
-//! `Driver::start`, and reuses it for the session's lifetime
-//! (`self.nearest`) — this module follows the same idiom rather than
-//! caching one internally.
+//! per call.** Fix round 1's other half, and still true even though the
+//! index is barely consulted now: a per-call `NearestVertexIndex::new(geo)`
+//! costs ~200 ms by The Portolan's own measurement, which would dwarf the
+//! whole draw. `driver.rs` builds its own once, at `Driver::start`, and
+//! reuses it for the session's lifetime (`self.nearest`) — this module
+//! follows the same idiom rather than caching one internally.
+//!
+//! **What the index is still FOR is one question, asked a few dozen times
+//! per plate instead of a few million: which three `Vertex` ids are the
+//! corners of a grid-level triangle.** That is
+//! [`hornvale_kernel::Facet::corner_weights`]'s three
+//! `nearest_to_position` scans, and it is memoized per grid-level facet
+//! through a [`hornvale_kernel::RoomMeshMemo`] [`draw_with`] owns for the
+//! length of one draw. Thousands of band-B tiles share one grid-level
+//! ancestor, so the scan count collapses from `w * h * 49` to roughly the
+//! number of grid-level facets the plate covers.
 
 use hornvale_game_core::{Cell, Grid, Ink, Source, Weight};
-use hornvale_kernel::{Geosphere, NearestVertexIndex, Vertex};
+use hornvale_kernel::{Facet, Geosphere, NearestVertexIndex, RoomMeshMemo, Vertex};
 use hornvale_terrain::GeneratedTerrain;
 use std::collections::BTreeSet;
 
@@ -149,15 +162,15 @@ fn tiles_around_a_great_circle(depth: u32) -> u32 {
 /// Mercator tile** — never a second copy of this arithmetic.
 ///
 /// **`depth` is clamped at [`BAND_B_RUNG`], and that clamp is load-bearing,
-/// not tidiness.** The old body clamped `zoom` at `MAX_ZOOM` for the same
-/// reason and the field is still `pub` with no validation: [`area_majority`]
-/// computes `virtual_w * SUBSAMPLES_PER_AXIS` in `u32`, which overflows once
-/// the chart passes ~613 million tiles — depth 27 and up. `apply_zoom` never
-/// gets there, but Task 5's tile cache constructs [`Window`]s directly, so
-/// "unreachable" stops being true. A COARSER-than-`GLOBE_RUNG` depth is
-/// deliberately still honoured: nothing overflows downward, and
+/// not tidiness.** The field is `pub` with no validation, and Task 5's tile
+/// cache constructs [`Window`]s directly, so "`apply_zoom` never gets
+/// there" is not a guarantee. [`BAND_B_RUNG`] is the finest band the client
+/// draws at all — past it the mesh discloses nothing new and the chart's
+/// own width leaves `u32` around depth 31. A COARSER-than-`GLOBE_RUNG`
+/// depth is deliberately still honoured: nothing overflows downward, and
 /// `driver.rs`'s own disclosure test needs a rung coarser than the mesh to
-/// exercise at all.
+/// exercise at all — [`terrain_at_tile`] resolves such a tile at the grid's
+/// own level, which is the only level terrain exists on.
 /// type-audit: bare-ok(count: depth), bare-ok(count: return)
 pub fn virtual_dims(depth: u32) -> (u32, u32) {
     let w = tiles_around_a_great_circle(depth.min(BAND_B_RUNG));
@@ -198,40 +211,6 @@ pub(crate) const CAVE_GLYPH: char = 'o';
 const SETTLEMENT_COLOR: [u8; 3] = [220, 180, 60];
 /// The colour claim for a discovered cave mouth. See [`SETTLEMENT_COLOR`].
 const CAVE_COLOR: [u8; 3] = [130, 120, 110];
-
-/// Sub-samples per axis for area-majority sampling: each screen cell
-/// takes the majority vote of `SUBSAMPLES_PER_AXIS * SUBSAMPLES_PER_AXIS`
-/// nearest-vertex queries spread evenly across its own footprint, in place
-/// of the single nearest-vertex query at its centre the previous,
-/// point-sampled scheme used.
-///
-/// **This generalises the old code rather than replacing it (Nathan's
-/// own framing).** At the projection's own ceiling — roughly one screen
-/// cell per terrain vertex — every sub-sample within a footprint lands on
-/// the same nearest vertex, so the majority is unanimous and the answer is
-/// identical to the old point-sampled one; the two are the same function
-/// evaluated at different resolutions, not two code paths that happen to
-/// agree.
-///
-/// `7` (49 samples — always odd, so a tie is impossible) approximates the
-/// ~51 real terrain vertices the task report's H1' investigation measured
-/// behind each character at the 40x20 floor rung (`sqrt(51) ≈ 7.1`,
-/// rounded down). It is a fixed constant, not derived from
-/// `GeneratedTerrain`'s actual vertex count — threading that count through
-/// just to pick a sampling density would be more machinery than a fixed
-/// approximation buys here, and the floor rung is the only resolution
-/// this task measures.
-///
-/// Each sub-sample point is obtained by calling
-/// [`mercator::unproject`] at a VIRTUAL resolution `SUBSAMPLES_PER_AXIS`
-/// times finer in both axes — `unproject`'s own `(col + 0.5) / w`
-/// cell-centre formula, evaluated at `(col * SUBSAMPLES_PER_AXIS + j,
-/// w * SUBSAMPLES_PER_AXIS)` for `j` in `0..SUBSAMPLES_PER_AXIS`, lands
-/// exactly on the `j`-th of `SUBSAMPLES_PER_AXIS` even sub-positions
-/// inside the original cell's footprint. This reuses `unproject`
-/// UNCHANGED (no fractional-coordinate variant needed, and none added to
-/// `mercator.rs`) rather than inventing a second projection entry point.
-const SUBSAMPLES_PER_AXIS: u32 = 7;
 
 /// Draw the whole-world Mercator plate at `w`x`h`, resolving whether
 /// colour is allowed from `NO_COLOR` exactly once
@@ -278,11 +257,17 @@ pub fn draw(
 /// — see the module doc for why it is a caller-owned parameter rather
 /// than being built or cached here).
 ///
-/// For every cell of the returned `w`x`h` grid, this samples
-/// [`SUBSAMPLES_PER_AXIS`] squared points spread evenly across that
-/// cell's own footprint (see that constant's doc for exactly how), looks
-/// up each sample's nearest terrain vertex, and draws ocean or land by
-/// MAJORITY vote across the samples.
+/// For every cell of the returned `w`x`h` grid, this asks
+/// [`terrain_at_tile`] which mesh facet the cell's own centre falls in and
+/// reads that facet's grid-level triangle by direct addressing — no
+/// footprint resampling, and (past the first tile of each grid-level
+/// facet) no spatial search. The [`hornvale_kernel::RoomMeshMemo`] that
+/// makes the second half true is owned HERE, for the length of one draw:
+/// it caches a pure function of `(Facet, Geosphere::level())`, so its
+/// lifetime is a performance choice and never a correctness one, and a
+/// per-draw memo keeps `draw`/`draw_with`'s public signatures unchanged
+/// while still collapsing the plate's scan count by three orders of
+/// magnitude (see the module doc).
 ///
 /// **`w`/`h` are the drawn plate's own size — the screen window —
 /// never the virtual chart's.** [`virtual_dims`]`(win.depth)` gives the
@@ -342,15 +327,19 @@ pub fn draw_with(
     let width = u32::from(w);
     let height = u32::from(h);
     let (virtual_w, virtual_h) = virtual_dims(win.depth);
+    // One memo for the whole plate — see this function's own doc for why
+    // its lifetime is free to be exactly this long.
+    let mut memo = RoomMeshMemo::default();
 
     for row in 0..height {
         for col in 0..width {
-            let (ocean, vertex) =
-                area_majority(terrain, geo, index, f, win, virtual_w, virtual_h, row, col);
+            let tile = terrain_at_tile(
+                terrain, geo, index, &mut memo, f, win, virtual_w, virtual_h, row, col,
+            );
             // TERRAIN ONLY. Sites are PROJECTED in a second pass below —
             // see `draw_point_sites` for why asking each screen cell "is
             // your representative a site?" dropped 37.8% of caves.
-            let _ = vertex;
+            let ocean = tile.ocean;
             let (glyph, color) = if ocean {
                 (OCEAN_GLYPH, OCEAN_COLOR)
             } else {
@@ -400,7 +389,8 @@ pub fn draw_with(
 /// chart draws a coastline but pins a town.
 ///
 /// It is also far cheaper: one projection per site in the roster against
-/// `width * height * 49` samples for the terrain pass.
+/// one [`terrain_at_tile`] per screen cell (and, before The Quadrat, 49
+/// nearest-vertex searches per screen cell on top of that).
 ///
 /// **Undiscovered sites are never drawn**, so §A7's "nothing is drawn and
 /// then hidden" still holds by construction — an undiscovered site is not
@@ -478,89 +468,129 @@ fn draw_point_sites(
     }
 }
 
-/// The 49-point area-majority vote for ONE screen cell at `(row, col)`
-/// (screen-relative, before `win.origin_row`/`origin_col` are added) —
-/// SHARED by [`draw_with`] (which paints the winning class as a glyph)
-/// and `bin`'s world-view resolver (Task 3b fix round 1, Finding 2: the
-/// resolver must never name a vertex whose class contradicts the glyph the
-/// player is looking at).
+/// What one chart tile's terrain resolves to: the class the glyph is
+/// painted from, the mesh [`Facet`] the tile IS, and a [`Vertex`] of the
+/// painted class that a resolver may name.
 ///
-/// Returns whether the majority is ocean, and the [`hornvale_kernel::
-/// Vertex`] of the MAJORITY-class sample nearest the screen cell's own
-/// true centre — the `(3, 3)` sub-sample, since [`SUBSAMPLES_PER_AXIS`]
-/// is odd (`7`) and index `3` of `0..7` is the exact centre. That
-/// sub-sample's own `unproject` call is provably identical to a direct
-/// single-point query at the screen cell's centre (`(row + 0.5, col +
-/// 0.5)` scaled by the virtual chart, not the sub-sampled grid — the
-/// `3.5 / 7 == 0.5` identity `bin`'s `driver.rs` `resolve_world_view` doc
-/// works out), so this is never coarser than what the previous,
-/// single-point resolver asked for — only additionally constrained to
-/// agree with what got drawn. Distance-to-centre ties break on the
-/// smaller `(i, j)` in row-major order: deterministic, and never reached
-/// by [`draw_with`] itself (which only reads the vote tally, never which
-/// sample cast it), so this matters only to the resolver.
+/// **`ocean` and `vertex` can never contradict each other**, by
+/// construction: `vertex` is chosen from the corners the class was decided
+/// on, so `terrain.is_ocean(vertex) == ocean` always. That invariant is the
+/// one The Portolan's fix round 1, Finding 2 bought with a 49-point vote —
+/// the strip must never name a land feature on a character drawn `~` — and
+/// it survives the vote's removal.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TileTerrain {
+    /// Whether the tile is painted ocean.
+    /// type-audit: bare-ok(flag)
+    pub ocean: bool,
+    /// The mesh facet the tile's own centre falls in, at the WINDOW's rung
+    /// — `Facet::containing(centre, win.depth)` exactly. At
+    /// [`BAND_B_RUNG`] this is the walk band's own room.
+    pub facet: Facet,
+    /// A grid-level [`Vertex`] of the painted class — the corner of
+    /// [`Self::facet`]'s grid-level triangle nearest the tile's own centre.
+    pub vertex: Vertex,
+}
+
+/// ONE chart tile's terrain, by direct mesh addressing (The Quadrat, Task
+/// 3) — SHARED by [`draw_with`] (which paints the class as a glyph) and
+/// `bin`'s world-view resolver (which names a feature at the vertex).
 ///
-/// `virtual_w`/`virtual_h` are `virtual_dims(win.depth)`'s own
-/// output — passed in rather than recomputed per cell, since [`draw_with`]
-/// already computes it once for the whole plate and a caller resolving a
-/// single cursor position computes it once per keypress; neither needs a
-/// second copy of that arithmetic per cell.
+/// `row`/`col` are screen-relative, before `win.origin_row`/`origin_col`
+/// are added. `virtual_w`/`virtual_h` are [`virtual_dims`]`(win.depth)`'s
+/// own output, passed in rather than recomputed per cell.
+///
+/// **This is the campaign's H1 in code.** The path it replaces
+/// (`area_majority`) ran [`NearestVertexIndex::nearest`] — a spatial SEARCH
+/// from a point to a vertex — 49 times per tile, for an area-majority vote
+/// over the tile's footprint. A rung is a mesh depth now, so:
+///
+/// 1. the tile's centre unprojects to a position, and
+///    [`Facet::containing`] turns that position into an ADDRESS by
+///    descending the mesh — no search over vertices;
+/// 2. the address's grid-level ancestor names the triangle terrain is
+///    actually defined on ([`hornvale_terrain::GLOBE_LEVEL`]), and
+///    [`Facet::corner_weights_memo`] gives that triangle's three corner
+///    vertices, memoized;
+/// 3. the tile's class is the nearest of those three corners.
+///
+/// **Step 3 is three dot products, and it is not an approximation of the
+/// old query — it is the same answer.** A point inside a grid-level
+/// triangle has its nearest mesh vertex among that triangle's own three
+/// corners, so this reproduces what
+/// [`NearestVertexIndex::nearest`] would have returned at the tile's centre
+/// without asking it. `mesh_addressing_agrees_with_the_spatial_search`
+/// measures that agreement rather than asserting it, because the icosphere's
+/// dual is not exactly a Voronoi diagram and a seam-straddling point may
+/// disagree.
+///
+/// **The weights [`Facet::corner_weights_memo`] also returns are
+/// deliberately unused.** They are the barycentric position of the ADDRESSED
+/// facet's own centroid; at the grid level they are uniform (`1,1,1`), which
+/// would make every tile inside one triangle identical and blocky. The tile's
+/// own centre is a strictly finer thing to compare against, and comparing
+/// against it costs three dot products rather than a memo key per tile.
+///
+/// A rung COARSER than the grid has no ancestor at the grid level, so the
+/// tile's own centre is re-addressed at the grid level instead. Nothing on
+/// the shipped ladder reaches there ([`GLOBE_RUNG`] is the floor and is the
+/// grid level itself); `driver.rs`'s rung-5 disclosure test does.
 #[allow(clippy::too_many_arguments)] // mirrors `draw_with`'s own allow, one level down
-pub(crate) fn area_majority(
+pub fn terrain_at_tile(
     terrain: &GeneratedTerrain,
     geo: &Geosphere,
     index: &NearestVertexIndex,
+    memo: &mut RoomMeshMemo,
     f: &Frame,
     win: &Window,
     virtual_w: u32,
     virtual_h: u32,
     row: u32,
     col: u32,
-) -> (bool, hornvale_kernel::Vertex) {
+) -> TileTerrain {
     let plate_row = win.origin_row + row;
     let plate_col = win.origin_col + col;
-    let sub_width = virtual_w * SUBSAMPLES_PER_AXIS;
-    let sub_height = virtual_h * SUBSAMPLES_PER_AXIS;
+    let (lat, lon) = mercator::unproject(f, plate_row, plate_col, virtual_w, virtual_h);
+    let pos = hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon);
+    let facet = Facet::containing(pos, win.depth);
 
-    let mut land_votes = 0u32;
-    let mut ocean_votes = 0u32;
-    let mut samples: Vec<(u32, u32, bool, hornvale_kernel::Vertex)> =
-        Vec::with_capacity((SUBSAMPLES_PER_AXIS * SUBSAMPLES_PER_AXIS) as usize);
-    for i in 0..SUBSAMPLES_PER_AXIS {
-        for j in 0..SUBSAMPLES_PER_AXIS {
-            let sub_row = plate_row * SUBSAMPLES_PER_AXIS + i;
-            let sub_col = plate_col * SUBSAMPLES_PER_AXIS + j;
-            let (lat, lon) = mercator::unproject(f, sub_row, sub_col, sub_width, sub_height);
-            let vertex = index.nearest(geo, lat, lon);
-            let ocean = terrain.is_ocean(vertex);
-            if ocean {
-                ocean_votes += 1;
-            } else {
-                land_votes += 1;
-            }
-            samples.push((i, j, ocean, vertex));
+    // The address terrain is actually defined on. `GeneratedTerrain` lives
+    // on `Geosphere::new(GLOBE_LEVEL)`'s vertices and has nothing finer to
+    // disclose, so every rung at or below the grid resolves through the
+    // grid-level triangle.
+    let grid_level = geo.depth();
+    let addr = match facet.ancestor(grid_level) {
+        Some(anc) => anc,
+        None => Facet::containing(pos, grid_level),
+    };
+    let corners = addr
+        .corner_weights_memo(geo, index, memo)
+        .expect("a facet AT the grid's own level is never coarser than the grid");
+
+    // The nearest of the triangle's three corners to the tile's own centre.
+    // Ties break to the lower `Vertex`, the same direction
+    // `NearestVertexIndex`'s own scan breaks them.
+    let mut vertex = corners[0].0;
+    let mut best = f64::NEG_INFINITY;
+    for &(candidate, _weight) in &corners {
+        let q = geo.position(candidate);
+        let d = q[0] * pos[0] + q[1] * pos[1] + q[2] * pos[2];
+        // Exact-equality tie detection is intentional, exactly as
+        // `NearestVertexIndex::scan_at` does it: it selects the vertex a
+        // strict-`>` first hit in ascending order would have.
+        #[allow(clippy::float_cmp)]
+        let tie = d == best;
+        if d > best || (tie && candidate < vertex) {
+            best = d;
+            vertex = candidate;
         }
     }
 
-    // `SUBSAMPLES_PER_AXIS * SUBSAMPLES_PER_AXIS` is odd (7*7 = 49), so
-    // `ocean_votes == land_votes` cannot happen and this is a true
-    // majority, never a tie broken by arm order.
-    let ocean = ocean_votes > land_votes;
-
-    const CENTRE: i64 = (SUBSAMPLES_PER_AXIS / 2) as i64; // 3, the exact centre of 0..7
-    let nearest = samples
-        .into_iter()
-        .filter(|&(_, _, sample_ocean, _)| sample_ocean == ocean)
-        .map(|(i, j, _, vertex)| {
-            let di = i64::from(i) - CENTRE;
-            let dj = i64::from(j) - CENTRE;
-            (di * di + dj * dj, i, j, vertex)
-        })
-        .min()
-        .expect("the majority class always has at least one matching sample, by definition")
-        .3;
-
-    (ocean, nearest)
+    TileTerrain {
+        ocean: terrain.is_ocean(vertex),
+        facet,
+        vertex,
+    }
 }
 
 #[cfg(test)]
@@ -638,11 +668,10 @@ mod tests {
             BAND_B_RUNG
         );
 
-        // The ceiling clamp `depth` no longer validates for itself: past
-        // BAND_B_RUNG the chart stops growing, so `area_majority`'s
-        // `virtual_w * SUBSAMPLES_PER_AXIS` can never leave `u32`. A caller
-        // building a `Window` by hand -- Task 5's tile cache -- is the one
-        // that can reach here.
+        // The ceiling clamp: past BAND_B_RUNG the chart stops growing, so
+        // the chart's own width can never leave `u32` and no rung finer
+        // than the walk band is ever drawn. A caller building a `Window`
+        // by hand -- Task 5's tile cache -- is the one that can reach here.
         assert_eq!(
             virtual_dims(BAND_B_RUNG + 20),
             (w_a, h_a),
@@ -834,7 +863,19 @@ mod tests {
         let orphan = caves.iter().copied().find_map(|c| {
             let g = geo.coord(c);
             let (row, col) = crate::mercator::project(&f, g.latitude, g.longitude, vw, vh)?;
-            let (_, rep) = area_majority(&terrain, &geo, &index, &f, &anywhere, vw, vh, row, col);
+            let rep = terrain_at_tile(
+                &terrain,
+                &geo,
+                &index,
+                &mut RoomMeshMemo::default(),
+                &f,
+                &anywhere,
+                vw,
+                vh,
+                row,
+                col,
+            )
+            .vertex;
             (rep != c).then_some((c, row, col))
         });
         let (orphan, row, col) = orphan.expect("seed 42 must have a cave that wins no vote");
@@ -962,20 +1003,25 @@ mod tests {
         );
     }
 
-    /// **At the ceiling, area-majority sampling collapses to point
-    /// sampling.** A tiny window (2x2) over the whole planet at a coarse
-    /// virtual resolution means each screen cell's SUBSAMPLES_PER_AXIS^2
-    /// sub-samples are close enough together (relative to the mesh's own
-    /// vertex spacing) that every sub-sample within a cell lands on the same
-    /// nearest terrain vertex — so the majority is unanimous and equals
-    /// what a single centre-point query would have returned. This is the
-    /// behavioural claim `SUBSAMPLES_PER_AXIS`'s own doc makes ("the two
-    /// are the same function evaluated at different resolutions"),
-    /// checked directly rather than only asserted in prose: every drawn
-    /// cell's glyph must equal the glyph a plain nearest-vertex query at
-    /// that same cell's own centre would have produced.
+    /// **Mesh addressing answers the question the spatial search answered.**
+    /// [`terrain_at_tile`] never calls [`NearestVertexIndex::nearest`]: it
+    /// addresses the tile's grid-level triangle and takes the nearest of
+    /// that triangle's own three corners. The claim that makes this a
+    /// replacement rather than an approximation is that a point inside a
+    /// grid-level triangle HAS its nearest mesh vertex among those three
+    /// corners — so every drawn cell's glyph must equal the glyph a plain
+    /// `nearest()` query at that same cell's own centre would produce.
+    ///
+    /// **Retargeted, not renamed away.** This test was
+    /// `at_a_fine_enough_window_area_majority_agrees_with_point_sampling`,
+    /// and it pinned the same comparison against the 49-point vote The
+    /// Quadrat's Task 3 removed; the subject moved, the assertion did not.
+    /// Its threshold TIGHTENED from `> 0.97` to exact equality on every
+    /// cell, because the two are now the same function rather than two
+    /// samplings that mostly agree — a `> 0.97` threshold against a method
+    /// that agrees exactly is a gate that never gates.
     #[test]
-    fn at_a_fine_enough_window_area_majority_agrees_with_point_sampling() {
+    fn mesh_addressing_agrees_with_the_spatial_search() {
         let (terrain, geo) = test_world();
         let index = NearestVertexIndex::new(&geo);
         let f = crate::mercator::frame_for(false);
@@ -1031,18 +1077,174 @@ mod tests {
                 }
             }
         }
-        // Not a strict 100%: a cell whose footprint straddles a REAL
-        // coastline can have sub-samples split closely enough that the
-        // majority differs from the single centre sample by chance, even
-        // at this resolution. The claim is "the two methods overwhelmingly
-        // agree once the footprint is fine", not "always identical" --
-        // asserting exactly 100% would be the "float guard against an
-        // exact literal" mistake (a threshold that never actually gates).
-        let ratio = f64::from(agree) / f64::from(total);
+        // THE VACUITY GUARD. An all-ocean patch would make every
+        // comparison `~` against `~`, which a gutted `terrain_at_tile`
+        // painting a constant would also pass. The compared region must
+        // straddle a real coastline for the equality below to discriminate.
+        let land = (0..h)
+            .flat_map(|y| (0..w).map(move |x| (x, y)))
+            .filter(|&(x, y)| g.get(x, y).and_then(|c| c.glyph) == Some(LAND_GLYPH))
+            .count();
         assert!(
-            ratio > 0.97,
-            "area-majority and point sampling should agree almost \
-             everywhere at a fine window: {agree}/{total} = {ratio}"
+            land > 0 && land < usize::from(w) * usize::from(h),
+            "the compared region must straddle a coastline or this test proves \
+             nothing: land={land} of {}",
+            usize::from(w) * usize::from(h)
+        );
+        assert_eq!(
+            agree, total,
+            "mesh addressing must reproduce the spatial search exactly: \
+             {agree}/{total} cells agreed"
+        );
+    }
+
+    /// **A tile resolves to the facet that contains it, at the WINDOW's own
+    /// rung.** The old path ran `index.nearest(geo, lat, lon)` -- a spatial
+    /// SEARCH -- 49 times per cell. The new path asks the MESH which facet
+    /// contains the tile's centre and reads that facet's grid-level corners
+    /// by direct addressing. The observable difference is that the answer
+    /// must agree with [`Facet::containing`] exactly, for every tile.
+    ///
+    /// **Both ENDS of the ladder, because one end alone is vacuous.** A
+    /// first draft ran only at [`GLOBE_RUNG`], and a mutation replacing
+    /// `win.depth` with `GLOBE_RUNG` inside `terrain_at_tile` SURVIVED the
+    /// whole lib suite (109/109 green) -- the rung the test picked was the
+    /// constant the mutation hardcoded. Sweeping both rungs kills it,
+    /// because the facet's own depth is then a thing the test varies.
+    #[test]
+    fn a_tile_resolves_to_the_facet_that_contains_it() {
+        let (terrain, geo) = test_world();
+        let index = NearestVertexIndex::new(&geo);
+        let mut memo = RoomMeshMemo::default();
+        let f = mercator::frame_for(false);
+        for depth in [GLOBE_RUNG, GLOBE_RUNG + 3, BAND_B_RUNG] {
+            let win = Window {
+                depth,
+                origin_col: 0,
+                origin_row: 0,
+            };
+            let (vw, vh) = virtual_dims(win.depth);
+            // A DISCRIMINATION GUARD, not decoration: the assertion below is
+            // vacuous if every tile lands in the same facet (a gutted
+            // `terrain_at_tile` returning a constant facet would pass). Count
+            // the distinct facets the sampled block actually spans.
+            let mut seen: BTreeSet<String> = BTreeSet::new();
+            for row in 0..4u32 {
+                for col in 0..4u32 {
+                    let got = terrain_at_tile(
+                        &terrain, &geo, &index, &mut memo, &f, &win, vw, vh, row, col,
+                    );
+                    assert_eq!(
+                        got.facet.depth(),
+                        depth,
+                        "tile ({row},{col}) resolved at the wrong rung"
+                    );
+                    let (lat, lon) = mercator::unproject(&f, row, col, vw, vh);
+                    let pos = hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon);
+                    assert_eq!(
+                        got.facet,
+                        Facet::containing(pos, win.depth),
+                        "tile ({row},{col}) resolved to the wrong facet at rung {depth}"
+                    );
+                    seen.insert(format!("{:?}", got.facet));
+                }
+            }
+            assert!(
+                seen.len() > 1,
+                "the sampled block at rung {depth} must span more than one facet or this \
+                 test proves nothing: {} distinct facets over 16 tiles",
+                seen.len()
+            );
+        }
+    }
+
+    /// **At the finest rung there is nothing inside a tile to sub-sample.**
+    /// A tile IS a facet at [`BAND_B_RUNG`], so there is no footprint to take
+    /// a majority over. Sub-sampling existed only because a COARSE tile
+    /// spanned many mesh cells. This is the mechanism H1 predicts the speedup
+    /// from, asserted rather than timed -- a timing assertion is a flake on a
+    /// contended box.
+    ///
+    /// The probe counter is [`RoomMeshMemo::corner_weights_misses`], which
+    /// the kernel already exposes (`kernel/src/room.rs`, built by The Forebay
+    /// for this exact question). `corner_weights_memo` runs three
+    /// [`NearestVertexIndex::nearest_to_position`] scans on a MISS and none on
+    /// a HIT, so a miss count IS a search count, divided by three.
+    #[test]
+    fn the_finest_rung_needs_no_subsampling() {
+        let (terrain, geo) = test_world();
+        let index = NearestVertexIndex::new(&geo);
+        let mut memo = RoomMeshMemo::default();
+        let f = mercator::frame_for(false);
+        let win = Window {
+            depth: BAND_B_RUNG,
+            origin_col: 0,
+            origin_row: 0,
+        };
+        let (vw, vh) = virtual_dims(win.depth);
+        // Warm the memo on the tile's own grid-level ancestor first.
+        let _ = terrain_at_tile(&terrain, &geo, &index, &mut memo, &f, &win, vw, vh, 0, 0);
+        let before = memo.corner_weights_misses();
+        assert_eq!(
+            before, 1,
+            "the first tile of a cold memo costs exactly one miss"
+        );
+        let _ = terrain_at_tile(&terrain, &geo, &index, &mut memo, &f, &win, vw, vh, 0, 1);
+        // BOUNDED, not zero: tiles (0,0) and (0,1) are not guaranteed to
+        // share a grid-level ancestor, and a cold ancestor costs exactly one
+        // miss. An exact-zero assertion would flake on an ancestor boundary
+        // rather than fail on a real regression. One miss is three vertex
+        // scans; the OLD path ran 49 unmemoised ones per tile, so this still
+        // discriminates by more than an order of magnitude.
+        assert!(
+            memo.corner_weights_misses() - before <= 1,
+            "the finest rung took {} memo misses for one tile; direct addressing costs \
+             at most 1",
+            memo.corner_weights_misses() - before
+        );
+    }
+
+    /// **The whole plate's search count is bounded by the mesh, not by the
+    /// screen** — the H1 mechanism at plate scale rather than tile scale.
+    /// One 64x32 band-B plate covers a handful of grid-level facets, so it
+    /// costs a handful of misses; the path this replaces cost `64 * 32 * 49
+    /// = 100,352` unmemoised searches for the same picture.
+    ///
+    /// Asserted against the plate's own tile count, never a hardcoded
+    /// number: a bound that says "fewer than one miss per hundred tiles" is
+    /// a claim about the MECHANISM, and it fails loudly if a future change
+    /// reintroduces a per-tile search.
+    #[test]
+    fn a_band_b_plate_costs_far_fewer_searches_than_it_has_tiles() {
+        let (terrain, geo) = test_world();
+        let index = NearestVertexIndex::new(&geo);
+        let mut memo = RoomMeshMemo::default();
+        let f = mercator::frame_for(false);
+        let (vw, vh) = virtual_dims(BAND_B_RUNG);
+        let (w, h) = (64u32, 32u32);
+        let win = Window {
+            depth: BAND_B_RUNG,
+            origin_col: vw / 2,
+            origin_row: vh / 2,
+        };
+        for row in 0..h {
+            for col in 0..w {
+                let _ = terrain_at_tile(
+                    &terrain, &geo, &index, &mut memo, &f, &win, vw, vh, row, col,
+                );
+            }
+        }
+        let misses = memo.corner_weights_misses();
+        let tiles = u64::from(w * h);
+        assert!(
+            misses * 100 < tiles,
+            "a {w}x{h} band-B plate took {misses} memo misses over {tiles} tiles; \
+             direct addressing must cost far fewer searches than it has tiles"
+        );
+        assert_eq!(
+            memo.corner_weights_hits() + misses,
+            tiles,
+            "every tile must consult the memo exactly once"
         );
     }
 

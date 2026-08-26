@@ -298,9 +298,14 @@ pub struct Driver {
     /// The last world plate drawn, with the inputs that produced it.
     ///
     /// A cursor move inside the plate changes none of those inputs, and
-    /// re-rendering costs ~265k `nearest()` calls at the design size —
-    /// measured 88% of a redraw. See [`PlateKey`] for what "the inputs"
-    /// means and what is deliberately not in it.
+    /// re-rendering the whole plate is still the most expensive thing a
+    /// redraw can do. **The magnitude it used to cite is retired, not
+    /// merely stale**: "~265k `nearest()` calls at the design size,
+    /// measured 88% of a redraw" was true of the 49-point vote The
+    /// Quadrat's Task 3 removed, and the search it named is now made a few
+    /// dozen times per plate rather than a few hundred thousand. See
+    /// [`PlateKey`] for what "the inputs" means and what is deliberately
+    /// not in it.
     plate_cache: Option<(PlateKey, hornvale_game_core::Grid)>,
     /// The world's seed, needed to draw a feature's name.
     seed: Seed,
@@ -816,9 +821,10 @@ impl Driver {
     /// every real caller (`main.rs`'s `redraw`) must use instead; this
     /// method stays `pub` because it is also the seam a test drives to
     /// exercise the plate's own rendering directly, unconditionally. The
-    /// plate resamples `SUBSAMPLES_PER_AXIS` squared points per cell
-    /// (`plate.rs`'s own doc), so a caller reaching this directly still owns
-    /// not paying that cost needlessly.
+    /// plate is far cheaper than it was — one mesh address per cell since
+    /// The Quadrat's Task 3, not 49 spatial searches (`plate.rs`'s own
+    /// doc) — but a full redraw is still a full redraw, so a caller
+    /// reaching this directly still owns not paying it needlessly.
     pub fn world_plate(&self, w: u16, h: u16) -> hornvale_game_core::Grid {
         let plate_width = hornvale_game_core::spread::world_plate_width(w, h);
         let plate_height = plate_width / hornvale_game_core::spread::GLYPH_ASPECT;
@@ -1556,10 +1562,10 @@ impl Driver {
     }
 
     /// The world view's own resolved [`hornvale_kernel::Vertex`] at the
-    /// cursor's current screen position — `plate::area_majority`, the
-    /// SAME 49-point vote [`plate::draw_with`] itself paints from (one
-    /// source of truth; see that function's own doc), asked for the
-    /// MAJORITY-class sample nearest the screen cell's own true centre.
+    /// cursor's current screen position — [`plate::terrain_at_tile`], the
+    /// SAME per-tile mesh addressing [`plate::draw_with`] itself paints
+    /// from (one source of truth; see that function's own doc), asked for
+    /// the painted class's own representative vertex.
     ///
     /// **Fix round 1, Finding 2 (the reviewer's own framing, which
     /// improved on this task's first pass): the earlier single-centre-
@@ -1576,26 +1582,36 @@ impl Driver {
     /// character's exact centre. This method closes that: it can never
     /// return a vertex whose class
     /// disagrees with what [`plate::draw_with`] would paint at the same
-    /// screen position, because it asks the identical vote for the
-    /// identical answer, and picks a REPRESENTATIVE of the winning class
-    /// rather than an unconstrained nearest point. See `plate::
-    /// area_majority`'s own doc for why its `(3, 3)` sub-sample is the
-    /// same point the earlier single-point query asked for, so this is
-    /// strictly more constrained, never coarser.
+    /// screen position, because it asks the identical question for the
+    /// identical answer, and picks a REPRESENTATIVE of the painted class.
+    /// [`plate::TileTerrain`]'s own doc states that invariant: `ocean` and
+    /// `vertex` cannot contradict each other, because the vertex is chosen
+    /// from the corners the class was decided on.
+    ///
+    /// **The Quadrat, Task 3 replaced the 49-point vote with mesh
+    /// addressing and the invariant survived unchanged** — what moved is
+    /// how the class is decided, not the guarantee that the strip agrees
+    /// with the picture.
+    ///
+    /// The [`hornvale_kernel::RoomMeshMemo`] is local because this resolves
+    /// exactly ONE tile per keypress: a session-lived memo would save at
+    /// most the three `nearest_to_position` scans of a repeated cursor
+    /// position, against holding cross-call state for a pure function.
     fn world_view_vertex(&self) -> hornvale_kernel::Vertex {
         let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
-        let (_ocean, vertex) = plate::area_majority(
+        plate::terrain_at_tile(
             &self.terrain,
             &self.geo,
             &self.nearest,
+            &mut hornvale_kernel::RoomMeshMemo::default(),
             &self.frame,
             &self.window,
             virtual_w,
             virtual_h,
             u32::from(self.cursor.y),
             u32::from(self.cursor.x),
-        );
-        vertex
+        )
+        .vertex
     }
 
     /// The world view's own resolution chain: [`Self::world_view_vertex`] to
@@ -2286,7 +2302,7 @@ mod portolan_tests {
     ///
     /// **Fix round 1, Finding 1 (reviewer): this reconstruction is NOT an
     /// independent derivation — it calls `active_plate_dims`,
-    /// `plate::virtual_dims` and `plate::area_majority` in the same order
+    /// `plate::virtual_dims` and `plate::terrain_at_tile` in the same order
     /// over the same fields `resolve_world_view` itself does, so it is a
     /// hand-mirrored copy of the implementation, not an alternate one.**
     /// Said plainly rather than smoothed over: this test cannot catch a
@@ -2321,17 +2337,19 @@ mod portolan_tests {
                 d.apply(Action::CursorBy(dx, dy));
 
                 let (virtual_w, virtual_h) = plate::virtual_dims(d.window().depth);
-                let (_ocean, expected_vertex) = plate::area_majority(
+                let expected_vertex = plate::terrain_at_tile(
                     &d.terrain,
                     &d.geo,
                     &d.nearest,
+                    &mut hornvale_kernel::RoomMeshMemo::default(),
                     d.frame(),
                     d.window(),
                     virtual_w,
                     virtual_h,
                     u32::from(d.cursor.y),
                     u32::from(d.cursor.x),
-                );
+                )
+                .vertex;
                 let (species, ph, morph) = &d.namer;
                 // `resolve_chain_at`, not `resolve_at`: Task 4 made
                 // `resolve_world_view` (`resolved`, below) return the FULL
@@ -2557,11 +2575,13 @@ mod portolan_tests {
     /// majority and a single centre-point answer can disagree at a
     /// coastline — was and remains real.
     ///
-    /// The fix ([`Self::world_view_vertex`], `plate::area_majority`) makes
-    /// the resolver ask the SAME 49-point vote the plate draws from, and
-    /// pick only a sample of the WINNING class — so agreement is no longer
-    /// a measured ratio, it is a GUARANTEE the code's own structure
-    /// enforces. This test still measures and prints the ratio (per the
+    /// The fix ([`Self::world_view_vertex`], now
+    /// [`plate::terrain_at_tile`]) makes the resolver ask the SAME question
+    /// the plate draws from, and take the representative of the PAINTED
+    /// class — so agreement is no longer a measured ratio, it is a
+    /// GUARANTEE the code's own structure enforces. The Quadrat's Task 3
+    /// replaced the 49-point vote with mesh addressing and left that
+    /// guarantee untouched ([`plate::TileTerrain`]'s own doc). This test still measures and prints the ratio (per the
     /// reviewer's own instruction: "if it is not ~100% by construction,
     /// something about the fix is wrong and I want to see the number") and
     /// then asserts it is exact, across every cell of the floor plate.
@@ -2581,19 +2601,22 @@ mod portolan_tests {
 
         let mut agree = 0u32;
         let mut total = 0u32;
+        let mut memo = hornvale_kernel::RoomMeshMemo::default();
         for y in 0..plate_h {
             for x in 0..plate_w {
-                let (_ocean, vertex) = plate::area_majority(
+                let vertex = plate::terrain_at_tile(
                     &d.terrain,
                     &d.geo,
                     &d.nearest,
+                    &mut memo,
                     &d.frame,
                     &d.window,
                     virtual_w,
                     virtual_h,
                     u32::from(y),
                     u32::from(x),
-                );
+                )
+                .vertex;
                 let resolved_ocean = d.terrain.is_ocean(vertex);
 
                 let drawn_ocean = grid.get(x, y).and_then(|c| c.glyph) == Some('~');
@@ -2606,18 +2629,18 @@ mod portolan_tests {
         assert!(total > 0);
         let ratio = f64::from(agree) / f64::from(total);
         println!(
-            "F5 (fix round 1): the resolved vertex's class agrees with the drawn 49-vote \
-             majority glyph on {agree}/{total} = {ratio:.4} of the {plate_w}x{plate_h} \
+            "F5 (fix round 1): the resolved vertex's class agrees with the drawn \
+             glyph on {agree}/{total} = {ratio:.4} of the {plate_w}x{plate_h} \
              floor plate at the coarsest zoom (the pre-fix figure once printed here, \
              420/800 = 0.5250, is RETRACTED as measured on a misaligned 32x16-vs-40x20 \
              harness bug; the pre-fix rate is unmeasured, not smaller)"
         );
         assert_eq!(
             agree, total,
-            "Finding 2's fix guarantees this by construction: `area_majority` only ever \
-             returns a sample of the WINNING class, so the resolved vertex can never \
-             disagree with the glyph drawn from that same vote — a non-1.0 ratio here \
-             means the fix itself is broken"
+            "Finding 2's fix guarantees this by construction: `terrain_at_tile` only ever \
+             returns a representative of the PAINTED class, so the resolved vertex can \
+             never disagree with the glyph drawn from that same read — a non-1.0 ratio \
+             here means the fix itself is broken"
         );
     }
 

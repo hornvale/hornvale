@@ -135,6 +135,30 @@ written to that test's `CARGO_TARGET_TMPDIR/tail-sweep-results.txt`; only the
 wall time is ledgered here because the harness is not `timed.sh`-wrapped and
 this file never invents a measured value it does not hold.
 
+**The Quadrat Task 3's H1 readout (2026-08-26, `campaign/the-quadrat`,
+ambrose, twelve cores, load average 7–14) — the world plate's per-draw wall
+time, BEFORE and AFTER mesh-aligned terrain lookup.** Run as
+`clients/game/bin/examples/rung_bench.rs` (`--release`, five runs, median),
+which is not `timed.sh`-wrapped, so only the numbers it printed are ledgered
+here — this file never invents a measured value it does not hold. The
+before/after pair was taken on the same box within fifteen minutes, at
+comparable load, against the same seed-42 world:
+
+| plate | rung | before (ms) | after (ms) | speed-up | vertex scans before | after |
+|---|---|---|---|---|---|---|
+| 200x200 | 12 (band B) | 1249.583 | 31.298 | 39.9x | 1,960,000 | 90 |
+| 104x52 | 6 (globe) | 186.931 | 17.721 | 10.5x | 264,992 | 16,020 |
+
+**H1 (preregistered: "a 200x200 uncached plate draws in under 50 ms") is
+SUPPORTED at 31.3 ms**, re-measured three more times at 29.6 / 30.6 / 29.9 ms
+median. The scan count is the kernel's own
+`RoomMeshMemo::corner_weights_misses` instrument times three, not a wall-clock
+proxy. The two rungs differ by three orders of magnitude in scans for the same
+reason they differ in speed-up: at band B thousands of tiles share one
+grid-level facet and the memo answers nearly every one, while at the globe
+rung a chart tile is already about the size of a facet, so there is little to
+share.
+
 | when (UTC) | label | wall_s | user_s | sys_s | cpu_ratio | waited_s | commit | branch | host | cores |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 2026-07-13T00:00:00Z | suite-full (pre-tiering, backfilled) | 2610.89 | 9246.93 | 36.88 | 3.56 | a2d39fa | main | m1max | 10 |
@@ -2983,3 +3007,5 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T20:33:17Z | gate-commit | 75.350 | 49.716 | 24.048 | 0.98 | 0 | 99b52c384 | campaign/the-quadrat | ambrose | 12 |
 | 2026-08-26T20:34:39Z | gate-commit | 74.871 | 49.470 | 23.825 | 0.98 | 0 | 99b52c384 | campaign/the-quadrat | ambrose | 12 |
 | 2026-08-26T21:04:31Z | gate-commit | 76.742 | 49.769 | 23.889 | 0.96 | 0 | 95fbd8f39 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-26T21:05:56Z | gate-commit | 76.800 | 49.457 | 24.100 | 0.96 | 0 | 95fbd8f39 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-26T22:07:33Z | gate-commit | 68.482 | 49.238 | 22.789 | 1.05 | 0 | a1339e537 | campaign/the-quadrat | ambrose | 12 |
