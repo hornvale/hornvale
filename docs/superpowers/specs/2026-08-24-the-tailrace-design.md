@@ -829,7 +829,7 @@ into this campaign's headline.
 
 Numbered from the reserved block at ratification.
 
-1. **Stage 7 is three stages, and their order is forced** — 7a the read side,
+1. **Stage 7 is three stages, and their order is forced** — minted as decision **0238**. — 7a the read side,
    7b the typed intention, 7c fact lifetime. Ratified at G3, 2026-08-24. The
    ordering is not a preference: 7c is unsafe while anything folds raw history,
    and 7b precedes 7c because the per-step `provenance` is rendered prose, so

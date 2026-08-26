@@ -249,12 +249,18 @@ the measurement that motivates them rather than a hunch:
   probing one fixed agent — but if the whole-tick fit is ever load-bearing it
   needs a median or the probe's own history.
 
-**Two of the spec's four candidate decisions were minted and two were not**, and
-that is deliberate rather than an omission. 0236 (a fold advances; it is not
-invalidated) and 0237 (the reset event is the checkpoint) are records. The stage
-7a/7b/7c re-carve was ratified at G3 and lives in the spec's §0 table and §9,
-in the registry rows for all three stages, and in the postscript added to the
-parent program's own chronicle entry — not in `docs/decisions/`. "The trail's
+**Three of the spec's four candidate decisions were minted, and the fourth
+deliberately was not.** 0236 (a fold advances; it is not invalidated), 0237 (the
+reset event is the checkpoint), and 0238 (stage 7 is three stages, and their
+order is forced) are records. **0238 was minted at close, and the reason it
+almost was not is the lesson.** The re-carve was ratified at G3, and it lived in
+the spec's §0 table and §9, in the registry rows for all three stages, and in a
+postscript on the parent program's own chronicle — four places, none of them
+`docs/decisions/`, which is the one place a future campaign greps before
+relitigating an architectural question. Being written down in four places that
+are not the index is not the same as being recorded. It amends another
+document's stage table, which is exactly the shape of thing the decision log
+exists to hold. "The trail's
 provenance is content" is likewise carried by the 7c row rather than as a
 record, which is what §9 itself proposed. If a later campaign wants either as a
 citable number, it mints it; nothing is lost in the meantime, but nothing

@@ -2923,3 +2923,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T12:47:18Z | gate-commit | 232.060 | 100.576 | 96.962 | 0.85 | 0 | 0a76e60bd | campaign/the-tailrace | ambrose | 12 |
 | 2026-08-26T12:52:23Z | gate-commit | 82.390 | 51.438 | 25.719 | 0.94 | 0 | 0a76e60bd | campaign/the-tailrace | ambrose | 12 |
 | 2026-08-26T13:32:32Z | gate-commit | 83.062 | 52.346 | 25.993 | 0.94 | 0 | 3404b8249 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-26T13:37:43Z | gate-commit | 82.404 | 51.603 | 26.214 | 0.94 | 0 | 57fc8cd6d | campaign/the-tailrace | ambrose | 12 |
