@@ -2994,3 +2994,9 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T19:01:48Z | rebaseline | 63.573 | 251.509 | 12.533 | 4.15 | 0 | afa5b7670 | campaign/the-sources | MacBookPro | 10 |
 | 2026-08-26T19:02:39Z | gate-commit | 32.847 | 66.140 | 45.383 | 3.40 | 0 | afa5b7670 | campaign/the-sources | MacBookPro | 10 |
 | 2026-08-26T19:03:19Z | gate-commit | 21.107 | 49.584 | 12.735 | 2.95 | 0 | afa5b7670 | campaign/the-sources | MacBookPro | 10 |
+| 2026-08-26T19:18:20Z | gate-commit | 2.250 | 2.156 | 0.080 | 0.99 | 0 | d73382f1d | campaign/the-sources | MacBookPro | 10 |
+| 2026-08-26T19:18:50Z | gate-commit | 21.961 | 35.457 | 27.128 | 2.85 | 0 | d73382f1d | campaign/the-sources | MacBookPro | 10 |
+| 2026-08-26T19:19:38Z | gate-commit | 25.406 | 30.035 | 28.396 | 2.30 | 0 | d73382f1d | campaign/the-sources | MacBookPro | 10 |
+| 2026-08-26T19:20:49Z | gate-commit | 60.238 | 293.198 | 43.817 | 5.59 | 0 | d73382f1d | campaign/the-sources | MacBookPro | 10 |
+| 2026-08-26T19:22:29Z | gate-commit | 49.982 | 87.675 | 80.538 | 3.37 | 0 | d73382f1d | campaign/the-sources | MacBookPro | 10 |
+| 2026-08-26T19:23:48Z | gate-commit | 24.584 | 50.776 | 12.957 | 2.59 | 0 | d73382f1d | campaign/the-sources | MacBookPro | 10 |
