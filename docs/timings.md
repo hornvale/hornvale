@@ -2855,6 +2855,39 @@ this file never invents a measured value it does not hold.
 | 2026-08-25T00:39:27Z | sluice:outboard | 38.358 | 24.105 | 37.073 | 1.59 | 0 | 3447d3a7f |  | lefford | 40 |
 | 2026-08-25T00:45:34Z | sluice:gate | 366.711 | 10361.278 | 357.276 | 29.23 | 0 | 10e7d1135 |  | lefford | 40 |
 | 2026-08-25T00:52:31Z | sluice:clients | 417.028 | 5192.015 | 69.550 | 12.62 | 0 | 1a6b4ddaa |  | lefford | 40 |
+| 2026-08-25T01:32:08Z | gate-commit | 92.292 | 486.918 | 64.461 | 5.97 | 0 | c33d0dedd | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T01:32:55Z | gate-commit | 19.737 | 48.560 | 12.226 | 3.08 | 0 | c33d0dedd | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T01:39:02Z | gate-commit | 52.481 | 116.003 | 64.473 | 3.44 | 0 | 97b8996ab | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T01:39:46Z | gate-commit | 19.911 | 48.586 | 12.228 | 3.05 | 0 | 97b8996ab | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T01:46:48Z | gate-commit | 67.527 | 123.465 | 60.914 | 2.73 | 0 | a15a97099 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T01:48:42Z | gate-commit | 29.098 | 51.298 | 12.562 | 2.19 | 0 | a15a97099 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T02:04:41Z | rebaseline | 68.719 | 237.594 | 11.541 | 3.63 | 0 | 4d17ffa27 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T02:06:36Z | gate-commit | 68.485 | 268.696 | 80.366 | 5.10 | 0 | 4d17ffa27 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T02:07:14Z | gate-commit | 19.148 | 48.105 | 12.054 | 3.14 | 0 | 4d17ffa27 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T02:24:48Z | rebaseline | 55.777 | 233.307 | 11.097 | 4.38 | 0 | cd0fef8ab | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T02:25:39Z | gate-commit | 43.158 | 84.056 | 65.765 | 3.47 | 0 | cd0fef8ab | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T02:26:51Z | gate-commit | 19.190 | 47.950 | 11.817 | 3.11 | 0 | cd0fef8ab | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T02:36:59Z | gate-commit | 45.146 | 110.551 | 60.425 | 3.79 | 0 | 0346e0acb | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T02:37:22Z | gate-commit | 19.185 | 47.882 | 11.485 | 3.09 | 0 | 0346e0acb | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T02:38:28Z | gate-commit | 19.217 | 47.953 | 11.830 | 3.11 | 0 | 0346e0acb | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T02:45:06Z | gate-commit | 46.791 | 86.739 | 70.205 | 3.35 | 0 | 5acb5c89d | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T02:45:36Z | gate-commit | 19.141 | 47.947 | 11.757 | 3.12 | 0 | 5acb5c89d | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T03:01:10Z | rebaseline | 56.540 | 234.104 | 11.906 | 4.35 | 0 | 5aa0439f7 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T03:01:49Z | gate-commit | 32.513 | 70.143 | 45.333 | 3.55 | 0 | 5aa0439f7 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T03:02:32Z | gate-commit | 19.141 | 47.930 | 11.893 | 3.13 | 0 | 5aa0439f7 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T03:21:34Z | rebaseline | 55.044 | 233.827 | 11.649 | 4.46 | 0 | 032b13392 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T03:22:10Z | gate-commit | 32.262 | 65.875 | 45.285 | 3.45 | 0 | 032b13392 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T03:22:48Z | gate-commit | 19.201 | 48.036 | 11.850 | 3.12 | 0 | 032b13392 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T03:32:02Z | gate-commit | 19.615 | 48.148 | 11.569 | 3.04 | 0 | 155a2ba99 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T03:32:48Z | gate-commit | 19.022 | 47.867 | 11.860 | 3.14 | 0 | 155a2ba99 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T03:41:43Z | rebaseline | 38.317 | 234.582 | 11.747 | 6.43 | 0 | edd00dd0b | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T03:57:48Z | vessel-check | 33.920 | 41.443 | 1.484 | 1.27 | 0 | eab2978b3 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T03:58:24Z | world-check | 35.923 | 44.191 | 1.513 | 1.27 | 0 | eab2978b3 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T04:04:25Z | game-check | 360.913 | 2160.162 | 21.920 | 6.05 | 0 | eab2978b3 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T04:37:38Z | rebaseline | 51.329 | 237.812 | 12.039 | 4.87 | 0 | b0e262bbd | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T04:38:52Z | gate-commit | 58.729 | 115.639 | 97.313 | 3.63 | 0 | b0e262bbd | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T04:40:57Z | gate-commit | 18.830 | 48.182 | 12.054 | 3.20 | 0 | b0e262bbd | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-25T04:46:48Z | gate-commit | 18.902 | 48.147 | 11.730 | 3.17 | 0 | 03ead4b4b | campaign/the-interlinear | MacBookPro | 10 |
 | 2026-08-25T01:36:34Z | rebaseline | 202.813 | 229.004 | 16.650 | 1.21 | 0 | ff23fd665 | campaign/the-tailrace | ambrose | 12 |
 | 2026-08-25T01:41:51Z | gate-commit | 303.578 | 751.623 | 112.358 | 2.85 | 0 | ff23fd665 | campaign/the-tailrace | ambrose | 12 |
 | 2026-08-25T01:43:14Z | gate-commit | 72.656 | 49.049 | 22.825 | 0.99 | 0 | ff23fd665 | campaign/the-tailrace | ambrose | 12 |
@@ -2932,3 +2965,9 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T14:35:37Z | sluice:outboard | 40.692 | 26.176 | 39.419 | 1.61 | 0 | 818e53fdf |  | lefford | 40 |
 | 2026-08-26T14:42:41Z | sluice:gate | 423.443 | 11678.935 | 449.493 | 28.64 | 0 | 8d1a4d84d |  | lefford | 40 |
 | 2026-08-26T14:50:24Z | sluice:clients | 463.528 | 5777.558 | 86.235 | 12.65 | 0 | bcf919ae5 |  | lefford | 40 |
+| 2026-08-26T15:01:21Z | rebaseline | 93.690 | 253.103 | 12.173 | 2.83 | 0 | 791fe78f0 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-26T15:08:28Z | gate-commit | 107.632 | 558.833 | 102.373 | 6.14 | 0 | 791fe78f0 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-26T15:28:19Z | gate-commit | 19.628 | 47.672 | 12.076 | 3.04 | 0 | 791fe78f0 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-26T15:29:07Z | vessel-check | 36.944 | 52.384 | 2.271 | 1.48 | 0 | f633df521 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-26T15:29:47Z | world-check | 40.057 | 56.437 | 2.293 | 1.47 | 0 | f633df521 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-26T15:36:26Z | game-check | 398.826 | 2393.211 | 27.098 | 6.07 | 0 | f633df521 | campaign/the-interlinear | MacBookPro | 10 |

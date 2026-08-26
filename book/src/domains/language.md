@@ -303,17 +303,51 @@ romanization states about one phoneme sequence, restated one level up about
 an entire told belief.
 
 The seam has since grown a second, more general storey: the **clause
-layer** (`clause.rs`), where a language-neutral `ClauseSpec` — frame,
-subject, complement, number, definiteness, a modifier tail — realizes into
+layer** (`clause.rs`), where a language-neutral `ClauseSpec` realizes into
 a Common sentence through a **construction inventory**: the grammar as
 data, an ordered list of surface parts one interpreter walks forward. The
 Self-Writing Book program builds on this layer ("Vebe is a planet with two
-moons…"), and since The Echo the same inventory runs **backward**: a
-parser binds the parts against a closed complement lexicon and
-reconstructs the `ClauseSpec` a sentence came from, under the standing
-round-trip law `parse(realize(spec)) == spec`. One committed grammar, two
-directions — production and comprehension cannot drift apart, because
-they are the same data read opposite ways. And since The Tongues, the
+moons…").
+
+Since The Interlinear the spec is **fact-shaped**, and the shape is the
+claim: an utterance *is* a fact.
+
+| | Who | What relation | To what | Circumstances |
+|---|---|---|---|---|
+| `Fact` | subject | predicate | object | place / day, provenance |
+| `ClauseSpec` | subject | predicate | object | adjuncts, speaker features |
+
+A clause therefore names its predicate — `is-a`, the kernel's own
+constant, the same string a committed fact carries — rather than hiding
+one relation inside a `Frame` enum, and the construction inventory is
+keyed by that predicate. Its **adjuncts** bind further registered
+predicates to arguments (`moon-count` to a count, `star-class` to a
+concept id), replacing a `modifiers: Vec<String>` of pre-rendered English.
+The difference is what a language may decide: how a role surfaces, and
+whether it surfaces inline ("with two moons") or as a trailing clause
+("its day lasts about 1.5 standard days"), is now the realizer's
+business. Before, the caller composed the phrase — which is why
+`windows/book`, a *window*, had to know English article selection.
+
+Since The Echo the same inventory also runs **backward**: a parser binds
+the parts against a closed complement lexicon and reconstructs the clause
+a sentence came from. One committed grammar, two directions — production
+and comprehension cannot drift apart, because they are the same data read
+opposite ways.
+
+**The round-trip law is narrower than it was, and deliberately so.** It
+once read `parse(realize(spec)) == spec` outright. The Interlinear
+narrowed it to the clause *skeleton*: `parse_common` recovers subject,
+predicate, object, number and definiteness exactly, and returns **no
+adjuncts at all**. Common realizes a role's surface but does not yet
+recognize one, so the tail comes back — through a separate entry point —
+as the text it was rendered to, never as structure. That asymmetry is
+recorded as a **loss, not a product**: a caller asking for a clause is
+handed a clause, and the one caller that still owns an English recognizer
+has to say so at the call site. Teaching Common to recognize its own role
+constructions is a later campaign's subject, because recognition is where
+controlled languages historically rot and it deserves a corpus to be
+measured against first. And since The Tongues, the
 clause layer speaks in more than Common: each tongue draws a surface
 grammar of its own (`grammar.rs` — constituent order and copula presence
 on permanent per-species streams, weighted by real cross-linguistic

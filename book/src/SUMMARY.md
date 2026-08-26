@@ -406,6 +406,7 @@
 - [The Forebay](./chronicle/the-forebay.md)
 - [The Lexicon of Place](./chronicle/the-lexicon-of-place.md)
 - [The Word](./chronicle/the-word.md)
+- [The Interlinear](./chronicle/the-interlinear.md)
 - [The Confidant](./chronicle/the-confidant.md)
 - [The Tailrace](./chronicle/the-tailrace.md)
 

@@ -62,6 +62,12 @@ editing:
   calibration* ("how many named units a satisfying space carries"),
   explicitly not coverage audit: same 0095 discipline, different job,
   different output type.
+- `sentences/` — the third sibling, founded by The Interlinear: frozen,
+  provenance-stamped corpora of dialogue for `domains/language`, measuring
+  whether today's grammar can produce or parse a demand a real utterance
+  makes. Same data/code split as `tropes/`/`systems/` (decision 0011) — the
+  corpus is data, the resolver lives in `domains/language` and its tests —
+  and the same freeze-before-measurement discipline (decision 0016).
 - `docs/` and `book/src/frontier/` — the knowledge-architecture discipline.
 
 `make doctor` prints the live self-map — layering, gate targets, artifact

@@ -223,3 +223,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0259](0259-conceptual-deficiency-is-derived-not-authored.md) | Conceptual deficiency is derived from authored psychology, never authored per people | Accepted |
 | [0260](0260-a-seed-invariant-derivation-is-a-window.md) | A seed-invariant derivation is a window, not a census metric | Accepted |
 | [0261](0261-a-rule-duplicated-on-purpose-carries-a-two-way-agreement-test.md) | A rule duplicated on purpose carries a pointer in both copies and a two-way agreement test | Accepted |
+| [0266](0266-an-utterance-is-a-fact.md) | An utterance is a fact, an event is an entity, and roles are predicates on that entity | Accepted |

@@ -12,13 +12,8 @@
 #![allow(clippy::module_name_repetitions)]
 
 use crate::common_vocab::CommonVocabulary;
+use hornvale_kernel::world::IS_A;
 
-/// The construction a clause realizes. C1 has one: classification (`isA`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Frame {
-    /// X is a Y.
-    Classify,
-}
 /// Grammatical number of the subject.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Number {
@@ -47,28 +42,69 @@ pub enum Subject {
     Pronoun(&'static str),
 }
 
+/// What an adjunct's role is bound to. Deliberately small: these are the
+/// argument shapes the ledger's own `Value` already carries, minus the ones
+/// no construction needs yet. A new variant is added when a role needs it,
+/// never speculatively.
+/// type-audit: bare-ok(identifier-text: Concept.0), bare-ok(prose: Name.0), bare-ok(count: Count.0), bare-ok(diagnostic-value: Quantity.0)
+#[derive(Clone, Debug, PartialEq)]
+pub enum Argument {
+    /// A concept id, resolved through the realizing language's vocabulary.
+    Concept(String),
+    /// An already-resolved proper name, passed through unresolved.
+    Name(String),
+    /// A whole count, rendered as the language's cardinal.
+    Count(u64),
+    /// A continuous quantity, rendered at the language's grain.
+    Quantity(f64),
+}
+
+/// One role binding on a clause: a **registered predicate** bound to an
+/// argument. How it surfaces — a preposition, a case affix, a trailing
+/// clause, or nothing at all — is the realizing language's business, not the
+/// caller's. This is what replaced `modifiers: Vec<String>`, whose English
+/// could not cross a language boundary.
+/// type-audit: bare-ok(identifier-text: role)
+#[derive(Clone, Debug, PartialEq)]
+pub struct Adjunct {
+    /// The role's predicate id, e.g. `"moon-count"`, `"occ-site"`.
+    pub role: String,
+    /// What the role is bound to.
+    pub argument: Argument,
+}
+
 /// A language-neutral clause: predicate-argument structure plus features.
 /// The per-language realizer decides how (and whether) each feature surfaces.
-/// type-audit: bare-ok(identifier-text: complement_concept), bare-ok(prose: modifiers)
-#[derive(Clone, Debug, PartialEq, Eq)]
+///
+/// **Fact-shaped, deliberately.** A `Fact` is subject/predicate/object plus
+/// its circumstances; a clause is the same shape plus the speaker's
+/// features, because an utterance IS a fact. Before The Interlinear this
+/// struct had a `frame: Frame` enum standing in for one relation and a
+/// `modifiers: Vec<String>` of pre-rendered English, neither of which could
+/// cross a language boundary.
+/// type-audit: bare-ok(identifier-text: predicate)
+#[derive(Clone, Debug, PartialEq)]
 pub struct ClauseSpec {
-    /// The construction.
-    pub frame: Frame,
+    /// The relation this clause asserts, as a concept id — `"is-a"` for a
+    /// classification. The same string a `Fact` would carry, which is the
+    /// point: an utterance is a fact, so the clause names its predicate
+    /// instead of hiding one relation inside an enum variant.
+    /// type-audit: bare-ok(identifier-text: predicate)
+    pub predicate: String,
     /// The subject: a resolved name, or a pronoun for re-mention.
     pub subject: Subject,
-    /// The complement **concept id**, resolved through the
-    /// [`CommonVocabulary`] at realization (never a word the caller chose).
-    pub complement_concept: String,
+    /// What the predicate relates the subject to.
+    pub object: Argument,
     /// Subject number.
     pub number: Number,
     /// Complement definiteness.
     pub definiteness: Definiteness,
-    /// Additional modifier phrases appended after the complement head, in
-    /// order (e.g. `"with two moons"`, `"orbiting a yellow-white dwarf"`).
-    /// The first attaches with a space, later ones join with `", "`; any
-    /// leading `with`/`orbiting` wording lives in the modifier string
-    /// itself — this layer only joins.
-    pub modifiers: Vec<String>,
+    /// Role bindings on this clause. How each surfaces — and whether it
+    /// surfaces inline or trailing — is the realizing language's business.
+    /// Replaced `modifiers: Vec<String>`, whose pre-rendered English could not
+    /// cross a language boundary and had already leaked article selection into
+    /// `windows/book`.
+    pub adjuncts: Vec<Adjunct>,
 }
 
 /// The complement's surface form: the concept's Common word, pluralized for
@@ -105,26 +141,36 @@ pub enum Part {
     Determiner,
     /// The complement lexeme.
     Complement,
-    /// The modifier tail: first joins with `' '`, later with `", "`.
+    /// The adjunct tail: inline adjuncts first (a `' '` before the first,
+    /// `", "` between the rest), then each trailing adjunct after `"; "`.
     ModifierTail,
     /// A fixed literal (spacing, terminal punctuation).
     Literal(&'static str),
 }
 
-/// A form↔meaning pairing: one clause frame's surface as an ordered part
+/// A form↔meaning pairing: one predicate's surface as an ordered part
 /// list. The same entry realizes forward and parses backward — a future
-/// frame is added HERE, and is bidirectional by construction.
+/// predicate is added HERE, and is bidirectional by construction.
 /// type-audit: bare-ok(identifier-text)
 #[derive(Clone, Copy, Debug)]
 pub struct Construction {
-    /// The frame this entry realizes/recognizes.
-    pub frame: Frame,
+    /// The predicate id this entry realizes/recognizes, e.g. `"is-a"`.
+    pub predicate: &'static str,
     /// The ordered surface parts.
     pub parts: &'static [Part],
 }
 
-/// The Common construction inventory. One entry today (`Classify`); every
-/// future frame adds an entry, never a second code path.
+/// The Common construction inventory, keyed by **predicate id**. One entry
+/// today ([`hornvale_kernel::world::IS_A`], the classification); every future
+/// predicate adds an entry, never a second code path.
+///
+/// **The key is the kernel's constant, not a local literal**, and that is
+/// load-bearing rather than tidy. `Frame::Classify` made this lookup
+/// statically total: an unhandled variant was a compile error. A string key
+/// moves that check to runtime ([`realize_common`] panics on a miss), so the
+/// only thing left holding the two ends together is that the producer and
+/// this table name the same constant. A kernel epoch bump of `IS_A` must
+/// break the render, not recompile cleanly and panic on every gallery page.
 /// type-audit: bare-ok(identifier-text)
 pub fn common_constructions() -> &'static [Construction] {
     const CLASSIFY: &[Part] = &[
@@ -138,13 +184,13 @@ pub fn common_constructions() -> &'static [Construction] {
         Part::Literal("."),
     ];
     &[Construction {
-        frame: Frame::Classify,
+        predicate: IS_A,
         parts: CLASSIFY,
     }]
 }
 
 /// Realize a ClauseSpec as a Common (≈ limited English) sentence, resolving
-/// `spec.complement_concept` through `vocab`.
+/// `spec.object` through `vocab` when it names a concept.
 ///
 /// **Infallible, and deliberately so.** Common is the author's register, not
 /// a people's tongue: [`CommonVocabulary::word_for`] is total, so there is no
@@ -152,16 +198,36 @@ pub fn common_constructions() -> &'static [Construction] {
 /// the world (this people has no word for the sea) rather than an authoring
 /// hole, because only the tongue path can gap at all.
 ///
+/// Every [`Argument`] variant has an answer in the object slot — a
+/// `Concept` resolves through the vocabulary (pluralized by `number`), a
+/// `Name` passes through verbatim, and a `Count`/`Quantity` renders through
+/// [`cardinal`]/[`quantity`]. None panics: a clause whose object is a
+/// quantity is a sentence we cannot say *yet*, not a crash.
+///
 /// The article is chosen from the **resolved word**, not the id — so `an`
 /// still fires for `elemental`, and now also for a declared multi-word
 /// display.
+///
+/// Panics only if `spec.predicate` names no construction — the one thing a
+/// caller must get right, and the same shape the `Frame` lookup had before
+/// The Interlinear made the key a string.
 /// type-audit: bare-ok(prose)
 pub fn realize_common(spec: &ClauseSpec, vocab: &CommonVocabulary) -> String {
     let construction = common_constructions()
         .iter()
-        .find(|c| c.frame == spec.frame)
-        .expect("every Frame has a construction");
-    let complement = surface_complement(vocab, &spec.complement_concept, spec.number);
+        .find(|c| c.predicate == spec.predicate)
+        .unwrap_or_else(|| {
+            panic!(
+                "Common has no construction for predicate {:?}",
+                spec.predicate
+            )
+        });
+    let complement = match &spec.object {
+        Argument::Concept(id) => surface_complement(vocab, id, spec.number),
+        Argument::Name(text) => text.clone(),
+        Argument::Count(n) => cardinal(*n),
+        Argument::Quantity(x) => quantity(*x),
+    };
     let mut out = String::new();
     for part in construction.parts {
         match part {
@@ -183,9 +249,22 @@ pub fn realize_common(spec: &ClauseSpec, vocab: &CommonVocabulary) -> String {
             },
             Part::Complement => out.push_str(&complement),
             Part::ModifierTail => {
-                for (i, modifier) in spec.modifiers.iter().enumerate() {
+                let mut inline: Vec<String> = Vec::new();
+                let mut trailing: Vec<String> = Vec::new();
+                for adjunct in &spec.adjuncts {
+                    match common_role_surface(adjunct, vocab) {
+                        Some((AdjunctPosition::Inline, text)) => inline.push(text),
+                        Some((AdjunctPosition::Trailing, text)) => trailing.push(text),
+                        None => {}
+                    }
+                }
+                for (i, text) in inline.iter().enumerate() {
                     out.push_str(if i == 0 { " " } else { ", " });
-                    out.push_str(modifier);
+                    out.push_str(text);
+                }
+                for text in &trailing {
+                    out.push_str("; ");
+                    out.push_str(text);
                 }
             }
             Part::Literal(text) => out.push_str(text),
@@ -219,6 +298,94 @@ pub fn cardinal(n: u64) -> String {
 pub fn quantity(x: f64) -> String {
     let truncated = (x * 10.0).trunc() / 10.0;
     format!("about {truncated:.1}")
+}
+
+/// Where a realized adjunct attaches. A language decides this, not a caller:
+/// Common puts a day-length in a trailing clause and a moon-count inline, and
+/// another tongue may do the opposite.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AdjunctPosition {
+    /// Inside the clause, after the complement.
+    Inline,
+    /// After the clause, semicolon-joined.
+    Trailing,
+}
+
+/// Common's role constructions: how each registered role surfaces in the
+/// author's register. `None` means Common has no construction for this role
+/// yet — the adjunct renders as nothing rather than leaking its key into
+/// prose, which is the same discipline `CommonVocabulary::word_for` follows.
+///
+/// **The first three moved here from `windows/book`'s `fragment_for`.** They
+/// lived in a window because `ClauseSpec` could not carry structure, which is
+/// also why that window had to duplicate `indefinite_article`. A role's
+/// surface is a fact about a language and belongs to the language.
+///
+/// **The four `occ-*` roles are the deep-history occupation predicates**
+/// (`domains/history`'s `OCC_PEOPLE`/`OCC_SITE`/`OCC_FOUNDED`/`OCC_ENDED`),
+/// and they are spelled as LITERALS here for the same reason the astronomy
+/// roles above are: this crate is a domain, and a domain may not depend on a
+/// sibling domain, so the constants are out of reach. Contrast
+/// [`common_constructions`], whose one key IS the kernel's `IS_A` constant —
+/// the kernel is not a sibling. The pairing is therefore held by these
+/// strings agreeing with `domains/history`'s, and by the acceptance test that
+/// realizes a real occupation through them
+/// (`windows/almanac/tests/suite/interlinear.rs`, which reads the ids off
+/// the constants).
+///
+/// Position is chosen per role, which is the whole point of the return type:
+/// the people, the site and the founding are all part of the noun phrase
+/// being described, so they surface inline; the ending is a separate event
+/// and gets its own trailing clause, exactly as `day-length-std` does.
+/// A vertex renders as a bare integer rather than through [`cardinal`]
+/// because it is an IDENTIFIER, not a count — a year is a count of years and
+/// does go through `cardinal`.
+/// type-audit: bare-ok(prose: return)
+pub fn common_role_surface(
+    adjunct: &Adjunct,
+    vocab: &CommonVocabulary,
+) -> Option<(AdjunctPosition, String)> {
+    match (adjunct.role.as_str(), &adjunct.argument) {
+        ("moon-count", Argument::Count(n)) => Some((
+            AdjunctPosition::Inline,
+            format!(
+                "with {} moon{}",
+                cardinal(*n),
+                if *n == 1 { "" } else { "s" }
+            ),
+        )),
+        ("star-class", Argument::Concept(id)) => {
+            let display = vocab.word_for(id);
+            Some((
+                AdjunctPosition::Inline,
+                format!("orbiting {} {display}", indefinite_article(&display)),
+            ))
+        }
+        ("day-length-std", Argument::Quantity(days)) => Some((
+            AdjunctPosition::Trailing,
+            format!("its day lasts {} standard days", quantity(*days)),
+        )),
+        // The plural goes through `surface_complement`, so Common has exactly
+        // one pluralization rule and this role cannot drift from the
+        // complement slot's.
+        ("occ-people", Argument::Concept(id)) => Some((
+            AdjunctPosition::Inline,
+            format!("of the {}", surface_complement(vocab, id, Number::Pl)),
+        )),
+        ("occ-site", Argument::Count(vertex)) => Some((
+            AdjunctPosition::Inline,
+            format!("in the clearing at vertex {vertex}"),
+        )),
+        ("occ-founded", Argument::Count(year)) => Some((
+            AdjunctPosition::Inline,
+            format!("founded in year {}", cardinal(*year)),
+        )),
+        ("occ-ended", Argument::Count(year)) => Some((
+            AdjunctPosition::Trailing,
+            format!("it ended in year {}", cardinal(*year)),
+        )),
+        _ => None,
+    }
 }
 
 /// The closed complement set a parse call recognizes — **concept ids**, plus
@@ -284,13 +451,43 @@ impl std::error::Error for ParseError {}
 /// today's vocabulary (single words and hyphenated compounds) satisfies
 /// this.
 ///
-/// Returns a spec whose `complement_concept` is the **concept id**, recovered
-/// by matching the text against each candidate id's realized surface (its
-/// Common word, pluralized for a plural clause) — the exact inverse of
-/// [`realize_common`], which is why `parse_common(realize_common(s)) == s`
-/// still holds now that the realizer resolves rather than echoes.
+/// Returns a spec whose `object` is `Argument::Concept(<the concept id>)`,
+/// recovered by matching the text against each candidate id's realized
+/// surface (its Common word, pluralized for a plural clause) — the exact
+/// inverse of [`realize_common`]'s complement slot, now that the realizer
+/// resolves rather than echoes.
+///
+/// **The adjunct tail is not recovered: the returned `adjuncts` is always
+/// empty.** Common recognizes the clause skeleton, not its role
+/// constructions — spec §6 of The Interlinear freezes parsing coverage
+/// where it was, and recognizing a role's surface is its own campaign. A
+/// caller that still needs the tail's TEXT (today: `windows/book`, which
+/// owns an English recognizer of its own) takes it from
+/// [`parse_common_with_tail`], which is the same walk with the tail
+/// returned instead of dropped.
 /// type-audit: bare-ok(prose)
 pub fn parse_common(text: &str, ctx: &ParseContext) -> Result<ClauseSpec, ParseError> {
+    parse_common_with_tail(text, ctx).map(|(spec, _)| spec)
+}
+
+/// [`parse_common`], plus the raw adjunct tail it does not structure: the
+/// `", "`-separated phrases that followed the complement, verbatim.
+///
+/// Two functions rather than one because the tail is a **loss**, not a
+/// product: a caller that asks for a `ClauseSpec` should not be handed
+/// English it then has to recognize, and the one caller that does own a
+/// recognizer should have to say so at the call site.
+///
+/// **Deletion condition, named rather than left in prose alone:** this
+/// function and its caller's recognizer (`windows/book::fact_for`) are a
+/// matched pair that goes away together, when Common learns to recognize
+/// its own role constructions instead of only its clause skeleton — see the
+/// idea-registry row `LANG-recognition-seam`.
+/// type-audit: bare-ok(prose: text), bare-ok(prose: return)
+pub fn parse_common_with_tail(
+    text: &str,
+    ctx: &ParseContext,
+) -> Result<(ClauseSpec, Vec<String>), ParseError> {
     // Terminal literal first.
     let body = text.strip_suffix('.').ok_or(ParseError::Unterminated)?;
     // Subject | Copula: split at the earliest " is " / " are ".
@@ -340,28 +537,44 @@ pub fn parse_common(text: &str, ctx: &ParseContext) -> Result<ClauseSpec, ParseE
         .ok_or_else(|| ParseError::UnknownComplement {
             after: after_det.to_string(),
         })?;
-    // Modifier tail: '' or ' m1' or ' m1, m2, …'. The complement filter
+    // Adjunct tail: '' or ' m1' or ' m1, m2, …'. The complement filter
     // above only admits candidates whose remainder is empty or starts
     // with ' ', so by construction `tail` is one of exactly those two
     // shapes — no third case exists to report.
     let tail = &after_det[surface.len()..];
-    let modifiers: Vec<String> = match tail.strip_prefix(' ') {
+    let tail_text: Vec<String> = match tail.strip_prefix(' ') {
         Some(t) => t.split(", ").map(str::to_string).collect(),
         None => Vec::new(),
     };
-    Ok(ClauseSpec {
-        frame: Frame::Classify,
-        subject,
-        complement_concept,
-        number,
-        definiteness,
-        modifiers,
-    })
+    Ok((
+        ClauseSpec {
+            // The kernel's constant, matching the construction this walk
+            // inverted — never a literal, so the two ends cannot drift.
+            predicate: IS_A.to_string(),
+            subject,
+            object: Argument::Concept(complement_concept),
+            number,
+            definiteness,
+            adjuncts: Vec::new(),
+        },
+        tail_text,
+    ))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// An adjunct binds a registered predicate (its role) to an argument.
+    #[test]
+    fn an_adjunct_binds_a_registered_predicate_to_an_argument() {
+        let a = Adjunct {
+            role: "moon-count".to_string(),
+            argument: Argument::Count(2),
+        };
+        assert_eq!(a.role, "moon-count");
+        assert_eq!(a.argument, Argument::Count(2));
+    }
 
     /// Common resolves its complement through the vocabulary, exactly as the
     /// tongue path resolves through a lexicon. Symmetry is the point: before
@@ -372,12 +585,12 @@ mod tests {
         let mut vocab = CommonVocabulary::default();
         vocab.declare("yellow-white-dwarf", "yellow-white dwarf (F)");
         let spec = ClauseSpec {
-            frame: Frame::Classify,
+            predicate: "is-a".to_string(),
             subject: Subject::Name("Elthandil".to_string()),
-            complement_concept: "yellow-white-dwarf".to_string(),
+            object: Argument::Concept("yellow-white-dwarf".to_string()),
             number: Number::Sg,
             definiteness: Definiteness::Indef,
-            modifiers: vec![],
+            adjuncts: vec![],
         };
         assert_eq!(
             realize_common(&spec, &vocab),
@@ -391,12 +604,12 @@ mod tests {
     fn a_key_never_reaches_prose_as_a_key() {
         let vocab = CommonVocabulary::default();
         let spec = ClauseSpec {
-            frame: Frame::Classify,
+            predicate: "is-a".to_string(),
             subject: Subject::Name("X".to_string()),
-            complement_concept: "celestial-body".to_string(),
+            object: Argument::Concept("celestial-body".to_string()),
             number: Number::Sg,
             definiteness: Definiteness::Indef,
-            modifiers: vec![],
+            adjuncts: vec![],
         };
         let line = realize_common(&spec, &vocab);
         assert_eq!(line, "X is a celestial body.");
@@ -409,12 +622,12 @@ mod tests {
     #[test]
     fn classify_singular_indefinite() {
         let s = ClauseSpec {
-            frame: Frame::Classify,
+            predicate: "is-a".into(),
             subject: Subject::Name("Elthandil".into()),
-            complement_concept: "planet".into(),
+            object: Argument::Concept("planet".into()),
             number: Number::Sg,
             definiteness: Definiteness::Indef,
-            modifiers: vec![],
+            adjuncts: vec![],
         };
         assert_eq!(
             realize_common(&s, &CommonVocabulary::default()),
@@ -424,12 +637,12 @@ mod tests {
     #[test]
     fn a_becomes_an_before_vowel() {
         let s = ClauseSpec {
-            frame: Frame::Classify,
+            predicate: "is-a".into(),
             subject: Subject::Name("Aoth".into()),
-            complement_concept: "elemental".into(),
+            object: Argument::Concept("elemental".into()),
             number: Number::Sg,
             definiteness: Definiteness::Indef,
-            modifiers: vec![],
+            adjuncts: vec![],
         };
         assert_eq!(
             realize_common(&s, &CommonVocabulary::default()),
@@ -442,12 +655,12 @@ mod tests {
     #[test]
     fn classify_generic_plural() {
         let s = ClauseSpec {
-            frame: Frame::Classify,
+            predicate: "is-a".into(),
             subject: Subject::Name("The Vavako".into()),
-            complement_concept: "goblin-kind".into(),
+            object: Argument::Concept("goblin-kind".into()),
             number: Number::Pl,
             definiteness: Definiteness::Indef,
-            modifiers: vec![],
+            adjuncts: vec![],
         };
         assert_eq!(
             realize_common(&s, &CommonVocabulary::default()),
@@ -455,21 +668,33 @@ mod tests {
         );
     }
 
+    /// The adjunct tail's surface, unchanged from the pre-Interlinear
+    /// `modifiers` join: a space before the first inline adjunct, `", "`
+    /// between the rest. The caller now states the ROLES; the realizer
+    /// renders them.
     #[test]
     fn classify_with_modifier_tail() {
+        let mut vocab = CommonVocabulary::default();
+        vocab.declare("yellow-white-dwarf", "yellow-white dwarf");
         let s = ClauseSpec {
-            frame: Frame::Classify,
+            predicate: "is-a".into(),
             subject: Subject::Name("Vebe".into()),
-            complement_concept: "planet".into(),
+            object: Argument::Concept("planet".into()),
             number: Number::Sg,
             definiteness: Definiteness::Indef,
-            modifiers: vec![
-                "with two moons".into(),
-                "orbiting a yellow-white dwarf".into(),
+            adjuncts: vec![
+                Adjunct {
+                    role: "moon-count".into(),
+                    argument: Argument::Count(2),
+                },
+                Adjunct {
+                    role: "star-class".into(),
+                    argument: Argument::Concept("yellow-white-dwarf".into()),
+                },
             ],
         };
         assert_eq!(
-            realize_common(&s, &CommonVocabulary::default()),
+            realize_common(&s, &vocab),
             "Vebe is a planet with two moons, orbiting a yellow-white dwarf."
         );
     }
@@ -488,7 +713,11 @@ mod tests {
     fn classify_has_one_declared_construction() {
         let inv = common_constructions();
         assert_eq!(inv.len(), 1);
-        assert_eq!(inv[0].frame, Frame::Classify);
+        // Against the KERNEL's constant, not the literal it happens to
+        // equal: the table's key and every producer's key are the same
+        // `const` by construction, which is what replaced the static
+        // totality `Frame::Classify` used to give this lookup.
+        assert_eq!(inv[0].predicate, hornvale_kernel::world::IS_A);
         assert_eq!(
             inv[0].parts,
             &[
@@ -515,17 +744,21 @@ mod tests {
 
     #[test]
     fn parse_inverts_the_c2_target_sentence() {
-        let spec = parse_common(
+        let (spec, tail) = parse_common_with_tail(
             "Vebe is a planet with two moons, orbiting a yellow-white dwarf.",
             &ctx(&["planet"]),
         )
         .unwrap();
         assert_eq!(spec.subject, Subject::Name("Vebe".into()));
-        assert_eq!(spec.complement_concept, "planet");
+        assert_eq!(spec.predicate, "is-a");
+        assert_eq!(spec.object, Argument::Concept("planet".into()));
         assert_eq!(spec.number, Number::Sg);
         assert_eq!(spec.definiteness, Definiteness::Indef);
+        // The tail comes back as TEXT, and `adjuncts` stays empty: Common
+        // recognizes the clause skeleton, not its role constructions.
+        assert_eq!(spec.adjuncts, Vec::<Adjunct>::new());
         assert_eq!(
-            spec.modifiers,
+            tail,
             vec![
                 "with two moons".to_string(),
                 "orbiting a yellow-white dwarf".to_string()
@@ -539,12 +772,13 @@ mod tests {
     /// caller stripping a trailing letter.
     #[test]
     fn parse_inverts_the_plural_generic() {
-        let spec = parse_common("The Vavako are goblins.", &ctx(&["goblin"])).unwrap();
+        let (spec, tail) =
+            parse_common_with_tail("The Vavako are goblins.", &ctx(&["goblin"])).unwrap();
         assert_eq!(spec.subject, Subject::Name("The Vavako".into()));
-        assert_eq!(spec.complement_concept, "goblin");
+        assert_eq!(spec.object, Argument::Concept("goblin".into()));
         assert_eq!(spec.number, Number::Pl);
         assert_eq!(spec.definiteness, Definiteness::Indef);
-        assert_eq!(spec.modifiers, Vec::<String>::new());
+        assert_eq!(tail, Vec::<String>::new());
     }
 
     #[test]
@@ -585,7 +819,11 @@ mod tests {
         );
     }
 
-    // --- The round-trip property: parse_common(realize_common(s), ctx_from(s)) == Ok(s) ---
+    // --- The round-trip property: parse_common(realize_common(s), ctx_from(s))
+    // recovers the clause SKELETON, and parse_common_with_tail recovers each
+    // adjunct's realized SURFACE. The adjuncts themselves are not recognized
+    // (spec §6 freezes parsing coverage), so the equality is stated against a
+    // spec with its adjuncts cleared — the loss is pinned, not papered over.
 
     /// Classify a subject into the coverage axis the property test tracks.
     fn subject_kind(s: &Subject) -> &'static str {
@@ -633,9 +871,12 @@ mod tests {
     /// (must NOT match at all: the boundary check requires the character
     /// after a matched prefix to be a space).
     fn ctx_from(spec: &ClauseSpec) -> ParseContext {
+        let Argument::Concept(concept) = &spec.object else {
+            panic!("the round-trip property only enumerates concept objects");
+        };
         let mut vocabulary = CommonVocabulary::default();
         let mut complements = std::collections::BTreeSet::new();
-        complements.insert(spec.complement_concept.clone());
+        complements.insert(concept.clone());
         // Stock decoys: other legal concepts from the closed vocabulary,
         // always present as noise the true complement must outrank.
         for stock in [
@@ -648,7 +889,7 @@ mod tests {
         ] {
             complements.insert(stock.to_string());
         }
-        let word = vocabulary.word_for(&spec.complement_concept);
+        let word = vocabulary.word_for(concept);
         // Prefix-of-longer probe: a single-word concept whose id is its own
         // word, matching the first word of a multi-word surface.
         if let Some((first, _)) = word.split_once(' ') {
@@ -673,7 +914,7 @@ mod tests {
     fn round_trip_over_the_closed_value_space() {
         // Full-factorial enumeration, NOT a Stream draw: the value space
         // here is small and genuinely closed (5 subjects x 5 complements x
-        // 2 numbers x 2 definitenesses x 4 modifier-counts = 400 cases), so
+        // 2 numbers x 2 definitenesses x 4 adjunct-counts = 400 cases), so
         // exhaustive enumeration GUARANTEES every combo fires at least
         // once. A drawn sample only gives that probabilistically — and the
         // Concordance campaign shipped a property test whose random
@@ -697,10 +938,23 @@ mod tests {
             "yellow-white-dwarf", // -> "yellow white dwarf", multi-word
             "ancient-artifact",   // -> "ancient artifact", multi-word AND vowel-initial
         ];
-        let modifier_pool = [
-            "with two moons",
-            "orbiting a yellow-white dwarf",
-            "beneath ancient stars",
+        // Real ROLES now, not pre-rendered English: the realizer chooses each
+        // surface, so the property exercises the role table too. All three are
+        // INLINE constructions, keeping the tail a `", "`-joined list the
+        // parser's own split can invert.
+        let adjunct_pool = [
+            Adjunct {
+                role: "moon-count".to_string(),
+                argument: Argument::Count(2),
+            },
+            Adjunct {
+                role: "star-class".to_string(),
+                argument: Argument::Concept("yellow-white-dwarf".to_string()),
+            },
+            Adjunct {
+                role: "moon-count".to_string(),
+                argument: Argument::Count(1),
+            },
         ];
 
         let mut covered: std::collections::BTreeSet<(
@@ -716,32 +970,42 @@ mod tests {
             for complement in complements {
                 for number in [Number::Sg, Number::Pl] {
                     for definiteness in [Definiteness::Indef, Definiteness::Def] {
-                        for modifier_count in 0..=3usize {
-                            let modifiers: Vec<String> = modifier_pool[..modifier_count]
-                                .iter()
-                                .map(|m| (*m).to_string())
-                                .collect();
+                        for adjunct_count in 0..=3usize {
+                            let adjuncts: Vec<Adjunct> = adjunct_pool[..adjunct_count].to_vec();
                             let spec = ClauseSpec {
-                                frame: Frame::Classify,
+                                predicate: "is-a".to_string(),
                                 subject: subject.clone(),
-                                complement_concept: complement.to_string(),
+                                object: Argument::Concept(complement.to_string()),
                                 number,
                                 definiteness,
-                                modifiers,
+                                adjuncts,
                             };
                             let ctx = ctx_from(&spec);
                             let text = realize_common(&spec, &ctx.vocabulary);
+                            let expected_tail: Vec<String> = spec
+                                .adjuncts
+                                .iter()
+                                .map(|a| {
+                                    common_role_surface(a, &ctx.vocabulary)
+                                        .expect("every pooled role has a Common construction")
+                                        .1
+                                })
+                                .collect();
+                            let skeleton = ClauseSpec {
+                                adjuncts: Vec::new(),
+                                ..spec.clone()
+                            };
                             assert_eq!(
-                                parse_common(&text, &ctx),
-                                Ok(spec.clone()),
+                                parse_common_with_tail(&text, &ctx),
+                                Ok((skeleton, expected_tail)),
                                 "round-trip failed for {text:?}"
                             );
                             covered.insert((
                                 subject_kind(&spec.subject),
-                                complement_kind(&ctx.vocabulary.word_for(&spec.complement_concept)),
+                                complement_kind(&ctx.vocabulary.word_for(complement)),
                                 number_str(spec.number),
                                 definiteness_str(spec.definiteness),
-                                modifier_count,
+                                adjunct_count,
                             ));
                             cases += 1;
                         }
@@ -754,9 +1018,9 @@ mod tests {
 
         // The generator's value-space coverage IS the test's strength (the
         // Concordance lesson): assert every (subject-kind x complement-kind
-        // x number x definiteness x modifier-count) combo was actually
+        // x number x definiteness x adjunct-count) combo was actually
         // emitted, not merely that the loop ran. 3 subject kinds x 3
-        // complement kinds x 2 numbers x 2 definitenesses x 4 modifier
+        // complement kinds x 2 numbers x 2 definitenesses x 4 adjunct
         // counts.
         let expected_combos = 3 * 3 * 2 * 2 * 4;
         assert_eq!(
@@ -764,5 +1028,175 @@ mod tests {
             expected_combos,
             "generator did not cover every combo: {covered:?}"
         );
+    }
+
+    #[test]
+    fn common_renders_a_moon_count_exactly_as_the_book_did() {
+        let v = CommonVocabulary::default();
+        let one = Adjunct {
+            role: "moon-count".into(),
+            argument: Argument::Count(1),
+        };
+        let two = Adjunct {
+            role: "moon-count".into(),
+            argument: Argument::Count(2),
+        };
+        assert_eq!(
+            common_role_surface(&one, &v),
+            Some((AdjunctPosition::Inline, "with one moon".to_string()))
+        );
+        assert_eq!(
+            common_role_surface(&two, &v),
+            Some((AdjunctPosition::Inline, "with two moons".to_string()))
+        );
+    }
+
+    #[test]
+    fn common_renders_a_star_class_through_the_vocabulary_with_its_article() {
+        let mut v = CommonVocabulary::default();
+        v.declare("yellow-white-dwarf", "yellow-white dwarf");
+        let a = Adjunct {
+            role: "star-class".into(),
+            argument: Argument::Concept("yellow-white-dwarf".into()),
+        };
+        assert_eq!(
+            common_role_surface(&a, &v),
+            Some((
+                AdjunctPosition::Inline,
+                "orbiting a yellow-white dwarf".to_string()
+            ))
+        );
+    }
+
+    #[test]
+    fn a_day_length_is_trailing_not_inline() {
+        let v = CommonVocabulary::default();
+        let a = Adjunct {
+            role: "day-length-std".into(),
+            argument: Argument::Quantity(1.5),
+        };
+        assert_eq!(
+            common_role_surface(&a, &v),
+            Some((
+                AdjunctPosition::Trailing,
+                "its day lasts about 1.5 standard days".to_string()
+            ))
+        );
+    }
+
+    /// The byte-identity contract: the adjunct path must reproduce, to the
+    /// byte, what `windows/book`'s pre-rendered `modifiers` tail produced —
+    /// the `", "` join between inline adjuncts and the `"; "` join before a
+    /// trailing one, terminal `'.'` last.
+    #[test]
+    fn adjuncts_reproduce_the_modifier_tail_byte_for_byte() {
+        let mut v = CommonVocabulary::default();
+        v.declare("yellow-white-dwarf", "yellow-white dwarf");
+        let spec = ClauseSpec {
+            predicate: "is-a".into(),
+            subject: Subject::Name("Hornvale".into()),
+            object: Argument::Concept("planet".into()),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            adjuncts: vec![
+                Adjunct {
+                    role: "moon-count".into(),
+                    argument: Argument::Count(2),
+                },
+                Adjunct {
+                    role: "star-class".into(),
+                    argument: Argument::Concept("yellow-white-dwarf".into()),
+                },
+                Adjunct {
+                    role: "day-length-std".into(),
+                    argument: Argument::Quantity(1.5),
+                },
+            ],
+        };
+        assert_eq!(
+            realize_common(&spec, &v),
+            "Hornvale is a planet with two moons, orbiting a yellow-white dwarf; \
+             its day lasts about 1.5 standard days."
+        );
+    }
+
+    #[test]
+    fn common_names_an_occupations_people_in_the_plural() {
+        let v = CommonVocabulary::default();
+        let a = Adjunct {
+            role: "occ-people".into(),
+            argument: Argument::Concept("hobgoblin-kind".into()),
+        };
+        assert_eq!(
+            common_role_surface(&a, &v),
+            Some((AdjunctPosition::Inline, "of the hobgoblins".to_string()))
+        );
+    }
+
+    #[test]
+    fn common_places_an_occupation_at_its_vertex_as_a_bare_identifier() {
+        let v = CommonVocabulary::default();
+        let a = Adjunct {
+            role: "occ-site".into(),
+            argument: Argument::Count(8835),
+        };
+        assert_eq!(
+            common_role_surface(&a, &v),
+            Some((
+                AdjunctPosition::Inline,
+                "in the clearing at vertex 8835".to_string()
+            ))
+        );
+    }
+
+    /// A founding is inline — part of the noun phrase — and its year goes
+    /// through [`cardinal`], so a small year reads as a word.
+    #[test]
+    fn common_dates_a_founding_inline_through_the_cardinal() {
+        let v = CommonVocabulary::default();
+        let big = Adjunct {
+            role: "occ-founded".into(),
+            argument: Argument::Count(312),
+        };
+        let small = Adjunct {
+            role: "occ-founded".into(),
+            argument: Argument::Count(7),
+        };
+        assert_eq!(
+            common_role_surface(&big, &v),
+            Some((AdjunctPosition::Inline, "founded in year 312".to_string()))
+        );
+        assert_eq!(
+            common_role_surface(&small, &v),
+            Some((AdjunctPosition::Inline, "founded in year seven".to_string()))
+        );
+    }
+
+    /// An ending is a separate event, so it gets its own trailing clause —
+    /// the position `day-length-std` already established, chosen per role.
+    #[test]
+    fn an_occupations_ending_is_trailing_not_inline() {
+        let v = CommonVocabulary::default();
+        let a = Adjunct {
+            role: "occ-ended".into(),
+            argument: Argument::Count(900),
+        };
+        assert_eq!(
+            common_role_surface(&a, &v),
+            Some((
+                AdjunctPosition::Trailing,
+                "it ended in year 900".to_string()
+            ))
+        );
+    }
+
+    #[test]
+    fn an_unknown_role_surfaces_as_nothing_rather_than_as_a_key() {
+        let v = CommonVocabulary::default();
+        let a = Adjunct {
+            role: "not-a-role".into(),
+            argument: Argument::Count(1),
+        };
+        assert_eq!(common_role_surface(&a, &v), None);
     }
 }

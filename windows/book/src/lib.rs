@@ -1,14 +1,16 @@
 //! The Book window: render a world's committed classification facts as
 //! Common sentences. Reads only the ledger; realizes via `domains/language`.
 //!
-//! Aggregation seam (C2 T4): `domains/language`'s `ClauseSpec.modifiers`
-//! only ever joins fragments into one clause's tail ("`X`, `Y`"), and stays
-//! that way — the seam between a noun-modifier ("with two moons") and a
-//! trailing independent clause ("its day lasts about 1.5 standard days")
-//! belongs here, at the one call site that knows a sentence is about to be
-//! finished. [`fragment_for`] tags each fact's rendering as one or the
-//! other; [`render_volume`] strips the realized clause's terminal period
-//! and re-joins any trailing clauses with `"; "` before restoring it.
+//! **This window states meaning; it no longer composes English** (The
+//! Interlinear). It used to own an aggregation seam: `ClauseSpec.modifiers`
+//! carried pre-rendered phrases, so the choice between a noun-modifier
+//! ("with two moons") and a trailing independent clause ("its day lasts
+//! about 1.5 standard days") — and the `"; "` join that assembled them —
+//! lived here, along with a duplicated `indefinite_article`. All of that is
+//! now `domains/language`'s: [`fragment_for`] returns an `Adjunct` binding a
+//! predicate to an argument, and `realize_common` decides how (and where)
+//! each role surfaces. A window that had to know English article selection
+//! was the symptom the interlingua removed.
 #![warn(missing_docs)]
 
 use hornvale_astronomy::facts::{DAY_LENGTH_STD, MOON_COUNT, MOON_PERIOD_RATIO, STAR_CLASS};
@@ -16,8 +18,8 @@ use hornvale_kernel::{EntityId, Value, World};
 use hornvale_language::CommonVocabulary;
 use hornvale_language::account::{Account, AccountEntry, AccountParams, Disposition, Stance};
 use hornvale_language::clause::{
-    ClauseSpec, Definiteness, Frame, Number, ParseContext, ParseError, Subject, cardinal,
-    parse_common, quantity, realize_common,
+    Adjunct, Argument, ClauseSpec, Definiteness, Number, ParseContext, ParseError, Subject,
+    cardinal, common_role_surface, parse_common_with_tail, quantity, realize_common,
 };
 use hornvale_language::numeracy::{NumeracyRung, render_quantity_at_rung};
 use hornvale_language::schemas::Manner;
@@ -161,49 +163,6 @@ pub struct ReckoningEpoch {
     pub margin: Vec<String>,
 }
 
-/// One fact's rendering, tagged by how it joins the sentence: a noun
-/// modifier folded into the main clause's tail, or an independent trailing
-/// clause appended after a semicolon (see the module doc's aggregation
-/// seam).
-enum Fragment {
-    /// Joins `ClauseSpec.modifiers`, e.g. `"with two moons"`.
-    Modifier(String),
-    /// Appended after the main clause, semicolon-joined, e.g. `"its day
-    /// lasts about 1.5 standard days"`.
-    Trailing(String),
-}
-
-/// `"a"` or `"an"`, by `word`'s first letter. Duplicated from
-/// `domains/language::clause`'s private helper of the same name rather than
-/// exposed from there — this predicate-specific modifier text is windows/
-/// book's own construction, and the aggregation seam keeps
-/// `domains/language` untouched (see the module doc).
-fn indefinite_article(word: &str) -> &'static str {
-    match word.chars().next().map(|c| c.to_ascii_lowercase()) {
-        Some('a' | 'e' | 'i' | 'o' | 'u') => "an",
-        _ => "a",
-    }
-}
-
-/// Join a realized clause with its trailing independent clause(s) — the
-/// aggregation seam's shared assembly tail, used by both [`render_volume`]
-/// (forward) and [`rerender`] (the corpus law's re-realization check).
-/// `realize_common` always terminates `line` with `'.'`: strip it, join
-/// each trailing clause with `"; "`, then restore the final period. A
-/// no-op when `trailing` is empty (returns `line` unchanged).
-fn assemble_trailing(mut line: String, trailing: &[String]) -> String {
-    if trailing.is_empty() {
-        return line;
-    }
-    line.pop();
-    for t in trailing {
-        line.push_str("; ");
-        line.push_str(t);
-    }
-    line.push('.');
-    line
-}
-
 /// The construction table's authored predicate order: fragments join the
 /// sentence in THIS order (the G3-approved surface — moons, then star, then
 /// day length), not ledger commit order. Deterministic without sorting:
@@ -211,37 +170,30 @@ fn assemble_trailing(mut line: String, trailing: &[String]) -> String {
 /// fact per predicate.
 const CONSTRUCTION_ORDER: &[&str] = &[MOON_COUNT, STAR_CLASS, DAY_LENGTH_STD];
 
-/// The construction table: maps a (predicate, object) pair to the fragment
+/// The construction table: maps a (predicate, object) pair to the **adjunct**
 /// it contributes, or `None` if this predicate has no construction yet
-/// (leaving it on [`uncovered_predicates`]'s list). `vocab` resolves any
-/// concept id the fragment names.
-fn fragment_for(predicate: &str, object: &Value, vocab: &CommonVocabulary) -> Option<Fragment> {
+/// (leaving it on [`uncovered_predicates`]'s list).
+///
+/// It no longer renders. How a role surfaces moved to
+/// `domains/language::clause::common_role_surface` with The Interlinear — a
+/// window composing English is what forced this crate to duplicate
+/// `indefinite_article`, and both are gone. The ledger's own `Value` becomes
+/// the language's `Argument`; the concept id travels unresolved, because
+/// resolving it is the realizing language's job.
+fn fragment_for(predicate: &str, object: &Value) -> Option<Adjunct> {
     match (predicate, object) {
-        (MOON_COUNT, Value::Number(n)) => {
-            let count = *n as u64;
-            Some(Fragment::Modifier(format!(
-                "with {} moon{}",
-                cardinal(count),
-                if count == 1 { "" } else { "s" }
-            )))
-        }
-        (STAR_CLASS, Value::Text(concept)) => {
-            // The ledger holds a concept id; the author's ground-truth register
-            // renders it as Morgan-Keenan taxonomy, which is the author's frame
-            // and not anything a creature says. Resolution goes through the
-            // vocabulary (Task 4 retired `class_display`) and is total, so an
-            // id with no declared word still renders as a word rather than
-            // leaking a raw registry key into prose.
-            let display = vocab.word_for(concept);
-            Some(Fragment::Modifier(format!(
-                "orbiting {} {display}",
-                indefinite_article(&display)
-            )))
-        }
-        (DAY_LENGTH_STD, Value::Number(days)) => Some(Fragment::Trailing(format!(
-            "its day lasts {} standard days",
-            quantity(*days)
-        ))),
+        (MOON_COUNT, Value::Number(n)) => Some(Adjunct {
+            role: MOON_COUNT.to_string(),
+            argument: Argument::Count(*n as u64),
+        }),
+        (STAR_CLASS, Value::Text(concept)) => Some(Adjunct {
+            role: STAR_CLASS.to_string(),
+            argument: Argument::Concept(concept.clone()),
+        }),
+        (DAY_LENGTH_STD, Value::Number(days)) => Some(Adjunct {
+            role: DAY_LENGTH_STD.to_string(),
+            argument: Argument::Quantity(*days),
+        }),
         _ => None,
     }
 }
@@ -322,8 +274,7 @@ pub fn render_volume_from(
             .map(str::to_string)
             .unwrap_or_else(|| format!("Entity {}", subject_entity.0));
 
-        let mut modifiers = Vec::new();
-        let mut trailing = Vec::new();
+        let mut adjuncts = Vec::new();
         for predicate in CONSTRUCTION_ORDER {
             // First committed fact per (subject, predicate) — all three
             // construction predicates are functional, so "first" is "the"
@@ -331,26 +282,23 @@ pub fn render_volume_from(
             let Some(object) = world.ledger.value_of(subject_entity, predicate) else {
                 continue;
             };
-            match fragment_for(predicate, object, &vocab) {
-                Some(Fragment::Modifier(m)) => modifiers.push(m),
-                Some(Fragment::Trailing(t)) => trailing.push(t),
-                None => {}
+            if let Some(adjunct) = fragment_for(predicate, object) {
+                adjuncts.push(adjunct);
             }
         }
 
         let subject = subject_for(subject_entity, name, &mut named);
         let line = realize_common(
             &ClauseSpec {
-                frame: Frame::Classify,
+                predicate: hornvale_kernel::world::IS_A.to_string(),
                 subject,
-                complement_concept: kind.clone(),
+                object: Argument::Concept(kind.clone()),
                 number: Number::Sg,
                 definiteness: Definiteness::Indef,
-                modifiers,
+                adjuncts,
             },
             &vocab,
         );
-        let line = assemble_trailing(line, &trailing);
         lines.push(line);
     }
     // (kind, autonym, common_line) per placed people — the autonym (no
@@ -383,12 +331,12 @@ pub fn render_volume_from(
         // it (the realizer's job since Task 4, not the caller's).
         let line = realize_common(
             &ClauseSpec {
-                frame: Frame::Classify,
+                predicate: hornvale_kernel::world::IS_A.to_string(),
                 subject,
-                complement_concept: kind.clone(),
+                object: Argument::Concept(kind.clone()),
                 number: Number::Pl,
                 definiteness: Definiteness::Indef,
-                modifiers: Vec::new(),
+                adjuncts: Vec::new(),
             },
             &vocab,
         );
@@ -445,6 +393,9 @@ pub fn render_volume_from(
             // lived experience (its autonym and own-kind concept are
             // Steeped by construction) — Witnessed (C7's readout law).
             evidential: Evidential::Witnessed,
+            // No role bindings on the self-statement today — this task adds
+            // the capability, not new adjunct data for existing callers.
+            adjuncts: Vec::new(),
         };
         let tongue_line = realize_tongue_deep(
             &self_statement,
@@ -1066,8 +1017,7 @@ fn render_world_clause(
         Disposition::Explained { .. } => unreachable!("effective() never returns Explained"),
     };
 
-    let mut modifiers = Vec::new();
-    let mut trailing = Vec::new();
+    let mut adjuncts = Vec::new();
     for entry in group {
         if entry.fact.predicate == hornvale_kernel::world::IS_A {
             continue;
@@ -1075,27 +1025,24 @@ fn render_world_clause(
         if !matches!(effective(&entry.disposition), Disposition::Kept) {
             continue;
         }
-        match fragment_for(&entry.fact.predicate, &entry.fact.object, vocab) {
-            Some(Fragment::Modifier(m)) => modifiers.push(m),
-            Some(Fragment::Trailing(t)) => trailing.push(t),
-            None => {}
+        if let Some(adjunct) = fragment_for(&entry.fact.predicate, &entry.fact.object) {
+            adjuncts.push(adjunct);
         }
     }
 
     let name = is_a_entry.fact.subject.clone();
     let subject = subject_for_text(&name, name.clone(), seen);
-    let line = realize_common(
+    Some(realize_common(
         &ClauseSpec {
-            frame: Frame::Classify,
+            predicate: hornvale_kernel::world::IS_A.to_string(),
             subject,
-            complement_concept,
+            object: Argument::Concept(complement_concept),
             number: Number::Sg,
             definiteness,
-            modifiers,
+            adjuncts,
         },
         vocab,
-    );
-    Some(assemble_trailing(line, &trailing))
+    ))
 }
 
 /// The world subject's etic margin (spec §4.3, the margin law): fires only
@@ -1139,27 +1086,24 @@ fn render_world_margin(
     let Value::Text(truth_kind) = &is_a_entry.fact.object else {
         return None;
     };
-    let mut modifiers = Vec::new();
-    let mut trailing = Vec::new();
+    let mut adjuncts = Vec::new();
     for entry in lost_fragments {
-        match fragment_for(&entry.fact.predicate, &entry.fact.object, vocab) {
-            Some(Fragment::Modifier(m)) => modifiers.push(m),
-            Some(Fragment::Trailing(t)) => trailing.push(t),
-            None => {}
+        if let Some(adjunct) = fragment_for(&entry.fact.predicate, &entry.fact.object) {
+            adjuncts.push(adjunct);
         }
     }
     let line = realize_common(
         &ClauseSpec {
-            frame: Frame::Classify,
+            predicate: hornvale_kernel::world::IS_A.to_string(),
             subject: Subject::Name(is_a_entry.fact.subject.clone()),
-            complement_concept: truth_kind.clone(),
+            object: Argument::Concept(truth_kind.clone()),
             number: Number::Sg,
             definiteness: Definiteness::Indef,
-            modifiers,
+            adjuncts,
         },
         vocab,
     );
-    Some(format!("In truth, {}", assemble_trailing(line, &trailing)))
+    Some(format!("In truth, {line}"))
 }
 
 /// Task 4 (C5): the count-aware head clause an explanation line opens
@@ -1319,12 +1263,12 @@ fn render_people_clause(
     let subject = subject_for_text(&raw_name, display, seen);
     let mut line = realize_common(
         &ClauseSpec {
-            frame: Frame::Classify,
+            predicate: hornvale_kernel::world::IS_A.to_string(),
             subject,
-            complement_concept: kind_text.clone(),
+            object: Argument::Concept(kind_text.clone()),
             number: Number::Pl,
             definiteness: Definiteness::Indef,
-            modifiers: Vec::new(),
+            adjuncts: Vec::new(),
         },
         vocab,
     );
@@ -1888,6 +1832,8 @@ fn probe_tongue(
             // Every probe states a claim grounded in the same
             // lived-experience footing as the self-statement above.
             evidential: Evidential::Witnessed,
+            // No role bindings on a C3 probe today.
+            adjuncts: Vec::new(),
         },
         grammar,
         morph,
@@ -1938,6 +1884,8 @@ fn world_statement(
         subject: planet_name.to_string(),
         complement_concept: "earth".to_string(),
         evidential,
+        // No role bindings on the world-statement today.
+        adjuncts: Vec::new(),
     };
     realize_tongue_deep(&clause, grammar, morph, noun_class_of, lexicon, orth).unwrap_or_else(
         |gap| {
@@ -2029,11 +1977,21 @@ impl std::fmt::Display for LineError {
 impl std::error::Error for LineError {}
 
 /// `cardinal`'s inverse (a private table, not shared with
-/// `domains/language::clause`'s — see this module's `indefinite_article`
-/// for the established precedent of duplicating a small presentation-layer
-/// table across the aggregation seam rather than widening the domain's
-/// public surface for a book-only need): word (`"two"`) or digits
-/// (`"13"`) to the count.
+/// `domains/language::clause`'s): word (`"two"`) or digits (`"13"`) to the
+/// count.
+///
+/// **It survives a duplication its own precedent did not.** The doc here
+/// used to cite this module's `indefinite_article` as the established case
+/// for keeping a small presentation-layer table on the book side of the
+/// aggregation seam. The Interlinear deleted that function, and the seam
+/// with it: article selection was never a book concern, it was English
+/// leaking into a window because `ClauseSpec` could not carry structure.
+/// This table stays for a different and narrower reason — it runs
+/// BACKWARD, and the direction is the whole argument. [`fact_for`] must
+/// recognize text the program did not generate (it backs
+/// `windows/vessel`'s spoken-to-heard seam), and recognition is a later
+/// campaign's subject. When Common learns to recognize its own role
+/// constructions, this goes with `fact_for`.
 fn uncardinal(word: &str) -> Option<u64> {
     const WORDS: [&str; 13] = [
         "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
@@ -2046,10 +2004,19 @@ fn uncardinal(word: &str) -> Option<u64> {
         .or_else(|| word.parse().ok())
 }
 
-/// The construction table run backward: recover (predicate, surface
-/// value) from one fragment's text — the mirror of [`fragment_for`].
-/// Returns `None` for text this table's forward direction never produces,
+/// The construction table run backward: recover (predicate, surface value)
+/// from one fragment's TEXT. Returns `None` for text it does not recognize,
 /// which [`parse_line`] treats as `LineError::UnknownFragment`.
+///
+/// **No longer the mirror of [`fragment_for`], and the difference is the
+/// point.** Since The Interlinear the forward direction produces an
+/// `Adjunct` — structure — while this one still consumes English, so the
+/// two no longer share a currency: what inverts this function's output is
+/// `fragment_for` followed by `common_role_surface`. It stays an English
+/// recognizer deliberately, because [`parse_line`] backs
+/// `windows/vessel`'s spoken-to-heard seam, which parses text the program
+/// did not generate. Recognition is a later campaign's subject (The
+/// Interlinear's spec §6 freezes its coverage here).
 fn fact_for(fragment: &str) -> Option<(String, Value)> {
     if let Some(rest) = fragment.strip_prefix("with ") {
         let count_word = rest
@@ -2086,24 +2053,25 @@ pub fn fact_for_public(fragment: &str) -> Option<(String, Value)> {
     fact_for(fragment)
 }
 
-/// The public face of the private [`fragment_for`], exported so
-/// `cli/tests/star_class_is_a_concept.rs` can drive its round-trip
-/// assertion from the actual renderer rather than a hand-rolled fragment —
-/// a hand-rolled `"orbiting a {display}"` never exercises which article
-/// [`fragment_for`] actually chooses, so a wrong-article regression there
-/// would go undetected. Returns the fragment's plain text; the
-/// `Modifier`/`Trailing` tag is a Book-internal aggregation detail the
-/// caller has no need of. Do not make `fragment_for` itself public — its
-/// privacy is what keeps the construction table a Book concern.
+/// The realized surface of the adjunct [`fragment_for`] contributes,
+/// exported so `cli/tests/star_class_is_a_concept.rs` can drive its
+/// round-trip assertion from the actual renderer rather than a hand-rolled
+/// fragment — a hand-rolled `"orbiting a {display}"` never exercises which
+/// article the realizer actually chooses, so a wrong-article regression
+/// would go undetected. Since The Interlinear the article is Common's
+/// choice, not this window's, so this composes the two halves:
+/// `fragment_for` states the role, `common_role_surface` renders it. The
+/// inline/trailing position is a language's decision the caller has no need
+/// of. Do not make `fragment_for` itself public — its privacy is what keeps
+/// the construction table a Book concern.
 /// type-audit: bare-ok(identifier-text: predicate), bare-ok(prose: return)
 pub fn fragment_for_public(
     predicate: &str,
     object: &Value,
     vocab: &CommonVocabulary,
 ) -> Option<String> {
-    match fragment_for(predicate, object, vocab)? {
-        Fragment::Modifier(text) | Fragment::Trailing(text) => Some(text),
-    }
+    let adjunct = fragment_for(predicate, object)?;
+    common_role_surface(&adjunct, vocab).map(|(_, text)| text)
 }
 
 /// Apply a listener's numeracy rung to a heard quantity fragment (LANG-44
@@ -2222,13 +2190,13 @@ fn parse_context_with_voices(
 /// seam (`"; "`), clause-parse the head via T2's `parse_common`, then
 /// recover each modifier/trailing fragment's fact via [`fact_for`].
 ///
-/// The split mirrors [`assemble_trailing`] exactly: the first segment lost
-/// its own terminal `'.'` to the strip in that join (append it back,
-/// unless there was no trailing clause at all — then the head is the
-/// whole, already-terminated line); the LAST segment carries the final
-/// `'.'` restored by that same join, which belongs to the sentence, not
-/// the fragment, so it is stripped before fragment inversion. Middle
-/// segments (more than one trailing clause) carry no punctuation at all.
+/// The split mirrors the realizer's trailing join exactly: the first
+/// segment lost its own terminal `'.'` to that join (append it back, unless
+/// there was no trailing clause at all — then the head is the whole,
+/// already-terminated line); the LAST segment carries the final `'.'`,
+/// which belongs to the sentence, not the fragment, so it is stripped
+/// before fragment inversion. Middle segments (more than one trailing
+/// clause) carry no punctuation at all.
 ///
 /// `ParsedLine.kind` is the recovered complement CONCEPT — always singular,
 /// for a `Pl` clause as much as an `Sg` one, because `parse_common` matches
@@ -2245,10 +2213,14 @@ pub fn parse_line(line: &str, ctx: &ParseContext) -> Result<ParsedLine, LineErro
     } else {
         format!("{head}.")
     };
-    let clause = parse_common(&clause_text, ctx).map_err(LineError::Clause)?;
+    // `parse_common_with_tail`, not `parse_common`: Common recognizes the
+    // clause skeleton and hands back the adjunct tail as TEXT, which this
+    // window's own English recognizer (`fact_for`) inverts. See that
+    // function's doc for why recognition stayed here.
+    let (clause, tail) = parse_common_with_tail(&clause_text, ctx).map_err(LineError::Clause)?;
 
     let mut facts = Vec::new();
-    for modifier in &clause.modifiers {
+    for modifier in &tail {
         let (predicate, value) =
             fact_for(modifier).ok_or_else(|| LineError::UnknownFragment(modifier.clone()))?;
         facts.push((predicate, value));
@@ -2273,7 +2245,9 @@ pub fn parse_line(line: &str, ctx: &ParseContext) -> Result<ParsedLine, LineErro
     // the text against each candidate id's realized surface, so the plural
     // `'s'` was undone by the same rule that added it. No suffix-stripping
     // closed-world assumption survives here.
-    let kind = clause.complement_concept.clone();
+    let Argument::Concept(kind) = clause.object.clone() else {
+        unreachable!("parse_common only ever recovers a concept object")
+    };
 
     Ok(ParsedLine {
         subject,
@@ -2285,25 +2259,22 @@ pub fn parse_line(line: &str, ctx: &ParseContext) -> Result<ParsedLine, LineErro
 }
 
 /// Re-realize a [`ParsedLine`] back to its exact surface text: the corpus
-/// law's other half. Regroups `parsed.facts` into modifiers/trailing via
-/// [`fragment_for`] (the same construction table, forward again) and rebuilds
-/// the clause plus any trailing clause(s) through the same
-/// [`assemble_trailing`] helper `render_volume` uses — so the two never
-/// drift apart into separate join logic. Re-pluralization is no longer done
-/// here: `parsed.kind` is the complement CONCEPT and `parsed.number` is what
+/// law's other half. Turns `parsed.facts` back into adjuncts via
+/// [`fragment_for`] (the same construction table, forward again) and hands
+/// them to the same realizer `render_volume` uses — so the two cannot drift
+/// apart into separate join logic, because there is only one join and it
+/// lives in `domains/language`. Re-pluralization is not done here either:
+/// `parsed.kind` is the complement CONCEPT and `parsed.number` is what
 /// pluralizes it, inside the realizer.
 /// type-audit: bare-ok(prose: return)
 pub fn rerender(parsed: &ParsedLine, vocab: &CommonVocabulary) -> String {
-    let mut modifiers = Vec::new();
-    let mut trailing = Vec::new();
+    let mut adjuncts = Vec::new();
     for (predicate, value) in &parsed.facts {
-        match fragment_for(predicate, value, vocab) {
-            Some(Fragment::Modifier(m)) => modifiers.push(m),
-            Some(Fragment::Trailing(t)) => trailing.push(t),
-            // fact_for only ever recovers (predicate, value) pairs that
-            // fragment_for's forward direction produced, so this is
-            // unreachable for a ParsedLine built by parse_line.
-            None => {}
+        // fact_for only ever recovers (predicate, value) pairs that
+        // fragment_for's forward direction produced, so a None here is
+        // unreachable for a ParsedLine built by parse_line.
+        if let Some(adjunct) = fragment_for(predicate, value) {
+            adjuncts.push(adjunct);
         }
     }
     let subject = match parsed.subject.as_str() {
@@ -2311,18 +2282,17 @@ pub fn rerender(parsed: &ParsedLine, vocab: &CommonVocabulary) -> String {
         "its" => Subject::Pronoun("its"),
         other => Subject::Name(other.to_string()),
     };
-    let line = realize_common(
+    realize_common(
         &ClauseSpec {
-            frame: Frame::Classify,
+            predicate: hornvale_kernel::world::IS_A.to_string(),
             subject,
-            complement_concept: parsed.kind.clone(),
+            object: Argument::Concept(parsed.kind.clone()),
             number: parsed.number,
             definiteness: parsed.definiteness,
-            modifiers,
+            adjuncts,
         },
         vocab,
-    );
-    assemble_trailing(line, &trailing)
+    )
 }
 
 /// The book-layer dress [`parse_chorus_line`] strips before delegating to
@@ -2482,10 +2452,11 @@ pub enum ReckoningLine {
 /// recovered word against, to hand back the same `'static` [`LexemeId`]
 /// these were minted from (a `LexemeId` wraps a `&'static str`, so a
 /// runtime-parsed word can never be boxed into one directly) — duplicated
-/// from `domains/language::schemas`'s own closed table, the same
-/// aggregation-seam precedent [`indefinite_article`]/[`uncardinal`] set for
-/// small closed tables a book-only need doesn't warrant widening the
-/// domain's public surface for.
+/// from `domains/language::schemas`'s own closed table, the same precedent
+/// [`uncardinal`] sets for a small closed table a book-only need doesn't
+/// warrant widening the domain's public surface for. (This cited
+/// `indefinite_article` alongside it until The Interlinear deleted that
+/// function — see [`uncardinal`] for why the two were never the same case.)
 const AGENTIVE_LEXEMES: &[LexemeId] = &[
     LexemeId("walks"),
     LexemeId("strides"),
@@ -2992,6 +2963,7 @@ mod tests {
     //! sanctioned test-fixture posture the weir's spec carves out.
     #![allow(clippy::disallowed_methods)]
     use super::*;
+    use hornvale_language::clause::AdjunctPosition;
 
     /// The world's Common vocabulary, exactly as `render_volume` assembles
     /// it. Built from the composed registry rather than any particular
@@ -3001,6 +2973,29 @@ mod tests {
         let mut registry = hornvale_kernel::ConceptRegistry::default();
         hornvale_worldgen::register_all(&mut registry).expect("the roster registers");
         hornvale_worldgen::common_vocabulary(&registry)
+    }
+
+    /// One construction's realized surface and where Common attaches it:
+    /// `fragment_for` states the role, `common_role_surface` renders it.
+    /// The two halves that used to be one function here.
+    fn surface_of(
+        predicate: &str,
+        object: &Value,
+        vocab: &CommonVocabulary,
+    ) -> Option<(AdjunctPosition, String)> {
+        common_role_surface(&fragment_for(predicate, object)?, vocab)
+    }
+
+    /// The Interlinear: this window hands the language STRUCTURE — a
+    /// predicate bound to an argument — never a rendered phrase. It is the
+    /// one assertion that would redden if `fragment_for` started composing
+    /// English again.
+    #[test]
+    fn the_book_hands_the_language_structure_not_english() {
+        let a =
+            fragment_for(MOON_COUNT, &Value::Number(2.0)).expect("moon-count has a construction");
+        assert_eq!(a.role, MOON_COUNT);
+        assert_eq!(a.argument, Argument::Count(2));
     }
 
     fn constant(seed: u64) -> World {
@@ -3118,10 +3113,9 @@ mod tests {
     #[test]
     fn star_class_modifier_chooses_an_before_a_vowel() {
         let value = Value::Text("orange-dwarf".to_string());
-        let modifier = match fragment_for(STAR_CLASS, &value, &vocab()) {
-            Some(Fragment::Modifier(m)) => m,
-            _ => panic!("expected a Modifier fragment"),
-        };
+        let (position, modifier) =
+            surface_of(STAR_CLASS, &value, &vocab()).expect("star-class has a construction");
+        assert_eq!(position, AdjunctPosition::Inline);
         assert_eq!(modifier, "orbiting an orange dwarf (K)");
     }
 
@@ -3630,10 +3624,9 @@ mod tests {
         let vocab = vocab();
         for count in 0..=13u64 {
             let value = Value::Number(count as f64);
-            let text = match fragment_for(MOON_COUNT, &value, &vocab) {
-                Some(Fragment::Modifier(m)) => m,
-                _ => panic!("expected a Modifier fragment for moon-count {count}"),
-            };
+            let (position, text) = surface_of(MOON_COUNT, &value, &vocab)
+                .unwrap_or_else(|| panic!("moon-count {count} must render"));
+            assert_eq!(position, AdjunctPosition::Inline);
             assert_eq!(
                 fact_for(&text),
                 Some((MOON_COUNT.to_string(), Value::Number(count as f64))),
@@ -3645,10 +3638,9 @@ mod tests {
             let world = generated(seed);
             for fact in world.ledger.find(STAR_CLASS) {
                 let value = fact.object.clone();
-                let text = match fragment_for(STAR_CLASS, &value, &vocab) {
-                    Some(Fragment::Modifier(m)) => m,
-                    _ => panic!("expected a Modifier fragment for {value:?}"),
-                };
+                let (position, text) = surface_of(STAR_CLASS, &value, &vocab)
+                    .unwrap_or_else(|| panic!("{value:?} must render"));
+                assert_eq!(position, AdjunctPosition::Inline);
                 assert_eq!(
                     fact_for(&text),
                     Some((STAR_CLASS.to_string(), value.clone())),
@@ -3660,10 +3652,9 @@ mod tests {
                     continue;
                 };
                 let value = Value::Number(days);
-                let text = match fragment_for(DAY_LENGTH_STD, &value, &vocab) {
-                    Some(Fragment::Trailing(t)) => t,
-                    _ => panic!("expected a Trailing fragment for {days}"),
-                };
+                let (position, text) = surface_of(DAY_LENGTH_STD, &value, &vocab)
+                    .unwrap_or_else(|| panic!("day-length {days} must render"));
+                assert_eq!(position, AdjunctPosition::Trailing);
                 let truncated = (days * 10.0).trunc() / 10.0;
                 assert_eq!(
                     fact_for(&text),
@@ -3693,10 +3684,8 @@ mod tests {
                     continue;
                 };
                 let value = Value::Number(days);
-                let fragment = match fragment_for(DAY_LENGTH_STD, &value, &vocab) {
-                    Some(Fragment::Trailing(t)) => t,
-                    _ => panic!("expected a Trailing fragment for {days}"),
-                };
+                let (_, fragment) = surface_of(DAY_LENGTH_STD, &value, &vocab)
+                    .unwrap_or_else(|| panic!("day-length {days} must render"));
                 let truncated = (days * 10.0).trunc() / 10.0;
                 for rung in [
                     NumeracyRung::Subitizing,
@@ -3725,10 +3714,8 @@ mod tests {
                 continue;
             };
             let value = Value::Number(days);
-            let fragment = match fragment_for(DAY_LENGTH_STD, &value, &vocab) {
-                Some(Fragment::Trailing(t)) => t,
-                _ => panic!("expected a Trailing fragment for {days}"),
-            };
+            let (_, fragment) = surface_of(DAY_LENGTH_STD, &value, &vocab)
+                .unwrap_or_else(|| panic!("day-length {days} must render"));
             let truncated = (days * 10.0).trunc() / 10.0;
             assert_eq!(
                 fact_for(&fragment),
