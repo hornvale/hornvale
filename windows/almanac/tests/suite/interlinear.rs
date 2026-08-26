@@ -41,11 +41,14 @@
 //!    So a tongue tail of three numerals is AMBIGUOUS between the site, the
 //!    founding and the ending — recoverable only from the spec's order.
 //!    A per-role construction table for tongues (the tongue-side twin of
-//!    `clause::common_role_surface`) does not exist. This is a different
-//!    absence from the `TongueClause`-keeps-a-`String`-subject asymmetry that
+//!    `clause::common_role_surface`) does not exist, and it is recorded
+//!    nowhere else. It is a different absence from the one
 //!    "And Common is not yet a peer in full"
-//!    (`book/src/chronicle/the-interlinear.md`) records, and it is recorded
-//!    nowhere else.
+//!    (`book/src/chronicle/the-interlinear.md`) records — that was the
+//!    `TongueClause`-keeps-a-`String`-subject asymmetry, and The Scarf
+//!    closed it: both realizers now take the SAME `&ClauseSpec`, so this
+//!    file hands one spec to each rather than projecting between two
+//!    structs. This absence survived that collapse.
 //! 2. **The subject takes a liberty.** The clause's subject is the PEOPLE's
 //!    autonym, used as the holding's headword, because the ledger names
 //!    neither the occupation nor its site (the almanac's own history page
@@ -74,7 +77,7 @@ use hornvale_language::clause::{
     Adjunct, Argument, ClauseSpec, Definiteness, Number, Subject, cardinal, realize_common,
 };
 use hornvale_language::{
-    CommonVocabulary, Evidential, SchemaId, TongueClause, realize_tongue_deep, tongue_grammar,
+    CommonVocabulary, Evidential, SchemaId, realize_tongue_deep, tongue_grammar,
 };
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 use std::collections::BTreeSet;
@@ -235,27 +238,6 @@ fn clause_for(occupation: &Occupation, autonym: &str) -> ClauseSpec {
     }
 }
 
-/// The tongue's view of the SAME spec: a `TongueClause` is the tongue-side
-/// projection of a `ClauseSpec`, carrying its subject, its complement
-/// concept and its role bindings unchanged. Nothing English crosses this
-/// boundary — the complement and every `Argument::Concept` are ids the
-/// tongue lexicalizes itself.
-fn tongue_view(spec: &ClauseSpec) -> TongueClause {
-    TongueClause {
-        subject: match &spec.subject {
-            Subject::Name(name) => name.clone(),
-            Subject::Pronoun(pronoun) => (*pronoun).to_string(),
-        },
-        complement_concept: match &spec.object {
-            Argument::Concept(id) => id.clone(),
-            other => panic!("the interlinear's clause predicates a concept, not {other:?}"),
-        },
-        // Forwarded, not invented: the spec states its own grounding now.
-        evidential: spec.evidential,
-        adjuncts: spec.adjuncts.clone(),
-    }
-}
-
 /// Everything a tongue needs to speak, for one people of one world.
 struct Tongue {
     grammar: hornvale_language::TongueGrammar,
@@ -269,7 +251,7 @@ impl Tongue {
     /// Realize a clause in this tongue — `realize_tongue_deep`, assembled
     /// exactly as `windows/book` assembles it, so this file speaks the same
     /// tongue the book prints.
-    fn say(&self, clause: &TongueClause) -> Result<String, hornvale_language::TongueGap> {
+    fn say(&self, clause: &ClauseSpec) -> Result<String, hornvale_language::TongueGap> {
         let noun_class_of =
             |concept: &str| hornvale_language::noun_class_with_sky(self.sky_animate, concept);
         realize_tongue_deep(
@@ -446,7 +428,7 @@ fn the_tongue_shares_no_word_with_common_but_the_autonym_and_the_numerals() {
     let common = realize_common(&spec, &vocab);
     let tongue_speaker = tongue_of(&world, &occupation.people);
     let tongue = tongue_speaker
-        .say(&tongue_view(&spec))
+        .say(&spec)
         .expect("the chosen people can say its own home");
 
     // Positive control: the tongue really did lexicalize two concepts, and
@@ -522,7 +504,7 @@ fn a_tongue_that_lacks_a_bound_concept_gaps_and_names_it() {
     spec.adjuncts[0].argument = Argument::Concept("planet".to_string());
 
     let gap = tongue_of(&world, &occupation.people)
-        .say(&tongue_view(&spec))
+        .say(&spec)
         .expect_err("no people on this world has a word for the planet as a body");
     assert_eq!(gap.concept, "planet");
     assert!(!gap.reason.is_empty(), "a gap is recountable, never bare");

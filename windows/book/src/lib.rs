@@ -24,8 +24,8 @@ use hornvale_language::clause::{
 use hornvale_language::numeracy::{NumeracyRung, render_quantity_at_rung};
 use hornvale_language::schemas::Manner;
 use hornvale_language::{
-    ConflictState, Evidential, LexemeId, NounClass, SchemaId, TongueClause, TongueMorphology,
-    conflict_of, realize_tongue_deep, tongue_grammar,
+    ConflictState, Evidential, LexemeId, NounClass, SchemaId, TongueMorphology, conflict_of,
+    realize_tongue_deep, tongue_grammar,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -395,9 +395,14 @@ pub fn render_volume_from(
             |concept: &str| hornvale_worldgen::noun_class_with_sky(sky_animate, concept);
 
         let own_kind = format!("{kind}-kind");
-        let self_statement = TongueClause {
-            subject: autonym.clone(),
-            complement_concept: own_kind,
+        let self_statement = ClauseSpec {
+            predicate: hornvale_kernel::world::IS_A.to_string(),
+            subject: Subject::Name(autonym.clone()),
+            object: Argument::Concept(own_kind),
+            // Unread by either tongue realizer (spec §3.2) — a clause states
+            // more than any one language surfaces.
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
             // The self-statement is a folk (self-)statement, grounded in
             // lived experience (its autonym and own-kind concept are
             // Steeped by construction) — Witnessed (C7's readout law).
@@ -1850,9 +1855,13 @@ fn probe_tongue(
     orth: hornvale_language::Orthography,
 ) -> Result<String, hornvale_language::TongueGap> {
     realize_tongue_deep(
-        &TongueClause {
-            subject: probe.subject.clone(),
-            complement_concept: probe.concept.clone(),
+        &ClauseSpec {
+            predicate: hornvale_kernel::world::IS_A.to_string(),
+            subject: Subject::Name(probe.subject.clone()),
+            object: Argument::Concept(probe.concept.clone()),
+            // Unread by either tongue realizer (spec §3.2).
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
             // Every probe states a claim grounded in the same
             // lived-experience footing as the self-statement above.
             evidential: Evidential::Witnessed,
@@ -1904,9 +1913,13 @@ fn world_statement(
     lexicon: &hornvale_language::Lexicon,
     orth: hornvale_language::Orthography,
 ) -> String {
-    let clause = TongueClause {
-        subject: planet_name.to_string(),
-        complement_concept: "earth".to_string(),
+    let clause = ClauseSpec {
+        predicate: hornvale_kernel::world::IS_A.to_string(),
+        subject: Subject::Name(planet_name.to_string()),
+        object: Argument::Concept("earth".to_string()),
+        // Unread by either tongue realizer (spec §3.2).
+        number: Number::Sg,
+        definiteness: Definiteness::Def,
         evidential,
         // No role bindings on the world-statement today.
         adjuncts: Vec::new(),
