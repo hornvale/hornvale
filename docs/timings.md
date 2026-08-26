@@ -3028,3 +3028,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T22:35:11Z | sluice:gate | 444.081 | 12420.727 | 427.816 | 28.93 | 0 | 7e824c600 |  | lefford | 40 |
 | 2026-08-26T22:42:52Z | sluice:clients | 461.152 | 5592.776 | 62.358 | 12.26 | 0 | 7b9b23679 |  | lefford | 40 |
 | 2026-08-26T23:41:51Z | gate-commit | 90.572 | 978.719 | 144.742 | 12.40 | 0 | 3fb3d5e5d | fix/census-yellow-threshold | lefford | 40 |
+| 2026-08-26T23:43:46Z | sluice:artifacts | 68.307 | 604.984 | 22.025 | 9.18 | 0 | 7f00b8592 |  | lefford | 40 |
