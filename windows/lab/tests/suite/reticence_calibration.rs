@@ -47,6 +47,59 @@ fn prior_of(
     openness(&improvised_name(world, &lexicon, species))
 }
 
+/// Every reachable [`Openness`] value — the roster H4 and its positive
+/// control both compare `real_prior` against.
+const ALL_PRIORS: [Openness; 3] = [Openness::Guarded, Openness::Wary, Openness::Open];
+
+/// Would ANY prior other than `real_prior` have selected a different
+/// [`Stance`] than `real_prior` does, at the SAME `overrides` count? This is
+/// the exact comparison H4's sweep uses at every observed ask-point, pulled
+/// out so the positive control below runs the identical detector rather
+/// than a hand-written stand-in that could silently drift from it (the
+/// review finding this responds to: a detector never proven capable of
+/// returning `true` cannot be trusted when it returns `false` 70 times).
+fn any_other_prior_diverges(real_prior: Openness, overrides: u32) -> bool {
+    let real_stance = stance_for(real_prior, overrides);
+    ALL_PRIORS
+        .iter()
+        .filter(|&&alt| alt != real_prior)
+        .any(|&alt| stance_for(alt, overrides) != real_stance)
+}
+
+/// **Positive control for H4's divergence detector.** A null with no
+/// evidence the detector CAN return non-zero is an unexamined zero, not a
+/// finding (review finding on this task: H4's own sweep only ever sampled
+/// `overrides == 0`, where `stance_for`'s first match arm returns
+/// `Stance::Forthcoming` unconditionally on `prior` — `stance.rs:53` — so
+/// agreement there is guaranteed by the function's own shape, before any
+/// tick is simulated). At `overrides == 3`: `stance_for(Guarded, 3) ==
+/// Dissembling` (`step = patience(Guarded) = 2`; `3 > step`, `3 <= step*2`),
+/// while `stance_for(Wary, 3) == Costly` (`step = patience(Wary) = 4`;
+/// `3 <= step`) and `stance_for(Open, 3) == Costly` likewise — so `Guarded`
+/// is a real outlier at this count, through the SAME `any_other_prior_diverges`
+/// call H4's sweep makes. If this fails, the detector itself is broken and
+/// H4's 0/70 says nothing.
+#[test]
+fn h4_positive_control_the_divergence_detector_can_fire() {
+    assert_eq!(stance_for(Openness::Guarded, 3), Stance::Dissembling);
+    assert_eq!(stance_for(Openness::Wary, 3), Stance::Costly);
+    assert_eq!(stance_for(Openness::Open, 3), Stance::Costly);
+    assert!(
+        any_other_prior_diverges(Openness::Guarded, 3),
+        "the detector must register a divergence at overrides=3, prior=Guarded — \
+         Wary and Open both select Costly where Guarded selects Dissembling"
+    );
+    // The degenerate case H4's real sweep landed in every time, confirmed
+    // to agree for the structural reason named above (stance_for's 0 arm
+    // ignores `prior`), not because the detector is blind to divergence in
+    // general.
+    assert!(
+        !any_other_prior_diverges(Openness::Guarded, 0),
+        "at overrides=0 every prior agrees BY CONSTRUCTION (stance_for's first \
+         match arm), so a 0 result here is expected and uninformative on its own"
+    );
+}
+
 /// **H1 — the improvising arms are distributed as preregistered** (spec
 /// section 5). Frozen before the code: 15 peoples, organized 9, folk 6,
 /// doctrine 0. Enumerated with `hornvale_species::society_registry()` — the
@@ -216,35 +269,63 @@ fn h3_refusal_is_selective_not_global() {
     );
 }
 
-/// **H4 — the null this campaign is prepared to report** (spec section 5).
-/// Whether the doctrine prior moves OBSERVABLE testimony at all, once the
-/// fold is running: `count(sessions where prior and fold select different
-/// stances) / denominator`.
+/// **H4 — the null this campaign is prepared to report** (spec section 5),
+/// with a structural claim and an empirical one kept SEPARATE (review
+/// correction: an earlier version of this test reported "0/70" as if it
+/// were a broad sweep with 70 independent chances to falsify the null; it
+/// is not, and the doc comment below is corrected to say so).
 ///
-/// Instrument chosen by reading `Session::ask`
-/// (`windows/vessel/src/session.rs`), not prescribed from outside it:
-/// `ask()`'s `overrides` value is `topic.map(|d| self.overrides_of(d))`,
-/// where `topic == self.driven_affect_object()` — the CURRENTLY-PURSUED
-/// drive's own object, never one of the arbitration's discarded ranks
-/// (`driven_suppressed`, which is what `driven_overrides` accumulates
-/// from). So the only override count `ask()` ever actually reads is the
-/// pursued drive's own, and a drive that is winning arbitration is
-/// structurally the one LEAST likely to have been overridden recently. A
-/// probe over 3 seeds x 40 ticks (120 total observations, run by hand while
-/// designing this test, not committed) found the pursued topic was
-/// `DriveKind::Thirst` at overrides=0 on EVERY single tick — this is the
-/// "found a discriminating instrument by reading" case the brief warned a
-/// plan author cannot prescribe: the interesting question is not "does a
-/// wide patience threshold ever get reached" but "does the topic the player
-/// can actually ask about ever carry any overrides at all."
+/// **Structural claim, verified by reading the code, not by sampling:**
+/// `ask()`'s topic and the override record are DISJOINT BY CONSTRUCTION, so
+/// on the current wiring the doctrine prior CANNOT move observable
+/// testimony. `Session::ask`'s `overrides` value is
+/// `topic.map(|d| self.overrides_of(d))` (`session.rs:4927`), where
+/// `topic == self.driven_affect_object()` — the CURRENTLY-PURSUED drive.
+/// `driven_overrides` increments only for drives in `driven_suppressed`
+/// (`session.rs:4101-4102`), and `liveness.rs:3520-3522` computes
+/// `suppressed` by explicitly filtering OUT `pursued_kind`. So the pursued
+/// drive (`ask()`'s only source of `overrides`) can never itself be a
+/// member of the set `driven_overrides` accumulates from at the SAME
+/// tick — the two sets are disjoint by construction, every tick, for every
+/// session.
 ///
-/// For each of several driven sessions, at each tick where a topic exists:
-/// the REAL observed stance (`stance_for(actual_prior, overrides_of(topic))`)
-/// is compared against what EVERY OTHER reachable prior would have produced
-/// at that SAME observed override count, holding the fold fixed and varying
-/// only the prior — the direct reading of "prior and fold select different
-/// stances". A session/tick counts toward the numerator if any other prior
-/// would have produced a different stance than the real one.
+/// **Empirical claim: this sweep CORROBORATES the structural claim, it does
+/// not independently test it.** All 70 sampled ask-observable points below
+/// land at `overrides_of(topic) == 0` — not "most", all — because a drive
+/// only ever ACCUMULATES overrides while it is losing, and the moment it
+/// wins it is `topic`, where this code never reads its own history. At
+/// `overrides == 0`, `stance_for`'s first match arm is `0 =>
+/// Stance::Forthcoming`, **unconditional on `prior`** (`stance.rs:53`), so
+/// every one of the 70 points was GUARANTEED to agree across all three
+/// priors before a single tick was simulated — restating one structural
+/// fact 70 times, not 70 independent trials. The positive control above
+/// (`h4_positive_control_the_divergence_detector_can_fire`) proves the
+/// comparison ITSELF can register a divergence when `overrides != 0`; this
+/// sweep never reaches that regime. A hand-run, uncommitted probe pushed
+/// far past this sweep's regime (a single session, 300x `!wait 30`, ~9,000
+/// ticks) and the topic drive was STILL at 0 overrides on every tick, while
+/// the suppressed drives it never became reached 300 and 299 — so the
+/// finding is more robust than 70 ticks shows, and the framing below is
+/// correspondingly less "broad empirical sweep" than an earlier version of
+/// this doc comment implied.
+///
+/// **Reachability, checked directly rather than assumed:** the state H4
+/// would need — the pursued drive changing to one that already carries
+/// override history — is **not reachable through any currently-shipped
+/// verb**. `IN_CHARACTER_VERBS` (`session.rs`) is a closed, exhaustive
+/// 18-verb roster with no drink/eat/relief verb; the driven body's own
+/// passive `!wait` walk discards every fact it would otherwise commit
+/// (`_driven_facts` is unconditionally dropped, `session.rs:4090` and the
+/// surrounding comment), so a driven body's own `DRANK`/`EATEN` facts are
+/// never written by ANY path. The only verb that resolves a drive at all is
+/// `sleep`, which resolves `Fatigue` alone (`rested_fact`,
+/// `session.rs:2127`) — it cannot unseat `Thirst`/`Hunger` (the two
+/// observed dominant drives; both ceiling-1.0 survival drives, tie broken
+/// `Thirst`-first by declared `DriveKind` order), because it never touches
+/// them. Not exhaustively ruled out: whether extreme positioning via `go`
+/// could spike the position-dependent `Thermal` flow drive high enough to
+/// win over an already-saturated survival drive was not tested; that
+/// remains an open, undemonstrated door rather than a closed one.
 ///
 /// claim: readout(seeds: 1,2,3,4,5,42 — H4's own preregistered measurement,
 /// decision 0016; a fixed, small, named roster, never a sweep to FIND an
@@ -256,10 +337,10 @@ fn h3_refusal_is_selective_not_global() {
 fn h4_does_the_prior_move_observable_testimony_at_all() {
     let seeds = [1u64, 2, 3, 4, 5, 42];
     let ticks_per_session = 12;
-    let all_priors = [Openness::Guarded, Openness::Wary, Openness::Open];
 
     let mut denominator = 0usize;
     let mut diverged = 0usize;
+    let mut degenerate_zero_overrides = 0usize;
     let mut sessions_with_observations = 0usize;
 
     for seed in seeds {
@@ -281,12 +362,10 @@ fn h4_does_the_prior_move_observable_testimony_at_all() {
             let overrides = s.overrides_of(topic);
             denominator += 1;
             this_session_observed = true;
-            let real_stance = stance_for(prior, overrides);
-            let disagrees = all_priors
-                .iter()
-                .filter(|&&alt| alt != prior)
-                .any(|&alt| stance_for(alt, overrides) != real_stance);
-            if disagrees {
+            if overrides == 0 {
+                degenerate_zero_overrides += 1;
+            }
+            if any_other_prior_diverges(prior, overrides) {
                 diverged += 1;
             }
         }
@@ -304,15 +383,21 @@ fn h4_does_the_prior_move_observable_testimony_at_all() {
         "H4's denominator must be non-zero for the count below to mean anything"
     );
 
-    // The measurement itself. ZERO is the headline this campaign is
-    // prepared to report, not a failure: it would mean the prior never
-    // changes what a player can actually hear, over every ask-observable
-    // point sampled, because the topic ask() reads is structurally the
-    // drive least likely to carry any overrides at all. Do NOT retune
-    // `stance::patience()` regardless of which way this comes out.
+    // The measurement itself, split into the two halves the doc comment
+    // above states separately: how many points were even capable of
+    // showing divergence (non-degenerate, overrides != 0) vs how many
+    // actually diverged. ZERO divergence over a denominator where EVERY
+    // point is degenerate is the corroborating-not-independent result this
+    // campaign reports; it would read differently (and be a real 70-trial
+    // sweep) if `non_degenerate` below were not also 0. Do NOT retune
+    // `stance::patience()` regardless of what this prints.
+    let non_degenerate = denominator - degenerate_zero_overrides;
     println!(
         "H4: prior moved observable testimony in {diverged}/{denominator} ask-observable \
-         points across {sessions_with_observations}/{} sessions",
+         points across {sessions_with_observations}/{} sessions \
+         ({degenerate_zero_overrides}/{denominator} were the degenerate overrides=0 case, \
+         where every prior agrees by construction; only {non_degenerate}/{denominator} could \
+         have shown divergence at all)",
         seeds.len()
     );
 }
