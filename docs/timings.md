@@ -2967,3 +2967,7 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T14:50:24Z | sluice:clients | 463.528 | 5777.558 | 86.235 | 12.65 | 0 | bcf919ae5 |  | lefford | 40 |
 | 2026-08-26T15:01:21Z | rebaseline | 93.690 | 253.103 | 12.173 | 2.83 | 0 | 791fe78f0 | campaign/the-interlinear | MacBookPro | 10 |
 | 2026-08-26T15:08:28Z | gate-commit | 107.632 | 558.833 | 102.373 | 6.14 | 0 | 791fe78f0 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-26T15:28:19Z | gate-commit | 19.628 | 47.672 | 12.076 | 3.04 | 0 | 791fe78f0 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-26T15:29:07Z | vessel-check | 36.944 | 52.384 | 2.271 | 1.48 | 0 | f633df521 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-26T15:29:47Z | world-check | 40.057 | 56.437 | 2.293 | 1.47 | 0 | f633df521 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-26T15:36:26Z | game-check | 398.826 | 2393.211 | 27.098 | 6.07 | 0 | f633df521 | campaign/the-interlinear | MacBookPro | 10 |
