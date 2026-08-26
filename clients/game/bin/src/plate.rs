@@ -51,124 +51,108 @@ use std::collections::BTreeSet;
 use crate::discovery::{Discovered, FeatureId};
 use crate::mercator::{self, Frame};
 
-/// A view onto the world plate: which zoom level, and which cell the
-/// window's origin sits at.
+/// A view onto the world plate: which mesh RUNG the virtual chart is drawn
+/// at, and which tile of that chart the window's own origin sits at.
 ///
-/// The Portolan part II's Task 2 only ever constructed
-/// `Window { zoom: 0, origin_col: 0, origin_row: 0 }` — the whole planet,
-/// filling the requested `w`x`h` exactly — and [`draw_with`] treated `w`
-/// and `h` as the FULL Mercator projection's own dimensions, so a zero
-/// origin was a no-op addition. **Task 3b is the first consumer that gives
-/// a nonzero origin or a zoom above `0`, and [`virtual_dims`] is where
-/// that meaning is defined**: `w`/`h` (passed to [`draw`]/[`draw_with`])
-/// are always the DRAWN plate's own size — the screen window — while
-/// `zoom` picks how much larger a virtual chart that window scrolls
-/// inside of, and `origin_col`/`origin_row` are that virtual chart's own
-/// coordinates, not the screen's.
+/// **The rung is a mesh depth now, not a zoom step** (The Quadrat, Task 1).
+/// The old `zoom: u8` — an index into a ladder of doublings that started
+/// from the drawn plate's own width — is REPLACED, not supplemented: it made
+/// the chart's size a function of the plate, which is precisely why no
+/// caller could render PART of a chart
+/// (`CLIENT-draw-with-cannot-render-a-subrect`). `depth` names a resolution
+/// the world itself has, so two callers drawing different-sized plates at
+/// the same rung are looking at the same chart.
+///
+/// `w`/`h` (passed to [`draw`]/[`draw_with`]) are always the DRAWN plate's
+/// own size — the screen window — while `depth` picks the virtual chart that
+/// window is a subrect OF, and `origin_col`/`origin_row` are that chart's
+/// own coordinates, never the screen's.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Window {
-    /// The zoom level, `0..=`[`MAX_ZOOM`]. `0` is the whole planet (the
-    /// virtual chart is exactly the drawn plate's own size, so there is
-    /// nothing to scroll); [`MAX_ZOOM`] is one character per terrain vertex
-    /// (see that constant's doc). See [`virtual_dims`] for the formula.
-    pub zoom: u8,
+    /// The mesh rung the virtual chart is drawn at —
+    /// [`GLOBE_RUNG`]`..=`[`BAND_B_RUNG`] on the shipped ladder. Higher is
+    /// FINER: each rung halves the facet edge, so it doubles the chart.
+    /// See [`virtual_dims`] for the chart that follows from it.
+    pub depth: u32,
     /// The window's origin column, in VIRTUAL chart cells (see
     /// [`virtual_dims`]), added to every drawn column before
-    /// inverse-projecting. `0` at `zoom == 0`, where it is the only valid
-    /// value (the whole virtual chart is on screen).
+    /// inverse-projecting. Longitude wraps, so any value names a real
+    /// column.
     pub origin_col: u32,
     /// The window's origin row, in VIRTUAL chart cells (see
     /// [`virtual_dims`]), added to every drawn row before
-    /// inverse-projecting. `0` at `zoom == 0`, where it is the only valid
-    /// value (the whole virtual chart is on screen).
+    /// inverse-projecting. Latitude does NOT wrap: the caller keeps
+    /// `origin_row + h` inside the chart's own height — see [`draw_with`]'s
+    /// own polar-fabrication note.
     pub origin_row: u32,
 }
 
-/// Task 1's own measurement: walking the equator at `GLOBE_LEVEL` (seed
-/// 42) crosses 385 distinct terrain vertices — not spec §4.3's ~364 estimate.
-/// This is the zoom ladder's ceiling: beyond a virtual chart this wide, a
-/// character would be drawing detail the mesh does not have (decision
-/// 0123: disclose a resolution, never invent detail below it). Believed
-/// to be a level-6-TOPOLOGY constant (the icosphere subdivision, not the
-/// terrain outcome) rather than a seed-42 fact, but unconfirmed against a
-/// second seed.
-///
-/// **This is true of the HORIZONTAL axis only, and the doc used to claim
-/// it for both.** `virtual_h = virtual_w / GLYPH_ASPECT`, and Mercator
-/// clamped at ±85° is nearly SQUARE in projected coordinates — so the
-/// vertical axis samples roughly twice as coarsely as this ceiling
-/// implies and never reaches the mesh's real detail on that axis at all.
-/// Measured on seed 42, best case (finest zoom, scrolled across the WHOLE
-/// virtual chart, no plate size limiting what is on screen): only 70.5%
-/// of the planet's 40,962 terrain vertices are EVER an `area_majority`
-/// representative at all -- 29.5% are undrawable by construction on this
-/// axis alone, no matter how the plate scrolls. Of the planet's 874 cave
-/// vertices specifically, under that same best case, 330 (37.8%) are among
-/// the undrawable ones. **A real plate is worse than the best case**,
-/// because it shows one screen's worth at a time rather than scrolling
-/// everywhere at once: only **5.7% of all vertices are ever drawable at the
-/// design plate's coarsest rung** (zoom 0, no scrolling), and only **1.1%
-/// at the 80x24 floor's coarsest rung** -- i.e. 94.3% and 98.9%
-/// undrawable respectively, at those two sizes, at that one rung.
-/// Recorded, not fixed here (registry row
-/// `MAP-vertical-axis-undersamples-the-mesh`): a genuine fix widens
-/// `virtual_h` independently of `GLYPH_ASPECT`'s horizontal role, which is
-/// a real signature change to every function in this module that takes
-/// `virtual_h`.
-pub const MAX_VIRTUAL_WIDTH: u16 = 385;
+/// The mesh depth band B is drawn at: the walk band, one tile per facet.
+/// Matches `hornvale_vessel::agent::walk_depth` (`globe_level + 6`) for the
+/// canonical globe level of 6; a world pinned to another globe level moves
+/// both together.
+/// type-audit: bare-ok(count)
+pub const BAND_B_RUNG: u32 = 12;
 
-/// How many zoom steps [`Window::zoom`] carries. Each step DOUBLES the
-/// virtual chart's width (see [`virtual_dims`]), starting from the 80x24
-/// floor's own plate width ([`hornvale_game_core::spread::PLATE_WIDTH`],
-/// 40 — the narrowest plate this client ever draws) and clamped at
-/// [`MAX_VIRTUAL_WIDTH`] (385): `40 << 3 == 320 < 385`, `40 << 4 == 640 >=
-/// 385`, so four doublings is the smallest ladder that reaches the
-/// ceiling from the floor. A wider terminal's plate (Task 3a's dynamic
-/// [`hornvale_game_core::spread::world_plate_width`]) reaches the ceiling
-/// in fewer of these four steps — [`virtual_dims`]'s own clamp catches
-/// that — so the last one or two zoom-in presses there are no-ops rather
-/// than the finest rung being unreachable; the ladder is sized for the
-/// floor, not wasted on it.
-pub const MAX_ZOOM: u8 = 4;
+/// The coarsest rung: the canonical grid level, below which the terrain
+/// fields have no resolution to disclose (decision 0196).
+/// type-audit: bare-ok(count)
+pub const GLOBE_RUNG: u32 = 6;
 
-/// The full virtual chart's width and height, in Mercator grid cells, at
-/// `win`'s zoom level, for a plate whose OWN drawn width is
-/// `plate_width` (its height following
-/// [`hornvale_game_core::spread::GLYPH_ASPECT`] — the same ratio
-/// `bin`'s `Driver::world_plate` derives the drawn plate's height from).
+/// The central angle an icosahedron's own base-face edge subtends at the
+/// centre of its circumsphere, in radians — `acos(1/sqrt(5))`, about
+/// 63.4349°. Every refinement level halves it, which is the whole content of
+/// [`tiles_around_a_great_circle`].
 ///
-/// At `zoom == 0` this returns `(plate_width, plate_width / GLYPH_ASPECT)`
-/// exactly — the whole planet fits with no scrolling, by construction, no
-/// matter how wide `plate_width` itself is (a test probing a resolution no
-/// live terminal uses must still see this invariant hold). Each zoom step
-/// doubles the width, clamped at [`MAX_VIRTUAL_WIDTH`] — or at
-/// `plate_width`, whichever is larger, so the clamp only ever limits
-/// GROWTH and never forces the virtual chart narrower than what is
-/// already on screen.
+/// Derived, never tabulated: `hornvale_kernel::math` (the `libm` route
+/// `mercator.rs` already uses for every transcendental in this client) is
+/// asked for the `acos` rather than a rounded literal being pasted here.
+fn base_edge_rad() -> f64 {
+    hornvale_kernel::math::acos(1.0 / 5.0f64.sqrt())
+}
+
+/// How many facet edges fit around a great circle at mesh depth `depth`.
+///
+/// **Derived from the icosahedron's own geometry, not a hardcoded ladder.**
+/// A table becomes a tuned number the first time the globe level moves —
+/// the mistake `hornvale_vessel::course::step_length_rad`'s own doc records
+/// avoiding. The base-face edge subtends [`base_edge_rad`]; each of the
+/// `depth` refinement levels halves it (the facet count is `20 << (2 *
+/// depth)`, i.e. four facets per facet per level, so the edge halves), so
+/// the count around a great circle is `2*pi` divided by that angle.
+///
+/// `2.0^depth` is computed through `math::powf` rather than a shift, so a
+/// depth at or past 32 saturates instead of overflowing.
+fn tiles_around_a_great_circle(depth: u32) -> u32 {
+    let edge = base_edge_rad() / hornvale_kernel::math::powf(2.0, f64::from(depth));
+    ((std::f64::consts::TAU / edge).round() as u32).max(1)
+}
+
+/// The virtual chart's size in TILES at `depth`, derived from the mesh alone.
+///
+/// **The plate's own width is deliberately not a parameter.** It used to be,
+/// and that is precisely why no caller could render part of a chart
+/// (`CLIENT-draw-with-cannot-render-a-subrect`): `draw_with(w = 1, ..)` drew a
+/// one-column-wide whole planet rather than one column of a wide one. The
+/// chart is a property of the rung; the plate is a window onto it.
+///
+/// Width is how many facet edges fit around a great circle at `depth`
+/// ([`tiles_around_a_great_circle`]). Height follows from the CLAMPED
+/// MERCATOR's own aspect — `2*mercator_y_max()/2pi`, about 0.9967, i.e.
+/// nearly square — and NOT from
+/// [`hornvale_game_core::spread::GLYPH_ASPECT`]. Conflating the two is
+/// `MAP-vertical-axis-undersamples-the-mesh`: the glyph aspect says a tile is
+/// two columns wide on a terminal, which is a fact about terminals.
 ///
 /// **This is the ONE function both [`draw_with`] (painting) and `bin`'s
 /// cursor resolver (`driver.rs`) call to turn a window position into a
-/// Mercator cell — never a second copy of this doubling-and-clamp
-/// arithmetic.** This campaign has already fixed the "two computations of
-/// the same geometry disagree" defect twice (a stale cursor, then a
-/// hardcoded plate height); H3 is exactly this defect a third time, and
-/// this function is the fix.
-pub fn virtual_dims(win: &Window, plate_width: u16) -> (u32, u32) {
-    let plate_width = u32::from(plate_width);
-    let zoom = win.zoom.min(MAX_ZOOM);
-    let scaled = plate_width << zoom;
-    // The ceiling is `MAX_VIRTUAL_WIDTH`, EXCEPT when the plate itself is
-    // already wider than that (an oversized screen, or a test probing a
-    // resolution no live terminal uses) — `zoom == 0` must always yield
-    // `virtual_w == plate_width` exactly (the "whole planet, no scroll"
-    // invariant), even past 385 columns, so the effective ceiling can
-    // never be smaller than `plate_width` itself. `scaled` is always
-    // `>= plate_width` (zoom only grows it), so this only ever clamps
-    // GROWTH, never forces `virtual_w` below the plate's own width.
-    let ceiling = u32::from(MAX_VIRTUAL_WIDTH).max(plate_width);
-    let virtual_w = scaled.min(ceiling);
-    let virtual_h = virtual_w / u32::from(hornvale_game_core::spread::GLYPH_ASPECT);
-    (virtual_w, virtual_h)
+/// Mercator tile** — never a second copy of this arithmetic.
+/// type-audit: bare-ok(count: depth), bare-ok(count: return)
+pub fn virtual_dims(depth: u32) -> (u32, u32) {
+    let w = tiles_around_a_great_circle(depth);
+    let aspect = (2.0 * mercator::mercator_y_max()) / (2.0 * std::f64::consts::PI);
+    let h = ((f64::from(w) * aspect).round() as u32).max(1);
+    (w, h)
 }
 
 /// The glyph for a cell whose sampled footprint is majority ocean — the
@@ -290,11 +274,11 @@ pub fn draw(
 /// MAJORITY vote across the samples.
 ///
 /// **`w`/`h` are the drawn plate's own size — the screen window —
-/// never the virtual chart's.** [`virtual_dims`]`(win, w)` gives the
+/// never the virtual chart's.** [`virtual_dims`]`(win.depth)` gives the
 /// latter; `win.origin_row`/`origin_col` are offsets into IT, not into
-/// `w`x`h`. Task 2 (before Task 3b) only ever drew at `win.zoom == 0`,
-/// where the two coincide, so this distinction was invisible until zoom
-/// and scroll existed to tell them apart.
+/// `w`x`h`. The two used to COINCIDE at the coarsest rung, because the
+/// chart was derived from `w` itself; since The Quadrat they never do, and
+/// `w`x`h` is always a genuine subrect of the chart.
 ///
 /// **No polar fabrication (spec §6) — automatic, PROVIDED the caller keeps
 /// `win.origin_row` inside its own valid range.** `unproject`'s own
@@ -346,7 +330,7 @@ pub fn draw_with(
     let mut grid = Grid::new(w, h);
     let width = u32::from(w);
     let height = u32::from(h);
-    let (virtual_w, virtual_h) = virtual_dims(win, w);
+    let (virtual_w, virtual_h) = virtual_dims(win.depth);
 
     for row in 0..height {
         for col in 0..width {
@@ -505,7 +489,7 @@ fn draw_point_sites(
 /// by [`draw_with`] itself (which only reads the vote tally, never which
 /// sample cast it), so this matters only to the resolver.
 ///
-/// `virtual_w`/`virtual_h` are `virtual_dims(win, plate_width)`'s own
+/// `virtual_w`/`virtual_h` are `virtual_dims(win.depth)`'s own
 /// output — passed in rather than recomputed per cell, since [`draw_with`]
 /// already computes it once for the whole plate and a caller resolving a
 /// single cursor position computes it once per keypress; neither needs a
@@ -588,6 +572,130 @@ mod tests {
         (terrain, geo)
     }
 
+    /// A window at `depth` positioned so the virtual chart's tile
+    /// `(row, col)` falls inside a `w`x`h` plate, plus the screen
+    /// `(x, y)` it falls at.
+    ///
+    /// **This helper could not have existed before Task 1.** The chart used
+    /// to be derived from the plate's own width, so the only way to get a
+    /// distant chart tile on screen was to enlarge the plate until the
+    /// chart grew to reach it — which is why several tests below used to
+    /// draw 400x200 grids to see one cave. A plate is a SUBRECT now, so a
+    /// test moves the window instead.
+    fn window_showing(depth: u32, row: u32, col: u32, w: u16, h: u16) -> (Window, u16, u16) {
+        let (vw, vh) = virtual_dims(depth);
+        assert!(
+            u32::from(w) < vw && u32::from(h) < vh,
+            "window_showing wants a plate strictly smaller than the chart"
+        );
+        let origin_row = row.saturating_sub(u32::from(h) / 2).min(vh - u32::from(h));
+        let origin_col = (col + vw - u32::from(w) / 2) % vw;
+        let win = Window {
+            depth,
+            origin_col,
+            origin_row,
+        };
+        (
+            (win),
+            ((col + vw - origin_col) % vw) as u16,
+            (row - origin_row) as u16,
+        )
+    }
+
+    #[test]
+    fn virtual_dims_come_from_the_mesh_not_the_plate() {
+        // The virtual chart's size is a property of the RUNG alone. Two callers
+        // drawing different-sized plates at the same rung must agree about the
+        // chart they are windows onto -- that agreement is what makes a subrect
+        // meaningful, and deriving it from the plate width is what made it
+        // impossible before this task.
+        let (w_a, h_a) = virtual_dims(BAND_B_RUNG);
+        let (w_b, h_b) = virtual_dims(BAND_B_RUNG);
+        assert_eq!((w_a, h_a), (w_b, h_b));
+
+        // Coarser rung => half the tiles. Each mesh level halves the edge length.
+        // Tolerance is +/-1 IN EITHER DIRECTION because each rung rounds
+        // independently: at the real numbers, rung 11 gives 11,623 and rung 12
+        // gives 23,245, so doubling the coarse rung OVERSHOOTS by one. A
+        // one-sided tolerance fails here, which is what the first draft of this
+        // assertion did.
+        let (w_coarse, _) = virtual_dims(BAND_B_RUNG - 1);
+        assert!(
+            (w_coarse * 2).abs_diff(w_a) <= 1,
+            "rung {} gave {w_coarse} and rung {} gave {w_a}; expected a halving within 1",
+            BAND_B_RUNG - 1,
+            BAND_B_RUNG
+        );
+    }
+
+    #[test]
+    fn the_clamped_mercator_is_nearly_square_in_tiles() {
+        // MAP-vertical-axis-undersamples-the-mesh: the old code set
+        // `virtual_h = virtual_w / GLYPH_ASPECT`, conflating the GLYPH aspect (a
+        // screen property, 2 columns per row) with the PROJECTION aspect (a
+        // geometry property). A +/-85-clamped Mercator is nearly square in
+        // projected coordinates, so the vertical axis was sampled ~2x too
+        // coarsely. Pin the geometry, not the glyph.
+        let (w, h) = virtual_dims(BAND_B_RUNG);
+        let ratio = f64::from(h) / f64::from(w);
+        assert!(
+            (ratio - 0.9967).abs() < 0.01,
+            "clamped-Mercator aspect came out {ratio}, expected ~0.9967"
+        );
+    }
+
+    /// THE TASK'S OWN POINT: a narrow plate draws a SUBRECT of a wide one,
+    /// tile for tile. Before Task 1 the chart's width was the plate's width,
+    /// so `draw_with(w = 8, ..)` drew an 8-column-wide whole planet rather
+    /// than eight columns of a wide one, and this assertion could not have
+    /// been written at all.
+    #[test]
+    fn a_narrow_plate_draws_a_subrect_of_the_wide_one() {
+        let (terrain, geo) = test_world();
+        let index = NearestVertexIndex::new(&geo);
+        let f = mercator::frame_for(false);
+        let win = Window {
+            depth: GLOBE_RUNG,
+            origin_col: 40,
+            origin_row: 20,
+        };
+        let wide = draw_with(
+            &terrain,
+            &geo,
+            &index,
+            &f,
+            &win,
+            32,
+            8,
+            false,
+            &BTreeSet::new(),
+            &BTreeSet::new(),
+            &Discovered::default(),
+        );
+        let narrow = draw_with(
+            &terrain,
+            &geo,
+            &index,
+            &f,
+            &win,
+            8,
+            8,
+            false,
+            &BTreeSet::new(),
+            &BTreeSet::new(),
+            &Discovered::default(),
+        );
+        for y in 0..8u16 {
+            for x in 0..8u16 {
+                assert_eq!(
+                    narrow.get(x, y).map(|c| c.glyph),
+                    wide.get(x, y).map(|c| c.glyph),
+                    "column {x} row {y} disagreed between an 8-wide and a 32-wide plate"
+                );
+            }
+        }
+    }
+
     /// A settlement and a cave sharing one screen cell: the settlement
     /// wins. Precedence used to be the `if/else` order inside
     /// `point_site_at`; it is now the DRAW ORDER in `draw_point_sites`,
@@ -598,22 +706,21 @@ mod tests {
         let (terrain, geo) = test_world();
         let index = NearestVertexIndex::new(&geo);
         let f = crate::mercator::frame_for(false);
-        let win = Window {
-            zoom: 0,
-            origin_col: 0,
-            origin_row: 0,
-        };
-        let (w, h) = (104u16, 52u16);
-        let (vw, vh) = virtual_dims(&win, w);
+        let (w, h) = (32u16, 16u16);
+        let (vw, vh) = virtual_dims(GLOBE_RUNG);
 
+        // Any vertex inside the clamp will do; the WINDOW is then moved to
+        // show it, rather than the plate being grown until it reaches.
         let shared = geo
             .vertices()
             .find(|&c| {
                 let g = geo.coord(c);
-                crate::mercator::project(&f, g.latitude, g.longitude, vw, vh)
-                    .is_some_and(|(r, cc)| r < u32::from(h) && cc < u32::from(w))
+                crate::mercator::project(&f, g.latitude, g.longitude, vw, vh).is_some()
             })
-            .expect("some vertex projects on-plate");
+            .expect("some vertex projects inside the clamp");
+        let g = geo.coord(shared);
+        let (row, col) = crate::mercator::project(&f, g.latitude, g.longitude, vw, vh).unwrap();
+        let (win, sx, sy) = window_showing(GLOBE_RUNG, row, col, w, h);
 
         let both: BTreeSet<Vertex> = std::iter::once(shared).collect();
         let mut discovered = Discovered::default();
@@ -633,10 +740,8 @@ mod tests {
             &both,
             &discovered,
         );
-        let g = geo.coord(shared);
-        let (row, col) = crate::mercator::project(&f, g.latitude, g.longitude, vw, vh).unwrap();
         assert_eq!(
-            grid.get(col as u16, row as u16).and_then(|c| c.glyph),
+            grid.get(sx, sy).and_then(|c| c.glyph),
             Some(SETTLEMENT_GLYPH),
             "a cave overwrote a settlement on a shared cell — draw order inverted"
         );
@@ -658,35 +763,34 @@ mod tests {
         let (terrain, geo) = test_world();
         let index = NearestVertexIndex::new(&geo);
         let f = crate::mercator::frame_for(false);
-        let win = Window {
-            zoom: 0,
+        let (w, h) = (32u16, 16u16);
+        let (vw, vh) = virtual_dims(GLOBE_RUNG);
+        // The chart tile a vertex falls in is now plate-independent, so the
+        // search below covers the WHOLE planet rather than whichever corner
+        // of it a 104x52 plate happened to reach.
+        let anywhere = Window {
+            depth: GLOBE_RUNG,
             origin_col: 0,
             origin_row: 0,
         };
-        let (w, h) = (104u16, 52u16);
-        let (vw, vh) = virtual_dims(&win, w);
 
-        // Every cave vertex, and the screen cell each projects into.
+        // Every cave vertex, and the chart tile each projects into.
         let caves: BTreeSet<Vertex> = (0..geo.vertex_count())
             .map(|i| Vertex(i as u32))
             .filter(|&c| terrain.cave_at(c).is_some())
             .collect();
         assert!(!caves.is_empty(), "seed 42 must have caves to test with");
 
-        // A cave that is NOT its own screen cell's representative: exactly
+        // A cave that is NOT its own chart tile's representative: exactly
         // the case the old scheme dropped.
-        let orphan = caves.iter().copied().find(|&c| {
+        let orphan = caves.iter().copied().find_map(|c| {
             let g = geo.coord(c);
-            match crate::mercator::project(&f, g.latitude, g.longitude, vw, vh) {
-                Some((row, col)) if row < u32::from(h) && col < u32::from(w) => {
-                    let (_, rep) =
-                        area_majority(&terrain, &geo, &index, &f, &win, vw, vh, row, col);
-                    rep != c
-                }
-                _ => false,
-            }
+            let (row, col) = crate::mercator::project(&f, g.latitude, g.longitude, vw, vh)?;
+            let (_, rep) = area_majority(&terrain, &geo, &index, &f, &anywhere, vw, vh, row, col);
+            (rep != c).then_some((c, row, col))
         });
-        let orphan = orphan.expect("seed 42 must have a cave that wins no vote");
+        let (orphan, row, col) = orphan.expect("seed 42 must have a cave that wins no vote");
+        let (win, sx, sy) = window_showing(GLOBE_RUNG, row, col, w, h);
 
         let mut discovered = Discovered::default();
         discovered.record(FeatureId::Cave(orphan));
@@ -704,11 +808,8 @@ mod tests {
             &discovered,
         );
 
-        let g = geo.coord(orphan);
-        let (row, col) = crate::mercator::project(&f, g.latitude, g.longitude, vw, vh)
-            .expect("the orphan projects on-plate");
         assert_eq!(
-            grid.get(col as u16, row as u16).and_then(|c| c.glyph),
+            grid.get(sx, sy).and_then(|c| c.glyph),
             Some(CAVE_GLYPH),
             "a discovered cave that wins no area-majority vote was not drawn"
         );
@@ -723,7 +824,7 @@ mod tests {
         let index = NearestVertexIndex::new(&geo);
         let f = crate::mercator::frame_for(false);
         let win = Window {
-            zoom: 0,
+            depth: GLOBE_RUNG,
             origin_col: 0,
             origin_row: 0,
         };
@@ -760,7 +861,7 @@ mod tests {
         let index = NearestVertexIndex::new(&geo);
         let f = crate::mercator::frame_for(false);
         let win = Window {
-            zoom: 0,
+            depth: GLOBE_RUNG,
             origin_col: 0,
             origin_row: 0,
         };
@@ -830,16 +931,21 @@ mod tests {
         let (terrain, geo) = test_world();
         let index = NearestVertexIndex::new(&geo);
         let f = crate::mercator::frame_for(false);
+        // GLOBE_RUNG's chart is 363x361 -- ~3.2 tiles per terrain vertex,
+        // finer than the 2 tiles per vertex the old 400x200 whole-chart
+        // draw achieved, so the claim is tested at least as sharply. The
+        // PLATE is 100x50 and the window is parked near the equator, where
+        // Mercator's own stretch is least and the chart is closest to the
+        // mesh's real spacing -- the hardest place for the two methods to
+        // agree, and (since Task 1) reachable without drawing the whole
+        // chart to get there.
+        let (vw, vh) = virtual_dims(GLOBE_RUNG);
+        let (w, h) = (100u16, 50u16);
         let win = Window {
-            zoom: 0,
+            depth: GLOBE_RUNG,
             origin_col: 0,
-            origin_row: 0,
+            origin_row: vh / 2 - u32::from(h) / 2,
         };
-        // 400x200: fine enough that a single screen cell's footprint (a
-        // fraction of a degree) is much smaller than the mesh's own
-        // typical vertex spacing at GLOBE_LEVEL, so every sub-sample within
-        // one cell's footprint should agree.
-        let (w, h) = (400u16, 200u16);
         let empty_settlements = BTreeSet::new();
         let empty_discovered = Discovered::default();
         let g = draw_with(
@@ -860,8 +966,13 @@ mod tests {
         let mut total = 0u32;
         for row in 0..u32::from(h) {
             for col in 0..u32::from(w) {
-                let (lat, lon) =
-                    crate::mercator::unproject(&f, row, col, u32::from(w), u32::from(h));
+                let (lat, lon) = crate::mercator::unproject(
+                    &f,
+                    win.origin_row + row,
+                    win.origin_col + col,
+                    vw,
+                    vh,
+                );
                 let point_vertex = index.nearest(&geo, lat, lon);
                 let point_ocean = terrain.is_ocean(point_vertex);
                 let expected = if point_ocean { OCEAN_GLYPH } else { LAND_GLYPH };
@@ -893,22 +1004,19 @@ mod tests {
     /// draws a discovered one** — the real test the discovery gate exists
     /// for (spec Amendment 1 §A3/§A7, "nothing is drawn and then hidden"):
     /// the gate lives inside the paint loop, not a filter pass afterward.
-    /// Uses a real cave vertex (real terrain, not a
-    /// fixture) at a window fine enough that `area_majority`'s vote
-    /// collapses to point sampling (the same technique
-    /// `at_a_fine_enough_window_area_majority_agrees_with_point_sampling`
-    /// already establishes), so the screen position resolving to
-    /// `cave_vertex` is found by direct search rather than assumed.
+    /// Uses a real cave vertex (real terrain, not a fixture), PROJECTED to
+    /// its own chart tile and then shown by moving the window there.
+    ///
+    /// It used to draw a 400x200 plate and SEARCH it for the screen tile
+    /// whose `area_majority` vote landed on `cave_vertex` — the only way to
+    /// reach a given cave when the chart was the plate. Since Task 1 the
+    /// tile a site falls in is a property of the rung, so the site's
+    /// position is computed, not hunted for, and the plate is 32x16.
     #[test]
     fn draw_with_gates_a_point_site_on_discovery() {
         let (terrain, geo) = test_world();
         let index = NearestVertexIndex::new(&geo);
         let f = crate::mercator::frame_for(false);
-        let win = Window {
-            zoom: 0,
-            origin_col: 0,
-            origin_row: 0,
-        };
         let cave_vertex = geo
             .vertices()
             .find(|&c| terrain.cave_at(c).is_some())
@@ -918,23 +1026,13 @@ mod tests {
         // PROJECTED from the roster now, not sampled for, so an empty
         // roster would make this test vacuous rather than failing.
         let caves: BTreeSet<Vertex> = std::iter::once(cave_vertex).collect();
-        let (w, h) = (400u16, 200u16);
-        let (virtual_w, virtual_h) = virtual_dims(&win, w);
-
-        // Find the screen position area_majority resolves to `cave_vertex`.
-        let mut found = None;
-        'search: for row in 0..u32::from(h) {
-            for col in 0..u32::from(w) {
-                let (_ocean, vertex) = area_majority(
-                    &terrain, &geo, &index, &f, &win, virtual_w, virtual_h, row, col,
-                );
-                if vertex == cave_vertex {
-                    found = Some((row, col));
-                    break 'search;
-                }
-            }
-        }
-        let (row, col) = found.expect("cave_vertex's own screen position is on this fine a plate");
+        let (w, h) = (32u16, 16u16);
+        let (virtual_w, virtual_h) = virtual_dims(GLOBE_RUNG);
+        let cg = geo.coord(cave_vertex);
+        let (crow, ccol) =
+            crate::mercator::project(&f, cg.latitude, cg.longitude, virtual_w, virtual_h)
+                .expect("the cave vertex is inside the projection's clamp");
+        let (win, col, row) = window_showing(GLOBE_RUNG, crow, ccol, w, h);
 
         let undiscovered = Discovered::default();
         let g_before = draw_with(
@@ -951,7 +1049,7 @@ mod tests {
             &undiscovered,
         );
         assert_ne!(
-            g_before.get(col as u16, row as u16).unwrap().glyph,
+            g_before.get(col, row).unwrap().glyph,
             Some(CAVE_GLYPH),
             "an undiscovered cave must never be drawn"
         );
@@ -972,7 +1070,7 @@ mod tests {
             &discovered,
         );
         assert_eq!(
-            g_after.get(col as u16, row as u16).unwrap().glyph,
+            g_after.get(col, row).unwrap().glyph,
             Some(CAVE_GLYPH),
             "a discovered cave must be drawn at its own resolved screen position"
         );

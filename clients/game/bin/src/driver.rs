@@ -68,7 +68,7 @@ use crate::history::History;
 use crate::input::Action;
 use crate::line::Line;
 use crate::mercator::{self, Frame};
-use crate::plate::{self, Window};
+use crate::plate::{self, BAND_B_RUNG, GLOBE_RUNG, Window};
 use hornvale_astronomy::SkyPins;
 use hornvale_game_core::{CandidateSource, Cursor, Focus};
 use hornvale_kernel::{FacetId, NearestVertexIndex, Seed, Value, Vertex, World};
@@ -281,12 +281,15 @@ pub struct Driver {
     /// from the committed `TIDALLY_LOCKED` fact and never recomputed — the
     /// central line does not move as the player does (spec §3.2).
     frame: Frame,
-    /// The world plate's window: which zoom level and which VIRTUAL-chart
+    /// The world plate's window: which mesh RUNG and which VIRTUAL-chart
     /// cell the window's own origin sits at (`plate::virtual_dims`'s own
     /// doc distinguishes the virtual chart from the drawn plate). Reset to
-    /// `Window { zoom: 0, origin_col: 0, origin_row: 0 }` on entering the
-    /// world view (`Driver::apply_zoom`) — the whole planet, no scroll
-    /// needed at the coarsest rung — and moved by zoom/scroll from there.
+    /// `Window { depth: GLOBE_RUNG, origin_col: 0, origin_row: 0 }` on
+    /// entering the world view (`Driver::apply_zoom`) — the coarsest rung,
+    /// scrolled to the chart's own origin — and moved by zoom/scroll from
+    /// there. Since The Quadrat the coarsest rung is NOT "the whole planet
+    /// on screen": the chart is 363x361 tiles there and the plate is a
+    /// subrect of it.
     window: Window,
     /// Whether the whole-world Mercator view is active. **Fix round 1
     /// (Task 3a's own review):** `Focus::Map` alone used to gate this in
@@ -665,7 +668,7 @@ impl Driver {
             .is_some();
         let frame = mercator::frame_for(locked);
         let window = Window {
-            zoom: 0,
+            depth: GLOBE_RUNG,
             origin_col: 0,
             origin_row: 0,
         };
@@ -925,7 +928,7 @@ impl Driver {
     /// routing table).** With the world view off, zooming out (`-`) turns it
     /// on at the coarsest rung; with the world view on at its finest rung,
     /// zooming in (`+`/`=`) turns it back off; between those, the keys move
-    /// the world map's own zoom, clamped to `0..=`[`plate::MAX_ZOOM`]. See
+    /// the world map's own rung, clamped to [`GLOBE_RUNG`]`..=`[`BAND_B_RUNG`]. See
     /// [`Self::apply_zoom`].
     ///
     /// **`Recentre` (`.`) rolls the projection to the cursor (spec §3.2),
@@ -1228,8 +1231,8 @@ impl Driver {
     /// (latitude stops at the clamp — spec §4.2). Only ever meaningful
     /// while the world view is on; callers only invoke it then.
     fn reclamp_window(&mut self) {
-        let (plate_w, plate_h) = self.active_plate_dims();
-        let (virtual_w, virtual_h) = plate::virtual_dims(&self.window, plate_w);
+        let (_, plate_h) = self.active_plate_dims();
+        let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
         if virtual_w > 0 {
             self.window.origin_col %= virtual_w;
         }
@@ -1268,7 +1271,7 @@ impl Driver {
         self.cursor.y = clamped_y as u16;
 
         if self.world_view {
-            let (virtual_w, virtual_h) = plate::virtual_dims(&self.window, plate_w);
+            let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
             let spill_x = raw_x - clamped_x;
             if virtual_w > 0 {
                 self.window.origin_col = (i64::from(self.window.origin_col) + spill_x)
@@ -1291,15 +1294,20 @@ impl Driver {
     /// (would break `Focus::Map`'s deliberately total routing table).
     ///
     /// - `delta < 0` (zoom OUT): with the world view off, turn it ON at
-    ///   its coarsest rung (`Window { zoom: 0, .. }` — the whole planet,
-    ///   nothing further out); with it on and already at zoom `0`, do
-    ///   nothing (there IS nothing further out); otherwise zoom out one
-    ///   step.
+    ///   its coarsest rung (`Window { depth: `[`GLOBE_RUNG`]`, .. }` — the
+    ///   canonical grid level, below which the terrain fields have no
+    ///   resolution to disclose); with it on and already there, do nothing
+    ///   (there IS nothing further out); otherwise LOWER `depth` one rung.
     /// - `delta > 0` (zoom IN): with the world view on and already at
-    ///   [`plate::MAX_ZOOM`] (the finest rung — one character per terrain
-    ///   vertex, decision 0123), turn it OFF, returning to the walk-band
-    ///   chart; with it on and below the ceiling, zoom in one step;
-    ///   with it off, do nothing (the walk band has no zoom of its own).
+    ///   [`BAND_B_RUNG`] (the finest rung — one tile per band-B facet),
+    ///   turn it OFF, returning to the walk-band chart; with it on and
+    ///   below the ceiling, RAISE `depth` one rung; with it off, do nothing
+    ///   (the walk band has no zoom of its own).
+    ///
+    /// **The ladder's direction inverted with The Quadrat**: `depth` is a
+    /// mesh subdivision level, so zooming IN raises it and zooming OUT
+    /// lowers it, where the old `zoom` field counted steps up from the
+    /// coarsest.
     ///
     /// Either transition re-clamps the cursor into whichever plate is now
     /// active ([`Self::move_cursor`]`(0, 0)`) and re-resolves the strip —
@@ -1312,25 +1320,25 @@ impl Driver {
                 if !self.world_view {
                     self.world_view = true;
                     self.window = Window {
-                        zoom: 0,
+                        depth: GLOBE_RUNG,
                         origin_col: 0,
                         origin_row: 0,
                     };
-                } else if self.window.zoom > 0 {
-                    self.window.zoom -= 1;
+                } else if self.window.depth > GLOBE_RUNG {
+                    self.window.depth -= 1;
                     self.reclamp_window();
                 }
             }
             Ordering::Greater => {
-                if self.world_view && self.window.zoom >= plate::MAX_ZOOM {
+                if self.world_view && self.window.depth >= BAND_B_RUNG {
                     self.world_view = false;
                     self.window = Window {
-                        zoom: 0,
+                        depth: GLOBE_RUNG,
                         origin_col: 0,
                         origin_row: 0,
                     };
                 } else if self.world_view {
-                    self.window.zoom += 1;
+                    self.window.depth += 1;
                     self.reclamp_window();
                 }
             }
@@ -1362,8 +1370,8 @@ impl Driver {
         if !self.world_view {
             return;
         }
-        let (plate_w, plate_h) = self.active_plate_dims();
-        let (virtual_w, virtual_h) = plate::virtual_dims(&self.window, plate_w);
+        let (_, plate_h) = self.active_plate_dims();
+        let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
         let plate_row = self.window.origin_row + u32::from(self.cursor.y);
         let plate_col = self.window.origin_col + u32::from(self.cursor.x);
         let (lat, lon) =
@@ -1531,13 +1539,20 @@ impl Driver {
     /// virtual chart's own cell count at the active zoom; the terrain's
     /// own vertex count ([`hornvale_kernel::Geosphere::vertex_count`]) divided
     /// by it is the mean number of real terrain vertices behind one screen
-    /// character — never a second copy of [`plate::MAX_VIRTUAL_WIDTH`],
-    /// and never a hand-picked ratio. `None` once that mean is `<= 1`
-    /// (one character names at most one vertex, on average — the design
-    /// ceiling `plate::MAX_ZOOM`'s own doc states).
+    /// character — never a hand-picked ratio. `None` once that mean is
+    /// `<= 1` (one character names at most one vertex, on average).
+    ///
+    /// **Since The Quadrat this returns `None` at every SHIPPED rung, and
+    /// that is the honest answer rather than a regression.** The chart no
+    /// longer shrinks to the plate: [`GLOBE_RUNG`], the coarsest rung the
+    /// ladder reaches, is the canonical grid level itself (decision 0196) —
+    /// 363x361 tiles for 40,962 vertices — so one character never stands
+    /// for more than one vertex anywhere on the ladder, and there is
+    /// nothing to disclose. The method is kept, not deleted: it is the
+    /// derivation, and a future rung coarser than the mesh would make it
+    /// speak again. The strip's own rung line is Task 7's.
     fn resolution_disclosure(&self) -> Option<String> {
-        let (plate_w, _) = self.active_plate_dims();
-        let (virtual_w, virtual_h) = plate::virtual_dims(&self.window, plate_w);
+        let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
         let virtual_cells = u64::from(virtual_w) * u64::from(virtual_h);
         if virtual_cells == 0 {
             return None;
@@ -1581,8 +1596,7 @@ impl Driver {
     /// same point the earlier single-point query asked for, so this is
     /// strictly more constrained, never coarser.
     fn world_view_vertex(&self) -> hornvale_kernel::Vertex {
-        let (plate_w, _) = self.active_plate_dims();
-        let (virtual_w, virtual_h) = plate::virtual_dims(&self.window, plate_w);
+        let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
         let (_ocean, vertex) = plate::area_majority(
             &self.terrain,
             &self.geo,
@@ -1873,6 +1887,28 @@ mod portolan_tests {
         );
     }
 
+    /// Scroll `d`'s window so the possessed agent's own position sits at the
+    /// middle of a `w`x`h` plate.
+    ///
+    /// **Before Task 1 the coarsest rung WAS the whole planet in one
+    /// screen**, so a test could read a 40x20 plate at origin `(0, 0)` and
+    /// expect to see the world. The chart is the rung now — 363x361 tiles at
+    /// [`GLOBE_RUNG`] — and the origin corner of it is a patch of arctic
+    /// ocean, so a test that means to look at somewhere real has to say
+    /// where. The player's own position is not an arbitrary choice: it is
+    /// where a client opening the map would put the window, and Task 7 makes
+    /// that the shipped gesture.
+    fn centre_window_on_the_player(d: &mut Driver, w: u16, h: u16) {
+        let (vw, vh) = plate::virtual_dims(d.window.depth);
+        let c = d.session.position().coord();
+        let (row, col) = mercator::project(&d.frame, c.latitude, c.longitude, vw, vh)
+            .expect("the flagship's own position is inside the projection's clamp");
+        d.window.origin_row = row
+            .saturating_sub(u32::from(h) / 2)
+            .min(vh.saturating_sub(u32::from(h)));
+        d.window.origin_col = (col + vw - u32::from(w) / 2) % vw;
+    }
+
     // -- The world-plate memo (perf/world-plate-memo) ----------------
     //
     // MEASURED, on seed 42 at the 210x56 design size: one `draw_with` is
@@ -1983,7 +2019,10 @@ mod portolan_tests {
         assert!(!d.world_view);
         d.apply(Action::Zoom(-1));
         assert!(d.world_view);
-        assert_eq!(d.window.zoom, 0, "the coarsest rung is zoom 0");
+        assert_eq!(
+            d.window.depth, GLOBE_RUNG,
+            "the coarsest rung is the canonical grid level"
+        );
         assert_eq!(d.window.origin_col, 0);
         assert_eq!(d.window.origin_row, 0);
     }
@@ -2006,7 +2045,7 @@ mod portolan_tests {
         let mut d = test_driver();
         enter_world_view(&mut d);
         d.apply(Action::Zoom(1));
-        assert_eq!(d.window.zoom, 1);
+        assert_eq!(d.window.depth, GLOBE_RUNG + 1);
         assert!(d.world_view);
     }
 
@@ -2014,14 +2053,13 @@ mod portolan_tests {
     fn zoom_in_stops_at_max_zoom_then_the_next_press_leaves_the_world_view() {
         let mut d = test_driver();
         enter_world_view(&mut d);
-        for _ in 0..plate::MAX_ZOOM {
+        for _ in 0..(BAND_B_RUNG - GLOBE_RUNG) {
             d.apply(Action::Zoom(1));
         }
         assert!(d.world_view);
         assert_eq!(
-            d.window.zoom,
-            plate::MAX_ZOOM,
-            "maximum zoom is one character per terrain vertex (decision 0123)"
+            d.window.depth, BAND_B_RUNG,
+            "the finest rung is band B: one tile per facet"
         );
         d.apply(Action::Zoom(1));
         assert!(
@@ -2030,7 +2068,7 @@ mod portolan_tests {
         );
     }
 
-    /// Sixty-four presses is far more than [`plate::MAX_ZOOM`] steps, so
+    /// Sixty-four presses is far more than the ladder's own height, so
     /// this must walk all the way up the ladder AND back off the top —
     /// the ladder's ceiling must be a real stop, not merely a slow climb.
     #[test]
@@ -2080,7 +2118,7 @@ mod portolan_tests {
         d.resize(210, 56);
         enter_world_view(&mut d);
         d.apply(Action::CursorBy(i16::MAX, 0));
-        for _ in 0..plate::MAX_ZOOM + 1 {
+        for _ in 0..(BAND_B_RUNG - GLOBE_RUNG) + 1 {
             d.apply(Action::Zoom(1)); // walk back off the top of the ladder
         }
         assert!(!d.world_view);
@@ -2155,17 +2193,16 @@ mod portolan_tests {
         let mut d = test_driver();
         enter_world_view(&mut d);
 
-        for target_zoom in [0u8, 1, 3] {
-            while d.window.zoom < target_zoom {
+        for target_depth in [GLOBE_RUNG, GLOBE_RUNG + 1, GLOBE_RUNG + 3] {
+            while d.window.depth < target_depth {
                 d.apply(Action::Zoom(1));
             }
-            assert_eq!(d.window.zoom, target_zoom);
+            assert_eq!(d.window.depth, target_depth);
 
             for &(dx, dy) in &[(0i16, 0i16), (7, 0), (0, 5), (39, 19), (-7, 3)] {
                 d.apply(Action::CursorBy(dx, dy));
 
-                let (plate_w, _) = d.active_plate_dims();
-                let (virtual_w, virtual_h) = plate::virtual_dims(d.window(), plate_w);
+                let (virtual_w, virtual_h) = plate::virtual_dims(d.window().depth);
                 let (_ocean, expected_vertex) = plate::area_majority(
                     &d.terrain,
                     &d.geo,
@@ -2197,7 +2234,7 @@ mod portolan_tests {
                 let resolved = d.resolve_world_view();
                 assert_eq!(
                     resolved, expected,
-                    "zoom {target_zoom}, offset ({dx}, {dy}), cursor {:?}, window {:?}: \
+                    "rung {target_depth}, offset ({dx}, {dy}), cursor {:?}, window {:?}: \
                      the resolver drifted from the window/cursor state",
                     d.cursor, d.window
                 );
@@ -2214,7 +2251,7 @@ mod portolan_tests {
     /// against each other's real OUTPUT, not a shared re-derivation of the
     /// same arithmetic.
     ///
-    /// Run at [`plate::MAX_ZOOM`] (the finest rung), where the 49-vote
+    /// Run at [`BAND_B_RUNG`] (the finest rung), where the 49-vote
     /// majority and the true-centre sample are expected to coincide (one
     /// terrain vertex per character — `plate::SUBSAMPLES_PER_AXIS`'s own
     /// doc), across several offsets: this is the region where the check is
@@ -2229,10 +2266,10 @@ mod portolan_tests {
     fn the_resolved_vertex_matches_the_actually_drawn_glyph_at_fine_zoom() {
         let mut d = test_driver();
         enter_world_view(&mut d);
-        for _ in 0..plate::MAX_ZOOM {
+        for _ in 0..(BAND_B_RUNG - GLOBE_RUNG) {
             d.apply(Action::Zoom(1));
         }
-        assert_eq!(d.window.zoom, plate::MAX_ZOOM);
+        assert_eq!(d.window.depth, BAND_B_RUNG);
 
         for &(dx, dy) in &[(0i16, 0i16), (5, 0), (0, 3), (-4, 2), (9, -6)] {
             d.apply(Action::CursorBy(dx, dy));
@@ -2261,7 +2298,7 @@ mod portolan_tests {
                 resolved_ocean, drawn_ocean,
                 "cursor {:?} at zoom {}: the resolver named a vertex whose class \
                  contradicts the actually drawn glyph",
-                d.cursor, d.window.zoom
+                d.cursor, d.window.depth
             );
         }
     }
@@ -2418,7 +2455,7 @@ mod portolan_tests {
         let grid = d.world_plate(d.term_w, d.term_h);
         let (plate_w, plate_h) = d.active_plate_dims();
         assert_eq!((grid.width(), grid.height()), (plate_w, plate_h));
-        let (virtual_w, virtual_h) = plate::virtual_dims(&d.window, plate_w);
+        let (virtual_w, virtual_h) = plate::virtual_dims(d.window.depth);
 
         let mut agree = 0u32;
         let mut total = 0u32;
@@ -2483,11 +2520,16 @@ mod portolan_tests {
         let mut d = test_driver();
         enter_world_view(&mut d);
         assert_eq!(
-            d.window.zoom, 0,
-            "sanity: the coarsest zoom, whole planet in one screen"
+            d.window.depth, GLOBE_RUNG,
+            "sanity: the coarsest rung the ladder reaches"
         );
 
         let (plate_w, plate_h) = d.active_plate_dims();
+        // Since Task 1 the plate no longer holds the whole planet at the
+        // coarsest rung, so the search below covers one screen's worth of a
+        // 363x361 chart — put that screen somewhere the world actually has
+        // features stacked on features.
+        centre_window_on_the_player(&mut d, plate_w, plate_h);
         let mut found: Option<hornvale_kernel::Vertex> = None;
         'search: for y in 0..plate_h {
             for x in 0..plate_w {
@@ -2617,34 +2659,45 @@ mod portolan_tests {
 
     // -- Task 4, Step 4 / F5: the resolution disclosure -------------------
 
-    /// F5: at the coarsest zoom (~51 real terrain vertices behind every
-    /// character, per `plate::SUBSAMPLES_PER_AXIS`'s own doc), the strip
-    /// discloses its resolution; at the finest zoom (one character per
-    /// terrain vertex, `plate::MAX_ZOOM`'s own design ceiling), it does not.
-    /// A test pinned at one zoom cannot see this requirement at all.
+    /// F5, RESTATED FOR THE MESH LADDER: the strip discloses a resolution
+    /// only where one character stands for MORE than one terrain vertex,
+    /// and since The Quadrat no shipped rung does.
+    ///
+    /// **The coarse half of this test was a real assertion and is now a
+    /// falsified one, so it is inverted rather than deleted.** It used to
+    /// read "the coarsest zoom must disclose": the chart was the plate,
+    /// 40x20 = 800 characters for 40,962 vertices, ~51 vertices apiece.
+    /// The chart is the RUNG now, and [`GLOBE_RUNG`] is the canonical grid
+    /// level itself (decision 0196) — 363x361 tiles — so even the coarsest
+    /// rung is finer than the mesh and the honest disclosure is silence.
+    /// See [`Driver::resolution_disclosure`]'s own doc. What this test
+    /// still pins is that the derivation runs at BOTH ends of the ladder
+    /// and agrees; a rung coarser than the mesh would make the first half
+    /// speak again.
     #[test]
-    fn the_resolution_disclosure_fires_at_the_coarsest_zoom_and_not_the_finest() {
+    fn the_resolution_disclosure_is_silent_at_every_shipped_rung() {
         let mut d = test_driver();
         enter_world_view(&mut d);
-        assert_eq!(d.window.zoom, 0, "sanity: the coarsest rung");
+        assert_eq!(d.window.depth, GLOBE_RUNG, "sanity: the coarsest rung");
         let coarse = d
             .strip_text()
             .expect("the world view always resolves once active");
         assert!(
-            coarse.contains("terrain cells"),
-            "the coarsest zoom must disclose its resolution, got {coarse:?}"
+            !coarse.contains("terrain cells"),
+            "GLOBE_RUNG is already the mesh's own level and has nothing to \
+             disclose, got {coarse:?}"
         );
 
-        for _ in 0..plate::MAX_ZOOM {
+        for _ in 0..(BAND_B_RUNG - GLOBE_RUNG) {
             d.apply(Action::Zoom(1));
         }
-        assert_eq!(d.window.zoom, plate::MAX_ZOOM, "sanity: the finest rung");
+        assert_eq!(d.window.depth, BAND_B_RUNG, "sanity: the finest rung");
         let fine = d
             .strip_text()
             .expect("the world view always resolves once active");
         assert!(
             !fine.contains("terrain cells"),
-            "the finest zoom is ~one character per vertex and must not disclose, got {fine:?}"
+            "the finest rung is one tile per band-B facet and must not disclose, got {fine:?}"
         );
     }
 
@@ -2809,7 +2862,11 @@ mod portolan_tests {
     /// of this task's scope to re-litigate.
     #[test]
     fn h5_the_map_is_useful_before_it_is_complete() {
-        let d = test_driver();
+        let mut d = test_driver();
+        // The plate is a SUBRECT of the chart since Task 1, so "the plate"
+        // is not a place until the window says which one. Look where the
+        // player is standing.
+        centre_window_on_the_player(&mut d, 40, 20);
         let g = d.world_plate(40, 20);
         let text = g.to_plain_text();
         // `~` ocean, `.` land — plate.rs's own module doc names this
@@ -2929,16 +2986,16 @@ mod portolan_tests {
 
         // At EVERY zoom rung the plate can draw, the settlement's glyph
         // must never appear — never drawn, not drawn-then-hidden (§A3/A7).
-        for zoom in 0..=plate::MAX_ZOOM {
+        for depth in GLOBE_RUNG..=BAND_B_RUNG {
             d.window = Window {
-                zoom,
+                depth,
                 origin_col: 0,
                 origin_row: 0,
             };
             let g = d.world_plate(40, 20);
             assert!(
                 !g.to_plain_text().contains(plate::SETTLEMENT_GLYPH),
-                "co-location leaked at zoom rung {zoom}: the settlement's glyph appeared \
+                "co-location leaked at rung {depth}: the settlement's glyph appeared \
                  on an undiscovered map"
             );
         }
@@ -2974,13 +3031,13 @@ mod portolan_tests {
         // reach:
         //
         //   - at the design plate (40x20), origin (0,0), EVERY rung
-        //     0..=MAX_ZOOM: glyph absent.
+        //     GLOBE_RUNG..=BAND_B_RUNG: glyph absent.
         //   - at the design plate, window CENTRED on this settlement's
         //     own projected position, EVERY rung: still absent.
         //   - at 400x200 (the resolution `plate.rs`'s own
         //     `draw_with_gates_a_point_site_on_discovery` uses, and which
         //     is enough for a real CAVE vertex): still absent.
-        //   - at 1200x600 -- more than 3x [`plate::MAX_VIRTUAL_WIDTH`],
+        //   - at 1200x600 -- finer, in the pre-Quadrat ladder's own terms,
         //     i.e. finer than any rung this client's zoom ladder ever
         //     reaches: present. ~180s to render, which is why this is a
         //     comment and not a test.
@@ -3028,7 +3085,7 @@ mod portolan_tests {
             mapped.apply(Action::Zoom(-1));
             mapped.apply(Action::CursorBy(5, 3));
             mapped.apply(Action::Recentre);
-            for _ in 0..plate::MAX_ZOOM {
+            for _ in 0..(BAND_B_RUNG - GLOBE_RUNG) {
                 mapped.apply(Action::Zoom(1));
             }
             let _ = mapped.world_plate(40, 20);
