@@ -19,7 +19,9 @@
 //! authored surface text anywhere in a generated tongue (the program
 //! thesis).
 
-use crate::clause::{Adjunct, Argument, Clause, Polarity, Subject, Tense};
+use crate::clause::{
+    Adjunct, Argument, Clause, Polarity, Subject, Tense, Valence, predicate_valence,
+};
 use crate::lexicon::{LexEntry, Lexicon};
 use crate::morphology::{
     ClassPosition, Evidential, MorphDepth, MorphForm, NounClass, TongueMorphology, affix,
@@ -31,12 +33,16 @@ use crate::phonology::Phonology;
 use crate::streams;
 use crate::typology::Orthography;
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::world::IS_A;
 use hornvale_kernel::{Seed, Stream};
 use std::collections::BTreeMap;
 
-/// The six constituent orders of a subject–copula–complement clause
-/// (a nominal-predication clause: "The Vavako are goblins").
+/// The six constituent orders of a subject–verb–object clause.
+///
+/// The V slot was always a verb slot; until The Inquest the only thing that
+/// could stand in it was the drawn copula of a nominal predication ("The
+/// Vavako are goblins"), so the variant docs below name the copula. A
+/// transitive clause ("The Vavako eat bread") supplies a real lexical verb
+/// there, ordered by exactly these six and nothing else.
 /// type-audit: bare-ok(identifier-text)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ConstituentOrder {
@@ -266,40 +272,85 @@ fn tongue_subject(subject: &Subject) -> Result<String, TongueGap> {
     }
 }
 
-/// Refuse a clause whose predicate no tongue construction covers.
+/// What a tongue must put in its verb slot for this clause -- and a
+/// REFUSAL, by panic, for a predicate no realizer covers.
 ///
 /// **Panics rather than gapping**, and the difference is the whole of spec
 /// §3.3. A [`TongueGap`] asserts something TRUE ABOUT THE WORLD -- this
-/// people has no word for the sea. A missing construction is an authoring
-/// hole in this repository, so reporting it as a gap would put a false claim
-/// about a people into a rendered artifact. `realize_common` panics on the
-/// same condition for the same reason.
-fn assert_tongue_construction(predicate: &str) {
-    assert!(
-        predicate == IS_A,
-        "no tongue construction for predicate {predicate:?} (only {IS_A:?} is covered)"
-    );
+/// people has no word for the sea. A predicate outside the inventory is an
+/// authoring hole in this repository, so reporting it as a gap would put a
+/// false claim about a people into a rendered artifact. `realize_common`
+/// panics on the same condition for the same reason.
+///
+/// **The tongue asks [`predicate_valence`], never Common's construction
+/// table.** What it needs is what the predicate RELATES -- a subject to a
+/// state, or an actor to a patient -- which decides whether the verb slot
+/// belongs to the tongue's own drawn copula or to the predicate itself. That
+/// is a fact about the predicate, true before any language says it, and
+/// reading it out of Common's part list would have made the tongue path
+/// depend on Common's spelling, which decision 0286 exists to prevent.
+fn tongue_valence(predicate: &str) -> Valence {
+    predicate_valence(predicate).unwrap_or_else(|| {
+        panic!(
+            "no tongue construction for predicate {predicate:?} \
+             (no entry in the clause layer's predicate inventory)"
+        )
+    })
 }
 
-/// Realize a nominal-predication clause in a tongue: lexicalize the
-/// complement, order the constituents per the grammar, include the copula
-/// if the tongue bears one, then append each adjunct's own resolved word.
-/// Renders fully or gaps entirely (spec §4) — a gap on the complement OR on
-/// any adjunct concept fails the whole clause.
+/// The tongue's verb slot for this clause, as a word mid-assembly.
+///
+/// **Nominal predication** puts the tongue's own drawn copula there, or
+/// nothing at all for a zero-copula tongue -- unchanged from every campaign
+/// before this one. **A transitive clause** puts the clause's own predicate
+/// there, lexicalized through THIS TONGUE's lexicon exactly as the object is,
+/// so a people with no word for the act gaps the whole clause (spec §4:
+/// render fully or gap entirely) rather than borrowing Common's verb.
+///
+/// Returned as a [`Marked`] and built ONCE, because the tense, polarity and
+/// evidential layers each join onto the segments the last one produced;
+/// re-reading the drawn form (or re-resolving the lexicon entry)
+/// mid-assembly would silently discard the join before it. That was a real
+/// defect for the copula, fixed in this campaign's Task 2, and a lexical
+/// verb inherits the same hazard.
+fn tongue_verb(
+    valence: Valence,
+    clause: &Clause,
+    grammar: &TongueGrammar,
+    lexicon: &Lexicon,
+) -> Result<Option<Marked>, TongueGap> {
+    match valence {
+        Valence::Nominal => Ok(grammar.copula.as_ref().map(|roman| Marked {
+            segments: grammar.copula_segments.clone(),
+            roman: roman.clone(),
+        })),
+        Valence::Transitive => Ok(Some(resolve_concept_marked(&clause.predicate, lexicon)?)),
+    }
+}
+
+/// Realize a clause in a tongue: lexicalize the object, fill the verb slot
+/// (the drawn copula for a nominal predication, the lexicalized predicate
+/// for a transitive clause), order the constituents per the grammar, then
+/// append each adjunct's own resolved word. Renders fully or gaps entirely
+/// (spec §4) — a gap on the object, on the VERB, or on any adjunct concept
+/// fails the whole clause.
 /// type-audit: bare-ok(prose)
 pub fn realize_tongue(
     clause: &Clause,
     grammar: &TongueGrammar,
     lexicon: &Lexicon,
 ) -> Result<String, TongueGap> {
-    assert_tongue_construction(&clause.predicate);
+    let valence = tongue_valence(&clause.predicate);
     let subject = tongue_subject(&clause.subject)?;
     let complement = resolve_argument(&clause.object, lexicon)?;
+    let verb = tongue_verb(valence, clause, grammar, lexicon)?.map(|marked| marked.roman);
     let adjunct_words = realize_adjuncts(&clause.adjuncts, lexicon)?;
     let s = subject.as_str();
-    let v = grammar.copula.as_deref();
+    let v = verb.as_deref();
     let o = complement.as_str();
-    // Order the present constituents; a `None` copula simply drops out.
+    // Order the present constituents; an absent verb (a zero-copula tongue
+    // predicating nominally) simply drops out. A transitive clause always
+    // fills the slot, so all six orders emit three tokens.
     let ordered: Vec<&str> = match grammar.order {
         ConstituentOrder::Sov => [Some(s), Some(o), v],
         ConstituentOrder::Svo => [Some(s), v, Some(o)],
@@ -365,17 +416,22 @@ fn layer_affix(
 }
 
 /// A token's grammatical role, tracked through assembly so a `Particle`
-/// insertion can find "the complement" or "the predicate" (the copula, or
-/// the complement itself for a zero-copula tongue) regardless of the
-/// tongue's drawn constituent order. `Marker` tags a spliced-in particle so
-/// it is never mistaken for one of the three base roles by a later splice.
+/// insertion can find "the complement" or "the predicate" (the verb, or the
+/// complement itself when the verb slot is empty) regardless of the tongue's
+/// drawn constituent order. `Marker` tags a spliced-in particle so it is
+/// never mistaken for one of the three base roles by a later splice.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Role {
     /// The clause's subject.
     Subject,
-    /// The overt copula, when present.
-    Copula,
-    /// The lexicalized complement.
+    /// The verb slot's token, when filled: the tongue's drawn copula in a
+    /// nominal predication, the lexicalized predicate in a transitive
+    /// clause. **Named `Copula` until The Inquest**, when the slot stopped
+    /// being the copula's alone — `ConstituentOrder`'s `Sov`/`Svo`/… always
+    /// meant a V the copula merely stood in for.
+    Verb,
+    /// The object slot's token: the predicate nominal in a nominal
+    /// predication, the patient in a transitive clause.
     Complement,
     /// A spliced-in particle marker (evidential, tense or noun-class).
     Marker,
@@ -455,9 +511,13 @@ fn marked_polarity_value(polarity: Polarity) -> Option<&'static str> {
 /// places the marker as a free word on that same side of the noun.
 ///
 /// Tense marking (The Inquest) reads `paradigm`'s drawn `tense_depth` and
-/// `tense_position`. **Past marks the verb** (spec §4.2), which in a nominal
-/// clause is the copula; under a ZERO COPULA it falls to the predicate
-/// nominal, exactly as the evidential already does in that position.
+/// `tense_position`. **Past marks the verb** (spec §4.2) — the LEXICAL verb
+/// in a transitive clause, the copula in a nominal one; under a ZERO COPULA
+/// and a nominal predication it falls to the predicate nominal, exactly as
+/// the evidential already does in that position. A transitive clause always
+/// fills the verb slot, so the fallback cannot fire there: the reason
+/// transitivity is in this campaign at all is that a tense marker had no
+/// host until it existed.
 /// Present is the zero member and is never marked. `paradigm` is `None` for
 /// a caller that does not model tense at all, which reproduces this
 /// function's pre-Inquest surface byte for byte — as does a `Some` bundle
@@ -487,7 +547,7 @@ pub fn realize_tongue_deep(
     lexicon: &Lexicon,
     orth: Orthography,
 ) -> Result<String, TongueGap> {
-    assert_tongue_construction(&clause.predicate);
+    let valence = tongue_valence(&clause.predicate);
     let subject = tongue_subject(&clause.subject)?;
     // Spec §4.3: only a LEXICAL object may bear morphology. `object_concept`
     // is `Some` only for a `Concept` -- and it must not be conflated with
@@ -506,6 +566,15 @@ pub fn realize_tongue_deep(
             None,
         ),
     };
+    // The verb slot as a word mid-assembly, so the tense, polarity and
+    // evidential layers below join onto the SAME segments in turn rather
+    // than each re-reading the drawn copula or re-resolving the lexicon
+    // entry. `None` only for a zero-copula tongue predicating nominally.
+    // Resolved HERE, between the object and the adjuncts, so a transitive
+    // clause whose verb AND object both gap reports the same one either
+    // realizer would (the object's), keeping the shallow-identity guarantee
+    // exact on the error path as well as the success path.
+    let mut verb = tongue_verb(valence, clause, grammar, lexicon)?;
     let adjunct_words = realize_adjuncts(&clause.adjuncts, lexicon)?;
 
     // Noun-class marking: always on the complement noun — but only a lexical
@@ -527,16 +596,9 @@ pub fn realize_tongue_deep(
         }
     }
 
-    // The copula as a word mid-assembly, so the tense and evidential layers
-    // below join onto the SAME segments in turn rather than each re-reading
-    // the bare drawn form. `None` for a zero-copula tongue.
-    let mut copula: Option<Marked> = grammar.copula.as_ref().map(|roman| Marked {
-        segments: grammar.copula_segments.clone(),
-        roman: roman.clone(),
-    });
-
-    // Tense marking (The Inquest): past marks the VERB, which in a nominal
-    // clause is the copula; under a zero copula it falls to the predicate
+    // Tense marking (The Inquest): past marks the VERB — the lexical verb of
+    // a transitive clause, or the copula of a nominal one; with neither (a
+    // zero-copula tongue predicating nominally) it falls to the predicate
     // nominal (spec §4.2), the same host the evidential falls to there.
     // Present is the zero member and draws no marker at all (spec §4.1).
     // Applied BEFORE the evidential layer so the evidential stays
@@ -550,10 +612,11 @@ pub fn realize_tongue_deep(
         match paradigm.depths.tense_depth {
             MorphDepth::None => {}
             MorphDepth::Affix => {
-                if let Some(cop) = copula.take() {
-                    copula = Some(layer_affix(cop, marker, position, orth));
+                if let Some(host) = verb.take() {
+                    verb = Some(layer_affix(host, marker, position, orth));
                 } else if object_concept.is_some() {
-                    // Zero copula, lexical object: the predicate nominal
+                    // No verb slot (a zero-copula NOMINAL clause; a
+                    // transitive one always fills it): the predicate nominal
                     // bears it. A non-lexical object (`Name`/`Count`/
                     // `Quantity`) has no segments BY NATURE, so the clause
                     // goes unmarked for tense -- the same outcome a tongue
@@ -570,8 +633,8 @@ pub fn realize_tongue_deep(
     }
 
     // Polarity marking (The Inquest): negation marks the same host tense
-    // does -- the verb, i.e. the copula, falling to the predicate nominal
-    // under a zero copula. Positive is the zero member and draws no marker
+    // does -- the verb slot, falling to the predicate nominal when a
+    // nominal clause has no copula. Positive is the zero member and draws no marker
     // at all. Applied AFTER the tense layer (so an affixed negative sits
     // outside an affixed tense marker) and BEFORE the evidential one (so
     // the evidential stays predicate-final).
@@ -584,11 +647,12 @@ pub fn realize_tongue_deep(
         match paradigm.depths.polarity_depth {
             MorphDepth::None => {}
             MorphDepth::Affix => {
-                if let Some(cop) = copula.take() {
-                    copula = Some(layer_affix(cop, marker, position, orth));
+                if let Some(host) = verb.take() {
+                    verb = Some(layer_affix(host, marker, position, orth));
                 } else if object_concept.is_some() {
-                    // Zero copula, lexical object: the predicate nominal
-                    // bears it. The guard is on the CONCEPT ID, never on
+                    // No verb slot (a zero-copula NOMINAL clause): the
+                    // predicate nominal bears it. The guard is on the
+                    // CONCEPT ID, never on
                     // `Marked.segments`, for the same reason the tense layer
                     // above states -- a `Compound` has no segments either and
                     // `layer_affix`'s panic on it is deliberate (spec §4.3).
@@ -599,8 +663,8 @@ pub fn realize_tongue_deep(
         }
     }
 
-    // Evidential marking: predicate-final — the overt copula, or (zero
-    // copula) the predicate nominal, i.e. the (possibly already
+    // Evidential marking: predicate-final — the verb slot's token, or (when
+    // it is empty) the predicate nominal, i.e. the (possibly already
     // class-marked) complement.
     let evidential_value = match clause.evidential {
         Evidential::Witnessed => "witnessed",
@@ -612,10 +676,10 @@ pub fn realize_tongue_deep(
         match morph.evidential_depth {
             MorphDepth::None => {}
             MorphDepth::Affix => {
-                if let Some(cop) = copula.take() {
-                    copula = Some(layer_affix(cop, marker, ClassPosition::Suffix, orth));
+                if let Some(host) = verb.take() {
+                    verb = Some(layer_affix(host, marker, ClassPosition::Suffix, orth));
                 } else if object_concept.is_some() {
-                    // Zero copula: the marker falls to the predicate nominal.
+                    // No verb slot: the marker falls to the predicate nominal.
                     // A non-lexical object cannot bear it, so the clause goes
                     // unmarked for evidentiality -- the same outcome a tongue
                     // that drew `MorphDepth::None` already has (spec §4.3).
@@ -625,41 +689,52 @@ pub fn realize_tongue_deep(
             MorphDepth::Particle => evidential_particle = Some(marker.roman.clone()),
         }
     }
-    let copula_roman = copula.map(|cop| cop.roman);
+    let verb_roman = verb.map(|marked| marked.roman);
 
     let s = subject.as_str();
-    let v = copula_roman.as_deref();
+    let v = verb_roman.as_deref();
+    // "The predicate" for every particle splice below: the verb slot's token
+    // when it is filled, otherwise the predicate nominal. Computed ONCE --
+    // it used to be re-derived from `grammar.copula` at each of the three
+    // splices, which is the same fact three times and would have had to be
+    // widened three times now that a transitive clause fills the slot
+    // without a drawn copula.
+    let predicate_role = if v.is_some() {
+        Role::Verb
+    } else {
+        Role::Complement
+    };
     let o = complement.roman.as_str();
     let mut ordered: Vec<(Role, String)> = match grammar.order {
         ConstituentOrder::Sov => [
             Some((Role::Subject, s.to_string())),
             Some((Role::Complement, o.to_string())),
-            v.map(|v| (Role::Copula, v.to_string())),
+            v.map(|v| (Role::Verb, v.to_string())),
         ],
         ConstituentOrder::Svo => [
             Some((Role::Subject, s.to_string())),
-            v.map(|v| (Role::Copula, v.to_string())),
+            v.map(|v| (Role::Verb, v.to_string())),
             Some((Role::Complement, o.to_string())),
         ],
         ConstituentOrder::Vso => [
-            v.map(|v| (Role::Copula, v.to_string())),
+            v.map(|v| (Role::Verb, v.to_string())),
             Some((Role::Subject, s.to_string())),
             Some((Role::Complement, o.to_string())),
         ],
         ConstituentOrder::Vos => [
-            v.map(|v| (Role::Copula, v.to_string())),
+            v.map(|v| (Role::Verb, v.to_string())),
             Some((Role::Complement, o.to_string())),
             Some((Role::Subject, s.to_string())),
         ],
         ConstituentOrder::Ovs => [
             Some((Role::Complement, o.to_string())),
-            v.map(|v| (Role::Copula, v.to_string())),
+            v.map(|v| (Role::Verb, v.to_string())),
             Some((Role::Subject, s.to_string())),
         ],
         ConstituentOrder::Osv => [
             Some((Role::Complement, o.to_string())),
             Some((Role::Subject, s.to_string())),
-            v.map(|v| (Role::Copula, v.to_string())),
+            v.map(|v| (Role::Verb, v.to_string())),
         ],
     }
     .into_iter()
@@ -678,25 +753,20 @@ pub fn realize_tongue_deep(
         ordered.insert(insert_at, (Role::Marker, particle));
     }
 
-    // Splice in the tense particle beside "the predicate" (the copula, or
-    // the predicate nominal for a zero-copula tongue) on the drawn side.
-    // Spliced BEFORE the evidential particle so the evidential still lands
-    // immediately after the predicate and this one sits one further out.
+    // Splice in the tense particle beside "the predicate" (`predicate_role`
+    // above: the verb slot's token, or the predicate nominal when that slot
+    // is empty) on the drawn side. Spliced BEFORE the evidential particle so
+    // the evidential still lands immediately after the predicate and this
+    // one sits one further out.
     if let Some(particle) = tense_particle
         && let Some(paradigm) = paradigm
+        && let Some(idx) = ordered.iter().position(|(r, _)| *r == predicate_role)
     {
-        let predicate_role = if grammar.copula.is_some() {
-            Role::Copula
-        } else {
-            Role::Complement
+        let insert_at = match paradigm.depths.tense_position {
+            ClassPosition::Prefix => idx,
+            ClassPosition::Suffix => idx + 1,
         };
-        if let Some(idx) = ordered.iter().position(|(r, _)| *r == predicate_role) {
-            let insert_at = match paradigm.depths.tense_position {
-                ClassPosition::Prefix => idx,
-                ClassPosition::Suffix => idx + 1,
-            };
-            ordered.insert(insert_at, (Role::Marker, particle));
-        }
+        ordered.insert(insert_at, (Role::Marker, particle));
     }
 
     // Splice in the polarity particle beside "the predicate" on its own
@@ -706,35 +776,24 @@ pub fn realize_tongue_deep(
     // stays immediately adjacent to it and this one sits just outside.
     if let Some(particle) = polarity_particle
         && let Some(paradigm) = paradigm
+        && let Some(idx) = ordered.iter().position(|(r, _)| *r == predicate_role)
     {
-        let predicate_role = if grammar.copula.is_some() {
-            Role::Copula
-        } else {
-            Role::Complement
+        let insert_at = match paradigm.depths.polarity_position {
+            ClassPosition::Prefix => idx,
+            ClassPosition::Suffix => idx + 1,
         };
-        if let Some(idx) = ordered.iter().position(|(r, _)| *r == predicate_role) {
-            let insert_at = match paradigm.depths.polarity_position {
-                ClassPosition::Prefix => idx,
-                ClassPosition::Suffix => idx + 1,
-            };
-            ordered.insert(insert_at, (Role::Marker, particle));
-        }
+        ordered.insert(insert_at, (Role::Marker, particle));
     }
 
     // Splice in the evidential particle immediately after "the predicate":
-    // the copula token if the tongue is copula-bearing, else the complement
-    // (the predicate nominal in a zero-copula clause). Tagging spliced
+    // the verb slot's token when it is filled, else the complement (the
+    // predicate nominal of a zero-copula nominal clause). Tagging spliced
     // tokens `Role::Marker` above means this search still finds the right
     // anchor even after the class-particle splice shifted later indices.
-    if let Some(particle) = evidential_particle {
-        let predicate_role = if grammar.copula.is_some() {
-            Role::Copula
-        } else {
-            Role::Complement
-        };
-        if let Some(idx) = ordered.iter().position(|(r, _)| *r == predicate_role) {
-            ordered.insert(idx + 1, (Role::Marker, particle));
-        }
+    if let Some(particle) = evidential_particle
+        && let Some(idx) = ordered.iter().position(|(r, _)| *r == predicate_role)
+    {
+        ordered.insert(idx + 1, (Role::Marker, particle));
     }
 
     let mut sentence = ordered
@@ -763,8 +822,10 @@ mod tests {
     use crate::etymology::CascadeRegime;
     use crate::lexicon::{ExposureClass, LexEntry, build_lexicon};
     use crate::naming::render_views;
+    use crate::packs::EAT;
     use crate::phonology::{Envelope, ExoticSeg, draw_phonology};
     use hornvale_kernel::Seed;
+    use hornvale_kernel::world::IS_A;
 
     /// The manikin's articulation envelope — per `phonology.rs`'s own
     /// test-constructor pattern (`manikin_env`), reconstructed locally here
@@ -2325,5 +2386,228 @@ mod tests {
             !out.contains(&class_roman),
             "a numeral must bear no noun-class affix: {out}"
         );
+    }
+
+    /// The transitive fixture: a lexicon carrying a word for the ACT as well
+    /// as for the patient, which is the whole of what a transitive clause
+    /// asks of a tongue that a nominal one did not.
+    fn transitive_lexicon() -> Lexicon {
+        tiny_lexicon_with(&[
+            (EAT, ExposureClass::Steeped),
+            ("bread", ExposureClass::Steeped),
+        ])
+    }
+
+    /// The roman form and modern segments of `concept` in `lex`, for tests
+    /// that must state an expected surface exactly. Panics on anything but a
+    /// `Root`, so a fixture that quietly became a compound or a gap fails
+    /// loudly rather than weakening the assertion.
+    fn root_of(lex: &Lexicon, concept: &str) -> (String, Vec<Segment>) {
+        match lex.entry(concept).unwrap() {
+            LexEntry::Root { views, derivation } => {
+                (views.roman.clone(), derivation.modern.clone())
+            }
+            other => panic!("{concept} should be a root, got {other:?}"),
+        }
+    }
+
+    /// `Nwamvam <eat> bread` — the transitive demonstration clause, the
+    /// tongue-side sibling of `clause.rs`'s `eat_clause`.
+    fn transitive_clause(tense: Tense) -> Clause {
+        Clause {
+            predicate: EAT.to_string(),
+            subject: Subject::Name("Nwamvam".to_string()),
+            object: Argument::Concept("bread".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense,
+            polarity: Polarity::Pos,
+            adjuncts: vec![],
+        }
+    }
+
+    /// The Inquest T5: a transitive clause honours all six drawn orders, and
+    /// the token it puts in the V slot is the tongue's own word for the act.
+    ///
+    /// **Each order is asserted twice, once against a copula-bearing grammar
+    /// and once against a zero-copula one, and the two must be IDENTICAL.**
+    /// That pair is the assertion that matters: a transitive clause fills the
+    /// verb slot itself, so the tongue's drawn copula plays no part in it.
+    /// An exhaustive-order test against one grammar would pass just as well
+    /// if the copula were being spliced in alongside the verb.
+    #[test]
+    fn realize_tongue_exhaustive_orders_for_a_transitive_clause() {
+        let lex = transitive_lexicon();
+        let (verb, _) = root_of(&lex, EAT);
+        let (object, _) = root_of(&lex, "bread");
+        let clause = transitive_clause(Tense::Present);
+        let cases: [(ConstituentOrder, String); 6] = [
+            (ConstituentOrder::Sov, format!("Nwamvam {object} {verb}.")),
+            (ConstituentOrder::Svo, format!("Nwamvam {verb} {object}.")),
+            (ConstituentOrder::Vso, format!("{verb} Nwamvam {object}.")),
+            (ConstituentOrder::Vos, format!("{verb} {object} Nwamvam.")),
+            (ConstituentOrder::Ovs, format!("{object} {verb} Nwamvam.")),
+            (ConstituentOrder::Osv, format!("{object} Nwamvam {verb}.")),
+        ];
+        for (order, expected) in cases {
+            for copula in [Some("gha".to_string()), None] {
+                let grammar = TongueGrammar {
+                    order,
+                    copula: copula.clone(),
+                    copula_segments: None,
+                    articles: false,
+                };
+                let out = realize_tongue(&clause, &grammar, &lex).unwrap();
+                assert_eq!(out, expected, "order {order:?} copula {copula:?}");
+                assert!(
+                    !out.contains("gha"),
+                    "a transitive clause fills the verb slot itself, so the drawn \
+                     copula must not appear: {out}"
+                );
+            }
+        }
+    }
+
+    /// The verb lexicalizes through the tongue's OWN lexicon, and gaps the
+    /// whole clause when that people has no word for the act (spec §4:
+    /// render fully or gap entirely). The object is known here, so a partial
+    /// render — a sentence with Common's `eat` in it, or with the verb slot
+    /// silently dropped — is the tempting wrong answer.
+    #[test]
+    fn a_tongue_gaps_when_it_has_no_word_for_the_verb() {
+        let lex = tiny_lexicon_with(&[("bread", ExposureClass::Steeped)]);
+        let grammar = svo_with_copula();
+        let gap = realize_tongue(&transitive_clause(Tense::Present), &grammar, &lex).unwrap_err();
+        assert_eq!(gap.concept, EAT);
+        assert_eq!(gap.reason, "no entry in this lexicon");
+    }
+
+    /// **THE ASSERTION THIS CAMPAIGN CARRIED TRANSITIVITY FOR** (spec §4.2).
+    ///
+    /// Tense marks the verb. Until a transitive clause existed the only verb
+    /// available was the copula, and a zero-copula tongue had none at all —
+    /// so the past marker fell to the predicate nominal, and nothing
+    /// distinguished "tense marks the verb" from "tense marks whatever is
+    /// nearest". A transitive clause supplies a real host, and this test
+    /// pins that the marker lands on IT and the object stays bare.
+    ///
+    /// Asserted against a ZERO-COPULA grammar as well, and that arm is the
+    /// sharp one: it is exactly the configuration in which a nominal clause
+    /// DOES mark the object. Same tongue, same depth, same marker — the only
+    /// difference is that the clause now has a verb, and the marker follows
+    /// it there.
+    #[test]
+    fn a_transitive_past_clause_marks_the_verb_not_the_object() {
+        let ph = test_phonology();
+        let lex = transitive_lexicon();
+        let (_, verb_segments) = root_of(&lex, EAT);
+        let (object, _) = root_of(&lex, "bread");
+        let noun_class_of = |_: &str| NounClass::Inanimate;
+        let (paradigm, past_segments, _) =
+            tense_paradigm(&ph, MorphDepth::Affix, ClassPosition::Suffix);
+        let marked_verb = affix(
+            &verb_segments,
+            &past_segments,
+            ClassPosition::Suffix,
+            Orthography::Digraph,
+        )
+        .roman;
+
+        for copula in [Some("gha".to_string()), None] {
+            let grammar = TongueGrammar {
+                order: ConstituentOrder::Svo,
+                copula: copula.clone(),
+                copula_segments: None,
+                articles: false,
+            };
+            let past = realize_tongue_deep(
+                &transitive_clause(Tense::Past),
+                &grammar,
+                &unmarked_morphology(),
+                Some(&paradigm),
+                &noun_class_of,
+                &lex,
+                Orthography::Digraph,
+            )
+            .unwrap();
+            assert_eq!(
+                past,
+                format!("Nwamvam {marked_verb} {object}."),
+                "past tense must affix onto the VERB and leave the object bare \
+                 (copula {copula:?})"
+            );
+
+            // Differential, so the assertion cannot pass with the depth
+            // unread: the same tongue and the same clause in the PRESENT —
+            // the zero member — must not carry the marker anywhere.
+            let present = realize_tongue_deep(
+                &transitive_clause(Tense::Present),
+                &grammar,
+                &unmarked_morphology(),
+                Some(&paradigm),
+                &noun_class_of,
+                &lex,
+                Orthography::Digraph,
+            )
+            .unwrap();
+            assert_ne!(
+                present, past,
+                "present is the zero member (copula {copula:?})"
+            );
+            assert!(
+                !present.contains(&marked_verb),
+                "an unmarked present must not carry the past affix: {present}"
+            );
+        }
+    }
+
+    /// The shallow-identity guarantee, for the clause shape that did not
+    /// exist when it was written: `realize_tongue_deep` at `None` depth on
+    /// every axis must equal `realize_tongue` byte for byte. The verb slot is
+    /// the new place the two could diverge — the deep realizer builds it as a
+    /// `Marked` and the floor realizer takes only its roman — so a transitive
+    /// clause needs its own instance of the check.
+    #[test]
+    fn shallow_identity_holds_for_a_transitive_clause() {
+        let ph = test_phonology();
+        let lex = transitive_lexicon();
+        let noun_class_of = |_: &str| NounClass::Inanimate;
+        let (paradigm, _, _) = tense_paradigm(&ph, MorphDepth::None, ClassPosition::Suffix);
+        for order in [
+            ConstituentOrder::Sov,
+            ConstituentOrder::Svo,
+            ConstituentOrder::Vso,
+            ConstituentOrder::Vos,
+            ConstituentOrder::Ovs,
+            ConstituentOrder::Osv,
+        ] {
+            for copula in [Some("gha".to_string()), None] {
+                let grammar = TongueGrammar {
+                    order,
+                    copula,
+                    copula_segments: None,
+                    articles: false,
+                };
+                for tense in [Tense::Present, Tense::Past] {
+                    let clause = transitive_clause(tense);
+                    let deep = realize_tongue_deep(
+                        &clause,
+                        &grammar,
+                        &unmarked_morphology(),
+                        Some(&paradigm),
+                        &noun_class_of,
+                        &lex,
+                        Orthography::Digraph,
+                    )
+                    .unwrap();
+                    assert_eq!(
+                        deep,
+                        realize_tongue(&clause, &grammar, &lex).unwrap(),
+                        "shallow identity, order {order:?} tense {tense:?}"
+                    );
+                }
+            }
+        }
     }
 }

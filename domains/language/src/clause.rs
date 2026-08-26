@@ -15,6 +15,7 @@ use crate::common_vocab::CommonVocabulary;
 use crate::morphology::Evidential;
 use crate::packs::EAT;
 use hornvale_kernel::world::IS_A;
+use std::sync::OnceLock;
 
 /// Grammatical number of the subject.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -340,6 +341,72 @@ fn verb_surface(stem: &str, tense: Tense, number: Number, polarity: Polarity) ->
     format!("{prefix}{stem}{suffix}")
 }
 
+/// What a predicate relates — the shape of its argument structure, and the
+/// one thing a realizer must know about a predicate before it can put words
+/// in an order.
+///
+/// **A property of the PREDICATE, owned by neither realizer.** Whether a
+/// relation holds between a subject and a state it is in, or between an
+/// actor and a patient it acts on, is true of `is-a` and of `eat` before any
+/// language says either. Common encodes it incidentally, in whether its part
+/// list carries [`Part::Copula`] or [`Part::Verb`]; a tongue has no part
+/// list at all and needs the fact itself. So the fact is stated once, here,
+/// and Common's parts are SELECTED from it (see [`common_constructions`])
+/// rather than restated beside it. Decision 0286 makes Common one realizer
+/// among the tongues rather than a privileged path, and a tongue reading
+/// Common's spelling to learn a predicate's argument structure would undo
+/// that quietly.
+///
+/// **This is not the `Frame` enum The Interlinear deleted, and the
+/// difference is many-to-one.** `Frame::Classify` was one variant per
+/// RELATION: the construction lookup was keyed by it, so every new predicate
+/// meant a new variant. The lookup is keyed by predicate id now and stays
+/// that way — nothing here is keyed by `Valence`. This enum instead sorts
+/// predicates INTO argument structures many of them share: `eat`, `kill` and
+/// `know` are one `Transitive` between them, adding no variant. If a future
+/// campaign finds itself adding a variant per predicate, it has rebuilt
+/// `Frame` and should stop.
+/// type-audit: bare-ok(identifier-text)
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Valence {
+    /// A subject and a predicative complement: *X is a Y*. Common fills the
+    /// verb slot with a copula; a tongue fills it with its own drawn copula,
+    /// or leaves it empty when it drew none (a zero-copula tongue).
+    Nominal,
+    /// An actor and a patient: *X eats Y*. Both realizers fill the verb slot
+    /// with the clause's own predicate, lexicalized — Common through its
+    /// [`CommonVocabulary`], a tongue through that people's own `Lexicon`.
+    Transitive,
+}
+
+/// **THE predicate inventory**: every predicate this crate can express, with
+/// its valence. One row per predicate, read by both realizers — Common
+/// through [`common_constructions`], a tongue through [`predicate_valence`].
+///
+/// A predicate absent from this list is expressible by nobody, which is the
+/// condition both realizers refuse on: [`realize_common`] panics and so does
+/// the tongue path, because a missing entry is an authoring hole in this
+/// repository rather than a fact about a people (spec §3.3).
+const PREDICATE_VALENCE: &[(&str, Valence)] =
+    &[(IS_A, Valence::Nominal), (EAT, Valence::Transitive)];
+
+/// The valence of `predicate`, or `None` when no realizer covers it.
+///
+/// **The realizer-neutral question**, and the tongue path's only reason to
+/// consult the clause layer's inventory at all: it asks what a predicate
+/// relates, never how Common spells it. A tongue orders its constituents by
+/// its own drawn [`crate::grammar::ConstituentOrder`] and lexicalizes
+/// through its own lexicon; the one thing it cannot draw is whether the
+/// verb slot belongs to a copula or to the predicate itself.
+/// type-audit: bare-ok(identifier-text)
+#[must_use]
+pub fn predicate_valence(predicate: &str) -> Option<Valence> {
+    PREDICATE_VALENCE
+        .iter()
+        .find(|(id, _)| *id == predicate)
+        .map(|(_, valence)| *valence)
+}
+
 /// A form↔meaning pairing: one predicate's surface as an ordered part
 /// list. The same entry realizes forward and parses backward — a future
 /// predicate is added HERE, and is bidirectional by construction.
@@ -358,6 +425,16 @@ pub struct Construction {
 /// code path — this is the first exercise of that promise, and the shared
 /// `TRANSITIVE` part list is the shape it takes: a second transitive verb is
 /// **one row**, not one construction.
+///
+/// **The rows come from [`PREDICATE_VALENCE`], and the part list is SELECTED
+/// by valence rather than written out per predicate.** That is what makes
+/// "a second transitive verb is one row" mechanical instead of a promise:
+/// there is one table, so Common's spelling and the fact a tongue reads
+/// ([`predicate_valence`]) cannot drift apart, and no agreement test stands
+/// between them needing to be kept honest. The cost is that Common gets one
+/// part list per valence; a predicate that eventually needs its own Common
+/// surface at an existing valence is what would earn a per-row override, and
+/// widening this function is the whole change.
 ///
 /// **Why the table stays a closed list of exact predicate ids**, rather than
 /// a matcher that would catch any `ConceptKind::Act` predicate: the parse
@@ -407,16 +484,24 @@ pub fn common_constructions() -> &'static [Construction] {
         Part::ModifierTail,
         Part::Literal("."),
     ];
-    &[
-        Construction {
-            predicate: IS_A,
-            parts: CLASSIFY,
-        },
-        Construction {
-            predicate: EAT,
-            parts: TRANSITIVE,
-        },
-    ]
+    // Built once and leaked into a `static` so the signature stays
+    // `&'static [Construction]` — `parse_common_with_tail` walks this on
+    // every parse and callers hold no allocation. The same `OnceLock`
+    // memoisation `kernel/src/geosphere.rs` and `domains/climate/src/axes.rs`
+    // use for their own derived tables.
+    static INVENTORY: OnceLock<Vec<Construction>> = OnceLock::new();
+    INVENTORY.get_or_init(|| {
+        PREDICATE_VALENCE
+            .iter()
+            .map(|(predicate, valence)| Construction {
+                predicate,
+                parts: match valence {
+                    Valence::Nominal => CLASSIFY,
+                    Valence::Transitive => TRANSITIVE,
+                },
+            })
+            .collect()
+    })
 }
 
 /// Every surface `construction`'s verb group can take, paired with the
@@ -427,9 +512,15 @@ pub fn common_constructions() -> &'static [Construction] {
 /// Which table applies is read off the construction's own parts, not off a
 /// second field that could disagree with them: a construction carries
 /// [`Part::Copula`] or [`Part::Verb`], and one that carries neither has no
-/// verb group and contributes no candidate (unreachable today, and returning
-/// an empty list rather than panicking keeps the parser's failure a
-/// [`ParseError`] rather than a crash).
+/// verb group. Those parts are now SELECTED by the predicate's [`Valence`]
+/// (see [`common_constructions`]), so reading them and asking
+/// [`predicate_valence`] are the same fact arrived at from two sides — still
+/// one table, and still nothing that can disagree. This function keeps
+/// reading the parts because it needs Common's surface anyway. A
+/// construction carrying neither part has no verb group and contributes no
+/// candidate (unreachable today, and returning an empty list rather than
+/// panicking keeps the parser's failure a [`ParseError`] rather than a
+/// crash).
 fn verb_group_forms(
     construction: &Construction,
     vocab: &CommonVocabulary,
@@ -1268,6 +1359,58 @@ mod tests {
         // and the table's "add a row, never a code path" promise a lie.
         let keys: std::collections::BTreeSet<&str> = inv.iter().map(|c| c.predicate).collect();
         assert_eq!(keys.len(), inv.len());
+    }
+
+    /// The predicate inventory is ONE table, and this pins what "selected by
+    /// valence" means so the claim cannot quietly become decorative.
+    ///
+    /// Not an agreement test between two tables — there is only one, which is
+    /// the point of the design. It asserts the DERIVATION: every construction
+    /// has a valence, every valence has a construction, and each part list is
+    /// the one its valence names. A future per-row override (the widening
+    /// `common_constructions`' doc anticipates) would redden this and should:
+    /// it is the moment the tongue's `predicate_valence` stops being derivable
+    /// from Common's parts, which is exactly when someone should look.
+    #[test]
+    fn common_parts_are_selected_by_the_predicates_valence() {
+        let inv = common_constructions();
+        for construction in inv {
+            let valence = predicate_valence(construction.predicate)
+                .expect("every construction's predicate is in the inventory");
+            match valence {
+                Valence::Nominal => {
+                    assert!(
+                        construction.parts.contains(&Part::Copula)
+                            && !construction.parts.contains(&Part::Verb),
+                        "a nominal predication fills the verb slot with a copula: {:?}",
+                        construction.predicate
+                    );
+                }
+                Valence::Transitive => {
+                    assert!(
+                        construction.parts.contains(&Part::Verb)
+                            && !construction.parts.contains(&Part::Copula),
+                        "a transitive clause fills the verb slot with a lexical verb: {:?}",
+                        construction.predicate
+                    );
+                }
+            }
+        }
+        // And the other direction: nothing in the inventory is unreachable
+        // from Common. `predicate_valence` is what the TONGUE path asks, so
+        // a predicate it answers for and Common cannot realize would panic
+        // in one realizer and not the other.
+        assert_eq!(
+            inv.len(),
+            [IS_A, EAT]
+                .iter()
+                .filter(|p| predicate_valence(p).is_some())
+                .count(),
+            "every inventory row realizes in Common"
+        );
+        assert_eq!(predicate_valence(IS_A), Some(Valence::Nominal));
+        assert_eq!(predicate_valence(EAT), Some(Valence::Transitive));
+        assert_eq!(predicate_valence("dwells-in"), None);
     }
 
     /// The transitive demonstration clause: `Nwamvam <eat> the bread`. The
