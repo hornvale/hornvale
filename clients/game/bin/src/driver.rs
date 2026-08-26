@@ -30,9 +30,9 @@
 //! own chart ([`Driver::resolve_walk_band`]); The Portolan part II, Task 3b
 //! adds a second resolver for the whole-world Mercator plate
 //! ([`Driver::resolve_world_view`]), active in place of the walk band's own
-//! whenever `self.world_view` is on (`spread::compose`'s own doc: the world
-//! view is a lens over whichever band the character occupies, never a new
-//! band). Either way, the *pointed-at* vertex is what gets resolved, not the
+//! on every rung [`Driver::world_view`] reports (`spread::compose`'s own
+//! doc: the world view is a lens over whichever band the character occupies,
+//! never a new band). Either way, the *pointed-at* vertex is what gets resolved, not the
 //! observer's own (an earlier revision of this module resolved the
 //! observer's vertex unconditionally — a fix round caught that this made the
 //! strip position-invariant while the cursor visibly moved, exactly the "a
@@ -283,36 +283,15 @@ pub struct Driver {
     frame: Frame,
     /// The world plate's window: which mesh RUNG and which VIRTUAL-chart
     /// cell the window's own origin sits at (`plate::virtual_dims`'s own
-    /// doc distinguishes the virtual chart from the drawn plate). Reset to
-    /// `Window { depth: GLOBE_RUNG, origin_col: 0, origin_row: 0 }` on
-    /// entering the world view (`Driver::apply_zoom`) — the coarsest rung,
-    /// scrolled to the chart's own origin — and moved by zoom/scroll from
-    /// there. Since The Quadrat the coarsest rung is NOT "the whole planet
-    /// on screen": the chart is 363x362 tiles there and the plate is a
-    /// subrect of it.
+    /// doc distinguishes the virtual chart from the drawn plate). Starts at
+    /// `Window { depth: BAND_B_RUNG, origin_col: 0, origin_row: 0 }` — the
+    /// FINEST rung, which is band B itself, the chart the walk band already
+    /// draws — and moves one rung per `Action::Zoom` from there
+    /// (`Driver::apply_zoom`). **Nothing resets it any more**: the ladder is
+    /// continuous, so `depth` is the only state a zoom touches. Since The
+    /// Quadrat the coarsest rung is NOT "the whole planet on screen": the
+    /// chart is 363x362 tiles there and the plate is a subrect of it.
     window: Window,
-    /// Whether the whole-world Mercator view is active. **Fix round 1
-    /// (Task 3a's own review):** `Focus::Map` alone used to gate this in
-    /// `main.rs`, which silently retired the walk-band cursor/strip feature
-    /// shipped across `9f69e4e2a`/`81d940d9c`/`64c80be36` and chronicled in
-    /// `book/src/chronicle/the-stride.md`/`the-stylus.md` — that feature
-    /// ALSO lives behind `Focus::Map` (entering the map to point at, and
-    /// read the name of, the walk band's own local terrain), so reusing the
-    /// same focus value for the world view meant a 210x56 redraw drew a
-    /// 104-column Mercator while the cursor stayed clamped to the OLD
-    /// 40-column plate and the strip kept resolving the walk band's own
-    /// (now invisible) chart — a picture and a cursor/strip that no longer
-    /// agreed at all. This field makes the world view its own explicit
-    /// state, defaulting OFF ([`Driver::start`] never sets it).
-    ///
-    /// **Task 3b's own gesture: zooming OUT past the walk band turns
-    /// this on, at the coarsest rung; zooming IN past the world view's
-    /// finest rung turns it back off.** See
-    /// [`Driver::apply_zoom`]. `Focus::Map` alone still reproduces the
-    /// pre-Task-3a behaviour byte-identically — this field is untouched by
-    /// focus changes on their own, only by `Action::Zoom`; see
-    /// [`Driver::world_plate_for_redraw`].
-    world_view: bool,
     /// How many world plates have actually been rendered this session.
     /// See [`Driver::plate_renders`] for why this is observable.
     plate_renders: usize,
@@ -667,8 +646,13 @@ impl Driver {
             .next()
             .is_some();
         let frame = mercator::frame_for(locked);
+        // The session opens on the walk band, and band B IS the ladder's
+        // finest rung (The Quadrat, Task 2) — so the opening rung is
+        // `BAND_B_RUNG`, not a separate off-ladder state. `world_view()`
+        // reads `false` there, which is what keeps `Focus::Map` alone from
+        // drawing the Mercator (`world_plate_for_redraw`).
         let window = Window {
-            depth: GLOBE_RUNG,
+            depth: BAND_B_RUNG,
             origin_col: 0,
             origin_row: 0,
         };
@@ -708,7 +692,6 @@ impl Driver {
             terrain,
             frame,
             window,
-            world_view: false,
             plate_renders: 0,
             plate_cache: None,
             seed: world_ref.seed,
@@ -759,7 +742,7 @@ impl Driver {
         self.term_w = w;
         self.term_h = h;
         self.plate_height = hornvale_game_core::spread::content_height(h);
-        if self.world_view {
+        if self.world_view() {
             self.reclamp_window();
         }
         self.move_cursor(0, 0);
@@ -856,14 +839,14 @@ impl Driver {
     /// The world plate to hand [`hornvale_game_core::render_with`] for a
     /// `w`-by-`h` redraw, gated on the world view actually being active —
     /// `Some(`[`Driver::world_plate`]`(w, h))` when [`Focus::Map`] is
-    /// focused AND `self.world_view` is on, `None` otherwise.
+    /// focused AND [`Self::world_view`] is on, `None` otherwise.
     ///
     /// **Fix round 1: this is the ONE place that decision is made.** Before
     /// this method existed, `main.rs`'s `redraw` computed
     /// `Some(driver.world_plate(w, h))` whenever `focus() == Focus::Map`,
     /// with no `world_view` gate at all — `Focus::Map` already meant
     /// something else (the walk-band cursor/strip feature this module's
-    /// `world_view` field doc names), so that reproduced the exact
+    /// `world_view` method's doc names), so that reproduced the exact
     /// class of bug `content_height`'s own doc warns about elsewhere in
     /// this crate: two independent computations of "is the world view
     /// showing" would have been one too many, this time on the ACTIVATION
@@ -872,11 +855,13 @@ impl Driver {
     /// wants to know what a redraw would draw calls it too rather than
     /// reimplementing the check a third time.
     ///
-    /// `self.world_view` defaults to `false` and, since Task 3b, [`Self::
-    /// apply_zoom`] is the gesture that sets it `true` — zooming out
-    /// (`-` on [`Focus::Map`]) past the walk band.
+    /// [`Self::world_view`] reads `false` at the opening rung and, since
+    /// Task 3b, [`Self::apply_zoom`] is the gesture that moves off it —
+    /// zooming out (`-` on [`Focus::Map`]) past band B. The GATE is
+    /// unchanged; its SOURCE is a rung comparison rather than a stored flag
+    /// (The Quadrat, Task 2).
     pub fn world_plate_for_redraw(&mut self, w: u16, h: u16) -> Option<hornvale_game_core::Grid> {
-        if !(self.world_view && self.focus == Focus::Map) {
+        if !(self.focus == Focus::Map && self.world_view()) {
             return None;
         }
         let key = PlateKey {
@@ -1198,6 +1183,19 @@ impl Driver {
         self.refresh_strip();
     }
 
+    /// Whether the world plate, rather than the walk band's own chart, is
+    /// what the current rung draws.
+    ///
+    /// **Derived, never stored.** It was a `bool` set by a mode gesture,
+    /// which is what made the zoom keys mean two different things at the
+    /// ladder's ends. The rung alone decides now: every rung coarser than
+    /// [`BAND_B_RUNG`] is the raster; band B itself is still the walk
+    /// band's chart until a later task moves it onto the raster too, at
+    /// which point this method has no referent and goes away.
+    fn world_view(&self) -> bool {
+        self.window.depth < BAND_B_RUNG
+    }
+
     /// The active plate's own width and height, in grid cells — the walk
     /// band's fixed [`hornvale_game_core::spread::PLATE_WIDTH`] and
     /// `self.plate_height` when the world view is off, or the world
@@ -1215,7 +1213,7 @@ impl Driver {
     /// the world-view resolver — reads it from here, never a second copy
     /// of the fit.
     fn active_plate_dims(&self) -> (u16, u16) {
-        if self.world_view {
+        if self.world_view() {
             let width = hornvale_game_core::spread::world_plate_width(self.term_w, self.term_h);
             let height = width / hornvale_game_core::spread::GLYPH_ASPECT;
             (width, height)
@@ -1270,7 +1268,7 @@ impl Driver {
         let clamped_y = raw_y.clamp(0, max_y);
         self.cursor.y = clamped_y as u16;
 
-        if self.world_view {
+        if self.world_view() {
             let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
             let spill_x = raw_x - clamped_x;
             if virtual_w > 0 {
@@ -1287,22 +1285,27 @@ impl Driver {
         }
     }
 
-    /// Zoom the map view: one continuous ladder built from already-routed
-    /// keys (`-`/`+`/`=`), rather than a new binding or a fourth focus
-    /// state — chosen over a typed `world` verb (no reply channel exists;
-    /// the entry pane's prose is wire-carried) and over a new letter key
-    /// (would break `Focus::Map`'s deliberately total routing table).
+    /// Zoom the map view: ONE continuous ladder of mesh rungs, driven by
+    /// already-routed keys (`-`/`+`/`=`) rather than a new binding or a
+    /// fourth focus state — chosen over a typed `world` verb (no reply
+    /// channel exists; the entry pane's prose is wire-carried) and over a
+    /// new letter key (would break `Focus::Map`'s deliberately total
+    /// routing table).
     ///
-    /// - `delta < 0` (zoom OUT): with the world view off, turn it ON at
-    ///   its coarsest rung (`Window { depth: `[`GLOBE_RUNG`]`, .. }` — the
-    ///   canonical grid level, below which the terrain fields have no
-    ///   resolution to disclose); with it on and already there, do nothing
-    ///   (there IS nothing further out); otherwise LOWER `depth` one rung.
-    /// - `delta > 0` (zoom IN): with the world view on and already at
-    ///   [`BAND_B_RUNG`] (the finest rung — one tile per band-B facet),
-    ///   turn it OFF, returning to the walk-band chart; with it on and
-    ///   below the ceiling, RAISE `depth` one rung; with it off, do nothing
-    ///   (the walk band has no zoom of its own).
+    /// - `delta > 0` (zoom IN) RAISES `depth` one rung, saturating at
+    ///   [`BAND_B_RUNG`] — the finest rung, one tile per band-B facet.
+    /// - `delta < 0` (zoom OUT) LOWERS `depth` one rung, saturating at
+    ///   [`GLOBE_RUNG`] — the canonical grid level, below which the terrain
+    ///   fields have no resolution to disclose.
+    ///
+    /// **The two keys change exactly one number and nothing else** (The
+    /// Quadrat, Task 2). They used to mean two different things at the
+    /// ladder's ends: a `world_view` boolean sat beside the rung, and
+    /// zooming past either end flipped that boolean AND reset the window to
+    /// the coarsest rung — the reported "zooms based on criteria I have not
+    /// identified". Band B is a rung now, so WHICH renderer appears is a
+    /// function of `depth` alone ([`Self::world_view`]), and crossing the
+    /// band-B boundary is an ordinary step rather than a mode change.
     ///
     /// **The ladder's direction inverted with The Quadrat**: `depth` is a
     /// mesh subdivision level, so zooming IN raises it and zooming OUT
@@ -1315,34 +1318,18 @@ impl Driver {
     /// on every one of these transitions.
     fn apply_zoom(&mut self, delta: i8) {
         use std::cmp::Ordering;
+        let before = self.window.depth;
         match delta.cmp(&0) {
             Ordering::Less => {
-                if !self.world_view {
-                    self.world_view = true;
-                    self.window = Window {
-                        depth: GLOBE_RUNG,
-                        origin_col: 0,
-                        origin_row: 0,
-                    };
-                } else if self.window.depth > GLOBE_RUNG {
-                    self.window.depth -= 1;
-                    self.reclamp_window();
-                }
+                self.window.depth = self.window.depth.saturating_sub(1).max(GLOBE_RUNG);
             }
             Ordering::Greater => {
-                if self.world_view && self.window.depth >= BAND_B_RUNG {
-                    self.world_view = false;
-                    self.window = Window {
-                        depth: GLOBE_RUNG,
-                        origin_col: 0,
-                        origin_row: 0,
-                    };
-                } else if self.world_view {
-                    self.window.depth += 1;
-                    self.reclamp_window();
-                }
+                self.window.depth = self.window.depth.saturating_add(1).min(BAND_B_RUNG);
             }
             Ordering::Equal => {}
+        }
+        if self.window.depth != before && self.world_view() {
+            self.reclamp_window();
         }
         self.move_cursor(0, 0);
         self.refresh_strip();
@@ -1367,7 +1354,7 @@ impl Driver {
     /// "The acknowledgement is the map redrawing" (`task-3b-brief.md`) —
     /// there is no reply channel to say anything else.
     fn recentre(&mut self) {
-        if !self.world_view {
+        if !self.world_view() {
             return;
         }
         let (_, plate_h) = self.active_plate_dims();
@@ -1490,7 +1477,7 @@ impl Driver {
     /// terrain-feature index — [`UNNAMED_TERRAIN`] if that chain comes up
     /// empty at any step.
     fn resolve(&self) -> String {
-        if self.world_view {
+        if self.world_view() {
             let base = self
                 .resolve_world_view()
                 .unwrap_or_else(|| UNNAMED_TERRAIN.to_string());
@@ -1876,19 +1863,30 @@ mod portolan_tests {
         Driver::start(42, PossessTarget::Flagship).expect("seed 42 generates")
     }
 
-    /// Enter the map and zoom out once — the gesture that turns the
-    /// world view on, at its coarsest rung.
     /// The opening clause of `Driver::resolution_disclosure`'s message —
     /// the substring the two tests below match on. Named once so neither
     /// repeats the shipped wording's own vertex-sense noun, which
     /// `cli/tests/suite/lexicon_guard.rs` ratchets against.
     const DISCLOSURE_OPENING: &str = "one character stands for";
 
+    /// Enter the map and walk the ladder all the way OUT, to
+    /// [`GLOBE_RUNG`] — the coarsest rung, which is where every test below
+    /// that says "the world view" means to stand.
+    ///
+    /// **Since The Quadrat's Task 2 that is six presses, not one.** The
+    /// ladder is continuous now: one zoom-out from band B steps to the rung
+    /// immediately coarser than band B, not to the globe.
     fn enter_world_view(d: &mut Driver) {
         d.enter_map();
-        d.apply(Action::Zoom(-1));
+        while d.window.depth > GLOBE_RUNG {
+            d.apply(Action::Zoom(-1));
+        }
+        assert_eq!(
+            d.window.depth, GLOBE_RUNG,
+            "the helper must land on the coarsest rung"
+        );
         assert!(
-            d.world_view,
+            d.world_view(),
             "zooming out from the walk band must enter the world view"
         );
     }
@@ -2018,16 +2016,27 @@ mod portolan_tests {
     // -- Step 1: the zoom ladder (zoom out past the walk band enters the
     //    world view; zoom in past its finest rung leaves it) -----------
 
+    /// **Retargeted by The Quadrat's Task 2, not deleted.** This used to
+    /// be `..._enters_the_world_view_at_the_coarsest_rung`, and that intent
+    /// has no referent any more: the jump to [`GLOBE_RUNG`] WAS the mode
+    /// flip. What survives — and is the thing worth pinning — is that the
+    /// first zoom-out off band B crosses into the world view, one rung at a
+    /// time.
     #[test]
-    fn zoom_out_from_the_walk_band_enters_the_world_view_at_the_coarsest_rung() {
+    fn zoom_out_from_band_b_steps_one_rung_into_the_world_view() {
         let mut d = test_driver();
         d.enter_map();
-        assert!(!d.world_view);
-        d.apply(Action::Zoom(-1));
-        assert!(d.world_view);
         assert_eq!(
-            d.window.depth, GLOBE_RUNG,
-            "the coarsest rung is the canonical grid level"
+            d.window.depth, BAND_B_RUNG,
+            "the session opens on band B, the ladder's finest rung"
+        );
+        assert!(!d.world_view());
+        d.apply(Action::Zoom(-1));
+        assert!(d.world_view());
+        assert_eq!(
+            d.window.depth,
+            BAND_B_RUNG - 1,
+            "one press is one rung — not a jump to the globe"
         );
         assert_eq!(d.window.origin_col, 0);
         assert_eq!(d.window.origin_row, 0);
@@ -2043,7 +2052,7 @@ mod portolan_tests {
             d.window, before,
             "there is nothing further out than the whole planet"
         );
-        assert!(d.world_view, "must still be in the world view");
+        assert!(d.world_view(), "must still be in the world view");
     }
 
     #[test]
@@ -2052,49 +2061,123 @@ mod portolan_tests {
         enter_world_view(&mut d);
         d.apply(Action::Zoom(1));
         assert_eq!(d.window.depth, GLOBE_RUNG + 1);
-        assert!(d.world_view);
+        assert!(d.world_view());
     }
 
+    /// **Retargeted by The Quadrat's Task 2.** This used to be
+    /// `zoom_in_stops_at_max_zoom_then_the_next_press_leaves_the_world_view`:
+    /// arriving at [`BAND_B_RUNG`] kept the world view on, and ONE MORE
+    /// press flipped it off while resetting the window to the globe. Band B
+    /// is the walk band's own rung now, so the arrival IS the handover and
+    /// the press past it does nothing at all.
     #[test]
-    fn zoom_in_stops_at_max_zoom_then_the_next_press_leaves_the_world_view() {
+    fn zoom_in_climbs_to_band_b_and_saturates_there() {
         let mut d = test_driver();
         enter_world_view(&mut d);
-        for _ in 0..(BAND_B_RUNG - GLOBE_RUNG) {
+        for _ in 0..(BAND_B_RUNG - GLOBE_RUNG - 1) {
             d.apply(Action::Zoom(1));
         }
-        assert!(d.world_view);
+        assert_eq!(
+            d.window.depth,
+            BAND_B_RUNG - 1,
+            "the finest rung the RASTER draws is one below band B"
+        );
+        assert!(
+            d.world_view(),
+            "still the world plate one rung below band B"
+        );
+
+        d.apply(Action::Zoom(1));
         assert_eq!(
             d.window.depth, BAND_B_RUNG,
             "the finest rung is band B: one tile per facet"
         );
-        d.apply(Action::Zoom(1));
         assert!(
-            !d.world_view,
-            "one more zoom-in at the finest rung must leave the world view"
+            !d.world_view(),
+            "band B is the walk band's own chart until a later task moves it"
+        );
+
+        let at_ceiling = d.window;
+        d.apply(Action::Zoom(1));
+        assert_eq!(
+            d.window, at_ceiling,
+            "a press past the ceiling must change nothing — no mode to flip"
         );
     }
 
     /// Sixty-four presses is far more than the ladder's own height, so
-    /// this must walk all the way up the ladder AND back off the top —
-    /// the ladder's ceiling must be a real stop, not merely a slow climb.
+    /// this must walk all the way up the ladder and STOP at band B — the
+    /// ladder's ceiling must be a real stop, not merely a slow climb, and
+    /// not a wrap back to the globe either.
     #[test]
-    fn many_zoom_ins_walk_off_the_top_of_the_ladder_and_back_to_the_walk_band() {
+    fn many_zoom_ins_climb_to_band_b_and_stop_there() {
         let mut d = test_driver();
         enter_world_view(&mut d);
         for _ in 0..64 {
             d.apply(Action::Zoom(1));
         }
-        assert!(!d.world_view);
+        assert_eq!(d.window.depth, BAND_B_RUNG);
+        assert!(!d.world_view());
+    }
+
+    /// THE LADDER'S ENDS. Both are saturations of one number now — there is
+    /// no mode to flip at either end, so twenty presses in either direction
+    /// must land on the end rung and stay there.
+    #[test]
+    fn the_ladder_runs_from_the_globe_rung_to_band_b_and_refuses_past_both() {
+        let mut d = test_driver();
+        d.enter_map();
+        for _ in 0..20 {
+            d.apply(Action::Zoom(1));
+        }
+        assert_eq!(
+            d.window().depth,
+            plate::BAND_B_RUNG,
+            "zoomed in past band B"
+        );
+        for _ in 0..20 {
+            d.apply(Action::Zoom(-1));
+        }
+        assert_eq!(
+            d.window().depth,
+            plate::GLOBE_RUNG,
+            "zoomed out past the globe"
+        );
+    }
+
+    /// Seven rungs, SIX zoom-out steps — the bound `Session::map` already
+    /// enforces as `depth - globe_level`. Stated as both numbers because
+    /// they differ by one and this is where that discrepancy would be
+    /// minted.
+    #[test]
+    fn every_rung_of_the_ladder_is_reachable_and_distinct() {
+        let mut d = test_driver();
+        d.enter_map();
+        for _ in 0..20 {
+            d.apply(Action::Zoom(1));
+        }
+        let mut seen = std::collections::BTreeSet::new();
+        seen.insert(d.window().depth);
+        for _ in 0..6 {
+            d.apply(Action::Zoom(-1));
+            assert!(seen.insert(d.window().depth), "a rung repeated");
+        }
+        assert_eq!(seen.len(), 7, "expected 7 rungs, saw {seen:?}");
+        assert_eq!(*seen.iter().next().unwrap(), plate::GLOBE_RUNG);
+        assert_eq!(*seen.iter().next_back().unwrap(), plate::BAND_B_RUNG);
     }
 
     #[test]
     fn zoom_plus_on_the_walk_band_alone_is_a_no_op() {
         let mut d = test_driver();
         d.enter_map();
-        assert!(!d.world_view);
+        assert!(!d.world_view());
         let before_window = d.window;
         d.apply(Action::Zoom(1));
-        assert!(!d.world_view, "the walk band has no zoom of its own");
+        assert!(
+            !d.world_view(),
+            "band B is already the ladder's finest rung"
+        );
         assert_eq!(d.window, before_window);
     }
 
@@ -2125,9 +2208,9 @@ mod portolan_tests {
         enter_world_view(&mut d);
         d.apply(Action::CursorBy(i16::MAX, 0));
         for _ in 0..(BAND_B_RUNG - GLOBE_RUNG) + 1 {
-            d.apply(Action::Zoom(1)); // walk back off the top of the ladder
+            d.apply(Action::Zoom(1)); // climb back to band B
         }
-        assert!(!d.world_view);
+        assert!(!d.world_view());
         d.apply(Action::CursorBy(i16::MAX, 0));
         assert_eq!(
             d.cursor.x,
@@ -2257,7 +2340,10 @@ mod portolan_tests {
     /// against each other's real OUTPUT, not a shared re-derivation of the
     /// same arithmetic.
     ///
-    /// Run at [`BAND_B_RUNG`] (the finest rung), where the 49-vote
+    /// Run at `BAND_B_RUNG - 1`, the finest rung the RASTER draws — The
+    /// Quadrat's Task 2 hands band B itself back to the walk band's own
+    /// chart, so `active_plate_dims`/`world_plate` no longer describe the
+    /// same picture there. One rung coarser is where the 49-vote
     /// majority and the true-centre sample are expected to coincide (one
     /// terrain vertex per character — `plate::SUBSAMPLES_PER_AXIS`'s own
     /// doc), across several offsets: this is the region where the check is
@@ -2272,10 +2358,11 @@ mod portolan_tests {
     fn the_resolved_vertex_matches_the_actually_drawn_glyph_at_fine_zoom() {
         let mut d = test_driver();
         enter_world_view(&mut d);
-        for _ in 0..(BAND_B_RUNG - GLOBE_RUNG) {
+        for _ in 0..(BAND_B_RUNG - GLOBE_RUNG - 1) {
             d.apply(Action::Zoom(1));
         }
-        assert_eq!(d.window.depth, BAND_B_RUNG);
+        assert_eq!(d.window.depth, BAND_B_RUNG - 1);
+        assert!(d.world_view(), "sanity: the raster is what is drawn here");
 
         for &(dx, dy) in &[(0i16, 0i16), (5, 0), (0, 3), (-4, 2), (9, -6)] {
             d.apply(Action::CursorBy(dx, dy));
@@ -2353,7 +2440,7 @@ mod portolan_tests {
     fn recentre_is_a_no_op_off_the_world_view() {
         let mut d = test_driver();
         d.enter_map();
-        assert!(!d.world_view);
+        assert!(!d.world_view());
         let before = *d.frame();
         d.apply(Action::Recentre);
         assert_eq!(
@@ -2677,35 +2764,50 @@ mod portolan_tests {
     /// level itself (decision 0196) — 363x362 tiles — so even the coarsest
     /// rung is finer than the mesh and the honest disclosure is silence.
     /// See [`Driver::resolution_disclosure`]'s own doc. What this test
-    /// still pins is that the derivation runs at BOTH ends of the ladder
-    /// and agrees; a rung coarser than the mesh would make the first half
-    /// speak again.
+    /// still pins is that the derivation runs at every rung the raster
+    /// draws and agrees; a rung coarser than the mesh would make it speak.
+    ///
+    /// **Widened by The Quadrat's Task 2 rather than retargeted.** It used
+    /// to read the two ENDS of the ladder, and band B's end now draws the
+    /// walk band's chart instead — whose strip never carries a disclosure
+    /// for reasons that have nothing to do with the ratio, so asserting
+    /// there would have gone quietly vacuous. Walking the raster's whole
+    /// range instead keeps every assertion pointed at the derivation under
+    /// test.
     #[test]
     fn the_resolution_disclosure_is_silent_at_every_shipped_rung() {
         let mut d = test_driver();
         enter_world_view(&mut d);
         assert_eq!(d.window.depth, GLOBE_RUNG, "sanity: the coarsest rung");
-        let coarse = d
-            .strip_text()
-            .expect("the world view always resolves once active");
-        // Matched on the disclosure's opening clause, never its noun --
-        // see `DISCLOSURE_OPENING`.
-        assert!(
-            !coarse.contains(DISCLOSURE_OPENING),
-            "GLOBE_RUNG is already the mesh's own level and has nothing to \
-             disclose, got {coarse:?}"
-        );
 
-        for _ in 0..(BAND_B_RUNG - GLOBE_RUNG) {
+        let mut rungs_checked = 0;
+        loop {
+            assert!(
+                d.world_view(),
+                "sanity: rung {} must be a raster rung",
+                d.window.depth
+            );
+            let said = d
+                .strip_text()
+                .expect("the world view always resolves once active");
+            // Matched on the disclosure's opening clause, never its noun --
+            // see `DISCLOSURE_OPENING`.
+            assert!(
+                !said.contains(DISCLOSURE_OPENING),
+                "rung {} is at or finer than the mesh's own level and has \
+                 nothing to disclose, got {said:?}",
+                d.window.depth
+            );
+            rungs_checked += 1;
+            if d.window.depth == BAND_B_RUNG - 1 {
+                break;
+            }
             d.apply(Action::Zoom(1));
         }
-        assert_eq!(d.window.depth, BAND_B_RUNG, "sanity: the finest rung");
-        let fine = d
-            .strip_text()
-            .expect("the world view always resolves once active");
-        assert!(
-            !fine.contains(DISCLOSURE_OPENING),
-            "the finest rung is one tile per band-B facet and must not disclose, got {fine:?}"
+        assert_eq!(
+            rungs_checked,
+            BAND_B_RUNG - GLOBE_RUNG,
+            "every rung the raster draws must have been read"
         );
     }
 
@@ -2909,6 +3011,13 @@ mod portolan_tests {
     #[test]
     fn h5_the_map_is_useful_before_it_is_complete() {
         let mut d = test_driver();
+        // The session now OPENS on band B (The Quadrat, Task 2), whose
+        // chart is 23,214 tiles wide — a 40x20 subrect of it is a few
+        // hundred metres of whatever the player is standing on, and the
+        // claim under test is about the WHOLE-PLANET plate. Walk out to the
+        // coarsest rung first; that is what "the whole-planet plate" has
+        // named since Task 1 moved the chart onto the mesh.
+        enter_world_view(&mut d);
         // The plate is a SUBRECT of the chart since Task 1, so "the plate"
         // is not a place until the window says which one. Look where the
         // player is standing.
