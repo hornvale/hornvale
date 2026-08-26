@@ -12,10 +12,15 @@ signed tick is the only instant and the named hatch is the only crossing.
 **Architecture:** `StdDays` narrows to a duration (non-negative is correct
 there); a new signed `StdInstant` takes the 27 instant positions in astronomy;
 `WorldTime` stays out of astronomy's public surface because it is
-tick-quantized and would round non-tick-aligned callers. `windows/vessel`'s
-private tick lattice is proven identical to the kernel's and the `f64` bridge
-between them is deleted. `domains/climate` and `windows/scene` move to kernel
-types.
+tick-quantized and would round non-tick-aligned callers. A world's local day
+becomes an exact integer of kernel ticks, which removes the reason
+`windows/vessel` kept a second tick lattice at all — so that lattice is
+deleted rather than converted. `domains/climate` and `windows/scene` move to
+kernel types.
+
+**Stage 1 was revised in execution** after its own probe refuted the premise
+it was specced on; see its heading. The header above states the corrected
+design, not the original one.
 
 **Tech Stack:** Rust edition 2024, `serde`/`serde_json`/`libm` only
 (`ALLOWED_EXTERNAL` in `cli/tests/architecture.rs`), `cargo nextest`,
@@ -59,449 +64,333 @@ per-file target is now a libtest **filter** after `--test suite --`.
 
 ---
 
-## Stage 1 — vessel's second tick lattice (follow-up 2)
+## Stage 1 — one tick, defined once (follow-up 2)
 
-**Independent of stages 2–4.** Ships value on its own.
+**REVISED IN EXECUTION, 2026-08-26.** Tasks 1.2 and 1.3 as originally written
+are **withdrawn**: Task 1.1's probe refuted the premise they rested on. Read
+the spec's stage 1 note before starting anything here.
 
-### The finding this stage rests on
+The short version: a vessel tick is NOT a kernel tick. A local day is an exact
+integer of *vessel* ticks but `d * B` *kernel* ticks, which is not an integer,
+so `days_of`'s conversion was correct and the planned identity `kernel_span`
+would have introduced an error. Measured cost of the old bridge: 213 losses vs
+211 gains over 5,764 samples, net -2 ticks — symmetric noise, no accumulation.
 
-`windows/vessel/src/clock.rs` declares `BASE_TICKS_PER_STD_DAY = 100_000`,
-tied to `WorldTime::TICKS_PER_STD_DAY` by nothing but agreement.
-`Session::charge` crosses `Ticks -> f64 days -> WorldTime` on every action.
+The fix Nathan chose removes the *reason* two lattices exist rather than
+managing the conversion between them: quantize the day length at the draw, so
+a local day IS an integer of kernel ticks.
 
-The algebra says the crossing carries no information. With
-`ticks_per_local_day(d) = round(d × B)` where `B = 100_000`:
+### Task 1.1: Prove the lattices coincide — COMPLETE (`9504368b9`)
 
-```
-days_of(t, d)          = t × d / round(d × B)          (standard days)
-kernel ticks           = days_of(t, d) × B
-                       = t × (d × B) / round(d × B)
-                       ≈ t                              exactly t when d × B ∈ ℤ
-```
+Landed, and it did its job by **failing** its premise. Two sampling errors are
+recorded in its module doc because either alone gives a wrong answer: sampling
+costs to only 10,000 finds zero witnesses (the defect needs `t` on the order of
+a local day), and sampling to `MASS_BAND_KG`'s 100,000 kg overstates it (no
+authored species exceeds 6,000 kg).
 
-The module's own doc confirms the intent: "An Earth-like world therefore has
-`10_000` ticks per `MoveTo`, the historical `MOVE_DURATION` of `0.1` days" —
-and 0.1 std days is 10,000 kernel ticks. **A vessel tick is a kernel tick.**
-The `f64` bridge is therefore pure loss, and the fix is integer addition.
+- [ ] **Step 1: Reframe its language from "loss" to "conversion noise"**
 
-**Do not take that on trust — Task 1.1 proves it empirically before Task 1.2
-acts on it.** If the probe contradicts the algebra, stop and report; the
-design is wrong and the stage needs redesigning.
+The file and its commit message call the effect a *loss*. It is not — it is
+symmetric. Update the module doc, rename
+`the_f64_bridge_loses_ticks_for_some_day_length` to
+`the_f64_bridge_differs_by_a_tick_for_some_day_length`, and record the
+213/211/net-minus-2 measurement beside the 438-witness count already there.
 
-### Task 1.1: Prove the lattices coincide, and that the bridge loses ticks
+- [ ] **Step 2: Gate and commit**
 
-**Files:**
-- Create: `windows/vessel/tests/suite/clock_lattice.rs`
-- Modify: `windows/vessel/tests/suite.rs` (register the module)
+Run `cargo fmt`, then `make gate-commit`, then commit
+`windows/vessel/tests/suite/clock_lattice.rs` with a message saying the effect
+is symmetric — 213 losses, 211 gains, net -2 ticks over 5,764 samples — so
+"loses" overstated it in exactly the way the registry row did.
 
-**Interfaces:**
-- Consumes: `hornvale_vessel::clock::{Ticks, days_of, ticks_per_local_day, BASE_TICKS_PER_STD_DAY}`, `hornvale_kernel::WorldTime`
-- Produces: nothing consumed by later tasks; this is a proof and a regression pin.
-
-- [ ] **Step 1: Write the probe as a failing test**
-
-Name the *property*, and let the search find the discriminating input — do not
-hard-code a triple guessed from outside the code.
-
-```rust
-//! The vessel scheduler's tick and the kernel's tick are the same unit, and
-//! the `f64` bridge between them loses whole ticks (The Foliot, stage 1).
-
-use hornvale_kernel::WorldTime;
-use hornvale_vessel::clock::{BASE_TICKS_PER_STD_DAY, Ticks, days_of, ticks_per_local_day};
-
-/// The two lattices are declared by separate literals; assert they agree.
-#[test]
-fn the_vessel_base_rate_is_the_kernel_tick_rate() {
-    assert_eq!(
-        BASE_TICKS_PER_STD_DAY as i64,
-        WorldTime::TICKS_PER_STD_DAY,
-        "vessel and kernel declare the same rate through separate literals"
-    );
-}
-
-/// A round trip through `f64` days must return the tick count it started
-/// with. It does not, for some day lengths — find one rather than assume it.
-#[test]
-fn the_f64_bridge_loses_ticks_for_some_day_length() {
-    let mut witnesses = Vec::new();
-    // Day lengths the rotation pin actually admits: 16h to 40h, in minutes.
-    for minutes in (16 * 60)..=(40 * 60) {
-        let d = minutes as f64 / 24.0 / 60.0;
-        for t in [1_u64, 150, 1_000, 3_000, 10_000] {
-            let days = days_of(Ticks(t), Some(d));
-            let round_tripped = WorldTime::from_std_days(days)
-                .expect("a finite day value converts")
-                .ticks();
-            if round_tripped != t as i64 {
-                witnesses.push((minutes, t, round_tripped));
-            }
-        }
-    }
-    assert!(
-        !witnesses.is_empty(),
-        "expected the f64 bridge to lose at least one tick somewhere in the \
-         admitted rotation range; if this is EMPTY the stage-1 premise is \
-         wrong -- STOP and report rather than proceeding to Task 1.2"
-    );
-    // Record what was found, so the fix has a named target.
-    println!("bridge-loss witnesses: {}", witnesses.len());
-    println!("first: {:?}", witnesses[0]);
-}
-
-/// `ticks_per_local_day` is exact by construction; the local lattice is a
-/// whole number of kernel ticks per local day.
-#[test]
-fn a_local_day_is_a_whole_number_of_ticks() {
-    for minutes in (16 * 60)..=(40 * 60) {
-        let d = minutes as f64 / 24.0 / 60.0;
-        assert!(ticks_per_local_day(Some(d)) >= 1);
-    }
-    assert_eq!(
-        ticks_per_local_day(None),
-        BASE_TICKS_PER_STD_DAY,
-        "a locked world takes the base rate"
-    );
-}
-```
-
-- [ ] **Step 2: Register the module**
-
-Add to `windows/vessel/tests/suite.rs`:
-
-```rust
-mod clock_lattice;
-```
-
-- [ ] **Step 3: Run the probe**
-
-Run: `cargo test -p hornvale-vessel --test suite -- clock_lattice --nocapture`
-
-Expected: `the_f64_bridge_loses_ticks_for_some_day_length` **passes** and
-prints a non-zero witness count. That pass is the RED signal here — it proves
-the defect exists.
-
-**If the witness list is empty, STOP.** Report it; the stage's premise is
-refuted and Task 1.2 must not proceed.
-
-- [ ] **Step 4: Commit**
-
-```bash
-cargo fmt
-make gate-commit
-git add windows/vessel/tests/suite/clock_lattice.rs windows/vessel/tests/suite.rs
-git commit -m "test(vessel): pin the two tick lattices and the f64 bridge's loss
-
-Proves the vessel scheduler's tick and the kernel's tick are the same unit
-declared through separate literals, and exhibits day lengths where the
-Ticks -> f64 days -> WorldTime round trip loses whole ticks. The premise
-stage 1's fix rests on, established before the fix."
-```
-
-### Task 1.2: Charge in integers
+### Task 1.2: Quantize the day length at the draw
 
 **Files:**
-- Modify: `windows/vessel/src/clock.rs` (module header, `days_of`)
-- Modify: `windows/vessel/src/session.rs:1970-1986` (`charge`)
-- Test: `windows/vessel/tests/suite/clock_lattice.rs`
+- Modify: `domains/astronomy/src/anchor.rs:14-25` (`Rotation`), `:75-95` (the draw and the pin path)
+- Modify: `domains/astronomy/src/calendar.rs:608` (`day_length`)
+- Test: `domains/astronomy/tests/suite/day_is_a_whole_tick_count.rs` (new)
 
 **Interfaces:**
-- Consumes: Task 1.1's proof.
-- Produces: `hornvale_vessel::clock::kernel_span(t: Ticks, day_length_std: Option<f64>) -> hornvale_kernel::units::TickSpan`, replacing `days_of` at the charge site. `days_of` itself stays for any presentation caller.
+- Produces: `Rotation::Spinning { day: TickSpan, retrograde: bool }`.
+  `Calendar::day_length() -> Option<StdDays>` is UNCHANGED in signature — it
+  becomes an exact derived conversion, so its 31 call sites do not move.
+
+**The scoping fact that governs this task: the draw does not change.**
+`anchor.rs` takes `stream.next_f64()` twice, in that order, before and after.
+Only the derived value is snapped to the lattice. So no seed label takes an
+epoch suffix and the pin-isolation tests hold unmodified. **If you find
+yourself editing `streams.rs`, stop — you have changed the draw, and that is a
+different and much larger decision.**
 
 - [ ] **Step 1: Write the failing test**
 
-Append to `clock_lattice.rs`:
+Register it in `domains/astronomy/tests/suite.rs` with an explicit
+`#[path = "suite/day_is_a_whole_tick_count.rs"]` attribute — that file uses
+`#[path]`, not bare `mod`.
 
 ```rust
-use hornvale_vessel::clock::kernel_span;
+//! A world's local day is an exact integer of kernel ticks (The Foliot).
+//!
+//! Before this, the day was a drawn f64 and `d * TICKS_PER_STD_DAY` had a
+//! fractional part, which is why `windows/vessel` had to keep a second tick
+//! lattice and convert between them. Quantizing at the draw removes the
+//! reason two lattices existed.
 
-/// The conversion the charge path uses is exact across the admitted
-/// rotation range: no tick is created or destroyed.
+use hornvale_astronomy::Rotation;
+use hornvale_kernel::{Seed, WorldTime};
+use hornvale_worldgen::{SkyChoice, build_world, sky_of};
+
+/// Across many seeds, every spinning world's day divides the tick lattice
+/// exactly. A single seed would not establish this — the drawn day length
+/// varies per world and the property is about all of them.
 #[test]
-fn kernel_span_is_exact_across_the_rotation_range() {
-    for minutes in (16 * 60)..=(40 * 60) {
-        let d = minutes as f64 / 24.0 / 60.0;
-        for t in [1_u64, 150, 1_000, 3_000, 10_000] {
+fn every_spinning_worlds_day_is_a_whole_number_of_ticks() {
+    let mut spinning = 0;
+    for seed in 1..=40_u64 {
+        let world = build_world(
+            Seed(seed),
+            &Default::default(),
+            SkyChoice::Generated,
+            &Default::default(),
+            &Default::default(),
+        )
+        .expect("world builds");
+        let Ok(sky) = sky_of(&world) else { continue };
+        let Some(system) = sky.system() else { continue };
+        if let Rotation::Spinning { day, .. } = &system.anchor.rotation {
+            spinning += 1;
+            let ticks = day.ticks();
+            assert!(ticks > 0, "seed {seed}: a spinning day is positive");
             assert_eq!(
-                kernel_span(Ticks(t), Some(d)).ticks(),
-                t as i64,
-                "a vessel tick is a kernel tick: {t} ticks at day length {d}"
+                WorldTime::from_ticks(ticks).ticks(),
+                ticks,
+                "seed {seed}: the day is not lattice-aligned"
             );
         }
     }
-}
-
-/// A locked world has no local day and takes the base rate, still exactly.
-#[test]
-fn kernel_span_is_exact_for_a_locked_world() {
-    assert_eq!(kernel_span(Ticks(10_000), None).ticks(), 10_000);
+    assert!(spinning > 0, "no spinning world in 40 seeds — the probe is vacuous");
 }
 ```
 
 - [ ] **Step 2: Run to verify it fails**
 
-Run: `cargo test -p hornvale-vessel --test suite -- kernel_span`
-Expected: FAIL — `kernel_span` does not exist (`unresolved import`).
+Run: `cargo test -p hornvale-astronomy --test suite -- day_is_a_whole_tick_count`
+Expected: FAIL to compile — `day.ticks()` does not exist on a `StdDays`.
 
-- [ ] **Step 3: Implement `kernel_span`**
+- [ ] **Step 3: Change the field**
 
-Add to `windows/vessel/src/clock.rs`, beside `days_of`:
-
-```rust
-/// The kernel-tick span one scheduler cost occupies.
-///
-/// A vessel tick and a kernel tick are the SAME unit: a local day is
-/// [`ticks_per_local_day`] vessel ticks and also `day_length_std ×
-/// WorldTime::TICKS_PER_STD_DAY` kernel ticks, and `ticks_per_local_day` is
-/// defined as `round` of exactly that product. So the two lattices differ
-/// only by that already-taken rounding, and the conversion is the identity.
-///
-/// This replaces the `Ticks -> f64 days -> WorldTime` round trip at the
-/// charge site, which round-tripped through the continuous domain and lost
-/// whole ticks (The Foliot, stage 1; the loss is exhibited in
-/// `tests/suite/clock_lattice.rs`).
-///
-/// **Rounding rule, named at the call as decision 0186 requires:** there is
-/// none. The conversion is exact integer identity. `days_of` survives for
-/// presentation callers that genuinely want continuous days.
-/// type-audit: bare-ok(ratio: day_length_std), bare-ok(count: return)
-pub fn kernel_span(t: Ticks, _day_length_std: Option<f64>) -> TickSpan {
-    TickSpan::from_ticks(t.0 as i64)
-}
-```
-
-Add the import at the top of `clock.rs`:
+`Rotation::Spinning { day: StdDays }` becomes `day: TickSpan`. At each of the
+two construction sites in `anchor.rs`, quantize once:
 
 ```rust
-use hornvale_kernel::units::TickSpan;
+// The draw is UNCHANGED — same stream, same two next_f64() calls, same
+// order. Only the derived value is snapped to the tick lattice, which is
+// what makes a local day an exact integer of kernel ticks and lets
+// windows/vessel drop its second lattice (The Foliot, decision <NNNN>).
+// Rounding rule, named at the call as decision 0186 requires: nearest tick.
+let std_days = (16.0 + stream.next_f64() * 24.0) / 24.0;
+Some(TickSpan::from_ticks(
+    (std_days * WorldTime::TICKS_PER_STD_DAY as f64).round() as i64,
+))
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+Apply the same quantization to the `PeriodHours(h)` pin path, keeping its
+existing 4–100 hour range validation ahead of it.
 
-Run: `cargo test -p hornvale-vessel --test suite -- kernel_span`
-Expected: PASS, both tests.
-
-- [ ] **Step 5: Move `charge` onto it**
-
-Replace `windows/vessel/src/session.rs:1977-1985` with:
+- [ ] **Step 4: Keep `day_length()`'s signature**
 
 ```rust
-        let ticks = cost_ticks(action, self.body_mass_kg, terrain_factor);
-        let span = crate::clock::kernel_span(ticks, self.day_length_std());
-        self.day = WorldTime::from_ticks(self.day.ticks() + span.ticks());
-        Ok(())
+    /// Length of one local day, if the world has one.
+    ///
+    /// Derived from the stored exact tick count (The Foliot): the day is an
+    /// integer of kernel ticks, and this is its lossless continuous view for
+    /// the orbital mathematics. A caller needing exactness should read the
+    /// tick count rather than round-tripping through this.
+    pub fn day_length(&self) -> Option<StdDays> {
+        self.day
+            .map(|d| StdDays(d.ticks() as f64 / WorldTime::TICKS_PER_STD_DAY as f64))
+    }
 ```
 
-`advanced_by` returned a `Result` because `from_std_days` could refuse a
-non-finite value; integer addition cannot fail, so the `match` goes. Check
-whether `advanced_by` has other callers before deleting it:
+- [ ] **Step 5: Compile and fix what the change names**
 
-Run: `grep -rn "advanced_by" windows/vessel/src/`
+Run: `cargo check --workspace --all-targets 2>&1 | grep -E "^error" | head -40`
 
-If it has none, delete it. If it has others, leave it and note them in the
-commit message.
+- [ ] **Step 6: Run the astronomy suite, reading the pin tests specifically**
 
-- [ ] **Step 6: Correct the module header**
-
-`clock.rs:6-15` documents the defect as live. Replace that paragraph with a
-statement that the bridge is gone from the charge path, citing this campaign.
-Do not delete the history — say what changed and when.
-
-- [ ] **Step 7: Run the vessel suite**
-
-Run: `cargo test -p hornvale-vessel 2>&1 | tee /tmp/hv-foliot-s1.txt`
-
-Byte goldens under `windows/vessel/tests/fixtures/` are **expected to move**.
-Branch on what you see:
-
-- **Only golden mismatches fail** → expected. Proceed to Task 1.3; the goldens
-  are accepted in Task 1.4, not here.
-- **A behavioural test fails** (anything not a golden) → STOP and report. The
-  change was supposed to be sub-tick; a logic failure means it was not.
-- **Nothing fails at all** → suspicious, not a success. It would mean no
-  golden covers the charge path. Report it.
-
-- [ ] **Step 8: Commit**
+Capture once and grep the file — do not re-run to ask a second question:
 
 ```bash
-cargo fmt
-make gate-commit
-git add windows/vessel/src/clock.rs windows/vessel/src/session.rs windows/vessel/tests/suite/clock_lattice.rs
-git commit -m "fix(vessel): charge in integer ticks, deleting the f64 bridge
-
-Session::charge crossed Ticks -> f64 days -> WorldTime on every action, and
-days_of's own doc conceded the round trip was lossy. The two lattices are
-the same unit -- a local day is ticks_per_local_day vessel ticks and
-day_length_std x TICKS_PER_STD_DAY kernel ticks, and the former is round()
-of the latter -- so the crossing carried no information and only lost ticks.
-
-kernel_span is the identity, and names its (absent) rounding rule at the
-call as decision 0186 requires.
-
-Byte goldens move; accepted separately under review."
+cargo test -p hornvale-astronomy > /tmp/hv-foliot-s1.log 2>&1; echo "exit=$?"
+grep -E "^test result|FAILED|panicked" /tmp/hv-foliot-s1.log
 ```
 
-### Task 1.3: End the name collision
+**Branch:**
+- **Pin-isolation tests pass, value assertions fail** → expected. The draw is
+  intact and the derived value moved, which is the whole change.
+- **A pin-isolation test fails** → STOP. You changed the draw. Revert and
+  re-read Step 3.
+
+- [ ] **Step 7: Commit** (goldens are accepted in Task 1.6, not here)
+
+Message: `feat(astronomy)!: a local day is an exact integer of kernel ticks`,
+recording that the draw is unchanged so no seed label takes an epoch suffix
+and pin isolation holds, that only the derived day length moves (by up to
+0.432 s), and that this removes the reason vessel kept a second lattice.
+
+### Task 1.3: Vessel drops its second lattice
 
 **Files:**
-- Modify: `windows/vessel/src/clock.rs` (the `Ticks` type and every use)
-- Modify: every in-crate caller
+- Modify: `windows/vessel/src/clock.rs` (`Ticks`, `days_of`, `ticks_per_local_day`)
+- Modify: `windows/vessel/src/session.rs:1943` (`day_length_std`), `:1970-1986` (`charge`)
 
 **Interfaces:**
-- Consumes: Task 1.2's `kernel_span`.
-- Produces: `hornvale_vessel::clock::ActionCost` replacing `Ticks`. Same shape: `pub struct ActionCost(pub u64)`.
+- Produces: `cost_of(action, mass_kg, terrain_factor) -> TickSpan`, replacing
+  `cost_ticks`. `Ticks` and `days_of` are **deleted**, not renamed — with the
+  day lattice-aligned there is one tick concept and no second name for it.
 
-- [ ] **Step 1: Find every use**
+- [ ] **Step 1: Write the failing test**
 
-Run: `grep -rn "\bTicks\b" windows/vessel/ cli/ windows/ --include=*.rs | grep -v TickSpan | grep -v TICKS`
+Append to `windows/vessel/tests/suite/clock_lattice.rs` a test asserting that a
+cost is an exact kernel span: no action is free, and charging it from genesis
+lands exactly on the span with no residue. Build the `MoveTo` action the way
+the existing tests in that file already do.
 
-- [ ] **Step 2: Rename**
+- [ ] **Step 2: Run to verify it fails**
 
-`Ticks` → `ActionCost` throughout. It is an action *cost* — a duration,
-legitimately unsigned — so the name states what it is and no longer collides
-with the kernel's instant concept. Update `base_ticks` → `base_cost` and
-`cost_ticks` → `cost_of` in the same pass, since their names encode the old
-one.
+Run: `cargo test -p hornvale-vessel --test suite -- a_cost_is_an_exact_kernel_span`
+Expected: FAIL — `cost_of` does not exist.
 
-Update the doc comment on the type:
+- [ ] **Step 3: Delete the lattice**
 
-```rust
-/// What one in-character act costs the scheduler, in ticks.
-///
-/// A duration, legitimately unsigned — distinct from the kernel's
-/// `WorldTime` (an instant) and `TickSpan` (a signed duration). Named
-/// `ActionCost` rather than `Ticks` because it shared a name with the
-/// kernel's tick concept while meaning something narrower (The Foliot).
-/// Internal; never serialized.
-/// type-audit: bare-ok(count)
-pub struct ActionCost(pub u64);
-```
+- `Ticks` deleted; `base_ticks`/`cost_ticks` return `TickSpan` and are renamed
+  `base_cost`/`cost_of`.
+- `days_of` deleted. Anything genuinely wanting continuous days converts
+  through the kernel hatch at its own call site.
+- `ticks_per_local_day` reads the world's stored day tick count instead of
+  recomputing `round(d * B)` from an `f64`.
+- `Session::charge` becomes integer addition on `WorldTime`. Check
+  `advanced_by`'s other callers before deleting it:
+  `grep -rn "advanced_by" windows/vessel/src/`.
 
-- [ ] **Step 3: Verify it compiles and behaviour is unchanged**
+- [ ] **Step 4: Rewrite the module header**
 
-Run: `cargo test -p hornvale-vessel 2>&1 | tail -30`
+`clock.rs:6-15` documents the two-lattice situation as live. It is now
+historical — say what changed and when, and keep the history rather than
+deleting it.
 
-Expected: the same set of failures as Task 1.2 Step 7 — a rename changes no
-behaviour. **A new failure means the rename was not mechanical.**
+- [ ] **Step 5: Run**
 
-- [ ] **Step 4: Commit**
-
-```bash
-cargo fmt
-make gate-commit
-git add -A windows/vessel
-git commit -m "refactor(vessel): rename Ticks to ActionCost
-
-It is an action cost -- a duration, legitimately unsigned -- and shared a
-name with the kernel's tick concept while meaning something narrower.
-base_ticks/cost_ticks renamed with it. No behaviour change."
-```
-
-### Task 1.4: Retire the f64 accumulation in liveness
-
-**Files:**
-- Modify: `windows/vessel/src/liveness.rs` (near `:5079`, `:5164`, `:5223`)
-
-- [ ] **Step 1: Read the three sites**
-
-Run: `sed -n '5070,5090p;5155,5175p;5215,5235p' windows/vessel/src/liveness.rs`
-
-The registry row records these as comparing an accumulated raw `f64` against
-a tick-derived bound — the shape decision 0186 clause 1 names.
-
-- [ ] **Step 2: Establish what each site is actually doing before changing it**
-
-For each site, write down in the commit message: what accumulates, what the
-bound is, and whether the comparison can straddle a tick boundary. **If a
-site turns out not to have the shape the registry describes, say so** — the
-row is evidence-cited but was written from a fix-wave analysis, not from a
-test.
-
-- [ ] **Step 3: Move each genuine instance to integer comparison**
-
-Compare `WorldTime`/`TickSpan` values directly. They derive `Ord`, so no
-`total_cmp` and no epsilon is needed.
-
-- [ ] **Step 4: Run the suite**
-
-Run: `cargo test -p hornvale-vessel 2>&1 | tail -30`
-Expected: same failure set as Task 1.3 — goldens only.
-
-- [ ] **Step 5: Commit**
-
-```bash
-cargo fmt
-make gate-commit
-git add windows/vessel/src/liveness.rs
-git commit -m "fix(vessel): compare instants as integers in liveness
-
-Three sites accumulated a raw f64 and compared it against a tick-derived
-bound -- the shape decision 0186 clause 1 names. WorldTime and TickSpan
-derive Ord, so the comparison is exact with no epsilon."
-```
-
-### Task 1.5: Accept the goldens, under review
-
-**Files:**
-- Modify: `windows/vessel/tests/fixtures/*.json` (5 files)
-
-**This task requires Nathan. Do not run it unattended.**
-
-- [ ] **Step 1: Show the diff before accepting anything**
-
-```bash
-cargo test -p hornvale-vessel 2>&1 | grep -A5 "golden"
-```
-
-- [ ] **Step 2: Characterize the movement**
-
-For each fixture, state how far it moved — in ticks, and in whatever the
-fixture's own units are. A sub-tick-per-action rounding fix should produce
-small, monotone movement. **Large or erratic movement is a signal the fix is
-wrong, not a signal to accept harder.**
-
-- [ ] **Step 3: Present to Nathan and wait**
-
-Report: which fixtures moved, by how much, and why. Get an explicit yes.
-
-- [ ] **Step 4: Accept**
-
-```bash
-REBASELINE=1 cargo test -p hornvale-vessel
-```
-
-Or `make rebaseline-goldens` if it covers vessel. **Never `make rebaseline`** —
-it does not write goldens and must not.
-
-- [ ] **Step 5: Verify the accept is clean**
-
-Run: `cargo test -p hornvale-vessel`
-Expected: PASS, everything.
+Capture once, then grep. Expected: byte goldens move; **no behavioural test
+fails**. A behavioural failure means the conversion changed semantics, not just
+precision — stop and report.
 
 - [ ] **Step 6: Commit**
 
-```bash
-git add windows/vessel/tests/fixtures
-git commit -m "chore(vessel): accept goldens after the integer-charge fix
+Message: `refactor(vessel)!: delete the second tick lattice` — `Ticks` and
+`days_of` are gone rather than renamed, because with the day lattice-aligned
+there is one tick concept and no second name for it.
 
-The charge path no longer round-trips through f64 days, so accumulated
-positions move by the ticks the old bridge was losing. Reviewed by Nathan;
-movement characterized in the campaign chronicle."
+### Task 1.4: Liveness accumulates in integers — THE REAL DEFECT
+
+**Files:**
+- Modify: `windows/vessel/src/liveness.rs:4644`, `:5233`, and the
+  `day`/`entry_day`/`horizon` locals around them
+
+This is the genuine accumulating drift, and it was found by checking a defect
+that turned out not to exist. The catch-up replay does `day += days_of(...)` in
+a loop over a bare `f64` while the live walk it reconstructs advances on the
+integer lattice — so the two diverge, which the site's own comment says must
+not happen.
+
+- [ ] **Step 1: Write the failing test**
+
+Name the property: a catch-up replay of N steps must land on the same instant
+the live walk would. Find a discriminating N by search rather than guessing —
+the divergence is per-step and small, so a short replay will not show it.
+
+- [ ] **Step 2: Run to verify it fails**
+
+If it does **not** fail, say so and stop. The drift may be masked by the
+horizon comparison rather than observable at the endpoint, which is a different
+and smaller finding than this task assumes.
+
+- [ ] **Step 3: Convert the accumulators**
+
+`day`, `entry_day` and `horizon` become `WorldTime`; the `+=` becomes
+`TickSpan` addition. `WorldTime` derives `Ord`, so `while day < horizon` is
+exact with no epsilon.
+
+- [ ] **Step 4: Run, then commit**
+
+Message: `fix(vessel): the catch-up replay accumulates in integer ticks` —
+noting it added `f64` days in a loop while the live walk it reconstructs
+advances on the integer lattice, which the site's own comment says would be a
+failure by construction.
+
+### Task 1.5: The epoch decision record
+
+**Files:**
+- Create: `docs/decisions/NNNN-a-local-day-is-a-whole-number-of-ticks.md`
+- Modify: `docs/digest/decisions-in-force.md` (regenerated)
+
+- [ ] **Step 1: Find the next number** — `ls docs/decisions/ | tail -5`
+- [ ] **Step 2: Write it.** Cover: why two lattices existed; that the
+      conversion between them was correct rather than buggy, and the
+      measurement that showed it (213 losses / 211 gains / net -2 over 5,764
+      samples); that the fix removes the reason rather than managing the
+      conversion; that the **draw is unchanged**, so no seed label takes an
+      epoch suffix and pin isolation holds; and that every world regenerates.
+      Cite 0186 and 0188. Record that the shallow vessel-only alternative was
+      offered and declined, and why.
+- [ ] **Step 3: Regenerate the index**
+
+```bash
+cargo run --manifest-path tools/digest/Cargo.toml -- render decisions > docs/digest/decisions-in-force.md
 ```
+
+- [ ] **Step 4: Commit**
+
+### Task 1.6: Accept the goldens and artifacts, under review
+
+**This task requires Nathan. Do not run it unattended.**
+
+- [ ] **Step 1: Show what moved, before accepting anything**
+
+```bash
+command -v deno || export PATH="$HOME/.deno/bin:$PATH"
+make rebaseline
+git diff --stat -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
+```
+
+`deno` must be on `PATH` or `make rebaseline` silently skips the atlas bundle
+(registry row `TOOL-rebaseline-skips-the-atlas-bundle-without-deno`).
+
+- [ ] **Step 2: Characterize the movement**
+
+The day length moved by at most 0.432 s, so almanac times should move by
+seconds, not hours. **A large movement means something other than the
+quantization is in the diff** — investigate rather than accept harder.
+
+- [ ] **Step 3: Present to Nathan and wait for an explicit yes**
+
+- [ ] **Step 4: Accept the byte goldens**
+
+`REBASELINE=1` on the vessel suite, or `make rebaseline-goldens`. Never
+`make rebaseline` for goldens — it does not write them and must not.
+
+- [ ] **Step 5: Commit the artifacts and the goldens separately from the code**
+
+**The census is NOT refreshed here.** It is one run on lefford at the pre-merge
+close (authorized; `docs/timings.md` puts the last six at 895-918 s), so it
+measures the finished world rather than an intermediate one.
 
 ### Stage 1 gate
 
-- [ ] Submit the stage gate:
+- [ ] `git push -u origin campaign/the-foliot`
+- [ ] `make sluice-stage BRANCH=campaign/the-foliot REF=$(git rev-parse HEAD)`
+- [ ] Read it back with `make sluice-log`. Do not start stage 2 until green.
 
-```bash
-git push -u origin campaign/the-foliot
-make sluice-stage BRANCH=campaign/the-foliot REF=$(git rev-parse HEAD)
-```
-
-- [ ] Read the result with `make sluice-log`. Do not start stage 2 until green.
-
----
 
 ## Stage 2 — the instant/duration split (follow-up 5)
 
