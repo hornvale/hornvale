@@ -311,9 +311,28 @@ pub fn rung_at_depth(depth_m: f64, gradient: GeothermalGradient) -> Band {
 /// bottom.
 ///
 /// [`Band::Nadir`] has no midpoint — [`delta_t_range_of`] gives it an open
-/// top — so it reads `depth_reach_m`, which is where EVERY rung was read
-/// before per-rung resolution existed. That makes `Nadir` the positive
-/// control for the change: its answer must not move.
+/// top — so it reads `depth_reach_m`. **This is exactly `depth_reach_m`
+/// only for the domain this function's one real producer emits**:
+/// [`crate::cave_depth::cave_depth_reach_m`] (`cave_depth.rs:202-220`)
+/// clamps every reach it returns to `[0.0, CAVE_REACH_CEILING_M]`
+/// ([`crate::cave_depth::CAVE_REACH_CEILING_M`] = 3000 m), so every
+/// `depth_reach_m` a real caller passes is finite and non-negative, and on
+/// that domain Nadir's answer is exactly `depth_reach_m` — where EVERY rung
+/// was read before per-rung resolution existed, which makes `Nadir` the
+/// positive control for the change: its answer must not move.
+///
+/// **The guarantee is not total, and no code here makes it one.** A
+/// negative `depth_reach_m` hits the trailing `.max(0.0)` below and
+/// returns `Some(0.0)`, not the reach it was given. A `depth_reach_m` of
+/// `f64::INFINITY` returns `Some(f64::INFINITY)` unchanged — `.max`
+/// sanitizes `NaN` via its fixed non-NaN partner but has no such partner
+/// for `+Infinity`. Neither input is reachable today (the one real
+/// producer's clamp rules both out), so neither is defended against at
+/// runtime — that would be paying rent for a caller that does not exist.
+/// The precondition is instead named in a debug-only assertion below, the
+/// same role `debug_assert!` plays on [`GeothermalGradient::new`]:
+/// documentation a test build enforces, not a guard a release build pays
+/// for.
 ///
 /// [`Band::Surface`] names no chamber and returns `None`.
 /// type-audit: bare-ok(diagnostic-value: depth_reach_m), bare-ok(diagnostic-value: return)
@@ -322,6 +341,14 @@ pub fn rung_evaluation_depth_m(
     gradient: GeothermalGradient,
     depth_reach_m: f64,
 ) -> Option<f64> {
+    // Documents the domain the guarantee above actually covers; see the
+    // doc comment. `cave_depth_reach_m` is the one real producer and it
+    // never emits outside this range, so this never fires in production.
+    debug_assert!(
+        depth_reach_m.is_finite() && depth_reach_m >= 0.0,
+        "rung_evaluation_depth_m's Nadir guarantee (== depth_reach_m) holds only for a \
+         finite, non-negative depth_reach_m; got {depth_reach_m}"
+    );
     if rung == Band::Surface {
         return None;
     }
