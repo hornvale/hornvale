@@ -886,7 +886,7 @@ git commit -m "feat(the-reticence): Testimony wraps FeltStateWord so a lie is in
 
 **Files:**
 - Modify: `windows/vessel/src/session.rs:4868-4899` (`fn ask`), `render_testimony`
-  (near line 5077), and a new accessor beside `driven_affect` (line 1162)
+  (:5121, plus its three in-module tests), and a new accessor beside `driven_affect` (:1162)
 - Test: `windows/vessel/tests/suite/ask_verb.rs` (append)
 
 **Interfaces:**
@@ -1007,6 +1007,17 @@ and the value written under `"{body}::feels"`:
   id. **Never the true label** — that is what `misreport_distance` would read.
 - `Costly { word, revealed }` — the ordinary line plus the revealed drives;
   `heard` = the reported concept id, as in `Spoken`.
+
+**Changing that signature breaks three existing in-module tests, and the plan
+did not say so.** Verified at dispatch time — `render_testimony` is private to
+`session.rs` (defined at :5121) with exactly four call sites: the production one
+at :4918 and three `#[cfg(test)]` tests at :7488, :7512 and :7534. Update all
+three to construct the wrapped form. **The one at :7534 is load-bearing**: its
+own doc comment records that it exists because substituting `label` for
+`reported_as` in the `Nearest` arm was mutation-proved to leak the true state.
+That invariant must survive your edit unchanged — if your rewrite makes it
+weaker or vacuous, stop and report rather than shipping a test that passes for
+free.
 
 - [ ] **Step 6: Run the whole vessel suite**
 
