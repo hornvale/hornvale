@@ -301,7 +301,7 @@ peoples, the prior resolves to `organized` for **9** and `folk` for **6**, with
 doctrine arm (no rider concept is registered). *Criterion:* exact counts, not a
 ratio. Any people resolving to two arms falsifies the uniformity claim in §3.2;
 any people resolving to the doctrine arm means a rider concept was registered
-after all, and §10.5 was decided without this line being updated.
+after all, and §10.4 was decided without this line being updated.
 
 **H2 — the fold discriminates per-drive.** After the rider overrides drive *d*
 some number of times, the host's stance on *d* moves and its stance on every other
@@ -408,13 +408,13 @@ derived lexicon state; if a value cannot be derived, it does not ship.
 3. **The 0261 hazard (§6).** The spec commits to sharing rather than copying. If
    the owner would rather this campaign not touch `testify`'s internals at all,
    the answer changes and §3.2 needs rework.
-5. **Should this campaign register a rider concept (§3.2)?** Today zero exist, so
+4. **Should this campaign register a rider concept (§3.2)?** Today zero exist, so
    the doctrine arm — a people that "names you correctly and knows what to do
    about it" — is unreachable, and the campaign ships the improvising side only.
    Registering one would make the arm live and is the natural home for
    `PLAY-host-names-you`'s other half, but it is a concept-registry addition with
    save-format reach, which is an owner call rather than autopilot's.
-6. **Sequencing against The Coercion (§7).** It shares this campaign's axis and
+5. **Sequencing against The Coercion (§7).** It shares this campaign's axis and
    is unshipped. Building this one first is defensible and was Nathan's stated
    priority; it is flagged because the duplicated-rulebook risk is real and
    points the other way.
