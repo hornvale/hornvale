@@ -3024,3 +3024,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T22:21:51Z | rebaseline | 97.072 | 261.132 | 12.930 | 2.82 | 0 | cd1c9352d | campaign/the-reticence | MacBookPro | 10 |
 | 2026-08-26T22:23:52Z | gate-commit | 83.166 | 223.557 | 52.287 | 3.32 | 0 | cd1c9352d | campaign/the-reticence | MacBookPro | 10 |
 | 2026-08-26T22:27:05Z | sluice:artifacts | 112.731 | 933.448 | 36.542 | 8.60 | 0 | 49eac4376 |  | lefford | 40 |
+| 2026-08-26T22:27:47Z | sluice:outboard | 41.391 | 25.704 | 39.153 | 1.57 | 0 | d7021e145 |  | lefford | 40 |
