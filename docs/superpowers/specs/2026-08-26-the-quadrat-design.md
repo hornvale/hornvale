@@ -319,14 +319,31 @@ be taken:
   **DISPOSED 2026-08-26 — SUPPORTED, AND RUNG-CONDITIONAL.** The bar as written
   named no rung, which was a scoping defect in this line: the answer depends on
   one. Measured (Task 3, before any cache existed):
-  rung 12 **31.3 ms**, rung 8 **42.2 ms**, rung 6 (`GLOBE_RUNG`) **91.6 ms —
-  1.8× OVER the bar**. `GLOBE_RUNG` is a shipped rung a player reaches by
-  holding `-`, and it is where the memo has almost no reuse (29,662 misses for
-  40,000 tiles). The **mechanism** claim holds at every rung — vertex scans fall
-  1,960,000 → 90 at band B and 1,960,000 → 88,986 (22×) at `GLOBE_RUNG`. So:
-  the search really does disappear; the 50 ms budget is met at rungs ≥ 7 and
-  missed at the coarsest one. **§5's task-5 cache budget is therefore sized
-  against 91.6 ms, not 31.3 ms.**
+  the full sweep, on a quiet box (an earlier sweep read ~2× high at every rung
+  under another campaign's suite at load 22–24; it was discarded and the ledger
+  says so, so it cannot later read as a mystery 2× win):
+
+  | rung | 200×200 | memo misses | scans | vs bar |
+  |---|---|---|---|---|
+  | 6 (`GLOBE_RUNG`) | **91.5 ms** | 29,662 | 88,986 | **1.8× over** |
+  | 7 | **66.4 ms** | 15,756 | 47,268 | **1.3× over** |
+  | 8 | 44.5 ms | 4,717 | 14,151 | under |
+  | 10 | 30.5 ms | 333 | 999 | under |
+  | 12 (`BAND_B_RUNG`) | 30.0 ms | 30 | 90 | under |
+
+  **The bar holds at rungs ≥ 8 and fails at 6 AND 7.** An earlier revision of
+  this line said "≥ 7", interpolated from a three-point sweep (6, 8, 12) that
+  skipped rung 7 — rung 7's own 66.4 ms is 1.3× over, and the correction came
+  from measuring the point the interpolation had assumed. Recorded because the
+  error was in this spec, not in the measurement.
+
+  Both failing rungs are **shipped** — a player reaches them by holding `-` —
+  and they are where the memo has almost no reuse. The **mechanism** claim holds
+  at every rung: vertex scans fall 1,960,000 → 90 at band B and → 88,986 (22×)
+  at `GLOBE_RUNG`. So the search really does disappear; the 50 ms budget is
+  what is rung-conditional. **§5's task-5 cache budget is therefore sized
+  against 91.5 ms, not 31.3 ms, and takes `GLOBE_RUNG` as its acceptance
+  criterion.**
 - **H2:** the byte-for-byte client/sim projection pin survives the reprojection
   — i.e. the sim and the client still draw the identical picture afterwards.
   Failure here is a design failure, not a test failure.
