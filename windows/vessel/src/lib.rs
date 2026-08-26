@@ -27,6 +27,7 @@ pub mod plan;
 mod purview;
 mod session;
 pub mod snapshot;
+pub mod stance;
 pub mod streams;
 pub mod structure;
 pub mod testimony;

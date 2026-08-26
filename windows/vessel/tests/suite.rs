@@ -71,6 +71,8 @@ mod possession_moves;
 mod session;
 #[path = "suite/session_snapshot.rs"]
 mod session_snapshot;
+#[path = "suite/stance.rs"]
+mod stance;
 #[path = "suite/submerged.rs"]
 mod submerged;
 #[path = "suite/submerged_before_arm.rs"]
