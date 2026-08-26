@@ -1066,7 +1066,10 @@ git commit -m "feat(the-reticence): ask routes through the host's willingness"
 
 **Files:**
 - Create: `windows/lab/src/reticence.rs`
-- Modify: `windows/lab/src/lib.rs` (export `render_reticence_report`)
+- Modify: `windows/lab/src/lib.rs` (export `render_reticence_report`, beside
+  `render_confidant_report` at `:31`)
+- Modify: `cli/src/main.rs` (a `Some("reticence") => cmd_lab_reticence()` arm
+  beside `:1537`, and the function)
 - Modify: `scripts/regenerate-artifacts.sh` (add the redirect beside the
   Confidant report's)
 - Modify: `docs/generated-paths.txt` (declare the new report **by name** as well
@@ -1075,8 +1078,9 @@ git commit -m "feat(the-reticence): ask routes through the host's willingness"
 
 **Interfaces:**
 - Consumes: Tasks 1-5.
-- Produces: `render_reticence_report() -> String` and the committed artifact
-  `docs/audits/the-reticence-report.md`.
+- Produces: `render_reticence_report() -> Result<String, BuildError>` (the same
+  shape as `render_confidant_report`, `windows/lab/src/metrics.rs:6688`) and the
+  committed artifact `docs/audits/the-reticence-report.md`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1088,14 +1092,27 @@ git commit -m "feat(the-reticence): ask routes through the host's willingness"
 
 #[test]
 fn the_report_covers_every_people_and_names_no_doctrine_arm() {
-    let report = hornvale_lab::render_reticence_report();
+    let report = hornvale_lab::render_reticence_report().expect("seed 42 builds");
     let rows = report.lines().filter(|l| l.starts_with("| ")).count();
     assert!(rows >= 15, "one row per people (15 on seed 42), plus header rows; got {rows}");
-    assert!(
-        !report.to_lowercase().contains("doctrine"),
-        "no rider concept is registered, so no people may resolve to a doctrine \
-         arm; if this fires, spec section 10.4 was reopened without updating H1"
-    );
+
+    // No rider concept is registered, so every people must land on one of the
+    // three IMPROVISING arms. Asserting on the arm cells rather than on the
+    // absence of the word "doctrine" anywhere in the file: a prose sentence
+    // legitimately mentioning doctrine would fail a substring check while
+    // saying nothing about the data, and that is a test that breaks for the
+    // wrong reason.
+    for line in report.lines().filter(|l| l.starts_with("| ")) {
+        let cells: Vec<_> = line.split('|').map(str::trim).collect();
+        if cells.iter().any(|c| *c == "God" || *c == "Spirit" || c.starts_with("Wordless")) {
+            continue;
+        }
+        assert!(
+            cells.iter().all(|c| !c.contains("Doctrine")),
+            "a people resolved to a doctrine arm, which is unreachable: {line}\n\
+             If this fires, spec section 10.4 was reopened without updating H1."
+        );
+    }
 }
 ```
 
@@ -1123,8 +1140,16 @@ In `scripts/regenerate-artifacts.sh`, beside the Confidant report's line, and
 matching whatever invocation that one actually uses:
 
 ```bash
-cargo run -q ... render reticence > docs/audits/the-reticence-report.md
+spawn run -p hornvale -- lab reticence > docs/audits/the-reticence-report.md
 ```
+
+Verified at dispatch time: the Confidant report is wired exactly this way at
+`scripts/regenerate-artifacts.sh:819`, in **Group C** (world-free, self-contained
+dumps) rather than among `$w42`'s readers, because `render_confidant_report`
+builds its own internal `Seed(42)`. Yours does too, so it belongs beside it.
+There is no `--bin`; the entry point is the `hornvale lab <sub>` subcommand
+dispatched from `cli/src/main.rs:1537` (`Some("confidant") => cmd_lab_confidant()`).
+You add the sibling arm and its `cmd_lab_reticence()`.
 
 **Every `render` prints to stdout; the `>` redirect is what writes the file.** A
 command without the redirect regenerates nothing, and the drift check that
