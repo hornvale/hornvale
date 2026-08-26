@@ -60,9 +60,10 @@ domain, legal under the layering in `cli/tests/architecture.rs`).
 Verified on this tree, seed 42:
 
 ```
-  distinct peoples                  15
+  distinct SPECIES holding beliefs  15   <- the denominator all counts use
+  settlements holding beliefs       15   <- 1:1 with species on THIS seed only
   beliefs (is-belief / held-by)    145
-  peoples with MIXED cult-forms      0   <- uniform per people
+  species with MIXED cult-forms      0   <- uniform per species
   cult-form = organized              9 peoples (87 beliefs)
   cult-form = folk                   6 peoples (58 beliefs)
   high-god facts                     1   <- rejected as discriminator
@@ -267,24 +268,40 @@ pub fn improvised_name(world: &World, lexicon: &Lexicon, people: &str) -> Improv
     }
 }
 
-/// The `cult-form` of the first belief `held-by` this people, by ledger order.
+/// The `cult-form` of the first belief held at a site this species peoples,
+/// by ledger order.
+///
+/// **`held-by` targets a SETTLEMENT entity, not a people**, so the join runs
+/// species -> `occ-people` -> site -> `held-by` -> belief -> `cult-form`. On
+/// seed 42 species and site happen to be 1:1 (15 and 15), but that is a
+/// property of one world, not a guarantee, so this takes the first by ledger
+/// order and the task's own test asserts uniformity PER SPECIES — which is the
+/// denominator the campaign's numbers are quoted on.
 fn cult_form_of(world: &World, people: &str) -> Option<String> {
+    use hornvale_kernel::Value;
     use hornvale_religion::{CULT_FORM, HELD_BY};
-    let belief = world.ledger.facts().find(|f| {
-        f.predicate == HELD_BY && f.object.as_text().is_some_and(|t| t == people)
-    })?;
+    let sites: std::collections::BTreeSet<_> = world
+        .ledger
+        .find("occ-people")
+        .filter(|f| matches!(&f.object, Value::Text(t) if t == people))
+        .map(|f| f.subject)
+        .collect();
     world
         .ledger
-        .facts()
-        .find(|f| f.predicate == CULT_FORM && f.subject == belief.subject)
-        .and_then(|f| f.object.as_text().map(str::to_string))
+        .find(HELD_BY)
+        .filter(|f| matches!(&f.object, Value::Entity(e) if sites.contains(e)))
+        .find_map(|f| world.ledger.text_of(f.subject, CULT_FORM))
+        .map(str::to_string)
 }
 ```
 
-**If `Ledger::facts()`, `Value::as_text()`, or `Fact.subject`'s type do not match
-the shapes above, adapt to what the tree actually has and say so in your report.
-Do not invent an accessor.** The plan author read these from call sites, not from
-the definitions.
+**The kernel API above was verified against `kernel/src/ledger.rs` at dispatch
+time and is what the tree actually has** — `Ledger::find(predicate)` (line 388),
+`Ledger::text_of(subject, predicate)` (line 429), `Fact.subject: EntityId` (line
+72), `Value::{Entity, Text, Number, Flag}` (line 55). There is **no**
+`Ledger::facts()` and **no** `Value::as_text()`; an earlier draft of this plan
+named both and neither exists. If anything else here does not compile, adapt to
+the tree and say so in your report — do not invent an accessor.
 
 - [ ] **Step 5: Run the tests**
 
@@ -301,24 +318,33 @@ fn cult_form_is_uniform_within_every_people() {
     // The spec's section 3.2 takes the FIRST belief as decisive. That is only
     // sound because no people holds two cult-forms. Measured 0 of 15 on seed
     // 42; this test is what keeps it true.
+    use hornvale_kernel::Value;
     use hornvale_religion::{CULT_FORM, HELD_BY};
     let (world, _ctx) = seed_42();
-    let mut form_of_belief = std::collections::BTreeMap::new();
-    for f in world.ledger.facts().filter(|f| f.predicate == CULT_FORM) {
-        if let Some(t) = f.object.as_text() {
-            form_of_belief.insert(f.subject.clone(), t.to_string());
+
+    // site -> the species that peoples it
+    let mut species_of_site = std::collections::BTreeMap::new();
+    for f in world.ledger.find("occ-people") {
+        if let Value::Text(t) = &f.object {
+            species_of_site.insert(f.subject, t.clone());
         }
     }
-    let mut per_people: std::collections::BTreeMap<String, std::collections::BTreeSet<String>> =
+    // species -> every cult-form held at any site it peoples
+    let mut per_species: std::collections::BTreeMap<String, std::collections::BTreeSet<String>> =
         std::collections::BTreeMap::new();
-    for f in world.ledger.facts().filter(|f| f.predicate == HELD_BY) {
-        if let (Some(people), Some(form)) = (f.object.as_text(), form_of_belief.get(&f.subject)) {
-            per_people.entry(people.to_string()).or_default().insert(form.clone());
-        }
+    for f in world.ledger.find(HELD_BY) {
+        let Value::Entity(site) = &f.object else { continue };
+        let (Some(sp), Some(form)) = (
+            species_of_site.get(site),
+            world.ledger.text_of(f.subject, CULT_FORM),
+        ) else {
+            continue;
+        };
+        per_species.entry(sp.clone()).or_default().insert(form.to_string());
     }
-    let mixed: Vec<_> = per_people.iter().filter(|(_, s)| s.len() > 1).collect();
-    assert!(mixed.is_empty(), "cult-form must be uniform per people, mixed: {mixed:?}");
-    assert_eq!(per_people.len(), 15, "seed 42 has 15 peoples holding beliefs");
+    let mixed: Vec<_> = per_species.iter().filter(|(_, s)| s.len() > 1).collect();
+    assert!(mixed.is_empty(), "cult-form must be uniform per SPECIES, mixed: {mixed:?}");
+    assert_eq!(per_species.len(), 15, "seed 42 has 15 species holding beliefs");
 }
 ```
 
