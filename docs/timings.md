@@ -3000,3 +3000,6 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T20:53:26Z | gate-commit | 30.360 | 53.023 | 12.996 | 2.17 | 0 | b25c2f9f2 | campaign/the-reticence | MacBookPro | 10 |
 | 2026-08-26T21:38:28Z | rebaseline | 67.332 | 262.241 | 13.624 | 4.10 | 0 | cea969f95 | campaign/the-reticence | MacBookPro | 10 |
 | 2026-08-26T21:39:21Z | gate-commit | 36.355 | 61.610 | 20.032 | 2.25 | 0 | cea969f95 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T21:46:47Z | gate-commit | 32.680 | 52.733 | 13.236 | 2.02 | 0 | cea969f95 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T22:04:21Z | rebaseline | 60.197 | 261.025 | 12.665 | 4.55 | 0 | 7dc967480 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T22:05:12Z | gate-commit | 41.675 | 84.111 | 28.808 | 2.71 | 0 | 7dc967480 | campaign/the-reticence | MacBookPro | 10 |
