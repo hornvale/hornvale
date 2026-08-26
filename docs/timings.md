@@ -2990,3 +2990,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T18:31:50Z | gate-commit | 38.805 | 72.196 | 55.661 | 3.29 | 0 | 7d4d5082d | campaign/the-sources | MacBookPro | 10 |
 | 2026-08-26T18:32:27Z | gate-commit | 21.768 | 49.992 | 12.805 | 2.88 | 0 | 7d4d5082d | campaign/the-sources | MacBookPro | 10 |
 | 2026-08-26T18:43:16Z | gate-commit | 61.681 | 97.524 | 86.859 | 2.99 | 0 | f899691b1 | campaign/the-sources | MacBookPro | 10 |
+| 2026-08-26T18:44:01Z | gate-commit | 21.295 | 49.735 | 12.551 | 2.92 | 0 | f899691b1 | campaign/the-sources | MacBookPro | 10 |
