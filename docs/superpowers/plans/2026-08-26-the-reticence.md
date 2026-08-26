@@ -506,9 +506,17 @@ Re-run the overrides filter. Expected: **RED** on
 means the test does not discriminate and must be strengthened before you
 restore.
 
-Restore with `git checkout -- windows/vessel/src/session.rs`, then **re-run and
-confirm green again** — a restored mutation can leave a stale binary, and the
-silent direction is a false GREEN.
+Restore from your scratch copy, then **re-run and confirm green again**.
+
+> **RESTORING A MUTATION: do NOT use `git checkout -- <file>` while your feature
+> edits are uncommitted.** It reverts the whole file to HEAD, taking your
+> unfinished work with the mutation. Task 2's implementer lost its edits to this
+> twice before correcting course. Copy the file to a scratch path before
+> mutating and copy it back afterwards, then **re-run and confirm green** — a
+> restored mutation can leave a stale binary, and that direction is a false
+> GREEN. Commit your work first if you prefer; either is fine, `git checkout`
+> alone is not.
+
 
 - [ ] **Step 8: Commit**
 
@@ -844,8 +852,18 @@ python3 scripts/mutate.py --to 'const DISSEMBLING_CLAIM: AffectLabel = AffectLab
     'const DISSEMBLING_CLAIM: AffectLabel = AffectLabel::Content;'
 ```
 
-Re-run the `testimony::reticence` filter. Expected: **RED**. Restore with
-`git checkout -- windows/vessel/src/testimony.rs`, re-run, confirm green.
+Re-run the `testimony::reticence` filter. Expected: **RED**. Restore from your
+scratch copy, re-run, confirm green.
+
+> **RESTORING A MUTATION: do NOT use `git checkout -- <file>` while your feature
+> edits are uncommitted.** It reverts the whole file to HEAD, taking your
+> unfinished work with the mutation. Task 2's implementer lost its edits to this
+> twice before correcting course. Copy the file to a scratch path before
+> mutating and copy it back afterwards, then **re-run and confirm green** — a
+> restored mutation can leave a stale binary, and that direction is a false
+> GREEN. Commit your work first if you prefer; either is fine, `git checkout`
+> alone is not.
+
 
 - [ ] **Step 6: Commit**
 
@@ -1192,8 +1210,18 @@ Expected: PASS at 9/6/0.
 
 Assert that overriding drive *d* moves the stance on *d* and not on a co-active
 drive. Then mutation-prove it: substitute a constant for the accumulated count
-and confirm **RED**. Restore, re-run, confirm green. A test made robust by being
-made weaker would go quietly green — that is the failure The Confidant caught in
+and confirm **RED**. Restore from your scratch copy, re-run, confirm green.
+
+> **RESTORING A MUTATION: do NOT use `git checkout -- <file>` while your feature
+> edits are uncommitted.** It reverts the whole file to HEAD, taking your
+> unfinished work with the mutation. Task 2's implementer lost its edits to this
+> twice before correcting course. Copy the file to a scratch path before
+> mutating and copy it back afterwards, then **re-run and confirm green** — a
+> restored mutation can leave a stale binary, and that direction is a false
+> GREEN. Commit your work first if you prefer; either is fine, `git checkout`
+> alone is not.
+
+A test made robust by being made weaker would go quietly green — that is the failure The Confidant caught in
 its own Task 8.
 
 - [ ] **Step 3: H3 — refusal is selective**

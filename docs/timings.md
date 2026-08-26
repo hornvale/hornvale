@@ -2977,3 +2977,7 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T16:15:29Z | sluice:clients | 462.845 | 5757.223 | 80.937 | 12.61 | 0 | 5f95b8918 |  | lefford | 40 |
 | 2026-08-26T18:06:23Z | gate-commit | 18.329 | 13.728 | 0.346 | 0.77 | 0 | bfeb852bc | campaign/the-reticence | MacBookPro | 10 |
 | 2026-08-26T18:08:10Z | gate-commit | 86.239 | 235.186 | 22.043 | 2.98 | 0 | bfeb852bc | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T18:08:58Z | gate-commit | 23.145 | 49.820 | 12.855 | 2.71 | 0 | bfeb852bc | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T18:26:45Z | gate-commit | 21.269 | 20.239 | 4.250 | 1.15 | 0 | dd1f98243 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T18:27:52Z | gate-commit | 46.544 | 161.034 | 22.745 | 3.95 | 0 | dd1f98243 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T18:28:27Z | gate-commit | 23.501 | 50.129 | 12.824 | 2.68 | 0 | dd1f98243 | campaign/the-reticence | MacBookPro | 10 |
