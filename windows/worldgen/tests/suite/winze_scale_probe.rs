@@ -305,6 +305,15 @@
 //!
 //! Test fixture (decision 0092): calls the composition-root entry points
 //! directly, the sanctioned posture for this crate's live-worldgen batteries.
+//!
+//! # RE-RUN AGAINST `main` (The Sources, Task 1, 2026-08-26)
+//!
+//! Harvested from `campaign/the-winze` (unmerged, 403 commits behind at the
+//! time of this re-run) and re-measured against `main` at `7576eca00`, after
+//! The Glasshouse's temperature re-centring. **Reproduces exactly**, n=3
+//! seeds (42/7/1234), pooled: chambers 3.264x, reachable chambers 3.264x,
+//! runs 0.502x — bit-for-bit the same figures the metaplan (§3.1) cites. The
+//! size clause stays falsified; no doc, registry or metaplan number changed.
 #![allow(clippy::disallowed_methods)]
 
 use std::collections::BTreeSet;

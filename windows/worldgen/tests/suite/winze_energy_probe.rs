@@ -90,6 +90,18 @@
 //! Test fixture (decision 0092): calls the sculpt/fit derivation entry
 //! points directly to build its own world state, once per test — the
 //! sanctioned test-fixture posture the weir's spec carves out.
+//!
+//! # RE-RUN AGAINST `main` (The Sources, Task 1, 2026-08-26)
+//!
+//! Harvested from `campaign/the-winze` (unmerged, 403 commits behind at the
+//! time of this re-run) and re-measured against `main` at `7576eca00`, after
+//! The Glasshouse's temperature re-centring. M4's decoupling verdict
+//! **reproduces exactly**, n=3 seeds (42/7/1234): the same three
+//! representative pairs the metaplan (§3.2) cites off seed 1234's matrix —
+//! `silica`x`porosity` -0.0279, `silica`x`carbonate` 0.1983,
+//! `grain`x`metamorphic_grade` 0.0988 — and the coupled pair,
+//! `induration`x`metamorphic_grade` 0.9818, all bit-for-bit unchanged. No
+//! doc, registry or metaplan number changed.
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;

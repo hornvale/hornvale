@@ -33,6 +33,19 @@
 //! Test fixture (decision 0092): calls the sculpt/fit derivation entry
 //! points directly to build its own world state, once per test — the
 //! sanctioned test-fixture posture the weir's spec carves out.
+//!
+//! # RE-RUN AGAINST `main` (The Sources, Task 1, 2026-08-26)
+//!
+//! Harvested from `campaign/the-winze` (unmerged, 403 commits behind at the
+//! time of this re-run) and re-measured against `main` at `7576eca00`, after
+//! The Glasshouse's temperature re-centring. n=3 seeds (42/7/1234). **A
+//! figure moved but the SEPARATION verdict stands**: the top-decile
+//! occupation share moved from 0.48% / 2.75% / 11.81% to 0.89% / 1.98% /
+//! 8.86% (see the in-body comment at the SEPARATION assertions) — every seed
+//! now sits below the ~10% indifferent-siting base rate, the same "ore does
+//! not separate settlements" conclusion by a wider margin, not a flip. No
+//! metaplan or registry number cites this figure, so nothing outside this
+//! file's own doc comment needed updating.
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
@@ -152,16 +165,19 @@ fn ore_separation_probe() {
         // N6). Two independent signals, both already computed above:
         //
         //   (a) the median barely moves: occupied-vertex p50 sits within 0.02
-        //       of land p50 on every seed measured (actual gap 0.0002-0.0016,
+        //       of land p50 on every seed measured (actual gap 0.0000-0.0021,
         //       against a distribution spanning ~0.06-0.74) — the centre of
         //       mass of occupied sites is not shifted toward high
         //       prospectivity at all.
         //   (b) the top decile is not over-represented among occupations: if
         //       siting were indifferent to prospectivity, ~10% of occupations
         //       would fall in land's own top decile by chance; measured share
-        //       is 0.48% / 2.75% / 11.81% across the panel — at or *below*
-        //       that base rate on two of three seeds, never consistently
-        //       above it.
+        //       is 0.89% / 1.98% / 8.86% across the panel (re-measured against
+        //       `main` at `7576eca00`, The Sources Task 1, 2026-08-26; the
+        //       figure moved from the branch's 0.48% / 2.75% / 11.81%, but the
+        //       verdict is unaffected — every seed now sits *below* the ~10%
+        //       base rate, which is the same conclusion by a wider margin) —
+        //       at or below that base rate on every seed, never above it.
         //
         // Landed branch: "occupied-vertex prospectivity is indistinguishable
         // from land overall" -> ore does not separate settlements. Per the

@@ -85,6 +85,18 @@
 //!
 //! Test fixture (decision 0092): calls the sculpt/fit derivation entry
 //! points directly to build its own world state, once per test.
+//!
+//! # RE-RUN AGAINST `main` (The Sources, Task 1, 2026-08-26)
+//!
+//! Harvested from `campaign/the-winze` (unmerged, 403 commits behind at the
+//! time of this re-run) and re-measured against `main` at `7576eca00`, after
+//! The Glasshouse's temperature re-centring. **Reproduces exactly**, n=3
+//! seeds (42/7/1234): the largest mutually-weak clique is still the same 4
+//! members (`sediment_thickness`, `geothermal_gradient_k_per_km`,
+//! `paleo_envelope`, `paleo_shoreline`), `sediment_thickness`'s own max|r|
+//! is still 0.3610, and the best single pair is still
+//! `sediment_thickness`/`paleo_envelope` at max|r| 0.1009. No doc, registry
+//! or metaplan number changed.
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
