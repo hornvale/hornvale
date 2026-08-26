@@ -5140,11 +5140,21 @@ fn felt_phrase(affect: &Affect) -> String {
 /// `label` at all — only `reported_as`, which [`testify`](crate::testimony::testify) guarantees differs
 /// from whatever it was asked about (`nearest` skips its own query
 /// candidate) — so a divergent testimony can never carry the true label into
-/// the returned text. `tests/suite/ask_verb.rs`'s
-/// `the_arbitration_never_reaches_a_divergent_utterance` mutation-proves
-/// this by substituting `label` for `reported_as` in that arm and watching
-/// the test catch it. [`Testimony::Falsehood`] holds the same discipline for
-/// a deliberate lie: it glosses from `claimed`, never `label`.
+/// the returned text. This module's OWN test
+/// `the_arbitration_never_reaches_a_divergent_utterance` (in the `tests`
+/// module at the foot of this file — NOT in `tests/suite/ask_verb.rs`, which
+/// an earlier version of this doc misnamed) mutation-proves it by
+/// substituting `label` for `reported_as` in that arm and watching the test
+/// catch it. [`Testimony::Falsehood`] holds the same discipline for a
+/// deliberate lie — it glosses from `claimed`, never `label` — and
+/// `a_deliberate_lie_carries_the_claim_and_never_the_truth` beside it
+/// mutation-proves THAT arm the same way.
+///
+/// **All four arms are pinned in-module, and the fourth was not always.**
+/// `Withheld`, `Falsehood` and `Costly` shipped with no test constructing
+/// them at all; the `Falsehood` mutation above passed the entire 653-test
+/// vessel crate, silently reporting a lying host's true state. The three
+/// tests that close that gap sit beside the two named above.
 ///
 /// [`Direct`]: FeltStateWord::Direct
 /// [`Nearest`]: FeltStateWord::Nearest
@@ -7638,5 +7648,159 @@ mod tests {
             "the heard entry must record what was actually SAID (eager), never the \
              true state (helpless)"
         );
+    }
+
+    /// The WITHHELD arm (The Reticence, Task 5). A refusal is the one arm
+    /// that lands nothing: a `heard` entry written on a refusal would make
+    /// silence informative, which is the exact property
+    /// [`render_testimony`]'s own doc names for this variant.
+    ///
+    /// FIRES WHEN: the refusal arm starts returning a concept id (from
+    /// `label` or from anywhere else), or the refusal text starts naming the
+    /// state the host declined to name.
+    #[test]
+    fn render_testimony_withheld_lands_nothing_and_names_no_state() {
+        let (turn, heard) = render_testimony(
+            "the herder",
+            AffectLabel::Helpless,
+            Some(Testimony::Withheld),
+        );
+        assert!(
+            !turn.is_empty(),
+            "a refusal is still a turn — the player must be told the host declined"
+        );
+        let lowered = turn.to_lowercase();
+        assert!(
+            !lowered.contains("helpless"),
+            "a refusal must not name the state it refused to name, got: {turn}"
+        );
+        assert_eq!(
+            heard, None,
+            "a refusal lands NOTHING: knowledge that recorded a felt state here \
+             would make silence informative"
+        );
+    }
+
+    /// **THE CAMPAIGN'S CENTRAL INVARIANT FOR A DELIBERATE LIE (The
+    /// Reticence, Task 5, spec §4.3): a host that lies is heard to have
+    /// lied.** A dissembling host truly [`AffectLabel::Helpless`] claims
+    /// [`AffectLabel::Content`] — so `content` must reach both the player's
+    /// ear and the `heard` value, and `helpless` must reach neither, in any
+    /// casing. This is the [`Testimony::Falsehood`] twin of
+    /// [`the_arbitration_never_reaches_a_divergent_utterance`] above, which
+    /// holds the same discipline for a lexical gap.
+    ///
+    /// MUTATION-PROVED (the final-fix wave): rewrite the argument of the
+    /// `Falsehood` arm's `concept_id` call from `claimed` to `label` — the
+    /// one-token change that makes a deliberate lie report the host's true
+    /// state — and this test turns RED on both the `helpless`-leak assertion
+    /// and the `heard` equality. Before this test existed the whole
+    /// 653-test vessel crate passed under that mutation, which fed the TRUE
+    /// state into the player's ear AND into
+    /// `Knowledge["{body_label}::feels"]`, inverting the campaign's premise
+    /// while every gate stayed green.
+    ///
+    /// (The repro command is deliberately NOT quoted verbatim here:
+    /// `scripts/mutate.py` refuses a target it finds twice, and a doc
+    /// comment holding the exact source line is the second occurrence.)
+    ///
+    /// FIRES WHEN: the lie's gloss is re-derived from the arbitration's true
+    /// answer instead of from the claim the spoken word actually names.
+    #[test]
+    fn a_deliberate_lie_carries_the_claim_and_never_the_truth() {
+        let true_label = AffectLabel::Helpless;
+        let (turn, heard) = render_testimony(
+            "the herder",
+            true_label,
+            Some(Testimony::Falsehood {
+                word: dummy_word("Sallim"),
+                claimed: AffectLabel::Content,
+            }),
+        );
+        let lowered = turn.to_lowercase();
+        assert!(
+            !lowered.contains("helpless"),
+            "the true state must never appear in a lie's turn text, got: {turn}"
+        );
+        assert!(
+            turn.contains("Sallim"),
+            "the word the host actually said must appear, got: {turn}"
+        );
+        assert!(
+            turn.contains("content"),
+            "the CLAIMED state's concept is what a listener hears, got: {turn}"
+        );
+        assert_eq!(
+            heard,
+            Some("content".to_string()),
+            "the heard entry must record the lie the host told (content), never \
+             the state it is actually in (helpless) — a knowledge store that \
+             recorded the truth here would make lying free"
+        );
+    }
+
+    /// The COSTLY arm (The Reticence, Task 5). Truth, plus the arbitration's
+    /// discarded ranks a forthcoming host never mentions — so this arm is
+    /// the ONE place the true label is both reported and accompanied by the
+    /// residue, and the residue must actually reach the text.
+    ///
+    /// Both directions are pinned, because only the pair discriminates: a
+    /// non-empty residue must be named, and an EMPTY one must render
+    /// byte-identically to the ordinary [`Testimony::Spoken`] answer rather
+    /// than emitting a dangling "it costs something to say:" with nothing
+    /// after it.
+    ///
+    /// FIRES WHEN: the residue is dropped from the rendered line, or the
+    /// empty-residue guard is removed.
+    #[test]
+    fn a_costly_truth_names_its_residue_and_an_empty_one_reads_as_ordinary() {
+        let (turn, heard) = render_testimony(
+            "the herder",
+            AffectLabel::Content,
+            Some(Testimony::Costly {
+                word: FeltStateWord::Direct(dummy_word("Vrenn")),
+                revealed: vec![DriveKind::Thirst, DriveKind::Fatigue],
+            }),
+        );
+        assert!(
+            turn.contains("Vrenn"),
+            "a costly answer is still an ordinary lexical report, got: {turn}"
+        );
+        assert!(
+            turn.contains("content"),
+            "a costly answer is TRUTHFUL — the true state's concept is correct here, got: {turn}"
+        );
+        assert_eq!(
+            heard,
+            Some("content".to_string()),
+            "a costly answer lands the true concept, exactly as a Spoken one does"
+        );
+        assert!(
+            turn.contains("Thirst") && turn.contains("Fatigue"),
+            "the residue is the WHOLE point of this arm and must reach the player, got: {turn}"
+        );
+
+        // The empty-residue half: identical to the plain Spoken rendering.
+        let (plain, plain_heard) = render_testimony(
+            "the herder",
+            AffectLabel::Content,
+            Some(Testimony::Spoken(FeltStateWord::Direct(dummy_word(
+                "Vrenn",
+            )))),
+        );
+        let (bare, bare_heard) = render_testimony(
+            "the herder",
+            AffectLabel::Content,
+            Some(Testimony::Costly {
+                word: FeltStateWord::Direct(dummy_word("Vrenn")),
+                revealed: Vec::new(),
+            }),
+        );
+        assert_eq!(
+            bare, plain,
+            "a costly answer with nothing to reveal must read exactly like an \
+             ordinary one, not trail an empty cost clause"
+        );
+        assert_eq!(bare_heard, plain_heard, "and land exactly the same concept");
     }
 }

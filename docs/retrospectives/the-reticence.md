@@ -145,16 +145,29 @@ same argument-check failure a third time.
   spec §10.4; the registry addition itself is undone and unscheduled.
   `PLAY-host-names-you` in the idea registry carries the split explicitly:
   the improvising half shipped, the doctrine half waits on this.
-- **`ask()`'s topic selection is what makes the doctrine prior inert, not
-  the willingness mechanism itself.** The prior remains genuinely sensitive
+- **Two levers make the doctrine prior live, not one — and this file named
+  only one until the final-fix wave.** The prior remains genuinely sensitive
   to a people's doctrine at reachable override counts; the drive a player can
-  currently ask about is never the drive with override history to be
-  sensitive to. Widening what a host can be asked — a query against a
-  specific suppressed drive, or a report of the whole override record rather
-  than only the pursued drive's topic — is the concrete lever a follow-up
-  would pull. Home: `windows/lab/tests/suite/reticence_calibration.rs`'s own
-  H4 doc comment, which states this as the reachability verdict rather than
-  leaving it only in this file.
+  currently ask about is observed never to be a drive with override history.
+  The levers are:
+  1. **Widening what a host can be asked** — a query against a specific
+     suppressed drive, or a report of the whole override record rather than
+     only the pursued drive's topic.
+  2. **Arbitration stickiness.** A drive holds the topic only during an
+     opening stretch before it has lost anything, and once it starts losing
+     it is never observed to win the topic back. Anything that lets a drive
+     regain the topic after a spell of losing makes the mechanism live
+     *without touching `ask()` at all*.
+
+  Lever 2 was invisible while the artifacts said the two quantities were
+  **disjoint by construction**, which asserted the state was impossible. It
+  is not: `driven_overrides` is never reset, so the per-tick disjointness
+  that claim rested on says nothing about the accumulated count `ask()`
+  actually reads. A follow-up campaign that believed the "impossible"
+  framing would have ruled out lever 2 on the strength of a wrong mechanism.
+  Home: `windows/lab/tests/suite/reticence_calibration.rs`'s own H4 doc
+  comment, which now states the stickiness measurement and the reachability
+  verdict as two separate claims.
 - **The speech budget stays out of scope.** A host volunteering testimony
   unprompted, rather than only answering when asked, depends on a delivery
   layer the spec names as still unmeasured and deliberately keeps off this

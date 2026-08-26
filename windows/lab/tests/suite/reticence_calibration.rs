@@ -275,44 +275,71 @@ fn h3_refusal_is_selective_not_global() {
 /// were a broad sweep with 70 independent chances to falsify the null; it
 /// is not, and the doc comment below is corrected to say so).
 ///
-/// **Structural claim, verified by reading the code, not by sampling:**
-/// `ask()`'s topic and the override record are DISJOINT BY CONSTRUCTION, so
-/// on the current wiring the doctrine prior CANNOT move observable
-/// testimony. `Session::ask`'s `overrides` value is
-/// `topic.map(|d| self.overrides_of(d))` (`session.rs:4927`), where
-/// `topic == self.driven_affect_object()` — the CURRENTLY-PURSUED drive.
-/// `driven_overrides` increments only for drives in `driven_suppressed`
-/// (`session.rs:4101-4102`), and `liveness.rs:3520-3522` computes
-/// `suppressed` by explicitly filtering OUT `pursued_kind`. So the pursued
-/// drive (`ask()`'s only source of `overrides`) can never itself be a
-/// member of the set `driven_overrides` accumulates from at the SAME
-/// tick — the two sets are disjoint by construction, every tick, for every
-/// session.
+/// **THE MECHANISM CLAIM WAS WRONG, AND IS RESTATED HERE (final-fix wave).**
+/// This doc used to say `ask()`'s topic and the override record are
+/// **disjoint by construction**, so the prior *cannot* move observable
+/// testimony. The per-tick half of that is true and is not in dispute:
+/// `liveness.rs`'s `suppressed` is computed by explicitly filtering OUT
+/// `pursued_kind`, so a drive is never recorded as overridden on the very
+/// tick it wins. **The conclusion does not follow.** `Session`'s
+/// `driven_overrides` is a `BTreeMap` that is created once at `Session::start`
+/// and thereafter only ever `+= 1` — it is **never reset** — and
+/// `overrides_of(topic)` reads that accumulated history, not the current
+/// tick. A drive that piles up overrides while LOSING would carry every one
+/// of them into `overrides_of(topic)` the moment it later WON. The two sets
+/// are disjoint *per tick*; the quantity `ask()` actually reads is not a
+/// per-tick quantity.
 ///
-/// **Empirical claim: this sweep CORROBORATES the structural claim, it does
-/// not independently test it.** All 70 sampled ask-observable points below
-/// land at `overrides_of(topic) == 0` — not "most", all — because a drive
-/// only ever ACCUMULATES overrides while it is losing, and the moment it
-/// wins it is `topic`, where this code never reads its own history. At
-/// `overrides == 0`, `stance_for`'s first match arm is `0 =>
-/// Stance::Forthcoming`, **unconditional on `prior`** (`stance.rs:53`), so
-/// every one of the 70 points was GUARANTEED to agree across all three
-/// priors before a single tick was simulated — restating one structural
-/// fact 70 times, not 70 independent trials. The positive control above
+/// **So the null is empirical, not structural — and it is empirically
+/// STRONGER than "disjoint by construction" would have made it, because a
+/// contingent fact that keeps holding is a finding, where an impossibility
+/// is just a restatement.** What actually keeps `overrides_of(topic)` at
+/// zero is that **arbitration is sticky**: measured directly, a drive holds
+/// the topic only during an opening prefix in which it has not yet lost
+/// anything, and once a drive begins losing it is never observed to win the
+/// topic back. Seed 42 is the clean picture — `Fatigue` is the topic at the
+/// first sample while the record is still literally empty, `Thirst` takes
+/// over one sample later, and `Thirst` then holds the topic for every
+/// remaining sample while `Fatigue` and `Hunger` climb past 100 overrides
+/// each.
+///
+/// **The topic genuinely does switch, which is why "impossible" was the
+/// wrong word.** Three of this test's own six seeds (3, 4 and 42) see the
+/// pursued drive change inside the 70 sampled points, and the sweep below
+/// asserts that switching is still real rather than assuming it. Two
+/// direct probes, both run for this correction:
+///
+/// - at this test's exact parameters — 6 seeds x 12 x `!wait 5` — **70/70**
+///   ask-observable points sit at `overrides_of(topic) == 0`, with 3/6 seeds
+///   switching topic;
+/// - at a far longer horizon — 6 seeds x 120 x `!wait 30`, 720 points —
+///   **0/720** points had a non-zero count, while the losing drives reached
+///   119-120 overrides apiece.
+///
+/// At `overrides == 0`, `stance_for`'s first match arm is
+/// `0 => Stance::Forthcoming`, **unconditional on `prior`**, so every one of
+/// the 70 points below was guaranteed to agree across all three priors
+/// before a single tick was simulated. The sweep therefore CORROBORATES the
+/// null; it does not independently test it. The positive control above
 /// (`h4_positive_control_the_divergence_detector_can_fire`) proves the
 /// comparison ITSELF can register a divergence when `overrides != 0`; this
-/// sweep never reaches that regime. A hand-run, uncommitted probe pushed
-/// far past this sweep's regime (a single session, 300x `!wait 30`, ~9,000
-/// ticks) and the topic drive was STILL at 0 overrides on every tick, while
-/// the suppressed drives it never became reached 300 and 299 — so the
-/// finding is more robust than 70 ticks shows, and the framing below is
-/// correspondingly less "broad empirical sweep" than an earlier version of
-/// this doc comment implied.
+/// sweep never reaches that regime.
+///
+/// **Why the distinction is load-bearing rather than pedantic:** a follow-up
+/// campaign reading "impossible by construction" would conclude the only
+/// lever is widening what a host can be ASKED. That is one lever, but a
+/// change to arbitration stickiness — anything that lets a drive regain the
+/// topic after a spell of losing — would make this mechanism live without
+/// touching `ask()` at all.
 ///
 /// **Reachability, checked directly rather than assumed:** the state H4
 /// would need — the pursued drive changing to one that already carries
-/// override history — is **not reachable through any currently-shipped
-/// verb**. `IN_CHARACTER_VERBS` (`session.rs`) is a closed, exhaustive
+/// override history — was **never observed**, and is **not reachable
+/// through any currently-shipped verb** by the argument below. Note the two
+/// are different claims: the paragraph below rules out the PLAYER forcing
+/// the switch, while the stickiness measured above is about the sim never
+/// producing it unprompted. Neither is an impossibility proof.
+/// `IN_CHARACTER_VERBS` (`session.rs`) is a closed, exhaustive
 /// 18-verb roster with no drink/eat/relief verb; the driven body's own
 /// passive `!wait` walk discards every fact it would otherwise commit
 /// (`_driven_facts` is unconditionally dropped, `session.rs:4090` and the
@@ -342,6 +369,7 @@ fn h4_does_the_prior_move_observable_testimony_at_all() {
     let mut diverged = 0usize;
     let mut degenerate_zero_overrides = 0usize;
     let mut sessions_with_observations = 0usize;
+    let mut sessions_whose_topic_switched = 0usize;
 
     for seed in seeds {
         let world = generated(seed);
@@ -354,6 +382,8 @@ fn h4_does_the_prior_move_observable_testimony_at_all() {
         let prior = prior_of(&world, &species, &terrain, &climate);
 
         let mut this_session_observed = false;
+        let mut topics_seen: std::collections::BTreeSet<DriveKind> =
+            std::collections::BTreeSet::new();
         for _ in 0..ticks_per_session {
             s.handle("!wait 5");
             let Some(topic) = s.driven_affect_object() else {
@@ -362,6 +392,7 @@ fn h4_does_the_prior_move_observable_testimony_at_all() {
             let overrides = s.overrides_of(topic);
             denominator += 1;
             this_session_observed = true;
+            topics_seen.insert(topic);
             if overrides == 0 {
                 degenerate_zero_overrides += 1;
             }
@@ -372,6 +403,9 @@ fn h4_does_the_prior_move_observable_testimony_at_all() {
         if this_session_observed {
             sessions_with_observations += 1;
         }
+        if topics_seen.len() > 1 {
+            sessions_whose_topic_switched += 1;
+        }
     }
 
     assert!(
@@ -381,6 +415,49 @@ fn h4_does_the_prior_move_observable_testimony_at_all() {
     assert!(
         denominator > 0,
         "H4's denominator must be non-zero for the count below to mean anything"
+    );
+
+    // THE MEASURED NUMBERS, PINNED. The chronicle quotes "seventy observable
+    // points across six sessions" and "zero divergences" as this campaign's
+    // headline null; before the final-fix wave this test asserted only
+    // `denominator > 0`, so the prose and the instrument could drift apart
+    // silently. These four assertions are the campaign's reported result,
+    // not a threshold to tune. If the WORLD moves them, that is a finding to
+    // report and re-quote in the chronicle — do NOT retune
+    // `stance::patience()` to restore them (root `CLAUDE.md`, decision 0016).
+    assert_eq!(
+        (denominator, sessions_with_observations),
+        (70, 6),
+        "H4's reported denominator moved; the chronicle and retrospective quote \
+         seventy observable points across six sessions and must be re-quoted together \
+         with this assertion"
+    );
+    assert_eq!(
+        diverged, 0,
+        "H4's headline null moved: the doctrine prior now DOES move observable \
+         testimony at {diverged}/{denominator} points. That is a real finding and \
+         belongs in the chronicle — it is not a reason to change stance::patience()"
+    );
+    assert_eq!(
+        degenerate_zero_overrides, denominator,
+        "every H4 point is expected to sit at overrides_of(topic) == 0, where all \
+         three priors agree unconditionally. If this is no longer ALL of them, the \
+         sweep has entered the regime that could actually falsify the null and the \
+         doc comment above (which says it never does) is now wrong"
+    );
+
+    // The stickiness premise the doc comment above rests on, asserted rather
+    // than assumed: the pursued drive DOES change within these 70 points (3
+    // of the 6 seeds when measured), which is precisely why the null cannot
+    // be explained as "the topic and the record are disjoint by
+    // construction". A drop to zero would mean every session pursued one
+    // drive forever, and the restatement above would need rewriting.
+    assert!(
+        sessions_whose_topic_switched > 0,
+        "H4's sampled sessions never once changed the pursued drive, so this sweep \
+         can no longer distinguish 'sticky arbitration' from 'a single drive \
+         forever' — the mechanism paragraph in this test's doc comment depends on \
+         the switch being real"
     );
 
     // The measurement itself, split into the two halves the doc comment
@@ -396,8 +473,11 @@ fn h4_does_the_prior_move_observable_testimony_at_all() {
         "H4: prior moved observable testimony in {diverged}/{denominator} ask-observable \
          points across {sessions_with_observations}/{} sessions \
          ({degenerate_zero_overrides}/{denominator} were the degenerate overrides=0 case, \
-         where every prior agrees by construction; only {non_degenerate}/{denominator} could \
-         have shown divergence at all)",
+         where every prior agrees unconditionally; only {non_degenerate}/{denominator} could \
+         have shown divergence at all; {sessions_whose_topic_switched}/{} sessions changed \
+         the pursued drive at least once, so the zero is stickiness rather than \
+         per-tick disjointness)",
+        seeds.len(),
         seeds.len()
     );
 }

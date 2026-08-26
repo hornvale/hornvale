@@ -5,12 +5,39 @@
 //! as `heard`, not what proves any of those upstream pieces individually
 //! (`windows/vessel/tests/suite/controller_swap.rs` and `testimony.rs`
 //! already do).
+//!
+//! **What this file may NOT test, and where that moved (the final-fix
+//! wave).** `ask()` cannot currently produce a [`Testimony::Withheld`] at
+//! all: the drive it answers about is always the drive *currently winning*
+//! arbitration, and — because arbitration is sticky in practice — that drive
+//! is observed to sit at zero overrides, where `stance_for`'s first arm is
+//! unconditionally `Forthcoming`. A test in this file that waits and then
+//! hopes to catch a refusal therefore observes nothing, forever, while
+//! reading like coverage. One such test (`a_refusal_writes_no_knowledge`)
+//! shipped and was deleted here rather than left: measured at its own
+//! parameters (seed 42, 24 × `!wait 30`) it took its "knowledge moved"
+//! branch every time and asserted only `after.is_some()`, which cannot fail
+//! because `Knowledge` is insert-only. The invariant it was reaching for —
+//! *a refusal lands no `heard` entry* — is now pinned where the refusal can
+//! actually be constructed: `render_testimony_withheld_lands_nothing_and_names_no_state`,
+//! in `windows/vessel/src/session.rs`'s own `tests` module, beside the three
+//! sibling arms.
 
 use crate::body_fields::seed_42;
 use hornvale_vessel::liveness::AffectLabel;
 use hornvale_vessel::liveness::DriveKind;
+use hornvale_vessel::stance::{Stance, stance_for};
 use hornvale_vessel::testimony::{FeltStateWord, testify};
 use hornvale_vessel::{PossessOpts, Session, Turn};
+
+/// Every reachable doctrine prior, so an assertion below can say "under ANY
+/// people's doctrine" rather than depending on which one seed 42's flagship
+/// happens to belong to.
+const ALL_PRIORS: [hornvale_vessel::doctrine::Openness; 3] = [
+    hornvale_vessel::doctrine::Openness::Guarded,
+    hornvale_vessel::doctrine::Openness::Wary,
+    hornvale_vessel::doctrine::Openness::Open,
+];
 
 /// Seed 42's flagship body is a bugbear (`session-seed-42.json`'s own
 /// `"species":"bugbear"`), and a bugbear's real, world-generated lexicon
@@ -125,8 +152,28 @@ fn asking_a_sleeping_body_is_refused() {
     }
 }
 
-/// The Reticence, Task 5: refusal is SELECTIVE (spec section 5, H3). A host
-/// driven into silence on one drive still answers about another.
+/// The Reticence, Task 5: refusal is SELECTIVE (spec section 5, H3), and
+/// this is the VERB-level statement of it — the host answers plainly about
+/// the drive it is currently pursuing while carrying an override record that
+/// would make it anything but forthcoming on another drive.
+///
+/// **This test used to assert only `!text.is_empty()`, which is true on
+/// every arm of `render_testimony` including the refusal**, so it could not
+/// distinguish selective reticence from no reticence at all. The three
+/// assertions that replace it are, measured on seed 42 at these exact
+/// parameters (`overrides_of(Thirst)=0`, `record={Fatigue: 7, Hunger: 7}`):
+///
+/// 1. the drive the answer is ABOUT sits at zero overrides;
+/// 2. some OTHER drive carries enough overrides that, under **every** one of
+///    the three doctrine priors, `stance_for` would return something other
+///    than [`Stance::Forthcoming`] — so the host is demonstrably not a host
+///    with a clean record;
+/// 3. it answered anyway, landing a real concept under `"{body}::feels"`.
+///
+/// FIRES WHEN: `ask` starts folding the whole override record (a max, a sum,
+/// any non-topic drive) into its stance instead of reading the pursued
+/// drive's own count — the host would then go quiet globally and (3) would
+/// find no landed knowledge.
 #[test]
 fn a_reticent_host_still_answers_about_a_drive_it_was_never_overridden_on() {
     let (world, _ctx) = seed_42();
@@ -139,52 +186,68 @@ fn a_reticent_host_still_answers_about_a_drive_it_was_never_overridden_on() {
         !record.is_empty(),
         "precondition: driving must override something"
     );
-    let never = [
-        DriveKind::Thirst,
-        DriveKind::Thermal,
-        DriveKind::Fatigue,
-        DriveKind::Hunger,
-        DriveKind::Danger,
-        DriveKind::Social,
-    ]
-    .into_iter()
-    .find(|d| s.overrides_of(*d) == 0);
+
+    // (1) The drive the answer is about.
+    let topic = s
+        .driven_affect_object()
+        .expect("a driven body pursues some drive after 8 waits");
+    assert_eq!(
+        s.overrides_of(topic),
+        0,
+        "the pursued drive is observed to carry no override history \
+         (arbitration is sticky — a drive that accumulates overrides is one \
+         that keeps LOSING, and this one is winning); record was {record:?}"
+    );
+
+    // (2) A drive the host would NOT be plainly forthcoming about, under any
+    // people's doctrine.
+    let worst = record
+        .values()
+        .copied()
+        .max()
+        .expect("the record is non-empty");
     assert!(
-        never.is_some(),
+        worst > 0,
+        "H3 needs a genuinely overridden drive to exist; record was {record:?}"
+    );
+    for prior in ALL_PRIORS {
+        assert_ne!(
+            stance_for(prior, worst),
+            Stance::Forthcoming,
+            "at {worst} overrides a {prior:?} host must not be plainly forthcoming, \
+             or this test is not contrasting anything; record was {record:?}"
+        );
+    }
+    assert!(
+        [
+            DriveKind::Thirst,
+            DriveKind::Thermal,
+            DriveKind::Fatigue,
+            DriveKind::Hunger,
+            DriveKind::Danger,
+            DriveKind::Social,
+        ]
+        .into_iter()
+        .any(|d| s.overrides_of(d) == 0),
         "H3 needs at least one un-overridden drive to exist; record was {record:?}"
     );
 
+    // (3) It answered anyway — selectively, on the axis it was not overridden on.
+    let body_label = s.driven_body().label.clone();
+    let key = format!("{body_label}::feels");
     let turn = s.handle("ask");
     let text = match turn {
         Turn::Out(t) => t,
         Turn::Released(t) => panic!("released: {t}"),
     };
     assert!(
-        !text.is_empty(),
-        "a host with a mixed record still produces an utterance"
+        !text.contains("will not say"),
+        "the host must not refuse about a drive it was never overridden on, got: {text}"
     );
-}
-
-/// A withheld answer must NOT write a `heard` entry: the player learned nothing,
-/// and a knowledge store that records a refusal as a felt state would make
-/// silence informative.
-#[test]
-fn a_refusal_writes_no_knowledge() {
-    let (world, _ctx) = seed_42();
-    let (mut s, _) = Session::start(&world, &PossessOpts::default()).unwrap();
-    for _ in 0..24 {
-        s.handle("!wait 30");
-    }
-    let body_label = s.driven_body().label.clone();
-    let key = format!("{body_label}::feels");
-    let before = s.knowledge().0.get(&key).cloned();
-    let _ = s.handle("ask");
-    let after = s.knowledge().0.get(&key).cloned();
-    if after == before {
-        return; // withheld, or unchanged — the case this test is about
-    }
+    let heard = s.knowledge().0.get(&key).cloned();
     assert!(
-        after.is_some(),
-        "if knowledge moved at all it must hold a real value"
+        heard.is_some_and(|v| !v.is_empty()),
+        "a forthcoming answer lands a real concept under {key:?}; got nothing, which \
+         is what a GLOBAL (non-selective) reticence would produce. Turn was: {text}"
     );
 }

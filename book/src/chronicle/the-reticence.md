@@ -66,7 +66,20 @@ unreachable — a blended average can never disagree with itself.
 
 So the two stay two values all the way to the point where the host actually
 answers. What the culture believes decides how much patience the host
-starts with; what you have done decides how much of it is spent. The
+starts with; what you have done decides how much of it is spent.
+
+**Those starting amounts are the campaign's one hand-picked quantity, and it
+is worth naming rather than letting the prose imply everything was derived.**
+A people with apparatus tolerates two overrides before its stance worsens a
+step, a people with only a word tolerates four, a people with neither
+tolerates eight. Nothing derives 2, 4 and 8; they were chosen. What keeps
+them honest is that they are thresholds on a count nobody chose — the record
+of what this rider has actually made this body ignore — so the *quantity*
+being judged is earned even though the step size is picked. They are not
+retuned to rescue a measurement, and the test that reports the campaign's
+null says so in its own header.
+
+The
 disagreement between them — the doctrine's opinion and the conduct's own
 account — is the entire point of keeping the pair apart, and it is this
 campaign's own version of the gap The Confidant shipped one level up: that
@@ -110,25 +123,45 @@ before any of the mechanism above existed: does a people's belief about what
 you are ever change what you actually get told, once a rider's own conduct
 is also in play?
 
-Structurally, the drive a host's answer is *about* and the drive its conduct
-record has accumulated history for are disjoint by construction — the drive
-currently winning arbitration is, by definition, never a drive the override
-record has history for at that tick — so the doctrine prior cannot move
-observable testimony on the current wiring. This was verified both by
-reading the exact call sites that establish it and by a long, direct probe
-that never once saw the asked-about drive carry an override. A separately
-preregistered sweep, seventy observable points across six sessions, measured
-zero divergences, and every one of those seventy points was the case where
-agreement between any two peoples' doctrines was already guaranteed before
-the sweep ran at all — so the sweep corroborates the structural finding
-rather than testing it independently. A positive control, run against the
-identical comparison the sweep itself uses, confirms that comparison is not
-simply incapable of detecting a divergence: fed a case where it should
-disagree, it does. The discriminating state is not reachable through any
-currently-shipped way of interacting with a possessed body — a fact about
-what the game currently lets you ask, not about the willingness mechanism
-underneath it, which remains genuinely sensitive to a people's doctrine at
-override counts a player cannot currently reach.
+The measured answer is no, and the reason is more interesting than the
+answer. A host's testimony is about whichever drive is currently winning
+arbitration, and its willingness is read from how often *that* drive has
+been overridden. Across a preregistered sweep of seventy observable points
+in six sessions, that count was zero at every single point — so all three
+doctrines agreed at every point, unconditionally, and the sweep measured
+zero divergences.
+
+The tempting explanation is that the two quantities are disjoint by
+construction: a drive is never recorded as overridden on the very tick it
+wins, so the winner can never carry a record. That is true per tick and it
+does not settle the question, because the count the host actually reads is
+not a per-tick quantity — the override record is accumulated across the
+whole possession and never reset. A drive that piled up overrides while
+losing would carry all of them with it if it later won.
+
+What actually holds the count at zero is that **arbitration is sticky**. A
+drive holds the topic only during an opening stretch in which it has not yet
+lost anything, and once a drive starts losing it is never observed to take
+the topic back. Seed 42 shows the shape plainly: fatigue is the subject of
+the first answer while the record is still empty, thirst takes over one
+sample later, and thirst then holds it for the rest of the possession while
+fatigue and hunger climb past a hundred overrides each. The pursued drive
+genuinely does change — in three of the six sampled sessions — which is
+exactly why "impossible" is the wrong word for this null. Pushed to a much
+longer horizon, seven hundred and twenty observed points across the same six
+seeds, the count was still zero every time.
+
+So this is a contingent fact that keeps holding, not a structural
+impossibility, and that makes it a stronger result rather than a weaker one:
+an impossibility would merely restate the wiring, whereas a fact that
+survives two very different sampling regimes is something the world is
+actually doing. A positive control, run against the identical comparison the
+sweep itself uses, confirms that comparison is not simply incapable of
+detecting a divergence: fed a case where it should disagree, it does. Two
+separate things would make the mechanism live — widening what a host can be
+asked, or anything that lets a drive regain the topic after a spell of
+losing. The willingness model underneath remains genuinely sensitive to a
+people's doctrine at override counts nothing currently reaches.
 
 So the honest headline splits down the middle. The conduct half shipped
 working and measurable: overriding a drive moves the host's stance on that

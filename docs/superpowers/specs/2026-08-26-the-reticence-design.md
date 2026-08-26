@@ -381,6 +381,19 @@ No authored table of what any given people thinks a rider is. No alignment axis.
 No hand-tuned hostility constants. Every input is a committed fact or an existing
 derived lexicon state; if a value cannot be derived, it does not ship.
 
+**One disclosed exception, added after implementation.** `stance::patience()`
+ships **three chosen numbers** — 2 / 4 / 8, how many overrides a
+`Guarded` / `Wary` / `Open` host tolerates before its stance worsens one step.
+They are not derived from anything, so the paragraph above is not literally
+true of the shipped campaign and this sentence exists so a reader of the spec
+alone is not misled. What keeps them inside the discipline's intent is that
+they are **thresholds on a derived count, not authored dispositions**: the
+quantity being gated (`Session::driven_overrides`, this rider's own conduct)
+is earned by play, and only the step size is picked. Nothing else in the
+campaign is hand-tuned. Also disclosed in `windows/vessel/src/stance.rs`,
+decision 0306, and `windows/lab/tests/suite/reticence_calibration.rs`'s
+module doc — which additionally forbids retuning them to rescue a readout.
+
 ---
 
 ## 9. Decisions to record
