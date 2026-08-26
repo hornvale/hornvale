@@ -15,6 +15,7 @@ pub mod domain;
 pub mod ecology;
 mod fact_index;
 pub mod field;
+pub mod fold;
 pub mod geosphere;
 pub mod golden;
 pub mod ledger;

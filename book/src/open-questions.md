@@ -3669,3 +3669,56 @@ standing gate asks a new metric whether it can vary, and nothing asks an
 existing one whether it still does. Until something does, a census column's
 stability is a claim about the instrument and the world jointly, and this
 chapter should not read a flat column as agreement between them.
+
+### The substrate is cheap to write and unpriced to read (2026-08-26)
+
+The first entry in the high-confidence tier above is the kernel substrate, and
+one of the four things it names is append-only event-sourced storage: chosen to
+be boring, and the choice paid. [The Tailrace](./chronicle/the-tailrace.md)
+does not disturb that. What it disturbs is a reading of it — that a substrate
+whose *writes* are boring has therefore been priced.
+
+Appending a fact is O(1) and always was. Reading a fold over the accumulated
+facts is not, and Hornvale's creature-drive stack recomputes five such folds
+over an agent's entire committed position trail on every evaluation, per agent,
+per tick — plus a sixth that does it once per co-located peer. (A sibling fold
+over `rested` events is timed alongside them and is the one that is cleanly
+*not* history-proportional; the count here is the trail-walkers, which is the
+set that makes the cost grow.) Measured on a fixed roster over two hundred ticks, with the
+deterministic columns held as a control and flat, the history term is **70 to
+80 per cent of a tick**, which makes total session cost quadratic in session
+length. That is a cost of the log, and nothing in the tier above was ever
+scored against it: every check that scored the substrate honestly — *this
+changed nothing*, byte-identical regeneration — is a check on **output
+identity**, and cost is invisible to all of them.
+
+The sharper half is that the shape was worse than the campaign's own
+preregistration predicted, and the campaign found that out by accident. It
+froze a linear model, `cost = C + k·h`, and looked for `k > 0`. One fold is
+**quadratic**: `integrate_thirst` runs a backward scan over the whole sightings
+timeline inside a loop over the sightings since the agent last drank, so its
+cost is `O(H + S·H)`, with `S` reset only by a `drank` fact. Twenty-three of
+fifty agents drank zero times in two hundred ticks. A preregistered hypothesis
+was met, and the mechanism behind it was not the one written down.
+
+**What this does to the chapter's own accounting.** There is no cost gate on
+the sim at all — no ceiling, no slope check, nothing that runs per commit — and
+the two instruments that exist were built by the two campaigns that needed
+them. So the substrate's confidence tier should be read as covering *what the
+world computes*, not *what computing it costs*: the first is scored
+mechanically and continuously, and the second is scored when a campaign
+chooses to look. On the two occasions a campaign has looked, it found a
+quadratic ([The Penstock](./chronicle/the-penstock.md)'s unindexed scan) and
+then a second one nobody had predicted. That is a poor base rate for an
+unwatched dimension.
+
+It also supplies this chapter's preamble with a fresh instance of its own
+floor. The rule stated there is that the only thing distinguishing a check that
+fires from one that does not is **making it fail on command**, and the campaign
+found two defects that way that no amount of reading found: a
+fold-equals-scan test comparing a function against itself, because the oracle
+it compared against was implemented by calling the thing under test; and a
+chaos-eviction schedule whose most aggressive form gives the least signal,
+because it replaces the state immediately after every step it is meant to
+stress. Both were green. Both were pinning nothing. Neither would have been
+found by reviewing the tests against their specification.

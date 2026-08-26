@@ -85,3 +85,36 @@ planner is deterministic — so commit *"resolved to go to the spring on day
 twelve"* once, and recompute the forty steps between intentions rather than
 storing them. Log-bounding and plan-caching turn out to be one idea approached
 from two directions, and the saving is the mean path length.
+
+## Postscript: the saving is not the mean path length (2026-08-26)
+
+The closing line above says log-bounding and plan-caching are one idea from two
+directions, and that the saving is the mean path length. The first half holds.
+The second was measuring the wrong mechanism, and
+[The Tailrace](./the-tailrace.md) — the program's stage 7 — says why.
+
+Path length prices **abstention**: how many per-step facts a per-errand commit
+would avoid writing. That is a storage saving, and it is real. But it is not
+available, because five folds in the creature-drive stack read the per-step
+trail as *semantics* rather than as cache — the thirst and hunger path
+integrals, the water belief, the fear memory, the alarm scan — and a sixth,
+the band's shared water belief, reads it once per co-located peer. (Fatigue is
+*not* one of them, though an earlier draft of this postscript said it was: it
+folds `rested` events only, and abstaining from the position trail would not
+move it by one bit.) Abstain and the world behaves differently, and no
+committed artifact would redden to say so.
+
+And it is not the larger number. The folds are recomputed from the beginning of
+an agent's history on every evaluation, per agent per tick, so the log costs
+**CPU while it sits there**, before it ever costs a byte too many: measured, the
+history term is 70 to 80 per cent of a tick, which makes total session cost
+quadratic in session length rather than linear. One of the folds is
+independently quadratic in its own right. So the saving available first is a
+change of *order*, not a constant factor, and it is obtained by making the folds
+incremental rather than by writing fewer facts.
+
+That reorders the rest of the program. Nothing may leave the log until nothing
+folds raw history; and between those two steps sits a third the design above did
+not separate out, because each step's provenance is authored, rendered prose, so
+dropping steps before the intention carries its own compositional *why?* is a
+fidelity cut rather than an optimisation.

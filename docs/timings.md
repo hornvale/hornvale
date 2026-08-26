@@ -2705,6 +2705,25 @@ this file never invents a measured value it does not hold.
 | 2026-08-24T16:22:34Z | sluice:outboard | 40.093 | 25.494 | 38.887 | 1.61 | 0 | 3b3a74a92 |  | lefford | 40 |
 | 2026-08-24T16:28:37Z | sluice:gate | 362.637 | 10334.925 | 361.859 | 29.50 | 0 | 03e84c086 |  | lefford | 40 |
 | 2026-08-24T16:35:36Z | sluice:clients | 418.850 | 4330.648 | 45.337 | 10.45 | 0 | 522d9580a |  | lefford | 40 |
+| 2026-08-24T18:16:12Z | gate-commit | 624.577 | 654.526 | 129.494 | 1.26 | 0 | c39444ba6 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T18:21:12Z | gate-commit | 271.558 | 64.717 | 33.690 | 0.36 | 0 | c39444ba6 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T19:32:52Z | gate-commit | 155.531 | 64.769 | 35.788 | 0.65 | 0 | 5618b2b79 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T19:41:39Z | gate-commit | 116.135 | 62.705 | 35.669 | 0.85 | 0 | b8b3f1323 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T19:59:05Z | gate-commit | 108.694 | 62.656 | 35.269 | 0.90 | 0 | f53b887e6 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T20:35:37Z | gate-commit | 98.028 | 64.758 | 33.236 | 1.00 | 0 | 11f774761 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T20:38:10Z | gate-commit | 92.975 | 59.777 | 32.502 | 0.99 | 0 | 11f774761 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T20:56:42Z | gate-commit | 115.173 | 63.885 | 34.003 | 0.85 | 0 | 6dd125acc | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T20:59:31Z | gate-commit | 85.309 | 55.485 | 30.108 | 1.00 | 0 | 6dd125acc | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T21:28:44Z | gate-commit | 145.021 | 61.534 | 35.217 | 0.67 | 0 | 67572987c | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T21:44:02Z | gate-commit | 150.591 | 63.551 | 33.039 | 0.64 | 0 | e6f7e654d | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T22:03:38Z | gate-commit | 643.406 | 1506.526 | 221.706 | 2.69 | 0 | 0f207e959 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T22:06:33Z | gate-commit | 129.892 | 62.831 | 34.531 | 0.75 | 0 | 0f207e959 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T22:26:01Z | gate-commit | 349.026 | 156.639 | 153.920 | 0.89 | 0 | ff709d8bf | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T22:29:26Z | gate-commit | 131.903 | 64.195 | 33.279 | 0.74 | 0 | ff709d8bf | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T22:42:10Z | gate-commit | 281.869 | 149.648 | 166.403 | 1.12 | 0 | 9b9c2f476 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T22:44:56Z | gate-commit | 144.112 | 60.675 | 32.808 | 0.65 | 0 | 9b9c2f476 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T22:55:25Z | gate-commit | 368.488 | 152.543 | 149.712 | 0.82 | 0 | 6a49aa78e | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T22:57:47Z | gate-commit | 124.814 | 60.740 | 28.613 | 0.72 | 0 | 6a49aa78e | campaign/the-tailrace | ambrose | 12 |
 | 2026-08-24T15:21:55Z | gate-commit | 109.868 | 546.183 | 51.095 | 5.44 | 0 | d1b0dd690 | campaign/the-lexicon | MacBookPro | 10 |
 | 2026-08-24T16:37:31Z | sluice:artifacts | 104.132 | 771.064 | 35.026 | 7.74 | 0 | 70921f3e0 |  | lefford | 40 |
 | 2026-08-24T16:38:11Z | sluice:outboard | 39.403 | 24.647 | 38.347 | 1.60 | 0 | 730de5266 |  | lefford | 40 |
@@ -2774,6 +2793,11 @@ this file never invents a measured value it does not hold.
 | 2026-08-24T21:51:13Z | sluice:outboard | 42.556 | 29.597 | 42.089 | 1.68 | 0 | e5772b897 |  | lefford | 40 |
 | 2026-08-24T21:58:38Z | sluice:gate | 444.452 | 12266.248 | 507.369 | 28.74 | 0 | 3e36028b2 |  | lefford | 40 |
 | 2026-08-24T22:05:56Z | sluice:clients | 438.347 | 5447.220 | 100.208 | 12.66 | 0 | 1a021d49e |  | lefford | 40 |
+| 2026-08-24T23:13:27Z | rebaseline | 407.925 | 246.250 | 25.000 | 0.66 | 0 | 729508a0d | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T23:23:26Z | gate-commit | 505.532 | 995.192 | 152.776 | 2.27 | 0 | 729508a0d | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T23:26:17Z | gate-commit | 67.958 | 46.178 | 21.397 | 0.99 | 0 | 729508a0d | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T23:29:38Z | gate-commit | 100.360 | 53.823 | 27.730 | 0.81 | 0 | 729508a0d | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T23:31:33Z | gate-commit | 96.004 | 49.024 | 22.895 | 0.75 | 0 | 729508a0d | campaign/the-tailrace | ambrose | 12 |
 | 2026-08-24T22:36:03Z | quick | 13.442 | 27.257 | 23.730 | 3.79 | 0 | f6457cf1c | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-24T22:36:46Z | quick | 6.701 | 9.873 | 7.111 | 2.53 | 0 | f6457cf1c | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-24T22:38:06Z | quick | 29.804 | 39.373 | 21.111 | 2.03 | 0 | f6457cf1c | campaign/the-granary | MacBookPro | 10 |
@@ -2831,6 +2855,13 @@ this file never invents a measured value it does not hold.
 | 2026-08-25T00:39:27Z | sluice:outboard | 38.358 | 24.105 | 37.073 | 1.59 | 0 | 3447d3a7f |  | lefford | 40 |
 | 2026-08-25T00:45:34Z | sluice:gate | 366.711 | 10361.278 | 357.276 | 29.23 | 0 | 10e7d1135 |  | lefford | 40 |
 | 2026-08-25T00:52:31Z | sluice:clients | 417.028 | 5192.015 | 69.550 | 12.62 | 0 | 1a6b4ddaa |  | lefford | 40 |
+| 2026-08-25T01:36:34Z | rebaseline | 202.813 | 229.004 | 16.650 | 1.21 | 0 | ff23fd665 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-25T01:41:51Z | gate-commit | 303.578 | 751.623 | 112.358 | 2.85 | 0 | ff23fd665 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-25T01:43:14Z | gate-commit | 72.656 | 49.049 | 22.825 | 0.99 | 0 | ff23fd665 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-25T01:48:56Z | gate-commit | 72.726 | 48.704 | 22.515 | 0.98 | 0 | 876c0d92d | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-25T01:58:53Z | gate-commit | 74.152 | 49.027 | 22.508 | 0.96 | 0 | 1b9834bec | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-25T02:38:36Z | gate-commit | 168.574 | 91.933 | 118.638 | 1.25 | 0 | f1243db1e | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-25T02:40:20Z | gate-commit | 50.551 | 36.738 | 12.300 | 0.97 | 0 | f1243db1e | campaign/the-tailrace | ambrose | 12 |
 | 2026-08-25T00:54:12Z | gate-commit | 19.434 | 48.071 | 11.951 | 3.09 | 0 | c3fda3e5d | campaign/the-confidant | MacBookPro | 10 |
 | 2026-08-25T01:10:43Z | census | 909.459 | 29461.697 | 317.291 | 32.74 | 0 | 34365155e |  | lefford | 40 |
 | 2026-08-25T01:36:47Z | gate-commit | 49.423 | 142.522 | 61.729 | 4.13 | 0 | 3e49a8ed1 | campaign/the-confidant | MacBookPro | 10 |
@@ -2855,6 +2886,9 @@ this file never invents a measured value it does not hold.
 | 2026-08-25T15:21:45Z | sluice:outboard | 41.211 | 26.613 | 39.127 | 1.60 | 0 | c4960e8c3 |  | lefford | 40 |
 | 2026-08-25T15:29:11Z | sluice:gate | 445.483 | 12397.259 | 505.042 | 28.96 | 0 | c9f4b6c35 |  | lefford | 40 |
 | 2026-08-25T15:36:25Z | sluice:clients | 434.245 | 5373.878 | 81.896 | 12.56 | 0 | 5c9fcbe0f |  | lefford | 40 |
+| 2026-08-25T17:20:13Z | rebaseline | 254.926 | 231.667 | 19.215 | 0.98 | 0 | b039e2d36 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-25T17:30:48Z | gate-commit | 517.688 | 1103.958 | 185.607 | 2.49 | 0 | b039e2d36 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-25T17:35:48Z | gate-commit | 83.403 | 49.709 | 24.012 | 0.88 | 0 | b039e2d36 | campaign/the-tailrace | ambrose | 12 |
 | 2026-08-25T16:11:01Z | quick | 12.231 | 21.595 | 18.258 | 3.26 | 0 | 58bc2bd3a | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-25T16:11:27Z | quick | 4.785 | 5.263 | 0.562 | 1.22 | 0 | 58bc2bd3a | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-25T16:12:29Z | quick | 12.702 | 17.346 | 19.287 | 2.88 | 0 | 58bc2bd3a | campaign/the-granary | MacBookPro | 10 |
@@ -2885,3 +2919,12 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T12:20:36Z | sluice:outboard | 40.135 | 24.445 | 38.398 | 1.57 | 0 | 3ec2da54f |  | lefford | 40 |
 | 2026-08-26T12:27:13Z | sluice:gate | 397.073 | 11466.306 | 371.980 | 29.81 | 0 | 1879e6910 |  | lefford | 40 |
 | 2026-08-26T12:34:48Z | sluice:clients | 454.532 | 5619.919 | 76.257 | 12.53 | 0 | a68745949 |  | lefford | 40 |
+| 2026-08-26T12:42:20Z | rebaseline | 158.966 | 237.654 | 15.266 | 1.59 | 0 | 0a76e60bd | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-26T12:47:18Z | gate-commit | 232.060 | 100.576 | 96.962 | 0.85 | 0 | 0a76e60bd | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-26T12:52:23Z | gate-commit | 82.390 | 51.438 | 25.719 | 0.94 | 0 | 0a76e60bd | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-26T13:32:32Z | gate-commit | 83.062 | 52.346 | 25.993 | 0.94 | 0 | 3404b8249 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-26T13:37:43Z | gate-commit | 82.404 | 51.603 | 26.214 | 0.94 | 0 | 57fc8cd6d | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-26T14:10:40Z | gate-commit | 79.866 | 52.642 | 25.765 | 0.98 | 0 | 90960b2e0 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-26T14:12:06Z | rebaseline | 64.051 | 264.922 | 14.649 | 4.36 | 0 | 90960b2e0 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-26T14:14:58Z | gate-commit | 80.757 | 51.491 | 25.773 | 0.96 | 0 | 90960b2e0 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-26T14:26:00Z | gate-commit | 74.017 | 50.220 | 23.992 | 1.00 | 0 | adf602a88 | campaign/the-tailrace | ambrose | 12 |
