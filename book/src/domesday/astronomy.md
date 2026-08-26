@@ -10,11 +10,11 @@ The sky a world is generated under: its star, its moons, its rotation and tilt, 
 
 Absolute solstice-sunrise azimuth drift over the first kiloyear at the flagship settlement's latitude; Absent when locked, unplaced, or polar
 
-n = 948 present, 52 absent (of 1000 worlds)
+n = 949 present, 51 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.0000024506268 | 0.012928845 | 0.034542126 | 0.082835436 | 0.3892435 | 0.060587557 |
+| 0.00000255012 | 0.013096076 | 0.034605513 | 0.08198898 | 0.39802834 | 0.060295465 |
 
 ### `brightening-per-gyr`
 

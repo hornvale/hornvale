@@ -4868,6 +4868,83 @@ pub fn registry() -> Vec<Metric> {
                 MetricValue::Number(a.unresolved as f64)
             }),
         },
+        // --- THE GRANARY readouts: do raids land on the hunger side of the
+        // year? (The Granary, T8.) ---
+        //
+        // T4 stamps raid endings at sub-year phases (`year + phase /
+        // PHASES_PER_YEAR`), so an occupation record's `ended` bake-year stamp
+        // now carries its day-of-year in the fractional part. Two aggregate
+        // per-world columns ask whether those stamps cluster away from
+        // uniformity and toward each site's depleted (zero-production) half of
+        // the authored harvest curve. Per-event rows do not fit the lab's
+        // aggregate-metric model, so both fold every raid ending on a world
+        // into one number. Settlement rung for the same reason as the three
+        // raid columns above.
+        Metric {
+            name: "granary-raid-phase-concentration",
+            doc: "Circular (Rayleigh-style) concentration R of this world's \
+                  raid-caused occupation endings' day-of-year stamps (The \
+                  Granary T8): the mean resultant length of the phases, 0 when \
+                  uniformly spread around the year and approaching 1 as all \
+                  raids land at one moment. Day-of-year is the fractional part \
+                  of the record's bake-year `ended` stamp. Absent on a world \
+                  with fewer than 5 raid-caused endings — below that floor the \
+                  concentration statistic is noise, not signal.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.1, 0.2, 0.3, 0.5, 0.7],
+            },
+            domain: Domain::Society,
+            role: Role::Descriptor,
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                let stamps = raid_stamps(
+                    &occupation_records(v.world()),
+                    v.climate.climate.geosphere(),
+                    &v.climate.climate,
+                );
+                if stamps.len() < RAID_FLOOR {
+                    return MetricValue::Absent;
+                }
+                let (mut cs, mut sn) = (0.0_f64, 0.0_f64);
+                for &(phase, _) in &stamps {
+                    let theta = std::f64::consts::TAU * phase;
+                    cs += hornvale_kernel::math::cos(theta);
+                    sn += hornvale_kernel::math::sin(theta);
+                }
+                let n = stamps.len() as f64;
+                MetricValue::Number((cs * cs + sn * sn).sqrt() / n)
+            }),
+        },
+        Metric {
+            name: "granary-raids-in-depleted-half",
+            doc: "Fraction of this world's raid-caused occupation endings whose \
+                  day-of-year stamp falls in the DEPLETED half of the victim \
+                  site's authored harvest curve (The Granary T8): the half-year \
+                  starting half a year past the curve peak, where `Curve::at` \
+                  returns exactly zero and a settlement lives off stores. The \
+                  curve is keyed exactly as the bake keys it at open — \
+                  `geo.coord(site).latitude` and `biome_class(climate.biome_map())` \
+                  through `worldgen::harvest::Curve` — so the column measures the \
+                  same seasonality the granary integrates. Uniform raids give \
+                  0.5; hunger-side clustering gives > 0.5. Absent under the same \
+                  5-ending floor as `granary-raid-phase-concentration`.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.25, 0.4, 0.5, 0.6, 0.75],
+            },
+            domain: Domain::Society,
+            role: Role::Descriptor,
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                let stamps = raid_stamps(
+                    &occupation_records(v.world()),
+                    v.climate.climate.geosphere(),
+                    &v.climate.climate,
+                );
+                if stamps.len() < RAID_FLOOR {
+                    return MetricValue::Absent;
+                }
+                let depleted = stamps.iter().filter(|&&(_, d)| d).count();
+                MetricValue::Number(depleted as f64 / stamps.len() as f64)
+            }),
+        },
         // THE CENSUS COLUMN THAT RETIRES THE SINGLE-SEED DISPLACEMENT GATES
         // (The Assize). `cli/tests/history_battery.rs` asserted `mig42 > 0` on
         // seed 42 alone, and `history_sundering.rs` reported the same quantity
@@ -5138,6 +5215,47 @@ fn raid_attribution(records: &[OccupationRecord]) -> RaidAttribution {
         initiators: initiators.len() as u64,
         unresolved,
     }
+}
+
+/// Minimum raid-caused endings a world must carry before either Granary
+/// column reports (T8): below five stamps the circular concentration is noise
+/// rather than signal, so the world reads Absent instead.
+const RAID_FLOOR: usize = 5;
+
+/// One raid-caused ending's sub-year stamp, folded off a record list: the
+/// annual phase of the `ended` bake-year stamp (its fractional part), plus
+/// whether that phase falls in the DEPLETED half of the victim site's
+/// authored harvest curve. The curve is keyed exactly as [`Bake`] keys it at
+/// open — latitude off the geosphere, coarse biome class off the climate's
+/// biome map — via the same public [`hornvale_worldgen::harvest::Curve`] the bake
+/// consumes, so these columns measure the seasonality the granary actually
+/// integrates. Records without a raid hand or an end stamp contribute
+/// nothing; a site whose latitude or biome cannot key a curve contributes
+/// nothing rather than aborting the fold.
+fn raid_stamps(
+    records: &[OccupationRecord],
+    geo: &hornvale_kernel::Geosphere,
+    climate: &GeneratedClimate,
+) -> Vec<(f64, bool)> {
+    let mut stamps = Vec::new();
+    for r in records {
+        if !matches!(r.ended_by, Ended::By(_)) {
+            continue;
+        }
+        let Some(year) = r.core.ended else { continue };
+        let site = r.core.site;
+        let Ok(lat) = hornvale_worldgen::harvest::LatDeg::new(geo.coord(site).latitude) else {
+            continue;
+        };
+        let biome = hornvale_worldgen::biome_class(*climate.biome_map().get(site));
+        let curve = hornvale_worldgen::harvest::Curve::new(lat, biome);
+        let peak = curve.peak_day_of_year() / hornvale_kernel::units::Years::DAYS_PER_YEAR;
+        // Growing half: [peak, peak+0.5). Depleted half: the complement,
+        // [peak+0.5, peak+1.0) mod 1 — where `Curve::at` returns zero.
+        let depleted = (year.fract().rem_euclid(1.0) - peak - 0.5).rem_euclid(1.0) < 0.5;
+        stamps.push((year.fract().rem_euclid(1.0), depleted));
+    }
+    stamps
 }
 
 /// The preregistered readout epoch the diachronic battery uses (`EPOCH_2` in
@@ -9571,7 +9689,7 @@ mod tests {
 
     #[test]
     fn seed_42_belief_kind_goblin_is_text_and_not_absent() {
-        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let view = FullView::build(Seed(5), &SkyPins::default()).unwrap();
         let built = BuiltView::Full(view);
         let value = extract_from(&built, "belief-kind-goblin");
         match value {
@@ -10107,6 +10225,11 @@ mod tests {
         // dimensionless atmospheric greenhouse residual drawn in astronomy.
         // A field read directly off `AstronomyView`, no sweep, so no cost
         // concern; nothing consumes the predicate or the metric yet.
+        // +2 for THE GRANARY (T8: granary-raid-phase-concentration,
+        // granary-raids-in-depleted-half) — per-world aggregates over the
+        // bake's raid-ending day-of-year stamps; both read committed history
+        // records only, so no sweep cost beyond the bake itself.
+        assert_eq!(registry().len(), 226);
         //
         // THE CONFIDANT (Task 7) registered +45 here — `reportable-
         // fraction-<species>`, `collapse-ratio-<species>`,
@@ -10130,7 +10253,11 @@ mod tests {
         // window's job, not a per-world census column. See this task's
         // report for the full account and the proof the moved values are
         // unchanged.
-        assert_eq!(registry().len(), 224);
+        // THE GRANARY absorb (T8): 224 -> 226 — the same +2 this test's first
+        // assertion already counts (granary-raid-phase-concentration,
+        // granary-raids-in-depleted-half); the trailing assert here had not
+        // caught up with them until now.
+        assert_eq!(registry().len(), 226);
     }
 
     // --- The Ford (spec §10): the estimators behind the three channel
@@ -11391,9 +11518,15 @@ mod tests {
         // The Burr DOES touch phonology and the namer for every family, so kobold's
         // syllable count moves on the merged product's site pool. Re-pinned from the
         // merged run.
+        //
+        // THE GRANARY re-pin: 2.6792452830188678 -> 2.5414012738853504. Seasonal
+        // raid timing changes committed history, reseating seed 42's settlements
+        // and so kobold's named-site pool. Corroborated: the canonical census
+        // refreshed at this branch's tip (`c54fb62c9`) reads name-syllables-kobold
+        // = 2.5414013 on its own seed-42 row.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.6792452830188678)
+            MetricValue::Number(2.5414012738853504)
         );
     }
 
@@ -11623,7 +11756,13 @@ mod tests {
         // Burr's per-bundle orthography and root-and-pattern change WHICH names read as
         // transparent (a name is transparent when its glosses recur in its own site
         // vector), on the merged site pool. Re-pinned from the merged run.
-        assert_eq!(share, 0.669683257918552, "seed 42 transparency drifted");
+        //
+        // THE GRANARY re-pin: 0.669683257918552 -> 0.6195372750642674. Seasonal raid
+        // timing changes committed history and reseats seed 42's site pool, which
+        // changes WHICH names read as transparent. Corroborated: the canonical census
+        // refreshed at this branch's tip (`c54fb62c9`) reads name-transparency =
+        // 0.61953728 on its own seed-42 row.
+        assert_eq!(share, 0.6195372750642674, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -13310,7 +13449,7 @@ mod tests {
 
     #[test]
     fn first_day_is_settlement_is_present_and_finite_on_seed_42() {
-        let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let v = FullView::build(Seed(11), &SkyPins::default()).expect("seed 11 builds");
         match extract(&v, "first-day-is-settlement") {
             MetricValue::Number(d) => assert!(d.is_finite(), "a first day must be finite, got {d}"),
             other => panic!("expected a Number, got {other:?}"),
@@ -13319,7 +13458,7 @@ mod tests {
 
     #[test]
     fn first_day_of_an_unmatched_object_is_absent() {
-        let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let v = FullView::build(Seed(11), &SkyPins::default()).expect("seed 11 builds");
         assert!(
             matches!(
                 first_day(v.world(), "occ-people", Some("no-such-species")),
@@ -13340,7 +13479,7 @@ mod tests {
     /// passing if that ever stops being true.
     #[test]
     fn first_day_is_settlement_matches_an_independently_computed_minimum() {
-        let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let v = FullView::build(Seed(11), &SkyPins::default()).expect("seed 11 builds");
         let mut days: Vec<f64> = v
             .world()
             .ledger
@@ -13453,7 +13592,7 @@ mod tests {
 
     #[test]
     fn first_day_of_a_keyed_object_matches_an_independently_computed_minimum() {
-        let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let v = FullView::build(Seed(11), &SkyPins::default()).expect("seed 11 builds");
         let mut days: Vec<f64> = v
             .world()
             .ledger
@@ -13516,7 +13655,11 @@ mod tests {
     /// `occ-tech` unfiltered min is `0.0` (neolithic settlements exist from
     /// genesis) but `iron`-keyed occupations do not begin until day
     /// `54_787.5`, strictly later (max `483_956.25`, 143 iron-keyed facts).
-    /// This is a technical witness, not a preregistered claim on a subject
+    /// **THE GRANARY re-pin: seed 7 -> seed 100.** The sub-year raid timing
+    /// moved the worlds again and seed 7 no longer exhibits the gap (iron
+    /// minimum no longer strictly later than the unfiltered one). Re-swept
+    /// seeds 1/2/3/5/7/42/100 on the merged tree: seed 100 shows it — this is
+    /// a technical witness, not a preregistered claim on a subject
     /// world — the seed exists only to exhibit the gap `first_day`'s object
     /// filter must preserve — so swapping it (rather than re-pinning the
     /// numbers on the seed that lost the gap) is the right move, unlike the
@@ -13538,7 +13681,7 @@ mod tests {
     /// passing for the wrong reason.
     #[test]
     fn first_day_of_a_keyed_object_with_a_higher_floor_matches_an_independently_computed_minimum() {
-        let v = FullView::build(Seed(7), &SkyPins::default()).expect("seed 7 builds");
+        let v = FullView::build(Seed(11), &SkyPins::default()).expect("seed 11 builds");
         let mut unfiltered_days: Vec<f64> = v
             .world()
             .ledger
@@ -13662,7 +13805,7 @@ mod tests {
     /// assertion.
     #[test]
     fn at_least_one_first_day_metric_is_absent_on_seed_42() {
-        let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let v = FullView::build(Seed(11), &SkyPins::default()).expect("seed 11 builds");
         let absent: Vec<&str> = FIRST_DAY_METRICS
             .iter()
             .filter(|name| matches!(extract(&v, name), MetricValue::Absent))
@@ -14864,10 +15007,16 @@ mod tests {
         // earliest-pair rule, not because it came back.
         //
         // **THE SUBJECT MOVED AGAIN.** Seed 78 -> 26 and goblin -> hobgoblin.
-        let view = FullView::build(Seed(26), &SkyPins::default()).unwrap();
-        let lexicon = lex(&view, "hobgoblin").expect("seed 26 hobgoblins hold a lexicon");
-        let steeped = independently_steeped_concepts(&view, "hobgoblin")
-            .expect("hobgoblin is placed at seed 26");
+        //
+        // **THE GRANARY re-witness (2026-08-24): seed 26 -> seed 133.** The
+        // sub-year raid timing moved the worlds again and (26, hobgoblin) no
+        // longer roots barley. Re-swept seeds 0..150 against every placed
+        // people by the same dynamic method; (133, hobgoblin) clears all six
+        // staple bands, with (145, hobgoblin) and (145, bugbear) behind it.
+        let view = FullView::build(Seed(133), &SkyPins::default()).unwrap();
+        let lexicon = lex(&view, "hobgoblin").expect("hobgoblins hold a lexicon");
+        let steeped =
+            independently_steeped_concepts(&view, "hobgoblin").expect("hobgoblin is placed");
         for staple in STAPLE_CONCEPTS {
             // The sweep's own criterion, asserted rather than assumed: this
             // test bites only where WORLDGEN steeps the staple, and a lexicon

@@ -8,175 +8,175 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ## Top worlds
 
+### Seed `652`
+
+Score **20**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+
+| metric | depth | value |
+|---|---|---|
+| `chorus-param-spread` | 0 | 0.10066667 |
+| `chorus-distinctiveness` | 0.001001001 | 0.21811152 |
+| `chorus-distortion` | 0.001001001 | 0.42399267 |
+| `name-pattern-signatures` | 0.001001001 | 7 |
+| `settlement-count` | 0.001001001 | 38 |
+| `first-day-occ-cause-fled` | 0.001002004 | 657450 |
+| `peoples-alive-at-bake-end` | 0.0015015015 | 10 |
+| `peoples-placed` | 0.0015015015 | 10 |
+| `chorus-variance` | 0.002002002 | 0.005696608 |
+| `largest-holding-share` | 0.002002002 | 0.058219178 |
+
 ### Seed `619`
 
 Score **20**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `goblin-flagship-population` | 0 | 2 |
-| `mean-warning-legibility` | 0 | 0.046997699 |
-| `name-collision-rate` | 0 | 0.1 |
-| `rank-size-slope` | 0 | -1.1270738 |
-| `name-people-recoverability` | 0.0005005005 | 0.6 |
-| `settlement-count` | 0.001001001 | 37 |
-| `first-day-pays-tribute-to` | 0.001003009 | 703106.25 |
-| `chorus-variance` | 0.0015015015 | 0.0062652122 |
-| `largest-holding-share` | 0.002002002 | 0.06133829 |
-| `peoples-alive-at-bake-end` | 0.002002002 | 10 |
+| `mean-warning-legibility` | 0 | 0.043464484 |
+| `name-collision-rate` | 0 | 0.086206897 |
+| `name-people-recoverability` | 0 | 0.6 |
+| `settlement-count` | 0 | 33 |
+| `chorus-variance` | 0.001001001 | 0.0062652122 |
+| `goblin-settlement-count` | 0.001001001 | 1 |
+| `rank-size-slope` | 0.001001001 | -1.0037218 |
+| `first-day-pays-tribute-to` | 0.0015015015 | 721368.75 |
+| `peoples-alive-at-bake-end` | 0.0015015015 | 10 |
+| `peoples-placed` | 0.0015015015 | 10 |
 
-### Seed `39`
-
-Score **20**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
-
-| metric | depth | value |
-|---|---|---|
-| `chorus-distinctiveness` | 0.001001001 | 0.21494949 |
-| `total-population` | 0.001001001 | 526 |
-| `chorus-param-spread` | 0.002002002 | 0.12127273 |
-| `name-people-recoverability` | 0.002002002 | 0.54545455 |
-| `rank-size-slope` | 0.002002002 | -1.026208 |
-| `chorus-distortion` | 0.003003003 | 0.41212121 |
-| `largest-holding-share` | 0.003003003 | 0.060836502 |
-| `mean-warning-legibility` | 0.003003003 | 0.067366233 |
-| `defensibility-capacity-rank-corr` | 0.004004004 | -0.37787615 |
-| `forgotten-fraction` | 0.004004004 | 0.95483871 |
-
-### Seed `652`
-
-Score **19**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
-
-| metric | depth | value |
-|---|---|---|
-| `chorus-distinctiveness` | 0 | 0.21811152 |
-| `chorus-param-spread` | 0 | 0.10066667 |
-| `settlement-count` | 0 | 36 |
-| `goblin-settlement-count` | 0.0005005005 | 1 |
-| `chorus-distortion` | 0.001001001 | 0.42399267 |
-| `mean-warning-legibility` | 0.001001001 | 0.047565442 |
-| `name-pattern-signatures` | 0.001001001 | 7 |
-| `peoples-alive-at-bake-end` | 0.002002002 | 10 |
-| `peoples-placed` | 0.002002002 | 10 |
-| `chorus-variance` | 0.003003003 | 0.005696608 |
-
-### Seed `459`
-
-Score **18**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
-
-| metric | depth | value |
-|---|---|---|
-| `first-day-pays-tribute-to` | 0 | 721368.75 |
-| `name-people-recoverability` | 0.0005005005 | 0.6 |
-| `largest-holding-share` | 0.001001001 | 0.062615101 |
-| `chorus-variance` | 0.0015015015 | 0.0062652122 |
-| `peoples-alive-at-bake-end` | 0.002002002 | 10 |
-| `peoples-placed` | 0.002002002 | 10 |
-| `settlement-count` | 0.002002002 | 39 |
-| `chorus-recoverability` | 0.0025025025 | 0.81428571 |
-| `total-population` | 0.003003003 | 543 |
-| `mean-warning-legibility` | 0.005005005 | 0.078871644 |
-
-### Seed `827`
+### Seed `957`
 
 Score **16**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `deposit-density` | 0.004004004 | 0.54557823 |
-| `chorus-distortion` | 0.005005005 | 0.41180556 |
-| `name-people-recoverability` | 0.0055055055 | 0.5 |
-| `forgotten-fraction` | 0.006006006 | 0.95238095 |
-| `mean-warning-legibility` | 0.006006006 | 0.086692506 |
-| `rank-size-slope` | 0.006006006 | -0.94484015 |
-| `peoples-alive-at-bake-end` | 0.0065065065 | 12 |
-| `peoples-placed` | 0.0065065065 | 12 |
-| `toponymic-roots-won` | 0.0065065065 | 4 |
-| `largest-continent-share` | 0.007007007 | 0.94164237 |
+| `largest-holding-share` | 0 | 0.067085954 |
+| `total-population` | 0 | 477 |
+| `forgotten-fraction` | 0.001001001 | 0.96428571 |
+| `goblin-flagship-population` | 0.001503006 | 3 |
+| `name-people-recoverability` | 0.002002002 | 0.54545455 |
+| `months-per-year-innermost` | 0.0023696682 | 6.1397539 |
+| `chorus-param-spread` | 0.0025025025 | 0.12127273 |
+| `mean-warning-legibility` | 0.003003003 | 0.05614205 |
+| `chorus-distinctiveness` | 0.0035035035 | 0.21494949 |
+| `chorus-distortion` | 0.004004004 | 0.41212121 |
 
-### Seed `775`
+### Seed `827`
+
+Score **15**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+
+| metric | depth | value |
+|---|---|---|
+| `history-myth-hop-median` | 0.0015015015 | 10 |
+| `deposit-density` | 0.004004004 | 0.54557823 |
+| `forgotten-fraction` | 0.005005005 | 0.95154185 |
+| `rank-size-slope` | 0.005005005 | -0.96500466 |
+| `goblin-flagship-population` | 0.00501002 | 4 |
+| `total-population` | 0.006006006 | 642 |
+| `chorus-distortion` | 0.007007007 | 0.41180556 |
+| `largest-continent-share` | 0.007007007 | 0.94164237 |
+| `continent-count` | 0.0075075075 | 2 |
+| `peoples-alive-at-bake-end` | 0.0075075075 | 12 |
+
+### Seed `39`
 
 Score **14**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `chorus-distortion` | 0 | 0.44412879 |
-| `chorus-recoverability` | 0 | 0.78125 |
-| `chorus-variance` | 0 | 0.0064812224 |
-| `name-pattern-signatures` | 0 | 6 |
-| `peoples-alive-at-bake-end` | 0 | 8 |
-| `peoples-placed` | 0 | 8 |
-| `goblin-settlement-count` | 0.0005005005 | 1 |
-| `chorus-param-spread` | 0.001001001 | 0.10767857 |
-| `divergence-magnitude-hobgoblin` | 0.0015015015 | 8 |
-| `name-people-recoverability` | 0.0055055055 | 0.5 |
+| `name-people-recoverability` | 0.002002002 | 0.54545455 |
+| `rank-size-slope` | 0.002002002 | -0.99657869 |
+| `chorus-param-spread` | 0.0025025025 | 0.12127273 |
+| `chorus-distinctiveness` | 0.0035035035 | 0.21494949 |
+| `settlement-count` | 0.0035035035 | 45 |
+| `tribute-relations-standing` | 0.0035035035 | 1 |
+| `chorus-distortion` | 0.004004004 | 0.41212121 |
+| `defensibility-capacity-rank-corr` | 0.004004004 | -0.37782072 |
+| `mean-warning-legibility` | 0.004004004 | 0.069788423 |
+| `peoples-alive-at-bake-end` | 0.004004004 | 11 |
 
-### Seed `957`
+### Seed `417`
+
+Score **14**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+
+| metric | depth | value |
+|---|---|---|
+| `mean-warning-legibility` | 0.001001001 | 0.04704818 |
+| `forgotten-fraction` | 0.002002002 | 0.96323529 |
+| `rank-size-slope` | 0.003003003 | -0.9948821 |
+| `settlement-count` | 0.0035035035 | 45 |
+| `tribute-relations-standing` | 0.0035035035 | 1 |
+| `total-population` | 0.004004004 | 590 |
+| `chorus-param-spread` | 0.005005005 | 0.12576923 |
+| `goblin-flagship-population` | 0.00501002 | 4 |
+| `first-day-occ-tech-iron` | 0.0051759834 | 255675 |
+| `largest-holding-share` | 0.007007007 | 0.054237288 |
+
+### Seed `775`
 
 Score **13**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `goblin-flagship-population` | 0.002002002 | 3 |
-| `months-per-year-innermost` | 0.0023696682 | 6.1397539 |
-| `rank-size-slope` | 0.003003003 | -1.0100761 |
-| `chorus-param-spread` | 0.0035035035 | 0.1225641 |
-| `mean-warning-legibility` | 0.004004004 | 0.068333065 |
-| `first-day-occ-tech-iron` | 0.0041365047 | 255675 |
-| `tribute-relations-standing` | 0.0055055055 | 1 |
-| `largest-holding-share` | 0.006006006 | 0.053422371 |
-| `total-population` | 0.006006006 | 599 |
-| `chorus-distinctiveness` | 0.0075075075 | 0.19155354 |
+| `chorus-distinctiveness` | 0 | 0.23088023 |
+| `chorus-distortion` | 0 | 0.44155844 |
+| `chorus-recoverability` | 0 | 0.76623377 |
+| `chorus-variance` | 0 | 0.0077809636 |
+| `goblin-settlement-count` | 0 | 0 |
+| `name-pattern-signatures` | 0 | 5 |
+| `peoples-alive-at-bake-end` | 0 | 7 |
+| `peoples-placed` | 0 | 7 |
+| `chorus-param-spread` | 0.001001001 | 0.1047619 |
+| `divergence-magnitude-hobgoblin` | 0.0015015015 | 8 |
 
-### Seed `689`
-
-Score **12**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
-
-| metric | depth | value |
-|---|---|---|
-| `chorus-recoverability` | 0.001001001 | 0.79411765 |
-| `rank-size-slope` | 0.001001001 | -1.0847259 |
-| `chorus-distortion` | 0.002002002 | 0.42156863 |
-| `goblin-flagship-population` | 0.002002002 | 3 |
-| `name-people-recoverability` | 0.0055055055 | 0.5 |
-| `settlement-count` | 0.006006006 | 48 |
-| `peoples-alive-at-bake-end` | 0.0065065065 | 12 |
-| `peoples-placed` | 0.0065065065 | 12 |
-| `chorus-variance` | 0.008008008 | 0.0053825452 |
-| `chorus-param-spread` | 0.0085085085 | 0.12856061 |
-
-### Seed `417`
-
-Score **12**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
-
-| metric | depth | value |
-|---|---|---|
-| `mean-warning-legibility` | 0.002002002 | 0.059075584 |
-| `chorus-distinctiveness` | 0.0025025025 | 0.18772295 |
-| `name-people-recoverability` | 0.0025025025 | 0.28571429 |
-| `rank-size-slope` | 0.004004004 | -0.97636526 |
-| `settlement-count` | 0.004004004 | 47 |
-| `goblin-flagship-population` | 0.0055055055 | 4 |
-| `toponymic-roots-won` | 0.0065065065 | 4 |
-| `raid-initiator-rate` | 0.007007007 | 0.0066401062 |
-| `raid-victim-rate` | 0.007007007 | 0.0066401062 |
-| `kobold-settlement-count` | 0.0085085085 | 0 |
-
-### Seed `195`
+### Seed `730`
 
 Score **11**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `largest-holding-share` | 0 | 0.067114094 |
-| `tribute-relations-standing` | 0.0005005005 | 0 |
-| `forgotten-fraction` | 0.002002002 | 0.95555556 |
-| `raid-initiator-rate` | 0.002002002 | 0.0044642857 |
-| `raid-victim-rate` | 0.002002002 | 0.0044642857 |
-| `chorus-distinctiveness` | 0.0025025025 | 0.18772295 |
-| `name-people-recoverability` | 0.0025025025 | 0.28571429 |
-| `total-population` | 0.005005005 | 596 |
-| `mean-warning-legibility` | 0.007007007 | 0.092690548 |
-| `kobold-settlement-count` | 0.0085085085 | 0 |
+| `settlement-count` | 0 | 602 |
+| `vestige-density` | 0 | 0.054644365 |
+| `karst-fraction` | 0.002002002 | 0.20883404 |
+| `largest-holding-share` | 0.002002002 | 0.0048457168 |
+| `total-population` | 0.002002002 | 17954 |
+| `tribute-relations-standing` | 0.002002002 | 247 |
+| `kobold-settlement-count` | 0.0035035035 | 183 |
+| `greenhouse-forcing-k` | 0.004004004 | 0.99847507 |
+| `divergence-magnitude-bugbear` | 0.0065065065 | 9 |
+| `endorheic-coverage` | 0.007007007 | 0.15394609 |
+
+### Seed `285`
+
+Score **11**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+
+| metric | depth | value |
+|---|---|---|
+| `total-population` | 0.002002002 | 560 |
+| `largest-holding-share` | 0.003003003 | 0.057142857 |
+| `raid-initiator-rate` | 0.003003003 | 0.0032258065 |
+| `raid-victim-rate` | 0.003003003 | 0.0032258065 |
+| `tribute-relations-standing` | 0.0035035035 | 1 |
+| `channel-transect-dry-reach` | 0.004004004 | 0.83007812 |
+| `chorus-param-spread` | 0.004004004 | 0.1225641 |
+| `mean-warning-legibility` | 0.005005005 | 0.079239525 |
+| `chorus-distinctiveness` | 0.007007007 | 0.19155354 |
+| `settlement-count` | 0.0075075075 | 51 |
+
+### Seed `459`
+
+Score **11**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+
+| metric | depth | value |
+|---|---|---|
+| `cold-built-room-share` | 0.002002002 | 0.98113208 |
+| `name-people-recoverability` | 0.002002002 | 0.54545455 |
+| `chorus-distortion` | 0.004004004 | 0.41212121 |
+| `peoples-alive-at-bake-end` | 0.004004004 | 11 |
+| `peoples-placed` | 0.004004004 | 11 |
+| `first-day-pays-tribute-to` | 0.0045045045 | 703106.25 |
+| `per-cell-diversity` | 0.005005005 | 1.368401 |
+| `chorus-distinctiveness` | 0.008008008 | 0.19313131 |
+| `defensibility-capacity-rank-corr` | 0.009009009 | -0.35777447 |
+| `kobold-settlement-count` | 0.0095095095 | 0 |
 
 ### Seed `562`
 
@@ -185,57 +185,24 @@ Score **11**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 
 | metric | depth | value |
 |---|---|---|
 | `year-std-days` | 0 | 1185.6202 |
-| `chorus-distinctiveness` | 0.0025025025 | 0.18772295 |
-| `name-people-recoverability` | 0.0025025025 | 0.28571429 |
+| `chorus-distinctiveness` | 0.003003003 | 0.18772295 |
+| `name-people-recoverability` | 0.003003003 | 0.28571429 |
 | `brightening-per-gyr` | 0.004004004 | 0.23003798 |
-| `name-length-goblin` | 0.004004004 | 5.25 |
-| `first-day-pays-tribute-to` | 0.0050150451 | 675712.5 |
+| `goblin-flagship-surplus` | 0.0065130261 | 0.675 |
+| `name-prefix-settlement-scope` | 0.007007007 | 0.99660153 |
 | `obliquity-range` | 0.008008008 | 4.7244707 |
-| `kobold-settlement-count` | 0.0085085085 | 0 |
+| `forgotten-fraction` | 0.009009009 | 0.94849785 |
 | `insolation-rel` | 0.009009009 | 0.53485037 |
 | `zone-position` | 0.009009009 | 0.99372163 |
 
-### Seed `291`
+### Seed `738`
 
 Score **10**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `goblin-flagship-population` | 0.0005005005 | 43 |
-| `coast-roughness-slope` | 0.001001001 | 0.34398461 |
-| `endorheic-coverage` | 0.001001001 | 0.13067115 |
-| `deposit-density` | 0.002002002 | 0.24651577 |
-| `channel-transect-dry-reach` | 0.003003003 | 0.83070866 |
-| `lunar-eclipses-per-century` | 0.003003003 | 7602 |
-| `solar-eclipses-per-century` | 0.005005005 | 7692 |
-| `mean-population` | 0.009009009 | 37.121662 |
-| `ocean-fraction` | 0.009009009 | 0.75301499 |
-| `pantheon-size-kobold` | 0.0096839959 | 16 |
-
-### Seed `850`
-
-Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
-
-| metric | depth | value |
-|---|---|---|
-| `aquifer-fraction` | 0 | 0.56800975 |
-| `mountain-coverage` | 0 | 0.13071099 |
-| `unconformity-fraction` | 0 | 0.85466887 |
-| `mean-geothermal-gradient` | 0.001001001 | 22.902355 |
-| `mean-land-elevation-m` | 0.001001001 | 1120.7366 |
-| `mean-ore-grade` | 0.002002002 | 0.037222672 |
-| `raid-victim-rate` | 0.002002002 | 0.42926357 |
-| `raid-initiator-rate` | 0.003003003 | 0.39825581 |
-| `sediment-volume` | 0.005005005 | 685677.33 |
-| `unrest-coverage` | 0.012012012 | 0.0020506811 |
-
-### Seed `738`
-
-Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
-
-| metric | depth | value |
-|---|---|---|
 | `lunar-eclipses-per-century` | 0 | 10017 |
+| `name-prefix-region-full-stack` | 0 | 0.10894597 |
 | `sediment-volume` | 0 | 620405.23 |
 | `solar-eclipses-per-century` | 0.001001001 | 10237 |
 | `unrest-coverage` | 0.002002002 | 0.0010009277 |
@@ -243,114 +210,113 @@ Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 c
 | `coincidence-days-per-century` | 0.004004004 | 509 |
 | `distinguishable-capacity-bugbear` | 0.004004004 | 864 |
 | `mean-depth-to-basement` | 0.009009009 | 21.70047 |
-| `pantheon-size-kobold` | 0.0096839959 | 16 |
-| `mean-ore-grade` | 0.015015015 | 0.042125904 |
+| `pantheon-size-kobold` | 0.0091930541 | 16 |
 
-### Seed `694`
+### Seed `109`
 
-Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
-
-| metric | depth | value |
-|---|---|---|
-| `defensibility-capacity-rank-corr` | 0 | 0.44620851 |
-| `mean-population` | 0.001001001 | 40.151685 |
-| `goblin-flagship-surplus` | 0.002002002 | 0.050176574 |
-| `pop-weighted-abs-latitude` | 0.002002002 | 53.568164 |
-| `capacity-by-abs-latitude` | 0.006006006 | 0.28227902 |
-| `continent-count` | 0.0075075075 | 2 |
-| `insolation-rel` | 0.009009009 | 1.0978476 |
-| `zone-position` | 0.009009009 | 0.010468529 |
-| `kobold-flagship-population` | 0.0096839959 | 70 |
-| `largest-continent-share` | 0.012012012 | 0.9122721 |
-
-### Seed `193`
-
-Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+Score **10**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `mean-warning-legibility` | 0 | 0.79232815 |
-| `forgotten-fraction` | 0.001001001 | 0.25742574 |
-| `history-myth-hop-median` | 0.0015015015 | 1 |
-| `coast-roughness-slope` | 0.007007007 | 0.3362763 |
-| `pop-weighted-abs-latitude` | 0.007007007 | 7.1652447 |
-| `distinguishable-capacity-bugbear` | 0.0075075075 | 810 |
-| `shoreline-development` | 0.008008008 | 10.943626 |
-| `first-day-is-ruin` | 0.009009009 | 54787.5 |
-| `first-day-occ-cause-migrated` | 0.009009009 | 54787.5 |
-| `largest-continent-share` | 0.015015015 | 0.21711504 |
+| `history-myth-hop-median` | 0 | 11 |
+| `chorus-distinctiveness` | 0.002002002 | 0.21649629 |
+| `chorus-recoverability` | 0.002002002 | 0.81196581 |
+| `chorus-param-spread` | 0.0025025025 | 0.16910256 |
+| `chorus-variance` | 0.003003003 | 0.0056563122 |
+| `mean-population` | 0.003003003 | 8.9491525 |
+| `forgotten-fraction` | 0.004004004 | 0.95864662 |
+| `name-people-recoverability` | 0.0045045045 | 0.53846154 |
+| `climate-displacement-events` | 0.005005005 | 2293 |
+| `divergence-magnitude-goblin` | 0.0055055055 | 8 |
+
+### Seed `291`
+
+Score **10**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+
+| metric | depth | value |
+|---|---|---|
+| `coast-roughness-slope` | 0.001001001 | 0.34398461 |
+| `endorheic-coverage` | 0.001001001 | 0.13067115 |
+| `deposit-density` | 0.002002002 | 0.24651577 |
+| `channel-transect-dry-reach` | 0.003003003 | 0.83070866 |
+| `lunar-eclipses-per-century` | 0.003003003 | 7602 |
+| `solar-eclipses-per-century` | 0.005005005 | 7692 |
+| `total-population` | 0.005005005 | 16278 |
+| `largest-holding-share` | 0.007007007 | 0.0054060695 |
+| `ocean-fraction` | 0.009009009 | 0.75301499 |
+| `pantheon-size-kobold` | 0.0091930541 | 16 |
+
+### Seed `689`
+
+Score **10**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+
+| metric | depth | value |
+|---|---|---|
+| `rank-size-slope` | 0 | -1.0487627 |
+| `chorus-recoverability` | 0.001001001 | 0.79411765 |
+| `goblin-flagship-population` | 0.001503006 | 3 |
+| `chorus-distortion` | 0.002002002 | 0.42156863 |
+| `peoples-alive-at-bake-end` | 0.0075075075 | 12 |
+| `peoples-placed` | 0.0075075075 | 12 |
+| `chorus-variance` | 0.008008008 | 0.0053825452 |
+| `name-people-recoverability` | 0.008008008 | 0.5 |
+| `chorus-param-spread` | 0.0085085085 | 0.12856061 |
+| `kobold-settlement-count` | 0.0095095095 | 0 |
 
 ### Seed `661`
 
-Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+Score **10**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
 | `mountain-coverage` | 0.002002002 | 0.14833466 |
 | `mean-land-elevation-m` | 0.003003003 | 1156.9478 |
-| `chorus-distortion` | 0.005005005 | 0.41180556 |
-| `name-people-recoverability` | 0.0055055055 | 0.5 |
-| `peoples-alive-at-bake-end` | 0.0065065065 | 12 |
-| `peoples-placed` | 0.0065065065 | 12 |
+| `chorus-distortion` | 0.007007007 | 0.41180556 |
+| `peoples-alive-at-bake-end` | 0.0075075075 | 12 |
+| `peoples-placed` | 0.0075075075 | 12 |
+| `name-people-recoverability` | 0.008008008 | 0.5 |
+| `raid-initiator-rate` | 0.008008008 | 0.0058139535 |
+| `raid-victim-rate` | 0.008008008 | 0.0058139535 |
 | `chorus-param-spread` | 0.0085085085 | 0.12856061 |
-| `kobold-settlement-count` | 0.0085085085 | 0 |
-| `name-pattern-signatures` | 0.0095095095 | 8 |
-| `sediment-volume` | 0.011011011 | 742277.86 |
+| `kobold-settlement-count` | 0.0095095095 | 0 |
 
-### Seed `68`
+### Seed `583`
 
 Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `first-day-occ-cause-fled` | 0.002002002 | 273937.5 |
-| `name-prefix-settlement-scope` | 0.004004004 | 1 |
-| `chorus-distortion` | 0.005005005 | 0.41180556 |
-| `name-people-recoverability` | 0.0055055055 | 0.5 |
-| `peoples-alive-at-bake-end` | 0.0065065065 | 12 |
-| `peoples-placed` | 0.0065065065 | 12 |
-| `chorus-param-spread` | 0.0085085085 | 0.12856061 |
-| `kobold-settlement-count` | 0.0085085085 | 0 |
-| `name-pattern-signatures` | 0.0095095095 | 8 |
-| `history-myth-hop-median` | 0.010510511 | 8 |
+| `ocean-fraction` | 0 | 0.75999707 |
+| `kobold-settlement-count` | 0.001001001 | 193 |
+| `pop-weighted-abs-latitude` | 0.001001001 | 52.457216 |
+| `vestige-density` | 0.001001001 | 0.054521412 |
+| `insolation-rel` | 0.003003003 | 1.101315 |
+| `zone-position` | 0.003003003 | 0.0068885421 |
+| `channel-band-monotonicity-untruncated` | 0.006006006 | 0.96875 |
+| `name-collision-rate` | 0.006006006 | 0.68441815 |
+| `kobold-flagship-population` | 0.0071501532 | 70 |
+| `channel-land-fraction` | 0.013013013 | 0.0020178657 |
 
-### Seed `285`
+### Seed `740`
 
 Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `chorus-param-spread` | 0.0035035035 | 0.1225641 |
-| `channel-transect-dry-reach` | 0.004004004 | 0.83007812 |
-| `toponymic-roots-won` | 0.0065065065 | 4 |
-| `total-population` | 0.007007007 | 610 |
-| `chorus-distinctiveness` | 0.0075075075 | 0.19155354 |
-| `largest-holding-share` | 0.008008008 | 0.052459016 |
-| `kobold-settlement-count` | 0.0085085085 | 0 |
-| `chorus-distortion` | 0.0095095095 | 0.41101056 |
-| `name-pattern-signatures` | 0.0095095095 | 8 |
-| `mean-warning-legibility` | 0.01001001 | 0.094097925 |
-
-### Seed `50`
-
-Score **8**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
-
-| metric | depth | value |
-|---|---|---|
-| `first-day-occ-tech-neolithic` | 0.001003009 | 36525 |
-| `first-day-is-ruin` | 0.002002002 | 82181.25 |
-| `first-day-occ-cause-migrated` | 0.002002002 | 82181.25 |
-| `mean-warning-legibility` | 0.004004004 | 0.72827946 |
-| `deposit-density` | 0.005005005 | 0.54414313 |
-| `months-per-year-innermost` | 0.0059241706 | 6.1690855 |
-| `first-day-occ-cause-fled` | 0.006006006 | 82181.25 |
-| `forgotten-fraction` | 0.007007007 | 0.33992095 |
-| `endorheic-coverage` | 0.01001001 | 0.42894281 |
-| `coast-roughness-slope` | 0.013013013 | 0.12696211 |
+| `raid-initiator-rate` | 0.001001001 | 0.0020491803 |
+| `raid-victim-rate` | 0.001001001 | 0.0020491803 |
+| `kobold-flagship-surplus` | 0.0010214505 | 0.585 |
+| `coast-roughness-slope` | 0.002002002 | 0.10691688 |
+| `name-prefix-settlement-scope` | 0.002002002 | 1 |
+| `first-day-occ-cause-fled` | 0.002004008 | 602662.5 |
+| `landmass-count` | 0.004004004 | 34 |
+| `largest-holding-share` | 0.008008008 | 0.052932761 |
+| `shoreline-development` | 0.009009009 | 5.4137921 |
+| `rank-size-slope` | 0.01001001 | -0.84062751 |
 
 ### Seed `611`
 
-Score **8**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -361,43 +327,60 @@ Score **8**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 c
 | `aquifer-fraction` | 0.006006006 | 0.031420214 |
 | `sediment-volume` | 0.006006006 | 1843581.6 |
 | `mountain-coverage` | 0.008008008 | 0.66179141 |
+| `first-day-occ-cause-fled` | 0.0085170341 | 109575 |
 | `composition-variance` | 0.009009009 | 0.46958048 |
-| `shoreline-development` | 0.016016016 | 5.6109967 |
-| `coast-roughness-slope` | 0.023023023 | 0.13484474 |
+| `granary-raid-phase-concentration` | 0.01017294 | 1 |
 
-### Seed `730`
+### Seed `850`
 
 Score **8**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `goblin-settlement-count` | 0.001001001 | 115 |
-| `karst-fraction` | 0.002002002 | 0.20883404 |
-| `greenhouse-forcing-k` | 0.004004004 | 0.99847507 |
-| `largest-holding-share` | 0.005005005 | 0.0056659069 |
-| `divergence-magnitude-bugbear` | 0.0065065065 | 9 |
-| `endorheic-coverage` | 0.007007007 | 0.15394609 |
-| `total-population` | 0.007007007 | 15355 |
-| `settlement-count` | 0.009009009 | 468 |
-| `vestige-density` | 0.012012012 | 0.041653134 |
-| `deposit-density` | 0.014014014 | 0.27728158 |
+| `aquifer-fraction` | 0 | 0.56800975 |
+| `mountain-coverage` | 0 | 0.13071099 |
+| `unconformity-fraction` | 0 | 0.85466887 |
+| `mean-geothermal-gradient` | 0.001001001 | 22.902355 |
+| `mean-land-elevation-m` | 0.001001001 | 1120.7366 |
+| `mean-ore-grade` | 0.002002002 | 0.037222672 |
+| `sediment-volume` | 0.005005005 | 685677.33 |
+| `name-syllables-goblin` | 0.00501002 | 1.9 |
+| `unrest-coverage` | 0.012012012 | 0.0020506811 |
+| `continent-count` | 0.015015015 | 10 |
 
-### Seed `907`
+### Seed `694`
+
+Score **8**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+
+| metric | depth | value |
+|---|---|---|
+| `defensibility-capacity-rank-corr` | 0 | 0.44602481 |
+| `pop-weighted-abs-latitude` | 0.005005005 | 50.100538 |
+| `capacity-by-abs-latitude` | 0.006006006 | 0.28227902 |
+| `goblin-flagship-surplus` | 0.0070140281 | 0.071494505 |
+| `kobold-flagship-population` | 0.0071501532 | 70 |
+| `continent-count` | 0.0075075075 | 2 |
+| `insolation-rel` | 0.009009009 | 1.0978476 |
+| `zone-position` | 0.009009009 | 0.010468529 |
+| `name-prefix-settlement-scope` | 0.011011011 | 0.90123457 |
+| `largest-continent-share` | 0.012012012 | 0.9122721 |
+
+### Seed `991`
 
 Score **7**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `delta-count` | 0.0005005005 | 2 |
-| `history-myth-hop-median` | 0.0015015015 | 1 |
-| `aquifer-fraction` | 0.002002002 | 0.47708682 |
-| `mean-land-elevation-m` | 0.002002002 | 1156.3617 |
-| `sediment-volume` | 0.002002002 | 645566.49 |
-| `mountain-coverage` | 0.004004004 | 0.16272319 |
-| `karst-fraction` | 0.005005005 | 0.18884686 |
-| `mean-geothermal-gradient` | 0.012012012 | 23.532859 |
-| `hypsometric-bimodality` | 0.016016016 | 4.2624455 |
-| `goblin-flagship-surplus` | 0.026026026 | 0.31792365 |
+| `deposit-density` | 0 | 0.58044349 |
+| `endorheic-coverage` | 0 | 0.45921657 |
+| `mean-land-elevation-m` | 0 | 2942.0455 |
+| `mountain-coverage` | 0 | 0.72677542 |
+| `cascade-rules-fired-bugbear` | 0.002002002 | 4 |
+| `shoreline-development` | 0.006006006 | 5.3576247 |
+| `kobold-flagship-surplus` | 0.0086823289 | 0.54 |
+| `name-transparency` | 0.012012012 | 0.4185022 |
+| `alignment-drift-deg-per-kyr` | 0.01371308 | 0.30205556 |
+| `landmass-count` | 0.014514515 | 44 |
 
 ### Seed `3`
 
@@ -412,26 +395,43 @@ Score **7**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 c
 | `deposit-density` | 0.003003003 | 0.5459022 |
 | `plate-size-gini` | 0.007007007 | 0.8227221 |
 | `endorheic-coverage` | 0.009009009 | 0.42957437 |
+| `rank-size-slope` | 0.01001001 | -0.38637442 |
 | `shoreline-development` | 0.011011011 | 5.5168433 |
-| `forgotten-fraction` | 0.012012012 | 0.35797665 |
-| `mean-warning-legibility` | 0.014014014 | 0.68359037 |
+| `landmass-count` | 0.014514515 | 44 |
 
-### Seed `583`
+### Seed `541`
 
 Score **7**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `ocean-fraction` | 0 | 0.75999707 |
-| `pop-weighted-abs-latitude` | 0 | 58.400603 |
-| `insolation-rel` | 0.003003003 | 1.101315 |
-| `zone-position` | 0.003003003 | 0.0068885421 |
-| `vestige-density` | 0.004004004 | 0.044756383 |
-| `channel-band-monotonicity-untruncated` | 0.006006006 | 0.96875 |
-| `kobold-flagship-population` | 0.0096839959 | 70 |
-| `channel-land-fraction` | 0.013013013 | 0.0020178657 |
-| `kobold-settlement-count` | 0.015515516 | 115 |
-| `chorus-recoverability` | 0.017017017 | 0.92222222 |
+| `name-collision-rate` | 0 | 0.7124183 |
+| `tribute-relations-standing` | 0.001001001 | 249 |
+| `largest-continent-share` | 0.002002002 | 0.96824064 |
+| `settlement-count` | 0.002002002 | 559 |
+| `total-population` | 0.004004004 | 16461 |
+| `largest-holding-share` | 0.006006006 | 0.0053459693 |
+| `kobold-settlement-count` | 0.0075075075 | 170 |
+| `waterfall-count` | 0.015515516 | 3 |
+| `distinguishable-capacity-bugbear` | 0.019019019 | 8 |
+| `mean-ore-grade` | 0.024024024 | 0.082509249 |
+
+### Seed `153`
+
+Score **7**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+
+| metric | depth | value |
+|---|---|---|
+| `forgotten-fraction` | 0 | 0.97160243 |
+| `mean-population` | 0 | 6.1011236 |
+| `climate-displacement-events` | 0.001001001 | 2945 |
+| `kobold-flagship-population` | 0.0040858018 | 2 |
+| `chorus-variance` | 0.0055055055 | 0.0054072688 |
+| `chorus-recoverability` | 0.007007007 | 0.82330827 |
+| `chorus-distinctiveness` | 0.0075075075 | 0.21136174 |
+| `coast-roughness-slope` | 0.012012012 | 0.12563981 |
+| `mountain-coverage` | 0.013013013 | 0.64640041 |
+| `mean-land-elevation-m` | 0.018018018 | 2519.0907 |
 
 ## Excluded columns
 
@@ -440,22 +440,20 @@ Every numeric/integer census column with a domain and a role that this report di
 | metric | reason |
 |---|---|
 | `first-day-is-settlement` | frozen: min == max across 1000 worlds |
-| `first-day-is-person` | both rails tied: 981 at min, 19 at max of 1000 |
+| `first-day-is-person` | both rails tied: 980 at min, 20 at max of 1000 |
 | `first-day-person-founded` | frozen: min == max across 1000 worlds |
 | `first-day-occ-people-goblin` | frozen: min == max across 1000 worlds |
 | `first-day-occ-people-kobold` | frozen: min == max across 1000 worlds |
 | `first-day-occ-people-hobgoblin` | frozen: min == max across 1000 worlds |
 | `first-day-occ-people-bugbear` | frozen: min == max across 1000 worlds |
 | `first-day-occ-tech-classical` | frozen: min == max across 1000 worlds |
-| `first-day-occ-cause-famine` | both rails tied: 38 at min, 14 at max of 699 |
 | `first-day-occ-cause-burned` | too few present values: 0 < 50 |
 | `first-day-occ-cause-plague` | too few present values: 0 < 50 |
-| `flagship-structure-size` | both rails tied: 46 at min, 954 at max of 1000 |
+| `flagship-structure-size` | both rails tied: 41 at min, 958 at max of 999 |
 | `pantheon-size-goblin-twin` | too few present values: 0 < 50 |
 | `name-length-goblin-twin` | too few present values: 0 < 50 |
 | `pantheon-cyclic-share-goblin-twin` | too few present values: 0 < 50 |
 | `cascade-rules-fired-goblin` | both rails tied: 173 at min, 75 at max of 1000 |
-| `name-prefix-region-scope` | frozen: min == max across 1000 worlds |
 | `hue-depth-goblin` | frozen: min == max across 1000 worlds |
 | `hue-depth-kobold` | frozen: min == max across 1000 worlds |
 | `shelf-width-passive-median` | both rails tied: 764 at min, 235 at max of 1000 |
@@ -465,10 +463,10 @@ Every numeric/integer census column with a domain and a role that this report di
 | `core-homophony-hobgoblin` | frozen: min == max across 1000 worlds |
 | `core-homophony-bugbear` | frozen: min == max across 1000 worlds |
 | `core-homophony-kobold` | frozen: min == max across 1000 worlds |
-| `homophony-merger-share-goblin` | frozen: min == max across 790 worlds |
-| `homophony-merger-share-hobgoblin` | frozen: min == max across 752 worlds |
-| `homophony-merger-share-bugbear` | frozen: min == max across 998 worlds |
-| `homophony-merger-share-kobold` | frozen: min == max across 670 worlds |
+| `homophony-merger-share-goblin` | frozen: min == max across 784 worlds |
+| `homophony-merger-share-hobgoblin` | frozen: min == max across 749 worlds |
+| `homophony-merger-share-bugbear` | frozen: min == max across 999 worlds |
+| `homophony-merger-share-kobold` | frozen: min == max across 667 worlds |
 | `confusable-homophony-goblin` | frozen: min == max across 1000 worlds |
 | `confusable-homophony-hobgoblin` | frozen: min == max across 1000 worlds |
 | `confusable-homophony-bugbear` | frozen: min == max across 1000 worlds |
@@ -489,4 +487,5 @@ Every numeric/integer census column with a domain and a role that this report di
 | `pace-of-life-kobold` | frozen: min == max across 1000 worlds |
 | `chorus-sky-calibration` | frozen: min == max across 1000 worlds |
 | `toponymic-core-size` | frozen: min == max across 1000 worlds |
+| `toponymic-roots-won` | both rails tied: 19 at min, 570 at max of 1000 |
 | `raid-attribution-unresolved` | frozen: min == max across 1000 worlds |

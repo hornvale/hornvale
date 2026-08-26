@@ -92,9 +92,35 @@
 //! tree, so every pinned per-seed value is still exact. What has not been
 //! re-established post-repair is the *completeness* claim — that `[2208, 2465]`
 //! is the whole 0–2999 positive set — because that needs a fresh full sweep and
+//!
+//! **The Granary re-sweep (2026-08-25, post Escapement+Lexicon absorbs):** the
+//! merged world's sub-year raid timing re-placed every settlement again;
+//! fresh full sweep found `[1057, 2852]`, one drop each. 1892 — the seed that
+//! survived four epochs — is finally cleared. Rate holds small: 2 in 3000.
+//! Read the rate, never the membership.
 //! this wave did not pay for one. Read the table as "these nineteen seeds drop
 //! exactly these counts", which is what it asserts, and not as "no other seed
 //! in 0–2999 drops a founder", which it does not.
+//!
+//! **The Granary asked whether the tail can retire, and the answer is NO —
+//! measured, not argued (Task 6, 2026-08-24).** T4's day-grain founding stamps
+//! were the hypothesis: if the raided founding and its same-year successor
+//! now differ in `founded`, the post-founding tail is redundant and
+//! `founder_handle` could collapse to its identity key. The tail-less handle
+//! swept seeds 0–2999 (`BuildDepth::Settlements`, default pins, this tree
+//! post-T4, 974 s — see `granary_tail_less_sweep_writes_its_counts` below):
+//! **2261 colliding worlds, 5039 founders lost** — against 3 in 3000 with the
+//! shipped key on the same placement epoch. The identity key alone had
+//! already measured 732/1000 pre-Granary; the day-grain stamps do not
+//! separate the twins because **the twinning is same-phase**: a raided
+//! founding and the community that took from it are founded in the same
+//! phase-resolution pass, so they share the finer timestamp as well as the
+//! year. Only a post-founding fact can tell them apart, which is what the
+//! tail folds. Verdict per the plan's branch table (>0 collisions):
+//! `founder_handle` in `domains/history/src/flesh.rs` stays exactly as it
+//! is. The cost is accepted knowingly: every future recomputation of
+//! `ended`/`peak_population` still forces an epoch under the save-format
+//! contract, forever.
 //!
 //! What this battery pins:
 //!
@@ -119,7 +145,7 @@
 //! is where a liveness guard belongs.
 //!
 use hornvale_astronomy::SkyPins;
-use hornvale_history::record::{Founding, FoundingCoords};
+use hornvale_history::record::{Founding, FoundingCoords, founding_key};
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::person_promote::{MEMORY_DEPTH, select_founders};
@@ -176,12 +202,12 @@ fn build(seed: u64, depth: BuildDepth) -> hornvale_kernel::World {
 /// 302), and fewer occupations are fewer chances for two of them to collide.
 /// **BOTH positives are built here, not three of six** — there is no third.
 ///
-/// claim: structural(seed: [2208, 2465]) — two named worlds, built once each.
+/// claim: structural(seed: [1057, 2852]) — two named worlds, built once each.
 /// No search: the seeds come from a completed 0–2999 sweep, not from this
 /// test.
 #[test]
 fn a_colliding_seed_builds_to_full_depth_instead_of_panicking() {
-    for seed in [2208u64, 2465] {
+    for seed in [1057u64, 2852] {
         let w = build(seed, BuildDepth::Full);
         let people = w.ledger.find("is-person").count();
         assert!(
@@ -280,8 +306,8 @@ fn the_dropped_founders_are_pinned_per_seed() {
         (1892, 0),
         (2031, 0),
         (2078, 0),
-        (2208, 1),
-        (2465, 1),
+        (1057, 1),
+        (2852, 1),
         (2634, 0),
         (2793, 0),
         (2871, 0),
@@ -384,13 +410,13 @@ fn the_dropped_founders_are_pinned_per_seed() {
 /// changes as little as the measurement permits. 2208 is held in reserve.
 #[test]
 fn a_dropped_founder_is_not_backfilled() {
-    let w = build(2465, BuildDepth::Settlements);
+    let w = build(1057, BuildDepth::Settlements);
     let occs = occupation_records(&w);
     let cast = select_founders(&occs);
     let dropped = cast
         .unremembered
         .first()
-        .expect("seed 2465 drops exactly one founder");
+        .expect("seed 1057 drops exactly one founder");
     let people = dropped.people;
     let promoted = cast
         .remembered
@@ -400,7 +426,7 @@ fn a_dropped_founder_is_not_backfilled() {
     let available = occs.iter().filter(|o| o.core.people == people).count();
     assert!(
         available > 1,
-        "seed 2465's {people:?} must hold more than one occupation \
+        "seed 1057's {people:?} must hold more than one occupation \
          ({available}), or there is nothing a backfill could have reached for"
     );
     assert_eq!(
@@ -410,4 +436,133 @@ fn a_dropped_founder_is_not_backfilled() {
          remembered ({available} available, cap {MEMORY_DEPTH}), not backfilled \
          to it"
     );
+}
+
+/// **The Granary, Task 6: can the discrimination tail retire?** The shipped
+/// handle is identity (`record::founding_key`: where, when, by whom, out of
+/// which community, plus the one ancestry hop) plus a tail that folds `ended`
+/// (presence-tagged, through `day_key`) then `peak_population`, with
+/// `FOUNDER_ROLE` last. The tail exists because same-year twin foundings — a
+/// raided attempt and the community that took, same people, same site, same
+/// year, same parent — are identical in every *founding-side* field, so only a
+/// post-founding fact separates them.
+///
+/// The Granary hypothesis is that T4's day-grain founding stamps already
+/// separate those twins naturally, making the tail redundant. This sweep
+/// measures the **tail-less** handle — identity key only, `FOUNDER_ROLE`
+/// folded on top (which cannot change collision behaviour: it is one fixed
+/// constant mixed after the identity, so two records tie under
+/// identity+role exactly when they tie under identity) — over the full
+/// 0–2999 range, using the same protocol every prior sweep in this file used:
+/// `BuildDepth::Settlements`, default pins, run OFFLINE with `--ignored`.
+///
+/// For each world the promoted cast is re-derived the way
+/// `select_founders` derives it — per people, `(peak_population DESC, site
+/// ASC, founded ASC)` with the candidate handle as final tiebreak, cut to
+/// `MEMORY_DEPTH` — and duplicates of the tail-less key across the kept set
+/// are counted. Two numbers come out, matching The Ell's three-arm table's
+/// axes: colliding worlds and founders lost.
+///
+/// Results are printed and written to
+/// `CARGO_TARGET_TMPDIR/tail-sweep-results.txt` so the counts survive the
+/// run and can be read back into this file's prose by whoever pays for it.
+///
+/// **THE SWEEP HAS BEEN RUN — 2026-08-24, this tree post-T4 (HEAD
+/// eeaa011fd), 974 s wall, ten threads.** Result: 2261 colliding worlds,
+/// 5039 founders lost, positives across most of the range (the full seed
+/// list is in the written report). That is the measurement behind the
+/// module header's verdict that the discrimination tail stays; re-running
+/// is only needed after the next settlement-replacing epoch.
+///
+/// claim: structural() — a measurement harness, not an assertion battery:
+/// everything it learns lands in prose, never in a pinned value.
+#[test]
+#[ignore = "the full 0-2999 sweep costs ~800 s wall on ten threads (prior sweeps: \
+           692.89/744.21/768.72/798.87 s) -- offline measurement, never in the \
+           normal test run"]
+fn granary_tail_less_sweep_writes_its_counts() {
+    const SEEDS: u64 = 3000;
+    const THREADS: usize = 10;
+
+    // One world's verdict under the tail-less handle: does its PROMOTED cast
+    // carry a duplicate identity key, and how many founders would that cost?
+    fn tail_less(seed: u64) -> (bool, usize) {
+        let w = build(seed, BuildDepth::Settlements);
+        let occs = occupation_records(&w);
+        let coords: BTreeMap<hornvale_kernel::EntityId, FoundingCoords<'static>> = occs
+            .iter()
+            .map(|o| (o.id, hornvale_history::record::founding_coords(&o.core)))
+            .collect();
+        let parent_of = |r: &hornvale_history::record::OccupationRecord| match r.founded_from {
+            Founding::From(e) => coords.get(&e).copied(),
+            Founding::Genesis(_) => None,
+        };
+        // The tail-less candidate handle: identity + role, nothing else.
+        let keys: Vec<u64> = occs
+            .iter()
+            .map(|r| founding_key(&r.core, parent_of(r)))
+            .collect();
+
+        let mut by_people: BTreeMap<&'static str, Vec<usize>> = BTreeMap::new();
+        for (i, r) in occs.iter().enumerate() {
+            by_people.entry(r.core.people.0).or_default().push(i);
+        }
+        let mut kept: Vec<u64> = Vec::new();
+        for idxs in by_people.values_mut() {
+            idxs.sort_by(|&a, &b| {
+                let (x, y) = (&occs[a], &occs[b]);
+                y.core
+                    .peak_population
+                    .cmp(&x.core.peak_population)
+                    .then(x.core.site.0.cmp(&y.core.site.0))
+                    .then(x.core.founded.total_cmp(&y.core.founded))
+                    .then(keys[a].cmp(&keys[b]))
+            });
+            kept.extend(idxs.iter().take(MEMORY_DEPTH).map(|&i| keys[i]));
+        }
+        kept.sort_unstable();
+        let distinct =
+            kept.windows(2).filter(|p| p[0] != p[1]).count() + usize::from(!kept.is_empty());
+        let dropped = kept.len() - distinct;
+        (dropped > 0, dropped)
+    }
+
+    let next = std::sync::atomic::AtomicU64::new(0);
+    let totals: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let lost: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let positives: std::sync::Mutex<Vec<u64>> = std::sync::Mutex::default();
+
+    std::thread::scope(|scope| {
+        for _ in 0..THREADS {
+            scope.spawn(|| {
+                loop {
+                    let seed = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    if seed >= SEEDS {
+                        break;
+                    }
+                    let (collides, drops) = tail_less(seed);
+                    if collides {
+                        totals.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        lost.fetch_add(drops as u64, std::sync::atomic::Ordering::Relaxed);
+                        positives.lock().unwrap().push(seed);
+                    }
+                }
+            });
+        }
+    });
+
+    let mut positives = positives.into_inner().unwrap();
+    positives.sort_unstable();
+    let report = format!(
+        "The Granary T6 tail-less sweep (seeds 0-{}, BuildDepth::Settlements, \
+         default pins): {} colliding worlds, {} founders lost, positive seeds \
+         {positives:?}\n",
+        SEEDS - 1,
+        totals.load(std::sync::atomic::Ordering::Relaxed),
+        lost.load(std::sync::atomic::Ordering::Relaxed),
+    );
+    println!("{report}");
+    let path = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("tail-sweep-results.txt");
+    std::fs::write(&path, &report).expect("write sweep results");
+    println!("written to {}", path.display());
 }

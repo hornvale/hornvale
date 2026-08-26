@@ -811,8 +811,13 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
     // rather than vacuous, which is the better of the two states this witness
     // alternates between — recovered here by accident, not by hunting for it.
     // Post-unblinding re-measure, declared per decision 0016.
+    // THE GRANARY re-reading (2026-08-25): 1 -> 0 over 7764 compared pairs.
+    // Sub-year raid timing re-placed seed 42's settlements an eleventh time;
+    // the witness alternates back to the empty state, which is the reading
+    // this file has recorded most often. Post-unblinding re-measure,
+    // declared per decision 0016.
     assert_eq!(
-        ties, 1,
+        ties, 0,
         "measured {ties} tying pairs on the live corpus over {pairs} compared pairs; a \
          different count means the key's tie conditions changed"
     );
@@ -1097,9 +1102,12 @@ fn the_material_fourth_key_barely_moves_the_stratigraphy() {
     // comparisons have something to compare again, so the witness is
     // load-bearing at this reading. That recovery is an accident of where the
     // settlements landed, not something this task went looking for.
+    // THE GRANARY re-pin (2026-08-25): [0, 1, 1] -> [0, 2, 0], total 2 -> 2.
+    // Same lever as every prior reading — re-placed settlements — and the
+    // same verdict: three seeds cannot distinguish them (decision 0097).
     assert_eq!(
         measured,
-        vec![(42u64, 0usize), (7, 1), (1000, 1)],
+        vec![(42u64, 0usize), (7, 2), (1000, 0)],
         "the per-seed order-change counts moved"
     );
 }

@@ -65,7 +65,7 @@ what it measured.
 
 ## 2. The six folds, and why each is bounded
 
-> **Line citations in this section are as of `efb2ab304` (`origin/main`, 2026-08-25).** They went stale on all three of this campaign's absorptions of `main` — a uniform +1 after The Gossan, and by 1 to 61 lines after The Escapement's tick epoch. `windows/vessel/src/liveness.rs` is ~15,000 lines under continuous churn, so a bare line number in a durable spec rots by default. **The function names are the stable handle — grep those.** The numbers are kept because they are faster when fresh, and dating them means a stale one reads as historical rather than as wrong.
+> **Line citations in this section are as of `1a5ed0276` (`origin/main`, 2026-08-25).** They went stale on all three of this campaign's absorptions of `main` — a uniform +1 after The Gossan, and by 1 to 61 lines after The Escapement's tick epoch. `windows/vessel/src/liveness.rs` is ~15,000 lines under continuous churn, so a bare line number in a durable spec rots by default. **The function names are the stable handle — grep those.** (Verified unchanged across the 2026-08-25 and 2026-08-26 absorptions — neither The Granary nor the campaigns after it touched this file, so re-dating cost one grep each time. That is the mechanism paying for itself: a dated citation is cheap to re-confirm and cannot silently become wrong.) The numbers are kept because they are faster when fresh, and dating them means a stale one reads as historical rather than as wrong.
 
 Every one of these reduces an unbounded history to bounded state. Read on
 `origin/main`; line numbers are `windows/vessel/src/liveness.rs`.

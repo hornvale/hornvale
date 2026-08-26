@@ -1203,7 +1203,6 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
@@ -1272,6 +1271,7 @@ hornvale-lab::hornvale_lab$domesday::render::tests::a_detector_that_fired_nothin
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_page_carries_the_generated_header_and_only_computed_numbers
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_with_no_metrics_renders_the_no_metrics_notice_verbatim
 hornvale-lab::hornvale_lab$domesday::render::tests::a_flag_metric_always_renders_both_true_and_false_rows
+hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two
 hornvale-lab::hornvale_lab$domesday::render::tests::a_novel_detector_name_reaches_the_rendered_index
 hornvale-lab::hornvale_lab$domesday::render::tests::a_removed_parenthetical_directly_before_a_period_does_not_leave_a_dangling_space
 hornvale-lab::hornvale_lab$domesday::render::tests::an_ellipsis_survives_the_space_dot_space_cleanup_untouched
@@ -2676,7 +2676,6 @@ hornvale-vessel::hornvale_vessel$underworld_level::tests::every_level_but_the_fi
 hornvale-vessel::hornvale_vessel$underworld_level::tests::every_walkable_cell_is_reachable_from_every_other
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generate_descent_produces_one_level_per_rung
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generation_is_deterministic
-hornvale-vessel::hornvale_vessel$underworld_level::tests::made_chambers_lean_worked_found_chambers_lean_natural
 hornvale-vessel::hornvale_vessel$underworld_level::tests::stairs_down_and_stairs_up_never_share_a_cell
 hornvale-vessel::hornvale_vessel$underworld_level::tests::two_rungs_with_the_same_origin_and_kind_still_differ
 hornvale-vessel::hornvale_vessel$underworld_level::tests::worked_fraction_has_inertia_across_rungs
@@ -2837,6 +2836,11 @@ hornvale-worldgen::hornvale_worldgen$graph_derive::tests::a_frozen_mire_travels_
 hornvale-worldgen::hornvale_worldgen$graph_derive::tests::dry_ground_is_unmodified
 hornvale-worldgen::hornvale_worldgen$graph_derive::tests::mud_and_snow_each_impede_travel
 hornvale-worldgen::hornvale_worldgen$graph_derive::tests::the_factor_never_leaves_the_unit_interval
+hornvale-worldgen::hornvale_worldgen$harvest::tests::amplitude_table_covers_every_variant_in_range
+hornvale-worldgen::hornvale_worldgen$harvest::tests::lat_deg_rejects_out_of_range
+hornvale-worldgen::hornvale_worldgen$harvest::tests::near_zero_in_winter_and_single_peak_at_harvest
+hornvale-worldgen::hornvale_worldgen$harvest::tests::periodic_over_one_year
+hornvale-worldgen::hornvale_worldgen$harvest::tests::southern_hemisphere_is_half_a_year_out_of_phase
 hornvale-worldgen::hornvale_worldgen$hazard::tests::a_transform_boundary_is_seismic_and_never_volcanic
 hornvale-worldgen::hornvale_worldgen$hazard::tests::an_amagmatic_vertex_never_erupts
 hornvale-worldgen::hornvale_worldgen$hazard::tests::an_empty_or_reversed_window_yields_nothing
@@ -2856,6 +2860,7 @@ hornvale-worldgen::hornvale_worldgen$hazard::tests::volcanic_recurrence_exists_e
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::a_busy_patron_extracts_harder_from_the_same_vassal_than_a_quiet_one
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::a_cascade_runs_three_hops_and_dies_of_dissipation
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::a_cheaply_reached_holder_is_raided_and_a_dearly_reached_one_is_not
+hornvale-worldgen::hornvale_worldgen$history_bake::tests::a_community_curve_amplitude_is_its_biome_class_amplitude
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::a_flight_with_nowhere_to_go_is_a_death_not_a_departure
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::a_generational_patron_declines_a_vassal_too_small_to_farm
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::a_generational_patron_leaves_a_markedly_larger_vassal_than_an_immediate_one
@@ -2868,6 +2873,7 @@ hornvale-worldgen::hornvale_worldgen$history_bake::tests::a_patron_is_not_itself
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::a_patron_raises_its_demand_on_a_vassal_that_grew_and_eases_it_on_one_that_shrank
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::a_patrons_effective_horizon_falls_monotonically_and_never_wraps
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::a_people_that_cannot_survive_winning_does_not_fight
+hornvale-worldgen::hornvale_worldgen$history_bake::tests::a_raider_strikes_in_the_depleted_phase_not_at_the_epoch_boundary
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::a_relation_naming_a_dead_community_collects_nothing
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::a_resettle_at_the_head_of_a_relaxation_is_counted_exactly_once
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::a_rival_that_cannot_out_muscle_the_incumbent_leaves_the_relation_alone
@@ -2894,8 +2900,12 @@ hornvale-worldgen::hornvale_worldgen$history_bake::tests::an_over_milked_vassal_
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::an_unauthored_patron_is_read_at_the_neutral_middle
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::approach_ease_is_zero_for_an_isolated_vertex
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::approach_ease_sums_traversable_conductance_only
+hornvale-worldgen::hornvale_worldgen$history_bake::tests::communities_at_opposite_hemispheres_carry_curves_half_a_year_out_of_phase
+hornvale-worldgen::hornvale_worldgen$history_bake::tests::granary_clamps_at_zero_through_the_lean_half
+hornvale-worldgen::hornvale_worldgen$history_bake::tests::granary_integration_preserves_the_annual_increment
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::no_patron_may_demand_more_than_the_land_could_ever_produce
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::no_subordinate_is_farmed_below_the_farm_floor_by_tribute
+hornvale-worldgen::hornvale_worldgen$history_bake::tests::phase_shares_sum_to_one_across_curves
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::record_cascade_bins_by_log2_and_skips_zero
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::relocate_founds_from_the_specific_predecessor_not_the_lineage_ancestor
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::stores_raise_strength_but_never_pressure
@@ -3052,7 +3062,6 @@ hornvale-worldgen::suite$history_bake::a_displaced_people_rolls_downhill_and_the
 hornvale-worldgen::suite$history_bake::a_hostile_vertex_in_a_full_world_starves_instead_of_cascading
 hornvale-worldgen::suite$history_bake::a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare
 hornvale-worldgen::suite$history_bake::a_strong_community_subordinates_a_productive_neighbour_it_would_not_evict
-hornvale-worldgen::suite$history_bake::concealment_moves_what_a_patron_collects_and_under_the_setpoint_it_moves_it_down
 hornvale-worldgen::suite$history_bake::different_seeds_diverge
 hornvale-worldgen::suite$history_bake::ocean_sunders_and_a_lane_leapfrogs
 hornvale-worldgen::suite$history_bake::same_seed_bakes_byte_identical_history
