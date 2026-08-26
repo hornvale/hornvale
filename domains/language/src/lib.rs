@@ -135,7 +135,7 @@ pub use lexicon::{
 };
 pub use morphology::{
     ClassPosition, Evidential, MorphDepth, MorphForm, NounClass, SKY_OVERRIDE, TongueMorphology,
-    affix, morph_depths, morph_forms, noun_class_with_sky,
+    affix, morph_depths, morph_forms, noun_class_with_sky, pronoun_forms,
 };
 pub use naming::{
     GeneratedName, MorphOptions, NameCorpus, NameKind, NameShape, Namer, SiteConcepts, render_views,
@@ -1156,6 +1156,10 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "The Inquest: the family's Negative affix proto-form, shared by every daughter — negative is the marked member and positive is zero, so no positive form is ever drawn",
         ),
         (
+            "language/family/<family>/morph/pronoun/<person-number>",
+            "The Inquest: the family's personal-pronoun proto-form for one person-number slot, drawn once per family and evolved per daughter via its own cascade — the cognate law. Six slots, `<person-number>` ranging over 1sg/2sg/3sg/1pl/2pl/3pl: person and number ONLY, no gender, because nothing in the ledger assigns grammatical gender. Written with a placeholder leg rather than six rows on the same precedent the multi-valued morph/evidential/<value> and morph/class/<value> rows above set; the singular number/tense/polarity rows are spelled out because each of those axes draws exactly ONE marked member",
+        ),
+        (
             "language/<species>/grammar/numeracy-rung",
             "The species' drawn numeral-system rung (Subitizing/FullCounting/Decimals) — how far counting words go past the universal subitizing floor",
         ),
@@ -1256,6 +1260,20 @@ mod tests {
     /// `tone_count` depends on `tonality` alone, so a hand-built envelope
     /// with the proto's `tonality` copied in is sufficient to prove the
     /// value reaches the tier.
+    /// The stream roster is HAND-MAINTAINED and nothing checks it for
+    /// completeness, so a draw added without its row ships a silently
+    /// incomplete manifest with every gate green. This pins the one row The
+    /// Inquest's pronoun draw adds; it is a spot check, not the missing
+    /// completeness test.
+    #[test]
+    fn stream_labels_declare_the_pronoun_draw() {
+        let labels: Vec<&str> = stream_labels().iter().map(|(l, _)| *l).collect();
+        assert!(
+            labels.contains(&"language/family/<family>/morph/pronoun/<person-number>"),
+            "the pronoun proto draw is missing from the stream roster"
+        );
+    }
+
     #[test]
     fn the_draconic_family_draws_a_contrastive_tone() {
         let proto = family_proto();

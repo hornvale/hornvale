@@ -3046,3 +3046,7 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T22:27:47Z | sluice:outboard | 41.391 | 25.704 | 39.153 | 1.57 | 0 | d7021e145 |  | lefford | 40 |
 | 2026-08-26T22:35:11Z | sluice:gate | 444.081 | 12420.727 | 427.816 | 28.93 | 0 | 7e824c600 |  | lefford | 40 |
 | 2026-08-26T22:42:52Z | sluice:clients | 461.152 | 5592.776 | 62.358 | 12.26 | 0 | 7b9b23679 |  | lefford | 40 |
+| 2026-08-26T23:19:50Z | rebaseline | 66.158 | 255.719 | 12.885 | 4.06 | 0 | 49765f4a1 | campaign/the-inquest | MacBookPro | 10 |
+| 2026-08-26T23:29:13Z | gate-commit | 24.511 | 60.293 | 15.297 | 3.08 | 0 | 49765f4a1 | campaign/the-inquest | MacBookPro | 10 |
+| 2026-08-26T23:43:44Z | rebaseline | 60.932 | 254.536 | 12.577 | 4.38 | 0 | 2d7aee66d | campaign/the-inquest | MacBookPro | 10 |
+| 2026-08-26T23:56:45Z | gate-commit | 37.795 | 69.530 | 21.507 | 2.41 | 0 | 2d7aee66d | campaign/the-inquest | MacBookPro | 10 |
