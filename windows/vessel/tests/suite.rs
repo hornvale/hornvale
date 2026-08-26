@@ -27,6 +27,8 @@ mod ask_verb;
 mod body_fields;
 #[path = "suite/body_mass.rs"]
 mod body_mass;
+#[path = "suite/clock_lattice.rs"]
+mod clock_lattice;
 #[path = "suite/controller_swap.rs"]
 mod controller_swap;
 #[path = "suite/course_properties.rs"]
