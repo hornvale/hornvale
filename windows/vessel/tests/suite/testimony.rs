@@ -247,18 +247,56 @@ mod reticence {
         }
     }
 
+    /// The Dissembling branch of `testify_with_stance` ignores `truth`
+    /// entirely and looks only at `DISSEMBLING_CLAIM` -- so the shared
+    /// `lexicon()` fixture (which steeps `content` but not `helpless`)
+    /// cannot exercise this arm at all: a lie claiming `helpless` there
+    /// falls into the `Nearest`/`Withheld` fallback below, never reaching
+    /// `Falsehood`, and this test's `if let` would silently skip its own
+    /// assertion. This lexicon steeps BOTH `content` and `helpless`, so
+    /// whichever of the two `DISSEMBLING_CLAIM` names, the claim is
+    /// `Direct` and this test actually reaches the comparison.
     #[test]
-    fn no_falsehood_ever_names_the_true_state() {
+    fn a_dissembling_hosts_lexicon_that_also_knows_the_truth_still_withholds_confirmation() {
+        let lex = super::build("hobgoblin", 7, &["content", "helpless"]);
+        // Fixed at `Content` today (see `DISSEMBLING_CLAIM`'s own doc), so
+        // this loop's live comparison always trivially holds -- the point
+        // of steeping `helpless` too is to give a FUTURE or MUTATED claim
+        // somewhere to land as `Falsehood` instead of silently falling
+        // through to `Withheld`, which is what actually makes the
+        // `assert_ne!` below capable of failing.
         for truth in [
             AffectLabel::Helpless,
             AffectLabel::Frustrated,
             AffectLabel::Lost,
         ] {
-            let t = testify_with_stance(&lexicon(), truth, Stance::Dissembling, &[])
-                .expect("testifies");
-            if let Testimony::Falsehood { claimed, .. } = t {
-                assert_ne!(claimed, truth, "a falsehood must never name the true state");
+            let t = testify_with_stance(&lex, truth, Stance::Dissembling, &[]).expect("testifies");
+            match t {
+                Testimony::Falsehood { claimed, .. } => {
+                    assert_ne!(claimed, truth, "a falsehood must never name the true state");
+                }
+                other => panic!(
+                    "expected a Falsehood (both `content` and `helpless` are Direct in this \
+                     lexicon), got {other:?}"
+                ),
             }
         }
+    }
+
+    /// Companion to the test above, covering the OTHER half of the same
+    /// invariant: a culture that has no word for the dissembling claim
+    /// itself must say nothing, never fall through to naming the truth. The
+    /// shared `lexicon()` fixture never reaches this branch (`content` is
+    /// always steeped there), so this test builds its own culture that
+    /// knows `eager` but not `content`.
+    #[test]
+    fn a_culture_with_no_word_for_the_claim_withholds_rather_than_lying() {
+        let lex = super::build("hobgoblin", 7, &["eager"]);
+        let t = testify_with_stance(&lex, AffectLabel::Frustrated, Stance::Dissembling, &[]);
+        assert_eq!(
+            t,
+            Some(Testimony::Withheld),
+            "no word for the lie itself -- say nothing rather than falling through to the truth"
+        );
     }
 }
