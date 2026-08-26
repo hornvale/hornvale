@@ -2971,3 +2971,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T15:29:07Z | vessel-check | 36.944 | 52.384 | 2.271 | 1.48 | 0 | f633df521 | campaign/the-interlinear | MacBookPro | 10 |
 | 2026-08-26T15:29:47Z | world-check | 40.057 | 56.437 | 2.293 | 1.47 | 0 | f633df521 | campaign/the-interlinear | MacBookPro | 10 |
 | 2026-08-26T15:36:26Z | game-check | 398.826 | 2393.211 | 27.098 | 6.07 | 0 | f633df521 | campaign/the-interlinear | MacBookPro | 10 |
+| 2026-08-26T15:59:43Z | sluice:artifacts | 121.266 | 871.417 | 36.794 | 7.49 | 0 | db187c483 |  | lefford | 40 |
