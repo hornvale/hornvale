@@ -165,11 +165,23 @@ Verified in `packs.rs`:
   `Experiential` gap".
 - **`kill`** — does not exist. This campaign adds it.
 
-**Consequence, and it must be in the chronicle rather than discovered by a
-reader: the two corpus lines this campaign covers will realize in Common and
-GAP in every tongue** — for vocabulary reasons, not grammatical ones. The
-transitive *grammar* works; those two particular *words* are not yet in any
-people's mouth.
+**AMENDED AT TASK 6 — this now applies to ONE line, not two.** The paragraph
+below said both covered lines would gap in every tongue. That was written when
+`kill` did not exist. It was registered at `ladder_rank: 0`, universal stratum,
+so nine settled peoples hold real roots for it (`Dabo`, `Qadag`, `Koa`, …) and
+**m05 *"A guard killed a woman."* realizes in a tongue too.** Only m10
+(*"I didn't know her."*) still gaps, for the `know`-exposure reason below.
+
+The `ladder_rank: 0` call came with evidence that removed the tradeoff
+entirely: a *gated* registration would have moved the same artifacts by the
+same line counts, because `proto_root_universe` draws for any registered
+concept that is not `Unnameable` — `know` already has a proto-root in every
+family despite having no exposure grant. Gating would have bought nothing and
+left every tongue wordless.
+
+**The surviving consequence, still worth the chronicle: a covered line can gap
+in every tongue** — for vocabulary reasons, not grammatical ones. The
+transitive *grammar* works; `know` is not yet in any people's mouth.
 
 That is defensible — the corpus's demand tokens name grammatical capabilities,
 and the resolver's own doc says so; lexical coverage is the axis `tropes/` and
@@ -296,13 +308,33 @@ after `PATH=$HOME/.deno/bin:$PATH make rebaseline`, per path:
                                    Regenerate in the SAME commit; gate-commit
                                    cannot catch this (type-audit `check` is a
                                    lint, the report is an artifact).
-  cli/tests/fixtures/ MOVED     -> STOP. Byte-goldens. This campaign adds new
-                                   STREAMS but must perturb no existing one
-                                   (§3.4). A move here means a new draw was
+  cli/tests/fixtures/ MOVED     -> STOP AND DIAGNOSE -- but the rule as first
+                                   written was WRONG, so read this before
+                                   acting. It said a move "means a draw was
                                    inserted into an existing stream's
-                                   consumption order, which is a save-format
-                                   break. Diagnose; do not rebaseline.
-  windows/vessel/tests/fixtures/ MOVED -> STOP, same reason.
+                                   consumption order". That is ONE cause. There
+                                   is a second, benign one, and Task 6 hit it:
+                                   a `World` is seed + registry + ledger, so
+                                   registering ANY concept necessarily adds its
+                                   row to the serialized registry. No placement
+                                   avoids it.
+
+                                   THE DISCRIMINATOR IS WHETHER AN EXISTING
+                                   VALUE MOVED, not whether the file changed:
+                                     - added rows only, existing values
+                                       untouched, and any deleted lines are
+                                       whole-list re-renderings or counts
+                                       incrementing by exactly the number of
+                                       concepts added  -> ADDITIVE. Proceed.
+                                     - an existing entry's VALUE differs, or a
+                                       proto-root moved  -> SAVE-FORMAT BREAK.
+                                       Stop; do not rebaseline.
+
+                                   Task 6's evidence for the first case is the
+                                   model: three unrelated language families
+                                   each gained exactly one row and not one
+                                   existing proto-root moved.
+  windows/vessel/tests/fixtures/ MOVED -> same test, same discriminator.
   book/src/domesday/ MOVED      -> STOP. Nothing here touches the census.
 ```
 
