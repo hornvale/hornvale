@@ -164,35 +164,6 @@ pub fn tongue_grammar(seed: &Seed, species: &str, ph: &Phonology) -> TongueGramm
     }
 }
 
-/// One nominal-predication clause for a tongue: an already-surfaced subject
-/// (autonym / proper name — tongue words already) and the complement as a
-/// CONCEPT id to lexicalize in the speaker's lexicon.
-/// type-audit: bare-ok(identifier-text)
-#[derive(Clone, Debug, PartialEq)]
-pub struct TongueClause {
-    /// The subject, already in surface form.
-    pub subject: String,
-    /// The complement concept id (e.g. `"goblin-kind"`), lexicalized via
-    /// the speaker's lexicon.
-    pub complement_concept: String,
-    /// How this clause's content was epistemically grounded (C7).
-    /// `realize_tongue` (the C3 floor realizer) ignores this field
-    /// entirely — only [`realize_tongue_deep`] reads it, and only when
-    /// `morph`'s evidential depth is not [`MorphDepth::None`].
-    pub evidential: Evidential,
-    /// Role bindings on this clause, realized through the tongue's own
-    /// lexicon rather than Common's `common_role_surface` table — a tongue
-    /// that lacks a bound concept gaps the WHOLE clause (spec §4: renders
-    /// fully or gaps entirely, never partially), the same discipline the
-    /// complement already followed. There is no per-role construction table
-    /// yet (contrast `clause::common_role_surface`): each resolved word is
-    /// appended in order by [`realize_tongue`]/[`realize_tongue_deep`]. This
-    /// is a deliberate asymmetry with the now fact-shaped `ClauseSpec` —
-    /// see "And Common is not yet a peer in full" in
-    /// `book/src/chronicle/the-interlinear.md` — not an oversight.
-    pub adjuncts: Vec<Adjunct>,
-}
-
 /// A whole-sentence gap: the tongue could not say this clause because its
 /// complement concept has no word (spec §4 — a clause renders fully or gaps
 /// entirely, never partially).

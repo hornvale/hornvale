@@ -1891,8 +1891,9 @@ fn planet_name_of(world: &World) -> Option<String> {
         .map(str::to_string)
 }
 
-/// C7 T3: build one tongue's emic world-statement — `TongueClause { subject:
-/// planet_name, complement_concept: "earth", evidential }` — through the
+/// C7 T3: build one tongue's emic world-statement — a `ClauseSpec` whose
+/// subject is `Subject::Name(planet_name)`, whose object is
+/// `Argument::Concept("earth")`, carrying the given `evidential` — through the
 /// deep realizer, using that tongue's own already-derived grammar/morphology/
 /// lexicon (never re-derived here; callers pass what they already hold, the
 /// same "measure once" discipline `render_volume`'s loop and
