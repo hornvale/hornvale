@@ -1151,6 +1151,16 @@ hornvale-kernel::suite$determinism::different_seeds_yield_different_worlds
 hornvale-kernel::suite$determinism::entity_ids_are_never_reused_after_reload
 hornvale-kernel::suite$determinism::same_seed_yields_byte_identical_worlds
 hornvale-kernel::suite$determinism::saved_world_reloads_identically
+hornvale-kernel::suite$fold::absorbing_the_same_position_twice_panics
+hornvale-kernel::suite$fold::advancing_in_two_bites_equals_advancing_in_one
+hornvale-kernel::suite$fold::discarding_the_state_at_every_position_is_unobservable
+hornvale-kernel::suite$fold::discarding_the_state_at_every_third_position_is_unobservable
+hornvale-kernel::suite$fold::one_fact_at_a_time_equals_folding_from_scratch
+hornvale-kernel::suite$fold::rebuilding_upto_a_position_equals_the_prefix_it_names
+hornvale-kernel::suite$fold::rebuilding_upto_beyond_the_ledger_stops_at_the_ledger
+hornvale-kernel::suite$fold::resuming_from_a_checkpoint_reaches_the_same_place_as_folding_throughout
+hornvale-kernel::suite$fold::skipping_a_position_panics
+hornvale-kernel::suite$fold::the_probe_fold_is_order_sensitive
 hornvale-kernel::suite$golden_harness::a_long_shared_prefix_still_surfaces_the_real_divergence
 hornvale-kernel::suite$golden_harness::a_mismatch_reports_the_first_divergence_and_the_accept_instruction
 hornvale-kernel::suite$golden_harness::a_missing_fixture_without_rebaseline_says_how_to_create_it
@@ -1271,7 +1281,6 @@ hornvale-lab::hornvale_lab$domesday::render::tests::a_detector_that_fired_nothin
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_page_carries_the_generated_header_and_only_computed_numbers
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_with_no_metrics_renders_the_no_metrics_notice_verbatim
 hornvale-lab::hornvale_lab$domesday::render::tests::a_flag_metric_always_renders_both_true_and_false_rows
-hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two
 hornvale-lab::hornvale_lab$domesday::render::tests::a_novel_detector_name_reaches_the_rendered_index
 hornvale-lab::hornvale_lab$domesday::render::tests::a_removed_parenthetical_directly_before_a_period_does_not_leave_a_dangling_space
 hornvale-lab::hornvale_lab$domesday::render::tests::an_ellipsis_survives_the_space_dot_space_cleanup_untouched
