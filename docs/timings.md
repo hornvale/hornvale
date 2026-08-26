@@ -2981,3 +2981,5 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T19:36:27Z | gate-commit | 85.707 | 51.566 | 25.768 | 0.90 | 0 | a86900394 | campaign/the-quadrat | ambrose | 12 |
 | 2026-08-26T19:59:15Z | gate-commit | 75.462 | 48.786 | 23.086 | 0.95 | 0 | 51cf7e4f5 | campaign/the-quadrat | ambrose | 12 |
 | 2026-08-26T20:33:17Z | gate-commit | 75.350 | 49.716 | 24.048 | 0.98 | 0 | 99b52c384 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-26T20:34:39Z | gate-commit | 74.871 | 49.470 | 23.825 | 0.98 | 0 | 99b52c384 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-26T21:04:31Z | gate-commit | 76.742 | 49.769 | 23.889 | 0.96 | 0 | 95fbd8f39 | campaign/the-quadrat | ambrose | 12 |

@@ -1876,9 +1876,19 @@ mod portolan_tests {
     /// **Since The Quadrat's Task 2 that is six presses, not one.** The
     /// ladder is continuous now: one zoom-out from band B steps to the rung
     /// immediately coarser than band B, not to the globe.
+    ///
+    /// **The count is BOUNDED, deliberately, rather than a
+    /// `while depth > GLOBE_RUNG` walk.** About twenty-five tests route
+    /// through this helper. An unbounded walk would spin forever the moment
+    /// `apply_zoom`'s zoom-out arm regressed to a no-op — turning the exact
+    /// regression this file's ladder tests exist to catch into a HUNG suite
+    /// rather than a failure list, which is the worst symptom available to a
+    /// future reader. The two assertions below stay as the real check: the
+    /// bound only decides when to stop pressing, never whether the walk
+    /// arrived.
     fn enter_world_view(d: &mut Driver) {
         d.enter_map();
-        while d.window.depth > GLOBE_RUNG {
+        for _ in 0..(BAND_B_RUNG - GLOBE_RUNG) {
             d.apply(Action::Zoom(-1));
         }
         assert_eq!(
@@ -2123,10 +2133,21 @@ mod portolan_tests {
     /// THE LADDER'S ENDS. Both are saturations of one number now — there is
     /// no mode to flip at either end, so twenty presses in either direction
     /// must land on the end rung and stay there.
+    ///
+    /// **It walks OUT before it walks in, and that ordering is the test.**
+    /// `Driver::start` opens the session ON [`BAND_B_RUNG`], so a version
+    /// that began with the zoom-ins would assert the ceiling against the
+    /// state it started in — an assertion a gutted `apply_zoom` satisfies
+    /// for free. Descending first makes every assertion below a real result
+    /// of the arm it names: gut the zoom-IN arm and the ceiling assertion
+    /// fails; gut the zoom-OUT arm and the floor assertion fails.
     #[test]
     fn the_ladder_runs_from_the_globe_rung_to_band_b_and_refuses_past_both() {
         let mut d = test_driver();
         d.enter_map();
+        for _ in 0..20 {
+            d.apply(Action::Zoom(-1));
+        }
         for _ in 0..20 {
             d.apply(Action::Zoom(1));
         }
@@ -2149,10 +2170,18 @@ mod portolan_tests {
     /// enforces as `depth - globe_level`. Stated as both numbers because
     /// they differ by one and this is where that discrepancy would be
     /// minted.
+    ///
+    /// **Walks OUT first for the reason the test above states**: the
+    /// session opens on [`BAND_B_RUNG`], so without the descent the climb
+    /// would not have to climb, and the seed `seen` collects would be the
+    /// start state rather than the zoom-IN arm's own answer.
     #[test]
     fn every_rung_of_the_ladder_is_reachable_and_distinct() {
         let mut d = test_driver();
         d.enter_map();
+        for _ in 0..20 {
+            d.apply(Action::Zoom(-1));
+        }
         for _ in 0..20 {
             d.apply(Action::Zoom(1));
         }
