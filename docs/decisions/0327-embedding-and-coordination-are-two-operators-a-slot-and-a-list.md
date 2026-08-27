@@ -16,8 +16,11 @@ They share a structural fact — both are marked at a **boundary**, and that
 marker is what keeps the parser's inverse computable — and nothing else.
 Embedding is a **slot**: `Argument::Clause(Box<Clause>)` and
 `Subject::Clause(Box<Clause>)` hold exactly one nested clause where an
-argument used to go, and every one of `Clause`'s ~89 literal construction
-sites is untouched by it. Coordination is a **list**: `Coordination { clauses:
+argument used to go, and every one of `Clause`'s 61 literal construction
+sites (`git grep -c 'Clause {' -- '*.rs'` at this decision's base commit: 65
+raw hits, minus the struct's own definition and three `-> Clause {`
+return-signature false positives) is untouched by it. Coordination is a
+**list**: `Coordination { clauses:
 Vec<Clause> }` arrives **above** `Clause` as an additive node, so
 `realize_common(&Clause)` keeps its signature and every existing caller is
 unchanged.
@@ -25,15 +28,22 @@ unchanged.
 Conflating them would have meant either forcing a list into the slot
 (`Argument::Clause` holding a `Vec`, which breaks the one-clause-per-argument
 shape §4.1 relies on) or forcing a slot reading onto the list (treating
-`Coordination` as a `Clause` field, which reintroduces exactly the 65-vs-89
-site-count argument decision 0326's sibling avoided for the object slot).
+`Coordination` as a `Clause` field, which reintroduces exactly the
+raw-vs-adjusted site-count confusion decision 0326's sibling avoided for the
+object slot — a naive `grep -c 'Clause {'` over this tree returns 65, not
+the 61 genuine construction sites, because it also counts the struct's own
+definition and its return-signature false positives).
 
 ## What ships instead
 
 `Argument::Clause` / `Subject::Clause` for embedding; `Coordination` as an
-independent public type with its own realize/parse entry points
+independent public type with its own realize entry points
 (`realize_common_coordination`, `realize_tongue_coordination`,
-`realize_tongue_deep_coordination`) for coordination. Both share the same
+`realize_tongue_deep_coordination`) for coordination — no parse entry
+point; recovering a `Coordination` back out of its own realized text is not
+attempted (the success criterion asks the parser to round-trip embedding and
+*distinguish* the two operators by their marker, not to recover a
+coordinated structure). Both share the same
 boundary-marking discipline: a complementizer marks *a clause hangs below
 here*; a conjunction marks *a clause sits beside here*. The parser's
 discriminator — coordination or embedding — falls directly out of which

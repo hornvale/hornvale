@@ -62,15 +62,25 @@ command — never to a re-read.
    only because the implementer was told to re-derive the claim rather than
    trust it — the one instruction in the dispatch that turned a
    would-be-red-workspace into a caught, fixed defect before landing.
-3. **Three different answers to one counting question.** How many
-   `TongueGrammar {` construction sites exist: the controller said 25, the
-   implementer said 21, the reviewer said 22 and showed its derivation. This
-   is `grep -c 'Type {'` counting the type's own definition and its
+3. **Three different answers to one counting question, and the one with a
+   derivation attached was ALSO wrong.** How many `TongueGrammar {`
+   construction sites exist: the controller said 25, the implementer said
+   21, the reviewer said 22 and showed its derivation — and the controller
+   recorded 22 as authoritative precisely because it came with working
+   shown. Re-derived directly against the tree at `0c59434df`: `git grep -c
+   'TongueGrammar {' -- domains/language/src/grammar.rs` returns 25 raw
+   hits; subtracting the type's own `pub struct TongueGrammar {` definition
+   (1) and its three `-> TongueGrammar {` return-signature false positives
+   (`tongue_grammar`, `overt_copula_grammar`, `svo_with_copula`) leaves
+   **21** — the implementer's number, not the reviewer's. The sharper
+   lesson isn't "prefer the count with a derivation attached" — it's that **a
+   reviewer's derivation is unaudited text too**: the reviewer's own
+   subtraction undercounted the return-signature false positives by one,
+   and nothing re-ran it before the controller filed 22 as settled. This is
+   `grep -c 'Type {'` counting the type's own definition and its
    `-> Type {` return-signature false positives — the same trap that produced
    three wrong figures in The Scarf — firing three separate times on one
-   question in one task. Only the number with a derivation attached was
-   trustworthy; the other two were confident and wrong in different
-   directions.
+   question in one task, and a fourth time on the fix that corrected it.
 4. **A `make rebaseline` step that could not see byte-goldens.** Task 2's plan
    said to run `make rebaseline` and the drift check after registering a
    concept. Neither can see a byte-golden — that path is `make

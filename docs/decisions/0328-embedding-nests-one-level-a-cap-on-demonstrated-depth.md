@@ -46,4 +46,9 @@ independently-tuned ones.
 **Raising the cap later is additive and costs no epoch.** `CLAUSE_EMBED_MAX_DEPTH`
 is a plain `usize`, not a save-format contract — nothing about it is
 serialized. A future campaign that demonstrates a real two-level need changes
-one constant and extends the two call sites that already read it.
+one constant and extends the seven call sites that already read it (`git grep
+-c 'CLAUSE_EMBED_MAX_DEPTH' domains/language/src/*.rs`, comparison
+expressions only: the object- and subject-embedding arms of both
+`realize_common` and the floor tongue realizer, the deep realizer's own
+object and subject arms, and the parser's recursion guard) — two *budgets*
+(object slot, subject slot), not two call sites.

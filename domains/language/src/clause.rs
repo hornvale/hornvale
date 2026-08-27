@@ -244,9 +244,12 @@ pub(crate) fn subject_embed_depth(subject: &Subject) -> usize {
 /// How deep a clause complement may nest before [`realize_common`] refuses
 /// it. States demonstrated depth, not a stack-safety belt — see
 /// [`Argument::Clause`]'s doc for why `1` is not a placeholder waiting to
-/// grow. Every later embedding site (a clause-carrying subject, a
-/// coordinated clause) reads this same constant rather than stating its own
-/// number, so raising the cap later is a one-line change here.
+/// grow. Every later clause-EMBEDDING site (a clause-carrying object, a
+/// clause-carrying subject) reads this same constant rather than stating
+/// its own number, so raising the cap later is a one-line change here.
+/// **[`Coordination`] does not** — it sits above a clause rather than
+/// inside one, so it carries no depth cap of its own; see that type's own
+/// doc for why the two operators diverge on this axis.
 /// type-audit: bare-ok(count)
 pub const CLAUSE_EMBED_MAX_DEPTH: usize = 1;
 
@@ -1100,18 +1103,6 @@ pub struct Coordination {
     pub clauses: Vec<Clause>,
 }
 
-/// Realize a [`Coordination`] as a Common (≈ limited English) sentence: each
-/// clause realizes through [`realize_common_with_subject`], trimmed of its
-/// own trailing full stop, then joined with `"and"` — Common's own
-/// coordinating conjunction, on the same footing every other Common surface
-/// choice is (this register's fixed vocabulary, not a drawn value; only a
-/// TONGUE's conjunction is drawn, see
-/// [`crate::grammar::realize_tongue_coordination`]) — and the whole
-/// sentence takes exactly one trailing period, on the identical
-/// "realize whole and trim" discipline [`realize_common`]'s own
-/// `Argument::Clause`/`Subject::Clause` arms already use for a nested
-/// clause.
-///
 /// Which coordinated clauses elide their subject (The Mortise, Task 7 fix
 /// round 1): index `i` is `true` when clause `i`'s `(subject, number)`
 /// matches whatever subject was last **stated** on the surface — not
@@ -1179,6 +1170,18 @@ pub(crate) fn elide_coordinated_subjects(clauses: &[Clause]) -> Vec<bool> {
     elisions
 }
 
+/// Realize a [`Coordination`] as a Common (≈ limited English) sentence: each
+/// clause realizes through [`realize_common_with_subject`], trimmed of its
+/// own trailing full stop, then joined with `"and"` — Common's own
+/// coordinating conjunction, on the same footing every other Common surface
+/// choice is (this register's fixed vocabulary, not a drawn value; only a
+/// TONGUE's conjunction is drawn, see
+/// [`crate::grammar::realize_tongue_coordination`]) — and the whole
+/// sentence takes exactly one trailing period, on the identical
+/// "realize whole and trim" discipline [`realize_common`]'s own
+/// `Argument::Clause`/`Subject::Clause` arms already use for a nested
+/// clause.
+///
 /// **Tier 2: a clause whose subject matches the last STATED subject (see
 /// [`elide_coordinated_subjects`] for exactly what "last stated" means and
 /// why it is not "the first clause") is realized WITHOUT its subject
@@ -1482,6 +1485,44 @@ pub fn parse_common_with_tail(
     parse_clause_body(body, ctx, 0)
 }
 
+/// Resolve the `Number` of a clause whose object recursed into an
+/// [`Argument::Clause`], where — unlike the non-embedded path just below —
+/// there is no complement surface to disambiguate a syncretic verb-group
+/// form. Two independent signals are tried, and the number is returned only
+/// when one of them is unambiguous:
+///
+/// 1. **The verb group itself.** `numbers` is the same candidate set
+///    [`parse_clause_body`]'s non-embedded path already computes (every
+///    `Number` a matched form is consistent with) — present tense is
+///    injective (`"knows"` vs `"know"`), so this alone already resolves it
+///    for a present-tense matrix clause.
+/// 2. **The subject's own pronoun row.** [`PRONOUN_PARADIGM`]'s nominative
+///    forms are not uniformly ambiguous: `"I"`/`"we"` name exactly one
+///    `Number` each (English spells first person differently by number),
+///    while `"they"`/`"you"` do not (spec §4.5 reuses `"they"` for third
+///    singular). When the subject text names exactly one row, that row's
+///    number is intersected with `numbers` — never used alone, so a
+///    genuinely inconsistent pairing (which no realizer produces) still
+///    fails closed rather than returning a number the verb group rejects.
+///
+/// `None` when neither signal is unambiguous — the embedding is refused
+/// rather than guessed, matching this task's stop-and-report posture for
+/// anything past the small extension it was sanctioned to build.
+fn resolve_embedded_number(numbers: &[Number], subject_text: &str) -> Option<Number> {
+    if let [n] = numbers {
+        return Some(*n);
+    }
+    let pronoun_rows: Vec<Number> = PRONOUN_PARADIGM
+        .iter()
+        .filter(|(form, _, _, case)| *case == PronounCase::Nominative && *form == subject_text)
+        .map(|(_, _, n, _)| *n)
+        .collect();
+    match pronoun_rows.as_slice() {
+        [n] if numbers.contains(n) => Some(*n),
+        _ => None,
+    }
+}
+
 /// [`parse_common_with_tail`]'s own body (The Mortise, Task 8), now able to
 /// recurse at the point the walk used to give up outright, and taught to
 /// refuse a coordination sentence before ever attempting that recursion.
@@ -1524,44 +1565,6 @@ pub fn parse_common_with_tail(
 /// (including inverting tier 2's elided-subject reattribution,
 /// [`elide_coordinated_subjects`]'s own inverse) is out of this task's
 /// scope, named rather than silently absent.
-/// Resolve the `Number` of a clause whose object recursed into an
-/// [`Argument::Clause`], where — unlike the non-embedded path just below —
-/// there is no complement surface to disambiguate a syncretic verb-group
-/// form. Two independent signals are tried, and the number is returned only
-/// when one of them is unambiguous:
-///
-/// 1. **The verb group itself.** `numbers` is the same candidate set
-///    [`parse_clause_body`]'s non-embedded path already computes (every
-///    `Number` a matched form is consistent with) — present tense is
-///    injective (`"knows"` vs `"know"`), so this alone already resolves it
-///    for a present-tense matrix clause.
-/// 2. **The subject's own pronoun row.** [`PRONOUN_PARADIGM`]'s nominative
-///    forms are not uniformly ambiguous: `"I"`/`"we"` name exactly one
-///    `Number` each (English spells first person differently by number),
-///    while `"they"`/`"you"` do not (spec §4.5 reuses `"they"` for third
-///    singular). When the subject text names exactly one row, that row's
-///    number is intersected with `numbers` — never used alone, so a
-///    genuinely inconsistent pairing (which no realizer produces) still
-///    fails closed rather than returning a number the verb group rejects.
-///
-/// `None` when neither signal is unambiguous — the embedding is refused
-/// rather than guessed, matching this task's stop-and-report posture for
-/// anything past the small extension it was sanctioned to build.
-fn resolve_embedded_number(numbers: &[Number], subject_text: &str) -> Option<Number> {
-    if let [n] = numbers {
-        return Some(*n);
-    }
-    let pronoun_rows: Vec<Number> = PRONOUN_PARADIGM
-        .iter()
-        .filter(|(form, _, _, case)| *case == PronounCase::Nominative && *form == subject_text)
-        .map(|(_, _, n, _)| *n)
-        .collect();
-    match pronoun_rows.as_slice() {
-        [n] if numbers.contains(n) => Some(*n),
-        _ => None,
-    }
-}
-
 fn parse_clause_body(
     body: &str,
     ctx: &ParseContext,

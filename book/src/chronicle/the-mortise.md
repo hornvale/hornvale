@@ -33,15 +33,20 @@ something a whole campaign was just spent protecting.
 **Embedding is a slot.** `Argument::Clause(Box<Clause>)` and
 `Subject::Clause(Box<Clause>)` hold exactly one nested clause where an
 argument used to go. Nothing about `Clause`'s own shape changes, so every one
-of its roughly ninety literal construction sites — the number this campaign
+of its 61 literal construction sites (re-derived directly: `git grep -c
+'Clause {' -- '*.rs'` returns 65 raw hits at the campaign's base commit,
+minus the struct's own `pub struct Clause {` definition and three
+`-> Clause {` return-signature false positives) — the number this campaign
 had to recount twice, because a naive `grep -c 'Clause {'` counts the
 struct's own definition as a construction site, the same trap that produced
 three wrong counts in the previous campaign — is untouched.
 
 **Coordination is a list at a node.** `Coordination { clauses: Vec<Clause> }`
-arrives *above* `Clause`, with its own realize and parse entry points
+arrives *above* `Clause`, with its own realize entry points
 (`realize_common_coordination`, `realize_tongue_coordination`,
-`realize_tongue_deep_coordination`). `realize_common(&Clause)` keeps its
+`realize_tongue_deep_coordination`) — no parse entry point; recovering a
+`Coordination` back out of its own realized text is not attempted at all,
+as this chronicle states further down. `realize_common(&Clause)` keeps its
 signature and every existing caller is unchanged — the coordination node did
 not cost a single edit at any of `Clause`'s construction sites, which is
 exactly what putting the list *above* the type rather than *inside* it buys.
@@ -121,11 +126,24 @@ degenerate the way, say, a marked/unmarked tense pair is. Ratified as
 
 These are the campaign's only two one-way doors: two new permanent stream
 labels, additive, never renamed. Vocabulary itself costs neither — a word is a
-`dynamic(concept)` value on the existing `PROTO_ROOT` axis, so `know` and
-`think` entering every tongue's lexicon moved no stream label at all. The
-asymmetry is real: the exotic tail of this project's vocabulary is
-structurally free, and a function word's mere *presence* is what is
-expensive, because presence is typological rather than lexical.
+`dynamic(concept)` value on the existing `PROTO_ROOT` axis, so `think`
+entering every tongue's lexicon moved no stream label at all. `know` entered
+none: it renders `gap (experiential)` in all 18 rows of the committed
+dictionary, unchanged from base, a deliberate asymmetry
+[`packs::THINK`](../../../domains/language/src/packs.rs)'s own doc states —
+`know`'s exposure gate is a question a prior campaign left unresolved, and
+moving it is out of this one's scope. The asymmetry is real: the exotic tail
+of this project's vocabulary is structurally free, and a function word's mere
+*presence* is what is expensive, because presence is typological rather than
+lexical.
+
+`think` entering the dictionary also moves the Burr's assignment-accuracy
+pin (`windows/lab/tests/burr_calibration.rs`): every one of the 18 daughters
+gains one word, so the readout's denominator grows from 1568 to 1586 and its
+numerator from 1251 to 1266 — `think` classified correctly in 15 of the 18
+tongues. The pin moves from 0.7978316326530612 to 0.798234552332913, a rise
+of 0.00040, re-pinned in the same commit as this campaign's readout, per that
+test's own instruction.
 
 ## The parser follows, and the discriminator falls out for free
 
