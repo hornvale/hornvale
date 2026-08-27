@@ -113,14 +113,14 @@ fn the_pair_opens_and_closes_and_reopens() {
     let holder = s.other_body_entity_for_test();
 
     put(&mut s, body, POSSESSED_BY, Value::Entity(holder));
-    assert_eq!(possessor_of(s.ledger_for_test(), body), Some(holder));
+    assert_eq!(s.possessor(), Some(holder));
 
     put(&mut s, body, POSSESSION_ENDED, Value::Text("released".into()));
-    assert_eq!(possessor_of(s.ledger_for_test(), body), None, "closed");
+    assert_eq!(s.possessor(), None, "closed");
 
     put(&mut s, body, POSSESSED_BY, Value::Entity(holder));
     assert_eq!(
-        possessor_of(s.ledger_for_test(), body),
+        s.possessor(),
         Some(holder),
         "a body may be possessed again after release — this is why the state is \
          a fold and not a single latest value"
@@ -498,17 +498,17 @@ fn the_ooc_seam_opens_and_closes_a_possession() {
     let (world, _ctx) = seed_42();
     let (mut s, _) = Session::start(&world, &PossessOpts::default()).unwrap();
     let body = s.agent_entity();
-    assert_eq!(possessor_of(s.ledger_for_test(), body), None, "starts free");
+    assert_eq!(s.possessor(), None, "starts free");
 
     let _ = s.handle("!possess-me");
     assert!(
-        possessor_of(s.ledger_for_test(), body).is_some(),
+        s.possessor().is_some(),
         "the seam must commit a possessed-by fact"
     );
 
     let _ = s.handle("!release-me");
     assert_eq!(
-        possessor_of(s.ledger_for_test(), body),
+        s.possessor(),
         None,
         "release closes it — the possessor's option, spec section 6"
     );
@@ -521,9 +521,9 @@ fn the_ooc_seam_opens_and_closes_a_possession() {
 fn releasing_a_free_body_commits_nothing() {
     let (world, _ctx) = seed_42();
     let (mut s, _) = Session::start(&world, &PossessOpts::default()).unwrap();
-    let before = s.ledger_for_test().len();
+    let before = s.committed_fact_count();
     let _ = s.handle("!release-me");
-    assert_eq!(s.ledger_for_test().len(), before, "no fact for a no-op release");
+    assert_eq!(s.committed_fact_count(), before, "no fact for a no-op release");
 }
 ```
 
@@ -561,6 +561,28 @@ Implement `Controller` for it by delegating `intend` to `inner`. Add the doc com
 In `handle_ooc`'s match, following the shape of the arms at `:2218+`. The open arm commits a `POSSESSED_BY` fact; the close arm commits a `POSSESSION_ENDED` with `Value::Text("released")`, **guarded** so a no-op release commits nothing — follow `TURNED_HOSTILE`'s idempotence pattern (`session.rs:4136`), which guards on `Ledger::value_of` rather than a separate dedup flag.
 
 The `possessed-by` object needs an entity to name as the holder. Use another body from the roster; if none is available in a given world, refuse with a legible reason rather than panicking (decision 0007: a refusal fails loudly).
+
+
+**TWO THINGS TASK 1 LEARNED THAT BIND YOU.**
+
+**(a) `Session::possessor()` is the public read** — Task 1 added it. There is no
+public ledger accessor and you must not add one. `Session::committed_fact_count()`
+(`:1646`) is `ledger.len()` for the no-op assertion.
+
+**(b) COMMITTING AN IDENTICAL `Fact` TWICE IS A SILENT NO-OP.** `Ledger::commit`
+narrows via `FactIndex::contains_full`, which does full `Fact` equality *including
+`provenance`*. So a release-then-repossess whose second `possessed-by` matches the
+first in every field — same subject, predicate, object, `place: None`, same `day`,
+same provenance — **commits nothing at all**, and `possessor_of` correctly returns
+`None` while your verb reports success. Task 1 hit this in a test and it cost it a
+false RED that misdiagnosed a working fold.
+
+Your verbs must therefore make each commit distinguishable. `day: Some(self.day)`
+does it whenever the day has advanced; it does **not** when two verbs run on the
+same day, which is exactly what a test does. Give the provenance strings something
+that varies, and **write a test that possesses, releases, and re-possesses without
+advancing the day** — if that reopen silently no-ops, the bug is live in the verb,
+not just in a fixture.
 
 - [ ] **Step 5: Run the tests**
 
