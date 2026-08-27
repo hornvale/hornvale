@@ -88,7 +88,25 @@ moved="$(git -C "$wt" diff --cached --name-only | wc -l)"
 echo "sluice-census: $moved path(s) moved; delivering on $branch"
 git -C "$wt" diff --cached --stat | sed 's/^/sluice-census:   /'
 
-git -C "$wt" -c user.name="$(git -C "$repo_root" config user.name)" \
+# HV_CENSUS_DELIVERY=1 tells pre-commit's golden-pins guard to stand down for
+# THIS commit only. It is a scoped, named opt-out of ONE check; every other
+# hook check still runs, and the hooks themselves stay installed and armed.
+# The guard compares the census fixture against calibration.rs's pins, and a
+# census refresh moves the fixture BY DEFINITION while the pins can only be
+# re-pinned afterwards by the campaign that owns them. So the guard fires on
+# exactly the commit it must not block, and a delivery branch with desynced
+# pins is the CORRECT output of a census run, not a defect. The chamber runs
+# census-check again when this branch is submitted as a merge, which is where
+# the desync must actually be resolved.
+# core.hooksPath is RELATIVE ('scripts/hooks'), so it resolves inside the
+# worktree — which is checked out at the ref being censused, and therefore
+# carries THAT ref's hooks, not this script's. A census of an older ref would
+# run an older guard and could not honour the escape below however this script
+# is fixed. The delivery commit is an act of the QUEUE, so it runs the queue's
+# own hooks, from the main checkout.
+if ! HV_CENSUS_DELIVERY=1 \
+   git -C "$wt" -c core.hooksPath="$repo_root/scripts/hooks" \
+             -c user.name="$(git -C "$repo_root" config user.name)" \
              -c user.email="$(git -C "$repo_root" config user.email)" \
     commit -q -m "chore(census): regenerate goldens at ${ref:0:12}
 
@@ -97,7 +115,12 @@ the queue rather than by hand. NOT pushed to main: census goldens are what the
 calibration batteries assert against, so they land through the chamber like any
 other change. Submit this branch as an ordinary merge to gate it.
 
-Census wall time: ${elapsed}s."
+Census wall time: ${elapsed}s."; then
+    echo "sluice-census: COMMIT REFUSED — the census ran and its output is NOT delivered." >&2
+    echo "sluice-census: the $moved moved path(s) are staged in $wt; nothing was pushed." >&2
+    echo "sluice-census: this is a hook refusal, not a census failure — read the log above." >&2
+    exit 4
+fi
 if ! git -C "$wt" push -q origin "HEAD:refs/heads/$branch"; then
     echo "sluice-census: PUSH FAILED — the commit exists locally in $wt on a detached HEAD." >&2
     echo "sluice-census: recover it with: git -C $wt push origin HEAD:refs/heads/$branch" >&2

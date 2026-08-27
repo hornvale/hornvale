@@ -112,7 +112,16 @@ fi
 # Guarding both sides is the whole fix: a pin can be falsified by an edit to
 # either operand, so the trigger has to name both operands.
 census_guard_files='windows/lab/tests/suite/calibration\.rs|windows/lab/tests/suite/branches_family_calibration\.rs|windows/lab/tests/suite/gathering_calibration\.rs|tools/census/queries/calibrate/golden-pins\.sql|book/src/laboratory/generated/[^/]+/rows\.csv'
-if git diff --cached --name-only | grep -qE "^(${census_guard_files})$"; then
+if [ -n "${HV_CENSUS_DELIVERY:-}" ]; then
+    # A census delivery commit (scripts/sluice-census.sh) moves the fixture
+    # wholesale and CANNOT carry matching pins: re-pinning is the owning
+    # campaign's judgment call, made after the run, and the delivery branch is
+    # gated as an ordinary merge before it can reach main. This is a scoped,
+    # named opt-out of ONE check, set by one script for one commit — the rest
+    # of this hook still runs.
+    echo "pre-commit: HV_CENSUS_DELIVERY=1 — skipping the golden-pins guard for this census delivery." >&2
+    echo "pre-commit: the pins are EXPECTED to disagree until the owning campaign re-pins them." >&2
+elif git diff --cached --name-only | grep -qE "^(${census_guard_files})$"; then
     echo "pre-commit: a calibration-pin file is staged — running 'make census-check' (~2.5 min; this is the golden-pins.sql tripwire guard)..." >&2
     if ! make census-check; then
         echo "pre-commit: 'make census-check' failed — a calibration test file and" >&2

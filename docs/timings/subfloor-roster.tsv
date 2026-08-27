@@ -1212,6 +1212,7 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_world_with_no_flagged_col
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_columns_are_never_evaluable
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_226_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
@@ -1340,6 +1341,7 @@ hornvale-lab::hornvale_lab$metrics::tests::seed_42_moons_admitted_is_text
 hornvale-lab::hornvale_lab$metrics::tests::seed_42_star_class_is_text
 hornvale-lab::hornvale_lab$metrics::tests::spearman_over_ranks_is_invariant_to_a_positive_rescaling
 hornvale-lab::hornvale_lab$metrics::tests::syllable_count_reads_maximal_vowel_runs
+hornvale-lab::hornvale_lab$metrics::tests::the_analytic_channel_area_matches_the_sampled_one
 hornvale-lab::hornvale_lab$metrics::tests::the_contour_metrics_are_registered_and_full_rung
 hornvale-lab::hornvale_lab$metrics::tests::the_deep_metrics_are_registered
 hornvale-lab::hornvale_lab$metrics::tests::the_eclipse_seasons_metrics_extract_on_seed_42
