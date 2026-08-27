@@ -5,7 +5,7 @@ use crate::action::{Action, Mood};
 use crate::agent::check_species_known;
 use crate::body::Body;
 use crate::clock::{climb_factor, cost_ticks, days_of, mass_for_species};
-use crate::controller::PlayerController;
+use crate::controller::{Controller, ImposedController, PlayerController};
 use crate::gate::{BodyState, Verdict, verdict};
 use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, HomeNavCache,
@@ -4154,32 +4154,77 @@ impl<'w> Session<'w> {
         // The driven body's OWN arbitration (The Hand, Task 5 fix round 1,
         // spec §2.3/§3.3): the SAME `advance_one` every other body's walk
         // just called, in a solo band-of-one walk (`step_one_with_controller`'s
-        // own doc says why it is not folded into `sys.npcs` above), asked
-        // through a FRESH `PlayerController` — nothing queues an action on
-        // it yet, so its intent is unconditionally `Hold`.
+        // own doc says why it is not folded into `sys.npcs` above).
         //
-        // **What actually keeps the ledger clean is the next line, not the
-        // `Hold` (fix round 3, N4): `_driven_facts` is discarded
-        // UNCONDITIONALLY, regardless of what `step_one_with_controller`
-        // returns.** An earlier version of this comment claimed this was
-        // "the commits on `Do`, nothing on `Hold` argument spec §5.2
-        // makes" — checked directly (fix round 2) and that claim is false:
-        // forcing the intent to `Do` here still leaves the ledger untouched,
-        // because the facts never reach `tick()` either way. The player's
-        // verbs (`go`, `drink`, …) are what the body DOES; this walk only
-        // ever supplies what the host WANTS (`self.driven_mode`) — spec
-        // §5.2 is being corrected at Task 8 to say so. Cloned out of
-        // `self.bodies` first: `driven_body()` borrows all of `self`, which
-        // cannot coexist with the `&mut self.mesh_memo`/`&mut
+        // **Which controller answers now depends on possession (The
+        // Coercion, Task 4 fix round).** Free, it is asked through a FRESH
+        // `PlayerController` — nothing queues an action on it yet, so its
+        // intent is unconditionally `Hold`, exactly as before this task.
+        // Possessed, it is asked through an `ImposedController` instead —
+        // semantically correct (a held body should not be asked what the
+        // PLAYER wants), and a REAL swap: `ImposedController::intend`
+        // delegates to `DefaultController`, which returns
+        // `resolution.intent` unchanged rather than forcing `Hold`, so a
+        // possessed body's solo walk actually ACTS on its own arbitration
+        // during `wait` (moves, drinks, rests, eats) instead of sitting
+        // frozen. Constructed fresh every call, same as `PlayerController`
+        // always was — there is no controller state to carry between ticks
+        // for either.
+        //
+        // **What actually keeps the LEDGER clean either way is the next
+        // line, not which controller answered (fix round 3, N4, reconfirmed
+        // by this task): `_driven_facts` is discarded UNCONDITIONALLY,
+        // regardless of what `step_one_with_controller` returns.** An
+        // earlier version of this comment claimed this was "the commits on
+        // `Do`, nothing on `Hold` argument spec §5.2 makes" — checked
+        // directly (fix round 2) and that claim is false: forcing the
+        // intent to `Do` here still leaves the ledger untouched, because the
+        // facts never reach `tick()` either way. The player's verbs (`go`,
+        // `drink`, …) are what the body DOES; this walk only ever supplies
+        // what the host WANTS (`self.driven_mode`) — spec §5.2 is being
+        // corrected at Task 8 to say so.
+        //
+        // **The ledger is inert to this swap; `driven_mode`/`driven_affect`/
+        // `driven_suppressed` are NOT (The Coercion, Task 4 fix round,
+        // checked directly rather than assumed).** Those three are read
+        // back from `st.mode`/`st.affect`/`st.suppressed` on the LAST
+        // `advance_one` iteration of this call, and while each iteration
+        // sets them from that iteration's OWN `resolution` — before
+        // `controller.intend` is even invoked, so intent cannot change what
+        // a single iteration reports — a multi-iteration `wait` (`from` to
+        // `to` spans more than one decision point) lets an ACTING
+        // controller's intent move `st.pos` between iterations, which
+        // changes what the NEXT iteration's `resolution` is a resolution
+        // OF. `Hold` never moves `st.pos` (`HoldStep` only ever advances
+        // `st.day`), so under `PlayerController` every iteration re-judges
+        // the same frozen position and this was never observable; under
+        // `ImposedController` the body can walk to water and drink mid-wait,
+        // which can leave it in a calmer felt state than a position-frozen
+        // walk would have reported. See
+        // `driven_felt_state_can_move_under_an_imposed_controller_during_wait`
+        // for a direct, seed-42 demonstration — this is a real behavioural
+        // consequence for `!ask`'s narration while possessed, not merely an
+        // internal bookkeeping detail, even though no committed fact ever
+        // differs.
+        //
+        // Cloned out of `self.bodies` first: `driven_body()` borrows all of
+        // `self`, which cannot coexist with the `&mut self.mesh_memo`/`&mut
         // self.home_nav_cache` borrows this call needs.
         let driven_npc = self.driven_body().clone();
+        let mut player_controller = PlayerController::new();
+        let mut imposed_controller = ImposedController::new();
+        let driven_controller: &mut dyn Controller = if self.possessor().is_some() {
+            &mut imposed_controller
+        } else {
+            &mut player_controller
+        };
         let (_driven_facts, driven_mode, driven_affect, driven_suppressed) = sys
             .step_one_with_controller(
                 &self.ledger,
                 &driven_npc,
                 &mut self.mesh_memo,
                 &mut self.home_nav_cache,
-                &mut PlayerController::new(),
+                driven_controller,
             );
         self.driven_mode = Some(driven_mode);
         self.driven_affect = Some(driven_affect);
@@ -8166,5 +8211,73 @@ mod tests {
              ordinary one, not trail an empty cost clause"
         );
         assert_eq!(bare_heard, plain_heard, "and land exactly the same concept");
+    }
+
+    /// The Coercion, Task 4 fix round: `ImposedController` is now wired at
+    /// the driven body's own `!wait` walk (`Session::wait`'s call into
+    /// `step_one_with_controller`), selected exactly when the body is
+    /// possessed. That swap is checked directly here rather than assumed
+    /// inert: `PlayerController`'s intent is unconditionally `Hold`, so a
+    /// FREE body's felt state after `!wait` is always read at whatever
+    /// position it started the tick standing in; `ImposedController`
+    /// delegates to `DefaultController`, whose intent is
+    /// `resolution.intent` unchanged, so a POSSESSED body's own solo walk
+    /// can actually act — move, drink, rest, eat — within the very same
+    /// tick, landing in a felt state a frozen walk could not have reached.
+    ///
+    /// Seed 42, one `!wait 1` from a fresh session, is a reliable
+    /// discriminator: the free body reads fatigue-pursuing and eager (it has
+    /// not yet had the chance to rest), while the possessed body — free to
+    /// act on its own arbitration under `ImposedController` — has already
+    /// served that need this tick and reads idle and content. Two session
+    /// instances from the same seed, differing only in whether `!possess`
+    /// was called first, is how this isolates the controller swap from
+    /// every other source of variation.
+    ///
+    /// **The ledger stays untouched by this test's own construction**: `!wait`
+    /// (`Session::wait`) discards the driven body's own facts unconditionally
+    /// regardless of which controller answered (see that call site's own
+    /// doc), so this test asserts only on the felt-state trio, never on
+    /// `committed_fact_count()` — a ledger assertion here would be asserting
+    /// something this swap was never claimed to change.
+    #[test]
+    fn driven_felt_state_can_move_under_an_imposed_controller_during_wait() {
+        let world = seam_world();
+        let (mut free, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let (mut held, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let _ = held.handle("!possess");
+        assert!(
+            held.possessor().is_some(),
+            "possession must actually be open for this to test the swap at all"
+        );
+
+        let _ = free.handle("!wait 1");
+        let _ = held.handle("!wait 1");
+
+        assert_eq!(
+            free.driven_mode(),
+            Some(Mode::Pursuing(DriveKind::Fatigue)),
+            "seed 42's free body, held to Hold and so frozen at its starting \
+             position, still pursues the fatigue it never got to act on"
+        );
+        assert_eq!(
+            held.driven_mode(),
+            Some(Mode::Idle),
+            "seed 42's possessed body, free to act under ImposedController, \
+             has already served that need this tick and reads idle"
+        );
+        assert_ne!(
+            free.driven_mode(),
+            held.driven_mode(),
+            "the controller swap is a real behavioural difference, not an \
+             identity — PlayerController's forced Hold and \
+             ImposedController's unforced resolution.intent are genuinely \
+             different intents"
+        );
+        assert_ne!(
+            free.driven_affect(),
+            held.driven_affect(),
+            "the felt-state trio ask() draws from moves with the swap too"
+        );
     }
 }
