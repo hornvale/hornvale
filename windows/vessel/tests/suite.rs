@@ -21,6 +21,8 @@ mod common;
 mod action_module;
 #[path = "suite/action_mood.rs"]
 mod action_mood;
+#[path = "suite/affordance.rs"]
+mod affordance;
 #[path = "suite/ask_verb.rs"]
 mod ask_verb;
 #[path = "suite/body_fields.rs"]

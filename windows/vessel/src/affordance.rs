@@ -134,6 +134,92 @@ pub fn object_registry() -> ComponentStore<AnchorKind, ObjectTraits> {
     .collect()
 }
 
+/// A verb an object may advertise to a body — the counterpart to
+/// [`ObjectProperty`]: where a property is what an object HAS, an
+/// `OfferedVerb` is what a body may DO with it, gated by which properties it
+/// requires (spec §3.2/§3.3). Four of five retrofit verbs that already ship
+/// (`Sleep`/`Rest`, `Drink`, `Enter`, `Examine`); `Warm` is the one genuinely
+/// new verb this campaign adds, and spec §6 names it the witness for
+/// acceptance test (2) — it must appear on `Hearth` with no edit to
+/// [`object_registry`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum OfferedVerb {
+    /// Lie down and sleep — gates on `SupportsRest` (spec §3.4:
+    /// body-relative, additive to the existing at-home precondition).
+    Sleep,
+    /// Drink from a source — gates on `HoldsLiquid`.
+    Drink,
+    /// Pass through a seam between rooms — gates on `AffordsPassage`.
+    Enter,
+    /// Look at the object — gates on no property (spec §3.3: universal).
+    Examine,
+    /// Warm oneself at a heat source — gates on `RadiatesHeat`.
+    Warm,
+}
+
+impl OfferedVerb {
+    /// Every verb, one representative each, in declaration order — the
+    /// roster [`offered_by`] sweeps for each kind.
+    pub fn all() -> Vec<OfferedVerb> {
+        vec![
+            OfferedVerb::Sleep,
+            OfferedVerb::Drink,
+            OfferedVerb::Enter,
+            OfferedVerb::Examine,
+            OfferedVerb::Warm,
+        ]
+    }
+
+    /// This verb's surface word, for the four surfaces spec §4 unifies
+    /// (deriving them is a later task; this is the shared source).
+    /// type-audit: bare-ok(identifier-text: return)
+    pub fn word(self) -> &'static str {
+        match self {
+            OfferedVerb::Sleep => "sleep",
+            OfferedVerb::Drink => "drink",
+            OfferedVerb::Enter => "enter",
+            OfferedVerb::Examine => "examine",
+            OfferedVerb::Warm => "warm",
+        }
+    }
+}
+
+/// The properties `v` requires before it is offered. The derived query
+/// (spec §3.2) tests this as a SUBSET of an object's properties, never
+/// equality — an object carrying more properties than `v` needs still
+/// affords it. `Examine` requires the empty set: it is universal (spec
+/// §3.3), and the empty set is a subset of every set, so universality falls
+/// out of the subset relation in [`offered_by`] rather than needing its own
+/// `if`.
+pub fn required_properties(v: OfferedVerb) -> BTreeSet<ObjectProperty> {
+    match v {
+        OfferedVerb::Sleep => [ObjectProperty::SupportsRest].into_iter().collect(),
+        OfferedVerb::Drink => [ObjectProperty::HoldsLiquid].into_iter().collect(),
+        OfferedVerb::Enter => [ObjectProperty::AffordsPassage].into_iter().collect(),
+        OfferedVerb::Examine => BTreeSet::new(),
+        OfferedVerb::Warm => [ObjectProperty::RadiatesHeat].into_iter().collect(),
+    }
+}
+
+/// The verbs `kind` advertises: every verb whose required properties are a
+/// SUBSET of the kind's (spec §3.2). Subset, never equality — see
+/// `extra_properties_do_not_withdraw_an_offer` in the test suite.
+///
+/// A `kind` absent from [`object_registry`] is treated as carrying the empty
+/// property set (`ObjectTraits::default()`), not as offering nothing: eight
+/// of the fourteen `AnchorKind` variants carry no property at all, and
+/// `Examine`'s universality (empty required set ⊆ empty property set) must
+/// hold for them too, or "universal" would silently mean "universal among
+/// the six kinds Task 1 happened to register."
+pub fn offered_by(kind: AnchorKind) -> BTreeSet<OfferedVerb> {
+    let reg = object_registry();
+    let traits = reg.get(&kind).cloned().unwrap_or_default();
+    OfferedVerb::all()
+        .into_iter()
+        .filter(|v| required_properties(*v).is_subset(&traits.properties))
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
