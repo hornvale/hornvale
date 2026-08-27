@@ -31,8 +31,10 @@
 use std::collections::BTreeSet;
 
 use hornvale_kernel::{ConditionResponse, EntityId, Facet, ResourceVector};
+use hornvale_vessel::Knowledge;
 use hornvale_vessel::affordance::{
     ObjectProperty, ObjectTraits, OfferedVerb, object_registry, offered, offered_by, offered_to,
+    offered_to_observer,
 };
 use hornvale_vessel::body::Body;
 use hornvale_vessel::clock::{REFERENCE_MASS_KG, mass_for_species};
@@ -444,4 +446,53 @@ fn body_relativity_never_withdraws_an_existing_capability() {
             );
         }
     }
+}
+
+// --- Task 4: the offer is knowledge-gated (spec §3.5) -------------------
+
+/// A body that has not encountered anything is offered nothing by an
+/// object it would otherwise reach — [`Knowledge::default`] is the empty
+/// store, and `offered_to_observer` must withdraw the whole offer for it.
+///
+/// **The mutation this test must catch, named per the task brief:** make
+/// `offered_to_observer` ignore `known` entirely and delegate straight to
+/// `offered_to`. Without this test that mutation is invisible — see
+/// `an_encountered_object_offers_its_verbs` below for why this direction
+/// alone is not enough either.
+#[test]
+fn an_unencountered_object_offers_nothing() {
+    let body = body_with_mass("human", REFERENCE_MASS_KG);
+    let empty = Knowledge::default();
+    assert!(
+        offered_to_observer(AnchorKind::Hearth, &body, &empty).is_empty(),
+        "a body with no recorded knowledge must be offered nothing"
+    );
+}
+
+/// ...and the same object offers its verbs once a room has been
+/// encountered — asserted as the SPECIFIC set `offered_to` returns, not
+/// mere non-emptiness. `!is_empty()` would be satisfiable by a knowledge
+/// filter that drops verbs arbitrarily, or by one that ignores knowledge
+/// entirely for any object carrying two or more verbs (`Hearth` offers
+/// both `Warm` and `Examine`, so it exercises that risk directly). Without
+/// this direction, `an_unencountered_object_offers_nothing` alone is
+/// satisfiable by a function that always returns the empty set.
+#[test]
+fn an_encountered_object_offers_its_verbs() {
+    let body = body_with_mass("human", REFERENCE_MASS_KG);
+    // A Knowledge store that has recorded a room — the room-granularity
+    // gate `offered_to_observer` actually checks (its own doc explains why
+    // the interface cannot express anchor- or specific-room granularity).
+    // The exact packed id is irrelevant to the gate, which only tests the
+    // key's `room/` prefix; a real one from `IdentityProjection` would
+    // differ only in that string, not in which branch this exercises.
+    let known = Knowledge(std::collections::BTreeMap::from([(
+        "room/1".to_string(),
+        "recorded".to_string(),
+    )]));
+    assert_eq!(
+        offered_to_observer(AnchorKind::Hearth, &body, &known),
+        offered_to(AnchorKind::Hearth, &body),
+        "knowledge of an encountered room must withdraw nothing"
+    );
 }

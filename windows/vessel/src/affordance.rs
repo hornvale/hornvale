@@ -17,6 +17,7 @@
 use crate::body::Body;
 use crate::clock::REFERENCE_MASS_KG;
 use crate::interior::AnchorKind;
+use crate::knowledge::{Knowledge, LOCALE_KEY_PREFIX};
 use hornvale_kernel::ComponentStore;
 use std::collections::BTreeSet;
 
@@ -307,6 +308,85 @@ pub fn offered_to(kind: AnchorKind, body: &Body) -> BTreeSet<OfferedVerb> {
                 .all(|p| body_can_use(*p, body))
         })
         .collect()
+}
+
+/// Whether `known` shows the observer has encountered ANY room — the
+/// coarsest reading the [`Knowledge`] type can honestly support of "has
+/// encountered the anchor's room" (spec §3.5), and the one
+/// [`offered_to_observer`] actually gates on. See that function's doc for
+/// why room granularity, rather than anchor granularity or a specific
+/// room, is what this interface can express at all.
+fn has_encountered_any_room(known: &Knowledge) -> bool {
+    known.0.keys().any(|k| k.starts_with(LOCALE_KEY_PREFIX))
+}
+
+/// The verbs `kind` offers to `body`, gated by whether the observer's
+/// `known` [`Knowledge`] shows it has encountered the anchor's room (spec
+/// §3.5: "the offer passes through the observer's knowledge before it is
+/// rendered"). **This is the seam a lying object will later use** — IV.a
+/// ships truthful advertisement through it and nothing else; do not read
+/// this function as a place to invent deception, and do not delete this
+/// doc comment when a later campaign wires a false `Knowledge` through it.
+///
+/// **Gated at ROOM granularity, not anchor granularity — a narrowing the
+/// TYPE forces, not a simplification of convenience.** [`Knowledge`]'s only
+/// key shapes are `room/<packed FacetId>` (`knowledge.rs`'s
+/// `LOCALE_KEY_PREFIX`) and `settlement/<id>/<field>`; there is no anchor
+/// key, and adding one would fight decision 0069 — `AnchorId` is
+/// positional and never serialized (`interior/anchor.rs`), so any anchor
+/// key would be an unstable index. Nor can this check scope to *one
+/// specific* room: this signature carries no room/`Facet` argument at all
+/// (by the task interface, matching `offered_to`'s own shape), so the only
+/// honest reading available is "has `known` recorded ANY room," via
+/// [`has_encountered_any_room`] — not "has it recorded THIS anchor's
+/// specific room."
+///
+/// **Measured, not assumed: as of this campaign, no live `Session` can ever
+/// present this function with a `known` that fails the gate.**
+/// `Session::new` unconditionally absorbs the CURRENT room's knowledge
+/// before returning (`session.rs`'s `session.absorb_here()?;`, run before
+/// the first turn is ever processed), and `IdentityProjection::project`
+/// writes that knowledge regardless of light or perception — it takes a
+/// `_perception: &PerceptionVector` argument it never reads.
+/// `Session::enter` is reachable only from the outdoor locale the body is
+/// already standing at, and standing there already absorbed that locale
+/// (`self.position()` does not move while descending into a structure, so
+/// every chamber of one structure shares the one `room/<id>` key the
+/// outdoor step already wrote). So by the time any chamber's anchors could
+/// be rendered, `known` already contains that room, and the empty branch
+/// below is unreached in practice today (verified by reading
+/// `Session::new`, `Session::go`/`Session::back`, and `Session::enter` —
+/// none of the four callers of `absorb_here` sits behind chamber entry,
+/// and all four sit in front of it).
+///
+/// **That makes this a seam ahead of its consumer, not yet a live gate** —
+/// the same status `Warm`/`RadiatesHeat` shipped in ahead of a `warm`
+/// dispatcher entry. It starts denying the day knowledge absorption stops
+/// being unconditional (gating on light or perception is `knowledge.rs`'s
+/// own named future direction: "Fog, inference, false belief: The
+/// Vessel's"), or the day a lying object writes a `Knowledge` that omits a
+/// room truthfully known to exist. A future task that wires this directly
+/// against a live `Session::knowledge()` without changing one of those two
+/// things would ship a check that reads as live and is permanently
+/// satisfied — this doc comment is the tripwire for that.
+///
+/// Consumed with synthetic `Knowledge` values (as the tests beside
+/// `offered_to`/`offered_by` already do with synthetic `Body` values),
+/// because that is the only way to observe the deny branch at all today —
+/// not because the deny branch is make-believe: [`Knowledge::default`] is
+/// a real, reachable state of the type, and this function's contract must
+/// hold for it regardless of whether any current caller happens to produce
+/// it.
+pub fn offered_to_observer(
+    kind: AnchorKind,
+    body: &Body,
+    known: &Knowledge,
+) -> BTreeSet<OfferedVerb> {
+    if has_encountered_any_room(known) {
+        offered_to(kind, body)
+    } else {
+        BTreeSet::new()
+    }
 }
 
 #[cfg(test)]
