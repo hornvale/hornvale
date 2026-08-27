@@ -1101,6 +1101,10 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "whether the tongue has articles (floor: drawn but surfaces no article lexeme until the morphology campaign)",
         ),
         (
+            "language/<species>/grammar/subordinator",
+            "whether an embedded clause is marked with an overt complementizer, and (when it is) the complementizer's one-syllable drawn form from the tongue's own phonology — a tongue that draws none subordinates by bare parataxis, a legitimate grammar and not a gap (The Mortise, Task 5, spec §4.6)",
+        ),
+        (
             "language/<species>/grammar/depth/evidential",
             "C7's depth vector: how deeply evidentiality grammaticalizes (None/Particle/Affix, weighted [60,25,15])",
         ),

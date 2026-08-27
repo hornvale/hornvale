@@ -34,6 +34,15 @@ pub const COPULA: StreamLabel<'static> = StreamLabel::from_static("copula");
 /// Article-presence draw, under grammar.
 /// type-audit: bare-ok(identifier-text: return)
 pub const ARTICLES: StreamLabel<'static> = StreamLabel::from_static("articles");
+/// Subordination-strategy (complementizer) presence/form draw, under
+/// grammar (The Mortise, Task 5): whether an embedded clause is marked
+/// with an overt free boundary word, and — when it is — the word's own
+/// drawn form, on the copula's exact pattern (one stream, presence and
+/// form together). A tongue that draws no subordinator marks nothing at
+/// the embedded clause's boundary: bare parataxis is a legitimate grammar,
+/// not a gap (spec §4.6).
+/// type-audit: bare-ok(identifier-text: return)
+pub const SUBORDINATOR: StreamLabel<'static> = StreamLabel::from_static("subordinator");
 /// The numeracy-rung draw, under grammar.
 /// type-audit: bare-ok(identifier-text: return)
 pub const NUMERACY_RUNG: StreamLabel<'static> = StreamLabel::from_static("numeracy-rung");

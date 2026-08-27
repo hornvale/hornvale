@@ -208,7 +208,14 @@ pub enum Argument {
 /// read the SAME budget from two different holes (The Mortise, Task 4), so a
 /// clause bound as a subject counts against it exactly as one bound as an
 /// object does, rather than each slot keeping a depth count of its own.
-fn clause_embed_depth(argument: &Argument) -> usize {
+///
+/// `pub(crate)` (not `pub`, and not private) since Task 5: `grammar.rs`'s
+/// tongue realizer needs the identical depth check `realize_common` already
+/// runs, on the identical budget — a second, hand-duplicated copy would be
+/// exactly the "duplicated rule with no two-way agreement test" shape a
+/// later divergence could rot silently. Widening visibility is the only
+/// change; the function's own behaviour is untouched.
+pub(crate) fn clause_embed_depth(argument: &Argument) -> usize {
     match argument {
         Argument::Clause(inner) => {
             1 + clause_embed_depth(&inner.object).max(subject_embed_depth(&inner.subject))
@@ -221,7 +228,11 @@ fn clause_embed_depth(argument: &Argument) -> usize {
 /// a [`Subject::Clause`], one more than the deeper of that clause's own
 /// object depth and subject depth otherwise. See [`clause_embed_depth`]'s
 /// doc for why the two are mutually recursive and read one shared budget.
-fn subject_embed_depth(subject: &Subject) -> usize {
+///
+/// `pub(crate)` since Task 5, for the same reason [`clause_embed_depth`]
+/// widened: `grammar.rs`'s tongue realizer reads the SAME shared budget for
+/// a clause bound to the subject slot.
+pub(crate) fn subject_embed_depth(subject: &Subject) -> usize {
     match subject {
         Subject::Clause(inner) => {
             1 + clause_embed_depth(&inner.object).max(subject_embed_depth(&inner.subject))

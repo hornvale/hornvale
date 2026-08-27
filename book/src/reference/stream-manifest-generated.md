@@ -101,6 +101,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `language/<species>/grammar/constituent-order` | the tongue's drawn constituent order for predication (SOV/SVO dominant, per authored typological weights) |
 | `language/<species>/grammar/copula` | whether nominal predication carries an overt copula, and (when it does) the copula's one-syllable drawn form from the tongue's own phonology |
 | `language/<species>/grammar/articles` | whether the tongue has articles (floor: drawn but surfaces no article lexeme until the morphology campaign) |
+| `language/<species>/grammar/subordinator` | whether an embedded clause is marked with an overt complementizer, and (when it is) the complementizer's one-syllable drawn form from the tongue's own phonology — a tongue that draws none subordinates by bare parataxis, a legitimate grammar and not a gap (The Mortise, Task 5, spec §4.6) |
 | `language/<species>/grammar/depth/evidential` | C7's depth vector: how deeply evidentiality grammaticalizes (None/Particle/Affix, weighted [60,25,15]) |
 | `language/<species>/grammar/depth/noun-class` | C7's depth vector: how deeply noun class grammaticalizes (None/Particle/Affix, weighted [55,15,30]) |
 | `language/<species>/grammar/class-position` | C7: which side of the noun the class marker binds when noun-class depth is Particle/Affix (prefix 40 / suffix 60) |
