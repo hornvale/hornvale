@@ -363,7 +363,9 @@ fn indefinite_article(word: &str) -> &'static str {
 /// type-audit: bare-ok(prose: Literal.0)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Part {
-    /// The subject slot (a `Subject::Name` or `Subject::Pronoun`).
+    /// The subject slot (a `Subject::Name`, `Subject::Pronoun`, or —
+    /// since The Mortise — `Subject::Clause`, a nested clause bound to
+    /// this position rather than a noun phrase).
     Subject,
     /// The copula, carrying `Clause.tense`, `Clause.number` and
     /// `Clause.polarity` together (`is`/`are`/`was`/`were`, plus `not`) —
@@ -1080,7 +1082,16 @@ fn realize_common_with_subject(
 /// does. A future campaign that wants this to vary per tongue needs its own
 /// stream label and its own draw; this one states the limit rather than
 /// leaving it to be discovered as a silent default.
-/// type-audit: bare-ok(identifier-text)
+///
+/// **Parsing a `Coordination` back out of its own realized text is not
+/// attempted.** [`parse_common_with_tail`] refuses the instant it sees the
+/// top-level `" and "` boundary marker — spec §6's own success criterion
+/// asks only that the parser round-trip embedding and DISTINGUISH the two
+/// operators by that marker, not that it recover a `Coordination`.
+/// Recovering one — including inverting tier 2's elided-subject
+/// reattribution, [`elide_coordinated_subjects`]'s own inverse — is out of
+/// scope, named here rather than left findable only on the private parser
+/// function that enforces it (`parse_clause_body`'s own doc).
 #[derive(Clone, Debug, PartialEq)]
 pub struct Coordination {
     /// The coordinated clauses, in surface order. At least two — a

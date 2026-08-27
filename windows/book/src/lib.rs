@@ -3667,11 +3667,55 @@ mod tests {
              don't delete it"
         );
         assert!(
-            !production.contains("predicate: KNOW") && !production.contains("predicate: THINK"),
+            !contains_bare_identifier(production, "KNOW")
+                && !contains_bare_identifier(production, "THINK"),
             "the Task 10 inertness declaration is stale: a production site now \
              constructs a KNOW/THINK matrix clause — update this test's doc, \
              don't delete it"
         );
+    }
+
+    /// Whether `needle` (a bare `SCREAMING_SNAKE` identifier, e.g. `"KNOW"`)
+    /// appears as a whole-word TOKEN on any non-comment line of `text`.
+    ///
+    /// This closes a hole Task 10's own review found (The Mortise, Task 11):
+    /// the guard above used to check the literal substring `"predicate:
+    /// KNOW"`, which an ordinary fully-qualified reference —
+    /// `hornvale_language::packs::KNOW` — evades without evading the actual
+    /// construction it names. Tokenizing on non-identifier characters and
+    /// comparing whole tokens catches the qualified path form too, at the
+    /// cost of also catching a token inside CODE that merely happens to be
+    /// named `KNOW` — which does not exist in this module today, and is the
+    /// correct failure direction for a novelty guard (a false alarm is
+    /// cheap; a silent miss is the thing this test exists to prevent).
+    ///
+    /// A line whose trimmed start is `//` (an ordinary comment, a `///` doc
+    /// comment, or a `//!` module comment) is skipped, not scanned: this
+    /// function's own doc comment mentions `KNOW`/`THINK` in prose, and nothing
+    /// about the scanning rule should have to keep such mentions out of the
+    /// tree to stay green.
+    fn contains_bare_identifier(text: &str, needle: &str) -> bool {
+        text.lines().any(|line| {
+            if line.trim_start().starts_with("//") {
+                return false;
+            }
+            let mut token = String::new();
+            let mut hit = false;
+            for ch in line.chars() {
+                if ch.is_alphanumeric() || ch == '_' {
+                    token.push(ch);
+                } else {
+                    if token == needle {
+                        hit = true;
+                    }
+                    token.clear();
+                }
+            }
+            if token == needle {
+                hit = true;
+            }
+            hit
+        })
     }
 
     /// C7 T3's shallow-identity guarantee (plan G4): for every species T2

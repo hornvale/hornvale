@@ -412,6 +412,7 @@
 - [The Reticence](./chronicle/the-reticence.md)
 - [The Scarf](./chronicle/the-scarf.md)
 - [The Inquest](./chronicle/the-inquest.md)
+- [The Mortise](./chronicle/the-mortise.md)
 
 # Appendix: The Frontier
 
