@@ -575,11 +575,23 @@ fn settlements_and_dominants_diversify_on_seed_42() {
     //   counts range 0..16, median 4; seed 42's 1 sits in the bottom sixth
     //   xorn holds ZERO dominant vertices on 24 of 24 seeds
     //
+    // RE-MEASURED 2026-08-27, AFTER THE SOURCES TASK 9'S PER-RUNG SWITCH gave
+    // xorn a real `CHEMOSYNTHATE` weight and a per-rung (not single-deepest-
+    // point) subterranean reading. Both numbers above are now stale; this is
+    // a fresh re-measurement, not the original one re-derived:
+    //
+    //   rust-monster clears the ruler on 13 of 24 seeds (54%)
+    //   counts range 0..13, median 2; seed 42's 1 still sits below the ruler
+    //   xorn clears the ruler on 2 of 24 seeds (21, 23) — no longer zero
+    //
     // So the claim "the pure-MINERAL specialist clears the dominance ruler" is
-    // TRUE of the world and FALSE of seed 42 about a quarter of the time. The
-    // three flips this comment records (1 -> 2 -> 1, across The Tense, C2d and
-    // C2d again) were never evidence about the mechanism; they are one world's
-    // draw wandering across a bar of 2 in a distribution whose median is 4.
+    // TRUE of the world and FALSE of seed 42 about half the time now (was a
+    // quarter). The three flips this comment records (1 -> 2 -> 1, across The
+    // Tense, C2d and C2d again) were never evidence about the mechanism; they
+    // are one world's draw wandering across a bar of 2 in a distribution
+    // whose median SAT AT 4 and now sits AT the bar itself (2) — closer to
+    // the threshold than before, which strengthens rather than weakens the
+    // case for treating this as a reported rate rather than a per-seed gate.
     //
     // That is exactly the shape ratified decision 0097 names — an EXISTENCE
     // CLAIM NEAR ITS THRESHOLD, carrying "a value pin's noise profile with an
@@ -587,7 +599,7 @@ fn settlements_and_dominants_diversify_on_seed_42() {
     // belong in the commit gate at all, but is measured as a rate with a
     // sampling bound. The per-kind assertion is therefore WITHDRAWN rather
     // than flipped a fourth time. It is not relaxed and no threshold is
-    // moved: 18/24 is reported, not asserted, and the follow-up to measure it
+    // moved: 13/24 is reported, not asserted, and the follow-up to measure it
     // properly at census n is filed as `BIO-mineral-dominance-rate`.
     //
     // The STRUCTURAL claims are unaffected and still asserted above (the
@@ -597,15 +609,36 @@ fn settlements_and_dominants_diversify_on_seed_42() {
     // rule for why it should not come back.
     println!("rust-monster dominant vertices at seed 42: {dominant_counts:?}");
 
-    // The xorn half STAYS asserted, and it is a different kind of claim: the
-    // same sweep measures xorn at ZERO dominant vertices on 24 of 24 seeds, so it
-    // is not near any threshold and 0097's rule does not reach it. It was
-    // previously a seed-42 point claim with no measured basis; it now has one.
+    // The xorn half STAYS asserted (for now — see below), but the ORIGINAL
+    // ARGUMENT for keeping it as a hard gate does not fully survive its own
+    // re-measurement. RE-MEASURED 2026-08-27, AFTER THE SOURCES TASK 9: the
+    // same sweep now measures xorn dominant on 2 of 24 seeds (21, 23), not
+    // zero. This is not sampling noise on an unrelated axis — it is the
+    // mechanistically expected fingerprint of the exact change that produced
+    // it: xorn's suitability was previously "climate-indifferent by potency
+    // rather than curve... flat within noise" (see the `habitat_realm_
+    // registry` row's own comment, `domains/species/src/lib.rs`), which is
+    // WHY it could not concentrate anywhere enough to dominate. Task 9
+    // deliberately removed that flatness (xorn's live/surface-forced
+    // suitability ratio moved 1.02 -> 1.697, `deep_realm_rehome.rs`), so a
+    // nonzero dominance rate is exactly what should be expected once the
+    // mechanism producing the old zero is gone.
+    //
+    // So the argument is WEAKENED, not merely renumbered: the assertion below
+    // is no longer backed by "this cannot structurally happen" (0/24), only
+    // by "seed 42 specifically is not one of the ~8% of seeds where it does"
+    // (2/24) — the same fragile near-a-boundary shape decision 0097 exists to
+    // name for rust-monster above, now arguably reaching xorn too. This
+    // report does not withdraw the assertion unilaterally: seed 42 itself is
+    // unaffected and the gate is still green, and whether to downgrade xorn
+    // to a reported rate (matching rust-monster) is a call for whoever reads
+    // this next, not one this comment update makes for them.
     assert!(
         !material_dominants.contains("xorn"),
-        "xorn cleared the dominance ruler ({dominant_counts:?}) — it has held none since \
-         The Deep Realm sharpened rust-monster's curves and left xorn's flat, and it holds \
-         none on any of seeds 0..=23; if this fires, that re-authoring is what to re-read."
+        "xorn cleared the dominance ruler ({dominant_counts:?}) at seed 42 — it held on 2 of \
+         seeds 0..=23 (21, 23) as of the 2026-08-27 re-measurement above, so this gate is \
+         narrower than it looks; if this fires, re-read that re-measurement before assuming a \
+         fresh regression."
     );
 }
 
