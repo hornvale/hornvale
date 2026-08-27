@@ -687,133 +687,156 @@ the cache warm, STOP and report** rather than proceeding to Task 6.
 
 ---
 
-### Task 6: Band B joins the raster ladder, and the sim's renderer moves with it
+### Task 6: Band B joins the raster ladder — the overlay is drawn in `bin`
 
-**The pin at `clients/game/core/tests/chart.rs:180` is KEPT, not retired.** It is
-the only thing that has ever caught a wrong projection here (The Quire:
-"geometrically wrong under seventeen green tests"). Spec H2 is this task.
+**THIS TASK WAS RE-PLANNED 2026-08-27.** Its first version told you to reproject
+`core/chart.rs` and `windows/scene/src/surrounds_ascii.rs` onto the square grid.
+An implementer measured that design **false** rather than building it, and the
+measurement is in spec §5a. The short version: `core` works from the wire's
+*relative* `(bearing_deg, distance_rad)`; the raster works from *absolute*
+Mercator tiles via `floor`; bridging them depends on the observer's **sub-tile
+phase**, which the wire does not carry. Across 200 phases, **best 0 of 31 marks
+misplaced, worst 24, mean 11.5, only 2 of 200 exact.**
 
-**CONTROLLER RULING (pre-flight, binding on this task).** An earlier draft of
-this task said `clients/game/core/src/chart.rs` reprojects terrain onto the
-raster. **It cannot.** `hornvale-game-core` carries NO hornvale crate in its
-dependency graph by design — its own `chart.rs` module doc says so — so it has
-no access to `Facet::containing`, the geosphere or terrain. The task is
-restructured along what each crate can actually reach:
-
-- **`bin/src/plate.rs` draws the band-B TERRAIN raster**, exactly as it already
-  draws C/D/E. `spread::compose` receives a `world_plate` at band B too — the
-  existing `world_plate: Option<&Grid>` parameter already supports this, so no
-  new seam is needed.
-- **`core/src/chart.rs` keeps the PERCEPTION layer** — the 31 packet cells,
-  `here`/marks/NPCs — placed by `bearing_deg`/`distance_rad`, which needs no
-  mesh and is exactly why it works in `core`. Its PROJECTION changes; its data
-  source does not.
-- **`windows/scene/src/surrounds_ascii.rs` makes the SAME projection change**,
-  so the byte pin survives.
-- **The pin at `chart.rs:180` is kept and its subject is UNCHANGED.** It was
-  never a terrain comparison. The Quire's account is that "the simulation drew
-  five dense rows (5 + 7 + 9 + 7 + 3 = 31) and the client drew nine sparse
-  sheared rows" — it pins the PLACEMENT of the packet's 31 cells. Both sides
-  keep placing 31 cells; only the projection moves, and it must move
-  identically on both.
+**The design that works reuses a path that already exists.** Each wire chart
+cell carries a `room` — a packed `FacetId`. `core` cannot use it (no mesh
+access); `bin` can, and **already does**: `driver.rs:1695-1696` is
+`FacetId(real_cell.room).unpack()` then `room.coord()`. So `bin` draws the
+band-B perception layer itself, projecting each cell's facet through the **same**
+`mercator::project` the raster uses — exact by construction, one projection
+rather than two agreeing by coincidence.
 
 **Files:**
-- Modify: `windows/scene/src/surrounds_ascii.rs` (projection only)
-- Modify: `clients/game/core/src/chart.rs` (projection only — perception layer)
-- Modify: `clients/game/core/src/spread.rs` (band B takes a `world_plate`)
-- Modify: `clients/game/bin/src/driver.rs` (`world_plate_for_redraw` supplies band B)
-- Modify: `clients/game/core/tests/fixtures/chart-reference-seed-42.txt` (REGENERATED, never hand-edited)
-- Test: `clients/game/core/tests/chart.rs`, `clients/game/bin/src/driver.rs`
+- Modify: `clients/game/bin/src/plate.rs` — add `draw_perception_layer`
+- Modify: `clients/game/bin/src/driver.rs` — band B gets a plate; the overlay is
+  composed into it; the window is centred (see the ruling below)
+- Modify: `clients/game/core/src/spread.rs` — only if band B needs a `world_plate`
+  routed to it; **`compose` must NOT learn about rungs**
+- Test: `clients/game/bin/src/plate.rs`, `clients/game/bin/src/driver.rs`
+- **NOT MODIFIED: `windows/scene/`, `clients/game/core/src/chart.rs`,
+  `clients/game/core/tests/chart.rs`, `clients/vessel/`.** If you find yourself
+  editing any of those, stop — the whole point of this design is that they do
+  not move.
 
-- [ ] **Step 1: Write the failing test** — the existing
-`the_shape_matches_the_sims_own_ascii_render` IS the byte pin and will fail once
-either side moves. Add one that pins the PROPERTY the stagger was a symptom of:
+**Interfaces:**
+- Consumes: `plate::{draw_terrain_layer, draw_feature_layer}` (Task 4),
+  `TileCache` (Task 5), `hornvale_kernel::FacetId`, `Facet::coord`,
+  `mercator::project`.
+- Produces: `pub(crate) fn draw_perception_layer(dst: &mut Grid, ..)` — takes its
+  bounds from `dst`, like `draw_feature_layer` does, for the reason Task 4's fix
+  round established.
+
+**CONTROLLER RULING — the band-B window origin (the ruling the block asked for).**
+Band B's window origin is `(0, 0)`, which at rung 12 is ~11,800 rows and ~2,200
+columns from the fixture's observer: the arctic corner. A band-B view that shows
+arctic ocean while you stand in a rainforest is not shippable, so **Task 6
+centres band B's window on the observer's own facet.** That is the minimal
+obviously-correct behaviour — the walk view has always had you in the middle of
+it — and `centre_window_on_the_player` already exists as a test helper
+(`driver.rs`), which Task 1's review flagged as needing a size guard when
+promoted to production. Promote it, with the guard.
+
+**Task 7 still owns the general policy**: cursor-anchored zoom, and where
+entering a *coarse* rung lands. This ruling is deliberately narrow — centre band
+B, nothing else.
+
+**RULING 19 IS RETRACTED.** It said `chart::draw` should become a
+here-plus-marks overlay. It cannot: the pin at `core/tests/chart.rs:180` compares
+`chart::draw`'s 31-cell placement against the sim's render, so `draw` cannot
+simultaneously be that placement and a 1–2 glyph overlay. Under this design
+`chart::draw` is untouched and the contradiction never arises. **But its
+underlying concern stands and is now this task's:** the observer's `'@'` and the
+marks must still appear at band B, and `draw_perception_layer` is what paints
+them.
+
+- [ ] **Step 1: Write the failing tests**
 
 ```rust
 #[test]
-fn the_raster_has_no_holes_inside_the_band() {
-    // The old projection was not surjective onto the character grid: one glyph
-    // per mesh cell, gaps between them. A raster asks each CHARACTER cell which
-    // facet contains it, so every cell inside the band's extent is drawn.
-    let c = walk_chart();
-    let mut g = Grid::new(40, 20);
-    chart::draw(&c, &mut g, (0, 0));
-    assert!(cells_within_band_extent(&g).iter().all(|cell| !cell.is_blank()),
-        "the raster left a hole inside the band's extent");
+fn the_perception_overlay_lands_exactly_where_the_raster_puts_that_facet() {
+    // The whole reason this task was re-planned. The overlay resolves each
+    // wire cell's `room` FacetId to a coordinate and projects it through the
+    // SAME mercator::project the raster uses, so agreement is by construction
+    // rather than by arithmetic coincidence. The measured alternative -- a
+    // relative polar offset rounded onto absolute floor'd tiles -- misplaced up
+    // to 24 of 31 marks depending on the observer's sub-tile phase.
+    //
+    // EXACT equality, on every cell. If you find yourself weakening this to
+    // "within one tile", the design has regressed to the one that was rejected.
+    let (drv, cells) = driver_with_a_walk_band_chart();
+    let win = Window { depth: plate::BAND_B_RUNG, .. };
+    let (vw, vh) = plate::virtual_dims(win.depth);
+    let mut checked = 0;
+    for cell in &cells {
+        let facet = FacetId(cell.room).unpack().expect("a wire cell carries a real facet");
+        let coord = facet.coord();
+        let expected = mercator::project(&drv.frame(), coord.latitude, coord.longitude, vw, vh)
+            .expect("a walk-band facet is inside the clamp");
+        let got = drv.perception_square_for(cell).expect("the overlay places every cell");
+        assert_eq!(got, expected, "cell at facet {facet:?} landed off its own terrain");
+        checked += 1;
+    }
+    // Non-vacuity: a band with no cells, or an overlay that placed none, would
+    // pass an empty loop. The fixture's band is 31 cells.
+    assert_eq!(checked, 31, "expected the fixture's full 31-cell band");
 }
-```
 
-Add the assertion the controller ruling requires — that the two layers agree
-about which square a bearing/distance lands in. Without it, marks sit one cell
-off their ground and nothing objects:
-
-```rust
 #[test]
-fn the_perception_overlay_lands_on_the_same_squares_as_the_terrain_raster() {
-    // The terrain raster (bin/plate.rs, mesh-aware) and the perception overlay
-    // (core/chart.rs, wire-only) are drawn by two crates that cannot share
-    // code -- core carries no hornvale crate by design. So the ONE thing that
-    // must agree between them is the projection, and nothing else in the build
-    // checks it: a disagreement puts every mark one square off its ground and
-    // leaves both suites green.
-    let (lat, lon) = a_known_offset_from_the_observer();
-    let from_raster = plate_square_for(lat, lon);
-    let from_overlay = chart_square_for_bearing_distance(bearing_of(lat, lon), distance_of(lat, lon));
-    assert_eq!(from_raster, from_overlay,
-        "the terrain raster and the perception overlay disagree about which square holds {lat},{lon}");
+fn band_b_still_shows_the_observer_and_its_marks() {
+    // Ruling 19's surviving concern. compose's plate selection was either/or,
+    // so handing band B a raster silently removed the ONLY thing that paints
+    // the observer's '@' and the creatures. This is the assertion that would
+    // have caught that.
+    let mut d = test_driver();
+    d.enter_map();
+    let (w, h) = (120u16, 40u16);
+    let plate = d.world_plate_for_redraw(w, h).expect("band B draws a plate");
+    let text = plate.to_plain_text();
+    assert!(text.contains('@'), "band B lost the observer's own position marker");
+    // and the terrain is still under it
+    assert!(text.contains('~') || text.contains('.'), "band B lost its terrain raster");
+}
+
+#[test]
+fn band_b_centres_on_the_observer_not_the_arctic_corner() {
+    // The window origin ruling. Origin (0,0) at rung 12 is ~11,800 rows from
+    // the fixture's observer. Assert the observer's own facet is INSIDE the
+    // drawn window, which is the property that matters and which a hardcoded
+    // expected origin would not survive a mesh change.
+    let mut d = test_driver();
+    d.enter_map();
+    let (w, h) = (120u16, 40u16);
+    let plate = d.world_plate_for_redraw(w, h).expect("band B draws a plate");
+    assert!(plate.to_plain_text().contains('@'),
+        "the observer is outside the band-B window; it was not centred");
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails** — Expected: FAIL, holes present and the two layers disagree.
+Adapt the helper names to the real API — `driver_with_a_walk_band_chart`,
+`perception_square_for` and `frame()` may need writing or may exist under other
+names. **Do not invent an API to make a test compile.**
+
+- [ ] **Step 2: Run to verify each fails.** Expected: FAIL —
+  `draw_perception_layer` does not exist, band B has no plate.
 
 - [ ] **Step 3: Implement.**
+  - `draw_perception_layer(dst, ..)` in `plate.rs`: for each wire chart cell,
+    unpack `room` → `Facet::coord()` → `mercator::project` → `dst.set`. Paint
+    the observer's `'@'` and the dominant mark's glyph. **Do not paint a glyph
+    for an ordinary terrain cell** — the raster underneath already shows the
+    ground, and painting over it would obliterate the layer this campaign built.
+  - `driver.rs`: band B gets a plate (terrain + features + perception), and the
+    window is centred on the observer's facet.
+  - **`world_view()` is NOT deleted.** Its referent survives, changed: band B now
+    has a plate AND a perception overlay AND a sight caption, while coarse rungs
+    have a plate and no overlay. Redefine it honestly — a predicate meaning "is
+    this the walk band" — or split it. Deleting it also deletes
+    `resolve_walk_band` and the walk band's sight caption (7 gate sites, 26
+    `enter_world_view` call sites), which is not this task's business.
 
-**CONTROLLER RULING (pre-dispatch, binding — this is the way this task ships
-broken).** `spread::compose`'s plate selection is currently **either/or**
-(`core/src/spread.rs:185-190`):
+- [ ] **Step 4: Run to verify they pass.** Capture to a file, grep it.
 
-```rust
-match world_plate {
-    Some(world) => blit(world, &mut plate, (0, 0)),
-    None => match &snapshot.spatial {
-        Spatial::Walk { chart } => crate::chart::draw(chart, &mut plate, (0, 0)),
-        ...
-```
-
-So the moment band B is handed a `world_plate`, **`chart::draw` never runs** —
-and `chart::draw` is the only thing that paints `HERE_GLYPH` (`'@'`, the
-observer's own position, `chart.rs:72`) and the marks (NPCs, features,
-`dominant_mark`). A naive implementation therefore ships a band B with **no
-player marker and no creatures**, and no existing test necessarily catches it:
-the plate tests assert terrain, the chart tests assert the chart in isolation.
-
-**So the match becomes a composition, not a choice:** blit the terrain raster,
-then **overlay the perception layer on top of it.**
-
-That forces one more decision, and it is the right one rather than a
-compromise: **once a terrain raster is underneath, the perception overlay draws
-the observer and marks and NEVER terrain glyphs.** `PLACED_GLYPH` (`'+'`,
-`chart.rs:79`, documented as "every other placed lattice cell") exists only
-because the walk view had no terrain vocabulary. It now has one. Painting `'+'`
-over every placed cell would obliterate the raster this campaign built.
-
-`chart.rs`'s own doc calls its coarse vocabulary deliberate and points at the
-22-biome glyph set as "a separate campaign" — this task does not build that
-set, it just stops `'+'` from covering ground the raster already draws.
-
-Concretely: `render_surrounds_ascii` and `chart::draw` change **projection**
-(both keep placing the packet's 31 cells, now onto the square grid);
-`chart::draw` additionally gains the overlay behaviour above; `plate.rs` gains
-band B as a rung it already knows how to draw; `spread::compose` and
-`world_plate_for_redraw` supply the plate at band B; and `world_view()` — the
-derived method Ruling 2 introduced for exactly this moment — loses its referent
-and is deleted, as its own doc comment predicted.
-
-**`surrounds_ascii.rs` and `chart.rs` must move in the SAME commit** — a commit
-where only one has moved leaves the `chart.rs:180` pin red and is not a valid
-stopping point for review.
-
-- [ ] **Step 4: Regenerate the reference fixture**
+- [ ] **Step 5: Regenerate and check drift**
 
 ```bash
 make rebaseline
@@ -821,22 +844,14 @@ git diff --stat -- clients/game/core/tests/fixtures/ book/ docs/
 ```
 
 Branch table, not a prediction:
-- **Only `chart-reference-seed-42.txt` and `docs/audits/` moved** → expected;
-  commit with the code.
-- **A `session-*.json` fixture moved** → expected only if the snapshot's chart
-  changed; inspect and state why in the report.
+- **Nothing moves** → the expected outcome, because no renderer changed. Say so.
+- **`chart-reference-seed-42.txt` moves** → **STOP.** That fixture pins
+  `core/chart.rs`, which this task does not touch. Movement means something
+  reached it that should not have.
 - **Anything under `book/src/domesday/`, `book/src/gallery/`, or an almanac
-  moved** → **STOP.** That is a determinism finding, not a rebaseline.
-
-- [ ] **Step 5: Run the full pin**
-
-Run: `cargo test -p hornvale-game-core --test suite > /tmp/hv-t6.log 2>&1; echo "exit=$?"` then grep.
-Expected: PASS including `the_shape_matches_the_sims_own_ascii_render`.
-**Dispose H2 in the report.**
+  moves** → **STOP.** A determinism finding, not a rebaseline.
 
 - [ ] **Step 6: `cargo fmt --all`, `make gate-commit`, commit**
-
----
 
 ### Task 7: Cursor-anchored zoom, and the rung indicator
 
