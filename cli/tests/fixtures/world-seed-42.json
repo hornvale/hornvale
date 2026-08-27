@@ -1216,6 +1216,12 @@
         "kind": "Terrain",
         "doc": "a biome class"
       },
+      "kill": {
+        "name": "kill",
+        "domain": "language",
+        "kind": "Act",
+        "doc": "to cause to cease living"
+      },
       "killer-whale-kind": {
         "name": "killer-whale-kind",
         "domain": "species",

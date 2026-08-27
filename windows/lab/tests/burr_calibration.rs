@@ -87,7 +87,21 @@ const DICTIONARY: &str = "../../book/src/reference/dictionary-generated.md";
 /// classifier reads. The Burr's thesis (typological stages raise
 /// distinguishability) is untouched. Re-pinned deliberately, per this test's
 /// own instruction. Never tuned.
-const BASELINE: f64 = 0.7980645161290323;
+///
+/// The Inquest (Task 6): 0.7978316326530612. Accuracy **fell** 0.00023 — the
+/// smallest move this pin has ever recorded, and the first one whose cause is
+/// legible as an exact fraction rather than inferred. The campaign registered
+/// `kill` (one concept, universal stratum), so every one of the 18 daughters
+/// gains one word: the readout goes from **1237/1550 to 1251/1568**. The
+/// denominator grew by exactly 18 and the numerator by 14 — `kill` classified
+/// correctly in 14 of the 18 tongues, marginally below the running rate, which
+/// is the whole of the move. **1237/1550 is a subset of the new reading**: not
+/// one pre-existing word changed corpus or classification, which is the same
+/// thing the campaign's three byte-goldens show as zero-deletion diffs. Same
+/// mechanism as The Confidant's entry above, one concept instead of six. The
+/// Burr's thesis (typological stages raise distinguishability) is untouched.
+/// Re-pinned deliberately, per this test's own instruction. Never tuned.
+const BASELINE: f64 = 0.7978316326530612;
 
 /// The chance floor for an 18-way assignment. Reported alongside the baseline
 /// because an accuracy figure without its denominator is not interpretable.

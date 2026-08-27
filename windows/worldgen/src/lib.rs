@@ -117,7 +117,7 @@ pub use chorus::{
     accounts_from, beta_of, chorus_ground, crisis_from, cyclic_beliefs_from, day_schema_from,
     doctrine_beta_of, doctrine_from, doctrine_params_of, doctrines_from, folk_verifiable,
     ladder_from, noun_class_from, noun_class_with_sky, observability_table, observations_from,
-    pathological_params, schema_prior, sky_capability, tongue_morphology_of,
+    pathological_params, schema_prior, sky_capability, tongue_morphology_of, tongue_paradigm_of,
 };
 pub use components::WorldComponents;
 pub use descent::{clan_root_of, forebear_of, founder_of, generation_length_of, name_pattern};

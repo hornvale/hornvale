@@ -490,7 +490,7 @@ missing 1 bundles, so no single row makes anything stageable on its own.
 
 ## Supply
 
-330 registered tokens no situation in this corpus requires.
+331 registered tokens no situation in this corpus requires.
 
 **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires
 *and no readout consumes*; the second half is not implemented. So this list
@@ -589,6 +589,7 @@ missing half before this list can serve it.
 - `concept:island` (terrain)
 - `concept:kelp-canopy` (climate)
 - `concept:kelp-forest` (climate)
+- `concept:kill` (language)
 - `concept:killer-whale-kind` (species)
 - `concept:know` (language)
 - `concept:kobold-kind` (species)
