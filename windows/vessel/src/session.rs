@@ -99,9 +99,9 @@ const SESSION_CONTROL: [&str; 3] = ["release", "quit", "exit"];
 /// `every_bare_verb_help_lists_is_classified` asserts the two agree in **both**
 /// directions: every verb `HELP` lists is in this roster or in
 /// [`SESSION_CONTROL`], and every entry of this roster is listed by `HELP`.
-const IN_CHARACTER_VERBS: [&str; 18] = [
+const IN_CHARACTER_VERBS: [&str; 19] = [
     "ask", "back", "climb", "consult", "delve", "dive", "enter", "examine", "go", "knows", "look",
-    "map", "needs", "out", "sleep", "surface", "wait", "write",
+    "map", "needs", "out", "sleep", "surface", "wait", "warm", "write",
 ];
 
 /// The provenance a walk-band step commits under (The Deed, Task 7).
@@ -381,6 +381,7 @@ verbs:
                    in' goes deeper and 'out' leaves
   out              step back out of doors
   examine <thing>  anything look or the floor plan names
+  warm             warm yourself at a hearth, where one burns
   back             retrace your last step, out of doors
   wait [N]         let N days pass overhead (default 1); the world moves too
   sleep            lie down and sleep; the body stops obeying until its own
@@ -2213,6 +2214,54 @@ impl<'w> Session<'w> {
         Turn::Out(SLEEP_REPLY.to_string())
     }
 
+    /// Warm oneself at a heat source (The Offer, Task 5, spec §3.3/§6): the
+    /// one wholly new verb this campaign adds, and the session-side half of
+    /// acceptance test (2)'s live witness — `warm_appears_on_hearth_with_no_
+    /// object_table_edit` (`tests/suite/affordance.rs`, Task 2) proves the
+    /// QUERY offers `warm` on `Hearth` and not on `Bed`; this method proves
+    /// the VERB actually dispatches, gated the same way every other
+    /// in-character act is.
+    ///
+    /// **Reads only DERIVED interior state, never a committed fact.**
+    /// Whether a hearth burns here is [`Self::chamber_interior_here`]'s own
+    /// anchor catalogue, checked for an [`crate::interior::AnchorKind::Hearth`]
+    /// exactly the way [`Self::chamber_sources`] already checks it for
+    /// light — a per-room DERIVATION, not a ledger read. `Interior` is never
+    /// serialized (decision 0069), so this precondition reads position and
+    /// derived state only, the same property every other `Action`'s
+    /// precondition holds (`action::precondition_reads_committed_state`).
+    /// Standing at a hearth out of doors is impossible in the first
+    /// place — no [`crate::interior::AnchorKind::Hearth`] exists outside a
+    /// chamber's `Interior` — so `self.chamber_interior_here()` returning
+    /// `None` out of doors doubles as that refusal.
+    ///
+    /// **Commits nothing, and mints no `Action` variant.** Warming is not a
+    /// GOAP-planned creature act — no successor in `action.rs`'s search
+    /// spaces ever proposes it — and `dive`/`surface`/`delve`/`climb` beside
+    /// it in [`Self::handle`]'s match are the standing precedent that an
+    /// in-character verb with no authored cost dial stays free rather than
+    /// inventing one (their own doc: minting a tariff here would be "a cost
+    /// model," which this arc does not add). A fifth `Action` variant would
+    /// also break the three-way partition
+    /// `tests/suite/action_mood.rs::every_rostered_action_is_classified`
+    /// asserts over `Action::all()` (creature actions + group A + group B),
+    /// since warm fits none of those three categories — reason enough on its
+    /// own to leave the action layer untouched here. Its effect is narration
+    /// alone: nothing durable changes, on the ledger or on this session,
+    /// which is the IV.a/IV.b line this task was told to stop at.
+    fn warm(&self) -> Turn {
+        let has_hearth = self.chamber_interior_here().is_some_and(|interior| {
+            interior
+                .ids()
+                .iter()
+                .any(|&a| interior.anchor(a).kind == crate::interior::AnchorKind::Hearth)
+        });
+        if !has_hearth {
+            return Turn::Out("There is no fire here to warm yourself at.".to_string());
+        }
+        Turn::Out("You warm yourself at the fire.".to_string())
+    }
+
     /// The out-of-character namespace's own dispatch: every verb reachable
     /// behind a leading `!` (The Deed, spec §2.1/§3.2).
     ///
@@ -2487,6 +2536,15 @@ impl<'w> Session<'w> {
                 "sleep" => self.sleep(rest),
                 "write" => Turn::Out(self.write(rest)),
                 "consult" => Turn::Out(self.consult()),
+                // The one wholly new verb The Offer adds (spec §3.3/§6): the
+                // live witness for acceptance test (2) — `Hearth` offers it
+                // with no edit to `affordance::object_registry`. Free, like
+                // `dive`/`surface`/`delve`/`climb` just below: no authored
+                // cost dial exists for warming oneself, and inventing one
+                // here would be the same "new cost model" spec §3.4 forbids
+                // those four from minting. See `Self::warm`'s own doc for
+                // why it needs no `Action` variant either.
+                "warm" => self.warm(),
                 // THE FOUR VERTICAL BAND CHANGES, AND THE ONE THING THEY DO
                 // NOT DO (fix round 1). Each is an in-character act — the gate
                 // above stands in front of all four — and each still charges
@@ -5682,6 +5740,82 @@ mod tests {
         }
     }
 
+    /// `warm` (The Offer, Task 5, spec §3.3/§6) is the LIVE half of
+    /// acceptance test (2): `warm_appears_on_hearth_with_no_object_table_edit`
+    /// (`tests/suite/affordance.rs`) proves the QUERY offers `warm` on
+    /// `Hearth` and not `Bed`, entirely without a `Session`; this proves the
+    /// VERB actually dispatches and reads only derived interior state.
+    ///
+    /// A freshly-possessed seed-42 session starts out of doors
+    /// (`self.inside` is `None`), where `AnchorKind::Hearth` cannot exist at
+    /// all — there is no chamber `Interior` to carry one — so `warm` must
+    /// refuse for want of a fire.
+    ///
+    /// Mutation this is written to catch: replacing `Self::warm`'s
+    /// `has_hearth` check with an unconditional `true` (which would make
+    /// `warm` always succeed, indoors or out, hearth or none) — this test
+    /// reddens on that mutation while `warm_appears_on_hearth_with_no_
+    /// object_table_edit` stays green, since that test never calls
+    /// `Session::handle` at all. Confirmed by actually applying the
+    /// mutation and re-running (task-5 report carries the transcript).
+    #[test]
+    fn warm_refuses_with_no_hearth_in_reach() {
+        let world = seam_world();
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+        assert!(
+            session.inside.is_none(),
+            "sanity check: a fresh possession starts out of doors"
+        );
+        let out = match session.handle("warm") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("warm must not release: {t}"),
+        };
+        assert!(
+            out.contains("no fire"),
+            "warm out of doors must refuse for lack of a hearth, got: {out}"
+        );
+    }
+
+    /// `warm` is gated by the body like every other in-character verb (spec
+    /// §2.1/§3.2): a sleeping body cannot warm itself any more than it can
+    /// walk. This is the BEHAVIOURAL half of the three-roster proof —
+    /// `every_bare_verb_help_lists_is_classified` catches a roster drift
+    /// structurally (by scanning `HELP`/`IN_CHARACTER_VERBS`); this drives an
+    /// actual sleeping body at `warm` and checks the refusal itself.
+    ///
+    /// Mutation this is written to catch: dropping `"warm"` from
+    /// [`IN_CHARACTER_VERBS`] while leaving its dispatch arm in
+    /// [`Session::handle`]'s match — exactly the "ungated new verb" hazard
+    /// that roster's own doc warns about. Confirmed by actually removing the
+    /// entry, re-running (this test reddened, asserting
+    /// `warmed != "You cannot — you are asleep."` since the dispatch ran
+    /// unrefused), and restoring it (task-5 report carries the transcript).
+    #[test]
+    fn warm_is_refused_while_asleep() {
+        let world = seam_world();
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+        let slept = match session.handle("sleep") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("sleep must not release: {t}"),
+        };
+        assert!(
+            !slept.starts_with("No verb"),
+            "`sleep` must be a verb for this test to mean anything: {slept}"
+        );
+        assert_eq!(
+            session.body_state(),
+            BodyState::Asleep,
+            "sanity check: asleep alone must gate as asleep"
+        );
+        let warmed = match session.handle("warm") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("warm must not release: {t}"),
+        };
+        assert_eq!(warmed, "You cannot — you are asleep.");
+    }
+
     /// H2. Every one of the eight compass points moves the possession from a
     /// walk-band room. This is the campaign's central claim and the whole of
     /// the availability half of the defect.
@@ -8294,11 +8428,11 @@ mod tests {
     /// that fact today regardless of what a player types. The conclusion
     /// rests on that; the loop below corroborates it over a roster.
     ///
-    /// **WHAT THIS FIXTURE ACTUALLY EXERCISES IS 12 OF THE 30, NOT 30 —
+    /// **WHAT THIS FIXTURE ACTUALLY EXERCISES IS 12 OF THE 31, NOT 31 —
     /// state that plainly rather than let the roster count imply
     /// otherwise.** Every verb here runs against a session that has just
     /// been `!possess`ed, and a possessed body is exactly what
-    /// `gated_by_the_body` refuses in front of: all 18
+    /// `gated_by_the_body` refuses in front of: all 19
     /// [`IN_CHARACTER_VERBS`] are turned away by the body-state gate BEFORE
     /// their handlers run, so only the 3 [`SESSION_CONTROL`] verbs and the
     /// 9 Group-A operator instruments below reach any dispatch arm at all.
@@ -8308,7 +8442,11 @@ mod tests {
     /// of this exact loop, counting lines whose output carries the gate's own
     /// refusal ("another will holds this body"), reported `roster=30
     /// gate-refused=18` — `ask back climb consult delve dive enter examine go
-    /// knows look map needs out sleep surface wait write`.
+    /// knows look map needs out sleep surface wait write` (The Offer, Task 5,
+    /// added `warm` to [`IN_CHARACTER_VERBS`] afterwards; the count above is
+    /// re-derived arithmetically from that measurement — same 12 ungated
+    /// verbs, one more gated one, 18→19→31 — rather than re-run, since
+    /// `gated_by_the_body`'s own logic is untouched by this addition).
     ///
     /// **So this is a weak tripwire, not the tripwire that turns red the
     /// day mortality ships.** If a death terminator ever arrives through an
@@ -8321,14 +8459,14 @@ mod tests {
     ///
     /// The stated denominator (spec §7's own requirement): the full shipped
     /// verb roster this file itself classifies is the SUM of three groups —
-    /// [`IN_CHARACTER_VERBS`] (18), [`SESSION_CONTROL`] (3:
-    /// `release`/`quit`/`exit`), and the nine out-of-character-ONLY operator
-    /// instruments `handle_ooc`'s Group A dispatches
-    /// (`why`/`npcs`/`help`/`eyes`/`whoami`/`provoke`/`soothe`/`possess`/
-    /// `unpossess`) — **30** total. Group B's six `!`-twins
+    /// [`IN_CHARACTER_VERBS`] (19, since The Offer's Task 5 added `warm`),
+    /// [`SESSION_CONTROL`] (3: `release`/`quit`/`exit`), and the nine
+    /// out-of-character-ONLY operator instruments `handle_ooc`'s Group A
+    /// dispatches (`why`/`npcs`/`help`/`eyes`/`whoami`/`provoke`/`soothe`/
+    /// `possess`/`unpossess`) — **31** total. Group B's six `!`-twins
     /// (`!map`/`!examine`/`!needs`/`!wait`/`!look`/`!knows`) are deliberately
     /// NOT counted a second time — [`HELP`]'s own text calls them "the
-    /// out-of-character halves" of verbs already among the 18: the same verb
+    /// out-of-character halves" of verbs already among the 19: the same verb
     /// under the other mood, not a distinct one.
     ///
     /// Each verb runs against its OWN fresh, freshly-possessed session
@@ -8342,7 +8480,7 @@ mod tests {
     /// argument to make it succeed: since no dispatch arm anywhere
     /// constructs the string `"died"` regardless of input, a bare
     /// invocation already covers the whole surface this loop can reach —
-    /// which, per the paragraph above, is the 12 ungated verbs, not the 30
+    /// which, per the paragraph above, is the 12 ungated verbs, not the 31
     /// the roster names.
     #[test]
     fn h2_no_shipped_verb_can_end_a_possession_by_death() {
@@ -8365,11 +8503,11 @@ mod tests {
             .collect();
         assert_eq!(
             roster.len(),
-            30,
-            "the stated denominator: 18 IN_CHARACTER_VERBS + 3 SESSION_CONTROL \
+            31,
+            "the stated denominator: 19 IN_CHARACTER_VERBS + 3 SESSION_CONTROL \
              + 9 Group-A operator instruments the OOC namespace alone \
              dispatches. This pins the ROSTER's size, NOT the exercised \
-             population: under a possessed body the gate refuses all 18 \
+             population: under a possessed body the gate refuses all 19 \
              in-character verbs, so 12 reach a dispatch arm — see this \
              test's doc comment"
         );

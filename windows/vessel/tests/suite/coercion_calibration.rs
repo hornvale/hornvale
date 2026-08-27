@@ -8,8 +8,9 @@
 //! own lines 5-6). The other three do not fit this file:
 //!
 //! - H2 needs [`IN_CHARACTER_VERBS`](hornvale_vessel), which is **not**
-//!   `pub` (`session.rs:102`, an 18-element array) — it lives in-module in
-//!   `session.rs`'s own `#[cfg(test)] mod tests` instead.
+//!   `pub` (`session.rs:102`, a 19-element array since The Offer's Task 5
+//!   added `warm`) — it lives in-module in `session.rs`'s own
+//!   `#[cfg(test)] mod tests` instead.
 //! - H3 and H4 both need `DriveMovements::step_one_with_controller`, which
 //!   is `pub(crate)` — both live in-module in `liveness.rs`'s own test
 //!   module, beside the existing controller-comparison test their shape
