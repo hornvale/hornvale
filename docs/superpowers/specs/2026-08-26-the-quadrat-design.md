@@ -251,8 +251,14 @@ Three changes:
 
    So the guarantee is delivered by **`strip_sgr` in `entry.rs`, applied per line
    BEFORE the width is measured** — the ordering is load-bearing, because an
-   escaped row costs ~19 bytes per glyph and measuring first would clip a
-   *fitting* picture down to its opening escape bytes.
+   escaped row costs **17-23 bytes per glyph** (`len("\x1b[38;2;r;g;bm") + 4`;
+   exactly 22 for a realistic tint) and measuring first would clip a *fitting*
+   picture down to its opening escape bytes. (An earlier revision of this line
+   said "~19", repeated from the implementer's report without checking — below
+   the range's floor for any realistic tint. The ordering argument does not
+   depend on the figure, since any positive overhead makes an escaped row
+   measure over-wide, but the number was wrong and is corrected rather than
+   quietly left.)
 
    **The proper follow-up is a per-call chart lens on the sim side** — additive,
    moves no byte, but it touches 17 exhaustive `PossessOpts` constructions, which
