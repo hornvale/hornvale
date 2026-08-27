@@ -474,11 +474,19 @@ fn the_objective_wait_narrates_a_departure_the_body_could_not_see() {
     // than searched for (see docs/retrospectives/the-hand.md). A SETTLED companion
     // (`bodies()[1]`/`[2]`) placed at the flagship simply stays there —
     // measured: ten waits, never departs, because the flagship itself
-    // satisfies its needs. A WILD one (`bodies()[3]`, "a wild rust-monster"
-    // at seed 42) reliably leaves on the very next tick once placed, which
-    // is what this discriminator needs: present-but-unsensed, THEN gone.
+    // satisfies its needs. A WILD one ("a wild rust-monster" at seed 42)
+    // reliably leaves on the very next tick once placed, which is what this
+    // discriminator needs: present-but-unsensed, THEN gone.
+    //
+    // THE SOURCES, Task 9 moved which INDEX that creature sits at (not
+    // whether it departs): xorn's per-rung `CHEMOSYNTHATE` weight changed
+    // suitability/ordering at seed 42, so `bodies()[3]` is now "a wild xorn"
+    // — which, re-measured, does NOT reliably depart on the next tick the
+    // way rust-monster does. `bodies()[4]` is "a wild rust-monster" now;
+    // the index moved with the reorder, the property this test needs did
+    // not.
     let w = world();
-    let wild_idx = 3;
+    let wild_idx = 4;
 
     let (mut s, _) = Session::start(&w, &PossessOpts::default()).unwrap();
     s.handle("wait");

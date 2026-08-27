@@ -1500,6 +1500,16 @@ pub fn per_species_suitability_masked(
     // water table, porosity) into `subterranean_substrate_field` so this call
     // site and `per_species_capacity_at`'s cannot derive them differently.
     let subterranean = subterranean_substrate_field(geo, terrain, &substrate);
+    // MAP-per-rung-substrate, Task 9: the per-rung siblings of `subterranean`
+    // above — hoisted the same way, so every species' dot product shares one
+    // derivation and the two fields cannot disagree about which rungs a
+    // chamber has or read a different depth/moisture at one it does (see
+    // each function's own doc comment). `subterranean` itself is KEPT, not
+    // replaced: a cave-less vertex's `Subterranean` reading still falls back
+    // to it below, multiplied by `availability = 0.0`, exactly as before.
+    let subterranean_per_rung = subterranean_substrate_field_per_rung(geo, terrain, &substrate);
+    let chemosynthate_per_rung =
+        energy::subterranean_energy_field_per_rung(geo, terrain, &substrate);
     // The Demesne/T2: per-axis supply fields, hoisted out of the per-species
     // loop below — each is a pure function of terrain/climate, built once
     // and shared by every species' dot product.
@@ -1531,53 +1541,90 @@ pub fn per_species_suitability_masked(
                 .copied()
                 .unwrap_or(hornvale_species::HabitatRealm::SURFACE);
             let k = hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
-                // The Warren: which realm's substrate this kind is scored
-                // against, and — for a subterranean kind only — whether the
-                // vertex actually holds a cave at all. A `Surface` kind's
-                // arithmetic is UNTOUCHED: same field, same reading, and the
-                // `availability` factor below is exactly 1.0, an IEEE-754
-                // no-op (verified over the roster's real values, bit-
-                // difference 0).
-                let (s, availability) = match realm {
-                    hornvale_species::HabitatRealm::Surface => (substrate.get(vertex), 1.0),
-                    hornvale_species::HabitatRealm::Subterranean => (
-                        subterranean.get(vertex),
-                        if terrain.cave_at(vertex).is_some() {
-                            1.0
-                        } else {
-                            0.0
-                        },
-                    ),
-                };
-                // Rank-restored supply via the extracted helper: the axis
-                // dot product, not the old summed-uptake scalar.
                 use hornvale_kernel::{
                     ANIMAL_PREY, CHEMOSYNTHATE, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE,
                     PLANT_FORAGE,
                 };
-                // ORDER IS LOAD-BEARING: it must equal `SUPPLY_AXIS_ORDER`, so
-                // that entry i's weight is the hoisted `niche_weights[i]`.
+                // `score_at`: the axis dot product plus Liebig tolerance at
+                // ONE place — the single surface reading (`Surface` kinds)
+                // or one rung of the delve ladder (`Subterranean` kinds,
+                // MAP-per-rung-substrate). `availability` and `affinity` are
+                // applied by the caller below, never in here, because both
+                // are RUNG-INDEPENDENT (see the long comment below this
+                // closure on why each sits outside the Liebig minimum) —
+                // folding either in here would multiply it in once per rung
+                // instead of once per vertex.
+                //
+                // ORDER IS LOAD-BEARING: it must equal `SUPPLY_AXIS_ORDER`,
+                // so that entry i's weight is the hoisted `niche_weights[i]`.
                 // `the_supply_axis_order_matches_both_capacity_loops` pins it.
-                let per_axis = [
-                    (PHOTOSYNTHATE, base_carrying.at(vertex)),
-                    (PLANT_FORAGE, *forage.get(vertex)),
-                    (MINERAL, *mineral.get(vertex)),
-                    (DETRITUS, *detritus.get(vertex)),
-                    (ANIMAL_PREY, *prey.get(vertex)),
-                    (MARINE_FORAGE, *marine.get(vertex)),
-                    // Supply is 0.0 everywhere until a later task wires the
-                    // real field — an exact IEEE-754 no-op (`x + 0.0 == x`),
-                    // so this entry moves no world number.
-                    (CHEMOSYNTHATE, 0.0),
-                ];
-                let supply = axis_supply_with(&niche_weights, &per_axis);
-                // THIS LINE IS WHERE THE MAGNITUDE GOES (decision 0103 §4).
-                // Michaelis-Menten saturation maps a supply magnitude onto
-                // `[0, 1)`, so everything below is a *dimensionless suitability*
-                // and NOT a capacity — which is what this function is for. The
-                // dimensional counterpart, with headcount units, is
-                // [`per_species_capacity`].
-                let saturated = supply / (1.0 + supply);
+                let score_at = |s: &Substrate, chemosynthate: f64| -> f64 {
+                    let per_axis = [
+                        (PHOTOSYNTHATE, base_carrying.at(vertex)),
+                        (PLANT_FORAGE, *forage.get(vertex)),
+                        (MINERAL, *mineral.get(vertex)),
+                        (DETRITUS, *detritus.get(vertex)),
+                        (ANIMAL_PREY, *prey.get(vertex)),
+                        (MARINE_FORAGE, *marine.get(vertex)),
+                        (CHEMOSYNTHATE, chemosynthate),
+                    ];
+                    let supply = axis_supply_with(&niche_weights, &per_axis);
+                    // THIS LINE IS WHERE THE MAGNITUDE GOES (decision 0103
+                    // §4). Michaelis-Menten saturation maps a supply
+                    // magnitude onto `[0, 1)`, so everything below is a
+                    // *dimensionless suitability* and NOT a capacity — which
+                    // is what this function is for. The dimensional
+                    // counterpart, with headcount units, is
+                    // [`per_species_capacity`].
+                    let saturated = supply / (1.0 + supply);
+                    saturated * tolerance_liebig(cn, s, floor_buf)
+                };
+                // The Warren: which realm's substrate this kind is scored
+                // against, and — for a `Subterranean` kind — the BEST rung
+                // of the delve ladder (MAP-per-rung-substrate, Task 9): `max`
+                // over the column's rungs of the WHOLE per-rung score, never
+                // a per-axis max (which would assemble a chimeric place
+                // existing at no rung) and never a mean (which would let a
+                // column of five hostile rungs and one outstanding one lose to
+                // a uniformly mediocre column) — the same rung-per-candidate
+                // logic `delve_seating::seat_at` already assumes. A
+                // `Surface` kind's arithmetic is UNTOUCHED: same field, same
+                // single reading, and `availability` below is exactly 1.0,
+                // an IEEE-754 no-op (verified over the roster's real values,
+                // bit-difference 0).
+                let (best, availability) = match realm {
+                    hornvale_species::HabitatRealm::Surface => {
+                        (score_at(substrate.get(vertex), 0.0), 1.0)
+                    }
+                    hornvale_species::HabitatRealm::Subterranean => {
+                        // Both per-rung fields share one gate
+                        // (`terrain.cave_at`), so their `Some`/`None` slots
+                        // align rung for rung (see each field's own doc
+                        // comment) — a vertex with no cave contributes no
+                        // iteration below at all, and its fallback (the
+                        // `None` arm) reproduces the pre-Task-9 single
+                        // reading, multiplied by `availability = 0.0` exactly
+                        // as before.
+                        let substrate_here = subterranean_per_rung.get(vertex);
+                        let chemosynthate_here = chemosynthate_per_rung.get(vertex);
+                        let mut rung_best: Option<f64> = None;
+                        for &rung in hornvale_kernel::Band::habitation() {
+                            let idx = rung as usize;
+                            let Some(s_r) = substrate_here[idx] else {
+                                continue;
+                            };
+                            let Some(chem_r) = chemosynthate_here[idx] else {
+                                continue;
+                            };
+                            let score = score_at(&s_r, chem_r);
+                            rung_best = Some(rung_best.map_or(score, |b: f64| b.max(score)));
+                        }
+                        match rung_best {
+                            Some(best) => (best, 1.0),
+                            None => (score_at(subterranean.get(vertex), 0.0), 0.0),
+                        }
+                    }
+                };
                 // LIEBIG, not a product (The Tilth, stage 5). The base field
                 // takes `min(temperature, precipitation)` — the law of the
                 // minimum — and this layer used to MULTIPLY four tolerances,
@@ -1611,7 +1658,7 @@ pub fn per_species_suitability_masked(
                     .get(tag)
                     .and_then(|a| a.as_ref())
                     .map_or(1.0, |a| a.factor(biome.get(vertex).name()));
-                saturated * tolerance_liebig(cn, s, floor_buf) * availability * affinity
+                best * availability * affinity
             });
             (tag as u32, k)
         })
@@ -1802,6 +1849,13 @@ pub fn per_species_capacity_at(
     // and since The Underworld, through the same shared derivation, so the
     // two paths cannot disagree about a chamber's depth or hydrology.
     let subterranean = subterranean_substrate_field(geo, terrain, &substrate);
+    // MAP-per-rung-substrate, Task 9: carried to the capacity path exactly as
+    // `per_species_suitability` carries it — see that function's matching
+    // hoist for the full rationale. `subterranean` above is KEPT as the
+    // cave-less fallback, exactly as there.
+    let subterranean_per_rung = subterranean_substrate_field_per_rung(geo, terrain, &substrate);
+    let chemosynthate_per_rung =
+        energy::subterranean_energy_field_per_rung(geo, terrain, &substrate);
     let forage = forage_supply_field(geo, base_carrying.as_vertex_map());
     let prey = prey_supply_field(geo, &forage);
     // The Range, carried to the capacity path: the biome at every vertex,
@@ -1829,41 +1883,61 @@ pub fn per_species_capacity_at(
             // `BTreeMap` reads per species instead of six per vertex per species.
             let niche_weights = SUPPLY_AXIS_ORDER.map(|axis| bio.niche.weight(axis));
             let raw = hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
-                // The Warren: which realm's substrate this kind is scored
-                // against, and — for a subterranean kind only — whether the
-                // vertex actually holds a cave at all. A `Surface` kind's
-                // arithmetic is UNTOUCHED, exactly as `per_species_suitability`
-                // documents at its matching match.
-                let (s, availability) = match realm {
-                    hornvale_species::HabitatRealm::Surface => (substrate.get(vertex), 1.0),
-                    hornvale_species::HabitatRealm::Subterranean => (
-                        subterranean.get(vertex),
-                        if terrain.cave_at(vertex).is_some() {
-                            1.0
-                        } else {
-                            0.0
-                        },
-                    ),
-                };
                 use hornvale_kernel::{
                     ANIMAL_PREY, CHEMOSYNTHATE, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE,
                     PLANT_FORAGE,
                 };
+                // `score_at`: see the sibling loop's matching closure for the
+                // full rationale — same shape, dimensional counterpart
+                // (`headcount` in place of `saturated`).
+                //
                 // ORDER IS LOAD-BEARING — see the sibling loop.
-                let per_axis = [
-                    (PHOTOSYNTHATE, base_carrying.at(vertex)),
-                    (PLANT_FORAGE, *forage.get(vertex)),
-                    (MINERAL, *hoisted.mineral.get(vertex)),
-                    (DETRITUS, *hoisted.detritus.get(vertex)),
-                    (ANIMAL_PREY, *prey.get(vertex)),
-                    (MARINE_FORAGE, *hoisted.marine.get(vertex)),
-                    // Supply is 0.0 everywhere until a later task wires the
-                    // real field — an exact IEEE-754 no-op (`x + 0.0 == x`),
-                    // so this entry moves no world number.
-                    (CHEMOSYNTHATE, 0.0),
-                ];
-                let supply = axis_supply_with(&niche_weights, &per_axis);
-                let headcount = CAPACITY_V_MAX * supply / (CAPACITY_K_M + supply);
+                let score_at = |s: &Substrate, chemosynthate: f64| -> f64 {
+                    let per_axis = [
+                        (PHOTOSYNTHATE, base_carrying.at(vertex)),
+                        (PLANT_FORAGE, *forage.get(vertex)),
+                        (MINERAL, *hoisted.mineral.get(vertex)),
+                        (DETRITUS, *hoisted.detritus.get(vertex)),
+                        (ANIMAL_PREY, *prey.get(vertex)),
+                        (MARINE_FORAGE, *hoisted.marine.get(vertex)),
+                        (CHEMOSYNTHATE, chemosynthate),
+                    ];
+                    let supply = axis_supply_with(&niche_weights, &per_axis);
+                    let headcount = CAPACITY_V_MAX * supply / (CAPACITY_K_M + supply);
+                    headcount * tolerance_liebig(cn, s, floor_buf)
+                };
+                // The Warren: which realm's substrate this kind is scored
+                // against, and — for a `Subterranean` kind — the BEST rung of
+                // the delve ladder (MAP-per-rung-substrate, Task 9) — see the
+                // sibling loop's matching arm for the full rationale (`max`,
+                // never a per-axis max, never a mean). A `Surface` kind's
+                // arithmetic is UNTOUCHED, exactly as `per_species_suitability`
+                // documents at its matching match.
+                let (best, availability) = match realm {
+                    hornvale_species::HabitatRealm::Surface => {
+                        (score_at(substrate.get(vertex), 0.0), 1.0)
+                    }
+                    hornvale_species::HabitatRealm::Subterranean => {
+                        let substrate_here = subterranean_per_rung.get(vertex);
+                        let chemosynthate_here = chemosynthate_per_rung.get(vertex);
+                        let mut rung_best: Option<f64> = None;
+                        for &rung in hornvale_kernel::Band::habitation() {
+                            let idx = rung as usize;
+                            let Some(s_r) = substrate_here[idx] else {
+                                continue;
+                            };
+                            let Some(chem_r) = chemosynthate_here[idx] else {
+                                continue;
+                            };
+                            let score = score_at(&s_r, chem_r);
+                            rung_best = Some(rung_best.map_or(score, |b: f64| b.max(score)));
+                        }
+                        match rung_best {
+                            Some(best) => (best, 1.0),
+                            None => (score_at(subterranean.get(vertex), 0.0), 0.0),
+                        }
+                    }
+                };
                 // `availability` stays OUTSIDE the tolerance product, exactly as
                 // `per_species_suitability` keeps it outside the Liebig
                 // minimum: a presence mask in {0.0, 1.0}, not a condition
@@ -1879,7 +1953,7 @@ pub fn per_species_capacity_at(
                     .get(tag)
                     .and_then(|a| a.as_ref())
                     .map_or(1.0, |a| a.factor(biome.get(vertex).name()));
-                headcount * tolerance_liebig(cn, s, floor_buf) * availability * affinity
+                best * availability * affinity
             });
             let map = hornvale_kernel::ecology::CapacityMap::new(raw)
                 .expect("a Michaelis-Menten product of non-negative terms is finite and >= 0");
