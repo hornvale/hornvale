@@ -364,8 +364,23 @@ be taken:
   actually points at the machine, and it is separate evidence that the sentence
   was not citing.
 
-  So: three successive measurements, each taken in good faith on a box its
-  author believed was quiet, disagree by up to 1.40× — and an earlier revision
+  **A fourth measurement, and the boundary partly resolves.** Task 5's fix round
+  re-measured at load 1.43→1.36 (89.6% idle before, 89.3% after) and read
+  **65.6 ms** at rung 6 — 0.5% from the review's 65.3 ms. Rung 6 uncached is
+  therefore **~65.5 ms on a genuinely quiet box, still over the bar**, and the
+  two outliers have explanations: 91.5 ms was taken at load ~7, and the
+  implementer traced its own 70.3 ms to a box whose *instantaneous* idle read
+  92% while the one-minute average had not yet decayed from its own mutation
+  runs. **Instantaneous idle alone is not a sufficient quiet-box check** — that
+  is the transferable lesson, and it is why the same author's two sweeps
+  disagreed.
+
+  **Rung 7 remains genuinely unresolved.** Its only reading, 47.1 ms, was taken
+  during the mid-decay run, so it is the one number with no clean replicate. The
+  boundary sits at rung 7 or rung 8 and this spec does not claim which.
+
+  So: four measurements, each taken in good faith on a box its author believed
+  was quiet, spanning 1.40× — and an earlier revision
   of this line ALSO stated a boundary interpolated across a rung it had not
   measured. Three attempts, three different answers. **The boundary is recorded
   as uncertain rather than resolved**, because this repo's own CLAUDE.md already
