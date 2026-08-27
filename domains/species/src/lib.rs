@@ -2333,9 +2333,12 @@ pub enum TrophicMode {
     /// Energy from chemical gradients in rock or water — a hydrothermal vent
     /// community, and the underworld's only possible productive base.
     ///
-    /// **Declared, not witnessed:** no kind carries it, and
-    /// `tests/suite/metabolic_pairs.rs` asserts exactly that. Rung 2's
-    /// success condition is that this assertion has to change.
+    /// **Witnessed by `xorn`** (rung 2 of the Underworld Larder,
+    /// `tests/suite/metabolic_pairs.rs`): a thing that burrows through stone
+    /// and eats only mineral is a chemolithotroph, and `Absent`/`Absent` was
+    /// only ever the honest encoding available before this variant existed.
+    /// The `niche` weight that actually feeds it (`CHEMOSYNTHATE`) is a
+    /// separate, later change — see the `xorn` row's own comment.
     Chemotrophic,
     /// No metabolism at all. See [`ThermalStrategy::Absent`] for the naming.
     Absent,
@@ -3418,16 +3421,26 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(55.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Absent,
-                trophic_mode: TrophicMode::Absent,
+                trophic_mode: TrophicMode::Chemotrophic,
                 niche: ResourceVector::new(&[(MINERAL, 1.0)]).unwrap(),
                 condition_niche: xorn_condition_niche(),
                 potency: 5.0 / 30.0, // xorn — CR 5 (5E MM); potency = CR/30
                 social_form: SocialForm::Solitary,
                 schedule: LifeSchedule::Allometric,
-                // Ametabolic (both axes `Absent`), burrows through stone:
-                // lives IN the substrate,
-                // not on it. rust-monster shares the pure-MINERAL niche but
-                // stays Terrestrial — it walks the surface eating metal.
+                // Chemotrophic (rung 2 of the Underworld Larder): burrows
+                // through stone and lives IN the substrate, not on it, eating
+                // only mineral — a chemolithotroph, not merely ametabolic.
+                // `thermal_strategy` stays `Absent` (unchanged; ametabolism is
+                // a thermal-axis fact and `is_ametabolic` reads that axis
+                // only), so xorn's BMR and the life-history golden do not
+                // move. Its `niche` still carries no `CHEMOSYNTHATE` weight —
+                // that supply is wired in a later task, in the same commit as
+                // the field that feeds it — so this row is witnessed but not
+                // yet fed; a witnessed-but-unfed niche is the deliberate,
+                // temporary gap that task's brief owns. rust-monster shares
+                // the pure-MINERAL niche but stays Terrestrial/Heterotrophic —
+                // it walks the surface eating metal, not gaining energy from
+                // a chemical gradient.
             },
         ),
         (
