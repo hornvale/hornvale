@@ -2404,13 +2404,22 @@ mod tests {
         );
     }
 
-    /// scene/eclipses/v1 emits an eclipse's time as an f64 day quantized to 8
-    /// SIGNIFICANT digits, so at world-year 20,000 a minutes-long event is
-    /// resolvable only to ~2.4 hours. The f64 field stays for compatibility
-    /// -- this is a cross-repo contract -- and an exact tick field is ADDED
-    /// beside it. Additive at v1, so no existing consumer breaks.
+    /// Every instant this schema emits is an exact tick count, and NO float
+    /// instant survives beside it (v2, The Foliot).
+    ///
+    /// This test is the inverse of the one it replaces. The Escapement added
+    /// the tick fields ADDITIVELY at v1 and pinned exactly that — schema
+    /// still v1, the `f64` still present, a tick beside it — because the
+    /// floats were a cross-repo contract that external consumers read. With
+    /// both external clients out of scope the floats had no consumer left,
+    /// so v2 completes the step 0188 deliberately left half-finished, and the
+    /// property worth pinning inverts with it.
+    ///
+    /// Asserting the ABSENCE of the float fields is the load-bearing half:
+    /// a test that only checked the tick fields exist would pass just as
+    /// happily if the floats had been left behind.
     #[test]
-    fn an_eclipse_carries_an_exact_tick_alongside_its_quantized_day() {
+    fn an_eclipse_emits_only_exact_ticks() {
         let w = mooned_world();
         let scene = eclipses_scene(
             &w,
@@ -2421,24 +2430,30 @@ mod tests {
         let json = serde_json::to_value(&scene).expect("serializes");
 
         assert_eq!(
-            json["schema"], "scene/eclipses/v1",
-            "still v1: the addition is additive"
+            json["schema"], "scene/eclipses/v2",
+            "the version moved with the shape, so a returning consumer fails \
+             loudly on an unknown schema rather than on a missing field"
         );
-        assert!(json["from_day"].is_f64(), "the f64 field is unchanged");
-        assert!(
-            json["from_day_ticks"].is_i64(),
-            "and an exact tick sits beside it"
-        );
-        assert!(json["until_day"].is_f64());
-        assert!(json["until_day_ticks"].is_i64());
+        assert!(json["from"].is_i64(), "the window start is an exact tick");
+        assert!(json["until"].is_i64(), "and so is the window end");
+        for gone in ["from_day", "from_day_ticks", "until_day", "until_day_ticks"] {
+            assert!(
+                json.get(gone).is_none(),
+                "v1's {gone} must not survive into v2 — checking only that the \
+                 tick fields EXIST would pass with the floats left behind"
+            );
+        }
 
         assert!(
             !scene.events.is_empty(),
             "seed 42's moons eclipse within 2000 days"
         );
         let elem = &json["events"][0];
-        assert!(elem["day"].is_f64());
-        assert!(elem["day_ticks"].is_i64());
+        assert!(elem["day"].is_i64(), "an event's instant is an exact tick");
+        assert!(
+            elem.get("day_ticks").is_none(),
+            "and there is no separate tick field, because `day` IS the tick"
+        );
 
         // The tick fields are exact conversions of the standard-day window
         // bounds and event days actually passed/produced, not the quantized

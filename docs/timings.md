@@ -3181,3 +3181,6 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T21:46:39Z | gate-commit | 120.162 | 60.969 | 28.474 | 0.74 | 0 | 7528c092f | campaign/the-foliot | ambrose | 12 |
 | 2026-08-27T21:57:18Z | rebaseline | 67.811 | 268.936 | 16.243 | 4.21 | 0 | 53553abde | campaign/the-foliot | ambrose | 12 |
 | 2026-08-27T21:58:40Z | gate-commit | 81.336 | 52.226 | 25.764 | 0.96 | 0 | 53553abde | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T22:01:16Z | gate-commit | 121.586 | 61.393 | 28.945 | 0.74 | 0 | e496e529d | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T22:37:31Z | gate-commit | 84.031 | 59.643 | 29.718 | 1.06 | 0 | e496e529d | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T22:40:14Z | rebaseline | 162.514 | 271.037 | 16.579 | 1.77 | 0 | e496e529d | campaign/the-foliot | ambrose | 12 |
