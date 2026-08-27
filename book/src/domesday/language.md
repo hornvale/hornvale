@@ -278,7 +278,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 9 | 16 | 30 | 140 | 21.51 |
+| 0 | 9 | 16 | 30 | 140 | 21.602 |
 
 ### `homophony-count-goblin`
 
@@ -288,7 +288,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 1 | 4 | 8 | 55 | 5.861 |
+| 0 | 1 | 4 | 8 | 55 | 5.883 |
 
 ### `homophony-count-hobgoblin`
 
@@ -298,7 +298,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0 | 4 | 8 | 53 | 6.04 |
+| 0 | 0 | 4 | 8 | 53 | 6.071 |
 
 ### `homophony-count-kobold`
 
@@ -308,7 +308,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0 | 3.5 | 9 | 81 | 6.279 |
+| 0 | 0 | 4 | 9 | 81 | 6.326 |
 
 ### `homophony-merger-share-bugbear`
 
@@ -324,7 +324,7 @@ n = 999 present, 1 absent (of 1000 worlds)
 
 Fraction of goblin colliding surface forms that are MERGERS (colliding roots carry ≥2 distinct proto-forms — the cascade or nativization made the collision after the proto) rather than draw-collisions (one shared proto); Absent if goblin has no collision (an undefined ratio, never reported as 0)
 
-n = 784 present, 216 absent (of 1000 worlds)
+n = 785 present, 215 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
@@ -580,7 +580,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `homophony-merger-share-goblin`
 
-- **D2**: min == median == max == 1 across 784 worlds
+- **D2**: min == median == max == 1 across 785 worlds
 - **D4**: median 1 equals the min (1 .. 1)
 
 ### `homophony-merger-share-hobgoblin`

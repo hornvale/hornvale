@@ -14,7 +14,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| -0.43378899 | -0.17579011 | -0.11931206 | -0.057290909 | 0.44602481 | -0.11292452 |
+| -0.43378899 | -0.17579011 | -0.11892863 | -0.057290909 | 0.44602481 | -0.11292187 |
 
 ### `granary-raid-phase-concentration`
 
@@ -24,7 +24,7 @@ n = 984 present, 16 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.56387674 | 0.88756419 | 0.92280548 | 0.94886494 | 1 | 0.91399915 |
+| 0.56387674 | 0.88755946 | 0.92262457 | 0.94886494 | 1 | 0.91395791 |
 
 ### `granary-raids-in-depleted-half`
 
@@ -34,7 +34,7 @@ n = 984 present, 16 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0.31464174 | 0.51145242 | 0.70955882 | 1 | 0.50663677 |
+| 0 | 0.31464174 | 0.50937441 | 0.70886076 | 1 | 0.50631743 |
 
 ### `raid-attribution-unresolved`
 
@@ -54,7 +54,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0.19361702 | 0.2757849 | 0.32520944 | 0.4235589 | 0.24795911 |
+| 0 | 0.19361702 | 0.27573958 | 0.32520944 | 0.4235589 | 0.24792544 |
 
 ### `raid-victim-rate`
 
@@ -64,7 +64,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0.19598965 | 0.28206487 | 0.33716751 | 0.45229425 | 0.25552067 |
+| 0 | 0.19598965 | 0.28201781 | 0.33716751 | 0.45229425 | 0.25547819 |
 
 ### `tribute-relations-standing`
 
@@ -74,7 +74,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1 | 59 | 91 | 122 | 270 | 91.682 |
+| 1 | 59 | 91 | 122 | 270 | 91.68 |
 
 ## Weaknesses found here
 
@@ -85,5 +85,5 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `tribute-relations-standing`
 
-- **D5 strength**: declared moderate tracking settlement-count, but observed r = +0.943 (1000 pairs) is dominant (positive)
+- **D5 strength**: declared moderate tracking settlement-count, but observed r = +0.942 (1000 pairs) is dominant (positive)
 
