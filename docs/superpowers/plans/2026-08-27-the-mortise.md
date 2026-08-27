@@ -402,6 +402,16 @@ cargo check --workspace --all-targets > /tmp/mortise-t3.log 2>&1; echo "exit=$?"
 grep -c '^error' /tmp/mortise-t3.log
 ```
 
+**CONTROLLER RULING (pre-flight): Task 5 owns ALL tongue-side realization.**
+The compiler will force an arm in `resolve_argument` (`grammar.rs:203`) — and in
+Task 4, `tongue_subject` (`grammar.rs:316`) — before any subordination strategy
+exists to realize a nested clause with. Write
+`unimplemented!("clause embedding in a tongue arrives in Task 5")` in those arms.
+**A panic, not a `TongueGap`**: a gap means "true about a people", and using one
+for "not built yet" would be a lie in the type that could ship silently. Add NO
+tongue-path test in this task; Task 5 removes the `unimplemented!` and success
+criterion 3 fails if it survives.
+
 **A `cargo check` that fails early has enumerated NOTHING** — its error list is a
 FLOOR, not a census. Size the real work independently with
 `git grep -c 'Argument::' -- '*.rs'` and reconcile the two before believing you
@@ -477,6 +487,17 @@ fn a_clause_subject_realizes_through_the_same_machinery() { /* … */ }
 - [ ] **Step 2: Run it — compile failure, `Subject` has no `Clause` variant**
 
 - [ ] **Step 3: Add the variant with its doc, handle both consumers**
+
+**CONTROLLER RULING (pre-flight): Task 5 owns ALL tongue-side realization.**
+The compiler will force an arm in `resolve_argument` (`grammar.rs:203`) — and in
+Task 4, `tongue_subject` (`grammar.rs:316`) — before any subordination strategy
+exists to realize a nested clause with. Write
+`unimplemented!("clause embedding in a tongue arrives in Task 5")` in those arms.
+**A panic, not a `TongueGap`**: a gap means "true about a people", and using one
+for "not built yet" would be a lie in the type that could ship silently. Add NO
+tongue-path test in this task; Task 5 removes the `unimplemented!` and success
+criterion 3 fails if it survives.
+
 
 Task 3's depth cap applies here too — a clause subject counts against the same
 one level. Say so in the doc comment.
