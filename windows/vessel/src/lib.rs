@@ -36,7 +36,7 @@ mod vantage;
 pub use agent::{most_populous_settlement, walk_depth};
 pub use brief::{Brief, brief_of};
 pub use chamber_prose::describe_chamber;
-pub use controller::{Controller, DefaultController, PlayerController};
+pub use controller::{Controller, DefaultController, ImposedController, PlayerController};
 pub use depth::{CHAMBER_DEPTH_OFFSET, chamber_depth, truncate_to_walk};
 pub use focalize::*;
 pub use knowledge::*;
