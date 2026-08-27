@@ -51,5 +51,50 @@ for f in README.md windows/lab/src/metrics.rs book/src/domesday/index.md \
     else ok "unrelated path does not trigger: $f"; fi
 done
 
+# --- the HV_CENSUS_DELIVERY escape -------------------------------------------
+# The pattern tests above are static; these two EXECUTE the hook, because the
+# escape is a control-flow branch and a pattern cannot see it. A census refresh
+# moves the fixture BY DEFINITION while the pins can only be re-pinned after the
+# run, so the guard fires on exactly the commit a census delivery must be allowed
+# to make. sluice-census.sh sets the escape for that one commit; if this branch
+# ever stops working, census delivery silently stops (it did, on 2026-08-27:
+# the commit was refused, an unchanged HEAD was pushed, and DELIVERED was
+# printed anyway).
+#
+# Staged path is the .sql pin, deliberately NOT a .rs one: a staged Rust path
+# would also take the hook's gate-commit branch and muddy what is being asserted.
+scratch="$(mktemp -d)"
+trap 'rm -rf "$scratch"' EXIT
+# Scrub git's environment: an inherited GIT_DIR/GIT_INDEX_FILE would point these
+# commands at the REAL repository. That is not hypothetical — it staged a file
+# and landed a junk commit on main here once.
+hook_env() { env -u GIT_DIR -u GIT_INDEX_FILE -u GIT_WORK_TREE -u GIT_OBJECT_DIRECTORY "$@"; }
+hook_env git init -q "$scratch" 2>/dev/null
+mkdir -p "$scratch/tools/census/queries/calibrate"
+echo "-- a pin" > "$scratch/tools/census/queries/calibrate/golden-pins.sql"
+hook_env git -C "$scratch" add tools/census/queries/calibrate/golden-pins.sql
+
+hook="$PWD/scripts/hooks/pre-commit"
+out_esc="$(cd "$scratch" && hook_env HV_CENSUS_DELIVERY=1 bash "$hook" 2>&1)" || true
+out_bare="$(cd "$scratch" && hook_env bash "$hook" 2>&1)" || true
+
+if printf '%s' "$out_esc" | grep -q 'skipping the golden-pins guard'; then
+    ok "HV_CENSUS_DELIVERY=1 stands the guard down"
+else
+    bad "HV_CENSUS_DELIVERY=1 did NOT stand the guard down — census delivery cannot commit"
+fi
+if printf '%s' "$out_esc" | grep -q "running 'make census-check'"; then
+    bad "escape set, yet the hook still ran census-check — the branch is not short-circuiting"
+else
+    ok "escape set: census-check is not attempted"
+fi
+# The control. Without this the test above passes even if the guard never fires
+# at all, which would make it a tautology rather than evidence.
+if printf '%s' "$out_bare" | grep -q "running 'make census-check'"; then
+    ok "CONTROL: without the escape the guard still fires on the same staged pin"
+else
+    bad "control failed: the guard did not fire without the escape, so the escape test proves nothing"
+fi
+
 printf '\ntest-census-guard: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
