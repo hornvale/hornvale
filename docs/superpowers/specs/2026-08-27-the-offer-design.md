@@ -106,14 +106,31 @@ that has been named, tagged, and left empty.
 
 ### 3.1 Properties are a kind-level component
 
-Properties live in a `ComponentStore<KindId, ObjectTraits>`, joined into
-`WorldComponents` exactly as `MaterialTraits` is
-(`domains/terrain/src/lib.rs:274` — two rows, granite and limestone, and its
-own doc calls the field set "thin and honest").
+Properties live in a `ComponentStore<AnchorKind, ObjectTraits>` — the kernel's
+own store type (`kernel/src/component.rs:14`), held **vessel-locally**.
+`AnchorKind` already derives `Ord`, so this needs no kernel, domain, or
+worldgen change. `MaterialTraits` (`domains/terrain/src/lib.rs:274` — two rows,
+granite and limestone, its own doc calling the field set "thin and honest") is
+the model for the *shape*: a thin, honest, kind-keyed trait table.
 
 This is **build-state, not world-state**. It satisfies §2's constraint
 structurally rather than by discipline: a kind-level registry has nowhere to
 put per-instance state, so IV.a *cannot* accidentally climb to 70%.
+
+**A correction to an earlier draft, stated because it narrows a claim this
+spec used to argue its own recommendation.** That draft said the store is
+"joined into `WorldComponents` exactly as `MaterialTraits` is." It is not, and
+should not be for IV.a. Joining requires a `KindId` key and a domain that owns
+object kinds — and no object domain exists, so joining means *creating* one.
+The consequence for §2.1's argument: UNI-21's "build-state, not world-state,
+derived at load" holds exactly, and IV.a's query has the same shape as a
+capability query, but `ComponentTag`/`kinds_with` is worldgen-side machinery
+that IV.a does not reach. Joining is IV.b's move, when objects become mintable
+entities validated against `WorldComponents::kinds()`.
+
+The argument that actually decided A2 over A1 is untouched by this: a
+`ComponentStore` is a data table, whereas a `fn(AnchorKind) -> &[Verb]` is a
+match arm returning verbs — one refactor from the forbidden table.
 
 **Rejected: a static `fn affordances(AnchorKind) -> &[Verb]`.** It is smaller
 and it is disqualifying — a table keyed by kind returning verbs is one refactor
