@@ -806,11 +806,45 @@ git add -A && git commit -m "feat(the-mortise): coordination is a list at a node
 ## Task 7: Subject elision — coordination tier 2
 
 **Files:**
-- Modify: `domains/language/src/clause.rs` (the coordination realizer from Task 6)
+- Modify: `domains/language/src/clause.rs` (`realize_common_coordination`)
+- Modify: `domains/language/src/grammar.rs` (`realize_tongue_coordination` AND
+  `realize_tongue_deep_coordination`)
 
 **Interfaces:**
-- Consumes: Task 6's coordination type and realizers.
-- Produces: no new type — a behaviour change in the existing realizer.
+- Consumes: Task 6's `Coordination` and its **three** realizers.
+- Produces: no new type — a behaviour change in all three.
+
+**CONTROLLER FINDING (pre-dispatch verification): elision cannot live where an
+earlier draft of this plan put it, and there are THREE realizers, not one.**
+
+1. **`join_coordinated` (`grammar.rs:665`) operates on already-realized
+   strings** — it trims trailing periods and joins with a separator. It cannot
+   elide a subject, because it has no idea where the subject *is*: the tongue
+   realizer orders constituents by a drawn `ConstituentOrder`, and the subject
+   lands first, middle or last across the six orders (`grammar.rs:634-639`).
+   String surgery to find and remove it would be fragile in exactly the way this
+   codebase avoids.
+
+   **So elision must happen INSIDE per-clause realization** — a non-first clause
+   is realized *without its subject constituent* — not by post-processing the
+   joined text.
+
+2. **Task 6's fix round added a third realizer.** The surfaces are now
+   `realize_common_coordination` (`clause.rs:1046`),
+   `realize_tongue_coordination` (`grammar.rs:701`, the floor) and
+   `realize_tongue_deep_coordination` (`grammar.rs:1254`, the production path).
+   Landing elision in Common alone would re-open the very asymmetry Task 6's fix
+   round closed. **All three, or state plainly why not.**
+
+3. **`Subject` derives `PartialEq`** (`clause.rs:136`), so equality is available
+   for deciding whether subjects are shared. Whether `PartialEq` is the RIGHT
+   comparison is your call from inside the code — report which you used and why.
+
+**No new drawn axis and no third stream label.** Whether a language elides a
+coordinate subject at all is genuinely typological, and this campaign is not
+drawing it — elision is applied as a uniform surface convention. Say so in the
+doc comments, so the next campaign finds a stated limit rather than an
+unexamined default.
 
 **Background.** Tier 2 states a shared subject once: *"Seeing it confused me and
 upset me"* rather than *"…confused me and it upset me"*. **Tier 3 — right-node
