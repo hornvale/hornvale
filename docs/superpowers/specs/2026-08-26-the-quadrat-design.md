@@ -287,6 +287,50 @@ be taken:
    1.208 ms against 130 ms for a full redraw, ~108× cheaper, so a scroll is
    near-free once tiles exist.
 
+## 5a. Task 6 re-planned (2026-08-27): the overlay is drawn in `bin`, and H2 dissolves
+
+The original Task-6 design had `core/chart.rs` reproject the perception packet
+onto the square grid, with `windows/scene/src/surrounds_ascii.rs` moving
+identically so the byte pin at `chart.rs:180` stayed green. **That design is
+measured false and was never built.**
+
+**The measurement.** `core` works from the wire's `(bearing_deg, distance_rad)`
+— a *relative polar offset*. `bin`'s raster works from *absolute* Mercator tile
+coordinates via `floor`. Converting one to the other depends on the observer's
+**sub-tile phase**, which the wire does not carry. Sweeping 200 phases on the
+fixture's own observer: **0 misplaced marks at best, 24 of 31 at worst, mean
+11.5, only 2 of 200 phases exact.** The mandated design produces exactly the
+defect the task's own agreement test existed to catch, and that test could only
+pass by being weakened to "within one tile".
+
+**The design that works, and it reuses an existing path.** The wire's chart
+cells each carry a `room` — a packed `FacetId`. `core` cannot use it (no mesh),
+but `bin` can, and **already does**: `driver.rs:1695-1696` is
+`FacetId(real_cell.room).unpack()` then `room.coord()`, and that module's own
+doc records "No new geometry was written for this". So the band-B perception
+layer is drawn **in `bin`**, resolving each cell's facet to a coordinate and
+projecting it through the same `mercator::project` the raster uses — **exact by
+construction**, because both sides share one projection instead of agreeing by
+arithmetic coincidence.
+
+**What that dissolves.** `core/chart.rs` and `surrounds_ascii.rs` never move, so
+the pin stays green untouched; `windows/scene`'s golden assertion that "31 of 31
+cells" are drawn survives (any raster-agreeing projection would have occluded
+~a third of the band, undoing The Illumination's headline); the third replica of
+this projection in `clients/vessel/src/pane_chart.ts` stays consistent; and
+`spread::compose` needs no knowledge of the rung, because `bin` composes the
+overlay into the plate before handing it over. It is also the
+`draw_perception_layer` Task 4 correctly refused to build, with its input
+finally identified.
+
+**H2 DISSOLVES RATHER THAN PASSING, and must not be reported as a pass.** §9's
+H2 was *"the byte-for-byte client/sim projection pin survives the
+reprojection"*. There is now **no reprojection**, so the pin is green because
+nothing touched it. That is vacuous satisfaction, not evidence, and the
+chronicle must say so — a hypothesis whose subject was removed is not a
+hypothesis confirmed.
+
+
 ## 6. What this does NOT change
 
 - **The mesh.** Facets, vertices, adjacency and the three-edge graph are
@@ -435,7 +479,14 @@ be taken:
    campaign changes no wire schema because `scene/surrounds/v2` already carries
    `radius` and `depth`. If the layer split needs the perception packet to carry
    anything new, that becomes an epoch question and returns here.
-2. **The sim's ASCII renderer moves.** This is not a `clients/`-only campaign:
+2. **WITHDRAWN 2026-08-27 — the renderer does NOT move; this IS a
+   `clients/`-only campaign.** Task 6's implementer measured the design this
+   item flagged and found it **unbuildable**, then proposed one that touches no
+   workspace crate. See §5a. Left in place rather than deleted, because Nathan
+   approved the spec with it flagged and a withdrawn flag is information.
+   The original text follows.
+
+   ~~**The sim's ASCII renderer moves.** This is not a `clients/`-only campaign:
    `windows/scene/src/surrounds_ascii.rs` reprojects too, to keep the pin at
    `chart.rs:180`. That is sim-side code in service of a client-side picture,
    and it deserves an explicit yes.
