@@ -123,6 +123,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `island` | land the water surrounds | *Ngaqab | /ŋaqab/ |
 | `kelp-canopy` | The floating canopy of a kelp forest. | *Sasax | /sasax/ |
 | `kelp-forest` | a biome class | *Qaqas | /qaqas/ |
+| `kill` | to cause to cease living | *Qadag | /qadag/ |
 | `killer-whale-kind` | a killer whale | *Naqash | /naqaʃ/ |
 | `know` | to hold something in memory or understanding — `knows` | *Vavash | /vavaʃ/ |
 | `kobold-kind` | a kobold | *Satag | /satag/ |

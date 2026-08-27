@@ -183,6 +183,20 @@ pub struct TongueMorphology {
     pub evidential: BTreeMap<&'static str, MorphForm>,
     /// The family's noun-class marker forms, keyed `"animate"`/`"inanimate"`.
     pub class: BTreeMap<&'static str, MorphForm>,
+    /// The family's personal-pronoun forms, keyed `"1sg"` … `"3pl"` — the
+    /// keys [`crate::clause::Person::paradigm_key`] names and
+    /// [`pronoun_forms`] returns.
+    ///
+    /// **No depth field beside it, unlike the three axes above.** A pronoun
+    /// is a free word by definition, so there is nothing for a
+    /// `MorphDepth` to decide; [`pronoun_forms`]' own doc records why no
+    /// such axis is drawn.
+    ///
+    /// **This is the field that retired The Scarf's pronoun gap.** A tongue
+    /// gapped on a pronoun subject *because no tongue drew a pronoun
+    /// inventory*; this is the inventory, so the antecedent is false and the
+    /// rule stops firing without being reversed (spec §4.6).
+    pub pronouns: BTreeMap<&'static str, MorphForm>,
 }
 
 /// Preregistered evidential-depth weights over `[None, Particle, Affix]`
@@ -264,6 +278,18 @@ const EVIDENTIAL_VALUES: [&str; 3] = ["witnessed", "taught", "inferred"];
 /// The noun-class axis's two value labels.
 const CLASS_VALUES: [&str; 2] = ["animate", "inanimate"];
 
+/// The personal-pronoun paradigm's six value labels — person crossed with
+/// number — in the order [`pronoun_forms`] iterates them. The order is
+/// presentational only: every value derives its own independent stream by
+/// its own label path, so reordering this array would move no drawn form.
+///
+/// **Person and number only: no gender.** Nothing in the ledger assigns
+/// grammatical gender to anything, so a gendered third person would be
+/// authored rather than derived (The Inquest, spec §4.5). Common renders the
+/// third-person singular as `them`, which is a slightly awkward register and
+/// the accepted trade.
+const PRONOUN_VALUES: [&str; 6] = ["1sg", "2sg", "3sg", "1pl", "2pl", "3pl"];
+
 /// Draw one axis-value's one-syllable proto-form for `family`, from
 /// `seed.derive(streams::ROOT).derive(streams::FAMILY_LEG).derive(StreamLabel::dynamic(family)).derive(streams::MORPH).derive(StreamLabel::dynamic(axis)).derive(StreamLabel::dynamic(value))`
 /// — the same syllable-fill mechanism
@@ -297,7 +323,12 @@ pub(crate) fn draw_morph_proto(
 /// Draw and evolve one axis's whole value set: each value's family proto-form
 /// (via [`draw_morph_proto`]), evolved into `daughter_ph` via `cascade`
 /// ([`evolve`]), rendered via [`render_views`].
-fn evolve_axis(
+///
+/// `pub(crate)` rather than private because [`crate::paradigm::paradigm_forms`]
+/// is the same operation on the tense/polarity axes: it must draw and evolve
+/// through THIS function, not a copy of it, or the two axis families could
+/// drift apart in how a proto becomes a daughter form.
+pub(crate) fn evolve_axis(
     seed: &Seed,
     family: &str,
     axis: &str,
@@ -364,6 +395,50 @@ pub fn morph_forms(
         daughter,
     );
     (evidential, class)
+}
+
+/// Draw `family`'s six personal-pronoun proto-forms (one syllable each, at
+/// `proto`'s phonology — the same syllable fill every family-cognate
+/// morpheme in this crate uses) and evolve them into `daughter` via
+/// `cascade`. This is [`morph_forms`]'s cognate law applied to a new axis:
+/// only `family` and the value label key the draw, never the daughter or its
+/// cascade, so all of a family's daughters carry COGNATE pronouns that
+/// diverge only through each daughter's own sound changes — the same way the
+/// rest of the family's inherited vocabulary does. Keyed
+/// `"1sg"`/`"2sg"`/`"3sg"`/`"1pl"`/`"2pl"`/`"3pl"` (`PRONOUN_VALUES`), whose
+/// doc records why no gender is drawn. New permanent stream:
+/// `language/family/<family>/morph/pronoun/<person-number>`, additive in the
+/// strong sense (spec §3.4): it consumes nothing from any existing stream, so
+/// no already-generated world's bytes move.
+///
+/// **A pronoun is a free word, so there is no depth draw here.** Number,
+/// tense and polarity each draw a [`MorphDepth`] because each may go
+/// unmarked, be carried by a separate particle, or fuse onto the marked word.
+/// Being a free word is precisely what distinguishes a pronoun from
+/// person-agreement marking on the verb, so a `pronoun_depth` axis would draw
+/// a value the definition has already fixed.
+///
+/// **Pro-drop is deliberately out of scope.** Whether a tongue may omit a
+/// pronominal subject is a real typological axis, and this draws none of it:
+/// no tongue is given permission to drop a pronoun. Recorded here so a later
+/// reader sees the shape was considered rather than missed.
+/// type-audit: bare-ok(identifier-text)
+pub fn pronoun_forms(
+    seed: &Seed,
+    family: &str,
+    proto: &Phonology,
+    cascade: &Cascade,
+    daughter: &Phonology,
+) -> BTreeMap<&'static str, MorphForm> {
+    evolve_axis(
+        seed,
+        family,
+        "pronoun",
+        &PRONOUN_VALUES,
+        proto,
+        cascade,
+        daughter,
+    )
 }
 
 /// Join `stem` and `affix` at the SEGMENT level — never string
@@ -522,6 +597,135 @@ mod tests {
                 .iter()
                 .any(|(value, form_a)| evid_b[value].roman != form_a.roman),
             "the two daughters' romans must differ where the cascades differ"
+        );
+    }
+
+    /// The two-way agreement between the DRAWING side (`PRONOUN_VALUES`, and
+    /// therefore [`pronoun_forms`]' keys) and the CLAUSE side
+    /// ([`crate::clause::Person::paradigm_key`]).
+    ///
+    /// **Both directions, deliberately.** A one-sided check is an echo: if
+    /// only "every key a clause asks for exists" were asserted, the drawing
+    /// side could grow a seventh row nothing can ever ask for, and the
+    /// cheapest repair for a failure would be to delete the assertion. If
+    /// only the converse were asserted, the clause side could name a row no
+    /// tongue draws and every realization of it would gap. The two sets must
+    /// be equal, so the test says so.
+    #[test]
+    fn the_pronoun_paradigm_keys_are_exactly_person_crossed_with_number() {
+        let ph = test_phonology();
+        let cascade = crate::etymology::draw_cascade(&Seed(7), "goblin", &ph);
+        let drawn = pronoun_forms(&Seed(7), "goblinoid", &ph, &cascade, &ph);
+
+        let asked: std::collections::BTreeSet<&'static str> = crate::clause::Person::ALL
+            .into_iter()
+            .flat_map(|person| {
+                [crate::clause::Number::Sg, crate::clause::Number::Pl]
+                    .into_iter()
+                    .map(move |number| person.paradigm_key(number))
+            })
+            .collect();
+        let offered: std::collections::BTreeSet<&'static str> = drawn.keys().copied().collect();
+        assert_eq!(
+            asked, offered,
+            "every row a clause can ask for must be drawn, and nothing may be \
+             drawn that no clause can ask for"
+        );
+        // And the constant the drawing side reads is the same set, so the
+        // agreement is against the declared inventory rather than only
+        // against one seed's output.
+        let declared: std::collections::BTreeSet<&'static str> =
+            PRONOUN_VALUES.into_iter().collect();
+        assert_eq!(asked, declared);
+    }
+
+    #[test]
+    fn pronoun_forms_cover_six_person_number_slots() {
+        // The inventory itself: three persons crossed with two numbers, and
+        // NOTHING ELSE. If a later campaign draws gender, this is the test
+        // that must be argued with first (spec §4.5).
+        let ph = test_phonology();
+        let cascade = Cascade { rules: vec![] };
+        let forms = pronoun_forms(&Seed(42), "goblinoid", &ph, &cascade, &ph);
+        let keys: Vec<&str> = forms.keys().copied().collect();
+        assert_eq!(
+            keys,
+            vec!["1pl", "1sg", "2pl", "2sg", "3pl", "3sg"],
+            "the drawn inventory is exactly person x number, no gender"
+        );
+        for (value, form) in &forms {
+            assert!(
+                !form.segments.is_empty() && !form.roman.is_empty(),
+                "{value} drew an empty pronoun"
+            );
+        }
+        assert_eq!(
+            forms,
+            pronoun_forms(&Seed(42), "goblinoid", &ph, &cascade, &ph),
+            "the same seed and family must draw the same inventory twice"
+        );
+    }
+
+    #[test]
+    fn pronoun_forms_are_family_cognate() {
+        // The cognate law for the pronoun axis, measured the same way
+        // `morph_forms_are_family_cognate` measures it for evidential and
+        // noun class: two daughters of one family draw the SAME proto and
+        // diverge only through their own cascades.
+        let proto_ph = test_phonology();
+        let daughter_ph = test_phonology();
+        let cascade_a = Cascade { rules: vec![] };
+        let cascade_b = Cascade {
+            rules: vec![
+                SoundRule {
+                    kind: RuleKind::FinalLoss,
+                    param: 0,
+                },
+                SoundRule {
+                    kind: RuleKind::Lenition,
+                    param: 0,
+                },
+            ],
+        };
+
+        let seed = (1..=30u64)
+            .map(Seed)
+            .find(|seed| {
+                let a = pronoun_forms(seed, "goblinoid", &proto_ph, &cascade_a, &daughter_ph);
+                let b = pronoun_forms(seed, "goblinoid", &proto_ph, &cascade_b, &daughter_ph);
+                a.iter()
+                    .any(|(value, form_a)| b[value].roman != form_a.roman)
+            })
+            .expect(
+                "at least one seed in 1..=30 must show a cascade-divergent pronoun; if none \
+                 does, this fixture's cascade contrast is too weak and needs strengthening",
+            );
+
+        let a = pronoun_forms(&seed, "goblinoid", &proto_ph, &cascade_a, &daughter_ph);
+        let b = pronoun_forms(&seed, "goblinoid", &proto_ph, &cascade_b, &daughter_ph);
+
+        for value in PRONOUN_VALUES {
+            // The proto re-drawn here independently, through the exact path
+            // `pronoun_forms` uses, keyed only by (seed, family, axis, value)
+            // — no daughter, no cascade.
+            let proto = draw_morph_proto(&seed, "goblinoid", "pronoun", value, &proto_ph);
+            let expected_a = evolve(&proto, &cascade_a, &daughter_ph);
+            let expected_b = evolve(&proto, &cascade_b, &daughter_ph);
+            assert_eq!(
+                a[value].segments, expected_a.modern,
+                "{value} in daughter A is not the family proto under A's cascade"
+            );
+            assert_eq!(
+                b[value].segments, expected_b.modern,
+                "{value} in daughter B is not the family proto under B's cascade"
+            );
+            assert_eq!(a[value].roman, render_views(&expected_a.modern).roman);
+        }
+
+        assert!(
+            a.iter()
+                .any(|(value, form_a)| b[value].roman != form_a.roman),
+            "the two daughters' pronoun romans must differ where the cascades differ"
         );
     }
 

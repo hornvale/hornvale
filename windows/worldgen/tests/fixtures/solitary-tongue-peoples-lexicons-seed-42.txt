@@ -93,6 +93,7 @@ identify: gap (extradiegetic): identify is an operator instrument; it has no ref
 island: gap (experiential): goblin has no exposure to 'island'
 kelp-canopy: gap (experiential): goblin has no exposure to 'kelp-canopy'
 kelp-forest: gap (experiential): no settlement in or beside kelp-forest
+kill: root Dabo /dabo/
 killer-whale-kind: gap (experiential): goblin has no exposure to 'killer-whale-kind'
 know: gap (experiential): goblin has no exposure to 'know'
 kobold-kind: root Naeno /naeno/
@@ -324,6 +325,7 @@ identify: gap (extradiegetic): identify is an operator instrument; it has no ref
 island: gap (experiential): hobgoblin has no exposure to 'island'
 kelp-canopy: gap (experiential): hobgoblin has no exposure to 'kelp-canopy'
 kelp-forest: gap (experiential): no settlement in or beside kelp-forest
+kill: root Babo /babo/
 killer-whale-kind: gap (experiential): hobgoblin has no exposure to 'killer-whale-kind'
 know: gap (experiential): hobgoblin has no exposure to 'know'
 kobold-kind: root Naeno /naeno/
@@ -555,6 +557,7 @@ identify: gap (extradiegetic): identify is an operator instrument; it has no ref
 island: gap (experiential): bugbear has no exposure to 'island'
 kelp-canopy: gap (experiential): bugbear has no exposure to 'kelp-canopy'
 kelp-forest: gap (experiential): no settlement in or beside kelp-forest
+kill: root Dabo /dabo/
 killer-whale-kind: gap (experiential): bugbear has no exposure to 'killer-whale-kind'
 know: gap (experiential): bugbear has no exposure to 'know'
 kobold-kind: root Daodo /daodo/
@@ -786,6 +789,7 @@ identify: gap (extradiegetic): identify is an operator instrument; it has no ref
 island: gap (experiential): kobold has no exposure to 'island'
 kelp-canopy: gap (experiential): kobold has no exposure to 'kelp-canopy'
 kelp-forest: gap (experiential): no settlement in or beside kelp-forest
+kill: root Roorarao /roorarao/
 killer-whale-kind: gap (experiential): kobold has no exposure to 'killer-whale-kind'
 know: gap (experiential): kobold has no exposure to 'know'
 kobold-kind: root Rara /rara/
@@ -1017,6 +1021,7 @@ identify: gap (extradiegetic): identify is an operator instrument; it has no ref
 island: gap (experiential): gnoll has no exposure to 'island'
 kelp-canopy: gap (experiential): gnoll has no exposure to 'kelp-canopy'
 kelp-forest: gap (experiential): no settlement in or beside kelp-forest
+kill: root Shmovshmox /ʃmovʃmox/
 killer-whale-kind: gap (experiential): gnoll has no exposure to 'killer-whale-kind'
 know: gap (experiential): gnoll has no exposure to 'know'
 kobold-kind: root Shmoox /ʃmoox/
@@ -1248,6 +1253,7 @@ identify: gap (extradiegetic): identify is an operator instrument; it has no ref
 island: gap (experiential): human has no exposure to 'island'
 kelp-canopy: gap (experiential): human has no exposure to 'kelp-canopy'
 kelp-forest: gap (experiential): no settlement in or beside kelp-forest
+kill: root Koa /koa/
 killer-whale-kind: gap (experiential): human has no exposure to 'killer-whale-kind'
 know: gap (experiential): human has no exposure to 'know'
 kobold-kind: root Raarao /raarao/
@@ -1479,6 +1485,7 @@ identify: gap (extradiegetic): identify is an operator instrument; it has no ref
 island: gap (experiential): desert-dwarf has no exposure to 'island'
 kelp-canopy: gap (experiential): desert-dwarf has no exposure to 'kelp-canopy'
 kelp-forest: gap (experiential): no settlement in or beside kelp-forest
+kill: root Qadag /qadag/
 killer-whale-kind: gap (experiential): desert-dwarf has no exposure to 'killer-whale-kind'
 know: gap (experiential): desert-dwarf has no exposure to 'know'
 kobold-kind: root Sadag /sadag/
@@ -1710,6 +1717,7 @@ identify: gap (extradiegetic): identify is an operator instrument; it has no ref
 island: gap (experiential): gully-dwarf has no exposure to 'island'
 kelp-canopy: gap (experiential): gully-dwarf has no exposure to 'kelp-canopy'
 kelp-forest: gap (experiential): no settlement in or beside kelp-forest
+kill: root Qabag /qabag/
 killer-whale-kind: gap (experiential): gully-dwarf has no exposure to 'killer-whale-kind'
 know: gap (experiential): gully-dwarf has no exposure to 'know'
 kobold-kind: root Tatag /tatag/
@@ -1941,6 +1949,7 @@ identify: gap (extradiegetic): identify is an operator instrument; it has no ref
 island: gap (experiential): hill-dwarf has no exposure to 'island'
 kelp-canopy: gap (experiential): hill-dwarf has no exposure to 'kelp-canopy'
 kelp-forest: gap (experiential): no settlement in or beside kelp-forest
+kill: root Qabag /qabag/
 killer-whale-kind: gap (experiential): hill-dwarf has no exposure to 'killer-whale-kind'
 know: gap (experiential): hill-dwarf has no exposure to 'know'
 kobold-kind: root Satag /satag/

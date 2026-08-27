@@ -460,6 +460,23 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "lost",
         "searching",
     ],
+    // Epoch 13 — The Inquest (2026-08-26), Task 6: `kill`, the causative of
+    // the core `die`, and the campaign's second transitive predicate. A
+    // single-concept cohort, appended per this module's absolute rule rather
+    // than seated beside `die` in cohort 0 — which is where it linguistically
+    // belongs and where placing it would re-sort the 76-concept baseline
+    // every later cohort is defined not to disturb.
+    //
+    // **This placement is what makes the campaign's byte-goldens hold.**
+    // `kill` joins `packs::universal_stratum`, so it is a CORE concept that
+    // every tongue lexicalizes, and a naive insertion would have moved a word
+    // in every language in the world. At epoch 13 it sorts strictly last in
+    // `etymology::assign_proto_roots_with_epoch`'s walk (epoch, then
+    // core-first, then concept-id), so it draws after every existing concept
+    // and displaces none. The cost it pays is the ordinary Accession trade
+    // (§3.3): it forfeits the short-form priority its core-ness would
+    // otherwise buy, and takes whatever the probe walk leaves.
+    &["kill"],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or

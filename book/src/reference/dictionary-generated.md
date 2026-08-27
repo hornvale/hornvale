@@ -100,6 +100,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `island` | land the water surrounds | — | — | — | gap (experiential): black-dragon has no exposure to 'island' |
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): black-dragon has no exposure to 'kelp-canopy' |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `kill` | to cause to cease living | Gogdood | /gogdood/ | Góngméóm | Góngméóm → no change → Gogdood |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): black-dragon has no exposure to 'killer-whale-kind' |
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): black-dragon has no exposure to 'know' |
 | `kobold-kind` | a kobold | — | — | — | gap (experiential): black-dragon has no exposure to 'kobold-kind' |
@@ -332,6 +333,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `island` | land the water surrounds | — | — | — | gap (experiential): bugbear has no exposure to 'island' |
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): bugbear has no exposure to 'kelp-canopy' |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `kill` | to cause to cease living | Dabo | /dabo/ | Dapo | Dapo → lenition → Dabo |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): bugbear has no exposure to 'killer-whale-kind' |
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): bugbear has no exposure to 'know' |
 | `kobold-kind` | a kobold | Daodo | /daodo/ | Naeno | Naeno → no change → Daodo |
@@ -564,6 +566,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `island` | land the water surrounds | — | — | — | gap (experiential): desert-dwarf has no exposure to 'island' |
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'kelp-canopy' |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `kill` | to cause to cease living | Qadag | /qadag/ | Qadag | Qadag → no change → Qadag |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): desert-dwarf has no exposure to 'killer-whale-kind' |
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): desert-dwarf has no exposure to 'know' |
 | `kobold-kind` | a kobold | Sadag | /sadag/ | Satag | Satag → lenition → Sadag |
@@ -796,6 +799,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `island` | land the water surrounds | — | — | — | gap (experiential): desert-elf has no exposure to 'island' |
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): desert-elf has no exposure to 'kelp-canopy' |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `kill` | to cause to cease living | Šzuṅszeuṅ | /ʃzuŋszeuŋ/ | Shrungsreung | Shrungsreung → no change → Šzuṅszeuṅ |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): desert-elf has no exposure to 'killer-whale-kind' |
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): desert-elf has no exposure to 'know' |
 | `kobold-kind` | a kobold | Žzeeṅ | /ʒzeeŋ/ | Zhreeng | Zhreeng → no change → Žzeeṅ |
@@ -1028,6 +1032,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `island` | land the water surrounds | — | — | — | gap (experiential): drow has no exposure to 'island' |
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): drow has no exposure to 'kelp-canopy' |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `kill` | to cause to cease living | Rogsroo | /rogsroo/ | Shrungsreung | Shrungsreung → clustersimplify → finalloss → Rogsroo |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): drow has no exposure to 'killer-whale-kind' |
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): drow has no exposure to 'know' |
 | `kobold-kind` | a kobold | Roo | /roo/ | Zhreeng | Zhreeng → clustersimplify → finalloss → Roo |
@@ -1260,6 +1265,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `island` | land the water surrounds | — | — | — | gap (experiential): gnoll has no exposure to 'island' |
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): gnoll has no exposure to 'kelp-canopy' |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `kill` | to cause to cease living | Shmovshmox | /ʃmovʃmox/ | Shmovshmox | Shmovshmox → no change → Shmovshmox |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): gnoll has no exposure to 'killer-whale-kind' |
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): gnoll has no exposure to 'know' |
 | `kobold-kind` | a kobold | Shmoox | /ʃmoox/ | Shmoox | Shmoox → no change → Shmoox |
@@ -1492,6 +1498,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `island` | land the water surrounds | — | — | — | gap (experiential): goblin has no exposure to 'island' |
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): goblin has no exposure to 'kelp-canopy' |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `kill` | to cause to cease living | Dabo | /dabo/ | Dapo | Dapo → no change → Dabo |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): goblin has no exposure to 'killer-whale-kind' |
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): goblin has no exposure to 'know' |
 | `kobold-kind` | a kobold | Naeno | /naeno/ | Naeno | Naeno → no change → Naeno |
@@ -1724,6 +1731,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `island` | land the water surrounds | — | — | — | gap (experiential): gully-dwarf has no exposure to 'island' |
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'kelp-canopy' |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `kill` | to cause to cease living | Qabag | /qabag/ | Qadag | Qadag → no change → Qabag |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): gully-dwarf has no exposure to 'killer-whale-kind' |
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): gully-dwarf has no exposure to 'know' |
 | `kobold-kind` | a kobold | Tatag | /tatag/ | Satag | Satag → no change → Tatag |
@@ -1956,6 +1964,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `island` | land the water surrounds | — | — | — | gap (experiential): high-elf has no exposure to 'island' |
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): high-elf has no exposure to 'kelp-canopy' |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `kill` | to cause to cease living | Šromsreom | /ʃromsreom/ | Shrungsreung | Shrungsreung → no change → Šromsreom |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): high-elf has no exposure to 'killer-whale-kind' |
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): high-elf has no exposure to 'know' |
 | `kobold-kind` | a kobold | Žreem | /ʒreem/ | Zhreeng | Zhreeng → no change → Žreem |
@@ -2188,6 +2197,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `island` | land the water surrounds | — | — | — | gap (experiential): hill-dwarf has no exposure to 'island' |
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'kelp-canopy' |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `kill` | to cause to cease living | Qabag | /qabag/ | Qadag | Qadag → no change → Qabag |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): hill-dwarf has no exposure to 'killer-whale-kind' |
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): hill-dwarf has no exposure to 'know' |
 | `kobold-kind` | a kobold | Satag | /satag/ | Satag | Satag → no change → Satag |
@@ -2420,6 +2430,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `island` | land the water surrounds | — | — | — | gap (experiential): hobgoblin has no exposure to 'island' |
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): hobgoblin has no exposure to 'kelp-canopy' |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `kill` | to cause to cease living | Babo | /babo/ | Dapo | Dapo → no change → Babo |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): hobgoblin has no exposure to 'killer-whale-kind' |
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): hobgoblin has no exposure to 'know' |
 | `kobold-kind` | a kobold | Naeno | /naeno/ | Naeno | Naeno → no change → Naeno |
@@ -2652,6 +2663,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `island` | land the water surrounds | — | — | — | gap (experiential): human has no exposure to 'island' |
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): human has no exposure to 'kelp-canopy' |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `kill` | to cause to cease living | Koa | /koa/ | Koa | Koa → no change → Koa |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): human has no exposure to 'killer-whale-kind' |
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): human has no exposure to 'know' |
 | `kobold-kind` | a kobold | Raarao | /raarao/ | Raarao | Raarao → no change → Raarao |
@@ -2884,6 +2896,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `island` | land the water surrounds | — | — | — | gap (experiential): kobold has no exposure to 'island' |
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): kobold has no exposure to 'kelp-canopy' |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `kill` | to cause to cease living | Roorarao | /roorarao/ | Roorarao | Roorarao → no change → Roorarao |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): kobold has no exposure to 'killer-whale-kind' |
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): kobold has no exposure to 'know' |
 | `kobold-kind` | a kobold | Rara | /rara/ | Rara | Rara → no change → Rara |
@@ -3116,6 +3129,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `island` | land the water surrounds | — | — | — | gap (experiential): red-dragon has no exposure to 'island' |
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): red-dragon has no exposure to 'kelp-canopy' |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `kill` | to cause to cease living | Doddood | /doddood/ | Góngméóm | Góngméóm → no change → Doddood |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): red-dragon has no exposure to 'killer-whale-kind' |
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): red-dragon has no exposure to 'know' |
 | `kobold-kind` | a kobold | — | — | — | gap (experiential): red-dragon has no exposure to 'kobold-kind' |
@@ -3348,6 +3362,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `island` | land the water surrounds | — | — | — | gap (experiential): sea-elf has no exposure to 'island' |
 | `kelp-canopy` | The floating canopy of a kelp forest. | Nennuen | /nennuen/ | Ngengngoeng | Ngengngoeng → vowelshift → Nennuen |
 | `kelp-forest` | a biome class | Dreanbun | /dreanbun/ | Zreangbung | Zreangbung → no change → Dreanbun |
+| `kill` | to cause to cease living | Šrunsreun | /ʃrunsreun/ | Shrungsreung | Shrungsreung → no change → Šrunsreun |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): sea-elf has no exposure to 'killer-whale-kind' |
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): sea-elf has no exposure to 'know' |
 | `kobold-kind` | a kobold | Žreen | /ʒreen/ | Zhreeng | Zhreeng → no change → Žreen |
@@ -3580,6 +3595,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `island` | land the water surrounds | — | — | — | gap (experiential): snow-elf has no exposure to 'island' |
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): snow-elf has no exposure to 'kelp-canopy' |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'kelp-forest' |
+| `kill` | to cause to cease living | Šroṅsrooṅ | /ʃroŋsrooŋ/ | Shrungsreung | Shrungsreung → no change → Šroṅsrooṅ |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): snow-elf has no exposure to 'killer-whale-kind' |
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): snow-elf has no exposure to 'know' |
 | `kobold-kind` | a kobold | Zrooṅ | /zrooŋ/ | Zhreeng | Zhreeng → no change → Zrooṅ |
@@ -3812,6 +3828,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `island` | land the water surrounds | — | — | — | gap (experiential): white-dragon has no exposure to 'island' |
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): white-dragon has no exposure to 'kelp-canopy' |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `kill` | to cause to cease living | Dongnoon | /doŋnoon/ | Góngméóm | Góngméóm → no change → Dongnoon |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): white-dragon has no exposure to 'killer-whale-kind' |
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): white-dragon has no exposure to 'know' |
 | `kobold-kind` | a kobold | — | — | — | gap (experiential): white-dragon has no exposure to 'kobold-kind' |
@@ -4044,6 +4061,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `island` | land the water surrounds | — | — | — | gap (experiential): wood-elf has no exposure to 'island' |
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): wood-elf has no exposure to 'kelp-canopy' |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `kill` | to cause to cease living | Sduṅsdeu | /sduŋsdeu/ | Shrungsreung | Shrungsreung → finalloss → Sduṅsdeu |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): wood-elf has no exposure to 'killer-whale-kind' |
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): wood-elf has no exposure to 'know' |
 | `kobold-kind` | a kobold | Zdee | /zdee/ | Zhreeng | Zhreeng → finalloss → Zdee |
@@ -4207,6 +4225,7 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | `hand` | the manipulating limb-end | *Ngáámbong /ŋa˥a˥mboŋ/ | Gaaddog /gaaddog/ | Daaddod /daaddod/ | Ngaandong /ŋaandoŋ/ | *Ngáámbong → Gaaddog / Daaddod / Ngaandong |
 | `helpless` | negative and persistent: given up despite an active drive | *Pééngáng /pe˥e˥nga˥ŋ/ | Doodgag /doodgag/ | Kooddad /kooddad/ | Koondang /koondaŋ/ | *Pééngáng → Doodgag / Kooddad / Koondang |
 | `high` | far above the ground | *Déomdóng /de˥omdo˥ŋ/ | Dooddog /dooddog/ | Dooddod /dooddod/ | Doondong /doondoŋ/ | *Déomdóng → Dooddog / Dooddod / Doondong |
+| `kill` | to cause to cease living | *Góngméóm /go˥ŋme˥o˥m/ | Gogdood /gogdood/ | Doddood /doddood/ | Dongnoon /doŋnoon/ | *Góngméóm → Gogdood / Doddood / Dongnoon |
 | `light` | the color term for white/light hues | *Dem /dem/ | Dod /dod/ | Dod /dod/ | Don /don/ | *Dem → Dod / Dod / Don |
 | `little` | small in size or extent | *Kaángmáón /kaa˥ŋma˥o˥n/ | Gaagdaod /gaagdaod/ | Kaaddaod /kaaddaod/ | Kaangnaon /kaaŋnaon/ | *Kaángmáón → Gaagdaod / Kaaddaod / Kaangnaon |
 | `low` | near the ground | *Neémnaáng /nee˥mnaa˥ŋ/ | Dooddaag /dooddaag/ | Dooddaad /dooddaad/ | Noonnaang /noonnaaŋ/ | *Neémnaáng → Dooddaag / Dooddaad / Noonnaang |
@@ -4278,6 +4297,7 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | `hobgoblin-kind` | a hobgoblin | *Babaj /babaj/ | Papaj /papaj/ | Babaj /babaj/ | Babaj /babaj/ | *Babaj → Papaj / Babaj / Babaj |
 | `home` | one's dwelling | *Jadan /jadan/ | Jadan /jadan/ | Jaban /jaban/ | Jabam /jabam/ | *Jadan → Jadan / Jaban / Jabam |
 | `human-kind` | a human | *Vavab /vavab/ | Vavap /vavap/ | Babab /babab/ | Vavab /vavab/ | *Vavab → Vavap / Babab / Vavab |
+| `kill` | to cause to cease living | *Qadag /qadag/ | Qadag /qadag/ | Qabag /qabag/ | Qabag /qabag/ | *Qadag → Qadag / Qabag / Qabag |
 | `kobold-kind` | a kobold | *Satag /satag/ | Sadag /sadag/ | Tatag /tatag/ | Satag /satag/ | *Satag → Sadag / Tatag / Satag |
 | `light` | the color term for white/light hues | *Bangas /baŋas/ | Pangas /paŋas/ | Bangat /baŋat/ | Bangas /baŋas/ | *Bangas → Pangas / Bangat / Bangas |
 | `little` | small in size or extent | *Danag /danag/ | Danag /danag/ | Banag /banag/ | Bamag /bamag/ | *Danag → Danag / Banag / Bamag |
@@ -4355,6 +4375,7 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | `hobgoblin-kind` | a hobgoblin | *Zrongshroung /zroŋʃrouŋ/ | Zzoṅšzouṅ /zzoŋʃzouŋ/ | Rogšroo /rogʃroo/ | Zromšroom /zromʃroom/ | Drunšruun /drunʃruun/ | Zroṅšrooṅ /zroŋʃrooŋ/ | Zduṅsduu /zduŋsduu/ | *Zrongshroung → Zzoṅšzouṅ / Rogšroo / Zromšroom / Drunšruun / Zroṅšrooṅ / Zduṅsduu |
 | `home` | one's dwelling | *Zraunggeng /zrauŋgeŋ/ | Zzauṅgeṅ /zzauŋgeŋ/ | Raoggo /raoggo/ | Zraomgem /zraomgem/ | Draunben /draunben/ | Zraoṅboṅ /zraoŋboŋ/ | Zdauṅge /zdauŋge/ | *Zraunggeng → Zzauṅgeṅ / Raoggo / Zraomgem / Draunben / Zraoṅboṅ / Zdauṅge |
 | `human-kind` | a human | *Ngongsrung /ŋoŋsruŋ/ | Ṅoṅszuṅ /ŋoŋszuŋ/ | Gogsro /gogsro/ | Momsrom /momsrom/ | Nunsrun /nunsrun/ | Ṅoṅsroṅ /ŋoŋsroŋ/ | Ṅuṅsdu /ŋuŋsdu/ | *Ngongsrung → Ṅoṅszuṅ / Gogsro / Momsrom / Nunsrun / Ṅoṅsroṅ / Ṅuṅsdu |
+| `kill` | to cause to cease living | *Shrungsreung /ʃruŋsreuŋ/ | Šzuṅszeuṅ /ʃzuŋszeuŋ/ | Rogsroo /rogsroo/ | Šromsreom /ʃromsreom/ | Šrunsreun /ʃrunsreun/ | Šroṅsrooṅ /ʃroŋsrooŋ/ | Sduṅsdeu /sduŋsdeu/ | *Shrungsreung → Šzuṅszeuṅ / Rogsroo / Šromsreom / Šrunsreun / Šroṅsrooṅ / Sduṅsdeu |
 | `kobold-kind` | a kobold | *Zhreeng /ʒreeŋ/ | Žzeeṅ /ʒzeeŋ/ | Roo /roo/ | Žreem /ʒreem/ | Žreen /ʒreen/ | Zrooṅ /zrooŋ/ | Zdee /zdee/ | *Zhreeng → Žzeeṅ / Roo / Žreem / Žreen / Zrooṅ / Zdee |
 | `light` | the color term for white/light hues | *Ngaong /ŋaoŋ/ | Ṅaoṅ /ŋaoŋ/ | Gao /gao/ | Maom /maom/ | Naun /naun/ | Ṅaoṅ /ŋaoŋ/ | Ṅau /ŋau/ | *Ngaong → Ṅaoṅ / Gao / Maom / Naun / Ṅaoṅ / Ṅau |
 | `little` | small in size or extent | *Ngoang /ŋoaŋ/ | Ṅoaṅ /ŋoaŋ/ | Goa /goa/ | Moam /moam/ | Nuan /nuan/ | Ṅoaṅ /ŋoaŋ/ | Ṅua /ŋua/ | *Ngoang → Ṅoaṅ / Goa / Moam / Nuan / Ṅoaṅ / Ṅua |
@@ -4430,6 +4451,7 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | `hobgoblin-kind` | a hobgoblin | *Dae /dae/ | Dao /dao/ | Dae /dae/ | Bae /bae/ | *Dae → Dao / Dae / Bae |
 | `home` | one's dwelling | *Qoqe /qoqe/ | Qoqo /qoqo/ | Tote /tote/ | Qoqe /qoqe/ | *Qoqe → Qoqo / Tote / Qoqe |
 | `human-kind` | a human | *Noaka /noaka/ | Doaga /doaga/ | Noaka /noaka/ | Noaka /noaka/ | *Noaka → Doaga / Noaka / Noaka |
+| `kill` | to cause to cease living | *Dapo /dapo/ | Dabo /dabo/ | Dabo /dabo/ | Babo /babo/ | *Dapo → Dabo / Dabo / Babo |
 | `kobold-kind` | a kobold | *Naeno /naeno/ | Daodo /daodo/ | Naeno /naeno/ | Naeno /naeno/ | *Naeno → Daodo / Naeno / Naeno |
 | `light` | the color term for white/light hues | *Noaqaa /noaqaa/ | Doaqaa /doaqaa/ | Noataa /noataa/ | Noaqaa /noaqaa/ | *Noaqaa → Doaqaa / Noataa / Noaqaa |
 | `little` | small in size or extent | *Neodoe /neodoe/ | Doodoo /doodoo/ | Neodoe /neodoe/ | Neoboe /neoboe/ | *Neodoe → Doodoo / Neodoe / Neoboe |
