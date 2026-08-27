@@ -225,3 +225,6 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0261](0261-a-rule-duplicated-on-purpose-carries-a-two-way-agreement-test.md) | A rule duplicated on purpose carries a pointer in both copies and a two-way agreement test | Accepted |
 | [0266](0266-an-utterance-is-a-fact.md) | An utterance is a fact, an event is an entity, and roles are predicates on that entity | Accepted |
 | [0286](0286-each-realizer-ignores-part-of-the-clause.md) | A language-neutral clause states more than any one realizer surfaces | Accepted |
+| [0306](0306-a-hosts-cooperation-is-derived-from-doctrine-and-conduct-never-authored.md) | A host's cooperation is derived from doctrine and conduct, never authored | Accepted |
+| [0307](0307-a-deliberate-falsehood-is-a-distinct-testimony-variant-from-a-lexical-substitution.md) | A deliberate falsehood is a distinct testimony variant from a lexical substitution | Accepted |
+| [0308](0308-prior-and-fold-are-stored-separately-their-disagreement-is-the-output.md) | Prior and fold are stored separately; their disagreement is the output | Accepted |

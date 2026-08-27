@@ -55,6 +55,10 @@ mod millrace_probe;
 mod namesake_metrics;
 #[path = "suite/preregistration_guard.rs"]
 mod preregistration_guard;
+#[path = "suite/reticence.rs"]
+mod reticence;
+#[path = "suite/reticence_calibration.rs"]
+mod reticence_calibration;
 #[path = "suite/roster_parity.rs"]
 mod roster_parity;
 #[path = "suite/rung_selection.rs"]

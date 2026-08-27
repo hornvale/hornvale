@@ -1212,7 +1212,6 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_world_with_no_flagged_col
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_columns_are_never_evaluable
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_226_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
@@ -1283,6 +1282,7 @@ hornvale-lab::hornvale_lab$domesday::render::tests::a_detector_that_fired_nothin
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_page_carries_the_generated_header_and_only_computed_numbers
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_with_no_metrics_renders_the_no_metrics_notice_verbatim
 hornvale-lab::hornvale_lab$domesday::render::tests::a_flag_metric_always_renders_both_true_and_false_rows
+hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two
 hornvale-lab::hornvale_lab$domesday::render::tests::a_novel_detector_name_reaches_the_rendered_index
 hornvale-lab::hornvale_lab$domesday::render::tests::a_removed_parenthetical_directly_before_a_period_does_not_leave_a_dangling_space
 hornvale-lab::hornvale_lab$domesday::render::tests::an_ellipsis_survives_the_space_dot_space_cleanup_untouched
@@ -1532,6 +1532,7 @@ hornvale-lab::suite$preregistration_guard::a_decision_cite_is_sanctioned
 hornvale-lab::suite$preregistration_guard::a_result_quieting_reason_is_rejected
 hornvale-lab::suite$preregistration_guard::calibration_files_carry_no_unsanctioned_ignores
 hornvale-lab::suite$preregistration_guard::the_census_cost_ignore_is_sanctioned
+hornvale-lab::suite$reticence_calibration::h4_positive_control_the_divergence_detector_can_fire
 hornvale-lab::suite$rung_selection::insolation_is_determined_by_zone_position_alone
 hornvale-lab::suite$rung_selection::the_astronomy_driver_metrics_are_registered_and_vary
 hornvale-lab::suite$seed_sweep::a_worker_panic_propagates_and_an_empty_sweep_is_empty
@@ -2670,12 +2671,15 @@ hornvale-vessel::hornvale_vessel$plan::tests::the_projection_is_deterministic
 hornvale-vessel::hornvale_vessel$plan::tests::the_standing_cell_is_carried_verbatim
 hornvale-vessel::hornvale_vessel$plan::tests::two_walls_at_different_light_levels_get_different_palette_entries
 hornvale-vessel::hornvale_vessel$purview::tests::agent_salience_outranks_every_settlement_salience
+hornvale-vessel::hornvale_vessel$session::tests::a_costly_truth_names_its_residue_and_an_empty_one_reads_as_ordinary
+hornvale-vessel::hornvale_vessel$session::tests::a_deliberate_lie_carries_the_claim_and_never_the_truth
 hornvale-vessel::hornvale_vessel$session::tests::advanced_by_checks_the_increment_and_the_sum_separately
 hornvale-vessel::hornvale_vessel$session::tests::every_bare_verb_help_lists_is_classified
 hornvale-vessel::hornvale_vessel$session::tests::further_in_is_the_deeper_aperture_and_stops_at_the_last_chamber
 hornvale-vessel::hornvale_vessel$session::tests::neighbours_reads_the_link_graph_in_both_directions
 hornvale-vessel::hornvale_vessel$session::tests::render_testimony_direct_reports_the_word_and_its_own_concept
 hornvale-vessel::hornvale_vessel$session::tests::render_testimony_none_says_nothing_and_lands_nothing
+hornvale-vessel::hornvale_vessel$session::tests::render_testimony_withheld_lands_nothing_and_names_no_state
 hornvale-vessel::hornvale_vessel$session::tests::session_control_is_never_an_in_character_verb
 hornvale-vessel::hornvale_vessel$session::tests::the_arbitration_never_reaches_a_divergent_utterance
 hornvale-vessel::hornvale_vessel$structure::tests::a_built_locale_has_a_bounded_chamber_set
@@ -2724,6 +2728,7 @@ hornvale-vessel::suite$course_properties::a_due_north_course_never_leaves_its_me
 hornvale-vessel::suite$course_properties::a_fixed_priority_exit_matching_cycle_traps_in_a_closed_room_set
 hornvale-vessel::suite$course_properties::a_memoryless_walk_leaves_the_meridian_that_h1_pins
 hornvale-vessel::suite$course_properties::bearing_based_resolution_escapes_the_fixed_priority_attractor
+hornvale-vessel::suite$doctrine::the_least_equipped_people_is_the_most_open
 hornvale-vessel::suite$felt_state_concepts::every_affect_label_has_exactly_one_registered_felt_state_concept
 hornvale-vessel::suite$gate_table::in_character_is_refused_while_asleep_and_permitted_awake
 hornvale-vessel::suite$gate_table::out_of_character_is_permitted_in_every_body_state
@@ -2738,10 +2743,18 @@ hornvale-vessel::suite$lantern_light::the_falloff_ratio_between_two_cells_is_inv
 hornvale-vessel::suite$ledger_query_equivalence::facts_of_selects_what_find_and_filter_selected
 hornvale-vessel::suite$possess_target::the_default_target_is_the_flagship
 hornvale-vessel::suite$session_snapshot::the_fixture_is_taken_at_the_transcript_s_own_day
+hornvale-vessel::suite$stance::an_unoffended_host_is_forthcoming_whatever_its_prior
+hornvale-vessel::suite$stance::stances_worsen_monotonically_with_conduct
+hornvale-vessel::suite$stance::the_prior_decides_how_fast_conduct_costs_you
 hornvale-vessel::suite$submerged::a_rock_stratum_is_not_submerged
 hornvale-vessel::suite$submerged::a_water_stratum_is_submerged
 hornvale-vessel::suite$submerged::the_surface_and_the_absent_case_are_unchanged
 hornvale-vessel::suite$testimony::a_culture_with_no_felt_state_words_reports_none
+hornvale-vessel::suite$testimony::reticence::a_costly_truth_reveals_the_residue_a_forthcoming_host_withholds
+hornvale-vessel::suite$testimony::reticence::a_culture_with_no_word_for_the_claim_withholds_rather_than_lying
+hornvale-vessel::suite$testimony::reticence::a_dissembling_host_claims_content_and_never_leaks_the_truth
+hornvale-vessel::suite$testimony::reticence::a_dissembling_hosts_lexicon_that_also_knows_the_truth_still_withholds_confirmation
+hornvale-vessel::suite$testimony::reticence::a_withholding_host_names_no_state_at_all
 hornvale-vessel::suite$testimony::the_fallback_fires_only_when_the_culture_lacks_the_word
 hornvale-vessel::suite$testimony::two_cultures_report_different_words_for_the_same_true_state
 hornvale-vessel::suite$the_blocking::a_locale_composition_is_untouched_by_the_role_layer

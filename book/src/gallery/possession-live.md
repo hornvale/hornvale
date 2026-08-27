@@ -90,7 +90,11 @@ route, departing and returning), <code>knows</code>,
 own tongue, and what it says is <em>not</em> what its arbitration computed — it
 cannot perceive what that arbitration suppressed, and its culture may have no
 word for the state it is in, in which case it reaches for the nearest word it
-does have and says so — The Confidant),
+does have and says so — The Confidant. Whether it answers at all is also not
+guaranteed: what its people believes you are and what you have made this body
+ignore can leave it refusing to say, claiming to feel fine when it does not, or
+answering truthfully and naming what it cost the host to say so — The
+Reticence),
 <code>sleep</code> (lie down and let go of the day; the body stops obeying
 until its own cycle wakes it — The Deed),
 and <code>release</code>, which ends the possession rather than doing anything

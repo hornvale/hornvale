@@ -18,7 +18,8 @@
 //! `windows/vessel/tests/suite/felt_state_concepts.rs` keeps the two
 //! rosters in step from this side rather than the other.
 
-use crate::liveness::AffectLabel;
+use crate::liveness::{AffectLabel, DriveKind};
+use crate::stance::Stance;
 use hornvale_language::{GapReason, LexEntry, Lexicon, WordViews};
 
 /// `AffectLabel`'s registered concept id in `domains/language`'s
@@ -178,6 +179,78 @@ pub fn testify(lexicon: &Lexicon, label: AffectLabel) -> Option<FeltStateWord> {
         reported_as,
         reason: reason.clone(),
     })
+}
+
+/// What a host actually says when asked, once its willingness is applied.
+///
+/// **`FeltStateWord` is deliberately NOT extended with a falsehood arm.** A lie
+/// and a lexical substitution have the same shape — report X when the truth is
+/// Y — and different causes, and `misreport_distance_for`
+/// (`windows/lab/src/metrics.rs`) compares concept ids and cannot tell them
+/// apart. Wrapping rather than extending makes that metric structurally unable
+/// to observe a falsehood instead of merely filtered from one.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Testimony {
+    /// The host answered from its own state — The Confidant's behaviour,
+    /// unchanged, including its two blindnesses.
+    Spoken(FeltStateWord),
+    /// The host declined to name its state.
+    Withheld,
+    /// The host named a state it is not in.
+    Falsehood {
+        /// The word it actually said.
+        word: WordViews,
+        /// The state that word names — never the true one.
+        claimed: AffectLabel,
+    },
+    /// Accurate, plus the discarded ranks a forthcoming host never mentions.
+    Costly {
+        /// The true state's word, by the ordinary lexical route.
+        word: FeltStateWord,
+        /// The residue revealed BECAUSE revealing it costs the rider.
+        revealed: Vec<DriveKind>,
+    },
+}
+
+/// The single lie this campaign tells: a dissembling host claims it is
+/// [`AffectLabel::Content`] — the "I am fine" of a body that is not.
+///
+/// One rule, deterministic, and deliberately flat: the deliverable is that a
+/// host CAN lie, not a taxonomy of lies. A chooser that varies the claim by what
+/// the host wants believed is a later campaign's work and wants its own
+/// preregistration.
+const DISSEMBLING_CLAIM: AffectLabel = AffectLabel::Content;
+
+/// [`testify`], with the host's willingness applied.
+///
+/// `residue` is the arbitration's discarded ranks
+/// ([`crate::Session::suppressed_drives`]); it is read ONLY by the
+/// [`Testimony::Costly`] arm. Every other arm ignores it, which is what keeps
+/// The Confidant's cognitive gap intact for an ordinary answer.
+pub fn testify_with_stance(
+    lexicon: &Lexicon,
+    truth: AffectLabel,
+    stance: Stance,
+    residue: &[DriveKind],
+) -> Option<Testimony> {
+    match stance {
+        Stance::Withholding => Some(Testimony::Withheld),
+        Stance::Forthcoming => testify(lexicon, truth).map(Testimony::Spoken),
+        Stance::Costly => testify(lexicon, truth).map(|word| Testimony::Costly {
+            word,
+            revealed: residue.to_vec(),
+        }),
+        Stance::Dissembling => match testify(lexicon, DISSEMBLING_CLAIM)? {
+            FeltStateWord::Direct(word) => Some(Testimony::Falsehood {
+                word,
+                claimed: DISSEMBLING_CLAIM,
+            }),
+            // The culture has no word for `Content` either. A host that cannot
+            // say the lie says nothing — falling through to the truth would
+            // make a hostile host MORE informative than a friendly one.
+            FeltStateWord::Nearest { .. } => Some(Testimony::Withheld),
+        },
+    }
 }
 
 #[cfg(test)]

@@ -148,6 +148,8 @@ usage:
                                             one world's report instead, writing nothing
   hornvale lab confidant                   render The Confidant's felt-state reportability report (world-invariant,
                                             builds its own Seed(42); docs/audits/the-confidant-report.md)
+  hornvale lab reticence                   render The Reticence's doctrine-prior report (builds its own Seed(42);
+                                            docs/audits/the-reticence-report.md)
   hornvale ci-record                       record this run's durations as the host baseline
 
 sky flags (shared by new and scout):
@@ -1525,7 +1527,7 @@ fn cmd_book(args: &[String]) -> Result<(), String> {
 
 /// Dispatch `lab` subcommands: `run <PATH>`, `diff <STUDY> <OLD_CSV> <NEW_CSV>`,
 /// `backfill-schema <STUDY_JSON> <ROWS_CSV>`, `list-metrics`, `domesday`,
-/// `anomalies [--seed N]`, `confidant`, and `claim-status`.
+/// `anomalies [--seed N]`, `confidant`, `reticence`, and `claim-status`.
 fn cmd_lab(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
         Some("run") => cmd_lab_run(args),
@@ -1535,6 +1537,7 @@ fn cmd_lab(args: &[String]) -> Result<(), String> {
         Some("domesday") => cmd_lab_domesday(),
         Some("anomalies") => cmd_lab_anomalies(args),
         Some("confidant") => cmd_lab_confidant(),
+        Some("reticence") => cmd_lab_reticence(),
         Some("claim-status") => {
             // Answers "is a heavy run holding the box right now?" without
             // ps | grep (decision 0081). `scripts/census-run.sh status` and
@@ -1545,7 +1548,7 @@ fn cmd_lab(args: &[String]) -> Result<(), String> {
         }
         Some(other) => Err(format!("lab: unknown subcommand '{other}'\n{}", usage())),
         None => Err(format!(
-            "lab: requires a subcommand (run <PATH>|diff <STUDY> <OLD_CSV> <NEW_CSV>|backfill-schema <STUDY_JSON> <ROWS_CSV>|list-metrics|domesday|anomalies [--seed N]|confidant|claim-status)\n{}",
+            "lab: requires a subcommand (run <PATH>|diff <STUDY> <OLD_CSV> <NEW_CSV>|backfill-schema <STUDY_JSON> <ROWS_CSV>|list-metrics|domesday|anomalies [--seed N]|confidant|reticence|claim-status)\n{}",
             usage()
         )),
     }
@@ -1660,6 +1663,24 @@ fn cmd_lab_confidant() -> Result<(), String> {
     print!(
         "{}",
         hornvale_lab::render_confidant_report().map_err(|e| e.to_string())?
+    );
+    Ok(())
+}
+
+/// Render The Reticence's report (Task 6): fifteen doctrine-prior rows, one
+/// per `hornvale_species::society_registry()` people. Prints to stdout, like
+/// every other `render`-shaped `lab` subcommand — `scripts/regenerate-
+/// artifacts.sh` owns the `>` redirect into the committed
+/// `docs/audits/the-reticence-report.md`. Builds its own `Seed(42)` world
+/// internally (a Group C artifact in that script's classification, the same
+/// shape as `confidant` above): see `hornvale_lab::render_reticence_report`'s
+/// own doc for why it pays for a full sculpt despite the felt-state half of
+/// its answer being world-invariant, so no `--world`/`--seed` flag is needed
+/// here either.
+fn cmd_lab_reticence() -> Result<(), String> {
+    print!(
+        "{}",
+        hornvale_lab::render_reticence_report().map_err(|e| e.to_string())?
     );
     Ok(())
 }
