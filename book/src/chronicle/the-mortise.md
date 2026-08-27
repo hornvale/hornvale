@@ -286,6 +286,17 @@ confused me and upset me,"* satisfies the identical demands through machinery
 this campaign already built. Nominalization is a real, separate feature, not
 a shortfall in this one.
 
+**A `Coordination` cannot itself be embedded.** `Argument::Clause` and
+`Subject::Clause` wrap only a `Box<Clause>`, never a `Box<Coordination>`, so
+*"I know he killed her and she died"* — a coordination nested under an
+embedding — is inexpressible today
+([decision 0327](../../../docs/decisions/0327-embedding-and-coordination-are-two-operators-a-slot-and-a-list.md)).
+This is not an oversight to fix later so much as the other half of why the
+parser's discriminator is sound at every recursion depth: because a
+`Coordination` can never hide inside a slot, seeing the top-level `" and "`
+marker is always conclusive, at depth zero and at the one level embedding
+reaches beneath it.
+
 **Temporal adverbials** stay cut, and this is a finding rather than a scoping
 preference. `m02` — *"Everything was fine until last night"* — needs only
 `past-tense` and `temporal-adverbial` by its own hand-authored demand tokens.
