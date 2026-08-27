@@ -231,6 +231,28 @@ The offer passes through the observer's `Knowledge` store
 (`windows/vessel/src/knowledge.rs:24`) before it is rendered. A body that has
 not encountered a thing is offered nothing by it.
 
+**The gate cannot deny anything in IV.a, and that is stated rather than
+discovered.** Task 4 investigated and the review verified every citation:
+`Session::new` calls `absorb_here` unconditionally before returning
+(`session.rs:1167`), and `IdentityProjection::project` takes `_perception` and
+never reads it (`knowledge.rs:131`), so darkness cannot suppress absorption.
+`enter` descends from a locale already absorbed. There is therefore **no live
+path in IV.a on which a body is offered an object whose room it does not
+know.**
+
+The gate ships anyway, wired (Nathan, at the §3.5 stop): Task 7 routes the four
+advertisement surfaces *through* `offered_to_observer`, so it is live code with
+an unreachable branch rather than dead code, and IV.b's durable objects give it
+a firing case with no rewiring. The alternative considered and declined was
+reverting it and moving §3.5 to IV.b entirely.
+
+**What this costs, named so it cannot be mistaken:** §3.5 reads as delivered
+and cannot be observed working. The machinery is correct and its tests are
+mutation-proven — making `offered_to_observer` ignore its `known` argument
+reddens `an_unencountered_object_offers_nothing` — but no seed, no session, and
+no transcript in IV.a will ever exercise the denying branch. The chronicle must
+say so too.
+
 **IV.a ships truthful advertisement through this seam.** It does not ship the
 lie. But the seam is where a lie plugs in later, and naming it now is what
 keeps that a one-file change rather than a redesign — see followup 4. The
