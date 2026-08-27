@@ -864,15 +864,13 @@ impl Driver {
     /// terminal — The Portolan part II, Task 3a wires this into the redraw
     /// path.
     ///
-    /// **The plate's own size is derived from the SAME fit `compose` itself
-    /// applies, never a second copy of it**:
-    /// [`hornvale_game_core::spread::world_plate_width`] gives the width,
-    /// and the height follows from
-    /// [`hornvale_game_core::spread::GLYPH_ASPECT`] — the ratio `core`
-    /// exposes rather than this module hardcoding a second `2` (see that
-    /// constant's own doc). This is what lets `world_plate_width`'s
-    /// `pub`-ness do its job: `compose` and this method size their two
-    /// `Grid`s from the identical computation.
+    /// **The plate's own size is derived from the SAME region `compose`
+    /// itself draws into, never a second copy of it** — see
+    /// [`Self::world_plate_dims`], which is the one place the width rule
+    /// ([`hornvale_game_core::spread::world_plate_width`]) and the height
+    /// rule ([`hornvale_game_core::spread::content_height`]) are read. This
+    /// is what lets those functions' `pub`-ness do its job: `compose` and
+    /// this method size their two `Grid`s from the identical computation.
     ///
     /// **Unconditional — draws the Mercator whether or not the world view is
     /// active.** [`Driver::world_plate_for_redraw`] is the gated entry point
@@ -899,30 +897,60 @@ impl Driver {
         )
     }
 
-    /// The world plate's own size for a `w`-by-`h` terminal — the SAME fit
-    /// `compose` applies, computed in one place because two callers now need
-    /// it ([`Self::world_plate`] draws a whole plate;
-    /// [`Self::world_plate_for_redraw`] draws its two layers separately and
-    /// must size both identically). A second copy of this arithmetic is the
-    /// bug shape `content_height`'s own doc warns about.
+    /// The world plate's own size for a `w`-by-`h` terminal — the SAME
+    /// region `compose` draws into, computed in one place because three
+    /// callers now need it ([`Self::world_plate`] draws a whole plate;
+    /// [`Self::world_plate_for_redraw`] draws its three layers separately
+    /// and must size all of them identically; [`Self::active_plate_dims`]
+    /// clamps the cursor and the window to it). A second copy of this
+    /// arithmetic is the bug shape `content_height`'s own doc warns about.
+    ///
+    /// **The height is [`hornvale_game_core::spread::content_height`], not
+    /// `width / GLYPH_ASPECT` (The Quadrat, Task 9).** The old derivation
+    /// agreed with this one for every width the old fit could produce —
+    /// that fit's own ceiling was `GLYPH_ASPECT * content_height(h)`, so
+    /// halving it landed exactly on `content_height(h)`. Task 9 raised the
+    /// width floor to half the terminal, which on a wide, short terminal
+    /// exceeds that ceiling (200x50: 100 columns against a ceiling of 92),
+    /// and half of 100 is 50 rows on a page with room for 46. Those four
+    /// rows would have been drawn into a grid the page then clipped, and —
+    /// worse — [`Self::active_plate_dims`] would have let the cursor walk
+    /// into them, which is the Task 3a review finding with the axes
+    /// swapped.
     fn world_plate_dims(w: u16, h: u16) -> (u16, u16) {
-        let width = hornvale_game_core::spread::world_plate_width(w, h);
-        (width, width / hornvale_game_core::spread::GLYPH_ASPECT)
+        (
+            hornvale_game_core::spread::world_plate_width(w, h),
+            hornvale_game_core::spread::content_height(h),
+        )
     }
 
     /// The world plate to hand [`hornvale_game_core::render_with`] for a
-    /// `w`-by-`h` redraw — `Some` when [`Focus::Map`] is focused AND the
-    /// band is one whose plate is the raster ([`Self::raster_is_drawn`]),
-    /// `None` otherwise.
+    /// `w`-by-`h` redraw — `Some` exactly when the band is one whose plate
+    /// is the raster ([`Self::raster_is_drawn`]), `None` otherwise.
     ///
-    /// **The RUNG is no longer part of the gate, and the BAND is (The
-    /// Quadrat, Task 6 and its fix round 1).** It used to be
-    /// `Focus::Map && world_view()`, where `world_view()` meant "some rung
-    /// coarser than band B"; band B draws the raster now, so that clause had
-    /// no discriminating answer left. What replaced it is not "nothing":
-    /// dropping to `Focus::Map` alone let a chamber-band `map` replace the
-    /// floor plan with the world raster, which the campaign's spec promises
-    /// not to touch — see [`Self::raster_is_drawn`].
+    /// **THE GATE IS THE BAND, AND ONLY THE BAND (The Quadrat, Task 9).**
+    /// It was `Focus::Map && raster_is_drawn()` until Task 9, and the focus
+    /// clause is what left this campaign's third reported defect half
+    /// fixed: the default focus is [`Focus::Walk`] (decision 0160), so the
+    /// view a player looks at while WALKING took the `None` arm and
+    /// `spread::compose` drew the walk band's old hex scatter into a fixed
+    /// 40-column pane. Task 6 had put band B on the square raster, but only
+    /// while the map was focused — which is not the view the complaint was
+    /// about.
+    ///
+    /// Dropping the clause is safe BY CONSTRUCTION rather than by care,
+    /// because [`Self::raster_is_drawn`] was already a question about the
+    /// band alone: the chamber band still answers `false`, so Task 6's fix
+    /// round 1 (typing `map` indoors must not replace the floor plan) is
+    /// preserved without anything else being asked to preserve it. What
+    /// FOCUS still decides is unchanged and is all it ever should have
+    /// decided: where the keys go, whether a cursor is reported, and
+    /// whether the map strip has text.
+    ///
+    /// **The RUNG is not part of the gate either (The Quadrat, Task 6 and
+    /// its fix round 1).** It used to be `Focus::Map && world_view()`, where
+    /// `world_view()` meant "some rung coarser than band B"; band B draws
+    /// the raster now, so that clause had no discriminating answer left.
     ///
     /// **This is the ONE place that decision is made** (The Portolan part
     /// II's own fix round 1). Before this method existed, `main.rs`'s
@@ -953,7 +981,7 @@ impl Driver {
     /// more** — the tiles are the cached objects, and the assembled plate
     /// was never one.
     pub fn world_plate_for_redraw(&mut self, w: u16, h: u16) -> Option<hornvale_game_core::Grid> {
-        if self.focus != Focus::Map || !self.raster_is_drawn() {
+        if !self.raster_is_drawn() {
             return None;
         }
         let (plate_width, plate_height) = Self::world_plate_dims(w, h);
@@ -1388,14 +1416,12 @@ impl Driver {
         self.on_walk_band
     }
 
-    /// The active plate's own width and height, in grid cells — the walk
-    /// band's fixed [`hornvale_game_core::spread::PLATE_WIDTH`] and
-    /// `self.plate_height` when the world view is off, or the world
-    /// plate's own fit when it is on: the SAME
-    /// [`hornvale_game_core::spread::world_plate_width`]
-    /// [`Driver::world_plate`] itself draws into, its height following
-    /// [`hornvale_game_core::spread::GLYPH_ASPECT`] the identical way that
-    /// method derives it.
+    /// The active plate's own width and height, in grid columns and rows —
+    /// the chamber band's fixed
+    /// [`hornvale_game_core::spread::PLATE_WIDTH`] and `self.plate_height`
+    /// when the raster is not what is drawn, or [`Self::world_plate_dims`]
+    /// outright when it is: the SAME pair [`Driver::world_plate`] itself
+    /// draws into, read from that one function rather than restated here.
     ///
     /// **Task 3a's own review finding, closed here (Task 3b):**
     /// `move_cursor` used to clamp to the fixed walk-band width regardless
@@ -1416,9 +1442,13 @@ impl Driver {
         // when it is actually handed a plate, which is exactly
         // [`Self::raster_is_drawn`].
         if self.raster_is_drawn() {
-            let width = hornvale_game_core::spread::world_plate_width(self.term_w, self.term_h);
-            let height = width / hornvale_game_core::spread::GLYPH_ASPECT;
-            (width, height)
+            // The IDENTICAL call `world_plate`/`world_plate_for_redraw`
+            // size their grids from — not a second spelling of it (Task 9;
+            // an earlier revision derived the height as
+            // `width / GLYPH_ASPECT` here and in `world_plate_dims`, two
+            // copies of one rule that Task 9's wider floor would have
+            // broken in both places at once).
+            Self::world_plate_dims(self.term_w, self.term_h)
         } else {
             (hornvale_game_core::spread::PLATE_WIDTH, self.plate_height)
         }
@@ -3956,8 +3986,27 @@ mod portolan_tests {
         // The plate is a SUBRECT of the chart since Task 1, so "the plate"
         // is not a place until the window says which one. Look where the
         // player is standing.
-        centre_window_on_the_player(&mut d, 40, 20);
-        let g = d.world_plate(40, 20);
+        //
+        // THE TWO CALLS TAKE DIFFERENT UNITS, and an earlier revision passed
+        // `40, 20` to both (Task 9): `centre_window_on` wants the PLATE's
+        // own size, `world_plate` wants the TERMINAL's. They agreed by
+        // accident while the width rule could never exceed
+        // `GLYPH_ASPECT * content_height(h)` — `world_plate_dims(40, 20)`
+        // happened to come back 32x16, near enough to 40x20 for the
+        // assertions below. Task 9's `MIN_ENTRY_WIDTH` ceiling makes a
+        // 40-column TERMINAL yield a zero-column plate, which is the honest
+        // answer for a terminal below the client's own 80x24 floor. So the
+        // terminal is now stated as the floor, whose plate is exactly the
+        // 40x20 this test always meant.
+        let (plate_w, plate_h) = Driver::world_plate_dims(
+            hornvale_game_core::MIN_WIDTH,
+            hornvale_game_core::MIN_HEIGHT,
+        );
+        centre_window_on_the_player(&mut d, plate_w, plate_h);
+        let g = d.world_plate(
+            hornvale_game_core::MIN_WIDTH,
+            hornvale_game_core::MIN_HEIGHT,
+        );
         let text = g.to_plain_text();
         // `~` ocean, `.` land — plate.rs's own module doc names this
         // vocabulary; hardcoded here rather than widening that module's
@@ -4082,7 +4131,13 @@ mod portolan_tests {
                 origin_col: 0,
                 origin_row: 0,
             };
-            let g = d.world_plate(40, 20);
+            // The client's own floor, not a bare `40, 20` — this argument is
+            // the TERMINAL's size, not the plate's (Task 9; see
+            // `h5_the_map_is_useful_before_it_is_complete` for the full note).
+            let g = d.world_plate(
+                hornvale_game_core::MIN_WIDTH,
+                hornvale_game_core::MIN_HEIGHT,
+            );
             assert!(
                 !g.to_plain_text().contains(plate::SETTLEMENT_GLYPH),
                 "co-location leaked at rung {depth}: the settlement's glyph appeared \
@@ -4178,7 +4233,12 @@ mod portolan_tests {
             for _ in 0..(BAND_B_RUNG - GLOBE_RUNG) {
                 mapped.apply(Action::Zoom(1));
             }
-            let _ = mapped.world_plate(40, 20);
+            // Terminal dims, not plate dims (Task 9 — see
+            // `h5_the_map_is_useful_before_it_is_complete`).
+            let _ = mapped.world_plate(
+                hornvale_game_core::MIN_WIDTH,
+                hornvale_game_core::MIN_HEIGHT,
+            );
             let _ = mapped.resolve_world_view();
 
             plain.handle(dir);

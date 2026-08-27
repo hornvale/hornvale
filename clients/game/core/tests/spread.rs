@@ -100,50 +100,38 @@ fn a_supplied_world_plate_replaces_the_band_view_and_nothing_else() {
     }
 }
 
-/// Task 3a (The Portolan part II): the plate's width is focus-dependent.
-/// Walk focus keeps the old `PLATE_WIDTH`-column plate even when a world
-/// plate is supplied — a caller-supplied `Grid` wider than that is CLIPPED,
-/// never stretched into; Map focus lets the plate reach
-/// `spread::world_plate_width`'s fit of the terminal's own size; the 80x24
-/// floor degrades to the SAME width the fit already gave it before this
-/// task (`world_plate_width(80, 24) == PLATE_WIDTH`, an identity that is
-/// itself a consistency check on `GLYPH_ASPECT`), never refusing.
+/// A solid `Source::World` plate, big enough that it is never the thing
+/// limiting the pane's width — so a probe that stops finding `World` has
+/// found the PAGE's own plate region ending, not the supplied grid's.
 ///
-/// **Deviates from the task brief's own draft of this test, found by
-/// running it, not by reasoning about it.** The brief's draft set exactly
-/// ONE non-blank cell on the synthetic plate at `(0, 0)` and then probed
-/// `(x, 10)` for `x` up to 120 — but `blit` only ever copies non-blank
-/// SOURCE cells (see `a_supplied_world_plate_replaces_the_band_view_and_
-/// nothing_else`'s own fix-round-1 note above for the same lesson learned
-/// once already), so a plate with exactly one non-blank cell can never
-/// populate row 10 at any column. This version fills the synthetic plate
-/// SOLIDLY with `Source::World` glyphs, well past both the old fixed width
-/// and the fit width at 210x56, so the probes below actually discriminate
-/// "clipped by the destination's own bounds" (`Grid::set` silently drops an
-/// out-of-range write — `cell.rs`'s own doc) from "the destination was
-/// sized wide enough to keep it".
-#[test]
-fn the_world_plate_uses_the_width_only_while_the_map_is_focused() {
-    let plate = {
-        let mut g = Grid::new(150, 40);
-        for y in 0..g.height() {
-            for x in 0..g.width() {
-                g.set(x, y, Cell::glyph('#', Weight::Normal, Source::World));
-            }
+/// **Solid, not sparse, and that is load-bearing** — the same lesson two
+/// tests in this file already record: `blit` copies only non-blank SOURCE
+/// squares, so a plate with one marked square can never populate a whole
+/// row and every column probe below it would read blank for the wrong
+/// reason.
+fn solid_world_plate(w: u16, h: u16) -> Grid {
+    let mut g = Grid::new(w, h);
+    for y in 0..g.height() {
+        for x in 0..g.width() {
+            g.set(x, y, Cell::glyph('#', Weight::Normal, Source::World));
         }
-        g
-    };
+    }
+    g
+}
 
-    // Walk focus: the two-pane split is untouched. The synthetic plate is
-    // still drawn (world_plate replaces the band's own chart/plan
-    // regardless of focus — see the test above), but confined to the OLD
-    // fixed width: column 40 itself belongs to the entry pane, never the
-    // plate, so it cannot be `Source::World`.
-    let (walk, _) = render_with(
+/// Compose a `w`-by-`h` spread in `focus` with a solid world plate
+/// supplied, and MEASURE the plate region's real column count off the
+/// composed page: the run of `Source::World` squares from column 0 along a
+/// mid-content row. Measured, never recomputed from
+/// `spread::world_plate_width` — a test that restated the formula would
+/// agree with any formula, including a wrong one.
+fn plate_column_count(w: u16, h: u16, focus: Focus) -> u16 {
+    let plate = solid_world_plate(w, h);
+    let (g, _) = render_with(
         FIXTURE,
-        210,
-        56,
-        Focus::Walk,
+        w,
+        h,
+        focus,
         None,
         CommandLine::default(),
         None,
@@ -153,47 +141,124 @@ fn the_world_plate_uses_the_width_only_while_the_map_is_focused() {
         None,
     )
     .unwrap();
-    assert_eq!(
-        walk.get(39, 10).unwrap().source,
-        Source::World,
-        "the walk view still draws the supplied plate up to the old width"
-    );
-    assert_ne!(
-        walk.get(40, 10).unwrap().source,
-        Source::World,
-        "the walk view keeps its 40-column plate even with a wide plate supplied"
+    let row = hornvale_game_core::spread::content_height(h) / 2;
+    let mut n = 0u16;
+    while n < w && g.get(n, row).is_some_and(|c| c.source == Source::World) {
+        n += 1;
+    }
+    n
+}
+
+/// THE QUADRAT, TASK 9 — bound one of two: the map is at least half the
+/// terminal.
+///
+/// **The sweep is what makes this discriminate.** At 80x24 the RETIRED
+/// fixed 40-column plate was already exactly half, so a single-size test
+/// here would pass against the very code this task replaces. Every wider
+/// size in the sweep fails under that fixed width, and 200x50 additionally
+/// fails under the pre-Task-9 fit (`GLYPH_ASPECT * content_height(50)` is
+/// 92 columns, 46%) — so the sweep separates all three rules, not just two.
+#[test]
+fn the_plate_claims_at_least_half_the_terminal() {
+    for (w, h) in [(80u16, 24u16), (104, 56), (120, 40), (200, 50), (300, 80)] {
+        let cols = plate_column_count(w, h, Focus::Walk);
+        assert!(
+            cols * 2 >= w,
+            "at {w}x{h} the plate claimed {cols} of {w} columns, under half"
+        );
+    }
+}
+
+/// THE QUADRAT, TASK 9 — bound two of two: the entry pane stays legible.
+///
+/// The direction a bare "at least half" rule breaks. A fraction has only
+/// one bound, so a rule stated as a fraction alone would go on taking half
+/// of a shrinking terminal until the prose had nowhere to go. 104x56 is the
+/// size in this sweep where the ceiling actually BINDS — the square-footprint
+/// preference wants all 104 columns there and this rule holds it to 64 — so
+/// the assertion is not merely satisfied by the floor's own arithmetic.
+#[test]
+fn the_entry_pane_keeps_a_legible_minimum() {
+    for (w, h) in [(80u16, 24u16), (104, 56), (120, 40), (200, 50), (300, 80)] {
+        let entry = w - plate_column_count(w, h, Focus::Walk);
+        assert!(
+            entry >= hornvale_game_core::spread::MIN_ENTRY_WIDTH,
+            "at {w}x{h} the entry pane got {entry} columns, under the legible minimum"
+        );
+    }
+}
+
+/// THE QUADRAT, TASK 9: **a supplied plate widens the pane, in every
+/// focus** — replacing `the_world_plate_uses_the_width_only_while_the_map_
+/// is_focused`, whose subject this task deletes rather than moves.
+///
+/// That test pinned The Portolan part II's Task 3a rule: the pane widened
+/// only under `Focus::Map`, and a wide plate supplied in any other focus
+/// was clipped to the fixed 40 columns. It was a true statement about the
+/// code and it was the campaign's third reported defect wearing a test's
+/// clothes — the default focus is `Focus::Walk`, so the widening never
+/// once happened in the view a player walks around in. Focus decides where
+/// the keys go; it never decided how wide the picture should be.
+///
+/// So the property is retargeted, not dropped: the width now depends on
+/// whether a plate was SUPPLIED, and on nothing else. Both halves are
+/// asserted, because a rule with one half is how the old defect survived —
+/// `None` must still leave the fixed pane alone, or the chamber band's
+/// floor plan and the walk band's own chart would be handed a pane sized
+/// for a raster that is not there.
+#[test]
+fn a_supplied_world_plate_widens_the_pane_in_every_focus() {
+    let (w, h) = (210u16, 56u16);
+    let fit = hornvale_game_core::spread::world_plate_width(w, h);
+    assert!(
+        fit > hornvale_game_core::spread::PLATE_WIDTH,
+        "VACUOUS GUARD: {w}x{h} must fit a pane wider than the fixed          {}, or nothing below discriminates",
+        hornvale_game_core::spread::PLATE_WIDTH
     );
 
-    // Map focus: the plate reaches past the old fixed width, out to the
-    // 210x56 fit (`world_plate_width(210, 56) == 104`).
-    let (map, _) = render_with(
-        FIXTURE,
-        210,
-        56,
-        Focus::Map,
-        None,
-        CommandLine::default(),
-        None,
-        None,
-        Some(&plate),
-        0,
-        None,
-    )
-    .unwrap();
-    assert_eq!(
-        map.get(100, 10).unwrap().source,
-        Source::World,
-        "the map view draws world cells past the old fixed plate width"
-    );
-    assert_ne!(
-        map.get(110, 10).unwrap().source,
-        Source::World,
-        "the map view still stops at the fit width, not the whole terminal \
-         or the supplied plate's own (wider) size"
-    );
+    for focus in [Focus::Walk, Focus::Map, Focus::Cli] {
+        assert_eq!(
+            plate_column_count(w, h, focus),
+            fit,
+            "a supplied plate must widen the pane in {focus:?}"
+        );
+    }
+
+    // The other half: with no plate supplied, the pane is the fixed width
+    // in every focus, whatever the terminal's size.
+    for focus in [Focus::Walk, Focus::Map, Focus::Cli] {
+        let (g, _) = render_with(
+            FIXTURE,
+            w,
+            h,
+            focus,
+            None,
+            CommandLine::default(),
+            None,
+            None,
+            None,
+            0,
+            None,
+        )
+        .unwrap();
+        let past = hornvale_game_core::spread::PLATE_WIDTH;
+        let row = hornvale_game_core::spread::content_height(h) / 2;
+        assert!(
+            (0..past).any(|x| g.get(x, row).is_some_and(|c| !c.is_blank())),
+            "VACUOUS GUARD: the band's own plate must draw something on row              {row} in {focus:?}"
+        );
+        assert!(
+            (past..w).all(|x| g
+                .get(x, row)
+                .is_some_and(|c| c.source != Source::Chart && c.source != Source::World)),
+            "with no plate supplied the pane must stay {past} columns wide in {focus:?}"
+        );
+    }
 
     // The floor degrades, never refuses -- and lands on the SAME width the
-    // fit already gave the old constant.
+    // fixed constant already gave it, which is why 80x24 alone could never
+    // have caught this task's defect.
+    let plate = solid_world_plate(80, 24);
     let (floor, _) = render_with(
         FIXTURE,
         80,
@@ -210,9 +275,9 @@ fn the_world_plate_uses_the_width_only_while_the_map_is_focused() {
     .unwrap();
     assert_eq!(floor.width(), 80, "80x24 degrades, never refuses");
     assert_eq!(
-        floor.get(30, 10).unwrap().source,
-        Source::World,
-        "the floor still draws the plate within its own (unchanged) width"
+        plate_column_count(80, 24, Focus::Walk),
+        hornvale_game_core::spread::PLATE_WIDTH,
+        "the 80x24 floor keeps the width it has always had"
     );
 }
 

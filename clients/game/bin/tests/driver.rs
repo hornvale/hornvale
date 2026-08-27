@@ -300,9 +300,11 @@ fn resize_re_centres_band_b_on_the_observer_at_the_new_plate_height() {
          the old origin would leave it at the same cell"
     );
     // The real assertion: centred on the NEW plate. `world_plate_dims(80,
-    // 40)` is 72x36, so the middle row is 18 — the very row the original
-    // test computed by hand and then asserted a refusal about.
-    let (_, new_h) = (72u16, 36u16);
+    // 40)` is 40x36 — the WIDTH moved under Task 9's `MIN_ENTRY_WIDTH`
+    // ceiling (an 80-column terminal can spare 40), the height did not —
+    // so the middle row is still 18, the very row the original test
+    // computed by hand and then asserted a refusal about.
+    let (_, new_h) = (40u16, 36u16);
     assert_eq!(
         at_taller.1,
         new_h / 2,
@@ -314,6 +316,19 @@ fn resize_re_centres_band_b_on_the_observer_at_the_new_plate_height() {
 /// "while you are there" check): at a 40-row terminal the plate is 36 rows
 /// tall, so the cursor must be able to reach row 35 -- unreachable if the
 /// clamp were still pinned to the 20-row floor.
+///
+/// **The second size is The Quadrat's Task 9, and the first cannot stand in
+/// for it.** The plate's height used to be derived as
+/// `world_plate_width(w, h) / GLYPH_ASPECT`, which agreed with
+/// `content_height(h)` for every width the old width rule could produce —
+/// that rule's own ceiling was `GLYPH_ASPECT * content_height(h)`, so
+/// halving it landed exactly on `content_height(h)` and the two spellings
+/// were indistinguishable at 80x40. Task 9's floor of half the terminal
+/// breaks that identity on a WIDE, SHORT terminal: at 200x50 the plate is
+/// 100 columns and `content_height` is 46, so the retired derivation would
+/// claim 50 rows and let the cursor walk four rows past the bottom of a
+/// plate the page has no room to draw. That is the Task 3a review finding
+/// with the axes swapped, and 200x50 is the size that sees it.
 #[test]
 fn the_cursor_clamp_tracks_the_real_plate_height_too() {
     let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
@@ -327,6 +342,19 @@ fn the_cursor_clamp_tracks_the_real_plate_height_too() {
         cursor.y, 35,
         "the clamp must reach row 35 (content height 36, 0-indexed) at a 40-row terminal, \
          not stop at the 20-row floor's row 19"
+    );
+
+    driver.resize(200, 50);
+    driver.apply(Action::CursorBy(0, 1000));
+    let wide = driver
+        .cursor()
+        .expect("the map always has a cursor once focused");
+    assert_eq!(
+        wide.y,
+        spread::content_height(50) - 1,
+        "the clamp must stop at the last row the page actually draws (content \
+         height {}, 0-indexed), not at half the plate's own width",
+        spread::content_height(50)
     );
 }
 
@@ -428,6 +456,112 @@ fn map_focus_at_band_b_keeps_the_picture_the_cursor_and_the_strip_on_one_plate()
     assert!(
         strip.is_some_and(|t| t.contains("clamped at")),
         "the strip must be the raster's own answer, got {strip:?}"
+    );
+}
+
+/// **THE QUADRAT, TASK 9 — the campaign's third reported defect, stated
+/// against the view it was actually reported about.** Nathan's complaint
+/// named "the map, when we're not in map mode": the picture you look at
+/// while WALKING must be the square raster and must claim at least half
+/// the terminal.
+///
+/// Task 6 put band B on the raster and the suite went green, but only under
+/// `Focus::Map`. The default focus is `Focus::Walk` (decision 0160), and
+/// nothing anywhere asserted what a redraw draws in it — so ordinary play
+/// went on getting the old hex scatter in a 40-column pane with every test
+/// passing. This is the assertion whose absence made that possible, and it
+/// deliberately never submits `map`: the driver stays in the focus it
+/// starts in.
+///
+/// Both halves are asserted from the COMPOSED PAGE, not from the gate or
+/// the width function — the defect was that a correct plate and a correct
+/// width rule were never brought together in this focus, which only the
+/// page can witness.
+#[test]
+fn the_walk_view_draws_the_raster_across_at_least_half_the_terminal() {
+    let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
+    let (w, h) = (200u16, 50u16);
+    driver.resize(w, h);
+    assert_eq!(
+        driver.focus(),
+        Focus::Walk,
+        "this test is about the DEFAULT focus; submitting anything here would          void it"
+    );
+
+    let world_plate = driver.world_plate_for_redraw(w, h);
+    assert!(
+        world_plate.is_some(),
+        "the walk view must be handed the raster — the focus gate is what          left this campaign's third defect half fixed"
+    );
+
+    let json = driver.snapshot();
+    let empty_line = String::new();
+    let (grid, _) = render_with(
+        &json,
+        w,
+        h,
+        driver.focus(),
+        driver.cursor(),
+        CommandLine {
+            text: &empty_line,
+            caret: 0,
+        },
+        driver.strip_text(),
+        driver.echo(),
+        world_plate.as_ref(),
+        driver.strip_offset(),
+        None,
+    )
+    .unwrap();
+
+    // ONE: the pane. Measured off the page — the run of raster/overlay
+    // columns from column 0 along a mid-content row — never recomputed from
+    // `world_plate_width`, which would agree with any rule including the
+    // one this task replaces.
+    let row = spread::content_height(h) / 2;
+    let drawn = |x: u16| {
+        grid.get(x, row)
+            .is_some_and(|c| c.source == Source::World || c.source == Source::Chart)
+    };
+    let cols = (0..w).take_while(|&x| drawn(x)).count() as u16;
+    assert!(
+        cols * 2 >= w,
+        "the walk view's map claimed {cols} of {w} columns, under half"
+    );
+    assert!(
+        cols > spread::PLATE_WIDTH,
+        "VACUOUS GUARD: {w}x{h} must exceed the retired fixed width, or this          passes against the very code it replaces"
+    );
+    assert!(
+        w - cols >= spread::MIN_ENTRY_WIDTH,
+        "the walk view's entry pane got {} columns, under the legible minimum",
+        w - cols
+    );
+
+    // TWO: the PICTURE is the raster with the perception overlay on it, not
+    // the old hex scatter. `Source::Chart` alone would be the scatter —
+    // which is why `World` is asserted rather than merely "something is
+    // drawn" — and `World` alone would mean the observer was lost.
+    let sources: BTreeSet<Source> = (0..spread::content_height(h))
+        .flat_map(|y| (0..cols).map(move |x| (x, y)))
+        .filter_map(|(x, y)| grid.get(x, y).filter(|c| !c.is_blank()).map(|c| c.source))
+        .collect();
+    assert!(
+        sources.contains(&Source::World),
+        "the walk view's map must be the terrain raster, got {sources:?}"
+    );
+    assert!(
+        sources.contains(&Source::Chart),
+        "the walk view's map must carry the perception overlay, got {sources:?}"
+    );
+
+    // THREE: focus still decides what focus is FOR. No cursor is reported
+    // and no strip text is, in the walk view — widening the picture must not
+    // have smuggled the map mode's furniture into it.
+    assert!(driver.cursor().is_none(), "the walk view reports no cursor");
+    assert!(
+        driver.strip_text().is_none(),
+        "the walk view reports no map strip"
     );
 }
 
