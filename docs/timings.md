@@ -3274,3 +3274,4 @@ measured here.
 | 2026-08-27T14:19:57Z | rebaseline | 77.966 | 268.552 | 16.796 | 3.66 | 0 | e4c9c69e4 | campaign/the-quadrat | ambrose | 12 |
 | 2026-08-27T14:21:28Z | gate-commit | 83.137 | 47.503 | 23.926 | 0.86 | 0 | e4c9c69e4 | campaign/the-quadrat | ambrose | 12 |
 | 2026-08-27T14:44:48Z | gate-commit | 144.051 | 62.767 | 33.240 | 0.67 | 0 | e4c9c69e4 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T14:47:36Z | gate-commit | 139.488 | 60.421 | 31.539 | 0.66 | 0 | e4c9c69e4 | campaign/the-quadrat | ambrose | 12 |
