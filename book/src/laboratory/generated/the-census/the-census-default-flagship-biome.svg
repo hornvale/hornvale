@@ -26,14 +26,14 @@
 <rect x="277.7" y="235.8" width="37.1" height="0.2" fill="#5b8dd9" rx="2" />
 <text x="296.3" y="231.8" font-size="11" fill="currentColor" text-anchor="middle">1</text>
 <text x="296.3" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 296.3 252.0)">shrubland</text>
-<rect x="321.4" y="193.4" width="37.1" height="42.6" fill="#5b8dd9" rx="2" />
-<text x="340.0" y="189.4" font-size="11" fill="currentColor" text-anchor="middle">213</text>
+<rect x="321.4" y="193.2" width="37.1" height="42.8" fill="#5b8dd9" rx="2" />
+<text x="340.0" y="189.2" font-size="11" fill="currentColor" text-anchor="middle">214</text>
 <text x="340.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 340.0 252.0)">taiga</text>
 <rect x="365.1" y="129.0" width="37.1" height="107.0" fill="#5b8dd9" rx="2" />
 <text x="383.7" y="125.0" font-size="11" fill="currentColor" text-anchor="middle">535</text>
 <text x="383.7" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 383.7 252.0)">temperate-forest</text>
-<rect x="408.8" y="234.4" width="37.1" height="1.6" fill="#5b8dd9" rx="2" />
-<text x="427.4" y="230.4" font-size="11" fill="currentColor" text-anchor="middle">8</text>
+<rect x="408.8" y="234.6" width="37.1" height="1.4" fill="#5b8dd9" rx="2" />
+<text x="427.4" y="230.6" font-size="11" fill="currentColor" text-anchor="middle">7</text>
 <text x="427.4" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 427.4 252.0)">temperate-rainforest</text>
 <rect x="452.5" y="234.0" width="37.1" height="2.0" fill="#5b8dd9" rx="2" />
 <text x="471.1" y="230.0" font-size="11" fill="currentColor" text-anchor="middle">10</text>

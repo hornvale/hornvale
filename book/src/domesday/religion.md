@@ -112,8 +112,8 @@ n = 980 present, 20 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `organized` | 671 | 68.5% |
-| `folk` | 309 | 31.5% |
+| `organized` | 672 | 68.6% |
+| `folk` | 308 | 31.4% |
 
 ### `head-deity-domain-goblin`
 
