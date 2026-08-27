@@ -3019,3 +3019,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T00:24:16Z | gate-commit | 88.525 | 210.689 | 86.974 | 3.36 | 0 | 5b0182c1d | campaign/the-sources | MacBookPro | 10 |
 | 2026-08-27T00:25:23Z | gate-commit | 30.060 | 53.929 | 13.111 | 2.23 | 0 | 5b0182c1d | campaign/the-sources | MacBookPro | 10 |
 | 2026-08-27T00:31:41Z | gate-commit | 89.232 | 213.618 | 84.209 | 3.34 | 0 | 59af9b91c | campaign/the-sources | MacBookPro | 10 |
+| 2026-08-27T00:32:29Z | gate-commit | 30.223 | 53.948 | 13.137 | 2.22 | 0 | 59af9b91c | campaign/the-sources | MacBookPro | 10 |
