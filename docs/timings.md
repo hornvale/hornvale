@@ -3137,3 +3137,6 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T13:39:44Z | sluice:outboard | 41.035 | 25.504 | 39.419 | 1.58 | 0 | 88131d41b |  | lefford | 40 |
 | 2026-08-27T13:46:28Z | sluice:gate | 403.814 | 11816.072 | 383.447 | 30.21 | 0 | cd50ef805 |  | lefford | 40 |
 | 2026-08-27T13:53:57Z | sluice:clients | 449.544 | 5638.098 | 66.301 | 12.69 | 0 | a8927ebed |  | lefford | 40 |
+| 2026-08-27T12:54:04Z | gate-commit | 157.329 | 513.583 | 151.102 | 4.22 | 0 | 4d96cbaf0 | campaign/the-sources | MacBookPro | 10 |
+| 2026-08-27T12:56:00Z | rebaseline | 109.827 | 316.213 | 11.546 | 2.98 | 0 | a94563b85 | campaign/the-sources | MacBookPro | 10 |
+| 2026-08-27T12:56:51Z | gate-commit | 26.071 | 50.956 | 12.600 | 2.44 | 0 | a94563b85 | campaign/the-sources | MacBookPro | 10 |
