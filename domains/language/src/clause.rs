@@ -13,7 +13,7 @@
 
 use crate::common_vocab::CommonVocabulary;
 use crate::morphology::Evidential;
-use crate::packs::{EAT, KILL, KNOW};
+use crate::packs::{EAT, KILL, KNOW, THINK};
 use hornvale_kernel::world::IS_A;
 use std::sync::OnceLock;
 
@@ -581,11 +581,20 @@ pub enum Valence {
 /// panicked on it, which is exactly the red
 /// `sentence_corpus.rs`'s `every_covered_entry_realizes_in_common` witness
 /// was built to find.
+///
+/// [`THINK`] (The Mortise, Task 2) is the same promise kept a fourth time,
+/// and by the same argument [`KNOW`]'s row is: one argument structure with a
+/// category-flexible object, so it adds a ROW and no new [`Valence`]
+/// variant. Unlike `know`, `think` is registered in
+/// `packs::universal_stratum` rather than `packs::action_suite_pack` — see
+/// [`crate::packs::THINK`]'s doc for why — so it is unconditionally
+/// lexicalized where `know` still gaps.
 const PREDICATE_VALENCE: &[(&str, Valence)] = &[
     (IS_A, Valence::Nominal),
     (EAT, Valence::Transitive),
     (KILL, Valence::Transitive),
     (KNOW, Valence::Transitive),
+    (THINK, Valence::Transitive),
 ];
 
 /// The valence of `predicate`, or `None` when no realizer covers it.
@@ -1619,7 +1628,7 @@ mod tests {
         // in one realizer and not the other.
         assert_eq!(
             inv.len(),
-            [IS_A, EAT, KILL, KNOW]
+            [IS_A, EAT, KILL, KNOW, THINK]
                 .iter()
                 .filter(|p| predicate_valence(p).is_some())
                 .count(),
@@ -1633,6 +1642,9 @@ mod tests {
         // `know` (The Mortise, Task 1) is the third: same derivation, same
         // shared part list, no new construction.
         assert_eq!(predicate_valence(KNOW), Some(Valence::Transitive));
+        // `think` (The Mortise, Task 2) is the fourth: same derivation,
+        // same shared part list, no new construction.
+        assert_eq!(predicate_valence(THINK), Some(Valence::Transitive));
         assert_eq!(predicate_valence("dwells-in"), None);
     }
 
@@ -1747,6 +1759,48 @@ mod tests {
         .expect("a kill clause parses");
         assert_eq!(parsed.predicate, KILL);
         assert_eq!(parsed.tense, Tense::Past);
+    }
+
+    /// `think` is the epistemic-hedge predicate (m09, *"I think her name
+    /// was Gilda"*). Transitive by the same argument [`KNOW`] is: one
+    /// argument structure with a category-flexible object, so it adds a
+    /// ROW and no new [`Valence`] variant — the same one-row promise
+    /// [`KILL`]'s test above exercises, kept a third time.
+    ///
+    /// This pins only that `think` surfaces as a verb in a simple
+    /// transitive clause; it does not build m09's full embedded-clause
+    /// sentence, which needs clause recursion this task does not add
+    /// (a later task's job).
+    #[test]
+    fn a_hedge_clause_surfaces_think_as_a_verb() {
+        let vocab = CommonVocabulary::default();
+        let clause = |tense, polarity| Clause {
+            predicate: THINK.to_string(),
+            subject: Subject::Name("Nwamvam".to_string()),
+            object: Argument::Concept("person".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense,
+            polarity,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(
+            realize_common(&clause(Tense::Present, Polarity::Pos), &vocab),
+            "Nwamvam thinks the person."
+        );
+        assert_eq!(
+            realize_common(&clause(Tense::Present, Polarity::Neg), &vocab),
+            "Nwamvam does not think the person."
+        );
+        // Backward through the same table, and the predicate comes back.
+        let parsed = parse_common(
+            &realize_common(&clause(Tense::Present, Polarity::Pos), &vocab),
+            &ctx(&["person"]),
+        )
+        .expect("a think clause parses");
+        assert_eq!(parsed.predicate, THINK);
+        assert_eq!(parsed.tense, Tense::Present);
     }
 
     /// [`VERB_PARADIGM`]'s totality, and the one place it is deliberately

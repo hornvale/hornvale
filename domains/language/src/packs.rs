@@ -60,6 +60,29 @@ pub const KILL: &str = "kill";
 /// type-audit: bare-ok(identifier-text)
 pub const KNOW: &str = "know";
 
+/// The `think` concept's id.
+///
+/// Named for the same reason [`EAT`], [`KILL`], and [`KNOW`] are: the pack
+/// row that REGISTERS the concept (in [`universal_stratum`]) and the
+/// `clause::PREDICATE_VALENCE` row that REALIZES it must not drift apart.
+///
+/// **Placed in the universal stratum, not beside [`KNOW`] in
+/// [`action_suite_pack`].** `know`'s exposure-gated placement rests on an
+/// UNRESOLVED question — `action_suite_pack`'s own doc says a culture's
+/// exposure to literacy, cartography, or reading another's state is a
+/// question it does not resolve (registry row
+/// `LANG-in-character-acts-are-unspeakable`). `think` has no such gate:
+/// the same reasoning [`KILL`]'s doc gives — no biome, climate, or
+/// perception ladder a people's word for a private mental act could hang
+/// off — applies to `think` and not to `know`. The consequence is a real,
+/// named asymmetry, not an oversight: *"I think…"* (m09) realizes in every
+/// tongue; *"I don't know…"* (m06) still gaps in all of them, because
+/// `know` was deliberately left where it is (out of scope for this task —
+/// moving it belongs to a future campaign, would shift exposure and
+/// byte-goldens, and is not this decision to make).
+/// type-audit: bare-ok(identifier-text)
+pub const THINK: &str = "think";
+
 /// One entry in a vocabulary pack: a concept id, its broad category, a doc,
 /// and its rank on whichever acquisition ladder it belongs to (0 for
 /// entries outside any ladder — always in the lexicon once the pack is
@@ -183,6 +206,21 @@ pub fn universal_stratum() -> &'static [PackEntry] {
             concept: KILL,
             kind: ConceptKind::Act,
             doc: "to cause to cease living",
+            ladder_rank: 0,
+        },
+        // The epistemic-hedge predicate (m09, "I think her name was
+        // Gilda"). Universal stratum rather than beside `know` in
+        // `action_suite_pack`: `know`'s exposure gate is an acknowledged
+        // open question (registry row
+        // `LANG-in-character-acts-are-unspeakable`), not a principled
+        // placement, and there is no biome, climate or perception ladder a
+        // people's word for thinking could hang off — the same argument
+        // `KILL` above already carries. `ladder_rank: 0` follows from the
+        // stratum for the same reason `KILL`'s does.
+        PackEntry {
+            concept: THINK,
+            kind: ConceptKind::Act,
+            doc: "to hold an uncertain belief",
             ladder_rank: 0,
         },
         PackEntry {
