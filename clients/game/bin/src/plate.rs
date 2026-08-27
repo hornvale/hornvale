@@ -492,8 +492,14 @@ pub(crate) fn draw_terrain_layer(
 ///
 /// Caves are drawn first and settlements second, so a settlement wins a cell
 /// they share — the same precedence the sampled scheme's `if/else` gave.
+/// **`pub` rather than `pub(crate)` for the same reason
+/// [`terrain_at_tile`] is** (Task 3): `examples/rung_bench.rs` is a separate
+/// crate and prices this layer on its own, which is the only way to answer
+/// whether the per-redraw roster scan needs a window pre-filter. A cost
+/// attributed by differencing two composed plates is a subtraction of two
+/// noisy numbers, not a measurement.
 #[allow(clippy::too_many_arguments)] // mirrors `draw_with`'s own parameter list, which this is lifted out of
-pub(crate) fn draw_feature_layer(
+pub fn draw_feature_layer(
     dst: &mut Grid,
     geo: &Geosphere,
     f: &Frame,

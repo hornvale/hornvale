@@ -189,6 +189,63 @@ instrument times three (`corner_weights_memo` runs three
 `NearestVertexIndex::nearest_to_position` scans on a miss and none on a hit),
 never a wall-clock proxy.
 
+**The Quadrat Task 5's tile-cache readout (2026-08-27, `campaign/the-quadrat`,
+ambrose, twelve cores) — the same plate, now through
+`hornvale_game::tiles::TileCache`.** Same harness
+(`clients/game/bin/examples/rung_bench.rs`, `--release`, five runs, median),
+extended to measure four costs rather than one, on a box measured at 88-92%
+idle immediately before and after the sweep.
+
+| rung | uncached | cached COLD | cached WARM | scroll, BOUNDARY | scroll, mean/col | memo misses |
+|---|---|---|---|---|---|---|
+| 6 (`GLOBE_RUNG`) | 70.289 | 79.026 (49 tiles) | **0.056** | 3.877 (7 tiles) | 0.504 | 29,662 |
+| 7 | 47.093 | 55.161 (49) | **0.053** | 5.689 (7) | 0.484 | 15,756 |
+| 8 | 30.102 | 35.509 (49) | **0.052** | 2.129 (7) | 0.284 | 4,717 |
+| 10 | 22.300 | 26.424 (49) | **0.054** | 2.339 (7) | 0.243 | 333 |
+| 12 (`BAND_B_RUNG`) | 25.430 | 30.599 (56) | **0.054** | 1.712 (8) | 0.244 | 30 |
+
+All figures ms. **WARM is the acceptance criterion and it is met by three
+orders of magnitude**: `GLOBE_RUNG`, the rung Task 3 measured 1.8x OVER the
+50 ms bar, redraws in **0.056 ms** once its tiles exist — 893x under. The
+worst single keystroke, the one that uncovers a whole tile column, is
+3.877 ms at that rung, still 12.9x under. The one number over the bar is
+COLD, 79.026 ms, and it is paid **once per (frame, rung)**: the rung-6 chart
+is only 12x12 tiles in total, so a player who pans the whole globe pays about
+211 ms across the entire session and nothing after.
+
+**COLD is DEARER than uncached (1.12x at rung 6), and that is the design, not
+a regression.** A 200x200 plate covers 49 whole tiles — 224x224 = 50,176 chart
+cells for 40,000 drawn ones — because an edge tile is drawn whole so it can be
+reused. The 25.4% extra cells cost 12.4% extra time, the difference being the
+session-long `RoomMeshMemo` the cache owns.
+
+**THE UNCACHED COLUMN RE-MEASURED 1.18-1.48x BELOW TASK 3'S SWEEP, AND THE
+DIFFERENCE IS THE BOX.** Rung 6 reads 70.289 here against 91.541 there; rung 8
+reads 30.102 against 44.522. The `RoomMeshMemo` miss counts are IDENTICAL at
+all five rungs (29,662 / 15,756 / 4,717 / 333 / 30), which is the
+cross-validation that both sweeps drew the same ground with the same code —
+so the wall-time gap is contention, and Task 3's sweep (taken at load ~7) was
+itself contended by roughly a third. **H1's disposition is unchanged in
+direction at `GLOBE_RUNG`** — 70.289 is still 1.41x over the 50 ms bar — but
+**the boundary rung moves: rung 7 reads 47.093 here, UNDER the bar it was
+1.3x over in the committed table.** Recorded, not retuned: two sweeps of the
+same code on the same machine can straddle a bar that sits inside the
+machine's own noise, which is a fact about the bar.
+
+**The feature layer costs 0.076 ms at worst, so no window pre-filter is
+needed** (Task 4's review asked). The cave roster is **874 vertices of
+40,962** — the number `Driver::start`'s scan produces and which was recorded
+nowhere in the tree until now. Composing that whole roster over a plate costs
+**0.0015 ms with nothing discovered** and **0.076 ms with every cave
+discovered**, at rung 6. The undiscovered figure is three orders of magnitude
+cheaper than the other because `draw_feature_layer` checks `discovered`
+BEFORE it calls `geo.coord` or `mercator::project` — so the review's premise
+("one `geo.coord` plus one `mercator::project` per site on every keystroke")
+holds only for sites already FOUND, and the worst case it feared is 0.15% of
+the 50 ms budget. The settlement roster is a ledger read this harness does
+not build and is not measured here.
+
+
 | when (UTC) | label | wall_s | user_s | sys_s | cpu_ratio | waited_s | commit | branch | host | cores |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 2026-07-13T00:00:00Z | suite-full (pre-tiering, backfilled) | 2610.89 | 9246.93 | 36.88 | 3.56 | a2d39fa | main | m1max | 10 |
@@ -3046,3 +3103,6 @@ never a wall-clock proxy.
 | 2026-08-26T23:52:38Z | gate-commit | 96.129 | 56.192 | 26.190 | 0.86 | 0 | bdf54dce7 | campaign/the-quadrat | ambrose | 12 |
 | 2026-08-26T23:54:41Z | gate-commit | 98.746 | 57.943 | 28.417 | 0.87 | 0 | bdf54dce7 | campaign/the-quadrat | ambrose | 12 |
 | 2026-08-27T00:24:13Z | game-check | 719.220 | 2498.065 | 54.844 | 3.55 | 0 | 386560c31 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T00:41:34Z | gate-commit | 73.637 | 50.407 | 24.604 | 1.02 | 0 | 386560c31 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T05:41:27Z | gate-commit | 41.872 | 33.248 | 11.045 | 1.06 | 0 | 2c3cbaf5f | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T05:43:56Z | gate-commit | 45.182 | 36.152 | 12.222 | 1.07 | 0 | 2c3cbaf5f | campaign/the-quadrat | ambrose | 12 |

@@ -163,35 +163,24 @@ impl std::fmt::Display for DriverError {
 
 impl std::error::Error for DriverError {}
 
-/// Every input [`plate::draw_terrain_layer`] reads that can CHANGE during a
-/// session, and nothing else — the memo in
-/// [`Driver::world_plate_for_redraw`] is only as correct as this key is
-/// complete.
-///
-/// **It keys the TERRAIN LAYER ALONE, and that narrowing is the whole point
-/// of The Quadrat's Task 4.** It used to key the composed plate, which meant
-/// carrying `discovered_len` — and a key carrying the discovery version is
-/// invalidated by every discovery, *the whole pyramid, for one settlement*
-/// (`CLIENT-tiles-need-the-overlay-split`, spec §3). That field is gone
-/// because the layer it belonged to is no longer cached at all:
-/// [`plate::draw_feature_layer`] is a handful of projections and redraws
-/// every frame, composed over whatever this key served. **Removing it is
-/// therefore not a loosening** — a discovery still changes the returned
-/// plate on the very next redraw; it simply no longer repaints the terrain
-/// under it.
-///
-/// **Deliberately absent, because they are fixed for the process:** the
-/// terrain, the `Geosphere`, the `NearestVertexIndex`, the settlement roster
-/// (built once in `start`) and `colour_allowed` (resolved from `NO_COLOR` by
-/// `plate::colour_allowed`, which cannot change under a running process). If
-/// any of those ever becomes mutable, it belongs here.
-#[derive(Debug, Clone, Copy, PartialEq)]
-struct PlateKey {
-    frame: Frame,
-    window: Window,
-    w: u16,
-    h: u16,
-}
+// **`PlateKey` is gone (The Quadrat, Task 5), and its narrowing lives on
+// in [`crate::tiles::TileCache`].** It keyed the whole drawn plate on
+// `(frame, window, w, h)`, which is why scrolling one column threw a plate
+// away and redrew it — measured before this campaign, a 104x52 plate is
+// 130 ms against 1.208 ms for one column. The cache unit is a CHART TILE
+// now, so the drawn plate's size is not an input at all and a scroll
+// re-renders only the tile column it uncovers.
+//
+// Everything that key deliberately did NOT carry, it still does not, and
+// for the same reasons: **`Discovered`**, because a key carrying the
+// discovery version is invalidated by every discovery — the whole pyramid,
+// for one settlement (`CLIENT-tiles-need-the-overlay-split`, spec §3, and
+// Task 4's layer split is the fix); and **the terrain, the `Geosphere`,
+// the `NearestVertexIndex`, the settlement and cave rosters (all built once
+// in `start`) and `colour_allowed`** (resolved from `NO_COLOR` by
+// `plate::colour_allowed`, which cannot change under a running process),
+// because they are fixed for the process. If any of those ever becomes
+// mutable, it belongs in `TileKey`.
 
 /// One live game: an owned [`World`], the [`WorldContext`] derived from it
 /// exactly once (the campaign's own headline — release-and-repossess reuses
@@ -301,23 +290,23 @@ pub struct Driver {
     /// Quadrat the coarsest rung is NOT "the whole planet on screen": the
     /// chart is 363x362 tiles there and the plate is a subrect of it.
     window: Window,
-    /// How many world plates have actually been rendered this session.
-    /// See [`Driver::plate_renders`] for why this is observable.
-    plate_renders: usize,
-    /// The last world plate's TERRAIN LAYER, with the inputs that produced
-    /// it. The feature layer is composed on top per redraw and is never
-    /// stored here — see [`PlateKey`].
+    /// The world plate's TERRAIN LAYER, cached one CHART TILE at a time
+    /// (The Quadrat, Task 5). The feature layer is composed on top per
+    /// redraw and is never stored here — see
+    /// [`crate::tiles::TileCache`]'s own doc, and the note above this
+    /// struct for what the key carries and what it deliberately does not.
     ///
-    /// A cursor move inside the plate changes none of those inputs, and
-    /// re-rendering the whole plate is still the most expensive thing a
-    /// redraw can do. **The magnitude it used to cite is retired, not
+    /// **A cursor move inside the plate changes none of a tile's inputs,
+    /// and neither does a resize to a subrect, and neither does a scroll
+    /// except at the edge it uncovers.** The last of those three is the one
+    /// the plate-shaped cache this replaces could not have: it keyed the
+    /// drawn plate's own `(w, h)`, so one column of scroll cost a whole
+    /// plate. **The magnitude that used to be cited here is retired, not
     /// merely stale**: "~265k `nearest()` calls at the design size,
     /// measured 88% of a redraw" was true of the 49-point vote The
     /// Quadrat's Task 3 removed, and the search it named is now made a few
-    /// dozen times per plate rather than a few hundred thousand. See
-    /// [`PlateKey`] for what "the inputs" means and what is deliberately
-    /// not in it.
-    plate_cache: Option<(PlateKey, hornvale_game_core::Grid)>,
+    /// dozen times per plate rather than a few hundred thousand.
+    tiles: crate::tiles::TileCache,
     /// The world's seed, needed to draw a feature's name.
     seed: Seed,
     /// Every terrain vertex the world's ledger commits at least one
@@ -708,8 +697,7 @@ impl Driver {
             terrain,
             frame,
             window,
-            plate_renders: 0,
-            plate_cache: None,
+            tiles: crate::tiles::TileCache::default(),
             seed: world_ref.seed,
             settlements,
             caves,
@@ -888,51 +876,37 @@ impl Driver {
     /// unchanged; its SOURCE is a rung comparison rather than a stored flag
     /// (The Quadrat, Task 2).
     ///
-    /// **Two layers, one key (The Quadrat, Task 4).** Only
-    /// [`plate::draw_terrain_layer`] is memoized, under a [`PlateKey`] that
-    /// no longer carries the discovery version;
-    /// [`plate::draw_feature_layer`] is composed over a CLONE of whatever
-    /// that memo served, on every call, hit or miss. So a discovery is
-    /// visible on the next redraw exactly as before — it just no longer
-    /// repaints the raster underneath, which is the whole of
+    /// **Two layers, and the lower one is assembled from TILES (The
+    /// Quadrat, Tasks 4 and 5).** The terrain raster comes from
+    /// [`crate::tiles::TileCache::compose`], which draws only the chart
+    /// tiles this window covers that it does not already hold;
+    /// [`plate::draw_feature_layer`] is then composed over the assembled
+    /// grid, on every call, hit or miss. So a discovery is visible on the
+    /// next redraw exactly as before — it just no longer repaints the
+    /// raster underneath, which is the whole of
     /// `CLIENT-tiles-need-the-overlay-split`. This is also why the composed
     /// grid is never stored back: the cache holds terrain, and a plate with
     /// features already burned into it could not answer a later frame whose
     /// discovery set had moved.
+    ///
+    /// **`compose` returns a fresh `Grid`, so there is no `clone` here any
+    /// more** — the tiles are the cached objects, and the assembled plate
+    /// was never one.
     pub fn world_plate_for_redraw(&mut self, w: u16, h: u16) -> Option<hornvale_game_core::Grid> {
         if !(self.focus == Focus::Map && self.world_view()) {
             return None;
         }
-        let key = PlateKey {
-            frame: self.frame,
-            window: self.window,
-            w,
-            h,
-        };
         let (plate_width, plate_height) = Self::world_plate_dims(w, h);
-        let hit = matches!(&self.plate_cache, Some((cached, _)) if *cached == key);
-        if !hit {
-            let mut memo = hornvale_kernel::RoomMeshMemo::default();
-            let terrain = plate::draw_terrain_layer(
-                &self.terrain,
-                &self.geo,
-                &self.nearest,
-                &mut memo,
-                &self.frame,
-                &self.window,
-                plate_width,
-                plate_height,
-                plate::colour_allowed(),
-            );
-            self.plate_renders += 1;
-            self.plate_cache = Some((key, terrain));
-        }
-        let mut grid = self
-            .plate_cache
-            .as_ref()
-            .expect("the miss branch above always fills the cache")
-            .1
-            .clone();
+        let mut grid = self.tiles.compose(
+            &self.terrain,
+            &self.geo,
+            &self.nearest,
+            &self.frame,
+            &self.window,
+            plate_width,
+            plate_height,
+            plate::colour_allowed(),
+        );
         // No `w`/`h` here, deliberately: the feature layer reads the window's
         // size from the grid it is drawing onto, so this path cannot hand it a
         // bound the cached terrain grid disagrees with (fix round 1, Minor 1).
@@ -1874,20 +1848,28 @@ impl Driver {
         &self.visited
     }
 
-    /// How many times the world plate's TERRAIN LAYER has actually been
-    /// RENDERED (as opposed to served from the memo). Exists because **a
-    /// cache with no observable hit is indistinguishable from a cache that
-    /// never hits**: every correctness test passes either way, so the
-    /// counter is what makes
+    /// How many CHART TILES of the world plate's terrain layer this session
+    /// has actually drawn (as opposed to served from the cache). Exists
+    /// because **a cache with no observable hit is indistinguishable from a
+    /// cache that never hits**: every correctness test passes either way, so
+    /// the counter is what makes
     /// `a_cursor_move_inside_the_plate_does_not_re_render_it` a real
     /// assertion rather than a hopeful one.
+    ///
+    /// **The unit is a TILE, not a plate, since The Quadrat's Task 5**, and
+    /// the rename from `plate_renders` is the point rather than tidiness: a
+    /// plate is no longer a cache unit at all, so "how many plates were
+    /// rendered" has no referent. A partial re-render — the tile column a
+    /// one-column scroll uncovers — is the ordinary case now, and a counter
+    /// of whole plates could not see it.
     ///
     /// **It counts the TERRAIN layer only, since The Quadrat's Task 4.** The
     /// feature layer is redrawn on every single call and is deliberately not
     /// counted — counting it would make this number constant and useless,
     /// and the expensive half is the raster.
-    pub fn plate_renders(&self) -> usize {
-        self.plate_renders
+    /// type-audit: bare-ok(count)
+    pub fn tile_renders(&self) -> u64 {
+        self.tiles.misses()
     }
 
     /// Test-only mutable access to the discovery set, so a test can vary
@@ -2056,7 +2038,7 @@ mod portolan_tests {
         let mut d = test_driver();
         enter_world_view(&mut d);
         let _ = d.world_plate_for_redraw(104, 56);
-        let after_first = d.plate_renders();
+        let after_first = d.tile_renders();
         assert!(after_first > 0, "the first redraw must actually render");
 
         // Interior moves: the window cannot scroll, so nothing changes.
@@ -2065,7 +2047,7 @@ mod portolan_tests {
             let _ = d.world_plate_for_redraw(104, 56);
         }
         assert_eq!(
-            d.plate_renders(),
+            d.tile_renders(),
             after_first,
             "eight interior cursor moves re-rendered the plate"
         );
@@ -2078,11 +2060,11 @@ mod portolan_tests {
         let mut d = test_driver();
         enter_world_view(&mut d);
         let _ = d.world_plate_for_redraw(104, 56);
-        let before = d.plate_renders();
+        let before = d.tile_renders();
         d.apply(Action::Zoom(1));
         let _ = d.world_plate_for_redraw(104, 56);
         assert!(
-            d.plate_renders() > before,
+            d.tile_renders() > before,
             "a zoom changes the window and must re-render"
         );
     }
@@ -2092,24 +2074,45 @@ mod portolan_tests {
     /// shape this campaign hit repeatedly. Each arm varies ONE input.
     #[test]
     fn every_input_the_plate_reads_is_in_its_cache_key() {
-        // size
+        // SIZE — and this arm's assertion is now the OPPOSITE of what it
+        // was, deliberately, because the thing it was asserting has been
+        // FIXED rather than lost (The Quadrat, Task 5). The drawn plate's
+        // own `(w, h)` used to be in the cache key, so ANY resize threw the
+        // plate away and redrew it, and this arm asserted that. A tile's
+        // size follows from its rung and its position, so a resize draws
+        // only the ground the new plate reaches that the old one did not.
+        // Both directions are asserted, and each rescues the other: "grows
+        // when it must" alone would pass on a cache that never hit, and
+        // "shrinks for free" alone would pass on a cache that had stopped
+        // drawing altogether.
         let mut d = test_driver();
         enter_world_view(&mut d);
-        let _ = d.world_plate_for_redraw(104, 56);
-        let n = d.plate_renders();
         let _ = d.world_plate_for_redraw(80, 24);
-        assert!(d.plate_renders() > n, "a size change must re-render");
+        let small = d.tile_renders();
+        assert!(small > 0, "the first redraw must actually draw tiles");
+        let _ = d.world_plate_for_redraw(104, 56);
+        let large = d.tile_renders();
+        assert!(
+            large > small,
+            "growing the plate drew none of the ground it uncovered"
+        );
+        let _ = d.world_plate_for_redraw(80, 24);
+        assert_eq!(
+            d.tile_renders(),
+            large,
+            "shrinking the plate redrew tiles it already held"
+        );
 
         // frame (re-centre)
         let mut d = test_driver();
         enter_world_view(&mut d);
         let _ = d.world_plate_for_redraw(104, 56);
-        let n = d.plate_renders();
+        let n = d.tile_renders();
         d.apply(Action::CursorBy(9, 4));
         d.apply(Action::Recentre);
         let _ = d.world_plate_for_redraw(104, 56);
         assert!(
-            d.plate_renders() > n,
+            d.tile_renders() > n,
             "a re-centre changes the frame and must re-render"
         );
 
@@ -2152,7 +2155,7 @@ mod portolan_tests {
         let before = d
             .world_plate_for_redraw(w, h)
             .expect("the world view is on");
-        let renders = d.plate_renders();
+        let renders = d.tile_renders();
         assert!(renders > 0, "the first redraw must actually render");
 
         d.discovered_mut_for_test()
@@ -2167,7 +2170,7 @@ mod portolan_tests {
             "a discovery never reached the drawn plate"
         );
         assert_eq!(
-            d.plate_renders(),
+            d.tile_renders(),
             renders,
             "a discovery re-rendered the TERRAIN layer — the whole pyramid, for one site"
         );
