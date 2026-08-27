@@ -315,11 +315,47 @@ mutually unaware:
 | `NounEntry.kind` | a completion hint on the wire, consulted by no dispatcher | `snapshot.rs:252` |
 | the chart legend | a second matcher inside `examine`, synthesizing throwaway `Noun`s | `session.rs:4611` |
 
-IV.a derives all four from the single query in §3.2. This is the campaign's
+**This table is wrong as a set of peers, and Task 7 proved it.** The first two
+are chamber-band; `NounEntry.kind` and the chart legend are **walk-band**, and
+the legend is blocked indoors by an existing `debug_assert` protecting The
+Sighting's creature-visibility discipline. Anchors are chamber-band, so the
+last two never advertised anchor verbs and cannot without threading anchors
+onto the wire (§5).
+
+So IV.a unifies what can be unified: `examine`'s datum routes through
+`offered_to_observer`, and `HELP` is tied to the registry by test since it is a
+static `const` with no `(kind, body, knowledge)` to route. **Acceptance clause
+(3) is therefore honestly PARTIAL** — two surfaces derive from the one query,
+two structurally cannot. Task 7's implementer declined to write an "all four
+move" test that would have read as full coverage, and was right to. This is the campaign's
 largest *diff* and its smallest *risk*: the behaviour is already shipped and
 already tested; what changes is that one derivation feeds it.
 
-## 5. The wire
+## 5. The wire — DEFERRED TO IV.b (Nathan, at the Task 7 stop)
+
+**No wire field ships in IV.a.** The reason is a defect in §4 below, found by
+Task 7 and verified against the committed chamber fixture:
+`clients/game/core/tests/fixtures/session-seed-42-chamber.json`'s
+`narration.nouns` holds only walk-band nouns — biome, terrain regime, village,
+sky, two moons. **No anchor reaches the wire, even in the chamber band.**
+
+Anchors are the only things carrying an `ObjectProperty`. So a
+`NounEntry.affordances` field would be empty for every entry the wire actually
+carries — a third artifact reading as delivered while doing nothing, after
+§3.5's gate. IV.b adds the field when anchors reach the wire, additively and
+with `#[serde(default)]`, exactly the discipline `NounEntry.kind` itself was
+added under.
+
+**What this costs, stated plainly: IV.a ships nothing a CLIENT can display.**
+The advertisement is sim-side only. A player sees it through `examine`; the
+browser clients do not see it at all. The alternative — threading chamber
+anchors onto `narration.nouns` — is schema-additive and safe, but it changes
+what every client receives and moves the committed fixtures, which is scope
+IV.a was cut to avoid.
+
+## 5.1 The wire precedent, retained for IV.b
+
+
 
 `NounEntry` gains an `affordances` field. The precedent for how is the field
 beside it — `NounEntry.kind`'s own doc (`snapshot.rs:255`):
