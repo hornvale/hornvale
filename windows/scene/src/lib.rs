@@ -1427,13 +1427,13 @@ pub struct EclipsesScene {
 /// or non-finite) — mirrors [`moons_scene`]. Pure read: consumes no draws.
 /// type-audit: pending(wave-2: from), pending(wave-2: until)
 pub fn eclipses_scene(world: &World, from: f64, until: f64) -> Result<EclipsesScene, SceneError> {
-    use hornvale_astronomy::StdDays;
+    use hornvale_astronomy::StdInstant;
     let sky = hornvale_worldgen::sky_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
     let system = sky
         .system()
         .ok_or_else(|| SceneError::Build("this world has no generated sky".to_string()))?;
-    let from_day = StdDays::new(from).map_err(|e| SceneError::Build(e.to_string()))?;
-    let until_day = StdDays::new(until).map_err(|e| SceneError::Build(e.to_string()))?;
+    let from_day = StdInstant::new(from).map_err(|e| SceneError::Build(e.to_string()))?;
+    let until_day = StdInstant::new(until).map_err(|e| SceneError::Build(e.to_string()))?;
     let calendar = hornvale_astronomy::calendar_of(system);
     let events = hornvale_astronomy::eclipse_events(system, &calendar, from_day, until_day)
         .into_iter()

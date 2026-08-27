@@ -8,7 +8,7 @@
 //! sanctioned test-fixture posture the weir's spec carves out.
 #![allow(clippy::disallowed_methods)]
 
-use hornvale_astronomy::{EclipseBody, StdDays};
+use hornvale_astronomy::{EclipseBody, StdInstant};
 use hornvale_worldgen::{
     LadderRung, SettlementPins, SkyChoice, crisis_from, doctrine_from, ladder_from,
     observations_from, placed_peoples,
@@ -34,8 +34,8 @@ fn generated(seed: u64) -> hornvale_kernel::World {
 const EPOCH_1: f64 = 0.0;
 const EPOCH_2: f64 = 36_525.0;
 
-fn at(day: f64) -> StdDays {
-    StdDays::new(day).unwrap()
+fn at(day: f64) -> StdInstant {
+    StdInstant::new(day).unwrap()
 }
 
 /// claim: invariant(forall-seed) — day-0 witnessed set is empty

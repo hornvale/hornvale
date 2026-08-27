@@ -9,7 +9,7 @@ use hornvale_astronomy::night_sky::night_sky_at;
 use hornvale_astronomy::pins::{ForcingPin, RotationPin, SkyPins, SpinPin};
 use hornvale_astronomy::sky_position::EquatorialCoord;
 use hornvale_astronomy::system::generate;
-use hornvale_astronomy::units::{Degrees, StdDays};
+use hornvale_astronomy::units::{Degrees, StdInstant};
 use hornvale_kernel::Seed;
 
 const SEEDS: [u64; 3] = [1, 7, 42];
@@ -28,7 +28,7 @@ fn locked_worlds_freeze_the_instrument() {
         };
         let system = generate(Seed(seed), &pins).unwrap().system;
         let calendar = calendar_of(&system);
-        let t = StdDays::new(5.0).unwrap();
+        let t = StdInstant::new(5.0).unwrap();
 
         let sky = night_sky_at(&system, &calendar, 35.0, t);
         assert!(
@@ -75,7 +75,7 @@ fn zero_obliquity_keeps_heliacal_events_but_kills_seasons() {
         // Sampled across the year: the sub-solar declination never leaves
         // the equator.
         for k in 0..24 {
-            let t = StdDays::new(k as f64 * year / 24.0).unwrap();
+            let t = StdInstant::new(k as f64 * year / 24.0).unwrap();
             assert!(
                 calendar.solar_equatorial(t).dec_deg.abs() < 1e-9,
                 "seed {seed}: zero obliquity must pin solar declination to the equator"
@@ -86,7 +86,7 @@ fn zero_obliquity_keeps_heliacal_events_but_kills_seasons() {
         // eccentricity are both exactly zero (ForcingPin::Zero gives both).
         assert!(
             calendar
-                .season_phase(StdDays::new(100.0).unwrap())
+                .season_phase(StdInstant::new(100.0).unwrap())
                 .is_none(),
             "seed {seed}: zero obliquity + zero forcing must have no season phase"
         );
@@ -97,7 +97,7 @@ fn zero_obliquity_keeps_heliacal_events_but_kills_seasons() {
         // mechanism (RA still advances over the year even at zero
         // obliquity) produces at least one riser-and-setter somewhere in
         // this 3-seed sample.
-        if !heliacal_events(&system, &calendar, 35.0, StdDays::new(0.0).unwrap()).is_empty() {
+        if !heliacal_events(&system, &calendar, 35.0, StdInstant::new(0.0).unwrap()).is_empty() {
             any_pairs = true;
         }
     }
@@ -130,7 +130,7 @@ fn retrograde_flips_wheeling_not_dates() {
         let retro = system_with_spin(SpinPin::Retrograde);
         let cal_pro = calendar_of(&pro);
         let cal_retro = calendar_of(&retro);
-        let t = StdDays::new(0.0).unwrap();
+        let t = StdInstant::new(0.0).unwrap();
 
         let sky_pro = night_sky_at(&pro, &cal_pro, 35.0, t);
         let sky_retro = night_sky_at(&retro, &cal_retro, 35.0, t);
@@ -183,8 +183,8 @@ fn epoch_drift_moves_the_equinox_referenced_and_spares_the_orbital() {
         let system = generate(Seed(seed), &pins).unwrap().system;
         let calendar = calendar_of(&system);
 
-        let t0 = StdDays::new(0.0).unwrap();
-        let t1 = StdDays::new(P_PRECESSION / 4.0).unwrap();
+        let t0 = StdInstant::new(0.0).unwrap();
+        let t1 = StdInstant::new(P_PRECESSION / 4.0).unwrap();
 
         // Every neighbor's apparent RA has moved more than a degree.
         for (i, n) in system.neighbors.iter().enumerate() {

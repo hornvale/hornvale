@@ -6,7 +6,7 @@
 use crate::calendar::Calendar;
 use crate::moons::Moon;
 use crate::system::StarSystem;
-use crate::units::StdDays;
+use crate::units::{StdDays, StdInstant};
 use hornvale_kernel::math;
 
 /// One angular-diameter unit (Sol from 1 AU ≈ Luna from Earth) in degrees
@@ -108,7 +108,7 @@ pub fn node_regression_period(year: StdDays, sidereal: StdDays, inclination_deg:
 /// The ascending node's ecliptic longitude at `t`, degrees in [0, 360):
 /// the genesis draw regressed westward one turn per regression period.
 /// type-audit: pending(wave-1)
-pub fn node_longitude_at(moon: &Moon, year: StdDays, t: StdDays) -> f64 {
+pub fn node_longitude_at(moon: &Moon, year: StdDays, t: StdInstant) -> f64 {
     let p = node_regression_period(year, moon.period, moon.inclination_deg);
     (moon.node_longitude_deg - 360.0 * t.0 / p.0).rem_euclid(360.0)
 }
@@ -126,7 +126,7 @@ pub fn moon_ecliptic_latitude_deg(
     calendar: &Calendar,
     moon: &Moon,
     index: usize,
-    t: StdDays,
+    t: StdInstant,
 ) -> Option<f64> {
     let phase = calendar.moon_phase(t, index)?;
     let l_sun = 360.0 * calendar.year_phase(t);
@@ -144,7 +144,7 @@ pub fn moon_ecliptic_latitude_deg(
 /// (insolation peaks at year phase 0.25). Declared approximation (model
 /// card); evaluated at the event, never cached (the tidal-braking seam).
 /// type-audit: pending(wave-1)
-pub fn sun_angular_rel_at(system: &StarSystem, calendar: &Calendar, t: StdDays) -> f64 {
+pub fn sun_angular_rel_at(system: &StarSystem, calendar: &Calendar, t: StdInstant) -> f64 {
     let mean = crate::star::sun_angular_diameter_rel(&system.star, system.anchor.orbit);
     let e = system.forcing.eccentricity_at(t.0);
     mean / (1.0 - e * math::sin(std::f64::consts::TAU * calendar.year_phase(t)))
@@ -175,7 +175,7 @@ pub enum EclipseKind {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct EclipseEvent {
     /// The syzygy, in absolute standard days.
-    pub day: StdDays,
+    pub day: StdInstant,
     /// Which moon (distance-sorted index into `StarSystem::moons`).
     pub moon: usize,
     /// Solar (new moon) or lunar (full moon).
@@ -194,15 +194,15 @@ pub struct EclipseEvent {
 pub fn eclipse_events(
     system: &StarSystem,
     calendar: &Calendar,
-    from: StdDays,
-    until: StdDays,
+    from: StdInstant,
+    until: StdInstant,
 ) -> Vec<EclipseEvent> {
     let mut out = Vec::new();
     for (index, moon) in system.moons.iter().enumerate() {
         let Some(synodic) = calendar.synodic_month(index) else {
             continue;
         };
-        let Some(phase0) = calendar.moon_phase(StdDays(0.0), index) else {
+        let Some(phase0) = calendar.moon_phase(StdInstant(0.0), index) else {
             continue;
         };
         // Syzygy k of each family sits at t = (k + half − phase0)·synodic.
@@ -210,7 +210,7 @@ pub fn eclipse_events(
             let k_min = (from.0 / synodic.0 + phase0 - half).ceil() as i64;
             let k_max = (until.0 / synodic.0 + phase0 - half).floor() as i64;
             for k in k_min..=k_max {
-                let t = StdDays((k as f64 + half - phase0) * synodic.0);
+                let t = StdInstant((k as f64 + half - phase0) * synodic.0);
                 if t.0 < from.0 || t.0 > until.0 {
                     continue;
                 }
@@ -262,7 +262,11 @@ pub const TRACK_HALF_WIDTH_DEG: f64 = 2.0;
 /// ephemeris half transits and standstills will reuse). `None` if the
 /// moon has no synodic cycle.
 /// type-audit: bare-ok(index: index), pending(wave-1: return)
-pub fn moon_ecliptic_longitude_deg(calendar: &Calendar, index: usize, t: StdDays) -> Option<f64> {
+pub fn moon_ecliptic_longitude_deg(
+    calendar: &Calendar,
+    index: usize,
+    t: StdInstant,
+) -> Option<f64> {
     let phase = calendar.moon_phase(t, index)?;
     Some((360.0 * calendar.year_phase(t) + 360.0 * phase).rem_euclid(360.0))
 }
@@ -273,7 +277,7 @@ pub fn moon_ecliptic_longitude_deg(calendar: &Calendar, index: usize, t: StdDays
 /// the sun sweeps westward on a prograde world, eastward on a retrograde
 /// one (SKY-22). A locked world's sun is fixed at 0.
 /// type-audit: pending(wave-1)
-pub fn sub_solar_longitude_deg(calendar: &Calendar, t: StdDays) -> f64 {
+pub fn sub_solar_longitude_deg(calendar: &Calendar, t: StdInstant) -> f64 {
     let Some((_, fraction)) = calendar.local_day(t) else {
         return 0.0;
     };
@@ -324,8 +328,9 @@ pub fn ground_track(
     let combined_deg = ANGULAR_UNIT_DEG * (sun_angular + moon.angular_diameter_rel);
     let duration_days = combined_deg / (360.0 / synodic.0);
     let start_lon_deg =
-        sub_solar_longitude_deg(calendar, StdDays(event.day.0 - duration_days / 2.0));
-    let end_lon_deg = sub_solar_longitude_deg(calendar, StdDays(event.day.0 + duration_days / 2.0));
+        sub_solar_longitude_deg(calendar, StdInstant(event.day.0 - duration_days / 2.0));
+    let end_lon_deg =
+        sub_solar_longitude_deg(calendar, StdInstant(event.day.0 + duration_days / 2.0));
     Some(GroundTrack {
         center_lat_deg,
         half_width_deg: TRACK_HALF_WIDTH_DEG,
@@ -608,11 +613,11 @@ mod tests {
         let moon = test_moon(5.14, 40.0);
         let year = StdDays(365.25);
         let p = node_regression_period(year, moon.period, moon.inclination_deg);
-        let start = node_longitude_at(&moon, year, StdDays(0.0));
+        let start = node_longitude_at(&moon, year, StdInstant(0.0));
         assert_eq!(start, 40.0);
-        let quarter = node_longitude_at(&moon, year, StdDays(p.0 / 4.0));
+        let quarter = node_longitude_at(&moon, year, StdInstant(p.0 / 4.0));
         assert!(((start - quarter).rem_euclid(360.0) - 90.0).abs() < 1e-6);
-        let full = node_longitude_at(&moon, year, StdDays(p.0));
+        let full = node_longitude_at(&moon, year, StdInstant(p.0));
         assert!((full - start).rem_euclid(360.0) < 1e-6);
     }
 
@@ -621,7 +626,7 @@ mod tests {
         let (system, calendar) = super::luna_sol();
         let moon = &system.moons[0];
         for k in 0..500 {
-            let t = StdDays(k as f64 * 13.7);
+            let t = StdInstant(k as f64 * 13.7);
             let b = moon_ecliptic_latitude_deg(&calendar, moon, 0, t).unwrap();
             assert!(b.abs() <= moon.inclination_deg + 1e-9, "β {b} at t {}", t.0);
         }
@@ -643,7 +648,7 @@ mod tests {
             let cap = i.min(180.0 - i);
             let mut peak: f64 = 0.0;
             for k in 0..500 {
-                let t = StdDays(k as f64 * 13.7);
+                let t = StdInstant(k as f64 * 13.7);
                 let b = moon_ecliptic_latitude_deg(&calendar, moon, 0, t).unwrap();
                 assert!(b.abs() <= cap + 1e-6, "i={i}: β {b} exceeds cap {cap}");
                 peak = peak.max(b.abs());
@@ -727,7 +732,7 @@ mod tests {
         let (system, calendar) = super::luna_sol();
         let mean = crate::star::sun_angular_diameter_rel(&system.star, system.anchor.orbit);
         for k in 0..12 {
-            let t = StdDays(k as f64 * 30.0);
+            let t = StdInstant(k as f64 * 30.0);
             assert_eq!(sun_angular_rel_at(&system, &calendar, t), mean);
         }
     }
@@ -742,7 +747,7 @@ mod tests {
         let calendar = crate::calendar::calendar_of(&system);
         let mean = crate::star::sun_angular_diameter_rel(&system.star, system.anchor.orbit);
         let sizes: Vec<f64> = (0..360)
-            .map(|d| sun_angular_rel_at(&system, &calendar, StdDays(d as f64)))
+            .map(|d| sun_angular_rel_at(&system, &calendar, StdInstant(d as f64)))
             .collect();
         let max = sizes.iter().cloned().fold(f64::MIN, f64::max);
         let min = sizes.iter().cloned().fold(f64::MAX, f64::min);
@@ -781,7 +786,12 @@ mod tests {
     fn luna_sol_dates_earths_solar_cadence() {
         let (system, calendar) = luna_sol();
         let years = 50.0;
-        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * years));
+        let events = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * years),
+        );
         let solar = events
             .iter()
             .filter(|e| matches!(e.body, EclipseBody::Solar))
@@ -801,7 +811,12 @@ mod tests {
     fn luna_sol_dates_earths_lunar_cadence() {
         let (system, calendar) = luna_sol();
         let years = 50.0;
-        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * years));
+        let events = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * years),
+        );
         let lunar = events
             .iter()
             .filter(|e| matches!(e.body, EclipseBody::Lunar))
@@ -818,7 +833,12 @@ mod tests {
     #[test]
     fn lunar_events_fall_at_full_moons() {
         let (system, calendar) = luna_sol();
-        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 20.0));
+        let events = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * 20.0),
+        );
         let lunar: Vec<_> = events
             .iter()
             .filter(|e| matches!(e.body, EclipseBody::Lunar))
@@ -836,7 +856,12 @@ mod tests {
     #[test]
     fn solar_events_fall_at_new_moons_inside_the_threshold() {
         let (system, calendar) = luna_sol();
-        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 20.0));
+        let events = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * 20.0),
+        );
         assert!(!events.is_empty());
         for e in events
             .iter()
@@ -863,8 +888,8 @@ mod tests {
         system.moons[0].inclination_deg = 1e-9;
         let calendar = crate::calendar::calendar_of(&system);
         let synodic = calendar.synodic_month(0).unwrap();
-        let window = StdDays(synodic.0 * 24.0);
-        let events = eclipse_events(&system, &calendar, StdDays(0.0), window);
+        let window = StdInstant(synodic.0 * 24.0);
+        let events = eclipse_events(&system, &calendar, StdInstant(0.0), window);
         let solar = events
             .iter()
             .filter(|e| matches!(e.body, EclipseBody::Solar))
@@ -879,7 +904,12 @@ mod tests {
     fn solar_events_cluster_at_the_node_line() {
         let (system, calendar) = luna_sol();
         let moon = &system.moons[0];
-        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 20.0));
+        let events = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * 20.0),
+        );
         for e in events
             .iter()
             .filter(|e| matches!(e.body, EclipseBody::Solar))
@@ -902,7 +932,12 @@ mod tests {
     #[test]
     fn track_latitude_runs_from_subsolar_to_polar_with_beta() {
         let (system, calendar) = luna_sol();
-        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 30.0));
+        let events = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * 30.0),
+        );
         let moon = &system.moons[0];
         for e in events
             .iter()
@@ -922,7 +957,12 @@ mod tests {
     #[test]
     fn track_duration_is_hours_luna_scale() {
         let (system, calendar) = luna_sol();
-        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 10.0));
+        let events = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * 10.0),
+        );
         let solar = events
             .iter()
             .find(|e| matches!(e.body, EclipseBody::Solar))
@@ -939,7 +979,12 @@ mod tests {
     #[test]
     fn lunar_events_have_no_track_and_night_visibility() {
         let (system, calendar) = luna_sol();
-        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 10.0));
+        let events = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * 10.0),
+        );
         let lunar = events
             .iter()
             .find(|e| matches!(e.body, EclipseBody::Lunar))
@@ -956,7 +1001,12 @@ mod tests {
     #[test]
     fn sight_tiers_partition_the_globe() {
         let (system, calendar) = luna_sol();
-        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 10.0));
+        let events = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * 10.0),
+        );
         let solar = events
             .iter()
             .find(|e| matches!(e.body, EclipseBody::Solar))
@@ -1058,7 +1108,12 @@ mod tests {
     #[test]
     fn coincidence_days_needs_two_moons() {
         let (system, calendar) = luna_sol();
-        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 50.0));
+        let events = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * 50.0),
+        );
         assert_eq!(coincidence_days(&events), 0);
     }
 }

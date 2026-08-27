@@ -5,7 +5,7 @@
 use crate::anchor::Rotation;
 use crate::calendar::{Calendar, SkyBand, calendar_of};
 use crate::system::{GenesisOutcome, StarSystem};
-use crate::units::StdDays;
+use crate::units::StdInstant;
 use crate::{CELESTIAL_BODY, SkyReport};
 use hornvale_kernel::math;
 use hornvale_kernel::{
@@ -397,7 +397,7 @@ mod tests {
             system,
             notes: Vec::new(),
         });
-        assert!(sky.calendar().moon_phase(StdDays(0.0), 0).is_none());
+        assert!(sky.calendar().moon_phase(StdInstant(0.0), 0).is_none());
         // Local day fraction 0.0 falls outside the centered daylight
         // window, so this is night — the branch that used to `.unwrap()`.
         let report = sky.sky_at(WorldTime::GENESIS);
@@ -657,13 +657,17 @@ mod tests {
     #[test]
     fn an_in_band_observer_sees_the_eclipse_on_its_day() {
         use crate::eclipses::{EclipseBody, eclipse_events, ground_track, sub_solar_longitude_deg};
-        use crate::units::StdDays;
         let (system, calendar) = crate::eclipses::luna_sol();
         let sky = GeneratedSky::new(crate::system::GenesisOutcome {
             system: system.clone(),
             notes: Vec::new(),
         });
-        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 10.0));
+        let events = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * 10.0),
+        );
         let solar = events
             .iter()
             .find(|e| matches!(e.body, EclipseBody::Solar))
@@ -701,13 +705,17 @@ mod tests {
     #[test]
     fn the_night_side_sees_the_blood_moon_on_its_day() {
         use crate::eclipses::{EclipseBody, eclipse_events, sub_solar_longitude_deg};
-        use crate::units::StdDays;
         let (system, calendar) = crate::eclipses::luna_sol();
         let sky = GeneratedSky::new(crate::system::GenesisOutcome {
             system: system.clone(),
             notes: Vec::new(),
         });
-        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 10.0));
+        let events = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * 10.0),
+        );
         let lunar = events
             .iter()
             .find(|e| matches!(e.body, EclipseBody::Lunar))
@@ -1067,7 +1075,7 @@ mod tests {
                         "got salience {}",
                         p.salience
                     );
-                    let band = s.calendar().sky_band(StdDays(t), 35.0);
+                    let band = s.calendar().sky_band(StdInstant(t), 35.0);
                     assert_ne!(
                         band,
                         Some(SkyBand::Day),
@@ -1189,10 +1197,14 @@ mod tests {
     #[test]
     fn rate_matches_the_dated_scan() {
         use crate::eclipses::{EclipseBody, eclipse_events};
-        use crate::units::StdDays;
         let (system, calendar) = crate::eclipses::luna_sol();
         let years = 100.0;
-        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * years));
+        let events = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * years),
+        );
         let solar = events
             .iter()
             .filter(|e| matches!(e.body, EclipseBody::Solar))
@@ -1217,10 +1229,14 @@ mod tests {
             EclipseBody, LUNAR_SHADOW_FACTOR, eclipse_events, node_crossing_chance,
             solar_eclipse_threshold_deg,
         };
-        use crate::units::StdDays;
         let (system, calendar) = crate::eclipses::luna_sol();
         let years = 100.0;
-        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * years));
+        let events = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * years),
+        );
         let lunar = events
             .iter()
             .filter(|e| matches!(e.body, EclipseBody::Lunar))
@@ -1513,15 +1529,24 @@ impl GeneratedSky {
         &self.notes
     }
 
-    /// This domain's ONE crossing from exact kernel ticks to continuous
-    /// standard days. Everything downstream of here works in `StdDays`.
+    /// This domain's ONE crossing from exact kernel ticks to a continuous
+    /// instant. Everything downstream of here works in `StdInstant`.
     ///
-    /// Clamps a pre-genesis instant to genesis, per decision 0187 — the sky
-    /// before the world exists is not a physical question. The NaN half of
-    /// the old `max(0.0)` guard is gone by construction: a `WorldTime` is an
-    /// integer and cannot be NaN.
-    fn t(&self, time: WorldTime) -> StdDays {
-        StdDays(time.as_std_days().max(0.0))
+    /// Clamps a pre-genesis instant to genesis, per decision 0187. The NaN
+    /// half of the old `max(0.0)` guard is gone by construction: a
+    /// `WorldTime` is an integer and cannot be NaN.
+    ///
+    /// **The clamp's stated reason no longer holds, and this comment used to
+    /// carry it.** It said "the sky before the world exists is not a physical
+    /// question" — a justification 0187 itself RETRACTED, on the grounds that
+    /// `Calendar::local_day` was deliberately fixed to answer for negative
+    /// time on decision 0126's precedent, and the sky and the calendar sit on
+    /// the same axis. What actually held up the clamp was structural: no
+    /// caller could construct a negative `StdDays` to hand in. `StdInstant`
+    /// removes that, so the clamp is now a free choice rather than a forced
+    /// one — see the campaign's own decision on it.
+    fn t(&self, time: WorldTime) -> StdInstant {
+        StdInstant(time.as_std_days().max(0.0))
     }
 
     /// The sky at a moment, rendered under an unobstructed view.
@@ -1804,8 +1829,8 @@ impl PhenomenaSource for GeneratedSky {
                 .day_length()
                 .map(|d| d.get() / 2.0)
                 .unwrap_or(0.5);
-            let window_from = crate::units::StdDays(t.0 - half_day);
-            let window_until = crate::units::StdDays(t.0 + half_day);
+            let window_from = crate::units::StdInstant(t.0 - half_day);
+            let window_until = crate::units::StdInstant(t.0 + half_day);
             for event in eclipse_events(&self.system, &self.calendar, window_from, window_until) {
                 let moon = &self.system.moons[event.moon];
                 match event.body {

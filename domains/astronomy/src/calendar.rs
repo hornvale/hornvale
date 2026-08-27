@@ -5,7 +5,7 @@
 use crate::anchor::Rotation;
 use crate::sky_position::{EquatorialCoord, ecliptic_of, equatorial_at};
 use crate::system::StarSystem;
-use crate::units::StdDays;
+use crate::units::{StdDays, StdInstant};
 use hornvale_kernel::math;
 use hornvale_kernel::units::TickSpan;
 
@@ -64,7 +64,7 @@ mod tests {
     fn local_days_advance_with_absolute_time() {
         let cal = calendar_of(&spinning_system());
         assert_eq!(cal.day_length().unwrap().get(), 1.0);
-        let (index, fraction) = cal.local_day(StdDays::new(2.25).unwrap()).unwrap();
+        let (index, fraction) = cal.local_day(StdInstant::new(2.25).unwrap()).unwrap();
         assert_eq!(index, 2);
         // The genesis day-phase offset (SKY-4) shifts where in the day t=0
         // falls, so the expected fraction is 0.25 plus that offset.
@@ -100,7 +100,7 @@ mod tests {
         // arithmetic. So a negative value reaches `local_day` internally in
         // ordinary worldgen even though no external caller can produce one.
         let (idx, frac) = cal
-            .local_day(StdDays(-1.5 * day_len))
+            .local_day(StdInstant(-1.5 * day_len))
             .expect("a spinning world answers");
 
         assert!(
@@ -117,9 +117,12 @@ mod tests {
     fn locked_worlds_have_no_local_day_and_no_daylight_cycle() {
         let cal = calendar_of(&locked_system());
         assert!(cal.day_length().is_none());
-        assert!(cal.local_day(StdDays::new(5.0).unwrap()).is_none());
-        assert!(cal.daylight_fraction(StdDays::new(5.0).unwrap()).is_none());
-        assert!(cal.is_daylight(StdDays::new(5.0).unwrap()).is_none());
+        assert!(cal.local_day(StdInstant::new(5.0).unwrap()).is_none());
+        assert!(
+            cal.daylight_fraction(StdInstant::new(5.0).unwrap())
+                .is_none()
+        );
+        assert!(cal.is_daylight(StdInstant::new(5.0).unwrap()).is_none());
     }
 
     #[test]
@@ -138,7 +141,7 @@ mod tests {
         // (SKY-4) shifts which absolute day that falls on, so solve for it
         // rather than assuming t=0 is the start of the year.
         let t_frac = (0.25 - cal.forcing.year_phase_offset).rem_euclid(1.0);
-        let t = StdDays::new(t_frac * year).unwrap();
+        let t = StdInstant::new(t_frac * year).unwrap();
         let expected = 0.5 + (obliquity / 90.0) * 0.5;
         assert!((cal.daylight_fraction(t).unwrap() - expected).abs() < 1e-9);
     }
@@ -152,7 +155,7 @@ mod tests {
             ..SkyPins::default()
         };
         let cal = calendar_of(&generate(Seed(42), &pins).unwrap().system);
-        let t = StdDays::new(100.0).unwrap();
+        let t = StdInstant::new(100.0).unwrap();
         assert!(cal.season_phase(t).is_none());
         assert_eq!(cal.daylight_fraction(t).unwrap(), 0.5);
     }
@@ -169,7 +172,8 @@ mod tests {
         };
         let cal = calendar_of(&generate(Seed(42), &pins).unwrap().system);
         assert_eq!(
-            cal.daylight_fraction(StdDays::new(0.0).unwrap()).unwrap(),
+            cal.daylight_fraction(StdInstant::new(0.0).unwrap())
+                .unwrap(),
             0.5
         );
     }
@@ -203,15 +207,15 @@ mod tests {
         // purely apsidal (eccentricity-driven).
         assert_eq!(cal.forcing.obliquity_at(123.0), 0.0);
         assert!(
-            cal.season_phase(StdDays::new(50.0).unwrap()).is_some(),
+            cal.season_phase(StdInstant::new(50.0).unwrap()).is_some(),
             "eccentricity gives even a zero-tilt world a year (SKY-2)"
         );
         // Daylight is not flat across the year: the apsidal term makes it vary.
         let spring = cal
-            .daylight_fraction(StdDays::new(365.25 * 0.25).unwrap())
+            .daylight_fraction(StdInstant::new(365.25 * 0.25).unwrap())
             .unwrap();
         let autumn = cal
-            .daylight_fraction(StdDays::new(365.25 * 0.75).unwrap())
+            .daylight_fraction(StdInstant::new(365.25 * 0.75).unwrap())
             .unwrap();
         assert!(
             (spring - autumn).abs() > 1e-6,
@@ -228,8 +232,8 @@ mod tests {
         let system = spinning_system();
         let cal = calendar_of(&system);
         let synodic = cal.synodic_month(0).unwrap().get();
-        let t0 = StdDays::new(0.0).unwrap();
-        let t = StdDays::new(synodic * 1.5).unwrap();
+        let t0 = StdInstant::new(0.0).unwrap();
+        let t = StdInstant::new(synodic * 1.5).unwrap();
         let advance =
             (cal.moon_phase(t, 0).unwrap() - cal.moon_phase(t0, 0).unwrap()).rem_euclid(1.0);
         assert!((advance - 0.5).abs() < 1e-9);
@@ -242,9 +246,11 @@ mod tests {
     fn genesis_day_zero_is_not_a_grand_alignment() {
         let cal = calendar_of(&spinning_system());
         // At least one of year/day/moon phase is non-zero at t=0.
-        let y = cal.year_phase(StdDays::new(0.0).unwrap());
-        let (_, dfrac) = cal.local_day(StdDays::new(0.0).unwrap()).unwrap();
-        let m = cal.moon_phase(StdDays::new(0.0).unwrap(), 0).unwrap_or(0.0);
+        let y = cal.year_phase(StdInstant::new(0.0).unwrap());
+        let (_, dfrac) = cal.local_day(StdInstant::new(0.0).unwrap()).unwrap();
+        let m = cal
+            .moon_phase(StdInstant::new(0.0).unwrap(), 0)
+            .unwrap_or(0.0);
         assert!(
             y != 0.0 || dfrac != 0.0 || m != 0.0,
             "day 0 is still a grand alignment"
@@ -256,7 +262,7 @@ mod tests {
         let cal = calendar_of(&spinning_system());
         let year = cal.year_length().get();
         for k in 0..24 {
-            let t = StdDays::new(k as f64 * year / 24.0).unwrap();
+            let t = StdInstant::new(k as f64 * year / 24.0).unwrap();
             let f = cal.daylight_fraction_at(t, 0.0).unwrap();
             assert!((f - 0.5).abs() < 1e-9, "equator not flat at t={t:?}: {f}");
         }
@@ -279,7 +285,7 @@ mod tests {
         let year = cal.year_length().get();
         let (mut max, mut min) = (0.0_f64, 1.0_f64);
         for k in 0..365 {
-            let t = StdDays::new(k as f64 * year / 365.0).unwrap();
+            let t = StdInstant::new(k as f64 * year / 365.0).unwrap();
             let f = cal.daylight_fraction_at(t, 85.0).unwrap();
             max = max.max(f);
             min = min.min(f);
@@ -292,7 +298,7 @@ mod tests {
     fn a_locked_world_has_no_latitude_daylight() {
         let cal = calendar_of(&locked_system());
         assert!(
-            cal.daylight_fraction_at(StdDays::new(0.0).unwrap(), 45.0)
+            cal.daylight_fraction_at(StdInstant::new(0.0).unwrap(), 45.0)
                 .is_none()
         );
     }
@@ -311,7 +317,8 @@ mod tests {
         let year = cal.year_length().get();
         // The genesis year-phase offset (SKY-4) shifts which absolute day
         // each year phase falls on — solve for it, as the daylight tests do.
-        let at_phase = |p: f64| StdDays((p - cal.forcing.year_phase_offset).rem_euclid(1.0) * year);
+        let at_phase =
+            |p: f64| StdInstant((p - cal.forcing.year_phase_offset).rem_euclid(1.0) * year);
         assert!(cal.solar_declination(at_phase(0.0)).abs() < 1e-6);
         assert!((cal.solar_declination(at_phase(0.25)) - 23.5).abs() < 1e-6);
         assert!((cal.solar_declination(at_phase(0.75)) + 23.5).abs() < 1e-6);
@@ -332,7 +339,7 @@ mod tests {
         // The genesis day-phase offset (SKY-4) shifts where in absolute
         // time noon falls — solve for the local-day fraction wanted.
         let at_fraction =
-            |f: f64| StdDays(10.0 + (f - cal.forcing.day_phase_offset).rem_euclid(1.0));
+            |f: f64| StdInstant(10.0 + (f - cal.forcing.day_phase_offset).rem_euclid(1.0));
         let alt = |f: f64, lat: f64| cal.solar_altitude_at(at_fraction(f), lat).unwrap();
         assert!((alt(0.5, 0.0) - 90.0).abs() < 1e-6, "noon zenith");
         assert!((alt(0.5, 40.0) - 50.0).abs() < 1e-6, "latitude subtracts");
@@ -358,7 +365,7 @@ mod tests {
         // The spin pin draws from its own stream, so both calendars share
         // the same genesis day-phase offset; solve for local fractions.
         let at_fraction =
-            |f: f64| StdDays(10.0 + (f - pro.forcing.day_phase_offset).rem_euclid(1.0));
+            |f: f64| StdInstant(10.0 + (f - pro.forcing.day_phase_offset).rem_euclid(1.0));
         let morning = pro.solar_azimuth_at(at_fraction(0.3), 0.0).unwrap();
         let evening = pro.solar_azimuth_at(at_fraction(0.7), 0.0).unwrap();
         assert!(
@@ -382,8 +389,8 @@ mod tests {
     #[test]
     fn locked_worlds_have_no_solar_position() {
         let cal = calendar_of(&locked_system());
-        assert!(cal.solar_altitude_at(StdDays(5.0), 30.0).is_none());
-        assert!(cal.solar_azimuth_at(StdDays(5.0), 30.0).is_none());
+        assert!(cal.solar_altitude_at(StdInstant(5.0), 30.0).is_none());
+        assert!(cal.solar_azimuth_at(StdInstant(5.0), 30.0).is_none());
     }
 
     /// Luna-like check: 27.32 d sidereal in a 365.25 d year → 29.53 d synodic.
@@ -401,8 +408,8 @@ mod tests {
     fn moon_phase_cycles_on_the_synodic_period() {
         let cal = calendar_with_moon(27.32, 365.25);
         let synodic = cal.synodic_month(0).unwrap().0;
-        assert!((cal.moon_phase(StdDays(synodic * 0.5), 0).unwrap() - 0.5).abs() < 1e-9);
-        assert!(cal.moon_phase(StdDays(synodic), 0).unwrap() < 1e-9);
+        assert!((cal.moon_phase(StdInstant(synodic * 0.5), 0).unwrap() - 0.5).abs() < 1e-9);
+        assert!(cal.moon_phase(StdInstant(synodic), 0).unwrap() < 1e-9);
     }
 
     /// A sidereal period at or beyond the year is degenerate: no synodic cycle.
@@ -410,7 +417,7 @@ mod tests {
     fn synodic_month_guards_the_degenerate_case() {
         let cal = calendar_with_moon(400.0, 365.25);
         assert!(cal.synodic_month(0).is_none());
-        assert!(cal.moon_phase(StdDays(1.0), 0).is_none());
+        assert!(cal.moon_phase(StdInstant(1.0), 0).is_none());
         assert!(cal.months_per_year(0).is_none());
     }
 
@@ -426,7 +433,8 @@ mod tests {
         };
         let cal = calendar_of(&generate(Seed(42), &pins).unwrap().system);
         let year = cal.year_length().get();
-        let at_phase = |p: f64| StdDays((p - cal.forcing.year_phase_offset).rem_euclid(1.0) * year);
+        let at_phase =
+            |p: f64| StdInstant((p - cal.forcing.year_phase_offset).rem_euclid(1.0) * year);
         assert!(cal.solar_equatorial(at_phase(0.0)).dec_deg.abs() < 1e-6);
         assert!((cal.solar_equatorial(at_phase(0.25)).dec_deg - 23.5).abs() < 1e-6);
         assert!((cal.solar_equatorial(at_phase(0.25)).ra_deg - 90.0).abs() < 1e-6);
@@ -442,8 +450,9 @@ mod tests {
             ra_deg: 10.0,
             dec_deg: 40.0,
         };
-        let now = cal.star_equatorial_at(&genesis, StdDays(0.0));
-        let later = cal.star_equatorial_at(&genesis, StdDays(crate::forcing::P_PRECESSION / 4.0));
+        let now = cal.star_equatorial_at(&genesis, StdInstant(0.0));
+        let later =
+            cal.star_equatorial_at(&genesis, StdInstant(crate::forcing::P_PRECESSION / 4.0));
         assert!(
             (now.ra_deg - genesis.ra_deg).abs() < 1e-9,
             "epoch 0 is the genesis frame"
@@ -466,7 +475,7 @@ mod tests {
         };
         let cal = calendar_of(&generate(Seed(42), &pins).unwrap().system);
         let at_fraction =
-            |f: f64| StdDays(10.0 + (f - cal.forcing.day_phase_offset).rem_euclid(1.0));
+            |f: f64| StdInstant(10.0 + (f - cal.forcing.day_phase_offset).rem_euclid(1.0));
         assert_eq!(cal.sky_band(at_fraction(0.5), 0.0), Some(SkyBand::Day));
         assert_eq!(cal.sky_band(at_fraction(0.0), 0.0), Some(SkyBand::Night));
         // Just past sunset (fraction 0.76 ≈ sun ~3.6° below on a zero-tilt equator).
@@ -476,7 +485,7 @@ mod tests {
         );
         assert!(
             calendar_of(&locked_system())
-                .sky_band(StdDays(5.0), 0.0)
+                .sky_band(StdInstant(5.0), 0.0)
                 .is_none()
         );
     }
@@ -487,7 +496,7 @@ mod tests {
     #[test]
     fn solstice_azimuth_geometry_holds() {
         let cal = calendar_of(&spinning_system());
-        let t = StdDays(0.0);
+        let t = StdInstant(0.0);
         let az = cal.solstice_rise_azimuth_at(40.0, t).unwrap();
         assert!((0.0..90.0).contains(&az), "az {az}");
         let south = cal.solstice_rise_azimuth_at(-40.0, t).unwrap();
@@ -505,11 +514,15 @@ mod tests {
         if cal.day_length().is_none() {
             return; // a locked draw can't test drift; seed 42 spins today
         }
-        let half = StdDays(crate::forcing::P_OBLIQUITY / 2.0);
-        let d = cal.alignment_drift_deg(40.0, StdDays(0.0), half).unwrap();
+        let half = StdInstant(crate::forcing::P_OBLIQUITY / 2.0);
+        let d = cal
+            .alignment_drift_deg(40.0, StdInstant(0.0), half)
+            .unwrap();
         assert!(d.abs() > 0.0, "a wobbling sky drifts");
-        let full = StdDays(crate::forcing::P_OBLIQUITY);
-        let round = cal.alignment_drift_deg(40.0, StdDays(0.0), full).unwrap();
+        let full = StdInstant(crate::forcing::P_OBLIQUITY);
+        let round = cal
+            .alignment_drift_deg(40.0, StdInstant(0.0), full)
+            .unwrap();
         assert!(round.abs() < 1e-9, "one full period returns home: {round}");
     }
 
@@ -521,10 +534,10 @@ mod tests {
         if cal.day_length().is_none() {
             return;
         }
-        let t = StdDays(0.3 * crate::forcing::P_OBLIQUITY);
+        let t = StdInstant(0.3 * crate::forcing::P_OBLIQUITY);
         let az = cal.solstice_rise_azimuth_at(40.0, t).unwrap();
         let epoch = cal
-            .alignment_epoch_of(az, 40.0, StdDays(t.0 + 1.0))
+            .alignment_epoch_of(az, 40.0, StdInstant(t.0 + 1.0))
             .unwrap();
         assert!(
             (epoch.0 - t.0).abs() < 1.0,
@@ -539,8 +552,14 @@ mod tests {
             ..SkyPins::default()
         };
         let frozen = calendar_of(&generate(Seed(42), &pins).unwrap().system);
-        let az0 = frozen.solstice_rise_azimuth_at(40.0, StdDays(0.0)).unwrap();
-        assert!(frozen.alignment_epoch_of(az0, 40.0, StdDays(1e6)).is_none());
+        let az0 = frozen
+            .solstice_rise_azimuth_at(40.0, StdInstant(0.0))
+            .unwrap();
+        assert!(
+            frozen
+                .alignment_epoch_of(az0, 40.0, StdInstant(1e6))
+                .is_none()
+        );
     }
 
     /// A NaN latitude must return `None`, not `Some(NaN)`: the domain guards
@@ -551,11 +570,11 @@ mod tests {
     fn nan_latitude_is_rejected_not_propagated() {
         let cal = calendar_of(&spinning_system());
         assert!(
-            cal.solstice_rise_azimuth_at(f64::NAN, StdDays(0.0))
+            cal.solstice_rise_azimuth_at(f64::NAN, StdInstant(0.0))
                 .is_none()
         );
         assert!(
-            cal.alignment_epoch_of(63.0, f64::NAN, StdDays(1.0))
+            cal.alignment_epoch_of(63.0, f64::NAN, StdInstant(1.0))
                 .is_none()
         );
     }
@@ -639,7 +658,7 @@ impl Calendar {
     /// every negative value to day 0 and returned a negative fraction
     /// (The Escapement); negative days are legal per decision 0126.
     /// type-audit: bare-ok(count: return), bare-ok(ratio: return)
-    pub fn local_day(&self, t: StdDays) -> Option<(i64, f64)> {
+    pub fn local_day(&self, t: StdInstant) -> Option<(i64, f64)> {
         let day = self.day?;
         let local = t.0 / day.as_std_days();
         let index = local.floor();
@@ -651,12 +670,12 @@ impl Calendar {
     }
     /// Fraction of the year elapsed at `t`.
     /// type-audit: bare-ok(ratio)
-    pub fn year_phase(&self, t: StdDays) -> f64 {
+    pub fn year_phase(&self, t: StdInstant) -> f64 {
         (t.0 / self.year.0 + self.forcing.year_phase_offset).fract()
     }
     /// Seasonal phase; present when either driver (tilt or eccentricity) acts.
     /// type-audit: bare-ok(ratio)
-    pub fn season_phase(&self, t: StdDays) -> Option<f64> {
+    pub fn season_phase(&self, t: StdInstant) -> Option<f64> {
         let obliquity = self.forcing.obliquity_at(t.0);
         let ecc = self.forcing.eccentricity_at(t.0);
         if obliquity == 0.0 && ecc == 0.0 {
@@ -668,7 +687,7 @@ impl Calendar {
     /// smaller apsidal term from eccentricity (a tilt-independent driver).
     /// Absent on a tidally locked world.
     /// type-audit: bare-ok(ratio)
-    pub fn daylight_fraction(&self, t: StdDays) -> Option<f64> {
+    pub fn daylight_fraction(&self, t: StdInstant) -> Option<f64> {
         self.day?;
         let obliquity = self.forcing.obliquity_at(t.0);
         let ecc = self.forcing.eccentricity_at(t.0);
@@ -683,7 +702,7 @@ impl Calendar {
     /// world's daylight geometry drifts with its axial tilt. `None` on a
     /// tidally locked world, which has no day/night cycle.
     /// type-audit: pending(wave-1: latitude), bare-ok(ratio: return)
-    pub fn daylight_fraction_at(&self, t: StdDays, latitude: f64) -> Option<f64> {
+    pub fn daylight_fraction_at(&self, t: StdInstant, latitude: f64) -> Option<f64> {
         self.day?;
         // Solar declination: the sub-solar latitude oscillates over the year,
         // its amplitude the (time-varying) obliquity.
@@ -701,7 +720,7 @@ impl Calendar {
     /// (time-varying) obliquity — the same declination the latitude
     /// daylight model already uses.
     /// type-audit: pending(wave-1)
-    pub fn solar_declination(&self, t: StdDays) -> f64 {
+    pub fn solar_declination(&self, t: StdInstant) -> f64 {
         self.forcing.obliquity_at(t.0) * math::sin(std::f64::consts::TAU * self.year_phase(t))
     }
 
@@ -709,7 +728,7 @@ impl Calendar {
     /// latitude (radians) for the solar-position formulas. A retrograde
     /// world (SKY-22) runs its hour angle backward. `None` on a locked
     /// world, which has no hour.
-    fn solar_geometry(&self, t: StdDays, latitude: f64) -> Option<(f64, f64, f64)> {
+    fn solar_geometry(&self, t: StdInstant, latitude: f64) -> Option<(f64, f64, f64)> {
         let fraction = self.local_day(t)?.1;
         let direction = if self.retrograde { -1.0 } else { 1.0 };
         let hour_angle = std::f64::consts::TAU * (fraction - 0.5) * direction;
@@ -724,7 +743,7 @@ impl Calendar {
     /// `latitude`, in degrees (SKY-7): sin a = sin φ sin δ + cos φ cos δ
     /// cos H. Negative below the horizon. `None` on a locked world.
     /// type-audit: pending(wave-1)
-    pub fn solar_altitude_at(&self, t: StdDays, latitude: f64) -> Option<f64> {
+    pub fn solar_altitude_at(&self, t: StdInstant, latitude: f64) -> Option<f64> {
         let (h, delta, phi) = self.solar_geometry(t, latitude)?;
         Some(
             math::asin(
@@ -740,7 +759,7 @@ impl Calendar {
     /// west; a retrograde world (SKY-22) mirrors the crossing. `None` on
     /// a locked world.
     /// type-audit: pending(wave-1)
-    pub fn solar_azimuth_at(&self, t: StdDays, latitude: f64) -> Option<f64> {
+    pub fn solar_azimuth_at(&self, t: StdInstant, latitude: f64) -> Option<f64> {
         let (h, delta, phi) = self.solar_geometry(t, latitude)?;
         // atan2 form measured from south, westward positive; shift to
         // compass convention.
@@ -753,7 +772,7 @@ impl Calendar {
 
     /// Is it daylight at `t`? Daylight is a centered window of the local day.
     /// type-audit: bare-ok(flag)
-    pub fn is_daylight(&self, t: StdDays) -> Option<bool> {
+    pub fn is_daylight(&self, t: StdInstant) -> Option<bool> {
         let fraction = self.local_day(t)?.1;
         let f = self.daylight_fraction(t)?;
         Some(fraction > (1.0 - f) / 2.0 && fraction < (1.0 + f) / 2.0)
@@ -776,7 +795,7 @@ impl Calendar {
     /// cycling on the synodic month (SKY-20) and shifted by the genesis phase
     /// offset (SKY-4) so day 0 is an ordinary day, not a grand alignment.
     /// type-audit: bare-ok(index: index), bare-ok(ratio: return)
-    pub fn moon_phase(&self, t: StdDays, index: usize) -> Option<f64> {
+    pub fn moon_phase(&self, t: StdInstant, index: usize) -> Option<f64> {
         let synodic = self.synodic_month(index)?;
         let offset = self
             .forcing
@@ -796,7 +815,7 @@ impl Calendar {
     /// Degrees the equinox has precessed since genesis (epoch 0) — the first
     /// reader `precession_at` has ever had.
     /// type-audit: pending(wave-1)
-    pub fn precession_offset_deg(&self, t: StdDays) -> f64 {
+    pub fn precession_offset_deg(&self, t: StdInstant) -> f64 {
         (self.forcing.precession_at(t.0) - self.forcing.precession_at(0.0)).to_degrees()
     }
 
@@ -809,7 +828,7 @@ impl Calendar {
     /// azimuth over kiloyears IS the obliquity wobble — the ground half
     /// of SKY-stale-alignments (the sky half is `star_equatorial_at`).
     /// type-audit: pending(wave-1: latitude), pending(wave-1: return)
-    pub fn solstice_rise_azimuth_at(&self, latitude: f64, t: StdDays) -> Option<f64> {
+    pub fn solstice_rise_azimuth_at(&self, latitude: f64, t: StdInstant) -> Option<f64> {
         self.day_length()?;
         let eps = self.forcing.obliquity_at(t.0).to_radians();
         let phi = latitude.to_radians();
@@ -830,7 +849,12 @@ impl Calendar {
     /// (positive = the rise point moved clockwise). Bounded by the
     /// obliquity amplitude's azimuthal image; periodic on `P_OBLIQUITY`.
     /// type-audit: pending(wave-1: latitude), pending(wave-1: return)
-    pub fn alignment_drift_deg(&self, latitude: f64, t0: StdDays, t1: StdDays) -> Option<f64> {
+    pub fn alignment_drift_deg(
+        &self,
+        latitude: f64,
+        t0: StdInstant,
+        t1: StdInstant,
+    ) -> Option<f64> {
         Some(
             self.solstice_rise_azimuth_at(latitude, t1)?
                 - self.solstice_rise_azimuth_at(latitude, t0)?,
@@ -849,8 +873,8 @@ impl Calendar {
         &self,
         azimuth_deg: f64,
         latitude: f64,
-        t_now: StdDays,
-    ) -> Option<StdDays> {
+        t_now: StdInstant,
+    ) -> Option<StdInstant> {
         self.day_length()?;
         if self.forcing.obliquity_amp == 0.0 {
             return None;
@@ -888,12 +912,12 @@ impl Calendar {
                 best = Some(t);
             }
         }
-        best.map(StdDays)
+        best.map(StdInstant)
     }
 
     /// The sun's equatorial position at `t` (exact spherical form; the shipped
     /// small-angle `solar_declination` is the coarse tier of the same object).
-    pub fn solar_equatorial(&self, t: StdDays) -> EquatorialCoord {
+    pub fn solar_equatorial(&self, t: StdInstant) -> EquatorialCoord {
         let lam = (360.0 * self.year_phase(t)).to_radians();
         let e = self.forcing.obliquity_at(t.0).to_radians();
         EquatorialCoord {
@@ -907,7 +931,7 @@ impl Calendar {
     /// A fixed star's apparent equatorial position at `t`: genesis coordinates
     /// through the genesis ecliptic, drifted by precession, re-projected at the
     /// epoch's obliquity.
-    pub fn star_equatorial_at(&self, genesis: &EquatorialCoord, t: StdDays) -> EquatorialCoord {
+    pub fn star_equatorial_at(&self, genesis: &EquatorialCoord, t: StdInstant) -> EquatorialCoord {
         let ecl = ecliptic_of(genesis, self.forcing.obliquity_at(0.0));
         equatorial_at(
             &ecl,
@@ -919,7 +943,7 @@ impl Calendar {
     /// The sky band at `t` for an observer at `latitude`; `None` on a
     /// locked world, which has no solar hour.
     /// type-audit: pending(wave-1: latitude)
-    pub fn sky_band(&self, t: StdDays, latitude: f64) -> Option<SkyBand> {
+    pub fn sky_band(&self, t: StdInstant, latitude: f64) -> Option<SkyBand> {
         let alt = self.solar_altitude_at(t, latitude)?;
         Some(if alt > 0.0 {
             SkyBand::Day

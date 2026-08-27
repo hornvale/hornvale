@@ -1462,7 +1462,7 @@ fn cmd_book(args: &[String]) -> Result<(), String> {
         let reckoning: Vec<hornvale_book::ReckoningEpoch> = match at {
             Some(day) => {
                 let at_days =
-                    hornvale_astronomy::StdDays::new(day).map_err(|e| format!("--at: {e}"))?;
+                    hornvale_astronomy::StdInstant::new(day).map_err(|e| format!("--at: {e}"))?;
                 let epoch = match (terrain.as_ref(), climate.as_ref()) {
                     (Some(t), Some(c)) => hornvale_book::reckoning_at_from(&world, at_days, t, c),
                     _ => hornvale_book::reckoning_at(&world, at_days),

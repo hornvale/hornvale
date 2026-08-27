@@ -5,7 +5,7 @@
 use crate::calendar::{Calendar, SkyBand};
 use crate::sky_position::EquatorialCoord;
 use crate::system::StarSystem;
-use crate::units::StdDays;
+use crate::units::StdInstant;
 
 /// Which celestial pole a pole star is closest to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -59,7 +59,7 @@ pub fn night_sky_at(
     system: &StarSystem,
     calendar: &Calendar,
     latitude: f64,
-    t: StdDays,
+    t: StdInstant,
 ) -> NightSky {
     let frozen = calendar.day_length().is_none();
     let sun = calendar.solar_equatorial(t);
@@ -122,7 +122,7 @@ pub fn night_sky_at(
             - calendar.local_day(t).map(|(_, f)| f).unwrap_or(0.0)
                 * calendar.day_length().map(|d| d.0).unwrap_or(1.0);
         let transit_fraction = (0.5 + (pos.ra_deg - sun.ra_deg) / 360.0).rem_euclid(1.0);
-        let transit_t = StdDays(
+        let transit_t = StdInstant(
             day_start + transit_fraction * calendar.day_length().map(|d| d.0).unwrap_or(1.0),
         );
         if calendar.sky_band(transit_t, latitude) != Some(SkyBand::Day) {
@@ -171,7 +171,7 @@ mod tests {
         let year = cal.year_length().get();
         let mut seen: std::collections::BTreeSet<usize> = std::collections::BTreeSet::new();
         for k in 0..48 {
-            let sky = night_sky_at(&system, &cal, 0.0, StdDays(k as f64 * year / 48.0));
+            let sky = night_sky_at(&system, &cal, 0.0, StdInstant(k as f64 * year / 48.0));
             assert!(sky.circumpolar.is_empty() && sky.never_rises.is_empty());
             seen.extend(sky.visible.iter().copied());
         }
@@ -186,7 +186,7 @@ mod tests {
     fn the_polar_observer_sees_one_unchanging_hemisphere() {
         let system = spinning_system();
         let cal = calendar_of(&system);
-        let sky = night_sky_at(&system, &cal, 90.0, StdDays(0.0));
+        let sky = night_sky_at(&system, &cal, 90.0, StdInstant(0.0));
         assert_eq!(
             sky.circumpolar.len() + sky.never_rises.len(),
             system.neighbors.len(),
@@ -198,8 +198,8 @@ mod tests {
     fn a_locked_world_has_a_frozen_sky() {
         let system = locked_system();
         let cal = calendar_of(&system);
-        let a = night_sky_at(&system, &cal, 30.0, StdDays(0.0));
-        let b = night_sky_at(&system, &cal, 30.0, StdDays(5000.0));
+        let a = night_sky_at(&system, &cal, 30.0, StdInstant(0.0));
+        let b = night_sky_at(&system, &cal, 30.0, StdInstant(5000.0));
         assert!(a.frozen);
         assert_eq!(
             a.visible, b.visible,
@@ -211,7 +211,7 @@ mod tests {
     fn pole_star_is_latitude_independent() {
         let system = spinning_system();
         let cal = calendar_of(&system);
-        let t = StdDays(0.0);
+        let t = StdInstant(0.0);
         let south = night_sky_at(&system, &cal, -60.0, t).pole_star;
         let equator = night_sky_at(&system, &cal, 0.0, t).pole_star;
         let north = night_sky_at(&system, &cal, 60.0, t).pole_star;
@@ -230,13 +230,13 @@ mod tests {
             generate(Seed(42), &pins).unwrap().system
         };
         let retro = system_with_spin(crate::pins::SpinPin::Retrograde);
-        let sky = night_sky_at(&retro, &calendar_of(&retro), 30.0, StdDays(0.0));
+        let sky = night_sky_at(&retro, &calendar_of(&retro), 30.0, StdInstant(0.0));
         assert!(
             sky.wheels_backward,
             "retrograde spin wheels the sky backward"
         );
         let pro = system_with_spin(crate::pins::SpinPin::Prograde);
-        let sky = night_sky_at(&pro, &calendar_of(&pro), 30.0, StdDays(0.0));
+        let sky = night_sky_at(&pro, &calendar_of(&pro), 30.0, StdInstant(0.0));
         assert!(!sky.wheels_backward, "prograde spin wheels the sky forward");
     }
 
@@ -249,7 +249,7 @@ mod tests {
         let cal = calendar_of(&system);
         let year = cal.year_length().get();
         let skies: Vec<Vec<usize>> = (0..12)
-            .map(|k| night_sky_at(&system, &cal, 30.0, StdDays(k as f64 * year / 12.0)).visible)
+            .map(|k| night_sky_at(&system, &cal, 30.0, StdInstant(k as f64 * year / 12.0)).visible)
             .collect();
         assert!(
             skies.iter().any(|s| *s != skies[0]),

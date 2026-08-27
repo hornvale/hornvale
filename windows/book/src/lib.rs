@@ -708,7 +708,7 @@ fn reckoning_epochs_from(
     ]
     .into_iter()
     .map(|(heading, day, margin_phrase)| {
-        let at = hornvale_astronomy::StdDays::new(day).unwrap_or_else(|e| {
+        let at = hornvale_astronomy::StdInstant::new(day).unwrap_or_else(|e| {
             panic!("the Reckoning's preregistered epoch day {day} must be a valid StdDays: {e}")
         });
         reckoning_epoch(
@@ -746,7 +746,7 @@ fn reckoning_epochs_from(
 // Named construction site (decision 0092): this entry wrapper sculpts/fits
 // once, then delegates to `reckoning_at_from`.
 #[allow(clippy::disallowed_methods)]
-pub fn reckoning_at(world: &World, at: hornvale_astronomy::StdDays) -> ReckoningEpoch {
+pub fn reckoning_at(world: &World, at: hornvale_astronomy::StdInstant) -> ReckoningEpoch {
     let terrain = hornvale_worldgen::terrain_of(world)
         .unwrap_or_else(|e| panic!("the Reckoning section requires a derivable terrain: {e}"));
     let climate = hornvale_worldgen::climate_from(world, &terrain)
@@ -760,7 +760,7 @@ pub fn reckoning_at(world: &World, at: hornvale_astronomy::StdDays) -> Reckoning
 /// wants many `--at` lenses over one world) can share it here instead.
 pub fn reckoning_at_from(
     world: &World,
-    at: hornvale_astronomy::StdDays,
+    at: hornvale_astronomy::StdInstant,
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &hornvale_climate::GeneratedClimate,
 ) -> ReckoningEpoch {
@@ -790,13 +790,13 @@ pub fn reckoning_at_from(
 /// zero short-circuits [`reckoning_epoch`] straight to the empty arm
 /// before it ever calls `observations_from`/`ladder_from` (both of which
 /// themselves require a Generated sky).
-fn true_event_count(world: &World, at: hornvale_astronomy::StdDays) -> usize {
+fn true_event_count(world: &World, at: hornvale_astronomy::StdInstant) -> usize {
     let sky = hornvale_worldgen::sky_of(world)
         .unwrap_or_else(|e| panic!("the Reckoning section requires a derivable sky: {e}"));
     match sky {
         hornvale_worldgen::Sky::Generated(sky) => {
             let from =
-                hornvale_astronomy::StdDays::new(0.0).expect("0.0 is always a valid StdDays");
+                hornvale_astronomy::StdInstant::new(0.0).expect("0.0 is always a valid StdInstant");
             hornvale_astronomy::eclipse_events(sky.system(), sky.calendar(), from, at).len()
         }
         hornvale_worldgen::Sky::Constant(_) => 0,
@@ -839,7 +839,7 @@ fn reckoning_epoch(
     world: &World,
     autonyms: &BTreeMap<String, String>,
     heading: &str,
-    at: hornvale_astronomy::StdDays,
+    at: hornvale_astronomy::StdInstant,
     margin_phrase: &str,
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &hornvale_climate::GeneratedClimate,
@@ -5973,7 +5973,7 @@ mod tests {
         let world = generated(1);
         let pair = render_volume(&world).reckoning;
 
-        let day0 = reckoning_at(&world, hornvale_astronomy::StdDays::new(0.0).unwrap());
+        let day0 = reckoning_at(&world, hornvale_astronomy::StdInstant::new(0.0).unwrap());
         assert_eq!(
             day0.lines, pair[0].lines,
             "day 0 matches the fixed pair's empty arm"
@@ -5985,7 +5985,7 @@ mod tests {
 
         let day100 = reckoning_at(
             &world,
-            hornvale_astronomy::StdDays::new(RECKONING_EPOCH_2_DAY).unwrap(),
+            hornvale_astronomy::StdInstant::new(RECKONING_EPOCH_2_DAY).unwrap(),
         );
         assert_eq!(
             day100.lines, pair[1].lines,
@@ -6016,7 +6016,10 @@ mod tests {
              lines are unaffected by the lens (they carry no epoch phrase)"
         );
 
-        let mid = reckoning_at(&world, hornvale_astronomy::StdDays::new(20_000.0).unwrap());
+        let mid = reckoning_at(
+            &world,
+            hornvale_astronomy::StdInstant::new(20_000.0).unwrap(),
+        );
         assert!(
             !mid.heading.is_empty() && !mid.lines.is_empty(),
             "an arbitrary day renders: heading={:?} lines={:?}",
@@ -6630,7 +6633,7 @@ mod tests {
         let world = generated(2);
         let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
         let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
-        let at = hornvale_astronomy::StdDays::new(RECKONING_EPOCH_2_DAY).unwrap();
+        let at = hornvale_astronomy::StdInstant::new(RECKONING_EPOCH_2_DAY).unwrap();
         assert_eq!(true_event_count(&world, at), 81);
 
         for kind in ["bugbear", "kobold"] {
@@ -6675,7 +6678,7 @@ mod tests {
         let seed3 = generated(3);
         let terrain3 = hornvale_worldgen::terrain_of(&seed3).expect("terrain reconstructs");
         let climate3 = hornvale_worldgen::climate_from(&seed3, &terrain3).expect("climate derives");
-        let at3 = hornvale_astronomy::StdDays::new(RECKONING_EPOCH_2_DAY).unwrap();
+        let at3 = hornvale_astronomy::StdInstant::new(RECKONING_EPOCH_2_DAY).unwrap();
         assert_eq!(true_event_count(&seed3, at3), 53);
         for kind in ["goblin", "hobgoblin"] {
             let (rung, _) =

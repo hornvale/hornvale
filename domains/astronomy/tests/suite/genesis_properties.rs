@@ -3,7 +3,7 @@
 
 use hornvale_astronomy::{
     Degrees, ForcingPin, GenesisError, LocalDays, MoonsPin, NeighborClass, Rotation, RotationPin,
-    SkyPins, generate, hill_radius_mm,
+    SkyPins, StdInstant, generate, hill_radius_mm,
 };
 use hornvale_kernel::Seed;
 
@@ -305,7 +305,7 @@ fn forcing_zero_pin_yields_zeroed_amplitudes() {
 /// no census home)
 #[test]
 fn equatorial_daylight_is_flat_and_every_latitude_stays_in_range() {
-    use hornvale_astronomy::{StdDays, calendar_of};
+    use hornvale_astronomy::calendar_of;
     for seed in 0..64u64 {
         let system = generate(
             Seed(seed),
@@ -319,7 +319,7 @@ fn equatorial_daylight_is_flat_and_every_latitude_stays_in_range() {
         let cal = calendar_of(&system);
         let year = system.anchor.year.get();
         for k in 0..8 {
-            let t = StdDays::new(k as f64 * year / 8.0).unwrap();
+            let t = StdInstant::new(k as f64 * year / 8.0).unwrap();
             let equator = cal.daylight_fraction_at(t, 0.0).unwrap();
             assert!(
                 (equator - 0.5).abs() < 1e-9,
@@ -644,7 +644,7 @@ fn neighbor_battery_counts_coordinates_and_determinism() {
 /// claim: invariant(census: none yet — migration candidate, default/unpinned)
 #[test]
 fn alignment_battery_dating_round_trip() {
-    use hornvale_astronomy::{Rotation, SkyPins, StdDays, calendar_of, generate};
+    use hornvale_astronomy::{Rotation, SkyPins, calendar_of, generate};
     for seed in 0..128u64 {
         let outcome = generate(hornvale_kernel::Seed(seed), &SkyPins::default()).unwrap();
         let s = &outcome.system;
@@ -653,12 +653,12 @@ fn alignment_battery_dating_round_trip() {
         }
         let calendar = calendar_of(s);
         for lat in [-55.0, -20.0, 20.0, 55.0] {
-            let t = StdDays::new(0.27 * hornvale_astronomy::forcing::P_OBLIQUITY).unwrap();
+            let t = StdInstant::new(0.27 * hornvale_astronomy::forcing::P_OBLIQUITY).unwrap();
             let Some(az) = calendar.solstice_rise_azimuth_at(lat, t) else {
                 continue;
             };
             let epoch = calendar
-                .alignment_epoch_of(az, lat, StdDays::new(t.get() + 1.0).unwrap())
+                .alignment_epoch_of(az, lat, StdInstant::new(t.get() + 1.0).unwrap())
                 .expect("a wobbling sky dates its own alignments");
             assert!((epoch.get() - t.get()).abs() < 1.0, "seed {seed} lat {lat}");
         }
