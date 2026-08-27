@@ -248,6 +248,7 @@
 | `island` | terrain | terrain | land the water surrounds |
 | `kelp-canopy` | climate | substance | The floating canopy of a kelp forest. |
 | `kelp-forest` | climate | terrain | a biome class |
+| `kill` | language | act | to cause to cease living |
 | `killer-whale-kind` | species | living | a killer whale |
 | `know` | language | act | to hold something in memory or understanding — `knows` |
 | `kobold-kind` | species | living | a kobold |

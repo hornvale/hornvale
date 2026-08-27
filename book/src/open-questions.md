@@ -170,6 +170,41 @@ where it usually does — not a check whose predicate is wrong, but an edit that
 never happened reporting that it did. Verify a mass edit by count; an exit
 status is not a measurement.
 
+**The Inquest (2026-08-26) does not move the score either, and sharpens the
+practice once more: it matters *which* checks go red.** The practice as it
+stands asks that a check be made to fail on command, that it be answerable to an
+enumeration, and — the sharpening recorded further down this chapter — that a
+positive control be shown to discriminate rather than merely to exist. All three
+are satisfied by a uniform red — corrupt
+the input, watch everything that touches it fail — and a uniform red is
+consistent with one assertion doing all the work while its neighbours ride
+along. This campaign's corpus resolver was mutated three times with a
+**predicted subset** for each: swap one demand token for another and the
+headline count stays at two while the pair changes, so only the by-identity
+assertion reddens; add a token nothing implements and only the distance report
+reddens, count and identities holding; drop the campaign's own new token and all
+three redden. Each mutation landed exactly where it was predicted to. That
+establishes something a uniform red cannot — that the three assertions are
+*independent*, and that the count is not silently standing in for the identities
+it was written not to trust.
+
+The same campaign supplies this chapter's floor with an instance of its own,
+from the other direction. Its plan named a byte-golden comparison, in capital
+letters, as the single most important check it would run. The check was close to
+vacuous: every production call site of the affected realizer passed a `None`
+where the new draw would have entered, and the drawn values had no consumer
+outside their own module at all, so the artifact could not have moved whether or
+not the claim under test was true. The implementer established that
+**structurally** rather than reporting the green, then measured the real claim
+directly — forty seeds across three species, printing the four pre-existing
+drawn axes with and without the new one, a hundred and twenty rows identical —
+with a positive control that inserted one extra draw upstream and moved seventy
+of the hundred and twenty. The claim is confirmed on far better evidence than
+the check would have produced. **A check answering a narrower question than the
+claim attached to it survives every reading**, and this one survived being
+written down, emphasised, and dispatched; what caught it was somebody asking
+what the check could possibly have failed on.
+
 **A note from The Staff (2026-08-14), amended by The Sluice (2026-08-15),
 since this score is read against an instrument this passage names by a label
 that no longer exists.** Both halves of Sexton's pairing — the census

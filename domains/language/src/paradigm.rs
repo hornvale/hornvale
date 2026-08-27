@@ -15,8 +15,8 @@ use hornvale_kernel::Seed;
 use hornvale_kernel::seed::StreamLabel;
 use std::collections::{BTreeMap, BTreeSet};
 
-/// A tongue's drawn Number/Tense grammaticalization depths and attachment
-/// sides — the LANG-43 sibling of [`crate::morphology::TongueMorphology`]'s
+/// A tongue's drawn Number/Tense/Polarity grammaticalization depths and
+/// attachment sides — the LANG-43 sibling of [`crate::morphology::TongueMorphology`]'s
 /// evidential/noun-class depths, kept as its own additive struct (not
 /// folded into `TongueMorphology`) so this campaign touches no existing
 /// call site: nothing in the shipped grammar renderer consumes these
@@ -28,10 +28,14 @@ pub struct ParadigmDepths {
     pub number_depth: MorphDepth,
     /// How deeply Tense (Present/Past) grammaticalizes.
     pub tense_depth: MorphDepth,
+    /// How deeply Polarity (Positive/Negative) grammaticalizes.
+    pub polarity_depth: MorphDepth,
     /// Which side of the marked word the Number affix binds.
     pub number_position: ClassPosition,
     /// Which side of the marked word the Tense affix binds.
     pub tense_position: ClassPosition,
+    /// Which side of the marked word the Polarity affix binds.
+    pub polarity_position: ClassPosition,
 }
 
 /// Preregistered Number-depth weights over `[None, Particle, Affix]` —
@@ -45,6 +49,27 @@ const NUMBER_DEPTH_WEIGHTS: [f64; 3] = [30.0, 20.0, 50.0];
 /// Preregistered Tense-depth weights over `[None, Particle, Affix]`.
 const TENSE_DEPTH_WEIGHTS: [f64; 3] = [25.0, 25.0, 50.0];
 
+/// Preregistered Polarity-depth weights over `[None, Particle, Affix]` —
+/// the only axis in this file whose skew INVERTS the others', for two
+/// typological reasons that pull in the same direction.
+///
+/// First, `None` is the smallest weight of any axis here: standard clausal
+/// negation is essentially universal, with no attested language lacking a
+/// way to deny a clause, whereas a language with no number, tense or
+/// noun-class morphology is ordinary. It is deliberately not ZERO — a
+/// zero-weight bucket would make an axis this crate's `depth_from_bucket`
+/// convention defines as three-valued binary in fact, while still claiming
+/// three, and this file's own reachability test asserts every bucket is
+/// reachable.
+///
+/// Second, `Particle` outweighs `Affix` here, the reverse of Number and
+/// Tense: the commonest negation strategy cross-linguistically is a free
+/// negative particle (English `not`, French `pas`, Mandarin `bu`), with
+/// affixal negation the next commonest and negative auxiliaries rarer
+/// still. A purely typological prior, drawn independently of every other
+/// axis.
+const POLARITY_DEPTH_WEIGHTS: [f64; 3] = [10.0, 50.0, 40.0];
+
 /// The percentage chance (out of 100) the Number affix binds as a suffix
 /// rather than a prefix.
 const NUMBER_POSITION_SUFFIX_CHANCE: u32 = 70;
@@ -52,6 +77,12 @@ const NUMBER_POSITION_SUFFIX_CHANCE: u32 = 70;
 /// The percentage chance (out of 100) the Tense affix binds as a suffix
 /// rather than a prefix.
 const TENSE_POSITION_SUFFIX_CHANCE: u32 = 65;
+
+/// The percentage chance (out of 100) the Polarity affix binds as a suffix
+/// rather than a prefix — below 50, unlike Number (70) and Tense (65),
+/// because the negative morpheme's cross-linguistically dominant position
+/// is BEFORE the verb it negates, not after it.
+const POLARITY_POSITION_SUFFIX_CHANCE: u32 = 40;
 
 /// The `weighted_index` bucket order both depth axes share: 0 = `None`,
 /// 1 = `Particle`, 2 = `Affix` (matching
@@ -64,14 +95,21 @@ fn depth_from_bucket(bucket: usize) -> MorphDepth {
     }
 }
 
-/// Draw `species`' Number/Tense grammaticalization depths and attachment
-/// sides — four permanent streams:
+/// Draw `species`' Number/Tense/Polarity grammaticalization depths and
+/// attachment sides — six permanent streams:
 /// `language/<species>/grammar/depth/number`,
 /// `language/<species>/grammar/depth/tense`,
+/// `language/<species>/grammar/depth/polarity`,
 /// `language/<species>/grammar/number-position`,
-/// `language/<species>/grammar/tense-position`. Drawn, independent of
+/// `language/<species>/grammar/tense-position`,
+/// `language/<species>/grammar/polarity-position`. Drawn, independent of
 /// evidentiality/noun-class (never shares a stream or a weight table with
 /// [`crate::morphology::morph_depths`]).
+///
+/// **Every axis derives its OWN stream by label path** (spec §3.4 of The
+/// Inquest): the polarity legs added here consume nothing from the number
+/// or tense streams, so adding them perturbs no existing consumption order
+/// and moves no already-generated world's bytes.
 /// type-audit: bare-ok(identifier-text)
 pub fn paradigm_depths(seed: &Seed, species: &str) -> ParadigmDepths {
     let mut number_stream = seed
@@ -100,6 +138,19 @@ pub fn paradigm_depths(seed: &Seed, species: &str) -> ParadigmDepths {
             .expect("TENSE_DEPTH_WEIGHTS is fixed and positive"),
     );
 
+    let mut polarity_stream = seed
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::GRAMMAR)
+        .derive(streams::DEPTH)
+        .derive(streams::POLARITY)
+        .stream();
+    let polarity_depth = depth_from_bucket(
+        polarity_stream
+            .weighted_index(&POLARITY_DEPTH_WEIGHTS)
+            .expect("POLARITY_DEPTH_WEIGHTS is fixed and positive"),
+    );
+
     let mut number_pos_stream = seed
         .derive(streams::ROOT)
         .derive(StreamLabel::dynamic(species))
@@ -124,11 +175,26 @@ pub fn paradigm_depths(seed: &Seed, species: &str) -> ParadigmDepths {
         ClassPosition::Prefix
     };
 
+    let mut polarity_pos_stream = seed
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::GRAMMAR)
+        .derive(streams::POLARITY_POSITION)
+        .stream();
+    let polarity_position =
+        if polarity_pos_stream.range_u32(1, 100) <= POLARITY_POSITION_SUFFIX_CHANCE {
+            ClassPosition::Suffix
+        } else {
+            ClassPosition::Prefix
+        };
+
     ParadigmDepths {
         number_depth,
         tense_depth,
+        polarity_depth,
         number_position,
         tense_position,
+        polarity_position,
     }
 }
 
@@ -140,9 +206,13 @@ pub fn paradigm_depths(seed: &Seed, species: &str) -> ParadigmDepths {
 /// etymology::evolve`], exactly like every other family-shared morpheme in
 /// this crate. Delegates to [`crate::morphology::draw_morph_proto`] (same
 /// one-syllable-fill mechanism every family-cognate proto in this crate
-/// uses) rather than duplicating it. New permanent streams:
+/// uses) rather than duplicating it. Permanent streams:
 /// `language/family/<family>/morph/number/plural`,
-/// `language/family/<family>/morph/tense/past`.
+/// `language/family/<family>/morph/tense/past`,
+/// `language/family/<family>/morph/polarity/negative`. `axis` and `value`
+/// are already free `&str` legs, so a new paradigm axis needs no new
+/// function here — only its roster entry in
+/// [`crate::stream_labels`].
 /// type-audit: bare-ok(identifier-text)
 pub fn draw_paradigm_affix_proto(
     seed: &Seed,
@@ -152,6 +222,66 @@ pub fn draw_paradigm_affix_proto(
     proto_ph: &crate::phonology::Phonology,
 ) -> Vec<Segment> {
     crate::morphology::draw_morph_proto(seed, family, axis, value, proto_ph)
+}
+
+/// The tense axis's marked value labels — `past` only. Present is the zero
+/// member (spec §4.1) and no marker is ever drawn for it, so inventing a
+/// present form here would be authoring.
+const TENSE_VALUES: [&str; 1] = ["past"];
+
+/// The polarity axis's marked value labels — `negative` only, for the same
+/// reason [`TENSE_VALUES`] holds only `past`: positive is the zero member.
+const POLARITY_VALUES: [&str; 1] = ["negative"];
+
+/// Draw `family`'s tense and polarity marker proto-affixes (one syllable
+/// each, at `proto`'s phonology) and evolve them into `daughter` via
+/// `cascade`, returning `(tense, polarity)` keyed by the MARKED value's
+/// label. This is [`crate::morphology::morph_forms`]' cognate law applied to
+/// the paradigm axes — only `family` and the value label key the draw, never
+/// the daughter or its cascade, so all of a family's daughters carry cognate
+/// markers that diverge only through their own sound changes.
+///
+/// Draws the same streams [`draw_paradigm_affix_proto`] documents
+/// (`language/family/<family>/morph/tense/past`,
+/// `language/family/<family>/morph/polarity/negative`) through the same
+/// [`crate::morphology::draw_morph_proto`] mechanism, because it shares
+/// `morphology`'s `evolve_axis` rather than re-implementing it.
+///
+/// **Number draws nothing here.** [`TongueParadigm`](crate::TongueParadigm)
+/// carries tense and polarity marker maps and no number map, because no
+/// realizer reads a number marker yet; drawing one would put an unread form
+/// in the bundle. The number axis's own proto stream stays reachable through
+/// [`draw_paradigm_affix_proto`] for whoever adds that realizer.
+/// type-audit: bare-ok(identifier-text)
+pub fn paradigm_forms(
+    seed: &Seed,
+    family: &str,
+    proto: &Phonology,
+    cascade: &Cascade,
+    daughter: &Phonology,
+) -> (
+    BTreeMap<&'static str, MorphForm>,
+    BTreeMap<&'static str, MorphForm>,
+) {
+    let tense = crate::morphology::evolve_axis(
+        seed,
+        family,
+        "tense",
+        &TENSE_VALUES,
+        proto,
+        cascade,
+        daughter,
+    );
+    let polarity = crate::morphology::evolve_axis(
+        seed,
+        family,
+        "polarity",
+        &POLARITY_VALUES,
+        proto,
+        cascade,
+        daughter,
+    );
+    (tense, polarity)
 }
 
 /// One root's paradigm-vertex computation for one axis value (spec §3.3):
@@ -343,6 +473,14 @@ mod tests {
         let mut saw_none = false;
         let mut saw_particle = false;
         let mut saw_affix = false;
+        // The polarity axis (The Inquest) is checked in the same sweep
+        // because its `None` weight is the smallest in the file (10 of
+        // 100): deliberately small, since standard negation is essentially
+        // universal, but deliberately NOT zero, and only a reachability
+        // assertion keeps that distinction honest.
+        let mut saw_polarity_none = false;
+        let mut saw_polarity_particle = false;
+        let mut saw_polarity_affix = false;
         for i in 0..200u64 {
             let d = paradigm_depths(&Seed(i), "test");
             match d.number_depth {
@@ -350,8 +488,17 @@ mod tests {
                 MorphDepth::Particle => saw_particle = true,
                 MorphDepth::Affix => saw_affix = true,
             }
+            match d.polarity_depth {
+                MorphDepth::None => saw_polarity_none = true,
+                MorphDepth::Particle => saw_polarity_particle = true,
+                MorphDepth::Affix => saw_polarity_affix = true,
+            }
         }
         assert!(saw_none && saw_particle && saw_affix);
+        assert!(
+            saw_polarity_none && saw_polarity_particle && saw_polarity_affix,
+            "every polarity bucket must be reachable, `None` included"
+        );
     }
 
     use crate::etymology::{Cascade, RuleKind, SoundRule};

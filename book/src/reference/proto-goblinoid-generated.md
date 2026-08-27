@@ -124,6 +124,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `island` | land the water surrounds | *Gope | /gope/ |
 | `kelp-canopy` | The floating canopy of a kelp forest. | *Pano | /pano/ |
 | `kelp-forest` | a biome class | *Naa | /naa/ |
+| `kill` | to cause to cease living | *Dapo | /dapo/ |
 | `killer-whale-kind` | a killer whale | *Gaqo | /gaqo/ |
 | `know` | to hold something in memory or understanding — `knows` | *Naena | /naena/ |
 | `kobold-kind` | a kobold | *Naeno | /naeno/ |
