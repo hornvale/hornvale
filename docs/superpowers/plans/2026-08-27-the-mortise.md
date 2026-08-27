@@ -289,6 +289,35 @@ grep -E 'panicked|test result' /tmp/mortise-t2.log
 
 - [ ] **Step 4: Register the concept, append the cohort, add the row**
 
+**CONTROLLER RULING (pre-dispatch verification): `think` goes in
+`universal_stratum()`, NOT beside `know`.** An earlier draft of this task said
+"the universal stratum beside `know`'s pack", which is incoherent — `know` is not
+in the universal stratum and is not even a `PackEntry`. It lives in
+`action_suite_pack()` (`packs.rs:671`), which is `&[(&str, &str)]`, registered
+directly by `register_concepts`, and whose seven concepts each produce an honest
+`Void::Gap` in every lexicon.
+
+The choice, and why:
+
+- **`kill`'s stated reasoning applies to `think` and not to `know`'s placement.**
+  `kill` is in the universal stratum because "there is no biome, climate or
+  perception ladder a people's word for killing could hang off, so gating it
+  would be authoring a silence rather than deriving one." Nothing gates thinking
+  either.
+- **`action_suite_pack`'s own doc flags its placement as UNRESOLVED**, not
+  principled: "a culture's exposure to literacy, cartography, or reading
+  another's state is a question this task does not resolve". Following it would
+  be inheriting an acknowledged open question as if it were a decision. It is
+  registry row `LANG-in-character-acts-are-unspeakable`.
+
+**The resulting asymmetry is real, and you must NAME it rather than smooth it
+over.** `think` will be sayable in every tongue; `know` will still gap in all of
+them. So m09 (*"I think…"*) realizes in a tongue and m06 (*"I don't know…"*) does
+not. **Do not "fix" `know` by moving it** — that is The Deed's decision, it would
+move exposure and goldens, and it is out of scope. Record the asymmetry in your
+report; it feeds `LANG-in-character-acts-are-unspeakable` and the chronicle.
+
+
 Read `packs.rs:37-48` and `accession.rs`'s epoch-13 comment before writing — a
 cohort comment is expected to explain *why this concept sorts where it does*, not
 merely that it was added.
@@ -297,9 +326,12 @@ merely that it was added.
 // packs.rs
 pub const THINK: &str = "think";
 
-// packs.rs — the PackEntry. Read the surrounding entries and choose `kind`
-// and `ladder_rank` from what a mental act actually is in this pack. Do NOT
-// copy KILL's `ladder_rank: 0` without checking what the ladder means here.
+// packs.rs — a PackEntry in `universal_stratum()` (packs.rs:89), beside
+// `kill`. See the CONTROLLER RULING below for why there and not beside
+// `know`. `kind: ConceptKind::Act` (kernel/src/registry.rs:43 — an act a
+// creature performs, the verb side of the vocabulary). Choose `ladder_rank`
+// from what the universal stratum's own doc says about unranked entries
+// (packs.rs:77-79), not by copying a neighbour.
 
 // accession.rs — a NEW entry appended to the END of EPOCH_COHORTS:
 &["think"],
