@@ -3059,3 +3059,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T00:29:19Z | gate-commit | 37.059 | 130.556 | 32.071 | 4.39 | 0 | 158ec5b3b | campaign/the-inquest | MacBookPro | 10 |
 | 2026-08-27T00:34:01Z | gate-commit | 20.138 | 49.175 | 12.534 | 3.06 | 0 | 158ec5b3b | campaign/the-inquest | MacBookPro | 10 |
 | 2026-08-27T00:52:28Z | gate-commit | 27.245 | 64.203 | 22.564 | 3.18 | 0 | 18fa854c1 | campaign/the-inquest | MacBookPro | 10 |
+| 2026-08-27T00:53:04Z | gate-commit | 19.829 | 49.045 | 12.394 | 3.10 | 0 | 18fa854c1 | campaign/the-inquest | MacBookPro | 10 |
