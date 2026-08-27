@@ -595,6 +595,9 @@ fn read_system(
 /// Re-measures `BIO-underworld-has-no-energy`'s size clause against the
 /// post-`chamber/v3` lattice, cross-checks the two counters that carry the
 /// finding against the committed witness, and ratchets the headline ratio.
+/// Costs three `BuildDepth::Settlements` worlds plus a full-lattice scan —
+/// the heavy tag's own reason states no duration (see its canonical form's
+/// own rule), so that cost is recorded here instead.
 ///
 /// # What would change the verdict
 ///
@@ -602,9 +605,7 @@ fn read_system(
 /// `entrance_count` are the three that move it most, and they move different
 /// pairs of the four populations, which is why all four are reported.
 #[test]
-#[ignore = "heavy: live-worldgen battery (three BuildDepth::Settlements worlds \
-            plus a full-lattice scan); deferred from the commit gate to the \
-            heavy set (decision 0132)"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn is_the_underworld_still_smaller_than_the_surface() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let ranks = habitation_ranks();
