@@ -1042,44 +1042,19 @@ const VENT_CIRCULATION_DEPTH_M: f64 = 1500.0;
 /// documents it as the high-productivity class — then `CoralReef` and
 /// `KelpForest`, then the sunlit `Epipelagic`, falling through the aphotic
 /// classes to near-zero at `Abyssal` and `HadalTrench`), and `SeaIce` is
-/// suppressed.
-///
-/// **`HydrothermalVent` is no longer a literal (The Sources, Task 10).** THE
-/// GOSSAN — rung 1 of BIO-chemotrophy — shipped
-/// `hornvale_species::TrophicMode::Chemotrophic`, the vocabulary; Task 4's
-/// [`energy::EnergySource`] shipped rung 2, the terms a chemotroph actually
-/// eats. A vent turns out not to need a special case to use them:
-/// `hornvale_climate::SeafloorFeature::Ridge` (a mid-ocean ridge) is exactly
-/// what `HydrothermalVent` classifies on
-/// (`hornvale_climate::biome::classify_marine`), ridge crust is the youngest
-/// and hottest terrain owns (`GeneratedTerrain::geothermal_gradient_at` peaks
-/// where `crust_age_at` is `0.0`), and ridge rock is mafic to ultramafic —
-/// exactly [`energy::EnergySource::Serpentinization`] and
-/// [`energy::EnergySource::IronReduction`]'s silica band, which is the real
-/// mid-ocean-ridge mechanism (the Lost City field). So this arm calls the
-/// same [`energy::subterranean_energy`] mean a chamber's `ENERGY` axis calls,
-/// at the vent's own material and gradient, rather than raising a new literal
-/// here — the free evidence metaplan §4 predicted that the mechanism is not
-/// underworld-special-cased.
-///
-/// Two of `subterranean_energy`'s five inputs need a marine reading rather
-/// than a chamber's:
-/// - **moisture is [`VENT_MOISTURE`]** (`1.0`, saturation): a chamber's
-///   moisture comes from `chamber_moisture`'s water-table model, which has no
-///   referent at the open sea floor — the water column above a vent is an
-///   unbounded reservoir, so every water-gated or water-multiplied source in
-///   [`energy::EnergySource`] correctly reads its ceiling input there.
-/// - **depth is [`VENT_CIRCULATION_DEPTH_M`]**, not the vertex's depth in the
-///   water column. [`energy::EnergySource::Geothermal`]'s yield rises with
-///   ΔT = gradient × depth *below the surface a chamber sits at*; a vent's
-///   fluid is hot because it circulated down into the crust and back up, not
-///   because the vent itself sits deep in the ocean — see that constant's own
-///   doc for the anchor.
-///
-/// `drainage` is read normally
-/// (`GeneratedTerrain::drainage_at`, which documents itself as `0` on ocean),
-/// so [`energy::EnergySource::DetritalImport`] correctly yields nothing at a
-/// vent: there is no overhead river channel at the sea floor to deliver it.
+/// suppressed. `HydrothermalVent` is deliberately left near-zero rather than
+/// productive: a real vent community is CHEMOTROPHIC. THE GOSSAN — rung 1 of
+/// BIO-chemotrophy — shipped `hornvale_species::TrophicMode::Chemotrophic`, so
+/// the vocabulary EXISTS; this campaign's own Task 4 then shipped rung 2,
+/// [`energy::EnergySource`], the terms a chemotroph actually eats. This field
+/// is a PHOTOSYNTHESIS supply, and making the vent productive on it feeds
+/// vent biomass to photosynthesis-based consumers — an earlier commit in
+/// this same campaign did exactly that (routed
+/// [`energy::subterranean_energy`] onto this axis), and the whole-branch
+/// review measured the consequence: six `MARINE_FORAGE`-weighted marine
+/// kinds gained ~9x vent occupancy with no chemotrophic mechanism behind it.
+/// **The fix is [`marine_chemosynthate_supply_field`], rung 2's own
+/// `CHEMOSYNTHATE` supply at a vent — not a number raised here.**
 /// type-audit: bare-ok(ratio: scale), bare-ok(count: return)
 pub fn marine_forage_supply_field(
     geo: &Geosphere,
@@ -1098,18 +1073,12 @@ pub fn marine_forage_supply_field(
             hornvale_climate::Biome::Epipelagic => 0.45,
             hornvale_climate::Biome::Mesopelagic => 0.15,
             hornvale_climate::Biome::Bathypelagic => 0.05,
-            hornvale_climate::Biome::Abyssal | hornvale_climate::Biome::HadalTrench => 0.02,
-            // Rung 2 arrived (The Sources): the same seven-source mean a
-            // chamber's ENERGY axis reads, at this vertex's own rock and
-            // gradient — see the field's own doc for why a vent needs no
-            // special case to land on it correctly.
-            hornvale_climate::Biome::HydrothermalVent => energy::subterranean_energy(
-                &terrain.material_at(c),
-                terrain.geothermal_gradient_at(c),
-                VENT_CIRCULATION_DEPTH_M,
-                VENT_MOISTURE,
-                terrain.drainage_at(c),
-            ),
+            // Chemotrophic in reality, and rung 2 now models that mechanism —
+            // but on `CHEMOSYNTHATE`, via `marine_chemosynthate_supply_field`,
+            // not here (see this field's own doc).
+            hornvale_climate::Biome::Abyssal
+            | hornvale_climate::Biome::HadalTrench
+            | hornvale_climate::Biome::HydrothermalVent => 0.02,
             hornvale_climate::Biome::SeaIce => 0.05,
             // Every land class: unreachable under the `is_ocean` guard above,
             // but the match must be total and a wrong default here would be a
@@ -1117,6 +1086,61 @@ pub fn marine_forage_supply_field(
             _ => 0.0,
         };
         productivity * scale
+    })
+}
+
+/// The `CHEMOSYNTHATE` supply a hydrothermal vent offers a marine consumer,
+/// **0 everywhere else in the ocean and on land** — rung 2's own supply
+/// field for a vent's productivity (The Sources, fix round), replacing the
+/// earlier commit that routed this same reading onto [`marine_forage_supply_field`]
+/// instead (see that field's own doc for the measured consequence).
+///
+/// **Gated on [`hornvale_climate::Biome::HydrothermalVent`], not on
+/// lithology or `SeafloorFeature` directly — deliberately, because the
+/// terrain model provably cannot make that call on its own.**
+/// `MAP-seafloor-features-carry-no-signal` (idea registry) measured a vent's
+/// own [`energy::subterranean_energy`] reading at median `0.2139` (n=684)
+/// against non-vent open ocean's median `0.2135` (n=28,995) — 0.19% apart —
+/// because `geothermal_gradient` pins `coolness = 0` at every
+/// non-continental vertex and `assemble_material` carries no seafloor-
+/// feature term at all: lithology and gradient genuinely do not know a ridge
+/// from a plain. The BIOME assignment does know: `Biome::HydrothermalVent`
+/// is derived straight from `hornvale_climate::SeafloorFeature::Ridge`
+/// (`hornvale_climate::biome::classify_marine`), so reading the biome here
+/// is not a shortcut around the terrain model's blind spot, it is the one
+/// place in this pipeline that spot has already been crossed.
+///
+/// Same two marine-reading substitutions as the (reverted) vent arm used,
+/// for the same reasons given at [`VENT_MOISTURE`] and
+/// [`VENT_CIRCULATION_DEPTH_M`]: moisture reads the open-ocean ceiling
+/// rather than a chamber's water table, and depth reads a vent's modelled
+/// circulation depth rather than the vertex's depth in the water column.
+/// `drainage` is read normally — `0` on ocean
+/// (`GeneratedTerrain::drainage_at`) — so `EnergySource::DetritalImport`
+/// correctly contributes nothing at a vent.
+///
+/// **No shipped kind weights `CHEMOSYNTHATE` yet, and this field does not
+/// change that.** A vent now carries a correctly-typed, non-zero
+/// chemotrophic supply that nothing in the roster consumes — authoring a
+/// marine chemotroph, or giving an existing marine kind a `CHEMOSYNTHATE`
+/// weight just to make the supply look used, is THE TENANT's job (rung 4:
+/// "something that eats the budget and spreads"), not this one's.
+/// type-audit: bare-ok(count: return)
+pub fn marine_chemosynthate_supply_field(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> hornvale_kernel::VertexMap<f64> {
+    let biome = climate.biome_map();
+    hornvale_kernel::VertexMap::from_fn(geo, |c| match biome.get(c) {
+        hornvale_climate::Biome::HydrothermalVent => energy::subterranean_energy(
+            &terrain.material_at(c),
+            terrain.geothermal_gradient_at(c),
+            VENT_CIRCULATION_DEPTH_M,
+            VENT_MOISTURE,
+            terrain.drainage_at(c),
+        ),
+        _ => 0.0,
     })
 }
 
@@ -1588,6 +1612,10 @@ pub fn per_species_suitability_masked(
     let forage = forage_supply_field(geo, base_carrying.as_vertex_map());
     let detritus = detritus_supply_field(geo, terrain);
     let marine = marine_forage_supply_field(geo, terrain, climate, MARINE_SUPPLY_SCALE);
+    // The Sources (fix round): rung 2's own vent supply, read for a `Surface`
+    // kind exactly as `chemosynthate_per_rung` is read for a `Subterranean`
+    // one below — see [`marine_chemosynthate_supply_field`]'s own doc.
+    let marine_chemosynthate = marine_chemosynthate_supply_field(geo, terrain, climate);
     let prey = prey_supply_field(geo, &forage);
     // The Range: the biome at every vertex, hoisted exactly as the other
     // per-vertex fields above — read only by a kind with a declared affinity
@@ -1664,9 +1692,10 @@ pub fn per_species_suitability_masked(
                 // an IEEE-754 no-op (verified over the roster's real values,
                 // bit-difference 0).
                 let (best, availability) = match realm {
-                    hornvale_species::HabitatRealm::Surface => {
-                        (score_at(substrate.get(vertex), 0.0), 1.0)
-                    }
+                    hornvale_species::HabitatRealm::Surface => (
+                        score_at(substrate.get(vertex), *marine_chemosynthate.get(vertex)),
+                        1.0,
+                    ),
                     hornvale_species::HabitatRealm::Subterranean => {
                         // Both per-rung fields share one gate
                         // (`terrain.cave_at`), so their `Some`/`None` slots
@@ -1819,16 +1848,20 @@ pub fn per_species_capacity(
 /// everything the era does move. Hoisting these turns a 25-era replay from ~25x
 /// into ~1.1x.
 ///
-/// `marine` is here on a narrower argument than the other three. It reads
-/// `climate.biome_map()`, which *would* move with a properly era-adjusted
-/// climate — but no era biome recomputation exists, and no shipped kind weights
-/// the `MARINE_FORAGE` axis, so it is inert either way. It is hoisted because
-/// today it cannot vary, not because it never could; a marine people or an era
-/// biome model would move it out of this struct.
+/// `marine` and `marine_chemosynthate` are here on a narrower argument than
+/// the other three. Both read `climate.biome_map()`, which *would* move with
+/// a properly era-adjusted climate — but no era biome recomputation exists,
+/// so both are inert either way. `marine` is additionally inert because no
+/// shipped kind weights `MARINE_FORAGE`; `marine_chemosynthate` is inert for
+/// the identical reason on `CHEMOSYNTHATE` (see
+/// [`marine_chemosynthate_supply_field`]'s own doc for why that gap is
+/// deliberate, not a bug). Both are hoisted because today neither can vary,
+/// not because either never could; a marine people, a marine chemotroph, or
+/// an era biome model would move either out of this struct.
 ///
 /// Every field is a dimensionless per-vertex supply or insolation ratio, which is
 /// what the axis dot product in [`axis_supply`] consumes.
-/// type-audit: bare-ok(ratio: insolation), bare-ok(ratio: mineral), bare-ok(ratio: detritus), bare-ok(ratio: marine)
+/// type-audit: bare-ok(ratio: insolation), bare-ok(ratio: mineral), bare-ok(ratio: detritus), bare-ok(ratio: marine), bare-ok(ratio: marine_chemosynthate)
 #[derive(Debug, Clone)]
 pub struct EraInvariantSupply {
     /// Annual-mean insolation per vertex — ~100% of the pipeline's cost, and a
@@ -1841,6 +1874,9 @@ pub struct EraInvariantSupply {
     pub detritus: hornvale_kernel::VertexMap<f64>,
     /// Marine forage supply — see the caveat above.
     pub marine: hornvale_kernel::VertexMap<f64>,
+    /// Marine chemosynthate supply (a vent's `CHEMOSYNTHATE`, The Sources fix
+    /// round) — see the caveat above.
+    pub marine_chemosynthate: hornvale_kernel::VertexMap<f64>,
 }
 
 impl EraInvariantSupply {
@@ -1860,6 +1896,7 @@ impl EraInvariantSupply {
             mineral: mineral_supply_field(geo, terrain, MINERAL_SUPPLY_SCALE),
             detritus: detritus_supply_field(geo, terrain),
             marine: marine_forage_supply_field(geo, terrain, climate, MARINE_SUPPLY_SCALE),
+            marine_chemosynthate: marine_chemosynthate_supply_field(geo, terrain, climate),
         }
     }
 }
@@ -1985,9 +2022,13 @@ pub fn per_species_capacity_at(
                 // arithmetic is UNTOUCHED, exactly as `per_species_suitability`
                 // documents at its matching match.
                 let (best, availability) = match realm {
-                    hornvale_species::HabitatRealm::Surface => {
-                        (score_at(substrate.get(vertex), 0.0), 1.0)
-                    }
+                    hornvale_species::HabitatRealm::Surface => (
+                        score_at(
+                            substrate.get(vertex),
+                            *hoisted.marine_chemosynthate.get(vertex),
+                        ),
+                        1.0,
+                    ),
                     hornvale_species::HabitatRealm::Subterranean => {
                         let substrate_here = subterranean_per_rung.get(vertex);
                         let chemosynthate_here = chemosynthate_per_rung.get(vertex);
@@ -14611,24 +14652,20 @@ mod tests {
         );
     }
 
-    /// Vents outproduce the deep-ocean plain they sit on, AND their
-    /// productivity VARIES between vents -- because it derives from that
-    /// vent's own rock and gradient (The Sources, Task 10). Both halves are
-    /// needed and neither alone is sufficient: "productive" is satisfied by
-    /// simply raising 0.02 to 0.6, and "varies" is satisfied by noise.
-    /// Together they say a mechanism arrived.
-    ///
-    /// **Deviation from the brief's template**: the brief compared against
-    /// `Biome::Abyssal`. Seed 42 at `GLOBE_LEVEL` 6 carries zero `Abyssal`
-    /// vertices — its deepest ocean never reaches the 4000-6000 m Abyssal
-    /// band, topping out at `Bathypelagic` (1000-4000 m). `Bathypelagic` is
-    /// the deepest aphotic class actually present in this world, and it is
-    /// the STRICTER of the two low-productivity aphotic multipliers (0.05 vs
-    /// Abyssal's 0.02), so substituting it does not weaken what the test
-    /// demands.
+    /// **`MARINE_FORAGE` is flat at a vent (The Sources, fix round).** An
+    /// earlier commit in this campaign routed a vent's
+    /// `energy::subterranean_energy` reading onto THIS axis, which is a
+    /// PHOTOSYNTHESIS supply — measured (whole-branch review) to give six
+    /// sunlight-eating marine kinds ~9x vent occupancy with no chemotrophic
+    /// mechanism behind it. `HydrothermalVent` now shares the flat `0.02`
+    /// literal with `Abyssal`/`HadalTrench` again, so every vent reports the
+    /// identical, near-zero `MARINE_FORAGE` value — the pre-campaign,
+    /// honest reading. The productive, VARYING mechanism this test used to
+    /// assert here now belongs on `CHEMOSYNTHATE`
+    /// ([`marine_chemosynthate_supply_field`]), checked below.
     #[test]
     #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
-    fn a_vent_is_productive_and_not_by_a_literal() {
+    fn a_vents_marine_forage_is_flat_again() {
         let world = generated(42);
         let terrain = terrain_of(&world).unwrap();
         let climate = climate_of(&world).unwrap();
@@ -14637,28 +14674,62 @@ mod tests {
         let field = marine_forage_supply_field(geo, &terrain, &climate, 1.0);
 
         let mut vents: Vec<f64> = Vec::new();
-        let mut bathypelagic: Vec<f64> = Vec::new();
+        for vertex in geo.vertices() {
+            if *biome.get(vertex) == hornvale_climate::Biome::HydrothermalVent {
+                vents.push(*field.get(vertex));
+            }
+        }
+        assert!(vents.len() >= 20, "only {} vents — vacuous", vents.len());
+        for v in &vents {
+            assert_eq!(
+                *v, 0.02,
+                "a vent's MARINE_FORAGE must be the flat Abyssal/HadalTrench \
+                 literal, not a chemotrophic reading"
+            );
+        }
+    }
+
+    /// Vents are productive on `CHEMOSYNTHATE`, AND their productivity
+    /// VARIES between vents — because it derives from that vent's own rock
+    /// and gradient (The Sources, Task 10, corrected in the fix round to
+    /// land on the right axis). Both halves are needed and neither alone is
+    /// sufficient: "productive" is satisfied by a flat non-zero constant,
+    /// and "varies" is satisfied by noise on an axis nothing reads. Together
+    /// they say the mechanism reaches the field this test checks.
+    ///
+    /// Non-vent ocean and land both read exactly `0.0`, confirming the gate
+    /// is the vent biome and nothing else leaks through it.
+    #[test]
+    #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+    fn a_vent_is_chemosynthetically_productive_and_not_by_a_literal() {
+        let world = generated(42);
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_of(&world).unwrap();
+        let geo = terrain.geosphere();
+        let biome = climate.biome_map();
+        let field = marine_chemosynthate_supply_field(geo, &terrain, &climate);
+
+        let mut vents: Vec<f64> = Vec::new();
+        let mut non_vent_ocean_and_land: Vec<f64> = Vec::new();
         for vertex in geo.vertices() {
             match biome.get(vertex) {
                 hornvale_climate::Biome::HydrothermalVent => vents.push(*field.get(vertex)),
-                hornvale_climate::Biome::Bathypelagic => bathypelagic.push(*field.get(vertex)),
-                _ => {}
+                _ => non_vent_ocean_and_land.push(*field.get(vertex)),
             }
         }
         assert!(vents.len() >= 20, "only {} vents — vacuous", vents.len());
         assert!(
-            !bathypelagic.is_empty(),
-            "no bathypelagic plain to compare against"
+            !non_vent_ocean_and_land.is_empty(),
+            "no non-vent vertex to compare against"
         );
 
-        let median = |mut v: Vec<f64>| {
-            v.sort_by(f64::total_cmp);
-            v[v.len() / 2]
-        };
-        let vent_median = median(vents.clone());
         assert!(
-            vent_median > median(bathypelagic),
-            "vents ({vent_median}) do not outproduce the bathypelagic plain they sit near"
+            vents.iter().all(|v| *v > 0.0),
+            "every vent must carry a positive chemosynthate reading"
+        );
+        assert!(
+            non_vent_ocean_and_land.iter().all(|v| *v == 0.0),
+            "chemosynthate must be exactly zero away from a vent"
         );
 
         let mut distinct = vents.clone();
