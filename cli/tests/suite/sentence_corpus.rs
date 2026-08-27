@@ -236,11 +236,21 @@ const MERCHANT_COVERED: usize = 5;
 ///   "confused and upset **me**" onto one mention) is cut from this campaign
 ///   entirely (spec §9.1), so the witness's two clauses each restate the
 ///   object in full.
-/// - **m09, *"I think her name was Gilda."*, drops the possessive.** Its
-///   demands (`epistemic-hedge`, `past-tense`, `pronoun-reference`) build a
-///   hedged transitive clause, not a possessed-noun-phrase complement
-///   ("her name") — no construction here builds a possessive, so the
-///   witness's object is a bare pronoun standing in for "her".
+/// - **m09, *"I think her name was Gilda."*, substitutes an embedded
+///   clause for the possessed-name complement.** *"Her name was Gilda"* is
+///   one clause inside another, not a bare NP: `think`'s object is the
+///   whole complement clause *"her name was Gilda"*, and *"her"* is a
+///   possessive determiner inside THAT clause's own subject NP ("her
+///   name"), not the pronoun `think` takes directly — an earlier version of
+///   this doc mis-parsed the sentence as `think` + a bare pronoun object.
+///   No construction here builds a possessive NP or a copular "was Gilda"
+///   naming clause, so the witness stands in with a different embedded
+///   clause the grammar DOES build (`kill`, transitive, pronoun subject and
+///   object) rather than the corpus's literal content — the point is that
+///   `epistemic-hedge` is exercised as the GRAMMAR the token names (one
+///   clause embedded as another's object), never merely as a lexical fact
+///   about the matrix verb alone, the same "Clause-shaped stand-in"
+///   discipline m07's entry above states.
 const MERCHANT_COVERED_IDS: &[&str] = &["m05", "m06", "m07", "m09", "m10"];
 
 /// The headline score.
@@ -495,7 +505,8 @@ enum MerchantConstruction {
 /// doc for the three new gaps: m06 drops the indirect *"why"*, m07
 /// substitutes a `Subject::Clause` complementizer for the gerund and stands
 /// in two unregistered matrix predicates while not raising the shared
-/// object, m09 drops the possessive "her name"). Panics on an id this
+/// object, m09 substitutes a different embedded clause for the
+/// possessed-name complement). Panics on an id this
 /// witness does not cover, the same fail-loud posture [`realize_common`]
 /// itself takes on an unconstructed predicate.
 fn merchant_construction(id: &str) -> MerchantConstruction {
@@ -605,12 +616,27 @@ fn merchant_construction(id: &str) -> MerchantConstruction {
             })
         }
         // "I think her name was Gilda." No construction here builds a
-        // possessive noun phrase ("her name"), so the witness's object is a
-        // bare pronoun standing in for "her" rather than "her name".
+        // possessive noun phrase ("her name"), so the witness's object
+        // stands in with an embedded clause rather than a possessed NP —
+        // `think`'s complement is the whole proposition "her name was
+        // Gilda", not the bare pronoun "her" (see MERCHANT_COVERED_IDS's
+        // doc for why a bare pronoun would have been the wrong stand-in:
+        // it would exercise epistemic-hedge only as a LEXICAL fact, never
+        // the grammar the token actually names).
         "m09" => MerchantConstruction::Clause(Clause {
             predicate: THINK.to_string(),
             subject: Subject::Pronoun(Person::First),
-            object: Argument::Pronoun(Person::Third),
+            object: Argument::Clause(Box::new(Clause {
+                predicate: KILL.to_string(),
+                subject: Subject::Pronoun(Person::Third),
+                object: Argument::Pronoun(Person::Third),
+                number: Number::Sg,
+                definiteness: Definiteness::Def,
+                evidential: Evidential::Witnessed,
+                tense: Tense::Past,
+                polarity: Polarity::Pos,
+                adjuncts: Vec::new(),
+            })),
             number: Number::Sg,
             definiteness: Definiteness::Def,
             evidential: Evidential::Witnessed,
@@ -654,7 +680,7 @@ const MERCHANT_WITNESS: &[(&str, &str)] = &[
     ("m05", "Nwamvam killed a person."),
     ("m06", "I does not know they killed them."),
     ("m07", "they killed them killed me and knowed me."),
-    ("m09", "I thinked them."),
+    ("m09", "I thinked they killed them."),
     ("m10", "I did not know them."),
 ];
 

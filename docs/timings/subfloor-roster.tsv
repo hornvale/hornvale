@@ -1170,6 +1170,7 @@ hornvale-kernel::suite$golden_harness::matching_bytes_pass
 hornvale-kernel::suite$golden_harness::rebaseline_creates_a_missing_fixture_and_its_parents
 hornvale-kernel::suite$golden_harness::rebaseline_on_matching_bytes_is_a_no_op_match
 hornvale-kernel::suite$golden_harness::rebaseline_rewrites_a_drifted_fixture
+hornvale-lab::burr_calibration$the_baseline_assignment_accuracy_is_pinned
 hornvale-lab::burr_calibration$the_baseline_roster_is_eighteen_tongues
 hornvale-lab::hornvale_lab$blackbox::tests::record_failure_reports_an_unknown_pin_set_without_panicking
 hornvale-lab::hornvale_lab$census_claim::tests::a_cheap_run_never_claims_and_never_waits

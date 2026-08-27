@@ -101,7 +101,18 @@ const DICTIONARY: &str = "../../book/src/reference/dictionary-generated.md";
 /// mechanism as The Confidant's entry above, one concept instead of six. The
 /// Burr's thesis (typological stages raise distinguishability) is untouched.
 /// Re-pinned deliberately, per this test's own instruction. Never tuned.
-const BASELINE: f64 = 0.7978316326530612;
+///
+/// The Mortise: 0.798234552332913. Accuracy **rose** 0.00040 — the second-
+/// smallest move this pin has recorded. The campaign registered `think` (one
+/// concept), so every one of the 18 daughters gains one word: the readout
+/// goes from **1251/1568 to 1266/1586**. The denominator grew by exactly 18
+/// and the numerator by 15 — `think` classified correctly in 15 of the 18
+/// tongues, marginally above the running rate, which is the whole of the
+/// move. Same mechanism as The Inquest's entry above, one concept instead of
+/// one. The Burr's thesis (typological stages raise distinguishability) is
+/// untouched. Re-pinned deliberately, per this test's own instruction. Never
+/// tuned.
+const BASELINE: f64 = 0.798234552332913;
 
 /// The chance floor for an 18-way assignment. Reported alongside the baseline
 /// because an accuracy figure without its denominator is not interpretable.

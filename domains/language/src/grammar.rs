@@ -359,11 +359,13 @@ fn mark_embedded_clause(grammar: &TongueGrammar, mut text: String) -> String {
 /// and `Subject::Clause` itself, before ever reaching this function, so the
 /// inner clause's own evidential/tense/polarity marking survives through a
 /// DEEP recursive call (spec §4.5) rather than being flattened to the floor
-/// here. This arm is therefore reached only from [`realize_tongue`]'s own
-/// direct dispatch, which handles every argument shape uniformly — never
-/// from `realize_tongue_deep`'s object slot. `realize_adjuncts` never
-/// reaches this arm for an adjunct's own clause either way (it refuses that
-/// case itself, with the real reason, before ever calling this function).
+/// here. This arm is therefore reached only through the shared
+/// `realize_tongue_with_subject` dispatch — [`realize_tongue`]'s own direct
+/// call and [`realize_tongue_coordination`]'s per-clause call (Task 7),
+/// both floor callers — never from `realize_tongue_deep`'s object slot.
+/// `realize_adjuncts` never reaches this arm for an adjunct's own clause
+/// either way (it refuses that case itself, with the real reason, before
+/// ever calling this function).
 ///
 /// The depth check runs BEFORE the recursive call, the same ordering
 /// [`crate::clause::realize_common`] uses, so a clause past the cap panics
@@ -516,9 +518,12 @@ fn realize_adjuncts(
 /// special-cases `Subject::Clause` itself, before ever reaching this
 /// function, so the inner clause's own morphology survives through a DEEP
 /// recursive call rather than being flattened here. This arm is therefore
-/// reached only from [`realize_tongue`]'s own direct dispatch, never from
-/// `realize_tongue_deep`'s subject slot. The depth check runs BEFORE the
-/// recursive call, the same ordering [`crate::clause::realize_common`] uses.
+/// reached only through the shared `realize_tongue_with_subject` dispatch —
+/// [`realize_tongue`]'s own direct call and
+/// [`realize_tongue_coordination`]'s per-clause call (Task 7), both floor
+/// callers — never from `realize_tongue_deep`'s subject slot. The depth
+/// check runs BEFORE the recursive call, the same ordering
+/// [`crate::clause::realize_common`] uses.
 fn tongue_subject(
     subject: &Subject,
     grammar: &TongueGrammar,
@@ -3570,6 +3575,109 @@ mod tests {
         );
     }
 
+    /// The Mortise fix-wave: the deep realizer's OBJECT-embedding arm
+    /// (`realize_tongue_deep`'s own `Argument::Clause` match arm) must mark
+    /// the embedded clause's boundary through [`mark_embedded_clause`],
+    /// exactly as the floor realizer's `resolve_argument` arm does. Closes a
+    /// hole the whole-branch review found: every existing deep-embedding
+    /// test above (`an_inner_clause_tense_is_not_backshifted`,
+    /// `an_inner_clause_keeps_its_own_evidential`) builds its grammar with
+    /// `embedding_grammar(None)` — no drawn subordinator — so
+    /// `mark_embedded_clause` is a no-op whether or not it is ever called,
+    /// and neutralising the call at `realize_tongue_deep`'s object arm
+    /// passed the entire `hornvale-language` suite. This test is the first
+    /// deep-realizer embedding test to draw a subordinator at all.
+    #[test]
+    fn a_tongue_with_a_complementizer_marks_the_deep_realized_object_boundary() {
+        let lex = embedding_lexicon();
+        let noun_class_of = |_: &str| NounClass::Inanimate;
+
+        let grammar = embedding_grammar(Some("zil"));
+        let embedded = embedded_kill_clause(Tense::Past, Evidential::Witnessed);
+        let matrix = know_matrix_clause(Tense::Past, Evidential::Witnessed, embedded);
+
+        let out = realize_tongue_deep(
+            &matrix,
+            &grammar,
+            &unmarked_morphology(),
+            None,
+            &noun_class_of,
+            &lex,
+            Orthography::Digraph,
+        )
+        .unwrap();
+
+        assert!(
+            out.contains("zil"),
+            "the deep realizer's object-embedding arm must mark the \
+             embedded clause's boundary with the tongue's drawn \
+             subordinator, exactly as the floor realizer's \
+             `a_tongue_with_a_complementizer_marks_the_embedded_boundary` \
+             precedent pins for `realize_tongue`: {out:?}"
+        );
+        assert_eq!(
+            out.matches('.').count(),
+            1,
+            "the embedded clause's own trailing period is trimmed away by \
+             `mark_embedded_clause`, the same invariant the floor-realizer \
+             precedent pins: {out:?}"
+        );
+    }
+
+    /// The subject-slot sibling of the test above: the deep realizer's
+    /// SUBJECT-embedding arm (`realize_tongue_deep_with_subject`'s own
+    /// `Subject::Clause` match arm) must mark the boundary too. Same fixture
+    /// shape `clause.rs`'s `a_clause_subject_realizes_through_the_same_
+    /// machinery` uses for Common (a `know`-matrix clause whose SUBJECT,
+    /// not object, is the embedded `kill` clause), moved to the tongue
+    /// layer and given a drawn subordinator so the marker has somewhere to
+    /// surface.
+    #[test]
+    fn a_tongue_with_a_complementizer_marks_the_deep_realized_subject_boundary() {
+        let lex = embedding_lexicon();
+        let noun_class_of = |_: &str| NounClass::Inanimate;
+
+        let grammar = embedding_grammar(Some("zil"));
+        let embedded = embedded_kill_clause(Tense::Past, Evidential::Witnessed);
+        let matrix = Clause {
+            predicate: KNOW.to_string(),
+            subject: Subject::Clause(Box::new(embedded)),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+
+        let out = realize_tongue_deep(
+            &matrix,
+            &grammar,
+            &unmarked_morphology(),
+            None,
+            &noun_class_of,
+            &lex,
+            Orthography::Digraph,
+        )
+        .unwrap();
+
+        assert!(
+            out.contains("zil"),
+            "the deep realizer's subject-embedding arm must mark the \
+             embedded clause's boundary with the tongue's drawn \
+             subordinator, exactly as the floor realizer's `tongue_subject` \
+             arm does: {out:?}"
+        );
+        assert_eq!(
+            out.matches('.').count(),
+            1,
+            "the embedded clause's own trailing period is trimmed away by \
+             `mark_embedded_clause`, the same invariant the object-slot \
+             test above pins: {out:?}"
+        );
+    }
+
     /// The Inquest T5: a transitive clause honours all six drawn orders, and
     /// the token it puts in the V slot is the tongue's own word for the act.
     ///
@@ -3779,8 +3887,13 @@ mod tests {
     }
 
     /// `<3sg> kill <3sg>` — the second coordinated clause, pronoun-only so
-    /// tier 1 (no subject elision, no right-node raising — both are later
-    /// work, spec §4.10) needs no fresh referent to make its point.
+    /// tier 1 (no subject elision — a distinct pronoun subject from the
+    /// fixture beside this one — and no right-node raising, which spec
+    /// §4.10 CUTS from this campaign entirely rather than deferring)
+    /// needs no fresh referent to make its point. Subject elision itself
+    /// shipped in Task 7 (`elide_coordinated_subjects`) and is exercised by
+    /// the tier-2 tests elsewhere in this module; this particular fixture
+    /// simply is not built to trigger it.
     fn coordinated_kill_clause(tense: Tense) -> Clause {
         Clause {
             predicate: KILL.to_string(),
@@ -4229,6 +4342,14 @@ mod tests {
         assert!(
             out.contains(&kill_roman),
             "the second clause's bare (unmarked) verb must still surface: {out:?}"
+        );
+        assert!(
+            out.contains("zil"),
+            "the Mortise fix-wave (I3): the drawn conjunction itself must \
+             reach the surface, not only the per-clause marking around it — \
+             replacing `join_coordinated`'s conjunction argument with `None` \
+             at this call site left every assertion above still green, \
+             because none of them checks for the joining word itself: {out:?}"
         );
     }
 

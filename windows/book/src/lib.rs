@@ -3596,8 +3596,8 @@ mod tests {
     /// caught the drift).
     ///
     /// Every one of this module's PRODUCTION `Clause`-construction sites
-    /// (the same `production` slice [`the_readout_law`] scans, plus both
-    /// `realize_tongue_deep` call sites) states a GOD'S-EYE OR EMIC/ETIC
+    /// (the same `production` slice [`the_readout_law`] scans, plus all
+    /// three `realize_tongue_deep` call sites) states a GOD'S-EYE OR EMIC/ETIC
     /// CLASSIFICATION fact — `predicate: hornvale_kernel::world::IS_A`,
     /// `object: Argument::Concept(...)` — read straight off a committed
     /// `is-a`/`instance-of` ledger fact. Nothing in this window's data model
@@ -3642,19 +3642,19 @@ mod tests {
             .expect("this module's own `mod tests` boundary must exist");
 
         assert!(
-            !production.contains("subject: Subject::Clause("),
+            !constructs_variant(production, "Subject::Clause"),
             "the Task 10 inertness declaration is stale: a production site now \
              constructs a clause-embedded SUBJECT — update this test's doc, \
              don't delete it"
         );
         assert!(
-            !production.contains("object: Argument::Clause("),
+            !constructs_variant(production, "Argument::Clause"),
             "the Task 10 inertness declaration is stale: a production site now \
              constructs a clause-embedded OBJECT — update this test's doc, \
              don't delete it"
         );
         assert!(
-            !production.contains("Coordination {"),
+            !contains_bare_identifier(production, "Coordination"),
             "the Task 10 inertness declaration is stale: a production site now \
              constructs a Coordination — update this test's doc, don't \
              delete it"
@@ -3715,6 +3715,92 @@ mod tests {
                 hit = true;
             }
             hit
+        })
+    }
+
+    /// Whether `text` constructs the tuple-variant `path` (e.g.
+    /// `"Argument::Clause"`, a `::`-joined pair of bare identifiers) as a
+    /// VALUE on any non-comment line — as opposed to matching it as a
+    /// PATTERN in a match arm.
+    ///
+    /// Closes a second hole in the guard above, found in the same review
+    /// (The Mortise, the fix-wave after Task 11): the original check was
+    /// the literal compound substring `"object: Argument::Clause("`, which
+    /// coupled the construction to being inlined directly into a field's
+    /// literal. A site that BINDS first —
+    ///
+    /// ```text
+    /// let embedded = Argument::Clause(Box::new(inner));
+    /// let self_statement = Clause { ..., object: embedded, ... };
+    /// ```
+    ///
+    /// — never contains that substring, so it passed the old guard
+    /// silently. This instead looks for `path` as a whole token (using the
+    /// same non-identifier-boundary rule [`contains_bare_identifier`]
+    /// uses, so `MyArgument::Clause` or `Argument::ClauseWrapper` cannot
+    /// match) wherever it appears on the line, which catches the bound form
+    /// too.
+    ///
+    /// One shape is deliberately excluded, because it is a real, documented
+    /// site and not a construction: this module's own
+    /// `Subject::Clause(_) => { unreachable!(...) }` exhaustiveness match
+    /// arm (Task 8). A bare tuple-variant followed by `(...)` and then `=>`
+    /// is unambiguously a PATTERN — an expression can never occupy that
+    /// position — so a `=>` immediately after the variant's own closing
+    /// paren marks a pattern and is skipped; anything else (including no
+    /// trailing `(...)` at all, or a construction spanning past the end of
+    /// the line) counts as a hit. Per this test suite's own stated
+    /// direction, a false alarm here is cheap and a silent miss is the
+    /// thing this function exists to prevent, so every ambiguous case
+    /// resolves toward "hit".
+    fn constructs_variant(text: &str, path: &str) -> bool {
+        text.lines().any(|line| {
+            if line.trim_start().starts_with("//") {
+                return false;
+            }
+            let bytes = line.as_bytes();
+            let is_ident_byte = |b: u8| (b as char).is_alphanumeric() || b == b'_';
+            let mut search_from = 0usize;
+            while let Some(rel) = line[search_from..].find(path) {
+                let start = search_from + rel;
+                let end = start + path.len();
+                let boundary_before = start == 0 || !is_ident_byte(bytes[start - 1]);
+                let boundary_after = end >= bytes.len() || !is_ident_byte(bytes[end]);
+                if boundary_before && boundary_after {
+                    let rest = line[end..].trim_start();
+                    match rest.strip_prefix('(') {
+                        None => return true,
+                        Some(after_open) => {
+                            let mut depth = 1i32;
+                            let mut close = None;
+                            for (i, ch) in after_open.char_indices() {
+                                match ch {
+                                    '(' => depth += 1,
+                                    ')' => {
+                                        depth -= 1;
+                                        if depth == 0 {
+                                            close = Some(i);
+                                            break;
+                                        }
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            match close {
+                                None => return true,
+                                Some(i) => {
+                                    let after_close = after_open[i + 1..].trim_start();
+                                    if !after_close.starts_with("=>") {
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                search_from = end;
+            }
+            false
         })
     }
 
