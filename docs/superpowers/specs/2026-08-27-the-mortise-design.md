@@ -8,7 +8,14 @@
 
 A mortise is the cavity cut into one timber to receive another. The Scarf was a
 joint that made two pieces into one length; this one makes a cavity that holds a
-second piece whole.
+second piece whole — and, because a joint is never only one cut, a second way of
+setting two pieces side by side.
+
+**Two operators, named apart.** Embedding is a SLOT that holds a clause;
+coordination is a LIST at a node. They sound like one idea — "connecting
+clauses" — and treating them as one is the trap this spec is written to avoid.
+They share a structural insight (both are marked at a BOUNDARY, and that marker
+is what keeps the parser's inverse computable) and nothing else.
 
 ---
 
@@ -31,7 +38,7 @@ spec rather than inherited:
   + embedded-clause ALONE                              2 of 12   <-- ZERO GAIN
   + epistemic-hedge alone                              3 of 12   +m09
   + embedded-clause + epistemic-hedge                  4 of 12   +m06 +m09
-  + coordination                                       5 of 12   +m07
+  + coordination                                       5 of 12   +m07   <-- THIS CAMPAIGN
   + temporal-adverbial                                 6 of 12   +m02
 ```
 
@@ -40,30 +47,44 @@ because every corpus line needing it also needs hedging or coordination. This is
 the shape that would have made a tense-only campaign land 0→0, and it is why
 The Inquest was scoped to four features rather than two.
 
-**This campaign targets 2 → 4** (m06, m09) with one mechanism. §9 says why the
-next two rows are cut.
+**This campaign targets 2 → 5** (m06, m07, m09). §9 says why the last row is cut,
+and §9.1 says what is cut INSIDE coordination.
 
 ## 3. Scope
 
 **In.**
 
-1. `Argument::Clause(Box<Clause>)` — object-position embedding, depth-capped.
-2. `Part::Determiner` becomes a no-op when the object is a clause.
-3. `know` and `think` as expressible predicates (`PREDICATE_VALENCE` rows;
-   concept registration where absent).
-4. Subordination strategy as a **drawn** typological axis per tongue.
-5. The parser follows: a recursive fallback at the existing
-   `UnknownComplement` site.
-6. **The realization witness** — the corpus score stops being a declaration.
-7. A named production caller, or a written declaration of inertness.
+*Embedding.*
 
-**Out**, each with its reason in §9: coordination and `Subject::Clause`;
-temporal adverbials; relative clauses; indirect questions (*wh*-embedding);
-nominalization and finiteness alternations; quotation.
+1. `Argument::Clause(Box<Clause>)` — object-position embedding, depth-capped.
+2. `Subject::Clause(Box<Clause>)` — subject-position embedding, riding the same
+   machinery.
+3. `Part::Determiner` becomes a no-op when the object is a clause.
+4. `know` and `think` as expressible predicates (`PREDICATE_VALENCE` rows;
+   concept registration where absent).
+5. Subordination strategy as a **drawn** typological axis per tongue.
+
+*Coordination.*
+
+6. A coordination node above the clause — additive, so `realize_common(&Clause)`
+   keeps working unchanged.
+7. Conjunction presence-and-form as a **drawn** axis per tongue, the second of
+   this campaign's two.
+8. Subject elision, so a shared subject is stated once.
+
+*The instrument.*
+
+9. The parser follows both operators.
+10. **The realization witness** — the corpus score stops being a declaration.
+11. A named production caller, or a written declaration of inertness.
+
+**Out**, each with its reason in §9: right-node raising; nominalization and
+finiteness alternations; temporal adverbials; relative clauses; indirect
+questions (*wh*-embedding); quotation.
 
 ## 4. Design
 
-### 4.1 The recursion site is an `Argument` variant, not a `Clause` field
+### 4.1 The recursion sites are enum variants, not `Clause` fields
 
 `Argument` gains `Clause(Box<Clause>)`. `Argument`'s own doc states the rule this
 follows: *"A new variant is added when a role needs it, never speculatively."*
@@ -75,6 +96,13 @@ edit at every one of them. A new **`Argument` variant** costs only the exhaustiv
 match sites, and the compiler enumerates them: `resolve_argument`
 (`grammar.rs:203`) is a total match, with 38 `Argument::` references in
 `grammar.rs`, 15 in `windows/book/src/lib.rs`, 8 in an almanac test.
+
+`Subject` gains `Clause(Box<Clause>)` on the same argument, and it is cheaper
+than it looks. Only **two** places consume a `Subject` structurally —
+`tongue_subject` (`grammar.rs:316`) and `Part::Subject` (`clause.rs:782`) — and
+both will already hold "how do I realize a nested clause here" logic, built for
+the object slot. The other ~75 `Subject::` references are construction sites,
+which a new variant does not break.
 
 A side effect that must be decided rather than inherited: `Adjunct` holds an
 `Argument` (`Adjunct { role, argument }`), so the moment `Argument` gains a
@@ -231,12 +259,58 @@ into a committed, drift-checked artifact — or it declares the capability
 deliberately inert and writes down why. Not deciding is the one outcome
 foreclosed.
 
+### 4.10 Coordination is a list at a node, not a slot
+
+`realize_common` takes a `&Clause` and always will. Coordination arrives
+**above** it, as an additive node — a coordinated utterance and its own entry
+point — so none of the 65 `Clause { … }` construction sites move and no existing
+caller changes.
+
+**The conjunction is drawn, on the copula's exact pattern.** `tongue_grammar`
+(`grammar.rs:145-156`) draws copula presence *and* form from one stream: 60% of
+tongues have a copula, and the ones that do get a form. The conjunction axis is
+the same shape — some tongues mark coordination with a word, some juxtapose —
+and it costs **one** static stream label, not one per word.
+
+That is worth stating plainly because the intuition runs the other way: a
+vocabulary word costs **zero** labels, because a word is a `dynamic(concept)`
+value on an axis that already exists (`etymology.rs:433`). A *function* word
+costs a label, because a function word's PRESENCE is typological rather than
+lexical — the tongue that has no conjunction is not missing a word, it has a
+different grammar.
+
+**Coordination decomposes into three tiers at very different prices, and this
+campaign builds two.**
+
+```
+tier  example                                     needs                  here
+----  ------------------------------------------  ---------------------  ----
+ 1    "It confused me and it upset me."           a list node +          IN
+                                                   a drawn conjunction
+ 2    "Seeing it confused me and upset me."       + subject elision      IN
+ 3    "Seeing it confused and upset me."          + right-node raising   OUT
+```
+
+Tier 3 is the corpus's exact wording, and §9.1 says why it is out.
+
+**The parser's discriminator falls out for free**, which is the symmetry that
+justifies shipping the two operators together. A sentence with two verb groups
+is embedding *or* coordination, and the marker says which: a complementizer means
+*a clause hangs below here*, a conjunction means *a clause sits beside here*.
+Boundary markers are what make an inverse computable — the same fact
+`common_constructions`' doc already states about the closed construction table,
+arrived at from the other side.
+
 ## 5. Determinism and save-format
 
 - `Clause` is not `Serialize`; recursion adds no serialized shape.
-- §4.6's drawn axis adds **one new permanent stream label**. Additive, never a
-  rename; the epoch-suffix rule (`settlement/name/v2`) applies to any later
-  regeneration.
+- **Two** new permanent stream labels: §4.6's subordination strategy and
+  §4.10's conjunction. Additive, never renamed; the epoch-suffix rule
+  (`settlement/name/v2`) applies to any later regeneration. These are the
+  campaign's only one-way doors.
+- Vocabulary adds **no** labels. A word is a `dynamic(concept)` value on the
+  existing `PROTO_ROOT` axis (`etymology.rs:433`); only a new KIND of draw earns
+  a static label.
 - Any new concept registration appends a **new** cohort to `EPOCH_COHORTS`,
   never edits an existing one — epoch-first sorting makes a later concept land
   strictly last, displacing nothing. Before that fix `otyugh-kind` alone moved
@@ -255,12 +329,17 @@ foreclosed.
 3. `realize_tongue` and `realize_tongue_deep` realize an embedded clause using a
    **drawn** subordination strategy, and a tongue that drew parataxis emits no
    marker.
-4. `parse_common` round-trips a one-level embedded sentence to an equal `Clause`.
-5. Nesting beyond the §4.3 cap is refused in both directions, by an assertion
+4. A coordinated utterance realizes in Common and in a tongue, with a **drawn**
+   conjunction, and a tongue that drew none joins by juxtaposition.
+5. A shared subject is stated once (tier 2), and right-node raising is NOT
+   attempted — the witness records the surface either way.
+6. `parse_common` round-trips a one-level embedded sentence to an equal `Clause`,
+   and distinguishes embedding from coordination by the boundary marker.
+7. Nesting beyond the §4.3 cap is refused in both directions, by an assertion
    that fails without the cap.
-6. The merchant score moves **2 → 4**, and the covered set is exactly
-   `m05 m06 m09 m10`. The distance report moves with it.
-7. The realization witness exists and covers every covered entry, and its RED
+8. The merchant score moves **2 → 5**, and the covered set is exactly
+   `m05 m06 m07 m09 m10`. The distance report moves with it.
+9. The realization witness exists and covers every covered entry, and its RED
    is demonstrated rather than assumed: the implementer finds a perturbation of
    the grammar that a covered entry depends on, applies it, and records the
    witness failing. **The perturbation is not prescribed here** — a plan author
@@ -270,7 +349,9 @@ foreclosed.
 
    The property: *a covered entry whose construction has been neutralized must
    fail the witness, not pass it.*
-8. §4.9 is discharged one way or the other, in writing.
+10. §4.9 is discharged one way or the other, in writing.
+11. **Two** stream labels were added and `stream_labels()` reports every path
+    the new draws create — counted, not assumed (§8).
 
 **A falsified prediction is a finding, not a failure.** If §4.6's drawn axis
 turns out to be unreachable at the floor the way `Evidential::Inferred` is, that
@@ -278,10 +359,10 @@ is the campaign's headline and the null ships.
 
 ## 7. Non-goals
 
-Coordination. Subject-position embedding. Relative clauses. Indirect questions.
-Nominalization and finiteness alternations. Quotation. Adjectival predication.
-Mood and aspect (`LANG-mood`, `LANG-aspect`). Closing the parser's pronoun gap.
-Recovering the adjunct tail.
+Right-node raising (coordination tier 3). Nominalization and finiteness
+alternations — no gerunds. Temporal adverbials. Relative clauses. Indirect
+questions. Quotation. Adjectival predication. Mood and aspect (`LANG-mood`,
+`LANG-aspect`). Closing the parser's pronoun gap. Recovering the adjunct tail.
 
 ## 8. Risks and traps
 
@@ -291,8 +372,11 @@ Recovering the adjunct tail.
   panic, no red. A nested clause is a *third* consumer of the same assembly.
   Whatever this campaign adds must **thread** its input, never reconstruct it.
 - **`stream_labels()` has no completeness check.** A draw added without its
-  roster entry yields a silently incomplete manifest and nothing goes red. Count
-  the paths the §4.6 draws actually create.
+  roster entry yields a silently incomplete manifest and nothing goes red. This
+  campaign adds **two** axes (§4.6, §4.10), and The Inquest hit exactly this: the
+  plan named two labels for one axis and the truth was three, the third reached
+  through a dynamic leg no roster can see. **Count the paths the draws actually
+  create; do not count the labels the spec names.**
 - **`cli/tests/suite/lexicon_guard.rs` counts `cell` in doc-comment prose**, and
   linguistics jargon collides with this repo's place vocabulary. Four Inquest
   tasks met it; write **row**.
@@ -308,18 +392,42 @@ Recovering the adjunct tail.
 
 ## 9. What is cut, and why
 
-**Coordination and `Subject::Clause` (m07, would be 5 of 12).**
-*"Seeing it confused and upset me"* needs three mechanisms, not one: a
-nominalized (gerund) subject clause, verb-phrase coordination, and a second
-variant in a second enum. That is +1 entry for roughly three mechanisms against
-embedding's +2 for one. And coordination is a **different operator** from
-embedding — a slot that takes a clause versus a *list* at a node — so shipping
-both under the name "connectivity" would ship two mechanisms as one. m07 is the
-only entry needing subject-position embedding, so cutting coordination cuts
-`Subject::Clause` with it cleanly.
+### 9.1 Inside coordination: right-node raising and the gerund
 
-**Temporal adverbials (m02, would be 6 of 12). This one is a finding.**
-m02 is *"Everything was fine until last night."* Its demands are `past-tense` and
+m07 is *"Seeing it confused and upset me."* An earlier draft of this spec cut it
+whole, pricing it at three mechanisms for one entry. **That pricing was wrong in
+two places and is corrected here**, because the correction is the reason the
+scope moved:
+
+- **`Subject::Clause` is cheap, not expensive.** Two structural consumers, both
+  already gaining nested-clause logic for the object slot (§4.1).
+- **"Coordination" is not one mechanism at one price.** It is the three-tier
+  ladder in §4.10, and tier 1 is genuinely small.
+
+What is still cut, and stays cut:
+
+**Right-node raising (tier 3).** *"confused and upset me"* shares BOTH the
+subject and the object across the two verbs. We ship *"confused me and upset
+me"*. Ellipsis is where quality dies rather than merely where effort is: the
+rules for what may be dropped are language-specific, and getting them wrong
+produces *plausible* garbage rather than obvious garbage — the failure mode that
+survives review.
+
+**The gerund.** *"Seeing it"* is a nominalization. It is not load-bearing for
+m07's demands, only for m07's exact wording: substitute the subject form and hold
+everything else constant — *"**That he killed her** confused me and upset me"* —
+and the same three demand tokens are satisfied through the complementizer §4.6
+already builds. Nominalization is a real feature and a later one.
+
+**What makes both cuts honest rather than hidden is §4.8.** Without the witness,
+m07 scores covered while the grammar quietly produces a different sentence — the
+m02 trap exactly. With it, our surface sits next to the corpus's where anyone can
+read the distance. The witness and the coordination scope are not independent
+decisions, and the spec should not pretend they are.
+
+### 9.2 Temporal adverbials — and this one is a finding
+
+m02 (*would be 6 of 12*) is *"Everything was fine until last night."* Its demands are `past-tense` and
 `temporal-adverbial` only. But *"Everything was fine"* is **adjectival**
 predication, and `Valence::Nominal` renders `Subject Copula Determiner
 Complement` (`clause.rs:656-665`) with `Definiteness` offering only `Indef` and
@@ -345,11 +453,24 @@ retro-labelling entries after seeing what the grammar can reach is a
 post-unblinding change, however honest its direction. The witness exposes the
 same gap without touching frozen data.
 
-**After this campaign the merchant corpus is close to spent as a scoping
-instrument.** `past-tense` covers 7 of 12 and is already built; the remaining
-blockers are thinly spread and five tokens are singletons, so no single remaining
-token unlocks more than three entries. The successor is a **second corpus**, not
-more merchant features. Recorded now rather than discovered next campaign.
+### 9.3 The instrument itself is nearly spent
+
+Computed against the corpus, not estimated. `past-tense` appears in **7 of 12**
+entries and is already built, so the remaining blockers are thin and spread:
+
+```
+  temporal-adverbial   3        existential         1
+  wh-question          2        named-entity-list   1
+  polar-question       2
+  witness-set          2
+```
+
+No single remaining token unlocks more than three entries, and the distance
+report shrinks to three one-away rows (m01 `wh-question`, m02
+`temporal-adverbial`, m08 `polar-question`). Diminishing returns here are
+structural, not a matter of choosing the next feature better. **The successor is
+a second corpus, not more merchant features** — recorded now rather than
+discovered by the next campaign scoping against a flat instrument.
 
 ## 10. Decisions this campaign expects to ratify
 
@@ -357,8 +478,11 @@ From the reserved block 0326–0335:
 
 - A clause complement rides the existing transitive frame; there is no sentential
   valence (§4.2).
+- Embedding and coordination are two operators, not one (§4.10) — a slot versus
+  a list, sharing only boundary marking.
 - Embedding nests one level, by a stated cap (§4.3).
-- Subordination strategy is drawn per tongue (§4.6) — save-format contract.
+- Subordination strategy and conjunction are drawn per tongue (§4.6, §4.10) —
+  two save-format contracts. Vocabulary adds none.
 - The corpus score is demonstrated, not declared (§4.8).
 
 Gaps inside the block are fine and cost nothing.
