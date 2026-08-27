@@ -61,7 +61,7 @@ another creature's body. It is not a feature request. It is the sharpest
 available test of whether the action system is coherent, because it forces
 one invariant:
 
-> When a dominated fisherman walks to the river and drinks, the ledger must
+> When a possessed fisherman walks to the river and drinks, the ledger must
 > record exactly what it would have recorded had the fisherman gone
 > himself. Nothing in the trace may reveal that a different mind chose.
 
@@ -162,7 +162,7 @@ row is the same row:
                      IC        OOC
   asleep             refused   permitted
   unconscious        refused   permitted
-  dominated          refused   permitted
+  possessed          refused   permitted
   dead               refused   permitted
   blind            (partial)   permitted
   target invisible   refused   permitted
@@ -171,6 +171,10 @@ row is the same row:
 Sleep is not a special case to be generalised later; it is the first row of
 a table whose shape is already known. Building the table with one row costs
 almost nothing and stops Arc III re-plumbing it.
+
+(Corrected post-shipment: Arc III's row reads `possessed` —
+`BodyState::PossessedByAnother` — not `dominated`. The word was settled by
+count, not by this table; see decision 0336.)
 
 **Consequence, free:** spectator-after-death. Death stops being a terminus
 and becomes the state where IC is gated off permanently and OOC persists —
@@ -215,7 +219,7 @@ required slots:
 *who commanded*; the ledger does not. Line 0022 posts `agent-at <you>`
 with no trace of the aboleth, which is §2's invariant arriving as a
 required field rather than an aspiration. Line 0021 is what makes
-domination legible at all: the record of what you tried and were denied.
+possession legible at all: the record of what you tried and were denied.
 Refused lines cost zero ticks and post no fact, yet appear — which is
 exactly what "accepted, not typos" means.
 
@@ -302,7 +306,7 @@ connection will not be obvious.
 | **I.a — The Tackle** | extract the action layer out of `liveness.rs`; rename `Drive::affordance` → `proposal` (6 impls, 22 sites); give the possessed body a `mass_kg` | **byte-identical.** Not one committed artifact moves. Any drift is a bug, caught immediately |
 | **I.b — The Deed** | one action type; IC/OOC on the request; the gate table with `asleep`; the daybook; player verbs routed through, charging time and posting facts | the player's walk leaves an `agent-at` trail indistinguishable from a creature's; the player sleeps and IC refuses while OOC works |
 | **II — The Hand** | the controller stack; GOAP demoted to "the default controller" | swap controllers — a creature on player-input and a player body on GOAP both produce well-formed traces |
-| **III — The Coercion** | an imposed controller; `dominated` joins the gate table | **an aboleth dominates the player**: IC refuses, OOC still works, and the ledger cannot tell |
+| **III — The Coercion** | an imposed controller; `possessed` joins the gate table | **a body held by an imposed controller**: IC refuses, OOC still works, and the ledger cannot tell. (Shipped without the aboleth this row once named — no creature possesses another yet, §5 defers that, and the seam that opens/closes the hold is out-of-character instead) |
 | **IV — The Offer** | objects advertise verbs (MAP-19 + MAP-27) | a key says "unlock me with this"; no verb×object table exists anywhere |
 | **V — The Chemistry** | verbs authored as data | a new verb ships with no Rust change |
 
@@ -324,7 +328,7 @@ axis on machinery that is already built and already tested.
 
 If a mind flayer takes your body, IC commands refuse; that is the point.
 But you are still there, watching. **OOC is what lets you observe your own
-domination.** Without it, being dominated is indistinguishable from the
+possession.** Without it, being possessed is indistinguishable from the
 game having hung. The same holds for sleep, unconsciousness and death. OOC
 is the interface for every state in which your body stops obeying you,
 which is why it belongs in Arc I rather than being deferred to a debug
@@ -347,7 +351,7 @@ consolidated suite is worth the discipline §3.4 imposes on it.
   throughout this document as a readable notation, not a committed
   grammar.
 - **A full body-condition system.** Arc I ships the table with `asleep`;
-  Arc III adds `dominated`. `unconscious`, `blind`, `invisible` are named
+  Arc III adds `possessed`. `unconscious`, `blind`, `invisible` are named
   in §3.7 to fix the table's shape, not scheduled.
 - **Durations and interruption.** `Action::Rest` is already a multi-day act
   modelled as one tick that jumps `st.day` — a duration wearing an
@@ -452,7 +456,7 @@ consolidated suite is worth the discipline §3.4 imposes on it.
   precedence rule, and the statement that the play-ledger is a cache.)
 - **Every accepted command is recorded; the daybook names the commander
   and the ledger does not.** (Arc I.b, enforced in Arc III — this is what
-  makes domination invisible in the world's record and visible in the
+  makes possession invisible in the world's record and visible in the
   operator's.)
 
 ## 8. Flagged for G3 — owner decisions, not autopilot's

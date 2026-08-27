@@ -8835,6 +8835,306 @@ mod tests {
         );
     }
 
+    /// The Coercion, spec §7 H3 — "the act trail is indistinguishable": a
+    /// body driven by [`crate::controller::ImposedController`] and the same
+    /// body driven by [`DefaultController`], same seed, same tick span,
+    /// commit facts differing only in *which* acts were chosen, never in
+    /// their shape, cost, or subject.
+    ///
+    /// **Chosen instrument, and why.** `step_one_with_controller` is
+    /// `pub(crate)`, so — like H2 — this cannot live in the integration
+    /// suite; it lives here, beside
+    /// `a_default_controller_passes_through_and_a_player_controller_holds`,
+    /// whose exact shape (one fixture, two controllers, compare the
+    /// returned facts) this test follows. The fixture is `charged_walk_fixture`
+    /// (below), not a fresh minimal one: over its 39-day span it is already
+    /// proven (by `drinking_and_eating_now_cost_time`) to emit `drank`,
+    /// `eaten`, AND `rested` alongside `agent-at` — the richest walk this
+    /// file has, so a comparison over it exercises every predicate shape
+    /// `DriveMovements` can commit, not only the one thirst allows.
+    ///
+    /// **The prediction is stronger than the spec's own wording asks for,
+    /// deliberately.** `ImposedController::intend` (`controller.rs`) is an
+    /// unconditional, stateless delegation to `DefaultController::intend`,
+    /// which is itself a pure pass-through of `resolution.intent` — so
+    /// nothing about which controller is live can change what either one
+    /// answers at any decision point of an identical walk. The two
+    /// committed `Vec<Fact>` are therefore predicted to be BYTE-IDENTICAL
+    /// (`Fact` derives `PartialEq`), not merely same-shaped, and the same
+    /// last-decision mode/affect/suppressed-ranks triple this walk returns
+    /// is predicted identical too.
+    ///
+    /// **Coordinator review (post-Task-5): this result is DEDUCIBLE from
+    /// `controller.rs:162-166` before the fixture ever runs, not evidence
+    /// this fixture gathered** — today's `ImposedController` is a provable
+    /// no-op relative to `DefaultController`, so this assertion holds
+    /// trivially and must be re-measured once `ImposedController` gains
+    /// real intent (see H4's own doc comment, right below, for the fuller
+    /// statement of this and a pointer to the comparison that IS live
+    /// today: `PlayerController` vs `ImposedController`, free versus HELD,
+    /// which Task 4 already measured and found DIVERGES in felt state
+    /// while committing identical facts).
+    #[test]
+    fn h3_the_act_trail_under_an_imposed_controller_is_byte_identical_to_the_default_controller() {
+        let (ledger, terrain, npc) = charged_walk_fixture();
+        let sys = DriveMovements {
+            npcs: vec![npc.clone()],
+            from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
+            params: SUSTENANCE,
+            day_length_std: None,
+            terrain: &terrain,
+        };
+
+        let (default_facts, default_mode, default_affect, default_suppressed) = sys
+            .step_one_with_controller(
+                &ledger,
+                &npc,
+                &mut RoomMeshMemo::new(),
+                &mut HomeNavCache::new(),
+                &mut DefaultController,
+            );
+        let (imposed_facts, imposed_mode, imposed_affect, imposed_suppressed) = sys
+            .step_one_with_controller(
+                &ledger,
+                &npc,
+                &mut RoomMeshMemo::new(),
+                &mut HomeNavCache::new(),
+                &mut crate::controller::ImposedController::new(),
+            );
+
+        assert!(
+            !default_facts.is_empty(),
+            "the fixture must actually walk and commit something, or this \
+             proves nothing: {default_facts:?}"
+        );
+        assert_eq!(
+            default_facts, imposed_facts,
+            "H3: an imposed controller's committed trail must be BYTE-IDENTICAL \
+             to the default controller's — ImposedController::intend is a pure, \
+             stateless delegation to DefaultController::intend, and nothing else \
+             in the walk reads which controller is live"
+        );
+        assert_eq!(
+            default_mode, imposed_mode,
+            "H3: the same last commitment mode either way"
+        );
+        assert_eq!(
+            default_affect, imposed_affect,
+            "H3: the same last resolution's felt state either way"
+        );
+        assert_eq!(
+            default_suppressed, imposed_suppressed,
+            "H3: the same discarded drive ranks either way"
+        );
+    }
+
+    /// The Coercion, spec §7 H4 — "the null this campaign is prepared to
+    /// report": count the distinct FACT SHAPES emitted under imposition
+    /// versus free running, over a stated denominator. A fact SHAPE here is
+    /// its PREDICATE identity — this file's own closed roster of everything
+    /// `DriveMovements` can ever commit is exactly four constants
+    /// ([`AGENT_AT`], [`DRANK`], [`RESTED`], [`EATEN`], grep-verified: the
+    /// only `pub const _: &str` predicate names this file defines), so the
+    /// stated denominator is **4**.
+    ///
+    /// **Coordinator review correction (post-Task-5, prose-only — no
+    /// assertion in this test changed): this equality is DEDUCIBLE, not
+    /// measured, and this is the same finding H3's doc comment now states
+    /// too.** `ImposedController::intend` (`controller.rs:162-166`) is
+    /// `self.inner.intend(body, resolution)` with `inner: DefaultController`
+    /// — a stateless pass-through taking no fixture-dependent branch at
+    /// all. That means the SET-equality this test measures follows from
+    /// `controller.rs`'s own text before either fixture below ever runs: no
+    /// trajectory choice, however varied, could have produced a different
+    /// outcome. **Today's stub `ImposedController` is provably a no-op
+    /// relative to `DefaultController`, so H3 and H4 both hold trivially,
+    /// and must be RE-MEASURED once `ImposedController` gains real intent**
+    /// (a possessing creature's own arbitration — spec §5's deferred future
+    /// work) — at that point the delegation this deduction rests on no
+    /// longer holds, and the two hypotheses become live measurements again
+    /// rather than restatements of `controller.rs`'s own source.
+    ///
+    /// **What this test still buys, framed correctly: a regression guard,
+    /// not a discovery.** It reddens the moment `ImposedController` grows
+    /// any logic that diverges from `DefaultController` — exactly this
+    /// campaign's own stated trajectory — so it is worth keeping as a
+    /// tripwire for that day, not as evidence about possession's
+    /// consequences today.
+    ///
+    /// **The comparison that IS live today, and is NOT this one:**
+    /// `PlayerController` vs `ImposedController` — free versus HELD, the
+    /// pair the game actually runs at `Session::wait`'s one real call site
+    /// — which Task 4 already measured directly
+    /// (`session::tests::driven_felt_state_can_move_under_an_imposed_controller_during_wait`)
+    /// and found produces IDENTICAL committed facts but DIVERGENT felt
+    /// state (`driven_mode`/`driven_affect`: `Pursuing(Fatigue)`/`Eager`
+    /// free vs `Idle`/`Content` held, seed 42). A reader who wants the
+    /// interesting result belongs there, not here — H3/H4 answer a
+    /// preregistered question about two controllers that happen, today, to
+    /// be the same controller in disguise.
+    ///
+    /// Instrument (unchanged from the original run — this correction is
+    /// prose-only): same call as H3 (`step_one_with_controller`, in-module
+    /// for the same `pub(crate)` reason H3 gives), reduced to the SET of
+    /// predicate names each run touched, pooled over TWO fixtures:
+    /// `charged_walk_fixture` (drink + eat + rest) and a second,
+    /// differently-planted single-drive fixture (the body
+    /// `a_default_controller_passes_through_and_a_player_controller_holds`
+    /// uses — a different species/terrain/genesis-vs-day-1 start). **The
+    /// two fixtures corroborate nothing beyond the deduction above** — they
+    /// are two instances of a comparison whose outcome the delegation
+    /// already fixed, not two independent trials that could have
+    /// disagreed.
+    ///
+    /// **A prediction this test made and got wrong, worth stating rather
+    /// than quietly dropping — and independent of the deduction above.**
+    /// The second fixture was chosen expecting a NARROWER reachable set
+    /// than the first (thirst-only, on the theory that a body minted fresh
+    /// with no prior `eaten`/`rested` history and a one-hop water source
+    /// would satisfy thirst long before hunger or fatigue crossed their own
+    /// thresholds in a 39-day window). Measured directly: it is not
+    /// narrower — over 39 days this fixture ALSO emits `eaten` and
+    /// `rested`, the same full four-predicate set the first fixture does.
+    /// That is a real fact about how generous a 39-day window is against
+    /// this file's own drive-cycle constants (`SUSTENANCE.act/
+    /// SUSTENANCE.rise ≈ 5.7` days), not a defect in the test — and it is
+    /// the one thing about this test's own setup that genuinely needed
+    /// running to find out, even though the imposed/free equality itself
+    /// did not.
+    #[test]
+    fn h4_the_distinct_fact_shapes_imposed_and_free_can_reach_are_identical() {
+        let known_predicates: std::collections::BTreeSet<String> = [AGENT_AT, DRANK, RESTED, EATEN]
+            .into_iter()
+            .map(str::to_string)
+            .collect();
+        assert_eq!(
+            known_predicates.len(),
+            4,
+            "the stated denominator: DriveMovements's own closed predicate \
+             roster (AGENT_AT/DRANK/RESTED/EATEN)"
+        );
+
+        fn shapes_of(facts: &[Fact]) -> std::collections::BTreeSet<String> {
+            facts.iter().map(|f| f.predicate.clone()).collect()
+        }
+
+        // Fixture A: `charged_walk_fixture` — drink, eat, AND rest are all
+        // reachable in its 39-day span (pinned by
+        // `drinking_and_eating_now_cost_time`, which asserts all three
+        // predicates appear on this exact fixture).
+        let (ledger_a, terrain_a, npc_a) = charged_walk_fixture();
+        let sys_a = DriveMovements {
+            npcs: vec![npc_a.clone()],
+            from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
+            params: SUSTENANCE,
+            day_length_std: None,
+            terrain: &terrain_a,
+        };
+        let (default_facts_a, ..) = sys_a.step_one_with_controller(
+            &ledger_a,
+            &npc_a,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut DefaultController,
+        );
+        let (imposed_facts_a, ..) = sys_a.step_one_with_controller(
+            &ledger_a,
+            &npc_a,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut crate::controller::ImposedController::new(),
+        );
+
+        // Fixture B: the single-drive thirst fixture
+        // `a_default_controller_passes_through_and_a_player_controller_holds`
+        // uses — a different species, terrain, and starting history than
+        // fixture A (see this test's own doc comment for the measured
+        // finding that its reachable set is NOT narrower in practice, over
+        // this 39-day window).
+        let mut ledger_b = Ledger::default();
+        let e_b = ledger_b.mint_entity(test_lineage(ledger_b.entity_count() as u16));
+        let home_b = raddr(1.0);
+        let water_b = home_b.neighbors()[0].clone();
+        let npc_b = Body {
+            entity: e_b,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
+            home: home_b.clone(),
+            resource: water_b.clone(),
+            species: "goblin".into(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            thermal_strategy: ThermalStrategy::Endothermic,
+            niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
+            label: "herder".into(),
+        };
+        let t_b = PlantedTerrain {
+            elevations: [(water_b.clone(), 0.0)].into_iter().collect(),
+            fresh: [water_b.clone()].into_iter().collect(),
+            ..Default::default()
+        };
+        let sys_b = DriveMovements {
+            npcs: vec![npc_b.clone()],
+            from: WorldTime::GENESIS,
+            to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
+            params: SUSTENANCE,
+            day_length_std: None,
+            terrain: &t_b,
+        };
+        let (default_facts_b, ..) = sys_b.step_one_with_controller(
+            &ledger_b,
+            &npc_b,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut DefaultController,
+        );
+        let (imposed_facts_b, ..) = sys_b.step_one_with_controller(
+            &ledger_b,
+            &npc_b,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut crate::controller::ImposedController::new(),
+        );
+
+        let mut free_shapes = shapes_of(&default_facts_a);
+        free_shapes.extend(shapes_of(&default_facts_b));
+        let mut imposed_shapes = shapes_of(&imposed_facts_a);
+        imposed_shapes.extend(shapes_of(&imposed_facts_b));
+
+        assert!(
+            !free_shapes.is_empty(),
+            "the pooled fixtures must actually commit something, or this \
+             proves nothing"
+        );
+        assert!(
+            free_shapes.is_subset(&known_predicates),
+            "every emitted predicate must be one of the four this file can \
+             ever commit: got {free_shapes:?}"
+        );
+        assert_eq!(
+            imposed_shapes,
+            free_shapes,
+            "H4: the set of distinct fact shapes (predicates) an imposed run \
+             can reach and the set a free run can reach, pooled over {} \
+             predicates' worth of denominator and 2 fixtures, are IDENTICAL \
+             — but that equality is DEDUCIBLE from \
+             `ImposedController::intend`'s pass-through delegation \
+             (controller.rs:162-166) before either fixture runs, NOT \
+             established by running them. Today's stub is provably a no-op \
+             relative to `DefaultController`, so this assertion is a \
+             regression tripwire for the day it gains real intent, not \
+             evidence that possession is invisible in reachable consequence",
+            known_predicates.len()
+        );
+    }
+
     /// The Hand, Task 5 fix round 3, N2: `step_one_with_controller`'s own
     /// `catch_up` call used to reborrow the LIVE controller, so the moment a
     /// verb ever queued a real action (`PlayerController::queue`, still
