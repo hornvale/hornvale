@@ -189,7 +189,7 @@ impl OfferedVerb {
 /// equality — an object carrying more properties than `v` needs still
 /// affords it. `Examine` requires the empty set: it is universal (spec
 /// §3.3), and the empty set is a subset of every set, so universality falls
-/// out of the subset relation in [`offered_by`] rather than needing its own
+/// out of the subset relation in [`offered`] rather than needing its own
 /// `if`.
 pub fn required_properties(v: OfferedVerb) -> BTreeSet<ObjectProperty> {
     match v {
@@ -201,9 +201,28 @@ pub fn required_properties(v: OfferedVerb) -> BTreeSet<ObjectProperty> {
     }
 }
 
-/// The verbs `kind` advertises: every verb whose required properties are a
-/// SUBSET of the kind's (spec §3.2). Subset, never equality — see
-/// `extra_properties_do_not_withdraw_an_offer` in the test suite.
+/// The verbs a set of `traits` affords: every verb whose required properties
+/// are a SUBSET of `traits.properties` (spec §3.2). Subset, never equality —
+/// see `extra_properties_expand_the_offer_never_withdraw_it` in the test
+/// suite, which asserts this against a *constructed* `ObjectTraits` rather
+/// than one read from [`object_registry`]. That distinction is load-bearing:
+/// every kind [`object_registry`] currently assigns carries exactly one
+/// property (Task 1's finding), so no query run only against the registry
+/// can tell a correct subset filter apart from an incorrect equality
+/// check — both agree on every single-property carrier. This is the actual
+/// query; [`offered_by`] is a thin wrapper reading the global registry, kept
+/// separate precisely so a test can hand it traits the registry does not
+/// (and never will, while every carrier stays single-property) produce on
+/// its own.
+pub fn offered(traits: &ObjectTraits) -> BTreeSet<OfferedVerb> {
+    OfferedVerb::all()
+        .into_iter()
+        .filter(|v| required_properties(*v).is_subset(&traits.properties))
+        .collect()
+}
+
+/// The verbs `kind` advertises — [`offered`] applied to `kind`'s registered
+/// traits (spec §3.2).
 ///
 /// A `kind` absent from [`object_registry`] is treated as carrying the empty
 /// property set (`ObjectTraits::default()`), not as offering nothing: eight
@@ -214,10 +233,7 @@ pub fn required_properties(v: OfferedVerb) -> BTreeSet<ObjectProperty> {
 pub fn offered_by(kind: AnchorKind) -> BTreeSet<OfferedVerb> {
     let reg = object_registry();
     let traits = reg.get(&kind).cloned().unwrap_or_default();
-    OfferedVerb::all()
-        .into_iter()
-        .filter(|v| required_properties(*v).is_subset(&traits.properties))
-        .collect()
+    offered(&traits)
 }
 
 #[cfg(test)]
