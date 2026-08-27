@@ -1679,11 +1679,24 @@ make lab-diff STUDY=the-census
 | what you observe | what to do |
 |---|---|
 | no metric moved | record the command and its output verbatim; the campaign proceeds |
-| any metric moved | **STOP AND ASK NATHAN.** A census refresh is an explicit-authorization carve-out costing hours on lefford. Report which metrics moved and by how much. Do not regenerate, and do not decide it is fine |
+| any metric moved | **Report it in full and CONTINUE.** Nathan pre-authorized the regen on 2026-08-26. Report the verbatim output, which metrics moved and by how much. You still do NOT run the regen — it is the controller's job, on the canonical box, behind a host guard, and `HV_CENSUS=1` is never yours to set |
 
 The spec is explicit that the census's named capacity columns being
 non-subterranean is **not** sufficient to conclude it does not move. This
 command is the instrument; the reasoning is not.
+
+**A census refresh costs about fifteen minutes, not hours.** The timings
+ledger's last eight runs cluster at **855–918 s** on lefford. An earlier
+draft of this plan said "hours", which was a stale figure lifted from
+`CLAUDE.md`'s prose — a 19,207 s run whose successor campaign indexed the
+slow query away, taking the next run to 949 s. `CLAUDE.md` warns against
+reading a cost off that block and uses this exact error as its worked
+example. Read `grep '| census |' docs/timings.md | tail` instead; it is the
+ledger the prose points at and it moves far faster than the prose does.
+
+Why the correction is in the plan rather than only in a ledger: a check
+described as guarding something hours long invites hoping the answer is
+"nothing moved".
 
 - [ ] **Step 6: Discharge `MAP-per-rung-substrate`**
 
