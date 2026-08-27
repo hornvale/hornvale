@@ -213,16 +213,29 @@ const MERCHANT_COVERED: usize = 5;
 ///   embedded clause as a bare declarative complement instead: the covered
 ///   construction is "know that-clause", not "know why-clause".
 /// - **m07, *"Seeing it confused and upset me."*, is a [`Coordination`], not
-///   a [`Clause`]**, and drops the shared object. `confuse`/`upset` are not
-///   registered predicates in this crate (see `two_clauses_coordinate_in_common`'s
-///   own doc), so the witness stands in with two registered transitive
-///   predicates instead — the point is the SHAPE (two clauses, realized
-///   through [`realize_common_coordination`], sharing a subject that elides
-///   on the second clause per spec §4.10 tier 2), not the corpus's literal
-///   verbs. Tier 3 (right-node raising — sharing the OBJECT too, which is
-///   what actually collapses "confused and upset **me**" onto one mention)
-///   is cut from this campaign entirely (spec §9.1), so the witness's two
-///   clauses each restate the object in full.
+///   a [`Clause`], substitutes the gerund for a complementizer clause, and
+///   drops the shared object.** Per spec §9.1's own argument for keeping m07
+///   in scope, the gerund *"Seeing it"* is not load-bearing for m07's THREE
+///   DEMANDS — substitute the subject form and hold everything else
+///   constant, *"That he killed her confused me and upset me"*, and the same
+///   tokens are satisfied through the complementizer-free [`Subject::Clause`]
+///   machinery `a_clause_subject_realizes_through_the_same_machinery`
+///   already pins. So the witness gives EACH coordinated clause a
+///   `Subject::Clause` embedding — never a bare pronoun standing in for it,
+///   which would have proven coordination and pronoun-reference while never
+///   exercising `embedded-clause` at all, the "Clause-shaped stand-in"
+///   failure this doc already forbids on the Clause-vs-Coordination axis,
+///   one level deeper. `confuse`/`upset` are still not registered predicates
+///   in this crate (see `two_clauses_coordinate_in_common`'s own doc), so the
+///   witness stands in with two registered transitive predicates for the
+///   MATRIX verbs — the point is the SHAPE (two clauses, each with a clause
+///   subject, realized through [`realize_common_coordination`], sharing an
+///   identical embedded subject that elides on the second clause per spec
+///   §4.10 tier 2), not the corpus's literal verbs. Tier 3 (right-node
+///   raising — sharing the OBJECT too, which is what actually collapses
+///   "confused and upset **me**" onto one mention) is cut from this campaign
+///   entirely (spec §9.1), so the witness's two clauses each restate the
+///   object in full.
 /// - **m09, *"I think her name was Gilda."*, drops the possessive.** Its
 ///   demands (`epistemic-hedge`, `past-tense`, `pronoun-reference`) build a
 ///   hedged transitive clause, not a possessed-noun-phrase complement
@@ -479,11 +492,12 @@ enum MerchantConstruction {
 /// own text, reading the field list straight off [`Clause`]/[`Coordination`]
 /// rather than off any other document, and each is honest about where it
 /// falls short of the corpus's literal English (see [`MERCHANT_COVERED_IDS`]'s
-/// doc for the three new gaps: m06 drops the indirect *"why"*, m07 stands in
-/// for two unregistered predicates and does not raise the shared object, m09
-/// drops the possessive "her name"). Panics on an id this witness does not
-/// cover, the same fail-loud posture [`realize_common`] itself takes on an
-/// unconstructed predicate.
+/// doc for the three new gaps: m06 drops the indirect *"why"*, m07
+/// substitutes a `Subject::Clause` complementizer for the gerund and stands
+/// in two unregistered matrix predicates while not raising the shared
+/// object, m09 drops the possessive "her name"). Panics on an id this
+/// witness does not cover, the same fail-loud posture [`realize_common`]
+/// itself takes on an unconstructed predicate.
 fn merchant_construction(id: &str) -> MerchantConstruction {
     match id {
         "m05" => MerchantConstruction::Clause(Clause {
@@ -526,42 +540,70 @@ fn merchant_construction(id: &str) -> MerchantConstruction {
                 adjuncts: Vec::new(),
             })
         }
-        // "Seeing it confused and upset me." `confuse`/`upset` are not
-        // registered predicates in this crate (see
-        // `two_clauses_coordinate_in_common`'s own doc), so the witness
-        // stands in with two registered transitive predicates sharing a
-        // subject — the point is the SHAPE: a `Coordination` of two clauses,
-        // realized through `realize_common_coordination`, where the second
-        // clause's subject elides against the first's (spec §4.10 tier 2).
-        // Tier 3 (right-node raising, which is what would collapse "and
-        // upset **me**" onto one mention of the object) is cut from this
+        // "Seeing it confused and upset me." Per spec §9.1's own argument
+        // for keeping m07 in scope: the gerund "Seeing it" is not
+        // load-bearing for m07's THREE DEMANDS, only for its exact wording
+        // — substitute the subject form and hold everything else constant,
+        // "That he killed her confused me and upset me", and the same three
+        // tokens (coordination, embedded-clause, pronoun-reference) are
+        // satisfied through the complementizer-free `Subject::Clause`
+        // machinery `a_clause_subject_realizes_through_the_same_machinery`
+        // already pins. So EACH coordinated clause's subject is
+        // `Subject::Clause`, not a bare pronoun — a bare-pronoun subject
+        // would prove coordination and pronoun-reference but never exercise
+        // embedded-clause at all, exactly the "Clause-shaped stand-in"
+        // failure this file's own witness discipline forbids, one level
+        // deeper than the Clause-vs-Coordination axis it was first written
+        // against. `confuse`/`upset` are still not registered predicates in
+        // this crate (see `two_clauses_coordinate_in_common`'s own doc), so
+        // the witness stands in with two registered transitive predicates
+        // for the MATRIX verbs only — the embedded clause itself ("he
+        // killed her") uses the same `KILL` construction m06's embedding
+        // does. Both matrix clauses share the identical embedded
+        // `Subject::Clause`, so tier 2 (spec §4.10) elides it on the second
+        // clause the same way a bare-pronoun subject elided before; tier 3
+        // (right-node raising, which is what would collapse "and upset
+        // **me**" onto one mention of the object) is still cut from this
         // campaign entirely, so both clauses restate the object in full.
-        "m07" => MerchantConstruction::Coordination(Coordination {
-            clauses: vec![
-                Clause {
-                    predicate: KILL.to_string(),
-                    subject: Subject::Pronoun(Person::Third),
-                    object: Argument::Pronoun(Person::First),
-                    number: Number::Sg,
-                    definiteness: Definiteness::Def,
-                    evidential: Evidential::Witnessed,
-                    tense: Tense::Past,
-                    polarity: Polarity::Pos,
-                    adjuncts: Vec::new(),
-                },
-                Clause {
-                    predicate: KNOW.to_string(),
-                    subject: Subject::Pronoun(Person::Third),
-                    object: Argument::Pronoun(Person::First),
-                    number: Number::Sg,
-                    definiteness: Definiteness::Def,
-                    evidential: Evidential::Witnessed,
-                    tense: Tense::Past,
-                    polarity: Polarity::Pos,
-                    adjuncts: Vec::new(),
-                },
-            ],
-        }),
+        "m07" => {
+            let embedded_subject = || Clause {
+                predicate: KILL.to_string(),
+                subject: Subject::Pronoun(Person::Third),
+                object: Argument::Pronoun(Person::Third),
+                number: Number::Sg,
+                definiteness: Definiteness::Def,
+                evidential: Evidential::Witnessed,
+                tense: Tense::Past,
+                polarity: Polarity::Pos,
+                adjuncts: Vec::new(),
+            };
+            MerchantConstruction::Coordination(Coordination {
+                clauses: vec![
+                    Clause {
+                        predicate: KILL.to_string(),
+                        subject: Subject::Clause(Box::new(embedded_subject())),
+                        object: Argument::Pronoun(Person::First),
+                        number: Number::Sg,
+                        definiteness: Definiteness::Def,
+                        evidential: Evidential::Witnessed,
+                        tense: Tense::Past,
+                        polarity: Polarity::Pos,
+                        adjuncts: Vec::new(),
+                    },
+                    Clause {
+                        predicate: KNOW.to_string(),
+                        subject: Subject::Clause(Box::new(embedded_subject())),
+                        object: Argument::Pronoun(Person::First),
+                        number: Number::Sg,
+                        definiteness: Definiteness::Def,
+                        evidential: Evidential::Witnessed,
+                        tense: Tense::Past,
+                        polarity: Polarity::Pos,
+                        adjuncts: Vec::new(),
+                    },
+                ],
+            })
+        }
         // "I think her name was Gilda." No construction here builds a
         // possessive noun phrase ("her name"), so the witness's object is a
         // bare pronoun standing in for "her" rather than "her name".
@@ -611,7 +653,7 @@ fn realize_merchant(id: &str, vocab: &CommonVocabulary) -> String {
 const MERCHANT_WITNESS: &[(&str, &str)] = &[
     ("m05", "Nwamvam killed a person."),
     ("m06", "I does not know they killed them."),
-    ("m07", "they killed me and knowed me."),
+    ("m07", "they killed them killed me and knowed me."),
     ("m09", "I thinked them."),
     ("m10", "I did not know them."),
 ];
