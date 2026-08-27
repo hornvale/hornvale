@@ -2354,6 +2354,15 @@ pub fn parse_line(line: &str, ctx: &ParseContext) -> Result<ParsedLine, LineErro
         Subject::Pronoun(person) => {
             common_pronoun(*person, clause.number, PronounCase::Nominative).to_string()
         }
+        // `parse_common_with_tail` has no clause-subject recognizer — spec
+        // §6 freezes parsing coverage, and The Mortise (Task 4) built only
+        // forward realization for a clause bound to the subject slot, so
+        // this arm can never actually fire. Added for exhaustiveness against
+        // `Subject::Clause`, the same posture the `Argument::Concept`
+        // `unreachable!` a few lines below already takes for its own slot.
+        Subject::Clause(_) => {
+            unreachable!("parse_common_with_tail never recovers a clause-embedded subject")
+        }
     };
     // The clause layer already recovered the singular concept id: it matched
     // the text against each candidate id's realized surface, so the plural

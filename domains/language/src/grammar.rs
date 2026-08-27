@@ -338,6 +338,13 @@ fn realize_adjuncts(
 /// it the same question. Common's own nominative/accusative split lives in
 /// `clause.rs` and stops at Common's edge — the asymmetry decision 0286
 /// licenses.
+///
+/// **[`Subject::Clause`] is `unimplemented!`, not gapped, and not yet** — the
+/// same ruling [`resolve_argument`]'s own `Argument::Clause` arm states, for
+/// the same reason (The Mortise, Task 4): a tongue-side subordination
+/// strategy is Task 5's, this crate has no way to realize a nested clause in
+/// a tongue's own word order today, and a [`TongueGap`] would assert a false
+/// fact about a people rather than an honest hole in this repository.
 fn tongue_subject(
     subject: &Subject,
     number: Number,
@@ -346,6 +353,7 @@ fn tongue_subject(
     match subject {
         Subject::Name(name) => Ok(name.clone()),
         Subject::Pronoun(person) => tongue_pronoun(*person, number, pronouns),
+        Subject::Clause(_) => unimplemented!("clause embedding in a tongue arrives in Task 5"),
     }
 }
 

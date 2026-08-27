@@ -133,12 +133,29 @@ impl Person {
 /// bare `"its"` now binds as a [`Subject::Name`], which re-realizes to the
 /// identical surface, so the round-trip law is untouched.
 /// type-audit: bare-ok(identifier-text: Name.0)
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Subject {
     /// An already-resolved proper name or noun phrase.
     Name(String),
     /// A personal pronoun, at the clause's own number.
     Pronoun(Person),
+    /// An embedded clause, realized in place of the subject — the same
+    /// machinery [`Argument::Clause`] gives the object slot, in a different
+    /// hole (The Mortise). *"That he killed her confused me"* is the
+    /// complementizer-marked English gloss of the phenomenon; the
+    /// complementizer itself is a tongue-side, DRAWN subordination strategy
+    /// (a later campaign's business — see [`Argument::Clause`]'s doc), so
+    /// Common realizes the bare embedded clause with no marker, exactly as
+    /// it does for a clause bound to the object slot. This is the
+    /// complementizer kind of subject clause, never the gerund
+    /// (*"Seeing it"*): a gerund is a nominalization, out of scope (spec
+    /// §9.1).
+    ///
+    /// Depth is capped at [`CLAUSE_EMBED_MAX_DEPTH`] — **the same one-level
+    /// budget the object slot spends, not a second budget of its own**: a
+    /// clause bound to the subject slot counts against the identical cap a
+    /// clause bound to the object slot does.
+    Clause(Box<Clause>),
 }
 
 /// What an adjunct's role is bound to. Deliberately small: these are the
@@ -179,15 +196,36 @@ pub enum Argument {
     Clause(Box<Clause>),
 }
 
-/// How many `Argument::Clause` layers deep an argument nests: `0` for
-/// anything else, one more than the same count on that clause's own object
-/// for a `Clause`. [`realize_common`] panics when this exceeds
-/// [`CLAUSE_EMBED_MAX_DEPTH`], and it is what that constant is measured
-/// against — a clause complement may not itself contain a clause
-/// complement.
+/// How many `Argument::Clause`/`Subject::Clause` layers deep an argument
+/// nests: `0` for anything else, one more than the deeper of that clause's
+/// own object depth ([`clause_embed_depth`] on itself) and its own subject
+/// depth ([`subject_embed_depth`]) for a `Clause`. [`realize_common`] panics
+/// when this exceeds [`CLAUSE_EMBED_MAX_DEPTH`], and it is what that
+/// constant is measured against — a clause complement may not itself
+/// contain a clause complement, whichever slot the inner one is bound to.
+///
+/// **Mutually recursive with [`subject_embed_depth`], on purpose**: the two
+/// read the SAME budget from two different holes (The Mortise, Task 4), so a
+/// clause bound as a subject counts against it exactly as one bound as an
+/// object does, rather than each slot keeping a depth count of its own.
 fn clause_embed_depth(argument: &Argument) -> usize {
     match argument {
-        Argument::Clause(inner) => 1 + clause_embed_depth(&inner.object),
+        Argument::Clause(inner) => {
+            1 + clause_embed_depth(&inner.object).max(subject_embed_depth(&inner.subject))
+        }
+        _ => 0,
+    }
+}
+
+/// [`clause_embed_depth`]'s mirror for the subject slot: `0` for anything but
+/// a [`Subject::Clause`], one more than the deeper of that clause's own
+/// object depth and subject depth otherwise. See [`clause_embed_depth`]'s
+/// doc for why the two are mutually recursive and read one shared budget.
+fn subject_embed_depth(subject: &Subject) -> usize {
+    match subject {
+        Subject::Clause(inner) => {
+            1 + clause_embed_depth(&inner.object).max(subject_embed_depth(&inner.subject))
+        }
         _ => 0,
     }
 }
@@ -849,12 +887,40 @@ pub fn realize_common(spec: &Clause, vocab: &CommonVocabulary) -> String {
     let mut out = String::new();
     for part in construction.parts {
         match part {
-            Part::Subject => out.push_str(match &spec.subject {
-                Subject::Name(name) => name.as_str(),
-                Subject::Pronoun(person) => {
-                    common_pronoun(*person, spec.number, PronounCase::Nominative)
-                }
-            }),
+            Part::Subject => {
+                let text = match &spec.subject {
+                    Subject::Name(name) => name.clone(),
+                    Subject::Pronoun(person) => {
+                        common_pronoun(*person, spec.number, PronounCase::Nominative).to_string()
+                    }
+                    // A clause bound to the subject slot realizes through
+                    // the exact same machinery `Argument::Clause` uses in
+                    // the object slot: its own full sentence, minus the
+                    // trailing period this clause's own `Part::Literal(".")`
+                    // supplies. No complementizer is added — the marker
+                    // (*"That..."*) is a tongue-side, DRAWN subordination
+                    // strategy, a later campaign's business (spec §9.1);
+                    // Common's register has no such word to spend. The depth
+                    // check runs BEFORE the recursive call, the same
+                    // ordering the object slot uses, so a subject past the
+                    // cap panics without ever realizing the offending text.
+                    Subject::Clause(inner) => {
+                        let depth = subject_embed_depth(&spec.subject);
+                        assert!(
+                            depth <= CLAUSE_EMBED_MAX_DEPTH,
+                            "a clause subject nests {depth} deep, past the cap of \
+                             {CLAUSE_EMBED_MAX_DEPTH}: a clause bound to the subject \
+                             slot may not itself contain a clause complement"
+                        );
+                        let mut text = realize_common(inner, vocab);
+                        if text.ends_with('.') {
+                            text.pop();
+                        }
+                        text
+                    }
+                };
+                out.push_str(&text);
+            }
             Part::Copula => {
                 out.push_str(copula_surface(spec.tense, spec.number, spec.polarity));
             }
@@ -1917,6 +1983,93 @@ mod tests {
         assert_eq!(out.matches('.').count(), 1);
     }
 
+    /// A clause in SUBJECT position — *"That he killed her confused me"*. The
+    /// same machinery the object slot uses (`a_clause_object_realizes_with_
+    /// no_determiner`, just above), in a different hole: the embedded
+    /// clause realizes as its own full sentence, trailing period trimmed,
+    /// and slots into `Part::Subject` verbatim — no complementizer, because
+    /// that marker is a tongue-side, drawn strategy (Task 5), not Common's
+    /// to spend. The gerund (*"Seeing it"*) is a nominalization and stays
+    /// out of scope (spec §9.1); this is the complementizer kind.
+    #[test]
+    fn a_clause_subject_realizes_through_the_same_machinery() {
+        let vocab = CommonVocabulary::default();
+        let embedded = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let matrix = Clause {
+            predicate: KNOW.to_string(),
+            subject: Subject::Clause(Box::new(embedded)),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Neg,
+            adjuncts: Vec::new(),
+        };
+        let out = realize_common(&matrix, &vocab);
+        assert_eq!(out, "they killed them did not know them.");
+        // Exactly one full stop, the same invariant the object-slot test
+        // pins: the embedded clause's own trailing "." is trimmed away, so
+        // the matrix clause's is the only one in the sentence.
+        assert_eq!(out.matches('.').count(), 1);
+    }
+
+    /// [`subject_embed_depth`] and [`clause_embed_depth`] read one shared
+    /// budget (Task 4's doc claim, demonstrated): a clause bound to the
+    /// SUBJECT slot, whose own object is itself a clause, goes two deep
+    /// exactly as `a_clause_nested_two_deep_is_refused` does through the
+    /// object slot — and is refused the same way, before either level
+    /// renders.
+    #[test]
+    #[should_panic(expected = "may not itself contain a clause complement")]
+    fn a_clause_subject_nested_two_deep_is_refused() {
+        let vocab = CommonVocabulary::default();
+        let deepest = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let inner = Clause {
+            predicate: KNOW.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Clause(Box::new(deepest)),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Neg,
+            adjuncts: Vec::new(),
+        };
+        let outer = Clause {
+            predicate: KNOW.to_string(),
+            subject: Subject::Clause(Box::new(inner)),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Neg,
+            adjuncts: Vec::new(),
+        };
+        let _ = realize_common(&outer, &vocab);
+    }
+
     /// The depth cap fires as a panic, the same class as the missing-
     /// construction panic [`realize_common`]'s own doc names: an authoring
     /// hole in this repository, never a fact about a people. One level is
@@ -2281,6 +2434,12 @@ mod tests {
             Subject::Pronoun(_) => "pronoun",
             Subject::Name(n) if n.contains(' ') => "multi-word-name",
             Subject::Name(_) => "single-word-name",
+            // The round-trip enumeration below never generates one (a
+            // clause subject has no parse-side recognizer yet — spec §6
+            // freezes parsing coverage), so this arm exists only to keep
+            // the match exhaustive against `Subject::Clause` (The Mortise,
+            // Task 4).
+            Subject::Clause(_) => "clause",
         }
     }
 
