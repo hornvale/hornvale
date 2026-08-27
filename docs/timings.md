@@ -192,59 +192,97 @@ never a wall-clock proxy.
 **The Quadrat Task 5's tile-cache readout (2026-08-27, `campaign/the-quadrat`,
 ambrose, twelve cores) — the same plate, now through
 `hornvale_game::tiles::TileCache`.** Same harness
-(`clients/game/bin/examples/rung_bench.rs`, `--release`, five runs, median),
-extended to measure four costs rather than one, on a box measured at 88-92%
-idle immediately before and after the sweep.
+(`clients/game/bin/examples/rung_bench.rs`, `--release`, five runs, median).
+**Load average 1.43 falling to 1.36 across the sweep, 89.6% idle before and
+89.3% after** — stated because the paragraph after the table is entirely about
+how much this number moves the others.
 
-| rung | uncached | cached COLD | cached WARM | scroll, BOUNDARY | scroll, mean/col | memo misses |
-|---|---|---|---|---|---|---|
-| 6 (`GLOBE_RUNG`) | 70.289 | 79.026 (49 tiles) | **0.056** | 3.877 (7 tiles) | 0.504 | 29,662 |
-| 7 | 47.093 | 55.161 (49) | **0.053** | 5.689 (7) | 0.484 | 15,756 |
-| 8 | 30.102 | 35.509 (49) | **0.052** | 2.129 (7) | 0.284 | 4,717 |
-| 10 | 22.300 | 26.424 (49) | **0.054** | 2.339 (7) | 0.243 | 333 |
-| 12 (`BAND_B_RUNG`) | 25.430 | 30.599 (56) | **0.054** | 1.712 (8) | 0.244 | 30 |
+| rung | uncached (`win`) | uncached (`aligned`) | cached COLD | cached WARM | scroll, BOUNDARY | scroll, mean/col | memo misses |
+|---|---|---|---|---|---|---|---|
+| 6 (`GLOBE_RUNG`) | 65.638 | 64.669 | 73.767 (49 tiles) | **0.053** | 3.614 (7 tiles) | 0.496 | 29,662 |
+| 7 | 46.810 | 45.892 | 55.275 (49) | **0.054** | 5.550 (7) | 0.495 | 15,756 |
+| 8 | 30.031 | 28.467 | 35.084 (49) | **0.050** | 2.120 (7) | 0.324 | 4,717 |
+| 10 | 22.036 | 20.659 | 26.842 (49) | **0.051** | 2.202 (7) | 0.233 | 333 |
+| 12 (`BAND_B_RUNG`) | 21.353 | 19.856 | 28.660 (56) | **0.051** | 1.635 (8) | 0.225 | 30 |
 
-All figures ms. **WARM is the acceptance criterion and it is met by three
-orders of magnitude**: `GLOBE_RUNG`, the rung Task 3 measured 1.8x OVER the
-50 ms bar, redraws in **0.056 ms** once its tiles exist — 893x under. The
-worst single keystroke, the one that uncovers a whole tile column, is
-3.877 ms at that rung, still 12.9x under. The one number over the bar is
-COLD, 79.026 ms, and it is paid **once per (frame, rung)**: the rung-6 chart
-is only 12x12 tiles in total, so a player who pans the whole globe pays about
-211 ms across the entire session and nothing after.
+All figures ms. **TWO UNCACHED COLUMNS, because the harness measures two
+windows and quoting a ratio across them would compare different ground** (fix
+round 1, Minor 2). `win` (`origin_col = vw/2`) is the window Task 3's committed
+table used and is kept there so the two sweeps are comparable; `aligned` puts
+the plate's right edge on a tile boundary so the scroll column is the genuine
+worst case, and COLD/WARM/scroll are all measured on it. **Every ratio below is
+taken within one window.**
 
-**COLD is DEARER than uncached (1.12x at rung 6), and that is the design, not
-a regression.** A 200x200 plate covers 49 whole tiles — 224x224 = 50,176 chart
-cells for 40,000 drawn ones — because an edge tile is drawn whole so it can be
-reused. The 25.4% extra cells cost 12.4% extra time, the difference being the
-session-long `RoomMeshMemo` the cache owns.
+**WARM is the acceptance criterion and it is met.** `GLOBE_RUNG`, the rung Task
+3 measured 1.8x OVER the 50 ms bar, redraws its terrain in **0.053 ms** once
+its tiles exist. **The number a PLAYER experiences is larger and is the one to
+quote: a keystroke is `compose` PLUS `draw_feature_layer`**, which is not
+cached and runs every frame — **0.054 ms at session start** (nothing
+discovered) and **0.120 ms worst case** (every cave discovered), i.e. **920x
+and 420x under the bar**, not the 893x a terrain-only figure suggests. The
+worst single keystroke overall is the one that uncovers a whole tile column:
+3.614 ms of terrain plus the feature layer, still ~13x under.
 
-**THE UNCACHED COLUMN RE-MEASURED 1.18-1.48x BELOW TASK 3'S SWEEP, AND THE
-DIFFERENCE IS THE BOX.** Rung 6 reads 70.289 here against 91.541 there; rung 8
-reads 30.102 against 44.522. The `RoomMeshMemo` miss counts are IDENTICAL at
-all five rungs (29,662 / 15,756 / 4,717 / 333 / 30), which is the
-cross-validation that both sweeps drew the same ground with the same code —
-so the wall-time gap is contention, and Task 3's sweep (taken at load ~7) was
-itself contended by roughly a third. **H1's disposition is unchanged in
-direction at `GLOBE_RUNG`** — 70.289 is still 1.41x over the 50 ms bar — but
-**the boundary rung moves: rung 7 reads 47.093 here, UNDER the bar it was
-1.3x over in the committed table.** Recorded, not retuned: two sweeps of the
-same code on the same machine can straddle a bar that sits inside the
-machine's own noise, which is a fact about the bar.
+**COLD is the one figure over the bar, and it is 1.14x its own window's
+uncached draw** (73.767 against 64.669 at rung 6) — the design, not a
+regression. A 200x200 plate covers 49 WHOLE tiles, 224x224 = 50,176 chart
+squares for 40,000 drawn ones: **25.4% more squares for 14.1% more time**, the
+difference being the session-long `RoomMeshMemo` the cache owns. At rung 12 the
+same accounting reads 56 tiles, 63.8% more squares for 44.3% more time.
 
-**The feature layer costs 0.076 ms at worst, so no window pre-filter is
+**Cold is paid once per `(frame, rung)` — and `(frame, ...)` is the half that
+is easy to misread.** The rung-6 chart is 12x12 = 144 tiles in total, so a
+player who pans the whole globe there pays about **217 ms across the session**
+and nothing after — *provided the projection does not move*. Eviction rule 1
+drops every tile of a superseded frame, so **a `Recentre` gesture makes the
+whole cost recur**. `Frame` moves only by that explicit gesture, but it is a
+gesture a player has, and an earlier revision of this paragraph said "and
+nothing after" without the qualifier.
+
+**THE UNCACHED COLUMN RE-MEASURED WELL BELOW TASK 3'S SWEEP, AND WHAT LICENSES
+THE CONCLUSION IS THE LOAD, NOT THE MISS COUNTS.** Four measurements of the
+identical quantity — rung 6, 200x200, `win`, uncached — now exist:
+
+| ms | when / by whom | load |
+|---|---|---|
+| 91.541 | Task 3's committed table | ~7 |
+| 70.289 | Task 5's first sweep | 1-min avg still decaying from this session's own test runs; 92% idle instantaneously |
+| 65.3 | fix round 1's independent reproduction | 2.32 |
+| 65.638 | this sweep | 1.43 |
+
+A **1.40x spread**, with the two genuinely-quiet measurements agreeing to
+0.5%.
+
+**The miss counts do NOT say "the same code", and an earlier revision of this
+paragraph claimed they did.** They are identical at all five rungs (29,662 /
+15,756 / 4,717 / 333 / 30) across every sweep above, but `plate.rs` DID change
+between Task 3's table and these runs — Task 4's layer split made the memo
+caller-owned, turned `colour_allowed` into a call, and made `draw_with` a
+two-call wrapper. The miss count counts `corner_weights_memo` calls and is
+INVARIANT to that refactor, so it cannot detect a code change at all. What it
+licenses is **"the same ground, and the same amount of memo-visible work"** —
+which excludes the different-work explanation and leaves codegen and machine
+both live. **The independent load observation is what points at the machine**,
+and it is separate evidence.
+
+**H1's disposition is unchanged in direction at `GLOBE_RUNG`** — 65.638 is
+still 1.31x over the 50 ms bar. **The boundary rung is where this bites: rung 7
+reads 46.810 here, UNDER the bar it was recorded 1.3x over.** Recorded, not
+retuned: measurements of the same quantity on the same machine straddle that
+bar, which is a fact about the bar sitting inside the machine's own noise.
+
+**The feature layer costs 0.066 ms at worst, so no window pre-filter is
 needed** (Task 4's review asked). The cave roster is **874 vertices of
 40,962** — the number `Driver::start`'s scan produces and which was recorded
 nowhere in the tree until now. Composing that whole roster over a plate costs
-**0.0015 ms with nothing discovered** and **0.076 ms with every cave
-discovered**, at rung 6. The undiscovered figure is three orders of magnitude
-cheaper than the other because `draw_feature_layer` checks `discovered`
-BEFORE it calls `geo.coord` or `mercator::project` — so the review's premise
-("one `geo.coord` plus one `mercator::project` per site on every keystroke")
-holds only for sites already FOUND, and the worst case it feared is 0.15% of
-the 50 ms budget. The settlement roster is a ledger read this harness does
-not build and is not measured here.
-
+**0.0013 ms with nothing discovered** and **0.066 ms with every cave
+discovered**. The undiscovered figure is nearly two orders cheaper because
+`draw_feature_layer` checks `discovered` BEFORE it calls `geo.coord` or
+`mercator::project` — so the review's premise ("one `geo.coord` plus one
+`mercator::project` per site on every keystroke") holds only for sites already
+FOUND, and the worst case it feared is 0.13% of the 50 ms budget. The
+settlement roster is a ledger read this harness does not build and is not
+measured here.
 
 | when (UTC) | label | wall_s | user_s | sys_s | cpu_ratio | waited_s | commit | branch | host | cores |
 |---|---|---|---|---|---|---|---|---|---|---|

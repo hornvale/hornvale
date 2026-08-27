@@ -15,14 +15,19 @@
 //!
 //! INFORMATIVE, never a gate — nothing in `make game-check` runs this.
 //!
-//! **Four costs, not one, because the cache turns "a draw" into four
+//! **Five costs, not one, because the cache turns "a draw" into several
 //! different questions** (Task 5):
 //!
-//! - **uncached** — `plate::draw_with`, the Task 3 number, kept so the
-//!   before/after is a comparison rather than a claim;
+//! - **uncached** — `plate::draw_with` on the `win` window, the Task 3
+//!   number, kept on THAT window so the before/after is a comparison rather
+//!   than a claim;
+//! - **uncached, ALIGNED** — the same call on the `aligned` window, which is
+//!   the one everything below is measured on. It exists because a ratio taken
+//!   across the two windows compares two different pieces of ground, which is
+//!   exactly what fix round 1 caught this harness doing;
 //! - **cold** — the same plate through a FRESH [`hornvale_game::tiles::
-//!   TileCache`]. Never cheaper than uncached and usually dearer, because a
-//!   plate's edge tiles are drawn whole;
+//!   TileCache`]. Never cheaper than its own window's uncached draw and
+//!   usually dearer, because a plate's edge tiles are drawn whole;
 //! - **warm** — the same window again. This is a cursor move, a resize to a
 //!   subrect, and a discovery: the keystrokes that used to cost a full
 //!   plate;
@@ -123,6 +128,28 @@ fn main() {
         origin_col: vw / 2,
         origin_row: (vh / 2).saturating_sub(u32::from(h) / 2),
     };
+    // The window's right edge is put ON a tile boundary, so the scroll
+    // measured below is the WORST case (it uncovers a whole tile column)
+    // rather than a lucky interior column that uncovers nothing.
+    //
+    // **It must also not WRAP**, and an earlier revision of this harness
+    // forgot that and reported a rung-6 worst case of ZERO tiles. At rung 6
+    // the chart is 363 columns and a 200-column plate parked at the equator
+    // runs off the end of it, so the aligned right edge landed back inside
+    // tile 0 — already resident — and one column of scroll uncovered
+    // nothing at all. The number was real and it was not the worst case.
+    let target = (TILE_EDGE - (u32::from(w) % TILE_EDGE)) % TILE_EDGE;
+    let room = vw.saturating_sub(u32::from(w));
+    let aligned = Window {
+        origin_col: if room >= target {
+            // the largest aligned origin that still fits without wrapping
+            ((room - target) / TILE_EDGE) * TILE_EDGE + target
+        } else {
+            target
+        },
+        ..win
+    };
+
     let empty = BTreeSet::new();
     let undiscovered = hornvale_game::discovery::Discovered::default();
 
@@ -147,6 +174,35 @@ fn main() {
         std::hint::black_box(&grid);
     }
 
+    // THE SAME UNCACHED DRAW ON THE **ALIGNED** WINDOW — the like-for-like
+    // partner of `cached cold` below, and the fix for a real defect in this
+    // harness's first revision (fix round 1, Minor 2). `draws` above is
+    // measured on `win` and MUST stay there: it is the number Task 3's
+    // committed table can be compared against. But `cold` is measured on
+    // `aligned`, so quoting "cold is 1.12x uncached" off those two columns
+    // was comparing two different pieces of ground. Two windows, two
+    // uncached numbers, and each ratio taken within its own window.
+    let mut draws_aligned = Vec::new();
+    for _ in 0..runs {
+        #[allow(clippy::disallowed_types)] // benchmark harness
+        let t0 = Instant::now();
+        let grid = plate::draw_with(
+            &terrain,
+            &geo,
+            &index,
+            &f,
+            &aligned,
+            w,
+            h,
+            false,
+            &empty,
+            &empty,
+            &undiscovered,
+        );
+        draws_aligned.push(t0.elapsed().as_secs_f64() * 1000.0);
+        std::hint::black_box(&grid);
+    }
+
     // The SCAN count for one draw, by the kernel's own instrument rather
     // than a wall-clock proxy: `RoomMeshMemo::corner_weights_misses` counts
     // the calls that actually ran `Facet::corner_weights`, and each of those
@@ -167,28 +223,6 @@ fn main() {
 
     // ---- Task 5: the same plate THROUGH the tile cache ----------------
     //
-    // The window's right edge is put ON a tile boundary, so the scroll
-    // measured below is the WORST case (it uncovers a whole tile column)
-    // rather than a lucky interior column that uncovers nothing.
-    //
-    // **It must also not WRAP**, and an earlier revision of this harness
-    // forgot that and reported a rung-6 worst case of ZERO tiles. At rung 6
-    // the chart is 363 columns and a 200-column plate parked at the equator
-    // runs off the end of it, so the aligned right edge landed back inside
-    // tile 0 — already resident — and one column of scroll uncovered
-    // nothing at all. The number was real and it was not the worst case.
-    let target = (TILE_EDGE - (u32::from(w) % TILE_EDGE)) % TILE_EDGE;
-    let room = vw.saturating_sub(u32::from(w));
-    let aligned = Window {
-        origin_col: if room >= target {
-            // the largest aligned origin that still fits without wrapping
-            ((room - target) / TILE_EDGE) * TILE_EDGE + target
-        } else {
-            target
-        },
-        ..win
-    };
-
     let mut cold = Vec::new();
     let mut warm = Vec::new();
     let mut boundary = Vec::new();
@@ -290,6 +324,11 @@ fn main() {
         "  uncached draw ms:   median {:.3}  min {:.3}",
         median(draws.clone()),
         draws.iter().copied().fold(f64::INFINITY, f64::min)
+    );
+    println!(
+        "  uncached, ALIGNED:  median {:.3}  min {:.3}   (the like-for-like partner of cold)",
+        median(draws_aligned.clone()),
+        draws_aligned.iter().copied().fold(f64::INFINITY, f64::min)
     );
     println!(
         "  cached cold ms:     median {:.3}  min {:.3}   ({cold_tiles} tiles drawn)",
