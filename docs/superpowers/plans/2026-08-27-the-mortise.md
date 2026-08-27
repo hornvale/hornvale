@@ -923,6 +923,46 @@ returns `Argument::Concept` unconditionally (line 1188), so it cannot recover
 **Do not fix that here** — it is registry row
 `LANG-parse-cannot-recover-a-pronoun-object` and out of scope.
 
+
+**CONTROLLER FINDING (pre-dispatch verification): the "boundary marker
+discriminates" claim is HALF FALSE for Common, and the half that is false is the
+one the parser needs.**
+
+Verified against the committed tests:
+
+- Common embedding emits **no complementizer at all** — `"I did not know they
+  killed them."` (`clause.rs`, `a_clause_object_realizes_with_no_determiner`).
+  The drawn subordinator from Task 5 is a **tongue** feature; Common has none.
+- Common coordination emits the fixed word `"and"`.
+
+So there is no symmetric pair of markers. The real discriminator is
+**asymmetric**: a top-level `" and "` means coordination, and its ABSENCE plus a
+second verb group means embedding.
+
+**This is not cosmetic — the naive order gets coordination wrong.** For
+*"It confused me and it upset me."* the existing walk splits at the EARLIEST
+verb group (`confused`), leaving `"me and it upset me"` as a complement, which is
+not a clause. **A top-level conjunction test must run BEFORE the verb-group
+split**, not after it.
+
+**And tier-2 elision makes the inverse genuinely hard.** *"It confused me and
+upset me."* has no subject on the second conjunct; recovering an equal
+`Coordination` means re-supplying the elided subject — the exact inverse of
+`elide_coordinated_subjects`. Whether that is tractable is a question for
+somebody inside the parser, which is you.
+
+**So the stop-and-report branch below is live, not decorative.** If recovering
+elided coordination is not small, say so and stop: freezing parse coverage where
+The Interlinear froze it, and saying so loudly, is a sanctioned outcome. What is
+NOT acceptable is a large speculative parser nobody sanctioned, or silently
+parsing only the un-elided case while criterion 6 claims the marker discriminates.
+
+**Pinned cross-task risk.** Task 4 added
+`Subject::Clause(_) => unreachable!(...)` in `windows/book/src/lib.rs` (~line
+2363), whose premise is *"the parse direction never produces a clause-embedded
+subject"*. **You are the task that can make that false.** If your parser learns
+to recover an embedded subject, that arm must change in the same commit.
+
 - [ ] **Step 1: Write the failing round-trip tests**
 
 ```rust
