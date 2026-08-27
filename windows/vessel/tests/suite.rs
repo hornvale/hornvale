@@ -29,6 +29,8 @@ mod body_fields;
 mod body_mass;
 #[path = "suite/clock_lattice.rs"]
 mod clock_lattice;
+#[path = "suite/coercion_calibration.rs"]
+mod coercion_calibration;
 #[path = "suite/controller_swap.rs"]
 mod controller_swap;
 #[path = "suite/course_properties.rs"]
@@ -67,6 +69,8 @@ mod overrides;
 mod player_acts_commit;
 #[path = "suite/possess_target.rs"]
 mod possess_target;
+#[path = "suite/possession_facts.rs"]
+mod possession_facts;
 #[path = "suite/possession_moves.rs"]
 mod possession_moves;
 #[path = "suite/session.rs"]

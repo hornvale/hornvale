@@ -100,3 +100,67 @@ impl Controller for PlayerController {
         }
     }
 }
+
+/// A controller supplied by whoever holds the body (The Coercion) — the
+/// generalisation The Hand's spec predicted: "`driven: usize` generalises to a
+/// controller map in Arc III without the body type changing."
+///
+/// It wraps another controller rather than inventing intents, because
+/// decision 0168 puts the effect with the BODY and not the driver: an imposed
+/// driver selects WHICH act, never WHAT the act does. Today it delegates to
+/// [`DefaultController`], which is a pure pass-through of
+/// `resolution.intent` — so relative to `DefaultController` this wraps
+/// changes **nothing** about the body's behaviour, only who is recorded as
+/// choosing it: `DefaultController`'s own doc already states a body under it
+/// is "byte-identical to a body with no controller at all", and this type
+/// does not touch `intend` at all, so that identity carries through
+/// unchanged. A later campaign giving a possessing creature real intent
+/// swaps the inner controller for one that reads *that* creature's own
+/// arbitration, and nothing else about this type needs to change.
+///
+/// **That comparison is to `DefaultController`, and it is NOT the same claim
+/// as "this changes nothing wired in" (checked directly at its one call
+/// site, `Session::wait` in `session.rs`, rather than assumed).** The body
+/// this type actually drives was previously handed a FRESH
+/// `PlayerController` every tick — an intent source that is unconditionally
+/// `Hold` until a verb queues a real action, which today's verb loop never
+/// does — so swapping to this type there is a real behavioural change
+/// relative to what that body did a moment ago, not an identity: an
+/// unconditional `Hold` versus `resolution.intent` unchanged are genuinely
+/// different intents. Concretely, a possessed body's own solo walk during
+/// `!wait` can now move, drink, rest and eat on its own arbitration instead
+/// of sitting frozen at one position while `wait`'s closed-form `Hold` jump
+/// advances the clock under it. **The ledger stays untouched either way** —
+/// `Session::wait` discards that walk's facts unconditionally, so no
+/// committed fact ever differs — but the body's OWN felt-state read
+/// (`Session::driven_mode`/`driven_affect`/`driven_suppressed`, which
+/// `!ask`'s narration draws from) is not similarly inert: it is read back
+/// from the last decision point of that walk, and an acting controller can
+/// leave the body in a different room, and a different felt state, than a
+/// frozen one would have. See
+/// `driven_felt_state_can_move_under_an_imposed_controller_during_wait` in
+/// `session.rs` for a seed-42 demonstration.
+pub struct ImposedController {
+    inner: DefaultController,
+}
+
+impl ImposedController {
+    /// A fresh imposed controller, wrapping a fresh [`DefaultController`].
+    pub fn new() -> Self {
+        Self {
+            inner: DefaultController,
+        }
+    }
+}
+
+impl Default for ImposedController {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Controller for ImposedController {
+    fn intend(&mut self, body: &Body, resolution: &Resolution) -> Intent {
+        self.inner.intend(body, resolution)
+    }
+}
