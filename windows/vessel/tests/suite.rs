@@ -65,6 +65,8 @@ mod overrides;
 mod player_acts_commit;
 #[path = "suite/possess_target.rs"]
 mod possess_target;
+#[path = "suite/possession_facts.rs"]
+mod possession_facts;
 #[path = "suite/possession_moves.rs"]
 mod possession_moves;
 #[path = "suite/session.rs"]

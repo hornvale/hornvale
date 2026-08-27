@@ -327,6 +327,44 @@ pub(crate) fn grievance(ledger: &Ledger, npc: EntityId) -> f64 {
         * GRIEVANCE_GAIN
 }
 
+/// The entity currently holding this body (The Coercion). **NOT functional**,
+/// unlike [`TURNED_HOSTILE`]: a body may be possessed, released, and possessed
+/// again over its life, so the live state is [`possessor_of`]'s open/close fold
+/// and never a single latest value. Committed only for an IMPOSED possession —
+/// the player's own possession is the session's premise, not a world fact, so
+/// an open `possessed-by` always means someone other than the player holds this
+/// body (spec §3.1).
+/// type-audit: bare-ok(identifier-text)
+pub const POSSESSED_BY: &str = "possessed-by";
+
+/// Closes the possession opened by the most recent [`POSSESSED_BY`] (The
+/// Coercion). The object is the reason: `"released"` today, and `"died"` once
+/// mortality exists — see the spec §6, which asserts the second is unreachable.
+/// type-audit: bare-ok(identifier-text)
+pub const POSSESSION_ENDED: &str = "possession-ended";
+
+/// Who currently holds `body`, if anyone (The Coercion).
+///
+/// A single pass in LEDGER ORDER over the body's own facts: a
+/// [`POSSESSED_BY`] opens, a [`POSSESSION_ENDED`] closes, and the last word
+/// wins. Ledger order is the ordering — never a sort on `day`, which is
+/// `Option<WorldTime>` and absent on facts that carry no instant.
+pub(crate) fn possessor_of(ledger: &Ledger, body: EntityId) -> Option<EntityId> {
+    let mut held = None;
+    for fact in ledger.facts_about(body) {
+        match fact.predicate.as_str() {
+            POSSESSED_BY => {
+                if let Value::Entity(who) = fact.object {
+                    held = Some(who);
+                }
+            }
+            POSSESSION_ENDED => held = None,
+            _ => {}
+        }
+    }
+    held
+}
+
 const HELP: &str = "\
 verbs:
   look             where you stand, focalized
@@ -990,6 +1028,20 @@ impl<'w> Session<'w> {
                 "an NPC turned hostile toward the possessing player",
             )
             .expect("TURNED_HOSTILE registers identically every session");
+        // The Coercion: an imposed possession is an open/close fact pair, not
+        // a single latest value (a body may be possessed, released, and
+        // possessed again) — both non-functional, matching DISPOSITION_SHIFT's
+        // shape rather than TURNED_HOSTILE's.
+        registry
+            .register_predicate(POSSESSED_BY, false, "the entity holding this body")
+            .expect("POSSESSED_BY registers identically every session");
+        registry
+            .register_predicate(
+                POSSESSION_ENDED,
+                false,
+                "a possession ended, with its reason",
+            )
+            .expect("POSSESSION_ENDED registers identically every session");
         // The Hand, Task 3: derive the roster ONCE and SELECT the driven body
         // from it, rather than minting a second representation of the same
         // villager. `ordered_for_derivation` (inside `derive_npcs`) always
@@ -1675,6 +1727,13 @@ impl<'w> Session<'w> {
     /// across a reload, unlike the old per-session `AgentId` draw).
     pub fn agent_entity(&self) -> EntityId {
         self.driven_body().entity
+    }
+
+    /// Who currently holds the driven body, if anyone (The Coercion) — the
+    /// session-level read over [`possessor_of`]'s fold. `None` for a free
+    /// body, which is every body until an imposition seam opens one.
+    pub fn possessor(&self) -> Option<EntityId> {
+        possessor_of(&self.ledger, self.agent_entity())
     }
 
     /// Would the named co-located NPC be hostile to the player right now
@@ -5934,6 +5993,79 @@ mod tests {
                 "an unprovoked NPC's grievance must be plain 0.0, not -0.0"
             );
         }
+    }
+
+    /// The Coercion, Task 1: `possessor_of`'s own coverage. Lives in-module
+    /// (not in `windows/vessel/tests/`) because it reaches `session.ledger`
+    /// and `session.registry` directly — `Session` gains no public ledger
+    /// reader or test-only commit for this, per the task's resolved brief.
+    #[test]
+    fn a_body_with_no_facts_has_no_possessor() {
+        let world = seam_world();
+        let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        assert_eq!(possessor_of(&session.ledger, session.agent_entity()), None);
+    }
+
+    /// `possessed-by` is NOT functional (unlike `TURNED_HOSTILE`): a body may
+    /// be possessed, released, and possessed again, so the live state must be
+    /// the fold and never a single latest value. The `reopen` fact below is
+    /// deliberately given different provenance from `open` — an identical
+    /// `Fact` (same subject/predicate/object/place/day/provenance) is an
+    /// idempotent no-op under `Ledger::commit`'s dedup, which would silently
+    /// defeat exactly the reopen case this test exists to prove.
+    #[test]
+    fn possession_opens_closes_and_reopens() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let body = session.agent_entity();
+        let holder = other_bodies(&session.bodies, session.driven)[0].entity;
+
+        let open = Fact {
+            subject: body,
+            predicate: POSSESSED_BY.to_string(),
+            object: Value::Entity(holder),
+            place: None,
+            day: None,
+            provenance: "test: open".to_string(),
+        };
+        session
+            .ledger
+            .commit(open, &session.registry)
+            .expect("possessed-by is registered");
+        assert_eq!(possessor_of(&session.ledger, body), Some(holder));
+
+        let close = Fact {
+            subject: body,
+            predicate: POSSESSION_ENDED.to_string(),
+            object: Value::Text("released".to_string()),
+            place: None,
+            day: None,
+            provenance: "test: close".to_string(),
+        };
+        session
+            .ledger
+            .commit(close, &session.registry)
+            .expect("possession-ended is registered");
+        assert_eq!(possessor_of(&session.ledger, body), None, "closed");
+
+        let reopen = Fact {
+            subject: body,
+            predicate: POSSESSED_BY.to_string(),
+            object: Value::Entity(holder),
+            place: None,
+            day: None,
+            provenance: "test: reopen".to_string(),
+        };
+        session
+            .ledger
+            .commit(reopen, &session.registry)
+            .expect("possessed-by is registered");
+        assert_eq!(
+            possessor_of(&session.ledger, body),
+            Some(holder),
+            "a body may be possessed again after release — this is why the state \
+             is a fold and not a single latest value"
+        );
     }
 
     #[test]
