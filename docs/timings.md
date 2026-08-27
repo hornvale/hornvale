@@ -3321,3 +3321,5 @@ measured here.
 | 2026-08-27T15:38:02Z | sluice:clients | 457.953 | 5626.068 | 78.451 | 12.46 | 0 | 5639ad58c |  | lefford | 40 |
 | 2026-08-27T16:50:40Z | rebaseline | 115.531 | 273.771 | 17.217 | 2.52 | 0 | 37406156e | campaign/the-quadrat | ambrose | 12 |
 | 2026-08-27T16:52:51Z | gate-commit | 125.209 | 167.800 | 42.516 | 1.68 | 0 | 37406156e | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T17:42:58Z | game-check | 853.546 | 3333.905 | 91.203 | 4.01 | 0 | ec1f657c8 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T17:44:29Z | gate-commit | 84.646 | 55.533 | 28.463 | 0.99 | 0 | ec1f657c8 | campaign/the-quadrat | ambrose | 12 |

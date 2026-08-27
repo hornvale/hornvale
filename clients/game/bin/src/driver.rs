@@ -98,6 +98,11 @@ use std::collections::BTreeSet;
 /// indistinguishable from a right one, and this string never is one.
 const NOTHING_HERE_YET: &str = "nothing here yet";
 
+/// The rung line's opening word — see [`Driver::rung_caption`]. Named once
+/// so the tests that look for the line match on the shipped wording rather
+/// than on a second copy of it.
+const RUNG_OPENING: &str = "rung";
+
 /// What the strip says when the resolver ran and genuinely found no
 /// individuated feature at the observer's vertex — real terrain below every
 /// class's individuation floor, not "nothing there" (seed 42 measured 377
@@ -1492,6 +1497,13 @@ impl Driver {
     fn apply_zoom(&mut self, delta: i8) {
         use std::cmp::Ordering;
         let before = self.window.depth;
+        // READ THE ANCHOR BEFORE THE RUNG MOVES. The point is expressed in
+        // degrees precisely so it survives the move: the tile that carries
+        // it is about to change size, address and chart, and degrees are the
+        // one address both rungs share.
+        let anchor = self
+            .raster_is_drawn()
+            .then(|| self.geographic_point_under_cursor());
         match delta.cmp(&0) {
             Ordering::Less => {
                 self.window.depth = self.window.depth.saturating_sub(1).max(GLOBE_RUNG);
@@ -1503,21 +1515,21 @@ impl Driver {
         }
         if self.window.depth != before {
             self.reclamp_window();
-            // ARRIVING at band B re-centres on the observer, the same way
-            // entering the map does — see
-            // [`Self::centre_band_b_on_the_observer`] for why that is band
-            // B's rule and not the ladder's.
-            //
-            // **INSIDE THIS GUARD, and the placement is the whole point.**
-            // Fix round 1, F1: it sat outside, so a SATURATING press at the
-            // ladder's ceiling re-centred anyway — measured jumping
-            // `origin_col` 21169 -> 2176, throwing away ~19,000 tiles of the
-            // player's own scroll on a keypress this method's own doc says
-            // changes nothing. That is Nathan's founding complaint ("the map
-            // zooms based on criteria I have not identified") reintroduced by
-            // its own fix, and `zoom_plus_on_the_walk_band_alone_is_a_no_op`
-            // passed throughout because it never scrolled first.
-            self.centre_band_b_on_the_observer();
+            // **INSIDE THE GUARD, and the placement is the whole point.**
+            // Fix round 1, F1: what used to sit here sat OUTSIDE, so a
+            // SATURATING press at the ladder's ceiling acted anyway —
+            // measured jumping `origin_col` 21169 -> 2176, throwing away
+            // ~19,000 tiles of the player's own scroll on a keypress this
+            // method's own doc says changes nothing.
+            // `zoom_plus_at_the_ladders_ceiling_keeps_the_players_scroll`
+            // still pins it, and is NOT made redundant by the anchor: the
+            // anchor is a no-op at an unchanged rung (a tile centre
+            // re-projects to its own tile), so a regression that moved this
+            // block back outside would once again be invisible to every
+            // other test in this file.
+            if let Some((lat, lon)) = anchor {
+                self.anchor_geographic_point(lat, lon);
+            }
         }
         self.move_cursor(0, 0);
         self.refresh_strip();
@@ -1550,30 +1562,111 @@ impl Driver {
         if !self.raster_is_drawn() {
             return;
         }
+        let (lat, lon) = self.geographic_point_under_cursor();
+        self.frame = mercator::centre_on(lat, lon);
+        // ONE COPY OF THE RE-ANCHOR, shared with [`Self::apply_zoom`] (The
+        // Quadrat, Task 7). It used to be spelled out here and would have
+        // had to be spelled out again there; this file's own
+        // `content_height` note records what two independent copies of one
+        // computation cost the last time.
+        self.anchor_geographic_point(lat, lon);
+        self.refresh_strip();
+    }
+
+    /// The geographic `(latitude, longitude)`, in degrees, of the tile the
+    /// map cursor points at right now — the reading every anchored gesture
+    /// takes before it moves anything, and the one address that survives a
+    /// change of rung.
+    ///
+    /// **Tile-resolution by construction, which is the map's whole address
+    /// space.** What comes back is the CENTRE of the tile under the cursor,
+    /// never a sub-tile position: nothing on screen distinguishes two points
+    /// inside one character, so there is no finer answer to give. Every
+    /// guarantee stated in terms of "the point under the cursor" inherits
+    /// that, and the campaign's own zoom invariant is therefore asserted as
+    /// a CONTAINMENT (the old point lies in the new tile) rather than as a
+    /// tolerance in degrees.
+    ///
+    /// The column wraps and the row is held on the chart. The wrap is
+    /// substantive rather than tidiness: `origin_col` may sit one short of
+    /// the chart's width, so `origin_col + cursor.x` routinely runs past it,
+    /// and `mercator::unproject` does no wrapping of its own — an unwrapped
+    /// read hands back a longitude outside `[-180, 180)`, which
+    /// `mercator::centre_on` turns into a `Frame` that compares unequal to
+    /// the geometrically identical one. The row bound is Task 5's carried
+    /// M3: `reclamp_window`'s `max_origin_row` is 0 whenever the plate is
+    /// taller than the whole chart, which a wide enough terminal reaches at
+    /// [`GLOBE_RUNG`], and a row past the chart unprojects to a latitude the
+    /// projection never drew.
+    pub fn geographic_point_under_cursor(&self) -> (f64, f64) {
+        let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
+        let row =
+            (self.window.origin_row + u32::from(self.cursor.y)).min(virtual_h.saturating_sub(1));
+        let col = (self.window.origin_col + u32::from(self.cursor.x)) % virtual_w;
+        mercator::unproject(&self.frame, row, col, virtual_w, virtual_h)
+    }
+
+    /// Move the window — and, where the window cannot move, the cursor — so
+    /// that `(lat, lon)` sits at the cursor's own screen position. The
+    /// shared tail of [`Self::recentre`] and [`Self::apply_zoom`], and
+    /// the whole mechanism behind The Quadrat's founding complaint: **the
+    /// geographic point under the cursor does not move across a zoom step.**
+    ///
+    /// **TWO KNOBS, and both are needed.** Normally the WINDOW ORIGIN moves
+    /// and the cursor holds still, which is what a reader expects: the
+    /// picture slides under a steady pointer. Where the origin has nowhere
+    /// left to go, the CURSOR moves instead and the guarantee is kept by the
+    /// other hand. A test that only ever anchored in the middle of a chart
+    /// would exercise one knob and never learn the second existed.
+    ///
+    /// **TWO LIMITS, DECLARED RATHER THAN HIDDEN** — decision 0142's own
+    /// shape for a lost axis, applied to a kept one:
+    ///
+    /// 1. **Longitude holds exactly, always.** The chart wraps, so the
+    ///    column arithmetic is a `rem_euclid` with no clamp in it and no
+    ///    residue to spend. There is no east-west case in which this fails.
+    /// 2. **Latitude holds except where Mercator's polar clamp binds.** Two
+    ///    distinct ways it can bind. Where the desired origin row falls
+    ///    outside `0..=max_origin_row` — the chart's top and bottom edges —
+    ///    the residue is handed to the cursor and the point is still held,
+    ///    exactly. Where the cursor would have to leave the plate to take
+    ///    it, or where the point is past `mercator::LAT_CLAMP_DEG` and so
+    ///    projects to no row at all, the point is on no chart this rung
+    ///    draws and the guarantee genuinely fails. `mercator::clamp_caption`
+    ///    is what already tells the reader that region exists; nothing here
+    ///    invents a position for it.
+    fn anchor_geographic_point(&mut self, lat: f64, lon: f64) {
         let (_, plate_h) = self.active_plate_dims();
         let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
-        let plate_row = self.window.origin_row + u32::from(self.cursor.y);
-        let plate_col = self.window.origin_col + u32::from(self.cursor.x);
-        let (lat, lon) =
-            mercator::unproject(&self.frame, plate_row, plate_col, virtual_w, virtual_h);
+        let Some((row, col)) = mercator::project(&self.frame, lat, lon, virtual_w, virtual_h)
+        else {
+            // Past the clamp: no row to anchor to, so the window stays put
+            // rather than being sent somewhere invented.
+            return;
+        };
 
-        self.frame = mercator::centre_on(lat, lon);
+        // KNOB ONE, east-west: the origin absorbs the whole offset, because
+        // longitude wraps. `virtual_dims` never returns a zero width, so the
+        // modulus is always safe.
+        self.window.origin_col =
+            (i64::from(col) - i64::from(self.cursor.x)).rem_euclid(i64::from(virtual_w)) as u32;
 
-        if let Some((new_row, new_col)) =
-            mercator::project(&self.frame, lat, lon, virtual_w, virtual_h)
-        {
-            if virtual_w > 0 {
-                self.window.origin_col = (i64::from(new_col) - i64::from(self.cursor.x))
-                    .rem_euclid(i64::from(virtual_w))
-                    as u32;
-            }
-            let max_origin_row = i64::from(virtual_h)
-                .saturating_sub(i64::from(plate_h))
-                .max(0);
-            self.window.origin_row =
-                (i64::from(new_row) - i64::from(self.cursor.y)).clamp(0, max_origin_row) as u32;
+        // KNOB ONE, north-south, as far as the clamp allows — then KNOB TWO
+        // for the rest. `wanted - settled` is exactly what the origin
+        // refused to travel, and adding it to the cursor puts the point back
+        // under the cursor: `origin_row + cursor.y` comes to `row` either
+        // way.
+        let max_origin_row = i64::from(virtual_h)
+            .saturating_sub(i64::from(plate_h))
+            .max(0);
+        let wanted = i64::from(row) - i64::from(self.cursor.y);
+        let settled = wanted.clamp(0, max_origin_row);
+        self.window.origin_row = settled as u32;
+        let residue = wanted - settled;
+        if residue != 0 {
+            let max_y = i64::from(plate_h).saturating_sub(1).max(0);
+            self.cursor.y = (i64::from(self.cursor.y) + residue).clamp(0, max_y) as u16;
         }
-        self.refresh_strip();
     }
 
     /// The world plate's current [`Window`] — which zoom level and virtual
@@ -1718,11 +1811,84 @@ impl Driver {
         let mut text = base;
         text.push_str(" — ");
         text.push_str(&mercator::clamp_caption(&self.frame));
+        text.push_str(" — ");
+        text.push_str(&self.rung_caption());
         if let Some(disclosure) = self.resolution_disclosure() {
             text.push_str(" — ");
             text.push_str(&disclosure);
         }
         text
+    }
+
+    /// **THE RUNG LINE**, and the half of Nathan's founding report that no
+    /// amount of correct anchoring would have answered on its own: "the game
+    /// map appears to zoom in and out based on criteria I have not
+    /// identified". Nothing on screen ever said which rung was showing, so
+    /// even a zoom that behaved perfectly was unreadable — the picture
+    /// changed and the reader had no name for what it changed to.
+    ///
+    /// Two clauses, both DERIVED from [`plate::virtual_dims`] and the
+    /// terrain's own vertex count, never tabulated:
+    ///
+    /// - **Where on the ladder.** The rung, and the ladder's own ends, so
+    ///   a reader knows both where they are and how much further either
+    ///   key goes. The chart's width in tiles is the scale: it is the
+    ///   number of tiles around a great circle at this rung, so it doubles
+    ///   as the reader zooms in and is the one number that makes two rungs
+    ///   comparable without a unit this client has no way to obtain (the
+    ///   world's radius is not on the wire).
+    /// - **THE MIRROR OF [`Self::resolution_disclosure`]**, and the reason
+    ///   this method carries it (Task 1's carried disclosure note). That
+    ///   method is ONE-SIDED: it speaks only when a character stands for
+    ///   MORE than one terrain vertex, and since Task 1 the whole shipped
+    ///   ladder sits on the other side of 1:1 — even [`GLOBE_RUNG`]'s
+    ///   363x362 chart carries about three tiles per vertex, and band B
+    ///   carries some thirteen thousand. So the coarse-end disclosure is
+    ///   silent everywhere and the map was left disclosing nothing at all,
+    ///   which decision 0196's "a map may disclose its own resolution" is
+    ///   poorly served by. This clause is that sentence written for the
+    ///   oversampled end: how many characters share one terrain reading.
+    ///   It also closes Task 6's own concern 2 — that some hundred band-B
+    ///   characters share one grid-level vertex with nothing disclosing it
+    ///   — because the two are the same fact counted the same way.
+    ///
+    /// The pair is deliberately not merged into one method. They are the
+    /// two sides of one ratio, but they answer different questions ("the
+    /// picture hides detail the field has" against "the picture claims
+    /// detail the field lacks"), and `resolution_disclosure`'s own tests
+    /// pin its silence as the honest answer on today's ladder.
+    fn rung_caption(&self) -> String {
+        let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
+        let mut text = format!(
+            "{RUNG_OPENING} {} of {GLOBE_RUNG}–{BAND_B_RUNG} — {virtual_w} tiles around the planet",
+            self.window.depth
+        );
+        if let Some(share) = self.oversample_disclosure(virtual_w, virtual_h) {
+            text.push_str(" — ");
+            text.push_str(&share);
+        }
+        text
+    }
+
+    /// The oversampled half of the resolution disclosure: how many screen
+    /// characters share ONE terrain reading, or `None` once a character no
+    /// longer outruns the field. See [`Self::rung_caption`] for why this
+    /// end of the ratio needed saying at all, and
+    /// [`Self::resolution_disclosure`] for the other end.
+    fn oversample_disclosure(&self, virtual_w: u32, virtual_h: u32) -> Option<String> {
+        let terrain_vertices = self.geo.vertex_count() as u64;
+        if terrain_vertices == 0 {
+            return None;
+        }
+        let virtual_tiles = u64::from(virtual_w) * u64::from(virtual_h);
+        let share = virtual_tiles as f64 / terrain_vertices as f64;
+        if share <= 1.0 {
+            return None;
+        }
+        Some(format!(
+            "about {} characters to one terrain reading",
+            share.round() as u64
+        ))
     }
 
     /// F5's resolution disclosure (decision 0123, "disclose a resolution
@@ -1958,14 +2124,31 @@ impl Driver {
     /// lands, and cursor-anchored zoom, are Task 7's and are not decided
     /// here.
     ///
-    /// **Called on ARRIVAL, never per redraw.** [`Self::enter_map`],
-    /// [`Self::apply_zoom`] and [`Self::resize`] are the three moments the
-    /// window could be somewhere the observer is not; a redraw is not one of
-    /// them. Re-centring per redraw would make band B unscrollable — every
-    /// arrow key would snap the window back — and the player genuinely can
-    /// scroll here: the observer cannot MOVE while [`Focus::Map`] is focused
-    /// (the arrows drive the cursor there), so the window can only go stale
-    /// across one of those three arrivals.
+    /// **Called on ARRIVAL, never per redraw.** [`Self::enter_map`] and
+    /// [`Self::resize`] are the two moments the window could be somewhere
+    /// the observer is not; a redraw is not one of them. Re-centring per
+    /// redraw would make band B unscrollable — every arrow key would snap
+    /// the window back — and the player genuinely can scroll here: the
+    /// observer cannot MOVE while [`Focus::Map`] is focused (the arrows
+    /// drive the cursor there), so the window can only go stale across one
+    /// of those two arrivals.
+    ///
+    /// **[`Self::apply_zoom`] WAS the third arrival and is not one any
+    /// more** (The Quadrat, Task 7), which is a decision this method's own
+    /// doc handed forward: "Where entering a COARSE rung lands, and
+    /// cursor-anchored zoom, are Task 7's and are not decided here." They
+    /// turned out to be the same question. A zoom no longer leaves the
+    /// window anywhere arbitrary — it anchors on the point under the cursor
+    /// ([`Self::anchor_geographic_point`]) — so there is nothing left for
+    /// this to rescue there, and snapping the reader back to the observer
+    /// after they had deliberately scrolled somewhere and pressed `+` would
+    /// BE the founding complaint: a map that moves for a reason the reader
+    /// did not give. The same anchor closes Task 2's carried finding at the
+    /// other end of the ladder — a zoom-out from band B used to land on
+    /// rung 11 at an arbitrary origin, and now lands where the reader was
+    /// looking. Entering the map from a keypress still centres here,
+    /// because at `start` the window really is at the corner and the cursor
+    /// has no point of the reader's own to preserve.
     fn centre_band_b_on_the_observer(&mut self) {
         if !self.at_walk_band_rung() {
             return;
@@ -4355,6 +4538,282 @@ mod portolan_tests {
             d.window.origin_col < vw,
             "the wrapped origin must stay inside the chart, got {}",
             d.window.origin_col
+        );
+    }
+
+    // -- Task 7: the cursor-anchored zoom invariant (H3) -----------------
+
+    /// A driver parked somewhere REAL, off-centre in both axes, with the
+    /// premise asserted rather than assumed.
+    ///
+    /// The Quadrat has now caught seven tests whose input space had
+    /// collapsed to a single value, and a zoom-invariant test is the
+    /// obvious next candidate: with the cursor at the plate's middle, or
+    /// with the window already centred on the point under the cursor, the
+    /// anchor has nothing to do and the invariant holds for free. So this
+    /// helper moves the cursor away from the middle in BOTH axes and
+    /// asserts it actually got there — the remedy Task 6's F1 fix
+    /// established, applied one task later.
+    fn off_centre_world_view(d: &mut Driver) {
+        d.resize(210, 56);
+        enter_world_view(d);
+        let (plate_w, plate_h) = d.active_plate_dims();
+        centre_window_on_the_player(d, plate_w, plate_h);
+        d.apply(Action::CursorBy(0, -i16::MAX)); // park at a known corner
+        d.apply(Action::CursorBy(-i16::MAX, 0));
+        d.apply(Action::CursorBy(
+            i16::try_from(plate_w / 4).expect("a plate quarter fits an i16"),
+            i16::try_from(plate_h / 3).expect("a plate third fits an i16"),
+        ));
+        assert_ne!(
+            (d.cursor.x, d.cursor.y),
+            (plate_w / 2, plate_h / 2),
+            "the premise: a cursor at the plate's middle makes the invariant \
+             hold trivially, and would prove nothing"
+        );
+    }
+
+    /// The tile the cursor points at right now, as `(row, col)` on the
+    /// active rung's own virtual chart, with the column wrapped the way
+    /// `mercator::unproject` reads it.
+    fn tile_under_cursor(d: &Driver) -> (u32, u32) {
+        let (virtual_w, _) = plate::virtual_dims(d.window.depth);
+        (
+            d.window.origin_row + u32::from(d.cursor.y),
+            (d.window.origin_col + u32::from(d.cursor.x)) % virtual_w,
+        )
+    }
+
+    /// **H3, THE CAMPAIGN'S FOUNDING DEFECT: the geographic point under the
+    /// cursor does not move across a zoom step.**
+    ///
+    /// Asserted EXACTLY, not within a tolerance, and the exactness is the
+    /// point. A degrees comparison would have to allow half a tile of the
+    /// destination rung — the map has no address finer than a tile — and at
+    /// [`GLOBE_RUNG`] half a tile is about half a degree, which is the same
+    /// size as the slop a broken anchor would produce. So the assertion is
+    /// the containment statement instead: the point that was under the
+    /// cursor before the step is inside the tile that is under the cursor
+    /// after it. That is true or false with no threshold to tune.
+    ///
+    /// Walked over EVERY rung of the shipped ladder in both directions, not
+    /// one step at one rung: the anchor's two knobs (window origin, and the
+    /// cursor where the origin cannot move) are selected by where the window
+    /// happens to be, so a single-rung test would exercise one of them.
+    #[test]
+    fn a_zoom_step_keeps_the_same_geographic_point_under_the_cursor() {
+        for direction in [1i8, -1i8] {
+            let mut d = test_driver();
+            off_centre_world_view(&mut d);
+            if direction < 0 {
+                for _ in 0..(BAND_B_RUNG - GLOBE_RUNG) {
+                    d.apply(Action::Zoom(1));
+                }
+                assert_eq!(d.window.depth, BAND_B_RUNG, "walked to the far end");
+            }
+            for _ in 0..(BAND_B_RUNG - GLOBE_RUNG) {
+                let before_depth = d.window.depth;
+                let before = d.geographic_point_under_cursor();
+                d.apply(Action::Zoom(direction));
+                assert_ne!(d.window.depth, before_depth, "the rung must have moved");
+
+                let (virtual_w, virtual_h) = plate::virtual_dims(d.window.depth);
+                let landed = mercator::project(&d.frame, before.0, before.1, virtual_w, virtual_h)
+                    .expect("the point was on the chart a moment ago");
+                assert_eq!(
+                    landed,
+                    tile_under_cursor(&d),
+                    "rung {before_depth} -> {}: the point {before:?} left the cursor; \
+                     it now reads {:?}",
+                    d.window.depth,
+                    d.geographic_point_under_cursor()
+                );
+            }
+        }
+    }
+
+    /// **THE SECOND KNOB.** Anchoring normally moves the WINDOW ORIGIN. At
+    /// the chart's polar edge the origin has nowhere left to go — latitude
+    /// clamps where longitude wraps (spec §4.2) — so the guarantee is kept
+    /// by moving the CURSOR instead, and a test that only ever zoomed in
+    /// the middle of the chart would never reach that branch.
+    ///
+    /// Note which end of the ladder this needs. The brief's sketch reached
+    /// for [`GLOBE_RUNG`] on the theory that the whole planet fits the plate
+    /// there and the origin is pinned at `(0, 0)`. That was true before Task
+    /// 1: it is not true now, because the chart is the RUNG rather than the
+    /// plate, and `GLOBE_RUNG`'s chart is 363x362 tiles against a plate of
+    /// about 104x52. The origin is pinned where the CLAMP binds, which is
+    /// the chart's top and bottom rows at any rung.
+    #[test]
+    fn at_the_charts_polar_edge_the_cursor_moves_because_the_window_cannot() {
+        let mut d = test_driver();
+        d.resize(210, 56);
+        d.enter_map();
+        for _ in 0..4 {
+            d.apply(Action::Zoom(-1));
+        }
+        // Scroll north until the origin sticks, then step the cursor down
+        // off the top row so there is something for the anchor to spend.
+        d.apply(Action::CursorBy(0, -i16::MAX));
+        d.apply(Action::CursorBy(0, 12));
+        assert_eq!(
+            d.window.origin_row, 0,
+            "the premise: the window must be against the chart's own top edge"
+        );
+        assert_eq!(d.cursor.y, 12, "the premise: the cursor is off that edge");
+
+        let before = d.geographic_point_under_cursor();
+        d.apply(Action::Zoom(-1));
+
+        assert_eq!(
+            d.window.origin_row, 0,
+            "the clamp must still hold the origin against the edge"
+        );
+        assert_ne!(
+            d.cursor.y, 12,
+            "the origin could not move, so the cursor had to; it did not"
+        );
+        let (virtual_w, virtual_h) = plate::virtual_dims(d.window.depth);
+        let landed = mercator::project(&d.frame, before.0, before.1, virtual_w, virtual_h)
+            .expect("the point was on the chart a moment ago");
+        assert_eq!(
+            landed,
+            tile_under_cursor(&d),
+            "the point {before:?} left the cursor; it now reads {:?}",
+            d.geographic_point_under_cursor()
+        );
+    }
+
+    /// The strip names the rung. Part of "the map zooms based on criteria I
+    /// have not identified" is that nothing on screen ever said which rung
+    /// was showing, so a zoom that worked perfectly was still unreadable.
+    #[test]
+    fn the_strip_names_the_current_rung() {
+        let mut d = test_driver();
+        d.resize(210, 56);
+        enter_world_view(&mut d);
+        let coarse = d.strip_text().map(str::to_string).expect("a strip");
+        d.apply(Action::Zoom(1));
+        let finer = d.strip_text().map(str::to_string).expect("a strip");
+        assert_ne!(
+            coarse, finer,
+            "the strip did not change across a zoom step: {coarse:?}"
+        );
+        assert!(
+            coarse.contains(RUNG_OPENING) && finer.contains(RUNG_OPENING),
+            "both strips must carry the rung line, got {coarse:?} and {finer:?}"
+        );
+    }
+
+    /// The rung line is DERIVED, and it is different at every rung. A line
+    /// that named the rung but said the same thing at all seven of them
+    /// would satisfy the test above (which only compares two neighbours)
+    /// while telling the reader nothing about where the ladder's ends are.
+    #[test]
+    fn the_rung_line_is_distinct_at_every_rung_and_names_the_ladders_ends() {
+        let mut d = test_driver();
+        d.resize(210, 56);
+        enter_world_view(&mut d);
+        let mut seen: Vec<String> = Vec::new();
+        for expected in GLOBE_RUNG..=BAND_B_RUNG {
+            assert_eq!(d.window.depth, expected, "the walk lost its place");
+            let line = d.rung_caption();
+            assert!(
+                line.contains(&format!("{RUNG_OPENING} {expected} ")),
+                "the line must name the rung it is on, got {line:?}"
+            );
+            assert!(
+                line.contains(&format!("{GLOBE_RUNG}–{BAND_B_RUNG}")),
+                "the line must name the ladder's own ends, got {line:?}"
+            );
+            seen.push(line);
+            d.apply(Action::Zoom(1));
+        }
+        assert_eq!(d.window.depth, BAND_B_RUNG, "the walk walked the ladder");
+        let mut distinct = seen.clone();
+        distinct.sort();
+        distinct.dedup();
+        assert_eq!(
+            distinct.len(),
+            seen.len(),
+            "two rungs printed the same line: {seen:?}"
+        );
+    }
+
+    /// **THE MIRROR DISCLOSURE** — Task 1's carried note, that the
+    /// resolution disclosure is one-sided and the ladder now lives entirely
+    /// on the other side of 1:1, so the map disclosed nothing at all. Also
+    /// Task 6's concern 2: some hundred band-B characters share one
+    /// grid-level vertex and nothing said so.
+    ///
+    /// Asserted as MONOTONE, not against a magic number: the share must
+    /// rise at every rung, because every rung quadruples the tiles over an
+    /// unchanged field. `Driver::resolution_disclosure` — the coarse half —
+    /// must stay silent throughout, which is what makes this half the only
+    /// thing the reader has.
+    #[test]
+    fn the_rung_line_discloses_that_the_picture_outruns_the_terrain_field() {
+        let mut d = test_driver();
+        d.resize(210, 56);
+        enter_world_view(&mut d);
+        let mut shares: Vec<u64> = Vec::new();
+        for _ in GLOBE_RUNG..=BAND_B_RUNG {
+            let (vw, vh) = plate::virtual_dims(d.window.depth);
+            let said = d
+                .oversample_disclosure(vw, vh)
+                .expect("every shipped rung outruns the terrain field");
+            assert!(
+                d.rung_caption().contains(&said),
+                "the rung line must carry the disclosure it derives"
+            );
+            assert!(
+                d.resolution_disclosure().is_none(),
+                "the coarse-end disclosure must stay silent — this test's premise"
+            );
+            shares.push(
+                said.split_whitespace()
+                    .nth(1)
+                    .and_then(|n| n.parse::<u64>().ok())
+                    .unwrap_or_else(|| panic!("the disclosure must carry a count, got {said:?}")),
+            );
+            d.apply(Action::Zoom(1));
+        }
+        for pair in shares.windows(2) {
+            assert!(
+                pair[1] > pair[0],
+                "every finer rung must share one reading across MORE characters, got {shares:?}"
+            );
+        }
+    }
+
+    /// TASK 2'S CARRIED FINDING, closed by the anchor rather than by a
+    /// second centring rule: leaving band B for the coarse rungs used to
+    /// land at an arbitrary origin on an ~11,600-tile-wide chart. It now
+    /// lands where the reader was looking, and at `enter_map` that is the
+    /// observer.
+    #[test]
+    fn zooming_out_of_band_b_lands_where_the_reader_was_looking() {
+        let mut d = test_driver();
+        d.resize(210, 56);
+        d.enter_map();
+        assert!(d.at_walk_band_rung(), "sanity: the map opens on band B");
+        d.apply(Action::Zoom(-1));
+        assert_eq!(d.window.depth, BAND_B_RUNG - 1);
+
+        let (plate_w, plate_h) = d.active_plate_dims();
+        let (vw, vh) = plate::virtual_dims(d.window.depth);
+        let coord = d.session.position().coord();
+        let (row, col) = mercator::project(&d.frame, coord.latitude, coord.longitude, vw, vh)
+            .expect("seed 42's flagship is inside the clamp");
+        let within_rows =
+            row >= d.window.origin_row && row < d.window.origin_row + u32::from(plate_h);
+        let across = (i64::from(col) - i64::from(d.window.origin_col)).rem_euclid(i64::from(vw));
+        assert!(
+            within_rows && across < i64::from(plate_w),
+            "the observer fell outside the coarse rung's own window: observer at \
+             ({row}, {col}), window {:?}, plate {plate_w}x{plate_h}",
+            d.window
         );
     }
 }
