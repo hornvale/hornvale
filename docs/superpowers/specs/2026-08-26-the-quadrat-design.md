@@ -345,13 +345,27 @@ be taken:
   The table above was taken on what its author called a quiet box (load ~7).
   Task 5 re-measured the same uncached path on a genuinely idle box (88–92%
   idle) and got figures **1.18–1.48× lower at every rung**, with
-  **byte-identical `RoomMeshMemo` miss counts** — so the computation was
-  identical and the difference is entirely the machine. Rung 6 read 70.3 ms
-  (still over); **rung 7 read 47.1 ms — UNDER a bar this spec had recorded it
-  1.3× over.**
+  **byte-identical `RoomMeshMemo` miss counts**. Rung 6 read 70.3 ms (still
+  over); **rung 7 read 47.1 ms — UNDER a bar this spec had recorded it 1.3×
+  over.** A third sweep during review, at load 2.32, read **65.3 ms** at rung 6
+  with the same miss count — so three nominally identical measurements read
+  **65.3 / 70.3 / 91.5 ms, a 1.40× spread.**
 
-  So: two successive measurements, both taken in good faith on a box their
-  author believed was quiet, disagree by up to 1.48× — and an earlier revision
+  **What the identical miss counts do and do not license.** An earlier revision
+  of this paragraph said they showed "the computation was identical and the
+  difference is entirely the machine." That is an overreach, caught in review.
+  `plate.rs` *did* change between the first two sweeps — Task 4's layer split
+  made the memo caller-owned and turned `draw_with` into a two-call wrapper —
+  and the miss count, which counts `corner_weights_memo` calls, is **invariant
+  to that refactor** and so cannot detect a code change at all. Identical miss
+  counts license only *"the same ground and the same amount of memo-visible
+  work"*: they exclude the different-work explanation and leave both codegen and
+  machine live. The load observation (~7 vs 88–92% idle vs 2.32) is what
+  actually points at the machine, and it is separate evidence that the sentence
+  was not citing.
+
+  So: three successive measurements, each taken in good faith on a box its
+  author believed was quiet, disagree by up to 1.40× — and an earlier revision
   of this line ALSO stated a boundary interpolated across a rung it had not
   measured. Three attempts, three different answers. **The boundary is recorded
   as uncertain rather than resolved**, because this repo's own CLAUDE.md already
