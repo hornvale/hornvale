@@ -1293,7 +1293,25 @@ impl Driver {
         self.focus = Focus::Map;
         // BEFORE the strip resolves, not after: the strip names what the
         // cursor points at, and centring moves what that is.
-        self.centre_band_b_on_the_observer();
+        //
+        // **AT ANY RUNG, not band B's alone** (fix round 1, Important 2, and
+        // a defect this task created). Task 7 took the observer-centring off
+        // the zoom path, which was right — see
+        // [`Self::centre_band_b_on_the_observer`] — but "zoom out one, zoom
+        // in one" had been an ACCIDENTAL way home, and removing it left a
+        // coarse rung with no way home at all: the centring returned early
+        // off band B, so `map` + Enter did nothing, and
+        // [`Self::compose_perception_layer`] deliberately refuses off band B,
+        // so no marker is drawn and the reader cannot even see which
+        // direction home is. `.` is no help — it rolls the projection about
+        // the CURSOR, carrying you further off. The only route left was `+`
+        // to the ladder's ceiling and THEN `map`.
+        //
+        // Entering the map is an ARRIVAL, and arrival is what centres
+        // (the rule this task settled is "centre on arrival, anchor on
+        // gesture"). Nothing about that rule was ever specific to a rung;
+        // only the implementation was.
+        self.centre_on_the_observer();
         self.refresh_strip();
     }
 
@@ -1515,18 +1533,37 @@ impl Driver {
         }
         if self.window.depth != before {
             self.reclamp_window();
-            // **INSIDE THE GUARD, and the placement is the whole point.**
-            // Fix round 1, F1: what used to sit here sat OUTSIDE, so a
-            // SATURATING press at the ladder's ceiling acted anyway —
-            // measured jumping `origin_col` 21169 -> 2176, throwing away
-            // ~19,000 tiles of the player's own scroll on a keypress this
-            // method's own doc says changes nothing.
-            // `zoom_plus_at_the_ladders_ceiling_keeps_the_players_scroll`
-            // still pins it, and is NOT made redundant by the anchor: the
-            // anchor is a no-op at an unchanged rung (a tile centre
-            // re-projects to its own tile), so a regression that moved this
-            // block back outside would once again be invisible to every
-            // other test in this file.
+            // **INSIDE THE GUARD** — and read the next paragraph before
+            // trusting any claim about what enforces that.
+            //
+            // Fix round 1's F1 is why the guard exists: what used to sit
+            // here sat OUTSIDE, so a SATURATING press at the ladder's
+            // ceiling acted anyway — measured jumping `origin_col`
+            // 21169 -> 2176, throwing away ~19,000 tiles of the player's own
+            // scroll on a keypress this method's own doc says changes
+            // nothing. `zoom_plus_at_the_ladders_ceiling_keeps_the_players_
+            // scroll` pins THAT defect and still discriminates it: a
+            // re-introduced NON-idempotent action outside the guard fails it.
+            //
+            // **AN EARLIER REVISION OF THIS COMMENT CLAIMED THAT TEST ALSO
+            // COVERS THIS BLOCK'S POSITION. IT DOES NOT, AND THE CLAIM WAS
+            // DISPROVED BY APPLYING THE REGRESSION** (fix round 1, Important
+            // 1): moving this block outside the guard leaves all eleven
+            // relevant tests green. The comment's own premise defeated it —
+            // the anchor is IDEMPOTENT at an unchanged rung (a tile centre
+            // re-projects to its own tile, pinned by
+            // `the_anchor_is_a_no_op_at_an_unchanged_rung`), so a press that
+            // saturates cannot tell the two placements apart. The guard is
+            // therefore belt-and-braces TODAY and load-bearing the moment
+            // anything non-idempotent joins it; it stays for that reason,
+            // not because a test is watching it.
+            //
+            // The one state that CAN tell them apart is the one state where
+            // the anchor is not idempotent — a plate taller than the whole
+            // chart, where the row clamp bites — and
+            // `a_saturating_press_on_a_plate_taller_than_the_chart_moves_
+            // nothing` drives exactly that. It is a narrow lever, and it is
+            // the only one there is; saying so is the point.
             if let Some((lat, lon)) = anchor {
                 self.anchor_geographic_point(lat, lon);
             }
@@ -1809,10 +1846,21 @@ impl Driver {
     /// sit on a named feature.
     fn world_view_caption(&self, base: String) -> String {
         let mut text = base;
-        text.push_str(" — ");
-        text.push_str(&mercator::clamp_caption(&self.frame));
+        // THE RUNG LINE COMES FIRST, and the order is a measurement rather
+        // than a preference (fix round 1, Important 3). The strip MARQUEES:
+        // on the 80x24 floor the plate is 40 columns and a tick is 300 ms, so
+        // a clause's position in this string is a delay before the reader can
+        // read it. With the rung line emitted third it began at character 90
+        // — the word "rung" first scrolled into view after ~15 s and the
+        // clause was readable after ~44 s. That made the one disclosure that
+        // answers "criteria I have not identified" the SLOWEST thing on the
+        // strip to reach. `mercator::clamp_caption` is 69 characters, static,
+        // and says the same thing at every rung and every cursor position, so
+        // it is exactly what should be waited for instead.
         text.push_str(" — ");
         text.push_str(&self.rung_caption());
+        text.push_str(" — ");
+        text.push_str(&mercator::clamp_caption(&self.frame));
         if let Some(disclosure) = self.resolution_disclosure() {
             text.push_str(" — ");
             text.push_str(&disclosure);
@@ -2153,6 +2201,25 @@ impl Driver {
         if !self.at_walk_band_rung() {
             return;
         }
+        self.centre_on_the_observer();
+    }
+
+    /// Scroll the window so the observer's own facet sits at the middle of
+    /// the plate a redraw would draw, AT WHATEVER RUNG IS SHOWING — the
+    /// rung-gated [`Self::centre_band_b_on_the_observer`]'s body, lifted out
+    /// so [`Self::enter_map`] can reach it everywhere (fix round 1,
+    /// Important 2).
+    ///
+    /// The gate is the caller's, and the two callers want different ones,
+    /// which is why this carries neither. `enter_map` is an ARRIVAL at the
+    /// map and centres at every rung — it is the reader's signposted way
+    /// home, and off band B it is the ONLY one, because no observer marker
+    /// is drawn there. `resize` keeps the rung gate: a resize is not an
+    /// arrival, and re-centring a coarse rung the reader had deliberately
+    /// scrolled somewhere would be a map moving for a reason the reader did
+    /// not give — the founding complaint, in the shape this task exists to
+    /// remove.
+    fn centre_on_the_observer(&mut self) {
         let (plate_w, plate_h) = Self::world_plate_dims(self.term_w, self.term_h);
         let coord = self.session.position().coord();
         // Above the projection's polar clamp the observer is on no chart at
@@ -4704,6 +4771,26 @@ mod portolan_tests {
             coarse.contains(RUNG_OPENING) && finer.contains(RUNG_OPENING),
             "both strips must carry the rung line, got {coarse:?} and {finer:?}"
         );
+
+        // AND IT COMES BEFORE THE CLAMP CAPTION (fix round 1, Important 3).
+        // The strip marquees, so a clause's POSITION is a delay: with the
+        // rung line emitted after the 69-character clamp caption it began at
+        // character 90, first scrolling into view after ~15 s on the 80x24
+        // floor and readable after ~44 s. The clamp caption is static and
+        // says the same thing at every rung; the rung line is the one that
+        // answers the founding report. Order is therefore a property, not a
+        // formatting accident, and `contains` alone would not have held it.
+        let rung_at = coarse
+            .find(RUNG_OPENING)
+            .expect("the rung line is on the strip");
+        let clamp_at = coarse
+            .find("clamped at")
+            .expect("the clamp caption is on the strip");
+        assert!(
+            rung_at < clamp_at,
+            "the rung line must reach the reader before the static clamp caption, \
+             got {coarse:?}"
+        );
     }
 
     /// The rung line is DERIVED, and it is different at every rung. A line
@@ -4785,6 +4872,149 @@ mod portolan_tests {
                 "every finer rung must share one reading across MORE characters, got {shares:?}"
             );
         }
+    }
+
+    /// **THE CORRECTED CLAIM** (fix round 1, Important 1). The comment in
+    /// [`Driver::apply_zoom`] used to assert that
+    /// `zoom_plus_at_the_ladders_ceiling_keeps_the_players_scroll` covers
+    /// where the anchor block sits relative to the `depth != before` guard.
+    /// It does not — the reviewer moved the block outside and every relevant
+    /// test stayed green — and the reason is exactly the property the
+    /// comment cited in its own defence: **the anchor is idempotent at an
+    /// unchanged rung.** A tile centre re-projects to its own tile, so
+    /// re-anchoring what is already anchored moves nothing.
+    ///
+    /// So the claim that rotted is replaced by a test of the FACT the claim
+    /// rested on. That is the half a reader can act on: if this ever goes
+    /// red, the guard has become load-bearing and needs a test of its own.
+    ///
+    /// Driven at every rung and from an off-centre cursor, because
+    /// idempotence at the plate's middle is the trivial case.
+    #[test]
+    fn the_anchor_is_a_no_op_at_an_unchanged_rung() {
+        let mut d = test_driver();
+        off_centre_world_view(&mut d);
+        for _ in GLOBE_RUNG..=BAND_B_RUNG {
+            let window = d.window;
+            let cursor = d.cursor;
+            let (lat, lon) = d.geographic_point_under_cursor();
+            d.anchor_geographic_point(lat, lon);
+            assert_eq!(
+                (d.window, d.cursor),
+                (window, cursor),
+                "rung {}: re-anchoring an already-anchored point moved something",
+                d.window.depth
+            );
+            d.apply(Action::Zoom(1));
+        }
+    }
+
+    /// **THE ONE LEVER THAT DISCRIMINATES THE GUARD'S POSITION**, and it
+    /// exists only because it is the one state in which the anchor is NOT
+    /// idempotent: a plate TALLER than the whole chart. There
+    /// `reclamp_window`'s `max_origin_row` is 0, the cursor may legally sit
+    /// on a row the chart does not have, and re-anchoring pulls it back onto
+    /// the chart — a real move, on a press documented as changing nothing.
+    ///
+    /// Reachable rather than contrived: it needs a terminal wide enough for
+    /// a plate over 362 rows deep at [`GLOBE_RUNG`], which is Task 5's
+    /// carried M3 finding stated from the cursor's side. It is driven
+    /// through the shipped `Action` path, not by poking `depth`.
+    #[test]
+    fn a_saturating_press_on_a_plate_taller_than_the_chart_moves_nothing() {
+        let mut d = test_driver();
+        d.resize(1600, 400);
+        enter_world_view(&mut d);
+        let (plate_w, plate_h) = d.active_plate_dims();
+        let (_, virtual_h) = plate::virtual_dims(d.window.depth);
+        assert!(
+            plate_h > virtual_h as u16,
+            "the premise: this test needs a plate ({plate_w}x{plate_h}) taller than \
+             the whole chart ({virtual_h} rows)"
+        );
+
+        // Park the cursor on a row the chart does not have — legal, because
+        // the cursor clamps to the PLATE and the plate is the taller of the
+        // two.
+        d.apply(Action::CursorBy(0, i16::MAX));
+        assert!(
+            u32::from(d.cursor.y) >= virtual_h,
+            "the premise: the cursor must be off the chart's own bottom, at \
+             {} against {virtual_h} rows",
+            d.cursor.y
+        );
+
+        let window = d.window;
+        let cursor = d.cursor;
+        d.apply(Action::Zoom(-1)); // saturating: GLOBE_RUNG is the floor
+        assert_eq!(
+            (d.window, d.cursor),
+            (window, cursor),
+            "a press past the ladder's floor must move nothing — not the window, \
+             and not the cursor an out-of-guard anchor would have dragged onto \
+             the chart"
+        );
+    }
+
+    /// **THE WAY HOME, AT A COARSE RUNG** (fix round 1, Important 2 — a
+    /// defect this task created). Taking the observer-centring off the zoom
+    /// path was right, but "zoom out one, zoom in one" had been an
+    /// accidental home gesture, and its removal left a coarse rung with none
+    /// at all: the centring returned early off band B, and no observer
+    /// marker is drawn there either, so a reader who had scrolled away could
+    /// neither return nor see which way to go.
+    ///
+    /// Asserted with the premise moved first: scroll a long way, assert the
+    /// observer really is off the window, THEN type `map`.
+    #[test]
+    fn typing_map_at_a_coarse_rung_brings_the_reader_home() {
+        let mut d = test_driver();
+        d.resize(210, 56);
+        enter_world_view(&mut d);
+        assert!(!d.at_walk_band_rung(), "sanity: a coarse rung");
+
+        let observer_is_shown = |d: &Driver| {
+            let (plate_w, plate_h) = d.active_plate_dims();
+            let (vw, vh) = plate::virtual_dims(d.window.depth);
+            let coord = d.session.position().coord();
+            let Some((row, col)) =
+                mercator::project(&d.frame, coord.latitude, coord.longitude, vw, vh)
+            else {
+                return false;
+            };
+            let down = i64::from(row) - i64::from(d.window.origin_row);
+            let across =
+                (i64::from(col) - i64::from(d.window.origin_col)).rem_euclid(i64::from(vw));
+            down >= 0 && down < i64::from(plate_h) && across < i64::from(plate_w)
+        };
+
+        // Get lost, DETERMINISTICALLY. An earlier revision drove this with
+        // thirty `CursorBy(i16::MAX, 0)` sweeps, which is the honest gesture
+        // but not a controlled one: each sweep spills a huge remainder into
+        // `origin_col` and the chart is 363 tiles around, so thirty of them
+        // wrap to an arbitrary column — and on seed 42 they wrapped back
+        // ONTO the observer, failing the premise. How the reader got lost is
+        // not the property under test; that they are lost is.
+        let coord = d.session.position().coord();
+        let (plate_w, plate_h) = d.active_plate_dims();
+        d.centre_window_on(-coord.latitude, coord.longitude + 180.0, plate_w, plate_h)
+            .expect("the observer's antipode is inside the clamp when the observer is");
+        assert!(
+            !observer_is_shown(&d),
+            "the premise: the reader must actually be off the observer, or \
+             arriving home proves nothing"
+        );
+
+        d.enter_map(); // what a submitted `map` line does
+        assert!(
+            observer_is_shown(&d),
+            "typing `map` at a coarse rung must bring the reader home; window {:?}",
+            d.window
+        );
+        assert!(
+            !d.at_walk_band_rung(),
+            "and must NOT smuggle in a rung change while doing it"
+        );
     }
 
     /// TASK 2'S CARRIED FINDING, closed by the anchor rather than by a
