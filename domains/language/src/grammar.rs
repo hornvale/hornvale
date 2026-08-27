@@ -20,7 +20,7 @@
 //! thesis).
 
 use crate::clause::{
-    Adjunct, Argument, Clause, Polarity, Subject, Tense, Valence, predicate_valence,
+    Adjunct, Argument, Clause, Number, Person, Polarity, Subject, Tense, Valence, predicate_valence,
 };
 use crate::lexicon::{LexEntry, Lexicon};
 use crate::morphology::{
@@ -194,13 +194,51 @@ pub struct TongueGap {
 /// and the object slot resolved only `Concept`, so a tongue could say a
 /// bare numeral in an adjunct and not in the object — an accident of two
 /// clause structs drifting, never a design.
-fn resolve_argument(argument: &Argument, lexicon: &Lexicon) -> Result<String, TongueGap> {
+///
+/// An [`Argument::Pronoun`] resolves through `pronouns` — the tongue's own
+/// drawn inventory — at `number`, the clause's own. It does **not** go
+/// through the lexicon: a pronoun is a closed-class grammatical word every
+/// tongue draws, not vocabulary a people may or may not have been exposed
+/// to, so no exposure gap is possible on it.
+fn resolve_argument(
+    argument: &Argument,
+    lexicon: &Lexicon,
+    number: Number,
+    pronouns: &BTreeMap<&'static str, MorphForm>,
+) -> Result<String, TongueGap> {
     match argument {
         Argument::Concept(id) => Ok(resolve_concept_marked(id, lexicon)?.roman),
         Argument::Name(text) => Ok(text.clone()),
         Argument::Count(n) => Ok(n.to_string()),
         Argument::Quantity(x) => Ok(x.to_string()),
+        Argument::Pronoun(person) => Ok(tongue_pronoun(*person, number, pronouns)?),
     }
+}
+
+/// One pronoun's surface in this tongue: the drawn form for `person` crossed
+/// with `number`.
+///
+/// **The Scarf's blanket refusal is gone from here** (spec §4.6). Until this
+/// campaign, every pronoun — subject or object — returned a [`TongueGap`]
+/// unconditionally, because no tongue drew an inventory at all. Drawing one
+/// falsifies that antecedent, so the arm was deleted rather than left
+/// unreachable, and this lookup replaced it. What survives is narrower and
+/// still true: an inventory that does not carry the row cannot say the word.
+/// A bundle assembled by `windows/worldgen` always carries all six, so the
+/// refusal is reachable only from a caller that assembled a partial one.
+fn tongue_pronoun(
+    person: Person,
+    number: Number,
+    pronouns: &BTreeMap<&'static str, MorphForm>,
+) -> Result<String, TongueGap> {
+    let key = person.paradigm_key(number);
+    pronouns
+        .get(key)
+        .map(|form| form.roman.clone())
+        .ok_or_else(|| TongueGap {
+            concept: format!("pronoun/{key}"),
+            reason: format!("this tongue's pronoun inventory carries no {key} form"),
+        })
 }
 
 /// Resolve a concept id to a word mid-assembly, keeping its segments when
@@ -245,30 +283,39 @@ fn resolve_concept_marked(id: &str, lexicon: &Lexicon) -> Result<Marked, TongueG
 /// out of this task's scope, so `Count`/`Quantity` render as bare digits and
 /// `Name` passes through unresolved, exactly as `realize_common` does for
 /// the complement slot.
-fn realize_adjuncts(adjuncts: &[Adjunct], lexicon: &Lexicon) -> Result<Vec<String>, TongueGap> {
+fn realize_adjuncts(
+    adjuncts: &[Adjunct],
+    lexicon: &Lexicon,
+    number: Number,
+    pronouns: &BTreeMap<&'static str, MorphForm>,
+) -> Result<Vec<String>, TongueGap> {
     adjuncts
         .iter()
-        .map(|adjunct| resolve_argument(&adjunct.argument, lexicon))
+        .map(|adjunct| resolve_argument(&adjunct.argument, lexicon, number, pronouns))
         .collect()
 }
 
 /// The subject's surface text in a tongue.
 ///
-/// A [`Subject::Pronoun`] GAPS: no tongue draws a pronoun inventory, so
-/// there is nothing to realize. Before The Scarf the projection into
-/// `TongueClause` stringified Common's own English pronoun and handed it
-/// to a tongue, which is precisely the leak The Interlinear existed to
-/// close. The reason names the inventory rather than the people: a tongue
-/// with no drawn pronouns cannot RE-MENTION; its speakers are not thereby
-/// unable to refer.
-fn tongue_subject(subject: &Subject) -> Result<String, TongueGap> {
+/// A [`Subject::Pronoun`] resolves through `pronouns`, the tongue's own
+/// drawn inventory, at the clause's own `number`. It carried an
+/// unconditional [`TongueGap`] from The Scarf until The Inquest drew that
+/// inventory; see [`tongue_pronoun`] for what replaced it and why deleting
+/// the arm satisfies the rule rather than reversing it.
+///
+/// **No case is read here.** A tongue's inventory is person crossed with
+/// number and nothing else (spec §4.5), so the subject and object slots ask
+/// it the same question. Common's own nominative/accusative split lives in
+/// `clause.rs` and stops at Common's edge — the asymmetry decision 0286
+/// licenses.
+fn tongue_subject(
+    subject: &Subject,
+    number: Number,
+    pronouns: &BTreeMap<&'static str, MorphForm>,
+) -> Result<String, TongueGap> {
     match subject {
         Subject::Name(name) => Ok(name.clone()),
-        Subject::Pronoun(_) => Err(TongueGap {
-            concept: "subject/pronoun".to_string(),
-            reason: "this tongue draws no pronoun inventory, so it cannot re-mention a referent"
-                .to_string(),
-        }),
+        Subject::Pronoun(person) => tongue_pronoun(*person, number, pronouns),
     }
 }
 
@@ -334,17 +381,25 @@ fn tongue_verb(
 /// append each adjunct's own resolved word. Renders fully or gaps entirely
 /// (spec §4) — a gap on the object, on the VERB, or on any adjunct concept
 /// fails the whole clause.
+///
+/// **`pronouns` is the tongue's drawn personal-pronoun inventory** — the
+/// same `BTreeMap` [`TongueMorphology::pronouns`] holds, passed separately
+/// here because this function is the pre-morphology floor and a pronoun is
+/// a free word, so it belongs to the floor rather than to a marking layer.
+/// Pass an empty map for a call site that models no pronouns; a pronoun
+/// subject or object then gaps, which is true of that inventory.
 /// type-audit: bare-ok(prose)
 pub fn realize_tongue(
     clause: &Clause,
     grammar: &TongueGrammar,
     lexicon: &Lexicon,
+    pronouns: &BTreeMap<&'static str, MorphForm>,
 ) -> Result<String, TongueGap> {
     let valence = tongue_valence(&clause.predicate);
-    let subject = tongue_subject(&clause.subject)?;
-    let complement = resolve_argument(&clause.object, lexicon)?;
+    let subject = tongue_subject(&clause.subject, clause.number, pronouns)?;
+    let complement = resolve_argument(&clause.object, lexicon, clause.number, pronouns)?;
     let verb = tongue_verb(valence, clause, grammar, lexicon)?.map(|marked| marked.roman);
-    let adjunct_words = realize_adjuncts(&clause.adjuncts, lexicon)?;
+    let adjunct_words = realize_adjuncts(&clause.adjuncts, lexicon, clause.number, pronouns)?;
     let s = subject.as_str();
     let v = verb.as_deref();
     let o = complement.as_str();
@@ -548,7 +603,12 @@ pub fn realize_tongue_deep(
     orth: Orthography,
 ) -> Result<String, TongueGap> {
     let valence = tongue_valence(&clause.predicate);
-    let subject = tongue_subject(&clause.subject)?;
+    // The pronoun inventory rides on `morph` (spec §4.6): it is drawn by the
+    // same family-cognate machinery every other form in that bundle is, and
+    // `windows/worldgen`'s `tongue_morphology_of` fills it, so every
+    // production caller of this function has one.
+    let pronouns = &morph.pronouns;
+    let subject = tongue_subject(&clause.subject, clause.number, pronouns)?;
     // Spec §4.3: only a LEXICAL object may bear morphology. `object_concept`
     // is `Some` only for a `Concept` -- and it must not be conflated with
     // `Marked.segments == None`, which a `Compound` also has. A `Compound`'s
@@ -561,7 +621,7 @@ pub fn realize_tongue_deep(
         other => (
             Marked {
                 segments: None,
-                roman: resolve_argument(other, lexicon)?,
+                roman: resolve_argument(other, lexicon, clause.number, pronouns)?,
             },
             None,
         ),
@@ -575,7 +635,7 @@ pub fn realize_tongue_deep(
     // realizer would (the object's), keeping the shallow-identity guarantee
     // exact on the error path as well as the success path.
     let mut verb = tongue_verb(valence, clause, grammar, lexicon)?;
-    let adjunct_words = realize_adjuncts(&clause.adjuncts, lexicon)?;
+    let adjunct_words = realize_adjuncts(&clause.adjuncts, lexicon, clause.number, pronouns)?;
 
     // Noun-class marking: always on the complement noun — but only a lexical
     // object has a concept id to ask `noun_class_of` about (spec §4.3).
@@ -818,7 +878,7 @@ mod tests {
     // `cfg(test)`. `Tense` and `Polarity` are NOT among them any more --
     // The Inquest made the realizer read both, so they are imported at
     // module level via `use super::*`.
-    use crate::clause::{Definiteness, Number};
+    use crate::clause::{Definiteness, Number, PRONOUN_PARADIGM};
     use crate::etymology::CascadeRegime;
     use crate::lexicon::{ExposureClass, LexEntry, build_lexicon};
     use crate::naming::render_views;
@@ -826,6 +886,28 @@ mod tests {
     use crate::phonology::{Envelope, ExoticSeg, draw_phonology};
     use hornvale_kernel::Seed;
     use hornvale_kernel::world::IS_A;
+
+    /// An EMPTY pronoun inventory, for the many tests whose clauses have a
+    /// `Subject::Name` and no pronoun anywhere: what a tongue's pronouns are
+    /// cannot affect them, and passing nothing says so.
+    fn no_pronouns() -> BTreeMap<&'static str, MorphForm> {
+        BTreeMap::new()
+    }
+
+    /// A REAL six-row pronoun inventory, drawn the way `windows/worldgen`
+    /// draws one — `pronoun_forms` off a family label and a phonology — so a
+    /// test that realizes a pronoun realizes a form the world would actually
+    /// produce, never an authored placeholder.
+    fn drawn_pronouns() -> BTreeMap<&'static str, MorphForm> {
+        let ph = test_phonology();
+        crate::morphology::pronoun_forms(
+            &Seed(42),
+            "goblinoid",
+            &ph,
+            &crate::etymology::draw_cascade(&Seed(42), "goblin", &ph),
+            &ph,
+        )
+    }
 
     /// The manikin's articulation envelope — per `phonology.rs`'s own
     /// test-constructor pattern (`manikin_env`), reconstructed locally here
@@ -989,20 +1071,31 @@ mod tests {
         // or rendered at the tongue's own grain. This is what `realize_adjuncts`
         // has always done -- naming it is what lets the OBJECT slot do it too.
         assert_eq!(
-            resolve_argument(&Argument::Name("Nwamvam".to_string()), &lex).unwrap(),
+            resolve_argument(
+                &Argument::Name("Nwamvam".to_string()),
+                &lex,
+                Number::Sg,
+                &no_pronouns()
+            )
+            .unwrap(),
             "Nwamvam"
         );
         assert_eq!(
-            resolve_argument(&Argument::Count(8835), &lex).unwrap(),
+            resolve_argument(&Argument::Count(8835), &lex, Number::Sg, &no_pronouns()).unwrap(),
             "8835"
         );
         assert_eq!(
-            resolve_argument(&Argument::Quantity(1.5), &lex).unwrap(),
+            resolve_argument(&Argument::Quantity(1.5), &lex, Number::Sg, &no_pronouns()).unwrap(),
             "1.5"
         );
         // A concept with no entry gaps, and the gap names the concept.
-        let gap =
-            resolve_argument(&Argument::Concept("no-such-concept".to_string()), &lex).unwrap_err();
+        let gap = resolve_argument(
+            &Argument::Concept("no-such-concept".to_string()),
+            &lex,
+            Number::Sg,
+            &no_pronouns(),
+        )
+        .unwrap_err();
         assert_eq!(gap.concept, "no-such-concept");
         assert_eq!(gap.reason, "no entry in this lexicon");
     }
@@ -1035,7 +1128,7 @@ mod tests {
             articles: false,
         };
         assert_eq!(
-            realize_tongue(&clause, &svo, &lex).unwrap(),
+            realize_tongue(&clause, &svo, &lex, &no_pronouns()).unwrap(),
             format!("Vavako gha {word}.")
         );
         let sov = TongueGrammar {
@@ -1045,7 +1138,7 @@ mod tests {
             articles: false,
         };
         assert_eq!(
-            realize_tongue(&clause, &sov, &lex).unwrap(),
+            realize_tongue(&clause, &sov, &lex, &no_pronouns()).unwrap(),
             format!("Vavako {word} gha.")
         );
         let zero_copula = TongueGrammar {
@@ -1055,7 +1148,7 @@ mod tests {
             articles: false,
         };
         assert_eq!(
-            realize_tongue(&clause, &zero_copula, &lex).unwrap(),
+            realize_tongue(&clause, &zero_copula, &lex, &no_pronouns()).unwrap(),
             format!("Vavako {word}.")
         );
     }
@@ -1080,7 +1173,7 @@ mod tests {
             copula_segments: None,
             articles: false,
         };
-        let gap = realize_tongue(&clause, &g, &lex).unwrap_err();
+        let gap = realize_tongue(&clause, &g, &lex, &no_pronouns()).unwrap_err();
         assert_eq!(gap.concept, "planet");
         assert!(!gap.reason.is_empty(), "recountable reason required");
     }
@@ -1127,7 +1220,7 @@ mod tests {
             copula_segments: None,
             articles: false,
         };
-        let gap = realize_tongue(&clause, &g, &lex).unwrap_err();
+        let gap = realize_tongue(&clause, &g, &lex, &no_pronouns()).unwrap_err();
         assert_eq!(gap.concept, "blue");
         assert!(
             gap.reason
@@ -1172,7 +1265,8 @@ mod tests {
             copula_segments: None,
             articles: false,
         };
-        let out = realize_tongue(&clause, &g, &lex).expect("both concepts are known");
+        let out =
+            realize_tongue(&clause, &g, &lex, &no_pronouns()).expect("both concepts are known");
         assert!(
             out.contains(&star_word),
             "the tongue's own word for the star class must appear: {out}"
@@ -1209,7 +1303,7 @@ mod tests {
             copula_segments: None,
             articles: false,
         };
-        let gap = realize_tongue(&clause, &g, &lex).unwrap_err();
+        let gap = realize_tongue(&clause, &g, &lex, &no_pronouns()).unwrap_err();
         assert_eq!(gap.concept, "yellow-white-dwarf");
         assert!(!gap.reason.is_empty(), "recountable reason required");
     }
@@ -1251,6 +1345,7 @@ mod tests {
             articles: false,
         };
         let shallow = TongueMorphology {
+            pronouns: drawn_pronouns(),
             evidential_depth: MorphDepth::None,
             noun_class_depth: MorphDepth::None,
             class_position: ClassPosition::Suffix,
@@ -1259,7 +1354,7 @@ mod tests {
         };
         let noun_class_of = |_: &str| NounClass::Inanimate;
 
-        let floor = realize_tongue(&clause, &grammar, &lex).unwrap();
+        let floor = realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap();
         let deep = realize_tongue_deep(
             &clause,
             &grammar,
@@ -1348,7 +1443,7 @@ mod tests {
                 articles: false,
             };
             assert_eq!(
-                realize_tongue(&clause, &grammar, &lex).unwrap(),
+                realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap(),
                 expected,
                 "order {order:?} copula {copula:?}"
             );
@@ -1422,6 +1517,7 @@ mod tests {
         // surface exactly (the shallow-identity guarantee), even with real
         // marker forms sitting unused in the bundle.
         let shallow = TongueMorphology {
+            pronouns: drawn_pronouns(),
             evidential_depth: MorphDepth::None,
             noun_class_depth: MorphDepth::None,
             class_position: ClassPosition::Suffix,
@@ -1439,7 +1535,7 @@ mod tests {
                 Orthography::Digraph,
             )
             .unwrap(),
-            realize_tongue(&clause, &grammar, &lex).unwrap(),
+            realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap(),
             "MorphDepth::None on both axes must reproduce the C3 floor surface exactly"
         );
 
@@ -1447,6 +1543,7 @@ mod tests {
         // appears predicate-finally, suffixed onto the copula at the
         // SEGMENT level.
         let affix_evidential = TongueMorphology {
+            pronouns: drawn_pronouns(),
             evidential_depth: MorphDepth::Affix,
             noun_class_depth: MorphDepth::None,
             class_position: ClassPosition::Suffix,
@@ -1483,6 +1580,7 @@ mod tests {
         // 3. Particle evidential -> a free word immediately after the
         // predicate (the copula, here).
         let particle_evidential = TongueMorphology {
+            pronouns: drawn_pronouns(),
             evidential_depth: MorphDepth::Particle,
             noun_class_depth: MorphDepth::None,
             class_position: ClassPosition::Suffix,
@@ -1514,6 +1612,7 @@ mod tests {
         // 4. class Affix + Prefix -> the marker precedes the complement
         // noun (joined at the segment level).
         let class_affix_prefix = TongueMorphology {
+            pronouns: drawn_pronouns(),
             evidential_depth: MorphDepth::None,
             noun_class_depth: MorphDepth::Affix,
             class_position: ClassPosition::Prefix,
@@ -1621,6 +1720,7 @@ mod tests {
     /// empty so a surface difference can only come from the paradigm.
     fn unmarked_morphology() -> TongueMorphology {
         TongueMorphology {
+            pronouns: drawn_pronouns(),
             evidential_depth: MorphDepth::None,
             noun_class_depth: MorphDepth::None,
             class_position: ClassPosition::Suffix,
@@ -2155,6 +2255,7 @@ mod tests {
             },
         );
         let morph = TongueMorphology {
+            pronouns: drawn_pronouns(),
             evidential_depth: MorphDepth::Particle,
             noun_class_depth: MorphDepth::None,
             class_position: ClassPosition::Suffix,
@@ -2191,13 +2292,33 @@ mod tests {
         }
     }
 
+    /// A pronoun subject REALIZES in a tongue, and does it with the tongue's
+    /// own drawn word.
+    ///
+    /// **This test replaces one that asserted the exact opposite.** The Scarf
+    /// wrote `a_tongue_gaps_on_a_pronoun_subject_and_names_the_missing_inventory`,
+    /// which required `realize_tongue` to refuse a `Subject::Pronoun` and to
+    /// say in its reason that the tongue drew no pronoun inventory. That was
+    /// true when written and green every day until The Inquest, whose Task 7
+    /// drew the inventory. The old test was replaced rather than deleted
+    /// because the two halves of what it pinned did not both expire: the
+    /// refusal did, and the "no English may cross into a tongue" half did
+    /// not, so that half is re-asserted below against a realized surface
+    /// instead of against a gap.
+    ///
+    /// **The rule the old test enforced is not reversed** (spec §4.6). It
+    /// said a tongue gaps *because* no tongue draws a pronoun inventory;
+    /// drawing one falsifies the antecedent, so the rule stays true and
+    /// simply stops firing. The unconditional gap arm was deleted from
+    /// `tongue_subject`, never left unreachable.
     #[test]
-    fn a_tongue_gaps_on_a_pronoun_subject_and_names_the_missing_inventory() {
+    fn a_tongue_realizes_a_pronoun_subject_from_its_own_drawn_inventory() {
         let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
         let grammar = svo_with_copula();
+        let pronouns = drawn_pronouns();
         let clause = Clause {
             predicate: IS_A.to_string(),
-            subject: Subject::Pronoun("it"),
+            subject: Subject::Pronoun(Person::Third),
             object: Argument::Concept("goblin-kind".to_string()),
             number: Number::Sg,
             definiteness: Definiteness::Def,
@@ -2206,20 +2327,145 @@ mod tests {
             polarity: Polarity::Pos,
             adjuncts: Vec::new(),
         };
-        let gap = realize_tongue(&clause, &grammar, &lex).unwrap_err();
-        // Spec 3.3: the reason must name the INVENTORY hole. A tongue with no
-        // drawn pronouns cannot re-mention; that is not the same claim as "this
-        // people cannot refer to things twice", and the reason must not imply it.
+        let line = realize_tongue(&clause, &grammar, &lex, &pronouns).expect(
+            "a tongue that draws a pronoun inventory realizes a pronoun subject (spec 4.6)",
+        );
+        let word = pronouns["3sg"].roman.clone();
         assert!(
-            gap.reason.contains("pronoun"),
-            "the gap must name pronouns, got: {}",
+            line.starts_with(&format!("{word} ")),
+            "SVO puts the drawn 3sg pronoun in the subject slot: {line}"
+        );
+        // The half of the old test that did NOT expire: no English may cross
+        // into a tongue. Before The Scarf, the projection stringified
+        // Common's own pronoun and handed it over; the drawn word must not be
+        // any of Common's.
+        for (form, _, _, _) in PRONOUN_PARADIGM {
+            assert_ne!(
+                word, *form,
+                "a tongue's pronoun must be drawn, never Common's English word"
+            );
+        }
+        // And the NUMBER is the clause's: the same person at Pl draws the
+        // other row, so the number is demonstrably read rather than defaulted.
+        let plural = Clause {
+            number: Number::Pl,
+            ..clause.clone()
+        };
+        let plural_line =
+            realize_tongue(&plural, &grammar, &lex, &pronouns).expect("3pl realizes too");
+        assert!(
+            plural_line.starts_with(&format!("{} ", pronouns["3pl"].roman)),
+            "the clause's number selects the paradigm row: {plural_line}"
+        );
+        assert_ne!(
+            pronouns["3sg"].roman, pronouns["3pl"].roman,
+            "this seed's 3sg and 3pl must differ, or the assertion above is vacuous"
+        );
+    }
+
+    /// The DEEP realizer reads the inventory off the morphology bundle, not
+    /// from a parameter of its own.
+    ///
+    /// This is the wiring that makes the feature real for production callers
+    /// rather than test-only: `windows/worldgen::tongue_morphology_of` fills
+    /// `TongueMorphology::pronouns`, and every window that speaks a tongue
+    /// assembles its bundle there, so no caller has to learn a new argument
+    /// for a pronoun to work. Asserted DIFFERENTIALLY — the same clause
+    /// against two bundles whose only difference is the inventory — so the
+    /// field is demonstrably read.
+    #[test]
+    fn the_deep_realizer_takes_its_pronouns_from_the_morphology_bundle() {
+        let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
+        let grammar = svo_with_copula();
+        let noun_class_of = |_: &str| NounClass::Inanimate;
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Concept("goblin-kind".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let render = |morph: &TongueMorphology| {
+            realize_tongue_deep(
+                &clause,
+                &grammar,
+                morph,
+                None,
+                &noun_class_of,
+                &lex,
+                Orthography::Digraph,
+            )
+        };
+        let morph = unmarked_morphology();
+        let line = render(&morph).expect("a bundle with an inventory realizes");
+        assert!(line.starts_with(&format!("{} ", morph.pronouns["3sg"].roman)));
+
+        // Same clause, same tongue, EMPTY inventory: the surface cannot be
+        // produced, so the field is what supplied it.
+        let empty = TongueMorphology {
+            pronouns: no_pronouns(),
+            ..morph.clone()
+        };
+        assert_eq!(render(&empty).unwrap_err().concept, "pronoun/3sg");
+    }
+
+    /// An inventory that does not carry the row still refuses, and says which
+    /// row. This is the narrower claim that SURVIVED The Scarf's blanket
+    /// refusal (spec §4.6): "no tongue draws pronouns" is false now, but "this
+    /// inventory has no 3sg" is a true thing to say about an empty bundle.
+    #[test]
+    fn an_empty_pronoun_inventory_still_refuses_and_names_the_row() {
+        let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
+        let grammar = svo_with_copula();
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Concept("goblin-kind".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let gap = realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap_err();
+        assert!(
+            gap.reason.contains("3sg"),
+            "the reason names the missing row, got: {}",
             gap.reason
         );
-        // And no English may cross: the Common pronoun must not appear in any
-        // tongue-side output. Before The Scarf, tongue_view stringified it.
-        assert_ne!(
-            gap.concept, "it",
-            "the English pronoun must not be reported as a tongue concept"
+        assert_eq!(gap.concept, "pronoun/3sg");
+    }
+
+    /// A pronoun OBJECT realizes in a tongue — `Argument::Pronoun`, the
+    /// variant this campaign added because the transitive frame's object slot
+    /// needed it. The corpus line is *"I did not know them"*, so the object
+    /// slot is the one that carries the third person there.
+    #[test]
+    fn a_tongue_realizes_a_pronoun_object() {
+        let lex = tiny_lexicon_with(&[(EAT, ExposureClass::Steeped)]);
+        let grammar = svo_with_copula();
+        let pronouns = drawn_pronouns();
+        let clause = Clause {
+            predicate: EAT.to_string(),
+            subject: Subject::Name("Vebe".to_string()),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let line = realize_tongue(&clause, &grammar, &lex, &pronouns)
+            .expect("a pronoun object realizes (spec 4.6)");
+        assert!(
+            line.ends_with(&format!("{}.", pronouns["3sg"].roman)),
+            "SVO puts the drawn 3sg pronoun last: {line}"
         );
     }
 
@@ -2241,8 +2487,8 @@ mod tests {
         // Impossible before The Scarf: tongue_view panicked on any object that
         // was not a Concept, while realize_adjuncts rendered exactly this shape
         // in the adjunct slot. The two slots now agree.
-        let out =
-            realize_tongue(&clause, &grammar, &lex).expect("a numeral needs no lexicon entry");
+        let out = realize_tongue(&clause, &grammar, &lex, &no_pronouns())
+            .expect("a numeral needs no lexicon entry");
         assert!(out.contains("8835"), "got: {out}");
     }
 
@@ -2270,8 +2516,8 @@ mod tests {
             ..base.clone()
         };
         assert_eq!(
-            realize_tongue(&base, &grammar, &lex).unwrap(),
-            realize_tongue(&plural_indef, &grammar, &lex).unwrap(),
+            realize_tongue(&base, &grammar, &lex, &no_pronouns()).unwrap(),
+            realize_tongue(&plural_indef, &grammar, &lex, &no_pronouns()).unwrap(),
             "no tongue reads number or definiteness yet: paradigm.rs's drawn \
              number_depth is the next campaign's work, not a gap in this one"
         );
@@ -2296,7 +2542,7 @@ mod tests {
             polarity: Polarity::Pos,
             adjuncts: Vec::new(),
         };
-        let _ = realize_tongue(&clause, &grammar, &lex);
+        let _ = realize_tongue(&clause, &grammar, &lex, &no_pronouns());
     }
 
     #[test]
@@ -2339,6 +2585,7 @@ mod tests {
         );
 
         let affixing = TongueMorphology {
+            pronouns: drawn_pronouns(),
             evidential_depth: MorphDepth::Affix,
             noun_class_depth: MorphDepth::Affix,
             class_position: ClassPosition::Suffix,
@@ -2458,7 +2705,7 @@ mod tests {
                     copula_segments: None,
                     articles: false,
                 };
-                let out = realize_tongue(&clause, &grammar, &lex).unwrap();
+                let out = realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap();
                 assert_eq!(out, expected, "order {order:?} copula {copula:?}");
                 assert!(
                     !out.contains("gha"),
@@ -2478,7 +2725,13 @@ mod tests {
     fn a_tongue_gaps_when_it_has_no_word_for_the_verb() {
         let lex = tiny_lexicon_with(&[("bread", ExposureClass::Steeped)]);
         let grammar = svo_with_copula();
-        let gap = realize_tongue(&transitive_clause(Tense::Present), &grammar, &lex).unwrap_err();
+        let gap = realize_tongue(
+            &transitive_clause(Tense::Present),
+            &grammar,
+            &lex,
+            &no_pronouns(),
+        )
+        .unwrap_err();
         assert_eq!(gap.concept, EAT);
         assert_eq!(gap.reason, "no entry in this lexicon");
     }
@@ -2603,7 +2856,7 @@ mod tests {
                     .unwrap();
                     assert_eq!(
                         deep,
-                        realize_tongue(&clause, &grammar, &lex).unwrap(),
+                        realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap(),
                         "shallow identity, order {order:?} tense {tense:?}"
                     );
                 }

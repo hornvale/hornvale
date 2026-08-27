@@ -1499,12 +1499,22 @@ pub fn tongue_morphology_of(
         hornvale_language::morph_depths(&world.seed, species);
     let (evidential, class) =
         hornvale_language::morph_forms(&world.seed, fam_label, &proto_ph, &cascade, &ph);
+    // The Inquest: the personal-pronoun inventory, drawn off the SAME
+    // (family, proto phonology, cascade, daughter phonology) tuple the
+    // evidential and class markers are, so a family's pronouns are cognate
+    // exactly the way the rest of its inherited vocabulary is. This is what
+    // makes the pronoun feature real for production callers rather than
+    // test-only: `realize_tongue_deep` reads the inventory off this bundle,
+    // and every window that speaks a tongue assembles it here.
+    let pronouns =
+        hornvale_language::pronoun_forms(&world.seed, fam_label, &proto_ph, &cascade, &ph);
     Ok(hornvale_language::TongueMorphology {
         evidential_depth,
         noun_class_depth,
         class_position,
         evidential,
         class,
+        pronouns,
     })
 }
 

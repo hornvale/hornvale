@@ -63,15 +63,82 @@ pub enum Definiteness {
     Def,
 }
 
-/// A clause's subject: a resolved name/noun, or a fixed pronoun for
-/// re-mention (e.g. a second sentence about the same referent).
-/// type-audit: bare-ok(identifier-text: Name.0), bare-ok(prose: Pronoun.0)
+/// Grammatical person: who the referent is relative to the speech act.
+///
+/// **Person only — number is not repeated here.** A pronoun's number is the
+/// clause's own [`Clause::number`], whose doc already states that it is the
+/// subject's number *and* "the number its object slot realizes at". Carrying
+/// a second number on the pronoun would let a caller state two contradictory
+/// numbers for one referent, and nothing in the world could adjudicate
+/// between them. [`Person::paradigm_key`] crosses this with that number to
+/// name a personal-pronoun paradigm row.
+///
+/// **No gender** (The Inquest, spec §4.5): nothing in the ledger assigns
+/// grammatical gender, so a gendered third person would be authored rather
+/// than derived.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Person {
+    /// The speaker.
+    First,
+    /// The addressee.
+    Second,
+    /// Neither speaker nor addressee.
+    Third,
+}
+
+impl Person {
+    /// Name the personal-pronoun paradigm row this person occupies at
+    /// `number` — `"1sg"`, `"2sg"`, `"3sg"`, `"1pl"`, `"2pl"`, `"3pl"`.
+    ///
+    /// **These are exactly the keys
+    /// [`crate::pronoun_forms`](../morphology/fn.pronoun_forms.html) returns**,
+    /// which is a contract between two modules and therefore has a two-way
+    /// agreement test on the drawing side
+    /// (`the_pronoun_paradigm_keys_are_exactly_person_crossed_with_number`):
+    /// neither side may grow a row the other does not have.
+    ///
+    /// type-audit: bare-ok(identifier-text: return)
+    #[must_use]
+    pub fn paradigm_key(self, number: Number) -> &'static str {
+        match (self, number) {
+            (Person::First, Number::Sg) => "1sg",
+            (Person::Second, Number::Sg) => "2sg",
+            (Person::Third, Number::Sg) => "3sg",
+            (Person::First, Number::Pl) => "1pl",
+            (Person::Second, Number::Pl) => "2pl",
+            (Person::Third, Number::Pl) => "3pl",
+        }
+    }
+
+    /// Every person, in the order [`PRONOUN_PARADIGM`] lists them.
+    pub const ALL: [Person; 3] = [Person::First, Person::Second, Person::Third];
+}
+
+/// A clause's subject: a resolved name/noun, or a pronoun for re-mention
+/// (e.g. a second sentence about the same referent).
+///
+/// **`Pronoun` held an English literal until The Inquest** — `"it"` and
+/// `"its"` were the only two values any caller passed, which put a
+/// pre-rendered English word inside a language-neutral struct, the exact
+/// defect The Interlinear removed from `modifiers: Vec<String>`. A tongue
+/// could not realize it and gapped (The Scarf), because there was nothing
+/// language-neutral in it to realize. It now carries a [`Person`], which
+/// crossed with [`Clause::number`] names a paradigm row every tongue draws.
+///
+/// **`"its"` did not survive the retype, and nothing was lost.** It was a
+/// possessive — a different grammatical function that no person/number row
+/// names — and it was never *produced*: it appeared only in the two
+/// surface-text-to-`Subject` maps on the parse side, inherited from a plan
+/// whose day-length fragment embedded the word before adjuncts existed. A
+/// bare `"its"` now binds as a [`Subject::Name`], which re-realizes to the
+/// identical surface, so the round-trip law is untouched.
+/// type-audit: bare-ok(identifier-text: Name.0)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Subject {
     /// An already-resolved proper name or noun phrase.
     Name(String),
-    /// A fixed pronoun lexeme (e.g. `"it"`, `"its"`).
-    Pronoun(&'static str),
+    /// A personal pronoun, at the clause's own number.
+    Pronoun(Person),
 }
 
 /// What an adjunct's role is bound to. Deliberately small: these are the
@@ -89,6 +156,16 @@ pub enum Argument {
     Count(u64),
     /// A continuous quantity, rendered at the language's grain.
     Quantity(f64),
+    /// A personal pronoun, at the clause's own number.
+    ///
+    /// **Added because a role needed it, which is this enum's own stated
+    /// rule** (see the doc above: "A new variant is added when a role needs
+    /// it, never speculatively"). The role is the object slot of a
+    /// transitive clause — *"I did not know them"* — which did not exist
+    /// before this campaign gave the clause a transitive frame, and which no
+    /// other variant can carry: a pronoun is neither a concept the
+    /// vocabulary resolves nor a name that passes through unresolved.
+    Pronoun(Person),
 }
 
 /// One role binding on a clause: a **registered predicate** bound to an
@@ -278,6 +355,113 @@ fn copula_surface(tense: Tense, number: Number, polarity: Polarity) -> &'static 
         .find(|(_, t, n, p)| *t == tense && *n == number && *p == polarity)
         .map(|(form, _, _, _)| *form)
         .expect("the copula paradigm is total over tense x number x polarity")
+}
+
+/// Which slot a pronoun stands in, and therefore which case Common inflects
+/// it for.
+///
+/// **Case belongs to the SLOT, not to the clause.** A realizer already knows
+/// whether it is filling the subject or the object, so nothing has to be
+/// stated twice and the language-neutral [`Clause`] acquires no case axis —
+/// which matters because the drawn tongue inventory has none either (a
+/// tongue's pronouns are person crossed with number, spec §4.5). This is
+/// decision 0286's shape one level down: Common surfaces a distinction no
+/// tongue does, and that asymmetry is the law rather than a gap.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PronounCase {
+    /// The subject slot.
+    Nominative,
+    /// The object slot.
+    Accusative,
+}
+
+/// One row of [`PRONOUN_PARADIGM`]: a Common surface form paired with the
+/// three features it realizes forward and (for a nominative) recovers
+/// backward.
+/// type-audit: bare-ok(prose: PronounRow)
+pub type PronounRow = (&'static str, Person, Number, PronounCase);
+
+/// Common's personal-pronoun paradigm: `{First, Second, Third} × {Sg, Pl} ×
+/// {Nominative, Accusative}` → surface form. **One table, read in both
+/// directions**, exactly as [`COPULA_PARADIGM`] is — [`realize_common`] looks
+/// a row up by its features and [`nominative_person`] reads a person back off
+/// a subject's surface text, so a realizable pronoun cannot be
+/// unrecognizable.
+///
+/// **The nominative forms are pairwise distinguishing on person** (`I`/`we` →
+/// first, `you` → second, `they` → third), which is what lets the parse
+/// direction recover a [`Person`] from the surface alone and take the number
+/// from the clause it is already recovering. That is not an accident of
+/// English; it is the property the round trip needs, and
+/// `nominative_forms_determine_person` pins it against the table.
+///
+/// **Two roughnesses, both deliberate and both asserted by tests** so they
+/// arrive as visible facts rather than surprises, the same posture
+/// [`VERB_PARADIGM`]'s `eated` takes:
+///
+/// 1. **Common has no person agreement.** [`COPULA_PARADIGM`] and
+///    [`VERB_PARADIGM`] are keyed by number only, so a first-person subject
+///    in the positive present surfaces third-person agreement (*"I knows
+///    them"*). Adding a person axis to both tables is a real widening that
+///    also changes the parse-side search, and it buys nothing the corpus
+///    needs: the campaign's own line is *"I did not know them"*, and English
+///    negation is periphrastic, so the number-blind row is already right.
+/// 2. **Third-person singular is `they`/`them`, not `it`.** Spec §4.5 fixes
+///    this: nothing in the ledger assigns gender or animacy to a clause, so
+///    Common has one third-person singular and it is the animate-neutral
+///    one. The cost is that an inanimate re-mention reads *"they is a
+///    planet"* — a genuinely awkward line, and exactly the "controlled
+///    register with slightly awkward phrasing" §4.5 names as the accepted
+///    trade. It reaches no committed artifact: no volume the book renders
+///    ever re-mentions a subject.
+///
+/// type-audit: bare-ok(prose: PRONOUN_PARADIGM)
+pub const PRONOUN_PARADIGM: &[PronounRow] = &[
+    ("I", Person::First, Number::Sg, PronounCase::Nominative),
+    ("me", Person::First, Number::Sg, PronounCase::Accusative),
+    ("you", Person::Second, Number::Sg, PronounCase::Nominative),
+    ("you", Person::Second, Number::Sg, PronounCase::Accusative),
+    ("they", Person::Third, Number::Sg, PronounCase::Nominative),
+    ("them", Person::Third, Number::Sg, PronounCase::Accusative),
+    ("we", Person::First, Number::Pl, PronounCase::Nominative),
+    ("us", Person::First, Number::Pl, PronounCase::Accusative),
+    ("you", Person::Second, Number::Pl, PronounCase::Nominative),
+    ("you", Person::Second, Number::Pl, PronounCase::Accusative),
+    ("they", Person::Third, Number::Pl, PronounCase::Nominative),
+    ("them", Person::Third, Number::Pl, PronounCase::Accusative),
+];
+
+/// The pronoun slot's Common surface for one person, number and case — the
+/// forward read of [`PRONOUN_PARADIGM`]. Panics only if the table is missing
+/// a row, which the `pronoun_paradigm_is_total` test makes impossible.
+/// type-audit: bare-ok(prose: return)
+#[must_use]
+pub fn common_pronoun(person: Person, number: Number, case: PronounCase) -> &'static str {
+    PRONOUN_PARADIGM
+        .iter()
+        .find(|(_, pe, n, c)| *pe == person && *n == number && *c == case)
+        .map(|(form, _, _, _)| *form)
+        .expect("the pronoun paradigm is total over person x number x case")
+}
+
+/// The [`Person`] a subject's surface text names, or `None` when the text is
+/// not one of Common's nominative pronouns — the backward read of
+/// [`PRONOUN_PARADIGM`], and the one place that inversion is stated. Both
+/// parse sites in this workspace (this crate's [`parse_common`] and
+/// `windows/book`'s re-realization of a `ParsedLine`) call it rather than
+/// keeping their own copy of the mapping.
+///
+/// **Case-sensitive, by contract.** A capitalized `"It"`/`"They"` is not a
+/// pronoun here, because Common's realizer never capitalizes a
+/// sentence-initial pronoun; `pronoun_subjects_are_lowercase_by_contract`
+/// is the canary that reddens if a construction ever starts to.
+/// type-audit: bare-ok(prose: text)
+#[must_use]
+pub fn nominative_person(text: &str) -> Option<Person> {
+    PRONOUN_PARADIGM
+        .iter()
+        .find(|(form, _, _, case)| *case == PronounCase::Nominative && *form == text)
+        .map(|(_, person, _, _)| *person)
 }
 
 /// One row of [`VERB_PARADIGM`]: a prefix and a suffix that wrap a verb
@@ -586,13 +770,20 @@ pub fn realize_common(spec: &Clause, vocab: &CommonVocabulary) -> String {
         Argument::Name(text) => text.clone(),
         Argument::Count(n) => cardinal(*n),
         Argument::Quantity(x) => quantity(*x),
+        // The object slot, so the ACCUSATIVE — case is the slot's business,
+        // never the clause's (see `PronounCase`).
+        Argument::Pronoun(person) => {
+            common_pronoun(*person, spec.number, PronounCase::Accusative).to_string()
+        }
     };
     let mut out = String::new();
     for part in construction.parts {
         match part {
             Part::Subject => out.push_str(match &spec.subject {
                 Subject::Name(name) => name.as_str(),
-                Subject::Pronoun(pronoun) => pronoun,
+                Subject::Pronoun(person) => {
+                    common_pronoun(*person, spec.number, PronounCase::Nominative)
+                }
             }),
             Part::Copula => {
                 out.push_str(copula_surface(spec.tense, spec.number, spec.polarity));
@@ -606,6 +797,13 @@ pub fn realize_common(spec: &Clause, vocab: &CommonVocabulary) -> String {
                 spec.number,
                 spec.polarity,
             )),
+            // A PRONOUN fills the determiner slot itself — English has no
+            // "*the them", and no `Definiteness` a caller states can change
+            // that, so the slot is skipped rather than given a fourth row.
+            // The condition is on the object's SHAPE, not on the feature,
+            // because definiteness is a property of the clause and this is a
+            // property of what the object slot holds.
+            Part::Determiner if matches!(spec.object, Argument::Pronoun(_)) => {}
             Part::Determiner => match (spec.definiteness, spec.number) {
                 (Definiteness::Def, _) => out.push_str("the "),
                 (Definiteness::Indef, Number::Sg) => {
@@ -919,10 +1117,15 @@ pub fn parse_common_with_tail(
     // The needle was `" {form} "`, so the remainder starts one space past the
     // form, which itself started one space past `at`.
     let (subject_text, rest) = (&body[..at], &body[at + form.len() + 2..]);
-    let subject = match subject_text {
-        "it" => Subject::Pronoun("it"),
-        "its" => Subject::Pronoun("its"),
-        name => Subject::Name(name.to_string()),
+    // A nominative pronoun binds to its PERSON; the number is the one the
+    // verb group is already recovering, so nothing is read twice. `"its"`
+    // used to bind here as a pronoun and no longer does — it is a
+    // possessive, which no person/number row names, and no realizer ever
+    // produced it (see `Subject`'s doc). It now falls through to `Name`,
+    // which re-realizes to the identical surface.
+    let subject = match nominative_person(subject_text) {
+        Some(person) => Subject::Pronoun(person),
+        None => Subject::Name(subject_text.to_string()),
     };
     // Determiner.
     let (definiteness, after_det) = if let Some(r) = rest.strip_prefix("the ") {
@@ -1669,20 +1872,150 @@ mod tests {
 
     #[test]
     fn pronoun_subjects_are_lowercase_by_contract() {
-        // The re-mention path emits lowercase "it"; parse binds it as a
-        // Pronoun. A capitalized "It" is NOT recognized as a pronoun — if a
-        // future construction capitalizes sentence-initial pronouns, this
+        // The re-mention path emits a lowercase nominative; parse binds it as
+        // a Pronoun. A capitalized "They" is NOT recognized as a pronoun — if
+        // a future construction capitalizes sentence-initial pronouns, this
         // canary reddens and the parse-side binding must learn case together
         // with it (never separately).
         let c = ctx(&["planet"]);
         assert_eq!(
-            parse_common("it is a planet.", &c).unwrap().subject,
-            Subject::Pronoun("it")
+            parse_common("they is a planet.", &c).unwrap().subject,
+            Subject::Pronoun(Person::Third)
         );
         assert_eq!(
-            parse_common("It is a planet.", &c).unwrap().subject,
-            Subject::Name("It".into())
+            parse_common("They is a planet.", &c).unwrap().subject,
+            Subject::Name("They".into())
         );
+        // "its" was a Pronoun until The Inquest and is a Name now: it is a
+        // POSSESSIVE, which no person/number row names, and no realizer ever
+        // produced it. Pinned so the retype's one behaviour change is a
+        // stated fact rather than a silent one.
+        assert_eq!(
+            parse_common("its is a planet.", &c).unwrap().subject,
+            Subject::Name("its".into())
+        );
+    }
+
+    /// The pronoun paradigm is total: every person x number x case has
+    /// exactly one row, so `common_pronoun`'s `expect` is unreachable.
+    #[test]
+    fn pronoun_paradigm_is_total() {
+        for person in Person::ALL {
+            for number in [Number::Sg, Number::Pl] {
+                for case in [PronounCase::Nominative, PronounCase::Accusative] {
+                    let matches: Vec<_> = PRONOUN_PARADIGM
+                        .iter()
+                        .filter(|(_, pe, n, c)| *pe == person && *n == number && *c == case)
+                        .collect();
+                    assert_eq!(
+                        matches.len(),
+                        1,
+                        "exactly one row for {person:?}/{number:?}/{case:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    /// The property the round trip depends on: a nominative form names one
+    /// person and no other, so [`nominative_person`] can invert the subject
+    /// slot from the surface alone and take the number from the clause it is
+    /// already recovering. A future Common that spelled first and third
+    /// person alike in the nominative would redden this BEFORE the round-trip
+    /// property failed with a confusing message.
+    #[test]
+    fn nominative_forms_determine_person() {
+        for (form, person, _, case) in PRONOUN_PARADIGM {
+            if *case != PronounCase::Nominative {
+                continue;
+            }
+            assert_eq!(
+                nominative_person(form),
+                Some(*person),
+                "{form:?} must invert to {person:?}"
+            );
+        }
+        assert_eq!(nominative_person("Vebe"), None);
+        // An ACCUSATIVE-only form is not a subject: "them" never appears in
+        // the subject slot, so it must not invert.
+        assert_eq!(nominative_person("them"), None);
+    }
+
+    /// The campaign's own corpus line, in Common: *"I didn't know her"*
+    /// realizes as *"I did not know them"* — a first-person subject pronoun
+    /// and a third-person object pronoun in one clause, which is the pair
+    /// `Argument::Pronoun` was added for.
+    ///
+    /// **Case comes from the SLOT.** The same `Person::First` renders `I` in
+    /// the subject and would render `me` in the object; nothing in the clause
+    /// states a case.
+    #[test]
+    fn common_realizes_a_pronoun_subject_and_a_pronoun_object() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Pronoun(Person::First),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Neg,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(realize_common(&clause, &vocab), "I did not kill them.");
+        // The object slot takes the accusative of whatever person it holds.
+        let reflexive = Clause {
+            object: Argument::Pronoun(Person::First),
+            ..clause.clone()
+        };
+        assert_eq!(realize_common(&reflexive, &vocab), "I did not kill me.");
+        // And the clause's number moves BOTH slots at once, which is what
+        // `Clause::number`'s doc says it does.
+        let plural = Clause {
+            number: Number::Pl,
+            ..clause.clone()
+        };
+        assert_eq!(realize_common(&plural, &vocab), "we did not kill them.");
+    }
+
+    /// The two roughnesses [`PRONOUN_PARADIGM`]'s doc names, asserted so they
+    /// are visible facts rather than surprises — the same posture
+    /// `a_transitive_verb_inflects_for_tense_number_and_polarity` takes with
+    /// `eated`. An irregular fix to either arrives as a red test rather than
+    /// a silent correction.
+    #[test]
+    fn common_has_no_person_agreement_and_one_third_person_singular() {
+        let vocab = CommonVocabulary::default();
+        // 1. No person agreement: the verb paradigm is keyed by NUMBER, so a
+        //    first-person subject takes the third-person singular present.
+        let eats = Clause {
+            predicate: EAT.to_string(),
+            subject: Subject::Pronoun(Person::First),
+            object: Argument::Concept("bread".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(realize_common(&eats, &vocab), "I eats the bread.");
+        // 2. One third person singular, and it is the animate-neutral one
+        //    (spec 4.5: nothing in the ledger assigns gender or animacy to a
+        //    clause). An inanimate re-mention therefore reads awkwardly.
+        let remention = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Concept("planet".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(realize_common(&remention, &vocab), "they is a planet.");
     }
 
     // --- The round-trip property: parse_common(realize_common(s), ctx_from(s))
@@ -1792,7 +2125,10 @@ mod tests {
             Subject::Name("Aoth".into()),
             Subject::Name("MacTavish".into()), // mixed-case: interior capital
             Subject::Name("The Vavako".into()), // multi-word
-            Subject::Pronoun("it"),
+            // Third person: its number is the clause's own, so this one
+            // subject covers "they"/"they" across the Sg and Pl legs of the
+            // enumeration below rather than needing two entries.
+            Subject::Pronoun(Person::Third),
         ];
         // Concept IDS, not words — the realizer resolves each through the
         // context's vocabulary, so `yellow-white-dwarf` also exercises the

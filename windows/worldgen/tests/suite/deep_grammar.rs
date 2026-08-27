@@ -143,6 +143,57 @@ fn morphology_is_deterministic() {
     );
 }
 
+/// The composition root fills the pronoun inventory, so a pronoun realizes
+/// for a PRODUCTION caller and not only in `domains/language`'s own tests.
+///
+/// The Inquest's Task 7 drew `pronoun_forms`; without this assembler every
+/// window would still hand `realize_tongue_deep` a bundle with an empty
+/// inventory, the pronoun would gap exactly as it did before the campaign,
+/// and the crate-local tests would pass anyway. That is the hazard this test
+/// exists to close: it asserts the six rows arrive on a REAL world, for every
+/// placed people.
+/// claim: structural(seed: [1,2,3]) — the assembler fills every row for every
+/// placed people; not a rate, so three seeds is the whole claim
+#[test]
+fn every_placed_people_draws_a_full_pronoun_inventory() {
+    let expected: Vec<&str> = hornvale_language::Person::ALL
+        .into_iter()
+        .flat_map(|person| {
+            [hornvale_language::Number::Sg, hornvale_language::Number::Pl]
+                .into_iter()
+                .map(move |number| person.paradigm_key(number))
+        })
+        .collect();
+    let mut seen_any = false;
+    for seed in 1..=3u64 {
+        let w = generated(seed);
+        for (kind, _village) in placed_peoples(&w) {
+            let morph = tongue_morphology_of(&w, kind)
+                .unwrap_or_else(|e| panic!("seed {seed} {kind}: {e}"));
+            for key in &expected {
+                let form = morph
+                    .pronouns
+                    .get(key)
+                    .unwrap_or_else(|| panic!("seed {seed} {kind}: no {key} pronoun"));
+                assert!(
+                    !form.roman.is_empty(),
+                    "seed {seed} {kind}: {key} drew an empty pronoun"
+                );
+            }
+            assert_eq!(
+                morph.pronouns.len(),
+                expected.len(),
+                "seed {seed} {kind}: the inventory carries exactly the drawn rows"
+            );
+            seen_any = true;
+        }
+    }
+    assert!(
+        seen_any,
+        "at least one people must place across seeds 1..=3"
+    );
+}
+
 /// claim: readout — prints the drawn depth triple per seed x species,
 /// morphology depth landscape over seeds 1..=3
 #[test]

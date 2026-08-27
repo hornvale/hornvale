@@ -183,6 +183,20 @@ pub struct TongueMorphology {
     pub evidential: BTreeMap<&'static str, MorphForm>,
     /// The family's noun-class marker forms, keyed `"animate"`/`"inanimate"`.
     pub class: BTreeMap<&'static str, MorphForm>,
+    /// The family's personal-pronoun forms, keyed `"1sg"` … `"3pl"` — the
+    /// keys [`crate::clause::Person::paradigm_key`] names and
+    /// [`pronoun_forms`] returns.
+    ///
+    /// **No depth field beside it, unlike the three axes above.** A pronoun
+    /// is a free word by definition, so there is nothing for a
+    /// `MorphDepth` to decide; [`pronoun_forms`]' own doc records why no
+    /// such axis is drawn.
+    ///
+    /// **This is the field that retired The Scarf's pronoun gap.** A tongue
+    /// gapped on a pronoun subject *because no tongue drew a pronoun
+    /// inventory*; this is the inventory, so the antecedent is false and the
+    /// rule stops firing without being reversed (spec §4.6).
+    pub pronouns: BTreeMap<&'static str, MorphForm>,
 }
 
 /// Preregistered evidential-depth weights over `[None, Particle, Affix]`
@@ -579,6 +593,45 @@ mod tests {
                 .any(|(value, form_a)| evid_b[value].roman != form_a.roman),
             "the two daughters' romans must differ where the cascades differ"
         );
+    }
+
+    /// The two-way agreement between the DRAWING side (`PRONOUN_VALUES`, and
+    /// therefore [`pronoun_forms`]' keys) and the CLAUSE side
+    /// ([`crate::clause::Person::paradigm_key`]).
+    ///
+    /// **Both directions, deliberately.** A one-sided check is an echo: if
+    /// only "every key a clause asks for exists" were asserted, the drawing
+    /// side could grow a seventh row nothing can ever ask for, and the
+    /// cheapest repair for a failure would be to delete the assertion. If
+    /// only the converse were asserted, the clause side could name a row no
+    /// tongue draws and every realization of it would gap. The two sets must
+    /// be equal, so the test says so.
+    #[test]
+    fn the_pronoun_paradigm_keys_are_exactly_person_crossed_with_number() {
+        let ph = test_phonology();
+        let cascade = crate::etymology::draw_cascade(&Seed(7), "goblin", &ph);
+        let drawn = pronoun_forms(&Seed(7), "goblinoid", &ph, &cascade, &ph);
+
+        let asked: std::collections::BTreeSet<&'static str> = crate::clause::Person::ALL
+            .into_iter()
+            .flat_map(|person| {
+                [crate::clause::Number::Sg, crate::clause::Number::Pl]
+                    .into_iter()
+                    .map(move |number| person.paradigm_key(number))
+            })
+            .collect();
+        let offered: std::collections::BTreeSet<&'static str> = drawn.keys().copied().collect();
+        assert_eq!(
+            asked, offered,
+            "every row a clause can ask for must be drawn, and nothing may be \
+             drawn that no clause can ask for"
+        );
+        // And the constant the drawing side reads is the same set, so the
+        // agreement is against the declared inventory rather than only
+        // against one seed's output.
+        let declared: std::collections::BTreeSet<&'static str> =
+            PRONOUN_VALUES.into_iter().collect();
+        assert_eq!(asked, declared);
     }
 
     #[test]

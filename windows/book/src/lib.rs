@@ -18,8 +18,9 @@ use hornvale_kernel::{EntityId, Value, World};
 use hornvale_language::CommonVocabulary;
 use hornvale_language::account::{Account, AccountEntry, AccountParams, Disposition, Stance};
 use hornvale_language::clause::{
-    Adjunct, Argument, Clause, Definiteness, Number, ParseContext, ParseError, Polarity, Subject,
-    Tense, cardinal, common_role_surface, parse_common_with_tail, quantity, realize_common,
+    Adjunct, Argument, Clause, Definiteness, Number, ParseContext, ParseError, Person, Polarity,
+    PronounCase, Subject, Tense, cardinal, common_pronoun, common_role_surface, nominative_person,
+    parse_common_with_tail, quantity, realize_common,
 };
 use hornvale_language::numeracy::{NumeracyRung, render_quantity_at_rung};
 use hornvale_language::schemas::Manner;
@@ -206,7 +207,11 @@ fn subject_for(entity: EntityId, name: String, seen: &mut BTreeSet<EntityId>) ->
     if seen.insert(entity) {
         Subject::Name(name)
     } else {
-        Subject::Pronoun("it")
+        // Third person; the NUMBER comes from the clause this subject lands
+        // in, which is what stops a plural people re-mentioning as a
+        // singular pronoun. It held the English literal `"it"` until The
+        // Inquest, which could not agree with anything.
+        Subject::Pronoun(Person::Third)
     }
 }
 
@@ -1010,7 +1015,7 @@ fn subject_for_text(key: &str, display: String, seen: &mut BTreeSet<String>) -> 
     if seen.insert(key.to_string()) {
         Subject::Name(display)
     } else {
-        Subject::Pronoun("it")
+        Subject::Pronoun(Person::Third)
     }
 }
 
@@ -2301,7 +2306,11 @@ pub fn parse_line(line: &str, ctx: &ParseContext) -> Result<ParsedLine, LineErro
 
     let subject = match &clause.subject {
         Subject::Name(name) => name.clone(),
-        Subject::Pronoun(p) => (*p).to_string(),
+        // The SUBJECT slot, so the nominative — the same form the realizer
+        // emitted, which is what keeps `rerender` byte-exact.
+        Subject::Pronoun(person) => {
+            common_pronoun(*person, clause.number, PronounCase::Nominative).to_string()
+        }
     };
     // The clause layer already recovered the singular concept id: it matched
     // the text against each candidate id's realized surface, so the plural
@@ -2345,10 +2354,13 @@ pub fn rerender(parsed: &ParsedLine, vocab: &CommonVocabulary) -> String {
             adjuncts.push(adjunct);
         }
     }
-    let subject = match parsed.subject.as_str() {
-        "it" => Subject::Pronoun("it"),
-        "its" => Subject::Pronoun("its"),
-        other => Subject::Name(other.to_string()),
+    // One statement of the inverse, in `domains/language` — this window kept
+    // its own copy of the mapping until The Inquest, and that copy is exactly
+    // where the stale `"its"` arm survived a rework that had already removed
+    // the fragment producing it.
+    let subject = match nominative_person(&parsed.subject) {
+        Some(person) => Subject::Pronoun(person),
+        None => Subject::Name(parsed.subject.clone()),
     };
     realize_common(
         &Clause {
@@ -3246,7 +3258,7 @@ mod tests {
         );
         assert_eq!(
             subject_for(entity, "Vebe".to_string(), &mut named),
-            Subject::Pronoun("it")
+            Subject::Pronoun(Person::Third)
         );
     }
 

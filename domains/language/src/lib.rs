@@ -92,7 +92,8 @@ pub use account::{
 };
 pub use clause::{
     Adjunct, AdjunctPosition, Argument, COPULA_PARADIGM, Clause, CopulaRow, Definiteness, Number,
-    ParseContext, ParseError, Polarity, Tense, VERB_PARADIGM, Valence, VerbRow, parse_common,
+    PRONOUN_PARADIGM, ParseContext, ParseError, Person, Polarity, PronounCase, PronounRow, Subject,
+    Tense, VERB_PARADIGM, Valence, VerbRow, common_pronoun, nominative_person, parse_common,
     parse_common_with_tail, predicate_valence, realize_common,
 };
 pub use common_vocab::{CommonVocabulary, MissingCommonWords};

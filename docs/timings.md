@@ -3051,3 +3051,9 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T23:43:44Z | rebaseline | 60.932 | 254.536 | 12.577 | 4.38 | 0 | 2d7aee66d | campaign/the-inquest | MacBookPro | 10 |
 | 2026-08-26T23:56:45Z | gate-commit | 37.795 | 69.530 | 21.507 | 2.41 | 0 | 2d7aee66d | campaign/the-inquest | MacBookPro | 10 |
 | 2026-08-26T23:57:41Z | gate-commit | 29.904 | 53.967 | 13.143 | 2.24 | 0 | 2d7aee66d | campaign/the-inquest | MacBookPro | 10 |
+| 2026-08-27T00:27:14Z | rebaseline | 54.450 | 255.660 | 12.811 | 4.93 | 0 | 158ec5b3b | campaign/the-inquest | MacBookPro | 10 |
+| 2026-08-27T00:27:33Z | gate-commit | 2.261 | 2.167 | 0.077 | 0.99 | 0 | 158ec5b3b | campaign/the-inquest | MacBookPro | 10 |
+| 2026-08-27T00:27:42Z | gate-commit | 3.734 | 3.806 | 0.359 | 1.12 | 0 | 158ec5b3b | campaign/the-inquest | MacBookPro | 10 |
+| 2026-08-27T00:28:04Z | gate-commit | 15.543 | 31.841 | 9.473 | 2.66 | 0 | 158ec5b3b | campaign/the-inquest | MacBookPro | 10 |
+| 2026-08-27T00:28:32Z | gate-commit | 18.394 | 26.140 | 9.662 | 1.95 | 0 | 158ec5b3b | campaign/the-inquest | MacBookPro | 10 |
+| 2026-08-27T00:29:19Z | gate-commit | 37.059 | 130.556 | 32.071 | 4.39 | 0 | 158ec5b3b | campaign/the-inquest | MacBookPro | 10 |
