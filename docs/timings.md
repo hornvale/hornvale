@@ -217,18 +217,25 @@ taken within one window.**
 3 measured 1.8x OVER the 50 ms bar, redraws its terrain in **0.053 ms** once
 its tiles exist. **The number a PLAYER experiences is larger and is the one to
 quote: a keystroke is `compose` PLUS `draw_feature_layer`**, which is not
-cached and runs every frame — **0.054 ms at session start** (nothing
-discovered) and **0.120 ms worst case** (every cave discovered), i.e. **920x
-and 420x under the bar**, not the 893x a terrain-only figure suggests. The
+cached and runs every frame — **0.0530 + 0.0013 = 0.0543 ms at session start**
+(nothing discovered) and **0.0530 + 0.0663 = 0.1193 ms worst case** (every cave
+discovered) — **921x** and **419x** under the bar, not the 893x a terrain-only
+figure suggests. The components are shown because the ratios are taken on the
+unrounded sums: rounding to three decimals first and dividing gives 926x and
+420x, and an earlier revision quoted a headline (0.120) that matched neither. The
 worst single keystroke overall is the one that uncovers a whole tile column:
 3.614 ms of terrain plus the feature layer, still ~13x under.
 
 **COLD is the one figure over the bar, and it is 1.14x its own window's
 uncached draw** (73.767 against 64.669 at rung 6) — the design, not a
 regression. A 200x200 plate covers 49 WHOLE tiles, 224x224 = 50,176 chart
-squares for 40,000 drawn ones: **25.4% more squares for 14.1% more time**, the
+squares for 40,000 drawn ones — the count derived from `TILE_EDGE`, `49 * 32^2
+= 50,176`, never restated — so **25.4% more squares for 14.1% more time**, the
 difference being the session-long `RoomMeshMemo` the cache owns. At rung 12 the
-same accounting reads 56 tiles, 63.8% more squares for 44.3% more time.
+same accounting reads 56 tiles, `56 * 32^2 = 57,344`: **43.4% more squares for
+44.3% more time**. (An earlier revision said 63.8% there, which is the figure
+for 64 tiles — the `tiles resident` count AFTER the scroll — not the 56 the
+cold draw actually paid for, in the same row.)
 
 **Cold is paid once per `(frame, rung)` — and `(frame, ...)` is the half that
 is easy to misread.** The rung-6 chart is 12x12 = 144 tiles in total, so a
@@ -246,12 +253,24 @@ identical quantity — rung 6, 200x200, `win`, uncached — now exist:
 | ms | when / by whom | load |
 |---|---|---|
 | 91.541 | Task 3's committed table | ~7 |
-| 70.289 | Task 5's first sweep | 1-min avg still decaying from this session's own test runs; 92% idle instantaneously |
+| 70.289 | Task 5's first sweep | **not logged** — see below |
 | 65.3 | fix round 1's independent reproduction | 2.32 |
 | 65.638 | this sweep | 1.43 |
 
-A **1.40x spread**, with the two genuinely-quiet measurements agreeing to
-0.5%.
+A **1.40x spread**, with the two lowest measurements agreeing to 0.5%.
+
+**ROW 2's LOAD IS NOT RECORDED, AND THIS TABLE NOW SAYS SO RATHER THAN
+RECONSTRUCTING ONE.** That sweep logged only INSTANTANEOUS idle (88-92%) and
+never a load average, so there is no figure to set beside the other three rows.
+The plausible account is that mutation suites had been running in this worktree
+minutes earlier and the one-minute average had not decayed even though
+instantaneous idle had already recovered — but that is a RECONSTRUCTION, not a
+measurement, and a previous revision of this table asserted it in the cell as
+though it were one. **The lesson holds whether or not the account is right: log
+the LOAD AVERAGE, not instantaneous idle.** Idle is a snapshot a just-finished
+job has already vacated; the average is the quantity the other three rows are
+comparable on. Had it been recorded, row 2 would be settled instead of argued,
+and this paragraph would not exist.
 
 **The miss counts do NOT say "the same code", and an earlier revision of this
 paragraph claimed they did.** They are identical at all five rungs (29,662 /
