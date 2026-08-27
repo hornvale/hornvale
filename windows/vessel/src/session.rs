@@ -8280,4 +8280,91 @@ mod tests {
             "the felt-state trio ask() draws from moves with the swap too"
         );
     }
+
+    /// The Coercion, spec §7 H2 — "the death terminator is unreachable": no
+    /// sequence of currently-shipped verbs produces a [`POSSESSION_ENDED`]
+    /// fact whose reason is `"died"`. Spec §6: no live death state exists
+    /// anywhere in `windows/vessel` today, and that predicate's own doc
+    /// comment (`:341`) only NAMES `"died"` as the reason once mortality
+    /// exists — grep-verified, the literal string `"died"` appears nowhere
+    /// else under `windows/vessel/src`, in no match arm, so nothing could
+    /// construct that fact today regardless of what a player types.
+    ///
+    /// **THIS ASSERTION IS DESIGNED TO TURN RED WHEN MORTALITY SHIPS** —
+    /// that is the point of writing it now rather than after: the day a
+    /// death arm lands, this is the tripwire saying spec §6 wants updating,
+    /// not a stale test to delete.
+    ///
+    /// The stated denominator (spec §7's own requirement): the full shipped
+    /// verb roster this file itself classifies is the SUM of three groups —
+    /// [`IN_CHARACTER_VERBS`] (18), [`SESSION_CONTROL`] (3:
+    /// `release`/`quit`/`exit`), and the nine out-of-character-ONLY operator
+    /// instruments `handle_ooc`'s Group A dispatches
+    /// (`why`/`npcs`/`help`/`eyes`/`whoami`/`provoke`/`soothe`/`possess`/
+    /// `unpossess`) — **30** total. Group B's six `!`-twins
+    /// (`!map`/`!examine`/`!needs`/`!wait`/`!look`/`!knows`) are deliberately
+    /// NOT counted a second time — [`HELP`]'s own text calls them "the
+    /// out-of-character halves" of verbs already among the 18: the same verb
+    /// under the other mood, not a distinct one.
+    ///
+    /// Each verb runs against its OWN fresh, freshly-possessed session
+    /// (`!possess` first, so a possession is genuinely open for every verb
+    /// to act against — including `!unpossess`, the only verb anywhere in
+    /// the tree that can commit a [`POSSESSION_ENDED`] fact at all) rather
+    /// than one long sequence through a single session: `release`/`quit`
+    /// return `Turn::Released`, and a single shared session would let those
+    /// two short-circuit — or at least complicate the provenance of — every
+    /// verb tried after them in roster order. No verb is given a crafted
+    /// argument to make it succeed: since no dispatch arm anywhere
+    /// constructs the string `"died"` regardless of input, a bare
+    /// invocation already covers the whole reachable surface this
+    /// hypothesis measures.
+    #[test]
+    fn h2_no_shipped_verb_can_end_a_possession_by_death() {
+        let world = seam_world();
+        let operator_only: [&str; 9] = [
+            "why",
+            "npcs",
+            "help",
+            "eyes",
+            "whoami",
+            "provoke",
+            "soothe",
+            "possess",
+            "unpossess",
+        ];
+        let roster: Vec<&str> = IN_CHARACTER_VERBS
+            .into_iter()
+            .chain(SESSION_CONTROL)
+            .chain(operator_only)
+            .collect();
+        assert_eq!(
+            roster.len(),
+            30,
+            "the stated denominator: 18 IN_CHARACTER_VERBS + 3 SESSION_CONTROL \
+             + 9 Group-A operator instruments the OOC namespace alone dispatches"
+        );
+
+        for verb in &roster {
+            let (mut s, _) =
+                Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+            let _ = s.handle("!possess");
+            let line = if operator_only.contains(verb) {
+                format!("!{verb}")
+            } else {
+                (*verb).to_string()
+            };
+            let _ = s.handle(&line);
+            let died = s.ledger.iter().any(|f| {
+                f.predicate == POSSESSION_ENDED && f.object == Value::Text("died".to_string())
+            });
+            assert!(
+                !died,
+                "`{line}` produced a possession-ended fact with reason \"died\" \
+                 — mortality does not exist yet (spec §6); if this fires, the \
+                 death arm is already correct and shipped, and spec §6 wants \
+                 updating, not this test deleted"
+            );
+        }
+    }
 }

@@ -27,6 +27,8 @@ mod ask_verb;
 mod body_fields;
 #[path = "suite/body_mass.rs"]
 mod body_mass;
+#[path = "suite/coercion_calibration.rs"]
+mod coercion_calibration;
 #[path = "suite/controller_swap.rs"]
 mod controller_swap;
 #[path = "suite/course_properties.rs"]
