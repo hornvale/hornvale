@@ -3111,3 +3111,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T14:29:19Z | rebaseline | 97.975 | 261.490 | 13.058 | 2.80 | 0 | b4154630b | campaign/the-coercion | MacBookPro | 10 |
 | 2026-08-27T14:31:49Z | gate-commit | 136.917 | 786.058 | 95.018 | 6.44 | 0 | b4154630b | campaign/the-coercion | MacBookPro | 10 |
 | 2026-08-27T14:49:29Z | gate-commit | 20.756 | 49.632 | 12.549 | 3.00 | 0 | ad4644d58 | campaign/the-coercion | MacBookPro | 10 |
+| 2026-08-27T15:22:02Z | sluice:artifacts | 118.518 | 1026.661 | 43.140 | 9.03 | 0 | 980362a94 |  | lefford | 40 |
