@@ -235,9 +235,28 @@ Three changes:
    it, so harmless). The residual risk is a picture narrower than the pane
    sitting beside prose — which is the actual case today, and which the rule
    handles.
-3. **The client requests the `terrain` lens**, which `surrounds_ascii.rs`
-   guarantees is escape-free. The client applies its own ink from the wire's
-   `color` field and has no use for SGR.
+3. **No SGR reaches the prose channel.** The client applies its own ink from the
+   wire's `color` field and has no use for escape sequences.
+
+   **MECHANISM AMENDED 2026-08-27 — the guarantee is unchanged, the means are
+   not.** This item originally read "the client requests the `terrain` lens".
+   Task 8's implementer measured that **unimplementable**, four ways:
+   `Session::map` picks the lens itself (`windows/vessel/src/session.rs:4475`)
+   and there is no per-call lens parameter and no lens argument in the grammar;
+   `PossessOpts.eyes = Off` does yield terrain but drops `scene.sight` and
+   reddens the existing sight-caption test; rewriting `map` to `!map` bypasses
+   `refused_by_the_body`, since `map` is in `IN_CHARACTER_VERBS`; and the driver
+   cannot re-render into the snapshot at all, because the pane reads a JSON
+   string and `serde_json` is a dev-only dependency of `clients/game/bin`.
+
+   So the guarantee is delivered by **`strip_sgr` in `entry.rs`, applied per line
+   BEFORE the width is measured** — the ordering is load-bearing, because an
+   escaped row costs ~19 bytes per glyph and measuring first would clip a
+   *fitting* picture down to its opening escape bytes.
+
+   **The proper follow-up is a per-call chart lens on the sim side** — additive,
+   moves no byte, but it touches 17 exhaustive `PossessOpts` constructions, which
+   is why it is a follow-up and not this campaign's business.
 
 ### 4.3 Pane width
 
