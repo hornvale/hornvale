@@ -5521,4 +5521,133 @@ mod prose_pane_tests {
         );
         assert_ne!(d.focus(), Focus::Map, "an argument form moved the plate");
     }
+
+    /// A REAL seed-42 walk-band chart, made tinted.
+    ///
+    /// The escape defect is latent, and latent is why it survived a whole
+    /// campaign of probes: seed 42 at turn 0 draws a band of water, marks
+    /// and the observer, so the `colour` lens reports "0 tinted, 31
+    /// withheld" and emits no escape at all. `p.ground && p.color.is_some()`
+    /// is what the lens tints, so a colour alone is not enough — the facet
+    /// must also DRAW its ground. So this takes the session's own chart and
+    /// makes every facet but the observer's a coloured piece of dry land:
+    /// no marks (a mark substitutes `#`/`&` and withholds the tint), a
+    /// water index outside the legend (which `terrain_glyph` resolves to
+    /// `dry-land`, the one arm that draws the impedance glyph), and a
+    /// colour.
+    ///
+    /// Everything else — the projection, the observer, the facet count — is
+    /// the sim's own, so the picture this renders is a picture the world
+    /// really can produce.
+    fn tinted_chart_fixture() -> hornvale_scene::SurroundsScene {
+        let d = test_driver();
+        let mut scene = d.session.purview(0).expect("seed 42 charts its walk band");
+        let dry = scene.water_legend.len() as u32;
+        for cell in &mut scene.cells {
+            if cell.state == "here" {
+                continue;
+            }
+            cell.marks.clear();
+            cell.water = dry;
+            cell.color = Some([120, 140, 60]);
+        }
+        scene
+    }
+
+    /// What this client's prose channel would show for `scene`: the sim's
+    /// own chart, drawn through the lens the session picks for a possession
+    /// with eyes, laid out by the prose pane and read back off the grid.
+    ///
+    /// Rendered through the REAL pane rather than asserted on the renderer's
+    /// output, because the renderer is not where the defect lives — the
+    /// prose channel is. The grid stores one `char` per column and carries
+    /// no colour, so the question worth asking is what actually reached it.
+    fn render_for_client(scene: &hornvale_scene::SurroundsScene) -> String {
+        let prose = hornvale_scene::render_surrounds_ascii(scene, "colour", &[]);
+        let narration = hornvale_game_core::Narration {
+            prose,
+            nouns: Vec::new(),
+        };
+        let (w, h) = (120u16, 60u16);
+        let mut grid = hornvale_game_core::Grid::new(w, h);
+        hornvale_game_core::entry::draw(
+            &narration,
+            &mut grid,
+            (0, 0),
+            w,
+            h,
+            Focus::Cli,
+            hornvale_game_core::CommandLine { text: "", caret: 0 },
+            None,
+            None,
+        );
+        (0..h)
+            .map(|y| {
+                (0..w)
+                    .map(|x| grid.get(x, y).and_then(|c| c.glyph).unwrap_or(' '))
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    /// The premise, asserted rather than assumed: the fixture really is
+    /// tinted, and the sim really does emit SGR for it. Without this the
+    /// test below would pass on an untinted chart and prove nothing — which
+    /// is exactly the state seed 42 turn 0 is in.
+    #[test]
+    fn the_tinted_fixture_really_does_make_the_sim_emit_escapes() {
+        let scene = tinted_chart_fixture();
+        let prose = hornvale_scene::render_surrounds_ascii(&scene, "colour", &[]);
+        assert!(
+            prose.contains('\u{1b}'),
+            "the fixture is not tinted, so the test below cannot discriminate"
+        );
+        assert!(
+            prose.matches("\u{1b}[38;2;").count() > 1,
+            "one tinted glyph is not a picture; the fixture must tint the band, \
+             got {prose:?}"
+        );
+    }
+
+    /// `surrounds_ascii.rs` wraps every tinted glyph in
+    /// `\x1b[38;2;r;g;bm … \x1b[0m`; the grid stores one `char` per column
+    /// and has nowhere to put an SGR parameter, so those bytes would be
+    /// drawn as glyphs — `[`, `3`, `8`, `;` and the rest, one per column,
+    /// across a picture. The client applies its own ink from the wire's
+    /// `color` field and has no use for SGR.
+    #[test]
+    fn no_escape_sequence_reaches_the_prose_channel() {
+        let scene = tinted_chart_fixture();
+        let out = render_for_client(&scene);
+        assert!(
+            !out.contains('\u{1b}'),
+            "an escape sequence reached the prose channel"
+        );
+        assert!(
+            !out.contains("38;2;"),
+            "an SGR parameter reached the prose channel as literal glyphs"
+        );
+    }
+
+    /// And the picture SURVIVES the strip: dropping the escapes must leave
+    /// the glyphs they wrapped, in their own columns, not a blank pane.
+    #[test]
+    fn stripping_the_escapes_leaves_the_picture_standing() {
+        let scene = tinted_chart_fixture();
+        let out = render_for_client(&scene);
+        assert!(
+            out.contains('@'),
+            "the observer's own glyph did not survive, got {out:?}"
+        );
+        // And the picture's SHAPE with it: this row is six columns of
+        // indent and one glyph in the sim's output, and it must still be
+        // six columns of indent and one glyph on the grid. Dropping the
+        // escapes and then collapsing the spaces would be the same defect
+        // wearing the fix's clothes.
+        assert!(
+            out.lines().any(|l| l.starts_with("      _")),
+            "the picture's indent did not survive, got {out:?}"
+        );
+    }
 }
