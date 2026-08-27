@@ -1158,13 +1158,14 @@ pub fn axis_supply(
 /// resolved in. A single constant so the two cannot drift apart silently;
 /// `the_supply_axis_order_matches_both_capacity_loops` asserts the loops
 /// really do use it.
-pub const SUPPLY_AXIS_ORDER: [hornvale_kernel::ResourceAxis; 6] = [
+pub const SUPPLY_AXIS_ORDER: [hornvale_kernel::ResourceAxis; 7] = [
     hornvale_kernel::PHOTOSYNTHATE,
     hornvale_kernel::PLANT_FORAGE,
     hornvale_kernel::MINERAL,
     hornvale_kernel::DETRITUS,
     hornvale_kernel::ANIMAL_PREY,
     hornvale_kernel::MARINE_FORAGE,
+    hornvale_kernel::CHEMOSYNTHATE,
 ];
 
 /// [`axis_supply`] with the niche's weights already resolved — the same dot
@@ -1551,7 +1552,8 @@ pub fn per_species_suitability_masked(
                 // Rank-restored supply via the extracted helper: the axis
                 // dot product, not the old summed-uptake scalar.
                 use hornvale_kernel::{
-                    ANIMAL_PREY, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
+                    ANIMAL_PREY, CHEMOSYNTHATE, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE,
+                    PLANT_FORAGE,
                 };
                 // ORDER IS LOAD-BEARING: it must equal `SUPPLY_AXIS_ORDER`, so
                 // that entry i's weight is the hoisted `niche_weights[i]`.
@@ -1563,6 +1565,10 @@ pub fn per_species_suitability_masked(
                     (DETRITUS, *detritus.get(vertex)),
                     (ANIMAL_PREY, *prey.get(vertex)),
                     (MARINE_FORAGE, *marine.get(vertex)),
+                    // Supply is 0.0 everywhere until a later task wires the
+                    // real field — an exact IEEE-754 no-op (`x + 0.0 == x`),
+                    // so this entry moves no world number.
+                    (CHEMOSYNTHATE, 0.0),
                 ];
                 let supply = axis_supply_with(&niche_weights, &per_axis);
                 // THIS LINE IS WHERE THE MAGNITUDE GOES (decision 0103 §4).
@@ -1840,7 +1846,8 @@ pub fn per_species_capacity_at(
                     ),
                 };
                 use hornvale_kernel::{
-                    ANIMAL_PREY, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
+                    ANIMAL_PREY, CHEMOSYNTHATE, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE,
+                    PLANT_FORAGE,
                 };
                 // ORDER IS LOAD-BEARING — see the sibling loop.
                 let per_axis = [
@@ -1850,6 +1857,10 @@ pub fn per_species_capacity_at(
                     (DETRITUS, *hoisted.detritus.get(vertex)),
                     (ANIMAL_PREY, *prey.get(vertex)),
                     (MARINE_FORAGE, *hoisted.marine.get(vertex)),
+                    // Supply is 0.0 everywhere until a later task wires the
+                    // real field — an exact IEEE-754 no-op (`x + 0.0 == x`),
+                    // so this entry moves no world number.
+                    (CHEMOSYNTHATE, 0.0),
                 ];
                 let supply = axis_supply_with(&niche_weights, &per_axis);
                 let headcount = CAPACITY_V_MAX * supply / (CAPACITY_K_M + supply);
@@ -10231,12 +10242,13 @@ mod tests {
     #[test]
     fn axis_supply_agrees_with_the_hoisted_form() {
         use hornvale_kernel::{
-            ANIMAL_PREY, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
-            ResourceVector,
+            ANIMAL_PREY, CHEMOSYNTHATE, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE,
+            PLANT_FORAGE, ResourceVector,
         };
-        // A niche that is SPARSE on purpose: `MINERAL` and `MARINE_FORAGE` are
-        // absent, so `weight` returns its 0.0 default for them and the hoisted
-        // array has to reproduce that, not just the recorded entries.
+        // A niche that is SPARSE on purpose: `MINERAL`, `MARINE_FORAGE` and
+        // `CHEMOSYNTHATE` are absent, so `weight` returns its 0.0 default for
+        // them and the hoisted array has to reproduce that, not just the
+        // recorded entries.
         let niche = ResourceVector::new(&[
             (PHOTOSYNTHATE, 0.7),
             (PLANT_FORAGE, 0.25),
@@ -10251,6 +10263,7 @@ mod tests {
             (DETRITUS, 1e-7),
             (ANIMAL_PREY, 1.0 / 7.0),
             (MARINE_FORAGE, 4.25),
+            (CHEMOSYNTHATE, 9.0),
         ];
         let weights = SUPPLY_AXIS_ORDER.map(|axis| niche.weight(axis));
         assert_eq!(
@@ -10292,6 +10305,7 @@ mod tests {
                     "DETRITUS" => "detritus",
                     "ANIMAL_PREY" => "animal prey",
                     "MARINE_FORAGE" => "marine forage",
+                    "CHEMOSYNTHATE" => "chemosynthate",
                     other => other,
                 })
                 .collect();
