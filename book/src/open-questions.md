@@ -1921,6 +1921,37 @@ smaller claim than the one preregistered. Recording the smaller claim is what
 keeps this chapter's accounting honest; staging measurements until one agrees
 is what would corrupt it.
 
+[The Coercion](./chronicle/the-coercion.md) hit the identical shape one arc
+later, from the other direction: this time the instrument was blind *before*
+anyone ran it, and the blindness was legible in the source. Arc III's two
+preregistered tests compare a body driven by an imposed controller against
+the same body under its own default controller, expecting the committed act
+trail to match. It does — byte-for-byte — and the reason is that the imposed
+controller is, today, a stateless pass-through to the very controller it is
+being compared against: no fixture, however varied, could have produced a
+different number, because the two code paths are one path wearing two names.
+A result that is deducible from the source before the code runs is not
+evidence the fixtures gathered, and an early draft of this campaign's own
+report called the two-fixture pool "a genuine, if weaker, corroborating
+measurement" — read, correctly, as overclaiming what a tautology can support.
+What is left after the correction is smaller and considerably more
+interesting than what was preregistered. The controller stack had never
+actually been wired into where a driven body walks on its own; wiring it
+in changes nothing the ledger sees (the walk's facts are discarded either
+way) and changes something the ledger never held to begin with — a free
+body waiting idly holds, and a possessed one keeps arbitrating, so the same
+seed under the same clock reads `Pursuing(Fatigue)`/`Eager` free and
+`Idle`/`Content` held. Two lessons stack on The Hand's. First, a stub
+implementation can make a preregistered test **trivially** true rather than
+either confirmed or falsified, and the honest move is neither to hide that
+nor to delete the test — it stays as a regression guard for the day the stub
+grows real logic, correctly labelled as guarding rather than discovering.
+Second, the real finding this chapter should count was never staked in the
+spec at all: it surfaced because a body already known to be co-present (The
+Hand, above) was, for the first time, actually driven by two different
+controllers in the same measured walk, and the divergence was there to find
+once someone looked.
+
 [The Mire](./chronicle/the-mire.md) exercised the same discipline on a bet
 about weather and world structure that no earlier chapter entry had staked,
 and it too came back **no** — a double falsification rather than a single

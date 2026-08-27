@@ -1,15 +1,16 @@
 //! The body-state gate (spec §3.3): whether a body's own state permits an
 //! act, decided against the act's [`Mood`](crate::action::Mood).
 //!
-//! Built as a table even though it has exactly one row today. The reason is
-//! empirical, not anticipatory: `Session::needs` in this crate already
-//! carries an ad-hoc perception gate that had to be patched after a verb
-//! walked around it as a side channel, and `Session::purview`'s own doc
-//! records a second, still-open version of the same shape. A table with an
-//! exhaustive match — no wildcard arm — turns the next omission into a
-//! compile error: Arc III's `Dominated` row, and the spec's own
-//! `unconscious`/`blind`/`target invisible` rows, must be classified before
-//! they can compile.
+//! Built as a table from the first row it ever carried, rather than a check
+//! grown into one under pressure. The reason is empirical, not anticipatory:
+//! `Session::needs` in this crate already carries an ad-hoc perception gate
+//! that had to be patched after a verb walked around it as a side channel,
+//! and `Session::purview`'s own doc records a second, still-open version of
+//! the same shape. A table with an exhaustive match — no wildcard arm — turns
+//! the next omission into a compile error: Arc III's `PossessedByAnother` row
+//! already went through it (The Coercion), and the spec's own
+//! `unconscious`/`blind`/`target invisible` rows must be classified the same
+//! way before they can compile.
 //!
 //! [`verdict`] is consulted by `Session::refused_by_the_body` (The Deed, Task
 //! 7), once for the whole in-character namespace and BEFORE any handler runs,
@@ -21,9 +22,9 @@
 
 use crate::action::Mood;
 
-/// A body's state, as the gate reads it. One row today ([`BodyState::Awake`]
-/// / [`BodyState::Asleep`]); Arc III adds `Dominated`, and the spec names
-/// `unconscious`, `blind`, and `target invisible` as future rows.
+/// A body's state, as the gate reads it. `Awake`/`Asleep` shipped first; Arc
+/// III (The Coercion) added [`BodyState::PossessedByAnother`], and the spec
+/// names `unconscious`, `blind`, and `target invisible` as future rows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BodyState {
     /// The body can act freely; no in-character act is gated.

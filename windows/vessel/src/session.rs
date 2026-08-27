@@ -2337,7 +2337,7 @@ impl<'w> Session<'w> {
             // same methods: there is no objective variant of either to reach
             // for, so a second rendering path here would be inventing the
             // difference rather than exposing one. What this namespace buys is
-            // that a sleeping — later dominated, unconscious — body can still
+            // that a sleeping — later possessed, unconscious — body can still
             // be looked out of.
             "look" if self.inside.is_some() => self.out(self.describe_chamber_here()),
             "look" if self.submerged.is_some() => self.out(self.describe_here()),
