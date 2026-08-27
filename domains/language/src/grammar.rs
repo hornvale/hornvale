@@ -650,16 +650,46 @@ pub fn realize_tongue(
     Ok(out)
 }
 
+/// Trim each coordinated clause's own trailing period and join with the
+/// tongue's drawn `conjunction` — or, for a tongue that drew none, simple
+/// juxtaposition (a space, no marker): a legitimate coordination strategy
+/// and not a gap (spec §4.10), the same argument [`mark_embedded_clause`]
+/// makes for a tongue that drew no subordinator. The whole utterance takes
+/// exactly one trailing period.
+///
+/// **Shared by [`realize_tongue_coordination`] (the floor realizer) and
+/// [`realize_tongue_deep_coordination`] (C7's full morphology bundle).**
+/// The two differ only in which per-clause realizer produced `texts` —
+/// [`realize_tongue`] or [`realize_tongue_deep`] — never in how the
+/// results are joined, so the join itself is written once.
+fn join_coordinated(mut texts: Vec<String>, conjunction: Option<&str>) -> String {
+    for text in &mut texts {
+        if text.ends_with('.') {
+            text.pop();
+        }
+    }
+    let separator = match conjunction {
+        Some(word) => format!(" {word} "),
+        None => " ".to_string(),
+    };
+    let mut out = texts.join(&separator);
+    out.push('.');
+    out
+}
+
 /// Realize a [`Coordination`] in a tongue: each clause realizes through
 /// [`realize_tongue`] (the FLOOR realizer — the same deliberate choice
 /// [`tongue_subject`]'s and [`resolve_argument`]'s own `Clause` arms make
 /// for embedding, spec §4.5's floor/deep split) in full (tier 1 — nothing
-/// shared or elided), trimmed of its own trailing full stop, then joined
-/// with the tongue's own drawn `grammar.conjunction` — or, for a tongue
-/// that drew none, simple juxtaposition (a space, no marker): a legitimate
-/// coordination strategy and not a gap (spec §4.10), the same argument
-/// [`mark_embedded_clause`] makes for a tongue that drew no subordinator.
-/// The whole utterance takes exactly one trailing period.
+/// shared or elided), then joined via [`join_coordinated`].
+///
+/// **Not the production path** — see [`realize_tongue_deep_coordination`]
+/// for the one `windows/book`/`windows/almanac` actually need, where each
+/// coordinated clause keeps its own drawn tense/polarity/evidential/
+/// noun-class marking. This floor entry point exists for the same reason
+/// bare [`realize_tongue`] does: a shallow, morphology-free baseline, kept
+/// for testing and for a caller that genuinely wants it, not because any
+/// production narration calls it today.
 ///
 /// Renders fully or gaps entirely (spec §4): a gap realizing any one
 /// coordinated clause fails the whole coordination, via `?` on
@@ -680,21 +710,11 @@ pub fn realize_tongue_coordination(
          coordinate",
         coord.clauses.len()
     );
-    let mut parts = Vec::with_capacity(coord.clauses.len());
+    let mut texts = Vec::with_capacity(coord.clauses.len());
     for clause in &coord.clauses {
-        let mut text = realize_tongue(clause, grammar, lexicon, pronouns)?;
-        if text.ends_with('.') {
-            text.pop();
-        }
-        parts.push(text);
+        texts.push(realize_tongue(clause, grammar, lexicon, pronouns)?);
     }
-    let separator = match &grammar.conjunction {
-        Some(word) => format!(" {word} "),
-        None => " ".to_string(),
-    };
-    let mut out = parts.join(&separator);
-    out.push('.');
-    Ok(out)
+    Ok(join_coordinated(texts, grammar.conjunction.as_deref()))
 }
 
 /// A word mid-assembly: its segments when known (so a further affix layer
@@ -1198,6 +1218,67 @@ pub fn realize_tongue_deep(
     }
     sentence.push('.');
     Ok(sentence)
+}
+
+/// Realize a [`Coordination`] under C7's full morphology bundle: each
+/// coordinated clause realizes through [`realize_tongue_deep`] itself — a
+/// DEEP call threading the SAME `grammar`/`morph`/`paradigm`/
+/// `noun_class_of`/`orth` this call was given, never rebuilding them, so
+/// each clause's own drawn tense/polarity/evidential/noun-class marking
+/// survives exactly as `realize_tongue_deep`'s own `Subject::Clause`/
+/// `Argument::Clause` arms already thread it for embedding (The Mortise,
+/// Task 5) — then joined via [`join_coordinated`].
+///
+/// **This is the production path.** `windows/book` and `windows/almanac`
+/// call only `realize_tongue_deep`, never bare [`realize_tongue`], for
+/// real narration; a coordination realized only through
+/// [`realize_tongue_coordination`] (the floor entry point) would render
+/// with no morphological marking in the one place a real narration
+/// actually renders. This function closes that gap (fix round 1, Task 6).
+///
+/// **Coordination reads and writes nothing about any one clause's own
+/// marking.** Each coordinated clause's tense/polarity/evidential is its
+/// own, computed by its own `realize_tongue_deep` call exactly as it would
+/// be realized alone; joining the results changes none of them — the same
+/// non-interference [`realize_tongue_deep`]'s embedding arms already
+/// guarantee for a nested clause.
+///
+/// Renders fully or gaps entirely (spec §4): a gap realizing any one
+/// coordinated clause fails the whole coordination, via `?` on
+/// [`realize_tongue_deep`]'s own `Result`.
+///
+/// Panics if `coord.clauses` holds fewer than two clauses, on the
+/// identical reasoning [`crate::clause::realize_common_coordination`]
+/// states.
+/// type-audit: bare-ok(prose)
+pub fn realize_tongue_deep_coordination(
+    coord: &Coordination,
+    grammar: &TongueGrammar,
+    morph: &TongueMorphology,
+    paradigm: Option<&TongueParadigm>,
+    noun_class_of: &dyn Fn(&str) -> NounClass,
+    lexicon: &Lexicon,
+    orth: Orthography,
+) -> Result<String, TongueGap> {
+    assert!(
+        coord.clauses.len() >= 2,
+        "a coordination joins at least two clauses; {} is not a list to \
+         coordinate",
+        coord.clauses.len()
+    );
+    let mut texts = Vec::with_capacity(coord.clauses.len());
+    for clause in &coord.clauses {
+        texts.push(realize_tongue_deep(
+            clause,
+            grammar,
+            morph,
+            paradigm,
+            noun_class_of,
+            lexicon,
+            orth,
+        )?);
+    }
+    Ok(join_coordinated(texts, grammar.conjunction.as_deref()))
 }
 
 #[cfg(test)]
@@ -3667,5 +3748,84 @@ mod tests {
             clauses: vec![transitive_clause(Tense::Past)],
         };
         let _ = realize_tongue_coordination(&coord, &grammar, &lex, &pronouns);
+    }
+
+    /// Fix round 1, Task 6: coordination under the DEEP realizer keeps each
+    /// coordinated clause's OWN drawn marking, exactly as embedding does
+    /// (`an_inner_clause_tense_is_not_backshifted` is the precedent this
+    /// test follows). Before this fix, `realize_tongue_coordination` called
+    /// only the floor `realize_tongue`, so a coordinated utterance in any
+    /// production narration path (which calls only `realize_tongue_deep`,
+    /// never bare `realize_tongue`) rendered with zero morphological
+    /// marking -- a coordination that existed but that nothing could
+    /// actually use for real narration.
+    ///
+    /// The differential is what makes this non-vacuous: the FIRST
+    /// coordinated clause sits at Past (marked) and the SECOND at Present
+    /// (the zero member, unmarked). A fixture where both clauses shared one
+    /// tense could pass even if marking were dropped entirely, the same
+    /// trap the embedding precedent's own doc names.
+    #[test]
+    fn a_coordination_under_the_deep_realizer_keeps_each_clauses_own_marking() {
+        let ph = test_phonology();
+        let lex = coordination_lexicon();
+        let (_, eat_segments) = root_of(&lex, EAT);
+        let (kill_roman, kill_segments) = root_of(&lex, KILL);
+        let noun_class_of = |_: &str| NounClass::Inanimate;
+        let (paradigm, past_segments, _) =
+            tense_paradigm(&ph, MorphDepth::Affix, ClassPosition::Suffix);
+        let marked_eat = affix(
+            &eat_segments,
+            &past_segments,
+            ClassPosition::Suffix,
+            Orthography::Digraph,
+        )
+        .roman;
+        let marked_kill = affix(
+            &kill_segments,
+            &past_segments,
+            ClassPosition::Suffix,
+            Orthography::Digraph,
+        )
+        .roman;
+        // Fixture sanity, the same check the embedding precedent makes: two
+        // distinct roots affix to two distinct marked forms, or the
+        // contains/!contains pair below would mean nothing.
+        assert_ne!(marked_eat, marked_kill);
+
+        let grammar = coordination_grammar(Some("zil"));
+        let first = transitive_clause(Tense::Past); // EAT, marked
+        let second = coordinated_kill_clause(Tense::Present); // KILL, unmarked
+        let coord = Coordination {
+            clauses: vec![first, second],
+        };
+
+        let out = realize_tongue_deep_coordination(
+            &coord,
+            &grammar,
+            &unmarked_morphology(),
+            Some(&paradigm),
+            &noun_class_of,
+            &lex,
+            Orthography::Digraph,
+        )
+        .unwrap();
+
+        assert!(
+            out.contains(&marked_eat),
+            "the first coordinated clause's own Past must mark ITS verb: {out:?}"
+        );
+        assert!(
+            !out.contains(&marked_kill),
+            "the second coordinated clause's Present is the zero member and \
+             must not be marked -- a floor-only join would also drop this \
+             marking, so this alone would not distinguish the fix from the \
+             defect it closes; paired with the `contains(&marked_eat)` \
+             assertion above it does: {out:?}"
+        );
+        assert!(
+            out.contains(&kill_roman),
+            "the second clause's bare (unmarked) verb must still surface: {out:?}"
+        );
     }
 }
