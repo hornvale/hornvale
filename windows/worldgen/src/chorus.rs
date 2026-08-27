@@ -1518,6 +1518,57 @@ pub fn tongue_morphology_of(
     })
 }
 
+/// The species' paradigm bundle: the drawn Number/Tense/Polarity depths and
+/// attachment sides ([`hornvale_language::paradigm::paradigm_depths`]) plus
+/// the family's tense and polarity marker forms, evolved into this species'
+/// own phonology via its own cascade — the paradigm sibling of
+/// [`tongue_morphology_of`], and derived exactly the way that function
+/// derives its morphology bundle (resolve the family's shared proto
+/// phonology, or fall back to this species' own phonology for a singleton
+/// family; route the cascade through [`crate::cascade_of`]), nothing
+/// persisted.
+///
+/// This is what makes tense and polarity real for production callers rather
+/// than test-only: [`hornvale_language::realize_tongue_deep`] takes a
+/// [`hornvale_language::TongueParadigm`] in parameter position 4, and until
+/// this existed the only way to obtain one was to build it by hand in a test.
+/// A window that speaks a tongue assembles it here, beside its morphology.
+/// type-audit: bare-ok(identifier-text: species)
+pub fn tongue_paradigm_of(
+    world: &World,
+    species: &str,
+) -> Result<hornvale_language::TongueParadigm, BuildError> {
+    let wc = WorldComponents::assemble()?;
+    let ph = crate::language_of_in(world, &wc, species);
+    let name = crate::resolve_kind(&wc, species)?;
+    let family = *wc
+        .family_of
+        .get(&KindId(name))
+        .expect("every kind has a family row (integrity-checked)");
+    let (fam_label, proto_ph) = match wc.family_proto.get(&KindId(family)) {
+        Some(_) => (family, crate::proto_phonology_of_in(world, &wc, family)),
+        None => (name, ph.clone()),
+    };
+    // Routed through cascade_of for the same reason tongue_morphology_of
+    // routes through it: this fn returns a Result, so the swap is trivial,
+    // and the two bundles must evolve their markers down the SAME cascade or
+    // a tongue's tense marker would not be cognate with its evidential one.
+    let cascade = crate::cascade_of(world, name)?;
+    let depths = hornvale_language::paradigm::paradigm_depths(&world.seed, species);
+    let (tense, polarity) = hornvale_language::paradigm::paradigm_forms(
+        &world.seed,
+        fam_label,
+        &proto_ph,
+        &cascade,
+        &ph,
+    );
+    Ok(hornvale_language::TongueParadigm {
+        depths,
+        tense,
+        polarity,
+    })
+}
+
 /// C7's day-schema readout: the SAME draw [`explain_day`] resolves
 /// (factored through [`day_schema_draw`]), rebuilt fresh from
 /// `world`+`species` alone — nothing persisted, nothing cached, the

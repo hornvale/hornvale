@@ -323,7 +323,12 @@ pub(crate) fn draw_morph_proto(
 /// Draw and evolve one axis's whole value set: each value's family proto-form
 /// (via [`draw_morph_proto`]), evolved into `daughter_ph` via `cascade`
 /// ([`evolve`]), rendered via [`render_views`].
-fn evolve_axis(
+///
+/// `pub(crate)` rather than private because [`crate::paradigm::paradigm_forms`]
+/// is the same operation on the tense/polarity axes: it must draw and evolve
+/// through THIS function, not a copy of it, or the two axis families could
+/// drift apart in how a proto becomes a daughter form.
+pub(crate) fn evolve_axis(
     seed: &Seed,
     family: &str,
     axis: &str,

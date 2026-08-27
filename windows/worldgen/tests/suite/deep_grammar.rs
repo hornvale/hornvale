@@ -12,7 +12,7 @@
 use hornvale_language::{Disposition, MorphDepth, NounClass, SchemaId};
 use hornvale_worldgen::{
     SettlementPins, SkyChoice, accounts_from, day_schema_from, noun_class_from, placed_peoples,
-    tongue_morphology_of,
+    tongue_morphology_of, tongue_paradigm_of,
 };
 
 /// Build a world with the shipped four-people component set, generated
@@ -184,6 +184,63 @@ fn every_placed_people_draws_a_full_pronoun_inventory() {
                 morph.pronouns.len(),
                 expected.len(),
                 "seed {seed} {kind}: the inventory carries exactly the drawn rows"
+            );
+            seen_any = true;
+        }
+    }
+    assert!(
+        seen_any,
+        "at least one people must place across seeds 1..=3"
+    );
+}
+
+/// The Inquest T8b: every placed people's assembled `TongueParadigm` carries
+/// what `paradigm_depths` drew for that species, plus a real marker form on
+/// each of the two axes `realize_tongue_deep` reads.
+///
+/// The assertion that makes this non-vacuous is the EQUALITY against
+/// `paradigm_depths`' own draw: an assembler that returned a default or empty
+/// bundle would still type-check, still be called by `windows/book`, and
+/// still change no rendered byte (the book's clauses are all present-tense
+/// and positive), so nothing else in the tree would object to it.
+/// claim: structural(seed: [1,2,3]) — the assembler carries the drawn depths
+/// and both marked markers for every placed people; not a rate, so three
+/// seeds is the whole claim
+#[test]
+fn every_placed_people_assembles_its_drawn_paradigm() {
+    let mut seen_any = false;
+    for seed in 1..=3u64 {
+        let w = generated(seed);
+        for (kind, _village) in placed_peoples(&w) {
+            let paradigm =
+                tongue_paradigm_of(&w, kind).unwrap_or_else(|e| panic!("seed {seed} {kind}: {e}"));
+            assert_eq!(
+                paradigm.depths,
+                hornvale_language::paradigm::paradigm_depths(&w.seed, kind),
+                "seed {seed} {kind}: the bundle must carry the depths paradigm_depths drew"
+            );
+            let past = paradigm
+                .tense
+                .get("past")
+                .unwrap_or_else(|| panic!("seed {seed} {kind}: no past marker"));
+            assert!(
+                !past.roman.is_empty() && !past.segments.is_empty(),
+                "seed {seed} {kind}: the past marker is empty"
+            );
+            let negative = paradigm
+                .polarity
+                .get("negative")
+                .unwrap_or_else(|| panic!("seed {seed} {kind}: no negative marker"));
+            assert!(
+                !negative.roman.is_empty() && !negative.segments.is_empty(),
+                "seed {seed} {kind}: the negative marker is empty"
+            );
+            // Exactly the marked members: present and positive are the zero
+            // members and must never acquire a form (spec §4.1).
+            assert_eq!(
+                (paradigm.tense.len(), paradigm.polarity.len()),
+                (1, 1),
+                "seed {seed} {kind}: only the marked member of each axis is drawn"
             );
             seen_any = true;
         }

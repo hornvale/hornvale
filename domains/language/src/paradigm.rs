@@ -224,6 +224,66 @@ pub fn draw_paradigm_affix_proto(
     crate::morphology::draw_morph_proto(seed, family, axis, value, proto_ph)
 }
 
+/// The tense axis's marked value labels — `past` only. Present is the zero
+/// member (spec §4.1) and no marker is ever drawn for it, so inventing a
+/// present form here would be authoring.
+const TENSE_VALUES: [&str; 1] = ["past"];
+
+/// The polarity axis's marked value labels — `negative` only, for the same
+/// reason [`TENSE_VALUES`] holds only `past`: positive is the zero member.
+const POLARITY_VALUES: [&str; 1] = ["negative"];
+
+/// Draw `family`'s tense and polarity marker proto-affixes (one syllable
+/// each, at `proto`'s phonology) and evolve them into `daughter` via
+/// `cascade`, returning `(tense, polarity)` keyed by the MARKED value's
+/// label. This is [`crate::morphology::morph_forms`]' cognate law applied to
+/// the paradigm axes — only `family` and the value label key the draw, never
+/// the daughter or its cascade, so all of a family's daughters carry cognate
+/// markers that diverge only through their own sound changes.
+///
+/// Draws the same streams [`draw_paradigm_affix_proto`] documents
+/// (`language/family/<family>/morph/tense/past`,
+/// `language/family/<family>/morph/polarity/negative`) through the same
+/// [`crate::morphology::draw_morph_proto`] mechanism, because it shares
+/// `morphology`'s `evolve_axis` rather than re-implementing it.
+///
+/// **Number draws nothing here.** [`TongueParadigm`](crate::TongueParadigm)
+/// carries tense and polarity marker maps and no number map, because no
+/// realizer reads a number marker yet; drawing one would put an unread form
+/// in the bundle. The number axis's own proto stream stays reachable through
+/// [`draw_paradigm_affix_proto`] for whoever adds that realizer.
+/// type-audit: bare-ok(identifier-text)
+pub fn paradigm_forms(
+    seed: &Seed,
+    family: &str,
+    proto: &Phonology,
+    cascade: &Cascade,
+    daughter: &Phonology,
+) -> (
+    BTreeMap<&'static str, MorphForm>,
+    BTreeMap<&'static str, MorphForm>,
+) {
+    let tense = crate::morphology::evolve_axis(
+        seed,
+        family,
+        "tense",
+        &TENSE_VALUES,
+        proto,
+        cascade,
+        daughter,
+    );
+    let polarity = crate::morphology::evolve_axis(
+        seed,
+        family,
+        "polarity",
+        &POLARITY_VALUES,
+        proto,
+        cascade,
+        daughter,
+    );
+    (tense, polarity)
+}
+
 /// One root's paradigm-vertex computation for one axis value (spec §3.3):
 /// both candidate modern forms, kept fully traceable, and whether they
 /// diverge. `regular_root`/`regular_affix` are kept as their own

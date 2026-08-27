@@ -25,8 +25,8 @@ use hornvale_language::clause::{
 use hornvale_language::numeracy::{NumeracyRung, render_quantity_at_rung};
 use hornvale_language::schemas::Manner;
 use hornvale_language::{
-    ConflictState, Evidential, LexemeId, NounClass, SchemaId, TongueMorphology, conflict_of,
-    realize_tongue_deep, tongue_grammar,
+    ConflictState, Evidential, LexemeId, NounClass, SchemaId, TongueMorphology, TongueParadigm,
+    conflict_of, realize_tongue_deep, tongue_grammar,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -394,6 +394,19 @@ pub fn render_volume_from(
         let Ok(morph) = hornvale_worldgen::tongue_morphology_of(world, kind) else {
             continue;
         };
+        // The Inquest T8b: the paradigm bundle, assembled beside the
+        // morphology one and from the same components, so the deep realizer
+        // receives a real `TongueParadigm` rather than the `None` that made
+        // tense and polarity reachable only from tests. It changes no line
+        // this window renders: every clause below is present-tense and
+        // positive, and both of those are the ZERO member of their axis (no
+        // marker is drawn for a zero member at all). Same `else { continue }`
+        // posture as the two derivations above, and it can only ever fire
+        // together with the morphology one — both resolve the identical
+        // (kind, family, cascade) chain.
+        let Ok(paradigm) = hornvale_worldgen::tongue_paradigm_of(world, kind) else {
+            continue;
+        };
         // The Shuttle: compute the sky-override's animacy answer ONCE per
         // kind (the same draw `noun_class_of` used to repeat per concept)
         // and hand it to `noun_class_with_sky`, the one shared copy of the
@@ -426,9 +439,11 @@ pub fn render_volume_from(
             &self_statement,
             &grammar,
             &morph,
-            // The self-statement is present-tense by construction, so this
-            // caller models no tense (The Inquest, spec §4.2).
-            None,
+            // The self-statement is present-tense and positive by
+            // construction, so the paradigm's markers go unread here — it is
+            // supplied because the tongue HAS one, not because this clause
+            // needs it (The Inquest, spec §4.1/§4.2).
+            Some(&paradigm),
             &noun_class_of,
             &lexicon,
             ph.orthography,
@@ -464,6 +479,7 @@ pub fn render_volume_from(
             Evidential::Witnessed,
             &grammar,
             &morph,
+            &paradigm,
             &noun_class_of,
             &lexicon,
             ph.orthography,
@@ -478,6 +494,7 @@ pub fn render_volume_from(
                 kind,
                 &grammar,
                 &morph,
+                &paradigm,
                 &noun_class_of,
                 &lexicon,
                 ph.orthography,
@@ -569,6 +586,17 @@ fn chorus_sections_from(
                              derivation failed: {e:?}"
                             )
                         });
+                    // The Inquest T8b: the paradigm bundle, beside the
+                    // morphology one. The taught world-statement is
+                    // present-tense and positive, so nothing in it reads a
+                    // marker; the tongue is simply handed the paradigm it has.
+                    let paradigm = hornvale_worldgen::tongue_paradigm_of(world, kind)
+                        .unwrap_or_else(|e| {
+                            panic!(
+                                "the taught-contrast law is violated for {kind}: paradigm \
+                             derivation failed: {e:?}"
+                            )
+                        });
                     // The Shuttle: sky_animate computed once per kind (see the
                     // matching comment in `render_volume_from`).
                     let sky_animate =
@@ -589,6 +617,7 @@ fn chorus_sections_from(
                         Evidential::Taught,
                         &grammar,
                         &morph,
+                        &paradigm,
                         &noun_class_of,
                         &lexicon,
                         ph.orthography,
@@ -1865,11 +1894,13 @@ pub fn tongue_probes(world: &World) -> Vec<TongueProbe> {
 /// ⟨concept⟩` through the deep realizer (C7) — `Ok` is a rendered line
 /// (the success path C3 dropped), `Err` the recountable gap (today, always
 /// the `planet` probe: no culture holds that etic concept).
+#[allow(clippy::too_many_arguments)]
 fn probe_tongue(
     probe: &TongueProbe,
     _kind: &str,
     grammar: &hornvale_language::TongueGrammar,
     morph: &TongueMorphology,
+    paradigm: &TongueParadigm,
     noun_class_of: &dyn Fn(&str) -> NounClass,
     lexicon: &hornvale_language::Lexicon,
     orth: hornvale_language::Orthography,
@@ -1892,8 +1923,10 @@ fn probe_tongue(
         },
         grammar,
         morph,
-        // Every probe is present-tense (spec §4.2): no paradigm to read.
-        None,
+        // Every probe is present-tense and positive (spec §4.1/§4.2), so the
+        // paradigm's markers go unread — it is passed because the tongue has
+        // one, not because this clause asks for one.
+        Some(paradigm),
         noun_class_of,
         lexicon,
         orth,
@@ -1934,6 +1967,7 @@ fn world_statement(
     evidential: Evidential,
     grammar: &hornvale_language::TongueGrammar,
     morph: &TongueMorphology,
+    paradigm: &TongueParadigm,
     noun_class_of: &dyn Fn(&str) -> NounClass,
     lexicon: &hornvale_language::Lexicon,
     orth: hornvale_language::Orthography,
@@ -1951,16 +1985,25 @@ fn world_statement(
         // No role bindings on the world-statement today.
         adjuncts: Vec::new(),
     };
-    // The world-statement is present-tense (spec §4.2): no paradigm to read.
-    realize_tongue_deep(&clause, grammar, morph, None, noun_class_of, lexicon, orth).unwrap_or_else(
-        |gap| {
-            panic!(
-                "the world-statement law is violated for {kind}: gap on {} ({}) — \"earth\" is \
-             universal-stratum Steeped and must never gap",
-                gap.concept, gap.reason
-            )
-        },
+    // The world-statement is present-tense and positive (spec §4.1/§4.2), so
+    // the paradigm's markers go unread — it is passed because the tongue has
+    // one, not because this clause asks for one.
+    realize_tongue_deep(
+        &clause,
+        grammar,
+        morph,
+        Some(paradigm),
+        noun_class_of,
+        lexicon,
+        orth,
     )
+    .unwrap_or_else(|gap| {
+        panic!(
+            "the world-statement law is violated for {kind}: gap on {} ({}) — \"earth\" is \
+             universal-stratum Steeped and must never gap",
+            gap.concept, gap.reason
+        )
+    })
 }
 
 /// Predicates present in the ledger that C1's grammar cannot yet render:
@@ -3867,11 +3910,14 @@ mod tests {
             concept: "planet".to_string(),
             subject: "Vebe".to_string(),
         };
+        let paradigm = hornvale_worldgen::tongue_paradigm_of(&world, "goblin")
+            .expect("goblin paradigm derives at seed 1");
         let line = probe_tongue(
             &probe,
             "goblin",
             &grammar,
             &morph,
+            &paradigm,
             &noun_class_of,
             &lexicon,
             ph.orthography,
