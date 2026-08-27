@@ -2350,19 +2350,38 @@ pub enum TrophicMode {
 /// campaign split.
 ///
 /// **THE DIRECTION THIS RELIES ON, STATED.** It reads the thermal axis alone,
-/// so it is correct only while `ThermalStrategy::Absent` and
-/// `TrophicMode::Absent` occur together and never apart. The type admits **six**
-/// pairs where that is false — three `(Absent, <live trophic mode>)` and three
-/// `(<live thermal strategy>, Absent)` (spec §4.4). Keep that number distinct
-/// from the **twelve** UNSANCTIONED pairs (16 combinations less the 4
-/// sanctioned rows): twelve is what the pair table refuses, six is what would
-/// break *this function*, and only the second is the direction stated here.
-/// What enforces it is `tests/suite/metabolic_pairs.rs`'s sanctioned-pair
-/// table, which consults every kind's pair in the workspace suite — and in the
-/// commit gate once a green chamber run records its baseline duration into
-/// `docs/timings/subfloor-roster.tsv`. If that table is ever relaxed
-/// to admit a `(Absent, …)` pair with a live trophic mode, this function is
-/// the first place that goes wrong.
+/// so it is correct only when `ThermalStrategy::Absent` implies zero basal
+/// metabolic rate — which is NOT the same claim as "implies
+/// `TrophicMode::Absent` too" (rung 1 could get away with conflating the two;
+/// rung 2 cannot). The type admits **six** pairs where thermal- and
+/// trophic-`Absent` diverge — three `(Absent, <live trophic mode>)` and three
+/// `(<live thermal strategy>, Absent)` (spec §4.4); this count is a fact about
+/// the TYPE and does not move with sanctioning. Keep it distinct from the
+/// **eleven** UNSANCTIONED pairs (16 combinations less the 5 sanctioned rows,
+/// as of rung 2's `(Absent, Chemotrophic)`): eleven is what the pair table
+/// refuses, six is what the type merely admits, and only the second is the
+/// direction stated here.
+///
+/// **One of the six is now SANCTIONED AND WITNESSED, and this function did
+/// not go wrong.** This paragraph used to warn about that only
+/// hypothetically ("if that table is ever relaxed to admit a `(Absent, …)`
+/// pair with a live trophic mode, this function is the first place that goes
+/// wrong"); rung 2 of the Underworld Larder did exactly that, and `xorn`
+/// carries `(Absent, Chemotrophic)` today. The reason it is safe is worth
+/// stating rather than left to luck: this function answers "does this kind
+/// have zero basal metabolic rate", not "does this kind draw energy from
+/// nothing" — a chemolithotroph's chemical energy extraction is a non-thermal
+/// process that needs no BMR, so `xorn`'s `thermal_strategy` stayed `Absent`
+/// by construction (see the `xorn` row's own comment in `biosphere_registry`)
+/// precisely so this invariant would hold for it. The remaining five members
+/// of the six stay UNSANCTIONED, and `tests/suite/metabolic_pairs.rs`'s
+/// sanctioned-pair table — which consults every kind's pair in the workspace
+/// suite, and in the commit gate once a green chamber run records its
+/// baseline duration into `docs/timings/subfloor-roster.tsv` — is still what
+/// enforces that. If the table admits a live-thermal/`Absent`-trophic pair,
+/// or a second `Absent`-thermal/live-trophic pair whose kind lacks the same
+/// zero-BMR argument `xorn`'s has, this function is the first place that goes
+/// wrong.
 ///
 /// A two-axis signature was specified and is not available: every one of the
 /// four call sites holds a `ThermalStrategy` and nothing else, because `Body`
