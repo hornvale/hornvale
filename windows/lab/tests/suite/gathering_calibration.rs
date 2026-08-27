@@ -401,9 +401,21 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // where by latitude the survivors sit. The preregistered directional
     // claim asserted above — below the uniform-sphere baseline of 32.7 —
     // is untouched and still clears the baseline by better than 1.8x.
+    //
+    // The Sources' close regen (2026-08-27, canonical census on lefford at
+    // ddacd5716, goldens 58e2558e3, the campaign's own second census — on a
+    // merge product that also folds in The Escapement's tick epoch):
+    // 17.2505 -> 17.2526, a sixth consecutive narrowing (margin
+    // 15.4495 -> 15.4474 degrees; ratio 1.89560x -> 1.89537x). The
+    // movement is the smallest step yet in this sequence (+0.0021 degrees),
+    // consistent with most of this regen's change already having been
+    // absorbed by earlier census refreshes on this branch. The
+    // preregistered directional claim asserted above — below the
+    // uniform-sphere baseline of 32.7 — is untouched and still clears the
+    // baseline by better than 1.8x.
     assert!(
-        (mean - 17.2505).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.2505)"
+        (mean - 17.2526).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.2526)"
     );
 }
 

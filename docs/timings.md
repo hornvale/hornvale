@@ -3230,3 +3230,6 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T18:45:32Z | gate-commit | 26.623 | 60.205 | 13.541 | 2.77 | 0 | 3ff27e1ff | campaign/the-sources | MacBookPro | 10 |
 | 2026-08-27T18:59:11Z | gate-commit | 20.782 | 49.570 | 12.966 | 3.01 | 0 | 3ff27e1ff | campaign/the-sources | MacBookPro | 10 |
 | 2026-08-27T19:18:05Z | census | 972.602 | 32189.836 | 257.579 | 33.36 | 0 | ddacd5716 |  | lefford | 40 |
+| 2026-08-27T21:05:52Z | rebaseline | 174.767 | 275.605 | 12.071 | 1.65 | 0 | 58e2558e3 | campaign/the-sources | MacBookPro | 10 |
+| 2026-08-27T21:07:27Z | gate-commit | 69.635 | 49.690 | 11.573 | 0.88 | 0 | 58e2558e3 | campaign/the-sources | MacBookPro | 10 |
+| 2026-08-27T21:11:50Z | gate-commit | 69.101 | 56.244 | 13.454 | 1.01 | 0 | 58e2558e3 | campaign/the-sources | MacBookPro | 10 |

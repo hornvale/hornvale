@@ -478,7 +478,9 @@ checks AS (
   -- worlds — see calibration.rs's own re-pin comment for the derivation).
   SELECT 'goblin flagship coastal count (calibration.rs::goblin_flagship_coastal_split_is_pinned)',
   -- The Underworld resync, 0063/0079: 189 -> 181.
-         CAST(flagship_coastal AS DOUBLE), 190.0, flagship_coastal = 190 FROM agg
+  -- The Sources resync (2026-08-27, canonical census on lefford at
+  -- ddacd5716, goldens 58e2558e3): 190 -> 189.
+         CAST(flagship_coastal AS DOUBLE), 189.0, flagship_coastal = 189 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 235 -> 234.
   -- The Tumult (predation) re-pin, 0063: 234 -> 238.
@@ -490,7 +492,9 @@ checks AS (
   -- The Range resync, 0063/0079: 792 -> 781.
   SELECT 'goblin flagship inland count (calibration.rs::goblin_flagship_coastal_split_is_pinned)',
   -- The Underworld resync, 0063/0079: 811 -> 819.
-         CAST(flagship_inland AS DOUBLE), 809.0, flagship_inland = 809 FROM agg
+  -- The Sources resync (2026-08-27, canonical census on lefford at
+  -- ddacd5716, goldens 58e2558e3): 809 -> 810.
+         CAST(flagship_inland AS DOUBLE), 810.0, flagship_inland = 810 FROM agg
   UNION ALL
   -- The Tithe (tribute) re-pin, 0063: 33 -> 34.
   -- The Contour epoch v2 resync, 0063: 34 -> 33.
@@ -630,7 +634,11 @@ checks AS (
   -- newer main it moves the same three census table entries the campaign's
   -- earlier census moved. zero/nonzero/absent unmoved at 0/1000/0.
   -- 0.5081441944999995 -> 0.5081323953399994. Tolerance unchanged at 1e-6.
-         collision_mean, 0.5190331163569993, abs(collision_mean - 0.5190331163569993) < 1e-6 FROM agg
+  -- The Sources resync (2026-08-27, canonical census on lefford at
+  -- ddacd5716, goldens 58e2558e3): zero/nonzero/absent unmoved at 0/1000/0.
+  -- 0.5190331163569993 -> 0.5190630355569993. Resynced FROM calibration.rs,
+  -- which stays primary.
+         collision_mean, 0.5190630355569993, abs(collision_mean - 0.5190630355569993) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 771 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 766 -> 767.
@@ -674,7 +682,9 @@ checks AS (
   -- The Underworld resync, 0063/0079: 8.506600585 -> 8.515439092299996.
   -- The Burr resync (ROOT_EPOCH v4, census committed as 635d116d):
   -- 8.515439092299996 -> 8.546439147599997.
-         goblin_len_mean, 8.522649181881878, abs(goblin_len_mean - 8.522649181881878) < 1e-6 FROM agg
+  -- The Sources resync (2026-08-27, canonical census on lefford at
+  -- ddacd5716, goldens 58e2558e3): 8.522649181881878 -> 8.520497665465461.
+         goblin_len_mean, 8.520497665465461, abs(goblin_len_mean - 8.520497665465461) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 772 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 762 -> 760.
@@ -719,7 +729,9 @@ checks AS (
   -- The Underworld resync, 0063/0079: 6.858963629124241 -> 6.854391970773933.
   -- The Burr resync (ROOT_EPOCH v4, census committed as 635d116d):
   -- 6.854391970773933 -> 6.818936120061097.
-         kobold_len_mean, 6.864935456632652, abs(kobold_len_mean - 6.864935456632652) < 1e-6 FROM agg
+  -- The Sources resync (2026-08-27, canonical census on lefford at
+  -- ddacd5716, goldens 58e2558e3): 6.864935456632652 -> 6.866580815408162.
+         kobold_len_mean, 6.866580815408162, abs(kobold_len_mean - 6.866580815408162) < 1e-6 FROM agg
   UNION ALL
   SELECT 'mean goblin hue-depth (calibration.rs::goblin_hue_depth_exceeds_kobold_hue_depth)',
          goblin_hue_mean, 4.0, abs(goblin_hue_mean - 4.0) < 1e-6 FROM agg
@@ -848,7 +860,9 @@ checks AS (
   -- The Underworld resync, 0063/0079: 2.7043333613 -> 2.7095434288.
   -- The Burr resync (ROOT_EPOCH v4, census committed as 635d116d):
   -- 2.7095434288 -> 2.7241874023999957.
-         goblin_syl_mean, 2.716477110510509, abs(goblin_syl_mean - 2.716477110510509) < 1e-6 FROM agg
+  -- The Sources resync (2026-08-27, canonical census on lefford at
+  -- ddacd5716, goldens 58e2558e3): 2.716477110510509 -> 2.715722780480479.
+         goblin_syl_mean, 2.715722780480479, abs(goblin_syl_mean - 2.715722780480479) < 1e-6 FROM agg
   UNION ALL
   -- The Contour epoch v2 resync, 0063: 763 -> 765.
   -- The Generalist resync, 0063/0079: 765 -> 762.
@@ -882,7 +896,9 @@ checks AS (
   -- The Confidant resync: 2.2007268159183666. Six felt-state concepts enter
   -- every tongue's dictionary, so the per-name statistics shift by fractions of
   -- a thousandth while homophony (a quadratic pair-count) moves 6-10 percent.
-         kobold_syl_mean, 2.2007268159183666, abs(kobold_syl_mean - 2.2007268159183666) < 1e-6 FROM agg
+  -- The Sources resync (2026-08-27, canonical census on lefford at
+  -- ddacd5716, goldens 58e2558e3): 2.2007268159183666 -> 2.201225966020408.
+         kobold_syl_mean, 2.201225966020408, abs(kobold_syl_mean - 2.201225966020408) < 1e-6 FROM agg
   UNION ALL
   SELECT 'name-transparency present-row count (calibration.rs::name_transparency_is_measured_and_pinned)',
          CAST(transparency_present AS DOUBLE), 1000.0, transparency_present = 1000 FROM agg
@@ -919,7 +935,9 @@ checks AS (
   -- unmoved at 1000/0 and the min/max spread pins below are unmoved.
   -- 0.7135540799000004 -> 0.7135625544800003. Still emphatically not 1.0.
   -- Tolerance unchanged at 1e-6.
-         transparency_mean, 0.7140890114700017, abs(transparency_mean - 0.7140890114700017) < 1e-6 FROM agg
+  -- The Sources resync (2026-08-27, canonical census on lefford at
+  -- ddacd5716, goldens 58e2558e3): 0.7140890114700017 -> 0.713871805500002.
+         transparency_mean, 0.713871805500002, abs(transparency_mean - 0.713871805500002) < 1e-6 FROM agg
   UNION ALL
   -- The min and max are the SPREAD pins the deferred note asked for. A floor
   -- of 0.154 against a ceiling of 1.0 is what proves the 0.816 mean describes
