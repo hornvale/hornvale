@@ -3185,3 +3185,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T22:37:31Z | gate-commit | 84.031 | 59.643 | 29.718 | 1.06 | 0 | e496e529d | campaign/the-foliot | ambrose | 12 |
 | 2026-08-27T22:40:14Z | rebaseline | 162.514 | 271.037 | 16.579 | 1.77 | 0 | e496e529d | campaign/the-foliot | ambrose | 12 |
 | 2026-08-27T22:41:55Z | gate-commit | 100.210 | 60.063 | 28.734 | 0.89 | 0 | e496e529d | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T23:25:36Z | sluice:artifacts | 103.333 | 816.736 | 36.716 | 8.26 | 0 | 8ebcf31e9 |  | lefford | 40 |
