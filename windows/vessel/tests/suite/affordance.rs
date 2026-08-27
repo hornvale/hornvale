@@ -32,8 +32,7 @@ use std::collections::BTreeSet;
 
 use hornvale_kernel::{ConditionResponse, EntityId, Facet, ResourceVector};
 use hornvale_vessel::affordance::{
-    ObjectProperty, ObjectTraits, OfferedVerb, body_can_use, object_registry, offered, offered_by,
-    offered_to,
+    ObjectProperty, ObjectTraits, OfferedVerb, object_registry, offered, offered_by, offered_to,
 };
 use hornvale_vessel::body::Body;
 use hornvale_vessel::clock::{REFERENCE_MASS_KG, mass_for_species};
@@ -442,51 +441,6 @@ fn body_relativity_never_withdraws_an_existing_capability() {
                 narrowed.difference(&baseline).collect::<Vec<_>>(),
                 body.mass_kg,
                 kind
-            );
-        }
-    }
-}
-
-/// Fix round 1 C1: `body_relativity_never_withdraws_an_existing_capability`
-/// asserts `offered_to(kind, body).is_subset(&offered_by(kind))`, but
-/// `offered_to` is *defined* as `offered_by(kind).into_iter().filter(..)`
-/// — a filter over a baseline is a subset of that baseline for ANY
-/// predicate whatsoever, including one that is restrictive rather than
-/// additive. That test cannot fail no matter what `body_can_use` does, so
-/// it proved nothing about §3.4's additive-only rule. Verified by mutation
-/// (task-3-report.md, fix round 1): mass-gating `AffordsPassage` — the one
-/// change §3.4 forbids by name, since it would newly block traversal —
-/// passed the whole suite undetected.
-///
-/// This test asserts against [`body_can_use`] directly, outside the
-/// `offered_by -> offered_to` filter chain entirely, so no filter identity
-/// can satisfy it for free: every [`ObjectProperty`] except
-/// [`ObjectProperty::SupportsRest`] must return `true` unconditionally, for
-/// every body regardless of mass. `body_can_use` is `pub` for exactly this
-/// reason — the same reason Task 2 extracted `offered` as `pub` so a test
-/// could hand it constructed input the registry alone could not produce.
-#[test]
-fn only_supports_rest_is_body_relative_in_iv_a() {
-    let biosphere = hornvale_species::biosphere_registry();
-    let masses = [
-        mass_for_species("kobold", Some(&biosphere)),
-        mass_for_species("human", Some(&biosphere)),
-        mass_for_species("woolly-mammoth", Some(&biosphere)),
-    ];
-
-    for mass_kg in masses {
-        let body = body_with_mass("probe", mass_kg);
-        for property in ObjectProperty::all() {
-            if property == ObjectProperty::SupportsRest {
-                continue;
-            }
-            assert!(
-                body_can_use(property, &body),
-                "{property:?} must be unconditional in IV.a (spec §3.4): \
-                 body_can_use returned false for a body of mass {mass_kg} kg, \
-                 which means a property other than SupportsRest has become \
-                 body-relative — AffordsPassage becoming body-relative is the \
-                 one change §3.4 forbids by name"
             );
         }
     }

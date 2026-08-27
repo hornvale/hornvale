@@ -260,17 +260,21 @@ const BED_MASS_RATIO_CEILING: f64 = 5.0;
 /// named function the next body-relative property gets an obvious arm in,
 /// per the task brief.
 ///
-/// **`pub` since fix round 1 (C1).** `offered_to` is defined as
-/// `offered_by(kind).into_iter().filter(..)`, so any test that only reads
-/// `offered_to`'s output is checking a subset-of-its-own-baseline identity
-/// that `Iterator::filter` guarantees for *any* predicate — including a
-/// restrictive one. A reviewer proved this by mass-gating
-/// `AffordsPassage` (the one change this doc comment names as forbidden)
-/// and watching the whole suite stay green. Exporting this function lets a
-/// test assert against the predicate itself, the same reason [`offered`]
-/// was extracted `pub` in Task 2's own first fix round.
-/// type-audit: bare-ok(flag: return)
-pub fn body_can_use(property: ObjectProperty, body: &Body) -> bool {
+/// **Private, not `pub` (fix round 2 reverts fix round 1's C1 patch).**
+/// Fix round 1 made this `pub` so an external test could assert against the
+/// predicate directly rather than through the `offered_by -> offered_to`
+/// filter chain (which is a subset of its own baseline for any predicate,
+/// so a test that only reads `offered_to`'s output cannot see a restrictive
+/// mutation here). That test now lives in this module's own `tests` block
+/// below instead, reaching this function through the ordinary `use
+/// super::*;` a same-module test already gets — no `pub` required. Keeping
+/// this private also closes a real bypass: [`offered_to`] is not the only
+/// planned caller of this predicate forever, and a `pub` `body_can_use`
+/// would let a future caller (Task 4's `offered_to_observer`, or any of
+/// `cli`/`windows/lab`/the wasm clients) ask "can this body use this
+/// property" while stepping around the knowledge gate spec §3.5 requires an
+/// offer to pass through.
+fn body_can_use(property: ObjectProperty, body: &Body) -> bool {
     match property {
         ObjectProperty::SupportsRest => body.mass_kg / REFERENCE_MASS_KG <= BED_MASS_RATIO_CEILING,
         ObjectProperty::HoldsLiquid
@@ -340,6 +344,91 @@ mod tests {
                 traits.properties.contains(&prop),
                 "{kind:?} must carry {prop:?} (spec §3.3)"
             );
+        }
+    }
+
+    /// A `Body` fixture varying only `species`/`mass_kg`, for
+    /// [`body_can_use`]'s own direct test below. A plain struct literal
+    /// built from public constructors (`EntityId::new`, `Facet::containing`,
+    /// `ResourceVector::new`, `ThreatNiche`'s pub fields,
+    /// `PerceptionVector::MANIKIN`) — no world or `Ledger`, and no
+    /// suite-only machinery, so it is the same shape as the identically
+    /// named helper in `tests/suite/affordance.rs` (kept separate rather
+    /// than shared, since that file exercises the crate's public API and
+    /// this one exercises a private function no external crate can reach).
+    fn body_with_mass(species: &str, mass_kg: f64) -> Body {
+        let home = hornvale_kernel::Facet::containing([0.0, 0.0, 0.0], 6);
+        Body {
+            entity: hornvale_kernel::EntityId::new(1).expect("1 is a valid entity id"),
+            home: home.clone(),
+            resource: home,
+            species: species.into(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: hornvale_kernel::ConditionResponse {
+                optimum: 15.0,
+                width: 10.0,
+                devotion: 0.5,
+            },
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            thermal_strategy: hornvale_species::ThermalStrategy::Endothermic,
+            niche: hornvale_kernel::ResourceVector::new(&[]).expect("the empty niche is valid"),
+            boldness: 0.5,
+            threat_niche: crate::liveness::ThreatNiche {
+                uncanny: 1.0,
+                heat: 0.0,
+                cold: 0.0,
+                predator: 0.5,
+            },
+            mass_kg,
+            label: "test-body".into(),
+            perception: hornvale_species::PerceptionVector::MANIKIN,
+            village: None,
+        }
+    }
+
+    /// Fix round 1 C1: `body_relativity_never_withdraws_an_existing_capability`
+    /// (`tests/suite/affordance.rs`) asserts
+    /// `offered_to(kind, body).is_subset(&offered_by(kind))`, but
+    /// `offered_to` is *defined* as `offered_by(kind).into_iter().filter(..)`
+    /// — a filter over a baseline is a subset of that baseline for ANY
+    /// predicate whatsoever, including a restrictive one. That test cannot
+    /// fail no matter what [`body_can_use`] does, so it proved nothing
+    /// about §3.4's additive-only rule. Verified by mutation
+    /// (task-3-report.md, fix round 1): mass-gating `AffordsPassage` — the
+    /// one change §3.4 forbids by name, since it would newly block
+    /// traversal — passed the whole suite undetected.
+    ///
+    /// This test asserts against [`body_can_use`] directly, reached the
+    /// ordinary same-module-test way (`use super::*;`) rather than by
+    /// making the function `pub` (fix round 2 reverts fix round 1's `pub`
+    /// widening once this test proved a same-module test was enough): every
+    /// [`ObjectProperty`] except [`ObjectProperty::SupportsRest`] must
+    /// return `true` unconditionally, for every body regardless of mass.
+    #[test]
+    fn only_supports_rest_is_body_relative_in_iv_a() {
+        let biosphere = hornvale_species::biosphere_registry();
+        let masses = [
+            crate::clock::mass_for_species("kobold", Some(&biosphere)),
+            crate::clock::mass_for_species("human", Some(&biosphere)),
+            crate::clock::mass_for_species("woolly-mammoth", Some(&biosphere)),
+        ];
+
+        for mass_kg in masses {
+            let body = body_with_mass("probe", mass_kg);
+            for property in ObjectProperty::all() {
+                if property == ObjectProperty::SupportsRest {
+                    continue;
+                }
+                assert!(
+                    body_can_use(property, &body),
+                    "{property:?} must be unconditional in IV.a (spec §3.4): \
+                     body_can_use returned false for a body of mass {mass_kg} kg, \
+                     which means a property other than SupportsRest has become \
+                     body-relative — AffordsPassage becoming body-relative is the \
+                     one change §3.4 forbids by name"
+                );
+            }
         }
     }
 }
