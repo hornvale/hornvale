@@ -1361,7 +1361,7 @@ not skip it.
 ### Task 8: Chemotrophy becomes witnessed
 
 **Files:**
-- Modify: `domains/species/src/lib.rs` (the `xorn` row, ~line 3417) — its
+- Modify: `domains/species/src/lib.rs` (the `xorn` row, at line 3417) — its
   `trophic_mode` ONLY; its `niche` is Task 9's (Ruling P2)
 - Modify: `domains/species/tests/suite/metabolic_pairs.rs`
 
@@ -1430,7 +1430,23 @@ do. Its message is explicit:
 **Replace, do not delete.** The Gossan's review demonstrated by mutation that
 with the thermal key duplicated, `every_kind_carries_a_sanctioned_pair`,
 `metabolic_class_coverage_matches_the_table` and the life-history golden all
-stay green while the trophic axis moves. The replacement is an explicit table
+stay green while the trophic axis moves.
+
+**The controller verified that claim rather than passing it on, and it is
+true in a stronger form than The Gossan stated.**
+`domains/species/tests/suite/coverage.rs` contains **zero** occurrences of
+`trophic_mode` or `TrophicMode` — its table is
+`&[(ThermalStrategy, Rung, &[&str])]` and it pins the THERMAL axis only. So
+after you duplicate the `Absent` thermal key, the replacement per-kind pin
+you write is **the only guard on the trophic axis anywhere in the suite**.
+That makes it the most load-bearing thing in this task, not a formality.
+
+Two consequences you can rely on:
+- `metabolic_class_coverage_matches_the_table` needs **no change** — it never
+  reads the axis you are moving.
+- `(ThermalStrategy::Absent, Rung::Witnessed, &["xorn"])`
+  (`coverage.rs:143`) must stay true: `xorn` is the sole `Absent`-thermal
+  witness and its thermal strategy is unchanged. The replacement is an explicit table
 of `(kind, trophic_mode)` covering **all** kinds, asserted exhaustively —
 exhaustive so that a kind added later cannot slip past it unnamed.
 
