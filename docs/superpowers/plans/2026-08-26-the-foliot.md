@@ -1,5 +1,12 @@
 # The Foliot Implementation Plan
 
+> **COMPLETE (2026-08-27).** All four stages are implemented; stage 1 landed
+> to main separately at `adc25f992`. Task 1.4 is the one deliberate
+> non-completion — attempted, reverted after three attempts, and carried
+> forward as `TOOL-liveness-accumulates-f64-days` with its measurements. See
+> the retrospective for what the execution changed about the plan.
+
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use
 > superpowers:subagent-driven-development (recommended) or
 > superpowers:executing-plans to implement this plan task-by-task. Steps use
