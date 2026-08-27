@@ -259,7 +259,18 @@ const BED_MASS_RATIO_CEILING: f64 = 5.0;
 /// restrictive rather than additive and belongs to Arc IV.b. This is the one
 /// named function the next body-relative property gets an obvious arm in,
 /// per the task brief.
-fn body_can_use(property: ObjectProperty, body: &Body) -> bool {
+///
+/// **`pub` since fix round 1 (C1).** `offered_to` is defined as
+/// `offered_by(kind).into_iter().filter(..)`, so any test that only reads
+/// `offered_to`'s output is checking a subset-of-its-own-baseline identity
+/// that `Iterator::filter` guarantees for *any* predicate — including a
+/// restrictive one. A reviewer proved this by mass-gating
+/// `AffordsPassage` (the one change this doc comment names as forbidden)
+/// and watching the whole suite stay green. Exporting this function lets a
+/// test assert against the predicate itself, the same reason [`offered`]
+/// was extracted `pub` in Task 2's own first fix round.
+/// type-audit: bare-ok(flag: return)
+pub fn body_can_use(property: ObjectProperty, body: &Body) -> bool {
     match property {
         ObjectProperty::SupportsRest => body.mass_kg / REFERENCE_MASS_KG <= BED_MASS_RATIO_CEILING,
         ObjectProperty::HoldsLiquid
