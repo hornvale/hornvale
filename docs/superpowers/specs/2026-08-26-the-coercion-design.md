@@ -73,8 +73,10 @@ decided.
 the gate would refuse *your* in-character acts on a body *you* possess. This
 state is **relational** in a way every other row is not — `Awake`, `Asleep`,
 `unconscious`, `dead`, `blind` are all true of the body regardless of who asks.
-The derivation therefore takes the asker, and the variant name says so rather
-than hiding it behind a short label that reads as "has any possessor."
+The variant name says so rather than hiding it behind a short label that reads
+as "has any possessor". The derivation itself needs no asker parameter — see
+§3.1's amendment for why, which is a fact about the tree rather than a design
+choice.
 
 ---
 
@@ -96,10 +98,32 @@ Repo precedent exists and this is not an invention: occupations use
   possessed-by       subject = the body's entity    object = Entity(possessor)
   possession-ended   subject = the body's entity    object = Text(reason)
 
-  possessed-by-another(body, asker)  iff
+  possessed_by_another(body)  iff
       the latest `possessed-by` for `body` is not followed by a
-      `possession-ended`, AND its object is not `asker`
+      `possession-ended`
 ```
+
+**AMENDED DURING PLANNING — the fold needs no asker, and the reason is a fact
+about the tree the brainstorm did not check.** An earlier draft of this section
+compared the possessor against "the asker". That cannot work:
+`Session::agent_entity` (`windows/vessel/src/session.rs:1676`) returns
+`self.driven_body().entity` — **the player IS the driven body**, entity-wise, and
+the player-soul has no ledger identity of its own to compare against.
+
+The resolution is smaller than the problem: **`possessed-by` records only
+IMPOSED possession.** The player's own possession is the session's premise, not
+a world fact — nothing commits it today and this campaign does not start. So an
+open `possessed-by` always means *someone other than the player holds this
+body*, the predicate is self-describing, and the derivation stays a flat
+`&self` read exactly like `fn body_state` is now.
+
+§2.3's argument survives intact but changes job: it is why the variant is
+**named** `PossessedByAnother` rather than `Possessed`, not a requirement on the
+signature. The state is relational in principle and degenerate in practice,
+because only one kind of possessor is ever recorded. If a later campaign gives
+the player-soul its own entity — which `PLAY-*`'s vacated-host-as-witness
+thread would need — this fold acquires the asker parameter then, and the name is
+already correct for it.
 
 **Both predicates are new registry entries**, which is save-format reach. See §8.
 
