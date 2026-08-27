@@ -5772,6 +5772,50 @@ mod tests {
         }
     }
 
+    /// The Offer, Task 7 (spec §4): `HELP` is the fourth surface spec §4
+    /// names, and the one that resists a runtime `offered_to_observer` call
+    /// for a structural reason rather than an oversight — it lists every
+    /// verb unconditionally, for a body that may be standing anywhere at
+    /// all, so there is no single `(AnchorKind, Body, Knowledge)` triple to
+    /// route it through (see the Task 7 report for the fuller finding). What
+    /// IS mechanizable is the text-level agreement this test holds: the
+    /// `warm` line's own word must be [`crate::affordance::OfferedVerb::
+    /// Warm`]'s canonical spelling, it must name the SAME carrier
+    /// [`crate::affordance::object_registry`] assigns `RadiatesHeat`
+    /// (`chamber_prose::noun(AnchorKind::Hearth)`), and that carrier must
+    /// actually offer `Warm` per the derived query — so a rename in either
+    /// place, or a reassignment of the carrier, reddens here rather than
+    /// drifting silently, the same discipline
+    /// `every_bare_verb_help_lists_is_classified` already holds between
+    /// `HELP` and the verb-gating rosters.
+    #[test]
+    fn help_names_warm_with_the_offer_modules_own_word_and_carrier() {
+        let warm_line = HELP
+            .lines()
+            .find(|l| l.trim_start().starts_with("warm "))
+            .expect("HELP must list warm");
+        assert!(
+            warm_line
+                .trim_start()
+                .starts_with(crate::affordance::OfferedVerb::Warm.word()),
+            "HELP's warm line must open with OfferedVerb::Warm's own word: {warm_line:?}"
+        );
+        let hearth_noun = crate::chamber_prose::noun(crate::interior::AnchorKind::Hearth)
+            .expect("Hearth always names a noun");
+        assert!(
+            warm_line.contains(hearth_noun),
+            "HELP's warm line must name the same carrier object_registry \
+             assigns RadiatesHeat to ({hearth_noun:?}): {warm_line:?}"
+        );
+        assert!(
+            crate::affordance::offered_by(crate::interior::AnchorKind::Hearth)
+                .contains(&crate::affordance::OfferedVerb::Warm),
+            "the carrier HELP names must actually offer Warm, or the two \
+             texts would agree with each other while disagreeing with the \
+             derived query"
+        );
+    }
+
     /// `warm` (The Offer, Task 5, spec §3.3/§6) is the LIVE half of
     /// acceptance test (2): `warm_appears_on_hearth_with_no_object_table_edit`
     /// (`tests/suite/affordance.rs`) proves the QUERY offers `warm` on
