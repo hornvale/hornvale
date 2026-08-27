@@ -130,31 +130,14 @@ fn map_focus_at_an_unresolved_band_refuses_rather_than_resolving() {
         driver.cursor().is_some(),
         "the cursor must exist at every band"
     );
-    // **RETARGETED by The Quadrat's Task 6.** This asserted
-    // `Some("nothing here yet")`, and that premise is gone: every rung
-    // draws the Mercator raster now — band B included — so the chamber
-    // band's plate is real terrain and the cursor over it has a real
-    // answer. Refusing here would be the LIE the doc above warns about, in
-    // the other direction: the picture would be showing ground the strip
-    // claimed to know nothing about.
-    //
-    // What survives is the doc's actual rule — a name is never faked — so
-    // this pins the two things that still make it checkable: the strip
-    // reports something, and `NOTHING_HERE_YET` is not it.
-    let strip = driver.strip_text();
-    assert!(
-        strip.is_some(),
-        "the strip always reports once the map is focused"
-    );
-    assert_ne!(
-        strip,
-        Some("nothing here yet"),
-        "the chamber band's plate is the raster now, and the raster resolves"
-    );
-    assert!(
-        strip.is_some_and(|t| t.contains("clamped at")),
-        "the answer must be the raster's own, caption included, got {strip:?}"
-    );
+    // UNCHANGED, and briefly wasn't (Task 6, fix round 1's F3/F5). Task 6
+    // dropped `world_plate_for_redraw`'s gate to `Focus::Map` alone, which
+    // handed the chamber band the world raster and made this refusal false —
+    // so it was retargeted to assert the opposite while the doc above went on
+    // saying "faking a resolution here would be worse than refusing". F5
+    // restored the chamber band's own renderer, so the original assertion is
+    // true again and the doc, the name and the body agree once more.
+    assert_eq!(driver.strip_text(), Some("nothing here yet"));
 }
 
 /// The walk band DOES have a resolver (the terrain-feature index, scoped to

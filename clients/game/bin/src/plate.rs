@@ -473,6 +473,36 @@ pub(crate) fn draw_terrain_layer(
     grid
 }
 
+/// Where a VIRTUAL chart tile lands on a `win`-scrolled plate, as
+/// `(screen row, screen col)` — or `None` when it is above or left of the
+/// window.
+///
+/// **The ONE copy of this arithmetic** (Task 6, fix round 1's M1). It was
+/// written twice — [`draw_feature_layer`]'s own `place` closure and
+/// [`perception_tile_on_screen`] — line for line, while the second one's doc
+/// invoked the one-copy discipline. The duplication was not merely untidy:
+/// the reviewer found it by accident because a single mutation hit both
+/// sites at once, so the copies were actively weakening the mutation
+/// evidence for each other.
+///
+/// LONGITUDE WRAPS, LATITUDE DOES NOT — spec §4.2's own asymmetry, the same
+/// one `Driver::move_cursor`'s scroll spill obeys. A site just past the seam
+/// is still on screen when the window straddles it; a row above the window
+/// is simply off the plate. The RIGHT and BOTTOM bounds are deliberately
+/// NOT checked here: they need the drawn plate's size, which each caller
+/// reads off its own `dst` (see [`draw_feature_layer`]'s doc on why that
+/// bound is never a parameter).
+fn tile_on_screen(
+    win: &Window,
+    virtual_w: u32,
+    plate_row: u32,
+    plate_col: u32,
+) -> Option<(u32, u32)> {
+    let dcol = (plate_col + virtual_w - (win.origin_col % virtual_w)) % virtual_w;
+    let drow = plate_row.checked_sub(win.origin_row)?;
+    Some((drow, dcol))
+}
+
 /// LAYER TWO: every DISCOVERED point site, drawn onto `dst` by PROJECTING
 /// it, rather than by asking each screen cell whether its area-majority
 /// representative happens to be one.
@@ -546,11 +576,9 @@ pub fn draw_feature_layer(
         else {
             return; // above the clamp: not on this map at all
         };
-        // LONGITUDE WRAPS, LATITUDE DOES NOT — the same asymmetry
-        // `move_cursor`'s scroll obeys, so a site just past the seam is
-        // still on screen when the window straddles it.
-        let dcol = (plate_col + virtual_w - (win.origin_col % virtual_w)) % virtual_w;
-        let Some(drow) = plate_row.checked_sub(win.origin_row) else {
+        // Longitude wraps, latitude does not — see [`tile_on_screen`], which
+        // is now the only place that arithmetic is written.
+        let Some((drow, dcol)) = tile_on_screen(win, virtual_w, plate_row, plate_col) else {
             return;
         };
         if dcol >= width || drow >= height {
@@ -836,10 +864,9 @@ pub(crate) fn perceived_at(
 /// where a facet went** — the same one-copy discipline `core`'s own chart
 /// keeps behind its single `boxes_of`.
 ///
-/// LONGITUDE WRAPS, LATITUDE DOES NOT, exactly as
-/// [`draw_feature_layer`]'s own `place` closure has it: a facet just past the
-/// seam is still on screen when the window straddles it, and a row above the
-/// window is simply off the plate.
+/// The window offset comes from [`tile_on_screen`], shared with
+/// [`draw_feature_layer`] rather than written a second time here — see that
+/// function's doc for what the duplication cost before M1 removed it.
 pub(crate) fn perception_tile_on_screen(
     f: &Frame,
     win: &Window,
@@ -848,9 +875,7 @@ pub(crate) fn perception_tile_on_screen(
     room: u64,
 ) -> Option<(u32, u32)> {
     let (plate_row, plate_col) = perception_tile(f, virtual_w, virtual_h, room)?;
-    let dcol = (plate_col + virtual_w - (win.origin_col % virtual_w)) % virtual_w;
-    let drow = plate_row.checked_sub(win.origin_row)?;
-    Some((drow, dcol))
+    tile_on_screen(win, virtual_w, plate_row, plate_col)
 }
 
 /// The VIRTUAL chart tile a packed room id occupies — the absolute

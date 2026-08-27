@@ -25,43 +25,49 @@
 //!
 //! **Resolution genuinely tracks the cursor.** Spec §3.1 assigns the cursor
 //! query to `bin`; §9 defers "the chamber / delve resolvers" (session-level
-//! cells/marks/agents at those bands) to a future campaign — so those bands
-//! honestly answer [`NOTHING_HERE_YET`]. The walk band resolves against its
-//! own chart ([`Driver::resolve_walk_band`]); The Portolan part II, Task 3b
-//! adds a second resolver for the whole-world Mercator plate
-//! ([`Driver::resolve_world_view`]), active in place of the walk band's own
-//! on every rung [`Driver::world_view`] reports (`spread::compose`'s own
-//! doc: the world view is a lens over whichever band the character occupies,
-//! never a new band). Either way, the *pointed-at* vertex is what gets resolved, not the
-//! observer's own (an earlier revision of this module resolved the
-//! observer's vertex unconditionally — a fix round caught that this made the
-//! strip position-invariant while the cursor visibly moved, exactly the "a
-//! wrong name is indistinguishable from a right one" failure the design
-//! spec warns against).
+//! marks and agents at those bands) to a future campaign — so the chamber
+//! band still honestly answers [`NOTHING_HERE_YET`]. Either way, the
+//! *pointed-at* vertex is what gets resolved, not the observer's own (an
+//! earlier revision of this module resolved the observer's vertex
+//! unconditionally — a fix round caught that this made the strip
+//! position-invariant while the cursor visibly moved, exactly the "a wrong
+//! name is indistinguishable from a right one" failure the design spec warns
+//! against).
 //!
-//! The chain from a screen position to a [`hornvale_kernel::Vertex`]:
-//! [`hornvale_game_core::chart::cell_at`] (new, shared with `draw` via a
-//! common `boxes_of` helper — never a second copy of the projection) finds
-//! which wire [`hornvale_game_core::ChartCell`] occupies the cursor's box
-//! and its index into `chart.cells`. `chart.cells` is a field-for-field,
-//! order-preserving mirror of the real `hornvale_scene::SurroundsScene`
-//! (`Session::snapshot` embeds that scene directly — nothing reorders or
-//! filters it in transit), so re-deriving the SAME scene with
-//! `self.session.purview(0)` (the identical call `Session::snapshot` itself
-//! makes for the walk band) and indexing into its `cells` at that same
-//! position names the identical real cell — no float matching, no new
-//! trigonometry. That real cell's `room: u64` unpacks
+//! **TWO RESOLVERS ON THE WALK BAND, most specific first (The Quadrat, Task
+//! 6).** Every rung of the walk band draws the Mercator raster now, band B
+//! included, so [`Driver::resolve_world_view`] — the tile
+//! [`plate::terrain_at_tile`] painted — is the answer almost everywhere.
+//! [`Driver::resolve_walk_band`] is tried first and answers only where the
+//! band-B PERCEPTION OVERLAY drew something under the cursor, which is the
+//! more specific fact and the one the picture is showing there.
+//!
+//! `Driver::world_view` is gone with the mode it named; the rung question it
+//! used to answer is [`Driver::at_walk_band_rung`] and the band question is
+//! [`Driver::raster_is_drawn`].
+//!
+//! The chain from a screen position to a [`hornvale_kernel::Vertex`], for
+//! both resolvers, is the same one and it is `bin`'s own: a
+//! `scene/surrounds/v2` facet's `room: u64` unpacks
 //! ([`hornvale_kernel::FacetId::unpack`]) to a real
-//! [`hornvale_kernel::Facet`], whose [`hornvale_kernel::Facet::coord`]
-//! feeds the same `NearestVertexIndex` lookup already used for the observer.
+//! [`hornvale_kernel::Facet`], whose [`hornvale_kernel::Facet::coord`] feeds
+//! the same `NearestVertexIndex` lookup already used for the observer. The
+//! scene is re-derived with `self.session.purview(0)` — the identical call
+//! `Session::snapshot` itself makes for the walk band.
 //!
-//! No new geometry was written for this: `FacetId::unpack`, `Facet::coord`
-//! and `NearestVertexIndex::nearest` all already existed: `kernel::room` has
-//! no inverse of `bearing_to`/`distance_rad_to` (a destination from an
-//! origin, a bearing and a distance), so this deliberately does not need
-//! one — the index-into-a-freshly-rebuilt-scene route reaches the same
-//! room a bearing-inversion would have, using data both `chart::cell_at`
-//! and `Session::purview` already carry.
+//! **This used to route through `hornvale_game_core::chart::cell_at`**, the
+//! `core` chart's own polar box lookup, matched back to the real scene by
+//! INDEX. That step is gone (Task 6): `core`'s chart is not what band B
+//! draws any more, so asking it which box the cursor was in would have named
+//! a facet from a picture nobody drew. The overlay's own placement
+//! ([`plate::perceived_at`]) answers instead, and it is `bin` that placed
+//! those facets in the first place, so no index round-trip is needed.
+//!
+//! No new geometry was written for any of this: `FacetId::unpack`,
+//! `Facet::coord` and `NearestVertexIndex::nearest` all already existed, and
+//! `kernel::room` has no inverse of `bearing_to`/`distance_rad_to` (a
+//! destination from an origin, a bearing and a distance), so this
+//! deliberately does not need one.
 
 use crate::discovery::{Discovered, FeatureId, Visited};
 use crate::history::History;
@@ -207,6 +213,22 @@ pub struct Driver {
     /// and by every `handle`, so `snapshot()` never needs to touch the
     /// session again.
     cached: String,
+    /// Whether the possession is currently on the WALK band, read off
+    /// [`Self::cached`]'s own `spatial` tag by [`Self::refresh`].
+    ///
+    /// **Cached rather than re-parsed, and the reason is a cost.** Four
+    /// things now depend on the band — whether a world plate is supplied at
+    /// all, the active plate's size, whether a cursor move scrolls, and
+    /// whether the strip has a resolver — and three of those are asked on
+    /// every keypress. Parsing the snapshot JSON in each of them would put
+    /// several `serde_json` passes on the cursor path to answer a question
+    /// that changes only when a turn does. [`Self::refresh`] is the one
+    /// choke point that already parses (for the completion scope), and it is
+    /// the only place a turn's band can change.
+    ///
+    /// Opens `true`: the session begins on the walk band, and `start`'s own
+    /// `refresh()` corrects it before any caller sees it.
+    on_walk_band: bool,
     /// Which pane keys currently drive — the walk view's movement keys, the
     /// command line, or the map cursor. Startup is [`Focus::Walk`] (arrow
     /// keys move immediately); replaces The Portolan part I's `Mode {
@@ -680,9 +702,11 @@ impl Driver {
         let frame = mercator::frame_for(locked);
         // The session opens on the walk band, and band B IS the ladder's
         // finest rung (The Quadrat, Task 2) — so the opening rung is
-        // `BAND_B_RUNG`, not a separate off-ladder state. `world_view()`
-        // reads `false` there, which is what keeps `Focus::Map` alone from
-        // drawing the Mercator (`world_plate_for_redraw`).
+        // `BAND_B_RUNG`, not a separate off-ladder state. Band B DRAWS the
+        // Mercator as of Task 6, so `Focus::Map` here shows the raster with
+        // the perception overlay over it; the origin below is the chart's
+        // corner and `enter_map` centres it on the observer before anything
+        // is drawn (`centre_band_b_on_the_observer`).
         let window = Window {
             depth: BAND_B_RUNG,
             origin_col: 0,
@@ -742,6 +766,7 @@ impl Driver {
             hint: None,
             cycle: None,
             noun_prompt: None,
+            on_walk_band: true,
         };
         driver.refresh();
         Ok(driver)
@@ -881,32 +906,33 @@ impl Driver {
     }
 
     /// The world plate to hand [`hornvale_game_core::render_with`] for a
-    /// `w`-by-`h` redraw, gated on the world view actually being active —
-    /// `Some(`[`Driver::world_plate`]`(w, h))` when [`Focus::Map`] is
-    /// focused AND [`Self::world_view`] is on, `None` otherwise.
+    /// `w`-by-`h` redraw — `Some` when [`Focus::Map`] is focused AND the
+    /// band is one whose plate is the raster ([`Self::raster_is_drawn`]),
+    /// `None` otherwise.
     ///
-    /// **Fix round 1: this is the ONE place that decision is made.** Before
-    /// this method existed, `main.rs`'s `redraw` computed
-    /// `Some(driver.world_plate(w, h))` whenever `focus() == Focus::Map`,
-    /// with no `world_view` gate at all — `Focus::Map` already meant
-    /// something else (the walk-band cursor/strip feature this module's
-    /// `world_view` method's doc names), so that reproduced the exact
-    /// class of bug `content_height`'s own doc warns about elsewhere in
-    /// this crate: two independent computations of "is the world view
-    /// showing" would have been one too many, this time on the ACTIVATION
-    /// question rather than a dimension. `main.rs` calls only this method
-    /// now, never re-deriving the condition itself, and every test that
-    /// wants to know what a redraw would draw calls it too rather than
-    /// reimplementing the check a third time.
+    /// **The RUNG is no longer part of the gate, and the BAND is (The
+    /// Quadrat, Task 6 and its fix round 1).** It used to be
+    /// `Focus::Map && world_view()`, where `world_view()` meant "some rung
+    /// coarser than band B"; band B draws the raster now, so that clause had
+    /// no discriminating answer left. What replaced it is not "nothing":
+    /// dropping to `Focus::Map` alone let a chamber-band `map` replace the
+    /// floor plan with the world raster, which the campaign's spec promises
+    /// not to touch — see [`Self::raster_is_drawn`].
     ///
-    /// [`Self::world_view`] reads `false` at the opening rung and, since
-    /// Task 3b, [`Self::apply_zoom`] is the gesture that moves off it —
-    /// zooming out (`-` on [`Focus::Map`]) past band B. The GATE is
-    /// unchanged; its SOURCE is a rung comparison rather than a stored flag
-    /// (The Quadrat, Task 2).
+    /// **This is the ONE place that decision is made** (The Portolan part
+    /// II's own fix round 1). Before this method existed, `main.rs`'s
+    /// `redraw` computed `Some(driver.world_plate(w, h))` whenever
+    /// `focus() == Focus::Map`, with no further gate — reproducing the exact
+    /// class of bug `content_height`'s own doc warns about elsewhere in this
+    /// crate: two independent computations of "is the raster showing" would
+    /// have been one too many, this time on the ACTIVATION question rather
+    /// than a dimension. `main.rs` calls only this method now, and every
+    /// test that wants to know what a redraw would draw calls it too rather
+    /// than reimplementing the check a third time.
     ///
-    /// **Two layers, and the lower one is assembled from TILES (The
-    /// Quadrat, Tasks 4 and 5).** The terrain raster comes from
+    /// **Three layers now, and the lowest is assembled from TILES (The
+    /// Quadrat, Tasks 4, 5 and 6).** The perception overlay is the third —
+    /// see [`Self::compose_perception_layer`], which is a no-op off band B. The terrain raster comes from
     /// [`crate::tiles::TileCache::compose`], which draws only the chart
     /// tiles this window covers that it does not already hold;
     /// [`plate::draw_feature_layer`] is then composed over the assembled
@@ -922,7 +948,7 @@ impl Driver {
     /// more** — the tiles are the cached objects, and the assembled plate
     /// was never one.
     pub fn world_plate_for_redraw(&mut self, w: u16, h: u16) -> Option<hornvale_game_core::Grid> {
-        if self.focus != Focus::Map {
+        if self.focus != Focus::Map || !self.raster_is_drawn() {
             return None;
         }
         let (plate_width, plate_height) = Self::world_plate_dims(w, h);
@@ -1295,6 +1321,31 @@ impl Driver {
         self.window.depth == BAND_B_RUNG
     }
 
+    /// Whether the RASTER is what the plate region draws right now — which
+    /// is a question about the BAND, not the rung.
+    ///
+    /// **Band A keeps its own renderer, and fix round 1's F5 is why this
+    /// method exists.** `world_plate_for_redraw`'s gate briefly became
+    /// `Focus::Map` alone, so typing `map` inside a chamber replaced the
+    /// chamber floor plan with the world raster — and
+    /// [`Self::compose_perception_layer`] correctly refuses off the walk
+    /// band, so nothing marked the player's position there at all. The
+    /// campaign's spec says "Band A keeps its own renderer and this campaign
+    /// does not touch it", and that is a promise: whether consulting a world
+    /// map from indoors is DESIRABLE is a real question, but it is a
+    /// deliberate design change for a later campaign, not a side effect of a
+    /// raster task.
+    ///
+    /// So: no plate at the chamber band, which means `spread::compose` draws
+    /// `plan::draw` exactly as it did before this campaign, the cursor
+    /// clamps to the narrow plate that is really on screen, a cursor move
+    /// does not silently scroll a window nobody can see, and the strip
+    /// answers [`NOTHING_HERE_YET`] — spec §9 still defers the chamber
+    /// resolver.
+    fn raster_is_drawn(&self) -> bool {
+        self.on_walk_band
+    }
+
     /// The active plate's own width and height, in grid cells — the walk
     /// band's fixed [`hornvale_game_core::spread::PLATE_WIDTH`] and
     /// `self.plate_height` when the world view is off, or the world
@@ -1312,18 +1363,23 @@ impl Driver {
     /// the world-view resolver — reads it from here, never a second copy
     /// of the fit.
     fn active_plate_dims(&self) -> (u16, u16) {
-        // ONE ARM since Task 6. The walk-band arm returned
-        // `spread::PLATE_WIDTH` because band B drew `core`'s own chart into
-        // the narrow plate; it draws the raster now, and `spread::compose`
-        // widens the plate region to `world_plate_width` for exactly the
-        // same condition this method's only callers live under
-        // ([`Focus::Map`], where the cursor and the strip exist at all).
-        // Keeping a second arm would put the cursor's clamp back on a plate
-        // nothing draws — the Task 3a review finding this method was
-        // extracted to fix.
-        let width = hornvale_game_core::spread::world_plate_width(self.term_w, self.term_h);
-        let height = width / hornvale_game_core::spread::GLYPH_ASPECT;
-        (width, height)
+        // TWO ARMS, KEYED ON THE BAND rather than on the rung (Task 6, fix
+        // round 1's F5). Before Task 6 the split was `world_view()`, a rung
+        // comparison, because band B drew `core`'s own chart into the narrow
+        // plate. Band B draws the raster now — so the rung no longer decides
+        // — but the CHAMBER band still draws `plan::draw` into
+        // `spread::PLATE_WIDTH`, and clamping the cursor to a 104-column fit
+        // over a 40-column floor plan is the Task 3a review finding with the
+        // operands swapped. `spread::compose` widens the plate region only
+        // when it is actually handed a plate, which is exactly
+        // [`Self::raster_is_drawn`].
+        if self.raster_is_drawn() {
+            let width = hornvale_game_core::spread::world_plate_width(self.term_w, self.term_h);
+            let height = width / hornvale_game_core::spread::GLYPH_ASPECT;
+            (width, height)
+        } else {
+            (hornvale_game_core::spread::PLATE_WIDTH, self.plate_height)
+        }
     }
 
     /// Re-clamp `self.window`'s origin into the CURRENT zoom's virtual
@@ -1372,9 +1428,12 @@ impl Driver {
         let clamped_y = raw_y.clamp(0, max_y);
         self.cursor.y = clamped_y as u16;
 
-        // UNCONDITIONAL since Task 6: band B is a scrollable Mercator window
-        // like every other rung, so a move past the edge scrolls there too.
-        {
+        // Band B is a scrollable Mercator window like every other RUNG since
+        // Task 6 — but only where a Mercator is drawn at all. Scrolling a
+        // window the chamber band never shows would move `self.window`
+        // invisibly and leave the map somewhere else on the way back out
+        // (fix round 1, F5).
+        if self.raster_is_drawn() {
             let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
             let spill_x = raw_x - clamped_x;
             if virtual_w > 0 {
@@ -1409,9 +1468,17 @@ impl Driver {
     /// ladder's ends: a `world_view` boolean sat beside the rung, and
     /// zooming past either end flipped that boolean AND reset the window to
     /// the coarsest rung — the reported "zooms based on criteria I have not
-    /// identified". Band B is a rung now, so WHICH renderer appears is a
-    /// function of `depth` alone ([`Self::world_view`]), and crossing the
-    /// band-B boundary is an ordinary step rather than a mode change.
+    /// identified". Band B is a rung now, so WHICH LAYERS appear is a
+    /// function of `depth` alone ([`Self::at_walk_band_rung`]), and crossing
+    /// the band-B boundary is an ordinary step rather than a mode change.
+    ///
+    /// **"Exactly one number" is enforced by the `!= before` guard, and it
+    /// has to be.** Everything this method does beyond moving `depth` — the
+    /// re-clamp and band B's re-centring — is inside that guard, so a press
+    /// that saturates at either end of the ladder really does nothing. Fix
+    /// round 1's F1 is what this sentence is for: the re-centring call
+    /// briefly sat outside it and a `+` at the ceiling discarded ~19,000
+    /// tiles of scroll.
     ///
     /// **The ladder's direction inverted with The Quadrat**: `depth` is a
     /// mesh subdivision level, so zooming IN raises it and zooming OUT
@@ -1436,11 +1503,22 @@ impl Driver {
         }
         if self.window.depth != before {
             self.reclamp_window();
+            // ARRIVING at band B re-centres on the observer, the same way
+            // entering the map does — see
+            // [`Self::centre_band_b_on_the_observer`] for why that is band
+            // B's rule and not the ladder's.
+            //
+            // **INSIDE THIS GUARD, and the placement is the whole point.**
+            // Fix round 1, F1: it sat outside, so a SATURATING press at the
+            // ladder's ceiling re-centred anyway — measured jumping
+            // `origin_col` 21169 -> 2176, throwing away ~19,000 tiles of the
+            // player's own scroll on a keypress this method's own doc says
+            // changes nothing. That is Nathan's founding complaint ("the map
+            // zooms based on criteria I have not identified") reintroduced by
+            // its own fix, and `zoom_plus_on_the_walk_band_alone_is_a_no_op`
+            // passed throughout because it never scrolled first.
+            self.centre_band_b_on_the_observer();
         }
-        // Arriving BACK at band B re-centres on the observer, the same way
-        // entering the map does — see [`Self::centre_band_b_on_the_observer`]
-        // for why that is band B's rule and not the ladder's.
-        self.centre_band_b_on_the_observer();
         self.move_cursor(0, 0);
         self.refresh_strip();
     }
@@ -1464,10 +1542,14 @@ impl Driver {
     /// "The acknowledgement is the map redrawing" (`task-3b-brief.md`) —
     /// there is no reply channel to say anything else.
     fn recentre(&mut self) {
-        // NO RUNG GATE since Task 6. It used to return early off the world
-        // view because "the walk-band chart is not a Mercator projection and
-        // has no central line to roll onto" — band B IS a Mercator
-        // projection now, so the gesture is meaningful at every rung.
+        // NO RUNG GATE since Task 6 — band B IS a Mercator projection now, so
+        // the gesture is meaningful at every rung. A BAND gate remains, for
+        // the reason the rung gate originally gave: the chamber band's floor
+        // plan is not a Mercator projection and has no central line to roll
+        // onto (fix round 1, F5).
+        if !self.raster_is_drawn() {
+            return;
+        }
         let (_, plate_h) = self.active_plate_dims();
         let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
         let plate_row = self.window.origin_row + u32::from(self.cursor.y);
@@ -1591,14 +1673,20 @@ impl Driver {
         let Ok(snap) = hornvale_game_core::Snapshot::parse(&self.cached) else {
             return NOTHING_HERE_YET.to_string();
         };
+        // A BAND WITH NO PLATE OF OURS HAS NO RESOLVER OF OURS. The chamber
+        // band draws `plan::draw`, not the raster (see
+        // [`Self::raster_is_drawn`]), and spec §9 still defers the chamber
+        // resolver — so resolving the tile under the cursor here would name
+        // terrain that is not on screen, which is the exact "the strip
+        // contradicts the picture" defect The Portolan part II's Task 3b
+        // closed on the other side. Fix round 1's F5.
+        let hornvale_game_core::Spatial::Walk { chart } = &snap.spatial else {
+            return NOTHING_HERE_YET.to_string();
+        };
         // The sight caption belongs to the walk band's own perception
         // channel, so it is read off the snapshot rather than inferred from
-        // the rung: a chamber-band snapshot carries no chart and therefore
-        // no sight, whatever rung the ladder happens to be on.
-        let sight = match &snap.spatial {
-            hornvale_game_core::Spatial::Walk { chart } => chart.sight.clone(),
-            hornvale_game_core::Spatial::Chamber { .. } => None,
-        };
+        // the rung.
+        let sight = chart.sight.clone();
         // TWO RESOLVERS, MOST SPECIFIC FIRST. The perception overlay's own
         // facet under the cursor is the better answer where there is one —
         // it is the facet the picture actually drew there — and the tile the
@@ -1770,8 +1858,9 @@ impl Driver {
     /// "strip contradicts the picture" defect Task 3b closed on the other
     /// side. Everything below that step — `room` to [`FacetId::unpack`] to
     /// [`hornvale_kernel::Facet::coord`] to the nearest-vertex lookup to
-    /// `resolve_chain_at` — is unchanged, and is still the chain the module
-    /// doc describes.
+    /// `resolve_chain_at` — is unchanged. The module doc now describes that
+    /// chain WITHOUT the `chart::cell_at` step, so the cross-reference is
+    /// whole again rather than half-true (fix round 1, F4).
     fn resolve_walk_band(&self) -> Option<String> {
         if !self.at_walk_band_rung() {
             return None;
@@ -1995,6 +2084,11 @@ impl Driver {
         // would be a regression masquerading as caution.
         if let Ok(snap) = hornvale_game_core::Snapshot::parse(&self.cached) {
             self.scope.update(&snap.narration);
+            // The band, from the same parse (see `on_walk_band`'s own doc for
+            // why it is cached and not re-derived per keypress). On a parse
+            // failure the previous value stands, the same posture the scope
+            // above takes: a dead session is not a band change.
+            self.on_walk_band = matches!(snap.spatial, hornvale_game_core::Spatial::Walk { .. });
         }
         self.update_discovery();
     }
@@ -2189,25 +2283,21 @@ mod portolan_tests {
     /// where. The player's own position is not an arbitrary choice: it is
     /// where a client opening the map would put the window, and Task 7 makes
     /// that the shipped gesture.
+    /// **DELEGATES to [`Driver::centre_window_on`] since Task 6's fix round
+    /// 1 (F2), and the delegation is the point.** Task 1's review made a size
+    /// guard the CONDITION of promoting this helper to production; Task 6
+    /// wrote the guarded version and left this unguarded copy of the same
+    /// name standing beside it, still computing
+    /// `(col + vw - u32::from(w) / 2) % vw` in `u32` — the exact underflow
+    /// the guard exists for. With 6 call sites here against 1 for the
+    /// production method, the UNGUARDED copy was what almost the whole suite
+    /// exercised, and two same-named functions with divergent arithmetic in
+    /// one file is how the next reader picks the wrong one. There is one
+    /// implementation now and the tests drive it.
     fn centre_window_on_the_player(d: &mut Driver, w: u16, h: u16) {
         let c = d.session.position().coord();
-        centre_window_on(d, c.latitude, c.longitude, w, h)
+        d.centre_window_on(c.latitude, c.longitude, w, h)
             .expect("the flagship's own position is inside the projection's clamp");
-    }
-
-    /// [`centre_window_on_the_player`]'s own body, taking the point to
-    /// centre on rather than reading the possession's. `None` when the
-    /// point is above the projection's polar clamp and so is on no chart at
-    /// all — a caller choosing a vertex out of a roster has to skip those,
-    /// which the player's own position never is.
-    fn centre_window_on(d: &mut Driver, lat: f64, lon: f64, w: u16, h: u16) -> Option<()> {
-        let (vw, vh) = plate::virtual_dims(d.window.depth);
-        let (row, col) = mercator::project(&d.frame, lat, lon, vw, vh)?;
-        d.window.origin_row = row
-            .saturating_sub(u32::from(h) / 2)
-            .min(vh.saturating_sub(u32::from(h)));
-        d.window.origin_col = (col + vw - u32::from(w) / 2) % vw;
-        Some(())
     }
 
     /// Move `d`'s window onto a real cave mouth out of `d`'s OWN roster —
@@ -2228,7 +2318,7 @@ mod portolan_tests {
             })
             .expect("seed 42 has at least one cave mouth inside the projection's clamp");
         let c = d.geo.coord(site);
-        centre_window_on(d, c.latitude, c.longitude, plate_w, plate_h)
+        d.centre_window_on(c.latitude, c.longitude, plate_w, plate_h)
             .expect("the site just passed the clamp above");
         site
     }
@@ -2658,6 +2748,51 @@ mod portolan_tests {
             "band B is already the ladder's finest rung"
         );
         assert_eq!(d.window, before_window);
+    }
+
+    /// THE SAME NO-OP, AFTER SCROLLING — fix round 1's F1, and the reason the
+    /// test above was not enough.
+    ///
+    /// `zoom_plus_on_the_walk_band_alone_is_a_no_op` compares the window
+    /// against its state at `enter_map`, which is the state band B's own
+    /// centring just produced — so re-centring on a saturating press is
+    /// INVISIBLE to it, and its premise had silently narrowed to "a press
+    /// that changes nothing changes nothing, provided nothing had changed".
+    /// Measured against the defect: `origin_col` jumped 21169 -> 2176, about
+    /// nineteen thousand tiles of the player's own scroll discarded by a
+    /// keypress documented as doing nothing. That is Nathan's founding
+    /// complaint — "the map zooms based on criteria I have not identified" —
+    /// reintroduced by its own fix.
+    ///
+    /// So this one scrolls FIRST, a long way, and then presses `+`.
+    #[test]
+    fn zoom_plus_at_the_ladders_ceiling_keeps_the_players_scroll() {
+        let mut d = test_driver();
+        d.resize(210, 56);
+        d.enter_map();
+        assert!(d.at_walk_band_rung(), "sanity: the ladder's ceiling");
+        let centred = d.window;
+
+        // Scroll east, hard, past the plate's own edge — the only way to
+        // travel at this rung (spec §4.2: the cursor clamps and the window
+        // moves).
+        for _ in 0..20 {
+            d.apply(Action::CursorBy(i16::MAX, 0));
+        }
+        let scrolled = d.window;
+        assert_ne!(
+            scrolled.origin_col, centred.origin_col,
+            "the premise: the scroll must actually have moved the window, or a \
+             re-centre would be undetectable — which is exactly how the defect \
+             this test exists for stayed hidden"
+        );
+
+        d.apply(Action::Zoom(1));
+        assert_eq!(
+            d.window, scrolled,
+            "a press past the ladder's ceiling must change nothing at all — not \
+             the rung, and not the window the player scrolled to"
+        );
     }
 
     // -- Step 2: the cursor clamps to the ACTIVE plate -------------------
@@ -3466,34 +3601,22 @@ mod portolan_tests {
             matches!(snap.spatial, hornvale_game_core::Spatial::Chamber { .. }),
             "seed 42's flagship must land in the chamber band after one `enter`"
         );
-        // A TERMINAL WIDE ENOUGH THAT THE TEXT FITS, which is the premise
-        // this test needs and no longer gets for free (Task 6). The chamber
-        // band used to answer `NOTHING_HERE_YET` — a short, fixed refusal
-        // that fit the 40-column floor — because band B drew `core`'s chart
-        // and only a coarse rung drew the raster. Every rung draws the
-        // raster now, so the chamber band resolves the terrain under the
-        // cursor like any other band, and its strip is a real containment
-        // chain plus the clamp caption. The subject of THIS test is
-        // `strip_offset`'s zero, not which band produces a short string, so
-        // the premise is restored by widening the plate rather than by
-        // hunting for another band that still refuses.
-        d.resize(240, 80);
         d.enter_map();
-        let (plate_w, _) = d.active_plate_dims();
-        let text_len = d
-            .strip_text()
-            .expect("the strip always reports once the map is focused")
-            .chars()
-            .count();
-        assert!(
-            text_len <= usize::from(plate_w),
-            "the premise: {text_len} characters must fit a {plate_w}-column plate"
+        // UNCHANGED, and briefly wasn't (fix round 1's F3/F5): Task 6 handed
+        // the chamber band the raster, which made this a long containment
+        // chain instead of a short refusal, and this test was retargeted to a
+        // 240-column terminal to keep its premise. F5 restored the chamber's
+        // own renderer, so the short refusal is back and so is the premise.
+        assert_eq!(
+            d.strip_text(),
+            Some(NOTHING_HERE_YET),
+            "sanity: the chamber band has no resolver, so the strip is the short refusal"
         );
         let before = d.redraw_count;
         assert_eq!(
             d.strip_offset(),
             0,
-            "a strip that fits has nothing to scroll"
+            "the chamber band's strip fits the plate at the floor"
         );
         d.apply(Action::CursorBy(1, 0));
         assert!(
@@ -4091,6 +4214,99 @@ mod portolan_tests {
             })
             .count();
         assert_eq!(overlay, 0, "a coarse rung must draw no perception glyphs");
+    }
+
+    /// **THE CHAMBER BAND'S PICTURE — fix round 1's F5, and the test whose
+    /// absence made that defect silent.** Nothing in `bin` pinned what the
+    /// chamber band draws, so when `world_plate_for_redraw`'s gate became
+    /// `Focus::Map` alone, typing `map` indoors replaced the chamber floor
+    /// plan with the world raster and the suite stayed green. The perception
+    /// overlay correctly refuses off the walk band, so nothing marked the
+    /// player's position there either.
+    ///
+    /// The campaign's spec says "Band A keeps its own renderer and this
+    /// campaign does not touch it". This is that promise, as an assertion
+    /// about the composed page rather than about a gate — so it holds however
+    /// the gate is later spelled.
+    #[test]
+    fn the_chamber_band_keeps_its_own_plan_and_never_the_raster() {
+        let mut d = test_driver();
+        d.resize(210, 56);
+        // `handle`'s bool is whether the possession RELEASED, so the real
+        // check is the snapshot's own `spatial` tag.
+        d.handle("enter");
+        let snap = hornvale_game_core::Snapshot::parse(&d.cached).expect("a live session");
+        assert!(
+            matches!(snap.spatial, hornvale_game_core::Spatial::Chamber { .. }),
+            "seed 42's flagship must land in the chamber band after one `enter`"
+        );
+        d.enter_map();
+
+        assert!(
+            d.world_plate_for_redraw(210, 56).is_none(),
+            "the chamber band must not be handed a world plate"
+        );
+
+        // The PICTURE, through the same `render_with` `main.rs`'s redraw
+        // calls — a gate assertion alone would not have caught this, because
+        // `spread::compose` is what turns a supplied plate into a replaced
+        // floor plan.
+        let json = d.snapshot();
+        let empty = String::new();
+        let world_plate = d.world_plate_for_redraw(210, 56);
+        let (grid, _) = hornvale_game_core::render_with(
+            &json,
+            210,
+            56,
+            d.focus(),
+            d.cursor(),
+            hornvale_game_core::CommandLine {
+                text: &empty,
+                caret: 0,
+            },
+            d.strip_text(),
+            d.echo(),
+            world_plate.as_ref(),
+            d.strip_offset(),
+            None,
+        )
+        .expect("the fixture renders");
+
+        let content_h = hornvale_game_core::spread::content_height(56);
+        let plate_w = hornvale_game_core::spread::world_plate_width(210, 56);
+        let sources: BTreeSet<hornvale_game_core::Source> = (0..content_h)
+            .flat_map(|y| (0..plate_w).map(move |x| (x, y)))
+            .filter_map(|(x, y)| grid.get(x, y).filter(|c| !c.is_blank()).map(|c| c.source))
+            .collect();
+        assert!(
+            sources.contains(&hornvale_game_core::Source::Plan),
+            "the chamber band must draw its own floor plan, got {sources:?}"
+        );
+        assert!(
+            !sources.contains(&hornvale_game_core::Source::World),
+            "the world raster must never appear on a chamber-band spread, got {sources:?}"
+        );
+        assert!(
+            !sources.contains(&hornvale_game_core::Source::Chart),
+            "and neither must a perception overlay with no packet behind it, got {sources:?}"
+        );
+
+        // The cursor clamps to the plate that IS drawn, not to the world
+        // plate's wider fit — the Task 3a review finding with the operands
+        // swapped.
+        d.apply(Action::CursorBy(i16::MAX, 0));
+        assert_eq!(
+            d.cursor.x,
+            hornvale_game_core::spread::PLATE_WIDTH - 1,
+            "the chamber band's cursor must stop at the floor plan's own edge"
+        );
+        // And a cursor move must not have scrolled a window nobody can see.
+        let window = d.window;
+        d.apply(Action::CursorBy(i16::MAX, 0));
+        assert_eq!(
+            d.window, window,
+            "the chamber band draws no Mercator, so nothing may scroll one"
+        );
     }
 
     /// The band-B strip keeps the walk band's SIGHT CAPTION — the honesty
