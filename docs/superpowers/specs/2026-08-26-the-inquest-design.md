@@ -83,15 +83,27 @@ realizer surface both:
 +------------------+---------------------------+---------------------------+
 | tense            | is / was                  | per drawn tense_depth     |
 | polarity         | is not / did not          | per drawn polarity_depth  |
-| number           | copula + plural           | per drawn number_depth    |
+| number           | copula + plural           | IGNORED (still)           |
 | definiteness     | determiner slot           | IGNORED (still)           |
 | evidential       | IGNORED (still)           | predicate-final mark      |
 +------------------+---------------------------+---------------------------+
 ```
 
 `definiteness` remains unread by every tongue and `evidential` unread by
-Common. Wiring `number` here retires one `IGNORED (today)` cell The Scarf left
-deliberately open.
+Common.
+
+**AMENDED AT TASK 10 — the `number` row said `per drawn number_depth`, and
+that did not ship.** The paragraph under it went further and claimed this
+campaign "retires one `IGNORED (today)` cell The Scarf left deliberately
+open". Neither is true: `realize_tongue_deep` reads `tense_depth` and
+`polarity_depth` and does not read `number_depth` at all
+(`domains/language/src/grammar.rs`), and the code says so in place — an
+existing assertion states outright that "no tongue reads number or
+definiteness yet: `paradigm.rs`'s drawn `number_depth` is the next campaign's
+work, not a gap in this one", and it is still green. The claim was a
+carry-over from The Scarf's own table and nothing in this campaign's plan ever
+asked for it. Two of `paradigm.rs`'s four drawn axes are consumed now; the
+number half remains exactly where The Scarf left it.
 
 ### 3.2 The output stays anti-symmetric
 

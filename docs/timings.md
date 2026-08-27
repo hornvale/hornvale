@@ -3062,3 +3062,6 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T00:53:04Z | gate-commit | 19.829 | 49.045 | 12.394 | 3.10 | 0 | 18fa854c1 | campaign/the-inquest | MacBookPro | 10 |
 | 2026-08-27T01:11:45Z | gate-commit | 30.952 | 54.629 | 13.113 | 2.19 | 0 | 678207e34 | campaign/the-inquest | MacBookPro | 10 |
 | 2026-08-27T01:13:14Z | gate-commit | 30.536 | 53.725 | 13.199 | 2.19 | 0 | 678207e34 | campaign/the-inquest | MacBookPro | 10 |
+| 2026-08-27T01:24:13Z | rebaseline | 45.190 | 254.087 | 12.537 | 5.90 | 0 | 4871c464f | campaign/the-inquest | MacBookPro | 10 |
+| 2026-08-27T01:33:18Z | rebaseline | 40.128 | 254.202 | 12.648 | 6.65 | 0 | 4871c464f | campaign/the-inquest | MacBookPro | 10 |
+| 2026-08-27T01:49:09Z | gate-commit | 30.352 | 53.716 | 13.041 | 2.20 | 0 | 4871c464f | campaign/the-inquest | MacBookPro | 10 |
