@@ -25,6 +25,42 @@ mod tests {
         GeneratedSky::new(generate(Seed(42), &pins).unwrap())
     }
 
+    /// A pre-genesis sky answers for the instant asked, not for genesis —
+    /// decision 0317, reversing 0187's clamp.
+    ///
+    /// The inverse of the test this replaces. That one pinned the clamp
+    /// ("the sky N days before genesis reads as genesis"), and it was written
+    /// to establish what the clamp actually DID before deciding its fate,
+    /// since the funnel's own comment cited a rationale 0187 had retracted.
+    ///
+    /// Now the contract is that time passes through: distinct pre-genesis
+    /// instants give distinct skies, and each is a real answer rather than a
+    /// substituted one. Asserting mere finiteness would not witness that —
+    /// a clamp returns finite values too — so this asserts DISTINCTNESS
+    /// against genesis, which only an unclamped funnel can produce.
+    #[test]
+    fn a_pre_genesis_sky_answers_for_the_instant_asked() {
+        let s = sky(SkyPins::default());
+        let genesis = s.sky_at_visibility(WorldTime::GENESIS, Visibility::CLEAR);
+        let mut seen_distinct = 0;
+        for days_before in [1.0_f64, 5.0, 100.0, 100_000.0] {
+            let before = WorldTime::from_std_days(-days_before).expect("finite");
+            let report = s.sky_at_visibility(before, Visibility::CLEAR);
+            assert!(
+                !report.description.is_empty(),
+                "a pre-genesis sky is still a sky"
+            );
+            if report.description != genesis.description {
+                seen_distinct += 1;
+            }
+        }
+        assert!(
+            seen_distinct > 0,
+            "every pre-genesis instant read identically to genesis — the clamp \
+             is still in the funnel, or something downstream reintroduced one"
+        );
+    }
+
     fn ctx(day: f64) -> ObserverContext {
         ObserverContext::at(
             EntityId::new(1).unwrap(),
@@ -1532,21 +1568,29 @@ impl GeneratedSky {
     /// This domain's ONE crossing from exact kernel ticks to a continuous
     /// instant. Everything downstream of here works in `StdInstant`.
     ///
-    /// Clamps a pre-genesis instant to genesis, per decision 0187. The NaN
-    /// half of the old `max(0.0)` guard is gone by construction: a
-    /// `WorldTime` is an integer and cannot be NaN.
+    /// **No clamp.** A pre-genesis instant passes through and the sky answers
+    /// for it, which is decision 0317 reversing 0187.
     ///
-    /// **The clamp's stated reason no longer holds, and this comment used to
-    /// carry it.** It said "the sky before the world exists is not a physical
-    /// question" — a justification 0187 itself RETRACTED, on the grounds that
-    /// `Calendar::local_day` was deliberately fixed to answer for negative
-    /// time on decision 0126's precedent, and the sky and the calendar sit on
-    /// the same axis. What actually held up the clamp was structural: no
-    /// caller could construct a negative `StdDays` to hand in. `StdInstant`
-    /// removes that, so the clamp is now a free choice rather than a forced
-    /// one — see the campaign's own decision on it.
+    /// 0187 clamped to genesis, and its own stated reason ("the sky before
+    /// the world exists is not a physical question") it then RETRACTED,
+    /// because `Calendar::local_day` was deliberately fixed to answer for
+    /// negative time on decision 0126's precedent and the sky and the
+    /// calendar sit on the same axis. What actually held the clamp up was
+    /// structural: `StdDays::new` refused a negative, so no caller could hand
+    /// one in and there was nothing else the funnel could do. The Foliot's
+    /// split removed that constraint, which turned the clamp back into a
+    /// choice — and the choice went the other way.
+    ///
+    /// Two things were established before removing it, in this order,
+    /// because the reverse order would have shipped an unvalidated path:
+    /// the negative branch is REACHABLE by an ordinary user (`cli/src/repl.rs`
+    /// parses `sky <day>` straight into `WorldTime::from_std_days`, which
+    /// accepts a negative), and the calendar's arithmetic actually HOLDS
+    /// down there — a sweep of all seventeen instant-taking methods found and
+    /// fixed one live defect (`year_phase` returned -0.49 via `fract`) before
+    /// this line changed.
     fn t(&self, time: WorldTime) -> StdInstant {
-        StdInstant(time.as_std_days().max(0.0))
+        StdInstant(time.as_std_days())
     }
 
     /// The sky at a moment, rendered under an unobstructed view.

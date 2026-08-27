@@ -9,6 +9,8 @@
 //! `tests/suite/`). This collapses 4 separate integration-test
 //! binaries into 1.
 
+#[path = "suite/calendar_negative_time.rs"]
+mod calendar_negative_time;
 #[path = "suite/day_is_a_whole_tick_count.rs"]
 mod day_is_a_whole_tick_count;
 #[path = "suite/genesis_properties.rs"]

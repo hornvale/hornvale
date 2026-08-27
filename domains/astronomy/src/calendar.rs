@@ -671,7 +671,14 @@ impl Calendar {
     /// Fraction of the year elapsed at `t`.
     /// type-audit: bare-ok(ratio)
     pub fn year_phase(&self, t: StdInstant) -> f64 {
-        (t.0 / self.year.0 + self.forcing.year_phase_offset).fract()
+        // `rem_euclid`, not `fract` (The Foliot). A phase is a fraction of a
+        // cycle and must lie in [0, 1); `fract` returns a NEGATIVE fraction
+        // for a negative operand, so a pre-genesis instant — legal per
+        // decision 0126 and reachable through the repl's `sky <day>` — read
+        // back a phase of -0.49. Byte-neutral for every existing world:
+        // for a non-negative operand `trunc` and `floor` coincide, so the
+        // two agree exactly.
+        (t.0 / self.year.0 + self.forcing.year_phase_offset).rem_euclid(1.0)
     }
     /// Seasonal phase; present when either driver (tilt or eccentricity) acts.
     /// type-audit: bare-ok(ratio)
@@ -803,7 +810,10 @@ impl Calendar {
             .get(index)
             .copied()
             .unwrap_or(0.0);
-        Some((t.0 / synodic.0 + offset).fract())
+        // `rem_euclid` for the same reason as `year_phase`: a phase is in
+        // [0, 1) on both sides of genesis, and the two agree exactly for a
+        // non-negative operand.
+        Some((t.0 / synodic.0 + offset).rem_euclid(1.0))
     }
     /// How many synodic months of moon `index` fit in a year.
     /// type-audit: bare-ok(index: index), bare-ok(ratio: return)

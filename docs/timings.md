@@ -3156,3 +3156,8 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T16:54:53Z | sluice:clients | 476.933 | 5848.271 | 90.960 | 12.45 | 0 | d94bb18c6 |  | lefford | 40 |
 | 2026-08-27T17:12:58Z | gate-commit | 419.075 | 494.631 | 86.796 | 1.39 | 0 | ca97f8354 | campaign/the-foliot | ambrose | 12 |
 | 2026-08-27T17:16:51Z | rebaseline | 232.543 | 276.691 | 18.910 | 1.27 | 0 | ca97f8354 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T17:32:06Z | gate-commit | 156.686 | 64.972 | 32.087 | 0.62 | 0 | ca97f8354 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T18:41:37Z | rebaseline | 207.965 | 269.180 | 15.249 | 1.37 | 0 | 7e11ea9e1 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T18:45:06Z | rebaseline | 148.048 | 267.400 | 14.854 | 1.91 | 0 | 7e11ea9e1 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T18:48:57Z | gate-commit | 160.802 | 92.167 | 52.714 | 0.90 | 0 | 7e11ea9e1 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T18:51:26Z | rebaseline | 148.710 | 265.845 | 16.120 | 1.90 | 0 | 7e11ea9e1 | campaign/the-foliot | ambrose | 12 |
