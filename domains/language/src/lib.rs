@@ -144,7 +144,8 @@ pub use naming::{
 pub use packs::{
     BEARINGS, PackDepths, PackEntry, action_suite_pack, bearing_compounds, body_pack, color_pack,
     compound_recipe, concept_domain, extradiegetic_pack, felt_state_pack, in_ladder,
-    is_core_concept, is_extradiegetic, kin_pack, register_concepts, universal_stratum,
+    is_core_concept, is_extradiegetic, kin_pack, object_property_pack, register_concepts,
+    universal_stratum,
 };
 pub use phoneme::{
     Backness, Height, Manner, Place, Segment, Tone, espeak, espeak_word, ipa, romanize, sonority,

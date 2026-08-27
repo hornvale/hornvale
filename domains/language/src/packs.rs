@@ -805,6 +805,42 @@ pub fn felt_state_pack() -> &'static [(&'static str, &'static str)] {
     ]
 }
 
+/// The five object properties an anchor may carry (`ObjectProperty`, The
+/// Offer, spec §3.1/§3.3/§8/§12): what an object OFFERS, independent of any
+/// verb that reads it — `supports-rest` (a place a body may lie down and
+/// sleep), `holds-liquid` (a place a body may drink from), `affords-passage`
+/// (a seam between two rooms a body may pass through), `encloses` (an anchor
+/// that reveals what lies within it), `radiates-heat` (an anchor that emits
+/// warmth). `(concept, doc)` pairs, registered directly by
+/// [`register_concepts`] under [`hornvale_kernel::ConceptKind::Quality`]
+/// (its definition is already "an abstract property or attribute", the fit
+/// The Offer's G3 ruling names for a property a thing HAS, spec §12) —
+/// deliberately NOT chained into any Swadesh pack, the same footing
+/// [`felt_state_pack`] uses and for the same reason: nothing today grants a
+/// culture `ExposureClass::Steeped` or `KnowsOf` over an object's carried
+/// property, so each registers an honest `Void::Gap` lexeme.
+///
+/// `hornvale_language` cannot import `ObjectProperty` itself — it lives in
+/// `windows/vessel`, a window, and a domain depends on the kernel and
+/// nothing else (`domains/CLAUDE.md`'s one rule). The two rosters are kept
+/// in step by a test in `windows/vessel`, which already depends on this
+/// crate, rather than by an import running the wrong way across the
+/// kernel -> domains -> windows layering — the exact shape
+/// `felt_state_pack`'s own doc explains for `AffectLabel`.
+/// type-audit: bare-ok(identifier-text)
+pub fn object_property_pack() -> &'static [(&'static str, &'static str)] {
+    &[
+        (
+            "affords-passage",
+            "a seam between two rooms a body may pass through",
+        ),
+        ("encloses", "an anchor that reveals what lies within it"),
+        ("holds-liquid", "a place a body may drink from"),
+        ("radiates-heat", "an anchor that emits warmth"),
+        ("supports-rest", "a place a body may lie down and sleep"),
+    ]
+}
+
 /// Input to [`in_ladder`]: how many acquisition-ladder stages are unlocked,
 /// per ladder in [`color_pack`]. Derivation from a culture's perception
 /// vector lives in worldgen (Task 8) — this struct is just the input shape.
@@ -955,6 +991,31 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
                 name: concept.to_string(),
                 domain: "language".to_string(),
                 kind: ConceptKind::Affect,
+                doc: doc.to_string(),
+            },
+            lexeme: Correspondent::Absent(Void::Gap(
+                "no exposure rule grants this concept Steeped or KnowsOf yet",
+            )),
+            percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })?;
+    }
+
+    // The five object properties (The Offer, Task 9): honest `Void::Gap`
+    // lexemes for the same reason the felt states get one — nothing grants
+    // any of these `Steeped`/`KnowsOf` today. See `object_property_pack`'s
+    // own doc.
+    for (concept, doc) in object_property_pack() {
+        if registry.concept(concept).is_some() {
+            continue;
+        }
+        registry.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: concept.to_string(),
+                domain: "language".to_string(),
+                kind: ConceptKind::Quality,
                 doc: doc.to_string(),
             },
             lexeme: Correspondent::Absent(Void::Gap(

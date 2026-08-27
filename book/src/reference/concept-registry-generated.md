@@ -158,6 +158,7 @@
 |---|---|---|---|
 | `abyssal` | climate | terrain | a biome class |
 | `abyssal-plain` | climate | substance | The flat floor of the deep ocean. |
+| `affords-passage` | language | quality | a seam between two rooms a body may pass through |
 | `alpine` | climate | terrain | a biome class |
 | `bait-ball` | climate | substance | A dense turning mass of fish. |
 | `barley` | climate | substance | a staple crop |
@@ -197,6 +198,7 @@
 | `east` | language | quality | the direction of increasing longitude |
 | `eat` | language | act | to consume food |
 | `eclipse` | astronomy | celestial | the darkening when a moon crosses the sun, or the world's shadow crosses a moon |
+| `encloses` | language | quality | an anchor that reveals what lies within it |
 | `epipelagic` | climate | terrain | a biome class |
 | `erg` | climate | substance | A sand sea of dunes. |
 | `eye` | language | body | the organ of sight |
@@ -239,6 +241,7 @@
 | `hill-dwarf-kind` | species | living | a hill dwarf |
 | `hobgoblin-kind` | species | living | a hobgoblin |
 | `holdfast-tangle` | climate | substance | The anchored base of a kelp forest. |
+| `holds-liquid` | language | quality | a place a body may drink from |
 | `home` | settlement | social | one's dwelling |
 | `human-kind` | species | living | a human |
 | `hydrothermal-vent` | climate | terrain | a biome class |
@@ -295,6 +298,7 @@
 | `playa` | climate | substance | A dry lake bed of salt and cracked clay. |
 | `pressure-ridge` | climate | substance | Sea ice buckled into a ridge. |
 | `provoke` | language | act | to make someone hostile by an act the simulation itself did not choose — `!provoke` |
+| `radiates-heat` | language | quality | an anchor that emits warmth |
 | `rafted-floe` | climate | substance | Ice floes driven over one another. |
 | `rain` | climate | substance | liquid precipitation |
 | `read` | language | act | to take meaning from written words — `consult` |
@@ -343,6 +347,7 @@
 | `stone` | terrain | substance | rock |
 | `sun` | astronomy | celestial | the sun |
 | `sun-like-star` | astronomy | celestial | a distant star resembling this world's own sun |
+| `supports-rest` | language | quality | a place a body may lie down and sleep |
 | `survey` | language | act | to enumerate every creature the world holds — `!npcs` |
 | `taiga` | climate | terrain | a biome class |
 | `temperate-forest` | climate | terrain | a biome class |

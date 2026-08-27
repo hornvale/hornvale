@@ -38,6 +38,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 |---|---|---|---|
 | `abyssal` | a biome class | *Dang | /daŋ/ |
 | `abyssal-plain` | The flat floor of the deep ocean. | *Dong | /doŋ/ |
+| `affords-passage` | a seam between two rooms a body may pass through | *Baung | /bauŋ/ |
 | `alpine` | a biome class | *Geng | /geŋ/ |
 | `bait-ball` | A dense turning mass of fish. | *Tuangtaang | /tuaŋtaaŋ/ |
 | `barley` | a staple crop | *Sruengzhreng | /srueŋʒreŋ/ |
@@ -76,6 +77,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `east` | the direction of increasing longitude | *Peung | /peuŋ/ |
 | `eat` | to consume food | *Pangpeng | /paŋpeŋ/ |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | *Deang | /deaŋ/ |
+| `encloses` | an anchor that reveals what lies within it | *Puang | /puaŋ/ |
 | `epipelagic` | a biome class | *Tengngung | /teŋŋuŋ/ |
 | `erg` | A sand sea of dunes. | *Ngeeng | /ŋeeŋ/ |
 | `eye` | the organ of sight | *Pangduang | /paŋduaŋ/ |
@@ -117,6 +119,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `hill-dwarf-kind` | a hill dwarf | *Zruang | /zruaŋ/ |
 | `hobgoblin-kind` | a hobgoblin | *Zrongshroung | /zroŋʃrouŋ/ |
 | `holdfast-tangle` | The anchored base of a kelp forest. | *Nguanggueng | /ŋuaŋgueŋ/ |
+| `holds-liquid` | a place a body may drink from | *Ngungtong | /ŋuŋtoŋ/ |
 | `home` | one's dwelling | *Zraunggeng | /zrauŋgeŋ/ |
 | `human-kind` | a human | *Ngongsrung | /ŋoŋsruŋ/ |
 | `hydrothermal-vent` | a biome class | *Peengzrong | /peeŋzroŋ/ |
@@ -168,6 +171,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `plankton-bloom` | Water thick with plankton. | *Sraung | /srauŋ/ |
 | `playa` | A dry lake bed of salt and cracked clay. | *Ngenggung | /ŋeŋguŋ/ |
 | `pressure-ridge` | Sea ice buckled into a ridge. | *Srong | /sroŋ/ |
+| `radiates-heat` | an anchor that emits warmth | *Dangzrung | /daŋzruŋ/ |
 | `rafted-floe` | Ice floes driven over one another. | *Duong | /duoŋ/ |
 | `rain` | liquid precipitation | *Zhroung | /ʒrouŋ/ |
 | `read` | to take meaning from written words — `consult` | *Shraang | /ʃraaŋ/ |
@@ -211,6 +215,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `starlit` | dark faintly lit by stars | *Deengsroeng | /deeŋsroeŋ/ |
 | `stone` | rock | *Peengngung | /peeŋŋuŋ/ |
 | `sun` | the sun | *Tungzhreong | /tuŋʒreoŋ/ |
+| `supports-rest` | a place a body may lie down and sleep | *Goeng | /goeŋ/ |
 | `taiga` | a biome class | *Zhrengngong | /ʒreŋŋoŋ/ |
 | `temperate-forest` | a biome class | *Shrongdeeng | /ʃroŋdeeŋ/ |
 | `temperate-grassland` | a biome class | *Sruunggang | /sruuŋgaŋ/ |

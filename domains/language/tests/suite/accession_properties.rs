@@ -570,20 +570,16 @@ fn appending_the_felt_state_cohort_displaces_no_existing_proto_root() {
 /// strictly last, and the anti-vacuity half proves that: folding `kill` into
 /// cohort 0 instead — one concept, not six — does move existing roots.
 ///
-/// It is also the currently-last cohort, so the helper's earlier-epoch
-/// restriction selects the entire rest of the roster here. When epoch 14
-/// lands, nothing about this test needs demoting; that is why the helper
-/// exists.
+/// It was also the last cohort as of The Inquest, so the helper's
+/// earlier-epoch restriction selected the entire rest of the roster at the
+/// time. The Offer's epoch 14 (`object_property_pack`) landed after it, per
+/// this test's own former sanity assertion — DELETED here, as its own
+/// message instructed, rather than reordering the table; the property above
+/// holds regardless of which cohort is last, which is why the helper needed
+/// no change either.
 ///
 /// claim: invariant(forall-seed) — save-format contract.
 #[test]
 fn appending_the_kill_cohort_displaces_no_existing_proto_root() {
     assert_appending_a_cohort_is_additive(&["kill"], "kill");
-    assert_eq!(
-        *EPOCH_COHORTS.last().expect("non-empty"),
-        ["kill"].as_slice(),
-        "sanity: `kill` is the last cohort as of The Inquest. A later \
-         campaign appending epoch 14 should DELETE this assertion, not \
-         reorder the table — the property above holds either way."
-    );
 }

@@ -490,7 +490,7 @@ missing 1 bundles, so no single row makes anything stageable on its own.
 
 ## Supply
 
-331 registered tokens no situation in this corpus requires.
+336 registered tokens no situation in this corpus requires.
 
 **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires
 *and no readout consumes*; the second half is not implemented. So this list
@@ -502,6 +502,7 @@ missing half before this list can serve it.
 
 - `concept:abyssal` (climate)
 - `concept:abyssal-plain` (climate)
+- `concept:affords-passage` (language)
 - `concept:alpine` (climate)
 - `concept:bait-ball` (climate)
 - `concept:barley` (climate)
@@ -539,6 +540,7 @@ missing half before this list can serve it.
 - `concept:east` (language)
 - `concept:eat` (language)
 - `concept:eclipse` (astronomy)
+- `concept:encloses` (language)
 - `concept:epipelagic` (climate)
 - `concept:erg` (climate)
 - `concept:eye` (language)
@@ -580,6 +582,7 @@ missing half before this list can serve it.
 - `concept:hill-dwarf-kind` (species)
 - `concept:hobgoblin-kind` (species)
 - `concept:holdfast-tangle` (climate)
+- `concept:holds-liquid` (language)
 - `concept:home` (settlement)
 - `concept:human-kind` (species)
 - `concept:hydrothermal-vent` (climate)
@@ -633,6 +636,7 @@ missing half before this list can serve it.
 - `concept:playa` (climate)
 - `concept:pressure-ridge` (climate)
 - `concept:provoke` (language)
+- `concept:radiates-heat` (language)
 - `concept:rafted-floe` (climate)
 - `concept:rain` (climate)
 - `concept:read` (language)
@@ -679,6 +683,7 @@ missing half before this list can serve it.
 - `concept:stone` (terrain)
 - `concept:sun` (astronomy)
 - `concept:sun-like-star` (astronomy)
+- `concept:supports-rest` (language)
 - `concept:survey` (language)
 - `concept:taiga` (climate)
 - `concept:temperate-forest` (climate)

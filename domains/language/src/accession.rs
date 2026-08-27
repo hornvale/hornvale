@@ -477,6 +477,22 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
     // (§3.3): it forfeits the short-form priority its core-ness would
     // otherwise buy, and takes whatever the probe walk leaves.
     &["kill"],
+    // Epoch 14 — The Offer (2026-08-27), Task 9: the five object properties
+    // an anchor may carry (`ObjectProperty`, spec §3.1/§3.3), registered so
+    // a culture can have — or lack — a word for one, the same shape the
+    // felt states (epoch 12) already use. One concept per variant
+    // (`hornvale_language::object_property_pack`); kept in step with
+    // `ObjectProperty` by a test in `windows/vessel`, not by an import,
+    // because a domain cannot depend on a window (`domains/CLAUDE.md`'s one
+    // rule). Appended, never merged into an earlier cohort, per this
+    // module's absolute rule.
+    &[
+        "affords-passage",
+        "encloses",
+        "holds-liquid",
+        "radiates-heat",
+        "supports-rest",
+    ],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or

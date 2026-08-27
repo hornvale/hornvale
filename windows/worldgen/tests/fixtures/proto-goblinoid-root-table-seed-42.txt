@@ -1,5 +1,6 @@
 abyssal: Gaokoe /gaokoe/
 abyssal-plain: Nodo /nodo/
+affords-passage: Nenea /nenea/
 alpine: Ne /ne/
 bait-ball: Dee /dee/
 barley: Nadae /nadae/
@@ -38,6 +39,7 @@ earth: Pode /pode/
 east: Paenao /paenao/
 eat: Noanoe /noanoe/
 eclipse: Nenaa /nenaa/
+encloses: Kagoa /kagoa/
 epipelagic: Goka /goka/
 erg: Naqae /naqae/
 eye: Tetae /tetae/
@@ -79,6 +81,7 @@ hill: Noono /noono/
 hill-dwarf-kind: Goonea /goonea/
 hobgoblin-kind: Dae /dae/
 holdfast-tangle: Doa /doa/
+holds-liquid: Neego /neego/
 home: Qoqe /qoqe/
 human-kind: Noaka /noaka/
 hydrothermal-vent: Poo /poo/
@@ -130,6 +133,7 @@ person: Neepo /neepo/
 plankton-bloom: Notee /notee/
 playa: Qena /qena/
 pressure-ridge: Nootaa /nootaa/
+radiates-heat: Poe /poe/
 rafted-floe: Qoe /qoe/
 rain: Nope /nope/
 read: Neeta /neeta/
@@ -173,6 +177,7 @@ star: Peanoo /peanoo/
 starlit: Tane /tane/
 stone: Peotea /peotea/
 sun: Pago /pago/
+supports-rest: Geno /geno/
 taiga: Qe /qe/
 temperate-forest: Na /na/
 temperate-grassland: Noo /noo/
