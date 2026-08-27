@@ -817,11 +817,26 @@ fn homophony_count_is_measured_and_pinned() {
     // again an exact integer count over the 1000-seed census divided by 1000
     // (5861, 6040, 21510, 6279). Post-unblinding re-measure, declared per
     // decision 0016.
-    assert!((mg - 5.861).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 6.040).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 21.510).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    // kobold 6.113 -> 6.279 (The Granary's re-pin, same mechanism as above).
-    assert!((mk - 6.279).abs() < 1e-9, "kobold mean drifted: {mk}");
+    //
+    // The Sources' close regen (canonical census on lefford at a94563b8513a,
+    // goldens b8a116b27, 2026-08-27): NOT SQL-expressible (`census-check`
+    // covers only `the-census` pins over SQL-queryable columns; this row is
+    // documented as one of the four it cannot see — see golden-pins.sql's
+    // own header). Ordinary census churn (283 commits since the previous
+    // refresh; this campaign's own metrics do not touch naming or
+    // homophony — see calibration.rs's own re-pin for their names) moves all
+    // four means: goblin 5.861 -> 5.883, hobgoblin 6.040 -> 6.071, bugbear
+    // 21.510 -> 21.602, kobold 6.279 -> 6.326. The claim this row guards is
+    // re-checked, not assumed: bugbear leads goblin by 3.673x
+    // (21.602/5.883) against 3.670x — WIDENED a fourth consecutive regen —
+    // and hobgoblin by 3.558x against 3.561x, essentially unmoved, both far
+    // above the 3x falsification line, so the warning above stands unspent.
+    // Each mean is again an exact integer count over the 1000-seed census
+    // divided by 1000 (5883, 6071, 21602, 6326).
+    assert!((mg - 5.883).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 6.071).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 21.602).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 6.326).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

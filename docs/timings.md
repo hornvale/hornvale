@@ -3141,3 +3141,6 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T12:56:00Z | rebaseline | 109.827 | 316.213 | 11.546 | 2.98 | 0 | a94563b85 | campaign/the-sources | MacBookPro | 10 |
 | 2026-08-27T12:56:51Z | gate-commit | 26.071 | 50.956 | 12.600 | 2.44 | 0 | a94563b85 | campaign/the-sources | MacBookPro | 10 |
 | 2026-08-27T13:35:34Z | census | 1090.941 | 36589.377 | 199.634 | 33.72 | 0 | a94563b85 |  | lefford | 40 |
+| 2026-08-27T14:34:14Z | gate-commit | 22.267 | 43.525 | 10.680 | 2.43 | 0 | 415e0509e | campaign/the-sources | MacBookPro | 10 |
+| 2026-08-27T14:38:26Z | gate-commit | 18.827 | 42.997 | 10.005 | 2.82 | 0 | 415e0509e | campaign/the-sources | MacBookPro | 10 |
+| 2026-08-27T14:45:35Z | gate-commit | 19.254 | 45.242 | 11.548 | 2.95 | 0 | 415e0509e | campaign/the-sources | MacBookPro | 10 |

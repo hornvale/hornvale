@@ -401,9 +401,26 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // where by latitude the survivors sit. The preregistered directional
     // claim asserted above — below the uniform-sphere baseline of 32.7 —
     // is untouched and still clears the baseline by better than 1.8x.
+    //
+    // THE SOURCES (canonical census on lefford at a94563b8513a, goldens
+    // b8a116b27, 2026-08-27): 17.2505 -> 17.2526, a movement of +0.0021
+    // degrees — the smallest step this row has ever recorded, an order of
+    // magnitude below The Granary's already-decelerating -0.089. NOT
+    // SQL-expressible (`census-check` covers only `the-census` pins over
+    // SQL-queryable columns; this row is documented as one of the four it
+    // cannot see — see golden-pins.sql's own header), so it is read here
+    // directly rather than cross-checked. This campaign's own metrics (see
+    // calibration.rs's own re-pin for their names) do not touch settlement
+    // placement or latitude; the mover is ordinary census churn (283 commits
+    // since the previous refresh). Margin: 15.4495 -> 15.4474 degrees; ratio
+    // 1.8956x -> 1.8954x — both essentially flat, not a meaningful
+    // continuation of the five-regen narrowing trend. The preregistered
+    // directional claim asserted above — below the uniform-sphere baseline
+    // of 32.7 — is untouched and still clears the baseline by better than
+    // 1.8x.
     assert!(
-        (mean - 17.2505).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.2505)"
+        (mean - 17.2526).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.2526)"
     );
 }
 

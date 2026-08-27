@@ -777,8 +777,17 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // zero-Absent reading), matching goblin's present-row counts elsewhere
     // in this file falling 1000 -> 999. WITNESS, not claim — nothing here
     // asserts a direction.
-    assert_eq!(coastal, 190, "coastal flagship count drifted");
-    assert_eq!(inland, 809, "inland flagship count drifted");
+    //
+    // The Sources' close regen (canonical census on lefford at a94563b8513a,
+    // goldens b8a116b27, 2026-08-27): per-cell-diversity and composition- // lexicon: registered metric name (windows/lab/src/metrics.rs), not vertex-sense
+    // variance both moved (this campaign's own metrics), plus 283 commits of
+    // ordinary census churn since the previous refresh (7d4732b89de9); the
+    // net effect on goblin's flagship siting re-seats it on two worlds:
+    // 190 -> 189 coastal, 809 -> 810 inland — the two still sum to 999, so
+    // the same one world still reports neither flag. WITNESS, not claim —
+    // nothing here asserts a direction.
+    assert_eq!(coastal, 189, "coastal flagship count drifted");
+    assert_eq!(inland, 810, "inland flagship count drifted");
 }
 
 #[test]
@@ -2105,7 +2114,18 @@ fn name_collision_rate_is_measured_and_pinned() {
         // still carries no directional claim (H4 already failed and is
         // recorded as such above), and the rate stays inside the range
         // decision 0024 sanctions (see the note above).
-        (mean - 0.519_033_116_356_999).abs() < 1e-6,
+        //
+        // The Sources' close regen (canonical census on lefford at
+        // a94563b8513a, goldens b8a116b27, 2026-08-27): ordinary census
+        // churn (this campaign's own metrics, named above at
+        // goblin_flagship_coastal_split_is_pinned's re-pin, do not touch
+        // naming); zero/nonzero/absent
+        // unmoved at 0/1000/0. Mean: 0.519_033_116_356_999 ->
+        // 0.519_063_035_556_999_4. This row still carries no directional
+        // claim (H4 already failed and is recorded as such above), and the
+        // rate stays inside the range decision 0024 sanctions (see the note
+        // above).
+        (mean - 0.519_063_035_556_999_4).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -2343,7 +2363,17 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 8.546_439_147_599_997 -> 8.523_035_457_757_757. Still comfortably
         // below the campaign's own <10-character claim (spec §7) — re-checked
         // rather than assumed.
-        ("goblin", 999u32, 8.523_035_457_757_757),
+        //
+        // The Sources' close regen (canonical census on lefford at
+        // a94563b8513a, goldens b8a116b27, 2026-08-27): ordinary census
+        // churn (283 commits since the previous refresh; this campaign's own
+        // metrics, named above at goblin_flagship_coastal_split_is_pinned's
+        // re-pin, do not touch naming) moves which sites the surviving
+        // flagships compound over:
+        // present count holds at 999, mean 8.523_035_457_757_757 ->
+        // 8.520_497_665_465_461. Still comfortably below the campaign's own
+        // <10-character claim (spec §7) — re-checked rather than assumed.
+        ("goblin", 999u32, 8.520_497_665_465_461),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -2472,7 +2502,16 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 982 -> 980, mean 6.818_936_120_061_097 -> 6.865_372_775_000_001.
         // Still comfortably below the campaign's own <10-character claim
         // (spec §7) — re-checked rather than assumed.
-        ("kobold", 980u32, 6.865_372_775_000_001),
+        //
+        // The Sources' close regen (canonical census on lefford at
+        // a94563b8513a, goldens b8a116b27, 2026-08-27): ordinary census
+        // churn (283 commits since the previous refresh; this campaign's own
+        // metrics do not touch naming) moves which sites the surviving
+        // flagships compound over: present count holds at 980, mean
+        // 6.865_372_775_000_001 -> 6.866_580_815_408_162. Still comfortably
+        // below the campaign's own <10-character claim (spec §7) —
+        // re-checked rather than assumed.
+        ("kobold", 980u32, 6.866_580_815_408_162),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -2679,8 +2718,16 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // 2.186_698_356_822_811 -> 2.200_726_815_918_367. The claim (spec §8
         // criterion 2, mean in 2-3) still HOLDS at both species — re-checked
         // rather than assumed.
-        ("goblin", 999u32, 2.716_477_110_510_511),
-        ("kobold", 980u32, 2.200_726_815_918_367),
+        //
+        // The Sources' close regen (canonical census on lefford at
+        // a94563b8513a, goldens b8a116b27, 2026-08-27): ordinary census
+        // churn (this campaign's own metrics do not touch naming). Present
+        // counts hold at 999/980. Goblin mean 2.716_477_110_510_511 ->
+        // 2.715_722_780_480_479. Kobold mean 2.200_726_815_918_367 ->
+        // 2.201_225_966_020_408. The claim (spec §8 criterion 2, mean in 2-3)
+        // still HOLDS at both species — re-checked rather than assumed.
+        ("goblin", 999u32, 2.715_722_780_480_479),
+        ("kobold", 980u32, 2.201_225_966_020_408),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -2958,7 +3005,14 @@ fn name_transparency_is_measured_and_pinned() {
         // 0.713_562_554_480_000_3 -> 0.714_363_700_030_002. Still emphatically
         // NOT 1.0 — the claim this row exists to guard — re-checked rather
         // than assumed.
-        (mean - 0.714_363_700_030_002).abs() < 1e-9,
+        //
+        // The Sources' close regen (canonical census on lefford at
+        // a94563b8513a, goldens b8a116b27, 2026-08-27): ordinary census
+        // churn (this campaign's own metrics do not touch naming);
+        // present/absent unmoved at 1000/0; mean 0.714_363_700_030_002 ->
+        // 0.713_871_805_500_001_7. Still emphatically NOT 1.0 — the claim
+        // this row exists to guard — re-checked rather than assumed.
+        (mean - 0.713_871_805_500_001_7).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -3530,7 +3584,17 @@ fn null_control_name_length_smd_is_pinned() {
         // `null_control_distributions_are_within_the_sampling_bound` asserts
         // — the null hypothesis this row exists to witness
         // (INDISTINGUISHABLE FROM ZERO) reads as true as it ever has.
-        (namelen - -0.024_799_776_460_672_038).abs() < 1e-9,
+        //
+        // The Sources' close regen (canonical census on lefford at
+        // a94563b8513a, goldens b8a116b27, 2026-08-27): `census-of-the-
+        // meeting`'s own fixture is regenerated alongside `the-census`; the
+        // residual name-length gap shifts: -0.024_799_776_460_672_038 ->
+        // -0.025_108_472_368_594_453. Still ~8x inside the ±0.2
+        // sampling-theory bound
+        // `null_control_distributions_are_within_the_sampling_bound` asserts
+        // — the null hypothesis this row exists to witness
+        // (INDISTINGUISHABLE FROM ZERO) reads as true as it ever has.
+        (namelen - -0.025_108_472_368_594_453).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }
