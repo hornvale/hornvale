@@ -300,6 +300,7 @@ hornvale-astronomy::hornvale_astronomy$provider::tests::a_night_sky_reports_each
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_placed_observer_sees_a_heliacal_rising_across_a_year
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_placed_observer_sees_a_wandering_star_across_two_synodic_periods
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_pre_genesis_query_has_a_documented_answer
+hornvale-astronomy::hornvale_astronomy$provider::tests::a_pre_genesis_sky_answers_for_the_instant_asked
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_small_moon_leaves_a_burning_ring
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_spinning_placed_observer_sees_the_whole_sky
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_spinning_sun_is_periodic_and_top_salience
@@ -387,6 +388,12 @@ hornvale-astronomy::hornvale_astronomy$wanderers::tests::kepler_holds_and_period
 hornvale-astronomy::hornvale_astronomy$wanderers::tests::no_wanderer_crowds_the_anchor
 hornvale-astronomy::hornvale_astronomy$wanderers::tests::wanderer_count_pin_is_honored_for_every_legal_value
 hornvale-astronomy::hornvale_astronomy$wanderers::tests::wanderers_are_deterministic_and_bounded
+hornvale-astronomy::suite$calendar_negative_time::alignment_drift_is_defined_across_genesis
+hornvale-astronomy::suite$calendar_negative_time::daylight_and_solar_angles_stay_in_range_across_genesis
+hornvale-astronomy::suite$calendar_negative_time::every_phase_stays_in_the_unit_interval_across_genesis
+hornvale-astronomy::suite$calendar_negative_time::local_day_is_monotone_and_its_fraction_is_bounded_across_genesis
+hornvale-astronomy::suite$calendar_negative_time::no_instant_taking_method_produces_a_non_finite_value
+hornvale-astronomy::suite$calendar_negative_time::solar_declination_is_bounded_by_the_obliquity_across_genesis
 hornvale-astronomy::suite$day_is_a_whole_tick_count::a_pinned_day_length_is_quantized_too
 hornvale-astronomy::suite$day_is_a_whole_tick_count::every_spinning_worlds_day_is_a_whole_number_of_ticks
 hornvale-astronomy::suite$day_is_a_whole_tick_count::the_continuous_day_length_round_trips_through_the_lattice
@@ -507,6 +514,7 @@ hornvale-climate::hornvale_climate$provider::tests::ocean_vertices_map_to_marine
 hornvale-climate::hornvale_climate$provider::tests::provider_answers_every_query_and_is_deterministic
 hornvale-climate::hornvale_climate$provider::tests::seasonal_swing_is_zero_when_locked
 hornvale-climate::hornvale_climate$provider::tests::the_expression_and_the_legacy_biome_agree_at_every_vertex
+hornvale-climate::hornvale_climate$provider::tests::the_sampling_api_takes_a_typed_instant
 hornvale-climate::hornvale_climate$provider::tests::weather_is_defined_and_deterministic_over_the_globe
 hornvale-climate::hornvale_climate$render::tests::ascii_map_has_right_shape_and_shows_land_and_sea
 hornvale-climate::hornvale_climate$render::tests::pixel_buffer_is_exactly_the_raster
@@ -1279,9 +1287,9 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::d8_fires_on_exactly_alchemy_
 hornvale-lab::hornvale_lab$domesday::detect::tests::defensibility_capacity_rank_corr_still_exists_in_the_registry
 hornvale-lab::hornvale_lab$domesday::detect::tests::direct_references_match_measured_crates
 hornvale-lab::hornvale_lab$domesday::detect::tests::domain_crates_are_still_exactly_this_list
-hornvale-lab::hornvale_lab$domesday::detect::tests::findings_are_sorted_by_detector_then_metric
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_reads_a_nontrivial_correlation_and_its_sign
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_returns_none_for_a_constant_column
+hornvale-lab::hornvale_lab$domesday::detect::tests::the_live_census_reproduces_the_preregistered_findings
 hornvale-lab::hornvale_lab$domesday::guard::every_emitted_detector_name_is_declared
 hornvale-lab::hornvale_lab$domesday::guard::loading_never_builds_a_world
 hornvale-lab::hornvale_lab$domesday::render::tests::a_bare_citation_outside_any_paren_is_redacted_with_its_possessive
@@ -1301,6 +1309,7 @@ hornvale-lab::hornvale_lab$domesday::render::tests::every_domain_renders_and_non
 hornvale-lab::hornvale_lab$domesday::render::tests::leaves_an_unrelated_paren_alone_while_dropping_the_citing_one
 hornvale-lab::hornvale_lab$domesday::render::tests::no_domain_is_currently_empty
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_full_exclusion_roster_with_reasons
+hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_generated_header_and_frozen_constants
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_lists_the_top_worlds_ranked_first
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_only_publishes_up_to_top_worlds_worlds
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_prints_the_true_uncapped_score_not_the_capped_flag_count
@@ -2748,7 +2757,6 @@ hornvale-vessel::hornvale_vessel$underworld_level::tests::every_level_but_the_fi
 hornvale-vessel::hornvale_vessel$underworld_level::tests::every_walkable_cell_is_reachable_from_every_other
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generate_descent_produces_one_level_per_rung
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generation_is_deterministic
-hornvale-vessel::hornvale_vessel$underworld_level::tests::made_chambers_lean_worked_found_chambers_lean_natural
 hornvale-vessel::hornvale_vessel$underworld_level::tests::stairs_down_and_stairs_up_never_share_a_cell
 hornvale-vessel::hornvale_vessel$underworld_level::tests::two_rungs_with_the_same_origin_and_kind_still_differ
 hornvale-vessel::hornvale_vessel$underworld_level::tests::worked_fraction_has_inertia_across_rungs
