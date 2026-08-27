@@ -291,11 +291,23 @@ Message: `refactor(vessel)!: delete the second tick lattice` — `Ticks` and
 `days_of` are gone rather than renamed, because with the day lattice-aligned
 there is one tick concept and no second name for it.
 
-### Task 1.4: Liveness accumulates in integers — THE REAL DEFECT
+### Task 1.4: Liveness accumulates in integers — ATTEMPTED, DEFERRED
 
 **Files:**
 - Modify: `windows/vessel/src/liveness.rs:4644`, `:5233`, and the
   `day`/`entry_day`/`horizon` locals around them
+
+**Attempted 2026-08-26 and reverted after three attempts; the branch is green
+without it.** Converting `WalkState.day` to `WorldTime` (~30 sites) passes 442
+of 444 vessel unit tests but violates the shared-clock monotonicity invariant
+by 75 ticks — a genuine queue ordering inversion, not rounding. The full
+finding is in the campaign retrospective. Do not retry this as a task: it
+wants its own campaign, because liveness's internal currency is `f64` days end
+to end and converting one field creates a boundary the interleaving invariant
+is sensitive to. One independent defect found on the way and worth recording
+separately: `hold_step`'s strict-progress guarantee is broken by
+`WorldTime::from_std_days`'s round-to-nearest, since a sub-tick advance rounds
+back onto its own tick.
 
 This is the genuine accumulating drift, and it was found by checking a defect
 that turned out not to exist. The catch-up replay does `day += days_of(...)` in
