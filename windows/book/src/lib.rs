@@ -3588,6 +3588,92 @@ mod tests {
         );
     }
 
+    /// The Mortise, Task 10 (spec §4.9): **this window declares clause
+    /// embedding and coordination deliberately unwired**, checked rather
+    /// than left as prose (the failure `LANG-in-character-acts-are-
+    /// unspeakable` records: three tasks each shipped an inert concept
+    /// without anyone writing down who was supposed to wire it, and nothing
+    /// caught the drift).
+    ///
+    /// Every one of this module's PRODUCTION `Clause`-construction sites
+    /// (the same `production` slice [`the_readout_law`] scans, plus both
+    /// `realize_tongue_deep` call sites) states a GOD'S-EYE OR EMIC/ETIC
+    /// CLASSIFICATION fact — `predicate: hornvale_kernel::world::IS_A`,
+    /// `object: Argument::Concept(...)` — read straight off a committed
+    /// `is-a`/`instance-of` ledger fact. Nothing in this window's data model
+    /// HOLDS a belief about another clause: `Evidential::Taught` already
+    /// carries doctrine's "this is what is taught" distinction as a
+    /// FEATURE on the very same is-a clause (the adjacency this task was
+    /// warned about, spec §8) — a matrix `THINK`/`KNOW` wrapper around it
+    /// would double-encode the same fact through two unrelated mechanisms,
+    /// exactly the "caller invented to justify a capability" shape the task
+    /// brief warns against, and the two stay orthogonal on purpose (no
+    /// amendment to the readout law above is sanctioned by the spec).
+    /// `windows/almanac`'s own `Speaker` doc records the same shape of
+    /// finding independently: a phenomenon has no subject for a
+    /// clause-level realizer to take at all.
+    ///
+    /// `KNOW`/`THINK` are not even imported into this module: their only
+    /// callers today are `domains/language`'s own tests and the merchant
+    /// corpus witness (`cli/tests/suite/sentence_corpus.rs`), which is a
+    /// TEST-side fixture, not a production caller. `Coordination` is the
+    /// same story. `Subject::Clause` appears exactly once in this file's
+    /// production code, as an exhaustiveness match arm in `parse_line` that
+    /// stays `unreachable!()` (documented in place) — never as a
+    /// constructed value; `Argument::Clause` appears only in that same
+    /// arm's neighboring doc comments, never as code.
+    ///
+    /// This is a finding, not an oversight: every `Clause`-construction call
+    /// site in this module was read for this task, looking for where the
+    /// book already says something that is genuinely one clause inside
+    /// another or two clauses joined — not where one could be forced in.
+    /// None does. If a future campaign gives a people or a character a
+    /// belief distinct from what it perceives, or narrates two committed
+    /// facts as one coordinated sentence, THIS is where that caller goes —
+    /// and this test must be UPDATED, not deleted, the day that happens
+    /// (the same STALE-DECL discipline `seam-guard`'s
+    /// `expect(survives: …)` uses).
+    #[test]
+    fn the_mortise_declares_no_construction_site_embeds_or_coordinates() {
+        let source = include_str!("lib.rs");
+        let production = source
+            .split("#[cfg(test)]\nmod tests {\n")
+            .next()
+            .expect("this module's own `mod tests` boundary must exist");
+
+        assert!(
+            !production.contains("subject: Subject::Clause("),
+            "the Task 10 inertness declaration is stale: a production site now \
+             constructs a clause-embedded SUBJECT — update this test's doc, \
+             don't delete it"
+        );
+        assert!(
+            !production.contains("object: Argument::Clause("),
+            "the Task 10 inertness declaration is stale: a production site now \
+             constructs a clause-embedded OBJECT — update this test's doc, \
+             don't delete it"
+        );
+        assert!(
+            !production.contains("Coordination {"),
+            "the Task 10 inertness declaration is stale: a production site now \
+             constructs a Coordination — update this test's doc, don't \
+             delete it"
+        );
+        assert!(
+            !production.contains("realize_common_coordination(")
+                && !production.contains("realize_tongue_deep_coordination("),
+            "the Task 10 inertness declaration is stale: a production site now \
+             realizes a coordinated utterance — update this test's doc, \
+             don't delete it"
+        );
+        assert!(
+            !production.contains("predicate: KNOW") && !production.contains("predicate: THINK"),
+            "the Task 10 inertness declaration is stale: a production site now \
+             constructs a KNOW/THINK matrix clause — update this test's doc, \
+             don't delete it"
+        );
+    }
+
     /// C7 T3's shallow-identity guarantee (plan G4): for every species T2
     /// measured at depth `(None, None, _)` on both axes — seed 2's goblin
     /// and kobold are the only such (seed, species) pairs within 1..=3 (T2's
