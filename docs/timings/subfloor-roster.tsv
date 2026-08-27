@@ -1214,7 +1214,6 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::partitioning_columns_are_all_covered_by_d2_or_d4
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
@@ -1273,7 +1272,6 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::d8_fires_on_exactly_alchemy_
 hornvale-lab::hornvale_lab$domesday::detect::tests::defensibility_capacity_rank_corr_still_exists_in_the_registry
 hornvale-lab::hornvale_lab$domesday::detect::tests::direct_references_match_measured_crates
 hornvale-lab::hornvale_lab$domesday::detect::tests::domain_crates_are_still_exactly_this_list
-hornvale-lab::hornvale_lab$domesday::detect::tests::findings_are_sorted_by_detector_then_metric
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_reads_a_nontrivial_correlation_and_its_sign
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_returns_none_for_a_constant_column
 hornvale-lab::hornvale_lab$domesday::detect::tests::the_live_census_reproduces_the_preregistered_findings
@@ -1284,7 +1282,6 @@ hornvale-lab::hornvale_lab$domesday::render::tests::a_detector_that_fired_nothin
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_page_carries_the_generated_header_and_only_computed_numbers
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_with_no_metrics_renders_the_no_metrics_notice_verbatim
 hornvale-lab::hornvale_lab$domesday::render::tests::a_flag_metric_always_renders_both_true_and_false_rows
-hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two
 hornvale-lab::hornvale_lab$domesday::render::tests::a_novel_detector_name_reaches_the_rendered_index
 hornvale-lab::hornvale_lab$domesday::render::tests::a_removed_parenthetical_directly_before_a_period_does_not_leave_a_dangling_space
 hornvale-lab::hornvale_lab$domesday::render::tests::an_ellipsis_survives_the_space_dot_space_cleanup_untouched
@@ -2622,6 +2619,8 @@ hornvale-vessel::hornvale_vessel$liveness::tests::frightened_at_is_false_after_t
 hornvale-vessel::hornvale_vessel$liveness::tests::frightened_at_is_terrain_only_with_empty_roster
 hornvale-vessel::hornvale_vessel$liveness::tests::frightened_at_matches_the_danger_drive
 hornvale-vessel::hornvale_vessel$liveness::tests::grab_and_weigh_resolve_the_same_conflict_differently
+hornvale-vessel::hornvale_vessel$liveness::tests::h3_the_act_trail_under_an_imposed_controller_is_byte_identical_to_the_default_controller
+hornvale-vessel::hornvale_vessel$liveness::tests::h4_the_distinct_fact_shapes_imposed_and_free_can_reach_are_identical
 hornvale-vessel::hornvale_vessel$liveness::tests::hazard_memory_dread_is_empty_with_an_empty_roster
 hornvale-vessel::hornvale_vessel$liveness::tests::hazard_memory_splits_static_from_transient
 hornvale-vessel::hornvale_vessel$liveness::tests::home_nav_a_belief_change_triggers_exactly_one_new_search
@@ -2743,6 +2742,7 @@ hornvale-vessel::hornvale_vessel$underworld_level::tests::every_level_but_the_fi
 hornvale-vessel::hornvale_vessel$underworld_level::tests::every_walkable_cell_is_reachable_from_every_other
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generate_descent_produces_one_level_per_rung
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generation_is_deterministic
+hornvale-vessel::hornvale_vessel$underworld_level::tests::made_chambers_lean_worked_found_chambers_lean_natural
 hornvale-vessel::hornvale_vessel$underworld_level::tests::stairs_down_and_stairs_up_never_share_a_cell
 hornvale-vessel::hornvale_vessel$underworld_level::tests::two_rungs_with_the_same_origin_and_kind_still_differ
 hornvale-vessel::hornvale_vessel$underworld_level::tests::worked_fraction_has_inertia_across_rungs
@@ -2756,6 +2756,7 @@ hornvale-vessel::suite$body_mass::an_absent_biosphere_falls_back_to_the_referenc
 hornvale-vessel::suite$body_mass::an_unknown_species_falls_back_to_the_reference_mass
 hornvale-vessel::suite$body_mass::the_inline_creature_derivation_and_mass_for_species_agree
 hornvale-vessel::suite$body_mass::the_two_fallback_arms_are_the_same_value
+hornvale-vessel::suite$coercion_calibration::h1_the_new_row_refuses_in_character_and_permits_out_of_character
 hornvale-vessel::suite$course_properties::a_due_north_course_never_leaves_its_meridian
 hornvale-vessel::suite$course_properties::a_fixed_priority_exit_matching_cycle_traps_in_a_closed_room_set
 hornvale-vessel::suite$course_properties::a_memoryless_walk_leaves_the_meridian_that_h1_pins
@@ -2763,7 +2764,9 @@ hornvale-vessel::suite$course_properties::bearing_based_resolution_escapes_the_f
 hornvale-vessel::suite$doctrine::the_least_equipped_people_is_the_most_open
 hornvale-vessel::suite$felt_state_concepts::every_affect_label_has_exactly_one_registered_felt_state_concept
 hornvale-vessel::suite$gate_table::in_character_is_refused_while_asleep_and_permitted_awake
+hornvale-vessel::suite$gate_table::in_character_is_refused_while_possessed_by_another
 hornvale-vessel::suite$gate_table::out_of_character_is_permitted_in_every_body_state
+hornvale-vessel::suite$gate_table::the_refusal_does_not_name_the_possessor
 hornvale-vessel::suite$lantern_lens::the_lens_can_be_declined
 hornvale-vessel::suite$lantern_lens::the_lens_gives_a_dichromat_no_hue_it_did_not_have
 hornvale-vessel::suite$lantern_lens::the_lens_is_a_deliberate_change_not_rounding_noise
