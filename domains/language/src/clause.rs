@@ -166,7 +166,40 @@ pub enum Argument {
     /// other variant can carry: a pronoun is neither a concept the
     /// vocabulary resolves nor a name that passes through unresolved.
     Pronoun(Person),
+    /// An embedded clause, realized in place of a lexical complement.
+    ///
+    /// **Added because a role needed it, which is this enum's own stated
+    /// rule.** The role is the clause complement of `know`/`think` — *"I do
+    /// not know he killed her"* — which no other variant can carry.
+    ///
+    /// Depth is capped at [`CLAUSE_EMBED_MAX_DEPTH`]: the cap states the
+    /// depth this campaign builds and can show working, not a stack-safety
+    /// belt. `Box` is unique ownership with no `Rc`, so a clause graph
+    /// cannot cycle; only depth is unbounded without it.
+    Clause(Box<Clause>),
 }
+
+/// How many `Argument::Clause` layers deep an argument nests: `0` for
+/// anything else, one more than the same count on that clause's own object
+/// for a `Clause`. [`realize_common`] panics when this exceeds
+/// [`CLAUSE_EMBED_MAX_DEPTH`], and it is what that constant is measured
+/// against — a clause complement may not itself contain a clause
+/// complement.
+fn clause_embed_depth(argument: &Argument) -> usize {
+    match argument {
+        Argument::Clause(inner) => 1 + clause_embed_depth(&inner.object),
+        _ => 0,
+    }
+}
+
+/// How deep a clause complement may nest before [`realize_common`] refuses
+/// it. States demonstrated depth, not a stack-safety belt — see
+/// [`Argument::Clause`]'s doc for why `1` is not a placeholder waiting to
+/// grow. Every later embedding site (a clause-carrying subject, a
+/// coordinated clause) reads this same constant rather than stating its own
+/// number, so raising the cap later is a one-line change here.
+/// type-audit: bare-ok(count)
+pub const CLAUSE_EMBED_MAX_DEPTH: usize = 1;
 
 /// One role binding on a clause: a **registered predicate** bound to an
 /// argument. How it surfaces — a preposition, a case affix, a trailing
@@ -791,6 +824,27 @@ pub fn realize_common(spec: &Clause, vocab: &CommonVocabulary) -> String {
         Argument::Pronoun(person) => {
             common_pronoun(*person, spec.number, PronounCase::Accusative).to_string()
         }
+        // An embedded clause realizes as its own full sentence, minus the
+        // trailing full stop this clause's own `Part::Literal(".")` will
+        // supply — realizing it whole and trimming is simpler than a second
+        // "clause body, no terminator" code path, and every construction
+        // this table has ends in exactly one `Literal(".")`, so the trim is
+        // safe. The depth check runs BEFORE the recursive call so a clause
+        // past the cap panics without ever realizing the offending text.
+        Argument::Clause(inner) => {
+            let depth = clause_embed_depth(&spec.object);
+            assert!(
+                depth <= CLAUSE_EMBED_MAX_DEPTH,
+                "a clause complement nests {depth} deep, past the cap of \
+                 {CLAUSE_EMBED_MAX_DEPTH}: a clause complement may not \
+                 itself contain a clause complement"
+            );
+            let mut text = realize_common(inner, vocab);
+            if text.ends_with('.') {
+                text.pop();
+            }
+            text
+        }
     };
     let mut out = String::new();
     for part in construction.parts {
@@ -818,8 +872,11 @@ pub fn realize_common(spec: &Clause, vocab: &CommonVocabulary) -> String {
             // that, so the slot is skipped rather than given a fourth row.
             // The condition is on the object's SHAPE, not on the feature,
             // because definiteness is a property of the clause and this is a
-            // property of what the object slot holds.
-            Part::Determiner if matches!(spec.object, Argument::Pronoun(_)) => {}
+            // property of what the object slot holds. A CLAUSE is skipped
+            // for the same reason: "*I do not know a he killed her*" is
+            // what NOT suppressing it produces (spec §4.2).
+            Part::Determiner
+                if matches!(spec.object, Argument::Pronoun(_) | Argument::Clause(_)) => {}
             Part::Determiner => match (spec.definiteness, spec.number) {
                 (Definiteness::Def, _) => out.push_str("the "),
                 (Definiteness::Indef, Number::Sg) => {
@@ -921,6 +978,17 @@ pub enum AdjunctPosition {
 /// A vertex renders as a bare integer rather than through [`cardinal`]
 /// because it is an IDENTIFIER, not a count — a year is a count of years and
 /// does go through `cardinal`.
+///
+/// **Refuses an [`Argument::Clause`], by panic, rather than silently
+/// rendering nothing.** `Adjunct` holds an `Argument`, so the moment
+/// `Argument` gained a `Clause` variant, an adjunct could carry one — and the
+/// trailing `_ => None` arm below would have swallowed it, rendering an
+/// adjunct that carries a whole embedded sentence as nothing at all, with no
+/// error. Spec §4.1 refuses this on purpose: adverbial subordination is a
+/// separate construction with its own boundary marking, and letting it
+/// arrive as an unexamined side effect of the object slot's own variant is
+/// exactly the "capability ships without a decision" failure this function's
+/// `None` convention otherwise guards against.
 /// type-audit: bare-ok(prose: return)
 pub fn common_role_surface(
     adjunct: &Adjunct,
@@ -965,6 +1033,10 @@ pub fn common_role_surface(
             AdjunctPosition::Trailing,
             format!("it ended in year {}", cardinal(*year)),
         )),
+        (role, Argument::Clause(_)) => panic!(
+            "an adjunct may not carry an embedded clause (role {role:?}): \
+             adverbial subordination is a separate construction, spec §4.1"
+        ),
         _ => None,
     }
 }
@@ -1801,6 +1873,121 @@ mod tests {
         .expect("a think clause parses");
         assert_eq!(parsed.predicate, THINK);
         assert_eq!(parsed.tense, Tense::Present);
+    }
+
+    /// The campaign's headline sentence: *"I did not know they killed
+    /// them"* — a clause complement, riding the transitive frame `know`
+    /// already had, with NO determiner in front of it. Failing to suppress
+    /// `Part::Determiner` for a clause object is what produces *"I did not
+    /// know a they killed them"*, which is the defect this test is written
+    /// to catch (spec §4.2).
+    #[test]
+    fn a_clause_object_realizes_with_no_determiner() {
+        let vocab = CommonVocabulary::default();
+        let embedded = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let matrix = Clause {
+            predicate: KNOW.to_string(),
+            subject: Subject::Pronoun(Person::First),
+            object: Argument::Clause(Box::new(embedded)),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Neg,
+            adjuncts: Vec::new(),
+        };
+        let out = realize_common(&matrix, &vocab);
+        assert_eq!(out, "I did not know they killed them.");
+        assert!(
+            !out.contains(" a they") && !out.contains(" the they"),
+            "no determiner may precede the embedded clause, got {out:?}"
+        );
+        // Exactly one full stop: the embedded clause's own trailing "." is
+        // trimmed, so the matrix clause's is the only one in the sentence.
+        assert_eq!(out.matches('.').count(), 1);
+    }
+
+    /// The depth cap fires as a panic, the same class as the missing-
+    /// construction panic [`realize_common`]'s own doc names: an authoring
+    /// hole in this repository, never a fact about a people. One level is
+    /// the depth this campaign builds and can show working (spec §4.3); a
+    /// clause complement whose own object is another clause complement goes
+    /// two deep and must be refused before either level renders.
+    #[test]
+    #[should_panic(expected = "may not itself contain a clause complement")]
+    fn a_clause_nested_two_deep_is_refused() {
+        let vocab = CommonVocabulary::default();
+        let deepest = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let middle = Clause {
+            predicate: KNOW.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Clause(Box::new(deepest)),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Neg,
+            adjuncts: Vec::new(),
+        };
+        let outer = Clause {
+            predicate: KNOW.to_string(),
+            subject: Subject::Pronoun(Person::First),
+            object: Argument::Clause(Box::new(middle)),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Neg,
+            adjuncts: Vec::new(),
+        };
+        let _ = realize_common(&outer, &vocab);
+    }
+
+    /// Spec §4.1's adjunct refusal, fired: `Adjunct` holds an `Argument`, so
+    /// an adjunct carrying a clause type-checks, and without an explicit arm
+    /// [`common_role_surface`]'s trailing `_ => None` would render it as
+    /// nothing, silently. This is the test the CONTROLLER FINDING asked for
+    /// — the refusal must be observed, not merely written.
+    #[test]
+    #[should_panic(expected = "adjunct may not carry an embedded clause")]
+    fn an_adjunct_carrying_a_clause_is_refused() {
+        let vocab = CommonVocabulary::default();
+        let embedded = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let adjunct = Adjunct {
+            role: "occ-people".to_string(),
+            argument: Argument::Clause(Box::new(embedded)),
+        };
+        let _ = common_role_surface(&adjunct, &vocab);
     }
 
     /// [`VERB_PARADIGM`]'s totality, and the one place it is deliberately

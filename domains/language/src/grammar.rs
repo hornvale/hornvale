@@ -200,6 +200,16 @@ pub struct TongueGap {
 /// through the lexicon: a pronoun is a closed-class grammatical word every
 /// tongue draws, not vocabulary a people may or may not have been exposed
 /// to, so no exposure gap is possible on it.
+///
+/// **`Argument::Clause` is `unimplemented!`, not gapped, and not yet.** A
+/// tongue-side subordination strategy is a later campaign task; this crate
+/// has no way to realize a nested clause in a tongue's own word order today.
+/// A [`TongueGap`] would be a lie in the type that could ship silently — it
+/// asserts something TRUE ABOUT A PEOPLE, and "not built yet" is a fact
+/// about this repository, not about any people. `realize_adjuncts` never
+/// reaches this arm for an adjunct's own clause (it refuses that case
+/// itself, with the real reason); this arm is reached only through the
+/// object slot, from [`realize_tongue`] and [`realize_tongue_deep`].
 fn resolve_argument(
     argument: &Argument,
     lexicon: &Lexicon,
@@ -212,6 +222,7 @@ fn resolve_argument(
         Argument::Count(n) => Ok(n.to_string()),
         Argument::Quantity(x) => Ok(x.to_string()),
         Argument::Pronoun(person) => Ok(tongue_pronoun(*person, number, pronouns)?),
+        Argument::Clause(_) => unimplemented!("clause embedding in a tongue arrives in Task 5"),
     }
 }
 
@@ -283,6 +294,16 @@ fn resolve_concept_marked(id: &str, lexicon: &Lexicon) -> Result<Marked, TongueG
 /// out of this task's scope, so `Count`/`Quantity` render as bare digits and
 /// `Name` passes through unresolved, exactly as `realize_common` does for
 /// the complement slot.
+///
+/// **Refuses an [`Argument::Clause`] itself, by panic, before it ever
+/// reaches [`resolve_argument`].** `Adjunct` holds an `Argument`, so an
+/// adjunct carrying a clause type-checks; left to fall through to
+/// `resolve_argument`'s own `Argument::Clause` arm, it would report "clause
+/// embedding in a tongue arrives in Task 5" — true of the object slot, but
+/// the WRONG reason here. This function's own message names the real rule:
+/// adjuncts may not carry clauses at all, ever, tongue or Common alike
+/// (spec §4.1) — see `clause.rs`'s `common_role_surface` for Common's half
+/// of the same refusal.
 fn realize_adjuncts(
     adjuncts: &[Adjunct],
     lexicon: &Lexicon,
@@ -291,7 +312,16 @@ fn realize_adjuncts(
 ) -> Result<Vec<String>, TongueGap> {
     adjuncts
         .iter()
-        .map(|adjunct| resolve_argument(&adjunct.argument, lexicon, number, pronouns))
+        .map(|adjunct| {
+            if let Argument::Clause(_) = &adjunct.argument {
+                panic!(
+                    "an adjunct may not carry an embedded clause (role {:?}): \
+                     adverbial subordination is a separate construction, spec §4.1",
+                    adjunct.role
+                );
+            }
+            resolve_argument(&adjunct.argument, lexicon, number, pronouns)
+        })
         .collect()
 }
 
@@ -1306,6 +1336,48 @@ mod tests {
         let gap = realize_tongue(&clause, &g, &lex, &no_pronouns()).unwrap_err();
         assert_eq!(gap.concept, "yellow-white-dwarf");
         assert!(!gap.reason.is_empty(), "recountable reason required");
+    }
+
+    /// `realize_adjuncts` refuses a clause-carrying adjunct itself, with the
+    /// real rule, rather than letting it fall through to
+    /// `resolve_argument`'s "arrives in Task 5" placeholder — which is true
+    /// of the object slot and would be the WRONG reason here (spec §4.1).
+    #[test]
+    #[should_panic(expected = "adjunct may not carry an embedded clause")]
+    fn a_tongue_adjunct_carrying_a_clause_is_refused() {
+        let lex = tiny_lexicon_with(&[("planet", ExposureClass::Steeped)]);
+        let embedded = Clause {
+            predicate: crate::packs::KILL.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: vec![],
+        };
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Concept("planet".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: vec![Adjunct {
+                role: "star-class".into(),
+                argument: Argument::Clause(Box::new(embedded)),
+            }],
+        };
+        let g = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: Some("gha".into()),
+            copula_segments: None,
+            articles: false,
+        };
+        let _ = realize_tongue(&clause, &g, &lex, &no_pronouns());
     }
 
     #[test]
