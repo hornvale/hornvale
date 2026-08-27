@@ -3385,7 +3385,7 @@ hornvale::suite$scene_context_discipline::the_catalog_reuses_one_scene_context_p
 hornvale::suite$sentence_corpus::a_classify_only_entry_resolves_as_covered
 hornvale::suite$sentence_corpus::a_mixed_entry_needs_every_demand_covered
 hornvale::suite$sentence_corpus::an_unimplemented_demand_resolves_as_not_yet
-hornvale::suite$sentence_corpus::merchant_coverage_is_zero_of_twelve
+hornvale::suite$sentence_corpus::merchant_coverage_is_two_of_twelve
 hornvale::suite$sentence_corpus::sentence_coverage_report
 hornvale::suite$sentence_corpus::the_merchant_corpus_is_frozen_at_its_authored_size
 hornvale::suite$sky_exit_criterion::scout_is_deterministic_and_finds_three_moon_worlds
