@@ -1923,13 +1923,18 @@ depth-distinction bet): moved, not closed.
 
 Done: both written.
 
-- [ ] **Step 5: Artifacts, then the merge**
+- [x] **Step 5: Artifacts, then the merge**
 
 ```bash
 make rebaseline
 git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
 make gate-commit
 ```
+
+Done: `make rebaseline` rc=0 (wall 47.5s); drift check against
+`docs/generated-paths.txt` exit 0, empty; `make gate-commit` rc=0
+(wall 20.7s, 618 tests + 3-chunk sub-floor tier). Sluice submission left to
+the reviewing session per this task's own instructions.
 
 Then `submitting-to-the-sluice`. The merge message needs a
 `Sluice-Headline:` trailer in the final trailer block, adjacent to
