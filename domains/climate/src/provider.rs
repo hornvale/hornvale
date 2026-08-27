@@ -439,7 +439,13 @@ impl GeneratedClimate {
     /// The synoptic weather state at a vertex on a day (The Firmament) — sampled,
     /// never integrated (the Lorenz guard-rail). Level 0: an observation read.
     /// type-audit: pending(wave-2: day)
-    pub fn weather_at(&self, vertex: Vertex, day: f64) -> WeatherState {
+    pub fn weather_at(&self, vertex: Vertex, at: WorldTime) -> WeatherState {
+        // The kernel's named hatch, once. This parameter's rawness had a
+        // visible consequence: `sky_report_from` fed it an UNCLAMPED negative
+        // day while astronomy's funnel clamped, so a pre-genesis query
+        // returned genesis's sky under pre-genesis weather (found in The
+        // Foliot's Task 2.5, and fixed the other way by decision 0317).
+        let day = at.as_std_days();
         let coord = self.geosphere.coord(vertex);
         let phase = crate::weather::weather_phase_with_fbm(
             &self.weather_fbm,
@@ -452,7 +458,8 @@ impl GeneratedClimate {
     /// The cloud type worn at a vertex on a day — the projection of
     /// [`Self::weather_at`].
     /// type-audit: pending(wave-2: day)
-    pub fn cloud_type_at(&self, vertex: Vertex, day: f64) -> CloudType {
+    pub fn cloud_type_at(&self, vertex: Vertex, at: WorldTime) -> CloudType {
+        let day = at.as_std_days();
         let coord = self.geosphere.coord(vertex);
         let prop = *self.weather_propensity.get(vertex);
         let phase = crate::weather::weather_phase_with_fbm(
@@ -582,7 +589,13 @@ impl GeneratedClimate {
     pub fn year_of_day_contexts(&self, vertex: Vertex) -> Vec<DayContext> {
         let days = self.year_length_std().max(1.0).round() as usize;
         let states: Vec<WeatherState> = (0..days)
-            .map(|d| self.weather_at(vertex, d as f64))
+            .map(|d| {
+                // `d` is a whole-day index, so this crossing is exact.
+                self.weather_at(
+                    vertex,
+                    WorldTime::from_std_days(d as f64).expect("a whole-day index is representable"),
+                )
+            })
             .collect();
         let weight_sum: f64 = states.iter().map(|s| daily_weight(*s)).sum();
         let annual = self.precip_at(vertex);
@@ -1302,10 +1315,10 @@ mod tests {
     fn weather_is_defined_and_deterministic_over_the_globe() {
         let climate = varied_climate();
         for vertex in climate.geosphere().vertices().take(64) {
-            let w1 = climate.weather_at(vertex, 100.0);
-            let w2 = climate.weather_at(vertex, 100.0);
+            let w1 = climate.weather_at(vertex, WorldTime::from_std_days(100.0).expect("finite"));
+            let w2 = climate.weather_at(vertex, WorldTime::from_std_days(100.0).expect("finite"));
             assert_eq!(w1, w2);
-            let c = climate.cloud_type_at(vertex, 100.0);
+            let c = climate.cloud_type_at(vertex, WorldTime::from_std_days(100.0).expect("finite"));
             // Storm vertices wear cumulonimbus; clear vertices wear none-or-cirrus.
             match w1 {
                 WeatherState::Storm => assert_eq!(c, CloudType::Cumulonimbus),

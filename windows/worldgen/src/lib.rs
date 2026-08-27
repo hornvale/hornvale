@@ -3899,8 +3899,8 @@ fn weather_line_for(
     climate: &GeneratedClimate,
     vertex: hornvale_kernel::Vertex,
 ) -> String {
-    let state = climate.weather_at(vertex, 0.0);
-    let cloud = climate.cloud_type_at(vertex, 0.0);
+    let state = climate.weather_at(vertex, WorldTime::from_std_days(0.0).expect("finite"));
+    let cloud = climate.cloud_type_at(vertex, WorldTime::from_std_days(0.0).expect("finite"));
     hornvale_almanac::render_weather_line(site, sky_phrase(state, cloud))
 }
 
@@ -4640,8 +4640,8 @@ fn occlusion_lens_at(
     };
     let vertex = terrain.nearest_vertex(coord.latitude, coord.longitude);
     let (lens, _) = occlusion(
-        climate.weather_at(vertex, day),
-        climate.cloud_type_at(vertex, day),
+        climate.weather_at(vertex, WorldTime::from_std_days(day).expect("finite")),
+        climate.cloud_type_at(vertex, WorldTime::from_std_days(day).expect("finite")),
     );
     lens
 }
@@ -8974,8 +8974,15 @@ pub fn sky_report_from(
     let Some(vertex) = at else {
         return Ok(sky_of(world)?.sky_at_visibility(time, Visibility::CLEAR));
     };
-    let state = climate.weather_at(vertex, time.as_std_days());
-    let cloud = climate.cloud_type_at(vertex, time.as_std_days());
+    // The SAME instant the sky is read at, now by construction rather than by
+    // coincidence. These two took `time.as_std_days()` while the sky went
+    // through astronomy's funnel, and when that funnel clamped a pre-genesis
+    // instant the two halves of ONE report disagreed about what time it was
+    // (The Foliot, Task 2.5). Decision 0317 removed the clamp; passing the
+    // `WorldTime` straight through is what stops the pair drifting apart
+    // again — a future clamp on either side could no longer be silent.
+    let state = climate.weather_at(vertex, time);
+    let cloud = climate.cloud_type_at(vertex, time);
     let (_, vis) = occlusion(state, cloud);
     let mut report = sky_of(world)?.sky_at_visibility(time, vis);
     report.description = format!(

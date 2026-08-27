@@ -545,7 +545,10 @@ pub fn tiles_scene_in(
             precip_regime.push(climate.regime_at(c_vertex) as u8);
             cloud_fraction.push(climate.cloud_fraction_at(c_vertex));
             weather_propensity.push(climate.storm_propensity_at(c_vertex));
-            cloud_type.push(climate.cloud_type_at(c_vertex, scene_day) as u8);
+            cloud_type.push(climate.cloud_type_at(
+                c_vertex,
+                WorldTime::from_std_days(scene_day).expect("finite"),
+            ) as u8);
         }
     }
     debug_assert!(
