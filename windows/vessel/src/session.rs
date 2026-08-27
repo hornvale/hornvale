@@ -1963,10 +1963,20 @@ impl<'w> Session<'w> {
     // within-room step at a tenth of a room-to-room move, so the cost model
     // has contemplated this all along.
 
-    /// The body's state, as the gate reads it — DERIVED from [`Self::wake_at`]
-    /// rather than stored, so the clock advancing past the next waking IS the
-    /// waking and there is no second field to fall out of step.
+    /// The body's state, as the gate reads it — DERIVED from
+    /// [`possessor_of`] and [`Self::wake_at`] rather than stored, so the
+    /// clock advancing past the next waking IS the waking and there is no
+    /// second field to fall out of step.
+    ///
+    /// **Possession is checked FIRST, and the order is a real decision**
+    /// (The Coercion, Task 3): a body held by another is refused
+    /// in-character whether or not it also happens to be asleep, and
+    /// reporting "you are asleep" to a player whose body has been taken
+    /// names the wrong condition.
     fn body_state(&self) -> BodyState {
+        if possessor_of(&self.ledger, self.agent_entity()).is_some() {
+            return BodyState::PossessedByAnother;
+        }
         match self.wake_at {
             Some(wake) if self.day < wake => BodyState::Asleep,
             _ => BodyState::Awake,
@@ -6065,6 +6075,138 @@ mod tests {
             Some(holder),
             "a body may be possessed again after release — this is why the state \
              is a fold and not a single latest value"
+        );
+    }
+
+    /// The Coercion, Task 3: proves `body_state` actually consults
+    /// `possessor_of` — Task 1 shipped the facts and Task 2 shipped the
+    /// `BodyState::PossessedByAnother` row, but nothing derived it yet, so
+    /// the gate never saw it. `look` is in-character and commits nothing,
+    /// so the assertion lands on the gate rather than a side effect;
+    /// `!whoami` is out-of-character and must still answer, or a possessed
+    /// body would be indistinguishable from a hung game (spec §2.2).
+    ///
+    /// Committed in-module, not in `windows/vessel/tests/suite/
+    /// possession_facts.rs`, for the same reason Task 1's fold coverage is:
+    /// `mod session` is private, so an external test cannot reach
+    /// `POSSESSED_BY`/`possessor_of`/`session.ledger` to construct the
+    /// state at all — there is no public commit surface for an imposed
+    /// possession yet (that is Task 4's OOC verb), and the brief for this
+    /// task says plainly not to invent one.
+    #[test]
+    fn an_imposed_possession_refuses_in_character_and_permits_out_of_character() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let body = session.agent_entity();
+        let holder = other_bodies(&session.bodies, session.driven)[0].entity;
+
+        // Baseline: an in-character verb works before anyone takes the body.
+        let before = match session.handle("look") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("look must not release: {t}"),
+        };
+        assert!(!before.is_empty());
+
+        let open = Fact {
+            subject: body,
+            predicate: POSSESSED_BY.to_string(),
+            object: Value::Entity(holder),
+            place: None,
+            day: None,
+            provenance: "test: imposed possession".to_string(),
+        };
+        session
+            .ledger
+            .commit(open, &session.registry)
+            .expect("possessed-by is registered");
+
+        // In-character now refuses, and names possession specifically...
+        let refused = match session.handle("look") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("possession must not release: {t}"),
+        };
+        assert_ne!(
+            refused, before,
+            "an in-character verb must not behave identically once the body is held"
+        );
+        assert!(
+            refused.contains("another will holds this body"),
+            "the refusal must name possession, not some other reason: {refused}"
+        );
+
+        // ...and out-of-character still works, which is the whole point:
+        // without it, being possessed is indistinguishable from the game
+        // having hung.
+        let ooc = match session.handle("!whoami") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("!whoami must not release: {t}"),
+        };
+        assert!(!ooc.is_empty(), "OOC must still answer while possessed");
+    }
+
+    /// The Coercion, Task 3, Step 5: the ordering in `body_state` — possession
+    /// checked BEFORE sleep — is a deliberate decision, not an accident of
+    /// which `if` came first. A body that is both asleep and possessed must
+    /// be refused for possession, not sleep: reporting sleep to a player
+    /// whose body was taken names the wrong condition. Reachable through the
+    /// shipped surface: `sleep` is a public in-character verb that sets
+    /// `wake_at` into the future, and this module can commit the same
+    /// `possessed-by` fact Task 1 shipped directly onto `session.ledger`.
+    #[test]
+    fn a_possessed_and_asleep_body_is_refused_for_possession_not_sleep() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let body = session.agent_entity();
+        let holder = other_bodies(&session.bodies, session.driven)[0].entity;
+
+        let slept = match session.handle("sleep") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("sleep must not release: {t}"),
+        };
+        assert!(
+            !slept.starts_with("No verb"),
+            "`sleep` must be a verb for this test to mean anything: {slept}"
+        );
+        assert_eq!(
+            session.body_state(),
+            BodyState::Asleep,
+            "sanity check: asleep alone must gate as asleep"
+        );
+
+        let open = Fact {
+            subject: body,
+            predicate: POSSESSED_BY.to_string(),
+            object: Value::Entity(holder),
+            place: None,
+            day: None,
+            provenance: "test: imposed possession while asleep".to_string(),
+        };
+        session
+            .ledger
+            .commit(open, &session.registry)
+            .expect("possessed-by is registered");
+
+        // The body is now BOTH asleep (wake_at is still in the future) and
+        // possessed. The gate must name possession.
+        assert_eq!(
+            session.body_state(),
+            BodyState::PossessedByAnother,
+            "a body that is both asleep and possessed must gate as possessed — \
+             this is the ordering decision this test exists to pin"
+        );
+
+        let refused = match session.handle("look") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("possession must not release: {t}"),
+        };
+        assert!(
+            refused.contains("another will holds this body"),
+            "the refusal must name possession, not sleep: {refused}"
+        );
+        assert!(
+            !refused.contains("asleep"),
+            "reporting sleep to a player whose body was taken names the wrong \
+             condition: {refused}"
         );
     }
 
