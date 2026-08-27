@@ -264,6 +264,32 @@ and replaced four ~17-minute round trips. When a test carries several pins
 against one derived quantity, re-measure all of them in one pass; the
 reporter can only ever name the first.
 
+## A green commit gate is not a green crate
+
+The merge went red in the chamber on a test I had never run. `gate-commit`
+executes the **sub-floor tier only** — a deliberately cheap filter — and
+`an_eclipse_carries_an_exact_tick_alongside_its_quantized_day` is not in that
+roster. I ran `hornvale-scene`'s full suite after Task 4.1, then made a
+*larger* change (the v2 schema) and verified it with `gate-commit` and
+`make world-check` alone.
+
+The failure is not that I skipped a check; it is that I let a passing check
+stand in for a different one — the same shape as this campaign's other five,
+one level up. A sub-floor pass says the obvious breakage is absent. It says
+nothing about the crate whose public schema I had just rewritten.
+
+The test itself was correct to fail: it is The Escapement's, and it pins the
+property v2 reverses (schema still v1, the float still present, a tick added
+*beside* it). It had to invert with the schema, and its replacement now
+asserts the **absence** of the old fields — the load-bearing half, since a
+test that only checked the tick fields exist would pass just as happily with
+the floats left behind.
+
+**Rule:** after changing a crate, run that crate's own suite before the gate,
+not instead of it. Re-run across all eight touched crates afterwards: 26
+suites, 0 failures — which is the check that should have preceded the first
+submission.
+
 ## Cost and process notes
 
 - `census_sentinel` has **zero** sub-floor roster entries, so a branch that
