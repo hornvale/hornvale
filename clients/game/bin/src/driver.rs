@@ -5650,4 +5650,80 @@ mod prose_pane_tests {
             "the picture's indent did not survive, got {out:?}"
         );
     }
+
+    /// **The premise [`hornvale_game_core`]'s prose-vs-picture classifier
+    /// rests on, made mechanical.** `entry::reads_as_prose` calls a line
+    /// prose when it carries two DISTINCT letters, which is sound exactly
+    /// as long as the sim's pre-formatted vocabularies carry at most one
+    /// letter between them. A chamber plan carries none
+    /// (`windows/vessel/src/lattice/render.rs`: `. # + @`); a chart
+    /// carries `A`, the top impedance rung, and nothing else — but that is
+    /// a fact about `surrounds_ascii.rs`'s glyph table, in another crate,
+    /// which nothing else would notice changing.
+    ///
+    /// So this renders a REAL chart at every impedance rung and reads the
+    /// picture back. `core` cannot write this test — it has no hornvale
+    /// dependency, by design — and that is precisely why the guard lives
+    /// on this side of the boundary rather than as a sentence in a doc
+    /// comment.
+    ///
+    /// The slice is exact rather than heuristic: with `ways` empty and the
+    /// legend cleared, the `terrain` lens emits three caption lines and
+    /// then nothing but grid rows, and the three prefixes are asserted
+    /// before the slice is taken.
+    #[test]
+    fn the_chart_vocabulary_carries_at_most_one_letter() {
+        let d = test_driver();
+        let base = d.session.purview(0).expect("seed 42 charts its walk band");
+        let dry = base.water_legend.len() as u32;
+        let mut letters: std::collections::BTreeSet<char> = std::collections::BTreeSet::new();
+        let mut glyphs: std::collections::BTreeSet<char> = std::collections::BTreeSet::new();
+        for relief in 0..=5u32 {
+            for (openness, roughness) in [(-1.0, 1.0), (1.0, 0.0), (0.0, -1.0)] {
+                let mut scene = base.clone();
+                scene.legend.clear();
+                for cell in &mut scene.cells {
+                    if cell.state == "here" {
+                        continue;
+                    }
+                    cell.marks.clear();
+                    cell.water = dry;
+                    cell.relief = relief;
+                    cell.micro.openness = openness;
+                    cell.micro.relief = roughness;
+                }
+                let out = hornvale_scene::render_surrounds_ascii(&scene, "terrain", &[]);
+                let lines: Vec<&str> = out.lines().collect();
+                assert!(lines[0].starts_with("[lens: terrain"), "{:?}", lines[0]);
+                assert!(lines[1].starts_with("  placement:"), "{:?}", lines[1]);
+                assert!(lines[2].starts_with("  epistemic:"), "{:?}", lines[2]);
+                for row in &lines[3..] {
+                    assert!(
+                        !row.starts_with("  legend:") && !row.starts_with("  ways on:"),
+                        "the slice caught a caption line: {row:?}"
+                    );
+                    for ch in row.chars().filter(|c| !c.is_whitespace()) {
+                        glyphs.insert(ch);
+                        if ch.is_alphabetic() {
+                            letters.insert(ch);
+                        }
+                    }
+                }
+            }
+        }
+        // The premise of the premise: the sweep must actually have reached
+        // the alpine rung, or an empty `letters` proves nothing.
+        assert!(
+            letters.contains(&'A'),
+            "the sweep never drew the alpine glyph; it cannot say anything \
+             about the vocabulary. glyphs drawn: {glyphs:?}"
+        );
+        assert_eq!(
+            letters.len(),
+            1,
+            "the chart vocabulary grew a second letter ({letters:?}), so a \
+             picture row can now carry two distinct letters and \
+             `entry::reads_as_prose` will word-wrap it — see that function"
+        );
+    }
 }

@@ -194,30 +194,52 @@ fn wrap(text: &str, width: usize) -> Vec<String> {
 /// Whether an over-wide `line` may be re-flowed — whether it reads as
 /// prose rather than as a picture.
 ///
-/// **The test is a WORD: a run of two or more alphabetic characters.**
-/// Prose is made of words; a chart row is made of glyphs held apart by
-/// spaces, and every glyph in the sim's chart vocabulary
-/// (`@ & # ~ = + _ . : ^ A`) is a single character, as is every glyph in a
-/// chamber plan. A caption line — `placement: north-up, one row per ring,
-/// …` — is full of words and wraps, which is right: it is prose that
-/// happens to arrive beside a picture.
+/// **The test is TWO DISTINCT LETTERS anywhere in the line.** Prose is
+/// built from an alphabet; the sim's pre-formatted surfaces are built from
+/// a glyph vocabulary that contains exactly one alphabetic character.
+/// A chart draws `@ & # ~ = +` and the five impedance rungs `_ . : ^ A`
+/// (`windows/scene/src/surrounds_ascii.rs`); a chamber plan draws
+/// `. # + @` and no letter at all (`windows/vessel/src/lattice/render.rs`).
+/// So the most letters a picture row can carry is any number of `A`s — one
+/// distinct letter — while a caption line (`placement: north-up, one row
+/// per ring, …`) or a sentence carries dozens. The caption wrapping and
+/// the picture beside it not wrapping is the right outcome for both.
+///
+/// **Distinctness, not adjacency, and that difference is the whole
+/// correction.** An earlier revision asked for a RUN of two or more
+/// letters, on the belief that a chart row holds its glyphs apart with
+/// spaces. It does not: `render_surrounds_ascii` pushes one character per
+/// occupied column with no separator, and only an unoccupied column
+/// becomes a space — the committed gallery chart carries `~  ~~ ~   ~  ~~`
+/// (`book/src/gallery/generated/surrounds-seed-42/seam.txt`). `A` is an
+/// ordinary alpine locale, so two neighbouring alpine facets render `AA`,
+/// which the run test read as a word: an over-wide alpine row would have
+/// been word-wrapped, which is the defect this function exists to prevent.
+/// A rule that never looks at adjacency cannot be fooled by contiguity.
 ///
 /// **This classifies per LINE, not per block, and that is a named limit
 /// rather than an oversight** (spec §4.2): the wire carries no marker
 /// distinguishing pre-formatted output from narration, so there is nothing
-/// else to go on. The residual risk is an over-wide prose line built
-/// entirely of one-letter words, which would be clipped instead of
-/// wrapped. Nothing in the sim emits one.
+/// else to go on.
+///
+/// **The residual risk is a SECOND alphabetic glyph** entering one of
+/// those vocabularies — two different letters on one row would read as
+/// prose however far apart they sat. That premise is not left to prose:
+/// `clients/game/bin`'s `the_chart_vocabulary_carries_at_most_one_letter`
+/// renders a real chart across every impedance rung and fails if the
+/// picture ever holds two distinct letters. (The old doc named the risk as
+/// an over-wide line of one-letter words. That was never the risk, and it
+/// pointed away from the one that was live.)
 fn reads_as_prose(line: &str) -> bool {
-    let mut run = 0usize;
+    let mut seen: Option<char> = None;
     for ch in line.chars() {
-        if ch.is_alphabetic() {
-            run += 1;
-            if run >= 2 {
-                return true;
-            }
-        } else {
-            run = 0;
+        if !ch.is_alphabetic() {
+            continue;
+        }
+        match seen {
+            None => seen = Some(ch),
+            Some(first) if first != ch => return true,
+            Some(_) => {}
         }
     }
     false
@@ -239,9 +261,12 @@ fn reads_as_prose(line: &str) -> bool {
 /// tinted chart is the first broken one.
 ///
 /// **Stripped BEFORE the width is measured**, which is the half that is
-/// easy to get wrong: a tinted row costs ~19 bytes per drawn glyph, so a
-/// picture that fits the pane comfortably would measure several times
-/// over-wide and be clipped down to its first few glyphs.
+/// easy to get wrong: a tinted glyph costs 17-23 bytes of overhead on top
+/// of itself — `\x1b[38;2;` and `m` and the four-byte reset are fixed, the
+/// three channel values are one to three digits each, and a realistic tint
+/// such as `120;140;60` costs 22 — so a picture that fits the pane
+/// comfortably measures several times over-wide and would be clipped down
+/// to its first few glyphs.
 ///
 /// A `\x1b[` sequence runs to its first final byte (`0x40..=0x7e`), per
 /// ECMA-48's CSI form — which covers both halves the lens emits, the
@@ -679,7 +704,7 @@ mod tests {
     }
 
     /// And it is dropped BEFORE the width is measured. Escaped, this row
-    /// is 41 characters against a 10-column pane; stripped it is 3, so
+    /// is 40 characters against a 10-column pane; stripped it is 3, so
     /// measuring first would clip a picture that fits down to its opening
     /// escape bytes.
     #[test]
@@ -697,6 +722,63 @@ mod tests {
     #[test]
     fn a_bare_escape_does_not_swallow_the_line() {
         assert_eq!(wrap("a\u{1b}b c", 40), vec!["ab c"]);
+    }
+
+    /// **An alpine chart row is still a picture.** Two facts compose into
+    /// the defect an earlier revision of [`reads_as_prose`] had:
+    /// `impedance_glyph` returns `'A'` at the top rung — an ordinary
+    /// alpine locale, not an exotic one — and `render_surrounds_ascii`
+    /// pushes glyphs into contiguous columns, so neighbouring alpine
+    /// facets render `AA`. A run-of-two-letters test called that a word
+    /// and word-wrapped the ridge.
+    ///
+    /// The row below is a real chart's shape: impedance rungs, contiguous
+    /// runs, gaps only where a column is unoccupied.
+    #[test]
+    fn wrap_clips_an_over_wide_alpine_row_rather_than_re_flowing_it() {
+        let ridge = "AA^AA  ^AA_ AAAA:AA^AA  AA_AA AAA^AA";
+        assert!(
+            ridge.chars().count() > 20,
+            "this test needs an over-wide row"
+        );
+        let out = wrap(ridge, 20);
+        assert_eq!(
+            out.len(),
+            1,
+            "an alpine ridge was re-flowed onto {} lines: {out:?}",
+            out.len()
+        );
+        assert_eq!(out[0].chars().count(), 20);
+    }
+
+    /// The same row at a width it FITS keeps every column, doubled `A`s
+    /// and interior gaps included.
+    #[test]
+    fn an_alpine_row_that_fits_survives_verbatim() {
+        let ridge = "AA^AA  ^AA_ AAAA:AA^AA";
+        assert_eq!(wrap(ridge, 40), vec![ridge]);
+    }
+
+    /// The other direction for the same rule: distinctness is what marks
+    /// prose, so SHOUTED prose still wraps. A test keyed on lower case
+    /// would have passed this by accident and failed a real all-caps line.
+    #[test]
+    fn wrap_still_wraps_prose_that_carries_no_lower_case() {
+        let shouted = "THE SKY ABOVE IS NIGHT AND THE VAST MOON IS A SMEAR";
+        let out = wrap(shouted, 20);
+        assert!(out.len() > 1, "all-caps prose stopped wrapping: {out:?}");
+        assert!(out.iter().all(|l| l.chars().count() <= 20));
+    }
+
+    /// The classifier's own boundary, stated directly so a later reader
+    /// need not infer it from the two tests above: one repeated letter is
+    /// a picture, two different ones are prose.
+    #[test]
+    fn one_repeated_letter_is_a_picture_and_two_different_ones_are_prose() {
+        assert!(!reads_as_prose("AAA A  AA"));
+        assert!(!reads_as_prose("~~ ^ _ .:"));
+        assert!(reads_as_prose("AB"));
+        assert!(reads_as_prose("A ridge"));
     }
 
     #[test]
