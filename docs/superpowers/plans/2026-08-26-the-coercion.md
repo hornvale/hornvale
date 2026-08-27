@@ -631,6 +631,25 @@ fn h1_the_new_row_refuses_in_character_and_permits_out_of_character() {
 
 If `Mood` or `BodyState::all` are not importable at those paths, adapt and say so.
 
+**H1 IS ALSO A RATCHET ON `BodyState::all()`, AND THAT IS LOAD-BEARING.** Task 2
+surfaced a pre-existing vacuous guard: `all()` (`gate.rs:46`) is a hand-written
+`vec![]` with no compiler link to the enum, so the exhaustive matches catch an
+*added* variant while nothing catches `all()` *omitting* one — mutation-proved
+twice, the pre-existing sweep stays GREEN when a variant is dropped.
+
+H1 closes that gap by accident of its shape: it counts over `all()` and asserts
+an exact total, so an omission takes the count to 1 and reddens it.
+
+Therefore: **do not "simplify" H1 into three direct `assert!(matches!(verdict(...)))`
+lines.** That reads like a clarification and silently removes the only check on
+`all()`'s completeness — the exact shape decision 0261 names, where the
+cheapest-looking repair deletes the detector. Keep the count-over-`all()` form,
+and say in its doc comment that it is doing two jobs.
+
+**Mutation-prove both jobs:** flip the new `verdict` arm (H1 must redden), and
+separately drop the variant from `all()` (H1 must also redden). Two mutations,
+two reds, restored from a scratch copy each time.
+
 - [ ] **Step 2: H2 — the death terminator is unreachable**
 
 ```rust
