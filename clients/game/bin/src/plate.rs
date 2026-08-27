@@ -369,8 +369,6 @@ pub fn draw_with(
         geo,
         f,
         win,
-        w,
-        h,
         colour_allowed,
         settlements,
         caves,
@@ -477,6 +475,17 @@ pub(crate) fn draw_terrain_layer(
 /// the terrain layer painted (or, at Task 5, over a tile served from a
 /// cache). It writes only the cells its own discovered sites project into.
 ///
+/// **The window's SIZE is read from `dst` itself, and there is deliberately
+/// no `w`/`h` parameter to disagree with it** (fix round 1, Minor 1).
+/// [`hornvale_game_core::Grid::set`] silently DROPS an out-of-range write,
+/// so a `dst` smaller than a passed-in `w`/`h` would lose exactly the sites
+/// nearest the edge — invisibly, with a green suite. No caller could
+/// disagree today, because both driver paths size through
+/// `Driver::world_plate_dims`; Task 5 composes this layer over a tile
+/// served from a CACHE, which is precisely where a `dst` of one size and a
+/// bound of another become plausible. Deriving the bound removes the
+/// disagreement rather than asserting its absence.
+///
 /// **Undiscovered sites are never drawn**, so §A7's "nothing is drawn and
 /// then hidden" still holds by construction — an undiscovered site is not
 /// suppressed here, it is never reached.
@@ -489,15 +498,13 @@ pub(crate) fn draw_feature_layer(
     geo: &Geosphere,
     f: &Frame,
     win: &Window,
-    w: u16,
-    h: u16,
     colour_allowed: bool,
     settlements: &BTreeSet<Vertex>,
     caves: &BTreeSet<Vertex>,
     discovered: &Discovered,
 ) {
-    let width = u32::from(w);
-    let height = u32::from(h);
+    let width = u32::from(dst.width());
+    let height = u32::from(dst.height());
     let (virtual_w, virtual_h) = virtual_dims(win.depth);
 
     let place = |vertex: Vertex, id: FeatureId, glyph: char, color: [u8; 3], grid: &mut Grid| {
@@ -1570,8 +1577,6 @@ mod tests {
             &geo,
             &f,
             &win,
-            w,
-            h,
             false,
             &BTreeSet::new(),
             &caves,
@@ -1639,8 +1644,6 @@ mod tests {
                 &geo,
                 &f,
                 &win,
-                w,
-                h,
                 false,
                 settlements,
                 caves,
@@ -1659,8 +1662,6 @@ mod tests {
                 &geo,
                 &f,
                 &win,
-                w,
-                h,
                 false,
                 settlements,
                 caves,
@@ -1715,8 +1716,6 @@ mod tests {
             &geo,
             &f,
             &win,
-            w,
-            h,
             false,
             &settlements,
             &caves,

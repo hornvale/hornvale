@@ -933,13 +933,14 @@ impl Driver {
             .expect("the miss branch above always fills the cache")
             .1
             .clone();
+        // No `w`/`h` here, deliberately: the feature layer reads the window's
+        // size from the grid it is drawing onto, so this path cannot hand it a
+        // bound the cached terrain grid disagrees with (fix round 1, Minor 1).
         plate::draw_feature_layer(
             &mut grid,
             &self.geo,
             &self.frame,
             &self.window,
-            plate_width,
-            plate_height,
             plate::colour_allowed(),
             &self.settlements,
             &self.caves,
@@ -2015,6 +2016,29 @@ mod portolan_tests {
         Some(())
     }
 
+    /// Move `d`'s window onto a real cave mouth out of `d`'s OWN roster —
+    /// the roster `plate::draw_feature_layer` projects from — and return it.
+    ///
+    /// The first cave the projection actually PLACES: a vertex above the
+    /// polar clamp is on no chart at all, and skipping those is the clamp's
+    /// own rule, not a search for a convenient answer.
+    fn centre_on_a_cave(d: &mut Driver, plate_w: u16, plate_h: u16) -> Vertex {
+        let site = d
+            .caves
+            .iter()
+            .copied()
+            .find(|&v| {
+                let c = d.geo.coord(v);
+                let (vw, vh) = plate::virtual_dims(d.window.depth);
+                mercator::project(&d.frame, c.latitude, c.longitude, vw, vh).is_some()
+            })
+            .expect("seed 42 has at least one cave mouth inside the projection's clamp");
+        let c = d.geo.coord(site);
+        centre_window_on(d, c.latitude, c.longitude, plate_w, plate_h)
+            .expect("the site just passed the clamp above");
+        site
+    }
+
     // -- The world-plate memo (perf/world-plate-memo) ----------------
     //
     // MEASURED, on seed 42 at the 210x56 design size: one `draw_with` is
@@ -2123,22 +2147,7 @@ mod portolan_tests {
         let (w, h) = (104u16, 56u16);
         let (plate_w, plate_h) = Driver::world_plate_dims(w, h);
 
-        // The first cave the projection actually places — a vertex above the
-        // polar clamp is on no chart at all, and skipping those is the
-        // clamp's own rule, not a search for a convenient answer.
-        let site = d
-            .caves
-            .iter()
-            .copied()
-            .find(|&v| {
-                let c = d.geo.coord(v);
-                let (vw, vh) = plate::virtual_dims(d.window.depth);
-                mercator::project(&d.frame, c.latitude, c.longitude, vw, vh).is_some()
-            })
-            .expect("seed 42 has at least one cave mouth inside the projection's clamp");
-        let c = d.geo.coord(site);
-        centre_window_on(&mut d, c.latitude, c.longitude, plate_w, plate_h)
-            .expect("the site just passed the clamp above");
+        let site = centre_on_a_cave(&mut d, plate_w, plate_h);
 
         let before = d
             .world_plate_for_redraw(w, h)
@@ -2162,6 +2171,67 @@ mod portolan_tests {
             renders,
             "a discovery re-rendered the TERRAIN layer — the whole pyramid, for one site"
         );
+    }
+
+    /// **The two driver paths into the layers must still agree** (fix round
+    /// 1, Minor 2).
+    ///
+    /// Before The Quadrat's Task 4, [`Driver::world_plate_for_redraw`]
+    /// CALLED [`Driver::world_plate`], so their agreement was structural and
+    /// unfalsifiable. They are now two independent argument lists into the
+    /// same two layers — plate dims, roster order, colour source — and
+    /// `plate.rs`'s own `draw_with_is_the_composition_of_its_layers` covers
+    /// only the `plate.rs` half. A divergence here would show as the
+    /// unconditional path (which `world_plate` is, and which every test that
+    /// drives the plate directly uses) disagreeing with what a player
+    /// actually sees.
+    ///
+    /// **Compared cell by cell, not by `to_plain_text`**, because the colour
+    /// SOURCE is one of the three things that could diverge and glyph text
+    /// cannot see [`hornvale_game_core::Ink`] at all.
+    ///
+    /// The window is put on a real, DISCOVERED cave first, so the comparison
+    /// covers the feature layer's arguments and not merely the raster's — two
+    /// terrain-only plates would agree whatever the roster arguments did.
+    #[test]
+    fn the_cached_redraw_path_draws_what_an_uncached_world_plate_would() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        let (w, h) = (104u16, 56u16);
+        let (plate_w, plate_h) = Driver::world_plate_dims(w, h);
+        let site = centre_on_a_cave(&mut d, plate_w, plate_h);
+        d.discovered_mut_for_test()
+            .record(crate::discovery::FeatureId::Cave(site));
+
+        let direct = d.world_plate(w, h);
+        assert!(
+            direct.to_plain_text().contains(plate::CAVE_GLYPH),
+            "guard: the discovered site must actually be on this plate, or the \
+             comparison below covers only the raster"
+        );
+
+        // A MISS and then a HIT: the composed output must match the
+        // unconditional path on both, since the feature layer is drawn over a
+        // clone either way.
+        for pass in ["miss", "hit"] {
+            let composed = d
+                .world_plate_for_redraw(w, h)
+                .expect("the world view is on");
+            assert_eq!(
+                (composed.width(), composed.height()),
+                (direct.width(), direct.height()),
+                "the two paths sized the plate differently ({pass})"
+            );
+            for y in 0..direct.height() {
+                for x in 0..direct.width() {
+                    assert_eq!(
+                        composed.get(x, y),
+                        direct.get(x, y),
+                        "the two driver paths disagree at ({x}, {y}) on the {pass}"
+                    );
+                }
+            }
+        }
     }
 
     /// A cache that returns a DIFFERENT grid than a fresh render is worse
