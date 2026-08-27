@@ -351,8 +351,19 @@ grep -E 'FAILED|test result' /tmp/mortise-t2b.log
 
 ```bash
 make rebaseline
+make rebaseline-goldens
 git diff --stat -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
+git diff --stat   # byte-goldens are NOT in generated-paths.txt — see below
 ```
+
+**BOTH commands, and this is a controller correction.** `make rebaseline` does
+not touch byte-golden fixtures; they have their own accept path
+(`make rebaseline-goldens`, i.e. `REBASELINE=1`). Task 2 ran only the first and
+left three byte-goldens red on the branch — `lens_purity`,
+`repose_byte_identity` and `solitary_tongue::peoples_lexicons_...` — which
+nothing in `gate-commit` runs, so the branch looked green for two whole tasks.
+`git diff --exit-code` over `docs/generated-paths.txt` cannot see them either.
+Run both, and diff the WHOLE tree, not only the declared paths.
 
 **A decision rule, not a prediction:**
 
@@ -685,7 +696,8 @@ compare against what you added. Report both numbers.
 
 ```bash
 make rebaseline
-git diff --stat -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
+make rebaseline-goldens
+git diff --stat   # the whole tree: byte-goldens are not in generated-paths.txt
 ```
 
 Expected to move: the stream manifest, by ADDED rows. Apply Task 2's Step-6
@@ -1065,7 +1077,8 @@ be "no".**
 
 ```bash
 make rebaseline
-git diff --stat -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
+make rebaseline-goldens
+git diff --stat   # the whole tree: byte-goldens are not in generated-paths.txt
 ```
 
 Apply Task 2's Step-6 decision table to the diff.
