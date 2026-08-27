@@ -1503,7 +1503,9 @@ git push
 ### Task 9: The switch — consumers read per rung, and read chemosynthate
 
 **Files:**
-- Modify: `windows/worldgen/src/lib.rs` (both capacity loops, ~1500 and ~1797)
+- Modify: `windows/worldgen/src/lib.rs` (both capacity loops — the `per_axis`
+  arrays are at **1561** and **1853**, and the `CHEMOSYNTHATE` entries
+  currently reading `(CHEMOSYNTHATE, 0.0)` are at **1571** and **1863**)
 - Modify: `domains/species/src/lib.rs` — xorn's `niche` (deferred from Task 8
   by Ruling P2)
 - Modify: `book/src/frontier/idea-registry.md` (`MAP-per-rung-substrate`)
@@ -1537,6 +1539,34 @@ load-bearing rather than stylistic.
 "same field, same reading", with `availability` exactly `1.0` — "an IEEE-754
 no-op (verified over the roster's real values, bit-difference 0)". Preserve
 that property and verify it the same way it was verified before: in bits.
+
+**Verified against the tree at `3d074d2af`, so you need not re-derive it:**
+
+- The two `(CHEMOSYNTHATE, 0.0)` placeholders Task 7 left are at
+  `lib.rs:1571` and `lib.rs:1863`. Those are the two lines that stop being
+  zero.
+- The fields you consume: `subterranean_energy_field_per_rung`
+  (`windows/worldgen/src/energy.rs:510`),
+  `subterranean_substrate_field_per_rung` (`lib.rs:3060`),
+  `subterranean_substrate_at_rung` (`lib.rs:3024`).
+- **`rung_evaluation_depth_m` is still NOT re-exported** at
+  `domains/terrain/src/lib.rs` — Task 3's deferred minor, confirmed still
+  open. It is the only `pub fn` in `delve.rs` missing from that crate root's
+  `pub use delve::{...}` list. **Add it here**, since you are the first task
+  that would otherwise be forced into the fully-qualified path. That is the
+  smallest change that closes a real inconsistency, and it was deferred to
+  this task deliberately.
+
+**A disclosed asymmetry you must NOT silently inherit.** Task 8's review
+traced `is_ametabolic`'s call sites and found that
+`windows/vessel/src/liveness.rs:3897-3907` and `:4431` gate **all homeostatic
+drives, including hunger, on `is_ametabolic(thermal)` alone** — that gate
+never inspects `niche` or `trophic_mode`. So after you give `xorn` a
+`CHEMOSYNTHATE` weight, it will **consume chemosynthate in the capacity model
+and still feel no hunger in the agent model**. That is pre-existing, it is
+not yours to fix, and it is out of scope. **State it in your report** so it
+lands in the campaign's follow-up register rather than being discovered by
+whoever next wonders why a rock-eater never eats.
 
 - [ ] **Step 1: Capture the "before" values**
 
