@@ -3117,3 +3117,5 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T15:38:02Z | sluice:clients | 457.953 | 5626.068 | 78.451 | 12.46 | 0 | 5639ad58c |  | lefford | 40 |
 | 2026-08-27T17:22:33Z | gate-commit | 39.688 | 114.232 | 26.640 | 3.55 | 0 | d7d8cbdc2 | campaign/the-offer | MacBookPro | 10 |
 | 2026-08-27T17:24:35Z | gate-commit | 26.841 | 52.332 | 13.314 | 2.45 | 0 | d7d8cbdc2 | campaign/the-offer | MacBookPro | 10 |
+| 2026-08-27T17:42:41Z | gate-commit | 29.374 | 62.287 | 23.080 | 2.91 | 0 | 4c76de145 | campaign/the-offer | MacBookPro | 10 |
+| 2026-08-27T17:44:08Z | gate-commit | 22.543 | 50.410 | 13.032 | 2.81 | 0 | 4c76de145 | campaign/the-offer | MacBookPro | 10 |
