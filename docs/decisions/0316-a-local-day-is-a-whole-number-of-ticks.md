@@ -1,4 +1,4 @@
-# 0287. A local day is a whole number of ticks
+# 0316. A local day is a whole number of ticks
 
 **Status:** Accepted (2026-08-26) · **Decider:** Nathan · **Campaign:** The
 Foliot · **Relates:**
