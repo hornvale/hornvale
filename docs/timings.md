@@ -3126,3 +3126,5 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T18:11:05Z | gate-commit | 36.483 | 74.256 | 52.350 | 3.47 | 0 | 0ef7a6112 | campaign/the-offer | MacBookPro | 10 |
 | 2026-08-27T18:17:36Z | gate-commit | 43.332 | 62.706 | 22.858 | 1.97 | 0 | 0ef7a6112 | campaign/the-offer | MacBookPro | 10 |
 | 2026-08-27T18:19:40Z | gate-commit | 19.875 | 48.845 | 12.362 | 3.08 | 0 | 0ef7a6112 | campaign/the-offer | MacBookPro | 10 |
+| 2026-08-27T18:56:29Z | gate-commit | 37.845 | 101.503 | 24.095 | 3.32 | 0 | 380a743cf | campaign/the-offer | MacBookPro | 10 |
+| 2026-08-27T18:57:04Z | gate-commit | 20.809 | 49.894 | 12.794 | 3.01 | 0 | 380a743cf | campaign/the-offer | MacBookPro | 10 |
