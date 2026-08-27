@@ -3135,3 +3135,10 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T21:53:09Z | gate-commit | 24.993 | 51.913 | 13.173 | 2.60 | 0 | c1833b4fd | campaign/the-offer | MacBookPro | 10 |
 | 2026-08-27T22:12:27Z | gate-commit | 23.899 | 53.496 | 17.757 | 2.98 | 0 | e93be0675 | campaign/the-offer | MacBookPro | 10 |
 | 2026-08-27T22:13:01Z | gate-commit | 20.303 | 49.160 | 12.627 | 3.04 | 0 | e93be0675 | campaign/the-offer | MacBookPro | 10 |
+| 2026-08-27T22:38:00Z | rebaseline | 61.835 | 253.201 | 12.230 | 4.29 | 0 | 51b127f80 | campaign/the-offer | MacBookPro | 10 |
+| 2026-08-27T22:38:50Z | gate-commit | 34.193 | 59.703 | 22.913 | 2.42 | 0 | 51b127f80 | campaign/the-offer | MacBookPro | 10 |
+| 2026-08-27T22:39:59Z | gate-commit | 33.636 | 52.021 | 13.960 | 1.96 | 0 | 51b127f80 | campaign/the-offer | MacBookPro | 10 |
+| 2026-08-27T22:45:05Z | gate-commit | 39.894 | 64.323 | 24.707 | 2.23 | 0 | 3fe901d16 | campaign/the-offer | MacBookPro | 10 |
+| 2026-08-27T22:46:14Z | gate-commit | 30.669 | 54.246 | 13.399 | 2.21 | 0 | 3fe901d16 | campaign/the-offer | MacBookPro | 10 |
+| 2026-08-27T22:51:03Z | gate-commit | 39.634 | 76.153 | 25.553 | 2.57 | 0 | 4ba89e3bc | campaign/the-offer | MacBookPro | 10 |
+| 2026-08-27T22:51:40Z | gate-commit | 20.417 | 49.597 | 12.736 | 3.05 | 0 | a158f22f2 | campaign/the-offer | MacBookPro | 10 |
