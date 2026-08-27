@@ -66,8 +66,9 @@ Test scaffolding: `use crate::body_fields::seed_42;` gives `(World, WorldContext
 
 **Interfaces:**
 - Consumes: nothing from earlier tasks.
-- Produces: `session::POSSESSED_BY`, `session::POSSESSION_ENDED`, and
-  `session::possessor_of(ledger: &Ledger, body: EntityId) -> Option<EntityId>`.
+- Produces: `session::POSSESSED_BY`, `session::POSSESSION_ENDED`,
+  `session::possessor_of(ledger: &Ledger, body: EntityId) -> Option<EntityId>`,
+  and `Session::possessor(&self) -> Option<EntityId>`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -134,7 +135,33 @@ Add to `windows/vessel/tests/suite.rs` in alphabetical position:
 mod possession_facts;
 ```
 
-**The three `*_for_test` accessors do not exist.** Add them as `#[doc(hidden)]` `pub` methods on `Session` in this task, or find the existing equivalents if the crate already exposes a ledger reader and a second body — check before adding, and say in your report which you did.
+**RESOLVED BEFORE DISPATCH — add NO test-only accessors.** The plan drafted three
+`*_for_test` methods as a hedge. Verified against the tree, none is needed and two
+already exist:
+
+- **`Session` has no public ledger reader and no public commit**, and it should not
+  gain one. `possessor_of` is a pure function over a `&Ledger`, so its own tests
+  belong **in-module** (`#[cfg(test)] mod tests` in `session.rs`, which already
+  holds 50 tests and can reach `self.ledger` directly). Move the fold's tests
+  there and drop the `put` helper — commit `Fact`s straight onto the ledger.
+- **`Session::bodies() -> &[Body]`** (`:1129`) already gives a second body:
+  pick one whose index is not `driven`. No `other_body_entity_for_test`.
+- **`Session::committed_fact_count() -> usize`** (`:1646`) is `self.ledger.len()`.
+  Use it for the no-op-release assertion. No `ledger_for_test`.
+
+Add ONE public read instead, which the later tasks want anyway:
+
+```rust
+    /// Who currently holds the driven body, if anyone (The Coercion) — the
+    /// session-level read over [`possessor_of`]'s fold. `None` for a free body,
+    /// which is every body until an imposition seam opens one.
+    pub fn possessor(&self) -> Option<EntityId> {
+        possessor_of(&self.ledger, self.agent_entity())
+    }
+```
+
+The integration tests in this task use `s.possessor()`; the fold's own open/close/
+reopen coverage lives in-module. Say in your report if anything here did not hold.
 
 - [ ] **Step 2: Run the test to verify it fails**
 
