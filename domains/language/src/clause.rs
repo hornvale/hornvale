@@ -13,7 +13,7 @@
 
 use crate::common_vocab::CommonVocabulary;
 use crate::morphology::Evidential;
-use crate::packs::{EAT, KILL};
+use crate::packs::{EAT, KILL, KNOW};
 use hornvale_kernel::world::IS_A;
 use std::sync::OnceLock;
 
@@ -575,10 +575,17 @@ pub enum Valence {
 /// [`KILL`] is the promise in [`common_constructions`]'s doc being kept: a
 /// second transitive verb is **one row here**, no new construction, no new
 /// [`Valence`] variant and no second code path.
+///
+/// [`KNOW`] (The Mortise) is the same promise kept a third time: it was
+/// registered vocabulary with no row here at all, so [`realize_common`]
+/// panicked on it, which is exactly the red
+/// `sentence_corpus.rs`'s `every_covered_entry_realizes_in_common` witness
+/// was built to find.
 const PREDICATE_VALENCE: &[(&str, Valence)] = &[
     (IS_A, Valence::Nominal),
     (EAT, Valence::Transitive),
     (KILL, Valence::Transitive),
+    (KNOW, Valence::Transitive),
 ];
 
 /// The valence of `predicate`, or `None` when no realizer covers it.
@@ -1612,7 +1619,7 @@ mod tests {
         // in one realizer and not the other.
         assert_eq!(
             inv.len(),
-            [IS_A, EAT, KILL]
+            [IS_A, EAT, KILL, KNOW]
                 .iter()
                 .filter(|p| predicate_valence(p).is_some())
                 .count(),
@@ -1623,6 +1630,9 @@ mod tests {
         // `kill` is the second transitive verb, and the reason it is only a
         // row: it shares `eat`'s part list rather than earning one.
         assert_eq!(predicate_valence(KILL), Some(Valence::Transitive));
+        // `know` (The Mortise, Task 1) is the third: same derivation, same
+        // shared part list, no new construction.
+        assert_eq!(predicate_valence(KNOW), Some(Valence::Transitive));
         assert_eq!(predicate_valence("dwells-in"), None);
     }
 

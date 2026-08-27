@@ -3077,3 +3077,8 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T11:49:28Z | sluice:gate | 470.178 | 13059.773 | 507.185 | 28.85 | 0 | 4e89b35a9 |  | lefford | 40 |
 | 2026-08-27T11:57:21Z | sluice:clients | 472.495 | 5776.730 | 91.999 | 12.42 | 0 | 046c6701e |  | lefford | 40 |
 | 2026-08-27T13:19:47Z | prewarm | 169.765 | 1145.105 | 41.753 | 6.99 | 0 | 68409004e | campaign/the-mortise | MacBookPro | 10 |
+| 2026-08-27T14:55:38Z | gate-commit | 10.258 | 17.422 | 1.948 | 1.89 | 0 | 00800b622 | campaign/the-mortise | MacBookPro | 10 |
+| 2026-08-27T14:56:29Z | gate-commit | 25.784 | 43.008 | 2.870 | 1.78 | 0 | 00800b622 | campaign/the-mortise | MacBookPro | 10 |
+| 2026-08-27T14:57:08Z | gate-commit | 26.839 | 74.118 | 19.359 | 3.48 | 0 | 00800b622 | campaign/the-mortise | MacBookPro | 10 |
+| 2026-08-27T14:58:28Z | gate-commit | 45.206 | 89.872 | 27.847 | 2.60 | 0 | 00800b622 | campaign/the-mortise | MacBookPro | 10 |
+| 2026-08-27T15:01:31Z | gate-commit | 29.183 | 49.216 | 11.603 | 2.08 | 0 | 00800b622 | campaign/the-mortise | MacBookPro | 10 |

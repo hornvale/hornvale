@@ -47,6 +47,19 @@ pub const EAT: &str = "eat";
 /// type-audit: bare-ok(identifier-text)
 pub const KILL: &str = "kill";
 
+/// The `know` concept's id.
+///
+/// Named for the same reason [`EAT`] and [`KILL`] are: the pack row that
+/// REGISTERS the concept (in [`action_suite_pack`]) and the
+/// `clause::PREDICATE_VALENCE` row that REALIZES it must not drift apart.
+/// Before this constant existed the pack row was a bare `"know"` literal and
+/// `PREDICATE_VALENCE` had no row for it at all — `realize_common` panicked
+/// with "Common has no construction for predicate \"know\"" the moment a
+/// caller tried, which is the red `cli/tests/suite/sentence_corpus.rs`'s
+/// `every_covered_entry_realizes_in_common` witness exists to catch.
+/// type-audit: bare-ok(identifier-text)
+pub const KNOW: &str = "know";
+
 /// One entry in a vocabulary pack: a concept id, its broad category, a doc,
 /// and its rank on whichever acquisition ladder it belongs to (0 for
 /// entries outside any ladder — always in the lexicon once the pack is
@@ -667,7 +680,7 @@ pub fn action_suite_pack() -> &'static [(&'static str, &'static str)] {
         ),
         ("sense", "to perceive another's felt bodily state — `needs`"),
         (
-            "know",
+            KNOW,
             "to hold something in memory or understanding — `knows`",
         ),
         ("wait", "to let time pass without acting — `wait`"),

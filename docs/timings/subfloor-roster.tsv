@@ -3412,6 +3412,7 @@ hornvale::suite$sentence_corpus::a_classify_only_entry_resolves_as_covered
 hornvale::suite$sentence_corpus::a_mixed_entry_needs_every_demand_covered
 hornvale::suite$sentence_corpus::an_unimplemented_demand_resolves_as_not_yet
 hornvale::suite$sentence_corpus::distance_zero_is_exactly_coverage
+hornvale::suite$sentence_corpus::every_covered_entry_realizes_in_common
 hornvale::suite$sentence_corpus::four_entries_sit_at_one_missing_demand
 hornvale::suite$sentence_corpus::merchant_coverage_is_two_of_twelve
 hornvale::suite$sentence_corpus::sentence_coverage_report

@@ -42,6 +42,12 @@
 //! the corpus is frozen data a future campaign is expected to swap. See its
 //! own doc comment.
 
+use hornvale_kernel::ConceptRegistry;
+use hornvale_language::packs::{KILL, KNOW};
+use hornvale_language::{
+    Argument, Clause, CommonVocabulary, Definiteness, Evidential, Number, Person, Polarity,
+    Subject, Tense, realize_common,
+};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -378,6 +384,87 @@ fn a_mixed_entry_needs_every_demand_covered() {
         demands: vec!["classify".to_string(), UNCOVERED_TOKEN.to_string()],
     };
     assert!(!entry_covered(&synthetic));
+}
+
+// ---------------------------------------------------------------------
+// Task 1: the realization witness
+// ---------------------------------------------------------------------
+
+/// The [`Clause`] this campaign constructs for a covered merchant id.
+///
+/// **Not a general corpus-to-clause translator** — this file has no parser
+/// from the corpus's English into a `Clause`, and building one is out of
+/// scope for the witness. Each arm is hand-built from the entry's own text
+/// (m05: *"A guard killed a woman."*; m10: *"I didn't know her."*), reading
+/// the field list straight off [`Clause`] rather than off any other
+/// document. Panics on an id this witness does not cover, the same
+/// fail-loud posture [`realize_common`] itself takes on an unconstructed
+/// predicate.
+fn merchant_clause(id: &str) -> Clause {
+    match id {
+        "m05" => Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Name("Nwamvam".to_string()),
+            object: Argument::Concept("person".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        },
+        "m10" => Clause {
+            predicate: KNOW.to_string(),
+            subject: Subject::Pronoun(Person::First),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Neg,
+            adjuncts: Vec::new(),
+        },
+        other => panic!("merchant_clause has no construction for id {other:?}"),
+    }
+}
+
+/// The Common surface each covered entry ACTUALLY realizes, beside the
+/// corpus's own English. Not an equality assertion against the corpus:
+/// Common is a limited register, so a witness demanding the corpus's literal
+/// text could never pass. What it proves is that a covered entry has a
+/// constructible clause that realizes at all — the mechanical half
+/// `IMPLEMENTED_DEMANDS` has never had.
+const MERCHANT_WITNESS: &[(&str, &str)] = &[
+    ("m05", "Nwamvam killed a person."),
+    ("m10", "I did not know them."),
+];
+
+/// Every covered entry realizes. **This is the guard the module doc says does
+/// not exist**, and it went red the first time it ran: m10 was scored covered
+/// while `realize_common` panicked on `know`, which had no
+/// `PREDICATE_VALENCE` row. A guard that has never been red proves nothing
+/// about what it catches.
+#[test]
+fn every_covered_entry_realizes_in_common() {
+    let witness_ids: Vec<&str> = MERCHANT_WITNESS.iter().map(|(id, _)| *id).collect();
+    assert_eq!(
+        witness_ids, MERCHANT_COVERED_IDS,
+        "MERCHANT_WITNESS must name exactly the covered ids, or this test is \
+         silently checking a different set than the resolver reports covered"
+    );
+
+    let mut registry = ConceptRegistry::default();
+    hornvale_worldgen::register_all(&mut registry).expect("the roster registers");
+    let vocab = CommonVocabulary::build(&registry).expect("the registry is sayable in Common");
+
+    for (id, expected) in MERCHANT_WITNESS {
+        let clause = merchant_clause(id);
+        let surface = realize_common(&clause, &vocab);
+        assert_eq!(
+            &surface, expected,
+            "{id} realized a different surface than MERCHANT_WITNESS records"
+        );
+    }
 }
 
 /// The committed report path. Deliberately NOT declared BY NAME in
