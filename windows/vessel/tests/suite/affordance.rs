@@ -30,10 +30,14 @@
 
 use std::collections::BTreeSet;
 
+use hornvale_kernel::{ConditionResponse, EntityId, Facet, ResourceVector};
 use hornvale_vessel::affordance::{
-    ObjectProperty, ObjectTraits, OfferedVerb, object_registry, offered, offered_by,
+    ObjectProperty, ObjectTraits, OfferedVerb, object_registry, offered, offered_by, offered_to,
 };
+use hornvale_vessel::body::Body;
+use hornvale_vessel::clock::{REFERENCE_MASS_KG, mass_for_species};
 use hornvale_vessel::interior::AnchorKind;
+use hornvale_vessel::liveness::ThreatNiche;
 
 /// Acceptance test (1): a new OBJECT kind ships with properties only — no
 /// dispatcher change — and the right verbs appear on it.
@@ -315,4 +319,129 @@ fn no_verb_by_object_table_exists() {
          match arm: that is the verb x object table the acceptance test \
          forbids"
     );
+}
+
+// --- Task 3: body-relative offers (spec §3.4, Gibson) -------------------
+
+/// A `Body` fixture varying only `species`/`mass_kg`. Built directly from
+/// public constructors (`EntityId::new`, `Facet::containing`,
+/// `ResourceVector::new`, `ThreatNiche`'s own pub fields) rather than
+/// through any world or `Ledger` — the controller's resolution of ambiguity
+/// is explicit that this task does not need a built world, and every field
+/// here is authored/default the same way `liveness.rs`'s own test bodies
+/// are, just assembled locally since those helpers are private to that
+/// module.
+fn body_with_mass(species: &str, mass_kg: f64) -> Body {
+    let home = Facet::containing([0.0, 0.0, 0.0], 6);
+    Body {
+        entity: EntityId::new(1).expect("1 is a valid entity id"),
+        home: home.clone(),
+        resource: home,
+        species: species.into(),
+        activity: hornvale_species::ActivityCycle::Diurnal,
+        temperature_niche: ConditionResponse {
+            optimum: 15.0,
+            width: 10.0,
+            devotion: 0.5,
+        },
+        deliberation_latency: 0.5,
+        time_horizon: 0.0,
+        thermal_strategy: hornvale_species::ThermalStrategy::Endothermic,
+        niche: ResourceVector::new(&[]).expect("the empty niche is valid"),
+        boldness: 0.5,
+        threat_niche: ThreatNiche {
+            uncanny: 1.0,
+            heat: 0.0,
+            cold: 0.0,
+            predator: 0.5,
+        },
+        mass_kg,
+        label: "test-body".into(),
+        perception: hornvale_species::PerceptionVector::MANIKIN,
+        village: None,
+    }
+}
+
+/// Gibson, via MAP-19: "a supporter to a sprite is not one to a giant." The
+/// same bed offers rest to one body and not another.
+///
+/// The discriminating pair is `kobold` (13.6 kg) and `woolly-mammoth`
+/// (6000.0 kg) from `hornvale_species::biosphere_registry()` — both real,
+/// registered species, not a pair chosen from outside the code. The masses
+/// are read from the registry rather than hardcoded here, and both are
+/// asserted to differ from [`REFERENCE_MASS_KG`] first: `mass_for_species`
+/// silently falls back to the reference mass for an unregistered species,
+/// so a typo'd label on both sides would produce two identical `70.0`s and
+/// a null result that *looks* like a pass.
+#[test]
+fn the_same_object_offers_differently_to_different_bodies() {
+    let biosphere = hornvale_species::biosphere_registry();
+    let small_mass = mass_for_species("kobold", Some(&biosphere));
+    let large_mass = mass_for_species("woolly-mammoth", Some(&biosphere));
+
+    assert_ne!(
+        small_mass, REFERENCE_MASS_KG,
+        "kobold must be a real biosphere entry, not a fallback to the \
+         reference mass"
+    );
+    assert_ne!(
+        large_mass, REFERENCE_MASS_KG,
+        "woolly-mammoth must be a real biosphere entry, not a fallback to \
+         the reference mass"
+    );
+    assert!(
+        small_mass < large_mass,
+        "the pair must discriminate: kobold ({small_mass} kg) is not \
+         lighter than woolly-mammoth ({large_mass} kg)"
+    );
+
+    let small = body_with_mass("kobold", small_mass);
+    let large = body_with_mass("woolly-mammoth", large_mass);
+
+    assert_ne!(
+        offered_to(AnchorKind::Bed, &small),
+        offered_to(AnchorKind::Bed, &large),
+        "supports-rest is not body-relative: the offer is identical for \
+         bodies of very different mass, so §3.4 is unexercised"
+    );
+}
+
+/// IV.a's additive-only rule (spec §3.4): body-relativity may narrow which
+/// verbs a *particular* body reaches through a *particular* object, but it
+/// may never grant a verb `offered_by(kind)` — the body-blind query —
+/// itself did not already grant. Checked across every registered kind, one
+/// unregistered kind (`Screen`, to catch a filter that mishandles the
+/// empty-property fallback), and bodies spanning the mass range from a
+/// small carrier to a very large one.
+#[test]
+fn body_relativity_never_withdraws_an_existing_capability() {
+    let biosphere = hornvale_species::biosphere_registry();
+    let bodies = [
+        body_with_mass("kobold", mass_for_species("kobold", Some(&biosphere))),
+        body_with_mass("human", mass_for_species("human", Some(&biosphere))),
+        body_with_mass(
+            "woolly-mammoth",
+            mass_for_species("woolly-mammoth", Some(&biosphere)),
+        ),
+    ];
+
+    let mut kinds: Vec<AnchorKind> = object_registry().iter().map(|(k, _)| *k).collect();
+    kinds.push(AnchorKind::Screen);
+
+    for kind in kinds {
+        let baseline = offered_by(kind);
+        for body in &bodies {
+            let narrowed = offered_to(kind, body);
+            assert!(
+                narrowed.is_subset(&baseline),
+                "{:?} offered {:?} to a body of mass {} kg, which offered_by({:?}) \
+                 does not grant at all: body-relativity may only narrow \
+                 offered_by's set, never exceed it",
+                kind,
+                narrowed.difference(&baseline).collect::<Vec<_>>(),
+                body.mass_kg,
+                kind
+            );
+        }
+    }
 }

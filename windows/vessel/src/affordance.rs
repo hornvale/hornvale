@@ -14,6 +14,8 @@
 //! *shape*: a thin, honest, kind-keyed trait table built with
 //! `ComponentStore`'s `FromIterator`.
 
+use crate::body::Body;
+use crate::clock::REFERENCE_MASS_KG;
 use crate::interior::AnchorKind;
 use hornvale_kernel::ComponentStore;
 use std::collections::BTreeSet;
@@ -234,6 +236,62 @@ pub fn offered_by(kind: AnchorKind) -> BTreeSet<OfferedVerb> {
     let reg = object_registry();
     let traits = reg.get(&kind).cloned().unwrap_or_default();
     offered(&traits)
+}
+
+/// The ceiling on `mass_kg / REFERENCE_MASS_KG` a bed still supports —
+/// authored so a body several times the reference mass still fits, but a
+/// body two orders of magnitude over it (a mammoth on a bed) does not.
+/// Consumed as a ratio, matching `body.rs`'s own stated convention for
+/// `mass_kg` (never raw kilograms).
+/// type-audit: bare-ok(ratio)
+const BED_MASS_RATIO_CEILING: f64 = 5.0;
+
+/// Whether `body` can actually make use of `property`, given its own
+/// capacities — the body-relative half of the offer (spec §3.4, Gibson: "a
+/// supporter to a sprite is not one to a giant"). [`offered_to`] applies
+/// this per required property, on top of (never instead of) the kind-level
+/// [`offered`] query.
+///
+/// **Only [`ObjectProperty::SupportsRest`] is body-relative in IV.a.** Every
+/// other property returns `true` unconditionally — in particular
+/// [`ObjectProperty::AffordsPassage`] is deliberately excluded (spec §3.4):
+/// making passage body-relative would newly BLOCK traversal, which is
+/// restrictive rather than additive and belongs to Arc IV.b. This is the one
+/// named function the next body-relative property gets an obvious arm in,
+/// per the task brief.
+fn body_can_use(property: ObjectProperty, body: &Body) -> bool {
+    match property {
+        ObjectProperty::SupportsRest => body.mass_kg / REFERENCE_MASS_KG <= BED_MASS_RATIO_CEILING,
+        ObjectProperty::HoldsLiquid
+        | ObjectProperty::AffordsPassage
+        | ObjectProperty::Encloses
+        | ObjectProperty::RadiatesHeat => true,
+    }
+}
+
+/// The verbs `kind` offers to this particular `body` — [`offered_by`]
+/// narrowed by [`body_can_use`] (spec §3.4: an affordance is a relation
+/// between object AND body, not an intrinsic property of the object alone).
+///
+/// **Additive, never restrictive, at the system level (spec §3.4).** Within
+/// this module the result is always a *subset* of [`offered_by`]`(kind)` —
+/// body-relativity can only decide whether THIS body reaches a verb the
+/// kind's properties already gate, never invent one `offered_by` did not
+/// already grant. That subset relation is what stays true no matter which
+/// body is asked; what makes the overall rule additive is that
+/// `supports-rest`'s body-gated Sleep is a channel this campaign adds
+/// *alongside* the pre-existing at-home rest precondition (outside this
+/// module) — a large body still rests exactly as it could before this
+/// campaign, just not via a bed too small for it.
+pub fn offered_to(kind: AnchorKind, body: &Body) -> BTreeSet<OfferedVerb> {
+    offered_by(kind)
+        .into_iter()
+        .filter(|v| {
+            required_properties(*v)
+                .iter()
+                .all(|p| body_can_use(*p, body))
+        })
+        .collect()
 }
 
 #[cfg(test)]
