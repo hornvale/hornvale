@@ -47,7 +47,8 @@
 
 use crate::clause::{
     Adjunct, Argument, CLAUSE_EMBED_MAX_DEPTH, Clause, Coordination, Number, Person, Polarity,
-    Subject, Tense, Valence, clause_embed_depth, predicate_valence, subject_embed_depth,
+    Subject, Tense, Valence, clause_embed_depth, elide_coordinated_subjects, predicate_valence,
+    subject_embed_depth,
 };
 use crate::lexicon::{LexEntry, Lexicon};
 use crate::morphology::{
@@ -720,24 +721,23 @@ fn join_coordinated(mut texts: Vec<String>, conjunction: Option<&str>) -> String
 /// `Clause` arms make for embedding, spec §4.5's floor/deep split), then
 /// joined via [`join_coordinated`].
 ///
-/// **Tier 2: a non-first clause whose `(subject, number)` equals the
-/// FIRST clause's own is realized WITHOUT its subject constituent** — see
+/// **Tier 2: a clause whose `(subject, number)` equals the LAST STATED
+/// subject before it is realized WITHOUT its subject constituent** — see
 /// [`realize_tongue_with_subject`] for where that omission actually
 /// happens (inside per-clause realization, never as surgery on the joined
-/// text) and
-/// [`crate::clause::realize_common_coordination`]'s doc for why the
-/// comparison is `(subject, number)` and not bare [`Subject`] equality.
-/// Comparing every clause against the FIRST one (not the immediately
-/// preceding one) is what lets a three-clause coordination whose first two
-/// share a subject but whose third does not elide exactly the middle
-/// clause. **Elided clauses never call [`tongue_subject`] at all** — since
-/// `grammar`/`lexicon`/`pronouns` are the same across every clause in one
-/// coordination and the compared subject+number are equal by construction,
-/// re-deriving the omitted clause's subject would be a deterministic
-/// no-op: it can only reproduce the `Ok` text the first clause's own
-/// (unskipped) call already produced, so skipping it costs nothing and
-/// cannot mask a gap the first clause's own call would not already have
-/// surfaced.
+/// text), [`elide_coordinated_subjects`] (the SAME decision function
+/// [`crate::clause::realize_common_coordination`] uses — one rule, not
+/// three copies) for exactly what "last stated" means and why comparing
+/// only to the first clause misattributes a 3+-clause coordination, and
+/// that function's doc for why the comparison is `(subject, number)` and
+/// not bare [`Subject`] equality. **An elided clause never calls
+/// [`tongue_subject`] at all** — since `grammar`/`lexicon`/`pronouns` are
+/// the same across every clause in one coordination and the compared
+/// subject+number are equal by construction, re-deriving the omitted
+/// clause's subject would be a deterministic no-op: it can only reproduce
+/// the `Ok` text the matching, unskipped call already produced, so
+/// skipping it costs nothing and cannot mask a gap that call would not
+/// already have surfaced.
 ///
 /// **Not the production path** — see [`realize_tongue_deep_coordination`]
 /// for the one `windows/book`/`windows/almanac` actually need, where each
@@ -766,10 +766,9 @@ pub fn realize_tongue_coordination(
          coordinate",
         coord.clauses.len()
     );
-    let first = &coord.clauses[0];
+    let elisions = elide_coordinated_subjects(&coord.clauses);
     let mut texts = Vec::with_capacity(coord.clauses.len());
-    for (i, clause) in coord.clauses.iter().enumerate() {
-        let elide = i > 0 && clause.subject == first.subject && clause.number == first.number;
+    for (clause, elide) in coord.clauses.iter().zip(elisions) {
         texts.push(realize_tongue_with_subject(
             clause, grammar, lexicon, pronouns, !elide,
         )?);
@@ -1340,12 +1339,14 @@ fn realize_tongue_deep_with_subject(
 /// `Argument::Clause` arms already thread it for embedding (The Mortise,
 /// Task 5) — then joined via [`join_coordinated`].
 ///
-/// **Tier 2: a non-first clause whose `(subject, number)` equals the FIRST
-/// clause's own is realized WITHOUT its subject constituent**, on the
-/// identical comparison and identical "compare against the first clause"
-/// reasoning [`realize_tongue_coordination`]'s own doc states — this is
-/// the SAME elision rule applied under the deep realizer instead of the
-/// floor one, not a second rule. Landing elision in the floor entry point
+/// **Tier 2: a clause whose `(subject, number)` equals the LAST STATED
+/// subject before it is realized WITHOUT its subject constituent**, via
+/// the SAME [`elide_coordinated_subjects`] decision
+/// [`realize_tongue_coordination`] uses — one rule, shared by all three
+/// coordination realizers, not three copies that could silently disagree
+/// (see that function's doc for why "last stated" and not "the first
+/// clause": comparing only to the first clause misattributes a 3+-clause
+/// coordination like `[X, Y, X]`, fix round 1). Landing elision in the floor entry point
 /// alone would re-open the exact floor/deep asymmetry Task 6's fix round
 /// closed for coordination itself (that fix round is why this function
 /// exists at all): a coordinated sentence would elide its subject only
@@ -1395,10 +1396,9 @@ pub fn realize_tongue_deep_coordination(
          coordinate",
         coord.clauses.len()
     );
-    let first = &coord.clauses[0];
+    let elisions = elide_coordinated_subjects(&coord.clauses);
     let mut texts = Vec::with_capacity(coord.clauses.len());
-    for (i, clause) in coord.clauses.iter().enumerate() {
-        let elide = i > 0 && clause.subject == first.subject && clause.number == first.number;
+    for (clause, elide) in coord.clauses.iter().zip(elisions) {
         texts.push(realize_tongue_deep_with_subject(
             clause,
             grammar,
@@ -4017,6 +4017,134 @@ mod tests {
             occurrences, 2,
             "tier 3 (right-node raising) is CUT: the shared object must be \
              stated on EACH verb, never raised to a single mention: {out:?}"
+        );
+    }
+
+    /// Fix round 1, Task 7: the tongue-floor twin of
+    /// `clause::tests::a_shared_object_is_not_raised_even_when_the_subject_also_elides`.
+    /// The negative test above deliberately isolates object-sharing from
+    /// subject-sharing with DIFFERENT subjects, which means a plausible
+    /// tier-3 implementation gated on `elide && object equal` never runs
+    /// its mutated branch there. This test shares BOTH the subject (tier 2
+    /// must elide) and the object concept (tier 3 must still not raise
+    /// it) — the exact shape of the brief's own tier-3 example.
+    #[test]
+    fn a_tongue_shared_object_is_not_raised_even_when_the_subject_also_elides() {
+        let lex = coordination_lexicon();
+        let pronouns = drawn_pronouns();
+        let grammar = coordination_grammar(Some("zil"));
+        let first = Clause {
+            predicate: EAT.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Concept("bread".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let second = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Pronoun(Person::Third), // SAME subject: tier 2 must elide
+            object: Argument::Concept("bread".to_string()), // SAME object: tier 3 must NOT raise
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(
+            first.subject, second.subject,
+            "sanity: this test needs elision to fire, unlike the isolated \
+             object-sharing test above"
+        );
+        let coord = Coordination {
+            clauses: vec![first, second],
+        };
+
+        let out = realize_tongue_coordination(&coord, &grammar, &lex, &pronouns).unwrap();
+
+        let subject_text = tongue_pronoun(Person::Third, Number::Sg, &pronouns).unwrap();
+        let object_word = resolve_argument(
+            &Argument::Concept("bread".to_string()),
+            &grammar,
+            &lex,
+            Number::Sg,
+            &pronouns,
+        )
+        .unwrap();
+        let subject_occurrences = out
+            .split_whitespace()
+            .filter(|word| word.trim_end_matches('.') == subject_text)
+            .count();
+        let object_occurrences = out
+            .split_whitespace()
+            .filter(|word| word.trim_end_matches('.') == object_word)
+            .count();
+
+        assert_eq!(
+            subject_occurrences, 1,
+            "the shared subject must still elide on this pair: {out:?}"
+        );
+        assert_eq!(
+            object_occurrences, 2,
+            "tier 3 stays cut even on the exact pair whose subject tier 2 \
+             elides: {out:?}"
+        );
+    }
+
+    /// Fix round 1, Task 7: the tongue-floor twin of
+    /// `clause::tests::a_third_clause_matching_only_the_first_clause_states_its_own_subject`
+    /// — `[X, Y, X]` run through the public [`realize_tongue_coordination`]
+    /// entry point. Clause 2's visible antecedent is clause 1's `Y`, not
+    /// clause 0's `X`, so it must restate its own subject rather than
+    /// eliding against a clause two positions back.
+    #[test]
+    fn a_tongue_third_clause_matching_only_the_first_clause_states_its_own_subject() {
+        let lex = coordination_lexicon();
+        let pronouns = drawn_pronouns();
+        let grammar = coordination_grammar(Some("zil"));
+        let first = Clause {
+            predicate: EAT.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Concept("bread".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let second = transitive_clause(Tense::Past); // Subject::Name("Nwamvam")
+        let third = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Pronoun(Person::Third), // matches FIRST, not SECOND
+            object: Argument::Concept("bread".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let coord = Coordination {
+            clauses: vec![first, second, third],
+        };
+
+        let out = realize_tongue_coordination(&coord, &grammar, &lex, &pronouns).unwrap();
+
+        let subject_text = tongue_pronoun(Person::Third, Number::Sg, &pronouns).unwrap();
+        let occurrences = out
+            .split_whitespace()
+            .filter(|word| word.trim_end_matches('.') == subject_text)
+            .count();
+        assert_eq!(
+            occurrences, 2,
+            "clause 0 and clause 2 must BOTH state the pronoun subject: \
+             clause 2's visible antecedent is clause 1's Name(\"Nwamvam\"), \
+             not clause 0, so it may not elide: {out:?}"
         );
     }
 

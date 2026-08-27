@@ -861,9 +861,10 @@ pub fn realize_common(spec: &Clause, vocab: &CommonVocabulary) -> String {
 /// whether to realize `spec.subject` at all. `realize_common` itself always
 /// passes `true`, so its behaviour is unchanged byte for byte;
 /// [`realize_common_coordination`] is the only caller that ever passes
-/// `false`, for a NON-FIRST coordinated clause whose subject is identical to
-/// the first clause's already-stated one (The Mortise, Task 7, spec §4.10's
-/// tier 2).
+/// `false`, for a coordinated clause whose subject is identical to the
+/// LAST STATED subject before it (see [`elide_coordinated_subjects`] for
+/// exactly what that means and why it is not simply "the first clause",
+/// The Mortise, Task 7 fix round 1, spec §4.10's tier 2).
 ///
 /// **Elision happens HERE, inside realization, not as text surgery on an
 /// already-realized sentence.** A coordinated clause with `include_subject:
@@ -925,9 +926,10 @@ fn realize_common_with_subject(
     let mut out = String::new();
     for part in construction.parts {
         match part {
-            // `include_subject: false` (a coordinated non-first clause whose
-            // subject the first clause already stated, Task 7) skips this
-            // arm entirely — the subject constituent is never computed or
+            // `include_subject: false` (a coordinated clause whose subject
+            // matches the LAST STATED one before it, see
+            // `elide_coordinated_subjects`, Task 7) skips this arm
+            // entirely — the subject constituent is never computed or
             // pushed, not merely emptied. The one leading space this leaves
             // (this table's own `Part::Literal(" ")` immediately follows
             // every `Part::Subject`, see `common_constructions`) is trimmed
@@ -1058,11 +1060,11 @@ fn realize_common_with_subject(
 /// its own subject in full — is what a coordination realizes when its
 /// clauses' subjects differ: *"It confused me and the goblin upset me."*
 /// Tier 2 — a shared subject is stated once — fires automatically whenever
-/// a non-first clause's subject equals the first's (see
-/// [`realize_common_coordination`] and
-/// [`crate::grammar::realize_tongue_coordination`] for exactly what
-/// "equals" compares): *"It confused me and upset me"* rather than *"It
-/// confused me and it upset me."* **Tier 3 (right-node raising — sharing
+/// a clause's subject equals the LAST STATED subject before it, not
+/// necessarily the first clause's own (see [`elide_coordinated_subjects`],
+/// fix round 1: comparing only against the first clause misattributes a
+/// 3+-clause coordination like `[X, Y, X]`): *"It confused me and upset
+/// me"* rather than *"It confused me and it upset me."* **Tier 3 (right-node raising — sharing
 /// the OBJECT too, "It confused and upset me") is CUT from this campaign
 /// entirely** (spec §9.1, The Mortise Task 7): what a language may elide is
 /// typological, and getting it wrong yields *plausible* garbage, the
@@ -1099,14 +1101,34 @@ pub struct Coordination {
 /// `Argument::Clause`/`Subject::Clause` arms already use for a nested
 /// clause.
 ///
-/// **Tier 2: a non-first clause whose subject equals the FIRST clause's own
-/// is realized WITHOUT its subject constituent** (`include_subject: false`,
-/// see [`realize_common_with_subject`]) — *"It confused me and upset me"*.
-/// Every other clause states its own subject in full (tier 1). Comparing
-/// against the first clause specifically, not the immediately preceding
-/// one, is what lets a three-clause coordination whose first and second
-/// share a subject but whose third does not elide exactly the middle
-/// clause and no other.
+/// Which coordinated clauses elide their subject (The Mortise, Task 7 fix
+/// round 1): index `i` is `true` when clause `i`'s `(subject, number)`
+/// matches whatever subject was last **stated** on the surface — not
+/// whichever clause happened to be first.
+///
+/// **Compared against the last STATED subject, never the first clause.**
+/// An earlier version of this rule compared every clause to clause 0. That
+/// is wrong for 3+ clauses: for `[X, Y, X]` (subjects `Pronoun(Third)`,
+/// `Name("Bemvo")`, `Pronoun(Third)` again), comparing to the first clause
+/// elides the third because it matches clause 0 — but a reader parsing
+/// left to right has only just read `Y` stated on clause 2, so the missing
+/// subject reads as "Bemvo killed... and knowed the goblin", confidently
+/// attributed to the WRONG referent. That is *plausible garbage* — the
+/// exact failure mode spec §9.1 cites as the reason tier 3 (right-node
+/// raising) is cut — occurring inside tier 2, which this campaign does
+/// build. Comparing to the last stated subject instead means clause 3
+/// compares against `Y` (clause 2's own, since clause 2 was not itself
+/// elided), finds no match, and states its own `X` — correct.
+///
+/// **The successor case, worked by hand:** for `[X, X, Y, X]`, this rule
+/// gives X / *elided* / Y / X — clause 2 elides against clause 1's `X`
+/// (the last stated subject at that point), clause 3 states `Y` (no
+/// match), and clause 4 states `X` again because the visible antecedent
+/// immediately before it is `Y`, not `X`. Comparing to the first clause
+/// would have elided clause 4 too, reading as `Y`'s subject — wrong. Last
+/// stated is strictly more correct than first-clause on every case
+/// first-clause got right (two clauses, or 3+ where the shared subject
+/// never has an intervening different one) AND on the cases it got wrong.
 ///
 /// **The equality compared is `(subject, number)`, not bare [`Subject`]
 /// equality.** [`Subject`] alone derives [`PartialEq`], and comparing only
@@ -1117,6 +1139,41 @@ pub struct Coordination {
 /// (see that field's own doc). Eliding across a number mismatch would drop
 /// the very feature that tells the reader whether one confuser or several
 /// are meant, so both must agree before a subject is silently omitted.
+///
+/// **Shared by all three coordination realizers** (Common,
+/// [`crate::grammar::realize_tongue_coordination`], and
+/// [`crate::grammar::realize_tongue_deep_coordination`]) so the elision
+/// RULE exists in exactly one place, never three copies with no agreement
+/// test between them. Each realizer still does its OWN per-clause
+/// realization with or without the subject constituent — this function
+/// only decides which clauses get which.
+///
+/// Clause 0 is never elided (`last_stated` starts `None`, so the first
+/// comparison always fails), matching every realizer's existing panic-below
+/// contract that a coordination needs at least two clauses to mean
+/// anything, though this function itself tolerates any length including 0
+/// or 1 (it returns an all-`false` vector rather than asserting, since the
+/// length check belongs to each public realizer, not to this shared rule).
+pub(crate) fn elide_coordinated_subjects(clauses: &[Clause]) -> Vec<bool> {
+    let mut elisions = Vec::with_capacity(clauses.len());
+    let mut last_stated: Option<(&Subject, Number)> = None;
+    for clause in clauses {
+        let elide = last_stated
+            .is_some_and(|(subject, number)| clause.subject == *subject && clause.number == number);
+        elisions.push(elide);
+        if !elide {
+            last_stated = Some((&clause.subject, clause.number));
+        }
+    }
+    elisions
+}
+
+/// **Tier 2: a clause whose subject matches the last STATED subject (see
+/// [`elide_coordinated_subjects`] for exactly what "last stated" means and
+/// why it is not "the first clause") is realized WITHOUT its subject
+/// constituent** (`include_subject: false`, see
+/// [`realize_common_with_subject`]) — *"It confused me and upset me"*.
+/// Every other clause states its own subject in full (tier 1).
 ///
 /// Panics if `coord.clauses` holds fewer than two clauses: a coordination
 /// with nothing to join states a contradiction in its own name, and the
@@ -1132,9 +1189,8 @@ pub fn realize_common_coordination(coord: &Coordination, vocab: &CommonVocabular
          coordinate",
         coord.clauses.len()
     );
-    let first = &coord.clauses[0];
-    let mut parts = coord.clauses.iter().enumerate().map(|(i, clause)| {
-        let elide = i > 0 && clause.subject == first.subject && clause.number == first.number;
+    let elisions = elide_coordinated_subjects(&coord.clauses);
+    let mut parts = coord.clauses.iter().zip(elisions).map(|(clause, elide)| {
         let mut text = realize_common_with_subject(clause, vocab, !elide);
         if text.ends_with('.') {
             text.pop();
@@ -3173,6 +3229,200 @@ mod tests {
             occurrences, 2,
             "tier 3 (right-node raising) is CUT: the shared object must be \
              stated on EACH verb, never raised to a single mention: {out:?}"
+        );
+    }
+
+    /// Fix round 1, Task 7: the reviewer's own discriminator. The negative
+    /// test above deliberately isolates object-sharing from subject-sharing
+    /// by giving its two clauses DIFFERENT subjects — which means a
+    /// plausible tier-3 implementation gated on `elide && object equal`
+    /// (the reviewer's own probe) never even runs its mutated branch there,
+    /// so that test alone cannot tell tier 3 apart from tier 2 working
+    /// correctly. This test closes that gap: the two clauses here share
+    /// BOTH the subject (so tier 2 correctly elides) AND the object concept
+    /// (so tier 3 must still NOT raise it) — the exact shape of the brief's
+    /// own tier-3 example, *"It confused and upset me"*.
+    #[test]
+    fn a_shared_object_is_not_raised_even_when_the_subject_also_elides() {
+        let vocab = CommonVocabulary::default();
+        let first = Clause {
+            predicate: EAT.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Concept("goblin".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let second = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Pronoun(Person::Third), // SAME subject: tier 2 must elide
+            object: Argument::Concept("goblin".to_string()), // SAME object: tier 3 must NOT raise
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(
+            first.subject, second.subject,
+            "sanity: this test needs elision to fire, unlike the isolated \
+             object-sharing test above"
+        );
+        let coord = Coordination {
+            clauses: vec![first, second],
+        };
+        let out = realize_common_coordination(&coord, &vocab);
+
+        let subject_text = common_pronoun(Person::Third, Number::Sg, PronounCase::Nominative);
+        let complement_word = surface_complement(&vocab, "goblin", Number::Sg);
+        let subject_occurrences = out
+            .split_whitespace()
+            .filter(|word| word.trim_end_matches('.') == subject_text)
+            .count();
+        let object_occurrences = out
+            .split_whitespace()
+            .filter(|word| word.trim_end_matches('.') == complement_word)
+            .count();
+
+        assert_eq!(
+            subject_occurrences, 1,
+            "the shared subject must still elide on this pair: {out:?}"
+        );
+        assert_eq!(
+            object_occurrences, 2,
+            "tier 3 stays cut even on the exact pair whose subject tier 2 \
+             elides -- a plausible tier-3 implementation gated on \
+             `elide && object equal` fires HERE and only here: {out:?}"
+        );
+    }
+
+    /// Fix round 1, Task 7: the reviewer's own probe, run directly against
+    /// [`elide_coordinated_subjects`]. `[X, Y, X]` (`Pronoun(Third)`,
+    /// `Name("Bemvo")`, `Pronoun(Third)` again) is the shape that
+    /// discriminates "compare to the first clause" (which wrongly elides
+    /// clause 2, index 2) from "compare to the last STATED subject" (which
+    /// correctly does not, since clause 1's `Name("Bemvo")` is the visible
+    /// antecedent immediately before it).
+    #[test]
+    fn elide_coordinated_subjects_compares_to_the_last_stated_not_the_first() {
+        let x = Subject::Pronoun(Person::Third);
+        let y = Subject::Name("Bemvo".to_string());
+        let clause_with = |subject: Subject| Clause {
+            predicate: EAT.to_string(),
+            subject,
+            object: Argument::Concept("bread".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let clauses = vec![clause_with(x.clone()), clause_with(y), clause_with(x)];
+        assert_eq!(
+            elide_coordinated_subjects(&clauses),
+            vec![false, false, false],
+            "clause 0 always states; clause 1 (Y) differs from clause 0's \
+             last-stated X, so it states too; clause 2 (X) differs from \
+             clause 1's last-stated Y, so it must ALSO state -- eliding it \
+             here would misattribute the missing subject to clause 1's Y"
+        );
+    }
+
+    /// The successor case the reviewer's ruling worked by hand: `[X, X, Y,
+    /// X]` should elide clause 1 (matches clause 0's stated X), state
+    /// clause 2 (Y, no match), then state clause 3 again (X does not match
+    /// the last-stated Y) -- "compare to the first clause" would have
+    /// elided clause 3 too, since it matches clause 0.
+    #[test]
+    fn elide_coordinated_subjects_restates_after_an_intervening_different_subject() {
+        let x = Subject::Pronoun(Person::Third);
+        let y = Subject::Name("Bemvo".to_string());
+        let clause_with = |subject: Subject| Clause {
+            predicate: EAT.to_string(),
+            subject,
+            object: Argument::Concept("bread".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let clauses = vec![
+            clause_with(x.clone()),
+            clause_with(x.clone()),
+            clause_with(y),
+            clause_with(x),
+        ];
+        assert_eq!(
+            elide_coordinated_subjects(&clauses),
+            vec![false, true, false, false]
+        );
+    }
+
+    /// The integration-level twin of the two `elide_coordinated_subjects`
+    /// unit tests above, run through the public
+    /// [`realize_common_coordination`] entry point -- proof the discriminator
+    /// is reachable through the type the brief flagged as unguarded
+    /// (`Coordination.clauses` is a `Vec` with no cap beyond `len() >= 2`).
+    /// `[X, Y, X]`: clause 2 must restate its own subject text, not be
+    /// silently absent the way comparing only to clause 0 would produce.
+    #[test]
+    fn a_third_clause_matching_only_the_first_clause_states_its_own_subject() {
+        let vocab = CommonVocabulary::default();
+        let first = Clause {
+            predicate: EAT.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Concept("bread".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let second = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Name("Bemvo".to_string()),
+            object: Argument::Concept("goblin".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let third = Clause {
+            predicate: KNOW.to_string(),
+            subject: Subject::Pronoun(Person::Third), // matches FIRST, not SECOND
+            object: Argument::Concept("goblin".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let coord = Coordination {
+            clauses: vec![first, second, third],
+        };
+        let out = realize_common_coordination(&coord, &vocab);
+
+        let subject_text = common_pronoun(Person::Third, Number::Sg, PronounCase::Nominative);
+        let occurrences = out
+            .split_whitespace()
+            .filter(|word| word.trim_end_matches('.') == subject_text)
+            .count();
+        assert_eq!(
+            occurrences, 2,
+            "clause 0 and clause 2 must BOTH state the pronoun subject: \
+             clause 2's visible antecedent is clause 1's Name(\"Bemvo\"), \
+             not clause 0, so it may not elide: {out:?}"
         );
     }
 
