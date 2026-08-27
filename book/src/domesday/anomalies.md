@@ -173,7 +173,7 @@ Score **11**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 
 | `peoples-alive-at-bake-end` | 0.004004004 | 11 |
 | `peoples-placed` | 0.004004004 | 11 |
 | `first-day-pays-tribute-to` | 0.0045045045 | 703106.25 |
-| `per-cell-diversity` | 0.005005005 | 1.368401 |
+| `per-cell-diversity` | 0.005005005 | 1.3724121 |
 | `chorus-distinctiveness` | 0.008008008 | 0.19313131 |
 | `defensibility-capacity-rank-corr` | 0.009009009 | -0.35777447 |
 | `kobold-settlement-count` | 0.0095095095 | 0 |
@@ -188,7 +188,7 @@ Score **11**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 
 | `chorus-distinctiveness` | 0.003003003 | 0.18772295 |
 | `name-people-recoverability` | 0.003003003 | 0.28571429 |
 | `brightening-per-gyr` | 0.004004004 | 0.23003798 |
-| `goblin-flagship-surplus` | 0.0065130261 | 0.675 |
+| `goblin-flagship-surplus` | 0.006012024 | 0.675 |
 | `name-prefix-settlement-scope` | 0.007007007 | 0.99660153 |
 | `obliquity-range` | 0.008008008 | 4.7244707 |
 | `forgotten-fraction` | 0.009009009 | 0.94849785 |
@@ -320,6 +320,7 @@ Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 c
 
 | metric | depth | value |
 |---|---|---|
+| `composition-variance` | 0.001001001 | 0.47201414 |
 | `mean-geothermal-gradient` | 0.002002002 | 26.508368 |
 | `mean-land-elevation-m` | 0.002002002 | 2863.0752 |
 | `hypsometric-bimodality` | 0.003003003 | 3.0239359 |
@@ -328,7 +329,6 @@ Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 c
 | `sediment-volume` | 0.006006006 | 1843581.6 |
 | `mountain-coverage` | 0.008008008 | 0.66179141 |
 | `first-day-occ-cause-fled` | 0.0085170341 | 109575 |
-| `composition-variance` | 0.009009009 | 0.46958048 |
 | `granary-raid-phase-concentration` | 0.01017294 | 1 |
 
 ### Seed `850`
@@ -440,7 +440,7 @@ Every numeric/integer census column with a domain and a role that this report di
 | metric | reason |
 |---|---|
 | `first-day-is-settlement` | frozen: min == max across 1000 worlds |
-| `first-day-is-person` | both rails tied: 980 at min, 20 at max of 1000 |
+| `first-day-is-person` | both rails tied: 979 at min, 21 at max of 1000 |
 | `first-day-person-founded` | frozen: min == max across 1000 worlds |
 | `first-day-occ-people-goblin` | frozen: min == max across 1000 worlds |
 | `first-day-occ-people-kobold` | frozen: min == max across 1000 worlds |
@@ -487,5 +487,5 @@ Every numeric/integer census column with a domain and a role that this report di
 | `pace-of-life-kobold` | frozen: min == max across 1000 worlds |
 | `chorus-sky-calibration` | frozen: min == max across 1000 worlds |
 | `toponymic-core-size` | frozen: min == max across 1000 worlds |
-| `toponymic-roots-won` | both rails tied: 19 at min, 570 at max of 1000 |
+| `toponymic-roots-won` | both rails tied: 19 at min, 569 at max of 1000 |
 | `raid-attribution-unresolved` | frozen: min == max across 1000 worlds |

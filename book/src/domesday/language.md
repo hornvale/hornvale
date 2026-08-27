@@ -278,7 +278,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 9 | 16 | 30 | 140 | 21.611 |
+| 0 | 9 | 16 | 30 | 140 | 21.602 |
 
 ### `homophony-count-goblin`
 
@@ -288,7 +288,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 1 | 4 | 8 | 55 | 5.884 |
+| 0 | 1 | 4 | 8 | 55 | 5.883 |
 
 ### `homophony-count-hobgoblin`
 

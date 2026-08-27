@@ -24,7 +24,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0.063106796 | 0.18979837 | 0.375 | 1 | 0.25404497 |
+| 0 | 0.063106796 | 0.18979837 | 0.375 | 1 | 0.25409144 |
 
 ### `composition-variance`
 
@@ -34,7 +34,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.35687662 | 0.41618936 | 0.42957855 | 0.43992486 | 0.47748056 | 0.42786437 |
+| 0.35157579 | 0.41483435 | 0.42870189 | 0.43917485 | 0.47774139 | 0.42667923 |
 
 ### `flagship-biome`
 
@@ -45,11 +45,11 @@ n = 999 present, 1 absent (of 1000 worlds)
 | value | count | share |
 |---|---|---|
 | `temperate-forest` | 535 | 53.6% |
-| `taiga` | 213 | 21.3% |
+| `taiga` | 214 | 21.4% |
 | `tropical-seasonal-forest` | 212 | 21.2% |
 | `tropical-rainforest` | 10 | 1.0% |
 | `alpine` | 8 | 0.8% |
-| `temperate-rainforest` | 8 | 0.8% |
+| `temperate-rainforest` | 7 | 0.7% |
 | `savanna` | 4 | 0.4% |
 | `epipelagic` | 3 | 0.3% |
 | `kelp-forest` | 3 | 0.3% |
@@ -65,8 +65,8 @@ n = 999 present, 1 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `true` | 190 | 19.0% |
-| `false` | 809 | 81.0% |
+| `true` | 189 | 18.9% |
+| `false` | 810 | 81.1% |
 
 ### `flagship-structure-size`
 
@@ -99,8 +99,8 @@ n = 999 present, 1 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `true` | 190 | 19.0% |
-| `false` | 809 | 81.0% |
+| `true` | 189 | 18.9% |
+| `false` | 810 | 81.1% |
 
 ### `goblin-flagship-roles`
 
@@ -124,7 +124,7 @@ n = 999 present, 1 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.046627014 | 0.48313681 | 0.51248377 | 0.53552439 | 0.72 | 0.50528983 |
+| 0.046627014 | 0.4826611 | 0.51231849 | 0.53543472 | 0.72 | 0.50501959 |
 
 ### `goblin-settlement-count`
 
@@ -134,7 +134,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 5 | 12 | 27 | 117 | 18.065 |
+| 0 | 5 | 12 | 27 | 117 | 18.008 |
 
 ### `kobold-flagship-coastal`
 
@@ -155,8 +155,8 @@ n = 980 present, 20 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `digger,keeper,elders` | 668 | 68.2% |
-| `digger,elders` | 308 | 31.4% |
+| `digger,keeper,elders` | 669 | 68.3% |
+| `digger,elders` | 307 | 31.3% |
 | `digger,warden,keeper,elders` | 3 | 0.3% |
 | `digger,warden,elders` | 1 | 0.1% |
 
@@ -168,7 +168,7 @@ n = 980 present, 20 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.0074137685 | 0.38022498 | 0.43830689 | 0.48608388 | 0.60800137 | 0.40046511 |
+| 0.0074137685 | 0.38035093 | 0.43847835 | 0.48623645 | 0.60800137 | 0.4010092 |
 
 ### `kobold-settlement-count`
 
@@ -178,7 +178,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 7 | 30 | 60 | 224 | 40.228 |
+| 0 | 7 | 30 | 60 | 224 | 40.226 |
 
 ### `largest-holding-share`
 
@@ -188,7 +188,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.004633486 | 0.0084139265 | 0.010311671 | 0.013727055 | 0.067085954 | 0.01293531 |
+| 0.004633486 | 0.0084139265 | 0.010311671 | 0.013727055 | 0.067085954 | 0.012937373 |
 
 ### `per-cell-diversity`
 
@@ -198,7 +198,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1.3591591 | 1.6501751 | 1.8462683 | 2.0148184 | 2.614093 | 1.8383944 |
+| 1.36282 | 1.6545201 | 1.8507802 | 2.0216296 | 2.6162405 | 1.8437287 |
 
 ### `pop-weighted-abs-latitude`
 
@@ -208,7 +208,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 4.789578 | 12.314887 | 15.667516 | 19.714466 | 54.837652 | 17.250523 |
+| 4.789578 | 12.329511 | 15.667516 | 19.714466 | 54.837652 | 17.252575 |
 
 ### `rank-size-slope`
 
@@ -218,7 +218,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| -1.0487627 | -0.62087732 | -0.57325156 | -0.52360711 | -0.30459 | -0.57626363 |
+| -1.0487627 | -0.62087732 | -0.57299544 | -0.52360711 | -0.30459 | -0.57619165 |
 
 ### `settlement-count`
 
@@ -228,13 +228,13 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 33 | 205 | 274.5 | 337 | 602 | 269.543 |
+| 33 | 205 | 275 | 337 | 602 | 269.53 |
 
 ## Weaknesses found here
 
 ### `flagship-coastal`
 
-- **D1**: "false" holds 809/999 worlds (81.0%), at or above the 80% threshold
+- **D1**: "false" holds 810/999 worlds (81.1%), at or above the 80% threshold
 
 ### `flagship-structure-size`
 
@@ -247,7 +247,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `goblin-flagship-coastal`
 
-- **D1**: "false" holds 809/999 worlds (81.0%), at or above the 80% threshold
+- **D1**: "false" holds 810/999 worlds (81.1%), at or above the 80% threshold
 
 ### `goblin-flagship-roles`
 
@@ -263,7 +263,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `settlement-count`
 
-- **D5 strength**: declared strong tracking habitable-fraction, but observed r = +0.212 (1000 pairs) is weak (positive)
+- **D5 strength**: declared strong tracking habitable-fraction, but observed r = +0.211 (1000 pairs) is weak (positive)
 - **D5 strength**: declared moderate tracking mountain-coverage, but observed |r| = 0.073 (1000 pairs) is none
-- **D5 strength**: declared moderate tracking ocean-fraction, but observed |r| = 0.004 (1000 pairs) is none
+- **D5 strength**: declared moderate tracking ocean-fraction, but observed |r| = 0.003 (1000 pairs) is none
 
