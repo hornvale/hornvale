@@ -817,6 +817,12 @@ spawn run -p hornvale -- systems matrix > docs/audits/system-matrix.md
 # Seed(42), like `first_light` above), so it belongs in Group C alongside
 # the other world-free/self-contained dumps rather than among $w42's readers.
 spawn run -p hornvale -- lab confidant > docs/audits/the-confidant-report.md
+# The Reticence, Task 6: builds its own internal Seed(42) too (see
+# `render_reticence_report`'s own doc for why the full sculpt is paid for
+# despite the felt-state half of its answer being world-invariant), so it
+# belongs in Group C beside the Confidant's line rather than among $w42's
+# readers.
+spawn run -p hornvale -- lab reticence > docs/audits/the-reticence-report.md
 spawn run --manifest-path tools/digest/Cargo.toml -- render delta \
   > docs/digest/intent-vs-reality.md
 spawn gen_underworld_lattice > docs/audits/underworld-lattice-seed-panel.md

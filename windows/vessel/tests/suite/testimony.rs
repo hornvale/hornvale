@@ -187,3 +187,116 @@ fn a_culture_with_no_felt_state_words_reports_none() {
         "no known felt-state word anywhere in this lexicon; nothing to substitute"
     );
 }
+
+mod reticence {
+    use hornvale_vessel::liveness::{AffectLabel, DriveKind};
+    use hornvale_vessel::stance::Stance;
+    use hornvale_vessel::testimony::{Testimony, testify_with_stance};
+
+    /// The file's existing builder, reused rather than duplicated:
+    /// `build(species, seed, steeped)` at `testimony.rs:82`. Steeping BOTH
+    /// `content` and `eager` gives the Direct arm for the dissembling claim
+    /// and for the costly-truth case, while leaving `helpless`/`frustrated`/
+    /// `lost` as Nearest — which is exactly the mix these four tests need.
+    fn lexicon() -> hornvale_language::Lexicon {
+        super::build("hobgoblin", 7, &["content", "eager"])
+    }
+
+    #[test]
+    fn a_withholding_host_names_no_state_at_all() {
+        let t = testify_with_stance(
+            &lexicon(),
+            AffectLabel::Frustrated,
+            Stance::Withholding,
+            &[],
+        );
+        assert_eq!(t, Some(Testimony::Withheld));
+    }
+
+    #[test]
+    fn a_dissembling_host_claims_content_and_never_leaks_the_truth() {
+        let t = testify_with_stance(&lexicon(), AffectLabel::Helpless, Stance::Dissembling, &[])
+            .expect("a lexicon with felt-state words testifies");
+        match t {
+            Testimony::Falsehood { claimed, .. } => assert_eq!(
+                claimed,
+                AffectLabel::Content,
+                "the dissembling rule is the one lie: claim Content"
+            ),
+            other => panic!("expected a Falsehood, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_costly_truth_reveals_the_residue_a_forthcoming_host_withholds() {
+        let residue = [DriveKind::Thirst, DriveKind::Fatigue];
+        let costly = testify_with_stance(&lexicon(), AffectLabel::Eager, Stance::Costly, &residue)
+            .expect("testifies");
+        let plain = testify_with_stance(
+            &lexicon(),
+            AffectLabel::Eager,
+            Stance::Forthcoming,
+            &residue,
+        )
+        .expect("testifies");
+        match (costly, plain) {
+            (Testimony::Costly { revealed, .. }, Testimony::Spoken(_)) => {
+                assert_eq!(revealed, residue, "the costly arm carries the residue");
+            }
+            other => panic!("wrong arms: {other:?}"),
+        }
+    }
+
+    /// The Dissembling branch of `testify_with_stance` ignores `truth`
+    /// entirely and looks only at `DISSEMBLING_CLAIM` -- so the shared
+    /// `lexicon()` fixture (which steeps `content` but not `helpless`)
+    /// cannot exercise this arm at all: a lie claiming `helpless` there
+    /// falls into the `Nearest`/`Withheld` fallback below, never reaching
+    /// `Falsehood`, and this test's `if let` would silently skip its own
+    /// assertion. This lexicon steeps BOTH `content` and `helpless`, so
+    /// whichever of the two `DISSEMBLING_CLAIM` names, the claim is
+    /// `Direct` and this test actually reaches the comparison.
+    #[test]
+    fn a_dissembling_hosts_lexicon_that_also_knows_the_truth_still_withholds_confirmation() {
+        let lex = super::build("hobgoblin", 7, &["content", "helpless"]);
+        // Fixed at `Content` today (see `DISSEMBLING_CLAIM`'s own doc), so
+        // this loop's live comparison always trivially holds -- the point
+        // of steeping `helpless` too is to give a FUTURE or MUTATED claim
+        // somewhere to land as `Falsehood` instead of silently falling
+        // through to `Withheld`, which is what actually makes the
+        // `assert_ne!` below capable of failing.
+        for truth in [
+            AffectLabel::Helpless,
+            AffectLabel::Frustrated,
+            AffectLabel::Lost,
+        ] {
+            let t = testify_with_stance(&lex, truth, Stance::Dissembling, &[]).expect("testifies");
+            match t {
+                Testimony::Falsehood { claimed, .. } => {
+                    assert_ne!(claimed, truth, "a falsehood must never name the true state");
+                }
+                other => panic!(
+                    "expected a Falsehood (both `content` and `helpless` are Direct in this \
+                     lexicon), got {other:?}"
+                ),
+            }
+        }
+    }
+
+    /// Companion to the test above, covering the OTHER half of the same
+    /// invariant: a culture that has no word for the dissembling claim
+    /// itself must say nothing, never fall through to naming the truth. The
+    /// shared `lexicon()` fixture never reaches this branch (`content` is
+    /// always steeped there), so this test builds its own culture that
+    /// knows `eager` but not `content`.
+    #[test]
+    fn a_culture_with_no_word_for_the_claim_withholds_rather_than_lying() {
+        let lex = super::build("hobgoblin", 7, &["eager"]);
+        let t = testify_with_stance(&lex, AffectLabel::Frustrated, Stance::Dissembling, &[]);
+        assert_eq!(
+            t,
+            Some(Testimony::Withheld),
+            "no word for the lie itself -- say nothing rather than falling through to the truth"
+        );
+    }
+}

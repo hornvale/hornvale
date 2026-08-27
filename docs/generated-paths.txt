@@ -61,3 +61,4 @@ clients/game/core/tests/fixtures/
 # cli/tests/suite/generated_paths.rs refuse until it is `git add`-ed.
 docs/audits/underworld-lattice-seed-panel.md
 docs/audits/the-confidant-report.md
+docs/audits/the-reticence-report.md

@@ -134,6 +134,42 @@ diff is only evidence because `the-book.md` is rewritten on every rebaseline and
 carries three distinct tail shapes, including one with no trailing clause at
 all. An empty diff over a file nothing regenerates would have proved nothing.
 
+**The Scarf (2026-08-26) confirms the clause twice and sharpens what counts as
+a control.** Its successor campaign collapsed the two clause structures into
+one, and both halves of its correctness case were handled as the clause asks.
+Two new guards protecting a widened object slot were mutated **individually** —
+neutralise the noun-class guard alone, neutralise the evidential zero-copula
+guard alone, and each produced the same panic — so both are load-bearing and
+the fixture genuinely reaches the branch, which one combined mutation could not
+have shown. And its byte-identity claim is the same shape The Begat's was: an
+empty diff over the gallery, held up by two controls rather than asserted.
+
+**The score does not move, and the sharpening is about which control you cite.**
+Two were available here and they are not the same grade. The **harness** control
+is that `docs/audits/type-audit-report.md` moved (752 → 750 tags) when the `pub`
+boundary changed, which proves the regeneration command ran and the diff can see
+a change — and nothing more, because a different generator wrote it. The
+**generator** control is
+[The Interlinear](./chronicle/the-interlinear.md)'s: `the-book.md` is rewritten
+on every rebaseline through the very realizer path this campaign retyped, and it
+carries ninety tongue renderings. Only the second speaks to the claim. The
+distinction matters because a harness control is exactly as convincing to *read*
+as a generator control and strictly weaker to *hold*, and the first draft of this
+passage cited the weaker one. **When claiming no change, name the generator you
+proved ran, not merely the command.**
+
+The same campaign produced eleven defects, all of them from its own spec and
+plan text and none from the code the implementers wrote — a fourth campaign
+confirming the diagnosis two paragraphs below. The one worth adding to this
+chapter's inventory of checks that cannot fail is a **command** that cannot
+fail: a mass rename written with BSD `sed` and `\b` word boundaries, which
+matches nothing, exits 0, and prints no diagnostic. It would have reported
+success, moved zero of 67 sites, and left a suite passing *because nothing had
+changed*. That is the failure this chapter names, arriving one layer below
+where it usually does — not a check whose predicate is wrong, but an edit that
+never happened reporting that it did. Verify a mass edit by count; an exit
+status is not a measurement.
+
 **A note from The Staff (2026-08-14), amended by The Sluice (2026-08-15),
 since this score is read against an instrument this passage names by a label
 that no longer exists.** Both halves of Sexton's pairing — the census
@@ -2599,6 +2635,26 @@ its honest size.
    What changes is that the guardrail is no longer a promissory note, so the
    taste half can now be judged against something that exists. The row stays
    low-confidence and the human read stays the gate.
+   **Re-scored again by [The Reticence](./chronicle/the-reticence.md)
+   (2026-08-26): a third, CHOSEN unreliability shipped, and the honest
+   scoring is again narrower than the mechanism sounds.** Where The
+   Confidant's two divergences are incapacities a host cannot help, this
+   campaign gives the same teller a reason to withhold, mislead, or reveal
+   *on purpose* — derived from what its own people believes it is riding and
+   what the rider has actually done to it, never authored per host. The
+   preregistered measurement found the conduct half genuinely discriminating
+   (a host goes quiet on the one subject it has actually been overridden on,
+   and stays forthcoming on every other) and the doctrine half **measurably
+   inert on the only path a player can currently interrogate** — a structural
+   fact about what a host can be asked, not a defect in the willingness
+   mechanism, which remains provably sensitive to doctrine at override counts
+   the shipped verb surface cannot reach. **What has not moved is the bet.**
+   A teller who can choose to lie is one more inspectable property of one
+   creature answering one question about itself, not evidence toward
+   *historiography worth reading*. The row stays low-confidence and the human
+   read stays the gate; what changes, again, is that one more named guardrail
+   moved from promissory note to a mechanism with a measured, partly-null
+   result.
 
 ## The standing horizon
 

@@ -15,6 +15,20 @@ COMMON: Nwamvam is the home of the hobgoblins, in the clearing at vertex 8835,
 TONGUE: Nwamvam Qoqe Bae 8835 25 375.
 ```
 
+**A note added by [The Scarf](the-scarf.md), 2026-08-26.** The *words* above
+are what this campaign built and are still exactly right. The *numerals* are
+ledger data and have since moved: the live line reads `Nwamvam Qoqe Bae 18822
+25 1600`, and the Common line's vertex and years move with it. The site and the
+two years are `Argument::Count` adjuncts read straight off `occ-site`,
+`occ-founded` and `occ-ended`, so they track whatever seed 42's deep history
+currently commits — and the demonstration above was authored on 2026-08-25,
+before 202 commits of `main` were absorbed into this branch the next day, and
+was never re-run. Nothing objected because nothing asserts it: `git grep 8835
+-- '*.rs'` finds only synthetic test literals. The line is kept as the record
+of what this campaign produced rather than silently rewritten, because the
+staleness is the more useful fact. **A demonstration no test asserts is prose,
+and absorbing `main` is exactly when prose goes stale.**
+
 `Qoqe` is *home*; `Bae` is *hobgoblin-kind*; the hobgoblin tongue drew a zero
 copula, so its sentence is juxtaposition rather than "is". Nothing about that
 sentence was authored. The people, the site, the years and the tongue's own
@@ -92,9 +106,23 @@ a worse record than one that says where the sentence stops.
 distinguishes "in the clearing at", "founded in", "ended in". The tongue
 distinguishes nothing — `realize_adjuncts` matches on the *argument* and never
 reads the *role*. A hobgoblin speaker could not tell the founding year from the
-ending. A tongue's role surfaces are its adpositions and case morphology, which
-`paradigm.rs` already draws and nothing realizes; that is the next campaign's
-work, not a defect in this one.
+ending. A tongue's role surfaces are its adpositions and case morphology, and
+building them is the next campaign's work, not a defect in this one.
+
+**Corrected by [The Scarf](the-scarf.md), 2026-08-26.** This paragraph
+originally ended "…its adpositions and case morphology, which `paradigm.rs`
+already draws and nothing realizes". That is false in both halves.
+`domains/language/src/` contains no adposition or case machinery at all — one
+grep for `adposition|postposition|preposition` returns a single doc comment,
+and `typology.rs` has no case dimension. What `paradigm.rs` actually draws is
+**Number and Tense**: depths, attachment sides, family affix protos, paradigm
+cells. Those *are* real unrealized machinery, with **zero consumers** anywhere
+outside their own module — just not the machinery this sentence named. The
+correction matters because the original reading makes role-marking sound
+nearly free: pick up morphology that is already drawn and surface it. It is
+not. Adpositions and case must be **drawn**, which means new permanent stream
+labels — a save-format contract — and the original framing hid that cost
+behind a claim about code.
 
 **The subject is a liberty.** `Nwamvam` is the *people's* autonym used as the
 holding's headword, because the ledger names neither the occupation nor its site.
@@ -109,7 +137,9 @@ peoples do mark, five of them by affixation; this one does not.
 shape from `ClauseSpec` — it carries an already-surfaced subject and a bare
 complement concept. Collapsing them is attractive and was deliberately not done
 here, because it is a second restructuring riding on a refactor that already took
-a fix round.
+a fix round. **[The Scarf](the-scarf.md) did it**: `TongueClause` is deleted,
+`ClauseSpec` absorbed its one unique field and is now called `Clause`, and both
+realizers take the same `&Clause`.
 
 **The interlingua's speaker features are two of five.** The spec promised
 `ClauseSpec` would carry number, definiteness, polarity, mood and evidential;
@@ -119,6 +149,9 @@ domain, and evidential lives only on `TongueClause`, so a projection from
 The right call was to add nothing speculative — `Argument`'s own doc already
 states the discipline, a variant is added "when a role needs it, never
 speculatively" — so this is a deviation recorded rather than a defect fixed.
+**Now three of five**: [The Scarf](the-scarf.md) moved `evidential` onto the
+clause, which is what let the out-of-band projection go. Polarity and mood
+still exist nowhere in the domain, and are still not added speculatively.
 
 ## The instrument that outlives it
 

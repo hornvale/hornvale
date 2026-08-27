@@ -5,7 +5,7 @@
 //! a demand token is `covered` if this campaign implements a construction for
 //! it, `not yet` otherwise. Today that means exactly one token —
 //! `classify`, the "X is a Y" construction domains/language realizes through
-//! the fact-shaped `ClauseSpec` (see `clause.rs`'s `classify_*` tests). Every
+//! the fact-shaped `Clause` (see `clause.rs`'s `classify_*` tests). Every
 //! other demand token names a grammatical capability — tense, negation,
 //! questions, embedded clauses, coordination, pronoun reference,
 //! existentials, witness lists — this campaign explicitly did not build.

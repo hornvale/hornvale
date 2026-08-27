@@ -3026,3 +3026,60 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T03:14:28Z | gate-commit | 19.661 | 48.559 | 12.259 | 3.09 | 0 | 7b831034b | campaign/the-sources | MacBookPro | 10 |
 | 2026-08-27T03:15:48Z | rebaseline | 59.992 | 314.410 | 12.167 | 5.44 | 0 | 653741877 | campaign/the-sources | MacBookPro | 10 |
 | 2026-08-27T03:32:27Z | gate-commit | 56.581 | 131.313 | 87.381 | 3.87 | 0 | b10ff6b0a | campaign/the-sources | MacBookPro | 10 |
+| 2026-08-26T18:06:23Z | gate-commit | 18.329 | 13.728 | 0.346 | 0.77 | 0 | bfeb852bc | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T18:08:10Z | gate-commit | 86.239 | 235.186 | 22.043 | 2.98 | 0 | bfeb852bc | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T18:08:58Z | gate-commit | 23.145 | 49.820 | 12.855 | 2.71 | 0 | bfeb852bc | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T18:26:45Z | gate-commit | 21.269 | 20.239 | 4.250 | 1.15 | 0 | dd1f98243 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T18:27:52Z | gate-commit | 46.544 | 161.034 | 22.745 | 3.95 | 0 | dd1f98243 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T18:28:27Z | gate-commit | 23.501 | 50.129 | 12.824 | 2.68 | 0 | dd1f98243 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T18:37:24Z | gate-commit | 12.039 | 11.681 | 0.241 | 0.99 | 0 | fd91c1a23 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T18:38:06Z | gate-commit | 27.071 | 71.284 | 21.056 | 3.41 | 0 | fd91c1a23 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T18:47:20Z | gate-commit | 38.080 | 60.377 | 19.026 | 2.09 | 0 | 56d4641d6 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T18:56:19Z | gate-commit | 26.870 | 54.765 | 20.318 | 2.79 | 0 | 751a2c87e | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T19:07:11Z | rebaseline | 74.211 | 250.654 | 11.568 | 3.53 | 0 | eda32d6a9 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T19:08:43Z | gate-commit | 39.183 | 109.870 | 20.502 | 3.33 | 0 | eda32d6a9 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T19:24:24Z | rebaseline | 58.048 | 262.460 | 13.531 | 4.75 | 0 | 4d2d568b5 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T19:27:01Z | rebaseline | 61.600 | 270.876 | 13.793 | 4.62 | 0 | 4d2d568b5 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T19:28:09Z | gate-commit | 33.203 | 86.878 | 22.300 | 3.29 | 0 | 4d2d568b5 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T19:29:33Z | gate-commit | 20.561 | 49.380 | 12.483 | 3.01 | 0 | 4d2d568b5 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T19:30:13Z | gate-commit | 19.847 | 48.854 | 12.702 | 3.10 | 0 | 4d2d568b5 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T19:53:24Z | gate-commit | 25.495 | 53.393 | 22.392 | 2.97 | 0 | 858c03ccf | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T19:54:14Z | gate-commit | 21.890 | 50.559 | 13.255 | 2.92 | 0 | 858c03ccf | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T20:36:08Z | gate-commit | 26.473 | 57.777 | 23.965 | 3.09 | 0 | a720d5cf2 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T20:37:12Z | gate-commit | 19.977 | 48.766 | 12.460 | 3.06 | 0 | a720d5cf2 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T20:52:28Z | rebaseline | 93.986 | 261.241 | 11.758 | 2.90 | 0 | b25c2f9f2 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T20:53:26Z | gate-commit | 30.360 | 53.023 | 12.996 | 2.17 | 0 | b25c2f9f2 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T21:38:28Z | rebaseline | 67.332 | 262.241 | 13.624 | 4.10 | 0 | cea969f95 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T21:39:21Z | gate-commit | 36.355 | 61.610 | 20.032 | 2.25 | 0 | cea969f95 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T21:46:47Z | gate-commit | 32.680 | 52.733 | 13.236 | 2.02 | 0 | cea969f95 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T22:04:21Z | rebaseline | 60.197 | 261.025 | 12.665 | 4.55 | 0 | 7dc967480 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T22:05:12Z | gate-commit | 41.675 | 84.111 | 28.808 | 2.71 | 0 | 7dc967480 | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T22:15:18Z | gate-commit | 30.120 | 52.837 | 13.015 | 2.19 | 0 | a1667d8cb | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T16:47:13Z | prewarm | 136.646 | 1088.968 | 57.296 | 8.39 | 0 | 7576eca00 | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T17:31:58Z | gate-commit | 53.780 | 132.760 | 80.534 | 3.97 | 0 | b294722dd | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T17:32:36Z | gate-commit | 19.919 | 48.725 | 12.373 | 3.07 | 0 | b294722dd | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T17:37:41Z | gate-commit | 44.198 | 88.034 | 66.408 | 3.49 | 0 | 0961bf36e | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T17:38:12Z | gate-commit | 19.574 | 48.513 | 12.272 | 3.11 | 0 | 0961bf36e | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T17:49:50Z | gate-commit | 43.253 | 87.466 | 65.437 | 3.54 | 0 | 6dc37b514 | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T17:50:26Z | gate-commit | 19.473 | 48.400 | 12.240 | 3.11 | 0 | 6dc37b514 | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T18:10:36Z | gate-commit | 34.251 | 76.847 | 33.993 | 3.24 | 0 | f3f6d8352 | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T18:11:16Z | gate-commit | 20.044 | 48.838 | 12.636 | 3.07 | 0 | f3f6d8352 | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T18:28:40Z | gate-commit | 36.359 | 74.506 | 34.027 | 2.99 | 0 | fdff81644 | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T18:29:21Z | gate-commit | 20.339 | 48.814 | 12.386 | 3.01 | 0 | fdff81644 | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T18:42:56Z | rebaseline | 75.855 | 255.402 | 12.795 | 3.54 | 0 | 6fc1645a3 | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T18:53:43Z | gate-commit | 32.505 | 66.552 | 35.146 | 3.13 | 0 | 6fc1645a3 | campaign/the-scarf | MacBookPro | 10 |
+| 2026-08-26T19:06:51Z | sluice:artifacts | 111.351 | 835.387 | 35.707 | 7.82 | 0 | 479623228 |  | lefford | 40 |
+| 2026-08-26T19:07:32Z | sluice:outboard | 40.639 | 24.736 | 37.217 | 1.52 | 0 | 214b4bc25 |  | lefford | 40 |
+| 2026-08-26T19:14:54Z | sluice:gate | 441.681 | 11982.538 | 459.550 | 28.17 | 0 | d57b92b96 |  | lefford | 40 |
+| 2026-08-26T19:22:34Z | sluice:clients | 459.193 | 5690.223 | 98.628 | 12.61 | 0 | 2a95bb183 |  | lefford | 40 |
+| 2026-08-26T22:21:51Z | rebaseline | 97.072 | 261.132 | 12.930 | 2.82 | 0 | cd1c9352d | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T22:23:52Z | gate-commit | 83.166 | 223.557 | 52.287 | 3.32 | 0 | cd1c9352d | campaign/the-reticence | MacBookPro | 10 |
+| 2026-08-26T22:27:05Z | sluice:artifacts | 112.731 | 933.448 | 36.542 | 8.60 | 0 | 49eac4376 |  | lefford | 40 |
+| 2026-08-26T22:27:47Z | sluice:outboard | 41.391 | 25.704 | 39.153 | 1.57 | 0 | d7021e145 |  | lefford | 40 |
+| 2026-08-26T22:35:11Z | sluice:gate | 444.081 | 12420.727 | 427.816 | 28.93 | 0 | 7e824c600 |  | lefford | 40 |
+| 2026-08-26T22:42:52Z | sluice:clients | 461.152 | 5592.776 | 62.358 | 12.26 | 0 | 7b9b23679 |  | lefford | 40 |
+| 2026-08-26T23:41:51Z | gate-commit | 90.572 | 978.719 | 144.742 | 12.40 | 0 | 3fb3d5e5d | fix/census-yellow-threshold | lefford | 40 |
+| 2026-08-26T23:43:46Z | sluice:artifacts | 68.307 | 604.984 | 22.025 | 9.18 | 0 | 7f00b8592 |  | lefford | 40 |
+| 2026-08-26T23:44:26Z | sluice:outboard | 40.477 | 25.203 | 38.643 | 1.58 | 0 | 8dba99971 |  | lefford | 40 |
+| 2026-08-26T23:51:18Z | sluice:gate | 411.396 | 11765.232 | 389.665 | 29.55 | 0 | 9844da73c |  | lefford | 40 |
+| 2026-08-26T23:58:46Z | sluice:clients | 447.235 | 5528.263 | 64.562 | 12.51 | 0 | 5ae6b9d63 |  | lefford | 40 |
