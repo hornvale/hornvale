@@ -6,7 +6,7 @@
 //! byte-for-byte with the orrery's `cubeSphere.ts` and the reference page.
 
 use crate::{SceneContext, SceneError, WaterfallPoint};
-use hornvale_kernel::{Geosphere, NearestVertexIndex, Vertex, World};
+use hornvale_kernel::{Geosphere, NearestVertexIndex, Vertex, World, WorldTime};
 use serde::Serialize;
 
 /// Deepest addressable quadtree level (the client clamps its own to ~18; this
@@ -508,7 +508,7 @@ pub fn region_json(scene: &RegionScene) -> String {
 /// whenever a context is already in hand — especially here, where the usual
 /// caller sweeps a day loop over one fixed address and would otherwise pay
 /// ~638 ms of derivation per day.
-/// type-audit: bare-ok(index: face), bare-ok(count: level), bare-ok(index: ix), bare-ok(index: iy), bare-ok(count: samples), bare-ok(diagnostic-value: day), bare-ok(diagnostic-value: return)
+/// type-audit: bare-ok(index: face), bare-ok(count: level), bare-ok(index: ix), bare-ok(index: iy), bare-ok(count: samples), bare-ok(diagnostic-value: return)
 pub fn temperature_grid_region(
     world: &World,
     face: u32,
@@ -516,7 +516,7 @@ pub fn temperature_grid_region(
     ix: u32,
     iy: u32,
     samples: u32,
-    day: f64,
+    day: WorldTime,
 ) -> Result<Vec<f64>, SceneError> {
     // Validate before the expensive derivation, exactly as `tiles_region_scene`
     // does — a bad address must not pay ~638 ms first.
@@ -537,7 +537,7 @@ pub fn temperature_grid_region(
 /// context derives terrain then climate, which is exactly what `climate_of`
 /// does (`windows/worldgen/src/lib.rs`), so only `ctx.climate` and
 /// `ctx.climate_index` are read here.
-/// type-audit: bare-ok(index: face), bare-ok(count: level), bare-ok(index: ix), bare-ok(index: iy), bare-ok(count: samples), bare-ok(diagnostic-value: day), bare-ok(diagnostic-value: return)
+/// type-audit: bare-ok(index: face), bare-ok(count: level), bare-ok(index: ix), bare-ok(index: iy), bare-ok(count: samples), bare-ok(diagnostic-value: return)
 #[allow(clippy::too_many_arguments)] // the address is five contract fields, spelled out
 pub fn temperature_grid_region_in(
     world: &World,
@@ -547,7 +547,7 @@ pub fn temperature_grid_region_in(
     ix: u32,
     iy: u32,
     samples: u32,
-    day: f64,
+    day: WorldTime,
 ) -> Result<Vec<f64>, SceneError> {
     debug_assert_eq!(
         ctx.seed(),
@@ -929,7 +929,16 @@ mod tests {
         let obliquity_deg = climate.obliquity_deg();
         let tau = std::f64::consts::TAU;
         for day in [0.0_f64, 91.3, 200.0, 366.5] {
-            let grid = temperature_grid_region(&w, face, level, ix, iy, samples, day).unwrap();
+            let grid = temperature_grid_region(
+                &w,
+                face,
+                level,
+                ix,
+                iy,
+                samples,
+                WorldTime::from_std_days(day).expect("finite"),
+            )
+            .unwrap();
             let phase = (day / period + offset).rem_euclid(1.0);
             let theta = hornvale_kernel::math::sin(tau * phase);
             let day_fraction = day.rem_euclid(1.0);
@@ -982,7 +991,16 @@ mod tests {
             iy: 4,
             samples: 16,
         };
-        let grid = temperature_grid_region(&w, 0, 3, 4, 4, 16, zero_phase_day).unwrap();
+        let grid = temperature_grid_region(
+            &w,
+            0,
+            3,
+            4,
+            4,
+            16,
+            WorldTime::from_std_days(zero_phase_day).expect("finite"),
+        )
+        .unwrap();
         let scene = tiles_region_scene(&w, 0, 3, 4, 4, 16).unwrap();
         let day_fraction = zero_phase_day.rem_euclid(1.0);
         for (i, (g, m)) in grid.iter().zip(scene.t_mean_c.iter()).enumerate() {

@@ -3162,3 +3162,8 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T18:48:57Z | gate-commit | 160.802 | 92.167 | 52.714 | 0.90 | 0 | 7e11ea9e1 | campaign/the-foliot | ambrose | 12 |
 | 2026-08-27T18:51:26Z | rebaseline | 148.710 | 265.845 | 16.120 | 1.90 | 0 | 7e11ea9e1 | campaign/the-foliot | ambrose | 12 |
 | 2026-08-27T18:53:36Z | gate-commit | 111.007 | 60.765 | 27.733 | 0.80 | 0 | 7e11ea9e1 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T20:25:34Z | rebaseline | 152.219 | 270.374 | 16.381 | 1.88 | 0 | 2be67ff43 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T20:26:21Z | gate-commit | 38.005 | 66.992 | 13.414 | 2.12 | 0 | 2be67ff43 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T20:33:17Z | gate-commit | 240.688 | 248.861 | 67.284 | 1.31 | 0 | 2be67ff43 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T20:39:28Z | gate-commit | 129.047 | 74.362 | 41.224 | 0.90 | 0 | 2be67ff43 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T20:52:36Z | rebaseline | 195.406 | 271.622 | 15.492 | 1.47 | 0 | 2be67ff43 | campaign/the-foliot | ambrose | 12 |

@@ -34,7 +34,7 @@ use hornvale_climate::snowpack::DEFAULT_SNOWPACK;
 use hornvale_climate::substrate::SubstrateField;
 use hornvale_climate::wetness::{DEFAULT_WETNESS, receptivity};
 use hornvale_kernel::math::acos;
-use hornvale_kernel::{Geosphere, Seed, Value, Vertex, VertexMap};
+use hornvale_kernel::{Geosphere, Seed, Value, Vertex, VertexMap, WorldTime};
 use hornvale_terrain::TerrainPins;
 use hornvale_topology::{CostSweep, least_cost_from};
 use hornvale_worldgen::graph_derive::weather_conductance_factor;
@@ -338,7 +338,9 @@ fn weathered_cost(sample: &WorldSample, day: f64) -> VertexMap<u64> {
                 DEFAULT_WETNESS.field_capacity_mm,
             ),
             sample.snow.at(vertex, day),
-            sample.climate.is_frozen_at(vertex, day),
+            sample
+                .climate
+                .is_frozen_at(vertex, WorldTime::from_std_days(day).expect("finite")),
         );
         base.saturating_add(weather_surcharge(factor))
     })

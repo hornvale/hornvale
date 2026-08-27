@@ -621,8 +621,8 @@ pub fn tiles_scene_in(
 /// client's reconstruction against these values. Full precision (not
 /// quantized) — callers that need portable bytes quantize at their own
 /// boundary.
-/// type-audit: bare-ok(count: width), bare-ok(diagnostic-value: day), bare-ok(diagnostic-value: return)
-pub fn temperature_grid(world: &World, width: u32, day: f64) -> Result<Vec<f64>, SceneError> {
+/// type-audit: bare-ok(count: width), bare-ok(diagnostic-value: return)
+pub fn temperature_grid(world: &World, width: u32, day: WorldTime) -> Result<Vec<f64>, SceneError> {
     validate_width(width)?;
     temperature_grid_in(world, &SceneContext::build(world)?, width, day)
 }
@@ -634,12 +634,12 @@ pub fn temperature_grid(world: &World, width: u32, day: f64) -> Result<Vec<f64>,
 /// `ctx.climate_index` are read here — `world` is otherwise read only by the
 /// context/world match assertion below, which is the same shape every `_in`
 /// entry point takes.
-/// type-audit: bare-ok(count: width), bare-ok(diagnostic-value: day), bare-ok(diagnostic-value: return)
+/// type-audit: bare-ok(count: width), bare-ok(diagnostic-value: return)
 pub fn temperature_grid_in(
     world: &World,
     ctx: &SceneContext,
     width: u32,
-    day: f64,
+    day: WorldTime,
 ) -> Result<Vec<f64>, SceneError> {
     debug_assert_eq!(
         ctx.seed(),
@@ -1884,7 +1884,12 @@ mod tests {
         let climate = climate_of(&world).expect("climate builds");
         let climate_index = NearestVertexIndex::new(climate.geosphere());
         let day = 91.3;
-        let grid = temperature_grid(&world, width, day).expect("grid builds");
+        let grid = temperature_grid(
+            &world,
+            width,
+            WorldTime::from_std_days(day).expect("finite"),
+        )
+        .expect("grid builds");
         assert_eq!(grid.len(), (width * height) as usize);
 
         // Independently reconstruct the same lattice sampling in the test
@@ -1896,7 +1901,9 @@ mod tests {
             for px in 0..width {
                 let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
                 let c_vertex = climate_index.nearest(climate.geosphere(), latitude, longitude);
-                let expected = climate.temperature_at(c_vertex, day).get();
+                let expected = climate
+                    .temperature_at(c_vertex, WorldTime::from_std_days(day).expect("finite"))
+                    .get();
                 assert_eq!(grid[i], expected, "tile {i} mismatch at day {day}");
                 i += 1;
             }
@@ -1913,8 +1920,17 @@ mod tests {
         let offset = climate.year_phase_offset();
         let obliquity_deg = climate.obliquity_deg();
         let zero_phase_day = (-offset).rem_euclid(1.0) * period;
-        let day_fraction = zero_phase_day.rem_euclid(1.0);
-        let zero_grid = temperature_grid(&world, width, zero_phase_day).expect("grid builds");
+        // BOTH HALVES MUST SAMPLE THE SAME INSTANT (The Foliot, stage 4).
+        // `temperature_grid` takes a `WorldTime` now, so it lands
+        // `zero_phase_day` on the tick lattice; deriving `day_fraction` from
+        // the UNROUNDED value would compare the grid at one instant against
+        // an expectation computed at another, and the two disagreed in the
+        // 8th decimal. Round once, here, and read the fraction back off the
+        // instant the grid will actually use.
+        let zero_phase_at =
+            WorldTime::from_std_days(zero_phase_day).expect("a zero-phase day is finite");
+        let day_fraction = zero_phase_at.as_std_days().rem_euclid(1.0);
+        let zero_grid = temperature_grid(&world, width, zero_phase_at).expect("grid builds");
         let scene = tiles_scene(&world, width).expect("scene builds");
         let mut i = 0;
         for py in 0..height {
@@ -1929,16 +1945,45 @@ mod tests {
                         climate.geosphere().coord(c_vertex).latitude,
                         climate.geosphere().coord(c_vertex).longitude,
                         obliquity_deg,
-                        0.0, // year phase is exactly zero at zero_phase_day, by construction
+                        // The year phase AT THE INSTANT THE GRID USES, not
+                        // the literal 0.0 this once passed. `zero_phase_day`
+                        // is by construction the day where the phase is
+                        // exactly zero, but landing it on the tick lattice
+                        // moves it by up to half a tick, so the phase there is
+                        // near zero rather than at it. Passing 0.0 compared
+                        // the grid at one phase against an expectation at
+                        // another and disagreed in the 12th decimal.
+                        (zero_phase_at.as_std_days() / period + offset).rem_euclid(1.0),
                         day_fraction,
                         day_std,
                     )
                     .get(),
                 };
                 let expected = scene.t_mean_c[i] + diurnal;
-                assert_eq!(
-                    zero_grid[i], expected,
-                    "zero-phase temperature_grid must equal t_mean_c + diurnal at tile {i}"
+                // A TOLERANCE, AND THE WEAKENING IS DELIBERATE (The Foliot,
+                // stage 4). This was `assert_eq!` on the bits, which held
+                // while the grid took a raw `f64` day: the probe could sit
+                // exactly on the zero-phase day, the seasonal term
+                // `sin(TAU * phase)` was exactly zero, and `t_mean_c +
+                // diurnal` was the whole value.
+                //
+                // The grid takes a `WorldTime` now, so the probe lands on the
+                // tick lattice and the zero-phase instant is generally NOT
+                // representable. The phase there is ~1e-9 rather than 0, and
+                // the seasonal term it produces is ~1.6e-9 — real, and
+                // omitted by this expectation on purpose, because adding it
+                // would mean duplicating another slice of the temperature
+                // model inside its own test.
+                //
+                // What the assertion is FOR survives intact: the grid
+                // decomposes into the zero-phase mean plus the diurnal
+                // anomaly. The bound is 1e-6, six orders under the ~1e-9
+                // residual and far under any real temperature difference.
+                assert!(
+                    (zero_grid[i] - expected).abs() < 1e-6,
+                    "zero-phase temperature_grid must equal t_mean_c + diurnal at tile {i}: \
+                     {} vs {expected}",
+                    zero_grid[i]
                 );
                 i += 1;
             }
@@ -2432,8 +2477,19 @@ mod tests {
         }
 
         // Temperature: the third terrain-facing entry point.
-        let via_world = temperature_grid(&world, 64, 100.0).expect("temps");
-        let via_ctx = temperature_grid_in(&world, &ctx, 64, 100.0).expect("temps_in");
+        let via_world = temperature_grid(
+            &world,
+            64,
+            WorldTime::from_std_days(100.0).expect("a finite sample day"),
+        )
+        .expect("temps");
+        let via_ctx = temperature_grid_in(
+            &world,
+            &ctx,
+            64,
+            WorldTime::from_std_days(100.0).expect("a finite sample day"),
+        )
+        .expect("temps_in");
         assert_eq!(
             via_world, via_ctx,
             "temperature_grid diverged from temperature_grid_in"
@@ -2442,10 +2498,27 @@ mod tests {
         // Regional temperature: the fourth, and the one a day loop sweeps —
         // so it is checked across several days on one address, not just one.
         for day in [0.0, 100.0, 233.5] {
-            let via_world =
-                temperature_grid_region(&world, 0, 3, 0, 0, 8, day).expect("region temps");
-            let via_ctx = temperature_grid_region_in(&world, &ctx, 0, 3, 0, 0, 8, day)
-                .expect("region temps_in");
+            let via_world = temperature_grid_region(
+                &world,
+                0,
+                3,
+                0,
+                0,
+                8,
+                WorldTime::from_std_days(day).expect("finite"),
+            )
+            .expect("region temps");
+            let via_ctx = temperature_grid_region_in(
+                &world,
+                &ctx,
+                0,
+                3,
+                0,
+                0,
+                8,
+                WorldTime::from_std_days(day).expect("finite"),
+            )
+            .expect("region temps_in");
             assert_eq!(
                 via_world, via_ctx,
                 "temperature_grid_region diverged at day={day}"

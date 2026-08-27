@@ -24,7 +24,8 @@ use crate::weather::{CloudType, WeatherState};
 use crate::{AMBIENT, COLD, HEAT, RAIN, SNOW};
 use hornvale_kernel::{
     Fbm, Geosphere, NearestVertexIndex, ObserverContext, PhenomenaSource, Phenomenon,
-    Precipitation, ReferenceElevation, Referent, Seed, Temperature, Venue, Vertex, VertexMap, math,
+    Precipitation, ReferenceElevation, Referent, Seed, Temperature, Venue, Vertex, VertexMap,
+    WorldTime, math,
 };
 
 /// The inputs the composition root supplies to build a climate (all bare
@@ -322,7 +323,14 @@ impl GeneratedClimate {
     }
     /// Temperature at a vertex on a given day, °C (mean plus the seasonal term).
     /// type-audit: pending(wave-2: day)
-    pub fn temperature_at(&self, vertex: Vertex, day: f64) -> Temperature {
+    pub fn temperature_at(&self, vertex: Vertex, at: WorldTime) -> Temperature {
+        // The kernel's named hatch (decision 0188), taken ONCE, here. The
+        // parameter was a bare `f64` day until The Foliot: nothing stopped a
+        // caller passing ticks where days were meant, and the unit lived only
+        // in the parameter's name. `WorldTime` and not astronomy's
+        // `StdInstant` because a domain depends on the kernel and never on a
+        // sibling — the layering rule picks the type here, not a preference.
+        let day = at.as_std_days();
         temperature_at(
             &self.mean_temp,
             &self.diurnal_amp,
@@ -588,7 +596,16 @@ impl GeneratedClimate {
             .enumerate()
             .map(|(d, state)| {
                 let mean_temp_c = match self.regime {
-                    RotationRegime::Locked => self.temperature_at(vertex, d as f64).get(),
+                    RotationRegime::Locked => self
+                        .temperature_at(
+                            vertex,
+                            // `d` is a WHOLE-day index, so this crossing is
+                            // exact rather than rounded: a whole number of
+                            // days is a whole number of ticks.
+                            WorldTime::from_std_days(d as f64)
+                                .expect("a whole-day index is representable"),
+                        )
+                        .get(),
                     RotationRegime::Spinning { .. } => mean + swing * self.seasonal_sine[d],
                 };
                 DayContext {
@@ -609,9 +626,9 @@ impl GeneratedClimate {
     /// Whether `vertex` is at or below freezing on `day` — the threshold that
     /// makes every substrate sink nonlinear. Not a substrate itself: it has
     /// no integral.
-    /// type-audit: bare-ok(diagnostic-value: day), bare-ok(flag: return)
-    pub fn is_frozen_at(&self, vertex: Vertex, day: f64) -> bool {
-        self.temperature_at(vertex, day).get() <= 0.0
+    /// type-audit: bare-ok(flag: return)
+    pub fn is_frozen_at(&self, vertex: Vertex, at: WorldTime) -> bool {
+        self.temperature_at(vertex, at).get() <= 0.0
     }
 }
 
@@ -858,6 +875,28 @@ mod tests {
     use hornvale_kernel::Geosphere;
     use test_support::inputs;
 
+    /// The sampling API takes a typed instant, not a bare `f64` day
+    /// (The Foliot, stage 4).
+    ///
+    /// `WorldTime` and not `StdDays`: a domain depends on the kernel and
+    /// never on a sibling, and `StdDays`/`StdInstant` live in
+    /// `domains/astronomy`. This is the layering rule choosing the type, not
+    /// a preference — climate could not use astronomy's instant if it wanted
+    /// to.
+    #[test]
+    fn the_sampling_api_takes_a_typed_instant() {
+        let climate = test_support::sample_climate();
+        let vertex = hornvale_kernel::Vertex(0);
+        let genesis = climate.temperature_at(vertex, WorldTime::GENESIS);
+        let later = climate.temperature_at(
+            vertex,
+            WorldTime::from_std_days(180.0).expect("a finite day is representable"),
+        );
+        assert!(genesis.get().is_finite() && later.get().is_finite());
+        // A frozen reading is a flag over the same instant type.
+        let _ = climate.is_frozen_at(vertex, WorldTime::GENESIS);
+    }
+
     #[test]
     fn provider_answers_every_query_and_is_deterministic() {
         let geo = Geosphere::new(4);
@@ -923,7 +962,12 @@ mod tests {
                 )
                 .get();
                 let documented = mean + swing * math::sin(std::f64::consts::TAU * phase) + diurnal;
-                let actual = climate.temperature_at(vertex, day).get();
+                let actual = climate
+                    .temperature_at(
+                        vertex,
+                        WorldTime::from_std_days(day).expect("a finite day is representable"),
+                    )
+                    .get();
                 assert_eq!(
                     documented.to_bits(),
                     actual.to_bits(),

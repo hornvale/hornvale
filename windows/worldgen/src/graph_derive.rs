@@ -18,7 +18,7 @@ use hornvale_climate::Biome;
 use hornvale_climate::snowpack::DEFAULT_SNOWPACK;
 use hornvale_climate::substrate::SubstrateField;
 use hornvale_climate::wetness::{DEFAULT_WETNESS, receptivity};
-use hornvale_kernel::{Geosphere, ReferenceElevation, Value, Vertex, VertexMap, World};
+use hornvale_kernel::{Geosphere, ReferenceElevation, Value, Vertex, VertexMap, World, WorldTime};
 use hornvale_topology::route::least_cost;
 use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
 use std::collections::BTreeSet;
@@ -30,7 +30,7 @@ use std::collections::BTreeSet;
 /// water-current trace may take before giving up. Coarse-tuned (not
 /// census-calibrated), like `traversal::BASE_COST`/`SLOPE_SCALE` -- see
 /// [`GraphConfig::default`].
-/// type-audit: bare-ok(count: land_route_radius), bare-ok(count: astar_budget), bare-ok(count: corridor_max_cost), bare-ok(count: water_route_max_steps), bare-ok(diagnostic-value: day)
+/// type-audit: bare-ok(count: land_route_radius), bare-ok(count: astar_budget), bare-ok(count: corridor_max_cost), bare-ok(count: water_route_max_steps)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct GraphConfig {
     /// Settlement pairs farther than this many hops apart over the bare
@@ -51,7 +51,10 @@ pub struct GraphConfig {
     /// The day to gate conductance on, if any. `None` -- the default and
     /// what every pre-Mire caller gets -- derives the unweathered graph,
     /// byte-identically to before this campaign.
-    pub day: Option<f64>,
+    ///
+    /// A typed instant since The Foliot: it is a point on the world's time
+    /// axis, and climate's sampling API now says so in its own signature.
+    pub day: Option<WorldTime>,
 }
 
 impl Default for GraphConfig {
@@ -221,8 +224,13 @@ pub fn connection_graph_of(world: &World, cfg: &GraphConfig) -> ConnectionGraph 
         let (wetness_field, snow_field) =
             SubstrateField::compute_pair(&climate, &DEFAULT_WETNESS, &DEFAULT_SNOWPACK);
         let factor_at = |vertex: Vertex| -> f64 {
-            let wetness_mm = wetness_field.at(vertex, day);
-            let snow_mm = snow_field.at(vertex, day);
+            // `SubstrateField::at` still takes a bare `f64` day. Retyping it
+            // is the same defect one layer along and deliberately NOT done
+            // here — stage 4 scopes climate's own sampling API, and widening
+            // it mid-stage would put an untyped surface's retype inside a
+            // commit that claims to be about climate's.
+            let wetness_mm = wetness_field.at(vertex, day.as_std_days());
+            let snow_mm = snow_field.at(vertex, day.as_std_days());
             let frozen = climate.is_frozen_at(vertex, day);
             weather_conductance_factor(
                 receptivity(wetness_mm, DEFAULT_WETNESS.field_capacity_mm),
@@ -629,7 +637,7 @@ mod tests {
         let winter = connection_graph_of(
             &world,
             &GraphConfig {
-                day: Some(0.0),
+                day: Some(WorldTime::GENESIS),
                 ..GraphConfig::default()
             },
         );
