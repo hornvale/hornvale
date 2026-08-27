@@ -140,10 +140,21 @@ lexical.
 `think` entering the dictionary also moves the Burr's assignment-accuracy
 pin (`windows/lab/tests/burr_calibration.rs`): every one of the 18 daughters
 gains one word, so the readout's denominator grows from 1568 to 1586 and its
-numerator from 1251 to 1266 — `think` classified correctly in 15 of the 18
-tongues. The pin moves from 0.7978316326530612 to 0.798234552332913, a rise
-of 0.00040, re-pinned in the same commit as this campaign's readout, per that
-test's own instruction.
+numerator from 1251 to 1266. The pin moves from 0.7978316326530612 to
+0.798234552332913, a rise of 0.00040, re-pinned in the same commit as this
+campaign's readout, per that test's own instruction.
+
+The numerator's +15 is worth decomposing, because the obvious reading is
+wrong and this campaign asserted it before measuring it. `think` itself is
+classified correctly in **13** of the 18 tongues; the remaining **+2 is net
+movement among eight pre-existing words**, five gaining credit and three
+losing it. Adding one word to every daughter shifts each tongue's trigram
+profile, and the profile is what the classifier reads — so a registration
+that is strictly additive in what the *lexicon holds* need not be additive in
+what the *classifier sees*. The Inquest's entry in that same file deliberately
+asserted the subset property, that not one pre-existing word changed. For The
+Mortise that property is false. The byte-goldens are additive; the statistic
+over them is not, and the two are different claims.
 
 ## The parser follows, and the discriminator falls out for free
 
