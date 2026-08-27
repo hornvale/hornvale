@@ -1,17 +1,20 @@
 //! A tongue's drawn surface grammar: constituent order, copula presence
 //! (and, when present, its drawn form), article presence, and — since The
-//! Mortise (Task 5) — subordination strategy (whether an embedded clause
-//! is marked with a complementizer, and its drawn form). This is the floor
-//! slice of LANG-40's grammaticalization-depth vector — C7 (the morphology
-//! campaign) extends [`TongueGrammar`], never replaces it.
+//! Mortise — subordination strategy (Task 5: whether an embedded clause is
+//! marked with a complementizer, and its drawn form) and coordination
+//! strategy (Task 6: whether coordinated clauses are joined with a
+//! conjunction, and its drawn form). This is the floor slice of LANG-40's
+//! grammaticalization-depth vector — C7 (the morphology campaign) extends
+//! [`TongueGrammar`], never replaces it.
 //!
 //! Word order is historically **contingent**, not derivable from a
 //! species' psychology or subsistence pattern (spec §3): deriving it from
 //! existing culture vectors would be astrology shipped as science, so
-//! these parameters are DRAWN from four permanent stream labels
+//! these parameters are DRAWN from five permanent stream labels
 //! (`language/<species>/grammar/constituent-order`,
 //! `language/<species>/grammar/copula`, `language/<species>/grammar/articles`,
-//! `language/<species>/grammar/subordinator`)
+//! `language/<species>/grammar/subordinator`,
+//! `language/<species>/grammar/conjunction`)
 //! — build-state (decision 0058): drawn at composition/render time, never
 //! serialized, so adding them is byte-identical to every existing world.
 //!
@@ -24,11 +27,27 @@
 //! §4.6): a hardcoded complementizer would make every tongue subordinate
 //! like English, the exact failure this module's realizers exist to
 //! prevent, and a tongue that draws none subordinates by bare parataxis —
-//! a legitimate grammar, not a gap.
+//! a legitimate grammar, not a gap. A drawn conjunction's form is filled
+//! the identical way again (spec §4.10): a hardcoded "and" would make
+//! every tongue coordinate like English, and a tongue that draws none
+//! coordinates by bare juxtaposition — also a legitimate grammar, not a
+//! gap.
+//!
+//! **A vocabulary word costs zero stream labels; a function word costs
+//! one.** A word is a `dynamic(concept)` value on the existing
+//! `PROTO_ROOT` axis ([`crate::etymology::proto_root`]) — every concept a
+//! tongue ever lexicalizes rides that one draw, so the vocabulary itself is
+//! free. The copula, the subordinator and the conjunction each cost a
+//! label instead, because a function word's PRESENCE is typological rather
+//! than lexical: the tongue that draws no conjunction is not missing a
+//! word the way it might lack a word for "sea" — it has a different
+//! grammar, and that grammar fact is what the label records. This is why
+//! this campaign adds two labels (§4.6, §4.10) and not one per generated
+//! word.
 
 use crate::clause::{
-    Adjunct, Argument, CLAUSE_EMBED_MAX_DEPTH, Clause, Number, Person, Polarity, Subject, Tense,
-    Valence, clause_embed_depth, predicate_valence, subject_embed_depth,
+    Adjunct, Argument, CLAUSE_EMBED_MAX_DEPTH, Clause, Coordination, Number, Person, Polarity,
+    Subject, Tense, Valence, clause_embed_depth, predicate_valence, subject_embed_depth,
 };
 use crate::lexicon::{LexEntry, Lexicon};
 use crate::morphology::{
@@ -108,6 +127,15 @@ pub struct TongueGrammar {
     /// affix layer, so unlike [`Self::copula`] no parallel `_segments`
     /// field is carried.
     pub subordinator: Option<String>,
+    /// The overt coordinating conjunction's roman form for tongues that
+    /// mark clause coordination with a free word — drawn from the tongue's
+    /// own phonology, never authored — or `None` for a tongue that
+    /// coordinates by bare juxtaposition: no marker, a legitimate drawn
+    /// value and not a degenerate one (The Mortise, Task 6, spec §4.10).
+    /// On the identical shape [`Self::subordinator`] carries and for the
+    /// identical reason: a free word that never hosts an affix layer, so no
+    /// parallel `_segments` field.
+    pub conjunction: Option<String>,
 }
 
 /// The `range_u32(1, 100)` roll boundaries for [`ConstituentOrder`]
@@ -163,10 +191,29 @@ fn draw_subordinator_form(stream: &mut Stream, namer: &Namer, orth: Orthography)
     render_views_with(&segments, orth).roman
 }
 
-/// Draw `species`' tongue grammar from the four permanent grammar streams
+/// Draw the overt coordinating conjunction's one-syllable roman form from
+/// `namer`'s phonology, consuming `stream` — the same stream the presence
+/// roll already drew from, so presence and form share the one permanent
+/// `.../grammar/conjunction` stream (The Mortise, Task 6). Uses the exact
+/// syllable-fill mechanism [`draw_copula_form`]/[`draw_subordinator_form`]
+/// use: one template syllable via [`Namer::draw_syllables`], flattened via
+/// [`segments_of`] and rendered via [`render_views_with`] under `orth`.
+/// Only the roman form is returned, on the identical reasoning
+/// [`draw_subordinator_form`] states: a coordinating conjunction is a free
+/// word that never hosts an affix layer, so it needs no parallel segments
+/// to join at.
+fn draw_conjunction_form(stream: &mut Stream, namer: &Namer, orth: Orthography) -> String {
+    let syllables = namer.draw_syllables(stream, 1, 1, false);
+    let segments = segments_of(&syllables);
+    render_views_with(&segments, orth).roman
+}
+
+/// Draw `species`' tongue grammar from the five permanent grammar streams
 /// (`language/<species>/grammar/…`): constituent order, copula presence
-/// (and drawn form), article presence, and subordination strategy
-/// (complementizer presence and drawn form, or bare parataxis).
+/// (and drawn form), article presence, subordination strategy
+/// (complementizer presence and drawn form, or bare parataxis), and
+/// coordination strategy (conjunction presence and drawn form, or bare
+/// juxtaposition).
 /// type-audit: bare-ok(identifier-text)
 pub fn tongue_grammar(seed: &Seed, species: &str, ph: &Phonology) -> TongueGrammar {
     let namer = Namer::new(seed, species, ph);
@@ -220,12 +267,34 @@ pub fn tongue_grammar(seed: &Seed, species: &str, ph: &Phonology) -> TongueGramm
         None
     };
 
+    let mut conjunction_stream = seed
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::GRAMMAR)
+        .derive(streams::CONJUNCTION)
+        .stream();
+    // 50/50, on the identical reasoning the subordinator draw states: no
+    // literature-backed skew is cited for this axis, and neither strategy
+    // is degenerate (spec §4.10) — a coordinating conjunction and bare
+    // juxtaposition (asyndetic coordination) are both attested, so the two
+    // split evenly.
+    let conjunction = if conjunction_stream.range_u32(1, 100) <= 50 {
+        Some(draw_conjunction_form(
+            &mut conjunction_stream,
+            &namer,
+            ph.orthography,
+        ))
+    } else {
+        None
+    };
+
     TongueGrammar {
         order,
         copula,
         copula_segments,
         articles,
         subordinator,
+        conjunction,
     }
 }
 
@@ -577,6 +646,53 @@ pub fn realize_tongue(
         out.push(' ');
         out.push_str(word);
     }
+    out.push('.');
+    Ok(out)
+}
+
+/// Realize a [`Coordination`] in a tongue: each clause realizes through
+/// [`realize_tongue`] (the FLOOR realizer — the same deliberate choice
+/// [`tongue_subject`]'s and [`resolve_argument`]'s own `Clause` arms make
+/// for embedding, spec §4.5's floor/deep split) in full (tier 1 — nothing
+/// shared or elided), trimmed of its own trailing full stop, then joined
+/// with the tongue's own drawn `grammar.conjunction` — or, for a tongue
+/// that drew none, simple juxtaposition (a space, no marker): a legitimate
+/// coordination strategy and not a gap (spec §4.10), the same argument
+/// [`mark_embedded_clause`] makes for a tongue that drew no subordinator.
+/// The whole utterance takes exactly one trailing period.
+///
+/// Renders fully or gaps entirely (spec §4): a gap realizing any one
+/// coordinated clause fails the whole coordination, via `?` on
+/// [`realize_tongue`]'s own `Result`.
+///
+/// Panics if `coord.clauses` holds fewer than two clauses, on the identical
+/// reasoning [`crate::clause::realize_common_coordination`] states.
+/// type-audit: bare-ok(prose)
+pub fn realize_tongue_coordination(
+    coord: &Coordination,
+    grammar: &TongueGrammar,
+    lexicon: &Lexicon,
+    pronouns: &BTreeMap<&'static str, MorphForm>,
+) -> Result<String, TongueGap> {
+    assert!(
+        coord.clauses.len() >= 2,
+        "a coordination joins at least two clauses; {} is not a list to \
+         coordinate",
+        coord.clauses.len()
+    );
+    let mut parts = Vec::with_capacity(coord.clauses.len());
+    for clause in &coord.clauses {
+        let mut text = realize_tongue(clause, grammar, lexicon, pronouns)?;
+        if text.ends_with('.') {
+            text.pop();
+        }
+        parts.push(text);
+    }
+    let separator = match &grammar.conjunction {
+        Some(word) => format!(" {word} "),
+        None => " ".to_string(),
+    };
+    let mut out = parts.join(&separator);
     out.push('.');
     Ok(out)
 }
@@ -1362,6 +1478,7 @@ mod tests {
             copula_segments: None,
             articles: false,
             subordinator: None,
+            conjunction: None,
         };
         assert_eq!(
             realize_tongue(&clause, &svo, &lex, &no_pronouns()).unwrap(),
@@ -1373,6 +1490,7 @@ mod tests {
             copula_segments: None,
             articles: false,
             subordinator: None,
+            conjunction: None,
         };
         assert_eq!(
             realize_tongue(&clause, &sov, &lex, &no_pronouns()).unwrap(),
@@ -1384,6 +1502,7 @@ mod tests {
             copula_segments: None,
             articles: false,
             subordinator: None,
+            conjunction: None,
         };
         assert_eq!(
             realize_tongue(&clause, &zero_copula, &lex, &no_pronouns()).unwrap(),
@@ -1411,6 +1530,7 @@ mod tests {
             copula_segments: None,
             articles: false,
             subordinator: None,
+            conjunction: None,
         };
         let gap = realize_tongue(&clause, &g, &lex, &no_pronouns()).unwrap_err();
         assert_eq!(gap.concept, "planet");
@@ -1459,6 +1579,7 @@ mod tests {
             copula_segments: None,
             articles: false,
             subordinator: None,
+            conjunction: None,
         };
         let gap = realize_tongue(&clause, &g, &lex, &no_pronouns()).unwrap_err();
         assert_eq!(gap.concept, "blue");
@@ -1505,6 +1626,7 @@ mod tests {
             copula_segments: None,
             articles: false,
             subordinator: None,
+            conjunction: None,
         };
         let out =
             realize_tongue(&clause, &g, &lex, &no_pronouns()).expect("both concepts are known");
@@ -1544,6 +1666,7 @@ mod tests {
             copula_segments: None,
             articles: false,
             subordinator: None,
+            conjunction: None,
         };
         let gap = realize_tongue(&clause, &g, &lex, &no_pronouns()).unwrap_err();
         assert_eq!(gap.concept, "yellow-white-dwarf");
@@ -1590,6 +1713,7 @@ mod tests {
             copula_segments: None,
             articles: false,
             subordinator: None,
+            conjunction: None,
         };
         let _ = realize_tongue(&clause, &g, &lex, &no_pronouns());
     }
@@ -1630,6 +1754,7 @@ mod tests {
             copula_segments: None,
             articles: false,
             subordinator: None,
+            conjunction: None,
         };
         let shallow = TongueMorphology {
             pronouns: drawn_pronouns(),
@@ -1729,6 +1854,7 @@ mod tests {
                 copula_segments: None,
                 articles: false,
                 subordinator: None,
+                conjunction: None,
             };
             assert_eq!(
                 realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap(),
@@ -1938,6 +2064,7 @@ mod tests {
             copula_segments: None,
             articles: grammar.articles,
             subordinator: grammar.subordinator.clone(),
+            conjunction: grammar.conjunction.clone(),
         };
         let expected_enclitic = affix(
             &complement_segments,
@@ -2165,6 +2292,7 @@ mod tests {
             copula_segments: None,
             articles: grammar.articles,
             subordinator: grammar.subordinator.clone(),
+            conjunction: grammar.conjunction.clone(),
         };
         let expected_enclitic = affix(
             &complement_segments,
@@ -2211,6 +2339,7 @@ mod tests {
             copula_segments: None,
             articles: false,
             subordinator: None,
+            conjunction: None,
         };
         let (affix_paradigm, _, past_roman) =
             tense_paradigm(&ph, MorphDepth::Affix, ClassPosition::Suffix);
@@ -2424,6 +2553,7 @@ mod tests {
             copula_segments: None,
             articles: grammar.articles,
             subordinator: grammar.subordinator.clone(),
+            conjunction: grammar.conjunction.clone(),
         };
         let expected_enclitic = affix(
             &complement_segments,
@@ -2468,6 +2598,7 @@ mod tests {
             copula_segments: None,
             articles: false,
             subordinator: None,
+            conjunction: None,
         };
         let (affix_paradigm, _, neg_roman) =
             polarity_paradigm(&ph, MorphDepth::Affix, ClassPosition::Suffix);
@@ -2583,6 +2714,7 @@ mod tests {
             copula_segments: None,
             articles: false,
             subordinator: None,
+            conjunction: None,
         }
     }
 
@@ -2892,6 +3024,7 @@ mod tests {
             copula_segments: None,
             articles: false,
             subordinator: None,
+            conjunction: None,
         };
         let clause = Clause {
             predicate: IS_A.to_string(),
@@ -3026,6 +3159,7 @@ mod tests {
             copula_segments: None,
             articles: false,
             subordinator: subordinator.map(str::to_string),
+            conjunction: None,
         }
     }
 
@@ -3249,6 +3383,7 @@ mod tests {
                     copula_segments: None,
                     articles: false,
                     subordinator: None,
+                    conjunction: None,
                 };
                 let out = realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap();
                 assert_eq!(out, expected, "order {order:?} copula {copula:?}");
@@ -3319,6 +3454,7 @@ mod tests {
                 copula_segments: None,
                 articles: false,
                 subordinator: None,
+                conjunction: None,
             };
             let past = realize_tongue_deep(
                 &transitive_clause(Tense::Past),
@@ -3388,6 +3524,7 @@ mod tests {
                     copula_segments: None,
                     articles: false,
                     subordinator: None,
+                    conjunction: None,
                 };
                 for tense in [Tense::Present, Tense::Past] {
                     let clause = transitive_clause(tense);
@@ -3409,5 +3546,126 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// The coordination fixture (The Mortise, Task 6): a lexicon carrying
+    /// words for both predicates the two coordinated clauses need — `eat`'s
+    /// transitive frame and `kill`'s — the tongue-side sibling of
+    /// `clause.rs`'s coordination fixture.
+    fn coordination_lexicon() -> Lexicon {
+        tiny_lexicon_with(&[
+            (EAT, ExposureClass::Steeped),
+            (KILL, ExposureClass::Steeped),
+            ("bread", ExposureClass::Steeped),
+        ])
+    }
+
+    /// `<3sg> kill <3sg>` — the second coordinated clause, pronoun-only so
+    /// tier 1 (no subject elision, no right-node raising — both are later
+    /// work, spec §4.10) needs no fresh referent to make its point.
+    fn coordinated_kill_clause(tense: Tense) -> Clause {
+        Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        }
+    }
+
+    /// A hand-fixed grammar for the coordination tests below, on the exact
+    /// shape [`embedding_grammar`] uses for the subordinator axis: SVO, no
+    /// copula (irrelevant — both coordinated clauses here are transitive,
+    /// which always fills the verb slot itself), `conjunction` set by the
+    /// caller.
+    fn coordination_grammar(conjunction: Option<&str>) -> TongueGrammar {
+        TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: None,
+            copula_segments: None,
+            articles: false,
+            subordinator: None,
+            conjunction: conjunction.map(str::to_string),
+        }
+    }
+
+    /// Tier 1 coordination (spec §4.10): two FULL clauses joined by the
+    /// tongue's own drawn conjunction — "It confused me and it upset me"'s
+    /// tongue-side gloss, built from `eat`/`kill` on the identical reasoning
+    /// `clause.rs`'s `two_clauses_coordinate_in_common` states. The axis is
+    /// DRAWN, not hardcoded, so this test is paired with
+    /// [`a_tongue_with_no_conjunction_juxtaposes`] on the identical logic
+    /// the subordinator pair uses: a single test cannot tell "the axis is
+    /// drawn" from "the axis is hardcoded to the value I happened to test".
+    #[test]
+    fn a_tongue_with_a_conjunction_joins_two_clauses() {
+        let lex = coordination_lexicon();
+        let pronouns = drawn_pronouns();
+        let grammar = coordination_grammar(Some("zil"));
+        let first = transitive_clause(Tense::Past);
+        let second = coordinated_kill_clause(Tense::Past);
+        let coord = Coordination {
+            clauses: vec![first.clone(), second.clone()],
+        };
+
+        let out = realize_tongue_coordination(&coord, &grammar, &lex, &pronouns).unwrap();
+
+        let mut first_text = realize_tongue(&first, &grammar, &lex, &pronouns).unwrap();
+        assert!(first_text.ends_with('.'));
+        first_text.pop();
+        let mut second_text = realize_tongue(&second, &grammar, &lex, &pronouns).unwrap();
+        assert!(second_text.ends_with('.'));
+        second_text.pop();
+        assert_eq!(out, format!("{first_text} zil {second_text}."));
+        // Exactly one full stop: each clause's own trailing "." is trimmed
+        // before the join, the same invariant the embedding pair pins.
+        assert_eq!(out.matches('.').count(), 1);
+    }
+
+    /// The other half of the pair: a tongue that draws NO conjunction
+    /// coordinates by bare juxtaposition, and that is a grammar, not a gap —
+    /// asyndetic coordination is attested (spec §4.10). Same clauses, same
+    /// grammar, only `conjunction` differs from the test above, so any
+    /// difference in the surface is attributable to the axis alone.
+    #[test]
+    fn a_tongue_with_no_conjunction_juxtaposes() {
+        let lex = coordination_lexicon();
+        let pronouns = drawn_pronouns();
+        let grammar = coordination_grammar(None);
+        let first = transitive_clause(Tense::Past);
+        let second = coordinated_kill_clause(Tense::Past);
+        let coord = Coordination {
+            clauses: vec![first.clone(), second.clone()],
+        };
+
+        let out = realize_tongue_coordination(&coord, &grammar, &lex, &pronouns).unwrap();
+
+        let mut first_text = realize_tongue(&first, &grammar, &lex, &pronouns).unwrap();
+        assert!(first_text.ends_with('.'));
+        first_text.pop();
+        let mut second_text = realize_tongue(&second, &grammar, &lex, &pronouns).unwrap();
+        assert!(second_text.ends_with('.'));
+        second_text.pop();
+        assert_eq!(out, format!("{first_text} {second_text}."));
+        assert_eq!(out.matches('.').count(), 1);
+    }
+
+    /// A coordination of fewer than two clauses states a contradiction in
+    /// its own name, and the tongue realizer refuses it by panic on the
+    /// identical reasoning `clause.rs`'s Common realizer test states.
+    #[test]
+    #[should_panic(expected = "at least two clauses")]
+    fn a_tongue_coordination_of_one_clause_panics() {
+        let lex = coordination_lexicon();
+        let pronouns = drawn_pronouns();
+        let grammar = coordination_grammar(Some("zil"));
+        let coord = Coordination {
+            clauses: vec![transitive_clause(Tense::Past)],
+        };
+        let _ = realize_tongue_coordination(&coord, &grammar, &lex, &pronouns);
     }
 }

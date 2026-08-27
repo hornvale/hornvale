@@ -988,6 +988,84 @@ pub fn realize_common(spec: &Clause, vocab: &CommonVocabulary) -> String {
     out
 }
 
+/// A coordinated sequence of clauses — a LIST at a node, never a slot that
+/// holds one (The Mortise, Task 6, spec §4.10).
+///
+/// **This is a different operator from [`Argument::Clause`] /
+/// [`Subject::Clause`], and the difference is the whole design.** Embedding
+/// is a slot that holds a clause; coordination is a list at a node. They
+/// share exactly one idea — both are marked at a boundary, and that marker
+/// is what keeps the parser's inverse computable (spec §4.10) — and
+/// nothing else. Concretely: `Coordination` carries no depth cap of its
+/// own and does not read [`CLAUSE_EMBED_MAX_DEPTH`], because it is not a
+/// clause-internal slot at all; it sits ABOVE a clause, wrapping it, the
+/// way a sentence wraps a clause rather than a clause wrapping itself.
+///
+/// **Additive above `Clause`, on purpose.** `Clause` gains no field for
+/// this: a coordination is a fact about how two or more *whole* clauses
+/// relate to each other, not a fact any one clause carries about itself.
+/// Putting a list inside a node that is not one would have cost an edit at
+/// every one of `Clause`'s many literal construction sites; arriving above
+/// it costs none of them — [`realize_common`] keeps taking a `&Clause` and
+/// always will.
+///
+/// **Tier 1 only** (spec §4.10's three-tier ladder): each clause realizes
+/// in full, with nothing shared or elided between them — *"It confused me
+/// and it upset me"* rather than *"It confused and upset me"*. Tier 2
+/// (subject elision, so a shared subject is stated once) and tier 3
+/// (right-node raising) are later work; tier 3 is cut from this campaign
+/// entirely (spec §9.1).
+/// type-audit: bare-ok(identifier-text)
+#[derive(Clone, Debug, PartialEq)]
+pub struct Coordination {
+    /// The coordinated clauses, in surface order. At least two — a
+    /// "coordination" of fewer than two clauses is not a list, and both
+    /// realizers assert this rather than silently degrading.
+    pub clauses: Vec<Clause>,
+}
+
+/// Realize a [`Coordination`] as a Common (≈ limited English) sentence: each
+/// clause realizes through [`realize_common`] in full (tier 1 — nothing
+/// shared or elided), trimmed of its own trailing full stop, then joined
+/// with `"and"` — Common's own coordinating conjunction, on the same
+/// footing every other Common surface choice is (this register's fixed
+/// vocabulary, not a drawn value; only a TONGUE's conjunction is drawn, see
+/// [`crate::grammar::realize_tongue_coordination`]) — and the whole
+/// sentence takes exactly one trailing period, on the identical
+/// "realize whole and trim" discipline [`realize_common`]'s own
+/// `Argument::Clause`/`Subject::Clause` arms already use for a nested
+/// clause.
+///
+/// Panics if `coord.clauses` holds fewer than two clauses: a coordination
+/// with nothing to join states a contradiction in its own name, and the
+/// panic is the same class as `realize_common`'s "no construction for this
+/// predicate" — an authoring hole, not a fact about the world a
+/// [`TongueGap`](crate::grammar::TongueGap)-shaped return could state
+/// (Common is infallible; see [`realize_common`]'s own doc for why).
+/// type-audit: bare-ok(prose)
+pub fn realize_common_coordination(coord: &Coordination, vocab: &CommonVocabulary) -> String {
+    assert!(
+        coord.clauses.len() >= 2,
+        "a coordination joins at least two clauses; {} is not a list to \
+         coordinate",
+        coord.clauses.len()
+    );
+    let mut parts = coord.clauses.iter().map(|clause| {
+        let mut text = realize_common(clause, vocab);
+        if text.ends_with('.') {
+            text.pop();
+        }
+        text
+    });
+    let mut out = parts.next().expect("length checked above: at least one");
+    for part in parts {
+        out.push_str(" and ");
+        out.push_str(&part);
+    }
+    out.push('.');
+    out
+}
+
 /// Render a small cardinal number as an English word (`0` through `12`);
 /// larger numbers render as plain digits.
 /// type-audit: bare-ok(prose)
@@ -2833,5 +2911,60 @@ mod tests {
             argument: Argument::Count(1),
         };
         assert_eq!(common_role_surface(&a, &v), None);
+    }
+
+    /// Tier 1 coordination (The Mortise, Task 6, spec §4.10): two FULL
+    /// clauses joined, nothing shared or elided — the gloss is *"It
+    /// confused me and it upset me"*, built here from two predicates the
+    /// crate already has words for (`eat`, `kill`) rather than inventing a
+    /// `confuse`/`upset` pair this campaign does not register. Each clause
+    /// realizes exactly as [`realize_common`] alone would (minus its own
+    /// trailing period), joined by Common's own `"and"`, with exactly one
+    /// trailing period on the whole coordinated utterance.
+    #[test]
+    fn two_clauses_coordinate_in_common() {
+        let vocab = CommonVocabulary::default();
+        let first = eat_clause(Tense::Past, Number::Sg, Polarity::Pos);
+        let second = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Name("Nwamvam".to_string()),
+            object: Argument::Concept("goblin".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let coord = Coordination {
+            clauses: vec![first.clone(), second.clone()],
+        };
+        let out = realize_common_coordination(&coord, &vocab);
+
+        let mut first_text = realize_common(&first, &vocab);
+        assert!(first_text.ends_with('.'));
+        first_text.pop();
+        let mut second_text = realize_common(&second, &vocab);
+        assert!(second_text.ends_with('.'));
+        second_text.pop();
+        assert_eq!(out, format!("{first_text} and {second_text}."));
+        // Exactly one full stop: each clause's own trailing "." is trimmed
+        // before the join, the same discipline the embedded-clause arms of
+        // `realize_common` already use.
+        assert_eq!(out.matches('.').count(), 1);
+    }
+
+    /// A coordination of fewer than two clauses states a contradiction in
+    /// its own name — nothing to coordinate — and both realizers refuse it
+    /// by panic rather than silently degrading to a bare clause.
+    #[test]
+    #[should_panic(expected = "at least two clauses")]
+    fn a_coordination_of_one_clause_panics() {
+        let vocab = CommonVocabulary::default();
+        let only = eat_clause(Tense::Present, Number::Sg, Polarity::Pos);
+        let coord = Coordination {
+            clauses: vec![only],
+        };
+        let _ = realize_common_coordination(&coord, &vocab);
     }
 }

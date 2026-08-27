@@ -43,6 +43,22 @@ pub const ARTICLES: StreamLabel<'static> = StreamLabel::from_static("articles");
 /// not a gap (spec §4.6).
 /// type-audit: bare-ok(identifier-text: return)
 pub const SUBORDINATOR: StreamLabel<'static> = StreamLabel::from_static("subordinator");
+/// Conjunction-presence/form draw, under grammar (The Mortise, Task 6):
+/// whether coordinated clauses are joined with an overt free coordinating
+/// word, and — when they are — the word's own drawn form, on the copula's
+/// exact pattern (one stream, presence and form together). A tongue that
+/// draws no conjunction joins coordinated clauses by bare juxtaposition:
+/// a legitimate grammar, not a gap (spec §4.10).
+///
+/// **A vocabulary word costs zero stream labels; a function word costs
+/// one.** A word is a `dynamic(concept)` value on the existing
+/// `PROTO_ROOT` axis ([`crate::etymology::proto_root`]), so the vocabulary
+/// a tongue draws is free. This label exists because the conjunction's
+/// PRESENCE is typological rather than lexical: the tongue that draws no
+/// conjunction is not missing a word, it has a different grammar — the
+/// same argument [`SUBORDINATOR`]'s doc makes for the complementizer axis.
+/// type-audit: bare-ok(identifier-text: return)
+pub const CONJUNCTION: StreamLabel<'static> = StreamLabel::from_static("conjunction");
 /// The numeracy-rung draw, under grammar.
 /// type-audit: bare-ok(identifier-text: return)
 pub const NUMERACY_RUNG: StreamLabel<'static> = StreamLabel::from_static("numeracy-rung");

@@ -91,10 +91,11 @@ pub use account::{
     domain_distortion, identity_params, recoverability,
 };
 pub use clause::{
-    Adjunct, AdjunctPosition, Argument, COPULA_PARADIGM, Clause, CopulaRow, Definiteness, Number,
-    PRONOUN_PARADIGM, ParseContext, ParseError, Person, Polarity, PronounCase, PronounRow, Subject,
-    Tense, VERB_PARADIGM, Valence, VerbRow, common_pronoun, nominative_person, parse_common,
-    parse_common_with_tail, predicate_valence, realize_common,
+    Adjunct, AdjunctPosition, Argument, COPULA_PARADIGM, Clause, Coordination, CopulaRow,
+    Definiteness, Number, PRONOUN_PARADIGM, ParseContext, ParseError, Person, Polarity,
+    PronounCase, PronounRow, Subject, Tense, VERB_PARADIGM, Valence, VerbRow, common_pronoun,
+    nominative_person, parse_common, parse_common_with_tail, predicate_valence, realize_common,
+    realize_common_coordination,
 };
 pub use common_vocab::{CommonVocabulary, MissingCommonWords};
 pub use etymology::{
@@ -128,7 +129,7 @@ pub fn assign_proto_roots_with_epoch_for_test(
 pub use exemplars::{HUE_CONCEPTS, hue_exemplar};
 pub use grammar::{
     ConstituentOrder, TongueGap, TongueGrammar, TongueParadigm, realize_tongue,
-    realize_tongue_deep, tongue_grammar,
+    realize_tongue_coordination, realize_tongue_deep, tongue_grammar,
 };
 pub use lexicon::{
     ExposureClass, GapReason, Headedness, LexEntry, Lexicon, WordViews, build_lexicon,
@@ -1103,6 +1104,10 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         (
             "language/<species>/grammar/subordinator",
             "whether an embedded clause is marked with an overt complementizer, and (when it is) the complementizer's one-syllable drawn form from the tongue's own phonology — a tongue that draws none subordinates by bare parataxis, a legitimate grammar and not a gap (The Mortise, Task 5, spec §4.6)",
+        ),
+        (
+            "language/<species>/grammar/conjunction",
+            "whether coordinated clauses are joined with an overt coordinating conjunction, and (when they are) the conjunction's one-syllable drawn form from the tongue's own phonology — a tongue that draws none coordinates by bare juxtaposition, a legitimate grammar and not a gap (The Mortise, Task 6, spec §4.10). A function word earns this label because its PRESENCE is typological, not lexical; a vocabulary word costs zero labels, drawn instead as a `dynamic(concept)` value on the existing `lexicon/root` axis",
         ),
         (
             "language/<species>/grammar/depth/evidential",
