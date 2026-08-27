@@ -57,9 +57,9 @@
 //! number of grid-level facets the plate covers.
 
 use hornvale_game_core::{Cell, Grid, Ink, Source, Weight};
-use hornvale_kernel::{Facet, Geosphere, NearestVertexIndex, RoomMeshMemo, Vertex};
+use hornvale_kernel::{Facet, FacetId, Geosphere, NearestVertexIndex, RoomMeshMemo, Vertex};
 use hornvale_terrain::GeneratedTerrain;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::discovery::{Discovered, FeatureId};
 use crate::mercator::{self, Frame};
@@ -211,6 +211,29 @@ pub(crate) const CAVE_GLYPH: char = 'o';
 const SETTLEMENT_COLOR: [u8; 3] = [220, 180, 60];
 /// The colour claim for a discovered cave mouth. See [`SETTLEMENT_COLOR`].
 const CAVE_COLOR: [u8; 3] = [130, 120, 110];
+
+/// The observer's own position, on the band-B perception layer
+/// ([`draw_perception_layer`]). The SAME character
+/// `clients/game/core/src/chart.rs` paints for the same fact, deliberately:
+/// a reader who has seen the walk-band chart must not have to learn a second
+/// symbol for "you are here" when a raster appears under it.
+const HERE_GLYPH: char = '@';
+
+/// A marked facet whose mark kind this client has no world-map counterpart
+/// for — an `"agent"`, and any future kind (see [`mark_glyph`] on why an
+/// unrecognised kind still draws rather than vanishing).
+const AGENT_GLYPH: char = '&';
+
+/// The colour claim for the observer's own facet. Like [`SETTLEMENT_COLOR`]
+/// this is an invented client-side palette entry, not a wire value: the
+/// packet's own `color` field is a facet's SURFACE cover, which is the
+/// terrain the raster already draws underneath, so tinting the marker with
+/// it would say the marker was ground.
+const HERE_COLOR: [u8; 3] = [240, 240, 240];
+
+/// The colour claim for a marked facet. See [`HERE_COLOR`] for why the
+/// wire's own per-facet colour is not used here.
+const MARK_COLOR: [u8; 3] = [230, 120, 120];
 
 /// Draw the whole-world Mercator plate at `w`x`h`, resolving whether
 /// colour is allowed from `NO_COLOR` exactly once
@@ -557,6 +580,293 @@ pub fn draw_feature_layer(
             dst,
         );
     }
+}
+
+/// One FACET of the walk band's own perception packet
+/// (`scene/surrounds/v2`), flattened to exactly what
+/// [`draw_perception_layer`] needs to place and rank it.
+///
+/// **The flattening is the interface, not a convenience.** `bin` reads the
+/// real `hornvale_scene::SurroundsScene` (through
+/// `hornvale_vessel::Session::purview`) and this module does not: `plate.rs`
+/// is handed rosters, never domain objects, exactly as
+/// [`draw_feature_layer`] takes `BTreeSet<Vertex>` rather than the ledger it
+/// was read out of. `driver.rs` owns the flattening (`perceived_cells`) and
+/// with it the wire's field names and state strings; this module never learns
+/// that a facet's epistemic state is spelled `"here"`, which is also what
+/// lets the layer be tested from a literal instead of from a genesis.
+///
+/// `kind` is borrowed rather than owned: a band is 31 facets and is rebuilt
+/// per redraw, so there is nothing here worth an allocation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Perceived<'a> {
+    /// The packed [`FacetId`] of this facet's own room — the ONE field that
+    /// makes this layer land on the raster's own squares rather than near
+    /// them. See [`draw_perception_layer`]'s doc for the measurement that
+    /// ruled out the alternative.
+    pub room: u64,
+    /// Whether this is the observer's own facet (`state == "here"`).
+    pub here: bool,
+    /// The facet's dominant mark, as `(salience, kind)` — `salience` is a
+    /// RANK where LOWER is more salient
+    /// (`hornvale_scene::Mark::salience`), and `kind` is the wire's own
+    /// mark kind (`"agent"`, `"settlement"`, `"cave"`, or a future one).
+    /// `None` on a facet carrying no marks at all.
+    pub mark: Option<(u32, &'a str)>,
+}
+
+/// The glyph for a marked facet of the perception packet.
+///
+/// The vocabulary is `bin`'s existing one wherever one already exists:
+/// a settlement and a cave mouth draw exactly what
+/// [`draw_feature_layer`] draws for the same substance
+/// ([`SETTLEMENT_GLYPH`], [`CAVE_GLYPH`]), because a creature standing next
+/// to a cave mouth and a discovered cave mouth on the world map are the same
+/// thing seen through two channels, and giving them two glyphs would say
+/// otherwise. An `"agent"` has no world-map counterpart — point sites are
+/// terrain-fixed and an agent is not — so it gets its own.
+///
+/// **An UNRECOGNISED kind still draws**, and that is the same infallibility
+/// `hornvale_scene::Mark::kind`'s own doc asks of a renderer ("a consumer
+/// that does not recognize a kind should still render the mark"): a future
+/// mark kind must not silently vanish from the map, so the fallback is the
+/// generic agent glyph rather than nothing.
+fn mark_glyph(kind: &str) -> char {
+    match kind {
+        "settlement" => SETTLEMENT_GLYPH,
+        "cave" => CAVE_GLYPH,
+        _ => AGENT_GLYPH,
+    }
+}
+
+/// LAYER THREE: the walk band's own perception packet — the observer's
+/// position and the marks standing around them — composed over the terrain
+/// raster (The Quadrat, Task 6).
+///
+/// This is the layer `plate.rs` did not have at Task 4, and the Task 4
+/// report was right that it had no input then: the surrounds packet reaches
+/// `bin` through `Session::purview`, which nothing in this module had a
+/// reason to touch until band B joined the raster ladder.
+///
+/// ## Why the placement comes from `room` and not from the wire's polar pair
+///
+/// Every facet of the packet carries `bearing_deg` and `distance_rad` — a
+/// polar coordinate about the observer — and `core/src/chart.rs` places its
+/// own chart from exactly that pair. Placing THIS layer from it was the
+/// first design, and it was **measured false** before it was built. The
+/// raster's tile index is `floor` of an ABSOLUTE Mercator coordinate
+/// ([`mercator::project`]); a polar pair can only give a RELATIVE offset,
+/// rounded; which side of a tile boundary a facet lands on is therefore
+/// decided by the observer's own **sub-tile phase**, which the wire does not
+/// carry. Measured on the seed-42 band across 200 sub-tile phases: best 0 of
+/// 31 marks misplaced, worst 24, mean 11.5, and only 2 of the 200 phases
+/// agreed exactly.
+///
+/// So this layer projects the SAME coordinate through the SAME function the
+/// raster does: `room` unpacks to a [`Facet`]
+/// ([`hornvale_kernel::FacetId::unpack`]), whose [`Facet::coord`] goes
+/// through [`mercator::project`]. Agreement is by construction — one
+/// projection, not two that have to agree — and there is no arithmetic here
+/// for a future edit to get subtly wrong.
+///
+/// ## What it paints, and what it deliberately does not
+///
+/// The observer's [`HERE_GLYPH`] and the dominant mark of any facet carrying
+/// marks. **An ordinary, unmarked facet paints NOTHING.** The raster
+/// underneath already draws that ground, at a resolution the packet cannot
+/// improve on, so a glyph per packet facet would obliterate the layer this
+/// campaign was built to add. (`core/src/chart.rs`'s `PLACED_GLYPH` — `'+'`
+/// on every placed lattice unit — exists because the walk view had no terrain
+/// vocabulary; it now has one, and `chart.rs` is untouched because it is
+/// still the renderer for the plate with no raster under it.)
+///
+/// ## Collisions
+///
+/// A band-B facet and a plate tile are within a small factor of each other
+/// in size, so two packet facets CAN land in one tile — measured 31 facets
+/// into 20 tiles on the seed-42 band. The rule is
+/// `windows/scene/src/surrounds_ascii.rs::box_rank`'s, stated the same way
+/// in all three of Hornvale's chart renderers and not re-invented here:
+///
+/// 1. **the observer never loses their own box** — the view is egocentric;
+/// 2. a marked facet beats an unmarked one, and among marked facets the
+///    numerically SMALLEST `salience` wins (a rank, never a magnitude);
+/// 3. ties break on document order, which the producer fixes as ascending
+///    `room`.
+///
+/// Resolved through a [`BTreeMap`] pass rather than by overdrawing, so the
+/// winner is a stated rule instead of a consequence of which facet the loop
+/// happened to write last.
+///
+/// **`dst` is drawn ONTO, never replaced**, and the window's SIZE is read
+/// from `dst` itself with deliberately no `w`/`h` parameter to disagree with
+/// it — both for the reasons [`draw_feature_layer`]'s own doc gives (fix
+/// round 1, Minor 1).
+pub(crate) fn draw_perception_layer(
+    dst: &mut Grid,
+    f: &Frame,
+    win: &Window,
+    colour_allowed: bool,
+    perceived: &[Perceived<'_>],
+) {
+    let width = u32::from(dst.width());
+    let height = u32::from(dst.height());
+    let (virtual_w, virtual_h) = virtual_dims(win.depth);
+
+    for ((drow, dcol), index) in
+        perception_boxes(f, win, virtual_w, virtual_h, width, height, perceived)
+    {
+        let won = &perceived[index];
+        let (glyph, weight, color) = if won.here {
+            (HERE_GLYPH, Weight::Bold, HERE_COLOR)
+        } else {
+            (
+                mark_glyph(won.mark.expect("a box winner is `here` or marked").1),
+                Weight::Normal,
+                MARK_COLOR,
+            )
+        };
+        dst.set(
+            dcol as u16,
+            drow as u16,
+            Cell {
+                glyph: Some(glyph),
+                weight,
+                ink: Ink::resolve(Some(color), colour_allowed),
+                // The perception packet IS the walk-band chart's channel,
+                // even though a different module paints it here: this is
+                // `scene/surrounds/v2` data, not world terrain, and
+                // `core`'s provenance discipline reads this field to say
+                // which channel a drawn glyph came off.
+                source: Source::Chart,
+            },
+        );
+    }
+}
+
+/// The ordering key [`perception_boxes`] settles a contested box with; see
+/// [`draw_perception_layer`]'s doc for the clauses, in the tuple's own
+/// order. Named for the same reason
+/// `windows/scene/src/surrounds_ascii.rs::BoxRank` is: the tuple IS the
+/// rule, so it gets a name rather than being re-read off a signature.
+type BoxRank = (bool, bool, u32, usize);
+
+/// Which perception facet owns each screen box of a `width`x`height` plate —
+/// the ONE place the placement and the collision rule run, shared by
+/// [`draw_perception_layer`] (which paints the winner) and `bin`'s band-B
+/// resolver (which names it).
+///
+/// **That sharing is the point, not tidiness.** `core`'s own chart keeps the
+/// identical discipline for the identical reason
+/// its own chart's query and paint paths share one `boxes_of`): two copies
+/// of "which facet is at this box" is how a picture
+/// and a strip come to name different things, which is the defect The
+/// Portolan part II's Task 3b fixed once already, in the other direction.
+///
+/// Only DRAWABLE facets appear — the observer's own and any facet carrying a
+/// mark. An unmarked packet facet is ground the raster drew, so it is neither
+/// painted nor resolvable here, and the resolver falls through to the tile
+/// under the cursor. Values are indices into `perceived`.
+///
+/// The rank's tuple order IS the rule stated in
+/// [`draw_perception_layer`]'s doc: observer, then marked-over-unmarked,
+/// then smallest `salience`, then document order.
+fn perception_boxes(
+    f: &Frame,
+    win: &Window,
+    virtual_w: u32,
+    virtual_h: u32,
+    width: u32,
+    height: u32,
+    perceived: &[Perceived<'_>],
+) -> BTreeMap<(u32, u32), usize> {
+    let mut placed: BTreeMap<(u32, u32), (BoxRank, usize)> = BTreeMap::new();
+    for (index, seen) in perceived.iter().enumerate() {
+        if !seen.here && seen.mark.is_none() {
+            continue;
+        }
+        let Some((drow, dcol)) = perception_tile_on_screen(f, win, virtual_w, virtual_h, seen.room)
+        else {
+            continue;
+        };
+        if dcol >= width || drow >= height {
+            continue;
+        }
+        let rank = (
+            !seen.here,
+            seen.mark.is_none(),
+            seen.mark.map_or(0, |(salience, _)| salience),
+            index,
+        );
+        match placed.get(&(drow, dcol)) {
+            Some((held, _)) if *held <= rank => {}
+            _ => {
+                placed.insert((drow, dcol), (rank, index));
+            }
+        }
+    }
+    placed.into_iter().map(|(at, (_, i))| (at, i)).collect()
+}
+
+/// [`perception_boxes`] for ONE screen box — which perception facet, if any,
+/// the picture drew at `(row, col)` of a `width`x`height` plate. `bin`'s
+/// band-B resolver's own entry point; see [`perception_boxes`] for why the
+/// resolver asks this rather than re-deriving the placement.
+pub(crate) fn perceived_at(
+    f: &Frame,
+    win: &Window,
+    width: u32,
+    height: u32,
+    perceived: &[Perceived<'_>],
+    row: u32,
+    col: u32,
+) -> Option<usize> {
+    let (virtual_w, virtual_h) = virtual_dims(win.depth);
+    perception_boxes(f, win, virtual_w, virtual_h, width, height, perceived)
+        .get(&(row, col))
+        .copied()
+}
+
+/// Where a packed room id lands on a `win`-scrolled plate, as
+/// `(screen row, screen col)` — `None` when the facet does not unpack, is
+/// above the projection's polar clamp, or sits above/left of the window.
+///
+/// **Shared by [`draw_perception_layer`] (which paints there) and `bin`'s
+/// own band-B tests (which assert it), so the two can never disagree about
+/// where a facet went** — the same one-copy discipline `core`'s own chart
+/// keeps behind its single `boxes_of`.
+///
+/// LONGITUDE WRAPS, LATITUDE DOES NOT, exactly as
+/// [`draw_feature_layer`]'s own `place` closure has it: a facet just past the
+/// seam is still on screen when the window straddles it, and a row above the
+/// window is simply off the plate.
+pub(crate) fn perception_tile_on_screen(
+    f: &Frame,
+    win: &Window,
+    virtual_w: u32,
+    virtual_h: u32,
+    room: u64,
+) -> Option<(u32, u32)> {
+    let (plate_row, plate_col) = perception_tile(f, virtual_w, virtual_h, room)?;
+    let dcol = (plate_col + virtual_w - (win.origin_col % virtual_w)) % virtual_w;
+    let drow = plate_row.checked_sub(win.origin_row)?;
+    Some((drow, dcol))
+}
+
+/// The VIRTUAL chart tile a packed room id occupies — the absolute
+/// `(row, col)` [`mercator::project`] gives for the facet's own centroid,
+/// before the window's origin is subtracted. `None` when the id does not
+/// unpack to a facet, or when the facet is above the projection's polar
+/// clamp and so is on no chart at all.
+pub(crate) fn perception_tile(
+    f: &Frame,
+    virtual_w: u32,
+    virtual_h: u32,
+    room: u64,
+) -> Option<(u32, u32)> {
+    let facet = FacetId(room).unpack().ok()?;
+    let coord = facet.coord();
+    mercator::project(f, coord.latitude, coord.longitude, virtual_w, virtual_h)
 }
 
 /// What one chart tile's terrain resolves to: the class the glyph is
@@ -1736,6 +2046,180 @@ mod tests {
             composed.to_plain_text(),
             by_hand.to_plain_text(),
             "`draw_with` is no longer its two layers composed"
+        );
+    }
+
+    // -- LAYER THREE: the band-B perception overlay (Task 6) -------------
+    //
+    // These drive `draw_perception_layer` from LITERAL `Perceived` values
+    // rather than from a genesis, which is the whole reason `Perceived`
+    // exists as a flattening: the rules under test here (what paints, what
+    // does not, and who keeps a contested box) are decidable without a
+    // world, and a test that had to build one could not force a collision
+    // at all.
+
+    /// A `Perceived` whose `room` is the packed id of the facet CONTAINING
+    /// `(lat, lon)` at `depth` — so a test can place a facet at a chosen
+    /// geographic point without knowing a real room id.
+    fn perceived_at_lat_lon(
+        lat: f64,
+        lon: f64,
+        depth: u32,
+        here: bool,
+        mark: Option<(u32, &str)>,
+    ) -> Perceived<'_> {
+        let pos = hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon);
+        let facet = Facet::containing(pos, depth);
+        Perceived {
+            room: facet.pack().expect("a facet at a shipped depth packs").0,
+            here,
+            mark,
+        }
+    }
+
+    /// The observer draws [`HERE_GLYPH`], a marked facet draws its kind's own
+    /// glyph, and **an ordinary unmarked facet draws NOTHING** — the raster
+    /// underneath already shows that ground, and painting over it is what
+    /// this layer exists not to do.
+    ///
+    /// Non-vacuity: the unmarked facet is placed at a DIFFERENT point from
+    /// the other two and its own box is asserted blank, so "nothing was
+    /// drawn" cannot be satisfied by the facet simply having landed off the
+    /// plate or under one of its neighbours.
+    #[test]
+    fn the_perception_overlay_paints_the_observer_and_marks_and_never_bare_ground() {
+        let f = crate::mercator::frame_for(false);
+        let win = Window {
+            depth: BAND_B_RUNG,
+            origin_col: 0,
+            origin_row: 0,
+        };
+        let (vw, vh) = virtual_dims(win.depth);
+        // Three points far enough apart to occupy three distinct tiles.
+        let pts = [(0.0, 0.0), (0.0, 0.02), (0.0, 0.04)];
+        let perceived = vec![
+            perceived_at_lat_lon(pts[0].0, pts[0].1, win.depth, true, None),
+            perceived_at_lat_lon(pts[1].0, pts[1].1, win.depth, false, Some((3, "agent"))),
+            perceived_at_lat_lon(pts[2].0, pts[2].1, win.depth, false, None),
+        ];
+        let boxes: Vec<(u32, u32)> = perceived
+            .iter()
+            .map(|c| {
+                perception_tile(&f, vw, vh, c.room).expect("an equatorial facet is in the clamp")
+            })
+            .collect();
+        assert_eq!(
+            boxes.iter().collect::<BTreeSet<_>>().len(),
+            3,
+            "the three points must land in three distinct tiles or this test proves nothing"
+        );
+        // A window whose origin is the tightest bounding box of the three,
+        // so all three are on the plate and none is off its top or left.
+        let origin_row = boxes.iter().map(|b| b.0).min().unwrap();
+        let origin_col = boxes.iter().map(|b| b.1).min().unwrap();
+        let win = Window {
+            depth: BAND_B_RUNG,
+            origin_col,
+            origin_row,
+        };
+        let w = (boxes.iter().map(|b| b.1).max().unwrap() - origin_col + 1) as u16;
+        let h = (boxes.iter().map(|b| b.0).max().unwrap() - origin_row + 1) as u16;
+        let mut grid = Grid::new(w, h);
+        draw_perception_layer(&mut grid, &f, &win, true, &perceived);
+        // The screen position of a virtual tile, spelled out here rather
+        // than taken from `perception_tile_on_screen`: this test is checking
+        // WHAT WAS PAINTED WHERE, so the expected position has to come from
+        // somewhere other than the function that decided it.
+        let at = |b: (u32, u32)| {
+            let drow = b.0 - win.origin_row;
+            let dcol = (b.1 + vw - win.origin_col) % vw;
+            *grid
+                .get(dcol as u16, drow as u16)
+                .expect("the three tiles are inside this plate")
+        };
+        assert_eq!(
+            at(boxes[0]).glyph,
+            Some(HERE_GLYPH),
+            "the observer draws '@'"
+        );
+        assert_eq!(at(boxes[0]).weight, Weight::Bold, "and draws bold");
+        assert_eq!(
+            at(boxes[1]).glyph,
+            Some(AGENT_GLYPH),
+            "a marked facet draws its kind's glyph"
+        );
+        assert!(
+            at(boxes[2]).is_blank(),
+            "an unmarked facet must leave the raster's own ground alone"
+        );
+    }
+
+    /// The collision rule, on a FORCED collision — two facets at the very
+    /// same facet, so they cannot help sharing a tile. Asserted in BOTH
+    /// document orders, which is what separates "the rule ran" from "the
+    /// later write won".
+    ///
+    /// Clause 1 (the observer never loses their own box) and clause 2 (the
+    /// numerically smallest `salience` wins among marked facets) are checked
+    /// separately, because a single fixture satisfying both would not say
+    /// which clause did the work.
+    #[test]
+    fn the_perception_overlay_settles_a_contested_box_by_rank_in_either_order() {
+        let f = crate::mercator::frame_for(false);
+        let win = Window {
+            depth: BAND_B_RUNG,
+            origin_col: 0,
+            origin_row: 0,
+        };
+        let (vw, vh) = virtual_dims(win.depth);
+        let here = perceived_at_lat_lon(0.0, 0.0, win.depth, true, None);
+        let loud = perceived_at_lat_lon(0.0, 0.0, win.depth, false, Some((0, "settlement")));
+        let quiet = perceived_at_lat_lon(0.0, 0.0, win.depth, false, Some((9, "cave")));
+        let (row, col) = perception_tile(&f, vw, vh, here.room).expect("in the clamp");
+        let win = Window {
+            depth: BAND_B_RUNG,
+            origin_col: col,
+            origin_row: row,
+        };
+
+        // Clause 1: the observer keeps their box against the most salient
+        // mark there is, in either order.
+        for perceived in [vec![here, loud], vec![loud, here]] {
+            let mut grid = Grid::new(2, 2);
+            draw_perception_layer(&mut grid, &f, &win, true, &perceived);
+            assert_eq!(
+                grid.get(0, 0).unwrap().glyph,
+                Some(HERE_GLYPH),
+                "the view is egocentric: the observer never loses their own box"
+            );
+        }
+
+        // Clause 2: among marks, the SMALLEST salience wins — a rank, never
+        // a magnitude.
+        for perceived in [vec![quiet, loud], vec![loud, quiet]] {
+            let mut grid = Grid::new(2, 2);
+            draw_perception_layer(&mut grid, &f, &win, true, &perceived);
+            assert_eq!(
+                grid.get(0, 0).unwrap().glyph,
+                Some(SETTLEMENT_GLYPH),
+                "salience 0 outranks salience 9, whichever order they arrive in"
+            );
+        }
+    }
+
+    /// An unrecognised mark kind still DRAWS
+    /// (`hornvale_scene::Mark::kind`'s own instruction to a renderer), so a
+    /// future kind cannot vanish from the map. Pinned because the fallback
+    /// arm of [`mark_glyph`] is otherwise unreachable from any real band.
+    #[test]
+    fn an_unrecognised_mark_kind_still_draws() {
+        assert_eq!(mark_glyph("settlement"), SETTLEMENT_GLYPH);
+        assert_eq!(mark_glyph("cave"), CAVE_GLYPH);
+        assert_eq!(mark_glyph("agent"), AGENT_GLYPH);
+        assert_eq!(
+            mark_glyph("some-kind-from-a-later-campaign"),
+            AGENT_GLYPH,
+            "an unknown kind must still get a glyph, never be skipped"
         );
     }
 }

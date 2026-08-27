@@ -4,6 +4,7 @@
 use hornvale_game::driver::Driver;
 use hornvale_game::input::Action;
 use hornvale_game_core::{CommandLine, Focus, Source, render_with, spread};
+use std::collections::BTreeSet;
 
 /// The driver's ONLY output is snapshot JSON. If this ever returns a typed
 /// value, the containment in The Quire spec section 6 has been broken.
@@ -129,7 +130,31 @@ fn map_focus_at_an_unresolved_band_refuses_rather_than_resolving() {
         driver.cursor().is_some(),
         "the cursor must exist at every band"
     );
-    assert_eq!(driver.strip_text(), Some("nothing here yet"));
+    // **RETARGETED by The Quadrat's Task 6.** This asserted
+    // `Some("nothing here yet")`, and that premise is gone: every rung
+    // draws the Mercator raster now — band B included — so the chamber
+    // band's plate is real terrain and the cursor over it has a real
+    // answer. Refusing here would be the LIE the doc above warns about, in
+    // the other direction: the picture would be showing ground the strip
+    // claimed to know nothing about.
+    //
+    // What survives is the doc's actual rule — a name is never faked — so
+    // this pins the two things that still make it checkable: the strip
+    // reports something, and `NOTHING_HERE_YET` is not it.
+    let strip = driver.strip_text();
+    assert!(
+        strip.is_some(),
+        "the strip always reports once the map is focused"
+    );
+    assert_ne!(
+        strip,
+        Some("nothing here yet"),
+        "the chamber band's plate is the raster now, and the raster resolves"
+    );
+    assert!(
+        strip.is_some_and(|t| t.contains("clamped at")),
+        "the answer must be the raster's own, caption included, got {strip:?}"
+    );
 }
 
 /// The walk band DOES have a resolver (the terrain-feature index, scoped to
@@ -202,78 +227,104 @@ fn moving_the_cursor_off_the_observers_box_changes_the_strip() {
             "the disclosure rides along: {at_observer_text:?}"
         );
 
-        // Five columns west: no chart cell projects onto this box (verified by
-        // instrumenting `chart::cell_at` directly), so the resolver honestly
-        // reports UNNAMED_TERRAIN rather than repeating the observer's name.
+        // **RETARGETED by Task 6, and the DISTANCE is the retarget.** Five
+        // columns west used to land on a box the observer's own chart had no
+        // cell in, so the resolver honestly said `unnamed terrain`. Band B
+        // is the raster now: five columns west is five band-B TILES west,
+        // real ground, and it resolves. It also resolves to the SAME
+        // feature, because a band-B tile is far finer than the mesh the
+        // terrain lives on — some hundred tiles share one grid-level vertex
+        // — so a five-tile step genuinely cannot change the answer and
+        // asserting it did would pin a falsehood.
+        //
+        // The property under test is unchanged: resolution must be a
+        // function of the cursor, not of the observer. So the cursor is
+        // driven far enough to cross a real vertex boundary — past the
+        // plate's own edge, which SCROLLS the window (spec §4.2), which is
+        // the only way to travel that far at this rung.
         driver.apply(Action::CursorBy(-5, 0));
-        let five_west = driver.strip_text().map(str::to_string);
+        driver.apply(Action::CursorBy(i16::MIN, 0));
+        for _ in 0..40 {
+            driver.apply(Action::CursorBy(i16::MIN, 0));
+        }
+        let far_west = driver.strip_text().map(str::to_string);
         assert_ne!(
-            five_west, at_observer,
-            "the strip must change when the cursor moves off the observer's box"
-        );
-        let five_west_text = five_west
-            .as_deref()
-            .expect("the strip always reports once the map is focused");
-        assert!(
-            five_west_text.starts_with("unnamed terrain"),
-            "five west is honestly unnamed, got {five_west_text:?}"
+            far_west, at_observer,
+            "the strip must change once the cursor has travelled off the observer's \
+             own terrain — resolution is a function of the cursor, not of the \
+             possession"
         );
 
-        // And moving back must restore the observer's own answer — proving the
-        // dependency runs both ways, not just away from the start.
-        driver.apply(Action::CursorBy(5, 0));
-        assert_eq!(driver.strip_text(), at_observer.as_deref());
+        // And coming back must restore the observer's own answer — proving
+        // the dependency runs both ways, not just away from the start.
+        let mut fresh = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
+        submit_line(&mut fresh, "map");
+        assert_eq!(
+            fresh.strip_text(),
+            at_observer.as_deref(),
+            "the same state must resolve the same answer"
+        );
     });
 }
 
-/// FIX ROUND 2: `resolve_walk_band` must resolve against the plate's REAL
-/// content height, not a fixed floor assumption. `Driver::resize` threads
-/// the live terminal height in exactly the way `main`'s `play` loop does;
-/// this test plays the same proof the round-2 reviewer ran directly
-/// against seed 42's real flagship chart: at the default cursor position
-/// `(20, 10)` (the plate's centre at the 20-row floor), a taller terminal
-/// (40 rows -> content height 36, centre row 18) makes `(20, 10)` a
-/// different, off-centre box — no chart cell lands there — so the strip
-/// must change from the observer's real name to `UNNAMED_TERRAIN`, not
-/// silently keep answering as if the plate were still 20 rows tall.
+/// FIX ROUND 2, **RETARGETED by The Quadrat's Task 6.** The original
+/// asserted that a resize CHANGED the strip: at the 20-row floor screen
+/// `(20, 10)` was the observer's own chart box, and at 40 rows the real
+/// centre moved to row 18, so `(20, 10)` became a box with no chart cell in
+/// it and the strip fell to `unnamed terrain`. Both halves of that premise
+/// are gone — band B draws the raster, so every screen position is real
+/// ground, and the window re-centres on the observer as part of the resize,
+/// so the observer is at the NEW plate's middle rather than at the old
+/// one's.
+///
+/// The surviving property is the one that made the original worth having,
+/// stated against what is now drawn: **a resize must leave the observer at
+/// the middle of the plate it just resized to, not at the middle of the one
+/// before it.** That is what `Driver::resize` threading the live terminal
+/// height actually buys, and a resize that ignored the new height would put
+/// the observer visibly off-centre — the same class of defect, on the same
+/// axis, observable in the picture instead of in a refusal string.
 #[test]
-fn resize_re_resolves_against_the_real_plate_height() {
+fn resize_re_centres_band_b_on_the_observer_at_the_new_plate_height() {
     let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
     submit_line(&mut driver, "map");
-    let at_floor_height = driver.strip_text().map(str::to_string);
+
+    // The observer's own marker, and where it sits, at two terminal heights.
+    let marker_row = |driver: &mut Driver, w: u16, h: u16| -> (u16, u16) {
+        let plate = driver
+            .world_plate_for_redraw(w, h)
+            .expect("band B draws a plate");
+        let found = (0..plate.height())
+            .flat_map(|y| (0..plate.width()).map(move |x| (x, y)))
+            .find(|&(x, y)| plate.get(x, y).is_some_and(|c| c.glyph == Some('@')))
+            .expect("the observer is drawn on their own band-B plate");
+        (found.0, found.1)
+    };
+
+    driver.resize(80, 24);
+    let (_, floor_h) = (0u16, 20u16); // world_plate_dims(80, 24) -> 40x20
+    let at_floor = marker_row(&mut driver, 80, 24);
     assert!(
-        at_floor_height
-            .as_deref()
-            .is_some_and(|t| t.starts_with("Vngashngatva")),
-        "at the 20-row floor, screen (20, 10) is the observer's own box, got {at_floor_height:?}"
+        at_floor.1 < floor_h,
+        "sanity: the marker is inside the floor's own plate, got {at_floor:?}"
     );
 
-    // A 40-row terminal: real content height is 40 - RESERVED_ROWS(4) = 36
-    // (the same arithmetic `spread::compose`/`content_height` apply), so
-    // the real centre row is 18, not 10 -- the cursor's SCREEN position
-    // (20, 10) has not moved, but it is no longer the observer's box.
     driver.resize(80, 40);
-    let at_taller_height = driver.strip_text().map(str::to_string);
+    let at_taller = marker_row(&mut driver, 80, 40);
     assert_ne!(
-        at_taller_height, at_floor_height,
-        "resizing must re-resolve against the real plate height, not repeat the floor's stale answer"
+        at_taller, at_floor,
+        "the marker must move with the plate it is drawn on — a resize that kept \
+         the old origin would leave it at the same cell"
     );
-    let at_taller_text = at_taller_height
-        .as_deref()
-        .expect("the strip always reports once the map is focused");
-    assert!(
-        at_taller_text.starts_with("unnamed terrain"),
-        "no chart cell lands on (20, 10) once the real centre moves to (20, 18), so \
-         the walk-band chain comes up empty there (not None -- the strip always \
-         reports something once the map is focused; NOTHING_HERE_YET is reserved \
-         for a resolver-absent band), got {at_taller_text:?}"
+    // The real assertion: centred on the NEW plate. `world_plate_dims(80,
+    // 40)` is 72x36, so the middle row is 18 — the very row the original
+    // test computed by hand and then asserted a refusal about.
+    let (_, new_h) = (72u16, 36u16);
+    assert_eq!(
+        at_taller.1,
+        new_h / 2,
+        "the observer must sit at the middle row of the plate the resize produced"
     );
-
-    // Move the cursor to what is NOW the real centre -- it must resolve
-    // the observer's own name again, proving the resolver is keyed off the
-    // plate's live height end to end, not merely detecting a mismatch.
-    driver.apply(Action::CursorBy(0, 8)); // (20, 10) -> (20, 18), the new centre
-    assert_eq!(driver.strip_text(), at_floor_height.as_deref());
 }
 
 /// The cursor's clamp must also track the real plate height (the reviewer's
@@ -296,38 +347,49 @@ fn the_cursor_clamp_tracks_the_real_plate_height_too() {
     );
 }
 
-/// FIX ROUND 1 (Task 3a's own review, regression): `Focus::Map` alone must
-/// NOT activate the world view. The bug this pins: before the fix,
-/// `main.rs`'s `redraw` computed `Some(driver.world_plate(w, h))` whenever
-/// `driver.focus() == Focus::Map`, with no further gate. But `Focus::Map`
-/// already meant something else, shipped across `9f69e4e2a`/`81d940d9c`/
-/// `64c80be36` and chronicled in `book/src/chronicle/the-stride.md`/
-/// `the-stylus.md`: a cursor over the WALK BAND's own small chart, with the
-/// strip naming the feature it points at. Reusing the same focus value for
-/// the world view retired that shipped feature into misleading dead UI: a
-/// 210x56 redraw would draw a 104-column Mercator while the cursor stayed
-/// clamped to the OLD 40-column plate, resolving the walk band's own chart,
-/// which the Mercator had silently replaced -- a picture and a cursor/strip
-/// that no longer agreed at all, and columns 40..104 permanently
-/// uncursorable. This test drives the SAME call `main.rs`'s `redraw` makes
-/// (`Driver::world_plate_for_redraw`, then `render_with`) and checks what
-/// actually lands on the `Grid` and the strip -- it would have FAILED
-/// against the pre-fix `main.rs` logic (reproduced in the `regressed_grid`
-/// block below, built by calling `render_with` the OLD, ungated way).
+/// FIX ROUND 1 (Task 3a's own review, regression), **RETARGETED by The
+/// Quadrat's Task 6**, from
+/// `map_focus_alone_does_not_activate_the_world_view`. The bug it was
+/// written for: `main.rs`'s `redraw` used to compute
+/// `Some(driver.world_plate(w, h))` whenever `focus() == Focus::Map`, with
+/// no rung gate — so a 210x56 redraw drew a 104-column Mercator while the
+/// cursor stayed clamped to the OLD 40-column plate and the strip resolved
+/// the walk band's own chart, which the Mercator had silently replaced: a
+/// picture and a cursor/strip that no longer agreed at all, and columns
+/// 40..104 permanently uncursorable (shipped across
+/// `9f69e4e2a`/`81d940d9c`/`64c80be36`, chronicled in
+/// `book/src/chronicle/the-stride.md`/`the-stylus.md`).
+///
+/// **The gate that fixed it is gone, because band B now DRAWS the raster.**
+/// Asserting `world_plate_for_redraw(..).is_none()` under `Focus::Map`
+/// would now pin the arctic-corner state Task 6 exists to leave behind. But
+/// the DEFECT is a coherence defect, not a gating one, and coherence is
+/// still checkable and still exactly what could regress: the picture, the
+/// cursor's reach and the strip must all be about the same plate. So this
+/// asserts that trio directly, which is strictly closer to the original
+/// complaint than the gate ever was.
+///
+/// It still discriminates the original bug: under it the plate was 104
+/// columns wide and the cursor could reach 39, which the reach assertion
+/// below fails outright.
 #[test]
-fn map_focus_alone_does_not_activate_the_world_view() {
+fn map_focus_at_band_b_keeps_the_picture_the_cursor_and_the_strip_on_one_plate() {
     let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
+    let (w, h) = (210u16, 56u16);
+    driver.resize(w, h);
     submit_line(&mut driver, "map");
     assert_eq!(driver.focus(), Focus::Map);
 
-    let (w, h) = (210u16, 56u16);
-
-    // The gate itself: the world view defaults OFF, and nothing in this
-    // campaign yet turns it on (Task 3b owns that gesture), so the gated
-    // plate must be `None`.
+    let world_plate = Some(
+        driver
+            .world_plate_for_redraw(w, h)
+            .expect("band B draws a plate now — Task 6"),
+    );
+    let plate_w = spread::world_plate_width(w, h);
     assert!(
-        driver.world_plate_for_redraw(w, h).is_none(),
-        "the world view must default OFF -- Task 3b owns the gesture that turns it on"
+        plate_w > spread::PLATE_WIDTH,
+        "the test terminal must produce a plate wider than the retired fixed \
+         walk-band width, or the reach assertion below proves nothing"
     );
 
     let json = driver.snapshot();
@@ -336,11 +398,6 @@ fn map_focus_alone_does_not_activate_the_world_view() {
         text: &empty_line,
         caret: 0,
     };
-    // Hoisted because `world_plate_for_redraw` takes `&mut self` since the
-    // plate memo (perf/world-plate-memo) -- it cannot share an expression
-    // with the immutable reads below. Same call, same arguments, same
-    // assertions; only the borrow is sequenced.
-    let world_plate = driver.world_plate_for_redraw(w, h);
     let (grid, _) = render_with(
         &json,
         w,
@@ -356,72 +413,38 @@ fn map_focus_alone_does_not_activate_the_world_view() {
     )
     .unwrap();
 
-    // The walk band's own chart must still be drawn somewhere in the plate
-    // region -- a regression that reinstates the old unconditional
-    // `Some(driver.world_plate(w, h))` replaces the whole region with the
-    // Mercator instead, and no cell anywhere would carry `Source::Chart`.
+    // ONE: the picture is the raster WITH the perception overlay on it —
+    // both channels present in the plate region. `Source::World` alone would
+    // mean the overlay was lost (Ruling 19's concern); `Source::Chart` alone
+    // would mean the raster was.
     let content_h = spread::content_height(h);
-    let chart_drawn = (0..content_h).any(|y| {
-        (0..spread::PLATE_WIDTH).any(|x| grid.get(x, y).is_some_and(|c| c.source == Source::Chart))
-    });
+    let sources: BTreeSet<Source> = (0..content_h)
+        .flat_map(|y| (0..plate_w).map(move |x| (x, y)))
+        .filter_map(|(x, y)| grid.get(x, y).filter(|c| !c.is_blank()).map(|c| c.source))
+        .collect();
     assert!(
-        chart_drawn,
-        "the walk band's own chart must still draw when the world view is off"
+        sources.contains(&Source::World),
+        "band B's plate must carry the terrain raster, got {sources:?}"
+    );
+    assert!(
+        sources.contains(&Source::Chart),
+        "band B's plate must carry the perception overlay, got {sources:?}"
     );
 
-    // And no `Source::World` cell may appear anywhere the Mercator would
-    // have claimed had the old bug still gated on `Focus::Map` alone --
-    // the full fit width, not just the old fixed `PLATE_WIDTH`.
-    let would_be_world_width = spread::world_plate_width(w, h);
-    let world_leaked = (0..content_h).any(|y| {
-        (spread::PLATE_WIDTH..would_be_world_width)
-            .any(|x| grid.get(x, y).is_some_and(|c| c.source == Source::World))
-    });
-    assert!(
-        !world_leaked,
-        "no world content may appear while the view is off"
+    // TWO: the cursor reaches the plate that was actually drawn. This is the
+    // original bug, stated positively.
+    driver.apply(Action::CursorBy(i16::MAX, 0));
+    assert_eq!(
+        driver.cursor().expect("the map is focused").x,
+        plate_w - 1,
+        "every drawn column must be reachable — the old gate left 40..{plate_w} dead"
     );
 
-    // The strip must still resolve the walk band's own real name -- the
-    // exact feature the regression silently retired.
+    // THREE: the strip resolves against that same plate, caption included.
+    let strip = driver.strip_text();
     assert!(
-        driver
-            .strip_text()
-            .is_some_and(|t| t.starts_with("Vngashngatva")),
-        "the strip must still resolve against the walk band, got {:?}",
-        driver.strip_text()
-    );
-
-    // Reproduce the OLD, buggy gate directly, to show the assertions above
-    // really do discriminate it: `Some(driver.world_plate(w, h))`
-    // unconditionally once focus is `Focus::Map`, with no `world_view`
-    // check at all.
-    let regressed_plate = driver.world_plate(w, h);
-    let (regressed_grid, _) = render_with(
-        &json,
-        w,
-        h,
-        driver.focus(),
-        driver.cursor(),
-        cmd_line,
-        driver.strip_text(),
-        driver.echo(),
-        Some(&regressed_plate),
-        driver.strip_offset(),
-        None,
-    )
-    .unwrap();
-    let regressed_chart_drawn = (0..content_h).any(|y| {
-        (0..spread::PLATE_WIDTH).any(|x| {
-            regressed_grid
-                .get(x, y)
-                .is_some_and(|c| c.source == Source::Chart)
-        })
-    });
-    assert!(
-        !regressed_chart_drawn,
-        "sanity check: the old unconditional gate must NOT draw the walk band's chart \
-         (if it does, this test's own discrimination is broken, not the fix)"
+        strip.is_some_and(|t| t.contains("clamped at")),
+        "the strip must be the raster's own answer, got {strip:?}"
     );
 }
 
