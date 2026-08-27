@@ -10,11 +10,12 @@ use crate::action::{
 };
 use crate::agent::{settlement_position, walk_depth};
 use crate::body::Body;
-use crate::clock::{climb_factor, cost_ticks, days_of, ticks_per_local_day};
+use crate::clock::{climb_factor, cost_of};
 use crate::controller::{Controller, DefaultController, PlayerController};
 use crate::interior::{
     AnchorId, Interior, SeamKind, interior_of, landing, route_within, seam_kind, warmth_at,
 };
+use hornvale_kernel::units::TickSpan;
 use hornvale_kernel::{
     ANIMAL_PREY, ConditionResponse, EntityId, Facet, FacetId, Fact, Ledger, Lineage, PHOTOSYNTHATE,
     PLANT_FORAGE, ResourceVector, RoomMeshMemo, TickSystem, Value, World, WorldTime,
@@ -4186,7 +4187,6 @@ fn eaten_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
 /// once it knows water — committing a dated `agent-at`/`drank` at each
 /// executed step. Holds a `Terrain` to compute belief and exploration
 /// mid-walk. Run through c6's `tick`.
-/// type-audit: bare-ok(ratio: day_length_std)
 pub struct DriveMovements<'a> {
     /// The NPCs this tick advances.
     pub npcs: Vec<Body>,
@@ -4196,13 +4196,15 @@ pub struct DriveMovements<'a> {
     pub to: WorldTime,
     /// The drive parameters.
     pub params: DriveParams,
-    /// The world's rotation period in standard days (`Calendar::day_length`),
-    /// `None` on a tidally-locked world. The action clock divides the planet's
-    /// day into an exact integer number of ticks (The Action Clock, spec §4.1),
-    /// so the scheduler needs the day length the same way it needs the drive
-    /// parameters. Read by the shared clock (the queue's tick scale) and by
-    /// every charge `advance_one` and `catch_up` make against `clock::days_of`.
-    pub day_length_std: Option<f64>,
+    /// The world's rotation period as an exact tick span
+    /// (`Calendar::day_ticks`), `None` on a tidally locked world. The action
+    /// clock divides the planet's day into an exact integer number of ticks
+    /// (The Action Clock, spec §4.1), so the scheduler needs the day length
+    /// the same way it needs the drive parameters.
+    ///
+    /// Was `day_ticks: Option<f64>` until The Foliot; a day is a whole
+    /// number of ticks now, so the scheduler reads the integer directly.
+    pub day_ticks: Option<TickSpan>,
     /// The elevation field belief and exploration read.
     pub terrain: &'a dyn Terrain,
 }
@@ -4564,7 +4566,10 @@ fn catch_up(
     frozen: &Ledger,
     out: &[Fact],
     cap: usize,
-    day_length_std: Option<f64>,
+    // `day_ticks` was a parameter here until The Foliot. It is gone rather
+    // than underscored: a replay's charge no longer consults the planet at
+    // all, because a cost IS a kernel span. Its absence is the clearest
+    // statement that the two lattices have merged.
     mesh_memo: &mut RoomMeshMemo,
     home_nav_cache: &mut HomeNavCache,
     controller: &mut dyn Controller,
@@ -4641,7 +4646,7 @@ fn catch_up(
                 // derivation failure `decide_step` is shared to avoid. No
                 // terrain factor: a within-room step does not change room, so
                 // there is no elevation pair to climb.
-                day += days_of(cost_ticks(&action, npc.mass_kg, 1.0), day_length_std);
+                day += cost_of(&action, npc.mass_kg, 1.0).as_std_days();
                 if day > horizon {
                     break;
                 }
@@ -4783,32 +4788,22 @@ impl<'a> DriveMovements<'a> {
             std::collections::BTreeMap::new();
         let mut queue: std::collections::BTreeSet<(u64, EntityId)> =
             std::collections::BTreeSet::new();
-        // Ticks per STANDARD day on this world: a local day is exactly
-        // `ticks_per_local_day` ticks (spec §4.1), so this is the inverse of
-        // `clock::days_of` and the two agree to the tick.
-        let per_day = ticks_per_local_day(self.day_length_std) as f64;
-        let scale = match self.day_length_std.filter(|d| d.is_finite() && *d > 0.0) {
-            Some(d) => per_day / d,
-            None => per_day,
-        };
-        // Derived from the EXACT standard tick count rather than a re-derived
-        // f64 day (spec §2.1). The scheduler's lattice is LOCAL ticks; the
-        // kernel's is standard-day ticks.
-        let local_ticks_of = |t: WorldTime| -> u64 {
-            match self.day_length_std.filter(|d| d.is_finite() && *d > 0.0) {
-                // A rotation pin puts the two lattices at different rates, so
-                // this crossing is a genuine rescale and keeps the arithmetic
-                // it always had — bit for bit, now read off `ticks()`.
-                Some(d) => ((t.ticks() as f64 / WorldTime::TICKS_PER_STD_DAY as f64)
-                    * (per_day / d))
-                    .round() as u64,
-                // With no pin the two lattices COINCIDE, so the conversion is
-                // the identity — exactly, not to within a rounding budget.
-                // `max(0)` states what the old saturating `as u64` cast did
-                // silently for a pre-genesis instant.
-                None => t.ticks().max(0) as u64,
-            }
-        };
+        // Standard ticks per standard day. THE RESCALE IS GONE (The Foliot):
+        // this used to be `ticks_per_local_day / day_ticks`, converting
+        // between the scheduler's local-tick lattice and the kernel's. A
+        // world's day is now an exact tick count, so `ticks_per_local_day` IS
+        // that count and the ratio is exactly `TICKS_PER_STD_DAY` — the two
+        // lattices coincide for every world, not just an unpinned one.
+        let scale = WorldTime::TICKS_PER_STD_DAY as f64;
+        // THE IDENTITY (The Foliot). This used to branch: an unpinned world's
+        // two lattices coincided, but a rotation pin put them at different
+        // rates and the crossing was a genuine `f64` rescale. With the day
+        // drawn as an exact tick count there is one lattice for every world,
+        // pinned or not, so a scheduler tick IS a kernel tick.
+        //
+        // `max(0)` states what the old saturating `as u64` cast did silently
+        // for a pre-genesis instant.
+        let local_ticks_of = |t: WorldTime| -> u64 { t.ticks().max(0) as u64 };
         let to_ticks = local_ticks_of(self.to);
         let from_ticks = local_ticks_of(self.from);
         for npc in &self.npcs {
@@ -4880,7 +4875,6 @@ impl<'a> DriveMovements<'a> {
                 frozen,
                 &out,
                 CATCH_UP_STEP_CAP,
-                self.day_length_std,
                 mesh_memo,
                 home_nav_cache,
                 // Every body here is GOAP-driven (the driven body's own
@@ -5230,7 +5224,7 @@ impl<'a> DriveMovements<'a> {
                 }
                 _ => 1.0,
             };
-            st.day += days_of(cost_ticks(action, npc.mass_kg, ground), self.day_length_std);
+            st.day += cost_of(action, npc.mass_kg, ground).as_std_days();
             if st.day > self.to.as_std_days() {
                 return false;
             }
@@ -5322,7 +5316,7 @@ impl<'a> DriveMovements<'a> {
             // KEPT as `unreachable!` (fix round 1, Finding 1) — unlike the
             // two `Drive::serviceability` sites this task also touches,
             // this arm sits DOWNSTREAM of a charge this same function
-            // already took: `st.day += days_of(cost_ticks(action, ...))`
+            // already took: `st.day += days_of(cost_of(action, ...))`
             // above (before this match) reads `base_ticks(action)`, which
             // is `Ticks(0)` for every group-A instrument. `cost_ticks`'s
             // own `.max(1)` floor happens to keep today's actual charge
@@ -5495,7 +5489,6 @@ impl<'a> DriveMovements<'a> {
             frozen,
             &out,
             CATCH_UP_STEP_CAP,
-            self.day_length_std,
             mesh_memo,
             home_nav_cache,
             &mut PlayerController::new(),
@@ -7280,7 +7273,7 @@ mod tests {
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
         // The subject prints as its ROLE in this fixture, not as its raw id.
@@ -7544,7 +7537,7 @@ mod tests {
                 from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
                 to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
                 params: SUSTENANCE,
-                day_length_std: None,
+                day_ticks: None,
                 terrain: &terrain,
             };
             sys.step(&ledger)
@@ -7583,7 +7576,7 @@ mod tests {
             from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
             to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let facts = sys.step(&ledger);
@@ -7609,11 +7602,9 @@ mod tests {
             drank_day.as_std_days() > arrived,
             "the drink still happens in the same instant as the arrival ({arrived})"
         );
-        let expected = crate::clock::days_of(
-            crate::clock::cost_ticks(&Action::Drink, mass, 1.0),
-            // The fixture has no sky, so the clock takes its base rate.
-            None,
-        );
+        // A cost IS a kernel span now (The Foliot), so its length in days is
+        // the span's own continuous view — no clock conversion in between.
+        let expected = crate::clock::cost_of(&Action::Drink, mass, 1.0).as_std_days();
         assert!(
             (drank_day.as_std_days() - arrived - expected).abs() < 1e-12,
             "a drink should cost exactly {expected} days; the gap is {}",
@@ -7678,7 +7669,7 @@ mod tests {
                 from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
                 to: WorldTime::from_std_days(20.0).expect("a day value is finite"),
                 params: SUSTENANCE,
-                day_length_std: None,
+                day_ticks: None,
                 terrain: &terrain,
             };
             sys.step(&ledger)
@@ -7716,7 +7707,7 @@ mod tests {
             from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
             to: WorldTime::from_std_days(20.0).expect("a day value is finite"),
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let facts = sys.step(&ledger);
@@ -7741,7 +7732,7 @@ mod tests {
         // regression by a tick is the honest form of "one timeline": asserting
         // strict monotonicity would be asserting that scheduling happens in
         // `f64`, which is the thing spec §4 refuses to do.
-        let tick = crate::clock::days_of(crate::clock::Ticks(1), None);
+        let tick = hornvale_kernel::units::TickSpan::from_ticks(1).as_std_days();
         let mut prev = f64::NEG_INFINITY;
         for f in &facts {
             let d = f.day.expect("every emitted fact is dated").as_std_days();
@@ -7816,7 +7807,7 @@ mod tests {
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
         let next =
@@ -8119,7 +8110,7 @@ mod tests {
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let next =
@@ -8723,7 +8714,7 @@ mod tests {
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
         let next =
@@ -8804,7 +8795,7 @@ mod tests {
             from: WorldTime::GENESIS,
             to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
 
@@ -8893,7 +8884,7 @@ mod tests {
             // generous next to `Drink`'s 150-tick base cost.
             to: WorldTime::from_std_days(3.5).expect("a day value is finite"),
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
         let mut player = PlayerController::new();
@@ -9005,7 +8996,7 @@ mod tests {
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
         world.ledger = hornvale_kernel::tick(
@@ -9083,7 +9074,7 @@ mod tests {
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -9178,7 +9169,7 @@ mod tests {
             params: degenerate,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -9245,7 +9236,7 @@ mod tests {
             params: p,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -9528,7 +9519,7 @@ mod tests {
                 params: SUSTENANCE,
                 // No sky in a planted-terrain fixture: the action clock takes its
                 // base rate (spec §4.1).
-                day_length_std: None,
+                day_ticks: None,
                 terrain: &terrain,
             };
             let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -9816,7 +9807,7 @@ mod tests {
                 params: SUSTENANCE,
                 // No sky in a planted-terrain fixture: the action clock takes its
                 // base rate (spec §4.1).
-                day_length_std: None,
+                day_ticks: None,
                 terrain: &terrain,
             };
             let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -10046,7 +10037,7 @@ mod tests {
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let next =
@@ -11110,7 +11101,7 @@ mod tests {
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let after1 = hornvale_kernel::tick(&ledger, &[&sys1], &["drive-movements"], &reg).unwrap();
@@ -11159,7 +11150,7 @@ mod tests {
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let after2 = hornvale_kernel::tick(&after1, &[&sys2], &["drive-movements"], &reg).unwrap();
@@ -11187,7 +11178,7 @@ mod tests {
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let cafter = hornvale_kernel::tick(&control, &[&csys], &["drive-movements"], &reg).unwrap();
@@ -11663,7 +11654,7 @@ mod tests {
                 params: SUSTENANCE,
                 // No sky in a planted-terrain fixture: the action clock takes its
                 // base rate (spec §4.1).
-                day_length_std: None,
+                day_ticks: None,
                 terrain: &terrain,
             };
             let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -11755,7 +11746,7 @@ mod tests {
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -13870,7 +13861,7 @@ mod tests {
             from: WorldTime::from_std_days(0.35).expect("a day value is finite"),
             to: WorldTime::from_std_days(1.35).expect("a day value is finite"),
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &hearth_terrain,
         };
         let (_facts, occ) =
@@ -13917,7 +13908,7 @@ mod tests {
             from: WorldTime::from_std_days(0.35).expect("a day value is finite"),
             to: WorldTime::from_std_days(1.35).expect("a day value is finite"),
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &wild_terrain,
         };
         let (_facts2, occ2) =
@@ -14310,7 +14301,7 @@ mod tests {
             from: now,
             to: now,
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let (facts, occ) =
@@ -14519,7 +14510,6 @@ mod tests {
             &ledger,
             &[],
             CATCH_UP_STEP_CAP,
-            None,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
             &mut DefaultController,
@@ -14582,7 +14572,7 @@ mod tests {
             from: now,
             to: now,
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let (_f1, occ_forward) = forward.step_with_occupancy(
@@ -14599,7 +14589,7 @@ mod tests {
             from: now,
             to: now,
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let (_f2, occ_reversed) = reversed.step_with_occupancy(
@@ -14701,10 +14691,9 @@ mod tests {
         // mass, no terrain factor, no rotation) — rather than restated as a
         // literal here, so a retune of the `MoveWithin` dial cannot leave this
         // test's arithmetic quietly disagreeing with the loop it measures.
-        let step_days = days_of(
-            cost_ticks(&Action::MoveWithin(anchors[0]), npc.mass_kg, 1.0),
-            None,
-        );
+        // A cost IS a kernel span now (The Foliot), so its length in days is
+        // the span's own continuous view.
+        let step_days = cost_of(&Action::MoveWithin(anchors[0]), npc.mass_kg, 1.0).as_std_days();
 
         let run = |horizon: f64| -> Option<AnchorId> {
             let mut occ = Occupancy::default();
@@ -14732,7 +14721,6 @@ mod tests {
                 &ledger,
                 &[],
                 CAP,
-                None,
                 &mut RoomMeshMemo::new(),
                 &mut HomeNavCache::new(),
                 &mut DefaultController,
@@ -14744,7 +14732,7 @@ mod tests {
         // loop exhausts its horizon (not the cap) and lands 4 hops down the
         // corridor. The extra half-step of slack absorbs float summation
         // drift between `entry_day + 4.0 * step_days` (computed once) and
-        // `catch_up`'s own `day += days_of(cost_ticks(..))` run four times in
+        // `catch_up`'s own `day += days_of(cost_of(..))` run four times in
         // a row — the two need not land on the identical f64, and an exact
         // boundary would make this test's own arithmetic, not the mechanism,
         // decide whether the 4th hop lands in time.

@@ -608,6 +608,16 @@ pub fn calendar_of(system: &StarSystem) -> Calendar {
 }
 
 impl Calendar {
+    /// Length of one local day as an exact tick span, if the world has one.
+    ///
+    /// The stored truth (The Foliot). Prefer this over [`Self::day_length`]
+    /// wherever the caller is doing integer time arithmetic — the scheduler
+    /// in `windows/vessel` is the motivating one — so the continuous view is
+    /// reserved for the orbital mathematics that genuinely needs it.
+    pub fn day_ticks(&self) -> Option<TickSpan> {
+        self.day
+    }
+
     /// Length of one local day, if the world has one.
     ///
     /// Derived from the stored exact tick count (The Foliot): the day is a
