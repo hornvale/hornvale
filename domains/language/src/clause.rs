@@ -1371,9 +1371,20 @@ pub enum ParseError {
     NoVerbGroup,
     /// The text after the determiner doesn't match (a prefix of) any
     /// complement surface in the caller's `ParseContext`, at any of the
-    /// numbers the verb group left open.
+    /// numbers the verb group left open — and (The Mortise, Task 8) neither
+    /// does a one-level recursive attempt at that same text as an embedded
+    /// clause, whether because the recursion itself failed, the shared
+    /// depth budget was already spent, or a matched embedded clause's
+    /// number could not be resolved without a complement to disambiguate
+    /// it (`resolve_embedded_number`). Also carries a top-level `" and "`
+    /// in the whole clause body: that marks a
+    /// [`Coordination`], which is refused before any split is attempted
+    /// rather than misread as an embedding (see
+    /// `parse_common_with_tail`'s doc).
     UnknownComplement {
-        /// The unrecognized text following the determiner.
+        /// The unrecognized text following the determiner, or (for a
+        /// top-level coordination marker) the whole clause body that was
+        /// refused before any split.
         after: String,
     },
     /// The text has no terminal `.`, so the construction's final literal
@@ -1457,6 +1468,99 @@ pub fn parse_common_with_tail(
 ) -> Result<(Clause, Vec<String>), ParseError> {
     // Terminal literal first.
     let body = text.strip_suffix('.').ok_or(ParseError::Unterminated)?;
+    parse_clause_body(body, ctx, 0)
+}
+
+/// [`parse_common_with_tail`]'s own body (The Mortise, Task 8), now able to
+/// recurse at the point the walk used to give up outright, and taught to
+/// refuse a coordination sentence before ever attempting that recursion.
+///
+/// `depth` reads the SAME shared embedding budget the realize side spends
+/// ([`clause_embed_depth`]/[`subject_embed_depth`] against
+/// [`CLAUSE_EMBED_MAX_DEPTH`]): the outermost call is depth `0`, and one
+/// recursive attempt at the unresolved remainder is spent going to depth
+/// `1` — past the cap, the walk reports the failure it already had rather
+/// than recursing further. Only the OBJECT slot recurses here
+/// (`Argument::Clause`): a clause bound to the SUBJECT slot would need the
+/// walk to try more than the earliest verb-group occurrence as the
+/// subject/verb split, since the subject's own inner verb group is the one
+/// that occurs first — a different, backtracking algorithm this task does
+/// not build (see `parse_common_with_tail`'s own doc and this campaign's
+/// task report for the reasoning; `windows/book`'s `Subject::Clause`
+/// `unreachable!()` therefore stays accurate).
+///
+/// **The boundary marker discriminates, and the check runs BEFORE the
+/// verb-group split, not after it (the controller finding this task
+/// shipped against).** Common's coordination marker is the fixed word
+/// `"and"` (Task 6); its embedding marker is NO WORD AT ALL (Task 5's drawn
+/// complementizer is a tongue-side feature Common does not spend). So a
+/// body containing a top-level `" and "` names a [`Coordination`], never a
+/// single [`Clause`] — and the earliest-verb-group split would otherwise
+/// land on the FIRST conjunct's own verb, leaving a remainder that, in
+/// general, legitimately CAN contain a real registered complement further
+/// in (a second conjunct that happens to be a plain classification), which
+/// would then recurse successfully and misreport the second conjunct as a
+/// clause embedded under the first conjunct's predicate — plausible
+/// garbage, not a parse. Refusing the instant the marker is seen, before
+/// any split is attempted, closes that hole at both the outermost call and
+/// every recursive one: a [`Coordination`] can never itself be embedded
+/// (`Argument::Clause`/`Subject::Clause` wrap a single [`Clause`], never a
+/// list of them), so the identical check is correct at every depth, not
+/// just depth `0`. **Parsing a [`Coordination`] back out of its own text is
+/// not attempted** — spec §6's own success criterion asks only that
+/// `parse_common` round-trip embedding and DISTINGUISH the two operators by
+/// this marker, not that it recover a `Coordination`; building that
+/// (including inverting tier 2's elided-subject reattribution,
+/// [`elide_coordinated_subjects`]'s own inverse) is out of this task's
+/// scope, named rather than silently absent.
+/// Resolve the `Number` of a clause whose object recursed into an
+/// [`Argument::Clause`], where — unlike the non-embedded path just below —
+/// there is no complement surface to disambiguate a syncretic verb-group
+/// form. Two independent signals are tried, and the number is returned only
+/// when one of them is unambiguous:
+///
+/// 1. **The verb group itself.** `numbers` is the same candidate set
+///    [`parse_clause_body`]'s non-embedded path already computes (every
+///    `Number` a matched form is consistent with) — present tense is
+///    injective (`"knows"` vs `"know"`), so this alone already resolves it
+///    for a present-tense matrix clause.
+/// 2. **The subject's own pronoun row.** [`PRONOUN_PARADIGM`]'s nominative
+///    forms are not uniformly ambiguous: `"I"`/`"we"` name exactly one
+///    `Number` each (English spells first person differently by number),
+///    while `"they"`/`"you"` do not (spec §4.5 reuses `"they"` for third
+///    singular). When the subject text names exactly one row, that row's
+///    number is intersected with `numbers` — never used alone, so a
+///    genuinely inconsistent pairing (which no realizer produces) still
+///    fails closed rather than returning a number the verb group rejects.
+///
+/// `None` when neither signal is unambiguous — the embedding is refused
+/// rather than guessed, matching this task's stop-and-report posture for
+/// anything past the small extension it was sanctioned to build.
+fn resolve_embedded_number(numbers: &[Number], subject_text: &str) -> Option<Number> {
+    if let [n] = numbers {
+        return Some(*n);
+    }
+    let pronoun_rows: Vec<Number> = PRONOUN_PARADIGM
+        .iter()
+        .filter(|(form, _, _, case)| *case == PronounCase::Nominative && *form == subject_text)
+        .map(|(_, _, n, _)| *n)
+        .collect();
+    match pronoun_rows.as_slice() {
+        [n] if numbers.contains(n) => Some(*n),
+        _ => None,
+    }
+}
+
+fn parse_clause_body(
+    body: &str,
+    ctx: &ParseContext,
+    depth: usize,
+) -> Result<(Clause, Vec<String>), ParseError> {
+    if body.contains(" and ") {
+        return Err(ParseError::UnknownComplement {
+            after: body.to_string(),
+        });
+    }
     // Subject | verb group: every construction contributes every surface its
     // verb group can take (a copula form, or its own stem run through
     // `VERB_PARADIGM`), and the sentence is searched for all of them at once.
@@ -1547,10 +1651,74 @@ pub fn parse_common_with_tail(
             }
         }
     }
-    let (complement_concept, number, surface) =
-        best_complement.ok_or_else(|| ParseError::UnknownComplement {
-            after: after_det.to_string(),
-        })?;
+    let (complement_concept, number, surface) = match best_complement {
+        Some(v) => v,
+        // The give-up point widens here (The Mortise, Task 8): before
+        // reporting failure, spend one level of the shared depth budget on
+        // a recursive attempt at the unresolved remainder — the exact
+        // inverse of `realize_common`'s own `Argument::Clause` arm, which
+        // realizes an embedded clause's own full text in this same spot
+        // and trims its trailing period.
+        None => {
+            if depth < CLAUSE_EMBED_MAX_DEPTH {
+                match parse_clause_body(after_det, ctx, depth + 1) {
+                    Ok((inner, _inner_tail)) => {
+                        // No complement surface exists here to disambiguate
+                        // a syncretic verb-group number (past tense shares
+                        // one form across Sg/Pl) the way the non-embedded
+                        // path does below, so the number must be resolved
+                        // some other way or the embedding is refused rather
+                        // than guessed.
+                        if let Some(number) = resolve_embedded_number(&numbers, subject_text) {
+                            // An embedded clause's own text carries no
+                            // determiner (`realize_common`'s `Part::Determiner`
+                            // arm skips `Argument::Clause`/`Argument::Pronoun`
+                            // objects outright), so nothing in the surface
+                            // states the matrix clause's own definiteness —
+                            // the same kind of loss `evidential` already
+                            // documents for every Common clause. `Indef` is
+                            // the same default the bare-plural-generic branch
+                            // above already falls back to when no determiner
+                            // word is found, reused here for the identical
+                            // reason.
+                            return Ok((
+                                Clause {
+                                    predicate: predicate.to_string(),
+                                    subject,
+                                    object: Argument::Clause(Box::new(inner)),
+                                    number,
+                                    definiteness: Definiteness::Indef,
+                                    evidential: Evidential::Witnessed,
+                                    tense,
+                                    polarity,
+                                    adjuncts: Vec::new(),
+                                },
+                                Vec::new(),
+                            ));
+                        }
+                    }
+                    // Propagate the recursive attempt's own `UnknownComplement`
+                    // — it names exactly where the walk actually stopped (at
+                    // the cap, or on an unrecognized complement one level
+                    // down), which is more specific than restating this
+                    // level's own remainder. A `NoVerbGroup` from the
+                    // recursive attempt is a DIFFERENT signal ("this text
+                    // isn't clause-shaped at all") and must not leak upward
+                    // dressed as a complement failure — falling through to
+                    // this level's own `UnknownComplement` below is what
+                    // keeps a plain unresolvable complement (no embedding
+                    // possible at all, e.g. "Vebe is a carriage." against a
+                    // `ParseContext` that only registers "planet") reporting
+                    // the same failure shape it always has.
+                    Err(e @ ParseError::UnknownComplement { .. }) => return Err(e),
+                    Err(_) => {}
+                }
+            }
+            return Err(ParseError::UnknownComplement {
+                after: after_det.to_string(),
+            });
+        }
+    };
     // Adjunct tail: '' or ' m1' or ' m1, m2, …'. The complement filter
     // above only admits candidates whose remainder is empty or starts
     // with ' ', so by construction `tail` is one of exactly those two
@@ -2480,6 +2648,178 @@ mod tests {
         assert_eq!(spec.number, Number::Pl);
         assert_eq!(spec.definiteness, Definiteness::Indef);
         assert_eq!(tail, Vec::<String>::new());
+    }
+
+    /// An embedded sentence round-trips: realize, parse, and get an equal
+    /// `Clause` back (The Mortise, Task 8). The matrix predicate is
+    /// present-tense so its verb-group form is number-UNIQUE (`"does not
+    /// know"` is the Sg row only; `"do not know"` is Pl) — the embedded
+    /// object leaves no complement surface behind to disambiguate a
+    /// syncretic form the way the non-embedded path does, so this test
+    /// deliberately avoids relying on that second signal
+    /// (`resolve_embedded_number`'s pronoun fallback) to isolate what the
+    /// recursion itself proves.
+    #[test]
+    fn an_embedded_sentence_round_trips() {
+        let vocab = CommonVocabulary::default();
+        let embedded = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Concept("planet".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let matrix = Clause {
+            predicate: KNOW.to_string(),
+            subject: Subject::Pronoun(Person::First),
+            object: Argument::Clause(Box::new(embedded)),
+            number: Number::Sg,
+            // Lost information, not a guess: an embedded-object clause's
+            // text carries no determiner (`realize_common` skips
+            // `Part::Determiner` for `Argument::Clause`), so nothing in the
+            // surface states this feature — the exact same kind of loss
+            // `evidential` already documents for every Common clause.
+            // `Indef` is the parser's documented default, matched here so
+            // the round trip holds.
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Neg,
+            adjuncts: Vec::new(),
+        };
+        let text = realize_common(&matrix, &vocab);
+        let ctx = ctx(&["planet"]);
+        assert_eq!(
+            parse_common(&text, &ctx),
+            Ok(matrix),
+            "round-trip failed for {text:?}"
+        );
+    }
+
+    /// The boundary marker is the discriminator (The Mortise, Task 8): a
+    /// sentence with two verb groups is embedding or coordination, and the
+    /// marker says which. A complementizer means a clause hangs BELOW; a
+    /// conjunction means one sits BESIDE — and for Common, embedding's
+    /// marker is no word at all, so the discriminator is really just the
+    /// conjunction's presence.
+    ///
+    /// The coordination half is not just "some Err comes back" — it proves
+    /// the guard is load-bearing. Without checking for a top-level `" and "`
+    /// BEFORE the verb-group split, this exact sentence would misparse: the
+    /// earliest verb group is "kills" (present tense, Sg-unique, so the
+    /// matrix `number` resolves with no ambiguity at all), leaving "them and
+    /// Vebe is a planet" as an unrecognized remainder, and a NAIVE recursive
+    /// attempt at THAT text would succeed — "is a planet" really is a
+    /// registered complement — recovering a bogus embedded clause whose
+    /// subject is the nonsense text `"them and Vebe"`. The guard refuses the
+    /// whole sentence before any of that runs.
+    #[test]
+    fn the_marker_discriminates_embedding_from_coordination() {
+        let vocab = CommonVocabulary::default();
+        let ctx = ctx(&["planet"]);
+
+        // Embedding: no marker, and it parses. The embedded clause's own
+        // object is a CONCEPT, not a pronoun — `parse_common` cannot
+        // recover `Argument::Pronoun` at all (a separate, out-of-scope
+        // limit, registry row `LANG-parse-cannot-recover-a-pronoun-object`),
+        // so a pronoun-object inner clause would refuse for that unrelated
+        // reason and prove nothing about the marker.
+        let embedded = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Concept("planet".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let matrix = Clause {
+            predicate: KNOW.to_string(),
+            subject: Subject::Pronoun(Person::First),
+            object: Argument::Clause(Box::new(embedded)),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Neg,
+            adjuncts: Vec::new(),
+        };
+        let embedded_text = realize_common(&matrix, &vocab);
+        assert!(
+            !embedded_text.contains(" and "),
+            "Common's embedding marker is no word at all: {embedded_text:?}"
+        );
+        assert!(
+            parse_common(&embedded_text, &ctx).is_ok(),
+            "an unmarked embedding must still parse: {embedded_text:?}"
+        );
+
+        // Coordination: the marker, and it refuses rather than misparsing.
+        let clause_a = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let clause_b = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vebe".to_string()),
+            object: Argument::Concept("planet".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let coord = Coordination {
+            clauses: vec![clause_a, clause_b],
+        };
+        let coord_text = realize_common_coordination(&coord, &vocab);
+        assert!(
+            coord_text.contains(" and "),
+            "Common's coordination marker is the word 'and': {coord_text:?}"
+        );
+        match parse_common(&coord_text, &ctx) {
+            Err(ParseError::UnknownComplement { .. }) => {}
+            other => panic!(
+                "a top-level 'and' must refuse rather than misparse, got {other:?} for {coord_text:?}"
+            ),
+        }
+    }
+
+    /// The depth budget stops the descent rather than recursing forever
+    /// (The Mortise, Task 8): this text is hand-assembled (not realized —
+    /// `realize_common` itself refuses to build genuinely two-deep text,
+    /// same cap, other direction) to need exactly two recursive levels to
+    /// fully resolve, and `CLAUSE_EMBED_MAX_DEPTH` is `1`. The returned
+    /// error's own `after` field is the decisive assertion: it names
+    /// exactly "they is a planet" — the depth-1 call's own unresolved
+    /// remainder — proving the walk stopped BEFORE attempting the depth-2
+    /// recursion that would otherwise have succeeded (`"planet"` is a real,
+    /// registered complement), not that it merely failed for some other
+    /// reason.
+    #[test]
+    fn the_parser_stops_descending_at_the_cap() {
+        let ctx = ctx(&["planet"]);
+        let text = "I does not know they do not know they is a planet.";
+        assert_eq!(
+            parse_common(text, &ctx),
+            Err(ParseError::UnknownComplement {
+                after: "they is a planet".to_string()
+            })
+        );
     }
 
     #[test]

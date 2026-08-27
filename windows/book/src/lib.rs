@@ -2354,12 +2354,18 @@ pub fn parse_line(line: &str, ctx: &ParseContext) -> Result<ParsedLine, LineErro
         Subject::Pronoun(person) => {
             common_pronoun(*person, clause.number, PronounCase::Nominative).to_string()
         }
-        // `parse_common_with_tail` has no clause-subject recognizer — spec
-        // §6 freezes parsing coverage, and The Mortise (Task 4) built only
-        // forward realization for a clause bound to the subject slot, so
-        // this arm can never actually fire. Added for exhaustiveness against
-        // `Subject::Clause`, the same posture the `Argument::Concept`
-        // `unreachable!` a few lines below already takes for its own slot.
+        // `parse_common_with_tail` still has no clause-SUBJECT recognizer as
+        // of The Mortise Task 8, which taught it to recover a clause-OBJECT
+        // (`Argument::Clause`, below) but deliberately not this slot: the
+        // walk's subject/verb split already commits to the EARLIEST
+        // verb-group occurrence, and for a subject-embedded clause that
+        // earliest occurrence is the INNER clause's own verb, not the
+        // matrix one — recovering it needs the walk to try more than one
+        // split candidate (a backtracking search), a different and larger
+        // change than extending the give-up point the object slot already
+        // had. So this arm still can never fire. Added for exhaustiveness
+        // against `Subject::Clause`, the same posture the `Argument::Clause`
+        // arm a few lines below now takes for its own slot.
         Subject::Clause(_) => {
             unreachable!("parse_common_with_tail never recovers a clause-embedded subject")
         }
@@ -2368,8 +2374,20 @@ pub fn parse_line(line: &str, ctx: &ParseContext) -> Result<ParsedLine, LineErro
     // the text against each candidate id's realized surface, so the plural
     // `'s'` was undone by the same rule that added it. No suffix-stripping
     // closed-world assumption survives here.
+    //
+    // `parse_common`/`parse_common_with_tail` CAN now return an
+    // `Argument::Clause` object (The Mortise, Task 8) — the claim in this
+    // arm's message is no longer true of the function in general. It stays
+    // unreachable for THIS window specifically because every line this
+    // window ever hands to `parse_line` comes from its own generated
+    // classification prose (`rerender`, a few lines down, always builds an
+    // `is-a` clause with an `Argument::Concept` object) or a hand-written
+    // test fixture in the same shape — nothing here ever constructs or
+    // feeds a KNOW/THINK-shaped clause-complement sentence.
     let Argument::Concept(kind) = clause.object.clone() else {
-        unreachable!("parse_common only ever recovers a concept object")
+        unreachable!(
+            "parse_line only ever receives an is-a classification line, whose object is always a concept"
+        )
     };
 
     Ok(ParsedLine {
