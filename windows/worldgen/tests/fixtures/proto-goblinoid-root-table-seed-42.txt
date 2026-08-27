@@ -87,6 +87,7 @@ ice-lead: Keeqe /keeqe/
 island: Gope /gope/
 kelp-canopy: Pano /pano/
 kelp-forest: Naa /naa/
+kill: Dapo /dapo/
 killer-whale-kind: Gaqo /gaqo/
 know: Naena /naena/
 kobold-kind: Naeno /naeno/

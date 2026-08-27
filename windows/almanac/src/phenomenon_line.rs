@@ -243,6 +243,9 @@ pub(crate) fn test_speaker(concepts: &[&str]) -> Speaker {
             class_position: ClassPosition::Suffix,
             evidential: BTreeMap::new(),
             class: BTreeMap::new(),
+            // A test speaker that models no morphology models no pronouns
+            // either; nothing here realizes a pronoun.
+            pronouns: BTreeMap::new(),
         },
         sky_animate: false,
         orthography: ph.orthography,
