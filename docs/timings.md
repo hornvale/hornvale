@@ -3328,3 +3328,5 @@ measured here.
 | 2026-08-27T19:08:11Z | game-check | 616.125 | 3229.479 | 57.633 | 5.34 | 0 | 18c06203e | campaign/the-quadrat | ambrose | 12 |
 | 2026-08-27T19:15:37Z | gate-commit | 72.135 | 50.281 | 23.243 | 1.02 | 0 | 18c06203e | campaign/the-quadrat | ambrose | 12 |
 | 2026-08-27T19:17:22Z | gate-commit | 72.678 | 50.492 | 23.988 | 1.02 | 0 | 18c06203e | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T19:48:49Z | gate-commit | 66.442 | 45.004 | 20.538 | 0.99 | 0 | 32969c670 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T19:50:27Z | gate-commit | 72.301 | 50.013 | 23.310 | 1.01 | 0 | 32969c670 | campaign/the-quadrat | ambrose | 12 |
