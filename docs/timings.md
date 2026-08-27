@@ -3051,3 +3051,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T14:10:43Z | rebaseline | 52.648 | 253.246 | 12.759 | 5.05 | 0 | 74e960e1b | campaign/the-coercion | MacBookPro | 10 |
 | 2026-08-27T14:12:04Z | rebaseline | 39.913 | 252.826 | 11.966 | 6.63 | 0 | 74e960e1b | campaign/the-coercion | MacBookPro | 10 |
 | 2026-08-27T14:12:36Z | gate-commit | 26.054 | 57.332 | 19.847 | 2.96 | 0 | 74e960e1b | campaign/the-coercion | MacBookPro | 10 |
+| 2026-08-27T14:14:27Z | gate-commit | 20.349 | 49.151 | 12.386 | 3.02 | 0 | 74e960e1b | campaign/the-coercion | MacBookPro | 10 |
