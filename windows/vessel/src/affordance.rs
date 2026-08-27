@@ -35,9 +35,12 @@ pub enum ObjectProperty {
     HoldsLiquid,
     /// A seam between two rooms — gates entering/leaving.
     AffordsPassage,
-    /// An anchor whose `within` relation is semantic containment (a
-    /// strongbox keeps things) rather than merely spatial (spec §3.6) —
-    /// gates a recursive `examine`.
+    /// An anchor that reveals what lies `within` it on examine — the
+    /// interactive-fiction rule (spec §3.6, amended): contents show when a
+    /// container is open or transparent. Both `Strongbox` and `Alcove`
+    /// carry it; IV.a has no closed/open state to gate on, so every
+    /// carrier reveals unconditionally — a carrier with nothing `within`
+    /// it stays silent for want of contents, not for want of the property.
     Encloses,
     /// An anchor that emits warmth, read via `warmth_at`'s graph-distance
     /// decay — gates `warm` (spec §3.3: a new verb).
@@ -88,20 +91,35 @@ pub struct ObjectTraits {
 }
 
 /// The canonical object-kind registry: which [`AnchorKind`] carries which
-/// [`ObjectProperty`]. Assigns the six certain carriers spec §3.3 names by
-/// name (`Bed`→`SupportsRest`, `Pool`/`Vessel`→`HoldsLiquid`,
+/// [`ObjectProperty`]. Assigns the six carriers spec §3.3 names by name
+/// (`Bed`→`SupportsRest`, `Pool`/`Vessel`→`HoldsLiquid`,
 /// `Threshold`→`AffordsPassage`, `Strongbox`→`Encloses`,
-/// `Hearth`→`RadiatesHeat`); a kind absent from this table carries no
-/// property.
+/// `Hearth`→`RadiatesHeat`) plus one more §3.6 itself adds on amendment —
+/// `Alcove`→`Encloses` — for seven entries in all. A kind absent from this
+/// table carries no property.
 ///
 /// **Every other kind was checked against the code and found to carry
 /// nothing**, not merely left unconsidered:
 /// - `Screen`'s own doc says outright "affords nothing, shapes sightlines"
 ///   (`interior/anchor.rs`).
-/// - `Alcove` is excluded from `Encloses` by the spec's own distinction
-///   (§3.6): the fire's `Attach::Within(AnchorKind::Alcove)`
-///   (`interior/pattern.rs`) makes an alcove a container only *spatially*,
-///   which is the case the spec names as the one `Encloses` does NOT mark.
+/// - `Alcove` carries `Encloses` too, and did not always: an earlier draft
+///   of §3.6 drew a semantic/spatial line that excluded it, reserving
+///   `Encloses` for containment that is semantic (a strongbox keeps
+///   things) rather than merely spatial (an alcove is a recess in a wall).
+///   Task 6 measured the consequence — the grammar's only `within`
+///   relation anywhere is `{(Hearth, Alcove)}` (a full census over all 60
+///   production gate combinations, `task-6-report.md`) — and that line put
+///   the property on the one anchor (`Strongbox`) that never holds
+///   anything, so the feature would have reported nothing, forever. The
+///   interactive-fiction rule that replaced it (contents show when a
+///   container is open or transparent, Inform/TADS's own convention) marks
+///   BOTH: the alcove reports because the grammar places a hearth within
+///   it; the strongbox stays silent because no pattern ever attaches
+///   anything within it — not because containment reading is
+///   unimplemented. IV.a models no open/closed state at all (that is
+///   IV.b's rung), so this table does not distinguish "closed" from
+///   "empty"; both read as silence, which is the correct behaviour either
+///   way.
 /// - `warmth_at` (`interior/field.rs`) sums only over anchors whose
 ///   `kind == AnchorKind::Hearth`; no other kind ever contributes to the
 ///   warmth field, so `RadiatesHeat` has exactly one mechanically-supported
@@ -131,10 +149,23 @@ pub fn object_registry() -> ComponentStore<AnchorKind, ObjectTraits> {
         (AnchorKind::Vessel, one(ObjectProperty::HoldsLiquid)),
         (AnchorKind::Threshold, one(ObjectProperty::AffordsPassage)),
         (AnchorKind::Strongbox, one(ObjectProperty::Encloses)),
+        (AnchorKind::Alcove, one(ObjectProperty::Encloses)),
         (AnchorKind::Hearth, one(ObjectProperty::RadiatesHeat)),
     ]
     .into_iter()
     .collect()
+}
+
+/// Whether `kind` carries [`ObjectProperty::Encloses`] — the gate `examine`
+/// reads before revealing what an anchor holds `within` it (spec §3.6,
+/// amended). A kind absent from [`object_registry`] carries no property, so
+/// it never encloses, matching [`offered_by`]'s own "absent = empty set"
+/// convention.
+/// type-audit: bare-ok(flag: return)
+pub fn encloses(kind: AnchorKind) -> bool {
+    object_registry()
+        .get(&kind)
+        .is_some_and(|traits| traits.properties.contains(&ObjectProperty::Encloses))
 }
 
 /// A verb an object may advertise to a body — the counterpart to

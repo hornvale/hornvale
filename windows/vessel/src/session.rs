@@ -4031,7 +4031,12 @@ impl<'w> Session<'w> {
             for id in interior.ids() {
                 let kind = interior.anchor(id).kind;
                 if crate::chamber_prose::noun(kind).is_some_and(|n| n.to_lowercase() == wanted) {
-                    return crate::chamber_prose::detail(kind).to_string();
+                    // The Offer, Task 6 (spec §3.6, amended): what lies
+                    // `within` an `Encloses` anchor is read here, not just
+                    // its authored `detail` line — see `examine_detail`'s
+                    // own doc for the property gate and the mutation it
+                    // guards against.
+                    return crate::chamber_prose::examine_detail(&interior, id);
                 }
             }
         }
