@@ -9,6 +9,7 @@
 
 #![warn(missing_docs)]
 
+use hornvale_astronomy::StdInstant;
 use hornvale_climate::{Biome, GeneratedClimate};
 use hornvale_kernel::{NearestVertexIndex, Seed, VertexMap, World, WorldTime};
 use hornvale_terrain::GeneratedTerrain;
@@ -1323,7 +1324,7 @@ pub fn neighbors_json(scene: &NeighborsScene) -> String {
 
 /// The `scene/eclipses/v1` schema tag.
 /// type-audit: bare-ok(identifier-text)
-pub const ECLIPSES_SCHEMA: &str = "scene/eclipses/v1";
+pub const ECLIPSES_SCHEMA: &str = "scene/eclipses/v2";
 
 /// One solar eclipse's shadow band on the globe.
 /// type-audit: pending(wave-1: center_lat_deg), pending(wave-1: half_width_deg), pending(wave-1: start_lon_deg), pending(wave-1: end_lon_deg), pending(wave-2: duration_days)
@@ -1368,19 +1369,24 @@ pub struct GroundTrackElem {
 /// campaign spent itself undoing. If a later pass sees redundant tags and a
 /// manual conversion: that redundancy is the point, and the cost of being
 /// wrong about it was priced at three tags and one call.
-/// type-audit: pending(wave-2: day), bare-ok(count: moon_index), bare-ok(identifier-text: body), bare-ok(identifier-text: kind), bare-ok(count: day_ticks)
+/// type-audit: bare-ok(count: day), bare-ok(count: moon_index), bare-ok(identifier-text: body), bare-ok(identifier-text: kind)
 #[derive(Debug, Serialize)]
 pub struct EclipseElem {
-    /// The syzygy, absolute standard days, quantized to 8 significant
-    /// digits. Kept for the external Orrery's existing consumers
-    /// (additive-or-versioned-only, spec §5); resolvable only to ~2.4 hours
-    /// at world-year 20,000.
-    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
-    pub day: f64,
-    /// The syzygy as an exact tick count (The Escapement, decision 0188):
-    /// added beside `day` rather than replacing it, since an integer needs
-    /// no quantization and does not decay with world age.
-    pub day_ticks: i64,
+    /// The syzygy, as an exact tick count since genesis.
+    ///
+    /// **v2 dropped the quantized `f64` day that sat beside this** (The
+    /// Foliot). It existed for one stated reason — "kept for the external
+    /// Orrery's existing consumers" — and both external clients (the Orrery
+    /// and goldengrove) are out of scope by Nathan's ruling, so it had no
+    /// consumer left: nothing in `clients/` ever read it. An integer needs no
+    /// quantization and does not decay with world age (decision 0188), which
+    /// is why the tick field was added BESIDE it rather than instead of it at
+    /// the time — the additive step this release completes.
+    ///
+    /// A bare `i64` on the wire rather than a `WorldTime`: this is a JSON
+    /// contract, and a serialized `WorldTime` would carry its own field name
+    /// into the document for no gain.
+    pub day: i64,
     /// Distance-sorted index into the system's moons.
     pub moon_index: usize,
     /// "solar" or "lunar".
@@ -1399,7 +1405,7 @@ pub struct EclipseElem {
 /// `from_day_ticks`/`until_day_ticks` are bare `i64` rather than `WorldTime`
 /// for the reason set out on [`EclipseElem`]: on a cross-repo wire, a
 /// compile-time break beats a silent one.
-/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), pending(wave-2: from_day), pending(wave-2: until_day), bare-ok(count: from_day_ticks), bare-ok(count: until_day_ticks)
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), bare-ok(count: from), bare-ok(count: until)
 #[derive(Debug, Serialize)]
 pub struct EclipsesScene {
     /// Always `scene/eclipses/v1`.
@@ -1407,16 +1413,16 @@ pub struct EclipsesScene {
     /// The world's seed.
     pub seed: u64,
     /// The queried window start, echoed back (standard days).
-    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
-    pub from_day: f64,
+    /// The queried window start, echoed back as an exact tick count.
+    pub from: i64,
     /// The queried window start as an exact tick count, added beside
     /// `from_day` for the same reason as `EclipseElem::day_ticks`.
-    pub from_day_ticks: i64,
+
     /// The queried window end.
-    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
-    pub until_day: f64,
+    /// The queried window end, echoed back as an exact tick count.
+    pub until: i64,
     /// The queried window end as an exact tick count.
-    pub until_day_ticks: i64,
+
     /// The dated eclipses, day-ascending.
     pub events: Vec<EclipseElem>,
 }
@@ -1425,17 +1431,23 @@ pub struct EclipsesScene {
 /// standard days. Errors when the world has no generated sky (no moons, no
 /// eclipses) or when the window itself is invalid (`from`/`until` negative
 /// or non-finite) — mirrors [`moons_scene`]. Pure read: consumes no draws.
-/// type-audit: pending(wave-2: from), pending(wave-2: until)
-pub fn eclipses_scene(world: &World, from: f64, until: f64) -> Result<EclipsesScene, SceneError> {
-    use hornvale_astronomy::StdInstant;
+pub fn eclipses_scene(
+    world: &World,
+    from: StdInstant,
+    until: StdInstant,
+) -> Result<EclipsesScene, SceneError> {
     let sky = hornvale_worldgen::sky_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
     let system = sky
         .system()
         .ok_or_else(|| SceneError::Build("this world has no generated sky".to_string()))?;
-    let from_day = StdInstant::new(from).map_err(|e| SceneError::Build(e.to_string()))?;
-    let until_day = StdInstant::new(until).map_err(|e| SceneError::Build(e.to_string()))?;
+    // The bounds arrive already typed and already validated -- StdInstant's
+    // constructor refuses a non-finite value, so the caller cannot hand in
+    // one. This is what closes The Escapement review's Minor 5: the bound
+    // conversions used to run AFTER the events map, so an out-of-range
+    // `until` hit an `expect` inside the map and panicked before it could
+    // reach the graceful error. There is no conversion left to mis-order.
     let calendar = hornvale_astronomy::calendar_of(system);
-    let events = hornvale_astronomy::eclipse_events(system, &calendar, from_day, until_day)
+    let events = hornvale_astronomy::eclipse_events(system, &calendar, from, until)
         .into_iter()
         .map(|ev| {
             let track =
@@ -1447,9 +1459,8 @@ pub fn eclipses_scene(world: &World, from: f64, until: f64) -> Result<EclipsesSc
                     duration_days: g.duration_days,
                 });
             EclipseElem {
-                day: ev.day.get(),
-                day_ticks: WorldTime::from_std_days(ev.day.get())
-                    .expect("an eclipse's own StdDays is finite and in range")
+                day: WorldTime::from_std_days(ev.day.get())
+                    .expect("an eclipse's own instant is finite and in range")
                     .ticks(),
                 moon_index: ev.moon,
                 body: match ev.body {
@@ -1469,12 +1480,10 @@ pub fn eclipses_scene(world: &World, from: f64, until: f64) -> Result<EclipsesSc
     Ok(EclipsesScene {
         schema: ECLIPSES_SCHEMA.to_string(),
         seed: world.seed.0,
-        from_day: from,
-        from_day_ticks: WorldTime::from_std_days(from_day.get())
+        from: WorldTime::from_std_days(from.get())
             .map_err(|e| SceneError::Build(e.to_string()))?
             .ticks(),
-        until_day: until,
-        until_day_ticks: WorldTime::from_std_days(until_day.get())
+        until: WorldTime::from_std_days(until.get())
             .map_err(|e| SceneError::Build(e.to_string()))?
             .ticks(),
         events,
@@ -2344,18 +2353,24 @@ mod tests {
     fn eclipses_scene_has_schema_window_and_is_deterministic() {
         let w = mooned_world();
         // A wide window so seed 42's two moons produce several events.
-        let a = eclipses_scene(&w, 0.0, 2000.0).expect("mooned world has eclipses");
-        assert_eq!(a.schema, "scene/eclipses/v1");
+        let a = eclipses_scene(
+            &w,
+            StdInstant::new(0.0).unwrap(),
+            StdInstant::new(2000.0).unwrap(),
+        )
+        .expect("mooned world has eclipses");
+        assert_eq!(a.schema, "scene/eclipses/v2");
         assert_eq!(a.seed, w.seed.0);
-        assert_eq!(a.from_day, 0.0);
-        assert_eq!(a.until_day, 2000.0);
+        // Echoed back as exact ticks now, not quantized days (v2).
+        assert_eq!(a.from, 0);
+        assert_eq!(a.until, 2000 * WorldTime::TICKS_PER_STD_DAY);
         assert!(
             !a.events.is_empty(),
             "seed 42's moons eclipse within 2000 days"
         );
         // Day-ascending, inside the window.
         for e in &a.events {
-            assert!((0.0..=2000.0).contains(&e.day));
+            assert!((0..=2000 * WorldTime::TICKS_PER_STD_DAY).contains(&e.day));
             assert!(e.body == "solar" || e.body == "lunar");
             assert!(e.kind == "total" || e.kind == "annular");
         }
@@ -2375,7 +2390,14 @@ mod tests {
         // Byte-identical on rebuild.
         assert_eq!(
             eclipses_json(&a),
-            eclipses_json(&eclipses_scene(&w, 0.0, 2000.0).unwrap())
+            eclipses_json(
+                &eclipses_scene(
+                    &w,
+                    StdInstant::new(0.0).unwrap(),
+                    StdInstant::new(2000.0).unwrap()
+                )
+                .unwrap()
+            )
         );
     }
 
@@ -2387,7 +2409,12 @@ mod tests {
     #[test]
     fn an_eclipse_carries_an_exact_tick_alongside_its_quantized_day() {
         let w = mooned_world();
-        let scene = eclipses_scene(&w, 0.0, 2000.0).expect("mooned world has eclipses");
+        let scene = eclipses_scene(
+            &w,
+            StdInstant::new(0.0).unwrap(),
+            StdInstant::new(2000.0).unwrap(),
+        )
+        .expect("mooned world has eclipses");
         let json = serde_json::to_value(&scene).expect("serializes");
 
         assert_eq!(
@@ -2413,20 +2440,30 @@ mod tests {
         // The tick fields are exact conversions of the standard-day window
         // bounds and event days actually passed/produced, not the quantized
         // f64 round-tripped back through ticks.
+        assert_eq!(scene.from, WorldTime::from_std_days(0.0).unwrap().ticks());
         assert_eq!(
-            scene.from_day_ticks,
-            WorldTime::from_std_days(0.0).unwrap().ticks()
-        );
-        assert_eq!(
-            scene.until_day_ticks,
+            scene.until,
             WorldTime::from_std_days(2000.0).unwrap().ticks()
         );
-        assert_eq!(
-            scene.events[0].day_ticks,
-            WorldTime::from_std_days(scene.events[0].day)
-                .unwrap()
-                .ticks(),
-            "an event's tick field agrees with converting its own emitted day"
+        // THE ESCAPEMENT'S MINOR 6, CLOSED BY DELETION. This asserted that an
+        // event's tick field agreed with converting its own emitted `f64`
+        // day — and it could not fail, because both sides were built from the
+        // same in-memory f64 (quantization happens at serialize, not here).
+        // The review named it tautological and asked for the interesting
+        // comparison instead: the tick against the EMITTED, quantized day.
+        //
+        // v2 removes the subject. There is no emitted f64 day any more, so
+        // that comparison has nothing to compare and the tautology has
+        // nothing to be tautological about. What is worth asserting is that
+        // the event lands inside the window the caller asked for, in the same
+        // units the window is expressed in — which the old pair could not
+        // check, since one side was days and the other ticks.
+        assert!(
+            (scene.from..=scene.until).contains(&scene.events[0].day),
+            "an event's instant lies inside the queried window: {} not in {}..={}",
+            scene.events[0].day,
+            scene.from,
+            scene.until
         );
     }
 
@@ -2434,7 +2471,14 @@ mod tests {
     fn eclipses_scene_rejects_a_world_with_no_generated_sky() {
         // Mirror the moons/neighbors constant-sun refusal test.
         let w = world();
-        assert!(eclipses_scene(&w, 0.0, 100.0).is_err());
+        assert!(
+            eclipses_scene(
+                &w,
+                StdInstant::new(0.0).unwrap(),
+                StdInstant::new(100.0).unwrap()
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -2444,7 +2488,12 @@ mod tests {
         // it leaves the world byte-identical (no Stream draw, no mutation).
         let w = mooned_world();
         let before = serde_json::to_string(&w).unwrap();
-        let _ = eclipses_scene(&w, 0.0, 2000.0).unwrap();
+        let _ = eclipses_scene(
+            &w,
+            StdInstant::new(0.0).unwrap(),
+            StdInstant::new(2000.0).unwrap(),
+        )
+        .unwrap();
         let after = serde_json::to_string(&w).unwrap();
         assert_eq!(before, after, "eclipses_scene must not alter the world");
     }

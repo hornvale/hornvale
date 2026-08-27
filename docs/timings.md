@@ -3167,3 +3167,10 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T20:33:17Z | gate-commit | 240.688 | 248.861 | 67.284 | 1.31 | 0 | 2be67ff43 | campaign/the-foliot | ambrose | 12 |
 | 2026-08-27T20:39:28Z | gate-commit | 129.047 | 74.362 | 41.224 | 0.90 | 0 | 2be67ff43 | campaign/the-foliot | ambrose | 12 |
 | 2026-08-27T20:52:36Z | rebaseline | 195.406 | 271.622 | 15.492 | 1.47 | 0 | 2be67ff43 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T20:54:56Z | gate-commit | 113.293 | 60.491 | 28.384 | 0.78 | 0 | 2be67ff43 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T21:18:34Z | rebaseline | 153.203 | 276.253 | 19.054 | 1.93 | 0 | d9f79789e | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T21:19:50Z | gate-commit | 27.765 | 17.572 | 4.536 | 0.80 | 0 | d9f79789e | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T21:22:39Z | world-check | 168.780 | 98.938 | 10.965 | 0.65 | 0 | d9f79789e | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T21:24:45Z | gate-commit | 40.058 | 22.439 | 4.577 | 0.67 | 0 | d9f79789e | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T21:28:19Z | rebaseline | 214.120 | 271.582 | 18.670 | 1.36 | 0 | d9f79789e | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T21:30:59Z | gate-commit | 135.542 | 95.208 | 39.269 | 0.99 | 0 | d9f79789e | campaign/the-foliot | ambrose | 12 |
