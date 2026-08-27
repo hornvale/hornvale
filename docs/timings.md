@@ -3085,3 +3085,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T23:58:46Z | sluice:clients | 447.235 | 5528.263 | 64.562 | 12.51 | 0 | 5ae6b9d63 |  | lefford | 40 |
 | 2026-08-27T11:15:53Z | gate-commit | 105.807 | 436.624 | 90.776 | 4.98 | 0 | 956ce8499 | campaign/the-sources | MacBookPro | 10 |
 | 2026-08-27T11:17:55Z | rebaseline | 111.129 | 320.444 | 11.155 | 2.98 | 0 | 19a765814 | campaign/the-sources | MacBookPro | 10 |
+| 2026-08-27T11:46:07Z | rebaseline | 47.547 | 314.569 | 12.471 | 6.88 | 0 | 4df575b6d | campaign/the-sources | MacBookPro | 10 |
