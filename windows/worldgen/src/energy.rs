@@ -490,14 +490,16 @@ pub fn dominant_source(
 /// [`crate::subterranean_substrate_field_per_rung`]'s own `Surface` slot).
 ///
 /// **Derived exactly as [`crate::subterranean_substrate_field_per_rung`]
-/// derives its own per-rung reading**: same [`rung_evaluation_depth_m`] call
-/// for the evaluation depth, same [`crate::subterranean_substrate_at_rung`]
-/// call for the rung's moisture — so this field cannot disagree with that
-/// one about which rungs a chamber has, or read a different depth or
-/// moisture at one it does. `drainage` is read once per vertex
-/// ([`GeneratedTerrain::drainage_at`]) rather than per rung, because it is
-/// [`EnergySource::DetritalImport`]'s only input and does not vary with
-/// depth the way moisture does.
+/// derives its own per-rung reading, because it reads that same reading
+/// rather than re-deriving it**: `subterranean_per_rung` is the field
+/// [`crate::subterranean_substrate_field_per_rung`] already built at this
+/// call's two production sites, so this field cannot disagree with that one
+/// about which rungs a chamber has, or read a different depth or moisture at
+/// one it does — there is only one derivation, not two that must be kept in
+/// step. Same [`rung_evaluation_depth_m`] call for the evaluation depth.
+/// `drainage` is read once per vertex ([`GeneratedTerrain::drainage_at`])
+/// rather than per rung, because it is [`EnergySource::DetritalImport`]'s
+/// only input and does not vary with depth the way moisture does.
 ///
 /// **This is where the module doc's "nothing here was shaped to produce a
 /// U" caveat becomes concrete, not merely theoretical.** `moisture` here is
@@ -510,7 +512,7 @@ pub fn dominant_source(
 pub fn subterranean_energy_field_per_rung(
     geo: &Geosphere,
     terrain: &GeneratedTerrain,
-    surface: &VertexMap<crate::Substrate>,
+    subterranean_per_rung: &VertexMap<[Option<crate::Substrate>; 6]>,
 ) -> VertexMap<[Option<f64>; 6]> {
     VertexMap::from_fn(geo, |vertex| {
         let mut out = [None; 6];
@@ -520,12 +522,12 @@ pub fn subterranean_energy_field_per_rung(
         let gradient = terrain.geothermal_gradient_at(vertex);
         let material = terrain.material_at(vertex);
         let drainage = terrain.drainage_at(vertex);
-        let s = *surface.get(vertex);
+        let sub_per_rung = subterranean_per_rung.get(vertex);
         for &rung in Band::all() {
             let Some(depth_m) = rung_evaluation_depth_m(rung, gradient, cave.depth_reach_m) else {
                 continue;
             };
-            let Some(sub) = crate::subterranean_substrate_at_rung(s, rung, terrain, vertex) else {
+            let Some(sub) = sub_per_rung[rung as usize] else {
                 continue;
             };
             out[rung as usize] = Some(subterranean_energy(

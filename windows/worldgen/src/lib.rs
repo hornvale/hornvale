@@ -1580,7 +1580,7 @@ pub fn per_species_suitability_masked(
     // to it below, multiplied by `availability = 0.0`, exactly as before.
     let subterranean_per_rung = subterranean_substrate_field_per_rung(geo, terrain, &substrate);
     let chemosynthate_per_rung =
-        energy::subterranean_energy_field_per_rung(geo, terrain, &substrate);
+        energy::subterranean_energy_field_per_rung(geo, terrain, &subterranean_per_rung);
     // The Demesne/T2: per-axis supply fields, hoisted out of the per-species
     // loop below — each is a pure function of terrain/climate, built once
     // and shared by every species' dot product.
@@ -1926,7 +1926,7 @@ pub fn per_species_capacity_at(
     // cave-less fallback, exactly as there.
     let subterranean_per_rung = subterranean_substrate_field_per_rung(geo, terrain, &substrate);
     let chemosynthate_per_rung =
-        energy::subterranean_energy_field_per_rung(geo, terrain, &substrate);
+        energy::subterranean_energy_field_per_rung(geo, terrain, &subterranean_per_rung);
     let forage = forage_supply_field(geo, base_carrying.as_vertex_map());
     let prey = prey_supply_field(geo, &forage);
     // The Range, carried to the capacity path: the biome at every vertex,
@@ -3172,7 +3172,39 @@ pub fn subterranean_substrate_at_rung(
     terrain: &GeneratedTerrain,
     vertex: hornvale_kernel::Vertex,
 ) -> Option<Substrate> {
+    // `Band::Surface` names no chamber and always yields `None` below (via
+    // `rung_evaluation_depth_m`'s own short-circuit) — checked here too, so
+    // a `Surface` call never pays for `terrain.cave_at`'s cave derivation
+    // only to discard it. Bit-identical: both paths return `None` for
+    // `Surface`, this one just gets there without the cave lookup.
+    if rung == hornvale_kernel::Band::Surface {
+        return None;
+    }
     let cave = terrain.cave_at(vertex)?;
+    subterranean_substrate_at_rung_with_cave(surface, rung, terrain, vertex, cave)
+}
+
+/// [`subterranean_substrate_at_rung`]'s body, given the vertex's cave
+/// already looked up. The hoist [`subterranean_substrate_field_per_rung`]
+/// needs: `terrain.cave_at` samples noise (`crate::crust::sphere_fbm01`,
+/// which builds a fresh `SphereFbm` on every call — the `Fbm`
+/// derive-once pattern, CLAUDE.md), so calling it once per vertex and
+/// reusing the answer across all six rungs is cheaper than calling it once
+/// per rung as [`subterranean_substrate_at_rung`] alone would. Bit-identical
+/// to `subterranean_substrate_at_rung(surface, rung, terrain, vertex)` when
+/// `cave` is the `Some` value `terrain.cave_at(vertex)` would itself
+/// return — this only skips re-deriving it. Callers must not pass a `cave`
+/// from a different vertex.
+fn subterranean_substrate_at_rung_with_cave(
+    surface: Substrate,
+    rung: hornvale_kernel::Band,
+    terrain: &GeneratedTerrain,
+    vertex: hornvale_kernel::Vertex,
+    cave: hornvale_terrain::Cave,
+) -> Option<Substrate> {
+    if rung == hornvale_kernel::Band::Surface {
+        return None;
+    }
     let gradient = terrain.geothermal_gradient_at(vertex);
     let depth_m =
         hornvale_terrain::delve::rung_evaluation_depth_m(rung, gradient, cave.depth_reach_m)?;
@@ -3202,6 +3234,13 @@ pub fn subterranean_substrate_at_rung(
 /// equals [`subterranean_substrate_field`]'s reading at that same vertex
 /// bit-for-bit — both evaluate at `depth_reach_m` — which is exactly the
 /// positive control this task's tests assert.
+///
+/// Calls `terrain.cave_at(vertex)` once per vertex, not once per rung —
+/// see [`subterranean_substrate_at_rung_with_cave`]'s doc for why that
+/// matters. A vertex with no cave short-circuits to `[None; 6]` without
+/// visiting any rung, exactly as six calls to
+/// [`subterranean_substrate_at_rung`] (each re-deriving and finding no
+/// cave) would.
 pub fn subterranean_substrate_field_per_rung(
     geo: &Geosphere,
     terrain: &GeneratedTerrain,
@@ -3210,8 +3249,12 @@ pub fn subterranean_substrate_field_per_rung(
     hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
         let s = *surface.get(vertex);
         let mut out = [None; 6];
+        let Some(cave) = terrain.cave_at(vertex) else {
+            return out;
+        };
         for &rung in hornvale_kernel::Band::all() {
-            out[rung as usize] = subterranean_substrate_at_rung(s, rung, terrain, vertex);
+            out[rung as usize] =
+                subterranean_substrate_at_rung_with_cave(s, rung, terrain, vertex, cave);
         }
         out
     })

@@ -144,7 +144,8 @@ fn every_field_entry_reproduces_the_pure_function_at_its_own_rung() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let (terrain, surface) = world_at(LIVE_GUARD_SEED, &wc);
     let geo = terrain.geosphere();
-    let field = subterranean_energy_field_per_rung(geo, &terrain, &surface);
+    let subterranean_per_rung = subterranean_substrate_field_per_rung(geo, &terrain, &surface);
+    let field = subterranean_energy_field_per_rung(geo, &terrain, &subterranean_per_rung);
     let mut compared = 0usize;
     for vertex in geo.vertices() {
         let entry = field.get(vertex);
@@ -339,7 +340,8 @@ fn derived_energy_is_monotone_not_a_trough() {
     for &seed in &SEEDS {
         let (terrain, surface) = world_at(seed, &wc);
         let geo = terrain.geosphere();
-        let field = subterranean_energy_field_per_rung(geo, &terrain, &surface);
+        let subterranean_per_rung = subterranean_substrate_field_per_rung(geo, &terrain, &surface);
+        let field = subterranean_energy_field_per_rung(geo, &terrain, &subterranean_per_rung);
         let fixed_field = energy_field_with_fixed_moisture(geo, &terrain, SATURATED_MOISTURE);
         for vertex in geo.vertices() {
             for (i, e) in field.get(vertex).iter().enumerate() {
@@ -648,8 +650,8 @@ fn between_worlds_separation_and_within_world_width() {
     for &seed_value in &Q6_SEEDS {
         let (terrain, surface) = world_at(seed_value, &wc);
         let geo = terrain.geosphere();
-        let field = subterranean_energy_field_per_rung(geo, &terrain, &surface);
         let moisture_field = subterranean_substrate_field_per_rung(geo, &terrain, &surface);
+        let field = subterranean_energy_field_per_rung(geo, &terrain, &moisture_field);
 
         let mut seed_pooled: Vec<f64> = Vec::new();
         let mut seed_by_rung: [Vec<f64>; 6] = [
