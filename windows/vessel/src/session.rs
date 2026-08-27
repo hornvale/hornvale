@@ -8282,18 +8282,42 @@ mod tests {
     }
 
     /// The Coercion, spec §7 H2 — "the death terminator is unreachable": no
-    /// sequence of currently-shipped verbs produces a [`POSSESSION_ENDED`]
-    /// fact whose reason is `"died"`. Spec §6: no live death state exists
-    /// anywhere in `windows/vessel` today, and that predicate's own doc
-    /// comment (`:341`) only NAMES `"died"` as the reason once mortality
-    /// exists — grep-verified, the literal string `"died"` appears nowhere
-    /// else under `windows/vessel/src`, in no match arm, so nothing could
-    /// construct that fact today regardless of what a player types.
+    /// currently-shipped verb produces a [`POSSESSION_ENDED`] fact whose
+    /// reason is `"died"`.
     ///
-    /// **THIS ASSERTION IS DESIGNED TO TURN RED WHEN MORTALITY SHIPS** —
-    /// that is the point of writing it now rather than after: the day a
-    /// death arm lands, this is the tripwire saying spec §6 wants updating,
-    /// not a stale test to delete.
+    /// **THE LIVE EVIDENCE FOR THAT CONCLUSION IS THE GREP, NOT THIS
+    /// FIXTURE.** Spec §6: no live death state exists anywhere in
+    /// `windows/vessel` today, and that predicate's own doc comment
+    /// (`:341`) only NAMES `"died"` as the reason once mortality exists —
+    /// grep-verified, the literal string `"died"` is CONSTRUCTED nowhere
+    /// under `windows/vessel/src`, in no match arm, so nothing could build
+    /// that fact today regardless of what a player types. The conclusion
+    /// rests on that; the loop below corroborates it over a roster.
+    ///
+    /// **WHAT THIS FIXTURE ACTUALLY EXERCISES IS 12 OF THE 30, NOT 30 —
+    /// state that plainly rather than let the roster count imply
+    /// otherwise.** Every verb here runs against a session that has just
+    /// been `!possess`ed, and a possessed body is exactly what
+    /// `gated_by_the_body` refuses in front of: all 18
+    /// [`IN_CHARACTER_VERBS`] are turned away by the body-state gate BEFORE
+    /// their handlers run, so only the 3 [`SESSION_CONTROL`] verbs and the
+    /// 9 Group-A operator instruments below reach any dispatch arm at all.
+    /// The `assert_eq!` on `roster.len()` pins the ROSTER's size — the
+    /// stated denominator — and must not be read as pinning the exercised
+    /// population, which is 12. **Measured, not inferred**: a scratch probe
+    /// of this exact loop, counting lines whose output carries the gate's own
+    /// refusal ("another will holds this body"), reported `roster=30
+    /// gate-refused=18` — `ask back climb consult delve dive enter examine go
+    /// knows look map needs out sleep surface wait write`.
+    ///
+    /// **So this is a weak tripwire, not the tripwire that turns red the
+    /// day mortality ships.** If a death terminator ever arrives through an
+    /// IN-CHARACTER verb — the likeliest route, since dying is something a
+    /// body does — this construction would not catch it: the gate refuses
+    /// that verb first and the loop sees nothing. It would catch a death
+    /// arm reached through session control or the operator namespace. The
+    /// durable check is the grep above; when mortality lands, re-derive
+    /// this fixture rather than trusting it to have objected.
     ///
     /// The stated denominator (spec §7's own requirement): the full shipped
     /// verb roster this file itself classifies is the SUM of three groups —
@@ -8317,8 +8341,9 @@ mod tests {
     /// verb tried after them in roster order. No verb is given a crafted
     /// argument to make it succeed: since no dispatch arm anywhere
     /// constructs the string `"died"` regardless of input, a bare
-    /// invocation already covers the whole reachable surface this
-    /// hypothesis measures.
+    /// invocation already covers the whole surface this loop can reach —
+    /// which, per the paragraph above, is the 12 ungated verbs, not the 30
+    /// the roster names.
     #[test]
     fn h2_no_shipped_verb_can_end_a_possession_by_death() {
         let world = seam_world();
@@ -8342,7 +8367,11 @@ mod tests {
             roster.len(),
             30,
             "the stated denominator: 18 IN_CHARACTER_VERBS + 3 SESSION_CONTROL \
-             + 9 Group-A operator instruments the OOC namespace alone dispatches"
+             + 9 Group-A operator instruments the OOC namespace alone \
+             dispatches. This pins the ROSTER's size, NOT the exercised \
+             population: under a possessed body the gate refuses all 18 \
+             in-character verbs, so 12 reach a dispatch arm — see this \
+             test's doc comment"
         );
 
         for verb in &roster {

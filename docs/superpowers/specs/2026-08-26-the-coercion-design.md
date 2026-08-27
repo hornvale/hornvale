@@ -288,8 +288,11 @@ stronger claim than §3.4 makes and would want its own decision record.
 - **Possession replaces a decision procedure; command constrains its outputs;
   charm modifies its inputs.** Three mechanisms, three subsystems, and charm is
   not a gate concept. (§4.)
-- **A possession state is relational, not intrinsic**, and the gate derivation
-  takes the asker. (§2.3.)
+- **A possession state is relational, not intrinsic** — the relation lives in
+  the variant's NAME (`PossessedByAnother`), because the gate derivation takes
+  **no asker parameter at all**. (§2.3, as amended in §3.1: the player has no
+  ledger identity to compare against, so an asker argument could not be
+  given a value. Decision 0338.)
 
 ---
 

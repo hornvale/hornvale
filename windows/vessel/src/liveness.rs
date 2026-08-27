@@ -9121,12 +9121,16 @@ mod tests {
         assert_eq!(
             imposed_shapes,
             free_shapes,
-            "H4: the null this campaign is prepared to report — the set of \
-             distinct fact shapes (predicates) an imposed run can reach and \
-             the set a free run can reach, pooled over {} predicates' worth \
-             of denominator and 2 fixtures, are IDENTICAL: possession is not \
-             merely invisible in provenance (spec §3.4) but, by this \
-             measurement, invisible in reachable consequence too",
+            "H4: the set of distinct fact shapes (predicates) an imposed run \
+             can reach and the set a free run can reach, pooled over {} \
+             predicates' worth of denominator and 2 fixtures, are IDENTICAL \
+             — but that equality is DEDUCIBLE from \
+             `ImposedController::intend`'s pass-through delegation \
+             (controller.rs:162-166) before either fixture runs, NOT \
+             established by running them. Today's stub is provably a no-op \
+             relative to `DefaultController`, so this assertion is a \
+             regression tripwire for the day it gains real intent, not \
+             evidence that possession is invisible in reachable consequence",
             known_predicates.len()
         );
     }

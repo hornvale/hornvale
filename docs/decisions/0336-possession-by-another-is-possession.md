@@ -58,3 +58,20 @@ second word here should read this record before minting one.
   system's have-a-thing sense is `carried`, recorded in the spec (§2.2) rather
   than here because no `possess`-as-owns collision exists yet to decide
   between.
+- **The verb's implicit SUBJECT inverts between the two surfaces, and the
+  rule above is silent on that** (appended after The Coercion's final review).
+  `hornvale possess --seed 42` reads *the player takes a body*: the player is
+  the subject and the body is the object. `!possess`, typed inside a session,
+  reads *something takes the player's body*: the player's body is the object
+  and the subject is someone else. The mechanism is genuinely the same —
+  that is what this decision settled, and it is unchanged — but a reader who
+  knows only the CLI sense will mis-hear the session verb, and no wording in
+  the rule warns them. This bullet is the warning.
+- **`!possess` is a stand-in for a subject that does not exist yet.** No
+  creature in `domains/species` can take a body today, so the campaign made
+  the operator the seam's trigger rather than inventing a possessor. When a
+  possessing creature ships, IT becomes the subject and the operator verb
+  becomes what it always was — a debug entry point onto a mechanism whose real
+  caller is in the world. The naming discomfort is a symptom of the missing
+  subject, not of the word, and it should be re-read then rather than resolved
+  now by minting a second verb (which this decision's rule forbids).

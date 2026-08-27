@@ -122,13 +122,26 @@ the two predicates carry no single latest value to compare against.
 The death terminator is written and cannot fire. `Body` carries no life
 state anywhere in the tree the session touches; the only death on record
 belongs to founders baked into deep history, never a body a live session
-drives. So `possession-ended`'s `"died"` arm exists in code and is asserted,
-by name, to be unreachable — a sweep of every one of the thirty currently
-shipped verbs (eighteen in-character, three that end a session outright, and
-nine out-of-character operator instruments) confirms no sequence of them ever
-produces it. This is deliberate, not an oversight papered over: the day
-mortality ships anywhere in this tree, the assertion is what turns red, and
-the arm was already sitting there correct, waiting.
+drives. The evidence that `possession-ended`'s `"died"` arm is unreachable
+is a grep: the literal string is *constructed* nowhere under
+`windows/vessel/src`, in no match arm, so nothing can build that fact
+whatever a player types.
+
+A fixture corroborates it over the roster of all thirty currently shipped
+verbs (eighteen in-character, three that end a session outright, nine
+out-of-character operator instruments), each run alone against its own fresh
+session — never in sequence, so the result says nothing about sequences. And
+the roster is not the exercised population: every verb in that fixture runs
+against a body that has just been possessed, and a possessed body is exactly
+what the gate refuses, so **all eighteen in-character verbs are turned away
+before their handlers run and only twelve reach a dispatch arm at all** —
+measured by a scratch probe of the loop itself, which reported `roster=30
+gate-refused=18`, not inferred from reading the gate. That
+makes it a weak tripwire rather than the tripwire that turns red the day
+mortality ships: if death arrives through an in-character verb — the likeliest
+route, since dying is something a body does — this construction would not
+catch it. The durable check is the grep; when mortality lands, the fixture
+wants re-deriving rather than trusting.
 
 ## What the ledger cannot tell, measured rather than assumed
 
