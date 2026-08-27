@@ -102,7 +102,7 @@ fn put(s: &mut Session, subject: hornvale_kernel::EntityId, predicate: &str, obj
 fn a_body_with_no_facts_has_no_possessor() {
     let (world, _ctx) = seed_42();
     let (s, _) = Session::start(&world, &PossessOpts::default()).unwrap();
-    assert_eq!(possessor_of(s.ledger_for_test(), s.agent_entity()), None);
+    assert_eq!(s.possessor(), None);
 }
 
 #[test]
