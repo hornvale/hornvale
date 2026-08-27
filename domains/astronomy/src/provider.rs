@@ -353,7 +353,7 @@ mod tests {
                 orbit: Au::new(1.0).unwrap(),
                 year: StdDays::new(365.25).unwrap(),
                 rotation: Rotation::Spinning {
-                    day: StdDays::new(1.0).unwrap(),
+                    day: hornvale_kernel::units::TickSpan::from_std_days(1.0).unwrap(),
                     retrograde: false,
                 },
                 obliquity: Degrees::new(0.0).unwrap(),
@@ -437,7 +437,7 @@ mod tests {
                 orbit: Au::new(1.0).unwrap(),
                 year: crate::units::StdDays::new(365.25).unwrap(),
                 rotation: Rotation::Spinning {
-                    day: crate::units::StdDays::new(1.0).unwrap(),
+                    day: hornvale_kernel::units::TickSpan::from_std_days(1.0).unwrap(),
                     retrograde: false,
                 },
                 obliquity: Degrees::new(obliquity).unwrap(),
@@ -1708,7 +1708,7 @@ impl PhenomenaSource for GeneratedSky {
                 Rotation::Spinning { day, .. } => out.push(Phenomenon {
                     kind: CELESTIAL_BODY.to_string(),
                     referent: Referent::of("sun"),
-                    period_days: Some(round2(day.get())),
+                    period_days: Some(round2(day.as_std_days())),
                     salience: 1.0,
                     venue: Venue::DaySky,
                 }),
@@ -1861,7 +1861,7 @@ impl PhenomenaSource for GeneratedSky {
         // to the surface: the local day for a spinning world, the year for
         // a locked one (which turns once per orbit).
         let surface_rotation = match self.system.anchor.rotation {
-            Rotation::Spinning { day, .. } => day.get(),
+            Rotation::Spinning { day, .. } => day.as_std_days(),
             Rotation::Locked => self.system.anchor.year.get(),
         };
         for moon in &self.system.moons {

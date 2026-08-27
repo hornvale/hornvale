@@ -636,7 +636,9 @@ fn fields(seed: u64, arm: Arm) -> Fields {
     let obliquity_deg = system.anchor.obliquity.get();
     let regime = match system.anchor.rotation {
         hornvale_astronomy::Rotation::Spinning { day, .. } => {
-            hornvale_climate::RotationRegime::Spinning { day_std: day.get() }
+            hornvale_climate::RotationRegime::Spinning {
+                day_std: day.as_std_days(),
+            }
         }
         hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
     };

@@ -290,7 +290,7 @@ pub fn genesis(
         }
         Rotation::Spinning { day, retrograde } => {
             world.ledger.commit(
-                fact(subject, DAY_LENGTH_STD, Value::Number(day.get())),
+                fact(subject, DAY_LENGTH_STD, Value::Number(day.as_std_days())),
                 &world.registry,
             )?;
             if retrograde {

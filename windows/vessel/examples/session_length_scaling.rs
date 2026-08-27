@@ -591,11 +591,10 @@ fn main() {
     let home_settlement = hornvale_settlement::village_info(&world)
         .expect("seed 42's flagship always exists")
         .id;
-    let day_length_std = hornvale_worldgen::sky_of(&world)
+    let day_ticks = hornvale_worldgen::sky_of(&world)
         .ok()
         .and_then(|sky| sky.calendar().cloned())
-        .and_then(|c| c.day_length())
-        .map(|d| d.get());
+        .and_then(|c| c.day_ticks());
 
     assert!(
         AGENTS <= settlement_count,
@@ -605,7 +604,7 @@ fn main() {
         "session_length_scaling: seed 42, {AGENTS} agents held FIXED, {TICKS} ticks in bands of {BAND}"
     );
 
-    let bands = run(&world, &ctx, home_settlement, day_length_std);
+    let bands = run(&world, &ctx, home_settlement, day_ticks);
 
     println!(
         "{:>5} {:>12} {:>11} {:>11} {:>9} {:>7} {:>9} {:>9} {:>9} {:>12}",
@@ -963,7 +962,7 @@ fn run(
     world: &World,
     ctx: &LocaleContext,
     home_settlement: EntityId,
-    day_length_std: Option<f64>,
+    day_ticks: Option<hornvale_kernel::units::TickSpan>,
 ) -> Vec<Band> {
     let mut ledger = world.ledger.clone();
     let mut registry = world.registry.clone();
@@ -1042,7 +1041,7 @@ fn run(
             from,
             to: day,
             params: SUSTENANCE,
-            day_length_std,
+            day_ticks,
             terrain: &terrain,
         };
         // Timed span: the drive evaluation AND the commits it produces, the

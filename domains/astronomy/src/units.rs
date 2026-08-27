@@ -58,6 +58,33 @@ macro_rules! quantity {
             }
         }
     };
+    ($name:ident, $label:literal, signed, $doc:literal) => {
+        #[doc = $doc]
+        #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+        pub struct $name(pub(crate) f64);
+        impl $name {
+            /// Validating constructor: finite, either sign.
+            ///
+            /// An instant is a point on an axis with genesis at zero, so a
+            /// negative value is legal and meaningful (decision 0126: a
+            /// founder can be born before the history record begins). Only
+            /// non-finiteness is refused — the one thing no instant can be.
+            pub fn new(value: f64) -> Result<Self, UnitError> {
+                if !value.is_finite() {
+                    return Err(UnitError {
+                        unit: $label,
+                        value,
+                        reason: "must be finite",
+                    });
+                }
+                Ok(Self(value))
+            }
+            /// The raw value.
+            pub fn get(self) -> f64 {
+                self.0
+            }
+        }
+    };
     ($name:ident, $label:literal, non_negative, $doc:literal) => {
         #[doc = $doc]
         #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
@@ -135,7 +162,18 @@ quantity!(
     StdDays,
     "standard days",
     non_negative,
-    "Absolute time or duration in standard days."
+    "A DURATION in standard days. For an instant on the world's time axis, \
+     see `StdInstant` — the two were one type until The Foliot, and the \
+     `non_negative` rule below is correct for this half and was wrong for \
+     the other."
+);
+quantity!(
+    StdInstant,
+    "standard days since genesis",
+    signed,
+    "An instant on the world's time axis, in standard days since genesis. \
+     Negative values are pre-genesis and legal (decision 0126). Distinct from \
+     `StdDays`, which is a DURATION and correctly refuses a negative."
 );
 quantity!(
     LocalDays,
@@ -244,6 +282,27 @@ impl HabitableZone {
     }
 }
 
+impl StdInstant {
+    /// The duration between two instants — unsigned, because a duration has
+    /// no direction.
+    ///
+    /// A caller that needs the SIGN takes `self.get() - other.get()` and says
+    /// at its own site what the sign means there. Offering a signed
+    /// difference here would hand back something shaped like a duration that
+    /// a duration type must refuse, which is the conflation this pair exists
+    /// to end.
+    /// type-audit: bare-ok(constructor-edge)
+    pub fn since(self, other: StdInstant) -> StdDays {
+        StdDays((self.0 - other.0).abs())
+    }
+
+    /// This instant advanced by a duration.
+    /// type-audit: bare-ok(constructor-edge)
+    pub fn plus(self, span: StdDays) -> StdInstant {
+        StdInstant(self.0 + span.0)
+    }
+}
+
 impl StdDays {
     /// A duration given in standard hours.
     /// type-audit: bare-ok(constructor-edge)
@@ -334,5 +393,51 @@ mod tests {
         assert!(GramsPerCm3::new(-3.0).is_err());
         assert!(GramsPerCm3::new(f64::NAN).is_err());
         assert_eq!(GramsPerCm3::new(3.34).unwrap().get(), 3.34);
+    }
+    #[test]
+    fn a_signed_quantity_admits_both_signs_and_refuses_nonfinite() {
+        assert!(StdInstant::new(0.0).is_ok(), "genesis is representable");
+        assert!(
+            StdInstant::new(-0.5).is_ok(),
+            "an instant before genesis is a point on an axis, not a duration \
+             (decision 0126)"
+        );
+        assert!(StdInstant::new(12_345.0).is_ok());
+        assert!(StdInstant::new(f64::NAN).is_err());
+        assert!(StdInstant::new(f64::INFINITY).is_err());
+        assert!(StdInstant::new(f64::NEG_INFINITY).is_err());
+    }
+
+    #[test]
+    fn a_duration_still_refuses_a_negative() {
+        assert!(
+            StdDays::new(-0.5).is_err(),
+            "StdDays is a DURATION now; non-negative is correct for it"
+        );
+        assert!(StdDays::new(0.0).is_ok(), "a zero-length duration is legal");
+    }
+
+    #[test]
+    fn the_difference_of_two_instants_is_a_duration() {
+        let a = StdInstant::new(-10.0).unwrap();
+        let b = StdInstant::new(15.0).unwrap();
+        assert_eq!(b.since(a).get(), 25.0);
+        assert_eq!(
+            a.since(b).get(),
+            25.0,
+            "a duration has no direction; both orders give the same span"
+        );
+        assert_eq!(a.since(a).get(), 0.0);
+    }
+
+    #[test]
+    fn an_instant_offset_by_a_duration_is_an_instant() {
+        let t = StdInstant::new(-5.0).unwrap();
+        assert_eq!(t.plus(StdDays::new(10.0).unwrap()).get(), 5.0);
+        assert_eq!(
+            t.plus(StdDays::new(0.0).unwrap()).get(),
+            -5.0,
+            "advancing by nothing leaves the instant where it was"
+        );
     }
 }

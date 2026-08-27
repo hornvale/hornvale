@@ -478,9 +478,7 @@ checks AS (
   -- worlds — see calibration.rs's own re-pin comment for the derivation).
   SELECT 'goblin flagship coastal count (calibration.rs::goblin_flagship_coastal_split_is_pinned)',
   -- The Underworld resync, 0063/0079: 189 -> 181.
-  -- The Granary resync, 0063/0079: 181 -> 190.
-  -- The Sources resync (census at a94563b8513a, goldens b8a116b27), 2026-08-27: 190 -> 189.
-         CAST(flagship_coastal AS DOUBLE), 189.0, flagship_coastal = 189 FROM agg
+         CAST(flagship_coastal AS DOUBLE), 190.0, flagship_coastal = 190 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 235 -> 234.
   -- The Tumult (predation) re-pin, 0063: 234 -> 238.
@@ -492,9 +490,7 @@ checks AS (
   -- The Range resync, 0063/0079: 792 -> 781.
   SELECT 'goblin flagship inland count (calibration.rs::goblin_flagship_coastal_split_is_pinned)',
   -- The Underworld resync, 0063/0079: 811 -> 819.
-  -- The Granary resync, 0063/0079: 819 -> 809.
-  -- The Sources resync (census at a94563b8513a, goldens b8a116b27), 2026-08-27: 809 -> 810.
-         CAST(flagship_inland AS DOUBLE), 810.0, flagship_inland = 810 FROM agg
+         CAST(flagship_inland AS DOUBLE), 809.0, flagship_inland = 809 FROM agg
   UNION ALL
   -- The Tithe (tribute) re-pin, 0063: 33 -> 34.
   -- The Contour epoch v2 resync, 0063: 34 -> 33.
@@ -634,9 +630,7 @@ checks AS (
   -- newer main it moves the same three census table entries the campaign's
   -- earlier census moved. zero/nonzero/absent unmoved at 0/1000/0.
   -- 0.5081441944999995 -> 0.5081323953399994. Tolerance unchanged at 1e-6.
-  -- The Sources resync (census at a94563b8513a, goldens b8a116b27),
-  -- 2026-08-27: 0.5190331163569993 -> 0.5190630355569994.
-         collision_mean, 0.5190630355569994, abs(collision_mean - 0.5190630355569994) < 1e-6 FROM agg
+         collision_mean, 0.5190331163569993, abs(collision_mean - 0.5190331163569993) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 771 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 766 -> 767.
@@ -680,9 +674,7 @@ checks AS (
   -- The Underworld resync, 0063/0079: 8.506600585 -> 8.515439092299996.
   -- The Burr resync (ROOT_EPOCH v4, census committed as 635d116d):
   -- 8.515439092299996 -> 8.546439147599997.
-  -- The Sources resync (census at a94563b8513a, goldens b8a116b27),
-  -- 2026-08-27: 8.523035457757755 -> 8.520497665465461.
-         goblin_len_mean, 8.520497665465461, abs(goblin_len_mean - 8.520497665465461) < 1e-6 FROM agg
+         goblin_len_mean, 8.522649181881878, abs(goblin_len_mean - 8.522649181881878) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 772 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 762 -> 760.
@@ -727,9 +719,7 @@ checks AS (
   -- The Underworld resync, 0063/0079: 6.858963629124241 -> 6.854391970773933.
   -- The Burr resync (ROOT_EPOCH v4, census committed as 635d116d):
   -- 6.854391970773933 -> 6.818936120061097.
-  -- The Sources resync (census at a94563b8513a, goldens b8a116b27),
-  -- 2026-08-27: 6.865372774999998 -> 6.866580815408162.
-         kobold_len_mean, 6.866580815408162, abs(kobold_len_mean - 6.866580815408162) < 1e-6 FROM agg
+         kobold_len_mean, 6.864935456632652, abs(kobold_len_mean - 6.864935456632652) < 1e-6 FROM agg
   UNION ALL
   SELECT 'mean goblin hue-depth (calibration.rs::goblin_hue_depth_exceeds_kobold_hue_depth)',
          goblin_hue_mean, 4.0, abs(goblin_hue_mean - 4.0) < 1e-6 FROM agg
@@ -858,9 +848,7 @@ checks AS (
   -- The Underworld resync, 0063/0079: 2.7043333613 -> 2.7095434288.
   -- The Burr resync (ROOT_EPOCH v4, census committed as 635d116d):
   -- 2.7095434288 -> 2.7241874023999957.
-  -- The Sources resync (census at a94563b8513a, goldens b8a116b27),
-  -- 2026-08-27: 2.716477110510509 -> 2.7157227804804793.
-         goblin_syl_mean, 2.7157227804804793, abs(goblin_syl_mean - 2.7157227804804793) < 1e-6 FROM agg
+         goblin_syl_mean, 2.716477110510509, abs(goblin_syl_mean - 2.716477110510509) < 1e-6 FROM agg
   UNION ALL
   -- The Contour epoch v2 resync, 0063: 763 -> 765.
   -- The Generalist resync, 0063/0079: 765 -> 762.
@@ -894,9 +882,7 @@ checks AS (
   -- The Confidant resync: 2.2007268159183666. Six felt-state concepts enter
   -- every tongue's dictionary, so the per-name statistics shift by fractions of
   -- a thousandth while homophony (a quadratic pair-count) moves 6-10 percent.
-  -- The Sources resync (census at a94563b8513a, goldens b8a116b27),
-  -- 2026-08-27: 2.2007268159183666 -> 2.2012259660204077.
-         kobold_syl_mean, 2.2012259660204077, abs(kobold_syl_mean - 2.2012259660204077) < 1e-6 FROM agg
+         kobold_syl_mean, 2.2007268159183666, abs(kobold_syl_mean - 2.2007268159183666) < 1e-6 FROM agg
   UNION ALL
   SELECT 'name-transparency present-row count (calibration.rs::name_transparency_is_measured_and_pinned)',
          CAST(transparency_present AS DOUBLE), 1000.0, transparency_present = 1000 FROM agg
@@ -933,9 +919,7 @@ checks AS (
   -- unmoved at 1000/0 and the min/max spread pins below are unmoved.
   -- 0.7135540799000004 -> 0.7135625544800003. Still emphatically not 1.0.
   -- Tolerance unchanged at 1e-6.
-  -- The Sources resync (census at a94563b8513a, goldens b8a116b27),
-  -- 2026-08-27: 0.7143637000300016 -> 0.7138718055000017.
-         transparency_mean, 0.7138718055000017, abs(transparency_mean - 0.7138718055000017) < 1e-6 FROM agg
+         transparency_mean, 0.7140890114700017, abs(transparency_mean - 0.7140890114700017) < 1e-6 FROM agg
   UNION ALL
   -- The min and max are the SPREAD pins the deferred note asked for. A floor
   -- of 0.154 against a ceiling of 1.0 is what proves the 0.816 mean describes
@@ -1100,8 +1084,6 @@ checks AS (
   -- -0.004779612149911376 -> -0.016164814210766883 (both solo builds' names
   -- redrawn alike in structure; still ~12x inside the ±0.2 sampling-theory
   -- bound).
-  -- The Sources resync (census at a94563b8513a, goldens b8a116b27),
-  -- 2026-08-27: -0.024799776460672034 -> -0.025108472368594453.
          (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), -0.025108472368594453,
          abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - -0.025_108_472_368_594_453) < 1e-6
     FROM namelen_stats

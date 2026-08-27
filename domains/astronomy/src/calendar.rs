@@ -7,6 +7,7 @@ use crate::sky_position::{EquatorialCoord, ecliptic_of, equatorial_at};
 use crate::system::StarSystem;
 use crate::units::StdDays;
 use hornvale_kernel::math;
+use hornvale_kernel::units::TickSpan;
 
 #[cfg(test)]
 mod tests {
@@ -192,7 +193,7 @@ mod tests {
             moon_phase_offsets: Vec::new(),
         };
         let cal = Calendar {
-            day: Some(StdDays::new(1.0).unwrap()),
+            day: Some(TickSpan::from_std_days(1.0).unwrap()),
             year: StdDays::new(365.25).unwrap(),
             forcing,
             moon_periods: Vec::new(),
@@ -581,7 +582,10 @@ pub const TWILIGHT_DEPTH_DEG: f64 = 12.0;
 /// A world's cycles, derived once from its star system.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Calendar {
-    day: Option<StdDays>,
+    /// Day length as an exact tick count, `None` for a tidally locked
+    /// world. Stored as the integer (The Foliot) and exposed continuously by
+    /// [`Calendar::day_length`]; the integer is the truth.
+    day: Option<TickSpan>,
     year: StdDays,
     moon_periods: Vec<StdDays>,
     forcing: crate::forcing::OrbitalForcing,
@@ -604,9 +608,25 @@ pub fn calendar_of(system: &StarSystem) -> Calendar {
 }
 
 impl Calendar {
-    /// Length of one local day, if the world has one.
-    pub fn day_length(&self) -> Option<StdDays> {
+    /// Length of one local day as an exact tick span, if the world has one.
+    ///
+    /// The stored truth (The Foliot). Prefer this over [`Self::day_length`]
+    /// wherever the caller is doing integer time arithmetic — the scheduler
+    /// in `windows/vessel` is the motivating one — so the continuous view is
+    /// reserved for the orbital mathematics that genuinely needs it.
+    pub fn day_ticks(&self) -> Option<TickSpan> {
         self.day
+    }
+
+    /// Length of one local day, if the world has one.
+    ///
+    /// Derived from the stored exact tick count (The Foliot): the day is a
+    /// whole number of kernel ticks, and this is its lossless continuous view
+    /// for the orbital mathematics. The signature is deliberately unchanged
+    /// so its call sites did not have to move; a caller needing exactness
+    /// should read the tick count rather than round-tripping through this.
+    pub fn day_length(&self) -> Option<StdDays> {
+        self.day.map(|d| StdDays(d.as_std_days()))
     }
     /// Length of the year in standard days.
     pub fn year_length(&self) -> StdDays {
@@ -621,7 +641,7 @@ impl Calendar {
     /// type-audit: bare-ok(count: return), bare-ok(ratio: return)
     pub fn local_day(&self, t: StdDays) -> Option<(i64, f64)> {
         let day = self.day?;
-        let local = t.0 / day.0;
+        let local = t.0 / day.as_std_days();
         let index = local.floor();
         if !index.is_finite() || index < i64::MIN as f64 || index > i64::MAX as f64 {
             return None;
