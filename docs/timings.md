@@ -3117,3 +3117,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T14:27:48Z | sluice:clients | 448.401 | 5586.402 | 71.171 | 12.62 | 0 | f002f79c3 |  | lefford | 40 |
 | 2026-08-27T14:44:08Z | rebaseline | 110.377 | 284.137 | 20.748 | 2.76 | 0 | 4e994ea0f | campaign/the-foliot | ambrose | 12 |
 | 2026-08-27T14:46:48Z | gate-commit | 133.174 | 62.752 | 32.146 | 0.71 | 0 | 4e994ea0f | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T15:31:41Z | gate-commit | 187.202 | 66.681 | 33.606 | 0.54 | 0 | 363635880 | campaign/the-foliot | ambrose | 12 |
