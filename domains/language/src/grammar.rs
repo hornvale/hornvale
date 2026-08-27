@@ -626,8 +626,11 @@ pub fn realize_tongue(
 /// whether to realize `clause.subject` at all. `realize_tongue` itself
 /// always passes `true`, so its behaviour is unchanged byte for byte;
 /// [`realize_tongue_coordination`] is the only caller that ever passes
-/// `false`, for a non-first coordinated clause whose subject is identical
-/// to the first clause's already-stated one (The Mortise, Task 7).
+/// `false`, for a coordinated clause whose subject is identical to the
+/// LAST STATED subject before it (see
+/// [`crate::clause::elide_coordinated_subjects`] for exactly what that
+/// means and why it is not simply "the first clause", The Mortise, Task 7
+/// fix round 1, spec §4.10's tier 2).
 ///
 /// **Elision happens HERE, inside per-clause realization, never as
 /// post-processing on an already-joined sentence.** [`join_coordinated`]
@@ -968,8 +971,10 @@ pub fn realize_tongue_deep(
 /// whether to realize `clause.subject` at all. `realize_tongue_deep` itself
 /// always passes `true`, so its behaviour is unchanged byte for byte;
 /// [`realize_tongue_deep_coordination`] is the only caller that ever passes
-/// `false`, for a non-first coordinated clause whose subject is identical
-/// to the first clause's already-stated one (The Mortise, Task 7) — the
+/// `false`, for a coordinated clause whose subject is identical to the
+/// LAST STATED subject before it (see
+/// [`crate::clause::elide_coordinated_subjects`], and note it is NOT
+/// simply "the first clause", The Mortise, Task 7 fix round 1) — the
 /// same knob [`realize_tongue_with_subject`] gives the floor realizer, kept
 /// on the deep path too so elision does not re-open the floor/deep
 /// asymmetry Task 6's fix round closed for coordination itself.
