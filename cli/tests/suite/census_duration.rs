@@ -44,7 +44,10 @@ use std::path::{Path, PathBuf};
 
 /// Seconds a census may take before this test fails.
 ///
-/// **The policy target is 900 — Nathan's ~15 minutes — and this is 900 again.**
+/// **The policy target was 900 — Nathan's ~15 minutes — and the constant is now
+/// 950; see the `900 -> 950` section below for why, and note the policy target
+/// itself is unchanged. 950 is not a looser budget, it is the same budget with
+/// the noise floor accounted for.**
 /// The temporary 1050 was RATCHETED BACK on 2026-08-16, on the census row its
 /// own expiry named. Raised deliberately and lowered deliberately, both
 /// recorded here rather than quietly, which is the discipline
@@ -111,12 +114,21 @@ use std::path::{Path, PathBuf};
 /// that regeneration, so the metric-level win cost no census value — the
 /// byte-identity claim's strongest confirmation, a full 1000-seed canonical
 /// run rather than a probe. The condition written here was met, so the
-/// constant below is 900 again.
+/// constant below was 900 again, and is now 950.
 ///
-/// **What the ratchet did NOT fix, and it is the live question now.** 900
-/// leaves 44.5 s of headroom over the 855.5 s reading — 5.2% — while the
-/// observed run-to-run spread with *no code change at all* was 882.5–949.6 s,
-/// or 7.6%. The ceiling is therefore still inside the instrument's noise,
+/// **What the ratchet did NOT fix — ANSWERED 2026-08-26, and this paragraph
+/// predicted it.** 900 left 44.5 s of headroom over the 855.5 s reading — 5.2%
+/// — while the observed run-to-run spread with *no code change at all* was
+/// 882.5–949.6 s, or 7.6%. A ceiling inside the instrument's own noise fires on
+/// noise, and it did: 7 of the last 12 runs. The `900 -> 950` section below is
+/// that finding acted on rather than restated. What it does NOT do is fix the
+/// instrument — 950 is still a wall-clock number on a shared box, and the
+/// durable repair named below (denominate against `cpu_ratio`, so contention
+/// and regression separate) is still unbuilt. This raise buys signal-to-noise,
+/// not measurement.
+///
+/// The original wording follows, because it is the reasoning the raise rests
+/// on: the ceiling was still inside the instrument's noise,
 /// which is exactly the condition The Sluice's retrospective named and Nathan
 /// deferred. The fix moved the number without fixing the instrument, so this
 /// may flap. The durable repair is to denominate against `cpu_ratio` so
@@ -130,7 +142,43 @@ use std::path::{Path, PathBuf};
 /// increase was real and attributed. The rule that replaces it: a raise must
 /// carry the attribution, the optimisable share, and the condition for ratcheting
 /// back down. This one does.
-const CENSUS_ALARM_SECS: f64 = 900.0;
+///
+/// # 900 -> 950 (2026-08-26)
+///
+/// **Attribution: the census did not get slower. The threshold was set AT the
+/// median instead of above it.** 900 was chosen when the post-Millrace census
+/// ran ~900 s, which makes a ~50% fire rate arithmetic rather than evidential —
+/// a threshold at the median alarms on half of a healthy distribution by
+/// construction. Measured over the last twelve runs (2026-08-13 .. 2026-08-25):
+///
+/// ```text
+///   min 855.5   median 902.8   p90 920.2   max 979.5   (excl. the 19,207 s Rill run)
+///   fire rate at 900: 7/12 (58%)     at 925: 2/12     at 950: 2/12
+/// ```
+///
+/// 925 and 950 are behaviourally IDENTICAL on the observed data — both catch
+/// exactly the 979.5 s run and The Rill's catastrophe. The choice between them
+/// is headroom against variance, not sensitivity: the observed healthy maximum
+/// is 920.2 s, so 925 leaves 4.8 s and 950 leaves 29.8 s. A yellow now costs a
+/// human a flamegraph and a written finding in the yellow log, so a false
+/// alarm is not free noise — it is wasted investigation. 950 it is.
+///
+/// **Optimisable share: unknown, and deliberately not guessed.** What is known
+/// is that the yellow mechanism has already paid for itself — see
+/// `168a2a9de` ("two optimizations the yellow-run profile found") and
+/// `3f50a5fc8`. The current ~903 s median is the steady state AFTER those
+/// landed, so it is not obviously carrying slack; establishing whether it does
+/// needs a profile, which is exactly what a yellow is for. Raising the
+/// threshold does not retire that question, it stops asking it eight times out
+/// of twelve.
+///
+/// **Ratchet back down when: the median over ten consecutive runs falls below
+/// 870 s.** At that point 925 restores the same ~2-in-12 fire rate this raise
+/// is buying, and the number should follow the distribution down. Read the
+/// median from `docs/timings.md`, never from this comment — a figure written
+/// here is a claim with a date, and this whole raise exists because the last
+/// one outlived its data.
+const CENSUS_ALARM_SECS: f64 = 950.0;
 
 /// **The refusal ceiling, and why there are now two numbers instead of one.**
 ///

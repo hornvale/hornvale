@@ -19,7 +19,7 @@
 //! authored surface text anywhere in a generated tongue (the program
 //! thesis).
 
-use crate::clause::{Adjunct, Argument};
+use crate::clause::{Adjunct, Argument, Clause, Subject};
 use crate::lexicon::{LexEntry, Lexicon};
 use crate::morphology::{
     ClassPosition, Evidential, MorphDepth, MorphForm, NounClass, TongueMorphology, affix,
@@ -30,6 +30,7 @@ use crate::phonology::Phonology;
 use crate::streams;
 use crate::typology::Orthography;
 use hornvale_kernel::seed::StreamLabel;
+use hornvale_kernel::world::IS_A;
 use hornvale_kernel::{Seed, Stream};
 
 /// The six constituent orders of a subject–copula–complement clause
@@ -163,35 +164,6 @@ pub fn tongue_grammar(seed: &Seed, species: &str, ph: &Phonology) -> TongueGramm
     }
 }
 
-/// One nominal-predication clause for a tongue: an already-surfaced subject
-/// (autonym / proper name — tongue words already) and the complement as a
-/// CONCEPT id to lexicalize in the speaker's lexicon.
-/// type-audit: bare-ok(identifier-text)
-#[derive(Clone, Debug, PartialEq)]
-pub struct TongueClause {
-    /// The subject, already in surface form.
-    pub subject: String,
-    /// The complement concept id (e.g. `"goblin-kind"`), lexicalized via
-    /// the speaker's lexicon.
-    pub complement_concept: String,
-    /// How this clause's content was epistemically grounded (C7).
-    /// `realize_tongue` (the C3 floor realizer) ignores this field
-    /// entirely — only [`realize_tongue_deep`] reads it, and only when
-    /// `morph`'s evidential depth is not [`MorphDepth::None`].
-    pub evidential: Evidential,
-    /// Role bindings on this clause, realized through the tongue's own
-    /// lexicon rather than Common's `common_role_surface` table — a tongue
-    /// that lacks a bound concept gaps the WHOLE clause (spec §4: renders
-    /// fully or gaps entirely, never partially), the same discipline the
-    /// complement already followed. There is no per-role construction table
-    /// yet (contrast `clause::common_role_surface`): each resolved word is
-    /// appended in order by [`realize_tongue`]/[`realize_tongue_deep`]. This
-    /// is a deliberate asymmetry with the now fact-shaped `ClauseSpec` —
-    /// see "And Common is not yet a peer in full" in
-    /// `book/src/chronicle/the-interlinear.md` — not an oversight.
-    pub adjuncts: Vec<Adjunct>,
-}
-
 /// A whole-sentence gap: the tongue could not say this clause because its
 /// complement concept has no word (spec §4 — a clause renders fully or gaps
 /// entirely, never partially).
@@ -203,6 +175,52 @@ pub struct TongueGap {
     /// The recountable reason (from the lexicon's own gap, or "no entry"
     /// when the concept has no entry at all).
     pub reason: String,
+}
+
+/// Resolve one argument to its surface text in this tongue: a concept
+/// through the lexicon, everything else passed through or rendered at the
+/// tongue's own grain.
+///
+/// **Shared by the object slot and the adjunct slot**, and that sharing is
+/// the point. Before The Scarf the adjunct slot resolved all four shapes
+/// and the object slot resolved only `Concept`, so a tongue could say a
+/// bare numeral in an adjunct and not in the object — an accident of two
+/// clause structs drifting, never a design.
+fn resolve_argument(argument: &Argument, lexicon: &Lexicon) -> Result<String, TongueGap> {
+    match argument {
+        Argument::Concept(id) => Ok(resolve_concept_marked(id, lexicon)?.roman),
+        Argument::Name(text) => Ok(text.clone()),
+        Argument::Count(n) => Ok(n.to_string()),
+        Argument::Quantity(x) => Ok(x.to_string()),
+    }
+}
+
+/// Resolve a concept id to a word mid-assembly, keeping its segments when
+/// the lexicon has them so a later affix layer can join at the segment
+/// level. A [`LexEntry::Compound`] yields `segments: None` — a pre-existing
+/// lexicon gap, which [`layer_affix`] PANICS on rather than silently
+/// degrading.
+fn resolve_concept_marked(id: &str, lexicon: &Lexicon) -> Result<Marked, TongueGap> {
+    match lexicon.entry(id) {
+        Some(LexEntry::Root { derivation, views }) => Ok(Marked {
+            segments: Some(derivation.modern.clone()),
+            roman: views.roman.clone(),
+        }),
+        Some(LexEntry::Compound { views, .. }) => Ok(Marked {
+            segments: None,
+            roman: views.roman.clone(),
+        }),
+        // `GapReason`'s Display is the canonical recountable rendering —
+        // never `{reason:?}`; the reason is prose to recount, not debug.
+        Some(LexEntry::Gap { reason }) => Err(TongueGap {
+            concept: id.to_string(),
+            reason: reason.to_string(),
+        }),
+        None => Err(TongueGap {
+            concept: id.to_string(),
+            reason: "no entry in this lexicon".to_string(),
+        }),
+    }
 }
 
 /// Realize a clause's adjuncts through the tongue's own lexicon, shared by
@@ -222,25 +240,43 @@ pub struct TongueGap {
 fn realize_adjuncts(adjuncts: &[Adjunct], lexicon: &Lexicon) -> Result<Vec<String>, TongueGap> {
     adjuncts
         .iter()
-        .map(|adjunct| match &adjunct.argument {
-            Argument::Concept(id) => match lexicon.entry(id) {
-                Some(LexEntry::Root { views, .. }) | Some(LexEntry::Compound { views, .. }) => {
-                    Ok(views.roman.clone())
-                }
-                Some(LexEntry::Gap { reason }) => Err(TongueGap {
-                    concept: id.clone(),
-                    reason: reason.to_string(),
-                }),
-                None => Err(TongueGap {
-                    concept: id.clone(),
-                    reason: "no entry in this lexicon".to_string(),
-                }),
-            },
-            Argument::Name(text) => Ok(text.clone()),
-            Argument::Count(n) => Ok(n.to_string()),
-            Argument::Quantity(x) => Ok(x.to_string()),
-        })
+        .map(|adjunct| resolve_argument(&adjunct.argument, lexicon))
         .collect()
+}
+
+/// The subject's surface text in a tongue.
+///
+/// A [`Subject::Pronoun`] GAPS: no tongue draws a pronoun inventory, so
+/// there is nothing to realize. Before The Scarf the projection into
+/// `TongueClause` stringified Common's own English pronoun and handed it
+/// to a tongue, which is precisely the leak The Interlinear existed to
+/// close. The reason names the inventory rather than the people: a tongue
+/// with no drawn pronouns cannot RE-MENTION; its speakers are not thereby
+/// unable to refer.
+fn tongue_subject(subject: &Subject) -> Result<String, TongueGap> {
+    match subject {
+        Subject::Name(name) => Ok(name.clone()),
+        Subject::Pronoun(_) => Err(TongueGap {
+            concept: "subject/pronoun".to_string(),
+            reason: "this tongue draws no pronoun inventory, so it cannot re-mention a referent"
+                .to_string(),
+        }),
+    }
+}
+
+/// Refuse a clause whose predicate no tongue construction covers.
+///
+/// **Panics rather than gapping**, and the difference is the whole of spec
+/// §3.3. A [`TongueGap`] asserts something TRUE ABOUT THE WORLD -- this
+/// people has no word for the sea. A missing construction is an authoring
+/// hole in this repository, so reporting it as a gap would put a false claim
+/// about a people into a rendered artifact. `realize_common` panics on the
+/// same condition for the same reason.
+fn assert_tongue_construction(predicate: &str) {
+    assert!(
+        predicate == IS_A,
+        "no tongue construction for predicate {predicate:?} (only {IS_A:?} is covered)"
+    );
 }
 
 /// Realize a nominal-predication clause in a tongue: lexicalize the
@@ -250,33 +286,15 @@ fn realize_adjuncts(adjuncts: &[Adjunct], lexicon: &Lexicon) -> Result<Vec<Strin
 /// any adjunct concept fails the whole clause.
 /// type-audit: bare-ok(prose)
 pub fn realize_tongue(
-    clause: &TongueClause,
+    clause: &Clause,
     grammar: &TongueGrammar,
     lexicon: &Lexicon,
 ) -> Result<String, TongueGap> {
-    let complement = match lexicon.entry(&clause.complement_concept) {
-        Some(LexEntry::Root { views, .. }) | Some(LexEntry::Compound { views, .. }) => {
-            views.roman.clone()
-        }
-        Some(LexEntry::Gap { reason }) => {
-            // `GapReason`'s Display is the canonical recountable rendering
-            // ("gap (experiential): ..." / "gap (perceptual): ..." / "gap
-            // (unnameable): ...") — never `{reason:?}`; the reason is prose
-            // to recount, not debug.
-            return Err(TongueGap {
-                concept: clause.complement_concept.clone(),
-                reason: reason.to_string(),
-            });
-        }
-        None => {
-            return Err(TongueGap {
-                concept: clause.complement_concept.clone(),
-                reason: "no entry in this lexicon".to_string(),
-            });
-        }
-    };
+    assert_tongue_construction(&clause.predicate);
+    let subject = tongue_subject(&clause.subject)?;
+    let complement = resolve_argument(&clause.object, lexicon)?;
     let adjunct_words = realize_adjuncts(&clause.adjuncts, lexicon)?;
-    let s = clause.subject.as_str();
+    let s = subject.as_str();
     let v = grammar.copula.as_deref();
     let o = complement.as_str();
     // Order the present constituents; a `None` copula simply drops out.
@@ -384,50 +402,50 @@ enum Role {
 /// spelling, never `morph`/`grammar`/`lexicon` or which draw fired.
 /// type-audit: bare-ok(prose)
 pub fn realize_tongue_deep(
-    clause: &TongueClause,
+    clause: &Clause,
     grammar: &TongueGrammar,
     morph: &TongueMorphology,
     noun_class_of: &dyn Fn(&str) -> NounClass,
     lexicon: &Lexicon,
     orth: Orthography,
 ) -> Result<String, TongueGap> {
-    let mut complement = match lexicon.entry(&clause.complement_concept) {
-        Some(LexEntry::Root { derivation, views }) => Marked {
-            segments: Some(derivation.modern.clone()),
-            roman: views.roman.clone(),
-        },
-        Some(LexEntry::Compound { views, .. }) => Marked {
-            segments: None,
-            roman: views.roman.clone(),
-        },
-        Some(LexEntry::Gap { reason }) => {
-            return Err(TongueGap {
-                concept: clause.complement_concept.clone(),
-                reason: reason.to_string(),
-            });
-        }
-        None => {
-            return Err(TongueGap {
-                concept: clause.complement_concept.clone(),
-                reason: "no entry in this lexicon".to_string(),
-            });
-        }
+    assert_tongue_construction(&clause.predicate);
+    let subject = tongue_subject(&clause.subject)?;
+    // Spec §4.3: only a LEXICAL object may bear morphology. `object_concept`
+    // is `Some` only for a `Concept` -- and it must not be conflated with
+    // `Marked.segments == None`, which a `Compound` also has. A `Compound`'s
+    // missing segments are a lexicon BUG that `layer_affix` panics on, on
+    // purpose; a numeral has no segments BY NATURE and there is nothing to
+    // fix. Guarding on the concept id keeps the panic reachable for the
+    // first case while declining to affix in the second.
+    let (mut complement, object_concept): (Marked, Option<String>) = match &clause.object {
+        Argument::Concept(id) => (resolve_concept_marked(id, lexicon)?, Some(id.clone())),
+        other => (
+            Marked {
+                segments: None,
+                roman: resolve_argument(other, lexicon)?,
+            },
+            None,
+        ),
     };
     let adjunct_words = realize_adjuncts(&clause.adjuncts, lexicon)?;
 
-    // Noun-class marking: always on the complement noun.
-    let class_value = match noun_class_of(&clause.complement_concept) {
-        NounClass::Animate => "animate",
-        NounClass::Inanimate => "inanimate",
-    };
+    // Noun-class marking: always on the complement noun — but only a lexical
+    // object has a concept id to ask `noun_class_of` about (spec §4.3).
     let mut class_particle: Option<String> = None;
-    if let Some(marker) = morph.class.get(class_value) {
-        match morph.noun_class_depth {
-            MorphDepth::None => {}
-            MorphDepth::Affix => {
-                complement = layer_affix(complement, marker, morph.class_position, orth);
+    if let Some(concept) = &object_concept {
+        let class_value = match noun_class_of(concept) {
+            NounClass::Animate => "animate",
+            NounClass::Inanimate => "inanimate",
+        };
+        if let Some(marker) = morph.class.get(class_value) {
+            match morph.noun_class_depth {
+                MorphDepth::None => {}
+                MorphDepth::Affix => {
+                    complement = layer_affix(complement, marker, morph.class_position, orth);
+                }
+                MorphDepth::Particle => class_particle = Some(marker.roman.clone()),
             }
-            MorphDepth::Particle => class_particle = Some(marker.roman.clone()),
         }
     }
 
@@ -452,7 +470,11 @@ pub fn realize_tongue_deep(
                     };
                     copula_roman =
                         Some(layer_affix(cop, marker, ClassPosition::Suffix, orth).roman);
-                } else {
+                } else if object_concept.is_some() {
+                    // Zero copula: the marker falls to the predicate nominal.
+                    // A non-lexical object cannot bear it, so the clause goes
+                    // unmarked for evidentiality -- the same outcome a tongue
+                    // that drew `MorphDepth::None` already has (spec §4.3).
                     complement = layer_affix(complement, marker, ClassPosition::Suffix, orth);
                 }
             }
@@ -460,7 +482,7 @@ pub fn realize_tongue_deep(
         }
     }
 
-    let s = clause.subject.as_str();
+    let s = subject.as_str();
     let v = copula_roman.as_deref();
     let o = complement.roman.as_str();
     let mut ordered: Vec<(Role, String)> = match grammar.order {
@@ -543,6 +565,11 @@ pub fn realize_tongue_deep(
 #[cfg(test)]
 mod tests {
     use super::*;
+    // Test-only: `Number` and `Definiteness` reach a tongue realizer and go
+    // UNREAD (spec 3.2), so no non-test code in this module names them.
+    // Importing them at module level would be an unused import outside
+    // `cfg(test)`.
+    use crate::clause::{Definiteness, Number};
     use crate::etymology::CascadeRegime;
     use crate::lexicon::{ExposureClass, LexEntry, build_lexicon};
     use crate::naming::render_views;
@@ -706,6 +733,31 @@ mod tests {
     }
 
     #[test]
+    fn every_argument_shape_resolves_the_same_way_in_either_slot() {
+        let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
+        // A concept goes through the lexicon; everything else is passed through
+        // or rendered at the tongue's own grain. This is what `realize_adjuncts`
+        // has always done -- naming it is what lets the OBJECT slot do it too.
+        assert_eq!(
+            resolve_argument(&Argument::Name("Nwamvam".to_string()), &lex).unwrap(),
+            "Nwamvam"
+        );
+        assert_eq!(
+            resolve_argument(&Argument::Count(8835), &lex).unwrap(),
+            "8835"
+        );
+        assert_eq!(
+            resolve_argument(&Argument::Quantity(1.5), &lex).unwrap(),
+            "1.5"
+        );
+        // A concept with no entry gaps, and the gap names the concept.
+        let gap =
+            resolve_argument(&Argument::Concept("no-such-concept".to_string()), &lex).unwrap_err();
+        assert_eq!(gap.concept, "no-such-concept");
+        assert_eq!(gap.reason, "no entry in this lexicon");
+    }
+
+    #[test]
     fn realize_tongue_orders_and_copula() {
         // Grammar fixed by hand (not drawn) to pin each transform: the
         // copula's TEST value "gha" is arbitrary — production forms are
@@ -715,9 +767,12 @@ mod tests {
             LexEntry::Root { views, .. } => views.roman.clone(),
             other => panic!("goblin-kind should be a root, got {other:?}"),
         };
-        let clause = TongueClause {
-            subject: "Vavako".into(),
-            complement_concept: "goblin-kind".into(),
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Concept("goblin-kind".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
             evidential: Evidential::Witnessed,
             adjuncts: vec![],
         };
@@ -756,9 +811,12 @@ mod tests {
     #[test]
     fn realize_tongue_gaps_whole_sentence() {
         let lex = tiny_lexicon_with(&[]); // no entries → concept is a gap
-        let clause = TongueClause {
-            subject: "Vavako".into(),
-            complement_concept: "planet".into(),
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Concept("planet".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
             evidential: Evidential::Witnessed,
             adjuncts: vec![],
         };
@@ -798,9 +856,12 @@ mod tests {
             &[],
             CascadeRegime::SETTLED,
         );
-        let clause = TongueClause {
-            subject: "Vavako".into(),
-            complement_concept: "blue".into(),
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Concept("blue".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
             evidential: Evidential::Witnessed,
             adjuncts: vec![],
         };
@@ -835,9 +896,12 @@ mod tests {
             LexEntry::Root { views, .. } => views.roman.clone(),
             other => panic!("expected a Root, got {other:?}"),
         };
-        let clause = TongueClause {
-            subject: "Vavako".into(),
-            complement_concept: "planet".into(),
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Concept("planet".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
             evidential: Evidential::Witnessed,
             adjuncts: vec![Adjunct {
                 role: "star-class".into(),
@@ -867,9 +931,12 @@ mod tests {
         // partial render is the tempting wrong answer. Spec section 4 of this
         // module: renders fully or gaps entirely, never partially.
         let lex = tiny_lexicon_with(&[("planet", ExposureClass::Steeped)]);
-        let clause = TongueClause {
-            subject: "Vavako".into(),
-            complement_concept: "planet".into(),
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Concept("planet".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
             evidential: Evidential::Witnessed,
             adjuncts: vec![Adjunct {
                 role: "star-class".into(),
@@ -903,9 +970,12 @@ mod tests {
             LexEntry::Root { views, .. } => views.roman.clone(),
             other => panic!("expected a Root, got {other:?}"),
         };
-        let clause = TongueClause {
-            subject: "Vavako".into(),
-            complement_concept: "goblin-kind".into(),
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Concept("goblin-kind".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
             evidential: Evidential::Witnessed,
             adjuncts: vec![Adjunct {
                 role: "star-class".into(),
@@ -958,9 +1028,12 @@ mod tests {
             LexEntry::Root { views, .. } => views.roman.clone(),
             other => panic!("goblin-kind should be a root, got {other:?}"),
         };
-        let clause = TongueClause {
-            subject: "Vavako".into(),
-            complement_concept: "goblin-kind".into(),
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Concept("goblin-kind".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
             evidential: Evidential::Witnessed,
             adjuncts: vec![],
         };
@@ -1041,9 +1114,12 @@ mod tests {
             LexEntry::Root { derivation, .. } => derivation.modern.clone(),
             other => panic!("goblin-kind should be a root, got {other:?}"),
         };
-        let clause = TongueClause {
-            subject: "Vavako".into(),
-            complement_concept: "goblin-kind".into(),
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Concept("goblin-kind".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
             evidential: Evidential::Witnessed,
             adjuncts: vec![],
         };
@@ -1259,9 +1335,12 @@ mod tests {
         // explicitly: exhaustive-match future-proofing, not a live path.
         let ph = test_phonology();
         let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
-        let clause = TongueClause {
-            subject: "Vavako".into(),
-            complement_concept: "goblin-kind".into(),
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Concept("goblin-kind".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
             evidential: Evidential::Inferred,
             adjuncts: vec![],
         };
@@ -1298,6 +1377,204 @@ mod tests {
         assert!(
             rendered.contains(&inferred_roman),
             "Inferred must render with its drawn form when passed explicitly: {rendered:?}"
+        );
+    }
+
+    /// A hand-fixed SVO grammar with an overt copula. The value "gha" is
+    /// arbitrary and follows the neighbouring tests' convention; production
+    /// copula forms are always drawn.
+    fn svo_with_copula() -> TongueGrammar {
+        TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: Some("gha".into()),
+            copula_segments: None,
+            articles: false,
+        }
+    }
+
+    #[test]
+    fn a_tongue_gaps_on_a_pronoun_subject_and_names_the_missing_inventory() {
+        let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
+        let grammar = svo_with_copula();
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Pronoun("it"),
+            object: Argument::Concept("goblin-kind".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            adjuncts: Vec::new(),
+        };
+        let gap = realize_tongue(&clause, &grammar, &lex).unwrap_err();
+        // Spec 3.3: the reason must name the INVENTORY hole. A tongue with no
+        // drawn pronouns cannot re-mention; that is not the same claim as "this
+        // people cannot refer to things twice", and the reason must not imply it.
+        assert!(
+            gap.reason.contains("pronoun"),
+            "the gap must name pronouns, got: {}",
+            gap.reason
+        );
+        // And no English may cross: the Common pronoun must not appear in any
+        // tongue-side output. Before The Scarf, tongue_view stringified it.
+        assert_ne!(
+            gap.concept, "it",
+            "the English pronoun must not be reported as a tongue concept"
+        );
+    }
+
+    #[test]
+    fn a_tongue_predicates_a_bare_count_in_the_object_slot() {
+        let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
+        let grammar = svo_with_copula();
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Nwamvam".to_string()),
+            object: Argument::Count(8835),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            adjuncts: Vec::new(),
+        };
+        // Impossible before The Scarf: tongue_view panicked on any object that
+        // was not a Concept, while realize_adjuncts rendered exactly this shape
+        // in the adjunct slot. The two slots now agree.
+        let out =
+            realize_tongue(&clause, &grammar, &lex).expect("a numeral needs no lexicon entry");
+        assert!(out.contains("8835"), "got: {out}");
+    }
+
+    #[test]
+    fn a_tongue_ignores_number_and_definiteness() {
+        // The mirror of `common_ignores_the_evidential` (Task 1), and the PAIR is
+        // what makes spec 3.2 a LAW rather than two separate defects. Read alone,
+        // either half invites the wrong repair.
+        let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
+        let grammar = svo_with_copula();
+        let base = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Concept("goblin-kind".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            adjuncts: Vec::new(),
+        };
+        let plural_indef = Clause {
+            number: Number::Pl,
+            definiteness: Definiteness::Indef,
+            ..base.clone()
+        };
+        assert_eq!(
+            realize_tongue(&base, &grammar, &lex).unwrap(),
+            realize_tongue(&plural_indef, &grammar, &lex).unwrap(),
+            "no tongue reads number or definiteness yet: paradigm.rs's drawn \
+             number_depth is the next campaign's work, not a gap in this one"
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "no tongue construction for predicate")]
+    fn a_tongue_panics_on_an_uncovered_predicate_rather_than_gapping() {
+        // Spec 3.3. A TongueGap asserts something TRUE ABOUT THE WORLD; a missing
+        // construction is an authoring hole in this repository. Gapping here would
+        // put a false claim about a people into a rendered artifact.
+        let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
+        let grammar = svo_with_copula();
+        let clause = Clause {
+            predicate: "dwells-in".to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Concept("goblin-kind".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            adjuncts: Vec::new(),
+        };
+        let _ = realize_tongue(&clause, &grammar, &lex);
+    }
+
+    #[test]
+    fn a_non_lexical_object_bears_no_morphology_and_does_not_panic() {
+        use crate::etymology::proto_root;
+
+        // SPEC 4.3, AND THIS IS THE CAMPAIGN'S LOWEST-CONFIDENCE DECISION, so it
+        // gets the sharpest construction available. Every choice here is aimed at
+        // the ONE branch that would otherwise panic: an Affix-depth tongue with a
+        // ZERO COPULA sends the evidential marker to the predicate NOMINAL, which
+        // here is a bare numeral carrying no segments. `layer_affix` panics on
+        // exactly that word shape.
+        //
+        // The guard is on the CONCEPT ID, never on `Marked.segments == None` -- a
+        // Compound has that too, and its missing segments are a lexicon bug the
+        // panic exists to expose. Guarding on segments would silence both.
+        let ph = test_phonology();
+        let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
+        let noun_class_of = |_: &str| NounClass::Inanimate;
+
+        let witnessed_segments = proto_root(&Seed(99), "goblin", "witness-marker", &ph);
+        let witnessed_roman = render_views(&witnessed_segments).roman;
+        let mut evidential_map = BTreeMap::new();
+        evidential_map.insert(
+            "witnessed",
+            MorphForm {
+                segments: witnessed_segments,
+                roman: witnessed_roman.clone(),
+            },
+        );
+        let class_segments = proto_root(&Seed(98), "goblin", "class-marker", &ph);
+        let class_roman = render_views(&class_segments).roman;
+        let mut class_map = BTreeMap::new();
+        class_map.insert(
+            "inanimate",
+            MorphForm {
+                segments: class_segments,
+                roman: class_roman.clone(),
+            },
+        );
+
+        let affixing = TongueMorphology {
+            evidential_depth: MorphDepth::Affix,
+            noun_class_depth: MorphDepth::Affix,
+            class_position: ClassPosition::Suffix,
+            evidential: evidential_map,
+            class: class_map,
+        };
+        let zero_copula = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: None,
+            copula_segments: None,
+            articles: false,
+        };
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Count(8835),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            adjuncts: Vec::new(),
+        };
+
+        let out = realize_tongue_deep(
+            &clause,
+            &zero_copula,
+            &affixing,
+            &noun_class_of,
+            &lex,
+            Orthography::Digraph,
+        )
+        .expect("a numeral needs no lexicon entry");
+
+        assert!(
+            out.contains("8835"),
+            "the numeral must reach the sentence: {out}"
+        );
+        assert!(
+            !out.contains(&witnessed_roman),
+            "a numeral must bear no evidential affix: {out}"
+        );
+        assert!(
+            !out.contains(&class_roman),
+            "a numeral must bear no noun-class affix: {out}"
         );
     }
 }
