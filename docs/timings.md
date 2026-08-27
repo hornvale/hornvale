@@ -3039,3 +3039,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T12:16:16Z | gate-commit | 23.748 | 54.711 | 19.148 | 3.11 | 0 | 761ddac19 | campaign/the-coercion | MacBookPro | 10 |
 | 2026-08-27T12:16:46Z | gate-commit | 19.805 | 48.704 | 12.507 | 3.09 | 0 | 761ddac19 | campaign/the-coercion | MacBookPro | 10 |
 | 2026-08-27T12:28:51Z | gate-commit | 23.268 | 53.472 | 19.357 | 3.13 | 0 | de1eefbf7 | campaign/the-coercion | MacBookPro | 10 |
+| 2026-08-27T12:30:42Z | gate-commit | 19.395 | 48.307 | 12.246 | 3.12 | 0 | de1eefbf7 | campaign/the-coercion | MacBookPro | 10 |

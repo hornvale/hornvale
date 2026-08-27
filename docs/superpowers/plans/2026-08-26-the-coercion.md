@@ -664,7 +664,33 @@ fn h2_no_shipped_verb_can_end_a_possession_by_death() {
 
 Fill it in by driving a session through every shipped verb and asserting no `possession-ended` carries `Text("died")`. **State the verb-roster size in the assertion message** — a null whose denominator is unstated is unreadable.
 
-- [ ] **Step 3: H3 — the act trail is indistinguishable**
+**READ THIS BEFORE H3 AND H4 — the world changed under them during Task 4.**
+
+`ImposedController` is now wired (`session.rs:4216`, selected on
+`self.possessor().is_some()`), and wiring it turned out **not** to be inert. Measured,
+seed 42, one `!wait 1`:
+
+```
+  free body      -> driven_mode Pursuing(Fatigue)   driven_affect Eager
+  possessed body -> driven_mode Idle                driven_affect Content
+```
+
+Mechanism: `PlayerController::intend` returns `Intent::Hold` whenever nothing is queued —
+always, during a wait — while `ImposedController` delegates to `DefaultController`, which
+returns `resolution.intent`. A free body **holds**; a held body **acts on its own
+arbitration**. Committed facts are unaffected either way, because that walk's
+`_driven_facts` are discarded unconditionally.
+
+So the campaign's answer is **two-sided**, and H3/H4 must report both halves separately:
+
+- **Invisible in the ledger** — committed facts identical. This is spec §3.4, unchanged.
+- **Visible in testimony** — `driven_mode`/`driven_affect`/`driven_suppressed` diverge,
+  and those are exactly what The Reticence's `ask` narrates from.
+
+Do not collapse these into one claim in either direction. "Possession is undetectable" is
+now false, and "possession changes what the body does" is still false for the ledger.
+
+- [ ] **Step 3: H3 — the act trail is indistinguishable (committed facts ONLY)**
 
 Name the property: a body driven by `ImposedController` and the same body driven by `DefaultController`, same seed, same tick span, commit facts differing only in *which* acts were chosen — never in shape, cost, or subject. Find the instrument. Since `ImposedController` currently delegates to `DefaultController`, consider whether the trails should be **byte-identical** rather than merely same-shaped, and if so assert that, which is far stronger.
 
