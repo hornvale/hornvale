@@ -110,20 +110,33 @@ this produces.
 ### 4.3 Depth is bounded, in both directions
 
 `Clause` derives `Clone, Debug, PartialEq` and **not** `Serialize`, so recursion
-carries no save-format risk on the struct itself. What it does open is stack
-depth — realization and parsing both become recursive — and parser attachment
-cost.
+carries no save-format risk on the struct itself. And `Box<Clause>` is unique
+ownership with no `Rc` and no shared borrow, so **a clause graph cannot cycle**:
+infinite regress is not a failure mode here. Only unbounded *depth* is.
 
 **Nesting is capped at one level: a clause complement may not itself contain a
 clause complement.** The realizer refuses beyond the cap and the parser stops
-descending at it. The cap is a stated constant with the reason beside it, not an
-implicit consequence of what callers happen to build.
+descending at it.
 
-Why one and not "some larger N": no corpus entry needs two, nothing in the world
-constructs one, and a cap chosen above demonstrated need is authoring a
-distinction nothing states — the same argument `Clause.number`'s doc already
-makes about a second number field. Raising it later is additive and costs no
-epoch.
+**The cap is a statement of demonstrated depth, not a safety belt**, and the
+distinction matters because the safety reading does not survive examination.
+Realization and parsing do become recursive, but every caller in this tree is
+repo code — nothing constructs a `Clause` from untrusted input — so a stack
+overflow would have to be built deliberately, by hand, ten thousand `Box::new`
+deep. That is not a hazard the cap is protecting against.
+
+What the cap actually says is: *one level is the depth this campaign builds,
+tests and can show working.* An uncapped `Box<Clause>` ships reach that nothing
+constructs and nothing covers, which is the
+`LANG-in-character-acts-are-unspeakable` shape — The Deed's seven inert concepts
+— arriving through a type rather than through a registry. Refusing past the
+tested depth is how the capability stays honest about its own size.
+
+Why one and not some larger N is then immediate: no corpus entry needs two,
+nothing in the world constructs one, and a cap above demonstrated need is
+authoring a distinction nothing states — the same argument `Clause.number`'s doc
+already makes about a second number field. Raising it later is additive and costs
+no epoch.
 
 ### 4.4 Tense stays absolute — no backshifting
 
@@ -312,6 +325,13 @@ predication, and `Valence::Nominal` renders `Subject Copula Determiner
 Complement` (`clause.rs:656-665`) with `Definiteness` offering only `Indef` and
 `Def` and no bare singular (`clause.rs:807-814`). Shipping the token would move
 the headline to 6 of 12 while producing *"Everything was a fine."*
+
+The cheap reversal is a trap worth naming: adding a `Definiteness::Bare` variant
+would produce the right *string* — but only by modelling an adjective as a
+concept and asserting *"Everything is-a fine"*, using the classification relation
+for property predication. That is authoring a false distinction to move a number.
+The honest reversal is a property-predication valence, which is a real
+construction and a real campaign.
 
 m02 is therefore the **second** corpus entry whose hand-authored demand tokens
 under-describe it — m10 is the first, and is documented at
