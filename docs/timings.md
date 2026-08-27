@@ -3112,3 +3112,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T14:31:49Z | gate-commit | 136.917 | 786.058 | 95.018 | 6.44 | 0 | b4154630b | campaign/the-coercion | MacBookPro | 10 |
 | 2026-08-27T14:49:29Z | gate-commit | 20.756 | 49.632 | 12.549 | 3.00 | 0 | ad4644d58 | campaign/the-coercion | MacBookPro | 10 |
 | 2026-08-27T15:22:02Z | sluice:artifacts | 118.518 | 1026.661 | 43.140 | 9.03 | 0 | 980362a94 |  | lefford | 40 |
+| 2026-08-27T15:22:42Z | sluice:outboard | 40.033 | 24.986 | 39.509 | 1.61 | 0 | 4d16c06d4 |  | lefford | 40 |
