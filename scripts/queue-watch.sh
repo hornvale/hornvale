@@ -32,7 +32,17 @@
 set -u
 cd /home/nathan/Projects/hornvale || exit 1
 STATE="${QW_STATE:-$HOME/.local/state/hornvale/sluice/queue-watch.state}"
-snap() { bash scripts/sluice-queue.sh list 2>/dev/null | awk -F'\t' 'NF>=6 {print $2"|"$5"|"$3"|"$6"|"substr($4,1,12)}'; }
+# The 6th field classifies WHY a row is held, because `held` means two
+# unrelated things: a chamber job that went red (needs attribution — wake the
+# operator) and a request the operator declined on purpose (needs nothing; they
+# just did it). Conflating them makes the watcher cry wolf at its own actions,
+# and an alarm that fires on your own deliberate moves trains you to ignore it
+# — the failure CLAUDE.md describes for a gate that reddens on day one and
+# stays red. This fired for real within minutes of arming: a deliberate
+# "redundant census, not run" hold was reported as needing attribution.
+# Unknown hold reasons fall through to the LOUD branch on purpose: a mouth
+# refusal is a hold nobody chose, so fail toward waking someone.
+snap() { bash scripts/sluice-queue.sh list 2>/dev/null | awk -F'\t' 'NF>=6 {h = (index($7,"HELD BY OPERATOR")==1) ? "op" : "chamber"; print $2"|"$5"|"$3"|"$6"|"substr($4,1,12)"|"h}'; }
 box_busy() { bash scripts/census-run.sh status >/dev/null 2>&1; }
 
 [ -f "$STATE" ] || snap > "$STATE"
@@ -60,11 +70,12 @@ while true; do
         [ -n "${TEST_ONCE:-}" ] && break
         sleep 45; continue
     fi
-    while IFS='|' read -r id st br kind sha; do
+    while IFS='|' read -r id st br kind sha why; do
         [ -n "${id:-}" ] || continue
         case "$st" in
             queued)   echo "QUEUE ARRIVED: $br $sha kind=$kind — needs vetting" ;;
-            held)     echo "QUEUE RED: $br $sha kind=$kind is HELD — needs attribution" ;;
+            held)     [ "${why:-chamber}" = "op" ] || \
+                          echo "QUEUE RED: $br $sha kind=$kind is HELD — needs attribution" ;;
             landed)   echo "QUEUE LANDED: $br $sha" ;;
             reported) echo "QUEUE REPORTED: $br $sha kind=$kind" ;;
         esac
