@@ -766,12 +766,52 @@ fn the_perception_overlay_lands_on_the_same_squares_as_the_terrain_raster() {
 
 - [ ] **Step 2: Run to verify it fails** — Expected: FAIL, holes present and the two layers disagree.
 
-- [ ] **Step 3: Implement.** `render_surrounds_ascii` and `chart::draw` change
-PROJECTION ONLY (both keep placing the packet's 31 cells); `plate.rs` gains
+- [ ] **Step 3: Implement.**
+
+**CONTROLLER RULING (pre-dispatch, binding — this is the way this task ships
+broken).** `spread::compose`'s plate selection is currently **either/or**
+(`core/src/spread.rs:185-190`):
+
+```rust
+match world_plate {
+    Some(world) => blit(world, &mut plate, (0, 0)),
+    None => match &snapshot.spatial {
+        Spatial::Walk { chart } => crate::chart::draw(chart, &mut plate, (0, 0)),
+        ...
+```
+
+So the moment band B is handed a `world_plate`, **`chart::draw` never runs** —
+and `chart::draw` is the only thing that paints `HERE_GLYPH` (`'@'`, the
+observer's own position, `chart.rs:72`) and the marks (NPCs, features,
+`dominant_mark`). A naive implementation therefore ships a band B with **no
+player marker and no creatures**, and no existing test necessarily catches it:
+the plate tests assert terrain, the chart tests assert the chart in isolation.
+
+**So the match becomes a composition, not a choice:** blit the terrain raster,
+then **overlay the perception layer on top of it.**
+
+That forces one more decision, and it is the right one rather than a
+compromise: **once a terrain raster is underneath, the perception overlay draws
+the observer and marks and NEVER terrain glyphs.** `PLACED_GLYPH` (`'+'`,
+`chart.rs:79`, documented as "every other placed lattice cell") exists only
+because the walk view had no terrain vocabulary. It now has one. Painting `'+'`
+over every placed cell would obliterate the raster this campaign built.
+
+`chart.rs`'s own doc calls its coarse vocabulary deliberate and points at the
+22-biome glyph set as "a separate campaign" — this task does not build that
+set, it just stops `'+'` from covering ground the raster already draws.
+
+Concretely: `render_surrounds_ascii` and `chart::draw` change **projection**
+(both keep placing the packet's 31 cells, now onto the square grid);
+`chart::draw` additionally gains the overlay behaviour above; `plate.rs` gains
 band B as a rung it already knows how to draw; `spread::compose` and
-`world_plate_for_redraw` supply the plate at band B. **`surrounds_ascii.rs` and
-`chart.rs` must move in the SAME commit** — a commit where only one has moved
-leaves the pin red and is not a valid stopping point for review.
+`world_plate_for_redraw` supply the plate at band B; and `world_view()` — the
+derived method Ruling 2 introduced for exactly this moment — loses its referent
+and is deleted, as its own doc comment predicted.
+
+**`surrounds_ascii.rs` and `chart.rs` must move in the SAME commit** — a commit
+where only one has moved leaves the `chart.rs:180` pin red and is not a valid
+stopping point for review.
 
 - [ ] **Step 4: Regenerate the reference fixture**
 
