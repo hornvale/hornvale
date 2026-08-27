@@ -3149,3 +3149,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T23:41:14Z | gate-commit | 20.200 | 49.460 | 12.243 | 3.05 | 0 | 4b3c8266f | campaign/the-offer | MacBookPro | 10 |
 | 2026-08-27T23:42:33Z | gate-commit | 20.418 | 49.505 | 12.666 | 3.04 | 0 | 4b3c8266f | campaign/the-offer | MacBookPro | 10 |
 | 2026-08-27T23:47:40Z | gate-commit | 55.487 | 103.689 | 96.673 | 3.61 | 0 | c52ecf532 | campaign/the-offer | MacBookPro | 10 |
+| 2026-08-27T23:49:28Z | rebaseline | 56.193 | 258.067 | 13.183 | 4.83 | 0 | 56240c479 | campaign/the-offer | MacBookPro | 10 |
