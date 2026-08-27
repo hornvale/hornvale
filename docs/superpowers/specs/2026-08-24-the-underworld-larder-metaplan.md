@@ -41,6 +41,12 @@ reachable chambers **3.264x**, runs 0.502x. `BIO-underworld-has-no-energy`'s
 size clause is falsified; its energy clause is what this program addresses.
 **That is how much space rung 3 has to feed.**
 
+**Re-run 2026-08-26 (The Sources, harvest task), against `main` post-Glasshouse
+(commit `7576eca00`):** all three figures reproduced bit-for-bit. The probe
+had been authored 403 commits earlier, before the temperature epoch merged;
+whether it still agreed with current `main` was unmeasured until this
+re-run.
+
 ### 3.2 The six energy sources are reachable from lithology
 
 `BIO-subterranean-energy-sources` names six candidates, each keyed on a
@@ -54,6 +60,10 @@ genuinely decoupled (`silica`x`porosity` -0.0279, `silica`x`carbonate` 0.1983,
 `grain`x`metamorphic_grade` 0.0988), and what IS coupled is exactly what the
 source defines as arithmetic on its neighbours (`induration`x`metamorphic_grade`
 0.9818). `winze_energy_probe`'s M4 assertions pin the corrected verdict.
+
+**Re-run 2026-08-26 (The Sources, harvest task), against `main` post-Glasshouse:**
+all cited correlations reproduced bit-for-bit. This section's conclusion — the
+axes carry independent signal — held.
 
 ### 3.3 The blocking type is small, and the estimate everyone was carrying was wrong
 
@@ -108,7 +118,7 @@ by construction. Spec: `2026-08-24-the-gossan-design.md`.
 **Deliberately changes nothing.** Its whole output is that a later campaign
 can say the word.
 
-### Rung 2 — THE SOURCES: an energy field over the rock
+### Rung 2 — THE SOURCES: an energy field over the rock — **DONE**
 
 **`BIO-subterranean-energy-sources` does not exist on `main`.** It is added by
 `campaign/the-winze`, unmerged as of this writing, and verified absent from
@@ -122,6 +132,21 @@ quantity. Moves `Chemotrophic` from `Declared` to `Witnessed`. **Unblocks
 hydrothermal vents at the same time** — the surface half of the same defect,
 and free evidence that the mechanism is not underworld-special-cased.
 
+**Shipped by The Sources (merged 2026-08-27); see
+[the chronicle](../../../book/src/chronicle/the-sources.md).** Landed as a
+seven-term sum (the six named here plus a drainage-gated detrital-import
+term the shallow arm needs), evaluated per rung rather than once per column.
+This paragraph's own "free evidence" framing does not survive unqualified —
+the chronicle corrects it: the terrain model gives every vent the same
+chemistry and gradient as the open ocean floor around it, so the evidence is
+that the whole ocean floor sits in the productive regime, not that a vent
+does specifically. Three of §7's questions came back FALSIFIED (no trough at
+the corpus's middle depth; worlds do not differ from each other by the
+frozen bar; a single rung's own chambers do not spread out by it either) and
+one CONFIRMED (composition — which source dominates — varies far more than
+magnitude does), which is why §7 below is now marked measured rather than
+left open.
+
 ### Rung 3 — THE CEILING: what that field can support
 
 Carrying capacity that does not trace back to the star. Where "not every world
@@ -132,6 +157,21 @@ horror and a spreading ecology eat the same rock, so one budget with two kinds
 of consumer is a mechanism where a special-case cap on monsters is a knob. Its
 cost is that "barren and deadly" and "lush and safe" both become unreachable
 world-types. Nathan has not ruled.
+
+**Inherited diagnosis (The Sources, §7 above):** do not design this rung
+against lithology carrying the variety budget. Rock chemistry underground
+was measured as roughly **three near-constant categorical states** (which
+kind of chamber a place is — karst, fracture, lava tube, …), not a
+continuum: within one kind the rock reads almost the same value everywhere,
+and the three chemical bands the terrain model draws from are wide enough
+that almost no sampled value leaves every energy mechanism unproductive.
+That is why magnitude compressed at every scale rung 2 measured, and it will
+compress the same way here if `Not every world is *DOOM*` is built to read
+off lithology-derived magnitude. What rung 2 found instead, and what this
+rung inherits as its live lead: variety survives in *composition* — which
+mechanism dominates, not how much arrives — and per-world **presence** of an
+axis at all (a world can lack a chemistry outright, the way it can lack a
+mineral), neither of which this rung's original framing anticipated.
 
 ### Rung 4 — THE TENANT: something that eats the budget and spreads
 
@@ -158,7 +198,7 @@ hazard, the knowledge that decays — are independent of everything here. The
 graph of the two is joined at exactly one node, the breach, which is why this
 is a separate program rather than a fifth Winze task.
 
-## 7. What is unvalidated
+## 7. What is unvalidated — **MEASURED (The Sources)**
 
 **Whether lithology-derived energy varies BETWEEN worlds.** Rung 3's entire
 promise is that different worlds get different ceilings without anyone tuning
@@ -172,6 +212,21 @@ The Winze Task 1 assumed ore prospectivity varied usefully across the map, and
 measured 75% of all land inside a band 0.0067 wide. A near-constant field
 everyone assumed had structure. **Rung 2 must measure the between-worlds
 statistic before rung 3 designs against it.**
+
+**Answer: it does not, at a magnitude rung 3 can build on.** The Sources froze
+this exact statistic before writing the derivation (twelve worlds, the
+between-world spread of world medians over the typical within-world spread,
+bar 0.25) and measured **0.145** — worlds differ by little more than half
+the frozen bar, and by less than three-fifths of what one world's own
+chambers already vary by internally. The same campaign also found the
+per-rung spread within a single world falling short of the same 0.25 bar at
+every depth (0.09–0.20), so the shortfall is not particular to the
+between-world statistic; magnitude is compressed at every scale this program
+measured. What did vary, robustly, is *composition* — which of the seven
+candidate mechanisms supplies the largest share at a given place — so rung
+3's ceiling cannot lean on lithology-derived magnitude the way this section
+originally hoped, and should look to composition, and to which environmental
+axes a given world even has, instead.
 
 ## 8. Provenance
 

@@ -455,3 +455,40 @@ Beyond the standard close (`closing-a-campaign`):
 - The Confidence Gradient (`book/src/open-questions.md`) re-scored if this
   rung moves one of its bets (decision 0030).
 - A chronicle entry and a retrospective, both before the merge submission.
+
+## 11. Completion (2026-08-27)
+
+Shipped as designed, with three of this document's own predictions
+falsified and recorded rather than rescued. §4.3's U-shaped depth profile
+did not survive: the derived field rises monotonically with depth (medians
+0.169/0.201/0.265/0.281/0.281). §6's between-worlds separation, frozen
+before the code, measured **0.145** against the preregistered 0.25 bar —
+falsified. §6a's S1 (per-rung spread, frozen after §4.3 failed) also missed
+at every depth (0.09–0.20, none clearing 0.25). §6a's S3 held: composition
+— which of the seven terms dominates — varies far more than magnitude does,
+and traces to rock chemistry sorting into roughly three near-constant
+categorical states rather than a continuum. Full account, numbers, and the
+mechanism trace: [the chronicle](../../../book/src/chronicle/the-sources.md).
+
+§4.7's vent unblock shipped and works, but this document's own "free
+evidence the mechanism is not underworld-special-cased" framing does not
+survive independent measurement: a vent's derived productivity (median
+0.2139, n=684) is 0.19% from the rest of the open ocean floor run through
+the identical derivation (median 0.2135, n=28,995), because the terrain
+model gives the whole ocean floor the same thermal gradient and rock
+chemistry a vent reads, not a vent specifically. The evidence is that the
+whole ocean floor sits in the productive regime — a stronger and different
+claim than the one this document made. Corrected in the chronicle, not
+retracted here: the derivation itself is unaffected and still ships real
+value (no longer a hand-picked literal; falsifiable by mutation).
+
+Definition-of-Done items: all landed. `MAP-per-rung-substrate` discharged
+(Task 9); `BIO-underworld-has-no-energy` verified still carrying the
+corrected size clause; `BIO-subterranean-energy-sources` moved off `raw` to
+`shipped`; `BIO-chemotrophy` untouched, as directed — its promise spans
+rungs 2 and 3, and the status is Nathan's call. The metaplan's §3.1/§3.2
+carry a re-run confirmation (bit-for-bit reproduction) and its §7 is marked
+measured with this document's §6 result. The Confidence Gradient bet on
+distinguishing two underground kinds by depth is re-scored, not closed —
+per-rung resolution is the precondition it was waiting on, but the biome
+vocabulary still has no subterranean variant.

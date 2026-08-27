@@ -252,12 +252,12 @@ program's third campaign) there is no `SpeciesDef` struct at all. A kind is a
 **set of components**, each keyed by the kind's stable `KindId` label, each
 authored and owned by the one domain that presents it, composed only at
 worldgen. `domains/species` authors the universal **biosphere** component
-(`BiosphereTraits` — mass, metabolic class, resource niche, condition niche,
-potency, social organization, life schedule — the row every kind carries and
-the packer and habitat model read), plus a **sparse** habitat-realm component
-carried only by kinds that do not live on the surface: two today, the xorn and
-the rust monster, whose capacity is scored against a chamber's conditions and
-gated on whether the cell holds a cave at all
+(`BiosphereTraits` — mass, thermal strategy, trophic mode, resource niche,
+condition niche, potency, social organization, life schedule — the row every
+kind carries and the packer and habitat model read), plus a **sparse**
+habitat-realm component carried only by kinds that do not live on the
+surface: three today, the xorn, the rust monster, and the drow, gated on
+whether the cell holds a cave at all
 and, since *The Cloister*, two psychology components where there used to be
 one: the **mind** vector (3 — threat response, deliberation latency, time
 horizon), carried by every minded kind, dragons included. Since *The Vigil*,
@@ -269,6 +269,19 @@ sociality, status basis, in-group radius) stays gated differently, on
 *sociality* rather than speech: only a minded kind that lives socially (a
 `Gregarious` or `Settled` kind) carries it, which today is exactly the fifteen
 settling peoples — a `Solitary` dragon carries none.
+
+**The habitat-realm gate gained a second dimension.** *The Sources* changed
+how the three subterranean kinds' conditions are read, not how many of them
+there are. A chamber used to be scored once, at the deepest point of its
+column; it is now scored **per rung**, each read at that rung's own offset
+from the surface temperature, and a subterranean kind is credited with
+whichever rung its whole suitability score is best at, not the deepest one
+by default. The same campaign gave the underworld its own productive term,
+derived from the surrounding rock and thermal gradient rather than from
+sunlight, and rewired the xorn's niche to draw on it — the one kind of the
+three whose capacity moved, because the rust monster and the drow weight
+nothing on that new term at all.
+
 `domains/language` authors the **articulation** (6) and the social
 **lexicon** — the speech a kind that speaks carries. Since *The Vigil*, a
 dragon carries three of this table's four vectors — mind, perception,

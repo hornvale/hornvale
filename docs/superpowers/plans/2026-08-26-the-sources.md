@@ -1850,13 +1850,22 @@ biomes are not a three-kind roster.
 
 ### Task 11: Definition of Done
 
-- [ ] **Step 1: The metaplan**
+- [x] **Step 1: The metaplan**
 
 `docs/superpowers/specs/2026-08-24-the-underworld-larder-metaplan.md`: §3.1
 and §3.2 carry Task 1's re-run figures. §7 is marked measured, with Task 6's
 number. Rung 2's own section is marked done with a pointer to the chronicle.
 
-- [ ] **Step 2: The idea registry**
+Done: §3.1/§3.2 each carry a "Re-run 2026-08-26" confirmation paragraph
+(bit-for-bit reproduction); §7's heading now reads "MEASURED (The Sources)"
+with the 0.145 result and its consequence for rung 3; rung 2's own section
+heading reads "— DONE" with a paragraph pointing at
+`book/src/chronicle/the-sources.md` and correcting its own "free evidence"
+framing; rung 3's section gained an "Inherited diagnosis" paragraph naming
+the ~3-state lithology finding so it does not design against magnitude
+lithology cannot carry.
+
+- [x] **Step 2: The idea registry**
 
 - `MAP-per-rung-substrate` discharged (Task 9).
 - `BIO-underworld-has-no-energy` carrying the corrected size clause.
@@ -1869,7 +1878,22 @@ number. Rung 2's own section is marked done with a pointer to the chronicle.
   comment "walks the surface eating metal", so by Task 8's own argument it is
   arguably chemotrophic too. Not decided by this campaign.
 
-- [ ] **Step 3: The book**
+Done: `book/src/frontier/idea-registry.md` — `BIO-subterranean-energy-sources`
+flipped `raw` → `shipped`, prose replaced (not appended, per this
+directory's own discipline against narrative accretion) to state what
+shipped, Where repointed at the chronicle and `energy.rs`.
+`MAP-per-rung-substrate`'s Where cell was pointing at the wrong chronicle
+(`the-underworld.md`, an unrelated earlier campaign) — corrected to
+`the-sources.md`. `BIO-underworld-has-no-energy` verified: already carries
+the corrected size clause, untouched. `BIO-chemotrophy` verified untouched,
+still `raw`. `rust-monster`'s open question is already recorded in the tree
+it belongs to, `domains/species/src/lib.rs:3480` (the "rust-monster shares
+the pure-MINERAL niche... it walks the surface eating metal" comment landed
+by Task 9) — confirmed present, not duplicated into the registry (which
+this directory's own guidance treats as narrative accretion, not a home for
+an open per-kind question already recorded beside the code it's about).
+
+- [x] **Step 3: The book**
 
 A chronicle entry `book/src/chronicle/the-sources.md`. A freshness sweep of
 stale chapters — at minimum the underworld and community-axes chapters, which
@@ -1878,11 +1902,26 @@ that describes carrying capacity as insolation-fed. Re-score
 `book/src/open-questions.md` if this campaign moved one of the Confidence
 Gradient's bets (decision 0030).
 
-- [ ] **Step 4: The retrospective**
+Done: `book/src/chronicle/the-sources.md` written and wired into
+`book/src/SUMMARY.md`. Swept `book/src/domains/species.md` (the chapter that
+actually carries the subterranean habitat-realm component and the resource
+niche this campaign touches): fixed a stale field list
+(`metabolic class` → `thermal strategy, trophic mode`), corrected "two
+today" to "three today" (xorn, rust monster, drow — drow predates this
+campaign and was simply never updated), and added a paragraph on per-rung
+resolution and the new energy term. Checked `book/src/domains/climate.md`
+for the underworld's authored corpus and found no book chapter describes it
+at all outside the frontier registry — nothing there to correct. Re-scored
+`book/src/open-questions.md` near line 1127 (the Mountain-dwarf/Duergar
+depth-distinction bet): moved, not closed.
+
+- [x] **Step 4: The retrospective**
 
 `docs/retrospectives/the-sources.md` — process lessons, not product. Write it
 **before** the merge submission, not after. Add a one-line entry to
 `docs/retrospectives/README.md`'s grouped index.
+
+Done: both written.
 
 - [ ] **Step 5: Artifacts, then the merge**
 

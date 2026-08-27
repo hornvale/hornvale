@@ -411,6 +411,7 @@
 - [The Tailrace](./chronicle/the-tailrace.md)
 - [The Reticence](./chronicle/the-reticence.md)
 - [The Scarf](./chronicle/the-scarf.md)
+- [The Sources](./chronicle/the-sources.md)
 
 # Appendix: The Frontier
 

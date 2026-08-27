@@ -1138,6 +1138,28 @@ Drow needs only to differ from surface elves. Mountain-dwarf and Duergar differ
 from each other by stratum alone, and the biome vocabulary still has no
 subterranean variant, so they remain owed.
 
+*Re-scored by [The Sources](./chronicle/the-sources.md) (2026-08-27), which
+moves the precondition the withdrawal was actually waiting on.* Before this
+campaign every rung in a subterranean column shared one temperature and one
+moisture reading, taken once at the column's deepest point — so two kinds
+differing by stratum alone would have been scored against conditions that do
+not vary by stratum at all, no matter how their authored optima were placed.
+Water, substrate and the new rock-derived energy term now all resolve **per
+rung**, each read at that rung's own thermal offset from the surface, with
+the deepest rung kept as a fixed point precisely so the change could be
+checked rather than assumed. Two kinds seated at different depths in the
+same column can now, structurally, read different conditions — which is the
+enabling condition the withdrawal named, not yet the separation itself. It is
+**not fully resolved**: the biome vocabulary still has no subterranean
+variant, so nothing yet gives Mountain-dwarf and Duergar a *kind of place* to
+differ by, only a set of scalars that can now vary with depth. And the same
+campaign found that one of those scalars carries less discriminating power
+than assumed — rock chemistry underground sorts into roughly three
+near-constant categories rather than a continuum, so a stratum-only
+distinction will have to lean on the axes that do vary continuously with
+depth (temperature, moisture, the energy term's own magnitude) rather than
+on rock type alone.
+
 **A finding about the contest, not about elves, and it is new.** Two peoples
 authored to share a mass and an affinity row have capacity fields that are
 **bit-identical** over eleven to nineteen thousand land cells — and they settle on
