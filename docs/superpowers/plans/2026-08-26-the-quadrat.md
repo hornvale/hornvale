@@ -1064,9 +1064,59 @@ fn the_entry_pane_keeps_a_legible_minimum() {
 
 - [ ] **Step 2: Run to verify it fails** — Expected: FAIL, `PLATE_WIDTH` is a fixed 40.
 
-- [ ] **Step 3: Implement** — `max(PLATE_WIDTH, w / 2)`, clamped so
-`w - plate_width >= MIN_ENTRY_WIDTH`. Add `MIN_ENTRY_WIDTH` with a doc comment
-saying what "legible" means and why that number.
+- [ ] **Step 3: Implement**
+
+**CONTROLLER RULING (pre-dispatch, binding) — THIS TASK IS BIGGER THAN THE PLAN
+SAID, because the campaign's third reported defect is only half-fixed.**
+
+Nathan's words were: *"the roguelike/map view (**the map, when we're not in map
+mode**) should always be ~50% or more of the width of the terminal window and
+should be grid-like rather than hex."* Two requirements, and only one is in
+hand.
+
+Verified in the source just now:
+- `world_plate_for_redraw` (`driver.rs:955-958`) returns `None` unless
+  `self.focus == Focus::Map`.
+- **The default focus is `Focus::Walk`** (`driver.rs:742`; decision 0160 makes
+  Walk the client's default).
+- `raster_is_drawn()` (`:1387`) is `self.on_walk_band` — a **band** question
+  only, already correct.
+- So in ordinary play `compose` takes its `None` arm and draws the OLD
+  `chart::draw` hex scatter, at the fixed 40 columns.
+
+Task 6 put band B on the raster **in map focus**. The view Nathan actually named
+— the one you look at while walking — is still the hex scatter.
+
+**So Task 9 does both halves:**
+
+1. **Drop the focus gate on the raster.** `world_plate_for_redraw`'s condition
+   becomes `raster_is_drawn()` alone. The band question already handles the
+   chamber (Ruling 23 is preserved by construction), and the perception overlay
+   already paints the observer and marks into the plate, so `@` and creatures
+   survive. In `Focus::Walk` there is simply no cursor, which the raster does
+   not need. `compose`'s width branch (`spread.rs:176`) must lose the same focus
+   clause — the rule becomes "a supplied world plate widens the pane", not
+   "map focus widens the pane".
+
+2. **The width rule.** `max(<the fitted width>, w / 2)`, clamped so
+   `w - plate_width >= MIN_ENTRY_WIDTH`. Add `MIN_ENTRY_WIDTH` with a doc
+   comment saying what "legible" means and why that number.
+
+**A hint worth checking rather than trusting.** `world_plate_width` currently
+returns `min(w, GLYPH_ASPECT * content_height(h))` — a 2:1 fit that predates
+this campaign. On 200×50 that is 92 columns, **46%** — just under the ask. That
+fit exists to stop the Mercator being stretched, but **Task 1 decoupled the
+virtual chart from the plate width**, so the plate is now a *window* onto the
+chart and need not be 2:1 at all. If that reasoning holds, the 2:1 fit is
+vestigial and the plate may simply be `max(w/2, …)` wide by `content_height`
+tall with no stretching anywhere. **Verify it; do not assume it.** If it does
+not hold, say why and take the closest honest width.
+
+**Task 8's classifier fix is what makes this safe.** Shrinking the entry pane is
+exactly what would have fired the alpine-row defect; that predicate now survives
+contiguous glyphs and `'A'`, and is pinned by
+`wrap_clips_an_over_wide_alpine_row_rather_than_re_flowing_it`. Do not weaken
+`MIN_ENTRY_WIDTH` past what that test assumes without saying so.
 
 - [ ] **Step 4: Run to verify it passes**
 
