@@ -445,9 +445,39 @@ tongue-path test in this task; Task 5 removes the `unimplemented!` and success
 criterion 3 fails if it survives.
 
 **A `cargo check` that fails early has enumerated NOTHING** — its error list is a
-FLOOR, not a census. Size the real work independently with
-`git grep -c 'Argument::' -- '*.rs'` and reconcile the two before believing you
-have seen every site.
+FLOOR, not a census. Size the real work independently and reconcile the two
+before believing you have seen every site.
+
+**CONTROLLER FINDING (pre-dispatch verification): the compiler will flag THREE
+sites and MISS at least two, and the missed ones are where the damage is.**
+Measured by grepping a rare variant (`Argument::Quantity`) rather than by
+reading the enum's users:
+
+*Compiler-enforced (exhaustive matches):*
+
+| site | what it is |
+|---|---|
+| `grammar.rs:210-214` | `resolve_argument` — gets ruling 1's `unimplemented!` |
+| `clause.rs:779` | `realize_common`'s complement match — the real work |
+| `clause.rs:~929-945` | `common_role_surface` — the ADJUNCT path, matched as `(role, argument)` tuples |
+
+*NOT compiler-enforced — a catch-all swallows the new variant silently:*
+
+| site | what happens without an explicit arm |
+|---|---|
+| `common_role_surface`'s trailing `_ => None` | an adjunct carrying a clause renders **nothing at all**, no error |
+| `grammar.rs:620-627`, `realize_tongue_deep`'s `other =>` | a clause object falls through to `resolve_argument` |
+| `realize_adjuncts` (`grammar.rs`) | calls `resolve_argument` per adjunct, so a clause adjunct hits ruling 1's panic and reports the WRONG reason ("arrives in Task 5" rather than "adjuncts may not carry clauses") |
+
+So spec 4.1's adjunct refusal **cannot be left to the compiler**. Write an
+explicit arm ahead of `common_role_surface`'s `_ => None`, and refuse in
+`realize_adjuncts` too so the message names the real rule. A silent `None` is
+precisely the "capability ships without a decision" failure 4.1 exists to
+prevent.
+
+**Line numbers moved when Task 1 landed** — `Part::Subject` is now `clause.rs:789`
+and `Part::Determiner` is `clause.rs:814`, not the 782/807 this plan says
+elsewhere. Grep, do not trust the numbers.
 
 - [ ] **Step 5: Handle every site, and REFUSE the adjunct case**
 
