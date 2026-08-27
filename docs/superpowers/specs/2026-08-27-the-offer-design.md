@@ -265,8 +265,36 @@ wrong is the third.
 
 `Interior` already computes RCC-8 relations over anchors — `within`
 (`Ntpp`), `relation()`, `walkable_neighbors()`. `encloses` marks the anchors
-for which that relation is *semantic* (a strongbox contains) rather than merely
-*spatial* (an alcove is a recess in a wall).
+that hold something within them.
+
+**An earlier draft of this section drew the line in the wrong place, and the
+correction is the better rule.** It said `encloses` marks containment that is
+*semantic* (a strongbox contains) rather than merely *spatial* (an alcove is a
+recess in a wall). Task 6 measured the consequence: a census over all 60
+production gate combinations found the grammar's only `within` relation
+anywhere is `{(Hearth, Alcove): 3}`, and **nothing is ever placed inside a
+strongbox** — `the-strongbox` is `Attach::Beside(Vessel)`, a sibling, not a
+container. So the semantic/spatial line put the property on the one anchor that
+never holds anything, and the feature would have reported nothing, forever.
+
+**The rule that replaces it is the interactive-fiction one** (Nathan, at the
+§3.6 stop): *contents are revealed when a container is OPEN or TRANSPARENT.*
+Inform and TADS both work this way. A wall nook is open and transparent, so its
+hearth shows; a chest is closed, so its contents do not. Both `Alcove` and
+`Strongbox` therefore carry `encloses` — the alcove reports, the strongbox is
+silent, and **the strongbox is silent because it is CLOSED, not because
+containment is unimplemented.**
+
+**That reasoning also lands the arc cut in exactly the same place, for a better
+reason than the one this spec originally gave.** Open/closed is *durable object
+state* — a chest you open and that stays open is the 90% rung §2 defers. So
+IV.a ships the containment read without the open/closed/transparent state
+machine, and IV.b gets a firing case for free rather than a redesign. The
+absence is stated, not discovered: **IV.a has no way to open anything.**
+
+The conformance question this raises — whether the object model obeys IF world
+rules generally — is captured as `MAP-if-world-conformance` in the idea
+registry, a proposed fourth sibling to `tropes/`, `systems/` and `sentences/`.
 
 **Known consequence, accepted:** `Interior` is derived per room and never
 serialized (decision 0069 — verified structurally: `anchor.rs` carries no
