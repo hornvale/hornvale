@@ -155,3 +155,9 @@ pub const NUMBER_POSITION: StreamLabel<'static> = StreamLabel::from_static("numb
 /// Tense-marker position draw, under grammar.
 /// type-audit: bare-ok(identifier-text: return)
 pub const TENSE_POSITION: StreamLabel<'static> = StreamLabel::from_static("tense-position");
+/// Polarity-marking depth draw, under grammar/depth.
+/// type-audit: bare-ok(identifier-text: return)
+pub const POLARITY: StreamLabel<'static> = StreamLabel::from_static("polarity");
+/// Polarity-marker position draw, under grammar.
+/// type-audit: bare-ok(identifier-text: return)
+pub const POLARITY_POSITION: StreamLabel<'static> = StreamLabel::from_static("polarity-position");

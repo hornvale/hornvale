@@ -74,7 +74,8 @@
 use hornvale_history::{IS_OCCUPATION, OCC_ENDED, OCC_FOUNDED, OCC_PEOPLE, OCC_SITE};
 use hornvale_kernel::{Seed, Value, World};
 use hornvale_language::clause::{
-    Adjunct, Argument, Clause, Definiteness, Number, Subject, cardinal, realize_common,
+    Adjunct, Argument, Clause, Definiteness, Number, Polarity, Subject, Tense, cardinal,
+    realize_common,
 };
 use hornvale_language::{
     CommonVocabulary, Evidential, SchemaId, realize_tongue_deep, tongue_grammar,
@@ -217,6 +218,16 @@ fn clause_for(occupation: &Occupation, autonym: &str) -> Clause {
         // takes. Stated HERE now that `Clause` carries the feature; it
         // used to be invented out of band inside `tongue_view`.
         evidential: Evidential::Witnessed,
+        // **Past, and this is the campaign's motivating defect closing.**
+        // `an_occupation_with_a_tongue` selects an occupation that ENDED, so
+        // the flagship used to assert a present state and then report its own
+        // ending six hundred years earlier. Spec §3.3 puts the fix here rather
+        // than in the realizer: tense is a RELATION to a moment outside the
+        // clause, so the caller — which holds the occupation's `occ-ended`
+        // fact and knows the utterance is being made now — computes the
+        // relation and states it. This is that computation's first live site.
+        tense: Tense::Past,
+        polarity: Polarity::Pos,
         adjuncts: vec![
             Adjunct {
                 role: OCC_PEOPLE.to_string(),
@@ -258,6 +269,9 @@ impl Tongue {
             clause,
             &self.grammar,
             &self.morph,
+            // The book prints only present-tense statements, so no tongue it
+            // assembles models tense today (The Inquest, spec §4.2).
+            None,
             &noun_class_of,
             &self.lexicon,
             self.orthography,
@@ -365,6 +379,21 @@ fn a_real_occupation_reaches_the_common_sentence_with_its_people_site_and_both_y
     assert!(
         tokens.contains(&autonym.to_lowercase()),
         "the subject ({autonym}) is not a word of {common:?}"
+    );
+    // Spec criterion 1, asserted on the REAL occupation rather than on a
+    // synthetic clause: this holding ended (`an_occupation_with_a_tongue`
+    // requires it), so the sentence that reports the ending must not also
+    // assert a present state. Both halves are needed — a copula slot that
+    // emitted both forms would satisfy the first alone.
+    assert!(
+        tokens.contains("was"),
+        "the occupation ended in year {}, so Common must say `was`: {common:?}",
+        occupation.ended
+    );
+    assert!(
+        !tokens.contains("is"),
+        "the occupation ended in year {}, so Common must not also say `is`: {common:?}",
+        occupation.ended
     );
 }
 

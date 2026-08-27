@@ -464,7 +464,21 @@ culture with an organized priesthood says one thing more, in its own
 doctrinal voice: that it has never been caught (or, once it has, that it
 could be) — echoing, without yet routing through, the very conflict
 machinery The Doctrine built for exactly this shape of claim. See
-[The Corrigendum](../chronicle/the-corrigendum.md).
+[The Corrigendum](../chronicle/the-corrigendum.md). And since The Inquest,
+a clause can be about something that is over. It carries a **tense** and a
+**polarity**; its predicate may be an act with an actor and a patient
+rather than only a classification; and a speaker may refer back to
+somebody already mentioned, out of a personal-pronoun inventory each
+family draws once and evolves down its own daughters like any other
+cognate morpheme. Tense is the first feature in this domain that is not a
+property *of* the clause at all but a **relation to a moment outside it**,
+so it is stated by whoever holds both instants rather than worked out by
+the clause, which has no clock — the settlement that ended six hundred
+years ago is now said to have *been* the home of its people, not to *be*
+one. Past is marked and present is the zero member, negative is marked and
+positive is zero, and each tongue marks or ignores both according to a
+grammaticalization depth it had already drawn and nothing had ever read.
+See [The Inquest](../chronicle/the-inquest.md).
 
 **The full model card.** The articulation-vector table above types the
 species' *envelope* — six authored capacities per people. Everything this

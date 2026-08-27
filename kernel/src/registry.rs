@@ -45,6 +45,16 @@ pub enum ConceptKind {
     /// before The Actants gave them their own kind: `eat` is something a
     /// creature *does*, not a property it *has*, and the GOAP action roster
     /// reconciles against exactly this class.
+    ///
+    /// **That reconciliation runs in ONE direction: actions ⊆ concepts.**
+    /// `cli`'s concept audit walks `Action::all()` and reports acts that no
+    /// concept names — a creature can do something the world has no word
+    /// for. It says nothing about the converse, and cannot: an `Act` concept
+    /// with no planner action is exactly what the audit permits, and is the
+    /// intended direction of travel. A world learns to *say* a thing before
+    /// it learns to *do* it (`kill`, The Inquest). Read as a two-way
+    /// obligation, this doc would make every new verb a combat-system
+    /// ticket; it is not one.
     Act,
     /// A felt state a creature undergoes — content, frustrated, lost. Distinct
     /// from [`ConceptKind::Quality`], which an unclassed felt state would
