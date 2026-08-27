@@ -403,6 +403,9 @@ operator instruments (out-of-character; bypass the body, never the world):
                    'standard', or 'off'); bare, it says what yours drop
   !provoke [who]   shift a co-located NPC's disposition, your own mark
   !soothe [who]    ease a co-located NPC's disposition, your own mark
+  !possess         another will takes this body; your own acts refuse until
+                   it lets go
+  !unpossess       the possessor's own option: let go of this body again
   !help            this list
 
 the out-of-character halves (bypass the body, never the world; four take a
@@ -2223,9 +2226,13 @@ impl<'w> Session<'w> {
     ///
     /// # Two groups, and what distinguishes them
     ///
-    /// **Group A** — `why`/`npcs`/`help`/`eyes`/`whoami`/`provoke`/`soothe` —
-    /// are operator instruments with no in-character counterpart, so this
-    /// namespace is their only entry point (Task 5 retired the bare forms).
+    /// **Group A** — `why`/`npcs`/`help`/`eyes`/`whoami`/`provoke`/`soothe`,
+    /// and (The Coercion, Task 4) `possess`/`unpossess` — are operator
+    /// instruments with no in-character counterpart. The first seven have
+    /// none because Task 5 retired their bare forms; `possess`/`unpossess`
+    /// have none because no creature can perform the act yet at all (spec §5
+    /// defers the biology behind an imposed possession to a species-domain
+    /// campaign) — this namespace is their only entry point either way.
     ///
     /// **Group B's objective halves** — `map`/`examine`/`needs`/`wait` — each
     /// render the same thing their bare twin does, through the same renderer,
@@ -2283,7 +2290,7 @@ impl<'w> Session<'w> {
             // Group A: the operator instruments (The Deed, spec §3.2).
             // Bare forms are retired — this namespace is their only entry
             // point now, and it carries no in-character counterpart for
-            // any of the seven, by design.
+            // any of them, by design.
             "why" => Turn::Out(self.why(rest)),
             "npcs" => Turn::Out(self.list_npcs()),
             "help" => Turn::Out(HELP.to_string()),
@@ -2295,6 +2302,16 @@ impl<'w> Session<'w> {
             "whoami" => Turn::Out(self.whoami()),
             "provoke" => self.act_on_disposition(rest, 1),
             "soothe" => self.act_on_disposition(rest, -1),
+            // The Coercion, Task 4: the imposition seam. No creature can
+            // possess another yet (spec §5), so this operator instrument
+            // stands in for one — the same "the operator authors the world
+            // event a creature cannot yet cause" shape `provoke`/`soothe`
+            // already established. Named after `Controller`/`ImposedController`,
+            // the abstraction this pair actually opens and closes, in the
+            // same spirit game engines pair `Possess`/`UnPossess` on a
+            // controller.
+            "possess" => self.possess(),
+            "unpossess" => self.unpossess(),
             // Group B's objective halves (Task 6). BAND-AWARE IN EXACTLY THE
             // SAME SHAPE their bare twins are, arm for arm: the objective
             // view of a chamber is still a chamber, and an out-of-character
@@ -4854,6 +4871,79 @@ impl<'w> Session<'w> {
         } else {
             Turn::Out(format!("{label} is already as eased as they'll be today."))
         }
+    }
+
+    /// Opens an imposed possession of the driven body (The Coercion, Task 4):
+    /// the out-of-character seam standing in for the creature capability spec
+    /// §5 defers to a species-domain campaign. No creature can choose to do
+    /// this yet, so the operator instrument does — the same shape
+    /// `act_on_disposition` already established for an act no world system
+    /// can currently cause on its own.
+    ///
+    /// The holder named in the committed [`POSSESSED_BY`] fact is the first
+    /// other derived body in the roster (`other_bodies`), chosen
+    /// deterministically because nothing yet exists that could choose one
+    /// itself. A world with no other derived body has no entity to name, so
+    /// this refuses rather than fabricating one or panicking (decision 0007).
+    fn possess(&mut self) -> Turn {
+        let Some(holder) = other_bodies(&self.bodies, self.driven).first().copied() else {
+            return Turn::Out("There is no other will in this world to take you.".to_string());
+        };
+        let holder_entity = holder.entity;
+        let holder_label = holder.label.clone();
+        let body = self.agent_entity();
+        // The provenance carries `self.turn` (incremented once per non-empty
+        // `handle` call, including this one — see `Session::handle`) so a
+        // same-day possess -> unpossess -> possess sequence never commits two
+        // BYTE-IDENTICAL `possessed-by` facts. `Ledger::commit`'s idempotent
+        // dedup compares the whole envelope including provenance (Task 1's own
+        // finding), and `day` alone does not vary within a day — a static
+        // provenance string here would make the second `possess` in such a
+        // sequence a silent no-op: `possessor()` would read `None` right after
+        // a verb that reported success. See
+        // `reopening_a_possession_on_the_same_day_is_not_a_silent_no_op`.
+        let fact = Fact {
+            subject: body,
+            predicate: POSSESSED_BY.to_string(),
+            object: Value::Entity(holder_entity),
+            place: None,
+            day: Some(self.day),
+            provenance: format!("player: possess (turn {})", self.turn),
+        };
+        self.ledger
+            .commit(fact, &self.registry)
+            .expect("possessed-by is registered and non-functional");
+        Turn::Out(format!(
+            "Another will settles into you — {holder_label} holds this body now. Your own \
+             acts refuse; only '!' verbs still answer."
+        ))
+    }
+
+    /// Closes an imposed possession at the possessor's own option (The
+    /// Coercion, Task 4, spec §6: "release is reachable"). Idempotent by a
+    /// guard on [`Self::possessor`], not on `Ledger::commit`'s own dedup —
+    /// mirrors `TURNED_HOSTILE`'s pattern (`Ledger::value_of`), adapted
+    /// because `POSSESSED_BY`/[`POSSESSION_ENDED`] are non-functional, so
+    /// `value_of`'s single-latest-fact read is the wrong query here; the
+    /// live state is [`possessor_of`]'s open/close fold, which
+    /// [`Self::possessor`] already exposes.
+    fn unpossess(&mut self) -> Turn {
+        if self.possessor().is_none() {
+            return Turn::Out("No other will holds this body.".to_string());
+        }
+        let body = self.agent_entity();
+        let fact = Fact {
+            subject: body,
+            predicate: POSSESSION_ENDED.to_string(),
+            object: Value::Text("released".to_string()),
+            place: None,
+            day: Some(self.day),
+            provenance: format!("player: unpossess (turn {})", self.turn),
+        };
+        self.ledger
+            .commit(fact, &self.registry)
+            .expect("possession-ended is registered and non-functional");
+        Turn::Out("The will withdraws. You are your own again.".to_string())
     }
 
     /// The felt-state read (the-wanting T4, spec §4.5 as corrected by G4):

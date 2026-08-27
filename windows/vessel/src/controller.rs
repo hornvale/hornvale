@@ -100,3 +100,44 @@ impl Controller for PlayerController {
         }
     }
 }
+
+/// A controller supplied by whoever holds the body (The Coercion) — the
+/// generalisation The Hand's spec predicted: "`driven: usize` generalises to a
+/// controller map in Arc III without the body type changing."
+///
+/// It wraps another controller rather than inventing intents, because
+/// decision 0168 puts the effect with the BODY and not the driver: an imposed
+/// driver selects WHICH act, never WHAT the act does. Today it delegates to
+/// [`DefaultController`], which is a pure pass-through of
+/// `resolution.intent` — so wrapping it here changes **nothing** about the
+/// body's behaviour, only who is recorded as choosing it. That is an honest
+/// admission, not a shortfall: `DefaultController`'s own doc already states a
+/// body under it is "byte-identical to a body with no controller at all", and
+/// this type does not touch `intend` at all, so the identity carries through
+/// unchanged. A later campaign giving a possessing creature real intent swaps
+/// the inner controller for one that reads *that* creature's own arbitration,
+/// and nothing else about this type needs to change.
+pub struct ImposedController {
+    inner: DefaultController,
+}
+
+impl ImposedController {
+    /// A fresh imposed controller, wrapping a fresh [`DefaultController`].
+    pub fn new() -> Self {
+        Self {
+            inner: DefaultController,
+        }
+    }
+}
+
+impl Default for ImposedController {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Controller for ImposedController {
+    fn intend(&mut self, body: &Body, resolution: &Resolution) -> Intent {
+        self.inner.intend(body, resolution)
+    }
+}
