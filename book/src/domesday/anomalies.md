@@ -463,7 +463,7 @@ Every numeric/integer census column with a domain and a role that this report di
 | `core-homophony-hobgoblin` | frozen: min == max across 1000 worlds |
 | `core-homophony-bugbear` | frozen: min == max across 1000 worlds |
 | `core-homophony-kobold` | frozen: min == max across 1000 worlds |
-| `homophony-merger-share-goblin` | frozen: min == max across 784 worlds |
+| `homophony-merger-share-goblin` | frozen: min == max across 785 worlds |
 | `homophony-merger-share-hobgoblin` | frozen: min == max across 749 worlds |
 | `homophony-merger-share-bugbear` | frozen: min == max across 999 worlds |
 | `homophony-merger-share-kobold` | frozen: min == max across 667 worlds |

@@ -2343,7 +2343,7 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 8.546_439_147_599_997 -> 8.523_035_457_757_757. Still comfortably
         // below the campaign's own <10-character claim (spec §7) — re-checked
         // rather than assumed.
-        ("goblin", 999u32, 8.523_035_457_757_757),
+        ("goblin", 999u32, 8.522_649_181_881_878),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -2472,7 +2472,7 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 982 -> 980, mean 6.818_936_120_061_097 -> 6.865_372_775_000_001.
         // Still comfortably below the campaign's own <10-character claim
         // (spec §7) — re-checked rather than assumed.
-        ("kobold", 980u32, 6.865_372_775_000_001),
+        ("kobold", 980u32, 6.864_935_456_632_652),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -2958,7 +2958,13 @@ fn name_transparency_is_measured_and_pinned() {
         // 0.713_562_554_480_000_3 -> 0.714_363_700_030_002. Still emphatically
         // NOT 1.0 — the claim this row exists to guard — re-checked rather
         // than assumed.
-        (mean - 0.714_363_700_030_002).abs() < 1e-9,
+        // The Foliot's tick epoch (0316): the day length is quantized to the
+        // lattice, moving climate's diurnal term, hence carrying capacity,
+        // hence which settlements seat a flagship and which peoples exist.
+        // The language did not change; the population did.
+        // 0.714_363_700_030_002 -> 0.714_089_011_470_002. Still emphatically
+        // NOT 1.0 — re-checked, not assumed.
+        (mean - 0.714_089_011_470_002).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -3530,7 +3536,12 @@ fn null_control_name_length_smd_is_pinned() {
         // `null_control_distributions_are_within_the_sampling_bound` asserts
         // — the null hypothesis this row exists to witness
         // (INDISTINGUISHABLE FROM ZERO) reads as true as it ever has.
-        (namelen - -0.024_799_776_460_672_038).abs() < 1e-9,
+        // The Foliot's tick epoch (0316): the day length is quantized to the
+        // lattice, which moves climate's diurnal term, which moves where
+        // settlements sit, which moves which peoples exist and therefore the
+        // name sample. The language did not change; the population did.
+        // -0.024_799_776_460_672_038 -> -0.025_108_472_368_594_453.
+        (namelen - -0.025_108_472_368_594_453).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

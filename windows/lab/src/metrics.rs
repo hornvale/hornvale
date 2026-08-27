@@ -997,7 +997,7 @@ pub fn registry() -> Vec<Metric> {
             role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| match &v.system.anchor.rotation {
                 Rotation::Locked => MetricValue::Absent,
-                Rotation::Spinning { day, .. } => MetricValue::Number(day.get() * 24.0),
+                Rotation::Spinning { day, .. } => MetricValue::Number(day.as_std_days() * 24.0),
             }),
         },
         Metric {

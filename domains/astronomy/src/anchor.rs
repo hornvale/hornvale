@@ -7,15 +7,21 @@ use crate::streams;
 use crate::units::{Au, Degrees, EarthMasses, SolarMasses, StdDays};
 use hornvale_kernel::Seed;
 use hornvale_kernel::math;
+use hornvale_kernel::units::TickSpan;
 
 /// Rotation regime of the anchor world.
 /// type-audit: bare-ok(flag: Spinning.retrograde)
 #[derive(Debug, Clone, PartialEq)]
 pub enum Rotation {
-    /// Ordinary spin with a solar day of this many standard days.
+    /// Ordinary spin with a solar day of this many kernel ticks.
     Spinning {
-        /// Day length in standard days.
-        day: StdDays,
+        /// Day length as an exact tick count.
+        ///
+        /// A whole number of ticks by construction (The Foliot): the drawn
+        /// or pinned `f64` is quantized once, here, so a local day divides
+        /// the kernel lattice exactly and nothing downstream needs a second
+        /// lattice to keep its own days whole.
+        day: TickSpan,
         /// Backward spin (SKY-22): the sun rises in the west. Drawn or
         /// pinned; direction never changes the day's length or timing.
         retrograde: bool,
@@ -104,7 +110,19 @@ pub fn generate_anchor(
             Rotation::Locked
         }
         Some(day) => Rotation::Spinning {
-            day,
+            // THE QUANTIZATION, and the only one. The draw above is
+            // untouched -- same streams, same `next_f64()` calls, same
+            // order -- so no seed label takes an epoch suffix and the
+            // pin-isolation tests hold; only this derived value moves, by at
+            // most half a tick (0.432 s). Rounding rule, named at the call
+            // as decision 0186 requires: `TickSpan::from_std_days` rounds to
+            // the nearest tick.
+            //
+            // Infallible in practice rather than by type: `from_std_days`
+            // refuses only a non-finite or out-of-range value, and `day`
+            // here is a validated `StdDays` between 4 and 100 hours.
+            day: TickSpan::from_std_days(day.get())
+                .expect("a day length of 4-100 hours is always representable in ticks"),
             retrograde: match pins.spin {
                 Some(SpinPin::Retrograde) => true,
                 Some(SpinPin::Prograde) => false,
@@ -143,7 +161,7 @@ pub fn generate_anchor(
                     ),
                 });
             }
-            let year_std = StdDays(local_days.0 * day.0);
+            let year_std = StdDays(local_days.0 * day.as_std_days());
             let orbit = Au(math::powf(
                 star.mass.0 * (year_std.0 / 365.25).powi(2),
                 1.0 / 3.0,
@@ -256,7 +274,7 @@ mod tests {
         assert_eq!(
             a.rotation,
             Rotation::Spinning {
-                day: StdDays(1.25),
+                day: TickSpan::from_std_days(1.25).unwrap(),
                 retrograde: false
             }
         );

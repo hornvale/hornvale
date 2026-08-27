@@ -337,7 +337,7 @@ fn cmd_scout(args: &[String]) -> Result<(), String> {
             let system = &outcome.system;
             let day = match system.anchor.rotation {
                 hornvale_astronomy::Rotation::Spinning { day, .. } => {
-                    format!("{:.1}h day", day.get() * 24.0)
+                    format!("{:.1}h day", day.as_std_days() * 24.0)
                 }
                 hornvale_astronomy::Rotation::Locked => "tidally locked".to_string(),
             };

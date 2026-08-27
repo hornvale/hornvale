@@ -817,11 +817,23 @@ fn homophony_count_is_measured_and_pinned() {
     // again an exact integer count over the 1000-seed census divided by 1000
     // (5861, 6040, 21510, 6279). Post-unblinding re-measure, declared per
     // decision 0016.
-    assert!((mg - 5.861).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 6.040).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 21.510).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    // The Foliot's tick epoch (0316): the quantized day length moves the
+    // diurnal term, hence capacity, hence which peoples exist to hold a
+    // lexicon. All four means move together; the RATIOS the claim rests on
+    // are re-checked rather than assumed, and both hold well above the 3x
+    // falsification line: bugbear leads goblin by 3.673x (21.611/5.884) and
+    // hobgoblin by 3.560x (21.611/6.071). Each mean is still an exact integer
+    // count over the 1000-seed census divided by 1000 (5884, 6071, 21611,
+    // 6326). Post-unblinding re-measure, declared per decision 0016.
+    //
+    // ALL FOUR were re-measured in one pass, not one per run: these asserts
+    // are sequential, so the first failure masks the rest, and only goblin
+    // was reported. The other three were read straight out of the new census.
+    assert!((mg - 5.884).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 6.071).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 21.611).abs() < 1e-9, "bugbear mean drifted: {mb}");
     // kobold 6.113 -> 6.279 (The Granary's re-pin, same mechanism as above).
-    assert!((mk - 6.279).abs() < 1e-9, "kobold mean drifted: {mk}");
+    assert!((mk - 6.326).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"
