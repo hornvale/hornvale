@@ -3093,3 +3093,5 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T15:55:18Z | gate-commit | 20.188 | 48.497 | 12.826 | 3.04 | 0 | 51ce2e396 | campaign/the-mortise | MacBookPro | 10 |
 | 2026-08-27T16:18:48Z | rebaseline | 58.575 | 256.056 | 13.629 | 4.60 | 0 | 0c59434df | campaign/the-mortise | MacBookPro | 10 |
 | 2026-08-27T16:20:28Z | gate-commit | 30.312 | 84.275 | 27.682 | 3.69 | 0 | 0c59434df | campaign/the-mortise | MacBookPro | 10 |
+| 2026-08-27T16:21:37Z | gate-commit | 20.025 | 48.379 | 12.852 | 3.06 | 0 | 0c59434df | campaign/the-mortise | MacBookPro | 10 |
+| 2026-08-27T16:22:49Z | gate-commit | 31.102 | 79.539 | 32.220 | 3.59 | 0 | ba05b757d | campaign/the-mortise | MacBookPro | 10 |

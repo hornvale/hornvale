@@ -397,12 +397,12 @@ fn resolve_concept_marked(id: &str, lexicon: &Lexicon) -> Result<Marked, TongueG
 /// **Refuses an [`Argument::Clause`] itself, by panic, before it ever
 /// reaches [`resolve_argument`].** `Adjunct` holds an `Argument`, so an
 /// adjunct carrying a clause type-checks; left to fall through to
-/// `resolve_argument`'s own `Argument::Clause` arm, it would report "clause
-/// embedding in a tongue arrives in Task 5" — true of the object slot, but
-/// the WRONG reason here. This function's own message names the real rule:
-/// adjuncts may not carry clauses at all, ever, tongue or Common alike
-/// (spec §4.1) — see `clause.rs`'s `common_role_surface` for Common's half
-/// of the same refusal.
+/// `resolve_argument`'s own `Argument::Clause` arm, it would silently embed
+/// the clause and mark its boundary exactly as the object slot does —
+/// correct there, but the WRONG behavior here. This function's own message
+/// names the real rule: adjuncts may not carry clauses at all, ever, tongue
+/// or Common alike (spec §4.1) — see `clause.rs`'s `common_role_surface`
+/// for Common's half of the same refusal.
 fn realize_adjuncts(
     adjuncts: &[Adjunct],
     grammar: &TongueGrammar,
@@ -1552,8 +1552,9 @@ mod tests {
 
     /// `realize_adjuncts` refuses a clause-carrying adjunct itself, with the
     /// real rule, rather than letting it fall through to
-    /// `resolve_argument`'s "arrives in Task 5" placeholder — which is true
-    /// of the object slot and would be the WRONG reason here (spec §4.1).
+    /// `resolve_argument`'s own `Argument::Clause` arm — which would embed
+    /// it silently, correct for the object slot and the WRONG behavior here
+    /// (spec §4.1).
     #[test]
     #[should_panic(expected = "adjunct may not carry an embedded clause")]
     fn a_tongue_adjunct_carrying_a_clause_is_refused() {
