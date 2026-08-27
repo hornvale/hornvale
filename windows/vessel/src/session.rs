@@ -4643,6 +4643,24 @@ impl<'w> Session<'w> {
     /// chart) is propagated as `Err`, never silently downgraded to an empty
     /// union — `examine` must be able to tell "the lens failed" from "no
     /// grain surfaced that noun", and only the latter is a bare absence.
+    ///
+    /// **The Offer, Task 7 (spec §4): the "chart legend" surface named
+    /// there, investigated and found NOT re-pointable at
+    /// [`crate::affordance::offered_to_observer`] without either a
+    /// structural violation or a scope-widening feature addition.** The
+    /// second matcher below (`scene.legend`, this method's own doc's "the
+    /// chart's legend") synthesizes `Noun`s from `hornvale_scene::
+    /// SurroundsScene` — WALK-band terrain marks (biome regions, sky), never
+    /// a chamber `AnchorKind`. Worse, this method cannot even be reached
+    /// while the possession is indoors: it calls [`Self::purview`] →
+    /// [`Self::purview_through`], whose own `debug_assert!` requires
+    /// `self.inside.is_none()`, because the walk-band chart marks every
+    /// derived NPC ungated and drawing it from inside a chamber would
+    /// disclose a creature sight withheld (see that assertion's doc).
+    /// Routing chamber anchors through here would mean lifting that
+    /// invariant, which is exactly the class of behaviour change spec
+    /// §10.1 and this task's brief say to stop for rather than push
+    /// through. See the Task 7 report for the full investigation.
     /// type-audit: bare-ok(identifier-text: return)
     pub fn lens_nouns(&self) -> Result<Vec<crate::focalize::Noun>, VesselError> {
         let mut out: Vec<crate::focalize::Noun> = self.focalized()?.nouns;
