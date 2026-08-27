@@ -30,3 +30,32 @@ fn in_character_is_refused_while_asleep_and_permitted_awake() {
         Verdict::Permitted => panic!("a sleeping body must refuse an in-character act"),
     }
 }
+
+/// The Coercion: the row's whole point. The name says `ByAnother` because the
+/// state is relational in a way no other row is — `Awake`, `Asleep`, and the
+/// spec's future `dead`/`blind` are true of the body regardless of who asks.
+/// A flat `Possessed` would refuse the player's own acts on a body they hold.
+#[test]
+fn in_character_is_refused_while_possessed_by_another() {
+    assert!(matches!(
+        verdict(BodyState::PossessedByAnother, Mood::InCharacter),
+        Verdict::Refused(_)
+    ));
+    assert_eq!(
+        verdict(BodyState::PossessedByAnother, Mood::OutOfCharacter),
+        Verdict::Permitted,
+        "OOC is what lets you observe your own possession — if this refuses, \
+         being possessed is indistinguishable from the game having hung"
+    );
+}
+
+/// The refusal names the condition and NOT the possessor: the body does not
+/// know who holds it (spec §3.4 — the ledger records the imposition, the body
+/// has no introspective access to it).
+#[test]
+fn the_refusal_does_not_name_the_possessor() {
+    let Verdict::Refused(reason) = verdict(BodyState::PossessedByAnother, Mood::InCharacter) else {
+        panic!("in-character must be refused while possessed by another");
+    };
+    assert!(!reason.is_empty(), "a refusal fails loudly (decision 0007)");
+}
