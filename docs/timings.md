@@ -3086,3 +3086,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T14:10:02Z | sluice:clients | 442.327 | 5565.345 | 67.602 | 12.73 | 0 | e9b9f39c8 |  | lefford | 40 |
 | 2026-08-27T14:12:54Z | sluice:artifacts | 66.859 | 601.524 | 23.035 | 9.34 | 0 | b24386e47 |  | lefford | 40 |
 | 2026-08-27T14:13:36Z | sluice:outboard | 42.125 | 26.053 | 39.033 | 1.55 | 0 | 2b86972df |  | lefford | 40 |
+| 2026-08-27T14:20:20Z | sluice:gate | 403.254 | 11799.077 | 382.526 | 30.21 | 0 | d93820ac1 |  | lefford | 40 |
