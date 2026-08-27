@@ -383,17 +383,46 @@ IV.a's acceptance test does not need it** — and severing it is a clean cut.
 - **The offer passes through the observer's knowledge before it is rendered.**
   (§3.5)
 - **M+N is proved two-way or not at all.** (§6)
+- **A property is a `Quality`, and is registered before it is gated on.** (§8,
+  G3) — the vocabulary a verb gates on must be nameable by the world, the same
+  obligation The Actants imposed on verbs, one layer down.
 
-## 12. Flagged for G3 — owner decisions, not autopilot's
+## 12. G3 outcome (2026-08-27, Nathan)
+
+**Resolved at the stop:**
+
+- **Concept registration (§8) is KEPT.** The five properties are registered,
+  accepting the drift in three generated language artifacts. The severable cut
+  was offered and declined.
+- **`ConceptKind::Quality`, not a new kind.** Its definition already is "an
+  abstract property or attribute", and the one-word-per-concept rule points the
+  same way. The Actants' `Act` and The Confidant's `Affect` were both minted for
+  concepts that were *categorically* new — a thing done, a thing undergone.
+  A property a thing HAS is what `Quality` already means, so this is the case
+  those two precedents do not cover.
+- **The wire field, the arc collision, and the campaign name ride as specced**
+  (items 1, 4, 5 below), reviewed and not contested.
+
+**Consequences now binding on the plan:** §8 is in scope, which means a new
+accession epoch appended to `domains/language/src/accession.rs` — never merged
+into an earlier cohort, per that module's absolute rule — plus a two-way
+agreement test in `windows/vessel`, following The Confidant's epoch 12 exactly
+(a domain cannot depend on a window, so the test lives window-side and asserts
+in both directions).
+
+## 13. What was flagged at G3, for the record
+
+*Items 2 and 3 are resolved above; they are retained here as the record of what
+was asked, since a G3 package is part of the campaign's provenance.*
 
 1. **Schema-adjacent: the wire gains a field.** `NounEntry.affordances`,
    additive on `vessel/session/v2` with `#[serde(default)]`, no version bump.
    Precedent is exact (`NounEntry.kind`, same struct), but it is a cross-repo
    contract and the owner should see it named.
-2. **Schema-adjacent: concept registration (§8) is severable.** Recommended in,
+2. **[RESOLVED — KEPT]** Schema-adjacent: concept registration (§8) is severable. Recommended in,
    costs drift in three generated language artifacts, and the acceptance test
    does not require it. A clean cut if the owner wants a smaller campaign.
-3. **`ConceptKind::Quality` vs a new kind.** If §8 is kept: The Actants minted
+3. **[RESOLVED — `Quality`]** `ConceptKind::Quality` vs a new kind. If §8 is kept: The Actants minted
    `Act` and The Confidant minted `Affect` rather than overloading `Quality`, so
    there are two recent precedents for minting. This spec recommends `Quality`
    instead — its definition already *is* "an abstract property or attribute,"
