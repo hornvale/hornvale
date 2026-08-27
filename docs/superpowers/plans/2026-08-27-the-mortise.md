@@ -1061,6 +1061,31 @@ Each has a doc comment explaining what it guards; **update the prose, not only
 the values** — a stale doc beside a moved number is how the last campaign's
 `seam-guard` prose rotted.
 
+
+**CONTROLLER FINDING (pre-dispatch verification): m07 is a `Coordination`, not a
+`Clause`, and the witness as built cannot hold it.**
+
+`MERCHANT_WITNESS` is `&[(&str, &str)]` — id paired with the Common surface — and
+`every_covered_entry_realizes_in_common` builds **a `Clause`** per id and calls
+`realize_common`. But the three entries you are adding are not one shape:
+
+| entry | shape | realizer |
+|---|---|---|
+| m06 *"I don't know why he killed her"* | `Clause` with `Argument::Clause` | `realize_common` |
+| m09 *"I think her name was Gilda"* | `Clause` with `Argument::Clause` | `realize_common` |
+| **m07** *"Seeing it confused and upset me"* | **`Coordination`** | **`realize_common_coordination`** |
+
+So the witness's builder must dispatch on shape. Widening the constant to carry
+the shape, or building an enum, or two parallel tables — your call from inside
+the code. **What must not happen is m07 quietly getting a `Clause`-shaped stand-in
+that realizes something other than a coordination**, because then the witness
+would attest to a capability the entry does not exercise, which is the exact
+failure the witness exists to prevent.
+
+**A guard already protects you here:** the test asserts
+`witness_ids == MERCHANT_COVERED_IDS`, so the witness cannot silently cover a
+different set than the resolver reports. Keep that assertion intact.
+
 - [ ] **Step 4: Extend the witness to every newly covered entry**
 
 `MERCHANT_WITNESS` gains m06, m07 and m09, each with the surface the grammar
