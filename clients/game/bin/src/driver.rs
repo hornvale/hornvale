@@ -1010,9 +1010,10 @@ impl Driver {
     /// the buffer — or, on an empty buffer, does nothing at all and returns
     /// `false` (spec §6: the buffer is the last reversible thing before an
     /// irreversible act, so a stray `Enter` must not cost a turn). A
-    /// submitted line whose first token is exactly `map` additionally
-    /// enters the map focus (exact-after-trim, mirroring `Session::handle`'s
-    /// first-token convention).
+    /// submitted line that is exactly `map` enters the map focus INSTEAD OF
+    /// being sent (exact-after-trim, mirroring `Session::handle`'s
+    /// first-token convention) — decision 0290, a mode gesture is not a
+    /// fetch; it costs no turn and returns `false`.
     /// `Move` executes a walk-mode direction exactly like a submitted line
     /// (echo + history + `handle`), minus any buffer involvement.
     /// `CursorBy`/`ToggleFocus` are unchanged from part I.
@@ -1149,32 +1150,50 @@ impl Driver {
                 self.clear_completion();
                 self.history.push(taken.clone());
                 self.echo = Some(taken.clone());
-                let released = self.handle(&taken);
-                // BARE `map` — and only bare `map` — enters the map focus.
-                // This mirrors a convention the sim already keeps rather
-                // than inventing one: `Session::handle` splits its own
-                // bare-from-argument forms on `rest.is_empty()` (see the
+                // BARE `map` — and only bare `map` — enters the map focus,
+                // AND IT DOES NOT SEND THE VERB (decision 0290). The
+                // comment that used to sit here already argued this ("the
+                // plate is redrawn from `Spatial` every turn regardless,
+                // which is why submitting `map` is a MODE GESTURE and not a
+                // fetch") while the code sent it anyway, and that gap IS
+                // The Quadrat's second reported defect: the sim answered a
+                // mode gesture with a picture, and the picture landed in
+                // the prose pane over the top of the plate the player had
+                // just asked to look at. The acknowledgement is the focus
+                // changing — the precedent `Self::recentre` states for
+                // itself ("the acknowledgement is the map redrawing").
+                //
+                // The bare-from-argument split mirrors a convention the sim
+                // already keeps rather than inventing one: `Session::handle`
+                // splits its own forms on `rest.is_empty()` (see the
                 // `"map" if self.inside.is_some() && rest.is_empty()` and
                 // `"eyes" if rest.is_empty()` arms), because the two mean
-                // different things. So `" map "` triggers; `"map x"`,
-                // `"map out 2"` and `"examine map"` do not.
+                // different things. So `" map "` is the gesture; `"map x"`,
+                // `"map out 2"` and `"examine map"` are sent as typed.
                 //
-                // `map out N` is the case worth stating, because "it drew a
-                // chart, so focus it" is the plausible wrong answer:
-                // `Session::map` takes `&self` and returns prose, so NO
-                // argument form can move the plate. The plate is redrawn
-                // from `Spatial` every turn regardless (`spread::compose`),
-                // which is why submitting `map` is a MODE GESTURE and not a
-                // fetch. Focusing after `map out 2` would hand the player a
+                // **`map out N` STAYS A FETCH, and that is load-bearing
+                // rather than conventional** (spec §4.2). It is the
+                // diagnostic path that caught The Quire's wrong projection,
+                // where the client and the sim were rendered side by side
+                // over the identical thirty-one facets and only one was
+                // right; removing every route to the sim's own picture
+                // would delete the comparison guarding spec §5's H2. It
+                // also must not focus the map: `Session::map` takes `&self`
+                // and returns prose, so no argument form moves the plate,
+                // and focusing after `map out 2` would hand the player a
                 // cursor on an unzoomed plate they did not ask about.
                 //
-                // Guarded on not already being focused so re-submitting
-                // `map` from the map does not pay a strip refresh for an
-                // identical answer.
-                if taken.trim() == "map" && self.focus != Focus::Map {
-                    self.enter_map();
+                // The focus test is what keeps re-submitting `map` from the
+                // map paying a strip refresh for an identical answer; the
+                // gesture still swallows the line either way, because a
+                // bare `map` is never a fetch, focused or not.
+                if taken.trim() == "map" {
+                    if self.focus != Focus::Map {
+                        self.enter_map();
+                    }
+                    return false;
                 }
-                released
+                self.handle(&taken)
             }
             Action::Move(word) => {
                 // A walk-mode arrow key acts like a submitted line — same
@@ -5419,5 +5438,87 @@ mod noun_prompt_tests {
             Focus::Cli,
             "Esc in the modal does not toggle focus"
         );
+    }
+}
+
+/// The prose pane's two client-side halves (The Quadrat, Task 8, spec
+/// §4.2): a bare `map` is a MODE GESTURE and not a fetch (decision 0290),
+/// and no escape sequence reaches the prose channel.
+#[cfg(test)]
+mod prose_pane_tests {
+    use super::*;
+
+    /// A fresh seed-42 flagship driver — the same construction every other
+    /// test module in this file uses.
+    fn test_driver() -> Driver {
+        Driver::start(42, PossessTarget::Flagship).expect("seed 42 generates")
+    }
+
+    /// Type `line` into the command buffer and submit it, the way a player
+    /// does. `FocusAndType` rather than `Type` because that is what the
+    /// input table produces for a printable key under every focus.
+    fn submit(d: &mut Driver, line: &str) -> bool {
+        for ch in line.chars() {
+            d.apply(Action::FocusAndType(ch));
+        }
+        d.apply(Action::Submit)
+    }
+
+    /// `driver.rs`'s own comment already argued `map` is a mode gesture and
+    /// not a fetch. The code called `self.handle("map")` first anyway, so
+    /// the sim answered the gesture with a picture — the reported defect.
+    ///
+    /// **The snapshot is what discriminates.** The focus assertion alone
+    /// passed before this change too; only the unchanged snapshot can tell
+    /// "entered the map" from "entered the map AND burned a turn on a chart
+    /// nobody asked for".
+    #[test]
+    fn a_bare_map_gesture_does_not_send_the_verb() {
+        let mut d = test_driver();
+        let before = d.snapshot();
+        assert!(!submit(&mut d, "map"), "a mode gesture never releases");
+        assert_eq!(d.focus(), Focus::Map, "the gesture did not focus the map");
+        assert_eq!(
+            d.snapshot(),
+            before,
+            "the gesture sent a verb and advanced the session"
+        );
+    }
+
+    /// The gesture is a gesture from the map too. Re-submitting `map` while
+    /// already focused must still swallow the line rather than falling
+    /// through to the sim — the old guard was about not paying for a
+    /// redundant strip refresh, never about sending the verb.
+    #[test]
+    fn a_bare_map_gesture_from_the_map_still_sends_nothing() {
+        let mut d = test_driver();
+        submit(&mut d, "map");
+        let before = d.snapshot();
+        submit(&mut d, "map");
+        assert_eq!(d.focus(), Focus::Map);
+        assert_eq!(
+            d.snapshot(),
+            before,
+            "a second gesture advanced the session"
+        );
+    }
+
+    /// Only the BARE form changes, and that is load-bearing: `map out N` is
+    /// the diagnostic path that caught The Quire's wrong projection, where
+    /// the client and the sim were rendered side by side over the identical
+    /// thirty-one facets and only one was right. It guards spec §5's H2.
+    #[test]
+    fn map_out_n_still_returns_the_sims_own_picture() {
+        let mut d = test_driver();
+        submit(&mut d, "map out 1");
+        let v: serde_json::Value = serde_json::from_str(&d.snapshot()).expect("a live snapshot");
+        let prose = v["narration"]["prose"]
+            .as_str()
+            .expect("the snapshot carries this turn's prose");
+        assert!(
+            prose.contains('\n'),
+            "map out 1 did not return a multi-line picture, got {prose:?}"
+        );
+        assert_ne!(d.focus(), Focus::Map, "an argument form moved the plate");
     }
 }
