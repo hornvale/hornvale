@@ -341,11 +341,30 @@ be taken:
   | 10 | 30.5 ms | 333 | 999 | under |
   | 12 (`BAND_B_RUNG`) | 30.0 ms | 30 | 90 | under |
 
-  **The bar holds at rungs ≥ 8 and fails at 6 AND 7.** An earlier revision of
-  this line said "≥ 7", interpolated from a three-point sweep (6, 8, 12) that
-  skipped rung 7 — rung 7's own 66.4 ms is 1.3× over, and the correction came
-  from measuring the point the interpolation had assumed. Recorded because the
-  error was in this spec, not in the measurement.
+  **THE UNCACHED BOUNDARY IS LOAD-SENSITIVE AND THIS SPEC WILL NOT NAME IT.**
+  The table above was taken on what its author called a quiet box (load ~7).
+  Task 5 re-measured the same uncached path on a genuinely idle box (88–92%
+  idle) and got figures **1.18–1.48× lower at every rung**, with
+  **byte-identical `RoomMeshMemo` miss counts** — so the computation was
+  identical and the difference is entirely the machine. Rung 6 read 70.3 ms
+  (still over); **rung 7 read 47.1 ms — UNDER a bar this spec had recorded it
+  1.3× over.**
+
+  So: two successive measurements, both taken in good faith on a box their
+  author believed was quiet, disagree by up to 1.48× — and an earlier revision
+  of this line ALSO stated a boundary interpolated across a rung it had not
+  measured. Three attempts, three different answers. **The boundary is recorded
+  as uncertain rather than resolved**, because this repo's own CLAUDE.md already
+  documents two campaigns anchoring on a committed cost figure and extrapolating
+  wrong, and a fourth guess would be the same mistake with better manners.
+
+  **What is NOT uncertain, and is what the campaign actually turns on:** the
+  mechanism claim holds at every rung and at every load — vertex scans fall
+  1,960,000 → 90 at band B and → 88,986 (22×) at `GLOBE_RUNG`, and those counts
+  are deterministic on seed 42, not timings. And with Task 5's cache warm,
+  200×200 at `GLOBE_RUNG` costs **0.056 ms — 893× under the bar**, which no
+  plausible load error can touch. The uncached boundary is therefore an
+  interesting number and not a load-bearing one.
 
   Both failing rungs are **shipped** — a player reaches them by holding `-` —
   and they are where the memo has almost no reuse. The **mechanism** claim holds
