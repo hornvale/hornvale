@@ -618,25 +618,62 @@ pub fn realize_tongue(
     lexicon: &Lexicon,
     pronouns: &BTreeMap<&'static str, MorphForm>,
 ) -> Result<String, TongueGap> {
+    realize_tongue_with_subject(clause, grammar, lexicon, pronouns, true)
+}
+
+/// [`realize_tongue`]'s own body, widened with one caller-only knob:
+/// whether to realize `clause.subject` at all. `realize_tongue` itself
+/// always passes `true`, so its behaviour is unchanged byte for byte;
+/// [`realize_tongue_coordination`] is the only caller that ever passes
+/// `false`, for a non-first coordinated clause whose subject is identical
+/// to the first clause's already-stated one (The Mortise, Task 7).
+///
+/// **Elision happens HERE, inside per-clause realization, never as
+/// post-processing on an already-joined sentence.** [`join_coordinated`]
+/// receives finished strings and has no idea where a subject sits within
+/// one — the constituent order is drawn (`grammar.order`, six possible
+/// shapes) and the subject lands first, middle or last depending on it.
+/// So when `include_subject` is `false`, `tongue_subject` is never even
+/// called: the subject slot is simply `None` in the `ordered` array below,
+/// wherever this tongue's drawn order would otherwise have placed it —
+/// there is no leftover token to find or trim, in any order.
+fn realize_tongue_with_subject(
+    clause: &Clause,
+    grammar: &TongueGrammar,
+    lexicon: &Lexicon,
+    pronouns: &BTreeMap<&'static str, MorphForm>,
+    include_subject: bool,
+) -> Result<String, TongueGap> {
     let valence = tongue_valence(&clause.predicate);
-    let subject = tongue_subject(&clause.subject, grammar, lexicon, clause.number, pronouns)?;
+    let subject = if include_subject {
+        Some(tongue_subject(
+            &clause.subject,
+            grammar,
+            lexicon,
+            clause.number,
+            pronouns,
+        )?)
+    } else {
+        None
+    };
     let complement = resolve_argument(&clause.object, grammar, lexicon, clause.number, pronouns)?;
     let verb = tongue_verb(valence, clause, grammar, lexicon)?.map(|marked| marked.roman);
     let adjunct_words =
         realize_adjuncts(&clause.adjuncts, grammar, lexicon, clause.number, pronouns)?;
-    let s = subject.as_str();
+    let s = subject.as_deref();
     let v = verb.as_deref();
     let o = complement.as_str();
     // Order the present constituents; an absent verb (a zero-copula tongue
-    // predicating nominally) simply drops out. A transitive clause always
-    // fills the slot, so all six orders emit three tokens.
+    // predicating nominally) simply drops out, exactly as an elided subject
+    // now does. A transitive clause always fills the verb slot, so all six
+    // orders emit three tokens with a subject present and two without one.
     let ordered: Vec<&str> = match grammar.order {
-        ConstituentOrder::Sov => [Some(s), Some(o), v],
-        ConstituentOrder::Svo => [Some(s), v, Some(o)],
-        ConstituentOrder::Vso => [v, Some(s), Some(o)],
-        ConstituentOrder::Vos => [v, Some(o), Some(s)],
-        ConstituentOrder::Ovs => [Some(o), v, Some(s)],
-        ConstituentOrder::Osv => [Some(o), Some(s), v],
+        ConstituentOrder::Sov => [s, Some(o), v],
+        ConstituentOrder::Svo => [s, v, Some(o)],
+        ConstituentOrder::Vso => [v, s, Some(o)],
+        ConstituentOrder::Vos => [v, Some(o), s],
+        ConstituentOrder::Ovs => [Some(o), v, s],
+        ConstituentOrder::Osv => [Some(o), s, v],
     }
     .into_iter()
     .flatten()
@@ -678,10 +715,29 @@ fn join_coordinated(mut texts: Vec<String>, conjunction: Option<&str>) -> String
 }
 
 /// Realize a [`Coordination`] in a tongue: each clause realizes through
-/// [`realize_tongue`] (the FLOOR realizer — the same deliberate choice
-/// [`tongue_subject`]'s and [`resolve_argument`]'s own `Clause` arms make
-/// for embedding, spec §4.5's floor/deep split) in full (tier 1 — nothing
-/// shared or elided), then joined via [`join_coordinated`].
+/// [`realize_tongue_with_subject`] (the FLOOR realizer — the same
+/// deliberate choice [`tongue_subject`]'s and [`resolve_argument`]'s own
+/// `Clause` arms make for embedding, spec §4.5's floor/deep split), then
+/// joined via [`join_coordinated`].
+///
+/// **Tier 2: a non-first clause whose `(subject, number)` equals the
+/// FIRST clause's own is realized WITHOUT its subject constituent** — see
+/// [`realize_tongue_with_subject`] for where that omission actually
+/// happens (inside per-clause realization, never as surgery on the joined
+/// text) and
+/// [`crate::clause::realize_common_coordination`]'s doc for why the
+/// comparison is `(subject, number)` and not bare [`Subject`] equality.
+/// Comparing every clause against the FIRST one (not the immediately
+/// preceding one) is what lets a three-clause coordination whose first two
+/// share a subject but whose third does not elide exactly the middle
+/// clause. **Elided clauses never call [`tongue_subject`] at all** — since
+/// `grammar`/`lexicon`/`pronouns` are the same across every clause in one
+/// coordination and the compared subject+number are equal by construction,
+/// re-deriving the omitted clause's subject would be a deterministic
+/// no-op: it can only reproduce the `Ok` text the first clause's own
+/// (unskipped) call already produced, so skipping it costs nothing and
+/// cannot mask a gap the first clause's own call would not already have
+/// surfaced.
 ///
 /// **Not the production path** — see [`realize_tongue_deep_coordination`]
 /// for the one `windows/book`/`windows/almanac` actually need, where each
@@ -693,7 +749,7 @@ fn join_coordinated(mut texts: Vec<String>, conjunction: Option<&str>) -> String
 ///
 /// Renders fully or gaps entirely (spec §4): a gap realizing any one
 /// coordinated clause fails the whole coordination, via `?` on
-/// [`realize_tongue`]'s own `Result`.
+/// [`realize_tongue_with_subject`]'s own `Result`.
 ///
 /// Panics if `coord.clauses` holds fewer than two clauses, on the identical
 /// reasoning [`crate::clause::realize_common_coordination`] states.
@@ -710,9 +766,13 @@ pub fn realize_tongue_coordination(
          coordinate",
         coord.clauses.len()
     );
+    let first = &coord.clauses[0];
     let mut texts = Vec::with_capacity(coord.clauses.len());
-    for clause in &coord.clauses {
-        texts.push(realize_tongue(clause, grammar, lexicon, pronouns)?);
+    for (i, clause) in coord.clauses.iter().enumerate() {
+        let elide = i > 0 && clause.subject == first.subject && clause.number == first.number;
+        texts.push(realize_tongue_with_subject(
+            clause, grammar, lexicon, pronouns, !elide,
+        )?);
     }
     Ok(join_coordinated(texts, grammar.conjunction.as_deref()))
 }
@@ -893,6 +953,49 @@ pub fn realize_tongue_deep(
     lexicon: &Lexicon,
     orth: Orthography,
 ) -> Result<String, TongueGap> {
+    realize_tongue_deep_with_subject(
+        clause,
+        grammar,
+        morph,
+        paradigm,
+        noun_class_of,
+        lexicon,
+        orth,
+        true,
+    )
+}
+
+/// [`realize_tongue_deep`]'s own body, widened with one caller-only knob:
+/// whether to realize `clause.subject` at all. `realize_tongue_deep` itself
+/// always passes `true`, so its behaviour is unchanged byte for byte;
+/// [`realize_tongue_deep_coordination`] is the only caller that ever passes
+/// `false`, for a non-first coordinated clause whose subject is identical
+/// to the first clause's already-stated one (The Mortise, Task 7) — the
+/// same knob [`realize_tongue_with_subject`] gives the floor realizer, kept
+/// on the deep path too so elision does not re-open the floor/deep
+/// asymmetry Task 6's fix round closed for coordination itself.
+///
+/// **When `include_subject` is `false`, `clause.subject` is never even
+/// matched on** — no `tongue_subject` call and no recursive
+/// `realize_tongue_deep` call for a `Subject::Clause`, so an elided
+/// subject costs nothing beyond the one comparison
+/// [`realize_tongue_deep_coordination`] already made to decide to elide it.
+///
+/// `#[allow(clippy::too_many_arguments)]`: the bundle is exactly
+/// [`realize_tongue_deep`]'s own seven arguments plus this function's one
+/// caller-only `include_subject` knob — the same widen-in-place shape
+/// [`realize_tongue_with_subject`] takes over [`realize_tongue`]'s four.
+#[allow(clippy::too_many_arguments)]
+fn realize_tongue_deep_with_subject(
+    clause: &Clause,
+    grammar: &TongueGrammar,
+    morph: &TongueMorphology,
+    paradigm: Option<&TongueParadigm>,
+    noun_class_of: &dyn Fn(&str) -> NounClass,
+    lexicon: &Lexicon,
+    orth: Orthography,
+    include_subject: bool,
+) -> Result<String, TongueGap> {
     let valence = tongue_valence(&clause.predicate);
     // The pronoun inventory rides on `morph` (spec §4.6): it is drawn by the
     // same family-cognate machinery every other form in that bundle is, and
@@ -907,27 +1010,31 @@ pub fn realize_tongue_deep(
     // Task 5). `tongue_subject`'s own `Subject::Clause` arm handles only the
     // FLOOR path (`realize_tongue`'s direct dispatch). The depth check runs
     // BEFORE the recursive call, the same ordering `realize_common` uses.
-    let subject = match &clause.subject {
-        Subject::Clause(inner) => {
-            let depth = subject_embed_depth(&clause.subject);
-            assert!(
-                depth <= CLAUSE_EMBED_MAX_DEPTH,
-                "a clause subject nests {depth} deep, past the cap of \
-                 {CLAUSE_EMBED_MAX_DEPTH}: a clause bound to the subject \
-                 slot may not itself contain a clause complement"
-            );
-            let text = realize_tongue_deep(
-                inner,
-                grammar,
-                morph,
-                paradigm,
-                noun_class_of,
-                lexicon,
-                orth,
-            )?;
-            mark_embedded_clause(grammar, text)
-        }
-        other => tongue_subject(other, grammar, lexicon, clause.number, pronouns)?,
+    let subject = if include_subject {
+        Some(match &clause.subject {
+            Subject::Clause(inner) => {
+                let depth = subject_embed_depth(&clause.subject);
+                assert!(
+                    depth <= CLAUSE_EMBED_MAX_DEPTH,
+                    "a clause subject nests {depth} deep, past the cap of \
+                     {CLAUSE_EMBED_MAX_DEPTH}: a clause bound to the subject \
+                     slot may not itself contain a clause complement"
+                );
+                let text = realize_tongue_deep(
+                    inner,
+                    grammar,
+                    morph,
+                    paradigm,
+                    noun_class_of,
+                    lexicon,
+                    orth,
+                )?;
+                mark_embedded_clause(grammar, text)
+            }
+            other => tongue_subject(other, grammar, lexicon, clause.number, pronouns)?,
+        })
+    } else {
+        None
     };
     // Spec §4.3: only a LEXICAL object may bear morphology. `object_concept`
     // is `Some` only for a `Concept` -- and it must not be conflated with
@@ -1102,7 +1209,11 @@ pub fn realize_tongue_deep(
     }
     let verb_roman = verb.map(|marked| marked.roman);
 
-    let s = subject.as_str();
+    // `s` is `None` for an elided subject (`include_subject: false`) — the
+    // same "absent constituent simply drops out" shape an absent verb
+    // (a zero-copula tongue predicating nominally) already has below.
+    let s = subject.as_deref();
+    let s_tok = s.map(|s| (Role::Subject, s.to_string()));
     let v = verb_roman.as_deref();
     // "The predicate" for every particle splice below: the verb slot's token
     // when it is filled, otherwise the predicate nominal. Computed ONCE --
@@ -1118,33 +1229,33 @@ pub fn realize_tongue_deep(
     let o = complement.roman.as_str();
     let mut ordered: Vec<(Role, String)> = match grammar.order {
         ConstituentOrder::Sov => [
-            Some((Role::Subject, s.to_string())),
+            s_tok.clone(),
             Some((Role::Complement, o.to_string())),
             v.map(|v| (Role::Verb, v.to_string())),
         ],
         ConstituentOrder::Svo => [
-            Some((Role::Subject, s.to_string())),
+            s_tok.clone(),
             v.map(|v| (Role::Verb, v.to_string())),
             Some((Role::Complement, o.to_string())),
         ],
         ConstituentOrder::Vso => [
             v.map(|v| (Role::Verb, v.to_string())),
-            Some((Role::Subject, s.to_string())),
+            s_tok.clone(),
             Some((Role::Complement, o.to_string())),
         ],
         ConstituentOrder::Vos => [
             v.map(|v| (Role::Verb, v.to_string())),
             Some((Role::Complement, o.to_string())),
-            Some((Role::Subject, s.to_string())),
+            s_tok.clone(),
         ],
         ConstituentOrder::Ovs => [
             Some((Role::Complement, o.to_string())),
             v.map(|v| (Role::Verb, v.to_string())),
-            Some((Role::Subject, s.to_string())),
+            s_tok.clone(),
         ],
         ConstituentOrder::Osv => [
             Some((Role::Complement, o.to_string())),
-            Some((Role::Subject, s.to_string())),
+            s_tok,
             v.map(|v| (Role::Verb, v.to_string())),
         ],
     }
@@ -1221,13 +1332,26 @@ pub fn realize_tongue_deep(
 }
 
 /// Realize a [`Coordination`] under C7's full morphology bundle: each
-/// coordinated clause realizes through [`realize_tongue_deep`] itself — a
-/// DEEP call threading the SAME `grammar`/`morph`/`paradigm`/
+/// coordinated clause realizes through [`realize_tongue_deep_with_subject`]
+/// — a DEEP call threading the SAME `grammar`/`morph`/`paradigm`/
 /// `noun_class_of`/`orth` this call was given, never rebuilding them, so
 /// each clause's own drawn tense/polarity/evidential/noun-class marking
 /// survives exactly as `realize_tongue_deep`'s own `Subject::Clause`/
 /// `Argument::Clause` arms already thread it for embedding (The Mortise,
 /// Task 5) — then joined via [`join_coordinated`].
+///
+/// **Tier 2: a non-first clause whose `(subject, number)` equals the FIRST
+/// clause's own is realized WITHOUT its subject constituent**, on the
+/// identical comparison and identical "compare against the first clause"
+/// reasoning [`realize_tongue_coordination`]'s own doc states — this is
+/// the SAME elision rule applied under the deep realizer instead of the
+/// floor one, not a second rule. Landing elision in the floor entry point
+/// alone would re-open the exact floor/deep asymmetry Task 6's fix round
+/// closed for coordination itself (that fix round is why this function
+/// exists at all): a coordinated sentence would elide its subject only
+/// when nobody's narration actually renders it, since `windows/book`/
+/// `windows/almanac` call this function, never the floor one, for real
+/// output.
 ///
 /// **This is the production path.** `windows/book` and `windows/almanac`
 /// call only `realize_tongue_deep`, never bare [`realize_tongue`], for
@@ -1241,11 +1365,16 @@ pub fn realize_tongue_deep(
 /// own, computed by its own `realize_tongue_deep` call exactly as it would
 /// be realized alone; joining the results changes none of them — the same
 /// non-interference [`realize_tongue_deep`]'s embedding arms already
-/// guarantee for a nested clause.
+/// guarantee for a nested clause. Eliding a subject changes nothing about
+/// this either: the elided clause's own tense/polarity/evidential/noun-class
+/// marking on its VERB and OBJECT still applies in full, exactly as if its
+/// subject had been realized and then discarded — the difference is that
+/// discarding happens before the marking work, not after it, so no marking
+/// is ever computed and then thrown away.
 ///
 /// Renders fully or gaps entirely (spec §4): a gap realizing any one
 /// coordinated clause fails the whole coordination, via `?` on
-/// [`realize_tongue_deep`]'s own `Result`.
+/// [`realize_tongue_deep_with_subject`]'s own `Result`.
 ///
 /// Panics if `coord.clauses` holds fewer than two clauses, on the
 /// identical reasoning [`crate::clause::realize_common_coordination`]
@@ -1266,9 +1395,11 @@ pub fn realize_tongue_deep_coordination(
          coordinate",
         coord.clauses.len()
     );
+    let first = &coord.clauses[0];
     let mut texts = Vec::with_capacity(coord.clauses.len());
-    for clause in &coord.clauses {
-        texts.push(realize_tongue_deep(
+    for (i, clause) in coord.clauses.iter().enumerate() {
+        let elide = i > 0 && clause.subject == first.subject && clause.number == first.number;
+        texts.push(realize_tongue_deep_with_subject(
             clause,
             grammar,
             morph,
@@ -1276,6 +1407,7 @@ pub fn realize_tongue_deep_coordination(
             noun_class_of,
             lexicon,
             orth,
+            !elide,
         )?);
     }
     Ok(join_coordinated(texts, grammar.conjunction.as_deref()))
@@ -3750,6 +3882,144 @@ mod tests {
         let _ = realize_tongue_coordination(&coord, &grammar, &lex, &pronouns);
     }
 
+    /// Tier 2 under the tongue FLOOR realizer (The Mortise, Task 7): a
+    /// shared subject is stated once, the tongue-side twin of
+    /// `clause::tests::a_shared_subject_is_stated_once`. Both clauses share
+    /// `Subject::Pronoun(Third)` at `Number::Sg` — [`coordinated_kill_clause`]'s
+    /// own subject, reused as the FIRST clause's subject too so the two are
+    /// structurally equal.
+    ///
+    /// **The expected text is derived, not hardcoded**: `tongue_pronoun` is
+    /// the same function [`realize_tongue`] itself calls to resolve
+    /// `Subject::Pronoun(Third)`.
+    #[test]
+    fn a_tongue_elides_a_shared_subject() {
+        let lex = coordination_lexicon();
+        let pronouns = drawn_pronouns();
+        let grammar = coordination_grammar(Some("zil"));
+        let first = Clause {
+            predicate: EAT.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Concept("bread".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        // Built directly rather than reusing `coordinated_kill_clause`
+        // (whose OBJECT is `Argument::Pronoun(Third)`): this tongue's floor
+        // realizer models no case distinction, so that pronoun would
+        // resolve to the SAME word this test's subject pronoun does,
+        // making the "exactly once" count below collide on an unrelated
+        // token instead of cleanly proving the subject was elided. Sharing
+        // the OBJECT concept with `first` instead sidesteps that (the same
+        // fix `a_coordination_under_the_deep_realizer_elides_a_shared_subject`
+        // makes for the identical reason).
+        let second = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Concept("bread".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(
+            first.subject, second.subject,
+            "sanity: both clauses must share a subject for tier 2 to fire"
+        );
+        let coord = Coordination {
+            clauses: vec![first.clone(), second.clone()],
+        };
+
+        let out = realize_tongue_coordination(&coord, &grammar, &lex, &pronouns).unwrap();
+
+        let subject_text = tongue_pronoun(Person::Third, Number::Sg, &pronouns).unwrap();
+        let mut first_text = realize_tongue(&first, &grammar, &lex, &pronouns).unwrap();
+        assert!(first_text.ends_with('.'));
+        first_text.pop();
+
+        let mut second_full = realize_tongue(&second, &grammar, &lex, &pronouns).unwrap();
+        assert!(second_full.ends_with('.'));
+        second_full.pop();
+        // `coordination_grammar` draws SVO, so the subject leads the full
+        // realization -- the same structural fact the Common test relies on.
+        let prefix = format!("{subject_text} ");
+        assert!(
+            second_full.starts_with(&prefix),
+            "sanity: realize_tongue alone states the subject: {second_full:?}"
+        );
+        let second_without_subject = second_full
+            .strip_prefix(&prefix)
+            .expect("checked above with starts_with");
+
+        assert_eq!(out, format!("{first_text} zil {second_without_subject}."));
+        assert_eq!(
+            out.split_whitespace()
+                .filter(|word| word.trim_end_matches('.') == subject_text)
+                .count(),
+            1,
+            "a shared subject must surface exactly once: {out:?}"
+        );
+    }
+
+    /// The tongue-floor twin of `clause::tests::a_shared_object_is_not_raised`:
+    /// tier 3 (right-node raising) is CUT (spec §9.1), so a shared OBJECT
+    /// must still surface once per clause even though tier 2 now elides a
+    /// shared SUBJECT. The two clauses here have DIFFERENT subjects
+    /// (`Nwamvam` vs. the drawn pronoun), which keeps tier 2 from firing
+    /// and isolates the object-sharing question this test asks.
+    #[test]
+    fn a_tongue_coordination_does_not_raise_a_shared_object() {
+        let lex = coordination_lexicon();
+        let pronouns = drawn_pronouns();
+        let grammar = coordination_grammar(Some("zil"));
+        let first = transitive_clause(Tense::Past); // Subject::Name("Nwamvam"), object bread
+        let second = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Concept("bread".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_ne!(
+            first.subject, second.subject,
+            "sanity: this test isolates object-sharing, so the subjects \
+             must differ (tier 2 must not fire here)"
+        );
+        let coord = Coordination {
+            clauses: vec![first, second],
+        };
+
+        let out = realize_tongue_coordination(&coord, &grammar, &lex, &pronouns).unwrap();
+
+        let object_word = resolve_argument(
+            &Argument::Concept("bread".to_string()),
+            &grammar,
+            &lex,
+            Number::Sg,
+            &pronouns,
+        )
+        .unwrap();
+        let occurrences = out
+            .split_whitespace()
+            .filter(|word| word.trim_end_matches('.') == object_word)
+            .count();
+        assert_eq!(
+            occurrences, 2,
+            "tier 3 (right-node raising) is CUT: the shared object must be \
+             stated on EACH verb, never raised to a single mention: {out:?}"
+        );
+    }
+
     /// Fix round 1, Task 6: coordination under the DEEP realizer keeps each
     /// coordinated clause's OWN drawn marking, exactly as embedding does
     /// (`an_inner_clause_tense_is_not_backshifted` is the precedent this
@@ -3826,6 +4096,124 @@ mod tests {
         assert!(
             out.contains(&kill_roman),
             "the second clause's bare (unmarked) verb must still surface: {out:?}"
+        );
+    }
+
+    /// Tier 2 under the DEEP realizer — the PRODUCTION path — is the case
+    /// that actually matters: `windows/book`/`windows/almanac` call only
+    /// `realize_tongue_deep`, never the floor realizer, for real narration
+    /// (the same fact fix round 1 of Task 6 closed for coordination
+    /// itself). Landing elision only under `realize_tongue_coordination`
+    /// would have re-opened that exact asymmetry — a coordinated sentence
+    /// eliding its subject only where nothing renders it.
+    ///
+    /// Reuses this module's own differential-marking fixture
+    /// (`a_coordination_under_the_deep_realizer_keeps_each_clauses_own_marking`'s
+    /// own EAT-Past/KILL-Present pair) so ONE test demonstrates both halves
+    /// at once: the shared subject is elided, AND the second clause's own
+    /// verb marking (its Present zero-marking, distinguishable from the
+    /// first clause's affixed Past) is unaffected by that elision — proof
+    /// that omitting the subject happens before any marking work, not as a
+    /// string-surgery pass after it that might have disturbed a token
+    /// elsewhere in the sentence.
+    #[test]
+    fn a_coordination_under_the_deep_realizer_elides_a_shared_subject() {
+        let ph = test_phonology();
+        let lex = coordination_lexicon();
+        let (_, eat_segments) = root_of(&lex, EAT);
+        let (kill_roman, kill_segments) = root_of(&lex, KILL);
+        let noun_class_of = |_: &str| NounClass::Inanimate;
+        let (paradigm, past_segments, _) =
+            tense_paradigm(&ph, MorphDepth::Affix, ClassPosition::Suffix);
+        let marked_eat = affix(
+            &eat_segments,
+            &past_segments,
+            ClassPosition::Suffix,
+            Orthography::Digraph,
+        )
+        .roman;
+        let marked_kill = affix(
+            &kill_segments,
+            &past_segments,
+            ClassPosition::Suffix,
+            Orthography::Digraph,
+        )
+        .roman;
+        assert_ne!(marked_eat, marked_kill);
+
+        let grammar = coordination_grammar(Some("zil"));
+        let first = Clause {
+            predicate: EAT.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Concept("bread".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past, // marked
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        // Built directly rather than reusing `coordinated_kill_clause`
+        // (whose OBJECT is `Argument::Pronoun(Third)`): the floor/deep
+        // tongue realizer models no case distinction, so that pronoun
+        // would resolve to the IDENTICAL word this test's subject pronoun
+        // does, making a token-count assertion accidentally depend on
+        // punctuation (only the sentence-FINAL token carries a trailing
+        // period) rather than cleanly proving the subject was elided.
+        // Sharing the OBJECT concept with `first` instead sidesteps that.
+        let second = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Concept("bread".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present, // unmarked
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(
+            first.subject, second.subject,
+            "sanity: both clauses must share a subject for tier 2 to fire"
+        );
+        let coord = Coordination {
+            clauses: vec![first, second],
+        };
+
+        let out = realize_tongue_deep_coordination(
+            &coord,
+            &grammar,
+            &unmarked_morphology(),
+            Some(&paradigm),
+            &noun_class_of,
+            &lex,
+            Orthography::Digraph,
+        )
+        .unwrap();
+
+        let subject_text = tongue_pronoun(Person::Third, Number::Sg, &drawn_pronouns()).unwrap();
+        assert_eq!(
+            out.split_whitespace()
+                .filter(|word| word.trim_end_matches('.') == subject_text)
+                .count(),
+            1,
+            "a shared subject must surface exactly once under the deep \
+             realizer, the production path: {out:?}"
+        );
+        assert!(
+            out.contains(&marked_eat),
+            "the first coordinated clause's own Past must still mark ITS \
+             verb after eliding the second clause's subject: {out:?}"
+        );
+        assert!(
+            !out.contains(&marked_kill),
+            "the second (subject-elided) clause's Present is the zero \
+             member and must not be marked: {out:?}"
+        );
+        assert!(
+            out.contains(&kill_roman),
+            "the second clause's bare (unmarked) verb must still surface \
+             even though its subject was elided: {out:?}"
         );
     }
 }

@@ -854,6 +854,33 @@ fn verb_group_forms(
 /// The Interlinear made the key a string.
 /// type-audit: bare-ok(prose)
 pub fn realize_common(spec: &Clause, vocab: &CommonVocabulary) -> String {
+    realize_common_with_subject(spec, vocab, true)
+}
+
+/// [`realize_common`]'s own body, widened with one caller-only knob:
+/// whether to realize `spec.subject` at all. `realize_common` itself always
+/// passes `true`, so its behaviour is unchanged byte for byte;
+/// [`realize_common_coordination`] is the only caller that ever passes
+/// `false`, for a NON-FIRST coordinated clause whose subject is identical to
+/// the first clause's already-stated one (The Mortise, Task 7, spec §4.10's
+/// tier 2).
+///
+/// **Elision happens HERE, inside realization, not as text surgery on an
+/// already-realized sentence.** A coordinated clause with `include_subject:
+/// false` never has its subject text computed or pushed at
+/// [`Part::Subject`] at all — the surface constituent is simply absent, the
+/// same discipline [`crate::grammar::realize_tongue`]'s own elision knob
+/// uses for a tongue whose constituent order is drawn rather than fixed.
+/// Common's own construction table happens to place [`Part::Subject`] first
+/// in every row (see [`common_constructions`]), immediately followed by a
+/// literal space, so omitting the subject leaves exactly one leading space
+/// to trim — a mechanical cleanup of a separator this table always emits
+/// there, not a search for content.
+fn realize_common_with_subject(
+    spec: &Clause,
+    vocab: &CommonVocabulary,
+    include_subject: bool,
+) -> String {
     let construction = common_constructions()
         .iter()
         .find(|c| c.predicate == spec.predicate)
@@ -898,6 +925,14 @@ pub fn realize_common(spec: &Clause, vocab: &CommonVocabulary) -> String {
     let mut out = String::new();
     for part in construction.parts {
         match part {
+            // `include_subject: false` (a coordinated non-first clause whose
+            // subject the first clause already stated, Task 7) skips this
+            // arm entirely — the subject constituent is never computed or
+            // pushed, not merely emptied. The one leading space this leaves
+            // (this table's own `Part::Literal(" ")` immediately follows
+            // every `Part::Subject`, see `common_constructions`) is trimmed
+            // once, after the loop below.
+            Part::Subject if !include_subject => {}
             Part::Subject => {
                 let text = match &spec.subject {
                     Subject::Name(name) => name.clone(),
@@ -985,7 +1020,16 @@ pub fn realize_common(spec: &Clause, vocab: &CommonVocabulary) -> String {
             Part::Literal(text) => out.push_str(text),
         }
     }
-    out
+    if include_subject {
+        out
+    } else {
+        // Every construction places `Part::Subject` first (see
+        // `common_constructions`), so an omitted subject leaves exactly the
+        // one separator space that always follows it — trimmed here rather
+        // than left for `realize_common_coordination` to strip out of an
+        // already-joined sentence.
+        out.trim_start().to_string()
+    }
 }
 
 /// A coordinated sequence of clauses — a LIST at a node, never a slot that
@@ -1009,12 +1053,31 @@ pub fn realize_common(spec: &Clause, vocab: &CommonVocabulary) -> String {
 /// it costs none of them — [`realize_common`] keeps taking a `&Clause` and
 /// always will.
 ///
-/// **Tier 1 only** (spec §4.10's three-tier ladder): each clause realizes
-/// in full, with nothing shared or elided between them — *"It confused me
-/// and it upset me"* rather than *"It confused and upset me"*. Tier 2
-/// (subject elision, so a shared subject is stated once) and tier 3
-/// (right-node raising) are later work; tier 3 is cut from this campaign
-/// entirely (spec §9.1).
+/// **Tiers 1 and 2 of spec §4.10's three-tier ladder are built; tier 3 is
+/// not, and never will be in this campaign.** Tier 1 — every clause states
+/// its own subject in full — is what a coordination realizes when its
+/// clauses' subjects differ: *"It confused me and the goblin upset me."*
+/// Tier 2 — a shared subject is stated once — fires automatically whenever
+/// a non-first clause's subject equals the first's (see
+/// [`realize_common_coordination`] and
+/// [`crate::grammar::realize_tongue_coordination`] for exactly what
+/// "equals" compares): *"It confused me and upset me"* rather than *"It
+/// confused me and it upset me."* **Tier 3 (right-node raising — sharing
+/// the OBJECT too, "It confused and upset me") is CUT from this campaign
+/// entirely** (spec §9.1, The Mortise Task 7): what a language may elide is
+/// typological, and getting it wrong yields *plausible* garbage, the
+/// failure mode that survives review. `a_shared_object_is_not_raised` pins
+/// this as a deliberate boundary, not an unexamined gap, so a later
+/// campaign that wants tier 3 has to come here and change it on purpose.
+///
+/// **Subject elision is a uniform surface convention, not a drawn axis.**
+/// Whether a language elides a coordinate subject at all is genuinely
+/// typological, but this campaign's two stream labels
+/// (`subordinator`, `conjunction`) are both spent, and no third is added
+/// here — every tongue elides a stated-once subject the same way Common
+/// does. A future campaign that wants this to vary per tongue needs its own
+/// stream label and its own draw; this one states the limit rather than
+/// leaving it to be discovered as a silent default.
 /// type-audit: bare-ok(identifier-text)
 #[derive(Clone, Debug, PartialEq)]
 pub struct Coordination {
@@ -1025,16 +1088,35 @@ pub struct Coordination {
 }
 
 /// Realize a [`Coordination`] as a Common (≈ limited English) sentence: each
-/// clause realizes through [`realize_common`] in full (tier 1 — nothing
-/// shared or elided), trimmed of its own trailing full stop, then joined
-/// with `"and"` — Common's own coordinating conjunction, on the same
-/// footing every other Common surface choice is (this register's fixed
-/// vocabulary, not a drawn value; only a TONGUE's conjunction is drawn, see
+/// clause realizes through [`realize_common_with_subject`], trimmed of its
+/// own trailing full stop, then joined with `"and"` — Common's own
+/// coordinating conjunction, on the same footing every other Common surface
+/// choice is (this register's fixed vocabulary, not a drawn value; only a
+/// TONGUE's conjunction is drawn, see
 /// [`crate::grammar::realize_tongue_coordination`]) — and the whole
 /// sentence takes exactly one trailing period, on the identical
 /// "realize whole and trim" discipline [`realize_common`]'s own
 /// `Argument::Clause`/`Subject::Clause` arms already use for a nested
 /// clause.
+///
+/// **Tier 2: a non-first clause whose subject equals the FIRST clause's own
+/// is realized WITHOUT its subject constituent** (`include_subject: false`,
+/// see [`realize_common_with_subject`]) — *"It confused me and upset me"*.
+/// Every other clause states its own subject in full (tier 1). Comparing
+/// against the first clause specifically, not the immediately preceding
+/// one, is what lets a three-clause coordination whose first and second
+/// share a subject but whose third does not elide exactly the middle
+/// clause and no other.
+///
+/// **The equality compared is `(subject, number)`, not bare [`Subject`]
+/// equality.** [`Subject`] alone derives [`PartialEq`], and comparing only
+/// that would treat `Subject::Pronoun(Person::Third)` at [`Number::Sg`]
+/// (*"it"*) as the same referent as [`Number::Pl`] (*"they"*) — two
+/// different surface pronouns bound to the same enum variant, since a
+/// clause's number lives on [`Clause::number`], not on [`Subject`] itself
+/// (see that field's own doc). Eliding across a number mismatch would drop
+/// the very feature that tells the reader whether one confuser or several
+/// are meant, so both must agree before a subject is silently omitted.
 ///
 /// Panics if `coord.clauses` holds fewer than two clauses: a coordination
 /// with nothing to join states a contradiction in its own name, and the
@@ -1050,8 +1132,10 @@ pub fn realize_common_coordination(coord: &Coordination, vocab: &CommonVocabular
          coordinate",
         coord.clauses.len()
     );
-    let mut parts = coord.clauses.iter().map(|clause| {
-        let mut text = realize_common(clause, vocab);
+    let first = &coord.clauses[0];
+    let mut parts = coord.clauses.iter().enumerate().map(|(i, clause)| {
+        let elide = i > 0 && clause.subject == first.subject && clause.number == first.number;
+        let mut text = realize_common_with_subject(clause, vocab, !elide);
         if text.ends_with('.') {
             text.pop();
         }
@@ -2921,13 +3005,21 @@ mod tests {
     /// realizes exactly as [`realize_common`] alone would (minus its own
     /// trailing period), joined by Common's own `"and"`, with exactly one
     /// trailing period on the whole coordinated utterance.
+    ///
+    /// **The two clauses deliberately have DIFFERENT subjects** (`Nwamvam`
+    /// vs. `Bemvo`) — Task 6's original fixture gave both the same subject
+    /// text, which was harmless before Task 7 landed elision but would now
+    /// silently exercise tier 2 instead of the tier 1 this test names and
+    /// documents. `two_clauses_coordinate_in_common` and
+    /// `a_shared_subject_is_stated_once` are the deliberate pair: same
+    /// subject elides, different subjects do not.
     #[test]
     fn two_clauses_coordinate_in_common() {
         let vocab = CommonVocabulary::default();
         let first = eat_clause(Tense::Past, Number::Sg, Polarity::Pos);
         let second = Clause {
             predicate: KILL.to_string(),
-            subject: Subject::Name("Nwamvam".to_string()),
+            subject: Subject::Name("Bemvo".to_string()),
             object: Argument::Concept("goblin".to_string()),
             number: Number::Sg,
             definiteness: Definiteness::Def,
@@ -2952,6 +3044,136 @@ mod tests {
         // before the join, the same discipline the embedded-clause arms of
         // `realize_common` already use.
         assert_eq!(out.matches('.').count(), 1);
+    }
+
+    /// Tier 2 (The Mortise, Task 7, spec §4.10): a shared subject is stated
+    /// once — *"It confused me and upset me"* rather than *"It confused me
+    /// and it upset me"*. Both clauses here share `Subject::Pronoun(Third)`
+    /// at `Number::Sg`, so the second clause's own subject constituent must
+    /// be entirely absent from the output, not merely rendered and matched
+    /// against the first.
+    ///
+    /// **The expected text is derived, not hardcoded**: `common_pronoun`
+    /// is the same function [`realize_common`] itself calls to resolve
+    /// `Subject::Pronoun(Third)`, so this test does not restate a "the
+    /// pronoun is `it`" fact the crate could later change out from under a
+    /// literal string.
+    #[test]
+    fn a_shared_subject_is_stated_once() {
+        let vocab = CommonVocabulary::default();
+        let first = Clause {
+            predicate: EAT.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Concept("bread".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let second = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Concept("goblin".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let coord = Coordination {
+            clauses: vec![first.clone(), second.clone()],
+        };
+        let out = realize_common_coordination(&coord, &vocab);
+
+        let subject_text = common_pronoun(Person::Third, Number::Sg, PronounCase::Nominative);
+        let mut first_text = realize_common(&first, &vocab);
+        assert!(first_text.ends_with('.'));
+        first_text.pop();
+
+        let mut second_full = realize_common(&second, &vocab);
+        assert!(second_full.ends_with('.'));
+        second_full.pop();
+        let prefix = format!("{subject_text} ");
+        assert!(
+            second_full.starts_with(&prefix),
+            "sanity: realize_common alone states the subject: {second_full:?}"
+        );
+        let second_without_subject = second_full
+            .strip_prefix(&prefix)
+            .expect("checked above with starts_with");
+
+        assert_eq!(out, format!("{first_text} and {second_without_subject}."));
+        // The first clause states the subject once; the second states it
+        // zero times — exactly one occurrence total, never two.
+        assert_eq!(
+            out.split_whitespace()
+                .filter(|word| *word == subject_text)
+                .count(),
+            1,
+            "a shared subject must surface exactly once: {out:?}"
+        );
+    }
+
+    /// Tier 3 — right-node raising, sharing the OBJECT as well as the
+    /// subject (*"It confused and upset me"*) — is CUT from this campaign
+    /// (spec §9.1, The Mortise Task 7) and this test is the assertion that
+    /// keeps that cut from being silently un-cut: a later campaign that
+    /// wants tier 3 has to come here and change this test on purpose.
+    ///
+    /// Two clauses share an object concept (`"goblin"`) but have DIFFERENT
+    /// subjects, so tier 2 does not fire and cannot be confused with tier 3
+    /// here — this isolates object-sharing from subject-sharing. Both
+    /// clauses' own resolved complement word must appear in the output,
+    /// once per clause: raising it once, the way tier 3 would, is exactly
+    /// what must NOT happen.
+    #[test]
+    fn a_shared_object_is_not_raised() {
+        let vocab = CommonVocabulary::default();
+        let first = Clause {
+            predicate: EAT.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Concept("goblin".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let second = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Name("Bemvo".to_string()),
+            object: Argument::Concept("goblin".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_ne!(
+            first.subject, second.subject,
+            "sanity: this test isolates object-sharing, so the subjects \
+             must differ (tier 2 must not fire here)"
+        );
+        let coord = Coordination {
+            clauses: vec![first, second],
+        };
+        let out = realize_common_coordination(&coord, &vocab);
+
+        let complement_word = surface_complement(&vocab, "goblin", Number::Sg);
+        let occurrences = out
+            .split_whitespace()
+            .filter(|word| word.trim_end_matches('.') == complement_word)
+            .count();
+        assert_eq!(
+            occurrences, 2,
+            "tier 3 (right-node raising) is CUT: the shared object must be \
+             stated on EACH verb, never raised to a single mention: {out:?}"
+        );
     }
 
     /// A coordination of fewer than two clauses states a contradiction in
