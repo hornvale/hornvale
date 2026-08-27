@@ -1746,6 +1746,42 @@ must come from the same source functions a chamber's does**, not from a new
 literal. A hand-tuned constant here would defeat the entire purpose of doing
 this in this rung rather than a later one.
 
+**What the controller verified about vents, because it makes this easier than
+the brief implies** (at `eeb120ba7`):
+
+A vent is not a special case bolted onto the sea — it is
+`SeafloorFeature::Ridge` (`domains/climate/src/biome.rs:712-714`), i.e. a
+mid-ocean ridge. That matters three ways, and all three are free:
+
+1. `geothermal_gradient_at` reads `crust_age_at`
+   (`domains/terrain/src/provider.rs:549-555`), and **ridge crust is the
+   youngest there is**, so the gradient at a vent is at its maximum. The
+   `Geothermal` source needs no special-casing to be strong there.
+2. Ridge rock is **mafic to ultramafic** — low silica — which is exactly
+   `Serpentinization`'s and `IronReduction`'s band. Serpentinization at
+   mid-ocean ridges is the real mechanism (the Lost City field), so the
+   sources you already have are the *right* sources for a vent.
+3. Moisture at a vent is saturation by definition. Drainage is a land
+   quantity and does not apply offshore — decide what to pass and say why.
+
+So metaplan §4's claim that this is "free evidence the mechanism is not
+underworld-special-cased" is stronger than it looks: the seven sources land
+on a vent correctly **because a vent is young mafic rock with a hot
+gradient**, which is what two of them describe.
+
+**THE ONE REAL DESIGN QUESTION, which the controller is NOT deciding.**
+`Geothermal`'s yield rises with ΔT, and ΔT is `gradient × depth`. At the
+seafloor interface depth is ~0, so ΔT is ~0 and `Geothermal` yields almost
+nothing — which is wrong for a vent, whose fluid is hot *precisely because it
+circulated deep and came back up*.
+
+So a vent cannot simply be evaluated at depth 0. **Name the property you are
+modelling — energy delivered to the interface from a circulation depth — and
+choose the depth accordingly, with a one-line physical justification in the
+doc and a citation if one exists.** Do not invent a constant without saying
+it is un-anchored; Task 4 spent two fix rounds learning that an un-anchored
+constant is not merely undocumented but unfalsifiable.
+
 - [ ] **Step 1: Write the failing test**
 
 ```rust
