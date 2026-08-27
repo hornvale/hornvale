@@ -4031,6 +4031,33 @@ impl<'w> Session<'w> {
             for id in interior.ids() {
                 let kind = interior.anchor(id).kind;
                 if crate::chamber_prose::noun(kind).is_some_and(|n| n.to_lowercase() == wanted) {
+                    // The Offer, Task 7 (spec §3.5/§4): routed through the
+                    // derived offer query, not the anchor's bare kind, so
+                    // the knowledge gate is LIVE CODE with an unreachable
+                    // branch (Nathan's #9 ruling) rather than dead code.
+                    // `Examine` is universal — `required_properties` is the
+                    // empty set, which is a subset of any kind's properties
+                    // — so the ONLY way this can ever be denied is
+                    // `offered_to_observer`'s own knowledge check. Per Task
+                    // 4's finding, no live `Session` can fail it today (this
+                    // method's caller always absorbs the current room before
+                    // the first turn runs), so this is byte-identical to the
+                    // pre-Task-7 behaviour for every reachable input —
+                    // `examine_chamber_anchor_reply_is_pinned_before_the_
+                    // offer_gate` pins exactly that, and `examine_chamber_
+                    // anchor_is_refused_when_the_observer_has_no_recorded_
+                    // knowledge` proves the branch is real by manufacturing
+                    // the one `Knowledge` state a live session cannot reach
+                    // on its own.
+                    if !crate::affordance::offered_to_observer(
+                        kind,
+                        self.driven_body(),
+                        &self.knowledge,
+                    )
+                    .contains(&crate::affordance::OfferedVerb::Examine)
+                    {
+                        return format!("You see no {noun} here.");
+                    }
                     // The Offer, Task 6 (spec §3.6, amended): what lies
                     // `within` an `Encloses` anchor is read here, not just
                     // its authored `detail` line — see `examine_detail`'s
@@ -6906,6 +6933,116 @@ mod tests {
         // And the same equality out of doors, so the two paths are pinned to one
         // sentence rather than to one prefix.
         assert_eq!(outdoors, refused_indoors);
+    }
+
+    /// A shared helper for the two `examine`'s-datum pins below: a real
+    /// seed-42 anchor (never a synthetic one), so both tests exercise the
+    /// actual production interior rather than a hand-built stand-in.
+    /// Returns the entered session, the anchor's [`crate::interior::AnchorId`]
+    /// and its noun.
+    fn entered_with_a_named_anchor(
+        world: &World,
+    ) -> (
+        Session<'_>,
+        crate::interior::Interior,
+        crate::interior::AnchorId,
+        &'static str,
+    ) {
+        let (mut session, _) = Session::start(world, &PossessOpts::default()).unwrap();
+        session.handle("enter");
+        let inside = session
+            .inside
+            .as_ref()
+            .expect("the flagship's own locale is built");
+        let terrain = session.terrain_here();
+        let brief = session.brief_here();
+        let interior = crate::interior::chamber_interior_of(
+            &inside.structure.chambers[inside.at],
+            &terrain,
+            session.walk_depth(),
+            &brief,
+            inside.at,
+        );
+        let id = interior
+            .ids()
+            .into_iter()
+            .find(|&id| crate::chamber_prose::noun(interior.anchor(id).kind).is_some())
+            .expect("a built chamber names at least one anchor");
+        let noun = crate::chamber_prose::noun(interior.anchor(id).kind)
+            .expect("checked Some by the find above");
+        (session, interior, id, noun)
+    }
+
+    /// The Offer, Task 7 (spec §4, §10.1): pins `examine_chamber`'s
+    /// anchor-detail reply BEFORE it is routed through
+    /// [`crate::affordance::offered_to_observer`] — the equality the spec's
+    /// own risk note asks for: "the behaviour is already shipped and already
+    /// tested; what changes is that one derivation feeds it." Must still
+    /// hold, byte for byte, after the re-point below, because the knowledge
+    /// gate can never fire through a live `Session` (Task 4's own finding).
+    ///
+    /// Mutation this must fail against: replacing `examine_chamber`'s anchor
+    /// branch with a bare refusal — proof the pin is not vacuous, run below
+    /// in `examine_chamber_anchor_reply_pin_can_fail`.
+    #[test]
+    fn examine_chamber_anchor_reply_is_pinned_before_the_offer_gate() {
+        let world = seam_world();
+        let (session, interior, id, noun) = entered_with_a_named_anchor(&world);
+        let reply = session.examine_chamber(noun, Perceiving::Body);
+        assert_eq!(
+            reply,
+            crate::chamber_prose::examine_detail(&interior, id),
+            "examine_chamber's anchor reply must equal chamber_prose's own \
+             examine_detail — the pin this task's re-point must not move"
+        );
+    }
+
+    /// Step 2's positive control for the pin above, run by hand rather than
+    /// left as prose: with the anchor branch of `examine_chamber` forced to
+    /// the outdoor refusal wording (the mutation a careless re-point could
+    /// plausibly introduce — routing every anchor through the gate's DENY
+    /// arm unconditionally), the pin test must go red. Confirmed by
+    /// temporarily editing the branch to `return format!("You see no {noun}
+    /// here.");` and re-running `examine_chamber_anchor_reply_is_pinned_
+    /// before_the_offer_gate`, which failed with the expected diff, then
+    /// restoring the branch — recorded here as the evidence the brief's
+    /// Step 2 asks for; this test itself asserts nothing new.
+    #[test]
+    fn examine_chamber_anchor_reply_pin_can_fail() {
+        let world = seam_world();
+        let (session, interior, id, noun) = entered_with_a_named_anchor(&world);
+        let reply = session.examine_chamber(noun, Perceiving::Body);
+        // A mutation that always refuses would make this equal the refusal
+        // sentence instead of the real detail — the two must differ, or the
+        // pin above could not tell the two apart.
+        assert_ne!(reply, format!("You see no {noun} here."));
+        assert_eq!(reply, crate::chamber_prose::examine_detail(&interior, id));
+    }
+
+    /// The Offer, Task 7 (spec §3.5/§4): [`crate::affordance::
+    /// offered_to_observer`] can never deny through a LIVE `Session` (Task
+    /// 4's own finding — knowledge absorption is unconditional before the
+    /// first turn), so the only way to observe this gate firing at all is to
+    /// manufacture the failing `Knowledge` directly — the same technique
+    /// `affordance.rs`'s own `an_unencountered_object_offers_nothing` uses
+    /// with a synthetic value.
+    ///
+    /// **Written and run RED against the pre-Task-7 `examine_chamber`**: it
+    /// does not consult `self.knowledge` at all, so wiping it changes
+    /// nothing and this assertion fails. The re-point below is what turns it
+    /// green — the live proof that `examine`'s datum now derives from
+    /// [`crate::affordance::offered_to_observer`], not merely from the
+    /// anchor's own kind.
+    #[test]
+    fn examine_chamber_anchor_is_refused_when_the_observer_has_no_recorded_knowledge() {
+        let world = seam_world();
+        let (mut session, _interior, _id, noun) = entered_with_a_named_anchor(&world);
+        // Manufacture the one state a live Session can never reach on its
+        // own (Task 4's own finding): an observer who has recorded no room
+        // at all.
+        session.knowledge = Knowledge::default();
+        let reply = session.examine_chamber(noun, Perceiving::Body);
+        assert_eq!(reply, format!("You see no {noun} here."));
     }
 
     #[test]
