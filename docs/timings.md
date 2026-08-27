@@ -3106,3 +3106,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T14:10:02Z | sluice:clients | 442.327 | 5565.345 | 67.602 | 12.73 | 0 | e9b9f39c8 |  | lefford | 40 |
 | 2026-08-27T14:29:19Z | rebaseline | 97.975 | 261.490 | 13.058 | 2.80 | 0 | b4154630b | campaign/the-coercion | MacBookPro | 10 |
 | 2026-08-27T14:31:49Z | gate-commit | 136.917 | 786.058 | 95.018 | 6.44 | 0 | b4154630b | campaign/the-coercion | MacBookPro | 10 |
+| 2026-08-27T14:49:29Z | gate-commit | 20.756 | 49.632 | 12.549 | 3.00 | 0 | ad4644d58 | campaign/the-coercion | MacBookPro | 10 |
