@@ -161,8 +161,12 @@ pub fn object_registry() -> ComponentStore<AnchorKind, ObjectTraits> {
 /// amended). A kind absent from [`object_registry`] carries no property, so
 /// it never encloses, matching [`offered_by`]'s own "absent = empty set"
 /// convention.
-/// type-audit: bare-ok(flag: return)
-pub fn encloses(kind: AnchorKind) -> bool {
+///
+/// `pub(crate)`, not `pub`: the only production caller is `chamber_prose.rs`,
+/// a sibling module in this crate. (No `type-audit:` tag: the extractor only
+/// reads bare-`pub` items, same reason `chamber_prose::noun`/`detail` carry
+/// none.)
+pub(crate) fn encloses(kind: AnchorKind) -> bool {
     object_registry()
         .get(&kind)
         .is_some_and(|traits| traits.properties.contains(&ObjectProperty::Encloses))
@@ -456,6 +460,30 @@ mod tests {
                 "{kind:?} must carry {prop:?} (spec §3.3)"
             );
         }
+    }
+
+    /// The Offer, Task 6 (spec §3.6, amended): the earlier draft carried
+    /// `Encloses` on `Strongbox` alone, drawing a semantic/spatial line that
+    /// excluded `Alcove`. Task 6's census found the consequence — the
+    /// grammar's only `within` relation anywhere is `{(Hearth, Alcove)}`, so
+    /// that line put the property on the one anchor that never holds
+    /// anything. The interactive-fiction rule that replaced it (contents
+    /// show when a container is open or transparent) marks BOTH. `encloses`
+    /// is the query `examine_chamber` reads before revealing an anchor's
+    /// contents (`chamber_prose::examine_detail`); this pins it against the
+    /// registry it wraps rather than trusting the two never drift apart.
+    #[test]
+    fn both_strongbox_and_alcove_carry_encloses() {
+        for kind in [AnchorKind::Strongbox, AnchorKind::Alcove] {
+            assert!(
+                encloses(kind),
+                "{kind:?} must carry ObjectProperty::Encloses (spec §3.6, amended)"
+            );
+        }
+        assert!(
+            !encloses(AnchorKind::Bed),
+            "a kind absent from object_registry must not enclose"
+        );
     }
 
     /// A `Body` fixture varying only `species`/`mass_kg`, for

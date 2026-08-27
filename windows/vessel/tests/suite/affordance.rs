@@ -33,8 +33,8 @@ use std::collections::BTreeSet;
 use hornvale_kernel::{ConditionResponse, EntityId, Facet, ResourceVector};
 use hornvale_vessel::Knowledge;
 use hornvale_vessel::affordance::{
-    ObjectProperty, ObjectTraits, OfferedVerb, encloses, object_registry, offered, offered_by,
-    offered_to, offered_to_observer,
+    ObjectProperty, ObjectTraits, OfferedVerb, object_registry, offered, offered_by, offered_to,
+    offered_to_observer,
 };
 use hornvale_vessel::body::Body;
 use hornvale_vessel::clock::{REFERENCE_MASS_KG, mass_for_species};
@@ -85,30 +85,6 @@ fn every_kind_carrying_a_shared_property_is_offered_the_verb_it_gates() {
             "{kind:?} carries HoldsLiquid but is not offered drink"
         );
     }
-}
-
-/// The Offer, Task 6 (spec §3.6, amended): the earlier draft carried
-/// `Encloses` on `Strongbox` alone, drawing a semantic/spatial line that
-/// excluded `Alcove`. Task 6's census found the consequence — the grammar's
-/// only `within` relation anywhere is `{(Hearth, Alcove)}`, so that line put
-/// the property on the one anchor that never holds anything. The
-/// interactive-fiction rule that replaced it (contents show when a
-/// container is open or transparent) marks BOTH. [`encloses`] is the query
-/// `examine_chamber` reads before revealing an anchor's contents
-/// (`chamber_prose::examine_detail`); this pins it against the registry it
-/// wraps rather than trusting the two never drift apart.
-#[test]
-fn both_strongbox_and_alcove_carry_encloses() {
-    for kind in [AnchorKind::Strongbox, AnchorKind::Alcove] {
-        assert!(
-            encloses(kind),
-            "{kind:?} must carry ObjectProperty::Encloses (spec §3.6, amended)"
-        );
-    }
-    assert!(
-        !encloses(AnchorKind::Bed),
-        "a kind absent from object_registry must not enclose"
-    );
 }
 
 /// The offer is a SUBSET relation, not an equality: an object carrying more
