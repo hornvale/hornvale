@@ -1673,8 +1673,23 @@ git diff --stat -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
 - [ ] **Step 5: The census question — measure, then STOP**
 
 ```bash
-make lab-diff STUDY=the-census
+cargo nextest run -p hornvale-lab --run-ignored all -E 'test(census_sentinel)'
 ```
+
+**NOT `make lab-diff STUDY=the-census` — it is VACUOUS locally, and Task 9
+found this the hard way.** That target compares
+`git show HEAD:book/src/laboratory/generated/<study>/rows.csv` against the
+**working-tree** copy of the same file. Nothing regenerates the working-tree
+copy without a census run, and a census run is host-guarded to lefford. So
+both sides are the same bytes and it reports "No metric moved" whatever you
+changed. It is a real check *after* a refresh and a null generator before
+one.
+
+`census_sentinel` is the live instrument: it re-probes a small seed set
+against committed fixtures, so it actually executes the code you changed.
+Read `windows/lab/tests/suite.rs` and
+`windows/lab/tests/fixtures/sentinel-waivers.txt` before interpreting a
+result.
 
 | what you observe | what to do |
 |---|---|
