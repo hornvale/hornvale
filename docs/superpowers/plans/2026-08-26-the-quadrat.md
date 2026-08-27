@@ -630,16 +630,47 @@ fn a_rung_change_does_not_serve_stale_tiles() {
 
 - [ ] **Step 2: Run to verify it fails** — Expected: FAIL, `tiles` module does not exist.
 
-- [ ] **Step 3: Implement** — `BTreeMap<(Frame, u32, u32, u32), Grid>` (NOT a
-`HashMap` — `clippy.toml` bans it). Bound the cache and evict by distance from
-the current window: the two-radius hot/warm policy MAP-70 already established.
-`Frame` must be `Ord`; if it holds `f64`, key on its quantized form and document
-why in the key type's doc comment.
+- [ ] **Step 3: Implement** — a `BTreeMap`-keyed cache (NOT a `HashMap` —
+`clippy.toml` bans it, and the ban reaches `clients/`). Bound the cache and
+evict by distance from the current window: the two-radius hot/warm policy MAP-70
+already established.
+
+**CONTROLLER RULING (pre-dispatch, binding): key the frame on `f64::to_bits()`,
+NOT on a quantized form.** `Frame` (`clients/game/bin/src/mercator.rs:99`)
+derives only `Debug, Clone, Copy, PartialEq` — it holds two `f64`, so it has no
+`Eq`/`Ord` and cannot be a `BTreeMap` key as-is. An earlier draft of this step
+said to "key on its quantized form", and that is a **correctness** mistake
+rather than a style one:
+
+- A **quantized** key can map two genuinely different frames onto one entry, and
+  the cache would then serve a tile drawn under the *wrong projection* — a
+  silently wrong picture.
+- A **bit** key (`pole_lat_deg.to_bits()`, `pole_lon_deg.to_bits()`) is exact.
+  Two frames that are bit-identical render identically; two that differ by an
+  ULP get separate entries. The only failure mode is an extra miss, which costs
+  time and never correctness.
+
+The asymmetry is the whole argument: over-missing is a performance bug,
+over-hitting is a wrong answer. Note also that `Frame` changes rarely — it is
+set once at load by `frame_for` and only moved by the explicit `recentre`
+gesture — so the extra-miss risk is close to hypothetical anyway.
+
+Do **not** reach for `hornvale_kernel::quantize` here. That function exists for
+the emit boundary (decision 0033) and this is a cache key, not an emitted value.
 
 - [ ] **Step 4: Run to verify it passes**
 
 - [ ] **Step 5: Re-run `rung_bench` WITH the cache** and record both numbers in
 `docs/timings.md`.
+
+**Also MEASURE the feature layer's per-redraw cost, and report the cave
+roster's cardinality.** Task 4 made the feature layer unconditional work over
+the whole site roster — one `geo.coord` plus one `mercator::project`
+(transcendentals) per site, on every keystroke, including cursor moves that
+previously cost exactly zero on a cache hit. The cave roster is built by
+scanning all 40,962 vertices (`driver.rs:648`) and **its cardinality is recorded
+nowhere in the tree.** Print it, measure the composition cost, and say whether a
+window pre-filter is needed — do not inherit "the rosters are small".
 
 **BUDGET AGAINST 91.6 ms, NOT 31.3 ms (controller ruling, from Task 3's
 measurement).** H1 came back SUPPORTED but **rung-conditional**: 200x200 costs
