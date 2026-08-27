@@ -8,7 +8,7 @@ use crate::calendar::Calendar;
 use crate::pins::NeighborClass;
 use crate::sky_position::EquatorialCoord;
 use crate::system::StarSystem;
-use crate::units::StdDays;
+use crate::units::StdInstant;
 use hornvale_kernel::math;
 
 /// Deterministic sample count for the year-long heliacal scan (model card):
@@ -73,13 +73,13 @@ fn half_arc_radians(phi_deg: f64, dec_deg: f64) -> f64 {
 /// timeline.
 fn at_local_fraction(
     calendar: &Calendar,
-    t_sample: StdDays,
+    t_sample: StdInstant,
     day_length: f64,
     fraction: f64,
-) -> StdDays {
+) -> StdInstant {
     let day_start =
         t_sample.0 - calendar.local_day(t_sample).map(|(_, f)| f).unwrap_or(0.0) * day_length;
-    StdDays(day_start + fraction * day_length)
+    StdInstant(day_start + fraction * day_length)
 }
 
 /// All heliacal risings and settings for the year containing `t`, at
@@ -103,7 +103,7 @@ pub fn heliacal_events(
     system: &StarSystem,
     calendar: &Calendar,
     latitude: f64,
-    t: StdDays,
+    t: StdInstant,
 ) -> Vec<HeliacalPair> {
     let Some(day_length) = calendar.day_length().map(|d| d.get()) else {
         return Vec::new();
@@ -134,7 +134,7 @@ pub fn heliacal_events(
         let mut evening = Vec::with_capacity(SAMPLES);
 
         for k in 0..SAMPLES {
-            let t_k = StdDays(year_start + (k as f64 / SAMPLES as f64) * year);
+            let t_k = StdInstant(year_start + (k as f64 / SAMPLES as f64) * year);
             let star_pos = calendar.star_equatorial_at(&genesis, t_k);
             let sun_pos = calendar.solar_equatorial(t_k);
             let transit_fraction =
@@ -206,7 +206,7 @@ mod tests {
     #[test]
     fn the_minimal_sky_yields_one_heliacal_pair_with_an_absence() {
         let (system, calendar) = minimal_sky();
-        let pairs = heliacal_events(&system, &calendar, 35.0, StdDays(0.0));
+        let pairs = heliacal_events(&system, &calendar, 35.0, StdInstant(0.0));
         assert_eq!(pairs.len(), 1);
         let p = &pairs[0];
         assert!((0.0..1.0).contains(&p.rising_frac) && (0.0..1.0).contains(&p.setting_frac));
@@ -232,7 +232,7 @@ mod tests {
     fn locked_worlds_have_no_heliacal_events() {
         let system = locked_system();
         let calendar = calendar_of(&system);
-        assert!(heliacal_events(&system, &calendar, 35.0, StdDays(0.0)).is_empty());
+        assert!(heliacal_events(&system, &calendar, 35.0, StdInstant(0.0)).is_empty());
     }
 
     #[test]
@@ -240,6 +240,6 @@ mod tests {
         let (mut system, _) = minimal_sky();
         system.neighbors[0].declination = 88.0;
         let calendar = calendar_of(&system);
-        assert!(heliacal_events(&system, &calendar, 60.0, StdDays(0.0)).is_empty());
+        assert!(heliacal_events(&system, &calendar, 60.0, StdInstant(0.0)).is_empty());
     }
 }

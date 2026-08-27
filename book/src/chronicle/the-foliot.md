@@ -135,6 +135,103 @@ the preregistration discipline requires: bugbear still leads goblin in
 homophony by 3.673× and hobgoblin by 3.560×, both far above the 3× line that
 would falsify it. Present counts did not move at all. Only the means did.
 
+## The second half: one type, two meanings
+
+The lattice was the campaign's opening move, not its object. What it was
+called for was a type whose own documentation confessed the problem:
+
+> `"Absolute time or duration in standard days."`
+
+`StdDays` was both. It carried a `non_negative` rule that is exactly right
+for a duration and exactly wrong for an instant — and the sharpest single
+illustration sat inside one signature, two adjacent parameters meaning
+opposite things:
+
+```rust
+pub fn node_longitude_at(moon: &Moon, year: StdDays, t: StdDays) -> f64
+//                                    ^^^^ duration  ^^^^ instant
+```
+
+The split gives astronomy a signed `StdInstant` for the twenty-seven public
+positions that are instants, and leaves `StdDays` to the durations it was
+always correct for. Where the seam falls is not a matter of taste: in this
+domain the **fields** are durations — `year`, `period`, `synodic_month` — and
+the **parameters** are instants. Two consequences fell out of that rule and
+neither was arranged. `windows/hearsay` needed no edit at all, because all
+eighty-two of its uses are spans, generations and lifespans. And the
+ephemeris golden kept byte-identity, because `StdInstant` is continuous and
+takes its sampled values unrounded — where adopting the kernel's tick-exact
+`WorldTime` at that boundary, the alternative considered and declined, would
+have rounded every one of them.
+
+## What the split made askable
+
+`Calendar` has seventeen methods that take an instant, and before this
+campaign not one of them had been exercised at negative time from outside
+the crate — because the input was unconstructible. `StdDays::new` refused a
+negative, so the only pre-existing negative-time test lived *inside*
+`calendar.rs` and its own comment records that it reached past the
+constructor to build its input.
+
+That is a particular kind of blind spot: not an untested path, but an
+unaskable question. The status quo was neither "known correct" nor "known
+broken" — it was unknown, and the type system was what made it so.
+
+Asked, it answered immediately. `year_phase(-100_000)` returned **−0.49**,
+where a phase is by definition a fraction of a cycle in `[0, 1)`. The cause
+is a one-word slip with a long reach: `fract` returns a *negative* fraction
+for a negative operand. `season_phase` inherited it by delegation and
+`moon_phase` had it independently. `rem_euclid(1.0)` is the fix, and it is
+byte-neutral for every world that exists, because for a non-negative operand
+`trunc` and `floor` coincide and the two agree exactly.
+
+## The clamp, and the order it was removed in
+
+Decision 0187 had made a pre-genesis sky answer as genesis. It is worth
+saying plainly that 0187 did not believe in this: it retracted its own stated
+reason — "the sky before the world exists is not a physical question" —
+because the calendar had been deliberately fixed to answer for negative time
+and the sky sits on the same axis. What actually held the clamp up was that
+`StdDays::new` refused a negative, so nothing else was available.
+
+The split removed that constraint, and the clamp became a choice for the
+first time. Two things were established before the line changed, in that
+order. Whether anyone can reach the negative branch: yes, and trivially — the
+REPL's `sky <day>` parses a typed number straight into a signed `WorldTime`.
+And whether the arithmetic holds down there: not until the phase defect above
+was fixed. Removing the clamp first would have shipped a path returning
+negative phases and called it a repair.
+
+Removing it also closed something 0187 never mentions, because nobody had
+looked. A sky report is assembled from two sources — the sky through
+astronomy's funnel, the weather through climate — and only the funnel
+clamped. So a pre-genesis query returned **genesis's sky under pre-genesis
+weather**: one report whose two halves disagreed about what time it was.
+Measured on seed 42, three queries returned three descriptions, and the
+difference was entirely weather. Both halves now read the same instant, and
+once climate's sampling API took the typed instant too, they share a type
+rather than a convention — which is what stops them drifting apart again.
+
+## Where the boundary sits
+
+The last stage is the least dramatic and the most load-bearing: nothing at
+a climate or scene entry point takes a bare floating-point day any more.
+
+`domains/climate` takes the kernel's `WorldTime`, and that is forced rather
+than preferred — a domain depends on the kernel and never on a sibling, so
+astronomy's instant was never available to it. The eclipse scene drops the
+quantized float it carried beside its tick count and bumps to
+`scene/eclipses/v2`; that float existed for one stated reason, written on the
+field itself — "kept for the external Orrery's existing consumers" — and with
+both external clients out of scope it had no consumer left. The additive step
+decision 0188 deliberately left half-finished is now finished.
+
+What remains untyped is named rather than quietly left: `SubstrateField::at`
+is the same defect one layer further along, and `windows/vessel`'s liveness
+layer still keeps floating-point days as its internal currency. Both are
+recorded with the measurements that motivate them. The campaign moved the
+boundary; it did not pretend to have reached the end of it.
+
 ## What is not done
 
 The real defect in this area was found by verifying the false one. The

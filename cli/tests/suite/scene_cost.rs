@@ -382,7 +382,12 @@ fn scene_api_cost_is_bounded_on_seed_42() {
     )
     .len();
     small_bytes += hornvale_scene::eclipses_json(
-        &hornvale_scene::eclipses_scene(&world, 0.0, 365.0).expect("eclipses scene"),
+        &hornvale_scene::eclipses_scene(
+            &world,
+            hornvale_astronomy::StdInstant::new(0.0).unwrap(),
+            hornvale_astronomy::StdInstant::new(365.0).unwrap(),
+        )
+        .expect("eclipses scene"),
     )
     .len();
     #[allow(clippy::disallowed_types)] // benchmark harness

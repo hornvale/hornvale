@@ -177,7 +177,12 @@ fn small_docs(world: &World) -> (f64, usize) {
     )
     .len();
     bytes += hornvale_scene::eclipses_json(
-        &hornvale_scene::eclipses_scene(world, 0.0, 365.0).expect("eclipses scene"),
+        &hornvale_scene::eclipses_scene(
+            world,
+            hornvale_astronomy::StdInstant::new(0.0).unwrap(),
+            hornvale_astronomy::StdInstant::new(365.0).unwrap(),
+        )
+        .expect("eclipses scene"),
     )
     .len();
     (ms(t), bytes)

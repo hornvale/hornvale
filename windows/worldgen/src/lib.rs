@@ -3899,8 +3899,8 @@ fn weather_line_for(
     climate: &GeneratedClimate,
     vertex: hornvale_kernel::Vertex,
 ) -> String {
-    let state = climate.weather_at(vertex, 0.0);
-    let cloud = climate.cloud_type_at(vertex, 0.0);
+    let state = climate.weather_at(vertex, WorldTime::from_std_days(0.0).expect("finite"));
+    let cloud = climate.cloud_type_at(vertex, WorldTime::from_std_days(0.0).expect("finite"));
     hornvale_almanac::render_weather_line(site, sky_phrase(state, cloud))
 }
 
@@ -4640,8 +4640,8 @@ fn occlusion_lens_at(
     };
     let vertex = terrain.nearest_vertex(coord.latitude, coord.longitude);
     let (lens, _) = occlusion(
-        climate.weather_at(vertex, day),
-        climate.cloud_type_at(vertex, day),
+        climate.weather_at(vertex, WorldTime::from_std_days(day).expect("finite")),
+        climate.cloud_type_at(vertex, WorldTime::from_std_days(day).expect("finite")),
     );
     lens
 }
@@ -4688,7 +4688,7 @@ pub fn observation_time(
     };
     let step = day_len.get() / 24.0;
     let daylight_at = |t: f64| {
-        hornvale_astronomy::StdDays::new(t)
+        hornvale_astronomy::StdInstant::new(t)
             .ok()
             .and_then(|d| calendar.is_daylight(d))
     };
@@ -8079,7 +8079,7 @@ fn build_to(
                     let coord = place_coord(&world, p.id)?;
                     let az = calendar.solstice_rise_azimuth_at(
                         coord.latitude,
-                        hornvale_astronomy::StdDays::new(0.0).unwrap(),
+                        hornvale_astronomy::StdInstant::new(0.0).unwrap(),
                     )?;
                     Some((p.id, az))
                 })
@@ -8974,8 +8974,15 @@ pub fn sky_report_from(
     let Some(vertex) = at else {
         return Ok(sky_of(world)?.sky_at_visibility(time, Visibility::CLEAR));
     };
-    let state = climate.weather_at(vertex, time.as_std_days());
-    let cloud = climate.cloud_type_at(vertex, time.as_std_days());
+    // The SAME instant the sky is read at, now by construction rather than by
+    // coincidence. These two took `time.as_std_days()` while the sky went
+    // through astronomy's funnel, and when that funnel clamped a pre-genesis
+    // instant the two halves of ONE report disagreed about what time it was
+    // (The Foliot, Task 2.5). Decision 0317 removed the clamp; passing the
+    // `WorldTime` straight through is what stops the pair drifting apart
+    // again — a future clamp on either side could no longer be silent.
+    let state = climate.weather_at(vertex, time);
+    let cloud = climate.cloud_type_at(vertex, time);
     let (_, vis) = occlusion(state, cloud);
     let mut report = sky_of(world)?.sky_at_visibility(time, vis);
     report.description = format!(
@@ -9037,7 +9044,7 @@ pub fn calendar_lines(world: &World) -> Result<Vec<String>, BuildError> {
         let year = calendar.year_length().get();
         let (mut max, mut min) = (0.0_f64, 1.0_f64);
         for k in 0..365 {
-            let t = hornvale_astronomy::StdDays::new(k as f64 * year / 365.0).unwrap();
+            let t = hornvale_astronomy::StdInstant::new(k as f64 * year / 365.0).unwrap();
             if let Some(f) = calendar.daylight_fraction_at(t, latitude) {
                 max = max.max(f);
                 min = min.min(f);
@@ -9117,7 +9124,7 @@ pub fn night_sky_lines(
     };
     let calendar = sky.calendar();
     let system = sky.system();
-    let t = hornvale_astronomy::StdDays::new(0.0).unwrap();
+    let t = hornvale_astronomy::StdInstant::new(0.0).unwrap();
 
     let view = hornvale_astronomy::night_sky_at(system, calendar, 0.0, t);
     let pole_star = view.pole_star.map(|ps| {
@@ -9218,7 +9225,7 @@ pub fn night_sky_lines(
         system,
         calendar,
         t,
-        hornvale_astronomy::StdDays::new(t.get() + 2.0 * year).unwrap(),
+        hornvale_astronomy::StdInstant::new(t.get() + 2.0 * year).unwrap(),
     );
     let ordinal = |i: usize| {
         ["first", "second", "third"]
@@ -9316,7 +9323,7 @@ pub fn night_sky_lines(
             calendar
                 .solstice_rise_azimuth_at(latitude, t)
                 .and_then(|az| {
-                    let kyr = hornvale_astronomy::StdDays::new(t.get() + 1000.0 * 365.25).unwrap();
+                    let kyr = hornvale_astronomy::StdInstant::new(t.get() + 1000.0 * 365.25).unwrap();
                     let drift = calendar.alignment_drift_deg(latitude, t, kyr)?;
                     Some(format!(
                         "From the first settlement, the midsummer sun rises at azimuth {az:.1}°; the sightline drifts {:.2}° in a thousand years.",

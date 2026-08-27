@@ -5216,7 +5216,7 @@ impl<'w> Session<'w> {
         // reads as day 0" is not a property this line should depend on.
         let day = self.day.whole_days();
         let mut lines = vec![format!("The Reckoning, at day {day}.")];
-        let at = hornvale_astronomy::StdDays::new(self.day.as_std_days())
+        let at = hornvale_astronomy::StdInstant::new(self.day.as_std_days())
             .expect("a session's day is always finite and non-negative");
         let epoch = match (self.wctx.terrain.as_ref(), self.wctx.climate.as_ref()) {
             (Some(t), Some(c)) => hornvale_book::reckoning_at_from(self.world, at, t, c),

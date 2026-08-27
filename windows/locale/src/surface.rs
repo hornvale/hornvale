@@ -251,7 +251,7 @@ fn cover_components(
     let expr = climate.biome_expr_at(vertex);
 
     // --- Snow: seasonal gate x annual propensity x a bounded aspect swing.
-    let frozen = climate.is_frozen_at(vertex, at.as_std_days());
+    let frozen = climate.is_frozen_at(vertex, at);
     let annual_snow = climate.snow_fraction_at(vertex).clamp(0.0, 1.0);
     let aspect_factor = (1.0 - ASPECT_SNOW_SWING * tier3(micro.aspect)).clamp(0.0, 2.0);
     // A frozen vertex always carries a snow floor (SNOW_FLOOR) even at zero
@@ -516,7 +516,7 @@ mod tests {
     #[test]
     fn a_frozen_vertex_carries_snow_and_reads_snow_dominant() {
         let climate = climate_seed_42();
-        let vertex = find_vertex(&climate, |c| climate.is_frozen_at(c, 0.0))
+        let vertex = find_vertex(&climate, |c| climate.is_frozen_at(c, WorldTime::GENESIS))
             .expect("seed 42 has at least one vertex frozen at day 0");
         let micro = neutral();
         let at = WorldTime::GENESIS;
@@ -540,7 +540,8 @@ mod tests {
     fn an_unfrozen_open_water_vertex_is_bare() {
         let climate = climate_seed_42();
         let vertex = find_vertex(&climate, |c| {
-            climate.biome_expr_at(c).realm == Realm::WATERWORLD && !climate.is_frozen_at(c, 0.0)
+            climate.biome_expr_at(c).realm == Realm::WATERWORLD
+                && !climate.is_frozen_at(c, WorldTime::GENESIS)
         })
         .expect("seed 42 has at least one unfrozen water vertex");
         let micro = neutral();
@@ -560,7 +561,8 @@ mod tests {
     fn a_desert_vertex_leans_sand_or_silt_not_vegetation() {
         let climate = climate_seed_42();
         let vertex = find_vertex(&climate, |c| {
-            climate.biome_expr_at(c).formation == Formation::Desert && !climate.is_frozen_at(c, 0.0)
+            climate.biome_expr_at(c).formation == Formation::Desert
+                && !climate.is_frozen_at(c, WorldTime::GENESIS)
         })
         // FINDING 5 (Task 2b fix round): this used to `return` silently on
         // `None`, on the reasoning that "seed 42 may simply have no desert
@@ -600,7 +602,7 @@ mod tests {
             let expr = climate.biome_expr_at(c);
             expr.realm == Realm::OVERWORLD
                 && vegetation_ceiling(expr.formation) > 0.0
-                && !climate.is_frozen_at(c, 0.0)
+                && !climate.is_frozen_at(c, WorldTime::GENESIS)
         })
         .expect("seed 42 has at least one unfrozen vegetated land vertex");
         let at = WorldTime::GENESIS;
