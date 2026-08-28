@@ -699,6 +699,17 @@ fn the_weakest_raider_beats_the_strongest_abstainer_primary_claim() {
 /// still a measurement. See the witness below for the attribution, which is
 /// **not** the one the campaign expected.
 ///
+/// **RE-READ AGAIN, CAUSE NAMED AT THE GOVERNOR'S CLOSE (2026-08-28): drow
+/// fell a third time, to 10/60 = 0.167.** Unlike the first two re-reads, this
+/// one has a measured cause rather than an open one: bisected to `eeaa011fd`
+/// ("chore(streams): history/bake/v3", The Granary T5), which bumps the
+/// deep-history bake's stream epoch because The Granary's sub-year raid/
+/// founding phase placement moves raid outcomes whenever a raid now fires on
+/// a store-trough phase — a shipped, documented consequence, not a fresh
+/// bug. The denominator again held at 60, and 10 live re-seats again refute
+/// the floor's stated mechanism exactly as 14 and 12 did. The deferral still
+/// does not move: the estimator's scale is still what is wrong.
+///
 /// Tracked as `BIO-raid-partition-order-statistic`. The witness below keeps
 /// the reading measured while this is deferred.
 ///
@@ -706,7 +717,7 @@ fn the_weakest_raider_beats_the_strongest_abstainer_primary_claim() {
 /// `RAID_DISPOSITION_MIN` re-seats its genesis flagship on at least
 /// `RAIDER_MIN` of the seed panel's worlds.
 #[test]
-#[ignore = "PREREGISTERED, not met: awaits BIO-raid-partition-order-statistic (decision 0138; drow fell to 14/60 = 0.233 under the 0.30 raider floor when The Glasshouse corrected the climate and to 12/60 = 0.200 at The Underworld's close, denominator held at 60 both times, and the floor's stated mechanism - that the raid branch stopped running - is refuted by 12 live re-seats, so the floor is reading a post-epoch world at a pre-epoch scale)"]
+#[ignore = "PREREGISTERED, not met: awaits BIO-raid-partition-order-statistic (decision 0138; drow fell to 14/60 = 0.233 under the 0.30 raider floor when The Glasshouse corrected the climate, to 12/60 = 0.200 at The Underworld's close, and to 10/60 = 0.167 at The Granary's close (named at The Governor's close, 2026-08-28: eeaa011fd, BAKE stream epoch v2 -> v3), denominator held at 60 throughout, and the floor's stated mechanism - that the raid branch stopped running - is refuted by 10 live re-seats, so the floor is reading a post-epoch world at a pre-epoch scale)"]
 fn every_raider_clears_the_floor_preregistered_not_met() {
     let wc = WorldComponents::assemble().expect("assemble the shipped component set");
     let (raiders, _) = raiders_and_abstainers(&wc);
@@ -724,9 +735,10 @@ fn every_raider_clears_the_floor_preregistered_not_met() {
         under.is_empty(),
         "PREREGISTERED, NOT MET (decision 0138): {} raiding people(s) below the \
          {RAIDER_MIN} floor: {under:?}. Measured 14/60 = 0.233 for drow at The Glasshouse's \
-         close and 12/60 = 0.200 at The Underworld's; a DIFFERENT reading here means the \
-         deferral has moved and owes a re-read, not a lowered floor. See this test's doc \
-         comment.",
+         close, 12/60 = 0.200 at The Underworld's, and 10/60 = 0.167 at The Granary's \
+         (cause named at The Governor's close: eeaa011fd, BAKE v2 -> v3); a DIFFERENT \
+         reading here means the deferral has moved and owes a re-read, not a lowered \
+         floor. See this test's doc comment.",
         under.len()
     );
 }
