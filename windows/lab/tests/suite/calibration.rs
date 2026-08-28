@@ -2133,7 +2133,16 @@ fn name_collision_rate_is_measured_and_pinned() {
         // 0.519_033_116_356_999, reverting exactly to The Granary's figure.
         // This row still carries no directional claim, and the rate stays
         // inside the range decision 0024 sanctions (see the note above).
-        (mean - 0.519_033_116_356_999).abs() < 1e-6,
+        // The Precedence's close regen (2026-08-28, canonical census on
+        // lefford at 27a2da724760, goldens 32fa5fb73): zero/nonzero/absent
+        // still unmoved at 0/1000/0, checked against this fixture rather than
+        // assumed. Mean: 0.519_033_116_356_999 -> 0.519_030_706_716_999_4, a
+        // fall of 2.4e-6 — a fifth consecutive regen in which this rate moves
+        // in the fifth decimal place or beyond. This row still carries no
+        // directional claim (H4 already failed and is recorded as such
+        // above), the tolerance is unchanged at 1e-6, and the rate stays
+        // inside the range decision 0024 sanctions (see the note above).
+        (mean - 0.519_030_706_716_999_4).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -2385,7 +2394,13 @@ fn name_length_distributions_are_measured_and_pinned() {
         // exactly to the prior regen's figure. Still comfortably below the
         // campaign's own <10-character claim (spec §7) — re-checked rather
         // than assumed.
-        ("goblin", 999u32, 8.522_649_181_881_878),
+        // The Precedence's close regen (2026-08-28, canonical census on
+        // lefford at 27a2da724760, goldens 32fa5fb73): present unmoved at
+        // 999; mean 8.522_649_181_881_878 -> 8.522_193_159_259_256, a fall
+        // of 4.6e-4 characters. Still comfortably below the campaign's own
+        // <10-character claim (spec §7) — 1.48 characters of margin —
+        // re-checked rather than assumed.
+        ("goblin", 999u32, 8.522_193_159_259_256),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -2528,7 +2543,16 @@ fn name_length_distributions_are_measured_and_pinned() {
         // exactly to the prior regen's figure. Still comfortably below the
         // campaign's own <10-character claim (spec §7) — re-checked rather
         // than assumed.
-        ("kobold", 980u32, 6.864_935_456_632_652),
+        // The Precedence's close regen (2026-08-28, canonical census on
+        // lefford at 27a2da724760, goldens 32fa5fb73): present unmoved at
+        // 980; mean 6.864_935_456_632_652 -> 6.864_892_034_999_999, a fall of
+        // 4.3e-5 characters. Still comfortably below the campaign's own
+        // <10-character claim (spec §7) — re-checked rather than assumed.
+        // MEASURED, NOT INFERRED: this row is the second assertion in a loop
+        // whose first arm is goblin, so a goblin drift masks it entirely and
+        // the failing run above named only goblin. Both means were read off
+        // the regenerated `rows.csv` in one duckdb pass.
+        ("kobold", 980u32, 6.864_892_034_999_999),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -3052,7 +3076,14 @@ fn name_transparency_is_measured_and_pinned() {
         // 0.713_871_805_500_002 -> 0.714_089_011_470_001_7, reverting
         // exactly to the prior regen's figure. Still emphatically NOT 1.0 —
         // re-checked, not assumed.
-        (mean - 0.714_089_011_470_001_7).abs() < 1e-9,
+        // The Precedence's close regen (2026-08-28, canonical census on
+        // lefford at 27a2da724760, goldens 32fa5fb73): present/absent unmoved
+        // at 1000/0; min/max unmoved at 0.284_644_19 and 0.986_531_99
+        // (checked directly against the committed census in duckdb, not
+        // assumed — they are the two assertions this one masks). Mean:
+        // 0.714_089_011_470_001_7 -> 0.713_851_012_460_001_4, a fall of
+        // 2.4e-4. Still emphatically NOT 1.0 — re-checked, not assumed.
+        (mean - 0.713_851_012_460_001_4).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -3629,7 +3660,16 @@ fn null_control_name_length_smd_is_pinned() {
         // settlements sit, which moves which peoples exist and therefore the
         // name sample. The language did not change; the population did.
         // -0.024_799_776_460_672_038 -> -0.025_108_472_368_594_453.
-        (namelen - -0.025_108_472_368_594_453).abs() < 1e-9,
+        // The Precedence's close regen (2026-08-28, canonical census on
+        // lefford at 27a2da724760, goldens 32fa5fb73): the residual
+        // name-length gap between the goblin and its deliberately-identical
+        // twin shifts -0.025_108_472_368_594_453 ->
+        // -0.025_280_277_786_945_245, a move of 1.7e-4 with no sign flip.
+        // Still ~8x inside the ±0.2 sampling-theory bound
+        // `null_control_distributions_are_within_the_sampling_bound` asserts
+        // — the null hypothesis this row exists to witness
+        // (INDISTINGUISHABLE FROM ZERO) reads as true as it ever has.
+        (namelen - -0.025_280_277_786_945_245).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }
