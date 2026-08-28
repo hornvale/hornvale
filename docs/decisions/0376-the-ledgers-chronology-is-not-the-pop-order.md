@@ -75,9 +75,16 @@ reason, three functions up. The scheduler simply never did the same for its own
 output.
 
 Named honestly, this is **windowed event-time reordering**: a tick is a closed
-window and `to` is its watermark. That precondition is asserted by
-`every_emitted_fact_is_dated_inside_the_tick_that_emitted_it`, written *before*
-the sort so it could refute the design.
+window and `to` is its watermark.
+
+That premise has **two** halves, and both are asserted rather than assumed.
+`every_emitted_fact_is_dated_inside_the_tick_that_emitted_it` covers the first
+— no fact is dated outside its own window — and was written *before* the sort
+so it could refute the design. `facts_are_chronological_across_consecutive_ticks`
+covers the second, which the first cannot see: that consecutive windows do not
+overlap, so global chronology survives across ticks and not merely within one.
+The second was added at the whole-branch review, which caught that the campaign
+had asserted half of its own premise while treating the other half as obvious.
 
 ## Alternatives rejected
 
