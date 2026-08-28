@@ -88,6 +88,55 @@ time — checked by hand, then confirmed by the registry's own uniqueness
 test — but the absence of damage is not evidence the cadence was safe to
 skip; it is evidence this particular merge happened not to collide.
 
+## The heavy tier: a false attribution I nearly ordered
+
+This campaign moved shipped world numbers twice and **never ran the heavy
+tier** — 81 `docs/timings.md` rows on the branch, zero of them heavy. Nothing
+in the path requires it: `gate-commit` excludes it, decision 0148 took it off
+the merge phase list, and the stage gate does not run it either. A campaign
+that moves world values can pass every gate it is asked to pass and still
+leave that tier red.
+
+Run at close, it failed 12 of 118. A report attributed 10 of those to this
+campaign's earlier tasks, and **I restated that as fact in the repair
+brief** — "10 STALE FIXTURES from this campaign's earlier tasks" — having
+inherited the framing from a prior agent's summary rather than checking it.
+
+The implementer refused the premise and bisected instead: each failure run
+standalone in scratch worktrees at `cae086f86` (Task 9's parent) and at
+`7576eca00` (before this campaign branched at all).
+
+| test | kind | verdict |
+|---|---|---|
+| `warren_readout::the_blast_radius_readout` | subterranean | **ours** — Task 9's `CHEMOSYNTHATE` weight; re-pinned |
+| 8 `hearsay` probes | surface | identical at both SHAs — pre-existing |
+| `radiation_readout` (wood-elf) | surface | identical at both SHAs — pre-existing |
+| `disposition_calibration` (drow) | subterranean | identical at both SHAs — pre-existing |
+
+**One of ten was ours.** Following the brief would have re-pinned nine
+fixtures against breakage that predates the campaign, writing this
+campaign's name into dated attribution prose on somebody else's redness —
+close to unwindable once merged.
+
+Three things are worth carrying:
+
+- **The STOP rule saved it, and I wrote it in the same brief as the false
+  claim.** "If any of the ten cannot be attributed to one of those two
+  causes, STOP and report it" was written a paragraph away from the assertion
+  it had to override. A brief can be simultaneously wrong and correctly
+  guarded, and the guard is the cheaper half to get right.
+- **Ask for a classification, not a confirmation.** The brief asked which
+  failures were subterranean, marine, or surface — because neither change
+  should reach a surface kind. That framing is what made "surface kinds are
+  failing" legible as *evidence against the attribution* rather than as more
+  work to do.
+- **A regeneration with no named cause is a silencing.** Nine plausible
+  diffs, regenerated, would have looked exactly like nine fixes.
+
+Posted to the board as an `fyi` notice with the bisection evidence, because
+the next campaign to move world values will see the same ten alongside its
+own and the natural move is to regenerate them all.
+
 ## Do differently next time
 
 Run `make sluice-stage` at every plan-stage boundary, not only at close, on
