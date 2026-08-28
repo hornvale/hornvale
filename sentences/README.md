@@ -7,7 +7,7 @@ a resolver rather than authored by one — the same discipline `tropes/` and
 The directory holds **two kinds of corpus, not one**. Two are *dialogue*:
 `the-merchant.corpus.json` (recorded) and `the-flood-watch.corpus.json`
 (authored) — see "Recorded and authored corpora support different claims"
-below. The third is a *capability ladder*: `the-ladder.corpus.json.DRAFT`,
+below. The third is a *capability ladder*: `the-ladder.corpus.json`,
 a dependency-ordered sequence of graded rungs drawn from the typological
 literature, which is not dialogue and is not spoken by anyone.
 
@@ -55,8 +55,11 @@ measurement makes every earlier score incomparable with the next one.
 
 A file whose name ends `.DRAFT` is deliberately outside this: it is not
 frozen, no count is asserted anywhere, and no score may be taken against it
-until it is. `the-ladder.corpus.json.DRAFT` is the one such file today, and
-its own `status` field says so.
+until it is. No file in this directory carries that suffix today.
+`the-ladder.corpus.json` was the last to carry it — The Rail froze it
+(2026-08-28), and its own `status` field now says so. Its entry count (214)
+is asserted the same way, by `LADDER_ENTRIES` alongside `MERCHANT_ENTRIES`
+and `FLOOD_WATCH_ENTRIES` in `cli/tests/suite/sentence_corpus.rs`.
 
 ## Direction: what must be parsed, what must be produced
 
@@ -112,12 +115,27 @@ written before any score existed to chase, which is the only order decision
 is *scored* is worth keeping visible, because an unscored corpus in this
 directory is doing its job, not waiting.
 
-The ladder adds a third state to that pair: neither frozen nor scored, but
-a revisable draft. The cross-check between it and the flood-watch corpus has
-already moved it once — 56 of that corpus's tokens named no rung on the
-ladder's first draft. That is the argument for keeping two instruments
-authored independently over the same subject: where they disagree, they
-name a defect neither could find alone.
+The ladder no longer names a third state. Through The Stile it was neither
+frozen nor scored — a revisable draft — and the cross-check between it and
+the flood-watch corpus moved it once during that time: 56 of that corpus's
+tokens named no rung on the ladder's first draft. The Rail froze it
+(2026-08-28): its rung ids are append-only from that moment on, and its
+entry count is asserted the same way the two dialogue corpora's are (see
+"Frozen before measurement" above). It now shares the flood-watch corpus's
+other state — frozen, but not coverage-scored — rather than sitting apart
+from both.
+
+Freezing the ladder does not retire the cross-check; it changes what
+closing a gap the cross-check finds now costs. A future corpus that names a
+demand token no rung introduces still surfaces a real gap the same way the
+flood-watch cross-check did. But the fix can no longer revise an existing
+rung's `presupposes` edges the way the last revision did (64 rungs placed
+throughout the file, not appended at the end) — a new rung must be
+appended, at the end, reaching the missing token without touching anything
+upstream of it. That is the argument for keeping two instruments authored
+independently over the same subject: where they disagree, they name a
+defect neither could find alone, and the freeze changes how the ladder is
+allowed to answer, not whether the question can still be asked.
 
 ## A verdict is two-valued today; a third is reserved
 

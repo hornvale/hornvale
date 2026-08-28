@@ -1,11 +1,12 @@
-//! This file resolves three corpora, not one, and they are not frozen the
-//! same way. `the-merchant.corpus.json` and `the-flood-watch.corpus.json`
-//! are frozen: each entry count is asserted, so growing or trimming either
-//! is a deliberate act rather than a drift. `the-ladder.corpus.json.DRAFT`
-//! is deliberately NOT frozen — no count is asserted for it, only
-//! structural properties over its `presupposes` graph (see Task 4's block
-//! below) — because freezing is the project owner's act and the moment it
-//! happens the ladder's rung ids become append-only forever.
+//! This file resolves three corpora, all three frozen: each entry count is
+//! asserted, so growing or trimming any of them is a deliberate act rather
+//! than a drift. `the-merchant.corpus.json` and `the-flood-watch.corpus.json`
+//! froze first; `the-ladder.corpus.json` froze last (The Rail) — freezing
+//! was the project owner's act, and from that moment the ladder's rung ids
+//! are append-only forever. The entry count alone does not guard everything
+//! that can go wrong with a DAG, so Task 4's block below also asserts
+//! structural properties over its `presupposes` graph that hold at any
+//! size.
 //!
 //! This file also carries the corpus's **resolver**: for each entry, a demand
 //! token is `covered` if the grammar implements a construction for it, `not
@@ -57,7 +58,7 @@
 //! own doc comment.
 //!
 //! **This file also carries the ladder/corpus cross-check (The Stile,
-//! Task 5).** The ladder (`the-ladder.corpus.json.DRAFT`) and
+//! Task 5).** The ladder (`the-ladder.corpus.json`) and
 //! `the-flood-watch.corpus.json` were authored independently, neither
 //! author seeing the other's work; the cross-check between them already
 //! moved the ladder once (56 tokens flood-watch needed did not exist on
@@ -128,7 +129,7 @@ const FLOOD_WATCH_ENTRIES: usize = 139;
 /// be chased (decision 0016), and the measurement is left alone.
 ///
 /// Its own `minted_tokens` block records the 56 demand tokens it needed that
-/// `the-ladder.corpus.json.DRAFT` does not name — in the corpus itself rather
+/// `the-ladder.corpus.json` does not name — in the corpus itself rather
 /// than in a campaign scratch file, so the vocabulary survives the worktree
 /// that authored it.
 #[test]
@@ -285,7 +286,7 @@ fn read_declared(path: &Path) -> Vec<Entry> {
         .collect()
 }
 
-/// The ladder's on-disk shape (`the-ladder.corpus.json.DRAFT`): a rung
+/// The ladder's on-disk shape (`the-ladder.corpus.json`): a rung
 /// declares the ONE token it introduces (`null` for none) and the rungs it
 /// presupposes; it carries no `demands` field and no `speaker` at all. See
 /// [`DeclaredEntryJson`] for the opposite shape.
@@ -334,7 +335,7 @@ fn derived_demands(id: &str, by_id: &BTreeMap<&str, &LadderEntryJson>) -> Vec<St
     demands.into_iter().collect()
 }
 
-/// Read the ladder (`the-ladder.corpus.json.DRAFT`): each rung's `demands`
+/// Read the ladder (`the-ladder.corpus.json`): each rung's `demands`
 /// is [`derived_demands`] — the transitive closure of `presupposes` — never
 /// read from disk, because the ladder carries no `demands` field to read.
 /// Every entry's [`Direction`] is `Produce`: the ladder declares itself a
@@ -377,10 +378,10 @@ fn load_flood_watch_corpus(root: &Path) -> Corpus {
     }
 }
 
-/// Load `the-ladder.corpus.json.DRAFT` through [`read_derived`].
+/// Load `the-ladder.corpus.json` through [`read_derived`].
 fn load_ladder_corpus(root: &Path) -> Corpus {
     Corpus {
-        entries: read_derived(&root.join("sentences/the-ladder.corpus.json.DRAFT")),
+        entries: read_derived(&root.join("sentences/the-ladder.corpus.json")),
     }
 }
 
@@ -920,7 +921,7 @@ fn a_mixed_entry_needs_every_demand_covered() {
 // ---------------------------------------------------------------------
 
 /// **Was the RED probe for Task 1 Step 2.** Before [`read_derived`] existed,
-/// this test deserialized `the-ladder.corpus.json.DRAFT` straight into the
+/// this test deserialized `the-ladder.corpus.json` straight into the
 /// old `speaker`+`demands`-requiring `Entry`/`Corpus` shape, which panicked
 /// on a missing field — proving nothing could read the ladder at all. It now
 /// asserts the real thing: r004 ("The long road runs to the shrine.")
@@ -946,16 +947,18 @@ fn a_ladder_rung_derives_its_transitive_demand_set() {
             "classify".to_string(),
             "property-predication".to_string(),
         ],
-        "r004's derived transitive demand set moved. The ladder is a \
-         revisable DRAFT (decision permits this), so a red here is not \
-         necessarily a bug — appending a rung, or rewiring `presupposes` \
-         mid-graph the way the ladder's last revision did (64 rungs placed \
-         throughout, not appended at the end), can legitimately change what \
-         r004 transitively presupposes. This assertion pins a CLOSURE, not \
-         a count: if the ladder moved deliberately, re-derive r004's demand \
-         set from the committed JSON (do not hand-edit this list to make it \
-         pass) and update it in the same commit, with a note on why. The \
-         ladder stays unfrozen either way — this test does not freeze it."
+        "r004's derived transitive demand set moved. Before The Rail froze \
+         the ladder, that could happen legitimately — appending a rung, or \
+         rewiring `presupposes` mid-graph the way the ladder's last \
+         revision did (64 rungs placed throughout, not appended at the \
+         end). Now that the ladder is frozen, r004's own `presupposes` \
+         edges are append-only forever, so this assertion should hold \
+         permanently: a red here means either a genuine resolver bug or a \
+         violation of the freeze, never a deliberate revision to wave \
+         through. If the ladder is ever deliberately unfrozen by the \
+         project owner, re-derive r004's demand set from the committed \
+         JSON (do not hand-edit this list to make it pass) and say so \
+         loudly in the commit message."
     );
 }
 
@@ -1030,16 +1033,18 @@ fn a_deep_ladder_rung_derives_its_full_transitive_closure() {
             "reported-speech".to_string(),
             "transitive-frame".to_string(),
         ],
-        "r183's derived transitive demand set moved. The ladder is a \
-         revisable DRAFT (decision permits this), so a red here is not \
-         necessarily a bug — appending a rung, or rewiring `presupposes` \
-         mid-graph the way the ladder's last revision did (64 rungs placed \
-         throughout, not appended at the end), can legitimately change what \
-         r183 transitively presupposes. This assertion pins a CLOSURE, not \
-         a count: if the ladder moved deliberately, re-derive r183's demand \
-         set from the committed JSON (do not hand-edit this list to make it \
-         pass) and update it in the same commit, with a note on why. The \
-         ladder stays unfrozen either way — this test does not freeze it."
+        "r183's derived transitive demand set moved. Before The Rail froze \
+         the ladder, that could happen legitimately — appending a rung, or \
+         rewiring `presupposes` mid-graph the way the ladder's last \
+         revision did (64 rungs placed throughout, not appended at the \
+         end). Now that the ladder is frozen, r183's own `presupposes` \
+         edges are append-only forever, so this assertion should hold \
+         permanently: a red here means either a genuine resolver bug or a \
+         violation of the freeze, never a deliberate revision to wave \
+         through. If the ladder is ever deliberately unfrozen by the \
+         project owner, re-derive r183's demand set from the committed \
+         JSON (do not hand-edit this list to make it pass) and say so \
+         loudly in the commit message."
     );
 }
 
@@ -1047,17 +1052,50 @@ fn a_deep_ladder_rung_derives_its_full_transitive_closure() {
 // Task 4 (The Stile): structural assertions over the ladder
 // ---------------------------------------------------------------------
 //
-// **The ladder is `.DRAFT` and this campaign must not freeze it.** A frozen
-// entry count is the freeze mechanism ([`MERCHANT_ENTRIES`] does exactly
-// that for the merchant corpus above), and freezing is the project owner's
-// act — the moment it happens, rung ids become append-only forever (the
-// ladder's own `renumbering` block says so). So nothing below asserts a
-// count of rungs. What holds instead are structural properties true at any
-// size: acyclic, ids unique, no token introduced twice, every rung's
-// cumulative closure computable (and consistent with its presuppositions'),
-// and exactly two roots.
+// **The Stile left the ladder a `.DRAFT`; The Rail froze it.** Freezing was
+// the project owner's act — the moment it happened, rung ids became
+// append-only forever (the ladder's own `renumbering` block says so), and
+// [`LADDER_ENTRIES`] below now pins its count the same way
+// [`MERCHANT_ENTRIES`] and [`FLOOD_WATCH_ENTRIES`] pin the two dialogue
+// corpora's. A frozen count alone does not guard everything that can go
+// wrong with a DAG, though: a corrupted graph — a duplicate id, a
+// reintroduced token, a cycle — can keep the same entry count while moving
+// nothing the count assertion can see. So the structural properties below
+// stay, true at any size and now doubly load-bearing since a new rung can
+// only ever be appended, never inserted: acyclic, ids unique, no token
+// introduced twice, every rung's cumulative closure computable (and
+// consistent with its presuppositions'), and exactly two roots.
 
-/// Read `the-ladder.corpus.json.DRAFT`'s raw entries with none of
+/// The ladder's frozen entry count (The Rail). Changing this number is the
+/// deliberate act; changing the corpus without it is the drift — the same
+/// discipline [`MERCHANT_ENTRIES`] and [`FLOOD_WATCH_ENTRIES`] enforce on
+/// the two dialogue corpora above. Re-derived from the committed JSON, not
+/// taken from any campaign document.
+const LADDER_ENTRIES: usize = 214;
+
+/// The ladder is frozen the same way the two dialogue corpora are (The
+/// Rail). Counts `"id":` occurrences over the raw text, the same instrument
+/// [`the_merchant_corpus_is_frozen_at_its_authored_size`] and
+/// [`the_flood_watch_corpus_is_frozen_at_its_authored_size`] use — not
+/// [`read_ladder_raw`]'s parsed `Vec`, because a parse can silently drop or
+/// merge malformed JSON before a length check ever sees it.
+#[test]
+fn the_ladder_is_frozen_at_its_authored_size() {
+    let text = std::fs::read_to_string(repo_root().join("sentences/the-ladder.corpus.json"))
+        .expect("the ladder is committed");
+    let n = text.matches("\"id\":").count();
+    assert_eq!(
+        n, LADDER_ENTRIES,
+        "the ladder moved. If that was deliberate, change LADDER_ENTRIES in \
+         the same commit and say why in the message; a corpus that drifts \
+         under a measurement makes every earlier score incomparable. Ids \
+         are append-only from the freeze onward (see the ladder's own \
+         `renumbering` block), so a moved count should mean a new rung was \
+         appended, never that an existing one changed."
+    );
+}
+
+/// Read `the-ladder.corpus.json`'s raw entries with none of
 /// [`read_derived`]'s post-processing — the structural checks below need the
 /// graph itself (`presupposes` edges, `introduces` tokens), not the resolved
 /// demand sets a rung's [`Entry`] carries.
@@ -1171,7 +1209,7 @@ fn topological_order(entries: &[LadderEntryJson]) -> Result<Vec<&str>, Vec<&str>
 /// would be as useless here as one that never fires at all.
 #[test]
 fn the_ladder_is_acyclic() {
-    let entries = read_ladder_raw(&repo_root().join("sentences/the-ladder.corpus.json.DRAFT"));
+    let entries = read_ladder_raw(&repo_root().join("sentences/the-ladder.corpus.json"));
     let n = entries.len();
     match topological_order(&entries) {
         Ok(order) => assert_eq!(
@@ -1194,7 +1232,7 @@ fn the_ladder_is_acyclic() {
 /// Builds a two-rung synthetic ladder with a genuine cycle (`x001`
 /// presupposes `x002`, which presupposes `x001`) and writes it to a file
 /// under [`std::env::temp_dir`] — never under `sentences/`, which this
-/// campaign does not edit outside `the-ladder.corpus.json.DRAFT` itself.
+/// campaign does not edit outside `the-ladder.corpus.json` itself.
 /// [`read_ladder_raw`] takes a path, so a temp file is the natural seam
 /// (Task 1's fix round established this route works and never touches
 /// `sentences/`). Confirms the detector reports the cycle by name, then
@@ -1202,7 +1240,7 @@ fn the_ladder_is_acyclic() {
 /// touched.
 #[test]
 fn the_cycle_detector_fires_on_an_injected_cycle() {
-    let ladder_path = repo_root().join("sentences/the-ladder.corpus.json.DRAFT");
+    let ladder_path = repo_root().join("sentences/the-ladder.corpus.json");
     let before = std::fs::read(&ladder_path).expect("the ladder is committed and readable before");
 
     let cyclic_json = r#"{
@@ -1248,7 +1286,7 @@ fn the_cycle_detector_fires_on_an_injected_cycle() {
 /// reporting an error.
 #[test]
 fn the_ladder_has_no_duplicate_ids() {
-    let entries = read_ladder_raw(&repo_root().join("sentences/the-ladder.corpus.json.DRAFT"));
+    let entries = read_ladder_raw(&repo_root().join("sentences/the-ladder.corpus.json"));
     let mut seen: BTreeSet<&str> = BTreeSet::new();
     let mut duplicates: Vec<&str> = Vec::new();
     for entry in &entries {
@@ -1270,7 +1308,7 @@ fn the_ladder_has_no_duplicate_ids() {
 /// ambiguity once two rungs contribute the same token.
 #[test]
 fn no_ladder_token_is_introduced_twice() {
-    let entries = read_ladder_raw(&repo_root().join("sentences/the-ladder.corpus.json.DRAFT"));
+    let entries = read_ladder_raw(&repo_root().join("sentences/the-ladder.corpus.json"));
     let mut introduced_by: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
     for entry in &entries {
         if let Some(token) = entry.introduces.as_deref() {
@@ -1304,7 +1342,7 @@ fn no_ladder_token_is_introduced_twice() {
 /// ladder even if it happened to pass on r004 and r183 individually.
 #[test]
 fn every_rungs_closure_is_a_superset_of_its_presuppositions_closures() {
-    let entries = read_ladder_raw(&repo_root().join("sentences/the-ladder.corpus.json.DRAFT"));
+    let entries = read_ladder_raw(&repo_root().join("sentences/the-ladder.corpus.json"));
     let by_id: BTreeMap<&str, &LadderEntryJson> =
         entries.iter().map(|e| (e.id.as_str(), e)).collect();
 
@@ -1346,7 +1384,7 @@ fn every_rungs_closure_is_a_superset_of_its_presuppositions_closures() {
 /// deliberate act a third independent strategy would be — not a drift.
 #[test]
 fn the_ladder_has_exactly_two_roots() {
-    let entries = read_ladder_raw(&repo_root().join("sentences/the-ladder.corpus.json.DRAFT"));
+    let entries = read_ladder_raw(&repo_root().join("sentences/the-ladder.corpus.json"));
     let roots: Vec<&str> = entries
         .iter()
         .filter(|e| e.presupposes.is_empty())
@@ -1450,7 +1488,7 @@ fn the_ladder_covers_flood_watch_vocabulary_except_the_two_refused_input_surface
          so this should only move alongside a deliberate, logged change to it"
     );
 
-    let ladder_entries = read_ladder_raw(&root.join("sentences/the-ladder.corpus.json.DRAFT"));
+    let ladder_entries = read_ladder_raw(&root.join("sentences/the-ladder.corpus.json"));
     let ladder_tokens = ladder_introduced_tokens(&ladder_entries);
 
     let absent = tokens_absent_from_ladder(&flood_watch_tokens, &ladder_tokens);
@@ -1500,7 +1538,7 @@ fn the_ladder_covers_the_merchant_corpus_vocabulary_completely() {
          so this should only move alongside a deliberate, logged change to it"
     );
 
-    let ladder_entries = read_ladder_raw(&root.join("sentences/the-ladder.corpus.json.DRAFT"));
+    let ladder_entries = read_ladder_raw(&root.join("sentences/the-ladder.corpus.json"));
     let ladder_tokens = ladder_introduced_tokens(&ladder_entries);
 
     let absent = tokens_absent_from_ladder(&merchant_tokens, &ladder_tokens);
@@ -1522,13 +1560,13 @@ fn the_ladder_covers_the_merchant_corpus_vocabulary_completely() {
 /// ladder as raw JSON, mutates an IN-MEMORY copy so r001 (which introduces
 /// `classify`, a token flood-watch demands) introduces nothing, writes that
 /// mutated copy to a temp file — never under `sentences/`, which this
-/// campaign does not edit outside `the-ladder.corpus.json.DRAFT` itself —
+/// campaign does not edit outside `the-ladder.corpus.json` itself —
 /// and confirms `classify` newly appears among flood-watch's absent tokens.
 /// Then confirms the real ladder file on disk was never touched.
 #[test]
 fn removing_a_rungs_introduces_token_makes_the_cross_check_notice() {
     let root = repo_root();
-    let ladder_path = root.join("sentences/the-ladder.corpus.json.DRAFT");
+    let ladder_path = root.join("sentences/the-ladder.corpus.json");
     let before = std::fs::read(&ladder_path).expect("the ladder is committed and readable before");
 
     let mut doc: serde_json::Value =
@@ -1871,7 +1909,7 @@ fn sentence_coverage_report() {
     let flood_watch_directions = direction_counts(&flood_watch.entries);
     let ladder_directions = direction_counts(&ladder.entries);
 
-    let ladder_raw = read_ladder_raw(&root.join("sentences/the-ladder.corpus.json.DRAFT"));
+    let ladder_raw = read_ladder_raw(&root.join("sentences/the-ladder.corpus.json"));
     let ladder_tokens = ladder_introduced_tokens(&ladder_raw);
     let merchant_tokens = distinct_demand_tokens(&merchant.entries);
     let merchant_absent = tokens_absent_from_ladder(&merchant_tokens, &ladder_tokens);
@@ -1904,9 +1942,9 @@ fn sentence_coverage_report() {
          this file and did not — the same as anywhere else under that path. \
          The covered COUNT for the-merchant is separately guarded, in Rust, \
          against `MERCHANT_COVERED`.\n\n\
-         Three corpora feed this report: `the-merchant` (12 entries, \
-         frozen), `the-flood-watch` (139 entries, frozen) and `the-ladder` \
-         ({} rungs, an unfrozen DRAFT). Only `the-merchant` is resolved \
+         Three corpora feed this report, all three frozen: `the-merchant` \
+         (12 entries), `the-flood-watch` (139 entries) and `the-ladder` \
+         ({} rungs, frozen since The Rail). Only `the-merchant` is resolved \
          against the grammar below — `the-flood-watch` carries a `scene` \
          field the resolver's `Entry` shape does not need, and neither it \
          nor the ladder has a coverage score. Nothing is waiting on a \
@@ -1961,7 +1999,7 @@ fn sentence_coverage_report() {
         flood_watch.entries.len(),
     ));
     out.push_str(&format!(
-        "| the-ladder (draft) | {} | {} | {} | {} |\n\n",
+        "| the-ladder | {} | {} | {} | {} |\n\n",
         ladder_directions.parse,
         ladder_directions.produce,
         ladder_directions.unknown,
@@ -2068,21 +2106,22 @@ fn sentence_coverage_report() {
         flood_watch_tokens.len(),
     ));
 
-    out.push_str("## the-ladder (draft)\n\n");
+    out.push_str("## the-ladder\n\n");
     out.push_str(&format!("- Total rungs: {}\n", ladder.entries.len()));
     out.push_str(&format!(
         "- Direction: {} produce (see the breakdown above)\n\n",
         ladder_directions.produce,
     ));
     out.push_str(
-        "`the-ladder.corpus.json.DRAFT` is an unfrozen draft — this \
-         campaign does not freeze it, and this report does not pin its \
-         rung count the way `MERCHANT_ENTRIES`/`FLOOD_WATCH_ENTRIES` pin \
-         the two dialogue corpora's. What holds instead are the structural \
-         properties `cli/tests/suite/sentence_corpus.rs` asserts directly \
-         over the ladder's `presupposes` graph (acyclic, ids unique, no \
-         token introduced twice, exactly two roots) and the vocabulary \
-         cross-check below.\n\n",
+        "`the-ladder.corpus.json` is frozen (The Rail): its rung count is \
+         pinned by `LADDER_ENTRIES`, the same mechanism \
+         `MERCHANT_ENTRIES`/`FLOOD_WATCH_ENTRIES` pin the two dialogue \
+         corpora's. `cli/tests/suite/sentence_corpus.rs` also asserts \
+         structural properties directly over the ladder's `presupposes` \
+         graph (acyclic, ids unique, no token introduced twice, exactly \
+         two roots) — the count assertion alone would not catch a \
+         corrupted graph that kept the same entry count. See the \
+         vocabulary cross-check below.\n\n",
     );
 
     out.push_str("## Cross-check: ladder vocabulary against the two dialogue corpora\n\n");

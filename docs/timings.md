@@ -3766,3 +3766,5 @@ measured here.
 | 2026-08-28T20:37:10Z | sluice:outboard | 41.061 | 25.222 | 38.856 | 1.56 | 0 | 6e7e9fe35 |  | lefford | 40 |
 | 2026-08-28T20:44:38Z | sluice:gate | 447.773 | 13018.949 | 409.363 | 29.99 | 0 | 957994933 |  | lefford | 40 |
 | 2026-08-28T20:53:34Z | sluice:clients | 535.338 | 9403.388 | 93.765 | 17.74 | 0 | 7576c92aa |  | lefford | 40 |
+| 2026-08-28T21:31:44Z | prewarm | 205.766 | 1184.878 | 42.318 | 5.96 | 0 | b7c97a4df | campaign/the-rail | MacBookPro | 10 |
+| 2026-08-28T21:39:09Z | gate-commit | 43.931 | 98.352 | 17.278 | 2.63 | 0 | b7c97a4df | campaign/the-rail | MacBookPro | 10 |
