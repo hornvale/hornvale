@@ -419,7 +419,27 @@ grep -rc '#\[ignore = "heavy:' --include='*.rs' . | awk -F: '{s+=$2} END{print s
 
 Expected: `118 - <DEMOTE count>`. Any other number means a tag was edited that the adjudication did not authorise.
 
-- [ ] **Step 4: fmt, gate, commit, push, then measure**
+- [ ] **Step 4: Prove mechanically that nothing but reason strings changed**
+
+The constraint above is what separates this campaign from a silencing, and
+prose is a weak place to keep it. Before committing, run:
+
+```bash
+git diff -U0 | grep '^[+-]' | grep -v '^[+-][+-]' | grep -v 'ignore = "' | sort -u
+```
+
+Expected: **no output**. Every changed line must be part of an `#[ignore = "…"]`
+attribute.
+
+| observation | action |
+|---|---|
+| no output | constraint held mechanically; continue |
+| any line | a test body, fixture or assertion changed. Revert that hunk. Do not rationalise it — this is the exact check's purpose. |
+
+Paste the command and its output into the task report, so the reviewer sees
+the constraint was checked rather than asserted.
+
+- [ ] **Step 5: fmt, gate, commit, push, then measure**
 
 ```bash
 cargo fmt && make gate-commit
