@@ -147,6 +147,27 @@ checkout, because real uncommitted edits were live elsewhere in the tree — the
 correct instinct, and the blanket version is the trap the parked reviewer's task
 had already hit.
 
+## A terminal artifact-sweep task is a plan defect, and the fix strengthened the sweep
+
+The plan gave regeneration its own final task: every earlier task drifts a
+generated artifact, and Task 10 sweeps them all at the end. That contradicts the
+project's same-commit rule, and the consequence is not cosmetic — the drift check
+is `git diff --exit-code` and nothing runs it automatically, so a plan shaped
+that way leaves **every intermediate commit red** against the only drift check
+that exists, and nobody would find out until the sweep.
+
+Ruled before dispatch: each task regenerates and commits its own artifacts in its
+own commit, and Task 10 becomes a *final sweep and verification* — run the
+regeneration, run the drift check, and assert it comes back **empty**. That
+strictly strengthens the plan rather than merely relocating work, because a
+non-empty diff at the end is now a finding about an earlier task rather than
+routine labour.
+
+It held: the final sweep's drift check was empty, and it is a **positive** result
+rather than a vacuous one, because the same check had fired for real one task
+earlier when the type-audit report moved. An empty diff needs a positive control,
+and this one had a dated one.
+
 ## Three of ten planned tasks changed shape or vanished on contact with the code
 
 - **The knowledge gate** survived, but only after a pre-dispatch investigation
@@ -191,3 +212,20 @@ checking which band each one runs in.
   risk 4.
 - **The arc-numbering collision**, inherited unresolved from two campaigns back
   and untouched here. Home: the spec's §13, item 4.
+- **Affordances as an unreliable narration channel.** Routing the offer through
+  the same culture/knowledge filter `ask` uses, so a body whose culture has no
+  word for a thing cannot be offered its verbs. Depends on The Reticence's
+  doctrine arm, which is G3-declined and unregistered — zero rider concepts
+  exist — so this is blocked, not merely unscheduled. Home: this list and
+  decision 0349's seam.
+- **`BarrierState` ships drawn, seeded, pinnable dials with zero effects**
+  (`windows/worldgen/src/character.rs`, whose own doc says "dials only, no
+  effects"), and nothing reads `barrier_of` outside its own tests. It is the
+  obvious input to the next campaign's restricted passage, and this campaign
+  deliberately did **not** become its first consumer. Home: that doc comment,
+  and the spec's §9.
+- **`Session::delve`'s dead sealed arm** keeps live code on an unreachable path
+  — zero of 48,316 caves sealed over thirty worlds — behind a two-directional
+  tripwire that reddens the moment sealed becomes possible. The next campaign
+  trips it deliberately. Home: `delve_has_two_distinguishable_outcomes` in
+  `windows/vessel/src/session.rs`.
