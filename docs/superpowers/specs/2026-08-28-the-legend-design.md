@@ -141,18 +141,53 @@ classification beside the one atlas already uses** — this repo already has
 three renderers independently implementing one projection, which is the
 failure being repeated.
 
-`tiles_region_scene_in` is region-addressed and **level-parameterized with a
-`samples` knob**, so the shape already fits a rung ladder.
+### 3.0 CORRECTION (found while writing the plan, before any code)
+
+An earlier draft of this section said `tiles_region_scene_in` is
+"region-addressed and level-parameterized with a `samples` knob, so the
+shape already fits a rung ladder." **That is false, and the error is
+instructive: level-parameterized is true, "therefore it fits the plate's
+ladder" is a DIFFERENT claim and does not follow.**
+
+`RegionScene.level` is, in its own doc's words, *"Quadtree depth on the
+cube-face mesh (**a different mesh from the geosphere's own `depth`**)"*,
+while `Window.depth` is a geosphere facet rung. `RegionAddr::node_units()`
+builds cube-face nodes via `face_unit(face, a, b)`, and `interp`
+**barycentrically interpolates** geosphere values onto them (discrete layers
+are nearest-vertex).
+
+So a plate consuming that scene would resample twice — geosphere facet ->
+cube-face node -> Mercator tile — breaking two ratified decisions:
+
+- **0287** (a zoom rung IS a mesh depth; The Quadrat's keystone is that a
+  tile *is* a facet, reached by direct addressing, not by search or
+  resampling), and
+- **0196** (a view may disclose its own resolution but may never invent
+  detail below it — interpolating between vertices is exactly that).
+
+**Therefore the shared unit is a FUNCTION, not a fetch.**
 
 **The layering that ships:**
 
 ```
-  windows/scene  ->  ordinal band index + nominal class id + legend
-                     (computed ONCE, sim-side)
-                        |               |               |
-   clients/game (TUI)   |  clients/atlas (browser)      |  tile client (future)
-   glyph + ANSI         |  RGB layers                   |  sprite / image asset
+  windows/scene::classify  ->  ordinal band index + nominal class id + legend
+        (ONE classifier; every producer below calls it, none reimplements it)
+             |                          |
+   scene/tiles-region/v1          plate.rs (direct mesh addressing,
+   (already consumed by atlas)     0287 and 0196 intact)
+             |                          |
+   clients/atlas (browser)        clients/game (TUI)
+   RGB layers                     glyph + ANSI
+             |
+   tile client (future) -- consumes the SAME scene atlas does
+   sprite / image asset
 ```
+
+**The TUI calls the classifier directly; every other client reaches it
+through the scene it already consumes.** The layering goal — one
+classification, never a second implementation — is met either way, and this
+way the plate keeps exact mesh addressing. A future tile client is served by
+the scene, exactly as atlas is, and never needs to call Rust.
 
 The register from §2 is therefore a **class registry**, and a glyph is one
 *binding* of it. The specimen sheet binds ASCII only; a tile client later
@@ -248,28 +283,32 @@ of ECS substrate and gets a board notice and its own stage boundary.
 
 ### 7.1 H1, preregistered
 
-> **H1.** Moving the world map's terrain classification from direct mesh
-> addressing to the shared scene wire preserves The Quadrat's redraw budget.
+> **H1.** Extracting the terrain classifier into a single shared function —
+> called by both `windows/scene`'s tile builder and `plate.rs` — preserves
+> The Quadrat's redraw budget AND leaves every committed artifact
+> byte-identical.
 
 The Quadrat measured a **0.056 ms warm redraw** at 200x200 on the coarsest
 rung, 893x under its 50 ms bar, built on direct mesh addressing and a
-`(frame, rung, tile)` cache. `tiles_region_scene`'s own comment prices the
-context build at **~638 ms**; the `_in` form reuses a `SceneContext`, so a
-plate holding one should not pay that per redraw — **but "should not" is not
-a measurement.**
+`(frame, rung, tile)` cache. Extraction is a refactor of where a
+decision is written, not of how a tile is addressed, so the expectation is a
+**no-op on both counts** — but an expectation is not a measurement, and a
+classifier that newly allocates or newly indirects per tile could still cost
+real time at 40,000 tiles.
 
-Falsification is a real outcome with a designed response: if the fetch
-cannot hold the budget, the fallback is to extract the shared classification
-*function* into `windows/scene` and let the plate keep mesh addressing. That
-still gets one classification for all clients — the layering win — without
-the fetch. **Recording the null is a result, not a failure** (decision 0016).
+Falsification has a designed response: if the shared function cannot hold
+the budget, `plate.rs` keeps a monomorphized copy **generated from the same
+source of truth** rather than hand-written, so the two can still never
+disagree. **Recording the null is a result, not a failure** (decision 0016).
 
 Success criteria, frozen before the code:
 
-1. Warm redraw at 200x200, coarsest rung, stays under **1.0 ms** (a ~18x
-   regression allowance against 0.056 ms, still 50x under The Quadrat's own
-   bar). Measured on an idle box, replicated, per The Quadrat's own finding
-   that a loaded box moved the same measurement 1.40x.
+1. Warm redraw at 200x200, coarsest rung, stays under **0.20 ms** (a ~3.5x
+   allowance against The Quadrat's 0.056 ms, 250x under its own 50 ms bar).
+   The bar tightened from the draft's 1.0 ms because extraction is a refactor
+   rather than a re-architecture: an 18x allowance would have passed a real
+   regression silently. Measured on an idle box, replicated, per The
+   Quadrat's finding that a loaded box moved the same measurement 1.40x.
 2. Byte-identity of committed artifacts is unchanged.
 3. `mesh_addressing_agrees_with_the_spatial_search` and the chart's
    `the_shape_matches_the_sims_own_ascii_render` stay green untouched.
