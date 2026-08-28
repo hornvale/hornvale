@@ -609,7 +609,7 @@ make board-post KIND=technique NOTE='The vessel scheduler pops by action START a
 
 **Goal:** establish, before committing to Stage 3, that the retype's blocker is gone.
 **Success Criteria:** a recorded branch outcome naming which of The Foliot's two failures survive.
-**Status:** Not Started
+**Status:** COMPLETE. Monotonicity GREEN (the blocker is gone); hoisted-walk golden RED by exactly one tick (1206633 -> 1206634), the legitimate drift-removal move. No other red. Stage 3 is unblocked.
 
 A fix task cannot audit its own premise. Stage 3 exists to land the retype; this stage exists to prove Stage 3 is possible, and it is allowed to conclude that it is not.
 
