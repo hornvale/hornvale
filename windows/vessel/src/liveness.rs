@@ -4929,6 +4929,36 @@ impl<'a> DriveMovements<'a> {
             }
             queue.insert((next, e));
         }
+        // THE LEDGER'S CHRONOLOGY IS NOT THE POP ORDER (The Precedence,
+        // decision <NNNN>, spec section 3). The queue pops creatures by when
+        // an action BEGINS; every fact above is stamped at the instant its
+        // action ENDS. Those two orderings differ by the population's cost
+        // spread whenever creatures act at different tempos — measured at
+        // 10,014 ticks on the real seed-42 population, against an invariant
+        // that allowed one tick.
+        //
+        // Sorting here is not a patch on the queue's output: it IS the
+        // queue's only cross-entity product. Pop order affects nothing else
+        // observable — every `occupancy` access is keyed by the creature's OWN
+        // entity, and perception is built from `frozen` before anyone moves —
+        // which `the_queues_tie_break_decides_nothing_but_order` asserts, and
+        // which will fail loudly the day that stops being true.
+        //
+        // Sound because a tick is a CLOSED WINDOW: nothing may be dated
+        // outside `[from, to]`, so reordering within it can never need to
+        // reach past a fact an earlier tick emitted. That watermark is
+        // asserted by `every_emitted_fact_is_dated_inside_the_tick_that_emitted_it`.
+        //
+        // `sort_by_key` on `Option<WorldTime>` is a STABLE, EXACT INTEGER
+        // comparison — `WorldTime` is an `i64` tick count with a derived `Ord`
+        // (decision 0186), so no float enters the ordering. Stability is
+        // load-bearing twice over: a creature's own facts are already
+        // monotone and stay in place, and cross-entity ties keep the entity-id
+        // order the queue chose, which is what keeps the emitted sequence a
+        // pure function of the frozen ledger rather than of the input vector.
+        // `decide_step` reads this vector mid-tick, but filters to its own
+        // subject and sorts what it finds, so it cannot observe this at all.
+        out.sort_by_key(|f| f.day);
         (out, occupancy)
     }
 }
@@ -7743,52 +7773,69 @@ mod tests {
         // clock its facts must appear BETWEEN the heavier one's; under the old
         // sequential loop they appeared entirely before them.
         //
-        // The assertion counts SWITCHES of subject along the emitted sequence.
-        // The sequential loop scores exactly one (all of A, then all of B) for
-        // any pair, however far apart in tempo; a scheduler scores many. `>= 2`
-        // is therefore the smallest threshold the old loop cannot reach.
-        let (ledger, terrain, npcs) = interleaving_fixture(&[4.375, 70.0]);
-        let sys = DriveMovements {
-            npcs,
-            from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
-            to: WorldTime::from_std_days(20.0).expect("a day value is finite"),
-            params: SUSTENANCE,
-            day_ticks: None,
-            terrain: &terrain,
-        };
-        let facts = sys.step(&ledger);
-        let seq: Vec<EntityId> = facts
-            .iter()
-            .filter(|f| f.predicate == AGENT_AT)
-            .map(|f| f.subject)
-            .collect();
-        let switches = seq.windows(2).filter(|w| w[0] != w[1]).count();
-        assert!(
-            switches >= 2,
-            "the two creatures never interleave (switches={switches}, seq={seq:?}) — \
-             the queue is not scheduling, it is still walking each in turn"
-        );
-        // And the emitted days run forward on ONE timeline — up to the tick,
-        // which is the resolution the schedule actually orders at. The sequential
-        // loop jumped the full interval backwards at its single handover (the
-        // second creature restarted at `from`); a shared clock can only ever go
-        // back by less than one tick, because creatures tied at the same rounded
-        // tick are separated by entity id and their exact `f64` days then differ
-        // by whatever float accumulation put inside that tick. Bounding the
-        // regression by a tick is the honest form of "one timeline": asserting
-        // strict monotonicity would be asserting that scheduling happens in
-        // `f64`, which is the thing spec §4 refuses to do.
-        let tick = hornvale_kernel::units::TickSpan::from_ticks(1).as_std_days();
-        let mut prev = f64::NEG_INFINITY;
-        for f in &facts {
-            let d = f.day.expect("every emitted fact is dated").as_std_days();
+        // BOTH MASS ORDERS (The Precedence). `interleaving_fixture` mints entity
+        // ids in the order the masses are listed, so the list order IS the
+        // queue's tie-break order. This test used to run only `[4.375, 70.0]`,
+        // which hands the FAST creature the lower id — so at every tie the
+        // cheaper action was emitted first and the inversion below could not
+        // show. Swapping the order was worth 9,925 ticks against a one-tick
+        // tolerance. The fixture must not depend on which creature is lighter.
+        for masses in [[4.375_f64, 70.0], [70.0, 4.375]] {
+            let (ledger, terrain, npcs) = interleaving_fixture(&masses);
+            let sys = DriveMovements {
+                npcs,
+                from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+                to: WorldTime::from_std_days(20.0).expect("a day value is finite"),
+                params: SUSTENANCE,
+                day_ticks: None,
+                terrain: &terrain,
+            };
+            let facts = sys.step(&ledger);
+            let seq: Vec<EntityId> = facts
+                .iter()
+                .filter(|f| f.predicate == AGENT_AT)
+                .map(|f| f.subject)
+                .collect();
+            // The assertion counts SWITCHES of subject along the emitted
+            // sequence. The sequential loop scores exactly one (all of A, then
+            // all of B) for any pair, however far apart in tempo; a scheduler
+            // scores many. `>= 2` is the smallest threshold the old loop
+            // cannot reach.
+            let switches = seq.windows(2).filter(|w| w[0] != w[1]).count();
             assert!(
-                d >= prev - tick,
-                "`{}` at {d} went back more than a tick past {prev} — \
-                 the clock is not shared",
-                f.predicate
+                switches >= 2,
+                "the two creatures never interleave (masses={masses:?}, \
+                 switches={switches}, seq={seq:?}) — the queue is not \
+                 scheduling, it is still walking each in turn"
             );
-            prev = prev.max(d);
+            // And the emitted days run forward on ONE timeline, EXACTLY.
+            //
+            // This assertion carried a one-tick tolerance until The Precedence,
+            // justified as "creatures tied at the same rounded tick are
+            // separated by entity id and their exact `f64` days then differ
+            // within that tick." That rationale was false, and the tolerance
+            // was never bounding the quantity that actually varies: the queue
+            // pops by when an action BEGINS while every fact is stamped at the
+            // instant it ENDS, so an emission could precede the running max by
+            // the population's whole COST SPREAD — 9,925 ticks in this very
+            // fixture, and 10,014 on the real seed-42 population.
+            //
+            // `step_with_occupancy` now sorts its emissions by day, so this is
+            // exact and needs no allowance. A tolerance here would silently
+            // re-admit the defect.
+            let mut prev: Option<WorldTime> = None;
+            for f in &facts {
+                let d = f.day.expect("every emitted fact is dated");
+                if let Some(p) = prev {
+                    assert!(
+                        d >= p,
+                        "`{}` at {d:?} went back past {p:?} (masses={masses:?}) — \
+                         the emitted stream is not chronological",
+                        f.predicate
+                    );
+                }
+                prev = Some(prev.map_or(d, |p: WorldTime| p.max(d)));
+            }
         }
     }
 
