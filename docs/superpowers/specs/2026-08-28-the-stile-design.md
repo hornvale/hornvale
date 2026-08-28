@@ -115,9 +115,16 @@ update.
 4. Coverage reports **per direction**: parse, produce, and direction-unknown,
    with the merchant corpus in the third.
 5. Direction is never inferred from `speaker` or from any other field.
-6. The ladder's 214 rungs, 199 tokens, acyclicity and two roots are asserted, so
-   the file cannot drift silently — the discipline `MERCHANT_ENTRIES` already
-   carries.
+6. The ladder gets **STRUCTURAL** assertions only: acyclic, ids unique, no token
+   introduced twice, cumulative closure computable for every rung, exactly two
+   roots. These hold at any size and freeze nothing.
+
+   **It does NOT get a count assertion.** A frozen entry count is precisely the
+   freeze mechanism (`MERCHANT_ENTRIES`), and §4 reserves freezing to the project
+   owner. An earlier draft of this spec asked for both and contradicted itself;
+   the structural/count split is the resolution. Adding `LADDER_ENTRIES` is a
+   one-line act the owner performs after review, and it is the moment the ladder
+   stops being a draft and its ids become append-only forever.
 7. The cross-check is computable: how many of a corpus's tokens exist on the
    ladder, and which do not. Its expected value for `the-flood-watch` is
    **147 of 149**, with `unpunctuated-input` and `contraction-elision` refused
