@@ -387,7 +387,7 @@ git diff --stat -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
 
 ```bash
 cargo fmt
-git add domains/thing Cargo.toml book/src/reference/layering-generated.md docs/audits/type-audit-report.md
+git add domains/thing windows/worldgen/src/components.rs book/src/reference/layering-generated.md docs/audits/type-audit-report.md
 printf '%s\n' \
   'feat(thing): the object domain and its kind roster' '' \
   'A domain that draws nothing, on the domains/alchemy model: what a kind IS' \
