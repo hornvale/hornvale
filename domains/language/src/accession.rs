@@ -539,6 +539,34 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "radiates-heat",
         "supports-rest",
     ],
+    // Epoch 16 — The Chattel, Task 3: the made, portable object kinds
+    // `domains/thing` registers (`ConceptKind::Object`, spec §3.5). One
+    // concept per `THING_KINDS` label, minus `hearth`: that label maps to
+    // settlement's pre-existing `hearth` concept (epoch 0, decision 0025's
+    // check-then-map rule — see `domains/thing::register_concepts`) rather
+    // than minting a second accession entry for a concept that already has
+    // one. `domains/language` cannot depend on `domains/thing` (one domain
+    // never depends on another), so this cohort is a hand-copied literal
+    // list, kept in step with `THING_KINDS` by
+    // `cli/tests/suite/accession.rs`'s parity check rather than by an
+    // import.
+    &[
+        "alcove",
+        "altar",
+        "anvil",
+        "bed",
+        "cave-mouth",
+        "ground",
+        "high-seat",
+        "key",
+        "log",
+        "loom",
+        "pool",
+        "screen",
+        "strongbox",
+        "threshold",
+        "vessel",
+    ],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or

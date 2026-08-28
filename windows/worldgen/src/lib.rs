@@ -335,8 +335,14 @@ pub const DOMAINS: &[&dyn Domain] = &[
     // published into the manifest before genesis emits them.
     &hornvale_history::History,
     // Order matters on this roster only for concept lenders and borrowers;
-    // person is neither, so it sits last with no ordering constraint.
+    // person is neither, so it sits last with no ordering constraint. thing
+    // is the same: it owns every concept it registers and borrows none (its
+    // one apparent collision, `hearth`, maps to settlement's existing
+    // concept via the decision-0025 check-then-map pattern rather than
+    // depending on registration order — see `domains/thing`'s
+    // `register_concepts`).
     &hornvale_person::Person,
+    &hornvale_thing::Thing,
 ];
 
 /// Register every domain's concepts. `NAME_GLOSS` itself is kernel-core
@@ -14084,7 +14090,7 @@ mod tests {
     #[test]
     fn domains_roster_crate_names_are_unique_and_nonempty() {
         let mut names: Vec<&str> = DOMAINS.iter().map(|d| d.crate_name()).collect();
-        assert_eq!(names.len(), 11, "expected eleven domains in the roster");
+        assert_eq!(names.len(), 12, "expected twelve domains in the roster");
         assert!(names.iter().all(|n| !n.is_empty()));
         let before = names.len();
         names.sort_unstable();

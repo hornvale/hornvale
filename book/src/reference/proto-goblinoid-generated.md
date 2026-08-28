@@ -38,10 +38,14 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `abyssal` | a biome class | *Gaokoe | /gaokoe/ |
 | `abyssal-plain` | The flat floor of the deep ocean. | *Nodo | /nodo/ |
 | `affords-passage` | a seam between two rooms a body may pass through | *Nenea | /nenea/ |
+| `alcove` | a recessed space set into a wall | *Da | /da/ |
 | `alpine` | a biome class | *Ne | /ne/ |
+| `altar` | a raised surface where offerings are made | *Neqeo | /neqeo/ |
+| `anvil` | a heavy iron block a smith hammers metal against | *Naedaa | /naedaa/ |
 | `bait-ball` | A dense turning mass of fish. | *Dee | /dee/ |
 | `barley` | a staple crop | *Nadae | /nadae/ |
 | `bathypelagic` | a biome class | *Neogeo | /neogeo/ |
+| `bed` | a place made for lying down and sleeping | *Koaqo | /koaqo/ |
 | `black-dragon-kind` | a black dragon | *Negoo | /negoo/ |
 | `blood` | the circulating fluid of a body | *Tae | /tae/ |
 | `blue` | the color term for blue | *Ta | /ta/ |
@@ -51,6 +55,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `bugbear-kind` | a bugbear | *Deetee | /deetee/ |
 | `burn` | Ground recovering from fire. | *Pa | /pa/ |
 | `carrion-crawler-kind` | a carrion crawler | *Tapo | /tapo/ |
+| `cave-mouth` | the opening where a cave meets the outside | *Kenee | /kenee/ |
 | `chart` | to form a picture of the space around oneself — `map` | *Nodoe | /nodoe/ |
 | `child` | one's son or daughter | *Doena | /doena/ |
 | `closed-canopy` | Tall closed-canopy tropical forest. | *Noapa | /noapa/ |
@@ -105,6 +110,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `grass-sward` | Open grassland, unbroken by trees. | *Nage | /nage/ |
 | `great` | large in size or extent | *Nadee | /nadee/ |
 | `green` | the color term for green | *Neo | /neo/ |
+| `ground` | the bare earth underfoot | *Kaane | /kaane/ |
 | `gully-dwarf-kind` | a gully dwarf | *Kao | /kao/ |
 | `hadal-trench` | a biome class | *Naone | /naone/ |
 | `hamada` | A stony desert pavement of bare rock. | *Neto | /neto/ |
@@ -114,6 +120,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `helpless` | negative and persistent: given up despite an active drive | *Neda | /neda/ |
 | `high` | far above the ground | *Neapoa | /neapoa/ |
 | `high-elf-kind` | a high elf | *Doe | /doe/ |
+| `high-seat` | the seat of a hall's presiding figure | *Qoano | /qoano/ |
 | `hill` | ground that rises above what surrounds it | *Noono | /noono/ |
 | `hill-dwarf-kind` | a hill dwarf | *Goonea | /goonea/ |
 | `hobgoblin-kind` | a hobgoblin | *Dae | /dae/ |
@@ -127,6 +134,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `island` | land the water surrounds | *Gope | /gope/ |
 | `kelp-canopy` | The floating canopy of a kelp forest. | *Pano | /pano/ |
 | `kelp-forest` | a biome class | *Naa | /naa/ |
+| `key` | a small tool shaped to work one particular lock | *Noopo | /noopo/ |
 | `kill` | to cause to cease living | *Dapo | /dapo/ |
 | `killer-whale-kind` | a killer whale | *Gaqo | /gaqo/ |
 | `know` | to hold something in memory or understanding — `knows` | *Naena | /naena/ |
@@ -136,7 +144,9 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `light` | the color term for white/light hues | *Noaqaa | /noaqaa/ |
 | `lightless-water` | Water below all light. | *Pao | /pao/ |
 | `little` | small in size or extent | *Neodoe | /neodoe/ |
+| `log` | a length of felled, unworked timber | *None | /none/ |
 | `look` | to visually attend to something, near or far — `look`, `examine` | *Gogo | /gogo/ |
+| `loom` | a frame for weaving thread into cloth | *Kooneo | /kooneo/ |
 | `lost` | negative: blocked with no target to move toward | *Nona | /nona/ |
 | `low` | near the ground | *Keono | /keono/ |
 | `many` | an indefinitely large count | *Naona | /naona/ |
@@ -169,6 +179,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `person` | a person; a member of a people (the autonym root) | *Neepo | /neepo/ |
 | `plankton-bloom` | Water thick with plankton. | *Notee | /notee/ |
 | `playa` | A dry lake bed of salt and cracked clay. | *Qena | /qena/ |
+| `pool` | a small standing body of water | *Nakao | /nakao/ |
 | `pressure-ridge` | Sea ice buckled into a ridge. | *Nootaa | /nootaa/ |
 | `radiates-heat` | an anchor that emits warmth | *Poe | /poe/ |
 | `rafted-floe` | Ice floes driven over one another. | *Qoe | /qoe/ |
@@ -189,6 +200,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `scattering-layer` | The daily-rising layer of small sea life. | *Geanoa | /geanoa/ |
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | *Netao | /netao/ |
 | `scoured-ice` | Ice swept bare and carved by wind. | *Do | /do/ |
+| `screen` | a partition set up to divide or shield a space | *Geana | /geana/ |
 | `sea` | a body of salt water | *Qae | /qae/ |
 | `sea-elf-kind` | a sea elf | *Pe | /pe/ |
 | `sea-ice` | a biome class | *Qoono | /qoono/ |
@@ -213,6 +225,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `star` | a fixed point of light in the night sky | *Peanoo | /peanoo/ |
 | `starlit` | dark faintly lit by stars | *Tane | /tane/ |
 | `stone` | rock | *Peotea | /peotea/ |
+| `strongbox` | a locked chest built to keep valuables safe | *Qonoa | /qonoa/ |
 | `sun` | the sun | *Pago | /pago/ |
 | `supports-rest` | a place a body may lie down and sleep | *Geno | /geno/ |
 | `taiga` | a biome class | *Qe | /qe/ |
@@ -221,6 +234,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `temperate-rainforest` | a biome class | *Daenao | /daenao/ |
 | `think` | to hold an uncertain belief | *Peo | /peo/ |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | *Nako | /nako/ |
+| `threshold` | the sill marking where one place ends and another begins | *Teane | /teane/ |
 | `tide` | the rise and fall of the waters under the moons | *Nea | /nea/ |
 | `treant-kind` | a treant | *Nana | /nana/ |
 | `tree` | a woody plant | *Nena | /nena/ |
@@ -239,6 +253,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `urchin-barren` | Seabed grazed bare of kelp. | *Noqea | /noqea/ |
 | `valley` | low ground between heights | *Ganee | /ganee/ |
 | `vent-plume` | Shimmering hot water rising from a vent. | *Naga | /naga/ |
+| `vessel` | a container shaped to hold liquid or goods | *Keato | /keato/ |
 | `vine` | a staple crop | *Nenoo | /nenoo/ |
 | `wait` | to let time pass without acting — `wait` | *Qaate | /qaate/ |
 | `water` | the drinkable liquid | *Qa | /qa/ |

@@ -62,6 +62,13 @@ pub enum ConceptKind {
     /// not a property it *has*, and the vessel window's affect circumplex
     /// (`AffectLabel`) reconciles against exactly this class.
     Affect,
+    /// A made, portable object a body may take and carry — a key, a vessel.
+    /// Distinct from [`ConceptKind::Terrain`], which is fixed ground a body
+    /// moves *through*, and from [`ConceptKind::Substance`], which is the
+    /// stuff an object may be made *of* but is not itself a countable thing:
+    /// `key` is something a body *has*, not a material or a place.
+    /// `domains/thing` registers every thing-kind under this variant.
+    Object,
 }
 
 /// Definition of a named concept: the word-level vocabulary entry

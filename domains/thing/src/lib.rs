@@ -22,7 +22,10 @@
 
 #![warn(missing_docs)]
 
-use hornvale_kernel::{ComponentStore, KindId};
+use hornvale_kernel::{
+    ComponentStore, ConceptDef, ConceptKind, ConceptRegistry, Correspondent, KindId, Manifest,
+    RegistryError, Void,
+};
 
 /// Object-kind traits: whether a body may carry the kind, and the label
 /// prose uses to name it. Thin and honest (spec §3.5) — no property lives
@@ -188,6 +191,87 @@ pub fn thing_registry() -> ComponentStore<KindId, ThingTraits> {
     .collect()
 }
 
+/// A short, honest gloss for each roster label — what a player would call
+/// the kind, not a mechanic. Kept beside [`THING_KINDS`] rather than folded
+/// into [`ThingTraits::display`], which names the kind in running prose, not
+/// what it *is*.
+fn concept_doc(label: &str) -> &'static str {
+    match label {
+        "alcove" => "a recessed space set into a wall",
+        "altar" => "a raised surface where offerings are made",
+        "anvil" => "a heavy iron block a smith hammers metal against",
+        "bed" => "a place made for lying down and sleeping",
+        "cave-mouth" => "the opening where a cave meets the outside",
+        "ground" => "the bare earth underfoot",
+        "hearth" => "the fire at the center of a home",
+        "high-seat" => "the seat of a hall's presiding figure",
+        "key" => "a small tool shaped to work one particular lock",
+        "log" => "a length of felled, unworked timber",
+        "loom" => "a frame for weaving thread into cloth",
+        "pool" => "a small standing body of water",
+        "screen" => "a partition set up to divide or shield a space",
+        "strongbox" => "a locked chest built to keep valuables safe",
+        "threshold" => "the sill marking where one place ends and another begins",
+        "vessel" => "a container shaped to hold liquid or goods",
+        other => unreachable!("concept_doc has no gloss for thing-kind {other:?}"),
+    }
+}
+
+/// Register thing's contribution to the concept registry: every label in
+/// [`THING_KINDS`] becomes a nameable concept.
+///
+/// No language pack names any thing-kind yet, so the lexeme edge is an
+/// honest `Gap` rather than an over-optimistic `Expected` (the same choice
+/// `settlement`'s home/hearth pair makes, and for the same reason).
+///
+/// **Check-then-map, never a homonym (decision 0025).** `hearth` is already
+/// a nameable concept — `settlement` registers it (domain `settlement`,
+/// [`ConceptKind::Social`], "the fire at the center of a home") as a social
+/// space, and that registration is semantically broader than this domain's
+/// reading of `hearth` as a fixture a body may stand at. Decision 0025 gives
+/// the earlier, broader registrant the word; `thing` maps to the existing
+/// concept instead of minting a conflicting redefinition under its own
+/// domain, which `ConceptRegistry::register_manifest` would otherwise reject
+/// as [`RegistryError::ConflictingDefinition`] the moment both domains sit on
+/// one roster. Every other label here is thing's alone.
+pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
+    for label in THING_KINDS {
+        if registry.concept(label).is_some() {
+            continue;
+        }
+        registry.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: label.to_string(),
+                domain: "thing".to_string(),
+                kind: ConceptKind::Object,
+                doc: concept_doc(label).to_string(),
+            },
+            lexeme: Correspondent::Absent(Void::Gap("no language pack names it yet")),
+            percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })?;
+    }
+    Ok(())
+}
+
+/// Thing as a registrable unit for the composition-root roster.
+/// type-audit: bare-ok(identifier-text: return)
+pub struct Thing;
+
+impl hornvale_kernel::Domain for Thing {
+    fn crate_name(&self) -> &'static str {
+        env!("CARGO_PKG_NAME")
+    }
+    fn register_concepts(
+        &self,
+        registry: &mut hornvale_kernel::ConceptRegistry,
+    ) -> Result<(), hornvale_kernel::RegistryError> {
+        crate::register_concepts(registry)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -232,5 +316,87 @@ mod tests {
                 id.0
             );
         }
+    }
+
+    /// Every roster kind is a registered concept after `register_concepts`, and
+    /// each carries this domain's own name — so the registry dump attributes
+    /// them here and not to whichever crate happened to call the function.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: replace `register_concepts`'s body
+    /// with `Ok(())` (registration becomes vacuous — nothing is registered,
+    /// but the function still reports success). Red observed:
+    ///
+    /// ```text
+    /// thread 'tests::every_roster_kind_registers_as_a_concept' panicked at domains/thing/src/lib.rs:323:36:
+    /// "alcove" not registered
+    /// test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out
+    /// ```
+    #[test]
+    fn every_roster_kind_registers_as_a_concept() {
+        let mut reg = hornvale_kernel::ConceptRegistry::default();
+        register_concepts(&mut reg).expect("registration is total and idempotent");
+        for label in THING_KINDS {
+            let c = reg
+                .concept(label)
+                .unwrap_or_else(|| panic!("{label:?} not registered"));
+            assert_eq!(
+                c.domain, "thing",
+                "{label:?} attributed to the wrong domain"
+            );
+        }
+    }
+
+    /// Re-registering must succeed and change nothing — every domain's
+    /// `register_concepts` relies on `ConceptRegistry` accepting a
+    /// byte-identical redefinition (`domains/person/src/lib.rs:199-205` is
+    /// the precedent this follows).
+    #[test]
+    fn registering_twice_is_idempotent() {
+        let mut reg = hornvale_kernel::ConceptRegistry::default();
+        register_concepts(&mut reg).expect("first registration");
+        register_concepts(&mut reg).expect("second registration is idempotent");
+    }
+
+    /// Decision 0025 (one concept name, one owner): `hearth` is already a
+    /// concept when `settlement` registers it first, and `thing` must map to
+    /// that existing definition rather than mint a conflicting redefinition
+    /// under its own domain. `thing` cannot depend on `hornvale-settlement`
+    /// (domains depend on the kernel only), so this hand-rolls settlement's
+    /// exact registration to stand in for it.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: delete the `if
+    /// registry.concept(label).is_some() { continue; }` guard in
+    /// `register_concepts`. Red observed:
+    ///
+    /// ```text
+    /// thread 'tests::hearth_maps_to_an_existing_owner_instead_of_conflicting' panicked at domains/thing/src/lib.rs:389:14:
+    /// thing must map to the existing `hearth` concept, not conflict with it: ConflictingDefinition { name: "hearth" }
+    /// test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out
+    /// ```
+    #[test]
+    fn hearth_maps_to_an_existing_owner_instead_of_conflicting() {
+        let mut reg = hornvale_kernel::ConceptRegistry::default();
+        reg.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: "hearth".to_string(),
+                domain: "settlement".to_string(),
+                kind: ConceptKind::Social,
+                doc: "the fire at the center of a home".to_string(),
+            },
+            lexeme: Correspondent::Absent(Void::Gap("no language pack names it yet")),
+            percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })
+        .expect("settlement's own registration");
+
+        register_concepts(&mut reg)
+            .expect("thing must map to the existing `hearth` concept, not conflict with it");
+        assert_eq!(
+            reg.concept("hearth").unwrap().domain,
+            "settlement",
+            "thing must not steal ownership of a word another domain already registered"
+        );
     }
 }
