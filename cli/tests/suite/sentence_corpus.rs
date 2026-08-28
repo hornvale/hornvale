@@ -178,7 +178,6 @@ struct Entry {
     demands: Vec<String>,
     /// This entry's [`Direction`], or `None` when the corpus states
     /// nothing.
-    #[allow(dead_code)] // consumed starting Task 3 (the three-bucket report)
     direction: Option<Direction>,
 }
 
@@ -341,7 +340,6 @@ fn load_merchant_corpus(root: &Path) -> Corpus {
 /// [`load_merchant_corpus`] uses — it shares the merchant corpus's shape,
 /// plus fields (`scene`, `note`, a per-entry `direction`) this resolver
 /// either ignores or already reads.
-#[allow(dead_code)] // consumed starting Task 3
 fn load_flood_watch_corpus(root: &Path) -> Corpus {
     Corpus {
         entries: read_declared(&root.join("sentences/the-flood-watch.corpus.json")),
@@ -383,6 +381,107 @@ fn missing_demands(entry: &Entry) -> Vec<&str> {
         .map(String::as_str)
         .filter(|d| !demand_covered(d))
         .collect()
+}
+
+// ---------------------------------------------------------------------
+// Task 3: three buckets, and direction is never inferred
+// ---------------------------------------------------------------------
+
+/// A corpus's entries, tallied by [`Direction`]: how many state `parse`,
+/// how many state `produce`, and how many state neither. Spec §2.2/§2.3 —
+/// coverage is reported **per direction**, and an absent direction is its
+/// own bucket rather than something inferred from `speaker` or any other
+/// field. `the-flood-watch` splits across the first two; `the-merchant`
+/// states no `direction` key at all and lands entirely in `unknown`; the
+/// ladder is declared entirely `produce` by [`read_derived`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct DirectionCounts {
+    /// Entries whose [`Entry::direction`] is [`Direction::Parse`].
+    parse: usize,
+    /// Entries whose [`Entry::direction`] is [`Direction::Produce`].
+    produce: usize,
+    /// Entries whose [`Entry::direction`] is `None` — the corpus states
+    /// nothing, and nothing here guesses one.
+    unknown: usize,
+}
+
+/// Tally a corpus's entries into [`DirectionCounts`]. Reads
+/// [`Entry::direction`] exactly as [`read_declared`]/[`read_derived`]
+/// produced it — **never** derives one from `speaker`, `id`, or any other
+/// field. That restraint is the whole point of Task 3: a merchant entry has
+/// a `speaker` (`"player"` or `"merchant"`) sitting right there, and mapping
+/// it to parse/produce would look reasonable while authoring a fact the
+/// corpus does not carry.
+fn direction_counts(entries: &[Entry]) -> DirectionCounts {
+    let mut counts = DirectionCounts {
+        parse: 0,
+        produce: 0,
+        unknown: 0,
+    };
+    for entry in entries {
+        match entry.direction {
+            Some(Direction::Parse) => counts.parse += 1,
+            Some(Direction::Produce) => counts.produce += 1,
+            None => counts.unknown += 1,
+        }
+    }
+    counts
+}
+
+/// The-flood-watch states `direction` on every entry, split 68 player lines
+/// (`parse`) to 71 NPC lines (`produce`) — re-derived here from the
+/// committed corpus rather than trusted from any campaign document; see
+/// [`the_flood_watch_corpus_is_frozen_at_its_authored_size`] for the
+/// corpus's frozen total these two numbers must sum to.
+#[test]
+fn the_flood_watch_direction_split_is_sixty_eight_parse_seventy_one_produce() {
+    let corpus = load_flood_watch_corpus(&repo_root());
+    assert_eq!(corpus.entries.len(), FLOOD_WATCH_ENTRIES);
+
+    let counts = direction_counts(&corpus.entries);
+    assert_eq!(
+        counts,
+        DirectionCounts {
+            parse: 68,
+            produce: 71,
+            unknown: 0,
+        },
+        "the flood-watch direction split moved from 68 parse / 71 produce. \
+         Every entry in this corpus states a direction, so a nonzero \
+         `unknown` here means a `direction` key failed to parse, not that \
+         one was legitimately absent."
+    );
+}
+
+/// **The negative test, and the more important of the two.** `the-merchant`
+/// states no `direction` key on any entry (spec §2.3), and it carries a
+/// `speaker` field (`"player"` on 4 entries, `"merchant"` on 8) that is
+/// exactly the kind of plausible-looking proxy a later campaign might reach
+/// for. This pins that every merchant entry resolves as direction-**unknown**
+/// regardless — the only thing standing between a future edit and quietly
+/// inferring `parse`/`produce` from `speaker`. This test was proven to bite:
+/// a temporary `speaker`-based inference was spliced into
+/// [`read_declared`], this test went red, the inference was removed, and the
+/// file was hashed back to byte-identical with pre-mutation — see the Task 3
+/// report for the transcript.
+#[test]
+fn merchant_entries_resolve_as_direction_unknown() {
+    let corpus = load_merchant_corpus(&repo_root());
+    assert_eq!(corpus.entries.len(), MERCHANT_ENTRIES);
+
+    let counts = direction_counts(&corpus.entries);
+    assert_eq!(
+        counts,
+        DirectionCounts {
+            parse: 0,
+            produce: 0,
+            unknown: MERCHANT_ENTRIES,
+        },
+        "a merchant entry resolved to parse or produce. The corpus states no \
+         `direction` key at all, so a nonzero count here means something is \
+         inferring direction — from `speaker` or another field — which spec \
+         §2.3 forbids: a merchant entry's direction must stay unknown."
+    );
 }
 
 /// The frozen result of resolving the-merchant against the grammar's
