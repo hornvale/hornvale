@@ -3660,3 +3660,5 @@ measured here.
 | 2026-08-28T13:12:43Z | sluice:gate | 501.568 | 13967.069 | 519.464 | 28.88 | 0 | e38fed504 |  | lefford | 40 |
 | 2026-08-28T13:21:59Z | sluice:clients | 556.367 | 9631.302 | 113.742 | 17.52 | 0 | ee352c836 |  | lefford | 40 |
 | 2026-08-28T14:47:38Z | prewarm | 386.170 | 1731.014 | 97.963 | 4.74 | 0 | 2f8faf243 | campaign/the-overture | ambrose | 12 |
+| 2026-08-28T16:08:38Z | game-check | 868.168 | 3655.666 | 79.990 | 4.30 | 0 | f049f5290 | campaign/the-overture | ambrose | 12 |
+| 2026-08-28T16:10:49Z | gate-commit | 124.567 | 112.118 | 35.989 | 1.19 | 0 | f049f5290 | campaign/the-overture | ambrose | 12 |

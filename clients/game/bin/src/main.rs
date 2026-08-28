@@ -8,7 +8,7 @@
 //! dependency (crossterm) is enough for this campaign.
 
 use hornvale_game::driver::Driver;
-use hornvale_game::{input, term};
+use hornvale_game::{boot, input, term};
 use hornvale_game_core::{CommandLine, MIN_HEIGHT, MIN_WIDTH};
 use hornvale_vessel::PossessTarget;
 
@@ -49,12 +49,17 @@ fn run(args: &[String]) -> Result<(), String> {
         .map_err(|e| format!("--seed must be a u64: {e}"))?;
     let target = parse_target(args)?;
 
-    let mut driver = Driver::start(seed, target).map_err(|e| e.to_string())?;
-
-    // The terminal is opened only once genesis and the possession have
-    // already succeeded — a failure above prints a normal error to a normal
-    // shell rather than needing the raw-mode screen restored first.
+    // The terminal now opens BEFORE genesis (The Overture, Task 1): every
+    // later view needs the screen live from the first frame, not blank
+    // until genesis finishes. That inversion means a genesis or possession
+    // failure below now happens with the terminal already in raw mode on
+    // the alternate screen, so `boot::start_and_report` explicitly
+    // restores it before this function's `?` ever hands the error back to
+    // `main`'s `eprintln!` — see that module's doc for why this is a
+    // tested seam rather than a hope resting on `Term`'s `Drop` backstop.
     let term = term::Term::open().map_err(|e| e.to_string())?;
+    let mut driver = boot::start_and_report(&term, || Driver::start(seed, target))?;
+
     let outcome = play(&mut driver, &term);
     // Explicit drop before reporting any error: whatever `play` returns, the
     // user's terminal must be sane before they read the message.
