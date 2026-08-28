@@ -3627,6 +3627,12 @@ measured here.
 | 2026-08-28T01:30:44Z | sluice:outboard | 41.394 | 25.514 | 39.078 | 1.56 | 0 | 2687e8cf2 |  | lefford | 40 |
 | 2026-08-28T01:38:26Z | sluice:gate | 461.319 | 12986.049 | 494.036 | 29.22 | 0 | aeaec47d1 |  | lefford | 40 |
 | 2026-08-28T01:46:29Z | sluice:clients | 483.345 | 5828.634 | 81.039 | 12.23 | 0 | c6424e5fb |  | lefford | 40 |
+| 2026-08-28T12:38:15Z | gate-commit | 97.602 | 110.101 | 36.214 | 1.50 | 0 | b01932c71 | campaign/the-precedence | ambrose | 12 |
+| 2026-08-28T12:51:06Z | gate-commit | 87.659 | 63.388 | 34.781 | 1.12 | 0 | 520cd5027 | campaign/the-precedence | ambrose | 12 |
+| 2026-08-28T13:00:20Z | gate-commit | 87.607 | 63.430 | 35.195 | 1.13 | 0 | 1221b85aa | campaign/the-precedence | ambrose | 12 |
+| 2026-08-28T13:12:02Z | rebaseline | 100.305 | 266.619 | 15.132 | 2.81 | 0 | 4fe99a9f7 | campaign/the-precedence | ambrose | 12 |
+| 2026-08-28T13:15:35Z | rebaseline | 81.164 | 267.038 | 15.290 | 3.48 | 0 | 1bf9c4a9f | campaign/the-precedence | ambrose | 12 |
+| 2026-08-28T13:17:33Z | gate-commit | 97.934 | 98.348 | 35.995 | 1.37 | 0 | 1bf9c4a9f | campaign/the-precedence | ambrose | 12 |
 | 2026-08-28T01:56:14Z | rebaseline | 124.990 | 258.686 | 14.209 | 2.18 | 0 | 402cdfab8 | campaign/the-quadrat | ambrose | 12 |
 | 2026-08-28T01:59:30Z | gate-commit | 191.015 | 484.945 | 66.203 | 2.89 | 0 | 402cdfab8 | campaign/the-quadrat | ambrose | 12 |
 | 2026-08-28T02:22:51Z | sluice:artifacts | 116.503 | 928.751 | 38.860 | 8.31 | 0 | 035caae71 |  | lefford | 40 |
@@ -3667,3 +3673,11 @@ measured here.
 | 2026-08-28T16:45:53Z | gate-commit | 20.570 | 49.872 | 12.879 | 3.05 | 0 | 80eff56ff | campaign/the-governor | MacBookPro | 10 |
 | 2026-08-28T16:57:54Z | gate-commit | 28.818 | 56.844 | 19.925 | 2.66 | 0 | 6c945669b | campaign/the-governor | MacBookPro | 10 |
 | 2026-08-28T16:58:41Z | gate-commit | 20.591 | 50.020 | 12.917 | 3.06 | 0 | 6c945669b | campaign/the-governor | MacBookPro | 10 |
+| 2026-08-28T13:32:03Z | rebaseline | 193.823 | 285.493 | 17.144 | 1.56 | 0 | 221bd7c49 | campaign/the-precedence | ambrose | 12 |
+| 2026-08-28T13:40:36Z | gate-commit | 311.316 | 1097.505 | 118.456 | 3.91 | 0 | 221bd7c49 | campaign/the-precedence | ambrose | 12 |
+| 2026-08-28T14:03:00Z | gate-commit | 91.625 | 59.638 | 31.912 | 1.00 | 0 | 26e5921a7 | campaign/the-precedence | ambrose | 12 |
+| 2026-08-28T14:34:27Z | gate-commit | 95.530 | 54.763 | 27.789 | 0.86 | 0 | beb39b901 | campaign/the-precedence | ambrose | 12 |
+| 2026-08-28T14:38:38Z | sluice:artifacts | 122.201 | 807.028 | 31.793 | 6.86 | 0 | 67e329d76 |  | lefford | 40 |
+| 2026-08-28T14:39:19Z | sluice:outboard | 40.069 | 24.974 | 38.323 | 1.58 | 0 | e1d138455 |  | lefford | 40 |
+| 2026-08-28T14:47:17Z | sluice:gate | 477.741 | 13144.926 | 443.540 | 28.44 | 0 | 4bc54599d |  | lefford | 40 |
+| 2026-08-28T14:55:44Z | sluice:clients | 506.344 | 9298.929 | 88.501 | 18.54 | 0 | 6764d2d71 |  | lefford | 40 |
