@@ -2,7 +2,7 @@
 
 **Campaign:** The Offer · **Branch:** `campaign/the-offer` ·
 **Decision block:** 0346–0355 (main ceiling 0338 at reservation) ·
-**Drafted:** 2026-08-27 · **Status:** G3 package pending.
+**Drafted:** 2026-08-27 · **Status:** Shipped and closed 2026-08-27 (chronicle `book/src/chronicle/the-offer.md`; decisions 0346-0353). Task 8 (the wire field) dropped by owner ruling; §5 records why.
 
 **Arc IV.a of The Bridle** (`docs/superpowers/specs/2026-08-19-the-bridle-metaplan.md:310`).
 Predecessors: The Tackle (I.a), The Deed (I.b), The Hand (II), The Coercion (III).
@@ -378,7 +378,19 @@ old and this is its first application outside the campaign that minted it.
 2. **A new verb ships declaring required properties only** — no object change —
    and it appears on every object that qualifies.
 3. The four surfaces of §4 provably derive from one source.
-4. No verb×object table exists, by grep.
+4. **No verb×object table exists in the offer's own module**, by a source
+   scan. **Narrowed at close, and the narrowing is the finding.** The clause
+   was written "anywhere", and read strictly that is false of this branch:
+   `Session::warm` shipped its first draft gating on `AnchorKind::Hearth`
+   directly — the campaign's own new verb reintroducing the coupling the
+   campaign abolishes — and `interior/field.rs`'s `warmth_at` still contains
+   `kind != AnchorKind::Hearth` today. What is actually enforced is that no
+   such table exists in `windows/vessel/src/affordance.rs`, in one syntactic
+   shape (a match arm whose pattern names an `AnchorKind` variant and whose
+   body mentions `OfferedVerb::`), plus a second scan asserting `Session::
+   warm`'s own body names no `AnchorKind` literal. A table in another file,
+   reached through a helper, or keyed on something else is not seen; both
+   guards say so in their own doc comments. See decision 0350.
 
 **(1) and (2) together are the M+N proof; either one alone is satisfiable by an
 M×N table.** (1) passes trivially if verbs are hardcoded per kind and you add a

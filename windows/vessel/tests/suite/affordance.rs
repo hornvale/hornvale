@@ -607,6 +607,27 @@ fn block_body_after_isolates_exactly_the_matched_block() {
 /// crate::interior::AnchorKind::Hearth` — reddens (confirmed in the fix
 /// wave's report) while every other `warm`/`examine` test stays green,
 /// exactly the I1 finding.
+///
+/// **The direction this enforces, stated so it cannot be mistaken for a
+/// broader guarantee** — the same disclosure
+/// `anchor_kind_arm_mentions_offered_verb` above carries, for the same
+/// reason. This scans exactly the block `block_body_after` isolates for
+/// `fn warm(&self) -> Turn {`, for exactly the literal text
+/// `AnchorKind::`. **Extracting the gate into a one-line private helper
+/// defeats it while it stays green**: `fn hearth_here(i: &Interior) ->
+/// bool { i.ids().iter().any(|&a| i.anchor(a).kind ==
+/// AnchorKind::Hearth) }`, called from `warm`, moves the literal out of
+/// the block this reads and reintroduces the coupling with no test
+/// objecting. A re-reviewer BUILT that evasion and confirmed it. Nor does
+/// this see a coupling reached through a re-exported alias, a
+/// fully-qualified path that never spells `AnchorKind::`, or a gate keyed
+/// on something other than an anchor kind. The concrete in-tree instance,
+/// the same one the sibling guard names: `interior/field.rs`'s
+/// `warmth_at` contains `if interior.anchor(id).kind !=
+/// AnchorKind::Hearth { continue; }` — a live kind-to-behaviour coupling
+/// neither guard can see, because it is in another file and mentions no
+/// `OfferedVerb`. Acceptance clause (4) is worded against what these two
+/// scans actually cover (spec §6, decision 0350), not against "anywhere".
 #[test]
 fn no_hardcoded_anchor_kind_gates_warm() {
     let src = include_str!("../../src/session.rs");
