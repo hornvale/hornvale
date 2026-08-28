@@ -3489,3 +3489,5 @@ measured here.
 | 2026-08-28T01:30:44Z | sluice:outboard | 41.394 | 25.514 | 39.078 | 1.56 | 0 | 2687e8cf2 |  | lefford | 40 |
 | 2026-08-28T01:38:26Z | sluice:gate | 461.319 | 12986.049 | 494.036 | 29.22 | 0 | aeaec47d1 |  | lefford | 40 |
 | 2026-08-28T01:46:29Z | sluice:clients | 483.345 | 5828.634 | 81.039 | 12.23 | 0 | c6424e5fb |  | lefford | 40 |
+| 2026-08-28T01:56:14Z | rebaseline | 124.990 | 258.686 | 14.209 | 2.18 | 0 | 402cdfab8 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-28T01:59:30Z | gate-commit | 191.015 | 484.945 | 66.203 | 2.89 | 0 | 402cdfab8 | campaign/the-quadrat | ambrose | 12 |
