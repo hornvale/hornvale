@@ -3547,3 +3547,4 @@ measured here.
 | 2026-08-28T02:09:06Z | gate-commit | 20.479 | 49.695 | 12.825 | 3.05 | 0 | eaa73ca38 | campaign/the-offer | MacBookPro | 10 |
 | 2026-08-28T02:11:07Z | gate-commit | 20.306 | 49.527 | 12.335 | 3.05 | 0 | 830bd3d1d | campaign/the-offer | MacBookPro | 10 |
 | 2026-08-28T02:22:11Z | gate-commit | 21.139 | 50.215 | 12.740 | 2.98 | 0 | ec25992ab | campaign/the-offer | MacBookPro | 10 |
+| 2026-08-28T02:41:24Z | sluice:artifacts | 117.092 | 930.730 | 40.480 | 8.29 | 0 | 9fcffbdbe |  | lefford | 40 |
