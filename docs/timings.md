@@ -3698,3 +3698,4 @@ measured here.
 | 2026-08-28T22:16:33Z | gate-commit | 25.608 | 51.246 | 12.727 | 2.50 | 0 | 72915d423 | campaign/the-governor | MacBookPro | 10 |
 | 2026-08-28T22:18:18Z | gate-commit | 24.155 | 52.156 | 13.506 | 2.72 | 0 | 72915d423 | campaign/the-governor | MacBookPro | 10 |
 | 2026-08-28T22:23:01Z | gate-commit | 33.532 | 63.990 | 13.973 | 2.33 | 0 | f8458bda8 | campaign/the-governor | MacBookPro | 10 |
+| 2026-08-28T22:23:43Z | gate-commit | 23.169 | 50.240 | 12.633 | 2.71 | 0 | f8458bda8 | campaign/the-governor | MacBookPro | 10 |
