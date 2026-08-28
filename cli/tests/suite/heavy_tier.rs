@@ -444,6 +444,23 @@ fn the_untokenised_ignore_reasons_are_exactly_this_roster() {
 // cannot silently vanish from `make gate-full`. This is the same guard for
 // the same class of drift, one directory over — now applied to two classes
 // rather than one, each still checked in both directions.
+//
+// A THIRD MARKER, `front-loaded` (The Governor, Task 1), tags BOTH tables
+// above rather than adding a table of its own. `threads-required =
+// "num-cpus"` makes nextest drain the WHOLE runner before starting the
+// pinned test, then restart everything scheduled after it from cold — a
+// barrier tax measured at 484 s and 485 s on two runs of this tier, at
+// different SHAs, against a ~1068 s theoretical optimum on a 1552 s tier.
+// `priority = 100` (nextest 0.9.140, `i8`, higher runs earlier) makes
+// nextest schedule the reserving test FIRST instead, so the drain happens
+// once, at the start, instead of mid-run. Verified on a seven-test scratch
+// probe outside this repo (four cores): no `priority`, wall 10.076 s, the
+// reserving test completes 3rd; `priority = 100` on the reserving test and
+// `priority = 50` on the tier's next-longest test, wall 8.041 s, the
+// reserving test completes 1st. A positive control (`priority = 500`) is
+// rejected by nextest with `invalid type: 64-bit integer 500, expected an
+// signed 8 bit integer`, which is why the config parses `priority` as
+// `i8` at all rather than silently ignoring an out-of-range value.
 // ============================================================================
 
 /// Where the serialized-battery pins live.
@@ -491,66 +508,73 @@ fn pinned_filter_names_for_class(marker: &str) -> Vec<String> {
         "{NEXTEST_CONFIG} has no `[[profile.default.overrides]]` table at all"
     );
 
-    let mut target: Option<&[&str]> = None;
+    // A class marker may tag MORE THAN ONE override table (The Governor,
+    // Task 1). Every class before `front-loaded` tagged exactly one table,
+    // so this used to assert uniqueness and return a single block's names.
+    // `front-loaded` tags BOTH the scatter-sweep and wall-clock-budget
+    // tables — every test that reserves the whole runner is front-loaded,
+    // and those two classes are what reserves it — so this now collects
+    // names from every table the marker tags, rather than assuming one.
+    // `serialized_filter_names()` and `budget_filter_names()` below still
+    // call this with markers that tag exactly one table each, so this is a
+    // strict generalization: their return values are unchanged.
+    let mut targets: Vec<&[&str]> = Vec::new();
     for (bi, &start) in block_starts.iter().enumerate() {
         let end = block_starts.get(bi + 1).copied().unwrap_or(lines.len());
         let block = &lines[start..end];
         if block.iter().any(|l| l.trim() == class_line) {
-            assert!(
-                target.is_none(),
-                "more than one override table in {NEXTEST_CONFIG} is tagged \
-                 {class_line:?} — the marker must be unique per class"
-            );
-            target = Some(block);
+            targets.push(block);
         }
     }
-    let block = target.unwrap_or_else(|| {
-        panic!(
-            "no override table in {NEXTEST_CONFIG} is tagged {class_line:?}. The \
-             `{class_line}` marker line lives INSIDE the `[[profile.default.overrides]]` \
-             table it identifies (see this file's section comment)."
-        )
-    });
-
-    // SETTINGS ONLY, never comments. Found by mutation-testing this guard:
-    // deleting the real `threads-required` line left the check GREEN, because
-    // the section comment above the override quotes the setting verbatim while
-    // explaining it. A guard that a comment can satisfy is not a guard.
-    let settings: Vec<&str> = block
-        .iter()
-        .map(|l| l.trim())
-        .filter(|l| !l.starts_with('#') && !l.is_empty())
-        .collect();
     assert!(
-        settings.contains(&THREADS_REQUIRED),
-        "the {class_line:?} table in {NEXTEST_CONFIG} has no live {THREADS_REQUIRED:?} \
-         SETTING (a comment mentioning it does not count). The serialization pin for \
-         this class is GONE, which silently re-exposes it to canonical-box contention \
-         — see this file's section comment."
-    );
-    let filter_lines: Vec<&str> = settings
-        .iter()
-        .copied()
-        .filter(|l| l.starts_with("filter = ") && l.contains("test(/"))
-        .collect();
-    assert_eq!(
-        filter_lines.len(),
-        1,
-        "expected exactly one `filter = ` line naming tests in the {class_line:?} \
-         table of {NEXTEST_CONFIG}; found {}.",
-        filter_lines.len()
+        !targets.is_empty(),
+        "no override table in {NEXTEST_CONFIG} is tagged {class_line:?}. The \
+         `{class_line}` marker line lives INSIDE the `[[profile.default.overrides]]` \
+         table it identifies (see this file's section comment)."
     );
 
     let mut names = Vec::new();
-    let mut rest = filter_lines[0];
-    while let Some((_, after)) = rest.split_once("test(/") {
-        let (name, tail) = after
-            .split_once("$/)")
-            .expect("a test(/…/) term in the filterset is end-anchored with `$/)`");
-        names.push(name.to_string());
-        rest = tail;
+    for block in targets {
+        // SETTINGS ONLY, never comments. Found by mutation-testing this guard:
+        // deleting the real `threads-required` line left the check GREEN, because
+        // the section comment above the override quotes the setting verbatim while
+        // explaining it. A guard that a comment can satisfy is not a guard.
+        let settings: Vec<&str> = block
+            .iter()
+            .map(|l| l.trim())
+            .filter(|l| !l.starts_with('#') && !l.is_empty())
+            .collect();
+        assert!(
+            settings.contains(&THREADS_REQUIRED),
+            "the {class_line:?} table in {NEXTEST_CONFIG} has no live {THREADS_REQUIRED:?} \
+             SETTING (a comment mentioning it does not count). The serialization pin for \
+             this class is GONE, which silently re-exposes it to canonical-box contention \
+             — see this file's section comment."
+        );
+        let filter_lines: Vec<&str> = settings
+            .iter()
+            .copied()
+            .filter(|l| l.starts_with("filter = ") && l.contains("test(/"))
+            .collect();
+        assert_eq!(
+            filter_lines.len(),
+            1,
+            "expected exactly one `filter = ` line naming tests in the {class_line:?} \
+             table of {NEXTEST_CONFIG}; found {}.",
+            filter_lines.len()
+        );
+
+        let mut rest = filter_lines[0];
+        while let Some((_, after)) = rest.split_once("test(/") {
+            let (name, tail) = after
+                .split_once("$/)")
+                .expect("a test(/…/) term in the filterset is end-anchored with `$/)`");
+            names.push(name.to_string());
+            rest = tail;
+        }
     }
     names.sort();
+    names.dedup();
     names
 }
 
@@ -562,6 +586,28 @@ fn serialized_filter_names() -> Vec<String> {
 /// The wall-clock-budget class's pinned roster (The Ballast).
 fn budget_filter_names() -> Vec<String> {
     pinned_filter_names_for_class("wall-clock-budget")
+}
+
+/// Every test that reserves the whole runner — the union of both
+/// `threads-required = "num-cpus"` classes above (The Governor, Task 1).
+/// Built from [`serialized_filter_names`] and [`budget_filter_names`]
+/// unchanged, so it is exactly "whichever named classes reserve the
+/// runner today", not a blanket scan of the config file.
+fn whole_runner_filter_names() -> Vec<String> {
+    let mut names = serialized_filter_names();
+    names.extend(budget_filter_names());
+    names.sort();
+    names.dedup();
+    names
+}
+
+/// The `front-loaded` class's pinned roster (The Governor, Task 1): every
+/// test given a `priority` so nextest starts it before draining the runner
+/// for it mid-tier. Unlike the two classes above, this marker tags BOTH the
+/// scatter-sweep and wall-clock-budget tables — see
+/// [`pinned_filter_names_for_class`]'s comment on why that is safe.
+fn front_loaded_filter_names() -> Vec<String> {
+    pinned_filter_names_for_class("front-loaded")
 }
 
 /// Every heavy-tagged test whose body calls [`SWEEP_CALL`] — i.e. every heavy
@@ -734,5 +780,38 @@ fn the_serialization_pin_names_exactly_the_wall_clock_budget_tests_marked_co_sch
          schedules the unpinned budget test alongside the rest of the tier, and it \
          may fail under contention for reasons that have nothing to do with the code \
          it measures."
+    );
+}
+
+/// Every test that reserves the whole runner must also be front-loaded, and
+/// nothing else may be.
+///
+/// DIRECTION, STATED SO IT CANNOT BE MISREAD AS TOTAL: this asserts set
+/// EQUALITY between the `threads-required = "num-cpus"` roster and the
+/// `priority`-carrying roster. It does not check that the priority VALUE is
+/// sensible, only that the two rosters name the same tests.
+///
+/// WHY: a `threads-required = "num-cpus"` test that is not front-loaded makes
+/// nextest drain the entire runner mid-run and restart the remainder cold.
+/// Measured on the canonical box, twice, at different SHAs: a 484-485 s
+/// barrier tax on a 1551 s tier.
+#[test]
+fn every_whole_runner_test_is_front_loaded() {
+    let reserving = whole_runner_filter_names();
+    let front_loaded = front_loaded_filter_names();
+
+    assert!(
+        !reserving.is_empty(),
+        "found no test reserving the whole runner in {NEXTEST_CONFIG}. Either \
+         the roster emptied (then this guard asserts nothing) or the key was \
+         renamed — the one outcome it must never quietly reach."
+    );
+    assert_eq!(
+        reserving, front_loaded,
+        "\n{NEXTEST_CONFIG}: the whole-runner roster and the front-loaded \
+         roster have diverged.\n  reserves the runner: {reserving:?}\n  \
+         front-loaded:        {front_loaded:?}\nA reserving test that is not \
+         front-loaded costs a full drain plus a cold restart of everything \
+         scheduled after it."
     );
 }

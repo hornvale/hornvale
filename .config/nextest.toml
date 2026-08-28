@@ -92,8 +92,30 @@
 # `--run-ignored`, so neither has ever run these three.
 [[profile.default.overrides]]
 # class: scatter-sweep
+# class: front-loaded
 filter = 'test(/the_mires_preregistered_readout$/) | test(/the_fares_preregistered_readout$/) | test(/the_fares_exploratory_readout$/)'
 threads-required = "num-cpus"
+# `priority = 100` (The Governor, Task 1): FRONT-LOAD the barrier this class
+# already pays. `threads-required = "num-cpus"` reserves the whole runner,
+# but without a priority nextest schedules a reserving test wherever it
+# falls in run order — mid-tier here, since `the_mires_preregistered_readout`
+# sat 47th of 118. That drains every OTHER running test first (including an
+# 891 s pole test), runs the reservation alone, then restarts the remaining
+# 71 tests from cold. Measured on the canonical box, twice, at different
+# SHAs: a 484 s and a 485 s barrier tax against a ~1068 s theoretical
+# optimum, on a 1552 s tier. `priority` is `i8` (-128..=127, cargo-nextest
+# 0.9.140 on both hosts), higher runs first; 100 schedules these three
+# batteries before anything else, so the drain happens once, at the start.
+#
+# VERIFIED, NOT ARGUED: a seven-test scratch probe outside this repo
+# (`/tmp/gov-probe`, four-worker pool, one `threads-required = "num-cpus"`
+# test placed mid-order). No `priority`: wall 10.076 s, the reserving test
+# completes 3rd. `priority = 100` on the reserving test and `priority = 50`
+# on the tier's next-longest test: wall 8.041 s, the reserving test
+# completes 1st. Positive control: `priority = 500` is rejected with
+# `invalid type: 64-bit integer 500, expected an signed 8 bit integer`,
+# proving nextest reads this file rather than ignoring an unknown key.
+priority = 100
 
 # A SECOND CLASS (The Ballast): WALL-CLOCK BUDGET TESTS PINNED AS VICTIMS,
 # NOT SOURCES. The block above protects everything ELSE from three batteries
@@ -129,8 +151,17 @@ threads-required = "num-cpus"
 # independently, in both directions, against its own class marker.
 [[profile.default.overrides]]
 # class: wall-clock-budget
+# class: front-loaded
 filter = 'test(/a_possessed_turn_stays_within_its_ceilings$/) | test(/scene_api_cost_is_bounded_on_seed_42$/)'
 threads-required = "num-cpus"
+# `priority = 100` (The Governor, Task 1) — same reason as the scatter-sweep
+# table above: this class ALSO reserves the whole runner (it is pinned as a
+# VICTIM of tier contention rather than a SOURCE, but `threads-required =
+# "num-cpus"` still drains everything else and cold-restarts it either way),
+# so it must also be scheduled first rather than wherever it happens to fall
+# in run order. See the scatter-sweep table's comment for the measured
+# barrier tax and the scratch-probe arms that verified `priority` moves it.
+priority = 100
 
 # UNUSED since The Sexton (Task 3): `make gate` (the only caller of the
 # duration alarm now that `make ci` is an alias for it, see the Makefile's
