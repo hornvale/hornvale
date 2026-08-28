@@ -319,6 +319,35 @@ Each stage ends with a heavy run on the canonical box (~26 min queued), because
 every claim in this campaign is about wall time and none of them can be
 verified locally.
 
+**Stage 0 — The two census redundancies.** Independent of everything below and
+runnable in parallel with it. Both confirmed present at `2f8faf243`:
+
+- `spearman_defensibility_capacity` (`windows/lab/src/metrics.rs:5540`) calls
+  `connection_graph_of(v.world(), ...)`, which re-derives terrain and climate
+  through `crate::terrain_of` / `crate::climate_from`
+  (`windows/worldgen/src/graph_derive.rs:193-200`) while the `FullView` it was
+  handed already holds both. Fix: a `connection_graph_from(world, &terrain,
+  &climate, cfg)` adapter that `connection_graph_of` also delegates to — the
+  adapter split is already the file's own idiom (`connection_graph` /
+  `connection_graph_at` / `connection_graph_of`).
+- `hornvale_worldgen::demography_report_from` is called at `metrics.rs:2431`
+  and `:2476` from two separate metric closures, rebuilding the identical
+  report.
+
+Both are pure plumbing; a correct fix is byte-identical, so no census refresh
+is needed and a moved golden means the change is wrong.
+
+**Why it is in this campaign rather than its own.** It shares the subject —
+an expensive tier costing more than it needs to — and, more decisively, its
+verification window is **open now and perishable**: piece A's whole correctness
+proof is "the census goldens do not move", and the goldens were independently
+confirmed current today (§9). Every census that lands between now and whenever
+this is picked up re-opens the question of what the fix is being compared
+against. A confirmed-current baseline is an asset that decays.
+
+*Success:* `make lab-diff` shows no metric moved and the live-probe fixture
+test stays green; the census's measured cost falls.
+
 **Stage 1 — Front-load the barrier.** `priority` on the exclusive tests in
 `.config/nextest.toml`. Config only, no adjudication, mechanism already
 verified. Ships first because it is the cheapest thing that moves the number
@@ -354,7 +383,10 @@ Sources' rule. Bisection before repair; classification, not confirmation.
 **Stage 7 — The gating decision (C), and its decision record.** Taken against
 the measured post-Stage-5 cost, not a projection.
 
-Stages 1-4 are independent of 5-6 and may interleave; 7 depends on all of them.
+Stage 0 is independent of all of them and touches no file any other stage
+touches (`windows/lab/src/metrics.rs`, `windows/worldgen/src/graph_derive.rs`
+against scheduling config, `#[ignore]` strings and test bodies). Stages 1-4 are
+independent of 5-6 and may interleave; 7 depends on 1-6.
 
 ---
 
