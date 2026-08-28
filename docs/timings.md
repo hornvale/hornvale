@@ -3764,3 +3764,4 @@ measured here.
 | 2026-08-28T20:17:20Z | rebaseline | 105.461 | 312.052 | 14.827 | 3.10 | 0 | 6755d6f05 | campaign/the-stile | MacBookPro | 10 |
 | 2026-08-28T20:36:29Z | sluice:artifacts | 70.615 | 696.548 | 25.170 | 10.22 | 0 | 5272fd05d |  | lefford | 40 |
 | 2026-08-28T20:37:10Z | sluice:outboard | 41.061 | 25.222 | 38.856 | 1.56 | 0 | 6e7e9fe35 |  | lefford | 40 |
+| 2026-08-28T20:44:38Z | sluice:gate | 447.773 | 13018.949 | 409.363 | 29.99 | 0 | 957994933 |  | lefford | 40 |
