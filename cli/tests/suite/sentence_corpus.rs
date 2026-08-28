@@ -642,6 +642,89 @@ fn the_covered_entries_are_m05_m06_m07_m09_and_m10() {
     );
 }
 
+/// Every intra-doc link in this file whose target begins
+/// `merchant_coverage_is_` names a function that exists in this file.
+///
+/// **This guards a rot mechanism this campaign watched produce a defect.** The
+/// headline test's name states the score, so it is renamed every time the score
+/// moves — zero, then two, then five. The Stile's Task 6 found a doc comment
+/// still pointing at `merchant_coverage_is_zero_of_twelve`, a test that had not
+/// existed for two campaigns, and fixed it; four live references to the current
+/// name remain, and each of them will dangle on the next move by exactly the
+/// same route.
+///
+/// **Prose discipline was the obvious repair and it is the one that already
+/// failed.** Nothing mechanical would have caught the stale reference: an
+/// unresolved intra-doc link is a *rustdoc* diagnostic, invisible to nextest,
+/// to clippy, to the doctest runner and to `gate-commit`
+/// (`TOOL-rustdoc-links`). So the reference is checked here instead, by the one
+/// instrument that does run — a text scan over this file's own source, in the
+/// same suite as the test it points at. A rename that misses a doc comment is
+/// already a commit-gate change (`docs/timings/subfloor-roster.tsv` selects by
+/// exact name), so the author is editing this file anyway when this reds.
+///
+/// Scope is narrow on purpose: it resolves references matching
+/// `merchant_coverage_is_*` only, and only against `fn` definitions in this
+/// file. It is not a general intra-doc link checker and does not stand in for
+/// one — `TOOL-rustdoc-links` still names the missing instrument.
+#[test]
+fn every_reference_to_the_headline_test_names_a_function_in_this_file() {
+    let source = std::fs::read_to_string(repo_root().join("cli/tests/suite/sentence_corpus.rs"))
+        .expect("this test file is readable from the repo root");
+
+    let defined: BTreeSet<&str> = source
+        .lines()
+        .filter_map(|l| l.trim().strip_prefix("fn "))
+        .filter_map(|rest| rest.split('(').next())
+        .collect();
+
+    // The stem is matched on its own and the opening `` [` `` checked from the
+    // bytes before it, so this test's own search literal is not itself a
+    // bracket-backtick link and cannot match. A candidate that is not a bare
+    // Rust identifier is not a link to a function either — a `…` placeholder
+    // in prose, say — so it is skipped rather than reported dangling.
+    const STEM: &str = "merchant_coverage_is_";
+    let bytes = source.as_bytes();
+    let mut referenced: BTreeSet<&str> = BTreeSet::new();
+    for (offset, _) in source.match_indices(STEM) {
+        if offset < 2 || bytes[offset - 2] != b'[' || bytes[offset - 1] != b'`' {
+            continue;
+        }
+        let after = &source[offset..];
+        let Some(end) = after.find('`') else { continue };
+        let name = &after[..end];
+        if name
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+        {
+            referenced.insert(name);
+        }
+    }
+
+    assert_eq!(
+        referenced.len(),
+        1,
+        "expected exactly one distinct headline-test link target in this file, \
+         found {referenced:?} — the headline test is referenced by four doc \
+         comments and all four must name the same current test. An empty set \
+         means the scan broke (a moved file path, or a changed link syntax), \
+         not that the references went away."
+    );
+
+    let dangling: Vec<&&str> = referenced.difference(&defined).collect();
+    assert!(
+        dangling.is_empty(),
+        "intra-doc links naming a headline test that does not exist in this \
+         file: {dangling:?}. The headline test's name states the score and is \
+         renamed whenever the score moves; every doc comment pointing at it \
+         has to move in the same commit. Defined here: {:?}",
+        defined
+            .iter()
+            .filter(|f| f.starts_with(STEM))
+            .collect::<Vec<_>>()
+    );
+}
+
 /// The entries sitting at exactly ONE missing demand, each with the token
 /// that blocks it — the frozen distance report.
 ///
