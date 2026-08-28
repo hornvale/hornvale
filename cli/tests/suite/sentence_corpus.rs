@@ -56,7 +56,7 @@ use hornvale_language::{
     Argument, Clause, CommonVocabulary, Coordination, Definiteness, Evidential, Number, Person,
     Polarity, Subject, Tense, realize_common, realize_common_coordination,
 };
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 fn repo_root() -> PathBuf {
@@ -138,27 +138,213 @@ const IMPLEMENTED_DEMANDS: &[&str] = &[
     "epistemic-hedge",
 ];
 
-/// One corpus entry, as read from `sentences/*.corpus.json`. Only the fields
-/// the resolver and the report need; unrecognized JSON fields (`name`,
-/// `provenance` at the document root) are ignored by default.
-#[derive(serde::Deserialize)]
+/// Whether a corpus entry states what the grammar must **parse** (a player
+/// line, read from the world) or **produce** (an NPC line, or any of the
+/// ladder's rungs). `None` when the corpus states nothing at all — see
+/// [`read_declared`] and [`read_derived`]'s own docs for which corpora leave
+/// it unset, and Task 3's discussion for why an absent direction is never
+/// inferred from `speaker` or any other field.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum Direction {
+    /// The grammar must parse this text.
+    Parse,
+    /// The grammar must produce this text.
+    Produce,
+}
+
+/// One corpus entry, normalized to a single shape regardless of which of
+/// the three corpora produced it. A `the-merchant`/`the-flood-watch` entry
+/// gets its `demands` [`read_declared`] — straight off the corpus's own
+/// `demands` field; a `the-ladder` entry has no such field on disk and gets
+/// its `demands` [`read_derived`] instead, as the transitive closure of its
+/// `presupposes` chain. Both readers produce this same type so every other
+/// function here — `demand_covered`, `entry_covered`, `missing_demands`, the
+/// witness, the report — is written once and works for any corpus.
 struct Entry {
+    /// The entry's corpus-assigned id (`"m05"`, `"fw042"`, `"r006"`, …).
     id: String,
-    speaker: String,
+    /// Who utters the entry, when the corpus states one. The ladder's rungs
+    /// have no speaker at all — they are a production instrument, not
+    /// dialogue — so this is optional even though every entry in the two
+    /// declared corpora carries one.
+    speaker: Option<String>,
+    /// The entry's authored English.
     text: String,
+    /// The demand tokens this entry makes on the grammar. Declared
+    /// (verbatim, in the corpus's own order) for `the-merchant` and
+    /// `the-flood-watch`; derived (the transitive closure of `presupposes`,
+    /// collected into sorted order — there is no "authored order" for a
+    /// computed set to preserve) for `the-ladder`.
     demands: Vec<String>,
+    /// This entry's [`Direction`], or `None` when the corpus states
+    /// nothing.
+    #[allow(dead_code)] // consumed starting Task 3 (the three-bucket report)
+    direction: Option<Direction>,
 }
 
 /// The corpus document's shape: only what the resolver reads.
-#[derive(serde::Deserialize)]
 struct Corpus {
     entries: Vec<Entry>,
 }
 
+/// The on-disk shape `the-merchant.corpus.json` and
+/// `the-flood-watch.corpus.json` share: `demands` and (where stated)
+/// `direction` are read exactly as authored. Unrecognized JSON fields
+/// (`scene`, `note`, `name`, `provenance` at the document root, …) are
+/// ignored by default. See [`LadderEntryJson`] for the opposite shape.
+#[derive(serde::Deserialize)]
+struct DeclaredEntryJson {
+    id: String,
+    #[serde(default)]
+    speaker: Option<String>,
+    text: String,
+    #[serde(default)]
+    demands: Vec<String>,
+    #[serde(default)]
+    direction: Option<String>,
+}
+
+/// The declared-shape document: only what [`read_declared`] needs.
+#[derive(serde::Deserialize)]
+struct DeclaredCorpusJson {
+    entries: Vec<DeclaredEntryJson>,
+}
+
+/// Parse a raw `"direction"` JSON string into a [`Direction`], or `None`
+/// when the field was absent (`the-merchant` states nothing — see the
+/// module's direction discussion). Panics loudly on any value that is
+/// neither `"parse"` nor `"produce"`, the same fail-fast posture every
+/// other loader here takes on malformed data.
+fn parse_direction(raw: Option<&str>) -> Option<Direction> {
+    match raw {
+        None => None,
+        Some("parse") => Some(Direction::Parse),
+        Some("produce") => Some(Direction::Produce),
+        Some(other) => panic!("unknown direction {other:?}; expected \"parse\" or \"produce\""),
+    }
+}
+
+/// Read a declared-shape corpus (`the-merchant`, `the-flood-watch`):
+/// `demands` is read as authored, never derived — see [`read_derived`] for
+/// the ladder's opposite reader. **A corpus file carries one shape or the
+/// other, never both**; writing a derived `demands` list back into the
+/// ladder would state the same fact twice, the duplicated-rule shape whose
+/// cheapest repair is to delete the check.
+fn read_declared(path: &Path) -> Vec<Entry> {
+    let text = std::fs::read_to_string(path)
+        .unwrap_or_else(|e| panic!("{} is committed: {e}", path.display()));
+    let doc: DeclaredCorpusJson = serde_json::from_str(&text)
+        .unwrap_or_else(|e| panic!("{} parses as the declared shape: {e}", path.display()));
+    doc.entries
+        .into_iter()
+        .map(|e| Entry {
+            id: e.id,
+            speaker: e.speaker,
+            text: e.text,
+            demands: e.demands,
+            direction: parse_direction(e.direction.as_deref()),
+        })
+        .collect()
+}
+
+/// The ladder's on-disk shape (`the-ladder.corpus.json.DRAFT`): a rung
+/// declares the ONE token it introduces (`null` for none) and the rungs it
+/// presupposes; it carries no `demands` field and no `speaker` at all. See
+/// [`DeclaredEntryJson`] for the opposite shape.
+#[derive(serde::Deserialize)]
+struct LadderEntryJson {
+    id: String,
+    text: String,
+    #[serde(default)]
+    introduces: Option<String>,
+    #[serde(default)]
+    presupposes: Vec<String>,
+}
+
+/// The ladder document's shape: only what [`read_derived`] needs.
+#[derive(serde::Deserialize)]
+struct LadderCorpusJson {
+    entries: Vec<LadderEntryJson>,
+}
+
+/// The transitive closure of `presupposes` for one rung, collecting every
+/// reached rung's `introduces` token (a rung whose `introduces` is `null`
+/// contributes nothing itself but its presuppositions are still walked).
+/// Returned in sorted order via a [`BTreeSet`] — a derived set has no
+/// "authored order" to preserve, and the workspace bans `HashSet`.
+///
+/// **This is the whole feature, not a helper.** A one-level reader — the
+/// union of only `id`'s direct presuppositions' own `introduces`, without
+/// continuing past them — produces a plausible, smaller set that looks
+/// fine; Task 2 pins a rung where the two answers differ.
+fn derived_demands(id: &str, by_id: &BTreeMap<&str, &LadderEntryJson>) -> Vec<String> {
+    let mut visited: BTreeSet<&str> = BTreeSet::new();
+    let mut demands: BTreeSet<String> = BTreeSet::new();
+    let mut stack = vec![id];
+    while let Some(rung_id) = stack.pop() {
+        if !visited.insert(rung_id) {
+            continue;
+        }
+        let rung = by_id
+            .get(rung_id)
+            .unwrap_or_else(|| panic!("presupposes references unknown rung {rung_id:?}"));
+        if let Some(token) = &rung.introduces {
+            demands.insert(token.clone());
+        }
+        stack.extend(rung.presupposes.iter().map(String::as_str));
+    }
+    demands.into_iter().collect()
+}
+
+/// Read the ladder (`the-ladder.corpus.json.DRAFT`): each rung's `demands`
+/// is [`derived_demands`] — the transitive closure of `presupposes` — never
+/// read from disk, because the ladder carries no `demands` field to read.
+/// Every entry's [`Direction`] is `Produce`: the ladder declares itself a
+/// production instrument in its own `production_axis` block, and every rung
+/// is prose the grammar must generate, never player input it must parse.
+fn read_derived(path: &Path) -> Vec<Entry> {
+    let text = std::fs::read_to_string(path)
+        .unwrap_or_else(|e| panic!("{} is committed: {e}", path.display()));
+    let doc: LadderCorpusJson = serde_json::from_str(&text)
+        .unwrap_or_else(|e| panic!("{} parses as the ladder shape: {e}", path.display()));
+
+    let by_id: BTreeMap<&str, &LadderEntryJson> =
+        doc.entries.iter().map(|e| (e.id.as_str(), e)).collect();
+
+    doc.entries
+        .iter()
+        .map(|e| Entry {
+            id: e.id.clone(),
+            speaker: None,
+            text: e.text.clone(),
+            demands: derived_demands(e.id.as_str(), &by_id),
+            direction: Some(Direction::Produce),
+        })
+        .collect()
+}
+
 fn load_merchant_corpus(root: &Path) -> Corpus {
-    let text = std::fs::read_to_string(root.join("sentences/the-merchant.corpus.json"))
-        .expect("the merchant corpus is committed");
-    serde_json::from_str(&text).expect("the merchant corpus parses as the frozen shape")
+    Corpus {
+        entries: read_declared(&root.join("sentences/the-merchant.corpus.json")),
+    }
+}
+
+/// Load `the-flood-watch.corpus.json` through the same declared reader
+/// [`load_merchant_corpus`] uses — it shares the merchant corpus's shape,
+/// plus fields (`scene`, `note`, a per-entry `direction`) this resolver
+/// either ignores or already reads.
+#[allow(dead_code)] // consumed starting Task 3
+fn load_flood_watch_corpus(root: &Path) -> Corpus {
+    Corpus {
+        entries: read_declared(&root.join("sentences/the-flood-watch.corpus.json")),
+    }
+}
+
+/// Load `the-ladder.corpus.json.DRAFT` through [`read_derived`].
+fn load_ladder_corpus(root: &Path) -> Corpus {
+    Corpus {
+        entries: read_derived(&root.join("sentences/the-ladder.corpus.json.DRAFT")),
+    }
 }
 
 /// Whether a single demand token has a construction in this campaign.
@@ -426,9 +612,10 @@ fn distance_zero_is_exactly_coverage() {
 fn a_classify_only_entry_resolves_as_covered() {
     let synthetic = Entry {
         id: "synthetic-positive-control".to_string(),
-        speaker: "player".to_string(),
+        speaker: Some("player".to_string()),
         text: "(synthetic, never in the frozen corpus)".to_string(),
         demands: vec!["classify".to_string()],
+        direction: None,
     };
     assert!(
         entry_covered(&synthetic),
@@ -478,9 +665,10 @@ fn the_negative_control_token_is_genuinely_uncovered() {
 fn an_unimplemented_demand_resolves_as_not_yet() {
     let synthetic = Entry {
         id: "synthetic-negative-control".to_string(),
-        speaker: "player".to_string(),
+        speaker: Some("player".to_string()),
         text: "(synthetic, never in the frozen corpus)".to_string(),
         demands: vec![UNCOVERED_TOKEN.to_string()],
+        direction: None,
     };
     assert!(!entry_covered(&synthetic));
 }
@@ -491,11 +679,46 @@ fn an_unimplemented_demand_resolves_as_not_yet() {
 fn a_mixed_entry_needs_every_demand_covered() {
     let synthetic = Entry {
         id: "synthetic-mixed".to_string(),
-        speaker: "player".to_string(),
+        speaker: Some("player".to_string()),
         text: "(synthetic, never in the frozen corpus)".to_string(),
         demands: vec!["classify".to_string(), UNCOVERED_TOKEN.to_string()],
+        direction: None,
     };
     assert!(!entry_covered(&synthetic));
+}
+
+// ---------------------------------------------------------------------
+// Task 1 (The Stile): one internal entry, two readers
+// ---------------------------------------------------------------------
+
+/// **Was the RED probe for Task 1 Step 2.** Before [`read_derived`] existed,
+/// this test deserialized `the-ladder.corpus.json.DRAFT` straight into the
+/// old `speaker`+`demands`-requiring `Entry`/`Corpus` shape, which panicked
+/// on a missing field — proving nothing could read the ladder at all. It now
+/// asserts the real thing: r004 ("The long road runs to the shrine.")
+/// presupposes r003 ("The road is long."), which presupposes r001 ("The
+/// woman is a merchant."). Its own `introduces` is `attributive-adjective`;
+/// r003's is `property-predication`; r001's is `classify`. A one-level
+/// reader would stop at r003's own `introduces` and never reach r001's
+/// `classify` — that is exactly the shallow-closure bug Task 2 pins
+/// directly; this test only needs the readers to exist and compute past one
+/// level.
+#[test]
+fn a_ladder_rung_derives_its_transitive_demand_set() {
+    let corpus = load_ladder_corpus(&repo_root());
+    let r004 = corpus
+        .entries
+        .iter()
+        .find(|e| e.id == "r004")
+        .expect("r004 is a ladder rung");
+    assert_eq!(
+        r004.demands,
+        vec![
+            "attributive-adjective".to_string(),
+            "classify".to_string(),
+            "property-predication".to_string(),
+        ]
+    );
 }
 
 // ---------------------------------------------------------------------
@@ -827,7 +1050,7 @@ fn sentence_coverage_report() {
         out.push_str(&format!(
             "| {} | {} | {} | {} | {status} |\n",
             entry.id,
-            entry.speaker,
+            entry.speaker.as_deref().unwrap_or("—"),
             entry.text.replace('|', "\\|"),
             entry.demands.join(", "),
         ));
