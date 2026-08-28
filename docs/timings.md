@@ -3653,3 +3653,5 @@ measured here.
 | 2026-08-28T03:25:06Z | sluice:gate | 417.166 | 12165.872 | 396.829 | 30.11 | 0 | aea8c41b6 |  | lefford | 40 |
 | 2026-08-28T03:33:14Z | sluice:clients | 488.257 | 8747.528 | 71.712 | 18.06 | 0 | f7be9a191 |  | lefford | 40 |
 | 2026-08-28T12:49:05Z | gate-commit | 93.324 | 382.083 | 111.329 | 5.29 | 0 | 6c7cc3ee8 | campaign/the-sources | MacBookPro | 10 |
+| 2026-08-28T12:50:57Z | rebaseline | 60.443 | 277.465 | 14.309 | 4.83 | 0 | 62365347e | campaign/the-sources | MacBookPro | 10 |
+| 2026-08-28T12:51:25Z | gate-commit | 20.276 | 50.034 | 12.532 | 3.09 | 0 | 62365347e | campaign/the-sources | MacBookPro | 10 |
