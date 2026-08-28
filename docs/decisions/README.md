@@ -230,3 +230,8 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0306](0306-a-hosts-cooperation-is-derived-from-doctrine-and-conduct-never-authored.md) | A host's cooperation is derived from doctrine and conduct, never authored | Accepted |
 | [0307](0307-a-deliberate-falsehood-is-a-distinct-testimony-variant-from-a-lexical-substitution.md) | A deliberate falsehood is a distinct testimony variant from a lexical substitution | Accepted |
 | [0308](0308-prior-and-fold-are-stored-separately-their-disagreement-is-the-output.md) | Prior and fold are stored separately; their disagreement is the output | Accepted |
+| [0326](0326-a-clause-complement-rides-the-transitive-frame-no-sentential-valence.md) | A clause complement rides the transitive frame — no `Valence::Sentential` | Accepted |
+| [0327](0327-embedding-and-coordination-are-two-operators-a-slot-and-a-list.md) | Embedding and coordination are two operators — a slot and a list | Accepted |
+| [0328](0328-embedding-nests-one-level-a-cap-on-demonstrated-depth.md) | Embedding nests one level — a cap on demonstrated depth, not a safety belt | Accepted |
+| [0329](0329-subordination-strategy-and-conjunction-are-drawn-per-tongue.md) | Subordination strategy and conjunction are drawn per tongue, not assumed | Accepted |
+| [0330](0330-the-corpus-score-is-demonstrated-not-declared.md) | The corpus score is demonstrated, not declared | Accepted |

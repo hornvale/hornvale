@@ -220,6 +220,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `temperate-forest` | a biome class | *Shrongdeeng | /ʃroŋdeeŋ/ |
 | `temperate-grassland` | a biome class | *Sruunggang | /sruuŋgaŋ/ |
 | `temperate-rainforest` | a biome class | *Zhrung | /ʒruŋ/ |
+| `think` | to hold an uncertain belief | *Bungbaong | /buŋbaoŋ/ |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | *Tuongdeng | /tuoŋdeŋ/ |
 | `tide` | the rise and fall of the waters under the moons | *Pengngeong | /peŋŋeoŋ/ |
 | `treant-kind` | a treant | *Geong | /geoŋ/ |

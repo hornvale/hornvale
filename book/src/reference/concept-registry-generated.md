@@ -353,6 +353,7 @@
 | `temperate-forest` | climate | terrain | a biome class |
 | `temperate-grassland` | climate | terrain | a biome class |
 | `temperate-rainforest` | climate | terrain | a biome class |
+| `think` | language | act | to hold an uncertain belief |
 | `thorn-scrub` | climate | substance | Dry scrub of thorned shrubs. |
 | `tide` | astronomy | celestial | the rise and fall of the waters under the moons |
 | `treant-kind` | species | living | a treant |

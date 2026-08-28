@@ -218,6 +218,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `temperate-forest` | a biome class | *Nadash | /nadaʃ/ |
 | `temperate-grassland` | a biome class | *Qadaq | /qadaq/ |
 | `temperate-rainforest` | a biome class | *Qajang | /qajaŋ/ |
+| `think` | to hold an uncertain belief | *Gangav | /gaŋav/ |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | *Qatat | /qatat/ |
 | `tide` | the rise and fall of the waters under the moons | *Xangash | /xaŋaʃ/ |
 | `treant-kind` | a treant | *Vajaq | /vajaq/ |

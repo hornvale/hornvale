@@ -205,6 +205,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `temperate-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-forest |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
+| `think` | to hold an uncertain belief | Goodgag | /goodgag/ | Kóenkáng | Kóenkáng → no change → Goodgag |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | — | — | — | gap (experiential): black-dragon has no exposure to 'thorn-scrub' |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): black-dragon has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): black-dragon has no exposure to 'treant-kind' |
@@ -443,6 +444,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `temperate-forest` | a biome class | Da | /da/ | Na | Na → no change → Da |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-grassland' |
 | `temperate-rainforest` | a biome class | Daodao | /daodao/ | Daenao | Daenao → no change → Daodao |
+| `think` | to hold an uncertain belief | Boo | /boo/ | Peo | Peo → lenition → Boo |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | — | — | — | gap (experiential): bugbear has no exposure to 'thorn-scrub' |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): bugbear has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): bugbear has no exposure to 'treant-kind' |
@@ -681,6 +683,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `temperate-forest` | a biome class | Nadash | /nadaʃ/ | Nadash | Nadash → no change → Nadash |
 | `temperate-grassland` | a biome class | Qadaq | /qadaq/ | Qadaq | Qadaq → no change → Qadaq |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
+| `think` | to hold an uncertain belief | Gangav | /gaŋav/ | Gangav | Gangav → no change → Gangav |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | Qadad | /qadad/ | Qatat | Qatat → lenition → Qadad |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): desert-dwarf has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): desert-dwarf has no exposure to 'treant-kind' |
@@ -919,6 +922,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `temperate-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-forest' |
 | `temperate-grassland` | a biome class | Szuuṅgaṅ | /szuuŋgaŋ/ | Sruunggang | Sruunggang → no change → Szuuṅgaṅ |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
+| `think` | to hold an uncertain belief | Puṅpaoṅ | /puŋpaoŋ/ | Bungbaong | Bungbaong → no change → Puṅpaoṅ |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | Puoṅzeṅ | /puoŋzeŋ/ | Tuongdeng | Tuongdeng → no change → Puoṅzeṅ |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): desert-elf has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): desert-elf has no exposure to 'treant-kind' |
@@ -1157,6 +1161,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `temperate-forest` | a biome class | Rogdoo | /rogdoo/ | Shrongdeeng | Shrongdeeng → clustersimplify → finalloss → Rogdoo |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
+| `think` | to hold an uncertain belief | Bogbao | /bogbao/ | Bungbaong | Bungbaong → finalloss → Bogbao |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | — | — | — | gap (experiential): drow has no exposure to 'thorn-scrub' |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): drow has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): drow has no exposure to 'treant-kind' |
@@ -1395,6 +1400,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `temperate-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-forest |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-grassland' |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
+| `think` | to hold an uncertain belief | Zmoopsmop | /zmoopsmop/ | Zmoofsmof | Zmoofsmof → fortition → Zmoopsmop |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | Shngaax | /ʃŋaax/ | Shngaax | Shngaax → no change → Shngaax |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): gnoll has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): gnoll has no exposure to 'treant-kind' |
@@ -1633,6 +1639,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `temperate-forest` | a biome class | Na | /na/ | Na | Na → no change → Na |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
+| `think` | to hold an uncertain belief | Beo | /beo/ | Peo | Peo → no change → Beo |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | — | — | — | gap (experiential): goblin has no exposure to 'thorn-scrub' |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): goblin has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): goblin has no exposure to 'treant-kind' |
@@ -1871,6 +1878,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `temperate-forest` | a biome class | Nabash | /nabaʃ/ | Nadash | Nadash → no change → Nabash |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
+| `think` | to hold an uncertain belief | Gangab | /gaŋab/ | Gangav | Gangav → no change → Gangab |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'thorn-scrub' |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): gully-dwarf has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): gully-dwarf has no exposure to 'treant-kind' |
@@ -2109,6 +2117,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `temperate-forest` | a biome class | Šromdeem | /ʃromdeem/ | Shrongdeeng | Shrongdeeng → no change → Šromdeem |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
+| `think` | to hold an uncertain belief | Bombaom | /bombaom/ | Bungbaong | Bungbaong → no change → Bombaom |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | — | — | — | gap (experiential): high-elf has no exposure to 'thorn-scrub' |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): high-elf has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): high-elf has no exposure to 'treant-kind' |
@@ -2347,6 +2356,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `temperate-forest` | a biome class | Mabash | /mabaʃ/ | Nadash | Nadash → no change → Mabash |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
+| `think` | to hold an uncertain belief | Gangav | /gaŋav/ | Gangav | Gangav → no change → Gangav |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'thorn-scrub' |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): hill-dwarf has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): hill-dwarf has no exposure to 'treant-kind' |
@@ -2585,6 +2595,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `temperate-forest` | a biome class | Na | /na/ | Na | Na → no change → Na |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-grassland' |
 | `temperate-rainforest` | a biome class | Baenao | /baenao/ | Daenao | Daenao → no change → Baenao |
+| `think` | to hold an uncertain belief | Beo | /beo/ | Peo | Peo → no change → Beo |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | — | — | — | gap (experiential): hobgoblin has no exposure to 'thorn-scrub' |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): hobgoblin has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): hobgoblin has no exposure to 'treant-kind' |
@@ -2823,6 +2834,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `temperate-forest` | a biome class | Pera | /pera/ | Pera | Pera → no change → Pera |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
+| `think` | to hold an uncertain belief | Fee | /fee/ | Kfee | Kfee → clustersimplify → Fee |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | — | — | — | gap (experiential): human has no exposure to 'thorn-scrub' |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): human has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): human has no exposure to 'treant-kind' |
@@ -3061,6 +3073,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `temperate-forest` | a biome class | Xoxa | /xoxa/ | Xoxa | Xoxa → no change → Xoxa |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
+| `think` | to hold an uncertain belief | Xaoraroo | /xaoraroo/ | Xaoraroo | Xaoraroo → no change → Xaoraroo |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | Xororao | /xororao/ | Xororao | Xororao → no change → Xororao |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): kobold has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): kobold has no exposure to 'treant-kind' |
@@ -3299,6 +3312,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `temperate-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-forest |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
+| `think` | to hold an uncertain belief | Koodkad | /koodkad/ | Kóenkáng | Kóenkáng → no change → Koodkad |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | — | — | — | gap (experiential): red-dragon has no exposure to 'thorn-scrub' |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): red-dragon has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): red-dragon has no exposure to 'treant-kind' |
@@ -3537,6 +3551,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `temperate-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-forest' |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
+| `think` | to hold an uncertain belief | Bunbaun | /bunbaun/ | Bungbaong | Bungbaong → vowelshift → Bunbaun |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | — | — | — | gap (experiential): sea-elf has no exposure to 'thorn-scrub' |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): sea-elf has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): sea-elf has no exposure to 'treant-kind' |
@@ -3775,6 +3790,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `temperate-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-forest |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
+| `think` | to hold an uncertain belief | Boṅbaoṅ | /boŋbaoŋ/ | Bungbaong | Bungbaong → no change → Boṅbaoṅ |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | — | — | — | gap (experiential): snow-elf has no exposure to 'thorn-scrub' |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): snow-elf has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): snow-elf has no exposure to 'treant-kind' |
@@ -4013,6 +4029,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `temperate-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-forest |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
+| `think` | to hold an uncertain belief | Koonkang | /koonkaŋ/ | Kóenkáng | Kóenkáng → no change → Koonkang |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | — | — | — | gap (experiential): white-dragon has no exposure to 'thorn-scrub' |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): white-dragon has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): white-dragon has no exposure to 'treant-kind' |
@@ -4251,6 +4268,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `temperate-forest` | a biome class | Sduṅdee | /sduŋdee/ | Shrongdeeng | Shrongdeeng → finalloss → vowelshift → Sduṅdee |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
+| `think` | to hold an uncertain belief | Duṅdau | /duŋdau/ | Bungbaong | Bungbaong → finalloss → vowelshift → Duṅdau |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | — | — | — | gap (experiential): wood-elf has no exposure to 'thorn-scrub' |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): wood-elf has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): wood-elf has no exposure to 'treant-kind' |
@@ -4342,6 +4360,7 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | `starlit` | dark faintly lit by stars | *Deeng /deeŋ/ | Doog /doog/ | Dood /dood/ | Doong /dooŋ/ | *Deeng → Doog / Dood / Doong |
 | `stone` | rock | *Gaommén /gaomme˥n/ | Gaoddod /gaoddod/ | Daoddod /daoddod/ | Daonnon /daonnon/ | *Gaommén → Gaoddod / Daoddod / Daonnon |
 | `sun` | the sun | *Káammóang /ka˥ammo˥aŋ/ | Gaaddoag /gaaddoag/ | Kaaddoad /kaaddoad/ | Kaannoang /kaannoaŋ/ | *Káammóang → Gaaddoag / Kaaddoad / Kaannoang |
+| `think` | to hold an uncertain belief | *Kóenkáng /ko˥enka˥ŋ/ | Goodgag /goodgag/ | Koodkad /koodkad/ | Koonkang /koonkaŋ/ | *Kóenkáng → Goodgag / Koodkad / Koonkang |
 | `tree` | a woody plant | *Maan /maan/ | Daad /daad/ | Daad /daad/ | Naan /naan/ | *Maan → Daad / Daad / Naan |
 | `two` | the cardinal number 2 | *Pang /paŋ/ | Dag /dag/ | Kad /kad/ | Kang /kaŋ/ | *Pang → Dag / Kad / Kang |
 | `under` | beneath; below | *Kongpén /koŋpe˥n/ | Gogdod /gogdod/ | Kodkod /kodkod/ | Kongkon /koŋkon/ | *Kongpén → Gogdod / Kodkod / Kongkon |
@@ -4419,6 +4438,7 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | `stone` | rock | *Shazaq /ʃazaq/ | Shadaq /ʃadaq/ | Shanaq /ʃanaq/ | Shasaq /ʃasaq/ | *Shazaq → Shadaq / Shanaq / Shasaq |
 | `sun` | the sun | *Qashax /qaʃax/ | Qashax /qaʃax/ | Qashax /qaʃax/ | Qashax /qaʃax/ | *Qashax → Qashax / Qashax / Qashax |
 | `temperate-forest` | a biome class | *Nadash /nadaʃ/ | Nadash /nadaʃ/ | Nabash /nabaʃ/ | Mabash /mabaʃ/ | *Nadash → Nadash / Nabash / Mabash |
+| `think` | to hold an uncertain belief | *Gangav /gaŋav/ | Gangav /gaŋav/ | Gangab /gaŋab/ | Gangav /gaŋav/ | *Gangav → Gangav / Gangab / Gangav |
 | `tree` | a woody plant | *Najan /najan/ | Najan /najan/ | Najan /najan/ | Majam /majam/ | *Najan → Najan / Najan / Majam |
 | `two` | the cardinal number 2 | *Tavad /tavad/ | Davad /davad/ | Tabab /tabab/ | Tavab /tavab/ | *Tavad → Davad / Tabab / Tavab |
 | `under` | beneath; below | *Qavaz /qavaz/ | Qavad /qavad/ | Qaban /qaban/ | Qavas /qavas/ | *Qavaz → Qavad / Qaban / Qavas |
@@ -4496,6 +4516,7 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | `starlit` | dark faintly lit by stars | *Deengsroeng /deeŋsroeŋ/ | Zeeṅszoeṅ /zeeŋszoeŋ/ | Doogsroo /doogsroo/ | Deemsroem /deemsroem/ | Deensruen /deensruen/ | Booṅsrooṅ /booŋsrooŋ/ | Deeṅsdue /deeŋsdue/ | *Deengsroeng → Zeeṅszoeṅ / Doogsroo / Deemsroem / Deensruen / Booṅsrooṅ / Deeṅsdue |
 | `stone` | rock | *Peengngung /peeŋŋuŋ/ | Peeṅṅuṅ /peeŋŋuŋ/ | Pooggo /pooggo/ | Beemmom /beemmom/ | Peennun /peennun/ | Booṅṅoṅ /booŋŋoŋ/ | Teeṅṅu /teeŋŋu/ | *Peengngung → Peeṅṅuṅ / Pooggo / Beemmom / Peennun / Booṅṅoṅ / Teeṅṅu |
 | `sun` | the sun | *Tungzhreong /tuŋʒreoŋ/ | Puṅžzeoṅ /puŋʒzeoŋ/ | Pogžroo /pogʒroo/ | Domžreom /domʒreom/ | Tunžreun /tunʒreun/ | Toṅzrooṅ /toŋzrooŋ/ | Tuṅzdeu /tuŋzdeu/ | *Tungzhreong → Puṅžzeoṅ / Pogžroo / Domžreom / Tunžreun / Toṅzrooṅ / Tuṅzdeu |
+| `think` | to hold an uncertain belief | *Bungbaong /buŋbaoŋ/ | Puṅpaoṅ /puŋpaoŋ/ | Bogbao /bogbao/ | Bombaom /bombaom/ | Bunbaun /bunbaun/ | Boṅbaoṅ /boŋbaoŋ/ | Duṅdau /duŋdau/ | *Bungbaong → Puṅpaoṅ / Bogbao / Bombaom / Bunbaun / Boṅbaoṅ / Duṅdau |
 | `tree` | a woody plant | *Dengshreng /deŋʃreŋ/ | Zeṅšzeṅ /zeŋʃzeŋ/ | Dogšro /dogʃro/ | Demšrem /demʃrem/ | Denšren /denʃren/ | Boṅšroṅ /boŋʃroŋ/ | Deṅsde /deŋsde/ | *Dengshreng → Zeṅšzeṅ / Dogšro / Demšrem / Denšren / Boṅšroṅ / Deṅsde |
 | `two` | the cardinal number 2 | *Ngeengzhrung /ŋeeŋʒruŋ/ | Ṅeeṅžzuṅ /ŋeeŋʒzuŋ/ | Googžro /googʒro/ | Meemžrom /meemʒrom/ | Neenžrun /neenʒrun/ | Ṅooṅzroṅ /ŋooŋzroŋ/ | Ṅeeṅzdu /ŋeeŋzdu/ | *Ngeengzhrung → Ṅeeṅžzuṅ / Googžro / Meemžrom / Neenžrun / Ṅooṅzroṅ / Ṅeeṅzdu |
 | `under` | beneath; below | *Ngengngaeng /ŋeŋŋaeŋ/ | Ṅeṅṅaeṅ /ŋeŋŋaeŋ/ | Goggao /goggao/ | Memmaem /memmaem/ | Nennaen /nennaen/ | Ṅoṅṅaoṅ /ŋoŋŋaoŋ/ | Ṅeṅṅae /ŋeŋŋae/ | *Ngengngaeng → Ṅeṅṅaeṅ / Goggao / Memmaem / Nennaen / Ṅoṅṅaoṅ / Ṅeṅṅae |
@@ -4573,6 +4594,7 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | `stone` | rock | *Peotea /peotea/ | Boodoa /boodoa/ | Beotea /beotea/ | Beotea /beotea/ | *Peotea → Boodoa / Beotea / Beotea |
 | `sun` | the sun | *Pago /pago/ | Bago /bago/ | Babo /babo/ | Bago /bago/ | *Pago → Bago / Babo / Bago |
 | `temperate-forest` | a biome class | *Na /na/ | Da /da/ | Na /na/ | Na /na/ | *Na → Da / Na / Na |
+| `think` | to hold an uncertain belief | *Peo /peo/ | Boo /boo/ | Beo /beo/ | Beo /beo/ | *Peo → Boo / Beo / Beo |
 | `tree` | a woody plant | *Nena /nena/ | Doda /doda/ | Nena /nena/ | Nena /nena/ | *Nena → Doda / Nena / Nena |
 | `two` | the cardinal number 2 | *Qaanoa /qaanoa/ | Qaadoa /qaadoa/ | Taanoa /taanoa/ | Qaanoa /qaanoa/ | *Qaanoa → Qaadoa / Taanoa / Qaanoa |
 | `under` | beneath; below | *Qapea /qapea/ | Qaboa /qaboa/ | Tabea /tabea/ | Qabea /qabea/ | *Qapea → Qaboa / Tabea / Qabea |

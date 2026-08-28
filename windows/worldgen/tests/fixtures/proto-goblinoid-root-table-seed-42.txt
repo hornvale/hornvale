@@ -182,6 +182,7 @@ taiga: Qe /qe/
 temperate-forest: Na /na/
 temperate-grassland: Noo /noo/
 temperate-rainforest: Daenao /daenao/
+think: Peo /peo/
 thorn-scrub: Nako /nako/
 tide: Nea /nea/
 treant-kind: Nana /nana/
