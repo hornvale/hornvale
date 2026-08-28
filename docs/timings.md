@@ -3667,3 +3667,4 @@ measured here.
 | 2026-08-28T16:44:55Z | gate-commit | 99.758 | 56.213 | 25.866 | 0.82 | 0 | 8d62c6cd4 | campaign/the-overture | ambrose | 12 |
 | 2026-08-28T18:04:12Z | game-check | 816.113 | 3839.334 | 96.468 | 4.82 | 0 | 636b81d55 | campaign/the-overture | ambrose | 12 |
 | 2026-08-28T18:06:31Z | gate-commit | 131.909 | 205.302 | 53.835 | 1.96 | 0 | 636b81d55 | campaign/the-overture | ambrose | 12 |
+| 2026-08-28T18:10:53Z | gate-commit | 83.766 | 51.085 | 25.559 | 0.91 | 0 | 636b81d55 | campaign/the-overture | ambrose | 12 |
