@@ -3021,6 +3021,22 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T19:07:32Z | sluice:outboard | 40.639 | 24.736 | 37.217 | 1.52 | 0 | 214b4bc25 |  | lefford | 40 |
 | 2026-08-26T19:14:54Z | sluice:gate | 441.681 | 11982.538 | 459.550 | 28.17 | 0 | d57b92b96 |  | lefford | 40 |
 | 2026-08-26T19:22:34Z | sluice:clients | 459.193 | 5690.223 | 98.628 | 12.61 | 0 | 2a95bb183 |  | lefford | 40 |
+| 2026-08-26T20:24:01Z | prewarm | 479.774 | 1633.666 | 96.893 | 3.61 | 0 | 5d8975d4b | campaign/the-foliot | ambrose | 12 |
+| 2026-08-26T21:13:54Z | gate-commit | 118.099 | 116.239 | 34.776 | 1.28 | 0 | 69dd78b72 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-26T21:15:23Z | gate-commit | 78.903 | 50.157 | 24.250 | 0.94 | 0 | 69dd78b72 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-26T22:20:40Z | gate-commit | 124.805 | 61.034 | 27.500 | 0.71 | 0 | 3dcc6d11f | campaign/the-foliot | ambrose | 12 |
+| 2026-08-26T22:22:11Z | gate-commit | 90.901 | 55.955 | 25.415 | 0.90 | 0 | 3dcc6d11f | campaign/the-foliot | ambrose | 12 |
+| 2026-08-26T22:30:33Z | gate-commit | 2.628 | 1.673 | 0.232 | 0.72 | 0 | 27bd671cc | campaign/the-foliot | ambrose | 12 |
+| 2026-08-26T22:33:19Z | gate-commit | 156.265 | 329.000 | 65.090 | 2.52 | 0 | 27bd671cc | campaign/the-foliot | ambrose | 12 |
+| 2026-08-26T22:34:16Z | rebaseline | 49.037 | 101.619 | 11.136 | 2.30 | 0 | 27bd671cc | campaign/the-foliot | ambrose | 12 |
+| 2026-08-26T22:36:09Z | rebaseline | 96.330 | 255.716 | 14.353 | 2.80 | 0 | 27bd671cc | campaign/the-foliot | ambrose | 12 |
+| 2026-08-26T22:37:57Z | gate-commit | 77.891 | 49.310 | 23.378 | 0.93 | 0 | 27bd671cc | campaign/the-foliot | ambrose | 12 |
+| 2026-08-26T23:52:10Z | rebaseline | 126.548 | 260.225 | 15.206 | 2.18 | 0 | 23d95df45 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-26T23:57:19Z | gate-commit | 10.148 | 14.685 | 4.003 | 1.84 | 0 | 23d95df45 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T00:00:35Z | gate-commit | 151.658 | 227.183 | 53.860 | 1.85 | 0 | 23d95df45 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T00:02:50Z | gate-commit | 121.313 | 59.344 | 27.496 | 0.72 | 0 | 23d95df45 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T00:17:28Z | gate-commit | 134.990 | 69.560 | 34.193 | 0.77 | 0 | b54dc1b65 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T00:20:31Z | rebaseline | 173.898 | 254.528 | 15.116 | 1.55 | 0 | a3fbbd05b | campaign/the-foliot | ambrose | 12 |
 | 2026-08-26T19:59:57Z | prewarm | 162.336 | 1137.705 | 49.028 | 7.31 | 0 | 26a4ad087 | campaign/the-inquest | MacBookPro | 10 |
 | 2026-08-26T20:27:13Z | gate-commit | 6.033 | 13.673 | 3.161 | 2.79 | 0 | f3a9921e4 | campaign/the-inquest | MacBookPro | 10 |
 | 2026-08-26T20:28:56Z | gate-commit | 59.961 | 244.690 | 39.840 | 4.75 | 0 | f3a9921e4 | campaign/the-inquest | MacBookPro | 10 |
@@ -3051,6 +3067,11 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T23:44:26Z | sluice:outboard | 40.477 | 25.203 | 38.643 | 1.58 | 0 | 8dba99971 |  | lefford | 40 |
 | 2026-08-26T23:51:18Z | sluice:gate | 411.396 | 11765.232 | 389.665 | 29.55 | 0 | 9844da73c |  | lefford | 40 |
 | 2026-08-26T23:58:46Z | sluice:clients | 447.235 | 5528.263 | 64.562 | 12.51 | 0 | 5ae6b9d63 |  | lefford | 40 |
+| 2026-08-27T01:22:06Z | rebaseline | 135.942 | 251.068 | 14.616 | 1.95 | 0 | d906b9d9c | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T01:33:51Z | gate-commit | 189.342 | 188.142 | 34.498 | 1.18 | 0 | d906b9d9c | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T01:36:44Z | gate-commit | 94.166 | 54.915 | 26.739 | 0.87 | 0 | b209cbc8b | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T11:43:35Z | gate-commit | 102.522 | 59.186 | 28.515 | 0.86 | 0 | 5edf1bfc7 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T11:48:01Z | gate-commit | 82.528 | 53.339 | 25.501 | 0.96 | 0 | 69bed0683 | campaign/the-foliot | ambrose | 12 |
 | 2026-08-27T11:19:18Z | gate-commit | 16.602 | 13.452 | 0.369 | 0.83 | 0 | 6be98c51c | campaign/the-coercion | MacBookPro | 10 |
 | 2026-08-27T11:20:39Z | gate-commit | 45.076 | 97.029 | 18.790 | 2.57 | 0 | 6be98c51c | campaign/the-coercion | MacBookPro | 10 |
 | 2026-08-27T11:56:14Z | rebaseline | 54.134 | 255.807 | 12.526 | 4.96 | 0 | 7f07091ab | campaign/the-coercion | MacBookPro | 10 |
@@ -3096,10 +3117,16 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T11:41:38Z | sluice:outboard | 41.781 | 26.059 | 40.143 | 1.58 | 0 | bb980c704 |  | lefford | 40 |
 | 2026-08-27T11:49:28Z | sluice:gate | 470.178 | 13059.773 | 507.185 | 28.85 | 0 | 4e89b35a9 |  | lefford | 40 |
 | 2026-08-27T11:57:21Z | sluice:clients | 472.495 | 5776.730 | 91.999 | 12.42 | 0 | 046c6701e |  | lefford | 40 |
+| 2026-08-27T12:01:19Z | rebaseline | 156.716 | 268.733 | 15.974 | 1.82 | 0 | 5b1c1eefc | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T12:09:19Z | gate-commit | 192.683 | 462.018 | 75.041 | 2.79 | 0 | 5b1c1eefc | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T12:12:35Z | gate-commit | 79.625 | 49.582 | 24.728 | 0.93 | 0 | 1f7c6cc10 | campaign/the-foliot | ambrose | 12 |
 | 2026-08-27T13:39:02Z | sluice:artifacts | 65.026 | 588.585 | 22.843 | 9.40 | 0 | 72f8f2329 |  | lefford | 40 |
 | 2026-08-27T13:39:44Z | sluice:outboard | 41.035 | 25.504 | 39.419 | 1.58 | 0 | 88131d41b |  | lefford | 40 |
 | 2026-08-27T13:46:28Z | sluice:gate | 403.814 | 11816.072 | 383.447 | 30.21 | 0 | cd50ef805 |  | lefford | 40 |
 | 2026-08-27T13:53:57Z | sluice:clients | 449.544 | 5638.098 | 66.301 | 12.69 | 0 | a8927ebed |  | lefford | 40 |
+| 2026-08-27T12:40:35Z | census | 918.590 | 30192.179 | 296.150 | 33.19 | 0 | 1f7c6cc10 |  | lefford | 40 |
+| 2026-08-27T14:28:10Z | gate-commit | 164.519 | 59.299 | 30.746 | 0.55 | 0 | 915860fe2 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T14:41:04Z | gate-commit | 91.878 | 59.575 | 31.155 | 0.99 | 0 | 915860fe2 | campaign/the-foliot | ambrose | 12 |
 | 2026-08-27T13:55:10Z | sluice:artifacts | 65.199 | 601.286 | 22.807 | 9.57 | 0 | afbc51ab2 |  | lefford | 40 |
 | 2026-08-27T13:55:51Z | sluice:outboard | 40.568 | 24.682 | 36.455 | 1.51 | 0 | 0b8246444 |  | lefford | 40 |
 | 2026-08-27T14:02:40Z | sluice:gate | 408.752 | 11813.916 | 384.359 | 29.84 | 0 | 1ffa04a49 |  | lefford | 40 |
@@ -3108,6 +3135,11 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T14:13:36Z | sluice:outboard | 42.125 | 26.053 | 39.033 | 1.55 | 0 | 2b86972df |  | lefford | 40 |
 | 2026-08-27T14:20:20Z | sluice:gate | 403.254 | 11799.077 | 382.526 | 30.21 | 0 | d93820ac1 |  | lefford | 40 |
 | 2026-08-27T14:27:48Z | sluice:clients | 448.401 | 5586.402 | 71.171 | 12.62 | 0 | f002f79c3 |  | lefford | 40 |
+| 2026-08-27T14:44:08Z | rebaseline | 110.377 | 284.137 | 20.748 | 2.76 | 0 | 4e994ea0f | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T14:46:48Z | gate-commit | 133.174 | 62.752 | 32.146 | 0.71 | 0 | 4e994ea0f | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T15:31:41Z | gate-commit | 187.202 | 66.681 | 33.606 | 0.54 | 0 | 363635880 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T15:39:13Z | gate-commit | 292.905 | 434.550 | 84.551 | 1.77 | 0 | 3dad9e9e8 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T15:40:59Z | gate-commit | 105.980 | 60.505 | 32.347 | 0.88 | 0 | 3dad9e9e8 | campaign/the-foliot | ambrose | 12 |
 | 2026-08-27T14:29:19Z | rebaseline | 97.975 | 261.490 | 13.058 | 2.80 | 0 | b4154630b | campaign/the-coercion | MacBookPro | 10 |
 | 2026-08-27T14:31:49Z | gate-commit | 136.917 | 786.058 | 95.018 | 6.44 | 0 | b4154630b | campaign/the-coercion | MacBookPro | 10 |
 | 2026-08-27T14:49:29Z | gate-commit | 20.756 | 49.632 | 12.549 | 3.00 | 0 | ad4644d58 | campaign/the-coercion | MacBookPro | 10 |
@@ -3150,3 +3182,52 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T23:42:33Z | gate-commit | 20.418 | 49.505 | 12.666 | 3.04 | 0 | 4b3c8266f | campaign/the-offer | MacBookPro | 10 |
 | 2026-08-27T23:47:40Z | gate-commit | 55.487 | 103.689 | 96.673 | 3.61 | 0 | c52ecf532 | campaign/the-offer | MacBookPro | 10 |
 | 2026-08-27T23:49:28Z | rebaseline | 56.193 | 258.067 | 13.183 | 4.83 | 0 | 56240c479 | campaign/the-offer | MacBookPro | 10 |
+| 2026-08-27T15:45:39Z | rebaseline | 170.092 | 278.357 | 20.431 | 1.76 | 0 | b10fd944d | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T16:04:46Z | gate-commit | 169.815 | 75.732 | 35.497 | 0.66 | 0 | b10fd944d | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T16:06:37Z | gate-commit | 110.161 | 62.109 | 30.831 | 0.84 | 0 | b10fd944d | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T16:38:19Z | sluice:artifacts | 123.433 | 1053.218 | 46.419 | 8.91 | 0 | adc25f992 |  | lefford | 40 |
+| 2026-08-27T16:38:59Z | sluice:outboard | 40.225 | 25.140 | 37.350 | 1.55 | 0 | cb7263eda |  | lefford | 40 |
+| 2026-08-27T16:46:55Z | sluice:gate | 476.179 | 13191.665 | 489.204 | 28.73 | 0 | 076c1f2f6 |  | lefford | 40 |
+| 2026-08-27T16:54:53Z | sluice:clients | 476.933 | 5848.271 | 90.960 | 12.45 | 0 | d94bb18c6 |  | lefford | 40 |
+| 2026-08-27T17:12:58Z | gate-commit | 419.075 | 494.631 | 86.796 | 1.39 | 0 | ca97f8354 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T17:16:51Z | rebaseline | 232.543 | 276.691 | 18.910 | 1.27 | 0 | ca97f8354 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T17:32:06Z | gate-commit | 156.686 | 64.972 | 32.087 | 0.62 | 0 | ca97f8354 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T18:41:37Z | rebaseline | 207.965 | 269.180 | 15.249 | 1.37 | 0 | 7e11ea9e1 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T18:45:06Z | rebaseline | 148.048 | 267.400 | 14.854 | 1.91 | 0 | 7e11ea9e1 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T18:48:57Z | gate-commit | 160.802 | 92.167 | 52.714 | 0.90 | 0 | 7e11ea9e1 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T18:51:26Z | rebaseline | 148.710 | 265.845 | 16.120 | 1.90 | 0 | 7e11ea9e1 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T18:53:36Z | gate-commit | 111.007 | 60.765 | 27.733 | 0.80 | 0 | 7e11ea9e1 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T20:25:34Z | rebaseline | 152.219 | 270.374 | 16.381 | 1.88 | 0 | 2be67ff43 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T20:26:21Z | gate-commit | 38.005 | 66.992 | 13.414 | 2.12 | 0 | 2be67ff43 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T20:33:17Z | gate-commit | 240.688 | 248.861 | 67.284 | 1.31 | 0 | 2be67ff43 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T20:39:28Z | gate-commit | 129.047 | 74.362 | 41.224 | 0.90 | 0 | 2be67ff43 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T20:52:36Z | rebaseline | 195.406 | 271.622 | 15.492 | 1.47 | 0 | 2be67ff43 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T20:54:56Z | gate-commit | 113.293 | 60.491 | 28.384 | 0.78 | 0 | 2be67ff43 | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T21:18:34Z | rebaseline | 153.203 | 276.253 | 19.054 | 1.93 | 0 | d9f79789e | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T21:19:50Z | gate-commit | 27.765 | 17.572 | 4.536 | 0.80 | 0 | d9f79789e | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T21:22:39Z | world-check | 168.780 | 98.938 | 10.965 | 0.65 | 0 | d9f79789e | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T21:24:45Z | gate-commit | 40.058 | 22.439 | 4.577 | 0.67 | 0 | d9f79789e | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T21:28:19Z | rebaseline | 214.120 | 271.582 | 18.670 | 1.36 | 0 | d9f79789e | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T21:30:59Z | gate-commit | 135.542 | 95.208 | 39.269 | 0.99 | 0 | d9f79789e | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T21:32:47Z | gate-commit | 91.013 | 55.802 | 28.010 | 0.92 | 0 | d9f79789e | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T21:35:13Z | gate-commit | 33.233 | 69.998 | 15.430 | 2.57 | 0 | 7528c092f | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T21:37:02Z | rebaseline | 109.632 | 267.644 | 15.788 | 2.59 | 0 | 7528c092f | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T21:44:27Z | gate-commit | 144.496 | 89.652 | 45.216 | 0.93 | 0 | 7528c092f | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T21:46:39Z | gate-commit | 120.162 | 60.969 | 28.474 | 0.74 | 0 | 7528c092f | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T21:57:18Z | rebaseline | 67.811 | 268.936 | 16.243 | 4.21 | 0 | 53553abde | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T21:58:40Z | gate-commit | 81.336 | 52.226 | 25.764 | 0.96 | 0 | 53553abde | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T22:01:16Z | gate-commit | 121.586 | 61.393 | 28.945 | 0.74 | 0 | e496e529d | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T22:37:31Z | gate-commit | 84.031 | 59.643 | 29.718 | 1.06 | 0 | e496e529d | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T22:40:14Z | rebaseline | 162.514 | 271.037 | 16.579 | 1.77 | 0 | e496e529d | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T22:41:55Z | gate-commit | 100.210 | 60.063 | 28.734 | 0.89 | 0 | e496e529d | campaign/the-foliot | ambrose | 12 |
+| 2026-08-27T23:25:36Z | sluice:artifacts | 103.333 | 816.736 | 36.716 | 8.26 | 0 | 8ebcf31e9 |  | lefford | 40 |
+| 2026-08-27T23:26:18Z | sluice:outboard | 41.926 | 25.661 | 40.119 | 1.57 | 0 | dfd315cab |  | lefford | 40 |
+| 2026-08-27T23:33:38Z | sluice:gate | 439.692 | 12223.634 | 467.361 | 28.86 | 0 | 7171b0e52 |  | lefford | 40 |
+| 2026-08-27T23:41:42Z | sluice:clients | 483.263 | 5902.891 | 88.343 | 12.40 | 0 | 9724a78cf |  | lefford | 40 |
+| 2026-08-28T00:56:32Z | gate-commit | 24.194 | 54.345 | 20.247 | 3.08 | 0 | 60db176f4 | campaign/the-offer | MacBookPro | 10 |
+| 2026-08-28T00:57:31Z | rebaseline | 50.965 | 257.005 | 12.798 | 5.29 | 0 | 60db176f4 | campaign/the-offer | MacBookPro | 10 |
+| 2026-08-28T00:59:24Z | gate-commit | 30.077 | 62.556 | 28.590 | 3.03 | 0 | 60db176f4 | campaign/the-offer | MacBookPro | 10 |
+| 2026-08-28T01:01:50Z | gate-commit | 20.664 | 49.740 | 12.901 | 3.03 | 0 | 60db176f4 | campaign/the-offer | MacBookPro | 10 |
+| 2026-08-28T01:02:49Z | gate-commit | 20.289 | 49.454 | 12.603 | 3.06 | 0 | 89e80a362 | campaign/the-offer | MacBookPro | 10 |
+| 2026-08-28T01:21:29Z | rebaseline | 138.262 | 262.527 | 11.599 | 1.98 | 0 | 3b84a7f09 | campaign/the-offer | MacBookPro | 10 |
+| 2026-08-28T01:26:03Z | gate-commit | 136.654 | 488.433 | 67.113 | 4.07 | 0 | 3b84a7f09 | campaign/the-offer | MacBookPro | 10 |

@@ -2,7 +2,7 @@
 //! (model card: L = M^3.5; habitable zone 0.95√L–1.37√L AU).
 
 use crate::streams;
-use crate::units::{Au, Gyr, HabitableZone, Kelvin, SolarLuminosities, SolarMasses};
+use crate::units::{Au, Gyr, HabitableZone, Kelvin, SolarLuminosities, SolarMasses, StdInstant};
 use hornvale_kernel::Seed;
 use hornvale_kernel::math;
 
@@ -213,18 +213,14 @@ pub fn brightening_per_gyr(star: &Star) -> f64 {
 /// equals the genesis luminosity exactly. The habitable zone remains a
 /// genesis-epoch derivation from L₀ (the world lives on kiloyear scales,
 /// where this slope is honestly negligible — deep time is where it shows).
-pub fn luminosity_at(star: &Star, t: crate::units::StdDays) -> SolarLuminosities {
+pub fn luminosity_at(star: &Star, t: StdInstant) -> SolarLuminosities {
     SolarLuminosities(star.luminosity.0 * (1.0 + brightening_per_gyr(star) * t.0 / GYR_DAYS))
 }
 
 /// Time-aware insolation: `luminosity_at / a²` — [`insolation_rel`]'s
 /// deep-time sibling (SKY-15's shared definition, evaluated at `t`).
 /// type-audit: pending(wave-1)
-pub fn insolation_rel_at(
-    star: &Star,
-    anchor: &crate::anchor::Anchor,
-    t: crate::units::StdDays,
-) -> f64 {
+pub fn insolation_rel_at(star: &Star, anchor: &crate::anchor::Anchor, t: StdInstant) -> f64 {
     luminosity_at(star, t).0 / (anchor.orbit.0 * anchor.orbit.0)
 }
 
@@ -317,10 +313,9 @@ pub(crate) mod tests {
     /// solar mass, faster for heavier stars (b = 0.10·M^2.5).
     #[test]
     fn luminosity_brightens_on_the_main_sequence_slope() {
-        use crate::units::StdDays;
         let s = generate_star(Seed(42));
-        assert_eq!(luminosity_at(&s, StdDays(0.0)), s.luminosity);
-        let after_gyr = luminosity_at(&s, StdDays(GYR_DAYS));
+        assert_eq!(luminosity_at(&s, StdInstant(0.0)), s.luminosity);
+        let after_gyr = luminosity_at(&s, StdInstant(GYR_DAYS));
         let expected = s.luminosity.get() * (1.0 + brightening_per_gyr(&s));
         assert!((after_gyr.get() - expected).abs() < 1e-12);
         let b = brightening_per_gyr(&s);
@@ -331,7 +326,6 @@ pub(crate) mod tests {
     #[test]
     fn brightening_scales_with_mass_and_reaches_insolation() {
         use crate::pins::SkyPins;
-        use crate::units::StdDays;
         let mut light = generate_star(Seed(42));
         light.mass = SolarMasses::new(0.7).unwrap();
         let mut heavy = light.clone();
@@ -340,11 +334,12 @@ pub(crate) mod tests {
         let star = generate_star(Seed(42));
         let anchor = crate::anchor::generate_anchor(Seed(42), &star, &SkyPins::default()).unwrap();
         assert_eq!(
-            insolation_rel_at(&star, &anchor, StdDays(0.0)),
+            insolation_rel_at(&star, &anchor, StdInstant(0.0)),
             insolation_rel(&star, &anchor)
         );
         assert!(
-            insolation_rel_at(&star, &anchor, StdDays(GYR_DAYS)) > insolation_rel(&star, &anchor)
+            insolation_rel_at(&star, &anchor, StdInstant(GYR_DAYS))
+                > insolation_rel(&star, &anchor)
         );
     }
 
@@ -483,7 +478,6 @@ pub(crate) mod tests {
     #[test]
     fn effective_temperature_is_contained_and_moves_nothing_else() {
         use crate::pins::SkyPins;
-        use crate::units::StdDays;
         let star = generate_star(Seed(42));
         assert_eq!(star.t_eff, generate_star(Seed(42)).t_eff);
 
@@ -503,12 +497,12 @@ pub(crate) mod tests {
             insolation_rel(&star, &anchor)
         );
         assert_eq!(
-            insolation_rel_at(&hot, &anchor, StdDays(GYR_DAYS)),
-            insolation_rel_at(&star, &anchor, StdDays(GYR_DAYS))
+            insolation_rel_at(&hot, &anchor, StdInstant(GYR_DAYS)),
+            insolation_rel_at(&star, &anchor, StdInstant(GYR_DAYS))
         );
         assert_eq!(
-            luminosity_at(&hot, StdDays(GYR_DAYS)),
-            luminosity_at(&star, StdDays(GYR_DAYS))
+            luminosity_at(&hot, StdInstant(GYR_DAYS)),
+            luminosity_at(&star, StdInstant(GYR_DAYS))
         );
         assert_eq!(
             sun_angular_diameter_rel(&hot, Au(1.0)),

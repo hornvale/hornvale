@@ -369,7 +369,7 @@ mod tests {
                 orbit: Au::new(1.0).unwrap(),
                 year: StdDays::new(year_days).unwrap(),
                 rotation: Rotation::Spinning {
-                    day: StdDays::new(1.0).unwrap(),
+                    day: hornvale_kernel::units::TickSpan::from_std_days(1.0).unwrap(),
                     retrograde: false,
                 },
                 obliquity: Degrees::new(0.0).unwrap(),

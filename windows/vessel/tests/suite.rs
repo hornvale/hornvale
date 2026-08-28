@@ -29,6 +29,8 @@ mod ask_verb;
 mod body_fields;
 #[path = "suite/body_mass.rs"]
 mod body_mass;
+#[path = "suite/clock_lattice.rs"]
+mod clock_lattice;
 #[path = "suite/coercion_calibration.rs"]
 mod coercion_calibration;
 #[path = "suite/controller_swap.rs"]

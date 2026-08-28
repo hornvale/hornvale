@@ -4,7 +4,7 @@
 use crate::action::{Action, Mood};
 use crate::agent::check_species_known;
 use crate::body::Body;
-use crate::clock::{climb_factor, cost_ticks, days_of, mass_for_species};
+use crate::clock::{climb_factor, cost_of, mass_for_species};
 use crate::controller::{Controller, ImposedController, PlayerController};
 use crate::gate::{BodyState, Verdict, verdict};
 use crate::liveness::{
@@ -2050,16 +2050,16 @@ impl<'w> Session<'w> {
         IN_CHARACTER_VERBS.contains(&verb) || parse_compass(verb).is_some()
     }
 
-    /// The planet's rotation period in standard days, as the action clock
-    /// needs it — `None` on a tidally-locked world, which the rotation pin
-    /// admits. Extracted from `wait`'s own inline read so the player's charge
-    /// and the NPC layer's cannot disagree about the tick rate.
-    /// type-audit: bare-ok(ratio: return)
-    fn day_length_std(&self) -> Option<f64> {
-        self.calendar
-            .as_ref()
-            .and_then(|c| c.day_length())
-            .map(|d| d.get())
+    /// The planet's rotation period as an exact tick span — `None` on a
+    /// tidally locked world, which the rotation pin admits.
+    ///
+    /// Reads the stored tick count rather than the continuous view (The
+    /// Foliot): a day is a whole number of ticks now, so there is no reason to
+    /// route the scheduler's own question through `f64` days. Extracted from
+    /// `wait`'s own inline read so the player's charge and the NPC layer's
+    /// cannot disagree about the rate.
+    fn day_ticks(&self) -> Option<TickSpan> {
+        self.calendar.as_ref().and_then(|c| c.day_ticks())
     }
 
     /// Charge `action` against THIS BODY'S OWN MASS and advance the day.
@@ -2089,14 +2089,27 @@ impl<'w> Session<'w> {
             "an out-of-character act must not reach the clock: cost_ticks \
              floors at one tick, which base_ticks prices at zero on purpose"
         );
-        let ticks = cost_ticks(action, self.body_mass_kg, terrain_factor);
-        let days = days_of(ticks, self.day_length_std());
-        match advanced_by(self.day, days) {
-            Ok(d) => {
+        // Integer addition, end to end (The Foliot). This used to convert the
+        // cost to `f64` days and re-enter the lattice through
+        // `WorldTime::from_std_days`; with a lattice-aligned day the cost IS a
+        // kernel span, so there is no crossing left to make.
+        let span = cost_of(action, self.body_mass_kg, terrain_factor);
+        match self
+            .day
+            .ticks()
+            .checked_add(span.ticks())
+            .map(WorldTime::from_ticks)
+        {
+            Some(d) => {
                 self.day = d;
                 Ok(())
             }
-            Err(e) => Err(e),
+            None => Err(format!(
+                "error: advancing day {} by {} ticks leaves the representable \
+                 tick range",
+                self.day.ticks(),
+                span.ticks()
+            )),
         }
     }
 
@@ -4263,7 +4276,7 @@ impl<'w> Session<'w> {
             // The planet's rotation period, so the action clock's tick divides
             // the local day exactly (The Action Clock, spec §4.1). `None` on a
             // tidally-locked world, which the rotation pin admits.
-            day_length_std: self.day_length_std(),
+            day_ticks: self.day_ticks(),
             terrain: &terrain,
         };
         // Recover this tick's within-room `Occupancy` alongside the facts
@@ -5347,7 +5360,7 @@ impl<'w> Session<'w> {
         // reads as day 0" is not a property this line should depend on.
         let day = self.day.whole_days();
         let mut lines = vec![format!("The Reckoning, at day {day}.")];
-        let at = hornvale_astronomy::StdDays::new(self.day.as_std_days())
+        let at = hornvale_astronomy::StdInstant::new(self.day.as_std_days())
             .expect("a session's day is always finite and non-negative");
         let epoch = match (self.wctx.terrain.as_ref(), self.wctx.climate.as_ref()) {
             (Some(t), Some(c)) => hornvale_book::reckoning_at_from(self.world, at, t, c),

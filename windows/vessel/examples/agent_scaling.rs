@@ -329,7 +329,7 @@ fn run_rung(
     world: &World,
     ctx: &LocaleContext,
     home_settlement: EntityId,
-    day_length_std: Option<f64>,
+    day_ticks: Option<hornvale_kernel::units::TickSpan>,
     agents: usize,
 ) -> Row {
     let mut ledger = world.ledger.clone();
@@ -403,7 +403,7 @@ fn run_rung(
             from,
             to: day,
             params: SUSTENANCE,
-            day_length_std,
+            day_ticks,
             terrain: &terrain,
         };
         let (facts, _occupancy) =
@@ -457,13 +457,12 @@ fn main() {
         .id;
 
     // The planet's rotation period, exactly the read `Session::start` makes
-    // (`self.calendar.as_ref().and_then(|c| c.day_length()).map(|d|
-    // d.get())`) — `None` on a tidally-locked world.
-    let day_length_std = hornvale_worldgen::sky_of(&world)
+    // (`self.calendar.as_ref().and_then(|c| c.day_ticks())`) — `None` on a
+    // tidally-locked world. Reads the exact tick count (The Foliot).
+    let day_ticks = hornvale_worldgen::sky_of(&world)
         .ok()
         .and_then(|sky| sky.calendar().cloned())
-        .and_then(|c| c.day_length())
-        .map(|d| d.get());
+        .and_then(|c| c.day_ticks());
 
     let mut rows: Vec<Row> = Vec::new();
     println!(
@@ -484,7 +483,7 @@ fn main() {
             );
             continue;
         }
-        let row = run_rung(&world, &ctx, home_settlement, day_length_std, k);
+        let row = run_rung(&world, &ctx, home_settlement, day_ticks, k);
         println!(
             "{:>8} {:>10.3} {:>14.4} {:>14.4} {:>16.1} {:>14} {:>10} {:>10}",
             row.agents,

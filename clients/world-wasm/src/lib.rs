@@ -416,14 +416,30 @@ pub extern "C" fn hw_scene_tiles_region(
     }
 }
 
-/// Emit the current world's `scene/eclipses/v1` JSON over `[from, until]`
+/// Emit the current world's `scene/eclipses/v2` JSON over `[from, until]`
 /// standard days. 0 ok; 2 scene error (envelope set); -3 when no world is live.
+///
+/// The ABI keeps taking `f64` standard days, because that is what JavaScript
+/// has — the crossing onto the typed instant happens HERE, at the boundary,
+/// which is the only place a caller-supplied number can be validated. A
+/// non-finite argument becomes the ordinary scene-error path rather than a
+/// panic across the wasm boundary.
 #[unsafe(no_mangle)]
 pub extern "C" fn hw_scene_eclipses(from: f64, until: f64) -> i32 {
     let world_ptr = &raw const WORLD;
     let Some(world) = (unsafe { (*world_ptr).as_ref() }) else {
         set_error("no world; call hw_new first");
         return -3;
+    };
+    let (from, until) = match (
+        hornvale_astronomy::StdInstant::new(from),
+        hornvale_astronomy::StdInstant::new(until),
+    ) {
+        (Ok(f), Ok(u)) => (f, u),
+        (Err(e), _) | (_, Err(e)) => {
+            set_error(&e.to_string());
+            return 2;
+        }
     };
     match hornvale_scene::eclipses_scene(world, from, until) {
         Ok(s) => {

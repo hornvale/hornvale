@@ -80,7 +80,9 @@ fn temperature_gate_versus_era_mask() {
         let obliquity_deg = system.anchor.obliquity.get();
         let regime = match system.anchor.rotation {
             hornvale_astronomy::Rotation::Spinning { day, .. } => {
-                hornvale_climate::RotationRegime::Spinning { day_std: day.get() }
+                hornvale_climate::RotationRegime::Spinning {
+                    day_std: day.as_std_days(),
+                }
             }
             hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
         };
@@ -208,7 +210,9 @@ fn would_moisture_as_a_gate_add_exclusion() {
     let obliquity_deg = system.anchor.obliquity.get();
     let regime = match system.anchor.rotation {
         hornvale_astronomy::Rotation::Spinning { day, .. } => {
-            hornvale_climate::RotationRegime::Spinning { day_std: day.get() }
+            hornvale_climate::RotationRegime::Spinning {
+                day_std: day.as_std_days(),
+            }
         }
         hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
     };

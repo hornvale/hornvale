@@ -674,7 +674,7 @@ checks AS (
   -- The Underworld resync, 0063/0079: 8.506600585 -> 8.515439092299996.
   -- The Burr resync (ROOT_EPOCH v4, census committed as 635d116d):
   -- 8.515439092299996 -> 8.546439147599997.
-         goblin_len_mean, 8.523035457757755, abs(goblin_len_mean - 8.523035457757755) < 1e-6 FROM agg
+         goblin_len_mean, 8.522649181881878, abs(goblin_len_mean - 8.522649181881878) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 772 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 762 -> 760.
@@ -719,7 +719,7 @@ checks AS (
   -- The Underworld resync, 0063/0079: 6.858963629124241 -> 6.854391970773933.
   -- The Burr resync (ROOT_EPOCH v4, census committed as 635d116d):
   -- 6.854391970773933 -> 6.818936120061097.
-         kobold_len_mean, 6.865372774999998, abs(kobold_len_mean - 6.865372774999998) < 1e-6 FROM agg
+         kobold_len_mean, 6.864935456632652, abs(kobold_len_mean - 6.864935456632652) < 1e-6 FROM agg
   UNION ALL
   SELECT 'mean goblin hue-depth (calibration.rs::goblin_hue_depth_exceeds_kobold_hue_depth)',
          goblin_hue_mean, 4.0, abs(goblin_hue_mean - 4.0) < 1e-6 FROM agg
@@ -919,7 +919,7 @@ checks AS (
   -- unmoved at 1000/0 and the min/max spread pins below are unmoved.
   -- 0.7135540799000004 -> 0.7135625544800003. Still emphatically not 1.0.
   -- Tolerance unchanged at 1e-6.
-         transparency_mean, 0.7143637000300016, abs(transparency_mean - 0.7143637000300016) < 1e-6 FROM agg
+         transparency_mean, 0.7140890114700017, abs(transparency_mean - 0.7140890114700017) < 1e-6 FROM agg
   UNION ALL
   -- The min and max are the SPREAD pins the deferred note asked for. A floor
   -- of 0.154 against a ceiling of 1.0 is what proves the 0.816 mean describes
@@ -1084,8 +1084,8 @@ checks AS (
   -- -0.004779612149911376 -> -0.016164814210766883 (both solo builds' names
   -- redrawn alike in structure; still ~12x inside the ±0.2 sampling-theory
   -- bound).
-         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), -0.024799776460672034,
-         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - -0.024_799_776_460_672_034) < 1e-6
+         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), -0.025108472368594453,
+         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - -0.025_108_472_368_594_453) < 1e-6
     FROM namelen_stats
 )
 SELECT pin, computed, pinned, ok FROM checks ORDER BY pin;
