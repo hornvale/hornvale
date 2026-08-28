@@ -7840,6 +7840,70 @@ mod tests {
     }
 
     #[test]
+    fn the_queues_tie_break_decides_nothing_but_order() {
+        // THE PRECEDENCE'S LOAD-BEARING PRECONDITION. Sorting the emitted
+        // stream by day is a sufficient fix ONLY because pop order affects
+        // nothing else observable: every `occupancy` access is keyed by the
+        // creature's own entity, and perception (`alarm`, hazard memory,
+        // belief seeding) is built from `frozen` BEFORE anyone moves. So two
+        // populations that differ only in which creature wins a tie must
+        // produce the SAME FACTS.
+        //
+        // `interleaving_fixture` mints entity ids in list order, so reversing
+        // the masses reverses the tie-break while keeping the same two
+        // creatures. Compare as a MULTISET keyed by (mass, predicate, tick):
+        // the two runs assign the ids oppositely, so comparing by raw
+        // `EntityId` would report a difference that is only a relabelling.
+        //
+        // WHEN THIS FAILS, DO NOT RELAX IT. It means a creature has begun to
+        // observe another's mid-tick state, pop order has become semantically
+        // load-bearing, and the sort is no longer sufficient — the
+        // begin/complete event queue named in the spec is then required.
+        let run = |masses: [f64; 2]| -> Vec<(u64, String, i64)> {
+            let (ledger, terrain, npcs) = interleaving_fixture(&masses);
+            let mass_of: std::collections::BTreeMap<EntityId, u64> = npcs
+                .iter()
+                .map(|n| (n.entity, (n.mass_kg * 1000.0).round() as u64))
+                .collect();
+            let sys = DriveMovements {
+                npcs,
+                from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+                to: WorldTime::from_std_days(20.0).expect("a day value is finite"),
+                params: SUSTENANCE,
+                day_ticks: None,
+                terrain: &terrain,
+            };
+            let mut rows: Vec<(u64, String, i64)> = sys
+                .step(&ledger)
+                .iter()
+                .map(|f| {
+                    (
+                        *mass_of
+                            .get(&f.subject)
+                            .expect("every emitter is in the roster"),
+                        f.predicate.clone(),
+                        f.day.expect("every emitted fact is dated").ticks(),
+                    )
+                })
+                .collect();
+            rows.sort();
+            rows
+        };
+        let forward = run([4.375, 70.0]);
+        let reversed = run([70.0, 4.375]);
+        assert!(
+            !forward.is_empty(),
+            "the fixture emitted nothing; it cannot pin a tie-break"
+        );
+        assert_eq!(
+            forward, reversed,
+            "reversing the queue's tie-break changed WHAT happened, not just \
+             the order it was reported in — pop order has become semantically \
+             load-bearing and sorting the emissions is no longer a sufficient fix"
+        );
+    }
+
+    #[test]
     fn a_colocated_lost_creature_moves_toward_shared_water() {
         // THE TIDINGS, WIRED INTO THE MOVER: a `knower` and a `lost` creature
         // share `here` (both homed there too). `knower` has genuinely stood
