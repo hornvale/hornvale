@@ -1231,6 +1231,7 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::partitioning_columns_are_all_covered_by_d2_or_d4
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
@@ -1311,7 +1312,6 @@ hornvale-lab::hornvale_lab$domesday::render::tests::every_domain_renders_and_non
 hornvale-lab::hornvale_lab$domesday::render::tests::leaves_an_unrelated_paren_alone_while_dropping_the_citing_one
 hornvale-lab::hornvale_lab$domesday::render::tests::no_domain_is_currently_empty
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_full_exclusion_roster_with_reasons
-hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_generated_header_and_frozen_constants
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_lists_the_top_worlds_ranked_first
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_only_publishes_up_to_top_worlds_worlds
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_prints_the_true_uncapped_score_not_the_capped_flag_count
@@ -2676,6 +2676,7 @@ hornvale-vessel::hornvale_vessel$liveness::tests::drive_folds_drank_events_risin
 hornvale-vessel::hornvale_vessel$liveness::tests::every_action_in_a_plan_has_its_precondition_satisfied_in_sequence
 hornvale-vessel::hornvale_vessel$liveness::tests::everything_replayable_is_a_movement
 hornvale-vessel::hornvale_vessel$liveness::tests::exactly_the_non_committing_actions_are_replayable
+hornvale-vessel::hornvale_vessel$liveness::tests::facts_are_chronological_across_consecutive_ticks
 hornvale-vessel::hornvale_vessel$liveness::tests::fatigue_folds_rested_events
 hornvale-vessel::hornvale_vessel$liveness::tests::flee_step_picks_the_safest_neighbour_or_none_when_cornered
 hornvale-vessel::hornvale_vessel$liveness::tests::food_value_is_the_niche_dotted_with_availability
@@ -3505,6 +3506,7 @@ hornvale::suite$lane_sets::every_phase_the_chamber_runs_is_rostered
 hornvale::suite$lane_sets::every_rostered_set_is_well_formed
 hornvale::suite$lane_sets::the_commit_gate_is_local_and_everything_else_is_the_lane
 hornvale::suite$lexicon_guard::a_waiver_needs_a_reason
+hornvale::suite$lexicon_guard::no_vertex_sense_cell_comes_back
 hornvale::suite$lexicon_guard::the_inventory_is_sorted_and_not_empty
 hornvale::suite$lexicon_guard::the_tokenizer_counts_affixed_bare_and_shouting_forms
 hornvale::suite$no_entity_id_values_in_prose::derived_prose_never_reads_an_entity_id_for_its_value

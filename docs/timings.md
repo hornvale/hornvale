@@ -3671,3 +3671,4 @@ measured here.
 | 2026-08-28T14:34:27Z | gate-commit | 95.530 | 54.763 | 27.789 | 0.86 | 0 | beb39b901 | campaign/the-precedence | ambrose | 12 |
 | 2026-08-28T14:38:38Z | sluice:artifacts | 122.201 | 807.028 | 31.793 | 6.86 | 0 | 67e329d76 |  | lefford | 40 |
 | 2026-08-28T14:39:19Z | sluice:outboard | 40.069 | 24.974 | 38.323 | 1.58 | 0 | e1d138455 |  | lefford | 40 |
+| 2026-08-28T14:47:17Z | sluice:gate | 477.741 | 13144.926 | 443.540 | 28.44 | 0 | 4bc54599d |  | lefford | 40 |
