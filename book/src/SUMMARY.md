@@ -417,6 +417,7 @@
 - [The Foliot](./chronicle/the-foliot.md)
 - [The Quadrat](./chronicle/the-quadrat.md)
 - [The Offer](./chronicle/the-offer.md)
+- [The Stile](./chronicle/the-stile.md)
 
 # Appendix: The Frontier
 
