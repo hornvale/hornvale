@@ -715,10 +715,14 @@ fn distance_zero_is_exactly_coverage() {
 /// **Its original job is done, and it keeps its place for a second one.** It
 /// was written when the score was 0 of 12, where it was the *only* thing
 /// separating a working resolver from one hardcoded to return "not yet" —
-/// that hardcoding left `merchant_coverage_is_zero_of_twelve` green, because
-/// zero was the expected answer. The Inquest moved the score to 2, so a
-/// hardcoded "not yet" now reds the headline test on its own and this control
-/// is no longer load-bearing for THAT reading.
+/// that hardcoding left the headline coverage test green, because zero was
+/// the expected answer at that score. (That test's own name has moved with
+/// the score since — zero, then two, then five — so it is named here by what
+/// it does rather than by a literal name that would go stale on the next
+/// move; see [`merchant_coverage_is_five_of_twelve`] for its current form.)
+/// The Inquest moved the score to 2, so a hardcoded "not yet" now reds the
+/// headline test on its own and this control is no longer load-bearing for
+/// THAT reading.
 ///
 /// What it still holds is independence from the corpus. Every other
 /// assertion in this file is a claim about `sentences/the-merchant.corpus.json`
@@ -1683,23 +1687,37 @@ fn every_covered_entry_realizes_in_common() {
 }
 
 /// The committed report path. Deliberately NOT declared BY NAME in
-/// `docs/generated-paths.txt`: nothing in `scripts/regenerate-artifacts.sh`
-/// writes it (the "regenerate-artifacts.sh writes it" criterion that would
-/// earn a by-name entry), so it follows the two-day-old
-/// `docs/audits/lexicon-inventory.tsv` precedent instead — rewritten under
-/// an env var, with the number that matters guarded in Rust
-/// (`MERCHANT_COVERED` above) rather than by diffing this file. **It is not
-/// drift-check-vacuous, though** — `docs/generated-paths.txt` declares the
-/// whole `docs/audits/` directory, and this file is tracked, so `git diff
-/// --exit-code -- docs/audits/` already covers it: an edit here that is not
-/// also committed reddens `make rebaseline`'s drift check like any other
-/// file under that directory.
+/// `docs/generated-paths.txt` — `docs/audits/` already declares the whole
+/// directory this file is tracked inside, so a by-name entry would only
+/// duplicate that coverage (`cli/tests/suite/generated_paths.rs`'s own
+/// hazard is a NEW file dropped into an already-declared directory, and this
+/// one predates that check, is tracked, and needs no second declaration).
+///
+/// **This WAS the `docs/audits/lexicon-inventory.tsv` vacuous-drift shape,
+/// and no longer is (The Stile).** Until this campaign, nothing in
+/// `scripts/regenerate-artifacts.sh` ever set `HV_SENTENCE_REBASELINE=1`, so
+/// `git diff --exit-code -- docs/audits/` could only ever compare the
+/// committed file against itself — a check with no writer in its own
+/// regeneration path cannot fire on staleness, which is the exact shape "a
+/// remedy is a claim" names: `make rebaseline` claiming to cover this path
+/// asserted a write that never happened. `scripts/regenerate-artifacts.sh`
+/// now runs the very test below under that env var (GROUP B+C, alongside the
+/// other `docs/audits/` generators), so the drift check is real: an
+/// unregenerated edit here, or a code change that should have moved this
+/// file and did not, now shows up in `git diff -- docs/audits/` after `make
+/// rebaseline` the same as every other artifact under that path. The
+/// covered COUNT stays separately guarded, in Rust, against
+/// [`MERCHANT_COVERED`] above — the file drifting is now a real, catchable
+/// fact, but the number that matters was never trusted to the prose alone.
 const REPORT_PATH: &str = "docs/audits/sentence-coverage.md";
 
 /// Rewrite `docs/audits/sentence-coverage.md` under
-/// `HV_SENTENCE_REBASELINE=1`; otherwise a no-op (the covered count is
-/// guarded by `merchant_coverage_is_zero_of_twelve` regardless of whether
-/// this prose file is current).
+/// `HV_SENTENCE_REBASELINE=1` — run automatically by
+/// `scripts/regenerate-artifacts.sh` (`make rebaseline`) — otherwise a
+/// no-op. The covered count itself is guarded independently, in Rust, by
+/// [`merchant_coverage_is_five_of_twelve`], so a stale run of *this* test
+/// cannot hide a coverage number that moved even before the drift check
+/// above existed.
 #[test]
 fn sentence_coverage_report() {
     if std::env::var("HV_SENTENCE_REBASELINE").is_err() {
@@ -1707,10 +1725,23 @@ fn sentence_coverage_report() {
     }
 
     let root = repo_root();
-    let corpus = load_merchant_corpus(&root);
+    let merchant = load_merchant_corpus(&root);
+    let flood_watch = load_flood_watch_corpus(&root);
+    let ladder = load_ladder_corpus(&root);
+
+    let merchant_directions = direction_counts(&merchant.entries);
+    let flood_watch_directions = direction_counts(&flood_watch.entries);
+    let ladder_directions = direction_counts(&ladder.entries);
+
+    let ladder_raw = read_ladder_raw(&root.join("sentences/the-ladder.corpus.json.DRAFT"));
+    let ladder_tokens = ladder_introduced_tokens(&ladder_raw);
+    let merchant_tokens = distinct_demand_tokens(&merchant.entries);
+    let merchant_absent = tokens_absent_from_ladder(&merchant_tokens, &ladder_tokens);
+    let flood_watch_tokens = distinct_demand_tokens(&flood_watch.entries);
+    let flood_watch_absent = tokens_absent_from_ladder(&flood_watch_tokens, &ladder_tokens);
 
     let mut tally: BTreeMap<String, usize> = BTreeMap::new();
-    for entry in &corpus.entries {
+    for entry in &merchant.entries {
         for demand in &entry.demands {
             *tally.entry(demand.clone()).or_insert(0) += 1;
         }
@@ -1719,47 +1750,103 @@ fn sentence_coverage_report() {
         tally.entry(demand.to_string()).or_insert(0);
     }
 
-    let covered = corpus.entries.iter().filter(|e| entry_covered(e)).count();
-    let not_yet = corpus.entries.len() - covered;
+    let covered = merchant.entries.iter().filter(|e| entry_covered(e)).count();
+    let not_yet = merchant.entries.len() - covered;
 
     let mut out = String::new();
     out.push_str(
-        "# Sentence coverage — the-merchant\n\n\
+        "# Sentence coverage\n\n\
          Generated by `cli/tests/suite/sentence_corpus.rs` under \
-         `HV_SENTENCE_REBASELINE=1`. This file is not declared BY NAME in \
-         `docs/generated-paths.txt` (the `docs/audits/lexicon-inventory.tsv` \
-         precedent — nothing regenerates it on its own) — but it IS \
-         drift-checked, because that file also declares the whole `docs/audits/` \
-         directory this report is tracked inside: `git diff --exit-code -- \
-         docs/audits/` catches an unregenerated edit here the same as \
-         anywhere else under that path. The covered COUNT is separately \
-         guarded, in Rust, against `MERCHANT_COVERED`.\n\n\
-         A demand is `covered` only if the grammar implements a construction \
-         for it, and an entry is covered only if EVERY demand it makes is. \
-         The Interlinear left one token covered (`classify`, the \"X is a \
-         Y\" construction); The Inquest added `past-tense`, `negation`, \
-         `transitive-frame` and `pronoun-reference`. Everything still \
-         uncovered names a grammatical capability no campaign has built — \
-         questions, embedded clauses, coordination, temporal adjuncts, \
-         epistemic hedges, existentials, witness lists, named-entity \
-         lists. A **low score is the expected result**, not a defect; the \
-         corpus is the program's map, not any one campaign's scorecard.\n\n\
-         Read the **distance** table below the tally, not only the headline \
-         count. Coverage is conjunctive and therefore lags: The Inquest \
-         implemented four tokens, moved two entries to covered, and moved \
-         four MORE entries from two missing demands to one — progress the \
-         headline number cannot express.\n\n",
+         `HV_SENTENCE_REBASELINE=1`, run automatically by \
+         `scripts/regenerate-artifacts.sh` (`make rebaseline`). This file is \
+         not declared BY NAME in `docs/generated-paths.txt`: `docs/audits/` \
+         already declares the whole directory this report is tracked \
+         inside, so `git diff --exit-code -- docs/audits/` catches an \
+         unregenerated edit here — or a code change that should have moved \
+         this file and did not — the same as anywhere else under that path. \
+         The covered COUNT for the-merchant is separately guarded, in Rust, \
+         against `MERCHANT_COVERED`.\n\n\
+         Three corpora feed this report: `the-merchant` (12 entries, \
+         frozen), `the-flood-watch` (139 entries, frozen) and `the-ladder` \
+         (214 rungs, an unfrozen DRAFT). Only `the-merchant` is resolved \
+         against the grammar below — `the-flood-watch` carries a `scene` \
+         and a per-entry `direction` the resolver's `Entry` shape does not \
+         need, but wiring a coverage resolver over it needs a schema change \
+         nobody has approved (see this file's module doc), and the ladder \
+         is a production instrument, not dialogue, with no resolver of its \
+         own either. What the report gives those two corpora instead is a \
+         direction breakdown and a vocabulary cross-check against the \
+         ladder, both below.\n\n\
+         A demand is `covered` only if the grammar implements a \
+         construction for it, and an entry is covered only if EVERY demand \
+         it makes is. The Interlinear left one token covered (`classify`, \
+         the \"X is a Y\" construction); The Inquest added `past-tense`, \
+         `negation`, `transitive-frame` and `pronoun-reference`; The \
+         Mortise added `coordination`, `embedded-clause` and \
+         `epistemic-hedge`. Everything still uncovered names a grammatical \
+         capability no campaign has built — questions, temporal adjuncts, \
+         existentials, witness lists, named-entity lists. A **low score is \
+         the expected result**, not a defect; the corpus is the program's \
+         map, not any one campaign's scorecard.\n\n\
+         Read the **distance** table below the merchant tally, not only the \
+         headline count. Coverage is conjunctive and therefore lags: a \
+         campaign can implement several tokens, move few or no entries to \
+         covered, and still move several MORE entries from two missing \
+         demands to one — progress the headline number cannot express.\n\n",
     );
 
+    out.push_str("## Direction breakdown\n\n");
+    out.push_str(
+        "Whether a corpus states what the grammar must **parse** (a player \
+         line) or **produce** (an NPC line, or any ladder rung), per spec \
+         §2.2/§2.3 — an absent direction is its own row, never inferred \
+         from `speaker` or any other field.\n\n",
+    );
+    out.push_str("| corpus | parse | produce | unknown | total |\n");
+    out.push_str("|---|---|---|---|---|\n");
+    out.push_str(&format!(
+        "| the-merchant | {} | {} | {} | {} |\n",
+        merchant_directions.parse,
+        merchant_directions.produce,
+        merchant_directions.unknown,
+        merchant.entries.len(),
+    ));
+    out.push_str(&format!(
+        "| the-flood-watch | {} | {} | {} | {} |\n",
+        flood_watch_directions.parse,
+        flood_watch_directions.produce,
+        flood_watch_directions.unknown,
+        flood_watch.entries.len(),
+    ));
+    out.push_str(&format!(
+        "| the-ladder (draft) | {} | {} | {} | {} |\n\n",
+        ladder_directions.parse,
+        ladder_directions.produce,
+        ladder_directions.unknown,
+        ladder.entries.len(),
+    ));
+    out.push_str(&format!(
+        "`the-merchant` states no `direction` key at all, so all {} entries \
+         land in `unknown` — that is **correct, not a gap**: the corpus \
+         carries a `speaker` field (`\"player\"`/`\"merchant\"`) that looks \
+         like a plausible stand-in, and spec §2.3 forbids inferring \
+         direction from it. `the-flood-watch` states a direction on every \
+         entry ({} player lines, {} NPC lines). `the-ladder` declares \
+         itself a production instrument in its own `production_axis` \
+         block, so every rung is prose the grammar must generate, never \
+         player input it must parse.\n\n",
+        merchant_directions.unknown, flood_watch_directions.parse, flood_watch_directions.produce,
+    ));
+
     out.push_str("## the-merchant\n\n");
-    out.push_str(&format!("- Total entries: {}\n", corpus.entries.len()));
+    out.push_str(&format!("- Total entries: {}\n", merchant.entries.len()));
     out.push_str(&format!("- Covered: {covered}\n"));
     out.push_str(&format!("- Not yet: {not_yet}\n\n"));
 
     out.push_str("### Per-entry\n\n");
     out.push_str("| id | speaker | text | demands | status |\n");
     out.push_str("|---|---|---|---|---|\n");
-    for entry in &corpus.entries {
+    for entry in &merchant.entries {
         let status = if entry_covered(entry) {
             "covered"
         } else {
@@ -1788,7 +1875,7 @@ fn sentence_coverage_report() {
     // so the leading edge (distance 1) is legible without reading the
     // per-entry table above.
     let mut by_distance: BTreeMap<usize, Vec<&Entry>> = BTreeMap::new();
-    for entry in &corpus.entries {
+    for entry in &merchant.entries {
         by_distance
             .entry(missing_demands(entry).len())
             .or_default()
@@ -1819,6 +1906,72 @@ fn sentence_coverage_report() {
             .join("; ");
         out.push_str(&format!("| {distance} | {} | {which} |\n", entries.len()));
     }
+    out.push('\n');
+
+    out.push_str("## the-flood-watch\n\n");
+    out.push_str(&format!("- Total entries: {}\n", flood_watch.entries.len()));
+    out.push_str(&format!(
+        "- Direction: {} parse / {} produce (see the breakdown above)\n\n",
+        flood_watch_directions.parse, flood_watch_directions.produce,
+    ));
+    out.push_str(&format!(
+        "The resolver above does not run over this corpus — see this \
+         file's module doc for why (a schema change nobody has approved). \
+         What ties it to the grammar's delivered capability instead is the \
+         vocabulary cross-check below: {} of its {} distinct demand \
+         tokens name a rung on the ladder.\n\n",
+        flood_watch_tokens.len() - flood_watch_absent.len(),
+        flood_watch_tokens.len(),
+    ));
+
+    out.push_str("## the-ladder (draft)\n\n");
+    out.push_str(&format!("- Total rungs: {}\n", ladder.entries.len()));
+    out.push_str(&format!(
+        "- Direction: {} produce (see the breakdown above)\n\n",
+        ladder_directions.produce,
+    ));
+    out.push_str(
+        "`the-ladder.corpus.json.DRAFT` is an unfrozen draft — this \
+         campaign does not freeze it, and this report does not pin its \
+         rung count the way `MERCHANT_ENTRIES`/`FLOOD_WATCH_ENTRIES` pin \
+         the two dialogue corpora's. What holds instead are the structural \
+         properties `cli/tests/suite/sentence_corpus.rs` asserts directly \
+         over the ladder's `presupposes` graph (acyclic, ids unique, no \
+         token introduced twice, exactly two roots) and the vocabulary \
+         cross-check below.\n\n",
+    );
+
+    out.push_str("## Cross-check: ladder vocabulary against the two dialogue corpora\n\n");
+    out.push_str(
+        "Whether every distinct demand token a corpus makes names at least \
+         one rung on the ladder — the ladder's own `introduces` \
+         vocabulary, not any one rung's transitive closure.\n\n",
+    );
+    out.push_str(&format!(
+        "- **the-merchant: {} of {}.** Every demand token the corpus makes \
+         has a rung.\n",
+        merchant_tokens.len() - merchant_absent.len(),
+        merchant_tokens.len(),
+    ));
+    out.push_str(&format!(
+        "- **the-flood-watch: {} of {}.** Two tokens are **refused**, not \
+         missing:\n",
+        flood_watch_tokens.len() - flood_watch_absent.len(),
+        flood_watch_tokens.len(),
+    ));
+    for token in &flood_watch_absent {
+        out.push_str(&format!("  - `{token}`\n"));
+    }
+    out.push_str(
+        "\n  Both are input-surface properties of `parse` entries — every \
+         player line in the corpus is lowercase and unterminated, the \
+         actual input surface a real player types — while every ladder \
+         rung is well-formed prose, because the ladder is a production \
+         instrument (its own `production_axis` block states this). A \
+         production instrument has no rung that could ever introduce \
+         either token, so their absence is a structural fact about what \
+         the ladder is FOR, not a gap nobody has closed yet.\n",
+    );
 
     std::fs::write(root.join(REPORT_PATH), out).expect(REPORT_PATH);
 }
