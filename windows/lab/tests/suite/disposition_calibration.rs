@@ -772,6 +772,43 @@ fn every_raider_clears_the_floor_preregistered_not_met() {
 /// mechanism behind either half is NOT established here** — this is a
 /// difference of three measured readings, and naming a cause for it would be
 /// exactly the invention this pin exists to prevent.
+///
+/// # RE-READ AT THE GOVERNOR'S CLOSE (2026-08-28): 12/60 → 10/60, CAUSE NAMED
+///
+/// **This time a cause was measured, not assumed.** The Governor's own tasks
+/// never touch history, worldgen or the bake — this witness had already been
+/// reading 10/60 since before The Governor's branch point (bisected
+/// independently at `7576eca00`, matching The Sources' retrospective
+/// bisection at the same SHA) — so the fall happened somewhere between this
+/// pin's last restatement (`4ee25c355`, 12/60) and that point.
+///
+/// First-parent bisection over the 384 mainline merges in that range (each
+/// probed by checking out the SHA in a scratch worktree and running this test
+/// alone) isolated the flip to a single merge: **`merge(the-granary)`
+/// (`6db5de3f2`)**. Bisecting *inside* that campaign's own branch narrowed it
+/// one commit further, to **`eeaa011fd` — "chore(streams): history/bake/v3 —
+/// The Granary phase timestamps change committed history (T5)"**:
+///
+/// ```text
+///   e8b373891 (Granary T4 + review)         PASS   12/60
+///   eeaa011fd (Granary T5: BAKE v2 -> v3)   FAIL   10/60
+/// ```
+///
+/// The commit is self-explaining and was landed deliberately, per decision
+/// 0006 (an epoch suffix, never a rename): The Granary's sub-year phase
+/// placement (T1-T4) moves *when* a raid or founding fires within a year, so
+/// raid outcomes move whenever a raid now lands on a store-trough phase that
+/// the old year-grained bake would have resolved differently — the stream's
+/// own doc comment says exactly this ("raid outcomes move when raids fire at
+/// store-trough phases"). Nothing about the fall is a bug: it is a shipped,
+/// documented, adjudicated consequence of a merged feature that simply never
+/// re-stated *this* witness at the campaign's own close (The Granary's own
+/// task list re-pinned the H1 witness, the domesday surface and the
+/// census-reading calibrations against its new census, but not this one).
+///
+/// Re-stated here rather than repaired: nothing in The Governor's own scope
+/// touches raid timing, so there is nothing to fix, only a stale number to
+/// correct with its cause on record.
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn the_sub_floor_raider_reading_is_pinned_as_a_witness() {
@@ -781,15 +818,16 @@ fn the_sub_floor_raider_reading_is_pinned_as_a_witness() {
     println!("witness: drow re-seated {changed}/{worlds}");
     assert_eq!(
         (changed, worlds),
-        (12, 60),
-        "drow's flagship re-seating moved from the pinned 12/60. This is NOT a number to \
+        (10, 60),
+        "drow's flagship re-seating moved from the pinned 10/60. This is NOT a number to \
          update — re-read it, then re-state this witness, the #[ignore] reason on \
          every_raider_clears_the_floor_preregistered_not_met, its roster entry in \
          cli/tests/heavy_tier.rs and the BIO-raid-partition-order-statistic registry row in \
-         the SAME commit. THIS HAS NOW HAPPENED ONCE (The Underworld, 2026-08-18, 14/60 → \
-         12/60). BEFORE ASSUMING A CAUSE, MEASURE ONE: that re-read expected decision 0145's \
-         node-index re-key and found it moving the reading the OTHER way — see the doc \
-         comment's mutation arm."
+         the SAME commit. THIS HAS NOW HAPPENED TWICE (The Underworld, 2026-08-18, 14/60 → \
+         12/60; The Granary, landed 2026-08-24 and re-read at The Governor's close on \
+         2026-08-28, 12/60 → 10/60 — see the doc comment's Governor section for the named \
+         cause, `eeaa011fd`'s BAKE v2 -> v3 epoch bump). BEFORE ASSUMING A CAUSE, MEASURE \
+         ONE."
     );
 }
 
