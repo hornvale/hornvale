@@ -783,8 +783,15 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // re-seats on one more world, 190 -> 189 coastal, 809 -> 810 inland —
     // and the two sum to 999 still (the one absent world persists). WITNESS,
     // not claim — nothing here asserts a direction.
-    assert_eq!(coastal, 189, "coastal flagship count drifted");
-    assert_eq!(inland, 810, "inland flagship count drifted");
+    // The Sources' third census (2026-08-28, canonical census on lefford at
+    // 83fcd1689, goldens 6455f51ce — run picked up after this campaign's own vent-chemotrophy fix
+    // (c4192797b) and its xorn re-pin (a56d91320) landed on the merge
+    // product): goblin re-seats back, 189 -> 190
+    // coastal, 810 -> 809 inland — reverting exactly to the prior regen's
+    // figures, and the two still sum to 999. WITNESS, not claim — nothing
+    // here asserts a direction.
+    assert_eq!(coastal, 190, "coastal flagship count drifted");
+    assert_eq!(inland, 809, "inland flagship count drifted");
 }
 
 #[test]
@@ -2118,7 +2125,15 @@ fn name_collision_rate_is_measured_and_pinned() {
         // 0.519_033_116_356_999 -> 0.519_063_035_556_999, a rise of 3.0e-5.
         // This row still carries no directional claim, and the rate stays
         // inside the range decision 0024 sanctions (see the note above).
-        (mean - 0.519_063_035_556_999).abs() < 1e-6,
+        // The Sources' third census (2026-08-28, canonical census on lefford
+        // at 83fcd1689, goldens 6455f51ce — run picked up after this campaign's own vent-chemotrophy fix
+        // (c4192797b) and its xorn re-pin (a56d91320) landed on the merge
+        // product): zero/nonzero/absent
+        // still unmoved at 0/1000/0. Mean: 0.519_063_035_556_999 ->
+        // 0.519_033_116_356_999, reverting exactly to The Granary's figure.
+        // This row still carries no directional claim, and the rate stays
+        // inside the range decision 0024 sanctions (see the note above).
+        (mean - 0.519_033_116_356_999).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -2362,7 +2377,15 @@ fn name_length_distributions_are_measured_and_pinned() {
         // present unmoved at 999; mean 8.522_649_181_881_878 ->
         // 8.520_497_665_465_461. Still comfortably below the campaign's own
         // <10-character claim (spec §7) — re-checked rather than assumed.
-        ("goblin", 999u32, 8.520_497_665_465_461),
+        // The Sources' third census (2026-08-28, canonical census on lefford
+        // at 83fcd1689, goldens 6455f51ce — run picked up after this campaign's own vent-chemotrophy fix
+        // (c4192797b) and its xorn re-pin (a56d91320) landed on the merge
+        // product): present unmoved at 999;
+        // mean 8.520_497_665_465_461 -> 8.522_649_181_881_878, reverting
+        // exactly to the prior regen's figure. Still comfortably below the
+        // campaign's own <10-character claim (spec §7) — re-checked rather
+        // than assumed.
+        ("goblin", 999u32, 8.522_649_181_881_878),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -2497,7 +2520,15 @@ fn name_length_distributions_are_measured_and_pinned() {
         // present unmoved at 980; mean 6.864_935_456_632_652 ->
         // 6.866_580_815_408_162. Still comfortably below the campaign's own
         // <10-character claim (spec §7) — re-checked rather than assumed.
-        ("kobold", 980u32, 6.866_580_815_408_162),
+        // The Sources' third census (2026-08-28, canonical census on lefford
+        // at 83fcd1689, goldens 6455f51ce — run picked up after this campaign's own vent-chemotrophy fix
+        // (c4192797b) and its xorn re-pin (a56d91320) landed on the merge
+        // product): present unmoved at 980;
+        // mean 6.866_580_815_408_162 -> 6.864_935_456_632_652, reverting
+        // exactly to the prior regen's figure. Still comfortably below the
+        // campaign's own <10-character claim (spec §7) — re-checked rather
+        // than assumed.
+        ("kobold", 980u32, 6.864_935_456_632_652),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -2712,8 +2743,17 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // 2.200_726_815_918_367 -> 2.201_225_966_020_408. The claim (spec §8
         // criterion 2, mean in 2-3) still HOLDS at both species — re-checked
         // rather than assumed.
-        ("goblin", 999u32, 2.715_722_780_480_479),
-        ("kobold", 980u32, 2.201_225_966_020_408),
+        // The Sources' third census (2026-08-28, canonical census on lefford
+        // at 83fcd1689, goldens 6455f51ce — run picked up after this campaign's own vent-chemotrophy fix
+        // (c4192797b) and its xorn re-pin (a56d91320) landed on the merge
+        // product): present counts unmoved
+        // (goblin 999, kobold 980). Goblin 2.715_722_780_480_479 ->
+        // 2.716_477_110_510_509; kobold 2.201_225_966_020_408 ->
+        // 2.200_726_815_918_366_6 — both reverting to (within float noise)
+        // the prior regen's figures. The claim (spec §8 criterion 2, mean in
+        // 2-3) still HOLDS at both species — re-checked rather than assumed.
+        ("goblin", 999u32, 2.716_477_110_510_509),
+        ("kobold", 980u32, 2.200_726_815_918_366_6),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -3004,7 +3044,15 @@ fn name_transparency_is_measured_and_pinned() {
         // and 0.986_531_99 (checked directly against the committed census,
         // not assumed). Mean: 0.714_089_011_470_002 -> 0.713_871_805_500_002.
         // Still emphatically NOT 1.0 — re-checked, not assumed.
-        (mean - 0.713_871_805_500_002).abs() < 1e-9,
+        // The Sources' third census (2026-08-28, canonical census on lefford
+        // at 83fcd1689, goldens 6455f51ce — run picked up after this campaign's own vent-chemotrophy fix
+        // (c4192797b) and its xorn re-pin (a56d91320) landed on the merge
+        // product): present/absent unmoved
+        // at 1000/0; min/max unmoved at 0.284_644_19 and 0.986_531_99. Mean:
+        // 0.713_871_805_500_002 -> 0.714_089_011_470_001_7, reverting
+        // exactly to the prior regen's figure. Still emphatically NOT 1.0 —
+        // re-checked, not assumed.
+        (mean - 0.714_089_011_470_001_7).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827

@@ -413,9 +413,18 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // preregistered directional claim asserted above — below the
     // uniform-sphere baseline of 32.7 — is untouched and still clears the
     // baseline by better than 1.8x.
+    //
+    // The Sources' third census (2026-08-28, canonical census on lefford at
+    // 83fcd1689, goldens 6455f51ce — run picked up after this campaign's own vent-chemotrophy fix
+    // (c4192797b) and its xorn re-pin (a56d91320) landed on the merge
+    // product): 17.2526 -> 17.2505, reverting
+    // exactly to The Granary's figure (margin 15.4474 -> 15.4495 degrees;
+    // ratio 1.89537x -> 1.89559x). The preregistered directional claim
+    // asserted above — below the uniform-sphere baseline of 32.7 — is
+    // untouched and still clears the baseline by better than 1.8x.
     assert!(
-        (mean - 17.2526).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.2526)"
+        (mean - 17.2505).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.2505)"
     );
 }
 
