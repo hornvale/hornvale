@@ -160,6 +160,36 @@ The `day' <= day` filter is the same shape `last_fact_day_at_or_before` already
 uses. That is not a coincidence to be admired; it is the reason (b) above
 matters.
 
+### 3.1 The lifetime is the session, and that is not this campaign's to change
+
+Found while writing the plan, not while reviewing the spec, and it corrects an
+earlier draft of §6 that claimed durability across a save.
+
+**Nothing a possession session commits is ever persisted.** The session's
+ledger is a clone of the frozen world's, and its own field doc says so:
+"a clone of the frozen world's ledger, mutated only by `wait`'s tick (NPC
+`agent-at` facts). **Never written back**" (`session.rs:639`). `AGENT_AT` is
+likewise "registered per-session, never at genesis" (`session.rs:642`). There
+is no world-writing path after genesis anywhere in the CLI. So registry and
+ledger are *both* session-scoped, coherently and by design.
+
+The consequence for this campaign is exact and worth stating plainly rather
+than burying: **the latch stays thrown for a playthrough, not for a world.**
+Every durable-state rung on The Offer's axis inherits this, however correct
+its mechanics.
+
+It is not this campaign's to fix. Every fact live play commits already
+evaporates the same way; a passage that persisted would be the anomaly, not
+the norm, and building world persistence is a serialization change touching
+every committed fact — what a saved playthrough contains, whether the
+per-session registry must become permanent, and what reload does are all
+unscoped. Registered as `MAP-playthrough-persistence` in the idea registry.
+
+What this campaign still delivers is unchanged in mechanism: agent-neutral
+facts, contradiction-checked against the registry, folded time-correctly with
+`day' <= day`. That is the 90% rung's machinery. Only its lifetime is smaller
+than the rung's name suggests.
+
 ## 4. Risks
 
 1. **A time-varying room graph vs. pure-function caches.** `RoomMeshMemo` and
@@ -179,11 +209,15 @@ matters.
    it *without* restoring the third outcome for real, leaving a
    three-outcome claim that passes on a fixture accident. Its own doc already
    demands a scan of every cave-bearing vertex; keep that shape.
-4. **Registering a concept moves `cli/tests/fixtures/world-seed-42.json`.** A
-   new predicate is a registry change. That fixture is a byte-golden:
-   `make rebaseline` never writes it, and neither guarding test is in the
-   subfloor roster, so `gate-commit` compiles them and never runs them. Only
-   `make rebaseline-goldens`. This bounced The Offer from the chamber.
+4. **A GENESIS registry change would move `cli/tests/fixtures/world-seed-42.json`.**
+   That fixture is a byte-golden: `make rebaseline` never writes it, and
+   neither guarding test is in the subfloor roster, so `gate-commit` compiles
+   them and never runs them. Only `make rebaseline-goldens`. This bounced The
+   Offer from the chamber. **This campaign most likely avoids it entirely** by
+   registering `passage-cleared` per-session, following `AGENT_AT`'s own
+   precedent (`session.rs:642` — "registered per-session, never at genesis").
+   Task 2 must CHECK which it is rather than assume: if the fixture moves, the
+   golden is refreshed in that same commit.
 
 ## 5. Non-goals
 
@@ -196,9 +230,11 @@ anchor granularity. All of these are IV.c.
 1. A passage whose `barrier_of` state is not `Open` **refuses** passage, with a
    refusal naming the physical reason, and that refusal is reachable in seed
    42's terrain (scanned, not assumed).
-2. An act clears such a passage, commits one fact, and the passage is open on a
-   **later** session over the same world — the durability claim, tested across
-   a save boundary rather than within one session.
+2. An act clears such a passage, commits one fact, and the passage stays open
+   for the **rest of that session** — across many turns, including a `wait`
+   tick and the NPC activity it drives. This is the durability claim at the
+   only lifetime the engine has (§3.1); it is NOT tested across a save
+   boundary, because no such boundary exists.
 3. The same passage reads **closed** when the fold is evaluated at a day before
    the clearing fact — the time-correctness claim, which is what distinguishes
    this from a mutable flag.
