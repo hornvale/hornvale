@@ -155,3 +155,66 @@ current. This does not weaken the drift check's honesty (a stale committed
 file still diffs against a fresh run and fails), but it does mean nobody
 notices unless someone runs `sounding_sweep::run_the_sounding_and_write_the_report`
 by hand and diffs the result.
+
+## Amendment (2026-08-28, The Governor, fix round 1)
+
+Additive correction of a factual premise **in the amendment immediately
+above, not in the original ruling**, which the previous amendment already
+left unchanged and this one leaves unchanged too.
+
+**The previous amendment's corrected count — two — was itself wrong. It
+should have been one.** That amendment reasoned at the *file* level
+(`windows/worldgen/tests/occupancy_readout.rs` is a file the original ruling
+named as a writer) rather than checking, per test, which function in that
+file actually carries the `heavy:` tag and which function performs the
+filesystem write. They are not the same function:
+
+- `occupancy_readout::occupancy_readout_is_current` is the one `heavy:`-tagged
+  test in that file (the one The Governor demoted). It only ever **compares**
+  a freshly rendered readout against the committed `tests/fixtures/
+  occupancy.csv`, byte for byte (`assert_eq!(rendered, committed, …)`). It
+  never writes anything.
+- `occupancy_readout::regenerate_occupancy_readout`, the actual writer
+  (`std::fs::write(FIXTURE_PATH, &body)`), carries its own `#[ignore]` reason
+  and was **never** `heavy:` — its preceding comment says so outright:
+  "Deliberately NOT a `heavy:` reason. The heavy tier is what `make gate-full`
+  runs, and this test WRITES the fixture — running it there would have CI
+  silently rewrite the artifact the drift check above exists to check."
+
+So `occupancy.csv` never belonged in either amendment's writer count. Verified
+directly rather than re-trusting the previous count: every file that still
+carries a surviving `heavy:` tag after this campaign's demotions was
+enumerated and grepped for a filesystem write inside its `heavy:`-tagged
+test bodies. Exactly one write to a committed path was found —
+`history_battery::history_gates_full_world_and_cross_seed`'s
+`std::fs::write` calls into `book/src/laboratory/generated/the-history/`.
+Every other write found in the tier's surviving tests (in
+`underworld_per_rung_switch.rs`, `anomaly_holdout.rs`, and
+`windows/lab/src/runner.rs`'s test module) either lives in a non-`heavy:`
+sibling function or writes to a scratch/temp directory the test itself
+cleans up, never a committed path.
+
+**The corrected count: one test writes a committed artifact
+(`history_battery::history_gates_full_world_and_cross_seed`, writing
+`book/src/laboratory/generated/the-history/`), and one compares a live probe
+against lefford-authored fixtures
+(`fixture_staleness::census_fixtures_match_a_probe_of_live_seeds`, per the
+original ruling, untouched by any of this).** The guard's justification is
+otherwise exactly as the ruling above states it.
+
+**A second orphaning, the same shape as the first amendment's, recorded
+here because it was named at length for `sample-biographies.txt` and not for
+its twin.** `windows/worldgen/tests/fixtures/occupancy.csv` is **not**
+declared in `docs/generated-paths.txt` — it was never part of the drift-check
+regime `sample-biographies.txt` sits under — but `occupancy_readout_is_current`
+was nonetheless its only *automated* witness: the one test in the tree that
+ever compared the committed fixture against a live re-render and could fail
+if the two disagreed. Demoting it out of `heavy:` does not change what
+verdict was correct (the adjudication table's DEMOTE stands — the test's own
+failure message already reads as the report-branch instruction "rewrite the
+fixture in the SAME commit as the change that drifted it"), but it does mean
+nobody runs that comparison automatically any more; catching drift in
+`occupancy.csv` now depends entirely on a human remembering to run
+`occupancy_readout_is_current` by hand. Named here so the cost is visible,
+not silent, the same standard the first amendment applied to
+`sample-biographies.txt`.

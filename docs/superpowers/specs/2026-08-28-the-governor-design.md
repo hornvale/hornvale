@@ -491,15 +491,27 @@ already dev-depends on it); the same in `hornvale-kernel` (which already owns
 truth). **Interacts with §5's literal-call-text detector.** Not decided here.
 
 **8.2 Could the read-only tier run off the canonical box entirely?**
-`heavy-run.sh` carries the canonical-host guard because *two* of its tests
-write committed artifacts and one compares against lefford-authored fixtures
-(a third writer, `sounding_sweep::run_the_sounding_and_write_the_report`, was
-itself demoted by this campaign's own Stage 3/Task 5 — see the adjudication
-table — so the count this paragraph originally argued from, three, is now
-two). That is an argument about three tests, not 118. Decision 0090 (The Pyx) measured
-a 40-world, all-metric probe **byte-identical between x86_64/Linux and
+`heavy-run.sh` carries the canonical-host guard because *one* of its tests
+writes a committed artifact
+(`history_battery::history_gates_full_world_and_cross_seed`) and one compares
+against lefford-authored fixtures
+(`fixture_staleness::census_fixtures_match_a_probe_of_live_seeds`). This
+paragraph originally argued from a count of three writers plus one
+comparator (four); this campaign's own Stage 3/Task 5 demoted two of those
+three writers out of the `heavy:` tier —
+`sounding_sweep::run_the_sounding_and_write_the_report` (a real writer, of
+`the-sounding/`) and `occupancy_readout::occupancy_readout_is_current` (never
+actually a writer — it only ever *compared* against `occupancy.csv`; that
+file's writer, `regenerate_occupancy_readout`, was never `heavy:` at all, so
+counting it here was always wrong, not merely stale — see decision 0086's
+amendments). The corrected count is two tests, not three or four. **Both
+numbers in this section's original text are now stale against the
+post-demotion tier and are corrected here rather than merely flagged:** the
+argument is about two tests, not the 63 the `heavy:` tier now holds (was 118
+when this section was drafted), and decision 0090 (The Pyx) measured a
+40-world, all-metric probe **byte-identical between x86_64/Linux and
 aarch64/Darwin** after libm landed. If that holds for this tier's pins, the
-other 114 could run on the Mac, concurrently with the queue, never taking the
+other 61 could run on the Mac, concurrently with the queue, never taking the
 serial mutex — which would make C nearly free.
 
 **This is exactly the shape of an inherited constraint that ages into an

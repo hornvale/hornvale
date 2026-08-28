@@ -102,10 +102,12 @@ require_canonical_census_host() {
 heavy: REFUSING to run on '$here' ($(uname -s)).
 
 The heavy tier may only run on '$CANONICAL_CENSUS_HOST' (The Siding; decisions
-0063/0079). It is an AUTHORING path, not just an expensive one: two of its
-tests write committed artifacts (the-history, occupancy.csv — a third,
-the-sounding, was demoted out of the heavy tier by The Governor, 2026-08-28),
-and census_fixtures_match_a_probe_of_live_seeds compares a LIVE probe against
+0063/0079). It is an AUTHORING path, not just an expensive one: one of its
+tests writes a committed artifact (the-history — two others, sounding_sweep
+and occupancy_readout_is_current, were demoted out of the heavy tier by The
+Governor, 2026-08-28; occupancy_readout_is_current only ever compared against
+occupancy.csv, it never wrote it), and
+census_fixtures_match_a_probe_of_live_seeds compares a LIVE probe against
 census fixtures authored on that box. The boxes are not byte-identical:
 ~0.1% of discrete-count metrics differ by one unit, decided upstream of
 quantize-at-emit, so a run here would commit values that silently disagree
