@@ -283,6 +283,18 @@ and this campaign must not commit it.** Therefore:
 
 1. Every demotion tag names the **campaign whose question it answered**, in
    the style of the 0148 fare tags.
+   **Carve-out, and it is narrow: some heavy tests never answered a campaign's
+   question at all.** `kernel::ledger::tests::bench_commit_scaling_before_vs_after_index`
+   is a wall-time micro-bench of `Ledger::commit`, and its own comment says it
+   is in the tier only because `heavy_tier_reason_strings_are_canonical`
+   requires every `heavy:` reason to be one verbatim string, so it shares that
+   string with the live-worldgen batteries. It has no campaign to name. Such a
+   tag names **the decision or convention that put the test in the tier**
+   instead — here decision 0132. Do not invent a campaign to satisfy the
+   clause; a false attribution is worse than a named convention.
+   *Found by a reviewer reading this clause against the finished table, not by
+   the clause itself: the rule assumed every heavy test descends from a
+   campaign's question, and one does not.*
 2. A test that is **currently red** and is being demoted must say so *in the
    tag*, and say why that is acceptable — normally "the pin records an answer
    from campaign X; the world has since moved; the question is closed." A
