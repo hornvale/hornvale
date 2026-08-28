@@ -1069,6 +1069,20 @@ fn front_loaded_filter_names() -> Vec<String> {
 /// the two agree about what a heavy test is. A heavy `#[ignore]` tag sits
 /// directly above its `fn`; a test's region runs from that `fn` to the next
 /// `#[test]` attribute or end of file.
+///
+/// **Consequence: a [`SWEEP_CALL`] inside a HELPER defined ABOVE the test is
+/// invisible.** `current` only becomes `Some(name)` at the test's own `fn`
+/// line, so a call textually earlier in the file — inside a helper the test
+/// happens to invoke — is scanned while `current` is still `None` or names an
+/// unrelated earlier test, and is silently never attributed to this test at
+/// all (The Governor, Task 9; found converting
+/// `tolerance_mutation.rs::zero_dispersion_collapses_between_settlement_
+/// variance`, whose sweep originally lived in a `population` helper defined
+/// earlier in the file). The fix is not to widen this scanner — it is to
+/// inline the `map_seeds` call into the test body, the shape every other
+/// caller in this tree already uses. See
+/// [`the_sized_sweep_pin_names_exactly_the_batteries_marked_for_a_bounded_panel`]'s
+/// failure message, which names this before it names dropping the pin.
 fn map_seeds_callers() -> Vec<(String, bool)> {
     let mut sources = Vec::new();
     collect_rs(&repo_root(), &mut sources);
@@ -1331,12 +1345,18 @@ fn the_sized_sweep_pin_names_exactly_the_batteries_marked_for_a_bounded_panel() 
         pinned, sized,
         "\n{NEXTEST_CONFIG}'s sized-sweep filter and the set of heavy/probe \
          batteries marked {SIZED_SWEEP_MARKER:?} have diverged.\n  pinned in \
-         config: {pinned:?}\n  marked in source: {sized:?}\nAdd the missing \
-         name(s) to the `filter = ` line in the `# class: sized-sweep` table, \
-         or drop the stale one. Left alone this does NOT redden on its own: \
-         nextest either schedules an unpinned sized-sweep battery without any \
-         reservation at all, or keeps reserving slots for a battery that no \
-         longer needs them."
+         config: {pinned:?}\n  marked in source: {sized:?}\nIf a name is \
+         pinned but not found in source, check whether its `{SWEEP_CALL:?}` \
+         call lives in a HELPER defined above the test rather than in the \
+         test body itself — `map_seeds_callers` cannot see it there (see that \
+         function's own doc comment), and inlining the call into the test is \
+         the fix, NOT dropping the name from the filter: the name is real and \
+         still needs its reservation. Only once the call is confirmed gone \
+         (or never existed) does dropping it apply. Otherwise add the missing \
+         name(s) to the `filter = ` line in the `# class: sized-sweep` table. \
+         Left alone this does NOT redden on its own: nextest either schedules \
+         an unpinned sized-sweep battery without any reservation at all, or \
+         keeps reserving slots for a battery that no longer needs them."
     );
 }
 
