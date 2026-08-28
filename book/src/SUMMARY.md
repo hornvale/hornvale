@@ -414,6 +414,7 @@
 - [The Coercion](./chronicle/the-coercion.md)
 - [The Inquest](./chronicle/the-inquest.md)
 - [The Foliot](./chronicle/the-foliot.md)
+- [The Offer](./chronicle/the-offer.md)
 
 # Appendix: The Frontier
 
