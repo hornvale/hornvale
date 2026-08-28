@@ -903,6 +903,310 @@ fn a_deep_ladder_rung_derives_its_full_transitive_closure() {
 }
 
 // ---------------------------------------------------------------------
+// Task 4 (The Stile): structural assertions over the ladder
+// ---------------------------------------------------------------------
+//
+// **The ladder is `.DRAFT` and this campaign must not freeze it.** A frozen
+// entry count is the freeze mechanism ([`MERCHANT_ENTRIES`] does exactly
+// that for the merchant corpus above), and freezing is the project owner's
+// act — the moment it happens, rung ids become append-only forever (the
+// ladder's own `renumbering` block says so). So nothing below asserts a
+// count of rungs. What holds instead are structural properties true at any
+// size: acyclic, ids unique, no token introduced twice, every rung's
+// cumulative closure computable (and consistent with its presuppositions'),
+// and exactly two roots.
+
+/// Read `the-ladder.corpus.json.DRAFT`'s raw entries with none of
+/// [`read_derived`]'s post-processing — the structural checks below need the
+/// graph itself (`presupposes` edges, `introduces` tokens), not the resolved
+/// demand sets a rung's [`Entry`] carries.
+fn read_ladder_raw(path: &Path) -> Vec<LadderEntryJson> {
+    let text = std::fs::read_to_string(path)
+        .unwrap_or_else(|e| panic!("{} is committed: {e}", path.display()));
+    let doc: LadderCorpusJson = serde_json::from_str(&text)
+        .unwrap_or_else(|e| panic!("{} parses as the ladder shape: {e}", path.display()));
+    doc.entries
+}
+
+/// DFS colouring's three states, applied to the `presupposes` graph
+/// (Cormen et al.): a node not yet visited, a node currently on the
+/// recursion path (revisiting it is a back edge — a cycle), and a node
+/// whose whole subtree is already explored (safe to see again from another
+/// branch, which is what makes a diamond — two branches reconverging on a
+/// shared ancestor, the shape [`derived_demands`]'s own doc discusses —
+/// linear-time instead of exponential).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Colour {
+    /// Not yet reached by the walk.
+    White,
+    /// On the current DFS path — an edge into a `Gray` node is a cycle.
+    Gray,
+    /// Fully explored; revisiting it from elsewhere is not a cycle.
+    Black,
+}
+
+/// A real cycle detector over `presupposes`: DFS-coloured, explicit-stack
+/// (so depth is bounded by heap, not the call stack, on a ladder far larger
+/// than 214 rungs), returning either a full topological order (root-most
+/// first) or the offending cycle.
+///
+/// **This is not a backward-reference check.** A file whose `presupposes`
+/// only ever names ids appearing earlier in the array is trivially acyclic
+/// by construction — so a test that merely confirms every reference points
+/// backward would pass on such a file forever while proving almost nothing:
+/// a real cycle introduced by an edit need not respect file order at all,
+/// since every id is looked up by content (`by_id`), never by position. Only
+/// a real graph walk that tracks the current path — not merely "have I seen
+/// this id before" — can tell a shared ancestor (safe; a diamond) from a
+/// live ancestor (a cycle).
+fn topological_order(entries: &[LadderEntryJson]) -> Result<Vec<&str>, Vec<&str>> {
+    let by_id: BTreeMap<&str, &LadderEntryJson> =
+        entries.iter().map(|e| (e.id.as_str(), e)).collect();
+    let mut colour: BTreeMap<&str, Colour> = entries
+        .iter()
+        .map(|e| (e.id.as_str(), Colour::White))
+        .collect();
+    let mut order: Vec<&str> = Vec::new();
+
+    for start in entries.iter().map(|e| e.id.as_str()) {
+        if colour[start] != Colour::White {
+            continue;
+        }
+        // Each stack frame is (id, index of the next presupposition of id
+        // still to visit) — the frame stays on the stack, index advancing,
+        // for as long as `id` is on the current DFS path, and is popped for
+        // good (without being pushed back) only once every presupposition
+        // has been explored. So at any moment, the ids present in `stack`
+        // are exactly the `Gray` ones, root to current, in path order.
+        let mut stack: Vec<(&str, usize)> = vec![(start, 0)];
+        colour.insert(start, Colour::Gray);
+        while let Some((id, next)) = stack.pop() {
+            let rung = by_id[id];
+            if next < rung.presupposes.len() {
+                let child = rung.presupposes[next].as_str();
+                stack.push((id, next + 1));
+                match colour.get(child) {
+                    Some(Colour::White) => {
+                        colour.insert(child, Colour::Gray);
+                        stack.push((child, 0));
+                    }
+                    Some(Colour::Gray) => {
+                        let mut cycle: Vec<&str> = stack.iter().map(|(id, _)| *id).collect();
+                        cycle.push(child);
+                        return Err(cycle);
+                    }
+                    Some(Colour::Black) => {}
+                    None => panic!("presupposes references unknown rung {child:?}"),
+                }
+            } else {
+                colour.insert(id, Colour::Black);
+                order.push(id);
+            }
+        }
+    }
+    Ok(order)
+}
+
+/// **Structural assertion: acyclic.** [`topological_order`] must both
+/// succeed and account for every rung — a detector that silently dropped
+/// rungs (e.g. by treating an already-`Black` node as "done, stop counting")
+/// would be as useless here as one that never fires at all.
+#[test]
+fn the_ladder_is_acyclic() {
+    let entries = read_ladder_raw(&repo_root().join("sentences/the-ladder.corpus.json.DRAFT"));
+    let n = entries.len();
+    match topological_order(&entries) {
+        Ok(order) => assert_eq!(
+            order.len(),
+            n,
+            "topological sort produced {} entries from {n} rungs in the file; \
+             they must match exactly",
+            order.len()
+        ),
+        Err(cycle) => panic!("the ladder has a cycle: {cycle:?}"),
+    }
+}
+
+/// **THE POSITIVE CONTROL for [`topological_order`].** A cycle detector that
+/// has never fired is not a detector — the same standing rule
+/// [`a_classify_only_entry_resolves_as_covered`]'s own doc states for the
+/// resolver's positive control, and this campaign has already found one test
+/// elsewhere that passed under the exact mutation it existed to catch.
+///
+/// Builds a two-rung synthetic ladder with a genuine cycle (`x001`
+/// presupposes `x002`, which presupposes `x001`) and writes it to a file
+/// under [`std::env::temp_dir`] — never under `sentences/`, which this
+/// campaign does not edit outside `the-ladder.corpus.json.DRAFT` itself.
+/// [`read_ladder_raw`] takes a path, so a temp file is the natural seam
+/// (Task 1's fix round established this route works and never touches
+/// `sentences/`). Confirms the detector reports the cycle by name, then
+/// hashes the real ladder file before and after to confirm it was never
+/// touched.
+#[test]
+fn the_cycle_detector_fires_on_an_injected_cycle() {
+    let ladder_path = repo_root().join("sentences/the-ladder.corpus.json.DRAFT");
+    let before = std::fs::read(&ladder_path).expect("the ladder is committed and readable before");
+
+    let cyclic_json = r#"{
+        "entries": [
+            {"id": "x001", "text": "a", "introduces": "tok-a", "presupposes": ["x002"]},
+            {"id": "x002", "text": "b", "introduces": "tok-b", "presupposes": ["x001"]}
+        ]
+    }"#;
+    let tmp = std::env::temp_dir().join(format!(
+        "hornvale-ladder-cycle-control-{}.json",
+        std::process::id()
+    ));
+    std::fs::write(&tmp, cyclic_json).expect("the temp control file writes");
+    let entries = read_ladder_raw(&tmp);
+    let result = topological_order(&entries);
+    std::fs::remove_file(&tmp).ok();
+
+    match result {
+        Ok(order) => panic!(
+            "topological_order reported a valid order ({order:?}) over a \
+             corpus containing a genuine x001<->x002 cycle; the detector has \
+             not fired and cannot be trusted to fire on a real one"
+        ),
+        Err(cycle) => assert!(
+            cycle.contains(&"x001") && cycle.contains(&"x002"),
+            "the detector fired, but the reported cycle {cycle:?} does not \
+             name both cyclic ids"
+        ),
+    }
+
+    let after = std::fs::read(&ladder_path).expect("the ladder is committed and readable after");
+    assert_eq!(
+        before, after,
+        "the cycle-detector positive control modified the real ladder file; \
+         it must only ever write its synthetic cycle to a temp file"
+    );
+}
+
+/// **Structural assertion: ids unique.** A duplicate id would make
+/// `by_id`'s construction (in [`derived_demands`] and [`topological_order`]
+/// alike) silently drop one of the two entries it collides on, which would
+/// corrupt every closure and every cycle check above without either ever
+/// reporting an error.
+#[test]
+fn the_ladder_has_no_duplicate_ids() {
+    let entries = read_ladder_raw(&repo_root().join("sentences/the-ladder.corpus.json.DRAFT"));
+    let mut seen: BTreeSet<&str> = BTreeSet::new();
+    let mut duplicates: Vec<&str> = Vec::new();
+    for entry in &entries {
+        if !seen.insert(entry.id.as_str()) {
+            duplicates.push(entry.id.as_str());
+        }
+    }
+    assert!(
+        duplicates.is_empty(),
+        "duplicate ladder ids: {duplicates:?}"
+    );
+}
+
+/// **Structural assertion: no token introduced twice.** Two rungs both
+/// declaring the same `introduces` token would make "which rung is the
+/// canonical source of this capability" ambiguous, which is exactly the
+/// question [`derived_demands`] answers by folding every reached
+/// `introduces` into one set — a set that cannot see or report the
+/// ambiguity once two rungs contribute the same token.
+#[test]
+fn no_ladder_token_is_introduced_twice() {
+    let entries = read_ladder_raw(&repo_root().join("sentences/the-ladder.corpus.json.DRAFT"));
+    let mut introduced_by: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
+    for entry in &entries {
+        if let Some(token) = entry.introduces.as_deref() {
+            introduced_by
+                .entry(token)
+                .or_default()
+                .push(entry.id.as_str());
+        }
+    }
+    let duplicates: BTreeMap<&str, &Vec<&str>> = introduced_by
+        .iter()
+        .filter(|(_, ids)| ids.len() > 1)
+        .map(|(token, ids)| (*token, ids))
+        .collect();
+    assert!(
+        duplicates.is_empty(),
+        "tokens introduced by more than one rung: {duplicates:?}"
+    );
+}
+
+/// **Structural assertion: every rung's cumulative closure is computable,
+/// and consistent with its presuppositions.** Every rung's closure must
+/// contain its own `introduces` token (if any), and must be a superset of
+/// each of its direct presuppositions' own closures — the monotonicity a
+/// transitive closure over a DAG is required to have. This both exercises
+/// [`derived_demands`] over every rung without panicking (the "computable"
+/// half) and pins the closure operator's actual algebra (the "cumulative"
+/// half) — a shallow reader that stopped one level early, the exact bug
+/// [`a_ladder_rung_derives_its_transitive_demand_set`] pins on r004 alone,
+/// would violate this superset relation on some rung somewhere in the
+/// ladder even if it happened to pass on r004 and r183 individually.
+#[test]
+fn every_rungs_closure_is_a_superset_of_its_presuppositions_closures() {
+    let entries = read_ladder_raw(&repo_root().join("sentences/the-ladder.corpus.json.DRAFT"));
+    let by_id: BTreeMap<&str, &LadderEntryJson> =
+        entries.iter().map(|e| (e.id.as_str(), e)).collect();
+
+    for entry in &entries {
+        let demands: BTreeSet<String> = derived_demands(entry.id.as_str(), &by_id)
+            .into_iter()
+            .collect();
+
+        if let Some(token) = &entry.introduces {
+            assert!(
+                demands.contains(token),
+                "{}'s own closure does not contain the token it introduces \
+                 ({token})",
+                entry.id
+            );
+        }
+
+        for presupposed_id in &entry.presupposes {
+            let parent_demands: BTreeSet<String> = derived_demands(presupposed_id, &by_id)
+                .into_iter()
+                .collect();
+            assert!(
+                parent_demands.is_subset(&demands),
+                "{}'s closure is missing tokens its presupposition {presupposed_id} \
+                 has: {:?}",
+                entry.id,
+                parent_demands.difference(&demands).collect::<Vec<_>>()
+            );
+        }
+    }
+}
+
+/// **Structural assertion: exactly two roots.** A root is a rung with no
+/// presuppositions at all — the ladder's own header states there must be
+/// exactly two, one per independent predication strategy (nominal and
+/// verbal; Stassen 1997), deliberately not nested under each other. This
+/// holds at any corpus size: appending a rung anywhere in the file changes
+/// the root count only if that rung is itself rootless, which is the
+/// deliberate act a third independent strategy would be — not a drift.
+#[test]
+fn the_ladder_has_exactly_two_roots() {
+    let entries = read_ladder_raw(&repo_root().join("sentences/the-ladder.corpus.json.DRAFT"));
+    let roots: Vec<&str> = entries
+        .iter()
+        .filter(|e| e.presupposes.is_empty())
+        .map(|e| e.id.as_str())
+        .collect();
+    assert_eq!(
+        roots.len(),
+        2,
+        "the ladder's root count moved from 2 to {}: {roots:?}. A root is a \
+         rung with no presuppositions at all; the ladder's own header \
+         states there are exactly two independent predication strategies \
+         (nominal and verbal), so a third root is a deliberate structural \
+         claim, not a drift.",
+        roots.len()
+    );
+}
+
+// ---------------------------------------------------------------------
 // Task 1: the realization witness
 // ---------------------------------------------------------------------
 
