@@ -1,0 +1,2546 @@
+{
+  "name": "the-flood-watch",
+  "provenance": "Nathan, 2026-08-27, written for The Stile. AUTHORED SCENE DIALOGUE, NOT RECORDED SPEECH — and the distinction is the field's whole job. `the-merchant.corpus.json` was transcribed verbatim from a live brainstorm, so its warrant is that a person actually said those words under no pressure to demonstrate anything. These five scenes were composed deliberately, by the project owner, knowing they would be annotated: an authored corpus can select for the constructions its author finds interesting, and nothing here rules that out. WHAT IT CAN TESTIFY TO: the player lines are written as a player would actually type — lowercase, unpunctuated, apostrophe-free, elliptical, sometimes malformed — and that is exactly the input surface a natural-language interface receives, so the parse side has real warrant as a sample of the input distribution even though the scenes are invented. WHAT IT CANNOT: it is not evidence about the FREQUENCY of any construction in play, and a coverage score against it measures the grammar against one author's ear for investigative dialogue, not against dialogue. Its coverage starts near zero on purpose; a low score is the starting state, not a defect.",
+  "shape_notes": "EXTENDS the merchant corpus's shape rather than forking it: same document keys, same per-entry `speaker`/`text`/`demands`, plus three additions. (1) `scene` names which of the five scenes an entry belongs to. (2) `direction` is `parse` for a player line and `produce` for an NPC line, and it is LOAD-BEARING: parsing a demand and producing it are different capabilities, the merchant corpus conflates them, and the distinction cannot be recovered from the data later if it is dropped now. Nothing resolves it today — no resolver, no score, no coverage test is wired for this corpus — because the resolver's `Entry` shape would have to change, and that is spec work nobody has approved. The data is frozen; the measurement is left alone. (3) `note` is optional and carries what a token list cannot: a reading that would otherwise be lost, or an honest statement that the annotator was unsure how to name something. DEMAND TOKENS ARE THE LADDER'S (`the-ladder.corpus.json.DRAFT`), so a cross-check between the two is mechanical rather than interpretive; where a line demanded something the ladder's 139 tokens do not name, a new token was minted and is listed under `minted_tokens` below rather than forced into an approximate neighbour. `ellipsis` is used in its general sense (any material recoverable from context), of which the ladder's answer-ellipsis rung is one instance; the narrower kinds that would otherwise hide inside it — subject ellipsis, verb-phrase ellipsis, null complement anaphora, one-anaphora, propositional anaphora — carry their own tokens, because fragmentary dialogue is where this corpus lives and one token for all of it would be exactly the under-description the merchant corpus already suffers from.",
+  "exclusions": "Stage directions in [brackets] are not utterances and are excluded, as is the scene-setting prose that opens each scene and the incident/cast matter at the head of the source. SIX pairs break strict speaker alternation and are kept as separate entries, because each is a separate utterance: s1-u29/s1-u30 (the first was refused by the interface, so the player speaks again), s4-u19/s4-u20, s4-u21/s4-u22, s5-u10/s5-u11, s5-u17/s5-u18 and s5-u18/s5-u19. Four of the six are separated in the source by a stage direction; two are not. Merging any of them into one entry would silently create an utterance nobody wrote.",
+  "minted_tokens_note": "Tokens this corpus needed that the ladder draft's 139 do not name. Each was minted rather than folded into a near neighbour, because under-description is this family's known failure mode and is invisible once committed. They are recorded HERE, in the frozen data, rather than only in a campaign report: a corpus that points at a scratch file for half its vocabulary is not self-describing. Two of them (`unpunctuated-input`, `contraction-elision`) are properties of the input SURFACE rather than of grammar, and they appear only on `parse` entries — every player line in the source is lowercase and unterminated, which is a fact about the interface, not about the player. A count of 1 is not an apology: a construction that occurs once and is unreachable from the other tokens still has to be named to be counted.",
+  "minted_tokens": {
+    "adjective-as-argument": "A bare adjective in an argument position rather than a predicate one (`careful is better than good`).",
+    "adjunct-wh-question": "A wh-question over a non-subcategorized position — where/when/why/how — rather than over an argument slot.",
+    "clarification-request": "A turn whose function is to demand specification of the previous turn rather than to advance the exchange.",
+    "condolence-formula": "A fixed sympathy expression, sibling to the ladder's `greeting-formula`.",
+    "contraction-elision": "A contraction written with the apostrophe missing (`couldnt`, `im`, `theres`). Input-surface only; parse entries only.",
+    "contradiction-assertion": "Asserting that two ATTRIBUTED propositions cannot both hold — a claim about the account set, not about the world.",
+    "conversational-implicature": "Meaning carried by what is deliberately not said, including a speaker pre-empting or cancelling an inference.",
+    "declarative-question": "A bare declarative used with question force: no inversion, no auxiliary, no interrogative marking of any kind.",
+    "degree-question": "A wh-question over the degree of a gradable predicate (`how late`, `how far`).",
+    "detached-relative": "A relative clause punctuated as its own sentence, its head in a previous sentence — or, at s3-u13, in the other speaker's previous turn.",
+    "echo-answer": "Answering by repeating the question's verb rather than with a particle.",
+    "epicene-pronoun": "Number-neutral `they` for a single referent of unknown identity.",
+    "exclamative": "An exclamative complement (`you'd be surprised how much …`), which asserts a degree rather than asking for one.",
+    "floating-quantifier": "A quantifier stranded away from the noun phrase it quantifies (`you can't both be right`).",
+    "idiom": "A lexicalized figurative expression, including one used with a substituted argument.",
+    "impersonal-pronoun": "A formally 1st/2nd/3rd-person pronoun used non-referentially (`you can see the head of the race`, `they rang it late`).",
+    "infinitival-complement": "An infinitive as the complement of a control verb (`want to talk`), distinct from the ladder's object-control `complement-manipulation`.",
+    "infinitival-relative": "An infinitive modifying a noun (`the only way to walk it`), distinct from the ladder's infinitival purpose adjunct.",
+    "irony": "An utterance whose intended force inverts its literal content.",
+    "kin-term-as-name": "A determinerless kinship term used as a proper name (`Then Mother's wrong`).",
+    "long-distance-extraction": "A wh-word questioned out of an embedded clause across a matrix verb (`where do you think i was`).",
+    "manner-adverb": "A bare adverb of manner, as against the ladder's clausal `subordination-manner`.",
+    "metalinguistic-reference": "Talking about the FORM of an utterance — whose words they were, how it was phrased — rather than its content.",
+    "metaphor": "A figure composed on the spot rather than retrieved (`nothing but elbows`); an idiom lexicon does not reach it.",
+    "multi-sentence-turn": "A turn that is more than one sentence. Named because the grammar produces clauses, and most NPC lines here are paragraphs.",
+    "negative-conditional": "An `unless` clause, here with no main clause at all.",
+    "negative-polarity-item": "An item licensed only in a negative or interrogative environment (`anyone`, `ever`, `at all`, `a word`, `in my life`).",
+    "nominal-compound": "A noun-noun compound (`sluice bar`, `lock house`, `watch roster`); pervasive in a world with its own vocabulary.",
+    "null-complement-anaphora": "A complement omitted entirely with the verb present (`he didnt say`), distinct from pronominalizing it.",
+    "one-anaphora": "The nominal pro-form `one` standing for an earlier noun phrase.",
+    "ordinal": "An ordinal numeral (`tenth hour`, `the first thing`, `the seventh day`), which the ladder's cardinal token does not reach.",
+    "overt-subject-imperative": "An imperative carrying an overt, contrastive subject (`You tell her`).",
+    "participial-modifier": "A participle modifying a noun phrase attributively (`someone … carrying something long`).",
+    "particle-verb": "A verb-plus-particle unit (`write down`, `walk out with`, `come back`, `carried … across`).",
+    "past-progressive": "The progressive composed with past tense; the ladder's progressive rung is present-tense only.",
+    "perfect-progressive": "Present perfect composed with the progressive (`I've been nine days waiting`).",
+    "phasal-adverb": "`still`, `already`, `yet` — asserting a phase against an expectation.",
+    "pluperfect": "An independent past-in-the-past (`The bell had gone`), not a sequence-of-tense effect inside an embedded clause.",
+    "possessive-pronoun": "Possessive determiners and independent possessives (`his` vs `yours`), which the ladder's possession rungs do not isolate.",
+    "pp-modifier": "An attributive prepositional phrase inside a noun phrase (`someone on the bank`), distinct from locative PREDICATION.",
+    "preposition-stranding": "A preposition left behind by extraction (`which way did he come from`, `what was she like`, `a niece she used to walk out with`).",
+    "proper-name": "A single proper name in an argument position. The ladder isolates only a LIST of names.",
+    "propositional-anaphora": "`so` as a pro-form for a whole proposition (`I didn't think so`), here under a neg-raising verb.",
+    "reference-failure": "Detecting that an anaphor in the interlocutor's utterance has no resolvable antecedent, and signalling it. Hesk's `Who?` is the only instance and is NOT a question about identity.",
+    "retraction": "A speaker withdrawing or downgrading their own earlier assertion.",
+    "rhetorical-question": "An interrogative not seeking an answer — which at s3-u28 is answered literally anyway.",
+    "small-clause-complement": "A whole subjectful predication as a verb's complement (`wanted the low fields under water`, `want it asked`, `mark it doubtful`).",
+    "so-inversion": "`So does X` — VP anaphora with do-support and subject-auxiliary inversion.",
+    "subject-ellipsis": "A dropped subject recoverable from context (`Couldn't see.`, `Drives people mad.`).",
+    "unpunctuated-input": "Lowercase, sentence-final punctuation absent. The parser cannot use case or a terminal `?` to type the utterance. Input-surface only; parse entries only.",
+    "verbless-clause": "A predication with no finite verb anywhere, not recoverable from a preceding question — so not answer ellipsis. See s3-u19.",
+    "volitional-modal": "`won't`/`wouldn't` as refusal, as against ability. The corpus turns on the contrast twice.",
+    "vp-ellipsis": "A verb phrase elided under a stranded auxiliary (`I didn't.`, `I won't.`, `now nobody can`).",
+    "wh-determiner-phrase": "A wh-determiner composed with a nominal restrictor (`which bell`), which presupposes a set the bare wh-pronoun does not.",
+    "zero-complementizer": "A complement clause with no `that`. Carried alongside its overt counterpart at s1-u10 / s4-u19.",
+    "zero-relativizer": "A relative clause with no relativizer (`a thing most innocent people have ready`)."
+  },
+  "entries": [
+    {
+      "id": "s1-u01",
+      "scene": "the-reluctant-witness",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "were you out on the night of the flood watch",
+      "demands": [
+        "polar-question",
+        "past-tense",
+        "person-deixis",
+        "locative-predication",
+        "temporal-adverbial",
+        "pp-modifier",
+        "nominal-compound",
+        "unpunctuated-input"
+      ],
+      "note": "Opens the scene with a dated polar question. `out` is an adverbial predicate under the copula, not a verb, so the clause has no lexical verb at all."
+    },
+    {
+      "id": "s1-u02",
+      "scene": "the-reluctant-witness",
+      "speaker": "hesk-ollow",
+      "direction": "produce",
+      "text": "I'm out most nights.",
+      "demands": [
+        "habitual-aspect",
+        "locative-predication",
+        "person-deixis",
+        "quantifier",
+        "temporal-adverbial",
+        "number-marking"
+      ],
+      "note": "Answers a question about one night with a habit. The evasion is grammatical, not lexical: producing a habitual where a past-tense polar answer was asked for."
+    },
+    {
+      "id": "s1-u03",
+      "scene": "the-reluctant-witness",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "were you out that night",
+      "demands": [
+        "polar-question",
+        "past-tense",
+        "person-deixis",
+        "locative-predication",
+        "demonstrative-deixis",
+        "temporal-adverbial",
+        "unpunctuated-input"
+      ],
+      "note": "A near-repetition that narrows the previous question. The parser must read it as a re-ask of an unanswered question, not as a new one."
+    },
+    {
+      "id": "s1-u04",
+      "scene": "the-reluctant-witness",
+      "speaker": "hesk-ollow",
+      "direction": "produce",
+      "text": "Part of it.",
+      "demands": [
+        "ellipsis",
+        "partitive",
+        "discourse-anaphora",
+        "verbless-clause"
+      ],
+      "note": "A partitive fragment answering a polar question: neither yes nor no."
+    },
+    {
+      "id": "s1-u05",
+      "scene": "the-reluctant-witness",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "which part",
+      "demands": [
+        "wh-question",
+        "wh-determiner-phrase",
+        "ellipsis",
+        "partitive",
+        "discourse-anaphora",
+        "clarification-request",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s1-u06",
+      "scene": "the-reluctant-witness",
+      "speaker": "hesk-ollow",
+      "direction": "produce",
+      "text": "Before the bell.",
+      "demands": [
+        "ellipsis",
+        "verbless-clause",
+        "temporal-adverbial",
+        "presupposition-accommodation",
+        "definiteness"
+      ],
+      "note": "`the bell` is a first-mention definite: the hearer must accommodate a bell neither speaker has introduced. The next turn refuses to."
+    },
+    {
+      "id": "s1-u07",
+      "scene": "the-reluctant-witness",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "which bell",
+      "demands": [
+        "wh-question",
+        "wh-determiner-phrase",
+        "ellipsis",
+        "definiteness",
+        "clarification-request",
+        "unpunctuated-input"
+      ],
+      "note": "Repairs the accommodated definite rather than accepting it."
+    },
+    {
+      "id": "s1-u08",
+      "scene": "the-reluctant-witness",
+      "speaker": "hesk-ollow",
+      "direction": "produce",
+      "text": "The flood-watch bell. They rang it late.",
+      "demands": [
+        "multi-sentence-turn",
+        "definiteness",
+        "nominal-compound",
+        "ellipsis",
+        "verbless-clause",
+        "impersonal-pronoun",
+        "transitive-frame",
+        "past-tense",
+        "pronoun-reference",
+        "temporal-adverbial"
+      ],
+      "note": "`They` is agent-defocusing: an impersonal plural for whoever rings the bell. Ottilie's scene later asks exactly who, and nobody can say."
+    },
+    {
+      "id": "s1-u09",
+      "scene": "the-reluctant-witness",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "how late",
+      "demands": [
+        "degree-question",
+        "ellipsis",
+        "clarification-request",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s1-u10",
+      "scene": "the-reluctant-witness",
+      "speaker": "hesk-ollow",
+      "direction": "produce",
+      "text": "Late enough the water was up before it went.",
+      "demands": [
+        "degree-result",
+        "zero-complementizer",
+        "subject-ellipsis",
+        "ellipsis",
+        "subordination-temporal",
+        "past-tense",
+        "locative-predication",
+        "pronoun-reference",
+        "definiteness"
+      ],
+      "note": "Subject and copula are dropped (`[it was] late enough`), the complementizer is absent, and the answer to a degree question is given as a consequence rather than a measurement. Compare s4-u19, which is the same construction with `that` overt."
+    },
+    {
+      "id": "s1-u11",
+      "scene": "the-reluctant-witness",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "where were you before the bell",
+      "demands": [
+        "adjunct-wh-question",
+        "past-tense",
+        "person-deixis",
+        "temporal-adverbial",
+        "definiteness",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s1-u12",
+      "scene": "the-reluctant-witness",
+      "speaker": "hesk-ollow",
+      "direction": "produce",
+      "text": "The racks. Where I am now.",
+      "demands": [
+        "multi-sentence-turn",
+        "ellipsis",
+        "verbless-clause",
+        "headless-relative",
+        "person-deixis",
+        "temporal-adverbial",
+        "definiteness",
+        "spatial-adverbial"
+      ],
+      "note": "The second fragment is a free relative apposed to the first, giving a past location by identity with the present utterance situation."
+    },
+    {
+      "id": "s1-u13",
+      "scene": "the-reluctant-witness",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "can you see the sluice from the racks",
+      "demands": [
+        "polar-question",
+        "ability-modal",
+        "transitive-frame",
+        "definiteness",
+        "spatial-adverbial",
+        "person-deixis",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s1-u14",
+      "scene": "the-reluctant-witness",
+      "speaker": "hesk-ollow",
+      "direction": "produce",
+      "text": "You can see the head of the race.",
+      "demands": [
+        "impersonal-pronoun",
+        "ability-modal",
+        "transitive-frame",
+        "possession-inalienable",
+        "definiteness",
+        "conversational-implicature"
+      ],
+      "note": "Swaps the addressee's referential `you` for a generic one, and the visible landmark for a different one. The whole evasion rides on how one pronoun is interpreted."
+    },
+    {
+      "id": "s1-u15",
+      "scene": "the-reluctant-witness",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "did you see anyone at the head of the race",
+      "demands": [
+        "polar-question",
+        "past-tense",
+        "transitive-frame",
+        "indefinite-pronoun",
+        "negative-polarity-item",
+        "spatial-adverbial",
+        "possession-inalienable",
+        "definiteness",
+        "person-deixis",
+        "unpunctuated-input"
+      ],
+      "note": "`anyone` is a negative-polarity indefinite licensed by the question, not the plain indefinite `someone`."
+    },
+    {
+      "id": "s1-u16",
+      "scene": "the-reluctant-witness",
+      "speaker": "hesk-ollow",
+      "direction": "produce",
+      "text": "I saw someone on the bank.",
+      "demands": [
+        "transitive-frame",
+        "past-tense",
+        "person-deixis",
+        "indefinite-pronoun",
+        "pp-modifier",
+        "evidential-witness",
+        "definiteness"
+      ]
+    },
+    {
+      "id": "s1-u17",
+      "scene": "the-reluctant-witness",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "who",
+      "demands": [
+        "wh-question",
+        "ellipsis",
+        "clarification-request",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s1-u18",
+      "scene": "the-reluctant-witness",
+      "speaker": "hesk-ollow",
+      "direction": "produce",
+      "text": "I couldn't say.",
+      "demands": [
+        "ability-modal",
+        "negation",
+        "modal-negation-scope",
+        "null-complement-anaphora",
+        "epistemic-hedge",
+        "person-deixis",
+        "deliberate-ambiguity"
+      ],
+      "note": "The complement is omitted outright rather than pronominalized, and the modal is ambiguous between inability and unwillingness. Both are deliberate; the next turn attacks the ambiguity directly."
+    },
+    {
+      "id": "s1-u19",
+      "scene": "the-reluctant-witness",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "couldnt see or wont say",
+      "demands": [
+        "alternative-question",
+        "declarative-question",
+        "subject-ellipsis",
+        "ability-modal",
+        "volitional-modal",
+        "negation",
+        "modal-negation-scope",
+        "contraction-elision",
+        "unpunctuated-input"
+      ],
+      "note": "No interrogative marking of any kind: no inversion, no auxiliary do-support, no question mark, no subject. The question force is carried by the bare disjunction alone."
+    },
+    {
+      "id": "s1-u20",
+      "scene": "the-reluctant-witness",
+      "speaker": "hesk-ollow",
+      "direction": "produce",
+      "text": "Couldn't see. It was dark and I'm not young.",
+      "demands": [
+        "multi-sentence-turn",
+        "echo-answer",
+        "subject-ellipsis",
+        "ability-modal",
+        "negation",
+        "clause-coordination",
+        "past-tense",
+        "property-predication",
+        "person-deixis"
+      ],
+      "note": "Answers an alternative question by repeating one disjunct rather than with a particle; the second sentence is an unmarked justification with no causal connective."
+    },
+    {
+      "id": "s1-u21",
+      "scene": "the-reluctant-witness",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "which way did he come from",
+      "demands": [
+        "wh-determiner-phrase",
+        "adjunct-wh-question",
+        "wh-fronting",
+        "preposition-stranding",
+        "past-tense",
+        "pronoun-reference",
+        "unpunctuated-input"
+      ],
+      "note": "`he` has no antecedent in the shared discourse: Hesk said `someone`. This is the pronoun the next turn fails on."
+    },
+    {
+      "id": "s1-u22",
+      "scene": "the-reluctant-witness",
+      "speaker": "hesk-ollow",
+      "direction": "produce",
+      "text": "Who?",
+      "demands": [
+        "wh-question",
+        "ellipsis",
+        "reference-failure",
+        "clarification-request"
+      ],
+      "note": "NOT a question about identity. The player's `he` has no resolvable antecedent for Hesk, who said `someone` and knows no more. The demand is to DETECT an unresolvable anaphor and initiate repair — a capability distinct from asking who a known referent is."
+    },
+    {
+      "id": "s1-u23",
+      "scene": "the-reluctant-witness",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "the person on the bank",
+      "demands": [
+        "ellipsis",
+        "verbless-clause",
+        "definiteness",
+        "pp-modifier",
+        "discourse-anaphora",
+        "unpunctuated-input"
+      ],
+      "note": "Repairs the failed pronoun by re-describing the referent; a bare definite NP standing as a whole turn."
+    },
+    {
+      "id": "s1-u24",
+      "scene": "the-reluctant-witness",
+      "speaker": "hesk-ollow",
+      "direction": "produce",
+      "text": "Up from the Warrens side. That's the only way to walk it, so don't make anything of that.",
+      "demands": [
+        "multi-sentence-turn",
+        "ellipsis",
+        "verbless-clause",
+        "spatial-adverbial",
+        "proper-name",
+        "nominal-compound",
+        "discourse-anaphora",
+        "focus-particle",
+        "infinitival-relative",
+        "discourse-connective",
+        "prohibitive",
+        "negative-polarity-item",
+        "conversational-implicature"
+      ],
+      "note": "Names the implicature the hearer is about to draw in order to cancel it. Producing a cancellation requires modelling the inference well enough to pre-empt it."
+    },
+    {
+      "id": "s1-u25",
+      "scene": "the-reluctant-witness",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "was he carrying something",
+      "demands": [
+        "polar-question",
+        "past-progressive",
+        "transitive-frame",
+        "indefinite-pronoun",
+        "pronoun-reference",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s1-u26",
+      "scene": "the-reluctant-witness",
+      "speaker": "hesk-ollow",
+      "direction": "produce",
+      "text": "Something long. Over the shoulder.",
+      "demands": [
+        "multi-sentence-turn",
+        "ellipsis",
+        "verbless-clause",
+        "indefinite-pronoun",
+        "property-predication",
+        "spatial-adverbial",
+        "possession-inalienable",
+        "definiteness"
+      ],
+      "note": "`something long` is a postnominal adjective on an indefinite pronoun — English forces the modifier after the head here, and no token in either corpus names that ordering constraint. `the shoulder` is inalienable possession with the possessor unexpressed."
+    },
+    {
+      "id": "s1-u27",
+      "scene": "the-reluctant-witness",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "a sluice bar",
+      "demands": [
+        "ellipsis",
+        "verbless-clause",
+        "nominal-compound",
+        "declarative-question",
+        "unpunctuated-input"
+      ],
+      "note": "A bare NP offered as a candidate specification of `something long` — a proposal the hearer is invited to confirm or refuse, with nothing in the form marking it as either statement or question."
+    },
+    {
+      "id": "s1-u28",
+      "scene": "the-reluctant-witness",
+      "speaker": "hesk-ollow",
+      "direction": "produce",
+      "text": "I said something long. Don't put the rest in my mouth.",
+      "demands": [
+        "multi-sentence-turn",
+        "metalinguistic-reference",
+        "past-tense",
+        "transitive-frame",
+        "indefinite-pronoun",
+        "emphatic-affirmation",
+        "prohibitive",
+        "idiom",
+        "possessive-pronoun",
+        "definiteness"
+      ],
+      "note": "Quotes his own prior wording as an object of discussion and refuses the proposed completion. The idiom appears with a substituted object (`the rest` for `words`), so a fixed-phrase lexicon would not reach it."
+    },
+    {
+      "id": "s1-u29",
+      "scene": "the-reluctant-witness",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "out with it",
+      "demands": [
+        "idiom",
+        "verbless-clause",
+        "imperative",
+        "discourse-anaphora",
+        "unpunctuated-input"
+      ],
+      "note": "REFUSED BY INTERFACE in the source: `You can't think how to put that to Hesk.` Recorded as a first-class entry because the refusal is the datum. A verbless idiomatic imperative gives the parser no lexical verb to key on, and the impatient register it carries has no expression the interface offers."
+    },
+    {
+      "id": "s1-u30",
+      "scene": "the-reluctant-witness",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "why dont you want to talk about this",
+      "demands": [
+        "adjunct-wh-question",
+        "negation",
+        "desiderative",
+        "infinitival-complement",
+        "demonstrative-deixis",
+        "person-deixis",
+        "contraction-elision",
+        "unpunctuated-input"
+      ],
+      "note": "Asks about the addressee's motives rather than about the events — a question whose answer is a state of the speaker, not a fact of the world."
+    },
+    {
+      "id": "s1-u31",
+      "scene": "the-reluctant-witness",
+      "speaker": "hesk-ollow",
+      "direction": "produce",
+      "text": "I've told you what I saw.",
+      "demands": [
+        "perfect-aspect",
+        "ditransitive-frame",
+        "headless-relative",
+        "past-tense",
+        "person-deixis",
+        "evidential-witness"
+      ],
+      "note": "A refusal shaped as a report: asserts the completeness of the account instead of declining."
+    },
+    {
+      "id": "s1-u32",
+      "scene": "the-reluctant-witness",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "you live in the warrens",
+      "demands": [
+        "declarative-question",
+        "intransitive-frame",
+        "spatial-adverbial",
+        "habitual-aspect",
+        "proper-name",
+        "person-deixis",
+        "unpunctuated-input"
+      ],
+      "note": "A bare declarative used as a challenge. Nothing in its form marks it as a question; the force comes from its being told to the person it is about."
+    },
+    {
+      "id": "s1-u33",
+      "scene": "the-reluctant-witness",
+      "speaker": "hesk-ollow",
+      "direction": "produce",
+      "text": "I rent a room in the Warrens. From Sera Pell. Who has a son.",
+      "demands": [
+        "multi-sentence-turn",
+        "transitive-frame",
+        "habitual-aspect",
+        "pp-modifier",
+        "proper-name",
+        "ellipsis",
+        "detached-relative",
+        "relative-clause-subject",
+        "possession-inalienable",
+        "conversational-implicature"
+      ],
+      "note": "The third fragment is a relative clause detached into its own sentence, its head two sentences back. Its entire content is an implicature: the son is named nowhere and is the accusation."
+    },
+    {
+      "id": "s1-u34",
+      "scene": "the-reluctant-witness",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "jarrow",
+      "demands": [
+        "proper-name",
+        "ellipsis",
+        "verbless-clause",
+        "unpunctuated-input"
+      ],
+      "note": "A bare name as a whole turn. The speech act — supplying the referent the previous turn withheld — is carried entirely by discourse position."
+    },
+    {
+      "id": "s1-u35",
+      "scene": "the-reluctant-witness",
+      "speaker": "hesk-ollow",
+      "direction": "produce",
+      "text": "You said it. I didn't.",
+      "demands": [
+        "multi-sentence-turn",
+        "metalinguistic-reference",
+        "past-tense",
+        "vp-ellipsis",
+        "negation",
+        "discourse-anaphora",
+        "person-deixis"
+      ],
+      "note": "Attributes the utterance to the hearer and disclaims it, with a stranded auxiliary and the verb phrase elided. The contrast is over who is on record, not over what happened."
+    },
+    {
+      "id": "s2-u01",
+      "scene": "carrying-the-account-onward",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "someone was on the bank at the head of the race that night",
+      "demands": [
+        "indefinite-pronoun",
+        "locative-predication",
+        "past-tense",
+        "pp-modifier",
+        "possession-inalienable",
+        "definiteness",
+        "temporal-adverbial",
+        "demonstrative-deixis",
+        "unpunctuated-input"
+      ],
+      "note": "Reports Hesk's observation as a bare fact with no source marked. The omission is what the whole scene is about; the line is well-formed and still wrong."
+    },
+    {
+      "id": "s2-u02",
+      "scene": "carrying-the-account-onward",
+      "speaker": "ottilie-marsh",
+      "direction": "produce",
+      "text": "Someone was. Go on.",
+      "demands": [
+        "multi-sentence-turn",
+        "vp-ellipsis",
+        "indefinite-pronoun",
+        "past-tense",
+        "emphatic-affirmation",
+        "imperative",
+        "particle-verb"
+      ]
+    },
+    {
+      "id": "s2-u03",
+      "scene": "carrying-the-account-onward",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "hesk ollow saw them",
+      "demands": [
+        "transitive-frame",
+        "past-tense",
+        "proper-name",
+        "epicene-pronoun",
+        "evidential-hearsay",
+        "unpunctuated-input"
+      ],
+      "note": "`them` is number-neutral for a single unidentified person. The claim is Hesk's perception asserted as the player's own knowledge — the minimal contrast with s2-u07."
+    },
+    {
+      "id": "s2-u04",
+      "scene": "carrying-the-account-onward",
+      "speaker": "ottilie-marsh",
+      "direction": "produce",
+      "text": "Hesk told you that?",
+      "demands": [
+        "declarative-question",
+        "past-tense",
+        "ditransitive-frame",
+        "proper-name",
+        "discourse-anaphora",
+        "clarification-request",
+        "evidential-scope"
+      ]
+    },
+    {
+      "id": "s2-u05",
+      "scene": "carrying-the-account-onward",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "yes",
+      "demands": [
+        "answer-particle",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s2-u06",
+      "scene": "carrying-the-account-onward",
+      "speaker": "ottilie-marsh",
+      "direction": "produce",
+      "text": "Then say it that way. There's a difference between what Hesk saw and what Hesk says he saw, and I have to write down which one you're handing me.",
+      "demands": [
+        "multi-sentence-turn",
+        "discourse-connective",
+        "imperative",
+        "metalinguistic-reference",
+        "discourse-anaphora",
+        "demonstrative-deixis",
+        "existential",
+        "headless-relative",
+        "coordination",
+        "complement-utterance",
+        "zero-complementizer",
+        "evidential-scope",
+        "attribution-chain",
+        "clause-coordination",
+        "deontic-obligation",
+        "particle-verb",
+        "indirect-question",
+        "partitive",
+        "present-progressive",
+        "ditransitive-frame"
+      ],
+      "note": "The scene's thesis and the corpus's hardest single sentence. It coordinates two headless relatives that differ only in an embedded evidential layer, then embeds a question over which of the two is being offered. The demand is to distinguish a proposition from an attributed proposition IN THE GRAMMAR, not in the commentary."
+    },
+    {
+      "id": "s2-u07",
+      "scene": "carrying-the-account-onward",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "hesk says he saw someone on the bank carrying something long",
+      "demands": [
+        "proper-name",
+        "complement-utterance",
+        "zero-complementizer",
+        "complement-perception",
+        "logophoric-pronoun",
+        "indefinite-pronoun",
+        "pp-modifier",
+        "participial-modifier",
+        "property-predication",
+        "past-tense",
+        "evidential-hearsay",
+        "unpunctuated-input"
+      ],
+      "note": "The corrected re-report: same content, source marked. Paired with s2-u03 this is the corpus's cleanest minimal contrast, and the pair is the reason both are kept."
+    },
+    {
+      "id": "s2-u08",
+      "scene": "carrying-the-account-onward",
+      "speaker": "ottilie-marsh",
+      "direction": "produce",
+      "text": "Carrying it how?",
+      "demands": [
+        "echo-question",
+        "adjunct-wh-question",
+        "ellipsis",
+        "subject-ellipsis",
+        "participial-modifier",
+        "pronoun-reference",
+        "clarification-request"
+      ],
+      "note": "Wh in situ inside an echoed participial fragment. Neither the wh-word nor the subject is where a canonical question would put it."
+    },
+    {
+      "id": "s2-u09",
+      "scene": "carrying-the-account-onward",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "over the shoulder",
+      "demands": [
+        "ellipsis",
+        "verbless-clause",
+        "spatial-adverbial",
+        "possession-inalienable",
+        "definiteness",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s2-u10",
+      "scene": "carrying-the-account-onward",
+      "speaker": "ottilie-marsh",
+      "direction": "produce",
+      "text": "His words or yours?",
+      "demands": [
+        "alternative-question",
+        "ellipsis",
+        "verbless-clause",
+        "possessive-pronoun",
+        "metalinguistic-reference",
+        "evidential-scope"
+      ],
+      "note": "Asks whether the WORDING, not the content, belongs to the witness. An independent possessive (`yours`) contrasts with a determiner possessive (`his`) inside one two-word turn."
+    },
+    {
+      "id": "s2-u11",
+      "scene": "carrying-the-account-onward",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "his",
+      "demands": [
+        "possessive-pronoun",
+        "ellipsis",
+        "metalinguistic-reference",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s2-u12",
+      "scene": "carrying-the-account-onward",
+      "speaker": "ottilie-marsh",
+      "direction": "produce",
+      "text": "Good.",
+      "demands": [
+        "ellipsis",
+        "verbless-clause",
+        "property-predication"
+      ],
+      "note": "A one-word evaluative turn: approves the previous answer without restating any of it."
+    },
+    {
+      "id": "s2-u13",
+      "scene": "carrying-the-account-onward",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "im not sure about the shoulder part actually",
+      "demands": [
+        "epistemic-hedge",
+        "negation",
+        "retraction",
+        "metalinguistic-reference",
+        "nominal-compound",
+        "discourse-connective",
+        "person-deixis",
+        "contraction-elision",
+        "unpunctuated-input"
+      ],
+      "note": "Withdraws a claim made two turns earlier. The retraction is carried by the discourse marker `actually`, not by the negation — remove the marker and the sentence merely reports a state."
+    },
+    {
+      "id": "s2-u14",
+      "scene": "carrying-the-account-onward",
+      "speaker": "ottilie-marsh",
+      "direction": "produce",
+      "text": "Then I'll mark it doubtful. You'd be surprised how much of this book is doubtful.",
+      "demands": [
+        "multi-sentence-turn",
+        "discourse-connective",
+        "future-reference",
+        "small-clause-complement",
+        "pronoun-reference",
+        "conditional-hypothetical",
+        "exclamative",
+        "partitive",
+        "demonstrative-deixis",
+        "property-predication"
+      ],
+      "note": "The second sentence takes an EXCLAMATIVE complement, not an indirect question: it does not ask how much, it asserts that it is a lot. Reading it as an embedded question is the under-description this corpus is trying to avoid."
+    },
+    {
+      "id": "s2-u15",
+      "scene": "carrying-the-account-onward",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "i think it was jarrow pell",
+      "demands": [
+        "epistemic-hedge",
+        "embedded-clause",
+        "zero-complementizer",
+        "classify",
+        "past-tense",
+        "proper-name",
+        "pronoun-reference",
+        "person-deixis",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s2-u16",
+      "scene": "carrying-the-account-onward",
+      "speaker": "ottilie-marsh",
+      "direction": "produce",
+      "text": "You think, or Hesk thinks?",
+      "demands": [
+        "alternative-question",
+        "null-complement-anaphora",
+        "proper-name",
+        "person-deixis",
+        "evidential-scope",
+        "metalinguistic-reference",
+        "clarification-request"
+      ],
+      "note": "The disjunction is over WHO HOLDS the belief, not over its content, and both disjuncts drop their complement entirely."
+    },
+    {
+      "id": "s2-u17",
+      "scene": "carrying-the-account-onward",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "i think",
+      "demands": [
+        "epistemic-hedge",
+        "null-complement-anaphora",
+        "ellipsis",
+        "person-deixis",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s2-u18",
+      "scene": "carrying-the-account-onward",
+      "speaker": "ottilie-marsh",
+      "direction": "produce",
+      "text": "On what?",
+      "demands": [
+        "adjunct-wh-question",
+        "wh-fronting",
+        "ellipsis",
+        "verbless-clause"
+      ],
+      "note": "A pied-piped preposition, the exact mirror of the stranding in s1-u21. The corpus carries both strategies, in different mouths, which is a register fact worth being able to see."
+    },
+    {
+      "id": "s2-u19",
+      "scene": "carrying-the-account-onward",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "the figure came up from the warrens side and jarrow lives at the warrens",
+      "demands": [
+        "definiteness",
+        "discourse-anaphora",
+        "particle-verb",
+        "spatial-adverbial",
+        "proper-name",
+        "nominal-compound",
+        "clause-coordination",
+        "habitual-aspect",
+        "locative-predication",
+        "past-tense",
+        "conversational-implicature",
+        "unpunctuated-input"
+      ],
+      "note": "An argument stated as two coordinated facts with the conclusion left unsaid. `the figure` is an anaphoric definite for an earlier indefinite — a re-description, not a repetition."
+    },
+    {
+      "id": "s2-u20",
+      "scene": "carrying-the-account-onward",
+      "speaker": "ottilie-marsh",
+      "direction": "produce",
+      "text": "So does everyone who can't afford otherwise. That's a road, not a name.",
+      "demands": [
+        "multi-sentence-turn",
+        "so-inversion",
+        "vp-ellipsis",
+        "quantifier",
+        "relative-clause-subject",
+        "ability-modal",
+        "negation",
+        "metalinguistic-negation",
+        "discourse-anaphora",
+        "classify",
+        "irony",
+        "conversational-implicature"
+      ],
+      "note": "Rebuts by generalizing the evidence to everyone it fits. `otherwise` is a pro-form adverb standing for a whole suppressed alternative, and the second sentence corrects the KIND of thing the evidence is rather than its truth."
+    },
+    {
+      "id": "s2-u21",
+      "scene": "carrying-the-account-onward",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "hesk wouldnt say the name",
+      "demands": [
+        "volitional-modal",
+        "negation",
+        "past-tense",
+        "transitive-frame",
+        "proper-name",
+        "definiteness",
+        "deliberate-ambiguity",
+        "contraction-elision",
+        "unpunctuated-input"
+      ],
+      "note": "`wouldn't` is ambiguous between refusal and hypothetical. The next turn attacks exactly that ambiguity, so it must be representable rather than resolved at parse time."
+    },
+    {
+      "id": "s2-u22",
+      "scene": "carrying-the-account-onward",
+      "speaker": "ottilie-marsh",
+      "direction": "produce",
+      "text": "Wouldn't, or couldn't?",
+      "demands": [
+        "alternative-question",
+        "vp-ellipsis",
+        "subject-ellipsis",
+        "volitional-modal",
+        "ability-modal",
+        "negation",
+        "clarification-request",
+        "metalinguistic-reference"
+      ],
+      "note": "Two bare negated auxiliaries as a complete turn — subject and verb phrase both gone. Echoes s1-u19 back at the player from the other side of the table."
+    },
+    {
+      "id": "s2-u23",
+      "scene": "carrying-the-account-onward",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "wouldnt, i think",
+      "demands": [
+        "volitional-modal",
+        "negation",
+        "epistemic-hedge",
+        "vp-ellipsis",
+        "subject-ellipsis",
+        "null-complement-anaphora",
+        "contraction-elision",
+        "unpunctuated-input"
+      ],
+      "note": "A hedged fragment: the hedge is postposed as a parenthetical over an elided clause that has no overt content of its own."
+    },
+    {
+      "id": "s2-u24",
+      "scene": "carrying-the-account-onward",
+      "speaker": "ottilie-marsh",
+      "direction": "produce",
+      "text": "You think a great deal for someone who wasn't there.",
+      "demands": [
+        "irony",
+        "person-deixis",
+        "transitive-frame",
+        "quantifier",
+        "pp-modifier",
+        "indefinite-pronoun",
+        "relative-clause-subject",
+        "negation",
+        "past-tense",
+        "spatial-adverbial",
+        "conversational-implicature"
+      ],
+      "note": "A rebuke delivered in the shape of a compliment. The sting is in the concessive `for` phrase; the matrix clause read alone is praise."
+    },
+    {
+      "id": "s2-u25",
+      "scene": "carrying-the-account-onward",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "hesk also says the bell rang late",
+      "demands": [
+        "proper-name",
+        "focus-particle",
+        "complement-utterance",
+        "zero-complementizer",
+        "past-tense",
+        "definiteness",
+        "temporal-adverbial",
+        "evidential-hearsay",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s2-u26",
+      "scene": "carrying-the-account-onward",
+      "speaker": "ottilie-marsh",
+      "direction": "produce",
+      "text": "Who rang it?",
+      "demands": [
+        "wh-question",
+        "past-tense",
+        "transitive-frame",
+        "pronoun-reference"
+      ]
+    },
+    {
+      "id": "s2-u27",
+      "scene": "carrying-the-account-onward",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "he didnt say",
+      "demands": [
+        "negation",
+        "past-tense",
+        "null-complement-anaphora",
+        "pronoun-reference",
+        "contraction-elision",
+        "unpunctuated-input"
+      ],
+      "note": "Reports the ABSENCE of an answer. The complement is omitted entirely rather than pronominalized, which is a different operation from the VP-ellipsis two turns earlier."
+    },
+    {
+      "id": "s2-u28",
+      "scene": "carrying-the-account-onward",
+      "speaker": "ottilie-marsh",
+      "direction": "produce",
+      "text": "Does he say the water was up before it went?",
+      "demands": [
+        "polar-question",
+        "complement-utterance",
+        "zero-complementizer",
+        "locative-predication",
+        "past-tense",
+        "subordination-temporal",
+        "pronoun-reference",
+        "definiteness",
+        "evidential-scope"
+      ]
+    },
+    {
+      "id": "s2-u29",
+      "scene": "carrying-the-account-onward",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "yes",
+      "demands": [
+        "answer-particle",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s2-u30",
+      "scene": "carrying-the-account-onward",
+      "speaker": "ottilie-marsh",
+      "direction": "produce",
+      "text": "That I can check against the gauge. It's the first thing you've given me that isn't somebody's opinion of a shadow.",
+      "demands": [
+        "multi-sentence-turn",
+        "topicalization",
+        "discourse-anaphora",
+        "ability-modal",
+        "transitive-frame",
+        "definiteness",
+        "classify",
+        "ordinal",
+        "relative-clause-object",
+        "zero-relativizer",
+        "perfect-aspect",
+        "ditransitive-frame",
+        "relative-clause-subject",
+        "negation",
+        "possession-alienable",
+        "indefinite-pronoun",
+        "nominalization",
+        "irony",
+        "conversational-implicature"
+      ],
+      "note": "Object topicalization in the first sentence; two relatives stacked on one head in the second, the first of them with no relativizer. The second relative is what makes the sentence a judgement rather than a description."
+    },
+    {
+      "id": "s3-u01",
+      "scene": "being-accused",
+      "speaker": "dagan-vell",
+      "direction": "produce",
+      "text": "Sit. I want to ask you about the gear on the mill sluice.",
+      "demands": [
+        "multi-sentence-turn",
+        "imperative",
+        "desiderative",
+        "infinitival-complement",
+        "oblique-argument",
+        "pp-modifier",
+        "nominal-compound",
+        "definiteness",
+        "person-deixis"
+      ]
+    },
+    {
+      "id": "s3-u02",
+      "scene": "being-accused",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "what about it",
+      "demands": [
+        "wh-question",
+        "ellipsis",
+        "verbless-clause",
+        "pronoun-reference",
+        "clarification-request",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s3-u03",
+      "scene": "being-accused",
+      "speaker": "dagan-vell",
+      "direction": "produce",
+      "text": "You asked Fenna Ould how it lifts. Eight days back, at the lock house. She remembers because nobody asks.",
+      "demands": [
+        "multi-sentence-turn",
+        "past-tense",
+        "proper-name",
+        "indirect-question",
+        "adjunct-wh-question",
+        "pronoun-reference",
+        "ellipsis",
+        "verbless-clause",
+        "temporal-adverbial",
+        "numeral-quantification",
+        "spatial-adverbial",
+        "nominal-compound",
+        "subordination-causal",
+        "negative-indefinite",
+        "habitual-aspect",
+        "generic-reference",
+        "conversational-implicature"
+      ],
+      "note": "The third sentence's causal clause IS the accusation: it is unusual to ask, therefore the asking is marked. Nothing in the turn asserts wrongdoing."
+    },
+    {
+      "id": "s3-u04",
+      "scene": "being-accused",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "i was curious",
+      "demands": [
+        "property-predication",
+        "past-tense",
+        "person-deixis",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s3-u05",
+      "scene": "being-accused",
+      "speaker": "dagan-vell",
+      "direction": "produce",
+      "text": "People are curious about the price of grain. Nobody is curious about a sluice gear.",
+      "demands": [
+        "multi-sentence-turn",
+        "generic-reference",
+        "property-predication",
+        "oblique-argument",
+        "possession-alienable",
+        "mass-count",
+        "negative-indefinite",
+        "nominal-compound",
+        "number-marking",
+        "irony",
+        "conversational-implicature"
+      ],
+      "note": "Two generic clauses in parallel, the second negative, refuting an excuse by contrasting what people are typically curious about."
+    },
+    {
+      "id": "s3-u06",
+      "scene": "being-accused",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "i never touched that gear in my life",
+      "demands": [
+        "negative-temporal-adverbial",
+        "past-tense",
+        "transitive-frame",
+        "demonstrative-deixis",
+        "possessive-pronoun",
+        "idiom",
+        "negative-polarity-item",
+        "emphatic-affirmation",
+        "person-deixis",
+        "unpunctuated-input"
+      ],
+      "note": "An absolute denial the speaker retracts two turns later. `in my life` is an emphatic negative-polarity idiom, not a duration adverbial, and reading it as one loses the overstatement Dagan catches."
+    },
+    {
+      "id": "s3-u07",
+      "scene": "being-accused",
+      "speaker": "dagan-vell",
+      "direction": "produce",
+      "text": "Careful. Fenna says you put your hand on the ratchet while she was explaining it.",
+      "demands": [
+        "multi-sentence-turn",
+        "verbless-clause",
+        "apprehensive",
+        "ellipsis",
+        "proper-name",
+        "complement-utterance",
+        "zero-complementizer",
+        "past-tense",
+        "transitive-frame",
+        "possessive-pronoun",
+        "spatial-adverbial",
+        "definiteness",
+        "subordination-temporal",
+        "past-progressive",
+        "pronoun-reference",
+        "evidential-hearsay"
+      ],
+      "note": "`Careful.` is a bare adjective doing the work of a warning — an admonitive with no verb, no subject and no modal."
+    },
+    {
+      "id": "s3-u08",
+      "scene": "being-accused",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "i touched it once while she was showing me. i never lifted it",
+      "demands": [
+        "multi-sentence-turn",
+        "retraction",
+        "transitive-frame",
+        "past-tense",
+        "iterative",
+        "subordination-temporal",
+        "past-progressive",
+        "ditransitive-frame",
+        "negative-temporal-adverbial",
+        "pronoun-reference",
+        "unpunctuated-input"
+      ],
+      "note": "Concedes the true part and re-denies the rest. The correction is to the speaker's OWN previous turn, not the interlocutor's, which is a different repair operation from the clarification requests elsewhere in the corpus."
+    },
+    {
+      "id": "s3-u09",
+      "scene": "being-accused",
+      "speaker": "dagan-vell",
+      "direction": "produce",
+      "text": "Then say that. Say the true thing the first time and we'll both be finished sooner.",
+      "demands": [
+        "multi-sentence-turn",
+        "discourse-connective",
+        "imperative",
+        "discourse-anaphora",
+        "metalinguistic-reference",
+        "ordinal",
+        "clause-coordination",
+        "future-reference",
+        "floating-quantifier",
+        "comparative",
+        "property-predication",
+        "definiteness"
+      ],
+      "note": "`both` floats out of the subject into the auxiliary complex, and the whole second sentence is a conditional promise dressed as a coordination."
+    },
+    {
+      "id": "s3-u10",
+      "scene": "being-accused",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "where do you think i was that night",
+      "demands": [
+        "adjunct-wh-question",
+        "long-distance-extraction",
+        "embedded-clause",
+        "zero-complementizer",
+        "past-tense",
+        "person-deixis",
+        "demonstrative-deixis",
+        "temporal-adverbial",
+        "unpunctuated-input"
+      ],
+      "note": "The corpus's only long-distance extraction: the wh-word is questioned out of the embedded clause across `do you think`. A parser that treats `where` as belonging to the matrix gets the wrong question."
+    },
+    {
+      "id": "s3-u11",
+      "scene": "being-accused",
+      "speaker": "dagan-vell",
+      "direction": "produce",
+      "text": "I'm asking you.",
+      "demands": [
+        "present-progressive",
+        "person-deixis",
+        "transitive-frame",
+        "emphatic-affirmation"
+      ],
+      "note": "Refuses the question by naming the direction of the exchange rather than by declining."
+    },
+    {
+      "id": "s3-u12",
+      "scene": "being-accused",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "on the towpath",
+      "demands": [
+        "ellipsis",
+        "verbless-clause",
+        "spatial-adverbial",
+        "definiteness",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s3-u13",
+      "scene": "being-accused",
+      "speaker": "dagan-vell",
+      "direction": "produce",
+      "text": "Which is the way to the sluice.",
+      "demands": [
+        "detached-relative",
+        "relative-clause-subject",
+        "classify",
+        "definiteness",
+        "pp-modifier",
+        "conversational-implicature"
+      ],
+      "note": "A relative clause whose head is the OTHER speaker's previous turn. It attaches across the turn boundary, and the accusation is delivered entirely by the attachment."
+    },
+    {
+      "id": "s3-u14",
+      "scene": "being-accused",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "its the way to everything. theres one path",
+      "demands": [
+        "multi-sentence-turn",
+        "classify",
+        "definiteness",
+        "pp-modifier",
+        "quantifier",
+        "existential",
+        "numeral-quantification",
+        "conversational-implicature",
+        "contraction-elision",
+        "unpunctuated-input"
+      ],
+      "note": "Rebuts the implicature by showing the evidence does not discriminate: if every route is the route to the sluice, the route is not evidence."
+    },
+    {
+      "id": "s3-u15",
+      "scene": "being-accused",
+      "speaker": "dagan-vell",
+      "direction": "produce",
+      "text": "How far along it?",
+      "demands": [
+        "degree-question",
+        "ellipsis",
+        "verbless-clause",
+        "spatial-adverbial",
+        "pronoun-reference",
+        "clarification-request"
+      ]
+    },
+    {
+      "id": "s3-u16",
+      "scene": "being-accused",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "as far as the ferry steps",
+      "demands": [
+        "equative",
+        "ellipsis",
+        "verbless-clause",
+        "spatial-adverbial",
+        "nominal-compound",
+        "definiteness",
+        "unpunctuated-input"
+      ],
+      "note": "An equative degree phrase answering a degree question, with no clause around it."
+    },
+    {
+      "id": "s3-u17",
+      "scene": "being-accused",
+      "speaker": "dagan-vell",
+      "direction": "produce",
+      "text": "Who saw you at the ferry steps?",
+      "demands": [
+        "wh-question",
+        "past-tense",
+        "transitive-frame",
+        "person-deixis",
+        "spatial-adverbial",
+        "nominal-compound",
+        "definiteness",
+        "witness-set"
+      ]
+    },
+    {
+      "id": "s3-u18",
+      "scene": "being-accused",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "nobody. the ferry was on the far side",
+      "demands": [
+        "multi-sentence-turn",
+        "negative-indefinite",
+        "ellipsis",
+        "locative-predication",
+        "past-tense",
+        "definiteness",
+        "spatial-adverbial",
+        "unpunctuated-input"
+      ],
+      "note": "A negative answer plus an unmarked justification for it. The second sentence exists to say the first is not evasion, and no connective says so."
+    },
+    {
+      "id": "s3-u19",
+      "scene": "being-accused",
+      "speaker": "dagan-vell",
+      "direction": "produce",
+      "text": "So. Alone, on the path to the sluice, lately taught how the sluice opens.",
+      "demands": [
+        "multi-sentence-turn",
+        "discourse-connective",
+        "verbless-clause",
+        "ellipsis",
+        "property-predication",
+        "pp-modifier",
+        "participial-modifier",
+        "apposition",
+        "indirect-question",
+        "adjunct-wh-question",
+        "temporal-adverbial",
+        "definiteness",
+        "conversational-implicature"
+      ],
+      "note": "Three predicates stacked over an unstated subject with no finite verb anywhere in the turn. The accusation is never asserted, only assembled — which is why annotating this as ordinary answer ellipsis would be wrong: nothing here is recoverable from a question."
+    },
+    {
+      "id": "s3-u20",
+      "scene": "being-accused",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "if i wanted the low fields under water i wouldnt need the sluice at all. i could cut the bank at hollow end and no one would ever know it was done by hand",
+      "demands": [
+        "multi-sentence-turn",
+        "conditional-hypothetical",
+        "small-clause-complement",
+        "desiderative",
+        "negative-polarity-item",
+        "ability-modal",
+        "clause-coordination",
+        "negative-indefinite",
+        "embedded-clause",
+        "zero-complementizer",
+        "passive-agentless",
+        "instrumental-adjunct",
+        "proper-name",
+        "definiteness",
+        "number-marking",
+        "unpunctuated-input",
+        "contraction-elision"
+      ],
+      "note": "A counterfactual competence argument: the speaker argues innocence by demonstrating he could have done it better. `wanted the low fields under water` is a small clause complement — a whole predication as the object of a verb — and the argument's force depends on the hearer entering a hypothetical world and reasoning inside it."
+    },
+    {
+      "id": "s3-u21",
+      "scene": "being-accused",
+      "speaker": "dagan-vell",
+      "direction": "produce",
+      "text": "That's true. It's also not a thing most innocent people have ready.",
+      "demands": [
+        "multi-sentence-turn",
+        "discourse-anaphora",
+        "property-predication",
+        "focus-particle",
+        "negation",
+        "classify",
+        "quantifier",
+        "relative-clause-object",
+        "zero-relativizer",
+        "small-clause-complement",
+        "irony",
+        "conversational-implicature"
+      ],
+      "note": "Concedes the argument and turns it into evidence. The relative has no relativizer (`a thing [that] most innocent people have ready`) and its verb takes a secondary predicate."
+    },
+    {
+      "id": "s3-u22",
+      "scene": "being-accused",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "someone else was on the bank",
+      "demands": [
+        "indefinite-pronoun",
+        "locative-predication",
+        "past-tense",
+        "definiteness",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s3-u23",
+      "scene": "being-accused",
+      "speaker": "dagan-vell",
+      "direction": "produce",
+      "text": "Name them.",
+      "demands": [
+        "imperative",
+        "epicene-pronoun",
+        "transitive-frame"
+      ]
+    },
+    {
+      "id": "s3-u24",
+      "scene": "being-accused",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "i cant",
+      "demands": [
+        "ability-modal",
+        "negation",
+        "vp-ellipsis",
+        "person-deixis",
+        "contraction-elision",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s3-u25",
+      "scene": "being-accused",
+      "speaker": "dagan-vell",
+      "direction": "produce",
+      "text": "Then you've told me nothing. Everyone has someone else on the bank.",
+      "demands": [
+        "multi-sentence-turn",
+        "discourse-connective",
+        "perfect-aspect",
+        "ditransitive-frame",
+        "negative-indefinite",
+        "quantifier",
+        "indefinite-pronoun",
+        "pp-modifier",
+        "definiteness",
+        "generic-reference",
+        "irony",
+        "conversational-implicature"
+      ],
+      "note": "The second sentence is a generic that reduces the player's evidence to a commonplace of the genre."
+    },
+    {
+      "id": "s3-u26",
+      "scene": "being-accused",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "hesk ollow saw them",
+      "demands": [
+        "transitive-frame",
+        "past-tense",
+        "proper-name",
+        "epicene-pronoun",
+        "evidential-hearsay",
+        "unpunctuated-input"
+      ],
+      "note": "Verbatim repetition of s2-u03 to a different hearer, who rejects it on entirely different grounds. The exact repeat is kept deliberately: the corpus's only duplicate text, and the pair is a datum about audience, not about grammar."
+    },
+    {
+      "id": "s3-u27",
+      "scene": "being-accused",
+      "speaker": "dagan-vell",
+      "direction": "produce",
+      "text": "Hesk Ollow rents from Sera Pell and hasn't said a word to me in nine days. Why would he say one to you?",
+      "demands": [
+        "multi-sentence-turn",
+        "proper-name",
+        "habitual-aspect",
+        "oblique-argument",
+        "clause-coordination",
+        "perfect-aspect",
+        "negation",
+        "negative-polarity-item",
+        "duration-adverbial",
+        "numeral-quantification",
+        "rhetorical-question",
+        "adjunct-wh-question",
+        "volitional-modal",
+        "one-anaphora",
+        "person-deixis",
+        "conversational-implicature"
+      ],
+      "note": "The question is not asking for a reason and would be badly answered by one. `one` is a nominal pro-form for `a word`, and `a word` under negation is itself a polarity item, not a count."
+    },
+    {
+      "id": "s3-u28",
+      "scene": "being-accused",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "i asked him",
+      "demands": [
+        "transitive-frame",
+        "past-tense",
+        "pronoun-reference",
+        "person-deixis",
+        "unpunctuated-input"
+      ],
+      "note": "Answers a rhetorical question literally, which is exactly why it lands. A parser that resolved the rhetorical force would make this reply impossible."
+    },
+    {
+      "id": "s3-u29",
+      "scene": "being-accused",
+      "speaker": "dagan-vell",
+      "direction": "produce",
+      "text": "You may go as far as the ferry steps. Not past them.",
+      "demands": [
+        "multi-sentence-turn",
+        "deontic-permission",
+        "equative",
+        "spatial-adverbial",
+        "nominal-compound",
+        "ellipsis",
+        "verbless-clause",
+        "negation",
+        "prohibitive",
+        "pronoun-reference",
+        "definiteness"
+      ],
+      "note": "The second fragment is a bare negated PP doing the work of a prohibition, with no verb, no subject and no modal."
+    },
+    {
+      "id": "s4-u01",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "you carried jarrow pell across that night",
+      "demands": [
+        "declarative-question",
+        "past-tense",
+        "transitive-frame",
+        "proper-name",
+        "particle-verb",
+        "demonstrative-deixis",
+        "temporal-adverbial",
+        "person-deixis",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s4-u02",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "corrin-ould",
+      "direction": "produce",
+      "text": "I carried him.",
+      "demands": [
+        "echo-answer",
+        "past-tense",
+        "transitive-frame",
+        "pronoun-reference",
+        "emphatic-affirmation",
+        "person-deixis"
+      ],
+      "note": "Confirms by repeating the verb with a pronominalized object rather than with a particle — an answer strategy the corpus needs alongside `yes`."
+    },
+    {
+      "id": "s4-u03",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "when",
+      "demands": [
+        "adjunct-wh-question",
+        "ellipsis",
+        "clarification-request",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s4-u04",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "corrin-ould",
+      "direction": "produce",
+      "text": "Tenth hour.",
+      "demands": [
+        "ellipsis",
+        "verbless-clause",
+        "ordinal",
+        "temporal-adverbial"
+      ]
+    },
+    {
+      "id": "s4-u05",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "how do you know it was the tenth",
+      "demands": [
+        "adjunct-wh-question",
+        "embedded-clause",
+        "zero-complementizer",
+        "past-tense",
+        "ordinal",
+        "definiteness",
+        "evidential-scope",
+        "person-deixis",
+        "unpunctuated-input"
+      ],
+      "note": "Questions the GROUND of a claim rather than the claim. The ordinal stands alone as an NP (`the tenth`) with its head noun elided."
+    },
+    {
+      "id": "s4-u06",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "corrin-ould",
+      "direction": "produce",
+      "text": "The bell had gone.",
+      "demands": [
+        "pluperfect",
+        "definiteness",
+        "intransitive-frame",
+        "evidential-inference"
+      ],
+      "note": "An independent pluperfect, not a sequence-of-tense effect inside an embedded clause: it supplies the anterior event that grounds the time claim."
+    },
+    {
+      "id": "s4-u07",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "was the sluice up when you passed the race",
+      "demands": [
+        "polar-question",
+        "locative-predication",
+        "definiteness",
+        "subordination-temporal",
+        "past-tense",
+        "transitive-frame",
+        "person-deixis",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s4-u08",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "corrin-ould",
+      "direction": "produce",
+      "text": "Down. I'd have felt the pull if it was up.",
+      "demands": [
+        "multi-sentence-turn",
+        "ellipsis",
+        "verbless-clause",
+        "conditional-counterfactual",
+        "perfect-aspect",
+        "transitive-frame",
+        "locative-predication",
+        "definiteness",
+        "pronoun-reference",
+        "evidential-inference",
+        "person-deixis"
+      ],
+      "note": "Answers with the antonym alone, then grounds it in a counterfactual about his own body — evidence from a sensation that did not occur."
+    },
+    {
+      "id": "s4-u09",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "fenna says the water was rising by the ninth",
+      "demands": [
+        "proper-name",
+        "complement-utterance",
+        "zero-complementizer",
+        "past-progressive",
+        "definiteness",
+        "ordinal",
+        "temporal-adverbial",
+        "evidential-hearsay",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s4-u10",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "corrin-ould",
+      "direction": "produce",
+      "text": "Then Mother's wrong.",
+      "demands": [
+        "discourse-connective",
+        "kin-term-as-name",
+        "property-predication",
+        "contradiction-assertion"
+      ],
+      "note": "`Mother` is a determinerless kin term used as a name. `Then` marks this as a deduction from the previous turn, not an opinion — the conclusion is forced, and the speaker takes it."
+    },
+    {
+      "id": "s4-u11",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "she was forty years on the locks",
+      "demands": [
+        "past-tense",
+        "duration-adverbial",
+        "numeral-quantification",
+        "definiteness",
+        "locative-predication",
+        "pronoun-reference",
+        "conversational-implicature",
+        "unpunctuated-input"
+      ],
+      "note": "An appeal to authority left as a bare fact, with the inference (`therefore she is right`) unstated."
+    },
+    {
+      "id": "s4-u12",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "corrin-ould",
+      "direction": "produce",
+      "text": "And she's my mother, and she can still be wrong.",
+      "demands": [
+        "clause-coordination",
+        "discourse-connective",
+        "possessive-pronoun",
+        "classify",
+        "epistemic-hedge",
+        "phasal-adverb",
+        "property-predication",
+        "conversational-implicature"
+      ],
+      "note": "Concedes the premise and denies its force. The concession is carried by `and`, with no concessive connective anywhere; `still` is a phasal adverb asserting continuation against an expectation."
+    },
+    {
+      "id": "s4-u13",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "you cant both be right",
+      "demands": [
+        "floating-quantifier",
+        "modal-negation-scope",
+        "epistemic-necessity",
+        "contradiction-assertion",
+        "property-predication",
+        "negation",
+        "person-deixis",
+        "contraction-elision",
+        "unpunctuated-input"
+      ],
+      "note": "The demand is to assert that two ATTRIBUTED propositions cannot both hold — a claim about the account set, not about the river. `can't` here is negated epistemic possibility, not inability."
+    },
+    {
+      "id": "s4-u14",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "corrin-ould",
+      "direction": "produce",
+      "text": "No.",
+      "demands": [
+        "answer-particle"
+      ],
+      "note": "Agrees with a negative claim. The particle confirms the negation rather than denying it, a polarity that many languages mark with a distinct third particle and that a two-valued yes/no system gets wrong."
+    },
+    {
+      "id": "s4-u15",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "how does she tell the hour",
+      "demands": [
+        "adjunct-wh-question",
+        "habitual-aspect",
+        "transitive-frame",
+        "definiteness",
+        "pronoun-reference",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s4-u16",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "corrin-ould",
+      "direction": "produce",
+      "text": "By the water. She always has. Drives people mad.",
+      "demands": [
+        "multi-sentence-turn",
+        "ellipsis",
+        "verbless-clause",
+        "instrumental-adjunct",
+        "definiteness",
+        "habitual-aspect",
+        "perfect-aspect",
+        "vp-ellipsis",
+        "subject-ellipsis",
+        "causative",
+        "small-clause-complement",
+        "idiom",
+        "number-marking"
+      ],
+      "note": "Three fragments. The second elides its verb phrase after `has`; the third drops its subject entirely, and that subject is the practice, not the person."
+    },
+    {
+      "id": "s4-u17",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "hesk says the bell went late that night",
+      "demands": [
+        "proper-name",
+        "complement-utterance",
+        "zero-complementizer",
+        "past-tense",
+        "definiteness",
+        "temporal-adverbial",
+        "demonstrative-deixis",
+        "evidential-hearsay",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s4-u18",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "corrin-ould",
+      "direction": "produce",
+      "text": "How late?",
+      "demands": [
+        "degree-question",
+        "ellipsis",
+        "verbless-clause",
+        "clarification-request"
+      ]
+    },
+    {
+      "id": "s4-u19",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "late enough that the water was already up when it rang",
+      "demands": [
+        "degree-result",
+        "subordination-temporal",
+        "phasal-adverb",
+        "locative-predication",
+        "past-tense",
+        "definiteness",
+        "pronoun-reference",
+        "ellipsis",
+        "subject-ellipsis",
+        "unpunctuated-input"
+      ],
+      "note": "The same construction as s1-u10 with the complementizer overt. The corpus therefore carries both strategies for one construction, in two mouths, which is a fact about the corpus worth preserving rather than normalizing."
+    },
+    {
+      "id": "s4-u20",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "so if she was right about the water then you were wrong about the hour",
+      "demands": [
+        "discourse-connective",
+        "conditional-real",
+        "correlative",
+        "property-predication",
+        "oblique-argument",
+        "past-tense",
+        "contradiction-assertion",
+        "person-deixis",
+        "definiteness",
+        "unpunctuated-input"
+      ],
+      "note": "Two consecutive player turns; this one draws the conclusion the previous set up. The `if ... then` pair is correlative, and the reasoning is modus tollens delivered conversationally."
+    },
+    {
+      "id": "s4-u21",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "corrin-ould",
+      "direction": "produce",
+      "text": "That's a fine way to put it to a man.",
+      "demands": [
+        "irony",
+        "discourse-anaphora",
+        "classify",
+        "infinitival-relative",
+        "oblique-argument",
+        "generic-reference",
+        "conversational-implicature"
+      ],
+      "note": "`a man` is an impersonal reference to the speaker himself, and the whole compliment is a complaint. Both halves have to be produced together or the line means its opposite."
+    },
+    {
+      "id": "s4-u22",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "corrin-ould",
+      "direction": "produce",
+      "text": "If the bell went late, I crossed him later than I called it. He was still on the far bank while the water was coming up.",
+      "demands": [
+        "multi-sentence-turn",
+        "conditional-real",
+        "past-tense",
+        "definiteness",
+        "transitive-frame",
+        "comparative-clause",
+        "pronoun-reference",
+        "retraction",
+        "phasal-adverb",
+        "locative-predication",
+        "subordination-temporal",
+        "past-progressive",
+        "particle-verb",
+        "evidential-inference"
+      ],
+      "note": "The speaker reasons himself out of his own testimony inside one turn: a conditional, a clausal comparison against his own earlier claim, and then the consequence stated as fact."
+    },
+    {
+      "id": "s4-u23",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "then it wasnt jarrow on the bank",
+      "demands": [
+        "discourse-connective",
+        "negation",
+        "classify",
+        "cleft-focus",
+        "proper-name",
+        "pp-modifier",
+        "past-tense",
+        "contraction-elision",
+        "unpunctuated-input"
+      ],
+      "note": "An inverted identificational copula with the descriptive material postposed — it reads as a truncated cleft, and calling it a plain negated classification would lose the focus structure that makes it an inference."
+    },
+    {
+      "id": "s4-u24",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "corrin-ould",
+      "direction": "produce",
+      "text": "Not unless he swims better than he pays.",
+      "demands": [
+        "negative-conditional",
+        "ellipsis",
+        "comparative-clause",
+        "habitual-aspect",
+        "pronoun-reference",
+        "irony",
+        "conversational-implicature"
+      ],
+      "note": "A bare negation with an `unless` clause and no main clause at all. The comparison is between two unrelated scales, which is the joke and also the reason a literal comparative reading fails."
+    },
+    {
+      "id": "s4-u25",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "and your mother was right",
+      "demands": [
+        "discourse-connective",
+        "possessive-pronoun",
+        "property-predication",
+        "past-tense",
+        "conversational-implicature",
+        "unpunctuated-input"
+      ],
+      "note": "Presses for the second concession by stating it rather than asking for it — a declarative that functions as a demand."
+    },
+    {
+      "id": "s4-u26",
+      "scene": "two-accounts-that-disagree",
+      "speaker": "corrin-ould",
+      "direction": "produce",
+      "text": "My mother was right. You tell her. I won't.",
+      "demands": [
+        "multi-sentence-turn",
+        "possessive-pronoun",
+        "property-predication",
+        "past-tense",
+        "retraction",
+        "overt-subject-imperative",
+        "pronoun-reference",
+        "volitional-modal",
+        "vp-ellipsis",
+        "negation",
+        "conversational-implicature",
+        "person-deixis"
+      ],
+      "note": "Concedes, delegates, refuses, in three sentences. The imperative carries an overt subject (`You tell her`), which is contrastive rather than merely emphatic, and the refusal is a bare auxiliary with the verb phrase elided."
+    },
+    {
+      "id": "s5-u01",
+      "scene": "someone-recalling-the-dead",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "did you know bellet craw",
+      "demands": [
+        "polar-question",
+        "past-tense",
+        "transitive-frame",
+        "proper-name",
+        "person-deixis",
+        "unpunctuated-input"
+      ],
+      "note": "The past tense is doing the delicate work: it asks about a dead woman without naming the death, and a present-tense version would be a different and crueller question."
+    },
+    {
+      "id": "s5-u02",
+      "scene": "someone-recalling-the-dead",
+      "speaker": "fenna-ould",
+      "direction": "produce",
+      "text": "I taught her the gates. Eleven years back, when she was nothing but elbows.",
+      "demands": [
+        "multi-sentence-turn",
+        "ditransitive-frame",
+        "past-tense",
+        "pronoun-reference",
+        "definiteness",
+        "ellipsis",
+        "verbless-clause",
+        "temporal-adverbial",
+        "numeral-quantification",
+        "subordination-temporal",
+        "metaphor",
+        "negative-polarity-item",
+        "classify",
+        "number-marking",
+        "person-deixis"
+      ],
+      "note": "`nothing but elbows` is a fresh metaphor, not a lexicalized idiom: it is composed on the spot, so an idiom lexicon does not reach it."
+    },
+    {
+      "id": "s5-u03",
+      "scene": "someone-recalling-the-dead",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "was she good at it",
+      "demands": [
+        "polar-question",
+        "past-tense",
+        "property-predication",
+        "oblique-argument",
+        "pronoun-reference",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s5-u04",
+      "scene": "someone-recalling-the-dead",
+      "speaker": "fenna-ould",
+      "direction": "produce",
+      "text": "She was careful. On a river, careful is better than good.",
+      "demands": [
+        "multi-sentence-turn",
+        "property-predication",
+        "past-tense",
+        "pronoun-reference",
+        "spatial-adverbial",
+        "adjective-as-argument",
+        "comparative",
+        "generic-reference",
+        "conversational-implicature"
+      ],
+      "note": "The second sentence fronts a scene-setting adverbial and then uses two bare adjectives as the ARGUMENTS of a comparison. Nothing in either corpus reaches an adjective in argument position, and the aphorism has no other form."
+    },
+    {
+      "id": "s5-u05",
+      "scene": "someone-recalling-the-dead",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "did she have family",
+      "demands": [
+        "polar-question",
+        "past-tense",
+        "transitive-frame",
+        "mass-count",
+        "pronoun-reference",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s5-u06",
+      "scene": "someone-recalling-the-dead",
+      "speaker": "fenna-ould",
+      "direction": "produce",
+      "text": "A brother at Marlow. He hasn't come. And there's a niece she used to walk out with on the seventh day. The girl's small. She doesn't understand it yet.",
+      "demands": [
+        "multi-sentence-turn",
+        "ellipsis",
+        "verbless-clause",
+        "pp-modifier",
+        "proper-name",
+        "perfect-aspect",
+        "negation",
+        "pronoun-reference",
+        "discourse-connective",
+        "existential",
+        "relative-clause-oblique",
+        "zero-relativizer",
+        "preposition-stranding",
+        "habitual-aspect",
+        "past-tense",
+        "particle-verb",
+        "ordinal",
+        "temporal-adverbial",
+        "definiteness",
+        "property-predication",
+        "phasal-adverb",
+        "discourse-anaphora"
+      ],
+      "note": "Five sentences. `it` in the last has no linguistic antecedent anywhere in the scene — it is the death, which nobody has named. `used to` is a dedicated periphrastic past habitual with no present-tense counterpart, and the relative strands its preposition with no relativizer."
+    },
+    {
+      "id": "s5-u07",
+      "scene": "someone-recalling-the-dead",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "what was she like",
+      "demands": [
+        "wh-question",
+        "past-tense",
+        "property-predication",
+        "preposition-stranding",
+        "pronoun-reference",
+        "unpunctuated-input"
+      ],
+      "note": "`like` is stranded with its object questioned. This is the idiomatic English way of asking for a character description, and there is no non-stranding paraphrase a player would type."
+    },
+    {
+      "id": "s5-u08",
+      "scene": "someone-recalling-the-dead",
+      "speaker": "fenna-ould",
+      "direction": "produce",
+      "text": "She sang while she worked, and she sang badly, and nobody ever told her, and now nobody can.",
+      "demands": [
+        "clause-coordination",
+        "subordination-temporal",
+        "past-tense",
+        "pronoun-reference",
+        "manner-adverb",
+        "negative-indefinite",
+        "negative-polarity-item",
+        "vp-ellipsis",
+        "ability-modal",
+        "temporal-adverbial",
+        "conversational-implicature"
+      ],
+      "note": "The corpus's furthest line from current capability. Four coordinated clauses build to an elided verb phrase whose recovery (`nobody can tell her`) is what states the death — and the death is never mentioned. Producing it requires holding an elided VP across three clauses AND intending the inference it licenses."
+    },
+    {
+      "id": "s5-u09",
+      "scene": "someone-recalling-the-dead",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "im sorry",
+      "demands": [
+        "condolence-formula",
+        "property-predication",
+        "person-deixis",
+        "contraction-elision",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s5-u10",
+      "scene": "someone-recalling-the-dead",
+      "speaker": "fenna-ould",
+      "direction": "produce",
+      "text": "You didn't do it.",
+      "demands": [
+        "negation",
+        "past-tense",
+        "transitive-frame",
+        "discourse-anaphora",
+        "person-deixis",
+        "presupposition-accommodation"
+      ],
+      "note": "Reinterprets a condolence formula as a confession and rejects it. The demand is to read a formula literally on purpose — the opposite of the usual requirement that formulae be recognized as formulae."
+    },
+    {
+      "id": "s5-u11",
+      "scene": "someone-recalling-the-dead",
+      "speaker": "fenna-ould",
+      "direction": "produce",
+      "text": "Did you?",
+      "demands": [
+        "polar-question",
+        "vp-ellipsis",
+        "past-tense",
+        "person-deixis"
+      ],
+      "note": "The speaker questions the proposition she asserted one turn earlier, with the verb phrase elided. The reversal within a single speaker's own two turns is the whole line."
+    },
+    {
+      "id": "s5-u12",
+      "scene": "someone-recalling-the-dead",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "no",
+      "demands": [
+        "answer-particle",
+        "unpunctuated-input"
+      ]
+    },
+    {
+      "id": "s5-u13",
+      "scene": "someone-recalling-the-dead",
+      "speaker": "fenna-ould",
+      "direction": "produce",
+      "text": "No. I didn't think so.",
+      "demands": [
+        "multi-sentence-turn",
+        "answer-particle",
+        "negation",
+        "past-tense",
+        "propositional-anaphora",
+        "epistemic-hedge",
+        "person-deixis"
+      ],
+      "note": "`so` is a propositional pro-form under a negated attitude verb; the negation belongs to the complement, not the matrix (`I thought not`), which a compositional reading gets backwards."
+    },
+    {
+      "id": "s5-u14",
+      "scene": "someone-recalling-the-dead",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "was she on the race that night because someone put her there",
+      "demands": [
+        "polar-question",
+        "locative-predication",
+        "past-tense",
+        "definiteness",
+        "demonstrative-deixis",
+        "temporal-adverbial",
+        "subordination-causal",
+        "indefinite-pronoun",
+        "transitive-frame",
+        "spatial-adverbial",
+        "presupposition-accommodation",
+        "pronoun-reference",
+        "unpunctuated-input"
+      ],
+      "note": "A loaded question: the causal clause smuggles in an agent, and answering the polar question either way concedes that someone put her there."
+    },
+    {
+      "id": "s5-u15",
+      "scene": "someone-recalling-the-dead",
+      "speaker": "fenna-ould",
+      "direction": "produce",
+      "text": "There it is.",
+      "demands": [
+        "idiom",
+        "discourse-anaphora",
+        "spatial-adverbial"
+      ],
+      "note": "A presentative formula acknowledging that the real question has finally been asked. `it` refers to the question itself, not to anything in the world — a metalinguistic use of a spatial deictic."
+    },
+    {
+      "id": "s5-u16",
+      "scene": "someone-recalling-the-dead",
+      "speaker": "player",
+      "direction": "parse",
+      "text": "i can come back another day",
+      "demands": [
+        "ability-modal",
+        "particle-verb",
+        "temporal-adverbial",
+        "politeness-register",
+        "conversational-implicature",
+        "person-deixis",
+        "unpunctuated-input"
+      ],
+      "note": "An offer to withdraw, phrased as a statement of ability. The politeness is entirely in the indirection; the literal content is a claim about the speaker's schedule."
+    },
+    {
+      "id": "s5-u17",
+      "scene": "someone-recalling-the-dead",
+      "speaker": "fenna-ould",
+      "direction": "produce",
+      "text": "Ask it now. She'd want it asked.",
+      "demands": [
+        "multi-sentence-turn",
+        "imperative",
+        "discourse-anaphora",
+        "temporal-adverbial",
+        "conditional-hypothetical",
+        "desiderative",
+        "small-clause-complement",
+        "passive-agentless",
+        "pronoun-reference"
+      ],
+      "note": "`want it asked` is a small clause with a passive participle: the wanting is about the act, and the act's agent is left unstated on purpose."
+    },
+    {
+      "id": "s5-u18",
+      "scene": "someone-recalling-the-dead",
+      "speaker": "fenna-ould",
+      "direction": "produce",
+      "text": "She was on the race because I put her on the race. I keep the watch roster. Forty years I've kept it and I have never once put someone somewhere they drowned.",
+      "demands": [
+        "multi-sentence-turn",
+        "locative-predication",
+        "past-tense",
+        "subordination-causal",
+        "transitive-frame",
+        "pronoun-reference",
+        "definiteness",
+        "metalinguistic-reference",
+        "habitual-aspect",
+        "nominal-compound",
+        "topicalization",
+        "duration-adverbial",
+        "numeral-quantification",
+        "perfect-aspect",
+        "negative-temporal-adverbial",
+        "negative-polarity-item",
+        "indefinite-pronoun",
+        "relative-clause-oblique",
+        "zero-relativizer",
+        "emphatic-affirmation",
+        "person-deixis"
+      ],
+      "note": "Answers by echoing the question's own wording back with herself as the agent — the repetition is the admission. `Forty years` is a topicalized duration adverbial, and `somewhere they drowned` is a relative on a locative indefinite with no relativizer."
+    },
+    {
+      "id": "s5-u19",
+      "scene": "someone-recalling-the-dead",
+      "speaker": "fenna-ould",
+      "direction": "produce",
+      "text": "That's the thing nobody has said to me since. I've been nine days waiting for someone to say it.",
+      "demands": [
+        "multi-sentence-turn",
+        "discourse-anaphora",
+        "classify",
+        "relative-clause-object",
+        "zero-relativizer",
+        "negative-indefinite",
+        "perfect-aspect",
+        "ditransitive-frame",
+        "null-complement-anaphora",
+        "perfect-progressive",
+        "duration-adverbial",
+        "numeral-quantification",
+        "subordination-purpose",
+        "infinitival-complement",
+        "indefinite-pronoun",
+        "pronoun-reference",
+        "conversational-implicature"
+      ],
+      "note": "`since` is stranded with no complement at all, and the final infinitival carries its own overt subject (`for someone to say it`). The turn reframes an accusation as the thing she needed to be asked."
+    }
+  ]
+}

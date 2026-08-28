@@ -83,6 +83,36 @@ fn the_merchant_corpus_is_frozen_at_its_authored_size() {
     );
 }
 
+/// The flood-watch corpus's frozen entry count: 139 utterances across five
+/// scenes of investigative dialogue, 68 player lines and 71 NPC lines.
+const FLOOD_WATCH_ENTRIES: usize = 139;
+
+/// The flood-watch corpus is frozen the same way the merchant corpus is, and
+/// **nothing else in this file touches it**. That is deliberate, not an
+/// omission: it carries two fields the resolver's [`Entry`] does not have —
+/// `scene`, and a per-entry `direction` (`parse` for a player line, `produce`
+/// for an NPC line) that splits one capability question into two. Wiring a
+/// resolver over it therefore needs a schema change, which is spec work
+/// nobody has approved. So the data is frozen now, before any score exists to
+/// be chased (decision 0016), and the measurement is left alone.
+///
+/// Its own `minted_tokens` block records the 56 demand tokens it needed that
+/// `the-ladder.corpus.json.DRAFT` does not name — in the corpus itself rather
+/// than in a campaign scratch file, so the vocabulary survives the worktree
+/// that authored it.
+#[test]
+fn the_flood_watch_corpus_is_frozen_at_its_authored_size() {
+    let text = std::fs::read_to_string(repo_root().join("sentences/the-flood-watch.corpus.json"))
+        .expect("the flood-watch corpus is committed");
+    let n = text.matches("\"id\":").count();
+    assert_eq!(
+        n, FLOOD_WATCH_ENTRIES,
+        "the corpus moved. If that was deliberate, change FLOOD_WATCH_ENTRIES \
+         in the same commit and say why in the message; a corpus that drifts \
+         under a measurement makes every earlier score incomparable."
+    );
+}
+
 // ---------------------------------------------------------------------
 // Task 9: the resolver
 // ---------------------------------------------------------------------
