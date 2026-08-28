@@ -3,10 +3,11 @@
 //! **Why this view goes first**: [`hornvale_worldgen::BuildDepth::Astronomy`]
 //! is the shallowest rung the ladder has, and everything a night sky needs —
 //! every neighbor star's class, distance, brightness, and its own celestial
-//! coordinates — is committed by the time that rung fires. So `sky` opens
-//! *complete*, where every later view (the atlas, the almanac, the tongue)
-//! opens empty until its own rung lands. [`SkyView::render`] must therefore
-//! be a pure function of the committed neighbor facts alone: identical
+//! coordinates, plus the system-level pole-star/wanderer/figure facts the
+//! caption band reads — is committed by the time that rung fires. So `sky`
+//! opens *complete*, where every later view (the atlas, the almanac, the
+//! tongue) opens empty until its own rung lands. [`SkyView::render`] must
+//! therefore be a pure function of those committed facts alone: identical
 //! output at [`BuildDepth::Astronomy`] and at every rung after it is the
 //! property this module's tests exist to hold.
 //!
@@ -20,27 +21,67 @@
 //! not assumed:
 //!
 //! 1. `hornvale_worldgen::almanac_context` — the obvious almanac entry point
-//!    — calls `terrain_of`/`climate_from` internally (see its body in
-//!    `windows/worldgen/src/lib.rs`). Those two functions are banned from
-//!    this crate's own call sites (decision 0092), and calling them from
-//!    inside a rung-0 render would also cost ~199 ms + ~69 ms *every* render
-//!    for data this view never uses (no view here reads terrain or climate).
+//!    — calls `terrain_of`/`climate_from` internally (`windows/worldgen/src/
+//!    lib.rs:10126-10127`, confirmed on review). Those two functions are
+//!    banned from this crate's own call sites (decision 0092), and calling
+//!    them from inside a rung-0 render would also cost ~199 ms + ~69 ms
+//!    *every* render for data this view never uses (no view here reads
+//!    terrain or climate).
 //! 2. The narrower `hornvale_worldgen::night_sky_lines(world)` needs no
 //!    terrain/climate, but its heliacal-event line resolves its observing
-//!    latitude from `hornvale_terrain::places(world).first()` — `None`
-//!    (falling back to a fixed 35° reference) before any settlement is
-//!    placed, and a real committed latitude once one is. That means its
-//!    OUTPUT would change between the astronomy-only rung and a later one,
-//!    which is exactly the property this view must not have. That is a real
-//!    reason, not a preference, so the ledger route is what is implemented
-//!    below; nothing here depends on `hornvale-almanac`, and no manifest
-//!    change was needed.
+//!    latitude from `hornvale_terrain::places(world).first()`
+//!    (`lib.rs:9656-9661`, confirmed on review) — `None` (falling back to a
+//!    fixed 35° reference) before any settlement is placed, and a real
+//!    committed latitude once one is. That means its OUTPUT would change
+//!    between the astronomy-only rung and a later one, which is exactly the
+//!    property this view must not have. That is a real reason, not a
+//!    preference, so the ledger route is what is implemented below; nothing
+//!    here depends on `hornvale-almanac`, and no manifest change was needed.
 //!
-//! The cost of NOT reading almanac captions is real too: this view draws
-//! only the star field itself (no pole-star sentence, no wanderer count,
-//! no figure summary) — see the report for why those were left for a later
-//! task rather than hand-rolling a rung-0-safe subset of `night_sky_lines`
-//! under time pressure.
+//! # The caption band (ruling R8, fix round 1)
+//!
+//! The star field alone left a title-vs-delivery gap against spec §4's named
+//! content for this view (neighbours, moons, wanderers, the ecliptic, the
+//! eclipse ladder). [`caption_lines`] closes the part of that gap reachable
+//! without a new dependency or a banned call: it draws exactly the WORLD-
+//! level astronomy facts already committed at rung 0 that the almanac route
+//! could not have safely supplied anyway —
+//! [`hornvale_astronomy::facts::POLE_STAR_NORTH`]/`POLE_STAR_SOUTH`,
+//! [`hornvale_astronomy::facts::WANDERER_COUNT_FACT`], and
+//! [`hornvale_astronomy::facts::FIGURE_COUNT`]/`FIGURE_ON_ECLIPTIC`. Each
+//! line is drawn only when ITS OWN fact is committed — contract rule 2, never
+//! a placeholder for a fact that does not exist — so the band holds anywhere
+//! from zero to four lines depending on what this world's genesis actually
+//! found.
+//!
+//! Two things named in spec §4 are deliberately still absent, and both were
+//! checked rather than assumed away:
+//!
+//! - **Moons and wanderers drawn at a position.** They move, so placing one
+//!   means picking a fixed reference instant — the choice
+//!   `hornvale_worldgen::night_sky_lines` makes with its own
+//!   `StdInstant::new(0.0)`. The plan never decided that choice for this
+//!   view, and inventing a reference-time model inside a `render` call is
+//!   the wrong place to decide it. A *count* caption
+//!   (`WANDERER_COUNT_FACT`) is in scope; a *position* is not.
+//! - **The eclipse-ladder caption.** `domains/astronomy/src/facts.rs` commits
+//!   NO eclipse predicate anywhere — grepped for `ECLIPSE`/`eclipse` across
+//!   that file and found only a doc reference to
+//!   `crate::eclipses::node_regression_period` (a moon-node fact, not an
+//!   eclipse event) and the `crate::eclipses` module name in a comment. The
+//!   only producer of eclipse prose is
+//!   `hornvale_worldgen::night_sky_lines`'s own `eclipse_events(...)` call
+//!   (`lib.rs:~9724`), which recomputes dated events from the live
+//!   `GeneratedSky` at a chosen instant rather than reading a committed
+//!   fact — the same reference-time problem as moon/wanderer positions, on
+//!   top of the almanac route already being closed. **Verified absence, not
+//!   an oversight**: there is no rung-0 eclipse fact to draw.
+//!
+//! The ecliptic itself, by contrast, DOES have a rung-0 fact:
+//! [`hornvale_astronomy::facts::FIGURE_ON_ECLIPTIC`] is committed exactly
+//! when genesis found at least one star figure standing on the ecliptic, so
+//! that one line is drawn (see its own doc for why it can only ever say
+//! "at least one", never a count or which figure).
 //!
 //! # The projection
 //!
@@ -48,14 +89,19 @@
 //! `w`×`h` grid: right ascension (0..360°, periodic) onto the column, west
 //! to east; declination (−90..90°) onto the row, north pole at the top row
 //! and south pole at the bottom — an ordinary equirectangular star-chart
-//! layout. See its own doc for the exact formula and worked examples.
+//! layout. See its own doc for the exact formula and worked examples. The
+//! star field is drawn BELOW the caption band (see [`SkyView::render`]):
+//! `sky_position` itself knows nothing about captions and is tested against
+//! a plain `h`-row area.
 
 use crate::overture::view::View;
 use hornvale_astronomy::facts::{
-    IS_NEIGHBOR, NEIGHBOR_BRIGHTNESS_REL, NEIGHBOR_DECLINATION_DEG, NEIGHBOR_RA_DEG,
+    FIGURE_COUNT, FIGURE_ON_ECLIPTIC, IS_NEIGHBOR, NEIGHBOR_BRIGHTNESS_REL,
+    NEIGHBOR_DECLINATION_DEG, NEIGHBOR_RA_DEG, POLE_STAR_NORTH, POLE_STAR_SOUTH, STAR_CLASS,
+    WANDERER_COUNT_FACT,
 };
 use hornvale_game_core::{Cell, Grid, Source, Weight};
-use hornvale_kernel::{Value, World};
+use hornvale_kernel::{EntityId, Value, World};
 use hornvale_worldgen::{BuildDepth, RungArtifacts};
 
 /// A neighbor star's sky-relevant coordinates and brightness, read off the
@@ -129,6 +175,13 @@ fn stars_of(world: &World) -> Vec<SkyStar> {
 /// bounds as a defensive floor against float edge cases, never as the
 /// normal path.
 ///
+/// **Two stars can project onto the same cell** — the sky is continuous and
+/// the grid is not, so two sufficiently close (ra, dec) pairs round to the
+/// same (col, row). [`SkyView::render`] draws stars in ledger commit order,
+/// so the LAST-drawn one wins that cell; deterministic (ledger order is
+/// fixed for a given world) but otherwise unremarkable — no test depends on
+/// which of two colliding stars is the one left on screen.
+///
 /// Worked examples (`w = 78`, `h = 20`, so scaling by `w = 78` and
 /// `h − 1 = 19`):
 /// - `(ra=0, dec=90)` → col `floor(0/360×78)=0`, row `round(0/180×19)=0` → `(0, 0)`
@@ -159,7 +212,19 @@ pub fn sky_position(star: &SkyStar, w: u16, h: u16) -> (u16, u16) {
 /// be. Sorted with `total_cmp` (no NaN/inf reaches a committed brightness
 /// fact, but float `Ord` still needs a total order to sort by at all —
 /// project convention, not a defensive check).
+///
+/// # Panics
+///
+/// If `stars` is empty (`values[mid]` indexes an empty slice). The only
+/// caller, [`SkyView::render`], upholds this by returning before the star
+/// field is drawn at all when `stars_of` comes back empty — this function
+/// does not re-check it, so a `debug_assert` stands in as the documented
+/// contract for any future caller.
 fn median_brightness(stars: &[SkyStar]) -> f64 {
+    debug_assert!(
+        !stars.is_empty(),
+        "median_brightness requires at least one star; the caller must check first"
+    );
     let mut values: Vec<f64> = stars.iter().map(|s| s.brightness).collect();
     values.sort_by(f64::total_cmp);
     let mid = values.len() / 2;
@@ -170,7 +235,92 @@ fn median_brightness(stars: &[SkyStar]) -> f64 {
     }
 }
 
-/// The night sky, drawn from the committed neighbor stars alone.
+/// Locate the world entity: the unique subject carrying a [`STAR_CLASS`]
+/// fact. The same idiom `windows/explain` uses to read system-level
+/// astronomy facts off the ledger (`windows/explain/src/lib.rs`'s own
+/// `world_entity`): the neighbor-level `NEIGHBOR_*` facts [`stars_of`] reads
+/// live on their own per-neighbor subjects, but the caption band's four
+/// facts are committed on the WORLD entity instead (see
+/// `domains/astronomy/src/facts.rs::genesis`'s own doc), so the star field
+/// and the caption band read off two different kinds of subject from the
+/// same ledger.
+fn world_entity(world: &World) -> Option<EntityId> {
+    world.ledger.find(STAR_CLASS).map(|f| f.subject).next()
+}
+
+/// The caption band's fact-to-line rules, given the WORLD entity directly —
+/// split out from [`world_entity`]'s resolution so each rule can be tested
+/// against a `subject` this module fully controls, independent of whatever
+/// the real generated system already committed for its own world entity
+/// (see the test module).
+///
+/// Each line is drawn only when its OWN fact is committed on `subject` —
+/// never a placeholder for one that is not (contract rule 2) — so this can
+/// return anywhere from zero to four lines. Order is fixed: pole star,
+/// wanderer count, figure count, ecliptic.
+fn captions_for(world: &World, subject: EntityId) -> Vec<String> {
+    let mut lines = Vec::new();
+
+    if let Some(sep) = as_number(world.ledger.value_of(subject, POLE_STAR_NORTH)) {
+        lines.push(format!(
+            "A star stands {sep:.1}\u{b0} from the north celestial pole."
+        ));
+    } else if let Some(sep) = as_number(world.ledger.value_of(subject, POLE_STAR_SOUTH)) {
+        lines.push(format!(
+            "A star stands {sep:.1}\u{b0} from the south celestial pole."
+        ));
+    }
+
+    if let Some(count) = as_number(world.ledger.value_of(subject, WANDERER_COUNT_FACT)) {
+        let n = count.round() as u64;
+        if n > 0 {
+            let noun = if n == 1 { "wanderer" } else { "wanderers" };
+            lines.push(format!("{n} {noun} cross this sky."));
+        }
+    }
+
+    if let Some(count) = as_number(world.ledger.value_of(subject, FIGURE_COUNT)) {
+        let n = count.round() as u64;
+        if n > 0 {
+            let noun = if n == 1 { "figure" } else { "figures" };
+            lines.push(format!("The sky holds {n} {noun}."));
+        }
+    }
+
+    if world.ledger.value_of(subject, FIGURE_ON_ECLIPTIC).is_some() {
+        lines.push("At least one figure stands on the sun's road.".to_string());
+    }
+
+    lines
+}
+
+/// The caption band for `world`: [`captions_for`] the resolved
+/// [`world_entity`], or no lines at all for a world that (somehow) never
+/// committed a star class — never a placeholder line in its place.
+fn caption_lines(world: &World) -> Vec<String> {
+    match world_entity(world) {
+        Some(subject) => captions_for(world, subject),
+        None => Vec::new(),
+    }
+}
+
+/// Write `line` starting at column 0 of `row`, clipping at the grid's right
+/// edge. `overture::mod`'s own `write_text` does the same thing but is
+/// private to that module, so this is a second, minimal copy scoped to what
+/// the caption band needs: one row, column zero, no color.
+fn write_caption(grid: &mut Grid, row: u16, line: &str) {
+    for (i, ch) in line.chars().enumerate() {
+        let Ok(col) = u16::try_from(i) else { break };
+        if col >= grid.width() {
+            break;
+        }
+        grid.set(col, row, Cell::glyph(ch, Weight::Normal, Source::Overture));
+    }
+}
+
+/// The night sky: a caption band of committed world-level facts (see the
+/// module doc's "The caption band" section) over a star field of committed
+/// neighbor facts.
 ///
 /// No memo: this view needs no expensive derived structure across renders
 /// (see [`View::render`]'s own doc on why the trait takes `&mut self`
@@ -184,8 +334,8 @@ impl View for SkyView {
     }
 
     /// Always speaks: astronomy is the shallowest rung the ladder has, so a
-    /// `world` handed to this view already carries every neighbor fact it
-    /// will ever carry.
+    /// `world` handed to this view already carries every fact this view
+    /// will ever read.
     fn can_speak(&self, _rung: BuildDepth) -> bool {
         true
     }
@@ -201,13 +351,34 @@ impl View for SkyView {
         let w = w.max(1);
         let h = h.max(1);
         let mut grid = Grid::new(w, h);
+
+        let captions = caption_lines(world);
+        let caption_rows = u16::try_from(captions.len()).unwrap_or(h).min(h);
+        for (i, line) in captions.iter().enumerate() {
+            let Ok(row) = u16::try_from(i) else { continue };
+            if row >= caption_rows {
+                continue;
+            }
+            write_caption(&mut grid, row, line);
+        }
+
+        // The star field gets whatever rows the caption band left — never
+        // the same rows, so a star cannot overwrite caption text (or vice
+        // versa). `sky_position` itself knows nothing about this offset: it
+        // is asked about an `h − caption_rows`-row area and the result is
+        // shifted down by `caption_rows` here.
+        let star_rows = h - caption_rows;
+        if star_rows == 0 {
+            return grid;
+        }
         let stars = stars_of(world);
         if stars.is_empty() {
             return grid;
         }
         let median = median_brightness(&stars);
         for star in &stars {
-            let (col, row) = sky_position(star, w, h);
+            let (col, row_in_band) = sky_position(star, w, star_rows);
+            let row = row_in_band + caption_rows;
             let glyph = if star.brightness >= median { '*' } else { '·' };
             grid.set(
                 col,
@@ -223,7 +394,7 @@ impl View for SkyView {
 mod tests {
     use super::*;
     use hornvale_astronomy::SkyPins;
-    use hornvale_kernel::Seed;
+    use hornvale_kernel::{Fact, Lineage, Seed, WorldTime};
     use hornvale_terrain::TerrainPins;
     use hornvale_worldgen::{SettlementPins, SkyChoice, WorldComponents, build_world_to};
     use std::sync::OnceLock;
@@ -263,6 +434,38 @@ mod tests {
         world_at(BuildDepth::Full)
     }
 
+    /// Commit a single hand-authored fact for a test, panicking on any
+    /// commit failure (a test's own setup must never silently no-op).
+    fn commit_fact(world: &mut World, subject: EntityId, predicate: &str, object: Value) {
+        world
+            .ledger
+            .commit(
+                Fact {
+                    subject,
+                    predicate: predicate.to_string(),
+                    object,
+                    place: None,
+                    day: Some(WorldTime::GENESIS),
+                    provenance: "test".to_string(),
+                },
+                &world.registry,
+            )
+            .expect("a hand-committed test fact must commit cleanly");
+    }
+
+    /// A fresh entity in `world`, unrelated to the real world entity or any
+    /// real neighbor — so a test can commit exactly the facts it wants on a
+    /// subject [`captions_for`] is handed directly, without colliding with
+    /// (or being confused for) whatever the real generated system already
+    /// committed.
+    fn fresh_subject(world: &mut World, ordinal: u16) -> EntityId {
+        world.ledger.mint_entity(Lineage {
+            parent: None,
+            role: "test-caption-subject",
+            ordinal,
+        })
+    }
+
     #[test]
     fn the_sky_is_complete_at_the_very_first_rung() {
         // The property that earns this view its place in the ladder:
@@ -283,16 +486,43 @@ mod tests {
             78,
             20,
         );
+        let early_text = early.to_plain_text();
         assert_eq!(
-            early.to_plain_text(),
+            early_text,
             late.to_plain_text(),
             "the sky changed after astronomy; it must be complete at rung 0"
         );
         // NON-VACUITY: two blank grids would also be equal. The glyph set
         // asserted on here is exactly the one `render` draws above.
         assert!(
-            early.to_plain_text().chars().any(|c| c == '*' || c == '·'),
+            early_text.chars().any(|c| c == '*' || c == '·'),
             "the sky drew no stars at all"
+        );
+        // NON-VACUITY, the caption band's own half: `early_text` is the
+        // WHOLE composed grid (not a star-field-only sub-region), so this
+        // also proves the equality check above is comparing the captions,
+        // not merely sitting alongside them. Seed 42's astronomy commits no
+        // pole star (verified: `POLE_STAR_NORTH`/`POLE_STAR_SOUTH` are both
+        // absent for this seed), 2 wanderers, 2 figures, and at least one
+        // figure on the ecliptic — pinned here the same way
+        // `the_fact_count_comes_off_the_observed_world_not_a_guess` in
+        // `overture::mod` pins a real seed-42 ledger value rather than a
+        // synthetic one.
+        assert!(
+            early_text.contains("2 wanderers cross this sky."),
+            "wanderer caption missing or wrong: {early_text:?}"
+        );
+        assert!(
+            early_text.contains("The sky holds 2 figures."),
+            "figure-count caption missing or wrong: {early_text:?}"
+        );
+        assert!(
+            early_text.contains("At least one figure stands on the sun's road."),
+            "ecliptic caption missing: {early_text:?}"
+        );
+        assert!(
+            !early_text.contains("celestial pole"),
+            "seed 42 commits no pole star; a pole-star caption would be fabricated: {early_text:?}"
         );
     }
 
@@ -358,44 +588,118 @@ mod tests {
         // it cannot fully read — exercised directly since a hand-built
         // world is the only way to construct that shape (`genesis` always
         // commits all three facts together).
-        use hornvale_kernel::{Fact, Lineage, WorldTime};
-        let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
-        let mut world = build_world_to(
-            Seed(42),
-            &SkyPins::default(),
-            SkyChoice::Generated,
-            &TerrainPins::default(),
-            &SettlementPins::default(),
-            &wc,
-            BuildDepth::Astronomy,
-        )
-        .expect("seed 42 builds");
+        let mut world = astronomy_only_world().clone();
         let before = stars_of(&world).len();
         let id = world.ledger.mint_entity(Lineage {
             parent: None,
             role: "neighbor",
             ordinal: 9999,
         });
-        world
-            .ledger
-            .commit(
-                Fact {
-                    subject: id,
-                    predicate: IS_NEIGHBOR.to_string(),
-                    object: Value::Flag(true),
-                    place: None,
-                    day: Some(WorldTime::GENESIS),
-                    provenance: "test".to_string(),
-                },
-                &world.registry,
-            )
-            .expect("a flag fact commits cleanly");
+        commit_fact(&mut world, id, IS_NEIGHBOR, Value::Flag(true));
         // Declination and right ascension are deliberately never committed
         // for `id`.
         let after = stars_of(&world).len();
         assert_eq!(
             after, before,
             "a neighbor with no coordinates must not be drawn"
+        );
+    }
+
+    #[test]
+    fn every_caption_is_drawn_when_its_own_fact_is_committed() {
+        let mut world = astronomy_only_world().clone();
+        let subject = fresh_subject(&mut world, 0);
+        commit_fact(&mut world, subject, POLE_STAR_NORTH, Value::Number(3.5));
+        commit_fact(&mut world, subject, WANDERER_COUNT_FACT, Value::Number(4.0));
+        commit_fact(&mut world, subject, FIGURE_COUNT, Value::Number(2.0));
+        commit_fact(&mut world, subject, FIGURE_ON_ECLIPTIC, Value::Flag(true));
+
+        let lines = captions_for(&world, subject);
+        assert_eq!(
+            lines,
+            vec![
+                "A star stands 3.5\u{b0} from the north celestial pole.".to_string(),
+                "4 wanderers cross this sky.".to_string(),
+                "The sky holds 2 figures.".to_string(),
+                "At least one figure stands on the sun's road.".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_subject_with_no_captioned_facts_gets_no_caption_band() {
+        let mut world = astronomy_only_world().clone();
+        let subject = fresh_subject(&mut world, 0);
+        assert_eq!(
+            captions_for(&world, subject),
+            Vec::<String>::new(),
+            "an entity with none of the four facts must caption nothing"
+        );
+    }
+
+    #[test]
+    fn the_north_pole_star_is_preferred_when_both_are_somehow_committed() {
+        // Genesis itself only ever commits one (`facts.rs`'s own doc: "north
+        // or south, never both"), but the reader must still resolve a
+        // definite order rather than depend on ledger iteration order.
+        let mut world = astronomy_only_world().clone();
+        let subject = fresh_subject(&mut world, 0);
+        commit_fact(&mut world, subject, POLE_STAR_NORTH, Value::Number(1.0));
+        commit_fact(&mut world, subject, POLE_STAR_SOUTH, Value::Number(2.0));
+        let lines = captions_for(&world, subject);
+        assert_eq!(
+            lines,
+            vec!["A star stands 1.0\u{b0} from the north celestial pole.".to_string()]
+        );
+    }
+
+    #[test]
+    fn zero_counts_are_not_captioned_as_a_placeholder() {
+        // A committed zero is a real, existing fact — but contract rule 2
+        // is about never drawing a placeholder for what an observer would
+        // read as "nothing here", and an explicit "0 wanderers cross this
+        // sky" line reads that way. Suppressed, same as the almanac's own
+        // "never rendered for a sky with no figures at all" convention for
+        // the figure-count line.
+        let mut world = astronomy_only_world().clone();
+        let subject = fresh_subject(&mut world, 0);
+        commit_fact(&mut world, subject, WANDERER_COUNT_FACT, Value::Number(0.0));
+        commit_fact(&mut world, subject, FIGURE_COUNT, Value::Number(0.0));
+        assert_eq!(captions_for(&world, subject), Vec::<String>::new());
+    }
+
+    #[test]
+    fn median_brightness_splits_a_tie_at_the_tied_value() {
+        // An even count with the two middle values equal: the average of
+        // the middle pair is that shared value, not a stray in-between one.
+        let stars: Vec<SkyStar> = [1.0, 5.0, 5.0, 9.0]
+            .into_iter()
+            .map(|brightness| SkyStar {
+                right_ascension: 0.0,
+                declination: 0.0,
+                brightness,
+            })
+            .collect();
+        assert_eq!(median_brightness(&stars), 5.0);
+    }
+
+    #[test]
+    fn median_brightness_is_not_dragged_by_one_dominant_outlier() {
+        // The whole reason this is a median and not a mean (module doc):
+        // one blue-giant-bright outlier must not pull the split away from
+        // where the other stars actually cluster.
+        let stars: Vec<SkyStar> = [1.0, 1.1, 1.2, 1_000_000.0]
+            .into_iter()
+            .map(|brightness| SkyStar {
+                right_ascension: 0.0,
+                declination: 0.0,
+                brightness,
+            })
+            .collect();
+        let median = median_brightness(&stars);
+        assert!(
+            (1.0..=1.2).contains(&median),
+            "the outlier dragged the split away from the cluster: {median}"
         );
     }
 }
