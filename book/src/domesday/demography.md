@@ -14,7 +14,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 1 | 15 | 175 | 3070 | 183.523 |
+| 0 | 1 | 15 | 175 | 3070 | 183.542 |
 
 ### `goblin-flagship-population`
 
@@ -24,7 +24,7 @@ n = 999 present, 1 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 3 | 35 | 40 | 41 | 43 | 34.944945 |
+| 3 | 35 | 40 | 41 | 43 | 34.957958 |
 
 ### `kobold-flagship-population`
 
@@ -34,7 +34,7 @@ n = 980 present, 20 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 2 | 28 | 45 | 56 | 70 | 41.408163 |
+| 2 | 28 | 45 | 56 | 70 | 41.402041 |
 
 ### `mean-population`
 
@@ -44,7 +44,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 6.1011236 | 23.434783 | 29.048458 | 31.704762 | 43.618644 | 27.086752 |
+| 6.1011236 | 23.434783 | 29.048458 | 31.701422 | 43.618644 | 27.084593 |
 
 ### `peoples-alive-at-bake-end`
 
@@ -74,7 +74,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 477 | 5119 | 7804 | 9990 | 19208 | 7583.677 |
+| 477 | 5119 | 7804 | 9996 | 19208 | 7584.354 |
 
 ## Weaknesses found here
 
@@ -94,6 +94,6 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `total-population`
 
-- **D5 strength**: declared strong tracking fertile-land-fraction, but observed r = +0.269 (1000 pairs) is weak (positive)
-- **D5 strength**: declared strong tracking habitable-fraction, but observed r = +0.259 (1000 pairs) is weak (positive)
+- **D5 strength**: declared strong tracking fertile-land-fraction, but observed r = +0.270 (1000 pairs) is weak (positive)
+- **D5 strength**: declared strong tracking habitable-fraction, but observed r = +0.260 (1000 pairs) is weak (positive)
 
