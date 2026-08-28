@@ -209,52 +209,74 @@ The seam is the same move The Wanting made reserving `world_view` for belief:
 the body swaps at zero schema cost because the parameter was there from the
 start.
 
-### 3.5 Fog of war: store the walk, derive the seen-set
+### 3.5 Fog of war: a seen-bitset per rung
 
 Traditional field of view. What is lit now comes from the shadowcast; what you
 have seen before stays on the pane, dimmer; creatures and objects are drawn
 only while lit.
 
-**The seen-set is not stored. The trail is, and the seen-set is a fold over
-it:**
+**Each rung carries a bitset of seen cells**, one bit per cell of its extent,
+indexed row-major over `Level::extent`. A step ORs its shadowcast into the
+bitset for the rung it happened on. Nothing else is stored.
 
-```
-seen = ⋃ shadowcast(level, c, r)   for every (c, r) in the trail for this rung
-```
+Extents run `40 + 4·rank` by `24 + 2·rank` with `rank ≤ 5` (five underground
+rungs; `Band::Surface` is not one), so the largest rung is 60×34 = 2,040 cells
+= 255 bytes, and a whole descent is **~1.2 KB**.
 
-A five-rung descent is ~7,000 cells but only a few hundred *steps*. This is
-`UNI-20` — the project's own derived-view architecture, *"nothing stored that
-re-derives"* — applied as written, and it is the third instance of the same
-move: The Quickening folds NPC position over committed `agent-at`, The Wanting
-folds a drive over the same log. `Session.trail: Vec<Facet>` already exists for
-`back` and is the shape precedent — **not the storage**. Its entries are
-walk-band `Facet` addresses, which name nothing underground; this band gets
-its own trail, keyed per rung, and `back` stays refused down here for the same
-reason it is refused indoors (a walk-band trail is not geometry).
+Three properties fall out of the representation rather than needing to be
+enforced:
 
-**Each trail entry carries the reach in force at that step.** Without it, a
-lantern acquired later would re-derive the past at the wider radius and
-*retroactively illuminate* chambers you walked by in the dark — memory
-improving because you picked something up. Storing `(cell, reach)` makes the
-fold exact, keeps a lantern's effect in the future where it belongs, and
-threads §3.4's seam through the stored data rather than bolting it on.
+- **Monotone by construction.** Bits are only ever set. §4.1.2's monotonicity
+  is structural, not a test that could fail.
+- **Correct across a change in reach.** A bit is set with whatever reach was in
+  force at the moment it was set. Acquire a lantern and later steps set more
+  bits; earlier ones are untouched. The past stays as you saw it.
+- **O(1) to read and to write**, with no cache to invalidate and no
+  recomputation on redraw — which matters, because the client rebuilds a full
+  snapshot **on every keypress** (The Quadrat), including keystrokes that are
+  just typing.
 
-**Rejected: per-cell `Knowledge` keys.** `knowledge_is_subset`
-(`knowledge.rs:159`) is default-deny over key shapes — *"Unknown key shapes
-among the checked (non-heard) entries are violations"* — and the walk band's
-one-key-per-locale granularity, whose value is the locale's whole serialized
-description, does not survive 1,344 cells per rung on a wire clients read.
+#### Why not derive the seen-set from a stored trail
 
-**Rejected: a stored bitset.** It bakes geometry, route and reach together at
-write time, and reach is the one input Nathan named as temporary.
+This was the draft design and it was wrong, in a way worth recording because
+the argument for it sounded like the project's own architecture.
 
-**Lifetime: session, and this is a choice rather than a limitation.** The
-trail is session-tier, so fog dies when you climb out — the same lifetime The
-Latch proved for a cleared passage, and no more. The save-tier home is named
-and not built: committing steps as facts, for which `AGENT_AT` is already
-registered every session and currently used only by NPCs. The Latch's
-precedent is exactly this — prove the session claim, name the save round trip,
-do not claim it.
+The draft stored a trail of `(cell, reach)` and folded the seen-set out of it
+on demand, citing `UNI-20` — *"nothing stored that re-derives"*. **That
+citation is circular.** A seen-set does not re-derive from the world: no
+`(seed, address)` yields it, because it is playthrough history rather than
+world truth. It re-derives only from the trail, which is *itself* stored
+playthrough state. The draft traded one stored object for a larger, slower
+stored object and called the result a derivation. `UNI-20` governs values
+derivable from the ledger; fog is not one, and neither representation is more
+derived than the other.
+
+The draft's second argument was that storing a set "bakes the reach in at write
+time." It does, and **that is the correct semantics, obtained for free.** The
+bug the draft feared — a lantern retroactively illuminating chambers walked
+past in the dark — is a hazard *created* by re-folding a trail, and the
+per-step reach field existed only to defend against it. A bitset cannot exhibit
+it.
+
+What a trail genuinely buys is answers to a **different question**: not *which
+cells have I seen* but *where have I walked, in what order* — retracing, a
+`back` verb underground, "you have come this way before." That is a separate
+feature, is not in §6, and is not in this campaign. Letting it choose the data
+structure for fog was the error.
+
+**If retracing is wanted later, a trail is added then, beside the bitset rather
+than instead of it.** The two answer different questions and neither derives
+the other.
+
+#### Lifetime
+
+Session, the same cut The Latch made: fog dies when you climb out, and the save
+round trip is named rather than claimed.
+
+The bitset makes that cut cheap to revisit, which is a point in its favour
+rather than a deferral. Persisting ~1.2 KB of bitset is a smaller and better-
+shaped change than committing several hundred position facts, so if fog should
+survive a save, the work is a serialization decision and not a redesign.
 
 ### 3.6 Inhabitants
 
@@ -359,8 +381,9 @@ tests against.
 
 **`remembered` is monotone**: once a cell is remembered it is never un-
 remembered within a descent. `lit` oscillates freely as the possession moves;
-`remembered` only accumulates. This is mechanically testable and is the
-invariant a fold bug breaks silently, so §6 pins it.
+`remembered` only accumulates. Under §3.5's bitset this is structural — bits
+are only ever set — so §6.4b pins a property the representation already
+guarantees, which is the cheap direction for a test to run.
 
 ### 4.2 Why a new variant rather than reusing `chamber`
 
@@ -515,8 +538,10 @@ Numbered at ratification; this is the expected set.
   (§4.2).
 - **Visibility is an explicit per-cell state, never a shade** — so field of
   view survives a monochrome client (§4.1).
-- **A seen-set is derived from a trail, never stored** — `UNI-20` applied;
-  trail entries carry the reach in force at that step (§3.5).
+- **Fog is a seen-bitset per rung** — ~1.2 KB for a whole descent, monotone by
+  construction, correct across a change in reach without bookkeeping. Records
+  why the trail-and-fold alternative was rejected, since its argument cited
+  `UNI-20` and the citation was circular (§3.5).
 - **Sight radius is a seam, not a constant** (§3.4).
 - **The flooded-cell rule** (§3.2), stated once the measurement is in.
 
