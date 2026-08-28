@@ -183,7 +183,7 @@ pub fn connection_graph_at(
 /// `world` must have been built through at least `BuildDepth::Settlements`
 /// (true of any world `build_world`/`build_world_to` returned at that depth
 /// or deeper): panics if terrain or climate fails to reconstruct, or if any
-/// committed settlement lacks its `cell-id` fact (the latter is
+/// committed settlement lacks its `cell-id` fact (the latter is  // lexicon: frozen predicate VALUE (cell-id, decision 0246), not the mesh sense
 /// [`connection_graph_from`]'s own panic).
 // Named construction site (decision 0092): the sole caller of `terrain_of`/
 // `climate_from` on this path -- sculpts/fits once for its own
@@ -212,7 +212,7 @@ pub fn connection_graph_of(world: &World, cfg: &GraphConfig) -> ConnectionGraph 
 ///
 /// Reads the current field pointwise (`GeneratedClimate::current_at`, no
 /// `current_map()` accessor exists) into a `VertexMap`, and reads each
-/// settlement's `cell-id` fact (`hornvale_settlement::VERTEX_ID`) into the
+/// settlement's `cell-id` fact (`hornvale_settlement::VERTEX_ID`) into the  // lexicon: frozen predicate VALUE (cell-id, decision 0246), not the mesh sense
 /// `Vec<Vertex>` `connection_graph` wants -- then calls `connection_graph`.
 /// Derivation logic stays there; this function is only the adapter, so it
 /// never duplicates `connection_graph`'s edge-assembly.
@@ -227,7 +227,7 @@ pub fn connection_graph_of(world: &World, cfg: &GraphConfig) -> ConnectionGraph 
 ///
 /// # Panics
 ///
-/// Panics if any committed settlement lacks its `cell-id` fact.
+/// Panics if any committed settlement lacks its `cell-id` fact.  // lexicon: frozen predicate VALUE (cell-id, decision 0246), not the mesh sense
 pub fn connection_graph_from(
     world: &World,
     terrain: &GeneratedTerrain,
@@ -673,7 +673,7 @@ mod tests {
     /// byte-identity check (that is `a_day_less_config_leaves_the_graph_byte_identical`
     /// and the census sentinel); this counts actual `terrain_of`/
     /// `climate_from` invocations (`crate::TERRAIN_OF_CALLS`/
-    /// `crate::CLIMATE_FROM_CALLS`, the same thread-local-`Cell` diagnostic
+    /// `crate::CLIMATE_FROM_CALLS`, the same thread-local-`Cell` diagnostic  // lexicon: std::cell::Cell diagnostic counter idiom, not the mesh sense
     /// idiom `windows/lab/src/metrics.rs`'s `LEX_BUILD_CALLS` uses for the
     /// analogous lexicon-rebuild claim) across the one `connection_graph_from`
     /// call, so a regression that reintroduced the re-derivation would fail

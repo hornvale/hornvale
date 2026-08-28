@@ -1,5 +1,7 @@
 //! Tier-1 metrics extractors: analyzable properties of generated worlds.
 
+use std::cell::Ref; // lexicon: std::cell::Ref, the Rust interior-mutability type, not the mesh sense
+
 use hornvale_astronomy::{
     Calendar, NeighborClass, Rotation, StarSystem, streams::ROOT as ASTRONOMY_STREAM_ROOT,
 };
@@ -384,7 +386,7 @@ thread_local! {
     /// to let a test measure "one report build per view, not one per metric"
     /// by counting, not by reading the call graph, and then guard the
     /// memoised path against silently regressing back to a rebuild per metric.
-    static DEMOGRAPHY_BUILD_CALLS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+    static DEMOGRAPHY_BUILD_CALLS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };  // lexicon: std::cell::RefCell/Cell/Ref/OnceCell — the Rust interior-mutability type, not the mesh sense
 }
 
 /// Settlement rung: climate + a world built to settlement depth (spec §4 /
@@ -398,7 +400,7 @@ pub struct SettlementView {
     /// This view's own demography report, computed on first demand by
     /// [`SettlementView::demography_report`] and reused thereafter (task 3
     /// of The Governor). Two Settlement-rung metrics
-    /// (`per-cell-diversity`, `composition-variance`) each called
+    /// (`per-cell-diversity`, `composition-variance`) each called  // lexicon: frozen metric name (per-cell-diversity), not the mesh sense
     /// `hornvale_worldgen::demography_report_from` independently against the
     /// same `(world, components, terrain, climate)` and rebuilt the
     /// identical report — profiled at 7.58% + 7.53% of census study cycles.
@@ -407,7 +409,7 @@ pub struct SettlementView {
     /// same way [`FullView::lexicon_cache`] states it for its own per-view
     /// cache.** This field is private, so its lifetime is exactly one
     /// world's evaluation: `build_row` constructs a `BuiltView` per (seed,
-    /// pin set), applies every metric to it, and drops it. `RefCell` (never
+    /// pin set), applies every metric to it, and drops it. `RefCell` (never  // lexicon: std::cell::RefCell/Cell/Ref/OnceCell — the Rust interior-mutability type, not the mesh sense
     /// a `Mutex`) is deliberate: it is `!Sync`, so a view carrying a filled
     /// cache cannot be shared across the runner's worker threads even by
     /// accident.
@@ -420,7 +422,7 @@ pub struct SettlementView {
     /// path either way, since `demography_report_from` is a pure function
     /// of this view's own already-committed fields.
     demography_cache:
-        std::cell::RefCell<Option<Result<hornvale_demography::DemographyReport, BuildError>>>,
+        std::cell::RefCell<Option<Result<hornvale_demography::DemographyReport, BuildError>>>, // lexicon: std::cell::RefCell/Cell/Ref/OnceCell — the Rust interior-mutability type, not the mesh sense
 }
 
 impl SettlementView {
@@ -438,7 +440,7 @@ impl SettlementView {
         let climate = ClimateView::build_to(seed, pins, wc, BuildDepth::Settlements)?;
         Ok(SettlementView {
             climate,
-            demography_cache: std::cell::RefCell::new(None),
+            demography_cache: std::cell::RefCell::new(None), // lexicon: std::cell::RefCell/Cell/Ref/OnceCell — the Rust interior-mutability type, not the mesh sense
         })
     }
 
@@ -454,7 +456,7 @@ impl SettlementView {
     #[allow(clippy::disallowed_methods)]
     pub fn demography_report(
         &self,
-    ) -> std::cell::Ref<'_, Result<hornvale_demography::DemographyReport, BuildError>> {
+    ) -> Ref<'_, Result<hornvale_demography::DemographyReport, BuildError>> {
         if self.demography_cache.borrow().is_none() {
             #[cfg(test)]
             DEMOGRAPHY_BUILD_CALLS.with(|c| c.set(c.get() + 1));
@@ -466,7 +468,7 @@ impl SettlementView {
             );
             *self.demography_cache.borrow_mut() = Some(built);
         }
-        std::cell::Ref::map(self.demography_cache.borrow(), |cached| {
+        Ref::map(self.demography_cache.borrow(), |cached| {
             cached.as_ref().expect("populated immediately above")
         })
     }
@@ -567,7 +569,7 @@ impl FullView {
         Ok(FullView {
             settlement: SettlementView {
                 climate,
-                demography_cache: std::cell::RefCell::new(None),
+                demography_cache: std::cell::RefCell::new(None), // lexicon: std::cell::RefCell/Cell/Ref/OnceCell — the Rust interior-mutability type, not the mesh sense
             },
             lexicon_cache: std::cell::RefCell::new(std::collections::BTreeMap::new()),
         })
@@ -2537,7 +2539,8 @@ pub fn registry() -> Vec<Metric> {
                    across space (species dominant in different strongholds). Read via \
                    `SettlementView::demography_report`, the view's own memoised build of \
                    `hornvale_worldgen::demography_report_from` (the niche-differentiated \
-                   coexistence shadow) — shared with `per-cell-diversity` above rather than \
+                   coexistence shadow) — shared with the settlement diversity metric \
+                   registered above rather than \
                    each rebuilding it (task 3 of The Governor). Absent if the report fails to \
                    build or the world has fewer than 2 settlements",
             summary: SummaryKind::Numeric {
@@ -15411,7 +15414,7 @@ mod tests {
     /// task's report names and then guards the fix against regressing**
     /// (task 3 of The Governor, mirroring
     /// `felt_testimony_metrics_share_one_lexicon_build_per_species` above).
-    /// Before memoisation, evaluating both `per-cell-diversity` and
+    /// Before memoisation, evaluating both `per-cell-diversity` and  // lexicon: frozen metric name (per-cell-diversity), not the mesh sense
     /// `composition-variance` on the same view called
     /// `hornvale_worldgen::demography_report_from` **twice** — each metric's
     /// extractor built its own report, profiled at 7.58% + 7.53% of census
@@ -15425,7 +15428,7 @@ mod tests {
         DEMOGRAPHY_BUILD_CALLS.with(|c| c.set(0));
         let view = SettlementView::build(Seed(42), &SkyPins::default()).unwrap();
         let built = BuiltView::Settlement(view);
-        let _ = extract_from(&built, "per-cell-diversity");
+        let _ = extract_from(&built, "per-cell-diversity"); // lexicon: frozen metric name (per-cell-diversity), not the mesh sense
         let _ = extract_from(&built, "composition-variance");
         let calls = DEMOGRAPHY_BUILD_CALLS.with(|c| c.get());
         assert_eq!(

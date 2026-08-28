@@ -532,10 +532,10 @@ thread_local! {
     /// `LEX_BUILD_CALLS` -- lets a test measure "did this call path
     /// re-derive terrain" directly, by counting, rather than by reading the
     /// call graph.
-    pub(crate) static TERRAIN_OF_CALLS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+    pub(crate) static TERRAIN_OF_CALLS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };  // lexicon: std::cell::Cell diagnostic counter idiom, not the mesh sense
     /// Test-only diagnostic (The Governor, Task 2): counts calls to
     /// [`climate_from`]'s fit path.
-    pub(crate) static CLIMATE_FROM_CALLS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+    pub(crate) static CLIMATE_FROM_CALLS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };  // lexicon: std::cell::Cell diagnostic counter idiom, not the mesh sense
 }
 
 /// Reconstruct the tectonic terrain provider from the world's seed and its

@@ -3681,3 +3681,6 @@ measured here.
 | 2026-08-28T14:39:19Z | sluice:outboard | 40.069 | 24.974 | 38.323 | 1.58 | 0 | e1d138455 |  | lefford | 40 |
 | 2026-08-28T14:47:17Z | sluice:gate | 477.741 | 13144.926 | 443.540 | 28.44 | 0 | 4bc54599d |  | lefford | 40 |
 | 2026-08-28T14:55:44Z | sluice:clients | 506.344 | 9298.929 | 88.501 | 18.54 | 0 | 6764d2d71 |  | lefford | 40 |
+| 2026-08-28T17:11:05Z | gate-commit | 62.170 | 124.151 | 38.317 | 2.61 | 0 | 023433787 | campaign/the-governor | MacBookPro | 10 |
+| 2026-08-28T17:23:15Z | gate-commit | 44.532 | 137.613 | 54.728 | 4.32 | 0 | 023433787 | campaign/the-governor | MacBookPro | 10 |
+| 2026-08-28T17:24:04Z | gate-commit | 21.180 | 50.381 | 12.793 | 2.98 | 0 | 023433787 | campaign/the-governor | MacBookPro | 10 |
