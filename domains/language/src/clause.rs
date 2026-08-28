@@ -675,6 +675,18 @@ pub enum Valence {
     /// [`Valence::Transitive`] does; the difference is the absent object,
     /// which Common expresses by a part list with no `Part::Complement` and
     /// a tongue by an ordering slot that is `None`.
+    ///
+    /// **This taxonomy is CLOSED, per spec §3.2, and that is a live guard in
+    /// this campaign, not a historical note.** `Nominal` plus `Property`
+    /// and `Locative` (Tasks 4 and 5 add these two beside `Intransitive`)
+    /// are exactly Stassen (1997)'s four intransitive predication
+    /// strategies, plus `Transitive` for the two-argument case — five
+    /// variants total, ever. A fifth INTRANSITIVE-predication strategy
+    /// would need Stassen's typology itself to be wrong; a fifth PREDICATE
+    /// at any of these five is one row in [`PREDICATE_VALENCE`], never a
+    /// new variant here. This is decision 0326's warning, verbatim: "if a
+    /// future campaign finds itself adding a variant per predicate, it has
+    /// rebuilt `Frame` and should stop."
     Intransitive,
 }
 
@@ -709,8 +721,15 @@ pub enum Valence {
 /// [`Valence::Intransitive`], not another transitive row. It is the lever
 /// this campaign is named for — `intransitive-frame` sits under seven of
 /// the ladder's other eight implemented demand tokens, so this one row
-/// moves four rungs (`r002`, `r006`, `r013`, `r014`) from uncovered to
-/// covered at once.
+/// moves five rungs from uncovered to covered at once: `r002`, `r006`,
+/// `r013` and `r014` directly (each demands `intransitive-frame`), plus
+/// `r015` — a reuse/control rung that introduces no token of its own but
+/// presupposes both `r013` and `r014`, and so becomes covered as a
+/// mechanical side effect of covering both. See
+/// `cli/tests/suite/sentence_corpus.rs`'s
+/// `the_ladder_score_and_frontier_match_the_campaigns_prediction` for the
+/// full account (this crate cannot link to it directly — layering forbids a
+/// domain from depending on `cli`).
 const PREDICATE_VALENCE: &[(&str, Valence)] = &[
     (IS_A, Valence::Nominal),
     (EAT, Valence::Transitive),

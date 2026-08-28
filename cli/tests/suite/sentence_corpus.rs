@@ -47,8 +47,10 @@
 //! `clause.rs::an_intransitive_clause_surfaces_its_predicate_as_a_verb_with_no_complement`
 //! in Common, and its tongue twin once a later task lands one
 //! (`intransitive-frame`, The Rail, Task 2 — the lever: it sits under seven
-//! of the other eight tokens, so this one token moves the ladder from 1
-//! covered rung to 5).
+//! of the other eight tokens. See
+//! [`the_ladder_score_and_frontier_match_the_campaigns_prediction`]'s own doc
+//! for the exact covered count this token moves the ladder to, rather than a
+//! number restated here that later tasks in this campaign will move again).
 //!
 //! **The score was zero once, and the positive control that answered that is
 //! still here on purpose.** A measurement whose only possible answer is zero
@@ -2159,12 +2161,16 @@ fn demand_instance_coverage_matches_the_campaigns_prediction() {
 /// `ladder_construction` can build), and that construction realizes
 /// deterministically rather than panicking. It does **not** prove the
 /// surface says what the rung's own `text` says — [`ladder_construction`]
-/// is hand-built, the same posture [`merchant_construction`] takes, and
-/// four of this campaign's five new witnesses substitute a registered
-/// concept (`kill`) or a naive-paradigm surface (`sleeped` for "slept") for
-/// what the rung's authored English literally reads. **Do not "fix" this by
-/// comparing the surface to `text`** — that comparison would fail every one
-/// of those four substitutions by design, not by regression. What actually
+/// is hand-built, the same posture [`merchant_construction`] takes, and two
+/// of this campaign's five new witnesses substitute a registered concept
+/// (`kill` for the unregistered `strike`, `r006`) or a naive-paradigm
+/// surface (`sleeped` for "slept", `r014`) for what the rung's authored
+/// English literally reads; the other three (`r002`, `r013`, `r015`)
+/// realize directly. **Do not "fix" this by comparing the surface to
+/// `text`** — every witness here is lowercase (`"the guard sleeps."`)
+/// against corpus text that is capitalized (`"The guard sleeps."`), so that
+/// comparison would fail all SIX rows on case alone, substitution or not,
+/// before the two real substitutions ever entered into it. What actually
 /// carries the honesty about each deviation is the comment on the
 /// corresponding [`ladder_construction`] arm, a social discipline the same
 /// module doc above already names for `IMPLEMENTED_DEMANDS` itself: "worse

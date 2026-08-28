@@ -1096,6 +1096,29 @@ fn realize_tongue_deep_with_subject(
                 None,
             )
         }
+        // The intransitive frame's object slot: no argument at all. Named
+        // explicitly rather than left to the `other` catch-all below, on
+        // purpose -- the catch-all would silently absorb it into an empty
+        // `Marked`, ordered into the tongue's constituent sequence as an
+        // empty complement, which is a WRONG surface (not a gap) for any
+        // caller realizing an intransitive clause through this deep
+        // realizer, since `predicate_valence` now answers `Intransitive`
+        // for a real predicate (`SLEEP`). The value is the same empty
+        // `Marked` the catch-all would have produced; what changes is that
+        // the variant is named at the site instead of vanishing into a
+        // wildcard, so the NEXT variant added to `Argument` cannot vanish
+        // the same way. A later task gives the object slot its own
+        // ordering-aware `Option` treatment in both orderings (this deep
+        // realizer and the floor realizer's own dispatch) rather than an
+        // empty placeholder; until then this arm is a correct no-op, not a
+        // deferred fix.
+        Argument::Absent => (
+            Marked {
+                segments: None,
+                roman: String::new(),
+            },
+            None,
+        ),
         other => (
             Marked {
                 segments: None,
