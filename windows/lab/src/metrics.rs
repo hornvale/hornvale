@@ -5526,10 +5526,14 @@ fn pearson_correlation(xs: &[f64], ys: &[f64]) -> Option<f64> {
 /// between [`hornvale_worldgen::weakest_point_defensibility`] and
 /// [`hornvale_demography::carrying_capacity`], over every PRESENT-DAY
 /// habitable vertex (`v.climate().habitability()`) — NOT the bake's own final
-/// era. `hornvale_worldgen::connection_graph_of` is the crate's existing
-/// present-day-graph entry point (already used by the legibility surface
-/// and the DoD check), reused here wholesale rather than reconstructed by
-/// hand; `hornvale_demography::carrying_capacity` over
+/// era. `hornvale_worldgen::connection_graph_from` is the crate's
+/// already-built-terrain-and-climate present-day-graph entry point --
+/// `v.terrain()`/`v.climate()` are already the `FullView`'s own
+/// reconstruction, so this reuses them wholesale instead of paying
+/// `connection_graph_of` to reconstruct a second, identical terrain and
+/// climate (The Governor, Task 2: this call was profiled at 13.17% of
+/// census study cycles before the split);
+/// `hornvale_demography::carrying_capacity` over
 /// `hornvale_worldgen::carrying_inputs_of` is the SAME species-agnostic
 /// capacity field `bake_history_from` itself feeds into the bake (up to
 /// its private `SETTLERS_PER_CAPACITY` scale, which cannot move a RANK
@@ -5544,8 +5548,10 @@ fn spearman_defensibility_capacity(v: &FullView) -> MetricValue {
         geo,
         &hornvale_worldgen::carrying_inputs_of(geo, v.terrain(), v.climate()),
     );
-    let graph = hornvale_worldgen::connection_graph_of(
+    let graph = hornvale_worldgen::connection_graph_from(
         v.world(),
+        v.terrain(),
+        v.climate(),
         &hornvale_worldgen::GraphConfig::default(),
     );
 
