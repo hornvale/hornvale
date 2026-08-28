@@ -3714,3 +3714,4 @@ measured here.
 | 2026-08-28T18:24:58Z | gate-commit | 158.727 | 269.747 | 62.126 | 2.09 | 0 | 27a2da724 | campaign/the-precedence | ambrose | 12 |
 | 2026-08-28T18:42:08Z | census | 942.658 | 31701.941 | 245.147 | 33.89 | 0 | 27a2da724 |  | lefford | 40 |
 | 2026-08-28T19:19:12Z | gate-commit | 99.262 | 53.280 | 27.617 | 0.81 | 0 | aea537631 | campaign/the-precedence | ambrose | 12 |
+| 2026-08-28T19:21:59Z | rebaseline | 73.023 | 283.193 | 17.068 | 4.11 | 0 | e03eae506 | campaign/the-precedence | ambrose | 12 |
