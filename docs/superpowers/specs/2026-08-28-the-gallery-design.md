@@ -317,6 +317,51 @@ document carries an explicit per-cell state, as `SurroundsCell.state` does —
 the walk band's own vocabulary is `"here"` / `"remembered"`, and this band
 needs a third for *lit but not here*.
 
+**The states are a named quantization of illumination, not three free-standing
+tags.** When reach becomes light-driven (§3.4), a light model produces a
+falloff rather than three buckets; defining the states as a quantization now
+makes that a re-quantization later rather than a schema break.
+
+### 4.1.1 Never-seen cells are OMITTED, not flagged
+
+The document carries only cells the possession has seen. A never-seen cell is
+absent, not present-with-a-flag.
+
+Two reasons, and the second is the load-bearing one. A 48×28 rung is 1,344
+cells, so flagging would put the whole level in every snapshot from the first
+step, growing nothing as you explore. And it would ship the client information
+the possession has not earned, leaving the client *trusted* to hide it —
+`Sighting`'s doc draws this line in the other direction already ("the
+embedding may decide what a client is SHOWN, never what an agent comes to
+BELIEVE"), and this is the same discipline pointed at the pane. A pane that
+cannot reveal the map is better than one that is asked politely not to.
+
+### 4.1.2 What a state entitles a client to draw
+
+The three states are ordered by information, and entities enter at exactly one
+rung:
+
+```
+              here            lit-not-here
+                \                 /
+                 \               /      <- entities MAY be drawn
+                  +-----+-------+
+                        |
+                   remembered            <- terrain only
+                        |
+                   never-seen            <- absent from the document (4.1.1)
+```
+
+Terrain is drawn from `remembered` upward; a creature or object only from
+`lit` upward. That is Nathan's rule — things vanish when unseen — stated as a
+property of the ordering rather than as a special case, which is what §6.6
+tests against.
+
+**`remembered` is monotone**: once a cell is remembered it is never un-
+remembered within a descent. `lit` oscillates freely as the possession moves;
+`remembered` only accumulates. This is mechanically testable and is the
+invariant a fold bug breaks silently, so §6 pins it.
+
 ### 4.2 Why a new variant rather than reusing `chamber`
 
 Reusing `Chamber { plan }` would be the cheapest possible client change and is
@@ -386,7 +431,10 @@ Mechanically, the campaign is done when all of these hold:
 3. The pane emits `band: "underground"` carrying `vessel/level/v1`, and
    `clients/game` draws the level in the plate.
 4. Cells lit now, cells remembered, and cells never seen are three
-   distinguishable states **in a monochrome render**.
+   distinguishable states **in a monochrome render**; a never-seen cell is
+   absent from the document rather than flagged (§4.1.1).
+4b. `remembered` is monotone across a descent — no walk sequence un-remembers
+   a cell (§4.1.2).
 5. Re-entering a level you have walked shows it still remembered; climbing out
    and back down does not (session lifetime, §3.5).
 6. A creature underground is drawn only while lit, and which creature it is
