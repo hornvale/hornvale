@@ -1185,6 +1185,7 @@ hornvale-kernel::suite$golden_harness::matching_bytes_pass
 hornvale-kernel::suite$golden_harness::rebaseline_creates_a_missing_fixture_and_its_parents
 hornvale-kernel::suite$golden_harness::rebaseline_on_matching_bytes_is_a_no_op_match
 hornvale-kernel::suite$golden_harness::rebaseline_rewrites_a_drifted_fixture
+hornvale-lab::burr_calibration$the_baseline_assignment_accuracy_is_pinned
 hornvale-lab::burr_calibration$the_baseline_roster_is_eighteen_tongues
 hornvale-lab::hornvale_lab$blackbox::tests::record_failure_reports_an_unknown_pin_set_without_panicking
 hornvale-lab::hornvale_lab$census_claim::tests::a_cheap_run_never_claims_and_never_waits
@@ -3439,12 +3440,13 @@ hornvale::suite$sentence_corpus::a_classify_only_entry_resolves_as_covered
 hornvale::suite$sentence_corpus::a_mixed_entry_needs_every_demand_covered
 hornvale::suite$sentence_corpus::an_unimplemented_demand_resolves_as_not_yet
 hornvale::suite$sentence_corpus::distance_zero_is_exactly_coverage
-hornvale::suite$sentence_corpus::four_entries_sit_at_one_missing_demand
-hornvale::suite$sentence_corpus::merchant_coverage_is_two_of_twelve
+hornvale::suite$sentence_corpus::every_covered_entry_realizes_in_common
+hornvale::suite$sentence_corpus::merchant_coverage_is_five_of_twelve
 hornvale::suite$sentence_corpus::sentence_coverage_report
-hornvale::suite$sentence_corpus::the_covered_entries_are_m05_and_m10
+hornvale::suite$sentence_corpus::the_covered_entries_are_m05_m06_m07_m09_and_m10
 hornvale::suite$sentence_corpus::the_merchant_corpus_is_frozen_at_its_authored_size
 hornvale::suite$sentence_corpus::the_negative_control_token_is_genuinely_uncovered
+hornvale::suite$sentence_corpus::three_entries_sit_at_one_missing_demand
 hornvale::suite$sky_exit_criterion::scout_is_deterministic_and_finds_three_moon_worlds
 hornvale::suite$star_class_is_a_concept::the_rendered_display_parses_back_to_the_committed_id
 hornvale::suite$subfloor_roster_coverage::every_workspace_crate_has_a_roster_entry_or_a_declared_reason

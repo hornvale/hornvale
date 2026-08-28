@@ -1,6 +1,6 @@
 # Campaign The Inquest — retrospective
 
-**Merged:** 2026-08-26
+**Merged:** 2026-08-27
 
 ## The headline: sixteen defects, every one in the controller's plan/spec/dispatch text, zero in implementer code
 

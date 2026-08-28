@@ -413,6 +413,7 @@
 - [The Scarf](./chronicle/the-scarf.md)
 - [The Coercion](./chronicle/the-coercion.md)
 - [The Inquest](./chronicle/the-inquest.md)
+- [The Mortise](./chronicle/the-mortise.md)
 - [The Foliot](./chronicle/the-foliot.md)
 
 # Appendix: The Frontier
