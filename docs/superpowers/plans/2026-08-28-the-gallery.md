@@ -64,8 +64,34 @@ behaviour.
 It sweeps at least 50 seeds, builds a full descent per seed through the shipped
 entry point, and prints per rung: total cells, walkable cells, flooded cells,
 and — the number that decides the rule — **the fraction of each rung's walkable
-area reachable from that rung's stairs cell when `Flooded` is treated as
+area reachable from that rung's entry cell when `Flooded` is treated as
 impassable**, versus when it is treated as passable.
+
+The entry cell is the `StairsUp` cell for every rung below the first. Rung 0 has
+none — `place_connections` emits `StairsUp` only when `has_up` is true — so
+rung 0 measures from the same cell `delve` will place the possession on.
+
+**The descent's inputs must be the production ones, and this is the whole
+validity of the measurement.** Flooding is decided by depth against the water
+table, so invented depths measure a fiction rather than the world. Derive them
+exactly as `windows/worldgen/src/lib.rs:3259-3267` does at a cave-bearing
+vertex:
+
+```rust
+let gradient   = terrain.geothermal_gradient_at(vertex);
+let porosity   = terrain.material_at(vertex).porosity;
+let water_table_m = hornvale_terrain::water_table_depth_m(
+    terrain.drainage_at(vertex), porosity, surface.height_asl_m.get(),
+);
+// per rung, skipping the Nones (Band::Surface names no chamber):
+let depth_m = hornvale_terrain::delve::rung_evaluation_depth_m(
+    rung, gradient, cave.depth_reach_m,
+);
+```
+
+`cave_kind` is `cave.kind`, never a hardcoded `Karst`. Reach a cave-bearing
+vertex the way `session.rs`'s test module already does — `find_open_cave_vertex`
+— rather than scanning for one by hand.
 
 Report, never assert. This is a measurement, and whichever way it lands is the
 finding — the posture `deep_realm_rehome.rs` takes, and the reason its header
