@@ -4930,7 +4930,7 @@ impl<'a> DriveMovements<'a> {
             queue.insert((next, e));
         }
         // THE LEDGER'S CHRONOLOGY IS NOT THE POP ORDER (The Precedence,
-        // decision <NNNN>, spec section 3). The queue pops creatures by when
+        // decision 0376, spec section 3). The queue pops creatures by when
         // an action BEGINS; every fact above is stamped at the instant its
         // action ENDS. Those two orderings differ by the population's cost
         // spread whenever creatures act at different tempos — measured at
