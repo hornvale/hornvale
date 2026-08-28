@@ -108,7 +108,7 @@
 - [Scene Schema: system v1](./reference/scene-system-v1.md)
 - [Scene Schema: moons v1](./reference/scene-moons-v1.md)
 - [Scene Schema: neighbors v1](./reference/scene-neighbors-v1.md)
-- [Scene Schema: eclipses v1](./reference/scene-eclipses-v1.md)
+- [Scene Schema: eclipses v2](./reference/scene-eclipses-v2.md)
 - [Dictionary](./reference/dictionary-generated.md)
 - [Proto-goblinoid](./reference/proto-goblinoid-generated.md)
 - [Proto-dwarf](./reference/proto-dwarf-generated.md)
@@ -413,6 +413,7 @@
 - [The Scarf](./chronicle/the-scarf.md)
 - [The Coercion](./chronicle/the-coercion.md)
 - [The Inquest](./chronicle/the-inquest.md)
+- [The Foliot](./chronicle/the-foliot.md)
 
 # Appendix: The Frontier
 

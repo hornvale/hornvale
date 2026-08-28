@@ -216,8 +216,13 @@ fn sample_year(
     let mut frozen_flags = Vec::new();
     for i in 0..8u32 {
         let day = year_length * (i as f64) / 8.0;
-        let temp = ctx.climate().temperature_at(vertex, day).get();
-        let frozen = ctx.climate().is_frozen_at(vertex, day);
+        let temp = ctx
+            .climate()
+            .temperature_at(vertex, WorldTime::from_std_days(day).expect("finite"))
+            .get();
+        let frozen = ctx
+            .climate()
+            .is_frozen_at(vertex, WorldTime::from_std_days(day).expect("finite"));
         println!("  day {day:8.2}  temperature_c {temp:8.3}  is_frozen_at {frozen}");
         temps.push(temp);
         frozen_flags.push(frozen);
@@ -251,8 +256,13 @@ fn sample_days(
     let mut frozen_count = 0usize;
     let mut first_frozen_day = None;
     for &day in days {
-        let temp = ctx.climate().temperature_at(vertex, day).get();
-        let frozen = ctx.climate().is_frozen_at(vertex, day);
+        let temp = ctx
+            .climate()
+            .temperature_at(vertex, WorldTime::from_std_days(day).expect("finite"))
+            .get();
+        let frozen = ctx
+            .climate()
+            .is_frozen_at(vertex, WorldTime::from_std_days(day).expect("finite"));
         println!("  day {day:8.2}  temperature_c {temp:8.3}  is_frozen_at {frozen}");
         if temp < min_t {
             min_t = temp;

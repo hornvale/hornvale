@@ -5,7 +5,7 @@
 use crate::anchor::Rotation;
 use crate::calendar::{Calendar, SkyBand, calendar_of};
 use crate::system::{GenesisOutcome, StarSystem};
-use crate::units::StdDays;
+use crate::units::StdInstant;
 use crate::{CELESTIAL_BODY, SkyReport};
 use hornvale_kernel::math;
 use hornvale_kernel::{
@@ -23,6 +23,42 @@ mod tests {
 
     fn sky(pins: SkyPins) -> GeneratedSky {
         GeneratedSky::new(generate(Seed(42), &pins).unwrap())
+    }
+
+    /// A pre-genesis sky answers for the instant asked, not for genesis —
+    /// decision 0317, reversing 0187's clamp.
+    ///
+    /// The inverse of the test this replaces. That one pinned the clamp
+    /// ("the sky N days before genesis reads as genesis"), and it was written
+    /// to establish what the clamp actually DID before deciding its fate,
+    /// since the funnel's own comment cited a rationale 0187 had retracted.
+    ///
+    /// Now the contract is that time passes through: distinct pre-genesis
+    /// instants give distinct skies, and each is a real answer rather than a
+    /// substituted one. Asserting mere finiteness would not witness that —
+    /// a clamp returns finite values too — so this asserts DISTINCTNESS
+    /// against genesis, which only an unclamped funnel can produce.
+    #[test]
+    fn a_pre_genesis_sky_answers_for_the_instant_asked() {
+        let s = sky(SkyPins::default());
+        let genesis = s.sky_at_visibility(WorldTime::GENESIS, Visibility::CLEAR);
+        let mut seen_distinct = 0;
+        for days_before in [1.0_f64, 5.0, 100.0, 100_000.0] {
+            let before = WorldTime::from_std_days(-days_before).expect("finite");
+            let report = s.sky_at_visibility(before, Visibility::CLEAR);
+            assert!(
+                !report.description.is_empty(),
+                "a pre-genesis sky is still a sky"
+            );
+            if report.description != genesis.description {
+                seen_distinct += 1;
+            }
+        }
+        assert!(
+            seen_distinct > 0,
+            "every pre-genesis instant read identically to genesis — the clamp \
+             is still in the funnel, or something downstream reintroduced one"
+        );
     }
 
     fn ctx(day: f64) -> ObserverContext {
@@ -353,7 +389,7 @@ mod tests {
                 orbit: Au::new(1.0).unwrap(),
                 year: StdDays::new(365.25).unwrap(),
                 rotation: Rotation::Spinning {
-                    day: StdDays::new(1.0).unwrap(),
+                    day: hornvale_kernel::units::TickSpan::from_std_days(1.0).unwrap(),
                     retrograde: false,
                 },
                 obliquity: Degrees::new(0.0).unwrap(),
@@ -397,7 +433,7 @@ mod tests {
             system,
             notes: Vec::new(),
         });
-        assert!(sky.calendar().moon_phase(StdDays(0.0), 0).is_none());
+        assert!(sky.calendar().moon_phase(StdInstant(0.0), 0).is_none());
         // Local day fraction 0.0 falls outside the centered daylight
         // window, so this is night — the branch that used to `.unwrap()`.
         let report = sky.sky_at(WorldTime::GENESIS);
@@ -437,7 +473,7 @@ mod tests {
                 orbit: Au::new(1.0).unwrap(),
                 year: crate::units::StdDays::new(365.25).unwrap(),
                 rotation: Rotation::Spinning {
-                    day: crate::units::StdDays::new(1.0).unwrap(),
+                    day: hornvale_kernel::units::TickSpan::from_std_days(1.0).unwrap(),
                     retrograde: false,
                 },
                 obliquity: Degrees::new(obliquity).unwrap(),
@@ -657,13 +693,17 @@ mod tests {
     #[test]
     fn an_in_band_observer_sees_the_eclipse_on_its_day() {
         use crate::eclipses::{EclipseBody, eclipse_events, ground_track, sub_solar_longitude_deg};
-        use crate::units::StdDays;
         let (system, calendar) = crate::eclipses::luna_sol();
         let sky = GeneratedSky::new(crate::system::GenesisOutcome {
             system: system.clone(),
             notes: Vec::new(),
         });
-        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 10.0));
+        let events = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * 10.0),
+        );
         let solar = events
             .iter()
             .find(|e| matches!(e.body, EclipseBody::Solar))
@@ -701,13 +741,17 @@ mod tests {
     #[test]
     fn the_night_side_sees_the_blood_moon_on_its_day() {
         use crate::eclipses::{EclipseBody, eclipse_events, sub_solar_longitude_deg};
-        use crate::units::StdDays;
         let (system, calendar) = crate::eclipses::luna_sol();
         let sky = GeneratedSky::new(crate::system::GenesisOutcome {
             system: system.clone(),
             notes: Vec::new(),
         });
-        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 10.0));
+        let events = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * 10.0),
+        );
         let lunar = events
             .iter()
             .find(|e| matches!(e.body, EclipseBody::Lunar))
@@ -1067,7 +1111,7 @@ mod tests {
                         "got salience {}",
                         p.salience
                     );
-                    let band = s.calendar().sky_band(StdDays(t), 35.0);
+                    let band = s.calendar().sky_band(StdInstant(t), 35.0);
                     assert_ne!(
                         band,
                         Some(SkyBand::Day),
@@ -1189,10 +1233,14 @@ mod tests {
     #[test]
     fn rate_matches_the_dated_scan() {
         use crate::eclipses::{EclipseBody, eclipse_events};
-        use crate::units::StdDays;
         let (system, calendar) = crate::eclipses::luna_sol();
         let years = 100.0;
-        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * years));
+        let events = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * years),
+        );
         let solar = events
             .iter()
             .filter(|e| matches!(e.body, EclipseBody::Solar))
@@ -1217,10 +1265,14 @@ mod tests {
             EclipseBody, LUNAR_SHADOW_FACTOR, eclipse_events, node_crossing_chance,
             solar_eclipse_threshold_deg,
         };
-        use crate::units::StdDays;
         let (system, calendar) = crate::eclipses::luna_sol();
         let years = 100.0;
-        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * years));
+        let events = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * years),
+        );
         let lunar = events
             .iter()
             .filter(|e| matches!(e.body, EclipseBody::Lunar))
@@ -1513,15 +1565,32 @@ impl GeneratedSky {
         &self.notes
     }
 
-    /// This domain's ONE crossing from exact kernel ticks to continuous
-    /// standard days. Everything downstream of here works in `StdDays`.
+    /// This domain's ONE crossing from exact kernel ticks to a continuous
+    /// instant. Everything downstream of here works in `StdInstant`.
     ///
-    /// Clamps a pre-genesis instant to genesis, per decision 0187 — the sky
-    /// before the world exists is not a physical question. The NaN half of
-    /// the old `max(0.0)` guard is gone by construction: a `WorldTime` is an
-    /// integer and cannot be NaN.
-    fn t(&self, time: WorldTime) -> StdDays {
-        StdDays(time.as_std_days().max(0.0))
+    /// **No clamp.** A pre-genesis instant passes through and the sky answers
+    /// for it, which is decision 0317 reversing 0187.
+    ///
+    /// 0187 clamped to genesis, and its own stated reason ("the sky before
+    /// the world exists is not a physical question") it then RETRACTED,
+    /// because `Calendar::local_day` was deliberately fixed to answer for
+    /// negative time on decision 0126's precedent and the sky and the
+    /// calendar sit on the same axis. What actually held the clamp up was
+    /// structural: `StdDays::new` refused a negative, so no caller could hand
+    /// one in and there was nothing else the funnel could do. The Foliot's
+    /// split removed that constraint, which turned the clamp back into a
+    /// choice — and the choice went the other way.
+    ///
+    /// Two things were established before removing it, in this order,
+    /// because the reverse order would have shipped an unvalidated path:
+    /// the negative branch is REACHABLE by an ordinary user (`cli/src/repl.rs`
+    /// parses `sky <day>` straight into `WorldTime::from_std_days`, which
+    /// accepts a negative), and the calendar's arithmetic actually HOLDS
+    /// down there — a sweep of all seventeen instant-taking methods found and
+    /// fixed one live defect (`year_phase` returned -0.49 via `fract`) before
+    /// this line changed.
+    fn t(&self, time: WorldTime) -> StdInstant {
+        StdInstant(time.as_std_days())
     }
 
     /// The sky at a moment, rendered under an unobstructed view.
@@ -1708,7 +1777,7 @@ impl PhenomenaSource for GeneratedSky {
                 Rotation::Spinning { day, .. } => out.push(Phenomenon {
                     kind: CELESTIAL_BODY.to_string(),
                     referent: Referent::of("sun"),
-                    period_days: Some(round2(day.get())),
+                    period_days: Some(round2(day.as_std_days())),
                     salience: 1.0,
                     venue: Venue::DaySky,
                 }),
@@ -1804,8 +1873,8 @@ impl PhenomenaSource for GeneratedSky {
                 .day_length()
                 .map(|d| d.get() / 2.0)
                 .unwrap_or(0.5);
-            let window_from = crate::units::StdDays(t.0 - half_day);
-            let window_until = crate::units::StdDays(t.0 + half_day);
+            let window_from = crate::units::StdInstant(t.0 - half_day);
+            let window_until = crate::units::StdInstant(t.0 + half_day);
             for event in eclipse_events(&self.system, &self.calendar, window_from, window_until) {
                 let moon = &self.system.moons[event.moon];
                 match event.body {
@@ -1861,7 +1930,7 @@ impl PhenomenaSource for GeneratedSky {
         // to the surface: the local day for a spinning world, the year for
         // a locked one (which turns once per orbit).
         let surface_rotation = match self.system.anchor.rotation {
-            Rotation::Spinning { day, .. } => day.get(),
+            Rotation::Spinning { day, .. } => day.as_std_days(),
             Rotation::Locked => self.system.anchor.year.get(),
         };
         for moon in &self.system.moons {

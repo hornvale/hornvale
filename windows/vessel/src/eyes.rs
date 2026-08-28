@@ -5,7 +5,7 @@
 //! neither knows the other exists.
 
 use crate::body::Body;
-use hornvale_astronomy::{Calendar, StdDays};
+use hornvale_astronomy::{Calendar, StdInstant};
 use hornvale_kernel::color::{BANDS, Illuminant, Observer};
 use hornvale_kernel::{World, WorldTime};
 
@@ -80,7 +80,7 @@ pub fn daylight_at(
     latitude: f64,
 ) -> (Illuminant, f64) {
     let altitude = calendar.and_then(|cal| {
-        StdDays::new(day.as_std_days())
+        StdInstant::new(day.as_std_days())
             .ok()
             .and_then(|t| cal.solar_altitude_at(t, latitude))
     });

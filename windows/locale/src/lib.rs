@@ -1196,7 +1196,7 @@ impl LocaleContext {
         let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
         let sum: f64 = weights
             .iter()
-            .map(|&(c, w)| w as f64 * self.climate.temperature_at(c, at.as_std_days()).get())
+            .map(|&(c, w)| w as f64 * self.climate.temperature_at(c, at).get())
             .sum();
         sum / denom as f64
     }

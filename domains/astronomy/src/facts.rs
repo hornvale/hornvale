@@ -290,7 +290,7 @@ pub fn genesis(
         }
         Rotation::Spinning { day, retrograde } => {
             world.ledger.commit(
-                fact(subject, DAY_LENGTH_STD, Value::Number(day.get())),
+                fact(subject, DAY_LENGTH_STD, Value::Number(day.as_std_days())),
                 &world.registry,
             )?;
             if retrograde {
@@ -561,7 +561,7 @@ pub fn genesis(
     // retires pole stars, so this is a genesis-epoch snapshot, not an
     // ongoing truth).
     let calendar = crate::calendar::calendar_of(system);
-    let sky = crate::night_sky::night_sky_at(system, &calendar, 0.0, crate::units::StdDays(0.0));
+    let sky = crate::night_sky::night_sky_at(system, &calendar, 0.0, crate::units::StdInstant(0.0));
     if let Some(pole_star) = &sky.pole_star {
         let predicate = match pole_star.pole {
             crate::night_sky::Hemisphere::North => POLE_STAR_NORTH,
@@ -680,6 +680,7 @@ mod tests {
     use crate::pins::{MoonsPin, RotationPin, SkyPins};
     use crate::register_concepts;
     use crate::system::generate;
+    use crate::units::StdInstant;
     use hornvale_kernel::Seed;
     use hornvale_kernel::test_lineage;
 
@@ -1040,7 +1041,6 @@ mod tests {
     fn genesis_commits_pole_star_facts_matching_the_derived_view_across_a_seed_sweep() {
         use crate::night_sky::{Hemisphere, night_sky_at};
         use crate::sky_position::EquatorialCoord;
-        use crate::units::StdDays;
 
         let mut any_committed = false;
         let mut min_separations: Vec<(u64, f64)> = Vec::new();
@@ -1054,7 +1054,7 @@ mod tests {
             genesis(&mut w, subject, &outcome).unwrap();
 
             let calendar = crate::calendar::calendar_of(&outcome.system);
-            let sky = night_sky_at(&outcome.system, &calendar, 0.0, StdDays(0.0));
+            let sky = night_sky_at(&outcome.system, &calendar, 0.0, StdInstant(0.0));
 
             let north = w.ledger.value_of(subject, POLE_STAR_NORTH).cloned();
             let south = w.ledger.value_of(subject, POLE_STAR_SOUTH).cloned();
@@ -1093,7 +1093,7 @@ mod tests {
                         ra_deg: n.right_ascension,
                         dec_deg: n.declination,
                     };
-                    let pos = calendar.star_equatorial_at(&genesis_pos, StdDays(0.0));
+                    let pos = calendar.star_equatorial_at(&genesis_pos, StdInstant(0.0));
                     (90.0 - pos.dec_deg).min(90.0 + pos.dec_deg)
                 })
                 .fold(f64::INFINITY, f64::min);
