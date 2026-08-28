@@ -142,7 +142,12 @@ fn mercator_y(lat_deg: f64) -> f64 {
 
 /// `mercator_y` at the clamp latitude -- the half-height of the projected
 /// range, used to normalize.
-fn mercator_y_max() -> f64 {
+///
+/// `pub(crate)` since The Quadrat: `plate::virtual_dims` derives the virtual
+/// chart's HEIGHT from the clamped projection's own aspect
+/// (`2*mercator_y_max()/2pi`, about 0.9967), rather than from the terminal's
+/// glyph aspect, so this number has one consumer outside this module.
+pub(crate) fn mercator_y_max() -> f64 {
     mercator_y(LAT_CLAMP_DEG)
 }
 

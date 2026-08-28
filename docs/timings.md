@@ -135,6 +135,174 @@ written to that test's `CARGO_TARGET_TMPDIR/tail-sweep-results.txt`; only the
 wall time is ledgered here because the harness is not `timed.sh`-wrapped and
 this file never invents a measured value it does not hold.
 
+**The Quadrat Task 3's H1 readout (2026-08-26, `campaign/the-quadrat`,
+ambrose, twelve cores) — the world plate's per-draw wall time, BEFORE and
+AFTER mesh-aligned terrain lookup.** Run as
+`clients/game/bin/examples/rung_bench.rs` (`--release`, five runs, median),
+which is not `timed.sh`-wrapped, so only the numbers it printed are ledgered
+here — this file never invents a measured value it does not hold.
+
+**H1'S VERDICT IS RUNG-CONDITIONAL, AND AN EARLIER DRAFT OF THIS NOTE STATED
+IT UNCONDITIONALLY.** The preregistered bar is *"a 200x200 uncached terrain
+raster under 50 ms"* and names **no rung**; the first measurement was taken at
+rung 12 alone, because that is the rung the task brief named, and this note
+then read "H1 ... is SUPPORTED at 31.3 ms" with nothing qualifying it. That
+sentence was true and its scope was unstated, in a committed artifact a later
+reader would take as general. The sweep below is what replaces it.
+
+Full rung sweep, 200x200, seed 42, one box, load average ~7 (an earlier sweep
+at load 22–24 read roughly 2x higher across the board and was discarded as
+contended — a second campaign was running a full suite on the same machine):
+
+| rung | wall ms (median) | wall ms (min) | memo misses / hits | vertex scans | vs the 50 ms bar |
+|---|---|---|---|---|---|
+| 6 (`GLOBE_RUNG`) | 91.541 | 91.306 | 29,662 / 10,338 | 88,986 | **1.8x OVER** |
+| 7 | 66.435 | 65.495 | 15,756 / 24,244 | 47,268 | **1.3x OVER** |
+| 8 | 44.522 | 42.282 | 4,717 / 35,283 | 14,151 | under, by 1.12x |
+| 10 | 30.523 | 30.117 | 333 / 39,667 | 999 | under, by 1.64x |
+| 12 (`BAND_B_RUNG`) | 29.985 | 29.191 | 30 / 39,970 | 90 | under, by 1.67x |
+
+**So: the bar holds at rungs >= 8 and FAILS at rungs 6 and 7, both of which
+ship** — the ladder runs `GLOBE_RUNG..=BAND_B_RUNG` and a player reaches the
+coarse end by holding `-`. The boundary is MEASURED, not interpolated: a review
+pass that measured rungs 6, 8 and 12 placed it at ">= 7", and rung 7's own
+66.435 ms says otherwise. Cross-validation on rung 6 between the two
+independent sweeps was 91.607 vs 91.541 ms, 0.07% apart.
+
+**The MECHANISM claim survives at every rung; only the 50 ms budget is
+rung-conditional.** Against the 1,960,000 vertex scans the replaced 49-point
+area-majority vote cost at every rung, the scan count falls by 21,778x at
+rung 12 and still 22x at rung 6. The reason the two ends differ so much is the
+same reason the wall times do: the memo saves exactly the reuse the rung
+offers, and at `GLOBE_RUNG` a 363x362 chart tile is already about the size of
+a grid-level facet, so 29,662 of 40,000 tiles find nothing to share.
+
+Before/after, at the two sizes originally measured:
+
+| plate | rung | before (ms) | after (ms) | speed-up | scans before -> after |
+|---|---|---|---|---|---|
+| 200x200 | 12 | 1249.583 | 31.298 | 39.9x | 1,960,000 -> 90 |
+| 104x52 | 6 | 186.931 | 17.721 | 10.5x | 264,992 -> 16,020 |
+
+Scan counts are the kernel's own `RoomMeshMemo::corner_weights_misses()`
+instrument times three (`corner_weights_memo` runs three
+`NearestVertexIndex::nearest_to_position` scans on a miss and none on a hit),
+never a wall-clock proxy.
+
+**The Quadrat Task 5's tile-cache readout (2026-08-27, `campaign/the-quadrat`,
+ambrose, twelve cores) — the same plate, now through
+`hornvale_game::tiles::TileCache`.** Same harness
+(`clients/game/bin/examples/rung_bench.rs`, `--release`, five runs, median).
+**Load average 1.43 falling to 1.36 across the sweep, 89.6% idle before and
+89.3% after** — stated because the paragraph after the table is entirely about
+how much this number moves the others.
+
+| rung | uncached (`win`) | uncached (`aligned`) | cached COLD | cached WARM | scroll, BOUNDARY | scroll, mean/col | memo misses |
+|---|---|---|---|---|---|---|---|
+| 6 (`GLOBE_RUNG`) | 65.638 | 64.669 | 73.767 (49 tiles) | **0.053** | 3.614 (7 tiles) | 0.496 | 29,662 |
+| 7 | 46.810 | 45.892 | 55.275 (49) | **0.054** | 5.550 (7) | 0.495 | 15,756 |
+| 8 | 30.031 | 28.467 | 35.084 (49) | **0.050** | 2.120 (7) | 0.324 | 4,717 |
+| 10 | 22.036 | 20.659 | 26.842 (49) | **0.051** | 2.202 (7) | 0.233 | 333 |
+| 12 (`BAND_B_RUNG`) | 21.353 | 19.856 | 28.660 (56) | **0.051** | 1.635 (8) | 0.225 | 30 |
+
+All figures ms. **TWO UNCACHED COLUMNS, because the harness measures two
+windows and quoting a ratio across them would compare different ground** (fix
+round 1, Minor 2). `win` (`origin_col = vw/2`) is the window Task 3's committed
+table used and is kept there so the two sweeps are comparable; `aligned` puts
+the plate's right edge on a tile boundary so the scroll column is the genuine
+worst case, and COLD/WARM/scroll are all measured on it. **Every ratio below is
+taken within one window.**
+
+**WARM is the acceptance criterion and it is met.** `GLOBE_RUNG`, the rung Task
+3 measured 1.8x OVER the 50 ms bar, redraws its terrain in **0.053 ms** once
+its tiles exist. **The number a PLAYER experiences is larger and is the one to
+quote: a keystroke is `compose` PLUS `draw_feature_layer`**, which is not
+cached and runs every frame — **0.0530 + 0.0013 = 0.0543 ms at session start**
+(nothing discovered) and **0.0530 + 0.0663 = 0.1193 ms worst case** (every cave
+discovered) — **921x** and **419x** under the bar, not the 893x a terrain-only
+figure suggests. The components are shown because the ratios are taken on the
+unrounded sums: rounding to three decimals first and dividing gives 926x and
+420x, and an earlier revision quoted a headline (0.120) that matched neither. The
+worst single keystroke overall is the one that uncovers a whole tile column:
+3.614 ms of terrain plus the feature layer, still ~13x under.
+
+**COLD is the one figure over the bar, and it is 1.14x its own window's
+uncached draw** (73.767 against 64.669 at rung 6) — the design, not a
+regression. A 200x200 plate covers 49 WHOLE tiles, 224x224 = 50,176 chart
+squares for 40,000 drawn ones — the count derived from `TILE_EDGE`, `49 * 32^2
+= 50,176`, never restated — so **25.4% more squares for 14.1% more time**, the
+difference being the session-long `RoomMeshMemo` the cache owns. At rung 12 the
+same accounting reads 56 tiles, `56 * 32^2 = 57,344`: **43.4% more squares for
+44.3% more time**. (An earlier revision said 63.8% there, which is the figure
+for 64 tiles — the `tiles resident` count AFTER the scroll — not the 56 the
+cold draw actually paid for, in the same row.)
+
+**Cold is paid once per `(frame, rung)` — and `(frame, ...)` is the half that
+is easy to misread.** The rung-6 chart is 12x12 = 144 tiles in total, so a
+player who pans the whole globe there pays about **217 ms across the session**
+and nothing after — *provided the projection does not move*. Eviction rule 1
+drops every tile of a superseded frame, so **a `Recentre` gesture makes the
+whole cost recur**. `Frame` moves only by that explicit gesture, but it is a
+gesture a player has, and an earlier revision of this paragraph said "and
+nothing after" without the qualifier.
+
+**THE UNCACHED COLUMN RE-MEASURED WELL BELOW TASK 3'S SWEEP, AND WHAT LICENSES
+THE CONCLUSION IS THE LOAD, NOT THE MISS COUNTS.** Four measurements of the
+identical quantity — rung 6, 200x200, `win`, uncached — now exist:
+
+| ms | when / by whom | load |
+|---|---|---|
+| 91.541 | Task 3's committed table | ~7 |
+| 70.289 | Task 5's first sweep | **not logged** — see below |
+| 65.3 | fix round 1's independent reproduction | 2.32 |
+| 65.638 | this sweep | 1.43 |
+
+A **1.40x spread**, with the two lowest measurements agreeing to 0.5%.
+
+**ROW 2's LOAD IS NOT RECORDED, AND THIS TABLE NOW SAYS SO RATHER THAN
+RECONSTRUCTING ONE.** That sweep logged only INSTANTANEOUS idle (88-92%) and
+never a load average, so there is no figure to set beside the other three rows.
+The plausible account is that mutation suites had been running in this worktree
+minutes earlier and the one-minute average had not decayed even though
+instantaneous idle had already recovered — but that is a RECONSTRUCTION, not a
+measurement, and a previous revision of this table asserted it in the cell as
+though it were one. **The lesson holds whether or not the account is right: log
+the LOAD AVERAGE, not instantaneous idle.** Idle is a snapshot a just-finished
+job has already vacated; the average is the quantity the other three rows are
+comparable on. Had it been recorded, row 2 would be settled instead of argued,
+and this paragraph would not exist.
+
+**The miss counts do NOT say "the same code", and an earlier revision of this
+paragraph claimed they did.** They are identical at all five rungs (29,662 /
+15,756 / 4,717 / 333 / 30) across every sweep above, but `plate.rs` DID change
+between Task 3's table and these runs — Task 4's layer split made the memo
+caller-owned, turned `colour_allowed` into a call, and made `draw_with` a
+two-call wrapper. The miss count counts `corner_weights_memo` calls and is
+INVARIANT to that refactor, so it cannot detect a code change at all. What it
+licenses is **"the same ground, and the same amount of memo-visible work"** —
+which excludes the different-work explanation and leaves codegen and machine
+both live. **The independent load observation is what points at the machine**,
+and it is separate evidence.
+
+**H1's disposition is unchanged in direction at `GLOBE_RUNG`** — 65.638 is
+still 1.31x over the 50 ms bar. **The boundary rung is where this bites: rung 7
+reads 46.810 here, UNDER the bar it was recorded 1.3x over.** Recorded, not
+retuned: measurements of the same quantity on the same machine straddle that
+bar, which is a fact about the bar sitting inside the machine's own noise.
+
+**The feature layer costs 0.066 ms at worst, so no window pre-filter is
+needed** (Task 4's review asked). The cave roster is **874 vertices of
+40,962** — the number `Driver::start`'s scan produces and which was recorded
+nowhere in the tree until now. Composing that whole roster over a plate costs
+**0.0013 ms with nothing discovered** and **0.066 ms with every cave
+discovered**. The undiscovered figure is nearly two orders cheaper because
+`draw_feature_layer` checks `discovered` BEFORE it calls `geo.coord` or
+`mercator::project` — so the review's premise ("one `geo.coord` plus one
+`mercator::project` per site on every keystroke") holds only for sites already
+FOUND, and the worst case it feared is 0.13% of the 50 ms budget. The
+settlement roster is a ledger read this harness does not build and is not
+measured here.
+
 | when (UTC) | label | wall_s | user_s | sys_s | cpu_ratio | waited_s | commit | branch | host | cores |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 2026-07-13T00:00:00Z | suite-full (pre-tiering, backfilled) | 2610.89 | 9246.93 | 36.88 | 3.56 | a2d39fa | main | m1max | 10 |
@@ -2975,6 +3143,29 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T16:00:25Z | sluice:outboard | 41.121 | 25.697 | 38.843 | 1.57 | 0 | 1daf2ade1 |  | lefford | 40 |
 | 2026-08-26T16:07:46Z | sluice:gate | 441.328 | 12173.405 | 457.514 | 28.62 | 0 | 38d8e13fa |  | lefford | 40 |
 | 2026-08-26T16:15:29Z | sluice:clients | 462.845 | 5757.223 | 80.937 | 12.61 | 0 | 5f95b8918 |  | lefford | 40 |
+| 2026-08-26T17:26:15Z | prewarm | 375.337 | 1725.815 | 107.516 | 4.88 | 0 | 7576eca00 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-26T19:32:05Z | gate-commit | 119.301 | 108.101 | 32.785 | 1.18 | 0 | a86900394 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-26T19:34:23Z | gate-commit | 87.681 | 51.724 | 25.419 | 0.88 | 0 | a86900394 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-26T19:36:27Z | gate-commit | 85.707 | 51.566 | 25.768 | 0.90 | 0 | a86900394 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-26T19:59:15Z | gate-commit | 75.462 | 48.786 | 23.086 | 0.95 | 0 | 51cf7e4f5 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-26T20:33:17Z | gate-commit | 75.350 | 49.716 | 24.048 | 0.98 | 0 | 99b52c384 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-26T20:34:39Z | gate-commit | 74.871 | 49.470 | 23.825 | 0.98 | 0 | 99b52c384 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-26T21:04:31Z | gate-commit | 76.742 | 49.769 | 23.889 | 0.96 | 0 | 95fbd8f39 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-26T21:05:56Z | gate-commit | 76.800 | 49.457 | 24.100 | 0.96 | 0 | 95fbd8f39 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-26T22:07:33Z | gate-commit | 68.482 | 49.238 | 22.789 | 1.05 | 0 | a1339e537 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-26T22:09:06Z | gate-commit | 69.789 | 50.042 | 23.763 | 1.06 | 0 | a1339e537 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-26T22:54:58Z | gate-commit | 68.870 | 49.662 | 23.363 | 1.06 | 0 | c519a6cbe | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-26T22:56:26Z | gate-commit | 69.239 | 49.607 | 23.722 | 1.06 | 0 | c519a6cbe | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-26T23:50:56Z | game-check | 712.964 | 2598.488 | 55.781 | 3.72 | 0 | bdf54dce7 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-26T23:52:38Z | gate-commit | 96.129 | 56.192 | 26.190 | 0.86 | 0 | bdf54dce7 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-26T23:54:41Z | gate-commit | 98.746 | 57.943 | 28.417 | 0.87 | 0 | bdf54dce7 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T00:24:13Z | game-check | 719.220 | 2498.065 | 54.844 | 3.55 | 0 | 386560c31 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T00:41:34Z | gate-commit | 73.637 | 50.407 | 24.604 | 1.02 | 0 | 386560c31 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T05:41:27Z | gate-commit | 41.872 | 33.248 | 11.045 | 1.06 | 0 | 2c3cbaf5f | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T05:43:56Z | gate-commit | 45.182 | 36.152 | 12.222 | 1.07 | 0 | 2c3cbaf5f | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T05:45:08Z | gate-commit | 46.621 | 36.762 | 12.675 | 1.06 | 0 | 2c3cbaf5f | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T06:13:09Z | gate-commit | 46.414 | 37.296 | 12.307 | 1.07 | 0 | 5233ad5e3 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T06:26:46Z | gate-commit | 45.405 | 36.168 | 12.302 | 1.07 | 0 | e70597a63 | campaign/the-quadrat | ambrose | 12 |
 | 2026-08-26T18:06:23Z | gate-commit | 18.329 | 13.728 | 0.346 | 0.77 | 0 | bfeb852bc | campaign/the-reticence | MacBookPro | 10 |
 | 2026-08-26T18:08:10Z | gate-commit | 86.239 | 235.186 | 22.043 | 2.98 | 0 | bfeb852bc | campaign/the-reticence | MacBookPro | 10 |
 | 2026-08-26T18:08:58Z | gate-commit | 23.145 | 49.820 | 12.855 | 2.71 | 0 | bfeb852bc | campaign/the-reticence | MacBookPro | 10 |
@@ -3067,6 +3258,8 @@ this file never invents a measured value it does not hold.
 | 2026-08-26T23:44:26Z | sluice:outboard | 40.477 | 25.203 | 38.643 | 1.58 | 0 | 8dba99971 |  | lefford | 40 |
 | 2026-08-26T23:51:18Z | sluice:gate | 411.396 | 11765.232 | 389.665 | 29.55 | 0 | 9844da73c |  | lefford | 40 |
 | 2026-08-26T23:58:46Z | sluice:clients | 447.235 | 5528.263 | 64.562 | 12.51 | 0 | 5ae6b9d63 |  | lefford | 40 |
+| 2026-08-27T11:43:09Z | rebaseline | 168.194 | 273.415 | 16.644 | 1.72 | 0 | 8d5196f48 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T11:46:54Z | gate-commit | 212.173 | 632.807 | 68.645 | 3.31 | 0 | 8d5196f48 | campaign/the-quadrat | ambrose | 12 |
 | 2026-08-27T01:22:06Z | rebaseline | 135.942 | 251.068 | 14.616 | 1.95 | 0 | d906b9d9c | campaign/the-foliot | ambrose | 12 |
 | 2026-08-27T01:33:51Z | gate-commit | 189.342 | 188.142 | 34.498 | 1.18 | 0 | d906b9d9c | campaign/the-foliot | ambrose | 12 |
 | 2026-08-27T01:36:44Z | gate-commit | 94.166 | 54.915 | 26.739 | 0.87 | 0 | b209cbc8b | campaign/the-foliot | ambrose | 12 |
@@ -3117,6 +3310,17 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T11:41:38Z | sluice:outboard | 41.781 | 26.059 | 40.143 | 1.58 | 0 | bb980c704 |  | lefford | 40 |
 | 2026-08-27T11:49:28Z | sluice:gate | 470.178 | 13059.773 | 507.185 | 28.85 | 0 | 4e89b35a9 |  | lefford | 40 |
 | 2026-08-27T11:57:21Z | sluice:clients | 472.495 | 5776.730 | 91.999 | 12.42 | 0 | 046c6701e |  | lefford | 40 |
+| 2026-08-27T12:50:58Z | rebaseline | 150.859 | 263.595 | 15.143 | 1.85 | 0 | 539bbb420 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T12:54:45Z | gate-commit | 219.008 | 676.947 | 84.521 | 3.48 | 0 | 539bbb420 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T14:19:57Z | rebaseline | 77.966 | 268.552 | 16.796 | 3.66 | 0 | e4c9c69e4 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T14:21:28Z | gate-commit | 83.137 | 47.503 | 23.926 | 0.86 | 0 | e4c9c69e4 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T14:44:48Z | gate-commit | 144.051 | 62.767 | 33.240 | 0.67 | 0 | e4c9c69e4 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T14:47:36Z | gate-commit | 139.488 | 60.421 | 31.539 | 0.66 | 0 | e4c9c69e4 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T16:08:09Z | game-check | 1230.985 | 3072.669 | 91.655 | 2.57 | 0 | 505ded39d | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T16:23:08Z | rebaseline | 38.578 | 108.063 | 11.987 | 3.11 | 0 | 505ded39d | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T16:24:55Z | rebaseline | 89.834 | 254.097 | 16.712 | 3.01 | 0 | 505ded39d | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T16:26:29Z | gate-commit | 82.804 | 53.825 | 27.836 | 0.99 | 0 | 505ded39d | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T16:28:12Z | gate-commit | 80.313 | 53.834 | 28.275 | 1.02 | 0 | 505ded39d | campaign/the-quadrat | ambrose | 12 |
 | 2026-08-27T13:19:47Z | prewarm | 169.765 | 1145.105 | 41.753 | 6.99 | 0 | 68409004e | campaign/the-mortise | MacBookPro | 10 |
 | 2026-08-27T14:55:38Z | gate-commit | 10.258 | 17.422 | 1.948 | 1.89 | 0 | 00800b622 | campaign/the-mortise | MacBookPro | 10 |
 | 2026-08-27T14:56:29Z | gate-commit | 25.784 | 43.008 | 2.870 | 1.78 | 0 | 00800b622 | campaign/the-mortise | MacBookPro | 10 |
@@ -3202,6 +3406,30 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T15:22:42Z | sluice:outboard | 40.033 | 24.986 | 39.509 | 1.61 | 0 | 4d16c06d4 |  | lefford | 40 |
 | 2026-08-27T15:30:24Z | sluice:gate | 462.083 | 13101.894 | 486.711 | 29.41 | 0 | 642abfcc5 |  | lefford | 40 |
 | 2026-08-27T15:38:02Z | sluice:clients | 457.953 | 5626.068 | 78.451 | 12.46 | 0 | 5639ad58c |  | lefford | 40 |
+| 2026-08-27T16:50:40Z | rebaseline | 115.531 | 273.771 | 17.217 | 2.52 | 0 | 37406156e | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T16:52:51Z | gate-commit | 125.209 | 167.800 | 42.516 | 1.68 | 0 | 37406156e | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T17:42:58Z | game-check | 853.546 | 3333.905 | 91.203 | 4.01 | 0 | ec1f657c8 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T17:44:29Z | gate-commit | 84.646 | 55.533 | 28.463 | 0.99 | 0 | ec1f657c8 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T17:46:28Z | gate-commit | 90.561 | 55.570 | 30.433 | 0.95 | 0 | ec1f657c8 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T18:57:50Z | game-check | 857.859 | 3286.309 | 76.613 | 3.92 | 0 | 18c06203e | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T19:08:11Z | game-check | 616.125 | 3229.479 | 57.633 | 5.34 | 0 | 18c06203e | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T19:15:37Z | gate-commit | 72.135 | 50.281 | 23.243 | 1.02 | 0 | 18c06203e | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T19:17:22Z | gate-commit | 72.678 | 50.492 | 23.988 | 1.02 | 0 | 18c06203e | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T19:48:49Z | gate-commit | 66.442 | 45.004 | 20.538 | 0.99 | 0 | 32969c670 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T19:50:27Z | gate-commit | 72.301 | 50.013 | 23.310 | 1.01 | 0 | 32969c670 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T19:52:03Z | gate-commit | 74.121 | 50.605 | 24.375 | 1.01 | 0 | 32969c670 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T20:22:52Z | gate-commit | 91.518 | 56.508 | 29.483 | 0.94 | 0 | 775708604 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T20:38:42Z | gate-commit | 103.696 | 52.715 | 26.374 | 0.76 | 0 | eb94ecfb4 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T20:56:48Z | game-check | 1078.245 | 3530.094 | 88.528 | 3.36 | 0 | 33d2ece94 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T21:16:16Z | gate-commit | 81.584 | 54.035 | 27.006 | 0.99 | 0 | 3bb6ed06a | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T21:18:25Z | gate-commit | 111.779 | 62.188 | 32.465 | 0.85 | 0 | 3bb6ed06a | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T21:34:08Z | game-check | 932.736 | 3565.409 | 94.320 | 3.92 | 0 | ef4710fdb | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T23:12:32Z | game-check | 656.277 | 3525.175 | 80.484 | 5.49 | 0 | 7c320c46c | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T23:13:53Z | gate-commit | 72.743 | 50.838 | 24.603 | 1.04 | 0 | 7c320c46c | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-27T23:15:36Z | gate-commit | 74.324 | 51.014 | 25.141 | 1.02 | 0 | 7c320c46c | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-28T00:01:52Z | game-check | 228.518 | 2392.995 | 14.181 | 10.53 | 0 | 633e54eef | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-28T00:09:06Z | game-check | 381.125 | 3308.853 | 14.996 | 8.72 | 0 | 633e54eef | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-28T00:10:25Z | gate-commit | 47.434 | 37.368 | 12.567 | 1.05 | 0 | 633e54eef | campaign/the-quadrat | ambrose | 12 |
 | 2026-08-27T15:45:39Z | rebaseline | 170.092 | 278.357 | 20.431 | 1.76 | 0 | b10fd944d | campaign/the-foliot | ambrose | 12 |
 | 2026-08-27T16:04:46Z | gate-commit | 169.815 | 75.732 | 35.497 | 0.66 | 0 | b10fd944d | campaign/the-foliot | ambrose | 12 |
 | 2026-08-27T16:06:37Z | gate-commit | 110.161 | 62.109 | 30.831 | 0.84 | 0 | b10fd944d | campaign/the-foliot | ambrose | 12 |
@@ -3244,8 +3472,22 @@ this file never invents a measured value it does not hold.
 | 2026-08-27T23:26:18Z | sluice:outboard | 41.926 | 25.661 | 40.119 | 1.57 | 0 | dfd315cab |  | lefford | 40 |
 | 2026-08-27T23:33:38Z | sluice:gate | 439.692 | 12223.634 | 467.361 | 28.86 | 0 | 7171b0e52 |  | lefford | 40 |
 | 2026-08-27T23:41:42Z | sluice:clients | 483.263 | 5902.891 | 88.343 | 12.40 | 0 | 9724a78cf |  | lefford | 40 |
+| 2026-08-28T00:20:32Z | rebaseline | 66.824 | 219.121 | 7.867 | 3.40 | 0 | ed5461aa1 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-28T00:22:22Z | gate-commit | 105.729 | 445.473 | 42.389 | 4.61 | 0 | ed5461aa1 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-28T00:40:49Z | rebaseline | 35.729 | 221.184 | 7.833 | 6.41 | 0 | 288cfc617 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-28T00:41:41Z | rebaseline | 36.143 | 219.888 | 7.615 | 6.29 | 0 | 288cfc617 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-28T00:45:41Z | gate-commit | 50.146 | 36.802 | 12.311 | 0.98 | 0 | 48e76268c | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-28T01:10:36Z | gate-commit | 73.541 | 47.187 | 22.284 | 0.94 | 0 | 011e69332 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-28T01:12:07Z | gate-commit | 80.576 | 51.887 | 24.831 | 0.95 | 0 | 011e69332 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-28T01:23:27Z | game-check | 672.154 | 3613.934 | 74.980 | 5.49 | 0 | 011e69332 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-28T01:25:06Z | gate-commit | 72.693 | 48.595 | 22.683 | 0.98 | 0 | 011e69332 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-28T01:40:01Z | gate-commit | 74.450 | 48.605 | 22.963 | 0.96 | 0 | 787f62f92 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-28T01:51:02Z | game-check | 658.696 | 3456.521 | 62.153 | 5.34 | 0 | 787f62f92 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-28T01:52:42Z | gate-commit | 78.094 | 49.945 | 23.882 | 0.95 | 0 | 787f62f92 | campaign/the-quadrat | ambrose | 12 |
 | 2026-08-28T01:08:57Z | rebaseline | 86.662 | 259.384 | 12.528 | 3.14 | 0 | 12a45f91d | campaign/the-mortise | MacBookPro | 10 |
 | 2026-08-28T01:30:02Z | sluice:artifacts | 123.422 | 963.697 | 42.725 | 8.15 | 0 | 87691ee00 |  | lefford | 40 |
 | 2026-08-28T01:30:44Z | sluice:outboard | 41.394 | 25.514 | 39.078 | 1.56 | 0 | 2687e8cf2 |  | lefford | 40 |
 | 2026-08-28T01:38:26Z | sluice:gate | 461.319 | 12986.049 | 494.036 | 29.22 | 0 | aeaec47d1 |  | lefford | 40 |
 | 2026-08-28T01:46:29Z | sluice:clients | 483.345 | 5828.634 | 81.039 | 12.23 | 0 | c6424e5fb |  | lefford | 40 |
+| 2026-08-28T01:56:14Z | rebaseline | 124.990 | 258.686 | 14.209 | 2.18 | 0 | 402cdfab8 | campaign/the-quadrat | ambrose | 12 |
+| 2026-08-28T01:59:30Z | gate-commit | 191.015 | 484.945 | 66.203 | 2.89 | 0 | 402cdfab8 | campaign/the-quadrat | ambrose | 12 |

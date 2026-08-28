@@ -1921,6 +1921,57 @@ are behaving correctly; it is the tiling declining to represent a continuous
 curve. A checkable contract can require that every offered destination exists.
 It cannot require that the ground be able to go there straight.
 
+**Re-scored by [The Quadrat](./chronicle/the-quadrat.md) (2026-08-27): the
+comparison instrument this row converted was measured unavailable on a second
+surface — and the campaign's first statement of *why* was wrong, which is part
+of the re-score rather than a footnote to it.** The Quire's contribution here
+was to turn "does the picture state the document's geometry" from taste into a
+byte comparison against the sim's own renderer of the same thirty-one facets.
+The Quadrat set out to move that pin — reprojecting the perception packet onto a
+square raster on both sides so the comparison survived the change — and did not.
+The packet describes each perceived facet as a *relative polar offset*; a raster
+addresses *absolute* tiles reached by flooring a projected coordinate; and
+converting one to the other requires the observer's position *within* its own
+tile. Reprojecting without reconstructing that, swept over 200 sub-tile phases:
+at worst 24 of 31 marks misplaced, mean 11.5, and only 2 of the 200 phases
+exact. The agreement test that was supposed to guard the change could only have
+passed by being weakened to "within one tile" — that is, by asserting the
+defect.
+
+**The campaign then wrote that the wire does not carry that phase, and the wire
+does.** The observer block states the centre's own centroid latitude and
+longitude, and the offsets are centroid-to-centroid great-circle quantities, so
+the spherical direct problem recovers every facet's absolute coordinate exactly.
+Quantization does not stand in the way either, and stating that accurately
+matters here of all places: the eight digits are *significant*, not decimal, so
+a latitude near the equator keeps a centimetre of ground while a longitude of
+large magnitude keeps only sub-metre rounding — against a facet 1.87 km across.
+What the render crate lacks is narrower and entirely its own: its parsed mirror
+of the document drops the observer block, and the simulation offers no inverse
+of the bearing-and-distance construction for it to call. The sweep measures the
+shortcut, not the contract.
+
+That makes the resolution the interesting part rather than the obstacle. The
+layer moved to the client crate that already holds the mesh, where each facet's
+own absolute address — `room`, a packed identifier the packet carries outright —
+needs no trigonometry at all, and the two pictures now agree **by construction**,
+one projection called from both sides, rather than by two computations being
+compared after the fact.
+
+The bet is unharmed and its scope is now stated more exactly, in the corrected
+form. A document may be complete and still ask real work of a consumer that
+wants to place it in the world's frame: either spherical trigonometry the
+consumer writes itself, or a dependency on the simulation to read the exact
+address. A zero-dependency renderer remains the strongest available evidence
+that a contract is renderable, and what this campaign found is the shape of the
+work such a renderer must do for anything the document expresses in the
+observer's frame rather than the world's. Whether that work should be removed
+(by putting an absolute coordinate on the wire beside the relative one) or left
+where it is (as the ordinary price of an observer-relative projection) is not
+settled here; the campaign records that agreeing by construction is strictly
+better than agreeing by comparison wherever one projection can serve both sides,
+which is a stronger form of the instrument this row already carries.
+
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
 closing under it.** The Measured Coast preregistered six Earth-anchored

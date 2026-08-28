@@ -37,6 +37,14 @@ hornvale-language = { path = "../../../domains/language" }
 # shipped path too, so it moved out of `[dev-dependencies]` rather than
 # being declared twice.
 hornvale-settlement = { path = "../../../domains/settlement" }
+# The Quadrat (Task 6): band B's perception overlay is placed from each
+# `scene/surrounds/v2` cell's own `room` (a packed `FacetId`), read off the
+# value `Session::purview` already hands back — so `driver.rs` now needs to
+# NAME `hornvale_scene::SurroundsScene` where before it only read fields off
+# it. Already in the build graph as a dependency of `hornvale-vessel`; this
+# is the same in-repo path-dependency-not-a-new-crate case the three
+# dependencies above record.
+hornvale-scene = { path = "../../../windows/scene" }
 crossterm = "0.29"
 # CONCERN, flagged per the task brief: a third new dependency beyond
 # crossterm. Added only after review found that an external SIGINT/SIGTERM/
