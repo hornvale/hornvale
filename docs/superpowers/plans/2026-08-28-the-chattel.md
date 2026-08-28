@@ -475,15 +475,45 @@ Use `Correspondent::Absent(Void::Gap(...))` with an honest reason for
 does exactly this and its comment explains why an honest `Gap` beats an
 over-optimistic `Expected`.
 
-- [ ] **Step 5: Call it at genesis**
+- [ ] **Step 5: Join the composition root's domain roster**
 
-Wire `register_concepts` into world construction in
-`windows/worldgen/src/lib.rs`, beside the other domains' registrations.
+**An earlier draft of this step was wrong twice and is corrected here.** It
+said to "wire `register_concepts` into world construction … beside the other
+domains' registrations", and justified the ordering with *"the derivation
+order inside `WorldContext::build` is copied verbatim from the old
+`Session::start`; a reorder changes which seed draws are taken."* That cites
+`windows/vessel/src/session.rs` — a SESSION concern — as the reason
+registration order matters during worldgen GENESIS. Two different mechanisms,
+and the wrong one would send you to the wrong file and imply a seed-draw
+hazard that does not apply.
 
-**Registration order is a save-format contract.** The derivation order inside
-`WorldContext::build` is copied verbatim from the old `Session::start` and a
-reorder changes which seed draws are taken. Add at the position the existing
-registrations establish; do not reorder them.
+**What is actually true**, from `windows/worldgen/src/lib.rs:306-339`:
+
+1. There is a roster, `pub const DOMAINS: &[&dyn Domain]` (`:322`), and
+   `register_all` (`:348`) iterates it. **You do not add a call anywhere** —
+   you add one line to the roster and implement the trait.
+2. The trait is `hornvale_kernel::Domain`. `domains/person/src/lib.rs:187` is
+   the minimal model: a unit struct, `crate_name()` returning
+   `env!("CARGO_PKG_NAME")`, and `register_concepts` delegating to the crate
+   function you wrote in Step 4.
+3. **Order on that roster constrains concept LENDERS and BORROWERS only.** The
+   roster's own doc says why: `language::register_concepts` references
+   concepts it does not own (terrain's `stone`, religion's `god`) and must run
+   after their owners, "or it claims them under domain `language` and
+   conflicts." `thing` owns every concept it registers and borrows none, so it
+   has no ordering constraint — the roster already carries `person` last with
+   a comment saying exactly that. Put `thing` last, and say why in a comment
+   rather than leaving the next reader to re-derive it.
+4. Membership is declarative, not the directory: `hornvale-demography` is a
+   domain crate that registers nothing and is deliberately OFF the roster. So
+   "every crate under `domains/` is on `DOMAINS`" is false and must not be
+   asserted.
+
+- [ ] **Step 5a: Assert registration is idempotent**
+
+`domains/person/src/lib.rs:199-205` registers twice in one test and expects
+both to succeed. The registry rejects a *conflicting* redefinition, not an
+identical one, and every domain relies on that. Follow it.
 
 - [ ] **Step 6: Run the tests, then refresh the golden**
 
