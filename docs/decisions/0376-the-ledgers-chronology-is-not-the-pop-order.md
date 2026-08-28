@@ -2,9 +2,9 @@
 
 **Status:** Accepted (2026-08-28) · **Decider:** Nathan (autopilot, spec §3,
 G1 auto-adopted with one overturn) · **Relates:**
-[0186](0186-time-is-an-exact-tick-count.md) (`WorldTime` is an exact `i64`, so
+[0186](0186-an-instant-is-an-exact-tick-count.md) (`WorldTime` is an exact `i64`, so
 the sort key is integer and no float enters the ordering);
-[0126](0126-fact-day-carries-a-typed-worldtime.md) (`Fact.day` is already the
+[0126](0126-fact-day-is-a-typed-world-time.md) (`Fact.day` is already the
 type this sorts on) · [The Precedence](../../book/src/chronicle/the-precedence.md)
 
 In the context of a shared-clock scheduler whose emitted facts were not in
