@@ -118,7 +118,7 @@ fn report(name: &str, mut v: Vec<f64>) {
 /// The input-domain survey that chose `cave_depth`'s functional form; not a
 /// gate on any value.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: what a depth budget has to read (input-domain survey that chose cave_depth's functional form); run by hand (The Underworld, Task 1b, answered its question; demoted by The Governor 2026-08-28)"]
 fn what_does_a_depth_budget_have_to_read() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let mut total = 0usize;

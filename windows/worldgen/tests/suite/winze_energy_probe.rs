@@ -331,7 +331,7 @@ fn measure(seed_value: u64) -> SeedMeasurement {
 /// assertions) — M1-M5 of task-2m-brief.md, seeds 42/7/1234. Ruling 2: this
 /// is a decision instrument, not a pass/fail gate on a chosen constant.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: whether plural chemotrophic sources decorrelate; run by hand (The Winze, Task 2M, answered its question; demoted by The Governor 2026-08-28)"]
 fn winze_energy_probe() {
     // Cross-seed accumulators for the branch-table assertions below.
     let mut max_abs_corr_over_all_seeds: f64 = 0.0;

@@ -549,7 +549,7 @@ fn substituting_goblins_niche_for_humans_is_detected() {
 /// Tracked as `BIO-gause-distinctness-vacuous`. The repair is a statistic
 /// with power against this world, not a lower floor.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the collapsed CV-ratio arms of the Gause-distinctness instrument; run by hand (The Generalist, Task 5, BIO-gause-distinctness-vacuous, answered its question; demoted by The Governor 2026-08-28)"]
 fn the_collapsed_cv_ratio_arms_are_pinned_as_witnesses() {
     let ratios = cv_ratios(&[
         None,

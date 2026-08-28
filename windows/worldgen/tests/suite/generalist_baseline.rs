@@ -471,7 +471,7 @@ fn report_band(
 /// claim: readout(off-gate, heavy:) — prints axis percentiles and per-people
 /// pre-human fit means over SEEDS
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: land distribution and pre-human niche fits; run by hand (The Generalist, Task 1, answered its question; demoted by The Governor 2026-08-28)"]
 fn report_land_distribution_and_pre_human_fits() {
     let mut temperature: Vec<f64> = Vec::new();
     let mut moisture: Vec<f64> = Vec::new();
@@ -541,7 +541,7 @@ fn report_land_distribution_and_pre_human_fits() {
 /// claim: readout(off-gate, heavy:, preregistered) — Gause-competition
 /// readout over SEEDS
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the preregistered Gause-competition readout; run by hand (The Generalist, Task 6, answered its question; demoted by The Governor 2026-08-28)"]
 fn report_the_preregistered_gause_readout() {
     let mut temperature: Vec<f64> = Vec::new();
     let mut moisture: Vec<f64> = Vec::new();

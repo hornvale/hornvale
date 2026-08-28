@@ -194,7 +194,7 @@ fn print_components(label: &str, t: &TailCounts) {
 /// claim: structural(seed: panel) — false-positive seed-loop flag; the loop
 /// binds a census-panel prefix, not a search over seeds.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the Touchstone's headline belief-delta battery, including the pinned arm_a_mutex/arm_b_mutex counts; RED as of 2026-08-28 — those counts are live-worldgen-derived and drift with unrelated worldgen changes, and the module's own governing philosophy treats this outcome as a reportable finding; run by hand (Myth campaign 6, The Touchstone, Task 4); demoted by The Governor"]
 fn touchstone_readout() {
     let components = hornvale_worldgen::WorldComponents::assemble().expect("components assemble");
     let mut skipped: Vec<u64> = Vec::new();

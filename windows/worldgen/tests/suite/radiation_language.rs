@@ -498,7 +498,7 @@ fn divergence_is_real_across_all_six_elf_daughters() {
 /// claim: readout(P5 clause 3; panel-pooled magnitude and sign over the
 /// [42, 7, 1234] panel, per-seed table printed)
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: whether homophony leaks the sibling count (underpowered one-seed-of-three panel); run by hand (The Radiation, P5 clause 3, answered its question; demoted by The Governor 2026-08-28)"]
 fn homophony_does_not_leak_the_sibling_count() {
     /// The three counts' labels, in tuple order.
     const LABELS: [&str; 3] = ["colliding pairs", "core pairs", "confusable pairs"];

@@ -767,7 +767,7 @@ fn modal<K: Copy + Ord>(hist: &BTreeMap<K, usize>) -> Option<(K, usize)> {
 /// each candidate must produce a seating over them — because a readout over an
 /// empty population satisfies every clause below perfectly.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the mountain-dwarf vs. duergar admission-gate separation readout; run by hand (The Delvers/Underworld, Task 9, answered its question; demoted by The Governor 2026-08-28)"]
 fn the_separation_readout() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let ladder = habitation_rungs();

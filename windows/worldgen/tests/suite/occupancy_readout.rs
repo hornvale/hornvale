@@ -213,7 +213,7 @@ fn render_occupancy_readout(seeds: RangeInclusive<u64>) -> String {
 }
 
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: byte-golden drift check of the committed occupancy fixture; run by hand (The Vacancy T3 / The Radiation answered its question; demoted by The Governor 2026-08-28)"]
 fn occupancy_readout_is_current() {
     let rendered = render_occupancy_readout(1..=30);
     let committed = include_str!("../fixtures/occupancy.csv");

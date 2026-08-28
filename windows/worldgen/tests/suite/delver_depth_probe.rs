@@ -118,7 +118,7 @@ fn pct(sorted: &[f64], q: f64) -> f64 {
 /// the printed table (see the module doc, which records it). It is the
 /// measurement that withdrew Task 3b, not a gate on any value.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: how deep a cave is, in metres (printed distribution table); run by hand (The Delvers answered its question; demoted by The Governor 2026-08-28)"]
 fn how_deep_is_a_cave() {
     for seed_value in SEEDS {
         let seed = hornvale_kernel::Seed(seed_value);
