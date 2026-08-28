@@ -3712,3 +3712,4 @@ measured here.
 | 2026-08-28T18:11:27Z | sluice:clients | 532.306 | 9563.209 | 103.372 | 18.16 | 0 | c241a6190 |  | lefford | 40 |
 | 2026-08-28T18:14:29Z | rebaseline | 128.314 | 281.548 | 17.191 | 2.33 | 0 | 34eaa21eb | campaign/the-precedence | ambrose | 12 |
 | 2026-08-28T18:24:58Z | gate-commit | 158.727 | 269.747 | 62.126 | 2.09 | 0 | 27a2da724 | campaign/the-precedence | ambrose | 12 |
+| 2026-08-28T18:42:08Z | census | 942.658 | 31701.941 | 245.147 | 33.89 | 0 | 27a2da724 |  | lefford | 40 |
