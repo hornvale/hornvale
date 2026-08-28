@@ -2767,15 +2767,20 @@ impl<'w> Session<'w> {
     /// Descend into the cave at this vertex's entrance chamber (The Deep
     /// Realm, Task 5).
     ///
-    /// Mirrors `dive`, but with an extra outcome `dive` never needed — TWO
-    /// today, and it was THREE until The Drift. `dive`'s own doc warns what
-    /// happens when a refusal doesn't name what stopped you: it reads as a
-    /// parse failure rather than a fact about the world. So each outcome
-    /// below is named:
+    /// Mirrors `dive`, but with an extra outcome `dive` never needed — THREE
+    /// again as of The Latch, after a stretch as two following The Drift.
+    /// `dive`'s own doc warns what happens when a refusal doesn't name what
+    /// stopped you: it reads as a parse failure rather than a fact about the
+    /// world. So each outcome below is named:
     ///   1. no cave at this vertex at all — say so;
-    ///   2. a chamber — descend, and say what the rock here is.
+    ///   2. a barred passage — say WHICH barrier turned the body back
+    ///      (`barred_refusal`);
+    ///   3. an open, unbarred chamber — descend, and say what the rock here
+    ///      is.
     ///
-    /// # THE THIRD OUTCOME WAS REMOVED, AND THE CODE STILL CARRIES ITS ARM
+    /// # THE CHAMBER-UNREALIZED OUTCOME WAS REMOVED, AND THE CODE STILL
+    /// # CARRIES ITS ARM — THIS IS A SEPARATE FACT FROM THE BARRIER GATE
+    /// # BELOW, WHICH IS WHAT ACTUALLY RESTORES THE THIRD OUTCOME
     ///
     /// A cave used to be **SEALED** when its own entrance address
     /// (`branch = 0, band = Undercroft, level = 0`) resolved to no chamber —
@@ -2785,21 +2790,22 @@ impl<'w> Session<'w> {
     /// only **51.5%** of the time, which is the 0.5 per-address existence
     /// coin showing through.
     ///
-    /// **The Drift deleted that coin** (spec §4.1), and a sealed cave is now
-    /// **impossible rather than rare**: every cave in shape realizes
-    /// chambers, measured `systems_with_open_mouth == systems` on all three
-    /// panel seeds (874/874, 1681/1681, 1266/1266) and 0 of 48,316 caves
-    /// sealed over thirty worlds. Nathan's ruling (spec amendment B) was to
-    /// accept two outcomes and build **restricted passage** later — locked
-    /// doors, collapses magic can clear, boss encounters, and the rare
-    /// chamber that stays lost with something worth finding
-    /// (`MAP-restricted-passage`).
+    /// **The Drift deleted that coin** (spec §4.1), and this chamber-
+    /// unrealized outcome is **impossible rather than rare**: every cave in
+    /// shape realizes chambers, measured `systems_with_open_mouth ==
+    /// systems` on all three panel seeds (874/874, 1681/1681, 1266/1266) and
+    /// 0 of 48,316 caves sealed over thirty worlds. Nothing in The Latch
+    /// touches `chamber_exists`, so this remains true and the sealed branch
+    /// below stays **live code on an unreachable path**, kept deliberately.
     ///
-    /// The sealed branch below is therefore **live code on an unreachable
-    /// path**, kept deliberately: it is what restricted passage will speak
-    /// through, and `delve_has_two_distinguishable_outcomes` reddens the
-    /// moment a sealed cave becomes possible again while that test still
-    /// claims two.
+    /// **What actually restores the third outcome is a different gate,
+    /// consulted BEFORE this one is ever reached.** `delve_at` now checks
+    /// `crate::passage::effective_state` against the address's seeded
+    /// `BarrierState` and refuses descent for anything short of `Open` — see
+    /// `delve_at`'s own doc comment, and
+    /// `delve_has_three_distinguishable_outcomes` (renamed from
+    /// `delve_has_two_distinguishable_outcomes`), which reddens the moment
+    /// EITHER outcome this comment tracks goes missing.
     fn delve(&mut self) -> Turn {
         if self.inside.is_some() {
             return Turn::Out("There is no rock to delve into in here.".to_string());
@@ -2866,6 +2872,20 @@ impl<'w> Session<'w> {
         let Some(terrain) = self.wctx.terrain.as_ref() else {
             return Turn::Out("There is no cave here to delve into.".to_string());
         };
+        // The Latch: a barred passage refuses descent even where the lattice
+        // realizes a chamber. This is the first precondition in the tree that
+        // reads committed state — the fold consults the session's own ledger
+        // for a clearing fact, and falls back to the seeded barrier.
+        let barrier = crate::passage::effective_state(
+            &self.ledger,
+            self.world.seed,
+            &addr,
+            self.day,
+            &hornvale_worldgen::BarrierPins::default(),
+        );
+        if barrier != hornvale_worldgen::BarrierState::Open {
+            return Turn::Out(barred_refusal(barrier));
+        }
         let gradient = terrain.geothermal_gradient_at(vertex);
         let column = terrain.column_at(vertex);
         match hornvale_worldgen::chamber::chamber_at(
@@ -5688,6 +5708,38 @@ fn stratum_word(s: hornvale_climate::Stratum) -> &'static str {
     }
 }
 
+/// The refusal a barred passage gives, naming WHICH barrier turned the body
+/// back — a refusal that named no reason would be indistinguishable from the
+/// no-cave one, which is the thing `delve`'s third outcome exists to be.
+///
+/// **Deliberately distinct from `delve_at`'s `None`-arm string** ("the rock
+/// beyond is sealed") even for `BarrierState::Sealed`: that arm answers a
+/// different question — an entrance chamber the lattice never realizes at
+/// all, currently unreachable since The Drift deleted the existence coin,
+/// but still live code this refusal must not collide with. Sharing wording
+/// between the two would leave the unrealized-chamber outcome and the barred
+/// outcome reading identically, which is exactly the vacuous-tripwire risk
+/// the spec calls out.
+/// type-audit: bare-ok(prose: return)
+fn barred_refusal(barrier: hornvale_worldgen::BarrierState) -> String {
+    match barrier {
+        hornvale_worldgen::BarrierState::Sealed => {
+            "The cave mouth is here, but the passage beyond is barred: choked \
+             with unbroken stone, with no way through and no way down."
+        }
+        hornvale_worldgen::BarrierState::Warded => {
+            "The cave mouth is here, but something set against passage holds \
+             the dark shut, and you cannot force it."
+        }
+        hornvale_worldgen::BarrierState::Thin => {
+            "The cave mouth is here, but a thin fall of rubble blocks the way \
+             down; it looks like it would not take much to clear."
+        }
+        hornvale_worldgen::BarrierState::Open => "The way down is open.",
+    }
+    .to_string()
+}
+
 /// Parse a compass token (case-insensitive, long names allowed).
 /// The four bearings a mover may take between CELLS, in `HEADINGS`-ish order:
 /// north first because that is how a reader scans the drawn plan.
@@ -7649,10 +7701,10 @@ mod tests {
     /// `deep_realm_chamber.rs` (Tasks 2-3) already do for the same reason.
     ///
     /// Shared by [`find_open_cave_vertex`] (which stops at the first open hit)
-    /// and `delve_has_two_distinguishable_outcomes`'s exhaustive sealed-cave
-    /// scan (The Drift, Task 3b), which does not stop early — one derivation
-    /// for both, so the two can never quietly disagree about what "sealed"
-    /// means.
+    /// and `delve_has_three_distinguishable_outcomes`'s exhaustive
+    /// chamber-realization scan (The Drift, Task 3b), which does not stop
+    /// early — one derivation for both, so the two can never quietly
+    /// disagree about what "realized" means.
     fn cave_entrance_states<'a>(
         terrain: &'a hornvale_terrain::GeneratedTerrain,
         seed: Seed,
@@ -7683,68 +7735,144 @@ mod tests {
     }
 
     /// The first cave-bearing vertex this seed's terrain places whose entrance
-    /// chamber is realized. Until The Drift (Task 1) deleted
-    /// `chamber_exists`'s 50% existence coin, this function also took a
-    /// `want_open` flag and could be asked for the SEALED counterpart
-    /// instead; that outcome is no longer reachable
-    /// (`delve_has_two_distinguishable_outcomes`'s doc comment records why),
-    /// so the flag is gone rather than kept as a parameter nothing ever
-    /// satisfies.
+    /// chamber is realized AND whose seeded barrier is `Open`. Until The
+    /// Drift (Task 1) deleted `chamber_exists`'s 50% existence coin, this
+    /// function also took a `want_open` flag and could be asked for the
+    /// SEALED counterpart instead; that outcome is no longer reachable
+    /// (`delve_has_three_distinguishable_outcomes`'s doc comment records
+    /// why), so the flag is gone rather than kept as a parameter nothing
+    /// ever satisfies.
+    ///
+    /// **The Latch (Task 4) added the barrier filter.** Before restricted
+    /// passage landed, chamber realization was the whole story (every
+    /// cave-bearing vertex resolves, post-Drift), so the first such vertex
+    /// was as good as any for every caller that wants a WORKING descent.
+    /// That stopped being true the moment `delve_at` started gating on
+    /// `effective_state`: seed 42's terrain barred 639 of 874 cave mouths
+    /// (Task 1's own measurement), so the first cave-bearing vertex in scan
+    /// order is barred more often than not — confirmed directly, it is
+    /// (`Vertex(30)`, `Warded`). Every caller of this finder wants a
+    /// descent that actually succeeds, so "open" now means both facts, not
+    /// just the one this function used to check alone.
     fn find_open_cave_vertex(
         terrain: &hornvale_terrain::GeneratedTerrain,
         seed: Seed,
     ) -> (hornvale_kernel::Vertex, hornvale_terrain::Cave) {
+        let pins = hornvale_worldgen::BarrierPins::default();
         cave_entrance_states(terrain, seed)
-            .find_map(|(vertex, cave, is_open)| is_open.then_some((vertex, cave)))
+            .find_map(|(vertex, cave, is_open)| {
+                let unbarred = hornvale_worldgen::barrier_of(
+                    seed,
+                    vertex,
+                    hornvale_kernel::Band::Undercroft,
+                    0,
+                    &pins,
+                ) == hornvale_worldgen::BarrierState::Open;
+                (is_open && unbarred).then_some((vertex, cave))
+            })
             .unwrap_or_else(|| {
                 panic!(
-                    "no open cave found in seed 42's terrain — the fixture no longer has \
-                     one of the two outcomes this campaign's descent verb needs to \
+                    "no open, unbarred cave found in seed 42's terrain — the fixture no \
+                     longer has one of the outcomes this campaign's descent verb needs to \
                      distinguish"
+                )
+            })
+    }
+
+    /// The first cave-bearing vertex whose seeded barrier is not `Open` — the
+    /// third outcome's own fixture-independent finder, mirroring
+    /// [`Self::find_open_cave_vertex`]. Scans every cave-bearing vertex in
+    /// the fixture terrain rather than assuming a particular one is barred
+    /// — a hard-coded vertex is a contingency an epoch can falsify, the same
+    /// reason [`Self::find_open_cave_vertex`]'s own doc comment gives for
+    /// scanning rather than steering a walk there.
+    ///
+    /// Reuses `windows/vessel/tests/suite/passage.rs`'s Task 1 loop rather
+    /// than [`cave_entrance_states`]: that helper answers whether an entrance
+    /// CHAMBER resolves, a question The Drift made unconditionally true; this
+    /// answers whether the BARRIER at the same address is `Open`, an
+    /// independent draw `hornvale_worldgen::barrier_of` makes.
+    fn find_barred_cave_vertex(
+        terrain: &hornvale_terrain::GeneratedTerrain,
+        seed: Seed,
+    ) -> (hornvale_kernel::Vertex, hornvale_terrain::Cave) {
+        let pins = hornvale_worldgen::BarrierPins::default();
+        terrain
+            .geosphere()
+            .vertices()
+            .filter_map(|vertex| {
+                if terrain.is_ocean(vertex) {
+                    return None;
+                }
+                let cave = terrain.cave_at(vertex)?;
+                let barrier = hornvale_worldgen::barrier_of(
+                    seed,
+                    vertex,
+                    hornvale_kernel::Band::Undercroft,
+                    0,
+                    &pins,
+                );
+                (barrier != hornvale_worldgen::BarrierState::Open).then_some((vertex, cave))
+            })
+            .next()
+            .unwrap_or_else(|| {
+                panic!(
+                    "no barred cave found in seed 42's terrain — the fixture no longer has \
+                     the barred outcome this campaign's descent verb needs to distinguish"
                 )
             })
     }
 
     /// The Deep Realm, Task 5 shipped `delve` with THREE distinguishable
     /// outcomes: no cave, a cave whose entrance chamber resolves to nothing
-    /// (**sealed** — spec §3.4 rung 0, "the void exists and is unreachable,"
-    /// a real fact a later dig could find, not a defect), and a cave with a
-    /// resolved chamber. This test carried that name and asserted all three
-    /// until The Drift.
+    /// (spec §3.4 rung 0, "the void exists and is unreachable," a real fact
+    /// a later dig could find, not a defect), and a cave with a resolved
+    /// chamber. The Drift's §4.1 (Task 1) then deleted the 50% existence
+    /// coin `chamber_exists` gated on, so every cave-bearing vertex's
+    /// entrance chamber realizes unconditionally — measured directly,
+    /// `systems_with_open_mouth == systems` on all three panel seeds
+    /// (874/874, 1681/1681, 1266/1266) — and that chamber-unrealized
+    /// outcome went from rare to **impossible**. This test carried the name
+    /// `delve_has_two_distinguishable_outcomes` from then until The Latch,
+    /// with a two-directional tripwire (the discipline `seam-guard`'s
+    /// STALE-DECL verdict names: a one-directional acknowledgement can only
+    /// ever be satisfied, so it rots) that re-scanned every cave-bearing
+    /// vertex on every run and would redden the moment a chamber-unrealized
+    /// cave became possible again. **That specific outcome is still
+    /// unreachable** — nothing in this campaign touches `chamber_exists`,
+    /// and `delve_at`'s `None` arm stays live, unreachable code for the
+    /// reason its own doc comment gives.
     ///
-    /// **What removed the third outcome.** The Drift's §4.1 deleted the 50%
-    /// existence coin `chamber_exists` gated on — the thing that made a
-    /// realized chamber a coin flip rather than a certainty. With the coin
-    /// gone, every cave inside the lattice's structural shape realizes a
-    /// chamber at every address the five remaining gates admit. Task 1's own
-    /// probe measured this directly rather than assuming it:
-    /// `systems_with_open_mouth == systems` on all three panel seeds —
-    /// 874/874, 1681/1681, 1266/1266. Sealed did not become rare. It became
-    /// **impossible**, and this test's failure (it passed at `69d1f5469`) is
-    /// what caught that a real behaviour change had happened, not a fixture
-    /// going stale on its own.
+    /// **The Latch (Task 4) restored a third outcome through a different
+    /// door: the barrier, not the chamber.** `delve_at` now consults
+    /// `crate::passage::effective_state` before it ever calls `chamber_at`,
+    /// so a cave whose seeded [`hornvale_worldgen::BarrierState`] is not
+    /// `Open` refuses descent even though its entrance chamber would
+    /// resolve fine. Task 1's own census
+    /// (`windows/vessel/tests/suite/passage.rs`) measured 639 of seed 42's
+    /// 874 cave-bearing vertices barred (sealed=215 warded=209 thin=215) —
+    /// the third outcome is the MAJORITY case, not a corner: the very
+    /// first cave-bearing vertex in scan order (`Vertex(30)`) is itself
+    /// `Warded`, which is exactly what caught that
+    /// [`Self::find_open_cave_vertex`] needed its own barrier filter (its
+    /// doc comment records this).
     ///
-    /// **What would restore it.** Restricted passage — locked doors,
-    /// collapses that magic can clear, boss encounters, or the rare chamber
-    /// that stays lost with something worth finding in it (spec §7's
-    /// non-goal, promoted to owed work by AMENDMENT B). That is later
-    /// campaign work, filed in `book/src/frontier/idea-registry.md`; this
-    /// task does not build it.
-    ///
-    /// Nathan's ruling (spec AMENDMENT B, B.2): **accept two outcomes**
-    /// until that later campaign lands. Deleting this test instead would
-    /// have removed a permanent guard; renaming it without more would only
-    /// have recorded a fact that never gets checked again. So this
-    /// assertion is two-directional, the discipline `seam-guard`'s
-    /// STALE-DECL verdict names: a one-directional acknowledgement
-    /// ("sealed doesn't happen") can only ever be satisfied, so it rots.
-    /// The scan below re-checks every cave-bearing vertex in the fixture on
-    /// every run and FAILS the moment a sealed cave becomes possible again
-    /// while this test still claims two outcomes — forcing whoever ships
-    /// restricted passage to come rename this test back, rather than
-    /// leaving a stale two-outcome claim sitting here looking satisfied.
+    /// **Renamed from `delve_has_two_distinguishable_outcomes`,** whose own
+    /// doc comment predicted this exact rename ("forcing whoever ships
+    /// restricted passage to come rename this test back") — though what
+    /// actually reddened first, once `delve_at`'s barrier gate landed, was
+    /// not the chamber-realization scan (untouched, still zero) but this
+    /// test's own "outcome 2" assertion, which had been silently relying on
+    /// the first chamber-realized vertex also being unbarred. **Keeps the
+    /// scan**, repointed at the fact that is now load-bearing: every
+    /// cave-bearing vertex's barrier is re-derived from
+    /// [`hornvale_worldgen::barrier_of`] on every run, never assumed from
+    /// [`Self::find_barred_cave_vertex`]'s own panic alone, so a fixture
+    /// accident — the barred population going to zero under some future
+    /// terrain epoch — cannot leave this test looking satisfied while
+    /// silently testing nothing.
     #[test]
-    fn delve_has_two_distinguishable_outcomes() {
+    fn delve_has_three_distinguishable_outcomes() {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         let terrain = session
@@ -7758,8 +7886,8 @@ mod tests {
         // nothing. This read the flagship's own STARTING VERTEX until decision
         // 0131, a convenience resting on the contingency that that one vertex
         // happened to be cave-free; the terrain epoch put a cave under it and
-        // falsified that. The other outcome is found by scanning rather than
-        // assumed, so this brings outcome 1 into line with it and leaves the
+        // falsified that. The other outcomes are found by scanning rather than
+        // assumed, so this brings outcome 1 into line with them and leaves the
         // test independent of where the flagship happens to stand.
         let no_cave = match session.delve_column(None) {
             Turn::Out(t) => t,
@@ -7771,7 +7899,20 @@ mod tests {
             "a refused delve must not change the underground state"
         );
 
-        // Outcome 2: a chamber — descend, and `climb` returns.
+        // Outcome 2: a barred passage — descent is refused, naming the
+        // barrier, and the underground state must not move.
+        let (barred_vertex, barred_cave) = find_barred_cave_vertex(&terrain, world.seed);
+        let barred = match session.delve_at(barred_vertex, barred_cave) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        assert!(
+            session.underground.is_none(),
+            "a barred passage must not set the underground state: {barred}"
+        );
+
+        // Outcome 3: an open, unbarred chamber — descend, and `climb`
+        // returns.
         let (open_vertex, open_cave) = find_open_cave_vertex(&terrain, world.seed);
         let open = match session.delve_at(open_vertex, open_cave) {
             Turn::Out(t) => t,
@@ -7779,7 +7920,7 @@ mod tests {
         };
         assert!(
             session.underground.is_some(),
-            "a resolved entrance chamber must set the underground state: {open}"
+            "a resolved, unbarred entrance chamber must set the underground state: {open}"
         );
         let up = match session.handle("climb") {
             Turn::Out(t) => t,
@@ -7791,52 +7932,76 @@ mod tests {
         );
         assert!(up.contains("You climb back into the light"), "{up}");
 
-        // The whole point: the two live outcomes must be told apart.
+        // The whole point: all three live outcomes must be told apart.
+        assert_ne!(
+            no_cave, barred,
+            "no-cave and a barred refusal read identically"
+        );
         assert_ne!(
             no_cave, open,
             "no-cave and a successful descent read identically"
         );
+        assert_ne!(
+            barred, open,
+            "a barred refusal and a successful descent read identically"
+        );
 
-        // The retired third outcome must STAY retired, loudly. Scan every
-        // cave-bearing vertex's entrance address in the fixture terrain and
-        // assert none of them resolves SEALED. Scoped to this one seed
-        // rather than a multi-seed panel: the exhaustive scan already
+        // One exhaustive scan over every cave-bearing vertex, carrying BOTH
+        // guards the prior two-outcome test carried separately — chamber
+        // realization (unchanged by this task, still checked so a future
+        // regression there is still caught here) and the barrier (new).
+        // Non-vacuous by construction and re-derived on every run rather
+        // than trusted from `find_barred_cave_vertex`'s own panic alone: at
+        // least one cave-bearing vertex must carry a non-`Open` barrier, or
+        // outcome 2 above would have exercised a vertex this scan never
+        // independently confirmed is representative of anything. Scoped to
+        // this one seed rather than a multi-seed panel for the same reason
+        // the prior version of this test was: the exhaustive scan already
         // touches every cave-bearing vertex this fixture has, and building
         // further whole worlds to widen it would push this test toward the
-        // heavy tier `the_drift_reachability_baseline`
-        // (`windows/worldgen/tests/suite/drift_reach_probe.rs`) already
-        // measured `systems_with_open_mouth == systems` on — the workspace
-        // gate never runs that tier, which would defeat the point of
-        // pinning this guard where it actually runs.
-        //
-        // Non-vacuous by construction: `caves_examined` must itself be
-        // nonzero, or "zero of zero sealed" would satisfy this assertion by
-        // finding nothing rather than by finding the world genuinely
-        // connected.
+        // heavy tier — the workspace gate never runs that tier, which would
+        // defeat the point of pinning this guard where it actually runs.
+        let pins = hornvale_worldgen::BarrierPins::default();
         let mut caves_examined = 0usize;
-        let mut sealed: Vec<hornvale_kernel::Vertex> = Vec::new();
+        let mut barred_count = 0usize;
+        let mut chamber_unrealized: Vec<hornvale_kernel::Vertex> = Vec::new();
         for (vertex, _cave, is_open) in cave_entrance_states(&terrain, world.seed) {
             caves_examined += 1;
             if !is_open {
-                sealed.push(vertex);
+                chamber_unrealized.push(vertex);
+            }
+            let barrier = hornvale_worldgen::barrier_of(
+                world.seed,
+                vertex,
+                hornvale_kernel::Band::Undercroft,
+                0,
+                &pins,
+            );
+            if barrier != hornvale_worldgen::BarrierState::Open {
+                barred_count += 1;
             }
         }
         assert!(
             caves_examined > 0,
             "non-vacuous guard: seed 42's terrain must contain at least one \
-             cave-bearing vertex, or the sealed-cave scan below would pass by \
-             finding nothing rather than by finding the world connected"
+             cave-bearing vertex, or the scans below would pass by finding \
+             nothing rather than by finding the world genuinely connected and \
+             genuinely barred somewhere"
         );
         assert!(
-            sealed.is_empty(),
-            "a SEALED cave exists again ({} of {caves_examined} cave-bearing vertices \
-             examined, e.g. vertex {:?}) — restricted passage has landed. Restore the \
-             third `delve_at` outcome this test used to assert, rename it back to \
-             `delve_has_three_distinguishable_outcomes`, and update its doc comment; \
-             do not leave a two-outcome claim standing once a sealed cave is possible \
-             again",
-            sealed.len(),
-            sealed[0],
+            chamber_unrealized.is_empty(),
+            "a chamber-unrealized cave exists again ({} of {caves_examined} \
+             cave-bearing vertices examined, e.g. vertex {:?}) — `delve_at`'s `None` \
+             arm is reachable once more and its doc comment (and this test's) needs \
+             updating to say so",
+            chamber_unrealized.len(),
+            chamber_unrealized[0],
+        );
+        assert!(
+            barred_count > 0,
+            "no barred cave mouth exists in seed 42's terrain of {caves_examined} \
+             cave-bearing vertices examined — restricted passage's third outcome has \
+             gone unreachable again"
         );
     }
 
@@ -7903,7 +8068,7 @@ mod tests {
     /// diegetically — mirroring `SUBMERGED_LATERAL_REFUSAL`'s own guard one
     /// realm over. Exercised directly against a hand-picked open cave
     /// (`delve_at`) rather than a walk, for the same reason
-    /// `delve_has_two_distinguishable_outcomes` is.
+    /// `delve_has_three_distinguishable_outcomes` is.
     #[test]
     fn lateral_movement_is_refused_underground() {
         let world = seam_world();
