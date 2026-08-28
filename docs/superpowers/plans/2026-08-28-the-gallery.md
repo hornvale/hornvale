@@ -1,0 +1,1017 @@
+# The Gallery Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Make the underworld a band a player can stand in, walk, see, remember, and meet something living in — with the client's pane showing the cave rather than the forest overhead.
+
+**Architecture:** `Session.underground` becomes a real position inside a generated `Level` (mirroring the existing `Inside`), `SpatialChannel` gains a third variant carrying `vessel/level/v1`, and `clients/game` gains one plate arm. Fog of war is a per-rung seen-bitset ORed with each step's shadowcast. Two performance changes ride along because they are in the blast radius and the kernel's own rules already demand them: `Level.cells` becomes dense storage, and the per-keypress full-snapshot parse in `walk_band_scene` is retired.
+
+**Tech Stack:** Rust 2024, workspace crates `hornvale-vessel` / `hornvale-worldgen` / `hornvale-kernel`; `clients/game/{core,bin}` outside the workspace (gated by `make game-check`, NOT by `cargo clippy --workspace`).
+
+**Spec:** `docs/superpowers/specs/2026-08-28-the-gallery-design.md`
+
+## Global Constraints
+
+- **Determinism is constitutional.** Same seed + pins produce byte-identical worlds, panes and transcripts. Any task that could move a seeded draw states so and proves it did not.
+- **No `HashMap`/`HashSet`** (`clippy.toml` `disallowed-types`). `BTreeMap`/`BTreeSet`/`Vec` only.
+- **No new external dependencies.** The allowlist is `serde`, `serde_json`, `libm` (`ALLOWED_EXTERNAL` in `cli/tests/suite/architecture.rs`).
+- **Dense-index storage uses `Vec`, not a map** (`kernel/CLAUDE.md`).
+- **`#![warn(missing_docs)]`** — every public item, field and variant gets a one-line doc comment.
+- **`cargo fmt` is the final step before every commit.** fmt-gate skips are the most common review finding.
+- **FRAME tier (decision 0069):** nothing this campaign adds to the underworld is serialized into the world file. The descent, the level, and the fog all die with the session.
+- **Layering:** `kernel/` then `domains/*` then `windows/*` then `cli/`. A domain never depends on a sibling.
+- **Decision block: 0406-0415.** Author records as `docs/decisions/0406-<slug>.md` upward.
+- **Per-task gate:** `make gate-commit` before each commit. It is seconds-scale for `windows/`-layer edits and ~470 s after a `kernel/`-layer edit. No task here is kernel-layer.
+
+---
+
+## File Structure
+
+**Created:**
+- `windows/vessel/src/underworld_level/dense.rs` — the dense cell grid backing `Level`.
+- `windows/vessel/src/underground.rs` — the `Underground` session-state struct, movement, stairs, and the seen-bitset. Kept out of `session.rs`, which is already ~9,000 lines.
+- `windows/vessel/src/level_doc.rs` — projection of a `Level` plus fog into `vessel/level/v1`, mirroring `plan.rs`'s role for `vessel/plan/v1`.
+- `clients/game/core/src/level.rs` — the client's level renderer, mirroring `plan.rs`.
+- `docs/decisions/0406-*.md` and up — one per spec section 10 decision.
+
+**Modified:**
+- `windows/vessel/src/underworld_level/mod.rs` — `Level.cells` becomes dense.
+- `windows/vessel/src/lattice/sight.rs` — `shadowcast` generalized over a transparency predicate.
+- `windows/vessel/src/session.rs` — `underground` field retyped; `delve`/`climb`/`go`/`look`/`examine`/`map` arms; the fold pin's successor.
+- `windows/vessel/src/snapshot.rs` — `SpatialChannel::Underground`.
+- `clients/game/core/src/spread.rs` — one plate arm.
+- `clients/game/bin/src/driver.rs` — `walk_band_scene`'s parse retired.
+- `book/src/frontier/idea-registry.md`, `book/src/chronicle/the-gallery.md`, `docs/retrospectives/the-gallery.md`.
+
+---
+
+## Task 0: Measure the descent before choosing the water rule
+
+The spec (section 3.2) leaves the flooded-cell rule open **deliberately**,
+because a rule that makes the deepest rungs unreachable is a different campaign
+from one that does not. This task produces the number; it changes no shipped
+behaviour.
+
+**Files:**
+- Test: `windows/vessel/tests/suite/underworld_level_generation.rs` (add)
+
+**Interfaces:**
+- Consumes: `underworld_level::generate_descent_for_character`, `hornvale_terrain::rungs()`
+- Produces: a reported measurement consumed by Task 4's rule choice. No API.
+
+- [ ] **Step 1: Write a reporting probe**
+
+It sweeps at least 50 seeds, builds a full descent per seed through the shipped
+entry point, and prints per rung: total cells, walkable cells, flooded cells,
+and — the number that decides the rule — **the fraction of each rung's walkable
+area reachable from that rung's stairs cell when `Flooded` is treated as
+impassable**, versus when it is treated as passable.
+
+Report, never assert. This is a measurement, and whichever way it lands is the
+finding — the posture `deep_realm_rehome.rs` takes, and the reason its header
+says so out loud.
+
+- [ ] **Step 2: Run it and record the numbers**
+
+```
+cargo test -p hornvale-vessel --test suite -- underworld_level_generation --nocapture > /tmp/hv-flood.log 2>&1; echo "exit=$?"
+grep -E "rung|reachable" /tmp/hv-flood.log
+```
+
+- [ ] **Step 3: Choose the rule from the numbers, and write it into the spec**
+
+**Decision rule, not a prediction:**
+- If treating `Flooded` as impassable leaves every rung's stairs mutually
+  reachable on 95% or more of seeds, then **flooded cells are impassable**,
+  refused with a physical reason. Simplest, and costs nothing.
+- If it strands stairs on a material fraction of seeds, then **flooded cells are
+  walkable**, described as wading. Cheapest way to keep the world connected.
+- If flooding is so extensive that walking it makes deep rungs
+  indistinguishable from dry ones, then **route into the `submerged` band**, and
+  say so. This is the expensive branch, and it is the one that may push Task 11
+  out of the campaign.
+
+Amend the spec's section 3.2 with the measurement and the chosen rule,
+replacing the open question.
+
+- [ ] **Step 4: Commit**
+
+```
+cargo fmt && make gate-commit
+git add windows/vessel/tests/suite/underworld_level_generation.rs docs/superpowers/specs/2026-08-28-the-gallery-design.md
+git commit -m "measure(the-gallery): how much of a descent is under water, and the rule that follows"
+```
+
+---
+
+## Task 1: `Level.cells` becomes dense storage
+
+`Level.cells` is a `BTreeMap<Cell, LevelCellKind>` whose own doc says it is
+**TOTAL** over the extent — a dense, complete index in a tree map, against
+`kernel/CLAUDE.md`'s rule and the measurement behind it (The Lookup: a
+dense-keyed `BTreeMap` was ~22% of genesis self-time; a `Vec` dropped it to
+~2%). Every cell read on the walk path pays an O(log N) traversal today.
+
+**This is byte-identical by construction, and that was verified before the task
+was written**, not asserted. No production path iterates the map implicitly:
+
+```
+$ awk '/#\[cfg\(test\)\]/{t=1} !t' windows/vessel/src/underworld_level/mod.rs \
+    | grep -n "cells\.\(iter\|values\|keys\|retain\)"
+$ awk '/#\[cfg\(test\)\]/{t=1} !t' windows/vessel/src/underworld_level/carve.rs \
+    | grep -n "cells\.\(iter\|values\|keys\|retain\)"
+(both empty)
+```
+
+Every access is `get`/`insert` at a computed `Cell`, and `first_walkable_cell`
+spells its own column-major order in nested `for` loops rather than borrowing
+the container's. No seeded choice can observe the change.
+
+**Files:**
+- Create: `windows/vessel/src/underworld_level/dense.rs`
+- Modify: `windows/vessel/src/underworld_level/mod.rs`, `carve.rs`, `region.rs`
+
+**Interfaces:**
+- Produces:
+  - `pub struct CellGrid { extent: Rect, cells: Vec<LevelCellKind> }`
+  - `pub fn CellGrid::new(extent: Rect, fill: LevelCellKind) -> CellGrid`
+  - `pub fn CellGrid::get(&self, c: Cell) -> Option<LevelCellKind>` — `None` if and only if outside the extent
+  - `pub fn CellGrid::set(&mut self, c: Cell, k: LevelCellKind)` — no-op outside the extent
+  - `pub fn CellGrid::iter(&self) -> impl Iterator<Item = (Cell, LevelCellKind)>` — **ascending `(x, y)`, matching `BTreeMap<Cell, _>`'s order exactly**, because `Cell(pub i32, pub i32)`'s derived `Ord` compares field 0 then field 1
+  - `Level.cells` retyped from `BTreeMap<Cell, LevelCellKind>` to `CellGrid`
+
+- [ ] **Step 1: Write the failing test**
+
+In `dense.rs`'s own test module:
+
+```rust
+#[test]
+fn a_dense_grid_agrees_with_a_btreemap_on_every_cell_and_on_order() {
+    let extent = Rect { x: -3, y: 7, w: 11, h: 5 };
+    let mut grid = CellGrid::new(extent, LevelCellKind::Wall);
+    let mut map: std::collections::BTreeMap<Cell, LevelCellKind> =
+        std::collections::BTreeMap::new();
+    for x in extent.x..(extent.x + extent.w) {
+        for y in extent.y..(extent.y + extent.h) {
+            map.insert(Cell(x, y), LevelCellKind::Wall);
+        }
+    }
+    let writes = [
+        (0, 0, LevelCellKind::Floor),
+        (10, 4, LevelCellKind::Flooded),
+        (5, 2, LevelCellKind::StairsUp),
+        (1, 3, LevelCellKind::StairsDown),
+    ];
+    for (dx, dy, k) in writes {
+        let c = Cell(extent.x + dx, extent.y + dy);
+        grid.set(c, k);
+        map.insert(c, k);
+    }
+    let from_grid: Vec<(Cell, LevelCellKind)> = grid.iter().collect();
+    let from_map: Vec<(Cell, LevelCellKind)> =
+        map.iter().map(|(&c, &k)| (c, k)).collect();
+    assert_eq!(
+        from_grid, from_map,
+        "dense iteration must match BTreeMap order exactly"
+    );
+    assert_eq!(
+        grid.get(Cell(extent.x - 1, extent.y)),
+        None,
+        "outside the extent is None"
+    );
+    assert_eq!(grid.get(Cell(extent.x, extent.y)), Some(LevelCellKind::Floor));
+}
+```
+
+- [ ] **Step 2: Run it and watch it fail**
+
+```
+cargo test -p hornvale-vessel dense:: > /tmp/hv-dense.log 2>&1; echo "exit=$?"
+tail -20 /tmp/hv-dense.log
+```
+Expected: FAIL — `CellGrid` does not exist.
+
+- [ ] **Step 3: Implement `CellGrid`**
+
+Backing `Vec` indexed `(x - extent.x) * extent.h + (y - extent.y)`, so walking
+the backing store front to back yields ascending `(x, y)` — the same order
+`BTreeMap<Cell, _>` gives, for free, which is the property Step 1 pins. `get`
+returns `None` outside the extent; `set` outside is a no-op.
+
+- [ ] **Step 4: Run it and watch it pass**
+
+```
+cargo test -p hornvale-vessel dense:: > /tmp/hv-dense.log 2>&1; echo "exit=$?"
+tail -20 /tmp/hv-dense.log
+```
+
+- [ ] **Step 5: Retype `Level.cells` and fix every call site**
+
+`cargo check -p hornvale-vessel --all-targets` enumerates them. Do **not**
+introduce a compatibility shim that converts back to a `BTreeMap` — that would
+reintroduce the allocation this task removes, invisibly.
+
+- [ ] **Step 6: Prove byte-identity against the pre-change generator**
+
+The existing suite is the oracle. `underworld_level_generation.rs` already
+asserts on generated levels; if any of its expectations move, the change is not
+byte-identical and the task has failed.
+
+```
+cargo nextest run -p hornvale-vessel > /tmp/hv-vessel.log 2>&1; echo "exit=$?"
+grep -E "^ *Summary|FAILED|panicked" /tmp/hv-vessel.log
+```
+
+**Decision rule:** any failure in `underworld_level_generation.rs` means the
+conversion changed generation — STOP and find which access became
+order-dependent, rather than rebaselining the test.
+
+- [ ] **Step 7: Commit**
+
+```
+cargo fmt && make gate-commit
+git add windows/vessel/src/underworld_level/
+git commit -m "perf(underworld): a level's cells are dense storage, not a tree map"
+```
+
+---
+
+## Task 2: Generalize the shadowcaster over a transparency predicate
+
+`shadowcast(lattice: &Lattice, from: Cell, radius: i32)` is concrete. A `Level`
+is the same shape (a `Rect` extent, one kind per cell) with a different value
+type, and a cave has no chambers to fill `CellKind::Floor(usize)` with — so
+converting a `Level` into a `Lattice` is not available, and a second copy of a
+property-tested symmetric shadowcaster is not acceptable.
+
+`CellKind::passable`'s own doc already argues the direction: *"a rule written
+against the variant breaks the day `Rubble` arrives; a rule written against the
+predicate survives it."*
+
+**Files:**
+- Modify: `windows/vessel/src/lattice/sight.rs`
+
+**Interfaces:**
+- Produces:
+  - `pub fn shadowcast_with(extent: Rect, transparent: impl Fn(Cell) -> bool, in_bounds: impl Fn(Cell) -> bool, from: Cell, radius: i32) -> BTreeSet<Cell>`
+  - `pub fn shadowcast(lattice: &Lattice, from: Cell, radius: i32) -> BTreeSet<Cell>` — unchanged signature, now a thin wrapper
+
+- [ ] **Step 1: Pin current behaviour before touching it**
+
+Add a characterization test recording `shadowcast`'s exact output for a
+hand-built lattice with a wall, a doorway and an open run — the full
+`BTreeSet<Cell>`, not a count. This is the oracle for Step 4.
+
+- [ ] **Step 2: Run it and watch it PASS**
+
+```
+cargo test -p hornvale-vessel sight:: > /tmp/hv-sight.log 2>&1; echo "exit=$?"
+tail -20 /tmp/hv-sight.log
+```
+Expected: PASS. A characterization test that fails against unchanged code is
+recording the wrong thing, and must be fixed before proceeding.
+
+- [ ] **Step 3: Extract the predicate**
+
+Move the body to `shadowcast_with`, taking `transparent` and `in_bounds` as
+closures. Reimplement `shadowcast` as a wrapper passing
+`|c| lattice.cells.get(&c).is_some_and(|k| k.passable())` and
+`|c| lattice.cells.contains_key(&c)`.
+
+The two closures stay separate because the existing implementation
+distinguishes them: `kind_of` is total over the extent, so "outside" and "wall"
+are both opaque, but only cells **inside** the extent are ever added to the
+result. Fold them into one and the result set grows.
+
+- [ ] **Step 4: Run the whole sight suite**
+
+```
+cargo nextest run -p hornvale-vessel sight > /tmp/hv-sight2.log 2>&1; echo "exit=$?"
+grep -E "^ *Summary|FAILED|panicked" /tmp/hv-sight2.log
+```
+Expected: PASS, including `sight_is_symmetric` (a property test over every
+ordered floor pair), `a_wall_blocks_what_lies_behind_it`, and Step 1's
+characterization test byte for byte.
+
+- [ ] **Step 5: Commit**
+
+```
+cargo fmt && make gate-commit
+git add windows/vessel/src/lattice/sight.rs
+git commit -m "refactor(sight): shadowcast over a transparency predicate, so two bands share one caster"
+```
+
+---
+
+## Task 3: `Underground` — the session's position in a descent
+
+**Files:**
+- Create: `windows/vessel/src/underground.rs`
+- Modify: `windows/vessel/src/session.rs`, `windows/vessel/src/lib.rs`
+
+**Interfaces:**
+- Consumes: Task 1's `CellGrid`, `underworld_level::generate_descent_for_character`
+- Produces:
+  - `pub struct Underground { descent: Vec<Level>, rung: usize, cell: Cell, seed: Seed }`
+    — Task 6 adds the `seen: Vec<SeenBits>` field. It is **not** declared here:
+    a field with no reader is a field a reviewer cannot judge, and `SeenBits`
+    is not defined until Task 6.
+  - `pub fn Underground::level(&self) -> &Level`
+  - `pub fn Underground::rung_band(&self) -> hornvale_kernel::Band`
+  - `Session.underground: Option<Underground>` (was `Option<Chamber>`)
+
+The struct is named `Underground` and Task 7's `SpatialChannel` variant is also
+`Underground`. They live in different modules and never appear in one scope. If
+that reads badly at implementation time, rename **the session struct** — the
+wire tag `band: "underground"` is fixed by the spec, and the channel variant
+should match it.
+
+- [ ] **Step 1: Write the failing test**
+
+```rust
+#[test]
+fn delve_places_the_possession_on_a_real_cell_of_a_generated_level() {
+    let world = seam_world();
+    let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    let terrain = session.wctx.terrain.clone().expect("seed 42 builds terrain");
+    let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+    session.delve_at(vertex, cave);
+
+    let ug = session.underground.as_ref().expect("a resolved descent");
+    assert!(!ug.descent.is_empty(), "a descent has at least one rung");
+    assert_eq!(ug.rung, 0, "you enter at the top rung");
+    assert!(
+        matches!(
+            ug.level().cells.get(ug.cell),
+            Some(LevelCellKind::Floor) | Some(LevelCellKind::Flooded)
+        ),
+        "the possession stands on a standable cell, not inside rock"
+    );
+}
+```
+
+`find_open_cave_vertex` and `seam_world` already exist in `session.rs`'s test
+module — the fold-pin test uses both.
+
+- [ ] **Step 2: Run it and watch it fail**
+
+```
+cargo test -p hornvale-vessel delve_places > /tmp/hv-t3.log 2>&1; echo "exit=$?"
+tail -20 /tmp/hv-t3.log
+```
+Expected: FAIL — `underground` is still `Option<Chamber>`.
+
+- [ ] **Step 3: Implement**
+
+`delve_at` keeps every existing early refusal, in order (no cave here; a barred
+passage; a sealed chamber). Those are The Latch's and are not this campaign's
+to move. Where it currently assigns `self.underground = Some(chamber)`, it now
+builds the descent through `generate_descent_for_character` and places the
+possession on the entrance rung's first standable cell.
+
+The rungs, origins and depths a descent needs come from the same terrain handle
+`delve_at` has already resolved, so no second independently-chosen lookup is
+introduced — the property `delve_at`'s existing doc comment claims for itself.
+
+`climb` clears `underground` only from `rung == 0`. From a deeper rung it
+refuses and says to take the stairs up.
+
+- [ ] **Step 4: Run it and watch it pass**
+
+```
+cargo nextest run -p hornvale-vessel > /tmp/hv-t3b.log 2>&1; echo "exit=$?"
+grep -E "^ *Summary|FAILED|panicked" /tmp/hv-t3b.log
+```
+Expected: PASS. `the_underground_band_folds_into_walk_as_map_does` is still
+green here — the pane does not change until Task 7.
+
+- [ ] **Step 5: Commit**
+
+```
+cargo fmt && make gate-commit
+git add windows/vessel/src/underground.rs windows/vessel/src/session.rs windows/vessel/src/lib.rs
+git commit -m "feat(underground): a descent, and a cell you stand on in it"
+```
+
+---
+
+## Task 4: Walking
+
+**Files:**
+- Modify: `windows/vessel/src/underground.rs`, `windows/vessel/src/session.rs`
+
+**Interfaces:**
+- Produces: `pub fn Underground::step(&mut self, dir: Compass) -> StepOutcome`,
+  where `StepOutcome` is `Moved`, `Blocked(&'static str)`, or `NeedsStairs`
+
+- [ ] **Step 1: Write the failing tests**
+
+```rust
+#[test]
+fn a_compass_step_underground_moves_one_cell() {
+    let world = seam_world();
+    let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    let terrain = session.wctx.terrain.clone().expect("seed 42 builds terrain");
+    let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+    session.delve_at(vertex, cave);
+
+    let before = session.underground.as_ref().expect("descended").cell;
+    // Try each bearing until one is not rock; at least one must be, because
+    // the possession was placed on a cell of a connected level.
+    let moved = ["n", "s", "e", "w"].iter().any(|d| {
+        session.handle(&format!("go {d}"));
+        session.underground.as_ref().expect("still below").cell != before
+    });
+    assert!(moved, "at least one bearing from a standable cell must be walkable");
+}
+
+#[test]
+fn rock_refuses_a_step_with_a_physical_reason() {
+    // Assert the refusal is PHYSICAL: not a parse error, and it does not
+    // mention verbs or modes. The exact wording is the implementer's.
+}
+
+#[test]
+fn the_lateral_refusal_is_gone() {
+    // UNDERGROUND_LATERAL_REFUSAL's text appears nowhere in a walking
+    // session's output. Its own doc says "there is nowhere down here for a
+    // bearing to mean", which this task makes false.
+}
+```
+
+- [ ] **Step 2: Run them and watch them fail**
+
+```
+cargo test -p hornvale-vessel underground > /tmp/hv-t4.log 2>&1; echo "exit=$?"
+tail -20 /tmp/hv-t4.log
+```
+
+- [ ] **Step 3: Implement**
+
+Delete `UNDERGROUND_LATERAL_REFUSAL` and its `"go" if self.underground.is_some()`
+arm. Route a compass step to `Underground::step`.
+
+Apply **Task 0's chosen flooded-cell rule here**. This is the only place that
+rule is expressed; do not scatter it across the movement, sight and rendering
+paths.
+
+- [ ] **Step 4: Run and watch pass**
+
+```
+cargo nextest run -p hornvale-vessel > /tmp/hv-t4b.log 2>&1; echo "exit=$?"
+grep -E "^ *Summary|FAILED|panicked" /tmp/hv-t4b.log
+```
+
+- [ ] **Step 5: Commit**
+
+```
+cargo fmt && make gate-commit
+git add windows/vessel/src/underground.rs windows/vessel/src/session.rs
+git commit -m "feat(underground): go walks the level, and rock refuses"
+```
+
+---
+
+## Task 5: Stairs
+
+**Files:**
+- Modify: `windows/vessel/src/underground.rs`, `windows/vessel/src/session.rs`
+
+**Interfaces:**
+- Produces: `pub fn Underground::take_stairs(&mut self) -> Option<hornvale_kernel::Band>`
+
+- [ ] **Step 1: Write the failing test**
+
+The property that matters is **round-tripping**: descending from rung *n* and
+climbing back arrives on rung *n* — not necessarily the same cell, since the
+generator places up and down stairs independently, but the same rung, with a
+stable identity.
+
+```rust
+#[test]
+fn stairs_connect_adjacent_rungs_in_both_directions() {
+    // Place the possession directly on the StairsDown cell — found by
+    // scanning the level — rather than walking there. Steering a walk to a
+    // particular cell is impractical from a test, which is the same reason
+    // `delve_at` exists as a seam.
+}
+```
+
+- [ ] **Step 2: Run it and watch it fail**
+
+```
+cargo test -p hornvale-vessel stairs > /tmp/hv-t5.log 2>&1; echo "exit=$?"
+tail -20 /tmp/hv-t5.log
+```
+
+- [ ] **Step 3: Implement**
+
+Moving between rungs requires standing on a stairs cell, and refuses with a
+physical reason otherwise. Whether the verbs are new (`down`/`up`) or the
+existing `delve`/`climb` re-pointed is the implementer's call; **record which,
+and why, in the task report** — it is a player-facing vocabulary decision, and
+Task 12's chronicle needs it.
+
+Whichever is chosen, the verb must appear in both lists a verb has to be in:
+the roster the body-state gate consults, and the help text. The Latch shipped a
+verb that was in neither and no gate caught it, because a verb absent from both
+satisfies an agreement check in both directions. The behavioural test — put the
+body to sleep, type the verb, require the refusal — is what catches it.
+
+- [ ] **Step 4: Run and watch pass**
+
+```
+cargo nextest run -p hornvale-vessel > /tmp/hv-t5b.log 2>&1; echo "exit=$?"
+grep -E "^ *Summary|FAILED|panicked" /tmp/hv-t5b.log
+```
+
+- [ ] **Step 5: Commit**
+
+```
+cargo fmt && make gate-commit
+git add windows/vessel/src/underground.rs windows/vessel/src/session.rs
+git commit -m "feat(underground): stairs connect the rungs"
+```
+
+---
+
+## Task 6: Fog of war — the seen-bitset and the reach seam
+
+**Files:**
+- Modify: `windows/vessel/src/underground.rs`, `windows/vessel/src/session.rs`
+
+**Interfaces:**
+- Produces:
+  - `pub struct SeenBits { extent: Rect, bits: Vec<u64> }`
+  - `pub fn SeenBits::saw(&self, c: Cell) -> bool`
+  - `pub fn SeenBits::mark_all(&mut self, cells: &BTreeSet<Cell>)`
+  - `pub fn Session::sight_reach(&self) -> i32` — **the seam.** Today it returns
+    the implicit torch's reach; later it reads carried light.
+
+- [ ] **Step 1: Write the failing tests**
+
+```rust
+#[test]
+fn walking_only_ever_adds_to_what_is_remembered() {
+    // Monotonicity (spec 4.1.2, acceptance 4b). Walk a route; after each
+    // step assert the seen-set is a superset of the previous one. Structural
+    // under a bitset — this pins that the wiring above it never clears bits.
+}
+
+#[test]
+fn a_wider_reach_does_not_change_what_was_already_seen() {
+    // Mark from a cell at a small reach, then from the SAME cell at a larger
+    // one. Bits already set stay set; no bit is cleared. A bitset gets this
+    // for free; the test says so out loud so a future refactor to a
+    // recomputed representation cannot quietly lose it.
+}
+
+#[test]
+fn the_reach_seam_is_the_only_source_of_the_radius() {
+    // Property, not a prescribed mutation: no literal sight radius appears on
+    // the underground sight path. The implementer picks the check that
+    // demonstrates it; a default-deny source scan has precedent in this repo.
+}
+```
+
+- [ ] **Step 2: Run them and watch them fail**
+
+```
+cargo test -p hornvale-vessel seen > /tmp/hv-t6.log 2>&1; echo "exit=$?"
+tail -20 /tmp/hv-t6.log
+```
+
+- [ ] **Step 3: Implement**
+
+`SeenBits` is one bit per cell of the rung's extent, row-major, packed into
+`Vec<u64>`. The largest rung is 60x34 = 2,040 cells = 255 bytes; a five-rung
+descent is about 1.2 KB.
+
+Each step ORs `shadowcast_with(...)` (Task 2) into the current rung's bitset, at
+`Session::sight_reach()`.
+
+`sight_reach` must also become the source of `chamber_sources`' torch radius,
+which today hardcodes `radius: SIGHT_RADIUS` separately from the shadowcaster's
+own constant — two places holding one number, and neither one a place a lantern
+could plug into.
+
+- [ ] **Step 4: Pin the lifetime, in both directions**
+
+Spec acceptance criterion 5, which no other task covers:
+
+```rust
+#[test]
+fn fog_survives_moving_between_rungs_and_dies_on_climbing_out() {
+    // Descend, walk to accumulate seen cells, take the stairs down, then take
+    // them back up: the first rung is still remembered (fog is per-rung and
+    // per-descent, not per-visit).
+    //
+    // Then `climb` to the surface and `delve` again: the fog is EMPTY. That
+    // is the session-lifetime cut the spec makes deliberately (3.5), and it
+    // must be asserted rather than left to be discovered — if a later
+    // campaign makes fog durable, this is the test it comes to rewrite.
+}
+```
+
+- [ ] **Step 5: Run and watch pass**
+
+```
+cargo nextest run -p hornvale-vessel > /tmp/hv-t6b.log 2>&1; echo "exit=$?"
+grep -E "^ *Summary|FAILED|panicked" /tmp/hv-t6b.log
+```
+
+- [ ] **Step 6: Commit**
+
+```
+cargo fmt && make gate-commit
+git add windows/vessel/src/underground.rs windows/vessel/src/session.rs
+git commit -m "feat(underground): fog of war, and a reach seam a lantern can fill"
+```
+
+---
+
+## Task 7: `vessel/level/v1` and the third `SpatialChannel` variant
+
+**SCHEMA TASK.** `vessel/level/v1`'s field order becomes contract on landing.
+
+**Files:**
+- Create: `windows/vessel/src/level_doc.rs`
+- Modify: `windows/vessel/src/snapshot.rs`, `windows/vessel/src/session.rs`
+
+**Interfaces:**
+- Produces:
+  - `pub struct SessionLevel { schema, rung, depth_m, extent, palette, cells, you, marks }`
+  - `SpatialChannel::Underground { level: Box<SessionLevel> }`, wire tag `band: "underground"`
+
+- [ ] **Step 1: Write the failing tests**
+
+```rust
+#[test]
+fn the_underground_pane_reads_band_underground() {
+    // descend, snapshot, assert the JSON contains r#""band":"underground""#
+}
+
+#[test]
+fn a_never_seen_cell_is_absent_from_the_document() {
+    // Spec 4.1.1. On the first turn after descending, the document's cell
+    // count is strictly less than the rung's extent area.
+}
+
+#[test]
+fn the_three_visibility_states_are_distinguishable_without_colour() {
+    // Spec 4.1. Assert on the STATE field, never on a colour: the document
+    // must distinguish here / lit / remembered with colour absent entirely.
+}
+```
+
+- [ ] **Step 2: Run and watch them fail**
+
+```
+cargo test -p hornvale-vessel level_doc > /tmp/hv-t7.log 2>&1; echo "exit=$?"
+tail -20 /tmp/hv-t7.log
+```
+
+- [ ] **Step 3: Implement**
+
+`SessionLevel` mirrors `SessionPlan`'s shape (extent, palette, row-major cell
+indices, `you`, `marks`) and adds a per-cell **visibility state**, plus `rung`
+and `depth_m`.
+
+Never-seen cells are **omitted, not flagged** (spec 4.1.1). The palette interns
+`(LevelCellKind, state)`.
+
+Box the variant's payload: `SpatialChannel` already boxes `SurroundsScene` for
+`clippy::large_enum_variant` (The Grain), and `Box<T>` serializes exactly as
+`T`, so this changes no byte on the wire.
+
+Field order is JSON key order and is contract — say so in the doc comment, as
+`SessionPlan`'s does.
+
+- [ ] **Step 4: Run and watch pass**
+
+```
+cargo nextest run -p hornvale-vessel > /tmp/hv-t7b.log 2>&1; echo "exit=$?"
+grep -E "^ *Summary|FAILED|panicked" /tmp/hv-t7b.log
+```
+
+- [ ] **Step 5: Commit**
+
+```
+cargo fmt && make gate-commit
+git add windows/vessel/src/level_doc.rs windows/vessel/src/snapshot.rs windows/vessel/src/session.rs
+git commit -m "feat(wire): vessel/level/v1, and the underground band on the pane"
+```
+
+---
+
+## Task 8: The fold, retired
+
+**Files:**
+- Modify: `windows/vessel/src/session.rs` (the pin, and `map`'s band arms)
+
+- [ ] **Step 1: Rewrite the pin — do not delete it**
+
+`the_underground_band_folds_into_walk_as_map_does` states its own disposition:
+
+> the invariant worth pinning is not "the pane is right here" but "the pane and
+> the verb cannot drift apart here": whichever answer the sim settles on, one
+> change must move both.
+
+The successor asserts that same agreement against the new answer: the pane
+reads `band: "underground"`, and `map` in the same state draws the level rather
+than the country overhead. Rename it for what it now pins, and carry the
+original's reasoning forward in its doc comment.
+
+- [ ] **Step 2: Run it and watch it fail**
+
+```
+cargo test -p hornvale-vessel underground_band > /tmp/hv-t8.log 2>&1; echo "exit=$?"
+tail -20 /tmp/hv-t8.log
+```
+Expected: FAIL — `map` still guards on `inside` alone.
+
+- [ ] **Step 3: Give `map` an underground arm**
+
+- [ ] **Step 4: Run the whole vessel suite**
+
+```
+cargo nextest run -p hornvale-vessel > /tmp/hv-t8b.log 2>&1; echo "exit=$?"
+grep -E "^ *Summary|FAILED|panicked" /tmp/hv-t8b.log
+```
+
+- [ ] **Step 5: Commit**
+
+```
+cargo fmt && make gate-commit
+git add windows/vessel/src/session.rs
+git commit -m "feat(underground): the pane and the verb both show the cave now"
+```
+
+---
+
+## Task 9: The client draws the level
+
+**Files:**
+- Create: `clients/game/core/src/level.rs`
+- Modify: `clients/game/core/src/spread.rs`, `clients/game/core/src/lib.rs`
+
+**Gate note:** `clients/game/core` and `clients/game/bin` are in the workspace
+`exclude` list, so `cargo clippy --workspace` does not build them and
+`make gate-commit` will not catch a break here. `make game-check` is this
+task's gate.
+
+- [ ] **Step 1: Write the failing test**
+
+```rust
+#[test]
+fn a_remembered_cell_and_a_lit_cell_draw_different_glyphs() {
+    // The monochrome property (spec 4.1), tested at the RENDERER: build a
+    // SessionLevel with one lit and one remembered floor cell, draw it, and
+    // assert the two grid positions hold different characters.
+}
+```
+
+- [ ] **Step 2: Run and watch it fail**
+
+```
+cargo test --manifest-path clients/game/core/Cargo.toml level > /tmp/hv-t9.log 2>&1; echo "exit=$?"
+tail -20 /tmp/hv-t9.log
+```
+
+- [ ] **Step 3: Implement the renderer and the plate arm**
+
+`spread.rs`'s match is exhaustive, so the new variant is already a compile
+error — the arm is not optional.
+
+Glyph selection is the CLIENT's (decision 0022). Remembered cells get a **glyph
+twin**, the way the walk band's `faded()` maps `.` to `,`, never a dimmer
+colour.
+
+- [ ] **Step 4: Run the client gate**
+
+```
+make game-check > /tmp/hv-game.log 2>&1; echo "exit=$?"
+tail -20 /tmp/hv-game.log
+```
+
+- [ ] **Step 5: Commit**
+
+```
+cargo fmt --manifest-path clients/game/core/Cargo.toml
+git add clients/game/core/src/
+git commit -m "feat(game): the plate draws the cave you are standing in"
+```
+
+---
+
+## Task 10: Retire the per-keypress snapshot parse
+
+Not a detour: `walk_band_scene` matches exhaustively on `SpatialChannel`, so
+Task 7 forces an edit here regardless.
+
+`walk_band_scene` (`driver.rs:2250`) parses the **entire** cached snapshot JSON
+to read one discriminant, then makes a sim call — and it runs from
+`compose_perception_layer` on every redraw. That is The Quadrat's measured
+"full snapshot parse plus a purview call on every keypress, including keypresses
+that are just typing", 0.089 ms to 2.124 ms.
+
+The `Driver` already caches that answer in `on_walk_band`, whose own doc says it
+exists because *"parsing the snapshot JSON in each of them would put several
+serde_json passes on the cursor path to answer a question that changes only when
+a turn does."* This call site did not get that fix.
+
+**Files:**
+- Modify: `clients/game/bin/src/driver.rs`
+
+- [ ] **Step 1: Measure before**
+
+Time a fixed sequence of ordinary typing keypresses on the walk band. Record
+the number; it is Step 4's baseline. Take it on an unloaded machine — this repo
+has discarded a timing pair taken at load average 50 as 3.3x wrong.
+
+- [ ] **Step 2: Write the failing test**
+
+```rust
+#[test]
+fn composing_the_perception_layer_does_not_parse_the_snapshot() {
+    // Property, not a prescribed mutation: the implementer picks the check
+    // that demonstrates the parse is gone from this path. A counter on the
+    // parse site, or a source-level assertion, are both acceptable.
+}
+```
+
+- [ ] **Step 3: Read the band from `on_walk_band`**
+
+It is already maintained by `refresh`, which runs once per turn, and it stays
+correct with a third band, since underground is not walk.
+
+- [ ] **Step 4: Measure after, and report both numbers**
+
+**Decision rule:** if the measurement does not improve, say so and keep the
+change anyway on correctness grounds — one source of truth for the band. A null
+is a result, and this repo ships nulls as headlines.
+
+- [ ] **Step 5: Commit**
+
+```
+make game-check
+git add clients/game/bin/src/driver.rs
+git commit -m "perf(game): the perception layer reads the cached band, not a fresh JSON parse"
+```
+
+---
+
+## Task 11: Inhabitants
+
+**Files:**
+- Modify: `windows/vessel/src/underground.rs`, `windows/vessel/src/level_doc.rs`
+
+**Interfaces:**
+- Consumes: `hornvale_worldgen::subterranean_substrate`,
+  `hornvale_worldgen::energy::{subterranean_energy, dominant_source}`
+
+- [ ] **Step 1: Write the failing tests**
+
+```rust
+#[test]
+fn who_is_underground_derives_from_the_chambers_own_conditions() {
+    // The property, not a fixed roster: perturb the chamber's energy input
+    // and require the roster to move; a chamber that can feed nothing holds
+    // nothing. Do NOT assert a named species — that would pin a calibration
+    // this task does not own.
+}
+
+#[test]
+fn a_creature_underground_is_drawn_only_while_lit() {
+    // Spec 4.1.2: entities enter at the `lit` rung, terrain at `remembered`.
+    // The chamber band already does this correctly (marks are a strict
+    // subset of present); this asserts the underground band does too.
+}
+```
+
+- [ ] **Step 2: Run and watch them fail**
+
+```
+cargo test -p hornvale-vessel inhabit > /tmp/hv-t11.log 2>&1; echo "exit=$?"
+tail -20 /tmp/hv-t11.log
+```
+
+- [ ] **Step 3: Implement**
+
+Compose the shipped readings at the chamber's own depth. Do not build a spawn
+table, and do not read the surface roster.
+
+- [ ] **Step 4: Run and watch pass**
+
+```
+cargo nextest run -p hornvale-vessel > /tmp/hv-t11b.log 2>&1; echo "exit=$?"
+grep -E "^ *Summary|FAILED|panicked" /tmp/hv-t11b.log
+```
+
+- [ ] **STOP CONDITION (spec section 9).** If the derivation cannot be expressed
+  as a read over existing fields within this task, **do not grow a placement
+  model here.** Ship geometry, pane, and the empty-chamber case; add an
+  idea-registry row for the placement model; record it in the task report; and
+  continue to Task 12. That is an accepted outcome, not a failure.
+
+- [ ] **Step 5: Commit**
+
+```
+cargo fmt && make gate-commit
+git add windows/vessel/src/
+git commit -m "feat(underground): something lives down here, and its rock decides what"
+```
+
+---
+
+## Task 12: Decisions, registry, artifacts, book
+
+**Files:**
+- Create: `docs/decisions/0406-*.md` and up (one per spec section 10 decision)
+- Modify: `book/src/frontier/idea-registry.md`, `book/src/chronicle/the-gallery.md`, `docs/retrospectives/the-gallery.md`
+
+- [ ] **Step 1: Write the decision records**
+
+One per spec section 10, in the reserved block 0406-0415. Gaps inside the block
+are fine and cost nothing.
+
+- [ ] **Step 2: Update the idea registry**
+
+- `MAP-underworld-chart` becomes `shipped`.
+- `CLIENT-band-fold` is **narrowed, not closed.** The `submerged` band still
+  folds into `walk`, deliberately. The row must say so, or the next reader
+  believes a solved problem is open — or worse, that an open one is solved.
+- `MAP-underworld-dressing`: note that its stated blocker (no chart) is gone.
+
+- [ ] **Step 3: Regenerate artifacts and read the diff**
+
+```
+make rebaseline > /tmp/hv-rebase.log 2>&1; echo "exit=$?"
+git diff --stat -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
+```
+
+**Decision rule (spec section 7):**
+- Only `docs/audits/` moved: expected. The type-audit report drifts on any
+  pub-boundary change, and this campaign adds several. Commit in the same
+  commit.
+- `docs/digest/` moved: expected. The in-force decision index drifts when
+  decisions are added.
+- A **walk-band or chamber-band** client fixture moved: **STOP.** That is a
+  schema regression, not drift.
+- The **census** moved: **STOP and investigate.** Nothing here changes world
+  generation; if a census column moved, find out why before merging.
+
+- [ ] **Step 3b: Pin determinism end to end**
+
+Spec acceptance criterion 9, which no other task covers. Every prior task
+asserts a behaviour; none asserts the campaign's constitutional property.
+
+```rust
+#[test]
+fn the_same_seed_and_pins_produce_a_byte_identical_descent_and_pane() {
+    // Two independent sessions on the same seed, driven through the SAME
+    // scripted walk (delve, several steps, stairs, several more). Assert the
+    // two snapshot JSON strings are byte-equal at every turn — not merely the
+    // final one, which would pass even if the two diverged and reconverged.
+    //
+    // This is the test that would catch Task 1's dense-storage conversion
+    // having changed an iteration order, Task 2's shadowcaster refactor
+    // having changed a result set, and Task 11's inhabitant derivation having
+    // read something unstable. It is cheap and it is the campaign's floor.
+}
+```
+
+Run it before the artifact regeneration below, not after: a determinism failure
+makes every diff in Step 3 meaningless.
+
+```
+cargo nextest run -p hornvale-vessel > /tmp/hv-det.log 2>&1; echo "exit=$?"
+grep -E "^ *Summary|FAILED|panicked" /tmp/hv-det.log
+```
+
+- [ ] **Step 4: Chronicle and retrospective**
+
+The chronicle is written at the book's altitude — technical, comprehensible
+without reading the code it may show. The retrospective carries the follow-up
+register from `.superpowers/sdd/followups.md`, which dies with the worktree, so
+promote it before teardown.
+
+- [ ] **Step 5: Commit**
+
+```
+cargo fmt && make gate-commit
+git add docs/ book/
+git commit -m "docs(the-gallery): decisions, registry, chronicle, retrospective"
+```
+
+---
+
+## Closing
+
+Stage-gate at the Task 6 boundary and again before merge:
+
+```
+make sluice-stage BRANCH=campaign/the-gallery REF=<full-sha>
+```
+
+Then `closing-a-campaign`.
