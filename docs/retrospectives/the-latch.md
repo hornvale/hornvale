@@ -4,12 +4,36 @@ Process lessons, not product. The product is in
 [the chronicle](../../book/src/chronicle/the-latch.md); the decisions are
 0366–0369.
 
-## The headline: twelve defects, all mine, and the shape changed
+## The headline: fourteen defects, all mine, and one of them shipped
 
-Twelve defects originated in controller prose — spec, plan, or dispatch brief.
-**Zero survived in implementer code.** That is the same distribution The Offer
-reported, and the fourth campaign running to report it, so the count is no
-longer the interesting number. The *shape* is.
+**The accounting first, because this heading read "twelve defects" and "zero
+survived in implementer code" until a close-out audit, and the correction is
+this campaign's own subject arriving one level up.** Fourteen defects
+originated in controller prose — spec, plan, or dispatch brief. Twelve are the
+list below. The thirteenth was the spec's false §3.1, which got its own section
+because it outranked them. The fourteenth — `clear` shipped with no body-state
+gate — arrived *after the ledger had stopped numbering*, found by the final
+whole-branch review; the fix wave that closed it added a third item to a later
+section **of this file** and never came back to this one.
+
+That is a record outliving its subject, which is the failure this campaign
+spent itself documenting, reproduced in the retrospective documenting it.
+Nobody re-read the opening after changing the body, because nothing asks you
+to: a heading is not a claim any gate parses, and the person best placed to
+notice is the person who just wrote the thing that invalidated it.
+
+**The sharper number is not the total, it is the split.** All fourteen
+originated in controller prose rather than in implementer code — the same
+distribution The Offer reported, and the fourth campaign running to report it.
+**Thirteen were caught before they reached committed code. The fourteenth
+shipped**, in Task 5's commit (`1660aabae`), and was removed only by the fix
+wave (`70c44d9cf`), six commits and one main absorption later. It sat in
+committed code through the campaign's own chronicle, retrospective and decision
+records. "Zero survived in implementer code" is the tidier
+sentence and the weaker one: it reads as a claim about implementers, when what
+it actually described was thirteen catches by the campaign's own defences — and
+it hid the one case where every one of those defences ran and none of them
+fired. So the count is no longer the interesting number. The *shape* is.
 
 **Early defects were wrong identifiers a grep catches.** A test helper
 (`crate::common::seed_42_world()`) that does not exist. `WorldTime::from_std_days`
@@ -37,7 +61,7 @@ tool does that, and the campaign's own pre-flight scan — which did find two
 defects by exactly this question, before any dispatch — is the only instrument
 that has ever caught one.
 
-## The largest error was not on that list, and outranks all twelve
+## The largest error was not on that list, and outranks the twelve on it
 
 The spec's §3.1 asserted as settled fact that **nothing a possession session
 commits is ever persisted** and that **no world-writing path exists after
@@ -75,10 +99,16 @@ Worth noting what could *not* have caught it: every gate was green throughout,
 the whole time. Only a false sentence in a spec was wrong, and no instrument in
 this project reads specs.
 
-## Two gates green for reasons unrelated to correctness
+## Three checks green for reasons unrelated to correctness
 
-Second theme, and both instances are the same shape: **a gate's scope and a
-defect's location disagreed, and the gate could not tell anyone.**
+Second theme. The first two are the same shape: **a gate's scope and a defect's
+location disagreed, and the gate could not tell anyone.** The third is a
+different shape and the sharpest of the three — a check whose scope was right,
+whose implementation was correct, and whose blind zone was structural.
+
+(This heading read *"Two gates"* while the body already had three items. The
+fix wave added item 3 and left the heading, in the same motion that left the
+count in the section above — one omission, two records.)
 
 1. **`gate-commit` was RED on the branch tip before Task 1 began**, from a
    docs-only plan commit that overran a 600-character idea-registry budget. The
@@ -95,10 +125,36 @@ defect's location disagreed, and the gate could not tell anyone.**
    require the full vessel suite in the foreground before any commit, and to
    frame the red as the *expected* signal.
 
-Neither was found by a tool. Both were found by a human reading the roster
-during pre-dispatch verification. The roster still does not carry the renamed
-test — that is not a miss, it is how the roster works now: a green chamber run
-writes it, and this branch has not had one.
+Neither of those two was found by a tool. Both were found by a human reading
+the roster during pre-dispatch verification.
+
+**The wait item 2 promised has since happened, and it came back the other way.**
+This paragraph used to say the roster does not carry the renamed tripwire only
+because "a green chamber run writes it, and this branch has not had one." The
+branch has now had one — the merge itself — and it did rewrite
+`docs/timings/subfloor-roster.tsv`, adding three of this campaign's new tests
+(`addr_key_distinguishes_every_field`,
+`addr_key_spelling_is_the_permanent_on_disk_key`, and
+`a_clearing_fact_does_not_open_the_passage_before_it_happened`, all in the
+integration suite). It added **none** of the behavioural ones, and the reason
+is structural rather than pending: the roster admits only tests measured
+strictly below `BASELINE_FLOOR_SECS`, which is **1.0 s**, and on lefford
+`delve_has_three_distinguishable_outcomes` costs **13.304 s**,
+`clear_is_refused_while_asleep` **13.437 s**, and
+`clear_refuses_from_inside_a_structure_and_from_underground` **17.111 s** —
+each builds a seed-42 world. No future chamber run changes that. The exclusion
+is by design (coverage is the stage gate's job, spec §4.3); what was wrong was
+this file calling it temporary.
+
+**So `gate-commit` compiles the Critical's own regression guard and will never
+run it — while running the check that could not see the Critical.**
+`every_bare_verb_help_lists_is_classified` is below the floor and is in the
+roster; every test that can see into its blind zone is above the floor and is
+not. The predecessor campaign's `warm_is_refused_while_asleep` (12.495 s) sits
+outside for the same reason, so this is a standing property of the vessel's
+body-state guards rather than a Latch oversight, and it is the concrete cost of
+the blind zone item 3 records: on the commit gate, the guard with the hole is
+the only one of the pair that runs.
 
 3. **A third, found only by the final whole-branch review, and it is the
    sharpest of the three.** `clear` was added to the dispatcher and to neither
@@ -178,5 +234,30 @@ checked red by merging it into the `Sealed` arm.
 
 **That mutation's pasted red corrected its own prediction.** The doc comment
 written before the run said the *second* assertion would fire; the first one
-did. The comment now records what happened rather than what was expected, which
-is the whole point of pasting a red instead of describing one.
+did. The comment now records what happened rather than what was expected — and
+it was not the only time, which is the next section.
+
+## Four predicted mutation reds, and every one of them was written before it ran
+
+Four separate times this campaign, an agent wrote what it *expected* a mutation
+to produce, then ran the mutation and found the real output said something
+else. Only one of the four reached this file before the close-out audit — the
+`Warded` arm above. The aggregate is the finding, and the aggregate is what was
+missing: a rate, not an anecdote.
+
+The fix wave disclosed its own share, and disclosed it in the honest form. One
+of its three drafted pastes was invented before the run and was wrong in its
+narration; the other two happened to be right. **"Happened to be right" is the
+part that makes this a discipline rather than a habit.** A prediction that
+lands is indistinguishable, on the page, from measured output. The reader
+cannot tell which of the four kinds of paste is in front of them, and neither
+can the author a week later. At a rate anywhere near one in three, a
+plausible-looking pasted red is a coin flip unless something outside the prose
+guarantees it was run.
+
+So the operational half of decision 0353 is not *"name the mutation, then
+describe the red."* It is **paste what ran, never what you predicted** — and
+where a prediction was written first and then corrected, say so in the doc,
+because that correction is the only surviving evidence that the run happened at
+all. A paste that was right the first time leaves no such evidence, which is
+exactly why the rule cannot be relaxed for it.

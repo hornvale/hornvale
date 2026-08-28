@@ -2172,11 +2172,13 @@ mutation is evidence only if something establishes it could have moved the
 result**, which is the same clause this chapter already carries about a
 column's stable value, arriving one level down.
 
-[The Latch](./chronicle/the-latch.md) continues that distribution exactly —
-twelve defects, every one originating in controller prose, none surviving in
-implementer code, a fourth campaign running — but its **shape shifted, and the
-shift is the entry worth keeping.** The early ones were wrong identifiers a grep
-catches: a test helper that does not exist, a constructor asserted to return a
+[The Latch](./chronicle/the-latch.md) continues that distribution and then
+breaks it in one place — fourteen defects, every one originating in controller
+prose, a fourth campaign running; thirteen caught before they reached committed
+code, and **the fourteenth shipped**, removed only after the merge candidate
+was assembled. Its **shape shifted too, and the shift is the entry worth
+keeping.** The early ones were wrong identifiers a grep catches: a test helper
+that does not exist, a constructor asserted to return a
 bare value when it returns a `Result`. The late ones were **internal
 contradictions no grep can find.** One brief named an integration-test file for
 a test while also instructing the implementer to reach the seam through a
@@ -2185,7 +2187,8 @@ unsatisfiable. Nothing mechanical can see that, and re-reading cannot either,
 because re-reading checks a claim against the model that produced it and the
 model is what is wrong. It died when an implementer tried to build it.
 
-**The campaign's largest error was of that second kind and outranks all twelve.**
+**The campaign's largest error was of that second kind and outranks the twelve
+on that list.**
 Its specification asserted, as established fact, that nothing a possession
 session commits is ever persisted and that no world-writing path exists after
 genesis. That sentence shaped an acceptance criterion, a module's
@@ -2205,7 +2208,7 @@ author's question, not the one a later reader brings to it**; a constraint read
 off one is a hypothesis, and this one went four tasks without being tested
 because it was never framed as one.
 
-Two gates also reported green for reasons unrelated to correctness, which is
+Three checks also reported green for reasons unrelated to correctness, which is
 this chapter's standing concern about instruments arriving from a new
 direction. A docs-only commit skipped the commit gate on a path heuristic —
 correct about which *files* changed, wrong about which *tests guard them*,
@@ -2216,6 +2219,36 @@ have reported green while that test was red, on the very change the test exists
 to catch. **A gate's scope and a defect's location can disagree, and the gate
 cannot tell you when they do.** Both were caught by a human reading the roster,
 not by anything running.
+
+The third is the defect that shipped, and it is a different failure entirely.
+The campaign added a verb to the dispatcher and to neither of the two rosters
+that gate a verb by the state of the body, so a sleeping character could clear
+a barred passage and commit the fact — and it was the only new verb that writes
+to the ledger. The check meant to catch exactly this was green throughout **and
+was working correctly**: it holds two lists in agreement in both directions,
+and a verb missing from both agrees with itself. That was measured in the
+defective state rather than inferred. **A two-way agreement check has a blind
+zone at zero copies**, and the only instrument that sees into it is a test that
+drives the behaviour. Seven green task reviews did not find it either — each
+saw a diff that added a verb, and none asked the question only a whole-branch
+view asks: which lists is this verb in? What closed it was available the whole
+time, since the preceding campaign had shut the identical hole on a different
+verb and left the test to copy. But the copy sits outside the cheapest gate by
+construction: it costs thirteen seconds because it builds a world, and the
+commit gate admits only tests under a second. The check with the hole runs on
+every commit; the one that closes it does not.
+
+The entry above is a correction, and it is worth saying so here because the
+record failed in the same way the campaign it records did. The campaign's
+retrospective opened with "twelve defects, none surviving in implementer code."
+The second half was already false the moment it was written — the fourteenth
+defect was sitting in committed code two commits earlier, undiscovered — and
+the heading was left standing even after that defect was found and written into
+a later section of the same file. Nothing re-reads an opening when a body
+changes, and the person best placed to notice is the one who has just written
+the thing that invalidated it. **A record can outlive its subject inside the
+document that named the hazard**, which is the smallest scale at which this
+chapter has yet observed it.
 
 [The Mire](./chronicle/the-mire.md) exercised the same discipline on a bet
 about weather and world structure that no earlier chapter entry had staked,
