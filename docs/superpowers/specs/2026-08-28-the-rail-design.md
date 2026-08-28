@@ -385,13 +385,11 @@ The Inquest added. Pin-isolation tests are the proof, not the argument.
    label path and consume nothing from an existing one, proven by the
    pin-isolation tests rather than by this sentence.
 
-   **This is deliberately NOT "the committed world is byte-identical after."**
-   It will not be, and the reason is a different change in the same campaign:
-   registering new predicates moves `world-seed-42.json` (§7). Stating
-   byte-identity as a criterion here would put this document in contradiction
-   with its own trap list and would be falsified by the very first task. What
-   must not move is a stream's *consumption order*; what must move, and be
-   regenerated deliberately, is the golden.
+   **What moves and what does not, as a branch rather than a prediction.** A
+   stream's *consumption order* must not move, and the pin-isolation tests
+   are what say so. The *stream manifest* WILL move, because `stream_labels()`
+   gains legs. `world-seed-42.json` moves only if a concept is registered,
+   and as of Task 0 none is.
 9. `Valence` has five variants and no more, and its doc names Stassen's
    taxonomy as the reason the list is closed.
 
@@ -419,10 +417,17 @@ From 0416–0425:
 
 ## 7. Traps this campaign will walk into
 
-- **Registering a concept moves the keystone golden.** New predicates (an
-  intransitive verb, property words, an adposition) are registry rows, and
-  `world-seed-42.json` moves. `make rebaseline` does not write it and
-  `gate-commit` does not test it; only the merge queue catches it.
+- **No concept is registered, and that was checked rather than assumed.**
+  Every concept the five rungs need is already in `packs::universal_stratum()`
+  — `sleep` (`Act`), `old`/`high`/`low`/`great`/`little`/`new` (`Quality`), and
+  `under`/`over` (`Quality`, docs "beneath; below" / "above; atop"). So
+  `world-seed-42.json` does not move for concept registration, and the
+  drafting session's assumption that it would was wrong.
+
+  **The trap is narrowed, not gone.** Registering a concept DOES move that
+  golden, `make rebaseline` does not write it, and `gate-commit` does not
+  test it — only the merge queue catches it. If any task finds it needs a
+  concept that is not already registered, that is the moment this fires.
 - **`make rebaseline` cannot see byte-goldens.** `make rebaseline-goldens` is
   the separate accept path. Run both and diff the whole tree.
 - **A declared generated path is not a live drift check.** `sentence-coverage.md`
