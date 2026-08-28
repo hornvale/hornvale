@@ -148,21 +148,39 @@ settlement placement."* The tenth,
 `the_sub_floor_raider_reading_is_pinned_as_a_witness`, says in its own name
 that it is a witness. That one stays.
 
-Two heavy tests have **zero assertions in their entire file** and only
-`println!`s — `probe_lossy_quadrants::how_often_does_each_teller_hearer_quadrant_occur_on_seed_4`
-(11 `println!`, 0 asserts) and
-`probe_stance_cost::what_does_stance_cost_and_how_are_stance_pairs_distributed`
-(6, 0). Neither delegates to an assertion helper; every call in their bodies is
-a stdlib or domain accessor. They can fail only if world construction itself
-panics through an `expect(`, so they assert nothing whatever about their own
-findings, and they have been running in a gate tier.
+**Five** heavy tests live in files with **zero assertions anywhere in the
+file**, and contain only `println!`s:
 
-*(A first count said three, from a body-scoped `assert!` regex.
-`underworld_ladder_probe::how_hot_is_a_cave` has zero in its body but one in
-its file, so it is an ordinary adjudication case, not an automatic one. The
-pre-filter in §3.2 is therefore specified file-wide and helper-aware — a
-body-scoped literal count is not sufficient evidence for an automatic
-demotion.)*
+```
+windows/hearsay/tests/suite/probe_filter_mismatch.rs
+    where_can_a_claim_cross_a_people_boundary_on_seed_42
+windows/hearsay/tests/suite/probe_filter_variation.rs
+    do_the_filter_keys_vary_between_witnesses_of_one_event_on_seed_42
+windows/hearsay/tests/suite/probe_lossy_quadrants.rs
+    how_often_does_each_teller_hearer_quadrant_occur_on_seed_42
+windows/hearsay/tests/suite/probe_stance_cost.rs
+    what_does_stance_cost_and_how_are_stance_pairs_distributed_on_seed_42
+windows/worldgen/tests/suite/warren_liebig_probe.rs
+    which_axis_binds_for_a_subterranean_kind
+```
+
+None delegates to an assertion helper. They can fail only if world
+construction itself panics through an `expect(`, so they assert nothing
+whatever about their own findings, and they have been running in a gate tier.
+
+*(**This figure was wrong twice and the second error is the instructive one.**
+A first count said three, from a body-scoped `assert!` regex; correcting that
+to file-wide gave two, and two is what this spec said when it was approved.
+Two was also wrong. The scan behind it ranked heavy tests by `println!` count
+and then file-wide-verified only the top three that surfaced — so a
+zero-assertion test with few prints could never enter the candidate set at
+all, and three of the five did not. The claim was tier-wide; the evidence
+covered a ranked prefix. Task 4a's implementer found two of the missing ones
+inside its own subpopulation and said so, which is what forced the recount.
+The lesson is the pre-filter's, not just this paragraph's: **§3.2's
+zero-assertion filter authorises an automatic demotion, so its evidence
+standard is the one thing in this spec that must not rest on a sampled
+scan.**)*
 
 ### 2.3 Front-load the barrier (`priority`)
 
@@ -222,8 +240,11 @@ These make the adjudication cheap and auditable; they do not replace it.
   fail witnesses nothing. **Counted file-wide, not body-scoped, and after
   checking the body's call list for assertion helpers** — a body-scoped literal
   `assert!` count is not sufficient evidence, and produced a wrong number
-  (three, not two) on the first pass of this very spec. Two tests qualify
-  today.
+  twice on this very spec (three, then two). **Five tests qualify today**, and
+  the scan that establishes it must be exhaustive over every heavy-bearing
+  file — not a ranked prefix of them. This filter is the only one in the spec
+  that authorises a demotion with no adjudication, so it is the one place a
+  sampled scan is not good enough. See §2.2 for both wrong numbers and why.
 - A test whose name is a **question** (`how_`, `which_`, `whether_`, `what_`,
   `could_`, `is_the_`) is a demotion *candidate* and must be adjudicated
   explicitly. It is not auto-demoted — `which_way_the_account_crosses_the_seam`
