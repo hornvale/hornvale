@@ -3669,3 +3669,4 @@ measured here.
 | 2026-08-28T13:40:36Z | gate-commit | 311.316 | 1097.505 | 118.456 | 3.91 | 0 | 221bd7c49 | campaign/the-precedence | ambrose | 12 |
 | 2026-08-28T14:03:00Z | gate-commit | 91.625 | 59.638 | 31.912 | 1.00 | 0 | 26e5921a7 | campaign/the-precedence | ambrose | 12 |
 | 2026-08-28T14:34:27Z | gate-commit | 95.530 | 54.763 | 27.789 | 0.86 | 0 | beb39b901 | campaign/the-precedence | ambrose | 12 |
+| 2026-08-28T14:38:38Z | sluice:artifacts | 122.201 | 807.028 | 31.793 | 6.86 | 0 | 67e329d76 |  | lefford | 40 |
