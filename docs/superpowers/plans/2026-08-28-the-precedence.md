@@ -609,7 +609,7 @@ make board-post KIND=technique NOTE='The vessel scheduler pops by action START a
 
 **Goal:** establish, before committing to Stage 3, that the retype's blocker is gone.
 **Success Criteria:** a recorded branch outcome naming which of The Foliot's two failures survive.
-**Status:** Not Started
+**Status:** COMPLETE. Monotonicity GREEN (the blocker is gone); hoisted-walk golden RED by exactly one tick (1206633 -> 1206634), the legitimate drift-removal move. No other red. Stage 3 is unblocked.
 
 A fix task cannot audit its own premise. Stage 3 exists to land the retype; this stage exists to prove Stage 3 is possible, and it is allowed to conclude that it is not.
 
@@ -683,10 +683,10 @@ At the time of writing there were 14 `day: f64` declarations. **Do not trust tha
 - [ ] **Step 2: Classify each site, by reading it, into exactly one of three**
 
 - **INSTANT** — a point on the time axis. Becomes `WorldTime`. (Expected: `WalkState.{day,last_drank,last_rested,last_ate}`, the four fact helpers' `day`, `last_fact_day_at_or_before`'s parameter and return, `catch_up`'s `entry_day`, `decide_step`'s `day` and `last_*`, `hold_step`'s `day`, `next_awake_day`'s `day`.)
-- **DURATION** — a span. Becomes `TickSpan`, or stays `f64` if it is a continuous physical quantity. (Expected: `anticipation_lead`'s return, `AnticipationX.horizon`.)
+- **DURATION** — a span. Becomes `TickSpan`, or stays `f64` if it is a continuous physical quantity. (Task 3.1 MEASURED this and found **none**: every duration in this file is either a transient inline difference of two instants or a module `const`. Expect zero `TickSpan` conversions.)
 - **RATIO** — dimensionless. Stays bare `f64`, per project convention.
 
-`catch_up`'s `horizon` is an INSTANT (it is "now", the ceiling) while `anticipation_lead`'s `horizon` is a DURATION. **They share a name and are different kinds.** Classify by reading the use, never by the identifier.
+`catch_up`'s `horizon` is an INSTANT (it is "now", the ceiling) while `anticipation_lead`'s `horizon` is a **RATIO** — `Disposition.horizon` is `time_horizon`, a dimensionless dial from myopic (0) to foresighted (1), and the actual span is the module const `ANTICIPATION_HORIZON_DAYS`. **They share a name and are different kinds.** Classify by reading the use, never by the identifier — this plan's own earlier draft called the second one a DURATION, in the very sentence stating the rule.
 
 - [ ] **Step 3: Write the table** to `.superpowers/sdd/instant-classification.md` as `file:line | identifier | INSTANT|DURATION|RATIO | why`.
 

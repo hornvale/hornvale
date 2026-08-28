@@ -129,34 +129,63 @@ instrument for a campaign that is *not* finished.
    hex-pure 40-char SHA (rejecting a string that merely *starts* with a hex
    digit — `[0-9a-f]*` is a glob, not a length-anchored check, and this
    script had that exact bug once) and is actually on a remote branch, then
-   **refuses the submission if the commit's own subject is not a real
-   headline** before it ever ssh's anywhere:
+   — for a **merge** request only — **refuses the submission unless the
+   range carries an authored `Sluice-Headline:` trailer** before it ever
+   ssh's anywhere. The subject of HEAD, or of any other commit in the
+   range, does **not** satisfy this — a real headline used to be inferred
+   from the tip commit's subject, and that inference failed on four of the
+   first four real merges (doubled once, branch-path-leaked twice,
+   redundantly prefixed once — the full account is in
+   `scripts/sluice-headline.sh`), so the rule is now a trailer, not
+   position:
 
-   ```bash
-   headline="$(git log -1 --format=%s "$ref")"
-   case "$headline" in
-       ""|wip|WIP|fixup!*|squash!*|.|tmp|temp|TODO) refuse ;;
-   esac
-   ```
+   - Write **only the text that landed**, one line, as a trailer:
 
-   This is mechanical, not advisory — `sluice-request.sh` runs this itself
-   on every **merge** submission (a `stage` request is exempt: its merge
-   commit is discarded with the chamber's worktree, so no subject it carries
-   can become a census epoch label, and refusing a mid-campaign `wip` commit
-   that a plan-stage boundary legitimately sits on would block the one thing
-   a stage gate is for), using the exact same subject
-   `sluice-run.sh`'s own `--no-ff` merge will later use as the merge
-   commit's subject (`headline="${HV_SLUICE_HEADLINE:-$(git log -1
-   --format=%s "$sha")}"`), which `tools/census/history.sh` then reads as
-   the permanent census epoch label (`git log --follow --first-parent
-   main`). Only the campaign that authored the commit knows whether that
-   subject is fit to become a permanent artifact label; an operator
-   triaging the queue later must never be the one inventing or silently
-   accepting a placeholder one. If your submission is refused this way,
-   amend HEAD's message (`git commit --amend`, if that commit is yours to
-   rewrite, or add a small final commit with a real subject) and push
-   again — do not try to route around it with an env var; nothing in the
-   request path threads a caller-supplied override through, deliberately.
+     ```
+     Sluice-Headline: every instant in the walk is a WorldTime (stage 3)
+     ```
+
+     Do not prefix it with `merge(...): ` yourself — `sluice-run.sh`
+     composes `merge(<campaign>): <your text>` as the actual merge
+     commit's subject (stripping a `merge(...): ` prefix defensively if
+     you added one anyway, so it can never double).
+   - It can sit on **any commit in the range** (`origin/main..REF`), not
+     necessarily the last one, and a later commit does not displace it —
+     `git log` reads newest-first and the newest non-empty trailer wins.
+   - It **must be in that commit message's last paragraph**. This reads
+     git's own trailer parser, which only ever looks at the final block:
+
+     ```
+     Sluice-Headline: what landed      <- STRANDED, ignored
+                                        <- this blank line breaks it
+     Claude-Session: https://…
+     ```
+
+     Keep it adjacent to any other trailers, no blank line between.
+   - Verify before pushing:
+
+     ```bash
+     git log -1 --format='%(trailers:key=Sluice-Headline,valueonly)' <sha>
+     # or, across the whole range (newest non-empty wins):
+     git log --format='%(trailers:key=Sluice-Headline,valueonly)' origin/main..HEAD
+     ```
+
+   This is mechanical, not advisory: `tools/census/history.sh` reads the
+   merge commit's subject as the permanent census epoch label (`git log
+   --follow --first-parent main`) whenever that merge moves the census, so
+   only the campaign that authored the range knows whether a label is fit
+   to be permanent; an operator triaging the queue later must never be the
+   one inventing or silently accepting a placeholder. A `stage` request is
+   exempt — its merge commit is discarded with the chamber's worktree, so
+   no label it carries can ever land, and refusing a mid-campaign commit
+   with no trailer at a plan-stage boundary would block the one thing a
+   stage gate is for. If your merge submission is refused this way, add
+   the trailer to any commit in the range (a small final commit is fine)
+   and push again — do not try to route around it with an env var;
+   nothing in the request path threads a caller-supplied override through,
+   deliberately (`HV_SLUICE_HEADLINE` is a test seam for driving
+   `sluice-run.sh` directly, not a caller-facing override of the mouth's
+   refusal).
 
    Once past both checks, `sluice-request.sh` ssh's to the canonical box
    and calls `sluice-queue.sh add` there under its own lock. **If this
@@ -171,11 +200,12 @@ instrument for a campaign that is *not* finished.
    demonstrates the assertion is non-vacuous by mutating the script to
    swallow ssh's exit code and confirming the same test goes red on the
    mutant. The headline refusal and the hex-purity check get the same
-   treatment: a real "wip"-subject commit (minted locally with `git
-   commit-tree`, never touching a real branch) is refused by the real
-   script and accepted by a mutant with the check deleted; a 40-char,
-   hex-*starting* but not hex-*pure* string is refused by the real script
-   and would have passed the original, glob-based check.
+   treatment: a real "wip"-subject commit with **no `Sluice-Headline:`
+   trailer** (minted locally with `git commit-tree`, never touching a real
+   branch) is refused by the real script and accepted by a mutant with the
+   check deleted; a 40-char, hex-*starting* but not hex-*pure* string is
+   refused by the real script and would have passed the original,
+   glob-based check.
 
 3. **Only once step 2 printed a request id: nudge.** The queue entry is
    already durable at this point — nudging is purely about latency,
@@ -238,11 +268,15 @@ chamber-side failure (read the log named above).
   durable-before-nudge ordering exists to prevent.
 - Assuming `make gate-commit` passing says anything about the headline —
   it is a different property (compiles/lints/sub-floor tests vs. "this
-  subject is fit to become a permanent census epoch label") and
-  gate-commit does not look at commit messages at all. `sluice-request.sh`
-  enforces the headline itself now, so a bad subject is refused at
-  submission time either way — but a campaign that expects `gate-commit`
-  to have already covered it will be confused by the refusal.
+  range carries an authored `Sluice-Headline:` trailer fit to become a
+  permanent census epoch label") and gate-commit does not look at commit
+  messages at all. `sluice-request.sh` enforces the headline itself now,
+  so a missing or misplaced trailer is refused at submission time either
+  way — but a campaign that expects `gate-commit` to have already covered
+  it will be confused by the refusal.
+- Writing a fine commit *subject* and assuming that satisfies the check.
+  It does not — only a `Sluice-Headline:` trailer does, and only when it
+  sits in that commit message's last block.
 - Force-pushing to update a submission. Push an ordinary fast-forward
   commit and submit a new request (the queue coalesces a same-branch,
   ancestor-superseding resubmission automatically — see

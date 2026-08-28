@@ -3696,6 +3696,9 @@ measured here.
 | 2026-08-28T14:39:19Z | sluice:outboard | 40.069 | 24.974 | 38.323 | 1.58 | 0 | e1d138455 |  | lefford | 40 |
 | 2026-08-28T14:47:17Z | sluice:gate | 477.741 | 13144.926 | 443.540 | 28.44 | 0 | 4bc54599d |  | lefford | 40 |
 | 2026-08-28T14:55:44Z | sluice:clients | 506.344 | 9298.929 | 88.501 | 18.54 | 0 | 6764d2d71 |  | lefford | 40 |
+| 2026-08-28T17:09:55Z | gate-commit | 157.457 | 101.134 | 35.601 | 0.87 | 0 | 11546ba9a | campaign/the-precedence | ambrose | 12 |
+| 2026-08-28T17:14:23Z | rebaseline | 189.442 | 291.248 | 17.381 | 1.63 | 0 | 41a83f230 | campaign/the-precedence | ambrose | 12 |
+| 2026-08-28T17:39:34Z | gate-commit | 132.363 | 71.282 | 35.464 | 0.81 | 0 | f655a465a | campaign/the-precedence | ambrose | 12 |
 | 2026-08-28T16:38:45Z | gate-commit | 49.088 | 141.996 | 21.031 | 3.32 | 0 | d96882d0d | campaign/the-latch | MacBookPro | 10 |
 | 2026-08-28T16:40:08Z | rebaseline | 75.711 | 278.657 | 13.397 | 3.86 | 0 | 578a294e2 | campaign/the-latch | MacBookPro | 10 |
 | 2026-08-28T17:07:17Z | gate-commit | 54.706 | 229.604 | 29.121 | 4.73 | 0 | 70103f547 | campaign/the-latch | MacBookPro | 10 |
@@ -3715,3 +3718,8 @@ measured here.
 | 2026-08-28T18:57:12Z | sluice:artifacts | 68.440 | 638.038 | 22.596 | 9.65 | 0 | 349c21754 |  | lefford | 40 |
 | 2026-08-28T18:57:53Z | sluice:outboard | 40.861 | 25.355 | 39.245 | 1.58 | 0 | dbaa54ab5 |  | lefford | 40 |
 | 2026-08-28T19:05:21Z | sluice:gate | 447.593 | 13022.035 | 409.903 | 30.01 | 0 | f84a0cc82 |  | lefford | 40 |
+| 2026-08-28T18:14:29Z | rebaseline | 128.314 | 281.548 | 17.191 | 2.33 | 0 | 34eaa21eb | campaign/the-precedence | ambrose | 12 |
+| 2026-08-28T18:24:58Z | gate-commit | 158.727 | 269.747 | 62.126 | 2.09 | 0 | 27a2da724 | campaign/the-precedence | ambrose | 12 |
+| 2026-08-28T18:42:08Z | census | 942.658 | 31701.941 | 245.147 | 33.89 | 0 | 27a2da724 |  | lefford | 40 |
+| 2026-08-28T19:19:12Z | gate-commit | 99.262 | 53.280 | 27.617 | 0.81 | 0 | aea537631 | campaign/the-precedence | ambrose | 12 |
+| 2026-08-28T19:21:59Z | rebaseline | 73.023 | 283.193 | 17.068 | 4.11 | 0 | e03eae506 | campaign/the-precedence | ambrose | 12 |

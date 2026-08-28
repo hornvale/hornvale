@@ -852,13 +852,29 @@ fn homophony_count_is_measured_and_pinned() {
     // 3.6719x — widened back to the Foliot figure — and hobgoblin 3.5597x
     // against 3.5582x, also widened back. Both margins stay far above the
     // 3x falsification line, so the warning above stands unspent.
-    assert!((mg - 5.884).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 6.071).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 21.611).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    //
+    // The Precedence's close regen (2026-08-28, canonical census on lefford
+    // at 27a2da724760, goldens 32fa5fb73): ALL FOUR daughters rise together —
+    // goblin 5.884 -> 5.919, hobgoblin 6.071 -> 6.101, bugbear
+    // 21.611 -> 21.704, kobold 6.326 -> 6.36. All four were re-measured in
+    // ONE pass off the regenerated `rows.csv` (cross-checked in duckdb), not
+    // one per failing run: these asserts are sequential, so only goblin was
+    // ever reported and reading the other three off the census cost nothing
+    // while chasing them one run at a time would have cost three suites.
+    // Each mean is still an exact integer count over the 1000-seed census
+    // divided by 1000 (5919, 6101, 21704, 6360). The claim this row guards is
+    // re-checked, not assumed: bugbear still leads goblin, 3.6668x
+    // (21.704/5.919) against the prior regen's 3.6728x, and hobgoblin 3.5574x
+    // (21.704/6.101) against 3.5597x — both margins narrowed a hair and both
+    // stay far above the 3x falsification line, so the warning above stands
+    // unspent. Post-unblinding re-measure, declared per decision 0016.
+    assert!((mg - 5.919).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 6.101).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 21.704).abs() < 1e-9, "bugbear mean drifted: {mb}");
     // kobold 6.113 -> 6.279 (The Granary's re-pin, same mechanism as above).
-    // Unmoved at 6.326 through The Foliot, The Sources' second census, and
-    // The Sources' third census.
-    assert!((mk - 6.326).abs() < 1e-9, "kobold mean drifted: {mk}");
+    // Unmoved at 6.326 through The Foliot and The Sources' second and third
+    // censuses; 6.326 -> 6.36 at The Precedence's, with the other three.
+    assert!((mk - 6.36).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"
