@@ -140,7 +140,7 @@ use hornvale_worldgen::{
 };
 use std::collections::BTreeSet;
 
-use crate::seed_sweep;
+use hornvale_worldgen::seed_sweep;
 
 /// The population size the spec froze (§6): seeds `1..=SAMPLE`.
 const SAMPLE: u64 = 200;

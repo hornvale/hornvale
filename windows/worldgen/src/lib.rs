@@ -102,6 +102,7 @@ pub mod person_promote;
 pub mod render;
 pub mod resolve;
 pub mod schedule;
+pub mod seed_sweep;
 pub mod settlement_pins;
 pub mod streams;
 pub mod traversal;

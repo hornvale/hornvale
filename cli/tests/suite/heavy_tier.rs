@@ -97,23 +97,31 @@
 //! here and would not be for the two above** — see that guard's own doc
 //! comment rather than duplicating the reasoning in two places.
 //!
-//! **The detector-fragility residual named two sections up applies to THIS
-//! class too, doubled.** `SWEEP_CALL` is matched as literal call text
-//! (`seed_sweep::map_seeds(`), and the helper it names currently lives in
+//! **The detector-fragility residual named two sections up applied to THIS
+//! class too, and Task 9 resolved it by moving the helper rather than by
+//! accepting the risk.** `SWEEP_CALL` is matched as literal call text
+//! (`seed_sweep::map_seeds(`), and the helper it names used to live in
 //! `windows/lab/tests/seed_sweep/mod.rs` — a test-only module `windows/
-//! hearsay` and `windows/worldgen` tests cannot reach (spec §8.1). Task 9
-//! may have to MOVE it to make it reachable, and if the move changes how the
-//! call is spelled, `SWEEP_CALL` must be updated in the same commit or BOTH
+//! hearsay` and `windows/worldgen` tests could not reach (spec §8.1). Task 9
+//! moved it to `hornvale_worldgen::seed_sweep` (see that module's own doc
+//! comment for the reachability argument) — **and every caller, old and
+//! new, still imports it under the short name `seed_sweep` and calls
+//! `seed_sweep::map_seeds(...)`, so the literal text `SWEEP_CALL` matches is
+//! UNCHANGED by the move.** Nothing here needed updating as a result, which
+//! is itself worth recording: the risk this paragraph used to warn about
+//! (a silent detector blind spot from a respelled call) was avoided by
+//! construction, not discovered and patched. A FUTURE move that changes the
+//! import spelling (`use hornvale_worldgen::seed_sweep as sweep;`, say)
+//! would still need `SWEEP_CALL` updated in the same commit, or BOTH
 //! `internally_parallel_heavy_tests` and `sized_sweep_heavy_tests` go blind
-//! to every caller using the new spelling — silently for a NEW sized-sweep
-//! conversion (this class tolerates zero matches by design, so a mis-spelled
-//! call just never shows up), loudly for the three existing scatter-sweep
-//! batteries (their names stay pinned in `.config/nextest.toml` while
-//! detection drops to zero, which is exactly the mismatch
+//! to every caller using the new spelling — silently for a sized-sweep
+//! conversion (that class tolerates zero matches by design, so a
+//! mis-spelled call just never shows up), loudly for the three existing
+//! scatter-sweep batteries (their names stay pinned in
+//! `.config/nextest.toml` while detection drops to zero, which is exactly
+//! the mismatch
 //! [`the_serialization_pin_names_exactly_the_batteries_that_scatter_their_sweeps`]'s
-//! non-emptiness assert exists to catch). Whoever moves the helper should
-//! grep this file for `SWEEP_CALL` and update every place the constant's
-//! value is asserted against, not just its definition.
+//! non-emptiness assert exists to catch).
 
 use std::collections::BTreeSet;
 use std::fs;
