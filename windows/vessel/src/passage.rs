@@ -47,6 +47,15 @@ pub const PASSAGE_CLEARED: &str = "passage-cleared";
 /// A chamber address as a ledger-storable key. Injective across every field
 /// of [`ChamberAddr`]: two distinct addresses never share a key, or clearing
 /// one passage would silently clear another.
+///
+/// **Injectivity is not the only contract this string owes.** The band rides
+/// as `{:?}`, so a [`hornvale_kernel::Band`] variant rename keeps every key
+/// distinct while changing what every key SAYS — and `possess --out` puts
+/// these keys in a saved world (decision 0368), where a changed spelling
+/// makes `effective_state` miss every committed fact and silently re-bar a
+/// cleared passage. `addr_key_spelling_is_the_permanent_on_disk_key`
+/// (`tests/suite/passage.rs`) pins the literal for that reason; a rename is
+/// an epoch, not an edit.
 /// type-audit: bare-ok(identifier-text: return)
 pub fn addr_key(addr: &ChamberAddr) -> String {
     format!(

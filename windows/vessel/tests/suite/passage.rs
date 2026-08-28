@@ -121,6 +121,60 @@ fn addr_key_distinguishes_every_field() {
     assert_eq!(unique.len(), keys.len(), "addr_key collided: {keys:?}");
 }
 
+/// The address encoding is a SAVE-FORMAT CONTRACT, and the test above cannot
+/// see it move. Injectivity survives any renaming: `addr_key` spells the band
+/// with `{:?}`, so renaming a `Band` variant keeps every key distinct while
+/// changing what every key SAYS.
+///
+/// That matters now rather than in principle. `possess --out` saves the
+/// session ledger into a world file (decision 0368), so committed
+/// `passage-cleared` objects carry this exact string. A renamed variant would
+/// leave `effective_state` looking up a spelling no committed fact uses — it
+/// would find nothing, fall back to the seeded barrier, and a passage the
+/// player cleared would quietly re-bar itself. Nothing else in the tree would
+/// go red: the derive still compiles, the keys are still unique, and the
+/// worldgen-side rename looks local.
+///
+/// So this pins the literal, the way the project's other save-format
+/// contracts are pinned (root CLAUDE.md: "deliberate regeneration uses an
+/// epoch suffix, never a rename"). Reddening here is the intended outcome of
+/// a rename, not an obstacle to one — the fix is an epoch, and the choice
+/// should be made deliberately rather than discovered by a player.
+///
+/// MUTATION this must fail against: rename `Band::Undercroft` (any variant
+/// reachable from a cave entrance address will do). Confirmed 2026-08-28 by
+/// the cheaper equivalent that perturbs the same output — swapping
+/// `addr_key`'s `{:?}` band field for `{}`-formatted `addr.band as u8`,
+/// which is what a `Debug`-spelling change amounts to on the wire:
+///
+/// ```text
+/// assertion `left == right` failed: addr_key's on-disk spelling changed —
+/// this is a save-format contract; see the doc comment
+///   left: "7/1/0/0"
+///  right: "7/Undercroft/0/0"
+/// ```
+///
+/// A genuine behavioural red, not a compile error; restored and re-run green.
+#[test]
+fn addr_key_spelling_is_the_permanent_on_disk_key() {
+    use hornvale_kernel::{Band, Vertex};
+    use hornvale_vessel::passage::addr_key;
+    use hornvale_worldgen::chamber::ChamberAddr;
+
+    let addr = ChamberAddr {
+        vertex: Vertex(7),
+        band: Band::Undercroft,
+        branch: 0,
+        level: 0,
+    };
+    assert_eq!(
+        addr_key(&addr),
+        "7/Undercroft/0/0",
+        "addr_key's on-disk spelling changed — this is a save-format \
+         contract; see the doc comment"
+    );
+}
+
 /// A clearing fact must not open the passage for days BEFORE it. This is what
 /// separates a time-correct fold from a mutable flag, and it is what lets any
 /// replay evaluating a past instant stay honest.

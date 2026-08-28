@@ -100,6 +100,22 @@ during pre-dispatch verification. The roster still does not carry the renamed
 test — that is not a miss, it is how the roster works now: a green chamber run
 writes it, and this branch has not had one.
 
+3. **A third, found only by the final whole-branch review, and it is the
+   sharpest of the three.** `clear` was added to the dispatcher and to neither
+   verb roster, so the body-state gate never stood in front of it: a sleeping
+   body could clear a passage and commit a fact. `every_bare_verb_help_lists_
+   is_classified` exists to catch exactly this and was **green the whole time,
+   working correctly** — it asserts that the two lists agree in both
+   directions, and a verb missing from both agrees. That was confirmed by
+   running it against the defective state, not inferred. **A two-way agreement
+   check between two copies has a blind zone at zero copies**, and the only
+   instrument that sees into it is a test that drives the behaviour: the
+   preceding campaign had written precisely that (`warm_is_refused_while_
+   asleep`, naming its own mutation) and the pattern was there to copy. Seven
+   task reviews, all green, did not surface it either — each saw a diff that
+   added a verb, and none asked what a whole-branch view asked: which lists is
+   this verb in?
+
 ## What went right, and is worth repeating
 
 - **A task dispatched as one that might correctly produce nothing did.** Task 6

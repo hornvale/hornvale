@@ -145,6 +145,29 @@ it demonstrably works for the sibling predicate committed by the same call on
 the same ledger, and nothing about this one differs; that is a strong inference
 and still an inference. Writing the test is the cheapest real work left behind.
 
+## The verb that shipped invisible, and the guard that agreed
+
+The campaign's headline act was, until the last review before merge, a verb no
+player could discover and no gate would stop. `clear` was wired into the
+dispatcher and written into neither of the two lists that matter: the roster the
+body-state gate consults, and the help text a player reads. A sleeping body
+answered `clear` and committed a fact — the one verb in the free band that
+writes to the ledger at all, and the only one that had shipped past the gate.
+
+The interesting part is the guard that watched this happen. A test holds the
+roster and the help text in agreement in both directions: everything offered is
+classified, everything classified is offered. It was green throughout, correctly.
+A verb absent from both lists satisfies both directions of an agreement check;
+the shape it can see is a verb in one place and missing from the other. Run
+against the branch as it shipped, that test passes — which was confirmed by
+running it, not reasoned about.
+
+So the remedy is not a better agreement check. It is the behavioural test beside
+it: possess a body, put it to sleep, type the verb, and require the refusal. The
+preceding campaign had already written exactly that for its own new verb, for
+exactly this reason, and the pattern was there to copy. Copying it is what was
+missed; a structural check cannot substitute for driving the thing.
+
 ## What stays open
 
 Re-closing, and with it traps and anything a container needs. The save round

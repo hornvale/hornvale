@@ -3698,3 +3698,6 @@ measured here.
 | 2026-08-28T14:55:44Z | sluice:clients | 506.344 | 9298.929 | 88.501 | 18.54 | 0 | 6764d2d71 |  | lefford | 40 |
 | 2026-08-28T16:38:45Z | gate-commit | 49.088 | 141.996 | 21.031 | 3.32 | 0 | d96882d0d | campaign/the-latch | MacBookPro | 10 |
 | 2026-08-28T16:40:08Z | rebaseline | 75.711 | 278.657 | 13.397 | 3.86 | 0 | 578a294e2 | campaign/the-latch | MacBookPro | 10 |
+| 2026-08-28T17:07:17Z | gate-commit | 54.706 | 229.604 | 29.121 | 4.73 | 0 | 70103f547 | campaign/the-latch | MacBookPro | 10 |
+| 2026-08-28T17:08:08Z | vessel-check | 47.939 | 71.617 | 4.311 | 1.58 | 0 | 70103f547 | campaign/the-latch | MacBookPro | 10 |
+| 2026-08-28T17:12:19Z | rebaseline | 56.323 | 272.499 | 13.259 | 5.07 | 0 | 70103f547 | campaign/the-latch | MacBookPro | 10 |

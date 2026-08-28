@@ -146,9 +146,28 @@ pub const LEVELS_PER_BRANCH_CEILING: u8 = 20;
 /// once welded to an entity id had to be re-cut as a `/v2` epoch. Nothing
 /// here carries a generation ordinal so that mistake cannot recur.
 ///
-/// Deliberately carries **no `Serialize`/`Deserialize`**: nothing in this
-/// campaign writes a `ChamberAddr` to a ledger, and the moment one is
-/// committed its on-disk spelling becomes a permanent key (spec §3.1).
+/// Deliberately carries **no `Serialize`/`Deserialize`**. The reason used to
+/// be stated in the future tense — "nothing in this campaign writes a
+/// `ChamberAddr` to a ledger, and the moment one is committed its on-disk
+/// spelling becomes a permanent key" — and **that moment has arrived**: The
+/// Latch commits `passage-cleared` facts whose object is
+/// `hornvale_vessel::passage::addr_key(&addr)`, a hand-rolled
+/// `"{vertex}/{band:?}/{branch}/{level}"` string, and `possess --out` saves
+/// them into a world file (decision 0368).
+///
+/// So the absence of a derive is no longer what keeps this type off disk —
+/// `addr_key` is the on-disk spelling, and it is `Debug`-derived. **Renaming
+/// a [`Band`] variant silently orphans every committed
+/// `passage-cleared` fact**: `effective_state` would look up the new
+/// spelling, find no fact, and fall back to the seeded barrier, so a cleared
+/// passage would quietly re-bar itself with nothing anywhere going red.
+///
+/// Bounded, not open: worlds are version-locked (decision 0099), so a stale
+/// key cannot corrupt a world that still loads. And it is no longer silent —
+/// `addr_key_spelling_is_the_permanent_on_disk_key`
+/// (`windows/vessel/tests/suite/passage.rs`) pins the exact string, so a
+/// variant rename reddens there and the epoch-suffix discipline every other
+/// save-format contract obeys applies here too.
 /// type-audit: bare-ok(index: branch), bare-ok(index: level)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ChamberAddr {

@@ -110,9 +110,22 @@ const SESSION_CONTROL: [&str; 3] = ["release", "quit", "exit"];
 /// Nothing here mechanizes the count — the two runtime rosters above are
 /// the only pair `every_bare_verb_help_lists_is_classified` actually holds
 /// together.
-const IN_CHARACTER_VERBS: [&str; 19] = [
-    "ask", "back", "climb", "consult", "delve", "dive", "enter", "examine", "go", "knows", "look",
-    "map", "needs", "out", "sleep", "surface", "wait", "warm", "write",
+///
+/// **THE DRIFT ABOVE IS NOT HYPOTHETICAL — IT HAPPENED, ONE CAMPAIGN AFTER
+/// THIS DOC WARNED ABOUT IT.** The Latch added `clear` to
+/// [`Session::handle`]'s match and to neither roster, so
+/// `gated_by_the_body("clear")` answered `false` and a SLEEPING body could
+/// clear a barred passage — and `clear` is the only verb in the free band
+/// that WRITES TO THE LEDGER, so the ungated one was the consequential one.
+/// The paired test above could not see it: it holds `HELP` and this roster
+/// together, and `clear` was in neither, so both directions were satisfied
+/// by its absence. That is the shape of this guard's blind zone — it catches
+/// a verb listed in one place and missing from the other, never a verb
+/// missing from both — and it is why `clear_is_refused_while_asleep` exists
+/// beside `warm_is_refused_while_asleep` rather than in place of it.
+const IN_CHARACTER_VERBS: [&str; 20] = [
+    "ask", "back", "clear", "climb", "consult", "delve", "dive", "enter", "examine", "go", "knows",
+    "look", "map", "needs", "out", "sleep", "surface", "wait", "warm", "write",
 ];
 
 /// The provenance a walk-band step commits under (The Deed, Task 7).
@@ -388,6 +401,8 @@ verbs:
   delve            descend into the cave here, if the rock admits
                    one; 'climb' comes back
   climb            return to the surface from underground
+  clear            clear the way down at a barred cave mouth; only a thin
+                   fall of rubble gives, and once cleared it stays cleared
   enter [way]      step inside what is built here; once inside, 'enter further
                    in' goes deeper and 'out' leaves
   out              step back out of doors
@@ -1007,9 +1022,25 @@ impl<'w> Session<'w> {
         registry
             .register_predicate(AGENT_AT, false, "an agent's position on a day")
             .expect("AGENT_AT registers identically every session");
-        // PASSAGE_CLEARED is likewise never registered at genesis (The Latch,
-        // spec section 3.1): the whole live-play fact layer is session-scoped,
-        // in registry and ledger both.
+        // PASSAGE_CLEARED is likewise never registered at genesis (The
+        // Latch): a live-play predicate is minted HERE, per session, beside
+        // AGENT_AT above.
+        //
+        // "Per-session" names WHERE it is registered, NOT how long it lasts,
+        // and this comment said the opposite until the final whole-branch
+        // review — it read "the whole live-play fact layer is session-scoped,
+        // in registry and ledger both", citing a spec section (3.1) that has
+        // since been retired as wrong. Both halves are false:
+        // `Session::into_played_world` moves `self.registry` AND `self.ledger`
+        // into the saved `World`, and `possess --out` writes it (decision
+        // 0368; decision 0171 already ruled a player's acts are not filtered
+        // on the way out).
+        //
+        // Note also that this registration is UNCONDITIONAL — it runs whether
+        // or not anything is ever cleared — so every `--out` world carries
+        // PASSAGE_CLEARED in its registry even with no clearing fact behind
+        // it. Harmless: no committed artifact carries a session registry, and
+        // a registered-but-unused predicate is what AGENT_AT has always been.
         registry
             .register_predicate(
                 crate::passage::PASSAGE_CLEARED,
@@ -6140,6 +6171,72 @@ mod tests {
         assert_eq!(warmed, "You cannot — you are asleep.");
     }
 
+    /// `clear` is gated by the body like every other in-character verb (spec
+    /// §2.1/§3.2), and it is the verb for which that mattered most: it is
+    /// the only one in the free band that WRITES TO THE LEDGER, so an
+    /// ungated `clear` meant a sleeping body could commit a
+    /// `PASSAGE_CLEARED` fact — contradicting `HELP`'s own `sleep` line
+    /// ("the body stops obeying until its own cycle wakes it, and only '!'
+    /// verbs answer meanwhile").
+    ///
+    /// **This is the fix, not a precaution.** The Latch shipped `clear` into
+    /// [`Session::handle`]'s match and into neither
+    /// [`IN_CHARACTER_VERBS`] nor [`HELP`], which is exactly the blind zone
+    /// `every_bare_verb_help_lists_is_classified` cannot see (it holds the
+    /// two lists in agreement; a verb absent from both agrees). The final
+    /// whole-branch review found it; the structural test could not.
+    /// Deliberately placed beside `warm_is_refused_while_asleep` rather than
+    /// among the passage tests below, because the pair — one gated verb that
+    /// only speaks, one that commits — is the argument.
+    ///
+    /// MUTATION this must fail against: drop `"clear"` from
+    /// [`IN_CHARACTER_VERBS`] (and its `HELP` line, so
+    /// `every_bare_verb_help_lists_is_classified` stays green and this test
+    /// is the only thing objecting) — precisely the state the branch shipped
+    /// in. Confirmed 2026-08-28 by making that edit and re-running: this
+    /// test reddened BEHAVIOURALLY, not on a compile error, with
+    ///
+    /// ```text
+    /// assertion `left == right` failed
+    ///   left: "There is no cave mouth here to clear."
+    ///  right: "You cannot — you are asleep."
+    /// ```
+    ///
+    /// — the dispatch ran `clear_passage` unrefused and answered from inside
+    /// the handler. Restored, and re-run on a fresh binary: green.
+    #[test]
+    fn clear_is_refused_while_asleep() {
+        let world = seam_world();
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+        let slept = match session.handle("sleep") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("sleep must not release: {t}"),
+        };
+        assert!(
+            !slept.starts_with("No verb"),
+            "`sleep` must be a verb for this test to mean anything: {slept}"
+        );
+        assert_eq!(
+            session.body_state(),
+            BodyState::Asleep,
+            "sanity check: asleep alone must gate as asleep"
+        );
+        let cleared = match session.handle("clear") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("clear must not release: {t}"),
+        };
+        assert_eq!(cleared, "You cannot — you are asleep.");
+        assert!(
+            !session
+                .ledger
+                .iter()
+                .any(|f| f.predicate == crate::passage::PASSAGE_CLEARED),
+            "a refused `clear` must commit nothing: the gate stands in front \
+             of the act, not inside it"
+        );
+    }
+
     /// The final whole-branch review's C1: neither test above ever drives
     /// `warm` to SUCCESS. `warm_refuses_with_no_hearth_in_reach` stays out
     /// of doors, where no chamber (and so no `Hearth`) can exist at all;
@@ -7858,6 +7955,37 @@ mod tests {
         })
     }
 
+    /// The SEEDED barrier at a vertex's cave-entrance address — the address
+    /// coming from [`cave_entrance_addr`], the same constructor production
+    /// uses, rather than from a second copy of its fields.
+    ///
+    /// **The Latch's fix wave, closing the other half of Task 7's own
+    /// finding.** Task 7 repointed [`cave_entrance_states`] at
+    /// `cave_entrance_addr` for exactly this reason and left four barrier
+    /// reads in this module still spelling `Band::Undercroft, 0` inline;
+    /// this collapses all four onto one derivation. The hazard is the same
+    /// one that helper's doc names and it is quieter here, because
+    /// [`hornvale_worldgen::barrier_of`] takes loose `(vertex, band,
+    /// branch)` arguments rather than a `ChamberAddr`: a change to where a
+    /// cave's entrance sits would leave these reads type-checking and
+    /// silently answering about a DIFFERENT address than `delve_at` and
+    /// `clear_passage_at` ask about, so every fixture would still be found
+    /// and every assertion would still be about the wrong place.
+    ///
+    /// `barrier_of` consults `vertex`/`band`/`branch` and not `level`, so
+    /// only three of the address's four fields reach it. That is the
+    /// function's own business, not this helper's: passing the fields off
+    /// the shared address is what keeps the two in step whichever fields
+    /// `barrier_of` grows.
+    fn seeded_entrance_barrier(
+        seed: Seed,
+        vertex: hornvale_kernel::Vertex,
+        pins: &hornvale_worldgen::BarrierPins,
+    ) -> hornvale_worldgen::BarrierState {
+        let addr = cave_entrance_addr(vertex);
+        hornvale_worldgen::barrier_of(seed, addr.vertex, addr.band, addr.branch, pins)
+    }
+
     /// The first cave-bearing vertex this seed's terrain places whose entrance
     /// chamber is realized AND whose seeded barrier is `Open`. Until The
     /// Drift (Task 1) deleted `chamber_exists`'s 50% existence coin, this
@@ -7885,13 +8013,8 @@ mod tests {
         let pins = hornvale_worldgen::BarrierPins::default();
         cave_entrance_states(terrain, seed)
             .find_map(|(vertex, cave, is_open)| {
-                let unbarred = hornvale_worldgen::barrier_of(
-                    seed,
-                    vertex,
-                    hornvale_kernel::Band::Undercroft,
-                    0,
-                    &pins,
-                ) == hornvale_worldgen::BarrierState::Open;
+                let unbarred = seeded_entrance_barrier(seed, vertex, &pins)
+                    == hornvale_worldgen::BarrierState::Open;
                 (is_open && unbarred).then_some((vertex, cave))
             })
             .unwrap_or_else(|| {
@@ -7929,13 +8052,7 @@ mod tests {
                     return None;
                 }
                 let cave = terrain.cave_at(vertex)?;
-                let barrier = hornvale_worldgen::barrier_of(
-                    seed,
-                    vertex,
-                    hornvale_kernel::Band::Undercroft,
-                    0,
-                    &pins,
-                );
+                let barrier = seeded_entrance_barrier(seed, vertex, &pins);
                 (barrier != hornvale_worldgen::BarrierState::Open).then_some((vertex, cave))
             })
             .next()
@@ -7970,13 +8087,7 @@ mod tests {
                     return None;
                 }
                 let cave = terrain.cave_at(vertex)?;
-                let barrier = hornvale_worldgen::barrier_of(
-                    seed,
-                    vertex,
-                    hornvale_kernel::Band::Undercroft,
-                    0,
-                    &pins,
-                );
+                let barrier = seeded_entrance_barrier(seed, vertex, &pins);
                 (barrier == want).then_some((vertex, cave))
             })
             .next()
@@ -8037,6 +8148,36 @@ mod tests {
     /// accident — the barred population going to zero under some future
     /// terrain epoch — cannot leave this test looking satisfied while
     /// silently testing nothing.
+    ///
+    /// MUTATION this must fail against (added by the fix wave; the review's
+    /// M4 noted this test alone among the campaign's new ones named none,
+    /// and "its red was corroborated mechanically when the gate landed" is a
+    /// weaker record than the neighbouring tests carry): delete
+    /// [`Session::delve_at`]'s barrier gate — the
+    /// `if barrier != BarrierState::Open { return Turn::Out(barred_refusal(
+    /// barrier)) }` block — which is precisely the third outcome this test's
+    /// name claims. The gate is what The Latch added; without it a barred
+    /// mouth descends like an open one, because chamber realization is
+    /// unconditional post-Drift.
+    ///
+    /// Confirmed 2026-08-28, with that block replaced by `let _ = barrier;`
+    /// (deleting it outright leaves `barrier` unbound; the discard is the
+    /// same behaviour and still compiles):
+    ///
+    /// ```text
+    /// a barred passage must not set the underground state: You worm down
+    /// into the dark. The rock here is the regolith.
+    /// ```
+    ///
+    /// — outcome 2's own assertion, firing because the barred vertex
+    /// descended and rendered its chamber. A genuine behavioural red, not a
+    /// compile error; restored and re-run on a fresh binary, green.
+    ///
+    /// **What that mutation does NOT reach, stated so the record is not
+    /// read as wider than it is:** the exhaustive scan at the end of this
+    /// test is a pure read over `barrier_of` and `chamber_at` and is
+    /// untouched by any change to `delve_at`. Its own guard against going
+    /// vacuous is the `caves_examined > 0` assertion, not this mutation.
     #[test]
     fn delve_has_three_distinguishable_outcomes() {
         let world = seam_world();
@@ -8146,13 +8287,7 @@ mod tests {
             if !is_open {
                 chamber_unrealized.push(vertex);
             }
-            let barrier = hornvale_worldgen::barrier_of(
-                world.seed,
-                vertex,
-                hornvale_kernel::Band::Undercroft,
-                0,
-                &pins,
-            );
+            let barrier = seeded_entrance_barrier(world.seed, vertex, &pins);
             if barrier != hornvale_worldgen::BarrierState::Open {
                 barred_count += 1;
             }
@@ -8193,10 +8328,22 @@ mod tests {
     /// steering the possession to one hand-picked vertex by walking is
     /// impractical for a test to depend on.
     ///
-    /// Session lifetime is the only lifetime the engine has (spec section
-    /// 3.1): the session ledger is never written back, so this is
-    /// deliberately NOT a save-boundary test — nothing here reloads the
-    /// world.
+    /// **Session-scoped BY CHOICE OF SCOPE, not because persistence is
+    /// impossible** — this paragraph claimed the opposite until the final
+    /// whole-branch review, reading "session lifetime is the only lifetime
+    /// the engine has (spec section 3.1): the session ledger is never
+    /// written back". It is written back:
+    /// [`Session::into_played_world`] moves the evolved ledger AND registry
+    /// into a new `World`, and `possess --out` saves it (decision 0368,
+    /// which retired the spec section this used to cite; decision 0171 rules
+    /// that a player's acts are not filtered on the way out).
+    ///
+    /// What this test asserts is therefore the narrower of two true claims:
+    /// the clearing survives across turns WITHIN one session. The save round
+    /// trip — clear, `--out`, re-possess, delve — is a different test that
+    /// nobody has written, so `passage.rs`'s module doc states it as an
+    /// inference from `agent-at`'s identical mechanism rather than as a
+    /// proven fact, and this test does not reach it either.
     ///
     /// MUTATION this must fail against: delete `clear_passage_at`'s
     /// `self.ledger.commit(fact, &self.registry)` call. The post-clear delve
@@ -8474,6 +8621,58 @@ mod tests {
             Turn::Released(_) => panic!("delve must not release"),
         };
         assert!(out.contains("no rock to delve into in here"), "{out}");
+    }
+
+    /// `clear`'s two early refusals — the same two facts about where a body
+    /// is standing that [`Session::delve`] guards on, which is why
+    /// [`Session::clear_passage`] reuses their shape rather than inventing
+    /// new ones.
+    ///
+    /// **Both arms shipped untested** (the final whole-branch review's M3):
+    /// `delve`'s indoors twin is pinned by
+    /// `delve_refuses_while_inside_a_structure` just above, and `clear`'s two
+    /// had nothing. They are `Turn::Out` early returns, so a regression in
+    /// either would be silent — the verb would fall through to
+    /// `clear_passage_column`, find no cave mouth in a chamber or below
+    /// ground, and answer "There is no cave mouth here to clear.": a
+    /// plausible refusal for the wrong reason, which no other assertion
+    /// would object to. Asserting on the DISTINGUISHING half of each string
+    /// is what makes that substitution visible.
+    #[test]
+    fn clear_refuses_from_inside_a_structure_and_from_underground() {
+        let world = seam_world();
+
+        // Indoors: `descend` into a chamber, the same seam
+        // `delve_refuses_while_inside_a_structure` uses.
+        let (mut inside, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        inside
+            .descend(path_structure(&inside.position(), 2), 0)
+            .expect("a chamber to stand in");
+        let out = match inside.handle("clear") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("clear must not release"),
+        };
+        assert_eq!(out, "There is nothing to clear from in here.");
+
+        // Below ground: reached through `delve_at` against a hand-picked open
+        // cave rather than a walk, for the reason
+        // `lateral_movement_is_refused_underground` gives.
+        let (mut below, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = below.wctx.terrain.clone().expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        below.delve_at(vertex, cave);
+        assert!(
+            below.underground.is_some(),
+            "the fixture must have descended, or the arm below is unreached"
+        );
+        let out = match below.handle("clear") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("clear must not release"),
+        };
+        assert_eq!(
+            out,
+            "You are already below; there is nothing left to clear from down here."
+        );
     }
 
     /// Lateral movement is refused while underground, and says so
@@ -9420,11 +9619,11 @@ mod tests {
     /// that fact today regardless of what a player types. The conclusion
     /// rests on that; the loop below corroborates it over a roster.
     ///
-    /// **WHAT THIS FIXTURE ACTUALLY EXERCISES IS 12 OF THE 31, NOT 31 —
+    /// **WHAT THIS FIXTURE ACTUALLY EXERCISES IS 12 OF THE 32, NOT 32 —
     /// state that plainly rather than let the roster count imply
     /// otherwise.** Every verb here runs against a session that has just
     /// been `!possess`ed, and a possessed body is exactly what
-    /// `gated_by_the_body` refuses in front of: all 19
+    /// `gated_by_the_body` refuses in front of: all 20
     /// [`IN_CHARACTER_VERBS`] are turned away by the body-state gate BEFORE
     /// their handlers run, so only the 3 [`SESSION_CONTROL`] verbs and the
     /// 9 Group-A operator instruments below reach any dispatch arm at all.
@@ -9435,10 +9634,11 @@ mod tests {
     /// refusal ("another will holds this body"), reported `roster=30
     /// gate-refused=18` — `ask back climb consult delve dive enter examine go
     /// knows look map needs out sleep surface wait write` (The Offer, Task 5,
-    /// added `warm` to [`IN_CHARACTER_VERBS`] afterwards; the count above is
-    /// re-derived arithmetically from that measurement — same 12 ungated
-    /// verbs, one more gated one, 18→19→31 — rather than re-run, since
-    /// `gated_by_the_body`'s own logic is untouched by this addition).
+    /// added `warm` to [`IN_CHARACTER_VERBS`] afterwards, and The Latch's
+    /// fix wave added `clear`; the count above is re-derived arithmetically
+    /// from that measurement — same 12 ungated verbs, two more gated ones,
+    /// 18→19→20 and 30→31→32 — rather than re-run, since
+    /// `gated_by_the_body`'s own logic is untouched by either addition).
     ///
     /// **So this is a weak tripwire, not the tripwire that turns red the
     /// day mortality ships.** If a death terminator ever arrives through an
@@ -9451,14 +9651,15 @@ mod tests {
     ///
     /// The stated denominator (spec §7's own requirement): the full shipped
     /// verb roster this file itself classifies is the SUM of three groups —
-    /// [`IN_CHARACTER_VERBS`] (19, since The Offer's Task 5 added `warm`),
+    /// [`IN_CHARACTER_VERBS`] (20, since The Offer's Task 5 added `warm` and
+    /// The Latch's fix wave added `clear`),
     /// [`SESSION_CONTROL`] (3: `release`/`quit`/`exit`), and the nine
     /// out-of-character-ONLY operator instruments `handle_ooc`'s Group A
     /// dispatches (`why`/`npcs`/`help`/`eyes`/`whoami`/`provoke`/`soothe`/
-    /// `possess`/`unpossess`) — **31** total. Group B's six `!`-twins
+    /// `possess`/`unpossess`) — **32** total. Group B's six `!`-twins
     /// (`!map`/`!examine`/`!needs`/`!wait`/`!look`/`!knows`) are deliberately
     /// NOT counted a second time — [`HELP`]'s own text calls them "the
-    /// out-of-character halves" of verbs already among the 19: the same verb
+    /// out-of-character halves" of verbs already among the 20: the same verb
     /// under the other mood, not a distinct one.
     ///
     /// Each verb runs against its OWN fresh, freshly-possessed session
@@ -9472,7 +9673,7 @@ mod tests {
     /// argument to make it succeed: since no dispatch arm anywhere
     /// constructs the string `"died"` regardless of input, a bare
     /// invocation already covers the whole surface this loop can reach —
-    /// which, per the paragraph above, is the 12 ungated verbs, not the 31
+    /// which, per the paragraph above, is the 12 ungated verbs, not the 32
     /// the roster names.
     #[test]
     fn h2_no_shipped_verb_can_end_a_possession_by_death() {
@@ -9495,11 +9696,11 @@ mod tests {
             .collect();
         assert_eq!(
             roster.len(),
-            31,
-            "the stated denominator: 19 IN_CHARACTER_VERBS + 3 SESSION_CONTROL \
+            32,
+            "the stated denominator: 20 IN_CHARACTER_VERBS + 3 SESSION_CONTROL \
              + 9 Group-A operator instruments the OOC namespace alone \
              dispatches. This pins the ROSTER's size, NOT the exercised \
-             population: under a possessed body the gate refuses all 19 \
+             population: under a possessed body the gate refuses all 20 \
              in-character verbs, so 12 reach a dispatch arm — see this \
              test's doc comment"
         );
