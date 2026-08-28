@@ -419,6 +419,7 @@
 - [The Quadrat](./chronicle/the-quadrat.md)
 - [The Offer](./chronicle/the-offer.md)
 - [The Latch](./chronicle/the-latch.md)
+- [The Precedence](./chronicle/the-precedence.md)
 
 # Appendix: The Frontier
 
