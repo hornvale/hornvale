@@ -13,15 +13,17 @@
 //! made", and still called itself an "unused seam" three campaigns later.
 
 use hornvale_species::{ThermalStrategy as T, TrophicMode as M, biosphere_registry};
+use std::collections::BTreeSet;
 
 /// Every pair a kind is allowed to carry. Rung 1 of the Underworld Larder
-/// declares four; rung 2 adds a `Chemotrophic` row, and that edit is the
-/// visible moment the underworld gains a productive base.
+/// declared four; rung 2 adds `(Absent, Chemotrophic)`, witnessed by `xorn` —
+/// the visible moment the underworld gains a productive base.
 const SANCTIONED: &[(T, M)] = &[
     (T::Endothermic, M::Heterotrophic),
     (T::Ectothermic, M::Heterotrophic),
     (T::Unmodelled, M::Phototrophic),
     (T::Absent, M::Absent),
+    (T::Absent, M::Chemotrophic),
 ];
 
 #[test]
@@ -45,8 +47,19 @@ fn every_kind_carries_a_sanctioned_pair() {
     );
 }
 
-/// `Chemotrophic` is DECLARED and not WITNESSED — the variant exists, no kind
-/// carries it. Rung 2's success condition is that this test has to change.
+/// `Chemotrophic` is now WITNESSED, by exactly one kind.
+///
+/// **THE DIRECTION THIS ENFORCES, STATED** (the discipline `is_ametabolic`'s
+/// doc uses): before rung 2, this test asserted the variant was carried by
+/// NO kind ("declared, not witnessed") — its own message said "if rung 2 has
+/// landed, this assertion is what you came to delete." Rung 2 has landed:
+/// `xorn` burrows through stone and eats only mineral, which is a
+/// chemolithotroph, so `Absent`/`Absent` — the honest encoding available
+/// before this variant existed — became `Absent`/`Chemotrophic`. The
+/// assertion inverts rather than deletes, because the axis still needs a
+/// witness-count guard going forward: exactly one kind today, and a second
+/// carrier appearing (or `xorn` losing the variant) is exactly as much a
+/// finding as zero carriers was before rung 2.
 #[test]
 fn chemotrophic_is_declared_and_unwitnessed() {
     let carriers: Vec<&str> = biosphere_registry()
@@ -54,62 +67,145 @@ fn chemotrophic_is_declared_and_unwitnessed() {
         .filter(|(_, b)| b.trophic_mode == M::Chemotrophic)
         .map(|(k, _)| k.0)
         .collect();
-    assert!(
-        carriers.is_empty(),
-        "{carriers:?} carry TrophicMode::Chemotrophic. THE GOSSAN ships that \
-         variant declared-but-unwitnessed on purpose: authoring a chemotroph \
-         needs an energy field to feed it, which is rung 2. If rung 2 has \
-         landed, this assertion is what you came to delete."
+    assert_eq!(
+        carriers,
+        vec!["xorn"],
+        "TrophicMode::Chemotrophic is carried by {carriers:?}; expected \
+         exactly [\"xorn\"]. Rung 2 of the Underworld Larder witnesses the \
+         variant through xorn alone — a thing that burrows through stone and \
+         eats only mineral is a chemolithotroph. If a second kind now carries \
+         it, or xorn no longer does, that is a deliberate change to say why; \
+         it is not something to silently widen this assertion for."
     );
     assert!(
-        !SANCTIONED.iter().any(|(_, m)| *m == M::Chemotrophic),
-        "SANCTIONED already admits a Chemotrophic pair while no kind carries \
-         one — the declaration and the roster have drifted apart"
+        SANCTIONED.iter().any(|(_, m)| *m == M::Chemotrophic),
+        "no kind carries TrophicMode::Chemotrophic yet SANCTIONED admits a \
+         Chemotrophic pair — the declaration and the roster have drifted \
+         apart"
     );
 }
 
-/// **THE PROPERTY THE PAIR GUARD SILENTLY RESTS ON.**
+/// **THE DIRECT PER-KIND PIN THAT REPLACED THE PAIRWISE-DISTINCTNESS
+/// PROPERTY.**
 ///
-/// `every_kind_carries_a_sanctioned_pair` looks like it constrains both axes.
-/// It only constrains the trophic one *because* no two `SANCTIONED` rows share
-/// a thermal value: with the thermal keys distinct, a kind's thermal strategy
-/// determines at most one admissible row, so the table pins its `trophic_mode`.
-/// The moment two rows share a thermal key, that determination is gone and a
-/// kind may swap between them freely — the pair guard, the coverage table and
-/// the life-history golden all stay GREEN while the trophic axis moves. That
-/// was demonstrated by mutation, not argued: adding `(Unmodelled, Chemotrophic)`
-/// and flipping `treant` to `Chemotrophic` was caught only by
-/// `chemotrophic_is_declared_and_unwitnessed` — the one test rung 2 exists to
-/// delete.
+/// Under its original name, this test asserted a STRUCTURAL property of
+/// `SANCTIONED`: that no two rows shared a thermal value, which is what let
+/// `every_kind_carries_a_sanctioned_pair` pin the trophic axis merely by
+/// virtue of pinning the thermal one (a kind's thermal strategy determined at
+/// most one admissible row, so it determined the row's trophic mode too).
+/// Rung 2 of the Underworld Larder broke that property ON PURPOSE: adding
+/// `(Absent, Chemotrophic)` beside the already-sanctioned `(Absent, Absent)`
+/// duplicates the `Absent` thermal key, exactly as this test's old failure
+/// message predicted it would. With that key duplicated, a kind carrying
+/// `ThermalStrategy::Absent` could swap between `TrophicMode::Absent` and
+/// `TrophicMode::Chemotrophic` and NOTHING else would notice:
+/// `every_kind_carries_a_sanctioned_pair` only checks membership in
+/// `SANCTIONED`, `tests/suite/coverage.rs`'s
+/// `metabolic_class_coverage_matches_the_table` pins `ThermalStrategy` alone
+/// (it has zero occurrences of `TrophicMode` in its own table), and the
+/// life-history golden is driven by `is_ametabolic`, which also reads the
+/// thermal axis only. That was demonstrated by mutation before this
+/// replacement existed: adding `(Unmodelled, Chemotrophic)` and flipping
+/// `treant` to `Chemotrophic` was caught only by
+/// `chemotrophic_is_declared_and_unwitnessed` — the one test that predicted
+/// rung 2's landing at all.
 ///
-/// So this test asserts the structural property out loud, in the
-/// direction-naming discipline `is_ametabolic`'s doc uses. It is EXPECTED to
-/// redden at rung 2, and its failure message says what to do about it.
+/// **THE DIRECTION THIS NOW ENFORCES, STATED** (the discipline
+/// `is_ametabolic`'s doc uses): every kind's `trophic_mode` must equal
+/// exactly what `PINNED` names for it — not merely "some sanctioned pair" —
+/// because with the thermal key no longer unique, membership in `SANCTIONED`
+/// alone under-constrains the trophic axis. This table is EXHAUSTIVE over
+/// every kind in the registry, checked in both directions (a kind present in
+/// the registry but missing from `PINNED`, or named in `PINNED` but absent
+/// from the registry, fails the set-equality assertion below), so a kind
+/// added later cannot slip past this guard unnamed. As of rung 2, this is the
+/// only guard on the trophic axis anywhere in the workspace suite.
 #[test]
 fn sanctioned_thermal_keys_are_pairwise_distinct() {
-    for (i, (t_i, m_i)) in SANCTIONED.iter().enumerate() {
-        for (t_j, m_j) in SANCTIONED.iter().skip(i + 1) {
-            assert!(
-                t_i != t_j,
-                "SANCTIONED admits {t_i:?} with BOTH {m_i:?} and {m_j:?}. The pair \
-                 table constrains the TROPHIC axis only while each thermal value \
-                 appears at most once — that is what makes a kind's thermal \
-                 strategy determine its sanctioned trophic mode. With this thermal \
-                 key duplicated, a kind can move between {m_i:?} and {m_j:?} and \
-                 `every_kind_carries_a_sanctioned_pair`, \
-                 `metabolic_class_coverage_matches_the_table` and the life-history \
-                 golden all stay green. RUNG 2 OF THE UNDERWORLD LARDER IS THE EDIT \
-                 THAT BREAKS THIS: adding a Chemotrophic row reuses a thermal value. \
-                 When it lands, do not simply delete this test — replace it with a \
-                 direct per-kind pin on `trophic_mode`, because that is the guard \
-                 this property was standing in for."
-            );
-        }
+    const PINNED: &[(&str, M)] = &[
+        ("goblin", M::Heterotrophic),
+        ("kobold", M::Heterotrophic),
+        ("hobgoblin", M::Heterotrophic),
+        ("bugbear", M::Heterotrophic),
+        ("treant", M::Phototrophic),
+        ("twig-blight", M::Phototrophic),
+        ("giant-elk", M::Heterotrophic),
+        ("woolly-mammoth", M::Heterotrophic),
+        ("giant-goat", M::Heterotrophic),
+        ("otyugh", M::Heterotrophic),
+        ("xorn", M::Chemotrophic),
+        ("rust-monster", M::Heterotrophic),
+        ("white-dragon", M::Heterotrophic),
+        ("red-dragon", M::Heterotrophic),
+        ("black-dragon", M::Heterotrophic),
+        ("owlbear", M::Heterotrophic),
+        ("giant-scorpion", M::Heterotrophic),
+        ("giant-hyena", M::Heterotrophic),
+        ("dire-wolf", M::Heterotrophic),
+        ("rhinoceros", M::Heterotrophic),
+        ("giant-constrictor-snake", M::Heterotrophic),
+        ("carrion-crawler", M::Heterotrophic),
+        ("shrieker", M::Phototrophic),
+        ("reef-shark", M::Heterotrophic),
+        ("giant-octopus", M::Heterotrophic),
+        ("killer-whale", M::Heterotrophic),
+        ("giant-squid", M::Heterotrophic),
+        ("giant-crocodile", M::Heterotrophic),
+        ("gnoll", M::Heterotrophic),
+        ("human", M::Heterotrophic),
+        ("desert-dwarf", M::Heterotrophic),
+        ("gully-dwarf", M::Heterotrophic),
+        ("hill-dwarf", M::Heterotrophic),
+        ("desert-elf", M::Heterotrophic),
+        ("drow", M::Heterotrophic),
+        ("high-elf", M::Heterotrophic),
+        ("sea-elf", M::Heterotrophic),
+        ("snow-elf", M::Heterotrophic),
+        ("wood-elf", M::Heterotrophic),
+    ];
+
+    let registry = biosphere_registry();
+
+    let pinned_names: BTreeSet<&str> = PINNED.iter().map(|(name, _)| *name).collect();
+    assert_eq!(
+        pinned_names.len(),
+        PINNED.len(),
+        "PINNED lists {} entries but only {} distinct kind names — a kind is \
+         named twice in this table",
+        PINNED.len(),
+        pinned_names.len()
+    );
+
+    let registry_names: BTreeSet<&str> = registry.iter().map(|(k, _)| k.0).collect();
+    assert_eq!(
+        pinned_names, registry_names,
+        "PINNED and the registry name different kinds (see the symmetric \
+         difference above). This table must name every kind in the registry \
+         exactly once — a kind present in one but not the other can carry an \
+         unnoticed trophic_mode, which is precisely the gap this test \
+         replaced the pairwise-distinctness property to close."
+    );
+
+    for (name, expected) in PINNED {
+        let bio = registry
+            .get_by_label(name)
+            .unwrap_or_else(|| panic!("PINNED names \"{name}\", which the set check above should have caught as absent from the registry"));
+        assert_eq!(
+            bio.trophic_mode, *expected,
+            "\"{name}\" carries {:?}, but PINNED pins {expected:?}. If this \
+             kind's trophic_mode genuinely changed, update PINNED \
+             deliberately and say why in the commit — this table is the only \
+             guard on the trophic axis anywhere in the suite \
+             (`tests/suite/coverage.rs` pins ThermalStrategy only).",
+            bio.trophic_mode
+        );
     }
+
     assert_eq!(
         SANCTIONED.len(),
-        4,
-        "rung 1 declares four sanctioned pairs; if this count moved, re-read this \
+        5,
+        "rung 1 declared four sanctioned pairs and rung 2 adds \
+         (Absent, Chemotrophic); if this count moved again, re-read this \
          test's doc before adjusting the number"
     );
 }
