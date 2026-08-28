@@ -195,6 +195,15 @@ mod tests {
     /// The roster is non-empty and every label is unique — a duplicate label
     /// would make two kinds share one `KindId`, and every fact about either
     /// would key to the same row.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: change `THING_KINDS`'s `"loom"` entry
+    /// to `"log"` (a duplicate of the existing `"log"` row). Red observed:
+    ///
+    /// ```text
+    /// thread 'tests::thing_kind_labels_are_unique' panicked at domains/thing/src/lib.rs:202:13:
+    /// duplicate thing-kind label "log"
+    /// test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out
+    /// ```
     #[test]
     fn thing_kind_labels_are_unique() {
         let mut seen = std::collections::BTreeSet::new();

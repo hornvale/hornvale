@@ -481,10 +481,12 @@ fn detect_d7(c: &Census) -> Vec<Finding> {
     out
 }
 
-/// Every crate under `domains/`, frozen at authoring time (spec §4.4a — 13
-/// crates as of that campaign; 14 with The Chattel's `domains/thing`).
-/// `domain_crates_are_still_exactly_this_list` cross-checks this against the
-/// live tree so it cannot silently drift.
+/// Every crate under `domains/` — 15 as of The Chattel's `domains/thing`
+/// (spec §4.4a authored this list at 13; it had already drifted to 14 with
+/// `person` before this campaign touched it, undetected because this comment
+/// is prose the roster-vs-tree check below has no opinion about).
+/// `domain_crates_are_still_exactly_this_list` cross-checks the roster
+/// itself against the live tree so its CONTENTS cannot silently drift.
 const DOMAIN_CRATES: &[&str] = &[
     "alchemy",
     "astronomy",

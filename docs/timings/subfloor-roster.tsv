@@ -2404,6 +2404,8 @@ hornvale-terrain::suite$tectonic_properties::rift_pin_isolation_supercontinent_c
 hornvale-terrain::suite$tectonic_properties::the_clip_reshapes_real_coastlines_on_seed_42
 hornvale-terrain::suite$tectonic_properties::the_column_is_a_pure_projection_unperturbed_by_pins
 hornvale-terrain::suite$tectonic_properties::the_column_is_deterministic
+hornvale-thing::hornvale_thing$tests::roster_and_registry_agree_in_both_directions
+hornvale-thing::hornvale_thing$tests::thing_kind_labels_are_unique
 hornvale-topology::hornvale_topology$route::tests::a_source_reaches_itself_at_zero_cost
 hornvale-topology::hornvale_topology$route::tests::a_tie_is_broken_by_the_lower_vertex_id_predecessor_not_expansion_order
 hornvale-topology::hornvale_topology$route::tests::a_vertex_with_no_impassable_neighbors_lists_every_neighbor

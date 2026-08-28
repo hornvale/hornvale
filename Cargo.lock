@@ -24,6 +24,7 @@ dependencies = [
  "hornvale-settlement",
  "hornvale-species",
  "hornvale-terrain",
+ "hornvale-thing",
  "hornvale-vessel",
  "hornvale-worldgen",
  "serde",

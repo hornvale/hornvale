@@ -838,7 +838,7 @@ mod tests {
     #[test]
     fn the_kind_roster_is_the_union_of_all_stores() {
         // Spec §4.4: "the biosphere store is the canonical entity set" is
-        // retired — deity/culture/material kinds carry no biosphere row.
+        // retired — deity/culture/material/thing kinds carry no biosphere row.
         let wc = WorldComponents::assemble().unwrap();
         let kinds = wc.kinds();
         for label in [
@@ -846,6 +846,7 @@ mod tests {
             "culture",
             "granite",
             "limestone",
+            "key",
             "owlbear",
             "goblin",
         ] {
@@ -856,7 +857,7 @@ mod tests {
         }
         // Non-species kinds are NOT in the biosphere store (the genesis /
         // placement constraint): genesis must not mint them as species.
-        for label in ["deity", "culture", "granite", "limestone"] {
+        for label in ["deity", "culture", "granite", "limestone", "key"] {
             assert!(wc.biosphere.get_by_label(label).is_none());
         }
         // Ascending order (BTree-backed union).
