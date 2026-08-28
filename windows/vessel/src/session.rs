@@ -2618,6 +2618,12 @@ impl<'w> Session<'w> {
                 "surface" => self.surface(),
                 "delve" => self.delve(),
                 "climb" => self.climb(),
+                // The Latch, Task 5: the act that clears a barred passage.
+                // Gated by the same band guards `delve` carries just above
+                // (`clear_passage`'s own doc explains why), so it is dispatched
+                // beside it rather than beside `enter`/`out`, whose guards
+                // differ.
+                "clear" => self.clear_passage(),
                 "enter" => self.enter(rest),
                 "out" => self.leave(),
                 // Coarse-ward is still refused: possessing a settlement, a culture
@@ -2856,12 +2862,7 @@ impl<'w> Session<'w> {
     /// all. The seam is still worth having for the reason its first sentence
     /// gives, and it is what restricted passage will be tested through.
     fn delve_at(&mut self, vertex: hornvale_kernel::Vertex, cave: hornvale_terrain::Cave) -> Turn {
-        let addr = hornvale_worldgen::chamber::ChamberAddr {
-            vertex,
-            band: hornvale_kernel::Band::Undercroft,
-            branch: 0,
-            level: 0,
-        };
+        let addr = cave_entrance_addr(vertex);
         let overrides = hornvale_worldgen::chamber::ChamberOverrides::new();
         // The chamber lattice is placed by HEAT since `chamber/v2` (spec
         // §4.1), so the same cave reaches a different distance down it
@@ -2924,6 +2925,68 @@ impl<'w> Session<'w> {
             Ok(d) => Turn::Out(format!("You climb back into the light.\n{d}")),
             other => self.out(other),
         }
+    }
+
+    /// Clear the barred passage at the cave mouth here (The Latch, Task 5) —
+    /// the campaign's headline act. Only reachable at a resolvable cave
+    /// mouth on the surface, the same footing `delve` requires, so it shares
+    /// `delve`'s own two early refusals rather than inventing new prose for
+    /// the same two facts about where a body is standing.
+    fn clear_passage(&mut self) -> Turn {
+        if self.inside.is_some() {
+            return Turn::Out("There is nothing to clear from in here.".to_string());
+        }
+        if self.underground.is_some() {
+            return Turn::Out(
+                "You are already below; there is nothing left to clear from down here.".to_string(),
+            );
+        }
+        self.clear_passage_column(self.chamber_column_here())
+    }
+
+    /// [`Self::clear_passage`]'s outcome for an ALREADY-RESOLVED column —
+    /// split out for the same reason [`Self::delve_column`] is: production
+    /// reaches this exactly one way, through `clear_passage` with
+    /// `chamber_column_here()`.
+    fn clear_passage_column(
+        &mut self,
+        column: Option<(hornvale_kernel::Vertex, hornvale_terrain::Cave)>,
+    ) -> Turn {
+        let Some((vertex, _cave)) = column else {
+            return Turn::Out("There is no cave mouth here to clear.".to_string());
+        };
+        self.clear_passage_at(vertex)
+    }
+
+    /// The outcome of clearing at a KNOWN vertex — split out of
+    /// [`Self::clear_passage`] for the same reason [`Self::delve_at`] is:
+    /// the sealed/warded/thin/open decision can then be exercised directly
+    /// against a hand-picked vertex without steering the possession there
+    /// first, which `chamber_column_here`'s own doc explains is impractical.
+    ///
+    /// Reads the barrier through [`crate::passage::effective_state`] — the
+    /// SAME fold `delve_at` consults, against the SAME address
+    /// ([`cave_entrance_addr`]), so a passage this clears is a passage
+    /// `delve_at` then finds open. Commits
+    /// [`crate::passage::cleared_fact`] only for [`hornvale_worldgen::
+    /// BarrierState::Thin`] — [`clear_response`]'s own doc explains why
+    /// `Sealed` and `Warded` do not yield to this act.
+    fn clear_passage_at(&mut self, vertex: hornvale_kernel::Vertex) -> Turn {
+        let addr = cave_entrance_addr(vertex);
+        let barrier = crate::passage::effective_state(
+            &self.ledger,
+            self.world.seed,
+            &addr,
+            self.day,
+            &hornvale_worldgen::BarrierPins::default(),
+        );
+        if barrier == hornvale_worldgen::BarrierState::Thin {
+            let fact = crate::passage::cleared_fact(self.driven_body().entity, &addr, self.day);
+            self.ledger
+                .commit(fact, &self.registry)
+                .expect("PASSAGE_CLEARED is registered every session and non-functional");
+        }
+        Turn::Out(clear_response(barrier))
     }
 
     /// The chamber rendering while underground (The Deep Realm, Task 5) —
@@ -5708,6 +5771,23 @@ fn stratum_word(s: hornvale_climate::Stratum) -> &'static str {
     }
 }
 
+/// The chamber address a cave's entrance names, for whichever verb needs to
+/// key a barrier read or a clearing fact against it (The Latch). Shared by
+/// [`Session::delve_at`] and [`Session::clear_passage_at`] so the two can
+/// never independently drift on what address one vertex resolves to — a
+/// drift here is silent (`addr_key`'s injectivity guarantee only holds
+/// between addresses that are actually equal), and would mean a passage this
+/// campaign clears never opens for the verb that reads it, or opens a
+/// passage nothing barred.
+fn cave_entrance_addr(vertex: hornvale_kernel::Vertex) -> hornvale_worldgen::chamber::ChamberAddr {
+    hornvale_worldgen::chamber::ChamberAddr {
+        vertex,
+        band: hornvale_kernel::Band::Undercroft,
+        branch: 0,
+        level: 0,
+    }
+}
+
 /// The refusal a barred passage gives, naming WHICH barrier turned the body
 /// back — a refusal that named no reason would be indistinguishable from the
 /// no-cave one, which is the thing `delve`'s third outcome exists to be.
@@ -5736,6 +5816,45 @@ fn barred_refusal(barrier: hornvale_worldgen::BarrierState) -> String {
              down; it looks like it would not take much to clear."
         }
         hornvale_worldgen::BarrierState::Open => "The way down is open.",
+    }
+    .to_string()
+}
+
+/// What [`Session::clear_passage_at`] reports for each barrier state — the
+/// full outcome table for `clear`, mirroring [`barred_refusal`]'s shape so
+/// the two verbs read consistently. Whether the state ALSO commits a
+/// [`crate::passage::PASSAGE_CLEARED`] fact is the caller's own decision
+/// (exactly one arm, `Thin`, is paired with a commit); this function only
+/// answers what the player reads.
+///
+/// **Only [`hornvale_worldgen::BarrierState::Thin`] yields to `clear`,** and
+/// that choice is this task's own: `BarrierState`'s doc reads `Sealed` as
+/// "nothing passes" (there is no rubble here for an act of clearing to move)
+/// and `Warded` as passage that "costs something specific and standing" —
+/// and `barred_refusal`'s own `Warded` prose already tells the player
+/// outright "you cannot force it," which a clearing verb that then forced it
+/// open would directly contradict. `Thin`'s own refusal, by contrast, already
+/// promises the outcome this verb delivers ("it looks like it would not take
+/// much to clear").
+/// type-audit: bare-ok(prose: return)
+fn clear_response(barrier: hornvale_worldgen::BarrierState) -> String {
+    match barrier {
+        hornvale_worldgen::BarrierState::Sealed => {
+            "You throw your weight against it, but there is no rubble here to \
+             clear — the stone beyond is unbroken, and clearing has nothing \
+             to move."
+        }
+        hornvale_worldgen::BarrierState::Warded => {
+            "You throw your weight against it, but it is not stone or fall \
+             that holds this dark shut, and no amount of clearing moves it."
+        }
+        hornvale_worldgen::BarrierState::Thin => {
+            "You wedge your shoulder into the rubble and heave; the loose \
+             fall gives way, and the passage down stands clear."
+        }
+        hornvale_worldgen::BarrierState::Open => {
+            "The way down is already clear; there is nothing here to clear."
+        }
     }
     .to_string()
 }
@@ -7823,6 +7942,48 @@ mod tests {
             })
     }
 
+    /// The first cave-bearing vertex whose seeded barrier is EXACTLY `want` —
+    /// The Latch, Task 5's own finder, sharper than
+    /// [`Self::find_barred_cave_vertex`] (which accepts any non-`Open`
+    /// state). `clear_passage_at` distinguishes `Thin` from `Sealed`/
+    /// `Warded` (only the former yields), so a test exercising that
+    /// distinction needs a vertex known to carry ONE specific state, not
+    /// merely "some barred state" — the same scanning discipline
+    /// [`Self::find_barred_cave_vertex`]'s own doc gives for why a
+    /// hard-coded vertex is unsafe against a future terrain epoch.
+    fn find_cave_vertex_with_barrier(
+        terrain: &hornvale_terrain::GeneratedTerrain,
+        seed: Seed,
+        want: hornvale_worldgen::BarrierState,
+    ) -> (hornvale_kernel::Vertex, hornvale_terrain::Cave) {
+        let pins = hornvale_worldgen::BarrierPins::default();
+        terrain
+            .geosphere()
+            .vertices()
+            .filter_map(|vertex| {
+                if terrain.is_ocean(vertex) {
+                    return None;
+                }
+                let cave = terrain.cave_at(vertex)?;
+                let barrier = hornvale_worldgen::barrier_of(
+                    seed,
+                    vertex,
+                    hornvale_kernel::Band::Undercroft,
+                    0,
+                    &pins,
+                );
+                (barrier == want).then_some((vertex, cave))
+            })
+            .next()
+            .unwrap_or_else(|| {
+                panic!(
+                    "no cave found in seed 42's terrain with barrier {want:?} — the fixture \
+                     no longer has the outcome this campaign's clearing verb needs to \
+                     distinguish"
+                )
+            })
+    }
+
     /// The Deep Realm, Task 5 shipped `delve` with THREE distinguishable
     /// outcomes: no cave, a cave whose entrance chamber resolves to nothing
     /// (spec §3.4 rung 0, "the void exists and is unreachable," a real fact
@@ -8002,6 +8163,160 @@ mod tests {
             "no barred cave mouth exists in seed 42's terrain of {caves_examined} \
              cave-bearing vertices examined — restricted passage's third outcome has \
              gone unreachable again"
+        );
+    }
+
+    /// The Latch's own headline, end to end (Task 5, acceptance criteria 1
+    /// and 2): a barred mouth refuses, `clear` clears it, and it stays clear
+    /// for the REST OF THE SESSION — across several turns, including a
+    /// `wait` tick and the NPC activity it drives.
+    ///
+    /// Exercised through [`Session::delve_at`] and
+    /// [`Session::clear_passage_at`] directly — the identical test seam
+    /// `delve_has_three_distinguishable_outcomes` uses, for the identical
+    /// reason: [`Session::chamber_column_here`]'s own doc explains why
+    /// steering the possession to one hand-picked vertex by walking is
+    /// impractical for a test to depend on.
+    ///
+    /// Session lifetime is the only lifetime the engine has (spec section
+    /// 3.1): the session ledger is never written back, so this is
+    /// deliberately NOT a save-boundary test — nothing here reloads the
+    /// world.
+    ///
+    /// MUTATION this must fail against: delete `clear_passage_at`'s
+    /// `self.ledger.commit(fact, &self.registry)` call. The post-clear delve
+    /// then reports the refusal again and the final assertion fires.
+    ///
+    /// Confirmed 2026-08-28: with the commit call deleted, the panic read
+    /// `a cleared passage must let descent through after several turns and a
+    /// wait: The cave mouth is here, but a thin fall of rubble blocks the
+    /// way down; it looks like it would not take much to clear.` — the
+    /// post-clear delve fell straight back to `barred_refusal`'s own `Thin`
+    /// text because `effective_state` never found a `PASSAGE_CLEARED` fact
+    /// to fold over. A genuine behavioural red, not a compile error.
+    #[test]
+    fn a_cleared_passage_stays_open_for_the_rest_of_the_session() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+
+        // 1/2. A vertex whose seeded barrier is specifically `Thin` — the
+        // only state this campaign's clearing act yields to
+        // (`clear_response`'s own doc explains why `Sealed`/`Warded` do
+        // not).
+        let (vertex, cave) = find_cave_vertex_with_barrier(
+            &terrain,
+            world.seed,
+            hornvale_worldgen::BarrierState::Thin,
+        );
+
+        // 3. A pre-clear delve refuses, naming the barrier — acceptance
+        // criterion 1.
+        let refused = match session.delve_at(vertex, cave) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        assert!(
+            refused.contains("thin fall of rubble"),
+            "a Thin barrier's refusal must name it: {refused}"
+        );
+        assert!(
+            session.underground.is_none(),
+            "a barred passage must not set the underground state"
+        );
+
+        // 4. Clear it.
+        let cleared = match session.clear_passage_at(vertex) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("clear must not release"),
+        };
+        assert!(
+            cleared.contains("gives way"),
+            "clearing a Thin barrier must say the rubble gave way: {cleared}"
+        );
+
+        // 5. Take several turns, including one `wait` — the NPC activity a
+        // wait tick drives, plus ordinary looking around, must not touch the
+        // fact just committed.
+        session.handle("look");
+        session.handle("wait");
+        session.handle("look");
+        session.handle("wait");
+
+        // 6. The SAME vertex now lets a delve through — acceptance
+        // criterion 2, and the whole point of the test's own name.
+        let after = match session.delve_at(vertex, cave) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        assert!(
+            session.underground.is_some(),
+            "a cleared passage must let descent through after several turns and a \
+             wait: {after}"
+        );
+        assert!(after.contains("You worm down into the dark"), "{after}");
+    }
+
+    /// **Which barriers yield to `clear` is a design choice, and this test
+    /// is what pins it (Task 5's own brief calls this out by name).** Only
+    /// `Thin` yields — `clear_response`'s doc comment gives the physical
+    /// reasoning — so a `Sealed` mouth must refuse both the clearing act
+    /// itself AND every delve after it, exactly as it did before `clear`
+    /// was ever called.
+    ///
+    /// MUTATION this must fail against: widen `clear_passage_at`'s gate from
+    /// `barrier == BarrierState::Thin` to `barrier != BarrierState::Open`
+    /// (i.e. "everything barred yields"). `clear_passage_at` then commits a
+    /// `PASSAGE_CLEARED` fact for the `Sealed` vertex below, and the
+    /// post-clear delve at the end of this test succeeds where it must
+    /// still refuse.
+    ///
+    /// Confirmed 2026-08-28: under that mutation, the panic read `a Sealed
+    /// passage must still refuse descent after a clear attempt: You worm
+    /// down into the dark. The rock here is the basement rock.` — the
+    /// widened gate committed a clearing fact for the Sealed vertex, and the
+    /// post-clear delve descended where it must still refuse. A genuine
+    /// behavioural red, not a compile error.
+    #[test]
+    fn clearing_a_sealed_passage_does_not_open_it() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+
+        let (vertex, cave) = find_cave_vertex_with_barrier(
+            &terrain,
+            world.seed,
+            hornvale_worldgen::BarrierState::Sealed,
+        );
+
+        let attempt = match session.clear_passage_at(vertex) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("clear must not release"),
+        };
+        assert!(
+            attempt.contains("unbroken"),
+            "clearing a Sealed barrier must say there is nothing to clear: {attempt}"
+        );
+
+        let after = match session.delve_at(vertex, cave) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        assert!(
+            session.underground.is_none(),
+            "a Sealed passage must still refuse descent after a clear attempt: {after}"
+        );
+        assert!(
+            after.contains("barred: choked"),
+            "the post-attempt refusal must still name the Sealed barrier: {after}"
         );
     }
 
