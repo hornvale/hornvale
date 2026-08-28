@@ -829,10 +829,35 @@ fn homophony_count_is_measured_and_pinned() {
     // ALL FOUR were re-measured in one pass, not one per run: these asserts
     // are sequential, so the first failure masks the rest, and only goblin
     // was reported. The other three were read straight out of the new census.
+    //
+    // The Sources' close regen (2026-08-27, canonical census on lefford at
+    // ddacd5716, goldens 58e2558e3, the campaign's own second census —
+    // measured against a merge product that also folds in The Escapement's
+    // tick epoch): goblin 5.884 -> 5.883, bugbear 21.611 -> 21.602;
+    // hobgoblin and kobold are UNMOVED at 6.071 and 6.326 (all four means
+    // are read directly off the regenerated `rows.csv`, cross-checked via
+    // duckdb, not carried forward). The claim this row guards is re-checked,
+    // not assumed: bugbear still leads goblin, 3.6719x (21.602/5.883)
+    // against the prior regen's 3.6728x — narrowed a hair — and hobgoblin
+    // 3.5582x against 3.5597x, also narrowed a hair. Both margins stay far
+    // above the 3x falsification line, so the warning above stands unspent.
+    // The Sources' third census (2026-08-28, canonical census on lefford at
+    // 83fcd1689, goldens 6455f51ce — run picked up after this campaign's own vent-chemotrophy fix
+    // (c4192797b) and its xorn re-pin (a56d91320) landed on the merge
+    // product): goblin 5.883 -> 5.884 and bugbear
+    // 21.602 -> 21.611 both revert to exactly their pre-second-census (The
+    // Foliot) values; hobgoblin and kobold are UNMOVED at 6.071 and 6.326.
+    // The claim this row guards is re-checked, not assumed: bugbear still
+    // leads goblin, 3.6728x (21.611/5.884) against the prior regen's
+    // 3.6719x — widened back to the Foliot figure — and hobgoblin 3.5597x
+    // against 3.5582x, also widened back. Both margins stay far above the
+    // 3x falsification line, so the warning above stands unspent.
     assert!((mg - 5.884).abs() < 1e-9, "goblin mean drifted: {mg}");
     assert!((mh - 6.071).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
     assert!((mb - 21.611).abs() < 1e-9, "bugbear mean drifted: {mb}");
     // kobold 6.113 -> 6.279 (The Granary's re-pin, same mechanism as above).
+    // Unmoved at 6.326 through The Foliot, The Sources' second census, and
+    // The Sources' third census.
     assert!((mk - 6.326).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,

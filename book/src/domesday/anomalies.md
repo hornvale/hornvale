@@ -173,7 +173,7 @@ Score **11**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 
 | `peoples-alive-at-bake-end` | 0.004004004 | 11 |
 | `peoples-placed` | 0.004004004 | 11 |
 | `first-day-pays-tribute-to` | 0.0045045045 | 703106.25 |
-| `per-cell-diversity` | 0.005005005 | 1.368401 |
+| `per-cell-diversity` | 0.005005005 | 1.3724121 |
 | `chorus-distinctiveness` | 0.008008008 | 0.19313131 |
 | `defensibility-capacity-rank-corr` | 0.009009009 | -0.35777447 |
 | `kobold-settlement-count` | 0.0095095095 | 0 |
@@ -328,7 +328,7 @@ Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 c
 | `sediment-volume` | 0.006006006 | 1843581.6 |
 | `mountain-coverage` | 0.008008008 | 0.66179141 |
 | `first-day-occ-cause-fled` | 0.0085170341 | 109575 |
-| `composition-variance` | 0.009009009 | 0.46958048 |
+| `composition-variance` | 0.009009009 | 0.46882903 |
 | `granary-raid-phase-concentration` | 0.01017294 | 1 |
 
 ### Seed `850`

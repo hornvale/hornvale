@@ -898,6 +898,7 @@ hornvale-kernel::hornvale_kernel$ecology::tests::a_capacity_map_accepts_any_non_
 hornvale-kernel::hornvale_kernel$ecology::tests::a_suitability_map_accepts_the_unit_interval_and_rejects_outside_it
 hornvale-kernel::hornvale_kernel$ecology::tests::a_suitability_never_raises_a_capacity
 hornvale-kernel::hornvale_kernel$ecology::tests::a_trailing_zero_weight_axis_does_not_perturb_a_terrestrial_niche
+hornvale-kernel::hornvale_kernel$ecology::tests::chemosynthate_takes_the_next_free_id_and_is_ambient
 hornvale-kernel::hornvale_kernel$ecology::tests::condition_response_floors_and_peaks
 hornvale-kernel::hornvale_kernel$ecology::tests::modulating_a_capacity_by_a_suitability_yields_a_capacity
 hornvale-kernel::hornvale_kernel$ecology::tests::overlap_is_symmetric_unit_diagonal_and_disjoint_zero
@@ -1230,7 +1231,6 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
@@ -1238,6 +1238,7 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neit
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_clamps_a_value_outside_the_census_range
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_is_zero_at_the_extremes_and_half_at_the_median
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::the_log_guard_holds_for_a_real_extreme_holding_world
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::too_few_present_values_is_excluded_with_its_reason
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_count_panics_loudly_on_an_unknown_metric_rather_than_reporting_all_absent
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_values_are_counted_not_skipped
@@ -2193,15 +2194,20 @@ hornvale-terrain::hornvale_terrain$crust::tests::stacked_terranes_saturate_at_th
 hornvale-terrain::hornvale_terrain$crust::tests::supercontinent_no_longer_transforms_the_drawn_craton_set
 hornvale-terrain::hornvale_terrain$crust::tests::terranes_are_drawn_on_continental_margins_and_thicken_crust
 hornvale-terrain::hornvale_terrain$crust::tests::the_rescale_delivers_its_own_budget
+hornvale-terrain::hornvale_terrain$delve::tests::a_bounded_rung_is_evaluated_at_its_delta_t_midpoint
 hornvale-terrain::hornvale_terrain$delve::tests::a_negative_or_nonfinite_delta_t_resolves_to_the_top_rung
 hornvale-terrain::hornvale_terrain$delve::tests::a_rungs_depth_in_metres_varies_by_vertex
 hornvale-terrain::hornvale_terrain$delve::tests::at_one_depth_a_hotter_gradient_sits_further_down_the_ladder
+hornvale-terrain::hornvale_terrain$delve::tests::evaluation_depth_is_monotone_in_the_rung
+hornvale-terrain::hornvale_terrain$delve::tests::evaluation_depth_never_exceeds_the_caves_reach
+hornvale-terrain::hornvale_terrain$delve::tests::nadir_is_evaluated_at_the_caves_own_reach
 hornvale-terrain::hornvale_terrain$delve::tests::rung_at_delta_t_agrees_with_the_declared_ranges
 hornvale-terrain::hornvale_terrain$delve::tests::surface_owns_no_temperature
 hornvale-terrain::hornvale_terrain$delve::tests::the_derived_order_runs_shallow_to_deep
 hornvale-terrain::hornvale_terrain$delve::tests::the_habitable_ceiling_is_the_authored_value
 hornvale-terrain::hornvale_terrain$delve::tests::the_ladder_is_within_the_specs_bound
 hornvale-terrain::hornvale_terrain$delve::tests::the_rungs_tile_the_line_with_no_gap_and_no_overlap
+hornvale-terrain::hornvale_terrain$delve::tests::the_surface_rung_has_no_evaluation_depth
 hornvale-terrain::hornvale_terrain$drainage::tests::accumulation_conserves_land_area_and_is_deterministic
 hornvale-terrain::hornvale_terrain$drainage::tests::drainage_flows_downhill_to_a_wetter_outlet
 hornvale-terrain::hornvale_terrain$elevation::tests::a_single_craton_world_has_a_shelf_and_a_bimodal_hypsometry
@@ -2990,6 +2996,12 @@ hornvale-worldgen::hornvale_worldgen$delve_seating::tests::two_formations_do_not
 hornvale-worldgen::hornvale_worldgen$disposition::tests::an_unclamped_axis_realizes_the_authored_standard_deviation
 hornvale-worldgen::hornvale_worldgen$disposition::tests::the_unit_halfwidth_is_the_square_root_of_three
 hornvale-worldgen::hornvale_worldgen$disposition::tests::the_year_key_rounds_to_the_nearest_whole_year
+hornvale-worldgen::hornvale_worldgen$energy::tests::detrital_import_needs_drainage
+hornvale-worldgen::hornvale_worldgen$energy::tests::every_chemotrophic_source_needs_water
+hornvale-worldgen::hornvale_worldgen$energy::tests::every_source_is_a_ratio
+hornvale-worldgen::hornvale_worldgen$energy::tests::sulphide_oxidation_peaks_at_intermediate_depth
+hornvale-worldgen::hornvale_worldgen$energy::tests::sulphide_oxidation_peaks_in_underdeep_across_the_legal_gradient_range
+hornvale-worldgen::hornvale_worldgen$energy::tests::the_three_silica_sources_peak_at_different_silica
 hornvale-worldgen::hornvale_worldgen$gazetteer::tests::a_volcanos_salt_is_its_bare_vertex_id
 hornvale-worldgen::hornvale_worldgen$gazetteer::tests::the_salt_is_injective_over_class_and_vertex
 hornvale-worldgen::hornvale_worldgen$gazetteer::tests::two_classes_at_one_vertex_do_not_share_a_name
@@ -3493,7 +3505,6 @@ hornvale::suite$lane_sets::every_phase_the_chamber_runs_is_rostered
 hornvale::suite$lane_sets::every_rostered_set_is_well_formed
 hornvale::suite$lane_sets::the_commit_gate_is_local_and_everything_else_is_the_lane
 hornvale::suite$lexicon_guard::a_waiver_needs_a_reason
-hornvale::suite$lexicon_guard::no_vertex_sense_cell_comes_back
 hornvale::suite$lexicon_guard::the_inventory_is_sorted_and_not_empty
 hornvale::suite$lexicon_guard::the_tokenizer_counts_affixed_bare_and_shouting_forms
 hornvale::suite$no_entity_id_values_in_prose::derived_prose_never_reads_an_entity_id_for_its_value
