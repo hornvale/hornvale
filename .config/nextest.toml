@@ -199,23 +199,30 @@ priority = 100
 # to explain why an EMPTY roster is correct here — Task 9 gave this class
 # its first member, `warren_readout.rs::the_blast_radius_readout`, the pole
 # test this whole campaign measures against (465.7 s serial on the canonical
-# box), then a second, `raid_attribution_probe.rs::is_the_raid_proxy_
-# ambiguous_or_is_its_population_stale` (268.2 s serial). Both proven
-# byte-identical to their old serial selves via `HV_SEED_SWEEP_THREADS=1`
-# (stdout diffed line for line on this Mac; the only differences were
-# harness noise — a build timestamp, libtest's own ">60s" progress notice,
-# and the run's own "finished in N.NNs" trailer — never test output).
+# box), then `raid_attribution_probe.rs::is_the_raid_proxy_ambiguous_or_is_
+# its_population_stale` (268.2 s serial), then
+# `tolerance_mutation.rs::zero_dispersion_collapses_between_settlement_
+# variance` (254.7 s serial — its own conversion also inlined a helper
+# function, `population`, into the test body, because the guard below
+# recognises a `map_seeds` call only within the TEXTUAL SPAN of the heavy
+# test that calls it, and `population` was defined earlier in the file,
+# outside that span). All three proven byte-identical to their old serial
+# selves via `HV_SEED_SWEEP_THREADS=1` (stdout diffed line for line on this
+# Mac; the only differences were harness noise — a build timestamp,
+# libtest's own ">60s" progress notice, and the run's own "finished in
+# N.NNs" trailer — never test output).
 #
 # `threads-required = 30` — ONE SHARED WIDTH FOR EVERY MEMBER OF THIS CLASS,
 # not a per-test setting (nextest overrides apply per TABLE, not per test
 # name inside a filter). 30 is the WIDEST converted panel so far
-# (`raid_attribution_probe.rs::SEEDS`, `1..=30`); `warren_readout.rs`'s own
-# panel is narrower (25). Each `map_seeds` caller's own `thread_budget`
-# already clamps its actual OS-thread spawn to `min(available_parallelism,
-# its own seed count)`, so a shared reservation wider than a narrower
-# member's panel is never wrong, only slightly conservative for that member
-# — the reservation is a nextest SCHEDULING budget, not a promise every
-# member spawns exactly that many threads.
+# (`raid_attribution_probe.rs::SEEDS` and `tolerance_mutation.rs::SEEDS`,
+# both `1..=30`); `warren_readout.rs`'s own panel is narrower (25). Each
+# `map_seeds` caller's own `thread_budget` already clamps its actual
+# OS-thread spawn to `min(available_parallelism, its own seed count)`, so a
+# shared reservation wider than a narrower member's panel is never wrong,
+# only slightly conservative for that member — the reservation is a nextest
+# SCHEDULING budget, not a promise every member spawns exactly that many
+# threads.
 #
 # NEITHER OF TASK 1's TWO PROPERTIES APPLIES TO THIS CLASS, DELIBERATELY.
 # It is not in `MARKERS_ALLOWING_MULTIPLE_TABLES`: it does not need MULTIPLE
@@ -228,7 +235,7 @@ priority = 100
 # class needs neither.
 [[profile.default.overrides]]
 # class: sized-sweep
-filter = 'test(/the_blast_radius_readout$/) | test(/is_the_raid_proxy_ambiguous_or_is_its_population_stale$/)'
+filter = 'test(/the_blast_radius_readout$/) | test(/is_the_raid_proxy_ambiguous_or_is_its_population_stale$/) | test(/zero_dispersion_collapses_between_settlement_variance$/)'
 threads-required = 30
 
 # UNUSED since The Sexton (Task 3): `make gate` (the only caller of the
