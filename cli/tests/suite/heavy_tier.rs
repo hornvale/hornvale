@@ -744,6 +744,88 @@ enum ThreadsRequiredKind {
     Bounded,
 }
 
+/// Where an override table starting at `start` (the index of its own
+/// `[[profile.default.overrides]]` header line) ENDS: the next such header,
+/// or the next `[profile.` SECTION header (e.g. `[profile.ci]`), whichever
+/// comes first — never simply "end of file" (The Governor, Task 9,
+/// precondition).
+///
+/// **The bug this replaces, and why it was latent rather than loud.** The
+/// original scan bounded every table at the next
+/// `[[profile.default.overrides]]` header only, via
+/// `block_starts.get(bi + 1).unwrap_or(lines.len())` — so the LAST override
+/// table's block ran all the way to end-of-file, silently absorbing
+/// whatever non-override content came after it. That was harmless while
+/// `# class: wall-clock-budget` was the last table in the file, because
+/// nothing below it (`[profile.ci]`, `[profile.heavy]`) carried a stray
+/// `filter = ` or `threads-required = ` line for the scan to mis-attribute.
+/// Task 8 made `# class: sized-sweep` the new last table, with those same
+/// two profiles still sitting below it — so the LATENT bug is still latent
+/// today, but the next profile section that happens to declare either
+/// setting (for an unrelated reason of its own) would silently corrupt the
+/// sized-sweep table's scan, and nothing would say so.
+fn override_table_end(lines: &[&str], start: usize) -> usize {
+    lines
+        .iter()
+        .enumerate()
+        .skip(start + 1)
+        .find(|(_, l)| {
+            let t = l.trim();
+            t == "[[profile.default.overrides]]" || t.starts_with("[profile.")
+        })
+        .map(|(i, _)| i)
+        .unwrap_or(lines.len())
+}
+
+/// The regression proof for [`override_table_end`]: a `[profile.*]` section
+/// appended after the last override table must never be folded into that
+/// table's scan, even though it is not itself another override header.
+///
+/// **Fails without the fix.** The old inline logic
+/// (`block_starts.get(bi + 1).unwrap_or(lines.len())`) has no notion of a
+/// `[profile.*]` boundary at all — with only one override header in this
+/// synthetic text, it would return `lines.len()` unconditionally, and the
+/// block would swallow `[profile.ci]` whole: the assertions below (no
+/// `[profile.ci]` line in the block, exactly one `filter = ` line) would
+/// both fail against that behaviour.
+#[test]
+fn override_table_end_stops_at_the_next_profile_section_not_just_eof() {
+    let text = "\
+[[profile.default.overrides]]
+# class: alpha
+filter = 'test(/a$/)'
+threads-required = 4
+
+[profile.ci]
+# a profile section appended after the last override table — its settings
+# must never be mistaken for the override table's own.
+filter = 'test(/stray$/)'
+threads-required = \"num-cpus\"
+";
+    let lines: Vec<&str> = text.lines().collect();
+    let start = lines
+        .iter()
+        .position(|l| l.trim() == "[[profile.default.overrides]]")
+        .expect("synthetic text has an override header");
+    let end = override_table_end(&lines, start);
+    let block = &lines[start..end];
+
+    assert!(
+        !block.iter().any(|l| l.trim() == "[profile.ci]"),
+        "the override table's bound must stop before the next `[profile.*]` \
+         section, not swallow it: {block:?}"
+    );
+    assert_eq!(
+        block
+            .iter()
+            .filter(|l| l.trim().starts_with("filter = "))
+            .count(),
+        1,
+        "exactly one `filter = ` line belongs to the override table itself; \
+         found in block {block:?}"
+    );
+}
+
 /// Extracts the sorted, deduped test names from the `filter = 'test(/…/) |
 /// …'` line inside the `.config/nextest.toml` override table(s) tagged
 /// `# class: <marker>` — an INLINE marker line living INSIDE the
@@ -797,8 +879,8 @@ fn pinned_filter_names_for_class(marker: &str, kind: ThreadsRequiredKind) -> Vec
     // stricter one-table invariant).
     let allows_multiple = MARKERS_ALLOWING_MULTIPLE_TABLES.contains(&marker);
     let mut targets: Vec<&[&str]> = Vec::new();
-    for (bi, &start) in block_starts.iter().enumerate() {
-        let end = block_starts.get(bi + 1).copied().unwrap_or(lines.len());
+    for &start in &block_starts {
+        let end = override_table_end(&lines, start);
         let block = &lines[start..end];
         if block.iter().any(|l| l.trim() == class_line) {
             assert!(
