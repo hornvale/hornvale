@@ -1289,7 +1289,6 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::d8_fires_on_exactly_alchemy_
 hornvale-lab::hornvale_lab$domesday::detect::tests::defensibility_capacity_rank_corr_still_exists_in_the_registry
 hornvale-lab::hornvale_lab$domesday::detect::tests::direct_references_match_measured_crates
 hornvale-lab::hornvale_lab$domesday::detect::tests::domain_crates_are_still_exactly_this_list
-hornvale-lab::hornvale_lab$domesday::detect::tests::findings_are_sorted_by_detector_then_metric
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_reads_a_nontrivial_correlation_and_its_sign
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_returns_none_for_a_constant_column
 hornvale-lab::hornvale_lab$domesday::detect::tests::the_live_census_reproduces_the_preregistered_findings
@@ -2810,7 +2809,6 @@ hornvale-vessel::hornvale_vessel$underworld_level::tests::every_level_but_the_fi
 hornvale-vessel::hornvale_vessel$underworld_level::tests::every_walkable_cell_is_reachable_from_every_other
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generate_descent_produces_one_level_per_rung
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generation_is_deterministic
-hornvale-vessel::hornvale_vessel$underworld_level::tests::made_chambers_lean_worked_found_chambers_lean_natural
 hornvale-vessel::hornvale_vessel$underworld_level::tests::stairs_down_and_stairs_up_never_share_a_cell
 hornvale-vessel::hornvale_vessel$underworld_level::tests::two_rungs_with_the_same_origin_and_kind_still_differ
 hornvale-vessel::hornvale_vessel$underworld_level::tests::worked_fraction_has_inertia_across_rungs
@@ -2867,6 +2865,9 @@ hornvale-vessel::suite$lantern_light::light_reaches_exactly_what_sight_reaches
 hornvale-vessel::suite$lantern_light::the_falloff_ratio_between_two_cells_is_inverse_square
 hornvale-vessel::suite$ledger_query_equivalence::facts_of_selects_what_find_and_filter_selected
 hornvale-vessel::suite$object_property_concepts::every_object_property_has_exactly_one_registered_concept
+hornvale-vessel::suite$passage::a_clearing_fact_does_not_open_the_passage_before_it_happened
+hornvale-vessel::suite$passage::addr_key_distinguishes_every_field
+hornvale-vessel::suite$passage::addr_key_spelling_is_the_permanent_on_disk_key
 hornvale-vessel::suite$possess_target::the_default_target_is_the_flagship
 hornvale-vessel::suite$session_snapshot::the_fixture_is_taken_at_the_transcript_s_own_day
 hornvale-vessel::suite$stance::an_unoffended_host_is_forthcoming_whatever_its_prior

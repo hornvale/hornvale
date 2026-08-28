@@ -110,9 +110,22 @@ const SESSION_CONTROL: [&str; 3] = ["release", "quit", "exit"];
 /// Nothing here mechanizes the count — the two runtime rosters above are
 /// the only pair `every_bare_verb_help_lists_is_classified` actually holds
 /// together.
-const IN_CHARACTER_VERBS: [&str; 19] = [
-    "ask", "back", "climb", "consult", "delve", "dive", "enter", "examine", "go", "knows", "look",
-    "map", "needs", "out", "sleep", "surface", "wait", "warm", "write",
+///
+/// **THE DRIFT ABOVE IS NOT HYPOTHETICAL — IT HAPPENED, ONE CAMPAIGN AFTER
+/// THIS DOC WARNED ABOUT IT.** The Latch added `clear` to
+/// [`Session::handle`]'s match and to neither roster, so
+/// `gated_by_the_body("clear")` answered `false` and a SLEEPING body could
+/// clear a barred passage — and `clear` is the only verb in the free band
+/// that WRITES TO THE LEDGER, so the ungated one was the consequential one.
+/// The paired test above could not see it: it holds `HELP` and this roster
+/// together, and `clear` was in neither, so both directions were satisfied
+/// by its absence. That is the shape of this guard's blind zone — it catches
+/// a verb listed in one place and missing from the other, never a verb
+/// missing from both — and it is why `clear_is_refused_while_asleep` exists
+/// beside `warm_is_refused_while_asleep` rather than in place of it.
+const IN_CHARACTER_VERBS: [&str; 20] = [
+    "ask", "back", "clear", "climb", "consult", "delve", "dive", "enter", "examine", "go", "knows",
+    "look", "map", "needs", "out", "sleep", "surface", "wait", "warm", "write",
 ];
 
 /// The provenance a walk-band step commits under (The Deed, Task 7).
@@ -388,6 +401,8 @@ verbs:
   delve            descend into the cave here, if the rock admits
                    one; 'climb' comes back
   climb            return to the surface from underground
+  clear            clear the way down at a barred cave mouth; only a thin
+                   fall of rubble gives, and once cleared it stays cleared
   enter [way]      step inside what is built here; once inside, 'enter further
                    in' goes deeper and 'out' leaves
   out              step back out of doors
@@ -1007,6 +1022,32 @@ impl<'w> Session<'w> {
         registry
             .register_predicate(AGENT_AT, false, "an agent's position on a day")
             .expect("AGENT_AT registers identically every session");
+        // PASSAGE_CLEARED is likewise never registered at genesis (The
+        // Latch): a live-play predicate is minted HERE, per session, beside
+        // AGENT_AT above.
+        //
+        // "Per-session" names WHERE it is registered, NOT how long it lasts,
+        // and this comment said the opposite until the final whole-branch
+        // review — it read "the whole live-play fact layer is session-scoped,
+        // in registry and ledger both", citing a spec section (3.1) that has
+        // since been retired as wrong. Both halves are false:
+        // `Session::into_played_world` moves `self.registry` AND `self.ledger`
+        // into the saved `World`, and `possess --out` writes it (decision
+        // 0368; decision 0171 already ruled a player's acts are not filtered
+        // on the way out).
+        //
+        // Note also that this registration is UNCONDITIONAL — it runs whether
+        // or not anything is ever cleared — so every `--out` world carries
+        // PASSAGE_CLEARED in its registry even with no clearing fact behind
+        // it. Harmless: no committed artifact carries a session registry, and
+        // a registered-but-unused predicate is what AGENT_AT has always been.
+        registry
+            .register_predicate(
+                crate::passage::PASSAGE_CLEARED,
+                false,
+                "a passage this body has cleared",
+            )
+            .expect("PASSAGE_CLEARED registers identically every session");
         // Idempotent (same def every session): never conflicts, since DRANK
         // is never registered at genesis either (spec §3).
         registry
@@ -2604,6 +2645,12 @@ impl<'w> Session<'w> {
                 "surface" => self.surface(),
                 "delve" => self.delve(),
                 "climb" => self.climb(),
+                // The Latch, Task 5: the act that clears a barred passage.
+                // Gated by the same band guards `delve` carries just above
+                // (`clear_passage`'s own doc explains why), so it is dispatched
+                // beside it rather than beside `enter`/`out`, whose guards
+                // differ.
+                "clear" => self.clear_passage(),
                 "enter" => self.enter(rest),
                 "out" => self.leave(),
                 // Coarse-ward is still refused: possessing a settlement, a culture
@@ -2753,15 +2800,20 @@ impl<'w> Session<'w> {
     /// Descend into the cave at this vertex's entrance chamber (The Deep
     /// Realm, Task 5).
     ///
-    /// Mirrors `dive`, but with an extra outcome `dive` never needed — TWO
-    /// today, and it was THREE until The Drift. `dive`'s own doc warns what
-    /// happens when a refusal doesn't name what stopped you: it reads as a
-    /// parse failure rather than a fact about the world. So each outcome
-    /// below is named:
+    /// Mirrors `dive`, but with an extra outcome `dive` never needed — THREE
+    /// again as of The Latch, after a stretch as two following The Drift.
+    /// `dive`'s own doc warns what happens when a refusal doesn't name what
+    /// stopped you: it reads as a parse failure rather than a fact about the
+    /// world. So each outcome below is named:
     ///   1. no cave at this vertex at all — say so;
-    ///   2. a chamber — descend, and say what the rock here is.
+    ///   2. a barred passage — say WHICH barrier turned the body back
+    ///      (`barred_refusal`);
+    ///   3. an open, unbarred chamber — descend, and say what the rock here
+    ///      is.
     ///
-    /// # THE THIRD OUTCOME WAS REMOVED, AND THE CODE STILL CARRIES ITS ARM
+    /// # THE CHAMBER-UNREALIZED OUTCOME WAS REMOVED, AND THE CODE STILL
+    /// # CARRIES ITS ARM — THIS IS A SEPARATE FACT FROM THE BARRIER GATE
+    /// # BELOW, WHICH IS WHAT ACTUALLY RESTORES THE THIRD OUTCOME
     ///
     /// A cave used to be **SEALED** when its own entrance address
     /// (`branch = 0, band = Undercroft, level = 0`) resolved to no chamber —
@@ -2771,21 +2823,22 @@ impl<'w> Session<'w> {
     /// only **51.5%** of the time, which is the 0.5 per-address existence
     /// coin showing through.
     ///
-    /// **The Drift deleted that coin** (spec §4.1), and a sealed cave is now
-    /// **impossible rather than rare**: every cave in shape realizes
-    /// chambers, measured `systems_with_open_mouth == systems` on all three
-    /// panel seeds (874/874, 1681/1681, 1266/1266) and 0 of 48,316 caves
-    /// sealed over thirty worlds. Nathan's ruling (spec amendment B) was to
-    /// accept two outcomes and build **restricted passage** later — locked
-    /// doors, collapses magic can clear, boss encounters, and the rare
-    /// chamber that stays lost with something worth finding
-    /// (`MAP-restricted-passage`).
+    /// **The Drift deleted that coin** (spec §4.1), and this chamber-
+    /// unrealized outcome is **impossible rather than rare**: every cave in
+    /// shape realizes chambers, measured `systems_with_open_mouth ==
+    /// systems` on all three panel seeds (874/874, 1681/1681, 1266/1266) and
+    /// 0 of 48,316 caves sealed over thirty worlds. Nothing in The Latch
+    /// touches `chamber_exists`, so this remains true and the sealed branch
+    /// below stays **live code on an unreachable path**, kept deliberately.
     ///
-    /// The sealed branch below is therefore **live code on an unreachable
-    /// path**, kept deliberately: it is what restricted passage will speak
-    /// through, and `delve_has_two_distinguishable_outcomes` reddens the
-    /// moment a sealed cave becomes possible again while that test still
-    /// claims two.
+    /// **What actually restores the third outcome is a different gate,
+    /// consulted BEFORE this one is ever reached.** `delve_at` now checks
+    /// `crate::passage::effective_state` against the address's seeded
+    /// `BarrierState` and refuses descent for anything short of `Open` — see
+    /// `delve_at`'s own doc comment, and
+    /// `delve_has_three_distinguishable_outcomes` (renamed from
+    /// `delve_has_two_distinguishable_outcomes`), which reddens the moment
+    /// EITHER outcome this comment tracks goes missing.
     fn delve(&mut self) -> Turn {
         if self.inside.is_some() {
             return Turn::Out("There is no rock to delve into in here.".to_string());
@@ -2836,12 +2889,7 @@ impl<'w> Session<'w> {
     /// all. The seam is still worth having for the reason its first sentence
     /// gives, and it is what restricted passage will be tested through.
     fn delve_at(&mut self, vertex: hornvale_kernel::Vertex, cave: hornvale_terrain::Cave) -> Turn {
-        let addr = hornvale_worldgen::chamber::ChamberAddr {
-            vertex,
-            band: hornvale_kernel::Band::Undercroft,
-            branch: 0,
-            level: 0,
-        };
+        let addr = cave_entrance_addr(vertex);
         let overrides = hornvale_worldgen::chamber::ChamberOverrides::new();
         // The chamber lattice is placed by HEAT since `chamber/v2` (spec
         // §4.1), so the same cave reaches a different distance down it
@@ -2852,6 +2900,20 @@ impl<'w> Session<'w> {
         let Some(terrain) = self.wctx.terrain.as_ref() else {
             return Turn::Out("There is no cave here to delve into.".to_string());
         };
+        // The Latch: a barred passage refuses descent even where the lattice
+        // realizes a chamber. This is the first precondition in the tree that
+        // reads committed state — the fold consults the session's own ledger
+        // for a clearing fact, and falls back to the seeded barrier.
+        let barrier = crate::passage::effective_state(
+            &self.ledger,
+            self.world.seed,
+            &addr,
+            self.day,
+            &hornvale_worldgen::BarrierPins::default(),
+        );
+        if barrier != hornvale_worldgen::BarrierState::Open {
+            return Turn::Out(barred_refusal(barrier));
+        }
         let gradient = terrain.geothermal_gradient_at(vertex);
         let column = terrain.column_at(vertex);
         match hornvale_worldgen::chamber::chamber_at(
@@ -2890,6 +2952,68 @@ impl<'w> Session<'w> {
             Ok(d) => Turn::Out(format!("You climb back into the light.\n{d}")),
             other => self.out(other),
         }
+    }
+
+    /// Clear the barred passage at the cave mouth here (The Latch, Task 5) —
+    /// the campaign's headline act. Only reachable at a resolvable cave
+    /// mouth on the surface, the same footing `delve` requires, so it shares
+    /// `delve`'s own two early refusals rather than inventing new prose for
+    /// the same two facts about where a body is standing.
+    fn clear_passage(&mut self) -> Turn {
+        if self.inside.is_some() {
+            return Turn::Out("There is nothing to clear from in here.".to_string());
+        }
+        if self.underground.is_some() {
+            return Turn::Out(
+                "You are already below; there is nothing left to clear from down here.".to_string(),
+            );
+        }
+        self.clear_passage_column(self.chamber_column_here())
+    }
+
+    /// [`Self::clear_passage`]'s outcome for an ALREADY-RESOLVED column —
+    /// split out for the same reason [`Self::delve_column`] is: production
+    /// reaches this exactly one way, through `clear_passage` with
+    /// `chamber_column_here()`.
+    fn clear_passage_column(
+        &mut self,
+        column: Option<(hornvale_kernel::Vertex, hornvale_terrain::Cave)>,
+    ) -> Turn {
+        let Some((vertex, _cave)) = column else {
+            return Turn::Out("There is no cave mouth here to clear.".to_string());
+        };
+        self.clear_passage_at(vertex)
+    }
+
+    /// The outcome of clearing at a KNOWN vertex — split out of
+    /// [`Self::clear_passage`] for the same reason [`Self::delve_at`] is:
+    /// the sealed/warded/thin/open decision can then be exercised directly
+    /// against a hand-picked vertex without steering the possession there
+    /// first, which `chamber_column_here`'s own doc explains is impractical.
+    ///
+    /// Reads the barrier through [`crate::passage::effective_state`] — the
+    /// SAME fold `delve_at` consults, against the SAME address
+    /// ([`cave_entrance_addr`]), so a passage this clears is a passage
+    /// `delve_at` then finds open. Commits
+    /// [`crate::passage::cleared_fact`] only for [`hornvale_worldgen::
+    /// BarrierState::Thin`] — [`clear_response`]'s own doc explains why
+    /// `Sealed` and `Warded` do not yield to this act.
+    fn clear_passage_at(&mut self, vertex: hornvale_kernel::Vertex) -> Turn {
+        let addr = cave_entrance_addr(vertex);
+        let barrier = crate::passage::effective_state(
+            &self.ledger,
+            self.world.seed,
+            &addr,
+            self.day,
+            &hornvale_worldgen::BarrierPins::default(),
+        );
+        if barrier == hornvale_worldgen::BarrierState::Thin {
+            let fact = crate::passage::cleared_fact(self.driven_body().entity, &addr, self.day);
+            self.ledger
+                .commit(fact, &self.registry)
+                .expect("PASSAGE_CLEARED is registered every session and non-functional");
+        }
+        Turn::Out(clear_response(barrier))
     }
 
     /// The chamber rendering while underground (The Deep Realm, Task 5) —
@@ -5674,6 +5798,94 @@ fn stratum_word(s: hornvale_climate::Stratum) -> &'static str {
     }
 }
 
+/// The chamber address a cave's entrance names, for whichever verb needs to
+/// key a barrier read or a clearing fact against it (The Latch). Shared by
+/// [`Session::delve_at`] and [`Session::clear_passage_at`] so the two can
+/// never independently drift on what address one vertex resolves to — a
+/// drift here is silent (`addr_key`'s injectivity guarantee only holds
+/// between addresses that are actually equal), and would mean a passage this
+/// campaign clears never opens for the verb that reads it, or opens a
+/// passage nothing barred.
+fn cave_entrance_addr(vertex: hornvale_kernel::Vertex) -> hornvale_worldgen::chamber::ChamberAddr {
+    hornvale_worldgen::chamber::ChamberAddr {
+        vertex,
+        band: hornvale_kernel::Band::Undercroft,
+        branch: 0,
+        level: 0,
+    }
+}
+
+/// The refusal a barred passage gives, naming WHICH barrier turned the body
+/// back — a refusal that named no reason would be indistinguishable from the
+/// no-cave one, which is the thing `delve`'s third outcome exists to be.
+///
+/// **Deliberately distinct from `delve_at`'s `None`-arm string** ("the rock
+/// beyond is sealed") even for `BarrierState::Sealed`: that arm answers a
+/// different question — an entrance chamber the lattice never realizes at
+/// all, currently unreachable since The Drift deleted the existence coin,
+/// but still live code this refusal must not collide with. Sharing wording
+/// between the two would leave the unrealized-chamber outcome and the barred
+/// outcome reading identically, which is exactly the vacuous-tripwire risk
+/// the spec calls out.
+/// type-audit: bare-ok(prose: return)
+fn barred_refusal(barrier: hornvale_worldgen::BarrierState) -> String {
+    match barrier {
+        hornvale_worldgen::BarrierState::Sealed => {
+            "The cave mouth is here, but the passage beyond is barred: choked \
+             with unbroken stone, with no way through and no way down."
+        }
+        hornvale_worldgen::BarrierState::Warded => {
+            "The cave mouth is here, but something set against passage holds \
+             the dark shut, and you cannot force it."
+        }
+        hornvale_worldgen::BarrierState::Thin => {
+            "The cave mouth is here, but a thin fall of rubble blocks the way \
+             down; it looks like it would not take much to clear."
+        }
+        hornvale_worldgen::BarrierState::Open => "The way down is open.",
+    }
+    .to_string()
+}
+
+/// What [`Session::clear_passage_at`] reports for each barrier state — the
+/// full outcome table for `clear`, mirroring [`barred_refusal`]'s shape so
+/// the two verbs read consistently. Whether the state ALSO commits a
+/// [`crate::passage::PASSAGE_CLEARED`] fact is the caller's own decision
+/// (exactly one arm, `Thin`, is paired with a commit); this function only
+/// answers what the player reads.
+///
+/// **Only [`hornvale_worldgen::BarrierState::Thin`] yields to `clear`,** and
+/// that choice is this task's own: `BarrierState`'s doc reads `Sealed` as
+/// "nothing passes" (there is no rubble here for an act of clearing to move)
+/// and `Warded` as passage that "costs something specific and standing" —
+/// and `barred_refusal`'s own `Warded` prose already tells the player
+/// outright "you cannot force it," which a clearing verb that then forced it
+/// open would directly contradict. `Thin`'s own refusal, by contrast, already
+/// promises the outcome this verb delivers ("it looks like it would not take
+/// much to clear").
+/// type-audit: bare-ok(prose: return)
+fn clear_response(barrier: hornvale_worldgen::BarrierState) -> String {
+    match barrier {
+        hornvale_worldgen::BarrierState::Sealed => {
+            "You throw your weight against it, but there is no rubble here to \
+             clear — the stone beyond is unbroken, and clearing has nothing \
+             to move."
+        }
+        hornvale_worldgen::BarrierState::Warded => {
+            "You throw your weight against it, but it is not stone or fall \
+             that holds this dark shut, and no amount of clearing moves it."
+        }
+        hornvale_worldgen::BarrierState::Thin => {
+            "You wedge your shoulder into the rubble and heave; the loose \
+             fall gives way, and the passage down stands clear."
+        }
+        hornvale_worldgen::BarrierState::Open => {
+            "The way down is already clear; there is nothing here to clear."
+        }
+    }
+    .to_string()
+}
+
 /// Parse a compass token (case-insensitive, long names allowed).
 /// The four bearings a mover may take between CELLS, in `HEADINGS`-ish order:
 /// north first because that is how a reader scans the drawn plan.
@@ -5953,6 +6165,72 @@ mod tests {
             Turn::Released(t) => panic!("warm must not release: {t}"),
         };
         assert_eq!(warmed, "You cannot — you are asleep.");
+    }
+
+    /// `clear` is gated by the body like every other in-character verb (spec
+    /// §2.1/§3.2), and it is the verb for which that mattered most: it is
+    /// the only one in the free band that WRITES TO THE LEDGER, so an
+    /// ungated `clear` meant a sleeping body could commit a
+    /// `PASSAGE_CLEARED` fact — contradicting `HELP`'s own `sleep` line
+    /// ("the body stops obeying until its own cycle wakes it, and only '!'
+    /// verbs answer meanwhile").
+    ///
+    /// **This is the fix, not a precaution.** The Latch shipped `clear` into
+    /// [`Session::handle`]'s match and into neither
+    /// [`IN_CHARACTER_VERBS`] nor [`HELP`], which is exactly the blind zone
+    /// `every_bare_verb_help_lists_is_classified` cannot see (it holds the
+    /// two lists in agreement; a verb absent from both agrees). The final
+    /// whole-branch review found it; the structural test could not.
+    /// Deliberately placed beside `warm_is_refused_while_asleep` rather than
+    /// among the passage tests below, because the pair — one gated verb that
+    /// only speaks, one that commits — is the argument.
+    ///
+    /// MUTATION this must fail against: drop `"clear"` from
+    /// [`IN_CHARACTER_VERBS`] (and its `HELP` line, so
+    /// `every_bare_verb_help_lists_is_classified` stays green and this test
+    /// is the only thing objecting) — precisely the state the branch shipped
+    /// in. Confirmed 2026-08-28 by making that edit and re-running: this
+    /// test reddened BEHAVIOURALLY, not on a compile error, with
+    ///
+    /// ```text
+    /// assertion `left == right` failed
+    ///   left: "There is no cave mouth here to clear."
+    ///  right: "You cannot — you are asleep."
+    /// ```
+    ///
+    /// — the dispatch ran `clear_passage` unrefused and answered from inside
+    /// the handler. Restored, and re-run on a fresh binary: green.
+    #[test]
+    fn clear_is_refused_while_asleep() {
+        let world = seam_world();
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+        let slept = match session.handle("sleep") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("sleep must not release: {t}"),
+        };
+        assert!(
+            !slept.starts_with("No verb"),
+            "`sleep` must be a verb for this test to mean anything: {slept}"
+        );
+        assert_eq!(
+            session.body_state(),
+            BodyState::Asleep,
+            "sanity check: asleep alone must gate as asleep"
+        );
+        let cleared = match session.handle("clear") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("clear must not release: {t}"),
+        };
+        assert_eq!(cleared, "You cannot — you are asleep.");
+        assert!(
+            !session
+                .ledger
+                .iter()
+                .any(|f| f.predicate == crate::passage::PASSAGE_CLEARED),
+            "a refused `clear` must commit nothing: the gate stands in front \
+             of the act, not inside it"
+        );
     }
 
     /// The final whole-branch review's C1: neither test above ever drives
@@ -7635,10 +7913,20 @@ mod tests {
     /// `deep_realm_chamber.rs` (Tasks 2-3) already do for the same reason.
     ///
     /// Shared by [`find_open_cave_vertex`] (which stops at the first open hit)
-    /// and `delve_has_two_distinguishable_outcomes`'s exhaustive sealed-cave
-    /// scan (The Drift, Task 3b), which does not stop early — one derivation
-    /// for both, so the two can never quietly disagree about what "sealed"
-    /// means.
+    /// and `delve_has_three_distinguishable_outcomes`'s exhaustive
+    /// chamber-realization scan (The Drift, Task 3b), which does not stop
+    /// early — one derivation for both, so the two can never quietly
+    /// disagree about what "realized" means.
+    ///
+    /// **Addresses come from [`cave_entrance_addr`], the same constructor
+    /// production uses** (The Latch, Task 7). This helper built its own
+    /// `ChamberAddr` literal until then. The two literals agreed field for
+    /// field, so nothing was wrong — but `addr_key`'s injectivity guarantee
+    /// only holds between addresses that are genuinely equal, so a test
+    /// helper deriving the address independently of production is exactly
+    /// how a later `ChamberAddr` field change would go unnoticed: the helper
+    /// would keep answering about one address while the verb under test
+    /// asked about another.
     fn cave_entrance_states<'a>(
         terrain: &'a hornvale_terrain::GeneratedTerrain,
         seed: Seed,
@@ -7649,12 +7937,7 @@ mod tests {
                 return None;
             }
             let cave = terrain.cave_at(vertex)?;
-            let addr = hornvale_worldgen::chamber::ChamberAddr {
-                vertex,
-                band: hornvale_kernel::Band::Undercroft,
-                branch: 0,
-                level: 0,
-            };
+            let addr = cave_entrance_addr(vertex);
             let is_open = hornvale_worldgen::chamber::chamber_at(
                 seed,
                 &cave,
@@ -7668,24 +7951,146 @@ mod tests {
         })
     }
 
+    /// The SEEDED barrier at a vertex's cave-entrance address — the address
+    /// coming from [`cave_entrance_addr`], the same constructor production
+    /// uses, rather than from a second copy of its fields.
+    ///
+    /// **The Latch's fix wave, closing the other half of Task 7's own
+    /// finding.** Task 7 repointed [`cave_entrance_states`] at
+    /// `cave_entrance_addr` for exactly this reason and left four barrier
+    /// reads in this module still spelling `Band::Undercroft, 0` inline;
+    /// this collapses all four onto one derivation. The hazard is the same
+    /// one that helper's doc names and it is quieter here, because
+    /// [`hornvale_worldgen::barrier_of`] takes loose `(vertex, band,
+    /// branch)` arguments rather than a `ChamberAddr`: a change to where a
+    /// cave's entrance sits would leave these reads type-checking and
+    /// silently answering about a DIFFERENT address than `delve_at` and
+    /// `clear_passage_at` ask about, so every fixture would still be found
+    /// and every assertion would still be about the wrong place.
+    ///
+    /// `barrier_of` consults `vertex`/`band`/`branch` and not `level`, so
+    /// only three of the address's four fields reach it. That is the
+    /// function's own business, not this helper's: passing the fields off
+    /// the shared address is what keeps the two in step whichever fields
+    /// `barrier_of` grows.
+    fn seeded_entrance_barrier(
+        seed: Seed,
+        vertex: hornvale_kernel::Vertex,
+        pins: &hornvale_worldgen::BarrierPins,
+    ) -> hornvale_worldgen::BarrierState {
+        let addr = cave_entrance_addr(vertex);
+        hornvale_worldgen::barrier_of(seed, addr.vertex, addr.band, addr.branch, pins)
+    }
+
     /// The first cave-bearing vertex this seed's terrain places whose entrance
-    /// chamber is realized. Until The Drift (Task 1) deleted
-    /// `chamber_exists`'s 50% existence coin, this function also took a
-    /// `want_open` flag and could be asked for the SEALED counterpart
-    /// instead; that outcome is no longer reachable
-    /// (`delve_has_two_distinguishable_outcomes`'s doc comment records why),
-    /// so the flag is gone rather than kept as a parameter nothing ever
-    /// satisfies.
+    /// chamber is realized AND whose seeded barrier is `Open`. Until The
+    /// Drift (Task 1) deleted `chamber_exists`'s 50% existence coin, this
+    /// function also took a `want_open` flag and could be asked for the
+    /// SEALED counterpart instead; that outcome is no longer reachable
+    /// (`delve_has_three_distinguishable_outcomes`'s doc comment records
+    /// why), so the flag is gone rather than kept as a parameter nothing
+    /// ever satisfies.
+    ///
+    /// **The Latch (Task 4) added the barrier filter.** Before restricted
+    /// passage landed, chamber realization was the whole story (every
+    /// cave-bearing vertex resolves, post-Drift), so the first such vertex
+    /// was as good as any for every caller that wants a WORKING descent.
+    /// That stopped being true the moment `delve_at` started gating on
+    /// `effective_state`: seed 42's terrain barred 639 of 874 cave mouths
+    /// (Task 1's own measurement), so the first cave-bearing vertex in scan
+    /// order is barred more often than not — confirmed directly, it is
+    /// (`Vertex(30)`, `Warded`). Every caller of this finder wants a
+    /// descent that actually succeeds, so "open" now means both facts, not
+    /// just the one this function used to check alone.
     fn find_open_cave_vertex(
         terrain: &hornvale_terrain::GeneratedTerrain,
         seed: Seed,
     ) -> (hornvale_kernel::Vertex, hornvale_terrain::Cave) {
+        let pins = hornvale_worldgen::BarrierPins::default();
         cave_entrance_states(terrain, seed)
-            .find_map(|(vertex, cave, is_open)| is_open.then_some((vertex, cave)))
+            .find_map(|(vertex, cave, is_open)| {
+                let unbarred = seeded_entrance_barrier(seed, vertex, &pins)
+                    == hornvale_worldgen::BarrierState::Open;
+                (is_open && unbarred).then_some((vertex, cave))
+            })
             .unwrap_or_else(|| {
                 panic!(
-                    "no open cave found in seed 42's terrain — the fixture no longer has \
-                     one of the two outcomes this campaign's descent verb needs to \
+                    "no open, unbarred cave found in seed 42's terrain — the fixture no \
+                     longer has one of the outcomes this campaign's descent verb needs to \
+                     distinguish"
+                )
+            })
+    }
+
+    /// The first cave-bearing vertex whose seeded barrier is not `Open` — the
+    /// third outcome's own fixture-independent finder, mirroring
+    /// [`Self::find_open_cave_vertex`]. Scans every cave-bearing vertex in
+    /// the fixture terrain rather than assuming a particular one is barred
+    /// — a hard-coded vertex is a contingency an epoch can falsify, the same
+    /// reason [`Self::find_open_cave_vertex`]'s own doc comment gives for
+    /// scanning rather than steering a walk there.
+    ///
+    /// Reuses `windows/vessel/tests/suite/passage.rs`'s Task 1 loop rather
+    /// than [`cave_entrance_states`]: that helper answers whether an entrance
+    /// CHAMBER resolves, a question The Drift made unconditionally true; this
+    /// answers whether the BARRIER at the same address is `Open`, an
+    /// independent draw `hornvale_worldgen::barrier_of` makes.
+    fn find_barred_cave_vertex(
+        terrain: &hornvale_terrain::GeneratedTerrain,
+        seed: Seed,
+    ) -> (hornvale_kernel::Vertex, hornvale_terrain::Cave) {
+        let pins = hornvale_worldgen::BarrierPins::default();
+        terrain
+            .geosphere()
+            .vertices()
+            .filter_map(|vertex| {
+                if terrain.is_ocean(vertex) {
+                    return None;
+                }
+                let cave = terrain.cave_at(vertex)?;
+                let barrier = seeded_entrance_barrier(seed, vertex, &pins);
+                (barrier != hornvale_worldgen::BarrierState::Open).then_some((vertex, cave))
+            })
+            .next()
+            .unwrap_or_else(|| {
+                panic!(
+                    "no barred cave found in seed 42's terrain — the fixture no longer has \
+                     the barred outcome this campaign's descent verb needs to distinguish"
+                )
+            })
+    }
+
+    /// The first cave-bearing vertex whose seeded barrier is EXACTLY `want` —
+    /// The Latch, Task 5's own finder, sharper than
+    /// [`Self::find_barred_cave_vertex`] (which accepts any non-`Open`
+    /// state). `clear_passage_at` distinguishes `Thin` from `Sealed`/
+    /// `Warded` (only the former yields), so a test exercising that
+    /// distinction needs a vertex known to carry ONE specific state, not
+    /// merely "some barred state" — the same scanning discipline
+    /// [`Self::find_barred_cave_vertex`]'s own doc gives for why a
+    /// hard-coded vertex is unsafe against a future terrain epoch.
+    fn find_cave_vertex_with_barrier(
+        terrain: &hornvale_terrain::GeneratedTerrain,
+        seed: Seed,
+        want: hornvale_worldgen::BarrierState,
+    ) -> (hornvale_kernel::Vertex, hornvale_terrain::Cave) {
+        let pins = hornvale_worldgen::BarrierPins::default();
+        terrain
+            .geosphere()
+            .vertices()
+            .filter_map(|vertex| {
+                if terrain.is_ocean(vertex) {
+                    return None;
+                }
+                let cave = terrain.cave_at(vertex)?;
+                let barrier = seeded_entrance_barrier(seed, vertex, &pins);
+                (barrier == want).then_some((vertex, cave))
+            })
+            .next()
+            .unwrap_or_else(|| {
+                panic!(
+                    "no cave found in seed 42's terrain with barrier {want:?} — the fixture \
+                     no longer has the outcome this campaign's clearing verb needs to \
                      distinguish"
                 )
             })
@@ -7693,44 +8098,84 @@ mod tests {
 
     /// The Deep Realm, Task 5 shipped `delve` with THREE distinguishable
     /// outcomes: no cave, a cave whose entrance chamber resolves to nothing
-    /// (**sealed** — spec §3.4 rung 0, "the void exists and is unreachable,"
-    /// a real fact a later dig could find, not a defect), and a cave with a
-    /// resolved chamber. This test carried that name and asserted all three
-    /// until The Drift.
+    /// (spec §3.4 rung 0, "the void exists and is unreachable," a real fact
+    /// a later dig could find, not a defect), and a cave with a resolved
+    /// chamber. The Drift's §4.1 (Task 1) then deleted the 50% existence
+    /// coin `chamber_exists` gated on, so every cave-bearing vertex's
+    /// entrance chamber realizes unconditionally — measured directly,
+    /// `systems_with_open_mouth == systems` on all three panel seeds
+    /// (874/874, 1681/1681, 1266/1266) — and that chamber-unrealized
+    /// outcome went from rare to **impossible**. This test carried the name
+    /// `delve_has_two_distinguishable_outcomes` from then until The Latch,
+    /// with a two-directional tripwire (the discipline `seam-guard`'s
+    /// STALE-DECL verdict names: a one-directional acknowledgement can only
+    /// ever be satisfied, so it rots) that re-scanned every cave-bearing
+    /// vertex on every run and would redden the moment a chamber-unrealized
+    /// cave became possible again. **That specific outcome is still
+    /// unreachable** — nothing in this campaign touches `chamber_exists`,
+    /// and `delve_at`'s `None` arm stays live, unreachable code for the
+    /// reason its own doc comment gives.
     ///
-    /// **What removed the third outcome.** The Drift's §4.1 deleted the 50%
-    /// existence coin `chamber_exists` gated on — the thing that made a
-    /// realized chamber a coin flip rather than a certainty. With the coin
-    /// gone, every cave inside the lattice's structural shape realizes a
-    /// chamber at every address the five remaining gates admit. Task 1's own
-    /// probe measured this directly rather than assuming it:
-    /// `systems_with_open_mouth == systems` on all three panel seeds —
-    /// 874/874, 1681/1681, 1266/1266. Sealed did not become rare. It became
-    /// **impossible**, and this test's failure (it passed at `69d1f5469`) is
-    /// what caught that a real behaviour change had happened, not a fixture
-    /// going stale on its own.
+    /// **The Latch (Task 4) restored a third outcome through a different
+    /// door: the barrier, not the chamber.** `delve_at` now consults
+    /// `crate::passage::effective_state` before it ever calls `chamber_at`,
+    /// so a cave whose seeded [`hornvale_worldgen::BarrierState`] is not
+    /// `Open` refuses descent even though its entrance chamber would
+    /// resolve fine. Task 1's own census
+    /// (`windows/vessel/tests/suite/passage.rs`) measured 639 of seed 42's
+    /// 874 cave-bearing vertices barred (sealed=215 warded=209 thin=215) —
+    /// the third outcome is the MAJORITY case, not a corner: the very
+    /// first cave-bearing vertex in scan order (`Vertex(30)`) is itself
+    /// `Warded`, which is exactly what caught that
+    /// [`Self::find_open_cave_vertex`] needed its own barrier filter (its
+    /// doc comment records this).
     ///
-    /// **What would restore it.** Restricted passage — locked doors,
-    /// collapses that magic can clear, boss encounters, or the rare chamber
-    /// that stays lost with something worth finding in it (spec §7's
-    /// non-goal, promoted to owed work by AMENDMENT B). That is later
-    /// campaign work, filed in `book/src/frontier/idea-registry.md`; this
-    /// task does not build it.
+    /// **Renamed from `delve_has_two_distinguishable_outcomes`,** whose own
+    /// doc comment predicted this exact rename ("forcing whoever ships
+    /// restricted passage to come rename this test back") — though what
+    /// actually reddened first, once `delve_at`'s barrier gate landed, was
+    /// not the chamber-realization scan (untouched, still zero) but this
+    /// test's own "outcome 2" assertion, which had been silently relying on
+    /// the first chamber-realized vertex also being unbarred. **Keeps the
+    /// scan**, repointed at the fact that is now load-bearing: every
+    /// cave-bearing vertex's barrier is re-derived from
+    /// [`hornvale_worldgen::barrier_of`] on every run, never assumed from
+    /// [`Self::find_barred_cave_vertex`]'s own panic alone, so a fixture
+    /// accident — the barred population going to zero under some future
+    /// terrain epoch — cannot leave this test looking satisfied while
+    /// silently testing nothing.
     ///
-    /// Nathan's ruling (spec AMENDMENT B, B.2): **accept two outcomes**
-    /// until that later campaign lands. Deleting this test instead would
-    /// have removed a permanent guard; renaming it without more would only
-    /// have recorded a fact that never gets checked again. So this
-    /// assertion is two-directional, the discipline `seam-guard`'s
-    /// STALE-DECL verdict names: a one-directional acknowledgement
-    /// ("sealed doesn't happen") can only ever be satisfied, so it rots.
-    /// The scan below re-checks every cave-bearing vertex in the fixture on
-    /// every run and FAILS the moment a sealed cave becomes possible again
-    /// while this test still claims two outcomes — forcing whoever ships
-    /// restricted passage to come rename this test back, rather than
-    /// leaving a stale two-outcome claim sitting here looking satisfied.
+    /// MUTATION this must fail against (added by the fix wave; the review's
+    /// M4 noted this test alone among the campaign's new ones named none,
+    /// and "its red was corroborated mechanically when the gate landed" is a
+    /// weaker record than the neighbouring tests carry): delete
+    /// [`Session::delve_at`]'s barrier gate — the
+    /// `if barrier != BarrierState::Open { return Turn::Out(barred_refusal(
+    /// barrier)) }` block — which is precisely the third outcome this test's
+    /// name claims. The gate is what The Latch added; without it a barred
+    /// mouth descends like an open one, because chamber realization is
+    /// unconditional post-Drift.
+    ///
+    /// Confirmed 2026-08-28, with that block replaced by `let _ = barrier;`
+    /// (deleting it outright leaves `barrier` unbound; the discard is the
+    /// same behaviour and still compiles):
+    ///
+    /// ```text
+    /// a barred passage must not set the underground state: You worm down
+    /// into the dark. The rock here is the regolith.
+    /// ```
+    ///
+    /// — outcome 2's own assertion, firing because the barred vertex
+    /// descended and rendered its chamber. A genuine behavioural red, not a
+    /// compile error; restored and re-run on a fresh binary, green.
+    ///
+    /// **What that mutation does NOT reach, stated so the record is not
+    /// read as wider than it is:** the exhaustive scan at the end of this
+    /// test is a pure read over `barrier_of` and `chamber_at` and is
+    /// untouched by any change to `delve_at`. Its own guard against going
+    /// vacuous is the `caves_examined > 0` assertion, not this mutation.
     #[test]
-    fn delve_has_two_distinguishable_outcomes() {
+    fn delve_has_three_distinguishable_outcomes() {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         let terrain = session
@@ -7741,12 +8186,22 @@ mod tests {
 
         // Outcome 1: no cave at all — asserted through `delve_column(None)`,
         // the branch production reaches when `chamber_column_here` finds
-        // nothing. This read the flagship's own STARTING VERTEX until decision
-        // 0131, a convenience resting on the contingency that that one vertex
-        // happened to be cave-free; the terrain epoch put a cave under it and
-        // falsified that. The other outcome is found by scanning rather than
-        // assumed, so this brings outcome 1 into line with it and leaves the
-        // test independent of where the flagship happens to stand.
+        // nothing. This read the flagship's own STARTING VERTEX until The
+        // Glasshouse (commit 14aa6fbab, 2026-08-14), a convenience resting on
+        // the contingency that that one vertex happened to be cave-free; that
+        // campaign's terrain epoch put a sealed cave under it and falsified
+        // that, and `delve_column` was split out of `delve` so the branch is
+        // reached directly instead. The other outcomes are found by scanning
+        // rather than assumed, so this leaves the test independent of where
+        // the flagship happens to stand.
+        //
+        // NO DECISION COVERS THIS, and the line said "decision 0131" until The
+        // Latch (Task 7) checked it. 0131 is "refuted is a seventh registry
+        // status" and 0134 is "a partition statistic refuted by its own
+        // mechanism is retired" — neither is about a terrain epoch or a
+        // contingent test subject. The event was a test re-pin inside a
+        // campaign, so it is cited as one; a commit is a fact, and inventing a
+        // nearer-looking number would only have moved the error.
         let no_cave = match session.delve_column(None) {
             Turn::Out(t) => t,
             Turn::Released(_) => panic!("delve must not release"),
@@ -7757,7 +8212,20 @@ mod tests {
             "a refused delve must not change the underground state"
         );
 
-        // Outcome 2: a chamber — descend, and `climb` returns.
+        // Outcome 2: a barred passage — descent is refused, naming the
+        // barrier, and the underground state must not move.
+        let (barred_vertex, barred_cave) = find_barred_cave_vertex(&terrain, world.seed);
+        let barred = match session.delve_at(barred_vertex, barred_cave) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        assert!(
+            session.underground.is_none(),
+            "a barred passage must not set the underground state: {barred}"
+        );
+
+        // Outcome 3: an open, unbarred chamber — descend, and `climb`
+        // returns.
         let (open_vertex, open_cave) = find_open_cave_vertex(&terrain, world.seed);
         let open = match session.delve_at(open_vertex, open_cave) {
             Turn::Out(t) => t,
@@ -7765,7 +8233,7 @@ mod tests {
         };
         assert!(
             session.underground.is_some(),
-            "a resolved entrance chamber must set the underground state: {open}"
+            "a resolved, unbarred entrance chamber must set the underground state: {open}"
         );
         let up = match session.handle("climb") {
             Turn::Out(t) => t,
@@ -7777,52 +8245,318 @@ mod tests {
         );
         assert!(up.contains("You climb back into the light"), "{up}");
 
-        // The whole point: the two live outcomes must be told apart.
+        // The whole point: all three live outcomes must be told apart.
+        assert_ne!(
+            no_cave, barred,
+            "no-cave and a barred refusal read identically"
+        );
         assert_ne!(
             no_cave, open,
             "no-cave and a successful descent read identically"
         );
+        assert_ne!(
+            barred, open,
+            "a barred refusal and a successful descent read identically"
+        );
 
-        // The retired third outcome must STAY retired, loudly. Scan every
-        // cave-bearing vertex's entrance address in the fixture terrain and
-        // assert none of them resolves SEALED. Scoped to this one seed
-        // rather than a multi-seed panel: the exhaustive scan already
+        // One exhaustive scan over every cave-bearing vertex, carrying BOTH
+        // guards the prior two-outcome test carried separately — chamber
+        // realization (unchanged by this task, still checked so a future
+        // regression there is still caught here) and the barrier (new).
+        // Non-vacuous by construction and re-derived on every run rather
+        // than trusted from `find_barred_cave_vertex`'s own panic alone: at
+        // least one cave-bearing vertex must carry a non-`Open` barrier, or
+        // outcome 2 above would have exercised a vertex this scan never
+        // independently confirmed is representative of anything. Scoped to
+        // this one seed rather than a multi-seed panel for the same reason
+        // the prior version of this test was: the exhaustive scan already
         // touches every cave-bearing vertex this fixture has, and building
         // further whole worlds to widen it would push this test toward the
-        // heavy tier `the_drift_reachability_baseline`
-        // (`windows/worldgen/tests/suite/drift_reach_probe.rs`) already
-        // measured `systems_with_open_mouth == systems` on — the workspace
-        // gate never runs that tier, which would defeat the point of
-        // pinning this guard where it actually runs.
-        //
-        // Non-vacuous by construction: `caves_examined` must itself be
-        // nonzero, or "zero of zero sealed" would satisfy this assertion by
-        // finding nothing rather than by finding the world genuinely
-        // connected.
+        // heavy tier — the workspace gate never runs that tier, which would
+        // defeat the point of pinning this guard where it actually runs.
+        let pins = hornvale_worldgen::BarrierPins::default();
         let mut caves_examined = 0usize;
-        let mut sealed: Vec<hornvale_kernel::Vertex> = Vec::new();
+        let mut barred_count = 0usize;
+        let mut chamber_unrealized: Vec<hornvale_kernel::Vertex> = Vec::new();
         for (vertex, _cave, is_open) in cave_entrance_states(&terrain, world.seed) {
             caves_examined += 1;
             if !is_open {
-                sealed.push(vertex);
+                chamber_unrealized.push(vertex);
+            }
+            let barrier = seeded_entrance_barrier(world.seed, vertex, &pins);
+            if barrier != hornvale_worldgen::BarrierState::Open {
+                barred_count += 1;
             }
         }
         assert!(
             caves_examined > 0,
             "non-vacuous guard: seed 42's terrain must contain at least one \
-             cave-bearing vertex, or the sealed-cave scan below would pass by \
-             finding nothing rather than by finding the world connected"
+             cave-bearing vertex, or the scans below would pass by finding \
+             nothing rather than by finding the world genuinely connected and \
+             genuinely barred somewhere"
         );
         assert!(
-            sealed.is_empty(),
-            "a SEALED cave exists again ({} of {caves_examined} cave-bearing vertices \
-             examined, e.g. vertex {:?}) — restricted passage has landed. Restore the \
-             third `delve_at` outcome this test used to assert, rename it back to \
-             `delve_has_three_distinguishable_outcomes`, and update its doc comment; \
-             do not leave a two-outcome claim standing once a sealed cave is possible \
-             again",
-            sealed.len(),
-            sealed[0],
+            chamber_unrealized.is_empty(),
+            "a chamber-unrealized cave exists again ({} of {caves_examined} \
+             cave-bearing vertices examined, e.g. vertex {:?}) — `delve_at`'s `None` \
+             arm is reachable once more and its doc comment (and this test's) needs \
+             updating to say so",
+            chamber_unrealized.len(),
+            chamber_unrealized[0],
+        );
+        assert!(
+            barred_count > 0,
+            "no barred cave mouth exists in seed 42's terrain of {caves_examined} \
+             cave-bearing vertices examined — restricted passage's third outcome has \
+             gone unreachable again"
+        );
+    }
+
+    /// The Latch's own headline, end to end (Task 5, acceptance criteria 1
+    /// and 2): a barred mouth refuses, `clear` clears it, and it stays clear
+    /// for the REST OF THE SESSION — across several turns, including a
+    /// `wait` tick and the NPC activity it drives.
+    ///
+    /// Exercised through [`Session::delve_at`] and
+    /// [`Session::clear_passage_at`] directly — the identical test seam
+    /// `delve_has_three_distinguishable_outcomes` uses, for the identical
+    /// reason: [`Session::chamber_column_here`]'s own doc explains why
+    /// steering the possession to one hand-picked vertex by walking is
+    /// impractical for a test to depend on.
+    ///
+    /// **Session-scoped BY CHOICE OF SCOPE, not because persistence is
+    /// impossible** — this paragraph claimed the opposite until the final
+    /// whole-branch review, reading "session lifetime is the only lifetime
+    /// the engine has (spec section 3.1): the session ledger is never
+    /// written back". It is written back:
+    /// [`Session::into_played_world`] moves the evolved ledger AND registry
+    /// into a new `World`, and `possess --out` saves it (decision 0368,
+    /// which retired the spec section this used to cite; decision 0171 rules
+    /// that a player's acts are not filtered on the way out).
+    ///
+    /// What this test asserts is therefore the narrower of two true claims:
+    /// the clearing survives across turns WITHIN one session. The save round
+    /// trip — clear, `--out`, re-possess, delve — is a different test that
+    /// nobody has written, so `passage.rs`'s module doc states it as an
+    /// inference from `agent-at`'s identical mechanism rather than as a
+    /// proven fact, and this test does not reach it either.
+    ///
+    /// MUTATION this must fail against: delete `clear_passage_at`'s
+    /// `self.ledger.commit(fact, &self.registry)` call. The post-clear delve
+    /// then reports the refusal again and the final assertion fires.
+    ///
+    /// Confirmed 2026-08-28: with the commit call deleted, the panic read
+    /// `a cleared passage must let descent through after several turns and a
+    /// wait: The cave mouth is here, but a thin fall of rubble blocks the
+    /// way down; it looks like it would not take much to clear.` — the
+    /// post-clear delve fell straight back to `barred_refusal`'s own `Thin`
+    /// text because `effective_state` never found a `PASSAGE_CLEARED` fact
+    /// to fold over. A genuine behavioural red, not a compile error.
+    #[test]
+    fn a_cleared_passage_stays_open_for_the_rest_of_the_session() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+
+        // 1/2. A vertex whose seeded barrier is specifically `Thin` — the
+        // only state this campaign's clearing act yields to
+        // (`clear_response`'s own doc explains why `Sealed`/`Warded` do
+        // not).
+        let (vertex, cave) = find_cave_vertex_with_barrier(
+            &terrain,
+            world.seed,
+            hornvale_worldgen::BarrierState::Thin,
+        );
+
+        // 3. A pre-clear delve refuses, naming the barrier — acceptance
+        // criterion 1.
+        let refused = match session.delve_at(vertex, cave) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        assert!(
+            refused.contains("thin fall of rubble"),
+            "a Thin barrier's refusal must name it: {refused}"
+        );
+        assert!(
+            session.underground.is_none(),
+            "a barred passage must not set the underground state"
+        );
+
+        // 4. Clear it.
+        let cleared = match session.clear_passage_at(vertex) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("clear must not release"),
+        };
+        assert!(
+            cleared.contains("gives way"),
+            "clearing a Thin barrier must say the rubble gave way: {cleared}"
+        );
+
+        // 5. Take several turns, including one `wait` — the NPC activity a
+        // wait tick drives, plus ordinary looking around, must not touch the
+        // fact just committed.
+        session.handle("look");
+        session.handle("wait");
+        session.handle("look");
+        session.handle("wait");
+
+        // 6. The SAME vertex now lets a delve through — acceptance
+        // criterion 2, and the whole point of the test's own name.
+        let after = match session.delve_at(vertex, cave) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        assert!(
+            session.underground.is_some(),
+            "a cleared passage must let descent through after several turns and a \
+             wait: {after}"
+        );
+        assert!(after.contains("You worm down into the dark"), "{after}");
+    }
+
+    /// **Which barriers yield to `clear` is a design choice, and this test
+    /// is what pins it (Task 5's own brief calls this out by name).** Only
+    /// `Thin` yields — `clear_response`'s doc comment gives the physical
+    /// reasoning — so a `Sealed` mouth must refuse both the clearing act
+    /// itself AND every delve after it, exactly as it did before `clear`
+    /// was ever called.
+    ///
+    /// MUTATION this must fail against: widen `clear_passage_at`'s gate from
+    /// `barrier == BarrierState::Thin` to `barrier != BarrierState::Open`
+    /// (i.e. "everything barred yields"). `clear_passage_at` then commits a
+    /// `PASSAGE_CLEARED` fact for the `Sealed` vertex below, and the
+    /// post-clear delve at the end of this test succeeds where it must
+    /// still refuse.
+    ///
+    /// Confirmed 2026-08-28: under that mutation, the panic read `a Sealed
+    /// passage must still refuse descent after a clear attempt: You worm
+    /// down into the dark. The rock here is the basement rock.` — the
+    /// widened gate committed a clearing fact for the Sealed vertex, and the
+    /// post-clear delve descended where it must still refuse. A genuine
+    /// behavioural red, not a compile error.
+    #[test]
+    fn clearing_a_sealed_passage_does_not_open_it() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+
+        let (vertex, cave) = find_cave_vertex_with_barrier(
+            &terrain,
+            world.seed,
+            hornvale_worldgen::BarrierState::Sealed,
+        );
+
+        let attempt = match session.clear_passage_at(vertex) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("clear must not release"),
+        };
+        assert!(
+            attempt.contains("unbroken"),
+            "clearing a Sealed barrier must say there is nothing to clear: {attempt}"
+        );
+
+        let after = match session.delve_at(vertex, cave) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        assert!(
+            session.underground.is_none(),
+            "a Sealed passage must still refuse descent after a clear attempt: {after}"
+        );
+        assert!(
+            after.contains("barred: choked"),
+            "the post-attempt refusal must still name the Sealed barrier: {after}"
+        );
+    }
+
+    /// The `Warded` half of the same split, and it pins **prose**, not the
+    /// boolean gate. `clearing_a_sealed_passage_does_not_open_it` (above)
+    /// already holds the LOGIC — one `barrier == Thin` test guards both
+    /// non-yielding arms — so this test exists for the thing that test cannot
+    /// see: that `Warded` gets its own words rather than falling back on
+    /// `Sealed`'s.
+    ///
+    /// **That is not a stylistic preference, it is the campaign's own
+    /// consistency argument.** `clear_response`'s doc justifies refusing
+    /// `Warded` by pointing at `barred_refusal`'s `Warded` prose, which tells
+    /// the player outright "you cannot force it" — a clearing verb that then
+    /// forced it would contradict shipped text. A `Warded` clear attempt
+    /// answering in `Sealed`'s vocabulary ("there is no rubble here", "the
+    /// stone beyond is unbroken") would be a *different* contradiction: it
+    /// would tell the player the ward is a rockfall.
+    ///
+    /// MUTATION this must fail against: in `clear_response`, merge the
+    /// `Warded` arm into the `Sealed` arm (`BarrierState::Sealed |
+    /// BarrierState::Warded => "You throw your weight against it, but there
+    /// is no rubble here to clear — ..."`). This type-checks and leaves every
+    /// other test in this module green, because no other assertion reads the
+    /// `Warded` wording.
+    ///
+    /// Confirmed 2026-08-28: under that mutation the panic read `a Warded
+    /// clear attempt must name what actually holds the dark shut: You throw
+    /// your weight against it, but there is no rubble here to clear — the
+    /// stone beyond is unbroken, and clearing has nothing to move.` A genuine
+    /// behavioural red, not a compile error.
+    ///
+    /// **It is the FIRST assertion that fires, not the second, and this note
+    /// is here because the prediction written above the run said otherwise.**
+    /// Both assertions are genuinely load-bearing and they fail in order: the
+    /// positive one ("names the ward") is strictly stronger, since prose could
+    /// avoid `no rubble here` while still failing to name the ward. The
+    /// negative one is kept as the guard against a *reworded* Sealed arm being
+    /// merged in — a mutation the positive assertion alone would still catch,
+    /// but which the pair localises faster.
+    #[test]
+    fn clearing_a_warded_passage_names_the_ward_not_the_rubble() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+
+        let (vertex, cave) = find_cave_vertex_with_barrier(
+            &terrain,
+            world.seed,
+            hornvale_worldgen::BarrierState::Warded,
+        );
+
+        let attempt = match session.clear_passage_at(vertex) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("clear must not release"),
+        };
+        assert!(
+            attempt.contains("not stone or fall"),
+            "a Warded clear attempt must name what actually holds the dark shut: {attempt}"
+        );
+        assert!(
+            !attempt.contains("no rubble here"),
+            "a Warded clear attempt must not answer in Sealed's vocabulary: {attempt}"
+        );
+
+        // And, like `Sealed`, it stays shut: the attempt commits nothing, so
+        // the passage is exactly as barred afterwards as before.
+        let after = match session.delve_at(vertex, cave) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        assert!(
+            session.underground.is_none(),
+            "a Warded passage must still refuse descent after a clear attempt: {after}"
+        );
+        assert!(
+            after.contains("holds the dark shut"),
+            "the post-attempt refusal must still name the Warded barrier: {after}"
         );
     }
 
@@ -7885,11 +8619,63 @@ mod tests {
         assert!(out.contains("no rock to delve into in here"), "{out}");
     }
 
+    /// `clear`'s two early refusals — the same two facts about where a body
+    /// is standing that [`Session::delve`] guards on, which is why
+    /// [`Session::clear_passage`] reuses their shape rather than inventing
+    /// new ones.
+    ///
+    /// **Both arms shipped untested** (the final whole-branch review's M3):
+    /// `delve`'s indoors twin is pinned by
+    /// `delve_refuses_while_inside_a_structure` just above, and `clear`'s two
+    /// had nothing. They are `Turn::Out` early returns, so a regression in
+    /// either would be silent — the verb would fall through to
+    /// `clear_passage_column`, find no cave mouth in a chamber or below
+    /// ground, and answer "There is no cave mouth here to clear.": a
+    /// plausible refusal for the wrong reason, which no other assertion
+    /// would object to. Asserting on the DISTINGUISHING half of each string
+    /// is what makes that substitution visible.
+    #[test]
+    fn clear_refuses_from_inside_a_structure_and_from_underground() {
+        let world = seam_world();
+
+        // Indoors: `descend` into a chamber, the same seam
+        // `delve_refuses_while_inside_a_structure` uses.
+        let (mut inside, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        inside
+            .descend(path_structure(&inside.position(), 2), 0)
+            .expect("a chamber to stand in");
+        let out = match inside.handle("clear") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("clear must not release"),
+        };
+        assert_eq!(out, "There is nothing to clear from in here.");
+
+        // Below ground: reached through `delve_at` against a hand-picked open
+        // cave rather than a walk, for the reason
+        // `lateral_movement_is_refused_underground` gives.
+        let (mut below, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = below.wctx.terrain.clone().expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        below.delve_at(vertex, cave);
+        assert!(
+            below.underground.is_some(),
+            "the fixture must have descended, or the arm below is unreached"
+        );
+        let out = match below.handle("clear") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("clear must not release"),
+        };
+        assert_eq!(
+            out,
+            "You are already below; there is nothing left to clear from down here."
+        );
+    }
+
     /// Lateral movement is refused while underground, and says so
     /// diegetically — mirroring `SUBMERGED_LATERAL_REFUSAL`'s own guard one
     /// realm over. Exercised directly against a hand-picked open cave
     /// (`delve_at`) rather than a walk, for the same reason
-    /// `delve_has_two_distinguishable_outcomes` is.
+    /// `delve_has_three_distinguishable_outcomes` is.
     #[test]
     fn lateral_movement_is_refused_underground() {
         let world = seam_world();
@@ -8829,11 +9615,11 @@ mod tests {
     /// that fact today regardless of what a player types. The conclusion
     /// rests on that; the loop below corroborates it over a roster.
     ///
-    /// **WHAT THIS FIXTURE ACTUALLY EXERCISES IS 12 OF THE 31, NOT 31 —
+    /// **WHAT THIS FIXTURE ACTUALLY EXERCISES IS 12 OF THE 32, NOT 32 —
     /// state that plainly rather than let the roster count imply
     /// otherwise.** Every verb here runs against a session that has just
     /// been `!possess`ed, and a possessed body is exactly what
-    /// `gated_by_the_body` refuses in front of: all 19
+    /// `gated_by_the_body` refuses in front of: all 20
     /// [`IN_CHARACTER_VERBS`] are turned away by the body-state gate BEFORE
     /// their handlers run, so only the 3 [`SESSION_CONTROL`] verbs and the
     /// 9 Group-A operator instruments below reach any dispatch arm at all.
@@ -8844,10 +9630,11 @@ mod tests {
     /// refusal ("another will holds this body"), reported `roster=30
     /// gate-refused=18` — `ask back climb consult delve dive enter examine go
     /// knows look map needs out sleep surface wait write` (The Offer, Task 5,
-    /// added `warm` to [`IN_CHARACTER_VERBS`] afterwards; the count above is
-    /// re-derived arithmetically from that measurement — same 12 ungated
-    /// verbs, one more gated one, 18→19→31 — rather than re-run, since
-    /// `gated_by_the_body`'s own logic is untouched by this addition).
+    /// added `warm` to [`IN_CHARACTER_VERBS`] afterwards, and The Latch's
+    /// fix wave added `clear`; the count above is re-derived arithmetically
+    /// from that measurement — same 12 ungated verbs, two more gated ones,
+    /// 18→19→20 and 30→31→32 — rather than re-run, since
+    /// `gated_by_the_body`'s own logic is untouched by either addition).
     ///
     /// **So this is a weak tripwire, not the tripwire that turns red the
     /// day mortality ships.** If a death terminator ever arrives through an
@@ -8860,14 +9647,15 @@ mod tests {
     ///
     /// The stated denominator (spec §7's own requirement): the full shipped
     /// verb roster this file itself classifies is the SUM of three groups —
-    /// [`IN_CHARACTER_VERBS`] (19, since The Offer's Task 5 added `warm`),
+    /// [`IN_CHARACTER_VERBS`] (20, since The Offer's Task 5 added `warm` and
+    /// The Latch's fix wave added `clear`),
     /// [`SESSION_CONTROL`] (3: `release`/`quit`/`exit`), and the nine
     /// out-of-character-ONLY operator instruments `handle_ooc`'s Group A
     /// dispatches (`why`/`npcs`/`help`/`eyes`/`whoami`/`provoke`/`soothe`/
-    /// `possess`/`unpossess`) — **31** total. Group B's six `!`-twins
+    /// `possess`/`unpossess`) — **32** total. Group B's six `!`-twins
     /// (`!map`/`!examine`/`!needs`/`!wait`/`!look`/`!knows`) are deliberately
     /// NOT counted a second time — [`HELP`]'s own text calls them "the
-    /// out-of-character halves" of verbs already among the 19: the same verb
+    /// out-of-character halves" of verbs already among the 20: the same verb
     /// under the other mood, not a distinct one.
     ///
     /// Each verb runs against its OWN fresh, freshly-possessed session
@@ -8881,7 +9669,7 @@ mod tests {
     /// argument to make it succeed: since no dispatch arm anywhere
     /// constructs the string `"died"` regardless of input, a bare
     /// invocation already covers the whole surface this loop can reach —
-    /// which, per the paragraph above, is the 12 ungated verbs, not the 31
+    /// which, per the paragraph above, is the 12 ungated verbs, not the 32
     /// the roster names.
     #[test]
     fn h2_no_shipped_verb_can_end_a_possession_by_death() {
@@ -8904,11 +9692,11 @@ mod tests {
             .collect();
         assert_eq!(
             roster.len(),
-            31,
-            "the stated denominator: 19 IN_CHARACTER_VERBS + 3 SESSION_CONTROL \
+            32,
+            "the stated denominator: 20 IN_CHARACTER_VERBS + 3 SESSION_CONTROL \
              + 9 Group-A operator instruments the OOC namespace alone \
              dispatches. This pins the ROSTER's size, NOT the exercised \
-             population: under a possessed body the gate refuses all 19 \
+             population: under a possessed body the gate refuses all 20 \
              in-character verbs, so 12 reach a dispatch arm — see this \
              test's doc comment"
         );
