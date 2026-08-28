@@ -202,15 +202,19 @@ review. Adding `LADDER_ENTRIES` is one line. It is also the moment the ladder
 stops being a draft and its rung ids become **append-only forever**, which is
 why nothing in this campaign performs it.
 
-**Unfrozen cuts only one way: append is free, rewiring mid-graph is not.**
-The two closure assertions that pin exact demand sets for r004 and r183
-(`cli/tests/suite/sentence_corpus.rs`) go red the moment a rung is inserted
-*and wired into the middle of the graph* — exactly what the ladder's last
-revision did, 64 rungs placed throughout rather than appended at the end. A
-red there is not a bug: it means the closure genuinely moved and the pinned
-set needs re-deriving from the committed JSON in the same commit. The ladder
-is still unfrozen either way; only its *count* is unpinned, never its
-existing rungs' derived closures.
+**Unfrozen cuts only one way, and the coverage is narrower than it looks.**
+Two closure assertions pin exact demand sets, for r004 and r183
+(`cli/tests/suite/sentence_corpus.rs`). Appending a leaf rung is free. Wiring
+a new rung into **r004's or r183's ancestry** reds the corresponding pin —
+and rewiring anywhere else does not, because **two of 214 closures are
+pinned, not all of them**. A rung wired into r005 leaves the suite green.
+
+A red there is not a bug: it means that closure genuinely moved, and the
+pinned set needs re-deriving from the committed JSON in the same commit. But
+the converse does not hold, and an earlier draft of this paragraph claimed it
+did — asserting the pins catch any mid-graph rewiring, which a mutation
+falsified. The ladder's *count* is unpinned and so is the derived closure of
+every rung outside those two ancestries.
 
 **No realization witness exists for the 353 new entries, and this is the
 largest honest gap the campaign ships.** [The

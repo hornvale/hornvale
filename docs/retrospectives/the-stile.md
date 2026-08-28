@@ -193,6 +193,10 @@ same commit*, rather than mandated: `docs/timings/subfloor-roster.tsv`
 selects tests by exact name, so a split spread across tasks means several
 roster edits and several chances to drop a test silently from the commit
 gate — which is how a predecessor carried a red test for nine tasks. No task
-took the permission, and the file closed at 2,060 lines. That is the accepted
+took the permission, and the file grew past two thousand lines without one.
+(An earlier draft of this sentence gave an exact count. It was stale in the
+commit that wrote it — the same commit grew the file further — which is the
+third wrong count this campaign put in prose, so the count is gone rather
+than corrected a third time.) That is the accepted
 cost; the alternative risked a commit gate running a subset of what it
 claimed.

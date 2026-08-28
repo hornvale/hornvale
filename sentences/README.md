@@ -88,6 +88,24 @@ corpora**, which is a different and larger question: what "covered" should
 mean for a corpus the grammar was never built toward, decided *before* a
 number exists to chase.
 
+**A frozen corpus can carry a superseded claim, and that is a cost of the
+freeze rather than a defect to repair.** `the-flood-watch.corpus.json`'s
+`shape_notes` says the resolver's `Entry` shape "would have to change, and
+that is spec work nobody has approved". That was true when it was authored on
+2026-08-27; decisions 0386 and 0387 then approved and shipped exactly that
+change, and the same field's "the ladder's 139 tokens" is superseded too — the
+ladder now introduces 199.
+
+**Both are deliberately left as authored.** Nothing reads `shape_notes` and
+nothing pins the file's bytes, so an edit would be invisible to every
+mechanism — which is an argument for editing it, and is precisely why the
+answer is no. The freeze's whole purchase is that an annotation can be said to
+predate any score; re-authoring the prose to read as though written today
+spends that. And "prose is editable, data is frozen" is not a boundary anyone
+can hold: `exclusions` encodes what the entry count *means*, and `provenance`
+is the corpus's entire warrant. This file — unfrozen — is where such a
+correction belongs, which is what this paragraph is.
+
 Freezing the data first is the point: each corpus's demand annotation was
 written before any score existed to chase, which is the only order decision
 0016 permits. The distinction between a corpus that is frozen and one that
