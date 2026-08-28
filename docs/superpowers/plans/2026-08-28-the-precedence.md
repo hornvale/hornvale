@@ -376,7 +376,9 @@ The fixture's list order is its entity-id order, so reversing the mass list reve
         //
         // `interleaving_fixture` mints entity ids in list order, so reversing
         // the masses reverses the tie-break while keeping the same two
-        // creatures. Compare as a MULTISET keyed by (mass, predicate, tick):
+        // creatures. Compare as a MULTISET keyed by (mass, predicate, tick,
+        // object, provenance) — the full content of every emission, not just
+        // its shape:
         // the two runs assign the ids oppositely, so comparing by raw
         // `EntityId` would report a difference that is only a relabelling.
         //
@@ -384,7 +386,7 @@ The fixture's list order is its entity-id order, so reversing the mass list reve
         // observe another's mid-tick state, pop order has become semantically
         // load-bearing, and the sort is no longer sufficient — the
         // begin/complete event queue named in the spec is then required.
-        let run = |masses: [f64; 2]| -> Vec<(u64, String, i64)> {
+        let run = |masses: [f64; 2]| -> Vec<(u64, String, i64, String, String)> {
             let (ledger, terrain, npcs) = interleaving_fixture(&masses);
             let mass_of: std::collections::BTreeMap<EntityId, u64> = npcs
                 .iter()
@@ -398,7 +400,7 @@ The fixture's list order is its entity-id order, so reversing the mass list reve
                 day_ticks: None,
                 terrain: &terrain,
             };
-            let mut rows: Vec<(u64, String, i64)> = sys
+            let mut rows: Vec<(u64, String, i64, String, String)> = sys
                 .step(&ledger)
                 .iter()
                 .map(|f| {
@@ -408,6 +410,17 @@ The fixture's list order is its entity-id order, so reversing the mass list reve
                             .expect("every emitter is in the roster"),
                         f.predicate.clone(),
                         f.day.expect("every emitted fact is dated").ticks(),
+                        // The OBJECT and the PROVENANCE, not just the shape.
+                        // `agent-at` carries the destination room and the
+                        // reason it was chosen; the other three predicates
+                        // carry `Flag(true)` and nothing is lost. Without
+                        // these two fields the key is blind to the exact
+                        // regression this guard exists to catch — pop order
+                        // leaking into a creature's ROUTING, which shows up
+                        // as the same creature reaching a DIFFERENT room on
+                        // the same tick under the same predicate.
+                        format!("{:?}", f.object),
+                        f.provenance.clone(),
                     )
                 })
                 .collect();
