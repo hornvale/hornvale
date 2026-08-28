@@ -371,6 +371,22 @@ impl AsRef<AstronomyView> for ClimateView {
     }
 }
 
+#[cfg(test)]
+thread_local! {
+    /// Test-only diagnostic (task 3 of The Governor, mirroring
+    /// `LEX_BUILD_CALLS`): counts calls to [`SettlementView::demography_report`]'s
+    /// uncached build path, i.e. actual `hornvale_worldgen::demography_report_from`
+    /// invocations. A `thread_local`, not a plain `static AtomicUsize`, for the
+    /// same reason `LEX_BUILD_CALLS` is one — nextest is process-per-test
+    /// (`windows/lab/CLAUDE.md`), so a plain `static` is already exclusive to
+    /// one test, but a thread-local also survives if that ever changes to a
+    /// multi-threaded test harness without becoming a cross-test race. Exists
+    /// to let a test measure "one report build per view, not one per metric"
+    /// by counting, not by reading the call graph, and then guard the
+    /// memoised path against silently regressing back to a rebuild per metric.
+    static DEMOGRAPHY_BUILD_CALLS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+}
+
 /// Settlement rung: climate + a world built to settlement depth (spec §4 /
 /// MAP-25). A metric handed a `SettlementView` reads a world whose
 /// religion/culture/species/deep-time facts do not exist yet — the type
@@ -379,6 +395,32 @@ impl AsRef<AstronomyView> for ClimateView {
 pub struct SettlementView {
     /// The climate rung this view extends.
     pub climate: ClimateView,
+    /// This view's own demography report, computed on first demand by
+    /// [`SettlementView::demography_report`] and reused thereafter (task 3
+    /// of The Governor). Two Settlement-rung metrics
+    /// (`per-cell-diversity`, `composition-variance`) each called
+    /// `hornvale_worldgen::demography_report_from` independently against the
+    /// same `(world, components, terrain, climate)` and rebuilt the
+    /// identical report — profiled at 7.58% + 7.53% of census study cycles.
+    ///
+    /// **Scoping is the whole safety argument, so it is stated here, the
+    /// same way [`FullView::lexicon_cache`] states it for its own per-view
+    /// cache.** This field is private, so its lifetime is exactly one
+    /// world's evaluation: `build_row` constructs a `BuiltView` per (seed,
+    /// pin set), applies every metric to it, and drops it. `RefCell` (never
+    /// a `Mutex`) is deliberate: it is `!Sync`, so a view carrying a filled
+    /// cache cannot be shared across the runner's worker threads even by
+    /// accident.
+    ///
+    /// `Option<Result<..>>` rather than caching only the `Ok` payload:
+    /// `BuildError` is not `Clone`, so the whole `Result` — including a
+    /// failed build — is memoised, and a world whose report fails to build
+    /// re-uses that SAME error on every later call instead of re-attempting
+    /// (and re-paying for) the build. Byte-identical to the un-memoised
+    /// path either way, since `demography_report_from` is a pure function
+    /// of this view's own already-committed fields.
+    demography_cache:
+        std::cell::RefCell<Option<Result<hornvale_demography::DemographyReport, BuildError>>>,
 }
 
 impl SettlementView {
@@ -394,7 +436,39 @@ impl SettlementView {
         wc: WorldComponents,
     ) -> Result<SettlementView, BuildError> {
         let climate = ClimateView::build_to(seed, pins, wc, BuildDepth::Settlements)?;
-        Ok(SettlementView { climate })
+        Ok(SettlementView {
+            climate,
+            demography_cache: std::cell::RefCell::new(None),
+        })
+    }
+
+    /// This view's demography report, memoised against
+    /// [`SettlementView::demography_cache`] — see that field's doc for the
+    /// scoping argument. Every settlement-rung metric that needs
+    /// `hornvale_worldgen::demography_report_from` should call this instead
+    /// of the worldgen function directly, so the whole crate shares one
+    /// build per view.
+    // Named construction site (decision 0092): the ONE place this view
+    // calls the derivation entry point; every metric extractor reads the
+    // memoised result back out instead.
+    #[allow(clippy::disallowed_methods)]
+    pub fn demography_report(
+        &self,
+    ) -> std::cell::Ref<'_, Result<hornvale_demography::DemographyReport, BuildError>> {
+        if self.demography_cache.borrow().is_none() {
+            #[cfg(test)]
+            DEMOGRAPHY_BUILD_CALLS.with(|c| c.set(c.get() + 1));
+            let built = hornvale_worldgen::demography_report_from(
+                self.world(),
+                self.components(),
+                self.terrain(),
+                self.climate(),
+            );
+            *self.demography_cache.borrow_mut() = Some(built);
+        }
+        std::cell::Ref::map(self.demography_cache.borrow(), |cached| {
+            cached.as_ref().expect("populated immediately above")
+        })
     }
 
     /// The world ledger, reached through the climate/terrain/astronomy
@@ -491,7 +565,10 @@ impl FullView {
     ) -> Result<FullView, BuildError> {
         let climate = ClimateView::build_to(seed, pins, wc, BuildDepth::Full)?;
         Ok(FullView {
-            settlement: SettlementView { climate },
+            settlement: SettlementView {
+                climate,
+                demography_cache: std::cell::RefCell::new(None),
+            },
             lexicon_cache: std::cell::RefCell::new(std::collections::BTreeMap::new()),
         })
     }
@@ -2412,28 +2489,26 @@ pub fn registry() -> Vec<Metric> {
                    A16a; feeds the A16b β calibration): the mean, over habitable land vertices, \
                    of the demography report's `byproducts.strife` field — already the \
                    per-vertex inverse-Herfindahl diversity 1/Σ frac_s² (1.0 when one species \
-                   dominates a vertex, →N when N species share it evenly). Recomputed via \
-                   `hornvale_worldgen::demography_report_from`, which reconstructs the IDENTICAL \
-                   report the settlement-genesis path builds internally (the shared-assembly \
-                   refactor of task A16a), so this measures the stack the world actually \
-                   ships, not a parallel one. Absent if the report fails to build or the \
-                   world has no habitable vertices",
+                   dominates a vertex, →N when N species share it evenly). Read via \
+                   `SettlementView::demography_report`, the view's own memoised build of \
+                   `hornvale_worldgen::demography_report_from` (task 3 of The Governor: shared \
+                   with `composition-variance` below rather than each rebuilding it), which \
+                   reconstructs the IDENTICAL report the settlement-genesis path builds \
+                   internally (the shared-assembly refactor of task A16a), so this measures the \
+                   stack the world actually ships, not a parallel one. Absent if the report \
+                   fails to build or the world has no habitable vertices",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 1.5, 2.0, 3.0, 4.0, 6.0, 8.0],
             },
             domain: Domain::Settlement,
             role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
-                // Named construction site (decision 0092): a metric extractor
-                // deliberately recomputes the fit per read against already-derived
-                // artifacts (documented in the metric's doc string above).
-                #[allow(clippy::disallowed_methods)]
-                let Ok(report) = hornvale_worldgen::demography_report_from(
-                    v.world(),
-                    v.components(),
-                    v.terrain(),
-                    v.climate(),
-                ) else {
+                // Reads the view's own memoised report (task 3 of The
+                // Governor) rather than deriving one — see
+                // `SettlementView::demography_report`'s doc for the
+                // construction site and scoping argument.
+                let cached = v.demography_report();
+                let Ok(report) = &*cached else {
                     return MetricValue::Absent;
                 };
                 let geo = v.terrain().geosphere();
@@ -2459,26 +2534,24 @@ pub fn registry() -> Vec<Metric> {
                    `stack_settlements`, of each species' composition fraction. 0.0 iff \
                    every settlement has the identical species mix (the pre-Niche \
                    'oatmeal' — one flat blend worldwide); > 0 when composition varies \
-                   across space (species dominant in different strongholds). Recomputed \
-                   via `hornvale_worldgen::demography_report_from` (the niche-differentiated \
-                   coexistence shadow). Absent if the report fails to build or the world \
-                   has fewer than 2 settlements",
+                   across space (species dominant in different strongholds). Read via \
+                   `SettlementView::demography_report`, the view's own memoised build of \
+                   `hornvale_worldgen::demography_report_from` (the niche-differentiated \
+                   coexistence shadow) — shared with `per-cell-diversity` above rather than \
+                   each rebuilding it (task 3 of The Governor). Absent if the report fails to \
+                   build or the world has fewer than 2 settlements",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.005, 0.01, 0.02, 0.05, 0.1],
             },
             domain: Domain::Settlement,
             role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
-                // Named construction site (decision 0092): a metric extractor
-                // deliberately recomputes the fit per read against already-derived
-                // artifacts (documented in the metric's doc string above).
-                #[allow(clippy::disallowed_methods)]
-                let Ok(report) = hornvale_worldgen::demography_report_from(
-                    v.world(),
-                    v.components(),
-                    v.terrain(),
-                    v.climate(),
-                ) else {
+                // Reads the view's own memoised report (task 3 of The
+                // Governor) rather than deriving one — see
+                // `SettlementView::demography_report`'s doc for the
+                // construction site and scoping argument.
+                let cached = v.demography_report();
+                let Ok(report) = &*cached else {
                     return MetricValue::Absent;
                 };
                 let settlements = &report.stack_settlements;
@@ -15331,6 +15404,34 @@ mod tests {
             calls, 15,
             "expected one lexicon build per species (15), shared across all three metric \
              families by FullView's per-view cache — {calls} means the memoisation regressed"
+        );
+    }
+
+    /// **Confirms, by direct measurement, the redundant-build finding this
+    /// task's report names and then guards the fix against regressing**
+    /// (task 3 of The Governor, mirroring
+    /// `felt_testimony_metrics_share_one_lexicon_build_per_species` above).
+    /// Before memoisation, evaluating both `per-cell-diversity` and
+    /// `composition-variance` on the same view called
+    /// `hornvale_worldgen::demography_report_from` **twice** — each metric's
+    /// extractor built its own report, profiled at 7.58% + 7.53% of census
+    /// study cycles. After `SettlementView::demography_report`'s memoised
+    /// body, it is **once**: both metrics read the same cached report. A
+    /// future change that reintroduces a second uncached path (a metric
+    /// bypassing `demography_report`, or a cache that gets rebuilt) would
+    /// move this number back toward 2, and this test would catch it.
+    #[test]
+    fn demography_metrics_share_one_report_build_per_view() {
+        DEMOGRAPHY_BUILD_CALLS.with(|c| c.set(0));
+        let view = SettlementView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Settlement(view);
+        let _ = extract_from(&built, "per-cell-diversity");
+        let _ = extract_from(&built, "composition-variance");
+        let calls = DEMOGRAPHY_BUILD_CALLS.with(|c| c.get());
+        assert_eq!(
+            calls, 1,
+            "expected one demography report build shared by both metrics — {calls} means the \
+             memoisation regressed"
         );
     }
 }
