@@ -4929,6 +4929,45 @@ impl<'a> DriveMovements<'a> {
             }
             queue.insert((next, e));
         }
+        // THE LEDGER'S CHRONOLOGY IS NOT THE POP ORDER (The Precedence,
+        // decision 0376, spec section 3). The queue pops creatures by when
+        // an action BEGINS; every fact above is stamped at the instant its
+        // action ENDS. Those two orderings differ by the population's cost
+        // spread whenever creatures act at different tempos — measured at
+        // 10,014 ticks on the real seed-42 population, against an invariant
+        // that allowed one tick.
+        //
+        // Sorting here is not a patch on the queue's output: it IS the
+        // queue's only cross-entity product. Pop order affects nothing else
+        // observable — every `occupancy` access is keyed by the creature's OWN
+        // entity, and perception is built from `frozen` before anyone moves —
+        // which `the_queues_tie_break_decides_nothing_but_order` asserts, and
+        // which will fail loudly the day that stops being true.
+        //
+        // Sound because a tick is a CLOSED WINDOW: nothing may be dated
+        // outside `[from, to]`, so reordering within it can never need to
+        // reach past a fact an earlier tick emitted. That watermark is
+        // asserted by `every_emitted_fact_is_dated_inside_the_tick_that_emitted_it`.
+        //
+        // `sort_by_key` on `Option<WorldTime>` is a STABLE, EXACT INTEGER
+        // comparison — `WorldTime` is an `i64` tick count with a derived `Ord`
+        // (decision 0186), so no float enters the ordering. Stability is
+        // load-bearing twice over: a creature's own facts are already
+        // monotone and stay in place, and cross-entity ties keep the entity-id
+        // order the queue chose, which is what keeps the emitted sequence a
+        // pure function of the frozen ledger rather than of the input vector.
+        // `decide_step` reads this vector mid-tick, but filters to its own
+        // subject and sorts what it finds, so it cannot observe this at all.
+        //
+        // `Option`'s derived `Ord` sorts `None` FIRST, before any `Some`, so
+        // an undated fact would be silently hoisted to the head of the tick
+        // rather than left in place or pushed to the end. Unreachable today:
+        // all four fact constructors in this module (`agent_at_fact`,
+        // `drank_fact`, `rested_fact`, `eaten_fact`) set `day: Some(...)`
+        // unconditionally. A future emission path that skips one of them —
+        // or constructs a `Fact` directly with `day: None` — would not fail
+        // loudly here; it would just reorder silently.
+        out.sort_by_key(|f| f.day);
         (out, occupancy)
     }
 }
@@ -7690,6 +7729,56 @@ mod tests {
     }
 
     #[test]
+    fn every_emitted_fact_is_dated_inside_the_tick_that_emitted_it() {
+        // THE SORT'S PRECONDITION (The Precedence, spec §5 guard 2). Making
+        // the emitted stream chronological by sorting it is correct only
+        // because a tick is a CLOSED WINDOW: no fact may be dated outside
+        // `[from, to]`, so reordering within the window can never need to
+        // reach back past a fact an earlier tick already emitted. That is the
+        // watermark the whole design rests on, and it was previously assumed
+        // rather than asserted.
+        //
+        // DIRECTION THIS ENFORCES: `emitted` is a subset of the window. It is
+        // blind to a fact the walk DECLINED to emit — a step past `to` returns
+        // early and commits nothing, which this cannot see and does not claim
+        // to.
+        //
+        // Three masses, so the population genuinely falls out of step — the
+        // INTENT of picking three widely-separated masses over `interleaving_fixture`'s
+        // usual two is to exercise the jump arms (`hold_step`'s closed form,
+        // `next_awake_day`'s sleep jump) rather than merely have them present
+        // in the binary. Nothing in this test verifies that either arm is
+        // actually taken (no counter, no branch coverage, no arm-specific
+        // assertion) — stated here as intent, not as a checked fact.
+        let (ledger, terrain, npcs) = interleaving_fixture(&[4.375, 70.0, 1_120.0]);
+        let from = WorldTime::from_std_days(1.0).expect("a day value is finite");
+        let to = WorldTime::from_std_days(20.0).expect("a day value is finite");
+        let sys = DriveMovements {
+            npcs,
+            from,
+            to,
+            params: SUSTENANCE,
+            day_ticks: None,
+            terrain: &terrain,
+        };
+        let facts = sys.step(&ledger);
+        assert!(
+            !facts.is_empty(),
+            "the fixture emitted nothing; it cannot pin a window"
+        );
+        for f in &facts {
+            let d = f.day.expect("every emitted fact is dated");
+            assert!(
+                d >= from && d <= to,
+                "`{}` at {d:?} fell outside the tick's window [{from:?}, {to:?}] — \
+                 the sort in `step_with_occupancy` is only sound inside a closed \
+                 window, so this is a design refutation, not a test to relax",
+                f.predicate
+            );
+        }
+    }
+
+    #[test]
     fn a_faster_creature_acts_more_often_between_a_slower_ones_actions() {
         // INTERLEAVING, OBSERVABLY. Two creatures sixteen-fold apart in mass are
         // exactly two-fold apart in tempo (`16 ^ 0.25 == 2`), so the lighter one
@@ -7697,52 +7786,264 @@ mod tests {
         // clock its facts must appear BETWEEN the heavier one's; under the old
         // sequential loop they appeared entirely before them.
         //
-        // The assertion counts SWITCHES of subject along the emitted sequence.
-        // The sequential loop scores exactly one (all of A, then all of B) for
-        // any pair, however far apart in tempo; a scheduler scores many. `>= 2`
-        // is therefore the smallest threshold the old loop cannot reach.
-        let (ledger, terrain, npcs) = interleaving_fixture(&[4.375, 70.0]);
-        let sys = DriveMovements {
-            npcs,
-            from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
-            to: WorldTime::from_std_days(20.0).expect("a day value is finite"),
+        // BOTH MASS ORDERS (The Precedence). `interleaving_fixture` mints entity
+        // ids in the order the masses are listed, so the list order IS the
+        // queue's tie-break order. This test used to run only `[4.375, 70.0]`,
+        // which hands the FAST creature the lower id — so at every tie the
+        // cheaper action was emitted first and the inversion below could not
+        // show. Swapping the order was worth 9,925 ticks against a one-tick
+        // tolerance. The fixture must not depend on which creature is lighter.
+        for masses in [[4.375_f64, 70.0], [70.0, 4.375]] {
+            let (ledger, terrain, npcs) = interleaving_fixture(&masses);
+            let sys = DriveMovements {
+                npcs,
+                from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+                to: WorldTime::from_std_days(20.0).expect("a day value is finite"),
+                params: SUSTENANCE,
+                day_ticks: None,
+                terrain: &terrain,
+            };
+            let facts = sys.step(&ledger);
+            let seq: Vec<EntityId> = facts
+                .iter()
+                .filter(|f| f.predicate == AGENT_AT)
+                .map(|f| f.subject)
+                .collect();
+            // The assertion counts SWITCHES of subject along the emitted
+            // sequence. The sequential loop scores exactly one (all of A, then
+            // all of B) for any pair, however far apart in tempo; a scheduler
+            // scores many. `>= 2` is the smallest threshold the old loop
+            // cannot reach.
+            let switches = seq.windows(2).filter(|w| w[0] != w[1]).count();
+            assert!(
+                switches >= 2,
+                "the two creatures never interleave (masses={masses:?}, \
+                 switches={switches}, seq={seq:?}) — the queue is not \
+                 scheduling, it is still walking each in turn"
+            );
+            // And the emitted days run forward on ONE timeline, EXACTLY.
+            //
+            // This assertion carried a one-tick tolerance until The Precedence,
+            // justified as "creatures tied at the same rounded tick are
+            // separated by entity id and their exact `f64` days then differ
+            // within that tick." That rationale was false, and the tolerance
+            // was never bounding the quantity that actually varies: the queue
+            // pops by when an action BEGINS while every fact is stamped at the
+            // instant it ENDS, so an emission could precede the running max by
+            // the population's whole COST SPREAD — 9,925 ticks in this very
+            // fixture, and 10,014 on the real seed-42 population.
+            //
+            // `step_with_occupancy` now sorts its emissions by day, so this is
+            // exact and needs no allowance. A tolerance here would silently
+            // re-admit the defect.
+            let mut prev: Option<WorldTime> = None;
+            for f in &facts {
+                let d = f.day.expect("every emitted fact is dated");
+                if let Some(p) = prev {
+                    assert!(
+                        d >= p,
+                        "`{}` at {d:?} went back past {p:?} (masses={masses:?}) — \
+                         the emitted stream is not chronological",
+                        f.predicate
+                    );
+                }
+                prev = Some(d);
+            }
+        }
+    }
+
+    #[test]
+    fn the_queues_tie_break_decides_nothing_but_order() {
+        // THE PRECEDENCE'S LOAD-BEARING PRECONDITION. Sorting the emitted
+        // stream by day is a sufficient fix ONLY because pop order affects
+        // nothing else observable: every `occupancy` access is keyed by the
+        // creature's own entity, and perception (`alarm`, hazard memory,
+        // belief seeding) is built from `frozen` BEFORE anyone moves. So two
+        // populations that differ only in which creature wins a tie must
+        // produce the SAME FACTS.
+        //
+        // `interleaving_fixture` mints entity ids in list order, so reversing
+        // the masses reverses the tie-break while keeping the same two
+        // creatures. Compare as a MULTISET keyed by (mass, predicate, tick,
+        // object, provenance) — the full content of every emission, not just
+        // its shape:
+        // the two runs assign the ids oppositely, so comparing by raw
+        // `EntityId` would report a difference that is only a relabelling.
+        //
+        // WHEN THIS FAILS, DO NOT RELAX IT. It means a creature has begun to
+        // observe another's mid-tick state, pop order has become semantically
+        // load-bearing, and the sort is no longer sufficient — the
+        // begin/complete event queue named in the spec is then required.
+        // ANOTHER BOUNDARY CONDITION THE KEY LEAVES UNNAMED: `mass_of`
+        // collapses to the rounded mass in millgrams, so two creatures of
+        // EQUAL mass collide in this key and the guard would then be blind
+        // to which of the two did what — a real regression could hide behind
+        // an accidental mass tie. The fixture below uses 4.375 and 70.0,
+        // which differ, so this does not bite today; keying on mass rather
+        // than entity id is deliberate (it is what survives the id-swap
+        // between the forward and reversed runs), so the fix is not to
+        // change the key but to keep the fixture's masses distinct.
+        let run = |masses: [f64; 2]| -> Vec<(u64, String, i64, String, String)> {
+            let (ledger, terrain, npcs) = interleaving_fixture(&masses);
+            let mass_of: std::collections::BTreeMap<EntityId, u64> = npcs
+                .iter()
+                .map(|n| (n.entity, (n.mass_kg * 1000.0).round() as u64))
+                .collect();
+            let sys = DriveMovements {
+                npcs,
+                from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+                to: WorldTime::from_std_days(20.0).expect("a day value is finite"),
+                params: SUSTENANCE,
+                day_ticks: None,
+                terrain: &terrain,
+            };
+            let mut rows: Vec<(u64, String, i64, String, String)> = sys
+                .step(&ledger)
+                .iter()
+                .map(|f| {
+                    (
+                        *mass_of
+                            .get(&f.subject)
+                            .expect("every emitter is in the roster"),
+                        f.predicate.clone(),
+                        f.day.expect("every emitted fact is dated").ticks(),
+                        // The OBJECT and the PROVENANCE, not just the shape.
+                        // `agent-at` carries the destination room and the
+                        // reason it was chosen; the other three predicates
+                        // carry `Flag(true)` and nothing is lost. Without
+                        // these two fields the key is blind to the exact
+                        // regression this guard exists to catch — pop order
+                        // leaking into a creature's ROUTING, which shows up
+                        // as the same creature reaching a DIFFERENT room on
+                        // the same tick under the same predicate.
+                        format!("{:?}", f.object),
+                        f.provenance.clone(),
+                    )
+                })
+                .collect();
+            rows.sort();
+            rows
+        };
+        let forward = run([4.375, 70.0]);
+        let reversed = run([70.0, 4.375]);
+        assert!(
+            !forward.is_empty(),
+            "the fixture emitted nothing; it cannot pin a tie-break"
+        );
+        // A CARDINALITY FLOOR, not just non-empty. `!is_empty()` alone would
+        // still pass if a future change made the reversal stop perturbing
+        // pop order at all (e.g. by making the walk deterministic in a way
+        // that no longer routes through the tie-break), since a single
+        // leftover emission satisfies it while asserting nothing about
+        // whether ties are actually being exercised. This fixture over days
+        // 1..20 measures 300 emitted facts; 20 is well below that so the
+        // floor stays cheap to satisfy while still catching a fixture that
+        // has gone degenerate (emitting only a handful of facts, or none of
+        // the interleaving this test exists to probe).
+        assert!(
+            forward.len() >= 20,
+            "the fixture emitted only {} facts (expected ~300) — it may no \
+             longer be exercising the tie-break this test probes",
+            forward.len()
+        );
+        assert_eq!(
+            forward, reversed,
+            "reversing the queue's tie-break changed WHAT happened, not just \
+             the order it was reported in — pop order has become semantically \
+             load-bearing and sorting the emissions is no longer a sufficient fix"
+        );
+    }
+
+    #[test]
+    fn facts_are_chronological_across_consecutive_ticks() {
+        // THE SORT'S OTHER HALF (The Precedence review, finding F1). Sorting
+        // `step_with_occupancy`'s own output makes ONE tick chronological.
+        // That only makes the WHOLE emitted stream chronological if a second
+        // premise also holds: consecutive ticks' `[from, to]` windows do not
+        // overlap. `every_emitted_fact_is_dated_inside_the_tick_that_emitted_it`
+        // covers the first half (every fact lands inside ITS OWN tick's
+        // window) but is structurally blind to the second — a single call
+        // cannot see a neighbouring tick at all. This test drives two
+        // consecutive ticks the way the production callers do (`health.rs`'s
+        // `run_simulation` loop: `from: day, to: day + 1.0`, then `day +=
+        // 1.0`; `Session::wait` likewise sets the next tick's `from` to the
+        // previous tick's `to`) and checks the composite property that
+        // actually matters: the concatenation of both ticks' emissions is
+        // non-decreasing in `day`, start to finish.
+        //
+        // The first tick's facts are committed into the ledger before the
+        // second tick runs, exactly as both real callers do — `step_with_occupancy`
+        // reads `frozen` fresh each call and reflects nothing from a call
+        // that never landed in the ledger. Unlike the single-tick guards
+        // above, this test actually COMMITS what it emits, so the registry
+        // needs every predicate `DriveMovements` can produce, not just
+        // `agent-at` — a two-day span is long enough for a creature to rest.
+        let reg = {
+            let mut r = agent_at_reg();
+            r.register_predicate(DRANK, false, "drank").unwrap();
+            r.register_predicate(RESTED, false, "rested").unwrap();
+            r.register_predicate(EATEN, false, "eaten").unwrap();
+            r
+        };
+        let (ledger, terrain, npcs) = interleaving_fixture(&[4.375, 70.0, 1_120.0]);
+        let mut mesh_memo = RoomMeshMemo::new();
+        let mut home_nav_cache = HomeNavCache::new();
+
+        let day1_from = WorldTime::from_std_days(1.0).expect("a day value is finite");
+        let day1_to = WorldTime::from_std_days(2.0).expect("a day value is finite");
+        let sys1 = DriveMovements {
+            npcs: npcs.clone(),
+            from: day1_from,
+            to: day1_to,
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &terrain,
         };
-        let facts = sys.step(&ledger);
-        let seq: Vec<EntityId> = facts
-            .iter()
-            .filter(|f| f.predicate == AGENT_AT)
-            .map(|f| f.subject)
-            .collect();
-        let switches = seq.windows(2).filter(|w| w[0] != w[1]).count();
+        let (facts1, _occ1) =
+            sys1.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
         assert!(
-            switches >= 2,
-            "the two creatures never interleave (switches={switches}, seq={seq:?}) — \
-             the queue is not scheduling, it is still walking each in turn"
+            !facts1.is_empty(),
+            "the fixture's first tick emitted nothing; it cannot pin cross-tick order"
         );
-        // And the emitted days run forward on ONE timeline — up to the tick,
-        // which is the resolution the schedule actually orders at. The sequential
-        // loop jumped the full interval backwards at its single handover (the
-        // second creature restarted at `from`); a shared clock can only ever go
-        // back by less than one tick, because creatures tied at the same rounded
-        // tick are separated by entity id and their exact `f64` days then differ
-        // by whatever float accumulation put inside that tick. Bounding the
-        // regression by a tick is the honest form of "one timeline": asserting
-        // strict monotonicity would be asserting that scheduling happens in
-        // `f64`, which is the thing spec §4 refuses to do.
-        let tick = hornvale_kernel::units::TickSpan::from_ticks(1).as_std_days();
-        let mut prev = f64::NEG_INFINITY;
-        for f in &facts {
-            let d = f.day.expect("every emitted fact is dated").as_std_days();
-            assert!(
-                d >= prev - tick,
-                "`{}` at {d} went back more than a tick past {prev} — \
-                 the clock is not shared",
-                f.predicate
-            );
-            prev = prev.max(d);
+        let mut ledger2 = ledger.clone();
+        for f in &facts1 {
+            ledger2.commit(f.clone(), &reg).unwrap();
+        }
+
+        // The second tick's `from` is exactly the first tick's `to` — the
+        // abutting-window shape both production callers use, and the one
+        // this property depends on.
+        let day2_from = day1_to;
+        let day2_to = WorldTime::from_std_days(3.0).expect("a day value is finite");
+        let sys2 = DriveMovements {
+            npcs: npcs.clone(),
+            from: day2_from,
+            to: day2_to,
+            params: SUSTENANCE,
+            day_ticks: None,
+            terrain: &terrain,
+        };
+        let (facts2, _occ2) =
+            sys2.step_with_occupancy(&ledger2, &mut mesh_memo, &mut home_nav_cache);
+        assert!(
+            !facts2.is_empty(),
+            "the fixture's second tick emitted nothing; it cannot pin cross-tick order"
+        );
+
+        let mut prev: Option<WorldTime> = None;
+        for f in facts1.iter().chain(facts2.iter()) {
+            let d = f.day.expect("every emitted fact is dated");
+            if let Some(p) = prev {
+                assert!(
+                    d >= p,
+                    "`{}` at {d:?} went back past {p:?} across the tick boundary \
+                     ({day1_from:?}..{day1_to:?} then {day2_from:?}..{day2_to:?}) — \
+                     within-tick sorting is not enough when ticks' windows \
+                     overlap or a caller commits out of order",
+                    f.predicate
+                );
+            }
+            prev = Some(d);
         }
     }
 
