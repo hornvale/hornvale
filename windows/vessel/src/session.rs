@@ -2178,12 +2178,10 @@ impl<'w> Session<'w> {
     /// ([`Self::position`]), and committing this fact **is** the update
     /// (spec §3.1).
     fn commit_agent_at(&mut self, position: &Facet, provenance: &str) {
-        let fact = agent_at_fact(
-            self.agent_entity(),
-            position,
-            self.day.as_std_days(),
-            provenance,
-        );
+        // `self.day` is already the instant the constructor wants (The
+        // Precedence): the `f64` round-trip that stood here is gone, not
+        // converted more carefully.
+        let fact = agent_at_fact(self.agent_entity(), position, self.day, provenance);
         self.ledger
             .commit(fact, &self.registry)
             .expect("AGENT_AT is registered every session and non-functional");
@@ -2221,20 +2219,18 @@ impl<'w> Session<'w> {
         if let Err(e) = self.charge(&Action::Rest, 1.0) {
             return Turn::Out(e);
         }
-        let fact = rested_fact(
-            self.agent_entity(),
-            self.day.as_std_days(),
-            SLEPT_PROVENANCE,
-        );
+        let fact = rested_fact(self.agent_entity(), self.day, SLEPT_PROVENANCE);
         self.ledger
             .commit(fact, &self.registry)
             .expect("RESTED is registered every session and non-functional");
         let wake = {
             let activity = species_activity(self.world, &self.driven_body().species);
             let terrain = self.terrain_here();
-            next_awake_day(activity, &terrain, &self.position(), self.day.as_std_days())
+            next_awake_day(activity, &terrain, &self.position(), self.day)
         };
-        self.wake_at = WorldTime::from_std_days(wake).ok();
+        // `next_awake_day` answers with the instant itself now, so the wake
+        // time needs no reconstruction from a float day — and cannot fail.
+        self.wake_at = Some(wake);
         Turn::Out(SLEEP_REPLY.to_string())
     }
 
