@@ -1,6 +1,6 @@
-# Scene Schema: eclipses v1
+# Scene Schema: eclipses v2
 
-`scene/eclipses/v1` is the dated eclipse events an anchor world's system
+`scene/eclipses/v2` is the dated eclipse events an anchor world's system
 produces over a requested day window: for each solar or lunar syzygy, when
 it falls, which moon caused it, whether it is total or annular, and — for
 solar events only — the shadow's ground track across the globe. It exists
@@ -13,18 +13,16 @@ rather than *what things are*.
 ## The parameterized window
 
 Every other scene schema in the book so far is a **snapshot**: give it a
-world, and it hands back the one document that world has. `scene/eclipses/v1`
+world, and it hands back the one document that world has. `scene/eclipses/v2`
 is different — it is a **query**, the same shape as
 [`scene/tiles-region/v1`](./scene-tiles-region-v1.md)'s addressed tile
-request. A client asks for `[from_day, until_day]` and the document echoes
+request. A client asks for `[from, until]` and the document echoes
 that window back alongside the events found inside it. The window is
 **closed** — both endpoints inclusive: an eclipse landing exactly on
-`until_day` is returned (the producer filters `day < from || day > until`).
+`until` is returned (the producer filters `day < from || day > until`).
 
 | Field | Type | Meaning |
 |---|---|---|
-| `from_day` | number | The queried window start, absolute standard days — echoed back unchanged. |
-| `until_day` | number | The queried window end, absolute standard days — echoed back unchanged. |
 
 This is the right shape because eclipses are a **temporal series**, not a
 fixed-size structure: a world can run for an arbitrary number of standard
@@ -39,50 +37,39 @@ answer for a world, only an answer for a query.
 
 ## The document
 
-Every `scene/eclipses/v1` document is one JSON object with these fields,
+Every `scene/eclipses/v2` document is one JSON object with these fields,
 in this order (field order is part of the contract — it is fixed, not
 incidental):
 
 | Field | Type | Meaning |
 |---|---|---|
-| `schema` | string | Always the literal `"scene/eclipses/v1"` — the version tag a consumer checks before trusting the rest of the document. |
+| `schema` | string | Always the literal `"scene/eclipses/v2"` — the version tag a consumer checks before trusting the rest of the document. |
 | `seed` | integer | The world's seed. This is a u64; JavaScript consumers parsing the document with plain `JSON.parse` lose integer precision above 2^53, so use BigInt-aware parsing when the exact seed matters. |
-| `from_day` | number | The queried window start, echoed back — see above. |
-| `from_day_ticks` | integer | The queried window start as an exact tick count — see "The additive `*_ticks` fields" below. |
-| `until_day` | number | The queried window end, echoed back — see above. |
-| `until_day_ticks` | integer | The queried window end as an exact tick count. |
-| `events` | array of object | The dated eclipses inside the closed window `[from_day, until_day]`, day-ascending. |
+| `from` | integer | The queried window start as an exact tick count since genesis — echoed back unchanged. |
+| `until` | integer | The queried window end as an exact tick count since genesis — echoed back unchanged. |
+| `events` | array of object | The dated eclipses inside the closed window `[from, until]`, day-ascending. |
 
 Each entry in `events` is:
 
 | Field | Type | Meaning |
 |---|---|---|
-| `day` | number | The syzygy, absolute standard days (`WorldTime`), quantized to 8 significant digits. |
-| `day_ticks` | integer | The syzygy as an exact `i64` tick count — see below. |
+| `day` | integer | The syzygy as an exact `i64` tick count since genesis. |
 | `moon_index` | integer | Distance-sorted index into the system's moons — the same index `scene/moons/v1` uses. |
 | `body` | string | `"solar"` or `"lunar"` — which body is eclipsed: the anchor's star, or the moon itself. |
 | `kind` | string | `"total"` or `"annular"` — whether the eclipsing disc fully covers the eclipsed one or leaves a burning ring. |
 | `track` | object or null | The shadow's ground track, **solar events only** — see below. |
 
-### The additive `*_ticks` fields (The Escapement, decision 0188)
+### Why the instant is an integer (The Escapement, decision 0188)
 
-`day_ticks`, `from_day_ticks`, and `until_day_ticks` were added beside their
-existing `f64` siblings, not in place of them: `scene/eclipses/v1` is a
-cross-repo contract the external Orrery consumes from a released catalog, and
-this schema is held to the same additive-or-versioned-only discipline as
-every other scene schema (see "Stability" below). The kernel's `WorldTime`
-retyped to an exact `i64` tick count (100,000 ticks per standard day) so that
-a committed instant no longer loses resolution as a world ages — the `f64`
-`day` field, still quantized to 8 significant digits, is good to only ~2.4
-hours by world-year 20,000, where the same instant's `day_ticks` is exact at
-every horizon the project has ever used. The `f64` fields stay quantized
-deliberately: quantizing them was never about the kernel's own
-representation, it is about giving an external consumer of the *float* wire
-format the same cross-platform stability every other quantized float on that
-wire gets, and an existing consumer that only reads `day` sees no change at
-all. A client that can parse a bare `i64` should prefer the `*_ticks` fields;
-one that cannot is unaffected.
+`WorldTime` is an exact `i64` tick count, 100,000 ticks to the standard day,
+so a committed instant does not lose resolution as a world ages. The `f64`
+day this schema used to carry alongside was quantized to 8 *significant*
+digits, which buys constant absolute precision only for a magnitude-bounded
+quantity — and time is unbounded, so its resolution decayed with world age.
 
+0188 added the tick fields beside the floats rather than replacing them,
+because the floats were a published contract. v2 completes that step; see
+"What changed in v2" at the end of this page.
 ### The solar-only `track`
 
 `track` is `Some`/present only for `body: "solar"` events; a lunar event
@@ -134,36 +121,32 @@ and behaves smoothly in between, but a client should not treat
 `center_lat_deg` as more precise than that: it is the declared shape of an
 approximation, not a re-derivation of the umbra's true footprint.
 
-An excerpt of a `scene/eclipses/v1` document (seed 42, window `[0, 2000]`
+An excerpt of a `scene/eclipses/v2` document (seed 42, window `[0, 2000]`
 standard days; the full document has 50 events — 31 solar, 19 lunar,
 drawn from 2 moons):
 
 ```json
 {
-  "schema": "scene/eclipses/v1",
+  "schema": "scene/eclipses/v2",
   "seed": 42,
-  "from_day": 0.0,
-  "from_day_ticks": 0,
-  "until_day": 2000.0,
-  "until_day_ticks": 200000000,
+  "from": 0,
+  "until": 200000000,
   "events": [
     {
-      "day": 85.982974,
-      "day_ticks": 8598297,
+      "day": 8598297,
       "moon_index": 0,
       "body": "solar",
       "kind": "total",
       "track": {
         "center_lat_deg": 82.494963,
         "half_width_deg": 2.0,
-        "start_lon_deg": -32.693882,
-        "end_lon_deg": -58.835236,
+        "start_lon_deg": -32.693097,
+        "end_lon_deg": -58.83445,
         "duration_days": 0.063892372
       }
     },
     {
-      "day": 94.34317,
-      "day_ticks": 9434317,
+      "day": 9434317,
       "moon_index": 0,
       "body": "lunar",
       "kind": "total",
@@ -208,10 +191,10 @@ trusting plain `JSON.parse`.
 
 ## Stability
 
-`scene/eclipses/v1` is a save-format-class contract, held to the same
+`scene/eclipses/v2` is a save-format-class contract, held to the same
 discipline as the rest of the scene schemas:
 
-- Adding a new field stays within `scene/eclipses/v1` and appends after
+- Adding a new field stays within `scene/eclipses/v2` and appends after
   every existing field; existing consumers that read fields by name are
   unaffected.
 - Changing an existing field's meaning, order, or type never happens in
@@ -228,12 +211,10 @@ the same seed, pins, and window always reproduces the same bytes, because
 every field routes through a pure ledger/orbital-element read or the
 declared-approximation formula above, none of which touches wall-clock
 time or platform-dependent floating point beyond the quantization boundary
-(decision 0033). The `*_ticks` fields are exact `i64` values and never pass
-through that boundary at all (decision 0188) — an integer needs no rounding
-to agree bit-for-bit across platforms — while `day`, `from_day`, and
-`until_day` are still quantized to 8 significant digits, deliberately, so
-the existing float wire format keeps the cross-platform stability every
-other quantized float on it gets.
+(decision 0033). Every instant on this document is an exact `i64` tick count and never passes
+through the quantization boundary at all (decision 0188) — an integer needs no
+rounding to agree bit-for-bit across platforms. v1's quantized `f64` instants,
+which did pass through it, are gone.
 
 ## Getting one
 
@@ -241,8 +222,31 @@ other quantized float on it gets.
 hornvale scene eclipses --from <day> --until <day> [--world <PATH>]
 ```
 
-This prints one `scene/eclipses/v1` document to standard output. `--world`
+This prints one `scene/eclipses/v2` document to standard output. `--world`
 defaults to `world.json`; `--from` and `--until` are required. A world with
 no generated sky (the tier-0 constant sun, or a sky with no moons to raise
 an eclipse) has no eclipses to describe, and the command fails with a
 message saying so.
+
+## What changed in v2
+
+v1 carried **two** representations of every instant: a quantized `f64` day and
+an exact tick count beside it (`day`/`day_ticks`, `from_day`/`from_day_ticks`,
+`until_day`/`until_day_ticks`). The tick fields were added by The Escapement
+(decision 0188), *beside* rather than instead of the floats, because the float
+halves were a published contract that external consumers were reading.
+
+v2 drops the floats. The Foliot established that both external clients — the
+Orrery and goldengrove — are out of scope, and that nothing inside this
+repository ever read those fields, so the additive step 0188 deliberately left
+half-finished could be completed.
+
+The remaining representation is the better one on its own merits, which is why
+0188 added it: an integer needs no quantization, and its resolution does not
+decay with world age. The float it replaces was "resolvable only to ~2.4 hours
+at world-year 20,000" — a limit the tick count does not have at any age the
+type can express.
+
+The version was bumped rather than the fields changed in place. A consumer
+that reappears fails loudly on an unknown schema string instead of silently
+reading a missing field.

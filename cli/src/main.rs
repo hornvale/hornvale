@@ -337,7 +337,7 @@ fn cmd_scout(args: &[String]) -> Result<(), String> {
             let system = &outcome.system;
             let day = match system.anchor.rotation {
                 hornvale_astronomy::Rotation::Spinning { day, .. } => {
-                    format!("{:.1}h day", day.get() * 24.0)
+                    format!("{:.1}h day", day.as_std_days() * 24.0)
                 }
                 hornvale_astronomy::Rotation::Locked => "tidally locked".to_string(),
             };
@@ -1462,7 +1462,7 @@ fn cmd_book(args: &[String]) -> Result<(), String> {
         let reckoning: Vec<hornvale_book::ReckoningEpoch> = match at {
             Some(day) => {
                 let at_days =
-                    hornvale_astronomy::StdDays::new(day).map_err(|e| format!("--at: {e}"))?;
+                    hornvale_astronomy::StdInstant::new(day).map_err(|e| format!("--at: {e}"))?;
                 let epoch = match (terrain.as_ref(), climate.as_ref()) {
                     (Some(t), Some(c)) => hornvale_book::reckoning_at_from(&world, at_days, t, c),
                     _ => hornvale_book::reckoning_at(&world, at_days),
@@ -1990,7 +1990,13 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
             };
             let from = parse_f64("--from")?;
             let until = parse_f64("--until")?;
-            let scene = hornvale_scene::eclipses_scene(&world, from, until).map_err(|e| e.to_string())?;
+            // `--from`/`--until` are user-typed, so a non-finite value must
+            // fail through the same Err path every other bad argument uses
+            // rather than panicking inside the constructor.
+            let from = hornvale_astronomy::StdInstant::new(from).map_err(|e| e.to_string())?;
+            let until = hornvale_astronomy::StdInstant::new(until).map_err(|e| e.to_string())?;
+            let scene =
+                hornvale_scene::eclipses_scene(&world, from, until).map_err(|e| e.to_string())?;
             println!("{}", hornvale_scene::eclipses_json(&scene));
             Ok(())
         }

@@ -130,7 +130,7 @@ use hornvale_climate::GeneratedClimate;
 use hornvale_climate::snowpack::DEFAULT_SNOWPACK;
 use hornvale_climate::substrate::SubstrateField;
 use hornvale_climate::wetness::{DEFAULT_WETNESS, receptivity};
-use hornvale_kernel::{Seed, Value, Vertex, VertexMap};
+use hornvale_kernel::{Seed, Value, Vertex, VertexMap, WorldTime};
 use hornvale_terrain::TerrainPins;
 use hornvale_topology::{ConnectionGraph, EdgeKind};
 use hornvale_worldgen::graph_derive::weather_conductance_factor;
@@ -346,7 +346,9 @@ fn gated_graph(sample: &WorldSample, day: f64) -> ConnectionGraph {
     let factor_at = |vertex: Vertex| -> f64 {
         let wetness_mm = sample.wetness.at(vertex, day);
         let snow_mm = sample.snow.at(vertex, day);
-        let frozen = sample.climate.is_frozen_at(vertex, day);
+        let frozen = sample
+            .climate
+            .is_frozen_at(vertex, WorldTime::from_std_days(day).expect("finite"));
         weather_conductance_factor(
             receptivity(wetness_mm, DEFAULT_WETNESS.field_capacity_mm),
             snow_mm,

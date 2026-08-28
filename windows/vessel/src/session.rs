@@ -4,8 +4,8 @@
 use crate::action::{Action, Mood};
 use crate::agent::check_species_known;
 use crate::body::Body;
-use crate::clock::{climb_factor, cost_ticks, days_of, mass_for_species};
-use crate::controller::PlayerController;
+use crate::clock::{climb_factor, cost_of, mass_for_species};
+use crate::controller::{Controller, ImposedController, PlayerController};
 use crate::gate::{BodyState, Verdict, verdict};
 use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, HomeNavCache,
@@ -327,6 +327,44 @@ pub(crate) fn grievance(ledger: &Ledger, npc: EntityId) -> f64 {
         * GRIEVANCE_GAIN
 }
 
+/// The entity currently holding this body (The Coercion). **NOT functional**,
+/// unlike [`TURNED_HOSTILE`]: a body may be possessed, released, and possessed
+/// again over its life, so the live state is [`possessor_of`]'s open/close fold
+/// and never a single latest value. Committed only for an IMPOSED possession —
+/// the player's own possession is the session's premise, not a world fact, so
+/// an open `possessed-by` always means someone other than the player holds this
+/// body (spec §3.1).
+/// type-audit: bare-ok(identifier-text)
+pub const POSSESSED_BY: &str = "possessed-by";
+
+/// Closes the possession opened by the most recent [`POSSESSED_BY`] (The
+/// Coercion). The object is the reason: `"released"` today, and `"died"` once
+/// mortality exists — see the spec §6, which asserts the second is unreachable.
+/// type-audit: bare-ok(identifier-text)
+pub const POSSESSION_ENDED: &str = "possession-ended";
+
+/// Who currently holds `body`, if anyone (The Coercion).
+///
+/// A single pass in LEDGER ORDER over the body's own facts: a
+/// [`POSSESSED_BY`] opens, a [`POSSESSION_ENDED`] closes, and the last word
+/// wins. Ledger order is the ordering — never a sort on `day`, which is
+/// `Option<WorldTime>` and absent on facts that carry no instant.
+pub(crate) fn possessor_of(ledger: &Ledger, body: EntityId) -> Option<EntityId> {
+    let mut held = None;
+    for fact in ledger.facts_about(body) {
+        match fact.predicate.as_str() {
+            POSSESSED_BY => {
+                if let Value::Entity(who) = fact.object {
+                    held = Some(who);
+                }
+            }
+            POSSESSION_ENDED => held = None,
+            _ => {}
+        }
+    }
+    held
+}
+
 const HELP: &str = "\
 verbs:
   look             where you stand, focalized
@@ -365,6 +403,9 @@ operator instruments (out-of-character; bypass the body, never the world):
                    'standard', or 'off'); bare, it says what yours drop
   !provoke [who]   shift a co-located NPC's disposition, your own mark
   !soothe [who]    ease a co-located NPC's disposition, your own mark
+  !possess         another will takes this body; your own acts refuse until
+                   it lets go
+  !unpossess       the possessor's own option: let go of this body again
   !help            this list
 
 the out-of-character halves (bypass the body, never the world; four take a
@@ -990,6 +1031,20 @@ impl<'w> Session<'w> {
                 "an NPC turned hostile toward the possessing player",
             )
             .expect("TURNED_HOSTILE registers identically every session");
+        // The Coercion: an imposed possession is an open/close fact pair, not
+        // a single latest value (a body may be possessed, released, and
+        // possessed again) — both non-functional, matching DISPOSITION_SHIFT's
+        // shape rather than TURNED_HOSTILE's.
+        registry
+            .register_predicate(POSSESSED_BY, false, "the entity holding this body")
+            .expect("POSSESSED_BY registers identically every session");
+        registry
+            .register_predicate(
+                POSSESSION_ENDED,
+                false,
+                "a possession ended, with its reason",
+            )
+            .expect("POSSESSION_ENDED registers identically every session");
         // The Hand, Task 3: derive the roster ONCE and SELECT the driven body
         // from it, rather than minting a second representation of the same
         // villager. `ordered_for_derivation` (inside `derive_npcs`) always
@@ -1677,6 +1732,13 @@ impl<'w> Session<'w> {
         self.driven_body().entity
     }
 
+    /// Who currently holds the driven body, if anyone (The Coercion) — the
+    /// session-level read over [`possessor_of`]'s fold. `None` for a free
+    /// body, which is every body until an imposition seam opens one.
+    pub fn possessor(&self) -> Option<EntityId> {
+        possessor_of(&self.ledger, self.agent_entity())
+    }
+
     /// Would the named co-located NPC be hostile to the player right now
     /// (their grievance fold at or past `HOSTILITY_THRESHOLD`)? A pure read
     /// — never commits anything. `who` resolves exactly as `provoke`/
@@ -1904,10 +1966,20 @@ impl<'w> Session<'w> {
     // within-room step at a tenth of a room-to-room move, so the cost model
     // has contemplated this all along.
 
-    /// The body's state, as the gate reads it — DERIVED from [`Self::wake_at`]
-    /// rather than stored, so the clock advancing past the next waking IS the
-    /// waking and there is no second field to fall out of step.
+    /// The body's state, as the gate reads it — DERIVED from
+    /// [`possessor_of`] and [`Self::wake_at`] rather than stored, so the
+    /// clock advancing past the next waking IS the waking and there is no
+    /// second field to fall out of step.
+    ///
+    /// **Possession is checked FIRST, and the order is a real decision**
+    /// (The Coercion, Task 3): a body held by another is refused
+    /// in-character whether or not it also happens to be asleep, and
+    /// reporting "you are asleep" to a player whose body has been taken
+    /// names the wrong condition.
     fn body_state(&self) -> BodyState {
+        if possessor_of(&self.ledger, self.agent_entity()).is_some() {
+            return BodyState::PossessedByAnother;
+        }
         match self.wake_at {
             Some(wake) if self.day < wake => BodyState::Asleep,
             _ => BodyState::Awake,
@@ -1966,16 +2038,16 @@ impl<'w> Session<'w> {
         IN_CHARACTER_VERBS.contains(&verb) || parse_compass(verb).is_some()
     }
 
-    /// The planet's rotation period in standard days, as the action clock
-    /// needs it — `None` on a tidally-locked world, which the rotation pin
-    /// admits. Extracted from `wait`'s own inline read so the player's charge
-    /// and the NPC layer's cannot disagree about the tick rate.
-    /// type-audit: bare-ok(ratio: return)
-    fn day_length_std(&self) -> Option<f64> {
-        self.calendar
-            .as_ref()
-            .and_then(|c| c.day_length())
-            .map(|d| d.get())
+    /// The planet's rotation period as an exact tick span — `None` on a
+    /// tidally locked world, which the rotation pin admits.
+    ///
+    /// Reads the stored tick count rather than the continuous view (The
+    /// Foliot): a day is a whole number of ticks now, so there is no reason to
+    /// route the scheduler's own question through `f64` days. Extracted from
+    /// `wait`'s own inline read so the player's charge and the NPC layer's
+    /// cannot disagree about the rate.
+    fn day_ticks(&self) -> Option<TickSpan> {
+        self.calendar.as_ref().and_then(|c| c.day_ticks())
     }
 
     /// Charge `action` against THIS BODY'S OWN MASS and advance the day.
@@ -2005,14 +2077,27 @@ impl<'w> Session<'w> {
             "an out-of-character act must not reach the clock: cost_ticks \
              floors at one tick, which base_ticks prices at zero on purpose"
         );
-        let ticks = cost_ticks(action, self.body_mass_kg, terrain_factor);
-        let days = days_of(ticks, self.day_length_std());
-        match advanced_by(self.day, days) {
-            Ok(d) => {
+        // Integer addition, end to end (The Foliot). This used to convert the
+        // cost to `f64` days and re-enter the lattice through
+        // `WorldTime::from_std_days`; with a lattice-aligned day the cost IS a
+        // kernel span, so there is no crossing left to make.
+        let span = cost_of(action, self.body_mass_kg, terrain_factor);
+        match self
+            .day
+            .ticks()
+            .checked_add(span.ticks())
+            .map(WorldTime::from_ticks)
+        {
+            Some(d) => {
                 self.day = d;
                 Ok(())
             }
-            Err(e) => Err(e),
+            None => Err(format!(
+                "error: advancing day {} by {} ticks leaves the representable \
+                 tick range",
+                self.day.ticks(),
+                span.ticks()
+            )),
         }
     }
 
@@ -2154,9 +2239,13 @@ impl<'w> Session<'w> {
     ///
     /// # Two groups, and what distinguishes them
     ///
-    /// **Group A** — `why`/`npcs`/`help`/`eyes`/`whoami`/`provoke`/`soothe` —
-    /// are operator instruments with no in-character counterpart, so this
-    /// namespace is their only entry point (Task 5 retired the bare forms).
+    /// **Group A** — `why`/`npcs`/`help`/`eyes`/`whoami`/`provoke`/`soothe`,
+    /// and (The Coercion, Task 4) `possess`/`unpossess` — are operator
+    /// instruments with no in-character counterpart. The first seven have
+    /// none because Task 5 retired their bare forms; `possess`/`unpossess`
+    /// have none because no creature can perform the act yet at all (spec §5
+    /// defers the biology behind an imposed possession to a species-domain
+    /// campaign) — this namespace is their only entry point either way.
     ///
     /// **Group B's objective halves** — `map`/`examine`/`needs`/`wait` — each
     /// render the same thing their bare twin does, through the same renderer,
@@ -2214,7 +2303,7 @@ impl<'w> Session<'w> {
             // Group A: the operator instruments (The Deed, spec §3.2).
             // Bare forms are retired — this namespace is their only entry
             // point now, and it carries no in-character counterpart for
-            // any of the seven, by design.
+            // any of them, by design.
             "why" => Turn::Out(self.why(rest)),
             "npcs" => Turn::Out(self.list_npcs()),
             "help" => Turn::Out(HELP.to_string()),
@@ -2226,6 +2315,16 @@ impl<'w> Session<'w> {
             "whoami" => Turn::Out(self.whoami()),
             "provoke" => self.act_on_disposition(rest, 1),
             "soothe" => self.act_on_disposition(rest, -1),
+            // The Coercion, Task 4: the imposition seam. No creature can
+            // possess another yet (spec §5), so this operator instrument
+            // stands in for one — the same "the operator authors the world
+            // event a creature cannot yet cause" shape `provoke`/`soothe`
+            // already established. Named after `Controller`/`ImposedController`,
+            // the abstraction this pair actually opens and closes, in the
+            // same spirit game engines pair `Possess`/`UnPossess` on a
+            // controller.
+            "possess" => self.possess(),
+            "unpossess" => self.unpossess(),
             // Group B's objective halves (Task 6). BAND-AWARE IN EXACTLY THE
             // SAME SHAPE their bare twins are, arm for arm: the objective
             // view of a chamber is still a chamber, and an out-of-character
@@ -2251,7 +2350,7 @@ impl<'w> Session<'w> {
             // same methods: there is no objective variant of either to reach
             // for, so a second rendering path here would be inventing the
             // difference rather than exposing one. What this namespace buys is
-            // that a sleeping — later dominated, unconscious — body can still
+            // that a sleeping — later possessed, unconscious — body can still
             // be looked out of.
             "look" if self.inside.is_some() => self.out(self.describe_chamber_here()),
             "look" if self.submerged.is_some() => self.out(self.describe_here()),
@@ -4051,7 +4150,7 @@ impl<'w> Session<'w> {
             // The planet's rotation period, so the action clock's tick divides
             // the local day exactly (The Action Clock, spec §4.1). `None` on a
             // tidally-locked world, which the rotation pin admits.
-            day_length_std: self.day_length_std(),
+            day_ticks: self.day_ticks(),
             terrain: &terrain,
         };
         // Recover this tick's within-room `Occupancy` alongside the facts
@@ -4068,32 +4167,77 @@ impl<'w> Session<'w> {
         // The driven body's OWN arbitration (The Hand, Task 5 fix round 1,
         // spec §2.3/§3.3): the SAME `advance_one` every other body's walk
         // just called, in a solo band-of-one walk (`step_one_with_controller`'s
-        // own doc says why it is not folded into `sys.npcs` above), asked
-        // through a FRESH `PlayerController` — nothing queues an action on
-        // it yet, so its intent is unconditionally `Hold`.
+        // own doc says why it is not folded into `sys.npcs` above).
         //
-        // **What actually keeps the ledger clean is the next line, not the
-        // `Hold` (fix round 3, N4): `_driven_facts` is discarded
-        // UNCONDITIONALLY, regardless of what `step_one_with_controller`
-        // returns.** An earlier version of this comment claimed this was
-        // "the commits on `Do`, nothing on `Hold` argument spec §5.2
-        // makes" — checked directly (fix round 2) and that claim is false:
-        // forcing the intent to `Do` here still leaves the ledger untouched,
-        // because the facts never reach `tick()` either way. The player's
-        // verbs (`go`, `drink`, …) are what the body DOES; this walk only
-        // ever supplies what the host WANTS (`self.driven_mode`) — spec
-        // §5.2 is being corrected at Task 8 to say so. Cloned out of
-        // `self.bodies` first: `driven_body()` borrows all of `self`, which
-        // cannot coexist with the `&mut self.mesh_memo`/`&mut
+        // **Which controller answers now depends on possession (The
+        // Coercion, Task 4 fix round).** Free, it is asked through a FRESH
+        // `PlayerController` — nothing queues an action on it yet, so its
+        // intent is unconditionally `Hold`, exactly as before this task.
+        // Possessed, it is asked through an `ImposedController` instead —
+        // semantically correct (a held body should not be asked what the
+        // PLAYER wants), and a REAL swap: `ImposedController::intend`
+        // delegates to `DefaultController`, which returns
+        // `resolution.intent` unchanged rather than forcing `Hold`, so a
+        // possessed body's solo walk actually ACTS on its own arbitration
+        // during `wait` (moves, drinks, rests, eats) instead of sitting
+        // frozen. Constructed fresh every call, same as `PlayerController`
+        // always was — there is no controller state to carry between ticks
+        // for either.
+        //
+        // **What actually keeps the LEDGER clean either way is the next
+        // line, not which controller answered (fix round 3, N4, reconfirmed
+        // by this task): `_driven_facts` is discarded UNCONDITIONALLY,
+        // regardless of what `step_one_with_controller` returns.** An
+        // earlier version of this comment claimed this was "the commits on
+        // `Do`, nothing on `Hold` argument spec §5.2 makes" — checked
+        // directly (fix round 2) and that claim is false: forcing the
+        // intent to `Do` here still leaves the ledger untouched, because the
+        // facts never reach `tick()` either way. The player's verbs (`go`,
+        // `drink`, …) are what the body DOES; this walk only ever supplies
+        // what the host WANTS (`self.driven_mode`) — spec §5.2 is being
+        // corrected at Task 8 to say so.
+        //
+        // **The ledger is inert to this swap; `driven_mode`/`driven_affect`/
+        // `driven_suppressed` are NOT (The Coercion, Task 4 fix round,
+        // checked directly rather than assumed).** Those three are read
+        // back from `st.mode`/`st.affect`/`st.suppressed` on the LAST
+        // `advance_one` iteration of this call, and while each iteration
+        // sets them from that iteration's OWN `resolution` — before
+        // `controller.intend` is even invoked, so intent cannot change what
+        // a single iteration reports — a multi-iteration `wait` (`from` to
+        // `to` spans more than one decision point) lets an ACTING
+        // controller's intent move `st.pos` between iterations, which
+        // changes what the NEXT iteration's `resolution` is a resolution
+        // OF. `Hold` never moves `st.pos` (`HoldStep` only ever advances
+        // `st.day`), so under `PlayerController` every iteration re-judges
+        // the same frozen position and this was never observable; under
+        // `ImposedController` the body can walk to water and drink mid-wait,
+        // which can leave it in a calmer felt state than a position-frozen
+        // walk would have reported. See
+        // `driven_felt_state_can_move_under_an_imposed_controller_during_wait`
+        // for a direct, seed-42 demonstration — this is a real behavioural
+        // consequence for `!ask`'s narration while possessed, not merely an
+        // internal bookkeeping detail, even though no committed fact ever
+        // differs.
+        //
+        // Cloned out of `self.bodies` first: `driven_body()` borrows all of
+        // `self`, which cannot coexist with the `&mut self.mesh_memo`/`&mut
         // self.home_nav_cache` borrows this call needs.
         let driven_npc = self.driven_body().clone();
+        let mut player_controller = PlayerController::new();
+        let mut imposed_controller = ImposedController::new();
+        let driven_controller: &mut dyn Controller = if self.possessor().is_some() {
+            &mut imposed_controller
+        } else {
+            &mut player_controller
+        };
         let (_driven_facts, driven_mode, driven_affect, driven_suppressed) = sys
             .step_one_with_controller(
                 &self.ledger,
                 &driven_npc,
                 &mut self.mesh_memo,
                 &mut self.home_nav_cache,
-                &mut PlayerController::new(),
+                driven_controller,
             );
         self.driven_mode = Some(driven_mode);
         self.driven_affect = Some(driven_affect);
@@ -4787,6 +4931,79 @@ impl<'w> Session<'w> {
         }
     }
 
+    /// Opens an imposed possession of the driven body (The Coercion, Task 4):
+    /// the out-of-character seam standing in for the creature capability spec
+    /// §5 defers to a species-domain campaign. No creature can choose to do
+    /// this yet, so the operator instrument does — the same shape
+    /// `act_on_disposition` already established for an act no world system
+    /// can currently cause on its own.
+    ///
+    /// The holder named in the committed [`POSSESSED_BY`] fact is the first
+    /// other derived body in the roster (`other_bodies`), chosen
+    /// deterministically because nothing yet exists that could choose one
+    /// itself. A world with no other derived body has no entity to name, so
+    /// this refuses rather than fabricating one or panicking (decision 0007).
+    fn possess(&mut self) -> Turn {
+        let Some(holder) = other_bodies(&self.bodies, self.driven).first().copied() else {
+            return Turn::Out("There is no other will in this world to take you.".to_string());
+        };
+        let holder_entity = holder.entity;
+        let holder_label = holder.label.clone();
+        let body = self.agent_entity();
+        // The provenance carries `self.turn` (incremented once per non-empty
+        // `handle` call, including this one — see `Session::handle`) so a
+        // same-day possess -> unpossess -> possess sequence never commits two
+        // BYTE-IDENTICAL `possessed-by` facts. `Ledger::commit`'s idempotent
+        // dedup compares the whole envelope including provenance (Task 1's own
+        // finding), and `day` alone does not vary within a day — a static
+        // provenance string here would make the second `possess` in such a
+        // sequence a silent no-op: `possessor()` would read `None` right after
+        // a verb that reported success. See
+        // `reopening_a_possession_on_the_same_day_is_not_a_silent_no_op`.
+        let fact = Fact {
+            subject: body,
+            predicate: POSSESSED_BY.to_string(),
+            object: Value::Entity(holder_entity),
+            place: None,
+            day: Some(self.day),
+            provenance: format!("player: possess (turn {})", self.turn),
+        };
+        self.ledger
+            .commit(fact, &self.registry)
+            .expect("possessed-by is registered and non-functional");
+        Turn::Out(format!(
+            "Another will settles into you — {holder_label} holds this body now. Your own \
+             acts refuse; only '!' verbs still answer."
+        ))
+    }
+
+    /// Closes an imposed possession at the possessor's own option (The
+    /// Coercion, Task 4, spec §6: "release is reachable"). Idempotent by a
+    /// guard on [`Self::possessor`], not on `Ledger::commit`'s own dedup —
+    /// mirrors `TURNED_HOSTILE`'s pattern (`Ledger::value_of`), adapted
+    /// because `POSSESSED_BY`/[`POSSESSION_ENDED`] are non-functional, so
+    /// `value_of`'s single-latest-fact read is the wrong query here; the
+    /// live state is [`possessor_of`]'s open/close fold, which
+    /// [`Self::possessor`] already exposes.
+    fn unpossess(&mut self) -> Turn {
+        if self.possessor().is_none() {
+            return Turn::Out("No other will holds this body.".to_string());
+        }
+        let body = self.agent_entity();
+        let fact = Fact {
+            subject: body,
+            predicate: POSSESSION_ENDED.to_string(),
+            object: Value::Text("released".to_string()),
+            place: None,
+            day: Some(self.day),
+            provenance: format!("player: unpossess (turn {})", self.turn),
+        };
+        self.ledger
+            .commit(fact, &self.registry)
+            .expect("possession-ended is registered and non-functional");
+        Turn::Out("The will withdraws. You are your own again.".to_string())
+    }
+
     /// The felt-state read (the-wanting T4, spec §4.5 as corrected by G4):
     /// diegetic prose for every CO-LOCATED NPC's drive, never a raw number.
     /// Deliberately reads the NPCs, not the possessed agent — the player's
@@ -4999,7 +5216,7 @@ impl<'w> Session<'w> {
         // reads as day 0" is not a property this line should depend on.
         let day = self.day.whole_days();
         let mut lines = vec![format!("The Reckoning, at day {day}.")];
-        let at = hornvale_astronomy::StdDays::new(self.day.as_std_days())
+        let at = hornvale_astronomy::StdInstant::new(self.day.as_std_days())
             .expect("a session's day is always finite and non-negative");
         let epoch = match (self.wctx.terrain.as_ref(), self.wctx.climate.as_ref()) {
             (Some(t), Some(c)) => hornvale_book::reckoning_at_from(self.world, at, t, c),
@@ -5934,6 +6151,211 @@ mod tests {
                 "an unprovoked NPC's grievance must be plain 0.0, not -0.0"
             );
         }
+    }
+
+    /// The Coercion, Task 1: `possessor_of`'s own coverage. Lives in-module
+    /// (not in `windows/vessel/tests/`) because it reaches `session.ledger`
+    /// and `session.registry` directly — `Session` gains no public ledger
+    /// reader or test-only commit for this, per the task's resolved brief.
+    #[test]
+    fn a_body_with_no_facts_has_no_possessor() {
+        let world = seam_world();
+        let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        assert_eq!(possessor_of(&session.ledger, session.agent_entity()), None);
+    }
+
+    /// `possessed-by` is NOT functional (unlike `TURNED_HOSTILE`): a body may
+    /// be possessed, released, and possessed again, so the live state must be
+    /// the fold and never a single latest value. The `reopen` fact below is
+    /// deliberately given different provenance from `open` — an identical
+    /// `Fact` (same subject/predicate/object/place/day/provenance) is an
+    /// idempotent no-op under `Ledger::commit`'s dedup, which would silently
+    /// defeat exactly the reopen case this test exists to prove.
+    #[test]
+    fn possession_opens_closes_and_reopens() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let body = session.agent_entity();
+        let holder = other_bodies(&session.bodies, session.driven)[0].entity;
+
+        let open = Fact {
+            subject: body,
+            predicate: POSSESSED_BY.to_string(),
+            object: Value::Entity(holder),
+            place: None,
+            day: None,
+            provenance: "test: open".to_string(),
+        };
+        session
+            .ledger
+            .commit(open, &session.registry)
+            .expect("possessed-by is registered");
+        assert_eq!(possessor_of(&session.ledger, body), Some(holder));
+
+        let close = Fact {
+            subject: body,
+            predicate: POSSESSION_ENDED.to_string(),
+            object: Value::Text("released".to_string()),
+            place: None,
+            day: None,
+            provenance: "test: close".to_string(),
+        };
+        session
+            .ledger
+            .commit(close, &session.registry)
+            .expect("possession-ended is registered");
+        assert_eq!(possessor_of(&session.ledger, body), None, "closed");
+
+        let reopen = Fact {
+            subject: body,
+            predicate: POSSESSED_BY.to_string(),
+            object: Value::Entity(holder),
+            place: None,
+            day: None,
+            provenance: "test: reopen".to_string(),
+        };
+        session
+            .ledger
+            .commit(reopen, &session.registry)
+            .expect("possessed-by is registered");
+        assert_eq!(
+            possessor_of(&session.ledger, body),
+            Some(holder),
+            "a body may be possessed again after release — this is why the state \
+             is a fold and not a single latest value"
+        );
+    }
+
+    /// The Coercion, Task 3: proves `body_state` actually consults
+    /// `possessor_of` — Task 1 shipped the facts and Task 2 shipped the
+    /// `BodyState::PossessedByAnother` row, but nothing derived it yet, so
+    /// the gate never saw it. `look` is in-character and commits nothing,
+    /// so the assertion lands on the gate rather than a side effect;
+    /// `!whoami` is out-of-character and must still answer, or a possessed
+    /// body would be indistinguishable from a hung game (spec §2.2).
+    ///
+    /// Committed in-module, not in `windows/vessel/tests/suite/
+    /// possession_facts.rs`, for the same reason Task 1's fold coverage is:
+    /// `mod session` is private, so an external test cannot reach
+    /// `POSSESSED_BY`/`possessor_of`/`session.ledger` to construct the
+    /// state at all — there is no public commit surface for an imposed
+    /// possession yet (that is Task 4's OOC verb), and the brief for this
+    /// task says plainly not to invent one.
+    #[test]
+    fn an_imposed_possession_refuses_in_character_and_permits_out_of_character() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let body = session.agent_entity();
+        let holder = other_bodies(&session.bodies, session.driven)[0].entity;
+
+        // Baseline: an in-character verb works before anyone takes the body.
+        let before = match session.handle("look") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("look must not release: {t}"),
+        };
+        assert!(!before.is_empty());
+
+        let open = Fact {
+            subject: body,
+            predicate: POSSESSED_BY.to_string(),
+            object: Value::Entity(holder),
+            place: None,
+            day: None,
+            provenance: "test: imposed possession".to_string(),
+        };
+        session
+            .ledger
+            .commit(open, &session.registry)
+            .expect("possessed-by is registered");
+
+        // In-character now refuses, and names possession specifically...
+        let refused = match session.handle("look") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("possession must not release: {t}"),
+        };
+        assert_ne!(
+            refused, before,
+            "an in-character verb must not behave identically once the body is held"
+        );
+        assert!(
+            refused.contains("another will holds this body"),
+            "the refusal must name possession, not some other reason: {refused}"
+        );
+
+        // ...and out-of-character still works, which is the whole point:
+        // without it, being possessed is indistinguishable from the game
+        // having hung.
+        let ooc = match session.handle("!whoami") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("!whoami must not release: {t}"),
+        };
+        assert!(!ooc.is_empty(), "OOC must still answer while possessed");
+    }
+
+    /// The Coercion, Task 3, Step 5: the ordering in `body_state` — possession
+    /// checked BEFORE sleep — is a deliberate decision, not an accident of
+    /// which `if` came first. A body that is both asleep and possessed must
+    /// be refused for possession, not sleep: reporting sleep to a player
+    /// whose body was taken names the wrong condition. Reachable through the
+    /// shipped surface: `sleep` is a public in-character verb that sets
+    /// `wake_at` into the future, and this module can commit the same
+    /// `possessed-by` fact Task 1 shipped directly onto `session.ledger`.
+    #[test]
+    fn a_possessed_and_asleep_body_is_refused_for_possession_not_sleep() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let body = session.agent_entity();
+        let holder = other_bodies(&session.bodies, session.driven)[0].entity;
+
+        let slept = match session.handle("sleep") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("sleep must not release: {t}"),
+        };
+        assert!(
+            !slept.starts_with("No verb"),
+            "`sleep` must be a verb for this test to mean anything: {slept}"
+        );
+        assert_eq!(
+            session.body_state(),
+            BodyState::Asleep,
+            "sanity check: asleep alone must gate as asleep"
+        );
+
+        let open = Fact {
+            subject: body,
+            predicate: POSSESSED_BY.to_string(),
+            object: Value::Entity(holder),
+            place: None,
+            day: None,
+            provenance: "test: imposed possession while asleep".to_string(),
+        };
+        session
+            .ledger
+            .commit(open, &session.registry)
+            .expect("possessed-by is registered");
+
+        // The body is now BOTH asleep (wake_at is still in the future) and
+        // possessed. The gate must name possession.
+        assert_eq!(
+            session.body_state(),
+            BodyState::PossessedByAnother,
+            "a body that is both asleep and possessed must gate as possessed — \
+             this is the ordering decision this test exists to pin"
+        );
+
+        let refused = match session.handle("look") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("possession must not release: {t}"),
+        };
+        assert!(
+            refused.contains("another will holds this body"),
+            "the refusal must name possession, not sleep: {refused}"
+        );
+        assert!(
+            !refused.contains("asleep"),
+            "reporting sleep to a player whose body was taken names the wrong \
+             condition: {refused}"
+        );
     }
 
     #[test]
@@ -7802,5 +8224,189 @@ mod tests {
              ordinary one, not trail an empty cost clause"
         );
         assert_eq!(bare_heard, plain_heard, "and land exactly the same concept");
+    }
+
+    /// The Coercion, Task 4 fix round: `ImposedController` is now wired at
+    /// the driven body's own `!wait` walk (`Session::wait`'s call into
+    /// `step_one_with_controller`), selected exactly when the body is
+    /// possessed. That swap is checked directly here rather than assumed
+    /// inert: `PlayerController`'s intent is unconditionally `Hold`, so a
+    /// FREE body's felt state after `!wait` is always read at whatever
+    /// position it started the tick standing in; `ImposedController`
+    /// delegates to `DefaultController`, whose intent is
+    /// `resolution.intent` unchanged, so a POSSESSED body's own solo walk
+    /// can actually act — move, drink, rest, eat — within the very same
+    /// tick, landing in a felt state a frozen walk could not have reached.
+    ///
+    /// Seed 42, one `!wait 1` from a fresh session, is a reliable
+    /// discriminator: the free body reads fatigue-pursuing and eager (it has
+    /// not yet had the chance to rest), while the possessed body — free to
+    /// act on its own arbitration under `ImposedController` — has already
+    /// served that need this tick and reads idle and content. Two session
+    /// instances from the same seed, differing only in whether `!possess`
+    /// was called first, is how this isolates the controller swap from
+    /// every other source of variation.
+    ///
+    /// **The ledger stays untouched by this test's own construction**: `!wait`
+    /// (`Session::wait`) discards the driven body's own facts unconditionally
+    /// regardless of which controller answered (see that call site's own
+    /// doc), so this test asserts only on the felt-state trio, never on
+    /// `committed_fact_count()` — a ledger assertion here would be asserting
+    /// something this swap was never claimed to change.
+    #[test]
+    fn driven_felt_state_can_move_under_an_imposed_controller_during_wait() {
+        let world = seam_world();
+        let (mut free, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let (mut held, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let _ = held.handle("!possess");
+        assert!(
+            held.possessor().is_some(),
+            "possession must actually be open for this to test the swap at all"
+        );
+
+        let _ = free.handle("!wait 1");
+        let _ = held.handle("!wait 1");
+
+        assert_eq!(
+            free.driven_mode(),
+            Some(Mode::Pursuing(DriveKind::Fatigue)),
+            "seed 42's free body, held to Hold and so frozen at its starting \
+             position, still pursues the fatigue it never got to act on"
+        );
+        assert_eq!(
+            held.driven_mode(),
+            Some(Mode::Idle),
+            "seed 42's possessed body, free to act under ImposedController, \
+             has already served that need this tick and reads idle"
+        );
+        assert_ne!(
+            free.driven_mode(),
+            held.driven_mode(),
+            "the controller swap is a real behavioural difference, not an \
+             identity — PlayerController's forced Hold and \
+             ImposedController's unforced resolution.intent are genuinely \
+             different intents"
+        );
+        assert_ne!(
+            free.driven_affect(),
+            held.driven_affect(),
+            "the felt-state trio ask() draws from moves with the swap too"
+        );
+    }
+
+    /// The Coercion, spec §7 H2 — "the death terminator is unreachable": no
+    /// currently-shipped verb produces a [`POSSESSION_ENDED`] fact whose
+    /// reason is `"died"`.
+    ///
+    /// **THE LIVE EVIDENCE FOR THAT CONCLUSION IS THE GREP, NOT THIS
+    /// FIXTURE.** Spec §6: no live death state exists anywhere in
+    /// `windows/vessel` today, and that predicate's own doc comment
+    /// (`:341`) only NAMES `"died"` as the reason once mortality exists —
+    /// grep-verified, the literal string `"died"` is CONSTRUCTED nowhere
+    /// under `windows/vessel/src`, in no match arm, so nothing could build
+    /// that fact today regardless of what a player types. The conclusion
+    /// rests on that; the loop below corroborates it over a roster.
+    ///
+    /// **WHAT THIS FIXTURE ACTUALLY EXERCISES IS 12 OF THE 30, NOT 30 —
+    /// state that plainly rather than let the roster count imply
+    /// otherwise.** Every verb here runs against a session that has just
+    /// been `!possess`ed, and a possessed body is exactly what
+    /// `gated_by_the_body` refuses in front of: all 18
+    /// [`IN_CHARACTER_VERBS`] are turned away by the body-state gate BEFORE
+    /// their handlers run, so only the 3 [`SESSION_CONTROL`] verbs and the
+    /// 9 Group-A operator instruments below reach any dispatch arm at all.
+    /// The `assert_eq!` on `roster.len()` pins the ROSTER's size — the
+    /// stated denominator — and must not be read as pinning the exercised
+    /// population, which is 12. **Measured, not inferred**: a scratch probe
+    /// of this exact loop, counting lines whose output carries the gate's own
+    /// refusal ("another will holds this body"), reported `roster=30
+    /// gate-refused=18` — `ask back climb consult delve dive enter examine go
+    /// knows look map needs out sleep surface wait write`.
+    ///
+    /// **So this is a weak tripwire, not the tripwire that turns red the
+    /// day mortality ships.** If a death terminator ever arrives through an
+    /// IN-CHARACTER verb — the likeliest route, since dying is something a
+    /// body does — this construction would not catch it: the gate refuses
+    /// that verb first and the loop sees nothing. It would catch a death
+    /// arm reached through session control or the operator namespace. The
+    /// durable check is the grep above; when mortality lands, re-derive
+    /// this fixture rather than trusting it to have objected.
+    ///
+    /// The stated denominator (spec §7's own requirement): the full shipped
+    /// verb roster this file itself classifies is the SUM of three groups —
+    /// [`IN_CHARACTER_VERBS`] (18), [`SESSION_CONTROL`] (3:
+    /// `release`/`quit`/`exit`), and the nine out-of-character-ONLY operator
+    /// instruments `handle_ooc`'s Group A dispatches
+    /// (`why`/`npcs`/`help`/`eyes`/`whoami`/`provoke`/`soothe`/`possess`/
+    /// `unpossess`) — **30** total. Group B's six `!`-twins
+    /// (`!map`/`!examine`/`!needs`/`!wait`/`!look`/`!knows`) are deliberately
+    /// NOT counted a second time — [`HELP`]'s own text calls them "the
+    /// out-of-character halves" of verbs already among the 18: the same verb
+    /// under the other mood, not a distinct one.
+    ///
+    /// Each verb runs against its OWN fresh, freshly-possessed session
+    /// (`!possess` first, so a possession is genuinely open for every verb
+    /// to act against — including `!unpossess`, the only verb anywhere in
+    /// the tree that can commit a [`POSSESSION_ENDED`] fact at all) rather
+    /// than one long sequence through a single session: `release`/`quit`
+    /// return `Turn::Released`, and a single shared session would let those
+    /// two short-circuit — or at least complicate the provenance of — every
+    /// verb tried after them in roster order. No verb is given a crafted
+    /// argument to make it succeed: since no dispatch arm anywhere
+    /// constructs the string `"died"` regardless of input, a bare
+    /// invocation already covers the whole surface this loop can reach —
+    /// which, per the paragraph above, is the 12 ungated verbs, not the 30
+    /// the roster names.
+    #[test]
+    fn h2_no_shipped_verb_can_end_a_possession_by_death() {
+        let world = seam_world();
+        let operator_only: [&str; 9] = [
+            "why",
+            "npcs",
+            "help",
+            "eyes",
+            "whoami",
+            "provoke",
+            "soothe",
+            "possess",
+            "unpossess",
+        ];
+        let roster: Vec<&str> = IN_CHARACTER_VERBS
+            .into_iter()
+            .chain(SESSION_CONTROL)
+            .chain(operator_only)
+            .collect();
+        assert_eq!(
+            roster.len(),
+            30,
+            "the stated denominator: 18 IN_CHARACTER_VERBS + 3 SESSION_CONTROL \
+             + 9 Group-A operator instruments the OOC namespace alone \
+             dispatches. This pins the ROSTER's size, NOT the exercised \
+             population: under a possessed body the gate refuses all 18 \
+             in-character verbs, so 12 reach a dispatch arm — see this \
+             test's doc comment"
+        );
+
+        for verb in &roster {
+            let (mut s, _) =
+                Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+            let _ = s.handle("!possess");
+            let line = if operator_only.contains(verb) {
+                format!("!{verb}")
+            } else {
+                (*verb).to_string()
+            };
+            let _ = s.handle(&line);
+            let died = s.ledger.iter().any(|f| {
+                f.predicate == POSSESSION_ENDED && f.object == Value::Text("died".to_string())
+            });
+            assert!(
+                !died,
+                "`{line}` produced a possession-ended fact with reason \"died\" \
+                 — mortality does not exist yet (spec §6); if this fires, the \
+                 death arm is already correct and shipped, and spec §6 wants \
+                 updating, not this test deleted"
+            );
+        }
     }
 }

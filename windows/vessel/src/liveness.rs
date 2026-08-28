@@ -10,11 +10,12 @@ use crate::action::{
 };
 use crate::agent::{settlement_position, walk_depth};
 use crate::body::Body;
-use crate::clock::{climb_factor, cost_ticks, days_of, ticks_per_local_day};
+use crate::clock::{climb_factor, cost_of};
 use crate::controller::{Controller, DefaultController, PlayerController};
 use crate::interior::{
     AnchorId, Interior, SeamKind, interior_of, landing, route_within, seam_kind, warmth_at,
 };
+use hornvale_kernel::units::TickSpan;
 use hornvale_kernel::{
     ANIMAL_PREY, ConditionResponse, EntityId, Facet, FacetId, Fact, Ledger, Lineage, PHOTOSYNTHATE,
     PLANT_FORAGE, ResourceVector, RoomMeshMemo, TickSystem, Value, World, WorldTime,
@@ -683,7 +684,7 @@ impl<'a> Terrain for LocaleTerrain<'a> {
         // fractional-day fallback. No `corner_weights` read here (a pure
         // astronomy calc over the room's centroid), so no cache to consult.
         match self.calendar {
-            Some(cal) => hornvale_astronomy::StdDays::new(day.as_std_days())
+            Some(cal) => hornvale_astronomy::StdInstant::new(day.as_std_days())
                 .ok()
                 .and_then(|t| cal.solar_altitude_at(t, room.coord().latitude)),
             None => fractional_day_sun(day),
@@ -4186,7 +4187,6 @@ fn eaten_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
 /// once it knows water — committing a dated `agent-at`/`drank` at each
 /// executed step. Holds a `Terrain` to compute belief and exploration
 /// mid-walk. Run through c6's `tick`.
-/// type-audit: bare-ok(ratio: day_length_std)
 pub struct DriveMovements<'a> {
     /// The NPCs this tick advances.
     pub npcs: Vec<Body>,
@@ -4196,13 +4196,15 @@ pub struct DriveMovements<'a> {
     pub to: WorldTime,
     /// The drive parameters.
     pub params: DriveParams,
-    /// The world's rotation period in standard days (`Calendar::day_length`),
-    /// `None` on a tidally-locked world. The action clock divides the planet's
-    /// day into an exact integer number of ticks (The Action Clock, spec §4.1),
-    /// so the scheduler needs the day length the same way it needs the drive
-    /// parameters. Read by the shared clock (the queue's tick scale) and by
-    /// every charge `advance_one` and `catch_up` make against `clock::days_of`.
-    pub day_length_std: Option<f64>,
+    /// The world's rotation period as an exact tick span
+    /// (`Calendar::day_ticks`), `None` on a tidally locked world. The action
+    /// clock divides the planet's day into an exact integer number of ticks
+    /// (The Action Clock, spec §4.1), so the scheduler needs the day length
+    /// the same way it needs the drive parameters.
+    ///
+    /// Was `day_ticks: Option<f64>` until The Foliot; a day is a whole
+    /// number of ticks now, so the scheduler reads the integer directly.
+    pub day_ticks: Option<TickSpan>,
     /// The elevation field belief and exploration read.
     pub terrain: &'a dyn Terrain,
 }
@@ -4564,7 +4566,10 @@ fn catch_up(
     frozen: &Ledger,
     out: &[Fact],
     cap: usize,
-    day_length_std: Option<f64>,
+    // `day_ticks` was a parameter here until The Foliot. It is gone rather
+    // than underscored: a replay's charge no longer consults the planet at
+    // all, because a cost IS a kernel span. Its absence is the clearest
+    // statement that the two lattices have merged.
     mesh_memo: &mut RoomMeshMemo,
     home_nav_cache: &mut HomeNavCache,
     controller: &mut dyn Controller,
@@ -4641,7 +4646,7 @@ fn catch_up(
                 // derivation failure `decide_step` is shared to avoid. No
                 // terrain factor: a within-room step does not change room, so
                 // there is no elevation pair to climb.
-                day += days_of(cost_ticks(&action, npc.mass_kg, 1.0), day_length_std);
+                day += cost_of(&action, npc.mass_kg, 1.0).as_std_days();
                 if day > horizon {
                     break;
                 }
@@ -4783,32 +4788,22 @@ impl<'a> DriveMovements<'a> {
             std::collections::BTreeMap::new();
         let mut queue: std::collections::BTreeSet<(u64, EntityId)> =
             std::collections::BTreeSet::new();
-        // Ticks per STANDARD day on this world: a local day is exactly
-        // `ticks_per_local_day` ticks (spec §4.1), so this is the inverse of
-        // `clock::days_of` and the two agree to the tick.
-        let per_day = ticks_per_local_day(self.day_length_std) as f64;
-        let scale = match self.day_length_std.filter(|d| d.is_finite() && *d > 0.0) {
-            Some(d) => per_day / d,
-            None => per_day,
-        };
-        // Derived from the EXACT standard tick count rather than a re-derived
-        // f64 day (spec §2.1). The scheduler's lattice is LOCAL ticks; the
-        // kernel's is standard-day ticks.
-        let local_ticks_of = |t: WorldTime| -> u64 {
-            match self.day_length_std.filter(|d| d.is_finite() && *d > 0.0) {
-                // A rotation pin puts the two lattices at different rates, so
-                // this crossing is a genuine rescale and keeps the arithmetic
-                // it always had — bit for bit, now read off `ticks()`.
-                Some(d) => ((t.ticks() as f64 / WorldTime::TICKS_PER_STD_DAY as f64)
-                    * (per_day / d))
-                    .round() as u64,
-                // With no pin the two lattices COINCIDE, so the conversion is
-                // the identity — exactly, not to within a rounding budget.
-                // `max(0)` states what the old saturating `as u64` cast did
-                // silently for a pre-genesis instant.
-                None => t.ticks().max(0) as u64,
-            }
-        };
+        // Standard ticks per standard day. THE RESCALE IS GONE (The Foliot):
+        // this used to be `ticks_per_local_day / day_ticks`, converting
+        // between the scheduler's local-tick lattice and the kernel's. A
+        // world's day is now an exact tick count, so `ticks_per_local_day` IS
+        // that count and the ratio is exactly `TICKS_PER_STD_DAY` — the two
+        // lattices coincide for every world, not just an unpinned one.
+        let scale = WorldTime::TICKS_PER_STD_DAY as f64;
+        // THE IDENTITY (The Foliot). This used to branch: an unpinned world's
+        // two lattices coincided, but a rotation pin put them at different
+        // rates and the crossing was a genuine `f64` rescale. With the day
+        // drawn as an exact tick count there is one lattice for every world,
+        // pinned or not, so a scheduler tick IS a kernel tick.
+        //
+        // `max(0)` states what the old saturating `as u64` cast did silently
+        // for a pre-genesis instant.
+        let local_ticks_of = |t: WorldTime| -> u64 { t.ticks().max(0) as u64 };
         let to_ticks = local_ticks_of(self.to);
         let from_ticks = local_ticks_of(self.from);
         for npc in &self.npcs {
@@ -4880,7 +4875,6 @@ impl<'a> DriveMovements<'a> {
                 frozen,
                 &out,
                 CATCH_UP_STEP_CAP,
-                self.day_length_std,
                 mesh_memo,
                 home_nav_cache,
                 // Every body here is GOAP-driven (the driven body's own
@@ -5230,7 +5224,7 @@ impl<'a> DriveMovements<'a> {
                 }
                 _ => 1.0,
             };
-            st.day += days_of(cost_ticks(action, npc.mass_kg, ground), self.day_length_std);
+            st.day += cost_of(action, npc.mass_kg, ground).as_std_days();
             if st.day > self.to.as_std_days() {
                 return false;
             }
@@ -5322,7 +5316,7 @@ impl<'a> DriveMovements<'a> {
             // KEPT as `unreachable!` (fix round 1, Finding 1) — unlike the
             // two `Drive::serviceability` sites this task also touches,
             // this arm sits DOWNSTREAM of a charge this same function
-            // already took: `st.day += days_of(cost_ticks(action, ...))`
+            // already took: `st.day += days_of(cost_of(action, ...))`
             // above (before this match) reads `base_ticks(action)`, which
             // is `Ticks(0)` for every group-A instrument. `cost_ticks`'s
             // own `.max(1)` floor happens to keep today's actual charge
@@ -5495,7 +5489,6 @@ impl<'a> DriveMovements<'a> {
             frozen,
             &out,
             CATCH_UP_STEP_CAP,
-            self.day_length_std,
             mesh_memo,
             home_nav_cache,
             &mut PlayerController::new(),
@@ -7280,7 +7273,7 @@ mod tests {
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
         // The subject prints as its ROLE in this fixture, not as its raw id.
@@ -7544,7 +7537,7 @@ mod tests {
                 from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
                 to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
                 params: SUSTENANCE,
-                day_length_std: None,
+                day_ticks: None,
                 terrain: &terrain,
             };
             sys.step(&ledger)
@@ -7583,7 +7576,7 @@ mod tests {
             from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
             to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let facts = sys.step(&ledger);
@@ -7609,11 +7602,9 @@ mod tests {
             drank_day.as_std_days() > arrived,
             "the drink still happens in the same instant as the arrival ({arrived})"
         );
-        let expected = crate::clock::days_of(
-            crate::clock::cost_ticks(&Action::Drink, mass, 1.0),
-            // The fixture has no sky, so the clock takes its base rate.
-            None,
-        );
+        // A cost IS a kernel span now (The Foliot), so its length in days is
+        // the span's own continuous view — no clock conversion in between.
+        let expected = crate::clock::cost_of(&Action::Drink, mass, 1.0).as_std_days();
         assert!(
             (drank_day.as_std_days() - arrived - expected).abs() < 1e-12,
             "a drink should cost exactly {expected} days; the gap is {}",
@@ -7678,7 +7669,7 @@ mod tests {
                 from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
                 to: WorldTime::from_std_days(20.0).expect("a day value is finite"),
                 params: SUSTENANCE,
-                day_length_std: None,
+                day_ticks: None,
                 terrain: &terrain,
             };
             sys.step(&ledger)
@@ -7716,7 +7707,7 @@ mod tests {
             from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
             to: WorldTime::from_std_days(20.0).expect("a day value is finite"),
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let facts = sys.step(&ledger);
@@ -7741,7 +7732,7 @@ mod tests {
         // regression by a tick is the honest form of "one timeline": asserting
         // strict monotonicity would be asserting that scheduling happens in
         // `f64`, which is the thing spec §4 refuses to do.
-        let tick = crate::clock::days_of(crate::clock::Ticks(1), None);
+        let tick = hornvale_kernel::units::TickSpan::from_ticks(1).as_std_days();
         let mut prev = f64::NEG_INFINITY;
         for f in &facts {
             let d = f.day.expect("every emitted fact is dated").as_std_days();
@@ -7816,7 +7807,7 @@ mod tests {
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
         let next =
@@ -8119,7 +8110,7 @@ mod tests {
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let next =
@@ -8723,7 +8714,7 @@ mod tests {
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
         let next =
@@ -8804,7 +8795,7 @@ mod tests {
             from: WorldTime::GENESIS,
             to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
 
@@ -8832,6 +8823,306 @@ mod tests {
             player_facts.is_empty(),
             "PlayerController holds the body regardless of what its own \
              arbitration wants, and commits nothing: {player_facts:?}"
+        );
+    }
+
+    /// The Coercion, spec §7 H3 — "the act trail is indistinguishable": a
+    /// body driven by [`crate::controller::ImposedController`] and the same
+    /// body driven by [`DefaultController`], same seed, same tick span,
+    /// commit facts differing only in *which* acts were chosen, never in
+    /// their shape, cost, or subject.
+    ///
+    /// **Chosen instrument, and why.** `step_one_with_controller` is
+    /// `pub(crate)`, so — like H2 — this cannot live in the integration
+    /// suite; it lives here, beside
+    /// `a_default_controller_passes_through_and_a_player_controller_holds`,
+    /// whose exact shape (one fixture, two controllers, compare the
+    /// returned facts) this test follows. The fixture is `charged_walk_fixture`
+    /// (below), not a fresh minimal one: over its 39-day span it is already
+    /// proven (by `drinking_and_eating_now_cost_time`) to emit `drank`,
+    /// `eaten`, AND `rested` alongside `agent-at` — the richest walk this
+    /// file has, so a comparison over it exercises every predicate shape
+    /// `DriveMovements` can commit, not only the one thirst allows.
+    ///
+    /// **The prediction is stronger than the spec's own wording asks for,
+    /// deliberately.** `ImposedController::intend` (`controller.rs`) is an
+    /// unconditional, stateless delegation to `DefaultController::intend`,
+    /// which is itself a pure pass-through of `resolution.intent` — so
+    /// nothing about which controller is live can change what either one
+    /// answers at any decision point of an identical walk. The two
+    /// committed `Vec<Fact>` are therefore predicted to be BYTE-IDENTICAL
+    /// (`Fact` derives `PartialEq`), not merely same-shaped, and the same
+    /// last-decision mode/affect/suppressed-ranks triple this walk returns
+    /// is predicted identical too.
+    ///
+    /// **Coordinator review (post-Task-5): this result is DEDUCIBLE from
+    /// `controller.rs:162-166` before the fixture ever runs, not evidence
+    /// this fixture gathered** — today's `ImposedController` is a provable
+    /// no-op relative to `DefaultController`, so this assertion holds
+    /// trivially and must be re-measured once `ImposedController` gains
+    /// real intent (see H4's own doc comment, right below, for the fuller
+    /// statement of this and a pointer to the comparison that IS live
+    /// today: `PlayerController` vs `ImposedController`, free versus HELD,
+    /// which Task 4 already measured and found DIVERGES in felt state
+    /// while committing identical facts).
+    #[test]
+    fn h3_the_act_trail_under_an_imposed_controller_is_byte_identical_to_the_default_controller() {
+        let (ledger, terrain, npc) = charged_walk_fixture();
+        let sys = DriveMovements {
+            npcs: vec![npc.clone()],
+            from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
+            params: SUSTENANCE,
+            day_ticks: None,
+            terrain: &terrain,
+        };
+
+        let (default_facts, default_mode, default_affect, default_suppressed) = sys
+            .step_one_with_controller(
+                &ledger,
+                &npc,
+                &mut RoomMeshMemo::new(),
+                &mut HomeNavCache::new(),
+                &mut DefaultController,
+            );
+        let (imposed_facts, imposed_mode, imposed_affect, imposed_suppressed) = sys
+            .step_one_with_controller(
+                &ledger,
+                &npc,
+                &mut RoomMeshMemo::new(),
+                &mut HomeNavCache::new(),
+                &mut crate::controller::ImposedController::new(),
+            );
+
+        assert!(
+            !default_facts.is_empty(),
+            "the fixture must actually walk and commit something, or this \
+             proves nothing: {default_facts:?}"
+        );
+        assert_eq!(
+            default_facts, imposed_facts,
+            "H3: an imposed controller's committed trail must be BYTE-IDENTICAL \
+             to the default controller's — ImposedController::intend is a pure, \
+             stateless delegation to DefaultController::intend, and nothing else \
+             in the walk reads which controller is live"
+        );
+        assert_eq!(
+            default_mode, imposed_mode,
+            "H3: the same last commitment mode either way"
+        );
+        assert_eq!(
+            default_affect, imposed_affect,
+            "H3: the same last resolution's felt state either way"
+        );
+        assert_eq!(
+            default_suppressed, imposed_suppressed,
+            "H3: the same discarded drive ranks either way"
+        );
+    }
+
+    /// The Coercion, spec §7 H4 — "the null this campaign is prepared to
+    /// report": count the distinct FACT SHAPES emitted under imposition
+    /// versus free running, over a stated denominator. A fact SHAPE here is
+    /// its PREDICATE identity — this file's own closed roster of everything
+    /// `DriveMovements` can ever commit is exactly four constants
+    /// ([`AGENT_AT`], [`DRANK`], [`RESTED`], [`EATEN`], grep-verified: the
+    /// only `pub const _: &str` predicate names this file defines), so the
+    /// stated denominator is **4**.
+    ///
+    /// **Coordinator review correction (post-Task-5, prose-only — no
+    /// assertion in this test changed): this equality is DEDUCIBLE, not
+    /// measured, and this is the same finding H3's doc comment now states
+    /// too.** `ImposedController::intend` (`controller.rs:162-166`) is
+    /// `self.inner.intend(body, resolution)` with `inner: DefaultController`
+    /// — a stateless pass-through taking no fixture-dependent branch at
+    /// all. That means the SET-equality this test measures follows from
+    /// `controller.rs`'s own text before either fixture below ever runs: no
+    /// trajectory choice, however varied, could have produced a different
+    /// outcome. **Today's stub `ImposedController` is provably a no-op
+    /// relative to `DefaultController`, so H3 and H4 both hold trivially,
+    /// and must be RE-MEASURED once `ImposedController` gains real intent**
+    /// (a possessing creature's own arbitration — spec §5's deferred future
+    /// work) — at that point the delegation this deduction rests on no
+    /// longer holds, and the two hypotheses become live measurements again
+    /// rather than restatements of `controller.rs`'s own source.
+    ///
+    /// **What this test still buys, framed correctly: a regression guard,
+    /// not a discovery.** It reddens the moment `ImposedController` grows
+    /// any logic that diverges from `DefaultController` — exactly this
+    /// campaign's own stated trajectory — so it is worth keeping as a
+    /// tripwire for that day, not as evidence about possession's
+    /// consequences today.
+    ///
+    /// **The comparison that IS live today, and is NOT this one:**
+    /// `PlayerController` vs `ImposedController` — free versus HELD, the
+    /// pair the game actually runs at `Session::wait`'s one real call site
+    /// — which Task 4 already measured directly
+    /// (`session::tests::driven_felt_state_can_move_under_an_imposed_controller_during_wait`)
+    /// and found produces IDENTICAL committed facts but DIVERGENT felt
+    /// state (`driven_mode`/`driven_affect`: `Pursuing(Fatigue)`/`Eager`
+    /// free vs `Idle`/`Content` held, seed 42). A reader who wants the
+    /// interesting result belongs there, not here — H3/H4 answer a
+    /// preregistered question about two controllers that happen, today, to
+    /// be the same controller in disguise.
+    ///
+    /// Instrument (unchanged from the original run — this correction is
+    /// prose-only): same call as H3 (`step_one_with_controller`, in-module
+    /// for the same `pub(crate)` reason H3 gives), reduced to the SET of
+    /// predicate names each run touched, pooled over TWO fixtures:
+    /// `charged_walk_fixture` (drink + eat + rest) and a second,
+    /// differently-planted single-drive fixture (the body
+    /// `a_default_controller_passes_through_and_a_player_controller_holds`
+    /// uses — a different species/terrain/genesis-vs-day-1 start). **The
+    /// two fixtures corroborate nothing beyond the deduction above** — they
+    /// are two instances of a comparison whose outcome the delegation
+    /// already fixed, not two independent trials that could have
+    /// disagreed.
+    ///
+    /// **A prediction this test made and got wrong, worth stating rather
+    /// than quietly dropping — and independent of the deduction above.**
+    /// The second fixture was chosen expecting a NARROWER reachable set
+    /// than the first (thirst-only, on the theory that a body minted fresh
+    /// with no prior `eaten`/`rested` history and a one-hop water source
+    /// would satisfy thirst long before hunger or fatigue crossed their own
+    /// thresholds in a 39-day window). Measured directly: it is not
+    /// narrower — over 39 days this fixture ALSO emits `eaten` and
+    /// `rested`, the same full four-predicate set the first fixture does.
+    /// That is a real fact about how generous a 39-day window is against
+    /// this file's own drive-cycle constants (`SUSTENANCE.act/
+    /// SUSTENANCE.rise ≈ 5.7` days), not a defect in the test — and it is
+    /// the one thing about this test's own setup that genuinely needed
+    /// running to find out, even though the imposed/free equality itself
+    /// did not.
+    #[test]
+    fn h4_the_distinct_fact_shapes_imposed_and_free_can_reach_are_identical() {
+        let known_predicates: std::collections::BTreeSet<String> = [AGENT_AT, DRANK, RESTED, EATEN]
+            .into_iter()
+            .map(str::to_string)
+            .collect();
+        assert_eq!(
+            known_predicates.len(),
+            4,
+            "the stated denominator: DriveMovements's own closed predicate \
+             roster (AGENT_AT/DRANK/RESTED/EATEN)"
+        );
+
+        fn shapes_of(facts: &[Fact]) -> std::collections::BTreeSet<String> {
+            facts.iter().map(|f| f.predicate.clone()).collect()
+        }
+
+        // Fixture A: `charged_walk_fixture` — drink, eat, AND rest are all
+        // reachable in its 39-day span (pinned by
+        // `drinking_and_eating_now_cost_time`, which asserts all three
+        // predicates appear on this exact fixture).
+        let (ledger_a, terrain_a, npc_a) = charged_walk_fixture();
+        let sys_a = DriveMovements {
+            npcs: vec![npc_a.clone()],
+            from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
+            params: SUSTENANCE,
+            day_ticks: None,
+            terrain: &terrain_a,
+        };
+        let (default_facts_a, ..) = sys_a.step_one_with_controller(
+            &ledger_a,
+            &npc_a,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut DefaultController,
+        );
+        let (imposed_facts_a, ..) = sys_a.step_one_with_controller(
+            &ledger_a,
+            &npc_a,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut crate::controller::ImposedController::new(),
+        );
+
+        // Fixture B: the single-drive thirst fixture
+        // `a_default_controller_passes_through_and_a_player_controller_holds`
+        // uses — a different species, terrain, and starting history than
+        // fixture A (see this test's own doc comment for the measured
+        // finding that its reachable set is NOT narrower in practice, over
+        // this 39-day window).
+        let mut ledger_b = Ledger::default();
+        let e_b = ledger_b.mint_entity(test_lineage(ledger_b.entity_count() as u16));
+        let home_b = raddr(1.0);
+        let water_b = home_b.neighbors()[0].clone();
+        let npc_b = Body {
+            entity: e_b,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
+            home: home_b.clone(),
+            resource: water_b.clone(),
+            species: "goblin".into(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            thermal_strategy: ThermalStrategy::Endothermic,
+            niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
+            label: "herder".into(),
+        };
+        let t_b = PlantedTerrain {
+            elevations: [(water_b.clone(), 0.0)].into_iter().collect(),
+            fresh: [water_b.clone()].into_iter().collect(),
+            ..Default::default()
+        };
+        let sys_b = DriveMovements {
+            npcs: vec![npc_b.clone()],
+            from: WorldTime::GENESIS,
+            to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
+            params: SUSTENANCE,
+            day_ticks: None,
+            terrain: &t_b,
+        };
+        let (default_facts_b, ..) = sys_b.step_one_with_controller(
+            &ledger_b,
+            &npc_b,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut DefaultController,
+        );
+        let (imposed_facts_b, ..) = sys_b.step_one_with_controller(
+            &ledger_b,
+            &npc_b,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut crate::controller::ImposedController::new(),
+        );
+
+        let mut free_shapes = shapes_of(&default_facts_a);
+        free_shapes.extend(shapes_of(&default_facts_b));
+        let mut imposed_shapes = shapes_of(&imposed_facts_a);
+        imposed_shapes.extend(shapes_of(&imposed_facts_b));
+
+        assert!(
+            !free_shapes.is_empty(),
+            "the pooled fixtures must actually commit something, or this \
+             proves nothing"
+        );
+        assert!(
+            free_shapes.is_subset(&known_predicates),
+            "every emitted predicate must be one of the four this file can \
+             ever commit: got {free_shapes:?}"
+        );
+        assert_eq!(
+            imposed_shapes,
+            free_shapes,
+            "H4: the set of distinct fact shapes (predicates) an imposed run \
+             can reach and the set a free run can reach, pooled over {} \
+             predicates' worth of denominator and 2 fixtures, are IDENTICAL \
+             — but that equality is DEDUCIBLE from \
+             `ImposedController::intend`'s pass-through delegation \
+             (controller.rs:162-166) before either fixture runs, NOT \
+             established by running them. Today's stub is provably a no-op \
+             relative to `DefaultController`, so this assertion is a \
+             regression tripwire for the day it gains real intent, not \
+             evidence that possession is invisible in reachable consequence",
+            known_predicates.len()
         );
     }
 
@@ -8893,7 +9184,7 @@ mod tests {
             // generous next to `Drink`'s 150-tick base cost.
             to: WorldTime::from_std_days(3.5).expect("a day value is finite"),
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
         let mut player = PlayerController::new();
@@ -9005,7 +9296,7 @@ mod tests {
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
         world.ledger = hornvale_kernel::tick(
@@ -9083,7 +9374,7 @@ mod tests {
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -9178,7 +9469,7 @@ mod tests {
             params: degenerate,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -9245,7 +9536,7 @@ mod tests {
             params: p,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -9528,7 +9819,7 @@ mod tests {
                 params: SUSTENANCE,
                 // No sky in a planted-terrain fixture: the action clock takes its
                 // base rate (spec §4.1).
-                day_length_std: None,
+                day_ticks: None,
                 terrain: &terrain,
             };
             let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -9816,7 +10107,7 @@ mod tests {
                 params: SUSTENANCE,
                 // No sky in a planted-terrain fixture: the action clock takes its
                 // base rate (spec §4.1).
-                day_length_std: None,
+                day_ticks: None,
                 terrain: &terrain,
             };
             let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -10046,7 +10337,7 @@ mod tests {
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let next =
@@ -11110,7 +11401,7 @@ mod tests {
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let after1 = hornvale_kernel::tick(&ledger, &[&sys1], &["drive-movements"], &reg).unwrap();
@@ -11159,7 +11450,7 @@ mod tests {
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let after2 = hornvale_kernel::tick(&after1, &[&sys2], &["drive-movements"], &reg).unwrap();
@@ -11187,7 +11478,7 @@ mod tests {
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let cafter = hornvale_kernel::tick(&control, &[&csys], &["drive-movements"], &reg).unwrap();
@@ -11663,7 +11954,7 @@ mod tests {
                 params: SUSTENANCE,
                 // No sky in a planted-terrain fixture: the action clock takes its
                 // base rate (spec §4.1).
-                day_length_std: None,
+                day_ticks: None,
                 terrain: &terrain,
             };
             let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -11755,7 +12046,7 @@ mod tests {
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -13870,7 +14161,7 @@ mod tests {
             from: WorldTime::from_std_days(0.35).expect("a day value is finite"),
             to: WorldTime::from_std_days(1.35).expect("a day value is finite"),
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &hearth_terrain,
         };
         let (_facts, occ) =
@@ -13917,7 +14208,7 @@ mod tests {
             from: WorldTime::from_std_days(0.35).expect("a day value is finite"),
             to: WorldTime::from_std_days(1.35).expect("a day value is finite"),
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &wild_terrain,
         };
         let (_facts2, occ2) =
@@ -14310,7 +14601,7 @@ mod tests {
             from: now,
             to: now,
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let (facts, occ) =
@@ -14519,7 +14810,6 @@ mod tests {
             &ledger,
             &[],
             CATCH_UP_STEP_CAP,
-            None,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
             &mut DefaultController,
@@ -14582,7 +14872,7 @@ mod tests {
             from: now,
             to: now,
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let (_f1, occ_forward) = forward.step_with_occupancy(
@@ -14599,7 +14889,7 @@ mod tests {
             from: now,
             to: now,
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let (_f2, occ_reversed) = reversed.step_with_occupancy(
@@ -14701,10 +14991,9 @@ mod tests {
         // mass, no terrain factor, no rotation) — rather than restated as a
         // literal here, so a retune of the `MoveWithin` dial cannot leave this
         // test's arithmetic quietly disagreeing with the loop it measures.
-        let step_days = days_of(
-            cost_ticks(&Action::MoveWithin(anchors[0]), npc.mass_kg, 1.0),
-            None,
-        );
+        // A cost IS a kernel span now (The Foliot), so its length in days is
+        // the span's own continuous view.
+        let step_days = cost_of(&Action::MoveWithin(anchors[0]), npc.mass_kg, 1.0).as_std_days();
 
         let run = |horizon: f64| -> Option<AnchorId> {
             let mut occ = Occupancy::default();
@@ -14732,7 +15021,6 @@ mod tests {
                 &ledger,
                 &[],
                 CAP,
-                None,
                 &mut RoomMeshMemo::new(),
                 &mut HomeNavCache::new(),
                 &mut DefaultController,
@@ -14744,7 +15032,7 @@ mod tests {
         // loop exhausts its horizon (not the cap) and lands 4 hops down the
         // corridor. The extra half-step of slack absorbs float summation
         // drift between `entry_day + 4.0 * step_days` (computed once) and
-        // `catch_up`'s own `day += days_of(cost_ticks(..))` run four times in
+        // `catch_up`'s own `day += days_of(cost_of(..))` run four times in
         // a row — the two need not land on the identical f64, and an exact
         // boundary would make this test's own arithmetic, not the mechanism,
         // decide whether the 4th hop lands in time.

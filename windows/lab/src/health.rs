@@ -66,7 +66,7 @@ fn is_distress(label: AffectLabel) -> bool {
 /// a read). This is the shared core of both the real-world sweep and the
 /// synthetic null-control / injected-fault scenarios.
 ///
-/// `day_length_std` is the world's rotation period in standard days, passed
+/// `day_ticks` is the world's rotation period as an exact tick span, passed
 /// through to the tick so the action clock can divide the local day exactly
 /// (The Action Clock, spec §4.1); `None` for a tidally-locked world and for the
 /// planted-terrain synthetic scenarios, which have no sky.
@@ -87,14 +87,14 @@ fn is_distress(label: AffectLabel) -> bool {
 /// simulation with different consequences — purely to recover the
 /// `Occupancy` [`affect_of_memo_occupied`] needs to read warmth at the anchor
 /// a creature actually reached.
-/// type-audit: bare-ok(count: ticks), bare-ok(ratio: day_length_std)
+/// type-audit: bare-ok(count: ticks)
 pub fn run_simulation(
     seed_ledger: &Ledger,
     registry: &hornvale_kernel::ConceptRegistry,
     npcs: &[Body],
     terrain: &dyn Terrain,
     ticks: usize,
-    day_length_std: Option<f64>,
+    day_ticks: Option<hornvale_kernel::units::TickSpan>,
 ) -> Vec<Vec<Affect>> {
     let mut ledger = seed_ledger.clone();
     let mut traces: Vec<Vec<Affect>> = vec![Vec::new(); npcs.len()];
@@ -125,7 +125,7 @@ pub fn run_simulation(
             from: WorldTime::from_std_days(day).expect("a day value is finite"),
             to: WorldTime::from_std_days(day + 1.0).expect("a day value is finite"),
             params: SUSTENANCE,
-            day_length_std,
+            day_ticks,
             terrain,
         };
         // Recover this tick's within-room `Occupancy` alongside the facts
@@ -189,7 +189,7 @@ pub fn run_simulation(
 /// the ONLY caller that can do this (it alone has a real `LocaleContext` to
 /// rebuild from), so it is a separate function rather than a `run_simulation`
 /// parameter that every other caller would have to thread `None` through.
-/// type-audit: bare-ok(count: ticks), bare-ok(ratio: day_length_std), bare-ok(ratio: predator), bare-ok(ratio: prey)
+/// type-audit: bare-ok(count: ticks), bare-ok(ratio: predator), bare-ok(ratio: prey)
 #[allow(clippy::too_many_arguments)]
 pub fn run_simulation_with_locale(
     seed_ledger: &Ledger,
@@ -201,7 +201,7 @@ pub fn run_simulation_with_locale(
     prey: Option<&hornvale_kernel::VertexMap<f64>>,
     built: Option<&std::collections::BTreeSet<hornvale_kernel::FacetId>>,
     ticks: usize,
-    day_length_std: Option<f64>,
+    day_ticks: Option<hornvale_kernel::units::TickSpan>,
 ) -> Vec<Vec<Affect>> {
     let mut ledger = seed_ledger.clone();
     let mut traces: Vec<Vec<Affect>> = vec![Vec::new(); npcs.len()];
@@ -243,7 +243,7 @@ pub fn run_simulation_with_locale(
             from: WorldTime::from_std_days(day).expect("a day value is finite"),
             to: WorldTime::from_std_days(day + 1.0).expect("a day value is finite"),
             params: SUSTENANCE,
-            day_length_std,
+            day_ticks,
             terrain: &terrain,
         };
         let (_facts, occupancy) =
@@ -370,10 +370,7 @@ pub fn simulate_world(world: &World) -> Vec<AffectTrace> {
     // The rotation period the action clock divides (spec §4.1) — the same
     // calendar the wake cycle already reads; `None` if the world is
     // tidally-locked or has no derivable sky.
-    let day_length_std = calendar
-        .as_ref()
-        .and_then(|c| c.day_length())
-        .map(|d| d.get());
+    let day_ticks = calendar.as_ref().and_then(|c| c.day_ticks());
     // `run_simulation_with_locale` (the-waymark fix round, Finding 1): rebuilds
     // `LocaleTerrain` fresh EVERY tick with a per-tick geometry prefill for each
     // NPC's CURRENT position, rather than one `LocaleTerrain` fixed for the
@@ -390,7 +387,7 @@ pub fn simulate_world(world: &World) -> Vec<AffectTrace> {
         prey.as_ref(),
         Some(&built),
         HEALTH_TICKS,
-        day_length_std,
+        day_ticks,
     );
     npcs.into_iter()
         .zip(traces)

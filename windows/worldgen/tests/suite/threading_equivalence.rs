@@ -31,7 +31,7 @@ fn from_variants_are_pure_over_the_same_world() {
     .expect("seed 1 builds");
     let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
     let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
-    let at = hornvale_astronomy::StdDays::new(36_525.0).expect("valid day");
+    let at = hornvale_astronomy::StdInstant::new(36_525.0).expect("valid day");
 
     let peoples = hornvale_worldgen::placed_peoples(&world);
     assert!(

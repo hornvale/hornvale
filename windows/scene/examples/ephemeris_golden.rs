@@ -2,7 +2,7 @@
 //! phase, moon synodic phases, and world rotation phase at sample days, which
 //! goldengrove (the external three.js client, hornvale/goldengrove) must
 //! reproduce from the emitted elements.
-use hornvale_astronomy::units::StdDays;
+use hornvale_astronomy::units::StdInstant;
 use hornvale_kernel::Seed;
 use hornvale_worldgen::{SkyChoice, build_world, sky_of};
 
@@ -19,7 +19,7 @@ fn main() {
     let system = sky.system().expect("system");
     let cal = sky.calendar().expect("calendar");
     let day_length = match &system.anchor.rotation {
-        hornvale_astronomy::Rotation::Spinning { day, .. } => day.get(),
+        hornvale_astronomy::Rotation::Spinning { day, .. } => day.as_std_days(),
         hornvale_astronomy::Rotation::Locked => f64::INFINITY,
     };
     let mut rows = Vec::new();
@@ -28,7 +28,7 @@ fn main() {
         // Quantize every emitted phase to the platform-stable canonical form
         // (kernel `quantize`): these are transcendental-derived, and the
         // ephemeris JSON is a committed, cross-platform drift-checked artifact.
-        let t = StdDays::new(d).unwrap();
+        let t = StdInstant::new(d).unwrap();
         let world_phase = hornvale_kernel::quantize(cal.year_phase(t));
         let rotation_phase = hornvale_kernel::quantize(if day_length.is_finite() {
             (d / day_length).rem_euclid(1.0)

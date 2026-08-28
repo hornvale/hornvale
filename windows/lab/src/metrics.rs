@@ -946,8 +946,8 @@ fn scan_century(v: &AstronomyView) -> Vec<hornvale_astronomy::EclipseEvent> {
     hornvale_astronomy::eclipse_events(
         &v.system,
         &v.calendar,
-        hornvale_astronomy::StdDays::new(0.0).unwrap(),
-        hornvale_astronomy::StdDays::new(100.0 * 365.25).unwrap(),
+        hornvale_astronomy::StdInstant::new(0.0).unwrap(),
+        hornvale_astronomy::StdInstant::new(100.0 * 365.25).unwrap(),
     )
 }
 
@@ -997,7 +997,7 @@ pub fn registry() -> Vec<Metric> {
             role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| match &v.system.anchor.rotation {
                 Rotation::Locked => MetricValue::Absent,
-                Rotation::Spinning { day, .. } => MetricValue::Number(day.get() * 24.0),
+                Rotation::Spinning { day, .. } => MetricValue::Number(day.as_std_days() * 24.0),
             }),
         },
         Metric {
@@ -1249,8 +1249,8 @@ pub fn registry() -> Vec<Metric> {
                 let Some(lat) = flagship_latitude(v) else {
                     return MetricValue::Absent;
                 };
-                let t0 = hornvale_astronomy::StdDays::new(0.0).unwrap();
-                let t1 = hornvale_astronomy::StdDays::new(1000.0 * 365.25).unwrap();
+                let t0 = hornvale_astronomy::StdInstant::new(0.0).unwrap();
+                let t1 = hornvale_astronomy::StdInstant::new(1000.0 * 365.25).unwrap();
                 match a.calendar.alignment_drift_deg(lat, t0, t1) {
                     Some(d) => MetricValue::Number(d.abs()),
                     None => MetricValue::Absent,
@@ -4743,7 +4743,7 @@ pub fn registry() -> Vec<Metric> {
             domain: Domain::Religion,
             role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
-                let at = match hornvale_astronomy::StdDays::new(DIACHRONIC_EPOCH_DAYS) {
+                let at = match hornvale_astronomy::StdInstant::new(DIACHRONIC_EPOCH_DAYS) {
                     Ok(days) => days,
                     Err(_) => return MetricValue::Absent,
                 };

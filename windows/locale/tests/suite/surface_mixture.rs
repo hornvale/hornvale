@@ -213,7 +213,22 @@ fn high_ground_is_brighter_in_the_cold_half_of_the_year() {
         let reflectance = ctx.reflectance_at(&addr, &micro, at).unwrap();
         let mean: f64 = reflectance.get().iter().sum::<f64>() / BANDS as f64;
         lightness.push(mean);
-        temps_c.push(ctx.climate().temperature_at(vertex, day).get());
+        // THE ONE SITE THAT ROUNDS (The Foliot, stage 4). `day` here is an
+        // arbitrary fraction of a year, not a whole-day index, so landing it
+        // on the tick lattice moves the sample point by up to half a tick
+        // (0.432 s). Recorded rather than absorbed: every other climate call
+        // site in the tree was byte-neutral, either a literal genesis or a
+        // caller that already held a `WorldTime` and was unwrapping it.
+        // Harmless here — this samples a smooth seasonal curve at 24 points
+        // to check a mixture, and a sub-second shift cannot move that.
+        temps_c.push(
+            ctx.climate()
+                .temperature_at(
+                    vertex,
+                    WorldTime::from_std_days(day).expect("a finite sample day"),
+                )
+                .get(),
+        );
     }
 
     let distinct = {

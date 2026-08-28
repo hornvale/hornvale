@@ -1,15 +1,16 @@
 //! The body-state gate (spec §3.3): whether a body's own state permits an
 //! act, decided against the act's [`Mood`](crate::action::Mood).
 //!
-//! Built as a table even though it has exactly one row today. The reason is
-//! empirical, not anticipatory: `Session::needs` in this crate already
-//! carries an ad-hoc perception gate that had to be patched after a verb
-//! walked around it as a side channel, and `Session::purview`'s own doc
-//! records a second, still-open version of the same shape. A table with an
-//! exhaustive match — no wildcard arm — turns the next omission into a
-//! compile error: Arc III's `Dominated` row, and the spec's own
-//! `unconscious`/`blind`/`target invisible` rows, must be classified before
-//! they can compile.
+//! Built as a table from the first row it ever carried, rather than a check
+//! grown into one under pressure. The reason is empirical, not anticipatory:
+//! `Session::needs` in this crate already carries an ad-hoc perception gate
+//! that had to be patched after a verb walked around it as a side channel,
+//! and `Session::purview`'s own doc records a second, still-open version of
+//! the same shape. A table with an exhaustive match — no wildcard arm — turns
+//! the next omission into a compile error: Arc III's `PossessedByAnother` row
+//! already went through it (The Coercion), and the spec's own
+//! `unconscious`/`blind`/`target invisible` rows must be classified the same
+//! way before they can compile.
 //!
 //! [`verdict`] is consulted by `Session::refused_by_the_body` (The Deed, Task
 //! 7), once for the whole in-character namespace and BEFORE any handler runs,
@@ -21,15 +22,22 @@
 
 use crate::action::Mood;
 
-/// A body's state, as the gate reads it. One row today ([`BodyState::Awake`]
-/// / [`BodyState::Asleep`]); Arc III adds `Dominated`, and the spec names
-/// `unconscious`, `blind`, and `target invisible` as future rows.
+/// A body's state, as the gate reads it. `Awake`/`Asleep` shipped first; Arc
+/// III (The Coercion) added [`BodyState::PossessedByAnother`], and the spec
+/// names `unconscious`, `blind`, and `target invisible` as future rows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BodyState {
     /// The body can act freely; no in-character act is gated.
     Awake,
     /// The body is asleep; an in-character act is refused.
     Asleep,
+    /// The body is held by someone other than the player; an in-character act
+    /// is refused. **Relational, unlike every other row** — `Awake` and
+    /// `Asleep` are true of the body whoever asks, and this is not. The name
+    /// carries the relation because the derivation cannot: the player has no
+    /// ledger identity of its own to compare against (spec §3.1), so an open
+    /// `possessed-by` fact always means someone else.
+    PossessedByAnother,
 }
 
 impl BodyState {
@@ -37,7 +45,11 @@ impl BodyState {
     /// [`Action::all`](crate::action::Action::all)'s roster discipline, and
     /// is the cross product [`verdict`]'s own tests sweep.
     pub fn all() -> Vec<BodyState> {
-        vec![BodyState::Awake, BodyState::Asleep]
+        vec![
+            BodyState::Awake,
+            BodyState::Asleep,
+            BodyState::PossessedByAnother,
+        ]
     }
 }
 
@@ -51,6 +63,7 @@ fn body_state_variants_must_all_be_rostered(s: &BodyState) -> &'static str {
     match s {
         BodyState::Awake => "awake",
         BodyState::Asleep => "asleep",
+        BodyState::PossessedByAnother => "possessed-by-another",
     }
 }
 
@@ -78,5 +91,9 @@ pub fn verdict(state: BodyState, mood: Mood) -> Verdict {
         (BodyState::Asleep, Mood::InCharacter) => Verdict::Refused("you are asleep".to_string()),
         (BodyState::Awake, Mood::OutOfCharacter) => Verdict::Permitted,
         (BodyState::Asleep, Mood::OutOfCharacter) => Verdict::Permitted,
+        (BodyState::PossessedByAnother, Mood::InCharacter) => {
+            Verdict::Refused("another will holds this body".to_string())
+        }
+        (BodyState::PossessedByAnother, Mood::OutOfCharacter) => Verdict::Permitted,
     }
 }

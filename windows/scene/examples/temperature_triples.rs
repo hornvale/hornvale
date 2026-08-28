@@ -7,6 +7,7 @@
 //! ground truth its equivalence test pins against — not a JS reconstruction
 //! of the formula, the sim's own answer.
 use hornvale_kernel::Seed;
+use hornvale_kernel::WorldTime;
 use hornvale_kernel::quantize::quantize;
 use hornvale_scene::{SceneContext, temperature_grid_in};
 use hornvale_worldgen::{SkyChoice, build_world};
@@ -42,7 +43,13 @@ fn main() {
     let rows: Vec<String> = ROWS
         .iter()
         .map(|&(i, day)| {
-            let grid = temperature_grid_in(&world, &ctx, WIDTH, day).expect("grid builds");
+            let grid = temperature_grid_in(
+                &world,
+                &ctx,
+                WIDTH,
+                WorldTime::from_std_days(day).expect("finite"),
+            )
+            .expect("grid builds");
             let t = quantize(grid[i]);
             format!("{{\"i\":{i},\"day\":{day},\"t\":{t}}}")
         })
