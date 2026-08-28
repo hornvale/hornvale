@@ -516,7 +516,8 @@ fn tile_on_screen(
 /// live reading: re-measured at The Quadrat's close, after this campaign's own
 /// rebuild of the rung ladder, rung 7 and every finer shipped rung reach 40,848
 /// of 40,962 vertices (99.7%) and all 874 of 874 cave vertices; the coarsest
-/// rung, the worst case, reaches 96.4%. The argument stands on
+/// rung, the worst case, reaches 39,500 (96.4%) and 823 of 874 caves (94.2%).
+/// The argument stands on
 /// its own either way — terrain is a texture and belongs to sampling; a
 /// settlement or a cave mouth is a landmark and belongs to projection, the same
 /// way a real chart draws a coastline but pins a town.
@@ -686,14 +687,30 @@ fn mark_glyph(kind: &str) -> char {
 /// Every facet of the packet carries `bearing_deg` and `distance_rad` — a
 /// polar coordinate about the observer — and `core/src/chart.rs` places its
 /// own chart from exactly that pair. Placing THIS layer from it was the
-/// first design, and it was **measured false** before it was built. The
-/// raster's tile index is `floor` of an ABSOLUTE Mercator coordinate
-/// ([`mercator::project`]); a polar pair can only give a RELATIVE offset,
-/// rounded; which side of a tile boundary a facet lands on is therefore
-/// decided by the observer's own **sub-tile phase**, which the wire does not
-/// carry. Measured on the seed-42 band across 200 sub-tile phases: best 0 of
-/// 31 marks misplaced, worst 24, mean 11.5, and only 2 of the 200 phases
-/// agreed exactly.
+/// first design, and it was **replaced before it was built**. The raster's
+/// tile index is `floor` of an ABSOLUTE Mercator coordinate
+/// ([`mercator::project`]); a polar pair gives a RELATIVE offset, so it has
+/// to be turned back into an absolute coordinate first — and `core`, which
+/// was to do it, cannot: its parsed mirror of the packet drops the
+/// `observer` block, and the kernel has no inverse of
+/// `bearing_to`/`distance_rad_to`. Reprojecting WITHOUT that step leaves
+/// which side of a tile boundary a facet lands on to the observer's own
+/// **sub-tile phase**. Measured on the seed-42 band across 200 sub-tile
+/// phases: best 0 of 31 marks misplaced, worst 24, mean 11.5, and only 2 of
+/// the 200 phases agreed exactly.
+///
+/// **What that measurement is NOT.** It is not evidence the wire withholds
+/// the phase — the campaign wrote that, and it is false.
+/// `SurroundsObserver` carries the centre's own centroid latitude and
+/// longitude, and bearing and distance run centroid to centroid, so the
+/// spherical direct problem recovers every facet's absolute coordinate
+/// exactly. Quantization does not stand in the way either, though it is
+/// coarser than "8 digits" sounds: 8 SIGNIFICANT digits leaves ~1 cm of
+/// latitude near the equator, ~11 cm near the ±85° clamp, and at worst — a
+/// longitude of magnitude ~145, where 8 significant digits is only 5
+/// decimals — ~1.1 m between storable values, so sub-metre rounding, against
+/// a facet 1.87 km across. This route is chosen because it is EXACT AND
+/// ALREADY IN THE TREE, not because the other one is impossible.
 ///
 /// So this layer projects the SAME coordinate through the SAME function the
 /// raster does: `room` unpacks to a [`Facet`]

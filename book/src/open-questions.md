@@ -1858,8 +1858,11 @@ defect.
 **The campaign then wrote that the wire does not carry that phase, and the wire
 does.** The observer block states the centre's own centroid latitude and
 longitude, and the offsets are centroid-to-centroid great-circle quantities, so
-the spherical direct problem recovers every facet's absolute coordinate exactly;
-eight-significant-digit quantization is centimetre-scale against a 1.87 km tile.
+the spherical direct problem recovers every facet's absolute coordinate exactly.
+Quantization does not stand in the way either, and stating that accurately
+matters here of all places: the eight digits are *significant*, not decimal, so
+a latitude near the equator keeps a centimetre of ground while a longitude of
+large magnitude keeps only sub-metre rounding — against a facet 1.87 km across.
 What the render crate lacks is narrower and entirely its own: its parsed mirror
 of the document drops the observer block, and the simulation offers no inverse
 of the bearing-and-distance construction for it to call. The sweep measures the

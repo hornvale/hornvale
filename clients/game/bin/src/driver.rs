@@ -4366,12 +4366,22 @@ mod portolan_tests {
     // pointed at it. The first design placed this overlay from the wire's
     // own polar pair (`bearing_deg`/`distance_rad`) the way
     // `core/src/chart.rs` places its chart. That cannot land on the
-    // raster's squares: the raster's tile index is `floor` of an ABSOLUTE
-    // Mercator coordinate, a polar pair gives a RELATIVE offset, and which
-    // side of a tile boundary a facet falls on is decided by the observer's
-    // own sub-tile phase, which the wire does not carry. Swept over 200
-    // sub-tile phases on the seed-42 band: best 0 of 31 marks misplaced,
-    // worst 24, mean 11.5, only 2 of 200 phases exact.
+    // raster's squares AS `core` STANDS: the raster's tile index is `floor`
+    // of an ABSOLUTE Mercator coordinate, a polar pair gives a RELATIVE
+    // offset, and turning one into the other needs the observer's centroid
+    // — which `core`'s mirror of the packet drops — and an inverse of
+    // `bearing_to`/`distance_rad_to`, which the kernel does not have (this
+    // module's own doc, at the top of the file, states both). Reprojecting
+    // without that step leaves which side of a tile boundary a facet falls
+    // on to the observer's sub-tile phase. Swept over 200 sub-tile phases on
+    // the seed-42 band: best 0 of 31 marks misplaced, worst 24, mean 11.5,
+    // only 2 of 200 phases exact.
+    //
+    // THE WIRE DOES CARRY THE PHASE. The observer's own centroid latitude
+    // and longitude are on it, so the spherical direct problem recovers
+    // every facet's absolute coordinate exactly; the sweep measures the
+    // shortcut, not the contract. The campaign asserted otherwise in six
+    // documents and it was corrected at close.
 
     /// Every facet of the walk-band packet lands on the tile that HOLDS its
     /// own facet — checked against the projection's own INVERSE rather than

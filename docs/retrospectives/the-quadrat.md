@@ -92,8 +92,11 @@ coordinates) generalised into a claim about the contract itself. The wire does
 carry it: the observer block states the centre's own centroid latitude and
 longitude, bearing and distance are centroid-to-centroid great-circle
 quantities, so the spherical direct problem recovers every facet's absolute
-position exactly, and eight-significant-digit quantization is centimetre-scale
-against a 1.87 km tile. The true statement is narrower and crate-local —
+position exactly. Quantization does not stand in the way either: the eight
+digits are *significant*, not decimal, so a latitude near the equator keeps a
+centimetre of ground and a longitude of large magnitude keeps only sub-metre
+rounding — against a facet 1.87 km across. The true statement is narrower and
+crate-local —
 `clients/game/core`'s parsed mirror of the document drops the observer block,
 and the kernel has no inverse of `bearing_to`/`distance_rad_to`. That framing
 was already written correctly, in `driver.rs`'s own module doc, by an

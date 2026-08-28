@@ -95,7 +95,7 @@ been flat or step-shaped instead.
 hypothesis was that a byte-for-byte pin between the client's chart renderer and
 the sim's would survive the reprojection this campaign was going to perform. It
 is green. It is green because there is no reprojection: the design that needed
-one was measured false and never built (below), so nothing touched the pin. A
+one was replaced before it was built (below), so nothing touched the pin. A
 hypothesis whose subject has been removed is not a hypothesis confirmed, and
 recording it as a pass would have banked a free green for work that was never
 done.
@@ -129,8 +129,11 @@ by being weakened to "within one tile".
 carry the phase. It is not, and the correction belongs where the claim was
 made.** The document names the observer's own centroid latitude and longitude,
 and bearing and distance run centroid to centroid, so the spherical direct
-problem recovers every facet's absolute position exactly — at eight significant
-digits, centimetres against a tile 1.87 km across. The sweep measures the
+problem recovers every facet's absolute position exactly. Quantization does not
+stand in the way: the eight digits are *significant*, not decimal, so a latitude
+near the equator keeps a centimetre of ground and a longitude of large magnitude
+keeps only sub-metre rounding — against a facet 1.87 km across. The sweep
+measures the
 shortcut. What is genuinely absent is narrower and less interesting: one crate's
 mirror of the document, and a piece of arithmetic nobody has written.
 

@@ -151,8 +151,13 @@ centroid `latitude`/`longitude` (see the address section above), and
 `bearing_deg`/`distance_rad` are centroid-to-centroid great-circle quantities.
 Observer centroid plus bearing plus distance is the spherical **direct
 problem**: each cell's absolute latitude and longitude follows from it exactly,
-and the sub-tile phase with it. Quantization is no obstacle either — eight
-significant digits is centimetre-scale against a tile roughly 1.87 km across.
+and the sub-tile phase with it. Quantization is no obstacle either, though it
+is coarser than "eight digits" sounds: the digits are **significant**, not
+decimal, so absolute precision falls as a coordinate's magnitude rises. A
+latitude near the equator keeps seven decimals (~1 cm of ground); one near the
+±85° clamp keeps six (~11 cm); a longitude of magnitude ~145 keeps only five,
+putting ~1.1 m between storable values — **sub-metre rounding at worst**,
+against a facet roughly 1.87 km across.
 
 Skipping that step is what costs, and the cost is not theoretical. Swept across
 200 sub-tile phases on a fixture observer, converting the polar offsets to

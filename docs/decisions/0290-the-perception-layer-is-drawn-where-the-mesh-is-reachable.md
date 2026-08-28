@@ -42,8 +42,11 @@ It does not show the wire is missing the phase. `SurroundsObserver` carries the
 centre's centroid `latitude`/`longitude` as `pub`, unskipped fields, and
 `bearing_deg`/`distance_rad` are centroid-to-centroid great-circle quantities,
 so a consumer that writes the spherical direct problem recovers every cell's
-absolute coordinate exactly — 8-significant-digit quantization is
-centimetre-scale against a 1.87 km tile. The sweep measures the shortcut, not
+absolute coordinate exactly, and 8-SIGNIFICANT-digit quantization does not
+stand in the way: ~1 cm of latitude near the equator, ~11 cm near the ±85°
+clamp, and at worst — a longitude of magnitude ~145, where eight significant
+digits is only five decimals — ~1.1 m between storable values, so sub-metre
+rounding, against a facet 1.87 km across. The sweep measures the shortcut, not
 the schema. The claim "the wire does not carry the sub-tile phase" is false and
 this record no longer rests on it. The ruling is unchanged, because even with
 that reconstruction written, `core` and the raster would be two independent
