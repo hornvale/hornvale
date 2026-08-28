@@ -260,6 +260,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "hornvale-thing"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
 name = "hornvale-topology"
 version = "0.1.0"
 dependencies = [
@@ -308,6 +315,7 @@ dependencies = [
  "hornvale-settlement",
  "hornvale-species",
  "hornvale-terrain",
+ "hornvale-thing",
  "hornvale-topology",
  "serde_json",
 ]

@@ -11855,6 +11855,7 @@ mod tests {
             wc.deity.clone(),
             wc.culture.clone(),
             wc.material.clone(),
+            wc.thing.clone(),
             wc.habitat_realm.clone(),
             wc.biome_affinity.clone(),
         )
@@ -12068,6 +12069,7 @@ mod tests {
             ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),
+            ComponentStore::new(),
         )
         .expect("a fauna-only component set is well-formed (no peopled rows)");
 
@@ -12162,6 +12164,7 @@ mod tests {
             lexicon,
             hornvale_language::family_proto(),
             family_of,
+            ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),
@@ -13836,6 +13839,7 @@ mod tests {
             ComponentStore::new(),
             hornvale_language::family_proto(),
             family_of,
+            ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),

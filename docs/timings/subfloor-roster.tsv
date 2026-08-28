@@ -1284,7 +1284,7 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::d7_does_not_fire_on_a_true_i
 hornvale-lab::hornvale_lab$domesday::detect::tests::d7_fires_on_an_invariant_that_varies
 hornvale-lab::hornvale_lab$domesday::detect::tests::d7_ignores_descriptors_no_matter_how_skewed
 hornvale-lab::hornvale_lab$domesday::detect::tests::d8_fires_on_an_unmeasured_crate_and_not_on_a_measured_one
-hornvale-lab::hornvale_lab$domesday::detect::tests::d8_fires_on_exactly_alchemy_paleoclimate_and_person
+hornvale-lab::hornvale_lab$domesday::detect::tests::d8_fires_on_exactly_alchemy_paleoclimate_person_and_thing
 hornvale-lab::hornvale_lab$domesday::detect::tests::defensibility_capacity_rank_corr_still_exists_in_the_registry
 hornvale-lab::hornvale_lab$domesday::detect::tests::direct_references_match_measured_crates
 hornvale-lab::hornvale_lab$domesday::detect::tests::domain_crates_are_still_exactly_this_list

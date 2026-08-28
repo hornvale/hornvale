@@ -54,16 +54,23 @@ use std::process::Command;
 /// campaign elsewhere; the third verdict below turns it RED the moment the
 /// roster catches up, which is the signal to delete it.
 ///
-/// EMPTY, and that is the guard working exactly as designed. Two declarations
-/// have lived here and both were deleted the moment the roster caught up:
-/// `hornvale-hearsay` (The Ballast, restored by The Retelling), and
-/// `hornvale-sentiment` (campaign/the-cant), whose 27 roster rows were
-/// harvested by the chamber's own `gate` phase at merge — landing in the SAME
-/// commit as the declaration that acknowledged its absence, which made the
-/// row stale the instant it was written. The safe shape is to add a new
-/// crate WITHOUT a declaration and let the first chamber run populate the
-/// roster; a declaration is only for a gap whose fix is genuinely elsewhere.
-const DECLARED_ABSENT: &[(&str, &str)] = &[];
+/// Two declarations have lived here before and both were deleted the moment
+/// the roster caught up: `hornvale-hearsay` (The Ballast, restored by The
+/// Retelling), and `hornvale-sentiment` (campaign/the-cant), whose 27 roster
+/// rows were harvested by the chamber's own `gate` phase at merge — landing
+/// in the SAME commit as the declaration that acknowledged its absence,
+/// which made the row stale the instant it was written.
+///
+/// `hornvale-thing` (campaign/the-chattel) is the same shape as
+/// `hornvale-sentiment`: a brand-new domain crate, committed between chamber
+/// runs, with no test of its own slow enough (or measured yet) to have
+/// earned a subfloor-roster row. Delete this row the moment a chamber `gate`
+/// phase (a stage gate or a merge) rewrites the roster and turns it stale.
+const DECLARED_ABSENT: &[(&str, &str)] = &[(
+    "hornvale-thing",
+    "new domain crate (The Chattel, Task 2); no chamber gate run has \
+     populated its subfloor-roster entry yet",
+)];
 
 /// The repository root, resolved from this crate's manifest directory.
 fn repo_root() -> PathBuf {

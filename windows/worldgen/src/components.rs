@@ -47,6 +47,8 @@ pub struct WorldComponents {
     pub culture: ComponentStore<KindId, hornvale_culture::CultureTraits>,
     /// Material-kind traits (terrain-owned; no biosphere row).
     pub material: ComponentStore<KindId, hornvale_terrain::MaterialTraits>,
+    /// Thing-kind traits (thing-owned; no biosphere row).
+    pub thing: ComponentStore<KindId, hornvale_thing::ThingTraits>,
     /// Which realm a kind's carrying capacity is scored in (The Warren).
     /// Sparse: absence means [`HabitatRealm::Surface`].
     pub habitat_realm: ComponentStore<KindId, HabitatRealm>,
@@ -78,6 +80,7 @@ impl WorldComponents {
         let deity = hornvale_religion::deity_registry();
         let culture = hornvale_culture::culture_registry();
         let material = hornvale_terrain::material_registry();
+        let thing = hornvale_thing::thing_registry();
         let habitat_realm = hornvale_species::habitat_realm_registry();
         let biome_affinity = hornvale_species::biome_affinity_registry();
 
@@ -104,6 +107,7 @@ impl WorldComponents {
             deity,
             culture,
             material,
+            thing,
             habitat_realm,
             biome_affinity,
         })
@@ -130,6 +134,7 @@ impl WorldComponents {
         deity: ComponentStore<KindId, hornvale_religion::DeityTraits>,
         culture: ComponentStore<KindId, hornvale_culture::CultureTraits>,
         material: ComponentStore<KindId, hornvale_terrain::MaterialTraits>,
+        thing: ComponentStore<KindId, hornvale_thing::ThingTraits>,
         habitat_realm: ComponentStore<KindId, HabitatRealm>,
         biome_affinity: ComponentStore<KindId, BiomeAffinity>,
     ) -> Result<Self, BuildError> {
@@ -156,6 +161,7 @@ impl WorldComponents {
             deity,
             culture,
             material,
+            thing,
             habitat_realm,
             biome_affinity,
         })
@@ -212,7 +218,7 @@ impl WorldComponents {
     /// Every kind in the world: the union of all component stores' key-sets,
     /// ascending. The kind roster — NOT the biosphere store, which is only
     /// the set of kinds with bodies (genesis iterates biosphere for species
-    /// entities; deity/culture/material kinds have no biosphere row).
+    /// entities; deity/culture/material/thing kinds have no biosphere row).
     pub fn kinds(&self) -> Vec<KindId> {
         let mut all: std::collections::BTreeSet<KindId> = std::collections::BTreeSet::new();
         all.extend(self.biosphere.ids().copied());
@@ -226,6 +232,7 @@ impl WorldComponents {
         all.extend(self.deity.ids().copied());
         all.extend(self.culture.ids().copied());
         all.extend(self.material.ids().copied());
+        all.extend(self.thing.ids().copied());
         all.into_iter().collect()
     }
 }
@@ -735,6 +742,7 @@ mod tests {
             ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),
+            ComponentStore::new(),
         );
         // Match the message, not just the variant: the perception check
         // follows the psyche check in the same loop, and red-dragon carries a
@@ -778,6 +786,7 @@ mod tests {
             lexicon,
             family_proto(),
             family_of,
+            ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),

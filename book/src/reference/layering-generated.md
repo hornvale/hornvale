@@ -20,6 +20,7 @@ kernel  →  domains/*  →  windows/*  →  cli
 | hornvale-settlement | domains | hornvale-kernel | — |
 | hornvale-species | domains | hornvale-kernel | — |
 | hornvale-terrain | domains | hornvale-kernel | — |
+| hornvale-thing | domains | hornvale-kernel | — |
 | hornvale-topology | domains | hornvale-kernel | — |
 | hornvale-almanac | windows | hornvale-astronomy, hornvale-climate, hornvale-culture, hornvale-history, hornvale-kernel, hornvale-language, hornvale-person, hornvale-religion, hornvale-settlement, hornvale-species, hornvale-terrain, hornvale-topology | hornvale-worldgen |
 | hornvale-book | windows | hornvale-astronomy, hornvale-climate, hornvale-kernel, hornvale-language, hornvale-terrain, hornvale-worldgen | — |
@@ -32,5 +33,5 @@ kernel  →  domains/*  →  windows/*  →  cli
 | hornvale-scene | windows | hornvale-astronomy, hornvale-climate, hornvale-kernel, hornvale-locale, hornvale-settlement, hornvale-terrain, hornvale-worldgen | — |
 | hornvale-sentiment | windows | hornvale-demography, hornvale-kernel, hornvale-language, hornvale-species | — |
 | hornvale-vessel | windows | hornvale-astronomy, hornvale-book, hornvale-climate, hornvale-historiography, hornvale-history, hornvale-kernel, hornvale-language, hornvale-locale, hornvale-religion, hornvale-scene, hornvale-settlement, hornvale-species, hornvale-terrain, hornvale-worldgen | — |
-| hornvale-worldgen | windows | hornvale-alchemy, hornvale-almanac, hornvale-astronomy, hornvale-climate, hornvale-culture, hornvale-demography, hornvale-explain, hornvale-history, hornvale-kernel, hornvale-language, hornvale-paleoclimate, hornvale-person, hornvale-religion, hornvale-settlement, hornvale-species, hornvale-terrain, hornvale-topology | — |
+| hornvale-worldgen | windows | hornvale-alchemy, hornvale-almanac, hornvale-astronomy, hornvale-climate, hornvale-culture, hornvale-demography, hornvale-explain, hornvale-history, hornvale-kernel, hornvale-language, hornvale-paleoclimate, hornvale-person, hornvale-religion, hornvale-settlement, hornvale-species, hornvale-terrain, hornvale-thing, hornvale-topology | — |
 | hornvale | cli | hornvale-almanac, hornvale-astronomy, hornvale-book, hornvale-chronicle, hornvale-climate, hornvale-culture, hornvale-explain, hornvale-historiography, hornvale-kernel, hornvale-lab, hornvale-language, hornvale-locale, hornvale-paleoclimate, hornvale-religion, hornvale-scene, hornvale-settlement, hornvale-species, hornvale-terrain, hornvale-vessel, hornvale-worldgen | — |
