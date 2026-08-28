@@ -74,6 +74,7 @@
 //! count.
 
 use hornvale_kernel::ConceptRegistry;
+use hornvale_kernel::world::IS_A;
 use hornvale_language::packs::{KILL, KNOW, THINK};
 use hornvale_language::{
     Argument, Clause, CommonVocabulary, Coordination, Definiteness, Evidential, Number, Person,
@@ -211,6 +212,13 @@ struct Entry {
     /// This entry's [`Direction`], or `None` when the corpus states
     /// nothing.
     direction: Option<Direction>,
+    /// The one demand token this entry itself introduces, for a ladder
+    /// rung — [`read_derived`] populates this straight off the rung's own
+    /// `introduces` field. `None` for a declared corpus
+    /// ([`read_declared`]'s entries): `the-merchant` and `the-flood-watch`
+    /// state no `introduces` field at all, and a declared corpus introduces
+    /// nothing by construction.
+    introduces: Option<String>,
 }
 
 /// The corpus document's shape: only what the resolver reads.
@@ -282,6 +290,7 @@ fn read_declared(path: &Path) -> Vec<Entry> {
             text: e.text,
             demands: e.demands,
             direction: parse_direction(e.direction.as_deref()),
+            introduces: None,
         })
         .collect()
 }
@@ -358,6 +367,7 @@ fn read_derived(path: &Path) -> Vec<Entry> {
             text: e.text.clone(),
             demands: derived_demands(e.id.as_str(), &by_id),
             direction: Some(Direction::Produce),
+            introduces: e.introduces.clone(),
         })
         .collect()
 }
@@ -845,6 +855,7 @@ fn a_classify_only_entry_resolves_as_covered() {
         text: "(synthetic, never in the frozen corpus)".to_string(),
         demands: vec!["classify".to_string()],
         direction: None,
+        introduces: None,
     };
     assert!(
         entry_covered(&synthetic),
@@ -898,6 +909,7 @@ fn an_unimplemented_demand_resolves_as_not_yet() {
         text: "(synthetic, never in the frozen corpus)".to_string(),
         demands: vec![UNCOVERED_TOKEN.to_string()],
         direction: None,
+        introduces: None,
     };
     assert!(!entry_covered(&synthetic));
 }
@@ -912,6 +924,7 @@ fn a_mixed_entry_needs_every_demand_covered() {
         text: "(synthetic, never in the frozen corpus)".to_string(),
         demands: vec!["classify".to_string(), UNCOVERED_TOKEN.to_string()],
         direction: None,
+        introduces: None,
     };
     assert!(!entry_covered(&synthetic));
 }
@@ -1862,6 +1875,185 @@ fn every_covered_entry_realizes_in_common() {
     }
 }
 
+// ---------------------------------------------------------------------
+// Task 1 (The Rail): the ladder's frontier and its own witness
+// ---------------------------------------------------------------------
+
+/// The rung's own `introduces` token, or `None` for a rung that introduces
+/// nothing (or for a declared corpus's entry, which never carries one at
+/// all).
+fn ladder_introduces(entry: &Entry) -> Option<&str> {
+    entry.introduces.as_deref()
+}
+
+/// The rungs whose every presupposition is covered but which are not
+/// themselves — the build-next list.
+///
+/// **The direction this computes, stated because a reader will assume the
+/// other one.** A rung is on the frontier when its DEPENDENCIES are
+/// satisfied, which is `demands` minus the rung's own `introduces` token.
+/// It says nothing about whether the rung is cheap, only that nothing stands
+/// between it and being built. A rung with three unbuilt dependencies is not
+/// on the frontier however easy it looks.
+fn ladder_frontier(entries: &[Entry]) -> Vec<String> {
+    entries
+        .iter()
+        .filter(|e| !entry_covered(e))
+        .filter(|e| {
+            let own = ladder_introduces(e);
+            e.demands
+                .iter()
+                .filter(|d| Some(d.as_str()) != own)
+                .all(|d| demand_covered(d))
+        })
+        .map(|e| e.id.clone())
+        .collect()
+}
+
+/// How many OTHER rungs would become newly covered as a side effect of
+/// building `rung` alone — used only by the report (Task 1, Step 5), never
+/// by a test. Computed by re-running [`entry_covered`]'s own predicate with
+/// `rung`'s `introduces` token added to the covered set, never estimated:
+/// counts every other entry whose demands are now all covered that were not
+/// covered before. `rung` itself is excluded — a frontier rung landing is
+/// the premise, not the "unblock", so this reports only the cascade beyond
+/// it.
+fn ladder_unblocks(entries: &[Entry], rung: &Entry) -> usize {
+    let Some(token) = ladder_introduces(rung) else {
+        return 0;
+    };
+    let newly_covered = |d: &str| demand_covered(d) || d == token;
+    entries
+        .iter()
+        .filter(|e| e.id != rung.id)
+        .filter(|e| !entry_covered(e))
+        .filter(|e| !e.demands.is_empty() && e.demands.iter().all(|d| newly_covered(d)))
+        .count()
+}
+
+/// `(met, total)` over every `(entry, demand)` pair a corpus states.
+///
+/// The complement to a headline covered-entry count: coverage is
+/// conjunctive at the entry level, so a corpus can gain many met demand
+/// instances while its covered-entry count sits still. See
+/// [`demand_instance_coverage_matches_the_campaigns_prediction`] for why
+/// this exists.
+fn demand_instance_coverage(entries: &[Entry]) -> (usize, usize) {
+    let mut met = 0usize;
+    let mut total = 0usize;
+    for entry in entries {
+        for demand in &entry.demands {
+            total += 1;
+            if demand_covered(demand) {
+                met += 1;
+            }
+        }
+    }
+    (met, total)
+}
+
+/// The Common surface each covered LADDER rung actually realizes.
+/// [`MERCHANT_WITNESS`]'s twin, read by
+/// [`every_covered_ladder_rung_realizes_in_common`]. One row per covered
+/// rung, no more and no fewer.
+const LADDER_WITNESS: &[(&str, &str)] = &[("r001", "the woman is a merchant.")];
+
+/// The [`MerchantConstruction`] this campaign builds for a covered ladder
+/// rung. Hand-built from the rung's own text, the same posture
+/// [`merchant_construction`] takes — and, like it, **not a corpus-to-clause
+/// translator**: there is no parser from the ladder's English into a
+/// `Clause` and building one is not this campaign's job. Panics on a rung it
+/// does not cover.
+fn ladder_construction(id: &str) -> MerchantConstruction {
+    match id {
+        "r001" => MerchantConstruction::Clause(Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("the woman".to_string()),
+            object: Argument::Concept("merchant".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        }),
+        other => panic!("no ladder construction for rung {other:?}"),
+    }
+}
+
+/// The ladder's covered count and its frontier, both preregistered.
+///
+/// **This is the baseline the campaign is measured against**, committed
+/// before any rung is built. `r001` (`classify`) is the only covered rung;
+/// the frontier is the five rungs every one of whose presuppositions is
+/// covered but which are not themselves.
+#[test]
+fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
+    let entries = read_derived(&repo_root().join("sentences/the-ladder.corpus.json"));
+    let covered: Vec<&str> = entries
+        .iter()
+        .filter(|e| entry_covered(e))
+        .map(|e| e.id.as_str())
+        .collect();
+    assert_eq!(covered, vec!["r001"], "the ladder's covered set");
+    assert_eq!(
+        ladder_frontier(&entries),
+        vec!["r002", "r003", "r005", "r011", "r083"],
+        "the ladder's frontier"
+    );
+}
+
+/// The complementary statistic, over every (entry, demand) pair rather than
+/// over entries. **It complements the headline count and never replaces
+/// it** — decision 0016 binds the merchant corpus's scoring METHOD as well
+/// as its text, and `5 of 12` is comparable across four campaigns.
+///
+/// Its reason for existing is the blind zone measured at spec time: the five
+/// rungs this campaign builds move `the-flood-watch` from 0 of 139 to 0 of
+/// 139 while meeting 95 more demand instances. A statistic that reads a null
+/// there is not wrong; it is unable to see.
+#[test]
+fn demand_instance_coverage_matches_the_campaigns_prediction() {
+    let merchant = read_declared(&repo_root().join("sentences/the-merchant.corpus.json"));
+    assert_eq!(demand_instance_coverage(&merchant), (19, 30));
+    let flood = read_declared(&repo_root().join("sentences/the-flood-watch.corpus.json"));
+    assert_eq!(demand_instance_coverage(&flood), (175, 1128));
+}
+
+/// Every ladder rung scored covered realizes in Common, exactly as
+/// [`every_covered_entry_realizes_in_common`] demands of the merchant
+/// corpus.
+///
+/// **This closes the gap that would otherwise let this campaign move the
+/// ladder from 1 to 9 with nothing mechanical behind any of it.** The module
+/// doc above says an `IMPLEMENTED_DEMANDS` nobody checks is "worse than no
+/// instrument, because it would read as evidence"; until this test existed
+/// that was exactly the ladder's situation. A rung whose witness cannot be
+/// built does not get its token.
+#[test]
+fn every_covered_ladder_rung_realizes_in_common() {
+    let entries = read_derived(&repo_root().join("sentences/the-ladder.corpus.json"));
+    let covered: Vec<&str> = entries
+        .iter()
+        .filter(|e| entry_covered(e))
+        .map(|e| e.id.as_str())
+        .collect();
+    let witnessed: Vec<&str> = LADDER_WITNESS.iter().map(|(id, _)| *id).collect();
+    assert_eq!(
+        covered, witnessed,
+        "every covered rung needs a witness row, and a witness row needs its \
+         rung to be covered"
+    );
+    let vocab = CommonVocabulary::default();
+    for (id, expected) in LADDER_WITNESS {
+        let surface = match ladder_construction(id) {
+            MerchantConstruction::Clause(c) => realize_common(&c, &vocab),
+            MerchantConstruction::Coordination(c) => realize_common_coordination(&c, &vocab),
+        };
+        assert_eq!(surface, *expected, "rung {id} realizes");
+    }
+}
+
 /// The committed report path. Deliberately NOT declared BY NAME in
 /// `docs/generated-paths.txt` — `docs/audits/` already declares the whole
 /// directory this file is tracked inside, so a by-name entry would only
@@ -1929,6 +2121,13 @@ fn sentence_coverage_report() {
     let covered = merchant.entries.iter().filter(|e| entry_covered(e)).count();
     let not_yet = merchant.entries.len() - covered;
 
+    let (merchant_demand_met, merchant_demand_total) = demand_instance_coverage(&merchant.entries);
+    let (flood_watch_demand_met, flood_watch_demand_total) =
+        demand_instance_coverage(&flood_watch.entries);
+
+    let ladder_covered = ladder.entries.iter().filter(|e| entry_covered(e)).count();
+    let ladder_frontier_ids = ladder_frontier(&ladder.entries);
+
     let mut out = String::new();
     out.push_str(&format!(
         "# Sentence coverage\n\n\
@@ -1944,18 +2143,20 @@ fn sentence_coverage_report() {
          against `MERCHANT_COVERED`.\n\n\
          Three corpora feed this report, all three frozen: `the-merchant` \
          (12 entries), `the-flood-watch` (139 entries) and `the-ladder` \
-         ({} rungs, frozen since The Rail). Only `the-merchant` is resolved \
-         against the grammar below — `the-flood-watch` carries a `scene` \
-         field the resolver's `Entry` shape does not need, and neither it \
-         nor the ladder has a coverage score. Nothing is waiting on a \
-         schema change: the entry shape that reads both corpora shipped; \
-         what is absent is a coverage resolver over them, which is a \
-         different and larger question (see this file's module doc and \
-         `sentences/README.md`, \"Frozen is not the same as measured\"), \
-         and the ladder is a production instrument, not dialogue, with no \
-         resolver of its own either. What the report gives those two \
-         corpora instead is a direction breakdown and a vocabulary \
-         cross-check against the ladder, both below.\n\n\
+         ({} rungs, frozen since The Rail). `the-merchant` and `the-ladder` \
+         are both resolved against the grammar below, entry by entry — \
+         `the-ladder`'s own resolver and frontier are new as of The Rail \
+         (Task 1). `the-flood-watch` is not: it carries a `scene` field the \
+         resolver's `Entry` shape does not need, and has no entry-level \
+         coverage score of its own. Nothing is waiting on a schema change: \
+         the entry shape that reads it shipped; what is absent is an \
+         entry-level coverage resolver over it, which is a different and \
+         larger question (see this file's module doc and \
+         `sentences/README.md`, \"Frozen is not the same as measured\"). \
+         What the report gives it instead is a direction breakdown, the \
+         demand-instance statistic below (which complements, never \
+         replaces, an entry-level score), and a vocabulary cross-check \
+         against the ladder.\n\n\
          A demand is `covered` only if the grammar implements a \
          construction for it, and an entry is covered only if EVERY demand \
          it makes is. The Interlinear left one token covered (`classify`, \
@@ -2021,7 +2222,11 @@ fn sentence_coverage_report() {
     out.push_str("## the-merchant\n\n");
     out.push_str(&format!("- Total entries: {}\n", merchant.entries.len()));
     out.push_str(&format!("- Covered: {covered}\n"));
-    out.push_str(&format!("- Not yet: {not_yet}\n\n"));
+    out.push_str(&format!("- Not yet: {not_yet}\n"));
+    out.push_str(&format!(
+        "- Demand instances met: {merchant_demand_met} of {merchant_demand_total} ({:.1}%)\n\n",
+        100.0 * merchant_demand_met as f64 / merchant_demand_total as f64,
+    ));
 
     out.push_str("### Per-entry\n\n");
     out.push_str("| id | speaker | text | demands | status |\n");
@@ -2091,16 +2296,24 @@ fn sentence_coverage_report() {
     out.push_str("## the-flood-watch\n\n");
     out.push_str(&format!("- Total entries: {}\n", flood_watch.entries.len()));
     out.push_str(&format!(
-        "- Direction: {} parse / {} produce (see the breakdown above)\n\n",
+        "- Direction: {} parse / {} produce (see the breakdown above)\n",
         flood_watch_directions.parse, flood_watch_directions.produce,
+    ));
+    out.push_str(&format!(
+        "- Demand instances met: {flood_watch_demand_met} of {flood_watch_demand_total} \
+         ({:.1}%)\n\n",
+        100.0 * flood_watch_demand_met as f64 / flood_watch_demand_total as f64,
     ));
     out.push_str(&format!(
         "The resolver above does not run over this corpus — not because of \
          a schema change (there is none outstanding), but because no \
-         coverage resolver has been written for it yet; see this file's \
-         module doc and `sentences/README.md` (\"Frozen is not the same as \
-         measured\"). What ties it to the grammar's delivered capability \
-         instead is the vocabulary cross-check below: {} of its {} \
+         entry-level coverage resolver has been written for it yet; see \
+         this file's module doc and `sentences/README.md` (\"Frozen is not \
+         the same as measured\"). The demand-instance statistic above is a \
+         complement to that, not a substitute (see the-merchant's own line \
+         and `demand_instance_coverage_matches_the_campaigns_prediction`'s \
+         doc). What ties this corpus to the grammar's delivered capability \
+         otherwise is the vocabulary cross-check below: {} of its {} \
          distinct demand tokens name a rung on the ladder.\n\n",
         flood_watch_tokens.len() - flood_watch_absent.len(),
         flood_watch_tokens.len(),
@@ -2109,9 +2322,11 @@ fn sentence_coverage_report() {
     out.push_str("## the-ladder\n\n");
     out.push_str(&format!("- Total rungs: {}\n", ladder.entries.len()));
     out.push_str(&format!(
-        "- Direction: {} produce (see the breakdown above)\n\n",
+        "- Direction: {} produce (see the breakdown above)\n",
         ladder_directions.produce,
     ));
+    out.push_str(&format!("- Covered: {ladder_covered}\n"));
+    out.push_str(&format!("- Frontier: {}\n\n", ladder_frontier_ids.len()));
     out.push_str(
         "`the-ladder.corpus.json` is frozen (The Rail): its rung count is \
          pinned by `LADDER_ENTRIES`, the same mechanism \
@@ -2123,6 +2338,34 @@ fn sentence_coverage_report() {
          corrupted graph that kept the same entry count. See the \
          vocabulary cross-check below.\n\n",
     );
+
+    out.push_str("### Frontier: the build-next list\n\n");
+    out.push_str(
+        "A rung is on the frontier when every demand it makes, other than \
+         its own `introduces` token, is already covered — nothing stands \
+         between it and being built, whether or not it looks cheap. \
+         `unblocks` is the number of OTHER rungs that would become covered \
+         as a side effect of building this one alone — computed by \
+         re-running the resolver with this rung's token added, never \
+         estimated.\n\n",
+    );
+    out.push_str("| id | introduces | text | unblocks |\n");
+    out.push_str("|---|---|---|---|\n");
+    for id in &ladder_frontier_ids {
+        let entry = ladder
+            .entries
+            .iter()
+            .find(|e| &e.id == id)
+            .expect("a frontier id names a real ladder entry");
+        let introduces = ladder_introduces(entry).unwrap_or("—");
+        let unblocks = ladder_unblocks(&ladder.entries, entry);
+        out.push_str(&format!(
+            "| {} | {introduces} | {} | {unblocks} |\n",
+            entry.id,
+            entry.text.replace('|', "\\|"),
+        ));
+    }
+    out.push('\n');
 
     out.push_str("## Cross-check: ladder vocabulary against the two dialogue corpora\n\n");
     out.push_str(
