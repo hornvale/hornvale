@@ -408,13 +408,26 @@ fn the_same_object_offers_differently_to_different_bodies() {
     );
 }
 
-/// IV.a's additive-only rule (spec §3.4): body-relativity may narrow which
-/// verbs a *particular* body reaches through a *particular* object, but it
-/// may never grant a verb `offered_by(kind)` — the body-blind query —
-/// itself did not already grant. Checked across every registered kind, one
-/// unregistered kind (`Screen`, to catch a filter that mishandles the
-/// empty-property fallback), and bodies spanning the mass range from a
-/// small carrier to a very large one.
+/// **Not a live guard on spec §3.4 — a structural sanity check, disclosed
+/// here rather than only in `affordance.rs` (final review minor M-a).**
+/// `offered_to(kind, body)` is *defined* as
+/// `offered_by(kind).into_iter().filter(..)` (`affordance.rs`), and a
+/// filter over a baseline is a subset of that baseline for ANY predicate —
+/// including a restrictive one `body_can_use` could never legally return.
+/// So this assertion holds unconditionally, by construction, regardless of
+/// whether §3.4's additive-only rule is actually honoured; it cannot
+/// distinguish a correct `body_can_use` from a broken one. Kept anyway as a
+/// cheap regression check on the SHAPE of `offered_to` itself (that it
+/// really is implemented as a filter over `offered_by`, across every
+/// registered kind plus one unregistered one), not as evidence for §3.4.
+///
+/// **The real, falsifiable additive-rule guard is
+/// `only_supports_rest_is_body_relative_in_iv_a`**, in `affordance.rs`'s
+/// own `#[cfg(test)] mod tests` — it asserts against [`crate::affordance`]'s
+/// private `body_can_use` directly, outside this filter chain, and is what
+/// actually reddens under a mass-gated `AffordsPassage` (the exact mutation
+/// §3.4 forbids by name). That test's own doc comment carries the full
+/// history of why this one could not.
 #[test]
 fn body_relativity_never_withdraws_an_existing_capability() {
     let biosphere = hornvale_species::biosphere_registry();
@@ -494,5 +507,115 @@ fn an_encountered_object_offers_its_verbs() {
         offered_to_observer(AnchorKind::Hearth, &body, &known),
         offered_to(AnchorKind::Hearth, &body),
         "knowledge of an encountered room must withdraw nothing"
+    );
+}
+
+// --- Fix wave (final whole-branch review, I1): warm must not reintroduce
+// the per-kind coupling this campaign abolishes --------------------------
+
+/// `Warm` is offered to ANY object carrying [`ObjectProperty::RadiatesHeat`]
+/// — never to `AnchorKind::Hearth` because it is named `Hearth`. This is
+/// the M+N claim `a_kind_gains_every_verb_its_properties_satisfy_with_no_
+/// dispatcher_edit` already proves for `Drink`/`HoldsLiquid`; restated here
+/// for `Warm`/`RadiatesHeat` because I1 found the one place in this
+/// codebase that did NOT go through this derivation:
+/// `Session::warm` (`session.rs`) used to compare `interior.anchor(a).kind
+/// == AnchorKind::Hearth` directly, a hardcoded per-kind check one file
+/// over from this exact query. `warm_appears_on_hearth_with_no_object_
+/// table_edit` already shows the QUERY is generic; `no_hardcoded_anchor_
+/// kind_gates_warm` below is the companion proof that `Session::warm`
+/// actually reaches it rather than short-circuiting past it — the two
+/// together are the assertion that would have caught I1, since neither one
+/// alone does (the query was always generic; the dispatcher was the bug).
+#[test]
+fn warm_is_offered_to_any_object_carrying_radiates_heat_not_only_hearth() {
+    let mut traits = ObjectTraits::default();
+    traits.properties.insert(ObjectProperty::RadiatesHeat);
+    assert!(
+        offered(&traits).contains(&OfferedVerb::Warm),
+        "an object carrying RadiatesHeat must offer Warm regardless of \
+         which AnchorKind (if any) produced those traits"
+    );
+    let bare = ObjectTraits::default();
+    assert!(
+        !offered(&bare).contains(&OfferedVerb::Warm),
+        "an object carrying no properties must not offer Warm"
+    );
+}
+
+/// Extracts the `{ ... }` block immediately following the first occurrence
+/// of `needle` in `src`, tracking brace depth from the block's own opening
+/// `{` to its matching close. Used below to isolate exactly `Session::
+/// warm`'s body out of `session.rs`'s several thousand lines — scanning the
+/// WHOLE file would also match `AnchorKind::Hearth` in `warm`'s own doc
+/// comment and in unrelated methods (`chamber_sources`'s light check,
+/// `interior/field.rs`'s `warmth_at`), none of which this test is about.
+fn block_body_after<'a>(src: &'a [u8], needle: &[u8]) -> Option<&'a [u8]> {
+    let start = find_bytes(src, needle)? + needle.len();
+    let open = start + src[start..].iter().position(|&b| b == b'{')?;
+    let mut depth: i32 = 0;
+    for (i, &b) in src[open..].iter().enumerate() {
+        match b {
+            b'{' => depth += 1,
+            b'}' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(&src[open..=open + i]);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+/// Positive control: `block_body_after` must actually isolate the block it
+/// claims to, not the whole remainder of the source.
+#[test]
+fn block_body_after_isolates_exactly_the_matched_block() {
+    let src = b"fn a() { one(); { nested(); } }\nfn b() { two(); }";
+    let body = block_body_after(src, b"fn a()").expect("must find fn a's block");
+    assert!(std::str::from_utf8(body).unwrap().contains("one()"));
+    assert!(
+        !std::str::from_utf8(body).unwrap().contains("two()"),
+        "must not run past fn a's own closing brace into fn b: {:?}",
+        std::str::from_utf8(body).unwrap()
+    );
+}
+
+/// The Offer, fix wave (I1): `Session::warm`'s own body must contain no
+/// `AnchorKind::` literal at all — the shape a per-kind dispatcher edit
+/// would take (`interior.anchor(a).kind == AnchorKind::Hearth`, the exact
+/// code this test's own mutation restores). A verb gated on the OFFER never
+/// needs to name a specific kind; naming one is the M×N coupling spec §3.2
+/// exists to abolish, reintroduced here even though every other surface
+/// (`examine_chamber`) was fixed cleanly at Task 7.
+///
+/// **Would NOT have been caught by a plain "warm succeeds at a real
+/// hearth" test alone.** `AnchorKind::Bed` always co-occurs with
+/// `AnchorKind::Hearth` in every real chamber (`the-fireside-bed` requires
+/// `Hearth` in the same chamber, `interior/pattern.rs`), so a session-level
+/// success test cannot distinguish "gated on Hearth" from "gated on Bed" —
+/// confirmed directly in `session.rs`'s own `warm_succeeds_at_a_real_
+/// hearth_through_a_real_session` doc comment. A structural scan of the
+/// DISPATCHER's own source, in the style of `no_verb_by_object_table_exists`
+/// above, is what actually distinguishes "routes through the offer" from
+/// "hardcodes a kind that happens to agree with the offer today".
+///
+/// Mutation this must fail against: revert `Session::warm` (session.rs) to
+/// the pre-fix body, `interior.anchor(a).kind ==
+/// crate::interior::AnchorKind::Hearth` — reddens (confirmed in the fix
+/// wave's report) while every other `warm`/`examine` test stays green,
+/// exactly the I1 finding.
+#[test]
+fn no_hardcoded_anchor_kind_gates_warm() {
+    let src = include_str!("../../src/session.rs");
+    let body = block_body_after(src.as_bytes(), b"fn warm(&self) -> Turn {")
+        .expect("session.rs must define fn warm(&self) -> Turn");
+    assert!(
+        find_bytes(body, b"AnchorKind::").is_none(),
+        "Session::warm's body names a specific AnchorKind literal directly, \
+         reintroducing the per-kind coupling spec 3.2 forbids: {:?}",
+        std::str::from_utf8(body).unwrap_or("<non-utf8>")
     );
 }
