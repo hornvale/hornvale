@@ -1007,6 +1007,16 @@ impl<'w> Session<'w> {
         registry
             .register_predicate(AGENT_AT, false, "an agent's position on a day")
             .expect("AGENT_AT registers identically every session");
+        // PASSAGE_CLEARED is likewise never registered at genesis (The Latch,
+        // spec section 3.1): the whole live-play fact layer is session-scoped,
+        // in registry and ledger both.
+        registry
+            .register_predicate(
+                crate::passage::PASSAGE_CLEARED,
+                false,
+                "a passage this body has cleared",
+            )
+            .expect("PASSAGE_CLEARED registers identically every session");
         // Idempotent (same def every session): never conflicts, since DRANK
         // is never registered at genesis either (spec §3).
         registry

@@ -79,3 +79,44 @@ fn seed_42_places_at_least_one_barred_cave_mouth() {
          unreachable and the campaign's cut must move"
     );
 }
+
+/// The address encoding must be injective across every field of
+/// `ChamberAddr` — two different addresses must never collide on one key, or
+/// clearing one passage would silently clear another.
+///
+/// MUTATION this must fail against: drop `branch` from `addr_key`'s format
+/// string. Both addresses below then produce the same key and the assertion
+/// fires.
+///
+/// Confirmed 2026-08-28: `assertion `left == right` failed: addr_key
+/// collided: ["7/Undercroft/0", "8/Undercroft/0", "7/Undercroft/0",
+/// "7/Undercroft/1"] left: 3 right: 4` — `base` and `by_branch` collided,
+/// as expected once `branch` drops out of the key.
+#[test]
+fn addr_key_distinguishes_every_field() {
+    use hornvale_kernel::{Band, Vertex};
+    use hornvale_vessel::passage::addr_key;
+    use hornvale_worldgen::chamber::ChamberAddr;
+
+    let base = ChamberAddr {
+        vertex: Vertex(7),
+        band: Band::Undercroft,
+        branch: 0,
+        level: 0,
+    };
+    let by_vertex = ChamberAddr {
+        vertex: Vertex(8),
+        ..base
+    };
+    let by_branch = ChamberAddr { branch: 1, ..base };
+    let by_level = ChamberAddr { level: 1, ..base };
+
+    let keys = [
+        addr_key(&base),
+        addr_key(&by_vertex),
+        addr_key(&by_branch),
+        addr_key(&by_level),
+    ];
+    let unique: std::collections::BTreeSet<&String> = keys.iter().collect();
+    assert_eq!(unique.len(), keys.len(), "addr_key collided: {keys:?}");
+}
