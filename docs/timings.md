@@ -3252,3 +3252,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-28T12:38:15Z | gate-commit | 97.602 | 110.101 | 36.214 | 1.50 | 0 | b01932c71 | campaign/the-precedence | ambrose | 12 |
 | 2026-08-28T12:51:06Z | gate-commit | 87.659 | 63.388 | 34.781 | 1.12 | 0 | 520cd5027 | campaign/the-precedence | ambrose | 12 |
 | 2026-08-28T13:00:20Z | gate-commit | 87.607 | 63.430 | 35.195 | 1.13 | 0 | 1221b85aa | campaign/the-precedence | ambrose | 12 |
+| 2026-08-28T13:12:02Z | rebaseline | 100.305 | 266.619 | 15.132 | 2.81 | 0 | 4fe99a9f7 | campaign/the-precedence | ambrose | 12 |
