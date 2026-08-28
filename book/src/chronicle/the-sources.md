@@ -153,13 +153,13 @@ underground — real evidence, not merely a plausible assumption, since a
 vent's chemistry (hot, mafic, water-saturated) sits squarely inside the
 same reactions a chamber's does.
 
-The vent unblock shipped, and it works: a vent's productivity is no longer
-a bare, hand-picked number sitting in the code with a comment explaining
-that nothing could be done about it yet. It is now derived from the same
-seven-mechanism sum a chamber reads, from the vent's own rock and its own
-thermal gradient, and it is measurably non-constant — every vent measured
-differs slightly from every other, because the rock genuinely varies place
-to place.
+The vent unblock shipped, and it works: a vent's chemotrophic energy is no
+longer a bare, hand-picked number sitting in the code with a comment
+explaining that nothing could be done about it yet. It is now derived from
+the same seven-mechanism sum a chamber reads, from the vent's own rock and
+its own thermal gradient, and it is measurably non-constant — every vent
+measured differs slightly from every other, because the rock genuinely
+varies place to place.
 
 But the framing needs correcting, plainly, because the evidence is
 stronger than advertised and points somewhere slightly different. A vent's
@@ -175,6 +175,24 @@ first place. The free evidence was never "a vent is special and the model
 found it." It is that **the entire ocean floor already sits in the regime
 this mechanism rewards** — which is, if anything, a stronger and stranger
 claim than the one inherited, and one the founding document did not make.
+
+An earlier commit inside this same campaign routed that derived reading
+onto the wrong axis: a vent's *forage* term, the one every ordinary marine
+kind already weights. A whole-branch review measured the consequence —
+six `MARINE_FORAGE`-weighted marine kinds gained roughly nine times their
+prior vent occupancy with no chemotrophic mechanism behind any of it, an
+artifact of routing rather than a finding. The fix put the derived reading
+where it belongs: gated on `Biome::HydrothermalVent`, not on lithology or
+seafloor feature directly, because the terrain model provably cannot make
+that call on its own (a vent's own energy reading sits within 0.19% of the
+surrounding open ocean's, the same measurement above). A vent's forage went
+back to being the flat `0.02` literal every other deep-ocean biome already
+carries, and the derived, non-constant reading now feeds only the
+`CHEMOSYNTHATE` axis. Nothing in the shipped roster weights that axis from
+the surface side yet — no marine kind, no marine chemotroph — so a vent's
+chemotrophic energy is correctly typed and non-zero but reaches no
+consumer today. Giving something a reason to eat it is rung 4's job, the
+tenant, not this one's.
 
 ## What shipped
 

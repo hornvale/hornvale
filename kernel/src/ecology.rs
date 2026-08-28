@@ -104,8 +104,11 @@ pub const MARINE_FORAGE: ResourceAxis = ResourceAxis {
 /// Ambient chemosynthetic primary production — energy fixed from chemical
 /// gradients rather than light (hydrothermal, cave-chemolithotrophic, or
 /// other lightless sources), never depleted by consumption. Registered here
-/// with a supply of `0.0` everywhere; the field itself is wired by a later
-/// task.
+/// with an axis id and no supply of its own — the kernel names the axis but
+/// draws no field; the real supply is wired downstream in the composition
+/// root, per realm (THE SOURCES, Task 9): `chemosynthate_per_rung` for a
+/// `Subterranean` kind, `marine_chemosynthate_supply_field` for a `Surface`
+/// one at a hydrothermal vent.
 ///
 /// `Field` rather than `Stock`, matching `PHOTOSYNTHATE`: this axis is the
 /// base of a lightless food web, not the standing biomass it supports.

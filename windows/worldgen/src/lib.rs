@@ -1119,12 +1119,18 @@ pub fn marine_forage_supply_field(
 /// (`GeneratedTerrain::drainage_at`) — so `EnergySource::DetritalImport`
 /// correctly contributes nothing at a vent.
 ///
-/// **No shipped kind weights `CHEMOSYNTHATE` yet, and this field does not
-/// change that.** A vent now carries a correctly-typed, non-zero
-/// chemotrophic supply that nothing in the roster consumes — authoring a
-/// marine chemotroph, or giving an existing marine kind a `CHEMOSYNTHATE`
-/// weight just to make the supply look used, is THE TENANT's job (rung 4:
-/// "something that eats the budget and spreads"), not this one's.
+/// **`xorn` weights `CHEMOSYNTHATE` (0.35, THE SOURCES Task 9), and this
+/// field still reaches no consumer — because `xorn` is
+/// `HabitatRealm::Subterranean`, and this field is read only on the
+/// `Surface` arm of [`per_species_capacity_at`]'s realm match. `xorn` reads
+/// its chemotrophic supply from `chemosynthate_per_rung` instead, the
+/// per-rung field built alongside it. No `Surface`-realm kind weights
+/// `CHEMOSYNTHATE`, so a vent now carries a correctly-typed, non-zero
+/// chemotrophic supply that nothing in the roster consumes on this arm —
+/// authoring a marine chemotroph, or giving an existing marine kind a
+/// `CHEMOSYNTHATE` weight just to make the supply look used, is THE
+/// TENANT's job (rung 4: "something that eats the budget and spreads"),
+/// not this one's.
 /// type-audit: bare-ok(count: return)
 pub fn marine_chemosynthate_supply_field(
     geo: &Geosphere,
@@ -1853,9 +1859,13 @@ pub fn per_species_capacity(
 /// a properly era-adjusted climate — but no era biome recomputation exists,
 /// so both are inert either way. `marine` is additionally inert because no
 /// shipped kind weights `MARINE_FORAGE`; `marine_chemosynthate` is inert for
-/// the identical reason on `CHEMOSYNTHATE` (see
-/// [`marine_chemosynthate_supply_field`]'s own doc for why that gap is
-/// deliberate, not a bug). Both are hoisted because today neither can vary,
+/// a different reason on `CHEMOSYNTHATE` — this hoisted field is consumed
+/// only on the `Surface` arm of the realm match below, and the one kind
+/// that weights `CHEMOSYNTHATE` (`xorn`) is `HabitatRealm::Subterranean`,
+/// so it is read on the `Subterranean` arm's `chemosynthate_per_rung`
+/// instead and never touches this field at all (see
+/// [`marine_chemosynthate_supply_field`]'s own doc for why the vent's
+/// supply is real and correctly typed even so). Both are hoisted because today neither can vary,
 /// not because either never could; a marine people, a marine chemotroph, or
 /// an era biome model would move either out of this struct.
 ///
