@@ -469,6 +469,32 @@ const NEXTEST_CONFIG: &str = ".config/nextest.toml";
 /// The marker that makes an override a serialization pin.
 const THREADS_REQUIRED: &str = "threads-required = \"num-cpus\"";
 
+/// The setting prefix that opts a whole-runner test into scheduling FIRST
+/// (The Governor, Task 1) — checked as a live SETTING, mirroring
+/// [`THREADS_REQUIRED`], for the same reason: the `# class: front-loaded`
+/// marker COMMENT records intent, but only a live `priority = ` line
+/// carries it out. Found by mutation-testing this guard: deleting the real
+/// `priority = 100` line and leaving the marker comment and
+/// `threads-required` line untouched left the guard GREEN, because nothing
+/// checked for this line at all. Matched by prefix, not by parsing the
+/// `i8` value — this guard verifies a whole-runner test IS front-loaded,
+/// not that the chosen priority is well-chosen.
+const PRIORITY_SETTING_PREFIX: &str = "priority = ";
+
+/// Markers allowed to tag MORE THAN ONE override table (The Governor,
+/// Task 1). Every other marker must tag at most one table — the original,
+/// stricter invariant — because a duplicated table under the SAME marker is
+/// the copy-paste mistake that silently reintroduces an unprimed
+/// `threads-required` reservation: found by mutation-testing this guard,
+/// duplicating the `# class: scatter-sweep` table (same filter, same
+/// `threads-required`, no `priority`, no `front-loaded` tag on the copy)
+/// left the whole heavy_tier suite GREEN once per-marker uniqueness was
+/// dropped for every marker rather than just this one. `front-loaded` is
+/// the deliberate exception: it tags BOTH the scatter-sweep and
+/// wall-clock-budget tables, because every test that reserves the whole
+/// runner must be front-loaded and those two classes are what reserves it.
+const MARKERS_ALLOWING_MULTIPLE_TABLES: &[&str] = &["front-loaded"];
+
 /// The call that makes a battery internally parallel — the property the
 /// scatter-sweep pin exists for. Matching the CALL (not the module) is
 /// deliberate: a test that merely mentions the helper in prose is not the
@@ -485,12 +511,20 @@ const SWEEP_CALL: &str = "seed_sweep::map_seeds(";
 const CO_SCHEDULE_SENSITIVE_MARKER: &str = "nextest: co-schedule-sensitive";
 
 /// Extracts the sorted, deduped test names from the `filter = 'test(/…/) |
-/// …'` line inside the `.config/nextest.toml` override table tagged
+/// …'` line inside the `.config/nextest.toml` override table(s) tagged
 /// `# class: <marker>` — an INLINE marker line living INSIDE the
 /// `[[profile.default.overrides]]` table it identifies, not the banner
 /// comment above it, so the two `threads-required` tables The Ballast leaves
 /// behind cannot be confused with each other. Std-only string scanning —
 /// this workspace admits no TOML parser (decision 0004).
+///
+/// Every matched table must carry a live `threads-required = "num-cpus"`
+/// SETTING (never just a comment mentioning it). A marker in
+/// [`MARKERS_ALLOWING_MULTIPLE_TABLES`] may tag more than one table — every
+/// other marker may tag at most one, or this panics — and for exactly those
+/// multiple-table markers, every matched table must ALSO carry a live
+/// `priority = ` setting (see [`PRIORITY_SETTING_PREFIX`]). The `i8` value
+/// itself is never inspected, only whether the line is present.
 fn pinned_filter_names_for_class(marker: &str) -> Vec<String> {
     let text = fs::read_to_string(repo_root().join(NEXTEST_CONFIG))
         .expect(".config/nextest.toml is readable");
@@ -508,21 +542,27 @@ fn pinned_filter_names_for_class(marker: &str) -> Vec<String> {
         "{NEXTEST_CONFIG} has no `[[profile.default.overrides]]` table at all"
     );
 
-    // A class marker may tag MORE THAN ONE override table (The Governor,
-    // Task 1). Every class before `front-loaded` tagged exactly one table,
-    // so this used to assert uniqueness and return a single block's names.
-    // `front-loaded` tags BOTH the scatter-sweep and wall-clock-budget
-    // tables — every test that reserves the whole runner is front-loaded,
-    // and those two classes are what reserves it — so this now collects
-    // names from every table the marker tags, rather than assuming one.
-    // `serialized_filter_names()` and `budget_filter_names()` below still
-    // call this with markers that tag exactly one table each, so this is a
-    // strict generalization: their return values are unchanged.
+    // A class marker may tag MORE THAN ONE override table only if it is
+    // listed in `MARKERS_ALLOWING_MULTIPLE_TABLES` (The Governor, Task 1;
+    // see that const's comment for why `front-loaded` is the one marker
+    // that needs this and why every other marker keeps the original,
+    // stricter one-table invariant).
+    let allows_multiple = MARKERS_ALLOWING_MULTIPLE_TABLES.contains(&marker);
     let mut targets: Vec<&[&str]> = Vec::new();
     for (bi, &start) in block_starts.iter().enumerate() {
         let end = block_starts.get(bi + 1).copied().unwrap_or(lines.len());
         let block = &lines[start..end];
         if block.iter().any(|l| l.trim() == class_line) {
+            assert!(
+                allows_multiple || targets.is_empty(),
+                "more than one override table in {NEXTEST_CONFIG} is tagged \
+                 {class_line:?} — the marker must be unique per class (add it to \
+                 MARKERS_ALLOWING_MULTIPLE_TABLES if that is now deliberate). A \
+                 duplicated override table under the same marker is the copy-paste \
+                 mistake that silently reintroduces an unprimed reservation: the \
+                 stray copy inherits the marker and the filter but not necessarily \
+                 the settings that made the original one safe."
+            );
             targets.push(block);
         }
     }
@@ -532,6 +572,13 @@ fn pinned_filter_names_for_class(marker: &str) -> Vec<String> {
          `{class_line}` marker line lives INSIDE the `[[profile.default.overrides]]` \
          table it identifies (see this file's section comment)."
     );
+
+    // Markers in MARKERS_ALLOWING_MULTIPLE_TABLES additionally certify a
+    // live `priority = ` setting per table, mirroring the THREADS_REQUIRED
+    // check below — see PRIORITY_SETTING_PREFIX's comment for why: the
+    // `# class: front-loaded` marker comment records intent, and only a
+    // live setting carries it out.
+    let requires_priority = allows_multiple;
 
     let mut names = Vec::new();
     for block in targets {
@@ -551,6 +598,19 @@ fn pinned_filter_names_for_class(marker: &str) -> Vec<String> {
              this class is GONE, which silently re-exposes it to canonical-box contention \
              — see this file's section comment."
         );
+        if requires_priority {
+            assert!(
+                settings
+                    .iter()
+                    .any(|l| l.starts_with(PRIORITY_SETTING_PREFIX)),
+                "the {class_line:?} table in {NEXTEST_CONFIG} has no live \
+                 {PRIORITY_SETTING_PREFIX:?} SETTING (the `{class_line}` marker \
+                 comment does not count — see PRIORITY_SETTING_PREFIX's doc \
+                 comment). This test reserves the whole runner but is not \
+                 scheduled first, which reintroduces the drain-then-cold-restart \
+                 barrier tax this class exists to remove."
+            );
+        }
         let filter_lines: Vec<&str> = settings
             .iter()
             .copied()
@@ -786,10 +846,19 @@ fn the_serialization_pin_names_exactly_the_wall_clock_budget_tests_marked_co_sch
 /// Every test that reserves the whole runner must also be front-loaded, and
 /// nothing else may be.
 ///
-/// DIRECTION, STATED SO IT CANNOT BE MISREAD AS TOTAL: this asserts set
-/// EQUALITY between the `threads-required = "num-cpus"` roster and the
-/// `priority`-carrying roster. It does not check that the priority VALUE is
-/// sensible, only that the two rosters name the same tests.
+/// PRECISELY WHAT IS CHECKED, SO THIS CANNOT BE MISREAD AS EITHER MORE OR
+/// LESS THAN IT IS: `front_loaded_filter_names()` only admits a table into
+/// its roster if it carries a live `priority = ` SETTING line — a
+/// `# class: front-loaded` marker COMMENT alone gets the table rejected by
+/// `pinned_filter_names_for_class` before this test ever runs (see
+/// [`PRIORITY_SETTING_PREFIX`]). So PRESENCE of a `priority` setting on
+/// every whole-runner test IS checked, both by construction (a table
+/// without one cannot contribute to `front_loaded`, so it would make
+/// `reserving` and `front_loaded` diverge) and directly. What is NOT
+/// checked is the priority VALUE — this does not assert `100`, or any
+/// particular number, or that a lower-priority test hasn't been given a
+/// HIGHER one; it asserts set EQUALITY between the `threads-required =
+/// "num-cpus"` roster and the roster of tables that live-set `priority`.
 ///
 /// WHY: a `threads-required = "num-cpus"` test that is not front-loaded makes
 /// nextest drain the entire runner mid-run and restart the remainder cold.
