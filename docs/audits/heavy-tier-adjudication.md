@@ -355,3 +355,189 @@ turn up there.
 No fixture was regenerated and no test file, `#[ignore]` string, or code was
 modified to produce this table — this task is the adjudication only; Task 5
 acts on the DEMOTE rows.
+
+---
+
+## Task 4c — everything outside `windows/hearsay` and `windows/worldgen`
+
+Date: 2026-08-28. Roster read at commit `53d2d051c` (branch `campaign/the-governor`).
+
+## Population
+
+Enumerated with:
+
+```
+grep -rEA1 '#\[ignore = "heavy:' --include='*.rs' . \
+  | grep -oE 'fn [a-z0-9_]+' | sed 's/^fn //' | sort -u
+```
+
+then subtracting the 88 rows already written by Tasks 4a/4b. The full-tree
+scan returns 118 distinct function names; every one outside `windows/hearsay`
+and `windows/worldgen` is enumerated here directly from the 19 files that
+carry a `heavy:` tag outside those two directories — **30 tests**, matching
+the brief's figure. Cross-checked against `binary::name` pairs, not bare
+function names (the brief's warning about a same-named-function collision
+across files, as nearly bit Task 4b): every one of this population's 30 test
+identifiers is unique across `hornvale`, `hornvale-lab`, `hornvale-terrain`,
+`hornvale-kernel`, `hornvale-chronicle`, `hornvale-locale` and `hornvale-scene`
+— no collision found.
+
+`wall_s` and `last result` for every row below are read directly, unmodified,
+from `.superpowers/sdd/2026-08-28-the-governor/task-4c-results.txt` — the
+authoritative log for this population, sourced from the canonical-box heavy
+run at commit `1710e2f11` (log `heavy-20260828T162043Z-602166.log`). **1
+`FAIL`, 29 `PASS`**, exactly as the task brief states (the FAIL is
+`disposition_calibration::the_sub_floor_raider_reading_is_pinned_as_a_witness`).
+This column is *given*, not derived — Task 4a's own artifact already records
+what deriving it by elimination cost once.
+
+## The zero-assertion scan: this population contributes NONE of the six
+
+A file-wide scan for assertion macros (`assert!`/`assert_eq!`/`assert_ne!`/
+`debug_assert*`), over every one of the 19 files in this population that
+carries a `heavy:` tag:
+
+```
+cli/tests/suite/graph_cost.rs                 10
+cli/tests/suite/history_battery.rs             9
+cli/tests/suite/scene_cost.rs                  8
+cli/tests/suite/session_cost.rs                4
+cli/tests/suite/sky_exit_criterion.rs         19
+domains/terrain/src/carve.rs                  74
+domains/terrain/tests/suite/carve_properties.rs 27
+kernel/src/ledger.rs                          78
+windows/chronicle/tests/suite/sounding_sweep.rs 2
+windows/lab/src/metrics.rs                   307
+windows/lab/src/runner.rs                     23
+windows/lab/tests/suite/anomaly_holdout.rs     6
+windows/lab/tests/suite/disposition_calibration.rs 10
+windows/lab/tests/suite/fixture_staleness.rs  11
+windows/lab/tests/suite/health_calibration.rs 65
+windows/lab/tests/suite/terminator_acceptance.rs 4
+windows/lab/tests/suite/the_mire_calibration.rs 6
+windows/locale/src/budget.rs                  12
+windows/scene/src/surrounds.rs                86
+```
+
+Every file carries at least two real assertion macros — **zero files in this
+population qualify for the mechanical zero-assertion filter**, and this
+population contributes nothing to spec §2.2's tier-wide count of six (all six
+live in `windows/hearsay`/`windows/worldgen`, per that section). **This
+agrees with spec §2.2's six exactly** — this scan found no seventh, and no
+disagreement to report.
+
+**One test in this population is the "different unit" case spec §3.2 carves
+out by name** — a test with no assertion of its own, in a file that has
+plenty, which does not qualify for the automatic path and gets an ordinary
+adjudication instead:
+`kernel::ledger::tests::bench_commit_scaling_before_vs_after_index` has zero
+`assert!`/`assert_eq!` calls anywhere in its own body (only `eprintln!` of
+measured durations) despite sitting in `kernel/src/ledger.rs`, a file with 78
+assertion macros elsewhere. Its row below reaches DEMOTE the long way, as the
+spec instructs, and states why.
+
+## The two budget-pinned tests, and the `.config/nextest.toml` guard
+
+`a_possessed_turn_stays_within_its_ceilings` (`cli/tests/suite/session_cost.rs`)
+and `scene_api_cost_is_bounded_on_seed_42` (`cli/tests/suite/scene_cost.rs`)
+both carry the `nextest: co-schedule-sensitive` doc-comment marker and are
+named in `.config/nextest.toml`'s `# class: wall-clock-budget` table (The
+Ballast), which `cli/tests/suite/heavy_tier.rs`'s
+`the_serialization_pin_names_exactly_the_wall_clock_budget_tests_marked_co_schedule_sensitive`
+holds to that exact roster in both directions —
+`co_schedule_sensitive_heavy_tests()` only recognises the marker on a `fn`
+whose own `#[ignore]` string contains `"heavy:"` (unlike the scatter-sweep
+scan beside it, which also recognises `"probe:"`). **Demoting either test —
+i.e. rewriting its `#[ignore]` reason to a `probe:` string — would drop it out
+of that function's roster while `.config/nextest.toml`'s filter still names
+it, reddening the guard**, exactly as the task brief warns.
+
+Read on the merits (§3.1's question, independent of that mechanical
+consequence): both are real production cost gates, not campaign reports.
+`session_cost.rs`'s own module doc states the falsification-ceiling
+discipline directly ("Ceilings ratchet DOWN freely. Raising one is an
+explicit, reviewed act") and its `walk_bytes < WALK_BYTES_BUDGET` assertion is
+explicitly the one that "would have caught this campaign's climate correction
+had it grown the snapshot." `scene_cost.rs` gates the client-facing
+`windows/scene` surface the same way, with a documented history of catching a
+real ~638 ms regression (removed by The Cistern) and an earlier ceiling
+history that moved 2.6 s → 90 s as the world grew (`graph_cost.rs`'s own
+history, cited by `scene_cost.rs`). Both verdicts below are **KEEP** — a red
+in either means a shipped API got slower or bigger, which is exactly the
+witness branch. Because both are KEEP, the mechanical consequence above never
+triggers: no roster edit is needed, and the guard stays consistent with the
+tier as adjudicated.
+
+## Adjudication
+
+| test | binary | wall_s | last result | verdict | reason |
+|---|---|---|---|---|---|
+| `anomaly_holdout::h2_holdout_flag_share_is_within_a_factor_of_two_of_the_in_census_share` | `hornvale-lab::suite` | 334.175 | PASS | **KEEP** | H2, preregistered (spec §3.5), asserts the census's percentile prior transfers to 200 held-out seeds within a factor of 2 — a real, standing calibration property of the shipped anomaly-report tool (`hornvale_lab::domesday::anomaly`), not a one-off campaign finding. The module doc's own words for a red: "the prior is fitted to its own sample," i.e. an active, ongoing defect in the report's calibration, not a historical number to update — "Report the two shares; do not widen FACTOR" instructs the opposite of the report branch. `the_holdout_arm_never_writes_into_the_committed_goldens` (fast, not `#[ignore]`d) covers only the scratch-path hygiene, not the calibration claim itself. |
+| `budget::tests::census_budget_and_spacing_hold_across_seeds` | `hornvale-locale` | 163.446 | PASS | **KEEP** | Three real invariants of the shipped `StrangenessBudget` (`windows/locale/src/budget.rs`) over 25 seeds: sites stay a rare minority of land (`sites.len() * 20 < land_count`), rebuilding is byte-identical (determinism — a project-constitutional concern per this repo's own determinism section), and placed sites occupy distinct vertices (no silent map overwrite). None is a historical pin; all three are general-population correctness properties of production placement code. A red is a real regression in any of the three. |
+| `carve::tests::waterfalls_exist_across_a_seed_sweep` | `hornvale-terrain` | 18.003 | PASS | **KEEP** | An existence probe of the shipped `find_waterfalls` reaching `crate::globe::generate` at canonical resolution (`GLOBE_LEVEL`) over 8 real seeds, asserting the union is non-empty. `find_waterfalls` itself is exercised directly (resolution-independent) by the non-heavy `find_waterfalls_flags_a_high_drainage_hard_over_soft_step`, but that unit test cannot show the feature actually FIRES on real generated worlds — this is the general-population witness that it does, at the resolution every real world uses. A red means waterfall placement silently broke at canonical scale. |
+| `carve_properties::arcs_are_discrete` | `hornvale-terrain::suite` | 32.183 | PASS | **KEEP** | Spec §8 physical property of the shipped terrain sculptor: island-arc land at v3 must form more than one connected component on average (v2's wall read exactly 1), measured over 40 real seeds. `mean > 1.5` is a real physical threshold against measured component counts, not a tautological identity and not a historical pin from a closed question — a red means arc-splitting physics regressed. |
+| `carve_properties::eustatic_dividend_regression` | `hornvale-terrain::suite` | 1.968 | PASS | **KEEP** | Named `_regression` and is one: asserts v3's mean eustatic (sea-level-swing) area sensitivity clears a v2 baseline measured directly from a throwaway pre-campaign worktree, over 4 seeds. A real physical "must be at least as good as the old system" floor for shipped terrain code, not a closed-campaign report — a red means the depositional-shelf physics got worse than the system it replaced. |
+| `carve_properties::shelf_width_asymmetry` | `hornvale-terrain::suite` | 36.048 | PASS | **KEEP** | Spec §8: passive-margin coasts must build measurably wider shelves than active-margin coasts, over 40 seeds pooled at the vertex level. The primary criterion (tail-dominance rate ratio >= 1.5x) is a real physical claim about the shipped `carve`/`shelf_width_hops` machinery, independently re-derived each run from real coast vertices — not a fixed count and not a historical pin. A red means the margin-polarity physics stopped producing the asymmetry it is supposed to. |
+| `disposition_calibration::non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders` | `hornvale-lab::suite` | 485.670 | PASS | **KEEP** | The file's history includes two claims explicitly RETIRED as falsified (the min-vs-max separation statistic, decision 0134) — but the test's one CURRENTLY live substantive assertion, `rho > 0.0` (Spearman sign, whole roster), is not one of them. Its own doc states the red-path meaning directly: "a non-positive [rho] means the gate stopped reading the authored mean" — i.e. the shipped `Bake::takes_the_initiative` mechanism broke, a program regression to investigate, not a historical number to update. Distinguish from `the_weakest_raider_beats_the_strongest_abstainer_primary_claim` in the same file, which pins the RETIRED claim and is itself `#[ignore]`d for an unrelated reason (`PREREGISTERED, not met`) and is outside this heavy population entirely. |
+| `disposition_calibration::the_sub_floor_raider_reading_is_pinned_as_a_witness` | `hornvale-lab::suite` | 517.681 | **FAIL** | **KEEP** | Spec §2.2 names this test by name as the one exception among ten similarly-shaped campaign instruments: "The tenth ... says in its own name that it is a witness. That one stays." Its own doc comment instructs a re-read on any move, explicitly resisting "assuming a cause" without measuring one (it records a prior instance where the intuitive attribution — decision 0145's node-index re-key — was measured and found to move the reading the OPPOSITE direction from the guess). Currently `FAIL` is acceptable and expected: it is the pinned witness for `every_raider_clears_the_floor_preregistered_not_met`, itself `#[ignore]`d as `PREREGISTERED, not met` (decision 0138) and outside the heavy set. No code, fixture or `#[ignore]` string is touched by this adjudication. |
+| `fixture_staleness::census_fixtures_match_a_probe_of_live_seeds` | `hornvale-lab::suite` | 213.326 | PASS | **KEEP** | Exists specifically to catch a worldgen change moving a committed census fixture BEFORE the drift check does (decision 0032's accepted gap, narrowed by TOOL-16/TOOL-drift-scan-probes): compares live-regenerated rows for a fixed head plus a rotating window against the committed fixture. This is a drift detector by design, the definition of a witness — a red means worldgen moved and the fixture is stale, which is exactly the regression this test exists to surface early. |
+| `graph_cost::connection_graph_cost_is_bounded_on_seed_42` | `hornvale::suite` | 67.811 | PASS | **KEEP** | A real falsification ceiling (wall-time and land-route attempt count) on the shipped `connection_graph_of`/`add_land_routes` derivation, re-baselined only when the settlement count itself demonstrably grew (documented counterfactual measurement each time). An asymmetric, one-directional cost safety net — general-purpose against any future change, deliberate or accidental — not a narrow historical pin. A red means the derivation got measurably slower or less filtered than a real, growing world explains. |
+| `graph_cost::tithe_tribute_bake_stays_within_budget` | `hornvale::suite` | 19.479 | PASS | **KEEP** | Same cost-gate class as the row above: bounds the tribute bake's wall-time and the size of a relation table nothing else in the tree bounds. A red is a real cost/size regression in shipped code. |
+| `graph_cost::tumult_predation_bake_stays_within_budget` | `hornvale::suite` | 28.848 | PASS | **KEEP** | Wall-time ceiling on the predation bake plus a non-vacuity-guarded check (`raided > 0` first, per the file's own "F-5" review note, so the cascade-size check cannot pass vacuously on an all-zero histogram) that relaxation cascades dissipate short of `CASCADE_DEPTH_CAP` rather than being silently truncated by it. No histogram floor is asserted (deliberately, to avoid freezing a value the file's own doc says already fell to a campaign's falsification) — only the ceiling and the non-vacuity precondition are, both general-purpose safety properties. |
+| `health_calibration::the_null_control_holds_across_a_seed_sweep` | `hornvale-lab::suite` | 282.211 | PASS | **KEEP** | The breadth-check twin of the always-run, non-`#[ignore]`d seed-42 flagship control for the shipped population-health metric (`hornvale_lab::health`): over 4 additional real seeds, asserts no population reads chronic STUCK distress, non-vacuously guarded (population non-emptiness, recovery). Its own doc: "The bug alarm is armed precisely because this stays quiet" — a false-negative floor for a live diagnostic tool, general-population by construction, not a historical pin. A red means either the metric started false-alarming or the underlying sim broke. |
+| `history_battery::history_gates_full_world_and_cross_seed` | `hornvale::suite` | 251.649 | PASS | **KEEP** | Proves the fast, non-heavy `windows/worldgen/tests/history_gates.rs` gates survive `BuildDepth::Full` (not just Settlements) and generalize across a 9-seed robustness sweep. Every numeric floor here is explicitly an "inertness floor" — set orders of magnitude below the measured value and, per the file's own repeated statement across five campaigns' worth of re-measurement, deliberately NEVER raised to track a rising measurement ("neither floor is raised to track them, because they are inertness floors, not targets"). This is an asymmetric dead-mechanism detector, not a narrow historical pin, and the file's own extensive drift narrative shows real investigation happening on unexplained movement (the seed-100 outlier, the correlation-direction reversal) rather than blind re-pinning. A red means the migration/restacking/stratigraphy mechanism went dormant or the light gate's floors stopped generalizing to the full cascade. |
+| `kernel::ledger::tests::bench_commit_scaling_before_vs_after_index` | `hornvale-kernel` | 0.145 | PASS | **DEMOTE** | Not caught by the mechanical zero-assertion filter (the file has 78 assertion macros elsewhere) but is the "different unit" case §3.2 names explicitly: this test's own body has no `assert!`/`assert_eq!` at all — it only `eprintln!`s measured `Instant` durations comparing indexed-commit vs. a naive O(n) scan, explicitly labelled in its own preceding comment as "a wall-time micro-bench of `Ledger::commit`'s scaling, not a live-worldgen battery." It cannot fail on its own substantive content (there is no ceiling, no pin, nothing asserted about the numbers it prints) — only a panic from `mint_entity`/`commit` themselves, which dozens of other kernel tests would also catch. If this went red tomorrow there is nothing to investigate about the printed numbers; there is nothing pinned to have moved. Reached the same verdict the mechanical filter would give a zero-assertion file, the long way, as the spec instructs. |
+| `metrics::tests::core_homophony_is_zero_for_every_daughter_under_the_merger_aware_assignment` | `hornvale-lab` | 75.371 | PASS | **KEEP** | `claim: invariant(forall-seed)`. Generalizes the fast, non-heavy `core_homophony_is_eliminated_at_seed_42_by_the_injective_assignment` from one seed to five (1/7/42/123/500), asserting the merger-aware family-proto assignment keeps core homophony at exactly zero for every shipped daughter language on every sampled seed — "the number Nathan targets," per the module doc. A real language-domain correctness invariant of shipped `domains/language` machinery; a red means the injective assignment failed to prevent homophony on some seed the fast test never samples. |
+| `metrics::tests::family_battery_metrics_are_deterministic_across_two_builds` | `hornvale-lab` | 33.440 | PASS | **KEEP** | Same class as `shape_metrics_are_present_deterministic_and_sane` below: builds seed 11 twice and asserts 15 family-battery metrics (lexicon regularity, monophyly, inventory closure, divergence magnitude, homophony counts) are byte-identical across the two builds. Determinism is constitutional to this project (see this repo's own CLAUDE.md determinism section); this is a real production-consumer test of the shipped metric registry against real `hornvale_worldgen`/`domains/language` builds, not a report. |
+| `metrics::tests::shape_metrics_are_present_deterministic_and_sane` | `hornvale-lab` | 8.607 | PASS | **KEEP** | Builds seed 7 twice via `TerrainView::build` and asserts every registered shape metric (14 of them) is both byte-identical across the two builds and finite. A real determinism/finiteness witness against the shipped `windows/lab` metric registry and `hornvale-terrain` — a red is either a non-determinism bug (catastrophic-class per this project's own constitution) or a NaN/infinity leaking into a committed metric. |
+| `runner::tests::csv_round_trips_comma_containing_text_fields` | `hornvale-lab` | 52.016 | PASS | **KEEP** | Runs a real 10-seed study, asserts at least one comma-containing `Text` value actually exercises the quoting path (non-vacuity), then round-trips the written CSV through an independent hand-rolled RFC-4180 parser and asserts every field, including the comma-bearing ones, survives byte-for-byte. A real correctness test of shipped `write_csv` — a red means committed study artifacts are silently corrupting comma-bearing text (e.g. a flagship role ladder), which is exactly the kind of bug this test was written to catch. |
+| `runner::tests::five_seed_study_runs_and_is_deterministic` | `hornvale-lab` | 0.087 | PASS | **KEEP** | Runs a real 5-seed study twice, asserts row-for-row and byte-for-byte (via `write_csv`) equality. Determinism witness for shipped `run`/`write_csv`, the same constitutional concern as the `metrics.rs` determinism rows above, on the runner side rather than the metric-extraction side. |
+| `runner::tests::parallel_run_matches_sequential` | `hornvale-lab` | 0.273 | PASS | **KEEP** | Asserts the parallel seed sweep (`run`) is byte-identical, both as in-memory rows and as written CSV bytes, to a hand-rolled sequential re-implementation of the same loop, over 2 pin sets x 16 seeds (enough to span multiple worker threads). Its own comment states the red-path meaning directly: "a reassembly bug, a shared-state leak, a nondeterministic metric" — a real concurrency-correctness witness for shipped infrastructure every study run depends on. |
+| `runner::tests::refusals_are_rows_not_errors` | `hornvale-lab` | 46.149 | PASS | **KEEP** | Real behavioural contract test: a genesis refusal (seed 7 refuses at an exact-3 moons pin) must surface as a `Row` with `refusal: Some(..)` and `Absent` values, not as a study-aborting `Err`, while a non-refusing seed's row must carry no refusal. A red is a real regression in how the shipped runner handles a refusal — load-bearing for every study that sweeps pins near a refusal boundary. |
+| `runner::tests::row_count_is_seeds_times_pin_sets` | `hornvale-lab` | 104.143 | PASS | **KEEP** | Asserts `rows.len() == seeds * pin_sets` (3 x 2 = 6) and that each pin-set's row count is individually correct, over a real run. Not a tautological identity in the sense the campaign's flipped 4b rows were (an exhaustive match fed by unconditional increments that holds for any input) — it requires the seed x pin-set loop, including any refusal/error handling along the way, to actually behave correctly; a bug that dropped or duplicated a row under any real control-flow path would be caught. |
+| `scene_cost::scene_api_cost_is_bounded_on_seed_42` | `hornvale::suite` | 7.392 | PASS | **KEEP** | Real cost/size ceilings on the client-facing `windows/scene` surface (`SceneContext::build`, `tiles_scene_in`, `tiles_region_scene_in`, the four small astronomical documents). Documented history of catching a real regression: the ~638 ms per-call terrain re-derivation The Cistern removed, and `graph_cost.rs`'s own 2.6 s -> 90 s ceiling growth as the world grew, cited here as the reason ceilings are written down as ratcheting rather than assumed. Carries the `nextest: co-schedule-sensitive` marker and is named in `.config/nextest.toml`'s wall-clock-budget class (see the population-level note above) — KEEP leaves that pin and `cli/tests/suite/heavy_tier.rs`'s guard consistent; no roster edit follows from this verdict. |
+| `session_cost::a_possessed_turn_stays_within_its_ceilings` | `hornvale::suite` | 18.567 | PASS | **KEEP** | Real cost/size ceilings on the possessed-turn path (`Session::start`, `handle+snapshot+json`, indoor `snapshot()+json`) plus an unconditional `walk_bytes < WALK_BYTES_BUDGET` serialized-size ceiling that holds on every host regardless of timing-basis calibration. The module doc states directly that this is the assertion "that would have caught this campaign's climate correction had it grown the snapshot." Carries the `nextest: co-schedule-sensitive` marker and is named in `.config/nextest.toml`'s wall-clock-budget class (see the population-level note above) — KEEP leaves that pin and the guard consistent; no roster edit follows from this verdict. |
+| `sky_exit_criterion::graded_pins_never_fail_above_min` | `hornvale::suite` | 309.068 | PASS | **KEEP** | Campaign 2b exit criterion, still live: asserts a graded pin (`--moons 0+3`, min 0) never hard-fails genesis, over 20 real seeds via the actual CLI subprocess. A boolean CLI-correctness invariant with no historical number to move — a red means the graded-pin mechanism started refusing worlds it is designed never to refuse, a direct regression in shipped `hornvale new` behaviour. |
+| `sounding_sweep::run_the_sounding_and_write_the_report` | `hornvale-chronicle::suite` | 26.976 | PASS | **DEMOTE** | The Sounding: a scaling-exponent sweep over `hornvale_chronicle`'s event-coupling delivery (scan vs. index), whose own file doc states "The exponent fit itself is a fast, checkable unit" (covered separately by the non-heavy `exponent_fit_recovers_a_known_power_law`). The preregistered coupling-exponent hypotheses this battery exists to measure (~2.0 under scan, ~1.0 under index, flat density axes) are computed and written into a committed report artifact (`book/src/laboratory/generated/the-sounding/`) but never asserted — the same "printed, not asserted" shape as the DEMOTE report rows in Tasks 4a/4b. The one real assertion, `base_census.raided >= RAID_FLOOR`, is a sample-size non-vacuity guard (the coupling must fire at volume for the exponents to measure anything), not the campaign's substantive finding. |
+| `surrounds::tests::no_land_vertex_bands_as_marine_relief_across_seeds` | `hornvale-scene` | 94.670 | PASS | **KEEP** | Generalizes the fast, non-heavy `no_land_vertex_bands_as_marine_relief` (seed 42 only) to a 5-seed sweep (1/7/42/99/2026), asserting every land vertex bands as `lowland` or above under `relief_band`. The fast sibling's own comment records this is specifically the call-site guard for a real, previously-shipped defect ("the datum's distance from zero is what made this defect invisible"); the heavy version checks the same shipped `relief_band` call site generalizes past one seed. A red is a direct regression of a bug this project has already shipped once. |
+| `the_mire_calibration::the_mires_preregistered_readout` | `hornvale-lab::suite` | 151.089 | PASS | **DEMOTE** | Bundles three assertions; two of the three are report-shaped and dominate the file's own framing. H1 and H2 are explicitly "PINNED AS A FALSIFIED WITNESS, not a floor" — narrow two-sided tolerance bands around ONE historical measurement from a campaign whose headline finding (weather-gated conductance does not move world topology at population scale, and the swing *reverses* with latitude rather than increasing) is already closed and documented in `book/src/chronicle/the-mire.md`. This is the same shape as 4b's DEMOTE `derived_energy_is_monotone_not_a_trough` ("if it ever fails, the shape has moved again and needs a fresh measurement recorded here") and 4a's `BASELINE_*` family: a red means "the pin is just the answer we recorded" moved, not that the (already-falsified) hypothesis was rescued — explicitly, by the file's own words, a red "does NOT mean the falsified hypothesis was rescued." **Distinguish from this population's KEEP rows that also re-baseline on drift** (`graph_cost.rs`, `history_battery.rs`): those are asymmetric, one-directional safety nets (a cost ceiling; an inertness floor) that remain meaningful indefinitely regardless of cause, where only an increase-past-bound or a collapse-to-near-zero fires. H1/H2 here are a symmetric band around a single frozen number, which fires on ANY move in either direction — the report shape, not the witness shape. The third assertion, H3 (daily precipitation sums to the annual climatology), is a genuine physics invariant, but the file's own doc says it is "already unit-tested in `domains/climate` at vertex scale" (`substrate.rs`'s `a_vertices_year_of_contexts_reproduces_its_annual_climatology`) — this heavy battery only re-confirms it at greater seed/vertex breadth, which is real but secondary value, not enough on its own to keep a 151 s battery whose bulk is H1/H2's closed report. Distinguish from `terminator_acceptance.rs`'s KEEP (below): that test's pinned ambient/eternal counts are a CURRENTLY-ACHIEVED payoff framed as a standing bar not to regress from ("a drop is the payoff regressing"), not a frozen falsified value. |
+| `terminator_acceptance::locked_worlds_recover_ambient_presiding_belief_after_the_terminator_fix` | `hornvale-lab::suite` | 116.084 | PASS | **KEEP** | Two assertions. `cyclic == 0` is an unconditional physical invariant (a locked world has no rising-and-setting body to read cyclic) with no historical dependency at all. `ambient == n` / `eternal == 0` pins the CURRENTLY-ACHIEVED preregistered payoff (locked worlds recovering a tide-derived Ambient presiding belief, after two campaigns — The Terminator, then The Sundering) as a standing bar not to silently regress from — its own comment states the red-path meaning directly: "if this drops, a later campaign changed placement or presiding-belief selection; investigate before re-pinning (a drop is the payoff regressing)." Unlike `the_mire_calibration.rs`'s DEMOTE row above, this is not a frozen record of a falsified finding — the payoff DID land, and the test exists to catch it silently un-landing. |
+
+## Summary
+
+- **KEEP: 27** — every row above except `kernel::ledger::tests::bench_commit_scaling_before_vs_after_index`,
+  `sounding_sweep::run_the_sounding_and_write_the_report`, and
+  `the_mire_calibration::the_mires_preregistered_readout`.
+  The population is dominated by production cost gates (`graph_cost.rs`,
+  `scene_cost.rs`, `session_cost.rs`), shipped-infrastructure correctness
+  tests (`windows/lab/src/runner.rs`, `windows/lab/src/metrics.rs`'s
+  determinism batteries), and seed-sweep generalizations of already-proven
+  fast invariants (`carve_properties.rs`, `surrounds.rs`, the
+  `metrics.rs`/`disposition_calibration.rs`/`health_calibration.rs` rows) —
+  qualitatively different in character from the campaign-question probes
+  that made up most of the hearsay/worldgen populations, which is why this
+  population's KEEP share is high rather than a departure from "the burden is
+  on KEEP."
+- **DEMOTE: 3** — `kernel::ledger::tests::bench_commit_scaling_before_vs_after_index`
+  (the ordinary-adjudication zero-assertion case: no `assert!` anywhere in
+  its own body, a pure `eprintln!` benchmark),
+  `sounding_sweep::run_the_sounding_and_write_the_report` (The Sounding's
+  scaling-exponent hypotheses are printed to a report artifact, never
+  asserted; the one real assertion is a sample-size non-vacuity guard), and
+  `the_mire_calibration::the_mires_preregistered_readout` (two of its three
+  assertions pin a closed, chronicle-documented falsified finding as a
+  symmetric drift sentinel; the third re-confirms, at greater breadth, an
+  invariant already unit-tested elsewhere). All three currently `PASS`; none
+  of the three DEMOTE rows is currently red.
+- **UNDECIDED: 0.**
+
+## Zero-assertion filter, project-wide
+
+Tasks 4a and 4b's populations together account for spec §2.2's six
+zero-assertion files. This task's population contributes a seventh count of
+**zero** — every file-wide scan above returned at least 2. **The project-wide
+zero-assertion count is six, unchanged, and this task's scan agrees with it.**
+
+No fixture was regenerated and no test file, `#[ignore]` string, or code was
+modified to produce this table — this task is the adjudication only; Task 5
+acts on the DEMOTE rows.
