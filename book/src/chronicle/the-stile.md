@@ -71,9 +71,13 @@ constructions a generator could fail to build — because the reason is the part
 that can later turn out to be wrong.
 
 The revised ladder was renumbered once, in dependency order, and its file
-states that this was the last free renumbering: nothing had ever been measured
-against it, no test asserted its count, and no artifact cited a rung id. After
-freeze, ids append.
+states that this was the last free renumbering: at the time, nothing had ever
+been measured against it, no test asserted its count, and no artifact cited a
+rung id. That reason has since gone false without the conclusion moving —
+three committed tests now cite specific rung ids by name, and several doc
+comments cite more — which only sharpens the point: the renumbering was free
+because it happened before anything cited an id, not because the file remains
+uncited today. After freeze, ids append regardless.
 
 ## Declared, or derived — never both
 
@@ -197,6 +201,16 @@ count *is* the freeze mechanism, and freezing is the project owner's act after
 review. Adding `LADDER_ENTRIES` is one line. It is also the moment the ladder
 stops being a draft and its rung ids become **append-only forever**, which is
 why nothing in this campaign performs it.
+
+**Unfrozen cuts only one way: append is free, rewiring mid-graph is not.**
+The two closure assertions that pin exact demand sets for r004 and r183
+(`cli/tests/suite/sentence_corpus.rs`) go red the moment a rung is inserted
+*and wired into the middle of the graph* — exactly what the ladder's last
+revision did, 64 rungs placed throughout rather than appended at the end. A
+red there is not a bug: it means the closure genuinely moved and the pinned
+set needs re-deriving from the committed JSON in the same commit. The ladder
+is still unfrozen either way; only its *count* is unpinned, never its
+existing rungs' derived closures.
 
 **No realization witness exists for the 353 new entries, and this is the
 largest honest gap the campaign ships.** [The

@@ -1,5 +1,11 @@
-//! The sentence corpus is frozen: its entry count is asserted, so growing or
-//! trimming it is a deliberate act rather than a drift.
+//! This file resolves three corpora, not one, and they are not frozen the
+//! same way. `the-merchant.corpus.json` and `the-flood-watch.corpus.json`
+//! are frozen: each entry count is asserted, so growing or trimming either
+//! is a deliberate act rather than a drift. `the-ladder.corpus.json.DRAFT`
+//! is deliberately NOT frozen — no count is asserted for it, only
+//! structural properties over its `presupposes` graph (see Task 4's block
+//! below) — because freezing is the project owner's act and the moment it
+//! happens the ladder's rung ids become append-only forever.
 //!
 //! This file also carries the corpus's **resolver**: for each entry, a demand
 //! token is `covered` if the grammar implements a construction for it, `not
@@ -103,13 +109,22 @@ fn the_merchant_corpus_is_frozen_at_its_authored_size() {
 /// scenes of investigative dialogue, 68 player lines and 71 NPC lines.
 const FLOOD_WATCH_ENTRIES: usize = 139;
 
-/// The flood-watch corpus is frozen the same way the merchant corpus is, and
-/// **nothing else in this file touches it**. That is deliberate, not an
-/// omission: it carries two fields the resolver's [`Entry`] does not have —
-/// `scene`, and a per-entry `direction` (`parse` for a player line, `produce`
-/// for an NPC line) that splits one capability question into two. Wiring a
-/// resolver over it therefore needs a schema change, which is spec work
-/// nobody has approved. So the data is frozen now, before any score exists to
+/// The flood-watch corpus is frozen the same way the merchant corpus is.
+/// **It is not true that nothing else in this file touches it** — four
+/// other tests do:
+/// [`the_flood_watch_direction_split_is_sixty_eight_parse_seventy_one_produce`],
+/// [`the_ladder_covers_flood_watch_vocabulary_except_the_two_refused_input_surface_tokens`],
+/// [`removing_a_rungs_introduces_token_makes_the_cross_check_notice`] and
+/// [`sentence_coverage_report`]. None of them scores it for coverage. The
+/// corpus carries one field the resolver's [`Entry`] does not have —
+/// `scene` — plus a per-entry `direction` that [`Entry`] already reads. Its
+/// entry shape shipped; wiring a *coverage* resolver over it is not blocked
+/// on a schema change (there is none outstanding — see
+/// `sentences/README.md`, "Frozen is not the same as measured"). What is
+/// actually absent is a coverage resolver over the two new corpora, which
+/// is a different and larger question: what "covered" should mean for a
+/// corpus the grammar was never built toward, decided before a number
+/// exists to chase. So the data is frozen now, before any score exists to
 /// be chased (decision 0016), and the measurement is left alone.
 ///
 /// Its own `minted_tokens` block records the 56 demand tokens it needed that
@@ -704,11 +719,14 @@ fn every_reference_to_the_headline_test_names_a_function_in_this_file() {
     assert_eq!(
         referenced.len(),
         1,
-        "expected exactly one distinct headline-test link target in this file, \
-         found {referenced:?} — the headline test is referenced by four doc \
-         comments and all four must name the same current test. An empty set \
-         means the scan broke (a moved file path, or a changed link syntax), \
-         not that the references went away."
+        "expected exactly one DISTINCT headline-test link target in this \
+         file, found {referenced:?}. This asserts distinctness, not arity: \
+         however many `[`merchant_coverage_is_*`]` links exist, they must \
+         all name the same current test — it does NOT require four of them \
+         to exist, and would stay green if three of the four references this \
+         test's own doc comment describes were deleted. An empty set means \
+         the scan broke (a moved file path, or a changed link syntax), not \
+         that the references went away."
     );
 
     let dangling: Vec<&&str> = referenced.difference(&defined).collect();
@@ -927,7 +945,17 @@ fn a_ladder_rung_derives_its_transitive_demand_set() {
             "attributive-adjective".to_string(),
             "classify".to_string(),
             "property-predication".to_string(),
-        ]
+        ],
+        "r004's derived transitive demand set moved. The ladder is a \
+         revisable DRAFT (decision permits this), so a red here is not \
+         necessarily a bug — appending a rung, or rewiring `presupposes` \
+         mid-graph the way the ladder's last revision did (64 rungs placed \
+         throughout, not appended at the end), can legitimately change what \
+         r004 transitively presupposes. This assertion pins a CLOSURE, not \
+         a count: if the ladder moved deliberately, re-derive r004's demand \
+         set from the committed JSON (do not hand-edit this list to make it \
+         pass) and update it in the same commit, with a note on why. The \
+         ladder stays unfrozen either way — this test does not freeze it."
     );
 }
 
@@ -1001,7 +1029,17 @@ fn a_deep_ladder_rung_derives_its_full_transitive_closure() {
             "pronoun-reference".to_string(),
             "reported-speech".to_string(),
             "transitive-frame".to_string(),
-        ]
+        ],
+        "r183's derived transitive demand set moved. The ladder is a \
+         revisable DRAFT (decision permits this), so a red here is not \
+         necessarily a bug — appending a rung, or rewiring `presupposes` \
+         mid-graph the way the ladder's last revision did (64 rungs placed \
+         throughout, not appended at the end), can legitimately change what \
+         r183 transitively presupposes. This assertion pins a CLOSURE, not \
+         a count: if the ladder moved deliberately, re-derive r183's demand \
+         set from the committed JSON (do not hand-edit this list to make it \
+         pass) and update it in the same commit, with a note on why. The \
+         ladder stays unfrozen either way — this test does not freeze it."
     );
 }
 
@@ -1051,7 +1089,10 @@ enum Colour {
 /// A real cycle detector over `presupposes`: DFS-coloured, explicit-stack
 /// (so depth is bounded by heap, not the call stack, on a ladder far larger
 /// than 214 rungs), returning either a full topological order (root-most
-/// first) or the offending cycle.
+/// first) or the minimal cycle — the live ancestors actually on the loop,
+/// sliced out of the full DFS path rather than the path itself, so a rung
+/// merely visited on the way to the cycle (a root, a shared ancestor) is
+/// never named as part of it.
 ///
 /// **This is not a backward-reference check.** A file whose `presupposes`
 /// only ever names ids appearing earlier in the array is trivially acyclic
@@ -1094,7 +1135,21 @@ fn topological_order(entries: &[LadderEntryJson]) -> Result<Vec<&str>, Vec<&str>
                         stack.push((child, 0));
                     }
                     Some(Colour::Gray) => {
-                        let mut cycle: Vec<&str> = stack.iter().map(|(id, _)| *id).collect();
+                        // `stack` holds the full DFS path from this call's
+                        // root to `id`, not the cycle itself — a root
+                        // reached before the cycle can sit ahead of it on
+                        // the path. `child` is Gray, so by the loop's own
+                        // invariant it is somewhere on that path; slicing
+                        // from its first (only) occurrence to the end
+                        // yields exactly the live ancestors between `child`
+                        // and `id`, and re-appending `child` closes the
+                        // loop — the MINIMAL cycle, not a superset of it.
+                        let path: Vec<&str> = stack.iter().map(|(id, _)| *id).collect();
+                        let start = path
+                            .iter()
+                            .position(|&pid| pid == child)
+                            .expect("child is Gray, so it is on the current DFS path");
+                        let mut cycle: Vec<&str> = path[start..].to_vec();
                         cycle.push(child);
                         return Err(cycle);
                     }
@@ -1837,7 +1892,7 @@ fn sentence_coverage_report() {
     let not_yet = merchant.entries.len() - covered;
 
     let mut out = String::new();
-    out.push_str(
+    out.push_str(&format!(
         "# Sentence coverage\n\n\
          Generated by `cli/tests/suite/sentence_corpus.rs` under \
          `HV_SENTENCE_REBASELINE=1`, run automatically by \
@@ -1851,15 +1906,18 @@ fn sentence_coverage_report() {
          against `MERCHANT_COVERED`.\n\n\
          Three corpora feed this report: `the-merchant` (12 entries, \
          frozen), `the-flood-watch` (139 entries, frozen) and `the-ladder` \
-         (214 rungs, an unfrozen DRAFT). Only `the-merchant` is resolved \
+         ({} rungs, an unfrozen DRAFT). Only `the-merchant` is resolved \
          against the grammar below — `the-flood-watch` carries a `scene` \
-         and a per-entry `direction` the resolver's `Entry` shape does not \
-         need, but wiring a coverage resolver over it needs a schema change \
-         nobody has approved (see this file's module doc), and the ladder \
-         is a production instrument, not dialogue, with no resolver of its \
-         own either. What the report gives those two corpora instead is a \
-         direction breakdown and a vocabulary cross-check against the \
-         ladder, both below.\n\n\
+         field the resolver's `Entry` shape does not need, and neither it \
+         nor the ladder has a coverage score. Nothing is waiting on a \
+         schema change: the entry shape that reads both corpora shipped; \
+         what is absent is a coverage resolver over them, which is a \
+         different and larger question (see this file's module doc and \
+         `sentences/README.md`, \"Frozen is not the same as measured\"), \
+         and the ladder is a production instrument, not dialogue, with no \
+         resolver of its own either. What the report gives those two \
+         corpora instead is a direction breakdown and a vocabulary \
+         cross-check against the ladder, both below.\n\n\
          A demand is `covered` only if the grammar implements a \
          construction for it, and an entry is covered only if EVERY demand \
          it makes is. The Interlinear left one token covered (`classify`, \
@@ -1876,7 +1934,8 @@ fn sentence_coverage_report() {
          campaign can implement several tokens, move few or no entries to \
          covered, and still move several MORE entries from two missing \
          demands to one — progress the headline number cannot express.\n\n",
-    );
+        ladder.entries.len(),
+    ));
 
     out.push_str("## Direction breakdown\n\n");
     out.push_str(
@@ -1998,11 +2057,13 @@ fn sentence_coverage_report() {
         flood_watch_directions.parse, flood_watch_directions.produce,
     ));
     out.push_str(&format!(
-        "The resolver above does not run over this corpus — see this \
-         file's module doc for why (a schema change nobody has approved). \
-         What ties it to the grammar's delivered capability instead is the \
-         vocabulary cross-check below: {} of its {} distinct demand \
-         tokens name a rung on the ladder.\n\n",
+        "The resolver above does not run over this corpus — not because of \
+         a schema change (there is none outstanding), but because no \
+         coverage resolver has been written for it yet; see this file's \
+         module doc and `sentences/README.md` (\"Frozen is not the same as \
+         measured\"). What ties it to the grammar's delivered capability \
+         instead is the vocabulary cross-check below: {} of its {} \
+         distinct demand tokens name a rung on the ladder.\n\n",
         flood_watch_tokens.len() - flood_watch_absent.len(),
         flood_watch_tokens.len(),
     ));
