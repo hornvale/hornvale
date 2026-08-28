@@ -265,14 +265,27 @@ git commit -m "feat(legend): the glyph register, and the guard that makes it a r
 ls docs/decisions/ | sed 's/-.*//' | sort -n | tail -1
 ```
 
-**Decision rule, not a prediction.** The Grain shipped a CONTIGUITY GUARD in
-`cli/tests/docs_consistency.rs`, so a gap or duplicate is a RED GATE:
-- Next integer free -> take it.
-- Another live branch already took it (check
-  `git log --all --oneline -- docs/decisions/` and the board) -> take the
-  next free one and post a `notice` claiming it.
-- Cannot tell -> post a board `ask` and take the next free number anyway; a
-  gap is what reddens, a collision is what wastes a campaign.
+**Decision rule, and the obvious version of it is BACKWARDS.** An earlier
+draft of this step said "a gap is what reddens, a collision is what wastes a
+campaign". The opposite is true, and `cli/tests/suite/docs_consistency.rs`
+says so at length in its own doc comment:
+
+- **Contiguity above 0001 is NO LONGER ASSERTED.** Under parallel campaigns
+  a hole is a NORMAL outcome — a campaign renumbers away from a collision or
+  withdraws a draft — so the check "lost its discriminating power". Main has
+  five gaps right now and is green.
+- **Duplicates ARE guarded**, by `decision_numbers_are_unique`. A COLLISION
+  is the red gate, and it is the failure that corrupts a citation handle.
+- The retrospective that killed the contiguity half named this exact trap:
+  *"the gap check pushes an author into the collision the uniqueness check
+  exists to catch"* — requiring next-free makes you take the number another
+  campaign is most likely holding.
+
+So: **take a number safely above every live claim; do not fight for
+next-free.** Campaigns reserve BLOCKS (The Overture's spec claims 0357-0366),
+and a reserved block shows up as a gap on main, not as a file. Check
+`git log --all --oneline -- docs/decisions/`, the board, and live campaign
+specs' "Decision block:" lines. Leaving a gap costs nothing.
 
 - [ ] **Step 2: Write the record**
 
