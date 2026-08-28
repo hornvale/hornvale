@@ -288,6 +288,92 @@ property is false: a registration additive in what the lexicon *holds* need
 not be additive in what a statistic over it *sees*, and the two are different
 claims that happen to share a byte-golden.
 
+**[The Stile](./chronicle/the-stile.md) (2026-08-28) does not move the score,
+and the finding worth leading with is a correction that reintroduced the
+defect it was written to close.** The campaign's whole-branch review flagged
+that its two closure-derivation pins (`r004`, `r183`) were undocumented
+against the one thing the ladder's own revision history actually does —
+rungs get wired into the *middle* of an existing graph, not merely appended.
+The fix wave's remedy, landing in the chronicle, said the pins "go red the
+moment a rung is inserted and wired into the middle of the graph." That
+sentence is false, and a mutation run at the campaign's own final gate —
+rereading its own committed artifact, not a second reviewer — found it: a
+rung wired into `r005`, mid-graph but outside either pinned rung's ancestry,
+leaves all twenty-six tests green. Two of 214 closures are pinned, not all
+of them, and the converse the correction asserted does not hold. It is
+[The Mortise](./chronicle/the-mortise.md)'s clause — a derivation is
+unaudited text exactly like the number it supports — landing this time on a
+correction rather than an original claim, inside the one paragraph whose
+whole job was to say honestly what the pins do and do not cover. The same
+final pass also found the retrospective's own line count wrong in the commit
+that had just corrected it, because that commit grew the file past the
+number it wrote — the third wrong count this campaign put into its own
+prose, which argues for what it did next: dropping the count rather than
+correcting it a third time.
+
+**A second instance predates the campaign and matches this chapter's own
+diagnosis from [The Siding](./chronicle/the-siding.md) exactly: a check is
+worth only the configurations it runs in.** `docs/audits/sentence-coverage.md`
+was written only under `HV_SENTENCE_REBASELINE=1`, a variable nothing in the
+repository ever set — not the Makefile, not `scripts/regenerate-artifacts.sh`,
+which did not mention the file at all. The path *was* declared in
+`docs/generated-paths.txt`, so the tracked-ness half of the drift discipline
+looked satisfied; what was missing was a writer, and `git diff --exit-code`
+over a path nothing ever writes is silently vacuous no matter how long it has
+sat green. It was found by a controller's pre-dispatch reading, not by any
+gate. The fix is the pairing this chapter keeps asking for — the generator
+now runs inside `make rebaseline` — proven not by trusting the wiring but by
+splicing a marker into the report, running the full script, and confirming
+the marker landed and nothing else declared moved.
+
+**A third instance sharpens the count-versus-identity distinction
+[The Inquest](./chronicle/the-inquest.md) already drew, from the reviewer's
+side rather than the implementer's.** Auditing the vocabulary cross-check
+between the ladder and the two dialogue corpora, the whole-branch reviewer
+held the reported counts constant — swapping one token out of a set and
+another in, so a refused set stayed size two and a covered set stayed at
+147 — and confirmed the set assertion still failed. A check that only
+compared cardinalities would have passed. Holding a mutation's *effect* on a
+headline number constant while changing its membership is a sharper probe
+than either the campaign's own task-level reviews had run, applied here one
+level up, at the branch as a whole.
+
+**A fourth, smaller pair: a guard whose message claimed more than its
+assertion checked, and the trap its own author fell into twice while writing
+it.** A new test resolving intra-doc links to a renamed headline test said,
+in its failure message, that four doc comments "must all name the same
+current test" — read as a claim about arity, deleting three of the four
+passed green, because the assertion checks distinctness of what remains, not
+how many links exist. The message was reworded rather than the assertion,
+correctly: distinctness is the property worth having as the test's name
+keeps changing under it. And a source-scanning guard that greps its own file
+for the pattern it is guarding is self-satisfying if it also matches its own
+doc comment — the implementer hit that shape twice while building this one
+guard, and excluded its own search literal from the match before either
+instance shipped.
+
+**The campaign is a sixth confirming instance of the diagnosis
+[The Scarf](./chronicle/the-scarf.md) named as a fourth and The Mortise as a
+fifth: every substantive defect traced to controlling-session text, never to
+an implementer's code.** A brief's over-broad "do not touch `sentences/`"
+constraint — meant to protect two frozen corpora — left the family's own
+README stale about which corpus a resolver reads. A review brief attributed
+a disclosure to a report file that had never carried it; the report was
+clean, the disclosure lived only in a reply. And a controller's own
+correction, once a stale claim was found live in one place, fixed exactly
+that one place while the identical sentence stood, word for word, in six
+more — three in the resolver's source, two in the generated report, one in
+the ladder's own draft prose — found only by a grep the whole-branch review
+ran that the original fix never did. One datum runs the other direction and
+is worth flagging rather than trusting outright: this campaign's own hazard
+— a verification claim written for work not performed — was named in later
+dispatches after it was first caught, and a subsequent implementer caught
+*itself* drafting exactly that shape of claim and removed it before the
+report was finalized. Whether naming a failure mode reliably produces a
+self-check or this was one attentive session is not something one instance
+can answer; it is a hypothesis for the next campaign's data, not a practice
+yet.
+
 **A note from The Staff (2026-08-14), amended by The Sluice (2026-08-15),
 since this score is read against an instrument this passage names by a label
 that no longer exists.** Both halves of Sexton's pairing — the census
@@ -2171,6 +2257,84 @@ substitution changes nothing observable. It was caught by running it. **A
 mutation is evidence only if something establishes it could have moved the
 result**, which is the same clause this chapter already carries about a
 column's stable value, arriving one level down.
+
+[The Latch](./chronicle/the-latch.md) continues that distribution and then
+breaks it in one place — fourteen defects, every one originating in controller
+prose, a fourth campaign running; thirteen caught before they reached committed
+code, and **the fourteenth shipped**, removed only after the merge candidate
+was assembled. Its **shape shifted too, and the shift is the entry worth
+keeping.** The early ones were wrong identifiers a grep catches: a test helper
+that does not exist, a constructor asserted to return a
+bare value when it returns a `Result`. The late ones were **internal
+contradictions no grep can find.** One brief named an integration-test file for
+a test while also instructing the implementer to reach the seam through a
+private module — two halves of one instruction, each locally reasonable, jointly
+unsatisfiable. Nothing mechanical can see that, and re-reading cannot either,
+because re-reading checks a claim against the model that produced it and the
+model is what is wrong. It died when an implementer tried to build it.
+
+**The campaign's largest error was of that second kind and outranks the twelve
+on that list.**
+Its specification asserted, as established fact, that nothing a possession
+session commits is ever persisted and that no world-writing path exists after
+genesis. That sentence shaped an acceptance criterion, a module's
+documentation, an idea-registry row, and a decision record — and it is false.
+Possession takes a documented `--out` flag; a previous campaign built the save
+path deliberately and ruled on how it filters. One command retired the claim at
+the Definition-of-Done sweep, four tasks after it should have been checked.
+
+**The generator of the error is the transferable part**, and it is a shape this
+chapter has recorded before at smaller scale. The evidence the specification
+rested on was a doc comment saying the session ledger is "never written back."
+That comment is *true*. It answers its author's question — does a session mutate
+the world it borrowed? — and the answer is no. The specification read it as
+answering a different question, whether these facts can ever be saved at all,
+and the two questions have opposite answers. **A doc comment answers its
+author's question, not the one a later reader brings to it**; a constraint read
+off one is a hypothesis, and this one went four tasks without being tested
+because it was never framed as one.
+
+Three checks also reported green for reasons unrelated to correctness, which is
+this chapter's standing concern about instruments arriving from a new
+direction. A docs-only commit skipped the commit gate on a path heuristic —
+correct about which *files* changed, wrong about which *tests guard them*,
+because the check that would have caught the defect is a Rust test that guards
+documentation. And the campaign's own three-outcome tripwire is absent from the
+sub-floor roster, so the commit gate compiles it and never runs it: it would
+have reported green while that test was red, on the very change the test exists
+to catch. **A gate's scope and a defect's location can disagree, and the gate
+cannot tell you when they do.** Both were caught by a human reading the roster,
+not by anything running.
+
+The third is the defect that shipped, and it is a different failure entirely.
+The campaign added a verb to the dispatcher and to neither of the two rosters
+that gate a verb by the state of the body, so a sleeping character could clear
+a barred passage and commit the fact — and it was the only new verb that writes
+to the ledger. The check meant to catch exactly this was green throughout **and
+was working correctly**: it holds two lists in agreement in both directions,
+and a verb missing from both agrees with itself. That was measured in the
+defective state rather than inferred. **A two-way agreement check has a blind
+zone at zero copies**, and the only instrument that sees into it is a test that
+drives the behaviour. Seven green task reviews did not find it either — each
+saw a diff that added a verb, and none asked the question only a whole-branch
+view asks: which lists is this verb in? What closed it was available the whole
+time, since the preceding campaign had shut the identical hole on a different
+verb and left the test to copy. But the copy sits outside the cheapest gate by
+construction: it costs thirteen seconds because it builds a world, and the
+commit gate admits only tests under a second. The check with the hole runs on
+every commit; the one that closes it does not.
+
+The entry above is a correction, and it is worth saying so here because the
+record failed in the same way the campaign it records did. The campaign's
+retrospective opened with "twelve defects, none surviving in implementer code."
+The second half was already false the moment it was written — the fourteenth
+defect was sitting in committed code two commits earlier, undiscovered — and
+the heading was left standing even after that defect was found and written into
+a later section of the same file. Nothing re-reads an opening when a body
+changes, and the person best placed to notice is the one who has just written
+the thing that invalidated it. **A record can outlive its subject inside the
+document that named the hazard**, which is the smallest scale at which this
+chapter has yet observed it.
 
 [The Mire](./chronicle/the-mire.md) exercised the same discipline on a bet
 about weather and world structure that no earlier chapter entry had staked,

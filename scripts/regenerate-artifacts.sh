@@ -196,6 +196,21 @@ wlocked="$work/hv-locked.json" # seed 42, tidally locked
 run() { cargo run -q "$@"; }
 run_release() { cargo run -q --release "$@"; }
 
+# `docs/audits/sentence-coverage.md` (The Stile). Unlike every artifact
+# above, the generator is a `cargo test`, not a `cargo run` binary printing
+# to stdout — `sentence_coverage_report` (`cli/tests/suite/sentence_corpus.rs`)
+# writes the file itself via `std::fs::write` under `HV_SENTENCE_REBASELINE=1`,
+# the same env-var-gated-test shape `make rebaseline-goldens` already uses
+# for byte-golden fixtures, so this copies THAT working pattern rather than
+# inventing a `> file` redirect this generator has no need of. Until this
+# campaign nothing ever set the env var here, so the drift check on this
+# file (covered by `docs/audits/` in `docs/generated-paths.txt`) could only
+# ever compare the committed file against itself — a remedy (`make
+# rebaseline` regenerates every artifact) that named no actual writer. See
+# `REPORT_PATH`'s own doc comment in `sentence_corpus.rs` for the fuller
+# account.
+gen_sentence_coverage() { HV_SENTENCE_REBASELINE=1 cargo test -q -p hornvale --test suite -- sentence_coverage_report; }
+
 echo "regenerate-artifacts: GROUP A — world builders (parallel)" >&2
 spawn run -p hornvale -- new --seed 42 --sky constant --out "$w42"
 spawn run -p hornvale -- new --seed 42 --out "$wsky"
@@ -813,6 +828,7 @@ spawn run -p hornvale -- tropes --corpus tropes/tvtropes-2012.trope.json report 
 spawn run -p hornvale -- tropes matrix > docs/audits/trope-matrix.md
 spawn run -p hornvale -- systems report > docs/audits/system-coverage-wolverson-2021.md
 spawn run -p hornvale -- systems matrix > docs/audits/system-matrix.md
+spawn gen_sentence_coverage
 # The Confidant, Task 7 reshape: world-invariant (builds its own internal
 # Seed(42), like `first_light` above), so it belongs in Group C alongside
 # the other world-free/self-contained dumps rather than among $w42's readers.
