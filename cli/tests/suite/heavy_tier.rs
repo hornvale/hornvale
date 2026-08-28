@@ -73,6 +73,47 @@
 //! which tests measure wall clock, so a test opts in explicitly and the same
 //! two-directional guard applies. See `pinned_filter_names_for_class` and
 //! `co_schedule_sensitive_heavy_tests` below.
+//!
+//! ## A third class, sized this time (The Governor, Task 8)
+//!
+//! The scatter-sweep guard above is a strict two-way match against every
+//! heavy/probe test calling [`SWEEP_CALL`], with no notion of HOW BIG a
+//! sweep is. Task 9 gives several hearsay/worldgen tests their own
+//! `map_seeds` call, but on small, bounded panels — parallelising a sweep
+//! that used to run its seeds one at a time, not scattering two hundred of
+//! them across every core. The moment one of those calls lands, this
+//! guard's strict equality fails, and the NAIVE fix — adding the newly
+//! parallel test to `.config/nextest.toml`'s `"num-cpus"` table — turns the
+//! guard green while creating one full-drain-then-cold-restart barrier PER
+//! CONVERTED TEST (see that table's comment for the measured 484-485 s
+//! cost of just one). So a `map_seeds` caller marked [`SIZED_SWEEP_MARKER`]
+//! is excluded from the scatter-sweep roster and moved to a THIRD,
+//! independent class instead — `.config/nextest.toml`'s `# class:
+//! sized-sweep` table, `threads-required = <a bounded integer>` rather than
+//! `"num-cpus"` — checked by its own two-directional guard,
+//! `the_sized_sweep_pin_names_exactly_the_batteries_marked_for_a_bounded_panel`.
+//!
+//! **This class starts empty, and its guard says why that is acceptable
+//! here and would not be for the two above** — see that guard's own doc
+//! comment rather than duplicating the reasoning in two places.
+//!
+//! **The detector-fragility residual named two sections up applies to THIS
+//! class too, doubled.** `SWEEP_CALL` is matched as literal call text
+//! (`seed_sweep::map_seeds(`), and the helper it names currently lives in
+//! `windows/lab/tests/seed_sweep/mod.rs` — a test-only module `windows/
+//! hearsay` and `windows/worldgen` tests cannot reach (spec §8.1). Task 9
+//! may have to MOVE it to make it reachable, and if the move changes how the
+//! call is spelled, `SWEEP_CALL` must be updated in the same commit or BOTH
+//! `internally_parallel_heavy_tests` and `sized_sweep_heavy_tests` go blind
+//! to every caller using the new spelling — silently for a NEW sized-sweep
+//! conversion (this class tolerates zero matches by design, so a mis-spelled
+//! call just never shows up), loudly for the three existing scatter-sweep
+//! batteries (their names stay pinned in `.config/nextest.toml` while
+//! detection drops to zero, which is exactly the mismatch
+//! [`the_serialization_pin_names_exactly_the_batteries_that_scatter_their_sweeps`]'s
+//! non-emptiness assert exists to catch). Whoever moves the helper should
+//! grep this file for `SWEEP_CALL` and update every place the constant's
+//! value is asserted against, not just its definition.
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -544,8 +585,9 @@ fn the_untokenised_ignore_reasons_are_exactly_this_roster() {
 
 // ============================================================================
 // The serialized-battery filters. `.config/nextest.toml` pins two DIFFERENT
-// classes of heavy test to `threads-required = "num-cpus"`, each in its own
-// override table, so each runs ALONE on the canonical box:
+// classes of heavy test to `threads-required = "num-cpus"` — the WHOLE
+// runner — each in its own override table, so each runs ALONE on the
+// canonical box:
 //
 //   scatter-sweep      three batteries that parallelise their own 200-seed
 //                      sweeps across every core (The Scatter) — pinned so
@@ -553,6 +595,18 @@ fn the_untokenised_ignore_reasons_are_exactly_this_roster() {
 //   wall-clock-budget  two cost-ceiling tests that cannot tell contention
 //                      from a regression on their own (The Ballast) — pinned
 //                      so the tier's OWN saturation does not redden them.
+//
+// A THIRD class, `sized-sweep` (The Governor, Task 8), pins
+// `threads-required = <a bounded integer>` instead — a panel-width
+// reservation for `map_seeds` callers that do NOT want the whole runner, so
+// they never drain it and never need front-loading either. Its own guard,
+// [`the_sized_sweep_pin_names_exactly_the_batteries_marked_for_a_bounded_panel`],
+// is below the two guards for the classes above, and its own doc comment
+// covers why its anti-vacuity check has a different shape than theirs. It is
+// not folded into the "two classes" language throughout the rest of this
+// section comment because everything below was written before it existed
+// and still describes those two accurately; the sized class's own functions
+// and guard are self-contained rather than threaded through this comment.
 //
 // `gate-full-heavy.sh` (now run by the `heavy` lane set — `make lane
 // SET=heavy REF=<full-sha>`, `make heavy-remote REF=<full-sha>`, or as a
@@ -626,12 +680,27 @@ const PRIORITY_SETTING_PREFIX: &str = "priority = ";
 /// the deliberate exception: it tags BOTH the scatter-sweep and
 /// wall-clock-budget tables, because every test that reserves the whole
 /// runner must be front-loaded and those two classes are what reserves it.
+///
+/// THIS LIST BINDS TWO STRUCTURALLY DIFFERENT PREDICATES TO ONE ALLOWLIST —
+/// "may tag multiple override tables" and "must carry a live `priority`
+/// setting" (see `requires_priority` in [`pinned_filter_names_for_class`]) —
+/// and they coincide today only because `front-loaded` is the sole marker
+/// with both properties. The sized-sweep class (The Governor, Task 8) needs
+/// NEITHER: one shared bounded width can serve every sized-sweep test in a
+/// single table (no barrier tax means no reason yet to split by width), and
+/// a bounded reservation never drains the whole runner, so there is nothing
+/// to front-load. So `sized-sweep` is deliberately NOT added here — the
+/// default (single table, no `priority` required) is already correct for
+/// it, and forcing it into this list for either property would grant it a
+/// behaviour it does not need and this test suite would then have to justify.
 const MARKERS_ALLOWING_MULTIPLE_TABLES: &[&str] = &["front-loaded"];
 
-/// The call that makes a battery internally parallel — the property the
-/// scatter-sweep pin exists for. Matching the CALL (not the module) is
-/// deliberate: a test that merely mentions the helper in prose is not the
-/// thing that saturates a box.
+/// The call that makes a battery internally parallel — the property BOTH
+/// the scatter-sweep pin and the sized-sweep pin exist for (The Governor,
+/// Task 8 split membership between the two by [`SIZED_SWEEP_MARKER`], not
+/// by a different call). Matching the CALL (not the module) is deliberate: a
+/// test that merely mentions the helper in prose is not the thing that
+/// saturates a box.
 const SWEEP_CALL: &str = "seed_sweep::map_seeds(";
 
 /// The doc-comment marker that opts a wall-clock budget test INTO serialized
@@ -643,6 +712,38 @@ const SWEEP_CALL: &str = "seed_sweep::map_seeds(";
 /// needs isolating.
 const CO_SCHEDULE_SENSITIVE_MARKER: &str = "nextest: co-schedule-sensitive";
 
+/// The doc-comment marker that opts a [`SWEEP_CALL`] caller OUT of the
+/// whole-runner scatter-sweep class and INTO the bounded sized-sweep class
+/// instead (The Governor, Task 8) — the mirror-image of
+/// [`CO_SCHEDULE_SENSITIVE_MARKER`]: that one pulls a test INTO serialized
+/// scheduling that would otherwise run unpinned; this one pulls a
+/// `map_seeds` caller OUT of the reservation it would otherwise default
+/// into. A test carrying this marker but never calling [`SWEEP_CALL`] pins
+/// nothing on its own — see [`map_seeds_callers`].
+const SIZED_SWEEP_MARKER: &str = "nextest: sized-sweep";
+
+/// The setting PREFIX shared by both forms `threads-required` can take —
+/// distinct from [`THREADS_REQUIRED`], which is the exact whole-runner
+/// STRING form. A `# class: sized-sweep` table's setting must start with
+/// this prefix but must NOT equal [`THREADS_REQUIRED`]: using the
+/// `"num-cpus"` string on the sized class would silently reproduce the
+/// whole-runner reservation the class exists to avoid — the exact "naive
+/// fix" trap this campaign's spec names explicitly (The Governor, Task 8).
+const THREADS_REQUIRED_PREFIX: &str = "threads-required = ";
+
+/// Which form of `threads-required` a class's override table(s) must carry
+/// — the whole-runner `"num-cpus"` string, or a bounded integer (The
+/// Governor, Task 8). Passed to [`pinned_filter_names_for_class`] so one
+/// scanner serves all three classes without silently accepting the wrong
+/// shape for any of them.
+enum ThreadsRequiredKind {
+    /// The exact [`THREADS_REQUIRED`] string — reserves the WHOLE runner.
+    WholeRunner,
+    /// Any live `threads-required = ` setting OTHER than [`THREADS_REQUIRED`]
+    /// — reserves a bounded number of slots, never the whole runner.
+    Bounded,
+}
+
 /// Extracts the sorted, deduped test names from the `filter = 'test(/…/) |
 /// …'` line inside the `.config/nextest.toml` override table(s) tagged
 /// `# class: <marker>` — an INLINE marker line living INSIDE the
@@ -651,14 +752,28 @@ const CO_SCHEDULE_SENSITIVE_MARKER: &str = "nextest: co-schedule-sensitive";
 /// behind cannot be confused with each other. Std-only string scanning —
 /// this workspace admits no TOML parser (decision 0004).
 ///
-/// Every matched table must carry a live `threads-required = "num-cpus"`
-/// SETTING (never just a comment mentioning it). A marker in
-/// [`MARKERS_ALLOWING_MULTIPLE_TABLES`] may tag more than one table — every
-/// other marker may tag at most one, or this panics — and for exactly those
-/// multiple-table markers, every matched table must ALSO carry a live
-/// `priority = ` setting (see [`PRIORITY_SETTING_PREFIX`]). The `i8` value
-/// itself is never inspected, only whether the line is present.
-fn pinned_filter_names_for_class(marker: &str) -> Vec<String> {
+/// Every matched table must carry a live `threads-required` SETTING (never
+/// just a comment mentioning it) matching `kind` — the exact
+/// [`THREADS_REQUIRED`] string for [`ThreadsRequiredKind::WholeRunner`], or
+/// any OTHER live `threads-required = ` setting for
+/// [`ThreadsRequiredKind::Bounded`] (The Governor, Task 8 — a `Bounded`
+/// class whose table used the whole-runner string would silently reproduce
+/// the reservation it exists to avoid, so that exact value is rejected, not
+/// just any-value-accepted). A marker in [`MARKERS_ALLOWING_MULTIPLE_TABLES`]
+/// may tag more than one table — every other marker may tag at most one, or
+/// this panics — and for exactly those multiple-table markers, every matched
+/// table must ALSO carry a live `priority = ` setting (see
+/// [`PRIORITY_SETTING_PREFIX`]). The `i8` value itself is never inspected,
+/// only whether the line is present.
+///
+/// The `filter = ` line's TEST NAMES are extracted only from `test(/…/)`
+/// terms; a filter with none (nextest's `none()` predicate, the sized-sweep
+/// table's value while it has no members — see `.config/nextest.toml`'s
+/// comment) yields an empty roster rather than a parse failure, which is
+/// what makes a legitimately empty class distinguishable from a missing
+/// table: the table-existence and setting checks above still run and still
+/// panic on absence; only the NAME list is allowed to be empty.
+fn pinned_filter_names_for_class(marker: &str, kind: ThreadsRequiredKind) -> Vec<String> {
     let text = fs::read_to_string(repo_root().join(NEXTEST_CONFIG))
         .expect(".config/nextest.toml is readable");
     let class_line = format!("# class: {marker}");
@@ -724,13 +839,40 @@ fn pinned_filter_names_for_class(marker: &str) -> Vec<String> {
             .map(|l| l.trim())
             .filter(|l| !l.starts_with('#') && !l.is_empty())
             .collect();
-        assert!(
-            settings.contains(&THREADS_REQUIRED),
-            "the {class_line:?} table in {NEXTEST_CONFIG} has no live {THREADS_REQUIRED:?} \
-             SETTING (a comment mentioning it does not count). The serialization pin for \
-             this class is GONE, which silently re-exposes it to canonical-box contention \
-             — see this file's section comment."
-        );
+        match kind {
+            ThreadsRequiredKind::WholeRunner => {
+                assert!(
+                    settings.contains(&THREADS_REQUIRED),
+                    "the {class_line:?} table in {NEXTEST_CONFIG} has no live \
+                     {THREADS_REQUIRED:?} SETTING (a comment mentioning it does not \
+                     count). The serialization pin for this class is GONE, which \
+                     silently re-exposes it to canonical-box contention — see this \
+                     file's section comment."
+                );
+            }
+            ThreadsRequiredKind::Bounded => {
+                let bounded = settings
+                    .iter()
+                    .find(|l| l.starts_with(THREADS_REQUIRED_PREFIX));
+                assert!(
+                    bounded.is_some(),
+                    "the {class_line:?} table in {NEXTEST_CONFIG} has no live \
+                     {THREADS_REQUIRED_PREFIX:?}<int> SETTING (a comment mentioning it \
+                     does not count). A sized-sweep table with no reservation at all \
+                     re-exposes its members to canonical-box contention exactly like a \
+                     missing whole-runner pin does."
+                );
+                assert_ne!(
+                    *bounded.expect("checked above"),
+                    THREADS_REQUIRED,
+                    "the {class_line:?} table in {NEXTEST_CONFIG} sets \
+                     {THREADS_REQUIRED:?} — the WHOLE-RUNNER value. That is exactly the \
+                     naive-fix trap this class exists to avoid: a bounded class must \
+                     reserve a bounded integer, never `\"num-cpus\"`, or every member \
+                     pays a full-drain barrier again."
+                );
+            }
+        }
         if requires_priority {
             assert!(
                 settings
@@ -744,15 +886,20 @@ fn pinned_filter_names_for_class(marker: &str) -> Vec<String> {
                  barrier tax this class exists to remove."
             );
         }
+        // NOT filtered on `.contains("test(/")` — a class may legitimately have
+        // no `test(/…/)` terms at all (nextest's `none()` predicate, the
+        // sized-sweep table's value while it has no members). The `filter = `
+        // line must still be present exactly once; the loop below simply
+        // extracts zero names from a filter that names none.
         let filter_lines: Vec<&str> = settings
             .iter()
             .copied()
-            .filter(|l| l.starts_with("filter = ") && l.contains("test(/"))
+            .filter(|l| l.starts_with("filter = "))
             .collect();
         assert_eq!(
             filter_lines.len(),
             1,
-            "expected exactly one `filter = ` line naming tests in the {class_line:?} \
+            "expected exactly one `filter = ` line in the {class_line:?} \
              table of {NEXTEST_CONFIG}; found {}.",
             filter_lines.len()
         );
@@ -773,12 +920,24 @@ fn pinned_filter_names_for_class(marker: &str) -> Vec<String> {
 
 /// The scatter-sweep class's pinned roster (The Scatter).
 fn serialized_filter_names() -> Vec<String> {
-    pinned_filter_names_for_class("scatter-sweep")
+    pinned_filter_names_for_class("scatter-sweep", ThreadsRequiredKind::WholeRunner)
 }
 
 /// The wall-clock-budget class's pinned roster (The Ballast).
 fn budget_filter_names() -> Vec<String> {
-    pinned_filter_names_for_class("wall-clock-budget")
+    pinned_filter_names_for_class("wall-clock-budget", ThreadsRequiredKind::WholeRunner)
+}
+
+/// The sized-sweep class's pinned roster (The Governor, Task 8) — a bounded
+/// `threads-required` integer rather than the whole-runner string, so this
+/// is the one caller of [`pinned_filter_names_for_class`] passing
+/// [`ThreadsRequiredKind::Bounded`]. Empty on the tree this task lands on
+/// (`.config/nextest.toml`'s table pins `filter = 'none()'`, deliberately —
+/// see that table's comment and
+/// [`the_sized_sweep_pin_names_exactly_the_batteries_marked_for_a_bounded_panel`]'s
+/// doc comment for why an empty roster is the correct state here today).
+fn sized_filter_names() -> Vec<String> {
+    pinned_filter_names_for_class("sized-sweep", ThreadsRequiredKind::Bounded)
 }
 
 /// Every test that reserves the whole runner — the union of both
@@ -800,28 +959,43 @@ fn whole_runner_filter_names() -> Vec<String> {
 /// scatter-sweep and wall-clock-budget tables — see
 /// [`pinned_filter_names_for_class`]'s comment on why that is safe.
 fn front_loaded_filter_names() -> Vec<String> {
-    pinned_filter_names_for_class("front-loaded")
+    pinned_filter_names_for_class("front-loaded", ThreadsRequiredKind::WholeRunner)
 }
 
-/// Every heavy-tagged test whose body calls [`SWEEP_CALL`] — i.e. every heavy
-/// battery that parallelises its own seed sweep and therefore MUST be pinned.
+/// Every heavy/probe-tagged test whose body calls [`SWEEP_CALL`], paired
+/// with whether its doc comment ALSO carries [`SIZED_SWEEP_MARKER`] — the
+/// single scan [`internally_parallel_heavy_tests`] and
+/// [`sized_sweep_heavy_tests`] both build on (The Governor, Task 8), so the
+/// one subtle piece of state tracking here — the marker is written in the
+/// doc comment ABOVE `#[test]`/`#[ignore]`/`fn`, but must still be readable
+/// while scanning the test's BODY below `fn`, which is a different span than
+/// [`co_schedule_sensitive_heavy_tests`]'s marker (consumed immediately, at
+/// the `fn` line) — is written and gets-it-right exactly once. The marker is
+/// snapshotted into `current_is_sized` AT the `fn` line (alongside `current`
+/// itself), then the accumulating flag resets so a later, unrelated test's
+/// doc comment cannot inherit it.
 ///
 /// Line-oriented, matching `gate-full-heavy.sh`'s own grep-based discovery, so
 /// the two agree about what a heavy test is. A heavy `#[ignore]` tag sits
 /// directly above its `fn`; a test's region runs from that `fn` to the next
 /// `#[test]` attribute or end of file.
-fn internally_parallel_heavy_tests() -> Vec<String> {
+fn map_seeds_callers() -> Vec<(String, bool)> {
     let mut sources = Vec::new();
     collect_rs(&repo_root(), &mut sources);
     sources.sort();
 
-    let mut found = Vec::new();
+    let mut found: Vec<(String, bool)> = Vec::new();
     for path in sources {
         let text = fs::read_to_string(&path).expect("source file is utf8");
         let mut next_fn_is_heavy = false;
+        let mut marker_seen = false;
         let mut current: Option<String> = None;
+        let mut current_is_sized = false;
         for line in text.lines() {
             let trimmed = line.trim();
+            if trimmed.contains(SIZED_SWEEP_MARKER) {
+                marker_seen = true;
+            }
             if trimmed.starts_with("#[test]") {
                 current = None;
             }
@@ -845,18 +1019,51 @@ fn internally_parallel_heavy_tests() -> Vec<String> {
                 && let Some((name, _)) = rest.split_once('(')
             {
                 current = next_fn_is_heavy.then(|| name.to_string());
+                current_is_sized = marker_seen;
                 next_fn_is_heavy = false;
+                marker_seen = false;
                 continue;
             }
             if line.contains(SWEEP_CALL)
                 && let Some(name) = &current
-                && !found.contains(name)
+                && !found.iter().any(|(n, _)| n == name)
             {
-                found.push(name.clone());
+                found.push((name.clone(), current_is_sized));
             }
         }
     }
     found.sort();
+    found
+}
+
+/// Every heavy/probe battery that parallelises its own seed sweep and is
+/// NOT marked [`SIZED_SWEEP_MARKER`] — i.e. the batteries that MUST reserve
+/// the whole runner (The Scatter). A [`SWEEP_CALL`] caller carrying the
+/// marker is deliberately excluded here: it belongs to
+/// [`sized_sweep_heavy_tests`] instead (The Governor, Task 8).
+fn internally_parallel_heavy_tests() -> Vec<String> {
+    let mut found: Vec<String> = map_seeds_callers()
+        .into_iter()
+        .filter(|(_, is_sized)| !is_sized)
+        .map(|(name, _)| name)
+        .collect();
+    found.sort();
+    found.dedup();
+    found
+}
+
+/// Every heavy/probe battery that parallelises its own seed sweep AND is
+/// marked [`SIZED_SWEEP_MARKER`] — the bounded-panel counterpart of
+/// [`internally_parallel_heavy_tests`] (The Governor, Task 8). Empty until
+/// Task 9 marks its first conversion.
+fn sized_sweep_heavy_tests() -> Vec<String> {
+    let mut found: Vec<String> = map_seeds_callers()
+        .into_iter()
+        .filter(|(_, is_sized)| *is_sized)
+        .map(|(name, _)| name)
+        .collect();
+    found.sort();
+    found.dedup();
     found
 }
 
@@ -913,6 +1120,14 @@ fn co_schedule_sensitive_heavy_tests() -> Vec<String> {
 /// processes against a box whose batteries each want forty worker threads,
 /// and the first thing anyone sees is a wall-clock budget test going red for
 /// reasons that have nothing to do with the code it measures.
+///
+/// A [`SWEEP_CALL`] caller marked [`SIZED_SWEEP_MARKER`] is EXCLUDED from
+/// `internally_parallel_heavy_tests` (The Governor, Task 8) — it belongs to
+/// the sized-sweep class checked below instead, by
+/// [`the_sized_sweep_pin_names_exactly_the_batteries_marked_for_a_bounded_panel`].
+/// A newly-converted, unmarked `map_seeds` caller still lands HERE by
+/// default and still demands `"num-cpus"` — the marker is an opt-OUT into
+/// the bounded class, not a silent default.
 #[test]
 fn the_serialization_pin_names_exactly_the_batteries_that_scatter_their_sweeps() {
     let pinned = serialized_filter_names();
@@ -973,6 +1188,72 @@ fn the_serialization_pin_names_exactly_the_wall_clock_budget_tests_marked_co_sch
          schedules the unpinned budget test alongside the rest of the tier, and it \
          may fail under contention for reasons that have nothing to do with the code \
          it measures."
+    );
+}
+
+/// The sized-sweep pin's roster is exactly the set of heavy/probe batteries
+/// marked [`SIZED_SWEEP_MARKER`] that also call [`SWEEP_CALL`] — the third
+/// guard, the same two-directional shape as the two above (The Governor,
+/// Task 8).
+///
+/// **UNLIKE THOSE TWO, THIS GUARD DOES NOT ASSERT NON-EMPTINESS, AND THAT IS
+/// A DELIBERATE, TEMPORARY CHOICE — NOT THE "PERMITS EMPTY FOREVER" GAP THIS
+/// PROJECT HAS SHIPPED BEFORE** (see this file's module doc, "What a token
+/// guard does NOT do"). The sized-sweep class was built by this very task so
+/// Task 9 has somewhere to land its conversions; at the commit that
+/// introduces it, nothing has landed yet, so BOTH sides of the comparison
+/// below are genuinely, correctly empty. Reusing the other two guards'
+/// `assert!(!sized.is_empty(), …)` here would make this guard fail on
+/// arrival, before there is anything to guard — the exact trap this task's
+/// brief warns against.
+///
+/// **"EMPTY" IS DISTINGUISHABLE FROM "THE CLASS WAS DELETED", AND THAT
+/// DISTINCTION IS WHAT THIS GUARD ACTUALLY LEANS ON** — the same
+/// fixture-vs-source shape [`the_heavy_roster_is_exactly_this_fixture`] uses
+/// a committed file for, done here with the config table itself as the
+/// fixture:
+/// - **The override table's existence is still hard-required.**
+///   [`pinned_filter_names_for_class`] panics if no table in
+///   `.config/nextest.toml` carries `# class: sized-sweep`, or if it has no
+///   live `threads-required = <int>` setting, or if that setting is the
+///   whole-runner `"num-cpus"` string — so deleting the class outright, or
+///   quietly reintroducing the naive-fix trap, both still fail loudly with
+///   nothing else touched. An empty class still has its scaffolding present
+///   and checked; a deleted one does not, and the guard says so.
+/// - **The two-way equality below is still checked, not skipped.** The
+///   moment Task 9 marks a test [`SIZED_SWEEP_MARKER`] without also adding
+///   its name to `.config/nextest.toml`'s `sized-sweep` filter (or the
+///   reverse), `pinned != sized` and this test goes red — the same
+///   protection the other two guards give, without the extra non-emptiness
+///   belt this file's mutation-testing found worth adding for a class that
+///   already had real members to lose (see the module doc's "residual is
+///   accepted rather than chased" note on `SWEEP_CALL` itself for the same
+///   kind of named, not hidden, gap).
+///
+/// **THE GAP THIS LEAVES, NAMED RATHER THAN HIDDEN:** while the class sits
+/// at its zero baseline, a joint failure that empties BOTH sides at once —
+/// exactly the shape the other two guards' non-emptiness assert exists to
+/// catch — is invisible here, because there is nothing yet for such a
+/// failure to make disappear. That gap closes itself the moment Task 9 adds
+/// the first sized-sweep test: a future editor should add the equivalent
+/// `assert!(!sized.is_empty(), …)` at that point, once "empty" stops being
+/// this class's correct, default state — and should update this doc comment
+/// rather than leaving it describing a state that has passed.
+#[test]
+fn the_sized_sweep_pin_names_exactly_the_batteries_marked_for_a_bounded_panel() {
+    let pinned = sized_filter_names();
+    let sized = sized_sweep_heavy_tests();
+
+    assert_eq!(
+        pinned, sized,
+        "\n{NEXTEST_CONFIG}'s sized-sweep filter and the set of heavy/probe \
+         batteries marked {SIZED_SWEEP_MARKER:?} have diverged.\n  pinned in \
+         config: {pinned:?}\n  marked in source: {sized:?}\nAdd the missing \
+         name(s) to the `filter = ` line in the `# class: sized-sweep` table, \
+         or drop the stale one. Left alone this does NOT redden on its own: \
+         nextest either schedules an unpinned sized-sweep battery without any \
+         reservation at all, or keeps reserving slots for a battery that no \
+         longer needs them."
     );
 }
 

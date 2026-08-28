@@ -163,6 +163,67 @@ threads-required = "num-cpus"
 # barrier tax and the scratch-probe arms that verified `priority` moves it.
 priority = 100
 
+# A THIRD CLASS (The Governor, Task 8): A SIZED PANEL RESERVES ONLY WHAT IT
+# NEEDS, NOT THE WHOLE BOX. Both tables above pin `threads-required =
+# "num-cpus"` — the whole runner — because they either genuinely saturate it
+# (a 200-seed scatter sweep) or cannot tell the tier's own saturation from a
+# regression (a wall-clock budget). Task 9 gives several hearsay/worldgen
+# tests their own `seed_sweep::map_seeds(` call too, but on small, BOUNDED
+# panels (a dozen-ish seeds, not two hundred) — parallelising a sweep that
+# used to run serially. The `the_serialization_pin_names_exactly_the_
+# batteries_that_scatter_their_sweeps` guard in `cli/tests/suite/heavy_tier.rs`
+# is a strict two-way match against every `map_seeds` caller, so the moment
+# Task 9 adds one, that guard fails — and the NAIVE fix, adding each newly
+# parallel test to the "num-cpus" table above, would turn it green while
+# creating one full-drain-then-cold-restart barrier PER CONVERTED TEST, at
+# ~484 s each (see that table's comment). This campaign's Task 1 spent its
+# entire contribution removing exactly one such barrier; re-adding several
+# to ship a "green guard" would make the tier dramatically worse while every
+# check passed. This class exists so the guard has somewhere honest to point
+# a bounded panel instead.
+#
+# `threads-required = <int>` (a bounded integer, not the `"num-cpus"`
+# string) is supported by cargo-nextest 0.9.140 — verified directly, the same
+# way `priority` was verified above: a scratch override table with
+# `threads-required = 4` and `filter = 'none()'` parses under both
+# `cargo nextest list` and `cargo nextest run` and changes nothing about
+# which tests run.
+#
+# `filter = 'none()'` — A LEGITIMATELY EMPTY TABLE, NOT A FAKE TEST NAME.
+# This class has no members yet: Task 9 has not landed, so nothing is marked
+# for it. `none()` is nextest's own "matches nothing" filterset predicate
+# (verified alongside the two claims above), so the table states the true
+# fact — "nobody is pinned to this class right now" — rather than inventing
+# a placeholder test name that would need deleting later. The `threads-
+# required = 4` value below is likewise a placeholder: it is inert while the
+# filter matches nothing, and Task 9 sets it to the real panel width (or
+# reconsiders whether one shared width serves every converted test) when it
+# adds the first name to the filter.
+#
+# `cli/tests/suite/heavy_tier.rs` reads this table the same way it reads the
+# two above — a `# class: sized-sweep` marker line, a live `threads-
+# required` SETTING (checked to be an integer, not the `"num-cpus"` string —
+# using that string here would silently reproduce the exact trap this class
+# exists to avoid), one `filter = ` line — via `sized_filter_names` /
+# `pinned_filter_names_for_class`. Its own guard, `the_sized_sweep_pin_
+# names_exactly_the_batteries_marked_for_a_bounded_panel`, explains at length
+# why an EMPTY roster is the correct, checkable state here today, and would
+# not be for the two tables above.
+#
+# NEITHER OF TASK 1's TWO PROPERTIES APPLIES TO THIS CLASS, DELIBERATELY.
+# It is not in `MARKERS_ALLOWING_MULTIPLE_TABLES`: it does not need MULTIPLE
+# override tables (one shared bounded width can serve every sized-sweep test
+# the same way one `"num-cpus"` table already serves all three scatter-sweep
+# batteries), and it does not need a `priority` setting — a bounded
+# `threads-required` reservation does not drain the whole runner, so there is
+# no barrier to front-load in the first place. See that const's own comment
+# in `heavy_tier.rs` for why `front-loaded` needed both properties and this
+# class needs neither.
+[[profile.default.overrides]]
+# class: sized-sweep
+filter = 'none()'
+threads-required = 4
+
 # UNUSED since The Sexton (Task 3): `make gate` (the only caller of the
 # duration alarm now that `make ci` is an alias for it, see the Makefile's
 # `gate-run`) deliberately runs the DEFAULT profile, not this one — running
