@@ -70,8 +70,24 @@ fn with_state_dir<T>(tag: &str, f: impl FnOnce(&Path) -> T) -> T {
     // SAFETY: `ENV_LOCK` is held for the whole body, and this binary's only
     // environment mutations go through this function and its sibling below.
     let previous = unsafe { swap_state_dir(Some(dir.as_os_str())) };
+
+    /// Restores the previous `HORNVALE_GAME_STATE_DIR` on drop, including on
+    /// unwind — `swap_state_dir`'s own `# Safety` clause requires the caller
+    /// to restore the previous value before releasing `ENV_LOCK`, and a bare
+    /// post-call restore skips that if `f` panics, leaking the temporary
+    /// directory into every later test that shares this process.
+    struct Restore(Option<std::ffi::OsString>);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            // SAFETY: same window `swap_state_dir`'s caller contract names —
+            // `ENV_LOCK` (held by `_guard`, still in scope here since drop
+            // order is last-declared-first-dropped) covers this call too.
+            unsafe { swap_state_dir(self.0.as_deref()) };
+        }
+    }
+    let _restore = Restore(previous);
+
     let out = f(&dir);
-    unsafe { swap_state_dir(previous.as_deref()) };
     std::fs::remove_dir_all(&dir).ok();
     out
 }

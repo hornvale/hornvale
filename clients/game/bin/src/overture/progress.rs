@@ -174,8 +174,9 @@ pub struct BuildState {
 
 impl BuildState {
     /// The state during the phase `rung` names, `fraction` of the way through
-    /// it. `fraction` is clamped into `0.0..=1.0`, and a non-finite value is
-    /// treated as unknown (no bar) rather than drawn as zero.
+    /// it. `fraction` is clamped below at zero only — **not capped at 1.0**
+    /// (see the field's own doc) — and a non-finite value is treated as
+    /// unknown (no bar) rather than drawn as zero.
     pub fn at(rung: BuildDepth, fraction: f64) -> BuildState {
         BuildState::in_phase(Phase::for_rung(rung), fraction)
     }

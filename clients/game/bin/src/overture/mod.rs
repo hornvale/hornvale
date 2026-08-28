@@ -36,10 +36,12 @@
 
 pub mod genesis;
 pub mod progress;
+pub mod sky;
 pub mod timings;
 pub mod view;
 
 pub use progress::{BuildState, Phase, progress_line};
+pub use sky::SkyView;
 pub use timings::{PhaseClock, PhaseTimings};
 pub use view::View;
 
@@ -751,7 +753,7 @@ mod tests {
         let text = frame.compose().to_plain_text();
         assert!(text.contains("hornvale"), "no header: {text}");
         assert!(
-            text.contains(&format!("{} facts", sky.ledger.len())),
+            text.contains(&progress::fact_count(&frame.state())),
             "the grouped fact count did not reach the screen: {text}"
         );
         assert!(
@@ -881,14 +883,15 @@ mod tests {
             "the fact count {count:?} was clipped at the floor: {text}"
         );
 
-        // And no row of the composed grid exceeds the floor — the write path
-        // clips silently, so a too-long row is invisible unless measured.
-        for row in text.lines() {
-            assert!(
-                row.chars().count() <= usize::from(hornvale_game_core::MIN_WIDTH),
-                "a composed row overran the floor: {row}"
-            );
-        }
+        // No per-row length check here: `Grid::to_plain_text`
+        // (`clients/game/core/src/cell.rs`) emits exactly `width` characters
+        // per row BY CONSTRUCTION (it iterates `0..self.width`, substituting
+        // `' '` for an unwritten cell rather than ever omitting a column), so
+        // a loop asserting `row.len() <= width` on a grid already composed at
+        // that width cannot fail — it is not evidence the write path clips
+        // correctly, only that `Grid` cannot produce a row of the wrong
+        // length. The `write_text`/clipping behaviour this test used to claim
+        // to cover belongs to `Grid`'s own suite, not this one.
         // Non-vacuity: the count must be a real grouped number, or
         // `contains` above could be satisfied by an empty string.
         assert!(count.ends_with(" facts") && count.len() > 6, "{count:?}");
