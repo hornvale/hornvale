@@ -730,6 +730,80 @@ fn a_ladder_rung_derives_its_transitive_demand_set() {
 }
 
 // ---------------------------------------------------------------------
+// Task 2 (The Stile): the closure, proven transitive
+// ---------------------------------------------------------------------
+
+/// r004 above (2 shallow → 3 transitive) proves the readers compute past one
+/// level; it does not prove the closure goes *deep*, and a shallow bug is
+/// exactly the kind that produces a plausible, smaller set. r183 ("Who says
+/// the guard was paid?") pins the deep case: read straight off the corpus,
+/// a one-level reader (the union of r183's own `introduces`, `null` here,
+/// plus its direct presuppositions' `introduces`) sees only 3 tokens —
+/// `evidential-scope` (r183 itself), `evidential-hearsay` (r181) and
+/// `negative-question` (r095) — while the true transitive closure over
+/// `presupposes` reaches 22. Re-derived directly from the committed JSON by
+/// a throwaway script rather than trusted from the brief, which also named
+/// this rung as the widest gap in the ladder (tied with r191, both
+/// 3 → 22); r183 is chosen over r191 because its own two direct
+/// presuppositions (r181 and r095) independently reach a shared ancestor
+/// (r001 and r002, both by way of `classify`), so this single rung also
+/// exercises the diamond case Task 2's brief asks about — see this test's
+/// own note below for why that made a second, dedicated diamond assertion
+/// unnecessary.
+///
+/// **This rung is a diamond in its own right, which is why one assertion
+/// covers both questions the brief raises.** r183 presupposes `[r181,
+/// r095]` directly; walking each branch separately (`transitive_ids`
+/// rooted at r181, then at r095) reaches `r001` and `r002` from *both*
+/// sides. A walk that double-counted a revisited ancestor, or that dropped
+/// a branch's contribution once the other branch had already visited a
+/// shared node, would show up here: `demands` is a `BTreeSet` collected
+/// into sorted `Vec<String>` order, so either fault changes the asserted
+/// 22-element list this test pins — a shorter list on a lost branch, or
+/// (had `demands` been a bag rather than a set) a token appearing twice.
+/// No second, rung-only-for-diamonds test is added: r183 already forces the
+/// walk to reconcile two paths into the same ancestor, and hand-picking a
+/// second rung for the same structural property without a second bug class
+/// to distinguish it from this one would only add corpus-reading cost for
+/// no new coverage.
+#[test]
+fn a_deep_ladder_rung_derives_its_full_transitive_closure() {
+    let corpus = load_ladder_corpus(&repo_root());
+    let r183 = corpus
+        .entries
+        .iter()
+        .find(|e| e.id == "r183")
+        .expect("r183 is a ladder rung");
+    assert_eq!(
+        r183.demands,
+        vec![
+            "ability-modal".to_string(),
+            "classify".to_string(),
+            "clause-coordination".to_string(),
+            "complement-utterance".to_string(),
+            "coordination".to_string(),
+            "definiteness".to_string(),
+            "direct-quotation".to_string(),
+            "embedded-clause".to_string(),
+            "epistemic-hedge".to_string(),
+            "evidential-hearsay".to_string(),
+            "evidential-scope".to_string(),
+            "evidential-witness".to_string(),
+            "intransitive-frame".to_string(),
+            "negation".to_string(),
+            "negative-question".to_string(),
+            "number-marking".to_string(),
+            "past-tense".to_string(),
+            "person-deixis".to_string(),
+            "polar-question".to_string(),
+            "pronoun-reference".to_string(),
+            "reported-speech".to_string(),
+            "transitive-frame".to_string(),
+        ]
+    );
+}
+
+// ---------------------------------------------------------------------
 // Task 1: the realization witness
 // ---------------------------------------------------------------------
 
