@@ -3710,3 +3710,4 @@ measured here.
 | 2026-08-28T17:54:23Z | sluice:outboard | 40.962 | 25.558 | 39.015 | 1.58 | 0 | 544de1ec6 |  | lefford | 40 |
 | 2026-08-28T18:02:34Z | sluice:gate | 491.420 | 14061.900 | 512.271 | 29.66 | 0 | f7c7aad12 |  | lefford | 40 |
 | 2026-08-28T18:11:27Z | sluice:clients | 532.306 | 9563.209 | 103.372 | 18.16 | 0 | c241a6190 |  | lefford | 40 |
+| 2026-08-28T18:14:29Z | rebaseline | 128.314 | 281.548 | 17.191 | 2.33 | 0 | 34eaa21eb | campaign/the-precedence | ambrose | 12 |
