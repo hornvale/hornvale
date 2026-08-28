@@ -583,3 +583,30 @@ fn appending_the_felt_state_cohort_displaces_no_existing_proto_root() {
 fn appending_the_kill_cohort_displaces_no_existing_proto_root() {
     assert_appending_a_cohort_is_additive(&["kill"], "kill");
 }
+
+/// THE OFFER (Task 9): appending the five `object_property_pack` concepts
+/// (epoch 14) displaces nothing.
+///
+/// **Final whole-branch review minor M-e.** Every other cohort landed since
+/// The Inquest wrote this pattern — elf, felt-state, kill — carries this
+/// exact test, one call to the shared helper; epoch 14 shipped without one.
+/// Task 9's own review checked the byte-golden diff by hand (five lines
+/// added at the correct alphabetical positions, every pre-existing entry
+/// byte-identical) but nothing PINS that as a property future campaigns
+/// must also hold, the way this test does for every other cohort.
+///
+/// claim: invariant(forall-seed) — save-format contract, mirroring
+/// `appending_the_kill_cohort_displaces_no_existing_proto_root`'s shape.
+#[test]
+fn appending_the_object_property_cohort_displaces_no_existing_proto_root() {
+    assert_appending_a_cohort_is_additive(
+        &[
+            "affords-passage",
+            "encloses",
+            "holds-liquid",
+            "radiates-heat",
+            "supports-rest",
+        ],
+        "object-property",
+    );
+}

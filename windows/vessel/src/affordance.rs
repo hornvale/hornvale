@@ -198,7 +198,15 @@ pub enum OfferedVerb {
 impl OfferedVerb {
     /// Every verb, one representative each, in declaration order — the
     /// roster [`offered_by`] sweeps for each kind.
-    pub fn all() -> Vec<OfferedVerb> {
+    ///
+    /// **Private, narrowed from `pub` (final review minor M-g).** Its only
+    /// caller anywhere in the workspace is [`offered`], two lines below, in
+    /// this same module. Two prior fix rounds this campaign (`body_can_use`,
+    /// `encloses`) narrowed exactly this kind of surface on exactly this
+    /// argument — a `pub` item nothing outside the crate calls is a bypass
+    /// waiting for a future caller, not a convenience for one that exists
+    /// today.
+    fn all() -> Vec<OfferedVerb> {
         vec![
             OfferedVerb::Sleep,
             OfferedVerb::Drink,
@@ -208,8 +216,30 @@ impl OfferedVerb {
         ]
     }
 
-    /// This verb's surface word, for the four surfaces spec §4 unifies
-    /// (deriving them is a later task; this is the shared source).
+    /// This verb's surface word, for the four surfaces spec §4 unifies.
+    /// Task 7 wired three of those four surfaces (`examine`'s datum, the
+    /// `HELP` tie, `IN_CHARACTER_VERBS`) directly against the literal
+    /// strings each surface already owned, never against this method — so
+    /// "deriving them is a later task", this doc's former claim, was stale
+    /// the moment Task 7 shipped and did not use it (final review, M-g).
+    /// The one caller today is `session.rs`'s own test module
+    /// (`OfferedVerb::Warm.word()`, pinning `HELP`'s line against the same
+    /// word this module derives `warm` from).
+    ///
+    /// **Stays `pub`, not narrowed to `pub(crate)`, and this is checked
+    /// rather than assumed.** `body_can_use`/`encloses` (both narrowed by
+    /// earlier fix rounds this campaign) each keep a real PRODUCTION
+    /// caller after narrowing, so the compiler still sees them used outside
+    /// `#[cfg(test)]`. `word`'s only caller lives inside another module's
+    /// `#[cfg(test)]` block, which a plain (non-test) build cannot see at
+    /// all — narrowing this to `pub(crate)` was tried and reddens
+    /// `cargo clippy -p hornvale-vessel --lib -- -D warnings` with
+    /// `error: method `word` is never used` (`-D dead-code`, part of
+    /// `gate-commit`'s own `-D warnings`), because a `pub(crate)` method
+    /// with no caller in the lib's own non-test compilation unit is
+    /// genuinely dead code from that unit's point of view. Only a bare
+    /// `pub` item is exempt from that lint (the compiler treats it as
+    /// public API, potentially used elsewhere), which is why it stays.
     /// type-audit: bare-ok(identifier-text: return)
     pub fn word(self) -> &'static str {
         match self {
@@ -229,7 +259,12 @@ impl OfferedVerb {
 /// §3.3), and the empty set is a subset of every set, so universality falls
 /// out of the subset relation in [`offered`] rather than needing its own
 /// `if`.
-pub fn required_properties(v: OfferedVerb) -> BTreeSet<ObjectProperty> {
+///
+/// **Private, narrowed from `pub` (final review minor M-g).** No caller
+/// outside this module exists — `offered` and `offered_to`, both in this
+/// same file, are the only two call sites in the workspace; the mention in
+/// `tests/suite/affordance.rs`'s own doc comment is prose, not a call.
+fn required_properties(v: OfferedVerb) -> BTreeSet<ObjectProperty> {
     match v {
         OfferedVerb::Sleep => [ObjectProperty::SupportsRest].into_iter().collect(),
         OfferedVerb::Drink => [ObjectProperty::HoldsLiquid].into_iter().collect(),
