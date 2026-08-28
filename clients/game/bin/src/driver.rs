@@ -591,10 +591,11 @@ impl Driver {
     /// generated sky — the same defaults `clients/vessel/wasm`'s `hv_start`
     /// uses), derive its [`WorldContext`] once, and start a possession of
     /// `target`.
-    // Named construction site (decision 0092): `terrain_of` re-derives the
-    // tectonic globe once here, at world load, to build the Portolan's
-    // terrain-feature index — never per-turn (see `VertexFeatureIndex`'s doc).
-    #[allow(clippy::disallowed_methods)]
+    ///
+    /// Genesis and session start are two separable halves, and
+    /// [`Driver::start_from_world`] is the second one — see its doc for who
+    /// needs the seam. This function is the whole thing, unchanged, for every
+    /// caller that does not.
     pub fn start(seed: u64, target: PossessTarget) -> Result<Driver, DriverError> {
         let world = build_world(
             Seed(seed),
@@ -604,6 +605,31 @@ impl Driver {
             &SettlementPins::default(),
         )
         .map_err(DriverError::Genesis)?;
+        Driver::start_from_world(world, target)
+    }
+
+    /// Everything [`Driver::start`] does EXCEPT building the world: derive the
+    /// [`WorldContext`], start a possession of `target`, and build the
+    /// session's indices.
+    ///
+    /// **The seam exists because genesis moved to a worker thread** (The
+    /// Overture, ruling R5). The startup frame needs the build to run somewhere
+    /// it can draw around, and `build_world_observed` returns a plain [`World`],
+    /// which is `Send`; a `Driver` is not (it holds `*mut World`) and a
+    /// `WorldContext` cannot be either (it stores `Box<dyn PhenomenaSource>`,
+    /// and that trait declares no `Send` bound). So the worker builds the world,
+    /// hands it back, and this half runs on the thread that owns the terminal.
+    /// Task 8's world cache needs the same seam for the same shape of reason: it
+    /// has a world already and only wants the second half.
+    ///
+    /// Takes the world BY VALUE and keeps it — it is never rebuilt, re-read or
+    /// re-derived, so a caller that has just paid ~2.2 s for one pays nothing
+    /// again here.
+    // Named construction site (decision 0092): `terrain_of` re-derives the
+    // tectonic globe once here, at world load, to build the Portolan's
+    // terrain-feature index — never per-turn (see `VertexFeatureIndex`'s doc).
+    #[allow(clippy::disallowed_methods)]
+    pub fn start_from_world(world: World, target: PossessTarget) -> Result<Driver, DriverError> {
         let world = Box::into_raw(Box::new(world));
         // SAFETY: `world` is a fresh heap allocation this function owns.
         // Nothing else can alias it yet, and it outlives `ctx`/`session`

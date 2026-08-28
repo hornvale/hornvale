@@ -34,6 +34,7 @@
 //! rule 2 demands: pressing `space` can never land on an empty region, because
 //! there is no rung at which a speaking view has no grid.
 
+pub mod genesis;
 pub mod progress;
 pub mod timings;
 pub mod view;
@@ -114,9 +115,10 @@ pub struct Frame {
     baseline: PhaseTimings,
 }
 
-/// Rows the chrome occupies: header, rule, then (at the bottom) rule and the
-/// progress substrate.
-const CHROME_ROWS: u16 = 4;
+/// Rows the chrome occupies: header, rule, then at the bottom a rule and the
+/// progress substrate's TWO rows (the phase roster and the fact count — see
+/// [`progress_line`] for why the count is not on the roster's row).
+const CHROME_ROWS: u16 = 5;
 
 impl Frame {
     /// Register `views`, in cycle order, and start the clock on the first
@@ -179,12 +181,46 @@ impl Frame {
         self.rung = Some(rung);
         self.facts = world.ledger.len();
         let (w, h) = self.region();
-        for (i, view) in self.views.iter().enumerate() {
+        // `iter_mut`, per ruling R6: a view may memoise what its arguments
+        // imply (the atlas's `NearestVertexIndex`, ~200 ms to build) rather
+        // than re-deriving it at each of the four rungs. The two field borrows
+        // are disjoint, so this needs no interior mutability.
+        for (i, view) in self.views.iter_mut().enumerate() {
             if view.can_speak(rung) {
                 self.panels[i] = Some(view.render(world, rung, artifacts, w, h));
             }
         }
         self.reseat();
+    }
+
+    /// Close a phase that is NOT a [`BuildDepth`] rung, recording its measured
+    /// duration and advancing the clock to whatever follows it.
+    ///
+    /// **The frame needs this because one of the five phases has no rung.**
+    /// [`Frame::observe`] closes `Phase::for_rung(rung)`, and the ladder's
+    /// deepest rung maps to [`Phase::DeepTime`] — so [`Phase::Living`], the
+    /// post-genesis `WorldContext` build that is 27.2% of the wait, is reached
+    /// by no observation at all. Without this method it renders `[>]` forever
+    /// and `overture-timings.tsv` is permanently missing its `living` line,
+    /// which means the phase that costs a quarter of the wait can never be
+    /// paced on any run, ever.
+    ///
+    /// The caller that owns the work closes it:
+    ///
+    /// ```no_run
+    /// # use hornvale_game::overture::{Frame, Phase};
+    /// # fn demo(frame: &mut Frame) {
+    /// // …after `build_world_observed` returns and the WorldContext is built:
+    /// frame.finish_phase(Phase::Living);
+    /// let _ = frame.save_timings();
+    /// # }
+    /// ```
+    ///
+    /// Idempotent in shape but not in effect: calling it twice for the same
+    /// phase records the second, shorter interval. Call it once, when the work
+    /// it names is done.
+    pub fn finish_phase(&mut self, phase: Phase) {
+        self.clock.finish(phase);
     }
 
     /// Move the cursor onto a speaking view if it is not on one already, without
@@ -271,6 +307,19 @@ impl Frame {
         state.with_facts(self.facts)
     }
 
+    /// The PREVIOUS run's measurements — the baseline that sizes the bar, read
+    /// at [`Frame::new`]. Empty on a first-ever run, which is what makes the
+    /// substrate draw no bar (spec §2).
+    pub fn baseline(&self) -> &PhaseTimings {
+        &self.baseline
+    }
+
+    /// This run's measurements so far — one entry per phase already closed by
+    /// [`Frame::observe`] or [`Frame::finish_phase`].
+    pub fn measured(&self) -> &PhaseTimings {
+        self.clock.measured()
+    }
+
     /// This run's measurements, to be saved once startup completes so the next
     /// run has a bar. Returns `Ok(false)` when there is nowhere to keep state.
     pub fn save_timings(&self) -> std::io::Result<bool> {
@@ -298,16 +347,36 @@ impl Frame {
         }
 
         rule(&mut grid, 1);
-        if let Some(panel) = self.panels.get(self.cursor).and_then(Option::as_ref) {
+        // Gated on `speaks(cursor)`, matching `current_name` (M6): skip-not-blank
+        // must be structural in BOTH predicates. A view whose `can_speak` is not
+        // monotone in `rung` would otherwise keep drawing the panel from the
+        // rung where it last spoke, underneath a `NO_VIEW` header — a stale
+        // picture presented as current, which is worse than an empty region.
+        if self.speaks(self.cursor)
+            && let Some(panel) = self.panels.get(self.cursor).and_then(Option::as_ref)
+        {
             blit(&mut grid, panel, 2);
         }
         if self.height >= CHROME_ROWS {
-            rule(&mut grid, self.height - 2);
+            let state = self.state();
+            rule(&mut grid, self.height - 3);
             write_text(
                 &mut grid,
                 0,
+                self.height - 2,
+                &progress::phase_roster(&state),
+                Weight::Normal,
+                Source::Overture,
+            );
+            // Right-aligned, as spec §2 draws it. It is on its own row so the
+            // 80-column floor cannot clip it — see `progress_line`'s doc.
+            let count = progress::fact_count(&state);
+            let x = self.width.saturating_sub(count.chars().count() as u16);
+            write_text(
+                &mut grid,
+                x,
                 self.height - 1,
-                &progress_line(&self.state()),
+                &count,
                 Weight::Normal,
                 Source::Overture,
             );
@@ -343,7 +412,8 @@ fn blit(grid: &mut Grid, panel: &Grid, top: u16) {
         let Some(row) = top.checked_add(y) else {
             return;
         };
-        if row + 2 >= grid.height() {
+        // Stop before the bottom chrome (rule + the substrate's two rows).
+        if row + 3 >= grid.height() {
             return;
         }
         for x in 0..panel.width() {
@@ -375,11 +445,14 @@ mod tests {
     /// tell whose panel is on screen.
     struct AlwaysSpeaks {
         name: &'static str,
+        /// How many times `render` has been called — writable only because
+        /// ruling R6 made `render` take `&mut self`.
+        renders: usize,
     }
 
     impl AlwaysSpeaks {
         fn named(name: &'static str) -> AlwaysSpeaks {
-            AlwaysSpeaks { name }
+            AlwaysSpeaks { name, renders: 0 }
         }
     }
 
@@ -391,15 +464,26 @@ mod tests {
             true
         }
         fn render(
-            &self,
+            &mut self,
             _world: &World,
             _rung: BuildDepth,
             _artifacts: RungArtifacts<'_>,
             w: u16,
             _h: u16,
         ) -> Grid {
+            // R6's memo, exercised rather than merely permitted: a real view
+            // caches something costly here (the atlas's `NearestVertexIndex`),
+            // and `renders` proves the `&mut self` signature actually lets one.
+            self.renders += 1;
+            // The count is DRAWN, so a test can observe the memo through the
+            // frame's own output instead of reaching into the view. A view under
+            // an `&self` signature could not produce this at all.
+            // `~`, never `#`: a panel glyph must not be confusable with a
+            // progress bar, or a `!contains('#')` assertion about the
+            // SUBSTRATE fires on the view's own output instead.
+            let text = format!("{}~{}", self.name, self.renders);
             let mut grid = Grid::new(w.max(1), 1);
-            write_text(&mut grid, 0, 0, self.name, Weight::Normal, Source::Overture);
+            write_text(&mut grid, 0, 0, &text, Weight::Normal, Source::Overture);
             grid
         }
     }
@@ -417,7 +501,7 @@ mod tests {
             rung >= BuildDepth::Terrain
         }
         fn render(
-            &self,
+            &mut self,
             _world: &World,
             _rung: BuildDepth,
             artifacts: RungArtifacts<'_>,
@@ -432,6 +516,44 @@ mod tests {
             );
             Grid::new(w.max(1), 1)
         }
+    }
+
+    /// A view that speaks at EXACTLY one rung, so its panel becomes stale as the
+    /// build moves past it. Contrived, and deliberately so: the trait only asks
+    /// `can_speak` to be a pure function of `rung`, never a monotone one, so the
+    /// frame must not assume otherwise.
+    struct SpeaksOnlyAtTerrain;
+
+    impl View for SpeaksOnlyAtTerrain {
+        fn name(&self) -> &'static str {
+            "fickle"
+        }
+        fn can_speak(&self, rung: BuildDepth) -> bool {
+            rung == BuildDepth::Terrain
+        }
+        fn render(
+            &mut self,
+            _world: &World,
+            _rung: BuildDepth,
+            _artifacts: RungArtifacts<'_>,
+            w: u16,
+            _h: u16,
+        ) -> Grid {
+            let mut grid = Grid::new(w.max(1), 1);
+            write_text(&mut grid, 0, 0, "fickle", Weight::Normal, Source::Overture);
+            grid
+        }
+    }
+
+    /// The phase-roster row of a composed frame, trailing padding trimmed — the
+    /// row every substrate assertion is really about. Reading it off the
+    /// composed grid rather than calling `phase_roster` directly keeps the
+    /// assertion end-to-end: it fails if `compose` puts the roster on the wrong
+    /// row, or clips it, as well as if the roster itself is wrong.
+    fn roster_row(frame: &Frame) -> String {
+        let text = frame.compose().to_plain_text();
+        let rows: Vec<&str> = text.lines().collect();
+        rows[rows.len() - 2].trim_end().to_string()
     }
 
     fn frame_of(views: Vec<Box<dyn View>>) -> Frame {
@@ -615,19 +737,22 @@ mod tests {
             Box::new(AlwaysSpeaks::named("alpha")),
             Box::new(AlwaysSpeaks::named("gamma")),
         ]);
-        // 140 columns, not 80: the substrate is ~100 characters wide, and at 80
-        // the tail of it is CLIPPED — which silently defanged the `%` assertion
-        // below (a mutation that appended a global percentage was caught by
-        // `progress.rs`'s own tests and slipped past this one, because the
-        // offending character fell off the right edge).
-        frame.resize(140, 24);
+        // Composed at the FLOOR, not above it. An earlier revision widened this
+        // to 140 columns to get a clipped assertion to fire, which was the
+        // wrong direction: `hornvale-game-core`'s own register is that 80x24 is
+        // the floor and anything that only works larger is wrong. The substrate
+        // narrowed instead (it is two rows now), so the assertions below hold at
+        // the width the client actually refuses to go under —
+        // `the_whole_substrate_is_on_screen_at_the_eighty_column_floor` is the
+        // dedicated test for that.
+        frame.resize(hornvale_game_core::MIN_WIDTH, 24);
         let sky = world_at(BuildDepth::Astronomy);
         frame.observe(BuildDepth::Astronomy, sky, RungArtifacts::none());
         let text = frame.compose().to_plain_text();
         assert!(text.contains("hornvale"), "no header: {text}");
         assert!(
-            text.contains("28") || text.contains("facts"),
-            "the fact count did not reach the screen: {text}"
+            text.contains(&format!("{} facts", sky.ledger.len())),
+            "the grouped fact count did not reach the screen: {text}"
         );
         assert!(
             text.contains("alpha"),
@@ -689,15 +814,21 @@ mod tests {
         frame.resize(100, 24);
         let sky = world_at(BuildDepth::Astronomy);
         frame.observe(BuildDepth::Astronomy, sky, RungArtifacts::none());
-        let text = frame.compose().to_plain_text();
-        assert!(!text.contains('#'), "a first-ever run drew a bar: {text}");
+        // Scoped to the SUBSTRATE rows, not the whole grid: a view's own panel
+        // may legitimately contain any glyph, and asserting over the whole
+        // screen makes this test's subject the views rather than the substrate.
+        let roster = roster_row(&frame);
+        assert!(
+            !roster.contains('#'),
+            "a first-ever run drew a bar: {roster}"
+        );
         // The `#`-free half alone cannot tell "no bar" from "an EMPTY bar",
         // which is a claim of zero rather than the honest absence of a
         // measurement — a mutation setting the fraction to `Some(0.0)` drew
         // `..........` and slipped past it. The marker is what discriminates.
         assert!(
-            text.contains("the land [>]"),
-            "a first-ever run must still mark the phase in progress: {text}"
+            roster.contains("the land [>]"),
+            "a first-ever run must still mark the phase in progress: {roster}"
         );
 
         // Non-vacuity: the same frame WITH a baseline does draw one, so the
@@ -708,14 +839,181 @@ mod tests {
         let mut paced = Frame::with_baseline(vec![Box::new(AlwaysSpeaks::named("a"))], baseline);
         paced.resize(100, 24);
         paced.observe(BuildDepth::Astronomy, sky, RungArtifacts::none());
-        let text = paced.compose().to_plain_text();
+        let roster = roster_row(&paced);
         assert!(
-            text.contains("the land ") && text.contains('.'),
-            "a paced frame drew no phase bar at all: {text}"
+            roster.contains("the land .........."),
+            "a paced frame drew no phase bar at all: {roster}"
         );
         assert!(
-            !text.contains("the land [>]"),
-            "a paced frame drew the UNPACED marker: {text}"
+            !roster.contains("the land [>]"),
+            "a paced frame drew the UNPACED marker: {roster}"
+        );
+    }
+
+    #[test]
+    fn the_whole_substrate_is_on_screen_at_the_eighty_column_floor() {
+        // I1. `hornvale-game-core`'s register: 80x24 is the floor and `render`
+        // refuses anything smaller rather than degrading — so the substrate must
+        // be entirely legible THERE, not merely somewhere. The fact count is the
+        // half that used to fall off, and spec §2 makes it mandatory.
+        let mut frame = frame_of(vec![Box::new(AlwaysSpeaks::named("a"))]);
+        frame.resize(
+            hornvale_game_core::MIN_WIDTH,
+            hornvale_game_core::MIN_HEIGHT,
+        );
+        let sky = world_at(BuildDepth::Astronomy);
+        frame.observe(BuildDepth::Astronomy, sky, RungArtifacts::none());
+        let state = frame.state();
+        let grid = frame.compose();
+        let text = grid.to_plain_text();
+
+        // Every phase name AND the grouped count, whole, on a floor-sized grid.
+        for phase in Phase::ALL {
+            assert!(
+                text.contains(phase.label()),
+                "{} clipped at the floor: {text}",
+                phase.label()
+            );
+        }
+        let count = progress::fact_count(&state);
+        assert!(
+            text.contains(&count),
+            "the fact count {count:?} was clipped at the floor: {text}"
+        );
+
+        // And no row of the composed grid exceeds the floor — the write path
+        // clips silently, so a too-long row is invisible unless measured.
+        for row in text.lines() {
+            assert!(
+                row.chars().count() <= usize::from(hornvale_game_core::MIN_WIDTH),
+                "a composed row overran the floor: {row}"
+            );
+        }
+        // Non-vacuity: the count must be a real grouped number, or
+        // `contains` above could be satisfied by an empty string.
+        assert!(count.ends_with(" facts") && count.len() > 6, "{count:?}");
+    }
+
+    #[test]
+    fn every_phase_including_the_one_with_no_rung_can_be_closed_and_recorded() {
+        // I2. `observe` closes `Phase::for_rung(rung)`, and the deepest rung maps
+        // to `DeepTime` — so `Phase::Living` (27.2% of the wait) is reached by no
+        // observation at all and was permanently unmeasurable. A full startup
+        // must be able to write all FIVE lines, or the phase that costs a quarter
+        // of the wait can never be paced on any run.
+        let dir = std::env::temp_dir().join(format!(
+            "hornvale-overture-frame-living-{}",
+            std::process::id()
+        ));
+        std::fs::remove_dir_all(&dir).ok();
+        let path = dir.join("timings.tsv");
+
+        let mut frame = frame_of(vec![Box::new(AlwaysSpeaks::named("a"))]);
+        let sky = world_at(BuildDepth::Astronomy);
+        let land = world_at(BuildDepth::Terrain);
+        let terrain = terrain();
+        let art = RungArtifacts {
+            terrain: Some(terrain),
+            climate: None,
+        };
+        // Every rung the ladder has…
+        frame.observe(BuildDepth::Astronomy, sky, RungArtifacts::none());
+        frame.observe(BuildDepth::Terrain, land, art);
+        frame.observe(BuildDepth::Settlements, land, art);
+        frame.observe(BuildDepth::Full, land, art);
+        // …and then the phase that has none.
+        assert_eq!(
+            frame.state().phase(),
+            Phase::Living,
+            "after the deepest rung the substrate must be on the living phase"
+        );
+        frame.finish_phase(Phase::Living);
+
+        frame
+            .measured()
+            .save_to(&path)
+            .expect("write the measured timings");
+        let read = PhaseTimings::load_from(&path);
+        for phase in Phase::ALL {
+            assert!(
+                read.get(phase).is_some(),
+                "{} was never recorded, so it can never be paced",
+                phase.key()
+            );
+        }
+        assert_eq!(
+            read.to_tsv().lines().count(),
+            5,
+            "a full startup must write one line per phase: {}",
+            read.to_tsv()
+        );
+        // Non-vacuity: WITHOUT the `finish_phase` call the file has four lines,
+        // so the assertion above is about `finish_phase` and not about
+        // `PhaseTimings` writing whatever it is given.
+        let mut four = frame_of(vec![Box::new(AlwaysSpeaks::named("a"))]);
+        four.observe(BuildDepth::Astronomy, sky, RungArtifacts::none());
+        four.observe(BuildDepth::Terrain, land, art);
+        four.observe(BuildDepth::Settlements, land, art);
+        four.observe(BuildDepth::Full, land, art);
+        assert_eq!(four.measured().get(Phase::Living), None);
+        assert_eq!(four.measured().to_tsv().lines().count(), 4);
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn a_view_may_memoise_across_rungs_because_render_takes_mut_self() {
+        // R6. The atlas needs a `NearestVertexIndex` (~200 ms to build) and can
+        // only reach the geosphere through `artifacts.terrain`, i.e. from inside
+        // `render`. `observe` renders every speaking view at every rung, so an
+        // `&self` signature would force a rebuild per rung: ~600 ms on a
+        // 3,054 ms build. This asserts the signature genuinely admits a memo —
+        // the stub counts its own renders, which `&self` could not do.
+        let mut frame = frame_of(vec![Box::new(AlwaysSpeaks::named("a"))]);
+        let sky = world_at(BuildDepth::Astronomy);
+        frame.observe(BuildDepth::Astronomy, sky, RungArtifacts::none());
+        frame.observe(BuildDepth::Astronomy, sky, RungArtifacts::none());
+        frame.resize(hornvale_game_core::MIN_WIDTH, 24);
+        let text = frame.compose().to_plain_text();
+        assert!(
+            text.contains("a~2"),
+            "the view could not carry state across renders: {text}"
+        );
+    }
+
+    #[test]
+    fn the_composed_screen_never_shows_a_stale_panel_under_a_no_view_header() {
+        // M6. `current_name` gates on `speaks(cursor)` and `compose` must too,
+        // or a view whose `can_speak` is non-monotone in `rung` keeps drawing the
+        // panel from the rung where it last spoke — a stale picture presented as
+        // current, which is worse than an empty region.
+        let mut frame = frame_of(vec![Box::new(SpeaksOnlyAtTerrain)]);
+        frame.resize(hornvale_game_core::MIN_WIDTH, 24);
+        let land = world_at(BuildDepth::Terrain);
+        let terrain = terrain();
+        frame.observe(
+            BuildDepth::Terrain,
+            land,
+            RungArtifacts {
+                terrain: Some(terrain),
+                climate: None,
+            },
+        );
+        assert!(frame.compose().to_plain_text().contains("fickle"));
+
+        // The rung advances and the view goes quiet again.
+        frame.observe(
+            BuildDepth::Full,
+            land,
+            RungArtifacts {
+                terrain: Some(terrain),
+                climate: None,
+            },
+        );
+        assert_eq!(frame.current_name(), NO_VIEW);
+        assert!(
+            !frame.compose().to_plain_text().contains("fickle"),
+            "a stale panel was drawn under a NO_VIEW header"
         );
     }
 

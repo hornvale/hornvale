@@ -62,8 +62,18 @@ const APP_DIR: &str = "hornvale";
 /// runner documented `HV_CENSUS_WORKTREE=canonical`, a bare relative name,
 /// and it created an untracked directory *inside the repository* that a `git
 /// clean -fdx` would delete (decision 0146). A cache root is exactly the same
-/// hazard, so a relative value yields [`None`] here and the caller behaves as
-/// though nothing were configured — the honest, lossless degradation.
+/// hazard.
+///
+/// **A refused value is IGNORED, and the next rule answers** — it does not
+/// short-circuit the whole resolution to [`None`]. That distinction is the
+/// difference between "your override was nonsense, so I used your
+/// `XDG_CACHE_HOME`" and "your override was nonsense, so this client has no
+/// cache at all", and only the first is defensible. So a relative
+/// `HORNVALE_GAME_STATE_DIR` falls through to rule 2, a relative
+/// `XDG_CACHE_HOME` falls through to rule 3, and [`None`] is reached only when
+/// every rule declines. `a_relative_override_is_refused_and_falls_through`
+/// asserts the fall-through itself rather than merely asserting a refusal, for
+/// exactly this reason.
 pub fn resolve(
     override_dir: Option<&str>,
     xdg_cache: Option<&str>,

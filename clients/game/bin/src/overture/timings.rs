@@ -86,13 +86,20 @@ impl PhaseTimings {
     /// by a measured zero would yield infinity, and the honest report is that
     /// this phase is too fast to have a bar (the sky phase, at 0.4 ms, is
     /// exactly that case rather than a hypothetical one).
+    ///
+    /// **The ratio is NOT capped at 1.0.** Clamping it made an overrunning phase
+    /// sit at a full bar indefinitely, which claims the phase is done — spec §3
+    /// rule 3 forbids exactly that, and overrunning is routine rather than
+    /// exceptional (a new seed, or the same seed on a busier machine). The
+    /// caller renders the excess distinctly; see [`super::progress::BuildState`]
+    /// and its `is_overrunning`.
     pub fn fraction_through(&self, phase: Phase, elapsed: Duration) -> Option<f64> {
         let baseline = self.get(phase)?;
         if baseline == 0 {
             return None;
         }
         let elapsed = u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX);
-        Some((elapsed as f64 / baseline as f64).clamp(0.0, 1.0))
+        Some(elapsed as f64 / baseline as f64)
     }
 
     /// The file's text form — see the module doc for the format.
@@ -341,8 +348,9 @@ sky\t0
 
     #[test]
     fn an_absent_file_is_the_first_ever_run_not_an_error() {
-        let path = scratch("absent").join("nothing-here.tsv");
-        assert!(PhaseTimings::load_from(&path).is_empty());
+        let dir = scratch("absent");
+        assert!(PhaseTimings::load_from(&dir.join("nothing-here.tsv")).is_empty());
+        std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]
@@ -350,19 +358,22 @@ sky\t0
         let path = scratch("roundtrip").join("nested").join(TIMINGS_FILE);
         sample().save_to(&path).expect("save");
         assert_eq!(PhaseTimings::load_from(&path), sample());
-        std::fs::remove_dir_all(path.parent().unwrap()).ok();
+        std::fs::remove_dir_all(scratch("roundtrip")).ok();
     }
 
     #[test]
-    fn a_fraction_needs_a_nonzero_baseline_and_saturates_at_one() {
+    fn a_fraction_needs_a_nonzero_baseline_and_reports_an_overrun_honestly() {
         let t = sample();
         assert_eq!(
             t.fraction_through(Phase::Land, Duration::from_millis(101)),
             Some(0.5)
         );
+        // NOT capped at 1.0 (M12): the caller must be able to tell "at the
+        // baseline" from "well past it", or an overrunning phase sits at a full
+        // bar implying completion.
         assert_eq!(
-            t.fraction_through(Phase::Land, Duration::from_millis(10_000)),
-            Some(1.0)
+            t.fraction_through(Phase::Land, Duration::from_millis(404)),
+            Some(2.0)
         );
         // A measured-zero baseline has no fraction — dividing by it is infinity,
         // and "too fast to bar" is the honest report.

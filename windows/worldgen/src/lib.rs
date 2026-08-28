@@ -139,16 +139,17 @@ pub use history_emit::{
     occupations_by_vertex, present_frame, present_year, ruins_of_people, stratigraphy,
     sundered_landmasses, territories,
 };
+/// The derived climate, re-exported so a consumer of [`RungArtifacts`] can NAME
+/// what it is handed without taking its own edge to `domains/climate` — the
+/// composition root is the layer where these values are built, so it is the
+/// honest place to publish the name. A re-export, not a new dependency edge.
+/// `GeneratedTerrain` needs no equivalent: every current consumer already
+/// depends on `hornvale-terrain` directly.
+pub use hornvale_climate::GeneratedClimate;
 /// The demography fit's result, re-exported so a caller that only depends on
 /// the composition root can NAME what [`demography_report_from`] hands back
 /// (The Quire: `hornvale_vessel::WorldContext` stores one). A re-export, not a
 /// new dependency edge — the layering graph is unchanged.
-// Re-exported so a consumer of [`RungArtifacts`] can NAME the type it is
-// handed without taking its own edge to `domains/climate` — the composition
-// root is the layer where these values are built, so it is the honest place
-// to publish the name. `GeneratedTerrain` needs no equivalent: every current
-// consumer already depends on `hornvale-terrain` directly.
-pub use hornvale_climate::GeneratedClimate;
 pub use hornvale_demography::DemographyReport;
 pub use knownness::{Knownness, knownness, memory_half_life};
 pub use resolve::{ChainLink, format_chain, resolve_at, resolve_chain_at};
@@ -273,7 +274,7 @@ pub struct BuildArtifacts {
 /// large, an observer that cloned one would double the build's peak
 /// footprint, and nothing in a view needs to outlive the callback — a
 /// consumer that must keep something derives and keeps that instead.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct RungArtifacts<'a> {
     /// The sculpted terrain, `Some` iff the fired rung >= [`BuildDepth::Terrain`].
     pub terrain: Option<&'a GeneratedTerrain>,
@@ -283,12 +284,12 @@ pub struct RungArtifacts<'a> {
 
 impl RungArtifacts<'_> {
     /// The artifacts of a rung that has built neither — the `Astronomy` rung's
-    /// value, and the honest default.
+    /// value, and the honest default. An alias for
+    /// [`RungArtifacts::default`], kept because `none()` reads better at a
+    /// firing site than `default()` does: the point there is that this rung has
+    /// nothing to lend, not that a default was wanted.
     pub fn none() -> RungArtifacts<'static> {
-        RungArtifacts {
-            terrain: None,
-            climate: None,
-        }
+        RungArtifacts::default()
     }
 }
 

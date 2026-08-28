@@ -1,5 +1,5 @@
 //! The boot seam: getting from a parsed seed/target to a running
-//! [`Driver`], with the terminal's restore-before-report ordering pulled
+//! [`crate::driver::Driver`], with the terminal's restore-before-report ordering pulled
 //! out where it can be tested without a real terminal.
 //!
 //! `main.rs`'s `run` opens the terminal *before* attempting genesis (The
@@ -12,8 +12,6 @@
 //! [`start_and_report`] make that ordering an explicit, testable seam
 //! rather than something only [`crate::term::Term`]'s `Drop` backstop
 //! happens to get right.
-
-use crate::driver::{Driver, DriverError};
 
 /// What [`start_and_report`] needs from a terminal: a way to restore it,
 /// and a way to mark that an error is about to be reported. Abstracted so
@@ -37,6 +35,14 @@ pub trait TermHandle {
 /// Build the driver, restoring `term` and marking the error reported
 /// before handing it back if `start` fails.
 ///
+/// Generic in the product and the error rather than fixed to
+/// `Result<Driver, DriverError>`, because The Overture's ruling R5 gave `main`
+/// a second fallible step that must obey the same ordering: the startup frame's
+/// own loop can fail (genesis failed on the worker, or the terminal did), and
+/// that failure is reported with the screen already open exactly as a
+/// `DriverError` is. One seam, both callers, rather than a second hand-rolled
+/// restore that could drift out of step with this one.
+///
 /// `start` is a thunk rather than a bare `(seed, target)` pair so a
 /// failure can be injected directly in a test instead of needing a real
 /// seed whose genesis or possession fails. `SkyPins`/`TerrainPins` default
@@ -49,10 +55,14 @@ pub trait TermHandle {
 /// Searching seed space here would be slow, non-deterministic in what it
 /// actually tests, and still only exercise the same `NoSettlement` path a
 /// direct injection reaches for free.
-pub fn start_and_report<T: TermHandle>(
+pub fn start_and_report<T, D, E>(
     term: &T,
-    start: impl FnOnce() -> Result<Driver, DriverError>,
-) -> Result<Driver, String> {
+    start: impl FnOnce() -> Result<D, E>,
+) -> Result<D, String>
+where
+    T: TermHandle,
+    E: std::fmt::Display,
+{
     start().map_err(|e| {
         term.restore();
         let message = e.to_string();

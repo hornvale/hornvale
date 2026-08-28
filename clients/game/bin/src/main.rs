@@ -8,8 +8,11 @@
 //! dependency (crossterm) is enough for this campaign.
 
 use hornvale_game::driver::Driver;
+use hornvale_game::overture::genesis::{self, Gesture, Keys, Screen};
+use hornvale_game::overture::{Frame, View};
 use hornvale_game::{boot, input, term};
 use hornvale_game_core::{CommandLine, MIN_HEIGHT, MIN_WIDTH};
+use hornvale_kernel::Seed;
 use hornvale_vessel::PossessTarget;
 
 const USAGE: &str = "usage: hornvale-game --seed <N> [--target flagship|most-populous-settlement]";
@@ -49,7 +52,7 @@ fn run(args: &[String]) -> Result<(), String> {
         .map_err(|e| format!("--seed must be a u64: {e}"))?;
     let target = parse_target(args)?;
 
-    // The terminal now opens BEFORE genesis (The Overture, Task 1): every
+    // The terminal opens BEFORE genesis (The Overture, Task 1): every
     // later view needs the screen live from the first frame, not blank
     // until genesis finishes. That inversion means a genesis or possession
     // failure below now happens with the terminal already in raw mode on
@@ -58,13 +61,105 @@ fn run(args: &[String]) -> Result<(), String> {
     // `main`'s `eprintln!` — see that module's doc for why this is a
     // tested seam rather than a hope resting on `Term`'s `Drop` backstop.
     let term = term::Term::open().map_err(|e| e.to_string())?;
-    let mut driver = boot::start_and_report(&term, || Driver::start(seed, target))?;
+
+    // THE OVERTURE (Task 3, ruling R5). Genesis runs on a worker thread and
+    // this thread draws around it — see `overture::genesis`'s module doc for
+    // why a thread, what the observer clones and what that costs (measured:
+    // 21.9-24.5 ms, under 1% of the build), and which phase cannot move off
+    // this thread and why. Both fallible steps go through
+    // `boot::start_and_report`, so the restore-before-report ordering Task 1
+    // established covers the frame's own failures too, not just the driver's.
+    let mut frame = Frame::new(views()).titled(format!("seed {seed}"));
+    let mut driver = boot::start_and_report(&term, || -> Result<Driver, String> {
+        let progress = genesis::spawn(Seed(seed));
+        let world = genesis::run(
+            &mut frame,
+            &progress,
+            &TermScreen(&term),
+            &mut CrosstermKeys,
+        )
+        .map_err(|e| e.to_string())?;
+        // `start_from_world`, not `start`: the world the worker just spent
+        // ~2.2 s building is handed straight over rather than built again.
+        let driver = Driver::start_from_world(world, target)
+            .map_err(|e: hornvale_game::driver::DriverError| e.to_string())?;
+        // The post-genesis phase reports through no rung, so its own owner
+        // closes it (see `Frame::finish_phase`). Closing it HERE, after
+        // `start_from_world` returns, is what makes `living` measurable at all.
+        frame.finish_phase(genesis::POST_GENESIS_PHASE);
+        Ok(driver)
+    })?;
+    // Best effort by design: a missing or unwritable state directory must cost
+    // the next run its bar and nothing else (see `state_dir`'s module doc).
+    let _ = frame.save_timings();
 
     let outcome = play(&mut driver, &term);
     // Explicit drop before reporting any error: whatever `play` returns, the
     // user's terminal must be sane before they read the message.
     drop(term);
     outcome.map_err(|e| e.to_string())
+}
+
+/// The views the overture cycles, in cycle order.
+///
+/// **Empty today, and that is the honest state rather than a stub.** Task 3
+/// settles the `View` contract; Tasks 4-7 write the four views (`sky`, `atlas`,
+/// `almanac`, `tongue`) and each adds one line here. With no view registered the
+/// frame shows its header, its rules and a live progress substrate over an
+/// unmarked middle — which is what the client genuinely knows right now, and is
+/// strictly more than the blank terminal that stood here before. Nothing else
+/// changes when a view lands: the frame skips what cannot speak, so a roster of
+/// one behaves correctly from the first rung (`hornvale_game::overture`).
+fn views() -> Vec<Box<dyn View>> {
+    Vec::new()
+}
+
+/// [`Screen`] over the real terminal.
+///
+/// A newtype rather than an `impl` on `Term` itself, because the trait belongs
+/// to the overture and `term.rs` should not have to know it exists — the same
+/// direction of dependency `boot::TermHandle` takes.
+struct TermScreen<'a>(&'a term::Term);
+
+impl Screen for TermScreen<'_> {
+    fn size(&self) -> std::io::Result<(u16, u16)> {
+        terminal_size()
+    }
+
+    fn draw(&self, grid: &hornvale_game_core::Grid) -> std::io::Result<()> {
+        // No cursor during the overture: there is nothing to type at yet, and a
+        // parked block cursor on a chrome cell reads as an input prompt.
+        self.0.draw(grid, None)
+    }
+}
+
+/// [`Keys`] over crossterm's event queue.
+///
+/// Maps only what the overture understands. `space` cycles; a resize is
+/// forwarded so the frame can re-lay its chrome; everything else is
+/// [`Gesture::Ignored`], because the world does not exist yet and there is
+/// nothing else to ask it. Release is deliberately NOT handled here: the
+/// signal handler (`term::watch_signals`) already owns interruption, and a
+/// half-built world has no session to release.
+struct CrosstermKeys;
+
+impl Keys for CrosstermKeys {
+    fn next(&mut self, timeout: std::time::Duration) -> std::io::Result<Option<Gesture>> {
+        use crossterm::event::{Event, KeyCode, KeyEventKind, poll, read};
+        if !poll(timeout)? {
+            return Ok(None);
+        }
+        Ok(Some(match read()? {
+            // `Press` only: a terminal reporting key-release events would
+            // otherwise cycle twice per keystroke.
+            Event::Key(key) if key.kind == KeyEventKind::Press => match key.code {
+                KeyCode::Char(' ') => Gesture::Cycle,
+                _ => Gesture::Ignored,
+            },
+            Event::Resize(_, _) => Gesture::Resize,
+            _ => Gesture::Ignored,
+        }))
+    }
 }
 
 /// The terminal's current size, clamped up to the monochrome floor

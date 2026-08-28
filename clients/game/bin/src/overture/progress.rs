@@ -106,8 +106,17 @@ impl Phase {
 }
 
 /// How wide a per-phase bar is drawn. Ten cells: wide enough that a tenth of a
-/// phase is visible, narrow enough that all five phases and a fact count fit on
-/// one 80-column row.
+/// phase is visible, narrow enough that the whole phase roster fits the
+/// 80-column floor with room to spare — see [`progress_line`] for the width
+/// budget, which is measured by
+/// `the_substrate_fits_the_eighty_column_floor_in_every_state` rather than
+/// asserted here.
+///
+/// **This doc previously claimed the roster AND a fact count fit one 80-column
+/// row. That was false** — the single-row form measured 85 to 101 characters, so
+/// at the floor the fact count was clipped off-screen entirely in every state,
+/// including the first-ever run that spec §2 makes it mandatory for. The
+/// substrate is two rows now, which is what spec §2 draws.
 pub const BAR_WIDTH: usize = 10;
 
 /// The mark on a phase that is finished.
@@ -117,7 +126,30 @@ const DONE_MARK: &str = "[x]";
 /// progress, because it is not.
 const UNPACED_MARK: &str = "[>]";
 /// The mark on a phase that has not started.
+///
+/// One cell, and it must never be confusable with a bar: a phase that has not
+/// started has no progress to report, and drawing it as an empty bar would put
+/// a "0% done" claim on work nobody has begun.
+/// `a_pending_phase_is_never_drawn_as_a_bar` pins that, by comparing the whole
+/// roster row against its exact expected text — a `contains("deep time .")`
+/// check is satisfied by `deep time ..........` and cannot see the defect.
 const PENDING_MARK: &str = ".";
+
+/// What separates two phase segments on the roster row. Two spaces, matching
+/// spec §2's own diagram: the earlier `"  ·  "` cost 15 characters across the
+/// row for no legibility a double space does not already give.
+const PHASE_SEP: &str = "  ";
+
+/// The last cell of a bar whose phase has OUTRUN its baseline.
+///
+/// The bar's fill is capped one cell short of full while a phase is in
+/// progress, and this replaces that last cell once the previous run's duration
+/// has been exceeded. Spec §3 rule 3: *fill the time it is given without
+/// implying a total it cannot know* — a bar drawn full implies the phase is
+/// done, and a bar that sits full indefinitely is the exact false claim that
+/// rule forbids. A new seed on the same hardware, or the same seed on a busier
+/// machine, reaches this routinely.
+const OVERRUN_MARK: char = '>';
 
 /// Where the build is right now, as the progress substrate needs to know it.
 ///
@@ -126,9 +158,14 @@ const PENDING_MARK: &str = ".";
 pub struct BuildState {
     /// The phase currently in progress.
     phase: Phase,
-    /// How far through `phase` we are, in `0.0..=1.0` — or `None` when there is
-    /// no measured duration for it to be a fraction OF, which is the
-    /// first-ever-run state (spec §2) and draws no bar.
+    /// How far through `phase` we are, as a multiple of the baseline duration —
+    /// `None` when there is no measured duration for it to be a fraction OF,
+    /// which is the first-ever-run state (spec §2) and draws no bar.
+    ///
+    /// **Not capped at 1.0.** A value above one means the phase has outrun its
+    /// baseline, which is a real and frequent state (a new seed, a busier
+    /// machine), and the bar draws it distinctly rather than sitting full and
+    /// implying completion — spec §3 rule 3.
     fraction: Option<f64>,
     /// Facts committed so far. Genesis appends facts, so this needs no
     /// estimate — it is the one honest number on the screen from the start.
@@ -148,8 +185,10 @@ impl BuildState {
     pub fn in_phase(phase: Phase, fraction: f64) -> BuildState {
         BuildState {
             phase,
+            // Clamped BELOW at zero (a negative elapsed time is nonsense) but
+            // deliberately not above: see the field's own doc.
             fraction: if fraction.is_finite() {
-                Some(fraction.clamp(0.0, 1.0))
+                Some(fraction.max(0.0))
             } else {
                 None
             },
@@ -177,9 +216,15 @@ impl BuildState {
         self.phase
     }
 
-    /// How far through [`phase`](BuildState::phase), if that is knowable.
+    /// How far through [`phase`](BuildState::phase), if that is knowable. May
+    /// exceed 1.0 — see the field's doc.
     pub fn fraction(self) -> Option<f64> {
         self.fraction
+    }
+
+    /// Whether the current phase has outrun the baseline that sized its bar.
+    pub fn is_overrunning(self) -> bool {
+        self.fraction.is_some_and(|f| f >= 1.0)
     }
 
     /// Facts committed so far.
@@ -204,18 +249,25 @@ fn grouped(n: usize) -> String {
 
 /// The bar for a phase that is `fraction` complete: `#####.....`.
 fn bar(fraction: f64) -> String {
-    let filled = (fraction.clamp(0.0, 1.0) * BAR_WIDTH as f64).round() as usize;
-    let filled = filled.min(BAR_WIDTH);
+    // The fill NEVER reaches the last cell. A bar drawn full says "this phase
+    // is done", and the phase this bar describes is by definition the one still
+    // running — so the last cell is reserved: a dot while inside the baseline,
+    // `OVERRUN_MARK` once past it (spec §3 rule 3).
+    let cap = BAR_WIDTH - 1;
+    let filled = (fraction.max(0.0) * BAR_WIDTH as f64).round() as usize;
+    let filled = filled.min(cap);
     let mut out = String::with_capacity(BAR_WIDTH);
     out.extend(std::iter::repeat_n('#', filled));
-    out.extend(std::iter::repeat_n('.', BAR_WIDTH - filled));
+    out.extend(std::iter::repeat_n('.', cap - filled));
+    out.push(if fraction >= 1.0 { OVERRUN_MARK } else { '.' });
     out
 }
 
-/// The whole progress substrate as one line:
+/// The phase roster: one segment per phase, marked done / in progress /
+/// pending.
 ///
 /// ```text
-/// the sky [x]  the land [x]  the peoples #####.....  deep time .  living .  ·  28,110 facts
+/// the sky [x]  the land [x]  the peoples ####.....  deep time .  living .
 /// ```
 ///
 /// **It contains no `%` and no total, ever** (decision 0359). Phases before the
@@ -223,9 +275,14 @@ fn bar(fraction: f64) -> String {
 /// previous run's measured duration, and phases after it are marked pending.
 /// With no measured duration the current phase carries `[>]` — a marker, not a
 /// zero-length bar, so nothing on the row can be mistaken for progress that was
-/// never measured.
-pub fn progress_line(state: &BuildState) -> String {
-    let mut parts: Vec<String> = Vec::with_capacity(Phase::ALL.len() + 1);
+/// never measured; and a pending phase carries a bare `.`, for the same reason
+/// in the other direction.
+///
+/// Widest possible form is 76 characters (all five labels, two `[x]`, a bar,
+/// two pending dots, four separators), which fits the 80-column floor
+/// `hornvale-game-core` refuses to render below.
+pub fn phase_roster(state: &BuildState) -> String {
+    let mut parts: Vec<String> = Vec::with_capacity(Phase::ALL.len());
     for phase in Phase::ALL {
         let mark = if phase < state.phase() {
             DONE_MARK.to_string()
@@ -239,8 +296,40 @@ pub fn progress_line(state: &BuildState) -> String {
         };
         parts.push(format!("{} {}", phase.label(), mark));
     }
-    parts.push(format!("{} facts", grouped(state.facts())));
-    parts.join("  ·  ")
+    parts.join(PHASE_SEP)
+}
+
+/// The committed-fact count, the one honest number on the screen from the first
+/// frame: `"28,110 facts"`. Genesis appends facts, so this needs no estimate and
+/// implies no total.
+pub fn fact_count(state: &BuildState) -> String {
+    format!("{} facts", grouped(state.facts()))
+}
+
+/// The whole progress substrate, as the TWO rows the frame draws it on,
+/// newline-separated — spec §2's own layout:
+///
+/// ```text
+/// the sky [x]  the land [x]  the peoples ####.....  deep time .  living .
+///                                                             28,110 facts
+/// ```
+///
+/// **Two rows, not one, and the reason is the 80-column floor.**
+/// `hornvale-game-core`'s module doc states this codebase's register outright:
+/// *"Monochrome at 80x24 is the floor … if it only works larger, it is wrong,
+/// so `render` refuses anything smaller rather than silently degrading."* The
+/// single-row form measured 85-101 characters, and [`super::Frame`]'s text
+/// writer clips at the grid's right edge, so at the floor the fact count fell
+/// off the screen in every state — including the first-ever run, for which spec
+/// §2 makes it mandatory. Widening the test terminal to see it was the wrong
+/// direction; the substrate narrowed instead.
+///
+/// The caller may draw the two rows wherever it likes
+/// ([`super::Frame::compose`] puts the roster on the second-to-last row and
+/// right-aligns the count on the last), but both rows always exist: the count
+/// is never optional.
+pub fn progress_line(state: &BuildState) -> String {
+    format!("{}\n{}", phase_roster(state), fact_count(state))
 }
 
 #[cfg(test)]
@@ -283,9 +372,14 @@ mod tests {
             line.contains("the peoples ####"),
             "the phase in progress must carry the bar: {line}"
         );
+        // NOT `contains("deep time .")` — that is satisfied by
+        // `deep time ..........`, which is the very defect
+        // `a_pending_phase_is_never_drawn_as_a_bar` exists to catch. The
+        // segment list is compared exactly there; here it is enough to say a
+        // pending phase carries no fill.
         assert!(
-            line.contains("deep time .") && line.contains("living ."),
-            "unstarted phases must be marked pending: {line}"
+            !line.contains("deep time ..") && !line.contains("living .."),
+            "an unstarted phase was drawn as a bar: {line}"
         );
     }
 
@@ -314,16 +408,121 @@ mod tests {
     }
 
     #[test]
-    fn the_bar_tracks_the_fraction_and_saturates_at_both_ends() {
-        // Non-vacuity: three DIFFERENT fractions, so the assertion cannot pass
+    fn the_bar_tracks_the_fraction_and_never_draws_itself_full() {
+        // Non-vacuity: four DIFFERENT fractions, so the assertion cannot pass
         // against an implementation that returns a constant bar.
         assert_eq!(bar(0.0), "..........");
         assert_eq!(bar(0.4), "####......");
-        assert_eq!(bar(1.0), "##########");
-        // Out of range in both directions, and a fraction is never a total:
-        // clamping is the honest answer, not a longer bar.
+        assert_eq!(bar(0.9), "#########.");
+        // The last cell is RESERVED: the phase this bar describes is by
+        // definition the one still running, so a full bar would claim a
+        // completion the frame cannot know (spec §3 rule 3). `0.95` rounds to
+        // ten tenths and must still leave the cell alone.
+        assert_eq!(bar(0.95), "#########.");
+        // A negative elapsed time is nonsense and clamps to empty.
         assert_eq!(bar(-1.0), "..........");
-        assert_eq!(bar(9.0), "##########");
+    }
+
+    #[test]
+    fn a_phase_that_outruns_its_baseline_says_so_instead_of_sitting_full() {
+        // M12 / spec §3 rule 3. Overrunning is routine — a new seed, or the same
+        // seed on a busier machine — and the old behaviour clamped to a FULL bar
+        // that then sat there implying the phase was done. The marker must be
+        // distinguishable from the in-baseline bar at the same fill.
+        assert_eq!(bar(1.0), "#########>");
+        assert_eq!(bar(3.0), "#########>");
+        assert_ne!(
+            bar(1.0),
+            bar(0.9),
+            "an overrunning phase must not look like one still inside its \
+             baseline"
+        );
+        // And it reaches the state, not just the bar helper.
+        let over = BuildState::at(BuildDepth::Settlements, 4.0);
+        assert!(over.is_overrunning());
+        assert_eq!(
+            over.fraction(),
+            Some(4.0),
+            "the fraction must not be capped at 1.0 — the frame needs to know \
+             the phase is over, not merely at, its baseline"
+        );
+        assert!(phase_roster(&over).contains("the peoples #########>"));
+        assert!(!BuildState::at(BuildDepth::Settlements, 0.9).is_overrunning());
+    }
+
+    #[test]
+    fn the_substrate_fits_the_eighty_column_floor_in_every_state() {
+        // I1. `hornvale-game-core` refuses to render below 80x24 rather than
+        // degrading, so every row of the substrate must fit 80 columns in EVERY
+        // state — not just the narrow ones. Enumerated rather than sampled:
+        // five phases x five mark shapes x three fact magnitudes.
+        let mut widest = 0usize;
+        for (i, phase) in Phase::ALL.into_iter().enumerate() {
+            for fraction in [None, Some(0.0), Some(0.5), Some(0.999), Some(9.0)] {
+                for facts in [0usize, 28_110, 999_999_999] {
+                    let state = match fraction {
+                        Some(f) => BuildState::in_phase(phase, f),
+                        None => BuildState::unpaced(phase),
+                    }
+                    .with_facts(facts);
+                    for row in progress_line(&state).lines() {
+                        let width = row.chars().count();
+                        widest = widest.max(width);
+                        assert!(
+                            width <= 80,
+                            "phase {i} ({}) at fraction {fraction:?} with \
+                             {facts} facts drew a {width}-column row, over the \
+                             80-column floor: {row}",
+                            phase.label()
+                        );
+                    }
+                }
+            }
+        }
+        // Non-vacuity: the loop must actually be producing long rows, or the
+        // assertion above is measuring nothing. The widest roster is 76.
+        assert!(
+            widest >= 70,
+            "the widest row measured only {widest} columns — this test is not \
+             exercising the full-roster case it claims to"
+        );
+    }
+
+    #[test]
+    fn a_pending_phase_is_never_drawn_as_a_bar() {
+        // I4, and the same defect class as the `[>]` one: a `contains("deep
+        // time .")` check is satisfied by `deep time ..........`, so a
+        // `PENDING_MARK` rendered as `bar(0.0)` would put a "0% done" claim on
+        // three phases nobody has started and survive the whole suite. The row
+        // is compared EXACTLY, which is the only assertion that cannot be
+        // fooled by a prefix.
+        let state = BuildState::at(BuildDepth::Settlements, 0.4);
+        assert_eq!(
+            phase_roster(&state),
+            "the sky [x]  the land [x]  the peoples ####......  deep time .  living ."
+        );
+        // And in the unpaced state, where the current phase's own mark differs.
+        let unpaced = BuildState::unpaced(Phase::Peoples);
+        assert_eq!(
+            phase_roster(&unpaced),
+            "the sky [x]  the land [x]  the peoples [>]  deep time .  living ."
+        );
+    }
+
+    #[test]
+    fn the_fact_count_is_its_own_row_and_is_never_omitted() {
+        // Spec §2 makes the count mandatory, including on a first-ever run. It
+        // moved to row two precisely so the 80-column floor cannot clip it.
+        for state in [
+            BuildState::unpaced(Phase::Sky),
+            BuildState::at(BuildDepth::Settlements, 0.4).with_facts(28_110),
+        ] {
+            let whole = progress_line(&state);
+            let rows: Vec<&str> = whole.lines().collect();
+            assert_eq!(rows.len(), 2, "the substrate is two rows: {rows:?}");
+            assert_eq!(rows[1], fact_count(&state));
+            assert!(rows[1].ends_with(" facts"), "{:?}", rows[1]);
+        }
     }
 
     #[test]
@@ -343,7 +542,7 @@ mod tests {
         // Without this half the test above cannot tell the two apart.
         let zero = BuildState::at(BuildDepth::Terrain, 0.0);
         assert_eq!(zero.fraction(), Some(0.0));
-        assert!(progress_line(&zero).contains("the land .........."));
+        assert!(phase_roster(&zero).contains("the land .........."));
     }
 
     #[test]

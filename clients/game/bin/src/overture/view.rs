@@ -65,8 +65,33 @@ pub trait View {
     /// The returned grid may be smaller than `w` x `h` — the frame places it
     /// into the region and leaves the remainder as unmarked paper, which is
     /// honest (rule 2) in a way a padded box of spaces is not.
+    ///
+    /// # Why `&mut self`
+    ///
+    /// So a view can build an expensive derived structure ONCE and keep it,
+    /// which is this codebase's standing doctrine rather than a new idea:
+    /// `crate::plate`'s module doc states that a `NearestVertexIndex` "is built
+    /// ONCE by the caller and passed in, never rebuilt per call", because a
+    /// per-call `NearestVertexIndex::new(geo)` costs ~200 ms — and `Driver`
+    /// duly builds its own at `start` and reuses it for the session. The atlas
+    /// view needs exactly that index and can only get the geosphere from
+    /// `artifacts.terrain`, i.e. from inside this call. Since
+    /// [`super::Frame::observe`] renders every speaking view at every rung, an
+    /// `&self` signature would make the atlas re-derive it three times per
+    /// startup: ~600 ms on a 3,054 ms build, a ~20% regression in the one path
+    /// this campaign exists to improve.
+    ///
+    /// A `OnceLock` field under an `&self` signature would work and is
+    /// deliberately not the answer: it hides mutation behind an immutable
+    /// signature and makes every view reinvent the same cell.
+    ///
+    /// **`&mut self` is a memo, not a licence.** Rendering must stay a pure
+    /// function of `(world, rung, artifacts, w, h)` as far as its OUTPUT is
+    /// concerned: two calls with the same arguments must return the same grid.
+    /// The mutability is for caching what those arguments imply, never for
+    /// carrying state between renders that changes what is drawn.
     fn render(
-        &self,
+        &mut self,
         world: &World,
         rung: BuildDepth,
         artifacts: RungArtifacts<'_>,
