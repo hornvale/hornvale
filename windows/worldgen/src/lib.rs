@@ -7385,6 +7385,7 @@ pub fn build_world_from_components(
         settlement_pins,
         wc,
         BuildDepth::Full,
+        None,
     )
     .map(|built| built.world)
 }
@@ -7402,7 +7403,17 @@ pub fn build_world_to(
     wc: &WorldComponents,
     depth: BuildDepth,
 ) -> Result<World, BuildError> {
-    build_to(seed, pins, sky, terrain_pins, settlement_pins, wc, depth).map(|built| built.world)
+    build_to(
+        seed,
+        pins,
+        sky,
+        terrain_pins,
+        settlement_pins,
+        wc,
+        depth,
+        None,
+    )
+    .map(|built| built.world)
 }
 
 /// Build a world to `depth` and hand back the artifacts the build already
@@ -7419,7 +7430,57 @@ pub fn build_world_to_with_artifacts(
     wc: &WorldComponents,
     depth: BuildDepth,
 ) -> Result<BuildArtifacts, BuildError> {
-    build_to(seed, pins, sky, terrain_pins, settlement_pins, wc, depth)
+    build_to(
+        seed,
+        pins,
+        sky,
+        terrain_pins,
+        settlement_pins,
+        wc,
+        depth,
+        None,
+    )
+}
+
+/// Build a world to `depth`, calling `observer` once per rung the build
+/// actually crosses — in ladder order (`Astronomy`, then `Terrain`, then
+/// `Settlements`, then `Full`, each only if `depth` reaches that far) — with
+/// the real, partially-built [`World`] at that depth (the same value
+/// [`build_world_to`] would return for that rung, not a preview of it: the
+/// rungs are a byte-identical prefix chain, per [`BuildDepth`]'s doc). This is
+/// the additive observer hook a client uses to render a build honestly as it
+/// proceeds (spec MAP-25's staged-genesis view), rather than only at the end.
+///
+/// **The observer is a READ.** It must not and cannot mutate the world it is
+/// handed (`&World`, not `&mut World`), and calling it commits no facts and
+/// draws nothing — an observed build is byte-identical to the same build
+/// without one (`an_observed_build_is_byte_identical_to_an_unobserved_one`,
+/// `windows/worldgen/tests/suite/depth.rs`). Every other entry point
+/// (`build_world`, `build_world_to`, `build_world_from_components`) keeps its
+/// existing signature; this is the observing variant beside them, not a
+/// replacement.
+#[allow(clippy::too_many_arguments)]
+pub fn build_world_observed(
+    seed: Seed,
+    pins: &SkyPins,
+    sky: SkyChoice,
+    terrain_pins: &TerrainPins,
+    settlement_pins: &SettlementPins,
+    wc: &WorldComponents,
+    depth: BuildDepth,
+    observer: &mut dyn FnMut(BuildDepth, &World),
+) -> Result<World, BuildError> {
+    build_to(
+        seed,
+        pins,
+        sky,
+        terrain_pins,
+        settlement_pins,
+        wc,
+        depth,
+        Some(observer),
+    )
+    .map(|built| built.world)
 }
 
 /// The raid gate's two authored per-people inputs, as
@@ -7796,6 +7857,7 @@ pub fn history_for(
         settlement_pins,
         wc,
         BuildDepth::Terrain,
+        None,
     )?;
     // A Terrain-depth build sculpts terrain and hands it back, so this reuses
     // it rather than re-sculpting with `terrain_of` (the same double sculpt
@@ -7810,11 +7872,23 @@ pub fn history_for(
     bake_history_from(seed, &built.world, &terrain, &climate, settlement_pins, wc)
 }
 
+/// `build_to`'s optional observer callback: called with the rung just
+/// completed and the real, partially-built world at that depth. A type alias
+/// purely to keep the signature below under clippy's type-complexity limit —
+/// see [`build_to`]'s own doc for the firing contract.
+type BuildObserver<'a> = &'a mut dyn FnMut(BuildDepth, &World);
+
 /// The full pipeline, run only as deep as `depth`. `build_world_from_components`
 /// delegates with `BuildDepth::Full`; `build_world_to` forwards its argument.
 /// The only depth-dependent behavior is early `return Ok(world)` between
 /// stages — every statement's order and borrows are otherwise unchanged, so
 /// the Full path is identical to the pre-depth pipeline.
+///
+/// `observer`, when present, is called once per rung this build actually
+/// reaches — in ladder order, unconditionally at each of the three existing
+/// early-return boundaries plus once more at the very end for `Full` — with
+/// the real `&World` at that depth. Every call site every other caller uses
+/// passes `None`; only [`build_world_observed`] passes `Some`.
 #[allow(clippy::too_many_arguments)]
 // Named construction site (decision 0092): worldgen's own build path —
 // the whole point of this fn is to derive terrain/climate for the world it
@@ -7828,6 +7902,7 @@ fn build_to(
     settlement_pins: &SettlementPins,
     wc: &WorldComponents,
     depth: BuildDepth,
+    mut observer: Option<BuildObserver<'_>>,
 ) -> Result<BuildArtifacts, BuildError> {
     let mut world = World::new(seed);
     register_all(&mut world.registry)?;
@@ -7877,6 +7952,13 @@ fn build_to(
         Ok(())
     })?;
 
+    // Fires unconditionally: every build, regardless of `depth`, has just
+    // crossed the Astronomy rung. A `Full` build falls through every `if
+    // depth …` check below, so this is the only site that ever reports it.
+    if let Some(obs) = &mut observer {
+        obs(BuildDepth::Astronomy, &world);
+    }
+
     if depth == BuildDepth::Astronomy {
         return Ok(BuildArtifacts {
             world,
@@ -7909,6 +7991,11 @@ fn build_to(
         hornvale_terrain::facts::genesis(&mut world, world_entity, &terrain_outcome)?;
         Ok(GeneratedTerrain::new(geo, terrain_outcome))
     })?;
+
+    // Fires unconditionally, same reason as the Astronomy site above.
+    if let Some(obs) = &mut observer {
+        obs(BuildDepth::Terrain, &world);
+    }
 
     if depth <= BuildDepth::Terrain {
         // The line that used to drop the sculpt on the floor, forcing every
@@ -8419,6 +8506,11 @@ fn build_to(
         Ok(())
     })?;
 
+    // Fires unconditionally, same reason as the two sites above.
+    if let Some(obs) = &mut observer {
+        obs(BuildDepth::Settlements, &world);
+    }
+
     if depth <= BuildDepth::Settlements {
         return Ok(BuildArtifacts {
             world,
@@ -8788,6 +8880,14 @@ fn build_to(
         person_promote::promote(&mut world, wc)?;
         Ok(())
     })?;
+
+    // Reached only when `depth == BuildDepth::Full` — every shallower depth
+    // returned early at one of the three boundaries above, so this is the
+    // one and only site that reports the Full rung; it cannot double-fire
+    // with any of them.
+    if let Some(obs) = &mut observer {
+        obs(BuildDepth::Full, &world);
+    }
 
     Ok(BuildArtifacts {
         world,
