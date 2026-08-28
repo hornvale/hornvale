@@ -74,6 +74,7 @@
 //! two-directional guard applies. See `pinned_filter_names_for_class` and
 //! `co_schedule_sensitive_heavy_tests` below.
 
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -154,6 +155,138 @@ fn the_canonical_heavy_reason_states_no_duration() {
             && !CANONICAL.contains("second")
             && !CANONICAL.contains("hour"),
         "the canonical reason must not assert a duration: {CANONICAL}"
+    );
+}
+
+/// The frozen `heavy:` roster (The Governor, Task 7; spec §4 — "the `heavy:`
+/// tag is unpriced"). Each entry is `<repo-relative source path>::<fn
+/// name>` — see [`heavy_tagged_tests`] for why the path is part of the key.
+const FROZEN_HEAVY_ROSTER: &str = include_str!("../fixtures/heavy-roster.txt");
+
+/// Every `#[ignore = "..."]` test whose reason contains `heavy:`, keyed as
+/// `<repo-relative source path>::<fn name>` rather than the bare function
+/// name.
+///
+/// **Why the path is part of the key, not an afterthought.** A bare-name
+/// roster (`sort -u` over function names alone) is structurally blind to two
+/// tests in different files sharing a name — and this repo already has that
+/// hazard live: `windows/worldgen/tests/suite/deep_realm_substrate.rs` and
+/// `windows/worldgen/tests/suite/hollow_readout.rs` both define
+/// `report_cave_substrate` (the former's own doc comment calls out the
+/// coincidence). Neither is `heavy:`-tagged today, but a bare-name roster
+/// would silently collapse a future `heavy:` tag on one of them into an
+/// entry already satisfied by the other — hiding that a SECOND heavy
+/// battery had been added under cover of a name already on the list. Keying
+/// on the source path — necessarily unique, since two files cannot share a
+/// path — closes that hole without needing to replicate nextest's own
+/// `binary-id::module::fn` naming, which would require re-deriving
+/// crate/binary boundaries and any enclosing `mod tests { ... }` nesting
+/// from source text alone; the source path already carries strictly more
+/// disambiguating power than that scheme needs.
+///
+/// Scans every `.rs` file in the repo (mirroring [`ignore_reasons`] and
+/// [`internally_parallel_heavy_tests`]), matching only an `#[ignore = "..."]`
+/// line whose `fn` follows on the VERY NEXT line — the same single-line,
+/// no-intervening-attribute shape [`internally_parallel_heavy_tests`]
+/// already assumes for this tag. Verified by hand against every one of the
+/// 63 `heavy:` sites in the tree while writing the fixture this checks
+/// against: all 63 are single-line reasons with no attribute between
+/// `#[ignore = "..."]` and their `fn`.
+fn heavy_tagged_tests() -> Vec<String> {
+    let root = repo_root();
+    let mut sources = Vec::new();
+    collect_rs(&root, &mut sources);
+    sources.sort();
+
+    let mut found = Vec::new();
+    for path in sources {
+        let text = fs::read_to_string(&path).expect("source file is utf8");
+        let lines: Vec<&str> = text.lines().collect();
+        for (i, line) in lines.iter().enumerate() {
+            let trimmed = line.trim();
+            if !(trimmed.starts_with("#[ignore = \"") && trimmed.contains("heavy:")) {
+                continue;
+            }
+            let Some(next_trimmed) = lines.get(i + 1).map(|l| l.trim()) else {
+                continue;
+            };
+            let Some(rest) = next_trimmed.strip_prefix("fn ") else {
+                continue;
+            };
+            let Some((name, _)) = rest.split_once('(') else {
+                continue;
+            };
+            let rel = path
+                .strip_prefix(&root)
+                .expect("scanned path is under the repo root")
+                .to_string_lossy()
+                .replace('\\', "/");
+            found.push(format!("{rel}::{name}"));
+        }
+    }
+    found.sort();
+    found
+}
+
+/// The `heavy:` roster is exactly [`FROZEN_HEAVY_ROSTER`] — checked in BOTH
+/// directions, with its own anti-vacuity assertion, the same shape as
+/// [`the_untokenised_ignore_reasons_are_exactly_this_roster`] below and
+/// `test_binary_ratchet.rs::no_new_top_level_test_binary_appears`.
+///
+/// **THIS GUARD CATCHES THE ROSTER GROWING OR SHRINKING; IT DOES NOT PRICE
+/// ANY SINGLE ENTRY.** Nothing charged a `heavy:` tag before this (spec
+/// §4) — this closes exactly that gap and no more: adding one now requires
+/// editing this committed fixture in the same commit, a deliberate,
+/// reviewable, visible diff, rather than a tag nobody sees. To add a test
+/// deliberately, append its `<path>::<fn>` line to
+/// `cli/tests/fixtures/heavy-roster.txt` in the same commit and say why in
+/// the message. To remove one — demoting it to `probe:` or deleting it —
+/// delete its line; this direction is checked too, so the roster cannot rot
+/// into a permission slip nobody re-reads.
+#[test]
+fn the_heavy_roster_is_exactly_this_fixture() {
+    let frozen: BTreeSet<String> = FROZEN_HEAVY_ROSTER
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .map(str::to_string)
+        .collect();
+    let found: BTreeSet<String> = heavy_tagged_tests().into_iter().collect();
+
+    assert!(
+        !found.is_empty(),
+        "found no heavy:-tagged test in the tree. Either every heavy battery was \
+         demoted (then FROZEN_HEAVY_ROSTER must be emptied deliberately, and this \
+         assertion updated to say so) or the scanner's #[ignore = \"...\"]/heavy: \
+         match broke — the one outcome this guard must never quietly reach."
+    );
+
+    let added: Vec<&String> = found.difference(&frozen).collect();
+    assert!(
+        added.is_empty(),
+        "new heavy:-tagged test(s) not in the frozen roster, each an UNPRICED \
+         addition to the tier (spec §4, The Governor):\n{}\n\nAppend the line(s) to \
+         cli/tests/fixtures/heavy-roster.txt in the same commit and say why in the \
+         message.",
+        added
+            .iter()
+            .map(|p| format!("  {p}"))
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+
+    let stale: Vec<&String> = frozen.difference(&found).collect();
+    assert!(
+        stale.is_empty(),
+        "the frozen roster names heavy:-tagged test(s) that no longer exist as such:\n{}\n\n\
+         If they were demoted (e.g. to probe:) or deleted, remove their lines — this \
+         direction is checked so the roster cannot rot into a permission slip nobody \
+         re-reads.",
+        stale
+            .iter()
+            .map(|p| format!("  {p}"))
+            .collect::<Vec<_>>()
+            .join("\n")
     );
 }
 
