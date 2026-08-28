@@ -205,6 +205,7 @@ committing.
   - `pub struct ThingTraits` — the per-kind trait row.
   - `pub fn thing_registry() -> ComponentStore<KindId, ThingTraits>`
   - `pub const THING_KINDS: &[&str]` — the authored kind labels.
+  - `WorldComponents.thing`, and `kinds()` unioning it — see Step 7a.
 
 - [ ] **Step 1: Understand what this task does NOT do**
 
@@ -295,6 +296,27 @@ choosing them from outside has been wrong here every time it has been tried.
 Run: `cargo test -p hornvale-thing > /tmp/hv-t2.log 2>&1; echo "exit=$?"`
 Then: `grep -E '^test result|FAILED|panicked' /tmp/hv-t2.log`
 Expected: `exit=0`, both tests passing.
+
+- [ ] **Step 7a: Join the store into `WorldComponents`**
+
+**Added at pre-flight; the plan's first draft named `components.rs` in its
+File Structure and gave the edit to no task.** Without it `promote` (Task 4)
+would validate a thing-kind against a roster its kinds are absent from, and
+`mint_instance_of_kind` would reject every one.
+
+`WorldComponents` (`windows/worldgen/src/components.rs:26`) gains a
+`thing: ComponentStore<KindId, ThingTraits>` field, and `kinds()` (`:216`)
+extends with its ids alongside the other eleven stores. `deity`, `culture` and
+`material` are the model — kind stores with no biosphere row.
+
+`WorldComponents::assemble` must populate it, and `assemble`'s output is
+asserted byte-equal to the default roster's composed set. Read that assertion
+before changing `assemble`; if adding a store moves it, that is a finding to
+report, not a number to update.
+
+**Do NOT add a `ComponentTag` variant unless something reads it.** `kinds_with`
+(`:196`) is the capability query; nothing in this plan calls it for things, and
+an unread variant is a surface with no consumer.
 
 - [ ] **Step 7: Prove the layering rule holds against the new crate**
 
@@ -626,6 +648,18 @@ if one did.
     — the **as-of-day** read, which is what a replay must use.
   - `pub fn room_of(ledger: &Ledger, thing: EntityId, day: WorldTime) -> Option<String>`
     — `location_of` followed transitively through `Value::Entity` holders.
+  - `pub const OPENNESS: &str = "openness";`
+  - `pub fn openness_fact(thing: EntityId, open: bool, day: WorldTime) -> Fact`
+  - `pub fn is_open(ledger: &Ledger, thing: EntityId, day: WorldTime) -> Option<bool>`
+    — `None` when no fact exists, which means "whatever the seed drew".
+
+**`openness` is produced HERE, and the plan's first draft produced it
+nowhere.** Tasks 8 and 11 both said they consumed "`openness` (Task 7's
+`Openable`)", which conflates two different objects: `Openable` is an
+affordance property saying a kind CAN be opened; `openness` is the ledger
+predicate recording that one WAS. Both folds live in this module, share the
+`day' <= day` discipline, and share the registration question in Step 1 —
+answering it once for both is strictly better than twice.
 
 - [ ] **Step 1: Register the predicate, and decide WHERE from the code**
 
@@ -843,7 +877,7 @@ Then `make rebaseline`, drift check, `cargo fmt`, `git commit -F`, `git push`.
 - Create: `docs/decisions/0396-<slug>.md` superseding 0367
 
 **Interfaces:**
-- Consumes: `openness` (Task 7's `Openable`), `thing_id`, `promote`.
+- Consumes: `openness`/`is_open` (Task 5), `Openable` (Task 7), `thing_id`, `promote` (Task 4).
 - Produces: `effective_state` re-expressed over `openness`; `cave-mouth` as a
   thing-kind.
 
@@ -975,7 +1009,48 @@ registry.
 
 ---
 
-### Task 10: `open` and `close`
+### Task 10: The name → entity lookup
+
+**Files:**
+- Modify: `windows/vessel/src/focalize.rs`, and the `Noun` construction sites
+- Test: `windows/vessel/tests/suite/` (the focalize tests' existing home)
+
+**Interfaces:**
+- Consumes: `thing_id` (Task 4).
+- Produces: `Noun.entity: Option<EntityId>`.
+
+- [ ] **Step 1: Add the field additively**
+
+`Noun` (`windows/vessel/src/focalize.rs:79`) carries `display`, `datum`,
+`words`, `kind`. Add `entity: Option<EntityId>`, defaulting to `None`, with a
+`with_entity` builder beside the existing `with_kind` — that is the
+established shape for "construction sites that can claim one."
+
+**`Noun::new` has callers that construct it by full literal.** Adding a field
+breaks every one of them; that list is the compiler's to produce, not this
+plan's. Use the builder so `new` keeps its signature.
+
+- [ ] **Step 2: Write the failing test**
+
+```rust
+/// A typed word resolves to the entity, not merely to a string. Before this
+/// campaign the catalog yielded a `datum` and stopped, which is the whole of
+/// the "no name -> entity lookup" gap The Offer named.
+///
+/// MUTATION THIS MUST FAIL AGAINST: make `with_entity` discard its argument.
+#[test]
+fn a_typed_word_resolves_to_a_things_entity() {}
+```
+
+- [ ] **Step 3: Run, fail, implement, confirm green, commit, push**
+
+`words` is process-internal and never serialized — `Noun`'s own doc says
+putting aliases on the wire would spray them into the client legend. `entity`
+is likewise **not** serialized by this task; the wire is Task 13.
+
+---
+
+### Task 11: `open` and `close`
 
 **Files:**
 - Modify: `windows/vessel/src/session.rs` (dispatch arm, `IN_CHARACTER_VERBS`,
@@ -985,7 +1060,7 @@ registry.
 - Regenerate: `book/src/gallery/possession-*.md`
 
 **Interfaces:**
-- Consumes: `openness` (Task 7), `promote` (Task 4), `is_latent` (Task 6).
+- Consumes: `openness`/`is_open` (Task 5), `Openable`/`Lockable` (Task 7), `promote` (Task 4), `is_latent` (Task 6), `Noun.entity` (Task 10).
 - Produces: two verbs, a pattern that places contents, and the `Lockable`
   precondition that reads a second object.
 
@@ -1099,7 +1174,7 @@ The gallery transcripts move if any `examine` or `look` output changed.
 
 ---
 
-### Task 11: `take`, `drop`, `put`, and `carrying`
+### Task 12: `take`, `drop`, `put`, and `carrying`
 
 **Files:**
 - Modify: `windows/vessel/src/session.rs`, `windows/vessel/src/thing.rs`
@@ -1108,12 +1183,13 @@ The gallery transcripts move if any `examine` or `look` output changed.
 
 **Interfaces:**
 - Consumes: `located_fact`, `location_of`, `room_of` (Task 5), `is_latent`
-  (Task 6), `Portable` (Task 7).
+  (Task 6), `Portable` (Task 7), `Noun.entity` (Task 10 — `take <thing>`
+  resolves a typed noun to an entity, and cannot without it).
 - Produces: four verbs; custody as a `located-in` fact naming the body.
 
 - [ ] **Step 1: The three-things rule, per verb, without exception**
 
-Same rule as Task 10, repeated because a reader may arrive here first. A verb
+Same rule as Task 11, repeated because a reader may arrive here first. A verb
 in the dispatcher and in neither roster is invisible to every test; the paired
 agreement check cannot see it, because both its directions are satisfied by
 absence. The Latch shipped one that way.
@@ -1180,47 +1256,6 @@ that a sibling predicate works.
 
 ---
 
-### Task 12: The name → entity lookup
-
-**Files:**
-- Modify: `windows/vessel/src/focalize.rs`, and the `Noun` construction sites
-- Test: `windows/vessel/tests/suite/` (the focalize tests' existing home)
-
-**Interfaces:**
-- Consumes: `thing_id` (Task 4).
-- Produces: `Noun.entity: Option<EntityId>`.
-
-- [ ] **Step 1: Add the field additively**
-
-`Noun` (`windows/vessel/src/focalize.rs:79`) carries `display`, `datum`,
-`words`, `kind`. Add `entity: Option<EntityId>`, defaulting to `None`, with a
-`with_entity` builder beside the existing `with_kind` — that is the
-established shape for "construction sites that can claim one."
-
-**`Noun::new` has callers that construct it by full literal.** Adding a field
-breaks every one of them; that list is the compiler's to produce, not this
-plan's. Use the builder so `new` keeps its signature.
-
-- [ ] **Step 2: Write the failing test**
-
-```rust
-/// A typed word resolves to the entity, not merely to a string. Before this
-/// campaign the catalog yielded a `datum` and stopped, which is the whole of
-/// the "no name -> entity lookup" gap The Offer named.
-///
-/// MUTATION THIS MUST FAIL AGAINST: make `with_entity` discard its argument.
-#[test]
-fn a_typed_word_resolves_to_a_things_entity() {}
-```
-
-- [ ] **Step 3: Run, fail, implement, confirm green, commit, push**
-
-`words` is process-internal and never serialized — `Noun`'s own doc says
-putting aliases on the wire would spray them into the client legend. `entity`
-is likewise **not** serialized by this task; the wire is Task 13.
-
----
-
 ### Task 13: The wire
 
 **Files:**
@@ -1229,7 +1264,7 @@ is likewise **not** serialized by this task; the wire is Task 13.
 - Regenerate: `clients/game/core/tests/fixtures/session-seed-42-*.json`
 
 **Interfaces:**
-- Consumes: Task 7's properties, Task 11's custody.
+- Consumes: Task 7's properties, Task 12's custody.
 - Produces: `NounEntry.affordances`, and carried things on the snapshot.
 
 - [ ] **Step 1: Add `affordances` the way `kind` was added**
@@ -1331,7 +1366,7 @@ project has shipped five vacuous guards in one campaign before.**
   what moved and what did not.
 - `PLAY-passage-has-no-anchor` — closed or not, per Task 9's real result.
 - `MAP-19`, `MAP-27` — the ontology and chemistry rows this advances.
-- `MAP-playthrough-persistence` — Task 11 tested the round trip 0368 left as
+- `MAP-playthrough-persistence` — Task 12 tested the round trip 0368 left as
   work; update the row to say so.
 - `book/src/open-questions.md` — decision 0030 requires re-scoring any
   Confidence Gradient bet a campaign moves. Promotion-on-touch is named in
