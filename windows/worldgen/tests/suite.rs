@@ -127,6 +127,12 @@ mod niche_breadth_probe;
 mod non_void_roster;
 #[path = "suite/occupancy_readout.rs"]
 mod occupancy_readout;
+#[path = "suite/off_lithology_decorrelation_probe.rs"]
+mod off_lithology_decorrelation_probe;
+#[path = "suite/ore_separation_probe.rs"]
+mod ore_separation_probe;
+#[path = "suite/ore_viability_probe.rs"]
+mod ore_viability_probe;
 #[path = "suite/person_promotion.rs"]
 mod person_promotion;
 #[path = "suite/pin_enumeration.rs"]
@@ -165,6 +171,8 @@ mod solitary_tongue;
 mod species_worlds;
 #[path = "suite/stope_variety_probe.rs"]
 mod stope_variety_probe;
+#[path = "suite/subterranean_energy_probe.rs"]
+mod subterranean_energy_probe;
 #[path = "suite/tense_shadow.rs"]
 mod tense_shadow;
 #[path = "suite/termination_probe.rs"]
@@ -193,6 +201,8 @@ mod underworld_conditions_probe;
 mod underworld_ladder_probe;
 #[path = "suite/underworld_lithology_probe.rs"]
 mod underworld_lithology_probe;
+#[path = "suite/underworld_per_rung_switch.rs"]
+mod underworld_per_rung_switch;
 #[path = "suite/underworld_separation.rs"]
 mod underworld_separation;
 #[path = "suite/underworld_water_table_probe.rs"]
@@ -207,3 +217,7 @@ mod warren_readout;
 mod waterline_probe;
 #[path = "suite/watershed_measure.rs"]
 mod watershed_measure;
+#[path = "suite/winze_energy_probe.rs"]
+mod winze_energy_probe;
+#[path = "suite/winze_scale_probe.rs"]
+mod winze_scale_probe;

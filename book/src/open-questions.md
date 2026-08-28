@@ -1256,6 +1256,28 @@ Drow needs only to differ from surface elves. Mountain-dwarf and Duergar differ
 from each other by stratum alone, and the biome vocabulary still has no
 subterranean variant, so they remain owed.
 
+*Re-scored by [The Sources](./chronicle/the-sources.md) (2026-08-27), which
+moves the precondition the withdrawal was actually waiting on.* Before this
+campaign every rung in a subterranean column shared one temperature and one
+moisture reading, taken once at the column's deepest point — so two kinds
+differing by stratum alone would have been scored against conditions that do
+not vary by stratum at all, no matter how their authored optima were placed.
+Water, substrate and the new rock-derived energy term now all resolve **per
+rung**, each read at that rung's own thermal offset from the surface, with
+the deepest rung kept as a fixed point precisely so the change could be
+checked rather than assumed. Two kinds seated at different depths in the
+same column can now, structurally, read different conditions — which is the
+enabling condition the withdrawal named, not yet the separation itself. It is
+**not fully resolved**: the biome vocabulary still has no subterranean
+variant, so nothing yet gives Mountain-dwarf and Duergar a *kind of place* to
+differ by, only a set of scalars that can now vary with depth. And the same
+campaign found that one of those scalars carries less discriminating power
+than assumed — rock chemistry underground sorts into roughly three
+near-constant categories rather than a continuum, so a stratum-only
+distinction will have to lean on the axes that do vary continuously with
+depth (temperature, moisture, the energy term's own magnitude) rather than
+on rock type alone.
+
 **A finding about the contest, not about elves, and it is new.** Two peoples
 authored to share a mass and an affinity row have capacity fields that are
 **bit-identical** over eleven to nineteen thousand land cells — and they settle on
@@ -1921,6 +1943,57 @@ are behaving correctly; it is the tiling declining to represent a continuous
 curve. A checkable contract can require that every offered destination exists.
 It cannot require that the ground be able to go there straight.
 
+**Re-scored by [The Quadrat](./chronicle/the-quadrat.md) (2026-08-27): the
+comparison instrument this row converted was measured unavailable on a second
+surface — and the campaign's first statement of *why* was wrong, which is part
+of the re-score rather than a footnote to it.** The Quire's contribution here
+was to turn "does the picture state the document's geometry" from taste into a
+byte comparison against the sim's own renderer of the same thirty-one facets.
+The Quadrat set out to move that pin — reprojecting the perception packet onto a
+square raster on both sides so the comparison survived the change — and did not.
+The packet describes each perceived facet as a *relative polar offset*; a raster
+addresses *absolute* tiles reached by flooring a projected coordinate; and
+converting one to the other requires the observer's position *within* its own
+tile. Reprojecting without reconstructing that, swept over 200 sub-tile phases:
+at worst 24 of 31 marks misplaced, mean 11.5, and only 2 of the 200 phases
+exact. The agreement test that was supposed to guard the change could only have
+passed by being weakened to "within one tile" — that is, by asserting the
+defect.
+
+**The campaign then wrote that the wire does not carry that phase, and the wire
+does.** The observer block states the centre's own centroid latitude and
+longitude, and the offsets are centroid-to-centroid great-circle quantities, so
+the spherical direct problem recovers every facet's absolute coordinate exactly.
+Quantization does not stand in the way either, and stating that accurately
+matters here of all places: the eight digits are *significant*, not decimal, so
+a latitude near the equator keeps a centimetre of ground while a longitude of
+large magnitude keeps only sub-metre rounding — against a facet 1.87 km across.
+What the render crate lacks is narrower and entirely its own: its parsed mirror
+of the document drops the observer block, and the simulation offers no inverse
+of the bearing-and-distance construction for it to call. The sweep measures the
+shortcut, not the contract.
+
+That makes the resolution the interesting part rather than the obstacle. The
+layer moved to the client crate that already holds the mesh, where each facet's
+own absolute address — `room`, a packed identifier the packet carries outright —
+needs no trigonometry at all, and the two pictures now agree **by construction**,
+one projection called from both sides, rather than by two computations being
+compared after the fact.
+
+The bet is unharmed and its scope is now stated more exactly, in the corrected
+form. A document may be complete and still ask real work of a consumer that
+wants to place it in the world's frame: either spherical trigonometry the
+consumer writes itself, or a dependency on the simulation to read the exact
+address. A zero-dependency renderer remains the strongest available evidence
+that a contract is renderable, and what this campaign found is the shape of the
+work such a renderer must do for anything the document expresses in the
+observer's frame rather than the world's. Whether that work should be removed
+(by putting an absolute coordinate on the wire beside the relative one) or left
+where it is (as the ordinary price of an observer-relative projection) is not
+settled here; the campaign records that agreeing by construction is strictly
+better than agreeing by comparison wherever one projection can serve both sides,
+which is a stronger form of the instrument this row already carries.
+
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
 closing under it.** The Measured Coast preregistered six Earth-anchored
@@ -2069,6 +2142,35 @@ spec at all: it surfaced because a body already known to be co-present (The
 Hand, above) was, for the first time, actually driven by two different
 controllers in the same measured walk, and the divergence was there to find
 once someone looked.
+
+[The Offer](./chronicle/the-offer.md) pushes the same thread one step further
+and supplies this chapter's largest single count of the failure. Arc IV.a
+shipped with **seven** checks that could not have failed: two asserting
+properties true of any implementation whatever (a subset relation over a
+`filter` re-proves an invariant of `filter`, not of the predicate inside it),
+one source scanner whose pattern could not match the only syntax anyone would
+ever write, two entire specified features with no reachable firing case, and
+two production paths held by no assertion at all. The distribution is the part
+worth recording rather than the total. **Every one originated in the planning
+prose, not in the implementation**, which is the third campaign running to
+report that shape; and **not one was found by reading** — each died to a
+command someone ran, five of them to a mutation that neutralised the code under
+test and left the suite green. Two of the seven were caught before any code
+existed, by a grep and by a sixty-combination census run during pre-dispatch
+verification, which is the cheapest place this chapter has yet seen one caught.
+
+The remedy the campaign adopted mid-flight is the transferable half, and it
+sharpens The Millrace's "the discipline is mutation, not review" into something
+a plan can be written against: **specify a regression test by the mutation it
+must fail, never by the property it should assert.** A property can be asserted
+vacuously; a mutation cannot be failed vacuously. The campaign then found the
+rule's own failure mode on the last page — a reviewer's illustrative mutation
+that was itself non-discriminating, because the two anchor kinds it swapped
+between are perfectly co-located in every room the grammar composes, so the
+substitution changes nothing observable. It was caught by running it. **A
+mutation is evidence only if something establishes it could have moved the
+result**, which is the same clause this chapter already carries about a
+column's stable value, arriving one level down.
 
 [The Mire](./chronicle/the-mire.md) exercised the same discipline on a bet
 about weather and world structure that no earlier chapter entry had staked,

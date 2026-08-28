@@ -226,7 +226,7 @@ use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, Substrate, WorldComponents,
     build_world_to_with_artifacts, chamber_moisture_at_reach, climate_of, substrate_field,
-    subterranean_substrate_field,
+    subterranean_substrate_field, subterranean_substrate_field_per_rung,
 };
 
 /// Seeds this campaign preregisters on (spec §5) — the same three
@@ -415,6 +415,120 @@ fn the_live_substrate_field_carries_depth() {
          temperature in a real world",
         pct(&deep, 0.50),
         pct(&shallow, 0.50)
+    );
+}
+
+/// Build `seed` to `BuildDepth::Terrain` and return its terrain and surface
+/// substrate field — the two inputs both `subterranean_substrate_field` and
+/// `subterranean_substrate_field_per_rung` need. Mirrors `cave_vertices`'s
+/// own world-building idiom above; returns `terrain` rather than a `geo`
+/// reference directly, because `Geosphere` borrows from `GeneratedTerrain`
+/// and the two cannot be packaged as an owned pair — callers derive
+/// `terrain.geosphere()` themselves once both are in scope.
+fn terrain_and_surface(
+    seed_value: u64,
+    wc: &WorldComponents,
+) -> (
+    hornvale_terrain::GeneratedTerrain,
+    hornvale_kernel::VertexMap<Substrate>,
+) {
+    let seed = hornvale_kernel::Seed(seed_value);
+    let artifacts = build_world_to_with_artifacts(
+        seed,
+        &SkyPins::default(),
+        SkyChoice::Generated,
+        &TerrainPins::default(),
+        &SettlementPins::default(),
+        wc,
+        BuildDepth::Terrain,
+    )
+    .expect("probe seed builds");
+    let world = artifacts.world;
+    let terrain = artifacts
+        .terrain
+        .expect("terrain is Some at BuildDepth::Terrain");
+    let climate = climate_of(&world).expect("climate reconstructs");
+    let geo = terrain.geosphere();
+
+    let surface = substrate_field(
+        geo,
+        &terrain,
+        &climate,
+        climate.obliquity_deg(),
+        climate.insolation(),
+        &climate.regime(),
+    );
+    (terrain, surface)
+}
+
+/// claim: structural(seed: 42) — one world, one build, no sweep.
+///
+/// THE POSITIVE CONTROL. `subterranean_substrate_field` reads every
+/// cave-bearing vertex at `depth_reach_m`; `rung_evaluation_depth_m` gives
+/// `Band::Nadir` that same depth (Task 2's own doc). So the per-rung field's
+/// `Nadir` entry must equal the old field EXACTLY — bit-for-bit, not
+/// approximately — on every cave-bearing vertex. A change that moves this
+/// has changed something it was not asked to change.
+#[test]
+fn the_deepest_rung_reproduces_todays_per_vertex_reading() {
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+    let (terrain, surface) = terrain_and_surface(LIVE_GUARD_SEED, &wc);
+    let geo = terrain.geosphere();
+    let old = subterranean_substrate_field(geo, &terrain, &surface);
+    let new = subterranean_substrate_field_per_rung(geo, &terrain, &surface);
+    let mut compared = 0;
+    for vertex in geo.vertices() {
+        if terrain.cave_at(vertex).is_none() {
+            continue;
+        }
+        let nadir = new.get(vertex)[hornvale_kernel::Band::Nadir as usize]
+            .expect("a cave-bearing vertex has a Nadir reading");
+        let was = old.get(vertex);
+        assert_eq!(
+            nadir.temperature_c.to_bits(),
+            was.temperature_c.to_bits(),
+            "vertex {vertex:?}: Nadir temperature moved"
+        );
+        assert_eq!(
+            nadir.moisture.to_bits(),
+            was.moisture.to_bits(),
+            "vertex {vertex:?}: Nadir moisture moved"
+        );
+        compared += 1;
+    }
+    assert!(
+        compared > 100,
+        "only {compared} cave-bearing vertices compared — vacuous"
+    );
+}
+
+/// claim: structural(seed: 42) — one world, one build, no sweep.
+///
+/// The floor the control above needs. A per-rung field where every rung
+/// equalled `Nadir` would pass the control and mean nothing changed at all.
+#[test]
+fn shallower_rungs_are_cooler_than_the_deepest() {
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+    let (terrain, surface) = terrain_and_surface(LIVE_GUARD_SEED, &wc);
+    let geo = terrain.geosphere();
+    let field = subterranean_substrate_field_per_rung(geo, &terrain, &surface);
+    let mut vertices_with_a_spread = 0;
+    for vertex in geo.vertices() {
+        if terrain.cave_at(vertex).is_none() {
+            continue;
+        }
+        let rungs = field.get(vertex);
+        let nadir = rungs[hornvale_kernel::Band::Nadir as usize].expect("Nadir reading");
+        if let Some(u) = rungs[hornvale_kernel::Band::Undercroft as usize]
+            && u.temperature_c < nadir.temperature_c
+        {
+            vertices_with_a_spread += 1;
+        }
+    }
+    assert!(
+        vertices_with_a_spread > 100,
+        "only {vertices_with_a_spread} vertices show a shallow/deep temperature \
+         spread — the per-rung field has collapsed to the per-vertex one"
     );
 }
 

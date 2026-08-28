@@ -36,6 +36,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 |---|---|---|---|
 | `abyssal` | a biome class | *Tatash | /tataʃ/ |
 | `abyssal-plain` | The flat floor of the deep ocean. | *Nganash | /ŋanaʃ/ |
+| `affords-passage` | a seam between two rooms a body may pass through | *Saxag | /saxag/ |
 | `alpine` | a biome class | *Shasaz | /ʃasaz/ |
 | `bait-ball` | A dense turning mass of fish. | *Tajat | /tajat/ |
 | `barley` | a staple crop | *Zajaj | /zajaj/ |
@@ -74,6 +75,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `east` | the direction of increasing longitude | *Gashagav | /gaʃagav/ |
 | `eat` | to consume food | *Shadang | /ʃadaŋ/ |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | *Bangaj | /baŋaj/ |
+| `encloses` | an anchor that reveals what lies within it | *Davaq | /davaq/ |
 | `epipelagic` | a biome class | *Jagang | /jagaŋ/ |
 | `erg` | A sand sea of dunes. | *Qajat | /qajat/ |
 | `eye` | the organ of sight | *Satan | /satan/ |
@@ -115,6 +117,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `hill-dwarf-kind` | a hill dwarf | *Ngashax | /ŋaʃax/ |
 | `hobgoblin-kind` | a hobgoblin | *Babaj | /babaj/ |
 | `holdfast-tangle` | The anchored base of a kelp forest. | *Basat | /basat/ |
+| `holds-liquid` | a place a body may drink from | *Zanan | /zanan/ |
 | `home` | one's dwelling | *Jadan | /jadan/ |
 | `human-kind` | a human | *Vavab | /vavab/ |
 | `hydrothermal-vent` | a biome class | *Zajang | /zajaŋ/ |
@@ -166,6 +169,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `plankton-bloom` | Water thick with plankton. | *Xabash | /xabaʃ/ |
 | `playa` | A dry lake bed of salt and cracked clay. | *Jajav | /jajav/ |
 | `pressure-ridge` | Sea ice buckled into a ridge. | *Nanat | /nanat/ |
+| `radiates-heat` | an anchor that emits warmth | *Tashab | /taʃab/ |
 | `rafted-floe` | Ice floes driven over one another. | *Xaxab | /xaxab/ |
 | `rain` | liquid precipitation | *Xangag | /xaŋag/ |
 | `read` | to take meaning from written words — `consult` | *Dataz | /dataz/ |
@@ -209,6 +213,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `starlit` | dark faintly lit by stars | *Javab | /javab/ |
 | `stone` | rock | *Shazaq | /ʃazaq/ |
 | `sun` | the sun | *Qashax | /qaʃax/ |
+| `supports-rest` | a place a body may lie down and sleep | *Bashav | /baʃav/ |
 | `taiga` | a biome class | *Nangab | /naŋab/ |
 | `temperate-forest` | a biome class | *Nadash | /nadaʃ/ |
 | `temperate-grassland` | a biome class | *Qadaq | /qadaq/ |

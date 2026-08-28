@@ -47,10 +47,10 @@ pub use color::{
 pub use component::{Component, ComponentStore};
 pub use domain::{Domain, WorldContext};
 pub use ecology::{
-    ANIMAL_PREY, AxisValence, ConditionResponse, DETRITUS, DISTURBANCE, ENERGY, EnvironmentAxis,
-    EnvironmentVector, LIGHT, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE, PHYSIOGNOMY, PLANT_FORAGE,
-    ResourceAxis, ResourceKind, ResourceVector, SUBSTRATE, WATER, environment_v1_basis,
-    sovereignty_floor, v1_basis,
+    ANIMAL_PREY, AxisValence, CHEMOSYNTHATE, ConditionResponse, DETRITUS, DISTURBANCE, ENERGY,
+    EnvironmentAxis, EnvironmentVector, LIGHT, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE, PHYSIOGNOMY,
+    PLANT_FORAGE, ResourceAxis, ResourceKind, ResourceVector, SUBSTRATE, WATER,
+    environment_v1_basis, sovereignty_floor, v1_basis,
 };
 pub use field::{ConstantField, Field, NoiseField, Position, WorldTime};
 pub use geosphere::{GeoCoord, Geosphere, NearestVertexIndex, Vertex, VertexMap};

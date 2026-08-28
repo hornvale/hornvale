@@ -89,6 +89,7 @@ pub mod components;
 pub mod delve_seating;
 mod descent;
 pub mod disposition;
+pub mod energy;
 pub mod gazetteer;
 pub mod graph_derive;
 pub mod harvest;
@@ -998,6 +999,38 @@ pub fn detritus_supply_field(
     })
 }
 
+/// Moisture supplied to [`energy::subterranean_energy`] for a hydrothermal
+/// vent (see [`marine_forage_supply_field`]): the open sea floor sits under
+/// an unbounded water column, the physical ceiling every one of
+/// [`energy::EnergySource`]'s water gates and multiplies is built to saturate
+/// at — so `1.0` is not a tuned value, it is the input a vent's real
+/// moisture, however finely a future model computed it, could not exceed.
+const VENT_MOISTURE: f64 = 1.0;
+
+/// Circulation depth (m) supplied to [`energy::EnergySource::Geothermal`] for
+/// a hydrothermal vent (see [`marine_forage_supply_field`]): the depth below
+/// the seafloor a vent's fluid is modelled as having circulated through
+/// before erupting, not the vent's own depth in the water column — a vent's
+/// heat comes from having gone down and back, and `Geothermal::yield_at`
+/// needs a depth to compute ΔT = gradient × depth from.
+///
+/// **Anchored to an order of magnitude, not to a paper checked in this
+/// session** — the same honesty Task 4's own `EnergySource::Geothermal`
+/// reach doc gives its anchor, and for the same reason: nothing in this
+/// repository measures a vent's circulation depth, so this is a physical
+/// citation to a well-established range, not a repository-internal
+/// calibration. Mid-ocean-ridge hydrothermal convection is described in the
+/// oceanographic literature as circulating on the order of 1-2 km into the
+/// crust before erupting for basalt-hosted (black-smoker) systems, and on
+/// the shallower end of that same order (several hundred metres to ~1.5 km)
+/// for the serpentinite-hosted, ultramafic systems — Lost City among
+/// them — that this module's silica band actually selects for (see the
+/// field's own doc). `1500.0` is the round order-of-magnitude figure inside
+/// both ranges, not a value taken from a specific source verified here; a
+/// campaign with a sharper citation should replace it, the same way
+/// `EnergySource::Geothermal`'s own reach names itself revisable.
+const VENT_CIRCULATION_DEPTH_M: f64 = 1500.0;
+
 /// The `MARINE_FORAGE` supply field (The Vacancy): marine primary production
 /// and the prey web it supports, **0 on every land vertex** — the exact mirror
 /// of the terrestrial axes' land mask (see [`DETRITUS_AMBIENT`]'s
@@ -1012,11 +1045,16 @@ pub fn detritus_supply_field(
 /// suppressed. `HydrothermalVent` is deliberately left near-zero rather than
 /// productive: a real vent community is CHEMOTROPHIC. THE GOSSAN — rung 1 of
 /// BIO-chemotrophy — shipped `hornvale_species::TrophicMode::Chemotrophic`, so
-/// the vocabulary now EXISTS; what does not exist yet is a kind that carries it
-/// or an energy field to feed one. This field is a PHOTOSYNTHESIS supply, and
-/// making the vent productive on it would feed vent biomass to
-/// photosynthesis-based consumers. The fix is rung 2's own chemotrophic
-/// supply field, not a number raised here.
+/// the vocabulary EXISTS; this campaign's own Task 4 then shipped rung 2,
+/// [`energy::EnergySource`], the terms a chemotroph actually eats. This field
+/// is a PHOTOSYNTHESIS supply, and making the vent productive on it feeds
+/// vent biomass to photosynthesis-based consumers — an earlier commit in
+/// this same campaign did exactly that (routed
+/// [`energy::subterranean_energy`] onto this axis), and the whole-branch
+/// review measured the consequence: six `MARINE_FORAGE`-weighted marine
+/// kinds gained ~9x vent occupancy with no chemotrophic mechanism behind it.
+/// **The fix is [`marine_chemosynthate_supply_field`], rung 2's own
+/// `CHEMOSYNTHATE` supply at a vent — not a number raised here.**
 /// type-audit: bare-ok(ratio: scale), bare-ok(count: return)
 pub fn marine_forage_supply_field(
     geo: &Geosphere,
@@ -1035,9 +1073,12 @@ pub fn marine_forage_supply_field(
             hornvale_climate::Biome::Epipelagic => 0.45,
             hornvale_climate::Biome::Mesopelagic => 0.15,
             hornvale_climate::Biome::Bathypelagic => 0.05,
-            hornvale_climate::Biome::Abyssal | hornvale_climate::Biome::HadalTrench => 0.02,
-            // Chemotrophic in reality; not modellable as forage yet (BIO-chemotrophy).
-            hornvale_climate::Biome::HydrothermalVent => 0.02,
+            // Chemotrophic in reality, and rung 2 now models that mechanism —
+            // but on `CHEMOSYNTHATE`, via `marine_chemosynthate_supply_field`,
+            // not here (see this field's own doc).
+            hornvale_climate::Biome::Abyssal
+            | hornvale_climate::Biome::HadalTrench
+            | hornvale_climate::Biome::HydrothermalVent => 0.02,
             hornvale_climate::Biome::SeaIce => 0.05,
             // Every land class: unreachable under the `is_ocean` guard above,
             // but the match must be total and a wrong default here would be a
@@ -1045,6 +1086,67 @@ pub fn marine_forage_supply_field(
             _ => 0.0,
         };
         productivity * scale
+    })
+}
+
+/// The `CHEMOSYNTHATE` supply a hydrothermal vent offers a marine consumer,
+/// **0 everywhere else in the ocean and on land** — rung 2's own supply
+/// field for a vent's productivity (The Sources, fix round), replacing the
+/// earlier commit that routed this same reading onto [`marine_forage_supply_field`]
+/// instead (see that field's own doc for the measured consequence).
+///
+/// **Gated on [`hornvale_climate::Biome::HydrothermalVent`], not on
+/// lithology or `SeafloorFeature` directly — deliberately, because the
+/// terrain model provably cannot make that call on its own.**
+/// `MAP-seafloor-features-carry-no-signal` (idea registry) measured a vent's
+/// own [`energy::subterranean_energy`] reading at median `0.2139` (n=684)
+/// against non-vent open ocean's median `0.2135` (n=28,995) — 0.19% apart —
+/// because `geothermal_gradient` pins `coolness = 0` at every
+/// non-continental vertex and `assemble_material` carries no seafloor-
+/// feature term at all: lithology and gradient genuinely do not know a ridge
+/// from a plain. The BIOME assignment does know: `Biome::HydrothermalVent`
+/// is derived straight from `hornvale_climate::SeafloorFeature::Ridge`
+/// (`hornvale_climate::biome::classify_marine`), so reading the biome here
+/// is not a shortcut around the terrain model's blind spot, it is the one
+/// place in this pipeline that spot has already been crossed.
+///
+/// Same two marine-reading substitutions as the (reverted) vent arm used,
+/// for the same reasons given at [`VENT_MOISTURE`] and
+/// [`VENT_CIRCULATION_DEPTH_M`]: moisture reads the open-ocean ceiling
+/// rather than a chamber's water table, and depth reads a vent's modelled
+/// circulation depth rather than the vertex's depth in the water column.
+/// `drainage` is read normally — `0` on ocean
+/// (`GeneratedTerrain::drainage_at`) — so `EnergySource::DetritalImport`
+/// correctly contributes nothing at a vent.
+///
+/// **`xorn` weights `CHEMOSYNTHATE` (0.35, THE SOURCES Task 9), and this
+/// field still reaches no consumer — because `xorn` is
+/// `HabitatRealm::Subterranean`, and this field is read only on the
+/// `Surface` arm of [`per_species_capacity_at`]'s realm match. `xorn` reads
+/// its chemotrophic supply from `chemosynthate_per_rung` instead, the
+/// per-rung field built alongside it. No `Surface`-realm kind weights
+/// `CHEMOSYNTHATE`, so a vent now carries a correctly-typed, non-zero
+/// chemotrophic supply that nothing in the roster consumes on this arm —
+/// authoring a marine chemotroph, or giving an existing marine kind a
+/// `CHEMOSYNTHATE` weight just to make the supply look used, is THE
+/// TENANT's job (rung 4: "something that eats the budget and spreads"),
+/// not this one's.
+/// type-audit: bare-ok(count: return)
+pub fn marine_chemosynthate_supply_field(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> hornvale_kernel::VertexMap<f64> {
+    let biome = climate.biome_map();
+    hornvale_kernel::VertexMap::from_fn(geo, |c| match biome.get(c) {
+        hornvale_climate::Biome::HydrothermalVent => energy::subterranean_energy(
+            &terrain.material_at(c),
+            terrain.geothermal_gradient_at(c),
+            VENT_CIRCULATION_DEPTH_M,
+            VENT_MOISTURE,
+            terrain.drainage_at(c),
+        ),
+        _ => 0.0,
     })
 }
 
@@ -1157,13 +1259,14 @@ pub fn axis_supply(
 /// resolved in. A single constant so the two cannot drift apart silently;
 /// `the_supply_axis_order_matches_both_capacity_loops` asserts the loops
 /// really do use it.
-pub const SUPPLY_AXIS_ORDER: [hornvale_kernel::ResourceAxis; 6] = [
+pub const SUPPLY_AXIS_ORDER: [hornvale_kernel::ResourceAxis; 7] = [
     hornvale_kernel::PHOTOSYNTHATE,
     hornvale_kernel::PLANT_FORAGE,
     hornvale_kernel::MINERAL,
     hornvale_kernel::DETRITUS,
     hornvale_kernel::ANIMAL_PREY,
     hornvale_kernel::MARINE_FORAGE,
+    hornvale_kernel::CHEMOSYNTHATE,
 ];
 
 /// [`axis_supply`] with the niche's weights already resolved — the same dot
@@ -1498,6 +1601,16 @@ pub fn per_species_suitability_masked(
     // water table, porosity) into `subterranean_substrate_field` so this call
     // site and `per_species_capacity_at`'s cannot derive them differently.
     let subterranean = subterranean_substrate_field(geo, terrain, &substrate);
+    // MAP-per-rung-substrate, Task 9: the per-rung siblings of `subterranean`
+    // above — hoisted the same way, so every species' dot product shares one
+    // derivation and the two fields cannot disagree about which rungs a
+    // chamber has or read a different depth/moisture at one it does (see
+    // each function's own doc comment). `subterranean` itself is KEPT, not
+    // replaced: a cave-less vertex's `Subterranean` reading still falls back
+    // to it below, multiplied by `availability = 0.0`, exactly as before.
+    let subterranean_per_rung = subterranean_substrate_field_per_rung(geo, terrain, &substrate);
+    let chemosynthate_per_rung =
+        energy::subterranean_energy_field_per_rung(geo, terrain, &subterranean_per_rung);
     // The Demesne/T2: per-axis supply fields, hoisted out of the per-species
     // loop below — each is a pure function of terrain/climate, built once
     // and shared by every species' dot product.
@@ -1505,6 +1618,10 @@ pub fn per_species_suitability_masked(
     let forage = forage_supply_field(geo, base_carrying.as_vertex_map());
     let detritus = detritus_supply_field(geo, terrain);
     let marine = marine_forage_supply_field(geo, terrain, climate, MARINE_SUPPLY_SCALE);
+    // The Sources (fix round): rung 2's own vent supply, read for a `Surface`
+    // kind exactly as `chemosynthate_per_rung` is read for a `Subterranean`
+    // one below — see [`marine_chemosynthate_supply_field`]'s own doc.
+    let marine_chemosynthate = marine_chemosynthate_supply_field(geo, terrain, climate);
     let prey = prey_supply_field(geo, &forage);
     // The Range: the biome at every vertex, hoisted exactly as the other
     // per-vertex fields above — read only by a kind with a declared affinity
@@ -1529,48 +1646,91 @@ pub fn per_species_suitability_masked(
                 .copied()
                 .unwrap_or(hornvale_species::HabitatRealm::SURFACE);
             let k = hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
-                // The Warren: which realm's substrate this kind is scored
-                // against, and — for a subterranean kind only — whether the
-                // vertex actually holds a cave at all. A `Surface` kind's
-                // arithmetic is UNTOUCHED: same field, same reading, and the
-                // `availability` factor below is exactly 1.0, an IEEE-754
-                // no-op (verified over the roster's real values, bit-
-                // difference 0).
-                let (s, availability) = match realm {
-                    hornvale_species::HabitatRealm::Surface => (substrate.get(vertex), 1.0),
-                    hornvale_species::HabitatRealm::Subterranean => (
-                        subterranean.get(vertex),
-                        if terrain.cave_at(vertex).is_some() {
-                            1.0
-                        } else {
-                            0.0
-                        },
-                    ),
-                };
-                // Rank-restored supply via the extracted helper: the axis
-                // dot product, not the old summed-uptake scalar.
                 use hornvale_kernel::{
-                    ANIMAL_PREY, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
+                    ANIMAL_PREY, CHEMOSYNTHATE, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE,
+                    PLANT_FORAGE,
                 };
-                // ORDER IS LOAD-BEARING: it must equal `SUPPLY_AXIS_ORDER`, so
-                // that entry i's weight is the hoisted `niche_weights[i]`.
+                // `score_at`: the axis dot product plus Liebig tolerance at
+                // ONE place — the single surface reading (`Surface` kinds)
+                // or one rung of the delve ladder (`Subterranean` kinds,
+                // MAP-per-rung-substrate). `availability` and `affinity` are
+                // applied by the caller below, never in here, because both
+                // are RUNG-INDEPENDENT (see the long comment below this
+                // closure on why each sits outside the Liebig minimum) —
+                // folding either in here would multiply it in once per rung
+                // instead of once per vertex.
+                //
+                // ORDER IS LOAD-BEARING: it must equal `SUPPLY_AXIS_ORDER`,
+                // so that entry i's weight is the hoisted `niche_weights[i]`.
                 // `the_supply_axis_order_matches_both_capacity_loops` pins it.
-                let per_axis = [
-                    (PHOTOSYNTHATE, base_carrying.at(vertex)),
-                    (PLANT_FORAGE, *forage.get(vertex)),
-                    (MINERAL, *mineral.get(vertex)),
-                    (DETRITUS, *detritus.get(vertex)),
-                    (ANIMAL_PREY, *prey.get(vertex)),
-                    (MARINE_FORAGE, *marine.get(vertex)),
-                ];
-                let supply = axis_supply_with(&niche_weights, &per_axis);
-                // THIS LINE IS WHERE THE MAGNITUDE GOES (decision 0103 §4).
-                // Michaelis-Menten saturation maps a supply magnitude onto
-                // `[0, 1)`, so everything below is a *dimensionless suitability*
-                // and NOT a capacity — which is what this function is for. The
-                // dimensional counterpart, with headcount units, is
-                // [`per_species_capacity`].
-                let saturated = supply / (1.0 + supply);
+                let score_at = |s: &Substrate, chemosynthate: f64| -> f64 {
+                    let per_axis = [
+                        (PHOTOSYNTHATE, base_carrying.at(vertex)),
+                        (PLANT_FORAGE, *forage.get(vertex)),
+                        (MINERAL, *mineral.get(vertex)),
+                        (DETRITUS, *detritus.get(vertex)),
+                        (ANIMAL_PREY, *prey.get(vertex)),
+                        (MARINE_FORAGE, *marine.get(vertex)),
+                        (CHEMOSYNTHATE, chemosynthate),
+                    ];
+                    let supply = axis_supply_with(&niche_weights, &per_axis);
+                    // THIS LINE IS WHERE THE MAGNITUDE GOES (decision 0103
+                    // §4). Michaelis-Menten saturation maps a supply
+                    // magnitude onto `[0, 1)`, so everything below is a
+                    // *dimensionless suitability* and NOT a capacity — which
+                    // is what this function is for. The dimensional
+                    // counterpart, with headcount units, is
+                    // [`per_species_capacity`].
+                    let saturated = supply / (1.0 + supply);
+                    saturated * tolerance_liebig(cn, s, floor_buf)
+                };
+                // The Warren: which realm's substrate this kind is scored
+                // against, and — for a `Subterranean` kind — the BEST rung
+                // of the delve ladder (MAP-per-rung-substrate, Task 9): `max`
+                // over the column's rungs of the WHOLE per-rung score, never
+                // a per-axis max (which would assemble a chimeric place
+                // existing at no rung) and never a mean (which would let a
+                // column of five hostile rungs and one outstanding one lose to
+                // a uniformly mediocre column) — the same rung-per-candidate
+                // logic `delve_seating::seat_at` already assumes. A
+                // `Surface` kind's arithmetic is UNTOUCHED: same field, same
+                // single reading, and `availability` below is exactly 1.0,
+                // an IEEE-754 no-op (verified over the roster's real values,
+                // bit-difference 0).
+                let (best, availability) = match realm {
+                    hornvale_species::HabitatRealm::Surface => (
+                        score_at(substrate.get(vertex), *marine_chemosynthate.get(vertex)),
+                        1.0,
+                    ),
+                    hornvale_species::HabitatRealm::Subterranean => {
+                        // Both per-rung fields share one gate
+                        // (`terrain.cave_at`), so their `Some`/`None` slots
+                        // align rung for rung (see each field's own doc
+                        // comment) — a vertex with no cave contributes no
+                        // iteration below at all, and its fallback (the
+                        // `None` arm) reproduces the pre-Task-9 single
+                        // reading, multiplied by `availability = 0.0` exactly
+                        // as before.
+                        let substrate_here = subterranean_per_rung.get(vertex);
+                        let chemosynthate_here = chemosynthate_per_rung.get(vertex);
+                        let mut rung_best: Option<f64> = None;
+                        for &rung in hornvale_kernel::Band::habitation() {
+                            let idx = rung as usize;
+                            let Some(s_r) = substrate_here[idx] else {
+                                continue;
+                            };
+                            let Some(chem_r) = chemosynthate_here[idx] else {
+                                continue;
+                            };
+                            let score = score_at(&s_r, chem_r);
+                            rung_best = Some(rung_best.map_or(score, |b: f64| b.max(score)));
+                        }
+                        match rung_best {
+                            Some(best) => (best, 1.0),
+                            None => (score_at(subterranean.get(vertex), 0.0), 0.0),
+                        }
+                    }
+                };
                 // LIEBIG, not a product (The Tilth, stage 5). The base field
                 // takes `min(temperature, precipitation)` — the law of the
                 // minimum — and this layer used to MULTIPLY four tolerances,
@@ -1604,7 +1764,7 @@ pub fn per_species_suitability_masked(
                     .get(tag)
                     .and_then(|a| a.as_ref())
                     .map_or(1.0, |a| a.factor(biome.get(vertex).name()));
-                saturated * tolerance_liebig(cn, s, floor_buf) * availability * affinity
+                best * availability * affinity
             });
             (tag as u32, k)
         })
@@ -1694,16 +1854,24 @@ pub fn per_species_capacity(
 /// everything the era does move. Hoisting these turns a 25-era replay from ~25x
 /// into ~1.1x.
 ///
-/// `marine` is here on a narrower argument than the other three. It reads
-/// `climate.biome_map()`, which *would* move with a properly era-adjusted
-/// climate — but no era biome recomputation exists, and no shipped kind weights
-/// the `MARINE_FORAGE` axis, so it is inert either way. It is hoisted because
-/// today it cannot vary, not because it never could; a marine people or an era
-/// biome model would move it out of this struct.
+/// `marine` and `marine_chemosynthate` are here on a narrower argument than
+/// the other three. Both read `climate.biome_map()`, which *would* move with
+/// a properly era-adjusted climate — but no era biome recomputation exists,
+/// so both are inert either way. `marine` is additionally inert because no
+/// shipped kind weights `MARINE_FORAGE`; `marine_chemosynthate` is inert for
+/// a different reason on `CHEMOSYNTHATE` — this hoisted field is consumed
+/// only on the `Surface` arm of the realm match below, and the one kind
+/// that weights `CHEMOSYNTHATE` (`xorn`) is `HabitatRealm::Subterranean`,
+/// so it is read on the `Subterranean` arm's `chemosynthate_per_rung`
+/// instead and never touches this field at all (see
+/// [`marine_chemosynthate_supply_field`]'s own doc for why the vent's
+/// supply is real and correctly typed even so). Both are hoisted because today neither can vary,
+/// not because either never could; a marine people, a marine chemotroph, or
+/// an era biome model would move either out of this struct.
 ///
 /// Every field is a dimensionless per-vertex supply or insolation ratio, which is
 /// what the axis dot product in [`axis_supply`] consumes.
-/// type-audit: bare-ok(ratio: insolation), bare-ok(ratio: mineral), bare-ok(ratio: detritus), bare-ok(ratio: marine)
+/// type-audit: bare-ok(ratio: insolation), bare-ok(ratio: mineral), bare-ok(ratio: detritus), bare-ok(ratio: marine), bare-ok(ratio: marine_chemosynthate)
 #[derive(Debug, Clone)]
 pub struct EraInvariantSupply {
     /// Annual-mean insolation per vertex — ~100% of the pipeline's cost, and a
@@ -1716,6 +1884,9 @@ pub struct EraInvariantSupply {
     pub detritus: hornvale_kernel::VertexMap<f64>,
     /// Marine forage supply — see the caveat above.
     pub marine: hornvale_kernel::VertexMap<f64>,
+    /// Marine chemosynthate supply (a vent's `CHEMOSYNTHATE`, The Sources fix
+    /// round) — see the caveat above.
+    pub marine_chemosynthate: hornvale_kernel::VertexMap<f64>,
 }
 
 impl EraInvariantSupply {
@@ -1735,6 +1906,7 @@ impl EraInvariantSupply {
             mineral: mineral_supply_field(geo, terrain, MINERAL_SUPPLY_SCALE),
             detritus: detritus_supply_field(geo, terrain),
             marine: marine_forage_supply_field(geo, terrain, climate, MARINE_SUPPLY_SCALE),
+            marine_chemosynthate: marine_chemosynthate_supply_field(geo, terrain, climate),
         }
     }
 }
@@ -1795,6 +1967,13 @@ pub fn per_species_capacity_at(
     // and since The Underworld, through the same shared derivation, so the
     // two paths cannot disagree about a chamber's depth or hydrology.
     let subterranean = subterranean_substrate_field(geo, terrain, &substrate);
+    // MAP-per-rung-substrate, Task 9: carried to the capacity path exactly as
+    // `per_species_suitability` carries it — see that function's matching
+    // hoist for the full rationale. `subterranean` above is KEPT as the
+    // cave-less fallback, exactly as there.
+    let subterranean_per_rung = subterranean_substrate_field_per_rung(geo, terrain, &substrate);
+    let chemosynthate_per_rung =
+        energy::subterranean_energy_field_per_rung(geo, terrain, &subterranean_per_rung);
     let forage = forage_supply_field(geo, base_carrying.as_vertex_map());
     let prey = prey_supply_field(geo, &forage);
     // The Range, carried to the capacity path: the biome at every vertex,
@@ -1822,36 +2001,65 @@ pub fn per_species_capacity_at(
             // `BTreeMap` reads per species instead of six per vertex per species.
             let niche_weights = SUPPLY_AXIS_ORDER.map(|axis| bio.niche.weight(axis));
             let raw = hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
+                use hornvale_kernel::{
+                    ANIMAL_PREY, CHEMOSYNTHATE, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE,
+                    PLANT_FORAGE,
+                };
+                // `score_at`: see the sibling loop's matching closure for the
+                // full rationale — same shape, dimensional counterpart
+                // (`headcount` in place of `saturated`).
+                //
+                // ORDER IS LOAD-BEARING — see the sibling loop.
+                let score_at = |s: &Substrate, chemosynthate: f64| -> f64 {
+                    let per_axis = [
+                        (PHOTOSYNTHATE, base_carrying.at(vertex)),
+                        (PLANT_FORAGE, *forage.get(vertex)),
+                        (MINERAL, *hoisted.mineral.get(vertex)),
+                        (DETRITUS, *hoisted.detritus.get(vertex)),
+                        (ANIMAL_PREY, *prey.get(vertex)),
+                        (MARINE_FORAGE, *hoisted.marine.get(vertex)),
+                        (CHEMOSYNTHATE, chemosynthate),
+                    ];
+                    let supply = axis_supply_with(&niche_weights, &per_axis);
+                    let headcount = CAPACITY_V_MAX * supply / (CAPACITY_K_M + supply);
+                    headcount * tolerance_liebig(cn, s, floor_buf)
+                };
                 // The Warren: which realm's substrate this kind is scored
-                // against, and — for a subterranean kind only — whether the
-                // vertex actually holds a cave at all. A `Surface` kind's
+                // against, and — for a `Subterranean` kind — the BEST rung of
+                // the delve ladder (MAP-per-rung-substrate, Task 9) — see the
+                // sibling loop's matching arm for the full rationale (`max`,
+                // never a per-axis max, never a mean). A `Surface` kind's
                 // arithmetic is UNTOUCHED, exactly as `per_species_suitability`
                 // documents at its matching match.
-                let (s, availability) = match realm {
-                    hornvale_species::HabitatRealm::Surface => (substrate.get(vertex), 1.0),
-                    hornvale_species::HabitatRealm::Subterranean => (
-                        subterranean.get(vertex),
-                        if terrain.cave_at(vertex).is_some() {
-                            1.0
-                        } else {
-                            0.0
-                        },
+                let (best, availability) = match realm {
+                    hornvale_species::HabitatRealm::Surface => (
+                        score_at(
+                            substrate.get(vertex),
+                            *hoisted.marine_chemosynthate.get(vertex),
+                        ),
+                        1.0,
                     ),
+                    hornvale_species::HabitatRealm::Subterranean => {
+                        let substrate_here = subterranean_per_rung.get(vertex);
+                        let chemosynthate_here = chemosynthate_per_rung.get(vertex);
+                        let mut rung_best: Option<f64> = None;
+                        for &rung in hornvale_kernel::Band::habitation() {
+                            let idx = rung as usize;
+                            let Some(s_r) = substrate_here[idx] else {
+                                continue;
+                            };
+                            let Some(chem_r) = chemosynthate_here[idx] else {
+                                continue;
+                            };
+                            let score = score_at(&s_r, chem_r);
+                            rung_best = Some(rung_best.map_or(score, |b: f64| b.max(score)));
+                        }
+                        match rung_best {
+                            Some(best) => (best, 1.0),
+                            None => (score_at(subterranean.get(vertex), 0.0), 0.0),
+                        }
+                    }
                 };
-                use hornvale_kernel::{
-                    ANIMAL_PREY, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
-                };
-                // ORDER IS LOAD-BEARING — see the sibling loop.
-                let per_axis = [
-                    (PHOTOSYNTHATE, base_carrying.at(vertex)),
-                    (PLANT_FORAGE, *forage.get(vertex)),
-                    (MINERAL, *hoisted.mineral.get(vertex)),
-                    (DETRITUS, *hoisted.detritus.get(vertex)),
-                    (ANIMAL_PREY, *prey.get(vertex)),
-                    (MARINE_FORAGE, *hoisted.marine.get(vertex)),
-                ];
-                let supply = axis_supply_with(&niche_weights, &per_axis);
-                let headcount = CAPACITY_V_MAX * supply / (CAPACITY_K_M + supply);
                 // `availability` stays OUTSIDE the tolerance product, exactly as
                 // `per_species_suitability` keeps it outside the Liebig
                 // minimum: a presence mask in {0.0, 1.0}, not a condition
@@ -1867,7 +2075,7 @@ pub fn per_species_capacity_at(
                     .get(tag)
                     .and_then(|a| a.as_ref())
                     .map_or(1.0, |a| a.factor(biome.get(vertex).name()));
-                headcount * tolerance_liebig(cn, s, floor_buf) * availability * affinity
+                best * availability * affinity
             });
             let map = hornvale_kernel::ecology::CapacityMap::new(raw)
                 .expect("a Michaelis-Menten product of non-negative terms is finite and >= 0");
@@ -2980,6 +3188,126 @@ pub fn subterranean_substrate_field(
             water_table_m,
             porosity,
         )
+    })
+}
+
+/// [`subterranean_substrate`] evaluated at one rung of the delve ladder,
+/// rather than at a vertex's cave `depth_reach_m` the way
+/// [`subterranean_substrate_field`] does — the per-rung reading that
+/// function's own doc names as still-deferred (`MAP-per-rung-substrate`).
+///
+/// The evaluation depth comes from
+/// [`hornvale_terrain::delve::rung_evaluation_depth_m`], which is where the
+/// ΔT-midpoint choice and the [`hornvale_kernel::Band::Nadir`] special case
+/// (open top, so it reads `depth_reach_m` — exactly where
+/// [`subterranean_substrate_field`] evaluates every rung today) both live;
+/// this function adds no depth policy of its own.
+///
+/// `None` when the vertex has no cave (`terrain.cave_at` returns `None`) or
+/// when `rung` is [`hornvale_kernel::Band::Surface`], which names no chamber
+/// and has no evaluation depth.
+///
+/// **Porosity, the water table and the gradient are derived exactly as
+/// [`subterranean_substrate_field`] derives them** — same three calls, same
+/// order — so the two per-vertex and per-rung readings cannot disagree about
+/// a chamber's hydrology the way two independent derivations could.
+///
+/// **This function has no production caller yet.** It and
+/// [`subterranean_substrate_field_per_rung`] exist so Task 9 of
+/// `MAP-per-rung-substrate` has something to switch consumers onto;
+/// [`subterranean_substrate_field`] keeps its own body and both its
+/// production call sites unchanged by this addition.
+pub fn subterranean_substrate_at_rung(
+    surface: Substrate,
+    rung: hornvale_kernel::Band,
+    terrain: &GeneratedTerrain,
+    vertex: hornvale_kernel::Vertex,
+) -> Option<Substrate> {
+    // `Band::Surface` names no chamber and always yields `None` below (via
+    // `rung_evaluation_depth_m`'s own short-circuit) — checked here too, so
+    // a `Surface` call never pays for `terrain.cave_at`'s cave derivation
+    // only to discard it. Bit-identical: both paths return `None` for
+    // `Surface`, this one just gets there without the cave lookup.
+    if rung == hornvale_kernel::Band::Surface {
+        return None;
+    }
+    let cave = terrain.cave_at(vertex)?;
+    subterranean_substrate_at_rung_with_cave(surface, rung, terrain, vertex, cave)
+}
+
+/// [`subterranean_substrate_at_rung`]'s body, given the vertex's cave
+/// already looked up. The hoist [`subterranean_substrate_field_per_rung`]
+/// needs: `terrain.cave_at` samples noise (`crate::crust::sphere_fbm01`,
+/// which builds a fresh `SphereFbm` on every call — the `Fbm`
+/// derive-once pattern, CLAUDE.md), so calling it once per vertex and
+/// reusing the answer across all six rungs is cheaper than calling it once
+/// per rung as [`subterranean_substrate_at_rung`] alone would. Bit-identical
+/// to `subterranean_substrate_at_rung(surface, rung, terrain, vertex)` when
+/// `cave` is the `Some` value `terrain.cave_at(vertex)` would itself
+/// return — this only skips re-deriving it. Callers must not pass a `cave`
+/// from a different vertex.
+fn subterranean_substrate_at_rung_with_cave(
+    surface: Substrate,
+    rung: hornvale_kernel::Band,
+    terrain: &GeneratedTerrain,
+    vertex: hornvale_kernel::Vertex,
+    cave: hornvale_terrain::Cave,
+) -> Option<Substrate> {
+    if rung == hornvale_kernel::Band::Surface {
+        return None;
+    }
+    let gradient = terrain.geothermal_gradient_at(vertex);
+    let depth_m =
+        hornvale_terrain::delve::rung_evaluation_depth_m(rung, gradient, cave.depth_reach_m)?;
+    let porosity = terrain.material_at(vertex).porosity;
+    let water_table_m = hornvale_terrain::water_table_depth_m(
+        terrain.drainage_at(vertex),
+        porosity,
+        surface.height_asl_m.get(),
+    );
+    Some(subterranean_substrate(
+        surface,
+        depth_m,
+        gradient,
+        water_table_m,
+        porosity,
+    ))
+}
+
+/// [`subterranean_substrate_at_rung`] over every band of the ladder and every
+/// vertex of the globe, indexed by `Band as usize`
+/// ([`hornvale_kernel::Band::all`]'s own order: `Surface` through `Nadir`,
+/// six entries).
+///
+/// A vertex with no cave gets `[None; 6]`; a cave-bearing vertex's
+/// [`hornvale_kernel::Band::Surface`] slot is always `None` (it names no
+/// chamber). By construction the [`hornvale_kernel::Band::Nadir`] slot
+/// equals [`subterranean_substrate_field`]'s reading at that same vertex
+/// bit-for-bit — both evaluate at `depth_reach_m` — which is exactly the
+/// positive control this task's tests assert.
+///
+/// Calls `terrain.cave_at(vertex)` once per vertex, not once per rung —
+/// see [`subterranean_substrate_at_rung_with_cave`]'s doc for why that
+/// matters. A vertex with no cave short-circuits to `[None; 6]` without
+/// visiting any rung, exactly as six calls to
+/// [`subterranean_substrate_at_rung`] (each re-deriving and finding no
+/// cave) would.
+pub fn subterranean_substrate_field_per_rung(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    surface: &hornvale_kernel::VertexMap<Substrate>,
+) -> hornvale_kernel::VertexMap<[Option<Substrate>; 6]> {
+    hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
+        let s = *surface.get(vertex);
+        let mut out = [None; 6];
+        let Some(cave) = terrain.cave_at(vertex) else {
+            return out;
+        };
+        for &rung in hornvale_kernel::Band::all() {
+            out[rung as usize] =
+                subterranean_substrate_at_rung_with_cave(s, rung, terrain, vertex, cave);
+        }
+        out
     })
 }
 
@@ -10160,12 +10488,13 @@ mod tests {
     #[test]
     fn axis_supply_agrees_with_the_hoisted_form() {
         use hornvale_kernel::{
-            ANIMAL_PREY, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
-            ResourceVector,
+            ANIMAL_PREY, CHEMOSYNTHATE, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE,
+            PLANT_FORAGE, ResourceVector,
         };
-        // A niche that is SPARSE on purpose: `MINERAL` and `MARINE_FORAGE` are
-        // absent, so `weight` returns its 0.0 default for them and the hoisted
-        // array has to reproduce that, not just the recorded entries.
+        // A niche that is SPARSE on purpose: `MINERAL`, `MARINE_FORAGE` and
+        // `CHEMOSYNTHATE` are absent, so `weight` returns its 0.0 default for
+        // them and the hoisted array has to reproduce that, not just the
+        // recorded entries.
         let niche = ResourceVector::new(&[
             (PHOTOSYNTHATE, 0.7),
             (PLANT_FORAGE, 0.25),
@@ -10180,6 +10509,7 @@ mod tests {
             (DETRITUS, 1e-7),
             (ANIMAL_PREY, 1.0 / 7.0),
             (MARINE_FORAGE, 4.25),
+            (CHEMOSYNTHATE, 9.0),
         ];
         let weights = SUPPLY_AXIS_ORDER.map(|axis| niche.weight(axis));
         assert_eq!(
@@ -10221,6 +10551,7 @@ mod tests {
                     "DETRITUS" => "detritus",
                     "ANIMAL_PREY" => "animal prey",
                     "MARINE_FORAGE" => "marine forage",
+                    "CHEMOSYNTHATE" => "chemosynthate",
                     other => other,
                 })
                 .collect();
@@ -14335,6 +14666,97 @@ mod tests {
                 .any(|c| *marine.get(c) > 0.0),
             "at least one ocean vertex must have positive marine supply, or the \
              sea is open in name only and Task 8's kinds would all be ghosts"
+        );
+    }
+
+    /// **`MARINE_FORAGE` is flat at a vent (The Sources, fix round).** An
+    /// earlier commit in this campaign routed a vent's
+    /// `energy::subterranean_energy` reading onto THIS axis, which is a
+    /// PHOTOSYNTHESIS supply — measured (whole-branch review) to give six
+    /// sunlight-eating marine kinds ~9x vent occupancy with no chemotrophic
+    /// mechanism behind it. `HydrothermalVent` now shares the flat `0.02`
+    /// literal with `Abyssal`/`HadalTrench` again, so every vent reports the
+    /// identical, near-zero `MARINE_FORAGE` value — the pre-campaign,
+    /// honest reading. The productive, VARYING mechanism this test used to
+    /// assert here now belongs on `CHEMOSYNTHATE`
+    /// ([`marine_chemosynthate_supply_field`]), checked below.
+    #[test]
+    #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+    fn a_vents_marine_forage_is_flat_again() {
+        let world = generated(42);
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_of(&world).unwrap();
+        let geo = terrain.geosphere();
+        let biome = climate.biome_map();
+        let field = marine_forage_supply_field(geo, &terrain, &climate, 1.0);
+
+        let mut vents: Vec<f64> = Vec::new();
+        for vertex in geo.vertices() {
+            if *biome.get(vertex) == hornvale_climate::Biome::HydrothermalVent {
+                vents.push(*field.get(vertex));
+            }
+        }
+        assert!(vents.len() >= 20, "only {} vents — vacuous", vents.len());
+        for v in &vents {
+            assert_eq!(
+                *v, 0.02,
+                "a vent's MARINE_FORAGE must be the flat Abyssal/HadalTrench \
+                 literal, not a chemotrophic reading"
+            );
+        }
+    }
+
+    /// Vents are productive on `CHEMOSYNTHATE`, AND their productivity
+    /// VARIES between vents — because it derives from that vent's own rock
+    /// and gradient (The Sources, Task 10, corrected in the fix round to
+    /// land on the right axis). Both halves are needed and neither alone is
+    /// sufficient: "productive" is satisfied by a flat non-zero constant,
+    /// and "varies" is satisfied by noise on an axis nothing reads. Together
+    /// they say the mechanism reaches the field this test checks.
+    ///
+    /// Non-vent ocean and land both read exactly `0.0`, confirming the gate
+    /// is the vent biome and nothing else leaks through it.
+    #[test]
+    #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+    fn a_vent_is_chemosynthetically_productive_and_not_by_a_literal() {
+        let world = generated(42);
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_of(&world).unwrap();
+        let geo = terrain.geosphere();
+        let biome = climate.biome_map();
+        let field = marine_chemosynthate_supply_field(geo, &terrain, &climate);
+
+        let mut vents: Vec<f64> = Vec::new();
+        let mut non_vent_ocean_and_land: Vec<f64> = Vec::new();
+        for vertex in geo.vertices() {
+            match biome.get(vertex) {
+                hornvale_climate::Biome::HydrothermalVent => vents.push(*field.get(vertex)),
+                _ => non_vent_ocean_and_land.push(*field.get(vertex)),
+            }
+        }
+        assert!(vents.len() >= 20, "only {} vents — vacuous", vents.len());
+        assert!(
+            !non_vent_ocean_and_land.is_empty(),
+            "no non-vent vertex to compare against"
+        );
+
+        assert!(
+            vents.iter().all(|v| *v > 0.0),
+            "every vent must carry a positive chemosynthate reading"
+        );
+        assert!(
+            non_vent_ocean_and_land.iter().all(|v| *v == 0.0),
+            "chemosynthate must be exactly zero away from a vent"
+        );
+
+        let mut distinct = vents.clone();
+        distinct.sort_by(f64::total_cmp);
+        distinct.dedup_by(|a, b| a.to_bits() == b.to_bits());
+        assert!(
+            distinct.len() > 1,
+            "every one of {} vents reports the identical productivity — the \
+             mechanism did not arrive, a different constant did",
+            vents.len()
         );
     }
 

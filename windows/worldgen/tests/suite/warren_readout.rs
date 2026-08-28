@@ -434,10 +434,32 @@ fn the_blast_radius_readout() {
          now binds — which is good news, and means the spec's §5/§10 and the chronicle need \
          re-measuring rather than this assertion needing a nudge."
     );
+    // RE-MEASURED 2026-08-27 (The Sources, Task 9 heavy-tier fixture review).
+    // xorn's ratio moved off the 1.000 mask, and the cause is NOT the Liebig
+    // tripwire this file otherwise pins — measured, not assumed: bisected on
+    // this branch, `warren_readout` PASSES (xorn ratio EXACTLY 1.000) at
+    // `cae086f86` (Task 9's parent) and FAILS, at the value pinned below, on
+    // the very next commit, `a19d0aa53` ("the per-rung switch — the
+    // campaign's only shipped-number move"). That commit gave xorn's niche a
+    // CHEMOSYNTHATE weight (0.65 MINERAL / 0.35 CHEMOSYNTHATE) read off the
+    // real per-rung energy field — a SUPPLY-axis change, computed in
+    // `score_at` before `tolerance_liebig` is ever applied, so it moves the
+    // `saturated = supply / (1 + supply)` factor directly and does not
+    // require (and is not evidence about) the two-tier tolerance coming out
+    // of shadow mode. rust-monster and drow above are unaffected because
+    // neither kind's niche weights changed — only xorn's did, exactly as
+    // that commit's own regression test (`underworld_per_rung_switch.rs`)
+    // already asserts at the suitability level. Nothing here was retuned:
+    // this is xorn's ratio at cave-bearing land vertices, pooled over the
+    // same 25 seeds, read straight off the shipped code.
     assert!(
-        (xorn_ratio - 1.0).abs() < 1e-9,
-        "P1 (falsified, and pinned as such): xorn's ratio is expected to be EXACTLY 1.000 for \
-         the same reason as rust-monster's. Got {xorn_ratio:.6}"
+        (xorn_ratio - 1.526_908_240_002_219_6).abs() < 1e-9,
+        "P1 (re-pinned 2026-08-27, The Sources Task 9): xorn's ratio is expected to be \
+         1.526908240002220 now that its niche carries a CHEMOSYNTHATE weight read off the \
+         per-rung energy field (`a19d0aa53`) — a supply-axis move, not the Liebig-masking \
+         tripwire rust-monster and drow above still pin. Got {xorn_ratio:.17}. If THIS moved, \
+         re-derive it: either xorn's niche weights changed again, or the per-rung energy field \
+         did, and either is a decision to record, not a constant to nudge."
     );
     // --- THE RADIATION (C2d): drow's dark adaptation, authored and DORMANT ---
     //

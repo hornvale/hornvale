@@ -37,6 +37,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 |---|---|---|---|
 | `abyssal` | a biome class | *Gaokoe | /gaokoe/ |
 | `abyssal-plain` | The flat floor of the deep ocean. | *Nodo | /nodo/ |
+| `affords-passage` | a seam between two rooms a body may pass through | *Nenea | /nenea/ |
 | `alpine` | a biome class | *Ne | /ne/ |
 | `bait-ball` | A dense turning mass of fish. | *Dee | /dee/ |
 | `barley` | a staple crop | *Nadae | /nadae/ |
@@ -75,6 +76,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `east` | the direction of increasing longitude | *Paenao | /paenao/ |
 | `eat` | to consume food | *Noanoe | /noanoe/ |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | *Nenaa | /nenaa/ |
+| `encloses` | an anchor that reveals what lies within it | *Kagoa | /kagoa/ |
 | `epipelagic` | a biome class | *Goka | /goka/ |
 | `erg` | A sand sea of dunes. | *Naqae | /naqae/ |
 | `eye` | the organ of sight | *Tetae | /tetae/ |
@@ -116,6 +118,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `hill-dwarf-kind` | a hill dwarf | *Goonea | /goonea/ |
 | `hobgoblin-kind` | a hobgoblin | *Dae | /dae/ |
 | `holdfast-tangle` | The anchored base of a kelp forest. | *Doa | /doa/ |
+| `holds-liquid` | a place a body may drink from | *Neego | /neego/ |
 | `home` | one's dwelling | *Qoqe | /qoqe/ |
 | `human-kind` | a human | *Noaka | /noaka/ |
 | `hydrothermal-vent` | a biome class | *Poo | /poo/ |
@@ -167,6 +170,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `plankton-bloom` | Water thick with plankton. | *Notee | /notee/ |
 | `playa` | A dry lake bed of salt and cracked clay. | *Qena | /qena/ |
 | `pressure-ridge` | Sea ice buckled into a ridge. | *Nootaa | /nootaa/ |
+| `radiates-heat` | an anchor that emits warmth | *Poe | /poe/ |
 | `rafted-floe` | Ice floes driven over one another. | *Qoe | /qoe/ |
 | `rain` | liquid precipitation | *Nope | /nope/ |
 | `read` | to take meaning from written words — `consult` | *Neeta | /neeta/ |
@@ -210,6 +214,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `starlit` | dark faintly lit by stars | *Tane | /tane/ |
 | `stone` | rock | *Peotea | /peotea/ |
 | `sun` | the sun | *Pago | /pago/ |
+| `supports-rest` | a place a body may lie down and sleep | *Geno | /geno/ |
 | `taiga` | a biome class | *Qe | /qe/ |
 | `temperate-forest` | a biome class | *Na | /na/ |
 | `temperate-grassland` | a biome class | *Noo | /noo/ |

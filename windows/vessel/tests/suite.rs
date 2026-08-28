@@ -21,6 +21,8 @@ mod common;
 mod action_module;
 #[path = "suite/action_mood.rs"]
 mod action_mood;
+#[path = "suite/affordance.rs"]
+mod affordance;
 #[path = "suite/ask_verb.rs"]
 mod ask_verb;
 #[path = "suite/body_fields.rs"]
@@ -57,6 +59,8 @@ mod lantern_seam;
 mod ledger_query_equivalence;
 #[path = "suite/liveness_genesis.rs"]
 mod liveness_genesis;
+#[path = "suite/object_property_concepts.rs"]
+mod object_property_concepts;
 #[path = "suite/one_roster.rs"]
 mod one_roster;
 #[path = "suite/ooc_namespace.rs"]

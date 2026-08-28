@@ -11,6 +11,18 @@ not an ornament on one. A larger question — whether every zoom rung should be
 a uniform square grid — stalled on the discovery that the people asking it
 could not be sure they meant the same thing by *level*, *band*, or *room*.
 
+**That question is now half-answered, and the vocabulary below is why the
+answer could be stated at all.** [The Quadrat](../chronicle/the-quadrat.md)
+settled the walking band and the consulted map: every zoom rung the game
+client draws *is* a uniform square grid, and a **rung is a facet depth**
+([decision 0287](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0287-a-zoom-rung-is-a-mesh-depth.md))
+— band B is depth 12, coarsening to globe level 6. A tile is a facet; the
+terrain it shows is read from that facet's corner *vertices*. Both halves of
+the duality below are load-bearing in that one sentence, which is what the
+stalled conversation could not say. The half still open is the chamber band,
+which is a square 4-neighbour lattice of its own and is not a facet depth at
+all.
+
 ## One sphere, two indexings
 
 The world is an icosphere: an icosahedron subdivided, its vertices projected

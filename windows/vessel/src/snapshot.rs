@@ -257,6 +257,31 @@ pub struct NounEntry {
     /// Coarse kind for completion-capable clients. Optional on the wire:
     /// older mirrors load unchanged (serde default), newer fixtures carry it.
     /// Additive on `vessel/session/v2` per the schema discipline.
+    ///
+    /// **The Offer, Task 7 (spec §4): investigated as one of the four
+    /// advertisement surfaces and found NOT to route through
+    /// [`crate::affordance::offered_to_observer`], and this is a finding
+    /// rather than an oversight.** `kind` is populated in `Session::
+    /// snapshot` from `focalize::NounKind::tag()` (`Creature`/`Place`/
+    /// `Thing`/`Unknown`), which is fed exclusively by walk-band content —
+    /// biome, regime, village, sky (`focalize.rs`'s own `render`). No
+    /// `narration.nouns` entry has ever carried a chamber `AnchorKind` at
+    /// any call site (`grep -rn "AnchorKind" windows/vessel/src/snapshot.rs
+    /// windows/vessel/src/focalize.rs` returns nothing), including while
+    /// the possession stands indoors — `Session::snapshot` always renders
+    /// `self.focalizer.render(&vantage)` from the walk-band `Vantage`,
+    /// never from the chamber's own `Interior`, and a committed chamber-band
+    /// fixture (`clients/game/core/tests/fixtures/session-seed-42-chamber.json`)
+    /// carries only `"place"`/`"thing"` kinds, confirming this at the byte
+    /// level. `offered_to_observer` requires a real `AnchorKind`, so there
+    /// is no value this field could route through it without either (a) a
+    /// nonsensical mapping from a walk-band noun to a chamber anchor kind,
+    /// or (b) newly threading chamber anchors into `narration.nouns` at
+    /// all — a real feature addition, not a re-point of existing ad hoc
+    /// logic, and outside this task's "smallest risk" scope (spec §10.1).
+    /// See the Task 7 report for the full investigation; this doc exists so
+    /// the absence is a stated finding, not a silent gap the next reader
+    /// has to rediscover.
     /// type-audit: bare-ok(identifier-text: kind)
     #[serde(default)]
     pub kind: String,
