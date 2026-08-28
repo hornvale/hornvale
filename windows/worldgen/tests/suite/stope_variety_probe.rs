@@ -2282,7 +2282,8 @@ fn did_the_stope_solve_the_oatmeal_problem() {
     // now redden on the campaign's own product, and `<=` could not fail at
     // all. A returning gap reddens here, which is what a one-directional
     // acknowledgement of a removed mechanism must do to stay honest — the
-    // same discipline `delve_has_two_distinguishable_outcomes` carries in
+    // same discipline `delve_has_three_distinguishable_outcomes` (renamed
+    // from `delve_has_two_distinguishable_outcomes` by The Latch) carries in
     // `hornvale-vessel`.
     assert_eq!(
         pooled.reachable_chambers,

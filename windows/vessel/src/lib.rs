@@ -24,6 +24,7 @@ pub mod lattice;
 pub mod lens;
 pub mod light;
 pub mod liveness;
+pub mod passage;
 pub mod plan;
 mod purview;
 mod session;
