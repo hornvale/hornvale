@@ -1286,54 +1286,47 @@ fn the_serialization_pin_names_exactly_the_wall_clock_budget_tests_marked_co_sch
 /// guard, the same two-directional shape as the two above (The Governor,
 /// Task 8).
 ///
-/// **UNLIKE THOSE TWO, THIS GUARD DOES NOT ASSERT NON-EMPTINESS, AND THAT IS
-/// A DELIBERATE, TEMPORARY CHOICE — NOT THE "PERMITS EMPTY FOREVER" GAP THIS
-/// PROJECT HAS SHIPPED BEFORE** (see this file's module doc, "What a token
-/// guard does NOT do"). The sized-sweep class was built by this very task so
-/// Task 9 has somewhere to land its conversions; at the commit that
-/// introduces it, nothing has landed yet, so BOTH sides of the comparison
-/// below are genuinely, correctly empty. Reusing the other two guards'
-/// `assert!(!sized.is_empty(), …)` here would make this guard fail on
-/// arrival, before there is anything to guard — the exact trap this task's
-/// brief warns against.
+/// **NOW CARRIES THE SAME NON-EMPTINESS ASSERT AS THE OTHER TWO, SINCE THE
+/// GAP THIS PARAGRAPH USED TO DESCRIBE CLOSED (The Governor, Task 9).** At
+/// the commit that introduced this class (Task 8) it deliberately omitted
+/// `assert!(!sized.is_empty(), …)`: both sides of the comparison below were
+/// genuinely, correctly empty, and reusing the other two guards' belt would
+/// have failed the guard on arrival, before there was anything to guard —
+/// the exact trap that task's brief warned against. Task 9 landed the
+/// class's first real member (`warren_readout.rs::the_blast_radius_readout`,
+/// this campaign's own pole test), so "empty" stopped being this class's
+/// correct, default state, and the belt is added now exactly as that
+/// earlier version of this comment said a future editor should.
 ///
-/// **"EMPTY" IS DISTINGUISHABLE FROM "THE CLASS WAS DELETED", AND THAT
-/// DISTINCTION IS WHAT THIS GUARD ACTUALLY LEANS ON** — the same
-/// fixture-vs-source shape [`the_heavy_roster_is_exactly_this_fixture`] uses
-/// a committed file for, done here with the config table itself as the
-/// fixture:
-/// - **The override table's existence is still hard-required.**
-///   [`pinned_filter_names_for_class`] panics if no table in
+/// **"EMPTY" WAS DISTINGUISHABLE FROM "THE CLASS WAS DELETED" EVEN BEFORE
+/// THIS CHANGE, AND THAT DISTINCTION IS STILL WHAT PART OF THIS GUARD LEANS
+/// ON** — the same fixture-vs-source shape
+/// [`the_heavy_roster_is_exactly_this_fixture`] uses a committed file for,
+/// done here with the config table itself as the fixture:
+/// - **The override table's existence is hard-required**, non-emptiness
+///   assert or not. [`pinned_filter_names_for_class`] panics if no table in
 ///   `.config/nextest.toml` carries `# class: sized-sweep`, or if it has no
 ///   live `threads-required = <int>` setting, or if that setting is the
 ///   whole-runner `"num-cpus"` string — so deleting the class outright, or
 ///   quietly reintroducing the naive-fix trap, both still fail loudly with
-///   nothing else touched. An empty class still has its scaffolding present
-///   and checked; a deleted one does not, and the guard says so.
-/// - **The two-way equality below is still checked, not skipped.** The
-///   moment Task 9 marks a test [`SIZED_SWEEP_MARKER`] without also adding
-///   its name to `.config/nextest.toml`'s `sized-sweep` filter (or the
-///   reverse), `pinned != sized` and this test goes red — the same
-///   protection the other two guards give, without the extra non-emptiness
-///   belt this file's mutation-testing found worth adding for a class that
-///   already had real members to lose (see the module doc's "residual is
-///   accepted rather than chased" note on `SWEEP_CALL` itself for the same
-///   kind of named, not hidden, gap).
-///
-/// **THE GAP THIS LEAVES, NAMED RATHER THAN HIDDEN:** while the class sits
-/// at its zero baseline, a joint failure that empties BOTH sides at once —
-/// exactly the shape the other two guards' non-emptiness assert exists to
-/// catch — is invisible here, because there is nothing yet for such a
-/// failure to make disappear. That gap closes itself the moment Task 9 adds
-/// the first sized-sweep test: a future editor should add the equivalent
-/// `assert!(!sized.is_empty(), …)` at that point, once "empty" stops being
-/// this class's correct, default state — and should update this doc comment
-/// rather than leaving it describing a state that has passed.
+///   nothing else touched.
+/// - **The two-way equality below is checked first**, so a name added to
+///   only one side is always caught with a precise diff, before the
+///   coarser non-emptiness assert would even have a chance to fire.
 #[test]
 fn the_sized_sweep_pin_names_exactly_the_batteries_marked_for_a_bounded_panel() {
     let pinned = sized_filter_names();
     let sized = sized_sweep_heavy_tests();
 
+    assert!(
+        !sized.is_empty(),
+        "found no heavy/probe test carrying {SIZED_SWEEP_MARKER:?} alongside a \
+         {SWEEP_CALL:?} call. Either the marker was renamed (update \
+         SIZED_SWEEP_MARKER) or this guard is now asserting nothing — which is \
+         the one outcome it must never quietly reach. (This assert was \
+         deliberately absent while the class was empty by design — see this \
+         test's doc comment for when and why it was added.)"
+    );
     assert_eq!(
         pinned, sized,
         "\n{NEXTEST_CONFIG}'s sized-sweep filter and the set of heavy/probe \
