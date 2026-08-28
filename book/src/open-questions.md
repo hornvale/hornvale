@@ -288,6 +288,92 @@ property is false: a registration additive in what the lexicon *holds* need
 not be additive in what a statistic over it *sees*, and the two are different
 claims that happen to share a byte-golden.
 
+**[The Stile](./chronicle/the-stile.md) (2026-08-28) does not move the score,
+and the finding worth leading with is a correction that reintroduced the
+defect it was written to close.** The campaign's whole-branch review flagged
+that its two closure-derivation pins (`r004`, `r183`) were undocumented
+against the one thing the ladder's own revision history actually does —
+rungs get wired into the *middle* of an existing graph, not merely appended.
+The fix wave's remedy, landing in the chronicle, said the pins "go red the
+moment a rung is inserted and wired into the middle of the graph." That
+sentence is false, and a mutation run at the campaign's own final gate —
+rereading its own committed artifact, not a second reviewer — found it: a
+rung wired into `r005`, mid-graph but outside either pinned rung's ancestry,
+leaves all twenty-six tests green. Two of 214 closures are pinned, not all
+of them, and the converse the correction asserted does not hold. It is
+[The Mortise](./chronicle/the-mortise.md)'s clause — a derivation is
+unaudited text exactly like the number it supports — landing this time on a
+correction rather than an original claim, inside the one paragraph whose
+whole job was to say honestly what the pins do and do not cover. The same
+final pass also found the retrospective's own line count wrong in the commit
+that had just corrected it, because that commit grew the file past the
+number it wrote — the third wrong count this campaign put into its own
+prose, which argues for what it did next: dropping the count rather than
+correcting it a third time.
+
+**A second instance predates the campaign and matches this chapter's own
+diagnosis from [The Siding](./chronicle/the-siding.md) exactly: a check is
+worth only the configurations it runs in.** `docs/audits/sentence-coverage.md`
+was written only under `HV_SENTENCE_REBASELINE=1`, a variable nothing in the
+repository ever set — not the Makefile, not `scripts/regenerate-artifacts.sh`,
+which did not mention the file at all. The path *was* declared in
+`docs/generated-paths.txt`, so the tracked-ness half of the drift discipline
+looked satisfied; what was missing was a writer, and `git diff --exit-code`
+over a path nothing ever writes is silently vacuous no matter how long it has
+sat green. It was found by a controller's pre-dispatch reading, not by any
+gate. The fix is the pairing this chapter keeps asking for — the generator
+now runs inside `make rebaseline` — proven not by trusting the wiring but by
+splicing a marker into the report, running the full script, and confirming
+the marker landed and nothing else declared moved.
+
+**A third instance sharpens the count-versus-identity distinction
+[The Inquest](./chronicle/the-inquest.md) already drew, from the reviewer's
+side rather than the implementer's.** Auditing the vocabulary cross-check
+between the ladder and the two dialogue corpora, the whole-branch reviewer
+held the reported counts constant — swapping one token out of a set and
+another in, so a refused set stayed size two and a covered set stayed at
+147 — and confirmed the set assertion still failed. A check that only
+compared cardinalities would have passed. Holding a mutation's *effect* on a
+headline number constant while changing its membership is a sharper probe
+than either the campaign's own task-level reviews had run, applied here one
+level up, at the branch as a whole.
+
+**A fourth, smaller pair: a guard whose message claimed more than its
+assertion checked, and the trap its own author fell into twice while writing
+it.** A new test resolving intra-doc links to a renamed headline test said,
+in its failure message, that four doc comments "must all name the same
+current test" — read as a claim about arity, deleting three of the four
+passed green, because the assertion checks distinctness of what remains, not
+how many links exist. The message was reworded rather than the assertion,
+correctly: distinctness is the property worth having as the test's name
+keeps changing under it. And a source-scanning guard that greps its own file
+for the pattern it is guarding is self-satisfying if it also matches its own
+doc comment — the implementer hit that shape twice while building this one
+guard, and excluded its own search literal from the match before either
+instance shipped.
+
+**The campaign is a sixth confirming instance of the diagnosis
+[The Scarf](./chronicle/the-scarf.md) named as a fourth and The Mortise as a
+fifth: every substantive defect traced to controlling-session text, never to
+an implementer's code.** A brief's over-broad "do not touch `sentences/`"
+constraint — meant to protect two frozen corpora — left the family's own
+README stale about which corpus a resolver reads. A review brief attributed
+a disclosure to a report file that had never carried it; the report was
+clean, the disclosure lived only in a reply. And a controller's own
+correction, once a stale claim was found live in one place, fixed exactly
+that one place while the identical sentence stood, word for word, in six
+more — three in the resolver's source, two in the generated report, one in
+the ladder's own draft prose — found only by a grep the whole-branch review
+ran that the original fix never did. One datum runs the other direction and
+is worth flagging rather than trusting outright: this campaign's own hazard
+— a verification claim written for work not performed — was named in later
+dispatches after it was first caught, and a subsequent implementer caught
+*itself* drafting exactly that shape of claim and removed it before the
+report was finalized. Whether naming a failure mode reliably produces a
+self-check or this was one attentive session is not something one instance
+can answer; it is a hypothesis for the next campaign's data, not a practice
+yet.
+
 **A note from The Staff (2026-08-14), amended by The Sluice (2026-08-15),
 since this score is read against an instrument this passage names by a label
 that no longer exists.** Both halves of Sexton's pairing — the census

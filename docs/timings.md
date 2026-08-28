@@ -3654,6 +3654,40 @@ measured here.
 | 2026-08-28T02:42:05Z | sluice:outboard | 40.996 | 25.698 | 39.592 | 1.59 | 0 | eea7b0155 |  | lefford | 40 |
 | 2026-08-28T02:49:50Z | sluice:gate | 465.147 | 12848.589 | 484.551 | 28.66 | 0 | 15af157f1 |  | lefford | 40 |
 | 2026-08-28T02:58:17Z | sluice:clients | 506.719 | 8921.440 | 116.501 | 17.84 | 0 | ae5fe3bf9 |  | lefford | 40 |
+| 2026-08-28T14:51:16Z | gate-commit | 79.930 | 347.754 | 79.440 | 5.34 | 0 | 1f8713b95 | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T14:51:56Z | gate-commit | 21.139 | 49.554 | 12.651 | 2.94 | 0 | 1f8713b95 | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T14:52:48Z | gate-commit | 21.398 | 50.264 | 12.907 | 2.95 | 0 | 1f8713b95 | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T15:42:44Z | gate-commit | 20.530 | 49.742 | 12.531 | 3.03 | 0 | 5cc6ea6b9 | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T17:05:52Z | gate-commit | 22.639 | 51.362 | 12.847 | 2.84 | 0 | 119eac62d | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T17:07:06Z | gate-commit | 32.355 | 54.047 | 14.111 | 2.11 | 0 | 119eac62d | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T17:17:13Z | gate-commit | 21.775 | 50.635 | 12.874 | 2.92 | 0 | 0f9763d8f | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T17:18:36Z | gate-commit | 20.791 | 50.288 | 12.884 | 3.04 | 0 | 0f9763d8f | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T17:24:50Z | gate-commit | 21.079 | 50.205 | 12.756 | 2.99 | 0 | b5e29ad65 | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T17:25:34Z | gate-commit | 22.684 | 50.388 | 12.938 | 2.79 | 0 | b5e29ad65 | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T17:29:52Z | gate-commit | 25.509 | 63.849 | 13.535 | 3.03 | 0 | 04c0345bb | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T17:33:10Z | gate-commit | 21.077 | 50.111 | 12.573 | 2.97 | 0 | 04c0345bb | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T17:34:24Z | gate-commit | 20.279 | 49.742 | 12.819 | 3.09 | 0 | 04c0345bb | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T17:39:08Z | gate-commit | 21.141 | 50.365 | 12.558 | 2.98 | 0 | 43ddd670a | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T17:39:41Z | gate-commit | 20.548 | 49.978 | 12.850 | 3.06 | 0 | 43ddd670a | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T17:48:31Z | gate-commit | 21.641 | 50.222 | 12.482 | 2.90 | 0 | aa10b0097 | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T17:50:04Z | gate-commit | 20.185 | 49.778 | 12.939 | 3.11 | 0 | aa10b0097 | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T17:59:53Z | gate-commit | 20.528 | 45.307 | 11.020 | 2.74 | 0 | a12545434 | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T18:01:03Z | gate-commit | 23.804 | 59.510 | 13.185 | 3.05 | 0 | a12545434 | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T18:01:46Z | gate-commit | 20.620 | 49.841 | 12.950 | 3.05 | 0 | a12545434 | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T18:18:05Z | gate-commit | 22.432 | 51.563 | 13.266 | 2.89 | 0 | 467b0ed12 | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T18:19:41Z | gate-commit | 20.126 | 49.641 | 12.710 | 3.10 | 0 | 467b0ed12 | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T18:39:04Z | rebaseline | 41.341 | 250.677 | 12.021 | 6.35 | 0 | 7e161f623 | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T18:40:41Z | gate-commit | 21.465 | 50.146 | 12.938 | 2.94 | 0 | 7e161f623 | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T18:41:24Z | gate-commit | 20.698 | 49.466 | 12.448 | 2.99 | 0 | 42a47917d | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T18:54:26Z | gate-commit | 20.931 | 49.577 | 12.317 | 2.96 | 0 | 27d9ae3f0 | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T19:26:25Z | rebaseline | 40.383 | 254.651 | 12.625 | 6.62 | 0 | 8e2a35d83 | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T19:27:09Z | gate-commit | 22.679 | 50.287 | 12.834 | 2.78 | 0 | 8e2a35d83 | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T19:30:35Z | rebaseline | 40.213 | 255.216 | 13.084 | 6.67 | 0 | 8e2a35d83 | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T19:31:04Z | gate-commit | 20.464 | 49.596 | 12.594 | 3.04 | 0 | 8e2a35d83 | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T19:40:47Z | gate-commit | 20.581 | 49.614 | 13.175 | 3.05 | 0 | 8e2a35d83 | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T19:52:27Z | gate-commit | 21.279 | 50.288 | 12.886 | 2.97 | 0 | 59c8f7b16 | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T20:02:31Z | gate-commit | 20.559 | 49.649 | 12.736 | 3.03 | 0 | 8f3302673 | campaign/the-stile | MacBookPro | 10 |
+| 2026-08-28T20:04:52Z | gate-commit | 20.391 | 49.790 | 12.763 | 3.07 | 0 | a52f6cabf | campaign/the-stile | MacBookPro | 10 |
 | 2026-08-28T03:17:27Z | sluice:artifacts | 67.504 | 601.037 | 22.623 | 9.24 | 0 | 04486862b |  | lefford | 40 |
 | 2026-08-28T03:18:08Z | sluice:outboard | 41.235 | 25.704 | 39.749 | 1.59 | 0 | 3b9604a15 |  | lefford | 40 |
 | 2026-08-28T03:25:06Z | sluice:gate | 417.166 | 12165.872 | 396.829 | 30.11 | 0 | aea8c41b6 |  | lefford | 40 |
@@ -3727,3 +3761,4 @@ measured here.
 | 2026-08-28T19:28:26Z | sluice:outboard | 41.166 | 26.026 | 39.159 | 1.58 | 0 | 4f29e5039 |  | lefford | 40 |
 | 2026-08-28T19:36:26Z | sluice:gate | 479.377 | 13275.752 | 445.243 | 28.62 | 0 | 7043cca6a |  | lefford | 40 |
 | 2026-08-28T19:45:31Z | sluice:clients | 545.387 | 9490.472 | 90.936 | 17.57 | 0 | 75f8d9857 |  | lefford | 40 |
+| 2026-08-28T20:17:20Z | rebaseline | 105.461 | 312.052 | 14.827 | 3.10 | 0 | 6755d6f05 | campaign/the-stile | MacBookPro | 10 |
