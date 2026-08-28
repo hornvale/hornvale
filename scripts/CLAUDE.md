@@ -215,6 +215,23 @@ the exact SHA it tested.
   fatal, and skippable with `HV_SLUICE_SKIP_BOARD=1` (which
   `scripts/test-sluice.sh` sets for the whole file, so a test run never
   pushes a board ref to the real `origin`).
+- **`census-duration-alarm.sh`** — reports a census run's wall against the
+  alarm threshold AT THE MOMENT IT IS MEASURED, called from `census-run.sh`.
+  **`cli/tests/suite/census_duration.rs` is the ratchet and it reads
+  `docs/timings.md` on `main` — which a census run's row no longer reaches
+  promptly.** Since the census joined the merge queue (2026-08-27) the row is
+  committed onto the run's `census/*` DELIVERY BRANCH with the goldens, so it
+  lands on main only when a campaign merges that branch, which may be days
+  later or never. Measured that day: four runs, three past the threshold, and
+  the ledger on main still showing a two-day-old figure as its most recent
+  census — the alarm could not see the runs that would have tripped it, while
+  the file the root guide tells you to consult for census cost read as current.
+  This is the live half; the Rust test still guards committed history. It reads
+  `CENSUS_ALARM_SECS` OUT of the Rust source rather than restating it (the
+  `test-census-guard.sh` discipline), and if it cannot find that constant it
+  **refuses to report a threshold** rather than inventing one — a bound stated
+  in a message is a claim, and a made-up one is worse than silence. Exit 0
+  always: a census that ran long is not a census that failed.
 - **`sluice-drain.sh`** — the operator's harness: pop the next row, gate it,
   dispatch on `kind`, set the terminal state, repeat. Every script it calls was
   committed and tested; **this one lived in a session scratchpad for weeks**,
