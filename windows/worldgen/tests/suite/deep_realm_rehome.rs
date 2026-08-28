@@ -347,13 +347,28 @@ fn rust_monster_live_path_reproduces_c2as_subterranean_asymmetry() {
 }
 
 #[test]
-fn xorn_live_path_reproduces_c2as_flat_ratio() {
-    // C2a measured the xorn's ratio at 1.02, flat within noise: its potency
-    // buys a large sovereignty floor and its devotions are near-zero on
-    // every axis, so no curve moves it. THIS is the campaign's wiring check
-    // (plan Task 3) — reproducing that flatness through a DIFFERENT code
-    // path is what proves the right thing got connected, rather than
-    // something that merely moves numbers.
+fn xorn_live_path_no_longer_reproduces_c2as_flat_ratio() {
+    // C2a measured the xorn's ratio at 1.02, flat within noise — but that
+    // flatness was an artifact of an UNFED axis, not a structural property
+    // of xorn's authored condition curves. Its `niche` carried no
+    // `CHEMOSYNTHATE` weight (witnessed by `TrophicMode::Chemotrophic`, fed
+    // by nothing), so nothing about the subterranean per-rung reading this
+    // ratio exercises could ever move xorn's live score away from a
+    // surface-forced one.
+    //
+    // THE SOURCES, Task 9 fed that weight (0.65 `MINERAL` / 0.35
+    // `CHEMOSYNTHATE`) in the same commit that wired the real per-rung
+    // energy field to the capacity loop — Ruling P2's deliberate deferral,
+    // landed on purpose, precisely so this flatness would stop holding.
+    // Measured 2026-08-26, seed 42: ratio 1.697 — xorn now reads
+    // MEASURABLY BETTER underground than a surface-forced reading of the
+    // same kind, the right direction for a chemotroph whose real energy
+    // supply exists only at depth. Do not narrow this band back toward 1.0
+    // to "fix" it; that would silently un-wire the axis this task exists to
+    // feed. Renamed from `xorn_live_path_reproduces_c2as_flat_ratio` because
+    // a test named after a premise it now falsifies is worse than an honest
+    // rename (the same rule `subterranean_energy_probe.rs`'s own
+    // `derived_energy_is_monotone_not_a_trough` states).
     let (live, surface_forced, n) = live_vs_surface_forced_on_cave_vertices("xorn");
     let ratio = live / surface_forced;
     println!(
@@ -361,8 +376,10 @@ fn xorn_live_path_reproduces_c2as_flat_ratio() {
          over {n} cave-bearing land vertices"
     );
     assert!(
-        (0.8..=1.25).contains(&ratio),
-        "xorn's ratio must stay essentially flat between subterranean and surface scoring \
-         (C2a measured 1.02); got ratio {ratio:.3} ({live:.6} vs {surface_forced:.6} over {n} vertices)"
+        ratio > 1.25,
+        "xorn's live/surface-forced ratio is expected to have moved OFF the pre-Task-9 flat \
+         band (C2a measured 1.02, bounded [0.8, 1.25]) now that CHEMOSYNTHATE is fed; got \
+         ratio {ratio:.3} ({live:.6} vs {surface_forced:.6} over {n} vertices) — a value back \
+         inside [0.8, 1.25] means the per-rung switch or xorn's niche weight regressed"
     );
 }

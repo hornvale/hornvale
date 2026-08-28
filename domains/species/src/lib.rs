@@ -16,10 +16,11 @@
 use std::collections::BTreeMap;
 
 use hornvale_kernel::{
-    ANIMAL_PREY, AxisValence, Component, ComponentStore, ConceptDef, ConceptKind, ConceptRegistry,
-    ConditionResponse, Correspondent, DETRITUS, EntityId, EnvironmentAxis, EnvironmentVector, Fact,
-    Ledger, LedgerError, MARINE_FORAGE, MINERAL, Manifest, Mass, PHOTOSYNTHATE, PLANT_FORAGE,
-    RegistryError, ResourceVector, UnitError, Value, Void, World, WorldTime,
+    ANIMAL_PREY, AxisValence, CHEMOSYNTHATE, Component, ComponentStore, ConceptDef, ConceptKind,
+    ConceptRegistry, ConditionResponse, Correspondent, DETRITUS, EntityId, EnvironmentAxis,
+    EnvironmentVector, Fact, Ledger, LedgerError, MARINE_FORAGE, MINERAL, Manifest, Mass,
+    PHOTOSYNTHATE, PLANT_FORAGE, RegistryError, ResourceVector, UnitError, Value, Void, World,
+    WorldTime,
 };
 // `perception_registry()` is keyed by `KindId`, so a caller resolving a
 // species by name (worldgen's `observer_named`, campaign "The Beholding")
@@ -2333,9 +2334,14 @@ pub enum TrophicMode {
     /// Energy from chemical gradients in rock or water — a hydrothermal vent
     /// community, and the underworld's only possible productive base.
     ///
-    /// **Declared, not witnessed:** no kind carries it, and
-    /// `tests/suite/metabolic_pairs.rs` asserts exactly that. Rung 2's
-    /// success condition is that this assertion has to change.
+    /// **Witnessed by `xorn`** (rung 2 of the Underworld Larder,
+    /// `tests/suite/metabolic_pairs.rs`): a thing that burrows through stone
+    /// and eats mineral and a chemical gradient is a chemolithotroph, and
+    /// `Absent`/`Absent` was only ever the honest encoding available before
+    /// this variant existed. The `niche` weight that actually feeds it
+    /// (`CHEMOSYNTHATE`) landed in THE SOURCES, Task 9, in the same commit as
+    /// the per-rung energy field that supplies it — see the `xorn` row's own
+    /// comment.
     Chemotrophic,
     /// No metabolism at all. See [`ThermalStrategy::Absent`] for the naming.
     Absent,
@@ -2347,19 +2353,38 @@ pub enum TrophicMode {
 /// campaign split.
 ///
 /// **THE DIRECTION THIS RELIES ON, STATED.** It reads the thermal axis alone,
-/// so it is correct only while `ThermalStrategy::Absent` and
-/// `TrophicMode::Absent` occur together and never apart. The type admits **six**
-/// pairs where that is false — three `(Absent, <live trophic mode>)` and three
-/// `(<live thermal strategy>, Absent)` (spec §4.4). Keep that number distinct
-/// from the **twelve** UNSANCTIONED pairs (16 combinations less the 4
-/// sanctioned rows): twelve is what the pair table refuses, six is what would
-/// break *this function*, and only the second is the direction stated here.
-/// What enforces it is `tests/suite/metabolic_pairs.rs`'s sanctioned-pair
-/// table, which consults every kind's pair in the workspace suite — and in the
-/// commit gate once a green chamber run records its baseline duration into
-/// `docs/timings/subfloor-roster.tsv`. If that table is ever relaxed
-/// to admit a `(Absent, …)` pair with a live trophic mode, this function is
-/// the first place that goes wrong.
+/// so it is correct only when `ThermalStrategy::Absent` implies zero basal
+/// metabolic rate — which is NOT the same claim as "implies
+/// `TrophicMode::Absent` too" (rung 1 could get away with conflating the two;
+/// rung 2 cannot). The type admits **six** pairs where thermal- and
+/// trophic-`Absent` diverge — three `(Absent, <live trophic mode>)` and three
+/// `(<live thermal strategy>, Absent)` (spec §4.4); this count is a fact about
+/// the TYPE and does not move with sanctioning. Keep it distinct from the
+/// **eleven** UNSANCTIONED pairs (16 combinations less the 5 sanctioned rows,
+/// as of rung 2's `(Absent, Chemotrophic)`): eleven is what the pair table
+/// refuses, six is what the type merely admits, and only the second is the
+/// direction stated here.
+///
+/// **One of the six is now SANCTIONED AND WITNESSED, and this function did
+/// not go wrong.** This paragraph used to warn about that only
+/// hypothetically ("if that table is ever relaxed to admit a `(Absent, …)`
+/// pair with a live trophic mode, this function is the first place that goes
+/// wrong"); rung 2 of the Underworld Larder did exactly that, and `xorn`
+/// carries `(Absent, Chemotrophic)` today. The reason it is safe is worth
+/// stating rather than left to luck: this function answers "does this kind
+/// have zero basal metabolic rate", not "does this kind draw energy from
+/// nothing" — a chemolithotroph's chemical energy extraction is a non-thermal
+/// process that needs no BMR, so `xorn`'s `thermal_strategy` stayed `Absent`
+/// by construction (see the `xorn` row's own comment in `biosphere_registry`)
+/// precisely so this invariant would hold for it. The remaining five members
+/// of the six stay UNSANCTIONED, and `tests/suite/metabolic_pairs.rs`'s
+/// sanctioned-pair table — which consults every kind's pair in the workspace
+/// suite, and in the commit gate once a green chamber run records its
+/// baseline duration into `docs/timings/subfloor-roster.tsv` — is still what
+/// enforces that. If the table admits a live-thermal/`Absent`-trophic pair,
+/// or a second `Absent`-thermal/live-trophic pair whose kind lacks the same
+/// zero-BMR argument `xorn`'s has, this function is the first place that goes
+/// wrong.
 ///
 /// A two-axis signature was specified and is not available: every one of the
 /// four call sites holds a `ThermalStrategy` and nothing else, because `Body`
@@ -2459,9 +2484,15 @@ pub fn habitat_realm_registry() -> ComponentStore<KindId, HabitatRealm> {
         // A cave-dark, damp mineral-eater: C2a measured its subterranean fit
         // at ~2.5x its surface fit once the low-insolation proxy came out.
         (KindId("rust-monster"), HabitatRealm::Subterranean),
-        // Climate-indifferent by potency rather than by curve — C2a measured
-        // its ratio at 1.02, flat within noise. Listed because it LIVES
-        // underground, not because scoring it there will move it.
+        // C2a measured its condition-curve ratio at 1.02, flat within noise
+        // — but that flatness held only because `niche` carried no
+        // `CHEMOSYNTHATE` weight yet. THE SOURCES, Task 9 fed that weight
+        // (0.65 MINERAL / 0.35 CHEMOSYNTHATE) alongside the real per-rung
+        // energy field, and scoring it here now DOES move it: live/surface-
+        // forced ratio 1.697 at seed 42 (`deep_realm_rehome.rs::xorn_live_
+        // path_no_longer_reproduces_c2as_flat_ratio`). Still listed because
+        // it lives underground; the parenthetical about scoring not moving
+        // it is the part that stopped being true.
         (KindId("xorn"), HabitatRealm::Subterranean),
         // The Delvers (C2c) briefly added two subterranean PEOPLES here and
         // withdrew them: a kind whose identity is DEPTH cannot be expressed
@@ -3418,16 +3449,38 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(55.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Absent,
-                trophic_mode: TrophicMode::Absent,
-                niche: ResourceVector::new(&[(MINERAL, 1.0)]).unwrap(),
+                trophic_mode: TrophicMode::Chemotrophic,
+                niche: ResourceVector::new(&[(MINERAL, 0.65), (CHEMOSYNTHATE, 0.35)]).unwrap(),
                 condition_niche: xorn_condition_niche(),
                 potency: 5.0 / 30.0, // xorn — CR 5 (5E MM); potency = CR/30
                 social_form: SocialForm::Solitary,
                 schedule: LifeSchedule::Allometric,
-                // Ametabolic (both axes `Absent`), burrows through stone:
-                // lives IN the substrate,
-                // not on it. rust-monster shares the pure-MINERAL niche but
-                // stays Terrestrial — it walks the surface eating metal.
+                // Chemotrophic (rung 2 of the Underworld Larder): burrows
+                // through stone and lives IN the substrate, not on it, eating
+                // both mineral and the rock column's own chemical energy — a
+                // chemolithotroph, not merely ametabolic. `thermal_strategy`
+                // stays `Absent` (unchanged; ametabolism is a thermal-axis
+                // fact and `is_ametabolic` reads that axis only), so xorn's
+                // BMR and the life-history golden do not move.
+                //
+                // THE SOURCES, Task 9: the `CHEMOSYNTHATE` weight deferred
+                // from this row's authoring (Ruling P2) — it could not be
+                // fed until the same commit wired the real per-rung energy
+                // field to the capacity loop, and a witnessed-but-unfed
+                // niche would have moved no world number while reading as if
+                // it had. The 0.65/0.35 split against `MINERAL` is
+                // deliberate, not a default: `MINERAL` is what a xorn's body
+                // is *made of* (it eats the rock it tunnels through), while
+                // `CHEMOSYNTHATE` is what *powers* it (the redox/thermal
+                // gradient a chemotroph actually metabolizes) — the same
+                // material/energy distinction `TrophicMode::Chemotrophic`
+                // names, now given a number. Kept a minority share of the
+                // niche because a xorn is authored as a stone-eater first;
+                // the energy axis differentiates it by depth without
+                // dominating what it is. rust-monster shares the pure-MINERAL
+                // niche but stays Terrestrial/Heterotrophic — it walks the
+                // surface eating metal, not gaining energy from a chemical
+                // gradient.
             },
         ),
         (
@@ -6188,9 +6241,14 @@ mod tests {
             assert_eq!(w(name, ANIMAL_PREY), 1.0);
         }
         assert_eq!(w("otyugh", DETRITUS), 1.0);
-        for name in ["xorn", "rust-monster"] {
-            assert_eq!(w(name, MINERAL), 1.0);
-        }
+        // rust-monster is the pure-MINERAL basis constant; xorn shares the
+        // axis but no longer owns it alone — THE SOURCES, Task 9 split its
+        // niche 0.65 MINERAL / 0.35 CHEMOSYNTHATE (Ruling P2), the
+        // material/energy distinction `TrophicMode::Chemotrophic` names,
+        // now given a number (see the `xorn` row's own comment).
+        assert_eq!(w("rust-monster", MINERAL), 1.0);
+        assert_eq!(w("xorn", MINERAL), 0.65);
+        assert_eq!(w("xorn", CHEMOSYNTHATE), 0.35);
     }
 
     #[test]

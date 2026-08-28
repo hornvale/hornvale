@@ -898,6 +898,7 @@ hornvale-kernel::hornvale_kernel$ecology::tests::a_capacity_map_accepts_any_non_
 hornvale-kernel::hornvale_kernel$ecology::tests::a_suitability_map_accepts_the_unit_interval_and_rejects_outside_it
 hornvale-kernel::hornvale_kernel$ecology::tests::a_suitability_never_raises_a_capacity
 hornvale-kernel::hornvale_kernel$ecology::tests::a_trailing_zero_weight_axis_does_not_perturb_a_terrestrial_niche
+hornvale-kernel::hornvale_kernel$ecology::tests::chemosynthate_takes_the_next_free_id_and_is_ambient
 hornvale-kernel::hornvale_kernel$ecology::tests::condition_response_floors_and_peaks
 hornvale-kernel::hornvale_kernel$ecology::tests::modulating_a_capacity_by_a_suitability_yields_a_capacity
 hornvale-kernel::hornvale_kernel$ecology::tests::overlap_is_symmetric_unit_diagonal_and_disjoint_zero
@@ -1287,10 +1288,8 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::d8_fires_on_exactly_alchemy_
 hornvale-lab::hornvale_lab$domesday::detect::tests::defensibility_capacity_rank_corr_still_exists_in_the_registry
 hornvale-lab::hornvale_lab$domesday::detect::tests::direct_references_match_measured_crates
 hornvale-lab::hornvale_lab$domesday::detect::tests::domain_crates_are_still_exactly_this_list
-hornvale-lab::hornvale_lab$domesday::detect::tests::findings_are_sorted_by_detector_then_metric
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_reads_a_nontrivial_correlation_and_its_sign
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_returns_none_for_a_constant_column
-hornvale-lab::hornvale_lab$domesday::detect::tests::the_live_census_reproduces_the_preregistered_findings
 hornvale-lab::hornvale_lab$domesday::guard::every_emitted_detector_name_is_declared
 hornvale-lab::hornvale_lab$domesday::guard::loading_never_builds_a_world
 hornvale-lab::hornvale_lab$domesday::render::tests::a_bare_citation_outside_any_paren_is_redacted_with_its_possessive
@@ -1298,7 +1297,6 @@ hornvale-lab::hornvale_lab$domesday::render::tests::a_detector_that_fired_nothin
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_page_carries_the_generated_header_and_only_computed_numbers
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_with_no_metrics_renders_the_no_metrics_notice_verbatim
 hornvale-lab::hornvale_lab$domesday::render::tests::a_flag_metric_always_renders_both_true_and_false_rows
-hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two
 hornvale-lab::hornvale_lab$domesday::render::tests::a_novel_detector_name_reaches_the_rendered_index
 hornvale-lab::hornvale_lab$domesday::render::tests::a_removed_parenthetical_directly_before_a_period_does_not_leave_a_dangling_space
 hornvale-lab::hornvale_lab$domesday::render::tests::an_ellipsis_survives_the_space_dot_space_cleanup_untouched
@@ -2194,15 +2192,20 @@ hornvale-terrain::hornvale_terrain$crust::tests::stacked_terranes_saturate_at_th
 hornvale-terrain::hornvale_terrain$crust::tests::supercontinent_no_longer_transforms_the_drawn_craton_set
 hornvale-terrain::hornvale_terrain$crust::tests::terranes_are_drawn_on_continental_margins_and_thicken_crust
 hornvale-terrain::hornvale_terrain$crust::tests::the_rescale_delivers_its_own_budget
+hornvale-terrain::hornvale_terrain$delve::tests::a_bounded_rung_is_evaluated_at_its_delta_t_midpoint
 hornvale-terrain::hornvale_terrain$delve::tests::a_negative_or_nonfinite_delta_t_resolves_to_the_top_rung
 hornvale-terrain::hornvale_terrain$delve::tests::a_rungs_depth_in_metres_varies_by_vertex
 hornvale-terrain::hornvale_terrain$delve::tests::at_one_depth_a_hotter_gradient_sits_further_down_the_ladder
+hornvale-terrain::hornvale_terrain$delve::tests::evaluation_depth_is_monotone_in_the_rung
+hornvale-terrain::hornvale_terrain$delve::tests::evaluation_depth_never_exceeds_the_caves_reach
+hornvale-terrain::hornvale_terrain$delve::tests::nadir_is_evaluated_at_the_caves_own_reach
 hornvale-terrain::hornvale_terrain$delve::tests::rung_at_delta_t_agrees_with_the_declared_ranges
 hornvale-terrain::hornvale_terrain$delve::tests::surface_owns_no_temperature
 hornvale-terrain::hornvale_terrain$delve::tests::the_derived_order_runs_shallow_to_deep
 hornvale-terrain::hornvale_terrain$delve::tests::the_habitable_ceiling_is_the_authored_value
 hornvale-terrain::hornvale_terrain$delve::tests::the_ladder_is_within_the_specs_bound
 hornvale-terrain::hornvale_terrain$delve::tests::the_rungs_tile_the_line_with_no_gap_and_no_overlap
+hornvale-terrain::hornvale_terrain$delve::tests::the_surface_rung_has_no_evaluation_depth
 hornvale-terrain::hornvale_terrain$drainage::tests::accumulation_conserves_land_area_and_is_deterministic
 hornvale-terrain::hornvale_terrain$drainage::tests::drainage_flows_downhill_to_a_wetter_outlet
 hornvale-terrain::hornvale_terrain$elevation::tests::a_single_craton_world_has_a_shelf_and_a_bimodal_hypsometry
@@ -2607,6 +2610,7 @@ hornvale-vessel::hornvale_vessel$liveness::tests::a_creature_crosses_a_hearth_be
 hornvale-vessel::hornvale_vessel$liveness::tests::a_default_controller_passes_through_and_a_player_controller_holds
 hornvale-vessel::hornvale_vessel$liveness::tests::a_degenerate_zero_rise_drive_terminates_via_the_max_steps_cap_not_a_hang
 hornvale-vessel::hornvale_vessel$liveness::tests::a_dread_afraid_creature_raises_no_alarm
+hornvale-vessel::hornvale_vessel$liveness::tests::a_fatigue_read_matches_the_walks_own_fatigue_arithmetic
 hornvale-vessel::hornvale_vessel$liveness::tests::a_flow_drive_grants_no_anticipation_lead_but_a_stock_drive_does
 hornvale-vessel::hornvale_vessel$liveness::tests::a_helpless_creature_gives_up_even_with_a_reachable_proposal
 hornvale-vessel::hornvale_vessel$liveness::tests::a_lonely_creature_yields_to_thirst_but_homes_when_sated
@@ -2671,6 +2675,7 @@ hornvale-vessel::hornvale_vessel$liveness::tests::drive_folds_drank_events_risin
 hornvale-vessel::hornvale_vessel$liveness::tests::every_action_in_a_plan_has_its_precondition_satisfied_in_sequence
 hornvale-vessel::hornvale_vessel$liveness::tests::everything_replayable_is_a_movement
 hornvale-vessel::hornvale_vessel$liveness::tests::exactly_the_non_committing_actions_are_replayable
+hornvale-vessel::hornvale_vessel$liveness::tests::facts_are_chronological_across_consecutive_ticks
 hornvale-vessel::hornvale_vessel$liveness::tests::fatigue_folds_rested_events
 hornvale-vessel::hornvale_vessel$liveness::tests::flee_step_picks_the_safest_neighbour_or_none_when_cornered
 hornvale-vessel::hornvale_vessel$liveness::tests::food_value_is_the_niche_dotted_with_availability
@@ -2804,6 +2809,7 @@ hornvale-vessel::hornvale_vessel$underworld_level::tests::every_level_but_the_fi
 hornvale-vessel::hornvale_vessel$underworld_level::tests::every_walkable_cell_is_reachable_from_every_other
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generate_descent_produces_one_level_per_rung
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generation_is_deterministic
+hornvale-vessel::hornvale_vessel$underworld_level::tests::made_chambers_lean_worked_found_chambers_lean_natural
 hornvale-vessel::hornvale_vessel$underworld_level::tests::stairs_down_and_stairs_up_never_share_a_cell
 hornvale-vessel::hornvale_vessel$underworld_level::tests::two_rungs_with_the_same_origin_and_kind_still_differ
 hornvale-vessel::hornvale_vessel$underworld_level::tests::worked_fraction_has_inertia_across_rungs
@@ -2860,6 +2866,9 @@ hornvale-vessel::suite$lantern_light::light_reaches_exactly_what_sight_reaches
 hornvale-vessel::suite$lantern_light::the_falloff_ratio_between_two_cells_is_inverse_square
 hornvale-vessel::suite$ledger_query_equivalence::facts_of_selects_what_find_and_filter_selected
 hornvale-vessel::suite$object_property_concepts::every_object_property_has_exactly_one_registered_concept
+hornvale-vessel::suite$passage::a_clearing_fact_does_not_open_the_passage_before_it_happened
+hornvale-vessel::suite$passage::addr_key_distinguishes_every_field
+hornvale-vessel::suite$passage::addr_key_spelling_is_the_permanent_on_disk_key
 hornvale-vessel::suite$possess_target::the_default_target_is_the_flagship
 hornvale-vessel::suite$session_snapshot::the_fixture_is_taken_at_the_transcript_s_own_day
 hornvale-vessel::suite$stance::an_unoffended_host_is_forthcoming_whatever_its_prior
@@ -2990,6 +2999,12 @@ hornvale-worldgen::hornvale_worldgen$delve_seating::tests::two_formations_do_not
 hornvale-worldgen::hornvale_worldgen$disposition::tests::an_unclamped_axis_realizes_the_authored_standard_deviation
 hornvale-worldgen::hornvale_worldgen$disposition::tests::the_unit_halfwidth_is_the_square_root_of_three
 hornvale-worldgen::hornvale_worldgen$disposition::tests::the_year_key_rounds_to_the_nearest_whole_year
+hornvale-worldgen::hornvale_worldgen$energy::tests::detrital_import_needs_drainage
+hornvale-worldgen::hornvale_worldgen$energy::tests::every_chemotrophic_source_needs_water
+hornvale-worldgen::hornvale_worldgen$energy::tests::every_source_is_a_ratio
+hornvale-worldgen::hornvale_worldgen$energy::tests::sulphide_oxidation_peaks_at_intermediate_depth
+hornvale-worldgen::hornvale_worldgen$energy::tests::sulphide_oxidation_peaks_in_underdeep_across_the_legal_gradient_range
+hornvale-worldgen::hornvale_worldgen$energy::tests::the_three_silica_sources_peak_at_different_silica
 hornvale-worldgen::hornvale_worldgen$gazetteer::tests::a_volcanos_salt_is_its_bare_vertex_id
 hornvale-worldgen::hornvale_worldgen$gazetteer::tests::the_salt_is_injective_over_class_and_vertex
 hornvale-worldgen::hornvale_worldgen$gazetteer::tests::two_classes_at_one_vertex_do_not_share_a_name

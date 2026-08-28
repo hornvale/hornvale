@@ -173,7 +173,7 @@ Score **11**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 
 | `peoples-alive-at-bake-end` | 0.004004004 | 11 |
 | `peoples-placed` | 0.004004004 | 11 |
 | `first-day-pays-tribute-to` | 0.0045045045 | 703106.25 |
-| `per-cell-diversity` | 0.005005005 | 1.368401 |
+| `per-cell-diversity` | 0.005005005 | 1.3724121 |
 | `chorus-distinctiveness` | 0.008008008 | 0.19313131 |
 | `defensibility-capacity-rank-corr` | 0.009009009 | -0.35777447 |
 | `kobold-settlement-count` | 0.0095095095 | 0 |
@@ -328,7 +328,7 @@ Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 c
 | `sediment-volume` | 0.006006006 | 1843581.6 |
 | `mountain-coverage` | 0.008008008 | 0.66179141 |
 | `first-day-occ-cause-fled` | 0.0085170341 | 109575 |
-| `composition-variance` | 0.009009009 | 0.46958048 |
+| `composition-variance` | 0.009009009 | 0.46882903 |
 | `granary-raid-phase-concentration` | 0.01017294 | 1 |
 
 ### Seed `850`
@@ -463,8 +463,8 @@ Every numeric/integer census column with a domain and a role that this report di
 | `core-homophony-hobgoblin` | frozen: min == max across 1000 worlds |
 | `core-homophony-bugbear` | frozen: min == max across 1000 worlds |
 | `core-homophony-kobold` | frozen: min == max across 1000 worlds |
-| `homophony-merger-share-goblin` | frozen: min == max across 785 worlds |
-| `homophony-merger-share-hobgoblin` | frozen: min == max across 749 worlds |
+| `homophony-merger-share-goblin` | frozen: min == max across 787 worlds |
+| `homophony-merger-share-hobgoblin` | frozen: min == max across 751 worlds |
 | `homophony-merger-share-bugbear` | frozen: min == max across 999 worlds |
 | `homophony-merger-share-kobold` | frozen: min == max across 667 worlds |
 | `confusable-homophony-goblin` | frozen: min == max across 1000 worlds |

@@ -171,8 +171,14 @@ const HELPLESS_PROBE_DAYS: f64 = 5.0;
 /// `(last_drank, day)` — a fold, exactly like the drive it reads, so
 /// `affect_of` (the read) and the drive tick (the mover) compute it identically
 /// and never disagree.
-fn learned_helplessness(last_drank: f64, day: f64) -> bool {
-    let unmet = day - last_drank;
+fn learned_helplessness(last_drank: WorldTime, day: WorldTime) -> bool {
+    // Both arguments are INSTANTS, so their difference is an exact tick span.
+    // The onset threshold and the probe cadence below are authored in
+    // continuous days (`HELPLESS_ONSET_DAYS`, `HELPLESS_PROBE_DAYS`) and the
+    // cadence is a real-valued modulo, so the SPAN crosses to `f64` standard
+    // days HERE, once, at that arithmetic's own edge — the walk does not carry
+    // a float clock to suit it. Lossless below ~2.47e8 years (decision 0186).
+    let unmet = (day - last_drank).as_std_days();
     if unmet < HELPLESS_ONSET_DAYS {
         return false;
     }
@@ -2183,9 +2189,12 @@ const SURVIVAL_OVERRIDE: f64 = 0.9;
 /// `ActivityCycle` and the time of day (the fractional part of `day`; The
 /// Slumber, spec §1). Diurnal is awake through the day window, nocturnal the
 /// complement, crepuscular the twilight edges. A fractional-day approximation
-/// The resolution at which the tick scans for the next wake transition (days).
-/// Fine enough to catch a crepuscular creature's narrow dawn/dusk bands.
-const WAKE_SCAN_STEP: f64 = 0.05;
+/// The resolution at which the tick scans for the next wake transition — one
+/// twentieth of a standard day (the historical `0.05` days), held as an EXACT
+/// tick span so the scan walks the lattice itself rather than re-rounding an
+/// accumulating `f64` day at every step. Fine enough to catch a crepuscular
+/// creature's narrow dawn/dusk bands.
+const WAKE_SCAN_STEP: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY / 20);
 
 /// A representative AWAKE fraction of the day for `activity` — where the health
 /// metric samples a creature's felt state (The Slumber). Sampling at midnight
@@ -2215,24 +2224,24 @@ pub(crate) fn next_awake_day(
     activity: ActivityCycle,
     terrain: &dyn Terrain,
     room: &Facet,
-    day: f64,
-) -> f64 {
-    let limit = day + 1.5;
+    day: WorldTime,
+) -> WorldTime {
+    // The scan's bound and its give-up fallback as EXACT spans: `day + 1.5`
+    // and `day + 1.0` were instant-plus-duration all along, and an instant is
+    // a tick count now, so the durations are spans rather than float days.
+    const SCAN_LIMIT: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY * 3 / 2);
+    const ONE_DAY: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY);
+    let limit = day + SCAN_LIMIT;
     let mut t = day + WAKE_SCAN_STEP;
     while t < limit {
-        if is_awake(
-            activity,
-            terrain,
-            room,
-            WorldTime::from_std_days(t).expect("a day value is finite"),
-        ) {
+        if is_awake(activity, terrain, room, t) {
             return t;
         }
-        t += WAKE_SCAN_STEP;
+        t = t + WAKE_SCAN_STEP;
     }
     // No waking within a cycle (e.g. polar night for a diurnal creature): sleep
     // on to the next day; the survival override still wakes a dying creature.
-    day + 1.0
+    day + ONE_DAY
 }
 
 /// (true solar altitude is deferred).
@@ -2255,11 +2264,23 @@ fn is_awake(activity: ActivityCycle, terrain: &dyn Terrain, room: &Facet, day: W
 /// over `rested` — the structural twin of thirst's `drive_at` over `drank`.
 /// type-audit: bare-ok(ratio: return)
 pub fn fatigue_at(ledger: &Ledger, entity: EntityId, t: WorldTime) -> f64 {
+    // THE READ AND THE MOVER MUST COMPUTE THIS THE SAME WAY (this module's own
+    // FOLD doctrine, stated on `learned_helplessness` and `drive_at`). The
+    // walk's own fatigue (`decide_step`) subtracts two INSTANTS on the lattice
+    // and crosses their exact span once. This read used to subtract two
+    // separately-crossed `f64` days, which is a different arithmetic shape:
+    // `t/K - r/K` and `(t - r)/K` disagree by an ULP for **56.7%** of tick
+    // pairs in the walk band (measured over 2e6 random pairs), so the two were
+    // no longer computing one function. The shapes are aligned here rather
+    // than in `decide_step`, because the exact-span form is the numerically
+    // better one and regressing the mover to match a float read would be
+    // backwards. `a_fatigue_read_matches_the_walks_own_fatigue_arithmetic`
+    // pins it on inputs measured to disagree under the old shape.
     let last_rested = ledger
         .facts_of(entity, RESTED)
         .filter_map(|f| f.day)
-        .fold(0.0_f64, |acc, d| acc.max(d.as_std_days()));
-    (FATIGUE_RISE * (t.as_std_days() - last_rested)).clamp(0.0, 1.0)
+        .fold(WorldTime::GENESIS, WorldTime::max);
+    (FATIGUE_RISE * (t - last_rested).as_std_days()).clamp(0.0, 1.0)
 }
 
 /// The rest (fatigue) drive, Drive #3 (The Slumber). A STOCK drive like thirst:
@@ -3776,10 +3797,22 @@ pub fn affect_of_memo_occupied(
     home_nav_cache: &mut HomeNavCache,
 ) -> Affect {
     let pos = agent_position(frozen, npc, day);
+    // BEHAVIOUR-PRESERVING, AND THE NEGATIVE CASE IS DELIBERATELY NOT HANDLED.
+    // `WorldTime::GENESIS` is `ticks: 0`, which is byte-for-byte the identity
+    // the old `fold(0.0, f64::max)` used — so a fact dated BEFORE genesis
+    // still reads as genesis here, exactly as it always has. What the retype
+    // buys is the removal of a float round-trip (`WorldTime` is `Ord`, so the
+    // fold orders instants directly), NOT a change of answer.
+    //
+    // Do not read decision 0126 into this. Negative days ARE legal, and
+    // flooring a pre-genesis fact at genesis is a real (if benign) loss —
+    // fixing it means returning `Option` and making each caller name its
+    // default, the way `last_fact_day_at_or_before` now does, which is a
+    // BEHAVIOUR change and is deliberately out of this retype's scope.
     let last_drank = frozen
         .facts_of(npc.entity, DRANK)
         .filter_map(|f| f.day)
-        .fold(0.0_f64, |acc, d| acc.max(d.as_std_days()));
+        .fold(WorldTime::GENESIS, WorldTime::max);
     let believed = shared_believed_water(frozen, npc, band, day, terrain, PLAN_BUDGET);
     let drive = drive_at(
         frozen,
@@ -3910,7 +3943,7 @@ pub fn affect_of_memo_occupied(
         drives.push(&danger);
         drives.push(&social);
     }
-    let helpless = !ametabolic && learned_helplessness(last_drank, day.as_std_days());
+    let helpless = !ametabolic && learned_helplessness(last_drank, day);
     let disposition = Disposition {
         latency: npc.deliberation_latency,
         horizon: npc.time_horizon,
@@ -4121,13 +4154,18 @@ fn landing_interior(pos: &Facet, terrain: &dyn Terrain) -> Option<(Interior, Anc
 
 /// A committed `agent-at` fact: `entity` moved to `target` on `day`, with
 /// `provenance` naming why.
-pub(crate) fn agent_at_fact(entity: EntityId, target: &Facet, day: f64, provenance: &str) -> Fact {
+pub(crate) fn agent_at_fact(
+    entity: EntityId,
+    target: &Facet,
+    day: WorldTime,
+    provenance: &str,
+) -> Fact {
     Fact {
         subject: entity,
         predicate: AGENT_AT.to_string(),
         object: Value::Text(room_to_text(target)),
         place: None,
-        day: Some(WorldTime::from_std_days(day).expect("simulated day is finite")),
+        day: Some(day),
         provenance: provenance.to_string(),
     }
 }
@@ -4141,43 +4179,43 @@ pub(crate) fn agent_at_fact(entity: EntityId, target: &Facet, day: f64, provenan
 /// same seam, a hand-built scenario instead of a derived population. Typed
 /// throughout (no primitive at the boundary), so it needs no type-audit tag.
 pub fn place_agent(entity: EntityId, room: &Facet, day: WorldTime) -> Fact {
-    agent_at_fact(entity, room, day.as_std_days(), "harness-placement")
+    agent_at_fact(entity, room, day, "harness-placement")
 }
 
 /// A committed `drank` fact: `entity` satisfied its sustenance goal on `day`.
-fn drank_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
+fn drank_fact(entity: EntityId, day: WorldTime, provenance: &str) -> Fact {
     Fact {
         subject: entity,
         predicate: DRANK.to_string(),
         object: Value::Flag(true),
         place: None,
-        day: Some(WorldTime::from_std_days(day).expect("simulated day is finite")),
+        day: Some(day),
         provenance: provenance.to_string(),
     }
 }
 
 /// A committed `rested` fact: `entity` slept (reset its fatigue) on `day` — The
 /// Slumber's discharge, the fatigue twin of [`drank_fact`].
-pub(crate) fn rested_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
+pub(crate) fn rested_fact(entity: EntityId, day: WorldTime, provenance: &str) -> Fact {
     Fact {
         subject: entity,
         predicate: RESTED.to_string(),
         object: Value::Flag(true),
         place: None,
-        day: Some(WorldTime::from_std_days(day).expect("simulated day is finite")),
+        day: Some(day),
         provenance: provenance.to_string(),
     }
 }
 
 /// A committed `eaten` fact: `entity` ate (reset its hunger) on `day` — The
 /// Provender's discharge, the hunger twin of [`drank_fact`].
-fn eaten_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
+fn eaten_fact(entity: EntityId, day: WorldTime, provenance: &str) -> Fact {
     Fact {
         subject: entity,
         predicate: EATEN.to_string(),
         object: Value::Flag(true),
         place: None,
-        day: Some(WorldTime::from_std_days(day).expect("simulated day is finite")),
+        day: Some(day),
         provenance: provenance.to_string(),
     }
 }
@@ -4211,7 +4249,7 @@ pub struct DriveMovements<'a> {
 
 /// The day `npc` entered the room it occupies as of `t` — the day of the
 /// latest committed `agent-at` fact with day ≤ `t.day`, or the world's own
-/// origin (`0.0`) when no such fact exists yet (the same pre-history
+/// origin ([`WorldTime::GENESIS`]) when no such fact exists yet (the same pre-history
 /// fallback [`agent_position`] uses for the ROOM itself: a creature with no
 /// committed history has been home since the world began). This is catch-up's
 /// (The Threshold task 7, spec §5) own "pre-entry state" boundary: the
@@ -4219,14 +4257,13 @@ pub struct DriveMovements<'a> {
 /// between them changed the creature's COARSE position — if it had, a later
 /// `agent-at` would be the latest one instead, and this function would
 /// return that later day.
-fn room_entry_day(ledger: &Ledger, npc: &Body, t: WorldTime) -> f64 {
+fn room_entry_day(ledger: &Ledger, npc: &Body, t: WorldTime) -> WorldTime {
     ledger
         .facts_of(npc.entity, AGENT_AT)
         .filter(|f| f.day.map(|d| d <= t).unwrap_or(false))
         .last()
         .and_then(|f| f.day)
-        .map(WorldTime::as_std_days)
-        .unwrap_or(0.0)
+        .unwrap_or(WorldTime::GENESIS)
 }
 
 /// The three outcomes [`Intent::Hold`]'s closed-form day-jump can produce —
@@ -4237,8 +4274,8 @@ fn room_entry_day(ledger: &Ledger, npc: &Body, t: WorldTime) -> f64 {
 /// which `ceiling` bounds the jump (`self.to.day` for the live walk,
 /// `self.from.day` — "now" — for catch-up's own unobserved-span replay).
 enum HoldStep {
-    /// Advance to this day and keep going.
-    Advance(f64),
+    /// Advance to this instant and keep going.
+    Advance(WorldTime),
     /// The jump is degenerate (`rate_here == 0.0` makes it non-finite) —
     /// spend this iteration without moving `day`, matching the live walk's
     /// own `continue`.
@@ -4256,26 +4293,35 @@ enum HoldStep {
 /// would be redundant, not a second judgment, but threading it removes even
 /// that redundancy.
 fn hold_step(
-    day: f64,
+    day: WorldTime,
     pos: &Facet,
     npc: &Body,
     terrain: &dyn Terrain,
     drive: f64,
     params: &DriveParams,
-    ceiling: f64,
+    ceiling: WorldTime,
 ) -> HoldStep {
-    let rate_here = rise_at(
-        terrain.temperature(
-            pos,
-            WorldTime::from_std_days(day).expect("a day value is finite"),
-        ),
-        npc.thermal_strategy,
-        params,
-    );
-    let next_act = day + (params.act - drive) / rate_here;
-    if !next_act.is_finite() {
+    let rate_here = rise_at(terrain.temperature(pos, day), npc.thermal_strategy, params);
+    // The jump's LENGTH is a continuous quantity — an urgency gap divided by
+    // an urgency rate — so it is computed in `f64` days and crosses onto the
+    // lattice ONCE, here, as a span added to the instant. `rate_here == 0.0`
+    // makes it non-finite: the same degenerate jump the `f64` form detected
+    // with this same `is_finite` test, before adding rather than after.
+    let ahead_days = (params.act - drive) / rate_here;
+    if !ahead_days.is_finite() {
         return HoldStep::Stall;
     }
+    let Ok(ahead) = TickSpan::from_std_days(ahead_days) else {
+        // Finite but outside the representable tick range: a jump that far
+        // ahead overshoots any ceiling a walk can carry, which is exactly the
+        // `next_act > ceiling` verdict the `f64` form reached for it.
+        return HoldStep::GiveUp;
+    };
+    let next_act = day + ahead;
+    // `next_act <= day` now also covers the sub-tick case: a jump shorter than
+    // one tick rounds to no jump at all, and a step that does not move the
+    // clock cannot be an `Advance` without breaking the loop's own strict-
+    // progress guarantee.
     if next_act <= day || next_act > ceiling {
         return HoldStep::GiveUp;
     }
@@ -4332,7 +4378,7 @@ fn hold_step(
 /// reach zero searches across ticks, not merely within one).
 #[allow(clippy::too_many_arguments)]
 fn decide_step(
-    day: f64,
+    day: WorldTime,
     pos: &Facet,
     npc: &Body,
     terrain: &dyn Terrain,
@@ -4340,9 +4386,9 @@ fn decide_step(
     hazard: &HazardMemory,
     alarm: &std::collections::BTreeMap<Facet, f64>,
     visited: &std::collections::BTreeSet<Facet>,
-    last_drank: f64,
-    last_ate: f64,
-    last_rested: f64,
+    last_drank: WorldTime,
+    last_ate: WorldTime,
+    last_rested: WorldTime,
     interior: Option<(&Interior, AnchorId)>,
     mode: Mode,
     params: &DriveParams,
@@ -4357,16 +4403,37 @@ fn decide_step(
     if is_water(pos, terrain) {
         *believed = nearer_to_home(&npc.home, believed.take(), pos.clone(), PLAN_BUDGET);
     }
+    // THE ONE CROSSING IN THIS FUNCTION. The thirst and hunger path integrals
+    // are CONTINUOUS quantities — a temperature-weighted rate integrated over
+    // an occupancy timeline — so the instants cross to `f64` standard days
+    // HERE, at the integrals' own edge, rather than the walk carrying a float
+    // clock upstream to suit them. Lossless below ~2.47e8 years (decision
+    // 0186). Everything above and below this block compares ticks exactly.
+    let day_days = day.as_std_days();
+    let last_drank_days = last_drank.as_std_days();
+    let last_ate_days = last_ate.as_std_days();
+    // AND THE CROSSING STOPS HERE, ON PURPOSE. `agent_sightings`' `upto` and
+    // its returned `(day, room)` timeline, and `integrate_thirst`'s
+    // `sightings`/`last_drank`/`t`, are all genuinely INSTANTS and are all
+    // deliberately left as `f64` standard days. Retyping them would push the
+    // crossing INWARD, past the integral's own edge, so the integral would
+    // cross back out to `f64` per segment to multiply a rate by a span — more
+    // crossings than the one that belongs here, and the opposite of the seam
+    // principle. The edge of a continuous integral is where an instant stops
+    // being a lattice point and starts being a limit of integration.
     // The temperature-coupled thirst integral, re-derived over the committed
     // history (`frozen`) PLUS this tick's own emitted moves (`out`) — see the
     // live walk's own doc for why both are folded together.
-    let mut sightings = agent_sightings(frozen, npc.entity, day);
+    let mut sightings = agent_sightings(frozen, npc.entity, day_days);
     for f in out {
         if f.subject == npc.entity
             && f.predicate == AGENT_AT
             && let Value::Text(s) = &f.object
             && let Some(d) = f.day
-            && d.as_std_days() <= day
+            // An exact tick comparison — the emitted fact's day and `day` are
+            // both instants, so this no longer round-trips either through
+            // `f64` merely to order them.
+            && d <= day
         {
             sightings.push((d.as_std_days(), room_from_text(s)));
         }
@@ -4375,8 +4442,8 @@ fn decide_step(
     let drive = integrate_thirst(
         &sightings,
         &npc.home,
-        last_drank,
-        day,
+        last_drank_days,
+        day_days,
         terrain,
         npc.thermal_strategy,
         params,
@@ -4384,14 +4451,16 @@ fn decide_step(
     let hunger_urgency = integrate_thirst(
         &sightings,
         &npc.home,
-        last_ate,
-        day,
+        last_ate_days,
+        day_days,
         terrain,
         npc.thermal_strategy,
         &HUNGER,
     );
     let explore_step = lowest_unvisited_neighbor_memo(pos, visited, terrain, mesh_memo);
-    let fatigue = (FATIGUE_RISE * (day - last_rested)).clamp(0.0, 1.0);
+    // The fatigue ramp is continuous too, but the SPAN it reads is exact: two
+    // instants subtract on the lattice and only their difference crosses.
+    let fatigue = (FATIGUE_RISE * (day - last_rested).as_std_days()).clamp(0.0, 1.0);
     let view = Perceived {
         position: pos.clone(),
         drive,
@@ -4404,7 +4473,7 @@ fn decide_step(
     let thermal = Thermal {
         niche: npc.temperature_niche,
         terrain,
-        day: WorldTime::from_std_days(day).expect("a day value is finite"),
+        day,
         interior,
     };
     let rest = Fatigue {
@@ -4414,7 +4483,7 @@ fn decide_step(
         urgency: hunger_urgency,
         niche: npc.niche.clone(),
         terrain,
-        day: WorldTime::from_std_days(day).expect("a day value is finite"),
+        day,
     };
     let danger = Danger {
         terrain,
@@ -4466,12 +4535,7 @@ fn decide_step(
         latency: npc.deliberation_latency,
         horizon: npc.time_horizon,
         helpless,
-        awake: is_awake(
-            npc.activity,
-            terrain,
-            pos,
-            WorldTime::from_std_days(day).expect("a day value is finite"),
-        ),
+        awake: is_awake(npc.activity, terrain, pos, day),
     };
     let resolution = arbitrate(
         &view,
@@ -4487,8 +4551,8 @@ fn decide_step(
     (resolution, drive)
 }
 
-/// The subject's most recent `predicate` fact day at or before `day`,
-/// `0.0` if none — the per-day counterpart to the whole-history folds
+/// The subject's most recent `predicate` fact day at or before `day`, or
+/// `None` if there is none — the per-day counterpart to the whole-history folds
 /// computed once outside the walk (`drive_at`, `fatigue_at`, and
 /// `step_with_occupancy`'s own `last_drank`/`last_ate`/`last_rested`
 /// locals). Those are correct for a SINGLE evaluation instant; catch-up's
@@ -4497,13 +4561,23 @@ fn decide_step(
 /// `<= day` at each one rather than reuse a value folded over the whole
 /// committed history, which could be looking chronologically PAST the day
 /// it is being asked about.
-fn last_fact_day_at_or_before(ledger: &Ledger, predicate: &str, entity: EntityId, day: f64) -> f64 {
+///
+/// `Option` rather than a `0.0` sentinel: "no such fact" and "a fact at
+/// genesis" are different answers, and the `f64` fold could not tell them
+/// apart — nor was `0.0` ever a safe identity for a SIGNED instant (decision
+/// 0126 makes negative days legal). Each caller now names the default it
+/// wants, at the call site, where the choice is visible.
+fn last_fact_day_at_or_before(
+    ledger: &Ledger,
+    predicate: &str,
+    entity: EntityId,
+    day: WorldTime,
+) -> Option<WorldTime> {
     ledger
         .facts_of(entity, predicate)
         .filter_map(|f| f.day)
-        .map(WorldTime::as_std_days)
         .filter(|&d| d <= day)
-        .fold(0.0_f64, f64::max)
+        .max()
 }
 
 /// Catch-up's own replay loop (The Threshold task 7, spec §5): reconstruct
@@ -4549,8 +4623,8 @@ fn last_fact_day_at_or_before(ledger: &Ledger, predicate: &str, entity: EntityId
 /// from cache.
 #[allow(clippy::too_many_arguments)]
 fn catch_up(
-    entry_day: f64,
-    horizon: f64,
+    entry_day: WorldTime,
+    horizon: WorldTime,
     pos: &Facet,
     npc: &Body,
     terrain: &dyn Terrain,
@@ -4593,9 +4667,19 @@ fn catch_up(
         // for every day before it. Filtering to `<= day` at each iteration
         // is what makes `decide_step` see the world as it actually was on
         // that day, not as it will be once the gap is fully closed.
-        let last_drank = last_fact_day_at_or_before(frozen, DRANK, npc.entity, day);
-        let last_ate = last_fact_day_at_or_before(frozen, EATEN, npc.entity, day);
-        let last_rested = last_fact_day_at_or_before(frozen, RESTED, npc.entity, day);
+        //
+        // `None` — no such fact at or before `day` — defaults to GENESIS here
+        // rather than inside the query, because that is what the drive folds
+        // this replay stands in for have always meant by it: a creature that
+        // has never drunk has been accruing thirst since the world began.
+        // Naming it at the call site is what keeps "no fact" and "a fact at
+        // genesis" distinguishable everywhere else.
+        let last_drank = last_fact_day_at_or_before(frozen, DRANK, npc.entity, day)
+            .unwrap_or(WorldTime::GENESIS);
+        let last_ate = last_fact_day_at_or_before(frozen, EATEN, npc.entity, day)
+            .unwrap_or(WorldTime::GENESIS);
+        let last_rested = last_fact_day_at_or_before(frozen, RESTED, npc.entity, day)
+            .unwrap_or(WorldTime::GENESIS);
         let (resolution, drive) = decide_step(
             day,
             pos,
@@ -4646,7 +4730,12 @@ fn catch_up(
                 // derivation failure `decide_step` is shared to avoid. No
                 // terrain factor: a within-room step does not change room, so
                 // there is no elevation pair to climb.
-                day += cost_of(&action, npc.mass_kg, 1.0).as_std_days();
+                // EXACT INTEGER ADDITION: a cost IS a `TickSpan` and an
+                // instant IS a tick count, so the charge is `WorldTime +
+                // TickSpan` with no conversion in either direction — the
+                // `f64` round-trip this line used to make is gone rather than
+                // made more carefully.
+                day = day + cost_of(&action, npc.mass_kg, 1.0);
                 if day > horizon {
                     break;
                 }
@@ -4679,7 +4768,7 @@ fn catch_up(
         let thermal = Thermal {
             niche: npc.temperature_niche,
             terrain,
-            day: WorldTime::from_std_days(horizon).expect("a day value is finite"),
+            day: horizon,
             interior: occupancy.at(npc.entity).map(|a| (interior, a)),
         };
         if let Some(target) = thermal.preferred_anchor(pos, budget) {
@@ -4788,13 +4877,12 @@ impl<'a> DriveMovements<'a> {
             std::collections::BTreeMap::new();
         let mut queue: std::collections::BTreeSet<(u64, EntityId)> =
             std::collections::BTreeSet::new();
-        // Standard ticks per standard day. THE RESCALE IS GONE (The Foliot):
-        // this used to be `ticks_per_local_day / day_ticks`, converting
-        // between the scheduler's local-tick lattice and the kernel's. A
-        // world's day is now an exact tick count, so `ticks_per_local_day` IS
-        // that count and the ratio is exactly `TICKS_PER_STD_DAY` — the two
-        // lattices coincide for every world, not just an unpinned one.
-        let scale = WorldTime::TICKS_PER_STD_DAY as f64;
+        // THE RESCALE IS GONE (The Foliot): a `scale` of standard-ticks-per-
+        // standard-day used to sit here, converting the walk's float day into
+        // the scheduler's lattice at every requeue. The walk's clock IS a tick
+        // count now (The Precedence), so there is nothing left to scale and
+        // `local_ticks_of` below is the whole crossing.
+        //
         // THE IDENTITY (The Foliot). This used to branch: an unpinned world's
         // two lattices coincided, but a rotation pin put them at different
         // rates and the crossing was a genuine `f64` rescale. With the day
@@ -4859,7 +4947,7 @@ impl<'a> DriveMovements<'a> {
             // queue — keeps the order-independence above trivially true.
             st.mode = catch_up(
                 room_entry_day(frozen, npc, self.from),
-                self.from.as_std_days(),
+                self.from,
                 &st.pos,
                 npc,
                 self.terrain,
@@ -4920,15 +5008,56 @@ impl<'a> DriveMovements<'a> {
             // `advance_one` has already advanced `st.day` by what the action
             // cost, so the requeue time is READ FROM THE STATE rather than
             // recomputed: one source of truth for when a creature next acts.
-            let next = (st.day * scale).round() as u64;
+            let next = local_ticks_of(st.day);
             if next > to_ticks {
-                // `round` is monotone, so this can only fire when `st.day`
-                // genuinely exceeds `to.day` — exactly the guard `advance_one`
-                // would apply on the next pop, applied a pop early.
+                // An exact tick read, so this fires exactly when `st.day`
+                // genuinely exceeds `to` — the guard `advance_one` would apply
+                // on the next pop, applied a pop early. It used to round a
+                // float day here, and monotonicity was the argument that the
+                // rounding could not move the verdict; no rounding happens.
                 continue;
             }
             queue.insert((next, e));
         }
+        // THE LEDGER'S CHRONOLOGY IS NOT THE POP ORDER (The Precedence,
+        // decision 0376, spec section 3). The queue pops creatures by when
+        // an action BEGINS; every fact above is stamped at the instant its
+        // action ENDS. Those two orderings differ by the population's cost
+        // spread whenever creatures act at different tempos — measured at
+        // 10,014 ticks on the real seed-42 population, against an invariant
+        // that allowed one tick.
+        //
+        // Sorting here is not a patch on the queue's output: it IS the
+        // queue's only cross-entity product. Pop order affects nothing else
+        // observable — every `occupancy` access is keyed by the creature's OWN
+        // entity, and perception is built from `frozen` before anyone moves —
+        // which `the_queues_tie_break_decides_nothing_but_order` asserts, and
+        // which will fail loudly the day that stops being true.
+        //
+        // Sound because a tick is a CLOSED WINDOW: nothing may be dated
+        // outside `[from, to]`, so reordering within it can never need to
+        // reach past a fact an earlier tick emitted. That watermark is
+        // asserted by `every_emitted_fact_is_dated_inside_the_tick_that_emitted_it`.
+        //
+        // `sort_by_key` on `Option<WorldTime>` is a STABLE, EXACT INTEGER
+        // comparison — `WorldTime` is an `i64` tick count with a derived `Ord`
+        // (decision 0186), so no float enters the ordering. Stability is
+        // load-bearing twice over: a creature's own facts are already
+        // monotone and stay in place, and cross-entity ties keep the entity-id
+        // order the queue chose, which is what keeps the emitted sequence a
+        // pure function of the frozen ledger rather than of the input vector.
+        // `decide_step` reads this vector mid-tick, but filters to its own
+        // subject and sorts what it finds, so it cannot observe this at all.
+        //
+        // `Option`'s derived `Ord` sorts `None` FIRST, before any `Some`, so
+        // an undated fact would be silently hoisted to the head of the tick
+        // rather than left in place or pushed to the end. Unreachable today:
+        // all four fact constructors in this module (`agent_at_fact`,
+        // `drank_fact`, `rested_fact`, `eaten_fact`) set `day: Some(...)`
+        // unconditionally. A future emission path that skips one of them —
+        // or constructs a `Fact` directly with `day: None` — would not fail
+        // loudly here; it would just reorder silently.
+        out.sort_by_key(|f| f.day);
         (out, occupancy)
     }
 }
@@ -4969,15 +5098,16 @@ impl<'a> TickSystem for DriveMovements<'a> {
 struct WalkState {
     /// Where the creature currently stands.
     pos: Facet,
-    /// How far into the interval the walk has got.
-    day: f64,
-    /// The day of its most recent drink, `frozen`-seeded and advanced by this
-    /// walk's own emitted `drank` facts.
-    last_drank: f64,
-    /// The day of its most recent sleep, the fatigue twin of `last_drank`.
-    last_rested: f64,
-    /// The day of its most recent meal, the hunger twin of `last_drank`.
-    last_ate: f64,
+    /// How far into the interval the walk has got — an INSTANT on the tick
+    /// lattice, not a float day: the walk's clock is the kernel's clock.
+    day: WorldTime,
+    /// The INSTANT of its most recent drink, `frozen`-seeded and advanced by
+    /// this walk's own emitted `drank` facts.
+    last_drank: WorldTime,
+    /// The INSTANT of its most recent sleep, the fatigue twin of `last_drank`.
+    last_rested: WorldTime,
+    /// The INSTANT of its most recent meal, the hunger twin of `last_drank`.
+    last_ate: WorldTime,
     /// The water source it believes in, seeded from the band's pooled belief and
     /// grown whenever it stands in water.
     believed: Option<Facet>,
@@ -5024,26 +5154,39 @@ impl WalkState {
         terrain: &dyn Terrain,
     ) -> WalkState {
         let pos = agent_position(frozen, npc, from);
-        let day = from.as_std_days();
+        // The interval start, carried as the instant it already is — the walk
+        // opens on the kernel's own clock rather than on a float rendering of
+        // it.
+        let day = from;
         // A scratch ledger view isn't available; track drank locally: derive
         // the starting last-drank day from `frozen`, then simulate forward,
         // updating a local `last_drank` as we emit `DRANK` facts.
+        //
+        // ALL THREE FOLDS BELOW ARE BEHAVIOUR-PRESERVING, AND NONE HANDLES THE
+        // NEGATIVE CASE. `WorldTime::GENESIS` is `ticks: 0` — byte-for-byte
+        // the identity the old `fold(0.0, f64::max)` used — so a fact dated
+        // before genesis still reads as genesis, exactly as it always has.
+        // What the retype removes is a float round-trip, not an answer. Do not
+        // read decision 0126 into this: fixing the pre-genesis floor means
+        // returning `Option` and making each caller name its default (as
+        // `last_fact_day_at_or_before` now does), which is a behaviour change
+        // and is deliberately out of this retype's scope.
         let last_drank = frozen
             .facts_of(npc.entity, DRANK)
             .filter_map(|f| f.day)
-            .fold(0.0_f64, |acc, d| acc.max(d.as_std_days()));
+            .fold(WorldTime::GENESIS, WorldTime::max);
         // Likewise the last rest day (The Slumber): fatigue is time since it,
         // reset when a `rested` fact is emitted.
         let last_rested = frozen
             .facts_of(npc.entity, RESTED)
             .filter_map(|f| f.day)
-            .fold(0.0_f64, |acc, d| acc.max(d.as_std_days()));
+            .fold(WorldTime::GENESIS, WorldTime::max);
         // Likewise the last meal day (The Provender): hunger is a path
         // integral since it, reset when an `eaten` fact is emitted.
         let last_ate = frozen
             .facts_of(npc.entity, EATEN)
             .filter_map(|f| f.day)
-            .fold(0.0_f64, |acc, d| acc.max(d.as_std_days()));
+            .fold(WorldTime::GENESIS, WorldTime::max);
         // Belief and exploration state, evolved locally across the walk (the
         // fold includes this tick's own emitted moves). Seed belief from the
         // pre-tick history; grow it whenever the agent stands in water.
@@ -5130,7 +5273,7 @@ impl<'a> DriveMovements<'a> {
         home_nav_cache: &mut HomeNavCache,
         controller: &mut dyn Controller,
     ) -> bool {
-        if st.day > self.to.as_std_days() || st.steps >= MAX_STEPS {
+        if st.day > self.to || st.steps >= MAX_STEPS {
             return false;
         }
         st.steps += 1;
@@ -5224,8 +5367,15 @@ impl<'a> DriveMovements<'a> {
                 }
                 _ => 1.0,
             };
-            st.day += cost_of(action, npc.mass_kg, ground).as_std_days();
-            if st.day > self.to.as_std_days() {
+            // EXACT INTEGER ADDITION, the whole point of this retype: a cost
+            // IS a `TickSpan` (The Foliot) and the walk's clock IS a tick
+            // count, so charging an action is `WorldTime + TickSpan` with no
+            // conversion at either end. The `f64` round-trip this line used to
+            // make — span to days, add to a float clock, round back at every
+            // emitted fact — is gone rather than performed more carefully, and
+            // with it the drift it accumulated across a long walk.
+            st.day = st.day + cost_of(action, npc.mass_kg, ground);
+            if st.day > self.to {
                 return false;
             }
         }
@@ -5284,7 +5434,7 @@ impl<'a> DriveMovements<'a> {
                 // Sleep through the off-phase in one jump to the next
                 // waking, rather than re-resting every step (The Slumber).
                 st.day = next_awake_day(npc.activity, self.terrain, &st.pos, st.day);
-                if st.day > self.to.as_std_days() {
+                if st.day > self.to {
                     return false;
                 }
             }
@@ -5316,7 +5466,7 @@ impl<'a> DriveMovements<'a> {
             // KEPT as `unreachable!` (fix round 1, Finding 1) — unlike the
             // two `Drive::serviceability` sites this task also touches,
             // this arm sits DOWNSTREAM of a charge this same function
-            // already took: `st.day += days_of(cost_of(action, ...))`
+            // already took: `st.day = st.day + cost_of(action, ...)`
             // above (before this match) reads `base_ticks(action)`, which
             // is `Ticks(0)` for every group-A instrument. `cost_ticks`'s
             // own `.max(1)` floor happens to keep today's actual charge
@@ -5364,7 +5514,7 @@ impl<'a> DriveMovements<'a> {
                     self.terrain,
                     drive,
                     &self.params,
-                    self.to.as_std_days(),
+                    self.to,
                 ) {
                     HoldStep::Stall => return true,
                     HoldStep::GiveUp => return false,
@@ -5473,7 +5623,7 @@ impl<'a> DriveMovements<'a> {
         // controller ultimately governs that live decision.
         st.mode = catch_up(
             room_entry_day(frozen, body, self.from),
-            self.from.as_std_days(),
+            self.from,
             &st.pos,
             body,
             self.terrain,
@@ -6174,6 +6324,21 @@ mod tests {
         )
     }
 
+    /// A test day, authored in standard days and crossed onto the tick
+    /// lattice once — the test-side twin of the production seam: a scenario is
+    /// still written in readable days, but what it hands the sim is an
+    /// instant.
+    fn td(days: f64) -> WorldTime {
+        WorldTime::from_std_days(days).expect("a test day is finite")
+    }
+
+    /// A test DURATION in standard days, crossed onto the tick lattice once —
+    /// the span twin of [`td`], for the `entry_day + <so many days>` shape a
+    /// catch-up scenario writes its horizon with.
+    fn tspan(days: f64) -> TickSpan {
+        TickSpan::from_std_days(days).expect("a test span is finite")
+    }
+
     /// Commit an `agent-at` fact placing `entity` at `room` on `day`.
     fn commit_agent_at(
         ledger: &mut Ledger,
@@ -6183,7 +6348,7 @@ mod tests {
         day: f64,
     ) {
         ledger
-            .commit(agent_at_fact(entity, room, day, "test"), reg)
+            .commit(agent_at_fact(entity, room, td(day), "test"), reg)
             .unwrap();
     }
 
@@ -7366,6 +7531,55 @@ mod tests {
         // first's new position — and the day bits would have moved. They did
         // not, so the emitted stream is still a pure function of the pre-tick
         // ledger.
+        // THIS FIXTURE MOVED ONCE MORE, AND IT IS QUANTIZATION PLACEMENT —
+        // NOT DRIFT, NOT A DEFECT, AND NOT TO BE RE-DERIVED (The Precedence).
+        // If you are reading this because these days moved again, compare your
+        // delta profile against the one recorded below FIRST: if it matches,
+        // your change is this known one and the fixture is already correct; if
+        // it does not, you have a DIFFERENT mechanism and must not rebaseline.
+        //
+        // THE MECHANISM. The walk's clock is a `WorldTime` — an exact tick
+        // count — rather than an `f64` day (decision 0186 makes the tick
+        // lattice the time domain, and decision 0188 carves time out of the
+        // quantize-at-emit rule). `hold_step`'s closed-form Hold jump
+        // (`(act - drive) / rate`) evaluates in this fixture to exactly
+        // `N + 2/3` ticks, at both of its two distinct lengths. The OLD scheme
+        // kept a real-valued clock, carried that 2/3 forward, and rounded ONCE
+        // at emission, so an emitted day was `round(exact)`. The NEW scheme
+        // rounds each jump onto the lattice as it is TAKEN (`+1/3` per jump)
+        // and the clock is exact thereafter. After `k` jumps the two differ by
+        // `k - round(2k/3)`: 0, 1, 1, 1, 2, 2, 2 for `k = 1..7`.
+        //
+        // THE PROFILE. Seven Hold jumps per creature over this walk, so the
+        // staircase tops out at +2:
+        //
+        //     facts  0-13   +0 ticks (byte-identical)
+        //     facts 14-53   +1 tick
+        //     facts 54-79   +2 ticks
+        //
+        // THREE ANCHORS, so checking which side of the change you are on is a
+        // lookup rather than a re-derivation. If your run produces the LEFT
+        // column, you have reverted the snapping; the RIGHT column is what is
+        // recorded below.
+        //
+        //     fact  0   100150  ->   100150   (unchanged)
+        //     fact 14  1206633  ->  1206634
+        //     fact 79  3665800  ->  3665802
+        //
+        // Nothing else moved: not an order, not a room, not a provenance, not
+        // a subject. Only the day column, only upward, both twins identically.
+        // Attribution is exclusive, not inferred — a variant that carried the
+        // remainder `TickSpan::from_std_days` discards reproduced all eighty of
+        // the previous values with zero mismatches, so this jump is 100% of the
+        // difference. The charge site, `next_awake_day` and the requeue were
+        // each measured to discard nothing at all.
+        //
+        // IT WAS ACCEPTED DELIBERATELY. Nathan took the fidelity/accuracy
+        // tradeoff and chose to let the snapping stand rather than carry a
+        // sub-tick remainder beside the lattice clock, because carrying one
+        // would reintroduce the very `f64` the campaign exists to delete. This
+        // value is the accepted one. Do not "fix" it back.
+        //
         const EXPECTED: &[&str] = &[
             r#"knower|rested|Flag(true)|Some(100150)|slept at home (fatigue eased)"#,
             r#"lost|rested|Flag(true)|Some(100150)|slept at home (fatigue eased)"#,
@@ -7381,72 +7595,72 @@ mod tests {
             r#"lost|agent-at|Text("180243")|Some(646967)|walking home (sated)"#,
             r#"knower|agent-at|Text("172046")|Some(656967)|walking home (sated)"#,
             r#"lost|agent-at|Text("172046")|Some(656967)|walking home (sated)"#,
-            r#"knower|eaten|Flag(true)|Some(1206633)|grazed the productive ground (hunger sated)"#,
-            r#"lost|eaten|Flag(true)|Some(1206633)|grazed the productive ground (hunger sated)"#,
-            r#"knower|rested|Flag(true)|Some(1206783)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(1206783)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(1236783)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(1236783)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(1246783)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(1246783)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(1246933)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(1246933)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(1256933)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(1256933)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(1266933)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(1266933)|walking home (sated)"#,
-            r#"knower|rested|Flag(true)|Some(1813750)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(1813750)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(1838750)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(1838750)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(1848750)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(1848750)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(1848900)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(1848900)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(1858900)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(1858900)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(1868900)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(1868900)|walking home (sated)"#,
-            r#"knower|eaten|Flag(true)|Some(2418567)|grazed the productive ground (hunger sated)"#,
-            r#"lost|eaten|Flag(true)|Some(2418567)|grazed the productive ground (hunger sated)"#,
-            r#"knower|rested|Flag(true)|Some(2418717)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(2418717)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(2438717)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(2438717)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(2448717)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(2448717)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(2448867)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(2448867)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(2458867)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(2458867)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(2468867)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(2468867)|walking home (sated)"#,
-            r#"knower|rested|Flag(true)|Some(3015683)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(3015683)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(3035683)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(3035683)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(3045683)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(3045683)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(3045833)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(3045833)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(3055833)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(3055833)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(3065833)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(3065833)|walking home (sated)"#,
-            r#"knower|eaten|Flag(true)|Some(3615500)|grazed the productive ground (hunger sated)"#,
-            r#"lost|eaten|Flag(true)|Some(3615500)|grazed the productive ground (hunger sated)"#,
-            r#"knower|rested|Flag(true)|Some(3615650)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(3615650)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(3635650)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(3635650)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(3645650)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(3645650)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(3645800)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(3645800)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(3655800)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(3655800)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(3665800)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(3665800)|walking home (sated)"#,
+            r#"knower|eaten|Flag(true)|Some(1206634)|grazed the productive ground (hunger sated)"#,
+            r#"lost|eaten|Flag(true)|Some(1206634)|grazed the productive ground (hunger sated)"#,
+            r#"knower|rested|Flag(true)|Some(1206784)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(1206784)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(1236784)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(1236784)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(1246784)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(1246784)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(1246934)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(1246934)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(1256934)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(1256934)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(1266934)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(1266934)|walking home (sated)"#,
+            r#"knower|rested|Flag(true)|Some(1813751)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(1813751)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(1838751)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(1838751)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(1848751)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(1848751)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(1848901)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(1848901)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(1858901)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(1858901)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(1868901)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(1868901)|walking home (sated)"#,
+            r#"knower|eaten|Flag(true)|Some(2418568)|grazed the productive ground (hunger sated)"#,
+            r#"lost|eaten|Flag(true)|Some(2418568)|grazed the productive ground (hunger sated)"#,
+            r#"knower|rested|Flag(true)|Some(2418718)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(2418718)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(2438718)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(2438718)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(2448718)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(2448718)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(2448868)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(2448868)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(2458868)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(2458868)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(2468868)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(2468868)|walking home (sated)"#,
+            r#"knower|rested|Flag(true)|Some(3015685)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(3015685)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(3035685)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(3035685)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(3045685)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(3045685)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(3045835)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(3045835)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(3055835)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(3055835)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(3065835)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(3065835)|walking home (sated)"#,
+            r#"knower|eaten|Flag(true)|Some(3615502)|grazed the productive ground (hunger sated)"#,
+            r#"lost|eaten|Flag(true)|Some(3615502)|grazed the productive ground (hunger sated)"#,
+            r#"knower|rested|Flag(true)|Some(3615652)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(3615652)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(3635652)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(3635652)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(3645652)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(3645652)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(3645802)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(3645802)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(3655802)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(3655802)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(3665802)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(3665802)|walking home (sated)"#,
         ];
         let shape = hoist_walk_shape();
         assert_eq!(
@@ -7690,6 +7904,56 @@ mod tests {
     }
 
     #[test]
+    fn every_emitted_fact_is_dated_inside_the_tick_that_emitted_it() {
+        // THE SORT'S PRECONDITION (The Precedence, spec §5 guard 2). Making
+        // the emitted stream chronological by sorting it is correct only
+        // because a tick is a CLOSED WINDOW: no fact may be dated outside
+        // `[from, to]`, so reordering within the window can never need to
+        // reach back past a fact an earlier tick already emitted. That is the
+        // watermark the whole design rests on, and it was previously assumed
+        // rather than asserted.
+        //
+        // DIRECTION THIS ENFORCES: `emitted` is a subset of the window. It is
+        // blind to a fact the walk DECLINED to emit — a step past `to` returns
+        // early and commits nothing, which this cannot see and does not claim
+        // to.
+        //
+        // Three masses, so the population genuinely falls out of step — the
+        // INTENT of picking three widely-separated masses over `interleaving_fixture`'s
+        // usual two is to exercise the jump arms (`hold_step`'s closed form,
+        // `next_awake_day`'s sleep jump) rather than merely have them present
+        // in the binary. Nothing in this test verifies that either arm is
+        // actually taken (no counter, no branch coverage, no arm-specific
+        // assertion) — stated here as intent, not as a checked fact.
+        let (ledger, terrain, npcs) = interleaving_fixture(&[4.375, 70.0, 1_120.0]);
+        let from = WorldTime::from_std_days(1.0).expect("a day value is finite");
+        let to = WorldTime::from_std_days(20.0).expect("a day value is finite");
+        let sys = DriveMovements {
+            npcs,
+            from,
+            to,
+            params: SUSTENANCE,
+            day_ticks: None,
+            terrain: &terrain,
+        };
+        let facts = sys.step(&ledger);
+        assert!(
+            !facts.is_empty(),
+            "the fixture emitted nothing; it cannot pin a window"
+        );
+        for f in &facts {
+            let d = f.day.expect("every emitted fact is dated");
+            assert!(
+                d >= from && d <= to,
+                "`{}` at {d:?} fell outside the tick's window [{from:?}, {to:?}] — \
+                 the sort in `step_with_occupancy` is only sound inside a closed \
+                 window, so this is a design refutation, not a test to relax",
+                f.predicate
+            );
+        }
+    }
+
+    #[test]
     fn a_faster_creature_acts_more_often_between_a_slower_ones_actions() {
         // INTERLEAVING, OBSERVABLY. Two creatures sixteen-fold apart in mass are
         // exactly two-fold apart in tempo (`16 ^ 0.25 == 2`), so the lighter one
@@ -7697,52 +7961,264 @@ mod tests {
         // clock its facts must appear BETWEEN the heavier one's; under the old
         // sequential loop they appeared entirely before them.
         //
-        // The assertion counts SWITCHES of subject along the emitted sequence.
-        // The sequential loop scores exactly one (all of A, then all of B) for
-        // any pair, however far apart in tempo; a scheduler scores many. `>= 2`
-        // is therefore the smallest threshold the old loop cannot reach.
-        let (ledger, terrain, npcs) = interleaving_fixture(&[4.375, 70.0]);
-        let sys = DriveMovements {
-            npcs,
-            from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
-            to: WorldTime::from_std_days(20.0).expect("a day value is finite"),
+        // BOTH MASS ORDERS (The Precedence). `interleaving_fixture` mints entity
+        // ids in the order the masses are listed, so the list order IS the
+        // queue's tie-break order. This test used to run only `[4.375, 70.0]`,
+        // which hands the FAST creature the lower id — so at every tie the
+        // cheaper action was emitted first and the inversion below could not
+        // show. Swapping the order was worth 9,925 ticks against a one-tick
+        // tolerance. The fixture must not depend on which creature is lighter.
+        for masses in [[4.375_f64, 70.0], [70.0, 4.375]] {
+            let (ledger, terrain, npcs) = interleaving_fixture(&masses);
+            let sys = DriveMovements {
+                npcs,
+                from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+                to: WorldTime::from_std_days(20.0).expect("a day value is finite"),
+                params: SUSTENANCE,
+                day_ticks: None,
+                terrain: &terrain,
+            };
+            let facts = sys.step(&ledger);
+            let seq: Vec<EntityId> = facts
+                .iter()
+                .filter(|f| f.predicate == AGENT_AT)
+                .map(|f| f.subject)
+                .collect();
+            // The assertion counts SWITCHES of subject along the emitted
+            // sequence. The sequential loop scores exactly one (all of A, then
+            // all of B) for any pair, however far apart in tempo; a scheduler
+            // scores many. `>= 2` is the smallest threshold the old loop
+            // cannot reach.
+            let switches = seq.windows(2).filter(|w| w[0] != w[1]).count();
+            assert!(
+                switches >= 2,
+                "the two creatures never interleave (masses={masses:?}, \
+                 switches={switches}, seq={seq:?}) — the queue is not \
+                 scheduling, it is still walking each in turn"
+            );
+            // And the emitted days run forward on ONE timeline, EXACTLY.
+            //
+            // This assertion carried a one-tick tolerance until The Precedence,
+            // justified as "creatures tied at the same rounded tick are
+            // separated by entity id and their exact `f64` days then differ
+            // within that tick." That rationale was false, and the tolerance
+            // was never bounding the quantity that actually varies: the queue
+            // pops by when an action BEGINS while every fact is stamped at the
+            // instant it ENDS, so an emission could precede the running max by
+            // the population's whole COST SPREAD — 9,925 ticks in this very
+            // fixture, and 10,014 on the real seed-42 population.
+            //
+            // `step_with_occupancy` now sorts its emissions by day, so this is
+            // exact and needs no allowance. A tolerance here would silently
+            // re-admit the defect.
+            let mut prev: Option<WorldTime> = None;
+            for f in &facts {
+                let d = f.day.expect("every emitted fact is dated");
+                if let Some(p) = prev {
+                    assert!(
+                        d >= p,
+                        "`{}` at {d:?} went back past {p:?} (masses={masses:?}) — \
+                         the emitted stream is not chronological",
+                        f.predicate
+                    );
+                }
+                prev = Some(d);
+            }
+        }
+    }
+
+    #[test]
+    fn the_queues_tie_break_decides_nothing_but_order() {
+        // THE PRECEDENCE'S LOAD-BEARING PRECONDITION. Sorting the emitted
+        // stream by day is a sufficient fix ONLY because pop order affects
+        // nothing else observable: every `occupancy` access is keyed by the
+        // creature's own entity, and perception (`alarm`, hazard memory,
+        // belief seeding) is built from `frozen` BEFORE anyone moves. So two
+        // populations that differ only in which creature wins a tie must
+        // produce the SAME FACTS.
+        //
+        // `interleaving_fixture` mints entity ids in list order, so reversing
+        // the masses reverses the tie-break while keeping the same two
+        // creatures. Compare as a MULTISET keyed by (mass, predicate, tick,
+        // object, provenance) — the full content of every emission, not just
+        // its shape:
+        // the two runs assign the ids oppositely, so comparing by raw
+        // `EntityId` would report a difference that is only a relabelling.
+        //
+        // WHEN THIS FAILS, DO NOT RELAX IT. It means a creature has begun to
+        // observe another's mid-tick state, pop order has become semantically
+        // load-bearing, and the sort is no longer sufficient — the
+        // begin/complete event queue named in the spec is then required.
+        // ANOTHER BOUNDARY CONDITION THE KEY LEAVES UNNAMED: `mass_of`
+        // collapses to the rounded mass in millgrams, so two creatures of
+        // EQUAL mass collide in this key and the guard would then be blind
+        // to which of the two did what — a real regression could hide behind
+        // an accidental mass tie. The fixture below uses 4.375 and 70.0,
+        // which differ, so this does not bite today; keying on mass rather
+        // than entity id is deliberate (it is what survives the id-swap
+        // between the forward and reversed runs), so the fix is not to
+        // change the key but to keep the fixture's masses distinct.
+        let run = |masses: [f64; 2]| -> Vec<(u64, String, i64, String, String)> {
+            let (ledger, terrain, npcs) = interleaving_fixture(&masses);
+            let mass_of: std::collections::BTreeMap<EntityId, u64> = npcs
+                .iter()
+                .map(|n| (n.entity, (n.mass_kg * 1000.0).round() as u64))
+                .collect();
+            let sys = DriveMovements {
+                npcs,
+                from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+                to: WorldTime::from_std_days(20.0).expect("a day value is finite"),
+                params: SUSTENANCE,
+                day_ticks: None,
+                terrain: &terrain,
+            };
+            let mut rows: Vec<(u64, String, i64, String, String)> = sys
+                .step(&ledger)
+                .iter()
+                .map(|f| {
+                    (
+                        *mass_of
+                            .get(&f.subject)
+                            .expect("every emitter is in the roster"),
+                        f.predicate.clone(),
+                        f.day.expect("every emitted fact is dated").ticks(),
+                        // The OBJECT and the PROVENANCE, not just the shape.
+                        // `agent-at` carries the destination room and the
+                        // reason it was chosen; the other three predicates
+                        // carry `Flag(true)` and nothing is lost. Without
+                        // these two fields the key is blind to the exact
+                        // regression this guard exists to catch — pop order
+                        // leaking into a creature's ROUTING, which shows up
+                        // as the same creature reaching a DIFFERENT room on
+                        // the same tick under the same predicate.
+                        format!("{:?}", f.object),
+                        f.provenance.clone(),
+                    )
+                })
+                .collect();
+            rows.sort();
+            rows
+        };
+        let forward = run([4.375, 70.0]);
+        let reversed = run([70.0, 4.375]);
+        assert!(
+            !forward.is_empty(),
+            "the fixture emitted nothing; it cannot pin a tie-break"
+        );
+        // A CARDINALITY FLOOR, not just non-empty. `!is_empty()` alone would
+        // still pass if a future change made the reversal stop perturbing
+        // pop order at all (e.g. by making the walk deterministic in a way
+        // that no longer routes through the tie-break), since a single
+        // leftover emission satisfies it while asserting nothing about
+        // whether ties are actually being exercised. This fixture over days
+        // 1..20 measures 300 emitted facts; 20 is well below that so the
+        // floor stays cheap to satisfy while still catching a fixture that
+        // has gone degenerate (emitting only a handful of facts, or none of
+        // the interleaving this test exists to probe).
+        assert!(
+            forward.len() >= 20,
+            "the fixture emitted only {} facts (expected ~300) — it may no \
+             longer be exercising the tie-break this test probes",
+            forward.len()
+        );
+        assert_eq!(
+            forward, reversed,
+            "reversing the queue's tie-break changed WHAT happened, not just \
+             the order it was reported in — pop order has become semantically \
+             load-bearing and sorting the emissions is no longer a sufficient fix"
+        );
+    }
+
+    #[test]
+    fn facts_are_chronological_across_consecutive_ticks() {
+        // THE SORT'S OTHER HALF (The Precedence review, finding F1). Sorting
+        // `step_with_occupancy`'s own output makes ONE tick chronological.
+        // That only makes the WHOLE emitted stream chronological if a second
+        // premise also holds: consecutive ticks' `[from, to]` windows do not
+        // overlap. `every_emitted_fact_is_dated_inside_the_tick_that_emitted_it`
+        // covers the first half (every fact lands inside ITS OWN tick's
+        // window) but is structurally blind to the second — a single call
+        // cannot see a neighbouring tick at all. This test drives two
+        // consecutive ticks the way the production callers do (`health.rs`'s
+        // `run_simulation` loop: `from: day, to: day + 1.0`, then `day +=
+        // 1.0`; `Session::wait` likewise sets the next tick's `from` to the
+        // previous tick's `to`) and checks the composite property that
+        // actually matters: the concatenation of both ticks' emissions is
+        // non-decreasing in `day`, start to finish.
+        //
+        // The first tick's facts are committed into the ledger before the
+        // second tick runs, exactly as both real callers do — `step_with_occupancy`
+        // reads `frozen` fresh each call and reflects nothing from a call
+        // that never landed in the ledger. Unlike the single-tick guards
+        // above, this test actually COMMITS what it emits, so the registry
+        // needs every predicate `DriveMovements` can produce, not just
+        // `agent-at` — a two-day span is long enough for a creature to rest.
+        let reg = {
+            let mut r = agent_at_reg();
+            r.register_predicate(DRANK, false, "drank").unwrap();
+            r.register_predicate(RESTED, false, "rested").unwrap();
+            r.register_predicate(EATEN, false, "eaten").unwrap();
+            r
+        };
+        let (ledger, terrain, npcs) = interleaving_fixture(&[4.375, 70.0, 1_120.0]);
+        let mut mesh_memo = RoomMeshMemo::new();
+        let mut home_nav_cache = HomeNavCache::new();
+
+        let day1_from = WorldTime::from_std_days(1.0).expect("a day value is finite");
+        let day1_to = WorldTime::from_std_days(2.0).expect("a day value is finite");
+        let sys1 = DriveMovements {
+            npcs: npcs.clone(),
+            from: day1_from,
+            to: day1_to,
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &terrain,
         };
-        let facts = sys.step(&ledger);
-        let seq: Vec<EntityId> = facts
-            .iter()
-            .filter(|f| f.predicate == AGENT_AT)
-            .map(|f| f.subject)
-            .collect();
-        let switches = seq.windows(2).filter(|w| w[0] != w[1]).count();
+        let (facts1, _occ1) =
+            sys1.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
         assert!(
-            switches >= 2,
-            "the two creatures never interleave (switches={switches}, seq={seq:?}) — \
-             the queue is not scheduling, it is still walking each in turn"
+            !facts1.is_empty(),
+            "the fixture's first tick emitted nothing; it cannot pin cross-tick order"
         );
-        // And the emitted days run forward on ONE timeline — up to the tick,
-        // which is the resolution the schedule actually orders at. The sequential
-        // loop jumped the full interval backwards at its single handover (the
-        // second creature restarted at `from`); a shared clock can only ever go
-        // back by less than one tick, because creatures tied at the same rounded
-        // tick are separated by entity id and their exact `f64` days then differ
-        // by whatever float accumulation put inside that tick. Bounding the
-        // regression by a tick is the honest form of "one timeline": asserting
-        // strict monotonicity would be asserting that scheduling happens in
-        // `f64`, which is the thing spec §4 refuses to do.
-        let tick = hornvale_kernel::units::TickSpan::from_ticks(1).as_std_days();
-        let mut prev = f64::NEG_INFINITY;
-        for f in &facts {
-            let d = f.day.expect("every emitted fact is dated").as_std_days();
-            assert!(
-                d >= prev - tick,
-                "`{}` at {d} went back more than a tick past {prev} — \
-                 the clock is not shared",
-                f.predicate
-            );
-            prev = prev.max(d);
+        let mut ledger2 = ledger.clone();
+        for f in &facts1 {
+            ledger2.commit(f.clone(), &reg).unwrap();
+        }
+
+        // The second tick's `from` is exactly the first tick's `to` — the
+        // abutting-window shape both production callers use, and the one
+        // this property depends on.
+        let day2_from = day1_to;
+        let day2_to = WorldTime::from_std_days(3.0).expect("a day value is finite");
+        let sys2 = DriveMovements {
+            npcs: npcs.clone(),
+            from: day2_from,
+            to: day2_to,
+            params: SUSTENANCE,
+            day_ticks: None,
+            terrain: &terrain,
+        };
+        let (facts2, _occ2) =
+            sys2.step_with_occupancy(&ledger2, &mut mesh_memo, &mut home_nav_cache);
+        assert!(
+            !facts2.is_empty(),
+            "the fixture's second tick emitted nothing; it cannot pin cross-tick order"
+        );
+
+        let mut prev: Option<WorldTime> = None;
+        for f in facts1.iter().chain(facts2.iter()) {
+            let d = f.day.expect("every emitted fact is dated");
+            if let Some(p) = prev {
+                assert!(
+                    d >= p,
+                    "`{}` at {d:?} went back past {p:?} across the tick boundary \
+                     ({day1_from:?}..{day1_to:?} then {day2_from:?}..{day2_to:?}) — \
+                     within-tick sorting is not enough when ticks' windows \
+                     overlap or a caller commits out of order",
+                    f.predicate
+                );
+            }
+            prev = Some(d);
         }
     }
 
@@ -9154,7 +9630,7 @@ mod tests {
         // The gap catch_up will reconstruct: last seen here on day 0, and the
         // walk itself does not open until day 3.
         ledger
-            .commit(agent_at_fact(e, &home, 0.0, "test setup"), &registry)
+            .commit(agent_at_fact(e, &home, td(0.0), "test setup"), &registry)
             .unwrap();
         let npc = Body {
             entity: e,
@@ -10659,7 +11135,7 @@ mod tests {
         );
         assert!(before > 0.0, "hunger accrues without a meal");
         // Eat on day 5 → hunger is 0 right after.
-        ledger.commit(eaten_fact(e, 5.0, "ate"), &reg).unwrap();
+        ledger.commit(eaten_fact(e, td(5.0), "ate"), &reg).unwrap();
         let after = hunger_at(
             &ledger,
             e,
@@ -12960,30 +13436,80 @@ mod tests {
         );
     }
 
+    /// THE READ AND THE MOVER COMPUTE FATIGUE WITH ONE ARITHMETIC SHAPE.
+    ///
+    /// `fatigue_at` (the read, behind `affect_of`) and `decide_step` (the
+    /// mover, inside the walk) must agree — this module's FOLD doctrine, and
+    /// the reason `learned_helplessness` carries the same sentence. The retype
+    /// briefly broke it: the mover subtracts two INSTANTS and crosses the
+    /// exact span (`(t - r).as_std_days()`), while the read subtracted two
+    /// separately-crossed days (`t.as_std_days() - r.as_std_days()`).
+    ///
+    /// Those two shapes are NOT interchangeable. Measured over 2e6 random tick
+    /// pairs in the walk band, they differ by an ULP for **56.7%** of them —
+    /// so a test asserting they agree could never have passed, which is why
+    /// this pins the SHAPE rather than asserting an equality between them.
+    ///
+    /// Every pair below was measured to disagree under the old shape and to
+    /// land strictly inside the clamp, so reverting `fatigue_at` to the float
+    /// difference turns this red deterministically rather than by luck.
+    #[test]
+    fn a_fatigue_read_matches_the_walks_own_fatigue_arithmetic() {
+        let mut reg = hornvale_kernel::ConceptRegistry::default();
+        reg.register_predicate(RESTED, false, "rested").unwrap();
+        // (query_ticks, rested_ticks) pairs whose two arithmetic shapes were
+        // measured to differ in the last bit.
+        const PAIRS: &[(i64, i64)] = &[
+            (207002, 170638),
+            (191727, 152774),
+            (30409, 29809),
+            (36625, 15772),
+            (47560, 36113),
+        ];
+        for &(t_ticks, r_ticks) in PAIRS {
+            let mut ledger = Ledger::default();
+            let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+            let rested = WorldTime::from_ticks(r_ticks);
+            let t = WorldTime::from_ticks(t_ticks);
+            ledger.commit(rested_fact(e, rested, "t"), &reg).unwrap();
+            // The MOVER's shape, written out here exactly as `decide_step`
+            // computes it, so this test states the contract rather than
+            // calling the code it is pinning.
+            let mover = (FATIGUE_RISE * (t - rested).as_std_days()).clamp(0.0, 1.0);
+            assert_eq!(
+                fatigue_at(&ledger, e, t).to_bits(),
+                mover.to_bits(),
+                "the fatigue read must be BIT-identical to the walk's own \
+                 fatigue arithmetic at t={t_ticks} ticks, rested={r_ticks} \
+                 ticks; a float-difference read disagrees here in the last bit"
+            );
+        }
+    }
+
     #[test]
     fn learned_helplessness_onsets_after_prolonged_thirst_and_probes_periodically() {
         // The fold (§7): unmet survival drive past the onset → helpless, but with
         // a periodic probe (renewed effort) so the state reverses rather than
         // trapping the creature forever.
         assert!(
-            !learned_helplessness(0.0, HELPLESS_ONSET_DAYS - 1.0),
+            !learned_helplessness(td(0.0), td(HELPLESS_ONSET_DAYS - 1.0)),
             "ordinary thirst is not helplessness"
         );
         assert!(
-            learned_helplessness(0.0, HELPLESS_ONSET_DAYS + 1.0),
+            learned_helplessness(td(0.0), td(HELPLESS_ONSET_DAYS + 1.0)),
             "unmet past onset → helpless"
         );
         // The probe: the first day of each period is a retry (not helpless).
         assert!(
-            !learned_helplessness(0.0, HELPLESS_ONSET_DAYS),
+            !learned_helplessness(td(0.0), td(HELPLESS_ONSET_DAYS)),
             "the onset day itself probes"
         );
         assert!(
-            !learned_helplessness(0.0, HELPLESS_ONSET_DAYS + HELPLESS_PROBE_DAYS),
+            !learned_helplessness(td(0.0), td(HELPLESS_ONSET_DAYS + HELPLESS_PROBE_DAYS)),
             "each period opens with a probe"
         );
         assert!(
-            !learned_helplessness(30.0, 31.0),
+            !learned_helplessness(td(30.0), td(31.0)),
             "a fresh drink clears helplessness"
         );
     }
@@ -13293,7 +13819,7 @@ mod tests {
                 .abs()
                 < 1e-9
         );
-        ledger.commit(rested_fact(e, 2.0, "t"), &reg).unwrap();
+        ledger.commit(rested_fact(e, td(2.0), "t"), &reg).unwrap();
         assert!(
             fatigue_at(
                 &ledger,
@@ -14663,8 +15189,8 @@ mod tests {
         // thirst at (day 2), but it is still the only `DRANK` fact in the
         // creature's whole history, so an unfiltered fold over that history
         // finds it regardless of which day is being asked about.
-        let drank_day = 3.0;
-        let read_day = 2.0;
+        let drank_day = td(3.0);
+        let read_day = td(2.0);
         ledger
             .commit(drank_fact(npc.entity, drank_day, "test"), &reg)
             .unwrap();
@@ -14675,9 +15201,12 @@ mod tests {
 
         let correct_last_drank = last_fact_day_at_or_before(&ledger, DRANK, npc.entity, read_day);
         assert_eq!(
-            correct_last_drank, 0.0,
+            correct_last_drank, None,
             "no drink has been committed as of read_day yet"
         );
+        // What `catch_up` itself names at its own call site: no such fact means
+        // "since the world began".
+        let correct_last_drank = correct_last_drank.unwrap_or(WorldTime::GENESIS);
         let mut believed_correct: Option<Facet> = None;
         let (_, correct_thirst) = decide_step(
             read_day,
@@ -14689,8 +15218,8 @@ mod tests {
             &alarm,
             &visited,
             correct_last_drank,
-            0.0,
-            0.0,
+            WorldTime::GENESIS,
+            WorldTime::GENESIS,
             None,
             Mode::Idle,
             &SUSTENANCE,
@@ -14712,7 +15241,7 @@ mod tests {
             .find(DRANK)
             .filter(|f| f.subject == npc.entity)
             .filter_map(|f| f.day)
-            .fold(0.0_f64, |acc, d| acc.max(d.as_std_days()));
+            .fold(WorldTime::GENESIS, WorldTime::max);
         assert_eq!(
             buggy_last_drank, drank_day,
             "sanity check: the unfiltered fold finds the FUTURE drink"
@@ -14728,8 +15257,8 @@ mod tests {
             &alarm,
             &visited,
             buggy_last_drank,
-            0.0,
-            0.0,
+            WorldTime::GENESIS,
+            WorldTime::GENESIS,
             None,
             Mode::Idle,
             &SUSTENANCE,
@@ -14790,11 +15319,11 @@ mod tests {
         let alarm: std::collections::BTreeMap<Facet, f64> = Default::default();
         let visited: std::collections::BTreeSet<Facet> = [home.clone()].into_iter().collect();
 
-        let entry_day = waking_offset(ActivityCycle::Diurnal);
+        let entry_day = td(waking_offset(ActivityCycle::Diurnal));
         let before = ledger.len();
         let _mode = catch_up(
             entry_day,
-            entry_day + 1.0,
+            entry_day + tspan(1.0),
             &home,
             &npc,
             &terrain,
@@ -14985,7 +15514,7 @@ mod tests {
         ]);
         let npc = cold_thermal_npc(npc_id(1), home.clone(), niche);
         let ledger = Ledger::default();
-        let entry_day = waking_offset(ActivityCycle::Diurnal);
+        let entry_day = td(waking_offset(ActivityCycle::Diurnal));
         // What ONE replayed within-room hop costs this creature, asked of the
         // action clock exactly as `catch_up` itself asks (same action, same
         // mass, no terrain factor, no rotation) — rather than restated as a
@@ -14995,7 +15524,7 @@ mod tests {
         // the span's own continuous view.
         let step_days = cost_of(&Action::MoveWithin(anchors[0]), npc.mass_kg, 1.0).as_std_days();
 
-        let run = |horizon: f64| -> Option<AnchorId> {
+        let run = |horizon: WorldTime| -> Option<AnchorId> {
             let mut occ = Occupancy::default();
             occ.place(npc.entity, &home, anchors[0]);
             let mut believed: Option<Facet> = None;
@@ -15032,11 +15561,11 @@ mod tests {
         // loop exhausts its horizon (not the cap) and lands 4 hops down the
         // corridor. The extra half-step of slack absorbs float summation
         // drift between `entry_day + 4.0 * step_days` (computed once) and
-        // `catch_up`'s own `day += days_of(cost_of(..))` run four times in
+        // `catch_up`'s own `day = day + cost_of(..)` run four times in
         // a row — the two need not land on the identical f64, and an exact
         // boundary would make this test's own arithmetic, not the mechanism,
         // decide whether the 4th hop lands in time.
-        let under = run(entry_day + 4.5 * step_days);
+        let under = run(entry_day + tspan(4.5 * step_days));
         assert_eq!(
             under,
             Some(anchors[4]),
@@ -15048,7 +15577,7 @@ mod tests {
         // need, but still short of the LEN-hop corridor), so the cap ends
         // the replay after exactly CAP hops, and the fallback jumps
         // straight to the hearth.
-        let over = run(entry_day + 1.0);
+        let over = run(entry_day + tspan(1.0));
         assert_eq!(
             over,
             Some(anchors[LEN - 1]),

@@ -411,6 +411,7 @@
 - [The Tailrace](./chronicle/the-tailrace.md)
 - [The Reticence](./chronicle/the-reticence.md)
 - [The Scarf](./chronicle/the-scarf.md)
+- [The Sources](./chronicle/the-sources.md)
 - [The Coercion](./chronicle/the-coercion.md)
 - [The Inquest](./chronicle/the-inquest.md)
 - [The Mortise](./chronicle/the-mortise.md)
@@ -418,6 +419,8 @@
 - [The Quadrat](./chronicle/the-quadrat.md)
 - [The Offer](./chronicle/the-offer.md)
 - [The Stile](./chronicle/the-stile.md)
+- [The Latch](./chronicle/the-latch.md)
+- [The Precedence](./chronicle/the-precedence.md)
 
 # Appendix: The Frontier
 

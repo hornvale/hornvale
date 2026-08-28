@@ -251,7 +251,7 @@ fn the_canonical_heavy_reason_states_no_duration() {
 /// outside **both**: outside `preregistration_guard`'s path filter, and
 /// outside this file's adjudication unless its reason happens to carry a
 /// token. Four of the seven blind spots listed above are exactly that case.
-const EXPECTED_UNTOKENISED: [&str; 32] = [
+const EXPECTED_UNTOKENISED: [&str; 33] = [
     "...",
     "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.6083 over 120 pairs, +0.19 SE from the 0.60 bar; five census epochs of one unchanged report read 0.5667, 0.6083, 0.6000, 0.6083 and 0.6083, all inside one SE of the bar, so the battery separates nothing)",
     "PREREGISTERED, not met: awaits BIO-gause-distinctness-vacuous (the corrected climate collapsed all three arms of the cv-ratio instrument - real 0.9945, goblin-niche-substituted 0.9964, width-only 0.9964 against 0.9747 when last authored - so the real gap 0.0055 no longer clears the 0.007 floor and the statistic can no longer separate human from a goblin-substituted human; lowering the floor would retune away the very vacuity it exists to announce)",
@@ -273,6 +273,7 @@ const EXPECTED_UNTOKENISED: [&str; 32] = [
     "measurement: builds one full world; run explicitly with --ignored",
     "measurement: builds one world to BuildDepth::Terrain; run explicitly with --ignored",
     "one-shot before-arm capture (The Fathom, Task 4 Step 1); run by hand, not a standing regression test - see module doc",
+    "one-shot before-arm capture (The Sources, Task 9 Step 1); run by hand, not a standing regression test - see module doc",
     "readout: chronicle evidence, run manually with --nocapture",
     "regenerates the committed occupancy fixture; run by hand - the drift check above is the gate",
     "regenerates the committed repose exposure fixture; run by hand - the drift check above is the gate",

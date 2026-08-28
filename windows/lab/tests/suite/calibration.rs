@@ -777,6 +777,19 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // zero-Absent reading), matching goblin's present-row counts elsewhere
     // in this file falling 1000 -> 999. WITNESS, not claim — nothing here
     // asserts a direction.
+    // The Sources' close regen (2026-08-27, canonical census on lefford at
+    // ddacd5716, goldens 58e2558e3, the campaign's own second census, on a
+    // merge product that also folds in The Escapement's tick epoch): goblin
+    // re-seats on one more world, 190 -> 189 coastal, 809 -> 810 inland —
+    // and the two sum to 999 still (the one absent world persists). WITNESS,
+    // not claim — nothing here asserts a direction.
+    // The Sources' third census (2026-08-28, canonical census on lefford at
+    // 83fcd1689, goldens 6455f51ce — run picked up after this campaign's own vent-chemotrophy fix
+    // (c4192797b) and its xorn re-pin (a56d91320) landed on the merge
+    // product): goblin re-seats back, 189 -> 190
+    // coastal, 810 -> 809 inland — reverting exactly to the prior regen's
+    // figures, and the two still sum to 999. WITNESS, not claim — nothing
+    // here asserts a direction.
     assert_eq!(coastal, 190, "coastal flagship count drifted");
     assert_eq!(inland, 809, "inland flagship count drifted");
 }
@@ -2105,7 +2118,31 @@ fn name_collision_rate_is_measured_and_pinned() {
         // still carries no directional claim (H4 already failed and is
         // recorded as such above), and the rate stays inside the range
         // decision 0024 sanctions (see the note above).
-        (mean - 0.519_033_116_356_999).abs() < 1e-6,
+        // The Sources' close regen (2026-08-27, canonical census on lefford
+        // at ddacd5716, goldens 58e2558e3, the campaign's own second census
+        // — on a merge product that also folds in The Escapement's tick
+        // epoch): zero/nonzero/absent still unmoved at 0/1000/0. Mean:
+        // 0.519_033_116_356_999 -> 0.519_063_035_556_999, a rise of 3.0e-5.
+        // This row still carries no directional claim, and the rate stays
+        // inside the range decision 0024 sanctions (see the note above).
+        // The Sources' third census (2026-08-28, canonical census on lefford
+        // at 83fcd1689, goldens 6455f51ce — run picked up after this campaign's own vent-chemotrophy fix
+        // (c4192797b) and its xorn re-pin (a56d91320) landed on the merge
+        // product): zero/nonzero/absent
+        // still unmoved at 0/1000/0. Mean: 0.519_063_035_556_999 ->
+        // 0.519_033_116_356_999, reverting exactly to The Granary's figure.
+        // This row still carries no directional claim, and the rate stays
+        // inside the range decision 0024 sanctions (see the note above).
+        // The Precedence's close regen (2026-08-28, canonical census on
+        // lefford at 27a2da724760, goldens 32fa5fb73): zero/nonzero/absent
+        // still unmoved at 0/1000/0, checked against this fixture rather than
+        // assumed. Mean: 0.519_033_116_356_999 -> 0.519_030_706_716_999_4, a
+        // fall of 2.4e-6 — a fifth consecutive regen in which this rate moves
+        // in the fifth decimal place or beyond. This row still carries no
+        // directional claim (H4 already failed and is recorded as such
+        // above), the tolerance is unchanged at 1e-6, and the rate stays
+        // inside the range decision 0024 sanctions (see the note above).
+        (mean - 0.519_030_706_716_999_4).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -2343,7 +2380,27 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 8.546_439_147_599_997 -> 8.523_035_457_757_757. Still comfortably
         // below the campaign's own <10-character claim (spec §7) — re-checked
         // rather than assumed.
-        ("goblin", 999u32, 8.522_649_181_881_878),
+        // The Sources' close regen (2026-08-27, canonical census on lefford at
+        // ddacd5716, goldens 58e2558e3, the campaign's own second census — on a
+        // merge product that also folds in The Escapement's tick epoch):
+        // present unmoved at 999; mean 8.522_649_181_881_878 ->
+        // 8.520_497_665_465_461. Still comfortably below the campaign's own
+        // <10-character claim (spec §7) — re-checked rather than assumed.
+        // The Sources' third census (2026-08-28, canonical census on lefford
+        // at 83fcd1689, goldens 6455f51ce — run picked up after this campaign's own vent-chemotrophy fix
+        // (c4192797b) and its xorn re-pin (a56d91320) landed on the merge
+        // product): present unmoved at 999;
+        // mean 8.520_497_665_465_461 -> 8.522_649_181_881_878, reverting
+        // exactly to the prior regen's figure. Still comfortably below the
+        // campaign's own <10-character claim (spec §7) — re-checked rather
+        // than assumed.
+        // The Precedence's close regen (2026-08-28, canonical census on
+        // lefford at 27a2da724760, goldens 32fa5fb73): present unmoved at
+        // 999; mean 8.522_649_181_881_878 -> 8.522_193_159_259_256, a fall
+        // of 4.6e-4 characters. Still comfortably below the campaign's own
+        // <10-character claim (spec §7) — 1.48 characters of margin —
+        // re-checked rather than assumed.
+        ("goblin", 999u32, 8.522_193_159_259_256),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -2472,7 +2529,30 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 982 -> 980, mean 6.818_936_120_061_097 -> 6.865_372_775_000_001.
         // Still comfortably below the campaign's own <10-character claim
         // (spec §7) — re-checked rather than assumed.
-        ("kobold", 980u32, 6.864_935_456_632_652),
+        // The Sources' close regen (2026-08-27, canonical census on lefford at
+        // ddacd5716, goldens 58e2558e3, the campaign's own second census — on a
+        // merge product that also folds in The Escapement's tick epoch):
+        // present unmoved at 980; mean 6.864_935_456_632_652 ->
+        // 6.866_580_815_408_162. Still comfortably below the campaign's own
+        // <10-character claim (spec §7) — re-checked rather than assumed.
+        // The Sources' third census (2026-08-28, canonical census on lefford
+        // at 83fcd1689, goldens 6455f51ce — run picked up after this campaign's own vent-chemotrophy fix
+        // (c4192797b) and its xorn re-pin (a56d91320) landed on the merge
+        // product): present unmoved at 980;
+        // mean 6.866_580_815_408_162 -> 6.864_935_456_632_652, reverting
+        // exactly to the prior regen's figure. Still comfortably below the
+        // campaign's own <10-character claim (spec §7) — re-checked rather
+        // than assumed.
+        // The Precedence's close regen (2026-08-28, canonical census on
+        // lefford at 27a2da724760, goldens 32fa5fb73): present unmoved at
+        // 980; mean 6.864_935_456_632_652 -> 6.864_892_034_999_999, a fall of
+        // 4.3e-5 characters. Still comfortably below the campaign's own
+        // <10-character claim (spec §7) — re-checked rather than assumed.
+        // MEASURED, NOT INFERRED: this row is the second assertion in a loop
+        // whose first arm is goblin, so a goblin drift masks it entirely and
+        // the failing run above named only goblin. Both means were read off
+        // the regenerated `rows.csv` in one duckdb pass.
+        ("kobold", 980u32, 6.864_892_034_999_999),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -2679,8 +2759,25 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // 2.186_698_356_822_811 -> 2.200_726_815_918_367. The claim (spec §8
         // criterion 2, mean in 2-3) still HOLDS at both species — re-checked
         // rather than assumed.
-        ("goblin", 999u32, 2.716_477_110_510_511),
-        ("kobold", 980u32, 2.200_726_815_918_367),
+        // The Sources' close regen (2026-08-27, canonical census on lefford at
+        // ddacd5716, goldens 58e2558e3, the campaign's own second census — on a
+        // merge product that also folds in The Escapement's tick epoch):
+        // present counts unmoved (goblin 999, kobold 980). Goblin
+        // 2.716_477_110_510_511 -> 2.715_722_780_480_479; kobold
+        // 2.200_726_815_918_367 -> 2.201_225_966_020_408. The claim (spec §8
+        // criterion 2, mean in 2-3) still HOLDS at both species — re-checked
+        // rather than assumed.
+        // The Sources' third census (2026-08-28, canonical census on lefford
+        // at 83fcd1689, goldens 6455f51ce — run picked up after this campaign's own vent-chemotrophy fix
+        // (c4192797b) and its xorn re-pin (a56d91320) landed on the merge
+        // product): present counts unmoved
+        // (goblin 999, kobold 980). Goblin 2.715_722_780_480_479 ->
+        // 2.716_477_110_510_509; kobold 2.201_225_966_020_408 ->
+        // 2.200_726_815_918_366_6 — both reverting to (within float noise)
+        // the prior regen's figures. The claim (spec §8 criterion 2, mean in
+        // 2-3) still HOLDS at both species — re-checked rather than assumed.
+        ("goblin", 999u32, 2.716_477_110_510_509),
+        ("kobold", 980u32, 2.200_726_815_918_366_6),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -2964,7 +3061,29 @@ fn name_transparency_is_measured_and_pinned() {
         // The language did not change; the population did.
         // 0.714_363_700_030_002 -> 0.714_089_011_470_002. Still emphatically
         // NOT 1.0 — re-checked, not assumed.
-        (mean - 0.714_089_011_470_002).abs() < 1e-9,
+        // The Sources' close regen (2026-08-27, canonical census on lefford at
+        // ddacd5716, goldens 58e2558e3, the campaign's own second census — on a
+        // merge product that also folds in The Escapement's tick epoch):
+        // present/absent unmoved at 1000/0; min/max unmoved at 0.284_644_19
+        // and 0.986_531_99 (checked directly against the committed census,
+        // not assumed). Mean: 0.714_089_011_470_002 -> 0.713_871_805_500_002.
+        // Still emphatically NOT 1.0 — re-checked, not assumed.
+        // The Sources' third census (2026-08-28, canonical census on lefford
+        // at 83fcd1689, goldens 6455f51ce — run picked up after this campaign's own vent-chemotrophy fix
+        // (c4192797b) and its xorn re-pin (a56d91320) landed on the merge
+        // product): present/absent unmoved
+        // at 1000/0; min/max unmoved at 0.284_644_19 and 0.986_531_99. Mean:
+        // 0.713_871_805_500_002 -> 0.714_089_011_470_001_7, reverting
+        // exactly to the prior regen's figure. Still emphatically NOT 1.0 —
+        // re-checked, not assumed.
+        // The Precedence's close regen (2026-08-28, canonical census on
+        // lefford at 27a2da724760, goldens 32fa5fb73): present/absent unmoved
+        // at 1000/0; min/max unmoved at 0.284_644_19 and 0.986_531_99
+        // (checked directly against the committed census in duckdb, not
+        // assumed — they are the two assertions this one masks). Mean:
+        // 0.714_089_011_470_001_7 -> 0.713_851_012_460_001_4, a fall of
+        // 2.4e-4. Still emphatically NOT 1.0 — re-checked, not assumed.
+        (mean - 0.713_851_012_460_001_4).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -3541,7 +3660,16 @@ fn null_control_name_length_smd_is_pinned() {
         // settlements sit, which moves which peoples exist and therefore the
         // name sample. The language did not change; the population did.
         // -0.024_799_776_460_672_038 -> -0.025_108_472_368_594_453.
-        (namelen - -0.025_108_472_368_594_453).abs() < 1e-9,
+        // The Precedence's close regen (2026-08-28, canonical census on
+        // lefford at 27a2da724760, goldens 32fa5fb73): the residual
+        // name-length gap between the goblin and its deliberately-identical
+        // twin shifts -0.025_108_472_368_594_453 ->
+        // -0.025_280_277_786_945_245, a move of 1.7e-4 with no sign flip.
+        // Still ~8x inside the ±0.2 sampling-theory bound
+        // `null_control_distributions_are_within_the_sampling_bound` asserts
+        // — the null hypothesis this row exists to witness
+        // (INDISTINGUISHABLE FROM ZERO) reads as true as it ever has.
+        (namelen - -0.025_280_277_786_945_245).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

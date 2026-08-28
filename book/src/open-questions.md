@@ -1342,6 +1342,28 @@ Drow needs only to differ from surface elves. Mountain-dwarf and Duergar differ
 from each other by stratum alone, and the biome vocabulary still has no
 subterranean variant, so they remain owed.
 
+*Re-scored by [The Sources](./chronicle/the-sources.md) (2026-08-27), which
+moves the precondition the withdrawal was actually waiting on.* Before this
+campaign every rung in a subterranean column shared one temperature and one
+moisture reading, taken once at the column's deepest point — so two kinds
+differing by stratum alone would have been scored against conditions that do
+not vary by stratum at all, no matter how their authored optima were placed.
+Water, substrate and the new rock-derived energy term now all resolve **per
+rung**, each read at that rung's own thermal offset from the surface, with
+the deepest rung kept as a fixed point precisely so the change could be
+checked rather than assumed. Two kinds seated at different depths in the
+same column can now, structurally, read different conditions — which is the
+enabling condition the withdrawal named, not yet the separation itself. It is
+**not fully resolved**: the biome vocabulary still has no subterranean
+variant, so nothing yet gives Mountain-dwarf and Duergar a *kind of place* to
+differ by, only a set of scalars that can now vary with depth. And the same
+campaign found that one of those scalars carries less discriminating power
+than assumed — rock chemistry underground sorts into roughly three
+near-constant categories rather than a continuum, so a stratum-only
+distinction will have to lean on the axes that do vary continuously with
+depth (temperature, moisture, the energy term's own magnitude) rather than
+on rock type alone.
+
 **A finding about the contest, not about elves, and it is new.** Two peoples
 authored to share a mass and an affinity row have capacity fields that are
 **bit-identical** over eleven to nineteen thousand land cells — and they settle on
@@ -2235,6 +2257,84 @@ substitution changes nothing observable. It was caught by running it. **A
 mutation is evidence only if something establishes it could have moved the
 result**, which is the same clause this chapter already carries about a
 column's stable value, arriving one level down.
+
+[The Latch](./chronicle/the-latch.md) continues that distribution and then
+breaks it in one place — fourteen defects, every one originating in controller
+prose, a fourth campaign running; thirteen caught before they reached committed
+code, and **the fourteenth shipped**, removed only after the merge candidate
+was assembled. Its **shape shifted too, and the shift is the entry worth
+keeping.** The early ones were wrong identifiers a grep catches: a test helper
+that does not exist, a constructor asserted to return a
+bare value when it returns a `Result`. The late ones were **internal
+contradictions no grep can find.** One brief named an integration-test file for
+a test while also instructing the implementer to reach the seam through a
+private module — two halves of one instruction, each locally reasonable, jointly
+unsatisfiable. Nothing mechanical can see that, and re-reading cannot either,
+because re-reading checks a claim against the model that produced it and the
+model is what is wrong. It died when an implementer tried to build it.
+
+**The campaign's largest error was of that second kind and outranks the twelve
+on that list.**
+Its specification asserted, as established fact, that nothing a possession
+session commits is ever persisted and that no world-writing path exists after
+genesis. That sentence shaped an acceptance criterion, a module's
+documentation, an idea-registry row, and a decision record — and it is false.
+Possession takes a documented `--out` flag; a previous campaign built the save
+path deliberately and ruled on how it filters. One command retired the claim at
+the Definition-of-Done sweep, four tasks after it should have been checked.
+
+**The generator of the error is the transferable part**, and it is a shape this
+chapter has recorded before at smaller scale. The evidence the specification
+rested on was a doc comment saying the session ledger is "never written back."
+That comment is *true*. It answers its author's question — does a session mutate
+the world it borrowed? — and the answer is no. The specification read it as
+answering a different question, whether these facts can ever be saved at all,
+and the two questions have opposite answers. **A doc comment answers its
+author's question, not the one a later reader brings to it**; a constraint read
+off one is a hypothesis, and this one went four tasks without being tested
+because it was never framed as one.
+
+Three checks also reported green for reasons unrelated to correctness, which is
+this chapter's standing concern about instruments arriving from a new
+direction. A docs-only commit skipped the commit gate on a path heuristic —
+correct about which *files* changed, wrong about which *tests guard them*,
+because the check that would have caught the defect is a Rust test that guards
+documentation. And the campaign's own three-outcome tripwire is absent from the
+sub-floor roster, so the commit gate compiles it and never runs it: it would
+have reported green while that test was red, on the very change the test exists
+to catch. **A gate's scope and a defect's location can disagree, and the gate
+cannot tell you when they do.** Both were caught by a human reading the roster,
+not by anything running.
+
+The third is the defect that shipped, and it is a different failure entirely.
+The campaign added a verb to the dispatcher and to neither of the two rosters
+that gate a verb by the state of the body, so a sleeping character could clear
+a barred passage and commit the fact — and it was the only new verb that writes
+to the ledger. The check meant to catch exactly this was green throughout **and
+was working correctly**: it holds two lists in agreement in both directions,
+and a verb missing from both agrees with itself. That was measured in the
+defective state rather than inferred. **A two-way agreement check has a blind
+zone at zero copies**, and the only instrument that sees into it is a test that
+drives the behaviour. Seven green task reviews did not find it either — each
+saw a diff that added a verb, and none asked the question only a whole-branch
+view asks: which lists is this verb in? What closed it was available the whole
+time, since the preceding campaign had shut the identical hole on a different
+verb and left the test to copy. But the copy sits outside the cheapest gate by
+construction: it costs thirteen seconds because it builds a world, and the
+commit gate admits only tests under a second. The check with the hole runs on
+every commit; the one that closes it does not.
+
+The entry above is a correction, and it is worth saying so here because the
+record failed in the same way the campaign it records did. The campaign's
+retrospective opened with "twelve defects, none surviving in implementer code."
+The second half was already false the moment it was written — the fourteenth
+defect was sitting in committed code two commits earlier, undiscovered — and
+the heading was left standing even after that defect was found and written into
+a later section of the same file. Nothing re-reads an opening when a body
+changes, and the person best placed to notice is the one who has just written
+the thing that invalidated it. **A record can outlive its subject inside the
+document that named the hazard**, which is the smallest scale at which this
+chapter has yet observed it.
 
 [The Mire](./chronicle/the-mire.md) exercised the same discipline on a bet
 about weather and world structure that no earlier chapter entry had staked,

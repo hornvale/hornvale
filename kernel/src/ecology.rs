@@ -101,6 +101,23 @@ pub const MARINE_FORAGE: ResourceAxis = ResourceAxis {
     kind: ResourceKind::Stock,
 };
 
+/// Ambient chemosynthetic primary production — energy fixed from chemical
+/// gradients rather than light (hydrothermal, cave-chemolithotrophic, or
+/// other lightless sources), never depleted by consumption. Registered here
+/// with an axis id and no supply of its own — the kernel names the axis but
+/// draws no field; the real supply is wired downstream in the composition
+/// root, per realm (THE SOURCES, Task 9): `chemosynthate_per_rung` for a
+/// `Subterranean` kind, `marine_chemosynthate_supply_field` for a `Surface`
+/// one at a hydrothermal vent.
+///
+/// `Field` rather than `Stock`, matching `PHOTOSYNTHATE`: this axis is the
+/// base of a lightless food web, not the standing biomass it supports.
+pub const CHEMOSYNTHATE: ResourceAxis = ResourceAxis {
+    id: 6,
+    label: "chemosynthate",
+    kind: ResourceKind::Field,
+};
+
 /// The registered resource-axis basis, in ascending id order. The basis is
 /// open — later campaigns may register further axes with higher ids — so this
 /// slice is a snapshot of what's registered today, not a closed enum. The
@@ -134,6 +151,7 @@ pub fn v1_basis() -> &'static [ResourceAxis] {
         DETRITUS,
         MINERAL,
         MARINE_FORAGE,
+        CHEMOSYNTHATE,
     ]
 }
 
@@ -685,10 +703,16 @@ mod tests {
         let ids: Vec<u16> = v1_basis().iter().map(|a| a.id).collect();
         assert_eq!(
             ids,
-            vec![0, 1, 2, 3, 4, 5],
+            vec![0, 1, 2, 3, 4, 5, 6],
             "the basis is append-only: ids must be dense and ascending from 0, \
              and a new axis takes the next free id at the END"
         );
+    }
+
+    #[test]
+    fn chemosynthate_takes_the_next_free_id_and_is_ambient() {
+        assert_eq!(CHEMOSYNTHATE.id, 6);
+        assert_eq!(CHEMOSYNTHATE.kind, ResourceKind::Field);
     }
 
     #[test]

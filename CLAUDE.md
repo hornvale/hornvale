@@ -674,10 +674,35 @@ unknown`), excluded from the cargo workspace by `Cargo.toml`. The repo
 boundary **is** the determinism boundary (decision 0055): Hornvale
 guarantees byte-identical seeded output up to and including the wasm ABI;
 what a client does with that output is unconstrained (decisions 0022/0023).
-The external Orrery client (a sibling repo) consumes `clients/world-wasm`'s
-released catalog — so **scene schemas (`scene/system/v1`, `scene/tiles/v1`,
-…) are cross-repo contracts: additive-or-versioned only**, the same
-discipline seed labels carry.
+**THE EXTERNAL CLIENTS ARE RETIRED (decision 0356), AND THIS PARAGRAPH USED
+TO SAY OTHERWISE.** It read: "The external Orrery client (a sibling repo)
+consumes `clients/world-wasm`'s released catalog — so **scene schemas are
+cross-repo contracts: additive-or-versioned only**." Goldengrove and the
+Orrery are gone, so the released catalog has no reader outside this
+repository and a scene schema (`scene/system/v1`, `scene/tiles/v1`, …) is no
+longer a cross-repo contract. Change one outright where that is the simpler
+design; version it where that is clearer; neither choice owes anything to a
+consumer that does not exist. Decision 0055's *mechanism* — a versioned wasm
+catalog, never a re-implementation and never a server — stands unchanged and
+is still the right answer for any future external client; only its premise
+lapsed.
+
+**Two things do NOT relax with it, and the sentence above used to bundle all
+three together.** The repo boundary is still the determinism boundary:
+byte-identical seeded output up to and including the wasm ABI is a guarantee
+Hornvale makes to *itself*, pinned by the golden smoke test that compares
+wasm output against the native CLI for the same seed and pins. And **seed
+labels are still permanent contracts** — a seed label binds every world ever
+generated, not a client, so "the same discipline seed labels carry" was
+never the reason schemas were disciplined and survives the clients that were.
+
+**Why the correction is loud rather than a quiet edit:** a record that
+outlives its subject does not sit inert, it produces wrong answers from
+readers acting in good faith. The merge queue vetted a `scene/eclipses` v1→v2
+bump as *correct* on the strength of the retired sentence, which made a
+version bump look like the disciplined choice and hid that the change also
+**removed** the float fields. The gate caught it; the vet, reading this file,
+did not.
 
 **A world is a seed plus a ledger.** `World { seed, registry, ledger }`
 serializes to JSON; everything else is re-derived deterministically.

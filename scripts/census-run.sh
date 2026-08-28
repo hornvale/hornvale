@@ -209,6 +209,20 @@ trap 'rm -f "$claim_path"; echo "census-run: finished at $(date -Is)" >&2' EXIT
 if [ "$#" -eq 0 ]; then
     echo "census-run: regenerating the canonical census goldens (HV_CENSUS=1, ~7 min) …" >&2
     HV_CENSUS=1 bash scripts/timed.sh census -- bash scripts/regenerate-artifacts.sh
+    # Report this run's wall against the alarm threshold NOW, while an operator
+    # is still watching and on the box that measured it. The Rust ratchet reads
+    # docs/timings.md on main, and since the census joined the merge queue a
+    # run's row lands on its census/* DELIVERY BRANCH — so the ratchet cannot
+    # see a run until a campaign merges that branch. On 2026-08-27 that meant
+    # three of four runs past the threshold while the ledger on main still
+    # showed a two-day-old figure as its most recent census.
+    # Reads the wall back out of the row timed.sh just wrote, so the number
+    # alarmed on is the number recorded, not a second measurement of it.
+    census_wall="$(grep '| census |' docs/timings.md 2>/dev/null | tail -1 \
+                   | awk -F'|' '{gsub(/ /, "", $4); print $4}')"
+    if [ -n "${census_wall:-}" ]; then
+        bash scripts/census-duration-alarm.sh "$census_wall" || true
+    fi
     echo "census-run: goldens regenerated — review 'git diff book/src/laboratory/generated' and commit (this box is the canonical one, decision 0063)." >&2
 else
     for study in "$@"; do
