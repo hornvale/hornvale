@@ -487,6 +487,11 @@ Expected drift, landing in the same commit as its cause:
   does.
 - `docs/audits/type-audit-report.md` — any pub-boundary change drifts it, and
   a new domain crate is a large one. An aggregate: never text-merge it.
+- `book/src/reference/layering-generated.md` — written by
+  `cli/tests/suite/architecture.rs`, which discovers crates from `cargo
+  metadata`, so `domains/thing` moves it automatically. **Added at plan-writing
+  time**: the first draft of this section missed it, because the drift it
+  causes is authored by a *test* rather than by `regenerate-artifacts.sh`.
 - `docs/digest/decisions-in-force.md` — 0367 superseded, new records added.
 - `book/src/reference/concept-registry-generated.md` and the stream manifest —
   the new `ConceptKind` variant and any new stream labels.
