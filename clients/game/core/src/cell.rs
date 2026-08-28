@@ -180,7 +180,7 @@ pub enum Source {
     /// construction: startup happens before any `Snapshot` exists, so there is
     /// no field for this crate to check the label against. Honesty is a caller
     /// discipline — `bin` must only attribute genuinely world- or
-    /// measurement-derived cells here.
+    /// measurement-derived glyphs here.
     Overture,
     /// The player's own unsent keystrokes: the command line's buffer text,
     /// drawn by `entry.rs` after the `>` prompt. **Deliberately not

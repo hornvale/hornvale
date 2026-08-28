@@ -3784,3 +3784,5 @@ measured here.
 | 2026-08-28T20:37:10Z | sluice:outboard | 41.061 | 25.222 | 38.856 | 1.56 | 0 | 6e7e9fe35 |  | lefford | 40 |
 | 2026-08-28T20:44:38Z | sluice:gate | 447.773 | 13018.949 | 409.363 | 29.99 | 0 | 957994933 |  | lefford | 40 |
 | 2026-08-28T20:53:34Z | sluice:clients | 535.338 | 9403.388 | 93.765 | 17.74 | 0 | 7576c92aa |  | lefford | 40 |
+| 2026-08-28T22:21:30Z | gate-commit | 253.043 | 606.351 | 75.072 | 2.69 | 0 | 2e3ff148a | campaign/the-overture | ambrose | 12 |
+| 2026-08-28T22:25:19Z | gate-commit | 89.713 | 55.033 | 26.812 | 0.91 | 0 | 2e3ff148a | campaign/the-overture | ambrose | 12 |

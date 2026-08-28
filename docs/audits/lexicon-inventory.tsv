@@ -22,10 +22,16 @@ clients/game/bin/examples/vision.rs	11
 clients/game/bin/src/discovery.rs	3
 clients/game/bin/src/driver.rs	36
 clients/game/bin/src/input.rs	1
+clients/game/bin/src/main.rs	1
 clients/game/bin/src/mercator.rs	5
+clients/game/bin/src/overture/genesis.rs	6
+clients/game/bin/src/overture/mod.rs	9
+clients/game/bin/src/overture/progress.rs	10
+clients/game/bin/src/overture/sky.rs	5
 clients/game/bin/src/plate.rs	48
 clients/game/bin/src/term.rs	5
 clients/game/bin/src/tiles.rs	9
+clients/game/bin/tests/boot.rs	3
 clients/game/bin/tests/driver.rs	8
 clients/game/core/src/cell.rs	48
 clients/game/core/src/chart.rs	148

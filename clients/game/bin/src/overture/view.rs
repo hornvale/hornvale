@@ -83,7 +83,7 @@ pub trait View {
     ///
     /// A `OnceLock` field under an `&self` signature would work and is
     /// deliberately not the answer: it hides mutation behind an immutable
-    /// signature and makes every view reinvent the same cell.
+    /// signature and makes every view reinvent the same escape hatch.
     ///
     /// **`&mut self` is a memo, not a licence.** Rendering must stay a pure
     /// function of `(world, rung, artifacts, w, h)` as far as its OUTPUT is
