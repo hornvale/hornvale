@@ -148,39 +148,45 @@ settlement placement."* The tenth,
 `the_sub_floor_raider_reading_is_pinned_as_a_witness`, says in its own name
 that it is a witness. That one stays.
 
-**Five** heavy tests live in files with **zero assertions anywhere in the
-file**, and contain only `println!`s:
+**Six** heavy tests live in files with **zero assertion macros anywhere in the
+file**, and contain only `println!`s plus build/lookup preconditions:
 
 ```
 windows/hearsay/tests/suite/probe_filter_mismatch.rs
-    where_can_a_claim_cross_a_people_boundary_on_seed_42
 windows/hearsay/tests/suite/probe_filter_variation.rs
-    do_the_filter_keys_vary_between_witnesses_of_one_event_on_seed_42
 windows/hearsay/tests/suite/probe_lossy_quadrants.rs
-    how_often_does_each_teller_hearer_quadrant_occur_on_seed_42
 windows/hearsay/tests/suite/probe_stance_cost.rs
-    what_does_stance_cost_and_how_are_stance_pairs_distributed_on_seed_42
+windows/worldgen/tests/suite/delver_depth_probe.rs
 windows/worldgen/tests/suite/warren_liebig_probe.rs
-    which_axis_binds_for_a_subterranean_kind
 ```
 
 None delegates to an assertion helper. They can fail only if world
-construction itself panics through an `expect(`, so they assert nothing
-whatever about their own findings, and they have been running in a gate tier.
+construction itself panics through an `expect(` — or through a `_ =>
+panic!(...)` match arm on a build precondition, which is the same thing
+written differently. `delver_depth_probe.rs:116` says so in its own words:
+*"This test asserts nothing at all: every check in it is a build/lookup
+`expect`."* So they assert nothing whatever about their own findings, and
+they have been running in a gate tier.
 
-*(**This figure was wrong twice and the second error is the instructive one.**
-A first count said three, from a body-scoped `assert!` regex; correcting that
-to file-wide gave two, and two is what this spec said when it was approved.
-Two was also wrong. The scan behind it ranked heavy tests by `println!` count
-and then file-wide-verified only the top three that surfaced — so a
-zero-assertion test with few prints could never enter the candidate set at
-all, and three of the five did not. The claim was tier-wide; the evidence
-covered a ranked prefix. Task 4a's implementer found two of the missing ones
-inside its own subpopulation and said so, which is what forced the recount.
-The lesson is the pre-filter's, not just this paragraph's: **§3.2's
-zero-assertion filter authorises an automatic demotion, so its evidence
-standard is the one thing in this spec that must not rest on a sampled
-scan.**)*
+*(**This number has been wrong four times and the sequence is the lesson:
+3, 2, 5, "at least 9", 6.** (1) A body-scoped `assert!` regex gave three.
+(2) Correcting to file-wide gave two -- but the scan behind it ranked heavy
+tests by `println!` count and file-wide-verified only the top three, so a
+zero-assertion test with few prints could never enter the candidate set; the
+claim was tier-wide and the evidence covered a ranked prefix. (3) An
+exhaustive file-wide scan gave five. (4) An adjudicating agent, warned that
+the number had been wrong twice, counted exhaustively and applied the wrong
+PREDICATE -- it scored tests with no assertions in a file that has some,
+which is a different unit, and reported "at least nine". (5) Six is the
+current answer: five, plus `delver_depth_probe.rs`, which the exhaustive scan
+missed because that scan's regex counted `panic!` as an assertion. It is not
+one -- this section's own definition of the class says these tests fail only
+through a build precondition, and a `_ => panic!(...)` arm is exactly that.
+**Each correction fixed the previous error's mechanism and introduced a new
+one at a different layer** -- scope, then sampling, then unit, then
+predicate. The filter authorises a demotion with NO adjudication, so it is
+the one place in this spec where being approximately right is not good
+enough.)*
 
 ### 2.3 Front-load the barrier (`priority`)
 
@@ -240,11 +246,25 @@ These make the adjudication cheap and auditable; they do not replace it.
   fail witnesses nothing. **Counted file-wide, not body-scoped, and after
   checking the body's call list for assertion helpers** — a body-scoped literal
   `assert!` count is not sufficient evidence, and produced a wrong number
-  twice on this very spec (three, then two). **Five tests qualify today**, and
-  the scan that establishes it must be exhaustive over every heavy-bearing
-  file — not a ranked prefix of them. This filter is the only one in the spec
-  that authorises a demotion with no adjudication, so it is the one place a
-  sampled scan is not good enough. See §2.2 for both wrong numbers and why.
+  four times on this very spec (3, 2, 5, "at least 9"). **Six tests qualify
+  today.** The scan that establishes it must be exhaustive over every
+  heavy-bearing file — not a ranked prefix — and must count the right thing:
+  **assertion macros (`assert!`/`assert_eq!`/`assert_ne!`/`debug_assert*`),
+  file-wide.** A `panic!` or `expect` reached only from a build or lookup
+  precondition is NOT an assertion and does not disqualify a file; a test
+  with no assertions of its own, in a file that has some, is a DIFFERENT unit
+  and does not qualify for the automatic path at all — it gets an ordinary
+  adjudication.
+
+  **The automatic path may not be reached by interpretation.** This filter is
+  the only rule in the spec that demotes a test without anyone arguing the
+  case, so its trigger stays mechanical on purpose. Do not broaden it to
+  "asserts something about its own results", however tempting: that phrasing
+  swallows non-vacuity guards by judgement, which is precisely how an
+  automatic path eats cases that were supposed to be argued. Where a test is
+  genuinely assertion-free but its file is not, reach the same verdict the
+  long way and say so in the reason. See §2.2 for all four wrong numbers and
+  the distinct mechanism behind each.
 - A test whose name is a **question** (`how_`, `which_`, `whether_`, `what_`,
   `could_`, `is_the_`) is a demotion *candidate* and must be adjudicated
   explicitly. It is not auto-demoted — `which_way_the_account_crosses_the_seam`
