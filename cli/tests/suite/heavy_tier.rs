@@ -283,8 +283,8 @@ fn heavy_tagged_tests() -> Vec<String> {
 /// `test_binary_ratchet.rs::no_new_top_level_test_binary_appears`.
 ///
 /// **THIS GUARD CATCHES THE ROSTER GROWING OR SHRINKING; IT DOES NOT PRICE
-/// ANY SINGLE ENTRY.** Nothing charged a `heavy:` tag before this (spec
-/// §4) — this closes exactly that gap and no more: adding one now requires
+/// ANY SINGLE ENTRY'S DURATION.** Nothing charged a `heavy:` tag before this
+/// (spec §4) — this closes exactly that gap and no more: adding one requires
 /// editing this committed fixture in the same commit, a deliberate,
 /// reviewable, visible diff, rather than a tag nobody sees. To add a test
 /// deliberately, append its `<path>::<fn>` line to
@@ -292,6 +292,21 @@ fn heavy_tagged_tests() -> Vec<String> {
 /// the message. To remove one — demoting it to `probe:` or deleting it —
 /// delete its line; this direction is checked too, so the roster cannot rot
 /// into a permission slip nobody re-reads.
+///
+/// **WHAT AN ADDITION NOW COSTS CHANGED UNDER DECISION 0426.** When this
+/// ratchet was written the tier ran only when a human typed `make
+/// heavy-remote`, so a new tag could only ever be made *visible* — a test no
+/// gate ran cost nobody anything. 0426 (The Governor, 2026-08-28) put `heavy`
+/// back on both of `scripts/sluice-run.sh`'s chamber phase lists, so a line
+/// appended here is charged to **every subsequent merge and every subsequent
+/// stage gate** on the one strictly serial box, forever. That is the coupling
+/// spec §4 wanted and could not have while the tier ran by hand.
+///
+/// It still prices **membership**, not duration — §4 chose a frozen roster
+/// over a wall-clock budget on purpose, because a committed baseline is a
+/// claim with a date and roster membership does not decay. 0426 records that
+/// as a named residual: the ~450 s figure that makes the phase affordable is
+/// exactly the quantity nothing ratchets.
 #[test]
 fn the_heavy_roster_is_exactly_this_fixture() {
     let frozen: BTreeSet<String> = FROZEN_HEAVY_ROSTER
@@ -313,10 +328,11 @@ fn the_heavy_roster_is_exactly_this_fixture() {
     let added: Vec<&String> = found.difference(&frozen).collect();
     assert!(
         added.is_empty(),
-        "new heavy:-tagged test(s) not in the frozen roster, each an UNPRICED \
-         addition to the tier (spec §4, The Governor):\n{}\n\nAppend the line(s) to \
-         cli/tests/fixtures/heavy-roster.txt in the same commit and say why in the \
-         message.",
+        "new heavy:-tagged test(s) not in the frozen roster (spec §4, The \
+         Governor):\n{}\n\nSince decision 0426 the tier is a chamber phase again, so \
+         each of these is charged to EVERY subsequent merge and stage gate. Append \
+         the line(s) to cli/tests/fixtures/heavy-roster.txt in the same commit and \
+         say why in the message.",
         added
             .iter()
             .map(|p| format!("  {p}"))

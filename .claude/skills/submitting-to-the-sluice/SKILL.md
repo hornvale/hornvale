@@ -33,7 +33,7 @@ needs the canonical box for, and they differ in exactly one respect:
 | | `make sluice-stage BRANCH=… REF=…` | `make sluice BRANCH=… REF=…` |
 |---|---|---|
 | when | every plan-stage boundary | work is complete |
-| phases | `artifacts outboard gate clients` | **the same four** — see below |
+| phases | `artifacts outboard gate clients heavy` | **the same five** — see below |
 | merges main+branch in the chamber | yes | yes |
 | pushes | **never** | yes, the exact SHA it tested |
 | terminal state | `reported` | `landed` |
@@ -41,19 +41,27 @@ needs the canonical box for, and they differ in exactly one respect:
 
 Everything below applies to both unless it says otherwise.
 
-**THE PHASE SETS ARE IDENTICAL, AND A MERGE DOES NOT RUN `heavy`.** An earlier
-version of this table said a merge runs "all six, `heavy` last." It does not.
-`scripts/sluice-run.sh:360` is unambiguous:
+**THE PHASE SETS ARE IDENTICAL, AND BOTH RUN `heavy` LAST (decision 0426,
+2026-08-28).** This paragraph has now been wrong in both directions, so read
+the script rather than any prose about it:
 
 ```
-merge_phases="artifacts outboard gate clients"
-stage_phases="artifacts outboard gate clients"
+merge_phases="artifacts outboard gate clients heavy"
+stage_phases="artifacts outboard gate clients heavy"
 ```
 
-The file says so in its own prose too — the two kinds "run the SAME phases and
-differ only in the push — which was always the design" (`:341`), and a merge
-product is "gated as itself, by four phases" (`:348`). `heavy` is not a chamber
-phase at all: it is a separate dispatch, `make heavy-remote REF=<full-sha>`.
+The history, because it is the reason to distrust a remembered phase list: the
+table once said a merge runs "all six, `heavy` last"; decision 0148 made that
+false by taking `heavy` and `seam-guard` off both lists; and this paragraph
+then said flatly that "`heavy` is not a chamber phase at all", which decision
+0426 made false again after The Governor cut the tier 3.45x. `seam-guard` is
+the one that is genuinely not a chamber phase — it runs only from `make
+seam-guard`. `make heavy-remote REF=<full-sha>` still exists as a by-hand
+entry point for the tier, but it is no longer the only dispatcher.
+
+**A prose-only candidate skips `heavy` (and `clients`).** `scripts/sluice-phases.sh`
+drops them when every changed path is hand-written prose, so a docs-only merge
+does not pay the tier's ~450 s.
 
 **Why this matters when choosing between them.** The difference is the push and
 nothing else, so a green stage gate on an ancestor SHA has already bought a

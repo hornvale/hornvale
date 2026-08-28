@@ -144,7 +144,16 @@ make doctor        # the repo self-map — run this first in a fresh session
 #   make quick                                        # cheap half only: fmt-check + clippy + type-audit
 #   make gate-commit                                  # THE COMMIT GATE: local, seconds, every commit
 #   make sluice-stage BRANCH=<branch> REF=<full-sha>  # THE STAGE GATE: the queue, minutes, each plan-stage boundary — never pushes
-#   make sluice       BRANCH=<branch> REF=<full-sha>  # THE MERGE: same queue, same FOUR phases as the stage gate, pushes the SHA it tested
+#   make sluice       BRANCH=<branch> REF=<full-sha>  # THE MERGE: same queue, same phases as the stage gate, pushes the SHA it tested
+#
+# THE CHAMBER RUNS FIVE PHASES NOW, NOT FOUR (decision 0426, 2026-08-28).
+# `heavy` is back on both of `scripts/sluice-run.sh`'s phase lists, last, after
+# The Governor cut the tier 3.45x (1551.631 s -> 449.219 s nextest wall,
+# 118 -> 63 tests, 10 -> 0 failures on lefford). A merge goes from ~1100 s to
+# ~1550 s (+41%); a prose-only candidate still pays none of it. `seam-guard`
+# stays off. The two lists remain IDENTICAL — the stage gate is still the merge
+# minus the push — and the phase names themselves stay in
+# `scripts/lane-sets.tsv`, which this block points at rather than restates.
 #
 # THE STAGE GATE IS THE SAME OBJECT AS A MERGE, MINUS THE PUSH. It is not a
 # separate system: one column in the queue TSV (`kind`), one branch at the
@@ -275,11 +284,14 @@ make doctor        # the repo self-map — run this first in a fresh session
 # closed rather than falling back to an uncontrolled local run.
 #
 # THERE IS NO LONGER AN "ONE SET ON DEMAND" ESCAPE. `make lane SET=<set>` is
-# gone with the rest of the dispatch layer. The two sets the chamber does not
-# run keep their own entry points (`make heavy-remote`, `census-run.sh`); for
+# gone with the rest of the dispatch layer. The sets the chamber does not run
+# keep their own entry points (`make seam-guard`, `census-run.sh`); for
 # anything else, the honest answer is that an operator resident on the box
 # runs that set's own command from `scripts/lane-sets.tsv` directly, which is
-# what "one session managing one machine" means in practice.
+# what "one session managing one machine" means in practice. (`make
+# heavy-remote` used to be listed here as a set the chamber does not run.
+# Decision 0426 put the tier back on the phase list; the by-hand entry point
+# survives, but it is no longer the only thing that dispatches it.)
 #
 #   make sluice-census BRANCH=<requester> REF=<full-sha>  # A CENSUS, QUEUED
 #
@@ -482,9 +494,11 @@ cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/ty
 #     /// seam-guard: identity(0) scope(hornvale-kernel)
 # `identity(N)` replaces the call with its Nth argument (unit conversions,
 # clamps, wrappers); `returns(EXPR)` replaces it outright. Runs as its own
-# `campaign`-rung set, run as one of the merge queue's chamber phases (there
-# is no aggregate campaign-gate target and no on-demand set dispatch anymore
-# — see the gate ladder above), not the commit gate — each call site costs a full scoped
+# `campaign`-rung set, run ONLY when a human types `make seam-guard` — it is
+# not a chamber phase (decision 0148 took it off and 0426 did not put it
+# back), there is no aggregate campaign-gate target, and there is no on-demand
+# set dispatch anymore — see the gate ladder above. Nor is it in the commit
+# gate — each call site costs a full scoped
 # test run, so `list` (which shows the site count without building) is worth
 # reading first: an experimental tag on `quantize` listed 36 sites, and a
 # broadly-called function makes a poor seam.
@@ -518,7 +532,11 @@ cargo run --manifest-path tools/seam-guard/Cargo.toml -- run <seam> <file>  # na
 # ROSTER MEANS (decision 0148).** 0148 took `seam-guard` and `heavy` off the
 # merge phase list because the two were 80.5% of a merge's wall time. So it
 # now runs only when a human types `make seam-guard` — there is no schedule,
-# no gate, and no phase behind it.
+# no gate, and no phase behind it. **This is now true of seam-guard ALONE**:
+# decision 0426 put the heavy tier back on the phase list once The Governor
+# had cut it 3.45x, and declined to do the same for seam-guard, whose cost is
+# a full scoped test run per call site and whose guarantee moves at campaign
+# cadence. Do not read the two as still sharing a fate.
 #
 # `docs/audits/seam-guard-roster.md` (the committed, drift-checked artifact)
 # lists what is REGISTERED and what has been DECLARED. It has never carried
