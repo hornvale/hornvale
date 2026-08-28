@@ -54,7 +54,9 @@ Sources: `/tmp/hornvale-heavy/heavy-20260828T002634Z-4075724.log` and
 `/tmp/hornvale-heavy/runs.tsv`.
 
 **No `heavy` row has been written to `docs/timings.md` since 2026-08-05.**
-The tier's own ledger is blind to its last five runs. That is a defect in its
+The tier's own ledger is blind to its last **27** runs — counted from
+`/tmp/hornvale-heavy/runs.tsv` on lefford, not estimated. This spec said
+"five" until Task 7 measured it. That is a defect in its
 own right and Stage 6 fixes it.
 
 ### 1.2 The wall decomposes into three serial segments, not one pole
