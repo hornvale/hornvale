@@ -3678,3 +3678,6 @@ measured here.
 | 2026-08-28T15:35:57Z | gate-commit | 20.431 | 49.353 | 12.703 | 3.04 | 0 | 862d8b66b | campaign/the-latch | MacBookPro | 10 |
 | 2026-08-28T15:59:21Z | gate-commit | 24.971 | 58.360 | 16.921 | 3.01 | 0 | b3f0266ce | campaign/the-latch | MacBookPro | 10 |
 | 2026-08-28T16:00:14Z | gate-commit | 20.526 | 49.922 | 12.946 | 3.06 | 0 | b3f0266ce | campaign/the-latch | MacBookPro | 10 |
+| 2026-08-28T16:11:18Z | rebaseline | 52.335 | 272.040 | 13.506 | 5.46 | 0 | f504ba820 | campaign/the-latch | MacBookPro | 10 |
+| 2026-08-28T16:29:59Z | rebaseline | 53.335 | 271.273 | 13.382 | 5.34 | 0 | f504ba820 | campaign/the-latch | MacBookPro | 10 |
+| 2026-08-28T16:30:44Z | gate-commit | 33.330 | 87.664 | 18.409 | 3.18 | 0 | f504ba820 | campaign/the-latch | MacBookPro | 10 |

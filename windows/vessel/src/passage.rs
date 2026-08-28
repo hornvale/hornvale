@@ -11,9 +11,28 @@
 //! **Monotone by ruling:** a latch, once thrown, stays thrown. Re-closing is
 //! arc IV.c's, alongside containers.
 //!
-//! **Lifetime is the SESSION, not the world** (spec section 3.1): the session
-//! ledger is a clone that is never written back, so this — like every other
-//! fact live play commits — evaporates when the possession ends.
+//! **Lifetime is the SESSION BY DEFAULT, and a played world is a FORK**
+//! (spec section 3.1, decision 0368). This paragraph used to say the fact
+//! "evaporates when the possession ends… the session ledger is a clone that
+//! is never written back," and that was wrong in the half that mattered.
+//!
+//! The session ledger is indeed a clone and the possessed world is never
+//! mutated — `--world` is read-only. But `possess` takes a documented
+//! `--out <PATH>`, and [`Session::into_played_world`] folds the evolved
+//! ledger AND the per-session registry into a new `World` that `--out`
+//! saves; decision 0171 rules that a player's acts are not filtered on the
+//! way out. So without `--out` nothing survives, and with it these facts
+//! reach a new world file that can be possessed again.
+//!
+//! **What is proved here is the session claim**
+//! (`a_cleared_passage_stays_open_for_the_rest_of_the_session`). The save
+//! round trip — clear, `--out`, re-possess, delve — is NOT tested, so it is
+//! not claimed. The carrying mechanism demonstrably works for `agent-at`, a
+//! sibling predicate committed through the same `Ledger::commit` call on the
+//! same ledger, and nothing here differs from it; that is a strong inference
+//! and still an inference.
+//!
+//! [`Session::into_played_world`]: crate::Session::into_played_world
 
 use hornvale_kernel::{EntityId, Fact, Seed, Value, WorldTime};
 use hornvale_worldgen::chamber::ChamberAddr;

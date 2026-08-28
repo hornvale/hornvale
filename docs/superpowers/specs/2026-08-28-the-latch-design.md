@@ -160,35 +160,60 @@ The `day' <= day` filter is the same shape `last_fact_day_at_or_before` already
 uses. That is not a coincidence to be admired; it is the reason (b) above
 matters.
 
-### 3.1 The lifetime is the session, and that is not this campaign's to change
+### 3.1 The lifetime is the session by default, and a played world is a fork
 
-Found while writing the plan, not while reviewing the spec, and it corrects an
-earlier draft of §6 that claimed durability across a save.
+**THIS SECTION WAS WRONG FOR THE WHOLE CAMPAIGN AND IS CORRECTED HERE, AT THE
+DEFINITION-OF-DONE SWEEP.** It is rewritten in place rather than quietly
+edited, because the false version was load-bearing: it shaped acceptance
+criterion 2, `passage.rs`'s module doc, an idea-registry row, and a decision
+record, and every one of those had to be corrected with it. See decision 0368.
 
-**Nothing a possession session commits is ever persisted.** The session's
-ledger is a clone of the frozen world's, and its own field doc says so:
-"a clone of the frozen world's ledger, mutated only by `wait`'s tick (NPC
-`agent-at` facts). **Never written back**" (`session.rs:639`). `AGENT_AT` is
-likewise "registered per-session, never at genesis" (`session.rs:642`). There
-is no world-writing path after genesis anywhere in the CLI. So registry and
-ledger are *both* session-scoped, coherently and by design.
+**What this section used to say.** *"Nothing a possession session commits is
+ever persisted… There is no world-writing path after genesis anywhere in the
+CLI. So registry and ledger are both session-scoped, coherently and by
+design."*
 
-The consequence for this campaign is exact and worth stating plainly rather
-than burying: **the latch stays thrown for a playthrough, not for a world.**
-Every durable-state rung on The Offer's axis inherits this, however correct
-its mechanics.
+**One command retired it.** `possess` takes a documented `--out <PATH>`.
+`Session::into_played_world` folds the session's evolved ledger **and its
+per-session registry** into a `World`, and `--out` saves it. That is The First
+Mark's Task 4, and decision 0171 already rules that a player's acts are *not*
+filtered on the way out. Measured here on seed 42:
+`possess --script 'go n; go n' --out walked.json` writes a world carrying **2
+`agent-at` facts** and the `agent-at` predicate in its registry, and
+`possess --world walked.json` then starts cleanly (rc=0).
 
-It is not this campaign's to fix. Every fact live play commits already
-evaporates the same way; a passage that persisted would be the anomaly, not
-the norm, and building world persistence is a serialization change touching
-every committed fact — what a saved playthrough contains, whether the
-per-session registry must become permanent, and what reload does are all
-unscoped. Registered as `MAP-playthrough-persistence` in the idea registry.
+**How the error was made, which is the reusable part.** The `ledger` field's
+doc says "a clone of the frozen world's ledger… **Never written back**." That
+sentence is true and answers its author's question — *does a session mutate the
+world it borrowed?* No; `--world` is read-only and `cli/src/main.rs` says so.
+This spec read it as answering a different question — *can these facts ever be
+saved at all?* — and the two questions have opposite answers. A doc comment
+answers its author's question, not the one a later reader brings to it.
 
-What this campaign still delivers is unchanged in mechanism: agent-neutral
-facts, contradiction-checked against the registry, folded time-correctly with
-`day' <= day`. That is the 90% rung's machinery. Only its lifetime is smaller
-than the rung's name suggests.
+**What is actually true: a played world is a fork, not an update.** Live play
+never mutates the world it possessed. Its facts are carried into a *new*
+`World` and written only if the player asks. So the default (no `--out`) is
+session lifetime, which is the original finding's surviving half and the common
+case; with `--out`, the facts persist into a new world file that can be
+possessed again.
+
+**What this campaign therefore claims, and what it does not.** The latch is
+claimed and proved **for the session** — many turns, a `wait` tick, and the NPC
+activity it drives. Its behaviour across a save is **not claimed, because it
+was not tested.** The carrying mechanism demonstrably works for `agent-at`, a
+sibling predicate committed through the same `Ledger::commit` call on the same
+session ledger, and nothing in `passage-cleared`'s handling differs — but no
+test drives clear → `--out` → re-possess → delve, so that round trip is left as
+work rather than asserted. It is the cheapest real thing this campaign leaves
+behind.
+
+The mechanism itself is unchanged by any of this: agent-neutral facts,
+contradiction-checked against the registry, folded time-correctly with
+`day' <= day`. That is the 90% rung's machinery in full.
+
+**The axis's rungs name what a precondition READS, never how long that state
+lives.** Conflating the two is what produced the original error, and any future
+rung can make the same conflation.
 
 ## 4. Risks
 
@@ -232,16 +257,56 @@ anchor granularity. All of these are IV.c.
    42's terrain (scanned, not assumed).
 2. An act clears such a passage, commits one fact, and the passage stays open
    for the **rest of that session** — across many turns, including a `wait`
-   tick and the NPC activity it drives. This is the durability claim at the
-   only lifetime the engine has (§3.1); it is NOT tested across a save
-   boundary, because no such boundary exists.
+   tick and the NPC activity it drives. **MET.**
+
+   The reason clause attached to this criterion was wrong and is corrected:
+   it read "it is NOT tested across a save boundary, because no such boundary
+   exists," and a save boundary **does** exist (`possess --out`, §3.1,
+   decision 0368). The criterion itself is unchanged and was always the right
+   one to assert — the session is the lifetime this campaign built and tested.
+   What changes is that not testing the save boundary is now a **scope
+   choice**, which is honest, rather than an **impossibility**, which was
+   false.
 3. The same passage reads **closed** when the fold is evaluated at a day before
    the clearing fact — the time-correctness claim, which is what distinguishes
    this from a mutable flag.
 4. `delve` has three distinguishable outcomes again, and the tripwire is renamed
    to say so, still scanning every cave-bearing vertex.
-5. The Offer's §3.5 knowledge gate **denies something** — a firing case, shown
-   by a test that fails if the gate is removed.
+5. ~~The Offer's §3.5 knowledge gate **denies something** — a firing case, shown
+   by a test that fails if the gate is removed.~~ **NOT MET, AND NOT MEETABLE
+   BY THIS CAMPAIGN. This criterion is left standing with its reason rather
+   than deleted** — a criterion quietly dropped tells a successor nothing,
+   while an unreachable one tells them exactly where the wall is. Rewritten
+   from the original after Task 6, which was dispatched as a task that might
+   correctly produce nothing and did.
+
+   **The reason is a type mismatch, not a missing wire.** `offered_to_observer`
+   (`windows/vessel/src/affordance.rs:450`) takes an `AnchorKind`, and
+   `AnchorKind` (`windows/vessel/src/interior/anchor.rs:20`) is an
+   **interior-object** enum — Hearth, Threshold, Bed, Vessel, Screen, Pool,
+   Log, Ground, Alcove, Strongbox, HighSeat, Loom, Anvil, Altar. There is no
+   cave-mouth variant and no passage variant. A cave mouth is addressed by a
+   `Vertex`/`ChamberAddr`, which is a different kind of thing entirely.
+   `windows/vessel/src/passage.rs` accordingly contains **zero** references to
+   `Knowledge`, `AnchorKind` or `offered_to_observer` — the barred-passage
+   mechanism reads ledger facts through `effective_state` and never constructs
+   or consults a `Knowledge` value. Nor could it borrow the chamber's own
+   anchors: the underground chamber `delve` reaches has no anchor catalogue at
+   all, `underground_nouns()` (`session.rs:3014`) returning two hardcoded
+   strings.
+
+   **This falsifies decision 0349's own closing prediction**, which said IV.b's
+   durable objects would give the gate "a firing case with no rewiring." The
+   Latch shipped durable-enough passage state and the gate did not move,
+   because the prediction was about *durability* and the obstacle is
+   *addressing*. See decision 0369.
+
+   Reaching the gate needs one of two design decisions that belong to the
+   owner, not to an implementation step: invent a new `AnchorKind` plus a
+   design for what a cave mouth offers, or give cave chambers their own
+   anchor/interior system. Registered as `PLAY-passage-has-no-anchor` in the
+   idea registry. The Offer already reshaped this gate once on contact with the
+   code; a second reshaping is not a thing to do in passing.
 6. Every regression test names the **mutation** it must fail against, and the
    red is pasted in its doc comment (decision 0353). No test is specified by
    the property it should assert.
@@ -266,3 +331,53 @@ rather than routine labour.
 absorbed once, at close, 50 commits behind, and conflicted on an aggregate that
 must never be text-merged. That was a controller failure, named in its own
 retrospective, and it is the single cheapest thing to not repeat.
+
+## 8. Decisions taken during execution
+
+Promoted from the campaign's SDD ledger at the Definition-of-Done sweep.
+`.superpowers/sdd/` is git-ignored and dies with the worktree, so the reasoning
+lives here or nowhere. Ordered as they were taken.
+
+1. **Imports are trimmed to what each task uses** (pre-flight). Task 2's brief
+   listed four symbols only Task 3's code touches. Under
+   `clippy --all-targets -D warnings` an unused import is a hard failure, so the
+   brief as written could not have passed its own commit gate.
+2. **A barred refusal must be textually distinct from the no-cave and
+   unrealized-chamber refusals** (pre-flight). The plan's `Sealed` arm reused
+   the unrealized-chamber string verbatim, which would have made two of three
+   outcomes indistinguishable and could satisfy a renamed three-outcome tripwire
+   vacuously — the exact failure §4 risk 3 names. All four refusal strings were
+   later verified pairwise distinct by reading source.
+3. **The lost registry enumeration is restored in a decision record, not the
+   registry cell.** Trimming `MAP-playthrough-persistence` to fit the
+   600-character budget discarded three concrete open questions. A registry cell
+   is budgeted and a decision record is not, so the enumeration went to 0368 and
+   the row keeps the pointer. (At the sweep, all three turned out to be answered
+   already — by The First Mark, not by this campaign. See §3.1.)
+4. **Only `BarrierState::Thin` yields to `clear`** (Task 5, made from inside the
+   code). `Sealed` has no rubble to move; `Warded`'s shipped refusal already
+   says "you cannot force it," which a verb that forced it would contradict. The
+   split has its own test and its own mutation. Ratified as part of 0367.
+5. **The implementer was right to override "do not restructure them"** (Task 4).
+   Adding the barrier gate invalidated `find_open_cave_vertex`'s premise for
+   five pre-existing tests — seed 42's first cave-bearing vertex is `Warded`.
+   That instruction was written against gratuitous refactoring, not against a
+   change the gate makes necessary. All five callers assert a *successful*
+   descent, so requiring barrier-open as well as chamber-realized is correct for
+   every one of them rather than an over-constraint.
+6. **The acceptance test belongs in `session.rs`'s own `mod tests`** (Task 5).
+   The brief named an integration-test file *and* required a seam reachable only
+   from inside the private module. The seam instruction reflects what the code
+   permits; the file path did not. No coverage is lost.
+7. **Accept the null on acceptance criterion 5** (Task 6). See §6 and 0369.
+8. **Do not guess a replacement for the wrong `decision 0131` citation** (Tasks
+   4 and 7). Traced instead to `14aa6fbab` (The Glasshouse, 2026-08-14), which
+   split `delve_column` out of `delve` when that campaign's terrain epoch put a
+   sealed cave under the flagship's starting vertex. No decision covers it, and
+   the code now says so.
+9. **Two carried minors were fixed rather than deferred** (Task 7):
+   `cave_entrance_states` now calls the shared `cave_entrance_addr` constructor,
+   and `clear_response`'s `Warded` arm gained a prose test, mutation-checked.
+10. **§3.1's premise was tested and found false** (Task 7). The correction is in
+    §3.1 and 0368, written loudly rather than edited quietly, because the false
+    version was load-bearing in four documents.

@@ -2172,6 +2172,51 @@ mutation is evidence only if something establishes it could have moved the
 result**, which is the same clause this chapter already carries about a
 column's stable value, arriving one level down.
 
+[The Latch](./chronicle/the-latch.md) continues that distribution exactly —
+twelve defects, every one originating in controller prose, none surviving in
+implementer code, a fourth campaign running — but its **shape shifted, and the
+shift is the entry worth keeping.** The early ones were wrong identifiers a grep
+catches: a test helper that does not exist, a constructor asserted to return a
+bare value when it returns a `Result`. The late ones were **internal
+contradictions no grep can find.** One brief named an integration-test file for
+a test while also instructing the implementer to reach the seam through a
+private module — two halves of one instruction, each locally reasonable, jointly
+unsatisfiable. Nothing mechanical can see that, and re-reading cannot either,
+because re-reading checks a claim against the model that produced it and the
+model is what is wrong. It died when an implementer tried to build it.
+
+**The campaign's largest error was of that second kind and outranks all twelve.**
+Its specification asserted, as established fact, that nothing a possession
+session commits is ever persisted and that no world-writing path exists after
+genesis. That sentence shaped an acceptance criterion, a module's
+documentation, an idea-registry row, and a decision record — and it is false.
+Possession takes a documented `--out` flag; a previous campaign built the save
+path deliberately and ruled on how it filters. One command retired the claim at
+the Definition-of-Done sweep, four tasks after it should have been checked.
+
+**The generator of the error is the transferable part**, and it is a shape this
+chapter has recorded before at smaller scale. The evidence the specification
+rested on was a doc comment saying the session ledger is "never written back."
+That comment is *true*. It answers its author's question — does a session mutate
+the world it borrowed? — and the answer is no. The specification read it as
+answering a different question, whether these facts can ever be saved at all,
+and the two questions have opposite answers. **A doc comment answers its
+author's question, not the one a later reader brings to it**; a constraint read
+off one is a hypothesis, and this one went four tasks without being tested
+because it was never framed as one.
+
+Two gates also reported green for reasons unrelated to correctness, which is
+this chapter's standing concern about instruments arriving from a new
+direction. A docs-only commit skipped the commit gate on a path heuristic —
+correct about which *files* changed, wrong about which *tests guard them*,
+because the check that would have caught the defect is a Rust test that guards
+documentation. And the campaign's own three-outcome tripwire is absent from the
+sub-floor roster, so the commit gate compiles it and never runs it: it would
+have reported green while that test was red, on the very change the test exists
+to catch. **A gate's scope and a defect's location can disagree, and the gate
+cannot tell you when they do.** Both were caught by a human reading the roster,
+not by anything running.
+
 [The Mire](./chronicle/the-mire.md) exercised the same discipline on a bet
 about weather and world structure that no earlier chapter entry had staked,
 and it too came back **no** — a double falsification rather than a single
