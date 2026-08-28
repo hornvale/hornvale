@@ -40,7 +40,7 @@ No new files. `liveness.rs` is large (15k lines) but is the established home for
 
 **Goal:** emissions are chronological; the invariant asserts it with no tolerance.
 **Success Criteria:** both mass orders of `interleaving_fixture` green; zero inverted ticks on seed 42; no tolerance term left in the file.
-**Status:** Complete through Task 1.7 (all criteria met and verified); Task 1.8 (landing) awaiting Nathan.
+**Status:** COMPLETE. All criteria met and verified; whole-branch review PROCEED; landed via the queue (Task 1.8).
 
 ---
 
