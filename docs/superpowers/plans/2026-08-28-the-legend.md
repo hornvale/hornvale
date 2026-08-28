@@ -614,12 +614,16 @@ terminal.
 
 - [ ] **Step 2: Declare the artifact BEFORE generating it**
 
-Add BOTH lines to `docs/generated-paths.txt`:
+Add **ONE** line to `docs/generated-paths.txt`:
 
 ```
-docs/audits/
 docs/audits/glyph-specimen-sheet.txt
 ```
+
+`docs/audits/` is ALREADY declared, at line 50 — do not add it a second
+time. Lines 55-64 already carry this exact convention, with its explanatory
+comment, for files declared by name inside an already-declared directory;
+follow that comment style rather than inventing one.
 
 **The directory alone is not enough, and the trap has a name.**
 `git diff --exit-code` against a path with no index entry is silently
@@ -662,6 +666,34 @@ From `clients/game/`: `cargo fmt`, then
 git add clients/game/bin/examples/specimen_sheet.rs docs/audits/glyph-specimen-sheet.txt docs/generated-paths.txt scripts/regenerate-artifacts.sh
 git commit -m "feat(legend): the specimen sheet, rendered where the glyphs ship"
 ```
+
+---
+
+### Collision resolutions — binding on Tasks 6 through 10
+
+The pre-flight scan found that the register's guard would fire on three
+characters that are ALREADY double-bound today, and the plan as first
+written said what would catch them and not what to do. Settled, so no task
+has to decide mid-flight:
+
+- **`.` — one binding, meaning "ordinary traversable ground".** The chamber
+  floor (`plan.rs:69`) and walk-band relief 2 are the same concept at two
+  scales, not two meanings. Nothing moves, and the impedance ladder stays
+  byte-identical to the sim's, which an agreement test pins.
+- **`#` — the SETTLEMENT glyph moves; WALL keeps `#`.** A wall you cannot
+  pass is not a town, and there is no honest single meaning. Wall-is-`#` is
+  universal convention and lives in three renderers
+  (`lattice/render.rs::WALL`, `plan.rs`, `pane_plan.ts`); the settlement
+  glyph is drawn in one place (`plate.rs`'s feature layer) and is younger.
+  Move the cheaper one. Task 7 picks the replacement from the specimen
+  sheet.
+- **`+` — means THRESHOLD, sole claimant.** Task 8 deletes `chart.rs`'s
+  `+`. **Task 6 must NOT hand `+` to any water class.**
+
+The register governs the CLIENT's renderers. `surrounds_ascii.rs` is
+sim-side and outside it; it must AGREE where it draws the same quantity
+(Task 8 preserves that by reusing its exact ladder), but its glyphs are not
+register rows — that would put a client concern in `windows/`.
 
 ---
 
