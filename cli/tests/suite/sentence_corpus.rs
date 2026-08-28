@@ -28,7 +28,7 @@
 //! The discipline is therefore social and stated here: a token goes in only
 //! alongside a test in `domains/language` that realizes a clause exercising
 //! it, in Common and, where the tongue realizer is the point, in a tongue.
-//! The eight present tokens are backed by, respectively:
+//! The nine present tokens are backed by, respectively:
 //! `clause.rs::classify_*`; `a_past_clause_says_was` and
 //! `grammar.rs::realize_tongue_reads_its_drawn_tense_depth`;
 //! `a_negated_clause_says_is_not` and
@@ -43,7 +43,12 @@
 //! `grammar.rs::a_tongue_with_a_complementizer_marks_the_embedded_boundary`
 //! (`embedded-clause`); `a_hedge_clause_surfaces_think_as_a_verb`
 //! (`epistemic-hedge` — Common-only, the same posture `classify` takes: no
-//! tongue realizer is the point of this token, so no tongue test is named).
+//! tongue realizer is the point of this token, so no tongue test is named);
+//! `clause.rs::an_intransitive_clause_surfaces_its_predicate_as_a_verb_with_no_complement`
+//! in Common, and its tongue twin once a later task lands one
+//! (`intransitive-frame`, The Rail, Task 2 — the lever: it sits under seven
+//! of the other eight tokens, so this one token moves the ladder from 1
+//! covered rung to 5).
 //!
 //! **The score was zero once, and the positive control that answered that is
 //! still here on purpose.** A measurement whose only possible answer is zero
@@ -75,7 +80,7 @@
 
 use hornvale_kernel::ConceptRegistry;
 use hornvale_kernel::world::IS_A;
-use hornvale_language::packs::{KILL, KNOW, THINK};
+use hornvale_language::packs::{KILL, KNOW, SLEEP, THINK};
 use hornvale_language::{
     Argument, Clause, CommonVocabulary, Coordination, Definiteness, Evidential, Number, Person,
     Polarity, Subject, Tense, realize_common, realize_common_coordination,
@@ -169,6 +174,8 @@ const IMPLEMENTED_DEMANDS: &[&str] = &[
     "coordination",
     "embedded-clause",
     "epistemic-hedge",
+    // The Rail, Task 2 — the lever.
+    "intransitive-frame",
 ];
 
 /// Whether a corpus entry states what the grammar must **parse** (a player
@@ -1956,7 +1963,23 @@ fn demand_instance_coverage(entries: &[Entry]) -> (usize, usize) {
 /// [`MERCHANT_WITNESS`]'s twin, read by
 /// [`every_covered_ladder_rung_realizes_in_common`]. One row per covered
 /// rung, no more and no fewer.
-const LADDER_WITNESS: &[(&str, &str)] = &[("r001", "the woman is a merchant.")];
+///
+/// **Row order is load-bearing: corpus order, not append order or any
+/// other convenience.** [`every_covered_ladder_rung_realizes_in_common`]
+/// compares `covered` (which comes out of the corpus in file order, because
+/// it is built by filtering `entries` without sorting) against this table's
+/// own id column as two `Vec`s, positionally. A row appended out of the
+/// corpus's order — sorted alphabetically, say, or simply tacked on at the
+/// end — produces a mismatched-order failure that reads exactly like a
+/// coverage regression and is not one.
+const LADDER_WITNESS: &[(&str, &str)] = &[
+    ("r001", "the woman is a merchant."),
+    ("r002", "the guard sleeps."),
+    ("r006", "a guard kills a woman."),
+    ("r013", "the guard does not sleep."),
+    ("r014", "the guard sleeped."),
+    ("r015", "the guard did not sleep."),
+];
 
 /// The [`MerchantConstruction`] this campaign builds for a covered ladder
 /// rung. Hand-built from the rung's own text, the same posture
@@ -1977,6 +2000,93 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
             polarity: Polarity::Pos,
             adjuncts: Vec::new(),
         }),
+        // "The guard sleeps." Direct: `sleep` is the intransitive frame's
+        // own flagship predicate, no substitution needed.
+        "r002" => MerchantConstruction::Clause(Clause {
+            predicate: SLEEP.to_string(),
+            subject: Subject::Name("the guard".to_string()),
+            object: Argument::Absent,
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        }),
+        // "A guard strikes a woman." `strike` is not a registered concept
+        // anywhere in this crate (`grep -rn 'concept: "strike"' domains/`
+        // returns nothing) and the only transitive predicates with a
+        // `PREDICATE_VALENCE` row are `eat`, `kill`, `know` and `think` — so
+        // the witness substitutes `kill`, the same shape [`MERCHANT_WITNESS`]'s
+        // m05 takes for the identical reason.
+        "r006" => MerchantConstruction::Clause(Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Name("a guard".to_string()),
+            object: Argument::Concept("woman".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        }),
+        // "The guard does not sleep." Direct: standard negation is
+        // periphrastic in Common, so the stem stays bare and the corpus's
+        // own text is exactly what realizes.
+        "r013" => MerchantConstruction::Clause(Clause {
+            predicate: SLEEP.to_string(),
+            subject: Subject::Name("the guard".to_string()),
+            object: Argument::Absent,
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Neg,
+            adjuncts: Vec::new(),
+        }),
+        // "The guard slept." Substituted: Common's past rule is the naive
+        // regular one (append `ed`), the same deliberate naivety `eat`
+        // surfaces as `eated` under — asserted outright by
+        // `a_transitive_verb_inflects_for_tense_number_and_polarity` and
+        // pinned again here by
+        // `an_intransitive_clause_surfaces_its_predicate_as_a_verb_with_no_complement`.
+        // The witness records what the realizer actually emits
+        // ("sleeped"), not the corpus's irregular "slept": an irregular
+        // table is a separate concern this campaign does not add.
+        "r014" => MerchantConstruction::Clause(Clause {
+            predicate: SLEEP.to_string(),
+            subject: Subject::Name("the guard".to_string()),
+            object: Argument::Absent,
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        }),
+        // "The guard did not sleep." NOT ONE OF THIS TASK'S FOUR TARGET
+        // RUNGS — a finding, not a plan. r015 is the ladder's own
+        // reuse/control rung: it presupposes BOTH r013 (negation) and r014
+        // (past-tense) and introduces no new token of its own, so once both
+        // of those are covered, its own transitive-closure demands
+        // (`negation`, `past-tense`, `intransitive-frame`) are too, and
+        // `entry_covered` scores it covered as a mechanical consequence —
+        // exactly the cross-check its own corpus note asks for ("if this
+        // stops resolving while r013 and r014 both resolve, the two
+        // categories do not compose and something regressed"). Direct: past
+        // negation is periphrastic, so the stem stays bare and the corpus's
+        // own text realizes exactly.
+        "r015" => MerchantConstruction::Clause(Clause {
+            predicate: SLEEP.to_string(),
+            subject: Subject::Name("the guard".to_string()),
+            object: Argument::Absent,
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Neg,
+            adjuncts: Vec::new(),
+        }),
         other => panic!("no ladder construction for rung {other:?}"),
     }
 }
@@ -1984,9 +2094,18 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
 /// The ladder's covered count and its frontier, both preregistered.
 ///
 /// **This is the baseline the campaign is measured against**, committed
-/// before any rung is built. `r001` (`classify`) is the only covered rung;
-/// the frontier is the five rungs every one of whose presuppositions is
-/// covered but which are not themselves.
+/// before any rung is built. Task 2's own prediction (`docs/superpowers/
+/// plans/`) was five: `r001` plus the four rungs `intransitive-frame`
+/// itself unblocks (`r002`, `r006`, `r013`, `r014`). **What the resolver
+/// actually reports is six, and that is a finding, not an error in this
+/// test.** `r015` — a REUSE/CONTROL rung, introducing no token of its own,
+/// that presupposes both r013 and r014 — becomes covered as a mechanical
+/// side effect of covering both of its presuppositions, exactly the
+/// cross-check its own corpus note asks for. The prediction undercounted
+/// because it reasoned about the token `intransitive-frame` unblocks
+/// directly and missed a rung two hops away that composes two OTHER
+/// tokens which that token happens to also gate. See
+/// [`ladder_construction`]'s `"r015"` arm for the full account.
 #[test]
 fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
     let entries = read_derived(&repo_root().join("sentences/the-ladder.corpus.json"));
@@ -1995,10 +2114,17 @@ fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
         .filter(|e| entry_covered(e))
         .map(|e| e.id.as_str())
         .collect();
-    assert_eq!(covered, vec!["r001"], "the ladder's covered set");
+    assert_eq!(
+        covered,
+        vec!["r001", "r002", "r006", "r013", "r014", "r015"],
+        "the ladder's covered set"
+    );
     assert_eq!(
         ladder_frontier(&entries),
-        vec!["r002", "r003", "r005", "r011", "r083"],
+        vec![
+            "r003", "r005", "r007", "r011", "r028", "r048", "r055", "r061", "r072", "r083", "r109",
+            "r113", "r114", "r117",
+        ],
         "the ladder's frontier"
     );
 }
@@ -2008,28 +2134,44 @@ fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
 /// it** — decision 0016 binds the merchant corpus's scoring METHOD as well
 /// as its text, and `5 of 12` is comparable across four campaigns.
 ///
-/// Its reason for existing is the blind zone measured at spec time: the five
-/// rungs this campaign builds move `the-flood-watch` from 0 of 139 to 0 of
-/// 139 while meeting 95 more demand instances. A statistic that reads a null
-/// there is not wrong; it is unable to see.
+/// Its reason for existing is the blind zone measured at spec time: this
+/// campaign's Task 2 moves `the-flood-watch` from 0 of 139 covered ENTRIES
+/// to 0 of 139 (see [`sentence_coverage_report`]'s own account of why that
+/// stays zero) while meeting 2 more demand instances (175 -> 177 of 1128,
+/// `intransitive-frame` being a comparatively rare token in that corpus). A
+/// statistic that reads a null there is not wrong; it is unable to see.
 #[test]
 fn demand_instance_coverage_matches_the_campaigns_prediction() {
     let merchant = read_declared(&repo_root().join("sentences/the-merchant.corpus.json"));
     assert_eq!(demand_instance_coverage(&merchant), (19, 30));
     let flood = read_declared(&repo_root().join("sentences/the-flood-watch.corpus.json"));
-    assert_eq!(demand_instance_coverage(&flood), (175, 1128));
+    assert_eq!(demand_instance_coverage(&flood), (177, 1128));
 }
 
 /// Every ladder rung scored covered realizes in Common, exactly as
 /// [`every_covered_entry_realizes_in_common`] demands of the merchant
 /// corpus.
 ///
-/// **This closes the gap that would otherwise let this campaign move the
-/// ladder from 1 to 9 with nothing mechanical behind any of it.** The module
-/// doc above says an `IMPLEMENTED_DEMANDS` nobody checks is "worse than no
-/// instrument, because it would read as evidence"; until this test existed
-/// that was exactly the ladder's situation. A rung whose witness cannot be
-/// built does not get its token.
+/// **What this guarantees, stated at its true width, is narrower than "the
+/// score means what it says".** It proves two mechanical facts: a
+/// [`ladder_construction`] exists for every rung [`entry_covered`] scores
+/// covered (so `IMPLEMENTED_DEMANDS` cannot silently outrun what
+/// `ladder_construction` can build), and that construction realizes
+/// deterministically rather than panicking. It does **not** prove the
+/// surface says what the rung's own `text` says — [`ladder_construction`]
+/// is hand-built, the same posture [`merchant_construction`] takes, and
+/// four of this campaign's five new witnesses substitute a registered
+/// concept (`kill`) or a naive-paradigm surface (`sleeped` for "slept") for
+/// what the rung's authored English literally reads. **Do not "fix" this by
+/// comparing the surface to `text`** — that comparison would fail every one
+/// of those four substitutions by design, not by regression. What actually
+/// carries the honesty about each deviation is the comment on the
+/// corresponding [`ladder_construction`] arm, a social discipline the same
+/// module doc above already names for `IMPLEMENTED_DEMANDS` itself: "worse
+/// than no instrument" is the failure mode a silent, undocumented
+/// substitution would be, and a commented one is not that. A rung whose
+/// witness cannot be built at all — the one failure this test DOES catch —
+/// does not get its token.
 #[test]
 fn every_covered_ladder_rung_realizes_in_common() {
     let entries = read_derived(&repo_root().join("sentences/the-ladder.corpus.json"));
@@ -2120,6 +2262,11 @@ fn sentence_coverage_report() {
 
     let covered = merchant.entries.iter().filter(|e| entry_covered(e)).count();
     let not_yet = merchant.entries.len() - covered;
+    let flood_watch_covered = flood_watch
+        .entries
+        .iter()
+        .filter(|e| entry_covered(e))
+        .count();
 
     let (merchant_demand_met, merchant_demand_total) = demand_instance_coverage(&merchant.entries);
     let (flood_watch_demand_met, flood_watch_demand_total) =
@@ -2143,20 +2290,25 @@ fn sentence_coverage_report() {
          against `MERCHANT_COVERED`.\n\n\
          Three corpora feed this report, all three frozen: `the-merchant` \
          (12 entries), `the-flood-watch` (139 entries) and `the-ladder` \
-         ({} rungs, frozen since The Rail). `the-merchant` and `the-ladder` \
-         are both resolved against the grammar below, entry by entry — \
-         `the-ladder`'s own resolver and frontier are new as of The Rail \
-         (Task 1). `the-flood-watch` is not: it carries a `scene` field the \
-         resolver's `Entry` shape does not need, and has no entry-level \
-         coverage score of its own. Nothing is waiting on a schema change: \
-         the entry shape that reads it shipped; what is absent is an \
-         entry-level coverage resolver over it, which is a different and \
-         larger question (see this file's module doc and \
+         ({} rungs, frozen since The Rail). All three are resolved against \
+         the grammar below, entry by entry — `entry_covered` is generic \
+         over `Entry`, and `read_declared` already produces `the-flood-watch`'s \
+         `Entry`s the same shape `the-merchant`'s are, so nothing stops the \
+         resolver from running over it; `the-ladder`'s own resolver and \
+         frontier are new as of The Rail (Task 1). `the-flood-watch`'s \
+         entry-level score is **zero**, and that is not a missing resolver: \
+         it is what a dense, conjunctive corpus scores under a construction \
+         inventory this small. Its {} demand instances average roughly \
+         8 per entry, so `entry_covered`'s ALL-of-its-demands rule fails \
+         every single entry for as long as any handful of tokens stays \
+         uncovered — a true reading of a real corpus, and an uninformative \
+         one on its own (see this file's module doc and \
          `sentences/README.md`, \"Frozen is not the same as measured\"). \
-         What the report gives it instead is a direction breakdown, the \
-         demand-instance statistic below (which complements, never \
-         replaces, an entry-level score), and a vocabulary cross-check \
-         against the ladder.\n\n\
+         What the report gives it instead of a headline entry count is a \
+         direction breakdown, the demand-instance statistic below (which \
+         complements, never replaces, an entry-level score, and is the one \
+         that actually moves), and a vocabulary cross-check against the \
+         ladder.\n\n\
          A demand is `covered` only if the grammar implements a \
          construction for it, and an entry is covered only if EVERY demand \
          it makes is. The Interlinear left one token covered (`classify`, \
@@ -2174,6 +2326,7 @@ fn sentence_coverage_report() {
          covered, and still move several MORE entries from two missing \
          demands to one — progress the headline number cannot express.\n\n",
         ladder.entries.len(),
+        flood_watch_demand_total,
     ));
 
     out.push_str("## Direction breakdown\n\n");
@@ -2300,21 +2453,33 @@ fn sentence_coverage_report() {
         flood_watch_directions.parse, flood_watch_directions.produce,
     ));
     out.push_str(&format!(
+        "- Covered: {flood_watch_covered} of {} (see below for why zero is expected)\n",
+        flood_watch.entries.len(),
+    ));
+    out.push_str(&format!(
         "- Demand instances met: {flood_watch_demand_met} of {flood_watch_demand_total} \
          ({:.1}%)\n\n",
         100.0 * flood_watch_demand_met as f64 / flood_watch_demand_total as f64,
     ));
     out.push_str(&format!(
-        "The resolver above does not run over this corpus — not because of \
-         a schema change (there is none outstanding), but because no \
-         entry-level coverage resolver has been written for it yet; see \
-         this file's module doc and `sentences/README.md` (\"Frozen is not \
-         the same as measured\"). The demand-instance statistic above is a \
-         complement to that, not a substitute (see the-merchant's own line \
-         and `demand_instance_coverage_matches_the_campaigns_prediction`'s \
-         doc). What ties this corpus to the grammar's delivered capability \
-         otherwise is the vocabulary cross-check below: {} of its {} \
-         distinct demand tokens name a rung on the ladder.\n\n",
+        "The resolver above DOES run over this corpus — `entry_covered` is \
+         generic over `Entry` and `read_declared` produces one for every \
+         flood-watch line, the same shape it produces for the-merchant. \
+         What it reports is zero, and that is a fact about the corpus's \
+         density, not an unwritten resolver: {flood_watch_demand_total} \
+         demand instances across {} entries is roughly 8 per entry, and \
+         `entry_covered`'s ALL-of-its-demands rule fails an entry the \
+         moment ANY one of its several tokens is uncovered — which is every \
+         entry, for as long as any handful of the corpus's vocabulary stays \
+         unimplemented. A zero that never moves is uninformative on its \
+         own, which is exactly why the demand-instance statistic above \
+         exists beside it (see the-merchant's own line and \
+         `demand_instance_coverage_matches_the_campaigns_prediction`'s \
+         doc; also `sentences/README.md`, \"Frozen is not the same as \
+         measured\"). What ties this corpus to the grammar's delivered \
+         capability otherwise is the vocabulary cross-check below: {} of \
+         its {} distinct demand tokens name a rung on the ladder.\n\n",
+        flood_watch.entries.len(),
         flood_watch_tokens.len() - flood_watch_absent.len(),
         flood_watch_tokens.len(),
     ));

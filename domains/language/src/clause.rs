@@ -13,7 +13,7 @@
 
 use crate::common_vocab::CommonVocabulary;
 use crate::morphology::Evidential;
-use crate::packs::{EAT, KILL, KNOW, THINK};
+use crate::packs::{EAT, KILL, KNOW, SLEEP, THINK};
 use hornvale_kernel::world::IS_A;
 use std::sync::OnceLock;
 
@@ -194,6 +194,27 @@ pub enum Argument {
     /// belt. `Box` is unique ownership with no `Rc`, so a clause graph
     /// cannot cycle; only depth is unbounded without it.
     Clause(Box<Clause>),
+    /// **No argument at all** — the object slot of an intransitive frame,
+    /// which relates a subject to nothing.
+    ///
+    /// **A departure from this enum's own rule, recorded rather than
+    /// glossed.** The rule above is that a variant is added when a ROLE
+    /// needs it, never speculatively. No role needs this one; the *absence*
+    /// of a role does. The alternative was `Clause.object: Option<Argument>`,
+    /// which is the more honest type and costs 105 full-literal construction
+    /// sites against this variant's five structural match arms.
+    ///
+    /// **The fact-shape claim (decision 0266) survives it**, because the
+    /// kernel already spells an objectless assertion: `Fact.object` is
+    /// mandatory too, and `IS_PERSON`, `IS_BELIEF`, `IS_NEIGHBOR` and
+    /// `TIDALLY_LOCKED` are all committed as `Value::Flag(true)`. An
+    /// utterance is still a fact; this is the object that fact carries.
+    ///
+    /// **An `Argument::Flag(bool)` variant was rejected on substance, not
+    /// passed over.** `Flag(false)` with `Polarity::Pos` and `Flag(true)`
+    /// with `Polarity::Neg` would be two spellings of one denial, and the
+    /// round trip could not choose between them.
+    Absent,
 }
 
 /// How many `Argument::Clause`/`Subject::Clause` layers deep an argument
@@ -648,6 +669,13 @@ pub enum Valence {
     /// with the clause's own predicate, lexicalized — Common through its
     /// [`CommonVocabulary`], a tongue through that people's own `Lexicon`.
     Transitive,
+    /// A subject and a verb, and nothing else: *X sleeps*. Stassen (1997)'s
+    /// VERBAL intransitive predication strategy. Both realizers fill the
+    /// verb slot with the clause's own predicate, lexicalized, exactly as
+    /// [`Valence::Transitive`] does; the difference is the absent object,
+    /// which Common expresses by a part list with no `Part::Complement` and
+    /// a tongue by an ordering slot that is `None`.
+    Intransitive,
 }
 
 /// **THE predicate inventory**: every predicate this crate can express, with
@@ -676,12 +704,20 @@ pub enum Valence {
 /// `packs::universal_stratum` rather than `packs::action_suite_pack` — see
 /// [`crate::packs::THINK`]'s doc for why — so it is unconditionally
 /// lexicalized where `know` still gaps.
+///
+/// [`SLEEP`] (The Rail, Task 2) is the first row at a **new** [`Valence`]:
+/// [`Valence::Intransitive`], not another transitive row. It is the lever
+/// this campaign is named for — `intransitive-frame` sits under seven of
+/// the ladder's other eight implemented demand tokens, so this one row
+/// moves four rungs (`r002`, `r006`, `r013`, `r014`) from uncovered to
+/// covered at once.
 const PREDICATE_VALENCE: &[(&str, Valence)] = &[
     (IS_A, Valence::Nominal),
     (EAT, Valence::Transitive),
     (KILL, Valence::Transitive),
     (KNOW, Valence::Transitive),
     (THINK, Valence::Transitive),
+    (SLEEP, Valence::Intransitive),
 ];
 
 /// The valence of `predicate`, or `None` when no realizer covers it.
@@ -778,6 +814,14 @@ pub fn common_constructions() -> &'static [Construction] {
         Part::ModifierTail,
         Part::Literal("."),
     ];
+    // One argument and a real verb: the transitive frame minus its object.
+    const INTRANSITIVE: &[Part] = &[
+        Part::Subject,
+        Part::Literal(" "),
+        Part::Verb,
+        Part::ModifierTail,
+        Part::Literal("."),
+    ];
     // Built once and leaked into a `static` so the signature stays
     // `&'static [Construction]` — `parse_common_with_tail` walks this on
     // every parse and callers hold no allocation. The same `OnceLock`
@@ -792,6 +836,7 @@ pub fn common_constructions() -> &'static [Construction] {
                 parts: match valence {
                     Valence::Nominal => CLASSIFY,
                     Valence::Transitive => TRANSITIVE,
+                    Valence::Intransitive => INTRANSITIVE,
                 },
             })
             .collect()
@@ -927,6 +972,12 @@ fn realize_common_with_subject(
             }
             text
         }
+        // The intransitive frame's object slot: no argument at all, so
+        // nothing to resolve. The construction's own part list
+        // (`INTRANSITIVE`, see `common_constructions`) carries no
+        // `Part::Complement` and no `Part::Determiner`, so this value is
+        // never read.
+        Argument::Absent => String::new(),
     };
     let mut out = String::new();
     for part in construction.parts {
@@ -2169,6 +2220,18 @@ mod tests {
                         construction.predicate
                     );
                 }
+                // The intransitive frame asserts the same pair the
+                // transitive arm does — a lexical verb, no copula — since
+                // both fill the verb slot with the predicate itself; the
+                // difference (no complement) is not this test's business.
+                Valence::Intransitive => {
+                    assert!(
+                        construction.parts.contains(&Part::Verb)
+                            && !construction.parts.contains(&Part::Copula),
+                        "an intransitive clause fills the verb slot with a lexical verb: {:?}",
+                        construction.predicate
+                    );
+                }
             }
         }
         // And the other direction: nothing in the inventory is unreachable
@@ -2177,7 +2240,7 @@ mod tests {
         // in one realizer and not the other.
         assert_eq!(
             inv.len(),
-            [IS_A, EAT, KILL, KNOW, THINK]
+            [IS_A, EAT, KILL, KNOW, THINK, SLEEP]
                 .iter()
                 .filter(|p| predicate_valence(p).is_some())
                 .count(),
@@ -2194,6 +2257,9 @@ mod tests {
         // `think` (The Mortise, Task 2) is the fourth: same derivation,
         // same shared part list, no new construction.
         assert_eq!(predicate_valence(THINK), Some(Valence::Transitive));
+        // `sleep` (The Rail, Task 2) is the first row at a NEW valence: the
+        // lever this campaign is named for.
+        assert_eq!(predicate_valence(SLEEP), Some(Valence::Intransitive));
         assert_eq!(predicate_valence("dwells-in"), None);
     }
 
@@ -2266,6 +2332,40 @@ mod tests {
                 "verb group wrong for {tense:?}/{number:?}/{polarity:?}"
             );
         }
+    }
+
+    /// The intransitive frame: one argument, a lexical verb, no complement.
+    ///
+    /// **The object slot holds [`Argument::Absent`]**, which is not an argument
+    /// at all — see its own doc. The construction's part list simply has no
+    /// `Part::Complement` and no `Part::Determiner`, so nothing ever reads it.
+    #[test]
+    fn an_intransitive_clause_surfaces_its_predicate_as_a_verb_with_no_complement() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: SLEEP.to_string(),
+            subject: Subject::Name("the guard".to_string()),
+            object: Argument::Absent,
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(realize_common(&clause, &vocab), "the guard sleeps.");
+        // The same three features the transitive frame carries, on a frame with
+        // no object to carry them into.
+        let past = Clause {
+            tense: Tense::Past,
+            ..clause.clone()
+        };
+        assert_eq!(realize_common(&past, &vocab), "the guard sleeped.");
+        let denied = Clause {
+            polarity: Polarity::Neg,
+            ..clause.clone()
+        };
+        assert_eq!(realize_common(&denied, &vocab), "the guard does not sleep.");
     }
 
     /// The one-row promise, exercised. [`KILL`] was added to

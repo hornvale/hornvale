@@ -383,6 +383,12 @@ fn resolve_argument(
         Argument::Count(n) => Ok(n.to_string()),
         Argument::Quantity(x) => Ok(x.to_string()),
         Argument::Pronoun(person) => Ok(tongue_pronoun(*person, number, pronouns)?),
+        // The intransitive frame's object slot: no argument at all, and
+        // callers that reach here for it (this crate's floor realizer) have
+        // nothing to resolve. Task 3 gives the deep realizer its own
+        // ordering-aware treatment of an absent object; this arm only keeps
+        // the match exhaustive for a caller of the floor path.
+        Argument::Absent => Ok(String::new()),
         Argument::Clause(inner) => {
             let depth = clause_embed_depth(argument);
             assert!(
@@ -601,6 +607,12 @@ fn tongue_verb(
             roman: roman.clone(),
         })),
         Valence::Transitive => Ok(Some(resolve_concept_marked(&clause.predicate, lexicon)?)),
+        // The verb slot is filled identically to the transitive case — the
+        // clause's own predicate, lexicalized through this tongue's own
+        // lexicon — and only the object differs. The ordering half (how a
+        // tongue with a drawn constituent order places a verb with no
+        // object) is Task 3's business, not this function's.
+        Valence::Intransitive => Ok(Some(resolve_concept_marked(&clause.predicate, lexicon)?)),
     }
 }
 

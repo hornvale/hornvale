@@ -83,6 +83,20 @@ pub const KNOW: &str = "know";
 /// type-audit: bare-ok(identifier-text)
 pub const THINK: &str = "think";
 
+/// The `sleep` concept's id.
+///
+/// Named for the same reason [`EAT`], [`KILL`], [`KNOW`] and [`THINK`] are:
+/// the pack row that REGISTERS the concept and the
+/// `clause::PREDICATE_VALENCE` row that REALIZES it must not drift apart.
+///
+/// **It adds no pack entry.** `sleep` has been in [`universal_stratum`]
+/// since long before this campaign — it is Swadesh-core and needs no
+/// exposure gate — so this constant names an existing registration rather
+/// than creating one. That is why The Rail registers no concept and moves
+/// no keystone golden.
+/// type-audit: bare-ok(identifier-text)
+pub const SLEEP: &str = "sleep";
+
 /// One entry in a vocabulary pack: a concept id, its broad category, a doc,
 /// and its rank on whichever acquisition ladder it belongs to (0 for
 /// entries outside any ladder — always in the lexicon once the pack is
@@ -185,7 +199,7 @@ pub fn universal_stratum() -> &'static [PackEntry] {
             ladder_rank: 0,
         },
         PackEntry {
-            concept: "sleep",
+            concept: SLEEP,
             kind: ConceptKind::Act,
             doc: "to rest unconscious",
             ladder_rank: 0,
