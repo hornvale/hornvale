@@ -136,6 +136,29 @@ and it drew the mesh's adjacency faithfully, but it was lattice-aligned — the
 page's top was whatever direction the base face happened to point — and it
 could not place a seam cell at all.
 
+### The polar projection is observer-relative, and that is a limit as well as a design
+
+`bearing_deg`/`distance_rad` place a cell **relative to the observer**, which
+is what makes the chart north-up and seam-safe. It also means the projection
+cannot be composed with an *absolute* one. A consumer drawing this packet onto
+a world-frame raster — a Mercator tile grid, say — must know where the observer
+sits **within its own tile**, and this schema does not carry that sub-tile
+phase. It is not recoverable from anything on the wire.
+
+The cost is not theoretical. Swept across 200 sub-tile phases on a fixture
+observer, converting the polar offsets to absolute floored tiles misplaced at
+worst **24 of 31 marks**, mean 11.5, with only 2 of the 200 phases exact
+([The Quadrat](../chronicle/the-quadrat.md)).
+
+The packet does carry an exact absolute address — every cell's `room`, a
+packed facet id — and that is the field to use for this. The catch is that
+reading it requires the mesh, so a consumer with no dependency on the
+simulation can render this document faithfully in its **own** frame and cannot
+place it in the **world's**. Hornvale's own client resolves the split by
+drawing the overlay in the crate that holds the mesh, projecting through the
+same projection the raster uses
+([decision 0290](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0290-the-perception-layer-is-drawn-where-the-mesh-is-reachable.md)).
+
 ## Seam cells: real ground, and now a place for it
 
 The lattice is face-local. Two rooms on *different* base icosahedron faces
