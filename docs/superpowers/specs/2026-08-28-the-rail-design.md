@@ -214,10 +214,21 @@ behaviour would be worse than the syncretism.
 `common_has_no_person_agreement_and_one_third_person_singular` pins today —
 *"I eats the bread"* and *"they is a planet"* — are that test doing its job: it
 was written so an irregular fix "arrives as a red test rather than a silent
-correction". This campaign fixes the first half. **The second half stays**:
-Common has one third-person singular pronoun and nothing in the ledger assigns
-gender or animacy, so *"they is a planet"* becomes *"they are a planet"* and
-stays animate-neutral.
+correction". **This campaign fixes the first and leaves the second exactly as
+it is**, and the reason is worth stating because it looks like an oversight.
+
+Person agreement is keyed on FEATURES, and third-person singular's feature
+bundle takes `is`. *"They is a planet"* is therefore untouched by adding a
+person axis: its awkwardness comes from the pronoun INVENTORY — Common spells
+third-person singular `they`, because nothing in the ledger assigns gender or
+animacy (spec §4.5) — not from agreement. Real English gives singular *they*
+plural agreement, which would make the copula depend on the subject's chosen
+form rather than on its features, and that is a different mechanism from the
+one this campaign builds. Deferred with its reason, not overlooked.
+
+An earlier draft of this section asserted the surface became *"they are a
+planet"*. That was wrong in both directions — it credited this campaign with a
+fix it does not make, and it described a mechanism the design does not have.
 
 ### 3.5 A polar question is not a fact, so force is an operator
 
