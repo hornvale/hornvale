@@ -49,6 +49,22 @@
 //! is the only assertion here that survives the corpus being replaced, and
 //! the corpus is frozen data a future campaign is expected to swap. See its
 //! own doc comment.
+//!
+//! **This file also carries the ladder/corpus cross-check (The Stile,
+//! Task 5).** The ladder (`the-ladder.corpus.json.DRAFT`) and
+//! `the-flood-watch.corpus.json` were authored independently, neither
+//! author seeing the other's work; the cross-check between them already
+//! moved the ladder once (56 tokens flood-watch needed did not exist on
+//! its first draft) and is now a standing test —
+//! [`the_ladder_covers_flood_watch_vocabulary_except_the_two_refused_input_surface_tokens`]
+//! — rather than a one-time analysis. Its ceiling is 147 of 149, not 149:
+//! see [`FLOOD_WATCH_TOKENS_REFUSED_BY_THE_LADDER`] for the two tokens
+//! that are refused rather than missing.
+//! [`the_ladder_covers_the_merchant_corpus_vocabulary_completely`] pins the
+//! sibling fact (13 of 13) for the older, recorded corpus.
+//! [`removing_a_rungs_introduces_token_makes_the_cross_check_notice`] proves
+//! the cross-check is sensitive to a token going missing, not merely to a
+//! count.
 
 use hornvale_kernel::ConceptRegistry;
 use hornvale_language::packs::{KILL, KNOW, THINK};
@@ -1203,6 +1219,223 @@ fn the_ladder_has_exactly_two_roots() {
          (nominal and verbal), so a third root is a deliberate structural \
          claim, not a drift.",
         roots.len()
+    );
+}
+
+// ---------------------------------------------------------------------
+// Task 5 (The Stile): the standing cross-check
+// ---------------------------------------------------------------------
+//
+// The ladder (214 rungs, written from linguistic typology) and
+// `the-flood-watch.corpus.json` (139 utterances of investigative dialogue,
+// written by the project owner) were authored independently on purpose,
+// neither author seeing the other's work — the cross-check between them is
+// the entire reason for that separation. It already paid once: 56 of the
+// flood-watch corpus's demand tokens did not exist on the ladder's first
+// draft (its own `minted_tokens` block records them), and the ladder was
+// revised. What follows makes that comparison a standing computation rather
+// than a one-time analysis, so the NEXT corpus that demands a token with no
+// rung gets noticed the same way.
+
+/// Every token any rung in a raw ladder read introduces, deduped into a
+/// `BTreeSet` — the ladder's whole vocabulary, not any one rung's transitive
+/// closure. [`derived_demands`] answers "what does THIS rung presuppose";
+/// this answers "what can the ladder say at all", which is the set a
+/// cross-check needs.
+fn ladder_introduced_tokens(entries: &[LadderEntryJson]) -> BTreeSet<String> {
+    entries
+        .iter()
+        .filter_map(|e| e.introduces.clone())
+        .collect()
+}
+
+/// The demand tokens named at least once across a corpus's entries, deduped
+/// into a `BTreeSet`. A token five entries all demand still counts once for
+/// a vocabulary cross-check — the question is "does the ladder have a rung
+/// for this token at all", not "how many entries need it".
+fn distinct_demand_tokens(entries: &[Entry]) -> BTreeSet<String> {
+    entries
+        .iter()
+        .flat_map(|e| e.demands.iter().cloned())
+        .collect()
+}
+
+/// A corpus's distinct demand tokens that the ladder's vocabulary does not
+/// contain — the whole cross-check, as one set difference.
+fn tokens_absent_from_ladder(
+    corpus_tokens: &BTreeSet<String>,
+    ladder_tokens: &BTreeSet<String>,
+) -> BTreeSet<String> {
+    corpus_tokens.difference(ladder_tokens).cloned().collect()
+}
+
+/// The flood-watch demand tokens the ladder is **refused** to cover, not
+/// missing to cover. Both are input-surface properties that appear only on
+/// `parse` entries — every player line in the corpus is lowercase and
+/// unterminated, the actual input surface a real player types — while every
+/// ladder text is well-formed prose, because the ladder is a *production*
+/// instrument (its own `production_axis` block states this). A production
+/// instrument has no rung that could ever introduce either token, so their
+/// absence is a structural fact about what the ladder is FOR, not a gap
+/// nobody has closed yet. Named here so the cross-check's ceiling (147, not
+/// 149) ships with its reason rather than reading as an unexplained miss.
+const FLOOD_WATCH_TOKENS_REFUSED_BY_THE_LADDER: &[&str] =
+    &["contraction-elision", "unpunctuated-input"];
+
+/// The flood-watch corpus's distinct demand-token vocabulary: 149 tokens,
+/// re-derived here from the committed corpus rather than trusted from any
+/// campaign document.
+const FLOOD_WATCH_DISTINCT_DEMAND_TOKENS: usize = 149;
+
+/// **The standing cross-check.** 147 of the flood-watch corpus's 149
+/// distinct demand tokens exist on the ladder; the two that do not are
+/// exactly [`FLOOD_WATCH_TOKENS_REFUSED_BY_THE_LADDER`], never any other
+/// pair — a future edit that drops a *different* token from the ladder while
+/// somehow keeping the count at 147 (or 2 absent) must still fail this,
+/// because the assertion compares the SET, not merely its size.
+#[test]
+fn the_ladder_covers_flood_watch_vocabulary_except_the_two_refused_input_surface_tokens() {
+    let root = repo_root();
+
+    let flood_watch = load_flood_watch_corpus(&root);
+    assert_eq!(flood_watch.entries.len(), FLOOD_WATCH_ENTRIES);
+    let flood_watch_tokens = distinct_demand_tokens(&flood_watch.entries);
+    assert_eq!(
+        flood_watch_tokens.len(),
+        FLOOD_WATCH_DISTINCT_DEMAND_TOKENS,
+        "the flood-watch corpus's distinct demand vocabulary moved from {FLOOD_WATCH_DISTINCT_DEMAND_TOKENS}; \
+         the corpus is frozen (see the_flood_watch_corpus_is_frozen_at_its_authored_size), \
+         so this should only move alongside a deliberate, logged change to it"
+    );
+
+    let ladder_entries = read_ladder_raw(&root.join("sentences/the-ladder.corpus.json.DRAFT"));
+    let ladder_tokens = ladder_introduced_tokens(&ladder_entries);
+
+    let absent = tokens_absent_from_ladder(&flood_watch_tokens, &ladder_tokens);
+    let refused: BTreeSet<String> = FLOOD_WATCH_TOKENS_REFUSED_BY_THE_LADDER
+        .iter()
+        .map(|token| token.to_string())
+        .collect();
+    assert_eq!(
+        absent, refused,
+        "the ladder's coverage of the flood-watch vocabulary moved. The only \
+         tokens ever expected absent are {FLOOD_WATCH_TOKENS_REFUSED_BY_THE_LADDER:?} \
+         — input-surface properties of `parse` entries that a production \
+         instrument like the ladder structurally cannot introduce (see \
+         FLOOD_WATCH_TOKENS_REFUSED_BY_THE_LADDER's own doc). If a DIFFERENT \
+         token is missing, the ladder needs a new rung for it — that is this \
+         test's whole job. If a token in this list is no longer absent, the \
+         ladder started producing input-surface prose, which is worth its \
+         own investigation before updating the constant."
+    );
+
+    let covered = flood_watch_tokens.len() - absent.len();
+    assert_eq!(
+        covered, 147,
+        "flood-watch coverage moved from 147 of {FLOOD_WATCH_DISTINCT_DEMAND_TOKENS}. \
+         The ceiling is 147, not 149, because contraction-elision and \
+         unpunctuated-input are refused rather than missing — see this \
+         test's own doc."
+    );
+}
+
+/// The merchant corpus's vocabulary is fully covered by the ladder — 13 of
+/// 13 — worth pinning on its own: the ladder, authored after the merchant
+/// corpus (The Interlinear), still names a rung for every demand token the
+/// corpus that predates it makes.
+#[test]
+fn the_ladder_covers_the_merchant_corpus_vocabulary_completely() {
+    let root = repo_root();
+
+    let merchant = load_merchant_corpus(&root);
+    assert_eq!(merchant.entries.len(), MERCHANT_ENTRIES);
+    let merchant_tokens = distinct_demand_tokens(&merchant.entries);
+    assert_eq!(
+        merchant_tokens.len(),
+        13,
+        "the merchant corpus's distinct demand vocabulary moved from 13; the \
+         corpus is frozen (see the_merchant_corpus_is_frozen_at_its_authored_size), \
+         so this should only move alongside a deliberate, logged change to it"
+    );
+
+    let ladder_entries = read_ladder_raw(&root.join("sentences/the-ladder.corpus.json.DRAFT"));
+    let ladder_tokens = ladder_introduced_tokens(&ladder_entries);
+
+    let absent = tokens_absent_from_ladder(&merchant_tokens, &ladder_tokens);
+    assert!(
+        absent.is_empty(),
+        "the merchant corpus's vocabulary is no longer fully covered by the \
+         ladder: {absent:?} of {} demand token(s) now have no rung. The \
+         merchant corpus carries no refused tokens the way flood-watch's \
+         `parse` entries do (see FLOOD_WATCH_TOKENS_REFUSED_BY_THE_LADDER), \
+         so any absence here is a real gap the ladder needs a new rung for.",
+        merchant_tokens.len()
+    );
+}
+
+/// **Proves the cross-check is sensitive to a token going missing from the
+/// ladder, not merely to a count.** A test asserting only `147 == 147` would
+/// pass while the ladder silently lost one token and gained a different one
+/// — precisely the drift this cross-check exists to catch. Loads the real
+/// ladder as raw JSON, mutates an IN-MEMORY copy so r001 (which introduces
+/// `classify`, a token flood-watch demands) introduces nothing, writes that
+/// mutated copy to a temp file — never under `sentences/`, which this
+/// campaign does not edit outside `the-ladder.corpus.json.DRAFT` itself —
+/// and confirms `classify` newly appears among flood-watch's absent tokens.
+/// Then confirms the real ladder file on disk was never touched.
+#[test]
+fn removing_a_rungs_introduces_token_makes_the_cross_check_notice() {
+    let root = repo_root();
+    let ladder_path = root.join("sentences/the-ladder.corpus.json.DRAFT");
+    let before = std::fs::read(&ladder_path).expect("the ladder is committed and readable before");
+
+    let mut doc: serde_json::Value =
+        serde_json::from_slice(&before).expect("the ladder parses as JSON");
+    let entries = doc["entries"]
+        .as_array_mut()
+        .expect("the ladder has an entries array");
+    let r001 = entries
+        .iter_mut()
+        .find(|e| e["id"] == "r001")
+        .expect("r001 is a ladder rung");
+    assert_eq!(
+        r001["introduces"], "classify",
+        "r001 no longer introduces classify; this mutation targets the wrong \
+         rung and the assertion below would prove nothing"
+    );
+    r001["introduces"] = serde_json::Value::Null;
+
+    let tmp = std::env::temp_dir().join(format!(
+        "hornvale-ladder-token-removal-control-{}.json",
+        std::process::id()
+    ));
+    std::fs::write(
+        &tmp,
+        serde_json::to_vec(&doc).expect("the mutated ladder serializes"),
+    )
+    .expect("the temp control file writes");
+    let mutated_entries = read_ladder_raw(&tmp);
+    std::fs::remove_file(&tmp).ok();
+
+    let mutated_ladder_tokens = ladder_introduced_tokens(&mutated_entries);
+    let flood_watch = load_flood_watch_corpus(&root);
+    let flood_watch_tokens = distinct_demand_tokens(&flood_watch.entries);
+    let absent = tokens_absent_from_ladder(&flood_watch_tokens, &mutated_ladder_tokens);
+
+    assert!(
+        absent.contains("classify"),
+        "removing r001's introduces token did not make classify newly \
+         absent from the cross-check: {absent:?}. Either classify left \
+         flood-watch's demand vocabulary, or the in-memory mutation did not \
+         take effect — either way this control is no longer proving what it \
+         claims to."
+    );
+
+    let after = std::fs::read(&ladder_path).expect("the ladder is committed and readable after");
+    assert_eq!(
+        before, after,
+        "the token-removal control modified the real ladder file; it must \
+         only ever write its mutated copy to a temp file"
     );
 }
 
