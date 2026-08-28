@@ -570,10 +570,12 @@ fn appending_the_felt_state_cohort_displaces_no_existing_proto_root() {
 /// strictly last, and the anti-vacuity half proves that: folding `kill` into
 /// cohort 0 instead — one concept, not six — does move existing roots.
 ///
-/// It was, until The Mortise (Task 2) appended epoch 14, also the
-/// currently-last cohort; the sanity assertion pinning that has since been
-/// deleted per its own instruction (the property above holds either way,
-/// and does not need `kill` to be last).
+/// It was also the last cohort as of The Inquest, and is no longer: The
+/// Mortise appended `think` (epoch 14) and The Offer the five object
+/// properties (epoch 15), both after it. The sanity assertion that pinned
+/// `kill` as last has been deleted per its own instruction, rather than
+/// reordering the table — the property above holds regardless of which
+/// cohort is last, which is why the helper needed no change either.
 ///
 /// claim: invariant(forall-seed) — save-format contract.
 #[test]
@@ -595,4 +597,31 @@ fn appending_the_kill_cohort_displaces_no_existing_proto_root() {
 #[test]
 fn appending_the_think_cohort_displaces_no_existing_proto_root() {
     assert_appending_a_cohort_is_additive(&["think"], "think");
+}
+
+/// THE OFFER (Task 9): appending the five `object_property_pack` concepts
+/// (epoch 15) displaces nothing.
+///
+/// **Final whole-branch review minor M-e.** Every other cohort landed since
+/// The Inquest wrote this pattern — elf, felt-state, kill — carries this
+/// exact test, one call to the shared helper; this cohort shipped without one.
+/// Task 9's own review checked the byte-golden diff by hand (five lines
+/// added at the correct alphabetical positions, every pre-existing entry
+/// byte-identical) but nothing PINS that as a property future campaigns
+/// must also hold, the way this test does for every other cohort.
+///
+/// claim: invariant(forall-seed) — save-format contract, mirroring
+/// `appending_the_kill_cohort_displaces_no_existing_proto_root`'s shape.
+#[test]
+fn appending_the_object_property_cohort_displaces_no_existing_proto_root() {
+    assert_appending_a_cohort_is_additive(
+        &[
+            "affords-passage",
+            "encloses",
+            "holds-liquid",
+            "radiates-heat",
+            "supports-rest",
+        ],
+        "object-property",
+    );
 }

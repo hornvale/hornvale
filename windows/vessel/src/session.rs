@@ -94,14 +94,25 @@ const SESSION_CONTROL: [&str; 3] = ["release", "quit", "exit"];
 /// A second list beside a match can fall out of step with it, silently, in the
 /// direction that matters most: a new bare verb added to `handle` and not
 /// added here would be UNGATED, and nothing about it would look wrong.
-/// [`HELP`] is the third copy that closes the loop — it is the surface a
+/// [`HELP`] is a second copy that closes the loop — it is the surface a
 /// player reads, so it is already obliged to be complete — and
 /// `every_bare_verb_help_lists_is_classified` asserts the two agree in **both**
 /// directions: every verb `HELP` lists is in this roster or in
 /// [`SESSION_CONTROL`], and every entry of this roster is listed by `HELP`.
-const IN_CHARACTER_VERBS: [&str; 18] = [
+///
+/// **Not "the third copy" — the final whole-branch review's own count (M-f)
+/// found the verb-roster count hardcoded in EIGHT places across three
+/// crates** (this roster, `HELP`, and — outside this file entirely —
+/// `action_mood.rs`'s partition assertion, `windows/lab/tests/suite/
+/// reticence_calibration.rs`'s prose, and others each of this campaign's
+/// task reports found in turn). This doc used to claim three; it was wrong
+/// the day a fourth copy existed and nobody had reason to re-check it.
+/// Nothing here mechanizes the count — the two runtime rosters above are
+/// the only pair `every_bare_verb_help_lists_is_classified` actually holds
+/// together.
+const IN_CHARACTER_VERBS: [&str; 19] = [
     "ask", "back", "climb", "consult", "delve", "dive", "enter", "examine", "go", "knows", "look",
-    "map", "needs", "out", "sleep", "surface", "wait", "write",
+    "map", "needs", "out", "sleep", "surface", "wait", "warm", "write",
 ];
 
 /// The provenance a walk-band step commits under (The Deed, Task 7).
@@ -381,6 +392,7 @@ verbs:
                    in' goes deeper and 'out' leaves
   out              step back out of doors
   examine <thing>  anything look or the floor plan names
+  warm             warm yourself at a hearth, where one burns
   back             retrace your last step, out of doors
   wait [N]         let N days pass overhead (default 1); the world moves too
   sleep            lie down and sleep; the body stops obeying until its own
@@ -2226,6 +2238,79 @@ impl<'w> Session<'w> {
         Turn::Out(SLEEP_REPLY.to_string())
     }
 
+    /// Warm oneself at a heat source (The Offer, Task 5, spec §3.3/§6): the
+    /// one wholly new verb this campaign adds, and the session-side half of
+    /// acceptance test (2)'s live witness — `warm_appears_on_hearth_with_no_
+    /// object_table_edit` (`tests/suite/affordance.rs`, Task 2) proves the
+    /// QUERY offers `warm` on `Hearth` and not on `Bed`; this method proves
+    /// the VERB actually dispatches, gated the same way every other
+    /// in-character act is.
+    ///
+    /// **Reads only DERIVED interior state, never a committed fact.**
+    /// Whether a heat source is here is [`Self::chamber_interior_here`]'s own
+    /// anchor catalogue, checked through [`crate::affordance::
+    /// offered_to_observer`] exactly the way [`Self::examine_chamber`]
+    /// already gates its own anchor detail — a per-room DERIVATION, not a
+    /// ledger read. `Interior` is never serialized (decision 0069), so this
+    /// precondition reads position and derived state only, the same property
+    /// every other `Action`'s precondition holds
+    /// (`action::precondition_reads_committed_state`). Standing at a hearth
+    /// out of doors is impossible in the first place — no
+    /// [`crate::interior::AnchorKind::Hearth`] exists outside a chamber's
+    /// `Interior` — so `self.chamber_interior_here()` returning `None` out
+    /// of doors doubles as that refusal.
+    ///
+    /// **Fixed post-review (I1): gates on the OFFER, not on a hardcoded
+    /// `AnchorKind::Hearth` literal.** This method used to compare
+    /// `interior.anchor(a).kind == AnchorKind::Hearth` directly — the exact
+    /// per-kind coupling spec §3.2 says a new verb must never need
+    /// ("neither edits a dispatcher"), reintroduced by the one verb this
+    /// campaign actually adds. A future `RadiatesHeat` carrier (a cauldron
+    /// of coals on `AnchorKind::Vessel`, say) would have needed an edit
+    /// HERE as well as an `object_registry` entry — exactly the M×N
+    /// dispatcher-edit this campaign exists to abolish. Now this reads
+    /// [`crate::affordance::OfferedVerb::Warm`] off whichever anchor is
+    /// actually here, so a future carrier needs only the registry entry.
+    /// **Behaviour is unchanged today**: `Hearth` is still the only
+    /// `RadiatesHeat` carrier, so `offered_to_observer` agrees with the old
+    /// literal check on every anchor kind that exists —
+    /// `warm_succeeds_at_a_real_hearth_through_a_real_session` (below) is
+    /// the proof, unmoved by this fix. Routed through `offered_to_observer`
+    /// rather than the narrower `offered_by`, for the same reason
+    /// [`Self::examine_chamber`] is: one knowledge gate for every surface
+    /// that reads an offer (Nathan's #9 ruling), not two.
+    ///
+    /// **Commits nothing, and mints no `Action` variant.** Warming is not a
+    /// GOAP-planned creature act — no successor in `action.rs`'s search
+    /// spaces ever proposes it — and `dive`/`surface`/`delve`/`climb` beside
+    /// it in [`Self::handle`]'s match are the standing precedent that an
+    /// in-character verb with no authored cost dial stays free rather than
+    /// inventing one (their own doc: minting a tariff here would be "a cost
+    /// model," which this arc does not add). A fifth `Action` variant would
+    /// also break the three-way partition
+    /// `tests/suite/action_mood.rs::every_rostered_action_is_classified`
+    /// asserts over `Action::all()` (creature actions + group A + group B),
+    /// since warm fits none of those three categories — reason enough on its
+    /// own to leave the action layer untouched here. Its effect is narration
+    /// alone: nothing durable changes, on the ledger or on this session,
+    /// which is the IV.a/IV.b line this task was told to stop at.
+    fn warm(&self) -> Turn {
+        let can_warm = self.chamber_interior_here().is_some_and(|interior| {
+            interior.ids().iter().any(|&a| {
+                crate::affordance::offered_to_observer(
+                    interior.anchor(a).kind,
+                    self.driven_body(),
+                    &self.knowledge,
+                )
+                .contains(&crate::affordance::OfferedVerb::Warm)
+            })
+        });
+        if !can_warm {
+            return Turn::Out("There is no fire here to warm yourself at.".to_string());
+        }
+        Turn::Out("You warm yourself at the fire.".to_string())
+    }
+
     /// The out-of-character namespace's own dispatch: every verb reachable
     /// behind a leading `!` (The Deed, spec §2.1/§3.2).
     ///
@@ -2500,6 +2585,15 @@ impl<'w> Session<'w> {
                 "sleep" => self.sleep(rest),
                 "write" => Turn::Out(self.write(rest)),
                 "consult" => Turn::Out(self.consult()),
+                // The one wholly new verb The Offer adds (spec §3.3/§6): the
+                // live witness for acceptance test (2) — `Hearth` offers it
+                // with no edit to `affordance::object_registry`. Free, like
+                // `dive`/`surface`/`delve`/`climb` just below: no authored
+                // cost dial exists for warming oneself, and inventing one
+                // here would be the same "new cost model" spec §3.4 forbids
+                // those four from minting. See `Self::warm`'s own doc for
+                // why it needs no `Action` variant either.
+                "warm" => self.warm(),
                 // THE FOUR VERTICAL BAND CHANGES, AND THE ONE THING THEY DO
                 // NOT DO (fix round 1). Each is an in-character act — the gate
                 // above stands in front of all four — and each still charges
@@ -3986,7 +4080,39 @@ impl<'w> Session<'w> {
             for id in interior.ids() {
                 let kind = interior.anchor(id).kind;
                 if crate::chamber_prose::noun(kind).is_some_and(|n| n.to_lowercase() == wanted) {
-                    return crate::chamber_prose::detail(kind).to_string();
+                    // The Offer, Task 7 (spec §3.5/§4): routed through the
+                    // derived offer query, not the anchor's bare kind, so
+                    // the knowledge gate is LIVE CODE with an unreachable
+                    // branch (Nathan's #9 ruling) rather than dead code.
+                    // `Examine` is universal — `required_properties` is the
+                    // empty set, which is a subset of any kind's properties
+                    // — so the ONLY way this can ever be denied is
+                    // `offered_to_observer`'s own knowledge check. Per Task
+                    // 4's finding, no live `Session` can fail it today (this
+                    // method's caller always absorbs the current room before
+                    // the first turn runs), so this is byte-identical to the
+                    // pre-Task-7 behaviour for every reachable input —
+                    // `examine_chamber_anchor_reply_is_pinned_before_the_
+                    // offer_gate` pins exactly that, and `examine_chamber_
+                    // anchor_is_refused_when_the_observer_has_no_recorded_
+                    // knowledge` proves the branch is real by manufacturing
+                    // the one `Knowledge` state a live session cannot reach
+                    // on its own.
+                    if !crate::affordance::offered_to_observer(
+                        kind,
+                        self.driven_body(),
+                        &self.knowledge,
+                    )
+                    .contains(&crate::affordance::OfferedVerb::Examine)
+                    {
+                        return format!("You see no {noun} here.");
+                    }
+                    // The Offer, Task 6 (spec §3.6, amended): what lies
+                    // `within` an `Encloses` anchor is read here, not just
+                    // its authored `detail` line — see `examine_detail`'s
+                    // own doc for the property gate and the mutation it
+                    // guards against.
+                    return crate::chamber_prose::examine_detail(&interior, id);
                 }
             }
         }
@@ -4566,6 +4692,24 @@ impl<'w> Session<'w> {
     /// chart) is propagated as `Err`, never silently downgraded to an empty
     /// union — `examine` must be able to tell "the lens failed" from "no
     /// grain surfaced that noun", and only the latter is a bare absence.
+    ///
+    /// **The Offer, Task 7 (spec §4): the "chart legend" surface named
+    /// there, investigated and found NOT re-pointable at
+    /// [`crate::affordance::offered_to_observer`] without either a
+    /// structural violation or a scope-widening feature addition.** The
+    /// second matcher below (`scene.legend`, this method's own doc's "the
+    /// chart's legend") synthesizes `Noun`s from `hornvale_scene::
+    /// SurroundsScene` — WALK-band terrain marks (biome regions, sky), never
+    /// a chamber `AnchorKind`. Worse, this method cannot even be reached
+    /// while the possession is indoors: it calls [`Self::purview`] →
+    /// [`Self::purview_through`], whose own `debug_assert!` requires
+    /// `self.inside.is_none()`, because the walk-band chart marks every
+    /// derived NPC ungated and drawing it from inside a chamber would
+    /// disclose a creature sight withheld (see that assertion's doc).
+    /// Routing chamber anchors through here would mean lifting that
+    /// invariant, which is exactly the class of behaviour change spec
+    /// §10.1 and this task's brief say to stop for rather than push
+    /// through. See the Task 7 report for the full investigation.
     /// type-audit: bare-ok(identifier-text: return)
     pub fn lens_nouns(&self) -> Result<Vec<crate::focalize::Noun>, VesselError> {
         let mut out: Vec<crate::focalize::Noun> = self.focalized()?.nouns;
@@ -5695,6 +5839,213 @@ mod tests {
         }
     }
 
+    /// The Offer, Task 7 (spec §4): `HELP` is the fourth surface spec §4
+    /// names, and the one that resists a runtime `offered_to_observer` call
+    /// for a structural reason rather than an oversight — it lists every
+    /// verb unconditionally, for a body that may be standing anywhere at
+    /// all, so there is no single `(AnchorKind, Body, Knowledge)` triple to
+    /// route it through (see the Task 7 report for the fuller finding). What
+    /// IS mechanizable is the text-level agreement this test holds: the
+    /// `warm` line's own word must be [`crate::affordance::OfferedVerb::
+    /// Warm`]'s canonical spelling, it must name the SAME carrier
+    /// [`crate::affordance::object_registry`] assigns `RadiatesHeat`
+    /// (`chamber_prose::noun(AnchorKind::Hearth)`), and that carrier must
+    /// actually offer `Warm` per the derived query — so a rename in either
+    /// place, or a reassignment of the carrier, reddens here rather than
+    /// drifting silently, the same discipline
+    /// `every_bare_verb_help_lists_is_classified` already holds between
+    /// `HELP` and the verb-gating rosters.
+    #[test]
+    fn help_names_warm_with_the_offer_modules_own_word_and_carrier() {
+        let warm_line = HELP
+            .lines()
+            .find(|l| l.trim_start().starts_with("warm "))
+            .expect("HELP must list warm");
+        assert!(
+            warm_line
+                .trim_start()
+                .starts_with(crate::affordance::OfferedVerb::Warm.word()),
+            "HELP's warm line must open with OfferedVerb::Warm's own word: {warm_line:?}"
+        );
+        let hearth_noun = crate::chamber_prose::noun(crate::interior::AnchorKind::Hearth)
+            .expect("Hearth always names a noun");
+        assert!(
+            warm_line.contains(hearth_noun),
+            "HELP's warm line must name the same carrier object_registry \
+             assigns RadiatesHeat to ({hearth_noun:?}): {warm_line:?}"
+        );
+        assert!(
+            crate::affordance::offered_by(crate::interior::AnchorKind::Hearth)
+                .contains(&crate::affordance::OfferedVerb::Warm),
+            "the carrier HELP names must actually offer Warm, or the two \
+             texts would agree with each other while disagreeing with the \
+             derived query"
+        );
+    }
+
+    /// `warm` (The Offer, Task 5, spec §3.3/§6) is the LIVE half of
+    /// acceptance test (2): `warm_appears_on_hearth_with_no_object_table_edit`
+    /// (`tests/suite/affordance.rs`) proves the QUERY offers `warm` on
+    /// `Hearth` and not `Bed`, entirely without a `Session`; this proves the
+    /// VERB actually dispatches and reads only derived interior state.
+    ///
+    /// A freshly-possessed seed-42 session starts out of doors
+    /// (`self.inside` is `None`), where `AnchorKind::Hearth` cannot exist at
+    /// all — there is no chamber `Interior` to carry one — so `warm` must
+    /// refuse for want of a fire.
+    ///
+    /// Mutation this is written to catch: replacing `Self::warm`'s
+    /// `has_hearth` check with an unconditional `true` (which would make
+    /// `warm` always succeed, indoors or out, hearth or none) — this test
+    /// reddens on that mutation while `warm_appears_on_hearth_with_no_
+    /// object_table_edit` stays green, since that test never calls
+    /// `Session::handle` at all. Confirmed by actually applying the
+    /// mutation and re-running (task-5 report carries the transcript).
+    #[test]
+    fn warm_refuses_with_no_hearth_in_reach() {
+        let world = seam_world();
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+        assert!(
+            session.inside.is_none(),
+            "sanity check: a fresh possession starts out of doors"
+        );
+        let out = match session.handle("warm") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("warm must not release: {t}"),
+        };
+        assert!(
+            out.contains("no fire"),
+            "warm out of doors must refuse for lack of a hearth, got: {out}"
+        );
+    }
+
+    /// `warm` is gated by the body like every other in-character verb (spec
+    /// §2.1/§3.2): a sleeping body cannot warm itself any more than it can
+    /// walk. This is the BEHAVIOURAL half of the three-roster proof —
+    /// `every_bare_verb_help_lists_is_classified` catches a roster drift
+    /// structurally (by scanning `HELP`/`IN_CHARACTER_VERBS`); this drives an
+    /// actual sleeping body at `warm` and checks the refusal itself.
+    ///
+    /// Mutation this is written to catch: dropping `"warm"` from
+    /// [`IN_CHARACTER_VERBS`] while leaving its dispatch arm in
+    /// [`Session::handle`]'s match — exactly the "ungated new verb" hazard
+    /// that roster's own doc warns about. Confirmed by actually removing the
+    /// entry, re-running (this test reddened, asserting
+    /// `warmed != "You cannot — you are asleep."` since the dispatch ran
+    /// unrefused), and restoring it (task-5 report carries the transcript).
+    #[test]
+    fn warm_is_refused_while_asleep() {
+        let world = seam_world();
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+        let slept = match session.handle("sleep") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("sleep must not release: {t}"),
+        };
+        assert!(
+            !slept.starts_with("No verb"),
+            "`sleep` must be a verb for this test to mean anything: {slept}"
+        );
+        assert_eq!(
+            session.body_state(),
+            BodyState::Asleep,
+            "sanity check: asleep alone must gate as asleep"
+        );
+        let warmed = match session.handle("warm") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("warm must not release: {t}"),
+        };
+        assert_eq!(warmed, "You cannot — you are asleep.");
+    }
+
+    /// The final whole-branch review's C1: neither test above ever drives
+    /// `warm` to SUCCESS. `warm_refuses_with_no_hearth_in_reach` stays out
+    /// of doors, where no chamber (and so no `Hearth`) can exist at all;
+    /// `warm_is_refused_while_asleep` is turned away by the body-state gate
+    /// before [`Self::warm`] ever runs. The success string "You warm
+    /// yourself at the fire." occurs exactly once in the whole workspace —
+    /// in production code — and was asserted by nothing until this test.
+    ///
+    /// **Seed 13, not seed 42.** `Terrain::is_cold` is read at a canonical
+    /// reference day (`liveness.rs`), so whether a location ever draws the
+    /// fire pattern is a fixed fact about that PLACE, not about a session's
+    /// current day. Seed 42's flagship sits somewhere that reads warm at
+    /// that reference day — `enter; enter further in` there composes an
+    /// `Alcove` with no `Hearth` inside it — so it cannot witness this test
+    /// at all. Seed 13 was found by probing seeds 1-19 for one whose
+    /// flagship's hearthroom actually draws the fire; the precondition
+    /// assertion below is what makes that a checked fact of this test rather
+    /// than a silent assumption the next campaign could break by changing
+    /// worldgen.
+    ///
+    /// Reaches a real hearth in a real session: `enter` lands at the
+    /// threshold chamber (`chamber_index` 0, `Role::Threshold`), which never
+    /// carries an alcove or a hearth (`interior/pattern.rs`'s `the-alcove`
+    /// pattern is gated `roles: &[Role::Hearthroom]`); `enter further in`
+    /// steps to `chamber_index` 1, `Role::Hearthroom`, the one role the fire
+    /// pattern's own `Attach::Within(AnchorKind::Alcove)` can ever reach.
+    ///
+    /// Mutation this must fail against: repoint `Self::warm`'s success gate
+    /// at `AnchorKind::Vessel` instead of `AnchorKind::Hearth` — this
+    /// reddens (confirmed below) while `warm_refuses_with_no_hearth_in_reach`
+    /// and `warm_is_refused_while_asleep` stay green, matching the final
+    /// review's own point: nothing but this test can tell the success path
+    /// apart from a refusal.
+    ///
+    /// **Not `AnchorKind::Bed`, and this is a real, checked finding, not an
+    /// oversight.** The final review's own illustrative mutation repointed
+    /// the gate at `Bed` ("warm... succeeds in bedrooms"). Run against seed
+    /// 13's real hearthroom, that swap does NOT redden this test —
+    /// `the-fireside-bed` (`interior/pattern.rs`) `requires:
+    /// Some(AnchorKind::Hearth)` in the SAME chamber, and `Bed`'s own
+    /// `needs_cold` is the same flag as `Hearth`'s, so every chamber that
+    /// ever composes a `Hearth` also composes a `Bed`, and vice versa — the
+    /// grammar makes the two anchor kinds perfectly co-located in every real
+    /// interior. `Vessel` has no such correlation
+    /// (`roles: STORING_ROLES` excludes `Role::Hearthroom` outright, so a
+    /// `Vessel` anchor can never share a chamber with a `Hearth`), which is
+    /// why it discriminates where `Bed` cannot. Verified by applying BOTH
+    /// mutations by hand: `Hearth` → `Bed` leaves all ten `warm`-area tests
+    /// green (including this one); `Hearth` → `Vessel` reddens exactly this
+    /// test. Both runs are pasted in the fix wave's report.
+    #[test]
+    fn warm_succeeds_at_a_real_hearth_through_a_real_session() {
+        let world = world_at(13).expect("seed 13 builds");
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 13 possesses");
+        session.handle("enter");
+        session.handle("enter further in");
+        let inside = session
+            .inside
+            .as_ref()
+            .expect("still indoors after stepping further in");
+        let interior = session.chamber_interior_here().expect(
+            "a chamber built at the position `enter` stood the possession in \
+             must compose an interior",
+        );
+        assert!(
+            interior
+                .ids()
+                .iter()
+                .any(|&a| interior.anchor(a).kind == crate::interior::AnchorKind::Hearth),
+            "precondition: chamber_index {} (expected the hearthroom) must \
+             carry a real Hearth anchor, or this test proves nothing about \
+             warm succeeding: {:?}",
+            inside.at,
+            interior
+                .ids()
+                .iter()
+                .map(|&a| interior.anchor(a).kind)
+                .collect::<Vec<_>>()
+        );
+        let warmed = match session.handle("warm") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("warm must not release: {t}"),
+        };
+        assert_eq!(warmed, "You warm yourself at the fire.");
+    }
+
     /// H2. Every one of the eight compass points moves the possession from a
     /// walk-band room. This is the campaign's central claim and the whole of
     /// the availability half of the defect.
@@ -6780,6 +7131,181 @@ mod tests {
         // And the same equality out of doors, so the two paths are pinned to one
         // sentence rather than to one prefix.
         assert_eq!(outdoors, refused_indoors);
+    }
+
+    /// A shared helper for the two `examine`'s-datum pins below: a real
+    /// seed-42 anchor (never a synthetic one), so both tests exercise the
+    /// actual production interior rather than a hand-built stand-in.
+    /// Returns the entered session, the anchor's [`crate::interior::AnchorId`]
+    /// and its noun.
+    fn entered_with_a_named_anchor(
+        world: &World,
+    ) -> (
+        Session<'_>,
+        crate::interior::Interior,
+        crate::interior::AnchorId,
+        &'static str,
+    ) {
+        let (mut session, _) = Session::start(world, &PossessOpts::default()).unwrap();
+        session.handle("enter");
+        let inside = session
+            .inside
+            .as_ref()
+            .expect("the flagship's own locale is built");
+        let terrain = session.terrain_here();
+        let brief = session.brief_here();
+        let interior = crate::interior::chamber_interior_of(
+            &inside.structure.chambers[inside.at],
+            &terrain,
+            session.walk_depth(),
+            &brief,
+            inside.at,
+        );
+        let id = interior
+            .ids()
+            .into_iter()
+            .find(|&id| crate::chamber_prose::noun(interior.anchor(id).kind).is_some())
+            .expect("a built chamber names at least one anchor");
+        let noun = crate::chamber_prose::noun(interior.anchor(id).kind)
+            .expect("checked Some by the find above");
+        (session, interior, id, noun)
+    }
+
+    /// The Offer, Task 7 (spec §4, §10.1): pins `examine_chamber`'s
+    /// anchor-detail reply BEFORE it is routed through
+    /// [`crate::affordance::offered_to_observer`] — the equality the spec's
+    /// own risk note asks for: "the behaviour is already shipped and already
+    /// tested; what changes is that one derivation feeds it." Must still
+    /// hold, byte for byte, after the re-point below, because the knowledge
+    /// gate can never fire through a live `Session` (Task 4's own finding).
+    ///
+    /// Mutation this must fail against: replacing `examine_chamber`'s anchor
+    /// branch with a bare refusal.
+    ///
+    /// **Folded in from the final review's minor M-c.** A second test,
+    /// `examine_chamber_anchor_reply_pin_can_fail`, used to run the SAME
+    /// mutation by hand and assert only `assert_ne!` against the refusal
+    /// sentence — a strict superset of the equality already asserted below
+    /// (its own doc said as much: "this test itself asserts nothing new").
+    /// Folded here rather than kept as a second function.
+    #[test]
+    fn examine_chamber_anchor_reply_is_pinned_before_the_offer_gate() {
+        let world = seam_world();
+        let (session, interior, id, noun) = entered_with_a_named_anchor(&world);
+        let reply = session.examine_chamber(noun, Perceiving::Body);
+        // A mutation that always refuses would make this equal the refusal
+        // sentence instead of the real detail — the two must differ, or the
+        // equality below could not tell the two apart. Confirmed by
+        // temporarily editing the anchor branch to `return format!("You see
+        // no {noun} here.");` and re-running this test, which failed with
+        // the expected diff, then restoring the branch.
+        assert_ne!(reply, format!("You see no {noun} here."));
+        assert_eq!(
+            reply,
+            crate::chamber_prose::examine_detail(&interior, id),
+            "examine_chamber's anchor reply must equal chamber_prose's own \
+             examine_detail — the pin this task's re-point must not move"
+        );
+    }
+
+    /// The final whole-branch review's C2: the pin above is tautological
+    /// (both sides route through [`crate::chamber_prose::examine_detail`])
+    /// and it never reaches the one branch Task 6 added — `entered_with_a_
+    /// named_anchor` takes the FIRST nouned anchor of the chamber `enter`
+    /// lands in, which is always `chamber_index` 0 (`Role::Threshold`,
+    /// `pattern.rs`:415); the alcove Task 6's `within` relation actually
+    /// names is drawn only for `chamber_index` 1 (`Role::Hearthroom`,
+    /// `pattern.rs`:178). So no test exercised the production seam at all.
+    ///
+    /// **Seed 13, not seed 42** — same reason as `warm_succeeds_at_a_real_
+    /// hearth_through_a_real_session`: `Terrain::is_cold` is a fixed fact
+    /// about a PLACE (read at a canonical day), and seed 42's flagship reads
+    /// warm at that day, so its hearthroom draws an alcove with nothing in
+    /// it. Seed 13's does not.
+    ///
+    /// Walks to the real hearthroom (`enter; enter further in`, exactly as
+    /// the `warm` test does) and examines the alcove directly, asserting on
+    /// the literal `"Within it:"` clause `chamber_prose::examine_detail`
+    /// only emits when [`crate::affordance::ObjectProperty::Encloses`] is
+    /// carried AND something composes `within` the anchor — never comparing
+    /// against `examine_detail`'s own output, so this cannot be tautological
+    /// the way the pin above is.
+    ///
+    /// Mutation this must fail against: revert `examine_chamber`'s anchor
+    /// branch (session.rs) from `chamber_prose::examine_detail(&interior,
+    /// id)` back to `chamber_prose::detail(kind)` — the exact mutation the
+    /// final review ran, which left 700/700 tests green while `examine
+    /// alcove` silently stopped naming the hearth within it. Confirmed
+    /// below.
+    #[test]
+    fn examine_chamber_names_the_hearth_within_the_real_hearthroom_alcove() {
+        let world = world_at(13).expect("seed 13 builds");
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 13 possesses");
+        session.handle("enter");
+        session.handle("enter further in");
+        let interior = session.chamber_interior_here().expect(
+            "a chamber built at the position `enter further in` stood the \
+             possession in must compose an interior",
+        );
+        let alcove_id = interior
+            .ids()
+            .into_iter()
+            .find(|&id| interior.anchor(id).kind == crate::interior::AnchorKind::Alcove)
+            .expect(
+                "precondition: seed 13's hearthroom must compose an Alcove, \
+                 or this test proves nothing about the within-relation",
+            );
+        assert!(
+            interior.anchor(alcove_id).within.is_none()
+                && interior.ids().into_iter().any(|id| interior.anchor(id).kind
+                    == crate::interior::AnchorKind::Hearth
+                    && interior.anchor(id).within == Some(alcove_id)),
+            "precondition: seed 13's alcove must have a real Hearth composed \
+             WITHIN it (the-fire's own Attach::Within(AnchorKind::Alcove)), \
+             or the within-relation this test checks does not exist here"
+        );
+        let alcove_noun = crate::chamber_prose::noun(crate::interior::AnchorKind::Alcove)
+            .expect("Alcove always names a noun");
+        let reply = match session.handle(&format!("examine {alcove_noun}")) {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("examine must not release: {t}"),
+        };
+        assert!(
+            reply.contains("Within it:"),
+            "examining the alcove must name what the grammar placed within \
+             it (the hearth): {reply:?}"
+        );
+        assert!(
+            reply.contains("a hearth"),
+            "the within-clause must name the hearth specifically: {reply:?}"
+        );
+    }
+
+    /// The Offer, Task 7 (spec §3.5/§4): [`crate::affordance::
+    /// offered_to_observer`] can never deny through a LIVE `Session` (Task
+    /// 4's own finding — knowledge absorption is unconditional before the
+    /// first turn), so the only way to observe this gate firing at all is to
+    /// manufacture the failing `Knowledge` directly — the same technique
+    /// `affordance.rs`'s own `an_unencountered_object_offers_nothing` uses
+    /// with a synthetic value.
+    ///
+    /// **Written and run RED against the pre-Task-7 `examine_chamber`**: it
+    /// does not consult `self.knowledge` at all, so wiping it changes
+    /// nothing and this assertion fails. The re-point below is what turns it
+    /// green — the live proof that `examine`'s datum now derives from
+    /// [`crate::affordance::offered_to_observer`], not merely from the
+    /// anchor's own kind.
+    #[test]
+    fn examine_chamber_anchor_is_refused_when_the_observer_has_no_recorded_knowledge() {
+        let world = seam_world();
+        let (mut session, _interior, _id, noun) = entered_with_a_named_anchor(&world);
+        // Manufacture the one state a live Session can never reach on its
+        // own (Task 4's own finding): an observer who has recorded no room
+        // at all.
+        session.knowledge = Knowledge::default();
+        let reply = session.examine_chamber(noun, Perceiving::Body);
+        assert_eq!(reply, format!("You see no {noun} here."));
     }
 
     #[test]
@@ -8307,11 +8833,11 @@ mod tests {
     /// that fact today regardless of what a player types. The conclusion
     /// rests on that; the loop below corroborates it over a roster.
     ///
-    /// **WHAT THIS FIXTURE ACTUALLY EXERCISES IS 12 OF THE 30, NOT 30 —
+    /// **WHAT THIS FIXTURE ACTUALLY EXERCISES IS 12 OF THE 31, NOT 31 —
     /// state that plainly rather than let the roster count imply
     /// otherwise.** Every verb here runs against a session that has just
     /// been `!possess`ed, and a possessed body is exactly what
-    /// `gated_by_the_body` refuses in front of: all 18
+    /// `gated_by_the_body` refuses in front of: all 19
     /// [`IN_CHARACTER_VERBS`] are turned away by the body-state gate BEFORE
     /// their handlers run, so only the 3 [`SESSION_CONTROL`] verbs and the
     /// 9 Group-A operator instruments below reach any dispatch arm at all.
@@ -8321,7 +8847,11 @@ mod tests {
     /// of this exact loop, counting lines whose output carries the gate's own
     /// refusal ("another will holds this body"), reported `roster=30
     /// gate-refused=18` — `ask back climb consult delve dive enter examine go
-    /// knows look map needs out sleep surface wait write`.
+    /// knows look map needs out sleep surface wait write` (The Offer, Task 5,
+    /// added `warm` to [`IN_CHARACTER_VERBS`] afterwards; the count above is
+    /// re-derived arithmetically from that measurement — same 12 ungated
+    /// verbs, one more gated one, 18→19→31 — rather than re-run, since
+    /// `gated_by_the_body`'s own logic is untouched by this addition).
     ///
     /// **So this is a weak tripwire, not the tripwire that turns red the
     /// day mortality ships.** If a death terminator ever arrives through an
@@ -8334,14 +8864,14 @@ mod tests {
     ///
     /// The stated denominator (spec §7's own requirement): the full shipped
     /// verb roster this file itself classifies is the SUM of three groups —
-    /// [`IN_CHARACTER_VERBS`] (18), [`SESSION_CONTROL`] (3:
-    /// `release`/`quit`/`exit`), and the nine out-of-character-ONLY operator
-    /// instruments `handle_ooc`'s Group A dispatches
-    /// (`why`/`npcs`/`help`/`eyes`/`whoami`/`provoke`/`soothe`/`possess`/
-    /// `unpossess`) — **30** total. Group B's six `!`-twins
+    /// [`IN_CHARACTER_VERBS`] (19, since The Offer's Task 5 added `warm`),
+    /// [`SESSION_CONTROL`] (3: `release`/`quit`/`exit`), and the nine
+    /// out-of-character-ONLY operator instruments `handle_ooc`'s Group A
+    /// dispatches (`why`/`npcs`/`help`/`eyes`/`whoami`/`provoke`/`soothe`/
+    /// `possess`/`unpossess`) — **31** total. Group B's six `!`-twins
     /// (`!map`/`!examine`/`!needs`/`!wait`/`!look`/`!knows`) are deliberately
     /// NOT counted a second time — [`HELP`]'s own text calls them "the
-    /// out-of-character halves" of verbs already among the 18: the same verb
+    /// out-of-character halves" of verbs already among the 19: the same verb
     /// under the other mood, not a distinct one.
     ///
     /// Each verb runs against its OWN fresh, freshly-possessed session
@@ -8355,7 +8885,7 @@ mod tests {
     /// argument to make it succeed: since no dispatch arm anywhere
     /// constructs the string `"died"` regardless of input, a bare
     /// invocation already covers the whole surface this loop can reach —
-    /// which, per the paragraph above, is the 12 ungated verbs, not the 30
+    /// which, per the paragraph above, is the 12 ungated verbs, not the 31
     /// the roster names.
     #[test]
     fn h2_no_shipped_verb_can_end_a_possession_by_death() {
@@ -8378,11 +8908,11 @@ mod tests {
             .collect();
         assert_eq!(
             roster.len(),
-            30,
-            "the stated denominator: 18 IN_CHARACTER_VERBS + 3 SESSION_CONTROL \
+            31,
+            "the stated denominator: 19 IN_CHARACTER_VERBS + 3 SESSION_CONTROL \
              + 9 Group-A operator instruments the OOC namespace alone \
              dispatches. This pins the ROSTER's size, NOT the exercised \
-             population: under a possessed body the gate refuses all 18 \
+             population: under a possessed body the gate refuses all 19 \
              in-character verbs, so 12 reach a dispatch arm — see this \
              test's doc comment"
         );
