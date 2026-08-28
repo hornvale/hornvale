@@ -62,4 +62,3 @@ clients/game/core/tests/fixtures/
 docs/audits/underworld-lattice-seed-panel.md
 docs/audits/the-confidant-report.md
 docs/audits/the-reticence-report.md
-docs/audits/heavy-tier-adjudication.md
