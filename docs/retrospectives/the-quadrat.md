@@ -84,9 +84,37 @@ softening, because the pattern is more instructive than any individual instance:
 **A sixth instance was committed inside this very document** and is recorded
 under *Confidence Gradient* below, where it happened.
 
-Four of the five above are the same error in different clothes: a true statement
-generalised past the ground it was measured on. The fifth is the same error
-about code rather than about numbers. The remedy that actually worked was not
+**A seventh is the most consequential of the set, and it is why this document
+was revised after the whole-branch review.** The controller wrote *"the wire
+does not carry the sub-tile phase"* — a real measurement (a 200-phase sweep of
+what happens when a consumer reprojects *without* reconstructing absolute
+coordinates) generalised into a claim about the contract itself. The wire does
+carry it: the observer block states the centre's own centroid latitude and
+longitude, bearing and distance are centroid-to-centroid great-circle
+quantities, so the spherical direct problem recovers every facet's absolute
+position exactly, and eight-significant-digit quantization is centimetre-scale
+against a 1.87 km tile. The true statement is narrower and crate-local —
+`clients/game/core`'s parsed mirror of the document drops the observer block,
+and the kernel has no inverse of `bearing_to`/`distance_rad_to`. That framing
+was already written correctly, in `driver.rs`'s own module doc, by an
+implementer; the controller's version travelled instead, into six committed
+documents.
+
+One of the six is `book/src/reference/scene-surrounds-v2.md`, a **cross-repo
+contract page**, which it left contradicting itself — that page's own address
+section states that the observer carries its centroid. The other instances put
+wrong numbers, or one wrong claim about this repository's own code, into this
+repository's own documents; this one told external client authors that something
+straightforward was impossible. Decision 0290's ruling survives untouched, on
+grounds that never depended on the false claim — one projection called from both
+sides beats two independent arithmetics obliged to agree — and the record now
+rests on those instead.
+
+Four of the five numbered above are the same error in different clothes: a true
+statement generalised past the ground it was measured on. The fifth is the same
+error about code rather than about numbers. The seventh is the same error again
+at the largest blast radius available to it: past this repository, onto a page
+other repositories read as a contract. The remedy that actually worked was not
 more care — it was that implementers and reviewers were briefed to judge on the
 merits and did, twice contradicting the controller directly and being right both
 times (rung 7's boundary; removing observer-centring from the zoom path).
@@ -95,9 +123,12 @@ times (rung 7's boundary; removing observer-centring from the zoom path).
 
 - **Three brief items were measured UNBUILDABLE rather than approximated**, each
   by the implementer that received it, and each with a number. Task 4's third
-  layer function had no perception input to take. Task 6's reprojection depends
-  on a sub-tile phase the wire does not carry — swept across 200 phases, worst
-  24 of 31 marks misplaced, mean 11.5, only 2 of 200 exact. Task 8's per-call
+  layer function had no perception input to take. Task 6's reprojection could
+  not be written in the crate that was to hold it — that crate's mirror of the
+  wire drops the observer block, and no inverse of the bearing-and-distance
+  construction exists to call; reprojecting without one, swept across 200
+  sub-tile phases, misplaces at worst 24 of 31 marks, mean 11.5, only 2 of 200
+  exact. Task 8's per-call
   lens request failed four independent ways. In every case the answer was a
   measurement and an alternative, not a shrug, and in Task 6's case the
   alternative was better than the design it replaced.
@@ -162,14 +193,17 @@ anyone noticing the reasoning was thin.
 The bet that moved is **"the phenomena interface generalizes"** — the emit-seam
 row whose instrument The Quire converted from taste into a byte comparison
 against the sim's own renderer of the same thirty-one facets. This campaign set
-out to move that pin and measured that it cannot be moved: the wire carries the
-packet as a *relative polar offset* and a raster addresses *absolute* tiles, and
-the conversion needs the observer's sub-tile phase, which the wire does not
-carry. The row is re-scored with what that boundary actually is — a document may
-be complete and still be renderable only by a consumer holding the mesh — and
+out to move that pin and did not: the wire carries the packet as a *relative
+polar offset* and a raster addresses *absolute* tiles, and the render crate that
+was to convert between them holds neither the observer block its mirror drops
+nor any inverse of the bearing-and-distance construction. The row is re-scored
+with what that boundary actually is — a document may be complete and still ask a
+consumer for real work before it can be placed in the world's frame, either
+spherical trigonometry it writes itself or a dependency on the simulation — and
 with the resolution, which is stronger than the instrument it replaces: one
 projection called from both sides, so the two pictures agree by construction
-rather than by comparison.
+rather than by comparison. The boundary as first written here was the wider,
+false one (the seventh instance above).
 
 The reasoning that produced the wrong first answer was not stupid, which is why
 it is worth naming. It was a *category* argument ("rendering is outside the
@@ -192,7 +226,7 @@ the substantial ones; the residue is listed here so nothing is lost.
 | **F5** | **An outdoor band A.** There is a ~1000× gap between band A (feet) and band B (1.87 km) with nothing between. This is the Dragon Warrior / 7th Saga model and is deliberate — but nothing recorded it as deliberate, so the next reader would read it as an omission. |
 | **F6** | `compose`/`draw_terrain_layer` diverge past `virtual_h` in a degenerate case, reachable at the coarsest rung on a ~800-column terminal. Nothing pins it. |
 | **F7** | `active_plate_dims` and the redraw read the terminal size from **two different syscalls**, so a resize landing between them desynchronises the cursor clamp from the drawn plate for one frame. Pre-existing — but Task 9 moved it onto the **default** view. |
-| **F8** | The `.min(w)` guard at `spread.rs:247` is now unreachable and reads as live; `core::chart::cell_at` is now test-only; a new colour-consistency window opens on a cache hit (inert under a running process). Three one-line residues of the rebuild. |
+| **F8** | The `.min(w)` guard at `spread.rs:247` is now unreachable and reads as live; `core::chart::cell_at` is now test-only; a new colour-consistency window opens on a cache hit (inert under a running process). Three one-line residues of the rebuild. A fourth residue of a different kind: Task 6's placement predicate is frame-specific, which matters before anyone extends it to locked worlds (H4). |
 | **F9** | The reader's rung no longer survives a map consultation (deliberate, decision 0293). The escape hatch, if ever wanted, is `enter_map` remembering the previous consultation's rung. |
 | **F10** | `follow_the_walker` re-centres every turn unconditionally, so the walk plate has no scroll of its own. A design position, not an accident — recorded so it is not re-derived as a bug. |
 | **F11** | **The walk loop costs 24× more per redraw** — 0.089 → 2.124 ms, size-independent, so not the plate. It is `walk_band_scene()` doing a full `Snapshot::parse` plus `purview(0)` on **every** redraw, including keypresses that are just typing in the command pane. Imperceptible today; the wrong shape. |

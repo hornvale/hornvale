@@ -1839,45 +1839,52 @@ curve. A checkable contract can require that every offered destination exists.
 It cannot require that the ground be able to go there straight.
 
 **Re-scored by [The Quadrat](./chronicle/the-quadrat.md) (2026-08-27): the
-document's geometry is interpretable only by a consumer that already holds the
-world, and the comparison instrument this row converted was measured
-unavailable on a second surface.** The Quire's contribution here was to turn
-"does the picture state the document's geometry" from taste into a byte
-comparison against the sim's own renderer of the same thirty-one facets. The
-Quadrat set out to move that pin — reprojecting the perception packet onto a
-square raster on both sides so the comparison survived the change — and
-measured that it cannot be done. The packet describes each perceived facet as a
-*relative polar offset*; a raster addresses *absolute* tiles reached by
-flooring a projected coordinate; and converting one to the other requires the
-observer's position *within* its own tile, which the wire does not carry. Swept
-over 200 sub-tile phases: at worst 24 of 31 marks misplaced, mean 11.5, and
-only 2 of the 200 phases exact. The agreement test that was supposed to guard
-the change could only have passed by being weakened to "within one tile" — that
-is, by asserting the defect.
+comparison instrument this row converted was measured unavailable on a second
+surface — and the campaign's first statement of *why* was wrong, which is part
+of the re-score rather than a footnote to it.** The Quire's contribution here
+was to turn "does the picture state the document's geometry" from taste into a
+byte comparison against the sim's own renderer of the same thirty-one facets.
+The Quadrat set out to move that pin — reprojecting the perception packet onto a
+square raster on both sides so the comparison survived the change — and did not.
+The packet describes each perceived facet as a *relative polar offset*; a raster
+addresses *absolute* tiles reached by flooring a projected coordinate; and
+converting one to the other requires the observer's position *within* its own
+tile. Reprojecting without reconstructing that, swept over 200 sub-tile phases:
+at worst 24 of 31 marks misplaced, mean 11.5, and only 2 of the 200 phases
+exact. The agreement test that was supposed to guard the change could only have
+passed by being weakened to "within one tile" — that is, by asserting the
+defect.
 
-This is the same category The Quire minted — the document correctly describing
-less than a consumer needs, with no defect anywhere to point at — with a
-sharper edge on it, and the resolution is the interesting part. The wire *does*
-carry enough: each cell holds `room`, a packed facet identifier, which is
-absolute and exact. What it does not carry is any way to *interpret* that
-without the mesh. The Quire's render crate has no dependency on the simulation
-at all, and that independence is exactly what made it strong evidence for this
-bet; it is also what makes it structurally unable to place the packet on an
-absolute grid. So the layer moved to the client crate that does hold the mesh,
-and the two pictures now agree **by construction** — one projection called from
-both sides — rather than by two computations being compared after the fact.
+**The campaign then wrote that the wire does not carry that phase, and the wire
+does.** The observer block states the centre's own centroid latitude and
+longitude, and the offsets are centroid-to-centroid great-circle quantities, so
+the spherical direct problem recovers every facet's absolute coordinate exactly;
+eight-significant-digit quantization is centimetre-scale against a 1.87 km tile.
+What the render crate lacks is narrower and entirely its own: its parsed mirror
+of the document drops the observer block, and the simulation offers no inverse
+of the bearing-and-distance construction for it to call. The sweep measures the
+shortcut, not the contract.
 
-The bet is unharmed and its scope is now stated more exactly: a document may be
-complete and still be renderable only by a consumer holding the world it
-describes. A zero-dependency renderer remains the strongest available evidence
-that a contract is renderable, and this campaign found the boundary of what
-that evidence can cover — anything the document expresses in the world's own
-coordinates rather than the observer's. Whether that boundary should be closed
-(by putting an absolute address in a form a mesh-free consumer can use) or
-accepted (as the price of an exact address) is not settled here; the campaign
-records that agreeing by construction is strictly better than agreeing by
-comparison wherever one projection can serve both sides, which is a stronger
-form of the instrument this row already carries.
+That makes the resolution the interesting part rather than the obstacle. The
+layer moved to the client crate that already holds the mesh, where each facet's
+own absolute address — `room`, a packed identifier the packet carries outright —
+needs no trigonometry at all, and the two pictures now agree **by construction**,
+one projection called from both sides, rather than by two computations being
+compared after the fact.
+
+The bet is unharmed and its scope is now stated more exactly, in the corrected
+form. A document may be complete and still ask real work of a consumer that
+wants to place it in the world's frame: either spherical trigonometry the
+consumer writes itself, or a dependency on the simulation to read the exact
+address. A zero-dependency renderer remains the strongest available evidence
+that a contract is renderable, and what this campaign found is the shape of the
+work such a renderer must do for anything the document expresses in the
+observer's frame rather than the world's. Whether that work should be removed
+(by putting an absolute coordinate on the wire beside the relative one) or left
+where it is (as the ordinary price of an observer-relative projection) is not
+settled here; the campaign records that agreeing by construction is strictly
+better than agreeing by comparison wherever one projection can serve both sides,
+which is a stronger form of the instrument this row already carries.
 
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than

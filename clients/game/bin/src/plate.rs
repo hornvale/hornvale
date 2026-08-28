@@ -509,12 +509,17 @@ fn tile_on_screen(
 ///
 /// **Why the direction matters.** The sampled scheme drew a site only when
 /// its exact vertex won the majority vote for some character. Measured on seed
-/// 42: only 70.5% of the planet's 40,962 vertices are ever a representative at
-/// any zoom or scroll position, so **37.8% of cave vertices were undrawable by
-/// construction** — a player could walk into a cave the map could never show,
-/// at any rung. Terrain is a texture and belongs to sampling; a settlement or
-/// a cave mouth is a landmark and belongs to projection, the same way a real
-/// chart draws a coastline but pins a town.
+/// 42 **before this change**: only 70.5% of the planet's 40,962 vertices were
+/// ever a representative at any zoom or scroll position, so **37.8% of cave
+/// vertices were undrawable by construction** — a player could walk into a cave
+/// the map could never show, at any rung. Those two figures are history, not a
+/// live reading: re-measured at The Quadrat's close, after this campaign's own
+/// rebuild of the rung ladder, rung 7 and every finer shipped rung reach 40,848
+/// of 40,962 vertices (99.7%) and all 874 of 874 cave vertices; the coarsest
+/// rung, the worst case, reaches 96.4%. The argument stands on
+/// its own either way — terrain is a texture and belongs to sampling; a
+/// settlement or a cave mouth is a landmark and belongs to projection, the same
+/// way a real chart draws a coastline but pins a town.
 ///
 /// It is also far cheaper: one projection per site in the roster against
 /// one [`terrain_at_tile`] per screen cell (and, before The Quadrat, 49

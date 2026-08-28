@@ -42,7 +42,9 @@
 
 use crate::{Grid, Spatial};
 
-/// The column where the entry begins; the plate occupies `0..PLATE_WIDTH`.
+/// The plate's fixed width when no plate is supplied: the plate then occupies
+/// `0..PLATE_WIDTH` and the entry begins at that column. A supplied plate is
+/// sized by [`world_plate_width`] instead (module doc).
 pub const PLATE_WIDTH: u16 = 40;
 
 /// Rows reserved below the shared plate/entry region: the map strip's own

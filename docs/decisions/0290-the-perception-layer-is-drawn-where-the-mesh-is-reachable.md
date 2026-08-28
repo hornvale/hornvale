@@ -4,9 +4,7 @@
 controller's Ruling 20, retracting its own Ruling 19 on the implementer's
 measurement) · **Relates:**
 [0289](0289-the-map-is-layers-with-distinct-cache-keys.md) (the layer this one
-places), [0022](0022-sim-emits-data-clients-render.md),
-[0142](0142-a-channel-carries-one-axis-and-a-lost-axis-is-declared.md) (a
-channel that does not carry an axis cannot be asked for it);
+places), [0022](0022-sim-emits-data-clients-render.md);
 [The Quadrat](../../book/src/chronicle/the-quadrat.md)
 
 In the context of overlaying the per-turn perception packet onto a Mercator
@@ -20,17 +18,37 @@ accepting that the overlay exists in one client only.
 
 The spec's original architecture had `core/chart.rs` reproject the packet onto
 the square grid, with `windows/scene/src/surrounds_ascii.rs` moving identically
-so the byte pin at `chart.rs:180` stayed green. **That design was measured false
-and never built.**
+so the byte pin at `chart.rs:180` stayed green. **That design was replaced before
+it was built**, on grounds narrower than the campaign first stated.
 
 `core` works from the wire's `(bearing_deg, distance_rad)` — a *relative polar
 offset*. The raster works from *absolute* Mercator tile coordinates via `floor`.
-Converting one into the other depends on the observer's **sub-tile phase**,
-which the wire does not carry. Sweeping 200 phases on the fixture's own
-observer: **0 misplaced marks at best, 24 of 31 at worst, mean 11.5, and only 2
-of 200 phases exact.** The mandated design produces exactly the defect the
+Converting one into the other means reconstructing each wire cell's absolute
+coordinate first, and **`core` as it stands cannot**: its parsed mirror of the
+document drops the `observer` block outright — `schema.rs`'s `Chart` carries
+`radius`, `depth`, three legends, `cells`, `legend` and `sight`, and no
+`observer` — so the centre's centroid is not in the crate's model at all; and
+`kernel::room` has no inverse of `bearing_to`/`distance_rad_to`, so the
+spherical direct problem would have to be newly written. Reprojecting the
+offsets *without* that reconstruction — what the mandated design amounted to —
+depends instead on the observer's **sub-tile phase**. Swept across 200 phases on
+the fixture's own observer: **0 misplaced marks at best, 24 of 31 at worst, mean
+11.5, and only 2 of 200 phases exact.** It produces exactly the defect the
 task's own agreement test existed to catch, and that test could only have passed
 by being weakened to "within one tile".
+
+**What that sweep does not show, stated because this record first said it did.**
+It does not show the wire is missing the phase. `SurroundsObserver` carries the
+centre's centroid `latitude`/`longitude` as `pub`, unskipped fields, and
+`bearing_deg`/`distance_rad` are centroid-to-centroid great-circle quantities,
+so a consumer that writes the spherical direct problem recovers every cell's
+absolute coordinate exactly — 8-significant-digit quantization is
+centimetre-scale against a 1.87 km tile. The sweep measures the shortcut, not
+the schema. The claim "the wire does not carry the sub-tile phase" is false and
+this record no longer rests on it. The ruling is unchanged, because even with
+that reconstruction written, `core` and the raster would be two independent
+arithmetics obliged to agree — which is the thing the first consequence below
+refuses.
 
 The alternative was already in the tree. The wire's chart cells each carry
 `room`, a packed `FacetId`; `core` cannot use it (it depends on no hornvale

@@ -105,7 +105,7 @@ all twelve ladder steps in both directions rather than at a tolerance. An
 earlier draft of that assertion would have used a tolerance equal to half a tile
 at the coarsest rung, which is blind to a full one-tile error.
 
-## The reprojection that could not exist
+## The reprojection that was not written
 
 The spec's original architecture had the client's chart renderer reproject the
 per-turn perception packet onto the square grid, with the sim's own ASCII
@@ -114,12 +114,25 @@ renderer moving identically so the byte pin between them stayed green.
 The packet describes each perceived facet as a **relative polar offset** —
 a bearing and a distance from the observer. The raster describes everything as
 an **absolute Mercator tile**, reached by flooring a projected coordinate.
-Converting one into the other requires knowing where the observer sits *within*
-its own tile — a sub-tile phase — and the wire does not carry it. Swept over 200
-phases on the fixture's own observer: at best 0 marks misplaced, at worst **24
-of 31**, mean 11.5, and only 2 of the 200 phases exact. The mandated design
-produces precisely the defect the task's own agreement test existed to catch,
-and that test could only have passed by being weakened to "within one tile".
+Converting one into the other means recovering each facet's absolute coordinate
+first, and the chart renderer cannot: its parsed mirror of the wire document
+keeps no observer at all, and the simulation offers it no inverse of the
+bearing-and-distance construction. Reprojecting the offsets *without* that
+recovery leans instead on where the observer sits within its own tile — a
+sub-tile phase — and swept over 200 phases on the fixture's own observer that
+gives, at best, 0 marks misplaced, at worst **24 of 31**, mean 11.5, and only 2
+of the 200 phases exact. The mandated design produces precisely the defect the
+task's own agreement test existed to catch, and that test could only have passed
+by being weakened to "within one tile".
+
+**The campaign first recorded that measurement as evidence the wire does not
+carry the phase. It is not, and the correction belongs where the claim was
+made.** The document names the observer's own centroid latitude and longitude,
+and bearing and distance run centroid to centroid, so the spherical direct
+problem recovers every facet's absolute position exactly — at eight significant
+digits, centimetres against a tile 1.87 km across. The sweep measures the
+shortcut. What is genuinely absent is narrower and less interesting: one crate's
+mirror of the document, and a piece of arithmetic nobody has written.
 
 The design that shipped instead was already half-present in the tree. Each wire
 cell carries `room`, a packed facet identifier. The client crate that owns the
@@ -168,7 +181,9 @@ found seed 42's flagship settlement undrawable at every rung the game shipped,
 appearing only past a chart width more than three times the old ladder's
 ceiling. That was a consequence of drawing sites by *sampling* — a settlement
 appeared only if an area-majority happened to land on its vertex. The feature
-layer projects the site's own committed coordinate instead. All **389** of seed
+layer projects instead: each site's own committed coordinate is resolved once to
+its nearest terrain vertex, and that vertex's coordinate is what the layer
+draws. All **389** of seed
 42's settlements project inside the chart at all seven shipped rungs, onto 386
 distinct tiles at rung 7 and finer (three pairs share a tile) and 377 at the
 globe rung. The row is dissolved by construction rather than by resolution: the
