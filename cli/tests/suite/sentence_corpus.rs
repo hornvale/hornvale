@@ -7,10 +7,11 @@
 //! (`classify`, the "X is a Y" construction domains/language realizes through
 //! the fact-shaped `Clause`); The Inquest added four more — `past-tense`,
 //! `negation`, `transitive-frame` and `pronoun-reference` — taking the
-//! merchant corpus from 0 of 12 to 2 of 12. The remaining tokens name
-//! capabilities no campaign has built: questions, embedded clauses,
-//! coordination, temporal adjuncts, epistemic hedges, existentials, witness
-//! lists, named-entity lists.
+//! merchant corpus from 0 of 12 to 2 of 12; The Mortise added three more —
+//! `coordination`, `embedded-clause` and `epistemic-hedge` — taking it from
+//! 2 of 12 to 5 of 12. The remaining tokens name capabilities no campaign
+//! has built: questions, temporal adjuncts, existentials, witness lists,
+//! named-entity lists.
 //!
 //! **[`IMPLEMENTED_DEMANDS`] is a hand-maintained declaration and nothing
 //! mechanically proves it.** No test crosses a token in that list against the
@@ -20,7 +21,7 @@
 //! The discipline is therefore social and stated here: a token goes in only
 //! alongside a test in `domains/language` that realizes a clause exercising
 //! it, in Common and, where the tongue realizer is the point, in a tongue.
-//! The five present tokens are backed by, respectively:
+//! The eight present tokens are backed by, respectively:
 //! `clause.rs::classify_*`; `a_past_clause_says_was` and
 //! `grammar.rs::realize_tongue_reads_its_drawn_tense_depth`;
 //! `a_negated_clause_says_is_not` and
@@ -28,7 +29,14 @@
 //! `a_transitive_clause_surfaces_its_predicate_as_a_verb` and
 //! `grammar.rs::realize_tongue_exhaustive_orders_for_a_transitive_clause`;
 //! `common_realizes_a_pronoun_subject_and_a_pronoun_object` and
-//! `grammar.rs::a_tongue_realizes_a_pronoun_subject_from_its_own_drawn_inventory`.
+//! `grammar.rs::a_tongue_realizes_a_pronoun_subject_from_its_own_drawn_inventory`;
+//! `a_shared_subject_is_stated_once` and
+//! `grammar.rs::a_tongue_elides_a_shared_subject` (`coordination`);
+//! `a_clause_object_realizes_with_no_determiner` and
+//! `grammar.rs::a_tongue_with_a_complementizer_marks_the_embedded_boundary`
+//! (`embedded-clause`); `a_hedge_clause_surfaces_think_as_a_verb`
+//! (`epistemic-hedge` — Common-only, the same posture `classify` takes: no
+//! tongue realizer is the point of this token, so no tongue test is named).
 //!
 //! **The score was zero once, and the positive control that answered that is
 //! still here on purpose.** A measurement whose only possible answer is zero
@@ -36,12 +44,18 @@
 //! unconditionally — the same defect class as a guard that has never gone
 //! red. That specific blind spot closed when the score moved off zero: a
 //! resolver stuck at "not yet" now fails
-//! [`merchant_coverage_is_two_of_twelve`] directly. The control keeps its
+//! [`merchant_coverage_is_five_of_twelve`] directly. The control keeps its
 //! place because it guards a *different* thing from the headline test — it
 //! is the only assertion here that survives the corpus being replaced, and
 //! the corpus is frozen data a future campaign is expected to swap. See its
 //! own doc comment.
 
+use hornvale_kernel::ConceptRegistry;
+use hornvale_language::packs::{KILL, KNOW, THINK};
+use hornvale_language::{
+    Argument, Clause, CommonVocabulary, Coordination, Definiteness, Evidential, Number, Person,
+    Polarity, Subject, Tense, realize_common, realize_common_coordination,
+};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -79,7 +93,7 @@ fn the_merchant_corpus_is_frozen_at_its_authored_size() {
 /// enforces on the corpus itself.
 ///
 /// **Nothing mechanically checks a row here against the grammar**; see the
-/// module doc, which names the test backing each of the five.
+/// module doc, which names the test backing each of the eight.
 const IMPLEMENTED_DEMANDS: &[&str] = &[
     // The Interlinear.
     "classify",
@@ -88,6 +102,10 @@ const IMPLEMENTED_DEMANDS: &[&str] = &[
     "past-tense",
     "pronoun-reference",
     "transitive-frame",
+    // The Mortise.
+    "coordination",
+    "embedded-clause",
+    "epistemic-hedge",
 ];
 
 /// One corpus entry, as read from `sentences/*.corpus.json`. Only the fields
@@ -146,7 +164,7 @@ fn missing_demands(entry: &Entry) -> Vec<&str> {
 /// The frozen result of resolving the-merchant against the grammar's
 /// delivered capability, independent of the prose report below — so a stale
 /// report cannot hide a coverage number that moved.
-const MERCHANT_COVERED: usize = 2;
+const MERCHANT_COVERED: usize = 5;
 
 /// **Which** entries are covered, not merely how many. A count of 2 could be
 /// any two of twelve, and a wrong pair passing a count check is exactly the
@@ -180,7 +198,60 @@ const MERCHANT_COVERED: usize = 2;
 /// is what `sentences/` was founded to keep separate from a grammatical one —
 /// but it is exactly the misreading a bare "2 of 12" invites, which is why
 /// it is written down beside the number rather than left to a chronicle.
-const MERCHANT_COVERED_IDS: &[&str] = &["m05", "m10"];
+///
+/// **The Mortise adds m06, m07 and m09, and each is a different distance
+/// from the corpus's own English than m05/m10 were** — see
+/// [`MERCHANT_WITNESS`] for the actual realized surface, pasted from a run,
+/// beside each entry's corpus text:
+///
+/// - **m06, *"I don't know why he killed her."*, drops the "why".** Its
+///   demands (`negation`, `embedded-clause`, `pronoun-reference`,
+///   `epistemic-hedge`) are all genuinely built, but none of them is an
+///   indirect question — *why* he killed her is a wh-word binding into an
+///   embedded clause, a construction this campaign does not add (that is
+///   `wh-question`'s job, still uncovered). The witness realizes the
+///   embedded clause as a bare declarative complement instead: the covered
+///   construction is "know that-clause", not "know why-clause".
+/// - **m07, *"Seeing it confused and upset me."*, is a [`Coordination`], not
+///   a [`Clause`], substitutes the gerund for a complementizer clause, and
+///   drops the shared object.** Per spec §9.1's own argument for keeping m07
+///   in scope, the gerund *"Seeing it"* is not load-bearing for m07's THREE
+///   DEMANDS — substitute the subject form and hold everything else
+///   constant, *"That he killed her confused me and upset me"*, and the same
+///   tokens are satisfied through the complementizer-free [`Subject::Clause`]
+///   machinery `a_clause_subject_realizes_through_the_same_machinery`
+///   already pins. So the witness gives EACH coordinated clause a
+///   `Subject::Clause` embedding — never a bare pronoun standing in for it,
+///   which would have proven coordination and pronoun-reference while never
+///   exercising `embedded-clause` at all, the "Clause-shaped stand-in"
+///   failure this doc already forbids on the Clause-vs-Coordination axis,
+///   one level deeper. `confuse`/`upset` are still not registered predicates
+///   in this crate (see `two_clauses_coordinate_in_common`'s own doc), so the
+///   witness stands in with two registered transitive predicates for the
+///   MATRIX verbs — the point is the SHAPE (two clauses, each with a clause
+///   subject, realized through [`realize_common_coordination`], sharing an
+///   identical embedded subject that elides on the second clause per spec
+///   §4.10 tier 2), not the corpus's literal verbs. Tier 3 (right-node
+///   raising — sharing the OBJECT too, which is what actually collapses
+///   "confused and upset **me**" onto one mention) is cut from this campaign
+///   entirely (spec §9.1), so the witness's two clauses each restate the
+///   object in full.
+/// - **m09, *"I think her name was Gilda."*, substitutes an embedded
+///   clause for the possessed-name complement.** *"Her name was Gilda"* is
+///   one clause inside another, not a bare NP: `think`'s object is the
+///   whole complement clause *"her name was Gilda"*, and *"her"* is a
+///   possessive determiner inside THAT clause's own subject NP ("her
+///   name"), not the pronoun `think` takes directly — an earlier version of
+///   this doc mis-parsed the sentence as `think` + a bare pronoun object.
+///   No construction here builds a possessive NP or a copular "was Gilda"
+///   naming clause, so the witness stands in with a different embedded
+///   clause the grammar DOES build (`kill`, transitive, pronoun subject and
+///   object) rather than the corpus's literal content — the point is that
+///   `epistemic-hedge` is exercised as the GRAMMAR the token names (one
+///   clause embedded as another's object), never merely as a lexical fact
+///   about the matrix verb alone, the same "Clause-shaped stand-in"
+///   discipline m07's entry above states.
+const MERCHANT_COVERED_IDS: &[&str] = &["m05", "m06", "m07", "m09", "m10"];
 
 /// The headline score.
 ///
@@ -190,7 +261,7 @@ const MERCHANT_COVERED_IDS: &[&str] = &["m05", "m10"];
 /// rename that does not also edit that file silently drops this test from
 /// `make gate-commit`. Edit both, in the same commit.
 #[test]
-fn merchant_coverage_is_two_of_twelve() {
+fn merchant_coverage_is_five_of_twelve() {
     let root = repo_root();
     let corpus = load_merchant_corpus(&root);
     assert_eq!(corpus.entries.len(), MERCHANT_ENTRIES);
@@ -207,11 +278,11 @@ fn merchant_coverage_is_two_of_twelve() {
 }
 
 /// The covered entries by id. Complements — never replaces —
-/// [`merchant_coverage_is_two_of_twelve`]: the count and the identities can
+/// [`merchant_coverage_is_five_of_twelve`]: the count and the identities can
 /// each move without the other, and only holding both pins the claim the
 /// campaign actually makes.
 #[test]
-fn the_covered_entries_are_m05_and_m10() {
+fn the_covered_entries_are_m05_m06_m07_m09_and_m10() {
     let corpus = load_merchant_corpus(&repo_root());
     let ids: Vec<&str> = corpus
         .entries
@@ -222,8 +293,13 @@ fn the_covered_entries_are_m05_and_m10() {
     assert_eq!(
         ids, MERCHANT_COVERED_IDS,
         "the covered SET moved, whatever the count did. m05 (\"A guard killed \
-         a woman.\") needs transitive-frame + past-tense; m10 (\"I didn't know \
-         her.\") needs negation + past-tense + pronoun-reference."
+         a woman.\") needs transitive-frame + past-tense; m06 (\"I don't know \
+         why he killed her.\") needs negation + embedded-clause + \
+         pronoun-reference + epistemic-hedge; m07 (\"Seeing it confused and \
+         upset me.\") needs coordination + embedded-clause + \
+         pronoun-reference; m09 (\"I think her name was Gilda.\") needs \
+         epistemic-hedge + past-tense + pronoun-reference; m10 (\"I didn't \
+         know her.\") needs negation + past-tense + pronoun-reference."
     );
 }
 
@@ -232,18 +308,25 @@ fn the_covered_entries_are_m05_and_m10() {
 ///
 /// Every row here is one construction away from covered, so this list is the
 /// cheapest available statement of what the next campaign should build:
-/// `polar-question` and `temporal-adverbial` each unlock one entry from here
-/// and appear twice more elsewhere in the corpus.
+/// `wh-question`, `temporal-adverbial` and `polar-question` each unlock one
+/// entry from here. The Mortise's three new tokens moved m09 OUT of this
+/// list (it is covered now, not one-missing) without shrinking it further —
+/// m01, m02 and m08 were already exactly one demand short before this
+/// campaign and remain so, because none of their blocking tokens
+/// (`wh-question`, `temporal-adverbial`, `polar-question`) is one this
+/// campaign builds. The wider distance-2-and-beyond picture (not tracked as
+/// its own constant): `temporal-adverbial` still blocks 3 entries in total,
+/// `wh-question` and `polar-question` 2 each, `witness-set` 2,
+/// `existential` and `named-entity-list` 1 each.
 const MERCHANT_ONE_MISSING: &[(&str, &str)] = &[
     ("m01", "wh-question"),
     ("m02", "temporal-adverbial"),
     ("m08", "polar-question"),
-    ("m09", "epistemic-hedge"),
 ];
 
 /// Spec criterion 7: the resolver reports distance, not only coverage.
 #[test]
-fn four_entries_sit_at_one_missing_demand() {
+fn three_entries_sit_at_one_missing_demand() {
     let corpus = load_merchant_corpus(&repo_root());
     let one_away: Vec<(&str, &str)> = corpus
         .entries
@@ -326,16 +409,21 @@ fn a_classify_only_entry_resolves_as_covered() {
 
 /// A demand token the negative controls below can rely on being *un*covered.
 ///
-/// **This is a maintenance obligation, and it has already come due once.**
+/// **This is a maintenance obligation, and it has already come due twice.**
 /// Both controls named `"negation"` until The Inquest implemented negation,
 /// at which point they went red — correctly, but with a bare
 /// `assertion failed` that said nothing about why. Naming the token once,
 /// here, with [`the_negative_control_token_is_genuinely_uncovered`] asserting
 /// the property the controls depend on, turns that rot into a failure that
-/// explains itself. `embedded-clause` is the pick because spec §7 identifies
-/// it as the structural next ceiling — a `Clause` has no field pointing at
-/// another `Clause` — so it will outlast the tokens around it.
-const UNCOVERED_TOKEN: &str = "embedded-clause";
+/// explains itself — which is exactly what caught the second occurrence: The
+/// Mortise implemented `embedded-clause`, the token this constant named
+/// before, and the assertion below reddened with a diagnosis rather than a
+/// bare panic. `wh-question` is the new pick: [`Clause`] has no interrogative
+/// mood and no question-word slot at all, the same kind of structural gap
+/// `embedded-clause` was before a `Clause`/`Coordination` distinction existed
+/// — so it should outlast the tokens around it, though "should" is exactly
+/// the word `embedded-clause`'s own doc used last time.
+const UNCOVERED_TOKEN: &str = "wh-question";
 
 /// The controls' own premise, asserted rather than assumed: whichever token
 /// [`UNCOVERED_TOKEN`] names must really be absent from
@@ -378,6 +466,249 @@ fn a_mixed_entry_needs_every_demand_covered() {
         demands: vec!["classify".to_string(), UNCOVERED_TOKEN.to_string()],
     };
     assert!(!entry_covered(&synthetic));
+}
+
+// ---------------------------------------------------------------------
+// Task 1: the realization witness
+// ---------------------------------------------------------------------
+
+/// The grammar shape a covered merchant id realizes through.
+///
+/// **The Mortise adds this dispatch.** Before this campaign every covered id
+/// was a single [`Clause`], so the witness could build one and hand it to
+/// [`realize_common`] unconditionally. m07 breaks that: it is a
+/// [`Coordination`] — a list of clauses at a node above `Clause`, not a
+/// slot a `Clause` holds (see [`Coordination`]'s own doc) — realized through
+/// [`realize_common_coordination`] instead. **Giving m07 a `Clause`-shaped
+/// stand-in that realizes through `realize_common` would make the witness
+/// attest to a capability m07 does not exercise** — the exact failure
+/// [`every_covered_entry_realizes_in_common`] exists to catch — so the
+/// builder returns this enum and the caller matches on it rather than
+/// forcing every id through one realizer.
+enum MerchantConstruction {
+    /// A single clause, realized through [`realize_common`].
+    Clause(Clause),
+    /// A coordination of clauses, realized through
+    /// [`realize_common_coordination`].
+    Coordination(Coordination),
+}
+
+/// The [`MerchantConstruction`] this campaign builds for a covered merchant
+/// id.
+///
+/// **Not a general corpus-to-clause translator** — this file has no parser
+/// from the corpus's English into a `Clause`/`Coordination`, and building one
+/// is out of scope for the witness. Each arm is hand-built from the entry's
+/// own text, reading the field list straight off [`Clause`]/[`Coordination`]
+/// rather than off any other document, and each is honest about where it
+/// falls short of the corpus's literal English (see [`MERCHANT_COVERED_IDS`]'s
+/// doc for the three new gaps: m06 drops the indirect *"why"*, m07
+/// substitutes a `Subject::Clause` complementizer for the gerund and stands
+/// in two unregistered matrix predicates while not raising the shared
+/// object, m09 substitutes a different embedded clause for the
+/// possessed-name complement). Panics on an id this
+/// witness does not cover, the same fail-loud posture [`realize_common`]
+/// itself takes on an unconstructed predicate.
+fn merchant_construction(id: &str) -> MerchantConstruction {
+    match id {
+        "m05" => MerchantConstruction::Clause(Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Name("Nwamvam".to_string()),
+            object: Argument::Concept("person".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        }),
+        // "I don't know why he killed her." The "why" is an indirect
+        // question this campaign does not build (that is `wh-question`'s
+        // job, still uncovered); the witness embeds the plain declarative
+        // "he killed her" as `know`'s clause complement instead — "know
+        // that-clause", not "know why-clause".
+        "m06" => {
+            let embedded = Clause {
+                predicate: KILL.to_string(),
+                subject: Subject::Pronoun(Person::Third),
+                object: Argument::Pronoun(Person::Third),
+                number: Number::Sg,
+                definiteness: Definiteness::Def,
+                evidential: Evidential::Witnessed,
+                tense: Tense::Past,
+                polarity: Polarity::Pos,
+                adjuncts: Vec::new(),
+            };
+            MerchantConstruction::Clause(Clause {
+                predicate: KNOW.to_string(),
+                subject: Subject::Pronoun(Person::First),
+                object: Argument::Clause(Box::new(embedded)),
+                number: Number::Sg,
+                definiteness: Definiteness::Def,
+                evidential: Evidential::Witnessed,
+                tense: Tense::Present,
+                polarity: Polarity::Neg,
+                adjuncts: Vec::new(),
+            })
+        }
+        // "Seeing it confused and upset me." Per spec §9.1's own argument
+        // for keeping m07 in scope: the gerund "Seeing it" is not
+        // load-bearing for m07's THREE DEMANDS, only for its exact wording
+        // — substitute the subject form and hold everything else constant,
+        // "That he killed her confused me and upset me", and the same three
+        // tokens (coordination, embedded-clause, pronoun-reference) are
+        // satisfied through the complementizer-free `Subject::Clause`
+        // machinery `a_clause_subject_realizes_through_the_same_machinery`
+        // already pins. So EACH coordinated clause's subject is
+        // `Subject::Clause`, not a bare pronoun — a bare-pronoun subject
+        // would prove coordination and pronoun-reference but never exercise
+        // embedded-clause at all, exactly the "Clause-shaped stand-in"
+        // failure this file's own witness discipline forbids, one level
+        // deeper than the Clause-vs-Coordination axis it was first written
+        // against. `confuse`/`upset` are still not registered predicates in
+        // this crate (see `two_clauses_coordinate_in_common`'s own doc), so
+        // the witness stands in with two registered transitive predicates
+        // for the MATRIX verbs only — the embedded clause itself ("he
+        // killed her") uses the same `KILL` construction m06's embedding
+        // does. Both matrix clauses share the identical embedded
+        // `Subject::Clause`, so tier 2 (spec §4.10) elides it on the second
+        // clause the same way a bare-pronoun subject elided before; tier 3
+        // (right-node raising, which is what would collapse "and upset
+        // **me**" onto one mention of the object) is still cut from this
+        // campaign entirely, so both clauses restate the object in full.
+        "m07" => {
+            let embedded_subject = || Clause {
+                predicate: KILL.to_string(),
+                subject: Subject::Pronoun(Person::Third),
+                object: Argument::Pronoun(Person::Third),
+                number: Number::Sg,
+                definiteness: Definiteness::Def,
+                evidential: Evidential::Witnessed,
+                tense: Tense::Past,
+                polarity: Polarity::Pos,
+                adjuncts: Vec::new(),
+            };
+            MerchantConstruction::Coordination(Coordination {
+                clauses: vec![
+                    Clause {
+                        predicate: KILL.to_string(),
+                        subject: Subject::Clause(Box::new(embedded_subject())),
+                        object: Argument::Pronoun(Person::First),
+                        number: Number::Sg,
+                        definiteness: Definiteness::Def,
+                        evidential: Evidential::Witnessed,
+                        tense: Tense::Past,
+                        polarity: Polarity::Pos,
+                        adjuncts: Vec::new(),
+                    },
+                    Clause {
+                        predicate: KNOW.to_string(),
+                        subject: Subject::Clause(Box::new(embedded_subject())),
+                        object: Argument::Pronoun(Person::First),
+                        number: Number::Sg,
+                        definiteness: Definiteness::Def,
+                        evidential: Evidential::Witnessed,
+                        tense: Tense::Past,
+                        polarity: Polarity::Pos,
+                        adjuncts: Vec::new(),
+                    },
+                ],
+            })
+        }
+        // "I think her name was Gilda." No construction here builds a
+        // possessive noun phrase ("her name"), so the witness's object
+        // stands in with an embedded clause rather than a possessed NP —
+        // `think`'s complement is the whole proposition "her name was
+        // Gilda", not the bare pronoun "her" (see MERCHANT_COVERED_IDS's
+        // doc for why a bare pronoun would have been the wrong stand-in:
+        // it would exercise epistemic-hedge only as a LEXICAL fact, never
+        // the grammar the token actually names).
+        "m09" => MerchantConstruction::Clause(Clause {
+            predicate: THINK.to_string(),
+            subject: Subject::Pronoun(Person::First),
+            object: Argument::Clause(Box::new(Clause {
+                predicate: KILL.to_string(),
+                subject: Subject::Pronoun(Person::Third),
+                object: Argument::Pronoun(Person::Third),
+                number: Number::Sg,
+                definiteness: Definiteness::Def,
+                evidential: Evidential::Witnessed,
+                tense: Tense::Past,
+                polarity: Polarity::Pos,
+                adjuncts: Vec::new(),
+            })),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        }),
+        "m10" => MerchantConstruction::Clause(Clause {
+            predicate: KNOW.to_string(),
+            subject: Subject::Pronoun(Person::First),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Neg,
+            adjuncts: Vec::new(),
+        }),
+        other => panic!("merchant_construction has no construction for id {other:?}"),
+    }
+}
+
+/// Realize whichever [`MerchantConstruction`] shape `id` builds, dispatching
+/// to [`realize_common`] or [`realize_common_coordination`] as the shape
+/// demands — see [`MerchantConstruction`]'s own doc for why this may not
+/// collapse to one realizer.
+fn realize_merchant(id: &str, vocab: &CommonVocabulary) -> String {
+    match merchant_construction(id) {
+        MerchantConstruction::Clause(clause) => realize_common(&clause, vocab),
+        MerchantConstruction::Coordination(coord) => realize_common_coordination(&coord, vocab),
+    }
+}
+
+/// The Common surface each covered entry ACTUALLY realizes, beside the
+/// corpus's own English. Not an equality assertion against the corpus:
+/// Common is a limited register, so a witness demanding the corpus's literal
+/// text could never pass. What it proves is that a covered entry has a
+/// constructible clause (or coordination) that realizes at all — the
+/// mechanical half `IMPLEMENTED_DEMANDS` has never had.
+const MERCHANT_WITNESS: &[(&str, &str)] = &[
+    ("m05", "Nwamvam killed a person."),
+    ("m06", "I does not know they killed them."),
+    ("m07", "they killed them killed me and knowed me."),
+    ("m09", "I thinked they killed them."),
+    ("m10", "I did not know them."),
+];
+
+/// Every covered entry realizes. **This is the guard the module doc says does
+/// not exist**, and it went red the first time it ran: m10 was scored covered
+/// while `realize_common` panicked on `know`, which had no
+/// `PREDICATE_VALENCE` row. A guard that has never been red proves nothing
+/// about what it catches.
+#[test]
+fn every_covered_entry_realizes_in_common() {
+    let witness_ids: Vec<&str> = MERCHANT_WITNESS.iter().map(|(id, _)| *id).collect();
+    assert_eq!(
+        witness_ids, MERCHANT_COVERED_IDS,
+        "MERCHANT_WITNESS must name exactly the covered ids, or this test is \
+         silently checking a different set than the resolver reports covered"
+    );
+
+    let mut registry = ConceptRegistry::default();
+    hornvale_worldgen::register_all(&mut registry).expect("the roster registers");
+    let vocab = CommonVocabulary::build(&registry).expect("the registry is sayable in Common");
+
+    for (id, expected) in MERCHANT_WITNESS {
+        let surface = realize_merchant(id, &vocab);
+        assert_eq!(
+            &surface, expected,
+            "{id} realized a different surface than MERCHANT_WITNESS records"
+        );
+    }
 }
 
 /// The committed report path. Deliberately NOT declared BY NAME in

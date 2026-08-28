@@ -101,7 +101,34 @@ const DICTIONARY: &str = "../../book/src/reference/dictionary-generated.md";
 /// mechanism as The Confidant's entry above, one concept instead of six. The
 /// Burr's thesis (typological stages raise distinguishability) is untouched.
 /// Re-pinned deliberately, per this test's own instruction. Never tuned.
-const BASELINE: f64 = 0.7978316326530612;
+///
+/// The Mortise: 0.798234552332913. Accuracy **rose** 0.00040 — the third-
+/// smallest move this pin has recorded (The Confidant's 0.000116 and The
+/// Inquest's 0.000233 are both smaller; The Confidant's own entry states its
+/// move in percentage points rather than absolute, which is what made The
+/// Inquest call itself the smallest). The campaign registered `think` (one
+/// concept), so every one of the 18 daughters gains one word: the readout
+/// goes from **1251/1568 to 1266/1586**.
+///
+/// The denominator grew by exactly 18 and the numerator by 15, and **the
+/// numerator's 15 is not `think` alone.** Decomposed word by word against the
+/// base tree: `think` is classified correctly in **13** of the 18 tongues,
+/// and the remaining **+2 is net movement among 8 PRE-EXISTING words** that
+/// re-classified — 5 gained credit, 3 lost it — because adding a word to
+/// every daughter shifts each tongue's trigram profile, which is what the
+/// classifier reads.
+///
+/// **That makes this entry differ from The Inquest's above in kind, not only
+/// in size.** The Inquest deliberately asserted the subset property — not one
+/// pre-existing word changed corpus or classification. For The Mortise that
+/// property is **false**, and it was asserted here before it was measured.
+/// A registration is not always additive in what the CLASSIFIER sees, even
+/// when it is strictly additive in what the LEXICON holds.
+///
+/// The Burr's thesis (typological stages raise distinguishability) is
+/// untouched. Re-pinned deliberately, per this test's own instruction. Never
+/// tuned.
+const BASELINE: f64 = 0.798234552332913;
 
 /// The chance floor for an 18-way assignment. Reported alongside the baseline
 /// because an accuracy figure without its denominator is not interpretable.

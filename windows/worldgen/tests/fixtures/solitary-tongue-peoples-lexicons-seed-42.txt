@@ -193,6 +193,7 @@ taiga: gap (experiential): no settlement in or beside taiga
 temperate-forest: root Na /na/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: gap (experiential): no settlement in or beside temperate-rainforest
+think: root Beo /beo/
 thorn-scrub: gap (experiential): goblin has no exposure to 'thorn-scrub'
 tide: gap (experiential): goblin has no exposure to 'tide'
 treant-kind: gap (experiential): goblin has no exposure to 'treant-kind'
@@ -425,6 +426,7 @@ taiga: root Qe /qe/
 temperate-forest: root Na /na/
 temperate-grassland: gap (experiential): no compound recipe for 'temperate-grassland'
 temperate-rainforest: root Baenao /baenao/
+think: root Beo /beo/
 thorn-scrub: gap (experiential): hobgoblin has no exposure to 'thorn-scrub'
 tide: gap (experiential): hobgoblin has no exposure to 'tide'
 treant-kind: gap (experiential): hobgoblin has no exposure to 'treant-kind'
@@ -657,6 +659,7 @@ taiga: root Qo /qo/
 temperate-forest: root Da /da/
 temperate-grassland: gap (experiential): no compound recipe for 'temperate-grassland'
 temperate-rainforest: root Daodao /daodao/
+think: root Boo /boo/
 thorn-scrub: gap (experiential): bugbear has no exposure to 'thorn-scrub'
 tide: gap (experiential): bugbear has no exposure to 'tide'
 treant-kind: gap (experiential): bugbear has no exposure to 'treant-kind'
@@ -889,6 +892,7 @@ taiga: root Raoroo /raoroo/
 temperate-forest: root Xoxa /xoxa/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: gap (experiential): no settlement in or beside temperate-rainforest
+think: root Xaoraroo /xaoraroo/
 thorn-scrub: root Xororao /xororao/
 tide: gap (experiential): kobold has no exposure to 'tide'
 treant-kind: gap (experiential): kobold has no exposure to 'treant-kind'
@@ -1121,6 +1125,7 @@ taiga: gap (experiential): no settlement in or beside taiga
 temperate-forest: gap (experiential): no settlement in or beside temperate-forest
 temperate-grassland: gap (experiential): no compound recipe for 'temperate-grassland'
 temperate-rainforest: gap (experiential): no settlement in or beside temperate-rainforest
+think: root Zmoopsmop /zmoopsmop/
 thorn-scrub: root Shngaax /ʃŋaax/
 tide: gap (experiential): gnoll has no exposure to 'tide'
 treant-kind: gap (experiential): gnoll has no exposure to 'treant-kind'
@@ -1353,6 +1358,7 @@ taiga: gap (experiential): no compound recipe for 'taiga'
 temperate-forest: root Pera /pera/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: gap (experiential): no settlement in or beside temperate-rainforest
+think: root Fee /fee/
 thorn-scrub: gap (experiential): human has no exposure to 'thorn-scrub'
 tide: gap (experiential): human has no exposure to 'tide'
 treant-kind: gap (experiential): human has no exposure to 'treant-kind'
@@ -1585,6 +1591,7 @@ taiga: gap (experiential): no settlement in or beside taiga
 temperate-forest: root Nadash /nadaʃ/
 temperate-grassland: root Qadaq /qadaq/
 temperate-rainforest: gap (experiential): no settlement in or beside temperate-rainforest
+think: root Gangav /gaŋav/
 thorn-scrub: root Qadad /qadad/
 tide: gap (experiential): desert-dwarf has no exposure to 'tide'
 treant-kind: gap (experiential): desert-dwarf has no exposure to 'treant-kind'
@@ -1817,6 +1824,7 @@ taiga: gap (experiential): no settlement in or beside taiga
 temperate-forest: root Nabash /nabaʃ/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: gap (experiential): no settlement in or beside temperate-rainforest
+think: root Gangab /gaŋab/
 thorn-scrub: gap (experiential): gully-dwarf has no exposure to 'thorn-scrub'
 tide: gap (experiential): gully-dwarf has no exposure to 'tide'
 treant-kind: gap (experiential): gully-dwarf has no exposure to 'treant-kind'
@@ -2049,6 +2057,7 @@ taiga: gap (experiential): no settlement in or beside taiga
 temperate-forest: root Mabash /mabaʃ/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: gap (experiential): no settlement in or beside temperate-rainforest
+think: root Gangav /gaŋav/
 thorn-scrub: gap (experiential): hill-dwarf has no exposure to 'thorn-scrub'
 tide: gap (experiential): hill-dwarf has no exposure to 'tide'
 treant-kind: gap (experiential): hill-dwarf has no exposure to 'treant-kind'
