@@ -121,3 +121,37 @@ probes lefford-authored fixtures, and must run on the canonical box. The
 prompted the campaign, and nobody has measured a gate on an idle lefford, so
 the comparison that would settle it does not exist. Recorded here rather than
 left to imply a benefit that has not been demonstrated.
+
+## Amendment (2026-08-28, The Governor)
+
+Additive correction of a factual premise; the ruling above is unchanged.
+
+The ruling's own text (above) counted three tests writing committed
+artifacts: `cli/tests/history_battery.rs`, `windows/chronicle/tests/
+sounding_sweep.rs`, and `windows/worldgen/tests/occupancy_readout.rs`. The
+Governor's heavy-tier adjudication (`docs/audits/heavy-tier-adjudication.md`)
+demoted `sounding_sweep::run_the_sounding_and_write_the_report` out of the
+`heavy:` tier: its preregistered coupling-exponent hypotheses are printed to
+`book/src/laboratory/generated/the-sounding/`, never asserted, the same
+"report" shape as the campaign's other demotions. **The count of tests that
+write committed artifacts is now two, not three**, and the guard's other
+justification — `census_fixtures_match_a_probe_of_live_seeds` comparing a
+live probe against lefford-authored fixtures — is untouched.
+
+**A real cost this demotion carries, named rather than left silent.**
+`scripts/regenerate-artifacts.sh` does not write `the-sounding`; the demoted
+test was the tree's only producer of it, including
+`book/src/laboratory/generated/the-sounding/sample-biographies.txt` (148 KB,
+byte-deterministic), which [0087](0087-a-benchmarks-timings-are-a-record-not-a-golden.md)
+*deliberately* kept under the strict drift check when it excluded
+`rows.csv`/`summary.md`'s timing columns, specifically because it is "the
+file that would catch a real regression in what The Sounding computes."
+`book/src/laboratory/` remains declared in `docs/generated-paths.txt` and
+`sample-biographies.txt` remains under its drift check, but nothing in any
+automated path (`make rebaseline`, a stage gate, a merge) regenerates it any
+longer — the test that did so is now `run by hand` only. The file is not
+excluded from the check; it is orphaned from the thing that would keep it
+current. This does not weaken the drift check's honesty (a stale committed
+file still diffs against a fresh run and fails), but it does mean nobody
+notices unless someone runs `sounding_sweep::run_the_sounding_and_write_the_report`
+by hand and diffs the result.

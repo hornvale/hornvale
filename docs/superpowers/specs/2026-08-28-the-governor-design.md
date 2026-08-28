@@ -491,9 +491,12 @@ already dev-depends on it); the same in `hornvale-kernel` (which already owns
 truth). **Interacts with §5's literal-call-text detector.** Not decided here.
 
 **8.2 Could the read-only tier run off the canonical box entirely?**
-`heavy-run.sh` carries the canonical-host guard because *three* of its tests
-write committed artifacts and one compares against lefford-authored fixtures.
-That is an argument about four tests, not 118. Decision 0090 (The Pyx) measured
+`heavy-run.sh` carries the canonical-host guard because *two* of its tests
+write committed artifacts and one compares against lefford-authored fixtures
+(a third writer, `sounding_sweep::run_the_sounding_and_write_the_report`, was
+itself demoted by this campaign's own Stage 3/Task 5 — see the adjudication
+table — so the count this paragraph originally argued from, three, is now
+two). That is an argument about three tests, not 118. Decision 0090 (The Pyx) measured
 a 40-world, all-metric probe **byte-identical between x86_64/Linux and
 aarch64/Darwin** after libm landed. If that holds for this tier's pins, the
 other 114 could run on the Mac, concurrently with the queue, never taking the
