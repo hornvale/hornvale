@@ -481,16 +481,28 @@ than a failure of the plan.
 
 ## 8. Open questions, flagged for review
 
-**8.1 Where does a shared `map_seeds` live?** It is currently a test-only
-module in `windows/lab/tests/`. `windows/hearsay` and `windows/worldgen` tests
-cannot reach it. The workspace is `members = ["kernel", "domains/*",
-"windows/*", "cli"]`, so a test-support crate is neither a domain nor a window
-and would need an `architecture.rs` amendment. Candidates: a `pub mod
-seed_sweep` in `hornvale-worldgen` (the composition root; every panel test
-already dev-depends on it); the same in `hornvale-kernel` (which already owns
-`Seed`/`Stream`, but is constitutional); or duplicating the module per crate
-(rejected — this tree fails builds on second copies of a single source of
-truth). **Interacts with §5's literal-call-text detector.** Not decided here.
+**8.1 Where does a shared `map_seeds` live? — RESOLVED, and this section's
+own cost table was wrong.**
+
+It lived in `windows/lab/tests/`, a test-only module reachable from no other
+crate. Task 9 moved it to `pub mod seed_sweep` in `hornvale-worldgen`, the
+composition root.
+
+**The correction:** this section previously argued that a worldgen-hosted
+helper could not reach `windows/locale/src/budget.rs`'s in-module unit test,
+and that reaching every candidate would therefore require the kernel —
+constitutional ground. That is false. `windows/locale/Cargo.toml` declares
+`hornvale-worldgen` under `[dependencies]`, not `[dev-dependencies]`, so a
+worldgen-hosted helper reaches an in-module `#[cfg(test)]` test in that crate
+like any other library item. All thirteen candidates are reachable from
+worldgen; the kernel was never needed. Task 9's implementer found this by
+checking the manifest and confirming with a scratch compile, rather than
+taking the table's word — and the table was the controller's, written from
+the layering diagram rather than from the manifests.
+
+The layering rule is unviolated: `windows/locale` -> `windows/worldgen` is
+window-to-window, which the constitution permits explicitly.
+
 
 **8.2 Could the read-only tier run off the canonical box entirely?**
 `heavy-run.sh` carries the canonical-host guard because *one* of its tests
