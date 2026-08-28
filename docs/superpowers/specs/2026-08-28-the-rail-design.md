@@ -46,26 +46,47 @@ tokens already implemented**. Landing it alone moves `negation` (`r013`),
 `past-tense` (`r014`) and `transitive-frame` (`r006`) to covered:
 
 ```
-  +r002 intransitive-frame   -> covered 5 (+4)   frontier 15
+  +r002 intransitive-frame   -> covered 6 (+5)   frontier 14
   +r003 property-predication -> covered 2 (+1)   frontier  7
   +r005 locative-predication -> covered 2 (+1)   frontier  4
   +r011 person-deixis        -> covered 2 (+1)   frontier  4
   +r083 polar-question       -> covered 2 (+1)   frontier  6
-  all five                   -> covered 9        frontier 22
+  all five                   -> covered 11       frontier 20
 ```
 
-The last row reads **9, not 6**, and the extra three are not the five rungs:
-`r006` (`transitive-frame`), `r013` (`negation`) and `r014` (`past-tense`) all
-introduce tokens that are ALREADY implemented and are held out of covered by
-`r002` alone. The newly covered set is exactly
-`r002 r003 r005 r006 r011 r013 r014 r083`.
+**These numbers were wrong in this document until Task 2 ran, and the
+correction is recorded here rather than applied silently.** The drafting
+session's own script treated a control rung's `null` `introduces` as a demand
+token, so `{None} | tokens` was never a subset of the implemented set and all
+fifteen control rungs were permanently excluded from *covered*. The resolver
+does the right thing — `derived_demands` skips a `null` — so the first task to
+land a token reported 6/14 where this table predicted 5/14, and the
+implementer used the resolver's answer rather than forcing the prediction,
+which is exactly the instruction it was given.
 
-Separately worth knowing, and NOT what produces that 9: **fifteen** of the
-ladder's rungs introduce no token at all — declared reuse/control rungs whose
-value is as tripwires on composition (`r015`, *"The guard did not sleep."*, is
-negation and past tense composed). None of the fifteen becomes covered this
-campaign; they sit deeper. An earlier draft of this section credited them for
-the 9 and was wrong.
+The last row reads **11, not 5**, and the six extra rungs come from two
+different mechanisms.
+
+Three are rungs whose own token is **already implemented** and which `r002`
+alone holds out of covered: `r006` (`transitive-frame`), `r013` (`negation`)
+and `r014` (`past-tense`).
+
+Two are **control rungs** — of the fifteen rungs that introduce no token at
+all, `r015` (*"The guard did not sleep."*, negation and past tense composed)
+and `r190` (*"You killed her."*, a transitive with a second-person agent in
+the past) become covered the moment their presuppositions do. A control rung
+is free coverage by construction: it demands only what its ancestors
+introduce.
+
+The newly covered set is exactly
+`r002 r003 r005 r006 r011 r013 r014 r015 r083 r190`.
+
+**This paragraph has been wrong twice, in opposite directions, and both drafts
+were confident.** The first credited the control rungs for a count they had no
+part in. The second — written as a *correction* of the first — asserted that
+none of the fifteen becomes covered at all, which is the error this note
+replaces. Both were produced by the same buggy script; neither was caught by
+re-reading, and the resolver settled it on the first task that ran.
 
 ### 1.2 `r005` is NOT the three-for-one lever its note suggests
 
@@ -360,9 +381,18 @@ The Inquest added. Pin-isolation tests are the proof, not the argument.
 
 ## 5. Success criteria (preregistered)
 
-1. The ladder reads **9 of 214 covered** with all five tokens implemented, and
-   the frontier reads **22** — both computed by the resolver, not asserted from
-   this document.
+1. The ladder reads **11 of 214 covered** with all five tokens implemented,
+   and the frontier reads **20** — both computed by the resolver, not asserted
+   from this document.
+
+   **Corrected from 9/22 after Task 2, and the reason matters more than the
+   numbers.** The 9/22 came from a controller script that excluded every
+   control rung; the resolver includes two of them (`r015`, `r190`). The
+   preregistration was not falsified by the world — it was arithmetic that had
+   never been run against the instrument it was predicting. Recorded here
+   because a criterion silently edited to match a result is worthless, and
+   this one was edited to match the *resolver*, before four of the five tokens
+   existed.
 2. Each of the five rungs has a **realization witness**: a hand-built
    construction and a recorded Common surface, on `MERCHANT_WITNESS`'s pattern.
    A rung without one does not get its token.
