@@ -21,6 +21,7 @@
 - **Never run two `cargo test` invocations in one shell command.** Capture once to a log, then grep the log. A pre-commit guard enforces this.
 - `windows/vessel/tests/fixtures/` are byte goldens only `REBASELINE=1` writes, deliberately. An unexpected move there is a finding, not a rebaseline.
 - Work happens in the worktree `.claude/worktrees/the-precedence` on branch `campaign/the-precedence`.
+- **A sluice submission needs an authored `Sluice-Headline:` git trailer**, in the body of *any* commit in `origin/main..HEAD`, as that message's LAST block (git trailer semantics — a blank line above it strands it). Write the text ONLY; the chamber composes the `merge(<campaign>): ` prefix itself. A good commit subject is NOT enough: `sluice-request.sh` refuses rather than inferring the merge subject from whichever commit happened to be last, because inferring it "failed on four of the first four real merges." The subject becomes permanent and `tools/census/history.sh` reads it as the census epoch label. Stage 1's submission was refused for exactly this.
 
 ---
 
