@@ -192,13 +192,21 @@ struct Corpus {
 /// `direction` are read exactly as authored. Unrecognized JSON fields
 /// (`scene`, `note`, `name`, `provenance` at the document root, …) are
 /// ignored by default. See [`LadderEntryJson`] for the opposite shape.
+///
+/// **`speaker` and `demands` are REQUIRED, not defaulted.** Both frozen
+/// corpora carry both on every entry today (re-scanned: 0 of 151 missing
+/// either), so a default would buy real data nothing — it would only let a
+/// future malformed edit to a frozen corpus deserialize silently as
+/// `None`/`[]` instead of panicking loudly at load, which is a regression
+/// against this project's fail-fast standard. `direction` is the one field
+/// that keeps its default: `the-merchant.corpus.json` genuinely has no
+/// `direction` key on any entry, so its absence is a real fact about that
+/// corpus (spec §2.3 — never inferred), not a defaulted requirement.
 #[derive(serde::Deserialize)]
 struct DeclaredEntryJson {
     id: String,
-    #[serde(default)]
-    speaker: Option<String>,
+    speaker: String,
     text: String,
-    #[serde(default)]
     demands: Vec<String>,
     #[serde(default)]
     direction: Option<String>,
@@ -239,7 +247,7 @@ fn read_declared(path: &Path) -> Vec<Entry> {
         .into_iter()
         .map(|e| Entry {
             id: e.id,
-            speaker: e.speaker,
+            speaker: Some(e.speaker),
             text: e.text,
             demands: e.demands,
             direction: parse_direction(e.direction.as_deref()),
