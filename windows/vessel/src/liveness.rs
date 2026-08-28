@@ -684,7 +684,7 @@ impl<'a> Terrain for LocaleTerrain<'a> {
         // fractional-day fallback. No `corner_weights` read here (a pure
         // astronomy calc over the room's centroid), so no cache to consult.
         match self.calendar {
-            Some(cal) => hornvale_astronomy::StdDays::new(day.as_std_days())
+            Some(cal) => hornvale_astronomy::StdInstant::new(day.as_std_days())
                 .ok()
                 .and_then(|t| cal.solar_altitude_at(t, room.coord().latitude)),
             None => fractional_day_sun(day),

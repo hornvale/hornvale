@@ -11,3 +11,4 @@ pub mod line;
 pub mod mercator;
 pub mod plate;
 pub mod term;
+pub mod tiles;

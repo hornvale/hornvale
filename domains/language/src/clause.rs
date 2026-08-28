@@ -13,7 +13,7 @@
 
 use crate::common_vocab::CommonVocabulary;
 use crate::morphology::Evidential;
-use crate::packs::{EAT, KILL};
+use crate::packs::{EAT, KILL, KNOW, THINK};
 use hornvale_kernel::world::IS_A;
 use std::sync::OnceLock;
 
@@ -133,12 +133,29 @@ impl Person {
 /// bare `"its"` now binds as a [`Subject::Name`], which re-realizes to the
 /// identical surface, so the round-trip law is untouched.
 /// type-audit: bare-ok(identifier-text: Name.0)
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Subject {
     /// An already-resolved proper name or noun phrase.
     Name(String),
     /// A personal pronoun, at the clause's own number.
     Pronoun(Person),
+    /// An embedded clause, realized in place of the subject — the same
+    /// machinery [`Argument::Clause`] gives the object slot, in a different
+    /// hole (The Mortise). *"That he killed her confused me"* is the
+    /// complementizer-marked English gloss of the phenomenon; the
+    /// complementizer itself is a tongue-side, DRAWN subordination strategy
+    /// (a later campaign's business — see [`Argument::Clause`]'s doc), so
+    /// Common realizes the bare embedded clause with no marker, exactly as
+    /// it does for a clause bound to the object slot. This is the
+    /// complementizer kind of subject clause, never the gerund
+    /// (*"Seeing it"*): a gerund is a nominalization, out of scope (spec
+    /// §9.1).
+    ///
+    /// Depth is capped at [`CLAUSE_EMBED_MAX_DEPTH`] — **the same one-level
+    /// budget the object slot spends, not a second budget of its own**: a
+    /// clause bound to the subject slot counts against the identical cap a
+    /// clause bound to the object slot does.
+    Clause(Box<Clause>),
 }
 
 /// What an adjunct's role is bound to. Deliberately small: these are the
@@ -166,7 +183,75 @@ pub enum Argument {
     /// other variant can carry: a pronoun is neither a concept the
     /// vocabulary resolves nor a name that passes through unresolved.
     Pronoun(Person),
+    /// An embedded clause, realized in place of a lexical complement.
+    ///
+    /// **Added because a role needed it, which is this enum's own stated
+    /// rule.** The role is the clause complement of `know`/`think` — *"I do
+    /// not know he killed her"* — which no other variant can carry.
+    ///
+    /// Depth is capped at [`CLAUSE_EMBED_MAX_DEPTH`]: the cap states the
+    /// depth this campaign builds and can show working, not a stack-safety
+    /// belt. `Box` is unique ownership with no `Rc`, so a clause graph
+    /// cannot cycle; only depth is unbounded without it.
+    Clause(Box<Clause>),
 }
+
+/// How many `Argument::Clause`/`Subject::Clause` layers deep an argument
+/// nests: `0` for anything else, one more than the deeper of that clause's
+/// own object depth ([`clause_embed_depth`] on itself) and its own subject
+/// depth ([`subject_embed_depth`]) for a `Clause`. [`realize_common`] panics
+/// when this exceeds [`CLAUSE_EMBED_MAX_DEPTH`], and it is what that
+/// constant is measured against — a clause complement may not itself
+/// contain a clause complement, whichever slot the inner one is bound to.
+///
+/// **Mutually recursive with [`subject_embed_depth`], on purpose**: the two
+/// read the SAME budget from two different holes (The Mortise, Task 4), so a
+/// clause bound as a subject counts against it exactly as one bound as an
+/// object does, rather than each slot keeping a depth count of its own.
+///
+/// `pub(crate)` (not `pub`, and not private) since Task 5: `grammar.rs`'s
+/// tongue realizer needs the identical depth check `realize_common` already
+/// runs, on the identical budget — a second, hand-duplicated copy would be
+/// exactly the "duplicated rule with no two-way agreement test" shape a
+/// later divergence could rot silently. Widening visibility is the only
+/// change; the function's own behaviour is untouched.
+pub(crate) fn clause_embed_depth(argument: &Argument) -> usize {
+    match argument {
+        Argument::Clause(inner) => {
+            1 + clause_embed_depth(&inner.object).max(subject_embed_depth(&inner.subject))
+        }
+        _ => 0,
+    }
+}
+
+/// [`clause_embed_depth`]'s mirror for the subject slot: `0` for anything but
+/// a [`Subject::Clause`], one more than the deeper of that clause's own
+/// object depth and subject depth otherwise. See [`clause_embed_depth`]'s
+/// doc for why the two are mutually recursive and read one shared budget.
+///
+/// `pub(crate)` since Task 5, for the same reason [`clause_embed_depth`]
+/// widened: `grammar.rs`'s tongue realizer reads the SAME shared budget for
+/// a clause bound to the subject slot.
+pub(crate) fn subject_embed_depth(subject: &Subject) -> usize {
+    match subject {
+        Subject::Clause(inner) => {
+            1 + clause_embed_depth(&inner.object).max(subject_embed_depth(&inner.subject))
+        }
+        _ => 0,
+    }
+}
+
+/// How deep a clause complement may nest before [`realize_common`] refuses
+/// it. States demonstrated depth, not a stack-safety belt — see
+/// [`Argument::Clause`]'s doc for why `1` is not a placeholder waiting to
+/// grow. Every later clause-EMBEDDING site (a clause-carrying object, a
+/// clause-carrying subject) reads this same constant rather than stating
+/// its own number, so raising the cap later is a one-line change here.
+/// **[`Coordination`] does not** — it sits above a clause rather than
+/// inside one, so it carries no depth cap of its own; see that type's own
+/// doc for why the two operators diverge on this axis.
+/// type-audit: bare-ok(count)
+pub const CLAUSE_EMBED_MAX_DEPTH: usize = 1;
 
 /// One role binding on a clause: a **registered predicate** bound to an
 /// argument. How it surfaces — a preposition, a case affix, a trailing
@@ -281,7 +366,9 @@ fn indefinite_article(word: &str) -> &'static str {
 /// type-audit: bare-ok(prose: Literal.0)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Part {
-    /// The subject slot (a `Subject::Name` or `Subject::Pronoun`).
+    /// The subject slot (a `Subject::Name`, `Subject::Pronoun`, or —
+    /// since The Mortise — `Subject::Clause`, a nested clause bound to
+    /// this position rather than a noun phrase).
     Subject,
     /// The copula, carrying `Clause.tense`, `Clause.number` and
     /// `Clause.polarity` together (`is`/`are`/`was`/`were`, plus `not`) —
@@ -575,10 +662,26 @@ pub enum Valence {
 /// [`KILL`] is the promise in [`common_constructions`]'s doc being kept: a
 /// second transitive verb is **one row here**, no new construction, no new
 /// [`Valence`] variant and no second code path.
+///
+/// [`KNOW`] (The Mortise) is the same promise kept a third time: it was
+/// registered vocabulary with no row here at all, so [`realize_common`]
+/// panicked on it, which is exactly the red
+/// `sentence_corpus.rs`'s `every_covered_entry_realizes_in_common` witness
+/// was built to find.
+///
+/// [`THINK`] (The Mortise, Task 2) is the same promise kept a fourth time,
+/// and by the same argument [`KNOW`]'s row is: one argument structure with a
+/// category-flexible object, so it adds a ROW and no new [`Valence`]
+/// variant. Unlike `know`, `think` is registered in
+/// `packs::universal_stratum` rather than `packs::action_suite_pack` — see
+/// [`crate::packs::THINK`]'s doc for why — so it is unconditionally
+/// lexicalized where `know` still gaps.
 const PREDICATE_VALENCE: &[(&str, Valence)] = &[
     (IS_A, Valence::Nominal),
     (EAT, Valence::Transitive),
     (KILL, Valence::Transitive),
+    (KNOW, Valence::Transitive),
+    (THINK, Valence::Transitive),
 ];
 
 /// The valence of `predicate`, or `None` when no realizer covers it.
@@ -756,6 +859,34 @@ fn verb_group_forms(
 /// The Interlinear made the key a string.
 /// type-audit: bare-ok(prose)
 pub fn realize_common(spec: &Clause, vocab: &CommonVocabulary) -> String {
+    realize_common_with_subject(spec, vocab, true)
+}
+
+/// [`realize_common`]'s own body, widened with one caller-only knob:
+/// whether to realize `spec.subject` at all. `realize_common` itself always
+/// passes `true`, so its behaviour is unchanged byte for byte;
+/// [`realize_common_coordination`] is the only caller that ever passes
+/// `false`, for a coordinated clause whose subject is identical to the
+/// LAST STATED subject before it (see [`elide_coordinated_subjects`] for
+/// exactly what that means and why it is not simply "the first clause",
+/// The Mortise, Task 7 fix round 1, spec §4.10's tier 2).
+///
+/// **Elision happens HERE, inside realization, not as text surgery on an
+/// already-realized sentence.** A coordinated clause with `include_subject:
+/// false` never has its subject text computed or pushed at
+/// [`Part::Subject`] at all — the surface constituent is simply absent, the
+/// same discipline [`crate::grammar::realize_tongue`]'s own elision knob
+/// uses for a tongue whose constituent order is drawn rather than fixed.
+/// Common's own construction table happens to place [`Part::Subject`] first
+/// in every row (see [`common_constructions`]), immediately followed by a
+/// literal space, so omitting the subject leaves exactly one leading space
+/// to trim — a mechanical cleanup of a separator this table always emits
+/// there, not a search for content.
+fn realize_common_with_subject(
+    spec: &Clause,
+    vocab: &CommonVocabulary,
+    include_subject: bool,
+) -> String {
     let construction = common_constructions()
         .iter()
         .find(|c| c.predicate == spec.predicate)
@@ -775,16 +906,74 @@ pub fn realize_common(spec: &Clause, vocab: &CommonVocabulary) -> String {
         Argument::Pronoun(person) => {
             common_pronoun(*person, spec.number, PronounCase::Accusative).to_string()
         }
+        // An embedded clause realizes as its own full sentence, minus the
+        // trailing full stop this clause's own `Part::Literal(".")` will
+        // supply — realizing it whole and trimming is simpler than a second
+        // "clause body, no terminator" code path, and every construction
+        // this table has ends in exactly one `Literal(".")`, so the trim is
+        // safe. The depth check runs BEFORE the recursive call so a clause
+        // past the cap panics without ever realizing the offending text.
+        Argument::Clause(inner) => {
+            let depth = clause_embed_depth(&spec.object);
+            assert!(
+                depth <= CLAUSE_EMBED_MAX_DEPTH,
+                "a clause complement nests {depth} deep, past the cap of \
+                 {CLAUSE_EMBED_MAX_DEPTH}: a clause complement may not \
+                 itself contain a clause complement"
+            );
+            let mut text = realize_common(inner, vocab);
+            if text.ends_with('.') {
+                text.pop();
+            }
+            text
+        }
     };
     let mut out = String::new();
     for part in construction.parts {
         match part {
-            Part::Subject => out.push_str(match &spec.subject {
-                Subject::Name(name) => name.as_str(),
-                Subject::Pronoun(person) => {
-                    common_pronoun(*person, spec.number, PronounCase::Nominative)
-                }
-            }),
+            // `include_subject: false` (a coordinated clause whose subject
+            // matches the LAST STATED one before it, see
+            // `elide_coordinated_subjects`, Task 7) skips this arm
+            // entirely — the subject constituent is never computed or
+            // pushed, not merely emptied. The one leading space this leaves
+            // (this table's own `Part::Literal(" ")` immediately follows
+            // every `Part::Subject`, see `common_constructions`) is trimmed
+            // once, after the loop below.
+            Part::Subject if !include_subject => {}
+            Part::Subject => {
+                let text = match &spec.subject {
+                    Subject::Name(name) => name.clone(),
+                    Subject::Pronoun(person) => {
+                        common_pronoun(*person, spec.number, PronounCase::Nominative).to_string()
+                    }
+                    // A clause bound to the subject slot realizes through
+                    // the exact same machinery `Argument::Clause` uses in
+                    // the object slot: its own full sentence, minus the
+                    // trailing period this clause's own `Part::Literal(".")`
+                    // supplies. No complementizer is added — the marker
+                    // (*"That..."*) is a tongue-side, DRAWN subordination
+                    // strategy, a later campaign's business (spec §9.1);
+                    // Common's register has no such word to spend. The depth
+                    // check runs BEFORE the recursive call, the same
+                    // ordering the object slot uses, so a subject past the
+                    // cap panics without ever realizing the offending text.
+                    Subject::Clause(inner) => {
+                        let depth = subject_embed_depth(&spec.subject);
+                        assert!(
+                            depth <= CLAUSE_EMBED_MAX_DEPTH,
+                            "a clause subject nests {depth} deep, past the cap of \
+                             {CLAUSE_EMBED_MAX_DEPTH}: a clause bound to the subject \
+                             slot may not itself contain a clause complement"
+                        );
+                        let mut text = realize_common(inner, vocab);
+                        if text.ends_with('.') {
+                            text.pop();
+                        }
+                        text
+                    }
+                };
+                out.push_str(&text);
+            }
             Part::Copula => {
                 out.push_str(copula_surface(spec.tense, spec.number, spec.polarity));
             }
@@ -802,8 +991,11 @@ pub fn realize_common(spec: &Clause, vocab: &CommonVocabulary) -> String {
             // that, so the slot is skipped rather than given a fourth row.
             // The condition is on the object's SHAPE, not on the feature,
             // because definiteness is a property of the clause and this is a
-            // property of what the object slot holds.
-            Part::Determiner if matches!(spec.object, Argument::Pronoun(_)) => {}
+            // property of what the object slot holds. A CLAUSE is skipped
+            // for the same reason: "*I do not know a he killed her*" is
+            // what NOT suppressing it produces (spec §4.2).
+            Part::Determiner
+                if matches!(spec.object, Argument::Pronoun(_) | Argument::Clause(_)) => {}
             Part::Determiner => match (spec.definiteness, spec.number) {
                 (Definiteness::Def, _) => out.push_str("the "),
                 (Definiteness::Indef, Number::Sg) => {
@@ -835,6 +1027,196 @@ pub fn realize_common(spec: &Clause, vocab: &CommonVocabulary) -> String {
             Part::Literal(text) => out.push_str(text),
         }
     }
+    if include_subject {
+        out
+    } else {
+        // Every construction places `Part::Subject` first (see
+        // `common_constructions`), so an omitted subject leaves exactly the
+        // one separator space that always follows it — trimmed here rather
+        // than left for `realize_common_coordination` to strip out of an
+        // already-joined sentence.
+        out.trim_start().to_string()
+    }
+}
+
+/// A coordinated sequence of clauses — a LIST at a node, never a slot that
+/// holds one (The Mortise, Task 6, spec §4.10).
+///
+/// **This is a different operator from [`Argument::Clause`] /
+/// [`Subject::Clause`], and the difference is the whole design.** Embedding
+/// is a slot that holds a clause; coordination is a list at a node. They
+/// share exactly one idea — both are marked at a boundary, and that marker
+/// is what keeps the parser's inverse computable (spec §4.10) — and
+/// nothing else. Concretely: `Coordination` carries no depth cap of its
+/// own and does not read [`CLAUSE_EMBED_MAX_DEPTH`], because it is not a
+/// clause-internal slot at all; it sits ABOVE a clause, wrapping it, the
+/// way a sentence wraps a clause rather than a clause wrapping itself.
+///
+/// **Additive above `Clause`, on purpose.** `Clause` gains no field for
+/// this: a coordination is a fact about how two or more *whole* clauses
+/// relate to each other, not a fact any one clause carries about itself.
+/// Putting a list inside a node that is not one would have cost an edit at
+/// every one of `Clause`'s many literal construction sites; arriving above
+/// it costs none of them — [`realize_common`] keeps taking a `&Clause` and
+/// always will.
+///
+/// **Tiers 1 and 2 of spec §4.10's three-tier ladder are built; tier 3 is
+/// not, and never will be in this campaign.** Tier 1 — every clause states
+/// its own subject in full — is what a coordination realizes when its
+/// clauses' subjects differ: *"It confused me and the goblin upset me."*
+/// Tier 2 — a shared subject is stated once — fires automatically whenever
+/// a clause's subject equals the LAST STATED subject before it, not
+/// necessarily the first clause's own (see [`elide_coordinated_subjects`],
+/// fix round 1: comparing only against the first clause misattributes a
+/// 3+-clause coordination like `[X, Y, X]`): *"It confused me and upset
+/// me"* rather than *"It confused me and it upset me."* **Tier 3 (right-node raising — sharing
+/// the OBJECT too, "It confused and upset me") is CUT from this campaign
+/// entirely** (spec §9.1, The Mortise Task 7): what a language may elide is
+/// typological, and getting it wrong yields *plausible* garbage, the
+/// failure mode that survives review. `a_shared_object_is_not_raised` pins
+/// this as a deliberate boundary, not an unexamined gap, so a later
+/// campaign that wants tier 3 has to come here and change it on purpose.
+///
+/// **Subject elision is a uniform surface convention, not a drawn axis.**
+/// Whether a language elides a coordinate subject at all is genuinely
+/// typological, but this campaign's two stream labels
+/// (`subordinator`, `conjunction`) are both spent, and no third is added
+/// here — every tongue elides a stated-once subject the same way Common
+/// does. A future campaign that wants this to vary per tongue needs its own
+/// stream label and its own draw; this one states the limit rather than
+/// leaving it to be discovered as a silent default.
+///
+/// **Parsing a `Coordination` back out of its own realized text is not
+/// attempted.** [`parse_common_with_tail`] refuses the instant it sees the
+/// top-level `" and "` boundary marker — spec §6's own success criterion
+/// asks only that the parser round-trip embedding and DISTINGUISH the two
+/// operators by that marker, not that it recover a `Coordination`.
+/// Recovering one — including inverting tier 2's elided-subject
+/// reattribution, [`elide_coordinated_subjects`]'s own inverse — is out of
+/// scope, named here rather than left findable only on the private parser
+/// function that enforces it (`parse_clause_body`'s own doc).
+#[derive(Clone, Debug, PartialEq)]
+pub struct Coordination {
+    /// The coordinated clauses, in surface order. At least two — a
+    /// "coordination" of fewer than two clauses is not a list, and both
+    /// realizers assert this rather than silently degrading.
+    pub clauses: Vec<Clause>,
+}
+
+/// Which coordinated clauses elide their subject (The Mortise, Task 7 fix
+/// round 1): index `i` is `true` when clause `i`'s `(subject, number)`
+/// matches whatever subject was last **stated** on the surface — not
+/// whichever clause happened to be first.
+///
+/// **Compared against the last STATED subject, never the first clause.**
+/// An earlier version of this rule compared every clause to clause 0. That
+/// is wrong for 3+ clauses: for `[X, Y, X]` (subjects `Pronoun(Third)`,
+/// `Name("Bemvo")`, `Pronoun(Third)` again), comparing to the first clause
+/// elides the third because it matches clause 0 — but a reader parsing
+/// left to right has only just read `Y` stated on clause 2, so the missing
+/// subject reads as "Bemvo killed... and knowed the goblin", confidently
+/// attributed to the WRONG referent. That is *plausible garbage* — the
+/// exact failure mode spec §9.1 cites as the reason tier 3 (right-node
+/// raising) is cut — occurring inside tier 2, which this campaign does
+/// build. Comparing to the last stated subject instead means clause 3
+/// compares against `Y` (clause 2's own, since clause 2 was not itself
+/// elided), finds no match, and states its own `X` — correct.
+///
+/// **The successor case, worked by hand:** for `[X, X, Y, X]`, this rule
+/// gives X / *elided* / Y / X — clause 2 elides against clause 1's `X`
+/// (the last stated subject at that point), clause 3 states `Y` (no
+/// match), and clause 4 states `X` again because the visible antecedent
+/// immediately before it is `Y`, not `X`. Comparing to the first clause
+/// would have elided clause 4 too, reading as `Y`'s subject — wrong. Last
+/// stated is strictly more correct than first-clause on every case
+/// first-clause got right (two clauses, or 3+ where the shared subject
+/// never has an intervening different one) AND on the cases it got wrong.
+///
+/// **The equality compared is `(subject, number)`, not bare [`Subject`]
+/// equality.** [`Subject`] alone derives [`PartialEq`], and comparing only
+/// that would treat `Subject::Pronoun(Person::Third)` at [`Number::Sg`]
+/// (*"it"*) as the same referent as [`Number::Pl`] (*"they"*) — two
+/// different surface pronouns bound to the same enum variant, since a
+/// clause's number lives on [`Clause::number`], not on [`Subject`] itself
+/// (see that field's own doc). Eliding across a number mismatch would drop
+/// the very feature that tells the reader whether one confuser or several
+/// are meant, so both must agree before a subject is silently omitted.
+///
+/// **Shared by all three coordination realizers** (Common,
+/// [`crate::grammar::realize_tongue_coordination`], and
+/// [`crate::grammar::realize_tongue_deep_coordination`]) so the elision
+/// RULE exists in exactly one place, never three copies with no agreement
+/// test between them. Each realizer still does its OWN per-clause
+/// realization with or without the subject constituent — this function
+/// only decides which clauses get which.
+///
+/// Clause 0 is never elided (`last_stated` starts `None`, so the first
+/// comparison always fails), matching every realizer's existing panic-below
+/// contract that a coordination needs at least two clauses to mean
+/// anything, though this function itself tolerates any length including 0
+/// or 1 (it returns an all-`false` vector rather than asserting, since the
+/// length check belongs to each public realizer, not to this shared rule).
+pub(crate) fn elide_coordinated_subjects(clauses: &[Clause]) -> Vec<bool> {
+    let mut elisions = Vec::with_capacity(clauses.len());
+    let mut last_stated: Option<(&Subject, Number)> = None;
+    for clause in clauses {
+        let elide = last_stated
+            .is_some_and(|(subject, number)| clause.subject == *subject && clause.number == number);
+        elisions.push(elide);
+        if !elide {
+            last_stated = Some((&clause.subject, clause.number));
+        }
+    }
+    elisions
+}
+
+/// Realize a [`Coordination`] as a Common (≈ limited English) sentence: each
+/// clause realizes through [`realize_common_with_subject`], trimmed of its
+/// own trailing full stop, then joined with `"and"` — Common's own
+/// coordinating conjunction, on the same footing every other Common surface
+/// choice is (this register's fixed vocabulary, not a drawn value; only a
+/// TONGUE's conjunction is drawn, see
+/// [`crate::grammar::realize_tongue_coordination`]) — and the whole
+/// sentence takes exactly one trailing period, on the identical
+/// "realize whole and trim" discipline [`realize_common`]'s own
+/// `Argument::Clause`/`Subject::Clause` arms already use for a nested
+/// clause.
+///
+/// **Tier 2: a clause whose subject matches the last STATED subject (see
+/// [`elide_coordinated_subjects`] for exactly what "last stated" means and
+/// why it is not "the first clause") is realized WITHOUT its subject
+/// constituent** (`include_subject: false`, see
+/// [`realize_common_with_subject`]) — *"It confused me and upset me"*.
+/// Every other clause states its own subject in full (tier 1).
+///
+/// Panics if `coord.clauses` holds fewer than two clauses: a coordination
+/// with nothing to join states a contradiction in its own name, and the
+/// panic is the same class as `realize_common`'s "no construction for this
+/// predicate" — an authoring hole, not a fact about the world a
+/// [`TongueGap`](crate::grammar::TongueGap)-shaped return could state
+/// (Common is infallible; see [`realize_common`]'s own doc for why).
+/// type-audit: bare-ok(prose)
+pub fn realize_common_coordination(coord: &Coordination, vocab: &CommonVocabulary) -> String {
+    assert!(
+        coord.clauses.len() >= 2,
+        "a coordination joins at least two clauses; {} is not a list to \
+         coordinate",
+        coord.clauses.len()
+    );
+    let elisions = elide_coordinated_subjects(&coord.clauses);
+    let mut parts = coord.clauses.iter().zip(elisions).map(|(clause, elide)| {
+        let mut text = realize_common_with_subject(clause, vocab, !elide);
+        if text.ends_with('.') {
+            text.pop();
+        }
+        text
+    });
+    let mut out = parts.next().expect("length checked above: at least one");
+    for part in parts {
+        out.push_str(" and ");
+        out.push_str(&part);
+    }
+    out.push('.');
     out
 }
 
@@ -905,6 +1287,17 @@ pub enum AdjunctPosition {
 /// A vertex renders as a bare integer rather than through [`cardinal`]
 /// because it is an IDENTIFIER, not a count — a year is a count of years and
 /// does go through `cardinal`.
+///
+/// **Refuses an [`Argument::Clause`], by panic, rather than silently
+/// rendering nothing.** `Adjunct` holds an `Argument`, so the moment
+/// `Argument` gained a `Clause` variant, an adjunct could carry one — and the
+/// trailing `_ => None` arm below would have swallowed it, rendering an
+/// adjunct that carries a whole embedded sentence as nothing at all, with no
+/// error. Spec §4.1 refuses this on purpose: adverbial subordination is a
+/// separate construction with its own boundary marking, and letting it
+/// arrive as an unexamined side effect of the object slot's own variant is
+/// exactly the "capability ships without a decision" failure this function's
+/// `None` convention otherwise guards against.
 /// type-audit: bare-ok(prose: return)
 pub fn common_role_surface(
     adjunct: &Adjunct,
@@ -949,6 +1342,10 @@ pub fn common_role_surface(
             AdjunctPosition::Trailing,
             format!("it ended in year {}", cardinal(*year)),
         )),
+        (role, Argument::Clause(_)) => panic!(
+            "an adjunct may not carry an embedded clause (role {role:?}): \
+             adverbial subordination is a separate construction, spec §4.1"
+        ),
         _ => None,
     }
 }
@@ -988,9 +1385,20 @@ pub enum ParseError {
     NoVerbGroup,
     /// The text after the determiner doesn't match (a prefix of) any
     /// complement surface in the caller's `ParseContext`, at any of the
-    /// numbers the verb group left open.
+    /// numbers the verb group left open — and (The Mortise, Task 8) neither
+    /// does a one-level recursive attempt at that same text as an embedded
+    /// clause, whether because the recursion itself failed, the shared
+    /// depth budget was already spent, or a matched embedded clause's
+    /// number could not be resolved without a complement to disambiguate
+    /// it (`resolve_embedded_number`). Also carries a top-level `" and "`
+    /// in the whole clause body: that marks a
+    /// [`Coordination`], which is refused before any split is attempted
+    /// rather than misread as an embedding (see
+    /// `parse_common_with_tail`'s doc).
     UnknownComplement {
-        /// The unrecognized text following the determiner.
+        /// The unrecognized text following the determiner, or (for a
+        /// top-level coordination marker) the whole clause body that was
+        /// refused before any split.
         after: String,
     },
     /// The text has no terminal `.`, so the construction's final literal
@@ -1074,6 +1482,99 @@ pub fn parse_common_with_tail(
 ) -> Result<(Clause, Vec<String>), ParseError> {
     // Terminal literal first.
     let body = text.strip_suffix('.').ok_or(ParseError::Unterminated)?;
+    parse_clause_body(body, ctx, 0)
+}
+
+/// Resolve the `Number` of a clause whose object recursed into an
+/// [`Argument::Clause`], where — unlike the non-embedded path just below —
+/// there is no complement surface to disambiguate a syncretic verb-group
+/// form. Two independent signals are tried, and the number is returned only
+/// when one of them is unambiguous:
+///
+/// 1. **The verb group itself.** `numbers` is the same candidate set
+///    [`parse_clause_body`]'s non-embedded path already computes (every
+///    `Number` a matched form is consistent with) — present tense is
+///    injective (`"knows"` vs `"know"`), so this alone already resolves it
+///    for a present-tense matrix clause.
+/// 2. **The subject's own pronoun row.** [`PRONOUN_PARADIGM`]'s nominative
+///    forms are not uniformly ambiguous: `"I"`/`"we"` name exactly one
+///    `Number` each (English spells first person differently by number),
+///    while `"they"`/`"you"` do not (spec §4.5 reuses `"they"` for third
+///    singular). When the subject text names exactly one row, that row's
+///    number is intersected with `numbers` — never used alone, so a
+///    genuinely inconsistent pairing (which no realizer produces) still
+///    fails closed rather than returning a number the verb group rejects.
+///
+/// `None` when neither signal is unambiguous — the embedding is refused
+/// rather than guessed, matching this task's stop-and-report posture for
+/// anything past the small extension it was sanctioned to build.
+fn resolve_embedded_number(numbers: &[Number], subject_text: &str) -> Option<Number> {
+    if let [n] = numbers {
+        return Some(*n);
+    }
+    let pronoun_rows: Vec<Number> = PRONOUN_PARADIGM
+        .iter()
+        .filter(|(form, _, _, case)| *case == PronounCase::Nominative && *form == subject_text)
+        .map(|(_, _, n, _)| *n)
+        .collect();
+    match pronoun_rows.as_slice() {
+        [n] if numbers.contains(n) => Some(*n),
+        _ => None,
+    }
+}
+
+/// [`parse_common_with_tail`]'s own body (The Mortise, Task 8), now able to
+/// recurse at the point the walk used to give up outright, and taught to
+/// refuse a coordination sentence before ever attempting that recursion.
+///
+/// `depth` reads the SAME shared embedding budget the realize side spends
+/// ([`clause_embed_depth`]/[`subject_embed_depth`] against
+/// [`CLAUSE_EMBED_MAX_DEPTH`]): the outermost call is depth `0`, and one
+/// recursive attempt at the unresolved remainder is spent going to depth
+/// `1` — past the cap, the walk reports the failure it already had rather
+/// than recursing further. Only the OBJECT slot recurses here
+/// (`Argument::Clause`): a clause bound to the SUBJECT slot would need the
+/// walk to try more than the earliest verb-group occurrence as the
+/// subject/verb split, since the subject's own inner verb group is the one
+/// that occurs first — a different, backtracking algorithm this task does
+/// not build (see `parse_common_with_tail`'s own doc and this campaign's
+/// task report for the reasoning; `windows/book`'s `Subject::Clause`
+/// `unreachable!()` therefore stays accurate).
+///
+/// **The boundary marker discriminates, and the check runs BEFORE the
+/// verb-group split, not after it (the controller finding this task
+/// shipped against).** Common's coordination marker is the fixed word
+/// `"and"` (Task 6); its embedding marker is NO WORD AT ALL (Task 5's drawn
+/// complementizer is a tongue-side feature Common does not spend). So a
+/// body containing a top-level `" and "` names a [`Coordination`], never a
+/// single [`Clause`] — and the earliest-verb-group split would otherwise
+/// land on the FIRST conjunct's own verb, leaving a remainder that, in
+/// general, legitimately CAN contain a real registered complement further
+/// in (a second conjunct that happens to be a plain classification), which
+/// would then recurse successfully and misreport the second conjunct as a
+/// clause embedded under the first conjunct's predicate — plausible
+/// garbage, not a parse. Refusing the instant the marker is seen, before
+/// any split is attempted, closes that hole at both the outermost call and
+/// every recursive one: a [`Coordination`] can never itself be embedded
+/// (`Argument::Clause`/`Subject::Clause` wrap a single [`Clause`], never a
+/// list of them), so the identical check is correct at every depth, not
+/// just depth `0`. **Parsing a [`Coordination`] back out of its own text is
+/// not attempted** — spec §6's own success criterion asks only that
+/// `parse_common` round-trip embedding and DISTINGUISH the two operators by
+/// this marker, not that it recover a `Coordination`; building that
+/// (including inverting tier 2's elided-subject reattribution,
+/// [`elide_coordinated_subjects`]'s own inverse) is out of this task's
+/// scope, named rather than silently absent.
+fn parse_clause_body(
+    body: &str,
+    ctx: &ParseContext,
+    depth: usize,
+) -> Result<(Clause, Vec<String>), ParseError> {
+    if body.contains(" and ") {
+        return Err(ParseError::UnknownComplement {
+            after: body.to_string(),
+        });
+    }
     // Subject | verb group: every construction contributes every surface its
     // verb group can take (a copula form, or its own stem run through
     // `VERB_PARADIGM`), and the sentence is searched for all of them at once.
@@ -1164,10 +1665,74 @@ pub fn parse_common_with_tail(
             }
         }
     }
-    let (complement_concept, number, surface) =
-        best_complement.ok_or_else(|| ParseError::UnknownComplement {
-            after: after_det.to_string(),
-        })?;
+    let (complement_concept, number, surface) = match best_complement {
+        Some(v) => v,
+        // The give-up point widens here (The Mortise, Task 8): before
+        // reporting failure, spend one level of the shared depth budget on
+        // a recursive attempt at the unresolved remainder — the exact
+        // inverse of `realize_common`'s own `Argument::Clause` arm, which
+        // realizes an embedded clause's own full text in this same spot
+        // and trims its trailing period.
+        None => {
+            if depth < CLAUSE_EMBED_MAX_DEPTH {
+                match parse_clause_body(after_det, ctx, depth + 1) {
+                    Ok((inner, _inner_tail)) => {
+                        // No complement surface exists here to disambiguate
+                        // a syncretic verb-group number (past tense shares
+                        // one form across Sg/Pl) the way the non-embedded
+                        // path does below, so the number must be resolved
+                        // some other way or the embedding is refused rather
+                        // than guessed.
+                        if let Some(number) = resolve_embedded_number(&numbers, subject_text) {
+                            // An embedded clause's own text carries no
+                            // determiner (`realize_common`'s `Part::Determiner`
+                            // arm skips `Argument::Clause`/`Argument::Pronoun`
+                            // objects outright), so nothing in the surface
+                            // states the matrix clause's own definiteness —
+                            // the same kind of loss `evidential` already
+                            // documents for every Common clause. `Indef` is
+                            // the same default the bare-plural-generic branch
+                            // above already falls back to when no determiner
+                            // word is found, reused here for the identical
+                            // reason.
+                            return Ok((
+                                Clause {
+                                    predicate: predicate.to_string(),
+                                    subject,
+                                    object: Argument::Clause(Box::new(inner)),
+                                    number,
+                                    definiteness: Definiteness::Indef,
+                                    evidential: Evidential::Witnessed,
+                                    tense,
+                                    polarity,
+                                    adjuncts: Vec::new(),
+                                },
+                                Vec::new(),
+                            ));
+                        }
+                    }
+                    // Propagate the recursive attempt's own `UnknownComplement`
+                    // — it names exactly where the walk actually stopped (at
+                    // the cap, or on an unrecognized complement one level
+                    // down), which is more specific than restating this
+                    // level's own remainder. A `NoVerbGroup` from the
+                    // recursive attempt is a DIFFERENT signal ("this text
+                    // isn't clause-shaped at all") and must not leak upward
+                    // dressed as a complement failure — falling through to
+                    // this level's own `UnknownComplement` below is what
+                    // keeps a plain unresolvable complement (no embedding
+                    // possible at all, e.g. "Vebe is a carriage." against a
+                    // `ParseContext` that only registers "planet") reporting
+                    // the same failure shape it always has.
+                    Err(e @ ParseError::UnknownComplement { .. }) => return Err(e),
+                    Err(_) => {}
+                }
+            }
+            return Err(ParseError::UnknownComplement {
+                after: after_det.to_string(),
+            });
+        }
+    };
     // Adjunct tail: '' or ' m1' or ' m1, m2, …'. The complement filter
     // above only admits candidates whose remainder is empty or starts
     // with ' ', so by construction `tail` is one of exactly those two
@@ -1612,7 +2177,7 @@ mod tests {
         // in one realizer and not the other.
         assert_eq!(
             inv.len(),
-            [IS_A, EAT, KILL]
+            [IS_A, EAT, KILL, KNOW, THINK]
                 .iter()
                 .filter(|p| predicate_valence(p).is_some())
                 .count(),
@@ -1623,6 +2188,12 @@ mod tests {
         // `kill` is the second transitive verb, and the reason it is only a
         // row: it shares `eat`'s part list rather than earning one.
         assert_eq!(predicate_valence(KILL), Some(Valence::Transitive));
+        // `know` (The Mortise, Task 1) is the third: same derivation, same
+        // shared part list, no new construction.
+        assert_eq!(predicate_valence(KNOW), Some(Valence::Transitive));
+        // `think` (The Mortise, Task 2) is the fourth: same derivation,
+        // same shared part list, no new construction.
+        assert_eq!(predicate_valence(THINK), Some(Valence::Transitive));
         assert_eq!(predicate_valence("dwells-in"), None);
     }
 
@@ -1739,6 +2310,250 @@ mod tests {
         assert_eq!(parsed.tense, Tense::Past);
     }
 
+    /// `think` is the epistemic-hedge predicate (m09, *"I think her name
+    /// was Gilda"*). Transitive by the same argument [`KNOW`] is: one
+    /// argument structure with a category-flexible object, so it adds a
+    /// ROW and no new [`Valence`] variant — the same one-row promise
+    /// [`KILL`]'s test above exercises, kept a third time.
+    ///
+    /// This pins only that `think` surfaces as a verb in a simple
+    /// transitive clause; it does not build m09's full embedded-clause
+    /// sentence, which needs clause recursion this task does not add
+    /// (a later task's job).
+    #[test]
+    fn a_hedge_clause_surfaces_think_as_a_verb() {
+        let vocab = CommonVocabulary::default();
+        let clause = |tense, polarity| Clause {
+            predicate: THINK.to_string(),
+            subject: Subject::Name("Nwamvam".to_string()),
+            object: Argument::Concept("person".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense,
+            polarity,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(
+            realize_common(&clause(Tense::Present, Polarity::Pos), &vocab),
+            "Nwamvam thinks the person."
+        );
+        assert_eq!(
+            realize_common(&clause(Tense::Present, Polarity::Neg), &vocab),
+            "Nwamvam does not think the person."
+        );
+        // Backward through the same table, and the predicate comes back.
+        let parsed = parse_common(
+            &realize_common(&clause(Tense::Present, Polarity::Pos), &vocab),
+            &ctx(&["person"]),
+        )
+        .expect("a think clause parses");
+        assert_eq!(parsed.predicate, THINK);
+        assert_eq!(parsed.tense, Tense::Present);
+    }
+
+    /// The campaign's headline sentence: *"I did not know they killed
+    /// them"* — a clause complement, riding the transitive frame `know`
+    /// already had, with NO determiner in front of it. Failing to suppress
+    /// `Part::Determiner` for a clause object is what produces *"I did not
+    /// know a they killed them"*, which is the defect this test is written
+    /// to catch (spec §4.2).
+    #[test]
+    fn a_clause_object_realizes_with_no_determiner() {
+        let vocab = CommonVocabulary::default();
+        let embedded = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let matrix = Clause {
+            predicate: KNOW.to_string(),
+            subject: Subject::Pronoun(Person::First),
+            object: Argument::Clause(Box::new(embedded)),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Neg,
+            adjuncts: Vec::new(),
+        };
+        let out = realize_common(&matrix, &vocab);
+        assert_eq!(out, "I did not know they killed them.");
+        assert!(
+            !out.contains(" a they") && !out.contains(" the they"),
+            "no determiner may precede the embedded clause, got {out:?}"
+        );
+        // Exactly one full stop: the embedded clause's own trailing "." is
+        // trimmed, so the matrix clause's is the only one in the sentence.
+        assert_eq!(out.matches('.').count(), 1);
+    }
+
+    /// A clause in SUBJECT position — *"That he killed her confused me"*. The
+    /// same machinery the object slot uses (`a_clause_object_realizes_with_
+    /// no_determiner`, just above), in a different hole: the embedded
+    /// clause realizes as its own full sentence, trailing period trimmed,
+    /// and slots into `Part::Subject` verbatim — no complementizer, because
+    /// that marker is a tongue-side, drawn strategy (Task 5), not Common's
+    /// to spend. The gerund (*"Seeing it"*) is a nominalization and stays
+    /// out of scope (spec §9.1); this is the complementizer kind.
+    #[test]
+    fn a_clause_subject_realizes_through_the_same_machinery() {
+        let vocab = CommonVocabulary::default();
+        let embedded = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let matrix = Clause {
+            predicate: KNOW.to_string(),
+            subject: Subject::Clause(Box::new(embedded)),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Neg,
+            adjuncts: Vec::new(),
+        };
+        let out = realize_common(&matrix, &vocab);
+        assert_eq!(out, "they killed them did not know them.");
+        // Exactly one full stop, the same invariant the object-slot test
+        // pins: the embedded clause's own trailing "." is trimmed away, so
+        // the matrix clause's is the only one in the sentence.
+        assert_eq!(out.matches('.').count(), 1);
+    }
+
+    /// [`subject_embed_depth`] and [`clause_embed_depth`] read one shared
+    /// budget (Task 4's doc claim, demonstrated): a clause bound to the
+    /// SUBJECT slot, whose own object is itself a clause, goes two deep
+    /// exactly as `a_clause_nested_two_deep_is_refused` does through the
+    /// object slot — and is refused the same way, before either level
+    /// renders.
+    #[test]
+    #[should_panic(expected = "may not itself contain a clause complement")]
+    fn a_clause_subject_nested_two_deep_is_refused() {
+        let vocab = CommonVocabulary::default();
+        let deepest = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let inner = Clause {
+            predicate: KNOW.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Clause(Box::new(deepest)),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Neg,
+            adjuncts: Vec::new(),
+        };
+        let outer = Clause {
+            predicate: KNOW.to_string(),
+            subject: Subject::Clause(Box::new(inner)),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Neg,
+            adjuncts: Vec::new(),
+        };
+        let _ = realize_common(&outer, &vocab);
+    }
+
+    /// The depth cap fires as a panic, the same class as the missing-
+    /// construction panic [`realize_common`]'s own doc names: an authoring
+    /// hole in this repository, never a fact about a people. One level is
+    /// the depth this campaign builds and can show working (spec §4.3); a
+    /// clause complement whose own object is another clause complement goes
+    /// two deep and must be refused before either level renders.
+    #[test]
+    #[should_panic(expected = "may not itself contain a clause complement")]
+    fn a_clause_nested_two_deep_is_refused() {
+        let vocab = CommonVocabulary::default();
+        let deepest = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let middle = Clause {
+            predicate: KNOW.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Clause(Box::new(deepest)),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Neg,
+            adjuncts: Vec::new(),
+        };
+        let outer = Clause {
+            predicate: KNOW.to_string(),
+            subject: Subject::Pronoun(Person::First),
+            object: Argument::Clause(Box::new(middle)),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Neg,
+            adjuncts: Vec::new(),
+        };
+        let _ = realize_common(&outer, &vocab);
+    }
+
+    /// Spec §4.1's adjunct refusal, fired: `Adjunct` holds an `Argument`, so
+    /// an adjunct carrying a clause type-checks, and without an explicit arm
+    /// [`common_role_surface`]'s trailing `_ => None` would render it as
+    /// nothing, silently. This is the test the CONTROLLER FINDING asked for
+    /// — the refusal must be observed, not merely written.
+    #[test]
+    #[should_panic(expected = "adjunct may not carry an embedded clause")]
+    fn an_adjunct_carrying_a_clause_is_refused() {
+        let vocab = CommonVocabulary::default();
+        let embedded = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let adjunct = Adjunct {
+            role: "occ-people".to_string(),
+            argument: Argument::Clause(Box::new(embedded)),
+        };
+        let _ = common_role_surface(&adjunct, &vocab);
+    }
+
     /// [`VERB_PARADIGM`]'s totality, and the one place it is deliberately
     /// NOT injective. `copula_paradigm_is_total_and_unambiguous` asserts
     /// eight distinct forms; this table has eight rows and only **six**
@@ -1847,6 +2662,178 @@ mod tests {
         assert_eq!(spec.number, Number::Pl);
         assert_eq!(spec.definiteness, Definiteness::Indef);
         assert_eq!(tail, Vec::<String>::new());
+    }
+
+    /// An embedded sentence round-trips: realize, parse, and get an equal
+    /// `Clause` back (The Mortise, Task 8). The matrix predicate is
+    /// present-tense so its verb-group form is number-UNIQUE (`"does not
+    /// know"` is the Sg row only; `"do not know"` is Pl) — the embedded
+    /// object leaves no complement surface behind to disambiguate a
+    /// syncretic form the way the non-embedded path does, so this test
+    /// deliberately avoids relying on that second signal
+    /// (`resolve_embedded_number`'s pronoun fallback) to isolate what the
+    /// recursion itself proves.
+    #[test]
+    fn an_embedded_sentence_round_trips() {
+        let vocab = CommonVocabulary::default();
+        let embedded = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Concept("planet".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let matrix = Clause {
+            predicate: KNOW.to_string(),
+            subject: Subject::Pronoun(Person::First),
+            object: Argument::Clause(Box::new(embedded)),
+            number: Number::Sg,
+            // Lost information, not a guess: an embedded-object clause's
+            // text carries no determiner (`realize_common` skips
+            // `Part::Determiner` for `Argument::Clause`), so nothing in the
+            // surface states this feature — the exact same kind of loss
+            // `evidential` already documents for every Common clause.
+            // `Indef` is the parser's documented default, matched here so
+            // the round trip holds.
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Neg,
+            adjuncts: Vec::new(),
+        };
+        let text = realize_common(&matrix, &vocab);
+        let ctx = ctx(&["planet"]);
+        assert_eq!(
+            parse_common(&text, &ctx),
+            Ok(matrix),
+            "round-trip failed for {text:?}"
+        );
+    }
+
+    /// The boundary marker is the discriminator (The Mortise, Task 8): a
+    /// sentence with two verb groups is embedding or coordination, and the
+    /// marker says which. A complementizer means a clause hangs BELOW; a
+    /// conjunction means one sits BESIDE — and for Common, embedding's
+    /// marker is no word at all, so the discriminator is really just the
+    /// conjunction's presence.
+    ///
+    /// The coordination half is not just "some Err comes back" — it proves
+    /// the guard is load-bearing. Without checking for a top-level `" and "`
+    /// BEFORE the verb-group split, this exact sentence would misparse: the
+    /// earliest verb group is "kills" (present tense, Sg-unique, so the
+    /// matrix `number` resolves with no ambiguity at all), leaving "them and
+    /// Vebe is a planet" as an unrecognized remainder, and a NAIVE recursive
+    /// attempt at THAT text would succeed — "is a planet" really is a
+    /// registered complement — recovering a bogus embedded clause whose
+    /// subject is the nonsense text `"them and Vebe"`. The guard refuses the
+    /// whole sentence before any of that runs.
+    #[test]
+    fn the_marker_discriminates_embedding_from_coordination() {
+        let vocab = CommonVocabulary::default();
+        let ctx = ctx(&["planet"]);
+
+        // Embedding: no marker, and it parses. The embedded clause's own
+        // object is a CONCEPT, not a pronoun — `parse_common` cannot
+        // recover `Argument::Pronoun` at all (a separate, out-of-scope
+        // limit, registry row `LANG-parse-cannot-recover-a-pronoun-object`),
+        // so a pronoun-object inner clause would refuse for that unrelated
+        // reason and prove nothing about the marker.
+        let embedded = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Concept("planet".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let matrix = Clause {
+            predicate: KNOW.to_string(),
+            subject: Subject::Pronoun(Person::First),
+            object: Argument::Clause(Box::new(embedded)),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Neg,
+            adjuncts: Vec::new(),
+        };
+        let embedded_text = realize_common(&matrix, &vocab);
+        assert!(
+            !embedded_text.contains(" and "),
+            "Common's embedding marker is no word at all: {embedded_text:?}"
+        );
+        assert!(
+            parse_common(&embedded_text, &ctx).is_ok(),
+            "an unmarked embedding must still parse: {embedded_text:?}"
+        );
+
+        // Coordination: the marker, and it refuses rather than misparsing.
+        let clause_a = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let clause_b = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vebe".to_string()),
+            object: Argument::Concept("planet".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let coord = Coordination {
+            clauses: vec![clause_a, clause_b],
+        };
+        let coord_text = realize_common_coordination(&coord, &vocab);
+        assert!(
+            coord_text.contains(" and "),
+            "Common's coordination marker is the word 'and': {coord_text:?}"
+        );
+        match parse_common(&coord_text, &ctx) {
+            Err(ParseError::UnknownComplement { .. }) => {}
+            other => panic!(
+                "a top-level 'and' must refuse rather than misparse, got {other:?} for {coord_text:?}"
+            ),
+        }
+    }
+
+    /// The depth budget stops the descent rather than recursing forever
+    /// (The Mortise, Task 8): this text is hand-assembled (not realized —
+    /// `realize_common` itself refuses to build genuinely two-deep text,
+    /// same cap, other direction) to need exactly two recursive levels to
+    /// fully resolve, and `CLAUSE_EMBED_MAX_DEPTH` is `1`. The returned
+    /// error's own `after` field is the decisive assertion: it names
+    /// exactly "they is a planet" — the depth-1 call's own unresolved
+    /// remainder — proving the walk stopped BEFORE attempting the depth-2
+    /// recursion that would otherwise have succeeded (`"planet"` is a real,
+    /// registered complement), not that it merely failed for some other
+    /// reason.
+    #[test]
+    fn the_parser_stops_descending_at_the_cap() {
+        let ctx = ctx(&["planet"]);
+        let text = "I does not know they do not know they is a planet.";
+        assert_eq!(
+            parse_common(text, &ctx),
+            Err(ParseError::UnknownComplement {
+                after: "they is a planet".to_string()
+            })
+        );
     }
 
     #[test]
@@ -2030,6 +3017,12 @@ mod tests {
             Subject::Pronoun(_) => "pronoun",
             Subject::Name(n) if n.contains(' ') => "multi-word-name",
             Subject::Name(_) => "single-word-name",
+            // The round-trip enumeration below never generates one (a
+            // clause subject has no parse-side recognizer yet — spec §6
+            // freezes parsing coverage), so this arm exists only to keep
+            // the match exhaustive against `Subject::Clause` (The Mortise,
+            // Task 4).
+            Subject::Clause(_) => "clause",
         }
     }
 
@@ -2412,5 +3405,392 @@ mod tests {
             argument: Argument::Count(1),
         };
         assert_eq!(common_role_surface(&a, &v), None);
+    }
+
+    /// Tier 1 coordination (The Mortise, Task 6, spec §4.10): two FULL
+    /// clauses joined, nothing shared or elided — the gloss is *"It
+    /// confused me and it upset me"*, built here from two predicates the
+    /// crate already has words for (`eat`, `kill`) rather than inventing a
+    /// `confuse`/`upset` pair this campaign does not register. Each clause
+    /// realizes exactly as [`realize_common`] alone would (minus its own
+    /// trailing period), joined by Common's own `"and"`, with exactly one
+    /// trailing period on the whole coordinated utterance.
+    ///
+    /// **The two clauses deliberately have DIFFERENT subjects** (`Nwamvam`
+    /// vs. `Bemvo`) — Task 6's original fixture gave both the same subject
+    /// text, which was harmless before Task 7 landed elision but would now
+    /// silently exercise tier 2 instead of the tier 1 this test names and
+    /// documents. `two_clauses_coordinate_in_common` and
+    /// `a_shared_subject_is_stated_once` are the deliberate pair: same
+    /// subject elides, different subjects do not.
+    #[test]
+    fn two_clauses_coordinate_in_common() {
+        let vocab = CommonVocabulary::default();
+        let first = eat_clause(Tense::Past, Number::Sg, Polarity::Pos);
+        let second = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Name("Bemvo".to_string()),
+            object: Argument::Concept("goblin".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let coord = Coordination {
+            clauses: vec![first.clone(), second.clone()],
+        };
+        let out = realize_common_coordination(&coord, &vocab);
+
+        let mut first_text = realize_common(&first, &vocab);
+        assert!(first_text.ends_with('.'));
+        first_text.pop();
+        let mut second_text = realize_common(&second, &vocab);
+        assert!(second_text.ends_with('.'));
+        second_text.pop();
+        assert_eq!(out, format!("{first_text} and {second_text}."));
+        // Exactly one full stop: each clause's own trailing "." is trimmed
+        // before the join, the same discipline the embedded-clause arms of
+        // `realize_common` already use.
+        assert_eq!(out.matches('.').count(), 1);
+    }
+
+    /// Tier 2 (The Mortise, Task 7, spec §4.10): a shared subject is stated
+    /// once — *"It confused me and upset me"* rather than *"It confused me
+    /// and it upset me"*. Both clauses here share `Subject::Pronoun(Third)`
+    /// at `Number::Sg`, so the second clause's own subject constituent must
+    /// be entirely absent from the output, not merely rendered and matched
+    /// against the first.
+    ///
+    /// **The expected text is derived, not hardcoded**: `common_pronoun`
+    /// is the same function [`realize_common`] itself calls to resolve
+    /// `Subject::Pronoun(Third)`, so this test does not restate a "the
+    /// pronoun is `it`" fact the crate could later change out from under a
+    /// literal string.
+    #[test]
+    fn a_shared_subject_is_stated_once() {
+        let vocab = CommonVocabulary::default();
+        let first = Clause {
+            predicate: EAT.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Concept("bread".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let second = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Concept("goblin".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let coord = Coordination {
+            clauses: vec![first.clone(), second.clone()],
+        };
+        let out = realize_common_coordination(&coord, &vocab);
+
+        let subject_text = common_pronoun(Person::Third, Number::Sg, PronounCase::Nominative);
+        let mut first_text = realize_common(&first, &vocab);
+        assert!(first_text.ends_with('.'));
+        first_text.pop();
+
+        let mut second_full = realize_common(&second, &vocab);
+        assert!(second_full.ends_with('.'));
+        second_full.pop();
+        let prefix = format!("{subject_text} ");
+        assert!(
+            second_full.starts_with(&prefix),
+            "sanity: realize_common alone states the subject: {second_full:?}"
+        );
+        let second_without_subject = second_full
+            .strip_prefix(&prefix)
+            .expect("checked above with starts_with");
+
+        assert_eq!(out, format!("{first_text} and {second_without_subject}."));
+        // The first clause states the subject once; the second states it
+        // zero times — exactly one occurrence total, never two.
+        assert_eq!(
+            out.split_whitespace()
+                .filter(|word| *word == subject_text)
+                .count(),
+            1,
+            "a shared subject must surface exactly once: {out:?}"
+        );
+    }
+
+    /// Tier 3 — right-node raising, sharing the OBJECT as well as the
+    /// subject (*"It confused and upset me"*) — is CUT from this campaign
+    /// (spec §9.1, The Mortise Task 7) and this test is the assertion that
+    /// keeps that cut from being silently un-cut: a later campaign that
+    /// wants tier 3 has to come here and change this test on purpose.
+    ///
+    /// Two clauses share an object concept (`"goblin"`) but have DIFFERENT
+    /// subjects, so tier 2 does not fire and cannot be confused with tier 3
+    /// here — this isolates object-sharing from subject-sharing. Both
+    /// clauses' own resolved complement word must appear in the output,
+    /// once per clause: raising it once, the way tier 3 would, is exactly
+    /// what must NOT happen.
+    #[test]
+    fn a_shared_object_is_not_raised() {
+        let vocab = CommonVocabulary::default();
+        let first = Clause {
+            predicate: EAT.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Concept("goblin".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let second = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Name("Bemvo".to_string()),
+            object: Argument::Concept("goblin".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_ne!(
+            first.subject, second.subject,
+            "sanity: this test isolates object-sharing, so the subjects \
+             must differ (tier 2 must not fire here)"
+        );
+        let coord = Coordination {
+            clauses: vec![first, second],
+        };
+        let out = realize_common_coordination(&coord, &vocab);
+
+        let complement_word = surface_complement(&vocab, "goblin", Number::Sg);
+        let occurrences = out
+            .split_whitespace()
+            .filter(|word| word.trim_end_matches('.') == complement_word)
+            .count();
+        assert_eq!(
+            occurrences, 2,
+            "tier 3 (right-node raising) is CUT: the shared object must be \
+             stated on EACH verb, never raised to a single mention: {out:?}"
+        );
+    }
+
+    /// Fix round 1, Task 7: the reviewer's own discriminator. The negative
+    /// test above deliberately isolates object-sharing from subject-sharing
+    /// by giving its two clauses DIFFERENT subjects — which means a
+    /// plausible tier-3 implementation gated on `elide && object equal`
+    /// (the reviewer's own probe) never even runs its mutated branch there,
+    /// so that test alone cannot tell tier 3 apart from tier 2 working
+    /// correctly. This test closes that gap: the two clauses here share
+    /// BOTH the subject (so tier 2 correctly elides) AND the object concept
+    /// (so tier 3 must still NOT raise it) — the exact shape of the brief's
+    /// own tier-3 example, *"It confused and upset me"*.
+    #[test]
+    fn a_shared_object_is_not_raised_even_when_the_subject_also_elides() {
+        let vocab = CommonVocabulary::default();
+        let first = Clause {
+            predicate: EAT.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Concept("goblin".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let second = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Pronoun(Person::Third), // SAME subject: tier 2 must elide
+            object: Argument::Concept("goblin".to_string()), // SAME object: tier 3 must NOT raise
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(
+            first.subject, second.subject,
+            "sanity: this test needs elision to fire, unlike the isolated \
+             object-sharing test above"
+        );
+        let coord = Coordination {
+            clauses: vec![first, second],
+        };
+        let out = realize_common_coordination(&coord, &vocab);
+
+        let subject_text = common_pronoun(Person::Third, Number::Sg, PronounCase::Nominative);
+        let complement_word = surface_complement(&vocab, "goblin", Number::Sg);
+        let subject_occurrences = out
+            .split_whitespace()
+            .filter(|word| word.trim_end_matches('.') == subject_text)
+            .count();
+        let object_occurrences = out
+            .split_whitespace()
+            .filter(|word| word.trim_end_matches('.') == complement_word)
+            .count();
+
+        assert_eq!(
+            subject_occurrences, 1,
+            "the shared subject must still elide on this pair: {out:?}"
+        );
+        assert_eq!(
+            object_occurrences, 2,
+            "tier 3 stays cut even on the exact pair whose subject tier 2 \
+             elides -- a plausible tier-3 implementation gated on \
+             `elide && object equal` fires HERE and only here: {out:?}"
+        );
+    }
+
+    /// Fix round 1, Task 7: the reviewer's own probe, run directly against
+    /// [`elide_coordinated_subjects`]. `[X, Y, X]` (`Pronoun(Third)`,
+    /// `Name("Bemvo")`, `Pronoun(Third)` again) is the shape that
+    /// discriminates "compare to the first clause" (which wrongly elides
+    /// clause 2, index 2) from "compare to the last STATED subject" (which
+    /// correctly does not, since clause 1's `Name("Bemvo")` is the visible
+    /// antecedent immediately before it).
+    #[test]
+    fn elide_coordinated_subjects_compares_to_the_last_stated_not_the_first() {
+        let x = Subject::Pronoun(Person::Third);
+        let y = Subject::Name("Bemvo".to_string());
+        let clause_with = |subject: Subject| Clause {
+            predicate: EAT.to_string(),
+            subject,
+            object: Argument::Concept("bread".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let clauses = vec![clause_with(x.clone()), clause_with(y), clause_with(x)];
+        assert_eq!(
+            elide_coordinated_subjects(&clauses),
+            vec![false, false, false],
+            "clause 0 always states; clause 1 (Y) differs from clause 0's \
+             last-stated X, so it states too; clause 2 (X) differs from \
+             clause 1's last-stated Y, so it must ALSO state -- eliding it \
+             here would misattribute the missing subject to clause 1's Y"
+        );
+    }
+
+    /// The successor case the reviewer's ruling worked by hand: `[X, X, Y,
+    /// X]` should elide clause 1 (matches clause 0's stated X), state
+    /// clause 2 (Y, no match), then state clause 3 again (X does not match
+    /// the last-stated Y) -- "compare to the first clause" would have
+    /// elided clause 3 too, since it matches clause 0.
+    #[test]
+    fn elide_coordinated_subjects_restates_after_an_intervening_different_subject() {
+        let x = Subject::Pronoun(Person::Third);
+        let y = Subject::Name("Bemvo".to_string());
+        let clause_with = |subject: Subject| Clause {
+            predicate: EAT.to_string(),
+            subject,
+            object: Argument::Concept("bread".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let clauses = vec![
+            clause_with(x.clone()),
+            clause_with(x.clone()),
+            clause_with(y),
+            clause_with(x),
+        ];
+        assert_eq!(
+            elide_coordinated_subjects(&clauses),
+            vec![false, true, false, false]
+        );
+    }
+
+    /// The integration-level twin of the two `elide_coordinated_subjects`
+    /// unit tests above, run through the public
+    /// [`realize_common_coordination`] entry point -- proof the discriminator
+    /// is reachable through the type the brief flagged as unguarded
+    /// (`Coordination.clauses` is a `Vec` with no cap beyond `len() >= 2`).
+    /// `[X, Y, X]`: clause 2 must restate its own subject text, not be
+    /// silently absent the way comparing only to clause 0 would produce.
+    #[test]
+    fn a_third_clause_matching_only_the_first_clause_states_its_own_subject() {
+        let vocab = CommonVocabulary::default();
+        let first = Clause {
+            predicate: EAT.to_string(),
+            subject: Subject::Pronoun(Person::Third),
+            object: Argument::Concept("bread".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let second = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Name("Bemvo".to_string()),
+            object: Argument::Concept("goblin".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let third = Clause {
+            predicate: KNOW.to_string(),
+            subject: Subject::Pronoun(Person::Third), // matches FIRST, not SECOND
+            object: Argument::Concept("goblin".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let coord = Coordination {
+            clauses: vec![first, second, third],
+        };
+        let out = realize_common_coordination(&coord, &vocab);
+
+        let subject_text = common_pronoun(Person::Third, Number::Sg, PronounCase::Nominative);
+        let occurrences = out
+            .split_whitespace()
+            .filter(|word| word.trim_end_matches('.') == subject_text)
+            .count();
+        assert_eq!(
+            occurrences, 2,
+            "clause 0 and clause 2 must BOTH state the pronoun subject: \
+             clause 2's visible antecedent is clause 1's Name(\"Bemvo\"), \
+             not clause 0, so it may not elide: {out:?}"
+        );
+    }
+
+    /// A coordination of fewer than two clauses states a contradiction in
+    /// its own name — nothing to coordinate — and both realizers refuse it
+    /// by panic rather than silently degrading to a bare clause.
+    #[test]
+    #[should_panic(expected = "at least two clauses")]
+    fn a_coordination_of_one_clause_panics() {
+        let vocab = CommonVocabulary::default();
+        let only = eat_clause(Tense::Present, Number::Sg, Polarity::Pos);
+        let coord = Coordination {
+            clauses: vec![only],
+        };
+        let _ = realize_common_coordination(&coord, &vocab);
     }
 }

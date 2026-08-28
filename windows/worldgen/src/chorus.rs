@@ -1732,7 +1732,7 @@ const CRISIS_MISS_RUN: usize = 2;
 pub fn observations_from(
     world: &World,
     species: &str,
-    at: hornvale_astronomy::StdDays,
+    at: hornvale_astronomy::StdInstant,
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &hornvale_climate::GeneratedClimate,
 ) -> Result<Observations, BuildError> {
@@ -1743,7 +1743,7 @@ pub fn observations_from(
         ));
     };
     let params = account_params_from(world, species, terrain, climate)?;
-    let from = hornvale_astronomy::StdDays::new(0.0).expect("0.0 is always a valid StdDays");
+    let from = hornvale_astronomy::StdInstant::new(0.0).expect("0.0 is always a valid StdInstant");
 
     let events = hornvale_astronomy::eclipse_events(sky.system(), sky.calendar(), from, at)
         .into_iter()
@@ -1897,7 +1897,7 @@ fn class_days(observations: &Observations, key: (usize, u8)) -> Vec<f64> {
 pub fn ladder_from(
     world: &World,
     species: &str,
-    at: hornvale_astronomy::StdDays,
+    at: hornvale_astronomy::StdInstant,
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &hornvale_climate::GeneratedClimate,
 ) -> Result<(LadderRung, Option<f64>), BuildError> {
@@ -1952,7 +1952,7 @@ pub fn ladder_from(
 pub fn crisis_from(
     world: &World,
     species: &str,
-    at: hornvale_astronomy::StdDays,
+    at: hornvale_astronomy::StdInstant,
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &hornvale_climate::GeneratedClimate,
 ) -> Result<Option<PredictionCrisis>, BuildError> {

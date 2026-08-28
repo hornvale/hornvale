@@ -1,7 +1,7 @@
 # The Foliot — finishing the redenomination The Escapement began
 
-**Campaign:** The Foliot · **Date:** 2026-08-26 · **Status:** approved 2026-08-26;
-stage 1 revised in execution (see its note)
+**Campaign:** The Foliot · **Date:** 2026-08-26 · **Status:** COMPLETE — all four stages merged or submitted
+(2026-08-27). Stage 1 was revised in execution; see its note.
 
 The Escapement retyped the kernel's instant to an exact signed tick count
 (decisions 0186, 0188). Five surfaces below the kernel never followed. This

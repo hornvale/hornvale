@@ -14,7 +14,7 @@
 //! hardcoded `0.0` reddens this the moment the real altitude (day 0.32, a
 //! seed-42 world) is anything else, which it is: nowhere near the horizon.
 
-use hornvale_astronomy::StdDays;
+use hornvale_astronomy::StdInstant;
 use hornvale_kernel::World;
 use std::process::Command;
 
@@ -85,7 +85,7 @@ fn colour_lens_declares_the_altitude_the_light_was_actually_built_from() {
         .expect("a generated sky always has a calendar");
     let expected_altitude = calendar
         .solar_altitude_at(
-            StdDays::new(DAY).expect("day 0.32 is a valid StdDays"),
+            StdInstant::new(DAY).expect("day 0.32 is a valid StdDays"),
             latitude,
         )
         .expect("a non-locked world always has a solar altitude");

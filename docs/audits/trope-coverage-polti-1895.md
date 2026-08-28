@@ -110,7 +110,7 @@ that is the difference.
 
 ## Supply
 
-325 registered tokens no situation in this corpus requires.
+326 registered tokens no situation in this corpus requires.
 
 **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires
 *and no readout consumes*; the second half is not implemented. So this list
@@ -304,6 +304,7 @@ missing half before this list can serve it.
 - `concept:temperate-forest` (climate)
 - `concept:temperate-grassland` (climate)
 - `concept:temperate-rainforest` (climate)
+- `concept:think` (language)
 - `concept:thorn-scrub` (climate)
 - `concept:tide` (astronomy)
 - `concept:treant-kind` (species)

@@ -136,6 +136,50 @@ and it drew the mesh's adjacency faithfully, but it was lattice-aligned — the
 page's top was whatever direction the base face happened to point — and it
 could not place a seam cell at all.
 
+### The polar projection is observer-relative, and composing it with an absolute frame takes a step
+
+`bearing_deg`/`distance_rad` place a cell **relative to the observer**, which
+is what makes the chart north-up and seam-safe. A consumer drawing this packet
+onto a world-frame raster — a Mercator tile grid, say — therefore cannot use
+those offsets directly: a raster addresses *absolute* tiles reached by flooring
+a projected coordinate, so the offsets must be turned back into absolute
+coordinates first, and doing that needs the observer's position *within* its own
+tile — the sub-tile phase.
+
+**The schema carries what that step needs.** `observer` states the centre's
+centroid `latitude`/`longitude` (see the address section above), and
+`bearing_deg`/`distance_rad` are centroid-to-centroid great-circle quantities.
+Observer centroid plus bearing plus distance is the spherical **direct
+problem**: each cell's absolute latitude and longitude follows from it exactly,
+and the sub-tile phase with it. Quantization is no obstacle either, though it
+is coarser than "eight digits" sounds: the digits are **significant**, not
+decimal, so absolute precision falls as a coordinate's magnitude rises. A
+latitude near the equator keeps seven decimals (~1 cm of ground); one near the
+±85° clamp keeps six (~11 cm); a longitude of magnitude ~145 keeps only five,
+putting ~1.1 m between storable values — **sub-metre rounding at worst**,
+against a facet roughly 1.87 km across.
+
+Skipping that step is what costs, and the cost is not theoretical. Swept across
+200 sub-tile phases on a fixture observer, converting the polar offsets to
+floored tiles *without* first reconstructing absolute coordinates misplaced at
+worst **24 of 31 marks**, mean 11.5, with only 2 of the 200 phases exact
+([The Quadrat](../chronicle/the-quadrat.md)). That number measures the shortcut,
+not the schema.
+
+The packet also carries an exact absolute address outright — every cell's
+`room`, a packed facet id — which needs no trigonometry but does need the mesh
+to unpack. So there are two routes into the world's frame and each asks for
+something: the direct problem asks for spherical trigonometry the consumer
+writes itself; `room` asks for a dependency on the simulation. A consumer with
+neither can still render this document faithfully in its **own** frame.
+Hornvale's own client takes the second route, because it already holds the mesh:
+it draws the overlay in the crate that can reach it, projecting through the same
+projection the raster uses
+([decision 0290](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0290-the-perception-layer-is-drawn-where-the-mesh-is-reachable.md)).
+Its chart crate takes neither — that crate's parsed mirror of this document
+omits the `observer` block, so the direct problem is not available to it as
+written, and it has no mesh.
+
 ## Seam cells: real ground, and now a place for it
 
 The lattice is face-local. Two rooms on *different* base icosahedron faces

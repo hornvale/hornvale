@@ -1816,6 +1816,12 @@
         "kind": "Terrain",
         "doc": "a biome class"
       },
+      "think": {
+        "name": "think",
+        "domain": "language",
+        "kind": "Act",
+        "doc": "to hold an uncertain belief"
+      },
       "thorn-scrub": {
         "name": "thorn-scrub",
         "domain": "climate",

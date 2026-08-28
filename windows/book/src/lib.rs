@@ -708,7 +708,7 @@ fn reckoning_epochs_from(
     ]
     .into_iter()
     .map(|(heading, day, margin_phrase)| {
-        let at = hornvale_astronomy::StdDays::new(day).unwrap_or_else(|e| {
+        let at = hornvale_astronomy::StdInstant::new(day).unwrap_or_else(|e| {
             panic!("the Reckoning's preregistered epoch day {day} must be a valid StdDays: {e}")
         });
         reckoning_epoch(
@@ -746,7 +746,7 @@ fn reckoning_epochs_from(
 // Named construction site (decision 0092): this entry wrapper sculpts/fits
 // once, then delegates to `reckoning_at_from`.
 #[allow(clippy::disallowed_methods)]
-pub fn reckoning_at(world: &World, at: hornvale_astronomy::StdDays) -> ReckoningEpoch {
+pub fn reckoning_at(world: &World, at: hornvale_astronomy::StdInstant) -> ReckoningEpoch {
     let terrain = hornvale_worldgen::terrain_of(world)
         .unwrap_or_else(|e| panic!("the Reckoning section requires a derivable terrain: {e}"));
     let climate = hornvale_worldgen::climate_from(world, &terrain)
@@ -760,7 +760,7 @@ pub fn reckoning_at(world: &World, at: hornvale_astronomy::StdDays) -> Reckoning
 /// wants many `--at` lenses over one world) can share it here instead.
 pub fn reckoning_at_from(
     world: &World,
-    at: hornvale_astronomy::StdDays,
+    at: hornvale_astronomy::StdInstant,
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &hornvale_climate::GeneratedClimate,
 ) -> ReckoningEpoch {
@@ -790,13 +790,13 @@ pub fn reckoning_at_from(
 /// zero short-circuits [`reckoning_epoch`] straight to the empty arm
 /// before it ever calls `observations_from`/`ladder_from` (both of which
 /// themselves require a Generated sky).
-fn true_event_count(world: &World, at: hornvale_astronomy::StdDays) -> usize {
+fn true_event_count(world: &World, at: hornvale_astronomy::StdInstant) -> usize {
     let sky = hornvale_worldgen::sky_of(world)
         .unwrap_or_else(|e| panic!("the Reckoning section requires a derivable sky: {e}"));
     match sky {
         hornvale_worldgen::Sky::Generated(sky) => {
             let from =
-                hornvale_astronomy::StdDays::new(0.0).expect("0.0 is always a valid StdDays");
+                hornvale_astronomy::StdInstant::new(0.0).expect("0.0 is always a valid StdInstant");
             hornvale_astronomy::eclipse_events(sky.system(), sky.calendar(), from, at).len()
         }
         hornvale_worldgen::Sky::Constant(_) => 0,
@@ -839,7 +839,7 @@ fn reckoning_epoch(
     world: &World,
     autonyms: &BTreeMap<String, String>,
     heading: &str,
-    at: hornvale_astronomy::StdDays,
+    at: hornvale_astronomy::StdInstant,
     margin_phrase: &str,
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &hornvale_climate::GeneratedClimate,
@@ -2354,13 +2354,40 @@ pub fn parse_line(line: &str, ctx: &ParseContext) -> Result<ParsedLine, LineErro
         Subject::Pronoun(person) => {
             common_pronoun(*person, clause.number, PronounCase::Nominative).to_string()
         }
+        // `parse_common_with_tail` still has no clause-SUBJECT recognizer as
+        // of The Mortise Task 8, which taught it to recover a clause-OBJECT
+        // (`Argument::Clause`, below) but deliberately not this slot: the
+        // walk's subject/verb split already commits to the EARLIEST
+        // verb-group occurrence, and for a subject-embedded clause that
+        // earliest occurrence is the INNER clause's own verb, not the
+        // matrix one — recovering it needs the walk to try more than one
+        // split candidate (a backtracking search), a different and larger
+        // change than extending the give-up point the object slot already
+        // had. So this arm still can never fire. Added for exhaustiveness
+        // against `Subject::Clause`, the same posture the `Argument::Clause`
+        // arm a few lines below now takes for its own slot.
+        Subject::Clause(_) => {
+            unreachable!("parse_common_with_tail never recovers a clause-embedded subject")
+        }
     };
     // The clause layer already recovered the singular concept id: it matched
     // the text against each candidate id's realized surface, so the plural
     // `'s'` was undone by the same rule that added it. No suffix-stripping
     // closed-world assumption survives here.
+    //
+    // `parse_common`/`parse_common_with_tail` CAN now return an
+    // `Argument::Clause` object (The Mortise, Task 8) — the claim in this
+    // arm's message is no longer true of the function in general. It stays
+    // unreachable for THIS window specifically because every line this
+    // window ever hands to `parse_line` comes from its own generated
+    // classification prose (`rerender`, a few lines down, always builds an
+    // `is-a` clause with an `Argument::Concept` object) or a hand-written
+    // test fixture in the same shape — nothing here ever constructs or
+    // feeds a KNOW/THINK-shaped clause-complement sentence.
     let Argument::Concept(kind) = clause.object.clone() else {
-        unreachable!("parse_common only ever recovers a concept object")
+        unreachable!(
+            "parse_line only ever receives an is-a classification line, whose object is always a concept"
+        )
     };
 
     Ok(ParsedLine {
@@ -3559,6 +3586,222 @@ mod tests {
             "readout_of must panic loudly on an Explained-grounded disposition rather than \
              silently return Evidential::Inferred"
         );
+    }
+
+    /// The Mortise, Task 10 (spec §4.9): **this window declares clause
+    /// embedding and coordination deliberately unwired**, checked rather
+    /// than left as prose (the failure `LANG-in-character-acts-are-
+    /// unspeakable` records: three tasks each shipped an inert concept
+    /// without anyone writing down who was supposed to wire it, and nothing
+    /// caught the drift).
+    ///
+    /// Every one of this module's PRODUCTION `Clause`-construction sites
+    /// (the same `production` slice [`the_readout_law`] scans, plus all
+    /// three `realize_tongue_deep` call sites) states a GOD'S-EYE OR EMIC/ETIC
+    /// CLASSIFICATION fact — `predicate: hornvale_kernel::world::IS_A`,
+    /// `object: Argument::Concept(...)` — read straight off a committed
+    /// `is-a`/`instance-of` ledger fact. Nothing in this window's data model
+    /// HOLDS a belief about another clause: `Evidential::Taught` already
+    /// carries doctrine's "this is what is taught" distinction as a
+    /// FEATURE on the very same is-a clause (the adjacency this task was
+    /// warned about, spec §8) — a matrix `THINK`/`KNOW` wrapper around it
+    /// would double-encode the same fact through two unrelated mechanisms,
+    /// exactly the "caller invented to justify a capability" shape the task
+    /// brief warns against, and the two stay orthogonal on purpose (no
+    /// amendment to the readout law above is sanctioned by the spec).
+    /// `windows/almanac`'s own `Speaker` doc records the same shape of
+    /// finding independently: a phenomenon has no subject for a
+    /// clause-level realizer to take at all.
+    ///
+    /// `KNOW`/`THINK` are not even imported into this module: their only
+    /// callers today are `domains/language`'s own tests and the merchant
+    /// corpus witness (`cli/tests/suite/sentence_corpus.rs`), which is a
+    /// TEST-side fixture, not a production caller. `Coordination` is the
+    /// same story. `Subject::Clause` appears exactly once in this file's
+    /// production code, as an exhaustiveness match arm in `parse_line` that
+    /// stays `unreachable!()` (documented in place) — never as a
+    /// constructed value; `Argument::Clause` appears only in that same
+    /// arm's neighboring doc comments, never as code.
+    ///
+    /// This is a finding, not an oversight: every `Clause`-construction call
+    /// site in this module was read for this task, looking for where the
+    /// book already says something that is genuinely one clause inside
+    /// another or two clauses joined — not where one could be forced in.
+    /// None does. If a future campaign gives a people or a character a
+    /// belief distinct from what it perceives, or narrates two committed
+    /// facts as one coordinated sentence, THIS is where that caller goes —
+    /// and this test must be UPDATED, not deleted, the day that happens
+    /// (the same STALE-DECL discipline `seam-guard`'s
+    /// `expect(survives: …)` uses).
+    #[test]
+    fn the_mortise_declares_no_construction_site_embeds_or_coordinates() {
+        let source = include_str!("lib.rs");
+        let production = source
+            .split("#[cfg(test)]\nmod tests {\n")
+            .next()
+            .expect("this module's own `mod tests` boundary must exist");
+
+        assert!(
+            !constructs_variant(production, "Subject::Clause"),
+            "the Task 10 inertness declaration is stale: a production site now \
+             constructs a clause-embedded SUBJECT — update this test's doc, \
+             don't delete it"
+        );
+        assert!(
+            !constructs_variant(production, "Argument::Clause"),
+            "the Task 10 inertness declaration is stale: a production site now \
+             constructs a clause-embedded OBJECT — update this test's doc, \
+             don't delete it"
+        );
+        assert!(
+            !contains_bare_identifier(production, "Coordination"),
+            "the Task 10 inertness declaration is stale: a production site now \
+             constructs a Coordination — update this test's doc, don't \
+             delete it"
+        );
+        assert!(
+            !production.contains("realize_common_coordination(")
+                && !production.contains("realize_tongue_deep_coordination("),
+            "the Task 10 inertness declaration is stale: a production site now \
+             realizes a coordinated utterance — update this test's doc, \
+             don't delete it"
+        );
+        assert!(
+            !contains_bare_identifier(production, "KNOW")
+                && !contains_bare_identifier(production, "THINK"),
+            "the Task 10 inertness declaration is stale: a production site now \
+             constructs a KNOW/THINK matrix clause — update this test's doc, \
+             don't delete it"
+        );
+    }
+
+    /// Whether `needle` (a bare `SCREAMING_SNAKE` identifier, e.g. `"KNOW"`)
+    /// appears as a whole-word TOKEN on any non-comment line of `text`.
+    ///
+    /// This closes a hole Task 10's own review found (The Mortise, Task 11):
+    /// the guard above used to check the literal substring `"predicate:
+    /// KNOW"`, which an ordinary fully-qualified reference —
+    /// `hornvale_language::packs::KNOW` — evades without evading the actual
+    /// construction it names. Tokenizing on non-identifier characters and
+    /// comparing whole tokens catches the qualified path form too, at the
+    /// cost of also catching a token inside CODE that merely happens to be
+    /// named `KNOW` — which does not exist in this module today, and is the
+    /// correct failure direction for a novelty guard (a false alarm is
+    /// cheap; a silent miss is the thing this test exists to prevent).
+    ///
+    /// A line whose trimmed start is `//` (an ordinary comment, a `///` doc
+    /// comment, or a `//!` module comment) is skipped, not scanned: this
+    /// function's own doc comment mentions `KNOW`/`THINK` in prose, and nothing
+    /// about the scanning rule should have to keep such mentions out of the
+    /// tree to stay green.
+    fn contains_bare_identifier(text: &str, needle: &str) -> bool {
+        text.lines().any(|line| {
+            if line.trim_start().starts_with("//") {
+                return false;
+            }
+            let mut token = String::new();
+            let mut hit = false;
+            for ch in line.chars() {
+                if ch.is_alphanumeric() || ch == '_' {
+                    token.push(ch);
+                } else {
+                    if token == needle {
+                        hit = true;
+                    }
+                    token.clear();
+                }
+            }
+            if token == needle {
+                hit = true;
+            }
+            hit
+        })
+    }
+
+    /// Whether `text` constructs the tuple-variant `path` (e.g.
+    /// `"Argument::Clause"`, a `::`-joined pair of bare identifiers) as a
+    /// VALUE on any non-comment line — as opposed to matching it as a
+    /// PATTERN in a match arm.
+    ///
+    /// Closes a second hole in the guard above, found in the same review
+    /// (The Mortise, the fix-wave after Task 11): the original check was
+    /// the literal compound substring `"object: Argument::Clause("`, which
+    /// coupled the construction to being inlined directly into a field's
+    /// literal. A site that BINDS first —
+    ///
+    /// ```text
+    /// let embedded = Argument::Clause(Box::new(inner));
+    /// let self_statement = Clause { ..., object: embedded, ... };
+    /// ```
+    ///
+    /// — never contains that substring, so it passed the old guard
+    /// silently. This instead looks for `path` as a whole token (using the
+    /// same non-identifier-boundary rule [`contains_bare_identifier`]
+    /// uses, so `MyArgument::Clause` or `Argument::ClauseWrapper` cannot
+    /// match) wherever it appears on the line, which catches the bound form
+    /// too.
+    ///
+    /// One shape is deliberately excluded, because it is a real, documented
+    /// site and not a construction: this module's own
+    /// `Subject::Clause(_) => { unreachable!(...) }` exhaustiveness match
+    /// arm (Task 8). A bare tuple-variant followed by `(...)` and then `=>`
+    /// is unambiguously a PATTERN — an expression can never occupy that
+    /// position — so a `=>` immediately after the variant's own closing
+    /// paren marks a pattern and is skipped; anything else (including no
+    /// trailing `(...)` at all, or a construction spanning past the end of
+    /// the line) counts as a hit. Per this test suite's own stated
+    /// direction, a false alarm here is cheap and a silent miss is the
+    /// thing this function exists to prevent, so every ambiguous case
+    /// resolves toward "hit".
+    fn constructs_variant(text: &str, path: &str) -> bool {
+        text.lines().any(|line| {
+            if line.trim_start().starts_with("//") {
+                return false;
+            }
+            let bytes = line.as_bytes();
+            let is_ident_byte = |b: u8| (b as char).is_alphanumeric() || b == b'_';
+            let mut search_from = 0usize;
+            while let Some(rel) = line[search_from..].find(path) {
+                let start = search_from + rel;
+                let end = start + path.len();
+                let boundary_before = start == 0 || !is_ident_byte(bytes[start - 1]);
+                let boundary_after = end >= bytes.len() || !is_ident_byte(bytes[end]);
+                if boundary_before && boundary_after {
+                    let rest = line[end..].trim_start();
+                    match rest.strip_prefix('(') {
+                        None => return true,
+                        Some(after_open) => {
+                            let mut depth = 1i32;
+                            let mut close = None;
+                            for (i, ch) in after_open.char_indices() {
+                                match ch {
+                                    '(' => depth += 1,
+                                    ')' => {
+                                        depth -= 1;
+                                        if depth == 0 {
+                                            close = Some(i);
+                                            break;
+                                        }
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            match close {
+                                None => return true,
+                                Some(i) => {
+                                    let after_close = after_open[i + 1..].trim_start();
+                                    if !after_close.starts_with("=>") {
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                search_from = end;
+            }
+            false
+        })
     }
 
     /// C7 T3's shallow-identity guarantee (plan G4): for every species T2
@@ -5973,7 +6216,7 @@ mod tests {
         let world = generated(1);
         let pair = render_volume(&world).reckoning;
 
-        let day0 = reckoning_at(&world, hornvale_astronomy::StdDays::new(0.0).unwrap());
+        let day0 = reckoning_at(&world, hornvale_astronomy::StdInstant::new(0.0).unwrap());
         assert_eq!(
             day0.lines, pair[0].lines,
             "day 0 matches the fixed pair's empty arm"
@@ -5985,7 +6228,7 @@ mod tests {
 
         let day100 = reckoning_at(
             &world,
-            hornvale_astronomy::StdDays::new(RECKONING_EPOCH_2_DAY).unwrap(),
+            hornvale_astronomy::StdInstant::new(RECKONING_EPOCH_2_DAY).unwrap(),
         );
         assert_eq!(
             day100.lines, pair[1].lines,
@@ -6016,7 +6259,10 @@ mod tests {
              lines are unaffected by the lens (they carry no epoch phrase)"
         );
 
-        let mid = reckoning_at(&world, hornvale_astronomy::StdDays::new(20_000.0).unwrap());
+        let mid = reckoning_at(
+            &world,
+            hornvale_astronomy::StdInstant::new(20_000.0).unwrap(),
+        );
         assert!(
             !mid.heading.is_empty() && !mid.lines.is_empty(),
             "an arbitrary day renders: heading={:?} lines={:?}",
@@ -6630,7 +6876,7 @@ mod tests {
         let world = generated(2);
         let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
         let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
-        let at = hornvale_astronomy::StdDays::new(RECKONING_EPOCH_2_DAY).unwrap();
+        let at = hornvale_astronomy::StdInstant::new(RECKONING_EPOCH_2_DAY).unwrap();
         assert_eq!(true_event_count(&world, at), 81);
 
         for kind in ["bugbear", "kobold"] {
@@ -6675,7 +6921,7 @@ mod tests {
         let seed3 = generated(3);
         let terrain3 = hornvale_worldgen::terrain_of(&seed3).expect("terrain reconstructs");
         let climate3 = hornvale_worldgen::climate_from(&seed3, &terrain3).expect("climate derives");
-        let at3 = hornvale_astronomy::StdDays::new(RECKONING_EPOCH_2_DAY).unwrap();
+        let at3 = hornvale_astronomy::StdInstant::new(RECKONING_EPOCH_2_DAY).unwrap();
         assert_eq!(true_event_count(&seed3, at3), 53);
         for kind in ["goblin", "hobgoblin"] {
             let (rung, _) =

@@ -477,6 +477,24 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
     // (§3.3): it forfeits the short-form priority its core-ness would
     // otherwise buy, and takes whatever the probe walk leaves.
     &["kill"],
+    // Epoch 14 — The Mortise (2026-08-27), Task 2: `think`, the
+    // epistemic-hedge predicate (m09, "I think her name was Gilda") and the
+    // campaign's third transitive predicate. A single-concept cohort,
+    // appended per this module's absolute rule rather than seated in cohort
+    // 0 beside the other universal-stratum acts — which is where it
+    // linguistically belongs and where placing it would re-sort the
+    // baseline every later cohort is defined not to disturb.
+    //
+    // **Same reason `kill` (epoch 13) sorts last rather than beside `die`.**
+    // `think` joins `packs::universal_stratum`, so it too is a CORE concept
+    // every tongue lexicalizes, and a naive insertion would move a word in
+    // every language in the world. At epoch 14 it sorts strictly last in
+    // `etymology::assign_proto_roots_with_epoch`'s walk (epoch, then
+    // core-first, then concept-id), after `kill`, so it draws after every
+    // existing concept — including `kill` itself — and displaces none. It
+    // pays the same ordinary Accession trade (§3.3) `kill` did: it forfeits
+    // the short-form priority its core-ness would otherwise buy.
+    &["think"],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or

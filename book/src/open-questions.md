@@ -205,6 +205,89 @@ claim attached to it survives every reading**, and this one survived being
 written down, emphasised, and dispatched; what caught it was somebody asking
 what the check could possibly have failed on.
 
+**The Mortise (2026-08-27) does not move the score, and the finding worth
+leading with is about the *derivation*, not the check it was meant to settle.**
+How many `TongueGrammar {` construction sites the crate carries was asked
+three times inside one task: the controller said 25, the implementer said 21,
+and a reviewer recounted and said 22 — with its subtraction shown. The
+controller recorded 22 as authoritative *because it came with working
+attached*, and the working was wrong. Re-derived directly against the tree,
+`git grep -c 'TongueGrammar {'` returns 25 raw hits; one is the type's own
+`pub struct TongueGrammar {` definition and three are `-> TongueGrammar {`
+return-signature false positives, leaving 21 — the implementer's number. The
+reviewer's own subtraction had undercounted the signature false positives by
+one, and nothing re-ran it before the wrong figure was written into a
+permanent retrospective as the corrected version of this campaign's own
+thesis, where it stood until a later whole-branch review caught it. **Showing
+your working makes a claim checkable, not checked** — a derivation is
+unaudited text exactly like the number it supports, and this chapter's own
+readers proved measurably more willing to accept a wrong figure that arrived
+with arithmetic attached than one that did not. The practice built above —
+make it fail on command, run the positive control, verify the mechanism
+rather than the account of it — gains a clause here: point it at the check
+*of* a claim as readily as at the claim.
+
+The same campaign is a fifth confirming instance of the diagnosis The Scarf
+named as a fourth: every substantive defect originated in the controlling
+session's own plan or brief text, and none in the code an implementer wrote.
+Five defects trace to text written before a line of implementation existed —
+an addition instruction naming a placement that does not exist in the target
+file, a consumer grep scoped to one crate that missed a match site in
+another, the count above, a `make rebaseline` step that cannot see a
+byte-golden it needed to, and a realizer edit aimed at a file that
+structurally cannot hold the elision it was asked to carry — and each died to
+a command run against the tree, never to a re-read.
+
+A whole-branch review, run after eleven scoped task reviews had already
+passed clean, found three more guards that read as evidence and proved less
+than they claimed, on the shape this chapter's floor already names. `m09` was
+credited with realizing an epistemic hedge on a witness that exercised the
+hedge only as a lexical fact, which the same file's own doctrine states is
+never sufficient for that credit. The spec's own inertness guard — a scan
+meant to keep a shipped-but-unwired capability visible rather than silent,
+required wherever a campaign declares a corner deliberately unused — matched
+only the compound string `"predicate: KNOW"`, so a production site that bound
+the value first (`let embedded = Argument::Clause(...)`, a shape the
+surrounding code already uses) passed the guard silently while the
+campaign's own ledger had just recorded that exact marker as "not
+defeatable." And both new drawn axes — the subordinator, the conjunction —
+were unobserved on `realize_tongue_deep`, the one function production
+actually calls: two mutations survived the entire suite because the
+deep-realizer's own tests supplied the drawn marker and then asserted on
+something else entirely. All three were found the way this chapter asks —
+neutralise it and watch, not read it and trust.
+
+A fourth finding is this chapter's own subject arriving one layer up.
+`the_baseline_assignment_accuracy_is_pinned` — the one test that would have
+caught the pin movement in the paragraph below — sat red on the branch for nine
+tasks, invisible through eleven scoped reviews and a green `gate-commit`
+every time, because `docs/timings/subfloor-roster.tsv` listed its insensitive
+sibling (a roster-size check, unmoved at eighteen) from the same module and
+not the sensitive test itself. `gate-commit` compiled the crate, ran the
+wrong test, and printed green; `subfloor_roster_coverage.rs` was satisfied
+because the crate carried *an* entry, which is all it checks. This is not a
+check whose predicate is wrong — the predicate fires reliably on the test it
+is pointed at — it is the wrong check running under the right name, one layer
+above where this chapter's instances have so far sat. The review found the
+shape recurs twenty-four times repository-wide; nearly all are legitimate,
+tests that build worlds and sit deliberately above the sub-floor with the
+stage gate covering them, so the number is a scope for the next campaign's
+registry row, not a tally of two dozen live defects.
+
+One finding belongs to the world rather than to process, and it cost this
+campaign a wrong number of its own before a second review caught it.
+Registering `think` moved the Burr assignment-accuracy pin, and the obvious
+decomposition — fifteen new correct rows, all of them `think` itself — was
+wrong: `think` classifies correctly in thirteen of eighteen tongues, and the
+remaining net two is eight *pre-existing* words re-classifying, five gained
+and three lost, because adding one word to every daughter's lexicon shifts
+the trigram profile the classifier reads for every word already in it. The
+Inquest's own entry in that file asserted a subset property for its own
+registration — that adding a word moves nothing else. For The Mortise that
+property is false: a registration additive in what the lexicon *holds* need
+not be additive in what a statistic over it *sees*, and the two are different
+claims that happen to share a byte-golden.
+
 **A note from The Staff (2026-08-14), amended by The Sluice (2026-08-15),
 since this score is read against an instrument this passage names by a label
 that no longer exists.** Both halves of Sexton's pairing — the census
@@ -1859,6 +1942,57 @@ latitude. That is not a defect any parity check can convert, because both sides
 are behaving correctly; it is the tiling declining to represent a continuous
 curve. A checkable contract can require that every offered destination exists.
 It cannot require that the ground be able to go there straight.
+
+**Re-scored by [The Quadrat](./chronicle/the-quadrat.md) (2026-08-27): the
+comparison instrument this row converted was measured unavailable on a second
+surface — and the campaign's first statement of *why* was wrong, which is part
+of the re-score rather than a footnote to it.** The Quire's contribution here
+was to turn "does the picture state the document's geometry" from taste into a
+byte comparison against the sim's own renderer of the same thirty-one facets.
+The Quadrat set out to move that pin — reprojecting the perception packet onto a
+square raster on both sides so the comparison survived the change — and did not.
+The packet describes each perceived facet as a *relative polar offset*; a raster
+addresses *absolute* tiles reached by flooring a projected coordinate; and
+converting one to the other requires the observer's position *within* its own
+tile. Reprojecting without reconstructing that, swept over 200 sub-tile phases:
+at worst 24 of 31 marks misplaced, mean 11.5, and only 2 of the 200 phases
+exact. The agreement test that was supposed to guard the change could only have
+passed by being weakened to "within one tile" — that is, by asserting the
+defect.
+
+**The campaign then wrote that the wire does not carry that phase, and the wire
+does.** The observer block states the centre's own centroid latitude and
+longitude, and the offsets are centroid-to-centroid great-circle quantities, so
+the spherical direct problem recovers every facet's absolute coordinate exactly.
+Quantization does not stand in the way either, and stating that accurately
+matters here of all places: the eight digits are *significant*, not decimal, so
+a latitude near the equator keeps a centimetre of ground while a longitude of
+large magnitude keeps only sub-metre rounding — against a facet 1.87 km across.
+What the render crate lacks is narrower and entirely its own: its parsed mirror
+of the document drops the observer block, and the simulation offers no inverse
+of the bearing-and-distance construction for it to call. The sweep measures the
+shortcut, not the contract.
+
+That makes the resolution the interesting part rather than the obstacle. The
+layer moved to the client crate that already holds the mesh, where each facet's
+own absolute address — `room`, a packed identifier the packet carries outright —
+needs no trigonometry at all, and the two pictures now agree **by construction**,
+one projection called from both sides, rather than by two computations being
+compared after the fact.
+
+The bet is unharmed and its scope is now stated more exactly, in the corrected
+form. A document may be complete and still ask real work of a consumer that
+wants to place it in the world's frame: either spherical trigonometry the
+consumer writes itself, or a dependency on the simulation to read the exact
+address. A zero-dependency renderer remains the strongest available evidence
+that a contract is renderable, and what this campaign found is the shape of the
+work such a renderer must do for anything the document expresses in the
+observer's frame rather than the world's. Whether that work should be removed
+(by putting an absolute coordinate on the wire beside the relative one) or left
+where it is (as the ordinary price of an observer-relative projection) is not
+settled here; the campaign records that agreeing by construction is strictly
+better than agreeing by comparison wherever one projection can serve both sides,
+which is a stronger form of the instrument this row already carries.
 
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than

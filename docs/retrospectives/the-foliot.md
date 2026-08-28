@@ -1,9 +1,8 @@
 # The Foliot — retrospective
 
-**In progress.** Stage 1 is complete; stages 2–4 (the `StdDays` instant/duration
-split, the negative-time sweep, climate and scene) are not started. Written
-incrementally because `.superpowers/sdd/` is git-ignored and dies with the
-worktree.
+All four stages complete. Written incrementally rather than at the end,
+because `.superpowers/sdd/` is git-ignored and dies with the worktree — the
+stage-1 half was committed before stage 2 began.
 
 Process lessons, not product. The product is decision
 [0316](../decisions/0316-a-local-day-is-a-whole-number-of-ticks.md).
@@ -105,32 +104,191 @@ vessel snapshot, and six affect-trace values at exactly 1e-8.
 - A domain's tests may not reach `hornvale_worldgen`; the probe had to build
   through astronomy's own `generate`.
 
-## Two of my own verification habits failed in the same way
+## The same failure shape, five times, in my own verification
 
-Both were checking a cheaper neighbour of the real question, and both looked
-obviously correct:
+Stage 1's headline was that the campaign's claims were wrong three times. The
+rest of the campaign kept producing the *same* shape, and it is worth naming
+as one pattern rather than five incidents: **every time, I checked a cheaper
+neighbour of the real question, and the check looked obviously correct.**
 
-- **Pairing diff output with `paste - -`** zips a two-line hunk's `<` lines
-  together, pairing *before* with *before*. It reported an arousal value moving
-  0.638→0.739 (16%) when both ticks had moved by 1e-8 on their own lines. Nearly
-  rejected a legitimate golden. **Compare per-line, not per-hunk.**
-- **A monitor filtering the queue with `grep "$REQ"`** matched the *superseded*
-  row, because that row's status text contains the new request's ID. Reported a
-  false terminal state. Exact field match (`awk '$2 == r'`) fixed it.
+| what I ran | what it actually answered |
+|---|---|
+| `paste - -` on diff output | zipped a two-line hunk's `<` lines together, pairing *before* with *before* — reported an arousal value moving 16% when both ticks had moved by 1e-8 |
+| `grep "$REQ"` on the queue | matched the *superseded* row, whose status text contains the new request's id — reported a false terminal state |
+| `grep CONFLICT` on `git merge` | swallowed an "Aborting" error, so a merge that never ran looked like a merge with no conflicts |
+| re-deriving climate's phase formula | three attempts from outside, each nearly right; reading the source took one |
+| the type-audit report drift | ran `gate-commit` *before* `rebaseline`, twice, and read the resulting red as new information |
 
-## Merge friction, stated because it is structural rather than bad luck
+None of these was a hard problem. Each was a filter or a shortcut standing in
+for the thing I wanted to know. The cost was small every time and the fix was
+always the same: **run the thing that answers the actual question**, which was
+usually one command away and often cheaper than the substitute.
 
-Two mouth refusals, both on `docs/audits/type-audit-report.md`. It is a
-whole-repo aggregate and this branch changes public signatures, so it drifts on
-our side whenever it drifts on main's — which is every campaign touching a
-`pub` boundary. Main moved 38 commits, then 27 more, within hours.
+## A guard in the plan is worth more than diligence at the keyboard
 
-The refusals are cheap by design (milliseconds, box never taken); the cost is
-round trips, and it compounds with branch age. Generated aggregates are
-resolved by **regeneration, never text-merge**. Separately, and more quietly: a
-byte golden auto-merged *cleanly* on the second absorb, which is the case the
-board warns can be silently wrong. It was correct — verified rather than
-assumed.
+The single most valuable line in this campaign was written before any code:
+Task 1.1 existed to prove Task 1.2's premise, and carried an explicit *if the
+witness list is empty, STOP*.
+
+It fired. Nothing else would have — the wrong fix compiled, and the tests it
+would have broken were goldens that a rebaseline would have quietly accepted.
+
+The same shape paid twice more. Task 2.5's branch table ("no caller reaches
+it / a caller can / the trace is inconclusive") meant the clamp decision was
+made against a traced answer instead of a guess, which matters because 0190
+exists precisely where a confident trace of that question was wrong before.
+And Task 3.1 was deliberately sequenced *before* the clamp removal, which is
+the only reason the `year_phase` defect was found before shipping rather
+than after.
+
+**Generalise it:** when a task exists to REMOVE something, give the preceding
+task the job of proving the thing is there, and give it a stop condition. A
+fix task cannot audit its own premise.
+
+## Success criteria are worth re-reading at the end, not just at the start
+
+Stage 4 was scoped to the two climate methods the spec's follow-up named. The
+plan's success criterion was broader — *no* climate or scene entry point takes
+a bare float day — and checking it by counting rather than by recollection
+found two more, `weather_at` and `cloud_type_at`.
+
+That was not pedantry. `weather_at` is the exact function whose raw unclamped
+day produced the sky/weather incoherence found in Task 2.5, and retyping it
+turned that fix from incidental into structural: the two halves of a sky
+report now share a type, so a future clamp on either side cannot be silent.
+
+A criterion phrased as an absolute ("no X remains") is checkable by counting
+and should be counted. A criterion phrased as a list of edits is not.
+
+## What the type system was hiding
+
+Worth recording as a category, because it is not obvious in advance: the
+`StdDays` conflation was not only producing wrong answers, it was **making a
+question unaskable**.
+
+Seventeen `Calendar` methods had never been exercised at negative time from
+outside the crate, and could not be — the constructor refused the input. The
+one existing test reached past the constructor from within. So the status quo
+was neither tested-and-correct nor known-broken; it was *unknown*, and the
+type was what made it so. Asked for the first time, it answered in seconds:
+`year_phase(-100_000)` = −0.49.
+
+A type that forecloses a legal input hides whatever lies behind it, and the
+hiding is invisible: nothing fails, no coverage tool reports a gap, and the
+absent test looks like an absent need.
+
+## Two judgement calls a reader should be able to find
+
+Both are places where something got weaker and I would rather they were
+visible than buried in a diff.
+
+- **Scene's zero-phase test moved from bit-equality to a 1e-6 tolerance.** It
+  asserted `grid == t_mean_c + diurnal` exactly, which held only because the
+  probe could sit precisely on the zero-phase day. On the tick lattice that
+  instant is not representable; the phase is ~1e-9 and the seasonal term it
+  produces is ~1.6e-9. The structural claim survives; the exactness does not.
+- **One climate call site now rounds** — `surface_mixture`'s probe day is an
+  arbitrary fraction of a year, so landing it on the lattice moves the sample
+  by up to half a tick. Named at the site rather than absorbed. Every other
+  climate call site in the tree was byte-neutral.
+
+## Deferred, each with a home
+
+- `TOOL-liveness-accumulates-f64-days` — the real defect, with the reverted
+  attempt and the 75-tick ordering inversion that stopped it.
+- `TOOL-hold-step-progress-lost-to-round-to-nearest` — strict progress does
+  not survive `from_std_days`'s round-to-nearest.
+- `TOOL-worktree-take-does-not-guard-a-used-campaign-name` — built a branch
+  over a completed campaign's remote and warned about neither.
+- `TOOL-rebaseline-parallel-job-can-truncate-an-artifact` — a generator
+  losing the cargo build lock left a generated page 249 lines short, reported
+  only as "a parallel job failed".
+- `SubstrateField::at` still takes a bare float day: the same defect one layer
+  along, named in the code at the call site rather than silently converted.
+
+Follow-ups 1, 3, 4 and 5 of The Escapement needed no rows: they shipped.
+Follow-up 3 in particular was *resolved rather than answered* — it asked what
+wave-2 verdict the scene floats should get, and v2 deleted the floats.
+
+## Merge friction, measured
+
+Four absorptions of main across the campaign, roughly a hundred commits.
+`docs/audits/type-audit-report.md` conflicted on most of them, structurally:
+it is a whole-repo aggregate and this branch changed public signatures, so it
+drifts on our side whenever it drifts on anyone's. Two mouth refusals, both
+cheap by design (milliseconds, box never taken) — the cost is round trips,
+and it compounds with branch age.
+
+Landing stage 1 mid-campaign was the right call for exactly that reason. The
+argument was not tidiness: it was that a self-contained, gated unit carried
+through three more stages pays the absorption toll three more times.
+
+One quiet case worth keeping: a byte golden **auto-merged cleanly** on the
+second absorb, which the board warns can be silently wrong. It was correct —
+verified rather than assumed. But on the same absorb, The Coercion's two new
+call sites used a field this campaign had renamed, git merged them without
+conflict, and the result did not compile. A clean merge is not a correct one,
+in compiling code as much as in generated artifacts.
+
+## The census deadlock, and a fix that arrived from outside
+
+The census could not land, and the reason was structural rather than a
+mistake in the run: `pre-commit`'s golden-pins guard triggers on the census
+fixture itself, so a refresh that moves a pinned value can never self-commit.
+Worse, the failure was invisible — the delivery script did not check `git
+commit`'s exit code, so it reported `rc=0` and "DELIVERED" over an empty
+branch.
+
+Another session fixed it while this campaign was diagnosing it, and its
+commit message opens by citing this run. Two things worth carrying:
+
+- The third defect it names — the census worktree ran the *censused ref's*
+  hooks rather than the queue's, because `core.hooksPath` is relative — would
+  have defeated the manual workaround I was about to attempt. Diagnosing a
+  deadlock is not the same as knowing all of its causes.
+- The operator later **held** a re-run rather than spending 17 minutes
+  reproducing byte-identical goldens, and was right. I verified the claim
+  (no census-determining code had changed) rather than taking it on trust,
+  which took one command.
+
+## Seven calibration pins, and only three announced themselves
+
+The census refresh moved seven pins. `census-check` reported four; running
+the lab suite surfaced three more; and of the homophony test's four
+sequential assertions **only the first was reported**, because `assert_eq!`
+aborts and masks the rest — the shape that cost the-granary one chamber run
+per hidden assertion.
+
+Reading all four out of the new census with a single query took one command
+and replaced four ~17-minute round trips. When a test carries several pins
+against one derived quantity, re-measure all of them in one pass; the
+reporter can only ever name the first.
+
+## A green commit gate is not a green crate
+
+The merge went red in the chamber on a test I had never run. `gate-commit`
+executes the **sub-floor tier only** — a deliberately cheap filter — and
+`an_eclipse_carries_an_exact_tick_alongside_its_quantized_day` is not in that
+roster. I ran `hornvale-scene`'s full suite after Task 4.1, then made a
+*larger* change (the v2 schema) and verified it with `gate-commit` and
+`make world-check` alone.
+
+The failure is not that I skipped a check; it is that I let a passing check
+stand in for a different one — the same shape as this campaign's other five,
+one level up. A sub-floor pass says the obvious breakage is absent. It says
+nothing about the crate whose public schema I had just rewritten.
+
+The test itself was correct to fail: it is The Escapement's, and it pins the
+property v2 reverses (schema still v1, the float still present, a tick added
+*beside* it). It had to invert with the schema, and its replacement now
+asserts the **absence** of the old fields — the load-bearing half, since a
+test that only checked the tick fields exist would pass just as happily with
+the floats left behind.
+
+**Rule:** after changing a crate, run that crate's own suite before the gate,
+not instead of it. Re-run across all eight touched crates afterwards: 26
+suites, 0 failures — which is the check that should have preceded the first
+submission.
 
 ## Cost and process notes
 

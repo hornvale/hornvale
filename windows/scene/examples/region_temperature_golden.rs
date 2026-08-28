@@ -5,6 +5,7 @@
 //! Mirrors the provenance recorded in the golden's header. Run:
 //!   cargo run -p hornvale-scene --example region_temperature_golden
 use hornvale_kernel::Seed;
+use hornvale_kernel::WorldTime;
 use hornvale_scene::{SceneContext, temperature_grid_region_in};
 use hornvale_worldgen::{SkyChoice, build_world};
 
@@ -35,8 +36,17 @@ fn main() {
     println!("# Regenerate: cargo run -p hornvale-scene --example region_temperature_golden");
     println!("# columns: node_index,day,temperature_c");
     for &day in DAYS {
-        let grid = temperature_grid_region_in(&world, &ctx, 0, 3, 4, 4, 16, day)
-            .expect("region grid builds");
+        let grid = temperature_grid_region_in(
+            &world,
+            &ctx,
+            0,
+            3,
+            4,
+            4,
+            16,
+            WorldTime::from_std_days(day).expect("finite"),
+        )
+        .expect("region grid builds");
         for &node in NODES {
             println!("{},{},{}", node, day, grid[node]);
         }

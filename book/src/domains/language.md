@@ -480,6 +480,24 @@ positive is zero, and each tongue marks or ignores both according to a
 grammaticalization depth it had already drawn and nothing had ever read.
 See [The Inquest](../chronicle/the-inquest.md).
 
+And since The Mortise, a clause can hold another clause. `Argument::Clause`
+and `Subject::Clause` let an argument or a subject slot carry a full nested
+clause one level deep — *"I don't know why he killed her"* is a `know`-clause
+whose object is itself a `Clause` — riding the predicate's existing
+transitive frame rather than a new sentential valence, so `know` and `think`
+gain a category-flexible object and nothing about `Clause`'s own shape
+changes at any of its sixty-one existing construction sites. A sibling
+`Coordination` node sits *above* the type entirely — a list of clauses, not a
+new kind of clause — so two clauses can stand side by side without a single
+existing realizer call changing either. Both operators share only a boundary
+marker, each drawn per tongue on the copula's own presence-and-form pattern
+and each admitting a genuine zero-marker outcome, and the parser leans on
+that shared discipline to tell them apart: a coordination's own marker is
+checked before any embedding attempt is tried, at every recursion depth, so
+the two can never be misread into each other. The nesting itself stops at one
+level, stated as the depth this campaign built and tested rather than argued
+as a safety limit. See [The Mortise](../chronicle/the-mortise.md).
+
 **The full model card.** The articulation-vector table above types the
 species' *envelope* — six authored capacities per people. Everything this
 domain builds *from* that envelope sorts into the same four kinds

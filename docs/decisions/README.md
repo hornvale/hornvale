@@ -225,8 +225,22 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0261](0261-a-rule-duplicated-on-purpose-carries-a-two-way-agreement-test.md) | A rule duplicated on purpose carries a pointer in both copies and a two-way agreement test | Accepted |
 | [0266](0266-an-utterance-is-a-fact.md) | An utterance is a fact, an event is an entity, and roles are predicates on that entity | Accepted |
 | [0286](0286-each-realizer-ignores-part-of-the-clause.md) | A language-neutral clause states more than any one realizer surfaces | Accepted |
+| [0287](0287-a-zoom-rung-is-a-mesh-depth.md) | A zoom rung is a mesh depth | Accepted |
+| [0288](0288-fog-of-war-is-band-as-alone.md) | Bands B through E share one epistemic model; fog of war is band A's alone | Accepted |
+| [0289](0289-the-map-is-layers-with-distinct-cache-keys.md) | The map is layers with distinct cache keys, and terrain never shares an invalidation key with discovery | Accepted |
+| [0290](0290-the-perception-layer-is-drawn-where-the-mesh-is-reachable.md) | The perception layer is drawn where the mesh is reachable | Accepted |
+| [0291](0291-the-point-under-the-cursor-is-invariant-across-a-zoom-step.md) | The geographic point under the cursor is invariant across a zoom step | Accepted |
+| [0292](0292-centre-on-arrival-anchor-on-gesture.md) | Centre on arrival, anchor on gesture | Accepted |
+| [0293](0293-a-rung-is-a-property-of-consulting-the-map.md) | A rung is a property of consulting the map, not of the walker | Accepted |
+| [0294](0294-a-mode-gesture-is-not-a-fetch.md) | A mode gesture is not a fetch | Accepted |
+| [0295](0295-pre-formatted-sim-output-survives-the-prose-pane.md) | Pre-formatted sim output survives the prose pane | Accepted |
 | [0296](0296-tense-is-stated-never-derived.md) | Tense is stated, never derived — a clause has no clock | Accepted |
 | [0297](0297-a-predicates-valence-is-stated-once-and-commons-parts-are-selected-from-it.md) | A predicate's valence is stated once, and Common's parts are selected from it | Accepted |
 | [0306](0306-a-hosts-cooperation-is-derived-from-doctrine-and-conduct-never-authored.md) | A host's cooperation is derived from doctrine and conduct, never authored | Accepted |
 | [0307](0307-a-deliberate-falsehood-is-a-distinct-testimony-variant-from-a-lexical-substitution.md) | A deliberate falsehood is a distinct testimony variant from a lexical substitution | Accepted |
 | [0308](0308-prior-and-fold-are-stored-separately-their-disagreement-is-the-output.md) | Prior and fold are stored separately; their disagreement is the output | Accepted |
+| [0326](0326-a-clause-complement-rides-the-transitive-frame-no-sentential-valence.md) | A clause complement rides the transitive frame — no `Valence::Sentential` | Accepted |
+| [0327](0327-embedding-and-coordination-are-two-operators-a-slot-and-a-list.md) | Embedding and coordination are two operators — a slot and a list | Accepted |
+| [0328](0328-embedding-nests-one-level-a-cap-on-demonstrated-depth.md) | Embedding nests one level — a cap on demonstrated depth, not a safety belt | Accepted |
+| [0329](0329-subordination-strategy-and-conjunction-are-drawn-per-tongue.md) | Subordination strategy and conjunction are drawn per tongue, not assumed | Accepted |
+| [0330](0330-the-corpus-score-is-demonstrated-not-declared.md) | The corpus score is demonstrated, not declared | Accepted |

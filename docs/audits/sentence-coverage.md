@@ -9,8 +9,8 @@ Read the **distance** table below the tally, not only the headline count. Covera
 ## the-merchant
 
 - Total entries: 12
-- Covered: 2
-- Not yet: 10
+- Covered: 5
+- Not yet: 7
 
 ### Per-entry
 
@@ -21,10 +21,10 @@ Read the **distance** table below the tally, not only the headline count. Covera
 | m03 | player | What happened last night? | wh-question, temporal-adverbial | not yet |
 | m04 | merchant | Last night, there was a death in the marketplace. | existential, past-tense, temporal-adverbial | not yet |
 | m05 | merchant | A guard killed a woman. | transitive-frame, past-tense | covered |
-| m06 | merchant | I don't know why he killed her. | negation, embedded-clause, pronoun-reference, epistemic-hedge | not yet |
-| m07 | merchant | Seeing it confused and upset me. | coordination, embedded-clause, pronoun-reference | not yet |
+| m06 | merchant | I don't know why he killed her. | negation, embedded-clause, pronoun-reference, epistemic-hedge | covered |
+| m07 | merchant | Seeing it confused and upset me. | coordination, embedded-clause, pronoun-reference | covered |
 | m08 | player | Did you know the woman? | polar-question, past-tense | not yet |
-| m09 | merchant | I think her name was Gilda. | epistemic-hedge, past-tense, pronoun-reference | not yet |
+| m09 | merchant | I think her name was Gilda. | epistemic-hedge, past-tense, pronoun-reference | covered |
 | m10 | merchant | I didn't know her. | negation, past-tense, pronoun-reference | covered |
 | m11 | player | Did anyone else see this? | polar-question, witness-set | not yet |
 | m12 | merchant | Stewie, Frank, Donkey Dick Doug, and 'The Big Bopper' were there. | named-entity-list, witness-set, past-tense | not yet |
@@ -34,9 +34,9 @@ Read the **distance** table below the tally, not only the headline count. Covera
 | demand | entries | implemented? |
 |---|---|---|
 | classify | 0 | yes |
-| coordination | 1 | no |
-| embedded-clause | 2 | no |
-| epistemic-hedge | 2 | no |
+| coordination | 1 | yes |
+| embedded-clause | 2 | yes |
+| epistemic-hedge | 2 | yes |
 | existential | 1 | no |
 | named-entity-list | 1 | no |
 | negation | 2 | yes |
@@ -54,6 +54,6 @@ How many demands each entry is SHORT. Distance 0 is the covered set above. **Dis
 
 | distance | entries | which |
 |---|---|---|
-| 0 | 2 | m05; m10 |
-| 1 | 4 | m01 (wh-question); m02 (temporal-adverbial); m08 (polar-question); m09 (epistemic-hedge) |
-| 2 | 6 | m03 (wh-question + temporal-adverbial); m04 (existential + temporal-adverbial); m06 (embedded-clause + epistemic-hedge); m07 (coordination + embedded-clause); m11 (polar-question + witness-set); m12 (named-entity-list + witness-set) |
+| 0 | 5 | m05; m06; m07; m09; m10 |
+| 1 | 3 | m01 (wh-question); m02 (temporal-adverbial); m08 (polar-question) |
+| 2 | 4 | m03 (wh-question + temporal-adverbial); m04 (existential + temporal-adverbial); m11 (polar-question + witness-set); m12 (named-entity-list + witness-set) |
