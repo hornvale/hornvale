@@ -4,6 +4,7 @@
 //! The Walk).
 
 pub mod action;
+pub mod affordance;
 mod agent;
 pub mod body;
 pub mod brief;

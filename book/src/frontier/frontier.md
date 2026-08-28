@@ -3473,6 +3473,25 @@ the NPC planners of Milestone 2 without a second system, because they were the s
 system all along. Downstream of MAP-19's ontology; it is the place the player
 finally touches the world.
 
+**The first instance landed, and it is smaller and stranger than "open, take,
+burn."** The Offer (2026-08-27) shipped the property-gated query on the one
+object-like thing the tree actually has — the derived *anchor* inside a room —
+with five properties (supports-rest, holds-liquid, affords-passage, encloses,
+radiates-heat) over fourteen anchor kinds, and five verbs gated by
+required-property subset. M+N is proved in both directions at once, which
+matters because either direction alone is satisfiable by the very table the
+economy exists to exclude. Three things the essay above assumes are *not* there
+yet, and each is load-bearing for the next rung. **Effects are absent**: a verb
+reads properties and never transforms them, so the animacy axis — the sharp part
+of this essay, a mutable property that selects its own sub-language — has no
+instance at all. **Properties are kind-level**, so two chests are
+indistinguishable and "this one is locked" is inexpressible by construction, not
+by omission. And **nothing is committed**: the offer is derived at the moment it
+is asked, which is what let the campaign ship without touching the catch-up
+replay that a committed precondition would break. The essay's claim that the
+player's verb loop and NPC planning are one system is therefore still a claim:
+the query has two dispatchers reading it and no planner.
+
 ---
 
 ## Emotion as appraisal — the affective readout of the gap

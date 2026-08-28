@@ -2143,6 +2143,35 @@ Hand, above) was, for the first time, actually driven by two different
 controllers in the same measured walk, and the divergence was there to find
 once someone looked.
 
+[The Offer](./chronicle/the-offer.md) pushes the same thread one step further
+and supplies this chapter's largest single count of the failure. Arc IV.a
+shipped with **seven** checks that could not have failed: two asserting
+properties true of any implementation whatever (a subset relation over a
+`filter` re-proves an invariant of `filter`, not of the predicate inside it),
+one source scanner whose pattern could not match the only syntax anyone would
+ever write, two entire specified features with no reachable firing case, and
+two production paths held by no assertion at all. The distribution is the part
+worth recording rather than the total. **Every one originated in the planning
+prose, not in the implementation**, which is the third campaign running to
+report that shape; and **not one was found by reading** — each died to a
+command someone ran, five of them to a mutation that neutralised the code under
+test and left the suite green. Two of the seven were caught before any code
+existed, by a grep and by a sixty-combination census run during pre-dispatch
+verification, which is the cheapest place this chapter has yet seen one caught.
+
+The remedy the campaign adopted mid-flight is the transferable half, and it
+sharpens The Millrace's "the discipline is mutation, not review" into something
+a plan can be written against: **specify a regression test by the mutation it
+must fail, never by the property it should assert.** A property can be asserted
+vacuously; a mutation cannot be failed vacuously. The campaign then found the
+rule's own failure mode on the last page — a reviewer's illustrative mutation
+that was itself non-discriminating, because the two anchor kinds it swapped
+between are perfectly co-located in every room the grammar composes, so the
+substitution changes nothing observable. It was caught by running it. **A
+mutation is evidence only if something establishes it could have moved the
+result**, which is the same clause this chapter already carries about a
+column's stable value, arriving one level down.
+
 [The Mire](./chronicle/the-mire.md) exercised the same discipline on a bet
 about weather and world structure that no earlier chapter entry had staked,
 and it too came back **no** — a double falsification rather than a single

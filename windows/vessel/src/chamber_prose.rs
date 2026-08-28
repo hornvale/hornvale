@@ -5,7 +5,7 @@
 //! chamber gets its own prose built from what the chamber actually holds.
 
 use crate::brief::Brief;
-use crate::interior::{AnchorKind, Interior};
+use crate::interior::{AnchorId, AnchorKind, Interior};
 
 /// The noun for an anchor kind, as prose says it. `Ground` has no noun: it is
 /// the chamber's own floor, not a thing standing in it.
@@ -71,6 +71,56 @@ pub(crate) fn detail(kind: AnchorKind) -> &'static str {
         AnchorKind::Anvil => "A block of iron on a sunk stump, bright where the work lands.",
         AnchorKind::Altar => "A low stone table, worn hollow at the centre and darkly stained.",
     }
+}
+
+/// The nouns of every anchor lying directly `within` `id` (spec §3.6's
+/// `Ntpp`), in the interior's own deterministic anchor order — a plain read
+/// of [`crate::interior::Anchor::within`], not a derivation.
+fn nouns_within(interior: &Interior, id: AnchorId) -> Vec<&'static str> {
+    interior
+        .ids()
+        .into_iter()
+        .filter(|&other| interior.anchor(other).within == Some(id))
+        .filter_map(|other| noun(interior.anchor(other).kind))
+        .collect()
+}
+
+/// `examine`'s answer for the anchor `id` (The Offer, Task 6, spec §3.6,
+/// amended): [`detail`]'s sentence, plus what lies within it when `kind`
+/// carries [`crate::affordance::ObjectProperty::Encloses`] — the
+/// interactive-fiction rule that contents show when a container is open or
+/// transparent. IV.a has no closed state to gate on (there is no way to
+/// close anything), so every `Encloses` carrier reveals unconditionally;
+/// what stays silent is a carrier with nothing `within` it, never the
+/// property itself.
+///
+/// **Gated on `Encloses`, not merely on `within` being non-empty.** An
+/// anchor kind that does not advertise `encloses` must stay silent even if
+/// something happened to sit `within` it — otherwise this would degrade
+/// into "reveal whatever `Interior` composed" rather than "reveal what the
+/// property promises". Nothing in today's grammar ever attaches anything
+/// within a non-`Encloses` kind (the only authored `Attach::Within` in the
+/// whole pattern inventory is the fire within the alcove), so this gate is
+/// unreachable from production data — exactly why
+/// `a_non_enclosing_anchor_never_reports_contents_even_if_something_sits_
+/// within_it` below builds one by hand.
+pub(crate) fn examine_detail(interior: &Interior, id: AnchorId) -> String {
+    let kind = interior.anchor(id).kind;
+    let base = detail(kind);
+    if !crate::affordance::encloses(kind) {
+        return base.to_string();
+    }
+    let contents = nouns_within(interior, id);
+    if contents.is_empty() {
+        return base.to_string();
+    }
+    let (last, rest) = contents.split_last().expect("checked non-empty above");
+    let listed = if rest.is_empty() {
+        (*last).to_string()
+    } else {
+        format!("{} and {}", rest.join(", "), last)
+    };
+    format!("{base} Within it: {listed}.")
 }
 
 /// What a closer look at a drawn WALL gives you.
@@ -363,5 +413,143 @@ mod tests {
         let wild = Brief::from_parts(None, None, None, None, 0, false, true);
         assert_ne!(describe_chamber(&i, &brief()), describe_chamber(&i, &wild));
         assert!(describe_chamber(&i, &wild).contains("hollow"));
+    }
+
+    // --- Task 6: `encloses`, revealed on `examine` (spec §3.6, amended) ---
+
+    /// The real case Task 6's census found: `the-fire`'s only authored
+    /// `Attach::Within` target is `the-alcove`, and it is the sole `within`
+    /// relation the whole grammar ever produces (`{(Hearth, Alcove)}` across
+    /// all 60 production gate combinations, `task-6-report.md`). Examining
+    /// the alcove must name the hearth.
+    ///
+    /// Mutation this must catch: return [`detail`]'s base sentence
+    /// unconditionally, dropping the `within` read entirely. Run below.
+    #[test]
+    fn examining_an_alcove_names_the_hearth_within_it() {
+        let mut i = Interior::new();
+        let alcove = i.push(AnchorKind::Alcove, None);
+        i.push(AnchorKind::Hearth, Some(alcove));
+
+        let text = examine_detail(&i, alcove);
+        assert!(
+            text.starts_with(detail(AnchorKind::Alcove)),
+            "the base detail must survive: {text:?}"
+        );
+        assert!(
+            text.contains("a hearth"),
+            "an alcove enclosing a hearth must name it: {text:?}"
+        );
+    }
+
+    /// The other direction of the SAME case: the hearth does not enclose the
+    /// alcove just because the alcove encloses the hearth — `within` is not
+    /// symmetric, and `Hearth` carries no `Encloses` property at all.
+    #[test]
+    fn the_enclosed_anchor_does_not_report_its_own_container() {
+        let mut i = Interior::new();
+        let alcove = i.push(AnchorKind::Alcove, None);
+        let hearth = i.push(AnchorKind::Hearth, Some(alcove));
+
+        assert_eq!(
+            examine_detail(&i, hearth),
+            detail(AnchorKind::Hearth),
+            "a hearth does not carry `encloses`, so examining it must be unchanged"
+        );
+    }
+
+    /// The live silent case: `Strongbox` carries `encloses` (`affordance::
+    /// object_registry`) but the grammar never places anything within one —
+    /// `the-strongbox` is `Attach::Beside(Vessel)`, a sibling, never a
+    /// container (Task 6 investigation, confirmed structurally and by
+    /// census). Examining it must not fabricate contents.
+    ///
+    /// Mutation this must catch: report every OTHER anchor in the interior
+    /// instead of consulting `within` (the mutation named in the task
+    /// brief). A bare `Strongbox` with unrelated siblings in the same
+    /// interior is the sharpest test of that: a naive "list the rest of the
+    /// room" implementation would name them; this must not.
+    #[test]
+    fn an_empty_strongbox_reports_no_contents() {
+        let mut i = Interior::new();
+        let strongbox = i.push(AnchorKind::Strongbox, None);
+        i.push(AnchorKind::Vessel, None); // a sibling, not a contained anchor
+
+        assert_eq!(
+            examine_detail(&i, strongbox),
+            detail(AnchorKind::Strongbox),
+            "an anchor with nothing `within` it must not fabricate contents"
+        );
+    }
+
+    /// Direction 3 of the task brief: a NON-enclosing anchor must report
+    /// nothing extra even if something happens to sit `within` it. Nothing
+    /// in the authored grammar ever attaches anything within a `Bed` — this
+    /// is deliberately hand-built, per the task brief's own instruction,
+    /// because production data cannot reach this branch.
+    ///
+    /// Mutation this must catch: gate on `within` being non-empty instead of
+    /// on [`crate::affordance::ObjectProperty::Encloses`] — i.e. drop the
+    /// `crate::affordance::encloses(kind)` check from `examine_detail`
+    /// entirely. Run below.
+    #[test]
+    fn a_non_enclosing_anchor_never_reports_contents_even_if_something_sits_within_it() {
+        assert!(
+            !crate::affordance::encloses(AnchorKind::Bed),
+            "precondition: Bed must not carry Encloses, or this test proves nothing"
+        );
+        let mut i = Interior::new();
+        let bed = i.push(AnchorKind::Bed, None);
+        i.push(AnchorKind::Hearth, Some(bed));
+
+        assert_eq!(
+            examine_detail(&i, bed),
+            detail(AnchorKind::Bed),
+            "a non-enclosing kind must stay silent about what sits `within` it"
+        );
+    }
+
+    /// Bridges the hand-built fixtures above to the real grammar: the same
+    /// `interior_of` production path Task 6's census ran
+    /// (`built && cold`, locale band), composing through the real
+    /// `INVENTORY`/`compose` rather than a fixture. Confirms the alcove that
+    /// composition draws is the same one `examine_detail` reports through.
+    #[test]
+    fn the_real_locale_grammar_composes_a_hearth_within_an_alcove_and_examine_names_it() {
+        struct ColdBuilt;
+        impl crate::liveness::Terrain for ColdBuilt {
+            fn elevation(&self, _r: &hornvale_kernel::Facet) -> f64 {
+                0.0
+            }
+            fn is_fresh_water(&self, _r: &hornvale_kernel::Facet) -> bool {
+                false
+            }
+            fn temperature(
+                &self,
+                _r: &hornvale_kernel::Facet,
+                _d: hornvale_kernel::WorldTime,
+            ) -> f64 {
+                -20.0
+            }
+            fn is_built(&self, _r: &hornvale_kernel::Facet) -> bool {
+                true
+            }
+        }
+        let room = hornvale_kernel::Facet {
+            face: 0,
+            path: Vec::new(),
+        };
+        let interior = crate::interior::interior_of(&room, &ColdBuilt);
+        let alcove = interior
+            .ids()
+            .into_iter()
+            .find(|&id| interior.anchor(id).kind == AnchorKind::Alcove)
+            .expect("built && cold draws an alcove — the-fire's own precondition");
+
+        let text = examine_detail(&interior, alcove);
+        assert!(
+            text.contains("a hearth"),
+            "the real grammar's only within-relation must be named: {text:?}"
+        );
     }
 }

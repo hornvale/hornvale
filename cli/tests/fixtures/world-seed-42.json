@@ -676,6 +676,12 @@
         "kind": "Substance",
         "doc": "The flat floor of the deep ocean."
       },
+      "affords-passage": {
+        "name": "affords-passage",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "a seam between two rooms a body may pass through"
+      },
       "alpine": {
         "name": "alpine",
         "domain": "climate",
@@ -909,6 +915,12 @@
         "domain": "astronomy",
         "kind": "Celestial",
         "doc": "the darkening when a moon crosses the sun, or the world's shadow crosses a moon"
+      },
+      "encloses": {
+        "name": "encloses",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "an anchor that reveals what lies within it"
       },
       "epipelagic": {
         "name": "epipelagic",
@@ -1161,6 +1173,12 @@
         "domain": "climate",
         "kind": "Substance",
         "doc": "The anchored base of a kelp forest."
+      },
+      "holds-liquid": {
+        "name": "holds-liquid",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "a place a body may drink from"
       },
       "home": {
         "name": "home",
@@ -1498,6 +1516,12 @@
         "kind": "Act",
         "doc": "to make someone hostile by an act the simulation itself did not choose — `!provoke`"
       },
+      "radiates-heat": {
+        "name": "radiates-heat",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "an anchor that emits warmth"
+      },
       "rafted-floe": {
         "name": "rafted-floe",
         "domain": "climate",
@@ -1785,6 +1809,12 @@
         "domain": "astronomy",
         "kind": "Celestial",
         "doc": "a distant star resembling this world's own sun"
+      },
+      "supports-rest": {
+        "name": "supports-rest",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "a place a body may lie down and sleep"
       },
       "survey": {
         "name": "survey",
