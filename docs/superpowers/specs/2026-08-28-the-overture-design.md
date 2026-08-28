@@ -207,10 +207,16 @@ A row with a number is worth several without.
 1. **The scope grew during brainstorming, twice, both times on Nathan's
    direction** — from one screen to a frame with views, then from three views to
    four. Recorded so it is not later read as drift.
-2. **`clients/game` gains a dependency on the language domain** for the `tongue`
-   view. `clients/` is outside the cargo workspace so decision 0004's allowlist
-   does not bind, and `hornvale-language` is already in the graph via
-   `hornvale-vessel` — but it is a new direct edge and deserves an explicit yes.
+2. **WITHDRAWN at spec self-review — there is no new dependency.** This item said
+   `clients/game` would gain an edge to the language domain for the `tongue`
+   view. It already has one: `hornvale-language` is a **direct** dependency at
+   `clients/game/bin/Cargo.toml:32`, added by The Portolan for name resolution.
+   So `tongue` needs no dependency change at all.
+
+   Left in place rather than deleted, because it is the campaign's own first
+   instance of the failure The Quadrat's retrospective names — a plausible claim
+   about the tree, written without checking. Caught here by the placeholder-and-
+   consistency pass rather than by a reviewer, which is the pass working.
 3. **H3 may fail**, and the design is sound without it. Flagged so a null is not
    read as the cache being unsafe.
 4. **The observer callback is the only sim-side change.** Everything else is
