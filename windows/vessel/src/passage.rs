@@ -15,8 +15,9 @@
 //! ledger is a clone that is never written back, so this — like every other
 //! fact live play commits — evaporates when the possession ends.
 
-use hornvale_kernel::{EntityId, Fact, Value, WorldTime};
+use hornvale_kernel::{EntityId, Fact, Seed, Value, WorldTime};
 use hornvale_worldgen::chamber::ChamberAddr;
+use hornvale_worldgen::{BarrierPins, BarrierState, barrier_of};
 
 /// The predicate naming a passage a body has cleared. Registered PER-SESSION
 /// (never at genesis), following `AGENT_AT`'s own discipline — see
@@ -47,4 +48,34 @@ pub fn cleared_fact(who: EntityId, addr: &ChamberAddr, day: WorldTime) -> Fact {
         day: Some(day),
         provenance: "the-latch: a body cleared a barred passage".to_string(),
     }
+}
+
+/// The barrier state at `addr` as of `day`: [`BarrierState::Open`] if any
+/// committed [`PASSAGE_CLEARED`] fact names this address at or before `day`,
+/// otherwise the seeded state [`barrier_of`] draws.
+///
+/// **Monotone and time-correct.** The `<= day` filter is the same discipline
+/// `last_fact_day_at_or_before` uses in the liveness walk: a fold over the
+/// whole history would look chronologically PAST the instant being asked
+/// about, which is precisely the failure mode that makes a mutable flag wrong
+/// for a replayed past.
+///
+/// The subject is not consulted — any body's clearing fact opens the passage
+/// for everyone, which is what makes this the 90% rung rather than a private
+/// daybook entry.
+pub fn effective_state(
+    ledger: &hornvale_kernel::Ledger,
+    seed: Seed,
+    addr: &ChamberAddr,
+    day: WorldTime,
+    pins: &BarrierPins,
+) -> BarrierState {
+    let key = addr_key(addr);
+    let cleared = ledger.find(PASSAGE_CLEARED).any(|f| {
+        matches!(&f.object, Value::Text(t) if *t == key) && f.day.is_some_and(|d| d <= day)
+    });
+    if cleared {
+        return BarrierState::Open;
+    }
+    barrier_of(seed, addr.vertex, addr.band, addr.branch, pins)
 }

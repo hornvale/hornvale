@@ -120,3 +120,59 @@ fn addr_key_distinguishes_every_field() {
     let unique: std::collections::BTreeSet<&String> = keys.iter().collect();
     assert_eq!(unique.len(), keys.len(), "addr_key collided: {keys:?}");
 }
+
+/// A clearing fact must not open the passage for days BEFORE it. This is what
+/// separates a time-correct fold from a mutable flag, and it is what lets any
+/// replay evaluating a past instant stay honest.
+///
+/// MUTATION this must fail against: delete the `<= day` filter in
+/// `effective_state` (accept every clearing fact regardless of its day). The
+/// day-1 assertion below then reports Open.
+///
+/// Confirmed 2026-08-28: `assertion `left == right` failed: a passage
+/// cleared on day 5 must be barred on day 1 left: Open right: Sealed`.
+#[test]
+fn a_clearing_fact_does_not_open_the_passage_before_it_happened() {
+    use hornvale_kernel::{Band, ConceptRegistry, Ledger, Seed, Vertex, WorldTime};
+    use hornvale_vessel::passage::{PASSAGE_CLEARED, cleared_fact, effective_state};
+    use hornvale_worldgen::chamber::ChamberAddr;
+    use hornvale_worldgen::{BarrierPins, BarrierState};
+
+    // A barrier the seed makes non-Open, forced through the pin so this test
+    // does not depend on which vertex the terrain happens to bar.
+    let pins = BarrierPins {
+        state: Some(BarrierState::Sealed),
+    };
+    let addr = ChamberAddr {
+        vertex: Vertex(1),
+        band: Band::Undercroft,
+        branch: 0,
+        level: 0,
+    };
+
+    let mut reg = ConceptRegistry::default();
+    reg.register_predicate(PASSAGE_CLEARED, false, "t").unwrap();
+    let mut ledger = Ledger::default();
+    let who = ledger.mint_entity(hornvale_kernel::test_lineage(0));
+
+    let cleared_on = WorldTime::from_std_days(5.0).expect("5 days is in range");
+    ledger
+        .commit(cleared_fact(who, &addr, cleared_on), &reg)
+        .unwrap();
+
+    let day1 = WorldTime::from_std_days(1.0).expect("1 day is in range");
+    let day9 = WorldTime::from_std_days(9.0).expect("9 days is in range");
+    let before = effective_state(&ledger, Seed(42), &addr, day1, &pins);
+    let after = effective_state(&ledger, Seed(42), &addr, day9, &pins);
+
+    assert_eq!(
+        before,
+        BarrierState::Sealed,
+        "a passage cleared on day 5 must be barred on day 1"
+    );
+    assert_eq!(
+        after,
+        BarrierState::Open,
+        "a passage cleared on day 5 must be open on day 9"
+    );
+}
