@@ -746,8 +746,8 @@ fn a_ladder_rung_derives_its_transitive_demand_set() {
 /// this rung as the widest gap in the ladder (tied with r191, both
 /// 3 → 22); r183 is chosen over r191 because its own two direct
 /// presuppositions (r181 and r095) independently reach a shared ancestor
-/// (r001 and r002, both by way of `classify`), so this single rung also
-/// exercises the diamond case Task 2's brief asks about — see this test's
+/// (r001, `classify`, and r002, `intransitive-frame`), so this single rung
+/// also exercises the diamond case Task 2's brief asks about — see this test's
 /// own note below for why that made a second, dedicated diamond assertion
 /// unnecessary.
 ///
