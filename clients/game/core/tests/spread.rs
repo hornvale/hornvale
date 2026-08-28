@@ -188,6 +188,37 @@ fn the_entry_pane_keeps_a_legible_minimum() {
     }
 }
 
+/// THE QUADRAT, TASK 9, FIX ROUND 1 — the square-footprint PREFERENCE,
+/// pinned by an equality, because the two bound tests above cannot see it.
+///
+/// **Two behaviours were one assertion away from each other.** Delete the
+/// preference from `world_plate_width` and every other test in this file and
+/// in `bin/tests/driver.rs` stays green, while 120x40 drops 72 -> 60 and
+/// 104x56 drops 64 -> 52. Worse, and this is the part that makes it a real
+/// hole rather than an unpinned nicety: with the preference gone the rule is
+/// exactly `ceil(w/2)`, so `entry = floor(w/2) >= MIN_ENTRY_WIDTH` holds for
+/// every `w >= 80` by arithmetic alone — which makes
+/// `the_entry_pane_keeps_a_legible_minimum` satisfiable without the ceiling,
+/// so the "ceiling dropped" mutation this task's own report records as
+/// CAUGHT would stop being caught. An unpinned behaviour was quietly
+/// propping up a pinned one.
+///
+/// 120x40 is the size that states it cleanly: the floor wants 60, the
+/// ceiling permits 80, and the preference is the only thing that says 72.
+/// Measured off the page like every other width assertion here.
+#[test]
+fn the_square_footprint_preference_decides_the_width_when_it_can_afford_to() {
+    let (w, h) = (120u16, 40u16);
+    assert_eq!(
+        plate_column_count(w, h, Focus::Walk),
+        72,
+        "at {w}x{h} the plate must be the square screen footprint \
+         (GLYPH_ASPECT * content_height({h}) = 72), not the {} the half-the-\
+         terminal floor alone would give",
+        w.div_ceil(2)
+    );
+}
+
 /// THE QUADRAT, TASK 9: **a supplied plate widens the pane, in every
 /// focus** — replacing `the_world_plate_uses_the_width_only_while_the_map_
 /// is_focused`, whose subject this task deletes rather than moves.

@@ -565,6 +565,149 @@ fn the_walk_view_draws_the_raster_across_at_least_half_the_terminal() {
     );
 }
 
+/// THE QUADRAT, TASK 9, FIX ROUND 1 — **Important 1: the walk view may
+/// never lose the player.**
+///
+/// Six keystrokes from the opening screen: `m a p ↵`, `-`, `Esc`. Task 9
+/// un-gated the raster so the walking view draws it, but nothing returned
+/// the ladder's rung on the way out, so the plate showed a coarse chart
+/// with the perception overlay correctly refusing off band B — no `@`, no
+/// creatures, no cursor, no strip — while the entry pane went on narrating
+/// the player's immediate surroundings. The picture and the prose described
+/// different places.
+///
+/// **Both doors are asserted**, because the map has two and the strip's own
+/// invariant has been broken once already by exactly that (see the
+/// `FocusAndType` arm's comment in `driver.rs`): `Esc` through
+/// `toggle_focus`, and any printable key through `FocusAndType`, which
+/// leaves for the command line. A fix wired into one of them would pass a
+/// test that knew about one of them.
+///
+/// The assertion is `Source::Chart` ON THE COMPOSED PAGE — the perception
+/// overlay's own channel, which is what refuses off band B. Asserting the
+/// rung directly would pass against a fix that reset the rung and left the
+/// window in the arctic corner of a 23,245-wide chart, which is the other
+/// half of the same defect.
+#[test]
+fn leaving_the_map_at_a_coarse_rung_returns_the_walker_to_their_own_band() {
+    for door in ["esc", "type"] {
+        let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
+        let (w, h) = (200u16, 50u16);
+        driver.resize(w, h);
+
+        submit_line(&mut driver, "map");
+        assert_eq!(driver.focus(), Focus::Map);
+        driver.apply(Action::Zoom(-1));
+
+        // VACUOUS GUARD: the zoom must actually have coarsened the ladder,
+        // or the exit below proves nothing at all.
+        let coarse = driver
+            .world_plate_for_redraw(w, h)
+            .expect("band B still draws a plate at a coarse rung");
+        let coarse_sources: BTreeSet<Source> = (0..spread::content_height(h))
+            .flat_map(|y| (0..coarse.width()).map(move |x| (x, y)))
+            .filter_map(|(x, y)| coarse.get(x, y).filter(|c| !c.is_blank()).map(|c| c.source))
+            .collect();
+        assert!(
+            !coarse_sources.contains(&Source::Chart),
+            "VACUOUS GUARD: a coarse rung must draw no perception overlay, or \
+             the assertion after the exit cannot discriminate; got \
+             {coarse_sources:?}"
+        );
+
+        match door {
+            "esc" => {
+                driver.apply(Action::ToggleFocus);
+            }
+            _ => {
+                driver.apply(Action::FocusAndType('x'));
+                assert_eq!(driver.focus(), Focus::Cli, "the second door lands on Cli");
+            }
+        }
+        assert_ne!(
+            driver.focus(),
+            Focus::Map,
+            "the map was left by the {door} door"
+        );
+
+        let plate = driver
+            .world_plate_for_redraw(w, h)
+            .expect("the walk view is handed the raster");
+        let sources: BTreeSet<Source> = (0..spread::content_height(h))
+            .flat_map(|y| (0..plate.width()).map(move |x| (x, y)))
+            .filter_map(|(x, y)| plate.get(x, y).filter(|c| !c.is_blank()).map(|c| c.source))
+            .collect();
+        assert!(
+            sources.contains(&Source::Chart),
+            "after leaving the map by the {door} door the plate carries no \
+             perception overlay — the player is not on their own picture; got \
+             {sources:?}"
+        );
+        assert!(
+            plate.to_plain_text().contains('@'),
+            "after leaving the map by the {door} door the observer is not drawn"
+        );
+    }
+}
+
+/// THE QUADRAT, TASK 9, FIX ROUND 1 — **the walk view follows the walker.**
+///
+/// `chart::draw` anchors the observer to the plate's centre by
+/// construction, so the picture Task 9 replaced had this property for free.
+/// The raster is drawn through a STORED window, and the centring was called
+/// only on arrival at the map and on resize — neither of which is a step.
+/// Measured before the fix, at this exact size: row 23 → 18 over eight
+/// `go n`s, about one row per 1.6 steps, walking clean off a 46-row plate in
+/// under forty.
+///
+/// Arrow keys ARE the walking gesture in `Focus::Walk` (`input::action_for`
+/// maps them to `Move`, not `CursorBy`), so this is the most ordinary thing
+/// a player does, and the walk view offers no scroll gesture to undo it
+/// with.
+///
+/// **Forty steps, not eight.** Eight would pass against no fix at all: the
+/// drift is slow, and a test that walked only a few steps would watch the
+/// observer sit two rows off centre and call it centred. The distance is
+/// chosen to exceed the plate's own half-height.
+#[test]
+fn the_walk_view_follows_the_walker_across_a_long_walk() {
+    let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
+    let (w, h) = (200u16, 50u16);
+    driver.resize(w, h);
+
+    let observer = |driver: &mut Driver| -> (u16, u16) {
+        let p = driver
+            .world_plate_for_redraw(w, h)
+            .expect("the walk view is handed the raster");
+        (0..p.height())
+            .flat_map(|y| (0..p.width()).map(move |x| (x, y)))
+            .find(|&(x, y)| p.get(x, y).is_some_and(|c| c.glyph == Some('@')))
+            .expect("the observer is drawn on their own walk plate")
+    };
+
+    let start = observer(&mut driver);
+    for _ in 0..40 {
+        driver.handle("go n");
+    }
+    let after = observer(&mut driver);
+    assert_eq!(
+        after, start,
+        "walking must scroll the plate under the observer, not the observer \
+         across the plate — started at {start:?}, ended at {after:?}"
+    );
+
+    // The other axis, because a fix on one is not a fix on both: longitude
+    // WRAPS where latitude clamps (spec 4.2), and they are different code.
+    for _ in 0..40 {
+        driver.handle("go e");
+    }
+    assert_eq!(
+        observer(&mut driver),
+        start,
+        "walking east must scroll the plate too"
+    );
+}
+
 /// **H2.** A whole line typed key by key reaches the sim and its answer
 /// comes back. The sweep in `input.rs` tests single keys and cannot see a
 /// defect in SEQUENCES — a buffer that drops every third character would

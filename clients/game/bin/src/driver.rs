@@ -834,12 +834,79 @@ impl Driver {
     /// moment `map` entry moved to its own function, and read as though Esc
     /// could still open the map.
     pub fn toggle_focus(&mut self) {
+        self.leave_the_map();
         self.focus = match self.focus {
             Focus::Cli => Focus::Walk,
             Focus::Map => Focus::Walk,
             Focus::Walk => Focus::Cli,
         };
+    }
+
+    /// End a map consultation: clear the strip, and — if the map was
+    /// actually focused — return the ladder to the walker's own band and
+    /// centre it on them.
+    ///
+    /// **The defect this closes (The Quadrat, Task 9, fix round 1).** Type
+    /// `map`, press `-`, press `Esc`: six keystrokes from the opening
+    /// screen. Before Task 9 that state drew [`crate::chart::draw`]'s own
+    /// picture, which is centred on the observer by construction. After
+    /// Task 9 the walk view draws the raster through `self.window` — and
+    /// nothing returned the rung, so the plate showed a coarse chart with
+    /// [`Self::compose_perception_layer`] correctly refusing off band B: no
+    /// `@`, no creatures, no cursor, no strip, no signal of any kind, while
+    /// the entry pane went on narrating the player's immediate
+    /// surroundings. **The picture and the prose described different
+    /// places.**
+    ///
+    /// **A RUNG BELONGS TO THE CONSULTATION, NOT TO THE WALKER**, and that
+    /// is the whole rule. Zoom is reachable only from [`Focus::Map`]
+    /// (`input::action_for` gives `-`/`+` to no other focus), so a coarse
+    /// rung is a thing the reader asked the MAP for; the walker never asked
+    /// for it and cannot undo it, because the walk view has no zoom
+    /// gesture. Leaving the map is where it ends.
+    ///
+    /// **Why this shape and not the two others considered.** (a) *Gate the
+    /// plate on `at_walk_band_rung()` outside `Focus::Map`* would hand the
+    /// walk view back to `chart::draw`'s hex scatter in a state reachable
+    /// in six keystrokes — reintroducing the very picture this campaign
+    /// exists to replace, in the default view. (b) *Give `Focus::Walk` its
+    /// own band-B window, leaving `self.window` to the map*, preserves the
+    /// reader's rung across consultations, and costs a SECOND window: this
+    /// module keeps exactly one, and [`Self::active_plate_dims`],
+    /// [`Self::move_cursor`], [`Self::reclamp_window`],
+    /// [`Self::refresh_strip`] and [`Self::resolve_world_view`] all read
+    /// it. None of them runs in `Focus::Walk` today, so the second window
+    /// would be correct today and would become the two-independent-copies
+    /// bug this file's own docs warn about repeatedly the moment one of
+    /// them did. What (b) buys is the reader's RUNG across a consultation —
+    /// and [`Self::enter_map`] already discards the reader's PAN on every
+    /// entry ("centre on arrival"), so a consultation already restarts
+    /// where the player stands. This makes it restart at the band they
+    /// stand in too, which is the same ruling carried one step, not a new
+    /// one.
+    ///
+    /// **Two doors, one owner.** `Esc` ([`Self::toggle_focus`]) is not the
+    /// only departure: `Action::FocusAndType` also leaves the map, for the
+    /// command line, on any printable key. The strip's own invariant
+    /// already had those two owners and the second arm's comment records
+    /// what that cost once; this method is now the single owner of both
+    /// halves, so a third door cannot acquire one and miss the other.
+    fn leave_the_map(&mut self) {
+        // Unconditional — the strip belongs to the map, and every departure
+        // clears it whatever focus we came from (`strip_text()` re-checks
+        // focus, so this is belt and braces, but the invariant is stated
+        // here rather than relying on that).
+        let was_consulting = self.focus == Focus::Map;
         self.strip = None;
+        if !was_consulting {
+            return;
+        }
+        self.window.depth = BAND_B_RUNG;
+        // The origin as well as the rung: a coarse rung's origin, reinterpreted
+        // at band B, is some arbitrary corner of a 23,245-wide chart — the
+        // arctic-corner state `centre_band_b_on_the_observer`'s own doc calls
+        // "not shippable". Centring is what makes the returned band a place.
+        self.centre_on_the_observer();
     }
 
     /// The map cursor's screen position, or `None` unless the map is
@@ -1100,8 +1167,14 @@ impl Driver {
                 // earlier revision left that invariant with two owners and
                 // one violator, masked only because `strip_text()`
                 // re-checks focus before returning.
+                // THE MAP'S SECOND DOOR (Task 9, fix round 1). This arm used
+                // to clear the strip itself, which was the whole of leaving
+                // the map at the time; leaving it also returns the rung now,
+                // so both halves are taken from the one owner rather than
+                // this arm re-spelling either. Called BEFORE the focus moves
+                // — `leave_the_map` asks what focus we are leaving.
+                self.leave_the_map();
                 self.focus = Focus::Cli;
-                self.strip = None;
                 self.line.insert(c);
                 self.clear_completion();
                 false
@@ -2390,6 +2463,41 @@ impl Driver {
             self.on_walk_band = matches!(snap.spatial, hornvale_game_core::Spatial::Walk { .. });
         }
         self.update_discovery();
+        self.follow_the_walker();
+    }
+
+    /// Keep the walk view centred on the observer as they MOVE — called from
+    /// [`Self::refresh`], which is every turn and nothing else.
+    ///
+    /// **This restores a property the picture it replaced had for free, and
+    /// which Task 9 removed without noticing** (fix round 1). `chart::draw`
+    /// anchors the observer to the plate's centre by construction, so the
+    /// walk view had always had the player in the middle of it. The raster
+    /// is drawn through a STORED window instead, and
+    /// [`Self::centre_band_b_on_the_observer`] was called only on arrival at
+    /// the map and on resize — neither of which is a step. Measured at
+    /// 200x50 before this existed: the observer drifted about one plate row
+    /// per 1.6 steps, from row 23 to row 18 in eight `go n`s, and would have
+    /// walked clean off a 46-row plate in under forty. Arrow keys ARE the
+    /// walking gesture (`input::action_for` gives `Focus::Walk` `Move`, not
+    /// `CursorBy`), so this is the most ordinary thing a player does.
+    ///
+    /// **It does not contradict "called on ARRIVAL, never per redraw".**
+    /// That ruling is [`Self::centre_band_b_on_the_observer`]'s and its
+    /// stated premise is exact: re-centring per REDRAW would make band B
+    /// unscrollable, *"the player genuinely can scroll here: the observer
+    /// cannot MOVE while [`Focus::Map`] is focused"*. Both halves of that
+    /// premise are about the map. A turn is not a redraw — it is the one
+    /// event that moves the observer — and `Focus::Map` has no `Submit` and
+    /// no `Move` at all (`input::action_for`), so no turn can occur while a
+    /// reader is scrolled somewhere deliberately. The focus test below is
+    /// therefore belt and braces rather than the load-bearing part, and it
+    /// is kept because it states which view this is for.
+    fn follow_the_walker(&mut self) {
+        if self.focus == Focus::Map {
+            return;
+        }
+        self.centre_band_b_on_the_observer();
     }
 
     /// Update [`Self::visited`] and [`Self::discovered`] from the
@@ -4492,21 +4600,39 @@ mod portolan_tests {
     ///
     /// Asserted as "the observer's own facet is INSIDE the drawn window",
     /// which is the property that matters and which a hardcoded expected
-    /// origin would not survive a mesh change. The `(0, 0)` half is asserted
-    /// too, so this cannot pass by the window happening never to have moved.
+    /// origin would not survive a mesh change.
+    ///
+    /// **RE-POINTED, on this test's own instruction (The Quadrat, Task 9,
+    /// fix round 1).** It used to open by asserting that `start` leaves the
+    /// origin at `(0, 0)`, "which is what makes this test meaningful at
+    /// all", and closed with "if `start` gains a centring step, re-point
+    /// it". `start` has gained one: `refresh` now ends in
+    /// [`Self::follow_the_walker`], so the very first frame of an
+    /// unresized driver is centred rather than arctic — strictly better,
+    /// since Task 9 means the walk view draws a plate before any arrival
+    /// happens at all.
+    ///
+    /// So the corner is now CONSTRUCTED rather than inherited, which makes
+    /// this stronger than it was: it shows the centring actually rescues a
+    /// corner origin (the negative control below fails without it), instead
+    /// of resting on `start` happening to leave one lying around.
     #[test]
     fn band_b_centres_on_the_observer_not_the_arctic_corner() {
         let mut d = test_driver();
-        // BEFORE any arrival: `start` leaves the corner alone, which is what
-        // makes this test meaningful at all. Asserted before `resize`,
-        // because `resize` is itself one of the three arrivals that centre.
-        assert_eq!(
-            (d.window.origin_row, d.window.origin_col),
-            (0, 0),
-            "sanity: this test is only meaningful if the untouched origin really is \
-             the corner — if `start` gains a centring step, re-point it"
-        );
         d.resize(120, 40);
+        // The corner, put there on purpose. At `BAND_B_RUNG` this is some
+        // eleven thousand rows and two thousand columns from seed 42's
+        // observer.
+        d.window.origin_row = 0;
+        d.window.origin_col = 0;
+        let arctic = d
+            .world_plate_for_redraw(120, 40)
+            .expect("band B draws a plate");
+        assert!(
+            !arctic.to_plain_text().contains('@'),
+            "NEGATIVE CONTROL: the observer must NOT be visible from the chart's \
+             corner, or the centring below proves nothing"
+        );
         d.enter_map();
         let plate = d
             .world_plate_for_redraw(120, 40)
