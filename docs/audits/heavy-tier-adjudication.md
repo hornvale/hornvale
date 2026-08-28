@@ -139,55 +139,53 @@ produced a wrong count once already, and copying that mistake into this
 population's table would repeat it. Every row below is read directly off
 that file's `RESULT WALL_S TEST` lines, name for name.
 
-## A second cross-cutting finding: the zero-assertion count is undercounted
-## again, and this time by files outside the roster spec §2.2 named
+## A second cross-cutting finding: the zero-assertion count was five, is now
+## six, and the scan is exhaustive project-wide
 
-Spec §2.2 named **five** zero-assertion files tier-wide and stated the
-scan behind that count "must be exhaustive over every heavy-bearing file —
-not a ranked prefix of them," because a ranked-by-`println!`-count scan had
-already produced two wrong answers (three, then two) before landing on five.
-One of those five, `warren_liebig_probe.rs`'s `which_axis_binds_for_a_subterranean_kind`,
-is in this population and is confirmed here (file-wide `grep -nE
-'assert(_eq|_ne)?!'` returns no hits, and the module doc independently says
-"nothing here asserts a preferred answer").
+Spec §2.2 named **five** zero-assertion files tier-wide and stated the scan
+behind that count "must be exhaustive over every heavy-bearing file — not a
+ranked prefix of them," because a ranked-by-`println!`-count scan had
+already produced two wrong answers (three, then two) before landing on
+five. One of those five, `warren_liebig_probe.rs`'s
+`which_axis_binds_for_a_subterranean_kind`, is in this population and is
+confirmed here (file-wide `grep -nE 'assert(_eq\|_ne)?!'` returns no hits,
+and the module doc independently says "nothing here asserts a preferred
+answer").
 
-**Exhaustively scanning every heavy-bearing file in `windows/worldgen`
-(the same `grep -nE 'assert(_eq\|_ne)?!'`, per test file, cross-checked
-against each file's own module doc where one exists) turns up four more,
-none previously named:**
+**A first pass over this population's other heavy-bearing files turned up
+three false positives, corrected here rather than left standing.**
+`underworld_ladder_probe.rs` carries a real `assert!` at line 369 (in
+`how_lumpy_is_the_delta_t_distribution`, a *different* test in the same
+file), and `underworld_capacity_probe.rs` carries two real `assert!`s at
+lines 336 and 341 (in `where_underworld_communities_found_and_what_they_cut`,
+again a different test in the same file). Spec §3.2's filter is counted
+**file-wide** — the whole file, not the individual test's own body plus its
+own helpers — precisely so that an assertion sourced from elsewhere in the
+file cannot be missed. Applied correctly, neither file qualifies as
+"zero assertions anywhere in the file," so the three tests that live in
+them (`how_hot_is_a_cave`, `what_the_bake_founded_per_people`,
+`a_pinned_surface_people_builds_the_same_world`) do not qualify for §3.2's
+no-adjudication-needed path. This matters beyond the count: demoting them
+under a criterion that does not apply meant their verdicts were never
+actually argued under §3.1, which is corrected in their rows below (all
+three remain DEMOTE, on adjudicated grounds that name the campaign each
+answered, per §3.3 clause 1).
 
-- `underworld_ladder_probe.rs::how_hot_is_a_cave` — zero `assert!` calls in
-  the file's `how_hot_is_a_cave` function or in any helper it calls (`pct`
-  is a pure percentile function with no assertion inside it). The file's own
-  module doc says so in as many words: "It asserts nothing. Every check is a
-  build/lookup `expect`; the result is the printed table." (The file's
-  *sibling* test, `how_lumpy_is_the_delta_t_distribution`, carries one real
-  `assert!` and is adjudicated on that basis below — the two do not share a
-  verdict.)
-- `underworld_capacity_probe.rs::what_the_bake_founded_per_people` — zero
-  `assert!` calls anywhere in the function; it builds three worlds and
-  prints per-people occupation counts and a distinct-site count. The file's
-  own doc calls it a `readout(off-gate, heavy:, prints the per-people
-  occupation counts...)` claim with no assertion component named.
-- `underworld_capacity_probe.rs::a_pinned_surface_people_builds_the_same_world`
-  — zero `assert!` calls; it builds pinned worlds and prints a per-world
-  digest. The doc comment states outright: "Prints rather than asserts
-  against a committed literal: the number it produces is compared against
-  the same command run on the parent commit, which is a comparison a
-  literal in this file could not make honestly."
-- `delver_depth_probe.rs::how_deep_is_a_cave` — zero `assert!` calls in the
-  entire file. Its own doc comment: "This test asserts nothing at all: every
-  check in it is a build/lookup `expect`, and the result is the printed
-  table."
+**One genuine sixth zero-assertion test survives the correction:**
+`delver_depth_probe.rs::how_deep_is_a_cave` has zero `assert!` calls
+anywhere in the file. Its lone `_ => panic!("probe expects a generated sky")` is a match arm on a build precondition — the same kind of check as
+the `.expect(...)` calls beside it, not an assertion about the probe's
+finding — and the file's own doc comment says so directly at the test's
+definition: "This test asserts nothing at all: every check in it is a
+build/lookup `expect`, and the result is the printed table." This one
+qualifies for §3.2's automatic path and is demoted on that ground alone.
 
-All four qualify for spec §3.2's automatic demotion (no adjudication
-needed) and are demoted below on that ground alone, cited in each row's
-reason rather than re-argued. **This means the project-wide zero-assertion
-count that stood at five after Task 4a's spec-fix round is at least nine**
-(the five already named, plus these four, before Task 4c's population is
-even scanned) — the brief's warning that the corrected number might still
-be wrong was correct. This is reported here as the finding it is; no file,
-`#[ignore]` string or code was touched to establish it.
+**So the project-wide zero-assertion count is six, not five and not
+nine**: the five spec §2.2 already named, plus `delver_depth_probe.rs`.
+Task 4c's population still needs its own file-wide scan for internal
+consistency, but the corrected spec (`1f7ae1b94`) states this scan is now
+exhaustive project-wide, so no further zero-assertion tests are expected to
+turn up there.
 
 ## Adjudication
 
@@ -211,19 +209,19 @@ be wrong was correct. This is reported here as the finding it is; no file,
 | `winze_energy_probe` | `winze_energy_probe` | 47.133 | PASS | **DEMOTE** | The Winze Task 2M. Its two branch-pinning assertions (min correlation < 0.5; majority of pairs not >= 0.8) exist to pin "branch 3" of a decision table; the doc's own red-path instruction is "Re-derive the M4 branch table" (both places it appears). Report branch — this is a design-decision instrument (do plural chemotrophic sources decorrelate?), not a standing production witness. |
 | `where_does_a_delve_terminate` | `termination_probe` | 8.508 | PASS | **DEMOTE** | The Stope Task 0. Pins the pooled Nadir-share branch ("BoundariesDecideRarity") this campaign proceeded under; the per-seed proceed-ceiling assertion's own message is "re-read Step 3 rather than adjusting this bound" if the panel disagrees. This is a calibration decision the campaign already made and is re-verifying, not a standing regression witness — a red asks for a re-read of the design decision, not an investigation of the program. |
 | `could_nadir_be_split_into_a_sixth_rung` | `termination_probe` | 8.583 | PASS | **UNDECIDED** | The Stope Task 0 follow-up, explicitly "A design readout, not a gate on the ladder... asserts nothing about where a sixth rung should go." Its two hard assertions are physics-ceiling checks (`cave.depth_reach_m <= CAVE_REACH_CEILING_M`; `observed_max_delta_t <= MAX_POSSIBLE_DELTA_T_K`). The per-cave reach-ceiling check duplicates a **cheap, non-heavy sibling** already in the tree — `domains/terrain/src/cave_depth.rs`'s in-crate unit test `every_reach_is_finite_non_negative_and_under_the_ceiling` — so that half of the assertion adds nothing this population needs to pay heavy-tier cost for. What is NOT covered cheaply is the composed ΔT ceiling (reach × live gradient field, over real generated worlds), which the reach-alone unit test cannot see. **The specific question that would settle this:** if the ΔT-ceiling assertion fired, would the response be "investigate a genuine reach×gradient clamp-composition bug" (keep), or "the sixth-rung design exploration's premise needs a fresh look, nothing to fix in production" (demote)? The test's own framing ("a design readout") leans report-shaped but the assertion itself is a physics invariant, not a design finding — I could not resolve the tension confidently enough to pick either side. |
-| `how_hot_is_a_cave` | `underworld_ladder_probe` | 8.212 | PASS | **DEMOTE** | Automatic, spec §3.2: zero `assert!` calls anywhere in the function or any helper it calls, confirmed by `grep -nE 'assert(_eq\|_ne)?!'` over the whole file (the file's one `assert!` belongs to its sibling test, not this one) and by the module doc's own words: "It asserts nothing. Every check is a build/lookup `expect`; the result is the printed table." See the cross-cutting finding above — one of four newly found zero-assertion tests in this population. |
+| `how_hot_is_a_cave` | `underworld_ladder_probe` | 8.212 | PASS | **DEMOTE** | The Underworld Task 1. Its whole substance is a printed ΔT (depth x gradient) distribution table, gathered to author spec §4.1's delve-ladder rung boundaries — a design input, already consumed once (the module doc's dated "Measured, 2026-08-16" record). The file is NOT zero-assertion (its sibling `how_lumpy_is_the_delta_t_distribution` carries a real guard), but this specific test asserts nothing at all: it can only redden via a build panic, indistinguishable from the dozens of other tests that would panic on the same seeds at the same time, so it carries no test-specific regression signal. If red, the natural response is to re-read whether the rung table spec §4.1 already authored from this data still holds against the new distribution — a report, not an investigation this test alone would prompt. |
 | `how_lumpy_is_the_delta_t_distribution` | `underworld_ladder_probe` | 7.793 | PASS | **DEMOTE** | The Underworld Task 1/1b, sibling to the row above but NOT zero-assertion (it carries one real `assert!(!dt.is_empty(), ...)`, a non-vacuity guard). Discriminator: that guard is the only real assertion, and the substantive content — a fine-grained ΔT-edge stability survey — is a closed calibration exercise: the module doc records the one edge it moved (`DEEPS_TOP_K` 10→8) and the decision is already made. If red, the crude vacuity guard would most likely mean "seed 42 stopped producing caves," a rare and blunt catch; the actual measured content is report-shaped and finished. |
 | `the_separation_readout` | `underworld_separation` | 47.616 | PASS | **DEMOTE** | The Delvers/Underworld Task 9 (mountain-dwarf vs. duergar admission gate). Its own doc: "It asserts nothing about the hypotheses. That is deliberate... a red here would misreport a finding as a defect." Only vacuity guards survive (`caves > 0`, `!seated.is_empty()`); the campaign's verdict is already closed ("THE VERDICT: The gate is CLOSED... a result, not a failure"). |
 | `the_cascade_distribution_is_adjudicated` | `history_tithe` | 309.778 | PASS | **KEEP** | The Tithe. Asserts three existence floors (pooled cascades, flights, revolts each clear a `MIN_POOLED_*` set well clear of measured values). If any fires: "the roll-downhill went inert," "flight went inert," or "the wounded-patron state has stopped arising" — each is a genuine claim that a shipped mechanism (predation/tribute/revolt) stopped firing, worth investigating as a program regression. The shape verdict itself (geometric, sub-critical) is explicitly NOT what is asserted — only that the phenomena the shape claim depends on still exist. |
-| `the_strategy_family_is_various` | `history_tithe` | 290.355 | PASS | **KEEP** | The Tithe / The Underworld §8.0. Asserts the whole-roster rank correlation (authored `time_horizon` vs. median standing-relation age) stays inside the roster's own derived noise bar — a real, mutation-proven discriminator (the doc records that artificially ordering the medians drives rho to 1.0 and reddens this exact assertion). If red in either direction, that is a genuine, novel finding about whether patron horizon now predicts relation lifetime — worth investigating why the mechanism changed, not merely updating a recorded number. |
+| `the_strategy_family_is_various` | `history_tithe` | 290.355 | PASS | **DEMOTE** | The Tithe / The Underworld §8.0. Reconsidered on review: the mutation proof (artificially ordering the medians drives rho to 1.0) shows the instrument is not vacuous, but does not settle whether a red is a program regression to chase or a number to re-derive — and the pin's own history answers that question against KEEP. This is not a first-time invariant: The Tense measured the ORIGINAL two-point claim FALSIFIED (2026-08-06), and The Underworld then re-derived the whole-roster null a second time (2026-08-18) after era-varying capacity moved the roster's own medians. The assertion's own failure message instructs, nearly verbatim in the report branch's own words, "re-derive it again over the roster printed above" — the same "already updated once, drifts for reasons unrelated to program correctness" shape Task 4a used as its strongest evidence for demoting the `BASELINE_*` family in `windows/hearsay`. The self-adjusting noise bar (`NOISE_Z / sqrt(n-1)`) is a genuine improvement over the retired two-point ratio it replaced — a discriminator worth recording — but robustness to roster-composition churn is not the same claim as being a standing regression witness, and the burden is on KEEP. |
 | `h1_the_seas_column_is_non_degenerate` | `fathom_column_probe` | 3.395 | PASS | **DEMOTE** | The Fathom, H-1 (spec §6), explicitly "Reports; repairs nothing" per the module's own opening line. A closed, one-time preregistered calibration check on seed 42's frozen climate output (three of four original clauses; the fourth was split out and carried `PREREGISTERED, not met:` separately). No red-path instruction is given beyond the implicit "the world's depth-field structure changed," and the campaign's own framing treats this file as a report of a finished measurement, not a standing gate. |
 | `h2_sea_ice_below_the_epipelagic` | `fathom_column_probe` | 4.260 | PASS | **DEMOTE** | The Fathom, H-2. "CONFIRMED, strongly... Recorded as an artifact for campaign 1 and NOT repaired here — repair changes world bytes, which this measurement task (spec §2) is forbidden from doing." The only assertion is `sea_ice_total > 0` (denominator non-vacuity); the substantive 91.96%-below-epipelagic finding is printed, not asserted, and the file's stated purpose is measurement/report, not gate. |
 | `how_far_down_the_lattice_does_a_cave_reach` | `underworld_chamber_reach` | 7.289 | PASS | **DEMOTE** | The Underworld Task 2. Own doc, verbatim: "It asserts nothing beyond a vacuity guard: each seed must have caves, and the two arms must not be constant." The substantive band-vs-rung reach comparison is entirely printed. Discriminator against its KEEP sibling below: this file's other heavy test carries a real structural bound the draw must obey; this one carries only vacuity/non-constancy guards. |
 | `how_many_floors_does_a_run_realize` | `underworld_chamber_reach` | 7.545 | PASS | **KEEP** | The Stope/Underworld Task 2, sibling to the DEMOTE row above but carrying a genuine structural invariant the sibling lacks: `(lo_bound..=hi_bound).contains(&branch_drawn)`, checked against spec §3.1's own frozen per-band floor ranges for every drawn branch. If violated, that is a real bug in `levels_in_branch`'s draw — the branch drew a floor count outside its own authored min/max, which "cannot happen" if the draw is implemented correctly. The §4.2 branch-table classification itself is explicitly NOT asserted ("a preregistered outcome is a finding to report, never a test to go red on"), which is the discriminator that keeps this from collapsing into its sibling's DEMOTE: the report-shaped half is unassessed, and what remains is the structural bound alone. |
-| `report_cave_substrate` | `deep_realm_substrate` | 112.966 | PASS | **KEEP** | The Deep Realm/The Hollow Task 0. Carries an exhaustiveness identity (`hist_total == total_caves`, every counted cave lands in exactly one histogram bucket) that the module doc credits with a documented precedent of catching a real defect: "The Hollow's operational finding... is what revealed that campaign's own gate input was gapped rather than merely non-uniform." That is stronger evidence than a bare non-vacuity guard — it is an accounting identity with a track record of finding real bugs in the harness/production boundary. The band-variety numbers themselves are printed, not asserted (the numeric threshold was deliberately withdrawn per the module doc), so what is kept is the exhaustiveness check alone. |
-| `report_h2_depth_weld_and_reachability` | `deep_realm_substrate` | 370.283 | PASS | **KEEP** | The Deep Realm Task 8, sibling to the row above, same file, same discipline. Carries its own exhaustiveness identity (`band_bucket_total == total_caves`) plus a genuine monotonicity invariant on land-vertex coverage by BFS radius (`coverage[r+1] >= coverage[r]`) — a real "cannot happen" property of a correctly-computed multi-source shortest-path distance field. A violation of either is a real accounting or graph-traversal bug, not a moved report number. |
-| `what_the_bake_founded_per_people` | `underworld_capacity_probe` | 43.850 | PASS | **DEMOTE** | Automatic, spec §3.2: zero `assert!` calls anywhere in the file's function (confirmed file-wide by `grep -nE 'assert(_eq\|_ne)?!'`, which returns hits only inside the sibling test `where_underworld_communities_found_and_what_they_cut`). See the cross-cutting finding above. |
-| `a_pinned_surface_people_builds_the_same_world` | `underworld_capacity_probe` | 103.264 | PASS | **DEMOTE** | Automatic, spec §3.2: zero `assert!` calls anywhere in the function. Its own doc states it "prints rather than asserts against a committed literal," by design (the comparison is meant to be made against the parent commit's run, not a hardcoded value). See the cross-cutting finding above. |
+| `report_cave_substrate` | `deep_realm_substrate` | 112.966 | PASS | **DEMOTE** | The Deep Realm/The Hollow Task 0. Corrected on review: `hist_total == total_caves` is not the load-bearing accounting check its module-doc citation of The Hollow's incident suggested — at source (`measure_one`, the `Some(cave) => { cave_vertices += 1; band_histogram[band_index(cave.deepest_horizon)] += 1; ... }` arm), the two counters are adjacent, unconditional increments in the same match arm, and `band_index` is a total match over `Horizon`'s five variants (a sixth variant is a compile error, not a runtime miss) — so the identity holds by construction and cannot fail. The source comment immediately after the Hollow citation says so itself: "This asserts the HARNESS counted every cave, not that the world has any particular property, so it is a guard and not a criterion." What remains are the file's non-vacuity guards (`land_vertices > 0`, `cave_vertices <= land_vertices`) — the same class Task 4a demoted in `probe_teller_relations.rs`. Section header at :352 concurs: "Three results, all REPORTED and never asserted... except for data-integrity guards." The band-variety numbers themselves are printed, never asserted (the numeric threshold was deliberately withdrawn per the module doc). |
+| `report_h2_depth_weld_and_reachability` | `deep_realm_substrate` | 370.283 | PASS | **DEMOTE** | The Deep Realm Task 8, sibling to the row above, same file, same correction. `band_bucket_total == total_caves` is the same tautological shape as `report_cave_substrate`'s identity (`rung_index` is also a total match over `Band`'s habitation variants, fed by unconditional adjacent increments) and cannot fail. The coverage-monotonicity assertion is tautological too, independent of what `report_cave_substrate`'s row argues: `coverage_by_radius[i] = count(v : dist[v] <= radius_i) / land_vertices` over the strictly increasing `REPORT_RADII = [1,2,3,5,10]`, so `{v : dist[v] <= radius_i}` is a subset of `{v : dist[v] <= radius_{i+1}}` for **any** `dist` array whatsoever — all-`None`, all-identical, or genuinely garbage — because the filter condition is monotone in the threshold regardless of the data. It cannot detect a traversal bug. What remains is the file's own stated class: "REPORTED, never asserted... except for data-integrity guards" (:352) — `land_vertices > 0`, per-vertex-coverage completeness, `cave_vertices <= land_vertices`. Same DEMOTE class as its sibling row. |
+| `what_the_bake_founded_per_people` | `underworld_capacity_probe` | 43.850 | PASS | **DEMOTE** | The Underworld Task 8, the surface-density half of spec §4.2.1/§4.6's re-key acceptance criteria. The file is NOT zero-assertion (its sibling `where_underworld_communities_found_and_what_they_cut` carries two real existence guards), but this test itself asserts nothing — it prints per-people occupation counts and a distinct-site count and nothing checks them. It exists to be read by a human alongside its sibling below, not to fail on its own; a red is only a build panic, carrying no content-specific signal. Report branch: the number is meant to be eyeballed against the acceptance criterion, not gated. |
+| `a_pinned_surface_people_builds_the_same_world` | `underworld_capacity_probe` | 103.264 | PASS | **DEMOTE** | The Underworld Task 8, the surface-invariance control for the realm re-key (spec §4.6): a pinned-surface-only world must build byte-for-byte the same before and after the re-key. The file is NOT zero-assertion (see the row above), but this test itself carries no assertion by design — its own doc says it "prints rather than asserts against a committed literal: the number it produces is compared against the same command run on the parent commit, which is a comparison a literal in this file could not make honestly." That is a deliberate report instrument (diff two runs by hand across a commit boundary), not a standing gate. |
 | `where_underworld_communities_found_and_what_they_cut` | `underworld_capacity_probe` | 51.812 | PASS | **KEEP** | The Underworld Task 8, sibling to the two DEMOTE rows above but carrying two real existence assertions: `underworld_records > 0` ("the seating has zeroed a people out of the world") and `made > 0` ("spec §4.2.1 clause 2's producer is not producing" — the `Made`-chamber drainage-rule production path). Both are genuine "did a shipped mechanism stop firing" catches, distinct from the file's other two tests, which print only. |
 | `occupancy_readout_is_current` | `occupancy_readout` | 408.440 | PASS | **DEMOTE** | The Vacancy T3 / The Radiation. A byte-golden drift check (`rendered == committed` against `fixtures/occupancy.csv`) whose own failure message is the canonical report-branch instruction: "if this is intended, rewrite the fixture in the SAME commit as the change that drifted it." This is the same shape as the hearsay artifact's `BASELINE_*`-family findings — a live-worldgen-derived committed artifact that legitimately drifts with any world-shape change and is meant to be re-baselined, not investigated as a regression per se. |
 | `full_pin_product_is_enumerated` | `pin_enumeration` | 8.521 | PASS | **KEEP** | Exhaustive micro-enumeration of the 48-point discrete pin-space product (sky × rotation × neighbor × supercontinent) at seed 42. Every `Ok` build is asserted byte-deterministic (rebuilt and compared via `to_json()`), and every combo is asserted to resolve to `Ok` or a typed `Err`, never a panic. This is a genuine, general-purpose determinism/robustness witness over the whole discrete pin space — a red means either a panic in genesis or a non-deterministic build for some pin combination, both real regressions. The built/refused split itself is deliberately NOT asserted (reported only), which is exactly the report/witness line drawn correctly within one test. |
@@ -232,15 +230,15 @@ be wrong was correct. This is reported here as the finding it is; no file,
 | `monophyly_elf_holds_over_the_seed_panel` | `radiation_language` | 46.171 | PASS | **KEEP** | The Radiation P5, clause 1. Asserts every elf daughter's recorded proto-root matches an INDEPENDENT re-derivation of the family's proto-root assignment, over a seed panel. A red means "the proto is being sourced from a sibling," a genuine bug in the language-derivation pipeline (`assign_proto_roots`/`build_lexicon`'s universe rule) — the module doc cites a real prior instance of exactly this kind of bug (`family_proto_assignment`'s own history). |
 | `divergence_is_real_across_all_six_elf_daughters` | `radiation_language` | 48.804 | PASS | **KEEP** | The Radiation P5, clause 2. Asserts that some concept rooted in all six elf daughters carries ≥2 distinct modern forms — a null that would mean "the family is silent aliases," a real regression in the divergence-cascade mechanism (something homogenized six independently-drawn lexicons). Six independent draws coinciding on everything is exactly the kind of finding worth investigating as a program defect, not a number to update. |
 | `homophony_does_not_leak_the_sibling_count` | `radiation_language` | 51.122 | PASS | **DEMOTE** | The Radiation P5, clause 3. The module's own extensive disclosure frames this as underpowered, provisional evidence: "NOT FALSIFIED, not 'confirmed'... the holding rests on ONE SEED OF THREE... this panel cannot distinguish a 2x systematic leak from noise in either direction," and explicitly calls for "an adequately powered successor... in a spec before any code." A test whose own doc states it cannot currently tell signal from noise is not standing regression coverage; a red would most plausibly restart the same "is this real or panel noise" question the doc already could not settle, which is a report-shaped outcome (record the new reading, reconsider) rather than an investigation with a defined target. |
-| `p1_every_dwarf_below_its_floor_is_elevation_bound_on_all_land` | `delver_readout` | 57.585 | PASS | **KEEP** | The Delvers, same closed-form theorem as `delver_bind_audit`'s KEEP row, applied to the shipped dwarf roster (gully-dwarf, human's dwarf-family analogue). Same reasoning: an exact consequence of `ConditionResponse::eval`'s formula, `share == 1.0` exactly; a red means the tolerance model changed in a way that breaks the closed form. |
-| `p1_desert_dwarf_is_not_elevation_bound` | `delver_readout` | 58.670 | PASS | **KEEP** | Discrimination control for the row above (desert-dwarf, devotion above its floor, must read <0.99 elevation-bound) — same shape and same reasoning as `delver_bind_audit`'s discrimination-control row: without it, the theorem's KEEP sibling could not be told apart from a probe that reports "elevation" unconditionally. |
+| `p1_every_dwarf_below_its_floor_is_elevation_bound_on_all_land` | `delver_readout` | 57.585 | PASS | **KEEP** | The Delvers, same closed-form theorem as `delver_bind_audit`'s KEEP row, applied to the shipped dwarf roster (gully-dwarf, human's dwarf-family analogue). Same reasoning: an exact consequence of `ConditionResponse::eval`'s formula, `share == 1.0` exactly; a red means the tolerance model changed in a way that breaks the closed form. A cheap, non-heavy sibling in the same file, `the_dwarf_floors_are_what_the_roster_was_authored_against`, already verifies (no world built) which dwarves classify below/above their sovereignty floor — the precondition this test needs to know which kinds to check. What this heavy test adds beyond that cheap check is the theorem's actual consequence measured over real land vertices of live generated worlds (three seeds), which no registry-only read can establish. |
+| `p1_desert_dwarf_is_not_elevation_bound` | `delver_readout` | 58.670 | PASS | **KEEP** | Discrimination control for the row above (desert-dwarf, devotion above its floor, must read <0.99 elevation-bound) — same shape and same reasoning as `delver_bind_audit`'s discrimination-control row: without it, the theorem's KEEP sibling could not be told apart from a probe that reports "elevation" unconditionally. Same cheap-sibling relationship as the row above: `the_dwarf_floors_are_what_the_roster_was_authored_against` cheaply confirms desert-dwarf classifies above its floor; this heavy test is what actually measures the live-world consequence of that classification. |
 | `the_supply_term_is_near_kind_independent_across_the_dwarf_family` | `delver_readout` | 140.882 | PASS | **KEEP** | The Delvers' capacity-decomposition diagnosis. Contains a genuine bit-for-bit mirror-proof, verified: `supply_only_correlations`'s helper asserts `reconstructed == *real.get(c)` (the local `saturated * tolerance_liebig_value` reconstruction against the real, production `per_species_suitability` output) on every land vertex of every kind measured, every run — "A mismatch means one of the two mirrors has drifted from the production capacity path." That is a real, load-bearing regression witness for both this file's private mirror of `tolerance_liebig` and production's `per_species_suitability`. The near-unity supply-correlation floor around it is a post-hoc, report-shaped diagnosis by contrast, but the mirror-proof assertion alone justifies KEEP. |
 | `p6_seed_42s_committed_world_moved` | `delver_readout` | 15.360 | PASS | **KEEP** | The Delvers P6, evolved into a general settling-roster-completeness invariant: `holding == settling_peoples()` — every settling people must hold ground somewhere on seed 42, and only settling peoples may hold any. This already caught one real bug in its own history (The Radiation's re-pin discovery: a stale hand-authored roster constant compared as a *count* rather than a *set*, silently passing on the wrong roster). A red today would mean a settling people genuinely failed to found anywhere, or a non-settling one placed — both real placement/genesis regressions. |
 | `did_the_stope_solve_the_oatmeal_problem` | `stope_variety_probe` | 9.881 | PASS | **KEEP** | The Stope's headline instrument, and the single most heavily mutation-validated test in this population. Carries a proven theorem (`reachable_chambers == totals.sum()`, "equal by construction" since The Drift, proven not argued: the module's sibling-guard comment records that refusing lateral moves drove the whole-world share to 67.82% and refusing descent to 18.40%, with the level count standing still through both — numerator and denominator are independently computed and the mutation moved only one), an arithmetic ceiling (`widest <= TOTAL_FLOORS_CEILING`, "the frozen ranges cannot produce that, so the measurement is wrong"), and extensive exhaustiveness/vacuity guards, alongside several report-shaped campaign-decision pins (the oatmeal criterion, C.1's branch-count mode, B.7's gate-not-gating reading, the ratcheted headline rate). The report-shaped clauses' own red-path instructions consistently point to a defined investigation ("read `drift_reach_probe`'s per-band unreached histogram before touching anything," "four changes move it LEGITIMATELY... a move with none of those four touched is a finding") rather than a bare "update the number" — the same diagnostic posture as `winze_scale_probe`'s KEEP row above, and for the same reason: the genuine theorem plus the investigative framing around the rest outweighs the report-shaped clauses bundled beside them. |
 | `the_blast_radius_readout` | `warren_readout` | 420.496 | PASS | **KEEP** | The Warren Task 4 — explicitly THE standing tripwire for the two-tier gate/modifier tolerance model's dormancy, cross-referenced by name from `radiation_readout.rs`'s own companion null ("The Warren tripwire... should have reddened FIRST — if it is green, THE TRIPWIRE IS BROKEN"). Pins three exact ratios (rust-monster, xorn, drow) with explicit "if this moves, the tolerance model came out of shadow mode, re-measure the downstream campaigns" framing, and has already been correctly re-pinned once for a real, bisection-verified production change (xorn's CHEMOSYNTHATE weight, commit `a19d0aa53`). Also carries a genuine gate-malfunction check (P2: non-zero land-vertex count must never RISE after the cave-availability gate is applied — "the plan calls a rise here 'the gate is not working'"). This is load-bearing infrastructure other tests in this population depend on being correctly wired. |
 | `wood_and_high_do_not_separate_in_field_or_placement` | `radiation_readout` | 88.949 | PASS | **KEEP** | The Radiation P3(a). Asserts wood-elf's and high-elf's capacity fields are bit-identical over land — a genuine structural invariant for two rows that are, by construction, the same value on every documented input. If it fires: "a FINDING about what else differentiates them" — a real, investigation-worthy divergence between two kinds that should be indistinguishable by the production capacity pipeline, not a report of an expected drift. |
 | `drow_separates_from_wood_and_the_five_arms_say_what_does_it` | `radiation_readout` | 210.793 | PASS | **KEEP** | The Radiation P4. Three genuine structural/mechanism invariants: every drow settlement sits on a cave vertex ("cannot happen unless the gate stopped reaching the dimensional path"); drow is NOT bit-identical to wood in the shipped arm (the realm gate must still separate them); drow IS bit-identical to wood in arm A4, where nothing authored differs — and if that one fires, the assertion's own message calls it "the headline: enumerate [the unenumerated difference] before reading anything else in this file." All three ask for investigation of the placement/capacity pipeline, not a report update. |
-| `drows_dark_adaptation_moves_nothing_in_the_committed_world` | `radiation_readout` | 91.345 | PASS | **KEEP** | The Radiation's companion null to `warren_readout`'s tripwire, explicitly cross-wired to it: "The Warren tripwire... should have reddened FIRST — if it is green, THE TRIPWIRE IS BROKEN and that is the first thing to fix." A red is diagnosed as a real, structural event (the two-tier tolerance model waking up), with a named positive control elsewhere in the file proving the perturbation used here actually differs from the shipped value. |
+| `drows_dark_adaptation_moves_nothing_in_the_committed_world` | `radiation_readout` | 91.345 | PASS | **KEEP** | Not an independent second tripwire — this test's own diagnostic power depends on `the_blast_radius_readout` (`warren_readout.rs`) already KEPT above: its explicit cross-wiring ("The Warren tripwire... should have reddened FIRST — if it is green, THE TRIPWIRE IS BROKEN") means a red here is only interpretable alongside that file's three ratio pins, not on its own. What this test adds beyond `warren_readout.rs`'s own drow ratio pin is a second, independent construction of the same claim (a full ledger byte-identity check under a perturbed `insolation.devotion`, rather than a mean-suitability ratio) plus a named positive control proving the perturbation used here actually differs from the shipped value — corroborating evidence for the same finding, not a second, freestanding one. |
 | `each_elf_changes_the_committed_ledger` | `radiation_readout` | 228.629 | PASS | **DEMOTE** | The Radiation P1′. Its own red-path message: "That kind is authored and INERT — rung 2 on that kind. It is a finding about the kind, not about the mechanism; report it, do not retune to rescue it." Explicit report-branch instruction distinguishing "a finding about the kind" from "about the mechanism" — this test's job is to catch the former, which the campaign's own framing treats as something to record, not chase. |
 | `each_elf_concentrates_in_its_authored_stronghold_biomes` | `radiation_readout` | 104.547 | **FAIL** | **DEMOTE** | The Radiation P2. Preregistered finding, closed and CONFIRMED for the five elves this test covers (the sixth, desert-elf, is carried separately under the `PREREGISTERED, not met:` idiom). Currently red, and the module doc for this whole file supplies the reason a live-worldgen-derived probe of this shape is expected to drift: the underlying world generation moves and this is a report of a fixed campaign's preregistered axis. This is the population's **only currently-failing test** (verified against `task-4b-results.txt`, sourced from the canonical-box heavy run at commit `1710e2f11`) — demoting it does not hide a live red from the gate, because it was never gated (heavy tier, off-gate by design); it removes it from the roster this campaign is scoping for cost, and the reason for demotion (a closed preregistered finding whose own axis is explicitly acknowledged as fragile to a known blind spot — see the sibling `desert_elf_...` test's own doc) stands independent of its current pass/fail state. |
 | `p3_desert_dwarfs_climate_curves_bind` | `delver_readout` | 61.487 | PASS | **DEMOTE** | The Delvers §10.2 P3′, first half. A preregistered floor (climate share ≥ 20%) CONFIRMED with wide margin (67–91% measured); the doc frames this as a closed, already-analyzed campaign finding ("The frozen floor was 20% and the measured climate share is 67-91%. This is the roster's first people whose climate niche actually selects"), with attribution to a single authored constant (`devotion_elev = 0.70`) established by a *different*, already-KEPT closed-form theorem file (`delver_bind_audit.rs`). No investigative red-path instruction is given; the natural reading of a break is "the desert-dwarf niche or the world's climate distribution changed," which the campaign would re-derive rather than debug. |
@@ -261,62 +259,98 @@ be wrong was correct. This is reported here as the finding it is; no file,
 
 ## Summary
 
-- **KEEP: 34** — 3553.828 s. Fifteen carry a genuine, mutation-proven or
-  bit-identity/exact-theorem structural invariant (`is_the_underworld_still_
-  smaller_than_the_surface`, `exactly_the_subterranean_roster_moves`, `what_
-  does_a_chamber_read`, `the_water_table_is_not_degenerate`, `how_far_does_
-  the_dryness_gain_reach`, `is_the_raid_proxy_ambiguous_or_is_its_population_
-  stale`, `the_drift_reachability_baseline`, `zero_dispersion_collapses_
-  between_settlement_variance`, `cascade_sizes_are_measured_and_the_shape_
-  adjudicated`, `how_many_floors_does_a_run_realize`, `report_cave_substrate`,
-  `report_h2_depth_weld_and_reachability`, `where_underworld_communities_
-  found_and_what_they_cut`, `full_pin_product_is_enumerated`,
-  `did_the_stope_solve_the_oatmeal_problem`), five are theorem/discrimination-
-  control pairs proving a closed-form tolerance-model result
-  (`every_kind_below_its_floor_is_elevation_bound_on_all_land` /
+- **KEEP: 31** — 2780.224 s. Nine carry a proven theorem, mirror-proof, or
+  bit-identity invariant (`is_the_underworld_still_smaller_than_the_surface`,
+  `exactly_the_subterranean_roster_moves`, `what_does_a_chamber_read`,
+  `how_far_does_the_dryness_gain_reach`, `the_drift_reachability_baseline`,
+  `zero_dispersion_collapses_between_settlement_variance`,
+  `the_supply_term_is_near_kind_independent_across_the_dwarf_family`,
+  `full_pin_product_is_enumerated`,
+  `build_world_from_assembled_components_matches_build_world_byte_for_byte`).
+  Three are theorem/discrimination-control pairs (six tests) proving a
+  closed-form tolerance-model result:
+  `every_kind_below_its_floor_is_elevation_bound_on_all_land` /
   `a_kind_above_its_floor_lets_a_climate_axis_bind`,
   `p1_every_dwarf_below_its_floor_is_elevation_bound_on_all_land` /
-  `p1_desert_dwarf_is_not_elevation_bound`, `the_probe_separates_two_kinds_
-  known_to_differ` / `the_probe_reports_unity_for_a_kind_against_itself`),
-  two are language-cascade divergence witnesses (`monophyly_elf_holds_over_
-  the_seed_panel`, `divergence_is_real_across_all_six_elf_daughters`), one is
-  a bit-for-bit mirror-proof of production code
-  (`the_supply_term_is_near_kind_independent_across_the_dwarf_family`), one
-  is a settling-roster-completeness invariant with a real prior bug in its
-  own history (`p6_seed_42s_committed_world_moved`), one is a standing
-  tripwire other tests in the tree depend on (`the_blast_radius_readout`),
-  three are its companion structural checks
-  (`wood_and_high_do_not_separate_in_field_or_placement`, `drow_separates_
-  from_wood_and_the_five_arms_say_what_does_it`, `drows_dark_adaptation_
-  moves_nothing_in_the_committed_world`), a byte-identity genesis-path proof
-  (`build_world_from_assembled_components_matches_build_world_byte_for_
-  byte`), and a fixed-bug regression pair
-  (`a_vents_marine_forage_is_flat_again` /
+  `p1_desert_dwarf_is_not_elevation_bound`,
+  `the_probe_separates_two_kinds_known_to_differ` /
+  `the_probe_reports_unity_for_a_kind_against_itself`. Three are
+  existence-floor witnesses for a shipped mechanism
+  (`is_the_raid_proxy_ambiguous_or_is_its_population_stale`,
+  `the_cascade_distribution_is_adjudicated`,
+  `cascade_sizes_are_measured_and_the_shape_adjudicated`). One is the water
+  table's structural sanity floor, a wide preregistered band rather than a
+  tight report (`the_water_table_is_not_degenerate`; its calibration-sweep
+  sibling `how_far_does_the_dryness_gain_reach` is already counted in the
+  mirror-proof group above).
+  One is a settling-roster-completeness invariant with a real prior bug in
+  its own history (`p6_seed_42s_committed_world_moved`). Two are
+  language-cascade divergence witnesses (`monophyly_elf_holds_over_the_seed_panel`, `divergence_is_real_across_all_six_elf_daughters`). One carries a
+  proven structural theorem plus extensive mutation-validated diagnostic
+  framing around its report-shaped clauses
+  (`did_the_stope_solve_the_oatmeal_problem`). One is a standing tripwire
+  other tests in the tree depend on (`the_blast_radius_readout`),
+  corroborated (not duplicated) by three companion structural checks
+  (`wood_and_high_do_not_separate_in_field_or_placement`,
+  `drow_separates_from_wood_and_the_five_arms_say_what_does_it`,
+  `drows_dark_adaptation_moves_nothing_in_the_committed_world` — the last of
+  which is explicitly dependent on the tripwire row rather than a second
+  independent one, per its own row). One is a genuine structural bound on a
+  draw process (`how_many_floors_does_a_run_realize`, kept distinct from its
+  zero-content sibling `how_far_down_the_lattice_does_a_cave_reach`,
+  demoted). One is a mechanism-liveness pair
+  (`where_underworld_communities_found_and_what_they_cut`). And a fixed-bug
+  regression pair closes the list (`a_vents_marine_forage_is_flat_again` /
   `a_vent_is_chemosynthetically_productive_and_not_by_a_literal`).
-- **DEMOTE: 30** — 3241.938 s. Every DEMOTE row above names the campaign
-  whose question the test answered. **Four qualify for spec §3.2's automatic
-  zero-assertion demotion** and are newly found by this task
+- **DEMOTE: 33** — 4015.542 s. Every DEMOTE row names the campaign whose
+  question the test answered.
+
+  **Six qualify for spec §3.2's automatic zero-assertion path**, all
+  confirmed file-wide, not body-scoped:
+  `warren_liebig_probe::which_axis_binds_for_a_subterranean_kind` (the one
+  already named in spec §2.2's five) and
+  `delver_depth_probe::how_deep_is_a_cave` (this task's one genuine
+  addition — see the cross-cutting finding above).
+
+  **Three rows that this task's first draft wrongly routed through §3.2 are
+  demoted here on adjudicated §3.1 grounds instead**
   (`underworld_ladder_probe::how_hot_is_a_cave`,
   `underworld_capacity_probe::what_the_bake_founded_per_people`,
-  `underworld_capacity_probe::a_pinned_surface_people_builds_the_same_
-  world`, `delver_depth_probe::how_deep_is_a_cave`); a fifth
-  (`warren_liebig_probe::which_axis_binds_for_a_subterranean_kind`) is the
-  one already named in spec §2.2's five, confirmed independently here. See
-  the cross-cutting finding above the table. **1 of the 30 is currently
-  `FAIL`** (`radiation_readout::each_elf_concentrates_in_its_authored_
-  stronghold_biomes`, verified against `task-4b-results.txt`, sourced from
-  the canonical-box heavy run at commit `1710e2f11`) — a preregistered,
-  closed finding (The Radiation P2) that never ran under any gate (heavy
-  tier, off-gate by design), so demoting it changes cost accounting only,
-  not gate coverage; its row states the reason independent of its current
-  pass/fail state. The other 29 DEMOTE rows currently `PASS`.
-- **UNDECIDED: 1** — 8.583 s (`termination_probe::could_nadir_be_split_into_
-  a_sixth_rung`). The specific question that would settle it is stated in
-  its row: whether a cheap non-heavy sibling in `domains/terrain` already
-  covers the reach-alone half of its one live physics assertion, and, if so,
-  whether the remaining reach-×-live-gradient composition is worth a
-  standing heavy witness or is better read as part of a closed design
-  exploration.
+  `underworld_capacity_probe::a_pinned_surface_people_builds_the_same_world`)
+  — their files are not zero-assertion file-wide, so the automatic path
+  never applied to them; the verdicts are unchanged but the reasons are not
+  the ones originally given.
+
+  **Two rows flipped from KEEP to DEMOTE on review**
+  (`deep_realm_substrate::report_cave_substrate`,
+  `deep_realm_substrate::report_h2_depth_weld_and_reachability`): both cited
+  an "exhaustiveness" or "monotonicity" identity as a real bug-catcher, and
+  both identities are in fact tautological by construction (a total match
+  fed by unconditional adjacent increments; a coverage filter monotone in
+  its own threshold regardless of the underlying data) — see each row for
+  the source-verified detail.
+
+  **One row flipped from KEEP to DEMOTE on review**
+  (`history_tithe::the_strategy_family_is_various`): its own red-path
+  message instructs re-deriving the finding a third time, the same
+  already-re-derived-once shape Task 4a used to demote the hearsay
+  `BASELINE_*` family.
+
+  **1 of the 33 is currently `FAIL`**
+  (`radiation_readout::each_elf_concentrates_in_its_authored_stronghold_biomes`,
+  verified against `task-4b-results.txt`, sourced from the canonical-box
+  heavy run at commit `1710e2f11`) — a preregistered, closed finding (The
+  Radiation P2) that never ran under any gate (heavy tier, off-gate by
+  design), so demoting it changes cost accounting only, not gate coverage;
+  its row states the reason independent of its current pass/fail state. The
+  other 32 DEMOTE rows currently `PASS`.
+- **UNDECIDED: 1** — 8.583 s
+  (`termination_probe::could_nadir_be_split_into_a_sixth_rung`). The
+  specific question that would settle it is stated in its row: whether a
+  cheap non-heavy sibling in `domains/terrain` already covers the
+  reach-alone half of its one live physics assertion, and, if so, whether
+  the remaining reach-×-live-gradient composition is worth a standing heavy
+  witness or is better read as part of a closed design exploration.
 
 No fixture was regenerated and no test file, `#[ignore]` string, or code was
 modified to produce this table — this task is the adjudication only; Task 5
