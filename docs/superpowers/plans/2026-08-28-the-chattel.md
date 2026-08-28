@@ -86,7 +86,9 @@ argues from the spec; executors read both.
 - `windows/vessel/src/snapshot.rs` — `NounEntry` gains `affordances`.
 - `windows/vessel/src/interior/pattern.rs` — a pattern that places a thing
   `Within` a container.
-- `Cargo.toml` (root) — `domains/thing` joins `members`.
+
+Root `Cargo.toml` is **not** in this list: `members` is a glob (`domains/*`),
+so the new crate joins the workspace with no edit.
 
 **Byte-goldens and generated artifacts that move:** spec §8 is the list. Two
 need naming here because nothing routine writes them:
@@ -194,7 +196,6 @@ committing.
 
 **Files:**
 - Create: `domains/thing/Cargo.toml`, `domains/thing/src/lib.rs`
-- Modify: `Cargo.toml` (root — add `"domains/thing"` to `members`)
 - Test: `domains/thing/src/lib.rs`'s own `mod tests`
 - Regenerate: `book/src/reference/layering-generated.md`,
   `docs/audits/type-audit-report.md`
@@ -251,7 +252,7 @@ mod tests {
     fn roster_and_registry_agree_in_both_directions() {
         let reg = thing_registry();
         for label in THING_KINDS {
-            assert!(reg.get(&KindId(label)).is_some(), "roster names {label:?}, registry does not");
+            assert!(reg.get(&KindId(*label)).is_some(), "roster names {label:?}, registry does not");
         }
         for id in reg.ids() {
             assert!(THING_KINDS.contains(&id.0), "registry has {:?}, roster does not", id.0);
@@ -273,8 +274,26 @@ where behaviour is being asserted, a red from a compile error proves nothing.
 - [ ] **Step 4: Create the crate**
 
 `domains/thing/Cargo.toml` copies `domains/alchemy/Cargo.toml`, with
-`hornvale-kernel` as the only dependency. Add `"domains/thing"` to root
-`Cargo.toml`'s `members`.
+`hornvale-kernel` as the only dependency:
+
+```toml
+[package]
+name = "hornvale-thing"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Hornvale thing domain: object kinds and their traits."
+
+[dependencies]
+hornvale-kernel = { path = "../../kernel" }
+```
+
+**Do NOT edit root `Cargo.toml`.** Its `members` is a glob —
+`["kernel", "domains/*", "windows/*", "cli"]` — so a new directory under
+`domains/` joins the workspace automatically. An earlier draft of this plan
+told you to add the path by hand and listed root `Cargo.toml` as a modified
+file; both were wrong, and adding a redundant explicit member alongside the
+glob is the kind of edit that reads as intentional forever after.
 
 The module doc states, in the `domains/alchemy` register, that this domain
 **draws nothing** — no `streams.rs`, no `StreamLabel`, no `Seed` parameter —
@@ -309,10 +328,25 @@ would validate a thing-kind against a roster its kinds are absent from, and
 extends with its ids alongside the other eleven stores. `deity`, `culture` and
 `material` are the model — kind stores with no biosphere row.
 
-`WorldComponents::assemble` must populate it, and `assemble`'s output is
-asserted byte-equal to the default roster's composed set. Read that assertion
-before changing `assemble`; if adding a store moves it, that is a finding to
-report, not a number to update.
+`WorldComponents::assemble` must populate it. **An earlier draft of this step
+told you to read an assertion that `assemble`'s output is "byte-equal to the
+default roster's composed set". No such test exists** — that phrase is from
+`build_world`'s doc comment in `windows/worldgen/src/lib.rs`, and a plan
+sending you to find a test that was never written is this project's
+best-documented defect shape.
+
+What actually guards `assemble`, verified, is three tests in
+`components.rs`'s own `mod tests`:
+
+- `the_kind_roster_is_the_union_of_all_stores` — asserts named labels are
+  present and that `kinds()` is sorted. A new store should keep both true.
+- `kinds_with_covers_the_new_component_tags` — asserts **exact vectors** per
+  tag. This is the one a new `ComponentTag` variant would break.
+- `kinds_with_biosphere_is_the_full_roster_and_psyche_is_the_peopled_subset`.
+
+Run those three and read what they assert before you change anything. If
+adding the store reddens one, that is a finding to report, not a number to
+update.
 
 **Do NOT add a `ComponentTag` variant unless something reads it.** `kinds_with`
 (`:196`) is the capability query; nothing in this plan calls it for things, and
