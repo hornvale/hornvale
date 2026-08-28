@@ -7690,6 +7690,52 @@ mod tests {
     }
 
     #[test]
+    fn every_emitted_fact_is_dated_inside_the_tick_that_emitted_it() {
+        // THE SORT'S PRECONDITION (The Precedence, spec §5 guard 2). Making
+        // the emitted stream chronological by sorting it is correct only
+        // because a tick is a CLOSED WINDOW: no fact may be dated outside
+        // `[from, to]`, so reordering within the window can never need to
+        // reach back past a fact an earlier tick already emitted. That is the
+        // watermark the whole design rests on, and it was previously assumed
+        // rather than asserted.
+        //
+        // DIRECTION THIS ENFORCES: `emitted` is a subset of the window. It is
+        // blind to a fact the walk DECLINED to emit — a step past `to` returns
+        // early and commits nothing, which this cannot see and does not claim
+        // to.
+        //
+        // Three masses, so the population genuinely falls out of step and the
+        // jump arms (`hold_step`'s closed form, `next_awake_day`'s sleep
+        // jump) are actually reached rather than merely present.
+        let (ledger, terrain, npcs) = interleaving_fixture(&[4.375, 70.0, 1_120.0]);
+        let from = WorldTime::from_std_days(1.0).expect("a day value is finite");
+        let to = WorldTime::from_std_days(20.0).expect("a day value is finite");
+        let sys = DriveMovements {
+            npcs,
+            from,
+            to,
+            params: SUSTENANCE,
+            day_ticks: None,
+            terrain: &terrain,
+        };
+        let facts = sys.step(&ledger);
+        assert!(
+            !facts.is_empty(),
+            "the fixture emitted nothing; it cannot pin a window"
+        );
+        for f in &facts {
+            let d = f.day.expect("every emitted fact is dated");
+            assert!(
+                d >= from && d <= to,
+                "`{}` at {d:?} fell outside the tick's window [{from:?}, {to:?}] — \
+                 the sort in `step_with_occupancy` is only sound inside a closed \
+                 window, so this is a design refutation, not a test to relax",
+                f.predicate
+            );
+        }
+    }
+
+    #[test]
     fn a_faster_creature_acts_more_often_between_a_slower_ones_actions() {
         // INTERLEAVING, OBSERVABLY. Two creatures sixteen-fold apart in mass are
         // exactly two-fold apart in tempo (`16 ^ 0.25 == 2`), so the lighter one
