@@ -8,7 +8,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world,
+    BuildDepth, RungArtifacts, SettlementPins, SkyChoice, WorldComponents, build_world,
     build_world_from_components, build_world_observed, build_world_to,
 };
 
@@ -118,8 +118,32 @@ fn full_depth_is_byte_identical_to_the_ordinary_full_build() {
 /// or unchanging world would satisfy a bare rung-name count, so this is the
 /// guard that keeps the test from being vacuous.
 fn observed_run(depth: BuildDepth) -> (hornvale_kernel::World, Vec<BuildDepth>) {
+    observed_run_recording(depth).0
+}
+
+/// What one firing site handed the observer, reduced to the two booleans the
+/// `Some`-iff-depth contract is about — kept as booleans rather than the
+/// borrowed artifacts themselves, because `RungArtifacts` borrows values that
+/// live only for the duration of the callback and cannot escape it (which is
+/// itself the contract: the observer is a read, not a clone).
+#[derive(Debug, PartialEq, Eq)]
+struct Handed {
+    rung: BuildDepth,
+    terrain: bool,
+    climate: bool,
+}
+
+/// [`observed_run`] plus the per-rung record of which artifacts were handed
+/// over, so a test can assert BOTH directions of the `Some`-iff-depth
+/// contract: present where the rung built it, ABSENT where it did not. A
+/// record taken only at `Full` cannot tell a correct implementation from one
+/// that hands `Some` at every rung.
+fn observed_run_recording(
+    depth: BuildDepth,
+) -> ((hornvale_kernel::World, Vec<BuildDepth>), Vec<Handed>) {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let mut seen: Vec<BuildDepth> = Vec::new();
+    let mut handed: Vec<Handed> = Vec::new();
     let mut last_len = 0usize;
     let world = build_world_observed(
         Seed(42),
@@ -129,8 +153,29 @@ fn observed_run(depth: BuildDepth) -> (hornvale_kernel::World, Vec<BuildDepth>) 
         &SettlementPins::default(),
         &wc,
         depth,
-        &mut |rung, world| {
+        &mut |rung, world, art: RungArtifacts<'_>| {
             seen.push(rung);
+            handed.push(Handed {
+                rung,
+                terrain: art.terrain.is_some(),
+                climate: art.climate.is_some(),
+            });
+            // Non-vacuity for the artifacts themselves: a `Some` that carried
+            // an empty or default value would satisfy `is_some()` while being
+            // useless to a view, so every handed terrain is read for a real
+            // globe and every handed climate for a real biome map.
+            if let Some(terrain) = art.terrain {
+                assert!(
+                    terrain.geosphere().vertex_count() > 1_000,
+                    "rung {rung:?} handed a terrain with no globe behind it"
+                );
+            }
+            if let Some(climate) = art.climate {
+                assert!(
+                    !climate.biome_map().is_empty(),
+                    "rung {rung:?} handed a climate with an empty biome map"
+                );
+            }
             assert!(
                 !world.ledger.is_empty(),
                 "rung {rung:?} handed an empty world"
@@ -145,7 +190,102 @@ fn observed_run(depth: BuildDepth) -> (hornvale_kernel::World, Vec<BuildDepth>) 
         },
     )
     .expect("seed 42 builds");
-    (world, seen)
+    ((world, seen), handed)
+}
+
+#[test]
+fn the_observer_hands_each_rung_exactly_the_artifacts_that_rung_built() {
+    // R4's contract, asserted in BOTH directions per rung. `Astronomy` must
+    // hand neither — a build that passed the terrain it has not sculpted yet
+    // could not (it does not exist), but one that passed a stale or default
+    // one silently could, and this is the assertion that would catch it.
+    // `Terrain` must hand terrain and NOT climate: climate is derived inside
+    // the settlements stage, so a `Some` here would mean something re-derived
+    // it, which is exactly the decision-0092 violation the widening exists to
+    // avoid.
+    let (_, handed) = observed_run_recording(BuildDepth::Full);
+    assert_eq!(
+        handed,
+        vec![
+            Handed {
+                rung: BuildDepth::Astronomy,
+                terrain: false,
+                climate: false
+            },
+            Handed {
+                rung: BuildDepth::Terrain,
+                terrain: true,
+                climate: false
+            },
+            Handed {
+                rung: BuildDepth::Settlements,
+                terrain: true,
+                climate: true
+            },
+            Handed {
+                rung: BuildDepth::Full,
+                terrain: true,
+                climate: true
+            },
+        ],
+        "a rung was handed an artifact it had not built, or denied one it had"
+    );
+}
+
+#[test]
+fn a_shallow_request_hands_the_same_artifacts_at_the_rungs_it_does_reach() {
+    // The shallow requests take DIFFERENT early-return paths through
+    // `build_to`, so the firing sites they reach are not the same code the
+    // test above exercised past. A stop-at-`Terrain` build must still deny
+    // climate at its last rung.
+    let (_, handed) = observed_run_recording(BuildDepth::Astronomy);
+    assert_eq!(
+        handed,
+        vec![Handed {
+            rung: BuildDepth::Astronomy,
+            terrain: false,
+            climate: false
+        }]
+    );
+
+    let (_, handed) = observed_run_recording(BuildDepth::Terrain);
+    assert_eq!(
+        handed,
+        vec![
+            Handed {
+                rung: BuildDepth::Astronomy,
+                terrain: false,
+                climate: false
+            },
+            Handed {
+                rung: BuildDepth::Terrain,
+                terrain: true,
+                climate: false
+            },
+        ]
+    );
+
+    let (_, handed) = observed_run_recording(BuildDepth::Settlements);
+    assert_eq!(
+        handed,
+        vec![
+            Handed {
+                rung: BuildDepth::Astronomy,
+                terrain: false,
+                climate: false
+            },
+            Handed {
+                rung: BuildDepth::Terrain,
+                terrain: true,
+                climate: false
+            },
+            Handed {
+                rung: BuildDepth::Settlements,
+                terrain: true,
+                climate: true
+            },
+        ]
+    );
 }
 
 #[test]
@@ -214,7 +354,7 @@ fn an_observed_build_is_byte_identical_to_an_unobserved_one() {
         &SettlementPins::default(),
         &wc,
         BuildDepth::Full,
-        &mut |_, _| {},
+        &mut |_, _, _| {},
     )
     .expect("seed 42 builds");
     assert_eq!(

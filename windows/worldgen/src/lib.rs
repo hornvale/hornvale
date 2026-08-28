@@ -12,8 +12,8 @@ use hornvale_astronomy::{
     streams::ROOT as ASTRONOMY_STREAM_ROOT,
 };
 use hornvale_climate::{
-    AMBIENT, ClimateInputs, ClimateReport, GeneratedClimate, PrecipRegime, RotationRegime,
-    SeafloorFeature, UniformClimate, diurnal_waveform,
+    AMBIENT, ClimateInputs, ClimateReport, PrecipRegime, RotationRegime, SeafloorFeature,
+    UniformClimate, diurnal_waveform,
 };
 use hornvale_kernel::math;
 use hornvale_kernel::seed::StreamLabel;
@@ -143,6 +143,12 @@ pub use history_emit::{
 /// the composition root can NAME what [`demography_report_from`] hands back
 /// (The Quire: `hornvale_vessel::WorldContext` stores one). A re-export, not a
 /// new dependency edge — the layering graph is unchanged.
+// Re-exported so a consumer of [`RungArtifacts`] can NAME the type it is
+// handed without taking its own edge to `domains/climate` — the composition
+// root is the layer where these values are built, so it is the honest place
+// to publish the name. `GeneratedTerrain` needs no equivalent: every current
+// consumer already depends on `hornvale-terrain` directly.
+pub use hornvale_climate::GeneratedClimate;
 pub use hornvale_demography::DemographyReport;
 pub use knownness::{Knownness, knownness, memory_half_life};
 pub use resolve::{ChainLink, format_chain, resolve_at, resolve_chain_at};
@@ -248,6 +254,42 @@ pub struct BuildArtifacts {
     pub terrain: Option<GeneratedTerrain>,
     /// The derived climate, `Some` iff depth >= [`BuildDepth::Settlements`].
     pub climate: Option<GeneratedClimate>,
+}
+
+/// The derived artifacts a rung had already built when the observer fired,
+/// as **borrows** — the read-only companion to [`BuildArtifacts`], which
+/// hands the same two values back by value at the end of a build.
+///
+/// Each field is `Some` on exactly the rungs [`BuildArtifacts`]' own fields
+/// are, and for the same reason: the build sculpts terrain at the `Terrain`
+/// rung and derives climate inside the `Settlements` stage, so a rung
+/// earlier than that has no such value to lend. `None` means *this rung has
+/// not built it yet*, never *re-derive it* — re-deriving is what
+/// [`terrain_of`]/[`climate_from`] are for, and decision 0092 forbids a
+/// readout doing that (a view re-sculpting a globe per render would cost
+/// ~199 ms of paint time to reproduce a value the build is holding).
+///
+/// Borrows, deliberately: the observer is a READ. A `GeneratedTerrain` is
+/// large, an observer that cloned one would double the build's peak
+/// footprint, and nothing in a view needs to outlive the callback — a
+/// consumer that must keep something derives and keeps that instead.
+#[derive(Clone, Copy)]
+pub struct RungArtifacts<'a> {
+    /// The sculpted terrain, `Some` iff the fired rung >= [`BuildDepth::Terrain`].
+    pub terrain: Option<&'a GeneratedTerrain>,
+    /// The derived climate, `Some` iff the fired rung >= [`BuildDepth::Settlements`].
+    pub climate: Option<&'a GeneratedClimate>,
+}
+
+impl RungArtifacts<'_> {
+    /// The artifacts of a rung that has built neither — the `Astronomy` rung's
+    /// value, and the honest default.
+    pub fn none() -> RungArtifacts<'static> {
+        RungArtifacts {
+            terrain: None,
+            climate: None,
+        }
+    }
 }
 
 /// The live astronomy provider a world uses, reconstructed from its ledger.
@@ -7451,8 +7493,16 @@ pub fn build_world_to_with_artifacts(
 /// the additive observer hook a client uses to render a build honestly as it
 /// proceeds (spec MAP-25's staged-genesis view), rather than only at the end.
 ///
+/// The observer is also handed the rung's [`RungArtifacts`] — borrows of the
+/// sculpted terrain and derived climate the build is already holding, `Some`
+/// exactly on the rungs that built them. A view needs them because decision
+/// 0092 forbids a readout re-deriving with [`terrain_of`]/[`climate_from`],
+/// and re-sculpting a globe per render would cost ~199 ms of paint time to
+/// reproduce a value in scope three lines away.
+///
 /// **The observer is a READ.** It must not and cannot mutate the world it is
-/// handed (`&World`, not `&mut World`), and calling it commits no facts and
+/// handed (`&World`, not `&mut World`), nor the artifacts (shared borrows,
+/// never clones), and calling it commits no facts and
 /// draws nothing — an observed build is byte-identical to the same build
 /// without one (`an_observed_build_is_byte_identical_to_an_unobserved_one`,
 /// `windows/worldgen/tests/suite/depth.rs`). Every other entry point
@@ -7468,7 +7518,7 @@ pub fn build_world_observed(
     settlement_pins: &SettlementPins,
     wc: &WorldComponents,
     depth: BuildDepth,
-    observer: &mut dyn FnMut(BuildDepth, &World),
+    observer: &mut dyn FnMut(BuildDepth, &World, RungArtifacts<'_>),
 ) -> Result<World, BuildError> {
     build_to(
         seed,
@@ -7873,10 +7923,11 @@ pub fn history_for(
 }
 
 /// `build_to`'s optional observer callback: called with the rung just
-/// completed and the real, partially-built world at that depth. A type alias
-/// purely to keep the signature below under clippy's type-complexity limit —
-/// see [`build_to`]'s own doc for the firing contract.
-type BuildObserver<'a> = &'a mut dyn FnMut(BuildDepth, &World);
+/// completed, the real, partially-built world at that depth, and the
+/// derived artifacts that rung had already built ([`RungArtifacts`]). A type
+/// alias purely to keep the signature below under clippy's type-complexity
+/// limit — see [`build_to`]'s own doc for the firing contract.
+type BuildObserver<'a> = &'a mut dyn FnMut(BuildDepth, &World, RungArtifacts<'_>);
 
 /// The full pipeline, run only as deep as `depth`. `build_world_from_components`
 /// delegates with `BuildDepth::Full`; `build_world_to` forwards its argument.
@@ -7887,7 +7938,10 @@ type BuildObserver<'a> = &'a mut dyn FnMut(BuildDepth, &World);
 /// `observer`, when present, is called once per rung this build actually
 /// reaches — in ladder order, unconditionally at each of the three existing
 /// early-return boundaries plus once more at the very end for `Full` — with
-/// the real `&World` at that depth. Every call site every other caller uses
+/// the real `&World` at that depth and the [`RungArtifacts`] that rung had
+/// built. Each firing site borrows the values already in scope at it, so the
+/// `Some`-iff-depth contract is the same one the `BuildArtifacts` returned
+/// beside it states, by construction rather than by a second rule. Every call site every other caller uses
 /// passes `None`; only [`build_world_observed`] passes `Some`.
 #[allow(clippy::too_many_arguments)]
 // Named construction site (decision 0092): worldgen's own build path —
@@ -7956,7 +8010,7 @@ fn build_to(
     // crossed the Astronomy rung. A `Full` build falls through every `if
     // depth …` check below, so this is the only site that ever reports it.
     if let Some(obs) = &mut observer {
-        obs(BuildDepth::Astronomy, &world);
+        obs(BuildDepth::Astronomy, &world, RungArtifacts::none());
     }
 
     if depth == BuildDepth::Astronomy {
@@ -7994,7 +8048,14 @@ fn build_to(
 
     // Fires unconditionally, same reason as the Astronomy site above.
     if let Some(obs) = &mut observer {
-        obs(BuildDepth::Terrain, &world);
+        obs(
+            BuildDepth::Terrain,
+            &world,
+            RungArtifacts {
+                terrain: Some(&terrain),
+                climate: None,
+            },
+        );
     }
 
     if depth <= BuildDepth::Terrain {
@@ -8508,7 +8569,14 @@ fn build_to(
 
     // Fires unconditionally, same reason as the two sites above.
     if let Some(obs) = &mut observer {
-        obs(BuildDepth::Settlements, &world);
+        obs(
+            BuildDepth::Settlements,
+            &world,
+            RungArtifacts {
+                terrain: Some(&terrain),
+                climate: Some(&climate),
+            },
+        );
     }
 
     if depth <= BuildDepth::Settlements {
@@ -8886,7 +8954,14 @@ fn build_to(
     // one and only site that reports the Full rung; it cannot double-fire
     // with any of them.
     if let Some(obs) = &mut observer {
-        obs(BuildDepth::Full, &world);
+        obs(
+            BuildDepth::Full,
+            &world,
+            RungArtifacts {
+                terrain: Some(&terrain),
+                climate: Some(&climate),
+            },
+        );
     }
 
     Ok(BuildArtifacts {
