@@ -59,9 +59,11 @@ ladder's frontier is the typologically correct build order: it says which
 capability is reachable next, and it moves every time one lands. Entry
 coverage is simply the wrong statistic for a corpus whose entries are that
 deep — not a broken one, a wrong-question one. The remedy is a
-**complementary** statistic and never a replacement: the merchant corpus
-reading 5 of 12 by its existing unmodified method is comparable across four
-campaigns, and loosening what *covered* means to make one headline move would
+**complementary** statistic and never a replacement: the merchant corpus's
+entry coverage, read by its existing unmodified method, held at 5 of 12
+across three prior campaigns and moved to 6 of 12 under this one's own
+`polar-question` landing — comparable precisely because the method never
+changed. Loosening what *covered* means to make a headline move sooner would
 have destroyed that comparability in the same edit. So the report now carries
 both numbers per corpus, and a campaign quoting either alone reports something
 false — "0 of 139" alone says a grammar standing still, "23.9%" alone says

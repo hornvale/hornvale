@@ -498,7 +498,7 @@ the two can never be misread into each other. The nesting itself stops at one
 level, stated as the depth this campaign built and tested rather than argued
 as a safety limit. See [The Mortise](../chronicle/the-mortise.md).
 
-And since The Rail, a clause can predicate four ways rather than two, ask
+And since The Rail, a clause can predicate five ways rather than two, ask
 rather than assert, and say who is speaking. Its **valence** — the field
 that decides which surface parts a predicate's clause is built from — now
 enumerates Stassen (1997)'s four intransitive predication strategies

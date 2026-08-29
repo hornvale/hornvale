@@ -400,13 +400,13 @@ pub fn universal_stratum() -> &'static [PackEntry] {
             ladder_rank: 0,
         },
         PackEntry {
-            concept: "old",
+            concept: OLD,
             kind: ConceptKind::Quality,
             doc: "long in existence",
             ladder_rank: 0,
         },
         PackEntry {
-            concept: "under",
+            concept: UNDER,
             kind: ConceptKind::Quality,
             doc: "beneath; below",
             ladder_rank: 0,

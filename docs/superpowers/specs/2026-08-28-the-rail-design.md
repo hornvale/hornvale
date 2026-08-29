@@ -447,6 +447,20 @@ The Inquest added. Pin-isolation tests are the proof, not the argument.
    *"I are a planet."* parse successfully — traced, not assumed).
 7. *"The road is long"* realizes with no determiner, and `Definiteness` gains
    no `Bare` variant.
+
+   **Amended after Task 0.** `long` is not a registered concept anywhere in
+   this crate, and Task 0 established that this campaign registers none —
+   registering it would move `world-seed-42.json`, a byte-golden
+   `make rebaseline` cannot write. `old` stands in for it: it has been in
+   `universal_stratum` since long before this campaign, so nothing new is
+   registered by using it. What shipped and is tested is *"the road is
+   old."*, recorded at its witness (`cli/tests/suite/sentence_corpus.rs`'s
+   `ladder_construction`, `"r003"` arm) the same way `r005`'s witness
+   records `under` standing in for the unregistered `at`, and `r006`'s
+   records `kill` for `strike`. The substance this criterion states —
+   property predication with no determiner and no third `Definiteness`
+   value — shipped and is well-guarded; only the literal example sentence
+   is unreconciled.
 8. Pin-isolation holds: the two new drawn axes derive their own streams by
    label path and consume nothing from an existing one, proven by the
    pin-isolation tests rather than by this sentence.

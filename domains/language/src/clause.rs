@@ -228,7 +228,7 @@ pub enum Argument {
     /// needs it, never speculatively. No role needs this one; the *absence*
     /// of a role does. The alternative was `Clause.object: Option<Argument>`,
     /// which is the more honest type and costs 105 full-literal construction
-    /// sites against this variant's five structural match arms.
+    /// sites against this variant's three structural match arms.
     ///
     /// **The fact-shape claim (decision 0266) survives it**, because the
     /// kernel already spells an objectless assertion: `Fact.object` is
@@ -1130,7 +1130,7 @@ pub enum Valence {
     ///
     /// **This taxonomy is CLOSED, per spec §3.2, and that is a live guard in
     /// this campaign, not a historical note.** `Nominal` plus `Property`
-    /// and `Locative` (Tasks 4 and 5 add these two beside `Intransitive`)
+    /// and `Locative` (Tasks 4 and 5 added these two beside `Intransitive`)
     /// are exactly Stassen (1997)'s four intransitive predication
     /// strategies, plus `Transitive` for the two-argument case — five
     /// variants total, ever. A fifth INTRANSITIVE-predication strategy

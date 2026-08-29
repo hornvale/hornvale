@@ -209,7 +209,7 @@ pub const PERSON_POSITION: StreamLabel<'static> = StreamLabel::from_static("pers
 /// prosody). That is a legitimate drawn grammar, not a gap — the same
 /// argument [`SUBORDINATOR`]'s and [`CONJUNCTION`]'s docs make for their own
 /// axes. A permanent seed-derivation label: renaming it would silently
-/// corrupt every world's drawn interrogative-particle depth; deliberate
-/// regeneration uses an epoch suffix, never a rename.
+/// corrupt every world's drawn interrogative-particle presence and form;
+/// deliberate regeneration uses an epoch suffix, never a rename.
 /// type-audit: bare-ok(identifier-text: return)
 pub const INTERROGATIVE: StreamLabel<'static> = StreamLabel::from_static("interrogative");

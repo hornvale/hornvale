@@ -181,10 +181,10 @@ campaign's transcription convention) and
 
 Open, not scoped here:
 
-3. **The merchant corpus's cheapest remaining path is six tokens.** Greedy:
-   `wh-question`, `temporal-adverbial`, `existential`, `polar-question`,
-   `witness-set`, `named-entity-list` covers all 12. Only `polar-question`
-   overlapped this campaign.
+3. **The merchant corpus's cheapest remaining path is five tokens.** Greedy:
+   `wh-question`, `temporal-adverbial`, `existential`, `witness-set`,
+   `named-entity-list` covers the rest. `polar-question` was the sixth
+   token this campaign landed, subtracting it from the remaining path.
 4. **A coverage resolver tuned to `the-flood-watch`.** It scores 0 of 139 for
    a structural reason (≈8 demands per entry, conjunctive coverage), and
    deciding what *covered* should mean for a corpus the grammar was never

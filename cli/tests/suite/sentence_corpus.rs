@@ -4,9 +4,9 @@
 //! froze first; `the-ladder.corpus.json` froze last (The Rail) — freezing
 //! was the project owner's act, and from that moment the ladder's rung ids
 //! are append-only forever. The entry count alone does not guard everything
-//! that can go wrong with a DAG, so Task 4's block below also asserts
-//! structural properties over its `presupposes` graph that hold at any
-//! size.
+//! that can go wrong with a DAG, so The Stile's Task 4's block below also
+//! asserts structural properties over its `presupposes` graph that hold at
+//! any size.
 //!
 //! This file also carries the corpus's **resolver**: for each entry, a demand
 //! token is `covered` if the grammar implements a construction for it, `not
@@ -2822,7 +2822,7 @@ fn sentence_coverage_report() {
     // shows. `m08_covered` is itself computed from `entry_covered`, the
     // same resolver the table above uses, so the gate cannot drift from it.
     if m08_covered {
-        out.push_str(
+        out.push_str(&format!(
             "**Two honesty limits on the entry-level count, both about `m08` \
              (*\"Did you know the woman?\"*), which The Rail's `polar-question` \
              moved to covered.**\n\n\
@@ -2845,8 +2845,11 @@ fn sentence_coverage_report() {
              WRITES. The corpus states no `direction` on any entry and spec \
              §2.3 forbids inferring one from `speaker`, so the resolver scores \
              it covered on production — the scoring method behaving exactly as \
-             specified, and a real limit on what \"6 of 12\" means.\n\n",
-        );
+             specified, and a real limit on what \"{covered} of {total}\" \
+             means.\n\n",
+            covered = covered,
+            total = merchant.entries.len(),
+        ));
     }
 
     out.push_str("### Per-entry\n\n");
