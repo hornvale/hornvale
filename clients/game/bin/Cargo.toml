@@ -53,6 +53,22 @@ hornvale-scene = { path = "../../../windows/scene" }
 # in-repo path dependency, not a new external crate, the same shape as the
 # four dependencies above it.
 hornvale-species = { path = "../../../domains/species" }
+# The Overture, Task 8 (the cache): the roster a cached world's stamp must be
+# diffed against is `versioned_labels()` (`cli/src/streams.rs:122`), built
+# from `hornvale_worldgen::DOMAINS` PLUS the kernel, locale, vessel,
+# worldgen::streams and chronicle crates — none of which `hornvale-worldgen`
+# alone re-exposes, and `hornvale-locale`/`hornvale-chronicle` are not
+# otherwise in this crate's build graph at all. Reimplementing that roster
+# here would be a second copy of a save-format contract: a crate added to
+# `cli`'s list and missed in a duplicate would make the cache's stamp check
+# silently under-report, and the failure mode is a stale cache ACCEPTED —
+# invisible, in exactly the protocol this task exists to make trustworthy.
+# So this depends on `cli` itself (`hornvale::streams::{stamp, what_moved,
+# reload_notice}`) rather than re-deriving its roster — an in-repo path
+# dependency, not a new external crate, the same shape as every dependency
+# above it. Measured cost in the task report: `make game-check` before vs.
+# after.
+hornvale = { path = "../../../cli" }
 crossterm = "0.29"
 # CONCERN, flagged per the task brief: a third new dependency beyond
 # crossterm. Added only after review found that an external SIGINT/SIGTERM/

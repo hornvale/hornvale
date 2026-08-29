@@ -4,6 +4,11 @@
 //! See `driver`'s module doc for the containment rule this exists to hold.
 
 pub mod boot;
+// The Overture, Task 8: the world cache and its three-layer validity
+// protocol. Named separately from `overture` (not `overture::cache`)
+// because it has nothing to do with rendering — it is a save/load seam next
+// to `state_dir`, the module it shares its on-disk home with.
+pub mod cache;
 pub mod discovery;
 pub mod driver;
 pub mod history;
