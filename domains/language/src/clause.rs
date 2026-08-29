@@ -494,9 +494,18 @@ pub type CopulaRow = (&'static str, Tense, Number, Polarity, Person);
 /// and [`parse_clause_body`] for the signal that actually recovers person.
 ///
 /// **`am` is the only genuinely new WORD**; every other row is a
-/// redistribution of forms the table already carried. That is worth knowing
-/// before assuming a widened key widened the parser's search space in
-/// proportion: the copula search went from 8 candidate strings to 10.
+/// redistribution of forms the table already carried: the DISTINCT-STRING
+/// set went from 8 to 10.
+///
+/// **That is not the parser's search space, and reading it as one understates
+/// the cost by 3x** (The Rail, Task 8 — the sentence above used to stop at
+/// "went from 8 candidate strings to 10", which invites exactly that
+/// reading). [`verb_group_forms`] emits **one entry per ROW**, deliberately
+/// (see its own doc for why no row may be nominated canonical), and
+/// [`parse_clause_body`] runs one `body.find` per emitted entry. So this
+/// table costs 24 `find` calls per copular construction where it once cost
+/// 8, not 10 — the 8→10 figure is true of the words, and the work is per
+/// row.
 /// type-audit: bare-ok(prose: COPULA_PARADIGM)
 pub const COPULA_PARADIGM: &[CopulaRow] = &[
     // Present positive. `am` is first person singular and nothing else —
@@ -1554,7 +1563,24 @@ fn realize_common_with_subject(
     vocab: &CommonVocabulary,
     include_subject: bool,
 ) -> String {
-    let construction = common_constructions()
+    emit_parts(
+        common_construction_for(spec).parts,
+        spec,
+        vocab,
+        include_subject,
+    )
+}
+
+/// The construction [`common_constructions`] holds for this clause's
+/// predicate. Split out so the declarative realizer and
+/// [`realize_common_polar_question`] resolve it the same way and fail the
+/// same way — the question operator is an operator OVER a clause's own
+/// construction, never a second table.
+///
+/// Panics if `spec.predicate` names no construction, exactly as
+/// [`realize_common`]'s own doc states.
+fn common_construction_for(spec: &Clause) -> &'static Construction {
+    common_constructions()
         .iter()
         .find(|c| c.predicate == spec.predicate)
         .unwrap_or_else(|| {
@@ -1562,7 +1588,22 @@ fn realize_common_with_subject(
                 "Common has no construction for predicate {:?}",
                 spec.predicate
             )
-        });
+        })
+}
+
+/// Emit one ordered part list against one clause — the shared surface walk.
+///
+/// **Takes `parts`, not a [`Construction`], and that is the whole point of
+/// the split.** [`realize_common_with_subject`] passes the construction's
+/// own list unchanged; [`realize_common_polar_question`] passes a REORDERED
+/// copy of the very same list. Neither writes a second surface by hand, so
+/// there is nothing to keep in sync with [`common_constructions`].
+fn emit_parts(
+    parts: &[Part],
+    spec: &Clause,
+    vocab: &CommonVocabulary,
+    include_subject: bool,
+) -> String {
     let complement = match &spec.object {
         Argument::Concept(id) => surface_complement(vocab, id, spec.number),
         Argument::Name(text) => text.clone(),
@@ -1604,7 +1645,7 @@ fn realize_common_with_subject(
         Argument::Absent => String::new(),
     };
     let mut out = String::new();
-    for part in construction.parts {
+    for part in parts {
         match part {
             // `include_subject: false` (a coordinated clause whose subject
             // matches the LAST STATED one before it, see
@@ -1674,8 +1715,12 @@ fn realize_common_with_subject(
             )),
             // The clause's own predicate again, through the same
             // vocabulary lookup `Part::Verb` uses — but **not inflected**:
-            // a property word (or a future locative valence's adposition)
-            // takes no tense, number or polarity, unlike a lexical verb.
+            // a property word, or the locative valence's adposition, takes
+            // no tense, number or polarity, unlike a lexical verb. (This
+            // comment said "a FUTURE locative valence's adposition" until
+            // The Rail's Task 8; Task 5 built that valence, and this was
+            // the third of three forward references in this file left
+            // pointing at it as unbuilt.)
             Part::PredicateWord => out.push_str(&vocab.word_for(&spec.predicate)),
             // A PRONOUN fills the determiner slot itself — English has no
             // "*the them", and no `Definiteness` a caller states can change
@@ -1909,6 +1954,92 @@ pub fn realize_common_coordination(coord: &Coordination, vocab: &CommonVocabular
     }
     out.push('.');
     out
+}
+
+/// One construction's part list, reordered into a polar question: the verb
+/// group moves in front of the subject, and the terminal full stop becomes a
+/// question mark.
+///
+/// **A positional SWAP, not an insertion.** Every copular construction in
+/// [`common_constructions`] opens `[Subject, Literal(" "), Copula, …]`, so
+/// exchanging the two slots' positions leaves the separator between them
+/// exactly where it was and yields `[Copula, Literal(" "), Subject, …]` —
+/// *"is the road old?"*, *"is the merchant under the tree?"* — with no
+/// literal added, removed, or respaced. Doing it by index rather than by
+/// rebuilding a list means a construction that later grows a part between
+/// its subject and its copula still inverts the two the caller asked for.
+///
+/// The terminal literal is rewritten rather than appended to, for the same
+/// reason: `"."` is a part this table emits, and a question replaces it.
+fn invert_for_question(parts: &[Part]) -> Vec<Part> {
+    let subject_at = parts
+        .iter()
+        .position(|p| *p == Part::Subject)
+        .expect("a construction with a copula also has a subject slot");
+    let copula_at = parts
+        .iter()
+        .position(|p| *p == Part::Copula)
+        .expect("checked by the caller before this is called");
+    let mut inverted = parts.to_vec();
+    inverted.swap(subject_at, copula_at);
+    if let Some(last) = inverted.last_mut()
+        && *last == Part::Literal(".")
+    {
+        *last = Part::Literal("?");
+    }
+    inverted
+}
+
+/// Realize a [`Clause`] as a Common **polar question** — *"are you a
+/// merchant?"* — by inverting its own construction rather than by spelling a
+/// second surface.
+///
+/// **Force is an OPERATOR over a clause, never a field on it.** [`Clause`] is
+/// fact-shaped (decision 0266, *an utterance is a fact*) and a question
+/// asserts nothing, so a `force` field would falsify the shape claim for
+/// every clause in order to serve one. [`Coordination`] is the precedent: a
+/// construction sitting above the clause gets its own realizer, not a flag
+/// inside it (decision 0327). Unlike `Coordination` this operator needs no
+/// new type at all — a polar question is the same proposition asked instead
+/// of asserted, so it takes the clause it questions and nothing else.
+///
+/// # A lexical verb is REFUSED, loudly
+///
+/// English inverts an auxiliary, and the copula is the only auxiliary Common
+/// has. A construction whose verb group is [`Part::Verb`] — the transitive
+/// and intransitive frames — does not invert: *"Sleeps the guard?"* and
+/// *"Knew you the woman?"* are not Common, and emitting either would produce
+/// the plausible garbage this project's realizers refuse on principle. What
+/// English actually uses there is **periphrastic *do*-support** (*"Did you
+/// know the woman?"*), and that is a later campaign's: the negative half of
+/// it already exists as [`VERB_PARADIGM`]'s `"did not "`/`"do not "`/
+/// `"does not "` prefixes, but an interrogative *do* needs a MOOD axis on
+/// that table's key, and the key is read in both directions
+/// ([`verb_group_forms`]), so widening it is a parse-side change as much as
+/// a realize-side one. This function panics instead — the same fail-fast
+/// posture [`realize_common`] takes for an unconstructed predicate, and for
+/// the same reason: an authoring hole, not a fact about the world.
+///
+/// Panics if `clause.predicate` names no construction, or if the
+/// construction it names has no [`Part::Copula`].
+/// type-audit: bare-ok(prose)
+pub fn realize_common_polar_question(clause: &Clause, vocab: &CommonVocabulary) -> String {
+    let construction = common_construction_for(clause);
+    assert!(
+        construction.parts.contains(&Part::Copula),
+        "Common inverts a copula, and predicate {:?} has a lexical verb \
+         instead: *\"Sleeps the guard?\"* is not Common. The English \
+         question of a lexical verb is periphrastic do-support (*\"Did you \
+         know the woman?\"*), which needs a mood axis on VERB_PARADIGM's \
+         bidirectional key and is not this campaign's",
+        clause.predicate
+    );
+    emit_parts(
+        &invert_for_question(construction.parts),
+        clause,
+        vocab,
+        true,
+    )
 }
 
 /// Render a small cardinal number as an English word (`0` through `12`);
@@ -5152,5 +5283,238 @@ mod tests {
             clauses: vec![only],
         };
         let _ = realize_common_coordination(&coord, &vocab);
+    }
+
+    /// A polar question inverts the copula and takes a question mark — the
+    /// ladder's `r083`, *"Are you a merchant?"*.
+    ///
+    /// **Force is an OPERATOR over a clause, never a field on it.**
+    /// [`Clause`] is fact-shaped — decision 0266, *an utterance is a fact* —
+    /// and a question asserts nothing, so a `force` field would falsify the
+    /// shape claim for every clause in order to serve one. [`Coordination`]
+    /// is the precedent: a construction above the clause gets its own
+    /// realizer, not a flag inside it (decision 0327).
+    ///
+    /// The surface is lowercase, like every other witness in this file:
+    /// Common's realizer never capitalizes sentence-initially (see
+    /// [`nominative_person`]'s case contract), so the rung's own capitalized
+    /// *"Are you a merchant?"* differs from the realized surface in exactly
+    /// that one way and no other.
+    #[test]
+    fn a_polar_question_inverts_the_copula_and_takes_a_question_mark() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Pronoun(Person::Second),
+            object: Argument::Concept("merchant".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(
+            realize_common_polar_question(&clause, &vocab),
+            "are you a merchant?"
+        );
+    }
+
+    /// The declarative is untouched by the operator existing: the same
+    /// clause realized through [`realize_common`] is byte-identical to what
+    /// it produced before this task, and differs from the question in
+    /// exactly the two ways the operator states (the verb group's position,
+    /// and the terminal literal).
+    #[test]
+    fn the_question_operator_does_not_change_the_declarative() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Pronoun(Person::Second),
+            object: Argument::Concept("merchant".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(realize_common(&clause, &vocab), "you are a merchant.");
+        assert_eq!(
+            realize_common_polar_question(&clause, &vocab),
+            "are you a merchant?"
+        );
+    }
+
+    /// The past copula inverts the same way — the witness `m08` stands in
+    /// with, and the pair of features that entry's demand tokens actually
+    /// name (`polar-question` + `past-tense`).
+    #[test]
+    fn a_past_polar_question_inverts_the_past_copula() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Pronoun(Person::Second),
+            object: Argument::Concept("merchant".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(
+            realize_common_polar_question(&clause, &vocab),
+            "were you a merchant?"
+        );
+    }
+
+    /// Inversion is read off the construction, so EVERY copular valence
+    /// inverts — not just `IS_A`'s. A property predication and a locative
+    /// predication both have a `Part::Copula` and both come out right with
+    /// no arm of their own, which is the evidence that the operator is a
+    /// reordering of `common_constructions` rather than a second surface.
+    #[test]
+    fn every_copular_valence_inverts_with_no_arm_of_its_own() {
+        let vocab = CommonVocabulary::default();
+        let property = Clause {
+            predicate: OLD.to_string(),
+            subject: Subject::Name("the road".to_string()),
+            object: Argument::Absent,
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(
+            realize_common_polar_question(&property, &vocab),
+            "is the road old?"
+        );
+        let locative = Clause {
+            predicate: UNDER.to_string(),
+            subject: Subject::Name("the merchant".to_string()),
+            object: Argument::Concept("tree".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(
+            realize_common_polar_question(&locative, &vocab),
+            "is the merchant under the tree?"
+        );
+    }
+
+    /// A construction whose verb group is a LEXICAL VERB is refused, loudly.
+    ///
+    /// *"Sleeps the guard?"* is not Common. English asks a lexical verb with
+    /// periphrastic *do*-support, which needs a mood axis on
+    /// [`VERB_PARADIGM`]'s bidirectional key and is a later campaign's — so
+    /// this operator panics rather than emitting the plausible garbage, the
+    /// same posture [`realize_common`] takes for an unconstructed predicate.
+    #[test]
+    #[should_panic(expected = "Common inverts a copula")]
+    fn a_polar_question_on_a_lexical_verb_panics() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: SLEEP.to_string(),
+            subject: Subject::Name("the guard".to_string()),
+            object: Argument::Absent,
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let _ = realize_common_polar_question(&clause, &vocab);
+    }
+
+    /// The transitive frame is refused for the same reason, and this is the
+    /// case that matters to the corpus: `m08` is *"Did you know the woman?"*,
+    /// a PAST question on the lexical verb `know`. *"Knew you the woman?"* is
+    /// not Common either, so the entry's witness cannot be its own sentence.
+    #[test]
+    #[should_panic(expected = "Common inverts a copula")]
+    fn a_polar_question_on_the_transitive_frame_panics() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: KNOW.to_string(),
+            subject: Subject::Pronoun(Person::Second),
+            object: Argument::Concept("person".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let _ = realize_common_polar_question(&clause, &vocab);
+    }
+
+    /// [`resolve_embedded_number`]'s SECOND signal, made observable.
+    ///
+    /// **The behaviour moved in The Rail's Task 6 and nothing pinned either
+    /// direction** (found in Task 6's review, fixed here). Under the old
+    /// number-only key `"know"` named the plural row and nothing else, so
+    /// `numbers` was a singleton and the first signal answered outright:
+    /// a first-person SINGULAR matrix clause came back `number: Pl`,
+    /// silently wrong. The widened key spells `"know"` at five rows, so the
+    /// singleton is gone and the subject's own pronoun row — `"I"` is 1sg
+    /// and nothing else — is what decides it.
+    ///
+    /// **What this test pins is the fallback, not the person filter**, and
+    /// the distinction was measured rather than assumed: deleting
+    /// [`parse_clause_body`]'s `h.6 == person` narrowing leaves both this
+    /// test and its sibling below GREEN (the fallback still intersects to
+    /// `Sg`), while deleting the fallback reddens this one and loosening it
+    /// to `pronoun_rows.first()` reddens the sibling. The narrowing has its
+    /// own guard in
+    /// [`an_agreement_violating_sentence_does_not_parse`]; this pair guards
+    /// the signal the widened key made load-bearing.
+    ///
+    /// (The embedded clause takes a CONCEPT complement rather than a pronoun
+    /// object — a pronoun in the object slot is not recoverable by this walk
+    /// at all — and its copula is `is`, because Common spells third-person
+    /// SINGULAR `they is` (spec §4.5's animate-neutral pronoun, see
+    /// `commons_one_third_person_singular_is_the_animate_neutral_one`).
+    /// Either substitution avoided would have made the test fail for a
+    /// reason that has nothing to do with number.)
+    #[test]
+    fn an_embedded_clause_reads_its_number_off_a_first_person_subject() {
+        let parsed = parse_common("I know they is a planet.", &ctx(&["planet"]))
+            .expect("the embedding round-trips");
+        assert_eq!(parsed.subject, Subject::Pronoun(Person::First));
+        assert_eq!(
+            parsed.number,
+            Number::Sg,
+            "a first-person-singular matrix clause is Sg; before the widened \
+             paradigm this returned Pl, because `know` named the plural row \
+             alone and the first signal never consulted the subject"
+        );
+    }
+
+    /// The other half of the same change: a second-person present embedding
+    /// now FAILS CLOSED where it used to return `Pl`.
+    ///
+    /// `"you"` is spelled identically at 2sg and 2pl
+    /// ([`PRONOUN_PARADIGM`]), and the present-tense verb group is syncretic
+    /// across both, so neither of [`resolve_embedded_number`]'s two signals
+    /// is a singleton. Refusing is the correct answer — the old `Pl` was a
+    /// guess that happened to be spelled like an answer — and this pins it as
+    /// a deliberate loss rather than an undiscovered gap. The positive
+    /// control for the same sentence shape is the test directly above, which
+    /// differs only in its subject pronoun.
+    #[test]
+    fn a_second_person_embedding_refuses_rather_than_guessing_its_number() {
+        assert!(
+            parse_common("you know they is a planet.", &ctx(&["planet"])).is_err(),
+            "`you` and the present `know` are both syncretic across number, \
+             so nothing in the sentence decides it and the walk must refuse"
+        );
     }
 }

@@ -16,9 +16,12 @@
 //! `negation`, `transitive-frame` and `pronoun-reference` — taking the
 //! merchant corpus from 0 of 12 to 2 of 12; The Mortise added three more —
 //! `coordination`, `embedded-clause` and `epistemic-hedge` — taking it from
-//! 2 of 12 to 5 of 12. The remaining tokens name capabilities no campaign
-//! has built: questions, temporal adjuncts, existentials, witness lists,
-//! named-entity lists.
+//! 2 of 12 to 5 of 12; The Rail added five — `intransitive-frame`,
+//! `property-predication`, `locative-predication`, `person-deixis` and
+//! `polar-question` — of which only the last moves this corpus, taking it
+//! from 5 of 12 to 6 of 12. The remaining tokens name capabilities no
+//! campaign has built: content questions, temporal adjuncts, existentials,
+//! witness lists, named-entity lists.
 //!
 //! **[`IMPLEMENTED_DEMANDS`] is a hand-maintained declaration and nothing
 //! mechanically proves it.** No test crosses a token in that list against the
@@ -28,7 +31,7 @@
 //! The discipline is therefore social and stated here: a token goes in only
 //! alongside a test in `domains/language` that realizes a clause exercising
 //! it, in Common and, where the tongue realizer is the point, in a tongue.
-//! The ten present tokens are backed by, respectively:
+//! The thirteen present tokens are backed by, respectively:
 //! `clause.rs::classify_*`; `a_past_clause_says_was` and
 //! `grammar.rs::realize_tongue_reads_its_drawn_tense_depth`;
 //! `a_negated_clause_says_is_not` and
@@ -68,7 +71,23 @@
 //! and the adposition), so filling it with the copula alone would render a
 //! plausible surface with the relation silently missing, per spec §4's
 //! render-fully-or-gap law, pinned by
-//! `grammar.rs::a_tongue_gaps_a_locative_predication`).
+//! `grammar.rs::a_tongue_gaps_a_locative_predication`);
+//! `clause.rs::a_polar_question_inverts_the_copula_and_takes_a_question_mark`
+//! (`polar-question`, The Rail, Task 8 — Common-only for the third
+//! consecutive token, and refusing rather than gapping where the earlier two
+//! gapped: `realize_common_polar_question` PANICS on a lexical-verb
+//! construction, because inversion is not merely unavailable there but
+//! wrong, and *"Sleeps the guard?"* is the plausible garbage a gap would not
+//! have prevented. Pinned in both directions by
+//! `clause.rs::a_polar_question_on_a_lexical_verb_panics` and
+//! `clause.rs::a_polar_question_on_the_transitive_frame_panics`).
+//!
+//! **The merchant corpus moves for the first time in four campaigns with
+//! that last token, and the entry it moves is the one to read carefully.**
+//! `polar-question` covers `m08`, taking the-merchant from 5 of 12 to
+//! 6 of 12 — see [`MERCHANT_COVERED_IDS`]'s doc for m08's two honesty
+//! limits (its demand tokens under-describe it, and it is a `parse`-side
+//! line scored on a `produce`-side capability).
 //!
 //! **The score was zero once, and the positive control that answered that is
 //! still here on purpose.** A measurement whose only possible answer is zero
@@ -76,7 +95,7 @@
 //! unconditionally — the same defect class as a guard that has never gone
 //! red. That specific blind spot closed when the score moved off zero: a
 //! resolver stuck at "not yet" now fails
-//! [`merchant_coverage_is_five_of_twelve`] directly. The control keeps its
+//! [`merchant_coverage_is_six_of_twelve`] directly. The control keeps its
 //! place because it guards a *different* thing from the headline test — it
 //! is the only assertion here that survives the corpus being replaced, and
 //! the corpus is frozen data a future campaign is expected to swap. See its
@@ -104,6 +123,7 @@ use hornvale_language::packs::{KILL, KNOW, OLD, SLEEP, THINK, UNDER};
 use hornvale_language::{
     Argument, Clause, CommonVocabulary, Coordination, Definiteness, Evidential, Number, Person,
     Polarity, Subject, Tense, realize_common, realize_common_coordination,
+    realize_common_polar_question,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -181,7 +201,7 @@ fn the_flood_watch_corpus_is_frozen_at_its_authored_size() {
 /// enforces on the corpus itself.
 ///
 /// **Nothing mechanically checks a row here against the grammar**; see the
-/// module doc, which names the test backing each of the ten.
+/// module doc, which names the test backing each of the thirteen.
 const IMPLEMENTED_DEMANDS: &[&str] = &[
     // The Interlinear.
     "classify",
@@ -204,6 +224,11 @@ const IMPLEMENTED_DEMANDS: &[&str] = &[
     // paradigms, and Common's first syncretism. See
     // `domains/language/src/clause.rs`'s `COPULA_PARADIGM`.
     "person-deixis",
+    // The Rail, Task 8 — the campaign's only token that moves a DIALOGUE
+    // corpus. An operator ABOVE the clause, like `coordination`, not a
+    // valence and not a paradigm key: see
+    // `domains/language/src/clause.rs`'s `realize_common_polar_question`.
+    "polar-question",
 ];
 
 /// Whether a corpus entry states what the grammar must **parse** (a player
@@ -564,7 +589,7 @@ fn merchant_entries_resolve_as_direction_unknown() {
 /// The frozen result of resolving the-merchant against the grammar's
 /// delivered capability, independent of the prose report below — so a stale
 /// report cannot hide a coverage number that moved.
-const MERCHANT_COVERED: usize = 5;
+const MERCHANT_COVERED: usize = 6;
 
 /// **Which** entries are covered, not merely how many. A count of 2 could be
 /// any two of twelve, and a wrong pair passing a count check is exactly the
@@ -651,7 +676,43 @@ const MERCHANT_COVERED: usize = 5;
 ///   clause embedded as another's object), never merely as a lexical fact
 ///   about the matrix verb alone, the same "Clause-shaped stand-in"
 ///   discipline m07's entry above states.
-const MERCHANT_COVERED_IDS: &[&str] = &["m05", "m06", "m07", "m09", "m10"];
+///
+/// **The Rail adds m08, and it is the entry whose DEMAND TOKENS
+/// UNDER-DESCRIBE IT — the third such case this twelve-entry corpus has
+/// surfaced.** m08 is *"Did you know the woman?"*, and it declares
+/// `polar-question` + `past-tense`. Both are built. The sentence is still
+/// not sayable, because it needs a third capability neither token names:
+/// English asks a LEXICAL verb with periphrastic *do*-support, not by
+/// inversion (*"Knew you the woman?"* is not Common), and
+/// [`realize_common_polar_question`] refuses a lexical-verb construction
+/// outright rather than emitting it.
+///
+/// So the witness substitutes a **past copula polar question** —
+/// *"were you a merchant?"* — which exercises exactly the two tokens m08
+/// declares, through the one verb group Common inverts. That is the same
+/// posture m06, m07 and m09 take (this table has never been an equality
+/// assertion against the corpus's literal English; see
+/// [`MERCHANT_WITNESS`]), and it is the honest one available.
+///
+/// **Where this sits among the corpus's other under-descriptions:** m10's
+/// gap is LEXICAL (`know` has no lexeme any register can say), which
+/// `sentences/` was founded to keep separate from a grammatical one; m02's
+/// is GRAMMATICAL (adjectival predication, fixed by Task 4 and recorded as
+/// `LANG-adjectival-predication` in the idea registry); m08's is
+/// grammatical too — do-support — and is recorded beside m02's as
+/// `LANG-do-support-is-unnamed-by-its-corpus-entry`. This is what a frozen
+/// corpus is FOR: no amount of care at hand-labelling time would have
+/// caught it, and resolving the corpus against a real grammar did.
+///
+/// **And one honesty limit on the score itself: m08 is a PLAYER line.** The
+/// grammar must *parse* it, and this operator only *produces*. The merchant
+/// corpus states no `direction` on any entry and The Stile forbids inferring
+/// one from `speaker` (spec §2.3), so the resolver scores m08 covered on a
+/// production capability — the scoring method behaving exactly as specified,
+/// and a real limit on what "6 of 12" means. It is stated in the generated
+/// report as well as here, because the report is what a reader of the number
+/// actually reads.
+const MERCHANT_COVERED_IDS: &[&str] = &["m05", "m06", "m07", "m08", "m09", "m10"];
 
 /// The headline score.
 ///
@@ -661,7 +722,7 @@ const MERCHANT_COVERED_IDS: &[&str] = &["m05", "m06", "m07", "m09", "m10"];
 /// rename that does not also edit that file silently drops this test from
 /// `make gate-commit`. Edit both, in the same commit.
 #[test]
-fn merchant_coverage_is_five_of_twelve() {
+fn merchant_coverage_is_six_of_twelve() {
     let root = repo_root();
     let corpus = load_merchant_corpus(&root);
     assert_eq!(corpus.entries.len(), MERCHANT_ENTRIES);
@@ -678,11 +739,11 @@ fn merchant_coverage_is_five_of_twelve() {
 }
 
 /// The covered entries by id. Complements — never replaces —
-/// [`merchant_coverage_is_five_of_twelve`]: the count and the identities can
+/// [`merchant_coverage_is_six_of_twelve`]: the count and the identities can
 /// each move without the other, and only holding both pins the claim the
 /// campaign actually makes.
 #[test]
-fn the_covered_entries_are_m05_m06_m07_m09_and_m10() {
+fn the_covered_entries_are_m05_m06_m07_m08_m09_and_m10() {
     let corpus = load_merchant_corpus(&repo_root());
     let ids: Vec<&str> = corpus
         .entries
@@ -697,9 +758,11 @@ fn the_covered_entries_are_m05_m06_m07_m09_and_m10() {
          why he killed her.\") needs negation + embedded-clause + \
          pronoun-reference + epistemic-hedge; m07 (\"Seeing it confused and \
          upset me.\") needs coordination + embedded-clause + \
-         pronoun-reference; m09 (\"I think her name was Gilda.\") needs \
-         epistemic-hedge + past-tense + pronoun-reference; m10 (\"I didn't \
-         know her.\") needs negation + past-tense + pronoun-reference."
+         pronoun-reference; m08 (\"Did you know the woman?\") needs \
+         polar-question + past-tense; m09 (\"I think her name was Gilda.\") \
+         needs epistemic-hedge + past-tense + pronoun-reference; m10 (\"I \
+         didn't know her.\") needs negation + past-tense + \
+         pronoun-reference."
     );
 }
 
@@ -708,7 +771,7 @@ fn the_covered_entries_are_m05_m06_m07_m09_and_m10() {
 ///
 /// **This guards a rot mechanism this campaign watched produce a defect.** The
 /// headline test's name states the score, so it is renamed every time the score
-/// moves — zero, then two, then five. The Stile's Task 6 found a doc comment
+/// moves — zero, then two, then five, and now six. The Stile's Task 6 found a doc
 /// still pointing at `merchant_coverage_is_zero_of_twelve`, a test that had not
 /// existed for two campaigns, and fixed it; four live references to the current
 /// name remain, and each of them will dangle on the next move by exactly the
@@ -794,23 +857,37 @@ fn every_reference_to_the_headline_test_names_a_function_in_this_file() {
 ///
 /// Every row here is one construction away from covered, so this list is the
 /// cheapest available statement of what the next campaign should build:
-/// `wh-question`, `temporal-adverbial` and `polar-question` each unlock one
-/// entry from here. The Mortise's three new tokens moved m09 OUT of this
-/// list (it is covered now, not one-missing) without shrinking it further —
-/// m01, m02 and m08 were already exactly one demand short before this
-/// campaign and remain so, because none of their blocking tokens
-/// (`wh-question`, `temporal-adverbial`, `polar-question`) is one this
-/// campaign builds. The wider distance-2-and-beyond picture (not tracked as
-/// its own constant): `temporal-adverbial` still blocks 3 entries in total,
-/// `wh-question` and `polar-question` 2 each, `witness-set` 2,
-/// `existential` and `named-entity-list` 1 each.
+/// `wh-question`, `temporal-adverbial` and `witness-set` each unlock one
+/// entry from here.
+///
+/// **The Rail's Task 8 held this list's SIZE still while swapping a member,
+/// and the count alone would have reported nothing.** `polar-question`
+/// covered m08, so m08 left this list (it is covered now, not one-missing);
+/// in the same move **m11** — *"Did anyone else see this?"*, demanding
+/// `polar-question` + `witness-set` — arrived from distance 2. Three before,
+/// three after, different membership: exactly the shape the ladder's
+/// frontier took twice in this campaign, which is the argument for asserting
+/// the ordered VECTOR rather than its length. The Mortise's three new tokens
+/// had earlier moved m09 out of this list the same way, without a
+/// replacement arriving.
+///
+/// The wider distance-2-and-beyond picture (not tracked as its own
+/// constant), after `polar-question`: `temporal-adverbial` still blocks 3
+/// entries in total, `wh-question` 2, `witness-set` 2, `existential` and
+/// `named-entity-list` 1 each.
 const MERCHANT_ONE_MISSING: &[(&str, &str)] = &[
     ("m01", "wh-question"),
     ("m02", "temporal-adverbial"),
-    ("m08", "polar-question"),
+    ("m11", "witness-set"),
 ];
 
 /// Spec criterion 7: the resolver reports distance, not only coverage.
+///
+/// **The name states a COUNT that this campaign did not move**, which is the
+/// unusual case worth a sentence: the covered set gained m08 and this list
+/// kept exactly three rows, because m11 arrived from distance 2 as m08 left
+/// for distance 0. See [`MERCHANT_ONE_MISSING`] — the assertion is on the
+/// ordered vector, so the swap is caught even though the count is not.
 #[test]
 fn three_entries_sit_at_one_missing_demand() {
     let corpus = load_merchant_corpus(&repo_root());
@@ -864,9 +941,9 @@ fn distance_zero_is_exactly_coverage() {
 /// separating a working resolver from one hardcoded to return "not yet" —
 /// that hardcoding left the headline coverage test green, because zero was
 /// the expected answer at that score. (That test's own name has moved with
-/// the score since — zero, then two, then five — so it is named here by what
+/// the score since — zero, then two, then five, then six — so it is named here by
 /// it does rather than by a literal name that would go stale on the next
-/// move; see [`merchant_coverage_is_five_of_twelve`] for its current form.)
+/// move; see [`merchant_coverage_is_six_of_twelve`] for its current form.)
 /// The Inquest moved the score to 2, so a hardcoded "not yet" now reds the
 /// headline test on its own and this control is no longer load-bearing for
 /// THAT reading.
@@ -1684,12 +1761,25 @@ fn removing_a_rungs_introduces_token_makes_the_cross_check_notice() {
 /// [`every_covered_entry_realizes_in_common`] exists to catch — so the
 /// builder returns this enum and the caller matches on it rather than
 /// forcing every id through one realizer.
+///
+/// **The Rail's Task 8 adds a third shape for the same reason.** A polar
+/// question is an operator ABOVE a clause — like a coordination, and unlike
+/// a valence — realized through [`realize_common_polar_question`]. Handing
+/// `m08` or `r083` a declarative `Clause` stand-in would let the witness
+/// attest to `polar-question` while never once inverting anything, which is
+/// the identical failure this enum was introduced to prevent.
 enum MerchantConstruction {
     /// A single clause, realized through [`realize_common`].
     Clause(Clause),
     /// A coordination of clauses, realized through
     /// [`realize_common_coordination`].
     Coordination(Coordination),
+    /// A single clause ASKED rather than asserted, realized through
+    /// [`realize_common_polar_question`]. It carries a bare [`Clause`] and
+    /// no wrapper type, because a polar question is the same proposition
+    /// under a different force — see that function's own doc for why force
+    /// is an operator and never a field.
+    PolarQuestion(Clause),
 }
 
 /// The [`MerchantConstruction`] this campaign builds for a covered merchant
@@ -1843,6 +1933,34 @@ fn merchant_construction(id: &str) -> MerchantConstruction {
             polarity: Polarity::Pos,
             adjuncts: Vec::new(),
         }),
+        // "Did you know the woman?" **The witness cannot be this sentence,
+        // and the reason is a capability neither of its demand tokens
+        // names.** `know` is a LEXICAL verb, and English asks a lexical verb
+        // with periphrastic do-support rather than by inversion — *"Knew you
+        // the woman?"* is not Common — so `realize_common_polar_question`
+        // refuses a lexical-verb construction outright (pinned by
+        // `clause.rs::a_polar_question_on_the_transitive_frame_panics`, which
+        // uses this very entry's predicate and tense).
+        //
+        // So the witness substitutes a PAST COPULA polar question, which
+        // exercises exactly the two tokens m08 declares — `polar-question`
+        // through the one verb group Common inverts, `past-tense` through
+        // `COPULA_PARADIGM`'s `were` row — the same substituting posture m06,
+        // m07 and m09 take. See `MERCHANT_COVERED_IDS`'s doc for the full
+        // account, including why m08 is the corpus's THIRD demand-token
+        // under-description and the fact that it is a PLAYER line scored on
+        // a production capability.
+        "m08" => MerchantConstruction::PolarQuestion(Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Pronoun(Person::Second),
+            object: Argument::Concept("merchant".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        }),
         "m10" => MerchantConstruction::Clause(Clause {
             predicate: KNOW.to_string(),
             subject: Subject::Pronoun(Person::First),
@@ -1863,9 +1981,20 @@ fn merchant_construction(id: &str) -> MerchantConstruction {
 /// demands — see [`MerchantConstruction`]'s own doc for why this may not
 /// collapse to one realizer.
 fn realize_merchant(id: &str, vocab: &CommonVocabulary) -> String {
-    match merchant_construction(id) {
+    realize_construction(merchant_construction(id), vocab)
+}
+
+/// Realize any [`MerchantConstruction`] through the realizer its own shape
+/// demands. Written once and shared by both corpora's witnesses — the ladder
+/// walked the same `match` inline until a third variant made two copies of
+/// it two places to forget a shape.
+fn realize_construction(construction: MerchantConstruction, vocab: &CommonVocabulary) -> String {
+    match construction {
         MerchantConstruction::Clause(clause) => realize_common(&clause, vocab),
         MerchantConstruction::Coordination(coord) => realize_common_coordination(&coord, vocab),
+        MerchantConstruction::PolarQuestion(clause) => {
+            realize_common_polar_question(&clause, vocab)
+        }
     }
 }
 
@@ -1879,6 +2008,7 @@ const MERCHANT_WITNESS: &[(&str, &str)] = &[
     ("m05", "Nwamvam killed a person."),
     ("m06", "I do not know they killed them."),
     ("m07", "they killed them killed me and knowed me."),
+    ("m08", "were you a merchant?"),
     ("m09", "I thinked they killed them."),
     ("m10", "I did not know them."),
 ];
@@ -2010,6 +2140,7 @@ const LADDER_WITNESS: &[(&str, &str)] = &[
     ("r013", "the guard does not sleep."),
     ("r014", "the guard sleeped."),
     ("r015", "the guard did not sleep."),
+    ("r083", "are you a merchant?"),
     ("r190", "you killed them."),
 ];
 
@@ -2207,6 +2338,30 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
             polarity: Polarity::Neg,
             adjuncts: Vec::new(),
         }),
+        // "Are you a merchant?" **REALIZES DIRECTLY — no substitution at
+        // all, the first rung in this campaign for which that is true of
+        // every word.** `merchant` is a registered concept, the copula is
+        // `COPULA_PARADIGM`'s present 2sg row, and the inversion is the
+        // token's own construction. The only difference from the rung's own
+        // text is the leading capital, which every witness here shares (see
+        // `every_covered_ladder_rung_realizes_in_common`'s doc: comparing
+        // any witness to `text` would fail on case alone).
+        //
+        // It is a `PolarQuestion`, not a `Clause`: a declarative stand-in
+        // would attest to `polar-question` without ever inverting anything,
+        // the same "Clause-shaped stand-in" failure `MerchantConstruction`'s
+        // own doc forbids one axis over.
+        "r083" => MerchantConstruction::PolarQuestion(Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Pronoun(Person::Second),
+            object: Argument::Concept("merchant".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        }),
         // "You killed her." **THE SECOND RUNG THIS TASK COVERS, AND IT IS A
         // REUSE/CONTROL RUNG** — `introduces: null`, presupposing r006
         // (transitive-frame), r011 (person-deixis) and r014 (past-tense).
@@ -2305,6 +2460,19 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
 /// here: nothing. Two of this campaign's scoring tasks moved the frontier's
 /// membership without moving its size, which is the argument for asserting
 /// the ordered VECTOR rather than the length.
+///
+/// **Task 8 (`polar-question`) covers exactly one more rung, `r083`, and is
+/// the first task of this campaign whose FRONTIER moves by more than a
+/// swap.** Covered: 10 → 11, as the brief predicted, with no reuse/control
+/// rung riding along (nothing else in the ladder presupposes two of this
+/// token's effects at once the way `r015` and `r190` did). The frontier goes
+/// 16 → 20: `r083` drops off (now covered) and FIVE rungs join — `r084`,
+/// `r085`, `r095`, `r096` and `r196` — each because its own non-introduced
+/// demands are now all covered, `polar-question` having been the last one
+/// outstanding for each. That is the largest frontier move this campaign has
+/// made, and the reason is structural rather than lucky: the questions
+/// branch of the ladder hangs off `r083` directly, so covering the cheapest
+/// interrogative opens the whole sub-tree beneath it at once.
 #[test]
 fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
     let entries = read_derived(&repo_root().join("sentences/the-ladder.corpus.json"));
@@ -2316,15 +2484,15 @@ fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
     assert_eq!(
         covered,
         vec![
-            "r001", "r002", "r003", "r005", "r006", "r011", "r013", "r014", "r015", "r190"
+            "r001", "r002", "r003", "r005", "r006", "r011", "r013", "r014", "r015", "r083", "r190"
         ],
         "the ladder's covered set"
     );
     assert_eq!(
         ladder_frontier(&entries),
         vec![
-            "r004", "r007", "r028", "r044", "r048", "r051", "r055", "r061", "r068", "r072", "r083",
-            "r109", "r113", "r114", "r117", "r171",
+            "r004", "r007", "r028", "r044", "r048", "r051", "r055", "r061", "r068", "r072", "r084",
+            "r085", "r095", "r096", "r109", "r113", "r114", "r117", "r171", "r196",
         ],
         "the ladder's frontier"
     );
@@ -2368,12 +2536,29 @@ fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
 /// is now `"I do not know they killed them."` — the *"I eats the bread"*
 /// roughness, showing up in the merchant corpus and fixed by the same
 /// widened key. The covered SET and both counts are unchanged.
+///
+/// **Task 8 (`polar-question`) is the one task in this campaign where BOTH
+/// corpora move, and the only one that moves a dialogue corpus's headline
+/// count at all.** the-merchant goes 19 → 21 of 30 demand instances and
+/// **5 → 6 of 12 covered entries** — the first movement in that number
+/// across four campaigns — because m08's two declared demands are
+/// `polar-question` and `past-tense` and the second was already built.
+/// the-flood-watch meets 12 more instances (258 → 270 of 1128) with its
+/// covered-ENTRY count at 0 of 139 for the fifth consecutive task, the same
+/// conjunctive-coverage blindness this statistic exists to see past.
+///
+/// Note what the merchant's entry-level move does NOT say, and read
+/// [`MERCHANT_COVERED_IDS`]'s doc before quoting the 6: m08 is *"Did you
+/// know the woman?"*, a do-support question on a lexical verb, and the
+/// grammar cannot say that sentence. Its two demand tokens under-describe
+/// it — the third time this twelve-entry corpus has done that — and it is a
+/// PLAYER line scored on a PRODUCTION capability.
 #[test]
 fn demand_instance_coverage_matches_the_campaigns_prediction() {
     let merchant = read_declared(&repo_root().join("sentences/the-merchant.corpus.json"));
-    assert_eq!(demand_instance_coverage(&merchant), (19, 30));
+    assert_eq!(demand_instance_coverage(&merchant), (21, 30));
     let flood = read_declared(&repo_root().join("sentences/the-flood-watch.corpus.json"));
-    assert_eq!(demand_instance_coverage(&flood), (258, 1128));
+    assert_eq!(demand_instance_coverage(&flood), (270, 1128));
 }
 
 /// Every ladder rung scored covered realizes in Common, exactly as
@@ -2421,10 +2606,7 @@ fn every_covered_ladder_rung_realizes_in_common() {
     );
     let vocab = CommonVocabulary::default();
     for (id, expected) in LADDER_WITNESS {
-        let surface = match ladder_construction(id) {
-            MerchantConstruction::Clause(c) => realize_common(&c, &vocab),
-            MerchantConstruction::Coordination(c) => realize_common_coordination(&c, &vocab),
-        };
+        let surface = realize_construction(ladder_construction(id), &vocab);
         assert_eq!(surface, *expected, "rung {id} realizes");
     }
 }
@@ -2458,7 +2640,7 @@ const REPORT_PATH: &str = "docs/audits/sentence-coverage.md";
 /// `HV_SENTENCE_REBASELINE=1` — run automatically by
 /// `scripts/regenerate-artifacts.sh` (`make rebaseline`) — otherwise a
 /// no-op. The covered count itself is guarded independently, in Rust, by
-/// [`merchant_coverage_is_five_of_twelve`], so a stale run of *this* test
+/// [`merchant_coverage_is_six_of_twelve`], so a stale run of *this* test
 /// cannot hide a coverage number that moved even before the drift check
 /// above existed.
 #[test]
@@ -2548,11 +2730,14 @@ fn sentence_coverage_report() {
          the \"X is a Y\" construction); The Inquest added `past-tense`, \
          `negation`, `transitive-frame` and `pronoun-reference`; The \
          Mortise added `coordination`, `embedded-clause` and \
-         `epistemic-hedge`. Everything still uncovered names a grammatical \
-         capability no campaign has built — questions, temporal adjuncts, \
-         existentials, witness lists, named-entity lists. A **low score is \
-         the expected result**, not a defect; the corpus is the program's \
-         map, not any one campaign's scorecard.\n\n\
+         `epistemic-hedge`; The Rail added `intransitive-frame`, \
+         `property-predication`, `locative-predication`, `person-deixis` \
+         and `polar-question`. Everything still uncovered names a \
+         grammatical capability no campaign has built — content questions, \
+         temporal adjuncts, existentials, witness lists, named-entity \
+         lists. A **low score is the expected result**, not a defect; the \
+         corpus is the program's map, not any one campaign's \
+         scorecard.\n\n\
          Read the **distance** table below the merchant tally, not only the \
          headline count. Coverage is conjunctive and therefore lags: a \
          campaign can implement several tokens, move few or no entries to \
@@ -2613,6 +2798,32 @@ fn sentence_coverage_report() {
         "- Demand instances met: {merchant_demand_met} of {merchant_demand_total} ({:.1}%)\n\n",
         100.0 * merchant_demand_met as f64 / merchant_demand_total as f64,
     ));
+
+    out.push_str(
+        "**Two honesty limits on the entry-level count, both about `m08` \
+         (*\"Did you know the woman?\"*), which The Rail's `polar-question` \
+         moved to covered.**\n\n\
+         1. **Its demand tokens under-describe it.** `m08` declares \
+         `polar-question` + `past-tense`, and both are built — but the \
+         sentence needs a third capability neither token names. English \
+         asks a LEXICAL verb with periphrastic *do*-support, not by \
+         inversion (*\"Knew you the woman?\"* is not Common), and the \
+         realizer refuses a lexical-verb construction outright rather than \
+         emitting it. The witness therefore substitutes a past copula polar \
+         question, *\"were you a merchant?\"*, which exercises exactly the \
+         two tokens the entry declares. This is the third entry of twelve \
+         whose hand-labelled tokens under-describe it (after `m10`, \
+         lexical, and `m02`, adjectival predication) — which is what a \
+         frozen corpus is FOR: no care at labelling time would have caught \
+         it, and resolving against a real grammar did.\n\
+         2. **It is a `parse`-side line scored on a `produce`-side \
+         capability.** `m08`'s speaker is the player, so the grammar's job \
+         with it is to READ it; `realize_common_polar_question` only \
+         WRITES. The corpus states no `direction` on any entry and spec \
+         §2.3 forbids inferring one from `speaker`, so the resolver scores \
+         it covered on production — the scoring method behaving exactly as \
+         specified, and a real limit on what \"6 of 12\" means.\n\n",
+    );
 
     out.push_str("### Per-entry\n\n");
     out.push_str("| id | speaker | text | demands | status |\n");
