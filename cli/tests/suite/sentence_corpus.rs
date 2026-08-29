@@ -28,7 +28,7 @@
 //! The discipline is therefore social and stated here: a token goes in only
 //! alongside a test in `domains/language` that realizes a clause exercising
 //! it, in Common and, where the tongue realizer is the point, in a tongue.
-//! The nine present tokens are backed by, respectively:
+//! The ten present tokens are backed by, respectively:
 //! `clause.rs::classify_*`; `a_past_clause_says_was` and
 //! `grammar.rs::realize_tongue_reads_its_drawn_tense_depth`;
 //! `a_negated_clause_says_is_not` and
@@ -53,6 +53,11 @@
 //! [`the_ladder_score_and_frontier_match_the_campaigns_prediction`]'s own doc
 //! for the exact covered count this token moves the ladder to, rather than a
 //! number restated here that later tasks in this campaign will move again).
+//! `clause.rs::a_property_predication_takes_no_determiner`
+//! (`property-predication`, The Rail, Task 4 — the m02 trap's honest fix:
+//! Common-only, the same posture `epistemic-hedge` takes, since
+//! `grammar.rs::tongue_verb`'s `Valence::Property` arm exists only to keep
+//! that match exhaustive and no tongue test exercises a property clause yet).
 //!
 //! **The score was zero once, and the positive control that answered that is
 //! still here on purpose.** A measurement whose only possible answer is zero
@@ -84,7 +89,7 @@
 
 use hornvale_kernel::ConceptRegistry;
 use hornvale_kernel::world::IS_A;
-use hornvale_language::packs::{KILL, KNOW, SLEEP, THINK};
+use hornvale_language::packs::{KILL, KNOW, OLD, SLEEP, THINK};
 use hornvale_language::{
     Argument, Clause, CommonVocabulary, Coordination, Definiteness, Evidential, Number, Person,
     Polarity, Subject, Tense, realize_common, realize_common_coordination,
@@ -165,7 +170,7 @@ fn the_flood_watch_corpus_is_frozen_at_its_authored_size() {
 /// enforces on the corpus itself.
 ///
 /// **Nothing mechanically checks a row here against the grammar**; see the
-/// module doc, which names the test backing each of the eight.
+/// module doc, which names the test backing each of the ten.
 const IMPLEMENTED_DEMANDS: &[&str] = &[
     // The Interlinear.
     "classify",
@@ -180,6 +185,8 @@ const IMPLEMENTED_DEMANDS: &[&str] = &[
     "epistemic-hedge",
     // The Rail, Task 2 — the lever.
     "intransitive-frame",
+    // The Rail, Task 4 — the m02 trap's honest fix.
+    "property-predication",
 ];
 
 /// Whether a corpus entry states what the grammar must **parse** (a player
@@ -1979,6 +1986,7 @@ fn demand_instance_coverage(entries: &[Entry]) -> (usize, usize) {
 const LADDER_WITNESS: &[(&str, &str)] = &[
     ("r001", "the woman is a merchant."),
     ("r002", "the guard sleeps."),
+    ("r003", "the road is old."),
     ("r006", "a guard kills a woman."),
     ("r013", "the guard does not sleep."),
     ("r014", "the guard sleeped."),
@@ -2012,6 +2020,26 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
             object: Argument::Absent,
             number: Number::Sg,
             definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        }),
+        // "The road is long." Substituted: `long` is not a registered
+        // concept anywhere in this crate (`grep -rn 'concept: "long"'
+        // domains/` returns nothing) and the only `Valence::Property`
+        // predicate with a `PREDICATE_VALENCE` row is `old` — so the witness
+        // substitutes `old`, the same shape [`MERCHANT_WITNESS`]'s m06/m07
+        // take for an identical reason. The object slot is
+        // `Argument::Absent`: a property predication has no second
+        // participant (see `Valence::Property`'s own doc), so there is
+        // nothing to fill it with, substituted or not.
+        "r003" => MerchantConstruction::Clause(Clause {
+            predicate: OLD.to_string(),
+            subject: Subject::Name("the road".to_string()),
+            object: Argument::Absent,
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
             evidential: Evidential::Witnessed,
             tense: Tense::Present,
             polarity: Polarity::Pos,
@@ -2110,6 +2138,19 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
 /// directly and missed a rung two hops away that composes two OTHER
 /// tokens which that token happens to also gate. See
 /// [`ladder_construction`]'s `"r015"` arm for the full account.
+///
+/// **Task 4 (`property-predication`) covers exactly one more rung, `r003`
+/// alone, as its own task brief predicted** — unlike Task 2, no reuse/control
+/// rung rides along, because nothing else in the corpus presupposes two of
+/// this token's own effects at once the way `r015` did for
+/// `intransitive-frame`. The FRONTIER shape is less trivial: `r003` drops
+/// off it (now covered), but three rungs join — `r004`, `r044` and `r171` —
+/// each because its own two non-introduced demands are exactly `classify`
+/// and `property-predication`, both now covered, even though none of the
+/// three is otherwise close to buildable (each still needs a token this
+/// campaign does not add: `attributive-adjective`, `comparative`,
+/// `verbless-clause`). Net: 14 → 16, a finding read off the resolver, not
+/// asserted from a hand count.
 #[test]
 fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
     let entries = read_derived(&repo_root().join("sentences/the-ladder.corpus.json"));
@@ -2120,14 +2161,14 @@ fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
         .collect();
     assert_eq!(
         covered,
-        vec!["r001", "r002", "r006", "r013", "r014", "r015"],
+        vec!["r001", "r002", "r003", "r006", "r013", "r014", "r015"],
         "the ladder's covered set"
     );
     assert_eq!(
         ladder_frontier(&entries),
         vec![
-            "r003", "r005", "r007", "r011", "r028", "r048", "r055", "r061", "r072", "r083", "r109",
-            "r113", "r114", "r117",
+            "r004", "r005", "r007", "r011", "r028", "r044", "r048", "r055", "r061", "r072", "r083",
+            "r109", "r113", "r114", "r117", "r171",
         ],
         "the ladder's frontier"
     );
@@ -2142,14 +2183,20 @@ fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
 /// campaign's Task 2 moves `the-flood-watch` from 0 of 139 covered ENTRIES
 /// to 0 of 139 (see [`sentence_coverage_report`]'s own account of why that
 /// stays zero) while meeting 2 more demand instances (175 -> 177 of 1128,
-/// `intransitive-frame` being a comparatively rare token in that corpus). A
-/// statistic that reads a null there is not wrong; it is unable to see.
+/// `intransitive-frame` being a comparatively rare token in that corpus).
+/// Task 4 (`property-predication`) meets 21 more still (177 -> 198 of 1128)
+/// while the covered-ENTRY count for `the-flood-watch` stays at 0 of 139 —
+/// the same conjunctive-coverage lesson Task 2 established, read again off a
+/// different token. A statistic that reads a null there is not wrong; it is
+/// unable to see. Merchant is untouched: `property-predication` demands
+/// nothing in `the-merchant.corpus.json`, so both merchant numbers hold
+/// still.
 #[test]
 fn demand_instance_coverage_matches_the_campaigns_prediction() {
     let merchant = read_declared(&repo_root().join("sentences/the-merchant.corpus.json"));
     assert_eq!(demand_instance_coverage(&merchant), (19, 30));
     let flood = read_declared(&repo_root().join("sentences/the-flood-watch.corpus.json"));
-    assert_eq!(demand_instance_coverage(&flood), (177, 1128));
+    assert_eq!(demand_instance_coverage(&flood), (198, 1128));
 }
 
 /// Every ladder rung scored covered realizes in Common, exactly as

@@ -97,6 +97,29 @@ pub const THINK: &str = "think";
 /// type-audit: bare-ok(identifier-text)
 pub const SLEEP: &str = "sleep";
 
+/// The `old` concept's id.
+///
+/// Named for the same reason [`EAT`], [`KILL`], [`KNOW`], [`THINK`] and
+/// [`SLEEP`] are: the pack row that REGISTERS the concept and the
+/// `clause::PREDICATE_VALENCE` row that REALIZES it must not drift apart.
+///
+/// **It adds no pack entry, the same way [`SLEEP`]'s doc explains for
+/// itself.** `old` has been in [`universal_stratum`] since long before this
+/// campaign (`ConceptKind::Quality`, alongside `new`, `great`, `high`,
+/// `low` and `little`), so this constant names an existing registration
+/// rather than creating one.
+///
+/// **It stands in for the rung's own `long`.** `r003`'s authored text is
+/// *"The road is long"*, and `long` is not a registered concept anywhere in
+/// this crate — registering it would move `world-seed-42.json`, a
+/// byte-golden `make rebaseline` cannot write, and Task 0 established that
+/// this campaign registers no concept. `old` is the substitution, recorded
+/// again at its witness (`cli/tests/suite/sentence_corpus.rs`'s
+/// `ladder_construction`, `"r003"` arm) the same way `r006`'s witness
+/// records `kill` standing in for the unregistered `strike`.
+/// type-audit: bare-ok(identifier-text)
+pub const OLD: &str = "old";
+
 /// One entry in a vocabulary pack: a concept id, its broad category, a doc,
 /// and its rank on whichever acquisition ladder it belongs to (0 for
 /// entries outside any ladder — always in the lexicon once the pack is

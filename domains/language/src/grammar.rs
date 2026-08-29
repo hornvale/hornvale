@@ -614,6 +614,17 @@ fn tongue_verb(
         // tongue with a drawn constituent order places a verb with no
         // object) is Task 3's business, not this function's.
         Valence::Intransitive => Ok(Some(resolve_concept_marked(&clause.predicate, lexicon)?)),
+        // Property predication is copular, the same as `Nominal`: the verb
+        // slot takes the tongue's own drawn copula (or nothing, for a
+        // zero-copula tongue), never the lexicalized predicate. The
+        // property word itself is not this function's business — it fills
+        // Common's `Part::PredicateWord` slot, and a tongue's own analogue
+        // (constituent ordering with no complement to carry it) is a later
+        // campaign's business, not this one's.
+        Valence::Property => Ok(grammar.copula.as_ref().map(|roman| Marked {
+            segments: grammar.copula_segments.clone(),
+            roman: roman.clone(),
+        })),
     }
 }
 

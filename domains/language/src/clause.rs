@@ -13,7 +13,7 @@
 
 use crate::common_vocab::CommonVocabulary;
 use crate::morphology::Evidential;
-use crate::packs::{EAT, KILL, KNOW, SLEEP, THINK};
+use crate::packs::{EAT, KILL, KNOW, OLD, SLEEP, THINK};
 use hornvale_kernel::world::IS_A;
 use std::sync::OnceLock;
 
@@ -420,6 +420,14 @@ pub enum Part {
     Determiner,
     /// The complement lexeme.
     Complement,
+    /// The clause's own predicate, resolved through the realizing
+    /// vocabulary and **not inflected** — unlike [`Part::Verb`], a property
+    /// word (or, for a later locative valence, an adposition) takes no
+    /// tense, number or polarity. Deliberately general: [`Valence::Property`]
+    /// and a future [`Valence`] for locative predication both need exactly
+    /// this slot, differing only in the object slot, so it is written once
+    /// here rather than as two parts with identical behaviour.
+    PredicateWord,
     /// The adjunct tail: inline adjuncts first (a `' '` before the first,
     /// `", "` between the rest), then each trailing adjunct after `"; "`.
     ModifierTail,
@@ -688,6 +696,30 @@ pub enum Valence {
     /// future campaign finds itself adding a variant per predicate, it has
     /// rebuilt `Frame` and should stop."
     Intransitive,
+    /// A subject and a property, with no second participant: *X is long*.
+    /// Stassen (1997)'s ADJECTIVAL intransitive predication strategy --
+    /// Dixon (1982, 2004) isolates a small property-concept core (dimension,
+    /// age, value, colour) that forms the semantic heart of the adjective
+    /// class wherever a language has one. Both realizers fill the verb slot
+    /// with a copula, exactly as [`Valence::Nominal`] does — property
+    /// predication is copular, the same way classification is — but the
+    /// object slot is [`Argument::Absent`]: a property relates a subject to
+    /// a state, not to a second participant, so nothing fills the
+    /// determiner/complement slots [`Valence::Nominal`] uses. Common
+    /// expresses the property itself through [`Part::PredicateWord`], a
+    /// clause's own predicate rendered uninflected through the realizing
+    /// vocabulary — the same slot a later campaign's locative valence is
+    /// expected to reuse for its adposition, the two differing only in the
+    /// object slot.
+    ///
+    /// **This is the honest fix for the m02 trap** (The Mortise): rendering
+    /// *"The road is long"* through [`Valence::Nominal`] produces *"the road
+    /// is a long"* — the right meaning stated through the wrong relation
+    /// (classification: *road is-a long*). A `Definiteness::Bare` variant
+    /// would have produced the right STRING the same wrong way; this variant
+    /// asserts what the sentence actually means instead, so `Definiteness`
+    /// gains no third value.
+    Property,
 }
 
 /// **THE predicate inventory**: every predicate this crate can express, with
@@ -730,6 +762,12 @@ pub enum Valence {
 /// `the_ladder_score_and_frontier_match_the_campaigns_prediction` for the
 /// full account (this crate cannot link to it directly — layering forbids a
 /// domain from depending on `cli`).
+///
+/// [`OLD`] (The Rail, Task 4) is the first row at [`Valence::Property`], the
+/// honest fix for the m02 trap: *"the road is old"* is a substitution for
+/// the rung's own *"The road is long"* — `long` is not registered in
+/// `packs::universal_stratum`, and this campaign registers no new concept
+/// (see [`crate::packs::OLD`]'s own doc). Covers `r003` alone.
 const PREDICATE_VALENCE: &[(&str, Valence)] = &[
     (IS_A, Valence::Nominal),
     (EAT, Valence::Transitive),
@@ -737,6 +775,7 @@ const PREDICATE_VALENCE: &[(&str, Valence)] = &[
     (KNOW, Valence::Transitive),
     (THINK, Valence::Transitive),
     (SLEEP, Valence::Intransitive),
+    (OLD, Valence::Property),
 ];
 
 /// The valence of `predicate`, or `None` when no realizer covers it.
@@ -841,6 +880,20 @@ pub fn common_constructions() -> &'static [Construction] {
         Part::ModifierTail,
         Part::Literal("."),
     ];
+    // A copula and the property itself, no determiner and no complement:
+    // the m02 trap's honest fix. `CLASSIFY` minus its `Determiner`/
+    // `Complement` pair, with `Part::PredicateWord` where `Complement` sat —
+    // the object slot has nothing to fill, since a property predication
+    // binds `Argument::Absent`.
+    const PROPERTY: &[Part] = &[
+        Part::Subject,
+        Part::Literal(" "),
+        Part::Copula,
+        Part::Literal(" "),
+        Part::PredicateWord,
+        Part::ModifierTail,
+        Part::Literal("."),
+    ];
     // Built once and leaked into a `static` so the signature stays
     // `&'static [Construction]` — `parse_common_with_tail` walks this on
     // every parse and callers hold no allocation. The same `OnceLock`
@@ -856,6 +909,7 @@ pub fn common_constructions() -> &'static [Construction] {
                     Valence::Nominal => CLASSIFY,
                     Valence::Transitive => TRANSITIVE,
                     Valence::Intransitive => INTRANSITIVE,
+                    Valence::Property => PROPERTY,
                 },
             })
             .collect()
@@ -1056,6 +1110,11 @@ fn realize_common_with_subject(
                 spec.number,
                 spec.polarity,
             )),
+            // The clause's own predicate again, through the same
+            // vocabulary lookup `Part::Verb` uses — but **not inflected**:
+            // a property word (or a future locative valence's adposition)
+            // takes no tense, number or polarity, unlike a lexical verb.
+            Part::PredicateWord => out.push_str(&vocab.word_for(&spec.predicate)),
             // A PRONOUN fills the determiner slot itself — English has no
             // "*the them", and no `Definiteness` a caller states can change
             // that, so the slot is skipped rather than given a fourth row.
@@ -2251,6 +2310,25 @@ mod tests {
                         construction.predicate
                     );
                 }
+                // A property predication is copular, like `Nominal` — but,
+                // unlike `Nominal`, it has no second participant: no
+                // `Part::Determiner` and no `Part::Complement`. Those two
+                // absences are the whole content of the m02 fix, so both
+                // are asserted here rather than left to `Part::PredicateWord`
+                // alone to imply.
+                Valence::Property => {
+                    assert!(
+                        construction.parts.contains(&Part::Copula)
+                            && !construction.parts.contains(&Part::Verb)
+                            && construction.parts.contains(&Part::PredicateWord)
+                            && !construction.parts.contains(&Part::Determiner)
+                            && !construction.parts.contains(&Part::Complement),
+                        "a property predication fills the verb slot with a copula and the \
+                         predicate slot with the property word, and binds no determiner or \
+                         complement: {:?}",
+                        construction.predicate
+                    );
+                }
             }
         }
         // And the other direction: nothing in the inventory is unreachable
@@ -2259,7 +2337,7 @@ mod tests {
         // in one realizer and not the other.
         assert_eq!(
             inv.len(),
-            [IS_A, EAT, KILL, KNOW, THINK, SLEEP]
+            [IS_A, EAT, KILL, KNOW, THINK, SLEEP, OLD]
                 .iter()
                 .filter(|p| predicate_valence(p).is_some())
                 .count(),
@@ -2279,6 +2357,9 @@ mod tests {
         // `sleep` (The Rail, Task 2) is the first row at a NEW valence: the
         // lever this campaign is named for.
         assert_eq!(predicate_valence(SLEEP), Some(Valence::Intransitive));
+        // `old` (The Rail, Task 4) is the first row at `Valence::Property`,
+        // the m02 trap's honest fix.
+        assert_eq!(predicate_valence(OLD), Some(Valence::Property));
         assert_eq!(predicate_valence("dwells-in"), None);
     }
 
@@ -2385,6 +2466,113 @@ mod tests {
             ..clause.clone()
         };
         assert_eq!(realize_common(&denied, &vocab), "the guard does not sleep.");
+    }
+
+    /// Adjectival predication: a copula, the property word, and NO
+    /// determiner and NO complement.
+    ///
+    /// **This is the m02 trap's honest fix.** `Valence::Nominal` renders
+    /// `Subject Copula Determiner Complement` and would say *"the road is an
+    /// old."* The Mortise declined a `Definiteness::Bare` for this because it
+    /// produced the right STRING through the wrong relation — asserting
+    /// *road is-a old*, the classification. The property valence asserts
+    /// property predication, and `Definiteness` gains no variant.
+    ///
+    /// **The property is the PREDICATE and the object slot is
+    /// [`Argument::Absent`].** A property predication relates a subject to
+    /// a state, not to a second participant — the ledger would commit it as
+    /// `road old Flag(true)`, objectless, exactly as `IS_PERSON` and
+    /// `TIDALLY_LOCKED` are committed. That is the same fact-shape argument
+    /// (decision 0266) `Argument::Absent` was introduced under in Task 2.
+    #[test]
+    fn a_property_predication_takes_no_determiner() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: OLD.to_string(),
+            subject: Subject::Name("the road".to_string()),
+            object: Argument::Absent,
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(realize_common(&clause, &vocab), "the road is old.");
+        // Definiteness is stated and IGNORED here, which is the point: a
+        // property predication has no determiner slot for it to fill, so both
+        // values produce the same surface.
+        let definite = Clause {
+            definiteness: Definiteness::Def,
+            ..clause.clone()
+        };
+        assert_eq!(realize_common(&definite, &vocab), "the road is old.");
+    }
+
+    /// `Definiteness` still has exactly two variants. The property valence is
+    /// what The Mortise's declined `Definiteness::Bare` was standing in for,
+    /// and this asserts the stand-in was not quietly added anyway.
+    ///
+    /// **Made real with an exhaustive match**, not just an array literal: a
+    /// third variant would fail to compile here (a non-exhaustive match),
+    /// rather than merely going unseen by a `.len()` check nothing forces to
+    /// widen.
+    #[test]
+    fn definiteness_gains_no_bare_variant() {
+        for d in [Definiteness::Indef, Definiteness::Def] {
+            match d {
+                Definiteness::Indef | Definiteness::Def => {}
+            }
+        }
+        let all = [Definiteness::Indef, Definiteness::Def];
+        assert_eq!(all.len(), 2);
+    }
+
+    /// **A property predication cannot be recovered by `parse_common`, and
+    /// this is a STATED LOSS, not an undiscovered gap** (spec §4 already
+    /// freezes parsing coverage). Two things are true, and the second is the
+    /// more informative one:
+    ///
+    /// 1. When the property word is not itself registered as a complement
+    ///    concept (the realistic case — `old` is a `ConceptKind::Quality`,
+    ///    never the kind of id a `ParseContext` registers as a classifiable
+    ///    complement), the walk fails exactly as it does on any unrecognized
+    ///    complement: [`ParseError::UnknownComplement`].
+    /// 2. **If it WERE registered, the walk would not fail at all — it
+    ///    would silently MISPARSE the sentence as a classification**,
+    ///    `road is-a old`, rather than the property predication it actually
+    ///    is. `parse_clause_body`'s verb-group search finds a `" is "` hit
+    ///    for BOTH `IS_A`'s `CLASSIFY` construction and `OLD`'s `PROPERTY`
+    ///    one at the identical position (they share the same copula
+    ///    paradigm), and the documented tie-break ("a tie on both goes to
+    ///    the lexicographically first predicate") always prefers `"is-a"`
+    ///    over `"old"` (`'i' < 'o'`). The downstream walk is generic over
+    ///    which construction actually won — it always tries a
+    ///    determiner+complement read of what follows the copula, whether or
+    ///    not that construction's own part list carries either slot — so a
+    ///    bare property word sitting exactly where a bare-generic complement
+    ///    would sit is structurally indistinguishable from one, for THIS
+    ///    algorithm, regardless of which predicate wins.
+    ///
+    /// Restructuring the parser to disambiguate the two is out of this
+    /// task's scope (the same "the walk is a hand-written inverse, not a
+    /// general one" boundary [`parse_clause_body`]'s own doc already states
+    /// for embedding); this test exists so the boundary is recorded rather
+    /// than discovered fresh by whoever builds `r003`'s parse direction.
+    #[test]
+    fn a_property_predication_is_not_recovered_by_parsing() {
+        // The realistic case: `old` is never registered as a complement.
+        assert!(matches!(
+            parse_common("the road is old.", &ctx(&["planet"])),
+            Err(ParseError::UnknownComplement { after }) if after == "old"
+        ));
+        // The more informative case: if it WERE registered, the parse does
+        // not fail — it silently returns the WRONG clause, a classification
+        // rather than a property predication. Pinned, not endorsed.
+        let misparsed = parse_common("the road is old.", &ctx(&["planet", "old"]))
+            .expect("the tie-break always favors is-a, so this resolves rather than fails");
+        assert_eq!(misparsed.predicate, IS_A);
+        assert_eq!(misparsed.object, Argument::Concept("old".to_string()));
     }
 
     /// The one-row promise, exercised. [`KILL`] was added to
