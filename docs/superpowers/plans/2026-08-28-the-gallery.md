@@ -1124,6 +1124,13 @@ cargo nextest run -p hornvale-vessel > /tmp/hv-det.log 2>&1; echo "exit=$?"
 grep -E "^ *Summary|FAILED|panicked" /tmp/hv-det.log
 ```
 
+- [ ] **Step 3c: Sweep the stale verb-count prose**
+
+`windows/lab/tests/suite/reticence_calibration.rs:343` says "20-verb roster".
+Task 5 took `IN_CHARACTER_VERBS` to 22. It is non-assertive prose and fails no
+gate, which is exactly why it rots — fix it here rather than leaving a wrong
+number in a file the next reader will trust.
+
 - [ ] **Step 4: Chronicle and retrospective**
 
 The chronicle is written at the book's altitude — technical, comprehensible
