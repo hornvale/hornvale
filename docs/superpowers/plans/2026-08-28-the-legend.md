@@ -919,8 +919,29 @@ git commit -m "feat(legend): the world map draws elevation and water, not land a
 - Test: `clients/game/bin/tests/plate_vocabulary.rs` (extend)
 
 **Interfaces:**
-- Consumes: `GeneratedTerrain::{has_edifice, nearest_boundary_at,
-  waterfalls, deltas, playas}`.
+- Consumes: the EXISTING `hornvale_terrain::landscape` feature system —
+  `FeatureClass`, `VertexFeatureIndex::at(vertex)` — which `plate.rs` already
+  wraps as `FeatureId::Extent`. Plus `GeneratedTerrain::{waterfalls, deltas}`
+  for the two point features that system does not carry.
+- Produces: no new public types, and no new feature enum.
+
+> **THIS TASK SHRANK, AND THE REASON IS THE CAMPAIGN'S OWN THESIS APPLIED A
+> FOURTH TIME.** An earlier draft had it read `has_edifice`,
+> `nearest_boundary_at`, `waterfalls()`, `deltas()` and `playas()` and mint
+> glyphs for all five. Checked against the tree before dispatch:
+>
+> | draft's landform | what already exists | verdict |
+> |---|---|---|
+> | volcanoes via `has_edifice` | `FeatureClass::Volcano`, already wrapped by `plate.rs`'s `FeatureId::Extent` | **use the existing one** |
+> | playas via `playas()` | `FeatureClass::SaltLake`, AND `WaterKind::SaltBasin` which Task 6 already draws | **drop — covered twice already** |
+> | ranges/rifts via `nearest_boundary_at` | a mountain IS high elevation, already drawn by Task 6's relief ladder as `highland`/`alpine` | **drop — double-encoding** |
+> | waterfalls | `GeneratedTerrain::waterfalls()`; the scene already emits `WaterfallPoint` | keep |
+> | deltas | `GeneratedTerrain::deltas()` | keep |
+>
+> `landscape::FeatureClass` also carries a **declared per-class salience
+> ordering** whose own doc says it mirrors the scene protocol's
+> `Mark.salience` sense ("lower is more specific"). Use it for draw
+> precedence; do not invent a second ordering.
 
 - [ ] **Step 1: Write the failing test**
 
