@@ -64,6 +64,20 @@ Item 4 contributes **two**, both original within their own brief but that
 brief was itself a repair, which is the rule item 3's borrowed ratio already
 answers to. 3 + 1 + 3 + 2 = **9**.
 
+**And it fired once more, inside the correction, in the sentence that states
+it.** The Errata's own repair of this section edited
+`docs/retrospectives/README.md`, where the campaign's one-line index carries
+*two* of these figures in a single sentence: the headline count and the
+implementer-refusal count. The repair fixed the first, left the second reading
+"five times", and its commit message asserted the index "stated the same
+derived quantity in a second form and is corrected with it" — true of one
+number and false of the one beside it. A reviewer re-deriving both caught it;
+re-reading would not have, and had not. So the tenth instance of this
+mechanism occurred in the act of writing the mechanism down, in the file
+`CLAUDE.md` names as the place to grep before reopening an area. **The count
+above is nine because it counts the campaign; this one belongs to its errata.
+The pattern does not respect that boundary, and neither should a reader.**
+
 **The seven was not merely stale, it was stale for the section's own reason.**
 The correction that raised this count from six to seven and the two defects
 that make it nine were produced in the *same* fix wave, hours apart: the
