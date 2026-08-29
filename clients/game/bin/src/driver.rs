@@ -115,12 +115,26 @@ const UNNAMED_TERRAIN: &str = "unnamed terrain";
 /// caves) — never on any refusal (a sealed cave, no cave at all, already
 /// underground, or already inside a structure each print their own
 /// distinct refusal text). This is the only signal that exists for cave
-/// discovery: the wire's own `band` tag deliberately folds underground
-/// into `"walk"` (see that module's own test,
-/// `the_underground_band_folds_into_walk_as_map_does`), so there is no
-/// typed alternative to reading the turn's own narration — the same
-/// category of read `Driver` already does everywhere else (the strip, the
-/// snapshot text itself), never a fabricated string.
+/// discovery.
+///
+/// **This paragraph used to claim the wire's own `band` tag "deliberately
+/// folds underground into `\"walk\"`", citing a test named
+/// `the_underground_band_folds_into_walk_as_map_does`. That has been false
+/// since The Gallery's Task 7**, which gave the pane its own `band:
+/// "underground"` tag (`vessel/level/v1`) — the cited test was renamed to
+/// `the_pane_and_the_verb_agree_underground` at Task 8's landing, once the
+/// `map` verb caught up to the same distinction (see
+/// `hornvale_game_core::snapshot`'s own module doc for the full history).
+/// The band tag distinguishing `underground` from `walk` does not make it a
+/// typed alternative here, though: what this constant answers is not "which
+/// band is the possession on" (that question has its own typed field now)
+/// but "did a delve **succeed this turn**" — a one-shot EVENT, not a
+/// standing STATE. Standing underground on the turn after a successful
+/// delve reads identically to standing underground ten turns later on the
+/// band tag alone; only the turn's own narration says which turn the
+/// transition happened on. So there is still no typed alternative to
+/// reading it — the same category of read `Driver` already does everywhere
+/// else (the strip, the snapshot text itself), never a fabricated string.
 ///
 /// **Guarded on the sim's own side, not just here.**
 /// `windows/vessel/src/session.rs`'s
@@ -2245,19 +2259,32 @@ impl Driver {
     /// standing in — so using it as the band test would draw a perception
     /// overlay of outdoor facets over a chamber-band spread. The snapshot's
     /// own `spatial` tag is the wire's answer to "which band is this", and
-    /// it is the one the rest of this module already asks.
+    /// it is the one the rest of this module already asks — **but this call
+    /// site reads it off [`Self::on_walk_band`], not a fresh parse of
+    /// `self.cached`** (The Gallery, Task 10; The Quadrat's F11). This
+    /// method runs from [`Self::compose_perception_layer`] and
+    /// [`Self::resolve_walk_band`] on every redraw — including a keypress
+    /// that is only typing — and `on_walk_band`'s own doc names exactly this
+    /// shape as the reason it exists: `refresh()` (once per turn) already
+    /// answers "which band" from the same tag, so a second, per-redraw
+    /// `Snapshot::parse` here was answering a question that had not
+    /// changed. On a `None` from `purview` (indoors, per the doc above)
+    /// `on_walk_band` is already `false`, so the outcome is unchanged from
+    /// the old snapshot-tag match — only the parse is gone. It stays correct
+    /// with three bands: `on_walk_band` is `Walk`-or-not, and underground is
+    /// not walk, the same distinction the retired match made explicit in its
+    /// `Chamber | Underground => None` arm.
+    ///
+    /// **Whether the underground band ever gets its own perception overlay
+    /// is still an open question, unresolved by this method's rewrite** —
+    /// the retired match's own comment raised it and this doc carries the
+    /// pointer forward rather than letting the question disappear with the
+    /// arm that used to name it.
     fn walk_band_scene(&self) -> Option<hornvale_scene::SurroundsScene> {
-        let snap = hornvale_game_core::Snapshot::parse(&self.cached).ok()?;
-        match snap.spatial {
-            hornvale_game_core::Spatial::Walk { .. } => self.session.purview(0).ok(),
-            // Neither indoors nor underground draws a walk-band perception
-            // overlay. This `Underground` arm exists only to keep this
-            // match exhaustive after The Gallery's Task 9 added the
-            // variant — the underground band's own overlay, if it ever
-            // gets one, is Task 10's question, not this one's.
-            hornvale_game_core::Spatial::Chamber { .. }
-            | hornvale_game_core::Spatial::Underground { .. } => None,
+        if !self.on_walk_band {
+            return None;
         }
+        self.session.purview(0).ok()
     }
 
     /// Compose the band-B perception overlay onto an already-drawn plate —
@@ -4388,6 +4415,36 @@ mod portolan_tests {
     // every facet's absolute coordinate exactly; the sweep measures the
     // shortcut, not the contract. The campaign asserted otherwise in six
     // documents and it was corrected at close.
+
+    /// `walk_band_scene` (and so `compose_perception_layer`, its only
+    /// caller off the resolver path) answers off [`Driver::on_walk_band`],
+    /// never a fresh `Snapshot::parse(&self.cached)` (The Gallery, Task 10;
+    /// The Quadrat's F11 measured the parse-and-`purview` shape at 24x a
+    /// bare redraw, size-independent, on **every** keypress including plain
+    /// typing).
+    ///
+    /// **The check corrupts `cached` rather than counting parses**, because
+    /// a counter would need its own seam and this property is more direct:
+    /// if the method still consulted `self.cached`'s own `spatial` tag, a
+    /// cache that cannot parse as JSON would read as "not walk band" and
+    /// `walk_band_scene` would go `None` even though the driver's own
+    /// `on_walk_band` (set by the last real `refresh()`) says the possession
+    /// is standing on the walk band right now. Answering `Some` here is
+    /// only possible if the parse is genuinely gone from this path.
+    #[test]
+    fn composing_the_perception_layer_does_not_parse_the_snapshot() {
+        let mut d = test_driver();
+        assert!(
+            d.on_walk_band,
+            "seed 42's flagship opens on the walk band, per Driver::start's own doc"
+        );
+        d.cached = "not valid snapshot json".to_string();
+        assert!(
+            d.walk_band_scene().is_some(),
+            "walk_band_scene must answer from on_walk_band, not a parse of \
+             the (here, corrupted) cached snapshot"
+        );
+    }
 
     /// Every facet of the walk-band packet lands on the tile that HOLDS its
     /// own facet — checked against the projection's own INVERSE rather than
