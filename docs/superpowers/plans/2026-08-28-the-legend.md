@@ -339,6 +339,12 @@ git commit -m "decide(NNNN): a glyph carries order or identity, never an arbitra
 
 ### Task 3: The shared classifier
 
+> **THIS TASK IS NOW A PROMOTION, NOT A NEW FUNCTION.** Two drafts of it
+> specified classifiers this crate already had. The water half duplicated
+> `WaterKind::index()`/`LEGEND` (deleted in fix round 1). The elevation half
+> duplicated `surrounds.rs`'s `relief_band`/`RELIEF_LEGEND` (fix round 2).
+> Read the box below before anything else.
+
 The campaign's load-bearing unit. One function, called by the scene builder
 (Task 4) and the plate (Task 6), so a class can never be defined twice.
 
@@ -354,9 +360,41 @@ The campaign's load-bearing unit. One function, called by the scene builder
 
 **Interfaces:**
 - Consumes: `hornvale_terrain::WaterKind`.
-- Produces: `pub fn elevation_band(elevation_m: f64, sea_level_m: f64) -> u8`
-  (0..=4, ascending); `pub const ELEVATION_LEGEND: [&str; 5]`.
-  **NO water function and NO water legend** — see the note below.
+- Produces: `relief_band` promoted from private to `pub` in
+  `windows/scene/src/surrounds.rs`. **No new classifier, no new legend, no
+  new constants.** `RELIEF_LEGEND` is already `pub`.
+
+**BOTH HALVES WERE ALREADY CLASSIFIED. The deliverable is to PROMOTE the
+existing elevation classifier, not to write one.**
+
+`windows/scene/src/surrounds.rs` already carries, ten lines apart:
+
+- `pub const RELIEF_LEGEND: [&str; 6]` (line 27) — **already public** —
+  `["abyss", "shelf", "lowland", "upland", "highland", "alpine"]`
+- `fn relief_band(height: SeaLevelHeight) -> u32` (line 36), floors at
+  `-3000 / 0 / 300 / 1000 / 2500`
+
+**That function is better than the one this plan first specified, and its own
+doc comment says why:** *"The parameter is a `SeaLevelHeight` and not a
+`ReferenceElevation` for the reason The Benchmark exists: these thresholds
+are sea-level-relative, and before v2 this function was handed the raw
+isostatic reading, so on a world whose sea level sits near -2936 m almost all
+land classified as `shelf`."* This crate already hit the sea-level-as-datum
+bug in production and fixed it with a TYPE that makes the error
+unrepresentable — strictly stronger than an `(f64, f64)` signature that
+re-solves it by subtraction and a unit test. It also distinguishes abyss from
+shelf, which is real cartographic information.
+
+So: **make `relief_band` `pub`, and delete `elevation_band`,
+`ELEVATION_LEGEND` and `BAND_FLOORS_M`.** `classify.rs` becomes either a
+thin re-export or disappears entirely — the implementer decides which reads
+better and says why.
+
+**Spec §2.2 is unaffected, and this is where it would break if anywhere.**
+The walk band draws IMPEDANCE (`relief_band` plus canopy and roughness, five
+glyphs `_ . : ^ A`); the world map draws `relief_band` DIRECTLY (six bands,
+its own glyphs). Different quantities, different ladders, disjoint
+characters — the conclusion is unchanged, only the supplying function is.
 
 **WATER IS ALREADY CLASSIFIED — do not write a second one.** An earlier
 draft of this task specified `water_class()` and `WATER_LEGEND`. Both were
@@ -528,9 +566,12 @@ can reject "the extraction changed behaviour" independently.
 - Test: `windows/scene/tests/suite/golden.rs` (existing — RUN it, do not edit)
 
 **Interfaces:**
-- Consumes: Task 3's `elevation_band`, `ELEVATION_LEGEND`.
-- Produces: `RegionScene` gains `pub elevation_band: Vec<u8>` and
-  `pub elevation_legend: Vec<String>`, ADDED BESIDE `elevation_m`.
+- Consumes: Task 3's newly-`pub` `relief_band`, and the already-`pub`
+  `RELIEF_LEGEND`.
+- Produces: `RegionScene` gains `pub relief: Vec<u32>` and
+  `pub relief_legend: Vec<String>`, APPENDED at the struct's end. **Same
+  field names `scene/surrounds/v2` already uses for the same quantity** —
+  two schemas naming one classification identically, which is the point.
 
 - [ ] **Step 1: Record the pre-change state**
 
@@ -733,7 +774,7 @@ register rows — that would put a client concern in `windows/`.
 - Test: `clients/game/bin/tests/plate_vocabulary.rs`
 
 **Interfaces:**
-- Consumes: `hornvale_scene::elevation_band` (flat re-export) and, for
+- Consumes: `hornvale_scene::relief_band` (flat re-export) and, for
   water, `terrain.water_kind_at(vertex).index()` + `WaterKind::LEGEND`
   DIRECTLY — the canonical pair `region.rs` itself uses. There is no
   `water_class`.
