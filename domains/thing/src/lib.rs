@@ -562,6 +562,62 @@ mod tests {
         let _ = register_concepts(&mut reg);
     }
 
+    /// The declared-owner-mismatch direction: `BORROWED` names an owner for
+    /// `hearth` (`settlement`), but the registry attributes it to a
+    /// DIFFERENT domain entirely. This is not the undeclared-collision case
+    /// (`BORROWED` does have an opinion about `hearth`) and not the
+    /// nothing-collides case (something is registered) — it is its own
+    /// failure, the real scenario being: `settlement` drops `hearth`,
+    /// `domains/climate` later registers it for hydrology, and `BORROWED`
+    /// never got updated. That deserves its own diagnostic ("the
+    /// declaration is stale and must be corrected") rather than being
+    /// folded into the undeclared-collision message ("BORROWED does not
+    /// declare this cession") — the two name different repairs (correct
+    /// `BORROWED`'s owner vs. add a new entry to it), and collapsing them
+    /// would leave a maintainer fixing the wrong thing.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: collapse `register_concepts`'s two
+    /// `Some(existing) => match borrowed_owner(label) { ... }` panic arms
+    /// (`Some(owner) => panic!(...stale...)` and `None =>
+    /// panic!(...does not declare this cession...)`) into one `_ =>
+    /// panic!(<undeclared-collision message>)`. Every other
+    /// `hornvale-thing` test still passes under this mutation (the arm is
+    /// unreachable from anywhere else in the suite), which is exactly the
+    /// coverage hole this test closes. Red observed:
+    ///
+    /// ```text
+    /// thread 'tests::declared_owner_mismatch_panics_with_its_own_message' panicked at domains/thing/src/lib.rs:295:22:
+    /// thing-kind "hearth" collides with a concept already owned by "climate", and BORROWED does not declare this cession -- add an entry to BORROWED (decision 0025) if that ownership is intended, or rename the collision away
+    /// note: panic did not contain expected string
+    ///       panic message: "thing-kind \"hearth\" collides with a concept already owned by \"climate\", and BORROWED does not declare this cession -- add an entry to BORROWED (decision 0025) if that ownership is intended, or rename the collision away"
+    ///  expected substring: "the declaration is stale and must be corrected"
+    /// test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out
+    /// ```
+    #[test]
+    #[should_panic(expected = "the declaration is stale and must be corrected")]
+    fn declared_owner_mismatch_panics_with_its_own_message() {
+        let mut reg = hornvale_kernel::ConceptRegistry::default();
+        // `hearth` IS declared in BORROWED (owner "settlement"), but this
+        // registers it under "climate" instead -- the stale-declaration
+        // scenario, not the undeclared-collision one.
+        reg.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: "hearth".to_string(),
+                domain: "climate".to_string(),
+                kind: ConceptKind::Substance,
+                doc: "warmth radiating from a fire".to_string(),
+            },
+            lexeme: Correspondent::Absent(Void::Gap("no language pack names it yet")),
+            percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })
+        .expect("climate's stand-in registration");
+
+        let _ = register_concepts(&mut reg);
+    }
+
     /// The stale-declaration direction: `BORROWED` names an owner for
     /// `hearth`, but nothing has registered it — the declaration's target
     /// is gone (or this call ran before its owner, which is exactly the
