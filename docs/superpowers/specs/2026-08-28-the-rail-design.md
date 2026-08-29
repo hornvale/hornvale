@@ -236,13 +236,30 @@ parser reads features backwards off the surface form. Person breaks that and
 English is the reason: `are` becomes 2sg, 1pl, 2pl and 3pl; `were` the same
 four.
 
-The resolution keeps the forward direction total and pins the backward loss:
-realization stays a total function of the features, the parse returns a
-**canonical** row, and a test states which distinctions are unrecoverable —
-exactly the posture the round-trip property already takes toward adjuncts,
-which it recovers as surfaces and not as structure. The invariant's name
-changes with its content; an assertion that quietly kept the old name over new
-behaviour would be worse than the syncretism.
+**The premise above is right and the resolution it proposed was wrong, and
+Task 6 found it.** The table is indeed non-injective. But the backward read
+never has to answer *"which person is `are`?"*, because **`Clause` has no
+person field at all** — person lives inside `Subject::Pronoun(Person)`, and a
+`Subject::Name` or `Subject::Clause` is third person by definition. So the
+parse reads person off the SUBJECT and uses it to narrow the verb group's
+candidates; there is no canonical row to nominate and no loss to pin.
+
+That is a better outcome than the one this section originally specified. A
+canonical row would have been a rule made by table ordering — exactly the
+implicit convention this spec elsewhere insists on naming — and the design
+avoids needing one rather than documenting one. The round-trip property test
+did not go red: its enumeration was **widened** from one person to three and
+passes at full width.
+
+What the syncretism does cost is real and is pinned elsewhere: the parse
+search now runs 24 candidate rows per copular construction where it ran 8, and
+`no_verb_group_form_spans_two_tenses_or_polarities` converts a property the
+parser had been silently relying on — that a winning row's tense and polarity
+are unambiguous — from "obvious while there were eight distinct forms" into an
+asserted fact, at exactly the moment the old reasoning stopped carrying it.
+
+The invariant's name still changes with its content; an assertion that quietly
+kept the old name over new behaviour would be worse than the syncretism.
 
 `VERB_PARADIGM` gets the same treatment. The two roughnesses
 `common_has_no_person_agreement_and_one_third_person_singular` pins today —
@@ -419,9 +436,15 @@ The Inquest added. Pin-isolation tests are the proof, not the argument.
 5. `docs/audits/sentence-coverage.md` publishes the ladder score and the
    frontier, and regenerates through `make rebaseline` with a drift check that
    can actually fail — demonstrated by a mutation, not asserted.
-6. The copula and verb paradigms are **total** over their widened key, and the
+6. The copula and verb paradigms are **total** over their widened key.
+
+   **Amended after Task 6.** This criterion originally continued "…and the
    backward read's loss is pinned by a test that names which distinctions are
-   unrecoverable.
+   unrecoverable." There is no such loss: person is recoverable from the
+   subject, so the criterion is met by totality plus the parse's
+   person-narrowing filter, whose non-vacuity is pinned by
+   `an_agreement_violating_sentence_does_not_parse` (deleting the filter makes
+   *"I are a planet."* parse successfully — traced, not assumed).
 7. *"The road is long"* realizes with no determiner, and `Definiteness` gains
    no `Bare` variant.
 8. Pin-isolation holds: the two new drawn axes derive their own streams by
