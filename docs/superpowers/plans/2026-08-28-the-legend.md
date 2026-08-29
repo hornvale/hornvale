@@ -539,9 +539,17 @@ and keep the log.
 
 - [ ] **Step 2: Add the fields additively**
 
-Add to `RegionScene` immediately AFTER `elevation_m` — field order is JSON
-key order and is contract, so never reorder and never insert before an
-existing field:
+Add to `RegionScene` **at the END of the struct, after `precip_mm_yr`** —
+NOT next to `elevation_m`, however much that reads better.
+
+The struct's own doc says *"Field order is the JSON key order and is
+contract."* `elevation_m` is at line 270 and `ocean` at 272, so inserting
+"after elevation_m" is a MIDDLE insertion: it shifts the key position of
+every field after it and reorders the document against every existing
+consumer. Appending leaves all existing keys exactly where they are and adds
+the new ones last, which is what "additive" means for an ordered wire
+format. Put a one-line comment on the fields saying why they sit apart from
+`elevation_m`, so the next reader does not "tidy" them back up:
 
 ```rust
     /// Elevation band per node — [`crate::elevation_band`]'s rung,
