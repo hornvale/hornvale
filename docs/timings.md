@@ -3705,6 +3705,24 @@ measured here.
 | 2026-08-28T13:04:21Z | sluice:outboard | 42.145 | 26.661 | 40.507 | 1.59 | 0 | 67090e56e |  | lefford | 40 |
 | 2026-08-28T13:12:43Z | sluice:gate | 501.568 | 13967.069 | 519.464 | 28.88 | 0 | e38fed504 |  | lefford | 40 |
 | 2026-08-28T13:21:59Z | sluice:clients | 556.367 | 9631.302 | 113.742 | 17.52 | 0 | ee352c836 |  | lefford | 40 |
+| 2026-08-28T14:47:38Z | prewarm | 386.170 | 1731.014 | 97.963 | 4.74 | 0 | 2f8faf243 | campaign/the-overture | ambrose | 12 |
+| 2026-08-28T16:08:38Z | game-check | 868.168 | 3655.666 | 79.990 | 4.30 | 0 | f049f5290 | campaign/the-overture | ambrose | 12 |
+| 2026-08-28T16:10:49Z | gate-commit | 124.567 | 112.118 | 35.989 | 1.19 | 0 | f049f5290 | campaign/the-overture | ambrose | 12 |
+| 2026-08-28T16:13:43Z | gate-commit | 117.779 | 57.117 | 28.051 | 0.72 | 0 | f049f5290 | campaign/the-overture | ambrose | 12 |
+| 2026-08-28T16:42:15Z | gate-commit | 161.598 | 91.939 | 54.808 | 0.91 | 0 | 8d62c6cd4 | campaign/the-overture | ambrose | 12 |
+| 2026-08-28T16:44:55Z | gate-commit | 99.758 | 56.213 | 25.866 | 0.82 | 0 | 8d62c6cd4 | campaign/the-overture | ambrose | 12 |
+| 2026-08-28T18:04:12Z | game-check | 816.113 | 3839.334 | 96.468 | 4.82 | 0 | 636b81d55 | campaign/the-overture | ambrose | 12 |
+| 2026-08-28T18:06:31Z | gate-commit | 131.909 | 205.302 | 53.835 | 1.96 | 0 | 636b81d55 | campaign/the-overture | ambrose | 12 |
+| 2026-08-28T18:10:53Z | gate-commit | 83.766 | 51.085 | 25.559 | 0.91 | 0 | 636b81d55 | campaign/the-overture | ambrose | 12 |
+| 2026-08-28T19:04:23Z | game-check | 814.053 | 3833.942 | 88.356 | 4.82 | 0 | 3b9bc719b | campaign/the-overture | ambrose | 12 |
+| 2026-08-28T19:07:11Z | gate-commit | 161.318 | 366.795 | 65.298 | 2.68 | 0 | 3b9bc719b | campaign/the-overture | ambrose | 12 |
+| 2026-08-28T19:11:34Z | gate-commit | 85.749 | 54.214 | 27.860 | 0.96 | 0 | 3b9bc719b | campaign/the-overture | ambrose | 12 |
+| 2026-08-28T21:29:22Z | game-check | 776.354 | 3882.595 | 85.143 | 5.11 | 0 | 0e4c0b08e | campaign/the-overture | ambrose | 12 |
+| 2026-08-28T21:30:45Z | gate-commit | 77.879 | 51.228 | 24.536 | 0.97 | 0 | 0e4c0b08e | campaign/the-overture | ambrose | 12 |
+| 2026-08-28T21:33:29Z | gate-commit | 78.503 | 51.966 | 25.676 | 0.99 | 0 | 0e4c0b08e | campaign/the-overture | ambrose | 12 |
+| 2026-08-28T22:08:25Z | game-check | 755.399 | 3868.732 | 84.390 | 5.23 | 0 | 89bcdb8da | campaign/the-overture | ambrose | 12 |
+| 2026-08-28T22:09:47Z | gate-commit | 76.361 | 52.244 | 25.340 | 1.02 | 0 | 89bcdb8da | campaign/the-overture | ambrose | 12 |
+| 2026-08-28T22:12:44Z | gate-commit | 77.817 | 52.891 | 26.692 | 1.02 | 0 | 89bcdb8da | campaign/the-overture | ambrose | 12 |
 | 2026-08-28T16:17:32Z | gate-commit | 92.318 | 342.384 | 113.896 | 4.94 | 0 | 171af8bfd | campaign/the-governor | MacBookPro | 10 |
 | 2026-08-28T16:18:13Z | gate-commit | 20.445 | 49.887 | 12.921 | 3.07 | 0 | 171af8bfd | campaign/the-governor | MacBookPro | 10 |
 | 2026-08-28T16:29:08Z | gate-commit | 21.629 | 50.629 | 12.717 | 2.93 | 0 | 1710e2f11 | campaign/the-governor | MacBookPro | 10 |
@@ -3812,6 +3830,32 @@ measured here.
 | 2026-08-28T20:37:10Z | sluice:outboard | 41.061 | 25.222 | 38.856 | 1.56 | 0 | 6e7e9fe35 |  | lefford | 40 |
 | 2026-08-28T20:44:38Z | sluice:gate | 447.773 | 13018.949 | 409.363 | 29.99 | 0 | 957994933 |  | lefford | 40 |
 | 2026-08-28T20:53:34Z | sluice:clients | 535.338 | 9403.388 | 93.765 | 17.74 | 0 | 7576c92aa |  | lefford | 40 |
+| 2026-08-28T22:21:30Z | gate-commit | 253.043 | 606.351 | 75.072 | 2.69 | 0 | 2e3ff148a | campaign/the-overture | ambrose | 12 |
+| 2026-08-28T22:25:19Z | gate-commit | 89.713 | 55.033 | 26.812 | 0.91 | 0 | 2e3ff148a | campaign/the-overture | ambrose | 12 |
+| 2026-08-28T22:27:13Z | gate-commit | 84.600 | 54.119 | 26.251 | 0.95 | 0 | 2e3ff148a | campaign/the-overture | ambrose | 12 |
+| 2026-08-28T23:49:44Z | game-check | 1390.277 | 3860.633 | 97.164 | 2.85 | 0 | fc53db628 | campaign/the-overture | ambrose | 12 |
+| 2026-08-29T00:08:47Z | gate-commit | 98.007 | 56.472 | 27.987 | 0.86 | 0 | fc53db628 | campaign/the-overture | ambrose | 12 |
+| 2026-08-29T00:10:37Z | gate-commit | 84.491 | 53.944 | 26.064 | 0.95 | 0 | fc53db628 | campaign/the-overture | ambrose | 12 |
+| 2026-08-29T01:24:22Z | game-check | 895.330 | 3867.425 | 79.996 | 4.41 | 0 | 40fc6b9c2 | campaign/the-overture | ambrose | 12 |
+| 2026-08-29T01:26:08Z | gate-commit | 79.864 | 53.200 | 24.541 | 0.97 | 0 | 40fc6b9c2 | campaign/the-overture | ambrose | 12 |
+| 2026-08-29T01:28:11Z | gate-commit | 74.794 | 53.522 | 24.552 | 1.04 | 0 | 40fc6b9c2 | campaign/the-overture | ambrose | 12 |
+| 2026-08-29T02:39:58Z | game-check | 940.663 | 3953.085 | 89.290 | 4.30 | 0 | 6baa7e24a | campaign/the-overture | ambrose | 12 |
+| 2026-08-29T02:42:10Z | gate-commit | 124.307 | 56.794 | 26.948 | 0.67 | 0 | 6baa7e24a | campaign/the-overture | ambrose | 12 |
+| 2026-08-29T02:44:28Z | gate-commit | 113.149 | 55.772 | 26.333 | 0.73 | 0 | 6baa7e24a | campaign/the-overture | ambrose | 12 |
+| 2026-08-29T03:17:32Z | game-check | 432.239 | 3608.252 | 19.361 | 8.39 | 0 | 7a65ab60d | campaign/the-overture | ambrose | 12 |
+| 2026-08-29T03:18:32Z | gate-commit | 53.173 | 39.262 | 13.206 | 0.99 | 0 | 7a65ab60d | campaign/the-overture | ambrose | 12 |
+| 2026-08-29T03:21:02Z | gate-commit | 53.564 | 39.320 | 13.416 | 0.98 | 0 | 7a65ab60d | campaign/the-overture | ambrose | 12 |
+| 2026-08-29T03:54:07Z | game-check | 0.290 | 0.180 | 0.053 | 0.80 | 0 | e8a7c97c4 | campaign/the-overture | ambrose | 12 |
+| 2026-08-29T04:01:51Z | game-check | 452.722 | 3628.733 | 23.436 | 8.07 | 0 | e8a7c97c4 | campaign/the-overture | ambrose | 12 |
+| 2026-08-29T04:02:46Z | gate-commit | 47.129 | 33.965 | 10.984 | 0.95 | 0 | e8a7c97c4 | campaign/the-overture | ambrose | 12 |
+| 2026-08-29T04:06:41Z | gate-commit | 46.125 | 34.458 | 11.364 | 0.99 | 0 | e8a7c97c4 | campaign/the-overture | ambrose | 12 |
+| 2026-08-29T04:08:07Z | gate-commit | 49.257 | 38.941 | 12.971 | 1.05 | 0 | e8a7c97c4 | campaign/the-overture | ambrose | 12 |
+| 2026-08-29T04:10:37Z | gate-commit | 49.619 | 38.858 | 13.504 | 1.06 | 0 | e8a7c97c4 | campaign/the-overture | ambrose | 12 |
+| 2026-08-29T13:41:09Z | game-check | 1070.871 | 3890.375 | 95.942 | 3.72 | 0 | 700b41f8d | campaign/the-overture | ambrose | 12 |
+| 2026-08-29T14:28:16Z | game-check | 858.912 | 3835.929 | 78.979 | 4.56 | 0 | 700b41f8d | campaign/the-overture | ambrose | 12 |
+| 2026-08-29T14:47:29Z | game-check | 863.455 | 3937.427 | 78.808 | 4.65 | 0 | 700b41f8d | campaign/the-overture | ambrose | 12 |
+| 2026-08-29T14:48:58Z | gate-commit | 84.669 | 54.166 | 25.990 | 0.95 | 0 | 700b41f8d | campaign/the-overture | ambrose | 12 |
+| 2026-08-29T14:51:08Z | gate-commit | 81.140 | 54.090 | 26.333 | 0.99 | 0 | 700b41f8d | campaign/the-overture | ambrose | 12 |
 | 2026-08-29T01:13:06Z | gate-commit | 105.360 | 443.772 | 100.180 | 5.16 | 0 | 24892b1ac | campaign/the-governor | MacBookPro | 10 |
 | 2026-08-29T01:15:03Z | rebaseline | 89.128 | 272.448 | 11.540 | 3.19 | 0 | b26a46fb0 | campaign/the-governor | MacBookPro | 10 |
 | 2026-08-29T01:16:08Z | gate-commit | 21.238 | 51.105 | 12.594 | 3.00 | 0 | a142cefaf | campaign/the-governor | MacBookPro | 10 |
@@ -3985,3 +4029,11 @@ measured here.
 | 2026-08-29T21:30:56Z | prewarm | 205.239 | 1181.148 | 42.001 | 5.96 | 0 | 6f121ac07 | campaign/the-quoin | MacBookPro | 10 |
 | 2026-08-29T22:44:31Z | gate-commit | 67.180 | 69.539 | 24.017 | 1.39 | 0 | b7f0d21b6 | campaign/the-quoin | MacBookPro | 10 |
 | 2026-08-29T22:46:05Z | gate-commit | 59.222 | 55.865 | 14.435 | 1.19 | 0 | b7f0d21b6 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-29T21:13:49Z | gate-commit | 150.799 | 826.784 | 66.076 | 5.92 | 0 | 0216dc303 | the-overture | MacBookPro | 10 |
+| 2026-08-29T21:16:36Z | rebaseline | 128.720 | 273.924 | 12.527 | 2.23 | 0 | ccb7cf0c2 | the-overture | MacBookPro | 10 |
+| 2026-08-29T21:31:29Z | gate-commit | 32.435 | 54.333 | 13.579 | 2.09 | 0 | 037b23df7 | the-overture | MacBookPro | 10 |
+| 2026-08-29T22:05:30Z | sluice:artifacts | 137.585 | 1192.634 | 58.603 | 9.09 | 0 | f47e64d62 |  | lefford | 40 |
+| 2026-08-29T22:06:11Z | sluice:outboard | 41.225 | 26.497 | 39.703 | 1.61 | 0 | b641fae52 |  | lefford | 40 |
+| 2026-08-29T22:14:47Z | sluice:gate | 516.011 | 14630.253 | 539.434 | 29.40 | 0 | 9b649ba8f |  | lefford | 40 |
+| 2026-08-29T22:23:40Z | sluice:clients | 532.090 | 9832.749 | 148.696 | 18.76 | 0 | 3904660fc |  | lefford | 40 |
+| 2026-08-29T22:31:21Z | sluice:heavy | 460.954 | 9889.954 | 177.306 | 21.84 | 0 | 64d6475cd |  | lefford | 40 |
