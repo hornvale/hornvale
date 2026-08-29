@@ -1918,7 +1918,7 @@ fn merchant_construction(id: &str) -> MerchantConstruction {
             polarity: Polarity::Pos,
             adjuncts: vec![Adjunct {
                 role: NIGHT.to_string(),
-                argument: Argument::Absent,
+                argument: Argument::Concept(NIGHT.to_string()),
             }],
         }),
         "m05" => MerchantConstruction::Clause(Clause {
@@ -2513,7 +2513,7 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
             polarity: Polarity::Pos,
             adjuncts: vec![Adjunct {
                 role: NIGHT.to_string(),
-                argument: Argument::Absent,
+                argument: Argument::Concept(NIGHT.to_string()),
             }],
         }),
         // "She was not in the marketplace last night." **THE SECOND RUNG
@@ -2549,7 +2549,7 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
                 },
                 Adjunct {
                     role: NIGHT.to_string(),
-                    argument: Argument::Absent,
+                    argument: Argument::Concept(NIGHT.to_string()),
                 },
             ],
         }),

@@ -2367,34 +2367,46 @@ mod tests {
         );
     }
 
-    /// r049 `temporal-adverbial`, tongue side — and NOT the same shape
+    /// r049 `temporal-adverbial`, tongue side — the SAME shape
     /// [`a_tongue_realizes_a_spatial_adjuncts_concept_the_same_shape_as_any_other_role`]
-    /// pins for `r048`, which is the finding worth recording.
+    /// pins for `r048`, not the total-gap shape an earlier version of this
+    /// test pinned.
     ///
-    /// **The gap here is TOTAL, not partial, and it is silent unless pinned
-    /// here.** `r049`'s role (`NIGHT`) resolves to `Argument::Absent`
-    /// (`clause.rs`'s `common_role_surface` doc explains why: the role IS
-    /// the temporal concept, so the argument slot carries nothing).
-    /// `resolve_argument`'s `Argument::Absent` arm returns `Ok(String::new())`
-    /// rather than a [`TongueGap`] — it exists for the intransitive OBJECT
-    /// slot, which never reaches it live (gated out by `binds_object`
-    /// upstream) — but `realize_adjuncts` calls it for every adjunct
-    /// unconditionally, so an adjunct is the first LIVE caller that ever
-    /// reaches this arm. The concept word never appears (contrast `r048`,
-    /// where the location concept renders even though the relation word
-    /// does not), and the render is not an `Err` either: it succeeds with a
-    /// stray trailing space before the final period (`"Vavako Tastve ."`
-    /// for this witness, one space more than the adjunct-free `"Vavako
-    /// Tastve."` would carry) — a genuinely wrong-looking surface, exactly
-    /// what spec §4's render-fully-or-gap law warns a *partial* render
-    /// produces, and pinned rather than fixed because closing it means
-    /// teaching `realize_adjuncts` to read a role, which is `r049`'s tongue
-    /// gap to STATE, not `r049`'s job to close. Stated explicitly in
-    /// `IMPLEMENTED_DEMANDS`, the same posture `epistemic-hedge` and
-    /// `r048` take for their own gaps.
+    /// **Corrected in review round 1, replacing
+    /// `a_tongue_stray_spaces_a_temporal_adjunct_whose_role_carries_no_argument`.**
+    /// That test pinned a self-inflicted defect: `clause.rs`'s original
+    /// `NIGHT` arm bound the adjunct's `argument` to `Argument::Absent`,
+    /// which is not what the role-naming decision required — only the
+    /// ROLE needed to name the concept, per the brief's own option table —
+    /// and `realize_adjuncts`/`resolve_argument` resolve `adjunct.argument`
+    /// exclusively, never `adjunct.role`. An absent argument left the
+    /// tongue path with nothing to resolve: a live, unforced render defect
+    /// (a stray trailing space, no concept word at all), not a stated gap.
+    /// The corrected arm carries `Argument::Concept(id)`, structurally
+    /// parallel to `UNDER`'s own arm, and `night` is `ladder_rank: 0` in
+    /// `universal_stratum` exactly like `tree` (`UNDER`'s complement) — so
+    /// nothing about the concept itself forced the emptier design.
+    ///
+    /// With the argument corrected, this is now the LESSER gap `r048`
+    /// already established: the temporal CONCEPT'S own tongue word appears
+    /// (`realize_adjuncts` resolves the argument through the lexicon
+    /// regardless of role, the same shape `star-class` and `r048`'s
+    /// location concept already exercise), and Common's `"at"` relation
+    /// word stays Common-only — no tongue construction states *where in
+    /// time* the concept sits relative to the event, only that it is
+    /// present. That is a stated gap in `IMPLEMENTED_DEMANDS`, the same
+    /// posture `epistemic-hedge` and `r048` take for their own gaps, not a
+    /// silent one.
     #[test]
-    fn a_tongue_stray_spaces_a_temporal_adjunct_whose_role_carries_no_argument() {
-        let lex = tiny_lexicon_with(&[(SLEEP, ExposureClass::Steeped)]);
+    fn a_tongue_realizes_a_temporal_adjuncts_concept_the_same_shape_as_any_other_role() {
+        let lex = tiny_lexicon_with(&[
+            (SLEEP, ExposureClass::Steeped),
+            ("night", ExposureClass::Steeped),
+        ]);
+        let night_word = match lex.entry("night").unwrap() {
+            LexEntry::Root { views, .. } => views.roman.clone(),
+            other => panic!("expected a Root, got {other:?}"),
+        };
         let clause = Clause {
             predicate: SLEEP.to_string(),
             subject: Subject::Name("Vavako".to_string()),
@@ -2406,7 +2418,7 @@ mod tests {
             polarity: Polarity::Pos,
             adjuncts: vec![Adjunct {
                 role: NIGHT.to_string(),
-                argument: Argument::Absent,
+                argument: Argument::Concept(NIGHT.to_string()),
             }],
         };
         let g = TongueGrammar {
@@ -2418,18 +2430,15 @@ mod tests {
             conjunction: None,
             interrogative: None,
         };
-        let out = realize_tongue(&clause, &g, &lex, &no_pronouns()).expect("sleep alone is known");
+        let out =
+            realize_tongue(&clause, &g, &lex, &no_pronouns()).expect("both concepts are known");
         assert!(
-            out.ends_with(" ."),
-            "the absent-argument adjunct leaves a stray space before the \
-             period that an adjunct-free clause would not carry, and this \
-             test exists to keep that fact visible rather than silently \
-             rediscovered: {out}"
+            out.contains(&night_word),
+            "the tongue's own word for the temporal concept must appear: {out}"
         );
         assert!(
-            !out.to_lowercase().contains("night"),
-            "no tongue construction states the temporal relation at all \
-             today -- Common-only, the gap IMPLEMENTED_DEMANDS states: {out}"
+            !out.to_lowercase().contains("at "),
+            "Common's role surface (\"at\") must not leak into a tongue: {out}"
         );
     }
 

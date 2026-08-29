@@ -2228,27 +2228,41 @@ pub fn common_role_surface(
         )),
         // r049 `temporal-adverbial`: a temporal adjunct on an event, the
         // second caller of this role-adjunct shape (Task 1's `UNDER` arm,
-        // r048) — but NOT collapsed into it, because the two differ
-        // structurally rather than only in the literal adposition.
+        // r048) — but NOT collapsed into it, because the two still differ
+        // structurally, even after a review-round correction to THIS arm's
+        // shape (see `packs::NIGHT`'s doc for the full account of what
+        // changed and why).
         //
-        // `UNDER`'s role is the RELATION word, applied to a variable
-        // complement carried in `Argument::Concept`: `under the <X>`. This
-        // arm's role, `NIGHT`, IS the complement — a temporal adjunct in
-        // this witness names a fixed point in time, not a relation to a
-        // variable argument, so `Argument::Absent` is what the object slot
-        // carries (the same "no role needs a value here" the object slot
-        // itself uses for an intransitive frame). The literal `"at"` is
-        // supplied by the arm rather than looked up through `vocab`,
-        // because `at` is not itself a registered concept — the same
-        // absence `UNDER` stands in for, from the opposite side (see
-        // `packs::NIGHT`'s doc). Collapsing the two arms would require
-        // unifying "role is the relation" with "role is the complement",
-        // which is a different generalisation than this task's one extra
-        // caller justifies; a genuine second relation-word caller (an `at`
-        // role applied to a variable complement) is what would.
-        (NIGHT, Argument::Absent) => Some((
+        // **Corrected design, review round 1:** the role, `NIGHT`, still
+        // NAMES the temporal relation this arm realizes (there is only one:
+        // "at"), but the argument slot now carries `Argument::Concept(id)`
+        // — the SAME shape `UNDER`'s arm takes for its own complement — not
+        // `Argument::Absent`. The original version emptied the argument
+        // slot on the theory that the role alone said enough; it did not
+        // say enough to a TONGUE, which resolves only `adjunct.argument`
+        // and never reads `adjunct.role` at all (`realize_adjuncts`'s own
+        // doc), so an absent argument left the tongue path with nothing to
+        // resolve — not merely Common-only, but a live, unforced defect
+        // (`grammar.rs`'s stray-space finding, since corrected alongside
+        // this arm). `night` is `ladder_rank: 0` in `universal_stratum`
+        // exactly like `tree`, r048's own complement, so nothing about the
+        // concept itself forced the emptier design.
+        //
+        // The literal `"at"` is still supplied by the arm rather than
+        // looked up through `vocab`, because `at` is not itself a
+        // registered concept — the same absence `UNDER` stands in for,
+        // from the opposite side. **What still keeps the two arms
+        // separate**: `UNDER`'s role IS the relation word rendered
+        // (`vocab.word_for(&adjunct.role)`, "under"), so its role and its
+        // rendered relation are the same string by construction; this arm's
+        // role (`NIGHT`) names a concept that is never itself rendered as
+        // the relation word — `"at"` is a hardcoded literal, not a lookup
+        // on the role — so the two arms key their match on a role id for
+        // two different reasons and still cannot be collapsed into one
+        // parametrized on the literal adposition alone.
+        (NIGHT, Argument::Concept(id)) => Some((
             AdjunctPosition::Inline,
-            format!("at {}", vocab.word_for(&adjunct.role)),
+            format!("at {}", surface_complement(vocab, id, Number::Sg)),
         )),
         (role, Argument::Clause(_)) => panic!(
             "an adjunct may not carry an embedded clause (role {role:?}): \
@@ -3148,9 +3162,20 @@ mod tests {
     /// registered concept (no predicate-valence row, since it is never a
     /// clause's own predicate), and binding the role to it directly needs
     /// no new registration — see `packs::NIGHT`'s doc for the asymmetry
-    /// this creates against `UNDER`'s arm (role-as-relation vs.
-    /// role-as-complement), and `common_role_surface`'s `NIGHT` arm for why
-    /// the two are not collapsed into one.
+    /// this creates against `UNDER`'s arm, and `common_role_surface`'s
+    /// `NIGHT` arm for why the two are not collapsed into one.
+    ///
+    /// **The adjunct's `argument` also carries `Argument::Concept(NIGHT)`,
+    /// not `Argument::Absent` — corrected in review round 1.** The role
+    /// alone is enough for COMMON, which reads only `adjunct.role` on this
+    /// arm; it is not enough for a TONGUE, which resolves only
+    /// `adjunct.argument` and never reads `adjunct.role` at all
+    /// (`realize_adjuncts`'s own doc, `grammar.rs`). An absent argument
+    /// left the tongue path with no concept to resolve — a live, unforced
+    /// defect (`grammar.rs`'s `a_tongue_realizes_a_temporal_adjuncts_concept…`
+    /// pins the corrected, working shape; see its doc for the defect this
+    /// replaced), not merely the stated Common-only gap this crate already
+    /// accepts for `UNDER`'s own relation word.
     #[test]
     fn a_temporal_adjunct_places_an_event_in_time() {
         let vocab = CommonVocabulary::default();
@@ -3165,7 +3190,7 @@ mod tests {
             polarity: Polarity::Pos,
             adjuncts: vec![Adjunct {
                 role: NIGHT.to_string(),
-                argument: Argument::Absent,
+                argument: Argument::Concept(NIGHT.to_string()),
             }],
         };
         assert_eq!(
