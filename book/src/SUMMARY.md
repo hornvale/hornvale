@@ -419,6 +419,7 @@
 - [The Quadrat](./chronicle/the-quadrat.md)
 - [The Offer](./chronicle/the-offer.md)
 - [The Precedence](./chronicle/the-precedence.md)
+- [The Governor](./chronicle/the-governor.md)
 
 # Appendix: The Frontier
 
