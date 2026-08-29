@@ -288,7 +288,7 @@ fn pct(sorted: &[f64], q: f64) -> f64 {
 /// the rate out of the band this campaign was authorised under reddens here
 /// instead of printing a different number into a log nobody reads.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: where a delve terminates (pooled Nadir-share branch); run by hand (The Stope, Task 0, answered its question; demoted by The Governor 2026-08-28)"]
 fn where_does_a_delve_terminate() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
 

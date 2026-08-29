@@ -102,6 +102,7 @@ pub mod person_promote;
 pub mod render;
 pub mod resolve;
 pub mod schedule;
+pub mod seed_sweep;
 pub mod settlement_pins;
 pub mod streams;
 pub mod traversal;
@@ -124,7 +125,7 @@ pub use components::WorldComponents;
 pub use descent::{clan_root_of, forebear_of, founder_of, generation_length_of, name_pattern};
 pub use gazetteer::{feature_name, feature_salt, gazetteer_features};
 pub use graph_derive::{
-    GraphConfig, connection_graph, connection_graph_at, connection_graph_of,
+    GraphConfig, connection_graph, connection_graph_at, connection_graph_from, connection_graph_of,
     land_route_attempt_count,
 };
 pub use hazard::{HazardEvent, HazardEventKind, Recurrence, events_in, has_edifice, hazard_at};
@@ -524,11 +525,27 @@ pub fn sky_of(world: &World) -> Result<Sky, BuildError> {
     }
 }
 
+#[cfg(test)]
+thread_local! {
+    /// Test-only diagnostic (The Governor, Task 2): counts calls to
+    /// [`terrain_of`]'s sculpt path, i.e. actual `hornvale_terrain::generate`
+    /// invocations via this function. Mirrors `windows/lab/src/metrics.rs`'s
+    /// `LEX_BUILD_CALLS` -- lets a test measure "did this call path
+    /// re-derive terrain" directly, by counting, rather than by reading the
+    /// call graph.
+    pub(crate) static TERRAIN_OF_CALLS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };  // lexicon: std::cell::Cell diagnostic counter idiom, not the mesh sense
+    /// Test-only diagnostic (The Governor, Task 2): counts calls to
+    /// [`climate_from`]'s fit path.
+    pub(crate) static CLIMATE_FROM_CALLS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };  // lexicon: std::cell::Cell diagnostic counter idiom, not the mesh sense
+}
+
 /// Reconstruct the tectonic terrain provider from the world's seed and its
 /// committed terrain-pin facts (the `sky_of` pattern). Worlds saved before
 /// terrain pins existed simply have none and regenerate with defaults. The
 /// single construction site for the terrain provider.
 pub fn terrain_of(world: &World) -> Result<GeneratedTerrain, BuildError> {
+    #[cfg(test)]
+    TERRAIN_OF_CALLS.with(|c| c.set(c.get() + 1));
     let mut pins = TerrainPins::default();
     for pin_fact in world.ledger.find(hornvale_terrain::facts::TERRAIN_PIN) {
         if let Value::Text(s) = &pin_fact.object {
@@ -2619,6 +2636,8 @@ pub fn climate_from(
     world: &World,
     terrain: &GeneratedTerrain,
 ) -> Result<GeneratedClimate, BuildError> {
+    #[cfg(test)]
+    CLIMATE_FROM_CALLS.with(|c| c.set(c.get() + 1));
     let sky = sky_of(world)?;
     let geo = terrain.geosphere();
     let elevation = &terrain.globe().elevation;

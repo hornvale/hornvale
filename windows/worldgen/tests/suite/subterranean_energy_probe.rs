@@ -332,7 +332,7 @@ fn energy_field_with_fixed_moisture(
 /// only that the measured shape holds) — the derived ENERGY field over the
 /// three preregistered seeds.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: whether derived subterranean energy is monotone rather than a trough; run by hand (The Sources, Task 5, answered its question; demoted by The Governor 2026-08-28)"]
 fn derived_energy_is_monotone_not_a_trough() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let mut profile: [Vec<f64>; 6] = Default::default();
@@ -407,7 +407,7 @@ fn derived_energy_is_monotone_not_a_trough() {
 /// asserts only that more than one source occupies it) — over the three
 /// preregistered seeds.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: whether more than one energy source dominates somewhere; run by hand (The Sources, Task 5, answered its question; demoted by The Governor 2026-08-28)"]
 fn more_than_one_source_dominates_somewhere() {
     // A FIXED-SIZE TALLY INDEXED BY `EnergySource::ALL` POSITION, not a
     // BTreeMap. `EnergySource` derives `Debug, Clone, Copy, PartialEq, Eq`
@@ -617,7 +617,7 @@ fn more_than_one_source_dominates_somewhere() {
 /// before drawing any verdict, then pins BOTH measured falsifications) —
 /// over the frozen twelve-seed set, `BuildDepth::Terrain`.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: between-worlds separation vs. within-world width of the energy mix; run by hand (The Sources, Task 6, answered its question; demoted by The Governor 2026-08-28)"]
 fn between_worlds_separation_and_within_world_width() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
 

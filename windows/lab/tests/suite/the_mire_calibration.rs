@@ -140,7 +140,7 @@ use hornvale_worldgen::{
 };
 use std::collections::BTreeSet;
 
-use crate::seed_sweep;
+use hornvale_worldgen::seed_sweep;
 
 /// The population size the spec froze (§6): seeds `1..=SAMPLE`.
 const SAMPLE: u64 = 200;
@@ -486,7 +486,7 @@ fn h3_violations_for(sample: &WorldSample) -> (usize, Vec<(Vertex, f64, f64)>) {
 /// claim: readout(preregistered) — off-gate (heavy:); own name states the
 /// shape
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the Mire's preregistered H1/H2/H3 readout (weather-gated conductance vs. world topology); run by hand (The Mire answered its question; demoted by The Governor 2026-08-28)"]
 fn the_mires_preregistered_readout() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let min_conductance = default_min_conductance();

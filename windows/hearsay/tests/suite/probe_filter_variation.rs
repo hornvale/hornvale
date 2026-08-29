@@ -38,7 +38,7 @@ fn number(ledger: &Ledger, occ: EntityId, predicate: &str) -> Option<f64> {
 /// claim: structural(seed: 42) — false-positive seed-loop flag; the loops bind
 /// occupation ids, not seeds. One fixed world, reported as substrate.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: whether filter keys vary between witnesses of one event on seed 42; run by hand (The Retelling answered its question; demoted by The Governor 2026-08-28)"]
 fn do_the_filter_keys_vary_between_witnesses_of_one_event_on_seed_42() {
     let world = hornvale_worldgen::build_world(
         hornvale_kernel::Seed(42),

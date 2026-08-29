@@ -672,7 +672,7 @@ fn print_scale_check(seed: u64, components: &hornvale_worldgen::WorldComponents)
 /// substrate controls and the one scale control that would catch an inverted
 /// conversion.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the unit-corrected exploratory follow-up readout for the Palimpsest's unit-conversion erratum; run by hand (Myth campaign 3, The Palimpsest, answered its question; demoted by The Governor 2026-08-28)"]
 fn the_palimpsest_unit_corrected_exploratory_readout() {
     let components = hornvale_worldgen::WorldComponents::assemble().expect("components assemble");
 

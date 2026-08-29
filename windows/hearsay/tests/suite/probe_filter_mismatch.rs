@@ -25,7 +25,7 @@ fn people_of(ledger: &Ledger, occ: EntityId) -> Option<String> {
 /// claim: structural(seed: 42) — false-positive seed-loop flag; the loop binds
 /// occupation ids, not seeds. One fixed world, reported as substrate.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: where a claim can cross a people boundary on seed 42; run by hand (The Retelling answered its question; demoted by The Governor 2026-08-28)"]
 fn where_can_a_claim_cross_a_people_boundary_on_seed_42() {
     let world = hornvale_worldgen::build_world(
         hornvale_kernel::Seed(42),

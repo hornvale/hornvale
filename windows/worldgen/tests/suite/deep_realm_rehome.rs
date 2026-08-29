@@ -144,7 +144,7 @@ fn measure_one(seed: Seed, wc: &WorldComponents, label: &str) -> SeedFit {
 /// claim: readout(off-gate, heavy:) — prints per-seed mean niche fit,
 /// with a finite/non-negative sanity assertion per seed
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the xorn niche fit before and after the realm re-key; run by hand (The Deep Realm, Task 6, H1, answered its question; demoted by The Governor 2026-08-28)"]
 fn report_the_xorn_before_and_after() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
 

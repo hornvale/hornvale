@@ -24,7 +24,7 @@ fn number(led: &Ledger, occ: EntityId, pred: &str) -> Option<f64> {
 /// claim: structural(seed: 42) — false-positive seed-loop flag; the loop binds
 /// occupation ids, not seeds.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: how often each teller/hearer quadrant occurs on seed 42; run by hand (The Retelling answered its question; demoted by The Governor 2026-08-28)"]
 fn how_often_does_each_teller_hearer_quadrant_occur_on_seed_42() {
     let world = hornvale_worldgen::build_world(
         hornvale_kernel::Seed(42),

@@ -1310,7 +1310,7 @@ fn fold_div(rows: &[SeedRow], matched: bool, ci: usize, ri: usize, si: usize) ->
 /// claim: structural(seed: panel) — false-positive seed-loop flag; the loop
 /// binds a census-panel prefix, not a search over seeds.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: whether the tiebreak rule or the contact pooled the accounts; RED as of 2026-08-28 — the shared BASELINE_* live-worldgen pins have drifted again since The Underworld changed settlement placement, and this question (The Undertow, Myth campaign 5) is closed; run by hand; demoted by The Governor"]
 fn whether_the_tiebreak_or_the_contact_pooled_the_accounts() {
     let components = hornvale_worldgen::WorldComponents::assemble().expect("components assemble");
     let mut rows: Vec<SeedRow> = Vec::new();

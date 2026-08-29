@@ -92,8 +92,30 @@
 # `--run-ignored`, so neither has ever run these three.
 [[profile.default.overrides]]
 # class: scatter-sweep
+# class: front-loaded
 filter = 'test(/the_mires_preregistered_readout$/) | test(/the_fares_preregistered_readout$/) | test(/the_fares_exploratory_readout$/)'
 threads-required = "num-cpus"
+# `priority = 100` (The Governor, Task 1): FRONT-LOAD the barrier this class
+# already pays. `threads-required = "num-cpus"` reserves the whole runner,
+# but without a priority nextest schedules a reserving test wherever it
+# falls in run order — mid-tier here, since `the_mires_preregistered_readout`
+# sat 47th of 118. That drains every OTHER running test first (including an
+# 891 s pole test), runs the reservation alone, then restarts the remaining
+# 71 tests from cold. Measured on the canonical box, twice, at different
+# SHAs: a 484 s and a 485 s barrier tax against a ~1068 s theoretical
+# optimum, on a 1552 s tier. `priority` is `i8` (-128..=127, cargo-nextest
+# 0.9.140 on both hosts), higher runs first; 100 schedules these three
+# batteries before anything else, so the drain happens once, at the start.
+#
+# VERIFIED, NOT ARGUED: a seven-test scratch probe outside this repo
+# (`/tmp/gov-probe`, four-worker pool, one `threads-required = "num-cpus"`
+# test placed mid-order). No `priority`: wall 10.076 s, the reserving test
+# completes 3rd. `priority = 100` on the reserving test and `priority = 50`
+# on the tier's next-longest test: wall 8.041 s, the reserving test
+# completes 1st. Positive control: `priority = 500` is rejected with
+# `invalid type: 64-bit integer 500, expected an signed 8 bit integer`,
+# proving nextest reads this file rather than ignoring an unknown key.
+priority = 100
 
 # A SECOND CLASS (The Ballast): WALL-CLOCK BUDGET TESTS PINNED AS VICTIMS,
 # NOT SOURCES. The block above protects everything ELSE from three batteries
@@ -129,8 +151,92 @@ threads-required = "num-cpus"
 # independently, in both directions, against its own class marker.
 [[profile.default.overrides]]
 # class: wall-clock-budget
+# class: front-loaded
 filter = 'test(/a_possessed_turn_stays_within_its_ceilings$/) | test(/scene_api_cost_is_bounded_on_seed_42$/)'
 threads-required = "num-cpus"
+# `priority = 100` (The Governor, Task 1) — same reason as the scatter-sweep
+# table above: this class ALSO reserves the whole runner (it is pinned as a
+# VICTIM of tier contention rather than a SOURCE, but `threads-required =
+# "num-cpus"` still drains everything else and cold-restarts it either way),
+# so it must also be scheduled first rather than wherever it happens to fall
+# in run order. See the scatter-sweep table's comment for the measured
+# barrier tax and the scratch-probe arms that verified `priority` moves it.
+priority = 100
+
+# A THIRD CLASS (The Governor, Task 8): A SIZED PANEL RESERVES ONLY WHAT IT
+# NEEDS, NOT THE WHOLE BOX. Both tables above pin `threads-required =
+# "num-cpus"` — the whole runner — because they either genuinely saturate it
+# (a 200-seed scatter sweep) or cannot tell the tier's own saturation from a
+# regression (a wall-clock budget). Task 9 gives several hearsay/worldgen
+# tests their own `seed_sweep::map_seeds(` call too, but on small, BOUNDED
+# panels (a dozen-ish seeds, not two hundred) — parallelising a sweep that
+# used to run serially. The `the_serialization_pin_names_exactly_the_
+# batteries_that_scatter_their_sweeps` guard in `cli/tests/suite/heavy_tier.rs`
+# is a strict two-way match against every `map_seeds` caller, so the moment
+# Task 9 adds one, that guard fails — and the NAIVE fix, adding each newly
+# parallel test to the "num-cpus" table above, would turn it green while
+# creating one full-drain-then-cold-restart barrier PER CONVERTED TEST, at
+# ~484 s each (see that table's comment). This campaign's Task 1 spent its
+# entire contribution removing exactly one such barrier; re-adding several
+# to ship a "green guard" would make the tier dramatically worse while every
+# check passed. This class exists so the guard has somewhere honest to point
+# a bounded panel instead.
+#
+# `threads-required = <int>` (a bounded integer, not the `"num-cpus"`
+# string) is supported by cargo-nextest 0.9.140 — verified directly, the same
+# way `priority` was verified above: a scratch override table with
+# `threads-required = 4` and `filter = 'none()'` parses under both
+# `cargo nextest list` and `cargo nextest run` and changes nothing about
+# which tests run.
+#
+# `cli/tests/suite/heavy_tier.rs` reads this table the same way it reads the
+# two above — a `# class: sized-sweep` marker line, a live `threads-
+# required` SETTING (checked to be an integer, not the `"num-cpus"` string —
+# using that string here would silently reproduce the exact trap this class
+# exists to avoid), one `filter = ` line — via `sized_filter_names` /
+# `pinned_filter_names_for_class`. Its own guard, `the_sized_sweep_pin_
+# names_exactly_the_batteries_marked_for_a_bounded_panel`, no longer needs
+# to explain why an EMPTY roster is correct here — Task 9 gave this class
+# its first member, `warren_readout.rs::the_blast_radius_readout`, the pole
+# test this whole campaign measures against (465.7 s serial on the canonical
+# box), then `raid_attribution_probe.rs::is_the_raid_proxy_ambiguous_or_is_
+# its_population_stale` (268.2 s serial), then
+# `tolerance_mutation.rs::zero_dispersion_collapses_between_settlement_
+# variance` (254.7 s serial — its own conversion also inlined a helper
+# function, `population`, into the test body, because the guard below
+# recognises a `map_seeds` call only within the TEXTUAL SPAN of the heavy
+# test that calls it, and `population` was defined earlier in the file,
+# outside that span). All three proven byte-identical to their old serial
+# selves via `HV_SEED_SWEEP_THREADS=1` (stdout diffed line for line on this
+# Mac; the only differences were harness noise — a build timestamp,
+# libtest's own ">60s" progress notice, and the run's own "finished in
+# N.NNs" trailer — never test output).
+#
+# `threads-required = 30` — ONE SHARED WIDTH FOR EVERY MEMBER OF THIS CLASS,
+# not a per-test setting (nextest overrides apply per TABLE, not per test
+# name inside a filter). 30 is the WIDEST converted panel so far
+# (`raid_attribution_probe.rs::SEEDS` and `tolerance_mutation.rs::SEEDS`,
+# both `1..=30`); `warren_readout.rs`'s own panel is narrower (25). Each
+# `map_seeds` caller's own `thread_budget` already clamps its actual
+# OS-thread spawn to `min(available_parallelism, its own seed count)`, so a
+# shared reservation wider than a narrower member's panel is never wrong,
+# only slightly conservative for that member — the reservation is a nextest
+# SCHEDULING budget, not a promise every member spawns exactly that many
+# threads.
+#
+# NEITHER OF TASK 1's TWO PROPERTIES APPLIES TO THIS CLASS, DELIBERATELY.
+# It is not in `MARKERS_ALLOWING_MULTIPLE_TABLES`: it does not need MULTIPLE
+# override tables (one shared bounded width can serve every sized-sweep test
+# the same way one `"num-cpus"` table already serves all three scatter-sweep
+# batteries), and it does not need a `priority` setting — a bounded
+# `threads-required` reservation does not drain the whole runner, so there is
+# no barrier to front-load in the first place. See that const's own comment
+# in `heavy_tier.rs` for why `front-loaded` needed both properties and this
+# class needs neither.
+[[profile.default.overrides]]
+# class: sized-sweep
+filter = 'test(/the_blast_radius_readout$/) | test(/is_the_raid_proxy_ambiguous_or_is_its_population_stale$/) | test(/zero_dispersion_collapses_between_settlement_variance$/)'
+threads-required = 30
 
 # UNUSED since The Sexton (Task 3): `make gate` (the only caller of the
 # duration alarm now that `make ci` is an alias for it, see the Makefile's
