@@ -577,7 +577,19 @@ git push
 - Produces:
   - `pub fn thing_role(facet: &Facet, kind: &str) -> Result<String, FacetError>`
   - `pub fn thing_id(facet: &Facet, kind: &str, ordinal: u16) -> Result<EntityId, FacetError>`
-  - `pub fn promote(ledger: &mut Ledger, registry: &ConceptRegistry, facet: &Facet, kind: &str, ordinal: u16, day: WorldTime) -> Result<EntityId, LedgerError>`
+  - `pub fn promote(ledger: &mut Ledger, registry: &ConceptRegistry, facet: &Facet, kind: &str, ordinal: u16, day: WorldTime) -> Result<EntityId, ThingError>`
+
+**AMENDED AFTER TASK 4 SHIPPED.** This line said `Result<EntityId,
+LedgerError>` and that type cannot be written: promotion derives the id before
+it commits, deriving packs a `Facet`, and `LedgerError`'s three variants
+(`UnknownPredicate`, `Contradiction`, `NonFiniteNumber`) can none of them carry
+a `FacetError`. Task 4 introduced a module-local `ThingError { Facet(FacetError),
+Ledger(LedgerError) }` with `From` impls so `?` propagates both. It derives
+`Debug` and implements `Display` only — `LedgerError` implements neither
+`Clone` nor `PartialEq`, and stringifying it to buy them would discard the
+variant a caller matches on. **Tasks 5, 6, 8 and 11 call `promote` and will see
+`ThingError`.** `thing_id`/`thing_role` keep `Result<_, FacetError>` unchanged,
+so Task 6's `is_latent` signature is unaffected.
 
 - [ ] **Step 1: Note the fallibility the spec did not mention**
 
@@ -732,7 +744,15 @@ if one did.
 - Consumes: `thing_id`, `promote` (Task 4).
 - Produces:
   - `pub const LOCATED_IN: &str = "located-in";`
-  - `pub fn located_fact(thing: EntityId, place: Value, day: WorldTime) -> Fact`
+  - `pub fn located_fact(thing: EntityId, location: Value, day: WorldTime) -> Fact`
+    — the parameter was named `place` in this plan's first draft, which
+    collides with `Fact`'s own `place` field. They are different types and only
+    one is right: `Fact.place` is `Option<EntityId>` ("the entity where this
+    fact was observed"), and the location must ride in **`object: Value`**
+    (`kernel/src/ledger.rs:71-84`). That is what makes the transitivity test
+    expressible at all — `Value::Entity(chest)` and `Value::Text(room_key)` are
+    two shapes of one field, and could never be two shapes of
+    `Option<EntityId>`.
   - `pub fn location_of(ledger: &Ledger, thing: EntityId, day: WorldTime) -> Option<Value>`
     — the **as-of-day** read, which is what a replay must use.
   - `pub fn room_of(ledger: &Ledger, thing: EntityId, day: WorldTime) -> Option<String>`
@@ -757,15 +777,46 @@ answering it once for both is strictly better than twice.
 not move for either. Task 3 already registered thing-kind *concepts* at
 genesis; a *predicate* is a different object.
 
+**CORRECTED BEFORE DISPATCH — the table that stood here was a false binary,
+and the wrong half was the expensive one.** It asked "does anything outside a
+session need to read `located-in`?" and answered "if yes, genesis registration
+is required and the golden moves again." Something outside a session already
+reads `AGENT_AT` — `windows/lab` does, at `health.rs:299` and
+`synthetic.rs:152` — and `AGENT_AT` is not registered at genesis and
+`world-seed-42.json` did not move for it. The route the table could not see is
+the one the code uses:
+
 ```
-  question                                  answer this task must establish
-  ---------------------------------------   -------------------------------
-  does per-session registration keep the     if yes, follow AGENT_AT exactly.
-  golden still?                              Verify by running the golden's
-                                             guarding tests, not by reasoning.
-  does anything outside a session need to    if yes, genesis registration is
-  read located-in?                           required and the golden moves
-                                             again -- report before doing it.
+windows/vessel/src/session.rs:1023  .register_predicate(AGENT_AT, false, "an agent's position on a day")
+windows/lab/src/health.rs:299       let _ = registry.register_predicate(AGENT_AT, false, "an agent's position on a day");
+windows/lab/src/synthetic.rs:152    let _ = registry.register_predicate(AGENT_AT, false, "an agent's position on a day");
+```
+
+An out-of-session reader registers the predicate into its own registry. The
+`let _ =` is not sloppiness: `register_predicate` is documented idempotent for
+identical definitions (`kernel/src/registry.rs:157`), so a second identical
+registration is a no-op rather than an error. And a SAVED world needs no
+genesis registration either — `Session::into_played_world` moves
+`self.registry` as well as `self.ledger` into the saved `World` (decision
+0368), so a world written by `possess --out` carries the registration with the
+facts it licenses.
+
+**So the rule is neither row: a live-play predicate is registered by whoever
+builds the registry that will hold its facts.** Follow `AGENT_AT` exactly —
+register `LOCATED_IN` and `OPENNESS` per-session in `session.rs`, beside it.
+
+```
+  observation                            response
+  ------------------------------------   -------------------------------------
+  world-seed-42.json does NOT move       expected. Confirm by running the
+                                         golden's guarding tests, not by
+                                         reasoning about them.
+  world-seed-42.json DOES move           STOP and report. Task 3 already moved
+                                         the keystone golden once; a second
+                                         move in this task means a predicate
+                                         reached genesis by a route this plan
+                                         did not intend, not that a rebaseline
+                                         is owed.
 ```
 
 - [ ] **Step 2: Write the failing tests**
@@ -811,6 +862,23 @@ the fixtures are not, because this plan does not know the crate's helpers.
 `location_of` reads the subject's own postings and applies `day' <= day`.
 `room_of` walks `Value::Entity` links with a visited set so the cycle test
 terminates. Use `BTreeSet`, never `HashSet`.
+
+**Two corrections from the pre-dispatch check.** `last_fact_day_at_or_before`,
+which this plan cites twice, is a **private** `fn`
+(`windows/vessel/src/liveness.rs:4570`), so nothing here can call it — it is a
+DISCIPLINE to copy, not a function to reuse, and it returns the *day* rather
+than the fact, which is the wrong shape for `location_of` anyway. The callable
+sibling idiom is `passage::effective_state`
+(`windows/vessel/src/passage.rs:95-105`), which inlines the same `<= day`
+filter over `ledger.find(..)`.
+
+**The tie-break neither the spec nor this plan stated:** two `located-in` facts
+at the same instant resolve by COMMIT ORDER — last posting wins, the same rule
+`Ledger::latest_value_of` uses. `Iterator::max_by_key` returns the LAST maximal
+element, so a fold in fact order gets this for free and deterministically. It
+is free only if nobody reaches for a sort or a `min_by_key`, so write the
+tie-break into the doc comment and pin it with a test that commits two facts at
+one instant.
 
 - [ ] **Step 4: Commit and push**
 
