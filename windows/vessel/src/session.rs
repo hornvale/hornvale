@@ -10415,6 +10415,97 @@ mod tests {
         );
     }
 
+    /// Fix round 1 finding 1: `handle_ooc`'s underground `map` arm and
+    /// `handle`'s underground `map` arm are two copies of one rule
+    /// (`self.underground.is_some() && rest.is_empty() => self.level_here()`)
+    /// with nothing to distinguish them — `level_here` takes no `eyes`
+    /// parameter, unlike the `inside` pair `!map`/`map` genuinely diverge on
+    /// (`OBJECTIVE_EYES` vs `self.eyes`; see `ooc_objective.rs`'s own
+    /// discriminators). `ooc_objective.rs`'s two `!map` tests cover only the
+    /// walk band and the indoor chamber, so nothing exercised `!map`
+    /// underground at all, and a future edit to only one of the two arms
+    /// (say, the bare form's refusal text) would go undetected. This test
+    /// pins the AGREEMENT the duplication depends on, not merely that each
+    /// arm works in isolation — that is the property two unsynchronized
+    /// copies threaten.
+    #[test]
+    fn bang_map_and_bare_map_agree_underground() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        assert!(
+            session.underground.is_some(),
+            "the fixture must have descended"
+        );
+
+        let bare = match session.handle("map") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("map must not release"),
+        };
+        let bang = match session.handle("!map") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("!map must not release"),
+        };
+        assert!(
+            bare.starts_with("[level:"),
+            "the bare form must draw the level: {bare}"
+        );
+        assert_eq!(
+            bare, bang,
+            "handle_ooc's underground `map` arm and handle's underground `map` \
+             arm must agree — both call `level_here`, which takes no `eyes` \
+             parameter, so nothing legitimately distinguishes them"
+        );
+    }
+
+    /// Fix round 1 finding 2: `UNDERGROUND_CHART_REFUSAL` was implemented
+    /// and reachable (the guard ordering makes it fire only when `rest` is
+    /// non-empty) but exercised by no test anywhere. The indoor precedent
+    /// this copies, `map_indoors_draws_the_plan_and_map_out_indoors_refuses`,
+    /// asserts both `"map out"` and `"map out 2"` for exactly the reason
+    /// given here: the refusal arm is the one nobody drives by accident.
+    #[test]
+    fn map_out_is_refused_underground() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        assert!(
+            session.underground.is_some(),
+            "the fixture must have descended"
+        );
+
+        for line in ["map out", "map out 2"] {
+            let refused = match session.handle(line) {
+                Turn::Out(t) => t,
+                Turn::Released(_) => panic!("map must not release"),
+            };
+            assert_eq!(
+                refused, UNDERGROUND_CHART_REFUSAL,
+                "{line:?} underground must refuse rather than ignore the argument"
+            );
+            let refused_ooc = match session.handle(&format!("!{line}")) {
+                Turn::Out(t) => t,
+                Turn::Released(_) => panic!("map must not release"),
+            };
+            assert_eq!(
+                refused_ooc, UNDERGROUND_CHART_REFUSAL,
+                "!{line:?} underground must refuse rather than ignore the argument"
+            );
+        }
+    }
+
     /// The Handle, Task 4: an underground `examine` must resolve against the
     /// band's OWN catalog, not fall through to the surface locale's — which is
     /// what `session.rs`'s dispatch did before this fix (the bare `"examine"`
