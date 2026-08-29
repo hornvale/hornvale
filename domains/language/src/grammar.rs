@@ -954,31 +954,31 @@ pub fn realize_tongue_coordination(
     Ok(join_coordinated(texts, grammar.conjunction.as_deref()))
 }
 
-/// Realize a [`Clause`] as a tongue's own polar question (The Rail, Task 9,
-/// spec §4, LANG-40) — the tongue-side counterpart to
-/// [`crate::clause::realize_common_polar_question`], and a different
-/// OPERATOR from it, not a port. Common inverts its one auxiliary (the
-/// copula) because English marks a polar question by INVERSION; a tongue
-/// marks one by a free PARTICLE, or by no grammatical marker at all
-/// (spec §4, LANG-40's floor slice), so this function never moves a
-/// constituent — it appends to the tongue's own already-realized
-/// declarative surface.
+/// Turn an already-realized tongue DECLARATIVE into its polar-question
+/// surface: prefix the drawn interrogative particle, or apply the
+/// transcription convention. Split out from [`realize_tongue_polar_question`]
+/// on the identical precedent [`invert_for_question`] sets for
+/// [`crate::clause::realize_common_polar_question`] (`clause.rs`) — a
+/// private, directly-testable operator over an already-assembled string,
+/// so its loud-panic guard can be pinned by a test without needing a
+/// `Clause`/`Lexicon`/pronoun fixture whose declarative happens to violate
+/// the assumption (today none can — every `Ok` return of
+/// `realize_tongue_with_subject` pushes exactly one terminal `.`).
 ///
-/// **A tongue that drew an interrogative particle
-/// ([`TongueGrammar::interrogative`]) prefixes it to the declarative**, on
-/// the identical boundary-marking convention [`mark_embedded_clause`] uses
-/// for the subordinator — *"zil the Vavako are goblins?"* A clause-initial
-/// particle is one of the attested cross-linguistic positions (Dryer, WALS
-/// 92); no position axis is drawn (this campaign spends exactly one stream
-/// label per typological fact, on [`streams::INTERROGATIVE`]'s own doc), so
-/// the realizer fixes one position rather than adding a second draw for it.
+/// **A drawn particle prefixes `declarative`**, on the identical
+/// boundary-marking convention [`mark_embedded_clause`] uses for the
+/// subordinator — *"zil the Vavako are goblins?"* A clause-initial particle
+/// is one of the attested cross-linguistic positions (Dryer, WALS 92); no
+/// position axis is drawn (this campaign spends exactly one stream label
+/// per typological fact, on [`streams::INTERROGATIVE`]'s own doc), so the
+/// realizer fixes one position rather than adding a second draw for it.
 ///
-/// **A tongue that drew none questions by INTONATION** — the commonest
+/// **No particle (`None`) questions by INTONATION** — the commonest
 /// strategy cross-linguistically (Ultan 1978; Dryer, WALS 116), the
 /// majority case this axis's own skewed draw reflects, not the degenerate
-/// one — **and a text renderer cannot show intonation**, so its polar
-/// question is its declarative surface with the terminal `.` replaced by
-/// `?`: a TRANSCRIPTION CONVENTION, not a grammatical marker. Spec §3.6:
+/// one — **and a text renderer cannot show intonation**, so the surface is
+/// `declarative` with its terminal `.` replaced by `?`: a TRANSCRIPTION
+/// CONVENTION, not a grammatical marker. Spec §3.6:
 /// [`crate::phonology::Phonology::orthography`] is a stated VIEW of a
 /// tongue, and punctuation is how writing encodes prosody — so
 /// transcription may express this contrast (the model DRAWS whether a
@@ -987,6 +987,42 @@ pub fn realize_tongue_coordination(
 /// `LANG-prosody-needs-a-stated-transcription-convention`; this does **not**
 /// close the question of real alphabets and writing systems, stated future
 /// work of its own.
+///
+/// **Panics, loudly, if `declarative` does not end in `.`** — a silent
+/// fallback here (append `?` to whatever the text ends with, or leave it
+/// untouched) would be the identical defect shape [`invert_for_question`]'s
+/// own loud panic exists to rule out, just reached by a different door
+/// (T9 review round 1: fixing four instances of a pattern while writing a
+/// fifth is a sign the pattern was matched, not the principle applied — so
+/// this function gets the same loud assumption its sibling does, not just
+/// the four that were already flagged).
+fn question_from_declarative(mut declarative: String, interrogative: Option<&str>) -> String {
+    assert!(
+        declarative.ends_with('.'),
+        "a tongue declarative always ends in \".\" — every `Ok` return of \
+         `realize_tongue_with_subject` pushes exactly one — so this operator \
+         has something to strip and replace with \"?\"; got {declarative:?} \
+         instead, on the identical loud-panic posture `invert_for_question` \
+         takes for the identical shape (T9 review round 1)"
+    );
+    declarative.pop();
+    match interrogative {
+        Some(particle) => format!("{particle} {declarative}?"),
+        None => format!("{declarative}?"),
+    }
+}
+
+/// Realize a [`Clause`] as a tongue's own polar question (The Rail, Task 9,
+/// spec §4, LANG-40) — the tongue-side counterpart to
+/// [`crate::clause::realize_common_polar_question`], and a different
+/// OPERATOR from it, not a port. Common inverts its one auxiliary (the
+/// copula) because English marks a polar question by INVERSION; a tongue
+/// marks one by a free PARTICLE, or by no grammatical marker at all
+/// (spec §4, LANG-40's floor slice), so this function never moves a
+/// constituent — it appends to the tongue's own already-realized
+/// declarative surface. The particle-vs-transcription strategy itself is
+/// [`question_from_declarative`]'s own doc; this function's job is only to
+/// produce the declarative once and hand it there.
 ///
 /// **No lexical-verb refusal, unlike Common's.** Common's own polar-question
 /// operator panics on a construction whose verb slot is
@@ -999,10 +1035,10 @@ pub fn realize_tongue_coordination(
 /// exactly as readily as a nominal one.
 ///
 /// **Takes the already-assembled declarative text, never rebuilds it** — a
-/// single call to [`realize_tongue`], transformed, is what keeps this
-/// surface and the declarative one from silently drifting apart, the same
-/// discipline [`mark_embedded_clause`]'s own doc states for the identical
-/// reason.
+/// single call to [`realize_tongue`], transformed by
+/// [`question_from_declarative`], is what keeps this surface and the
+/// declarative one from silently drifting apart, the same discipline
+/// [`mark_embedded_clause`]'s own doc states for the identical reason.
 ///
 /// Renders fully or gaps entirely (spec §4): any gap [`realize_tongue`]
 /// itself raises for `clause` propagates unchanged.
@@ -1013,14 +1049,11 @@ pub fn realize_tongue_polar_question(
     lexicon: &Lexicon,
     pronouns: &BTreeMap<&'static str, MorphForm>,
 ) -> Result<String, TongueGap> {
-    let mut declarative = realize_tongue(clause, grammar, lexicon, pronouns)?;
-    if declarative.ends_with('.') {
-        declarative.pop();
-    }
-    Ok(match &grammar.interrogative {
-        Some(particle) => format!("{particle} {declarative}?"),
-        None => format!("{declarative}?"),
-    })
+    let declarative = realize_tongue(clause, grammar, lexicon, pronouns)?;
+    Ok(question_from_declarative(
+        declarative,
+        grammar.interrogative.as_deref(),
+    ))
 }
 
 /// A word mid-assembly: its segments when known (so a further affix layer
@@ -2049,11 +2082,15 @@ mod tests {
         };
         let declarative = realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap();
         assert_eq!(declarative, format!("Vavako gha {word}."));
+        // Expected question DERIVED from the declarative just computed above
+        // — not a second, independent literal — so a future word-order or
+        // spacing change needs updating in one place, not two (T9 review
+        // round 1 Minor: the no-particle sibling test already does this).
+        let expected = format!("zil {}?", &declarative[..declarative.len() - 1]);
         let question =
             realize_tongue_polar_question(&clause, &grammar, &lex, &no_pronouns()).unwrap();
         assert_eq!(
-            question,
-            format!("zil Vavako gha {word}?"),
+            question, expected,
             "the particle prefixes the SAME constituents the declarative \
              already ordered, with `.` replaced by `?`"
         );
@@ -2121,6 +2158,23 @@ mod tests {
              surface, computed above, with the terminal `.` replaced by `?` \
              — never a hard-coded string"
         );
+    }
+
+    /// The loud-panic guard, pinned directly against the private operator
+    /// [`question_from_declarative`] with a hand-built string that does not
+    /// end in `.` — unreachable through the public
+    /// [`realize_tongue_polar_question`] today (every `Ok` return of
+    /// `realize_tongue_with_subject` pushes exactly one terminal `.`), but
+    /// the function's own contract is a panic rather than a silent
+    /// fallback, and nothing pinned that arm firing until this test (T9
+    /// review round 1 — the same gap `invert_for_question`'s sibling panic
+    /// had, fixed the same way: split the guard into a directly-testable
+    /// private function rather than trying to construct an unreachable
+    /// `Clause`).
+    #[test]
+    #[should_panic(expected = "always ends in")]
+    fn question_from_declarative_panics_on_a_non_period_terminal() {
+        let _ = question_from_declarative("Vavako gha kell!".to_string(), Some("zil"));
     }
 
     #[test]

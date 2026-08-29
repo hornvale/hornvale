@@ -5323,6 +5323,26 @@ mod tests {
     /// [`nominative_person`]'s case contract), so the rung's own capitalized
     /// *"Are you a merchant?"* differs from the realized surface in exactly
     /// that one way and no other.
+    /// The loud-panic guard on the terminal literal, pinned directly against
+    /// the private operator — a part list whose last part is not
+    /// `Literal(".")`. Unreachable through any of `common_constructions`'
+    /// five copular part lists today (every one ends in exactly that
+    /// literal), but the function's own contract is now a panic rather than
+    /// a silent no-op there, and nothing pinned that arm firing until this
+    /// test (T9 review round 1 — a required carried fix had landed with no
+    /// coverage of its own).
+    #[test]
+    #[should_panic(expected = "terminal part must be")]
+    fn invert_for_question_panics_on_a_non_period_terminal() {
+        let parts = [
+            Part::Subject,
+            Part::Literal(" "),
+            Part::Copula,
+            Part::Literal("!"),
+        ];
+        let _ = invert_for_question(&parts);
+    }
+
     #[test]
     fn a_polar_question_inverts_the_copula_and_takes_a_question_mark() {
         let vocab = CommonVocabulary::default();
