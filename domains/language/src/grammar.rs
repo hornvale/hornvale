@@ -2310,6 +2310,63 @@ mod tests {
         );
     }
 
+    /// r048 `spatial-adverbial`, tongue side: a spatial adjunct's concept
+    /// renders through the tongue's own lexicon exactly the SHAPE
+    /// [`a_tongue_realizes_an_adjunct_whose_concept_it_knows`] already pins
+    /// for `star-class` — `realize_adjuncts` resolves only the argument, and
+    /// never reads a role at all, so this is not new behavior for a spatial
+    /// role and not a gap: the location concept's own tongue word appears,
+    /// and Common's `"under"` (from `common_role_surface`) never leaks in.
+    /// **Common-only for the RELATION**: no tongue construction states
+    /// *where* the location concept sits relative to the event, only that
+    /// it is present — the `IMPLEMENTED_DEMANDS` doc states this gap
+    /// explicitly, the way `epistemic-hedge` states its own tongue gap.
+    #[test]
+    fn a_tongue_realizes_a_spatial_adjuncts_concept_the_same_shape_as_any_other_role() {
+        let lex = tiny_lexicon_with(&[
+            (KILL, ExposureClass::Steeped),
+            ("person", ExposureClass::Steeped),
+            ("tree", ExposureClass::Steeped),
+        ]);
+        let tree_word = match lex.entry("tree").unwrap() {
+            LexEntry::Root { views, .. } => views.roman.clone(),
+            other => panic!("expected a Root, got {other:?}"),
+        };
+        let clause = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Concept("person".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: vec![Adjunct {
+                role: UNDER.to_string(),
+                argument: Argument::Concept("tree".into()),
+            }],
+        };
+        let g = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: None,
+            copula_segments: None,
+            articles: false,
+            subordinator: None,
+            conjunction: None,
+            interrogative: None,
+        };
+        let out =
+            realize_tongue(&clause, &g, &lex, &no_pronouns()).expect("both concepts are known");
+        assert!(
+            out.contains(&tree_word),
+            "the tongue's own word for the location concept must appear: {out}"
+        );
+        assert!(
+            !out.contains("under"),
+            "Common's role surface must not leak into a tongue: {out}"
+        );
+    }
+
     #[test]
     fn a_tongue_gaps_on_an_adjunct_concept_it_lacks_rather_than_emitting_common() {
         // The COMPLEMENT is known; only the ADJUNCT's concept is missing, so a

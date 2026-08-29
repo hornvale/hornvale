@@ -2205,6 +2205,27 @@ pub fn common_role_surface(
             AdjunctPosition::Trailing,
             format!("it ended in year {}", cardinal(*year)),
         )),
+        // r048 `spatial-adverbial`: a locative adjunct on an event. The role
+        // IS the adposition — the same identification `Valence::Locative`
+        // makes for the locative PREDICATE, one slot over. Inline, because a
+        // location is part of the event being described rather than a
+        // separate one (contrast `occ-ended`, which gets its own trailing
+        // clause). The complement goes through `surface_complement` so this
+        // arm cannot drift from the object slot's pluralization.
+        //
+        // `UNDER` alone, not `UNDER | OVER`: `over` is a registered concept
+        // (`ConceptKind::Quality`) but has no `packs.rs` constant, and this
+        // task has exactly one caller. Widening to a second role id on the
+        // strength of one caller is speculative generality — Task 2 is the
+        // second caller that would justify it, if it needs to.
+        (UNDER, Argument::Concept(id)) => Some((
+            AdjunctPosition::Inline,
+            format!(
+                "{} the {}",
+                vocab.word_for(&adjunct.role),
+                surface_complement(vocab, id, Number::Sg)
+            ),
+        )),
         (role, Argument::Clause(_)) => panic!(
             "an adjunct may not carry an embedded clause (role {role:?}): \
              adverbial subordination is a separate construction, spec §4.1"
@@ -3036,6 +3057,42 @@ mod tests {
             "Vebe is a planet with two moons, orbiting a yellow-white dwarf."
         );
     }
+
+    /// r048 `spatial-adverbial`: a locative adjunct on an EVENT, which is a
+    /// different thing from `Valence::Locative`'s locative PREDICATE (r005).
+    /// The clause is transitive — the adjunct rides `Part::ModifierTail`,
+    /// which `TRANSITIVE` has carried since The Interlinear; what is new is
+    /// that a SPATIAL role has a surface at all.
+    ///
+    /// **Substitutions, per the campaign's no-registration rule:** the rung's
+    /// text is *"The guard struck her in the marketplace."*; `guard`,
+    /// `strike` and `marketplace` are registered nowhere, and registering one
+    /// would move `world-seed-42.json`. `kill` stands in for `strike` (the
+    /// same substitution `r006`'s witness records), `person` for the two
+    /// human referents, and `under`/`tree` for the location.
+    #[test]
+    fn a_spatial_adjunct_locates_an_event() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Name("the person".to_string()),
+            object: Argument::Concept("person".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: vec![Adjunct {
+                role: UNDER.to_string(),
+                argument: Argument::Concept("tree".to_string()),
+            }],
+        };
+        assert_eq!(
+            realize_common(&clause, &vocab),
+            "the person killed the person under the tree."
+        );
+    }
+
     #[test]
     fn cardinal_words() {
         assert_eq!(cardinal(2), "two");

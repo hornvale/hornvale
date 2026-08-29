@@ -82,6 +82,24 @@
 //! `clause.rs::a_polar_question_on_a_lexical_verb_panics` and
 //! `clause.rs::a_polar_question_on_the_transitive_frame_panics`).
 //!
+//! `clause.rs::a_spatial_adjunct_locates_an_event` (`spatial-adverbial`,
+//! The Quoin, Task 1 — a locative adjunct on an EVENT, distinct from
+//! `locative-predication`'s locative on a SUBJECT: a new arm in
+//! `common_role_surface`, keyed on the registered `under` concept, riding
+//! `Part::ModifierTail`'s existing machinery for hanging an adjunct on a
+//! transitive clause. **A tongue test is also named, not stated absent**:
+//! `grammar.rs::a_tongue_realizes_a_spatial_adjuncts_concept_the_same_shape_as_any_other_role`
+//! shows the tongue path already renders the location concept's own word,
+//! the same shape `a_tongue_realizes_an_adjunct_whose_concept_it_knows`
+//! already pins for `star-class` — `realize_adjuncts` resolves only an
+//! adjunct's argument and never reads its role, so this was already true
+//! before this task and needed no new tongue code. **The relation itself
+//! stays Common-only, the same posture `epistemic-hedge` takes**: no tongue
+//! construction states *where* the location concept sits relative to the
+//! event (only that it is present), because nothing routes
+//! `common_role_surface`'s adposition word — `"under"` — into a tongue at
+//! all; that is a stated gap, not a silent one.)
+//!
 //! **The merchant corpus moves for the first time in four campaigns with
 //! that last token, and the entry it moves is the one to read carefully.**
 //! `polar-question` covers `m08`, taking the-merchant from 5 of 12 to
@@ -121,8 +139,8 @@ use hornvale_kernel::ConceptRegistry;
 use hornvale_kernel::world::IS_A;
 use hornvale_language::packs::{KILL, KNOW, OLD, SLEEP, THINK, UNDER};
 use hornvale_language::{
-    Argument, Clause, CommonVocabulary, Coordination, Definiteness, Evidential, Number, Person,
-    Polarity, Subject, Tense, realize_common, realize_common_coordination,
+    Adjunct, Argument, Clause, CommonVocabulary, Coordination, Definiteness, Evidential, Number,
+    Person, Polarity, Subject, Tense, realize_common, realize_common_coordination,
     realize_common_polar_question,
 };
 use std::collections::{BTreeMap, BTreeSet};
@@ -229,6 +247,8 @@ const IMPLEMENTED_DEMANDS: &[&str] = &[
     // valence and not a paradigm key: see
     // `domains/language/src/clause.rs`'s `realize_common_polar_question`.
     "polar-question",
+    // The Quoin.
+    "spatial-adverbial",
 ];
 
 /// Whether a corpus entry states what the grammar must **parse** (a player
@@ -2140,6 +2160,7 @@ const LADDER_WITNESS: &[(&str, &str)] = &[
     ("r013", "the guard does not sleep."),
     ("r014", "the guard sleeped."),
     ("r015", "the guard did not sleep."),
+    ("r048", "the person killed the person under the tree."),
     ("r083", "are you a merchant?"),
     ("r190", "you killed them."),
 ];
@@ -2338,6 +2359,31 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
             polarity: Polarity::Neg,
             adjuncts: Vec::new(),
         }),
+        // "The guard struck her in the marketplace." Substituted three
+        // ways, the same discipline `r006`'s witness records: `guard`,
+        // `strike` and `marketplace` are registered nowhere, so `kill`
+        // stands in for `strike` (r006's own substitution, reused here),
+        // `person` for the two human referents, and `under`/`tree` for the
+        // location (`r005`'s own substitution, reused here). This is the
+        // rung `common_role_surface`'s new spatial-role arm exists for: an
+        // adjunct on an EVENT, not a predicate — distinct from r005's
+        // locative on a SUBJECT. Presupposes r006 (transitive-frame) and
+        // r014 (past-tense), both live in this witness's `predicate` and
+        // `tense`.
+        "r048" => MerchantConstruction::Clause(Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Name("the person".to_string()),
+            object: Argument::Concept("person".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: vec![Adjunct {
+                role: UNDER.to_string(),
+                argument: Argument::Concept("tree".to_string()),
+            }],
+        }),
         // "Are you a merchant?" **REALIZES DIRECTLY — no substitution at
         // all, the first rung in this campaign for which that is true of
         // every word.** `merchant` is a registered concept, the copula is
@@ -2473,6 +2519,21 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
 /// made, and the reason is structural rather than lucky: the questions
 /// branch of the ladder hangs off `r083` directly, so covering the cheapest
 /// interrogative opens the whole sub-tree beneath it at once.
+///
+/// **The Quoin, Task 1 (`spatial-adverbial`) covers exactly one more rung,
+/// `r048`, matching Task 0's preregistered row exactly: 11 → 12, no
+/// reuse/control rung riding along** — nothing else in the ladder
+/// presupposes `spatial-adverbial` alone the way `r015`/`r190` rode behind
+/// `intransitive-frame`/`person-deixis`. The FRONTIER holds at 20, and
+/// **that count hides a swap, the same shape Tasks 5 and 6 already
+/// demonstrated**: `r048` drops off (now covered) and `r049` joins —
+/// *"Everything was fine until last night."* (`temporal-adverbial`), whose
+/// two presuppositions (`r014`, `r048`) are now both covered, even though
+/// `r049` itself still needs `temporal-adverbial`, the very token Task 2
+/// adds next. An unchanged frontier SIZE is not "nothing happened": it is
+/// membership turning over by one in each direction, which is exactly what
+/// the ordered-vector assertion below exists to catch and a bare count
+/// would have hidden.
 #[test]
 fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
     let entries = read_derived(&repo_root().join("sentences/the-ladder.corpus.json"));
@@ -2484,14 +2545,15 @@ fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
     assert_eq!(
         covered,
         vec![
-            "r001", "r002", "r003", "r005", "r006", "r011", "r013", "r014", "r015", "r083", "r190"
+            "r001", "r002", "r003", "r005", "r006", "r011", "r013", "r014", "r015", "r048", "r083",
+            "r190"
         ],
         "the ladder's covered set"
     );
     assert_eq!(
         ladder_frontier(&entries),
         vec![
-            "r004", "r007", "r028", "r044", "r048", "r051", "r055", "r061", "r068", "r072", "r084",
+            "r004", "r007", "r028", "r044", "r049", "r051", "r055", "r061", "r068", "r072", "r084",
             "r085", "r095", "r096", "r109", "r113", "r114", "r117", "r171", "r196",
         ],
         "the ladder's frontier"
@@ -2559,12 +2621,19 @@ fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
 /// grammar cannot say that sentence. Its two demand tokens under-describe
 /// it — the third time this twelve-entry corpus has done that — and it is a
 /// PLAYER line scored on a PRODUCTION capability.
+///
+/// **The Quoin, Task 1 (`spatial-adverbial`) matches Task 0's preregistered
+/// row exactly: the-flood-watch meets 20 more demand instances (270 → 290
+/// of 1128)**, with its covered-ENTRY count still 0 of 139 — the same
+/// conjunctive-coverage blindness the earlier tasks' paragraphs describe.
+/// the-merchant is untouched: `spatial-adverbial` is not one of its demand
+/// tokens, so it holds at 21 of 30 and 6 of 12.
 #[test]
 fn demand_instance_coverage_matches_the_campaigns_prediction() {
     let merchant = read_declared(&repo_root().join("sentences/the-merchant.corpus.json"));
     assert_eq!(demand_instance_coverage(&merchant), (21, 30));
     let flood = read_declared(&repo_root().join("sentences/the-flood-watch.corpus.json"));
-    assert_eq!(demand_instance_coverage(&flood), (270, 1128));
+    assert_eq!(demand_instance_coverage(&flood), (290, 1128));
 }
 
 /// Every ladder rung scored covered realizes in Common, exactly as
