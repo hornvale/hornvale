@@ -1,7 +1,6 @@
 // FLAT import, not `hornvale_scene::classify::...` — the crate glob-
 // re-exports its private modules, and its existing tests import this way.
-use hornvale_scene::{ELEVATION_LEGEND, WATER_LEGEND, elevation_band, water_class};
-use hornvale_terrain::WaterKind;
+use hornvale_scene::{ELEVATION_LEGEND, elevation_band};
 
 #[test]
 fn the_elevation_band_is_monotone_in_elevation() {
@@ -49,24 +48,5 @@ fn sea_level_is_the_datum_not_the_number_zero() {
             elevation_band(500.0, 0.0),
             "banding moved when sea level moved to {offset}"
         );
-    }
-}
-
-#[test]
-fn every_water_kind_has_a_distinct_class_and_a_legend_entry() {
-    let kinds = [
-        WaterKind::Ocean,
-        WaterKind::SaltBasin,
-        WaterKind::River,
-        WaterKind::DryLand,
-    ];
-    let classes: std::collections::BTreeSet<u8> = kinds.iter().copied().map(water_class).collect();
-    assert_eq!(
-        classes.len(),
-        kinds.len(),
-        "two water kinds collapsed to one class"
-    );
-    for c in classes {
-        assert!((c as usize) < WATER_LEGEND.len());
     }
 }

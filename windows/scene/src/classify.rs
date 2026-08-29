@@ -36,22 +36,3 @@ pub fn elevation_band(elevation_m: f64, sea_level_m: f64) -> u8 {
     }
     band
 }
-
-/// The four water classes, in [`WATER_LEGEND`] order.
-/// type-audit: bare-ok(identifier-text)
-pub const WATER_LEGEND: [&str; 4] = ["ocean", "salt basin", "river", "dry"];
-
-/// Which [`WATER_LEGEND`] class a [`hornvale_terrain::WaterKind`] is.
-///
-/// NOMINAL, not ordinal — "river" is not more or less than "ocean" — so
-/// under decision NNNN this rides colour, and only the ocean/dry split
-/// (a boundary the reader must trust) reaches a glyph.
-/// type-audit: bare-ok(index: return)
-pub fn water_class(kind: hornvale_terrain::WaterKind) -> u8 {
-    match kind {
-        hornvale_terrain::WaterKind::Ocean => 0,
-        hornvale_terrain::WaterKind::SaltBasin => 1,
-        hornvale_terrain::WaterKind::River => 2,
-        hornvale_terrain::WaterKind::DryLand => 3,
-    }
-}
