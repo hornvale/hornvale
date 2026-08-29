@@ -25,9 +25,29 @@
 //! standing in one room, and its only obvious source would be the interior's
 //! own derivation order — a `Vec` order, which is fine-layer and which 0069
 //! licenses to change. The Chattel's Task 1 census swept all 60 production
-//! gate combinations and found **no room composes two anchors of a single
-//! promotable kind**, so no ordering rule is needed and every production
-//! caller passes `0`. The parameter is kept rather than hardcoded away
+//! gate combinations — `selection(built, cold)` over four, and
+//! `selection_for(role, built, cold, populous)` over seven roles × eight
+//! boolean triples — and found the **stronger** of the spec's two green
+//! results: not merely "no duplicate of a *promotable* kind" (§3.2's branch
+//! row 2) but row 1, `CENSUS_ANY_DUPLICATE false` — every `AnchorKind` that
+//! appears in a composed interior appears exactly once, promotable or not.
+//! So no ordering rule is needed, and `0` is the only ordinal any caller has
+//! cause to pass.
+//!
+//! **That census is now a permanent test, not a scratch measurement**:
+//! `interior::pattern::tests::no_production_room_composes_two_anchors_of_one_kind`
+//! re-runs the same 60 combinations on every gate. It is the thing standing
+//! between a future pattern addition and a silently colliding entity id — see
+//! its doc comment for what a red from it means.
+//!
+//! **Nothing outside this module calls [`thing_id`] or [`promote`] yet.** That
+//! is an obligation on the tasks that will (the latent-slot read and the
+//! promotion seam), not a property of today's tree: a production caller must
+//! pass `0`, and it may do so *only* because the census above holds. A caller
+//! that wants a nonzero ordinal is asserting the census has moved, and owes
+//! the ordering rule below before it may exist.
+//!
+//! The parameter is kept rather than hardcoded away
 //! because that is an invariant of today's layouts, not of the design: a
 //! future interior epoch may compose two of a kind, and the day it does, the
 //! ordering rule it needs must be keyed on something a layout epoch cannot
@@ -89,10 +109,31 @@ impl From<LedgerError> for ThingError {
 /// A save-format contract: this string is an input to a derived `EntityId`
 /// (see [`hornvale_kernel::Lineage::role`]), so changing its spelling
 /// renumbers every thing in every saved world. A change is an epoch, not an
-/// edit.
+/// edit. `the_thing_role_spelling_is_the_permanent_lineage_key` writes the
+/// exact string out as a literal and so **cannot be rebaselined**, which is
+/// the entire point of writing it that way: every other test in this module
+/// asserts a *relative* property (two derivations agree, three derivations
+/// differ), and any injective spelling whatsoever satisfies all of them. The
+/// literal is the only assertion that a spelling change can fail.
 /// type-audit: bare-ok(identifier-text: kind), bare-ok(identifier-text: return)
 pub fn thing_role(facet: &Facet, kind: &str) -> Result<String, FacetError> {
     Ok(format!("thing@{}/{}", facet.pack()?.0, kind))
+}
+
+/// The ONE construction of a thing's [`Lineage`], and the reason it is a
+/// function rather than two struct literals. Both [`thing_id`] (which derives)
+/// and [`promote`] (which mints under the same derivation) route through it, so
+/// the id a caller *predicts* for an unpromoted thing and the id the ledger
+/// *mints* for a promoted one cannot disagree — there is nothing left for them
+/// to disagree about. The duplicate literal this replaced was a live seam:
+/// mutating `promote`'s copy of `ordinal` to `0` left the whole vessel suite
+/// green, because every assertion in the module ran through `thing_id`'s copy.
+fn thing_lineage<'a>(role: &'a str, ordinal: u16) -> Lineage<'a> {
+    Lineage {
+        parent: None,
+        role,
+        ordinal,
+    }
 }
 
 /// The entity a thing of `kind` standing in `facet` has — whether or not
@@ -101,11 +142,9 @@ pub fn thing_role(facet: &Facet, kind: &str) -> Result<String, FacetError> {
 /// type-audit: bare-ok(identifier-text: kind), bare-ok(count: ordinal)
 pub fn thing_id(facet: &Facet, kind: &str, ordinal: u16) -> Result<EntityId, FacetError> {
     let role = thing_role(facet, kind)?;
-    Ok(hornvale_kernel::derive_entity_id(Lineage {
-        parent: None,
-        role: &role,
-        ordinal,
-    }))
+    Ok(hornvale_kernel::derive_entity_id(thing_lineage(
+        &role, ordinal,
+    )))
 }
 
 /// Promote the thing of `kind` in `facet` to a ledger entity, committing its
@@ -133,11 +172,7 @@ pub fn promote(
     day: WorldTime,
 ) -> Result<EntityId, ThingError> {
     let role = thing_role(facet, kind)?;
-    let id = ledger.reuse_or_mint_entity(Lineage {
-        parent: None,
-        role: &role,
-        ordinal,
-    });
+    let id = ledger.reuse_or_mint_entity(thing_lineage(&role, ordinal));
     ledger.commit(
         Fact {
             subject: id,
@@ -235,6 +270,147 @@ mod tests {
             ledger.find(INSTANCE_OF).count(),
             1,
             "a second instance-of fact was committed"
+        );
+    }
+
+    /// The role string's exact on-disk spelling, written out as a literal.
+    ///
+    /// **This test cannot be rebaselined, which is the entire point of writing
+    /// it out.** Every other assertion about identity in this module is
+    /// *relative* — `a_things_id_is_a_pure_function_of_room_kind_and_ordinal`
+    /// asks whether two derivations agree,
+    /// `distinct_addresses_never_share_an_id` asks whether three derivations
+    /// differ — and ANY injective spelling satisfies both. Changing
+    /// `"thing@{}/{}"` to `"thingX{}|{}"` left all four of them green while
+    /// silently renumbering every thing in every saved world.
+    ///
+    /// The same shape as `passage::addr_key`'s frozen key and
+    /// `knowledge::LOCALE_KEY_PREFIX`: the literal IS the contract, so the only
+    /// legitimate way to change it is an epoch (a new prefix alongside the old,
+    /// never a rename), and this assertion is what makes that a deliberate act
+    /// rather than a green diff.
+    ///
+    /// `707` is not a magic number: `Facet { face: 3, path: [1, 2] }` packs to
+    /// `(((1 << 2 | 1) << 2 | 2) << 5) | 3`, and the sentinel-prefixed path
+    /// word is the kernel's `FacetId` contract, frozen independently.
+    #[test]
+    fn the_thing_role_spelling_is_the_permanent_lineage_key() {
+        let f = facet(3, &[1, 2]);
+        assert_eq!(
+            f.pack().expect("a shallow facet packs").0,
+            707,
+            "the FacetId packing moved; the role literal below is stated in \
+             terms of it"
+        );
+        assert_eq!(
+            thing_role(&f, "strongbox").expect("a shallow facet packs"),
+            "thing@707/strongbox",
+            "thing_role's spelling is a SAVE-FORMAT CONTRACT: it is an input to \
+             a derived EntityId, so changing it renumbers every thing in every \
+             saved world. Do not rebaseline this literal — see the doc comment \
+             on `thing_role`."
+        );
+    }
+
+    /// `promote`'s `ordinal` argument must reach the id it returns.
+    ///
+    /// The module used to construct the `Lineage` twice — once in `thing_id`,
+    /// once in `promote` — and only `thing_id`'s copy was pinned, so mutating
+    /// `promote`'s `ordinal` to a literal `0` left the whole vessel suite
+    /// green. The duplicate is gone (both route through `thing_lineage`), but
+    /// that deletion alone cannot pin the ARGUMENT `promote` passes: the ledger
+    /// takes a `Lineage`, not an `EntityId`, so `promote` must still hand the
+    /// ordinal on, and only a test that promotes a NONZERO ordinal watches that
+    /// hand-off. This is that test.
+    #[test]
+    fn promotes_ordinal_reaches_the_id_it_returns() {
+        let mut reg = ConceptRegistry::default();
+        reg.register_predicate(INSTANCE_OF, false, "t").unwrap();
+        let mut ledger = Ledger::default();
+
+        let f = facet(3, &[1, 2]);
+        let day = WorldTime::from_std_days(5.0).expect("5 days is in range");
+
+        let zeroth = promote(&mut ledger, &reg, &f, "strongbox", 0, day).unwrap();
+        let first = promote(&mut ledger, &reg, &f, "strongbox", 1, day).unwrap();
+
+        assert_ne!(
+            zeroth, first,
+            "two ordinals in one room promoted to one entity"
+        );
+        assert_eq!(
+            first,
+            thing_id(&f, "strongbox", 1).unwrap(),
+            "promote and thing_id disagree about ordinal 1"
+        );
+    }
+
+    /// The committed `instance-of` fact's FIELDS, not merely its count.
+    ///
+    /// `promoting_twice_yields_one_entity` counts facts, which is the wrong
+    /// half: mutating the fact's `object` to `Value::Text("mutant")` or its
+    /// `day` to `None` left that count at 1 and the suite green.
+    ///
+    /// `day` is the load-bearing one. A thing with no day is invisible to every
+    /// `day <= now` fold downstream — the same time-correctness discipline
+    /// `passage.rs` documents for a clearing fact — so a `None` here would not
+    /// fail anything today and would silently hide every promoted thing from
+    /// the reads that come next.
+    #[test]
+    fn the_committed_instance_of_fact_carries_the_kind_and_the_day() {
+        let mut reg = ConceptRegistry::default();
+        reg.register_predicate(INSTANCE_OF, false, "t").unwrap();
+        let mut ledger = Ledger::default();
+
+        let f = facet(3, &[1, 2]);
+        let day = WorldTime::from_std_days(5.0).expect("5 days is in range");
+        let id = promote(&mut ledger, &reg, &f, "strongbox", 0, day).unwrap();
+
+        assert_eq!(
+            ledger.kind_of(id),
+            Some("strongbox"),
+            "the instance-of object must be the thing's KIND"
+        );
+        let fact = ledger
+            .find(INSTANCE_OF)
+            .find(|fact| fact.subject == id)
+            .expect("promotion committed an instance-of about the thing");
+        assert_eq!(
+            fact.day,
+            Some(day),
+            "a promoted thing with no day is invisible to every `day <= now` \
+             fold that reads it"
+        );
+    }
+
+    /// `promote`'s own error path, not just [`thing_id`]'s. The two reach
+    /// [`Facet::pack`] by different routes, and [`ThingError`] exists precisely
+    /// because this one has to widen `LedgerError` to carry the failure — an
+    /// arm nothing exercised until now.
+    #[test]
+    fn a_promotion_into_a_room_that_does_not_pack_is_refused() {
+        let mut reg = ConceptRegistry::default();
+        reg.register_predicate(INSTANCE_OF, false, "t").unwrap();
+        let mut ledger = Ledger::default();
+
+        let too_deep = facet(3, &[1u8; 64]);
+        let day = WorldTime::from_std_days(5.0).expect("5 days is in range");
+
+        let err = promote(&mut ledger, &reg, &too_deep, "strongbox", 0, day)
+            .expect_err("a room past MAX_DEPTH cannot carry a thing");
+        assert!(
+            matches!(err, ThingError::Facet(FacetError::DepthExceedsCap)),
+            "expected the Facet arm, got {err:?}"
+        );
+        assert_eq!(
+            ledger.entity_count(),
+            0,
+            "a refused promotion must mint nothing"
+        );
+        assert_eq!(
+            ledger.find(INSTANCE_OF).count(),
+            0,
+            "a refused promotion must commit nothing"
         );
     }
 }

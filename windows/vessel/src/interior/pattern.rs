@@ -681,6 +681,97 @@ mod tests {
         );
     }
 
+    /// **No production room composes two anchors of one kind** — the census
+    /// The Chattel's Task 1 ran once, made permanent.
+    ///
+    /// WHAT A RED HERE MEANS, and it is not "a pattern was added". It means the
+    /// thing that made a pattern addition safe has stopped holding.
+    /// `windows/vessel/src/thing.rs` keys a thing's `EntityId` on
+    /// `(room facet, kind, ordinal)` and every caller hardcodes ordinal `0`,
+    /// which is legitimate ONLY while each `AnchorKind` occurs at most once per
+    /// composed interior. The moment one occurs twice, two distinct things in
+    /// one room derive the SAME entity id: every fact about either keys to the
+    /// other, and no gate in this tree can see it — a derived id has no
+    /// collision assert behind `reuse_or_mint_entity`, and the world still
+    /// saves, loads and renders.
+    ///
+    /// So the response is not to widen this test. It is the STOP row of the
+    /// spec's §3.2 branch table (`docs/superpowers/plans/`'s Task 1, Step 2):
+    /// an ordering rule is needed, and it must be keyed on something a layout
+    /// epoch cannot change — **never** on the interior's `Vec` derivation
+    /// order, which decision 0069 licenses to regenerate differently forever.
+    /// Return to the spec; do not choose a rule here.
+    ///
+    /// Task 1 measured the STRONGER of the table's two green rows: not row 2
+    /// ("duplicates exist, but only of unpromotable kinds") but row 1 —
+    /// `CENSUS_ANY_DUPLICATE false`, every kind's count exactly 1. This test
+    /// asserts row 1, so it fires on a duplicate of ANY kind, promotable or
+    /// not, which is deliberately stricter than `thing.rs` strictly needs: a
+    /// duplicate `Ground` would be a real change to what a room IS, and
+    /// discovering it here beats discovering it when someone makes that kind
+    /// promotable.
+    #[test]
+    fn no_production_room_composes_two_anchors_of_one_kind() {
+        let mut combinations = 0usize;
+
+        let mut census = |label: String, selected: Vec<&'static Pattern>| {
+            combinations += 1;
+            let interior: Interior = compose(&selected);
+            let mut counts: std::collections::BTreeMap<AnchorKind, usize> =
+                std::collections::BTreeMap::new();
+            for id in interior.ids() {
+                *counts.entry(interior.anchor(id).kind).or_insert(0) += 1;
+            }
+            for (kind, n) in &counts {
+                assert_eq!(
+                    *n, 1,
+                    "{label} composes {n} anchors of {kind:?}. thing.rs's \
+                     hardcoded ordinal 0 now collides two things into one \
+                     entity id: an ordering rule is needed, and it must not key \
+                     on derivation order. See spec SS3.2's branch table (STOP \
+                     row) and this test's doc comment."
+                );
+            }
+        };
+
+        // The LOCALE band: no role, never populous.
+        for (built, cold) in [(true, true), (true, false), (false, true), (false, false)] {
+            census(
+                format!("selection(built={built}, cold={cold})"),
+                selection(built, cold),
+            );
+        }
+
+        // The CHAMBER band. `populous` is swept as well as `built`/`cold`
+        // because `the-strongbox` is population-gated, so a sweep that omitted
+        // it would under-cover exactly the pattern this invariant protects.
+        for role in EVERY_ROLE {
+            for built in [true, false] {
+                for cold in [true, false] {
+                    for populous in [true, false] {
+                        census(
+                            format!(
+                                "selection_for({role:?}, built={built}, cold={cold}, \
+                                 populous={populous})"
+                            ),
+                            selection_for(*role, built, cold, populous),
+                        );
+                    }
+                }
+            }
+        }
+
+        // The census's own accounting. Without this, a future edit that dropped
+        // a loop would still pass every assertion above by measuring less —
+        // which is the quietest way an invariant test stops being one.
+        assert_eq!(
+            combinations,
+            4 + EVERY_ROLE.len() * 8,
+            "the census no longer sweeps every production gate combination"
+        );
+        assert_eq!(combinations, 60, "the census swept {combinations}, not 60");
+    }
+
     #[test]
     fn only_the_hearthroom_can_hold_a_fire_and_no_rule_says_so() {
         // THE CLAIM THAT MAKES THIS A LANGUAGE RATHER THAN A CATALOGUE. Nothing
