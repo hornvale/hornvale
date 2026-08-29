@@ -5,7 +5,7 @@
 //! layers stay nearest-vertex. The projection here is the normative one, shared
 //! byte-for-byte with the orrery's `cubeSphere.ts` and the reference page.
 
-use crate::{SceneContext, SceneError, WaterfallPoint};
+use crate::{RELIEF_LEGEND, SceneContext, SceneError, WaterfallPoint, relief_band};
 use hornvale_kernel::{Geosphere, NearestVertexIndex, Vertex, World, WorldTime};
 use serde::Serialize;
 
@@ -234,7 +234,7 @@ fn interp(
 /// JSON key order and is contract. Per-node layers are `(samples+1)²`,
 /// row-major (`i = row·(samples+1) + col`). Continuous layers are barycentric;
 /// discrete layers (`ocean`, `biome`, `plate`) are nearest-vertex.
-/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), bare-ok(index: face), bare-ok(count: level), bare-ok(index: ix), bare-ok(index: iy), bare-ok(count: samples), pending(wave-3: sea_level_m), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(identifier-text: biome_legend), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(ratio: moisture), bare-ok(index: water), bare-ok(identifier-text: water_legend), bare-ok(diagnostic-value: drainage), bare-ok(diagnostic-value: t_diurnal_amp_c), bare-ok(diagnostic-value: precip_mm_yr)
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), bare-ok(index: face), bare-ok(count: level), bare-ok(index: ix), bare-ok(index: iy), bare-ok(count: samples), pending(wave-3: sea_level_m), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(identifier-text: biome_legend), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(ratio: moisture), bare-ok(index: water), bare-ok(identifier-text: water_legend), bare-ok(diagnostic-value: drainage), bare-ok(diagnostic-value: t_diurnal_amp_c), bare-ok(diagnostic-value: precip_mm_yr), bare-ok(index: relief), bare-ok(identifier-text: relief_legend)
 #[derive(Debug, Serialize)]
 pub struct RegionScene {
     /// Always `scene/tiles-region/v1`.
@@ -328,6 +328,17 @@ pub struct RegionScene {
     /// latter matches the per-vertex values the tiles export ships.
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
     pub precip_mm_yr: Vec<f64>,
+    /// Relief band per node — [`crate::relief_band`]'s rung, index into
+    /// [`RELIEF_LEGEND`] (nearest-vertex; discrete, like `ocean`/`biome`/
+    /// `plate`). Appended at the struct's end rather than beside
+    /// `elevation_m`: field order is JSON key order and is contract, so a
+    /// middle insertion would have reordered every field after it. Same
+    /// field names `scene/surrounds/v2` already uses for this quantity —
+    /// deliberately, not a collision.
+    pub relief: Vec<u32>,
+    /// The relief catalog, `RELIEF_LEGEND`'s stable order — `relief`'s values
+    /// index into this. Appended per the schema stability contract.
+    pub relief_legend: Vec<String>,
 }
 
 /// Build the `scene/tiles-region/v1` scene for one tile address, deriving a
@@ -407,6 +418,7 @@ pub fn tiles_region_scene_in(
     let mut precip_mm_yr = Vec::with_capacity(units.len());
     let mut water = Vec::with_capacity(units.len());
     let mut drainage = Vec::with_capacity(units.len());
+    let mut relief = Vec::with_capacity(units.len());
     for s in &units {
         let tg = terrain.geosphere();
         let cg = climate.geosphere();
@@ -416,6 +428,9 @@ pub fn tiles_region_scene_in(
         ocean.push(terrain.is_ocean(t_vertex));
         water.push(terrain.water_kind_at(t_vertex).index());
         drainage.push(terrain.drainage_at(t_vertex));
+        relief.push(relief_band(
+            terrain.elevation_at(t_vertex).above(terrain.sea_level()),
+        ));
         let b = *biomes.get(c_vertex);
         biome.push(
             catalog
@@ -486,6 +501,8 @@ pub fn tiles_region_scene_in(
         waterfalls,
         t_diurnal_amp_c,
         precip_mm_yr,
+        relief,
+        relief_legend: RELIEF_LEGEND.iter().map(|s| s.to_string()).collect(),
     })
 }
 
