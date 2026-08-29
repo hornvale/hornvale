@@ -302,6 +302,15 @@ const SUBMERGED_LATERAL_REFUSAL: &str = "Not while you are under. Surface first,
 const UNDERGROUND_BACK_REFUSAL: &str =
     "There is no trail to retrace down here; walk it again, cell by cell.";
 
+/// What `map <anything>` says underground (The Gallery, Task 8). A level has
+/// no coarser rung to zoom to the way the walk band's chart does — `map out
+/// N` is a question about the country overhead, and there is no overhead to
+/// draw from inside the rock — so any argument is refused the same way an
+/// indoor `map <arg>` is refused by [`INDOOR_CHART_REFUSAL`]: for the
+/// geometry, not as a parse complaint.
+const UNDERGROUND_CHART_REFUSAL: &str =
+    "Down here the chart is the rock around you; there is no coarser rung to draw.";
+
 /// `climb`'s refusal from any rung but the entrance (The Gallery, Task 3):
 /// there is no one-step way out of a multi-rung descent, only the stairs
 /// up (Task 5).
@@ -2478,6 +2487,10 @@ impl<'w> Session<'w> {
                 self.out(self.plan_here(&OBJECTIVE_EYES))
             }
             "map" if self.inside.is_some() => Turn::Out(INDOOR_CHART_REFUSAL.to_string()),
+            // The underground half of Task 8, objective mood: same rule as
+            // the bare form just below — a level, not the country overhead.
+            "map" if self.underground.is_some() && rest.is_empty() => self.out(self.level_here()),
+            "map" if self.underground.is_some() => Turn::Out(UNDERGROUND_CHART_REFUSAL.to_string()),
             "map" => self.map(rest, &OBJECTIVE_EYES),
             "examine" if self.inside.is_some() && !rest.is_empty() => {
                 Turn::Out(self.examine_chamber(rest, Perceiving::Objectively))
@@ -2568,6 +2581,19 @@ impl<'w> Session<'w> {
                     self.out(self.plan_here(&self.eyes))
                 }
                 "map" if self.inside.is_some() => Turn::Out(INDOOR_CHART_REFUSAL.to_string()),
+                // The underground band (The Gallery, Task 8, spec §5): the
+                // pane and the verb agree now — both answer `underground`,
+                // never the walk band's chart of the country overhead. No
+                // `eyes` parameter here, matching `level_here`'s own reason
+                // (`vessel/level/v1` carries an explicit visibility state
+                // per cell, never a colour, so there is nothing for a lens
+                // to filter).
+                "map" if self.underground.is_some() && rest.is_empty() => {
+                    self.out(self.level_here())
+                }
+                "map" if self.underground.is_some() => {
+                    Turn::Out(UNDERGROUND_CHART_REFUSAL.to_string())
+                }
                 "map" => self.map(rest, &self.eyes),
                 // `go` is band-aware for the same reason `look` and `map` are, and
                 // this arm is the reversal The Blocking owes The Lintel: indoors a
@@ -4328,6 +4354,59 @@ impl<'w> Session<'w> {
             |c| ug.seen[ug.rung].saw(c),
             marks,
         )
+    }
+
+    /// `map` underground (The Gallery, Task 8; spec §5) — the verb's own
+    /// answer, one band down, drawn from the exact `SessionLevel` document
+    /// the pane emits ([`Self::underground_level`]). The pane and the verb
+    /// read one source now, which is what keeps them from drifting apart
+    /// the way the retired fold worried they might (see this module's
+    /// `the_pane_and_the_verb_agree_underground`, formerly
+    /// `the_underground_band_folds_into_walk_as_map_does`).
+    ///
+    /// Fog-of-war-respecting by construction, not by a filter added here:
+    /// `doc.cells` already omits every never-seen cell (spec §4.1.1), so a
+    /// cell this picture never marks is simply left blank rather than
+    /// checked and skipped.
+    ///
+    /// No `eyes` parameter and no lens, unlike [`Self::plan_here`]:
+    /// `vessel/level/v1` carries an explicit visibility STATE per cell,
+    /// never a shade (`level_doc`'s own module doc, spec §4.1), so there is
+    /// no colour here for a lens to filter.
+    ///
+    /// Never shows a creature mark — [`Self::plan_here`] does not either (it
+    /// always passes `Vec::new()` for `marks`); Task 11 is what teaches this
+    /// band to place one.
+    fn level_here(&self) -> Result<String, VesselError> {
+        let Some(ug) = self.underground.as_ref() else {
+            // Unreachable through `handle` (the arm checks first), the same
+            // guard and the same reason `plan_here` gives for its own.
+            return Err(VesselError::Build(
+                "no level to draw: the possession is not underground".to_string(),
+            ));
+        };
+        let doc = self.underground_level(ug, Vec::new());
+        let e = doc.extent;
+        let mut rows = vec![vec![' '; e.w as usize]; e.h as usize];
+        for cell in &doc.cells {
+            let glyph = level_kind_glyph(&doc.palette[cell.ix as usize].kind);
+            rows[(cell.y - e.y) as usize][(cell.x - e.x) as usize] = glyph;
+        }
+        rows[(doc.you.y - e.y) as usize][(doc.you.x - e.x) as usize] = '@';
+        let picture = rows
+            .into_iter()
+            .map(|r| r.into_iter().collect::<String>())
+            .collect::<Vec<_>>()
+            .join("\n");
+        Ok(format!(
+            "[level: rung {} of {}, {} — {:.1} m]\n{}\n  legend: # wall, . floor, ~ flooded, \
+             > stairs down, < stairs up, @ you",
+            ug.rung + 1,
+            ug.descent.len(),
+            doc.rung,
+            doc.depth_m,
+            picture
+        ))
     }
 
     /// The drawn floor plan, in the chamber block's own shape: a bracketed
@@ -6241,6 +6320,28 @@ fn underground_footing_word(ug: &crate::underground::Underground) -> &'static st
     match ug.level().cells.get(ug.cell) {
         Some(crate::underworld_level::LevelCellKind::Flooded) => "flooded",
         _ => "dry",
+    }
+}
+
+/// The glyph [`Session::level_here`] draws for one `LevelPaletteEntry::kind`
+/// wire string. Chosen fresh for this verb's own text render: `level_doc`'s
+/// own module doc is explicit that the wire `kind` field is a name, never a
+/// glyph (decision 0022 leaves glyph selection to the client), so this
+/// mapping is `map`'s own and binds nothing on the wire.
+///
+/// `_ => '?'` is unreachable for any kind [`crate::level_doc::level_of`]
+/// actually emits — every [`crate::underworld_level::LevelCellKind`]
+/// variant has a named arm above it — kept rather than a hard panic because
+/// a display glyph is not worth crashing a player's turn over should a
+/// future variant land here first.
+fn level_kind_glyph(kind: &str) -> char {
+    match kind {
+        "wall" => '#',
+        "floor" => '.',
+        "flooded" => '~',
+        "stairs_down" => '>',
+        "stairs_up" => '<',
+        _ => '?',
     }
 }
 
@@ -10092,8 +10193,8 @@ mod tests {
     /// 3): the pane answers `band: "underground"` the moment the possession
     /// descends, carrying `vessel/level/v1` rather than folding into the
     /// walk-band chart. See `SpatialChannel`'s own doc and
-    /// `the_underground_band_folds_into_walk_as_map_does` (below) for the
-    /// history this replaces.
+    /// `the_pane_and_the_verb_agree_underground` (below) for the history
+    /// this replaces.
     #[test]
     fn the_underground_pane_reads_band_underground() {
         let world = seam_world();
@@ -10230,7 +10331,7 @@ mod tests {
     }
 
     /// The snapshot's spatial channel and the `map` verb, underground —
-    /// **not a fold any more, and this test's own job narrowed with it.**
+    /// **the fold, retired (The Gallery, Task 8; spec §5).**
     ///
     /// Found at The Panes' merge, not during either campaign: The Deep Realm
     /// added `underground` while The Panes added the spatial channel, in
@@ -10238,26 +10339,29 @@ mod tests {
     /// touched different lines of the same file. `SpatialChannel` enumerates
     /// bands; The Deep Realm added one; neither campaign's chronicle mentions
     /// the other's surface. That is precisely the semantic collision
-    /// `make preflight` says it cannot score. This test's original body
+    /// `make preflight` says it cannot score. **This test's own name and
+    /// body have changed twice, and the invariant it pins has not.** Its
+    /// first form (`the_underground_band_folds_into_walk_as_map_does`)
     /// asserted a FOLD — the pane and the `map` verb both answering `walk`
     /// underground — under the argument that whichever answer the sim
     /// settles on, one change must move both, so a silent fold could never
-    /// hide behind a passing test.
+    /// hide behind a passing test. Task 7 answered the PANE half (its own
+    /// `band: "underground"`, carrying `vessel/level/v1`) while deliberately
+    /// leaving the verb one turn behind, so that test's second form pinned
+    /// the two answering DIFFERENTLY on purpose — a transitional state, not
+    /// a destination — for exactly as long as it took Task 8 to land the
+    /// verb's own arm.
     ///
-    /// **The Gallery, Task 7 answers the underground half of that question,
-    /// and spec §5 ("the fold, retired") names the disposition explicitly:
-    /// `the_underground_band_folds_into_walk_as_map_does` is "replaced, not
-    /// deleted."** The pane now emits its own `band: "underground"` carrying
-    /// `vessel/level/v1` — see `the_underground_pane_reads_band_underground`,
-    /// which is that replacement for the PANE half. The `map` VERB's own
-    /// underground arm is a separate, later addition (Task 8), so for as
-    /// long as it takes that task to land, the pane and the verb answer this
-    /// one question differently ON PURPOSE: this is now the test that pins
-    /// the verb's own half has not silently moved WITH the pane, which is
-    /// exactly the drift `SpatialChannel`'s own doc warns a reader to check
-    /// for before trusting the two still agree.
+    /// **This is that landing.** Renamed again because a reader scanning the
+    /// test list must not see a fold reported as intact when there is none
+    /// left to report — the old name was half-false the moment Task 7
+    /// landed and would have been wholly false the moment this task did, had
+    /// it survived unrenamed. What survives, under the new name, is the
+    /// original argument verbatim: the pane and the verb cannot drift apart
+    /// here, so one change — this one — must move both, and this test now
+    /// asserts them agreeing on the new answer rather than the old one.
     #[test]
-    fn the_underground_band_folds_into_walk_as_map_does() {
+    fn the_pane_and_the_verb_agree_underground() {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         let terrain = session
@@ -10278,9 +10382,9 @@ mod tests {
         match &snap.spatial {
             crate::snapshot::SpatialChannel::Underground { .. } => {}
             other => panic!(
-                "the underground band no longer answers `walk` — Task 7 gave it \
-                 `band: \"underground\"` — if that changed again, `SpatialChannel`'s \
-                 own doc and this test must change WITH it: {other:?}"
+                "the underground band no longer answers `underground` — if that \
+                 changed again, `SpatialChannel`'s own doc and this test must \
+                 change WITH it: {other:?}"
             ),
         }
         let json = crate::snapshot_json(&snap);
@@ -10289,18 +10393,21 @@ mod tests {
             "the wire tag must read `underground`: {json:.120}"
         );
 
-        // The verb, in the same state: STILL the surface chart, not a plan
-        // and not a refusal — Task 8's own job, not landed here.
-        // `plan_here` prints a legend; `map`'s chart prints a lens header —
-        // so the two are told apart by content, not by length.
+        // The verb, in the same state: the level now, never the surface
+        // chart and never the indoor refusal. `plan_here` prints a
+        // ` legend: ` line; the walk-band chart prints a `[lens:` header —
+        // so all three are told apart by content, not by length.
         let out = match session.handle("map") {
             Turn::Out(t) => t,
             Turn::Released(_) => panic!("map must not release"),
         };
         assert!(
-            out.contains("[lens:"),
-            "map underground must still draw the walk-band chart until Task 8 \
-             lands its own arm: {out}"
+            out.starts_with("[level:"),
+            "map underground must draw the level, not the country overhead: {out}"
+        );
+        assert!(
+            !out.contains("[lens:"),
+            "map underground must not fall through to the walk-band chart: {out}"
         );
         assert!(
             !out.contains(INDOOR_CHART_REFUSAL),
