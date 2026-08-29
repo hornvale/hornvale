@@ -506,32 +506,13 @@ a constant. Record both outcomes in your report.
 //! (a tile IS a facet) and 0196 (never invent detail below the datum). See
 //! The Legend spec §3.0.
 
-/// The five elevation rungs, ascending. The index is [`elevation_band`]'s
-/// return; the TUI binds these to ink, atlas binds them to colour.
-pub const ELEVATION_LEGEND: [&str; 5] =
-    ["abyssal", "lowland", "upland", "highland", "montane"];
-
-/// Metres above sea level at which each band STARTS, ascending. Band 0 is
-/// everything below `BAND_FLOORS_M[0]`.
-const BAND_FLOORS_M: [f64; 4] = [0.0, 400.0, 1200.0, 2800.0];
-
-/// Which [`ELEVATION_LEGEND`] rung `elevation_m` falls in, given this
-/// world's own `sea_level_m`.
-///
-/// **Ordinal and total.** Monotone non-decreasing in `elevation_m`, so ink
-/// density may carry it (decision NNNN). Sea level is the DATUM, never the
-/// number zero — a world whose sea level is 1,200 m bands identically to one
-/// at 0 m for the same height above sea.
-pub fn elevation_band(elevation_m: f64, sea_level_m: f64) -> u8 {
-    let asl = elevation_m - sea_level_m;
-    let mut band = 0u8;
-    for floor in BAND_FLOORS_M {
-        if asl >= floor {
-            band += 1;
-        }
-    }
-    band
-}
+// (The classifier that used to be specified here is GONE. Ruling X found
+// that `windows/scene/src/surrounds.rs` already had `relief_band` +
+// `RELIEF_LEGEND` — six bands, sea-level-relative BY TYPE, already public —
+// so this task promotes that instead of minting a fifth near-copy. What
+// actually shipped is `pub fn relief_band(height: SeaLevelHeight) -> u32`
+// in surrounds.rs; `classify.rs` was deleted outright. Do not resurrect the
+// snippet that stood here.)
 
 ```
 
@@ -660,13 +641,29 @@ change as if it were yours. Read the failures BEFORE rebaselining:
 
 - [ ] **Step 4: Prove `elevation_m` is untouched**
 
+**The obvious line-grep DOES NOT WORK here, and it fails in the direction
+that cries wolf.** These fixtures are single-line minified JSON, so the
+removed line contains every key and
+`git diff | grep '^-' | grep elevation_m` matches on ANY change at all.
+Measured against the real additive commit: it printed a match, i.e. it
+reports `elevation_m` removed when nothing moved. Compare the PARSED field:
+
 ```bash
-git diff -- windows/scene/tests/fixtures/ | grep -E '^-' | grep -i elevation_m | head
+python3 - <<'EOF'
+import json, subprocess
+f = "windows/scene/tests/fixtures/region-seed-1-f0-l3.json"
+old = json.loads(subprocess.run(["git", "show", f"HEAD~1:{f}"],
+                                capture_output=True, text=True).stdout)
+new = json.loads(open(f).read())
+assert old["elevation_m"] == new["elevation_m"], "elevation_m MOVED"
+print("elevation_m identical; keys added:", sorted(set(new) - set(old)))
+EOF
 ```
 
-Expected: NO output. A removed `elevation_m` line is the `scene/eclipses`
-v1->v2 failure repeating — a bump that quietly dropped float fields, vetted
-as correct and caught only by the gate.
+Expected: `elevation_m identical; keys added: ['relief', 'relief_legend']`.
+A moved `elevation_m` is the `scene/eclipses` v1->v2 failure repeating — a
+bump that quietly dropped float fields, vetted as correct and caught only by
+the gate.
 
 - [ ] **Step 5: fmt, gate, commit**
 
