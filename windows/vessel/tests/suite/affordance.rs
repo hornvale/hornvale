@@ -410,10 +410,21 @@ fn the_table_scanner_catches_a_thing_kind_keyed_arm() {
     );
 }
 
-/// Negative control: the legitimate indirection `object_registry` itself is
-/// written in — a `KindId` key mapped to `ObjectProperty` values — must not
-/// trip the scan, or acceptance clause (4) would condemn the one table the
+/// Negative control: a `KindId`-keyed arm whose body mentions only
+/// `ObjectProperty` — the permitted key-to-PROPERTY direction — must not
+/// trip the scan, or acceptance clause (4) would condemn the indirection the
 /// whole design is built on.
+///
+/// **This fixture is a shape, not a transcription of `object_registry`, and
+/// the sentence it replaces got that wrong** (fix round 1, m6).
+/// `object_registry` (`src/affordance.rs`) is an array of
+/// `(KindId, ObjectTraits)` tuples fed to `.collect()`, with no `match` and
+/// no arms at all — the scanner never reaches an arm for it, so calling this
+/// "the legitimate indirection `object_registry` itself is written in" named
+/// the wrong production shape. The control still discriminates and is worth
+/// keeping: it is the arm-shaped form the same key-to-property mapping would
+/// take if anyone wrote it as a `match`, which is precisely the case a
+/// scanner keyed on `KindId(` could plausibly over-condemn.
 #[test]
 fn the_table_scanner_does_not_false_positive_on_thing_kind_property_rows() {
     let legitimate = "match kind {\n    \
@@ -432,8 +443,22 @@ fn the_table_scanner_does_not_false_positive_on_thing_kind_property_rows() {
 /// claim over the key the table actually uses. Stated so it cannot be
 /// over-read: this shares every blind spot its sibling discloses (one file,
 /// one syntactic shape, nothing reached through a helper or an alias), and
-/// adds one of its own — a table keyed on a `KindId` held in a variable
-/// rather than spelled as a literal is invisible to it.
+/// adds one of its own — **it sees only the spelling `KindId(`, not every
+/// table keyed on a thing-kind.**
+///
+/// That sentence is a correction, and the wording it replaces is why the
+/// correction is loud rather than a quiet edit. This doc used to name the
+/// blind spot as "a table keyed on a `KindId` held in a variable rather than
+/// spelled as a literal", which a reader takes as the boundary — and it is
+/// far too narrow. `KindId` is `pub struct KindId(pub &'static str)`, so
+/// `match kind.0 { "bed" => ... }` is a table keyed on a thing-kind, spelled
+/// as a LITERAL, that this scan cannot see. A reviewer put exactly that in
+/// production and it was reproduced here: `254 passed; 0 failed` for the
+/// whole suite with this test reporting `ok`. What closes it is
+/// `no_kind_keyed_dispatch_names_a_verb` below, which asks a question that
+/// never mentions the key at all. This scan is kept alongside it because it
+/// reads the WHOLE file rather than only the dispatch bodies — coverage the
+/// key-agnostic guard does not have.
 ///
 /// MUTATION THIS MUST FAIL AGAINST, and it is the evidence that the gap was
 /// real rather than theoretical: replace `offered_by`'s body with the
@@ -459,7 +484,7 @@ fn the_table_scanner_does_not_false_positive_on_thing_kind_property_rows() {
 /// test affordance::no_thing_kind_keyed_verb_table_exists ... FAILED
 /// test affordance::no_verb_by_object_table_exists ... ok
 /// thread 'affordance::no_thing_kind_keyed_verb_table_exists' panicked at
-/// windows/vessel/tests/suite/affordance.rs:440:5:
+/// windows/vessel/tests/suite/affordance.rs:
 /// affordance.rs maps a KindId literal to an OfferedVerb through a match arm ...
 /// ```
 #[test]
@@ -470,6 +495,466 @@ fn no_thing_kind_keyed_verb_table_exists() {
         "affordance.rs maps a KindId literal to an OfferedVerb through a \
          match arm: that is the verb x object table the acceptance test \
          forbids, in the spelling Task 7's re-key made natural"
+    );
+}
+
+// --- The key-agnostic guard (The Chattel, Task 7 fix round 1) -----------
+
+/// A copy of `src` byte-for-byte the same length, with every line comment's
+/// text and every string literal's CONTENTS replaced by spaces.
+///
+/// Both blanks are load-bearing rather than tidiness, and each was checked
+/// against the real file before being written:
+///
+/// - **Comments**: `affordance.rs` spells `fn hearth_here(i: &Interior) ->
+///   bool { ... }` inside a doc comment (see
+///   `no_hardcoded_anchor_kind_gates_warm`'s own doc), so a signature walk
+///   over the raw bytes would try to parse prose as a function. Blanking
+///   the comment removes it from the walk without moving any other byte's
+///   offset.
+/// - **String contents**: `affordance.rs` contains `panic!("{kind:?} has no
+///   ObjectTraits")` and three sibling format strings, each carrying an
+///   UNBALANCED-looking `{`/`}` pair inside quotes. A brace balance that
+///   counted those would end a function body in the wrong place. It would
+///   also see the identifier `kind` inside `{kind:?}`, which is exactly the
+///   token the dispatch selector below keys on.
+///
+/// Length is preserved (spaces in, spaces out) so the blanked copy and the
+/// original agree on every byte offset — the messages below quote the
+/// blanked text deliberately, since that is what the scan actually read.
+///
+/// **What this does NOT handle, stated so the guard is not over-read**:
+/// block comments (`/* */`) and character literals (`'x'`). Neither appears
+/// in `affordance.rs` today — verified by `grep -n '/\*'` and
+/// `grep -nE "'[^ ]'"`, both empty — and a character literal cannot be
+/// distinguished from a lifetime (`&'static str`, which the file does have)
+/// without real lexing. `the_dispatch_scan_reports_the_functions_it_found`
+/// below is the tripwire for that: if either construct arrives and breaks
+/// the walk, the roster it prints stops containing `offered_by` and the
+/// test fails loudly rather than quietly scanning nothing.
+fn blank_comments_and_strings(src: &[u8]) -> Vec<u8> {
+    let mut out = src.to_vec();
+    let mut i = 0usize;
+    while i < out.len() {
+        if out[i] == b'/' && i + 1 < out.len() && out[i + 1] == b'/' {
+            while i < out.len() && out[i] != b'\n' {
+                out[i] = b' ';
+                i += 1;
+            }
+        } else if out[i] == b'"' {
+            i += 1;
+            while i < out.len() && out[i] != b'"' {
+                if out[i] == b'\\' && i + 1 < out.len() {
+                    out[i] = b' ';
+                    i += 1;
+                }
+                out[i] = b' ';
+                i += 1;
+            }
+            i += 1;
+        } else {
+            i += 1;
+        }
+    }
+    out
+}
+
+/// Whether `body` names a specific [`OfferedVerb`] VARIANT — the literal
+/// text `OfferedVerb::` immediately followed by an uppercase ASCII letter.
+///
+/// The uppercase test is what separates naming a verb (`OfferedVerb::Sleep`)
+/// from asking the enum for its own roster (`OfferedVerb::all()`), and the
+/// distinction is the difference between the forbidden shape and the
+/// permitted one: a dispatch that filters `OfferedVerb::all()` by a
+/// property predicate is exactly the design decision 0350 mandates, while a
+/// dispatch that spells `Sleep` has decided which verb a kind gets.
+fn names_an_offered_verb_variant(body: &[u8]) -> bool {
+    let mut cursor = 0usize;
+    while let Some(rel) = find_bytes(&body[cursor..], b"OfferedVerb::") {
+        let after = cursor + rel + b"OfferedVerb::".len();
+        if body.get(after).is_some_and(u8::is_ascii_uppercase) {
+            return true;
+        }
+        cursor = after;
+    }
+    false
+}
+
+/// Every kind → verbs dispatch function in `src`, as `(name, body)` pairs:
+/// each `fn` whose return type is `BTreeSet<OfferedVerb>` AND whose
+/// parameter list names an object kind (the identifier `kind`, or the types
+/// `KindId`/`AnchorKind`). `src` must already have been through
+/// [`blank_comments_and_strings`].
+///
+/// **This selector is the whole point of the repair, so the reasoning for
+/// its two halves is here rather than in the test.** Decision 0350 forbids a
+/// verb × object table: a function that is handed an object's IDENTITY and
+/// answers with VERBS must derive that answer from properties, never decide
+/// it per kind. Both halves of the selector are that sentence:
+///
+/// - the return type `BTreeSet<OfferedVerb>` is "answers with verbs";
+/// - a kind-shaped parameter is "handed an object's identity".
+///
+/// `offered(traits: &ObjectTraits) -> BTreeSet<OfferedVerb>` is deliberately
+/// OUT of scope — it is handed properties, not an identity, so a verb it
+/// names is keyed on the property vocabulary rather than on which object it
+/// is. That is the bound the fix round required be expressible against the
+/// real source, and it is: the selector never has to enumerate it, because
+/// `&ObjectTraits` names no kind. Today the file's dispatch surface is
+/// exactly `offered_by`, `offered_to`, `offered_to_observer`, and a fourth
+/// one added tomorrow is covered without editing anything here.
+fn kind_to_verb_dispatch_bodies(src: &[u8]) -> Vec<(String, Vec<u8>)> {
+    let mut out = Vec::new();
+    let mut cursor = 0usize;
+    while let Some(rel) = find_bytes(&src[cursor..], b"fn ") {
+        let at = cursor + rel;
+        cursor = at + 3;
+        if at > 0 && (src[at - 1].is_ascii_alphanumeric() || src[at - 1] == b'_') {
+            continue;
+        }
+        let name_start = at + 3;
+        let mut i = name_start;
+        while i < src.len() && (src[i].is_ascii_alphanumeric() || src[i] == b'_') {
+            i += 1;
+        }
+        if i == name_start || src.get(i) != Some(&b'(') {
+            continue;
+        }
+        let name = String::from_utf8_lossy(&src[name_start..i]).into_owned();
+        let mut depth: i32 = 0;
+        let mut j = i;
+        let mut params_end = None;
+        while j < src.len() {
+            match src[j] {
+                b'(' => depth += 1,
+                b')' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        params_end = Some(j);
+                        break;
+                    }
+                }
+                _ => {}
+            }
+            j += 1;
+        }
+        let Some(params_end) = params_end else {
+            continue;
+        };
+        let Some(brace_rel) = src[params_end..].iter().position(|&b| b == b'{') else {
+            continue;
+        };
+        let returns_verbs = find_bytes(
+            &src[params_end + 1..params_end + brace_rel],
+            b"BTreeSet<OfferedVerb>",
+        )
+        .is_some();
+        let params = &src[i + 1..params_end];
+        let names_a_kind = find_bytes(params, b"kind").is_some()
+            || find_bytes(params, b"KindId").is_some()
+            || find_bytes(params, b"AnchorKind").is_some();
+        if !returns_verbs || !names_a_kind {
+            continue;
+        }
+        if let Some(body) = balanced_block(src, params_end + brace_rel) {
+            out.push((name, body.to_vec()));
+        }
+    }
+    out
+}
+
+/// **Acceptance clause (4), key-agnostically: no kind → verbs dispatch
+/// function in `affordance.rs` may name an `OfferedVerb` variant in its own
+/// body.**
+///
+/// This is the repair fix round 1 asked for, and it replaces enumerating
+/// spellings rather than adding a third one to the pile. The two scans above
+/// it (`no_verb_by_object_table_exists`,
+/// `no_thing_kind_keyed_verb_table_exists`) look for a match arm keyed on a
+/// PARTICULAR spelling of the object key — `AnchorKind::`, then `KindId(`.
+/// A reviewer defeated both at once with a third spelling that is neither:
+///
+/// ```ignore
+/// pub fn offered_by(kind: KindId) -> BTreeSet<OfferedVerb> {
+///     match kind.0 {
+///         "bed" => [OfferedVerb::Sleep, OfferedVerb::Examine]
+///             .into_iter()
+///             .collect(),
+///         _ => { /* the legitimate registry path */ }
+///     }
+/// }
+/// ```
+///
+/// `KindId` is `pub struct KindId(pub &'static str)`, so its inner `&str` is
+/// a match scrutinee too, and neither marker appears anywhere in that arm.
+/// **Independently reproduced before this guard was written**: that exact
+/// body in production gave `254 passed; 0 failed` for the whole
+/// `hornvale-vessel` suite, with `no_verb_by_object_table_exists ... ok` and
+/// `no_thing_kind_keyed_verb_table_exists ... ok`. A fourth spelling
+/// (`kind.0.as_bytes()`, a `matches!`, a `HashMap`-free `if` chain) would
+/// have needed a fourth marker, and the marker list is unbounded.
+///
+/// So this asks a question that does not mention the key at all: the
+/// selector is a TYPE shape (kind in, verbs out — see
+/// [`kind_to_verb_dispatch_bodies`]) and the forbidden text is the VERB
+/// side. Every key spelling, present and future, is covered by construction,
+/// because none of them is looked at.
+///
+/// **Why no behavioural test can do this job, which is why a source scan is
+/// the right instrument rather than a fallback.** The reviewer's table
+/// AGREES with the registry — `bed`'s registry answer is precisely
+/// `{Sleep, Examine}` — so it moves no output whatsoever. No behavioural
+/// check, however total, can observe a function that returns the same values
+/// by a worse route. Decision 0350's guard is necessarily structural.
+///
+/// **The honest boundary, stated so it cannot be over-read.** A scan over
+/// source text is still a scan over source text, and this one is narrower
+/// than "no verb × object table exists anywhere":
+///
+/// - It reads exactly `windows/vessel/src/affordance.rs`. A table in another
+///   file is invisible — the live in-tree instance
+///   `no_hardcoded_anchor_kind_gates_warm` names, `interior/field.rs`'s
+///   `warmth_at`, still is.
+/// - It reads exactly the dispatch functions' own bodies. **A per-kind
+///   decision extracted into a helper called from the arm defeats it** —
+///   `fn verbs_for(kind: KindId) -> Vec<OfferedVerb>` returns a `Vec`, not a
+///   `BTreeSet`, so the selector does not reach it and the dispatch body
+///   names no variant. This is the same evasion a re-reviewer built against
+///   `no_hardcoded_anchor_kind_gates_warm`, and it is unfixed for the same
+///   reason: following a call needs a compiler, not a scanner.
+/// - It reads exactly the text `OfferedVerb::<uppercase>`. A dispatch that
+///   selected verbs by comparing `v.word()` against a per-kind string, or
+///   through a re-exported alias that never spells `OfferedVerb`, names no
+///   variant and passes.
+///
+/// What it DOES buy over the two marker scans is that none of those three
+/// residual holes is *key-shaped*: inventing a new way to spell the object
+/// key — the thing Task 7's re-key did, and the thing that silently narrowed
+/// this guard once already — can no longer open a hole at all.
+///
+/// MUTATIONS THIS MUST FAIL AGAINST — one per key spelling, each run against
+/// PRODUCTION source, each restored and re-run afterwards. See the fix
+/// round's report for the full transcripts.
+///
+/// ```text
+/// (1) `match kind.0 { "bed" => [OfferedVerb::Sleep, OfferedVerb::Examine] ... }`
+///     in `offered_by` — the spelling BOTH marker scans miss:
+/// test affordance::no_kind_keyed_dispatch_names_a_verb ... FAILED
+/// test affordance::no_thing_kind_keyed_verb_table_exists ... ok
+/// test affordance::no_verb_by_object_table_exists ... ok
+///
+/// (2) `match kind { KindId("bed") => [OfferedVerb::Sleep, ...] ... }`
+///     in `offered_by` — the Task 7 spelling:
+/// test affordance::no_kind_keyed_dispatch_names_a_verb ... FAILED
+/// test affordance::no_thing_kind_keyed_verb_table_exists ... FAILED
+///
+/// (3) `match kind { AnchorKind::Bed => [OfferedVerb::Sleep, ...] ... }`
+///     in `offered_to_observer` — The Offer's original spelling:
+/// test affordance::no_kind_keyed_dispatch_names_a_verb ... FAILED
+/// test affordance::no_verb_by_object_table_exists ... FAILED
+/// ```
+#[test]
+fn no_kind_keyed_dispatch_names_a_verb() {
+    let src = include_str!("../../src/affordance.rs");
+    let blanked = blank_comments_and_strings(src.as_bytes());
+    for (name, body) in kind_to_verb_dispatch_bodies(&blanked) {
+        assert!(
+            !names_an_offered_verb_variant(&body),
+            "affordance.rs's `{name}` is handed an object kind and answers \
+             with OfferedVerbs, yet names a specific verb variant in its own \
+             body: that is the verb x object table decision 0350 forbids, in \
+             whatever spelling the key happens to take. Body read: {:?}",
+            std::str::from_utf8(&body).unwrap_or("<non-utf8>")
+        );
+    }
+}
+
+/// **Vacuity guard for the test above, and the tripwire for
+/// [`blank_comments_and_strings`]'s two disclosed gaps.** A signature walk
+/// that finds nothing asserts nothing, and would go green forever — the
+/// exact failure mode the whole fix round is about. So the roster the
+/// selector discovers is asserted directly.
+///
+/// Frozen as an EXACT set rather than a floor. A dispatch function that
+/// disappears is what makes the guard above vacuous; a dispatch function
+/// that ARRIVES is a new place a table can live, and a human should be told
+/// that it is now covered rather than have it happen silently. Either
+/// direction reddens here.
+///
+/// MUTATION THIS MUST FAIL AGAINST, and it is the evidence that this test is
+/// load-bearing rather than decorative: break the selector's return-type
+/// needle (`b"BTreeSet<OfferedVerb>"` ->
+/// `b"BTreeSet<OfferedVerbNeverMatches>"`) so it discovers nothing. The
+/// guard above then passes **vacuously** — it iterates an empty roster —
+/// while this one reds:
+///
+/// ```text
+/// test affordance::no_kind_keyed_dispatch_names_a_verb ... ok
+/// test affordance::the_dispatch_scan_reports_the_functions_it_found ... FAILED
+/// assertion `left == right` failed: the kind -> verbs dispatch roster moved ...
+///   left: []
+///  right: ["offered_by", "offered_to", "offered_to_observer"]
+/// ```
+///
+/// That `ok` on the line above the `FAILED` is the whole point: a scanner
+/// that stops finding its subject reports success, and nothing but this
+/// assertion distinguishes that from a clean tree.
+#[test]
+fn the_dispatch_scan_reports_the_functions_it_found() {
+    let src = include_str!("../../src/affordance.rs");
+    let blanked = blank_comments_and_strings(src.as_bytes());
+    let found: Vec<String> = kind_to_verb_dispatch_bodies(&blanked)
+        .into_iter()
+        .map(|(name, _)| name)
+        .collect();
+    assert_eq!(
+        found,
+        vec![
+            "offered_by".to_string(),
+            "offered_to".to_string(),
+            "offered_to_observer".to_string(),
+        ],
+        "the kind -> verbs dispatch roster moved: no_kind_keyed_dispatch_\
+         names_a_verb covers exactly these bodies, so a name leaving this \
+         list is coverage lost and a name arriving is coverage gained"
+    );
+}
+
+/// Positive control (1): the `kind.0` spelling, the one that defeated both
+/// marker scans, on a synthetic dispatch function.
+#[test]
+fn the_dispatch_scan_catches_an_inner_str_keyed_table() {
+    let src = b"pub fn offered_by(kind: KindId) -> BTreeSet<OfferedVerb> {\n    \
+                 match kind.0 {\n        \
+                 \"bed\" => [OfferedVerb::Sleep, OfferedVerb::Examine].into_iter().collect(),\n        \
+                 _ => BTreeSet::new(),\n    \
+                 }\n\
+                 }";
+    let blanked = blank_comments_and_strings(src);
+    let found = kind_to_verb_dispatch_bodies(&blanked);
+    assert_eq!(found.len(), 1, "the selector must reach offered_by");
+    assert!(names_an_offered_verb_variant(&found[0].1));
+}
+
+/// Positive control (2): the `KindId(` spelling.
+#[test]
+fn the_dispatch_scan_catches_a_thing_kind_keyed_table() {
+    let src = b"pub fn offered_by(kind: KindId) -> BTreeSet<OfferedVerb> {\n    \
+                 match kind {\n        \
+                 KindId(\"bed\") => [OfferedVerb::Sleep].into_iter().collect(),\n        \
+                 _ => BTreeSet::new(),\n    \
+                 }\n\
+                 }";
+    let blanked = blank_comments_and_strings(src);
+    let found = kind_to_verb_dispatch_bodies(&blanked);
+    assert_eq!(found.len(), 1);
+    assert!(names_an_offered_verb_variant(&found[0].1));
+}
+
+/// Positive control (3): the `AnchorKind::` spelling, on the one dispatch
+/// function that still speaks that key (`offered_to_observer`).
+#[test]
+fn the_dispatch_scan_catches_an_anchor_kind_keyed_table() {
+    let src = b"pub fn offered_to_observer(\n    \
+                 kind: AnchorKind,\n    \
+                 body: &Body,\n\
+                 ) -> BTreeSet<OfferedVerb> {\n    \
+                 match kind {\n        \
+                 AnchorKind::Bed => [OfferedVerb::Sleep].into_iter().collect(),\n        \
+                 _ => BTreeSet::new(),\n    \
+                 }\n\
+                 }";
+    let blanked = blank_comments_and_strings(src);
+    let found = kind_to_verb_dispatch_bodies(&blanked);
+    assert_eq!(
+        found.len(),
+        1,
+        "a multi-line signature must still be walked"
+    );
+    assert!(names_an_offered_verb_variant(&found[0].1));
+}
+
+/// Negative control: the production shape itself — a dispatch that reads the
+/// registry and hands the traits to `offered` — must not fire, or the guard
+/// would condemn the design it exists to protect. Distinct from the live
+/// test above in that it is a fixture: it discriminates the SHAPE, and would
+/// still discriminate it if `affordance.rs` were empty.
+#[test]
+fn the_dispatch_scan_does_not_fire_on_the_registry_indirection() {
+    let src = b"pub fn offered_by(kind: KindId) -> BTreeSet<OfferedVerb> {\n    \
+                 let reg = object_registry();\n    \
+                 let traits = reg.get(&kind).cloned().unwrap_or_default();\n    \
+                 offered(&traits)\n\
+                 }";
+    let blanked = blank_comments_and_strings(src);
+    let found = kind_to_verb_dispatch_bodies(&blanked);
+    assert_eq!(found.len(), 1, "the selector must reach offered_by");
+    assert!(!names_an_offered_verb_variant(&found[0].1));
+}
+
+/// Negative control: asking the enum for its own roster is the PERMITTED
+/// shape and must not fire. This is the control that gives
+/// [`names_an_offered_verb_variant`]'s uppercase test its meaning — without
+/// it, "contains `OfferedVerb::`" would look like an equally good rule while
+/// forbidding the property-filter design decision 0350 mandates.
+#[test]
+fn the_dispatch_scan_does_not_fire_on_the_verb_roster_call() {
+    let src = b"pub fn offered_by(kind: KindId) -> BTreeSet<OfferedVerb> {\n    \
+                 let traits = object_registry().get(&kind).cloned().unwrap_or_default();\n    \
+                 OfferedVerb::all().into_iter().filter(|v| \
+                 required_properties(*v).is_subset(&traits.properties)).collect()\n\
+                 }";
+    let blanked = blank_comments_and_strings(src);
+    let found = kind_to_verb_dispatch_bodies(&blanked);
+    assert_eq!(found.len(), 1);
+    assert!(
+        !names_an_offered_verb_variant(&found[0].1),
+        "OfferedVerb::all() is the roster call, not a named variant"
+    );
+}
+
+/// Scoping control: a PROPERTY-keyed query is out of the selector's scope,
+/// which is what lets `offered` name verbs freely without this guard having
+/// an opinion. Asserts the bound the fix round asked be made expressible —
+/// and asserts it by construction rather than by an exclusion list, since
+/// `&ObjectTraits` simply names no kind.
+#[test]
+fn the_dispatch_scan_does_not_select_a_property_keyed_query() {
+    let src = b"pub fn offered(traits: &ObjectTraits) -> BTreeSet<OfferedVerb> {\n    \
+                 [OfferedVerb::Sleep].into_iter().collect()\n\
+                 }";
+    let blanked = blank_comments_and_strings(src);
+    assert!(
+        kind_to_verb_dispatch_bodies(&blanked).is_empty(),
+        "a query handed properties rather than an object identity is not a \
+         verb x object table, however many verbs it names"
+    );
+}
+
+/// Control for [`blank_comments_and_strings`]: a verb named only inside a
+/// doc comment or a string literal must not fire, and — the half that
+/// actually bites — an unbalanced brace inside a format string must not end
+/// the body early. `affordance.rs` really does contain `panic!("{kind:?} has
+/// no ObjectTraits")`, so this is the production hazard, not a hypothetical.
+#[test]
+fn blanking_survives_comments_and_format_strings() {
+    let src = b"pub fn offered_by(kind: KindId) -> BTreeSet<OfferedVerb> {\n    \
+                 // OfferedVerb::Sleep mentioned in a comment\n    \
+                 let t = reg.get(&kind).unwrap_or_else(|| panic!(\"{kind:?} }} OfferedVerb::Drink\"));\n    \
+                 offered(&t)\n\
+                 }\nfn later() {}";
+    let blanked = blank_comments_and_strings(src);
+    let found = kind_to_verb_dispatch_bodies(&blanked);
+    assert_eq!(found.len(), 1);
+    assert!(
+        !names_an_offered_verb_variant(&found[0].1),
+        "a verb named in a comment or a string is not a dispatch decision"
+    );
+    assert!(
+        find_bytes(&found[0].1, b"offered(&t)").is_some(),
+        "the unbalanced brace inside the format string must not have ended \
+         the body before its last real statement: {:?}",
+        std::str::from_utf8(&found[0].1).unwrap_or("<non-utf8>")
     );
 }
 
@@ -703,6 +1188,15 @@ fn warm_is_offered_to_any_object_carrying_radiates_heat_not_only_hearth() {
 fn block_body_after<'a>(src: &'a [u8], needle: &[u8]) -> Option<&'a [u8]> {
     let start = find_bytes(src, needle)? + needle.len();
     let open = start + src[start..].iter().position(|&b| b == b'{')?;
+    balanced_block(src, open)
+}
+
+/// The brace-balanced block of `src` beginning at the `{` at byte `open` —
+/// the half of [`block_body_after`] that does not depend on how the block
+/// was located, split out so [`kind_to_verb_dispatch_bodies`] (which finds
+/// its blocks by walking signatures rather than by a literal needle) can
+/// reuse the same balance rather than writing a second copy of it.
+fn balanced_block(src: &[u8], open: usize) -> Option<&[u8]> {
     let mut depth: i32 = 0;
     for (i, &b) in src[open..].iter().enumerate() {
         match b {
@@ -882,7 +1376,7 @@ fn the_re_key_preserves_every_anchor_kinds_offer() {
 /// ```text
 /// test affordance::the_anchor_to_thing_kind_mapping_is_injective ... FAILED
 /// thread 'affordance::the_anchor_to_thing_kind_mapping_is_injective' panicked at
-/// windows/vessel/tests/suite/affordance.rs:776:9:
+/// windows/vessel/tests/suite/affordance.rs:
 /// two anchor kinds map to KindId("ground"): 7 kinds for 14 variants
 /// ```
 ///
@@ -943,7 +1437,7 @@ fn the_anchor_to_thing_kind_mapping_is_injective() {
 /// ```text
 /// test affordance::thing_kind_of_has_no_wildcard_arm ... FAILED
 /// thread 'affordance::thing_kind_of_has_no_wildcard_arm' panicked at
-/// windows/vessel/tests/suite/affordance.rs:807:5:
+/// windows/vessel/tests/suite/affordance.rs:
 /// thing_kind_of has a wildcard arm: an appended AnchorKind variant would fall
 /// through it instead of failing to compile, and inherit a thing-kind's
 /// properties silently: "{\n    match kind {\n        AnchorKind::Hearth => ...

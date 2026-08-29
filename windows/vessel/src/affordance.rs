@@ -404,15 +404,38 @@ fn required_properties(v: OfferedVerb) -> BTreeSet<ObjectProperty> {
 /// are a SUBSET of `traits.properties` (spec §3.2). Subset, never equality —
 /// see `extra_properties_expand_the_offer_never_withdraw_it` in the test
 /// suite, which asserts this against a *constructed* `ObjectTraits` rather
-/// than one read from [`object_registry`]. That distinction is load-bearing:
-/// every kind [`object_registry`] currently assigns carries exactly one
-/// property (Task 1's finding), so no query run only against the registry
-/// can tell a correct subset filter apart from an incorrect equality
-/// check — both agree on every single-property carrier. This is the actual
-/// query; [`offered_by`] is a thin wrapper reading the global registry, kept
-/// separate precisely so a test can hand it traits the registry does not
-/// (and never will, while every carrier stays single-property) produce on
-/// its own.
+/// than one read from [`object_registry`].
+///
+/// **That distinction WAS load-bearing and no longer is, and the claim this
+/// paragraph replaces is now false in production** (The Chattel, Task 7 fix
+/// round 1). It read: "every kind [`object_registry`] currently assigns
+/// carries exactly one property (Task 1's finding), so no query run only
+/// against the registry can tell a correct subset filter apart from an
+/// incorrect equality check — both agree on every single-property carrier
+/// … a test can hand it traits the registry does not (and never will, while
+/// every carrier stays single-property) produce on its own." Task 7 gave
+/// `strongbox` three properties (`Encloses`/`Openable`/`Lockable`), so the
+/// registry now discriminates subset from equality by itself — asserted by
+/// `a_registered_multi_property_kind_discriminates_subset_from_equality` in
+/// the test suite, which says the opposite of the parenthesis above.
+///
+/// It is corrected here rather than deleted because the parenthesis is
+/// exactly the kind of sentence a later reader reasons FROM: "the registry
+/// can never produce multi-property traits" is a licence to write a query
+/// that assumes it. Two copies of this same claim in
+/// `tests/suite/affordance.rs` were corrected during Task 7 and this one —
+/// the copy a reader of `offered` actually meets — was missed, because the
+/// correction was made by matching wording rather than by grepping the
+/// claim.
+///
+/// What survives unchanged is the reason the two functions are separate:
+/// [`offered`] takes traits so a test can construct a property set
+/// independent of whatever the registry happens to hold today, and
+/// [`offered_by`] is the thin wrapper that reads the global registry. That
+/// separation is now a convenience rather than the only route to the
+/// discriminating case, and `extra_properties_expand_the_offer_never_
+/// withdraw_it` keeps its constructed traits for the reason its own doc
+/// gives.
 pub fn offered(traits: &ObjectTraits) -> BTreeSet<OfferedVerb> {
     OfferedVerb::all()
         .into_iter()
