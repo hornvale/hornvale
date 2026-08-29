@@ -2416,7 +2416,7 @@ impl<'w> Session<'w> {
     /// | arm | where it discriminates | where it is an alias, and why |
     /// |---|---|---|
     /// | `!map` | out of doors, and indoors under a lens | indoors under [`crate::lens::Lens::Off`] — the plan carries no colour to decline, so the bytes match `map` exactly |
-    /// | `!examine` | the chamber band, on a creature sight withheld | the walk band (the objective eyes reach [`Self::purview_through`] but the legend carries nouns and datums, never colour) and underground (no creature arm at all) |
+    /// | `!examine` | the chamber band, on a creature sight withheld | the walk band (the objective eyes reach [`Self::purview_through`] but the legend carries nouns and datums, never colour) and underground (`examine_underground` takes no `Perceiving`/`Eyes` parameter at all, and reads `sight_reach()` — a constant unaffected by objective mode — for its own creature arm too) |
     /// | `!needs` | the chamber band | out of doors, where `sighting()` is `None` and [`Perceiving::Body`] already *is* the limit |
     /// | `!wait` | the chamber band, on both halves of the motion narration | out of doors, for the same reason as `!needs` |
     ///
@@ -2424,6 +2424,18 @@ impl<'w> Session<'w> {
     /// a place with nothing withheld is the subjective view of it. What would
     /// be a defect is advertising otherwise, so [`HELP`] states the band each
     /// arm is *for* rather than promising a difference it cannot always make.
+    ///
+    /// **Underground's cell in that row used to read "(no creature arm at
+    /// all)", and the reason — not the conclusion — is what The Gallery's
+    /// Task 11 falsified.** Underground has a creature arm now:
+    /// [`Self::underground_nouns`] gains the chamber's own derived resident
+    /// (spec §3.6) whenever [`Self::underground_resident`] finds one, lit.
+    /// The row's CONCLUSION survives unchanged — `examine_underground` still
+    /// takes no `Perceiving`/`Eyes` parameter, and the arm's own visibility
+    /// test (`sight_reach()`) is still a constant no objective mode moves —
+    /// so the bare and `!`-prefixed calls still agree byte-for-byte; only the
+    /// STATED REASON was stale, the same "fix the reason, keep the
+    /// conclusion" shape a driver.rs correction took one task earlier.
     ///
     /// # `!look` and `!knows`: shipped in Task 7's fix round, on a DIFFERENT
     /// discriminator
