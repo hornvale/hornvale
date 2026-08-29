@@ -83,6 +83,82 @@ pub const KNOW: &str = "know";
 /// type-audit: bare-ok(identifier-text)
 pub const THINK: &str = "think";
 
+/// The `sleep` concept's id.
+///
+/// Named for the same reason [`EAT`], [`KILL`], [`KNOW`] and [`THINK`] are:
+/// the pack row that REGISTERS the concept and the
+/// `clause::PREDICATE_VALENCE` row that REALIZES it must not drift apart.
+///
+/// **It adds no pack entry.** `sleep` has been in [`universal_stratum`]
+/// since long before this campaign — it is Swadesh-core and needs no
+/// exposure gate — so this constant names an existing registration rather
+/// than creating one. That is why The Rail registers no concept and moves
+/// no keystone golden.
+/// type-audit: bare-ok(identifier-text)
+pub const SLEEP: &str = "sleep";
+
+/// The `old` concept's id.
+///
+/// Named for the same reason [`EAT`], [`KILL`], [`KNOW`], [`THINK`] and
+/// [`SLEEP`] are: the pack row that REGISTERS the concept and the
+/// `clause::PREDICATE_VALENCE` row that REALIZES it must not drift apart.
+///
+/// **It adds no pack entry, the same way [`SLEEP`]'s doc explains for
+/// itself.** `old` has been in [`universal_stratum`] since long before this
+/// campaign (`ConceptKind::Quality`, alongside `new`, `great`, `high`,
+/// `low` and `little`), so this constant names an existing registration
+/// rather than creating one.
+///
+/// **It stands in for the rung's own `long`.** `r003`'s authored text is
+/// *"The road is long"*, and `long` is not a registered concept anywhere in
+/// this crate — registering it would move `world-seed-42.json`, a
+/// byte-golden `make rebaseline` cannot write, and Task 0 established that
+/// this campaign registers no concept. `old` is the substitution, recorded
+/// again at its witness (`cli/tests/suite/sentence_corpus.rs`'s
+/// `ladder_construction`, `"r003"` arm) the same way `r006`'s witness
+/// records `kill` standing in for the unregistered `strike`.
+/// type-audit: bare-ok(identifier-text)
+pub const OLD: &str = "old";
+
+/// The `under` concept's id.
+///
+/// Named for the same reason [`EAT`], [`KILL`], [`KNOW`], [`THINK`],
+/// [`SLEEP`] and [`OLD`] are: the pack row that REGISTERS the concept and
+/// the `clause::PREDICATE_VALENCE` row that REALIZES it must not drift
+/// apart.
+///
+/// **It adds no pack entry, the same way [`SLEEP`]'s and [`OLD`]'s docs
+/// explain for themselves.** `under` has been in [`universal_stratum`]
+/// since long before this campaign (`ConceptKind::Quality`, doc "beneath;
+/// below"), so this constant names an existing registration rather than
+/// creating one.
+///
+/// **It stands in for the rung's own `at`.** `r005`'s authored text is
+/// *"The merchant is at the gate."*, and neither `at` nor `gate` is a
+/// registered concept anywhere in this crate — registering either would
+/// move `world-seed-42.json`, a byte-golden `make rebaseline` cannot write,
+/// and Task 0 established that this campaign registers no concept. `under`
+/// and `tree` are the substitution, recorded again at their witness
+/// (`cli/tests/suite/sentence_corpus.rs`'s `ladder_construction`, `"r005"`
+/// arm) the same way `r003`'s witness records `old` standing in for the
+/// unregistered `long`, and `r006`'s records `kill` for `strike`.
+///
+/// **Its registry KIND is a second, quieter compromise, recorded here so it
+/// is not rediscovered.** `under` is a `ConceptKind::Quality` — the same
+/// kind [`OLD`] carries, and [`OLD`] is the crate's only
+/// `Valence::Property` predicate. An adposition is not a quality, and in a
+/// registry designed around this crate's needs it would carry a kind of its
+/// own; it carries `Quality` because the no-new-concept constraint above
+/// forced the choice to be made from the kinds `universal_stratum` already
+/// had, and `Quality` was the nearest. **Nothing checks kind against
+/// valence.** The only thing separating a locative relation from a property
+/// word in this crate is `clause::PREDICATE_VALENCE`'s two rows, so a
+/// reader who infers valence from `ConceptKind` will infer it wrongly for
+/// exactly this concept. A campaign free to move `world-seed-42.json` could
+/// register an adposition kind and delete this paragraph.
+/// type-audit: bare-ok(identifier-text)
+pub const UNDER: &str = "under";
+
 /// One entry in a vocabulary pack: a concept id, its broad category, a doc,
 /// and its rank on whichever acquisition ladder it belongs to (0 for
 /// entries outside any ladder — always in the lexicon once the pack is
@@ -185,7 +261,7 @@ pub fn universal_stratum() -> &'static [PackEntry] {
             ladder_rank: 0,
         },
         PackEntry {
-            concept: "sleep",
+            concept: SLEEP,
             kind: ConceptKind::Act,
             doc: "to rest unconscious",
             ladder_rank: 0,
@@ -324,13 +400,13 @@ pub fn universal_stratum() -> &'static [PackEntry] {
             ladder_rank: 0,
         },
         PackEntry {
-            concept: "old",
+            concept: OLD,
             kind: ConceptKind::Quality,
             doc: "long in existence",
             ladder_rank: 0,
         },
         PackEntry {
-            concept: "under",
+            concept: UNDER,
             kind: ConceptKind::Quality,
             doc: "beneath; below",
             ladder_rank: 0,
