@@ -8,6 +8,7 @@ pub mod endpaper;
 pub mod entry;
 pub mod lexicon;
 pub mod plan;
+pub mod register;
 pub mod schema;
 pub mod spread;
 pub mod strip;
