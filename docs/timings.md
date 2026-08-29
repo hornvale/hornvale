@@ -3977,3 +3977,4 @@ measured here.
 | 2026-08-29T15:18:42Z | rebaseline | 101.434 | 276.772 | 12.759 | 2.85 | 0 | 14587acf1 | campaign/the-errata | MacBookPro | 10 |
 | 2026-08-29T15:19:47Z | gate-commit | 29.535 | 54.290 | 13.788 | 2.30 | 0 | 14587acf1 | campaign/the-errata | MacBookPro | 10 |
 | 2026-08-29T15:32:55Z | gate-commit | 20.712 | 50.533 | 12.962 | 3.07 | 0 | 5a943cbe5 | campaign/the-errata | MacBookPro | 10 |
+| 2026-08-29T15:34:22Z | gate-commit | 20.730 | 50.582 | 12.945 | 3.06 | 0 | d59c7526b | campaign/the-errata | MacBookPro | 10 |
