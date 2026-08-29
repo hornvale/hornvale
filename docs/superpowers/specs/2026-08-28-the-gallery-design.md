@@ -298,7 +298,17 @@ This is not speculative generality. `chamber_sources` already gives the
 possession an implicit torch — a `Source` at its own cell, `TORCH_KELVIN`,
 scaled 4× by The Wick — and hardcodes `radius: SIGHT_RADIUS`, the same
 constant the shadowcaster is called with separately. Two places hold one
-number and neither is a place a lantern could plug into. Pouring that
+number and neither is a place a lantern could plug into.
+
+**Exactly one of `chamber_sources`' three radii is the body's, and the
+distinction is load-bearing.** All three write `radius: SIGHT_RADIUS`
+(`session.rs:4100`, `:4120`, `:4128`), which makes them look interchangeable
+and they are not: 4100 is the implicit torch AT THE POSSESSION'S OWN CELL —
+the body's carried light, and the only one the seam owns — while 4120 is the
+hearth's throw and 4128 is daylight spilling through each doorway. Those two
+are properties of a fire and of an opening. Routing them through the body's
+reach would mean a lantern in your hand brightens every hearth and every
+doorway in the building, which is not what carrying a lamp does. Pouring that
 assumption into a second band would make carried light a two-band change
 later.
 
