@@ -94,7 +94,7 @@ windows/vessel/src/lattice/grow.rs	94
 windows/vessel/src/lattice/mod.rs	104
 windows/vessel/src/lattice/occupancy.rs	47
 windows/vessel/src/lattice/render.rs	55
-windows/vessel/src/lattice/sight.rs	75
+windows/vessel/src/lattice/sight.rs	104
 windows/vessel/src/lens.rs	5
 windows/vessel/src/lib.rs	3
 windows/vessel/src/light.rs	150
