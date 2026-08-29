@@ -45,6 +45,14 @@ hornvale-settlement = { path = "../../../domains/settlement" }
 # is the same in-repo path-dependency-not-a-new-crate case the three
 # dependencies above record.
 hornvale-scene = { path = "../../../windows/scene" }
+# The Overture, Task 7 (the tongue view): resolving a settlement's own
+# species is `hornvale_species::species_of` — the same call
+# `almanac_context`'s speaker assembly makes (`windows/worldgen/src/
+# lib.rs`) — needed here because the view builds its own `Lexicon`/
+# `TongueGrammar`/pronoun map rather than reaching for `AlmanacContext`. An
+# in-repo path dependency, not a new external crate, the same shape as the
+# four dependencies above it.
+hornvale-species = { path = "../../../domains/species" }
 crossterm = "0.29"
 # CONCERN, flagged per the task brief: a third new dependency beyond
 # crossterm. Added only after review found that an external SIGINT/SIGTERM/

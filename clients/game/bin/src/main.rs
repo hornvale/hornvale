@@ -9,7 +9,7 @@
 
 use hornvale_game::driver::Driver;
 use hornvale_game::overture::genesis::{self, Gesture, Keys, Screen};
-use hornvale_game::overture::{AlmanacView, AtlasView, Frame, SkyView, View};
+use hornvale_game::overture::{AlmanacView, AtlasView, Frame, SkyView, TongueView, View};
 use hornvale_game::{boot, input, term};
 use hornvale_game_core::{CommandLine, MIN_HEIGHT, MIN_WIDTH};
 use hornvale_kernel::Seed;
@@ -102,21 +102,26 @@ fn run(args: &[String]) -> Result<(), String> {
 
 /// The views the overture cycles, in cycle order.
 ///
-/// **`sky`, `atlas`, then `almanac` — one line added per task, and nothing
-/// else changed.** Task 3 settles the `View` contract; Tasks 4-7 write the
-/// four views (`sky`, `atlas`, `almanac`, `tongue`) and each adds one line
-/// here. `sky` speaks from the first rung; `atlas` (Task 5) cannot speak
-/// until terrain exists (`BuildDepth::Terrain`); `almanac` (Task 6) speaks
-/// from the first rung too (its own `OrbitComponent` needs nothing deeper),
-/// and grows its own content internally as later rungs land, through the
-/// component registry rather than through anything visible here. The frame
-/// skips what cannot speak, so a roster of three behaves correctly from the
-/// first rung the same way a roster of two did (`hornvale_game::overture`).
+/// **`sky`, `atlas`, `almanac`, then `tongue` — one line added per task, and
+/// nothing else changed.** Task 3 settles the `View` contract; Tasks 4-7
+/// write the four views (`sky`, `atlas`, `almanac`, `tongue`) and each adds
+/// one line here. `sky` speaks from the first rung; `atlas` (Task 5) cannot
+/// speak until terrain exists (`BuildDepth::Terrain`); `almanac` (Task 6)
+/// speaks from the first rung too (its own `OrbitComponent` needs nothing
+/// deeper), and grows its own content internally as later rungs land,
+/// through the component registry rather than through anything visible
+/// here. `tongue` (Task 7) speaks only once the ledger has actually
+/// committed a settlement's species — `BuildDepth::Full`, the ladder's last
+/// rung, not `Settlements` as originally sketched (see `overture::tongue`'s
+/// module doc for why). The frame skips what cannot speak, so a roster of
+/// four behaves correctly from the first rung the same way a roster of two
+/// did (`hornvale_game::overture`).
 fn views() -> Vec<Box<dyn View>> {
     vec![
         Box::new(SkyView),
         Box::new(AtlasView::default()),
         Box::new(AlmanacView),
+        Box::new(TongueView),
     ]
 }
 

@@ -41,6 +41,7 @@ pub mod genesis;
 pub mod progress;
 pub mod sky;
 pub mod timings;
+pub mod tongue;
 pub mod view;
 
 pub use almanac::AlmanacView;
@@ -48,6 +49,7 @@ pub use atlas::AtlasView;
 pub use progress::{BuildState, Phase, progress_line};
 pub use sky::SkyView;
 pub use timings::{PhaseClock, PhaseTimings};
+pub use tongue::TongueView;
 pub use view::View;
 
 use hornvale_game_core::{Cell, Grid, Source, Weight};

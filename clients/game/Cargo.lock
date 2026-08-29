@@ -178,6 +178,7 @@ dependencies = [
  "hornvale-language",
  "hornvale-scene",
  "hornvale-settlement",
+ "hornvale-species",
  "hornvale-terrain",
  "hornvale-vessel",
  "hornvale-worldgen",

@@ -191,8 +191,8 @@ impl AlmanacComponent for PeoplesComponent {
 /// derived from any committed decision or physical threshold. Chosen well
 /// under any ordinary world's coverage: seed 42 (this module's own test
 /// world) measures its real, live-built fraction in
-/// `tests::seed_42_has_oceans_and_is_not_locked`, printed as evidence rather
-/// than assumed.
+/// `tests::what_is_strange_names_only_what_is_true_of_this_world`, printed
+/// as evidence rather than assumed.
 const NO_OCEANS_THRESHOLD: f64 = 0.01;
 
 /// "No oceans" — needs [`BuildDepth::Terrain`]; silent unless the world's
@@ -255,10 +255,19 @@ impl AlmanacComponent for TidallyLockedComponent {
 const WASTELAND_THRESHOLD: f64 = 0.05;
 
 /// Above this ocean fraction, a low [`WASTELAND_THRESHOLD`] reading no
-/// longer means the LAND is barren — see [`wasteland_line`]'s own doc for
-/// the fix-round-1 finding this constant exists to close. A narrative
-/// "mostly water, not mostly wasted" cutoff, same status as the other two
-/// thresholds in this module: chosen, not derived.
+/// longer lets us TELL whether the land itself is barren — see
+/// [`wasteland_line`]'s own doc for the fix-round-1 finding this constant
+/// exists to close. That is weaker than "the land is not barren": the
+/// mechanism cannot distinguish a mostly-ocean world with plentiful land
+/// from a mostly-ocean world whose land is itself barren, so above this
+/// cutoff it stays silent about BOTH rather than risk a false claim about
+/// either. The accepted cost is real, not hypothetical —
+/// `wasteland_line(0.04, 0.51)` returns `None` even though that world's land
+/// (`0.04 / (1.0 - 0.51) ≈ 8%` habitable) is about 92% barren — but the
+/// alternative (a land-only fraction) is out of reach without a new
+/// domain accessor, so this component simply says nothing rather than
+/// guess. A narrative "mostly water, not mostly wasted" cutoff, same status
+/// as the other two thresholds in this module: chosen, not derived.
 const WASTELAND_MAX_OCEAN_FRACTION: f64 = 0.5;
 
 /// The wasteland predicate, factored out of [`WastelandComponent::render`]
@@ -296,6 +305,18 @@ const WASTELAND_MAX_OCEAN_FRACTION: f64 = 0.5;
 /// construction: "a wasteland" now additionally requires the world not be
 /// mostly ocean, so it can never fire on a world [`NoOceansComponent`] would
 /// call oceanic.
+///
+/// **The trade this accepts, stated plainly:** above
+/// [`WASTELAND_MAX_OCEAN_FRACTION`] this function goes silent about the
+/// LAND's own condition — never claims it is fine, but also never calls out
+/// a land that genuinely is barren. `wasteland_line(0.04, 0.51)` returns
+/// `None` for a world whose land is itself ~92% barren, because the
+/// conjunction cannot tell that case apart from a mostly-ocean world with
+/// plentiful land — both would need a land-only habitable fraction, which
+/// [`hornvale_climate::GeneratedClimate`] does not expose (see
+/// [`WASTELAND_MAX_OCEAN_FRACTION`]'s own doc). Silence, not a false
+/// negative claim: this component simply has nothing honest to say about
+/// such a world's land quality.
 fn wasteland_line(habitable_fraction: f64, ocean_fraction: f64) -> Option<String> {
     if habitable_fraction < WASTELAND_THRESHOLD && ocean_fraction <= WASTELAND_MAX_OCEAN_FRACTION {
         Some(format!(
@@ -698,7 +719,8 @@ mod tests {
         );
         assert!(
             wasteland_line(0.16, 0.7).is_none(),
-            "16% habitable (seed 42's own live rough order) must not read as a wasteland              regardless of ocean coverage"
+            "16% habitable (seed 42's own live rough order) must not read as a wasteland \
+             regardless of ocean coverage"
         );
     }
 
@@ -729,13 +751,15 @@ mod tests {
         // The boundary case just inside "mostly ocean": still suppressed.
         assert!(
             wasteland_line(0.04, 0.51).is_none(),
-            "a world just over half ocean must still not be called a wasteland on a low              fraction driven by that ocean"
+            "a world just over half ocean must still not be called a wasteland on a low \
+             fraction driven by that ocean"
         );
         // And the case the conjunction must still allow: low habitability
         // on a world that is NOT mostly ocean is a real wasteland.
         assert!(
             wasteland_line(0.04, 0.5).is_some(),
-            "a barren, mostly-land world (ocean fraction at the boundary, not past it)              should still read as a wasteland"
+            "a barren, mostly-land world (ocean fraction at the boundary, not past it) \
+             should still read as a wasteland"
         );
     }
 
