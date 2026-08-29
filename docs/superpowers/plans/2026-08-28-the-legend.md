@@ -773,8 +773,18 @@ empty diff that reads as "no drift".
 
 ```bash
 make rebaseline
-git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
+HV_TEST_OK=1 cargo test -p hornvale --test suite -- \
+    generated_paths::every_declared_generated_path_is_tracked
 ```
+
+**Use that test, NOT `git diff --exit-code`.** `git diff` is the right tool
+for "did a regeneration move a TRACKED artifact", and the wrong one here:
+against a path with no index entry it is silently vacuous and exits 0, which
+is the very hazard this step exists to demonstrate. The guard that actually
+refuses is `cli/tests/suite/generated_paths.rs`, whose own header says a
+declared-but-untracked path means "the tracked-ness check above silently
+never covers it" — it even collects such paths into a variable named
+`vacuous`.
 
 Expected: it REFUSES, naming the untracked sheet. Observe that refusal — it
 is the proof Step 2 worked. Then `git add` the sheet and re-run; expected
