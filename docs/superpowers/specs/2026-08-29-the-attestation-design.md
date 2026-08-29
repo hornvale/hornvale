@@ -183,13 +183,50 @@ that is flagged for Nathan rather than assumed (§9).
 
 One command diffing `docs/timings.md` against the two declarations above:
 
-- **per job kind** — phases owed by the roster's rungs, versus rows recorded;
-  a job missing an owed phase is named.
+- **per job kind** — phases owed by the roster's rungs, versus rows recorded.
 - **per author** — when it last ran, from its own rows, and how many declared
   files depend on it.
 
+**It diffs in BOTH directions, and the first draft of this section did not.**
+Owed-but-missing is the absence that motivated the campaign; *recorded-but-not-
+owed* is its mirror — a phase that ran when nothing asked for it, an author that
+ran outside any declaration. A reader that only reports absences would be a
+one-sided consistency check, which is precisely the defect §1.1 identifies in
+`lane_sets.rs`. Shipping the campaign's own instrument with that shape would be
+the campaign refuting itself. (Found by an ideonomy negation pass at G3: the
+design's definitional property was *absence is the signal*, and negating it
+gives *presence is the signal*.)
+
 It reports; it does not gate (§6). Both questions of 2026-08-29 become one
 invocation.
+
+## 5a. The fourth cell: a decision record inside its own block
+
+Same shape, same remedy, and it has already cost this project twice.
+
+A campaign reserves a decision block (`make decision-block`), which is a
+**declaration** living on the canonical box. It then authors records into
+`docs/decisions/`, which is the **record**. Nothing diffs them:
+`docs_consistency.rs::decision_numbers_are_unique` asserts uniqueness and
+`decision_cites_in_sources_resolve` asserts links resolve, but no check asks
+whether a record's number falls inside the block its author reserved.
+
+Both known instances were caught by a human noticing:
+
+- **The Overture** (2026-08-29) drafted its spec claiming 0357–0366, which
+  nothing had reserved and which by close straddled two other campaigns' live
+  blocks. Caught at the closing task, before any record was written.
+- **campaign/the-stride** minted `0160` inside `campaign/the-burr`'s reserved
+  0156–0165. Caught by the queue operator by hand, at the mouth, and recorded
+  on the board — with the note that "a number inside someone else's reserved
+  block is invisible to every mechanical check until the block's owner mints
+  the same number, and by then both are committed."
+
+This is in scope because it is the same defect, not because it is nearby: a
+declaration exists, a record exists, and the diff between them is performed by
+whichever human happens to look. The check is cheap. What it needs is the
+block ledger to be readable from a checkout, which is the one design question
+this section carries into the plan rather than settling here.
 
 ## 6. What this does NOT do
 
@@ -204,6 +241,15 @@ invocation.
   order, no quantized value.
 - **It does not re-author any stale artifact.** If the reader finds one, moving
   it is a deliberate act with its own review.
+- **It does not give seam-guard a record.** The same grid that produced §5a
+  shows seam guards are worse off than anything this campaign touches: they have
+  a declaration (`docs/audits/seam-guard-roster.md`) and **no record of what
+  happened at all** — the artifact states outright that it lists registrations
+  and "never the verdicts". Ordered by reversibility that is the severe case, and
+  it is severe in a way this campaign cannot cheaply fix: a missing phase can be
+  re-run and a stale artifact re-authored, but a seam that stopped being guarded
+  leaves no trace of *when* it stopped, so the history is unrecoverable rather
+  than merely absent. It gets an idea-registry row, not a task.
 
 ## 7. What is unverified, and how each is settled
 
@@ -267,5 +313,7 @@ invocation.
 3. Derive the phase lists from the roster (H2), or keep the literals if null.
 4. The author column in `docs/generated-paths.txt`, and assertions 1 and 2.
 5. Assertion 3, and the deletions it implies — the G3-flagged item.
-6. The freshness reader (H3).
-7. Artifacts, book, chronicle, retrospective, decisions, registry.
+6. The freshness reader, diffing both directions (H3).
+7. The decision-block check (§5a), which needs the block ledger readable from a
+   checkout before the check can be written.
+8. Artifacts, book, chronicle, retrospective, decisions, registry.
