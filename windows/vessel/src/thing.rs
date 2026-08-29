@@ -187,6 +187,184 @@ pub fn promote(
     Ok(id)
 }
 
+/// The predicate naming WHERE a thing is — **one** predicate covering all
+/// three location types (spec §3.3): in a room, in a container, in a hand.
+///
+/// **The location rides in the fact's `object`, never in [`Fact::place`].**
+/// `Fact::place` is an `Option<EntityId>` ("the entity where this fact was
+/// observed") and could not hold a room key at all; `object` is a [`Value`],
+/// so a room rides as [`Value::Text`] and a holder — a chest, a hand — rides
+/// as [`Value::Entity`]. Two shapes of ONE field is exactly what makes
+/// transitivity ("a key in a chest in a room is in the room") expressible in
+/// [`room_of`] rather than re-asserted at every call site. This follows
+/// `agent_at_fact` and `passage::cleared_fact`, which both put the place in
+/// the object.
+///
+/// Non-functional and append-only: a thing moves, and each move is one dated
+/// fact. The read is [`location_of`] — as of a day — never
+/// [`hornvale_kernel::Ledger::latest_value_of`], which answers "where is it
+/// now" and would let a replayed past see a move that had not happened yet.
+///
+/// Registered PER-SESSION (never at genesis), beside `AGENT_AT` and
+/// `PASSAGE_CLEARED` in `Session::start`. An out-of-session reader registers
+/// it into its own registry the way `windows/lab` does for `AGENT_AT`;
+/// `ConceptRegistry::register_predicate` is idempotent for an identical
+/// definition, so the second registration is a no-op. A world saved by
+/// `possess --out` carries the registration with the facts it licenses
+/// (`Session::into_played_world`, decision 0368).
+///
+/// **The spelling is a save-format contract**, for the same reason
+/// `passage::addr_key`'s is: it is written into every committed [`Fact`] and
+/// into a saved world's registry, so a rename leaves every old fact in the
+/// file and invisible to every fold that reads it — a thing silently loses
+/// its location and nothing goes red, because tests use the constant on both
+/// sides. `the_location_predicate_spellings_are_permanent_on_disk_keys`
+/// writes the literal out for that reason; a change is an epoch
+/// (`located-in/v2`), never an edit.
+/// type-audit: bare-ok(identifier-text)
+pub const LOCATED_IN: &str = "located-in";
+
+/// The predicate recording that a thing was opened or closed.
+///
+/// **ABSENCE MEANS "whatever the seed drew"** (spec §3.3), which is why
+/// [`is_open`] returns `Option<bool>` and not `bool`: a thing nobody has
+/// touched has no openness fact, and the answer belongs to the generator, not
+/// to this fold. Collapsing the `None` into `false` here would state that
+/// every untouched door in the world is shut.
+///
+/// Non-functional and append-only — a chest may be opened, closed and opened
+/// again — so, unlike The Latch's monotone `PASSAGE_CLEARED`, the latest
+/// posting at or before the day is the answer.
+///
+/// `openness` is a LEDGER FACT about one thing. It is not `Openable`, the
+/// affordance property saying a KIND can be opened at all; the two are
+/// different objects and a plan draft that read "openness (Task 7's
+/// `Openable`)" conflated them.
+///
+/// Its spelling is a save-format contract on the same terms as
+/// [`LOCATED_IN`]'s.
+/// type-audit: bare-ok(identifier-text)
+pub const OPENNESS: &str = "openness";
+
+/// The fact committed when `thing` comes to rest at `location` on `day`.
+///
+/// The thing is the SUBJECT and the location the OBJECT — a
+/// [`Value::Text`] room key or a [`Value::Entity`] holder. Nothing validates
+/// which of the two a caller passes, because both are legal: that choice is
+/// the campaign's whole "three location types, one predicate" claim.
+pub fn located_fact(thing: EntityId, location: Value, day: WorldTime) -> Fact {
+    Fact {
+        subject: thing,
+        predicate: LOCATED_IN.to_string(),
+        object: location,
+        place: None,
+        day: Some(day),
+        provenance: "the-chattel: a thing came to rest somewhere".to_string(),
+    }
+}
+
+/// The fact committed when `thing` is opened (`open == true`) or closed.
+/// type-audit: bare-ok(flag: open)
+pub fn openness_fact(thing: EntityId, open: bool, day: WorldTime) -> Fact {
+    Fact {
+        subject: thing,
+        predicate: OPENNESS.to_string(),
+        object: Value::Flag(open),
+        place: None,
+        day: Some(day),
+        provenance: "the-chattel: a thing was opened or closed".to_string(),
+    }
+}
+
+/// The last object committed for (`subject`, `predicate`) **at or before**
+/// `day` — the one fold both [`location_of`] and [`is_open`] are made of.
+///
+/// **The `<= day` filter is the whole point**, and it is what distinguishes a
+/// fold from a mutable flag: a read over the entire history would look
+/// chronologically PAST the instant being asked about, so a replayed past
+/// would see a move that had not happened yet. Same discipline as
+/// `passage::effective_state` and as `last_fact_day_at_or_before` in the
+/// liveness walk (which is private, so it is a discipline to copy and not a
+/// function to call), and the rule decision 0366 already states.
+///
+/// **The tie-break, which neither the spec nor the plan stated: two facts at
+/// ONE instant resolve by commit order, last posting wins.** That is
+/// `Ledger::latest_value_of`'s rule, and keeping it here means a same-instant
+/// pair reads the same way whichever of the two reads a caller reaches for.
+/// It is bought by `seen <= d` rather than `seen < d` in the fold below — a
+/// one-character property, so it is pinned by its own test
+/// (`the_last_posting_at_one_instant_wins`).
+///
+/// A fact with no `day` is skipped rather than treated as ancient: an undated
+/// location is not a location as of any day.
+fn latest_object_at_or_before<'a>(
+    ledger: &'a Ledger,
+    subject: EntityId,
+    predicate: &str,
+    day: WorldTime,
+) -> Option<&'a Value> {
+    let mut best: Option<(WorldTime, &'a Value)> = None;
+    for fact in ledger.facts_of(subject, predicate) {
+        let Some(d) = fact.day else { continue };
+        if d > day {
+            continue;
+        }
+        if best.is_none_or(|(seen, _)| seen <= d) {
+            best = Some((d, &fact.object));
+        }
+    }
+    best.map(|(_, object)| object)
+}
+
+/// Where `thing` was as of `day`: the latest [`LOCATED_IN`] object at or
+/// before that instant, or `None` if nothing has ever placed it.
+///
+/// A [`Value::Text`] answer is a room key; a [`Value::Entity`] answer is a
+/// holder, and [`room_of`] is the read that follows those to the room.
+pub fn location_of(ledger: &Ledger, thing: EntityId, day: WorldTime) -> Option<Value> {
+    latest_object_at_or_before(ledger, thing, LOCATED_IN, day).cloned()
+}
+
+/// The room `thing` is in as of `day`, following containment transitively: a
+/// key in a chest in a room is in the room.
+///
+/// Transitivity is a property of the `in` relation itself (RCC-8, declared in
+/// The Hearth §5), so it is resolved HERE and never re-asserted by each
+/// caller. The walk stops at the first [`Value::Text`]; a
+/// [`Value::Entity`] is a holder to follow; anything else is a malformed
+/// location and yields `None` rather than a panic.
+///
+/// **A cycle terminates.** `visited` is a [`std::collections::BTreeSet`] (no
+/// `HashSet` — decision 0004's determinism ban), and a holder already seen
+/// ends the walk with `None`. Nothing in this campaign creates a containment
+/// cycle, which is exactly why nothing else would catch one.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn room_of(ledger: &Ledger, thing: EntityId, day: WorldTime) -> Option<String> {
+    let mut visited = std::collections::BTreeSet::new();
+    let mut current = thing;
+    loop {
+        if !visited.insert(current) {
+            return None;
+        }
+        match location_of(ledger, current, day)? {
+            Value::Text(room) => return Some(room),
+            Value::Entity(holder) => current = holder,
+            _ => return None,
+        }
+    }
+}
+
+/// Whether `thing` was open as of `day`, or `None` if no [`OPENNESS`] fact
+/// exists at or before it — which means "whatever the seed drew", never
+/// "shut". See [`OPENNESS`].
+/// type-audit: bare-ok(flag: return)
+pub fn is_open(ledger: &Ledger, thing: EntityId, day: WorldTime) -> Option<bool> {
+    match latest_object_at_or_before(ledger, thing, OPENNESS, day) {
+        Some(Value::Flag(open)) => Some(*open),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -411,6 +589,331 @@ mod tests {
             ledger.find(INSTANCE_OF).count(),
             0,
             "a refused promotion must commit nothing"
+        );
+    }
+
+    /// A registry carrying the three predicates this module commits: the
+    /// kernel's `instance-of` plus the two live-play predicates
+    /// `Session::start` registers.
+    fn play_registry() -> ConceptRegistry {
+        let mut reg = ConceptRegistry::default();
+        reg.register_predicate(INSTANCE_OF, false, "t").unwrap();
+        reg.register_predicate(LOCATED_IN, false, "where a thing is on a day")
+            .unwrap();
+        reg.register_predicate(OPENNESS, false, "whether a thing is open")
+            .unwrap();
+        reg
+    }
+
+    fn eid(raw: u64) -> EntityId {
+        EntityId::new(raw).expect("a nonzero raw id")
+    }
+
+    fn at(days: f64) -> WorldTime {
+        WorldTime::from_std_days(days).expect("a small day count is in range")
+    }
+
+    /// A thing's location is the LATEST fact AT OR BEFORE the day asked
+    /// about, not the latest fact outright. This is what distinguishes a fold
+    /// from a mutable flag: a replayed past must not see a move that had not
+    /// happened yet (decision 0366; the same discipline
+    /// `passage::effective_state` inlines).
+    ///
+    /// MUTATION THIS FAILS AGAINST: the `if d > day { continue; }` guard in
+    /// `latest_object_at_or_before`. Deleting it — the shape a "latest value"
+    /// read would naturally have — leaves every other test in this module
+    /// green, because every one of them asks about a day at or after the last
+    /// fact. The third assertion below (a day BEFORE the first fact) pins the
+    /// other end of the same guard.
+    #[test]
+    fn location_is_read_as_of_the_day_asked_about() {
+        let reg = play_registry();
+        let mut ledger = Ledger::default();
+        let key = eid(1);
+
+        ledger
+            .commit(
+                located_fact(key, Value::Text("hall".to_string()), at(2.0)),
+                &reg,
+            )
+            .unwrap();
+        ledger
+            .commit(
+                located_fact(key, Value::Text("crypt".to_string()), at(6.0)),
+                &reg,
+            )
+            .unwrap();
+
+        assert_eq!(
+            location_of(&ledger, key, at(4.0)),
+            Some(Value::Text("hall".to_string())),
+            "a read as of day 4 must not see the move that happened on day 6"
+        );
+        assert_eq!(
+            location_of(&ledger, key, at(6.0)),
+            Some(Value::Text("crypt".to_string())),
+            "the filter is `<= day`, not `< day`: a move is visible on the \
+             instant it happens"
+        );
+        assert_eq!(
+            location_of(&ledger, key, at(1.0)),
+            None,
+            "before its first location fact, a thing has no location"
+        );
+    }
+
+    /// Two location facts at ONE instant resolve by COMMIT ORDER — the last
+    /// posting wins, the same rule `Ledger::latest_value_of` uses.
+    ///
+    /// MUTATION THIS FAILS AGAINST: `seen <= d` to `seen < d` in
+    /// `latest_object_at_or_before`. That is a one-character change which
+    /// keeps every dated-ordering property intact and silently inverts the
+    /// tie-break, and no other test in this module commits two facts at one
+    /// instant.
+    #[test]
+    fn the_last_posting_at_one_instant_wins() {
+        let reg = play_registry();
+        let mut ledger = Ledger::default();
+        let key = eid(1);
+        let noon = at(3.0);
+
+        ledger
+            .commit(
+                located_fact(key, Value::Text("hall".to_string()), noon),
+                &reg,
+            )
+            .unwrap();
+        ledger
+            .commit(
+                located_fact(key, Value::Text("crypt".to_string()), noon),
+                &reg,
+            )
+            .unwrap();
+
+        assert_eq!(
+            location_of(&ledger, key, noon),
+            Some(Value::Text("crypt".to_string())),
+            "two facts at one instant resolve by commit order: the LAST \
+             posting wins"
+        );
+    }
+
+    /// The positive control for the transitive walk: a thing whose location
+    /// is already a room needs no hop at all. Without this, the mutation
+    /// `room_of` is pinned against below could be mistaken for a break in the
+    /// whole read rather than in its containment step.
+    #[test]
+    fn a_thing_resting_in_a_room_is_in_that_room() {
+        let reg = play_registry();
+        let mut ledger = Ledger::default();
+        let chest = eid(2);
+
+        ledger
+            .commit(
+                located_fact(chest, Value::Text("vault".to_string()), at(1.0)),
+                &reg,
+            )
+            .unwrap();
+
+        assert_eq!(room_of(&ledger, chest, at(5.0)), Some("vault".to_string()));
+    }
+
+    /// A key in a chest in a room is in the room. Transitivity is a property
+    /// of the `in` relation (RCC-8, The Hearth §5), so it belongs to the
+    /// resolver and not to each caller.
+    ///
+    /// MUTATION THIS FAILS AGAINST: `Value::Entity(holder) => current =
+    /// holder` to `Value::Entity(_) => return None` in `room_of` — the
+    /// one-hop reading of the same function. Every other assertion about
+    /// `room_of` stays green under it, including the positive control above,
+    /// because they place things directly in rooms.
+    #[test]
+    fn containment_resolves_transitively_to_a_room() {
+        let reg = play_registry();
+        let mut ledger = Ledger::default();
+        let key = eid(1);
+        let chest = eid(2);
+
+        ledger
+            .commit(located_fact(key, Value::Entity(chest), at(1.0)), &reg)
+            .unwrap();
+        ledger
+            .commit(
+                located_fact(chest, Value::Text("vault".to_string()), at(1.0)),
+                &reg,
+            )
+            .unwrap();
+
+        assert_eq!(
+            room_of(&ledger, key, at(5.0)),
+            Some("vault".to_string()),
+            "a key in a chest in a room is in the room"
+        );
+    }
+
+    /// A containment cycle TERMINATES rather than hanging. Nothing in this
+    /// campaign creates one, which is exactly why nothing else would catch
+    /// it.
+    ///
+    /// MUTATION THIS FAILS AGAINST: `if !visited.insert(current) { return
+    /// None; }` in `room_of`. Its red is a HANG, not an assertion failure —
+    /// the walk revisits `a` forever — so it is observed as a timeout on this
+    /// test alone rather than as a printed `assert` diff. That is the honest
+    /// shape of the failure this guard prevents.
+    #[test]
+    fn a_containment_cycle_terminates() {
+        let reg = play_registry();
+        let mut ledger = Ledger::default();
+        let a = eid(1);
+        let b = eid(2);
+
+        ledger
+            .commit(located_fact(a, Value::Entity(b), at(1.0)), &reg)
+            .unwrap();
+        ledger
+            .commit(located_fact(b, Value::Entity(a), at(1.0)), &reg)
+            .unwrap();
+
+        assert_eq!(
+            room_of(&ledger, a, at(5.0)),
+            None,
+            "a cycle has no room, and must be answered rather than walked \
+             forever"
+        );
+    }
+
+    /// A location that is neither a room key nor a holder is refused, not
+    /// unwrapped. Nothing in the tree commits one today; the arm exists so
+    /// that a future writer of a malformed fact gets `None` instead of a
+    /// panic, and this is what pins it.
+    #[test]
+    fn a_malformed_location_is_not_a_room() {
+        let reg = play_registry();
+        let mut ledger = Ledger::default();
+        let key = eid(1);
+
+        ledger
+            .commit(located_fact(key, Value::Number(7.0), at(1.0)), &reg)
+            .unwrap();
+
+        assert_eq!(room_of(&ledger, key, at(5.0)), None);
+    }
+
+    /// Openness is ABSENT until a fact says otherwise, and absence means
+    /// "whatever the seed drew" — never "shut". The same as-of-day fold
+    /// `location_of` uses, which is why both route through one helper.
+    #[test]
+    fn openness_is_absent_until_a_fact_says_otherwise() {
+        let reg = play_registry();
+        let mut ledger = Ledger::default();
+        let chest = eid(2);
+
+        assert_eq!(
+            is_open(&ledger, chest, at(5.0)),
+            None,
+            "an untouched thing's openness belongs to the generator, not to \
+             this fold"
+        );
+
+        ledger
+            .commit(openness_fact(chest, true, at(2.0)), &reg)
+            .unwrap();
+        ledger
+            .commit(openness_fact(chest, false, at(6.0)), &reg)
+            .unwrap();
+
+        assert_eq!(
+            is_open(&ledger, chest, at(1.0)),
+            None,
+            "before the first openness fact there is still no answer here"
+        );
+        assert_eq!(
+            is_open(&ledger, chest, at(4.0)),
+            Some(true),
+            "openness is read as of the day asked about, like every other fold"
+        );
+        assert_eq!(
+            is_open(&ledger, chest, at(6.0)),
+            Some(false),
+            "openness is NOT monotone: unlike a thrown latch, a chest closes \
+             again"
+        );
+    }
+
+    /// The two facts' whole envelope, not merely the value a fold reads back.
+    ///
+    /// Task 4's review found the committed `instance-of` fact's `object` and
+    /// `day` both unpinned — a `day: None` would have hidden every promoted
+    /// thing from every `day <= now` fold with the suite green. `place` is
+    /// the field with that shape here: nothing downstream reads it, so a
+    /// mutation setting it would go unnoticed, and it must stay `None`
+    /// because the location rides in `object` (see [`LOCATED_IN`]).
+    #[test]
+    fn the_location_and_openness_facts_carry_their_whole_envelope() {
+        let key = eid(1);
+        let chest = eid(2);
+
+        let located = located_fact(key, Value::Entity(chest), at(3.0));
+        assert_eq!(located.subject, key, "the THING is the subject");
+        assert_eq!(located.predicate, LOCATED_IN);
+        assert_eq!(
+            located.object,
+            Value::Entity(chest),
+            "the LOCATION is the object"
+        );
+        assert_eq!(
+            located.place, None,
+            "`Fact::place` is where a fact was observed; the location rides \
+             in `object`, and a holder could not fit in `place` at all"
+        );
+        assert_eq!(
+            located.day,
+            Some(at(3.0)),
+            "an undated location is invisible to every `day <= now` fold"
+        );
+
+        let opened = openness_fact(chest, true, at(3.0));
+        assert_eq!(opened.subject, chest);
+        assert_eq!(opened.predicate, OPENNESS);
+        assert_eq!(
+            opened.object,
+            Value::Flag(true),
+            "openness must carry the flag it was told, not a constant"
+        );
+        assert_eq!(opened.place, None);
+        assert_eq!(opened.day, Some(at(3.0)));
+    }
+
+    /// The two predicates' exact on-disk spellings, written out as literals.
+    ///
+    /// **This test cannot be rebaselined, which is the entire point of
+    /// writing it out** — the same reasoning as
+    /// `the_thing_role_spelling_is_the_permanent_lineage_key` above and
+    /// `addr_key_spelling_is_the_permanent_on_disk_key` in
+    /// `tests/suite/passage.rs`. Every other assertion in this module reaches
+    /// the predicate through the CONSTANT on both the write and the read
+    /// side, so any spelling whatsoever keeps them all green — while a
+    /// rename leaves every fact in an already-saved world (`possess --out`
+    /// carries them, decision 0368) present in the file and invisible to
+    /// every fold that reads it. A thing would silently lose its location and
+    /// a chest silently forget it was opened.
+    ///
+    /// A predicate name is therefore load-bearing on the same terms as
+    /// `addr_key`'s format string, and the only legitimate change is an epoch
+    /// (`located-in/v2`), never an edit.
+    #[test]
+    fn the_location_predicate_spellings_are_permanent_on_disk_keys() {
+        assert_eq!(
+            LOCATED_IN, "located-in",
+            "LOCATED_IN's spelling is a SAVE-FORMAT CONTRACT: it is written \
+             into every committed fact and into a saved world's registry, so \
+             a rename makes every existing located-in fact unreadable without \
+             failing anything. Do not rebaseline this literal — take an epoch."
+        );
+        assert_eq!(
+            OPENNESS, "openness",
+            "OPENNESS's spelling is a SAVE-FORMAT CONTRACT on the same terms \
+             as LOCATED_IN's."
         );
     }
 }

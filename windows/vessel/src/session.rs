@@ -1048,6 +1048,33 @@ impl<'w> Session<'w> {
                 "a passage this body has cleared",
             )
             .expect("PASSAGE_CLEARED registers identically every session");
+        // The Chattel's two live-play predicates, registered on exactly the
+        // same terms as the two above: a predicate is registered by whoever
+        // builds the registry that will hold its facts. Nothing registers
+        // these at genesis, so `world-seed-42.json` does not move for them;
+        // an out-of-session reader registers them into its own registry the
+        // way `windows/lab` already does for AGENT_AT (`health.rs`,
+        // `synthetic.rs`), which is a no-op for an identical definition
+        // (`ConceptRegistry::register_predicate` is documented idempotent).
+        //
+        // Both are NON-FUNCTIONAL: a thing moves more than once, and a chest
+        // opens, closes and opens again. Each change is one dated fact and
+        // the read is the as-of-day fold in `thing.rs`, never a latest-value
+        // read.
+        registry
+            .register_predicate(
+                crate::thing::LOCATED_IN,
+                false,
+                "where a thing is on a day: a room, a container, or a hand",
+            )
+            .expect("LOCATED_IN registers identically every session");
+        registry
+            .register_predicate(
+                crate::thing::OPENNESS,
+                false,
+                "whether a thing was open on a day",
+            )
+            .expect("OPENNESS registers identically every session");
         // Idempotent (same def every session): never conflicts, since DRANK
         // is never registered at genesis either (spec §3).
         registry
