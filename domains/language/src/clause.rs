@@ -13,7 +13,7 @@
 
 use crate::common_vocab::CommonVocabulary;
 use crate::morphology::Evidential;
-use crate::packs::{EAT, KILL, KNOW, OLD, SLEEP, THINK, UNDER};
+use crate::packs::{EAT, KILL, KNOW, NIGHT, OLD, SLEEP, THINK, UNDER};
 use hornvale_kernel::world::IS_A;
 use std::sync::OnceLock;
 
@@ -2226,6 +2226,30 @@ pub fn common_role_surface(
                 surface_complement(vocab, id, Number::Sg)
             ),
         )),
+        // r049 `temporal-adverbial`: a temporal adjunct on an event, the
+        // second caller of this role-adjunct shape (Task 1's `UNDER` arm,
+        // r048) — but NOT collapsed into it, because the two differ
+        // structurally rather than only in the literal adposition.
+        //
+        // `UNDER`'s role is the RELATION word, applied to a variable
+        // complement carried in `Argument::Concept`: `under the <X>`. This
+        // arm's role, `NIGHT`, IS the complement — a temporal adjunct in
+        // this witness names a fixed point in time, not a relation to a
+        // variable argument, so `Argument::Absent` is what the object slot
+        // carries (the same "no role needs a value here" the object slot
+        // itself uses for an intransitive frame). The literal `"at"` is
+        // supplied by the arm rather than looked up through `vocab`,
+        // because `at` is not itself a registered concept — the same
+        // absence `UNDER` stands in for, from the opposite side (see
+        // `packs::NIGHT`'s doc). Collapsing the two arms would require
+        // unifying "role is the relation" with "role is the complement",
+        // which is a different generalisation than this task's one extra
+        // caller justifies; a genuine second relation-word caller (an `at`
+        // role applied to a variable complement) is what would.
+        (NIGHT, Argument::Absent) => Some((
+            AdjunctPosition::Inline,
+            format!("at {}", vocab.word_for(&adjunct.role)),
+        )),
         (role, Argument::Clause(_)) => panic!(
             "an adjunct may not carry an embedded clause (role {role:?}): \
              adverbial subordination is a separate construction, spec §4.1"
@@ -3090,6 +3114,63 @@ mod tests {
         assert_eq!(
             realize_common(&clause, &vocab),
             "the person killed the person under the tree."
+        );
+    }
+
+    /// r049 `temporal-adverbial`. The rung's text is merchant entry `m02`,
+    /// *"Everything was fine until last night."*; `everything`, `fine` and
+    /// `until` are registered nowhere, so the witness keeps only the part
+    /// the token names — a temporal adjunct on a clause — and substitutes
+    /// `sleep` (a registered `Act`, `Valence::Intransitive`) and `night` (a
+    /// registered `ConceptKind::Celestial`).
+    ///
+    /// **The r048 dependency this rung declares is DIACHRONIC, not
+    /// synchronic**, and the corpus says so at the rung itself: there is no
+    /// synchronic requirement that a language have spatial adjuncts before
+    /// temporal ones. This campaign built r048 first because the two share
+    /// one extension point (`common_role_surface`), which is an engineering
+    /// reason; nothing here asserts Haspelmath's implication about how the
+    /// category historically arises.
+    ///
+    /// **The witness is deliberately intransitive, trading naturalness for
+    /// second-valence coverage.** `r048`'s witness already exercises this
+    /// shape on a transitive clause (`kill`); this one exercises the SAME
+    /// role-adjunct shape on an `Intransitive` predicate, which is a real
+    /// gap `kill` alone would leave uncovered. The cost is that Common's
+    /// past tense is the naive regular append-`ed` (pinned deliberately —
+    /// `eat` surfaces as `eated` a few tests up, and that doc explains why
+    /// pinning the wrong-looking output is what keeps an irregular table a
+    /// red test to update rather than a latent defect): `sleep` surfaces as
+    /// `sleeped`, never `slept`. Pinning it here takes the same posture.
+    ///
+    /// **The role id resolves to `NIGHT`, not a new `"at-time"` name.**
+    /// `Adjunct`'s own doc calls a role a registered predicate; `night` is a
+    /// registered concept (no predicate-valence row, since it is never a
+    /// clause's own predicate), and binding the role to it directly needs
+    /// no new registration — see `packs::NIGHT`'s doc for the asymmetry
+    /// this creates against `UNDER`'s arm (role-as-relation vs.
+    /// role-as-complement), and `common_role_surface`'s `NIGHT` arm for why
+    /// the two are not collapsed into one.
+    #[test]
+    fn a_temporal_adjunct_places_an_event_in_time() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: SLEEP.to_string(),
+            subject: Subject::Name("the person".to_string()),
+            object: Argument::Absent,
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: vec![Adjunct {
+                role: NIGHT.to_string(),
+                argument: Argument::Absent,
+            }],
+        };
+        assert_eq!(
+            realize_common(&clause, &vocab),
+            "the person sleeped at night."
         );
     }
 

@@ -100,12 +100,58 @@
 //! `common_role_surface`'s adposition word — `"under"` — into a tongue at
 //! all; that is a stated gap, not a silent one.)
 //!
+//! `clause.rs::a_temporal_adjunct_places_an_event_in_time`
+//! (`temporal-adverbial`, The Quoin, Task 2 — the SECOND caller of the
+//! role-adjunct shape `spatial-adverbial` established, and deliberately
+//! NOT collapsed into it). **The rung's own dependency on `spatial-
+//! adverbial` is DIACHRONIC, not synchronic**: nothing about a language
+//! requires spatial adjuncts before temporal ones typologically, and this
+//! campaign built the spatial rung first only because the two share one
+//! extension point (`common_role_surface`) — an engineering convenience,
+//! not an endorsement of Haspelmath's implicational claim. **The new arm's
+//! role NAMES the temporal concept itself (`NIGHT`) rather than a relation
+//! word applied to a variable complement** — the opposite asymmetry from
+//! `UNDER`'s arm, which is the relation applied to a variable complement.
+//! `Argument::Absent` is what the object slot carries because the role
+//! already encodes what would otherwise be the complement, and the arm
+//! supplies the literal `"at"` rather than looking it up, because `at` is
+//! not itself a registered concept. The two arms differ structurally, not
+//! merely in their literal adposition, so Step 3's "generalise only if two
+//! callers now exist" test is failed on purpose — see `packs::NIGHT`'s doc
+//! and `common_role_surface`'s `NIGHT` arm for the full account. **A
+//! tongue test is again named, not stated absent, and this time the
+//! finding is worse than `spatial-adverbial`'s**:
+//! `grammar.rs::a_tongue_stray_spaces_a_temporal_adjunct_whose_role_carries_no_argument`
+//! pins that `realize_adjuncts` calls `resolve_argument` for every adjunct
+//! unconditionally, including one whose argument is `Absent` — a live path
+//! nothing exercised before this task, since `Absent` previously only ever
+//! reached the OBJECT slot, gated out before rendering. The concept id
+//! never appears (there is none to resolve: the role itself carries it,
+//! and nothing routes a role into a tongue), and the render neither errors
+//! nor renders cleanly — it succeeds with a stray trailing space before the
+//! final period. **Common-only, the same posture `epistemic-hedge` and
+//! `spatial-adverbial` take**, but total rather than partial: no tongue
+//! construction states the temporal relation OR the temporal concept,
+//! where `spatial-adverbial`'s tongue gap left the location concept
+//! rendering correctly and only the relation word missing.
+//!
+//! **`temporal-adverbial` also covers a second rung, `r067`
+//! (`introduces: null`) — a reuse/control rung, not coverage debt.** Its
+//! four presupposed demands are all met once `temporal-adverbial` lands
+//! (the same "rides along on a null-introduces rung" shape Task 0's
+//! findings table records for `existential`/`r105`); it introduces no new
+//! grammar of its own.
+//!
 //! **The merchant corpus moves for the first time in four campaigns with
 //! that last token, and the entry it moves is the one to read carefully.**
 //! `polar-question` covers `m08`, taking the-merchant from 5 of 12 to
 //! 6 of 12 — see [`MERCHANT_COVERED_IDS`]'s doc for m08's two honesty
 //! limits (its demand tokens under-describe it, and it is a `parse`-side
-//! line scored on a `produce`-side capability).
+//! line scored on a `produce`-side capability). **It moves again with
+//! `temporal-adverbial`**, covering `m02` (*"Everything was fine until
+//! last night."*, `past-tense` + `temporal-adverbial`) and taking the
+//! corpus to 7 of 12 — [`MERCHANT_COVERED_IDS`] and both merchant coverage
+//! tests are renamed for the new count.
 //!
 //! **The score was zero once, and the positive control that answered that is
 //! still here on purpose.** A measurement whose only possible answer is zero
@@ -113,7 +159,7 @@
 //! unconditionally — the same defect class as a guard that has never gone
 //! red. That specific blind spot closed when the score moved off zero: a
 //! resolver stuck at "not yet" now fails
-//! [`merchant_coverage_is_six_of_twelve`] directly. The control keeps its
+//! [`merchant_coverage_is_seven_of_twelve`] directly. The control keeps its
 //! place because it guards a *different* thing from the headline test — it
 //! is the only assertion here that survives the corpus being replaced, and
 //! the corpus is frozen data a future campaign is expected to swap. See its
@@ -137,7 +183,7 @@
 
 use hornvale_kernel::ConceptRegistry;
 use hornvale_kernel::world::IS_A;
-use hornvale_language::packs::{KILL, KNOW, OLD, SLEEP, THINK, UNDER};
+use hornvale_language::packs::{KILL, KNOW, NIGHT, OLD, SLEEP, THINK, UNDER};
 use hornvale_language::{
     Adjunct, Argument, Clause, CommonVocabulary, Coordination, Definiteness, Evidential, Number,
     Person, Polarity, Subject, Tense, realize_common, realize_common_coordination,
@@ -249,6 +295,7 @@ const IMPLEMENTED_DEMANDS: &[&str] = &[
     "polar-question",
     // The Quoin.
     "spatial-adverbial",
+    "temporal-adverbial",
 ];
 
 /// Whether a corpus entry states what the grammar must **parse** (a player
@@ -609,7 +656,7 @@ fn merchant_entries_resolve_as_direction_unknown() {
 /// The frozen result of resolving the-merchant against the grammar's
 /// delivered capability, independent of the prose report below — so a stale
 /// report cannot hide a coverage number that moved.
-const MERCHANT_COVERED: usize = 6;
+const MERCHANT_COVERED: usize = 7;
 
 /// **Which** entries are covered, not merely how many. A count of 2 could be
 /// any two of twelve, and a wrong pair passing a count check is exactly the
@@ -732,7 +779,19 @@ const MERCHANT_COVERED: usize = 6;
 /// and a real limit on what "6 of 12" means. It is stated in the generated
 /// report as well as here, because the report is what a reader of the number
 /// actually reads.
-const MERCHANT_COVERED_IDS: &[&str] = &["m05", "m06", "m07", "m08", "m09", "m10"];
+///
+/// **The Quoin adds m02, and unlike m06/m07/m08/m09 it needs no under-
+/// description caveat — its two demand tokens (`past-tense`,
+/// `temporal-adverbial`) are exactly what the sentence needs, no more and
+/// no less.** *"Everything was fine until last night."* is still not
+/// realized verbatim — `everything`, `fine` and `until` are registered
+/// nowhere — so the witness substitutes `sleep` and `night`, the same
+/// substitution its ladder twin (`r049`) records, and for the same reason
+/// (Global Constraint 2: this campaign registers no concept). m02 moves
+/// the count from 6 to 7, and, unlike every prior addition to this list,
+/// it inserts BEFORE m05 rather than after m10 — corpus order, not
+/// discovery order, is what a corpus-ordered id list follows.
+const MERCHANT_COVERED_IDS: &[&str] = &["m02", "m05", "m06", "m07", "m08", "m09", "m10"];
 
 /// The headline score.
 ///
@@ -742,7 +801,7 @@ const MERCHANT_COVERED_IDS: &[&str] = &["m05", "m06", "m07", "m08", "m09", "m10"
 /// rename that does not also edit that file silently drops this test from
 /// `make gate-commit`. Edit both, in the same commit.
 #[test]
-fn merchant_coverage_is_six_of_twelve() {
+fn merchant_coverage_is_seven_of_twelve() {
     let root = repo_root();
     let corpus = load_merchant_corpus(&root);
     assert_eq!(corpus.entries.len(), MERCHANT_ENTRIES);
@@ -759,11 +818,11 @@ fn merchant_coverage_is_six_of_twelve() {
 }
 
 /// The covered entries by id. Complements — never replaces —
-/// [`merchant_coverage_is_six_of_twelve`]: the count and the identities can
+/// [`merchant_coverage_is_seven_of_twelve`]: the count and the identities can
 /// each move without the other, and only holding both pins the claim the
 /// campaign actually makes.
 #[test]
-fn the_covered_entries_are_m05_m06_m07_m08_m09_and_m10() {
+fn the_covered_entries_are_m02_m05_m06_m07_m08_m09_and_m10() {
     let corpus = load_merchant_corpus(&repo_root());
     let ids: Vec<&str> = corpus
         .entries
@@ -791,11 +850,11 @@ fn the_covered_entries_are_m05_m06_m07_m08_m09_and_m10() {
 ///
 /// **This guards a rot mechanism this campaign watched produce a defect.** The
 /// headline test's name states the score, so it is renamed every time the score
-/// moves — zero, then two, then five, and now six. The Stile's Task 6 found a doc
-/// still pointing at `merchant_coverage_is_zero_of_twelve`, a test that had not
-/// existed for two campaigns, and fixed it; four live references to the current
-/// name remain, and each of them will dangle on the next move by exactly the
-/// same route.
+/// moves — zero, then two, then five, then six, and now seven. The Stile's
+/// Task 6 found a doc still pointing at `merchant_coverage_is_zero_of_twelve`,
+/// a test that had not existed for two campaigns, and fixed it; four live
+/// references to the current name remain, and each of them will dangle on the
+/// next move by exactly the same route.
 ///
 /// **Prose discipline was the obvious repair and it is the one that already
 /// failed.** Nothing mechanical would have caught the stale reference: an
@@ -895,21 +954,41 @@ fn every_reference_to_the_headline_test_names_a_function_in_this_file() {
 /// constant), after `polar-question`: `temporal-adverbial` still blocks 3
 /// entries in total, `wh-question` 2, `witness-set` 2, `existential` and
 /// `named-entity-list` 1 each.
+///
+/// **The Quoin, Task 2 (`temporal-adverbial`) grows this list from three
+/// rows to four, and it is not a simple "one entry left" move.** m02 —
+/// the only one-missing entry `temporal-adverbial` alone blocked — leaves
+/// the list (it is covered now, distance 0). But `temporal-adverbial` was
+/// ALSO one of two demands each for m03 and m04 (see
+/// [`demand_instance_coverage_matches_the_campaigns_prediction`]'s own
+/// finding), and covering it drops both of THEM from distance 2 to
+/// distance 1 — so they arrive here at the same time m02 leaves. Net: one
+/// out, two in, three rows become four. The remaining picture:
+/// `wh-question` blocks 2 entries (`m01`, `m03`), `existential` 1 (`m04`),
+/// `witness-set` 2 (`m11`, and `m12` at distance 2), `named-entity-list` 1
+/// (`m12`, also at distance 2).
 const MERCHANT_ONE_MISSING: &[(&str, &str)] = &[
     ("m01", "wh-question"),
-    ("m02", "temporal-adverbial"),
+    ("m03", "wh-question"),
+    ("m04", "existential"),
     ("m11", "witness-set"),
 ];
 
 /// Spec criterion 7: the resolver reports distance, not only coverage.
 ///
-/// **The name states a COUNT that this campaign did not move**, which is the
-/// unusual case worth a sentence: the covered set gained m08 and this list
-/// kept exactly three rows, because m11 arrived from distance 2 as m08 left
-/// for distance 0. See [`MERCHANT_ONE_MISSING`] — the assertion is on the
-/// ordered vector, so the swap is caught even though the count is not.
+/// **The name states a COUNT that moves when the count moves** — renamed
+/// from `three_entries_sit_at_one_missing_demand` this task, the same
+/// discipline the merchant coverage tests state explicitly for themselves.
+/// Three before this task (a count Task 8 held steady while swapping a
+/// member: the covered set gained m08 and this list kept exactly three
+/// rows, because m11 arrived from distance 2 as m08 left for distance 0),
+/// four after: `temporal-adverbial` landing drops m02 out (now covered) and
+/// pulls both m03 and m04 in from distance 2 at once. See
+/// [`MERCHANT_ONE_MISSING`] — the assertion is on the ordered vector, so a
+/// membership swap is caught even when the count does not move, and a count
+/// move like this task's is caught too.
 #[test]
-fn three_entries_sit_at_one_missing_demand() {
+fn four_entries_sit_at_one_missing_demand() {
     let corpus = load_merchant_corpus(&repo_root());
     let one_away: Vec<(&str, &str)> = corpus
         .entries
@@ -961,9 +1040,10 @@ fn distance_zero_is_exactly_coverage() {
 /// separating a working resolver from one hardcoded to return "not yet" —
 /// that hardcoding left the headline coverage test green, because zero was
 /// the expected answer at that score. (That test's own name has moved with
-/// the score since — zero, then two, then five, then six — so it is named here by
-/// it does rather than by a literal name that would go stale on the next
-/// move; see [`merchant_coverage_is_six_of_twelve`] for its current form.)
+/// the score since — zero, then two, then five, then six, then seven — so it
+/// is named here by what it does rather than by a literal name that would go
+/// stale on the next move; see [`merchant_coverage_is_seven_of_twelve`] for
+/// its current form.)
 /// The Inquest moved the score to 2, so a hardcoded "not yet" now reds the
 /// headline test on its own and this control is no longer load-bearing for
 /// THAT reading.
@@ -1820,6 +1900,27 @@ enum MerchantConstruction {
 /// itself takes on an unconstructed predicate.
 fn merchant_construction(id: &str) -> MerchantConstruction {
     match id {
+        // "Everything was fine until last night." `everything`, `fine` and
+        // `until` are registered nowhere, so the witness keeps only the
+        // part its demand tokens name — a temporal adjunct on a past
+        // clause — substituting `sleep` and `night`, the same construction
+        // `clause.rs`'s own `r049` ladder witness builds (see
+        // `ladder_construction`'s `"r049"` arm; this is the same
+        // Clause literal, not merely the same shape).
+        "m02" => MerchantConstruction::Clause(Clause {
+            predicate: SLEEP.to_string(),
+            subject: Subject::Name("the person".to_string()),
+            object: Argument::Absent,
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: vec![Adjunct {
+                role: NIGHT.to_string(),
+                argument: Argument::Absent,
+            }],
+        }),
         "m05" => MerchantConstruction::Clause(Clause {
             predicate: KILL.to_string(),
             subject: Subject::Name("Nwamvam".to_string()),
@@ -2025,6 +2126,7 @@ fn realize_construction(construction: MerchantConstruction, vocab: &CommonVocabu
 /// constructible clause (or coordination) that realizes at all — the
 /// mechanical half `IMPLEMENTED_DEMANDS` has never had.
 const MERCHANT_WITNESS: &[(&str, &str)] = &[
+    ("m02", "the person sleeped at night."),
     ("m05", "Nwamvam killed a person."),
     ("m06", "I do not know they killed them."),
     ("m07", "they killed them killed me and knowed me."),
@@ -2161,6 +2263,8 @@ const LADDER_WITNESS: &[(&str, &str)] = &[
     ("r014", "the guard sleeped."),
     ("r015", "the guard did not sleep."),
     ("r048", "the person killed the person under the tree."),
+    ("r049", "the person sleeped at night."),
+    ("r067", "the person did not sleep under the tree, at night."),
     ("r083", "are you a merchant?"),
     ("r190", "you killed them."),
 ];
@@ -2384,6 +2488,71 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
                 argument: Argument::Concept("tree".to_string()),
             }],
         }),
+        // Merchant entry `m02` verbatim. Substituted: `everything`, `fine`
+        // and `until` are registered nowhere, so the witness keeps only
+        // the part the token names — a temporal adjunct on a clause — and
+        // substitutes `sleep` (intransitive, a second valence from r048's
+        // transitive witness) and `night` (`ConceptKind::Celestial`).
+        // Common's past rule is the naive regular one, the same deliberate
+        // naivety `r014`'s own comment explains: the witness records what
+        // the realizer actually emits ("sleeped"), not an irregular form.
+        // This is the rung `common_role_surface`'s new `NIGHT` arm exists
+        // for — see that arm's own doc for why it is a DIFFERENT shape
+        // from `r048`'s `UNDER` arm (role-as-complement, not
+        // role-as-relation) and therefore not collapsed into it.
+        // Presupposes r014 (past-tense) and r048 (spatial-adverbial,
+        // diachronically only — see this rung's corpus note).
+        "r049" => MerchantConstruction::Clause(Clause {
+            predicate: SLEEP.to_string(),
+            subject: Subject::Name("the person".to_string()),
+            object: Argument::Absent,
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: vec![Adjunct {
+                role: NIGHT.to_string(),
+                argument: Argument::Absent,
+            }],
+        }),
+        // "She was not in the marketplace last night." **THE SECOND RUNG
+        // `temporal-adverbial` COVERS, AND IT IS A REUSE/CONTROL RUNG** —
+        // `introduces: null`, presupposing r013 (negation), r014
+        // (past-tense), r048 (spatial-adverbial) and r049
+        // (temporal-adverbial) — "the alibi": negation, past, a spatial
+        // adjunct and a temporal adjunct, all composed, introducing no new
+        // token of its own. It becomes covered the moment
+        // `temporal-adverbial` lands, the same mechanical way r015 rode
+        // behind `intransitive-frame`.
+        //
+        // Substituted the same way r048 and r049 already are (`under`/
+        // `tree` for the location, `night` for the time), on an
+        // intransitive frame carrying BOTH adjuncts at once — the
+        // composition this rung exists to exercise. `ModifierTail` joins
+        // multiple inline adjuncts with `", "`, which is why the comma
+        // appears in the witness; that join rule predates this task and is
+        // not this rung's to fix.
+        "r067" => MerchantConstruction::Clause(Clause {
+            predicate: SLEEP.to_string(),
+            subject: Subject::Name("the person".to_string()),
+            object: Argument::Absent,
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Neg,
+            adjuncts: vec![
+                Adjunct {
+                    role: UNDER.to_string(),
+                    argument: Argument::Concept("tree".to_string()),
+                },
+                Adjunct {
+                    role: NIGHT.to_string(),
+                    argument: Argument::Absent,
+                },
+            ],
+        }),
         // "Are you a merchant?" **REALIZES DIRECTLY — no substitution at
         // all, the first rung in this campaign for which that is true of
         // every word.** `merchant` is a registered concept, the copula is
@@ -2534,6 +2703,20 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
 /// membership turning over by one in each direction, which is exactly what
 /// the ordered-vector assertion below exists to catch and a bare count
 /// would have hidden.
+///
+/// **The Quoin, Task 2 (`temporal-adverbial`) covers TWO more rungs, `r049`
+/// and `r067`, matching the plan's Task 0 prediction exactly: 12 → 14.**
+/// `r049` is the token's own rung; `r067` is a reuse/control rung
+/// (`introduces: null`, "the alibi") presupposing `r013`, `r014`, `r048`
+/// AND `r049` — all four demands land at once with this single token, so
+/// `r067` falls out mechanically the same way `r015` and `r190` did behind
+/// their own tokens. The FRONTIER holds at 20, and again the count hides a
+/// swap: `r049` drops off (now covered) and **`r060` joins** — `remote-past`,
+/// whose two non-introduced demands (`r014`, `r049` transitively closed)
+/// are now both covered, even though `r060` itself still needs
+/// `remote-past`, a token this campaign does not add. `r067` does **not**
+/// join the frontier at any point — by the time all four of its
+/// presuppositions are met, it is already covered, not merely unblocked.
 #[test]
 fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
     let entries = read_derived(&repo_root().join("sentences/the-ladder.corpus.json"));
@@ -2545,15 +2728,15 @@ fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
     assert_eq!(
         covered,
         vec![
-            "r001", "r002", "r003", "r005", "r006", "r011", "r013", "r014", "r015", "r048", "r083",
-            "r190"
+            "r001", "r002", "r003", "r005", "r006", "r011", "r013", "r014", "r015", "r048", "r049",
+            "r067", "r083", "r190"
         ],
         "the ladder's covered set"
     );
     assert_eq!(
         ladder_frontier(&entries),
         vec![
-            "r004", "r007", "r028", "r044", "r049", "r051", "r055", "r061", "r068", "r072", "r084",
+            "r004", "r007", "r028", "r044", "r051", "r055", "r060", "r061", "r068", "r072", "r084",
             "r085", "r095", "r096", "r109", "r113", "r114", "r117", "r171", "r196",
         ],
         "the ladder's frontier"
@@ -2628,12 +2811,28 @@ fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
 /// conjunctive-coverage blindness the earlier tasks' paragraphs describe.
 /// the-merchant is untouched: `spatial-adverbial` is not one of its demand
 /// tokens, so it holds at 21 of 30 and 6 of 12.
+///
+/// **The Quoin, Task 2 (`temporal-adverbial`) moves BOTH corpora, the
+/// second time in this campaign that has happened (the first was Task 8's
+/// `polar-question`).** the-merchant's demand-instance count moves **21 →
+/// 24 of 30**, not 21 → 23 as a naive "m02 has two demands, one already
+/// met" count would suggest: `temporal-adverbial` is also one of m03's and
+/// m04's two demands each (`m03`: `wh-question` + `temporal-adverbial`;
+/// `m04`: `existential` + `temporal-adverbial`), so the token satisfies
+/// THREE demand instances across three different entries even though only
+/// m02 becomes fully covered — m03 and m04 each still have their other
+/// demand outstanding. This is the conjunctive-coverage lesson from the
+/// OTHER direction: a single token landing can move the instance count by
+/// more than its own covered-entry count would suggest, not only less.
+/// the-flood-watch meets 22 more instances (290 → 312 of 1128), matching
+/// Task 0's preregistered row exactly, with its covered-ENTRY count still
+/// 0 of 139.
 #[test]
 fn demand_instance_coverage_matches_the_campaigns_prediction() {
     let merchant = read_declared(&repo_root().join("sentences/the-merchant.corpus.json"));
-    assert_eq!(demand_instance_coverage(&merchant), (21, 30));
+    assert_eq!(demand_instance_coverage(&merchant), (24, 30));
     let flood = read_declared(&repo_root().join("sentences/the-flood-watch.corpus.json"));
-    assert_eq!(demand_instance_coverage(&flood), (290, 1128));
+    assert_eq!(demand_instance_coverage(&flood), (312, 1128));
 }
 
 /// Every ladder rung scored covered realizes in Common, exactly as
@@ -2715,7 +2914,7 @@ const REPORT_PATH: &str = "docs/audits/sentence-coverage.md";
 /// `HV_SENTENCE_REBASELINE=1` — run automatically by
 /// `scripts/regenerate-artifacts.sh` (`make rebaseline`) — otherwise a
 /// no-op. The covered count itself is guarded independently, in Rust, by
-/// [`merchant_coverage_is_six_of_twelve`], so a stale run of *this* test
+/// [`merchant_coverage_is_seven_of_twelve`], so a stale run of *this* test
 /// cannot hide a coverage number that moved even before the drift check
 /// above existed.
 #[test]

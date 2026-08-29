@@ -1749,7 +1749,7 @@ mod tests {
     use crate::etymology::CascadeRegime;
     use crate::lexicon::{ExposureClass, LexEntry, build_lexicon};
     use crate::naming::render_views;
-    use crate::packs::{EAT, KILL, KNOW, OLD, SLEEP, UNDER};
+    use crate::packs::{EAT, KILL, KNOW, NIGHT, OLD, SLEEP, UNDER};
     use crate::phonology::{Envelope, ExoticSeg, draw_phonology};
     use hornvale_kernel::Seed;
     use hornvale_kernel::world::IS_A;
@@ -2364,6 +2364,72 @@ mod tests {
         assert!(
             !out.contains("under"),
             "Common's role surface must not leak into a tongue: {out}"
+        );
+    }
+
+    /// r049 `temporal-adverbial`, tongue side — and NOT the same shape
+    /// [`a_tongue_realizes_a_spatial_adjuncts_concept_the_same_shape_as_any_other_role`]
+    /// pins for `r048`, which is the finding worth recording.
+    ///
+    /// **The gap here is TOTAL, not partial, and it is silent unless pinned
+    /// here.** `r049`'s role (`NIGHT`) resolves to `Argument::Absent`
+    /// (`clause.rs`'s `common_role_surface` doc explains why: the role IS
+    /// the temporal concept, so the argument slot carries nothing).
+    /// `resolve_argument`'s `Argument::Absent` arm returns `Ok(String::new())`
+    /// rather than a [`TongueGap`] — it exists for the intransitive OBJECT
+    /// slot, which never reaches it live (gated out by `binds_object`
+    /// upstream) — but `realize_adjuncts` calls it for every adjunct
+    /// unconditionally, so an adjunct is the first LIVE caller that ever
+    /// reaches this arm. The concept word never appears (contrast `r048`,
+    /// where the location concept renders even though the relation word
+    /// does not), and the render is not an `Err` either: it succeeds with a
+    /// stray trailing space before the final period (`"Vavako Tastve ."`
+    /// for this witness, one space more than the adjunct-free `"Vavako
+    /// Tastve."` would carry) — a genuinely wrong-looking surface, exactly
+    /// what spec §4's render-fully-or-gap law warns a *partial* render
+    /// produces, and pinned rather than fixed because closing it means
+    /// teaching `realize_adjuncts` to read a role, which is `r049`'s tongue
+    /// gap to STATE, not `r049`'s job to close. Stated explicitly in
+    /// `IMPLEMENTED_DEMANDS`, the same posture `epistemic-hedge` and
+    /// `r048` take for their own gaps.
+    #[test]
+    fn a_tongue_stray_spaces_a_temporal_adjunct_whose_role_carries_no_argument() {
+        let lex = tiny_lexicon_with(&[(SLEEP, ExposureClass::Steeped)]);
+        let clause = Clause {
+            predicate: SLEEP.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Absent,
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: vec![Adjunct {
+                role: NIGHT.to_string(),
+                argument: Argument::Absent,
+            }],
+        };
+        let g = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: None,
+            copula_segments: None,
+            articles: false,
+            subordinator: None,
+            conjunction: None,
+            interrogative: None,
+        };
+        let out = realize_tongue(&clause, &g, &lex, &no_pronouns()).expect("sleep alone is known");
+        assert!(
+            out.ends_with(" ."),
+            "the absent-argument adjunct leaves a stray space before the \
+             period that an adjunct-free clause would not carry, and this \
+             test exists to keep that fact visible rather than silently \
+             rediscovered: {out}"
+        );
+        assert!(
+            !out.to_lowercase().contains("night"),
+            "no tongue construction states the temporal relation at all \
+             today -- Common-only, the gap IMPLEMENTED_DEMANDS states: {out}"
         );
     }
 
