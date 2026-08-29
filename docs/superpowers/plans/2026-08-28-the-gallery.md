@@ -546,6 +546,23 @@ and rendering paths.
    and `Fly` reserved as variants it will return later. Same shape as Task 6's
    reach seam.
 
+**Three constraints inherited from the indoor compass step
+(`session.rs:3413`), which is this task's precedent — read it before writing
+`step`:**
+
+- **Lateral movement never changes band** (metaplan 1b.6). A cell step stays
+  inside the underworld band and must NOT read or write the possession's
+  walk-band `position`. The indoor path states this explicitly about itself;
+  the same law binds here, and getting it wrong ("I moved, so update
+  position") would teleport the possession on the surface.
+- **Orthogonal only.** Refuse a diagonal before any lookup, as
+  `INDOOR_DIAGONAL_REFUSAL` does — slipping through the corner where two walls
+  meet is not a way through rock. Task 0's own reachability BFS is 4-way, so
+  the geometry already assumes this.
+- **Ask the passability predicate, never `== LevelCellKind::Wall`.** The same
+  rule `CellKind::passable`'s doc gives: a rule written against the variant
+  breaks the day a new impassable kind arrives.
+
 **Not in this task:** drowned rungs, dive-entry from above, and swimming.
 They are designed in spec 3.2 and deferred — they need a capability model that
 does not exist, and The Chattel is building the object model that would carry
