@@ -335,12 +335,19 @@ pub const DOMAINS: &[&dyn Domain] = &[
     // published into the manifest before genesis emits them.
     &hornvale_history::History,
     // Order matters on this roster only for concept lenders and borrowers;
-    // person is neither, so it sits last with no ordering constraint. thing
-    // is the same: it owns every concept it registers and borrows none (its
-    // one apparent collision, `hearth`, maps to settlement's existing
-    // concept via the decision-0025 check-then-map pattern rather than
-    // depending on registration order — see `domains/thing`'s
-    // `register_concepts`).
+    // person is neither, so it sits last with no ordering constraint.
+    //
+    // thing IS a borrower, of exactly one concept: `hearth` is declared in
+    // `hornvale_thing::BORROWED` as ceded to `settlement` (decision 0025,
+    // "one concept name, one owner"). Check-then-map turns what would
+    // otherwise be `RegistryError::ConflictingDefinition` into order-decided
+    // ownership — it does NOT remove the ordering dependency, only changes
+    // what happens if the order is wrong: `settlement` registers `hearth`
+    // unconditionally, so `thing` MUST run after it, or `register_concepts`
+    // panics (loudly, not silently — see `domains/thing`'s
+    // `register_concepts` doc). `domains_roster_registers_thing_after_its_
+    // borrowed_owners` below pins this from the roster side, reading
+    // `BORROWED` rather than duplicating it.
     &hornvale_person::Person,
     &hornvale_thing::Thing,
 ];
@@ -14121,6 +14128,46 @@ mod tests {
             assert!(
                 idx(lender) < language,
                 "{lender} must be registered before hornvale-language"
+            );
+        }
+    }
+
+    #[test]
+    fn domains_roster_registers_thing_after_its_borrowed_owners() {
+        // `hornvale_thing::BORROWED` declares which concepts `thing` cedes
+        // to an earlier owner (decision 0025) -- `hearth` to `settlement`.
+        // `settlement` registers `hearth` unconditionally
+        // (`domains/settlement/src/lib.rs`), so `thing` MUST run after it or
+        // `register_all` panics with a stale-declaration message
+        // (`domains/thing`'s `register_concepts`). This reads `BORROWED`
+        // rather than hardcoding "settlement", so a future entry added
+        // there is covered by construction, not by remembering to update a
+        // second copy of the same fact here.
+        //
+        // MUTATION THIS MUST FAIL AGAINST: swap `&hornvale_thing::Thing` and
+        // `&hornvale_settlement::Settlement` on `DOMAINS`, so thing runs
+        // first. Red observed:
+        //
+        // ```text
+        // thread 'tests::domains_roster_registers_thing_after_its_borrowed_owners' panicked at windows/worldgen/src/lib.rs:14167:13:
+        // hornvale-settlement (owner of "hearth") must be registered before hornvale-thing, but is at index 11 vs thing's 3
+        // test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out
+        // ```
+        let names: Vec<&str> = DOMAINS.iter().map(|d| d.crate_name()).collect();
+        let idx = |n: &str| {
+            names
+                .iter()
+                .position(|x| *x == n)
+                .unwrap_or_else(|| panic!("{n} missing from DOMAINS"))
+        };
+        let thing = idx("hornvale-thing");
+        for (label, owner) in hornvale_thing::BORROWED {
+            let owner_crate = format!("hornvale-{owner}");
+            let owner_idx = idx(&owner_crate);
+            assert!(
+                owner_idx < thing,
+                "{owner_crate} (owner of {label:?}) must be registered before \
+                 hornvale-thing, but is at index {owner_idx} vs thing's {thing}"
             );
         }
     }

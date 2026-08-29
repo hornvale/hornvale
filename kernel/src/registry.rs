@@ -62,12 +62,26 @@ pub enum ConceptKind {
     /// not a property it *has*, and the vessel window's affect circumplex
     /// (`AffectLabel`) reconciles against exactly this class.
     Affect,
-    /// A made, portable object a body may take and carry — a key, a vessel.
-    /// Distinct from [`ConceptKind::Terrain`], which is fixed ground a body
-    /// moves *through*, and from [`ConceptKind::Substance`], which is the
-    /// stuff an object may be made *of* but is not itself a countable thing:
-    /// `key` is something a body *has*, not a material or a place.
-    /// `domains/thing` registers every thing-kind under this variant.
+    /// A discrete, countable thing a scene is furnished or anchored with —
+    /// an alcove, an anvil, a key — sized to sit *within* a place rather
+    /// than to be a landform or region in its own right. Distinct from
+    /// [`ConceptKind::Terrain`], which names a landform at the scale of the
+    /// world's surface (a mountain, a river), and from
+    /// [`ConceptKind::Substance`], which is stuff an object may be made
+    /// *of* but is not itself a countable thing: `key` is one object among
+    /// many, not a material or a place. `domains/thing` registers every
+    /// thing-kind under this variant.
+    ///
+    /// **This says nothing about whether a body may carry the thing**, and
+    /// reading it that way gives the wrong answer for most of today's
+    /// roster: of the fifteen kinds `domains/thing` registers under
+    /// `Object`, only `key` is `ThingTraits::portable` — a `vessel` and a
+    /// `threshold` are both `Object` and neither is. Whether an individual
+    /// kind can be picked up is `ThingTraits::portable`
+    /// (`domains/thing`), a per-kind fact this kind-level tag does not
+    /// encode. The same one-directional caveat [`ConceptKind::Act`] carries,
+    /// for the same reason: a kind tag this coarse invites a reader to
+    /// over-read it.
     Object,
 }
 
