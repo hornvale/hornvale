@@ -601,7 +601,30 @@ format. Put a one-line comment on the fields saying why they sit apart from
     pub elevation_legend: Vec<String>,
 ```
 
-Populate from the same `elevation_m` values the builder already computes,
+**Populate it NEAREST-VERTEX, not barycentric, and build the
+`SeaLevelHeight` by SUBTRACTION.** Two rules, both load-bearing:
+
+1. The struct's own doc says *"Continuous layers are barycentric; discrete
+   layers (`ocean`, `biome`, `plate`) are nearest-vertex."* A band is
+   discrete, so it joins the nearest-vertex group — computed at `t_vertex`,
+   the same vertex `ocean`/`biome`/`water` already use. Interpolating a band
+   would invent intermediate classes that no vertex holds, which is decision
+   0196's prohibition exactly.
+2. **Do NOT call `SeaLevelHeight::from_metres(elevation_m - sea_level_m)`.**
+   That constructor's own doc calls itself *"the hole through which the
+   datum-confusion class returns"* and directs callers holding two
+   `ReferenceElevation`s to subtract instead. You hold two. Use
+   `ReferenceElevation::above` (`kernel/src/units.rs:118`):
+
+   ```rust
+   relief.push(relief_band(terrain.elevation_at(t_vertex).above(terrain.sea_level())));
+   ```
+
+   That path cannot be wrong about which datum it is on. The `from_metres`
+   path can, and this crate has already shipped that bug once — it is why
+   `relief_band` takes a typed parameter at all.
+
+Populate the legend from `RELIEF_LEGEND`, exactly as `surrounds.rs` does,
 and extend the struct's `type-audit:` tag with
 `bare-ok(index: elevation_band), bare-ok(identifier-text: elevation_legend)`.
 
