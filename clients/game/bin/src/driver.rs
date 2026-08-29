@@ -2250,7 +2250,13 @@ impl Driver {
         let snap = hornvale_game_core::Snapshot::parse(&self.cached).ok()?;
         match snap.spatial {
             hornvale_game_core::Spatial::Walk { .. } => self.session.purview(0).ok(),
-            hornvale_game_core::Spatial::Chamber { .. } => None,
+            // Neither indoors nor underground draws a walk-band perception
+            // overlay. This `Underground` arm exists only to keep this
+            // match exhaustive after The Gallery's Task 9 added the
+            // variant — the underground band's own overlay, if it ever
+            // gets one, is Task 10's question, not this one's.
+            hornvale_game_core::Spatial::Chamber { .. }
+            | hornvale_game_core::Spatial::Underground { .. } => None,
         }
     }
 

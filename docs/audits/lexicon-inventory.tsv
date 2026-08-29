@@ -31,9 +31,10 @@ clients/game/core/src/cell.rs	48
 clients/game/core/src/chart.rs	148
 clients/game/core/src/endpaper.rs	2
 clients/game/core/src/entry.rs	15
+clients/game/core/src/level.rs	58
 clients/game/core/src/lib.rs	10
 clients/game/core/src/plan.rs	68
-clients/game/core/src/schema.rs	40
+clients/game/core/src/schema.rs	58
 clients/game/core/src/spread.rs	7
 clients/game/core/src/strip.rs	3
 clients/game/core/tests/cell.rs	12
@@ -41,7 +42,7 @@ clients/game/core/tests/chart.rs	20
 clients/game/core/tests/monochrome_floor.rs	6
 clients/game/core/tests/plan.rs	4
 clients/game/core/tests/provenance.rs	11
-clients/game/core/tests/schema.rs	6
+clients/game/core/tests/schema.rs	17
 clients/game/core/tests/spread.rs	10
 domains/astronomy/src/eclipses.rs	2
 domains/astronomy/src/render.rs	4

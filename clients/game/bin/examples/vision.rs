@@ -107,6 +107,18 @@ fn main() {
                 plan.palette.len()
             );
         }
+        // The underground band (The Gallery, Task 9) has no colour channel
+        // at all — `vessel/level/v1`'s palette interns on `(kind,
+        // visibility)`, never a shade (spec §4.1) — so there is nothing for
+        // a vision-mode sketch to remap here. Rather than fabricate a
+        // colour this band never claims, this arm draws no tiles and says
+        // so in the legend.
+        Spatial::Underground { level } => {
+            legend += &format!(
+                " | underground level | rung {} | {}x{} | no colour channel (monochrome band)",
+                level.rung, level.extent.w, level.extent.h
+            );
+        }
     }
 
     for (_, row) in rows {
