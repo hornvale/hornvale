@@ -516,11 +516,14 @@ a constant. Record both outcomes in your report.
 
 ```
 
-**Do not tune `BAND_FLOORS_M` to make a picture you like.** If Task 5's
-specimen sheet shows the bands badly distributed on real worlds, that is a
-FINDING to report with the distribution measured, and the constant moves in
-its own commit that says so. Retuning silently after unblinding is exactly
-what the preregistration discipline exists to prevent.
+**Do not tune `relief_band`'s floors to make a picture you like.** They are
+`-3000 / 0 / 300 / 1000 / 2500` and they are LOAD-BEARING for the shipped
+`scene/surrounds/v2` wire field — moving them moves a committed wire value,
+not just a rendering. (The constant this warning used to name,
+`BAND_FLOORS_M`, no longer exists; Ruling X deleted it.) If Task 5's specimen
+sheet shows the bands badly distributed on real worlds, that is a FINDING to
+report with the distribution measured — and moving them is then a separate,
+deliberate act with its own commit and its own justification, not a tweak.
 
 - [ ] **Step 4: Run the tests**
 
