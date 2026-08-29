@@ -378,8 +378,8 @@ lane_sets_file="${HV_SLUICE_LANE_SETS:-$repo_root/scripts/lane-sets.tsv}"
 #
 # WHAT IT COSTS, STATED PLAINLY. A four-phase merge is ~1100 s; five is
 # ~1550 s (+41%) on the one strictly serial box, paid by every campaign in the
-# queue behind it — about +42 h/month at the landing tempo measured over
-# 2026-08-17..28. A prose-only candidate pays none of it: see the
+# queue behind it — about +45 h/month at the landing tempo measured over
+# 2026-08-17..28 (128 non-prose landings in 11.327 days). A prose-only candidate pays none of it: see the
 # sluice-phases.sh block below, which already drops `heavy`. Full reasoning,
 # the rejected alternatives (stage-gate-only, conditional on a world-code
 # predicate, scheduled) and the residuals are in

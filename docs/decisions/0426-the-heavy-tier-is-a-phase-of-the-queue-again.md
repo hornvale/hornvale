@@ -59,11 +59,13 @@ would be. The answer is measured, not estimated:
 
 - The tier ran only when a human remembered, and **no bare `heavy` row reached
   `docs/timings.md` between 2026-08-05 and this campaign** — 27 runs invisible
-  to the tier's own ledger. (Seven `sluice:heavy` rows do exist, all on
-  2026-08-19, from the last chamber runs before 0148 landed. Those are the
-  *phase's* rows; the by-hand `make heavy-remote` path, which is what 0148 left
-  as the only dispatcher, wrote none — its rows were stranded in a scratch
-  worktree, which is residual 2 below.)
+  to the tier's own ledger. (Twenty-one `sluice:heavy` rows do exist, spanning
+  2026-08-16 to 2026-08-19 — 2, 6, 6 and 7 by day. Most predate 0148's landing
+  at 2026-08-19T19:10:55Z; exactly one, at 20:03:41Z, follows it, from the run
+  0148's own record describes as gated under the four phases it proposed. Those
+  are the *phase's* rows; the by-hand `make heavy-remote` path, which is what
+  0148 left as the only dispatcher, wrote none — its rows were stranded in a
+  scratch worktree, which is residual 2 below.)
 - It accumulated **ten failures** that nobody saw until The Sources ran it by
   hand at close, and then nearly attributed nine of them to itself.
 - Task 10 named the cause of the last one: `eeaa011fd`, The Granary's
@@ -110,7 +112,9 @@ introduced by `2aa07bd38` on **2026-08-17**. All 160 landings therefore fall
 between 2026-08-17 and 2026-08-28 — **11.3 days**, and a `--since=2026-07-01`
 filter selects the trailer's entire lifetime rather than a two-month window.
 The first draft normalised these counts over two months and stated the saving
-as "about 2 h/month". Every per-month figure in it was **~4.7x low**:
+as "about 2 h/month". The denominator it used was **5.4x too long** (two
+months, ~60.9 days, against the 11.327 days actually spanned), so every
+per-month figure in it was **~5.3x low**:
 
 ```text
   form                                        first draft   corrected (159 over 11.3 days)
@@ -258,8 +262,9 @@ call it ~475 s, between the tier's own 449.219 s nextest wall and the 499.572 s
 a tree the `gate` phase has already warmed. The cost falls on bystanders in the
 queue, not only on the campaign that caused it.
 
-At the tempo measured over 2026-08-17..28 (128 non-prose landings in 11.3 days,
-14/day) that is roughly **45 h/month** of serial-box time, against ~35 h/month
+At the tempo measured over 2026-08-17..28 — 159 landings in 11.327 days, of
+which 128 are non-prose: **14.0 landings/day overall, 11.3 of them non-prose**
+— that is roughly **45 h/month** of serial-box time, against ~35 h/month
 under the conditional form that was declined — so the saving forgone is about
 **10 h/month**. Stage gates contribute **nothing** to these figures and
 correctly so: they never land, and `heavy` is deliberately not one of their
