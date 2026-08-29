@@ -361,7 +361,7 @@ lane_sets_file="${HV_SLUICE_LANE_SETS:-$repo_root/scripts/lane-sets.tsv}"
 # fixtures by exact equality. The census is refreshed once per campaign, at the
 # pre-merge close (CLAUDE.md's standing rule). So a campaign that moves any
 # census metric would red that test on EVERY stage gate from its first moved
-# value until close — ~450 s of the one serial box each time, for a reason that
+# value until close — ~475 s of the one serial box each time, for a reason that
 # is expected, benign and not yet fixable. A gate that reds predictably for a
 # known-benign reason trains people to ignore it, which is precisely the
 # disease this campaign diagnosed in the heavy tier. The merge does not have

@@ -307,7 +307,7 @@ fn heavy_tagged_tests() -> Vec<String> {
 /// It still prices **membership**, not duration — §4 chose a frozen roster
 /// over a wall-clock budget on purpose, because a committed baseline is a
 /// claim with a date and roster membership does not decay. 0426 records that
-/// as a named residual: the ~450 s figure that makes the phase affordable is
+/// as a named residual: the ~475 s figure that makes the phase affordable is
 /// exactly the quantity nothing ratchets.
 #[test]
 fn the_heavy_roster_is_exactly_this_fixture() {

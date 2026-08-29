@@ -39,8 +39,8 @@ since 2026-08-16.
 A four-phase merge on the queue currently costs about 1100 s. Summing the
 `sluice:*` rows in `docs/timings.md` for the four consecutive merges of
 2026-08-28 gives 1129.954, 1014.162, 1227.633 and 1146.355 s; the queue's own
-recent totals run 1021–1236 s. Adding a ~450–500 s `heavy` phase takes a merge
-to roughly 1550 s.
+recent totals run 1021–1236 s. Adding a ~475 s `heavy` phase (its basis is
+under "What this costs") takes a merge to roughly 1550 s.
 
 **This is the fact 0148 could not have had.** 0148 measured `heavy` at a
 1965.0 s mean over 21 chamber runs and `seam-guard` at 1017.5 s, together
@@ -86,7 +86,7 @@ mis-attribute.** It is an author/inheritor asymmetry, not a cost problem.
 |---|---|---|
 | **every merge** | the asymmetry, universally | ~+41% per non-prose landing, ~45 h/month of the serial box — **chosen** |
 | stage gate | the asymmetry, for campaigns that submit one | opt-in, so the failure being fixed is "nobody ran it" — and it would red predictably on the census fixture (below) |
-| conditional on a world-code predicate | the asymmetry, where the predicate fires | a new mechanism blind in the silent direction; the ~10 h/month it saves is real, and is not the reason it loses |
+| conditional on a world-code predicate | the asymmetry, where the predicate fires | a new mechanism blind in the silent direction; the ~9.8 h/month it saves is real, and is not the reason it loses |
 | scheduled | nothing at merge time | `scripts/scheduled/` was written and **never installed**; standing guidance already forbids closing a campaign on "the nightly was empty" |
 
 **The conditional form was the serious rival. It is NOT answered by
@@ -105,19 +105,18 @@ population, measured over the 160 landings on `main` carrying a
 The prose-only skip already exists (`scripts/sluice-phases.sh` drops `heavy`,
 `clients` and `seam-guard` from a candidate whose every path is hand-written
 prose) and applies under every form, so a conditional predicate would exempt
-heavy on about **one landing in six** beyond what is already exempt.
+heavy on **that last 28** and nothing more.
 
 **THE DENOMINATOR, AND THE ERROR IT CAUSED.** The `Sluice-Headline` trailer was
-introduced by `2aa07bd38` on **2026-08-17**. All 160 landings therefore fall
-between 2026-08-17 and 2026-08-28 — **11.3 days**, and a `--since=2026-07-01`
-filter selects the trailer's entire lifetime rather than a two-month window.
-The first draft normalised these counts over two months and stated the saving
-as "about 2 h/month". The denominator it used was **5.4x too long** (two
-months, ~60.9 days, against the 11.327 days actually spanned), so every
-per-month figure in it was **~5.3x low**:
+introduced by `2aa07bd38` on **2026-08-17**, so all 160 landings fall between
+then and 2026-08-28, and a `--since=2026-07-01` filter selects the trailer's
+entire lifetime rather than a two-month window. The first draft divided these
+counts by **60 days** and stated the saving as "about 2 h/month". The data
+spans **11.327 days**. Every per-month figure in it is therefore low by
+60 / 11.327 = **5.3x**:
 
 ```text
-  form                                        first draft   corrected (159 over 11.3 days)
+  form                                        first draft   corrected, per 30-day month
   chosen (128 non-prose landings)              ~9 h/month     ~45 h/month
   conditional (100 landings)                   ~7 h/month     ~35 h/month
   saving forgone by declining conditional      ~2 h/month     ~9.8 h/month
@@ -131,13 +130,14 @@ project — a real command, correctly run, answering a narrower question than th
 claim attached to it — and because the correction changes which argument
 carries the decision.
 
-One caveat, stated as uncertainty and explicitly **not** as a rescue: 14
-landings/day over 11.3 days is a busy stretch with several campaigns running in
-parallel, and it may not be the steady state. It is the only tempo actually
-measured, so it is the one used; a quieter month costs proportionally less.
+One caveat on the tempo these figures rest on, stated as uncertainty and
+explicitly **not** as a rescue: 2026-08-17..28 is a busy stretch with several
+campaigns running in parallel, and it may not be the steady state. It is the
+only tempo actually measured, so it is the one used; a quieter month costs
+proportionally less.
 
 **So the decision does not rest on cost, and must not be read as if it does.**
-Roughly 10 h/month of serial-box time is a real saving to forgo. What survives
+Roughly 9.8 h/month of serial-box time is a real saving to forgo. What survives
 the correction untouched is a **correctness** argument, and it is the one doing
 the work:
 
@@ -149,7 +149,7 @@ layering diagram would exempt exactly the changes most able to break the tier,
 and nothing would say so. That is a silent-direction failure in a new
 mechanism, introduced to fix a campaign whose whole subject is silent gaps
 accruing where nothing reports them. **The trade this decision actually makes
-is ~10 h/month of the one serial box in exchange for not building a predicate
+is ~9.8 h/month of the one serial box in exchange for not building a predicate
 that can be wrong without saying so** — a defensible trade, and a much narrower
 one than the first draft described.
 
@@ -256,17 +256,17 @@ reader would otherwise reconstruct wrongly.
 
 ## What this costs, stated rather than implied
 
-Every non-prose **landing** pays ~450–500 s more on a strictly serial box —
-call it ~475 s, between the tier's own 449.219 s nextest wall and the 499.572 s
-`timed.sh` wall that includes its build, since the chamber reaches `heavy` with
-a tree the `gate` phase has already warmed. The cost falls on bystanders in the
-queue, not only on the campaign that caused it.
+Every non-prose **landing** pays **~475 s** more on a strictly serial box. That
+is the midpoint of the tier's own 449.219 s nextest wall and the 499.572 s
+`timed.sh` wall that includes its build — the chamber reaches `heavy` with a
+tree the `gate` phase has already warmed, so its true marginal cost lies
+between the two. The cost falls on bystanders in the queue, not only on the
+campaign that caused it.
 
-At the tempo measured over 2026-08-17..28 — 159 landings in 11.327 days, of
-which 128 are non-prose: **14.0 landings/day overall, 11.3 of them non-prose**
-— that is roughly **45 h/month** of serial-box time, against ~35 h/month
-under the conditional form that was declined — so the saving forgone is about
-**10 h/month**. Stage gates contribute **nothing** to these figures and
+At the tempo measured over 2026-08-17..28 — 159 landings in 11.327 days, 128 of
+them non-prose — that is roughly **45 h/month** of serial-box time, against
+~35 h/month under the conditional form that was declined, so the saving forgone
+is about **9.8 h/month**. Stage gates contribute **nothing** to these figures and
 correctly so: they never land, and `heavy` is deliberately not one of their
 phases.
 
@@ -309,7 +309,7 @@ committed baseline is a claim with a date and membership does not decay), so a
 single admitted test may cost minutes. If the tier drifts back toward 1500 s
 this decision's arithmetic inverts and 0148's holds again.
 
-*And ~10 h/month of the one serial box is a real thing to decline.* The
+*And ~9.8 h/month of the one serial box is a real thing to decline.* The
 conditional form is not free of merit; it is rejected because its predicate
 would be blind in a silent direction, not because its saving is small. If
 someone later builds a predicate that keys on the tier's own harness as well as
