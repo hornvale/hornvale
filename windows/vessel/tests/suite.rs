@@ -59,6 +59,8 @@ mod lantern_seam;
 mod ledger_query_equivalence;
 #[path = "suite/liveness_genesis.rs"]
 mod liveness_genesis;
+#[path = "suite/noun_entity.rs"]
+mod noun_entity;
 #[path = "suite/object_property_concepts.rs"]
 mod object_property_concepts;
 #[path = "suite/one_roster.rs"]

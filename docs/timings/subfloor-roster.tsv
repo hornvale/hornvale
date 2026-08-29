@@ -2925,6 +2925,7 @@ hornvale-vessel::suite$lantern_light::a_real_chamber_is_not_uniformly_lit
 hornvale-vessel::suite$lantern_light::light_reaches_exactly_what_sight_reaches
 hornvale-vessel::suite$lantern_light::the_falloff_ratio_between_two_cells_is_inverse_square
 hornvale-vessel::suite$ledger_query_equivalence::facts_of_selects_what_find_and_filter_selected
+hornvale-vessel::suite$noun_entity::a_typed_word_resolves_to_a_things_entity
 hornvale-vessel::suite$object_property_concepts::every_object_property_has_exactly_one_registered_concept
 hornvale-vessel::suite$passage::a_cave_mouth_closed_after_it_was_opened_bars_again
 hornvale-vessel::suite$passage::a_closed_cave_mouth_falls_back_to_the_barrier_the_seed_drew
