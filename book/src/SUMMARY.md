@@ -422,6 +422,7 @@
 - [The Latch](./chronicle/the-latch.md)
 - [The Precedence](./chronicle/the-precedence.md)
 - [The Rail](./chronicle/the-rail.md)
+- [The Gallery](./chronicle/the-gallery.md)
 
 # Appendix: The Frontier
 

@@ -60,7 +60,7 @@
 //! `the_radius_is_reached_as_well_as_respected` checks the bound is not
 //! vacuous.
 
-use crate::lattice::{Cell, Lattice, kind_of};
+use crate::lattice::{Cell, Lattice};
 use std::collections::BTreeSet;
 
 /// Which cells of `lattice` are visible from `from`, out to Chebyshev
@@ -73,12 +73,48 @@ use std::collections::BTreeSet;
 ///
 /// `from` is always in the result, whatever it is and whatever the radius —
 /// you can always see where you are standing. Cells outside
-/// [`Lattice::extent`] never are: [`kind_of`] is total over the extent, so
+/// [`Lattice::extent`] never are: [`kind_of`](crate::lattice::kind_of) is total over the extent, so
 /// "outside" and "wall" are the same to the scan and neither is a place.
 ///
 /// A `radius` below 1 lights the origin alone.
 /// type-audit: bare-ok(count: radius)
 pub fn shadowcast(lattice: &Lattice, from: Cell, radius: i32) -> BTreeSet<Cell> {
+    shadowcast_with(
+        |cell| lattice.cells.get(&cell).is_some_and(|k| k.passable()),
+        |cell| lattice.cells.contains_key(&cell),
+        from,
+        radius,
+    )
+}
+
+/// Which cells are visible from `from`, out to Chebyshev `radius`, over an
+/// arbitrary transparency predicate rather than a concrete [`Lattice`].
+///
+/// This is [`shadowcast`]'s body, generalized so a cave `Level` (Task 6) can
+/// share one caster with a building `Lattice` rather than needing its own
+/// copy of a property-tested algorithm. See the module docs for the variant
+/// and for why walls are the symmetry exception.
+///
+/// `transparent(cell)` answers whether sight passes through `cell` — a cell
+/// outside the caller's bounds must answer `false` here, the same way
+/// [`shadowcast`]'s wrapper treats "outside the extent" as opaque. `in_bounds(cell)`
+/// answers separately whether `cell` may ever enter the result: the two are
+/// NOT the same predicate. A cell outside the bounds is opaque (it blocks
+/// sight) but must never be inserted into the lit set — collapsing the two
+/// into one predicate either leaks light past the boundary or returns
+/// out-of-bounds cells. See `scan`'s loop, which asks both.
+///
+/// `from` is always in the result, whatever it is and whatever the radius —
+/// you can always see where you are standing.
+///
+/// A `radius` below 1 lights the origin alone.
+/// type-audit: bare-ok(count: radius)
+pub fn shadowcast_with(
+    transparent: impl Fn(Cell) -> bool,
+    in_bounds: impl Fn(Cell) -> bool,
+    from: Cell,
+    radius: i32,
+) -> BTreeSet<Cell> {
     let mut lit = BTreeSet::new();
     lit.insert(from);
     if radius < 1 {
@@ -86,7 +122,8 @@ pub fn shadowcast(lattice: &Lattice, from: Cell, radius: i32) -> BTreeSet<Cell> 
     }
     for quadrant in 0..4 {
         scan(
-            lattice,
+            &transparent,
+            &in_bounds,
             from,
             quadrant,
             radius,
@@ -175,18 +212,6 @@ fn transform(quadrant: u8, origin: Cell, depth: i32, col: i32) -> Cell {
     }
 }
 
-/// May sight pass through `cell`?
-///
-/// Asks [`CellKind::passable`](crate::lattice::CellKind::passable), never
-/// `== CellKind::Wall` — that predicate's own doc says why, and a rule written
-/// against the variant breaks the day `Rubble` arrives. Outside the extent
-/// counts as opaque: `kind_of` is total over the extent, so `None` means
-/// "not a place" and nothing else.
-/// type-audit: bare-ok(flag: return)
-fn transparent(lattice: &Lattice, cell: Cell) -> bool {
-    kind_of(lattice, cell).is_some_and(|k| k.passable())
-}
-
 /// Scan one row of one quadrant, lighting what it admits and recursing into
 /// the rows behind it.
 ///
@@ -196,11 +221,16 @@ fn transparent(lattice: &Lattice, cell: Cell) -> bool {
 /// row inherits, and recomputing the range from the narrowed value would drop
 /// columns the scan is standing in the middle of.
 ///
+/// `transparent` and `in_bounds` are asked separately and mean different
+/// things — see [`shadowcast_with`]'s doc. Taken by reference so the
+/// recursion does not require `Copy` closures.
+///
 /// Recursion is bounded by `radius`: every call goes exactly one row deeper,
 /// and the depth guard is the first thing it checks.
 #[allow(clippy::too_many_arguments)] // a quadrant scan's frame; splitting it into a struct would hide the recursion
 fn scan(
-    lattice: &Lattice,
+    transparent: &impl Fn(Cell) -> bool,
+    in_bounds: &impl Fn(Cell) -> bool,
     origin: Cell,
     quadrant: u8,
     radius: i32,
@@ -219,11 +249,11 @@ fn scan(
     let mut previous_was_opaque: Option<bool> = None;
     for col in first..=last {
         let cell = transform(quadrant, origin, depth, col);
-        let opaque = !transparent(lattice, cell);
+        let opaque = !transparent(cell);
         // A wall is lit whenever the band touches it; a floor only when its
         // centre is inside the band. That asymmetry between the two KINDS is
         // what buys symmetry between the two ENDS.
-        if (opaque || is_symmetric(depth, col, start, end)) && lattice.cells.contains_key(&cell) {
+        if (opaque || is_symmetric(depth, col, start, end)) && in_bounds(cell) {
             lit.insert(cell);
         }
         if previous_was_opaque == Some(true) && !opaque {
@@ -233,7 +263,8 @@ fn scan(
         if previous_was_opaque == Some(false) && opaque {
             // Entering one: everything behind it, up to here, is still lit.
             scan(
-                lattice,
+                transparent,
+                in_bounds,
                 origin,
                 quadrant,
                 radius,
@@ -247,7 +278,8 @@ fn scan(
     }
     if previous_was_opaque == Some(false) {
         scan(
-            lattice,
+            transparent,
+            in_bounds,
             origin,
             quadrant,
             radius,
@@ -262,12 +294,108 @@ fn scan(
 #[cfg(test)]
 mod tests {
     use crate::brief::Brief;
-    use crate::lattice::{Cell, Lattice, embed_with, extent_for, kind_of, shadowcast};
+    use crate::lattice::{
+        Cell, CellKind, Lattice, Rect, embed_with, extent_for, kind_of, shadowcast,
+    };
     use crate::structure::{Structure, structure_at};
     use hornvale_kernel::{Facet, Seed};
     use std::collections::{BTreeMap, BTreeSet};
 
     const WALK: u32 = 12;
+
+    /// A hand-built lattice, small enough to eyeball: two 3x3 rooms
+    /// (`Floor(0)` and `Floor(1)`) inside a 9x5 extent, separated by a wall
+    /// column at `x=4` with one doorway (`Threshold(0, 1)`) at `(4, 2)`. Each
+    /// room's interior is an open run — nothing subdivides it.
+    ///
+    /// This is the Step 1 characterization fixture: it exists to record
+    /// `shadowcast`'s exact output against unchanged code, as the oracle
+    /// Step 4 diffs the refactor against.
+    fn characterization_lattice() -> Lattice {
+        let extent = Rect {
+            x: 0,
+            y: 0,
+            w: 9,
+            h: 5,
+        };
+        let mut cells = BTreeMap::new();
+        for y in 0..extent.h {
+            for x in 0..extent.w {
+                let cell = Cell(x, y);
+                let kind = if x == 4 {
+                    if y == 2 {
+                        CellKind::Threshold(0, 1)
+                    } else {
+                        CellKind::Wall
+                    }
+                } else if y == 0 || y == extent.h - 1 || x == 0 || x == extent.w - 1 {
+                    CellKind::Wall
+                } else if x < 4 {
+                    CellKind::Floor(0)
+                } else {
+                    CellKind::Floor(1)
+                };
+                cells.insert(cell, kind);
+            }
+        }
+        Lattice {
+            extent,
+            cells,
+            doorways: vec![(0, 1, Cell(4, 2))],
+            dof: 0,
+        }
+    }
+
+    /// Step 1/2: pin `shadowcast`'s exact output for
+    /// [`characterization_lattice`] against the UNCHANGED implementation, so
+    /// Step 4 can diff the refactor's output against it byte for byte. The
+    /// full set, not a count — a count cannot show which cell moved.
+    #[test]
+    fn shadowcast_characterization() {
+        let lattice = characterization_lattice();
+        let lit = shadowcast(&lattice, Cell(2, 2), 6);
+        let expected: BTreeSet<Cell> = [
+            (0, 0),
+            (0, 1),
+            (0, 2),
+            (0, 3),
+            (0, 4),
+            (1, 0),
+            (1, 1),
+            (1, 2),
+            (1, 3),
+            (1, 4),
+            (2, 0),
+            (2, 1),
+            (2, 2),
+            (2, 3),
+            (2, 4),
+            (3, 0),
+            (3, 1),
+            (3, 2),
+            (3, 3),
+            (3, 4),
+            (4, 0),
+            (4, 1),
+            (4, 2),
+            (4, 3),
+            (4, 4),
+            (5, 2),
+            (6, 1),
+            (6, 2),
+            (6, 3),
+            (7, 1),
+            (7, 2),
+            (7, 3),
+            (8, 1),
+            (8, 2),
+            (8, 3),
+        ]
+        .into_iter()
+        .map(|(x, y)| Cell(x, y))
+        .collect();
+        assert_eq!(lit, expected);
+    }
 
     fn built() -> Brief {
         Brief::from_parts(None, None, None, None, 0, true, true)

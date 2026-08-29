@@ -22,6 +22,7 @@ pub mod interior;
 mod knowledge;
 pub mod lattice;
 pub mod lens;
+pub mod level_doc;
 pub mod light;
 pub mod liveness;
 pub mod passage;
@@ -33,6 +34,7 @@ pub mod stance;
 pub mod streams;
 pub mod structure;
 pub mod testimony;
+mod underground;
 pub mod underworld_level;
 mod vantage;
 pub use agent::{most_populous_settlement, walk_depth};
@@ -43,6 +45,9 @@ pub use depth::{CHAMBER_DEPTH_OFFSET, chamber_depth, truncate_to_walk};
 pub use focalize::*;
 pub use knowledge::*;
 pub use lattice::{Cell, CellKind, Lattice, Plan, Rect, allocate, embed_with, extent_for, render};
+pub use level_doc::{
+    LEVEL_SCHEMA, LevelCell, LevelExtent, LevelPaletteEntry, LevelPoint, SessionLevel, level_of,
+};
 pub use plan::{
     PLAN_SCHEMA, PaletteEntry, PlanExtent, PlanMark, PlanPoint, SessionPlan, Shading, plan_of,
 };
