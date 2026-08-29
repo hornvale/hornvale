@@ -929,8 +929,32 @@ tail -20 /tmp/hv-t9.log
 
 - [ ] **Step 3: Implement the renderer and the plate arm**
 
-`spread.rs`'s match is exhaustive, so the new variant is already a compile
-error — the arm is not optional.
+**The client has its OWN `Spatial` enum** (`clients/game/core/src/schema.rs:100`),
+a `#[serde(tag = "band")]` deserialization mirror carrying `Walk` and
+`Chamber`. It does not match the sim's type. **Nothing forces this update** —
+verified: `cargo check -p hornvale-game-core --all-targets` exits 0 today, with
+`SpatialChannel::Underground` already landed. An earlier draft of this plan and
+of spec 4.3 both claimed a compile error would enforce it; both were wrong and
+both are corrected.
+
+So the mirror enum gains an `Underground { level: Level }` variant, `spread.rs`
+gains its arm, and — because the compiler will not — **you also build the
+enforcement**:
+
+- [ ] **Step 3b: Pin that the client can read every band the sim emits**
+
+A test in `clients/game/core` that parses a snapshot for each band and asserts
+it deserializes. It fails the moment the sim grows a band the client cannot
+read. Without it the next band repeats this exactly: a silent blank pane,
+because `Driver::refresh` swallows a parse failure by design
+(`.unwrap_or_default()`, `if let Ok(snap)`) and leaves the previous state
+standing.
+
+Use the committed fixtures where they serve
+(`clients/game/core/tests/fixtures/session-seed-42-turn-0.json` is `walk`,
+`session-seed-42-chamber.json` is `chamber`); an underground fixture does not
+exist yet, so construct that case rather than skipping it — a two-band test
+that silently omits the third is the same gap one layer up.
 
 Glyph selection is the CLIENT's (decision 0022). Remembered cells get a **glyph
 twin**, the way the walk band's `faded()` maps `.` to `,`, never a dimmer
