@@ -3824,3 +3824,13 @@ measured here.
 | 2026-08-29T06:55:59Z | gate-commit | 49.901 | 38.362 | 13.006 | 1.03 | 0 | 4c2882b56 | campaign/the-gallery | ambrose | 12 |
 | 2026-08-29T07:15:49Z | game-check | 414.204 | 3497.763 | 18.999 | 8.49 | 0 | 22c9039e5 | campaign/the-gallery | ambrose | 12 |
 | 2026-08-29T07:18:18Z | gate-commit | 52.694 | 34.312 | 11.252 | 0.86 | 0 | 22c9039e5 | campaign/the-gallery | ambrose | 12 |
+| 2026-08-29T07:19:33Z | gate-commit | 50.020 | 38.423 | 12.707 | 1.02 | 0 | 22c9039e5 | campaign/the-gallery | ambrose | 12 |
+| 2026-08-29T07:52:14Z | game-check | 412.471 | 3527.445 | 15.697 | 8.59 | 0 | 89d48639a | campaign/the-gallery | ambrose | 12 |
+| 2026-08-29T07:54:22Z | gate-commit | 53.013 | 38.732 | 12.881 | 0.97 | 0 | 89d48639a | campaign/the-gallery | ambrose | 12 |
+| 2026-08-29T08:17:28Z | game-check | 425.716 | 3548.180 | 16.348 | 8.37 | 0 | d484f45ec | campaign/the-gallery | ambrose | 12 |
+| 2026-08-29T08:18:45Z | gate-commit | 58.483 | 39.265 | 13.540 | 0.90 | 0 | d484f45ec | campaign/the-gallery | ambrose | 12 |
+| 2026-08-29T08:58:17Z | gate-commit | 5.589 | 10.408 | 3.678 | 2.52 | 0 | 37298d32a | campaign/the-gallery | ambrose | 12 |
+| 2026-08-29T08:58:32Z | gate-commit | 1.601 | 1.447 | 0.084 | 0.96 | 0 | 37298d32a | campaign/the-gallery | ambrose | 12 |
+| 2026-08-29T08:58:50Z | gate-commit | 12.505 | 13.842 | 1.904 | 1.26 | 0 | 37298d32a | campaign/the-gallery | ambrose | 12 |
+| 2026-08-29T09:00:26Z | gate-commit | 80.075 | 204.175 | 30.959 | 2.94 | 0 | 37298d32a | campaign/the-gallery | ambrose | 12 |
+| 2026-08-29T09:01:53Z | gate-commit | 51.669 | 39.072 | 13.529 | 1.02 | 0 | 37298d32a | campaign/the-gallery | ambrose | 12 |

@@ -4327,10 +4327,19 @@ impl<'w> Session<'w> {
     /// `"lit"` is always already `"remembered"` too by the time this runs —
     /// nothing here can show the possession a cell its own arrival did not
     /// already commit to memory.
+    ///
+    /// **Since The Gallery, Task 11 (spec §3.6), `marks` may grow a chamber
+    /// resident here even when the caller passed an empty `Vec`.** The
+    /// resident is derived fresh from `ug`'s own substrate and energy
+    /// (`crate::underground::chamber_resident`) whenever `self.wctx.terrain`
+    /// and `self.wctx.climate` are both available, and appears only if its
+    /// fixed cell (`crate::underground::resident_cell`) is genuinely `lit`
+    /// this turn — a chamber that is out of sight shows nobody, exactly as
+    /// the chamber band's own NPC marks already require.
     fn underground_level(
         &self,
         ug: &crate::underground::Underground,
-        marks: Vec<crate::plan::PlanMark>,
+        mut marks: Vec<crate::plan::PlanMark>,
     ) -> crate::level_doc::SessionLevel {
         let level = ug.level();
         let lit = crate::lattice::shadowcast_with(
@@ -4345,6 +4354,29 @@ impl<'w> Session<'w> {
             ug.cell,
             self.sight_reach(),
         );
+        // The Gallery, Task 11 (spec §3.6): who lives here is derived from
+        // THIS chamber's own substrate and energy, never a spawn table and
+        // never the surface roster — `crate::underground::chamber_resident`
+        // is the whole derivation. A resident's cell is fixed by the
+        // level's own geometry (`resident_cell`), never by the possession's
+        // position, so it is drawn only when THAT cell is genuinely lit —
+        // the same "entities enter at `lit`, never merely `remembered`"
+        // rule the chamber band's own marks already follow (spec §4.1.2).
+        if let (Some(terrain), Some(climate)) =
+            (self.wctx.terrain.as_ref(), self.wctx.climate.as_ref())
+            && let Some((kind, source)) = crate::underground::chamber_resident(ug, terrain, climate)
+            && let Some(cell) = crate::underground::resident_cell(level)
+            && lit.contains(&cell)
+        {
+            marks.push(crate::plan::PlanMark {
+                x: cell.0,
+                y: cell.1,
+                noun: kind.0.to_string(),
+                kind: crate::purview::AGENT_MARK_KIND.to_string(),
+                datum: crate::underground::inhabitant_datum(kind, source),
+                salience: crate::purview::AGENT_SALIENCE,
+            });
+        }
         crate::level_doc::level_of(
             level,
             ug.rung_band(),
@@ -4374,9 +4406,16 @@ impl<'w> Session<'w> {
     /// never a shade (`level_doc`'s own module doc, spec §4.1), so there is
     /// no colour here for a lens to filter.
     ///
-    /// Never shows a creature mark — [`Self::plan_here`] does not either (it
-    /// always passes `Vec::new()` for `marks`); Task 11 is what teaches this
-    /// band to place one.
+    /// **This picture never draws a creature mark, and that stays true after
+    /// The Gallery, Task 11** — not because `doc.marks` is empty (as of
+    /// Task 11 it may carry a derived chamber resident, exactly as the pane
+    /// does: [`Self::underground_level`] builds it whether this verb's own
+    /// `Vec::new()` argument is empty or not), but because the render loop
+    /// below only ever walks `doc.cells`, `doc.palette` and `doc.you` — it
+    /// never reads `doc.marks` at all. [`Self::plan_here`] draws the same
+    /// way, for the same reason (it too always passes `Vec::new()` for
+    /// `marks`, and its own picture ignores whatever a plan's `marks` would
+    /// have carried).
     fn level_here(&self) -> Result<String, VesselError> {
         let Some(ug) = self.underground.as_ref() else {
             // Unreachable through `handle` (the arm checks first), the same
@@ -10327,6 +10366,135 @@ mod tests {
             !json.contains("\"color\"") && !json.contains("\"colour\""),
             "the level document must distinguish visibility by state alone, \
              never by colour: {json}"
+        );
+    }
+
+    /// The Gallery, Task 11 (spec §4.1.2, §3.6): a chamber's derived
+    /// resident is drawn only while its own cell is `lit` — never merely
+    /// `remembered`. The chamber band's own marks already follow this rule
+    /// (`a_creature_beyond_sight_appears_neither_in_sensed_nor_in_marks`,
+    /// below); this is the same assertion one band down, for a mark this
+    /// module derives fresh on every snapshot rather than reading off a
+    /// placed body.
+    ///
+    /// Stands the possession directly on the resident's own cell (folding
+    /// the shadowcast there via [`Session::mark_underground_seen`], exactly
+    /// as a real arrival would) so that cell is genuinely `seen`, then walks
+    /// far enough away — by BFS over the level's own walkable graph, the
+    /// same technique
+    /// [`the_three_visibility_states_are_distinguishable_without_colour`]
+    /// uses, rather than steering a walk there and risking an unlucky maze
+    /// shape — that the resident's cell falls outside the current
+    /// shadowcast: `remembered`, not `lit`. The mark must vanish there and
+    /// reappear back at the resident's own cell.
+    #[test]
+    fn a_creature_underground_is_drawn_only_while_lit() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let climate = session
+            .wctx
+            .climate
+            .clone()
+            .expect("seed 42 builds climate");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+
+        let (kind, _) = {
+            let ug = session.underground.as_ref().expect("descended");
+            crate::underground::chamber_resident(ug, &terrain, &climate).unwrap_or_else(|| {
+                panic!(
+                    "the fixture's entrance chamber must support a resident for this \
+                     test to exercise anything — if a terrain/species change moved \
+                     this, pick a different fixture vertex rather than deleting the \
+                     assertion"
+                )
+            })
+        };
+        let resident_cell = {
+            let ug = session.underground.as_ref().expect("descended");
+            crate::underground::resident_cell(ug.level())
+                .expect("Task 9's connectivity invariant guarantees a standable cell")
+        };
+        let reach = session.sight_reach();
+
+        // Stand on the resident's own cell and fold the shadowcast there, the
+        // same way a real arrival marks its surroundings seen.
+        session.underground.as_mut().expect("descended").cell = resident_cell;
+        session.mark_underground_seen();
+
+        let has_resident_mark = |session: &Session| -> bool {
+            let snap = session.snapshot().expect("a descended session snapshots");
+            match snap.spatial {
+                crate::snapshot::SpatialChannel::Underground { level } => level
+                    .marks
+                    .iter()
+                    .any(|m| m.noun == kind.0 && m.x == resident_cell.0 && m.y == resident_cell.1),
+                other => panic!("expected the underground band, got {other:?}"),
+            }
+        };
+
+        assert!(
+            has_resident_mark(&session),
+            "standing on the resident's own (lit) cell must show its mark"
+        );
+
+        // BFS over the level's own walkable graph for a cell more than
+        // `reach` Chebyshev cells from the resident's cell — guaranteed to
+        // exist by Task 9's connectivity invariant.
+        let far_cell = {
+            let ug = session.underground.as_ref().expect("descended");
+            let level = ug.level();
+            let mut visited = std::collections::BTreeSet::new();
+            let mut queue = std::collections::VecDeque::new();
+            visited.insert(resident_cell);
+            queue.push_back(resident_cell);
+            let mut found = None;
+            while let Some(cur) = queue.pop_front() {
+                let dist = (cur.0 - resident_cell.0)
+                    .abs()
+                    .max((cur.1 - resident_cell.1).abs());
+                if dist > reach {
+                    found = Some(cur);
+                    break;
+                }
+                for (dx, dy) in [(0, 1), (0, -1), (1, 0), (-1, 0)] {
+                    let next = crate::lattice::Cell(cur.0 + dx, cur.1 + dy);
+                    if visited.insert(next)
+                        && level
+                            .cells
+                            .get(next)
+                            .and_then(crate::underworld_level::movement_mode)
+                            .is_some()
+                    {
+                        queue.push_back(next);
+                    }
+                }
+            }
+            found.expect(
+                "Task 9's connectivity invariant: every level is connected well beyond \
+                 `reach` cells from any of its own standable cells",
+            )
+        };
+
+        session.underground.as_mut().expect("descended").cell = far_cell;
+        assert!(
+            !has_resident_mark(&session),
+            "the resident's cell is now merely REMEMBERED (seen earlier, not lit \
+             from here) — its mark must not appear, exactly as an entity's own \
+             mark never appears from mere memory (spec §4.1.2)"
+        );
+
+        // Walk back: the resident's own cell is lit again, so the mark must
+        // reappear — this is not a one-shot "seen once, gone forever" bug.
+        session.underground.as_mut().expect("descended").cell = resident_cell;
+        assert!(
+            has_resident_mark(&session),
+            "the mark must reappear once its cell is lit again"
         );
     }
 

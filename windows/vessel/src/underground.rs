@@ -12,7 +12,7 @@
 //! `delve`, never serialized. A world is a seed plus a ledger; nothing here
 //! is either.
 
-use hornvale_kernel::{Band, Seed};
+use hornvale_kernel::{Band, KindId, Seed, Vertex};
 use hornvale_locale::Compass;
 use std::collections::BTreeSet;
 
@@ -168,6 +168,15 @@ pub(crate) struct Underground {
     /// `Floor` or `Flooded` cell at the moment [`Underground::enter`]
     /// places it — never `Wall`, `StairsDown` or `StairsUp`.
     pub(crate) cell: Cell,
+    /// The surface vertex this whole descent hangs beneath — the same
+    /// vertex [`Underground::enter`]’s caller (`Session::delve_at`) already
+    /// resolved the cave through. Every rung of `descent` shares this one
+    /// vertex; only the evaluation depth ([`Underground::depths_m`]) varies
+    /// between them. Kept so a later read of this chamber’s own conditions
+    /// (spec §3.6, Task 11) can re-derive `terrain.geothermal_gradient_at`,
+    /// `terrain.material_at` and the rest from the SAME point `enter` itself
+    /// read, rather than a second, independently-chosen vertex.
+    pub(crate) vertex: Vertex,
     /// The seed the descent was generated from (the world's own seed —
     /// [`Underground::enter`] derives nothing else). Carried alongside the
     /// generated content the same way [`crate::lattice::Lattice`]'s
@@ -302,6 +311,7 @@ impl Underground {
             descent,
             rung: 0,
             cell,
+            vertex,
             seed,
             seen,
             depths_m,
@@ -515,6 +525,262 @@ impl Underground {
     }
 }
 
+// --- Task 11: inhabitants (spec §3.6) ---------------------------------
+
+/// Below this, a species' fit is treated as "cannot be fed here" rather than
+/// merely "poorly fed" — the difference between a chamber holding a marginal
+/// resident and holding nobody at all (spec §3.6: "a chamber that can feed
+/// nothing holds nothing"). Deliberately small: at a chamber near either
+/// subterranean species' own preferred elevation, [`inhabitant_fit`] reads
+/// well clear of this line (rust-monster's own elevation optimum alone
+/// clears `0.2`; a fed xorn's energy term alone clears `0.3` — see
+/// [`who_is_underground_derives_from_the_chambers_own_conditions`]'s
+/// measured baseline), so this threshold exists to catch the genuinely
+/// hostile case — an elevation far outside every authored niche, combined
+/// with a chemotroph starved of energy — not to prune the ordinary middle
+/// of the distribution. A calibration knob, not a physical constant;
+/// nothing in this campaign measures where it should sit more precisely.
+/// type-audit: bare-ok(ratio)
+const INHABITANT_FIT_THRESHOLD: f64 = 0.05;
+
+/// One species' fit at one chamber, `[0, 1]` — a blend of
+/// [`hornvale_worldgen::tolerance_liebig`]'s environmental score and the
+/// chamber's own energy reading, weighted by how much of that species' diet
+/// the energy sources actually cover.
+///
+/// **The weight is the species' own authored `CHEMOSYNTHATE` niche weight,
+/// not a second axis dot product.** The full genesis-time capacity
+/// calculation weighs `CHEMOSYNTHATE` alongside six other supply axes via
+/// each species' authored niche weights (`windows/worldgen/src/lib.rs`'s
+/// `per_species_capacity_at`); none of those other six fields exist at a
+/// per-turn query, and the subterranean roster does not need them — THE
+/// SOURCES already authored `xorn`'s niche at `0.65 MINERAL / 0.35
+/// CHEMOSYNTHATE` (`domains/species/src/lib.rs`'s `biosphere_registry`),
+/// which is the exact number this reads back with `bio.niche.
+/// weight(CHEMOSYNTHATE)`. `rust-monster`'s niche carries no `CHEMOSYNTHATE`
+/// weight at all (`0.0`, pure `MINERAL`), so for it this collapses to
+/// `condition_fit` exactly — untouched by how rich or poor the rock's
+/// chemical sources are, which is correct biology (it eats metal, not a
+/// chemical gradient) and needs no special-casing to fall out of the
+/// formula.
+///
+/// **A weighted blend, not a Liebig `min`, and deliberately so.** A first
+/// draft gated a chemotroph with `condition_fit.min(energy)` — but xorn's
+/// OWN elevation-tolerance ceiling (`devotion: 0.10`) already caps its
+/// `condition_fit` around `0.10` everywhere (the same "elevation binds"
+/// pathology `tolerance_liebig`'s own doc discloses for goblin/gnoll/human),
+/// so a `min` can only ever SHRINK that already-small number — it can never
+/// lift xorn's fit above rust-monster's (whose own elevation devotion,
+/// `0.25`, gives it a materially higher ceiling), and "a chamber whose
+/// dominant energy source differs should be able to hold a different
+/// creature than one next to it" (spec §3.6) would never actually be
+/// witnessed by any real chamber. The blend lets a well-fed chemotroph's
+/// score rise on the energy term rather than merely fail to fall on it —
+/// see [`who_is_underground_derives_from_the_chambers_own_conditions`] for
+/// the measured crossover this buys, at a real, unremarkable chamber
+/// (height 0 m, temperature 5 °C, moisture 0.85).
+fn inhabitant_fit(
+    bio: &hornvale_species::BiosphereTraits,
+    substrate: &hornvale_worldgen::Substrate,
+    energy: f64,
+) -> f64 {
+    let floor_buf = hornvale_kernel::sovereignty_floor(bio.mass, bio.potency);
+    let condition_fit =
+        hornvale_worldgen::tolerance_liebig(&bio.condition_niche, substrate, floor_buf);
+    let chemo_weight = bio
+        .niche
+        .weight(hornvale_kernel::CHEMOSYNTHATE)
+        .clamp(0.0, 1.0);
+    condition_fit * (1.0 - chemo_weight) + energy.clamp(0.0, 1.0) * chemo_weight
+}
+
+/// Which subterranean species best fits one chamber's own `substrate` and
+/// `energy` reading (spec §3.6), or `None` if nothing in the subterranean
+/// roster ([`hornvale_species::habitat_realm_registry`], filtered to
+/// [`hornvale_species::HabitatRealm::Subterranean`] and, below, to the
+/// solitary/gregarious/sessile kinds — no `SocialForm::Settled` PEOPLE)
+/// clears [`INHABITANT_FIT_THRESHOLD`] — "a chamber that can feed nothing
+/// holds nothing."
+///
+/// **Pure, and deliberately so**: this is the seam
+/// [`who_is_underground_derives_from_the_chambers_own_conditions`]
+/// perturbs directly, with no `Underground`, no terrain and no climate in
+/// sight — the property under test is "this function's OUTPUT moves when
+/// its INPUTS do," which a pure function over two arguments states as
+/// plainly as it can be stated.
+///
+/// Ties (equal fit, to the bit) break on `KindId`'s own `Ord` — the
+/// registry's ascending iteration order already gives one, but stating the
+/// break explicitly keeps this function's own result independent of
+/// whatever order a future larger roster happens to iterate in. `total_cmp`
+/// for the float comparison itself (no float-`Ord` shortcuts — CLAUDE.md),
+/// a tie-break for the rest.
+pub(crate) fn dominant_inhabitant(
+    substrate: &hornvale_worldgen::Substrate,
+    energy: f64,
+) -> Option<KindId> {
+    let biosphere = hornvale_species::biosphere_registry();
+    hornvale_species::habitat_realm_registry()
+        .iter()
+        .filter(|(_, realm)| **realm == hornvale_species::HabitatRealm::Subterranean)
+        .filter_map(|(kind, _)| biosphere.get(kind).map(|bio| (*kind, bio)))
+        // **A PEOPLE is not a wandering monster.** `habitat_realm_registry`
+        // gained a third row since this task's brief was written — `drow`
+        // (The Radiation, C2d), `SocialForm::Settled` — whose own doc names
+        // it "the store's first PEOPLED occupant, and the first row whose
+        // consumer is settlement placement rather than a readout." A people
+        // is founded through settlement placement, with agency and society;
+        // a chamber's derived RESIDENT here is a solitary creature a
+        // possession might stumble on, with no such placement behind it. Were
+        // this filter absent, `dominant_inhabitant` would print "a drow moves
+        // in the dark here" at any qualifying chamber anywhere in the world —
+        // the same category error `habitat_realm_registry`'s own doc warns
+        // against for a DEPTH-only distinction, one axis over: conflating a
+        // people with a monster. `SocialForm::Settled` is exactly the
+        // registry's own name for "a settling people" (its own doc), so
+        // filtering on it needs no roster maintained here that could drift
+        // from that registry's own membership.
+        .filter(|(_, bio)| bio.social_form != hornvale_species::SocialForm::Settled)
+        .map(|(kind, bio)| (kind, inhabitant_fit(bio, substrate, energy)))
+        .filter(|(_, fit)| *fit > INHABITANT_FIT_THRESHOLD)
+        .max_by(|(a_kind, a_fit), (b_kind, b_fit)| {
+            a_fit.total_cmp(b_fit).then_with(|| a_kind.0.cmp(b_kind.0))
+        })
+        .map(|(kind, _)| kind)
+}
+
+/// This rung's own substrate, energy scalar and dominant source (spec
+/// §3.6) — [`hornvale_worldgen::subterranean_substrate`] and
+/// [`hornvale_worldgen::energy::{subterranean_energy, dominant_source}`]
+/// evaluated at `ug.vertex`/`ug.depths_m[ug.rung]`, the exact point
+/// [`Underground::enter`] built this rung for.
+///
+/// **Re-derives `gradient`/`porosity`/`water_table_m` rather than storing
+/// them** — the same three calls [`Underground::enter`] itself makes (see
+/// that method's own doc), so a chamber's hydrology cannot disagree with
+/// how it was generated. Only `surface.temperature_c`/`surface.height_asl_m`
+/// are read from the constructed `surface` reading below;
+/// `subterranean_substrate` overwrites `moisture`/`insolation` outright
+/// (its own doc), so the placeholder zeros here never reach a species'
+/// score.
+pub(crate) fn chamber_conditions(
+    ug: &Underground,
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    climate: &hornvale_climate::GeneratedClimate,
+) -> (
+    hornvale_worldgen::Substrate,
+    f64,
+    hornvale_worldgen::energy::EnergySource,
+) {
+    let gradient = terrain.geothermal_gradient_at(ug.vertex);
+    let material = terrain.material_at(ug.vertex);
+    let porosity = material.porosity;
+    let height_asl_m = terrain.elevation_at(ug.vertex).above(terrain.sea_level());
+    let water_table_m = hornvale_terrain::water_table_depth_m(
+        terrain.drainage_at(ug.vertex),
+        porosity,
+        height_asl_m.get(),
+    );
+    let surface = hornvale_worldgen::Substrate {
+        temperature_c: climate.mean_temperature_at(ug.vertex).get(),
+        moisture: 0.0,
+        insolation: 0.0,
+        height_asl_m,
+    };
+    let depth_m = ug.depths_m[ug.rung];
+    let substrate = hornvale_worldgen::subterranean_substrate(
+        surface,
+        depth_m,
+        gradient,
+        water_table_m,
+        porosity,
+    );
+    let drainage = terrain.drainage_at(ug.vertex);
+    let energy = hornvale_worldgen::energy::subterranean_energy(
+        &material,
+        gradient,
+        depth_m,
+        substrate.moisture,
+        drainage,
+    );
+    let source = hornvale_worldgen::energy::dominant_source(
+        &material,
+        gradient,
+        depth_m,
+        substrate.moisture,
+        drainage,
+    );
+    (substrate, energy, source)
+}
+
+/// The chamber's own resident, if the rung's own conditions can feed one
+/// (spec §3.6): [`dominant_inhabitant`] scored against [`chamber_conditions`]'s
+/// substrate and energy reading, paired with the dominant source that fed
+/// it — carried through purely for [`inhabitant_datum`]'s flavour text, the
+/// same "retained beside the scalar" role `dominant_source` plays in the
+/// energy module itself.
+pub(crate) fn chamber_resident(
+    ug: &Underground,
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    climate: &hornvale_climate::GeneratedClimate,
+) -> Option<(KindId, hornvale_worldgen::energy::EnergySource)> {
+    let (substrate, energy, source) = chamber_conditions(ug, terrain, climate);
+    dominant_inhabitant(&substrate, energy).map(|kind| (kind, source))
+}
+
+/// Where a chamber's derived resident stands, if the rung has any standable
+/// cell at all: the LAST `Floor`/`Flooded` cell in the level's own ascending
+/// `(x, y)` order — the mirror image of [`Underground::enter`]'s own
+/// entrance-placement rule (the FIRST such cell), chosen so the resident
+/// does not, in general, greet the possession at the stairs it just climbed
+/// down. A fixed function of the level's own geometry, not of anything the
+/// possession does: the resident does not chase the player around the rung
+/// from one snapshot to the next.
+pub(crate) fn resident_cell(level: &Level) -> Option<Cell> {
+    level
+        .cells
+        .iter()
+        .filter(|(_, k)| matches!(k, LevelCellKind::Floor | LevelCellKind::Flooded))
+        .map(|(c, _)| c)
+        .last()
+}
+
+/// The flavour text a chamber's derived resident's mark carries — naming the
+/// SPECIES rather than a personal label, because this creature has no
+/// entity identity to be consistent with (spec §3.6's own stop condition:
+/// this task ships a query, not a placement engine with tracked
+/// individuals). `source` is [`hornvale_worldgen::energy::dominant_source`]'s
+/// own reading, hand-mapped to a short phrase rather than its `Debug`
+/// text — the same discipline [`crate::level_doc::band_wire_name`] and
+/// `crate::plan::entry_for` already apply to their own enums, for the same
+/// reason: prose a player reads is not obliged to track an internal
+/// variant's name.
+pub(crate) fn inhabitant_datum(
+    kind: KindId,
+    source: hornvale_worldgen::energy::EnergySource,
+) -> String {
+    format!(
+        "A {} moves in the dark here, drawn to {}.",
+        kind.0,
+        source_phrase(source)
+    )
+}
+
+/// [`inhabitant_datum`]'s own hand-map from [`hornvale_worldgen::energy::
+/// EnergySource`] to a short descriptive phrase.
+fn source_phrase(source: hornvale_worldgen::energy::EnergySource) -> &'static str {
+    use hornvale_worldgen::energy::EnergySource;
+    match source {
+        EnergySource::Serpentinization => "the wet, serpentine rock",
+        EnergySource::IronReduction => "iron-bearing stone",
+        EnergySource::Radiolysis => "the rock's own faint radioactivity",
+        EnergySource::SulphideOxidation => "a sulphide-laced seam",
+        EnergySource::Methanogenesis => "the porous, water-logged carbonate",
+        EnergySource::Geothermal => "the warmth rising from below",
+        EnergySource::DetritalImport => "detritus washed down from above",
+    }
+}
+
 /// The outcome of one lateral compass step underground (The Gallery, Task
 /// 4; spec §3.2).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -724,6 +990,141 @@ mod tests {
             find_bytes(body, b"sight_reach").is_some(),
             "positive control: mark_underground_seen must actually call \
              sight_reach() somewhere in its body"
+        );
+    }
+
+    // --- Task 11: inhabitants (spec §3.6) -----------------------------
+
+    /// A real, unremarkable chamber: sea-level height, a mild temperature and
+    /// a damp-but-not-flooded moisture reading — nothing authored to favour
+    /// either subterranean species over the other. Only `height_asl_m` is
+    /// varied by the tests below; `temperature_c`/`moisture` stay fixed here.
+    fn ordinary_substrate(height_asl_m: f64) -> hornvale_worldgen::Substrate {
+        hornvale_worldgen::Substrate {
+            temperature_c: 5.0,
+            moisture: 0.85,
+            insolation: 0.0,
+            height_asl_m: hornvale_kernel::SeaLevelHeight::from_metres(height_asl_m),
+        }
+    }
+
+    /// **The property, not a fixed roster** (spec §3.6): perturbing either
+    /// of `dominant_inhabitant`'s two inputs — the chamber's own energy
+    /// reading, or its substrate — moves the result, and a chamber hostile
+    /// enough on both axes at once holds nobody at all. No named species is
+    /// asserted as a FIXED answer to a fixed input; each assertion compares
+    /// two READINGS against each other or against `None`, which is what
+    /// keeps this test from pinning a calibration Task 11 does not own.
+    #[test]
+    fn who_is_underground_derives_from_the_chambers_own_conditions() {
+        let sea_level = ordinary_substrate(0.0);
+
+        // Energy alone moves the roster, substrate held fixed. A starved
+        // chamber favours rust-monster (untouched by energy — its niche
+        // carries no CHEMOSYNTHATE weight); the same chamber, well-fed,
+        // favours xorn instead (0.35 CHEMOSYNTHATE-weighted, THE SOURCES).
+        let starved = dominant_inhabitant(&sea_level, 0.0);
+        let fed = dominant_inhabitant(&sea_level, 1.0);
+        assert!(
+            starved.is_some() && fed.is_some(),
+            "an ordinary chamber must hold somebody whether starved or fed: \
+             starved={starved:?} fed={fed:?}"
+        );
+        assert_ne!(
+            starved, fed,
+            "starving vs feeding the SAME chamber must be able to change WHO \
+             it holds, not merely whether: starved={starved:?} fed={fed:?}"
+        );
+
+        // Substrate alone moves the roster, energy held fixed at "starved"
+        // (`0.0`) throughout: an ordinary chamber still holds rust-monster
+        // (its own fit does not read energy at all), but a chamber whose
+        // elevation sits far outside every authored niche's range holds
+        // nobody — "a chamber that can feed nothing holds nothing" (spec
+        // §3.6), demonstrated here through substrate alone rather than
+        // energy. (Energy is held at `0.0`, not `1.0`, on purpose: a
+        // well-fed xorn's energy term alone already clears
+        // [`INHABITANT_FIT_THRESHOLD`] regardless of substrate, so pairing
+        // an extreme substrate with full energy would not show substrate
+        // moving anything — see [`inhabitant_fit`]'s own doc for why the
+        // energy term is a floor a chemotroph can always reach when fed.)
+        let extreme_height = ordinary_substrate(60_000.0);
+        let hostile = dominant_inhabitant(&extreme_height, 0.0);
+        assert_eq!(
+            hostile, None,
+            "moving ONLY the substrate (height 0 m -> 60,000 m), energy held \
+             fixed at 0.0, must be able to empty a chamber that used to hold \
+             somebody: ordinary={starved:?} extreme={hostile:?}"
+        );
+        assert_ne!(
+            starved, hostile,
+            "substrate alone must be able to move the roster"
+        );
+    }
+
+    /// [`resident_cell`] picks the level's own LAST standable cell, the
+    /// mirror of [`Underground::enter`]'s FIRST-cell entrance rule — and a
+    /// fixed function of the level alone, not of any external state.
+    #[test]
+    fn resident_cell_is_the_levels_own_last_standable_cell() {
+        let extent = Rect {
+            x: 0,
+            y: 0,
+            w: 4,
+            h: 3,
+        };
+        let mut cells = crate::underworld_level::CellGrid::new(extent, LevelCellKind::Wall);
+        cells.set(Cell(1, 1), LevelCellKind::Floor);
+        cells.set(Cell(2, 1), LevelCellKind::Flooded);
+        let level = Level {
+            extent,
+            cells,
+            dof: 0,
+            leaf_styles: Vec::new(),
+        };
+        assert_eq!(resident_cell(&level), Some(Cell(2, 1)));
+    }
+
+    /// A level with no standable cell at all (degenerate, never produced by
+    /// the real generator — Task 9's own connectivity invariant forbids it)
+    /// has no resident cell either, rather than panicking.
+    #[test]
+    fn resident_cell_is_none_when_the_level_has_no_floor() {
+        let extent = Rect {
+            x: 0,
+            y: 0,
+            w: 3,
+            h: 3,
+        };
+        let cells = crate::underworld_level::CellGrid::new(extent, LevelCellKind::Wall);
+        let level = Level {
+            extent,
+            cells,
+            dof: 0,
+            leaf_styles: Vec::new(),
+        };
+        assert_eq!(resident_cell(&level), None);
+    }
+
+    /// [`inhabitant_datum`] names the species, not a personal label (this
+    /// creature has no entity identity — see the function's own doc), and
+    /// its flavour text changes with the dominant source even for the same
+    /// species — a chamber whose dominant source differs reads as a
+    /// genuinely different sentence, not a copy-pasted one.
+    #[test]
+    fn inhabitant_datum_names_the_species_and_the_source() {
+        let a = inhabitant_datum(
+            KindId("xorn"),
+            hornvale_worldgen::energy::EnergySource::Geothermal,
+        );
+        let b = inhabitant_datum(
+            KindId("xorn"),
+            hornvale_worldgen::energy::EnergySource::DetritalImport,
+        );
+        assert!(a.contains("xorn") && b.contains("xorn"));
+        assert_ne!(
+            a, b,
+            "a different dominant source must read differently: {a:?} vs {b:?}"
         );
     }
 }

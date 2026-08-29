@@ -48,8 +48,18 @@
 //! same creature named in the prose must stay the same examinable thing, so
 //! this module reuses the type outright rather than defining a
 //! structurally-identical `LevelMark` that would sever the join for no gain.
-//! Always an empty `Vec` as of Task 7 (Task 11 fills it — see the field's own
-//! doc).
+//!
+//! **As of Task 11 (spec §3.6), `marks` is no longer always empty** — a
+//! chamber's own conditions may derive a resident
+//! (`crate::underground::chamber_resident`), drawn here exactly like any
+//! other mark. That resident is not yet party to the map/prose identity join
+//! this doc argues for above: it has no entity, so `examine` underground
+//! does not yet answer to its noun (`crate::underground::inhabitant_datum`
+//! is this module's own copy of its flavour text, read directly off the
+//! mark rather than through a ledger entity the way an NPC's `datum` is).
+//! `PlanMark` is reused here for its plain STRUCTURAL shape — one noun, one
+//! kind, one salience-sortable mark — not yet for the fuller identity
+//! argument above; closing that gap is future work, not this task's.
 //!
 //! # Emit-only. Never persist this.
 //!
@@ -120,9 +130,10 @@ enum LevelVisibility {
 impl LevelVisibility {
     /// The wire string this state serializes as. Terrain draws from
     /// `Remembered` upward; an entity draws only from `Lit` upward (spec
-    /// §4.1.2's ordering) — a rule for whoever fills [`SessionLevel::marks`]
-    /// (Task 11), not for this module, which carries every state it is
-    /// given without filtering.
+    /// §4.1.2's ordering) — a rule `Session::underground_level`
+    /// (`session.rs`) follows when it fills [`SessionLevel::marks`] (The
+    /// Gallery, Task 11), not a rule this module enforces itself: this
+    /// module carries every state it is given without filtering.
     fn as_wire(self) -> &'static str {
         match self {
             LevelVisibility::Here => "here",
@@ -217,11 +228,16 @@ pub struct SessionLevel {
     pub you: LevelPoint,
     /// The individuals standing on the level, ascending by `(salience,
     /// noun)` exactly as `vessel/plan/v1`'s own `marks` sorts (so the bytes
-    /// do not depend on discovery order). **Always `[]` as of Task 7** — no
-    /// creature is placed underground yet (spec §3.6); Task 11 is what
-    /// fills this. Empty is `[]`, never an omitted key, for the same reason
-    /// `PlanMark`'s own doc gives: an omitted key and an empty list would be
-    /// two representations of "nobody here."
+    /// do not depend on discovery order). **Empty through Task 10** — no
+    /// creature was placed underground at all (spec §3.6). **Since Task
+    /// 11**, may carry the chamber's own derived resident: `Session::
+    /// underground_level` asks `crate::underground::chamber_resident` for
+    /// which species (if any) this rung's own substrate and energy can
+    /// feed, and includes it here only while its cell is lit — never merely
+    /// remembered (spec §4.1.2). Still `[]`, never an omitted key, whenever
+    /// nobody qualifies — for the same reason `PlanMark`'s own doc gives: an
+    /// omitted key and an empty list would be two representations of
+    /// "nobody here."
     pub marks: Vec<PlanMark>,
 }
 
