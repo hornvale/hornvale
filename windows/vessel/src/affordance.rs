@@ -189,7 +189,8 @@ pub fn thing_kind_of(kind: AnchorKind) -> KindId {
 /// `threshold`→`AffordsPassage`, `strongbox`/`alcove`→`Encloses`,
 /// `hearth`→`RadiatesHeat`. Task 7 adds the three properties spec §3.8
 /// earns, on the carriers §3.8 names: `key`→`Portable`,
-/// `strongbox`/`cave-mouth`→`Openable`, `strongbox`→`Lockable`. A kind
+/// `strongbox`/`cave-mouth`→`Openable`, `strongbox`→`Lockable`; Task 8 adds
+/// `cave-mouth`→`AffordsPassage` (spec §3.7). A kind
 /// absent from this table carries no property.
 ///
 /// **`key` and `cave-mouth` are the first rows with no `AnchorKind` behind
@@ -198,13 +199,30 @@ pub fn thing_kind_of(kind: AnchorKind) -> KindId {
 /// a body carries, neither expressible in the enum The Offer keyed on
 /// (decision 0369's "the obstacle is addressing, not durability").
 ///
-/// **`cave-mouth` carries `Openable` and NOT `AffordsPassage`, deliberately
-/// and only for now.** Spec §3.7 gives the finished cave-mouth thing-kind
-/// both, but `AffordsPassage` gates `Enter`, and nothing routes chamber
-/// entry through this table until Task 8 retires `passage-cleared`. Adding
-/// it here would make `offered_by(KindId("cave-mouth"))` advertise a verb no
-/// dispatcher honours — the shape spec §3.3 calls dead vocabulary. Task 8
-/// adds it with the consumer that reads it.
+/// **`cave-mouth` carries BOTH `Openable` and `AffordsPassage` as of Task 8**
+/// (spec §3.7), and the paragraph this replaces deferred the second one with
+/// a precise condition, so the condition is worth settling rather than
+/// quietly dropping. It read: *"`AffordsPassage` gates `Enter`, and nothing
+/// routes chamber entry through this table until Task 8 retires
+/// `passage-cleared` … Task 8 adds it with the consumer that reads it."*
+///
+/// Task 8 retired the predicate: chamber entry (`Session::delve_at`) is now
+/// gated on the cave mouth's own `openness` fold, so the cave mouth is a
+/// promoted thing with a derived `EntityId` and an authored kind, which is
+/// what the deferral was waiting on.
+///
+/// **What is still NOT true, said plainly rather than left for a reader to
+/// discover: no production caller holds a cave-mouth [`KindId`] yet.** Every
+/// live call site of [`offered_by`]/[`offered_to`]/[`offered_to_observer`]
+/// converts from an [`AnchorKind`] via [`thing_kind_of`], and cave-mouth has
+/// no `AnchorKind` — so `offered_by(KindId("cave-mouth"))` returning
+/// `{Enter, Examine}` is a fact about the table that nothing reads for one
+/// more task. Task 9 re-keys [`offered_to_observer`] to `KindId` (its own doc
+/// below says so, and names this exact obstacle), which is the call site.
+/// The property is granted HERE rather than there because §3.7 assigns it to
+/// this task and because the thing it describes — a mouth a body passes
+/// through, whose passability is now a ledger fold — exists as of this task
+/// and not before it.
 ///
 /// **Every kind NOT listed was checked against the code and found to carry
 /// nothing**, not merely left unconsidered:
@@ -270,7 +288,10 @@ pub fn object_registry() -> ComponentStore<KindId, ObjectTraits> {
         (KindId("alcove"), traits(&[ObjectProperty::Encloses])),
         (KindId("hearth"), traits(&[ObjectProperty::RadiatesHeat])),
         (KindId("key"), traits(&[ObjectProperty::Portable])),
-        (KindId("cave-mouth"), traits(&[ObjectProperty::Openable])),
+        (
+            KindId("cave-mouth"),
+            traits(&[ObjectProperty::AffordsPassage, ObjectProperty::Openable]),
+        ),
     ]
     .into_iter()
     .collect()
@@ -691,6 +712,7 @@ mod tests {
                 ObjectProperty::Openable,
             ),
             (KindId("cave-mouth"), ObjectProperty::Openable),
+            (KindId("cave-mouth"), ObjectProperty::AffordsPassage),
             (
                 thing_kind_of(AnchorKind::Strongbox),
                 ObjectProperty::Lockable,

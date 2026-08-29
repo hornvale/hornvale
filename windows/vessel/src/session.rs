@@ -676,8 +676,9 @@ pub struct Session<'w> {
     /// only by `wait`'s tick (NPC `agent-at` facts). Never written back.
     ledger: Ledger,
     /// A clone of the world's registry, extended with the live-play
-    /// predicates — `AGENT_AT`, `PASSAGE_CLEARED` (The Latch), `LOCATED_IN`
-    /// and `OPENNESS` (The Chattel), and the drive/needs predicates beside
+    /// predicates — `AGENT_AT`, `LOCATED_IN` and `OPENNESS` (The Chattel,
+    /// which also RETIRED `PASSAGE_CLEARED` from this list), and the
+    /// drive/needs predicates beside
     /// them — every one registered per-session, never at genesis (spec §3).
     /// The roster is `Session::start`'s own `register_predicate` block, which
     /// is where a reader should look rather than trusting this list to stay
@@ -1051,34 +1052,25 @@ impl<'w> Session<'w> {
         registry
             .register_predicate(AGENT_AT, false, "an agent's position on a day")
             .expect("AGENT_AT registers identically every session");
-        // PASSAGE_CLEARED is likewise never registered at genesis (The
-        // Latch): a live-play predicate is minted HERE, per session, beside
-        // AGENT_AT above.
+        // PASSAGE_CLEARED USED TO BE REGISTERED HERE, and its registration is
+        // gone rather than kept as a compatibility stub (The Chattel, Task 8;
+        // decision 0396 supersedes 0367). A cave mouth is a thing now, and the
+        // predicate it writes is OPENNESS, registered a few lines below beside
+        // LOCATED_IN — so this block would have registered a predicate nothing
+        // in the tree can write and nothing reads. "Per-session" always named
+        // WHERE a predicate is registered, not how long it lasts, and that has
+        // not changed: `Session::into_played_world` moves `self.registry` AND
+        // `self.ledger` into the saved `World`, and `possess --out` writes it
+        // (decision 0368; decision 0171 already ruled a player's acts are not
+        // filtered on the way out). A saved world written BEFORE this flip
+        // still carries `passage-cleared` in its own registry and its own
+        // facts; nothing reads them, so a passage it recorded as cleared is
+        // barred again on reload. That break was measured, not estimated — no
+        // committed fixture carries the predicate — and decision 0189 is the
+        // precedent for taking one deliberately.
         //
-        // "Per-session" names WHERE it is registered, NOT how long it lasts,
-        // and this comment said the opposite until the final whole-branch
-        // review — it read "the whole live-play fact layer is session-scoped,
-        // in registry and ledger both", citing a spec section (3.1) that has
-        // since been retired as wrong. Both halves are false:
-        // `Session::into_played_world` moves `self.registry` AND `self.ledger`
-        // into the saved `World`, and `possess --out` writes it (decision
-        // 0368; decision 0171 already ruled a player's acts are not filtered
-        // on the way out).
-        //
-        // Note also that this registration is UNCONDITIONAL — it runs whether
-        // or not anything is ever cleared — so every `--out` world carries
-        // PASSAGE_CLEARED in its registry even with no clearing fact behind
-        // it. Harmless: no committed artifact carries a session registry, and
-        // a registered-but-unused predicate is what AGENT_AT has always been.
-        registry
-            .register_predicate(
-                crate::passage::PASSAGE_CLEARED,
-                false,
-                "a passage this body has cleared",
-            )
-            .expect("PASSAGE_CLEARED registers identically every session");
         // The Chattel's two live-play predicates, registered on exactly the
-        // same terms as the two above: a predicate is registered by whoever
+        // same terms as AGENT_AT above: a predicate is registered by whoever
         // builds the registry that will hold its facts. Nothing registers
         // these at genesis, so `world-seed-42.json` does not move for them;
         // an out-of-session reader registers them into its own registry the
@@ -1086,7 +1078,8 @@ impl<'w> Session<'w> {
         // `synthetic.rs`), which is a no-op for an identical definition
         // (`ConceptRegistry::register_predicate` is documented idempotent).
         //
-        // Both are NON-FUNCTIONAL: a thing moves more than once, and a chest
+        // Both are NON-FUNCTIONAL: a thing moves more than once, and a chest —
+        // or, since Task 8, a cave mouth —
         // opens, closes and opens again. Each change is one dated fact and
         // the read is the as-of-day fold in `thing.rs`, never a latest-value
         // read.
@@ -3023,10 +3016,7 @@ impl<'w> Session<'w> {
             addr,
             &overrides,
         ) {
-            None => Turn::Out(
-                "The cave mouth is here, but the rock beyond is sealed; there is no way down."
-                    .to_string(),
-            ),
+            None => Turn::Out(UNREALIZED_CHAMBER_REFUSAL.to_string()),
             Some(chamber) => {
                 // The Gallery, Task 3: the entrance chamber above only
                 // gates whether this cave mouth leads anywhere at all (the
@@ -3364,10 +3354,24 @@ impl<'w> Session<'w> {
     /// Reads the barrier through [`crate::passage::effective_state`] — the
     /// SAME fold `delve_at` consults, against the SAME address
     /// ([`cave_entrance_addr`]), so a passage this clears is a passage
-    /// `delve_at` then finds open. Commits
-    /// [`crate::passage::cleared_fact`] only for [`hornvale_worldgen::
+    /// `delve_at` then finds open. Writes through
+    /// [`crate::passage::set_openness`] only for [`hornvale_worldgen::
     /// BarrierState::Thin`] — [`clear_response`]'s own doc explains why
     /// `Sealed` and `Warded` do not yield to this act.
+    ///
+    /// **What is written changed with The Chattel, and what is NOT written
+    /// changed with it.** The Latch committed a `passage-cleared` fact whose
+    /// SUBJECT was the clearing body and whose object carried the address.
+    /// The subject is now the cave mouth itself — a promoted
+    /// [`crate::thing`] — and the predicate is `openness`, the one a
+    /// strongbox already uses. So the body that did the clearing is no longer
+    /// recorded anywhere by this act. That is a real loss of information and
+    /// it is deliberate: The Latch's own fold never consulted the subject
+    /// ("any body's clearing fact opens the passage for everyone"), so the
+    /// subject was write-only, and a predicate about a thing whose subject is
+    /// a different thing is precisely what joining the object model removes.
+    /// Whoever wants "who opened this" back wants an agentive predicate, not
+    /// this one's subject slot.
     fn clear_passage_at(&mut self, vertex: hornvale_kernel::Vertex) -> Turn {
         let addr = cave_entrance_addr(vertex);
         let barrier = crate::passage::effective_state(
@@ -3378,10 +3382,8 @@ impl<'w> Session<'w> {
             &hornvale_worldgen::BarrierPins::default(),
         );
         if barrier == hornvale_worldgen::BarrierState::Thin {
-            let fact = crate::passage::cleared_fact(self.driven_body().entity, &addr, self.day);
-            self.ledger
-                .commit(fact, &self.registry)
-                .expect("PASSAGE_CLEARED is registered every session and non-functional");
+            crate::passage::set_openness(&mut self.ledger, &self.registry, &addr, true, self.day)
+                .expect("OPENNESS and instance-of are registered and non-functional");
         }
         Turn::Out(clear_response(barrier))
     }
@@ -6505,11 +6507,32 @@ fn cave_entrance_addr(vertex: hornvale_kernel::Vertex) -> hornvale_worldgen::cha
     }
 }
 
+/// What [`Session::delve_at`] says when the cave mouth is unbarred but the
+/// entrance chamber the lattice would realize does not exist — spec §3.4
+/// rung 0, *"the void exists and is unreachable"*.
+///
+/// **A const rather than an inline literal, and the promotion is the point.**
+/// It is the fifth string in the vocabulary [`barred_refusal`] and
+/// [`clear_response`] between them own, and the one a reader is most likely
+/// to collide with by accident, because it is the only one that is about
+/// stone the way three of `barred_refusal`'s arms are and is written a whole
+/// function away from them. `every_passage_outcome_reads_distinctly` sweeps
+/// all nine strings pairwise, which it could not do while this one was
+/// spelled inside a `match` arm.
+///
+/// Unreachable since The Drift deleted the existence coin
+/// (`delve_has_three_distinguishable_outcomes`'s doc records the measurement:
+/// 0 of 48,316 caves over thirty worlds), and kept as live code for the reason
+/// that doc gives.
+/// type-audit: bare-ok(prose)
+const UNREALIZED_CHAMBER_REFUSAL: &str =
+    "The cave mouth is here, but the rock beyond is sealed; there is no way down.";
+
 /// The refusal a barred passage gives, naming WHICH barrier turned the body
 /// back — a refusal that named no reason would be indistinguishable from the
 /// no-cave one, which is the thing `delve`'s third outcome exists to be.
 ///
-/// **Deliberately distinct from `delve_at`'s `None`-arm string** ("the rock
+/// **Deliberately distinct from [`UNREALIZED_CHAMBER_REFUSAL`]** ("the rock
 /// beyond is sealed") even for `BarrierState::Sealed`: that arm answers a
 /// different question — an entrance chamber the lattice never realizes at
 /// all, currently unreachable since The Drift deleted the existence coin,
@@ -6539,9 +6562,10 @@ fn barred_refusal(barrier: hornvale_worldgen::BarrierState) -> String {
 
 /// What [`Session::clear_passage_at`] reports for each barrier state — the
 /// full outcome table for `clear`, mirroring [`barred_refusal`]'s shape so
-/// the two verbs read consistently. Whether the state ALSO commits a
-/// [`crate::passage::PASSAGE_CLEARED`] fact is the caller's own decision
-/// (exactly one arm, `Thin`, is paired with a commit); this function only
+/// the two verbs read consistently. Whether the state ALSO writes an
+/// [`crate::thing::OPENNESS`] fact through [`crate::passage::set_openness`]
+/// is the caller's own decision
+/// (exactly one arm, `Thin`, is paired with a write); this function only
 /// answers what the player reads.
 ///
 /// **Only [`hornvale_worldgen::BarrierState::Thin`] yields to `clear`,** and
@@ -6867,8 +6891,9 @@ mod tests {
     /// `clear` is gated by the body like every other in-character verb (spec
     /// §2.1/§3.2), and it is the verb for which that mattered most: it is
     /// the only one in the free band that WRITES TO THE LEDGER, so an
-    /// ungated `clear` meant a sleeping body could commit a
-    /// `PASSAGE_CLEARED` fact — contradicting `HELP`'s own `sleep` line
+    /// ungated `clear` meant a sleeping body could commit an
+    /// `openness` fact (a `PASSAGE_CLEARED` one, before Task 8 retired that
+    /// predicate) — contradicting `HELP`'s own `sleep` line
     /// ("the body stops obeying until its own cycle wakes it, and only '!'
     /// verbs answer meanwhile").
     ///
@@ -6924,7 +6949,7 @@ mod tests {
             !session
                 .ledger
                 .iter()
-                .any(|f| f.predicate == crate::passage::PASSAGE_CLEARED),
+                .any(|f| f.predicate == crate::thing::OPENNESS),
             "a refused `clear` must commit nothing: the gate stands in front \
              of the act, not inside it"
         );
@@ -8793,6 +8818,110 @@ mod tests {
             })
     }
 
+    /// **The nine strings the two passage verbs can say must be pairwise
+    /// distinct.** A refusal that reads like another refusal is a refusal that
+    /// tells the player nothing — `barred_refusal`'s own doc gives that
+    /// argument for one pair of them ("a refusal that named no reason would be
+    /// indistinguishable from the no-cave one") and
+    /// `clearing_a_warded_passage_names_the_ward_not_the_rubble` gives it for
+    /// a second pair. This is the same argument applied to the whole
+    /// vocabulary at once.
+    ///
+    /// **THIS CHECK DID NOT EXIST BEFORE TASK 8, AND THE BRIEF THAT ASKED FOR
+    /// IT SAID IT DID.** The instruction was to extend a check that "verified
+    /// the four refusal strings pairwise distinct once"; nothing in this crate
+    /// did that — `delve_has_three_distinguishable_outcomes` compares three
+    /// whole TURN OUTPUTS for one barrier state, and the two `clear` tests
+    /// each assert on a substring. So this is written rather than extended,
+    /// which is worth recording because a check believed to exist is weaker
+    /// than one known not to: nobody re-derives it.
+    ///
+    /// **Nine, not four, and the fifth is why the sweep is over functions
+    /// rather than a hand-listed set.** `barred_refusal` and `clear_response`
+    /// each answer four `BarrierState`s; [`UNREALIZED_CHAMBER_REFUSAL`] is the
+    /// ninth, and it is the one that was written a whole function away from
+    /// the others and is *about stone* the way three of `barred_refusal`'s
+    /// arms are. It was an inline literal in a `match` arm until this task —
+    /// unreachable for any assertion to name — which is exactly how a
+    /// collision with it would have gone unnoticed.
+    ///
+    /// The two `BarrierState` sweeps come from
+    /// [`hornvale_worldgen::BarrierState`]'s own four variants written out
+    /// here; the enum is not `all()`-bearing, so a fifth variant would not
+    /// automatically appear. That is stated rather than hidden: a new variant
+    /// reddens `barred_refusal`'s and `clear_response`'s non-exhaustive
+    /// `match`es at compile time, which is the compiler doing the
+    /// enumeration this test cannot.
+    ///
+    /// MUTATION this must fail against: in `clear_response`, give the `Open`
+    /// arm `barred_refusal`'s `Open` text ("The way down is open.") — the most
+    /// plausible real collision, since the two tables mirror each other's
+    /// shape by design and that pair is the only one whose meanings are
+    /// genuinely close.
+    ///
+    /// Confirmed 2026-08-29 (abridged — the panic prints all nine strings):
+    ///
+    /// ```text
+    /// assertion `left == right` failed: two passage outcomes read
+    /// identically — a player cannot tell them apart. All nine: [
+    ///     ... ,
+    ///     "The way down is open.",
+    ///     "The way down is open.",
+    ///     "The cave mouth is here, but the rock beyond is sealed; there is
+    ///      no way down.",
+    /// ]
+    ///   left: 8
+    ///  right: 9
+    /// ```
+    ///
+    /// **The duplicate is printed, which is the reason the message carries
+    /// the whole list rather than just the counts.** `8 != 9` alone names no
+    /// culprit, and a reader who has to go re-derive which two collided is a
+    /// reader who will not.
+    ///
+    /// A genuine behavioural red, not a compile error; restored and re-run
+    /// on a fresh binary, green.
+    #[test]
+    fn every_passage_outcome_reads_distinctly() {
+        let states = [
+            hornvale_worldgen::BarrierState::Sealed,
+            hornvale_worldgen::BarrierState::Warded,
+            hornvale_worldgen::BarrierState::Thin,
+            hornvale_worldgen::BarrierState::Open,
+        ];
+        let mut said: Vec<String> = Vec::new();
+        for state in states {
+            said.push(barred_refusal(state));
+            said.push(clear_response(state));
+        }
+        said.push(UNREALIZED_CHAMBER_REFUSAL.to_string());
+
+        assert_eq!(
+            said.len(),
+            9,
+            "non-vacuous guard: the sweep must actually collect every string \
+             the two verbs can say, or the uniqueness check below passes by \
+             comparing nothing"
+        );
+        let unique: std::collections::BTreeSet<&String> = said.iter().collect();
+        assert_eq!(
+            unique.len(),
+            said.len(),
+            "two passage outcomes read identically — a player cannot tell \
+             them apart. All nine: {said:#?}"
+        );
+
+        // Every one must also NAME something. An empty or whitespace-only
+        // refusal is trivially distinct from the other eight and tells a
+        // player nothing at all, so uniqueness alone would not catch it.
+        for line in &said {
+            assert!(
+                line.len() > 20,
+                "a passage outcome must say something: {line:?}"
+            );
+        }
+    }
+
     /// The Deep Realm, Task 5 shipped `delve` with THREE distinguishable
     /// outcomes: no cave, a cave whose entrance chamber resolves to nothing
     /// (spec §3.4 rung 0, "the void exists and is unreachable," a real fact
@@ -9145,16 +9274,20 @@ mod tests {
     /// proven fact, and this test does not reach it either.
     ///
     /// MUTATION this must fail against: delete `clear_passage_at`'s
-    /// `self.ledger.commit(fact, &self.registry)` call. The post-clear delve
-    /// then reports the refusal again and the final assertion fires.
+    /// `crate::passage::set_openness(...)` call (the whole `if barrier ==
+    /// Thin` body). The post-clear delve then reports the refusal again and
+    /// the final assertion fires.
     ///
-    /// Confirmed 2026-08-28: with the commit call deleted, the panic read
+    /// Confirmed 2026-08-29 against the openness write (Task 8); confirmed
+    /// 2026-08-28 against the `passage-cleared` commit it replaced. In both
+    /// cases the panic read
     /// `a cleared passage must let descent through after several turns and a
     /// wait: The cave mouth is here, but a thin fall of rubble blocks the
     /// way down; it looks like it would not take much to clear.` — the
     /// post-clear delve fell straight back to `barred_refusal`'s own `Thin`
-    /// text because `effective_state` never found a `PASSAGE_CLEARED` fact
-    /// to fold over. A genuine behavioural red, not a compile error.
+    /// text because `effective_state` never found an `openness` fact about
+    /// the cave mouth to fold over. A genuine behavioural red, not a compile
+    /// error.
     #[test]
     fn a_cleared_passage_stays_open_for_the_rest_of_the_session() {
         let world = seam_world();
@@ -9231,12 +9364,13 @@ mod tests {
     ///
     /// MUTATION this must fail against: widen `clear_passage_at`'s gate from
     /// `barrier == BarrierState::Thin` to `barrier != BarrierState::Open`
-    /// (i.e. "everything barred yields"). `clear_passage_at` then commits a
-    /// `PASSAGE_CLEARED` fact for the `Sealed` vertex below, and the
+    /// (i.e. "everything barred yields"). `clear_passage_at` then opens the
+    /// cave mouth at the `Sealed` vertex below, and the
     /// post-clear delve at the end of this test succeeds where it must
     /// still refuse.
     ///
-    /// Confirmed 2026-08-28: under that mutation, the panic read `a Sealed
+    /// Confirmed 2026-08-29 (Task 8) and 2026-08-28 (The Latch): under that
+    /// mutation, the panic read `a Sealed
     /// passage must still refuse descent after a clear attempt: You worm
     /// down into the dark. The rock here is the basement rock.` — the
     /// widened gate committed a clearing fact for the Sealed vertex, and the

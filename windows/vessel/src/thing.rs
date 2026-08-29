@@ -121,10 +121,12 @@ pub fn thing_role(facet: &Facet, kind: &str) -> Result<String, FacetError> {
 }
 
 /// The ONE construction of a thing's [`Lineage`], and the reason it is a
-/// function rather than two struct literals. Both [`thing_id`] (which derives)
-/// and [`promote`] (which mints under the same derivation) route through it, so
-/// the id a caller *predicts* for an unpromoted thing and the id the ledger
-/// *mints* for a promoted one cannot disagree — there is nothing left for them
+/// function rather than two struct literals. Both [`id_for_role`] (which
+/// derives) and [`promote_role`] (which mints under the same derivation) route
+/// through it — and so, transitively, do [`thing_id`], [`promote`] and
+/// `passage::cave_mouth_id` — so the id a caller *predicts* for an unpromoted
+/// thing and the id the ledger *mints* for a promoted one cannot disagree:
+/// there is nothing left for them
 /// to disagree about. The duplicate literal this replaced was a live seam:
 /// mutating `promote`'s copy of `ordinal` to `0` left the whole vessel suite
 /// green, because every assertion in the module ran through `thing_id`'s copy.
@@ -141,10 +143,26 @@ fn thing_lineage<'a>(role: &'a str, ordinal: u16) -> Lineage<'a> {
 /// ledger is read, and two ledgers that have never met agree.
 /// type-audit: bare-ok(identifier-text: kind), bare-ok(count: ordinal)
 pub fn thing_id(facet: &Facet, kind: &str, ordinal: u16) -> Result<EntityId, FacetError> {
-    let role = thing_role(facet, kind)?;
-    Ok(hornvale_kernel::derive_entity_id(thing_lineage(
-        &role, ordinal,
-    )))
+    Ok(id_for_role(&thing_role(facet, kind)?, ordinal))
+}
+
+/// The entity a thing whose role leg is already spelled has — [`thing_id`]
+/// with the room-keyed half factored out, so a thing whose address is NOT a
+/// room can reach the same derivation.
+///
+/// **`pub(crate)`, and the narrowness is the whole design.** A cave mouth is a
+/// [`hornvale_worldgen::chamber::ChamberAddr`], not a [`Facet`], so
+/// [`thing_role`] cannot spell it — but a second `Lineage` literal in
+/// `passage.rs` would re-open exactly the seam [`thing_lineage`]'s own doc
+/// records as having been live once already (mutating one copy's `ordinal`
+/// left the whole vessel suite green, because every assertion ran through the
+/// other). So `passage.rs` owns its role SPELLING and this module keeps its
+/// monopoly on the DERIVATION. A `pub` version would let any caller invent a
+/// role string, which is the encoding gap [`located_fact`]'s privacy closes
+/// on the other side of this module.
+/// type-audit: bare-ok(identifier-text: role), bare-ok(count: ordinal)
+pub(crate) fn id_for_role(role: &str, ordinal: u16) -> EntityId {
+    hornvale_kernel::derive_entity_id(thing_lineage(role, ordinal))
 }
 
 /// Promote the thing of `kind` in `facet` to a ledger entity, committing its
@@ -171,8 +189,35 @@ pub fn promote(
     ordinal: u16,
     day: WorldTime,
 ) -> Result<EntityId, ThingError> {
-    let role = thing_role(facet, kind)?;
-    let id = ledger.reuse_or_mint_entity(thing_lineage(&role, ordinal));
+    promote_role(
+        ledger,
+        registry,
+        &thing_role(facet, kind)?,
+        kind,
+        ordinal,
+        day,
+    )
+}
+
+/// [`promote`] for a thing whose role leg is already spelled — the same
+/// mint-and-commit, reached by a caller whose address is not a [`Facet`].
+/// `pub(crate)` for the reason [`id_for_role`]'s doc gives.
+///
+/// The two must stay one function rather than two that agree, because
+/// [`promote`]'s idempotence is a property of the `reuse_or_mint_entity` call
+/// and its `INSTANCE_OF` commit sitting together: a second copy could reuse
+/// the entity and forget the fact, or mint and dedup differently, and nothing
+/// in either caller's own tests would see it.
+/// type-audit: bare-ok(identifier-text: role), bare-ok(identifier-text: kind), bare-ok(count: ordinal)
+pub(crate) fn promote_role(
+    ledger: &mut Ledger,
+    registry: &ConceptRegistry,
+    role: &str,
+    kind: &str,
+    ordinal: u16,
+    day: WorldTime,
+) -> Result<EntityId, ThingError> {
+    let id = ledger.reuse_or_mint_entity(thing_lineage(role, ordinal));
     ledger.commit(
         Fact {
             subject: id,
@@ -240,16 +285,18 @@ pub fn room_key(room: &Facet) -> Result<String, FacetError> {
 /// as [`Value::Entity`]. Two shapes of ONE field is exactly what makes
 /// transitivity ("a key in a chest in a room is in the room") expressible in
 /// [`room_of`] rather than re-asserted at every call site. This follows
-/// `agent_at_fact` and `passage::cleared_fact`, which both put the place in
-/// the object.
+/// `agent_at_fact`, which puts the place in the object. (`passage`'s own
+/// `cleared_fact` was the second precedent cited here; Task 8 retired it —
+/// a cave mouth's address is now a lineage role rather than a fact object,
+/// so `agent_at_fact` is the one live example left.)
 ///
 /// Non-functional and append-only: a thing moves, and each move is one dated
 /// fact. The read is [`location_of`] — as of a day — never
 /// [`hornvale_kernel::Ledger::latest_value_of`], which answers "where is it
 /// now" and would let a replayed past see a move that had not happened yet.
 ///
-/// Registered PER-SESSION (never at genesis), beside `AGENT_AT` and
-/// `PASSAGE_CLEARED` in `Session::start`. An out-of-session reader registers
+/// Registered PER-SESSION (never at genesis), beside `AGENT_AT` in
+/// `Session::start`. An out-of-session reader registers
 /// it into its own registry the way `windows/lab` does for `AGENT_AT`;
 /// `ConceptRegistry::register_predicate` is idempotent for an identical
 /// definition, so the second registration is a no-op. A world saved by
@@ -299,8 +346,11 @@ pub const LOCATED_IN_DOC: &str = "where a thing is on a day: a room, a container
 /// every untouched door in the world is shut.
 ///
 /// Non-functional and append-only — a chest may be opened, closed and opened
-/// again — so, unlike The Latch's monotone `PASSAGE_CLEARED`, the latest
-/// posting at or before the day is the answer.
+/// again — the latest posting at or before the day is the answer, never a
+/// short-circuit on any posting ever made. That is what made this predicate
+/// able to absorb restricted passage in Task 8, where The Latch's monotone
+/// `passage-cleared` could not: decision 0396 supersedes 0367 by folding the
+/// cave mouth through THIS rule.
 ///
 /// `openness` is a LEDGER FACT about one thing. It is not `Openable`, the
 /// affordance property saying a KIND can be opened at all; the two are
@@ -325,8 +375,8 @@ pub const OPENNESS_DOC: &str = "whether a thing was open on a day";
 /// point of this function existing beside [`located_in_holder_fact`].** The
 /// shipped API took an already-encoded `Value`, which left NOBODY owning the
 /// spelling of a room in a `located-in` fact: `agent_at_fact` takes a `&Facet`
-/// and encodes inside, `passage::cleared_fact` takes a `&ChamberAddr` and
-/// encodes inside, and this one asked its caller to have done it. A caller
+/// and encodes inside (as did `passage::cleared_fact`, until Task 8 retired
+/// it), and this one asked its caller to have done it. A caller
 /// that spelled a room its own way would have produced facts that are
 /// self-consistent, that its own reader resolves, and that no gate can
 /// distinguish from the real thing. There is no public constructor taking a
@@ -1162,7 +1212,7 @@ mod tests {
     ///
     /// **This test cannot be rebaselined**, the same shape as
     /// `the_thing_role_spelling_is_the_permanent_lineage_key` above and
-    /// `addr_key_spelling_is_the_permanent_on_disk_key` in
+    /// `the_cave_mouth_role_spelling_is_the_permanent_lineage_key` in
     /// `tests/suite/passage.rs`. Every other assertion about locations in
     /// this module uses a legible stand-in (`"hall"`, `"vault"`) because
     /// `room_of` returns whatever text it finds — so any encoding whatsoever
@@ -1275,7 +1325,7 @@ mod tests {
     /// **This test cannot be rebaselined, which is the entire point of
     /// writing it out** — the same reasoning as
     /// `the_thing_role_spelling_is_the_permanent_lineage_key` above and
-    /// `addr_key_spelling_is_the_permanent_on_disk_key` in
+    /// `the_cave_mouth_role_spelling_is_the_permanent_lineage_key` in
     /// `tests/suite/passage.rs`. Every other assertion in this module reaches
     /// the predicate through the CONSTANT on both the write and the read
     /// side, so any spelling whatsoever keeps them all green — while a
