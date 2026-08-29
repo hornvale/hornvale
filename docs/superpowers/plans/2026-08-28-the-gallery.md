@@ -1092,6 +1092,40 @@ are fine and cost nothing.
   believes a solved problem is open — or worse, that an open one is solved.
 - `MAP-underworld-dressing`: note that its stated blocker (no chart) is gone.
 
+- [ ] **Step 2b: Re-score the systems corpus, because nothing will tell you it
+  is stale**
+
+`docs/audits/system-coverage-wolverson-2021.md` is GENERATED from **authored
+verdicts** in `systems/wolverson-2021.system.json`. If nobody edits those
+verdicts, the report does not drift, `git diff --exit-code` passes, and the
+audit keeps reporting a resolved gap as open. **The drift check cannot see
+this**, which is exactly the failure shape this campaign has hit repeatedly:
+a record outliving its subject, with the guard green.
+
+Three items cite `registry:MAP-underworld-chart` as their blocker, and all
+three describe the fold this campaign retires:
+
+| item | line | what its note currently claims |
+|---|---|---|
+| 2.11 Delving Deeper | 84 | "the underground band FOLDS INTO `walk`… You can descend and cannot see where you are" |
+| 5.13 Into the caverns | 126 | "the underworld has no chart of its own, so the pane and the verb both draw the surface overhead" |
+| 5.17 Deep caverns | 130 | "RENDER half is the deciding one and is absent" |
+
+Re-score each against what the campaign actually shipped, and **re-score
+honestly rather than optimistically** — the corpus's own provenance says
+`present` is the verdict it is least entitled to, and a weakest-half item is
+decided by its weaker half. If the render half is delivered but thin, say
+which. If an item's blocker moved rather than cleared, cite the new one.
+
+Regenerate with `cargo run -p hornvale -- systems --corpus
+systems/wolverson-2021.system.json report` and commit the moved report with
+the corpus edit that caused it.
+
+Check the same way for any OTHER audit under `docs/audits/` whose authored
+content names the fold, the `map` verb underground, or
+`the_underground_band_folds_into_walk_as_map_does`. A generated file with
+authored inputs is stale-by-default, not fresh-by-default.
+
 - [ ] **Step 3: Regenerate artifacts and read the diff**
 
 ```
