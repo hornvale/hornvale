@@ -9104,6 +9104,53 @@ mod tests {
         }
     }
 
+    /// `Underground::peek_stairs`'s own catch-all arm — refusing when the
+    /// current cell is not a stairs cell at all — is unreachable through any
+    /// shipped path: `Session::take_stairs` always checks the current
+    /// cell's kind against the direction it wants BEFORE ever calling
+    /// `peek_stairs`, so a live session can never hand it a non-stairs
+    /// cell. `peek_stairs`'s own doc calls it "a real seam a test... can
+    /// reach directly" — this is that test, exercised the same way
+    /// `rock_refuses_a_step_with_a_physical_reason` (just above) reaches
+    /// `Underground::step`'s own seam: build a real `Underground` via
+    /// `enter`, place it on a scanned, known-non-stairs cell, and call the
+    /// method directly rather than through `Session::handle`.
+    #[test]
+    fn peek_stairs_refuses_off_any_stairs_cell() {
+        let world = seam_world();
+        let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        let mut ug = crate::underground::Underground::enter(&terrain, vertex, cave, world.seed);
+        let level = ug.level().clone();
+        let floor_cell = level
+            .cells
+            .iter()
+            .find(|(_, k)| {
+                matches!(
+                    k,
+                    crate::underworld_level::LevelCellKind::Floor
+                        | crate::underworld_level::LevelCellKind::Flooded
+                )
+            })
+            .map(|(c, _)| c)
+            .expect("a generated level has at least one standable, non-stairs cell");
+        ug.cell = floor_cell;
+        match ug.peek_stairs() {
+            Err(reason) => {
+                assert!(
+                    reason.to_lowercase().contains("stairway"),
+                    "the refusal must name the physical reason: {reason}"
+                );
+            }
+            Ok(_) => panic!("a plain Floor/Flooded cell must not offer stairs"),
+        }
+    }
+
     /// `UNDERGROUND_LATERAL_REFUSAL`'s own doc said "there is nowhere down
     /// here for a bearing to mean" — false the moment Task 3 gave the cave
     /// real cells to walk. The Gallery, Task 4 deletes the constant

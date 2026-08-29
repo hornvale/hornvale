@@ -36,8 +36,10 @@ const UNDERGROUND_ROCK_REFUSAL: &str =
 /// surfaced through `Session::take_stairs` in practice — that caller checks
 /// the current cell's kind against the direction it wants before ever
 /// asking `peek_stairs`, and refuses with a direction-specific sentence of
-/// its own instead — but `peek_stairs`/`take_stairs` are real seams a test,
-/// or a future caller with no direction preference, can reach directly.
+/// its own instead — but `peek_stairs`/`take_stairs` are real seams, and
+/// `session.rs`'s own `peek_stairs_refuses_off_any_stairs_cell` reaches this
+/// arm directly, the same way `rock_refuses_a_step_with_a_physical_reason`
+/// reaches `Underground::step`'s seam rather than through `Session::handle`.
 const NOT_ON_STAIRS_REFUSAL: &str = "There is no stairway underfoot to take.";
 
 /// The physical reason the descent's own deepest rung refuses a `StairsDown`
@@ -80,11 +82,15 @@ pub(crate) struct Underground {
     /// One generated level per habitation rung, in [`habitation_rungs`]
     /// order: `descent[i]` is the level for `habitation_rungs()[i]`.
     pub(crate) descent: Vec<Level>,
-    /// Which element of `descent` the possession currently occupies —
-    /// always `0` as of this task ([`Underground::enter`] is the only
-    /// constructor, and it always enters at the top). An index into
-    /// `habitation_rungs()` as well as into `descent`; the two can never
-    /// disagree because both are sized and ordered from the same
+    /// Which element of `descent` the possession currently occupies.
+    /// [`Underground::enter`] is the only constructor and always enters at
+    /// the top (`rung == 0`) — but that is no longer this field's whole
+    /// story: [`Underground::take_stairs`] (The Gallery, Task 5) is the
+    /// project's first and only mutator of `rung`, moving it up or down one
+    /// rung per stairway taken, so a live `Underground` cannot be assumed to
+    /// sit at rung `0` merely because it was once true at construction. An
+    /// index into `habitation_rungs()` as well as into `descent`; the two
+    /// can never disagree because both are sized and ordered from the same
     /// `habitation_rungs()` call.
     pub(crate) rung: usize,
     /// Which cell of `descent[rung]` the possession stands on. Always a
