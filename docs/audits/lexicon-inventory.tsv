@@ -41,7 +41,7 @@ clients/game/core/tests/cell.rs	12
 clients/game/core/tests/chart.rs	20
 clients/game/core/tests/monochrome_floor.rs	6
 clients/game/core/tests/plan.rs	4
-clients/game/core/tests/provenance.rs	11
+clients/game/core/tests/provenance.rs	16
 clients/game/core/tests/schema.rs	17
 clients/game/core/tests/spread.rs	10
 domains/astronomy/src/eclipses.rs	2

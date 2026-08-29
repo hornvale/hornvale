@@ -227,18 +227,28 @@ const UNDERGROUND_SNAPSHOT: &str = r#"{
   }
 }"#;
 
-/// **THE ENFORCEMENT (Task 9, Step 3b).** Spec §4.3 first claimed the
-/// client's `Spatial` mirror gaining `Underground` was "a compile error
-/// until it is handled" and that claim was false: the mirror is the
-/// client's OWN enum, so an unhandled band fails silently at RUNTIME
-/// instead — `bin`'s `Driver::refresh` swallows a parse error by design
-/// (`.unwrap_or_default()` on the snapshot, `if let Ok(snap)` on the
-/// parse), leaving the previous plate standing with no error anywhere.
+/// **A REGRESSION CHECK, NOT THE ENFORCEMENT (Task 9, Step 3b; corrected in
+/// review round 1).** Spec §4.3 first claimed the client's `Spatial` mirror
+/// gaining `Underground` was "a compile error until it is handled" and that
+/// claim was false: the mirror is the client's OWN enum, so an unhandled
+/// band fails silently at RUNTIME instead — `bin`'s `Driver::refresh`
+/// swallows a parse error by design (`.unwrap_or_default()` on the
+/// snapshot, `if let Ok(snap)` on the parse), leaving the previous plate
+/// standing with no error anywhere.
 ///
-/// This test is the guard that claim was supposed to be: it parses a
-/// document for every band the sim can emit, so it goes RED the moment
-/// `SpatialChannel` grows a fourth variant this mirror cannot read, rather
-/// than staying silently green while the pane blanks.
+/// **This test does NOT provide the guard that claim was supposed to be,
+/// and an earlier version of this comment wrongly said it did.** It parses
+/// three STATIC, hand-authored cases (two committed fixtures, one literal
+/// string) and checks each still lands on its expected `Spatial` variant —
+/// a real regression check, worth keeping, that would catch this mirror
+/// breaking on a band it already claims to read. But `clients/game/core`
+/// has no dependency on `hornvale-vessel` at all (the repo boundary is the
+/// determinism boundary, decision 0055), so nothing here is wired to
+/// `SpatialChannel` itself. A FOURTH band arriving on the wire leaves this
+/// test exactly as green as it is today; nothing about running it would
+/// tell anyone a new variant exists. The actual compile-time trip for that
+/// lives on the workspace side, where the sim's own type is visible:
+/// `cli/tests/suite/client_band_coverage.rs`.
 #[test]
 fn the_client_can_parse_every_band_the_sim_emits() {
     let walk = hornvale_game_core::Snapshot::parse(FIXTURE).expect("walk band must parse");

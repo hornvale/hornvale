@@ -3821,3 +3821,6 @@ measured here.
 | 2026-08-29T06:50:25Z | game-check | 417.549 | 3533.019 | 20.417 | 8.51 | 0 | 4c2882b56 | campaign/the-gallery | ambrose | 12 |
 | 2026-08-29T06:52:39Z | gate-commit | 52.875 | 34.319 | 11.554 | 0.87 | 0 | 4c2882b56 | campaign/the-gallery | ambrose | 12 |
 | 2026-08-29T06:53:43Z | gate-commit | 44.551 | 34.291 | 11.028 | 1.02 | 0 | 4c2882b56 | campaign/the-gallery | ambrose | 12 |
+| 2026-08-29T06:55:59Z | gate-commit | 49.901 | 38.362 | 13.006 | 1.03 | 0 | 4c2882b56 | campaign/the-gallery | ambrose | 12 |
+| 2026-08-29T07:15:49Z | game-check | 414.204 | 3497.763 | 18.999 | 8.49 | 0 | 22c9039e5 | campaign/the-gallery | ambrose | 12 |
+| 2026-08-29T07:18:18Z | gate-commit | 52.694 | 34.312 | 11.252 | 0.86 | 0 | 22c9039e5 | campaign/the-gallery | ambrose | 12 |

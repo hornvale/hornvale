@@ -175,8 +175,8 @@ fn blit(src: &Grid, dst: &mut Grid, origin: (u16, u16)) {
 /// position (see [`crate::entry::draw`]), `Some` only when `focus` is
 /// [`crate::Focus::Cli`]. See the module doc for the column and row
 /// layout. The plate dispatches on [`Spatial`]: the walk-band chart
-/// outdoors, the chamber-band floor plan indoors — the register switches
-/// picture, never prose. `strip` is the map strip's text (see `strip.rs`),
+/// outdoors, the chamber-band floor plan indoors, the underground-band
+/// level below both — the register switches picture, never prose. `strip` is the map strip's text (see `strip.rs`),
 /// `None` unless the map is focused — either way the row beneath the plate
 /// is reserved (see the module doc). `strip_offset` is the character
 /// offset [`crate::strip::draw`] starts at (F3 — see that function's own
