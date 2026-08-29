@@ -894,6 +894,60 @@ to close the gap would destroy the split the spec's own text demands.
 **Complementing beats replacing**, and a practice that only ever swaps the
 statistic will eventually swap away a working instrument.
 
+A sixteenth campaign adds a **new position on the checkability axis**, and it
+is one this passage has been circling without naming.
+[The Rail](./chronicle/the-rail.md) (2026-08-29) preregistered four numbers
+before writing any code, and every one of them was judged against a resolver
+that already existed. The numbers were **computed by a different program**: a
+script written during the design pass, which reimplemented the resolver's
+demand-closure rule and got one case wrong. Fifteen rungs of a 214-rung ladder
+introduce no capability token at all — they exist as free tripwires on
+composition — and the script treated each one's absent token as an
+*unsatisfiable demand*, so all fifteen were permanently excluded from
+*covered* in every predicted figure. The first task to land a token reported
+six covered where the prediction said five, said so, and used the resolver's
+answer.
+
+**The prediction was not falsified by the world; it had never been run against
+the instrument it was predicting.** That is a distinct failure from anything
+above it. An unpaired check is a verifier nobody invokes; an unanchored one is
+a verifier with no external truth. This is a *third* thing: a fully paired,
+fully anchored check whose **target value** came from a second implementation
+of the thing under test. Both programs were run, both produced numbers, and
+the agreement between them was the untested assumption. So the floor gains a
+seventh question, asked of any preregistered figure: **was this number
+produced by the instrument that will judge it, or by something that
+reimplements it?** If the second, the prediction is a claim about the
+reimplementation, and the two agree only by luck.
+
+The same campaign then supplied the passage's sharpest instance of *"a
+correction is unaudited text"*. Its design document's coverage paragraph was
+wrong twice, in opposite directions — the first crediting the control rungs
+for a count they had no part in, the second, written explicitly as a
+correction of the first, asserting that none of them ever counts. Both came
+from the same buggy script; neither was caught by re-reading. And a later
+repair to the campaign's own command list, made to fix five steps that named
+an unrunnable command, dropped one character from each step's output path in
+the same edit, so every one of the five wrote one file and inspected another.
+Each step then ran, exited zero, printed nothing, and **read exactly like a
+clean run** — the failure this whole passage is about, authored mechanically
+inside the act of preventing it. It was found by the next agent to execute the
+list, not by anyone reading it.
+
+Those two are part of a longer tally the campaign kept deliberately:
+**thirteen substantive defects, every one originating in a controlling
+session's own design or planning prose, none in an implementer's code, and
+none found by re-reading.** That is the seventh consecutive campaign with
+this distribution. Three of the thirteen run the other way and are the
+cheapest lesson in the list — a controller's *stated worry* that a reader
+checked instead of accepting, and found unfounded each time. A worry taken
+sympathetically costs a round of rework; a worry checked costs one command.
+
+**Score: the bet holds, and the practice gains a seventh question.** The
+positive-control clause covers an instrument that cannot fire; this adds the
+case where the instrument fires correctly and the number it is compared
+against was never its own.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only

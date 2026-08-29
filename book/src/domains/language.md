@@ -498,6 +498,35 @@ the two can never be misread into each other. The nesting itself stops at one
 level, stated as the depth this campaign built and tested rather than argued
 as a safety limit. See [The Mortise](../chronicle/the-mortise.md).
 
+And since The Rail, a clause can predicate five ways rather than two, ask
+rather than assert, and say who is speaking. Its **valence** — the field
+that decides which surface parts a predicate's clause is built from — now
+enumerates Stassen (1997)'s four intransitive predication strategies
+(nominal, adjectival, locational, verbal) plus the two-argument transitive
+case, and the list is **closed by that typology**: a further predicate is one
+row in a lookup table, while a further *strategy* would need the typology to
+be wrong. The two new copular strategies share one uninflected predicate
+slot and differ only in the object: a property relates a subject to a state
+(*"the road is old"*, with no determiner and no third definiteness value —
+the classification frame's *road is-a old* was the wrong relation, not
+merely the wrong string), a locative relates it to a located thing. An
+intransitive clause's object is a named **absence** rather than a nullable
+field, which keeps the fact-shape claim intact by the route the kernel
+already uses for an objectless assertion. The copula and verb paradigms gain
+a **person** axis and stop being injective — English spells *are* for four
+different feature bundles — and the parse nominates no canonical row: person
+lives on the *subject*, not on the clause, so the backward read narrows the
+candidates instead of choosing among them, and nothing is lost. Interrogative
+force is an **operator over** a clause rather than a field on it, on the same
+footing embedding and coordination already stand: Common asks by inverting
+its one auxiliary and refuses loudly where English would need *do*-support,
+while a tongue asks with a drawn particle — or, for the majority of tongues,
+which mark a question by intonation alone, by a **transcription convention**
+that writes the question mark and says in as many words that it is
+punctuation and not morphology. The capability ladder these five rungs come
+from is now scored and publishes its own **frontier**: the build-next list,
+recomputed on every regeneration. See [The Rail](../chronicle/the-rail.md).
+
 **The full model card.** The articulation-vector table above types the
 species' *envelope* — six authored capacities per people. Everything this
 domain builds *from* that envelope sorts into the same four kinds

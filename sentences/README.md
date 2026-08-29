@@ -7,7 +7,7 @@ a resolver rather than authored by one — the same discipline `tropes/` and
 The directory holds **two kinds of corpus, not one**. Two are *dialogue*:
 `the-merchant.corpus.json` (recorded) and `the-flood-watch.corpus.json`
 (authored) — see "Recorded and authored corpora support different claims"
-below. The third is a *capability ladder*: `the-ladder.corpus.json.DRAFT`,
+below. The third is a *capability ladder*: `the-ladder.corpus.json`,
 a dependency-ordered sequence of graded rungs drawn from the typological
 literature, which is not dialogue and is not spoken by anyone.
 
@@ -55,8 +55,11 @@ measurement makes every earlier score incomparable with the next one.
 
 A file whose name ends `.DRAFT` is deliberately outside this: it is not
 frozen, no count is asserted anywhere, and no score may be taken against it
-until it is. `the-ladder.corpus.json.DRAFT` is the one such file today, and
-its own `status` field says so.
+until it is. No file in this directory carries that suffix today.
+`the-ladder.corpus.json` was the last to carry it — The Rail froze it
+(2026-08-28), and its own `status` field now says so. Its entry count (214)
+is asserted the same way, by `LADDER_ENTRIES` alongside `MERCHANT_ENTRIES`
+and `FLOOD_WATCH_ENTRIES` in `cli/tests/suite/sentence_corpus.rs`.
 
 ## Direction: what must be parsed, what must be produced
 
@@ -79,14 +82,30 @@ that, which was demonstrated red by splicing the forbidden mapping in.
 
 ## Frozen is not the same as measured
 
-**Only `the-merchant.corpus.json` is coverage-scored.** All three corpora
-are loaded by the resolver, and the two newer ones get a direction breakdown
-and a vocabulary cross-check against the ladder — but neither has a coverage
-score, and neither is waiting on a schema change. The entry shape that reads
-them shipped. What is absent is a **coverage resolver over the two new
-corpora**, which is a different and larger question: what "covered" should
-mean for a corpus the grammar was never built toward, decided *before* a
-number exists to chase.
+**All three corpora are coverage-scored now, and two of the three scores need
+a second number beside them to mean anything** (The Rail). Every corpus is
+loaded by the resolver, gets a direction breakdown and — for the two newer
+ones — a vocabulary cross-check against the ladder. What changed is that
+`entry_covered` now runs over all three, and the ladder additionally
+publishes its **frontier**: the rungs whose every dependency is covered,
+with how many other rungs each would unblock.
+
+The complication is arithmetic rather than schema. Entry coverage is
+**conjunctive** — an entry counts when *every* token it demands is
+implemented — and `the-flood-watch` averages roughly eight demand tokens per
+entry across 1128 instances, so a single unimplemented token holds a whole
+entry out and its headline reads **0 of 139**. That is a fact about the
+corpus's density, not an unwritten resolver. So the report carries a
+**demand-instance** count beside each entry count: `the-flood-watch` met 175
+of 1128 before The Rail and 270 after, while its entry count did not move at
+all. Quoting either number alone is misleading in a different direction, and
+`the-merchant`'s entry score keeps its original unmodified method so it stays
+comparable across the campaigns that have reported it (decision 0016 binds
+the scoring method, not only the corpus).
+
+What is still absent is a **coverage resolver tuned to `the-flood-watch`** —
+what "covered" should mean for a corpus the grammar was never built toward,
+decided *before* a number exists to chase.
 
 **A frozen corpus can carry a superseded claim, and that is a cost of the
 freeze rather than a defect to repair.** `the-flood-watch.corpus.json`'s
@@ -112,12 +131,28 @@ written before any score existed to chase, which is the only order decision
 is *scored* is worth keeping visible, because an unscored corpus in this
 directory is doing its job, not waiting.
 
-The ladder adds a third state to that pair: neither frozen nor scored, but
-a revisable draft. The cross-check between it and the flood-watch corpus has
-already moved it once — 56 of that corpus's tokens named no rung on the
-ladder's first draft. That is the argument for keeping two instruments
-authored independently over the same subject: where they disagree, they
-name a defect neither could find alone.
+The ladder no longer names a third state. Through The Stile it was neither
+frozen nor scored — a revisable draft — and the cross-check between it and
+the flood-watch corpus moved it once during that time: 56 of that corpus's
+tokens named no rung on the ladder's first draft. The Rail froze it
+(2026-08-28): its rung ids are append-only from that moment on, and its
+entry count is asserted the same way the two dialogue corpora's are (see
+"Frozen before measurement" above). It is scored in the same commit that
+froze it — 1 of 214 covered at the freeze, 11 by the end of that campaign —
+so it now sits in the same state as both dialogue corpora rather than apart
+from either: frozen first, measured after.
+
+Freezing the ladder does not retire the cross-check; it changes what
+closing a gap the cross-check finds now costs. A future corpus that names a
+demand token no rung introduces still surfaces a real gap the same way the
+flood-watch cross-check did. But the fix can no longer revise an existing
+rung's `presupposes` edges the way the last revision did (64 rungs placed
+throughout the file, not appended at the end) — a new rung must be
+appended, at the end, reaching the missing token without touching anything
+upstream of it. That is the argument for keeping two instruments authored
+independently over the same subject: where they disagree, they name a
+defect neither could find alone, and the freeze changes how the ladder is
+allowed to answer, not whether the question can still be asked.
 
 ## A verdict is two-valued today; a third is reserved
 
