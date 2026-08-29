@@ -52,28 +52,75 @@ with no arm landing on `cave-mouth`. **So the gate could not be asked about a
 passage — not "was not asked", could not be.** That is 0369's obstacle stated
 mechanically, and it is why the remedy is a signature and not a feature.
 
-**2. The Chattel's acceptance criterion 4 is MET, in the sense The Latch's
-criterion 5 meant it.** `an_unencountered_passage_offers_nothing`
+**2. The Chattel's acceptance criterion 4 is MET on The Latch's stated
+REASON, and NOT met on 0349's vocabulary. This clause names which, because
+its first draft asserted both.** It read "MET, in the sense The Latch's
+criterion 5 meant it", which is a claim about what a prior campaign intended,
+and the ancestry cuts the other way: criterion 5's literal text is "denies
+something — a **firing case**, shown by a test that fails if the gate is
+removed", and *firing case* is 0349's own term for live reachability ("IV.b's
+durable objects give it a firing case with no rewiring"; "No seed, no session
+and no transcript in IV.a exercises the denying branch"). Read through that
+vocabulary, criterion 5 asks for precisely the half clause 3 concedes is
+unmet.
+
+**What this record relies on is The Latch's written reason, not 0349's
+word.** The Latch spent its whole justification on *currency* — "The reason is
+a type mismatch, not a missing wire": `offered_to_observer` took an
+`AnchorKind`, `AnchorKind` has no cave-mouth variant, a cave mouth is a
+`Vertex`/`ChamberAddr` — and both remedies it named are keys, not states. That
+wall is gone, and this campaign is what removed it.
+
+**The increment is also narrower than "a test that fails if the gate is
+removed", which was already true before this campaign.** 0349's own
+consequence list says so: "making `offered_to_observer` ignore its `known`
+argument reddens `an_unencountered_object_offers_nothing`" — and it still
+does, on the same unfiltered run that reds the new test. The thing that is
+new is that **a kind with no `AnchorKind` behind it can be named to the gate
+at all**. `an_unencountered_passage_offers_nothing`
 (`windows/vessel/tests/suite/affordance.rs`) asks the gate about
-`KindId("cave-mouth")` with an empty `Knowledge` and gets the empty set; it
-fails if the gate is removed (mutation: make `offered_to_observer` ignore
-`known` — red pasted in the test's own doc, per decision 0353). Its first
-assertion is the precondition that keeps it honest: no `AnchorKind` maps to
-`cave-mouth`, so if a cave-mouth anchor variant ever arrives, the test stops
-being evidence about addressing and someone has to say so. Its sibling
+`KindId("cave-mouth")` with an empty `Knowledge` and gets the empty set; the
+gate mutation reds it, alongside two tests that predate it (red pasted
+unfiltered in the test's own doc, per decision 0353). Its first assertion is
+the precondition that keeps it honest: no `AnchorKind` maps to `cave-mouth`,
+so if a cave-mouth anchor variant ever arrives, the test stops being evidence
+about addressing and someone has to say so. **That precondition did not fire
+against its own named scenario until fix round 1** — the roster it swept was
+hand-written, so an added variant was invisible to it. `AnchorKind::ALL` is
+now generated from the enum's declaration (`interior/anchor.rs`), and the
+probe that was silent reds four tests including this one. Its sibling
 `an_encountered_passage_offers_its_verbs` pins `{Enter, Examine}` from the
 other direction, so the pair cannot be satisfied by an empty registry row.
 
-**3. What is NOT met, stated here rather than left for a reader to discover.**
-The gate still cannot deny through a **live `Session`**. Knowledge absorption
-is unconditional before the first turn (`Session::new`'s `absorb_here`), so
-`known` is never empty in production, and no production caller passes
-`KindId("cave-mouth")` at all — chamber entry gates on the cave mouth's own
-`openness` fold (0396), not on this query. The denial is observed with a
-synthetic `Knowledge::default()`, which is a real and reachable state of the
-type but not one today's callers produce.
+**3. What is NOT met, stated here rather than left for a reader to discover
+— and stated NARROWER than this clause's first draft, which was reached
+without a fact that bears on it.** The draft said the gate "still cannot deny
+through a **live `Session`**". That is false about the PATH and true about the
+STATE, and the two need separating.
 
-**These two halves are different claims and 0369 named only the first.** Its
+`session.rs`'s `examine_chamber_anchor_is_refused_when_the_observer_has_no_
+recorded_knowledge` builds a real world, starts a real `Session`, enters a
+real chamber, takes a real anchor's noun, and gets the player-facing refusal
+`"You see no {noun} here."` out of `Session::examine_chamber` — which reaches
+this gate through `thing_kind_of`. It is one of the three tests the gate
+mutation reds on an unfiltered run. So the production call path DOES deny, in
+a live session, with a real anchor, and the denial is observable as prose.
+
+What is unreachable is the **state**, not the path, and separately the
+**passage**:
+
+- Knowledge absorption is unconditional before the first turn (`Session::new`'s
+  `absorb_here`), so `known` is never empty in production. That test reaches
+  the denying branch by assigning `session.knowledge = Knowledge::default()`
+  — a real and reachable state of the type, written by the test rather than
+  produced by the world. In 0349's vocabulary this is still not a *firing
+  case*: no seed and no transcript produces it.
+- No production caller passes `KindId("cave-mouth")` at all. Chamber entry
+  gates on the cave mouth's own `openness` fold (0396), not on this query. So
+  the passage denial is not merely un-fired, it is off every production path,
+  which is a strictly weaker position than the anchor half above.
+
+**These halves are different claims and 0369 named only the first.** Its
 reason section is entirely about currency: the enum, the missing variant, the
 `Vertex`/`ChamberAddr`, `passage.rs` holding zero references to `Knowledge`.
 That half is discharged. A campaign that wants the second half must change
@@ -83,6 +130,25 @@ that omits a room truthfully known — and **not** the key, which is now the
 wrong lever.
 
 ## Consequences
+
+- **`AnchorKind::ALL` is generated from the enum's own declaration, and every
+  roster of anchor kinds in the workspace now reads it** (fix round 1). Clause
+  2's precondition is the reason this record cares: it is what keeps
+  "no anchor kind reaches `cave-mouth`" honest, and it was sweeping a
+  hand-written list that no compiler, and no possible test, could hold to the
+  enum's cardinality. Three such lists existed —
+  `windows/vessel/tests/suite/affordance.rs`,
+  `cli/tests/suite/anchor_thing_correspondence.rs`,
+  `windows/vessel/src/chamber_prose.rs` — each carrying a comment claiming an
+  exhaustive match kept it in step, which is true of an ARM and false of a
+  LIST. **All three get the mechanism, not just the one clause 2 depends on**:
+  a repair that generalizes in its reasoning and stops at one file leaves the
+  next reader with a rule they cannot trust, and the cost of the other two was
+  two deletions. A `macro_rules! anchor_kinds` in
+  `windows/vessel/src/interior/anchor.rs` declares the enum and the roster
+  together; `the_anchor_kind_roster_is_generated_from_the_enums_declaration`
+  scans that it stays that way, since unwinding it back into two hand lists
+  compiles, behaves identically, and silently removes the property.
 
 - **0369 is answered, not superseded.** Its rule is unchanged and this record
   is evidence for it rather than against it: the fix was a key, exactly as

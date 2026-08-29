@@ -50,44 +50,33 @@ use hornvale_vessel::liveness::ThreatNiche;
 /// Every `AnchorKind` variant, once — the roster
 /// `the_anchor_to_thing_kind_mapping_is_injective` sweeps and
 /// `an_unencountered_passage_offers_nothing` checks its precondition
-/// against.
+/// against. It is [`AnchorKind::ALL`], **generated from the enum's own
+/// declaration** (`windows/vessel/src/interior/anchor.rs`), not a list
+/// maintained here.
 ///
-/// **One copy, hoisted by Task 9 rather than pasted a second time.** The
-/// injectivity test held this list inline; the passage-denial test needs the
-/// same fourteen to say "no anchor kind reaches `cave-mouth`". Two
-/// hand-maintained copies of an enum roster is precisely the shape where one
-/// silently goes short and its test narrows without failing — an omitted
-/// variant makes injectivity *easier* to satisfy and makes the
-/// no-anchor-reaches-cave-mouth precondition *easier* to satisfy, so neither
-/// copy reddens on its own.
+/// **This alias is what is left of a hand-written roster, and the paragraph
+/// it replaces was wrong in the direction that happens.** Task 9 hoisted one
+/// `[AnchorKind; 14]` into this file and answered "what stops THIS copy going
+/// short" with: the compiler (`thing_kind_of` has no wildcard arm, so a
+/// fifteenth variant will not compile until someone writes its arm) plus the
+/// two-way agreement against
+/// `the_re_key_preserves_every_anchor_kinds_offer`'s own fourteen-row table.
+/// Both halves are true and neither is anchored to the enum's CARDINALITY.
+/// The compiler forces an ARM, never a LIST ENTRY; the two hand-maintained
+/// lists go short **together**, since the person appending a variant touches
+/// neither. Fix round 1 measured it: a fifteenth variant, given the arms the
+/// compiler demanded and pointed at `KindId("cave-mouth")`, left 1209 tests
+/// green — including the precondition below, whose doc comment promised to
+/// stop being evidence in exactly that case.
 ///
-/// **What stops THIS copy going short, stated exactly rather than hoped
-/// for.** Production is safe by the compiler: `thing_kind_of` has no
-/// wildcard arm (`thing_kind_of_has_no_wildcard_arm` scans for one), so a
-/// fifteenth variant is a compile error until someone writes its arm. This
-/// roster is not covered by that, so
-/// `the_re_key_preserves_every_anchor_kinds_offer` asserts its own
-/// fourteen-row table names exactly these fourteen, in order — a two-way
-/// agreement between the only two enumerations left in this file. A variant
-/// dropped from either side reddens there; the `[AnchorKind; 14]` length
-/// annotation on its own would not, since dropping an element and the count
-/// together compiles.
-const ALL_ANCHOR_KINDS: [AnchorKind; 14] = [
-    AnchorKind::Hearth,
-    AnchorKind::Threshold,
-    AnchorKind::Bed,
-    AnchorKind::Vessel,
-    AnchorKind::Screen,
-    AnchorKind::Pool,
-    AnchorKind::Log,
-    AnchorKind::Ground,
-    AnchorKind::Alcove,
-    AnchorKind::Strongbox,
-    AnchorKind::HighSeat,
-    AnchorKind::Loom,
-    AnchorKind::Anvil,
-    AnchorKind::Altar,
-];
+/// **Removing a variant reddened one test; adding one reddened nothing, and
+/// adding is the direction that happens.** No test can enumerate a variant
+/// it has never heard of, so no test could have closed that gap — the roster
+/// had to come from the declaration. It now does, and what remains
+/// hand-maintained is the frozen verb table below, deliberately: its two-way
+/// agreement against a roster that grows with the enum is what turns an
+/// appended variant into a red.
+const ALL_ANCHOR_KINDS: &[AnchorKind] = AnchorKind::ALL;
 
 /// Acceptance test (1): a new OBJECT kind ships with properties only — no
 /// dispatcher change — and the right verbs appear on it.
@@ -1233,13 +1222,38 @@ fn an_encountered_object_offers_its_verbs() {
 /// room: the knowledge gate did not deny a passage
 /// ```
 ///
-/// **That run reddened TWO tests, not one** — this and
-/// `an_unencountered_object_offers_nothing` (`41 tests run: 39 passed, 2
-/// failed`), which is stated rather than trimmed because it is the honest
-/// shape of the evidence: the mutation kills the gate for every kind, and
-/// the hearth test was already holding it for anchors. What this test adds
-/// is the half no existing test could reach — the same kill against a kind
-/// with no `AnchorKind` behind it.
+/// **That run reddens THREE tests, not one, and the count was wrong here
+/// until fix round 1 because the run behind it was FILTERED.** The figure
+/// this paragraph used to give — "TWO tests … `41 tests run: 39 passed, 2
+/// failed`" — is a `-E 'test(affordance)'` selection, taken in the same
+/// commit in which the sibling mutation below was self-corrected to an
+/// unfiltered run, one doc comment away. Re-taken unfiltered over the whole
+/// crate:
+///
+/// ```text
+/// FAIL [   4.541s] (436/836) hornvale-vessel session::tests::examine_chamber_anchor_is_refused_when_the_observer_has_no_recorded_knowledge
+/// FAIL [   0.025s] (568/836) hornvale-vessel::suite affordance::an_unencountered_object_offers_nothing
+/// FAIL [   0.018s] (569/836) hornvale-vessel::suite affordance::an_unencountered_passage_offers_nothing
+///      Summary [ 174.236s] 836 tests run: 833 passed, 3 failed, 3 skipped
+/// ```
+///
+/// Stated rather than trimmed because it is the honest shape of the evidence:
+/// the mutation kills the gate for every kind, the hearth test was already
+/// holding it for anchors, and `session.rs`'s own test was already holding it
+/// through a real `Session::examine_chamber`. What this test adds is the half
+/// no existing test could reach — the same kill against a kind with no
+/// `AnchorKind` behind it.
+///
+/// **The residual, stated here because this is the first file a successor
+/// grepping for acceptance criterion 4 lands in** (fix round 1, m2; the same
+/// sentence decision 0397 clause 3 carries). The addressing half is
+/// discharged; the *live-reachability* half is not. `Session::new`'s
+/// `absorb_here` is unconditional, so no session reaches an empty
+/// `Knowledge` on its own, and no production caller passes
+/// `KindId("cave-mouth")` at all — chamber entry gates on the cave mouth's
+/// `openness` fold (0396), not on this query. The denial above is observed
+/// with a synthetic `Knowledge::default()`: a real and reachable state of the
+/// type, not one today's callers produce.
 ///
 /// That `{Enter, Examine}` in the message is the whole point — it is a
 /// non-empty offer, so this test cannot be satisfied by a `cave-mouth` row
@@ -1252,8 +1266,16 @@ fn an_unencountered_passage_offers_nothing() {
     // Precondition, and the reason this test could not have been written
     // before the re-key: `cave-mouth` is unreachable through `AnchorKind`.
     // If a cave-mouth anchor variant ever arrives, this test stops being
-    // evidence about ADDRESSING and someone must say so deliberately.
-    for kind in ALL_ANCHOR_KINDS {
+    // evidence about ADDRESSING and someone must say so deliberately —
+    // and since fix round 1 that sentence is MECHANICAL rather than a
+    // hope. `AnchorKind::ALL` is generated from the enum's declaration, so
+    // a fifteenth variant is swept here on the run that first compiles it.
+    // Probed here after the fix: a `CaveMouth` variant pointed at
+    // `KindId("cave-mouth")`, given the three arms the compiler demands,
+    // reds this assertion along with three other tests. The reviewer ran
+    // the identical probe against the pre-fix hand-written roster and got
+    // 1209 tests green — see [`ALL_ANCHOR_KINDS`].
+    for &kind in ALL_ANCHOR_KINDS {
         assert_ne!(
             thing_kind_of(kind),
             cave_mouth,
@@ -1514,30 +1536,43 @@ fn no_hardcoded_anchor_kind_gates_warm() {
 /// other direction — see the injectivity test's own doc for the pair that
 /// separates the two.
 ///
-/// **Also the agreement half for [`ALL_ANCHOR_KINDS`] (Task 9).** This
-/// table and that const are the only two hand-maintained enumerations of
-/// `AnchorKind` left in this file, and a variant silently missing from
-/// EITHER weakens a test without failing one — an absent row here is one
-/// fewer offer pinned, an absent entry there is one fewer precondition
-/// checked by `an_unencountered_passage_offers_nothing`. So the first
-/// assertion below holds the two against each other in both directions.
+/// **Also the agreement half for [`ALL_ANCHOR_KINDS`] (Task 9), and since
+/// fix round 1 the agreement has a compiler-anchored side.** This table is
+/// now the ONLY hand-maintained enumeration of `AnchorKind` in this file:
+/// [`ALL_ANCHOR_KINDS`] is `AnchorKind::ALL`, generated from the enum's own
+/// declaration. That asymmetry is what makes the first assertion below carry
+/// the campaign's add-a-variant property. An appended variant lengthens the
+/// generated side and not this one, so it reddens here; a row dropped from
+/// this table shortens it against a side that cannot follow, so that reddens
+/// here too. Neither direction can be satisfied by both lists going short
+/// together, which is exactly how the pre-fix arrangement failed.
 ///
 /// MUTATION THAT AGREEMENT MUST FAIL AGAINST — run because a guard written
 /// in the same commit as the thing it guards is unaudited text: drop
-/// `AnchorKind::Loom` from [`ALL_ANCHOR_KINDS`] and its length annotation
-/// from 14 to 13. **Exactly one test failed, this one**
-/// (`41 tests run: 40 passed, 1 failed`) — the injectivity sweep and
-/// `an_unencountered_passage_offers_nothing`'s precondition BOTH stayed
-/// green on the short roster, which is the silent narrowing this assertion
-/// exists for. Red observed:
+/// `(AnchorKind::Loom, &[Examine])` from the table below and its length
+/// annotation from 14 to 13 (the hand-maintained side; the generated side
+/// can no longer be shortened without deleting the variant). **Exactly one
+/// test failed, this one.**
+///
+/// **The `41 tests run: 40 passed, 1 failed` figure this paragraph used to
+/// cite was a `-E 'test(affordance)'` selection** — the claim it supported
+/// was true and the evidence pasted under it could not establish it, since a
+/// filtered run says nothing about the 795 tests it did not select (fix
+/// round 1, m4). Re-taken unfiltered over the whole crate:
 ///
 /// ```text
-/// FAIL [   0.011s] (35/41) hornvale-vessel::suite affordance::the_re_key_preserves_every_anchor_kinds_offer
+/// FAIL [   0.011s] (593/836) hornvale-vessel::suite affordance::the_re_key_preserves_every_anchor_kinds_offer
+///      Summary [ 173.431s] 836 tests run: 835 passed, 1 failed, 3 skipped
+///
 /// assertion `left == right` failed: this table and ALL_ANCHOR_KINDS are the
 /// file's only two hand-maintained AnchorKind enumerations, ...
-///   left: [Hearth, Threshold, Bed, Vessel, Screen, Pool, Log, Ground, Alcove, Strongbox, HighSeat, Loom, Anvil, Altar]
-///  right: [Hearth, Threshold, Bed, Vessel, Screen, Pool, Log, Ground, Alcove, Strongbox, HighSeat, Anvil, Altar]
+///   left: [Hearth, Threshold, Bed, Vessel, Screen, Pool, Log, Ground, Alcove, Strongbox, HighSeat, Anvil, Altar]
+///  right: [Hearth, Threshold, Bed, Vessel, Screen, Pool, Log, Ground, Alcove, Strongbox, HighSeat, Loom, Anvil, Altar]
 /// ```
+///
+/// The `left`/`right` sides are the other way round from the citation this
+/// replaces, and that is the mutation moving rather than a transcription
+/// slip: the shortened list is now the TABLE, which is `left`.
 #[test]
 fn the_re_key_preserves_every_anchor_kinds_offer() {
     use OfferedVerb::{Drink, Enter, Examine, Sleep, Warm};
@@ -1568,10 +1603,11 @@ fn the_re_key_preserves_every_anchor_kinds_offer() {
     assert_eq!(
         table_kinds,
         ALL_ANCHOR_KINDS.to_vec(),
-        "this table and ALL_ANCHOR_KINDS are the file's only two hand-\
-         maintained AnchorKind enumerations, and a variant present in one \
-         and absent from the other silently narrows whichever tests read \
-         the short one"
+        "this table and ALL_ANCHOR_KINDS are the file's only two \
+         AnchorKind enumerations, and only the table is hand-maintained: a \
+         variant appended to the enum lengthens ALL_ANCHOR_KINDS and not \
+         this table, and a row dropped from this table shortens it against \
+         a roster that cannot follow"
     );
     for (kind, want) in expected {
         let want: BTreeSet<OfferedVerb> = want.iter().copied().collect();
@@ -1612,7 +1648,7 @@ fn the_re_key_preserves_every_anchor_kinds_offer() {
 #[test]
 fn the_anchor_to_thing_kind_mapping_is_injective() {
     let mut seen: BTreeSet<KindId> = BTreeSet::new();
-    for kind in ALL_ANCHOR_KINDS {
+    for &kind in ALL_ANCHOR_KINDS {
         let id = thing_kind_of(kind);
         assert!(
             seen.insert(id),
@@ -1684,6 +1720,90 @@ fn the_wildcard_scan_catches_a_wildcard_arm() {
     assert!(
         find_bytes(body, b"_ =>").is_some(),
         "positive control: a wildcard arm must be caught"
+    );
+}
+
+/// **[`AnchorKind::ALL`] must stay GENERATED, because the whole add-a-variant
+/// property rests on that and on nothing else** (fix round 1, MAJOR 1).
+///
+/// The enum and its roster are declared by one `anchor_kinds!` invocation in
+/// `interior/anchor.rs`. Unwind that into a plain `pub enum` beside a plain
+/// `pub const ALL` and everything still compiles, every test here stays
+/// green, and the roster is a hand-maintained list again — which is the state
+/// in which a fifteenth variant reddened nothing at all. Nothing else in the
+/// language is anchored to the enum's cardinality, so nothing else can notice
+/// the unwinding; this scan is what does.
+///
+/// Same disclosure the two scans above carry, for the same reason. It reads
+/// the block `block_body_after` isolates for the literal needle
+/// `macro_rules! anchor_kinds`, and asks for the literal texts
+/// `pub enum AnchorKind` and `pub const ALL` inside it. A roster generated by
+/// a differently-named macro, by a build script, or by a second macro layer
+/// is not seen; neither is one whose `ALL` is generated from a list other
+/// than the enum's own variants. It also asserts `pub enum AnchorKind`
+/// appears exactly ONCE in the file, so a hand-written second declaration
+/// cannot sit beside the generated one.
+///
+/// MUTATION THIS MUST FAIL AGAINST — run against production source, not a
+/// synthetic string: move the `pub const ALL` line out of the macro body and
+/// into a bare `impl AnchorKind` block below the invocation, spelling the
+/// fourteen variants by hand. It compiles and behaves identically today. Red
+/// observed, on an unfiltered `-p hornvale-vessel` run:
+///
+/// ```text
+/// FAIL [   0.005s] hornvale-vessel::suite affordance::the_anchor_kind_roster_is_generated_from_the_enums_declaration
+/// thread 'affordance::the_anchor_kind_roster_is_generated_from_the_enums_declaration'
+/// panicked at windows/vessel/tests/suite/affordance.rs:
+/// AnchorKind::ALL is not declared inside the anchor_kinds! macro that declares
+/// the enum, so it is a hand-maintained roster again and an appended variant
+/// reddens nothing
+/// ```
+#[test]
+fn the_anchor_kind_roster_is_generated_from_the_enums_declaration() {
+    let src = include_str!("../../src/interior/anchor.rs");
+    assert_eq!(
+        src.matches("pub enum AnchorKind").count(),
+        1,
+        "AnchorKind must be declared exactly once; a second declaration would \
+         let a hand-written enum sit beside the generated roster"
+    );
+    let body = block_body_after(src.as_bytes(), b"macro_rules! anchor_kinds")
+        .expect("interior/anchor.rs must define macro_rules! anchor_kinds");
+    let body = std::str::from_utf8(body).expect("anchor.rs is utf-8");
+    assert!(
+        body.contains("pub enum AnchorKind"),
+        "the anchor_kinds! macro must be what declares the enum: {body:?}"
+    );
+    assert!(
+        body.contains("pub const ALL"),
+        "AnchorKind::ALL is not declared inside the anchor_kinds! macro that \
+         declares the enum, so it is a hand-maintained roster again and an \
+         appended variant reddens nothing: {body:?}"
+    );
+}
+
+/// Positive control for the scan above: the forbidden shape — a roster
+/// declared OUTSIDE the macro that declares the enum — must actually be
+/// caught, or that test's green is worth nothing.
+#[test]
+fn the_roster_generation_scan_catches_a_hand_written_roster() {
+    let src = b"macro_rules! anchor_kinds {\n    \
+                 ($($v:ident),+) => {\n        \
+                 pub enum AnchorKind { $($v),+ }\n    \
+                 };\n\
+                 }\n\
+                 impl AnchorKind {\n    \
+                 pub const ALL: &[AnchorKind] = &[AnchorKind::Bed];\n\
+                 }";
+    let body = block_body_after(src, b"macro_rules! anchor_kinds").expect("the control must parse");
+    let body = std::str::from_utf8(body).expect("the control is utf-8");
+    assert!(
+        body.contains("pub enum AnchorKind"),
+        "the control must still put the enum inside the macro"
+    );
+    assert!(
+        !body.contains("pub const ALL"),
+        "positive control: a roster declared outside the macro must be caught"
     );
 }
 

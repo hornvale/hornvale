@@ -239,41 +239,34 @@ mod tests {
         i
     }
 
-    /// Every kind, listed once. Written out rather than derived, and kept in
-    /// step by [`detail`]'s exhaustive match: a new kind fails to compile there,
-    /// and `every_kind_has_a_detail` below is what notices it missing here.
-    const EVERY_KIND: [AnchorKind; 14] = [
-        AnchorKind::Ground,
-        AnchorKind::Hearth,
-        AnchorKind::Threshold,
-        AnchorKind::Bed,
-        AnchorKind::Vessel,
-        AnchorKind::Screen,
-        AnchorKind::Alcove,
-        AnchorKind::Pool,
-        AnchorKind::Log,
-        AnchorKind::Strongbox,
-        AnchorKind::HighSeat,
-        AnchorKind::Loom,
-        AnchorKind::Anvil,
-        AnchorKind::Altar,
-    ];
+    /// Every kind, listed once — [`AnchorKind::ALL`], which is generated from
+    /// the enum's own declaration (`interior/anchor.rs`).
+    ///
+    /// **This used to be a hand-written `[AnchorKind; 14]` here**, whose
+    /// comment claimed it was "kept in step by [`detail`]'s exhaustive match".
+    /// It was not: the compiler forces an ARM in `detail`, never an ENTRY in a
+    /// list beside it, so an appended variant would have compiled with this
+    /// list unchanged and every test below would have swept one kind short and
+    /// stayed green. The Chattel's Task 9 fix round measured exactly that on
+    /// the sibling rosters. Now there is one roster and it grows with the enum.
+    const EVERY_KIND: &[AnchorKind] = AnchorKind::ALL;
 
     #[test]
     fn every_kind_has_a_detail() {
-        // The list above cannot go stale silently: `detail` is exhaustive, so a
-        // tenth kind compiles only once it is written there, and this asserts the
-        // list here covers as many distinct kinds as `noun` distinguishes.
+        // The roster grows with the enum, so this sweep cannot silently narrow;
+        // what it still adds is that `detail` answers for every kind and that
+        // `noun`'s own match distinguishes as many as the arithmetic below says.
         let mut seen = std::collections::BTreeSet::new();
-        for kind in EVERY_KIND {
+        for &kind in EVERY_KIND {
             assert!(seen.insert(kind), "{kind:?} listed twice");
             let d = detail(kind);
             assert!(d.ends_with('.'), "{kind:?}: a detail is a sentence: {d:?}");
             assert!(!d.trim().is_empty(), "{kind:?}: an empty detail");
         }
         // Ground has no noun and every other kind does, so fourteen kinds must
-        // yield thirteen nouns — the arithmetic that catches a kind dropped from
-        // the list.
+        // yield thirteen nouns. The roster can no longer go short, so what this
+        // now catches is the other direction: an APPENDED variant reddens here
+        // rather than sliding through `noun`'s new arm unremarked.
         assert_eq!(
             EVERY_KIND.iter().filter(|&&k| noun(k).is_some()).count(),
             13,
@@ -286,7 +279,7 @@ mod tests {
         // `a_chamber_never_speaks_of_terrain`'s counterpart. A detail line is read
         // in the same room by the same player, so the locale describer's
         // vocabulary is as wrong here as it is in the prose.
-        for kind in EVERY_KIND {
+        for &kind in EVERY_KIND {
             for banned in [
                 "biome",
                 "elevation",

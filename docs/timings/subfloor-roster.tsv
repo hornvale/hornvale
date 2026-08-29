@@ -2888,6 +2888,8 @@ hornvale-vessel::suite$affordance::extra_properties_expand_the_offer_never_withd
 hornvale-vessel::suite$affordance::no_hardcoded_anchor_kind_gates_warm
 hornvale-vessel::suite$affordance::no_verb_by_object_table_exists
 hornvale-vessel::suite$affordance::subset_and_equality_genuinely_disagree_on_the_constructed_traits
+hornvale-vessel::suite$affordance::the_anchor_kind_roster_is_generated_from_the_enums_declaration
+hornvale-vessel::suite$affordance::the_roster_generation_scan_catches_a_hand_written_roster
 hornvale-vessel::suite$affordance::the_same_object_offers_differently_to_different_bodies
 hornvale-vessel::suite$affordance::the_table_scanner_catches_a_block_arm
 hornvale-vessel::suite$affordance::the_table_scanner_catches_a_set_builder_arm

@@ -28,27 +28,18 @@
 use hornvale_vessel::affordance::{object_registry, thing_kind_of};
 use hornvale_vessel::interior::AnchorKind;
 
-/// Every `AnchorKind` variant. Hand-listed because `AnchorKind` has no
-/// `all()`; the compile-time guard against an appended variant is
-/// `thing_kind_of`'s own exhaustive match (and
-/// `windows/vessel/tests/suite/affordance.rs`'s scan for a wildcard arm that
-/// would defeat it), not this list.
-const EVERY_ANCHOR_KIND: [AnchorKind; 14] = [
-    AnchorKind::Hearth,
-    AnchorKind::Threshold,
-    AnchorKind::Bed,
-    AnchorKind::Vessel,
-    AnchorKind::Screen,
-    AnchorKind::Pool,
-    AnchorKind::Log,
-    AnchorKind::Ground,
-    AnchorKind::Alcove,
-    AnchorKind::Strongbox,
-    AnchorKind::HighSeat,
-    AnchorKind::Loom,
-    AnchorKind::Anvil,
-    AnchorKind::Altar,
-];
+/// Every `AnchorKind` variant — [`AnchorKind::ALL`], generated from the
+/// enum's own declaration (`windows/vessel/src/interior/anchor.rs`).
+///
+/// **This was a hand-written `[AnchorKind; 14]` until The Chattel's Task 9 fix
+/// round**, and its doc named `thing_kind_of`'s exhaustive match as the
+/// compile-time guard against an appended variant. That guard is real for the
+/// MAPPING and does not reach a LIST: an appended variant compiled here with
+/// this file's roster untouched, so this sweep would have run one kind short
+/// and stayed green — measured, not supposed. The roster now grows with the
+/// enum, so the two checks below sweep an appended variant on the run that
+/// first compiles it.
+const EVERY_ANCHOR_KIND: &[AnchorKind] = AnchorKind::ALL;
 
 /// Every anchor kind's thing-kind — read from the production mapping — is a
 /// row `hornvale_thing::THING_KINDS` actually carries.
@@ -66,7 +57,7 @@ const EVERY_ANCHOR_KIND: [AnchorKind; 14] = [
 /// ```
 #[test]
 fn every_anchor_kind_has_a_thing_kind_counterpart() {
-    for kind in EVERY_ANCHOR_KIND {
+    for &kind in EVERY_ANCHOR_KIND {
         let id = thing_kind_of(kind);
         assert!(
             hornvale_thing::THING_KINDS.contains(&id.0),
@@ -114,6 +105,9 @@ fn every_property_table_key_is_a_real_thing_kind() {
 /// as two green results.
 #[test]
 fn the_correspondence_checks_are_not_vacuous() {
+    // Fourteen is now a claim about the ENUM, not about a list in this file:
+    // `AnchorKind::ALL` is generated from the declaration, so an appended
+    // variant reddens here on the run that first compiles it.
     assert_eq!(EVERY_ANCHOR_KIND.len(), 14);
     assert!(
         object_registry().ids().count() >= 9,
