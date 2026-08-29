@@ -240,24 +240,45 @@ fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
 /// **The direction this still enforces, unchanged from before** (stated so
 /// it cannot be mistaken for a broader guarantee): it scans exactly the one
 /// file passed to it, for exactly the one syntactic shape "a match arm
-/// pattern containing the literal text `AnchorKind::<ident>`, whose body
-/// contains the literal text `OfferedVerb::`". A table in another file; one
-/// reached through a re-exported alias, a fully-qualified path that never
-/// spells `AnchorKind::`, or a helper function called from the arm instead
-/// of inlined in it; or one keyed on something other than `AnchorKind`
-/// entirely — none of those are seen. The concrete instance already in this
-/// crate: `interior/field.rs`'s `warmth_at` contains `if
-/// interior.anchor(id).kind != AnchorKind::Hearth { continue; }`, a
-/// kind-to-behavior coupling this guard cannot see because it is not in
-/// `affordance.rs` and never mentions `OfferedVerb`.
-fn anchor_kind_arm_mentions_offered_verb(src: &str) -> bool {
+/// pattern containing the literal text `<marker><key>`, whose body contains
+/// the literal text `OfferedVerb::`". A table in another file; one reached
+/// through a re-exported alias, a fully-qualified path that never spells the
+/// marker, or a helper function called from the arm instead of inlined in
+/// it; or one keyed on something the callers below do not pass — none of
+/// those are seen. The concrete instance already in this crate:
+/// `interior/field.rs`'s `warmth_at` contains `if interior.anchor(id).kind
+/// != AnchorKind::Hearth { continue; }`, a kind-to-behavior coupling this
+/// guard cannot see because it is not in `affordance.rs` and never mentions
+/// `OfferedVerb`.
+///
+/// **`marker` is a parameter since The Chattel's Task 7, and that is a
+/// coverage repair rather than a tidy-up.** The scan was hard-coded to
+/// `AnchorKind::`, which was the property table's key when The Offer wrote
+/// it. Task 7 re-keyed the table to `KindId`, so the natural spelling of a
+/// hardcoded verb table moved with it — `KindId("bed") => [OfferedVerb::
+/// Sleep, ...]` is a legal match arm (a tuple-struct pattern over a string
+/// literal) that the old scan could not see at all. Nothing would have gone
+/// red; acceptance clause (4) would simply have stopped covering the shape
+/// anyone would now write. Both markers are scanned by the two callers
+/// below.
+fn arm_mentions_offered_verb(src: &str, marker: &[u8]) -> bool {
     let bytes = src.as_bytes();
-    let anchor_marker = b"AnchorKind::";
     let mut cursor = 0usize;
-    while let Some(rel) = find_bytes(&bytes[cursor..], anchor_marker) {
-        let variant_start = cursor + rel + anchor_marker.len();
+    while let Some(rel) = find_bytes(&bytes[cursor..], marker) {
+        let variant_start = cursor + rel + marker.len();
         let mut j = variant_start;
-        while j < bytes.len() && (bytes[j].is_ascii_alphanumeric() || bytes[j] == b'_') {
+        // The key text between the marker and the `=>`. The set is wide
+        // enough for both an `AnchorKind` variant name (`Bed`) and a
+        // `KindId` literal's remainder (`"cave-mouth")`), so one scan
+        // serves both markers; it is a superset for the enum case and
+        // changes nothing there.
+        while j < bytes.len()
+            && (bytes[j].is_ascii_alphanumeric()
+                || bytes[j] == b'_'
+                || bytes[j] == b'"'
+                || bytes[j] == b'-'
+                || bytes[j] == b')')
+        {
             j += 1;
         }
         let mut k = j;
@@ -296,6 +317,20 @@ fn anchor_kind_arm_mentions_offered_verb(src: &str) -> bool {
         cursor = variant_start;
     }
     false
+}
+
+/// The `AnchorKind::`-keyed reading of [`arm_mentions_offered_verb`] — the
+/// shape The Offer's acceptance clause (4) named, kept as its own function
+/// so the three controls below read unchanged.
+fn anchor_kind_arm_mentions_offered_verb(src: &str) -> bool {
+    arm_mentions_offered_verb(src, b"AnchorKind::")
+}
+
+/// The `KindId(`-keyed reading — the shape a hardcoded verb table would take
+/// AFTER Task 7's re-key, and the one the scan was blind to until it was
+/// parameterised.
+fn thing_kind_arm_mentions_offered_verb(src: &str) -> bool {
+    arm_mentions_offered_verb(src, b"KindId(")
 }
 
 /// Positive control: the exact single-expression (set-builder) form a
@@ -356,6 +391,85 @@ fn no_verb_by_object_table_exists() {
         "affordance.rs maps an AnchorKind variant to an OfferedVerb through a \
          match arm: that is the verb x object table the acceptance test \
          forbids"
+    );
+}
+
+/// Positive control for the thing-kind reading: the shape a hardcoded table
+/// would take now that the property table is keyed on `KindId`. Without
+/// this, `no_thing_kind_keyed_verb_table_exists` below could be green
+/// because the scanner never fires rather than because the shape is absent.
+#[test]
+fn the_table_scanner_catches_a_thing_kind_keyed_arm() {
+    let table = "match kind {\n    \
+                  KindId(\"bed\") => [OfferedVerb::Sleep, OfferedVerb::Examine].into_iter().collect(),\n    \
+                  _ => BTreeSet::new(),\n\
+                  }";
+    assert!(
+        thing_kind_arm_mentions_offered_verb(table),
+        "positive control: a KindId-keyed verb x object arm must be caught"
+    );
+}
+
+/// Negative control: the legitimate indirection `object_registry` itself is
+/// written in — a `KindId` key mapped to `ObjectProperty` values — must not
+/// trip the scan, or acceptance clause (4) would condemn the one table the
+/// whole design is built on.
+#[test]
+fn the_table_scanner_does_not_false_positive_on_thing_kind_property_rows() {
+    let legitimate = "match kind {\n    \
+                       KindId(\"bed\") => ObjectProperty::SupportsRest,\n    \
+                       _ => ObjectProperty::HoldsLiquid,\n\
+                       }";
+    assert!(!thing_kind_arm_mentions_offered_verb(legitimate));
+}
+
+/// Acceptance test (4), the half Task 7's re-key made necessary: no
+/// **thing-kind**-keyed verb table exists in `affordance.rs` either.
+///
+/// `no_verb_by_object_table_exists` above scans for `AnchorKind::`-keyed
+/// arms, which was the whole of the forbidden shape while the property table
+/// was keyed on that enum. It no longer is, so this is the same structural
+/// claim over the key the table actually uses. Stated so it cannot be
+/// over-read: this shares every blind spot its sibling discloses (one file,
+/// one syntactic shape, nothing reached through a helper or an alias), and
+/// adds one of its own — a table keyed on a `KindId` held in a variable
+/// rather than spelled as a literal is invisible to it.
+///
+/// MUTATION THIS MUST FAIL AGAINST, and it is the evidence that the gap was
+/// real rather than theoretical: replace `offered_by`'s body with the
+/// forbidden table itself —
+///
+/// ```ignore
+/// match kind {
+///     KindId("bed") => [OfferedVerb::Sleep, OfferedVerb::Examine]
+///         .into_iter()
+///         .collect(),
+///     _ => BTreeSet::new(),
+/// }
+/// ```
+///
+/// Observed: this test FAILED and **`no_verb_by_object_table_exists` passed**
+/// — a live, hardcoded verb x object table sitting in production while the
+/// guard decision 0350 names for it reported green. (Five behavioural tests
+/// also reddened, because that mutation breaks the answers too; a subtler
+/// table that agreed with the registry on every row would have left only
+/// this one.)
+///
+/// ```text
+/// test affordance::no_thing_kind_keyed_verb_table_exists ... FAILED
+/// test affordance::no_verb_by_object_table_exists ... ok
+/// thread 'affordance::no_thing_kind_keyed_verb_table_exists' panicked at
+/// windows/vessel/tests/suite/affordance.rs:440:5:
+/// affordance.rs maps a KindId literal to an OfferedVerb through a match arm ...
+/// ```
+#[test]
+fn no_thing_kind_keyed_verb_table_exists() {
+    let src = include_str!("../../src/affordance.rs");
+    assert!(
+        !thing_kind_arm_mentions_offered_verb(src),
+        "affordance.rs maps a KindId literal to an OfferedVerb through a \
+         match arm: that is the verb x object table the acceptance test \
+         forbids, in the spelling Task 7's re-key made natural"
     );
 }
 
