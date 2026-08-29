@@ -2367,6 +2367,16 @@ impl<'w> Session<'w> {
     /// [`Self::examine_chamber`] is: one knowledge gate for every surface
     /// that reads an offer (Nathan's #9 ruling), not two.
     ///
+    /// **The [`crate::affordance::thing_kind_of`] conversion is at this call
+    /// site since Task 9, not inside the query** (spec §3.6, decision 0397).
+    /// It is here because the anchor is here: this method holds an
+    /// [`crate::interior::AnchorKind`] and the query speaks thing-kind, so
+    /// the conversion belongs where the anchor is — the same rule
+    /// `crate::affordance::encloses` already follows. Moving it out of
+    /// `offered_to_observer` is what lets a caller who holds NO anchor kind
+    /// (a cave mouth, addressed by a `Vertex`/`ChamberAddr`) reach the gate
+    /// at all; nothing about warming changes.
+    ///
     /// **Commits nothing, and mints no `Action` variant.** Warming is not a
     /// GOAP-planned creature act — no successor in `action.rs`'s search
     /// spaces ever proposes it — and `dive`/`surface`/`delve`/`climb` beside
@@ -2385,7 +2395,7 @@ impl<'w> Session<'w> {
         let can_warm = self.chamber_interior_here().is_some_and(|interior| {
             interior.ids().iter().any(|&a| {
                 crate::affordance::offered_to_observer(
-                    interior.anchor(a).kind,
+                    crate::affordance::thing_kind_of(interior.anchor(a).kind),
                     self.driven_body(),
                     &self.knowledge,
                 )
@@ -4874,8 +4884,17 @@ impl<'w> Session<'w> {
                     // knowledge` proves the branch is real by manufacturing
                     // the one `Knowledge` state a live session cannot reach
                     // on its own.
+                    //
+                    // The Chattel, Task 9 (spec §3.6, decision 0397): the
+                    // `thing_kind_of` conversion is HERE now, not inside
+                    // `offered_to_observer`, which is keyed on `KindId`.
+                    // `kind` is an `AnchorKind` read off this chamber's own
+                    // anchor, so the conversion sits where the anchor is;
+                    // the offer this consults is unchanged, because
+                    // `thing_kind_of` is exactly what the query used to
+                    // apply to the same value one frame in.
                     if !crate::affordance::offered_to_observer(
-                        kind,
+                        crate::affordance::thing_kind_of(kind),
                         self.driven_body(),
                         &self.knowledge,
                     )
@@ -6840,7 +6859,7 @@ mod tests {
     /// names, and the one that resists a runtime `offered_to_observer` call
     /// for a structural reason rather than an oversight — it lists every
     /// verb unconditionally, for a body that may be standing anywhere at
-    /// all, so there is no single `(AnchorKind, Body, Knowledge)` triple to
+    /// all, so there is no single `(KindId, Body, Knowledge)` triple to
     /// route it through (see the Task 7 report for the fuller finding). What
     /// IS mechanizable is the text-level agreement this test holds: the
     /// `warm` line's own word must be [`crate::affordance::OfferedVerb::

@@ -211,18 +211,25 @@ pub fn thing_kind_of(kind: AnchorKind) -> KindId {
 /// promoted thing with a derived `EntityId` and an authored kind, which is
 /// what the deferral was waiting on.
 ///
-/// **What is still NOT true, said plainly rather than left for a reader to
-/// discover: no production caller holds a cave-mouth [`KindId`] yet.** Every
-/// live call site of [`offered_by`]/[`offered_to`]/[`offered_to_observer`]
-/// converts from an [`AnchorKind`] via [`thing_kind_of`], and cave-mouth has
-/// no `AnchorKind` — so `offered_by(KindId("cave-mouth"))` returning
-/// `{Enter, Examine}` is a fact about the table that nothing reads for one
-/// more task. Task 9 re-keys [`offered_to_observer`] to `KindId` (its own doc
-/// below says so, and names this exact obstacle), which is the call site.
-/// The property is granted HERE rather than there because §3.7 assigns it to
-/// this task and because the thing it describes — a mouth a body passes
-/// through, whose passability is now a ledger fold — exists as of this task
-/// and not before it.
+/// **What Task 9 changed here, and what it did not.** This paragraph used
+/// to read "no production caller holds a cave-mouth [`KindId`] yet … Task 9
+/// re-keys [`offered_to_observer`] to `KindId` …, which is the call site."
+/// The re-key landed; the second clause was optimistic and is corrected
+/// rather than deleted, because it is the kind of sentence a later reader
+/// reasons FROM. What the re-key bought is that a cave mouth can now be
+/// NAMED in the query's currency at all — `offered_to_observer(KindId(
+/// "cave-mouth"), …)` is a well-typed call where `offered_to_observer(
+/// AnchorKind::…, …)` could never have reached this row, since
+/// `thing_kind_of` is injective over fourteen variants and none of them is
+/// `cave-mouth`. What it did NOT buy is a production caller: chamber entry
+/// (`Session::delve_at`) gates on the cave mouth's own `openness` fold, not
+/// on this table, so `offered_by(KindId("cave-mouth")) == {Enter, Examine}`
+/// is still a fact only the test suite reads. That distinction is decision
+/// 0397's, and it is the honest half of answering 0369 — addressing lifted,
+/// live reachability untouched. The property is granted HERE rather than at
+/// a call site because §3.7 assigns it to Task 8 and because the thing it
+/// describes — a mouth a body passes through, whose passability is a ledger
+/// fold — exists as of that task and not before it.
 ///
 /// **Every kind NOT listed was checked against the code and found to carry
 /// nothing**, not merely left unconsidered:
@@ -623,16 +630,33 @@ fn has_encountered_any_room(known: &Knowledge) -> bool {
 /// things would ship a check that reads as live and is permanently
 /// satisfied — this doc comment is the tripwire for that.
 ///
-/// **Still keyed on [`AnchorKind`] after Task 7's re-key, and that is the
-/// task boundary rather than an inconsistency.** The table, [`offered_by`]
-/// and [`offered_to`] all speak [`KindId`] now; this one converts with
-/// [`thing_kind_of`] on the way in, so the *gate's* currency is unchanged.
-/// Decision 0369 says the reason the gate has never denied anything is
-/// addressing — `AnchorKind` has no cave-mouth variant — and changing the
-/// currency here is what finally gives it something to deny. That needs a
-/// cave-mouth thing to exist (Task 8) before it means anything, so the plan
-/// gives it its own task (Task 9) and its own decision record answering
-/// 0369, and this signature is deliberately left for it.
+/// **Keyed on [`KindId`] since Task 9, and the re-key IS the deliverable
+/// rather than a tidy-up (spec §3.6, decision 0397 answering 0369).** The
+/// table, [`offered_by`] and [`offered_to`] were re-keyed by Task 7 while
+/// this one kept converting with [`thing_kind_of`] on the way in, which
+/// left the *gate's* currency at [`AnchorKind`] — and that currency was
+/// exactly 0369's obstacle. `AnchorKind` is an interior-object enum with no
+/// cave-mouth variant, `thing_kind_of` is injective over its fourteen
+/// variants, and none of them lands on `cave-mouth`, so **before this change
+/// there was no argument that named a passage and the gate could not be
+/// asked about one at all.** Moving the conversion OUT of this function and
+/// to its two anchor-side call sites (`Session::warm`,
+/// `Session::examine_chamber`) is the whole mechanism by which the obstacle
+/// lifts: an argument that is a thing-kind admits `KindId("cave-mouth")`,
+/// which `passage.rs` mints for a `Vertex`/`ChamberAddr` and no anchor
+/// enum can express. `an_unencountered_passage_offers_nothing`
+/// (`tests/suite/affordance.rs`) is the denial that was unwritable before.
+///
+/// **What did NOT change, said plainly so the re-key is not over-read.** The
+/// gate's *reachability through a live `Session`* is untouched — the
+/// paragraph above about unconditional absorption still holds, and no
+/// production caller passes `KindId("cave-mouth")` here today
+/// (chamber entry gates on the cave mouth's own `openness` fold in
+/// `Session::delve_at`, not on this query). What Task 9 bought is
+/// ADDRESSABILITY: the gate can now be asked about a passage and answers by
+/// denying, which is precisely the half 0369 identified as the wall. A
+/// campaign that wants the *other* half must change one of the two things
+/// the tripwire paragraph above names, not the key.
 ///
 /// Consumed with synthetic `Knowledge` values (as the tests beside
 /// `offered_to`/`offered_by` already do with synthetic `Body` values),
@@ -641,13 +665,9 @@ fn has_encountered_any_room(known: &Knowledge) -> bool {
 /// a real, reachable state of the type, and this function's contract must
 /// hold for it regardless of whether any current caller happens to produce
 /// it.
-pub fn offered_to_observer(
-    kind: AnchorKind,
-    body: &Body,
-    known: &Knowledge,
-) -> BTreeSet<OfferedVerb> {
+pub fn offered_to_observer(kind: KindId, body: &Body, known: &Knowledge) -> BTreeSet<OfferedVerb> {
     if has_encountered_any_room(known) {
-        offered_to(thing_kind_of(kind), body)
+        offered_to(kind, body)
     } else {
         BTreeSet::new()
     }

@@ -2877,7 +2877,9 @@ hornvale-vessel::suite$action_mood::every_group_b_objective_half_is_out_of_chara
 hornvale-vessel::suite$action_mood::every_rostered_action_is_classified
 hornvale-vessel::suite$affordance::a_kind_gains_every_verb_its_properties_satisfy_with_no_dispatcher_edit
 hornvale-vessel::suite$affordance::an_encountered_object_offers_its_verbs
+hornvale-vessel::suite$affordance::an_encountered_passage_offers_its_verbs
 hornvale-vessel::suite$affordance::an_unencountered_object_offers_nothing
+hornvale-vessel::suite$affordance::an_unencountered_passage_offers_nothing
 hornvale-vessel::suite$affordance::block_body_after_isolates_exactly_the_matched_block
 hornvale-vessel::suite$affordance::body_relativity_never_withdraws_an_existing_capability
 hornvale-vessel::suite$affordance::every_kind_carrying_a_shared_property_is_offered_the_verb_it_gates

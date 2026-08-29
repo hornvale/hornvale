@@ -248,3 +248,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0387](0387-an-absent-direction-is-unknown-never-inferred.md) | Coverage is reported per direction, and an absent direction is unknown | Accepted |
 | [0388](0388-the-ladder-is-a-production-instrument-and-parse-robustness-is-a-separate-axis.md) | The ladder is a production instrument; parse-robustness is a separate axis | Accepted |
 | [0396](0396-a-passage-is-a-thing-and-openness-is-its-fold.md) | A passage is a thing, and `openness` is its fold (supersedes 0367) | Accepted |
+| [0397](0397-the-knowledge-gate-denies-a-passage.md) | The knowledge gate denies a passage — re-keying it answers 0369 | Accepted |

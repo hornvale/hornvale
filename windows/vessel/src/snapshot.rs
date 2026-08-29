@@ -298,12 +298,25 @@ pub struct NounEntry {
     /// never from the chamber's own `Interior`, and a committed chamber-band
     /// fixture (`clients/game/core/tests/fixtures/session-seed-42-chamber.json`)
     /// carries only `"place"`/`"thing"` kinds, confirming this at the byte
-    /// level. `offered_to_observer` requires a real `AnchorKind`, so there
-    /// is no value this field could route through it without either (a) a
-    /// nonsensical mapping from a walk-band noun to a chamber anchor kind,
-    /// or (b) newly threading chamber anchors into `narration.nouns` at
-    /// all — a real feature addition, not a re-point of existing ad hoc
-    /// logic, and outside this task's "smallest risk" scope (spec §10.1).
+    /// level.
+    ///
+    /// **The finding survives The Chattel's Task 9; its REASON did not, and
+    /// the difference is worth stating because a stale reason is what a
+    /// later reader reasons from.** This used to read "`offered_to_observer`
+    /// requires a real `AnchorKind`, so there is no value this field could
+    /// route through it" — true when written, false since Task 9 re-keyed
+    /// that query to [`hornvale_kernel::KindId`], which any string can
+    /// spell. What still holds is the substantive half: `NounKind::tag()`
+    /// emits `creature`/`place`/`thing`/`unknown`, and none of those is a
+    /// thing-kind [`crate::affordance::object_registry`] knows, so routing
+    /// this field through the query would now COMPILE and answer
+    /// `{Examine}` for every noun in the world — a worse outcome than the
+    /// old type error, since it reads as coverage. Wiring it for real still
+    /// needs either (a) a nonsensical mapping from a walk-band noun to a
+    /// registered thing-kind, or (b) newly threading chamber anchors into
+    /// `narration.nouns` at all — a real feature addition, not a re-point of
+    /// existing ad hoc logic, and outside this task's "smallest risk" scope
+    /// (spec §10.1).
     /// See the Task 7 report for the full investigation; this doc exists so
     /// the absence is a stated finding, not a silent gap the next reader
     /// has to rediscover.

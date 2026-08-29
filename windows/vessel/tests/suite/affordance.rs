@@ -47,6 +47,48 @@ use hornvale_vessel::clock::{REFERENCE_MASS_KG, mass_for_species};
 use hornvale_vessel::interior::AnchorKind;
 use hornvale_vessel::liveness::ThreatNiche;
 
+/// Every `AnchorKind` variant, once — the roster
+/// `the_anchor_to_thing_kind_mapping_is_injective` sweeps and
+/// `an_unencountered_passage_offers_nothing` checks its precondition
+/// against.
+///
+/// **One copy, hoisted by Task 9 rather than pasted a second time.** The
+/// injectivity test held this list inline; the passage-denial test needs the
+/// same fourteen to say "no anchor kind reaches `cave-mouth`". Two
+/// hand-maintained copies of an enum roster is precisely the shape where one
+/// silently goes short and its test narrows without failing — an omitted
+/// variant makes injectivity *easier* to satisfy and makes the
+/// no-anchor-reaches-cave-mouth precondition *easier* to satisfy, so neither
+/// copy reddens on its own.
+///
+/// **What stops THIS copy going short, stated exactly rather than hoped
+/// for.** Production is safe by the compiler: `thing_kind_of` has no
+/// wildcard arm (`thing_kind_of_has_no_wildcard_arm` scans for one), so a
+/// fifteenth variant is a compile error until someone writes its arm. This
+/// roster is not covered by that, so
+/// `the_re_key_preserves_every_anchor_kinds_offer` asserts its own
+/// fourteen-row table names exactly these fourteen, in order — a two-way
+/// agreement between the only two enumerations left in this file. A variant
+/// dropped from either side reddens there; the `[AnchorKind; 14]` length
+/// annotation on its own would not, since dropping an element and the count
+/// together compiles.
+const ALL_ANCHOR_KINDS: [AnchorKind; 14] = [
+    AnchorKind::Hearth,
+    AnchorKind::Threshold,
+    AnchorKind::Bed,
+    AnchorKind::Vessel,
+    AnchorKind::Screen,
+    AnchorKind::Pool,
+    AnchorKind::Log,
+    AnchorKind::Ground,
+    AnchorKind::Alcove,
+    AnchorKind::Strongbox,
+    AnchorKind::HighSeat,
+    AnchorKind::Loom,
+    AnchorKind::Anvil,
+    AnchorKind::Altar,
+];
+
 /// Acceptance test (1): a new OBJECT kind ships with properties only — no
 /// dispatcher change — and the right verbs appear on it.
 ///
@@ -851,8 +893,21 @@ fn the_dispatch_scan_catches_a_thing_kind_keyed_table() {
     assert!(names_an_offered_verb_variant(&found[0].1));
 }
 
-/// Positive control (3): the `AnchorKind::` spelling, on the one dispatch
-/// function that still speaks that key (`offered_to_observer`).
+/// Positive control (3): the `AnchorKind::` spelling.
+///
+/// **This doc used to read "on the one dispatch function that still speaks
+/// that key (`offered_to_observer`)", and Task 9 made that sentence false:
+/// no dispatch function in `affordance.rs` is keyed on `AnchorKind` any
+/// more.** The FIXTURE is unaffected and is deliberately kept — it is a
+/// synthetic source sample, never read off production, and what it proves
+/// is that [`kind_to_verb_dispatch_bodies`] can still walk a multi-line
+/// signature and that [`names_an_offered_verb_variant`] still recognises
+/// the `AnchorKind::` spelling. That must keep working precisely BECAUSE
+/// production no longer contains an example: the scan's coverage of a
+/// spelling must not quietly lapse when the last live instance of it
+/// leaves the tree, which is the same "a scanner that stops finding its
+/// subject reports success" failure `the_dispatch_scan_reports_the_
+/// functions_it_found` guards from the other side.
 #[test]
 fn the_dispatch_scan_catches_an_anchor_kind_keyed_table() {
     let src = b"pub fn offered_to_observer(\n    \
@@ -1112,7 +1167,7 @@ fn an_unencountered_object_offers_nothing() {
     let body = body_with_mass("human", REFERENCE_MASS_KG);
     let empty = Knowledge::default();
     assert!(
-        offered_to_observer(AnchorKind::Hearth, &body, &empty).is_empty(),
+        offered_to_observer(thing_kind_of(AnchorKind::Hearth), &body, &empty).is_empty(),
         "a body with no recorded knowledge must be offered nothing"
     );
 }
@@ -1139,9 +1194,143 @@ fn an_encountered_object_offers_its_verbs() {
         "recorded".to_string(),
     )]));
     assert_eq!(
-        offered_to_observer(AnchorKind::Hearth, &body, &known),
+        offered_to_observer(thing_kind_of(AnchorKind::Hearth), &body, &known),
         offered_to(thing_kind_of(AnchorKind::Hearth), &body),
         "knowledge of an encountered room must withdraw nothing"
+    );
+}
+
+// --- Task 9: the gate denies a PASSAGE (spec §3.6, decision 0397) --------
+
+/// **The knowledge gate denies a passage — the thing decision 0369 recorded
+/// as unreachable, and the reason acceptance criterion 4 is claimable.**
+///
+/// The gate has denied a *hearth* since The Offer
+/// (`an_unencountered_object_offers_nothing`, above). What it could never
+/// deny is a PASSAGE, and 0369 is precise about why: `offered_to_observer`
+/// took an `AnchorKind`, `AnchorKind` is an interior-object enum with no
+/// cave-mouth variant, and a cave mouth is addressed by a
+/// `Vertex`/`ChamberAddr`. **The obstacle was addressing, not durability**
+/// — so the remedy is not more state, it is a different key, which is what
+/// Task 9's re-key to [`KindId`] is. The first assertion below is the
+/// precondition that makes that concrete rather than asserted: no anchor
+/// kind maps to `cave-mouth`, so before the re-key there was no argument
+/// this call could have been given.
+///
+/// **MUTATION THIS MUST FAIL AGAINST**: make `offered_to_observer` ignore
+/// its `known` argument and delegate straight to `offered_to` — the same
+/// mutation `an_unencountered_object_offers_nothing` is proven against, run
+/// again because a re-keyed function is a rewritten function and the old
+/// red does not transfer. Applied with `scripts/mutate.py` to production
+/// source, restored from a `cp` backup, and re-run green afterwards. Red
+/// observed:
+///
+/// ```text
+/// FAIL [   0.007s] (1/1) hornvale-vessel::suite affordance::an_unencountered_passage_offers_nothing
+/// thread 'affordance::an_unencountered_passage_offers_nothing' panicked at
+/// windows/vessel/tests/suite/affordance.rs:
+/// a cave mouth offers {Enter, Examine} to a body that has encountered no
+/// room: the knowledge gate did not deny a passage
+/// ```
+///
+/// **That run reddened TWO tests, not one** — this and
+/// `an_unencountered_object_offers_nothing` (`41 tests run: 39 passed, 2
+/// failed`), which is stated rather than trimmed because it is the honest
+/// shape of the evidence: the mutation kills the gate for every kind, and
+/// the hearth test was already holding it for anchors. What this test adds
+/// is the half no existing test could reach — the same kill against a kind
+/// with no `AnchorKind` behind it.
+///
+/// That `{Enter, Examine}` in the message is the whole point — it is a
+/// non-empty offer, so this test cannot be satisfied by a `cave-mouth` row
+/// that carries nothing. `an_encountered_passage_offers_its_verbs` below
+/// pins the same set from the other direction, so the pair cannot both be
+/// satisfied by a gate that always denies.
+#[test]
+fn an_unencountered_passage_offers_nothing() {
+    let cave_mouth = KindId(hornvale_vessel::passage::CAVE_MOUTH);
+    // Precondition, and the reason this test could not have been written
+    // before the re-key: `cave-mouth` is unreachable through `AnchorKind`.
+    // If a cave-mouth anchor variant ever arrives, this test stops being
+    // evidence about ADDRESSING and someone must say so deliberately.
+    for kind in ALL_ANCHOR_KINDS {
+        assert_ne!(
+            thing_kind_of(kind),
+            cave_mouth,
+            "precondition: {kind:?} maps to `cave-mouth`, so the gate was \
+             reachable for a passage through the pre-Task-9 `AnchorKind` \
+             key and decision 0369's obstacle is not what this test claims"
+        );
+    }
+    let body = body_with_mass("human", REFERENCE_MASS_KG);
+    let empty = Knowledge::default();
+    let offered = offered_to_observer(cave_mouth, &body, &empty);
+    assert!(
+        offered.is_empty(),
+        "a cave mouth offers {offered:?} to a body that has encountered no \
+         room: the knowledge gate did not deny a passage"
+    );
+}
+
+/// Vacuity control for the denial above, and the half that makes the pair a
+/// claim about the GATE rather than about `cave-mouth` being empty: the same
+/// passage offers its real verbs to a body that has encountered a room.
+///
+/// Asserted as the SPECIFIC set — `{Enter, Examine}`, which `AffordsPassage`
+/// (spec §3.7) and `Examine`'s universality earn — rather than as
+/// `!is_empty()`, for the reason `an_encountered_object_offers_its_verbs`
+/// gives: non-emptiness is satisfiable by a filter that drops verbs
+/// arbitrarily. Compared against `offered_to` rather than a hand-written
+/// literal, so a registry change moves both sides together and this stays a
+/// claim about the gate withdrawing nothing.
+///
+/// MUTATION THIS MUST FAIL AGAINST: drop `ObjectProperty::AffordsPassage`
+/// from `cave-mouth`'s row in `object_registry`, which is what would make
+/// the denial above vacuous. Red observed:
+///
+/// ```text
+/// FAIL [   0.008s] (1/1) hornvale-vessel::suite affordance::an_encountered_passage_offers_its_verbs
+/// thread 'affordance::an_encountered_passage_offers_its_verbs' panicked at
+/// windows/vessel/tests/suite/affordance.rs:
+/// a cave mouth must offer Enter to a body that has encountered a room, or
+/// `an_unencountered_passage_offers_nothing` is satisfied by an empty row
+/// rather than by the gate: {Examine}
+/// ```
+///
+/// `{Examine}`, not `{}`, is why this is the right mutation: dropping
+/// `AffordsPassage` leaves the row present and universal-`Examine` intact,
+/// so the denial test above stays green while it has stopped being a claim
+/// about a PASSAGE.
+///
+/// **Two tests failed on that run, not one, and the second is the reason
+/// this doc says so instead of claiming isolation it does not have.** The
+/// full `hornvale-vessel` suite reported `834 tests run: 832 passed, 2
+/// failed`; the other was `affordance::tests::the_certain_carriers_named_
+/// by_the_spec_carry_their_property`, the in-module assertion over the
+/// carriers spec §3.7/§3.8 names outright. That is the correct shape — a
+/// registry row the spec names is pinned in two places on purpose — and it
+/// is stated because a first, narrower run of this same mutation filtered
+/// to ONE test name and could not have seen it.
+#[test]
+fn an_encountered_passage_offers_its_verbs() {
+    let cave_mouth = KindId(hornvale_vessel::passage::CAVE_MOUTH);
+    let body = body_with_mass("human", REFERENCE_MASS_KG);
+    let known = Knowledge(std::collections::BTreeMap::from([(
+        "room/1".to_string(),
+        "recorded".to_string(),
+    )]));
+    let offered = offered_to_observer(cave_mouth, &body, &known);
+    assert!(
+        offered.contains(&OfferedVerb::Enter),
+        "a cave mouth must offer Enter to a body that has encountered a \
+         room, or `an_unencountered_passage_offers_nothing` is satisfied by \
+         an empty row rather than by the gate: {offered:?}"
+    );
+    assert_eq!(
+        offered,
+        offered_to(cave_mouth, &body),
+        "knowledge of an encountered room must withdraw nothing from a \
+         passage either"
     );
 }
 
@@ -1324,6 +1513,31 @@ fn no_hardcoded_anchor_kind_gates_warm() {
 /// that isolates THIS test is `Log -> KindId("ground")`'s sibling in the
 /// other direction — see the injectivity test's own doc for the pair that
 /// separates the two.
+///
+/// **Also the agreement half for [`ALL_ANCHOR_KINDS`] (Task 9).** This
+/// table and that const are the only two hand-maintained enumerations of
+/// `AnchorKind` left in this file, and a variant silently missing from
+/// EITHER weakens a test without failing one — an absent row here is one
+/// fewer offer pinned, an absent entry there is one fewer precondition
+/// checked by `an_unencountered_passage_offers_nothing`. So the first
+/// assertion below holds the two against each other in both directions.
+///
+/// MUTATION THAT AGREEMENT MUST FAIL AGAINST — run because a guard written
+/// in the same commit as the thing it guards is unaudited text: drop
+/// `AnchorKind::Loom` from [`ALL_ANCHOR_KINDS`] and its length annotation
+/// from 14 to 13. **Exactly one test failed, this one**
+/// (`41 tests run: 40 passed, 1 failed`) — the injectivity sweep and
+/// `an_unencountered_passage_offers_nothing`'s precondition BOTH stayed
+/// green on the short roster, which is the silent narrowing this assertion
+/// exists for. Red observed:
+///
+/// ```text
+/// FAIL [   0.011s] (35/41) hornvale-vessel::suite affordance::the_re_key_preserves_every_anchor_kinds_offer
+/// assertion `left == right` failed: this table and ALL_ANCHOR_KINDS are the
+/// file's only two hand-maintained AnchorKind enumerations, ...
+///   left: [Hearth, Threshold, Bed, Vessel, Screen, Pool, Log, Ground, Alcove, Strongbox, HighSeat, Loom, Anvil, Altar]
+///  right: [Hearth, Threshold, Bed, Vessel, Screen, Pool, Log, Ground, Alcove, Strongbox, HighSeat, Anvil, Altar]
+/// ```
 #[test]
 fn the_re_key_preserves_every_anchor_kinds_offer() {
     use OfferedVerb::{Drink, Enter, Examine, Sleep, Warm};
@@ -1347,6 +1561,18 @@ fn the_re_key_preserves_every_anchor_kinds_offer() {
         (AnchorKind::Anvil, &[Examine]),
         (AnchorKind::Altar, &[Examine]),
     ];
+    // Task 9: the two rosters agree, in both directions and in order. A
+    // variant dropped from either enumeration reddens here rather than
+    // quietly shrinking what some other test sweeps.
+    let table_kinds: Vec<AnchorKind> = expected.iter().map(|(k, _)| *k).collect();
+    assert_eq!(
+        table_kinds,
+        ALL_ANCHOR_KINDS.to_vec(),
+        "this table and ALL_ANCHOR_KINDS are the file's only two hand-\
+         maintained AnchorKind enumerations, and a variant present in one \
+         and absent from the other silently narrows whichever tests read \
+         the short one"
+    );
     for (kind, want) in expected {
         let want: BTreeSet<OfferedVerb> = want.iter().copied().collect();
         let got = offered_by(thing_kind_of(kind));
@@ -1385,30 +1611,14 @@ fn the_re_key_preserves_every_anchor_kinds_offer() {
 /// message reports progress, not a total.)
 #[test]
 fn the_anchor_to_thing_kind_mapping_is_injective() {
-    let all = [
-        AnchorKind::Hearth,
-        AnchorKind::Threshold,
-        AnchorKind::Bed,
-        AnchorKind::Vessel,
-        AnchorKind::Screen,
-        AnchorKind::Pool,
-        AnchorKind::Log,
-        AnchorKind::Ground,
-        AnchorKind::Alcove,
-        AnchorKind::Strongbox,
-        AnchorKind::HighSeat,
-        AnchorKind::Loom,
-        AnchorKind::Anvil,
-        AnchorKind::Altar,
-    ];
     let mut seen: BTreeSet<KindId> = BTreeSet::new();
-    for kind in all {
+    for kind in ALL_ANCHOR_KINDS {
         let id = thing_kind_of(kind);
         assert!(
             seen.insert(id),
             "two anchor kinds map to {id:?}: {} kinds for {} variants",
             seen.len(),
-            all.len()
+            ALL_ANCHOR_KINDS.len()
         );
     }
 }
