@@ -410,9 +410,42 @@ to move. Where it currently assigns `self.underground = Some(chamber)`, it now
 builds the descent through `generate_descent_for_character` and places the
 possession on the entrance rung's first standable cell.
 
-The rungs, origins and depths a descent needs come from the same terrain handle
-`delve_at` has already resolved, so no second independently-chosen lookup is
-introduced — the property `delve_at`'s existing doc comment claims for itself.
+**The descent's inputs are the production recipe, exactly as Task 0's probe
+derives them** — and this matters more here than it did there, because Task 0
+only measured while this ships the descent a player walks. An invented depth or
+water table produces a fiction in every world, and nothing goes red:
+
+```rust
+let gradient   = terrain.geothermal_gradient_at(vertex);
+let porosity   = terrain.material_at(vertex).porosity;
+let water_table_m = hornvale_terrain::water_table_depth_m(
+    terrain.drainage_at(vertex), porosity, surface.height_asl_m.get(),
+);
+// per rung, skipping the Nones — Band::Surface names no chamber:
+let depth_m = hornvale_terrain::delve::rung_evaluation_depth_m(
+    rung, gradient, cave.depth_reach_m,
+);
+```
+
+`cave_kind` is `cave.kind`, never a hardcoded `Karst`. Origins are
+`ChamberOrigin::Found` for every rung (the shipped path constructs no
+`ChamberOverrides`, so `Made` is unreachable there) and the character is
+`Character::WildCave`, matching `generate_descent`'s own hardcoded value.
+
+`windows/vessel/tests/suite/underworld_level_generation.rs`'s
+`measure_flooded_cell_reachability_across_the_descent` (Task 0) already does
+all of this — **read it as the worked example rather than re-deriving it.**
+Both come from the same terrain handle `delve_at` has already resolved, so no
+second independently-chosen lookup is introduced, which is the property
+`delve_at`'s existing doc comment claims for itself.
+
+**`Underground`'s fields are `pub(crate)`.** The struct lives in a new module
+while `session.rs`'s test module reaches into it; the precedent it mirrors,
+`Inside`, is private only because it is declared in `session.rs` itself.
+`pub(crate)` is the narrowest visibility that compiles. Unit tests for
+`Underground`'s own mechanics belong in `underground.rs`'s test module, as
+`lattice/sight.rs` already does; only session-level integration tests stay in
+`session.rs`.
 
 `climb` clears `underground` only from `rung == 0`. From a deeper rung it
 refuses and says to take the stairs up.
