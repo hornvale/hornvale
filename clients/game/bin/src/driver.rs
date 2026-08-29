@@ -52,8 +52,13 @@
 //! ([`hornvale_kernel::FacetId::unpack`]) to a real
 //! [`hornvale_kernel::Facet`], whose [`hornvale_kernel::Facet::coord`] feeds
 //! the same `NearestVertexIndex` lookup already used for the observer. The
-//! scene is re-derived with `self.session.purview(0)` — the identical call
-//! `Session::snapshot` itself makes for the walk band.
+//! scene is [`Driver::walk_band_scene`]'s cached packet, refreshed once per
+//! turn rather than re-derived with `self.session.purview(0)` on every
+//! redraw (The Gallery, Task 10 round 2) — the same underlying `purview(0)`
+//! call `Session::snapshot` itself makes for the walk band. The resolver and
+//! the picture still cannot disagree, now because both read the one shared
+//! cache rather than because two independently-called derivations happened
+//! to agree.
 //!
 //! **This used to route through `hornvale_game_core::chart::cell_at`**, the
 //! `core` chart's own polar box lookup, matched back to the real scene by

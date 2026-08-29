@@ -103,7 +103,7 @@ windows/vessel/src/light.rs	150
 windows/vessel/src/liveness.rs	12
 windows/vessel/src/plan.rs	150
 windows/vessel/src/purview.rs	39
-windows/vessel/src/session.rs	526
+windows/vessel/src/session.rs	531
 windows/vessel/src/snapshot.rs	3
 windows/vessel/src/streams.rs	6
 windows/vessel/src/underground.rs	144
@@ -125,6 +125,7 @@ windows/vessel/tests/suite/the_blocking.rs	13
 windows/vessel/tests/suite/underworld_level_generation.rs	101
 windows/vessel/tests/suite/world_context.rs	2
 windows/worldgen/src/chamber.rs	2
+windows/worldgen/src/delve_seating.rs	1
 windows/worldgen/src/disposition.rs	3
 windows/worldgen/src/graph_derive.rs	5
 windows/worldgen/src/hazard.rs	3

@@ -8979,6 +8979,112 @@ mod tests {
         );
     }
 
+    /// The Gallery, Task 12 (spec §6 acceptance criterion 9): the campaign's
+    /// constitutional property, stated once at the end rather than assumed
+    /// throughout. Every prior task in this campaign asserted a behaviour
+    /// (a refusal reads correctly, fog is monotone, an inhabitant is
+    /// derived); none asserted that two INDEPENDENT builds of the same seed
+    /// and pins, driven through the identical script, stay byte-identical
+    /// at every turn — not merely at the end, which would pass even if the
+    /// two diverged mid-descent and reconverged by coincidence.
+    ///
+    /// **Two separately-built `World`s**, not one `World` shared by two
+    /// `Session`s: sharing a `World` would prove the session-level fold is
+    /// deterministic given identical inputs, but would leave any
+    /// nondeterminism inside world genesis itself (terrain, the cave
+    /// lattice) unexercised, since both sessions would be reading the exact
+    /// same in-memory value rather than two independently-derived ones.
+    ///
+    /// `find_open_cave_vertex` is called on EACH terrain independently and
+    /// the two answers are asserted equal before either session delves —
+    /// a determinism check on the finder itself, and the reason a later
+    /// snapshot mismatch could not be blamed on picking two different
+    /// entrances.
+    ///
+    /// The script is concrete to seed 42's fixture rather than a generic
+    /// blind sweep, and was found by running it and reading what the
+    /// narration actually said (`Underground::enter` places the possession
+    /// at the first standable cell in `Cell` order, which is not guaranteed
+    /// to be a stairs cell — unlike a rung's connectivity PROBE, which
+    /// measures from the entrance by convention, see the plan's F3):
+    /// stepping `n` from the entrance happens to land on a stairs-down cell
+    /// here, so `down` actually descends; the walk on rung 1 happens to
+    /// cross a stairs-up cell, so `up` actually returns. The script therefore
+    /// exercises a real multi-rung round trip — delve, a lateral step, a
+    /// real descent, three more lateral steps, a real ascent, climb — not
+    /// merely a sequence of blind attempts, and the two sessions' snapshot
+    /// bytes are compared after every single line.
+    #[test]
+    fn the_same_seed_and_pins_produce_a_byte_identical_descent_and_pane() {
+        fn world_at_seed_42() -> World {
+            build_world(
+                Seed(42),
+                &SkyPins::default(),
+                SkyChoice::Generated,
+                &TerrainPins::default(),
+                &SettlementPins::default(),
+            )
+            .expect("seed 42 builds")
+        }
+
+        let world_a = world_at_seed_42();
+        let world_b = world_at_seed_42();
+
+        let (mut session_a, _) = Session::start(&world_a, &PossessOpts::default()).unwrap();
+        let (mut session_b, _) = Session::start(&world_b, &PossessOpts::default()).unwrap();
+
+        let terrain_a = session_a
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let terrain_b = session_b
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex_a, cave_a) = find_open_cave_vertex(&terrain_a, world_a.seed);
+        let (vertex_b, cave_b) = find_open_cave_vertex(&terrain_b, world_b.seed);
+        assert_eq!(
+            vertex_a, vertex_b,
+            "two independent builds of the same seed must find the same open cave vertex"
+        );
+
+        let assert_same_snapshot = |a: &Session, b: &Session, label: &str| {
+            let json_a = crate::snapshot_json(&a.snapshot().unwrap());
+            let json_b = crate::snapshot_json(&b.snapshot().unwrap());
+            assert_eq!(
+                json_a, json_b,
+                "snapshots diverged at {label} — the same seed and pins must \
+                 produce a byte-identical descent and pane at every turn, not \
+                 merely at the end"
+            );
+        };
+
+        match session_a.delve_at(vertex_a, cave_a) {
+            Turn::Out(_) => {}
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        match session_b.delve_at(vertex_b, cave_b) {
+            Turn::Out(_) => {}
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        assert!(
+            session_a.underground.is_some() && session_b.underground.is_some(),
+            "an open, unbarred vertex found by find_open_cave_vertex must delve successfully"
+        );
+        assert_same_snapshot(&session_a, &session_b, "delve");
+
+        const SCRIPT: &[&str] = &[
+            "look", "go n", "down", "go n", "go e", "go s", "go w", "up", "climb",
+        ];
+        for line in SCRIPT {
+            session_a.handle(line);
+            session_b.handle(line);
+            assert_same_snapshot(&session_a, &session_b, line);
+        }
+    }
+
     /// The Latch's own headline, end to end (Task 5, acceptance criteria 1
     /// and 2): a barred mouth refuses, `clear` clears it, and it stays clear
     /// for the REST OF THE SESSION — across several turns, including a
