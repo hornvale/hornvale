@@ -61,14 +61,17 @@
 //! directly, no re-derivation and no new dependency (the method is called on
 //! an already-typed reference; `hornvale-climate` need not be a direct
 //! `Cargo.toml` dependency for that to compile). [`WastelandComponent`]
-//! reads it, no ledger predicate involved.
+//! reads it — plus, since fix round 1, `OCEAN_FRACTION` off the ledger too.
+//! `habitable_fraction()`'s denominator is EVERY vertex, ocean included, so a
+//! low reading alone does not mean the LAND is barren; see [`wasteland_line`]'s
+//! own doc for the finding and why the fix conjoins both facts rather than
+//! computing a land-only fraction.
 
 use crate::overture::component::{AlmanacComponent, ComponentRegistry};
 use crate::overture::view::View;
 use hornvale_astronomy::facts::{STAR_CLASS, TIDALLY_LOCKED, YEAR_LENGTH_STD};
 use hornvale_game_core::{Cell, Grid, Source, Weight};
 use hornvale_kernel::{EntityId, Value, World};
-use hornvale_settlement::{IS_SETTLEMENT, POPULATION};
 use hornvale_terrain::facts::OCEAN_FRACTION;
 use hornvale_worldgen::{BuildDepth, RungArtifacts};
 
@@ -144,6 +147,20 @@ impl AlmanacComponent for OceansComponent {
 /// literal "0 settlements dot the land" would read as the placeholder
 /// contract rule 2 forbids, the same convention `sky.rs`'s caption band uses
 /// for a zero wanderer/figure count.
+///
+/// **Fix round 1 (Minor):** reads
+/// [`hornvale_settlement::all_settlements`] rather than re-walking
+/// `IS_SETTLEMENT`/`POPULATION` by hand — the domain already exposes exactly
+/// this roster (subject, name, population, defaulting a missing population
+/// to `0` the same way this component's own `filter_map`-based sum used to),
+/// and duplicating it here was the same shape R10 (Task 5) extracted for
+/// `plate::settlements_of`. Verified behaviourally equivalent before
+/// switching: both give every `IS_SETTLEMENT` subject a population of `0`
+/// when the fact is absent (the domain function via `unwrap_or_else`'s `_ =>
+/// 0` match arm on `value_of`; this component's old code via `filter_map`
+/// dropping the missing entry from an `f64` sum, which contributes the same
+/// `0`) — so the switch changes no observed line, confirmed by the unchanged
+/// `peoples_is_silent_at_zero_and_speaks_once_settlements_exist` test.
 struct PeoplesComponent;
 
 impl AlmanacComponent for PeoplesComponent {
@@ -156,23 +173,15 @@ impl AlmanacComponent for PeoplesComponent {
     }
 
     fn render(&self, world: &World, _artifacts: RungArtifacts<'_>) -> Option<String> {
-        let settlements: Vec<EntityId> = world
-            .ledger
-            .find(IS_SETTLEMENT)
-            .map(|fact| fact.subject)
-            .collect();
+        let settlements = hornvale_settlement::all_settlements(world);
         if settlements.is_empty() {
             return None;
         }
-        let population: f64 = settlements
-            .iter()
-            .filter_map(|&id| as_number(world.ledger.value_of(id, POPULATION)))
-            .sum();
+        let population: u64 = settlements.iter().map(|s| u64::from(s.population)).sum();
         let n = settlements.len();
         let settlement_noun = if n == 1 { "settlement" } else { "settlements" };
         Some(format!(
-            "{n} {settlement_noun} dot the land, home to {} people.",
-            population.round() as u64
+            "{n} {settlement_noun} dot the land, home to {population} people."
         ))
     }
 }
@@ -240,20 +249,58 @@ impl AlmanacComponent for TidallyLockedComponent {
 /// Below this habitable fraction the almanac calls a world a wasteland —
 /// again a narrative cutoff, not a physical threshold (see
 /// [`NO_OCEANS_THRESHOLD`]'s own doc for the same caveat). Chosen well under
-/// seed 42's own measured fraction (`tests::seed_42_is_not_a_wasteland`
-/// prints the live value) so an ordinary world never trips it by accident.
+/// seed 42's own measured fraction (`tests::what_is_strange_names_only_what_
+/// is_true_of_this_world` prints the live value) so an ordinary world never
+/// trips it by accident.
 const WASTELAND_THRESHOLD: f64 = 0.05;
 
+/// Above this ocean fraction, a low [`WASTELAND_THRESHOLD`] reading no
+/// longer means the LAND is barren — see [`wasteland_line`]'s own doc for
+/// the fix-round-1 finding this constant exists to close. A narrative
+/// "mostly water, not mostly wasted" cutoff, same status as the other two
+/// thresholds in this module: chosen, not derived.
+const WASTELAND_MAX_OCEAN_FRACTION: f64 = 0.5;
+
 /// The wasteland predicate, factored out of [`WastelandComponent::render`]
-/// as a pure function of an already-computed fraction — so it can be tested
-/// directly against hand-picked values (both above and below the
-/// threshold), independent of building a real climate to exercise both
-/// directions of the non-vacuity check.
-fn wasteland_line(fraction: f64) -> Option<String> {
-    if fraction < WASTELAND_THRESHOLD {
+/// as a pure function of two already-computed fractions — so it can be
+/// tested directly against hand-picked values, independent of building a
+/// real climate to exercise every direction of the non-vacuity check.
+///
+/// **Fix round 1 (Important).** The first version of this function took
+/// `habitable_fraction` alone. `GeneratedClimate::habitable_fraction`
+/// (`domains/climate/src/habitability.rs:51-57`, confirmed in source) is
+/// `habitable count / ALL vertices` — ocean included, since `is_habitable`
+/// treats below-sea-level as uninhabitable (that function's own test is
+/// named `ocean_and_extremes_are_uninhabitable_temperate_land_is_habitable`).
+/// So the fraction is driven as much by ocean COVERAGE as by land QUALITY: a
+/// 95%-ocean world with fully habitable land scores `habitable_fraction ≈
+/// 0.05`, tripping the threshold and making this component claim "a
+/// wasteland" about an archipelago of plenty — a confident false statement
+/// about the world, contract rule 2's failure arriving through a wrong
+/// denominator instead of through an absent fact. It also let this
+/// component and [`NoOceansComponent`] contradict each other: that world
+/// would read as both "has oceans" (true) and "a wasteland" (false).
+///
+/// **Route taken: conjoin the two facts already read, rather than compute a
+/// land-only fraction.** A land-relative accessor does not exist on
+/// [`hornvale_climate::GeneratedClimate`] — `habitability.rs` exposes only
+/// `is_habitable`, `habitability_map` and the all-vertex `habitable_fraction`,
+/// and `GeneratedClimate` keeps its `elevation`/`sea_level` fields private,
+/// so computing one here would mean either adding a new accessor to the
+/// domain (out of scope for a view-layer fix) or re-implementing the
+/// sea-level test in this crate — the second is exactly the duplication the
+/// review said not to commit. Conjoining is cheap (both facts are already
+/// read by this view: [`hornvale_terrain::facts::OCEAN_FRACTION`] by
+/// [`NoOceansComponent`], `habitable_fraction()` by this component), needs no
+/// domain change, and makes the two conditional components agree by
+/// construction: "a wasteland" now additionally requires the world not be
+/// mostly ocean, so it can never fire on a world [`NoOceansComponent`] would
+/// call oceanic.
+fn wasteland_line(habitable_fraction: f64, ocean_fraction: f64) -> Option<String> {
+    if habitable_fraction < WASTELAND_THRESHOLD && ocean_fraction <= WASTELAND_MAX_OCEAN_FRACTION {
         Some(format!(
             "This world is a wasteland: only {:.0}% of the surface could support life.",
-            fraction * 100.0
+            habitable_fraction * 100.0
         ))
     } else {
         None
@@ -262,7 +309,11 @@ fn wasteland_line(fraction: f64) -> Option<String> {
 
 /// "A wasteland" — needs [`BuildDepth::Settlements`], the rung
 /// `RungArtifacts::climate` first becomes `Some` (see the module doc's own
-/// section on why this is reachable at all).
+/// section on why this is reachable at all). Reads BOTH
+/// [`hornvale_terrain::facts::OCEAN_FRACTION`] (off the ledger, like
+/// [`NoOceansComponent`]) and `artifacts.climate`'s `habitable_fraction()` —
+/// see [`wasteland_line`]'s own doc for why both are needed after fix
+/// round 1.
 struct WastelandComponent;
 
 impl AlmanacComponent for WastelandComponent {
@@ -274,12 +325,16 @@ impl AlmanacComponent for WastelandComponent {
         BuildDepth::Settlements
     }
 
-    fn render(&self, _world: &World, artifacts: RungArtifacts<'_>) -> Option<String> {
+    fn render(&self, world: &World, artifacts: RungArtifacts<'_>) -> Option<String> {
         // Defensive only, like `AtlasView::render`'s own `terrain` check: the
-        // registry never calls `render` before `needs()`'s rung, so this
-        // should always be `Some` on the shipped path.
+        // registry never calls `render` before `needs()`'s rung, so both
+        // `?`s below should always succeed on the shipped path. Exercised
+        // directly (bypassing the registry) by
+        // `tests::wasteland_does_not_fire_from_absent_climate_before_settlements`.
         let climate = artifacts.climate?;
-        wasteland_line(climate.habitable_fraction())
+        let subject = world_entity(world)?;
+        let ocean_fraction = as_number(world.ledger.value_of(subject, OCEAN_FRACTION))?;
+        wasteland_line(climate.habitable_fraction(), ocean_fraction)
     }
 }
 
@@ -638,12 +693,81 @@ mod tests {
         // `WastelandComponent` is not permanently silent nor permanently
         // vocal.
         assert!(
-            wasteland_line(0.01).is_some(),
-            "1% habitable should read as a wasteland"
+            wasteland_line(0.01, 0.1).is_some(),
+            "1% habitable on a mostly-land world should read as a wasteland"
         );
         assert!(
-            wasteland_line(0.16).is_none(),
-            "16% habitable (seed 42's own live rough order) must not read as a wasteland"
+            wasteland_line(0.16, 0.7).is_none(),
+            "16% habitable (seed 42's own live rough order) must not read as a wasteland              regardless of ocean coverage"
+        );
+    }
+
+    #[test]
+    fn wasteland_does_not_fire_on_an_oceanic_world_with_fully_habitable_land() {
+        // FIX ROUND 1 (Important), THE FINDING ITSELF: `habitable_fraction`
+        // is habitable-count / ALL vertices, ocean included
+        // (`domains/climate/src/habitability.rs`), so a world that is mostly
+        // ocean scores a low fraction even when every scrap of its land is
+        // fully habitable. A 95%-ocean, fully-habitable-land world:
+        // `habitable_fraction` is at most `1 - 0.95 = 0.05` (land is at most
+        // 5% of the globe, and even if ALL of it is habitable that is still
+        // `<= 0.05`), which trips the OLD single-fraction threshold and would
+        // have called an archipelago of plenty "a wasteland" — a confident
+        // false statement, and (this is the part a threshold test on
+        // `habitable_fraction` alone cannot see) it also contradicts
+        // `NoOceansComponent`, which would call this same world "has oceans".
+        //
+        // NON-VACUITY: this is exactly the case the pre-fix predicate got
+        // wrong. Mutation-proved by hand (see the task report): reverting
+        // `wasteland_line` to the single-fraction check and re-running the
+        // whole crate's test binary unfiltered kills THIS test and no
+        // other.
+        assert!(
+            wasteland_line(0.05, 0.95).is_none(),
+            "a 95%-ocean world with fully habitable land must not be called a wasteland"
+        );
+        // The boundary case just inside "mostly ocean": still suppressed.
+        assert!(
+            wasteland_line(0.04, 0.51).is_none(),
+            "a world just over half ocean must still not be called a wasteland on a low              fraction driven by that ocean"
+        );
+        // And the case the conjunction must still allow: low habitability
+        // on a world that is NOT mostly ocean is a real wasteland.
+        assert!(
+            wasteland_line(0.04, 0.5).is_some(),
+            "a barren, mostly-land world (ocean fraction at the boundary, not past it)              should still read as a wasteland"
+        );
+    }
+
+    #[test]
+    fn wasteland_does_not_fire_from_absent_climate_before_settlements() {
+        // THE SAME TRAP SHAPE `no_oceans_does_not_fire_from_absence_before_
+        // terrain` GUARDS, for `WastelandComponent` (fix round 1, Minor):
+        // calling `render` DIRECTLY, bypassing the registry's own `needs()`
+        // gate, with `RungArtifacts::none()` (climate absent, as it always is
+        // before `BuildDepth::Settlements`). Proves the `climate?` early
+        // return is itself safe, independent of the gate that (redundantly)
+        // also protects it.
+        let world = terrain_world();
+        assert_eq!(
+            WastelandComponent.render(world, RungArtifacts::none()),
+            None,
+            "an absent (too-early) climate artifact must not read as 'a wasteland'"
+        );
+    }
+
+    #[test]
+    fn wasteland_is_silent_at_settlements_for_a_hospitable_world() {
+        // Exercises the exact `Settlements`-depth build (not `Full`), the
+        // rung `WastelandComponent` itself declares as `needs()` — the
+        // natural caller for `artifacts_at(BuildDepth::Settlements)`, which
+        // otherwise builds a `BuildArtifacts` no test reads (fix round 1,
+        // Minor).
+        let built = artifacts_at(BuildDepth::Settlements);
+        assert_eq!(
+            WastelandComponent.render(&built.world, rung_artifacts(built)),
+            None,
+            "seed 42 is not a wasteland even at the exact rung its climate first exists"
         );
     }
 
