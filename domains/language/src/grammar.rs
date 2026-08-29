@@ -385,9 +385,10 @@ fn resolve_argument(
         Argument::Pronoun(person) => Ok(tongue_pronoun(*person, number, pronouns)?),
         // The intransitive frame's object slot: no argument at all, and
         // callers that reach here for it (this crate's floor realizer) have
-        // nothing to resolve. Task 3 gives the deep realizer its own
-        // ordering-aware treatment of an absent object; this arm only keeps
-        // the match exhaustive for a caller of the floor path.
+        // nothing to resolve. This arm keeps the match exhaustive; the empty
+        // string it returns never reaches `realize_tongue_with_subject`'s
+        // ordering, since that function gates the object slot on `valence`
+        // (The Rail, Task 3) rather than trusting this value's presence.
         Argument::Absent => Ok(String::new()),
         Argument::Clause(inner) => {
             let depth = clause_embed_depth(argument);
@@ -683,18 +684,27 @@ fn realize_tongue_with_subject(
         realize_adjuncts(&clause.adjuncts, grammar, lexicon, clause.number, pronouns)?;
     let s = subject.as_deref();
     let v = verb.as_deref();
-    let o = complement.as_str();
+    // The object slot: `None` for an intransitive clause (The Rail, Task 3)
+    // -- Common's own analogue is a part list with no `Part::Complement`
+    // ([`Valence::Intransitive`]'s own doc) -- `Some` for every other
+    // valence, even where the resolved text happens to be empty (a gap-free
+    // absent argument never reaches this function to begin with, since
+    // `resolve_argument` already errored on any real gap upstream).
+    let o = (valence != Valence::Intransitive).then_some(complement.as_str());
     // Order the present constituents; an absent verb (a zero-copula tongue
     // predicating nominally) simply drops out, exactly as an elided subject
-    // now does. A transitive clause always fills the verb slot, so all six
-    // orders emit three tokens with a subject present and two without one.
+    // now does -- and an absent object drops out the same way for an
+    // intransitive clause, rather than leaving a spurious empty token
+    // between the two real ones. A transitive clause always fills the verb
+    // slot, so all six orders emit three tokens with a subject present and
+    // two without one; an intransitive clause emits at most two either way.
     let ordered: Vec<&str> = match grammar.order {
-        ConstituentOrder::Sov => [s, Some(o), v],
-        ConstituentOrder::Svo => [s, v, Some(o)],
-        ConstituentOrder::Vso => [v, s, Some(o)],
-        ConstituentOrder::Vos => [v, Some(o), s],
-        ConstituentOrder::Ovs => [Some(o), v, s],
-        ConstituentOrder::Osv => [Some(o), s, v],
+        ConstituentOrder::Sov => [s, o, v],
+        ConstituentOrder::Svo => [s, v, o],
+        ConstituentOrder::Vso => [v, s, o],
+        ConstituentOrder::Vos => [v, o, s],
+        ConstituentOrder::Ovs => [o, v, s],
+        ConstituentOrder::Osv => [o, s, v],
     }
     .into_iter()
     .flatten()
@@ -1099,19 +1109,16 @@ fn realize_tongue_deep_with_subject(
         // The intransitive frame's object slot: no argument at all. Named
         // explicitly rather than left to the `other` catch-all below, on
         // purpose -- the catch-all would silently absorb it into an empty
-        // `Marked`, ordered into the tongue's constituent sequence as an
-        // empty complement, which is a WRONG surface (not a gap) for any
-        // caller realizing an intransitive clause through this deep
+        // `Marked`, which used to be ordered into the tongue's constituent
+        // sequence as an empty complement, a WRONG surface (not a gap) for
+        // any caller realizing an intransitive clause through this deep
         // realizer, since `predicate_valence` now answers `Intransitive`
-        // for a real predicate (`SLEEP`). The value is the same empty
-        // `Marked` the catch-all would have produced; what changes is that
-        // the variant is named at the site instead of vanishing into a
-        // wildcard, so the NEXT variant added to `Argument` cannot vanish
-        // the same way. A later task gives the object slot its own
-        // ordering-aware `Option` treatment in both orderings (this deep
-        // realizer and the floor realizer's own dispatch) rather than an
-        // empty placeholder; until then this arm is a correct no-op, not a
-        // deferred fix.
+        // for a real predicate (`SLEEP`). This arm still produces that same
+        // empty `Marked`; what has changed (The Rail, Task 3) is that the
+        // ordering below now gates the object token on `valence`, so an
+        // `Intransitive` clause's `o_tok` is `None` and this empty roman
+        // string never reaches `ordered` at all -- the value sitting
+        // unused here is inert, not silently rendered.
         Argument::Absent => (
             Marked {
                 segments: None,
@@ -1270,38 +1277,42 @@ fn realize_tongue_deep_with_subject(
     } else {
         Role::Complement
     };
-    let o = complement.roman.as_str();
+    // The object slot: `None` for an intransitive clause (The Rail, Task 3),
+    // the same "absent constituent simply drops out" shape `s`/`s_tok` above
+    // and `v` below already have -- `Some` for every other valence, even
+    // where the resolved text happens to be empty (a gap-free absent
+    // argument never reaches this function, since `resolve_argument` already
+    // errored on any real gap upstream). Named here rather than inlined at
+    // each arm, since every arm needs the same `Option`-wrapped token.
+    let o_tok =
+        (valence != Valence::Intransitive).then(|| (Role::Complement, complement.roman.clone()));
     let mut ordered: Vec<(Role, String)> = match grammar.order {
         ConstituentOrder::Sov => [
             s_tok.clone(),
-            Some((Role::Complement, o.to_string())),
+            o_tok.clone(),
             v.map(|v| (Role::Verb, v.to_string())),
         ],
         ConstituentOrder::Svo => [
             s_tok.clone(),
             v.map(|v| (Role::Verb, v.to_string())),
-            Some((Role::Complement, o.to_string())),
+            o_tok.clone(),
         ],
         ConstituentOrder::Vso => [
             v.map(|v| (Role::Verb, v.to_string())),
             s_tok.clone(),
-            Some((Role::Complement, o.to_string())),
+            o_tok.clone(),
         ],
         ConstituentOrder::Vos => [
             v.map(|v| (Role::Verb, v.to_string())),
-            Some((Role::Complement, o.to_string())),
+            o_tok.clone(),
             s_tok.clone(),
         ],
         ConstituentOrder::Ovs => [
-            Some((Role::Complement, o.to_string())),
+            o_tok.clone(),
             v.map(|v| (Role::Verb, v.to_string())),
             s_tok.clone(),
         ],
-        ConstituentOrder::Osv => [
-            Some((Role::Complement, o.to_string())),
-            s_tok,
-            v.map(|v| (Role::Verb, v.to_string())),
-        ],
+        ConstituentOrder::Osv => [o_tok, s_tok, v.map(|v| (Role::Verb, v.to_string()))],
     }
     .into_iter()
     .flatten()
@@ -1471,7 +1482,7 @@ mod tests {
     use crate::etymology::CascadeRegime;
     use crate::lexicon::{ExposureClass, LexEntry, build_lexicon};
     use crate::naming::render_views;
-    use crate::packs::{EAT, KILL, KNOW};
+    use crate::packs::{EAT, KILL, KNOW, SLEEP};
     use crate::phonology::{Envelope, ExoticSeg, draw_phonology};
     use hornvale_kernel::Seed;
     use hornvale_kernel::world::IS_A;
@@ -3360,6 +3371,30 @@ mod tests {
         }
     }
 
+    /// The intransitive fixture (The Rail, Task 3): a lexicon carrying a
+    /// word for the ACT alone — no patient, unlike [`transitive_lexicon`] —
+    /// which is the whole of what an intransitive clause asks of a tongue.
+    fn intransitive_lexicon() -> Lexicon {
+        tiny_lexicon_with(&[(SLEEP, ExposureClass::Steeped)])
+    }
+
+    /// `Nwamvam <sleep>` — the intransitive demonstration clause, the
+    /// tongue-side sibling of [`transitive_clause`] with the object slot
+    /// left [`Argument::Absent`] rather than filled.
+    fn intransitive_clause(tense: Tense) -> Clause {
+        Clause {
+            predicate: SLEEP.to_string(),
+            subject: Subject::Name("Nwamvam".to_string()),
+            object: Argument::Absent,
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense,
+            polarity: Polarity::Pos,
+            adjuncts: vec![],
+        }
+    }
+
     /// The clause-embedding fixture (The Mortise, Task 5): a lexicon
     /// carrying words for both predicates the headline construction needs —
     /// `know`'s own clause complement and `kill`'s transitive frame — the
@@ -3752,6 +3787,83 @@ mod tests {
                     !out.contains("gha"),
                     "a transitive clause fills the verb slot itself, so the drawn \
                      copula must not appear: {out}"
+                );
+            }
+        }
+    }
+
+    /// A tongue orders two constituents, not three, for an intransitive
+    /// clause — and every one of the six drawn orders projects onto exactly
+    /// one of the two possible two-slot sequences.
+    ///
+    /// **Six orders, two outcomes, and that is the whole typological
+    /// content.** SOV/SVO/OSV put the subject before the verb; VSO/VOS/OVS
+    /// put the verb first. Nothing here is drawn afresh: the projection
+    /// reads the order the tongue already has.
+    ///
+    /// **Exercises both realizers, not just the floor one.** The deep
+    /// realizer (`realize_tongue_deep`) computes the object slot's ordering
+    /// token independently of the floor realizer's — a separate `match` on
+    /// the same six orders, over `(Role, String)` pairs instead of `&str` —
+    /// so a fix to one does not fix the other (The Rail, Task 3 brief). An
+    /// `unmarked_morphology()`/`paradigm: None` bundle draws no marker at
+    /// all, so the deep surface must equal the floor surface exactly, the
+    /// same shallow-identity assertion `shallow_identity_holds_with_
+    /// nonempty_adjuncts` makes for the transitive/nominal path.
+    #[test]
+    fn a_tongue_orders_an_intransitive_clause_with_no_object_slot() {
+        let lex = intransitive_lexicon();
+        let (verb, _) = root_of(&lex, SLEEP);
+        let clause = intransitive_clause(Tense::Present);
+        let morph = unmarked_morphology();
+        let noun_class_of = |_: &str| NounClass::Inanimate;
+        let cases: [(ConstituentOrder, String); 6] = [
+            (ConstituentOrder::Sov, format!("Nwamvam {verb}.")),
+            (ConstituentOrder::Svo, format!("Nwamvam {verb}.")),
+            (ConstituentOrder::Vso, format!("{verb} Nwamvam.")),
+            (ConstituentOrder::Vos, format!("{verb} Nwamvam.")),
+            (ConstituentOrder::Ovs, format!("{verb} Nwamvam.")),
+            (ConstituentOrder::Osv, format!("Nwamvam {verb}.")),
+        ];
+        for (order, expected) in cases {
+            for copula in [Some("gha".to_string()), None] {
+                let grammar = TongueGrammar {
+                    order,
+                    copula: copula.clone(),
+                    copula_segments: None,
+                    articles: false,
+                    subordinator: None,
+                    conjunction: None,
+                };
+                let out = realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap();
+                assert_eq!(out, expected, "order {order:?} copula {copula:?}");
+                assert!(
+                    !out.contains("gha"),
+                    "an intransitive clause fills the verb slot with its own \
+                     predicate, so the drawn copula must not appear: {out}"
+                );
+                assert!(
+                    !out.contains("  "),
+                    "the object slot must drop out entirely for an \
+                     intransitive clause, not leave a gap between the two \
+                     real tokens: {out:?}"
+                );
+                let deep = realize_tongue_deep(
+                    &clause,
+                    &grammar,
+                    &morph,
+                    None,
+                    &noun_class_of,
+                    &lex,
+                    Orthography::Digraph,
+                )
+                .unwrap();
+                assert_eq!(
+                    deep, out,
+                    "the deep realizer's own object-slot ordering (a \
+                     separate match, over (Role, String) pairs) must drop \
+                     the object exactly as the floor realizer's does: \
+                     order {order:?} copula {copula:?}"
                 );
             }
         }

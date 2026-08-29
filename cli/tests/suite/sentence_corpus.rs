@@ -45,8 +45,10 @@
 //! (`epistemic-hedge` — Common-only, the same posture `classify` takes: no
 //! tongue realizer is the point of this token, so no tongue test is named);
 //! `clause.rs::an_intransitive_clause_surfaces_its_predicate_as_a_verb_with_no_complement`
-//! in Common, and its tongue twin once a later task lands one
-//! (`intransitive-frame`, The Rail, Task 2 — the lever: it sits under seven
+//! in Common, and
+//! `grammar.rs::a_tongue_orders_an_intransitive_clause_with_no_object_slot`
+//! for its tongue twin (`intransitive-frame`, The Rail, Task 2 for the
+//! Common half, Task 3 for the tongue half — the lever: it sits under seven
 //! of the other eight tokens. See
 //! [`the_ladder_score_and_frontier_match_the_campaigns_prediction`]'s own doc
 //! for the exact covered count this token moves the ladder to, rather than a
