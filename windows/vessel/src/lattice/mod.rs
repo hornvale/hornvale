@@ -62,7 +62,7 @@ pub use classify::{
 pub use grow::grow;
 pub use occupancy::{Occupancy, Refusal};
 pub use render::{Plan, render};
-pub use sight::shadowcast;
+pub use sight::{shadowcast, shadowcast_with};
 
 use crate::brief::Brief;
 use crate::structure::Structure;

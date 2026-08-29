@@ -14,8 +14,9 @@
 
 use hornvale_kernel::{Band, Seed};
 use hornvale_locale::Compass;
+use std::collections::BTreeSet;
 
-use crate::lattice::Cell;
+use crate::lattice::{Cell, Rect};
 use crate::underworld_level::{Level, LevelCellKind, generate_descent_for_character};
 
 /// Underground's own diagonal refusal (The Gallery, Task 4) — the same
@@ -66,6 +67,82 @@ fn habitation_rungs() -> Vec<Band> {
         .collect()
 }
 
+/// One bit per cell of a rung's extent, remembering which cells the
+/// possession has ever seen there (The Gallery, Task 6; spec §3.5).
+///
+/// Row-major over `extent`: cell `(x, y)` is bit
+/// `(y - extent.y) * extent.w + (x - extent.x)`, packed 64 cells to a
+/// `u64`. The largest rung is 60x34 = 2,040 cells = 255 bytes; a five-rung
+/// descent is about 1.2 KB (spec §3.5).
+///
+/// **Monotone by construction** (spec §4.1.2's acceptance 4b). The only
+/// mutator, [`SeenBits::mark_all`], only ever sets bits — there is no
+/// clearing operation anywhere on this type — so "a cell once seen is
+/// never un-seen within a descent" is a fact about the representation, not
+/// a rule any caller has to remember to uphold.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SeenBits {
+    /// The rung's own extent — the same [`Rect`] its [`Level::extent`]
+    /// carries.
+    extent: Rect,
+    /// The packed bits, 64 cells per word, row-major over `extent`.
+    bits: Vec<u64>,
+}
+
+impl SeenBits {
+    /// A fresh, entirely-unseen bitset over `extent`.
+    pub(crate) fn new(extent: Rect) -> SeenBits {
+        let cells = (extent.w.max(0) as usize).saturating_mul(extent.h.max(0) as usize);
+        let words = cells.div_ceil(64);
+        SeenBits {
+            extent,
+            bits: vec![0u64; words],
+        }
+    }
+
+    /// `c`'s bit index within `bits`, or `None` if `c` lies outside
+    /// `extent`.
+    fn index_of(&self, c: Cell) -> Option<usize> {
+        if !self.extent.contains(c) {
+            return None;
+        }
+        let dx = (c.0 - self.extent.x) as usize;
+        let dy = (c.1 - self.extent.y) as usize;
+        Some(dy * self.extent.w as usize + dx)
+    }
+
+    /// Has `c` ever been seen? `false` for any cell outside `extent` — the
+    /// same tolerance [`crate::underworld_level::CellGrid::get`] gives an
+    /// out-of-bounds read, rather than a panic.
+    ///
+    /// **Unused in production as of Task 6** — this task's own tests are
+    /// the only caller so far. The brief's own interface list names it as
+    /// part of this task's produced surface regardless; a future pane
+    /// (Task 7) is what reads it to decide "terrain only" vs "lit" per
+    /// cell (spec §4.1.2). The same "documented interface, no live
+    /// production caller yet" shape `Underground::seed` and
+    /// `Underground::rung_band` already carry.
+    /// type-audit: bare-ok(flag: return)
+    #[allow(dead_code)]
+    pub fn saw(&self, c: Cell) -> bool {
+        match self.index_of(c) {
+            Some(bit) => self.bits[bit / 64] & (1u64 << (bit % 64)) != 0,
+            None => false,
+        }
+    }
+
+    /// Mark every one of `cells` seen. A cell outside `extent` is silently
+    /// ignored. Only ever SETS bits, never clears any — see the type's own
+    /// doc for why that is the whole of the monotonicity guarantee.
+    pub fn mark_all(&mut self, cells: &BTreeSet<Cell>) {
+        for &c in cells {
+            if let Some(bit) = self.index_of(c) {
+                self.bits[bit / 64] |= 1u64 << (bit % 64);
+            }
+        }
+    }
+}
+
 /// The session's position within one cave system's generated descent (The
 /// Gallery, Task 3).
 ///
@@ -74,10 +151,6 @@ fn habitation_rungs() -> Vec<Band> {
 /// the same reason `Inside` (`session.rs`) gets away with bare private
 /// fields is exactly the reason this one cannot: `Inside` is declared
 /// inside the module that reads it, this is not.
-///
-/// **No `seen` field yet.** Task 6 adds the fog-of-war bitset; a field with
-/// no reader is a field a reviewer cannot judge, and `SeenBits` does not
-/// exist until then.
 pub(crate) struct Underground {
     /// One generated level per habitation rung, in [`habitation_rungs`]
     /// order: `descent[i]` is the level for `habitation_rungs()[i]`.
@@ -104,14 +177,22 @@ pub(crate) struct Underground {
     /// verb that needs to reproduce or extend this descent has it in hand
     /// rather than threading it through a second parameter.
     ///
-    /// **Unused within this task** — this task's own tests read
-    /// `self.underground.as_ref()` and the generated `descent`/`rung`/
-    /// `cell` directly, never this field. The brief's own interface list
-    /// names it as part of this task's produced struct regardless, and
-    /// Task 6's fog-of-war bitset is the first thing that needs a seed to
-    /// rebuild from.
+    /// **Still unused as of Task 6.** The fog-of-war bitset ([`SeenBits`])
+    /// turned out not to need it either — spec §3.5 is explicit that fog is
+    /// playthrough history, not something a `(seed, address)` re-derives,
+    /// so `seen` is built empty over each rung's extent and mutated by
+    /// walking rather than rebuilt from this field. Kept for the reason its
+    /// first paragraph gives: a later verb that reproduces or extends this
+    /// descent has it in hand rather than threading it through a second
+    /// parameter.
     #[allow(dead_code)]
     pub(crate) seed: Seed,
+    /// One [`SeenBits`] per element of `descent`, same indexing: `seen[i]`
+    /// is rung `i`'s own remembered set. Session-lifetime and per-descent
+    /// (spec §3.5's lifetime cut): built fresh, all-unseen, by
+    /// [`Underground::enter`], and discarded along with the rest of this
+    /// struct the moment the possession climbs out.
+    pub(crate) seen: Vec<SeenBits>,
 }
 
 impl Underground {
@@ -192,11 +273,20 @@ impl Underground {
                 "a generated level has at least one standable cell \
                  (Task 9's connectivity invariant)",
             );
+        // Task 6's fog-of-war: one all-unseen bitset per rung, sized to
+        // that rung's own extent (deeper rungs are wider — see
+        // `generate_level_extent`). Nothing is marked yet; the first mark
+        // comes from the session's first successful step.
+        let seen = descent
+            .iter()
+            .map(|level| SeenBits::new(level.extent))
+            .collect();
         Underground {
             descent,
             rung: 0,
             cell,
             seed,
+            seen,
         }
     }
 
@@ -438,5 +528,181 @@ mod tests {
     fn habitation_rungs_excludes_surface() {
         assert!(!habitation_rungs().contains(&Band::Surface));
         assert_eq!(habitation_rungs(), hornvale_terrain::rungs()[1..].to_vec());
+    }
+
+    // --- Task 6: fog of war (spec §3.5) -------------------------------
+
+    /// `SeenBits::saw` reports exactly what `mark_all` has marked, and
+    /// nothing else — the basic contract before monotonicity is asked
+    /// about at all.
+    #[test]
+    fn saw_reports_exactly_what_was_marked() {
+        let extent = Rect {
+            x: 0,
+            y: 0,
+            w: 6,
+            h: 4,
+        };
+        let mut seen = SeenBits::new(extent);
+        let marked = Cell(2, 1);
+        let unmarked = Cell(3, 1);
+        assert!(!seen.saw(marked), "nothing is seen before marking");
+        let mut cells = BTreeSet::new();
+        cells.insert(marked);
+        seen.mark_all(&cells);
+        assert!(seen.saw(marked));
+        assert!(!seen.saw(unmarked));
+    }
+
+    /// A cell outside the extent is never "seen" — `saw` tolerates it
+    /// rather than panicking, the same tolerance `CellGrid::get` gives an
+    /// out-of-bounds read.
+    #[test]
+    fn a_cell_outside_the_extent_is_never_seen() {
+        let extent = Rect {
+            x: 0,
+            y: 0,
+            w: 4,
+            h: 4,
+        };
+        let seen = SeenBits::new(extent);
+        assert!(!seen.saw(Cell(100, 100)));
+        assert!(!seen.saw(Cell(-1, -1)));
+    }
+
+    /// Step 1's `a_wider_reach_does_not_change_what_was_already_seen`: mark
+    /// a small set, then mark a larger, disjoint one — the small set's own
+    /// bits must stay set. A bitset gets this for free; this says so out
+    /// loud so a future refactor to a recomputed representation cannot
+    /// quietly lose it (spec §3.5's "correct across a change in reach").
+    #[test]
+    fn a_wider_reach_does_not_change_what_was_already_seen() {
+        let extent = Rect {
+            x: 0,
+            y: 0,
+            w: 20,
+            h: 20,
+        };
+        let mut seen = SeenBits::new(extent);
+        let small: BTreeSet<Cell> = [(5, 5), (5, 6), (6, 5)]
+            .into_iter()
+            .map(|(x, y)| Cell(x, y))
+            .collect();
+        seen.mark_all(&small);
+        for &c in &small {
+            assert!(seen.saw(c), "must be seen right after marking: {c:?}");
+        }
+
+        let wide: BTreeSet<Cell> = (10..15)
+            .flat_map(|x| (10..15).map(move |y| Cell(x, y)))
+            .collect();
+        seen.mark_all(&wide);
+
+        for &c in &small {
+            assert!(
+                seen.saw(c),
+                "a bit already set must stay set after marking a disjoint, \
+                 wider set: {c:?}"
+            );
+        }
+        for &c in &wide {
+            assert!(seen.saw(c));
+        }
+    }
+
+    /// A byte-level substring search — see
+    /// `windows/vessel/tests/suite/affordance.rs`'s identical helper for
+    /// why this operates on `&[u8]` rather than `&str`: the depth-tracking
+    /// scan below slices at arbitrary byte offsets that need not land on a
+    /// UTF-8 char boundary in a doc comment full of `—`/`§`/`×`.
+    fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+        if needle.is_empty() || haystack.len() < needle.len() {
+            return None;
+        }
+        (0..=haystack.len() - needle.len()).find(|&i| &haystack[i..i + needle.len()] == needle)
+    }
+
+    /// Extracts the `{ ... }` block immediately following the first
+    /// occurrence of `needle` in `src`, tracking brace depth from the
+    /// block's own opening `{` to its matching close — the same helper
+    /// `affordance.rs` uses to isolate one function's body out of a large
+    /// file without also matching unrelated mentions elsewhere in it.
+    fn block_body_after<'a>(src: &'a [u8], needle: &[u8]) -> Option<&'a [u8]> {
+        let start = find_bytes(src, needle)? + needle.len();
+        let open = start + src[start..].iter().position(|&b| b == b'{')?;
+        let mut depth: i32 = 0;
+        for (i, &b) in src[open..].iter().enumerate() {
+            match b {
+                b'{' => depth += 1,
+                b'}' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Some(&src[open..=open + i]);
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
+    /// Step 1's `the_reach_seam_is_the_only_source_of_the_radius`: a
+    /// property, not a prescribed mutation. No literal sight radius appears
+    /// anywhere on the underground sight path — the reach always comes
+    /// through `Session::sight_reach()`. A structural source scan, because
+    /// the property is about what the code does not contain, which no
+    /// runtime assertion can witness
+    /// (`affordance.rs`'s `no_verb_by_object_table_exists` is this repo's
+    /// own precedent for the shape).
+    ///
+    /// Two checks: this module never spells `SIGHT_RADIUS` at all (nothing
+    /// here has any other name for a sight distance to reach for), and
+    /// `session.rs`'s own fog-marking function — the one call site that ORs
+    /// a shadowcast into the rung bitset — reads the reach through
+    /// `sight_reach()` rather than the constant directly. The positive
+    /// control at the end guards against the scan silently matching nothing
+    /// (a renamed function would make `block_body_after` return `None` and
+    /// `expect` catches that; an emptied-out body would make the
+    /// `sight_reach` check fail loudly instead of the whole test going
+    /// vacuously green).
+    #[test]
+    fn the_reach_seam_is_the_only_source_of_the_radius() {
+        // Scan only the PRODUCTION half of this file, split at the test
+        // module's own opening attribute — this test's own assertion
+        // strings (this one included) necessarily spell out the forbidden
+        // name, and a scan of the whole file would trip on its own prose.
+        let here = include_str!("underground.rs");
+        let production = here
+            .split("#[cfg(test)]")
+            .next()
+            .expect("split always yields at least one piece");
+        assert!(
+            !production.contains("SIGHT_RADIUS"),
+            "underground.rs's production code must never name SIGHT_RADIUS \
+             directly; the reach comes from Session::sight_reach()"
+        );
+
+        let session_src = include_str!("session.rs");
+        // `block_body_after` finds the block's OWN opening `{` by scanning
+        // forward from the needle's end — so the needle must stop short of
+        // that brace (`affordance.rs`'s own doc-test example, `b"fn a()"`,
+        // does the same), or the scan overshoots past it into the first
+        // NESTED brace inside the body instead.
+        let body = block_body_after(
+            session_src.as_bytes(),
+            b"fn mark_underground_seen(&mut self)",
+        )
+        .expect("session.rs must define fn mark_underground_seen(&mut self)");
+        assert!(
+            find_bytes(body, b"SIGHT_RADIUS").is_none(),
+            "mark_underground_seen must read the reach through sight_reach(), \
+             not SIGHT_RADIUS directly: {:?}",
+            std::str::from_utf8(body).unwrap_or("<non-utf8>")
+        );
+        assert!(
+            find_bytes(body, b"sight_reach").is_some(),
+            "positive control: mark_underground_seen must actually call \
+             sight_reach() somewhere in its body"
+        );
     }
 }

@@ -3062,7 +3062,15 @@ impl<'w> Session<'w> {
             .underground
             .as_mut()
             .expect("checked Some above; nothing between then and now clears it");
-        match ug.commit_step(target) {
+        let outcome = ug.commit_step(target);
+        // The Gallery, Task 6: fog marks after the move actually lands, on
+        // the path that moved it — never for a step `commit_step` would
+        // refuse (it never does; see the unreachable arm just below), and
+        // never before `charge_within_room` has already succeeded above.
+        if !matches!(outcome, crate::underground::StepOutcome::Blocked(_)) {
+            self.mark_underground_seen();
+        }
+        match outcome {
             crate::underground::StepOutcome::Blocked(reason) => {
                 // Unreachable: `commit_step` only ever runs on a target
                 // `peek` already validated, and never itself refuses. Kept
@@ -3099,6 +3107,49 @@ impl<'w> Session<'w> {
                 ))
             }
         }
+    }
+
+    /// Fold the current cell's shadowcast into the current rung's own
+    /// remembered set (The Gallery, Task 6; spec §3.5: "a step ORs its
+    /// shadowcast into the bitset for the rung it happened on"). Called only
+    /// from [`Self::step_underground`], after [`crate::underground::
+    /// Underground::commit_step`] has already moved the possession — never
+    /// before, and never for a refused or blocked step, so what gets
+    /// remembered is always somewhere the possession genuinely stood.
+    ///
+    /// **The reach comes from [`Self::sight_reach`], never a literal** —
+    /// the same seam `chamber_sources`'s implicit-torch source reads
+    /// through, so a future carried-light model changes both call sites by
+    /// changing one function.
+    ///
+    /// A no-op if the possession is not underground. Nothing else calls
+    /// this today, but a private helper that assumes its own caller's
+    /// precondition instead of checking it is a private helper waiting to
+    /// be misused by the next one.
+    fn mark_underground_seen(&mut self) {
+        let reach = self.sight_reach();
+        let Some(ug) = self.underground.as_ref() else {
+            return;
+        };
+        let level = ug.level();
+        let lit = crate::lattice::shadowcast_with(
+            |cell| {
+                level
+                    .cells
+                    .get(cell)
+                    .and_then(crate::underworld_level::movement_mode)
+                    .is_some()
+            },
+            |cell| level.extent.contains(cell),
+            ug.cell,
+            reach,
+        );
+        let rung = ug.rung;
+        self.underground
+            .as_mut()
+            .expect("checked Some above; nothing between then and now clears it")
+            .seen[rung]
+            .mark_all(&lit);
     }
 
     /// Moving between rungs by way of the stairs (The Gallery, Task 5) — the
@@ -4062,6 +4113,19 @@ impl<'w> Session<'w> {
         ))
     }
 
+    /// The possession's own reach — how far it can see, and how far its
+    /// implicit torch throws light (The Gallery, Task 6; spec §3.4's seam:
+    /// "one named function answers 'how', rather than a constant or a
+    /// boolean re-derived at every call site"). Today this simply returns
+    /// [`SIGHT_RADIUS`]; a future carried-light model replaces this body
+    /// alone, with every caller already reading through it rather than a
+    /// second copy of the number — `chamber_sources`'s implicit-torch
+    /// [`crate::light::Source`] above, and the underground fog mark
+    /// ([`Self::mark_underground_seen`]) below.
+    fn sight_reach(&self) -> i32 {
+        SIGHT_RADIUS
+    }
+
     /// Every light burning where the possession stands (spec §4.2).
     ///
     /// Three kinds, and **one radius for all of them**: [`SIGHT_RADIUS`], whose
@@ -4097,7 +4161,14 @@ impl<'w> Session<'w> {
                 &hornvale_kernel::color::blackbody(crate::light::TORCH_KELVIN),
                 4.0, // The Wick, spec §2.1
             ),
-            radius: SIGHT_RADIUS,
+            // The Gallery, Task 6: this is THE body's own reach, read
+            // through `sight_reach()` rather than `SIGHT_RADIUS` directly —
+            // the seam a future carried-light model fills. The hearth and
+            // doorway sources below keep `SIGHT_RADIUS` on purpose: they are
+            // the FIRE's and the OPENING's own reach, not the body's, so
+            // routing them through the same seam would mean picking up a
+            // lantern brightens every hearth and doorway in the building.
+            radius: self.sight_reach(),
         }];
 
         let has_hearth = self.chamber_interior_here().is_some_and(|interior| {
@@ -9403,6 +9474,181 @@ mod tests {
         assert!(
             out.to_lowercase().contains("no stairway up"),
             "the refusal must name the physical mismatch: {out}"
+        );
+    }
+
+    /// Every cell of `ug.rung`'s own remembered set — a `BTreeSet` snapshot
+    /// taken by scanning the level, used only by this task's own fog tests
+    /// to compare "before" against "after" with an ordinary set-comparison
+    /// method rather than poking at `SeenBits`'s packed bits directly.
+    fn seen_snapshot(
+        ug: &crate::underground::Underground,
+    ) -> std::collections::BTreeSet<crate::lattice::Cell> {
+        let level = ug.level();
+        level
+            .cells
+            .iter()
+            .filter(|(cell, _)| ug.seen[ug.rung].saw(*cell))
+            .map(|(cell, _)| cell)
+            .collect()
+    }
+
+    /// The Gallery, Task 6, Step 1's `walking_only_ever_adds_to_what_is_
+    /// remembered`: monotonicity (spec §4.1.2's acceptance 4b). After every
+    /// real "go <bearing>" turn — whether it actually moves the possession
+    /// or refuses — the rung's own remembered set must be a superset of
+    /// what it was one turn before, never smaller.
+    ///
+    /// Exercised through `Session::handle`, not `Underground::step`
+    /// directly: the wiring under test is `Session::mark_underground_seen`,
+    /// which sits one level above `Underground` and is what a bare
+    /// `Underground::step` call would bypass entirely.
+    #[test]
+    fn walking_only_ever_adds_to_what_is_remembered() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        assert!(
+            session.underground.is_some(),
+            "the fixture must have descended"
+        );
+
+        let mut before = seen_snapshot(session.underground.as_ref().expect("descended"));
+        for _ in 0..8 {
+            for d in ["n", "s", "e", "w"] {
+                match session.handle(&format!("go {d}")) {
+                    Turn::Out(_) => {}
+                    Turn::Released(_) => panic!("go {d} must not release"),
+                }
+                let after = seen_snapshot(session.underground.as_ref().expect("still below"));
+                assert!(
+                    after.is_superset(&before),
+                    "remembered cells must never shrink after `go {d}`: \
+                     before had {} cells, after has {}, and after is missing \
+                     {:?}",
+                    before.len(),
+                    after.len(),
+                    before.difference(&after).collect::<Vec<_>>()
+                );
+                before = after;
+            }
+        }
+        assert!(
+            !before.is_empty(),
+            "32 attempted steps from a connected level must have marked at \
+             least one cell"
+        );
+    }
+
+    /// The Gallery, Task 6, Step 4's `fog_survives_moving_between_rungs_
+    /// and_dies_on_climbing_out`: spec acceptance criterion 5, in both
+    /// directions. Descend, walk to accumulate seen cells on rung 0, take
+    /// the stairs down and back up — rung 0's own remembered set must still
+    /// hold what was walked. Then climb out and delve again: the fresh
+    /// descent's rung 0 must remember nothing, because fog is session-lived
+    /// (spec §3.5), not derived from `(seed, address)`.
+    #[test]
+    fn fog_survives_moving_between_rungs_and_dies_on_climbing_out() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        assert!(
+            session.underground.is_some(),
+            "the fixture must have descended"
+        );
+
+        // Walk until at least one bearing actually moves the possession, so
+        // there is a marked cell to look for later — the same "try every
+        // bearing" discipline `a_compass_step_underground_moves_one_cell`
+        // uses, since which bearing is walkable depends on generated
+        // content.
+        let before_cell = session.underground.as_ref().expect("descended").cell;
+        let moved = ["n", "s", "e", "w"].iter().any(|d| {
+            session.handle(&format!("go {d}"));
+            session.underground.as_ref().expect("still below").cell != before_cell
+        });
+        assert!(
+            moved,
+            "at least one bearing from the entrance cell must be walkable"
+        );
+        let walked_cell = session.underground.as_ref().expect("still below").cell;
+        assert!(
+            session.underground.as_ref().expect("still below").seen[0].saw(walked_cell),
+            "the cell just walked to must be marked seen on rung 0"
+        );
+
+        // Place the possession on the entrance rung's own StairsDown cell —
+        // reaching it by walking is impractical from a test, the same
+        // reason `stairs_connect_adjacent_rungs_in_both_directions` places
+        // it directly.
+        let down_cell = {
+            let ug = session.underground.as_ref().expect("descended");
+            ug.level()
+                .cells
+                .iter()
+                .find(|(_, k)| *k == crate::underworld_level::LevelCellKind::StairsDown)
+                .map(|(c, _)| c)
+                .expect("every rung has exactly one StairsDown cell")
+        };
+        session.underground.as_mut().expect("descended").cell = down_cell;
+
+        match session.handle("down") {
+            Turn::Out(_) => {}
+            Turn::Released(_) => panic!("down must not release"),
+        }
+        assert_eq!(
+            session.underground.as_ref().expect("still below").rung,
+            1,
+            "descending from rung 0 must land on rung 1"
+        );
+        match session.handle("up") {
+            Turn::Out(_) => {}
+            Turn::Released(_) => panic!("up must not release"),
+        }
+        assert_eq!(
+            session.underground.as_ref().expect("still below").rung,
+            0,
+            "ascending back must land on rung 0"
+        );
+        assert!(
+            session.underground.as_ref().expect("still below").seen[0].saw(walked_cell),
+            "rung 0's remembered set must survive a round trip through rung 1"
+        );
+
+        // Climb out (rung is 0, so `climb` succeeds) and delve the SAME cave
+        // again: `Underground::enter` re-derives an identical descent from
+        // the same seed/vertex/cave (nothing here consumes any per-session
+        // state), so `walked_cell` names the same physical cell in the new
+        // descent — but the new descent's own `seen` starts all-unseen.
+        match session.handle("climb") {
+            Turn::Out(_) => {}
+            Turn::Released(_) => panic!("climb must not release"),
+        }
+        assert!(
+            session.underground.is_none(),
+            "climb must clear the descent entirely"
+        );
+        session.delve_at(vertex, cave);
+        assert!(
+            session.underground.is_some(),
+            "the fixture must have descended again"
+        );
+        assert!(
+            !session.underground.as_ref().expect("descended again").seen[0].saw(walked_cell),
+            "fog is session-lived: a fresh descent must remember nothing, \
+             even at a cell the previous descent had marked"
         );
     }
 
