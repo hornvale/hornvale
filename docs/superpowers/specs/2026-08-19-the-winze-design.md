@@ -552,3 +552,169 @@ cluster touches the energy cluster at **exactly one node, the breach**. Two
 ideas under one name, joined at a single point — which is why building this
 campaign without the energy model is the natural cut rather than a
 compromise.
+
+---
+
+# AMENDMENT, 2026-08-29: a working searches outward for its ore
+
+**Nathan's ruling, 2026-08-29, after Task 2 landed.** §B.3's design stands in
+every other respect; this changes one thing — the set of sites a working may be
+founded on — and freezes a preregistration for the re-measure before the code
+is written.
+
+## E.1 What Task 2 measured, and what bound it
+
+```
+                        seed 42    seed 7   seed 1234
+  mines                       1        13           2
+  occupations              1240       661         898
+  mine share              0.08%     1.97%       0.22%
+
+  daughter throws           466       292          23
+  throws with ANY vacant
+    neighbour at/above
+    ORE_CUT = 0.24            4        23           4
+```
+
+**Neither the rate nor the cut is the binding constraint.** The rate is the
+site's own prospectivity and the cut sits on a measured plateau; what binds is
+that `Bake::grow` considers only the parent's **direct traversable
+neighbours**, and ore is rarely one hop from farmland. That is Task 1's
+finding — settlements are under-represented in high-ore ground because
+agrarian siting correctly puts them where ore is not — arriving one hop out
+and biting the design that was built to answer it.
+
+On seed 42 that is one mining camp in 1,240 settlements. `AbandonedDelving`,
+the vestige kind this campaign exists to make reachable, is reachable in
+principle and absent in practice.
+
+## E.2 The change
+
+A working is founded by a **ring scan outward** from the parent, not by a scan
+of the parent's direct neighbours.
+
+**The argument is from the objective, not from the count.** One hop is the
+right radius for the agrarian daughter path: a farm village spreads to the next
+field, and the next field is next. A working is founded *because of where the
+ore is*, so its search radius must be set by the thing it is searching for. The
+two objectives were sharing a radius because they were sharing a code path, and
+that is the kind of coupling §B.3 was already unpicking when it split the
+scoring — this finishes the split.
+
+**There is precedent in the same file and it is not a stretch.**
+`Bake::best_home` (`history_bake.rs:1674`) already resolves a destination by
+`self.nearest_ring(from, |ring| …)` for relocation. A working is closer in kind
+to a relocation than to a daughter: in both, a people moves to reach something
+specific rather than spilling into adjacent room.
+
+## E.3 This is a POST-UNBLINDING change to the mechanism, and the record says so
+
+Decided after seeing 1 / 13 / 2. That must be stated plainly rather than
+smoothed over, and two things about it are worth being precise about, because
+the difference between them is the whole of this project's preregistration
+discipline:
+
+**It is not a retune to rescue a falsified prediction.** §5.1's branch table
+was *satisfied*: no seed returned zero, so the STOP row never fired, and the
+result landed in the sanctioned `1-5 per world` row — "viable but thin. Pool
+across the panel; single-seed claims banned for the campaign." The
+preregistration anticipated this outcome and permitted the campaign to
+continue. Nothing here is being rescued.
+
+**It is a design change on an axis the preregistration never spoke to.** §5.1
+asks "do mines exist, and how many" as a question about whether the derivation
+*works*. It does. The question Nathan answered is a different one — whether a
+feature a player meets once in 1,240 settlements is *in the world* in any
+meaningful sense — and no frozen criterion addressed it, because none was
+written. A campaign is allowed to discover that it measured the wrong thing;
+what it is not allowed to do is quietly move a number it did measure.
+
+**What would have made this illegitimate**, recorded so a later reader can
+check we did not do it: lowering `ORE_CUT` to manufacture mines. §5.1's STOP
+row forbids it by name, and Task 2 measured why — at the barren floor you get
+42 / 19 / 6 mines, of which 23 of seed 42's 42 stand on prospectivity 0.0600,
+which is to say on no ore at all. The cut is untouched by this amendment.
+
+## E.4 Preregistration for the re-measure — frozen before the code
+
+Decision 0016. Computed against the resolver, not beside it: the numbers below
+are branch tables over what the existing `ore_siting_probe` and `mines_exist`
+tests already report, not predictions from a second implementation.
+
+### E.4.1 Mine population
+
+§5.1's four-row table is **unchanged and still governs** — the acceptance
+range for "does the derivation work" does not move because the search radius
+did:
+
+```
+  0 on a majority of seeds -> the derivation is wrong. STOP. Do NOT widen the
+                              ore threshold to manufacture mines.
+  1-5 per world            -> viable but thin. Pool across the panel;
+                              single-seed claims banned for the campaign.
+  6-40 per world           -> proceed.
+  >40% of all occupations  -> TOO MANY. Report first.
+```
+
+Added for this amendment, because a ring scan can overshoot in a way a
+one-hop scan could not:
+
+```
+  mines exceed the count of daughter throws that HAVE a workable-ore
+  candidate in range
+      -> impossible; a founding was minted somewhere other than the scan.
+         STOP.
+
+  the ring scan reaches so far that a working's parent is not plausibly its
+  supplier (state the radius distribution; §B.3 calls a mining camp "a
+  daughter founded on ore FROM A PARENT THAT SUPPLIES IT")
+      -> report the distribution before proceeding. A supply relationship
+         that spans half a continent is a different design, not this one.
+```
+
+### E.4.2 The Task 5 panel — the rule, fixed now, before the hazard exists
+
+Task 5 compares the depth distribution of breached against ordinarily-ended
+delvings. Its power is set by how many delvings exist, which this amendment
+changes, so the panel rule is frozen here rather than chosen once the answer
+is visible:
+
+```
+  pooled mines across [42, 7, 1234] >= 60
+      -> keep the panel at [42, 7, 1234]. Task 5 pools over it.
+  fewer than 60
+      -> extend the panel by CONSECUTIVE seeds 0, 1, 2, ... (skipping any
+         already in it) until pooled mines >= 60 or the panel reaches 12
+         seeds, whichever comes first. Report the panel actually used and
+         the count it reached.
+```
+
+**Why 60, and why a rule rather than a number chosen later.** The comparison
+needs enough in the *smaller* group to be a distribution rather than a handful:
+at a breach fraction anywhere near a third, 60 delvings gives roughly 20
+breached against 40 ordinary, which is the neighbourhood where an overlap
+statement means something. The figure is a floor on sample size, not a target
+for the mechanism, and the seeds are taken in a fixed order so the panel cannot
+be chosen for its answer.
+
+**Task 4 chooses the hazard rate without reference to any of this.** The rate
+is a modelling choice about how dangerous digging is; if it were picked to land
+the breached count somewhere convenient, this rule would be laundering a
+tuned constant through a sample-size argument. Task 4's report states its rate
+and its justification before Task 5 runs.
+
+## E.5 What does not change
+
+- **The cut.** `ORE_CUT = 0.24`, read off `prospectivity`'s own definition
+  (`0.6 × 0.4` is where "on a plate boundary" begins) and corroborated by the
+  plateau measurement. Untouched.
+- **The rate.** The site's own prospectivity, per the field's own doc.
+  Untouched.
+- **The stream leg.** `settlement/working/v1`, keyed on the parent's
+  `(vertex, band, year)`. A ring scan changes which vertex is chosen, not how
+  the draw is derived, so no epoch bump and no label change.
+- **Genesis.** Still untouched, and still the reason the blast radius is
+  bounded.
+- **§4.2–4.6, §7, and amendment C.** Depth, the per-increment hazard, the
+  survivorship claim, fallible knowledge, naming nothing, and the permission
+  that a breach's consequence may travel — all unchanged.
