@@ -55,9 +55,10 @@
 //! number restated here that later tasks in this campaign will move again).
 //! `clause.rs::a_property_predication_takes_no_determiner`
 //! (`property-predication`, The Rail, Task 4 — the m02 trap's honest fix:
-//! Common-only, the same posture `epistemic-hedge` takes, since
-//! `grammar.rs::tongue_verb`'s `Valence::Property` arm exists only to keep
-//! that match exhaustive and no tongue test exercises a property clause yet).
+//! Common-only, the same posture `epistemic-hedge` takes — a tongue GAPS on
+//! a property clause rather than rendering one, per `realize_tongue`'s own
+//! render-fully-or-gap law (spec §4), pinned by
+//! `grammar.rs::a_tongue_gaps_a_property_predication`).
 //!
 //! **The score was zero once, and the positive control that answered that is
 //! still here on purpose.** A measurement whose only possible answer is zero

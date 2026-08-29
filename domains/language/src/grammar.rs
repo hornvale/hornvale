@@ -717,25 +717,26 @@ fn realize_tongue_with_subject(
         realize_adjuncts(&clause.adjuncts, grammar, lexicon, clause.number, pronouns)?;
     let s = subject.as_deref();
     let v = verb.as_deref();
-    // The object slot: `None` for an intransitive clause (The Rail, Task 3)
-    // or a property predication (The Rail, Task 4) -- both bind
-    // `Argument::Absent`, and Common's own analogue is a part list with no
-    // `Part::Complement` ([`Valence::Intransitive`]'s and
-    // [`Valence::Property`]'s own docs) -- `Some` for every other valence,
-    // even where the resolved text happens to be empty (a gap-free absent
-    // argument never reaches this function to begin with, since
-    // `resolve_argument` already errored on any real gap upstream).
+    // The object slot: `None` when this valence binds no object at all
+    // (`Valence::binds_object`) -- `Intransitive` (The Rail, Task 3) and
+    // `Property` (The Rail, Task 4) both bind `Argument::Absent`, and
+    // Common's own analogue is a part list with no `Part::Complement` for
+    // either (`INTRANSITIVE`/`PROPERTY`, see `common_constructions`) --
+    // `Some` for every other valence, even where the resolved text happens
+    // to be empty (a gap-free absent argument never reaches this function
+    // to begin with, since `resolve_argument` already errored on any real
+    // gap upstream).
     //
-    // **Currently unreachable for `Property` specifically, and kept anyway.**
-    // `tongue_verb`'s `Property` arm gaps before this line is ever reached
-    // (the `?` on `verb` above returns first), so this exclusion has no
-    // live caller today. It stays correct for the day a tongue-side
-    // property construction ships and that arm starts returning `Ok` --
-    // the object slot must still drop out then, exactly as it does for
-    // `Intransitive` now, so the gate is written in advance rather than
-    // left to be re-discovered.
-    let o = (valence != Valence::Intransitive && valence != Valence::Property)
-        .then_some(complement.as_str());
+    // **Currently unreachable for `Property` specifically, and kept
+    // anyway.** `tongue_verb`'s `Property` arm gaps before this line is
+    // ever reached (the `?` on `verb` above returns first), so this
+    // exclusion has no live caller today. It is kept because
+    // `binds_object` says `Property` binds no object regardless of whether
+    // any tongue construction exists to render one -- a fact about what the
+    // clause MEANS, not about what `tongue_verb` currently builds -- so a
+    // future campaign that flips that arm to `Ok` inherits a correct gate
+    // rather than having to rediscover it.
+    let o = valence.binds_object().then_some(complement.as_str());
     // Order the present constituents; an absent verb (a zero-copula tongue
     // predicating nominally) simply drops out, exactly as an elided subject
     // now does -- and an absent object drops out the same way for an
@@ -1322,22 +1323,26 @@ fn realize_tongue_deep_with_subject(
     } else {
         Role::Complement
     };
-    // The object slot: `None` for an intransitive clause (The Rail, Task 3)
-    // or a property predication (The Rail, Task 4) -- both bind
-    // `Argument::Absent` -- the same "absent constituent simply drops out"
-    // shape `s`/`s_tok` above and `v` below already have -- `Some` for every
-    // other valence, even where the resolved text happens to be empty (a
-    // gap-free absent argument never reaches this function, since
-    // `resolve_argument` already errored on any real gap upstream). Named
-    // here rather than inlined at each arm, since every arm needs the same
-    // `Option`-wrapped token.
+    // The object slot: `None` when this valence binds no object at all
+    // (`Valence::binds_object`) -- `Intransitive` (The Rail, Task 3) and
+    // `Property` (The Rail, Task 4) both bind `Argument::Absent` -- the
+    // same "absent constituent simply drops out" shape `s`/`s_tok` above
+    // and `v` below already have -- `Some` for every other valence, even
+    // where the resolved text happens to be empty (a gap-free absent
+    // argument never reaches this function, since `resolve_argument`
+    // already errored on any real gap upstream). Named here rather than
+    // inlined at each arm, since every arm needs the same `Option`-wrapped
+    // token.
     //
     // **Currently unreachable for `Property` specifically, the same way its
     // floor-realizer twin is** (`tongue_verb`'s `Property` arm gaps at the
-    // `?` on `verb`, ~line 1190, before this line ever runs) -- kept for the
-    // day a tongue-side property construction ships and starts returning
-    // `Ok`.
-    let o_tok = (valence != Valence::Intransitive && valence != Valence::Property)
+    // `?` on `verb`, ~line 1190, before this line ever runs) -- kept
+    // because `binds_object` states a fact about what the clause MEANS, not
+    // about what `tongue_verb` currently builds, so a future campaign that
+    // flips that arm to `Ok` inherits a correct gate rather than having to
+    // rediscover it.
+    let o_tok = valence
+        .binds_object()
         .then(|| (Role::Complement, complement.roman.clone()));
     let mut ordered: Vec<(Role, String)> = match grammar.order {
         ConstituentOrder::Sov => [

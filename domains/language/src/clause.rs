@@ -722,6 +722,40 @@ pub enum Valence {
     Property,
 }
 
+impl Valence {
+    /// Whether a clause at this valence binds a second participant at all.
+    ///
+    /// **One named fact, not an inequality list repeated at every call
+    /// site.** `Intransitive` and `Property` both bind [`Argument::Absent`]
+    /// — an intransitive clause has one argument by definition, and a
+    /// property predication relates a subject to a state, never to a second
+    /// participant (see each variant's own doc) — so both answer `false`
+    /// here; `Nominal` and `Transitive` both bind a real object and answer
+    /// `true`. `grammar.rs`'s tongue realizers (both the floor and the deep
+    /// one) consult this to decide whether the object-slot ordering token
+    /// is present at all, rather than each restating
+    /// `valence != Valence::Intransitive && valence != Valence::Property`
+    /// — the same fact stated three times (twice in `grammar.rs`, once in
+    /// prose here) before this method existed, and a fact a later
+    /// campaign's locative valence would otherwise have had to get right in
+    /// three places rather than one.
+    ///
+    /// **States only whether an object is bound, never how a tongue orders
+    /// or renders one.** A tongue's own construction for a valence that
+    /// binds no object may not exist at all — `Valence::Property`'s tongue
+    /// path gaps today rather than ordering anything (see
+    /// `grammar.rs::tongue_verb`) — and this method makes no claim about
+    /// that; it is a fact about what the clause MEANS, not about what any
+    /// realizer currently builds.
+    #[must_use]
+    pub(crate) fn binds_object(self) -> bool {
+        match self {
+            Valence::Nominal | Valence::Transitive => true,
+            Valence::Intransitive | Valence::Property => false,
+        }
+    }
+}
+
 /// **THE predicate inventory**: every predicate this crate can express, with
 /// its valence. One row per predicate, read by both realizers — Common
 /// through [`common_constructions`], a tongue through [`predicate_valence`].
@@ -1045,11 +1079,13 @@ fn realize_common_with_subject(
             }
             text
         }
-        // The intransitive frame's object slot: no argument at all, so
-        // nothing to resolve. The construction's own part list
-        // (`INTRANSITIVE`, see `common_constructions`) carries no
-        // `Part::Complement` and no `Part::Determiner`, so this value is
-        // never read.
+        // No argument at all, so nothing to resolve. Bound to a predicate
+        // at a valence that does not bind an object at all
+        // ([`Valence::binds_object`] is `false` — today `Intransitive` or
+        // `Property`), and each such construction's own part list carries
+        // no `Part::Complement` and no `Part::Determiner` (`INTRANSITIVE`,
+        // `PROPERTY`, see `common_constructions`), so this value is never
+        // read.
         Argument::Absent => String::new(),
     };
     let mut out = String::new();
@@ -2524,8 +2560,6 @@ mod tests {
                 Definiteness::Indef | Definiteness::Def => {}
             }
         }
-        let all = [Definiteness::Indef, Definiteness::Def];
-        assert_eq!(all.len(), 2);
     }
 
     /// **A property predication cannot be recovered by `parse_common`, and
