@@ -3764,6 +3764,7 @@ measured here.
 | 2026-08-28T23:11:27Z | gate-commit | 32.906 | 56.637 | 13.807 | 2.14 | 0 | ff792d8d9 | campaign/the-governor | MacBookPro | 10 |
 | 2026-08-28T23:17:28Z | gate-commit | 20.778 | 49.825 | 12.611 | 3.00 | 0 | bb8185c93 | campaign/the-governor | MacBookPro | 10 |
 | 2026-08-28T23:27:22Z | gate-commit | 26.515 | 54.373 | 14.514 | 2.60 | 0 | aa3c4c5c1 | campaign/the-governor | MacBookPro | 10 |
+| 2026-08-28T23:28:25Z | heavy | 499.572 | 10209.915 | 217.468 | 20.87 | 0 | da03b576a |  | lefford | 40 |
 | 2026-08-28T23:36:34Z | gate-commit | 33.666 | 54.926 | 13.621 | 2.04 | 0 | 8736c6fbe | campaign/the-governor | MacBookPro | 10 |
 | 2026-08-28T23:37:10Z | gate-commit | 22.066 | 50.787 | 13.170 | 2.90 | 0 | 8736c6fbe | campaign/the-governor | MacBookPro | 10 |
 | 2026-08-28T23:50:44Z | gate-commit | 42.359 | 70.216 | 15.090 | 2.01 | 0 | b551eaddd | campaign/the-governor | MacBookPro | 10 |
@@ -3814,3 +3815,7 @@ measured here.
 | 2026-08-29T01:13:06Z | gate-commit | 105.360 | 443.772 | 100.180 | 5.16 | 0 | 24892b1ac | campaign/the-governor | MacBookPro | 10 |
 | 2026-08-29T01:15:03Z | rebaseline | 89.128 | 272.448 | 11.540 | 3.19 | 0 | b26a46fb0 | campaign/the-governor | MacBookPro | 10 |
 | 2026-08-29T01:16:08Z | gate-commit | 21.238 | 51.105 | 12.594 | 3.00 | 0 | a142cefaf | campaign/the-governor | MacBookPro | 10 |
+| 2026-08-29T01:45:29Z | gate-commit | 39.762 | 61.847 | 15.347 | 1.94 | 0 | ec037ae40 | campaign/the-governor | MacBookPro | 10 |
+| 2026-08-29T01:46:54Z | rebaseline | 79.897 | 276.105 | 12.911 | 3.62 | 0 | ec037ae40 | campaign/the-governor | MacBookPro | 10 |
+| 2026-08-29T01:48:12Z | gate-commit | 21.611 | 51.298 | 13.577 | 3.00 | 0 | ec037ae40 | campaign/the-governor | MacBookPro | 10 |
+| 2026-08-29T01:48:53Z | gate-commit | 31.235 | 54.097 | 13.363 | 2.16 | 0 | 6946ae905 | campaign/the-governor | MacBookPro | 10 |
