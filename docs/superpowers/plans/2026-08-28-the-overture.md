@@ -1,5 +1,9 @@
 # The Overture Implementation Plan
 
+**Status: Complete.** All nine tasks landed; see
+[the chronicle](../../../book/src/chronicle/the-overture.md) and
+[the retrospective](../../retrospectives/the-overture.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make world generation's 3.05 s (projected: a minute) into the first
@@ -9,7 +13,9 @@ part of the game rather than the delay before it, and make it not recur.
 the progress substrate and a `space` cycle; a view owns the middle and must
 render honestly at any build rung. Four views arrive in the order the world can
 justify them — `sky` (data complete at 0.4 ms), `atlas` (202 ms), `tongue`
-(2,043 ms), `almanac` (grows throughout). Plus a world cache whose validity is
+(**2,224 ms** — corrected at close: 2,043 ms is when the *settlements* rung
+completes, and `TongueView::can_speak` is `rung >= BuildDepth::Full`, which
+lands 181 ms of deep time later), `almanac` (grows throughout). Plus a world cache whose validity is
 seed + pins + an existing label-diff + a 0.4 ms prefix tripwire.
 
 **Tech Stack:** Rust 2024, `clients/game` (own workspace, outside the cargo
