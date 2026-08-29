@@ -1110,6 +1110,25 @@ Then `cargo fmt`, `git commit -F`, `git push`.
 
 ### Task 8: Passages join the object model — `passage-cleared` retires
 
+**TASK 7 DEFERRED SOMETHING TO YOU AND FILED THE NOTE WHERE YOU DO NOT LOOK.**
+`cave-mouth` carries `Openable` but **not** `AffordsPassage`, though spec §3.7
+gives the finished thing-kind both. The reasoning is sound and was checked:
+`required_properties(Enter) = {AffordsPassage}`, and every production caller of
+`offered_by`/`offered_to`/`offered_to_observer` converts via
+`thing_kind_of(AnchorKind)` — cave-mouth has no `AnchorKind`, so it is not
+reachable from a live call site either way, and adding the property now would
+advertise vocabulary no dispatcher honours.
+
+But the note lives only in `object_registry`'s doc comment in
+`windows/vessel/src/affordance.rs`, and this task's file list does not mention
+that file. **Nothing goes red if you miss it**: `AffordsPassage` is still
+carried by `threshold`, so `each_property_is_carried_by_at_least_one_thing_kind`
+stays green, and cave-mouth is absent from the frozen fourteen-row
+`AnchorKind` table. So: when this task routes chamber entry through the object
+model, decide `cave-mouth`'s `AffordsPassage` explicitly — grant it, or record
+why it still waits — and add `windows/vessel/src/affordance.rs` to the files you
+touch if you grant it.
+
 **Files:**
 - Modify: `windows/vessel/src/passage.rs`, `windows/vessel/src/session.rs`,
   `windows/vessel/src/thing.rs`
