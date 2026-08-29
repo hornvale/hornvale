@@ -654,8 +654,13 @@ pub struct Session<'w> {
     /// The evolving ledger: a clone of the frozen world's ledger, mutated
     /// only by `wait`'s tick (NPC `agent-at` facts). Never written back.
     ledger: Ledger,
-    /// A clone of the world's registry, extended with `AGENT_AT` (registered
-    /// per-session, never at genesis — spec §3).
+    /// A clone of the world's registry, extended with the live-play
+    /// predicates — `AGENT_AT`, `PASSAGE_CLEARED` (The Latch), `LOCATED_IN`
+    /// and `OPENNESS` (The Chattel), and the drive/needs predicates beside
+    /// them — every one registered per-session, never at genesis (spec §3).
+    /// The roster is `Session::start`'s own `register_predicate` block, which
+    /// is where a reader should look rather than trusting this list to stay
+    /// exhaustive; it has already gone stale three predicates in a row.
     registry: ConceptRegistry,
     /// Whose eyes the possession's chart is coloured through (The Beholding,
     /// Task 4), carried from `PossessOpts::eyes`.
@@ -1065,15 +1070,11 @@ impl<'w> Session<'w> {
             .register_predicate(
                 crate::thing::LOCATED_IN,
                 false,
-                "where a thing is on a day: a room, a container, or a hand",
+                crate::thing::LOCATED_IN_DOC,
             )
             .expect("LOCATED_IN registers identically every session");
         registry
-            .register_predicate(
-                crate::thing::OPENNESS,
-                false,
-                "whether a thing was open on a day",
-            )
+            .register_predicate(crate::thing::OPENNESS, false, crate::thing::OPENNESS_DOC)
             .expect("OPENNESS registers identically every session");
         // Idempotent (same def every session): never conflicts, since DRANK
         // is never registered at genesis either (spec §3).

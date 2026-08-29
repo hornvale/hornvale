@@ -187,8 +187,51 @@ pub fn promote(
     Ok(id)
 }
 
-/// The predicate naming WHERE a thing is — **one** predicate covering all
-/// three location types (spec §3.3): in a room, in a container, in a hand.
+/// A ROOM as save-format text: the room's packed `FacetId` (decision 0006)
+/// rendered as a decimal `u64` string. **The crate's one room-key encoder**,
+/// and the only string a [`LOCATED_IN`] fact may carry as a room.
+///
+/// **There is exactly one of these, not two that agree.**
+/// `liveness::room_to_text` — which spells `agent-at`'s object, and whose
+/// `room_from_text` is this function's inverse — now calls straight through
+/// to here, so `agent-at` and `located-in` cannot drift into two spellings of
+/// one room. That mattered because a second encoding would be
+/// self-consistent, would round-trip through its own decoder, and would red
+/// nothing: the two predicates would simply stop describing the same place,
+/// on disk, forever.
+///
+/// **It propagates [`FacetError`] where `room_to_text` `.expect()`s, and the
+/// fallible half has to be the shared one** — a panicking core cannot be
+/// widened into a fallible wrapper, only the reverse. It is also the
+/// signature this module already uses: [`thing_role`] and [`thing_id`] refuse
+/// a room past `MAX_DEPTH` rather than unwrapping it, and an encoder that
+/// panicked on the very facet `thing_id` politely refuses would be an
+/// inconsistency inside one module. `room_to_text` keeps its panic because
+/// the liveness walk has no error channel and its own doc states the
+/// invariant it relies on (a scheduled room is always within `MAX_DEPTH`).
+///
+/// The spelling is a save-format contract on the same terms as
+/// [`LOCATED_IN`]'s — it is written into every committed fact — and
+/// `a_rooms_key_is_the_permanent_on_disk_spelling` freezes it as a literal.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn room_key(room: &Facet) -> Result<String, FacetError> {
+    Ok(room.pack()?.0.to_string())
+}
+
+/// The predicate naming WHERE a thing is — **one** predicate whose object can
+/// REPRESENT all three location types (spec §3.3): in a room, in a container,
+/// in a hand.
+///
+/// **Representable is not resolvable, and today only two of the three
+/// resolve.** [`room_of`] follows a [`Value::Text`] room key and a
+/// [`Value::Entity`] holder that is itself located, so "in a room" and "in a
+/// container" both answer. "In a hand" does not: a body's own position is
+/// committed under [`crate::liveness::AGENT_AT`], a predicate this fold never
+/// consults, so a thing whose location is a BODY resolves to `None` — the
+/// same answer a thing nobody ever placed gets. Nothing puts a thing in a
+/// hand until Task 12 (`take`/`drop`/`put`/`carrying`), so the gap is PINNED
+/// by a test (`a_thing_held_by_a_body_has_no_room_today`) rather than closed
+/// by a fallback nothing in this tree could exercise.
 ///
 /// **The location rides in the fact's `object`, never in [`Fact::place`].**
 /// `Fact::place` is an `Option<EntityId>` ("the entity where this fact was
@@ -224,6 +267,29 @@ pub fn promote(
 /// type-audit: bare-ok(identifier-text)
 pub const LOCATED_IN: &str = "located-in";
 
+/// The doc string [`LOCATED_IN`] is registered with — **a constant because a
+/// predicate's doc is save-format state, not a comment.**
+///
+/// [`hornvale_kernel::PredicateDef`] derives `PartialEq` over
+/// `{name, functional, doc}` and `ConceptRegistry::register_predicate` is
+/// idempotent only for an *identical* definition, so two registrations of
+/// `located-in` whose docs differ by one word are a
+/// `RegistryError::ConflictingDefinition` — which `Session::start` meets
+/// behind an `.expect`, i.e. as a panic. A world saved by `possess --out`
+/// carries the registration (decision 0368), so the two registrations that
+/// must agree are not even in one process: they are a saved world's and a
+/// later session's.
+///
+/// Task 5 shipped that divergence inside its own file on day one —
+/// `session.rs` registered "…: a room, a container, or a hand" while this
+/// module's test helper registered "where a thing is on a day". Neither red,
+/// because the two registries never met. One constant removes the
+/// possibility rather than testing for it, and
+/// `tests/suite/session.rs`'s `a_sessions_registry_carries_the_shared_predicate_docs`
+/// pins that `Session::start` actually reaches for it.
+/// type-audit: bare-ok(prose)
+pub const LOCATED_IN_DOC: &str = "where a thing is on a day: a room, a container, or a hand";
+
 /// The predicate recording that a thing was opened or closed.
 ///
 /// **ABSENCE MEANS "whatever the seed drew"** (spec §3.3), which is why
@@ -246,13 +312,48 @@ pub const LOCATED_IN: &str = "located-in";
 /// type-audit: bare-ok(identifier-text)
 pub const OPENNESS: &str = "openness";
 
-/// The fact committed when `thing` comes to rest at `location` on `day`.
+/// The doc string [`OPENNESS`] is registered with, a constant for exactly the
+/// reason [`LOCATED_IN_DOC`] is — and it had diverged too: `session.rs`
+/// registered "whether a thing was open on a day" against the test helper's
+/// "whether a thing is open".
+/// type-audit: bare-ok(prose)
+pub const OPENNESS_DOC: &str = "whether a thing was open on a day";
+
+/// The fact committed when `thing` comes to rest in `room` on `day`.
 ///
-/// The thing is the SUBJECT and the location the OBJECT — a
-/// [`Value::Text`] room key or a [`Value::Entity`] holder. Nothing validates
-/// which of the two a caller passes, because both are legal: that choice is
-/// the campaign's whole "three location types, one predicate" claim.
-pub fn located_fact(thing: EntityId, location: Value, day: WorldTime) -> Fact {
+/// **The room is encoded HERE, from a typed [`Facet`], and that is the whole
+/// point of this function existing beside [`located_in_holder_fact`].** The
+/// shipped API took an already-encoded `Value`, which left NOBODY owning the
+/// spelling of a room in a `located-in` fact: `agent_at_fact` takes a `&Facet`
+/// and encodes inside, `passage::cleared_fact` takes a `&ChamberAddr` and
+/// encodes inside, and this one asked its caller to have done it. A caller
+/// that spelled a room its own way would have produced facts that are
+/// self-consistent, that its own reader resolves, and that no gate can
+/// distinguish from the real thing. There is no public constructor taking a
+/// bare `Value` any more, so that shape is not merely discouraged — it is
+/// unreachable from outside this module.
+pub fn located_in_room_fact(
+    thing: EntityId,
+    room: &Facet,
+    day: WorldTime,
+) -> Result<Fact, FacetError> {
+    Ok(located_fact(thing, Value::Text(room_key(room)?), day))
+}
+
+/// The fact committed when `thing` comes to rest in `holder` — a chest, and
+/// from Task 12 a body — on `day`. The holder rides as a [`Value::Entity`],
+/// which is what [`room_of`] follows transitively.
+pub fn located_in_holder_fact(thing: EntityId, holder: EntityId, day: WorldTime) -> Fact {
+    located_fact(thing, Value::Entity(holder), day)
+}
+
+/// The shared envelope both public constructors above are made of, and the
+/// reason it is PRIVATE: the two `Value` shapes a location may take are the
+/// campaign's whole "three location types, one predicate" claim, and a public
+/// function taking an unconstrained `Value` would re-open the encoding gap
+/// they close. The in-module tests still reach it, which is how the malformed
+/// arm of [`room_of`] is exercised at all.
+fn located_fact(thing: EntityId, location: Value, day: WorldTime) -> Fact {
     Fact {
         subject: thing,
         predicate: LOCATED_IN.to_string(),
@@ -334,10 +435,23 @@ pub fn location_of(ledger: &Ledger, thing: EntityId, day: WorldTime) -> Option<V
 /// [`Value::Entity`] is a holder to follow; anything else is a malformed
 /// location and yields `None` rather than a panic.
 ///
+/// **A chest resolves; a HAND does not, and the difference is which predicate
+/// carries the holder's own position.** A chest is located by a
+/// [`LOCATED_IN`] fact, so the next hop is a fact this walk reads. A body is
+/// positioned by [`crate::liveness::AGENT_AT`], which this walk never
+/// consults, so a thing held by a body walks one hop and then finds no
+/// location at all — `None`, indistinguishable from a thing nobody placed.
+/// That is deliberate for now: nothing commits a held thing until Task 12,
+/// and `a_thing_held_by_a_body_has_no_room_today` fails the moment a fallback
+/// lands, so whoever writes that task must revisit this paragraph rather than
+/// inherit it.
+///
 /// **A cycle terminates.** `visited` is a [`std::collections::BTreeSet`] (no
-/// `HashSet` — decision 0004's determinism ban), and a holder already seen
-/// ends the walk with `None`. Nothing in this campaign creates a containment
-/// cycle, which is exactly why nothing else would catch one.
+/// `HashSet` — decision 0005's deterministic-collections ban; 0004 is the
+/// *dependency* allowlist, and citing it here sent a reader to the wrong
+/// record), and a holder already seen ends the walk with `None`. Nothing in
+/// this campaign creates a containment cycle, which is exactly why nothing
+/// else would catch one.
 /// type-audit: bare-ok(identifier-text: return)
 pub fn room_of(ledger: &Ledger, thing: EntityId, day: WorldTime) -> Option<String> {
     let mut visited = std::collections::BTreeSet::new();
@@ -592,15 +706,25 @@ mod tests {
         );
     }
 
-    /// A registry carrying the three predicates this module commits: the
-    /// kernel's `instance-of` plus the two live-play predicates
-    /// `Session::start` registers.
+    /// A registry carrying the predicates this module's tests commit: the
+    /// kernel's `instance-of`, the two live-play predicates `Session::start`
+    /// registers, and `AGENT_AT` (which no fold here reads — that is the
+    /// point of `a_thing_held_by_a_body_has_no_room_today`).
+    ///
+    /// **The two docs come from the shared constants, not from literals.** A
+    /// helper spelling them its own way is exactly the divergence Task 5
+    /// shipped: `PredicateDef` compares `{name, functional, doc}`, so a
+    /// one-word difference between this registry and `Session::start`'s is a
+    /// `ConflictingDefinition` the moment one registry meets the other's
+    /// facts — and neither side reds until then.
     fn play_registry() -> ConceptRegistry {
         let mut reg = ConceptRegistry::default();
         reg.register_predicate(INSTANCE_OF, false, "t").unwrap();
-        reg.register_predicate(LOCATED_IN, false, "where a thing is on a day")
+        reg.register_predicate(LOCATED_IN, false, LOCATED_IN_DOC)
             .unwrap();
-        reg.register_predicate(OPENNESS, false, "whether a thing is open")
+        reg.register_predicate(OPENNESS, false, OPENNESS_DOC)
+            .unwrap();
+        reg.register_predicate(crate::liveness::AGENT_AT, false, "t")
             .unwrap();
         reg
     }
@@ -621,10 +745,16 @@ mod tests {
     ///
     /// MUTATION THIS FAILS AGAINST: the `if d > day { continue; }` guard in
     /// `latest_object_at_or_before`. Deleting it — the shape a "latest value"
-    /// read would naturally have — leaves every other test in this module
-    /// green, because every one of them asks about a day at or after the last
-    /// fact. The third assertion below (a day BEFORE the first fact) pins the
-    /// other end of the same guard.
+    /// read would naturally have — reds this test and exactly one other,
+    /// `openness_is_absent_until_a_fact_says_otherwise`, which asks about a
+    /// day before its own first fact through the SAME shared fold. Every
+    /// other test in this module stays green, because every one of them asks
+    /// about a day at or after the last fact it committed. (The claim here
+    /// used to be "leaves every other test in this module green", which the
+    /// suite itself contradicts — over-coverage, but a stated fact about the
+    /// suite has to be true or the next reader trusts the next one.) The
+    /// third assertion below, a day BEFORE the first fact, pins the other end
+    /// of the same guard.
     #[test]
     fn location_is_read_as_of_the_day_asked_about() {
         let reg = play_registry();
@@ -853,7 +983,7 @@ mod tests {
         let key = eid(1);
         let chest = eid(2);
 
-        let located = located_fact(key, Value::Entity(chest), at(3.0));
+        let located = located_in_holder_fact(key, chest, at(3.0));
         assert_eq!(located.subject, key, "the THING is the subject");
         assert_eq!(located.predicate, LOCATED_IN);
         assert_eq!(
@@ -875,13 +1005,134 @@ mod tests {
         let opened = openness_fact(chest, true, at(3.0));
         assert_eq!(opened.subject, chest);
         assert_eq!(opened.predicate, OPENNESS);
-        assert_eq!(
-            opened.object,
-            Value::Flag(true),
-            "openness must carry the flag it was told, not a constant"
-        );
+        assert_eq!(opened.object, Value::Flag(true));
         assert_eq!(opened.place, None);
         assert_eq!(opened.day, Some(at(3.0)));
+
+        // BOTH flags, because the message below names a guarantee one of them
+        // cannot give: a body of `Value::Flag(true)` satisfies the `true`
+        // case, so asserting only that arm cannot see the constant it warns
+        // against. (`openness_is_absent_until_a_fact_says_otherwise` does
+        // catch it, through the fold — this is the envelope-level half.)
+        let shut = openness_fact(chest, false, at(3.0));
+        assert_eq!(
+            shut.object,
+            Value::Flag(false),
+            "openness must carry the flag it was told, not a constant"
+        );
+    }
+
+    /// A ROOM's on-disk key, written out as a literal — and the whole reason
+    /// [`room_key`] exists.
+    ///
+    /// **This test cannot be rebaselined**, the same shape as
+    /// `the_thing_role_spelling_is_the_permanent_lineage_key` above and
+    /// `addr_key_spelling_is_the_permanent_on_disk_key` in
+    /// `tests/suite/passage.rs`. Every other assertion about locations in
+    /// this module uses a legible stand-in (`"hall"`, `"vault"`) because
+    /// `room_of` returns whatever text it finds — so any encoding whatsoever
+    /// keeps them green, while a `located-in` room key that stopped agreeing
+    /// with `agent-at`'s would put two spellings of one room on disk, each
+    /// self-consistent, each round-tripping through its own decoder.
+    ///
+    /// The second assertion is the one that pins the WIRING: an encoder
+    /// nothing routes through is not an owner, and `located_in_room_fact`
+    /// hand-formatting the same digits would satisfy the first assertion
+    /// alone.
+    ///
+    /// `707` is the same packing the role-spelling test above states:
+    /// `Facet { face: 3, path: [1, 2] }`.
+    #[test]
+    fn a_rooms_key_is_the_permanent_on_disk_spelling() {
+        let f = facet(3, &[1, 2]);
+        assert_eq!(
+            room_key(&f).expect("a shallow facet packs"),
+            "707",
+            "room_key's spelling is a SAVE-FORMAT CONTRACT: it is written \
+             into every located-in fact naming a room, and agent-at spells \
+             the same rooms through this same function. Do not rebaseline \
+             this literal — take an epoch."
+        );
+        assert_eq!(
+            located_in_room_fact(eid(1), &f, at(3.0))
+                .expect("a shallow facet packs")
+                .object,
+            Value::Text("707".to_string()),
+            "the room fact must carry the key `room_key` produces, not a \
+             spelling of its own"
+        );
+    }
+
+    /// A room too deep to pack is refused by the fact constructor, not
+    /// unwrapped — the reason [`room_key`] propagates [`FacetError`] instead
+    /// of `.expect()`ing the way `liveness::room_to_text` does. `thing_id`
+    /// refuses the same facet (`a_room_that_does_not_pack_is_refused`), and
+    /// an encoder that panicked where identity politely refuses would be an
+    /// inconsistency inside one module.
+    #[test]
+    fn a_room_that_does_not_pack_cannot_carry_a_thing_either() {
+        let too_deep = facet(3, &[1u8; 64]);
+        assert_eq!(room_key(&too_deep), Err(FacetError::DepthExceedsCap));
+        assert!(matches!(
+            located_in_room_fact(eid(1), &too_deep, at(3.0)),
+            Err(FacetError::DepthExceedsCap)
+        ));
+    }
+
+    /// **A thing held by a BODY has no room today, and this test exists to
+    /// FAIL when that changes.**
+    ///
+    /// The module's docs used to claim `located-in` covered "in a room, in a
+    /// container, in a hand" and that `room_of` resolved containment
+    /// transitively — both true of what the object can REPRESENT, and the
+    /// second false of what resolves. A chest is located by a `located-in`
+    /// fact, which this walk reads; a body is positioned by `AGENT_AT`, which
+    /// it does not. So a key in a hand walks one hop and finds nothing —
+    /// `None`, the same answer a key nobody ever placed gets. The body below
+    /// genuinely HAS a position (the `agent-at` fact is committed and names a
+    /// room), so this is not the absence of data: it is the absence of a
+    /// bridge between two predicates.
+    ///
+    /// **TASK 12 (`take`/`drop`/`put`/`carrying`) MUST CHANGE THIS**, and
+    /// must change this test and [`LOCATED_IN`]'s and [`room_of`]'s doc
+    /// comments with it. The fallback was deliberately NOT implemented here:
+    /// nothing in the tree commits a held thing yet, so it would be a branch
+    /// no test could exercise — the exact defect class this campaign keeps
+    /// finding. A deferred obligation written only as prose is one nobody
+    /// meets; written as a red, it cannot be inherited silently.
+    #[test]
+    fn a_thing_held_by_a_body_has_no_room_today() {
+        let reg = play_registry();
+        let mut ledger = Ledger::default();
+        let key = eid(1);
+        let body = eid(2);
+        let room = facet(3, &[1, 2]);
+
+        ledger
+            .commit(
+                crate::liveness::agent_at_fact(body, &room, at(1.0), "test placement"),
+                &reg,
+            )
+            .unwrap();
+        ledger
+            .commit(located_in_holder_fact(key, body, at(1.0)), &reg)
+            .unwrap();
+
+        assert_eq!(
+            room_of(&ledger, key, at(5.0)),
+            None,
+            "a thing in a hand does not resolve to a room today. If you just \
+             implemented the AGENT_AT fallback, this red is the tripwire \
+             working: update this test, `LOCATED_IN`'s doc and `room_of`'s \
+             doc together."
+        );
+        assert_eq!(
+            location_of(&ledger, key, at(5.0)),
+            Some(Value::Entity(body)),
+            "the holding IS represented — only the walk to the body's own \
+             room is missing, and this assertion is what keeps the red above \
+             from being read as a missing fact"
+        );
     }
 
     /// The two predicates' exact on-disk spellings, written out as literals.
