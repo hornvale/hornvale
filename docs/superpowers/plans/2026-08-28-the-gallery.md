@@ -279,7 +279,12 @@ predicate survives it."*
 
 **Interfaces:**
 - Produces:
-  - `pub fn shadowcast_with(extent: Rect, transparent: impl Fn(Cell) -> bool, in_bounds: impl Fn(Cell) -> bool, from: Cell, radius: i32) -> BTreeSet<Cell>`
+  - `pub fn shadowcast_with(transparent: impl Fn(Cell) -> bool, in_bounds: impl Fn(Cell) -> bool, from: Cell, radius: i32) -> BTreeSet<Cell>`
+    — **no `extent` parameter.** An earlier draft of this brief mandated one;
+    verified against the code before dispatch, `shadowcast` never reads
+    `lattice.extent` (it reaches the lattice only through `transparent` and
+    `contains_key`), so an extent argument would arrive dead. The recursive
+    `scan` helper threads the two predicates by reference.
   - `pub fn shadowcast(lattice: &Lattice, from: Cell, radius: i32) -> BTreeSet<Cell>` — unchanged signature, now a thin wrapper
 
 - [ ] **Step 1: Pin current behaviour before touching it**
@@ -305,9 +310,19 @@ closures. Reimplement `shadowcast` as a wrapper passing
 `|c| lattice.cells.contains_key(&c)`.
 
 The two closures stay separate because the existing implementation
-distinguishes them: `kind_of` is total over the extent, so "outside" and "wall"
-are both opaque, but only cells **inside** the extent are ever added to the
-result. Fold them into one and the result set grows.
+distinguishes them, at `sight.rs:222` and `:226` of the same loop:
+
+```rust
+let opaque = !transparent(lattice, cell);                  // outside extent -> opaque
+if (opaque || is_symmetric(..)) && lattice.cells.contains_key(&cell) {   // but not insertable
+    lit.insert(cell);
+}
+```
+
+A cell outside the extent BLOCKS sight and must never enter the result. Folding
+the two into one predicate either leaks light past the boundary (if outside
+becomes transparent) or inserts out-of-bounds cells into `lit`. Verified by
+reading the loop, not inferred.
 
 - [ ] **Step 4: Run the whole sight suite**
 
