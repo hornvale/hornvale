@@ -532,11 +532,40 @@ match &snapshot.spatial {
 }
 ```
 
-The match is exhaustive, so adding the variant is a **compile error** in
-`clients/game` until it is handled. The update is enforced rather than
-remembered. Note which gate catches it: `clients/` is outside the cargo
-workspace, so `gate-commit`'s `cargo clippy --workspace` does not build it —
-`make game-check` does.
+**An earlier draft of this section claimed the new variant is "a compile error
+in `clients/game` until it is handled — the update is enforced rather than
+remembered." That is FALSE, and it was asserted without being run.**
+
+`clients/game/core/src/schema.rs:100` declares the client's **own** `Spatial`
+enum — a `#[serde(tag = "band")]` deserialization mirror of `SpatialChannel`,
+carrying `Walk` and `Chamber`. The client does not match on the sim's type; it
+matches on its own. Measured with `SpatialChannel::Underground` already landed:
+`cargo check -p hornvale-game-core --all-targets` exits 0.
+
+**So nothing enforces the client update, and the failure mode is silent.** A
+snapshot tagged `band: "underground"` fails to deserialize on an unknown
+variant; `Driver::refresh` swallows that by design — `.unwrap_or_default()` on
+the snapshot, `if let Ok(snap)` on the parse, with the previous noun catalogue
+deliberately left standing — so the pane goes blank or stale with no error
+anywhere. `make game-check` passes the whole time.
+
+This is the campaign's own recurring failure committed in its spec: a mechanism
+asserted from how the code *looked* rather than from running it. Two
+consequences follow, and the second is the durable one.
+
+**First**, the client's mirror enum must gain the variant, and that is Task 9's
+real content rather than a formality.
+
+**Second, the enforcement has to be built, because it does not exist.** A test
+in `clients/game/core` that parses a snapshot carrying each band the sim can
+emit is the cheap version: it fails the moment the sim grows a band the client
+cannot read, which is the guarantee this section wrongly claimed the compiler
+was already giving. Without it, the next band added to `SpatialChannel` repeats
+this exactly.
+
+Note which gate runs it either way: `clients/` is outside the cargo workspace,
+so `gate-commit`'s `cargo clippy --workspace` never builds it — `make
+game-check` does.
 
 ## 5. The fold, retired
 
