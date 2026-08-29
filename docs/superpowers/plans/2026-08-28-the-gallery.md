@@ -631,11 +631,27 @@ existing `delve`/`climb` re-pointed is the implementer's call; **record which,
 and why, in the task report** — it is a player-facing vocabulary decision, and
 Task 12's chronicle needs it.
 
-Whichever is chosen, the verb must appear in both lists a verb has to be in:
-the roster the body-state gate consults, and the help text. The Latch shipped a
-verb that was in neither and no gate caught it, because a verb absent from both
-satisfies an agreement check in both directions. The behavioural test — put the
-body to sleep, type the verb, require the refusal — is what catches it.
+**If you add a verb, it goes in both lists a verb has to be in, and here they
+are by name:**
+
+- `IN_CHARACTER_VERBS` (`session.rs:126`), the roster the body-state gate
+  consults. It is declared `[&str; 20]` — an explicit array length, so adding
+  an entry forces you to bump it and the compiler will not let you forget.
+- `HELP` (`session.rs:~401`), the text a player reads. Its existing `delve`
+  and `climb` lines are the format to match.
+
+The Latch shipped a verb that was in NEITHER and no gate caught it: a verb
+absent from both satisfies an agreement check in both directions, so the
+structural check between the two lists is blind to it. What catches it is the
+behavioural test — put the body to sleep, type the verb, require the refusal —
+and the pattern to copy is `warm_is_refused_while_asleep`, which the roster's
+own doc comment names.
+
+**If you instead re-point `delve`/`climb`, both lists already contain them and
+neither needs an entry — but their HELP text becomes wrong**, because it
+describes surface-to-cave movement and would now also mean rung-to-rung. Update
+it in that case; a help line that describes half of what a verb does is the
+same defect one layer along.
 
 - [ ] **Step 4: Run and watch pass**
 
