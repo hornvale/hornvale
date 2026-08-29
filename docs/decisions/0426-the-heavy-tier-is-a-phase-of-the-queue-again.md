@@ -9,8 +9,8 @@
 
 In the context of a heavy tier that has cost 3.45x less since The Governor cut
 it, and that spent nine days red because nothing dispatched it, we decided that
-**`heavy` returns to the chamber's phase list — on the merge and on the stage
-gate alike, `artifacts outboard gate clients heavy`** — accepting that a merge
+**`heavy` returns to the chamber's MERGE phase list — `artifacts outboard gate
+clients heavy`, and the stage list is left alone** — accepting that a merge
 grows from ~1100 s to ~1550 s (+41%) on the one strictly serial box, paid by
 every campaign in the queue behind it.
 
@@ -57,9 +57,13 @@ changed.
 whoever next runs those commands". What it could not price was how long that
 would be. The answer is measured, not estimated:
 
-- The tier ran only when a human remembered, and **no `heavy` row reached
+- The tier ran only when a human remembered, and **no bare `heavy` row reached
   `docs/timings.md` between 2026-08-05 and this campaign** — 27 runs invisible
-  to the tier's own ledger.
+  to the tier's own ledger. (Seven `sluice:heavy` rows do exist, all on
+  2026-08-19, from the last chamber runs before 0148 landed. Those are the
+  *phase's* rows; the by-hand `make heavy-remote` path, which is what 0148 left
+  as the only dispatcher, wrote none — its rows were stranded in a scratch
+  worktree, which is residual 2 below.)
 - It accumulated **ten failures** that nobody saw until The Sources ran it by
   hand at close, and then nearly attributed nine of them to itself.
 - Task 10 named the cause of the last one: `eeaa011fd`, The Granary's
@@ -78,16 +82,17 @@ mis-attribute.** It is an author/inheritor asymmetry, not a cost problem.
 
 | form | what it fixes | why not |
 |---|---|---|
-| **every merge** | the asymmetry, universally | costs the queue ~+41% per non-prose landing — **chosen** |
-| stage gate | the asymmetry, for campaigns that submit one | opt-in; the failure being fixed is "nobody ran it" |
-| conditional on a world-code predicate | the asymmetry, where the predicate fires | a new mechanism that fails silently; and it buys little |
+| **every merge** | the asymmetry, universally | ~+41% per non-prose landing, ~45 h/month of the serial box — **chosen** |
+| stage gate | the asymmetry, for campaigns that submit one | opt-in, so the failure being fixed is "nobody ran it" — and it would red predictably on the census fixture (below) |
+| conditional on a world-code predicate | the asymmetry, where the predicate fires | a new mechanism blind in the silent direction; the ~10 h/month it saves is real, and is not the reason it loses |
 | scheduled | nothing at merge time | `scripts/scheduled/` was written and **never installed**; standing guidance already forbids closing a campaign on "the nightly was empty" |
 
-**The conditional form was the serious rival, and it was answered by
-arithmetic.** Its real argument is symmetry, not cost — but *every merge*
-delivers symmetry strictly more completely, so the comparison reduces to what
-conditionality saves. Measured over the 160 landings on `main` carrying a
-`Sluice-Headline` trailer since 2026-07-01 (159 inter-landing ranges, 2 empty):
+**The conditional form was the serious rival. It is NOT answered by
+arithmetic, and the first draft of this record said it was.** Its real argument
+is symmetry, not cost — but *every merge* delivers symmetry strictly more
+completely, so the comparison reduces to what conditionality saves. The
+population, measured over the 160 landings on `main` carrying a
+`Sluice-Headline` trailer (159 inter-landing ranges, 2 empty):
 
 ```text
   100  (62.9%)  touch kernel/, domains/ or windows/   -> heavy runs under EITHER form
@@ -97,36 +102,103 @@ conditionality saves. Measured over the 160 landings on `main` carrying a
 
 The prose-only skip already exists (`scripts/sluice-phases.sh` drops `heavy`,
 `clients` and `seam-guard` from a candidate whose every path is hand-written
-prose), and it applies under every form. So a conditional predicate would
-exempt heavy on about **one landing in six** beyond what is already exempt:
-roughly 28 × 475 s ≈ 3.7 h of queue time over two months, about **2 h/month**.
+prose) and applies under every form, so a conditional predicate would exempt
+heavy on about **one landing in six** beyond what is already exempt.
 
-Against that saving, the predicate's failure mode is silent and its blind spot
-is concrete: **seven of the 63 `heavy:` tests live in `cli/tests/suite/`**, and
-the tier's harness — `.config/nextest.toml`'s serialization and sized-sweep
-pins, `scripts/gate-full-heavy.sh`, `cli/tests/fixtures/heavy-roster.txt` — is
+**THE DENOMINATOR, AND THE ERROR IT CAUSED.** The `Sluice-Headline` trailer was
+introduced by `2aa07bd38` on **2026-08-17**. All 160 landings therefore fall
+between 2026-08-17 and 2026-08-28 — **11.3 days**, and a `--since=2026-07-01`
+filter selects the trailer's entire lifetime rather than a two-month window.
+The first draft normalised these counts over two months and stated the saving
+as "about 2 h/month". Every per-month figure in it was **~4.7x low**:
+
+```text
+  form                                        first draft   corrected (159 over 11.3 days)
+  chosen (128 non-prose landings)              ~9 h/month     ~45 h/month
+  conditional (100 landings)                   ~7 h/month     ~35 h/month
+  saving forgone by declining conditional      ~2 h/month     ~9.8 h/month
+```
+
+**The saving being declined is roughly the size the first draft claimed for the
+whole cost of the option being chosen.** A reader comparing 2 against 9 reaches
+the opposite intuition from one comparing 10 against 45. This is recorded
+rather than silently corrected because it is a recurring failure mode in this
+project — a real command, correctly run, answering a narrower question than the
+claim attached to it — and because the correction changes which argument
+carries the decision.
+
+One caveat, stated as uncertainty and explicitly **not** as a rescue: 14
+landings/day over 11.3 days is a busy stretch with several campaigns running in
+parallel, and it may not be the steady state. It is the only tempo actually
+measured, so it is the one used; a quieter month costs proportionally less.
+
+**So the decision does not rest on cost, and must not be read as if it does.**
+Roughly 10 h/month of serial-box time is a real saving to forgo. What survives
+the correction untouched is a **correctness** argument, and it is the one doing
+the work:
+
+**Seven of the 63 `heavy:` tests live in `cli/tests/suite/`**, and the tier's
+harness — `.config/nextest.toml`'s serialization and sized-sweep pins,
+`scripts/gate-full-heavy.sh`, `cli/tests/fixtures/heavy-roster.txt` — is
 outside `kernel/domains/windows` entirely. A predicate written from the
 layering diagram would exempt exactly the changes most able to break the tier,
-and nothing would say so. This campaign's whole subject is silent gaps
-accruing where no mechanism reports them; buying two hours a month by adding
-one is a poor trade.
+and nothing would say so. That is a silent-direction failure in a new
+mechanism, introduced to fix a campaign whose whole subject is silent gaps
+accruing where nothing reports them. **The trade this decision actually makes
+is ~10 h/month of the one serial box in exchange for not building a predicate
+that can be wrong without saying so** — a defensible trade, and a much narrower
+one than the first draft described.
 
 **Stage gate and scheduled both lose on the same word: opt-in.** A campaign
 that does not submit a stage gate gets no heavy, and a timer nobody installs
 runs nothing. The observed failure is not "the check was too expensive to run",
 it is "nobody ran it".
 
-## Merge and stage alike, not merge only
+## The merge only — and the stage gate deliberately not
 
-0148 made the merge and the stage gate identical — "the stage gate is this
-script with the push turned off" — and that property is worth more than the
-stage gate's cost saving. If only the merge ran `heavy`, a campaign could pass
-every stage gate it submitted and then discover a heavy failure at the single
-most expensive moment available: holding the serial box, in the queue, with
-other work behind it. Both lists get `heavy`, appended last, which is exactly
-where 0148 found it (`artifacts outboard gate seam-guard clients heavy`) and
-for the reason recorded there: a phase that costs half the run goes after the
-cheap phases that might have gone red first.
+`heavy` goes on `merge_phases`, last. `stage_phases` is untouched. **A first
+draft of this decision put it on both and called that a restoration. It was
+not, and the phrase was doing real work in the wrong direction.**
+
+**`heavy` has never been a stage-gate phase.** At `3163ceb2c^` — 0148's parent,
+the last commit of the six-phase era — the two lists read:
+
+```text
+merge_phases="artifacts outboard gate seam-guard clients heavy"
+stage_phases="artifacts outboard gate clients"
+```
+
+0148 shrank the merge list *down to* the stage list; it did not take `heavy`
+off both. So merge-only reproduces the pre-0148 arrangement exactly, and
+merge+stage would have been new scope wearing the word "restoration".
+
+**And the stage gate is the one place this test cannot go.**
+`fixture_staleness::census_fixtures_match_a_probe_of_live_seeds` is
+heavy-rostered, runs a live probe over the census seeds, and compares it to the
+committed fixtures by exact equality — its own panic message reads "worldgen
+changed but the census fixture was not regenerated". The census is refreshed
+**once per campaign, at the pre-merge close**. So a campaign that moves any
+census metric would red that test on *every* stage gate from its first moved
+value until close: ~475 s of the one serial box each time, for a reason that is
+expected, benign, and not fixable at that moment. **A gate that reds
+predictably for a known-benign reason trains people to ignore it — which is
+exactly the disease this decision was written to cure.** Shipping the cure and
+the disease in one change would have been a poor trade.
+
+The merge has no such problem, and the reason is a genuine alignment rather
+than luck: by merge time the census *has* been refreshed, so the cadence the
+test assumes and the moment a merge occupies are the same moment.
+
+**What is given up, stated rather than implied.** 0148's phase-list identity
+goes — the two lists differ again, by exactly `heavy`. That identity was a
+consequence in 0148, not its design ("differ only in the push" is a claim about
+the *object gated*, the real merge product, and that is unchanged). And a
+campaign can now pass every stage gate and still meet a heavy failure at merge.
+The cost of that is bounded and self-attributing: one merge attempt, ~1550 s,
+main untouched, the queue row `held` with the failing phase named, and
+`make heavy-remote REF=<sha>` available to anyone who wants the answer sooner.
+`scripts/test-sluice.sh` asserts the divergence is exactly `heavy` — "stage plus
+heavy equals merge" — so it cannot widen unnoticed.
 
 ## This changes what the roster ratchet means
 
@@ -138,8 +210,7 @@ charge it. Under 0148's phase list the ratchet could only ever make an addition
 *visible*: a tag nobody's gate ran cost nobody anything.
 
 Under this decision it prices one. Appending a line to that fixture now charges
-every subsequent merge and every subsequent stage gate for the test it admits,
-on the one serial box, forever. That is the coupling §4 wanted and could not
+every subsequent merge for the test it admits, on the one serial box, forever. That is the coupling §4 wanted and could not
 have while the tier ran by hand. The ratchet is checked in both directions, so
 a removal is equally deliberate.
 
@@ -181,13 +252,40 @@ reader would otherwise reconstruct wrongly.
 
 ## What this costs, stated rather than implied
 
-Every non-prose landing pays ~450–500 s more on a strictly serial box, and the
-cost falls on bystanders in the queue, not only on the campaign that caused it.
-Over the last two months' landing rate that is roughly **9 h/month** of queue
-time, against about 7 h/month under the conditional form that was declined.
+Every non-prose **landing** pays ~450–500 s more on a strictly serial box —
+call it ~475 s, between the tier's own 449.219 s nextest wall and the 499.572 s
+`timed.sh` wall that includes its build, since the chamber reaches `heavy` with
+a tree the `gate` phase has already warmed. The cost falls on bystanders in the
+queue, not only on the campaign that caused it.
+
+At the tempo measured over 2026-08-17..28 (128 non-prose landings in 11.3 days,
+14/day) that is roughly **45 h/month** of serial-box time, against ~35 h/month
+under the conditional form that was declined — so the saving forgone is about
+**10 h/month**. Stage gates contribute **nothing** to these figures and
+correctly so: they never land, and `heavy` is deliberately not one of their
+phases.
+
 0133's accepted cost — "a stage gate queuing behind an hour of heavy or census
 work is an accepted cost, not a bug" — is what absorbs this; submission is
-asynchronous, so the wait costs queue position, not attention.
+asynchronous, so the wait costs queue position, not attention. But 45 h/month
+is a standing commitment on a box that also serves stage gates, censuses and
+by-hand heavy runs, and it is stated here at its true size precisely because
+the first draft of this record stated it at a fifth of that.
+
+**One thing this buys back, found while checking the change rather than
+argued for it.** `book/src/laboratory/` is a declared path in
+`docs/generated-paths.txt`, but nothing in `scripts/regenerate-artifacts.sh`
+writes the `the-history/` subtree — `history_battery` does, and it is
+`heavy:`-tagged. Under 0148 the drift check over that subtree was therefore
+**vacuous**: no phase regenerated it, so `git diff --exit-code` compared it
+against itself forever while the artifact rotted. Restoring `heavy` to the
+merge list makes that check mean something again. The safety of letting it
+author on every merge was checked rather than assumed: `history_battery` is the
+tier's only committed-artifact writer, nothing reads `the-history` as a
+reference so there is no self-ratifying loop, its preregistered floors assert
+*before* the write so an out-of-floor movement reddens the phase instead of
+landing, and auto-commit is the established `authors=yes` contract every other
+authoring phase already runs under.
 
 **A red heavy tier now holds the box.** That is the point, and it is only
 tolerable because the tier is green: 63/63 at `da03b576a`, the first green run
@@ -197,13 +295,25 @@ end. **The window is the argument as much as the arithmetic is**: a green tier
 can be gated where a red one cannot, and nothing keeps it green except gating
 it.
 
-**The strongest argument against this that survived.** The number that makes
-this affordable — 449 s — is exactly the quantity nothing ratchets. The roster
-freezes membership, deliberately, and a single test admitted through it may
-cost minutes. If the tier drifts back toward 1500 s, this decision's arithmetic
-inverts and 0148's holds again. That is not a reason to decline now; it is a
-reason to revisit with the same discipline, on a fresh measurement, rather than
-on the memory of this one.
+**The strongest arguments against this that survived.** Two, and the second
+only became visible once the denominator was fixed.
+
+*The affordability number is the one thing nothing ratchets.* The roster
+freezes membership, deliberately (§4 chose that over a wall budget because a
+committed baseline is a claim with a date and membership does not decay), so a
+single admitted test may cost minutes. If the tier drifts back toward 1500 s
+this decision's arithmetic inverts and 0148's holds again.
+
+*And ~10 h/month of the one serial box is a real thing to decline.* The
+conditional form is not free of merit; it is rejected because its predicate
+would be blind in a silent direction, not because its saving is small. If
+someone later builds a predicate that keys on the tier's own harness as well as
+on world-generating code — and can demonstrate the blind spot closed — the cost
+argument would be theirs to make and this record should not be read as having
+foreclosed it.
+
+Neither is a reason to decline now. Both are reasons to revisit with the same
+discipline, on a fresh measurement, rather than on the memory of this one.
 
 ## See also
 

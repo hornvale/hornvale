@@ -33,7 +33,7 @@ needs the canonical box for, and they differ in exactly one respect:
 | | `make sluice-stage BRANCH=… REF=…` | `make sluice BRANCH=… REF=…` |
 |---|---|---|
 | when | every plan-stage boundary | work is complete |
-| phases | `artifacts outboard gate clients heavy` | **the same five** — see below |
+| phases | `artifacts outboard gate clients` | **the same four, PLUS `heavy`** — see below |
 | merges main+branch in the chamber | yes | yes |
 | pushes | **never** | yes, the exact SHA it tested |
 | terminal state | `reported` | `landed` |
@@ -41,35 +41,50 @@ needs the canonical box for, and they differ in exactly one respect:
 
 Everything below applies to both unless it says otherwise.
 
-**THE PHASE SETS ARE IDENTICAL, AND BOTH RUN `heavy` LAST (decision 0426,
-2026-08-28).** This paragraph has now been wrong in both directions, so read
-the script rather than any prose about it:
+**THE MERGE RUNS ONE PHASE MORE THAN THE STAGE GATE: `heavy`, last (decision
+0426, 2026-08-28).** This paragraph has now been wrong in two different
+directions, so read the script rather than any prose about it:
 
 ```
 merge_phases="artifacts outboard gate clients heavy"
-stage_phases="artifacts outboard gate clients heavy"
+stage_phases="artifacts outboard gate clients"
 ```
 
 The history, because it is the reason to distrust a remembered phase list: the
 table once said a merge runs "all six, `heavy` last"; decision 0148 made that
-false by taking `heavy` and `seam-guard` off both lists; and this paragraph
-then said flatly that "`heavy` is not a chamber phase at all", which decision
-0426 made false again after The Governor cut the tier 3.45x. `seam-guard` is
-the one that is genuinely not a chamber phase — it runs only from `make
-seam-guard`. `make heavy-remote REF=<full-sha>` still exists as a by-hand
-entry point for the tier, but it is no longer the only dispatcher.
+false by shrinking the merge list down to the stage list; this paragraph then
+said flatly that "`heavy` is not a chamber phase at all", which decision 0426
+made false again after The Governor cut the tier 3.45x. `seam-guard` is the one
+that is genuinely not a chamber phase — it runs only from `make seam-guard`.
+
+**`heavy` is a merge phase and NOT a stage-gate phase, and that asymmetry is
+deliberate.** It compares a live probe against the committed census fixtures,
+which are refreshed once per campaign at pre-merge close — so on a stage gate
+it would red predictably for the whole middle of any world-touching campaign.
+It has in fact never been a stage phase; 0426 restores the pre-0148 layout.
+
+**Consequence when choosing between the two: a green stage gate no longer buys
+a merge's ENTIRE phase coverage.** It buys four fifths of it. A merge can still
+red on `heavy` after every stage gate passed. If you want that answer earlier,
+`make heavy-remote REF=<full-sha>` is the by-hand dispatch — it is a
+diagnostic you read, not a gate, so a census-fixture red in it is expected
+mid-campaign and is not a reason to stop.
 
 **A prose-only candidate skips `heavy` (and `clients`).** `scripts/sluice-phases.sh`
 drops them when every changed path is hand-written prose, so a docs-only merge
-does not pay the tier's ~450 s.
+does not pay the tier's ~475 s.
 
-**Why this matters when choosing between them.** The difference is the push and
-nothing else, so a green stage gate on an ancestor SHA has already bought a
-merge's entire phase coverage. Do not reason that going straight to merge "adds
-the full suite" — it adds the push. The stage gate's real value is that its
-refusal is free, and it leaves `main` untouched by construction rather than by
-a phase passing. (Learned by The Forebay reasoning from the stale row and
-telling its decider the wrong thing.)
+**Why this matters when choosing between them.** From 0148 until 0426 the
+difference was the push and nothing else, and this paragraph said so. Since
+0426 the difference is the push **plus `heavy`**: a green stage gate on an
+ancestor SHA buys four of a merge's five phases, not all of them. Do not
+reason that going straight to merge "adds the full suite" — it adds the push
+and the heavy tier, which is a real but bounded increment. The stage gate's
+real value is unchanged: its refusal is free, and it leaves `main` untouched by
+construction rather than by a phase passing. (The original warning here was
+learned by The Forebay reasoning from a stale row and telling its decider the
+wrong thing — which is why this paragraph now names what changed instead of
+being quietly rewritten.)
  A stage gate is
 not a lesser instrument: it gates the same real merge product, which is what
 makes it worth queueing behind an hour of someone else's heavy run. What it

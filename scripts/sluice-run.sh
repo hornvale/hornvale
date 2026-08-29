@@ -338,28 +338,48 @@ lane_sets_file="${HV_SLUICE_LANE_SETS:-$repo_root/scripts/lane-sets.tsv}"
 # row — the same direction it used to enforce over the Makefile's
 # `lane-dispatch.sh` lines, pointed at the caller that replaced them.
 #
-# `heavy` IS BACK ON BOTH LISTS (decision 0426, The Governor, 2026-08-28),
-# AND `seam-guard` IS NOT. Decision 0148 took both off on 2026-08-19 because
-# together they were 80.5% of a 3704 s six-phase merge; on that evidence it
-# was right, and its measurement is not disputed. What changed is the tier:
-# The Governor cut it 3.45x (1551.631 s -> 449.219 s nextest wall, 118 -> 63
-# tests, 10 -> 0 failures, lefford, 2f8faf243 -> da03b576a), so `heavy` is now
-# ~29% of a would-be ~1550 s merge rather than 53% of a 3704 s one. `heavy`
-# stays a `stage`-rung set on both lists — a merge and a stage gate still run
-# the SAME phases and differ only in the push, which is the design 0148 named
-# and which this preserves rather than breaks.
+# `heavy` IS BACK ON THE MERGE LIST ONLY (decision 0426, The Governor,
+# 2026-08-28), AND `seam-guard` IS NOT BACK AT ALL. Decision 0148 took both off
+# the merge list on 2026-08-19 because together they were 80.5% of a 3704 s
+# six-phase merge; on that evidence it was right, and its measurement is not
+# disputed. What changed is the tier: The Governor cut it 3.45x (1551.631 s ->
+# 449.219 s nextest wall, 118 -> 63 tests, 10 -> 0 failures, lefford,
+# 2f8faf243 -> da03b576a), so `heavy` is now ~29% of a would-be ~1550 s merge
+# rather than 53% of a 3704 s one.
+#
+# THE TWO LISTS DIVERGE AGAIN, AND THAT IS A RESTORATION, NOT NEW SCOPE.
+# `heavy` has NEVER been a stage-gate phase: at 3163ceb2c^ (0148's parent) the
+# lists read `artifacts outboard gate seam-guard clients heavy` and `artifacts
+# outboard gate clients`. 0148 shrank the merge list DOWN TO the stage list —
+# it did not remove `heavy` from both — so putting `heavy` back on the merge
+# list alone reproduces the pre-0148 arrangement exactly. A first cut of this
+# change put it on both lists and described that as restoration. It was not.
+#
+# WHY STAGE MUST NOT RUN IT, on its own merits and not only by precedent.
+# `fixture_staleness::census_fixtures_match_a_probe_of_live_seeds` is
+# heavy-rostered and compares a LIVE probe against the COMMITTED census
+# fixtures by exact equality. The census is refreshed once per campaign, at the
+# pre-merge close (CLAUDE.md's standing rule). So a campaign that moves any
+# census metric would red that test on EVERY stage gate from its first moved
+# value until close — ~450 s of the one serial box each time, for a reason that
+# is expected, benign and not yet fixable. A gate that reds predictably for a
+# known-benign reason trains people to ignore it, which is precisely the
+# disease this campaign diagnosed in the heavy tier. The merge does not have
+# this problem: by merge time the census HAS been refreshed, so the cadence the
+# test assumes and the moment the merge occupies are the same moment.
 #
 # WHY IT IS BACK AT ALL. Removing it removed the only automatic dispatcher the
 # tier had, and nothing replaced it. It then ran only when a human remembered,
-# accumulated ten failures nobody saw, and wrote no `docs/timings.md` row for
-# 27 runs. The failure this fixes is an ASYMMETRY, not a cost: a campaign
+# accumulated ten failures nobody saw, and wrote no bare `heavy` timings row
+# for 27 runs. The failure this fixes is an ASYMMETRY, not a cost: a campaign
 # could move shipped world values (The Granary's `history/bake/v3` bump,
 # eeaa011fd), pass every gate it was asked to pass, and leave the tier red for
 # the NEXT campaign to inherit and mis-attribute.
 #
 # WHAT IT COSTS, STATED PLAINLY. A four-phase merge is ~1100 s; five is
 # ~1550 s (+41%) on the one strictly serial box, paid by every campaign in the
-# queue behind it. A prose-only candidate pays none of it — see the
+# queue behind it — about +42 h/month at the landing tempo measured over
+# 2026-08-17..28. A prose-only candidate pays none of it: see the
 # sluice-phases.sh block below, which already drops `heavy`. Full reasoning,
 # the rejected alternatives (stage-gate-only, conditional on a world-code
 # predicate, scheduled) and the residuals are in
@@ -369,7 +389,7 @@ lane_sets_file="${HV_SLUICE_LANE_SETS:-$repo_root/scripts/lane-sets.tsv}"
 # site, its guarantee moves when seams or tests change (campaign-shaped, not
 # per-merge), and it keeps its `campaign`-rung row and `make seam-guard`.
 merge_phases="artifacts outboard gate clients heavy"
-stage_phases="artifacts outboard gate clients heavy"
+stage_phases="artifacts outboard gate clients"
 
 if [ "$kind" = "stage" ]; then
     phases="${HV_SLUICE_PHASES:-$stage_phases}"

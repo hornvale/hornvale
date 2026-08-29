@@ -24,18 +24,6 @@
 # `outboard` set (the `lane:outboard` row in docs/timings.md), of which
 # seam-guard's 7 call sites alone cost 853.284 s (99.8%, the `lane:seam-guard`
 # row) -- the other three suites finish in well under a minute combined. The
-#
-# `heavy` MOVED BACK TO THE `stage` RUNG (decision 0426, The Governor,
-# 2026-08-28). Decision 0148 put it on `campaign` when it came off the
-# chamber's phase list, which was the honest rung for a set nothing dispatched
-# automatically. The Governor cut the tier 3.45x (1551.631 s -> 449.219 s
-# nextest wall, 118 -> 63 tests, 10 -> 0 failures) and 0426 put it back on
-# BOTH of sluice-run.sh's phase lists, so it once again runs at every stage
-# gate and every merge -- which is what this column means. `make heavy-remote`
-# survives as a by-hand entry point; it is no longer the only thing that runs
-# the tier. `seam-guard` stays on `campaign` and stays off the phase list.
-#
-# The
 # taxonomy sorts sets by the DIRECTION their guarantee moves in, not by
 # cost: a seam changes when seams or tests change (slow-moving,
 # campaign-shaped), which is a `campaign`-rung cadence, not a
@@ -47,6 +35,19 @@
 # as the `gate` row above (`make --no-print-directory gate-suite-run`), not
 # a special case.
 #
+# `heavy` MOVED FROM THE `campaign` RUNG TO THE `merge` RUNG (decision 0426,
+# The Governor, 2026-08-28). 0148 put it on `campaign` when it came off the
+# chamber's phase list, which was the honest rung for a set nothing dispatched
+# automatically. The Governor cut the tier 3.45x (1551.631 s -> 449.219 s
+# nextest wall, 118 -> 63 tests, 10 -> 0 failures) and 0426 put it back on
+# sluice-run.sh's MERGE list -- and deliberately not on the stage list, where
+# its live-vs-committed census-fixture check would red predictably for the
+# whole middle of any world-touching campaign. `merge`, not `stage`, is
+# therefore the rung its guarantee is actually needed at, which is what this
+# column means. `make heavy-remote` survives as a by-hand entry point; it is
+# no longer the only thing that runs the tier. `seam-guard` stays on
+# `campaign` and stays off both phase lists.
+#
 # name	gate	where	authors	command
 style	commit	local	no	make --no-print-directory style-run
 subfloor	commit	local	no	make --no-print-directory subfloor-run
@@ -54,7 +55,7 @@ gate	stage	lane	no	make --no-print-directory gate-suite-run
 artifacts	stage	lane	yes	bash scripts/regenerate-artifacts.sh
 outboard	stage	lane	yes	bash scripts/lane-outboard.sh
 clients	stage	lane	yes	make --no-print-directory clients-check-run
-heavy	stage	lane	yes	bash scripts/gate-full-heavy.sh
+heavy	merge	lane	yes	bash scripts/gate-full-heavy.sh
 census	campaign	lane	yes	bash scripts/census-run.sh
 seam-guard	campaign	lane	no	make --no-print-directory seam-guard
 integration	merge	lane	yes	bash scripts/sluice-run.sh

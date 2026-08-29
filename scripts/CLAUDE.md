@@ -133,15 +133,16 @@ exactly that reason: it names the claim, not the deleted machinery.
   `gate-commit` and the `gate` set's own suite both defer (see
   `cli/tests/suite/heavy_tier.rs`). Runs as the `heavy` set — either standalone via
   `make heavy-remote REF=<sha>`, or as the LAST of the chamber's phases
-  (`sluice-run.sh`, below). **It is a phase of BOTH a merge and a stage gate
-  (decision 0426), and this bullet used to say the opposite.** It read "it is
-  deliberately not a stage-gate phase: at a measured mean 1678 s it is 47% of
-  the merge set's ~3602 s" — true when written, and superseded twice since.
-  0148 took it off the merge list entirely; The Governor then cut the tier
-  3.45x (1551.631 s -> 449.219 s nextest wall, 118 -> 63 tests, 10 -> 0
-  failures), which is what makes it affordable at ~29% of a ~1550 s merge, and
-  0426 put it back on both lists so a merge and a stage gate still differ only
-  in the push. **Takes the shared box claim** (decisions 0086/0133) — here,
+  (`sluice-run.sh`, below). **It is a phase of a MERGE and not of a stage gate
+  (decision 0426).** That is the pre-0148 arrangement restored: 0148 took it
+  off the merge list, where it had lived, and it has never been on the stage
+  list at all. The Governor then cut the tier 3.45x (1551.631 s -> 449.219 s
+  nextest wall, 118 -> 63 tests, 10 -> 0 failures), which is what makes it
+  affordable at ~29% of a ~1550 s merge. It stays off the stage list because
+  `census_fixtures_match_a_probe_of_live_seeds` compares a live probe against
+  committed census fixtures refreshed once per campaign at pre-merge close, so
+  a stage gate would red predictably for the whole middle of any
+  world-touching campaign. **Takes the shared box claim** (decisions 0086/0133) — here,
   at the seam, rather than only in a wrapper, because a wrapper cannot guard
   a direct invocation of the script. Where there is no `flock` (macOS ships
   none) it proceeds unserialised with a note rather than failing.
@@ -200,14 +201,16 @@ the exact SHA it tested.
   wall time was queue wait for exactly that reason). Merges the candidate,
   then runs `artifacts outboard gate clients heavy` against the real merge
   commit before pushing it, so a broken interaction with main is caught before
-  it ever reaches main. **That list lost `seam-guard` and `heavy` on
-  2026-08-19 (decision 0148) and got `heavy` back on 2026-08-28 (decision
-  0426)**, after The Governor cut the tier 3.45x. `seam-guard` keeps its
-  `campaign`-rung row and its own entry point (`make seam-guard`), and that is
-  still the ONLY thing that runs it — nothing does so automatically. `heavy`
-  keeps `make heavy-remote REF=<full-sha>` as a by-hand entry point, but the
-  chamber now dispatches it on every non-prose candidate. The merge product is
-  gated as itself, by five phases.
+  it ever reaches main. A STAGE GATE RUNS THE SAME LIST MINUS `heavy`.
+  **The merge list lost `seam-guard` and `heavy` on 2026-08-19 (decision 0148)
+  and got `heavy` back on 2026-08-28 (decision 0426)**, after The Governor cut
+  the tier 3.45x. `seam-guard` keeps its `campaign`-rung row and its own entry
+  point (`make seam-guard`), and that is still the ONLY thing that runs it —
+  nothing does so automatically. `heavy` keeps `make heavy-remote
+  REF=<full-sha>` as a by-hand entry point, and that is still the only way to
+  run the tier at a plan-stage boundary, but the chamber now dispatches it on
+  every non-prose merge candidate. The merge product is gated as itself, by
+  five phases.
   (`census` refuses as a chamber phase for an unrelated reason: it
   unconditionally clobbers the shared claim on exit.) A `kind=stage` run is the same code with one
   branch turned the other way at the push step: it merges, runs the

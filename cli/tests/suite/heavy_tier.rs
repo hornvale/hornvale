@@ -297,10 +297,12 @@ fn heavy_tagged_tests() -> Vec<String> {
 /// ratchet was written the tier ran only when a human typed `make
 /// heavy-remote`, so a new tag could only ever be made *visible* — a test no
 /// gate ran cost nobody anything. 0426 (The Governor, 2026-08-28) put `heavy`
-/// back on both of `scripts/sluice-run.sh`'s chamber phase lists, so a line
-/// appended here is charged to **every subsequent merge and every subsequent
-/// stage gate** on the one strictly serial box, forever. That is the coupling
-/// spec §4 wanted and could not have while the tier ran by hand.
+/// back on `scripts/sluice-run.sh`'s **merge** phase list, so a line appended
+/// here is charged to **every subsequent merge** on the one strictly serial
+/// box, forever. That is the coupling spec §4 wanted and could not have while
+/// the tier ran by hand. (Not the stage gate: 0426 leaves `stage_phases`
+/// alone, because heavy's live-vs-committed census-fixture check would red
+/// predictably for the whole middle of any world-touching campaign.)
 ///
 /// It still prices **membership**, not duration — §4 chose a frozen roster
 /// over a wall-clock budget on purpose, because a committed baseline is a
@@ -330,7 +332,7 @@ fn the_heavy_roster_is_exactly_this_fixture() {
         added.is_empty(),
         "new heavy:-tagged test(s) not in the frozen roster (spec §4, The \
          Governor):\n{}\n\nSince decision 0426 the tier is a chamber phase again, so \
-         each of these is charged to EVERY subsequent merge and stage gate. Append \
+         each of these is charged to EVERY subsequent merge. Append \
          the line(s) to cli/tests/fixtures/heavy-roster.txt in the same commit and \
          say why in the message.",
         added

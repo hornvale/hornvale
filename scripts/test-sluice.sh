@@ -473,10 +473,23 @@ case "$merge_list" in
     *heavy*)      ok "heavy runs on a merge (decision 0426) and seam-guard does not" ;;
     *)            bad "heavy is missing from the merge list; decision 0426 put it back after The Governor cut the tier 3.45x" ;;
 esac
-if [ "$merge_list" = "$stage_list" ]; then
-    ok "a merge and a stage gate run the same phases, differing only in the push"
+# THE TWO LISTS DIVERGE BY EXACTLY `heavy`, AND THAT IS ASSERTED RATHER THAN
+# ALLOWED. 0148 made them identical; 0426 put `heavy` back on the merge list
+# ONLY, restoring the pre-0148 arrangement (at 3163ceb2c^ the stage list was
+# already `artifacts outboard gate clients` — `heavy` has never been a
+# stage-gate phase). The reason is specific: heavy's
+# `census_fixtures_match_a_probe_of_live_seeds` compares a live probe against
+# committed census fixtures that are refreshed once per campaign at pre-merge
+# close, so on a stage gate it would red predictably and benignly for the
+# whole middle of any world-touching campaign.
+# Checked as "stage plus heavy equals merge" rather than as two literals, so a
+# future change to the shared four is not required to touch this line twice.
+if [ "$stage_list heavy" = "$merge_list" ]; then
+    ok "a stage gate runs the merge's phases minus heavy: $stage_list"
+elif [ "$merge_list" = "$stage_list" ]; then
+    bad "merge and stage are identical ('$merge_list') — 0426 puts heavy on the merge list ONLY; if a stage gate should run it, the census-fixture red argued in sluice-run.sh must be answered first"
 else
-    bad "merge ('$merge_list') and stage ('$stage_list') diverged — 0148 made them identical and 0426 kept them so; if that is deliberate, update this test and say why"
+    bad "merge ('$merge_list') and stage ('$stage_list') differ by something other than a trailing 'heavy'; if that is deliberate, update this test and say why"
 fi
 
 echo "== phases: MUTATION — an allowlist without its exclusions would skip heavy for a generated artifact"
