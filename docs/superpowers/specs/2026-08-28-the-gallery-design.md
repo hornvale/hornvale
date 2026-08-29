@@ -328,8 +328,16 @@ have seen before stays on the pane, dimmer; creatures and objects are drawn
 only while lit.
 
 **Each rung carries a bitset of seen cells**, one bit per cell of its extent,
-indexed row-major over `Level::extent`. A step ORs its shadowcast into the
-bitset for the rung it happened on. Nothing else is stored.
+indexed row-major over `Level::extent`. **Every arrival at a cell** ORs its
+shadowcast into the bitset for the rung it happened on. Nothing else is stored.
+
+"Arrival", not "step", and the distinction is a real bug the first draft of
+this sentence caused: a lateral step is only one of three ways a possession
+comes to occupy a cell. `delve` places it at the entrance, and stairs place it
+on the rung below or above. Marking on lateral steps alone means the chamber
+you descend into is the one place you do not remember — you see it, walk out
+of it, and it is gone — and a rung you enter and immediately leave by the
+stairs is never recorded at all. All three paths mark.
 
 Extents run `40 + 4·rank` by `24 + 2·rank` with `rank ≤ 5` (five underground
 rungs; `Band::Surface` is not one), so the largest rung is 60×34 = 2,040 cells
