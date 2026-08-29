@@ -4029,3 +4029,4 @@ measured here.
 | 2026-08-29T21:13:49Z | gate-commit | 150.799 | 826.784 | 66.076 | 5.92 | 0 | 0216dc303 | the-overture | MacBookPro | 10 |
 | 2026-08-29T21:16:36Z | rebaseline | 128.720 | 273.924 | 12.527 | 2.23 | 0 | ccb7cf0c2 | the-overture | MacBookPro | 10 |
 | 2026-08-29T21:31:29Z | gate-commit | 32.435 | 54.333 | 13.579 | 2.09 | 0 | 037b23df7 | the-overture | MacBookPro | 10 |
+| 2026-08-29T22:05:30Z | sluice:artifacts | 137.585 | 1192.634 | 58.603 | 9.09 | 0 | f47e64d62 |  | lefford | 40 |
