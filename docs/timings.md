@@ -3822,3 +3822,4 @@ measured here.
 | 2026-08-29T01:58:09Z | heavy | 491.310 | 10580.558 | 225.844 | 22.00 | 0 | e76ea0497 |  | lefford | 40 |
 | 2026-08-29T02:07:56Z | gate-commit | 22.257 | 51.955 | 13.132 | 2.92 | 0 | e76ea0497 | campaign/the-governor | MacBookPro | 10 |
 | 2026-08-29T02:08:56Z | rebaseline | 42.883 | 274.642 | 13.698 | 6.72 | 0 | e76ea0497 | campaign/the-governor | MacBookPro | 10 |
+| 2026-08-29T02:10:27Z | gate-commit | 20.810 | 50.902 | 12.906 | 3.07 | 0 | e76ea0497 | campaign/the-governor | MacBookPro | 10 |
