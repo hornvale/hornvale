@@ -301,6 +301,33 @@ pub const COLLAPSE_PRESSURE: f64 = 2.0;
 const DAUGHTER_MAX_PRESSURE: f64 = 0.7;
 /// Per-epoch probability a comfortable community founds a daughter.
 const DAUGHTER_PROB: f64 = 0.06;
+/// Prospectivity at or above which ground is worth *working* — the floor a
+/// candidate site must clear before an expansion onto it can be a mine (The
+/// Winze, spec §B.3). `pub` so the gates that hold the mine population
+/// (`windows/worldgen/tests/suite/mines_exist.rs`) express themselves against
+/// the number the siting actually used, rather than a second copy of it.
+///
+/// **Read off the field's own definition, not chosen.**
+/// `hornvale_terrain::prospectivity` is
+/// `0.6·setting + 0.3·unrest + 0.1·metamorphic_grade`, and `setting` is a step
+/// function of the boundary: `0.1` off a plate boundary, `0.4` at a
+/// continental collision, `0.5` at a rift or ridge, `0.7` at an island arc or
+/// coastal range. So `0.06` is the field's absolute floor and `0.6 × 0.4 =
+/// 0.24` is *exactly* where "on a plate boundary" begins.
+///
+/// **And it is where the tie-break stops deciding the siting.** Task 1
+/// measured prospectivity to be a near-constant floor — 75% of seed 42's land
+/// inside a 0.0067-wide band — so a naive `max_by(prospectivity)` over a
+/// settlement's neighbours ties, and the lowest-`Vertex` tie-break silently
+/// becomes the siting rule. Measured over the candidate neighbour sets of
+/// every occupied vertex on the panel (`ore_siting_probe.rs`), the argmax of
+/// the *unfiltered* set is tied on **40.9% / 32.2% / 29.2%** of sites (seeds
+/// 42 / 7 / 1234). Filtered at this cut it is tied on **0.0% / 0.0% / 0.0%**.
+/// The cut also sits on a plateau rather than a knife edge: the share of land
+/// at or above `0.24` and at or above `0.30` differ by 0.00 / 0.08 / 0.00
+/// percentage points, because almost nothing lives between them.
+/// type-audit: bare-ok(ratio)
+pub const ORE_CUT: f64 = 0.24;
 /// How much a unit of stored wealth is worth as raiding strength, relative to
 /// a head of population. Walls, retainers and granaries are strength the local
 /// land does not have to feed.
@@ -1197,6 +1224,22 @@ struct Bake<'a> {
     /// ~0 far from one). Biases all three site-picking paths toward water so
     /// settlements condense near rivers (Task 5b, restoring The Confluence).
     river_prox: &'a VertexMap<f64>,
+    /// Per-vertex mineral prospectivity in `[0, 1]`
+    /// (`GeneratedTerrain::prospectivity_at`) — the **second** siting
+    /// objective, and the only thing a working is scored on (The Winze, spec
+    /// §B.3).
+    ///
+    /// Threaded in rather than read, following `caps_by_era`'s shape, because
+    /// the bake has no terrain: it imports nothing at all from
+    /// `hornvale-terrain`, so `prospectivity_at` is not reachable from in
+    /// here. Built once at the composition root, where terrain and the bake's
+    /// other inputs already meet.
+    ///
+    /// **It biases nothing else.** The agrarian objective is untouched — the
+    /// daughter scan still ranks on river-weighted capacity alone, which is
+    /// the finding Task 1 rests on (settlements are *under*-represented in
+    /// high-ore ground, and that is the model being right).
+    prospectivity: &'a VertexMap<f64>,
     /// Vertices habitable through the glacial maximum (migration preference).
     refugia: &'a VertexMap<bool>,
     /// The world's seed, kept so [`Bake::open`] can derive each community's
@@ -1957,6 +2000,32 @@ impl<'a> Bake<'a> {
             location,
             spread,
         ))
+    }
+
+    /// The stream one expansion's working/farm decision draws from (The Winze,
+    /// spec §B.3). Keyed on the PARENT's place and the year it throws — the
+    /// vertex, the band, and the epoch year — which is a place in the fixed
+    /// lattice plus a place in time, never a generation ordinal (decision
+    /// 0102). See [`crate::streams::SETTLEMENT_WORKING`] for why the draw sits
+    /// on its own leg rather than on [`Bake::stream`].
+    ///
+    /// The key is unique by construction: at most one live community occupies a
+    /// `(vertex, band)` — the node index's own invariant — and `grow` runs at
+    /// most once per community per epoch, so `(vertex, band, year)` names
+    /// exactly one throw. The year goes through
+    /// [`crate::disposition::occupation_draw_key`], the same reduction the
+    /// other composition-root key that spells a year uses.
+    fn working_stream(&self, site: Vertex, rung: Band, year: f64) -> Stream {
+        let leg = format!(
+            "{}/{}/{}",
+            site.0,
+            crate::chamber::rung_name(rung),
+            crate::disposition::occupation_draw_key(year)
+        );
+        self.seed
+            .derive(crate::streams::SETTLEMENT_WORKING)
+            .derive(StreamLabel::dynamic(&leg))
+            .stream()
     }
 
     /// Whether a **community** takes the initiative at all — spec §4.2a's
@@ -3607,17 +3676,65 @@ impl<'a> Bake<'a> {
             // occupied set toward fresh water. `RIVER_SITE_WEIGHT` tunes how
             // hard river proximity outbids raw capacity here. Tie-broken by
             // lowest Vertex — total & deterministic (`f64::total_cmp`).
-            let dest = traversable_neighbors(self.cur(), site)
+            let candidates: Vec<Vertex> = traversable_neighbors(self.cur(), site)
                 .into_iter()
                 .filter(|&n| self.vacant_for(era, n, dpidx))
+                .collect();
+            let dest = candidates.iter().copied().max_by(|a, b| {
+                let sa = self.caps_now()[dpidx].at(*a) * river_factor(*self.river_prox.get(*a));
+                let sb = self.caps_now()[dpidx].at(*b) * river_factor(*self.river_prox.get(*b));
+                // Higher score wins; among equal score, lower Vertex wins
+                // (treated as "greater" for `max_by`).
+                sa.total_cmp(&sb).then(b.cmp(a))
+            });
+            // THE SECOND OBJECTIVE (The Winze, spec §B.3). The same expansion,
+            // scored the other way: a WORKING goes to the richest ore among
+            // the same candidates, on `prospectivity` alone — no capacity, no
+            // river term. That single-objective scoring is the point. A mining
+            // camp is a daughter founded on ore rather than on fertility, from
+            // a parent that supplies it, which is what a mining camp is; the
+            // reclassification design this replaced could not work because the
+            // agrarian objective had already put every settlement where ore is
+            // not (spec §B.2, measured by Task 1).
+            //
+            // Filtered at [`ORE_CUT`] first, and that filter is doing two jobs.
+            // It is the honest one — you do not found a working where there is
+            // nothing to work — and it is also what keeps the tie-break out of
+            // the siting: unfiltered, this `max_by`'s argmax is tied on ~a
+            // third of candidate sets and `b.cmp(a)` would silently be the
+            // rule. See `ORE_CUT`'s own doc for the measurement.
+            let working_dest = candidates
+                .iter()
+                .copied()
+                .filter(|&n| *self.prospectivity.get(n) >= ORE_CUT)
                 .max_by(|a, b| {
-                    let sa = self.caps_now()[dpidx].at(*a) * river_factor(*self.river_prox.get(*a));
-                    let sb = self.caps_now()[dpidx].at(*b) * river_factor(*self.river_prox.get(*b));
-                    // Higher score wins; among equal score, lower Vertex wins
-                    // (treated as "greater" for `max_by`).
-                    sa.total_cmp(&sb).then(b.cmp(a))
+                    let pa = *self.prospectivity.get(*a);
+                    let pb = *self.prospectivity.get(*b);
+                    pa.total_cmp(&pb).then(b.cmp(a))
                 });
-            if let Some(dest) = dest {
+            // Is this expansion a working? A rate, and the rate is the ore
+            // itself: `prospectivity` is documented by its own author as a
+            // probability ("here it is a probability" —
+            // `hornvale_terrain::lithology::prospectivity`), so the chance an
+            // expansion onto a given site is dug rather than farmed is how
+            // promising that site is. Richer ground is worked more often, and
+            // the campaign mints no free constant to say so.
+            //
+            // **NOT A DRAW ON `Bake::stream`.** It hangs off its own keyed leg
+            // ([`crate::streams::SETTLEMENT_WORKING`]), so it consumes nothing
+            // from the bake's sequential epoch-dynamics stream and a world
+            // moves only where a working is actually founded. That label's own
+            // doc carries the measurement that decided it — on the sequential
+            // stream, ~all of the world change was the re-ordering and ~none of
+            // it was the mines.
+            let working = working_dest
+                .filter(|&w| {
+                    self.working_stream(site, self.communities[idx].rung, year)
+                        .next_f64()
+                        < *self.prospectivity.get(w)
+                })
+                .map(|w| (w, Function::Mine));
+            if let Some((dest, function)) = working.or(dest.map(|d| (d, Function::Agrarian))) {
                 let (people, lineage, offset) = {
                     let c = &self.communities[idx];
                     (self.records[c.record].core.people, c.lineage, c.tech_offset)
@@ -3631,6 +3748,16 @@ impl<'a> Bake<'a> {
                     Some(lineage),
                     offset,
                 );
+                // [`Bake::open`] opens every community `Agrarian` — the
+                // engine's default and, before this campaign, its only
+                // reachable value. A working overwrites it here, at the one
+                // site that founds one, rather than by widening `open`'s
+                // already-eight-argument signature for the ~40 call sites that
+                // never found anything but a farm.
+                if function != Function::Agrarian {
+                    let record = self.communities[new_idx].record;
+                    self.records[record].core.function = function;
+                }
                 self.touch(new_idx, year);
                 self.tally.founded += 1;
             }
@@ -3645,9 +3772,12 @@ impl<'a> Bake<'a> {
 /// displacement-fires invariant.
 /// `caps` carries one headcount-capacity field per entry of `peoples`, **in the
 /// same order** — the alignment is the caller's contract and is asserted below.
+/// `prospectivity` is the ore field the working objective scores on (The
+/// Winze, spec §B.3) — one value per vertex, species-blind, because ore is a
+/// property of the ground rather than of the pairing.
 /// There is no longer a species-blind capacity field: every site that once read
 /// one now asks the question per-people, including genesis siting.
-/// type-audit: bare-ok(ratio: river_prox), bare-ok(flag: refugia)
+/// type-audit: bare-ok(ratio: river_prox), bare-ok(ratio: prospectivity), bare-ok(flag: refugia)
 // The bake reads several independent composition-root fields (geo, capacity,
 // river proximity, era series, refugia, roster, span); each is a distinct
 // world input with no coherent grouping into a single struct, so they stay
@@ -3659,6 +3789,7 @@ pub fn bake(
     biomes: &VertexMap<hornvale_culture::BiomeClass>,
     caps_by_era: &[Vec<hornvale_kernel::ecology::CapacityMap>],
     river_prox: &VertexMap<f64>,
+    prospectivity: &VertexMap<f64>,
     eras: &[EraClimate],
     refugia: &VertexMap<bool>,
     peoples: &[KindId],
@@ -3700,6 +3831,7 @@ pub fn bake(
         peoples,
         seating,
         river_prox,
+        prospectivity,
         refugia,
         seed,
         disposition: &cfg.disposition,
@@ -4039,6 +4171,7 @@ mod tests {
             caps_by_era: &caps,
             peoples: all_settlers(),
             river_prox: &river_prox,
+            prospectivity: barren_ground(),
             refugia: &refugia,
             seed: Seed(1),
             disposition: no_disposition(),
@@ -4180,6 +4313,7 @@ mod tests {
             caps_by_era: &caps,
             peoples: all_settlers(),
             river_prox: &river_prox,
+            prospectivity: barren_ground(),
             refugia: &refugia,
             seed: Seed(1),
             disposition: no_disposition(),
@@ -4521,6 +4655,7 @@ mod tests {
             caps_by_era: caps,
             peoples: all_settlers(),
             river_prox,
+            prospectivity: barren_ground(),
             refugia,
             seed: Seed(1),
             disposition,
@@ -4574,6 +4709,23 @@ mod tests {
         B.get_or_init(|| {
             let geo = Geosphere::new(1);
             VertexMap::from_fn(&geo, |_| hornvale_culture::BiomeClass::Grassland)
+        })
+    }
+
+    /// The prospectivity field a hand-built [`Bake`] is given: every vertex at
+    /// `0.0`, which is below [`ORE_CUT`] everywhere. No candidate ever
+    /// qualifies as a working, so the ore objective never fires and the
+    /// pre-Winze siting is exactly what these fixtures still see — including
+    /// the draw, which is taken only inside the ore filter.
+    ///
+    /// Deliberately not the real field's own floor (`0.06`): a fixture that
+    /// happened to sit at the floor would read as "ore, just not much", and
+    /// what is meant here is "this fixture is not about ore".
+    fn barren_ground() -> &'static VertexMap<f64> {
+        static P: std::sync::OnceLock<VertexMap<f64>> = std::sync::OnceLock::new();
+        P.get_or_init(|| {
+            let geo = Geosphere::new(1);
+            VertexMap::from_fn(&geo, |_| 0.0)
         })
     }
 
@@ -4666,6 +4818,7 @@ mod tests {
             caps_by_era: &capacity,
             peoples: all_settlers(),
             river_prox: &river_prox,
+            prospectivity: barren_ground(),
             refugia: &refugia,
             seed: Seed(1),
             disposition: no_disposition(),

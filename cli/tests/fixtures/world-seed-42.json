@@ -159176,7 +159176,7 @@
         "subject": 10760661430244476109,
         "predicate": "occ-site",
         "object": {
-          "Number": 32869.0
+          "Number": 8281.0
         },
         "place": 10760661430244476109,
         "day": 72136875000,
@@ -159216,7 +159216,7 @@
         "subject": 10760661430244476109,
         "predicate": "occ-function",
         "object": {
-          "Text": "agrarian"
+          "Text": "mine"
         },
         "place": 10760661430244476109,
         "day": 72136875000,
@@ -159266,7 +159266,7 @@
         "subject": 10760661430244476109,
         "predicate": "cell-id",
         "object": {
-          "Number": 32869.0
+          "Number": 8281.0
         },
         "place": 10760661430244476109,
         "day": 72136875000,
@@ -184806,7 +184806,7 @@
         "subject": 10760661430244476109,
         "predicate": "name",
         "object": {
-          "Text": "Raoro"
+          "Text": "Xora"
         },
         "place": 10760661430244476109,
         "day": 0,
@@ -184826,7 +184826,7 @@
         "subject": 10760661430244476109,
         "predicate": "biome",
         "object": {
-          "Text": "taiga"
+          "Text": "alpine"
         },
         "place": 10760661430244476109,
         "day": 0,
@@ -184836,7 +184836,7 @@
         "subject": 10760661430244476109,
         "predicate": "latitude",
         "object": {
-          "Number": 25.090594
+          "Number": 25.729937
         },
         "place": 10760661430244476109,
         "day": 0,
@@ -184846,7 +184846,7 @@
         "subject": 10760661430244476109,
         "predicate": "longitude",
         "object": {
-          "Number": -5.2209513
+          "Number": -6.2992996
         },
         "place": 10760661430244476109,
         "day": 0,
@@ -184856,7 +184856,7 @@
         "subject": 10760661430244476109,
         "predicate": "name-gloss",
         "object": {
-          "Text": "taiga"
+          "Text": "alpine"
         },
         "place": null,
         "day": 0,
@@ -189196,7 +189196,7 @@
         "subject": 10760661430244476109,
         "predicate": "founding-solstice-azimuth-degrees",
         "object": {
-          "Number": 88.94073
+          "Number": 88.935099
         },
         "place": null,
         "day": 0,

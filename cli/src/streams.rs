@@ -561,6 +561,18 @@ mod tests {
                 // settlement's mind. See
                 // `windows/worldgen/src/disposition.rs`.
                 "settlement/disposition v1",
+                // The Winze, Task 2: whether one expansion out of
+                // `Bake::grow` is a WORKING rather than a farm — the
+                // second siting objective that makes `Function::Mine`
+                // reachable at all (spec §B.3). Additive at v1: a NEW
+                // label on its own leg, so it consumes nothing from
+                // `history/bake v3` and a world moves only where a
+                // working is founded. Versioned from birth for the same
+                // reason `settlement/disposition v1` is — the rate
+                // (the site's own prospectivity) and the
+                // (vertex, band, year) key are both save-format
+                // contracts. See `windows/worldgen/src/streams.rs`.
+                "settlement/working v1",
                 // The Adit, Task 3: the cellular-automata cave content
                 // generator (Karst-biased leaves). Versioned from birth
                 // like the other entries in this golden. See

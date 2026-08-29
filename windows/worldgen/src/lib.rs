@@ -130,8 +130,9 @@ pub use graph_derive::{
 };
 pub use hazard::{HazardEvent, HazardEventKind, Recurrence, events_in, has_edifice, hazard_at};
 pub use history_bake::{
-    BakeCensus, BakeConfig, BakeId, BakeOccupation, CASCADE_DEPTH_CAP, History, TributeRelation,
-    bake, cascade_sizes, census, defensibility_for_test, weakest_point_defensibility,
+    BakeCensus, BakeConfig, BakeId, BakeOccupation, CASCADE_DEPTH_CAP, History, ORE_CUT,
+    TributeRelation, bake, cascade_sizes, census, defensibility_for_test,
+    weakest_point_defensibility,
 };
 pub use history_emit::{
     GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, bake_year_of_ledger_day,
@@ -7758,12 +7759,21 @@ fn bake_history_from(
     // key its amplitude on the biome it actually stands in at open.
     let climate_biomes = climate.biome_map();
     let biomes = hornvale_kernel::VertexMap::from_fn(geo, |c| biome_class(*climate_biomes.get(c)));
+    // THE ORE FIELD (The Winze, spec §B.3). The bake's second siting
+    // objective: a daughter is occasionally a *working*, and a working is
+    // sited on `prospectivity_at` alone. Built here, once, for the same reason
+    // `biomes` and `caps_by_era` above are — the bake has no terrain, and this
+    // is where terrain and the bake's other inputs meet. A dense read over a
+    // committed lithology buffer, so it costs one pass over the globe and no
+    // derivation.
+    let prospectivity = hornvale_kernel::VertexMap::from_fn(geo, |c| terrain.prospectivity_at(c));
     Ok(history_bake::bake(
         seed,
         geo,
         &biomes,
         &caps_by_era,
         &river_prox,
+        &prospectivity,
         &eras,
         &paleo.refugia,
         &peoples,
@@ -11077,6 +11087,21 @@ mod tests {
         // two derived counts hold while the gloss count tracks the merged
         // world's larger named population. Post-unblinding re-measure,
         // declared per decision 0016.
+        //
+        // THE WINZE (Task 2): UNMOVED at 514, and worth a line precisely
+        // because every campaign entry above it moved. `Bake::grow` gained a
+        // second siting objective (spec §B.3: an expansion onto ore-bearing
+        // ground may be a *working*), which moves seed 42's world — one
+        // settlement of 1240 is a `Function::Mine` now, and it stands on a
+        // different vertex than the farm that would have been founded there.
+        // That is a smaller perturbation than any previous entry because the
+        // working decision hangs off its OWN keyed leg
+        // (`streams::SETTLEMENT_WORKING`) rather than consuming a draw from
+        // the bake's sequential stream: a world moves where a working is
+        // founded and nowhere else. The first cut of this task did draw
+        // sequentially, and this count read 498 under it — a 16-name move on
+        // a world with one mine in it, which is the measurement that sent the
+        // draw onto its own leg.
         assert_eq!(count("name-gloss"), 514);
     }
 

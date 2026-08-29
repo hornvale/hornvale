@@ -119,6 +119,8 @@ mod junctions;
 mod keeping_probe;
 #[path = "suite/lantern_probe.rs"]
 mod lantern_probe;
+#[path = "suite/mines_exist.rs"]
+mod mines_exist;
 #[path = "suite/name_pattern.rs"]
 mod name_pattern;
 #[path = "suite/niche_breadth_probe.rs"]
@@ -131,6 +133,8 @@ mod occupancy_readout;
 mod off_lithology_decorrelation_probe;
 #[path = "suite/ore_separation_probe.rs"]
 mod ore_separation_probe;
+#[path = "suite/ore_siting_probe.rs"]
+mod ore_siting_probe;
 #[path = "suite/ore_viability_probe.rs"]
 mod ore_viability_probe;
 #[path = "suite/person_promotion.rs"]

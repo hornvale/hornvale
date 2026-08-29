@@ -28,6 +28,39 @@ hornvale_kernel::stream_labels! {
     /// [`crate::disposition`] for why that key, and not the settlement's
     /// `EntityId`, its `BakeId`, or its bare current `cell-id`.
     SETTLEMENT_DISPOSITION = "settlement/disposition/v1" => "the per-settlement disposition draw, keyed on the occupation's (site, founded-year)";
+    /// Whether one expansion out of [`crate::history_bake::Bake::grow`] is a
+    /// **working** rather than a farm (The Winze, spec §B.3). A flat path,
+    /// like [`SETTLEMENT_DISPOSITION`] beside it and for the same reason: the
+    /// draw needs `hornvale_terrain`'s prospectivity field AND the expanding
+    /// occupation's own place, and a domain crate may not depend on a sibling,
+    /// so no domain can host it.
+    ///
+    /// **Keyed on the PARENT's place and the year it throws** — vertex, band,
+    /// and the epoch year — which is a place in the fixed lattice plus a place
+    /// in time, never a generation ordinal (decision 0102, and the same shape
+    /// [`HAZARD_EVENT`] uses). The key is unique by construction: at most one
+    /// live community occupies a `(vertex, band)`, and `grow` runs at most once
+    /// per community per epoch, so a `(vertex, band, year)` names exactly one
+    /// throw. The year goes through
+    /// [`crate::disposition::occupation_draw_key`] so the two composition-root
+    /// keys that spell a year spell it the same way.
+    ///
+    /// **A SEPARATE LEG RATHER THAN A DRAW ON `history/bake/v3`, AND THAT WAS
+    /// MEASURED, NOT ASSUMED.** The first cut of this campaign took the draw
+    /// sequentially off the bake's own epoch-dynamics stream, one line below
+    /// the `DAUGHTER_PROB` draw it is nested inside. That is the neighbouring
+    /// idiom and it is wrong here, because the bake stream carries exactly one
+    /// other draw and inserting a second one conditionally re-orders every
+    /// world's whole history. Measured over four seeds (42/7/1234/0), holding
+    /// the working PLACEMENT out and consuming only the draw: occupation
+    /// counts moved 1240→1402, 860→1240, 892→915, 440→284. The mines
+    /// themselves number 0/1/2/3. So on the sequential stream ~all of the
+    /// world change was the reshuffle and ~none of it was the mechanism, which
+    /// would have left every later measurement in this campaign — the breach
+    /// rate, the survivorship comparison — sitting on a world re-rolled for
+    /// reasons unrelated to delving. Off its own leg, a world moves where a
+    /// working is founded and nowhere else.
+    SETTLEMENT_WORKING = "settlement/working/v1" => "whether one expansion is a working rather than a farm, keyed on the parent's (vertex, band, year)";
     /// The underworld chamber derivation (The Deep Realm). Spelled by
     /// `crate::chamber`'s private `chamber_key`, but **`chamber_key` is a
     /// DISPLAY FORMATTER now, not a derivation key** (The Drift, spec

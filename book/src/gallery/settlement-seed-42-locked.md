@@ -1,7 +1,7 @@
 # The Peoples of Seed 42
 
-The land holds 293 settlement(s).
-The chief bugbear settlement, Doo, holds 64 souls amid tropical-seasonal-forest.
+The land holds 279 settlement(s).
+The chief bugbear settlement, Qadadado, holds 54 souls amid tropical-seasonal-forest.
 The chief desert-dwarf settlement, Shasadpaxax, holds 62 souls amid alpine.
 The chief desert-elf settlement, Zzoaṅgeṅṅoṅšzaṅ, holds 27 souls amid savanna.
 The chief drow settlement, Poogpaogogšra, holds 12 souls amid ice.
@@ -12,9 +12,9 @@ The chief high-elf settlement, Zromgo, holds 21 souls amid tropical-seasonal-for
 The chief hill-dwarf settlement, Shababkasas, holds 35 souls amid savanna.
 The chief hobgoblin settlement, Gaebaebobeqa, holds 78 souls amid tropical-seasonal-forest.
 The chief human settlement, Vaerope, holds 34 souls amid savanna.
-The chief kobold settlement, Xao, holds 49 souls amid alpine.
+The chief kobold settlement, Raaxora, holds 64 souls amid temperate-forest.
 The chief sea-elf settlement, Šreannaensraundunžreun, holds 33 souls amid coral-reef.
-The chief snow-elf settlement, Zroṅboṅboṅṅaṅ, holds 13 souls amid taiga.
+The chief snow-elf settlement, Boṅsroṅ, holds 17 souls amid temperate-forest.
 The chief wood-elf settlement, Zduuṅduteuṅtau, holds 24 souls amid tropical-seasonal-forest.
 
 ```text
@@ -23,7 +23,7 @@ The chief wood-elf settlement, Zduuṅduteuṅtau, holds 24 souls amid tropical-
                                                                         
                                                      o                  
                                                     oo                  
-                                   o                                    
+                                   o                o                   
                                                                         
                                                         o               
                                                                         
@@ -32,13 +32,13 @@ The chief wood-elf settlement, Zduuṅduteuṅtau, holds 24 souls amid tropical-
   o                                                                     
                                                                         
                         o               o                               
-                    @o o o                 o                            
-                  o oo                                                  
+                   oo  o o                 o                            
+                  oo                                                    
                  ooo ooo                                                
-                  ooo                           ooo                     
-                                        o o oooooooo                    
-                                     ooo  ooooooooo                     
-                                               oo                       
+                  oooo                          ooo                     
+                                        @ oo oooooo                     
+                                     oo   ooooooooo                     
+                                                                        
                                                                         
                                                                         
                                                                         

@@ -816,8 +816,22 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
     // the witness alternates back to the empty state, which is the reading
     // this file has recorded most often. Post-unblinding re-measure,
     // declared per decision 0016.
+    //
+    // THE WINZE re-reading (Task 2, 2026-08-29): 0 -> 1 over 7848 compared
+    // pairs (up from 7764). `Bake::grow` gained a second siting objective
+    // (spec §B.3: an expansion onto ore-bearing ground may be a *working*,
+    // sited on prospectivity rather than river-weighted capacity), which
+    // re-places settlements a twelfth time. **It has still never held a value
+    // twice running** — twelve readings, and the sequence is
+    // 1 -> 0 -> 2 -> 0 -> 1 -> 0 -> 1 -> 2 -> 0 -> 1 -> 0 -> 1. The standing
+    // reading is unchanged and this entry restates it rather than narrating a
+    // new one: the count is a coincidence of which occupation chains a world
+    // grows, never a property of `layer_key`. At 1 tie the per-tie assertions
+    // in the loop above are load-bearing rather than vacuous — recovered by
+    // accident again, not by hunting for it. Post-unblinding re-measure,
+    // declared per decision 0016.
     assert_eq!(
-        ties, 0,
+        ties, 1,
         "measured {ties} tying pairs on the live corpus over {pairs} compared pairs; a \
          different count means the key's tie conditions changed"
     );
@@ -1105,9 +1119,20 @@ fn the_material_fourth_key_barely_moves_the_stratigraphy() {
     // THE GRANARY re-pin (2026-08-25): [0, 1, 1] -> [0, 2, 0], total 2 -> 2.
     // Same lever as every prior reading — re-placed settlements — and the
     // same verdict: three seeds cannot distinguish them (decision 0097).
+    //
+    // THE WINZE re-pin (Task 2, 2026-08-29): [0, 2, 0] -> [0, 1, 0], total
+    // 2 -> 1. `Bake::grow` gained a second siting objective (spec §B.3: an
+    // expansion onto ore-bearing ground may be a *working*), which re-places
+    // settlements a seventh time — seed 7 carries 13 of the panel's 16 mines,
+    // so it is the seed that moved, exactly as it is the seed that has carried
+    // every nonzero reading here. Recorded, not narrated: 1 is no more
+    // "better" for `barely moves` than 2 was "worse", and three seeds cannot
+    // distinguish them (decision 0097). The witness stays load-bearing rather
+    // than vacuous at this reading, which is again where it happened to land
+    // and not something this task went looking for.
     assert_eq!(
         measured,
-        vec![(42u64, 0usize), (7, 2), (1000, 0)],
+        vec![(42u64, 0usize), (7, 1), (1000, 0)],
         "the per-seed order-change counts moved"
     );
 }

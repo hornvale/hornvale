@@ -12472,7 +12472,21 @@ mod tests {
             // "valley" — the same narrowing-at-equal-size the Glasshouse-close
             // entry recorded, which is again why the SET is pinned and not its
             // cardinality.
-            vec!["river", "ford", "marsh", "spring"],
+            //
+            // THE WINZE re-pin (Task 2, the working objective): SIX — every
+            // toponymic concept but "hill", and the widest this precondition
+            // has ever read, wider even than the 2026-08-04 merge. The TENTH
+            // oscillation. `Bake::grow`'s expansion gained a second siting
+            // objective (spec §B.3: an expansion onto ore-bearing ground may
+            // be a *working*, sited on prospectivity instead of river-weighted
+            // capacity), so a handful of seed 7's foundings land on plate-
+            // boundary ground the agrarian objective would never have chosen,
+            // and their descendants reach terrain goblin had not touched.
+            // "valley" and "island" both return. Re-pin the set, do not swap
+            // the seed, per the precedent this comment has now followed
+            // through all ten. Coverage is the best it has ever been here:
+            // river, elevation and karst/wetland gate classes all exercised.
+            vec!["river", "ford", "valley", "marsh", "spring", "island"],
             "seed 7 goblins must root these toponymic concepts for this test to bite"
         );
         for concept in &rooted {
@@ -13753,17 +13767,33 @@ mod tests {
     /// identical to the one every species-, tech-, and cause-keyed metric in
     /// the roster calls.
     ///
+    /// **THE WINZE re-pin (Task 2): -> seed 15.** The seed this test actually
+    /// built was `Seed(11)` — the prose above records the `7 -> 100` swap and
+    /// a later campaign moved it again without amending the prose, which is
+    /// worth noting since the sentence "seed 100 shows it" was false when
+    /// read. `Bake::grow`'s second siting objective (spec §B.3) moves every
+    /// world with ore-bearing ground next to an expansion, and at seed 11 the
+    /// gap collapsed: `iron`-keyed occupations now begin at day `0.0`, the
+    /// same as the unfiltered minimum, because a genesis settlement that used
+    /// to be lost now survives to the iron horizon. Re-swept seeds 11-22:
+    /// 15, 18, 20 and 21 still show the gap. **Seed 15** is taken — unfiltered
+    /// min `0.0`, iron min `100_443.75` (max `383_512.5`, 15 iron-keyed
+    /// facts) — because its gap is the widest of the four and so the most
+    /// likely to survive the next world change. Swapping the seed rather than
+    /// re-pinning follows this doc's own precedent above: the seed is a
+    /// technical witness for `first_day`'s object filter, not a subject world.
+    ///
     /// Both self-defence guards from the sibling tests apply here together:
     /// `expected_min != expected_max` (catches `first_day` silently returning
     /// the maximum) and `expected_min` strictly greater than the predicate's
     /// own unfiltered minimum (catches the object filter being dropped —
     /// without this, `first_day` would fall back to `occ-tech`'s unfiltered
-    /// `0.0`, not `iron`'s `54_787.5`). If a later world change collapses
+    /// `0.0`, not `iron`'s own minimum). If a later world change collapses
     /// either gap, this test must fail loudly rather than quietly start
     /// passing for the wrong reason.
     #[test]
     fn first_day_of_a_keyed_object_with_a_higher_floor_matches_an_independently_computed_minimum() {
-        let v = FullView::build(Seed(11), &SkyPins::default()).expect("seed 11 builds");
+        let v = FullView::build(Seed(15), &SkyPins::default()).expect("seed 15 builds");
         let mut unfiltered_days: Vec<f64> = v
             .world()
             .ledger
@@ -15095,10 +15125,22 @@ mod tests {
         // longer roots barley. Re-swept seeds 0..150 against every placed
         // people by the same dynamic method; (133, hobgoblin) clears all six
         // staple bands, with (145, hobgoblin) and (145, bugbear) behind it.
-        let view = FullView::build(Seed(133), &SkyPins::default()).unwrap();
-        let lexicon = lex(&view, "hobgoblin").expect("hobgoblins hold a lexicon");
-        let steeped =
-            independently_steeped_concepts(&view, "hobgoblin").expect("hobgoblin is placed");
+        //
+        // **THE WINZE re-witness (Task 2): seed 133/hobgoblin -> seed
+        // 137/kobold.** `Bake::grow`'s second siting objective (spec §B.3)
+        // re-places every world that has ore-bearing ground beside an
+        // expansion, and (133, hobgoblin) lost a staple band with it. Re-swept
+        // `0..150` with `sweep_for_the_independent_reading_witness` above,
+        // `--ignored --release` (598.10 s), the fourth pass to use the shipped
+        // method. **TWO qualifying pairs — (137, kobold) and (142, kobold) —
+        // so the count reads 3 -> 4 -> 7 -> 11 -> 3 -> 15 -> 9 -> 5 -> 10 ->
+        // 2 -> 2 -> 2 -> 2.** A fourth consecutive reading at n = 2; the tenth
+        // pass's warning still stands unaddressed, and the witness is
+        // load-bearing alone (no same-seed second species). **THE SUBJECT
+        // MOVED AGAIN**, and the SPECIES with it: hobgoblin -> kobold.
+        let view = FullView::build(Seed(137), &SkyPins::default()).unwrap();
+        let lexicon = lex(&view, "kobold").expect("kobolds hold a lexicon");
+        let steeped = independently_steeped_concepts(&view, "kobold").expect("kobold is placed");
         for staple in STAPLE_CONCEPTS {
             // The sweep's own criterion, asserted rather than assumed: this
             // test bites only where WORLDGEN steeps the staple, and a lexicon
@@ -15108,7 +15150,12 @@ mod tests {
             // wrong one.
             assert!(
                 matches!(lexicon.entry(staple), Some(LexEntry::Root { .. })),
-                "seed 26 hobgoblins must root {staple} for this test to bite"
+                // The seed and species are named from the witness the sweep
+                // above selected, not from a literal — this message read
+                // "seed 26 hobgoblins" through two witness moves before The
+                // Winze, and a failure message that names the wrong world
+                // sends its reader to the wrong place.
+                "seed 137 kobolds must root {staple} for this test to bite"
             );
             assert!(
                 steeped.contains(staple),

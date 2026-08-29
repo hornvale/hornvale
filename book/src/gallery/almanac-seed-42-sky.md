@@ -253,7 +253,7 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Xo (26.3°N, 111.3°E)** — temperate-forest
 - **Xo (22.1°N, 2.0°W)** — temperate-forest
 - **Xaxaro (25.1°N, 2.1°E)** — taiga
-- **Xora** — alpine
+- **Xora (26.1°N, 2.1°E)** — alpine
 - **Qadodoba** — tropical-rainforest
 - **Gadoodao** — coral-reef
 - **Googšroo (10.5°N, 123.3°E)** — temperate-forest
@@ -452,7 +452,7 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Doda** — temperate-forest
 - **Do (24.8°N, 140.5°E)** — temperate-forest
 - **Xo (25.5°N, 109.4°E)** — temperate-forest
-- **Raoro (25.1°N, 5.2°W)** — taiga
+- **Xora (25.7°N, 6.3°W)** — alpine
 - **Na (22.0°N, 8.2°E)** — temperate-forest
 - **Roora (27.3°N, 109.8°E)** — temperate-forest
 - **Dajadshaxas** — temperate-forest
@@ -502,7 +502,7 @@ Notable ore: copper, gold, lead-zinc, coal, gems, bauxite.
 ## The Vestige
 
 The underworld's residue marks 4% of the land — the buried palimpsest of ages before.
-0 abandoned delvings and 1131 buried undercities lie beneath the land.
+1 abandoned delvings and 1130 buried undercities lie beneath the land.
 384 layers of that residue are still venerated against 747 forgotten — forgetting outpaces memory.
 The residue's dominant hazard is structural collapse — 1131 layers so afflicted.
 
