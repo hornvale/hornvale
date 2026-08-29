@@ -165,7 +165,7 @@ fn surrounds_seed_1_json() -> String {
     // shallow depth; this pin only needs a stable address, not a specific
     // biome or a seam. Same lat/lon -> unit-sphere conversion as the lib
     // tests' `observer` helper.
-    let observer = hornvale_kernel::RoomAddr::containing(
+    let observer = hornvale_kernel::Facet::containing(
         hornvale_kernel::math::unit_sphere_from_lat_lon(0.0, 0.0),
         6,
     );
@@ -227,7 +227,7 @@ fn surrounds_seed_42_flagship_json() -> String {
     let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
     let depth = ctx.globe_level() + 6;
     let (lat, lon) = flagship_latlon(&w);
-    let observer = hornvale_kernel::RoomAddr::containing(
+    let observer = hornvale_kernel::Facet::containing(
         hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon),
         depth,
     );
@@ -266,8 +266,8 @@ fn surrounds_v1_land_and_mark_bytes_are_pinned() {
 /// east of the settlement Mjoexaenoenoa (`connections-seed-42.md`), where
 /// the 31-cell neighbourhood genuinely splits between ocean and land (the
 /// gallery's "A coastline east of Mjoexaenoenoa").
-fn coastline_room() -> hornvale_kernel::RoomAddr {
-    hornvale_kernel::RoomId(897392747)
+fn coastline_room() -> hornvale_kernel::Facet {
+    hornvale_kernel::FacetId(897392747)
         .unpack()
         .expect("897392747 is a valid packed room id (the gallery's coastline observer)")
 }
@@ -275,8 +275,8 @@ fn coastline_room() -> hornvale_kernel::RoomAddr {
 /// The observer room for room 724698318 — face 14, depth 12, latitude -10°/
 /// longitude 0° — whose radius-4 neighbourhood reaches across a base-face
 /// edge for 12 of its 31 cells (the gallery's "A seam, disclosed").
-fn seam_room() -> hornvale_kernel::RoomAddr {
-    hornvale_kernel::RoomId(724698318)
+fn seam_room() -> hornvale_kernel::Facet {
+    hornvale_kernel::FacetId(724698318)
         .unpack()
         .expect("724698318 is a valid packed room id (the gallery's seam observer)")
 }
@@ -285,7 +285,7 @@ fn seam_room() -> hornvale_kernel::RoomAddr {
 /// ascii` path and the possession's own `map` verb both compute it: the
 /// observer room's own lateral (`ExitKind::Edge`) exits, read from
 /// `hornvale_locale`.
-fn ways_on(ctx: &hornvale_locale::LocaleContext, room: &hornvale_kernel::RoomAddr) -> Vec<String> {
+fn ways_on(ctx: &hornvale_locale::LocaleContext, room: &hornvale_kernel::Facet) -> Vec<String> {
     let locale = ctx
         .describe(room, hornvale_kernel::WorldTime::GENESIS)
         .expect("the gallery's pinned observers describe cleanly")

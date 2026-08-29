@@ -5,7 +5,7 @@
 //! §2.3) made mechanical.
 
 use crate::body_fields::seed_42;
-use hornvale_vessel::liveness::{DriveKind, Mode};
+use hornvale_vessel::liveness::{AffectLabel, DriveKind, Mode};
 use hornvale_vessel::{PossessOpts, PossessTarget, Session};
 
 /// The Bridle's Arc II acceptance test: swap controllers and both paths
@@ -108,33 +108,46 @@ fn a_driven_bodys_mode_tracks_its_own_state_as_time_passes() {
 /// time alone — the reviewer's own worked counter-example to the test above —
 /// cannot ALSO vary by WHICH WORLD it is asked about, because `self.day`
 /// carries no seed identity. Real arbitration does: seed 42's flagship
-/// arbitrates to `Pursuing(Fatigue)` after one day; seed 13's arbitrates to
-/// `Pursuing(Thermal)` (different species, different home, a genuinely
-/// different drive trajectory — empirically checked, not assumed; five
-/// seeds sampled for this fix round showed three distinct early-mode values).
-/// This compares the SAME single checkpoint across two different seeds and
-/// asserts the reported mode differs — a check no function of `self.day`
-/// alone can pass, because it never reads which world it is even in.
+/// arbitrates to `Pursuing(Fatigue)` after one day, seed 13's to
+/// `Pursuing(Thermal)`, seed 1's to `Idle` (different species, different
+/// homes, genuinely different drive trajectories — empirically checked, not
+/// assumed). This compares the SAME single checkpoint across three different
+/// seeds and asserts at least two of the reported modes differ — a check no
+/// function of `self.day` alone can pass, because it never reads which world
+/// it is even in.
 ///
-/// Verified as this round's acceptance criterion: `scripts/mutate.py`
-/// applied to the reviewer's exact substitution reddens this test (quoted
-/// verbatim in the fix-round report).
+/// **Hardened (The Confidant, Task 8) from a two-seed `assert_ne!`.** The
+/// original pinned only the (42, 13) pair, and a randomly redrawn pair of
+/// seeds coincides on `Mode` at p≈0.46 (F-H1) — so an unrelated change that
+/// merely happened to make those two specific worlds' early modes coincide
+/// would have gone spuriously red. Three seeds asserting "not all equal"
+/// keeps the same discriminating power (still fails for any function of
+/// elapsed time alone) while being robust to any single pair's coincidence.
+///
+/// Verified as this round's acceptance criterion (both the original fix
+/// round and this hardening): `scripts/mutate.py` applied to a constant-mode
+/// substitution reddens this test.
+///
+/// claim: invariant(forall-seed) — "not all equal" over a small, pinned seed
+/// set {42, 13, 1}; not a census question (0093) since the point is a
+/// specific mechanism (real per-world state reaches `driven_mode`), not a
+/// frequency.
 #[test]
 fn a_driven_bodys_early_mode_depends_on_which_seeds_population_not_merely_elapsed_time() {
-    let world_a = world_at_seed(42);
-    let (mut a, _) = Session::start(&world_a, &PossessOpts::default()).unwrap();
-    a.handle("!wait 1");
-    let mode_a = a.driven_mode().expect("a driven body has a mode");
+    let modes: Vec<Mode> = [42u64, 13, 1]
+        .into_iter()
+        .map(|seed| {
+            let world = world_at_seed(seed);
+            let (mut s, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+            s.handle("!wait 1");
+            s.driven_mode().expect("a driven body has a mode")
+        })
+        .collect();
 
-    let world_b = world_at_seed(13);
-    let (mut b, _) = Session::start(&world_b, &PossessOpts::default()).unwrap();
-    b.handle("!wait 1");
-    let mode_b = b.driven_mode().expect("a driven body has a mode");
-
-    assert_ne!(
-        mode_a, mode_b,
-        "two different seeds' driven bodies produced the SAME mode at the \
-         same checkpoint ({mode_a:?}) — a function of elapsed time alone \
+    assert!(
+        modes.iter().any(|m| *m != modes[0]),
+        "three different seeds' driven bodies all produced the SAME mode at \
+         the same checkpoint ({modes:?}) — a function of elapsed time alone \
          cannot tell worlds apart, so this can only pass by actually reading \
          each body's own real state"
     );
@@ -194,5 +207,124 @@ fn the_driven_walks_own_facts_never_reach_the_ledger_while_the_player_says_nothi
          player says nothing — Session::wait discards its facts \
          unconditionally (D2: this is a structural guard, not spec 5.2's \
          Hold-vs-Do argument)"
+    );
+}
+
+/// Co-present, for felt state as well as mode (The Confidant, Task 2):
+/// `driven_affect` is a SPECIFIC, empirically-verified value, not the
+/// exhaustive-over-all-six-variants trap `AffectLabel`'s six-variant enum
+/// invites (`matches!(a, Content | Eager | Searching | Frustrated | Lost |
+/// Helpless)` is vacuous — it can never fail). Seed 42's flagship body,
+/// waited 30 days from a fresh session, arbitrates to `AffectLabel::Eager`
+/// every time (checked directly: stable across single calls of 1, 5, 30, 100
+/// and 200 days, and down to a 0.001-day wait) — a real computation over
+/// this body's actual state, discriminating against every other
+/// `AffectLabel` value rather than vacuously accepting all of them.
+#[test]
+fn a_driven_bodys_felt_state_is_a_specific_circumplex_region() {
+    let (world, _ctx) = seed_42();
+    let (mut s, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    s.handle("!wait 30");
+    let affect = s.driven_affect().expect("a driven body has a felt state");
+    assert_eq!(
+        affect,
+        AffectLabel::Eager,
+        "the driven body's own arbitration produced: {affect:?}"
+    );
+}
+
+/// **The decisive pin, mirroring N1 above for mode.** A literal keyed on
+/// elapsed time alone cannot ALSO vary by WHICH WORLD it is asked about,
+/// because `self.day` carries no seed identity. Real arbitration does: seed
+/// 42's flagship arbitrates to `AffectLabel::Eager` after one day, seed 13's
+/// to `AffectLabel::Frustrated`, seed 1's to `AffectLabel::Content` (checked
+/// directly). This compares the SAME single checkpoint across three
+/// different seeds and asserts at least two of the reported labels differ —
+/// a check no function of elapsed time alone can pass, because it never
+/// reads which world it is even in.
+///
+/// This is the trap-avoiding assertion the task brief names by name: a
+/// same-seed "as time passes" test (mirroring
+/// [`a_driven_bodys_mode_tracks_its_own_state_as_time_passes`] above) was
+/// tried first and does NOT discriminate here — seed 42's felt state stays
+/// `Eager` from day 0.001 through day 200 even while its `Mode` cycles
+/// through `Pursuing(Fatigue)`/`Pursuing(Thirst)`/others, so asserting
+/// `early != later` within one seed would be checking a fact that happens to
+/// be false, not a vacuous tautology, but still the wrong axis to vary.
+/// Varying the SEED is what actually discriminates.
+///
+/// **Hardened (The Confidant, Task 8) from a two-seed `assert_ne!`.** The
+/// original pinned only the (42, 13) pair. Measured across 20 seeds:
+/// `Eager` 12/20, `Content` 7/20, `Frustrated` 1/20 — only 3 of
+/// `AffectLabel`'s 6 variants reachable at all, concentration 0.485, so a
+/// randomly redrawn pair collides ~49% of the time and the hardcoded seed 13
+/// draws from the rare (1/20) `Frustrated` tail: robust today only because
+/// it happens to land outside the dominant mass, not because the pair is
+/// hard to collide. The larger enum bought no robustness — the reachable
+/// distribution sets the odds, not the variant count. Three seeds asserting
+/// "not all equal" keeps the same discriminating power while being robust to
+/// any single pair's coincidence.
+///
+/// Verified as this round's acceptance criterion: `scripts/mutate.py`
+/// applied to a constant-affect substitution reddens this test.
+///
+/// claim: invariant(forall-seed) — "not all equal" over a small, pinned seed
+/// set {42, 13, 1}; not a census question (0093) since the point is a
+/// specific mechanism (real per-world state reaches `driven_affect`), not a
+/// frequency.
+#[test]
+fn a_driven_bodys_early_affect_depends_on_which_seeds_population_not_merely_elapsed_time() {
+    let affects: Vec<AffectLabel> = [42u64, 13, 1]
+        .into_iter()
+        .map(|seed| {
+            let world = world_at_seed(seed);
+            let (mut s, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+            s.handle("!wait 1");
+            s.driven_affect().expect("a driven body has a felt state")
+        })
+        .collect();
+
+    assert!(
+        affects.iter().any(|a| *a != affects[0]),
+        "three different seeds' driven bodies all produced the SAME felt \
+         state at the same checkpoint ({affects:?}) — a function of elapsed \
+         time alone cannot tell worlds apart, so this can only pass by \
+         actually reading each body's own real state"
+    );
+}
+
+/// **The cognitive gap, at the Session boundary this time** (The Confidant,
+/// Task 5). Seed 7's flagship body, waited 30 days from a fresh session,
+/// arbitrates to `AffectLabel::Eager` while its own Fatigue drive stays
+/// genuinely ACTIVE and unpursued — checked directly (stable across single
+/// calls of 5, 10, 30, 100 and 200 days). This is a real two-drive conflict
+/// the world actually produces, not a constructed one:
+/// `driven_affect` reports the winner alone (a SPECIFIC value, not the
+/// exhaustive-over-all-six-variants trap `AffectLabel`'s enum invites); the
+/// loser is retrievable only through `suppressed_drives`, which nothing
+/// routes into what the host says.
+#[test]
+fn the_driven_bodys_suppressed_drive_is_retrievable_but_absent_from_what_it_says() {
+    let world = world_at_seed(7);
+    let (mut s, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    assert_eq!(
+        s.suppressed_drives(),
+        &[] as &[DriveKind],
+        "before the first !wait there has been no arbitration to discard \
+         anything from"
+    );
+    s.handle("!wait 30");
+    let affect = s.driven_affect().expect("a driven body has a felt state");
+    assert_eq!(
+        affect,
+        AffectLabel::Eager,
+        "the driven body's own arbitration produced: {affect:?}"
+    );
+    assert_eq!(
+        s.suppressed_drives(),
+        &[DriveKind::Fatigue],
+        "fatigue is genuinely active alongside the pursued drive this tick \
+         and must stay retrievable through suppressed_drives, absent from \
+         driven_affect's single label"
     );
 }

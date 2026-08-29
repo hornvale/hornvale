@@ -93,8 +93,8 @@
 //! An earlier version built its terrain with `LocaleTerrain::new(ctx)`, which
 //! hard-codes `cache: None`. `Session` passes `Some(&self.mesh_memo)` at every
 //! construction site, so the bench was measuring a configuration the game
-//! never runs: every drive's terrain read re-resolved room->cell through a
-//! full `NearestCellIndex` scan. A profile blamed 14.9% of the whole run on
+//! never runs: every drive's terrain read re-resolved room->vertex through a
+//! full `NearestVertexIndex` scan. A profile blamed 14.9% of the whole run on
 //! `scan_at`, and the obvious conclusion -- that the number was a harness
 //! artifact -- was WRONG. Wiring the cache in moved it only 14.9% -> 13.4%.
 //! The cost is real; the missing cache was about a tenth of it.
@@ -329,7 +329,7 @@ fn run_rung(
     world: &World,
     ctx: &LocaleContext,
     home_settlement: EntityId,
-    day_length_std: Option<f64>,
+    day_ticks: Option<hornvale_kernel::units::TickSpan>,
     agents: usize,
 ) -> Row {
     let mut ledger = world.ledger.clone();
@@ -373,7 +373,7 @@ fn run_rung(
 
     let mut mesh_memo = RoomMeshMemo::new();
     let mut home_nav_cache = HomeNavCache::new();
-    let mut day = WorldTime::new(0.5).expect("0.5 is finite");
+    let mut day = WorldTime::from_std_days(0.5).expect("0.5 is finite");
 
     let facts_before = ledger.len();
     let searches_before = home_nav_cache.searches();
@@ -381,10 +381,10 @@ fn run_rung(
     let t0 = Instant::now();
     for _ in 0..TICKS {
         let from = day;
-        day = WorldTime::new(day.day() + 1.0).expect("day advance stays finite");
+        day = WorldTime::from_std_days(day.as_std_days() + 1.0).expect("day advance stays finite");
         // THE CACHE PRODUCTION ALWAYS PASSES. `LocaleTerrain::new` hard-codes
-        // `cache: None`, so every drive's terrain read re-resolves room->cell
-        // through a full `NearestCellIndex` scan — which a profile of the
+        // `cache: None`, so every drive's terrain read re-resolves room->vertex
+        // through a full `NearestVertexIndex` scan — which a profile of the
         // previous version attributed 15% of the whole run to, an artifact of
         // this harness rather than a property of the sim. `Session` passes
         // `Some(&self.mesh_memo)` at every construction site; so does this now.
@@ -403,7 +403,7 @@ fn run_rung(
             from,
             to: day,
             params: SUSTENANCE,
-            day_length_std,
+            day_ticks,
             terrain: &terrain,
         };
         let (facts, _occupancy) =
@@ -457,13 +457,12 @@ fn main() {
         .id;
 
     // The planet's rotation period, exactly the read `Session::start` makes
-    // (`self.calendar.as_ref().and_then(|c| c.day_length()).map(|d|
-    // d.get())`) — `None` on a tidally-locked world.
-    let day_length_std = hornvale_worldgen::sky_of(&world)
+    // (`self.calendar.as_ref().and_then(|c| c.day_ticks())`) — `None` on a
+    // tidally-locked world. Reads the exact tick count (The Foliot).
+    let day_ticks = hornvale_worldgen::sky_of(&world)
         .ok()
         .and_then(|sky| sky.calendar().cloned())
-        .and_then(|c| c.day_length())
-        .map(|d| d.get());
+        .and_then(|c| c.day_ticks());
 
     let mut rows: Vec<Row> = Vec::new();
     println!(
@@ -484,7 +483,7 @@ fn main() {
             );
             continue;
         }
-        let row = run_rung(&world, &ctx, home_settlement, day_length_std, k);
+        let row = run_rung(&world, &ctx, home_settlement, day_ticks, k);
         println!(
             "{:>8} {:>10.3} {:>14.4} {:>14.4} {:>16.1} {:>14} {:>10} {:>10}",
             row.agents,

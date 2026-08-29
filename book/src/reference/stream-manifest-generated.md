@@ -47,7 +47,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | Label | Meaning |
 |---|---|
 | `climate/weather/phase/v1` | drifting weather-phase noise seed (The Firmament) |
-| `climate/variant/cell/v1` | the characteristic variant of a cell (The Toponym) |
+| `climate/variant/cell/v1` | the characteristic variant of a vertex (The Toponym) |
 
 ### hornvale-culture
 
@@ -60,7 +60,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `history` | root stream for history: reserved for the deep-history bake (run at the composition root); no draw is made against it directly |
 | `history/residue` | flesh::residue_of's deterministic flavor draws |
 | `history/structures` | flesh::structures_of's dwelling-count variance draws |
-| `history/bake/v2` | the deep-history bake's epoch dynamics: grow/found/migrate/raid/collapse draws, taken sequentially from one stream in commit order at the composition root; bumped from history/bake by The Contour's position-aware conflict, which changes committed history without moving stream consumption order (decision 0006: an epoch suffix, never a rename) |
+| `history/bake/v3` | the deep-history bake's epoch dynamics: grow/found/migrate/raid/collapse draws, taken sequentially from one stream in commit order at the composition root; bumped from history/bake/v2 by The Granary's sub-year phase placement, which changes committed history — raid outcomes move when raids fire at store-trough phases — without moving stream consumption order (decision 0006: an epoch suffix, never a rename) |
 | `history/genesis` | the deep-history bake's genesis draws: proto-community count, site picks, and tech-advance offset; further derives a per-people sub-stream history/genesis/<people-kind> via StreamLabel::dynamic |
 | `history/flesh/v2` | the per-occupation flesh seed the legibility surface derives before expanding residue/structures on demand (never committed); keyed on the occupation's material core, bumped from history/flesh by The Salt |
 
@@ -79,11 +79,11 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `language/<species>/phonology/inventory` | per-species phoneme inventory draw under the articulation envelope; for a family's shared proto-language (e.g. goblinoid) a family name occupies the <species> slot — a language with no speakers |
 | `language/<species>/phonology/phonotactics` | per-species syllable phonotactic templates (onsets, nuclei, codas) |
 | `language/<species>/phonology/tones` | the phonology epoch's tone-inventory draw: which contrastive level tone (High/Low) joins Neutral for a partly-tonal species (tonality → 2 tones); atonal (1) and fully tonal (3) draw nothing here |
-| `language/<species>/name/settlement` | (retired at The Words, superseded by name/settlement/v2) per-settlement name (salted by cell id): a bare stem |
+| `language/<species>/name/settlement` | (retired at The Words, superseded by name/settlement/v2) per-settlement name (salted by vertex id): a bare stem |
 | `language/<species>/name/deity` | (retired at The Words, superseded by name/deity/v2) per-deity name (salted by belief id): a bare stem biased toward closed syllables |
 | `language/<species>/name/epithet` | (retired at The Words, superseded by name/epithet/v2) per-deity epithet (salted by belief id): a descriptive root, optionally reduplicated and honorific-prefixed |
 | `language/<species>/name/person` | (The Particular, Task 2) per-founder name: a bare stem, like the settlement v1 draw above. Not an epoch of `name/settlement` — a fourth, disjoint `NameKind`, so it consumes nothing from any existing stream |
-| `language/<species>/name/landform` | (The Repose, Task 3) per-landform name, keyed at the composition root by (seed, cell, species) rather than by the landform's own identity — one landform has many names, one per people with a word for it: a bare 2-3 syllable stem, like the settlement/person v1 draw above. A fifth, disjoint `NameKind` — no epoch suffix, since this label is new rather than a regeneration (decision 0084) |
+| `language/<species>/name/landform` | (The Repose, Task 3) per-landform name, keyed at the composition root by (seed, vertex, species) rather than by the landform's own identity — one landform has many names, one per people with a word for it: a bare 2-3 syllable stem, like the settlement/person v1 draw above. A fifth, disjoint `NameKind` — no epoch suffix, since this label is new rather than a regeneration (decision 0084) |
 | `language/<species>/name/settlement/v2` | (retired at The Wearing, superseded by name/settlement/v3) the glossed settlement name (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the bare-stem v1 draw above, PLUS a per-salt 2-3 syllable drawn stem that v3 retires |
 | `language/<species>/name/deity/v2` | (retired at The Wearing, superseded by name/deity/v3) the glossed deity name (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the bare-stem v1 draw above |
 | `language/<species>/name/epithet/v2` | (retired at The Wearing, superseded by name/epithet/v3) the glossed epithet (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the v1 draw above |
@@ -101,6 +101,9 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `language/<species>/grammar/constituent-order` | the tongue's drawn constituent order for predication (SOV/SVO dominant, per authored typological weights) |
 | `language/<species>/grammar/copula` | whether nominal predication carries an overt copula, and (when it does) the copula's one-syllable drawn form from the tongue's own phonology |
 | `language/<species>/grammar/articles` | whether the tongue has articles (floor: drawn but surfaces no article lexeme until the morphology campaign) |
+| `language/<species>/grammar/subordinator` | whether an embedded clause is marked with an overt complementizer, and (when it is) the complementizer's one-syllable drawn form from the tongue's own phonology — a tongue that draws none subordinates by bare parataxis, a legitimate grammar and not a gap (The Mortise, Task 5, spec §4.6) |
+| `language/<species>/grammar/conjunction` | whether coordinated clauses are joined with an overt coordinating conjunction, and (when they are) the conjunction's one-syllable drawn form from the tongue's own phonology — a tongue that draws none coordinates by bare juxtaposition, a legitimate grammar and not a gap (The Mortise, Task 6, spec §4.10). A function word earns this label because its PRESENCE is typological, not lexical; a vocabulary word costs zero labels, drawn instead as a `dynamic(concept)` value on the existing `lexicon/root` axis |
+| `language/<species>/grammar/interrogative` | whether a polar question is marked with an overt free particle, and (when it is) the particle's one-syllable drawn form from the tongue's own phonology, skewed toward absent — a tongue that draws none questions by INTONATION, the cross-linguistic majority strategy (Ultan 1978; Dryer, WALS 116), which a text renderer cannot show, so it questions by a transcription convention instead: its declarative surface plus `?` (The Rail, Task 9, spec §4) |
 | `language/<species>/grammar/depth/evidential` | C7's depth vector: how deeply evidentiality grammaticalizes (None/Particle/Affix, weighted [60,25,15]) |
 | `language/<species>/grammar/depth/noun-class` | C7's depth vector: how deeply noun class grammaticalizes (None/Particle/Affix, weighted [55,15,30]) |
 | `language/<species>/grammar/class-position` | C7: which side of the noun the class marker binds when noun-class depth is Particle/Affix (prefix 40 / suffix 60) |
@@ -108,10 +111,16 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `language/<species>/grammar/depth/tense` | The Residue: the species' drawn Tense grammaticalization depth (None/Particle/Affix) |
 | `language/<species>/grammar/number-position` | The Residue: which side of the marked word the Number affix binds |
 | `language/<species>/grammar/tense-position` | The Residue: which side of the marked word the Tense affix binds |
+| `language/<species>/grammar/depth/polarity` | The Inquest: the species' drawn Polarity grammaticalization depth (None/Particle/Affix) — how a tongue marks a negated clause; an independent stream, added additively (spec §3.4) |
+| `language/<species>/grammar/polarity-position` | The Inquest: which side of the marked word the Polarity affix binds |
+| `language/<species>/grammar/depth/person` | The Rail (Task 7): the species' drawn Person (subject-agreement) grammaticalization depth (None/Particle/Affix), independent of number/tense/polarity — a tongue's own take on how deeply it grammaticalizes person, distinct from Common's fixed rules |
+| `language/<species>/grammar/person-position` | The Rail (Task 7): which side of the marked word the Person affix binds |
 | `language/family/<family>/morph/evidential/<value>` | C7: the family's one-syllable evidential-marker proto-form for <value> (witnessed/taught/inferred), drawn once per family and evolved per daughter via its own cascade — the cognate law |
 | `language/family/<family>/morph/class/<value>` | C7: the family's one-syllable noun-class-marker proto-form for <value> (animate/inanimate), drawn once per family and evolved per daughter via its own cascade — the cognate law |
 | `language/family/<family>/morph/number/plural` | The Residue: the family's Plural affix proto-form, shared by every daughter (family-cognate law) |
 | `language/family/<family>/morph/tense/past` | The Residue: the family's Past-tense affix proto-form, shared by every daughter |
+| `language/family/<family>/morph/polarity/negative` | The Inquest: the family's Negative affix proto-form, shared by every daughter — negative is the marked member and positive is zero, so no positive form is ever drawn |
+| `language/family/<family>/morph/pronoun/<person-number>` | The Inquest: the family's personal-pronoun proto-form for one person-number slot, drawn once per family and evolved per daughter via its own cascade — the cognate law. Six slots, `<person-number>` ranging over 1sg/2sg/3sg/1pl/2pl/3pl: person and number ONLY, no gender, because nothing in the ledger assigns grammatical gender. Written with a placeholder leg rather than six rows on the same precedent the multi-valued morph/evidential/<value> and morph/class/<value> rows above set; the singular number/tense/polarity rows are spelled out because each of those axes draws exactly ONE marked member |
 | `language/<species>/grammar/numeracy-rung` | The species' drawn numeral-system rung (Subitizing/FullCounting/Decimals) — how far counting words go past the universal subitizing floor |
 | `language/<species>/schema/<domain>/<fact-shape>` | C5's causal-schema draw (render-time, `schemas::select_schema`): the β-sharpened pick among the fact-shape's admitted schemas for one culture's account of one (source-domain, fact-shape) pair — `<domain>` and `<fact-shape>` are the salt legs (e.g. `sky`/`cyclic-event` for the day) |
 | `language/<species>/lexeme/<fact-key>` | C5's lexeme draw (render-time, `schemas::select_lexeme`): the uniform pick among a fired schema's gate-surviving verb candidates for one explained fact — `<fact-key>` salts by the ground fact's predicate (e.g. `day-length-std`) |
@@ -123,7 +132,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 
 | Label | Meaning |
 |---|---|
-| `locale/regime/micro` | room sub-cell micro-field |
+| `locale/regime/micro` | room sub-vertex micro-field |
 | `locale/regime/variety` | room descriptor variety draw |
 | `locale/regime/substrate` | room substrate-detail draw |
 | `locale/strangeness/place` | world rarity-budget placement pass |
@@ -169,7 +178,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `terrain/cratons` | margin draw (scales the ocean-fraction-derived budget, Task 9 iteration 3'), craton count, then per-craton center/radius/age |
 | `terrain/plate-weights` | per-plate heavy-tailed Voronoi weight draws |
 | `terrain/plate-edge` | plate-edge noise (hash-noise only; no stream draws) |
-| `terrain/lithology` | lithology sub-cell hash-noise (hash-noise only; no stream draws) |
+| `terrain/lithology` | lithology sub-vertex hash-noise (hash-noise only; no stream draws) |
 | `terrain/features` | subsurface features point-process hash-noise (hash-noise only; no stream draws) |
 | `terrain/terranes` | terrane count, then per terrane host-craton index/bearing/size/age |
 | `terrain/microcontinents` | fixed candidate count, then per candidate position/radius/age |
@@ -182,7 +191,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `terrain/slice-2` | third of three orthogonal crust noise slices (hash-noise only; no stream draws) |
 | `terrain/crenulation` | rift crenulation-noise sub-leg (hash-noise only; no stream draws) |
 | `terrain/channel-meander` | channel meander displacement field (hash-noise only; no stream draws) |
-| `terrain/rill-partition` | where a sub-cell catchment divides between its two branches (hash-noise only; no stream draws) |
+| `terrain/rill-partition` | where a sub-vertex catchment divides between its two branches (hash-noise only; no stream draws) |
 
 ### hornvale-vessel
 
@@ -213,15 +222,15 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `religion/deity/v2` | the deity-naming stream, epoch v2 |
 | `settlement/disposition/v1` | the per-settlement disposition draw, keyed on the occupation's (site, founded-year) |
 | `chamber/v3` | a display-only address formatter; the underworld's real derivation key is RUN_FLOORS and the per-branch legs |
-| `chamber/run-floors/v2` | how many levels one run realizes, keyed on (cell, branch, band) |
-| `chamber/branch-character/v2` | which character one branch carries, keyed on (cell, branch, band) |
-| `chamber/branch-barrier/v2` | the barrier thinness of one branch, keyed on (cell, branch, band) |
-| `chamber/branch-count/v2` | how many branches one cave system realizes, keyed on (cell, band) |
-| `chamber/entrance-count/v2` | how large one cave system's FREE aperture set is, keyed on cell (the shipped count is this raised to the top band's branch width) |
-| `chamber/entrance-mouth/v2` | which top-band branch one aperture opens on, keyed on (cell, aperture, role) |
-| `chamber/band-descent/v1` | which branches of an adjacent band one branch connects to, keyed on (cell, branch, band, role) |
-| `volcano/v1` | the volcano-identity derivation, keyed on the edifice's source contact cell |
-| `hazard/event/v1` | the per-cell hazard-event draw, keyed on (cell, process, world-time block) |
+| `chamber/run-floors/v2` | how many levels one run realizes, keyed on (vertex, branch, band) |
+| `chamber/branch-character/v2` | which character one branch carries, keyed on (vertex, branch, band) |
+| `chamber/branch-barrier/v2` | the barrier thinness of one branch, keyed on (vertex, branch, band) |
+| `chamber/branch-count/v2` | how many branches one cave system realizes, keyed on (vertex, band) |
+| `chamber/entrance-count/v2` | how large one cave system's FREE aperture set is, keyed on vertex (the shipped count is this raised to the top band's branch width) |
+| `chamber/entrance-mouth/v2` | which top-band branch one aperture opens on, keyed on (vertex, aperture, role) |
+| `chamber/band-descent/v1` | which branches of an adjacent band one branch connects to, keyed on (vertex, branch, band, role) |
+| `volcano/v1` | the volcano-identity derivation, keyed on the edifice's source contact vertex |
+| `hazard/event/v1` | the per-vertex hazard-event draw, keyed on (vertex, process, world-time block) |
 
 ### hornvale-kernel (internal)
 

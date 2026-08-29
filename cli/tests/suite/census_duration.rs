@@ -44,7 +44,13 @@ use std::path::{Path, PathBuf};
 
 /// Seconds a census may take before this test fails.
 ///
-/// **The policy target is 900 — Nathan's ~15 minutes — and this is 900 again.**
+/// **The policy target was 900 — Nathan's ~15 minutes — and the constant is now
+/// 1000; see the `900 -> 950` and `950 -> 1000` sections below for why, and note
+/// the policy target itself is unchanged. Neither raise is a looser budget: the
+/// first accounted for the noise floor, the second for a world that grew. If the
+/// ~15 minutes is to be held as a real budget rather than a remembered one, that
+/// is a decision about scope — fewer seeds, fewer metrics — not about this
+/// constant.**
 /// The temporary 1050 was RATCHETED BACK on 2026-08-16, on the census row its
 /// own expiry named. Raised deliberately and lowered deliberately, both
 /// recorded here rather than quietly, which is the discipline
@@ -72,7 +78,7 @@ use std::path::{Path, PathBuf};
 /// `descendants_of` in `lineage.rs` filters every node through
 /// `ancestry(*k).contains(&of)`, allocating per node, and `median_hops` calls it
 /// twice per node — O(nodes² × depth). A 17% larger lineage tree bought a 44%
-/// larger bill. `defensibility` grew 24.8% on 30.1% more habitable cells:
+/// larger bill. `defensibility` grew 24.8% on 30.1% more habitable vertices:
 /// sub-linear, nothing to fix.
 ///
 /// **So ~51% of the regression is optimisable** and the fix is contained to two
@@ -111,12 +117,21 @@ use std::path::{Path, PathBuf};
 /// that regeneration, so the metric-level win cost no census value — the
 /// byte-identity claim's strongest confirmation, a full 1000-seed canonical
 /// run rather than a probe. The condition written here was met, so the
-/// constant below is 900 again.
+/// constant below was 900 again, then 950, and is now 1000.
 ///
-/// **What the ratchet did NOT fix, and it is the live question now.** 900
-/// leaves 44.5 s of headroom over the 855.5 s reading — 5.2% — while the
-/// observed run-to-run spread with *no code change at all* was 882.5–949.6 s,
-/// or 7.6%. The ceiling is therefore still inside the instrument's noise,
+/// **What the ratchet did NOT fix — ANSWERED 2026-08-26, and this paragraph
+/// predicted it.** 900 left 44.5 s of headroom over the 855.5 s reading — 5.2%
+/// — while the observed run-to-run spread with *no code change at all* was
+/// 882.5–949.6 s, or 7.6%. A ceiling inside the instrument's own noise fires on
+/// noise, and it did: 7 of the last 12 runs. The `900 -> 950` section below is
+/// that finding acted on rather than restated. What it does NOT do is fix the
+/// instrument — 1000 is still a wall-clock number on a shared box, and the
+/// durable repair named below (denominate against `cpu_ratio`, so contention
+/// and regression separate) is still unbuilt. This raise buys signal-to-noise,
+/// not measurement.
+///
+/// The original wording follows, because it is the reasoning the raise rests
+/// on: the ceiling was still inside the instrument's noise,
 /// which is exactly the condition The Sluice's retrospective named and Nathan
 /// deferred. The fix moved the number without fixing the instrument, so this
 /// may flap. The durable repair is to denominate against `cpu_ratio` so
@@ -130,7 +145,94 @@ use std::path::{Path, PathBuf};
 /// increase was real and attributed. The rule that replaces it: a raise must
 /// carry the attribution, the optimisable share, and the condition for ratcheting
 /// back down. This one does.
-const CENSUS_ALARM_SECS: f64 = 900.0;
+///
+/// # 900 -> 950 (2026-08-26)
+///
+/// **Attribution: the census did not get slower. The threshold was set AT the
+/// median instead of above it.** 900 was chosen when the post-Millrace census
+/// ran ~900 s, which makes a ~50% fire rate arithmetic rather than evidential —
+/// a threshold at the median alarms on half of a healthy distribution by
+/// construction. Measured over the last twelve runs (2026-08-13 .. 2026-08-25):
+///
+/// ```text
+///   min 855.5   median 902.8   p90 920.2   max 979.5   (excl. the 19,207 s Rill run)
+///   fire rate at 900: 7/12 (58%)     at 925: 2/12     at 950: 2/12
+/// ```
+///
+/// 925 and 950 are behaviourally IDENTICAL on the observed data — both catch
+/// exactly the 979.5 s run and The Rill's catastrophe. The choice between them
+/// is headroom against variance, not sensitivity: the observed healthy maximum
+/// is 920.2 s, so 925 leaves 4.8 s and 950 leaves 29.8 s. A yellow now costs a
+/// human a flamegraph and a written finding in the yellow log, so a false
+/// alarm is not free noise — it is wasted investigation. 950 it is.
+///
+/// **Optimisable share: unknown, and deliberately not guessed.** What is known
+/// is that the yellow mechanism has already paid for itself — see
+/// `168a2a9de` ("two optimizations the yellow-run profile found") and
+/// `3f50a5fc8`. The current ~903 s median is the steady state AFTER those
+/// landed, so it is not obviously carrying slack; establishing whether it does
+/// needs a profile, which is exactly what a yellow is for. Raising the
+/// threshold does not retire that question, it stops asking it eight times out
+/// of twelve.
+///
+/// **Ratchet back down when: the median over ten consecutive runs falls below
+/// 870 s.** At that point 925 restores the same ~2-in-12 fire rate this raise
+/// is buying, and the number should follow the distribution down. Read the
+/// median from `docs/timings.md`, never from this comment — a figure written
+/// here is a claim with a date, and this whole raise exists because the last
+/// one outlived its data.
+/// # 950 -> 1000 (2026-08-28)
+///
+/// **Attribution: the world got bigger, and this is the first raise where that
+/// is the whole reason.** The Sources landed an energy field over the rock —
+/// `windows/worldgen/src/energy.rs` (+791), a tenth `ResourceAxis`
+/// (`CHEMOSYNTHATE`), 1,684 insertions of new generation work — and the census
+/// generates ~2,000 worlds through exactly that path. Two censuses of main
+/// after it landed:
+///
+/// ```text
+///   969.204 s  (2f8faf243, operator baseline)
+///   942.658 s  (27a2da724, campaign/the-precedence)
+///   pre-Sources main, same instrument: 897.790 s and 918.590 s
+/// ```
+///
+/// The step is real and attributed to a feature, not to drift.
+///
+/// **The distribution, and why 1000 rather than 970.** n=2 is thin — the fire
+/// rate methodology the `900 -> 950` section used wants ~12 runs and I have two.
+/// What the two do establish is that the run-to-run spread on an UNCHANGED tree
+/// is at least 26.5 s wide (942.7–969.2). A bound at 970 would sit 0.8 s above
+/// the observed max, which is inside that spread by a factor of thirty: it would
+/// fire intermittently on a healthy census, which is the failure mode the last
+/// raise existed to remove. 1000 leaves 30.8 s over the observed maximum,
+/// deliberately matching the 29.8 s of headroom the 950 choice bought over its
+/// own 920.2 s healthy max. The precedent is followed, not re-derived.
+///
+/// **Optimisable share: partly known, and the obvious win is already taken.**
+/// The Sources profiled their own addition (`perf record -F 99 -g --call-graph
+/// dwarf,16384`, 60-seed subset, lefford), found it pushing census CPU +16.6%
+/// over its band maximum, and fixed three pure-optimisation defects in
+/// `d0d0a4e02` — `subterranean_substrate_at_rung` was calling `terrain.cave_at`
+/// BEFORE checking `Band::Surface`, deriving a cave only to discard it. Measured
+/// recovery: the two underworld field functions 12.43% -> 4.15% of census cycles,
+/// `SphereFbm::new` project-wide 4.48% -> 2.17%. So ~10.6 points were already
+/// paid down before this raise; 969 s is the post-optimisation cost, not a number
+/// waiting for work nobody has done. Pre-optimisation main would have been ~1084 s.
+///
+/// **Ratchet back down when: the median over ten consecutive runs falls below
+/// 920 s.** At that point 970 restores the headroom-to-spread ratio this raise
+/// is buying, and the number should follow the distribution down. Read the median
+/// from `docs/timings.md`, never from this comment — and note that since the
+/// census joined the merge queue a run's timing row lands on its `census/*`
+/// DELIVERY BRANCH first, so the ledger on main lags until that branch merges.
+/// `scripts/census-duration-alarm.sh` reports on the box at the moment of
+/// measurement precisely because this test cannot see a run it never receives.
+///
+/// **Still unfixed, and named again rather than quietly dropped:** the durable
+/// repair is to denominate against `cpu_ratio` so contention and regression
+/// separate. Every raise so far has bought signal-to-noise instead. This one
+/// does too.
+const CENSUS_ALARM_SECS: f64 = 1000.0;
 
 /// **The refusal ceiling, and why there are now two numbers instead of one.**
 ///

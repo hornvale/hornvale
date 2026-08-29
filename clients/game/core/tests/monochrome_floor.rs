@@ -78,6 +78,7 @@ fn render(json: &str) -> Grid {
         None,
         None,
         0,
+        None,
     )
     .unwrap()
     .0

@@ -32,7 +32,7 @@ use hornvale_worldgen::{
 
 const SETTLERS: [&str; 6] = ["kobold", "goblin", "hobgoblin", "bugbear", "gnoll", "human"];
 
-/// `bake_eras`'s snowline, mirrored: the era mask admits a cell iff its
+/// `bake_eras`'s snowline, mirrored: the era mask admits a vertex iff its
 /// era-adjusted mean temperature is at or above this.
 const FREEZE_C: f64 = -10.0;
 
@@ -80,7 +80,9 @@ fn temperature_gate_versus_era_mask() {
         let obliquity_deg = system.anchor.obliquity.get();
         let regime = match system.anchor.rotation {
             hornvale_astronomy::Rotation::Spinning { day, .. } => {
-                hornvale_climate::RotationRegime::Spinning { day_std: day.get() }
+                hornvale_climate::RotationRegime::Spinning {
+                    day_std: day.as_std_days(),
+                }
             }
             hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
         };
@@ -129,13 +131,13 @@ fn temperature_gate_versus_era_mask() {
 
             // Land at this era. Ocean is excluded by capacity already (proven in
             // `era_substrate.rs`), so counting it here would drown the signal.
-            let land: Vec<hornvale_kernel::CellId> = geo
-                .cells()
+            let land: Vec<hornvale_kernel::Vertex> = geo
+                .vertices()
                 .filter(|&c| terrain.elevation_at(c) >= adjust.sea_level)
                 .collect();
 
-            // MASK: the incumbent. Excludes a cell for everyone, on temperature.
-            // GATE: the successor. A cell is "excluded" when NO settling species
+            // MASK: the incumbent. Excludes a vertex for everyone, on temperature.
+            // GATE: the successor. A vertex is "excluded" when NO settling species
             // can seat a founding on it -- the same question the mask answers,
             // asked of capacity instead.
             let (mut mask_only, mut gate_only, mut both, mut mask_n, mut gate_n) =
@@ -208,7 +210,9 @@ fn would_moisture_as_a_gate_add_exclusion() {
     let obliquity_deg = system.anchor.obliquity.get();
     let regime = match system.anchor.rotation {
         hornvale_astronomy::Rotation::Spinning { day, .. } => {
-            hornvale_climate::RotationRegime::Spinning { day_std: day.get() }
+            hornvale_climate::RotationRegime::Spinning {
+                day_std: day.as_std_days(),
+            }
         }
         hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
     };
@@ -225,8 +229,8 @@ fn would_moisture_as_a_gate_add_exclusion() {
         sea_level: terrain.sea_level(),
     };
     let substrate = substrate_field_at(geo, &terrain, &climate, &hoisted.insolation, &adjust);
-    let land: Vec<hornvale_kernel::CellId> =
-        geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+    let land: Vec<hornvale_kernel::Vertex> =
+        geo.vertices().filter(|&c| !terrain.is_ocean(c)).collect();
 
     println!(
         "{:<10} {:>14} {:>16} {:>14}",
@@ -239,7 +243,7 @@ fn would_moisture_as_a_gate_add_exclusion() {
             .expect("settler has biosphere traits");
         let floor = sovereignty_floor(bio.mass, bio.potency);
         let cn = &bio.condition_niche;
-        // Tolerance below this leaves no cell able to seat a founding even at
+        // Tolerance below this leaves no vertex able to seat a founding even at
         // the best supply on the map, so it is a fair proxy for "gated out".
         let bar = 0.05;
         let (mut t_only, mut t_moist) = (0usize, 0usize);

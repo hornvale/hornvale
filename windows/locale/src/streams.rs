@@ -2,8 +2,8 @@
 //! Changing a label silently moves every room's regime.
 
 hornvale_kernel::stream_labels! {
-    /// Stream label for a room's sub-cell micro-field.
-    LOCALE_MICRO = "locale/regime/micro" => "room sub-cell micro-field";
+    /// Stream label for a room's sub-vertex micro-field.
+    LOCALE_MICRO = "locale/regime/micro" => "room sub-vertex micro-field";
     /// Stream label for a room's descriptor variety draw.
     LOCALE_VARIETY = "locale/regime/variety" => "room descriptor variety draw";
     /// Stream label for a room's substrate-detail draw.

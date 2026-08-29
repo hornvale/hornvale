@@ -4,8 +4,8 @@
 //! body is one `Body` among the roster, not a separate kind.
 
 use crate::liveness::ThreatNiche;
-use hornvale_kernel::{ConditionResponse, EntityId, ResourceVector, RoomAddr};
-use hornvale_species::{ActivityCycle, MetabolicClass};
+use hornvale_kernel::{ConditionResponse, EntityId, Facet, ResourceVector};
+use hornvale_species::{ActivityCycle, ThermalStrategy};
 
 /// A derived non-player agent: a minted entity, a home and a resource room,
 /// its species, and that species' activity-cycle. Derived from the genesis
@@ -16,10 +16,10 @@ pub struct Body {
     /// The NPC's minted ledger entity (subject of its future `agent-at` facts).
     pub entity: EntityId,
     /// Where the NPC rests (its home settlement's room).
-    pub home: RoomAddr,
+    pub home: Facet,
     /// The room its sustenance drive seeks (the-wanting supersedes the old
     /// fixed-schedule destination: this IS the drive's resource anchor now).
-    pub resource: RoomAddr,
+    pub resource: Facet,
     /// The NPC's species (kind label), threaded from `species_of` at derivation
     /// the same way the niche and latency are — the health metric's by-species
     /// distress attribution reads it.
@@ -46,13 +46,15 @@ pub struct Body {
     /// `0` is myopic (acts only once the need bites). Threaded from
     /// `psyche_registry` at derivation, beside `deliberation_latency`.
     pub time_horizon: f64,
-    /// The species' `MetabolicClass` (The Kindling): gates which homeostatic
-    /// drives the creature has and how its thirst couples to temperature. An
-    /// `Ametabolic` creature (construct/undead/elemental) has no homeostatic
-    /// drives at all; a metabolizing one's thirst rate couples to ambient heat
-    /// per class (`rise_at`). Threaded from `biosphere_registry` at derivation,
-    /// beside the niche.
-    pub metabolic_class: MetabolicClass,
+    /// The species' [`ThermalStrategy`] (The Kindling; split off
+    /// `MetabolicClass` by THE GOSSAN): gates which homeostatic drives the
+    /// creature has and how its thirst couples to temperature. A
+    /// [`ThermalStrategy::Absent`] creature (construct/undead/elemental) has
+    /// no homeostatic drives at all; a metabolizing one's thirst rate couples
+    /// to ambient heat per strategy (`rise_at`). Threaded from
+    /// `biosphere_registry` at derivation, beside the niche. The trophic axis
+    /// is deliberately NOT carried here: nothing at this layer reads it.
+    pub thermal_strategy: ThermalStrategy,
     /// The species' diet niche (`Taxon.niche`, a `ResourceVector` over the
     /// resource axes): the dial the hunger drive reads to decide WHAT is food
     /// (The Provender). An omnivore weights forage+prey, an autotroph
@@ -72,7 +74,7 @@ pub struct Body {
     /// hazard, DERIVED at derivation from its temperature niche (HEAT/COLD) and
     /// metabolic class (UNCANNY) — a cold-adapted creature fears heat, an
     /// elemental does not fear the eldritch. Read by the Danger drive against the
-    /// cell's hazards for per-kind fear.
+    /// room's hazards for per-kind fear.
     pub threat_niche: ThreatNiche,
     /// The species' adult body mass in kilograms (`BiosphereTraits::mass`),
     /// threaded from `biosphere_registry` at derivation beside the metabolic

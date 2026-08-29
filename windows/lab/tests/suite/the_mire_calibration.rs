@@ -24,7 +24,7 @@
 //! 200 seeds (`1..=200`), default pins (`SkyPins`/`TerrainPins`/
 //! `SettlementPins::default()`, `SkyChoice::Generated`), the standard
 //! icosphere mesh (`hornvale_terrain::GLOBE_LEVEL`, unconditionally 6 —
-//! there is no smaller "study mesh" in this codebase), **land cells only**
+//! there is no smaller "study mesh" in this codebase), **land vertices only**
 //! (`!Biome::is_marine()`), evaluated at 12 days evenly spaced across one
 //! converged annual trajectory (`GeneratedClimate::year_length_std() / 12`
 //! per step).
@@ -41,7 +41,7 @@
 //! wasted work when we already hold both); compute the two `SubstrateField`s
 //! once each. Only the per-day `ConnectionGraph::scale_conductance` pass and
 //! `reachable_regions` walk repeat per sample day — both O(edges), not
-//! O(cells × years).
+//! O(vertices × years).
 //!
 //! ## `DEFAULT_MIN_CONDUCTANCE` — a threshold this test defines, not a
 //! shipped default
@@ -73,7 +73,7 @@
 //! essentially never presents a perfectly flat neighbor pair at this mesh
 //! resolution (`SLOPE_SCALE` dominates `BASE_COST` almost everywhere), so
 //! `0.05` classified **100% of land-land edges as already-impassable before
-//! any weather scaling ran** — the largest region was a constant 40 cells on
+//! any weather scaling ran** — the largest region was a constant 40 vertices on
 //! every single sample day, for every pilot seed. That is a broken
 //! instrument (it cannot possibly respond to weather, since scaling can only
 //! shrink an already-below-threshold conductance further), not a measurement
@@ -110,7 +110,7 @@
 //! ## Latitude bands (H2)
 //!
 //! Three coarse bands of `|latitude|`, degrees: equatorial `[0,30)`,
-//! temperate `[30,60)`, polar `[60,90]`. A world with zero land cells in a
+//! temperate `[30,60)`, polar `[60,90]`. A world with zero land vertices in a
 //! band contributes no reading for that band from that seed (rather than a
 //! spurious `0/0`).
 //!
@@ -130,7 +130,7 @@ use hornvale_climate::GeneratedClimate;
 use hornvale_climate::snowpack::DEFAULT_SNOWPACK;
 use hornvale_climate::substrate::SubstrateField;
 use hornvale_climate::wetness::{DEFAULT_WETNESS, receptivity};
-use hornvale_kernel::{CellId, CellMap, Seed, Value};
+use hornvale_kernel::{Seed, Value, Vertex, VertexMap, WorldTime};
 use hornvale_terrain::TerrainPins;
 use hornvale_topology::{ConnectionGraph, EdgeKind};
 use hornvale_worldgen::graph_derive::weather_conductance_factor;
@@ -140,7 +140,7 @@ use hornvale_worldgen::{
 };
 use std::collections::BTreeSet;
 
-use crate::seed_sweep;
+use hornvale_worldgen::seed_sweep;
 
 /// The population size the spec froze (§6): seeds `1..=SAMPLE`.
 const SAMPLE: u64 = 200;
@@ -225,31 +225,31 @@ fn default_min_conductance() -> f64 {
     0.002
 }
 
-/// How many land cells H3 samples per seed — a stride across the full land
-/// roster rather than every cell, since `year_of_day_contexts` is O(year
-/// days) per cell and the two `SubstrateField`s already pay that cost once
-/// over EVERY cell; re-paying it over every land cell a second time (for H3
+/// How many land vertices H3 samples per seed — a stride across the full land
+/// roster rather than every vertex, since `year_of_day_contexts` is O(year
+/// days) per vertex and the two `SubstrateField`s already pay that cost once
+/// over EVERY vertex; re-paying it over every land vertex a second time (for H3
 /// alone) would double a cost this test otherwise avoids. Striding still
 /// checks every one of the 200 seeds, which is what H3 asks for
-/// ("for every seed in the population") — it does not ask for every cell.
+/// ("for every seed in the population") — it does not ask for every vertex.
 const H3_SAMPLE_STRIDE_TARGET: usize = 24;
 
 /// One built world's cached readout surface: everything the per-day sampling
 /// loop needs, computed exactly once per world.
 struct WorldSample {
-    /// Every land cell (`!Biome::is_marine()`), in ascending `CellId` order.
-    land_cells: Vec<CellId>,
-    /// `land_cells`, partitioned by `BANDS` (same order).
-    land_by_band: [Vec<CellId>; 3],
+    /// Every land vertex (`!Biome::is_marine()`), in ascending `Vertex` order.
+    land_vertices: Vec<Vertex>,
+    /// `land_vertices`, partitioned by `BANDS` (same order).
+    land_by_band: [Vec<Vertex>; 3],
     /// The converged annual period, standard days.
     year_length: f64,
     /// The unweathered connection graph — `GraphConfig::default()`, `day:
     /// None` — built once.
     ungated: ConnectionGraph,
-    /// Surface wetness's converged annual trajectory, every cell, computed
+    /// Surface wetness's converged annual trajectory, every vertex, computed
     /// once.
     wetness: SubstrateField,
-    /// Snowpack's converged annual trajectory, every cell, computed once.
+    /// Snowpack's converged annual trajectory, every vertex, computed once.
     snow: SubstrateField,
     /// The reconstructed climate — kept for `is_frozen_at`/`precip_at`/
     /// `year_of_day_contexts` reads, which are all O(1) or O(year-days)
@@ -284,13 +284,13 @@ fn build_sample(seed: u64, wc: &WorldComponents) -> WorldSample {
     let geo = terrain.geosphere();
     let elevation = &terrain.globe().elevation;
     let biome = climate.biome_map();
-    let current = CellMap::from_fn(geo, |c| climate.current_at(c));
+    let current = VertexMap::from_fn(geo, |c| climate.current_at(c));
 
-    let settlements: Vec<CellId> = hornvale_settlement::all_settlements(&world)
+    let settlements: Vec<Vertex> = hornvale_settlement::all_settlements(&world)
         .iter()
         .map(
-            |s| match world.ledger.value_of(s.id, hornvale_settlement::CELL_ID) {
-                Some(Value::Number(n)) => CellId(*n as u32),
+            |s| match world.ledger.value_of(s.id, hornvale_settlement::VERTEX_ID) {
+                Some(Value::Number(n)) => Vertex(*n as u32),
                 _ => panic!("settlement {} has no cell-id fact", s.id.0),
             },
         )
@@ -305,9 +305,12 @@ fn build_sample(seed: u64, wc: &WorldComponents) -> WorldSample {
     let wetness = SubstrateField::compute(&climate, &DEFAULT_WETNESS);
     let snow = SubstrateField::compute(&climate, &DEFAULT_SNOWPACK);
 
-    let land_cells: Vec<CellId> = geo.cells().filter(|&c| !biome.get(c).is_marine()).collect();
-    let mut land_by_band: [Vec<CellId>; 3] = Default::default();
-    for &c in &land_cells {
+    let land_vertices: Vec<Vertex> = geo
+        .vertices()
+        .filter(|&c| !biome.get(c).is_marine())
+        .collect();
+    let mut land_by_band: [Vec<Vertex>; 3] = Default::default();
+    for &c in &land_vertices {
         let lat = geo.coord(c).latitude.abs();
         for (band_idx, &(lo, hi)) in BANDS.iter().enumerate() {
             let is_last_band = band_idx == BANDS.len() - 1;
@@ -321,7 +324,7 @@ fn build_sample(seed: u64, wc: &WorldComponents) -> WorldSample {
     let year_length = climate.year_length_std();
 
     WorldSample {
-        land_cells,
+        land_vertices,
         land_by_band,
         year_length,
         ungated,
@@ -340,10 +343,12 @@ fn build_sample(seed: u64, wc: &WorldComponents) -> WorldSample {
 /// mechanism rather than a parallel reimplementation of it.
 fn gated_graph(sample: &WorldSample, day: f64) -> ConnectionGraph {
     let mut graph = sample.ungated.clone();
-    let factor_at = |cell: CellId| -> f64 {
-        let wetness_mm = sample.wetness.at(cell, day);
-        let snow_mm = sample.snow.at(cell, day);
-        let frozen = sample.climate.is_frozen_at(cell, day);
+    let factor_at = |vertex: Vertex| -> f64 {
+        let wetness_mm = sample.wetness.at(vertex, day);
+        let snow_mm = sample.snow.at(vertex, day);
+        let frozen = sample
+            .climate
+            .is_frozen_at(vertex, WorldTime::from_std_days(day).expect("finite"));
         weather_conductance_factor(
             receptivity(wetness_mm, DEFAULT_WETNESS.field_capacity_mm),
             snow_mm,
@@ -359,9 +364,9 @@ fn gated_graph(sample: &WorldSample, day: f64) -> ConnectionGraph {
 
 /// The largest connected region at `min_conductance` -- the "mainland" a
 /// day's weather leaves standing. Deterministic: `reachable_regions` already
-/// orders its output by each region's minimum `CellId`, so ties in `len()`
+/// orders its output by each region's minimum `Vertex`, so ties in `len()`
 /// resolve the same way every run.
-fn largest_region(graph: &ConnectionGraph, min_conductance: f64) -> BTreeSet<CellId> {
+fn largest_region(graph: &ConnectionGraph, min_conductance: f64) -> BTreeSet<Vertex> {
     graph
         .reachable_regions(min_conductance)
         .into_iter()
@@ -369,13 +374,13 @@ fn largest_region(graph: &ConnectionGraph, min_conductance: f64) -> BTreeSet<Cel
         .unwrap_or_default()
 }
 
-/// What share of `cells` sit inside `region`.
-fn fraction_in(cells: &[CellId], region: &BTreeSet<CellId>) -> f64 {
-    if cells.is_empty() {
+/// What share of `vertices` sit inside `region`.
+fn fraction_in(vertices: &[Vertex], region: &BTreeSet<Vertex>) -> f64 {
+    if vertices.is_empty() {
         return 0.0;
     }
-    let hit = cells.iter().filter(|c| region.contains(c)).count();
-    hit as f64 / cells.len() as f64
+    let hit = vertices.iter().filter(|c| region.contains(c)).count();
+    hit as f64 / vertices.len() as f64
 }
 
 /// `max - min` over a day-indexed series -- the "swing" both H1 and H2 read.
@@ -401,10 +406,10 @@ fn median(values: &[f64]) -> f64 {
 }
 
 /// Everything one seed contributes to the readout: its [`SeedReadout`], how
-/// many H3 cell samples it checked, and the H3 violations (cell, daily-summed
+/// many H3 vertex samples it checked, and the H3 violations (vertex, daily-summed
 /// precipitation, annual climatology) it found. The unit of parallel work in
 /// [`the_mires_preregistered_readout`].
-type SeedContribution = (SeedReadout, usize, Vec<(CellId, f64, f64)>);
+type SeedContribution = (SeedReadout, usize, Vec<(Vertex, f64, f64)>);
 
 /// One seed's H1/H2 readout: the all-land swing, and each band's swing
 /// (`None` if that seed carries no land in that band).
@@ -424,7 +429,7 @@ fn readout_for(sample: &WorldSample, min_conductance: f64) -> SeedReadout {
     for &day in &days {
         let graph = gated_graph(sample, day);
         let region = largest_region(&graph, min_conductance);
-        all_land.push(fraction_in(&sample.land_cells, &region));
+        all_land.push(fraction_in(&sample.land_vertices, &region));
         for (band, series) in sample.land_by_band.iter().zip(band_series.iter_mut()) {
             if !band.is_empty() {
                 series.push(fraction_in(band, &region));
@@ -446,33 +451,33 @@ fn readout_for(sample: &WorldSample, min_conductance: f64) -> SeedReadout {
     }
 }
 
-/// The stride [`h3_violations_for`] walks `land_cells` at: at most every
-/// cell, but no finer than needed to land roughly
+/// The stride [`h3_violations_for`] walks `land_vertices` at: at most every
+/// vertex, but no finer than needed to land roughly
 /// [`H3_SAMPLE_STRIDE_TARGET`] samples across the whole land roster.
-fn h3_stride(land_cell_count: usize) -> usize {
-    (land_cell_count / H3_SAMPLE_STRIDE_TARGET).max(1)
+fn h3_stride(land_vertex_count: usize) -> usize {
+    (land_vertex_count / H3_SAMPLE_STRIDE_TARGET).max(1)
 }
 
-/// H3: annual sum of daily precipitation equals `precip_at(cell)`, per cell,
-/// within tolerance -- already unit-tested in `domains/climate` at cell
+/// H3: annual sum of daily precipitation equals `precip_at(vertex)`, per vertex,
+/// within tolerance -- already unit-tested in `domains/climate` at vertex
 /// scale (`substrate.rs`'s
-/// `a_cells_year_of_contexts_reproduces_its_annual_climatology`); this
+/// `a_vertices_year_of_contexts_reproduces_its_annual_climatology`); this
 /// re-confirms it at study scale (every one of the 200 seeds), over a
-/// stride of land cells (see [`H3_SAMPLE_STRIDE_TARGET`]'s doc comment for
-/// why a stride rather than every cell). Returns `(checked_count,
+/// stride of land vertices (see [`H3_SAMPLE_STRIDE_TARGET`]'s doc comment for
+/// why a stride rather than every vertex). Returns `(checked_count,
 /// violations)`.
-fn h3_violations_for(sample: &WorldSample) -> (usize, Vec<(CellId, f64, f64)>) {
-    let stride = h3_stride(sample.land_cells.len());
+fn h3_violations_for(sample: &WorldSample) -> (usize, Vec<(Vertex, f64, f64)>) {
+    let stride = h3_stride(sample.land_vertices.len());
     let mut checked = 0usize;
     let mut violations = Vec::new();
-    for &cell in sample.land_cells.iter().step_by(stride) {
+    for &vertex in sample.land_vertices.iter().step_by(stride) {
         checked += 1;
-        let year = sample.climate.year_of_day_contexts(cell);
+        let year = sample.climate.year_of_day_contexts(vertex);
         let summed: f64 = year.iter().map(|c| c.precip_mm).sum();
-        let annual = sample.climate.precip_at(cell).get();
+        let annual = sample.climate.precip_at(vertex).get();
         let tolerance = annual.abs() * 1e-6 + 1e-6;
         if (summed - annual).abs() > tolerance {
-            violations.push((cell, summed, annual));
+            violations.push((vertex, summed, annual));
         }
     }
     (checked, violations)
@@ -481,7 +486,7 @@ fn h3_violations_for(sample: &WorldSample) -> (usize, Vec<(CellId, f64, f64)>) {
 /// claim: readout(preregistered) — off-gate (heavy:); own name states the
 /// shape
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the Mire's preregistered H1/H2/H3 readout (weather-gated conductance vs. world topology); run by hand (The Mire answered its question; demoted by The Governor 2026-08-28)"]
 fn the_mires_preregistered_readout() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let min_conductance = default_min_conductance();
@@ -508,8 +513,8 @@ fn the_mires_preregistered_readout() {
     for (seed, (readout, checked, violations)) in (1..=SAMPLE).zip(per_seed) {
         readouts.push(readout);
         h3_total_checked += checked;
-        for (cell, summed, annual) in violations {
-            h3_total_violations.push((seed, cell, summed, annual));
+        for (vertex, summed, annual) in violations {
+            h3_total_violations.push((seed, vertex, summed, annual));
         }
     }
 
@@ -554,12 +559,12 @@ fn the_mires_preregistered_readout() {
         }
     }
     eprintln!(
-        "H3: {h3_total_checked} cell-seed samples checked, {} violations",
+        "H3: {h3_total_checked} vertex-seed samples checked, {} violations",
         h3_total_violations.len()
     );
     if !h3_total_violations.is_empty() {
-        for (seed, cell, summed, annual) in h3_total_violations.iter().take(5) {
-            eprintln!("  seed {seed} cell {cell:?}: daily-summed {summed} vs annual {annual}");
+        for (seed, vertex, summed, annual) in h3_total_violations.iter().take(5) {
+            eprintln!("  seed {seed} vertex {vertex:?}: daily-summed {summed} vs annual {annual}");
         }
     }
 
@@ -639,7 +644,7 @@ fn the_mires_preregistered_readout() {
 
     assert!(
         h3_ok,
-        "H3 (the invariant) failed: {} of {h3_total_checked} cell-seed samples' daily \
+        "H3 (the invariant) failed: {} of {h3_total_checked} vertex-seed samples' daily \
          precipitation did not sum to the annual climatology within tolerance -- see the \
          eprintln'd samples above",
         h3_total_violations.len()

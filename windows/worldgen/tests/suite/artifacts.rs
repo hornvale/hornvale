@@ -9,7 +9,7 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{CellMap, Seed};
+use hornvale_kernel::{Seed, VertexMap};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to,
@@ -51,18 +51,21 @@ fn full_depth_produces_both() {
     assert!(a.climate.is_some(), "full build builds climate");
 }
 
-/// Project a terrain onto the per-cell fields metrics actually read, so two
+/// Project a terrain onto the per-vertex fields metrics actually read, so two
 /// terrains can be compared without `PartialEq` on the provider itself
-/// (`GeneratedTerrain` derives only `Debug, Clone`). `CellMap` DOES derive
+/// (`GeneratedTerrain` derives only `Debug, Clone`). `VertexMap` DOES derive
 /// `PartialEq`, which is what makes this comparison exact rather than
 /// approximate.
 fn projection(
     t: &hornvale_terrain::GeneratedTerrain,
-) -> (CellMap<hornvale_kernel::ReferenceElevation>, CellMap<bool>) {
+) -> (
+    VertexMap<hornvale_kernel::ReferenceElevation>,
+    VertexMap<bool>,
+) {
     let geo = t.geosphere();
     (
-        CellMap::from_fn(geo, |c| t.elevation_at(c)),
-        CellMap::from_fn(geo, |c| t.is_ocean(c)),
+        VertexMap::from_fn(geo, |c| t.elevation_at(c)),
+        VertexMap::from_fn(geo, |c| t.is_ocean(c)),
     )
 }
 

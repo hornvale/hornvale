@@ -60,3 +60,5 @@ clients/game/core/tests/fixtures/
 # new one is invisible. Naming the file directly is what makes
 # cli/tests/suite/generated_paths.rs refuse until it is `git add`-ed.
 docs/audits/underworld-lattice-seed-panel.md
+docs/audits/the-confidant-report.md
+docs/audits/the-reticence-report.md

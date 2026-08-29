@@ -225,7 +225,7 @@ const REGION_PER_TILE_BUDGET_MS: f64 = 420.0;
 const GENESIS_BUDGET_MS: f64 = 13000.0;
 
 /// Wall-time budget for one `SceneContext::build` — the terrain and climate
-/// derivation, the two nearest-cell indices, and the biome map, built once per
+/// derivation, the two nearest-vertex indices, and the biome map, built once per
 /// world and reused by every terrain-facing entry point.
 ///
 /// **New in The Cistern; no Sextant counterpart.** Measured 1308.0 ms on
@@ -382,7 +382,12 @@ fn scene_api_cost_is_bounded_on_seed_42() {
     )
     .len();
     small_bytes += hornvale_scene::eclipses_json(
-        &hornvale_scene::eclipses_scene(&world, 0.0, 365.0).expect("eclipses scene"),
+        &hornvale_scene::eclipses_scene(
+            &world,
+            hornvale_astronomy::StdInstant::new(0.0).unwrap(),
+            hornvale_astronomy::StdInstant::new(365.0).unwrap(),
+        )
+        .expect("eclipses scene"),
     )
     .len();
     #[allow(clippy::disallowed_types)] // benchmark harness

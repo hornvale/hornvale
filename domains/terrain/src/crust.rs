@@ -1,5 +1,5 @@
 //! Crust: drawn cratons and the stateless crust fields (Crust spec §2).
-//! Everything here is a pure function of position — no per-cell draws —
+//! Everything here is a pure function of position — no per-vertex draws —
 //! so any grid at any level samples the same underlying world and
 //! coarse-constrains-fine is exact.
 
@@ -80,9 +80,9 @@ const REBALANCE_GAIN: f64 = 15.0;
 /// their per-octave seeds **once**, then samples many positions with no
 /// further derivation. Bit-identical to [`sphere_fbm01`] — same slice
 /// labels, same slice-plane pairing, same summation order — it only hoists
-/// the per-call `Seed::derive`s out of the per-cell loop. Build one per
+/// the per-call `Seed::derive`s out of the per-vertex loop. Build one per
 /// field (the seed/frequency/octaves are loop-invariant) and call
-/// [`SphereFbm::sample`] per cell.
+/// [`SphereFbm::sample`] per vertex.
 #[derive(Clone, Debug)]
 pub(crate) struct SphereFbm {
     /// The three orthogonal coordinate-plane slice samplers, in the
@@ -119,7 +119,7 @@ impl SphereFbm {
 /// Seam-free fBm in [0, 1) on the unit sphere: the mean of three
 /// orthogonal coordinate-plane slices (the `coast_render` construction).
 ///
-/// Random-access convenience form; a hot per-cell loop with a fixed seed
+/// Random-access convenience form; a hot per-vertex loop with a fixed seed
 /// should build a [`SphereFbm`] once and reuse it.
 pub(crate) fn sphere_fbm01(seed: Seed, p: [f64; 3], frequency: f64, octaves: u32) -> f64 {
     SphereFbm::new(seed, frequency, octaves).sample(p)
@@ -149,7 +149,7 @@ pub(crate) fn lobed_envelope_with(
 }
 
 /// Lobed envelope of one craton (random-access convenience form). A hot
-/// per-cell loop should build a [`SphereFbm`] once and call
+/// per-vertex loop should build a [`SphereFbm`] once and call
 /// [`lobed_envelope_with`]; this constructs one per call.
 pub(crate) fn lobed_envelope(seed: Seed, center: [f64; 3], p: [f64; 3], radius_rad: f64) -> f64 {
     lobed_envelope_with(
@@ -941,8 +941,8 @@ fn pull_to_contact(
 /// the circle is at *exactly* contact with its host, so the scan chooses
 /// **which** contact point, never how precise one is. 720 puts adjacent
 /// candidates `contact · π/360 ≈ 0.012` rad apart at the widest contact
-/// separation in play — finer than the canonical globe's cell spacing, so
-/// a nearer-but-unsampled tangency could not move a cell.
+/// separation in play — finer than the canonical globe's vertex spacing, so
+/// a nearer-but-unsampled tangency could not move a vertex.
 const ASSEMBLY_AZIMUTH_SAMPLES: u32 = 720;
 
 /// A unit vector tangent to the sphere at `at`, pointing toward `toward`.
@@ -1140,7 +1140,7 @@ pub struct CrustField {
     cratons: Vec<Craton>,
     /// Per-craton lobing samplers, indexed by craton id — one
     /// `SphereFbm::new(craton-{id}, LOBE_FREQ, LOBE_OCTAVES)` per craton.
-    /// Precomputed once here so per-cell and per-pixel sampling (millions
+    /// Precomputed once here so per-vertex and per-pixel sampling (millions
     /// of calls at the canonical grid) allocates and derives nothing per
     /// craton: not the `craton-{id}` seed, and not the slice/octave seeds
     /// inside `sphere_fbm01`. Byte-identical to the per-sample path.
@@ -1365,7 +1365,7 @@ mod tests {
 
     use crate::streams;
     use hornvale_kernel::seed::StreamLabel;
-    use hornvale_kernel::{Geosphere, NearestCellIndex};
+    use hornvale_kernel::{Geosphere, NearestVertexIndex};
 
     /// The default-pins ocean-fraction target for a given terrain seed —
     /// what `generate` resolves once and threads to both `draw_cratons`
@@ -1781,11 +1781,11 @@ mod tests {
         );
         let coarse = Geosphere::new(4);
         let fine = Geosphere::new(5);
-        let index = NearestCellIndex::new(&fine);
+        let index = NearestVertexIndex::new(&fine);
         let mut shared = 0;
-        for cell in coarse.cells() {
-            let p = coarse.position(cell);
-            let c = coarse.coord(cell);
+        for vertex in coarse.vertices() {
+            let p = coarse.position(vertex);
+            let c = coarse.coord(vertex);
             let twin = index.nearest(&fine, c.latitude, c.longitude);
             let q = fine.position(twin);
             if crate::plates::dot(p, q) > 1.0 - 1e-12 {
@@ -1798,7 +1798,7 @@ mod tests {
             }
         }
         assert!(
-            shared > coarse.cell_count() / 2,
+            shared > coarse.vertex_count() / 2,
             "nesting assumption broken: {shared}"
         );
     }
@@ -1815,7 +1815,7 @@ mod tests {
             x: -120.25,
             y: 45.5,
         };
-        let time = hornvale_kernel::WorldTime::new(3.0).expect("a day value is finite");
+        let time = hornvale_kernel::WorldTime::from_std_days(3.0).expect("a day value is finite");
         let (lat, lon) = (45.5f64.to_radians(), (-120.25f64).to_radians());
         let p = [
             math::cos(lat) * math::cos(lon),

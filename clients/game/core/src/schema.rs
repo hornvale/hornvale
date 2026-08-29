@@ -89,6 +89,9 @@ pub struct NounEntry {
     pub noun: String,
     /// What `examine` prints for it.
     pub datum: String,
+    /// Coarse kind (`creature`/`place`/`thing`/`unknown`) for completion.
+    #[serde(default)]
+    pub kind: String,
 }
 
 /// The band-tagged spatial channel. The wire tag is `band`.
@@ -104,6 +107,11 @@ pub enum Spatial {
     Chamber {
         /// `vessel/plan/v1`.
         plan: Plan,
+    },
+    /// Inside a generated cave descent (The Gallery, Task 9; spec §4).
+    Underground {
+        /// `vessel/level/v1`.
+        level: Level,
     },
 }
 
@@ -308,4 +316,93 @@ pub struct PlanMark {
     pub datum: String,
     /// Rank key; lower is more salient.
     pub salience: u32,
+}
+
+/// The underground band's cave-level document, mirroring `vessel/level/v1`'s
+/// `SessionLevel` (`windows/vessel/src/level_doc.rs`). Two things differ from
+/// [`Plan`], and both are load-bearing rather than cosmetic — see
+/// `level_doc.rs`'s own module doc, which this mirror follows:
+///
+/// - [`LevelPaletteEntry`] interns on `(kind, VISIBILITY)`, never on colour
+///   — there is no `color` field at all, unlike [`PaletteEntry`]'s. The
+///   producer's own doc states why: this client's renderers withhold tint
+///   from a mark by rule, so encoding fog as colour would put this band's
+///   field of view below the walk band's on the one axis the systems audit
+///   credits it for. `level.rs` carries the remembered/lit distinction as a
+///   **glyph twin** instead (spec §4.1).
+/// - [`Level::cells`] is SPARSE — one entry per cell the possession has ever
+///   seen, each naming its own `(x, y)` — unlike [`Plan::cells`]'s dense
+///   row-major index sized to the whole extent. A never-seen cell is simply
+///   absent (spec §4.1.1), so `level.rs`'s draw path iterates the list
+///   directly rather than sweeping the extent the way `plan::draw` does.
+///
+/// `schema` (the per-document `"vessel/level/v1"` tag) is dropped from this
+/// mirror, following [`Plan`]'s own precedent: `SessionLevel::schema` is
+/// never read, and the top-level `Spatial` tag already discriminates the
+/// band before this type is ever reached.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Level {
+    /// Which habitation band this rung is — `"undercroft"`, `"shallows"`,
+    /// … No reader in this campaign; kept for record fidelity.
+    pub rung: String,
+    /// The rung's own evaluation depth below the surface, metres. No reader
+    /// in this campaign; kept for record fidelity.
+    pub depth_m: f64,
+    /// The level's bounds.
+    pub extent: LevelExtent,
+    /// The distinct `(cell kind, visibility)` pairs, in first-seen order.
+    pub palette: Vec<LevelPaletteEntry>,
+    /// The cells the possession has ever seen on this rung — sparse, unlike
+    /// [`Plan::cells`] (see this type's own doc).
+    pub cells: Vec<LevelCell>,
+    /// The cell the possession stands on.
+    pub you: LevelPoint,
+    /// The individuals standing on the level. Reuses [`PlanMark`], exactly
+    /// as the producer reuses `PlanMark` for this field rather than
+    /// defining a fresh type. **Always `[]` as of Task 9** — spec §3.6's
+    /// placement lands in Task 11; draw nothing for it until then.
+    pub marks: Vec<PlanMark>,
+}
+
+/// A level's bounds, in level-local cells.
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+pub struct LevelExtent {
+    /// Left edge.
+    pub x: i32,
+    /// Top edge.
+    pub y: i32,
+    /// Width, in cells.
+    pub w: i32,
+    /// Height, in cells.
+    pub h: i32,
+}
+
+/// One distinct `(cell kind, visibility)` pair in a level's palette.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct LevelPaletteEntry {
+    /// `"floor"`, `"wall"`, `"flooded"`, `"stairs_down"` or `"stairs_up"`.
+    pub kind: String,
+    /// `"here"`, `"lit"` or `"remembered"` — never a colour (spec §4.1).
+    pub state: String,
+}
+
+/// One level-local cell position.
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+pub struct LevelPoint {
+    /// Column.
+    pub x: i32,
+    /// Row.
+    pub y: i32,
+}
+
+/// One cell the possession has ever seen on this rung — absent for every
+/// cell it has not (spec §4.1.1).
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+pub struct LevelCell {
+    /// Column, level-local.
+    pub x: i32,
+    /// Row, level-local.
+    pub y: i32,
+    /// Index into [`Level::palette`].
+    pub ix: u32,
 }

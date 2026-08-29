@@ -9,7 +9,11 @@
 //! `tests/suite/`). This collapses 2 separate integration-test
 //! binaries into 1.
 
+#[path = "suite/derived.rs"]
+mod derived;
 #[path = "suite/determinism.rs"]
 mod determinism;
+#[path = "suite/fold.rs"]
+mod fold;
 #[path = "suite/golden_harness.rs"]
 mod golden_harness;

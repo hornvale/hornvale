@@ -38,10 +38,34 @@ For a struct, the tag on the struct's doc comment lists each primitive field
 by name. For a function, it lists each primitive parameter (and `return`) by
 name.
 
+### On a default-deny lint, add what it DEMANDS, never what it might
+
+A struct-level tag is required only for a primitive field that is itself at a
+`pub` edge. A **private** field needs none, even on a `pub` struct — its
+primitives reach the boundary only through the methods that expose them, and
+those methods carry their own tags.
+
+Two kernel types make the contrast concrete, and they sit a file apart:
+
+- `kernel/src/fold.rs`'s `Folded<S>` has `state: S` and `position: u64`, both
+  **private**. `check` passes with *method*-level tags only — `bare-ok(count:
+  position)` on `resume`, `bare-ok(count: return)` on `position()`. There is
+  no struct-level tag and adding one would be tagging a primitive the audit
+  never asked about.
+- `kernel/src/derived.rs`'s `Validity::Ledger { position }` is a field of a
+  **`pub` enum variant**, so it is at the boundary and does need the
+  struct-level form: `type-audit: bare-ok(count: Ledger.position)`.
+
+The failure mode this prevents is pre-emptive tagging: on a default-deny lint
+the temptation is to tag everything that looks like a primitive, which buries
+the boundary the audit is trying to describe and creates extra tag positions
+for the footgun below to make stale. **Run `check`, read what it demands, tag
+exactly that.**
+
 ## The footgun (learned the hard way this session)
 
 The tool tracks tag **positions**. When you **move a tagged primitive** — e.g.
-lift a `plate_of: &CellMap<u32>` param out of three functions into a new
+lift a `plate_of: &VertexMap<u32>` param out of three functions into a new
 struct field — the old functions' tags go **stale** ("stale tag position")
 and the new struct field is **untagged**. Both fail `check`, and the committed
 report goes stale too. This is invisible to unit tests and to a
@@ -53,7 +77,7 @@ gate`.** A commit that skipped this briefly left `main` gate-failing.
 
 ## Only primitives at `pub` edges
 
-Newtypes (`Au`, `Mm`, `StdDays`, …) and non-primitive types (`&CellMap<T>`
+Newtypes (`Au`, `Mm`, `StdDays`, …) and non-primitive types (`&VertexMap<T>`
 where `T` is an enum/struct) don't need tags — only bare primitives. If you
 find yourself tagging a lot of bare `f64`s that form a coherent unit, the
 right fix may be a newtype (decision 0008/0044), not more tags.

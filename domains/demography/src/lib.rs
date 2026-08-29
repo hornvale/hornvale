@@ -1,7 +1,7 @@
 //! Hornvale demography domain: a carrying-capacity field derived from climate
 //! and terrain, and the flow-condensation that reads discrete settlements off
 //! it as conserved attractors of a population flow. Kernel-only: the
-//! composition root supplies each cell's bare climate/terrain inputs; this
+//! composition root supplies each vertex's bare climate/terrain inputs; this
 //! crate never imports a climate or terrain crate.
 //!
 //! Condensation is the same field-to-fact projection the codebase performs
@@ -30,7 +30,7 @@ pub use founder::condense_tagged;
 pub use render::{density_ppm, refugia_ppm, stack_density_ppm, strife_ppm};
 pub use stack_condense::StackSettlement;
 
-use hornvale_kernel::{CellMap, Geosphere, Mass, ResourceVector};
+use hornvale_kernel::{Geosphere, Mass, ResourceVector, VertexMap};
 use std::collections::BTreeMap;
 
 /// The one-call demography report: each species' carrying-capacity field K
@@ -53,12 +53,12 @@ pub struct DemographyReport {
     /// Each species' carrying-capacity field, tagged by species id. Retained
     /// so callers (the render, calibration) reuse the field instead of
     /// recomputing `carrying_capacity`.
-    pub per_species_k: Vec<(u32, CellMap<f64>)>,
+    pub per_species_k: Vec<(u32, VertexMap<f64>)>,
     /// Settlements condensed across all species' fields, tagged by the
     /// species that founded them. **This is what worldgen consumes** —
     /// unchanged by the additive fields below.
     pub settlements: Vec<(Condensation, u32)>,
-    /// The overlap-weighted, trophically-coupled per-cell density stack —
+    /// The overlap-weighted, trophically-coupled per-vertex density stack —
     /// [`coexist::pack`]'s output. Additive: not yet consumed by worldgen.
     pub stack: coexist::CoexistStack,
     /// Settlements condensed off `stack` (mass-weighted, composition-aware).
@@ -79,7 +79,7 @@ pub struct DemographyReport {
 /// type-audit: bare-ok(index: per_species_inputs), bare-ok(index: species), bare-ok(ratio: beta), bare-ok(count: floor), bare-ok(count: threshold)
 pub fn report(
     geo: &Geosphere,
-    per_species_inputs: &[(u32, CellMap<CarryingInput>)],
+    per_species_inputs: &[(u32, VertexMap<CarryingInput>)],
     species: &[(u32, Mass, ResourceVector)],
     beta: f64,
     floor: f64,
@@ -87,12 +87,12 @@ pub fn report(
 ) -> DemographyReport {
     // `_k` is accurate here — these ARE capacities, one per species' inputs.
     // The unwrap is explicit because `condense_tagged` / `coexist::pack` /
-    // `byproducts` still take bare `CellMap<f64>`; typing them through is
+    // `byproducts` still take bare `VertexMap<f64>`; typing them through is
     // follow-on work, and decision 0103's guarantee is at the demography →
     // worldgen boundary, which `carrying_capacity`'s return type now holds.
-    let per_species_k: Vec<(u32, CellMap<f64>)> = per_species_inputs
+    let per_species_k: Vec<(u32, VertexMap<f64>)> = per_species_inputs
         .iter()
-        .map(|(tag, inputs)| (*tag, carrying_capacity(geo, inputs).into_cell_map()))
+        .map(|(tag, inputs)| (*tag, carrying_capacity(geo, inputs).into_vertex_map()))
         .collect();
     let settlements = condense_tagged(&per_species_k, geo, threshold);
 
@@ -130,7 +130,7 @@ mod tests {
     #[test]
     fn report_holds_k_fields_and_settlements() {
         let geo = Geosphere::new(3);
-        let inputs = CellMap::from_fn(&geo, |c| CarryingInput {
+        let inputs = VertexMap::from_fn(&geo, |c| CarryingInput {
             is_land: true,
             temperature_c: 20.0,
             precip_mm_yr: 1200.0,
@@ -149,7 +149,8 @@ mod tests {
             "settlements condense off the stack too"
         );
         assert!(
-            !rep.byproducts.strife.is_empty() && rep.byproducts.strife.len() == geo.cells().count(),
+            !rep.byproducts.strife.is_empty()
+                && rep.byproducts.strife.len() == geo.vertices().count(),
             "byproducts.strife is populated over the whole geosphere"
         );
         assert!(

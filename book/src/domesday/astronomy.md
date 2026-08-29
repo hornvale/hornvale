@@ -10,11 +10,11 @@ The sky a world is generated under: its star, its moons, its rotation and tilt, 
 
 Absolute solstice-sunrise azimuth drift over the first kiloyear at the flagship settlement's latitude; Absent when locked, unplaced, or polar
 
-n = 948 present, 52 absent (of 1000 worlds)
+n = 949 present, 51 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.0000024506268 | 0.012928845 | 0.034542126 | 0.082835436 | 0.3892435 | 0.060587557 |
+| 0.00000255012 | 0.013096076 | 0.034605513 | 0.08198898 | 0.39802834 | 0.060295465 |
 
 ### `brightening-per-gyr`
 
@@ -59,7 +59,7 @@ n = 952 present, 48 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 16.011046 | 21.97459 | 28.43893 | 34.022856 | 39.914032 | 28.038775 |
+| 16.01112 | 21.97464 | 28.43892 | 34.02288 | 39.91392 | 28.038775 |
 
 ### `eclipse-year-days`
 
@@ -297,7 +297,7 @@ n = 952 present, 48 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 88.787987 | 236.01491 | 380.42044 | 606.07001 | 1515.3328 | 448.74594 |
+| 88.788019 | 236.01425 | 380.42002 | 606.06895 | 1515.3368 | 448.7459 |
 
 ### `year-std-days`
 

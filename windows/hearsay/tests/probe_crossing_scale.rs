@@ -524,7 +524,7 @@ fn read_world(led: &Ledger, components: &hornvale_worldgen::WorldComponents) -> 
         let Some(bio) = components.biosphere.get_by_label(people) else {
             continue;
         };
-        let life = hornvale_species::life_history(bio.mass, bio.metabolic_class, bio.schedule);
+        let life = hornvale_species::life_history(bio.mass, bio.thermal_strategy, bio.schedule);
         let to_days = |years: hornvale_kernel::Years| StdDays::new(years.get() * year_days).ok();
         durations.insert(
             people,
@@ -615,7 +615,7 @@ struct RuleRow {
     at_coarsest: usize,
 
     // ---- M5 ----
-    /// One cell per [`SWEEP`] multiplier.
+    /// One vertex per [`SWEEP`] multiplier.
     sweep: [SweepCell; SWEEP.len()],
 
     // ---- controls ----
@@ -630,7 +630,7 @@ struct RuleRow {
     holder_set_differs: usize,
     /// CONTROL: crossings whose recorded width was not finite. Must be zero at
     /// the shipped magnitude; reported for every multiplier so a saturating
-    /// sweep cell is visible rather than silent.
+    /// sweep vertex is visible rather than silent.
     nonfinite_widths: usize,
 }
 
@@ -803,7 +803,7 @@ fn measure_seed(seed: u64, led: &Ledger, read: &WorldRead) -> SeedRow {
 
             for (ki, k) in SWEEP.iter().enumerate() {
                 let held = probe.walk(*rule, *k, e.subject);
-                let cell = &mut r.sweep[ki];
+                let vertex = &mut r.sweep[ki];
 
                 let mut set_differs = false;
                 for h in &held {
@@ -818,13 +818,13 @@ fn measure_seed(seed: u64, led: &Ledger, read: &WorldRead) -> SeedRow {
                     let rung_moved = h.claim.precision != base.claim.precision;
                     let day_moved = day_bits(&h.claim) != day_bits(&base.claim);
                     if width_moved {
-                        cell.width_moved += 1;
+                        vertex.width_moved += 1;
                     }
                     if rung_moved {
-                        cell.rung_moved += 1;
+                        vertex.rung_moved += 1;
                     }
                     if day_moved {
-                        cell.day_moved += 1;
+                        vertex.day_moved += 1;
                     }
 
                     // ---- M1, M2 and M4, at the SHIPPED magnitude only ----
@@ -971,7 +971,7 @@ fn merge(into: &mut RuleRow, from: &RuleRow) {
 /// claim: structural(seed: panel) — false-positive seed-loop flag; the loop
 /// binds a census-panel prefix, not a search over seeds.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: whether the crossing penalty reaches the ladder; RED as of 2026-08-28 — the shared BASELINE_ENDINGS_12/FOREIGN_12 live-worldgen pins have drifted again since The Underworld changed settlement placement, and this question (The Undertow, Myth campaign 5) is closed; run by hand; demoted by The Governor"]
 fn whether_the_crossing_penalty_reaches_the_ladder() {
     let components = hornvale_worldgen::WorldComponents::assemble().expect("components assemble");
     let mut rows: Vec<SeedRow> = Vec::new();
@@ -1092,8 +1092,8 @@ fn whether_the_crossing_penalty_reaches_the_ladder() {
     );
     let mut panel: [RuleRow; 3] = Default::default();
     for r in &rows {
-        for (ri, cell) in panel.iter_mut().enumerate() {
-            merge(cell, &r.rules[ri]);
+        for (ri, vertex) in panel.iter_mut().enumerate() {
+            merge(vertex, &r.rules[ri]);
         }
     }
     for (ri, rule) in Accumulation::ALL.iter().enumerate() {
@@ -1446,12 +1446,12 @@ fn whether_the_crossing_penalty_reaches_the_ladder() {
         SWEEP[widest]
     );
 
-    // (5) NOTHING SATURATED. A non-finite width would make a sweep cell report
+    // (5) NOTHING SATURATED. A non-finite width would make a sweep vertex report
     // a saturation artifact as a rung movement.
     let nonfinite: usize = panel.iter().map(|p| p.nonfinite_widths).sum();
     assert_eq!(
         nonfinite, 0,
-        "control: {nonfinite} accumulated widths were not finite, so at least one sweep cell \
+        "control: {nonfinite} accumulated widths were not finite, so at least one sweep vertex \
          is a floating-point artifact rather than a measurement"
     );
     println!("  all widths finite          : every rule, every multiplier");

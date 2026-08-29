@@ -37,6 +37,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 |---|---|---|---|
 | `abyssal` | a biome class | *Gaokoe | /gaokoe/ |
 | `abyssal-plain` | The flat floor of the deep ocean. | *Nodo | /nodo/ |
+| `affords-passage` | a seam between two rooms a body may pass through | *Nenea | /nenea/ |
 | `alpine` | a biome class | *Ne | /ne/ |
 | `bait-ball` | A dense turning mass of fish. | *Dee | /dee/ |
 | `barley` | a staple crop | *Nadae | /nadae/ |
@@ -56,6 +57,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `coast` | where the land meets the sea | *Neoda | /neoda/ |
 | `cold` | felt, biting chill | *Gao | /gao/ |
 | `cold-upwelling` | Cold nutrient-rich water rising from below. | *Goe | /goe/ |
+| `content` | positive, low arousal: needs met, at rest | *Nooqo | /nooqo/ |
 | `coral-head` | A massive coral colony standing proud of the reef. | *Naono | /naono/ |
 | `coral-reef` | a biome class | *Nae | /nae/ |
 | `crevasse-field` | Ice split by crevasses. | *Teadoe | /teadoe/ |
@@ -69,10 +71,12 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `dire-wolf-kind` | a dire wolf | *Qaa | /qaa/ |
 | `drink` | to swallow liquid | *Qeego | /qeego/ |
 | `drow-kind` | a drow | *Genoa | /genoa/ |
+| `eager` | positive, high arousal: chasing a satisfiable need | *Nene | /nene/ |
 | `earth` | the ground underfoot | *Pode | /pode/ |
 | `east` | the direction of increasing longitude | *Paenao | /paenao/ |
 | `eat` | to consume food | *Noanoe | /noanoe/ |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | *Nenaa | /nenaa/ |
+| `encloses` | an anchor that reveals what lies within it | *Kagoa | /kagoa/ |
 | `epipelagic` | a biome class | *Goka | /goka/ |
 | `erg` | A sand sea of dunes. | *Naqae | /naqae/ |
 | `eye` | the organ of sight | *Tetae | /tetae/ |
@@ -84,6 +88,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `ford` | where a river runs shallow enough to cross | *Naadee | /naadee/ |
 | `forest-gap` | A break in the canopy where light reaches the ground. | *Goa | /goa/ |
 | `frost-heave` | Ground churned and patterned by freezing. | *Qeedeo | /qeedeo/ |
+| `frustrated` | negative: blocked with a known target out of reach | *Qoneo | /qoneo/ |
 | `gallery-forest` | Forest following a watercourse. | *Takee | /takee/ |
 | `giant-constrictor-snake-kind` | a giant constrictor snake | *Noko | /noko/ |
 | `giant-crocodile-kind` | a giant crocodile | *Deeneo | /deeneo/ |
@@ -106,12 +111,14 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `hand` | the manipulating limb-end | *Goona | /goona/ |
 | `hearth` | the fire at the center of a home | *Kono | /kono/ |
 | `heat` | felt, oppressive warmth | *Taa | /taa/ |
+| `helpless` | negative and persistent: given up despite an active drive | *Neda | /neda/ |
 | `high` | far above the ground | *Neapoa | /neapoa/ |
 | `high-elf-kind` | a high elf | *Doe | /doe/ |
 | `hill` | ground that rises above what surrounds it | *Noono | /noono/ |
 | `hill-dwarf-kind` | a hill dwarf | *Goonea | /goonea/ |
 | `hobgoblin-kind` | a hobgoblin | *Dae | /dae/ |
 | `holdfast-tangle` | The anchored base of a kelp forest. | *Doa | /doa/ |
+| `holds-liquid` | a place a body may drink from | *Neego | /neego/ |
 | `home` | one's dwelling | *Qoqe | /qoqe/ |
 | `human-kind` | a human | *Noaka | /noaka/ |
 | `hydrothermal-vent` | a biome class | *Poo | /poo/ |
@@ -120,6 +127,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `island` | land the water surrounds | *Gope | /gope/ |
 | `kelp-canopy` | The floating canopy of a kelp forest. | *Pano | /pano/ |
 | `kelp-forest` | a biome class | *Naa | /naa/ |
+| `kill` | to cause to cease living | *Dapo | /dapo/ |
 | `killer-whale-kind` | a killer whale | *Gaqo | /gaqo/ |
 | `know` | to hold something in memory or understanding — `knows` | *Naena | /naena/ |
 | `kobold-kind` | a kobold | *Naeno | /naeno/ |
@@ -129,6 +137,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `lightless-water` | Water below all light. | *Pao | /pao/ |
 | `little` | small in size or extent | *Neodoe | /neodoe/ |
 | `look` | to visually attend to something, near or far — `look`, `examine` | *Gogo | /gogo/ |
+| `lost` | negative: blocked with no target to move toward | *Nona | /nona/ |
 | `low` | near the ground | *Keono | /keono/ |
 | `many` | an indefinitely large count | *Naona | /naona/ |
 | `marine-snow` | Organic debris drifting endlessly down. | *Qeapao | /qeapao/ |
@@ -161,6 +170,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `plankton-bloom` | Water thick with plankton. | *Notee | /notee/ |
 | `playa` | A dry lake bed of salt and cracked clay. | *Qena | /qena/ |
 | `pressure-ridge` | Sea ice buckled into a ridge. | *Nootaa | /nootaa/ |
+| `radiates-heat` | an anchor that emits warmth | *Poe | /poe/ |
 | `rafted-floe` | Ice floes driven over one another. | *Qoe | /qoe/ |
 | `rain` | liquid precipitation | *Nope | /nope/ |
 | `read` | to take meaning from written words — `consult` | *Neeta | /neeta/ |
@@ -182,6 +192,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `sea` | a body of salt water | *Qae | /qae/ |
 | `sea-elf-kind` | a sea elf | *Pe | /pe/ |
 | `sea-ice` | a biome class | *Qoono | /qoono/ |
+| `searching` | neutral, mid arousal: seeking with a gradient | *Konea | /konea/ |
 | `sense` | to perceive another's felt bodily state — `needs` | *Naetoa | /naetoa/ |
 | `shadow` | cast dark, distinct from open gloom | *Nano | /nano/ |
 | `shrieker-kind` | a shrieker | *Goo | /goo/ |
@@ -203,10 +214,12 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `starlit` | dark faintly lit by stars | *Tane | /tane/ |
 | `stone` | rock | *Peotea | /peotea/ |
 | `sun` | the sun | *Pago | /pago/ |
+| `supports-rest` | a place a body may lie down and sleep | *Geno | /geno/ |
 | `taiga` | a biome class | *Qe | /qe/ |
 | `temperate-forest` | a biome class | *Na | /na/ |
 | `temperate-grassland` | a biome class | *Noo | /noo/ |
 | `temperate-rainforest` | a biome class | *Daenao | /daenao/ |
+| `think` | to hold an uncertain belief | *Peo | /peo/ |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | *Nako | /nako/ |
 | `tide` | the rise and fall of the waters under the moons | *Nea | /nea/ |
 | `treant-kind` | a treant | *Nana | /nana/ |

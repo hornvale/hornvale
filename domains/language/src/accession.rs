@@ -261,7 +261,7 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "wooded-grassland",
     ],
     // Epoch 4 — The Wearing (2026-07-27, re-seated 2026-07-29): the nineteen
-    // words a place-name is built out of. Nine landforms a settled cell can BE
+    // words a place-name is built out of. Nine landforms a settled vertex can BE
     // or sit beside (`hill`, `valley`, `river`, `ford`, `spring`, `marsh`,
     // `island`, `coast`, `lake`), gated on the real terrain query that put a
     // settlement there; and the ten relative/evaluative modifiers every
@@ -441,6 +441,103 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
     &[
         "chart", "help", "identify", "know", "lens", "look", "provoke", "read", "recount", "sense",
         "soothe", "survey", "wait", "write",
+    ],
+    // Epoch 12 — The Confidant (2026-08-24), Task 3: the six felt states of
+    // the vessel window's affect circumplex (`AffectLabel`, spec §7),
+    // registered so a culture can have — or lack — a word for one, the same
+    // shape the spectral classes (epoch 6) and the action suite (epoch 11)
+    // already use. One concept per variant
+    // (`hornvale_language::felt_state_pack`); kept in step with
+    // `AffectLabel` by a test in `windows/vessel`, not by an import, because
+    // a domain cannot depend on a window (`domains/CLAUDE.md`'s one rule).
+    // Appended, never merged into an earlier cohort, per this module's
+    // absolute rule.
+    &[
+        "content",
+        "eager",
+        "frustrated",
+        "helpless",
+        "lost",
+        "searching",
+    ],
+    // Epoch 13 — The Inquest (2026-08-26), Task 6: `kill`, the causative of
+    // the core `die`, and the campaign's second transitive predicate. A
+    // single-concept cohort, appended per this module's absolute rule rather
+    // than seated beside `die` in cohort 0 — which is where it linguistically
+    // belongs and where placing it would re-sort the 76-concept baseline
+    // every later cohort is defined not to disturb.
+    //
+    // **This placement is what makes the campaign's byte-goldens hold.**
+    // `kill` joins `packs::universal_stratum`, so it is a CORE concept that
+    // every tongue lexicalizes, and a naive insertion would have moved a word
+    // in every language in the world. At epoch 13 it sorts strictly last in
+    // `etymology::assign_proto_roots_with_epoch`'s walk (epoch, then
+    // core-first, then concept-id), so it draws after every existing concept
+    // and displaces none. The cost it pays is the ordinary Accession trade
+    // (§3.3): it forfeits the short-form priority its core-ness would
+    // otherwise buy, and takes whatever the probe walk leaves.
+    &["kill"],
+    // Epoch 14 — The Mortise (2026-08-27), Task 2: `think`, the
+    // epistemic-hedge predicate (m09, "I think her name was Gilda") and the
+    // campaign's third transitive predicate. A single-concept cohort,
+    // appended per this module's absolute rule rather than seated in cohort
+    // 0 beside the other universal-stratum acts — which is where it
+    // linguistically belongs and where placing it would re-sort the
+    // baseline every later cohort is defined not to disturb.
+    //
+    // **Same reason `kill` (epoch 13) sorts last rather than beside `die`.**
+    // `think` joins `packs::universal_stratum`, so it too is a CORE concept
+    // every tongue lexicalizes, and a naive insertion would move a word in
+    // every language in the world. At epoch 14 it sorts strictly last in
+    // `etymology::assign_proto_roots_with_epoch`'s walk (epoch, then
+    // core-first, then concept-id), after `kill`, so it draws after every
+    // existing concept — including `kill` itself — and displaces none. It
+    // pays the same ordinary Accession trade (§3.3) `kill` did: it forfeits
+    // the short-form priority its core-ness would otherwise buy.
+    &["think"],
+    // Epoch 15 — The Offer (2026-08-27), Task 9: the five object properties
+    // an anchor may carry (`ObjectProperty`, spec §3.1/§3.3), registered so
+    // a culture can have — or lack — a word for one, the same shape the
+    // felt states (epoch 12) already use. One concept per variant
+    // (`hornvale_language::object_property_pack`); kept in step with
+    // `ObjectProperty` by a test in `windows/vessel`, not by an import,
+    // because a domain cannot depend on a window (`domains/CLAUDE.md`'s one
+    // rule). Appended, never merged into an earlier cohort, per this
+    // module's absolute rule.
+    //
+    // **This cohort was authored as epoch 14 and renumbered to 15 on
+    // absorption (2026-08-27).** The Offer and The Mortise appended
+    // concurrently and both claimed 14; The Mortise merged first, so it
+    // keeps the number and this cohort moves — first-to-merge keeps the
+    // number, exactly as a colliding decision ID is renumbered against the
+    // merged tree. Renumbering was the only resolution available: an
+    // earlier cohort is a save-format contract, so neither cohort's
+    // *contents* could be touched and merging the two into one 14 would
+    // have re-sorted `think` against five concepts it had already drawn
+    // ahead of.
+    //
+    // **Measured consequence: none, in either direction.** Every
+    // pre-existing entry in
+    // `windows/worldgen/tests/fixtures/proto-goblinoid-root-table-seed-42.txt`
+    // is byte-identical across the absorption (the diff against the
+    // pre-merge `origin/main` table is five additions and zero
+    // modifications), which is the property append-only exists to give. The
+    // renumber did not move these five concepts' own roots either, which is
+    // worth stating because the opposite was expected: the epoch reaches
+    // the draw ONLY as `let weighty = epoch > 0` in
+    // `etymology::draw_candidate`, so 14 and 15 are indistinguishable to
+    // it, and cohort order can move a root only by way of the
+    // collision/minimal-pair rejection state. `think` takes `Peo`, which
+    // collides with none of the five, so every probe index is unchanged.
+    // Do not read that as a licence to renumber freely: it is a fact about
+    // these two cohorts' drawn forms, not a property of renumbering, and a
+    // colliding form would have moved a root here.
+    &[
+        "affords-passage",
+        "encloses",
+        "holds-liquid",
+        "radiates-heat",
+        "supports-rest",
     ],
 ];
 

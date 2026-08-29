@@ -48,7 +48,7 @@
 //! `rows.csv` snapshots". It is not reimplemented here; that would be the
 //! exact duplication this campaign exists to stop.
 //!
-//! The per-PAIR movement above is a raw string comparison of two CSV cells,
+//! The per-PAIR movement above is a raw string comparison of two CSV vertices,
 //! which `render_diff` cannot express (it summarises a whole arm's
 //! distribution, not one seed's row) and which is not a differ in any
 //! meaningful sense.
@@ -313,7 +313,7 @@ fn two_independent_baseline_runs_rank_identically() {
 /// claim: readout(preregistered) — recall@10 over the committed (injection x
 /// seed) pairs, against the frozen 0.60 bar; the seed loop enumerates the
 /// battery's own arms rather than sampling a population.
-#[ignore = "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.6083 over 120 pairs, +0.19 SE from the 0.60 bar; four census epochs of one unchanged report read 0.5667, 0.6083, 0.6000 and 0.6083, all inside one SE of the bar, so the battery separates nothing)"]
+#[ignore = "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.6083 over 120 pairs, +0.19 SE from the 0.60 bar; five census epochs of one unchanged report read 0.5667, 0.6083, 0.6000, 0.6083 and 0.6083, all inside one SE of the bar, so the battery separates nothing)"]
 #[test]
 fn h1_recall_at_10() {
     let t = tally_recall();
@@ -412,7 +412,7 @@ fn h1_recall_at_10() {
 /// scorer, not the evaluable surface. Only the worlds moved. Re-measured:
 /// **72/120 = 0.6000**, which is *exactly* the preregistered bar.
 ///
-/// Three readings now exist, across three census epochs, of one unchanged
+/// Five readings now exist, across five census epochs, of one unchanged
 /// report:
 ///
 /// ```text
@@ -421,12 +421,13 @@ fn h1_recall_at_10() {
 ///     68/120 = 0.5667   -0.745 SE   The Gnomon      (published as refuted)
 ///     73/120 = 0.6083   +0.186 SE   The Glasshouse  (verdict withdrawn)
 ///     72/120 = 0.6000    0.000 SE   The Underworld  (this re-read)
+///     73/120 = 0.6083   +0.186 SE   The Burr        (repeats Glasshouse)
+///     70/120 = 0.5833   -0.374 SE   The Granary     (this re-read)
 /// ```
 ///
-/// All three sit inside one standard error of the bar, and the third sits
-/// *on* it — the single most uninformative position a reading can occupy,
-/// since a measurement equal to its own threshold decides nothing in either
-/// direction. **The verdict therefore remains "cannot tell"; the instrument
+/// All sit inside one standard error of the bar, scattered on both sides of
+/// it — exactly the signature of an instrument measuring nothing but noise
+/// at this n. **The verdict therefore remains "cannot tell"; the instrument
 /// remains underpowered; the fix remains more pairs, not a moved bar.**
 ///
 /// This re-read STRENGTHENS that conclusion rather than disturbing it. The
@@ -470,6 +471,23 @@ fn h1_recall_at_10() {
 /// either side. The registry row's status is unchanged by this re-read, as it
 /// was unchanged by the second.
 ///
+/// **RE-READ A FOURTH TIME AT THE GRANARY'S CLOSE (2026-08-24), WITH A HOST
+/// CAVEAT THE EARLIER RE-READS DID NOT NEED.** The Granary's sub-year raid
+/// timing moved the worlds, and the campaign's first measurement of the
+/// refreshed battery read **70/120 = 0.5833** — but that figure came from
+/// LOCAL PILOT fixtures (`HV_GNOMON_PILOT=1`, Nathan-authorized), which sit
+/// in the known ~0.1% discrete-count host-divergence class against the
+/// census goldens. The CANONICAL re-author on lefford (fixtures at
+/// `13695c4ae`, census goldens at `c54fb62c9`) restored **73/120 = 0.6083,
+/// +0.19 SE** — numerically identical to The Glasshouse/Burr readings.
+/// Nothing about the *report* changed. The canonical reading list stays:
+/// 0.5667 / 0.6083 / 0.6000 / 0.6083 / 0.6083 across five epochs — all
+/// within one SE of the bar. The pilot detour arguably STRENGTHENS the
+/// underpower diagnosis: even a world-moving campaign leaves the canonical
+/// reading inside one SE of the bar — and an off-host fixture set can move
+/// the tally by three hits, which is exactly why only canonical readings
+/// enter this list.
+///
 /// claim: invariant(the committed battery scores exactly 73 hits over 120
 /// evaluable (injection x seed) pairs, with no void pairs) — an identity over
 /// committed fixtures and a committed census, not a statistic.
@@ -485,7 +503,7 @@ fn the_falsified_recall_is_pinned_as_a_witness() {
         ),
         (73, 120, 0, 0),
         "the injection battery's recall tally moved. This is the WITNESS to The \
-         Gnomon's reading (recall@10 = 73/120 = 0.6083, +0.19 SE from the \
+         Gnomon's finding (recall@10 now reads 73/120 = 0.6083, +0.19 SE from \
          preregistered bar of 0.60 — a bar this battery is NOT powered to \
          adjudicate, see the doc comment), and it is pinned so that a change to \
          the report — REPORT_SIZE, TAIL_DEPTH_BAR, the scorer, the evaluable \
@@ -494,11 +512,13 @@ fn the_falsified_recall_is_pinned_as_a_witness() {
          re-read the finding, re-state it in book/src/chronicle/the-gnomon.md, \
          in the TOOL-anomaly-ranking-concentrates-injection registry row and in \
          the `#[ignore]` reason rostered in cli/tests/heavy_tier.rs, and re-pin \
-         all four in the same commit. THIS HAS NOW HAPPENED THREE TIMES (The \
+         all four in the same commit. THIS HAS NOW HAPPENED FIVE TIMES (The \
          Glasshouse, 2026-08-15, which overturned the verdict; The Underworld, \
          2026-08-17, which corroborated the withdrawal at a third census \
-         epoch; The Burr, 2026-08-18/19, which corroborated it again at a \
-         fourth, reproducing The Glasshouse's exact reading). Every time the \
+         epoch; The Burr, 2026-08-18/19, which reproduced The Glasshouse's \
+         exact reading at a fourth; The Granary, 2026-08-24, whose canonical \
+         reading repeated it a fifth time after a host-divergent local pilot \
+         first said otherwise). Every time the \
          report was untouched and the number moved because the WORLD moved, \
          which is the strongest argument for keeping this pin. FIRST ASK \
          WHETHER YOUR CHANGE TOUCHED THE REPORT: if it did, the four readings \

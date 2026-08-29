@@ -280,8 +280,8 @@ fn assert_h3_clauses(out_coloured: &str, out_mono: &str, mono_cell_count: usize)
 ///
 /// **Why not the flagship's own band, unlike H1 and Step 0.** That was tried
 /// first and is a genuine null worth recording: per Task 1's own report, the
-/// flagship band is "entirely within one canonical grid cell (a tropical
-/// rainforest river cell)" — every one of its 31 cells resolves to
+/// flagship band is "entirely within one canonical grid vertex (a tropical
+/// rainforest river vertex)" — every one of its 31 cells resolves to
 /// `water == "river"`, so `terrain_glyph` withholds tint from all of them
 /// regardless of chromatic capability (RENDER-9's ground-only tinting rule).
 /// The rendered picture is therefore identical coloured or not — an

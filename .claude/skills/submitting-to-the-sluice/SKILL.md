@@ -33,13 +33,60 @@ needs the canonical box for, and they differ in exactly one respect:
 | | `make sluice-stage BRANCH=… REF=…` | `make sluice BRANCH=… REF=…` |
 |---|---|---|
 | when | every plan-stage boundary | work is complete |
-| phases | the `stage`-rung ones | all six, `heavy` last |
+| phases | `artifacts outboard gate clients` | **the same four, PLUS `heavy`** — see below |
 | merges main+branch in the chamber | yes | yes |
 | pushes | **never** | yes, the exact SHA it tested |
 | terminal state | `reported` | `landed` |
 | headline refused if junk | no — nothing permanent carries it | yes |
 
-Everything below applies to both unless it says otherwise. A stage gate is
+Everything below applies to both unless it says otherwise.
+
+**THE MERGE RUNS ONE PHASE MORE THAN THE STAGE GATE: `heavy`, last (decision
+0426, 2026-08-28).** This paragraph has now been wrong in two different
+directions, so read the script rather than any prose about it:
+
+```
+merge_phases="artifacts outboard gate clients heavy"
+stage_phases="artifacts outboard gate clients"
+```
+
+The history, because it is the reason to distrust a remembered phase list: the
+table once said a merge runs "all six, `heavy` last"; decision 0148 made that
+false by shrinking the merge list down to the stage list; this paragraph then
+said flatly that "`heavy` is not a chamber phase at all", which decision 0426
+made false again after The Governor cut the tier 3.52x. `seam-guard` is the one
+that is genuinely not a chamber phase — it runs only from `make seam-guard`.
+
+**`heavy` is a merge phase and NOT a stage-gate phase, and that asymmetry is
+deliberate.** It compares a live probe against the committed census fixtures,
+which are refreshed once per campaign at pre-merge close — so on a stage gate
+it would red predictably for the whole middle of any world-touching campaign.
+It has in fact never been a stage phase; 0426 restores the pre-0148 layout.
+
+**Consequence when choosing between the two: a green stage gate no longer buys
+a merge's ENTIRE phase coverage.** It buys four fifths of it. A merge can still
+red on `heavy` after every stage gate passed. If you want that answer earlier,
+`make heavy-remote REF=<full-sha>` is the by-hand dispatch — it is a
+diagnostic you read, not a gate, so a census-fixture red in it is expected
+mid-campaign and is not a reason to stop.
+
+**A prose-only candidate skips `heavy` (and `clients`).** `scripts/sluice-phases.sh`
+drops them when every changed path is hand-written prose, so a docs-only merge
+does not pay the tier's ~465.8 s (decision 0426 derives that figure next to its
+inputs; nothing else restates it).
+
+**Why this matters when choosing between them.** From 0148 until 0426 the
+difference was the push and nothing else, and this paragraph said so. Since
+0426 the difference is the push **plus `heavy`**: a green stage gate on an
+ancestor SHA buys four of a merge's five phases, not all of them. Do not
+reason that going straight to merge "adds the full suite" — it adds the push
+and the heavy tier, which is a real but bounded increment. The stage gate's
+real value is unchanged: its refusal is free, and it leaves `main` untouched by
+construction rather than by a phase passing. (The original warning here was
+learned by The Forebay reasoning from a stale row and telling its decider the
+wrong thing — which is why this paragraph now names what changed instead of
+being quietly rewritten.)
+ A stage gate is
 not a lesser instrument: it gates the same real merge product, which is what
 makes it worth queueing behind an hour of someone else's heavy run. What it
 replaced (`make gate-stage`) tested a bare branch tip and could go green on
@@ -106,34 +153,80 @@ instrument for a campaign that is *not* finished.
    hex-pure 40-char SHA (rejecting a string that merely *starts* with a hex
    digit — `[0-9a-f]*` is a glob, not a length-anchored check, and this
    script had that exact bug once) and is actually on a remote branch, then
-   **refuses the submission if the commit's own subject is not a real
-   headline** before it ever ssh's anywhere:
+   — for a **merge** request only — **refuses the submission unless the
+   range carries an authored `Sluice-Headline:` trailer** before it ever
+   ssh's anywhere. The subject of HEAD, or of any other commit in the
+   range, does **not** satisfy this — a real headline used to be inferred
+   from the tip commit's subject, and that inference failed on four of the
+   first four real merges (doubled once, branch-path-leaked twice,
+   redundantly prefixed once — the full account is in
+   `scripts/sluice-headline.sh`), so the rule is now a trailer, not
+   position:
 
-   ```bash
-   headline="$(git log -1 --format=%s "$ref")"
-   case "$headline" in
-       ""|wip|WIP|fixup!*|squash!*|.|tmp|temp|TODO) refuse ;;
-   esac
-   ```
+   - Write **only the text that landed**, one line, as a trailer:
 
-   This is mechanical, not advisory — `sluice-request.sh` runs this itself
-   on every **merge** submission (a `stage` request is exempt: its merge
-   commit is discarded with the chamber's worktree, so no subject it carries
-   can become a census epoch label, and refusing a mid-campaign `wip` commit
-   that a plan-stage boundary legitimately sits on would block the one thing
-   a stage gate is for), using the exact same subject
-   `sluice-run.sh`'s own `--no-ff` merge will later use as the merge
-   commit's subject (`headline="${HV_SLUICE_HEADLINE:-$(git log -1
-   --format=%s "$sha")}"`), which `tools/census/history.sh` then reads as
-   the permanent census epoch label (`git log --follow --first-parent
-   main`). Only the campaign that authored the commit knows whether that
-   subject is fit to become a permanent artifact label; an operator
-   triaging the queue later must never be the one inventing or silently
-   accepting a placeholder one. If your submission is refused this way,
-   amend HEAD's message (`git commit --amend`, if that commit is yours to
-   rewrite, or add a small final commit with a real subject) and push
-   again — do not try to route around it with an env var; nothing in the
-   request path threads a caller-supplied override through, deliberately.
+     ```
+     Sluice-Headline: every instant in the walk is a WorldTime (stage 3)
+     ```
+
+     Do not prefix it with `merge(...): ` yourself — `sluice-run.sh`
+     composes `merge(<campaign>): <your text>` as the actual merge
+     commit's subject (stripping a `merge(...): ` prefix defensively if
+     you added one anyway, so it can never double).
+   - It can sit on **any commit in the range** (`origin/main..REF`), not
+     necessarily the last one. A later commit *without* a trailer does not
+     displace it — which is the whole gain over the old tip-subject rule. A
+     later commit *with* one **does**: `git log` reads newest-first and the
+     newest non-empty trailer wins. (This bullet used to assert both halves at
+     once — "a later commit does not displace it, and the newest wins" — which
+     is self-contradictory and reads as reassurance.)
+   - **Nothing refuses a WRONG headline, only a missing or placeholder one**,
+     and the subject it writes is permanent: `tools/census/history.sh` loads
+     it as a census `epoch_label`. So a stray `Sluice-Headline:` on an early
+     fix commit becomes main's subject unless a later commit overrides it —
+     The Governor nearly landed under one of its own Task 9 fix commits'
+     trailers. **Before submitting a merge, run the helper and read what it
+     returns**, rather than trusting that the last trailer you wrote is the
+     one it finds:
+
+     ```bash
+     . scripts/sluice-headline.sh
+     sluice_headline_of "$PWD" origin/main HEAD
+     ```
+   - It **must be in that commit message's last paragraph**. This reads
+     git's own trailer parser, which only ever looks at the final block:
+
+     ```
+     Sluice-Headline: what landed      <- STRANDED, ignored
+                                        <- this blank line breaks it
+     Claude-Session: https://…
+     ```
+
+     Keep it adjacent to any other trailers, no blank line between.
+   - Verify before pushing:
+
+     ```bash
+     git log -1 --format='%(trailers:key=Sluice-Headline,valueonly)' <sha>
+     # or, across the whole range (newest non-empty wins):
+     git log --format='%(trailers:key=Sluice-Headline,valueonly)' origin/main..HEAD
+     ```
+
+   This is mechanical, not advisory: `tools/census/history.sh` reads the
+   merge commit's subject as the permanent census epoch label (`git log
+   --follow --first-parent main`) whenever that merge moves the census, so
+   only the campaign that authored the range knows whether a label is fit
+   to be permanent; an operator triaging the queue later must never be the
+   one inventing or silently accepting a placeholder. A `stage` request is
+   exempt — its merge commit is discarded with the chamber's worktree, so
+   no label it carries can ever land, and refusing a mid-campaign commit
+   with no trailer at a plan-stage boundary would block the one thing a
+   stage gate is for. If your merge submission is refused this way, add
+   the trailer to any commit in the range (a small final commit is fine)
+   and push again — do not try to route around it with an env var;
+   nothing in the request path threads a caller-supplied override through,
+   deliberately (`HV_SLUICE_HEADLINE` is a test seam for driving
+   `sluice-run.sh` directly, not a caller-facing override of the mouth's
+   refusal).
 
    Once past both checks, `sluice-request.sh` ssh's to the canonical box
    and calls `sluice-queue.sh add` there under its own lock. **If this
@@ -148,11 +241,12 @@ instrument for a campaign that is *not* finished.
    demonstrates the assertion is non-vacuous by mutating the script to
    swallow ssh's exit code and confirming the same test goes red on the
    mutant. The headline refusal and the hex-purity check get the same
-   treatment: a real "wip"-subject commit (minted locally with `git
-   commit-tree`, never touching a real branch) is refused by the real
-   script and accepted by a mutant with the check deleted; a 40-char,
-   hex-*starting* but not hex-*pure* string is refused by the real script
-   and would have passed the original, glob-based check.
+   treatment: a real "wip"-subject commit with **no `Sluice-Headline:`
+   trailer** (minted locally with `git commit-tree`, never touching a real
+   branch) is refused by the real script and accepted by a mutant with the
+   check deleted; a 40-char, hex-*starting* but not hex-*pure* string is
+   refused by the real script and would have passed the original,
+   glob-based check.
 
 3. **Only once step 2 printed a request id: nudge.** The queue entry is
    already durable at this point — nudging is purely about latency,
@@ -215,11 +309,15 @@ chamber-side failure (read the log named above).
   durable-before-nudge ordering exists to prevent.
 - Assuming `make gate-commit` passing says anything about the headline —
   it is a different property (compiles/lints/sub-floor tests vs. "this
-  subject is fit to become a permanent census epoch label") and
-  gate-commit does not look at commit messages at all. `sluice-request.sh`
-  enforces the headline itself now, so a bad subject is refused at
-  submission time either way — but a campaign that expects `gate-commit`
-  to have already covered it will be confused by the refusal.
+  range carries an authored `Sluice-Headline:` trailer fit to become a
+  permanent census epoch label") and gate-commit does not look at commit
+  messages at all. `sluice-request.sh` enforces the headline itself now,
+  so a missing or misplaced trailer is refused at submission time either
+  way — but a campaign that expects `gate-commit` to have already covered
+  it will be confused by the refusal.
+- Writing a fine commit *subject* and assuming that satisfies the check.
+  It does not — only a `Sluice-Headline:` trailer does, and only when it
+  sits in that commit message's last block.
 - Force-pushing to update a submission. Push an ordinary fast-forward
   commit and submit a new request (the queue coalesces a same-branch,
   ancestor-superseding resubmission automatically — see

@@ -17,7 +17,7 @@ use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, FoundingCoords, Function, Notability, Occupation,
     OccupationRecord, TechHorizon, founding_coords, layer_key,
 };
-use hornvale_kernel::{CellId, EntityId, Fact, KindId, Lineage, Value, World, WorldTime};
+use hornvale_kernel::{EntityId, Fact, KindId, Lineage, Value, Vertex, World, WorldTime};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// **The unit boundary (The Ell, spec §2a).** A bake-side YEAR becomes the
@@ -32,7 +32,7 @@ use std::collections::{BTreeMap, BTreeSet};
 ///
 /// Finiteness is not checked: the input is bake output (a `f64` stepped from
 /// `start_year` by `epoch_years`), never parsed text, and a finite year times a
-/// finite constant is finite. The `WorldTime::new(...).expect(...)` in [`fact`]
+/// finite constant is finite. The `WorldTime::from_std_days(...).expect(...)` in [`fact`]
 /// is the assertion of that.
 /// seam-guard: identity(0) scope(hornvale-worldgen)
 ///
@@ -60,7 +60,27 @@ use std::collections::{BTreeMap, BTreeSet};
 /// `#[ignore]`d code, not widening `scope()`.
 /// type-audit: bare-ok(count: year), bare-ok(count: return)
 pub fn ledger_day_of_bake_year(year: f64) -> f64 {
-    year * hornvale_kernel::Years::DAYS_PER_YEAR
+    // The crossing quantizes (decision 0033), and must, for two reasons that
+    // both post-date the original two-line body:
+    //
+    // The Escapement (decision 0186) split the ledger's canonicalizations:
+    // a committed `Value::Number` object still rounds to 8 significant digits
+    // while `Fact.day` became an exact tick count. Every caller commits the
+    // result BOTH ways — as an `occ-founded` object and as its own day stamp —
+    // so an unquantized crossing let one instant present as two values a
+    // half-ULP apart (`155261.6875` as a day, `155261.69` as the object), and
+    // any consumer ordering events by `Fact.day` against a founding object
+    // read inversions into same-instant pairs: 7 of seed 42's 157 tribute
+    // facts predated the very patron whose seating instant they carried.
+    // Quantizing here makes the forward map idempotent under commit, so the
+    // object and the day agree to the last bit.
+    //
+    // The Granary's sub-year stamps (`year + phase / PHASES_PER_YEAR`) also
+    // ended the old guarantee that bake crossings were coarse enough to
+    // survive 8-digit quantization unchanged (`k · 9131.25` days); folding the
+    // rounding into the crossing is what keeps the round trip through
+    // `bake_year_of_ledger_day` lossless for them.
+    hornvale_kernel::quantize(year * hornvale_kernel::Years::DAYS_PER_YEAR)
 }
 
 /// The inverse read: a standard DAY off the ledger becomes the bake-side YEAR
@@ -76,10 +96,11 @@ pub fn ledger_day_of_bake_year(year: f64) -> f64 {
 /// has both sides move together.
 ///
 /// **Losslessness is a property of the bake, not of this function.** The
-/// forward map passes through `Ledger::commit`'s 8-significant-digit
-/// quantization, and the round trip is exact only while foundings stay coarse
-/// enough to survive it — they are (25-year epochs ⇒ `k · 9131.25` days, at
-/// most 8 significant digits). `windows/worldgen/tests/history_units.rs`'s
+/// forward map quantizes to 8 significant digits itself (see above), so it is
+/// idempotent under `Ledger::commit` and the round trip is exact for any year
+/// whose crossing survives that rounding — whole epoch years always did; The
+/// Granary's sub-year stamps do because the rounding now happens here, once,
+/// rather than at the object boundary alone. `windows/worldgen/tests/history_units.rs`'s
 /// `reading_a_founding_back_out_of_the_ledger_is_lossless` asserts that
 /// property on a real world, because if it ever stops holding, every founder
 /// handle and every flesh seed in every world moves and nothing else says so.
@@ -120,7 +141,7 @@ fn fact(subject: EntityId, predicate: &str, object: Value, day: f64) -> Fact {
         predicate: predicate.to_string(),
         object,
         place: Some(subject),
-        day: Some(WorldTime::new(day).expect("history-bake day is finite")),
+        day: Some(WorldTime::from_std_days(day).expect("history-bake day is finite")),
         provenance: hornvale_history::streams::BAKE.as_str().to_string(),
     }
 }
@@ -193,7 +214,7 @@ fn resolve_people(label: &str) -> Option<KindId> {
 pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
     // Mint one entity per record, strictly in `records` order (determinism:
     // same history ⇒ same ids ⇒ same facts, every time).
-    // An occupation has no ledger entity above it — its site is a `CellId` and
+    // An occupation has no ledger entity above it — its site is a `Vertex` and
     // its people a `KindId`, neither of which is an entity — so it roots, and
     // its ordinal is its position in the baked `records` order. Spec P4: a
     // future bake that reorders `records` still moves these ids, and that is
@@ -296,7 +317,7 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
             commit_on(hornvale_history::OCC_ENDED_BY, ended_by, end_day)?;
         }
         let founded_from = match record.founded_from {
-            Founding::Genesis(cell) => Value::Number(f64::from(cell.0)),
+            Founding::Genesis(vertex) => Value::Number(f64::from(vertex.0)),
             Founding::From(e) => Value::Entity(
                 *bake_to_ledger
                     .get(&e)
@@ -318,7 +339,7 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
                 day,
             )?;
             commit_on(
-                hornvale_settlement::CELL_ID,
+                hornvale_settlement::VERTEX_ID,
                 Value::Number(f64::from(record.core.site.0)),
                 day,
             )?;
@@ -341,14 +362,17 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
         let patron = *bake_to_ledger
             .get(&rel.patron)
             .expect("a tribute patron names a community minted in this history");
+        // `ledger_day_of_bake_year` quantizes the crossing (see there for why
+        // The Escapement makes that load-bearing): the day below therefore
+        // carries the SAME canonical instant as each party's committed founding
+        // object, so the invariant this fact must honour — a relation is never
+        // dated before either community it names — cannot be inverted by the
+        // two surfaces disagreeing about one instant.
         world.ledger.commit(
             fact(
                 subject,
                 hornvale_history::PAYS_TRIBUTE_TO,
                 Value::Entity(patron),
-                // `TributeRelation::since` is a bake YEAR like every other time
-                // the bake carries — the same crossing as the founding stamp
-                // above.
                 ledger_day_of_bake_year(rel.since),
             ),
             &world.registry,
@@ -431,7 +455,7 @@ pub fn present_year(world: &World) -> f64 {
 /// [`present_year`], crossed forward into the standard **day** every
 /// [`WorldTime`] consumer needs — the composition a caller wanting "now" as a
 /// day would otherwise hand-write as
-/// `WorldTime::new(ledger_day_of_bake_year(present_year(world)))`.
+/// `WorldTime::from_std_days(ledger_day_of_bake_year(present_year(world)))`.
 ///
 /// That hand-written composition is exactly what sat at
 /// `windows/worldgen/tests/repose_exposure.rs`'s TASK 7 call, and it reported
@@ -447,7 +471,7 @@ pub fn present_year(world: &World) -> f64 {
 /// `present_frame_crosses_the_bake_year_by_days_per_year` in this crate's
 /// `tests/history_emit.rs`.
 pub fn present_frame(world: &World) -> WorldTime {
-    WorldTime::new(ledger_day_of_bake_year(present_year(world)))
+    WorldTime::from_std_days(ledger_day_of_bake_year(present_year(world)))
         .expect("a derived present-day crossing is finite")
 }
 
@@ -467,16 +491,16 @@ pub fn occupation_records(world: &World) -> Vec<OccupationRecord> {
         .collect()
 }
 
-/// Occupations on a cell, oldest-founded first (the palimpsest layers a
+/// Occupations on a vertex, oldest-founded first (the palimpsest layers a
 /// site's stratigraphy stacks in). Ordered by [`layer_key`]: material facts
 /// only (founded, then ended — a still-living occupation sorts last, then
 /// peak population, then the predecessor's founding coordinates) — never by
 /// mint order, so a site's stratigraphy is a property of the world, not of
 /// the order a bake loop happened to mint its entities in.
-pub fn occupations_at(world: &World, cell: CellId) -> Vec<OccupationRecord> {
+pub fn occupations_at(world: &World, vertex: Vertex) -> Vec<OccupationRecord> {
     let all = occupation_records(world);
     let coords = founding_coords_by_id(&all);
-    let mut v: Vec<OccupationRecord> = all.into_iter().filter(|o| o.core.site == cell).collect();
+    let mut v: Vec<OccupationRecord> = all.into_iter().filter(|o| o.core.site == vertex).collect();
     v.sort_by_key(|r| layer_key(r, parent_coords(r, &coords)));
     v
 }
@@ -505,29 +529,29 @@ pub(crate) fn parent_coords(
     }
 }
 
-/// Every occupation, grouped by `site`, each cell's vec ordered
+/// Every occupation, grouped by `site`, each vertex's vec ordered
 /// oldest-founded-first — the batched sibling of [`occupations_at`]: one
-/// [`occupation_records`] scan for the whole world instead of one per cell.
+/// [`occupation_records`] scan for the whole world instead of one per vertex.
 /// Built for The Vestige's per-world field derivations
 /// ([`crate::vestige::vestiges_field`]) and the coming census, where calling
-/// `occupations_at` per cell would rescan the ledger `O(cells)` times. Each
-/// cell's vec is sorted with the exact same [`layer_key`] `occupations_at`
-/// uses, so a cell's entry here is byte-for-byte identical to what
-/// `occupations_at(world, cell)` would produce. The predecessor-coordinates
-/// map is built **once** for the whole world, not per cell — `layer_key`'s
-/// ancestry tail can point at a predecessor on any site, so a per-cell map
+/// `occupations_at` per vertex would rescan the ledger `O(vertices)` times. Each
+/// vertex's vec is sorted with the exact same [`layer_key`] `occupations_at`
+/// uses, so a vertex's entry here is byte-for-byte identical to what
+/// `occupations_at(world, vertex)` would produce. The predecessor-coordinates
+/// map is built **once** for the whole world, not per vertex — `layer_key`'s
+/// ancestry tail can point at a predecessor on any site, so a per-vertex map
 /// would miss it.
-pub fn occupations_by_cell(world: &World) -> BTreeMap<CellId, Vec<OccupationRecord>> {
+pub fn occupations_by_vertex(world: &World) -> BTreeMap<Vertex, Vec<OccupationRecord>> {
     let all = occupation_records(world);
     let coords = founding_coords_by_id(&all);
-    let mut by_cell: BTreeMap<CellId, Vec<OccupationRecord>> = BTreeMap::new();
+    let mut by_vertex: BTreeMap<Vertex, Vec<OccupationRecord>> = BTreeMap::new();
     for occ in all {
-        by_cell.entry(occ.core.site).or_default().push(occ);
+        by_vertex.entry(occ.core.site).or_default().push(occ);
     }
-    for occs in by_cell.values_mut() {
+    for occs in by_vertex.values_mut() {
         occs.sort_by_key(|r| layer_key(r, parent_coords(r, &coords)));
     }
-    by_cell
+    by_vertex
 }
 
 /// Reconstruct the [`OccupationRecord`] an occupation entity's committed facts
@@ -540,7 +564,7 @@ pub fn occupations_by_cell(world: &World) -> BTreeMap<CellId, Vec<OccupationReco
 fn reconstruct_occupation(world: &World, entity: EntityId) -> Option<OccupationRecord> {
     let people_label = world.ledger.text_of(entity, hornvale_history::OCC_PEOPLE)?;
     let people = resolve_people(people_label)?;
-    let site = CellId(occ_number(world, entity, hornvale_history::OCC_SITE)? as u32);
+    let site = Vertex(occ_number(world, entity, hornvale_history::OCC_SITE)? as u32);
     // The inverse crossing: the ledger stores days, an `Occupation` carries the
     // bake's years. Every key derived from this record downstream
     // (`founder_handle`, `material_key`, `founding_key`, `layer_key`) is keyed
@@ -577,7 +601,7 @@ fn reconstruct_occupation(world: &World, entity: EntityId) -> Option<OccupationR
         .value_of(entity, hornvale_history::OCC_FOUNDED_FROM)
     {
         Some(Value::Entity(e)) => Founding::From(*e),
-        Some(Value::Number(cell)) => Founding::Genesis(CellId(*cell as u32)),
+        Some(Value::Number(vertex)) => Founding::Genesis(Vertex(*vertex as u32)),
         _ => Founding::Genesis(site),
     };
 
@@ -651,12 +675,12 @@ fn parse_notability(label: &str) -> Option<Notability> {
     })
 }
 
-/// The dominant people per region: every cell an alive occupation (a
+/// The dominant people per region: every vertex an alive occupation (a
 /// committed `is-settlement`) sits on, grouped by that occupation's people.
 /// Reads purely off the ledger — the present-as-query the campaign's
 /// keystone names.
-pub fn territories(world: &World) -> BTreeMap<KindId, BTreeSet<CellId>> {
-    let mut map: BTreeMap<KindId, BTreeSet<CellId>> = BTreeMap::new();
+pub fn territories(world: &World) -> BTreeMap<KindId, BTreeSet<Vertex>> {
+    let mut map: BTreeMap<KindId, BTreeSet<Vertex>> = BTreeMap::new();
     for f in world.ledger.find(hornvale_settlement::IS_SETTLEMENT) {
         let id = f.subject;
         let Some(label) = world.ledger.text_of(id, hornvale_history::OCC_PEOPLE) else {
@@ -665,11 +689,13 @@ pub fn territories(world: &World) -> BTreeMap<KindId, BTreeSet<CellId>> {
         let Some(people) = resolve_people(label) else {
             continue;
         };
-        let Some(Value::Number(cell)) = world.ledger.value_of(id, hornvale_settlement::CELL_ID)
+        let Some(Value::Number(vertex)) = world.ledger.value_of(id, hornvale_settlement::VERTEX_ID)
         else {
             continue;
         };
-        map.entry(people).or_default().insert(CellId(*cell as u32));
+        map.entry(people)
+            .or_default()
+            .insert(Vertex(*vertex as u32));
     }
     map
 }
@@ -702,7 +728,7 @@ pub const GOBLINOIDS: [KindId; 4] = [
 ];
 
 /// The number of **climate** displacement events the bake resolved, read
-/// straight off the ledger: an occupation the paleoclimate evicted from a cell
+/// straight off the ledger: an occupation the paleoclimate evicted from a vertex
 /// it turned hostile, which relocated to a vacant refuge rather than starving.
 /// This equals `census(bake).migrated` exactly — the contract
 /// `windows/worldgen/tests/history_gates.rs`'s
@@ -714,7 +740,7 @@ pub const GOBLINOIDS: [KindId; 4] = [
 /// A conquest also closes the *conqueror's* abandoned record with
 /// `CauseOfEnd::Migrated`: `Bake::maybe_raid` has it leave its poorer land for
 /// the prize, an orderly self-directed move under `Ended::Nature`, before it
-/// reopens on the seized cell. Counting every `occ-cause = migrated` fact
+/// reopens on the seized vertex. Counting every `occ-cause = migrated` fact
 /// therefore folds predation into the climate signal (seed 42: 133 such facts
 /// against 58 real climate migrations). The two are kept separate — conflict
 /// displacement is `census(bake).raided`/`fled`, and the campaign's cascade
@@ -807,8 +833,8 @@ pub fn collapse_events(world: &World) -> u64 {
 /// key" idiom [`resolve_people`] uses one level up).
 /// type-audit: bare-ok(identifier-text: peoples)
 pub struct Landmass {
-    /// The component's cells.
-    pub cells: BTreeSet<CellId>,
+    /// The component's vertices.
+    pub vertices: BTreeSet<Vertex>,
     /// The raw people-label text of every alive occupation on this landmass.
     pub peoples: BTreeSet<String>,
 }
@@ -833,56 +859,57 @@ pub fn sundered_landmasses(world: &World) -> Vec<Landmass> {
         &crate::graph_derive::GraphConfig::default(),
     );
 
-    let mut site_people: BTreeMap<CellId, String> = BTreeMap::new();
+    let mut site_people: BTreeMap<Vertex, String> = BTreeMap::new();
     for s in hornvale_settlement::all_settlements(world) {
-        let Some(Value::Number(cell)) = world.ledger.value_of(s.id, hornvale_settlement::CELL_ID)
+        let Some(Value::Number(vertex)) =
+            world.ledger.value_of(s.id, hornvale_settlement::VERTEX_ID)
         else {
             continue;
         };
         let Some(label) = world.ledger.text_of(s.id, hornvale_history::OCC_PEOPLE) else {
             continue;
         };
-        site_people.insert(CellId(*cell as u32), label.to_string());
+        site_people.insert(Vertex(*vertex as u32), label.to_string());
     }
 
     graph
         .reachable_regions(1e-6)
         .into_iter()
-        .filter_map(|cells| {
-            let peoples: BTreeSet<String> = cells
+        .filter_map(|vertices| {
+            let peoples: BTreeSet<String> = vertices
                 .iter()
                 .filter_map(|c| site_people.get(c).cloned())
                 .collect();
             if peoples.is_empty() {
                 None
             } else {
-                Some(Landmass { cells, peoples })
+                Some(Landmass { vertices, peoples })
             }
         })
         .collect()
 }
 
-/// How many neighbour rings a people's occupied cells are dilated by to form
+/// How many neighbour rings a people's occupied vertices are dilated by to form
 /// its *region of influence* for [`goblinoid_region_overlap`]. One ring — a
-/// cell plus its immediate neighbours — is the natural "territory around a
+/// vertex plus its immediate neighbours — is the natural "territory around a
 /// settlement". The raw point-sets ([`territories`]) are structurally disjoint
-/// (each cell hosts at most one alive settlement), so their Jaccard is always
-/// 0; dilation is what turns "distinct cells" into the meaningful "distinct
+/// (each vertex hosts at most one alive settlement), so their Jaccard is always
+/// 0; dilation is what turns "distinct vertices" into the meaningful "distinct
 /// regions" the diversity payoff is really about.
 /// type-audit: bare-ok(count)
 pub const TERRITORY_DILATION_RINGS: u32 = 1;
 
 /// Mean pairwise Jaccard overlap of the four [`GOBLINOIDS`]' raw territory
-/// cell-sets ([`territories`]). Because each cell hosts at most one alive
+/// vertex-sets ([`territories`]). Because each vertex hosts at most one alive
 /// settlement, these sets are structurally disjoint, so this is 0.0 on any
-/// well-formed world — it is a *disjointness sanity check* (no cell is
+/// well-formed world — it is a *disjointness sanity check* (no vertex is
 /// double-claimed), NOT the separation metric. For the real spatial-separation
 /// measurement use [`goblinoid_region_overlap`]. Cross-platform byte-identical
 /// (integer set-cardinality arithmetic only).
 /// type-audit: bare-ok(ratio: return)
 pub fn goblinoid_overlap(world: &World) -> f64 {
     let terr = territories(world);
-    let sets: Vec<BTreeSet<CellId>> = GOBLINOIDS
+    let sets: Vec<BTreeSet<Vertex>> = GOBLINOIDS
         .iter()
         .map(|k| terr.get(k).cloned().unwrap_or_default())
         .collect();
@@ -890,7 +917,7 @@ pub fn goblinoid_overlap(world: &World) -> f64 {
 }
 
 /// Mean pairwise Jaccard overlap of the four [`GOBLINOIDS`]' *regions of
-/// influence* — each people's occupied cells dilated by
+/// influence* — each people's occupied vertices dilated by
 /// [`TERRITORY_DILATION_RINGS`] neighbour rings. THIS is the peoples-diversity
 /// payoff, measured: 0.0 = fully separated countries, rising toward 1.0 as
 /// peoples interleave. Regions that merely abut overlap only along their
@@ -906,7 +933,7 @@ pub fn goblinoid_region_overlap(world: &World) -> f64 {
     let terrain = crate::terrain_of(world).expect("a built world's terrain reconstructs");
     let geo = terrain.geosphere();
     let terr = territories(world);
-    let sets: Vec<BTreeSet<CellId>> = GOBLINOIDS
+    let sets: Vec<BTreeSet<Vertex>> = GOBLINOIDS
         .iter()
         .map(|k| {
             let base = terr.get(k).cloned().unwrap_or_default();
@@ -926,9 +953,9 @@ pub fn goblinoid_region_overlap(world: &World) -> f64 {
     mean_pairwise_jaccard(&sets)
 }
 
-/// Mean Jaccard overlap over all unordered pairs of the given cell-sets
+/// Mean Jaccard overlap over all unordered pairs of the given vertex-sets
 /// (0.0 for an empty pair). Integer set-cardinality arithmetic — deterministic.
-fn mean_pairwise_jaccard(sets: &[BTreeSet<CellId>]) -> f64 {
+fn mean_pairwise_jaccard(sets: &[BTreeSet<Vertex>]) -> f64 {
     let (mut sum, mut pairs) = (0.0, 0.0);
     for i in 0..sets.len() {
         for j in (i + 1)..sets.len() {
@@ -947,14 +974,14 @@ fn mean_pairwise_jaccard(sets: &[BTreeSet<CellId>]) -> f64 {
 }
 
 /// A stratigraphy readout: how deep occupation stacks up per site, and whether
-/// depth tracks land quality. A "site" is any cell that ever held an
+/// depth tracks land quality. A "site" is any vertex that ever held an
 /// occupation; its layer count is how many occupations (alive or ruined, over
 /// all of deep time) sat on it — a stack ≥ 2 is a re-occupation, the mark of a
 /// site worth returning to.
 /// type-audit: bare-ok(count: occupied_sites), bare-ok(count: restacked_sites), bare-ok(ratio: restacked_fraction), bare-ok(ratio: depth_capacity_correlation)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Stratigraphy {
-    /// Cells that ever held at least one occupation.
+    /// Vertices that ever held at least one occupation.
     pub occupied_sites: u64,
     /// Occupied sites re-occupied at least once (≥ 2 layers — a stack).
     pub restacked_sites: u64,
@@ -971,14 +998,14 @@ pub struct Stratigraphy {
 }
 
 /// Read the [`Stratigraphy`] off the ledger: group every occupation by its
-/// `occ-site` cell, count layers, and correlate depth against mean peak
+/// `occ-site` vertex, count layers, and correlate depth against mean peak
 /// population. Pure present-as-query — no bake replay, no `HashMap`.
 pub fn stratigraphy(world: &World) -> Stratigraphy {
-    // cell -> (layer count, summed peak population).
-    let mut by_cell: BTreeMap<u32, (u64, f64)> = BTreeMap::new();
+    // vertex -> (layer count, summed peak population).
+    let mut by_vertex: BTreeMap<u32, (u64, f64)> = BTreeMap::new();
     for f in world.ledger.find(hornvale_history::IS_OCCUPATION) {
         let id = f.subject;
-        let Some(Value::Number(cell)) = world.ledger.value_of(id, hornvale_history::OCC_SITE)
+        let Some(Value::Number(vertex)) = world.ledger.value_of(id, hornvale_history::OCC_SITE)
         else {
             continue;
         };
@@ -986,19 +1013,22 @@ pub fn stratigraphy(world: &World) -> Stratigraphy {
             Some(Value::Number(p)) => *p,
             _ => 0.0,
         };
-        let entry = by_cell.entry(*cell as u32).or_insert((0, 0.0));
+        let entry = by_vertex.entry(*vertex as u32).or_insert((0, 0.0));
         entry.0 += 1;
         entry.1 += peak;
     }
-    let occupied_sites = by_cell.len() as u64;
-    let restacked_sites = by_cell.values().filter(|(c, _)| *c >= 2).count() as u64;
+    let occupied_sites = by_vertex.len() as u64;
+    let restacked_sites = by_vertex.values().filter(|(c, _)| *c >= 2).count() as u64;
     let restacked_fraction = if occupied_sites == 0 {
         0.0
     } else {
         restacked_sites as f64 / occupied_sites as f64
     };
-    let depths: Vec<f64> = by_cell.values().map(|(c, _)| *c as f64).collect();
-    let capacities: Vec<f64> = by_cell.values().map(|(c, sum)| *sum / *c as f64).collect();
+    let depths: Vec<f64> = by_vertex.values().map(|(c, _)| *c as f64).collect();
+    let capacities: Vec<f64> = by_vertex
+        .values()
+        .map(|(c, sum)| *sum / *c as f64)
+        .collect();
     let depth_capacity_correlation = rank_correlation(&depths, &capacities);
     Stratigraphy {
         occupied_sites,
@@ -1087,12 +1117,12 @@ mod tests {
         let r = &recs[0];
         assert!(r.core.founded >= 0.0);
 
-        // `occupations_at` groups by cell — the same layer must show up
+        // `occupations_at` groups by vertex — the same layer must show up
         // among the records at its own site.
         let at = occupations_at(&world, r.core.site);
         assert!(at.iter().any(|o| o.core.founded == r.core.founded));
 
-        // Every returned occupation genuinely sits on the queried cell, and
+        // Every returned occupation genuinely sits on the queried vertex, and
         // the layers come back oldest-founded first.
         assert!(at.iter().all(|o| o.core.site == r.core.site));
         assert!(

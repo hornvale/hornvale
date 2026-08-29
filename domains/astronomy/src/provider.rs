@@ -5,7 +5,7 @@
 use crate::anchor::Rotation;
 use crate::calendar::{Calendar, SkyBand, calendar_of};
 use crate::system::{GenesisOutcome, StarSystem};
-use crate::units::StdDays;
+use crate::units::StdInstant;
 use crate::{CELESTIAL_BODY, SkyReport};
 use hornvale_kernel::math;
 use hornvale_kernel::{
@@ -25,10 +25,46 @@ mod tests {
         GeneratedSky::new(generate(Seed(42), &pins).unwrap())
     }
 
+    /// A pre-genesis sky answers for the instant asked, not for genesis —
+    /// decision 0317, reversing 0187's clamp.
+    ///
+    /// The inverse of the test this replaces. That one pinned the clamp
+    /// ("the sky N days before genesis reads as genesis"), and it was written
+    /// to establish what the clamp actually DID before deciding its fate,
+    /// since the funnel's own comment cited a rationale 0187 had retracted.
+    ///
+    /// Now the contract is that time passes through: distinct pre-genesis
+    /// instants give distinct skies, and each is a real answer rather than a
+    /// substituted one. Asserting mere finiteness would not witness that —
+    /// a clamp returns finite values too — so this asserts DISTINCTNESS
+    /// against genesis, which only an unclamped funnel can produce.
+    #[test]
+    fn a_pre_genesis_sky_answers_for_the_instant_asked() {
+        let s = sky(SkyPins::default());
+        let genesis = s.sky_at_visibility(WorldTime::GENESIS, Visibility::CLEAR);
+        let mut seen_distinct = 0;
+        for days_before in [1.0_f64, 5.0, 100.0, 100_000.0] {
+            let before = WorldTime::from_std_days(-days_before).expect("finite");
+            let report = s.sky_at_visibility(before, Visibility::CLEAR);
+            assert!(
+                !report.description.is_empty(),
+                "a pre-genesis sky is still a sky"
+            );
+            if report.description != genesis.description {
+                seen_distinct += 1;
+            }
+        }
+        assert!(
+            seen_distinct > 0,
+            "every pre-genesis instant read identically to genesis — the clamp \
+             is still in the funnel, or something downstream reintroduced one"
+        );
+    }
+
     fn ctx(day: f64) -> ObserverContext {
         ObserverContext::at(
             EntityId::new(1).unwrap(),
-            WorldTime::new(day).expect("a day value is finite"),
+            WorldTime::from_std_days(day).expect("a day value is finite"),
         )
     }
 
@@ -41,7 +77,10 @@ mod tests {
             vec![luna_like()],
             vec![neighbor(crate::pins::NeighborClass::SunLike, "warm yellow")],
         );
-        (s, WorldTime::new(13.1).expect("a day value is finite"))
+        (
+            s,
+            WorldTime::from_std_days(13.1).expect("a day value is finite"),
+        )
     }
 
     #[test]
@@ -51,7 +90,7 @@ mod tests {
             s.sky_at(night),
             s.sky_at_visibility(night, Visibility::CLEAR)
         );
-        let noon = WorldTime::new(13.5).expect("a day value is finite");
+        let noon = WorldTime::from_std_days(13.5).expect("a day value is finite");
         assert_eq!(s.sky_at(noon), s.sky_at_visibility(noon, Visibility::CLEAR));
     }
 
@@ -214,11 +253,13 @@ mod tests {
             ..SkyPins::default()
         });
         let day_len = s.calendar().day_length().unwrap().get();
-        let noon = s.sky_at(WorldTime::new(10.5 * day_len).expect("a day value is finite"));
-        let night = s.sky_at(WorldTime::new(10.01 * day_len).expect("a day value is finite"));
+        let noon =
+            s.sky_at(WorldTime::from_std_days(10.5 * day_len).expect("a day value is finite"));
+        let night =
+            s.sky_at(WorldTime::from_std_days(10.01 * day_len).expect("a day value is finite"));
         assert_ne!(noon.description, night.description);
         assert_eq!(
-            s.sky_at(WorldTime::new(10.5 * day_len).expect("a day value is finite"))
+            s.sky_at(WorldTime::from_std_days(10.5 * day_len).expect("a day value is finite"))
                 .description,
             noon.description
         );
@@ -296,7 +337,7 @@ mod tests {
         });
         let obs = ObserverContext::at_position(
             EntityId::new(1).unwrap(),
-            WorldTime::new(10.5).expect("a day value is finite"),
+            WorldTime::from_std_days(10.5).expect("a day value is finite"),
             GeoCoord {
                 latitude: 40.0,
                 longitude: 25.0,
@@ -348,7 +389,7 @@ mod tests {
                 orbit: Au::new(1.0).unwrap(),
                 year: StdDays::new(365.25).unwrap(),
                 rotation: Rotation::Spinning {
-                    day: StdDays::new(1.0).unwrap(),
+                    day: hornvale_kernel::units::TickSpan::from_std_days(1.0).unwrap(),
                     retrograde: false,
                 },
                 obliquity: Degrees::new(0.0).unwrap(),
@@ -392,7 +433,7 @@ mod tests {
             system,
             notes: Vec::new(),
         });
-        assert!(sky.calendar().moon_phase(StdDays(0.0), 0).is_none());
+        assert!(sky.calendar().moon_phase(StdInstant(0.0), 0).is_none());
         // Local day fraction 0.0 falls outside the centered daylight
         // window, so this is night — the branch that used to `.unwrap()`.
         let report = sky.sky_at(WorldTime::GENESIS);
@@ -432,7 +473,7 @@ mod tests {
                 orbit: Au::new(1.0).unwrap(),
                 year: crate::units::StdDays::new(365.25).unwrap(),
                 rotation: Rotation::Spinning {
-                    day: crate::units::StdDays::new(1.0).unwrap(),
+                    day: hornvale_kernel::units::TickSpan::from_std_days(1.0).unwrap(),
                     retrograde: false,
                 },
                 obliquity: Degrees::new(obliquity).unwrap(),
@@ -652,13 +693,17 @@ mod tests {
     #[test]
     fn an_in_band_observer_sees_the_eclipse_on_its_day() {
         use crate::eclipses::{EclipseBody, eclipse_events, ground_track, sub_solar_longitude_deg};
-        use crate::units::StdDays;
         let (system, calendar) = crate::eclipses::luna_sol();
         let sky = GeneratedSky::new(crate::system::GenesisOutcome {
             system: system.clone(),
             notes: Vec::new(),
         });
-        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 10.0));
+        let events = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * 10.0),
+        );
         let solar = events
             .iter()
             .find(|e| matches!(e.body, EclipseBody::Solar))
@@ -668,7 +713,7 @@ mod tests {
         let at = |day: f64| {
             let obs = ObserverContext::at_position(
                 EntityId::new(1).unwrap(),
-                WorldTime::new(day).expect("a day value is finite"),
+                WorldTime::from_std_days(day).expect("a day value is finite"),
                 GeoCoord {
                     latitude: track.center_lat_deg,
                     longitude: ss,
@@ -696,13 +741,17 @@ mod tests {
     #[test]
     fn the_night_side_sees_the_blood_moon_on_its_day() {
         use crate::eclipses::{EclipseBody, eclipse_events, sub_solar_longitude_deg};
-        use crate::units::StdDays;
         let (system, calendar) = crate::eclipses::luna_sol();
         let sky = GeneratedSky::new(crate::system::GenesisOutcome {
             system: system.clone(),
             notes: Vec::new(),
         });
-        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 10.0));
+        let events = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * 10.0),
+        );
         let lunar = events
             .iter()
             .find(|e| matches!(e.body, EclipseBody::Lunar))
@@ -714,7 +763,7 @@ mod tests {
         let night_lon = (ss + 360.0).rem_euclid(360.0) - 180.0;
         let obs = ObserverContext::at_position(
             EntityId::new(1).unwrap(),
-            WorldTime::new(lunar.day.0).expect("a day value is finite"),
+            WorldTime::from_std_days(lunar.day.0).expect("a day value is finite"),
             GeoCoord {
                 latitude: 0.0,
                 longitude: night_lon,
@@ -749,15 +798,15 @@ mod tests {
             vec![neighbor(crate::pins::NeighborClass::SunLike, "warm yellow")],
         );
         let noon = s
-            .sky_at(WorldTime::new(10.5).expect("a day value is finite"))
+            .sky_at(WorldTime::from_std_days(10.5).expect("a day value is finite"))
             .description;
         assert!(noon.contains("The light is golden."), "got {noon}");
         let dusk = s
-            .sky_at(WorldTime::new(10.78).expect("a day value is finite"))
+            .sky_at(WorldTime::from_std_days(10.78).expect("a day value is finite"))
             .description;
         assert!(dusk.contains("The horizon glows gold."), "got {dusk}");
         let night = s
-            .sky_at(WorldTime::new(10.1).expect("a day value is finite"))
+            .sky_at(WorldTime::from_std_days(10.1).expect("a day value is finite"))
             .description;
         assert!(!night.contains("horizon"), "night takes no hue: {night}");
     }
@@ -851,7 +900,7 @@ mod tests {
             vec![neighbor(crate::pins::NeighborClass::SunLike, "warm yellow")],
         );
         let at = |t: f64| {
-            s.sky_at(WorldTime::new(t).expect("a day value is finite"))
+            s.sky_at(WorldTime::from_std_days(t).expect("a day value is finite"))
                 .description
         };
         assert!(
@@ -882,7 +931,7 @@ mod tests {
                 ..SkyPins::default()
             };
             sky(pins)
-                .sky_at(WorldTime::new(10.5).expect("a day value is finite"))
+                .sky_at(WorldTime::from_std_days(10.5).expect("a day value is finite"))
                 .description
         };
         let retro = noon_sky(crate::pins::SpinPin::Retrograde);
@@ -904,21 +953,21 @@ mod tests {
         // Synodic month = 27.32 × 365.25 / (365.25 − 27.32) ≈ 29.53 d.
         // t = 13.1: phase ≈ 0.4436 — inside the centered full window
         // [7/16, 9/16); local-day fraction 0.1 — night.
-        let full = s.sky_at(WorldTime::new(13.1).expect("a day value is finite"));
+        let full = s.sky_at(WorldTime::from_std_days(13.1).expect("a day value is finite"));
         assert!(
             full.description.contains("shows its full face"),
             "got {}",
             full.description
         );
         // t = 7.1: phase ≈ 0.2404 — first quarter.
-        let quarter = s.sky_at(WorldTime::new(7.1).expect("a day value is finite"));
+        let quarter = s.sky_at(WorldTime::from_std_days(7.1).expect("a day value is finite"));
         assert!(
             quarter.description.contains("shows its first-quarter face"),
             "got {}",
             quarter.description
         );
         // t = 3.05: phase ≈ 0.1033 — waxing crescent.
-        let crescent = s.sky_at(WorldTime::new(3.05).expect("a day value is finite"));
+        let crescent = s.sky_at(WorldTime::from_std_days(3.05).expect("a day value is finite"));
         assert!(
             crescent
                 .description
@@ -941,7 +990,7 @@ mod tests {
                 neighbor(crate::pins::NeighborClass::RedDwarf, "dim red"),
             ],
         );
-        let night = s.sky_at(WorldTime::new(10.1).expect("a day value is finite"));
+        let night = s.sky_at(WorldTime::from_std_days(10.1).expect("a day value is finite"));
         assert!(
             night
                 .description
@@ -961,7 +1010,7 @@ mod tests {
             vec![neighbor(crate::pins::NeighborClass::SunLike, "warm yellow")],
         );
         let noon = |day: f64| {
-            s.sky_at(WorldTime::new(day).expect("a day value is finite"))
+            s.sky_at(WorldTime::from_std_days(day).expect("a day value is finite"))
                 .description
         };
         // Year phase 0.25 is midsummer (daylight peaks); ±1/16 around each
@@ -1002,7 +1051,7 @@ mod tests {
         for k in 0..365 {
             let obs = ObserverContext::at_position(
                 EntityId::new(1).unwrap(),
-                WorldTime::new(k as f64 * year / 365.0).expect("a day value is finite"),
+                WorldTime::from_std_days(k as f64 * year / 365.0).expect("a day value is finite"),
                 GeoCoord {
                     latitude: 35.0,
                     longitude: 0.0,
@@ -1047,7 +1096,7 @@ mod tests {
             let t = k as f64 * span / 60.0;
             let obs = ObserverContext::at_position(
                 EntityId::new(1).unwrap(),
-                WorldTime::new(t).expect("a day value is finite"),
+                WorldTime::from_std_days(t).expect("a day value is finite"),
                 GeoCoord {
                     latitude: 35.0,
                     longitude: 0.0,
@@ -1062,7 +1111,7 @@ mod tests {
                         "got salience {}",
                         p.salience
                     );
-                    let band = s.calendar().sky_band(StdDays(t), 35.0);
+                    let band = s.calendar().sky_band(StdInstant(t), 35.0);
                     assert_ne!(
                         band,
                         Some(SkyBand::Day),
@@ -1145,7 +1194,7 @@ mod tests {
             let t = k as f64 * span / samples as f64;
             let obs = ObserverContext::at_position(
                 EntityId::new(1).unwrap(),
-                WorldTime::new(t).expect("a day value is finite"),
+                WorldTime::from_std_days(t).expect("a day value is finite"),
                 GeoCoord {
                     latitude: 35.0,
                     longitude: 0.0,
@@ -1184,10 +1233,14 @@ mod tests {
     #[test]
     fn rate_matches_the_dated_scan() {
         use crate::eclipses::{EclipseBody, eclipse_events};
-        use crate::units::StdDays;
         let (system, calendar) = crate::eclipses::luna_sol();
         let years = 100.0;
-        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * years));
+        let events = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * years),
+        );
         let solar = events
             .iter()
             .filter(|e| matches!(e.body, EclipseBody::Solar))
@@ -1212,10 +1265,14 @@ mod tests {
             EclipseBody, LUNAR_SHADOW_FACTOR, eclipse_events, node_crossing_chance,
             solar_eclipse_threshold_deg,
         };
-        use crate::units::StdDays;
         let (system, calendar) = crate::eclipses::luna_sol();
         let years = 100.0;
-        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * years));
+        let events = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * years),
+        );
         let lunar = events
             .iter()
             .filter(|e| matches!(e.body, EclipseBody::Lunar))
@@ -1229,6 +1286,28 @@ mod tests {
         let rate_period = calendar.synodic_month(0).unwrap().get() / chance;
         let ratio = scanned_period / rate_period;
         assert!((0.75..=1.25).contains(&ratio), "ratio {ratio}");
+    }
+
+    /// The clamp at the WorldTime -> StdDays funnel is a DECISION, not an
+    /// accident. Whatever it is, it must be asserted somewhere, because
+    /// today it is stated only in a comment and nothing would notice if it
+    /// changed.
+    #[test]
+    fn a_pre_genesis_query_has_a_documented_answer() {
+        let (sky, _t) = night_sky();
+        let before = WorldTime::from_ticks(-1);
+        let at_genesis = WorldTime::GENESIS;
+
+        // Decision 0187: a pre-genesis query is CLAMPED to genesis,
+        // deliberately -- the sky before the world exists is not a physical
+        // question, and an Option or an error at this depth would force
+        // every caller to handle a case no caller can produce (traced: the
+        // only unclamped call sites pass a hardcoded StdDays::new(0.0)).
+        assert_eq!(
+            sky.sky_at(before),
+            sky.sky_at(at_genesis),
+            "a pre-genesis query answers as genesis, per decision 0187"
+        );
     }
 }
 
@@ -1486,10 +1565,32 @@ impl GeneratedSky {
         &self.notes
     }
 
-    // Clamps negative time to 0.0; NaN also maps to 0.0 via f64::max
-    // semantics — genesis-time queries never predate the world.
-    fn t(&self, time: WorldTime) -> StdDays {
-        StdDays(time.day().max(0.0))
+    /// This domain's ONE crossing from exact kernel ticks to a continuous
+    /// instant. Everything downstream of here works in `StdInstant`.
+    ///
+    /// **No clamp.** A pre-genesis instant passes through and the sky answers
+    /// for it, which is decision 0317 reversing 0187.
+    ///
+    /// 0187 clamped to genesis, and its own stated reason ("the sky before
+    /// the world exists is not a physical question") it then RETRACTED,
+    /// because `Calendar::local_day` was deliberately fixed to answer for
+    /// negative time on decision 0126's precedent and the sky and the
+    /// calendar sit on the same axis. What actually held the clamp up was
+    /// structural: `StdDays::new` refused a negative, so no caller could hand
+    /// one in and there was nothing else the funnel could do. The Foliot's
+    /// split removed that constraint, which turned the clamp back into a
+    /// choice — and the choice went the other way.
+    ///
+    /// Two things were established before removing it, in this order,
+    /// because the reverse order would have shipped an unvalidated path:
+    /// the negative branch is REACHABLE by an ordinary user (`cli/src/repl.rs`
+    /// parses `sky <day>` straight into `WorldTime::from_std_days`, which
+    /// accepts a negative), and the calendar's arithmetic actually HOLDS
+    /// down there — a sweep of all seventeen instant-taking methods found and
+    /// fixed one live defect (`year_phase` returned -0.49 via `fract`) before
+    /// this line changed.
+    fn t(&self, time: WorldTime) -> StdInstant {
+        StdInstant(time.as_std_days())
     }
 
     /// The sky at a moment, rendered under an unobstructed view.
@@ -1676,7 +1777,7 @@ impl PhenomenaSource for GeneratedSky {
                 Rotation::Spinning { day, .. } => out.push(Phenomenon {
                     kind: CELESTIAL_BODY.to_string(),
                     referent: Referent::of("sun"),
-                    period_days: Some(round2(day.get())),
+                    period_days: Some(round2(day.as_std_days())),
                     salience: 1.0,
                     venue: Venue::DaySky,
                 }),
@@ -1772,8 +1873,8 @@ impl PhenomenaSource for GeneratedSky {
                 .day_length()
                 .map(|d| d.get() / 2.0)
                 .unwrap_or(0.5);
-            let window_from = crate::units::StdDays(t.0 - half_day);
-            let window_until = crate::units::StdDays(t.0 + half_day);
+            let window_from = crate::units::StdInstant(t.0 - half_day);
+            let window_until = crate::units::StdInstant(t.0 + half_day);
             for event in eclipse_events(&self.system, &self.calendar, window_from, window_until) {
                 let moon = &self.system.moons[event.moon];
                 match event.body {
@@ -1829,7 +1930,7 @@ impl PhenomenaSource for GeneratedSky {
         // to the surface: the local day for a spinning world, the year for
         // a locked one (which turns once per orbit).
         let surface_rotation = match self.system.anchor.rotation {
-            Rotation::Spinning { day, .. } => day.get(),
+            Rotation::Spinning { day, .. } => day.as_std_days(),
             Rotation::Locked => self.system.anchor.year.get(),
         };
         for moon in &self.system.moons {

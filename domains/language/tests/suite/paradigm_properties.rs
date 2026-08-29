@@ -145,8 +145,9 @@ fn non_degeneracy_some_diverge_some_dont() {
     let mut irregular_count = 0;
     let mut regular_count = 0;
     for (id, proto) in &root_protos {
-        let cell = realize_paradigm_cell(proto, &affix_proto, ClassPosition::Suffix, &cascade, &ph);
-        if cell.is_irregular {
+        let vertex =
+            realize_paradigm_cell(proto, &affix_proto, ClassPosition::Suffix, &cascade, &ph);
+        if vertex.is_irregular {
             irregular_count += 1;
             assert!(
                 id.starts_with("consonant-final"),
@@ -175,7 +176,7 @@ fn leveling_suppresses_a_strict_subset() {
     };
     let (root_protos, affix_proto) = build_scenario();
 
-    let cells: BTreeMap<String, _> = root_protos
+    let vertices: BTreeMap<String, _> = root_protos
         .iter()
         .map(|(id, proto)| {
             (
@@ -184,10 +185,10 @@ fn leveling_suppresses_a_strict_subset() {
             )
         })
         .collect();
-    let raw_divergence_count = cells.values().filter(|c| c.is_irregular).count();
+    let raw_divergence_count = vertices.values().filter(|c| c.is_irregular).count();
     assert_eq!(raw_divergence_count, 8);
 
-    let leveled = level_paradigm(&cells, &root_protos, 0.25);
+    let leveled = level_paradigm(&vertices, &root_protos, 0.25);
     let survivor_count = leveled.values().filter(|lc| lc.survived).count();
 
     assert!(
@@ -215,7 +216,7 @@ fn the_frequency_prediction_shorter_roots_survive() {
     };
     let (root_protos, affix_proto) = build_scenario();
 
-    let cells: BTreeMap<String, _> = root_protos
+    let vertices: BTreeMap<String, _> = root_protos
         .iter()
         .map(|(id, proto)| {
             (
@@ -224,7 +225,7 @@ fn the_frequency_prediction_shorter_roots_survive() {
             )
         })
         .collect();
-    let leveled = level_paradigm(&cells, &root_protos, 0.25);
+    let leveled = level_paradigm(&vertices, &root_protos, 0.25);
 
     let survivor_lengths: Vec<f64> = leveled
         .iter()
@@ -233,7 +234,7 @@ fn the_frequency_prediction_shorter_roots_survive() {
         .collect();
     let leveled_away_lengths: Vec<f64> = leveled
         .iter()
-        .filter(|(_, lc)| lc.cell.is_irregular && !lc.survived)
+        .filter(|(_, lc)| lc.vertex.is_irregular && !lc.survived)
         .map(|(id, _)| root_protos[id].len() as f64)
         .collect();
 
@@ -265,15 +266,15 @@ fn every_candidate_form_carries_a_derivation() {
     let (root_protos, affix_proto) = build_scenario();
     let root = &root_protos["consonant-final-00"];
 
-    let cell = realize_paradigm_cell(root, &affix_proto, ClassPosition::Suffix, &cascade, &ph);
+    let vertex = realize_paradigm_cell(root, &affix_proto, ClassPosition::Suffix, &cascade, &ph);
     assert_eq!(
-        &cell.cascade_native.proto,
+        &vertex.cascade_native.proto,
         root_proto_plus_affix(root, &affix_proto).as_slice()
     );
-    assert_eq!(&cell.regular_root.proto, root);
-    assert_eq!(&cell.regular_affix.proto, &affix_proto);
+    assert_eq!(&vertex.regular_root.proto, root);
+    assert_eq!(&vertex.regular_affix.proto, &affix_proto);
     assert!(
-        !cell.cascade_native.steps.is_empty(),
+        !vertex.cascade_native.steps.is_empty(),
         "a real Derivation records its applied-rule steps, not just proto/modern"
     );
 }

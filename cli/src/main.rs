@@ -5,7 +5,7 @@ use hornvale::{
     audio, concepts, dictionary, flag_value, phonology, proto, repl, streams, systems, tropes,
 };
 use hornvale_astronomy::{SkyPins, parse_pin};
-use hornvale_kernel::{EntityId, RoomAddr, RoomId, Seed, World, WorldTime, math};
+use hornvale_kernel::{EntityId, Facet, FacetId, Seed, World, WorldTime, math};
 use hornvale_worldgen as world_builder;
 use std::process::ExitCode;
 
@@ -22,6 +22,8 @@ const SKY_FLAGS: &str =
   [--spin prograde|retrograde]             pin the spin direction (spinning worlds)
 ";
 
+// lexicon: this help text is rendered CLI prose a person reads, kept "cell"
+// (windows/almanac precedent) even where it names a mesh vertex.
 const USAGE: &str = "\
 usage:
   hornvale new --seed <N> [--out <PATH>] [sky flags]
@@ -86,9 +88,9 @@ usage:
                                                       how many it withheld)
                                                       (--room and --depth are mutually exclusive —
                                                       a room id already carries its own depth)
-  hornvale history --world <PATH> --site <CELL>
+  hornvale history --world <PATH> --site <VERTEX>
                           read a site's stratigraphy + flesh (the deep history of one cell)
-  hornvale connections --world <PATH> --site <CELL>
+  hornvale connections --world <PATH> --site <VERTEX>
                           read a site's transport topology (sea-lanes, natural land routes, isolation)
   hornvale connections --world <PATH> --overview
                           summarize the world's reachability: real regions, the largest, the rest
@@ -144,6 +146,10 @@ usage:
   hornvale lab domesday                    render the Domesday survey (book/src/domesday/) from the committed census
   hornvale lab anomalies [--seed N]        render the anomaly report (book/src/domesday/anomalies.md); --seed N prints
                                             one world's report instead, writing nothing
+  hornvale lab confidant                   render The Confidant's felt-state reportability report (world-invariant,
+                                            builds its own Seed(42); docs/audits/the-confidant-report.md)
+  hornvale lab reticence                   render The Reticence's doctrine-prior report (builds its own Seed(42);
+                                            docs/audits/the-reticence-report.md)
   hornvale ci-record                       record this run's durations as the host baseline
 
 sky flags (shared by new and scout):
@@ -331,7 +337,7 @@ fn cmd_scout(args: &[String]) -> Result<(), String> {
             let system = &outcome.system;
             let day = match system.anchor.rotation {
                 hornvale_astronomy::Rotation::Spinning { day, .. } => {
-                    format!("{:.1}h day", day.get() * 24.0)
+                    format!("{:.1}h day", day.as_std_days() * 24.0)
                 }
                 hornvale_astronomy::Rotation::Locked => "tidally locked".to_string(),
             };
@@ -413,13 +419,13 @@ fn cmd_gazetteer(args: &[String]) -> Result<(), String> {
 /// occupation layers plus the derived flesh in the present-day grass.
 fn cmd_history(args: &[String]) -> Result<(), String> {
     let world = load_world(args)?;
-    let raw = flag_value(args, "--site").ok_or("history: --site <CELL> is required")?;
-    let cell: u32 = raw
-        .parse()
-        .map_err(|_| format!("history: bad --site '{raw}' (must be a non-negative cell index)"))?;
+    let raw = flag_value(args, "--site").ok_or("history: --site <VERTEX> is required")?;
+    let vertex: u32 = raw.parse().map_err(|_| {
+        format!("history: bad --site '{raw}' (must be a non-negative vertex index)")
+    })?;
     print!(
         "{}",
-        hornvale_almanac::history::render_site(&world, hornvale_kernel::CellId(cell))
+        hornvale_almanac::history::render_site(&world, hornvale_kernel::Vertex(vertex))
     );
     Ok(())
 }
@@ -441,16 +447,17 @@ fn cmd_connections(args: &[String]) -> Result<(), String> {
         print!("{}", hornvale_almanac::connections::render_overview(&graph));
         return Ok(());
     }
+    // lexicon: user-facing CLI text, kept "cell" (windows/almanac precedent)
     let raw = flag_value(args, "--site")
-        .ok_or("connections: --site <CELL> is required (or pass --overview)")?;
-    let cell: u32 = raw.parse().map_err(|_| {
-        format!("connections: bad --site '{raw}' (must be a non-negative cell index)")
+        .ok_or("connections: --site <VERTEX> is required (or pass --overview)")?;
+    let vertex: u32 = raw.parse().map_err(|_| {
+        format!("connections: bad --site '{raw}' (must be a non-negative vertex index)")
     })?;
     print!(
         "{}",
         hornvale_almanac::connections::render_connections(
             &world,
-            hornvale_kernel::CellId(cell),
+            hornvale_kernel::Vertex(vertex),
             &graph
         )
     );
@@ -633,7 +640,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
             .map_err(|e| e.to_string())?;
         writeln!(out, "```text").map_err(|e| e.to_string())?;
         let opts = hornvale_vessel::PossessOpts {
-            day: WorldTime::new(day).expect("a day value is finite"),
+            day: WorldTime::from_std_days(day).expect("a day value is finite"),
             echo: true,
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,
@@ -649,7 +656,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
     } else {
         let stdin = std::io::stdin();
         let opts = hornvale_vessel::PossessOpts {
-            day: WorldTime::new(day).expect("a day value is finite"),
+            day: WorldTime::from_std_days(day).expect("a day value is finite"),
             echo: false,
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,
@@ -743,7 +750,7 @@ fn write_snapshot(session: &hornvale_vessel::Session<'_>, path: &str) -> Result<
 /// ASCII map) to stdout and, with `--out`, the PNG image to disk. Both are
 /// deterministic; CI drift-checks the committed copies.
 /// Appended after every emitted map/chart PNG reference. The raster's exact
-/// bytes are a *platform-local render*: pixel colors come from per-cell
+/// bytes are a *platform-local render*: pixel colors come from per-vertex
 /// classifications (biome, ocean) thresholded on transcendental-derived
 /// floats, which the host math library computes to the last ULP differently
 /// on different platforms. So the PNGs are not cross-platform byte-checked
@@ -1283,7 +1290,7 @@ fn cmd_systems_matrix() -> Result<(), String> {
 /// `docs/generated-paths.txt`'s own header records.
 ///
 /// `BuildDepth::Terrain`, the shallowest rung a chamber needs: it wants a
-/// cave's depth budget, its cell's geothermal gradient and its cell's
+/// cave's depth budget, its vertex's geothermal gradient and its vertex's
 /// stratigraphic column, and nothing above terrain. Anything deeper would pay
 /// for settlement and language work this reads no field of.
 fn cmd_underworld(args: &[String]) -> Result<(), String> {
@@ -1455,7 +1462,7 @@ fn cmd_book(args: &[String]) -> Result<(), String> {
         let reckoning: Vec<hornvale_book::ReckoningEpoch> = match at {
             Some(day) => {
                 let at_days =
-                    hornvale_astronomy::StdDays::new(day).map_err(|e| format!("--at: {e}"))?;
+                    hornvale_astronomy::StdInstant::new(day).map_err(|e| format!("--at: {e}"))?;
                 let epoch = match (terrain.as_ref(), climate.as_ref()) {
                     (Some(t), Some(c)) => hornvale_book::reckoning_at_from(&world, at_days, t, c),
                     _ => hornvale_book::reckoning_at(&world, at_days),
@@ -1520,7 +1527,7 @@ fn cmd_book(args: &[String]) -> Result<(), String> {
 
 /// Dispatch `lab` subcommands: `run <PATH>`, `diff <STUDY> <OLD_CSV> <NEW_CSV>`,
 /// `backfill-schema <STUDY_JSON> <ROWS_CSV>`, `list-metrics`, `domesday`,
-/// `anomalies [--seed N]`, and `claim-status`.
+/// `anomalies [--seed N]`, `confidant`, `reticence`, and `claim-status`.
 fn cmd_lab(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
         Some("run") => cmd_lab_run(args),
@@ -1529,6 +1536,8 @@ fn cmd_lab(args: &[String]) -> Result<(), String> {
         Some("list-metrics") => cmd_lab_list_metrics(),
         Some("domesday") => cmd_lab_domesday(),
         Some("anomalies") => cmd_lab_anomalies(args),
+        Some("confidant") => cmd_lab_confidant(),
+        Some("reticence") => cmd_lab_reticence(),
         Some("claim-status") => {
             // Answers "is a heavy run holding the box right now?" without
             // ps | grep (decision 0081). `scripts/census-run.sh status` and
@@ -1539,7 +1548,7 @@ fn cmd_lab(args: &[String]) -> Result<(), String> {
         }
         Some(other) => Err(format!("lab: unknown subcommand '{other}'\n{}", usage())),
         None => Err(format!(
-            "lab: requires a subcommand (run <PATH>|diff <STUDY> <OLD_CSV> <NEW_CSV>|backfill-schema <STUDY_JSON> <ROWS_CSV>|list-metrics|domesday|anomalies [--seed N]|claim-status)\n{}",
+            "lab: requires a subcommand (run <PATH>|diff <STUDY> <OLD_CSV> <NEW_CSV>|backfill-schema <STUDY_JSON> <ROWS_CSV>|list-metrics|domesday|anomalies [--seed N]|confidant|reticence|claim-status)\n{}",
             usage()
         )),
     }
@@ -1638,6 +1647,41 @@ fn cmd_lab_backfill_schema(args: &[String]) -> Result<(), String> {
 
 fn cmd_lab_list_metrics() -> Result<(), String> {
     print!("{}", hornvale_lab::render_metric_list());
+    Ok(())
+}
+
+/// Render The Confidant's report (Task 7 reshape): fifteen felt-state
+/// reportability rows, one per `hornvale_species::society_registry()`
+/// people. Prints to stdout, like every other `render`-shaped `lab`
+/// subcommand — `scripts/regenerate-artifacts.sh` owns the `>` redirect
+/// into the committed `docs/audits/the-confidant-report.md`. Builds its own
+/// `Seed(42)` world internally (a Group C artifact in that script's
+/// classification, the same shape as the `first_light` example): the values
+/// are world-invariant (see `hornvale_lab::render_confidant_report`'s own
+/// doc), so no `--world`/`--seed` flag is needed here.
+fn cmd_lab_confidant() -> Result<(), String> {
+    print!(
+        "{}",
+        hornvale_lab::render_confidant_report().map_err(|e| e.to_string())?
+    );
+    Ok(())
+}
+
+/// Render The Reticence's report (Task 6): fifteen doctrine-prior rows, one
+/// per `hornvale_species::society_registry()` people. Prints to stdout, like
+/// every other `render`-shaped `lab` subcommand — `scripts/regenerate-
+/// artifacts.sh` owns the `>` redirect into the committed
+/// `docs/audits/the-reticence-report.md`. Builds its own `Seed(42)` world
+/// internally (a Group C artifact in that script's classification, the same
+/// shape as `confidant` above): see `hornvale_lab::render_reticence_report`'s
+/// own doc for why it pays for a full sculpt despite the felt-state half of
+/// its answer being world-invariant, so no `--world`/`--seed` flag is needed
+/// here either.
+fn cmd_lab_reticence() -> Result<(), String> {
+    print!(
+        "{}",
+        hornvale_lab::render_reticence_report().map_err(|e| e.to_string())?
+    );
     Ok(())
 }
 
@@ -1946,7 +1990,13 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
             };
             let from = parse_f64("--from")?;
             let until = parse_f64("--until")?;
-            let scene = hornvale_scene::eclipses_scene(&world, from, until).map_err(|e| e.to_string())?;
+            // `--from`/`--until` are user-typed, so a non-finite value must
+            // fail through the same Err path every other bad argument uses
+            // rather than panicking inside the constructor.
+            let from = hornvale_astronomy::StdInstant::new(from).map_err(|e| e.to_string())?;
+            let until = hornvale_astronomy::StdInstant::new(until).map_err(|e| e.to_string())?;
+            let scene =
+                hornvale_scene::eclipses_scene(&world, from, until).map_err(|e| e.to_string())?;
             println!("{}", hornvale_scene::eclipses_json(&scene));
             Ok(())
         }
@@ -2006,7 +2056,7 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                     let id = raw
                         .parse::<u64>()
                         .map_err(|e| format!("--room must be a packed room id: {e}"))?;
-                    RoomId(id)
+                    FacetId(id)
                         .unpack()
                         .map_err(|e| format!("--room {id} is not a room id: {e:?}"))?
                 }
@@ -2042,7 +2092,7 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                 let (light, sun_altitude_deg) = hornvale_vessel::eyes::daylight_at(
                     &world,
                     calendar.as_ref(),
-                    WorldTime::new(day).expect("a day value is finite"),
+                    WorldTime::from_std_days(day).expect("a day value is finite"),
                     latitude,
                 );
                 hornvale_scene::surrounds_scene_colored_in(
@@ -2050,7 +2100,7 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                     &ctx,
                     &room,
                     radius,
-                    WorldTime::new(day).expect("a day value is finite"),
+                    WorldTime::from_std_days(day).expect("a day value is finite"),
                     &hornvale_kernel::color::standard_observer(),
                     &light,
                     hornvale_scene::Sight {
@@ -2066,7 +2116,7 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                     },
                 )
             } else {
-                hornvale_scene::surrounds_scene_in(&world, &ctx, &room, radius, WorldTime::new(day).expect("a day value is finite"))
+                hornvale_scene::surrounds_scene_in(&world, &ctx, &room, radius, WorldTime::from_std_days(day).expect("a day value is finite"))
             }
             .map_err(|e| e.to_string())?;
             if render_mode == "ascii" {
@@ -2077,7 +2127,7 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                 // exactly how a CLI caption and the possession's would end
                 // up disagreeing.
                 let locale = ctx
-                    .describe(&room, WorldTime::new(day).expect("a day value is finite"))
+                    .describe(&room, WorldTime::from_std_days(day).expect("a day value is finite"))
                     .map_err(|e| e.to_string())?;
                 let ways: Vec<String> = locale
                     .exits
@@ -2116,7 +2166,7 @@ fn settlement_room(
     world: &World,
     id: hornvale_kernel::EntityId,
     depth: u32,
-) -> Result<RoomAddr, String> {
+) -> Result<Facet, String> {
     let lat = match world.ledger.value_of(id, hornvale_settlement::LATITUDE) {
         Some(hornvale_kernel::Value::Number(n)) => *n,
         _ => return Err("the settlement has no latitude fact".to_string()),
@@ -2125,7 +2175,7 @@ fn settlement_room(
         Some(hornvale_kernel::Value::Number(n)) => *n,
         _ => return Err("the settlement has no longitude fact".to_string()),
     };
-    Ok(RoomAddr::containing(
+    Ok(Facet::containing(
         math::unit_sphere_from_lat_lon(lat, lon),
         depth,
     ))
@@ -2135,7 +2185,7 @@ fn settlement_room(
 /// emits the `locale/room/v2` schema. Deterministic; the committed artifact is
 /// regenerated by `scripts/regenerate-artifacts.sh`, but excluded from CI's
 /// strict cross-platform diff — the inherited biome is a host-libm-sensitive
-/// per-cell classification (the `scene-tiles` exclusion class).
+/// per-vertex classification (the `scene-tiles` exclusion class).
 ///
 /// `--sample N` bypasses the single-room describe and instead walks `N`
 /// rooms spread evenly over the globe (a Fibonacci-lattice sphere sample,
@@ -2170,7 +2220,7 @@ fn cmd_locale(args: &[String]) -> Result<(), String> {
 
     let addr = if let Some(id) = flag_value(args, "--room") {
         let raw: u64 = id.parse().map_err(|_| format!("bad --room id: {id}"))?;
-        RoomId(raw)
+        FacetId(raw)
             .unpack()
             .map_err(|e| format!("invalid room id: {e:?}"))?
     } else if let Some(at) = flag_value(args, "--at") {
@@ -2182,7 +2232,7 @@ fn cmd_locale(args: &[String]) -> Result<(), String> {
             .trim()
             .parse()
             .map_err(|_| "bad longitude".to_string())?;
-        RoomAddr::containing(math::unit_sphere_from_lat_lon(lat, lon), depth)
+        Facet::containing(math::unit_sphere_from_lat_lon(lat, lon), depth)
     } else {
         return Err("provide --at LAT,LON or --room ID".to_string());
     };
@@ -2244,12 +2294,12 @@ fn render_strange_sites(ctx: &hornvale_locale::LocaleContext, limit: Option<usiz
     let total = rows.len();
     let shown = limit.unwrap_or(total).min(total);
     let mut out = format!("{total} placed exotic sites.\n\n");
-    out.push_str("| cell | lat | lon | biome | what makes it strange |\n");
+    out.push_str("| vertex | lat | lon | biome | what makes it strange |\n");
     out.push_str("|---|---|---|---|---|\n");
     for r in rows.iter().take(shown) {
         out.push_str(&format!(
             "| {} | {:.2} | {:.2} | {} | {} |\n",
-            r.cell, r.latitude, r.longitude, r.biome, r.descriptor
+            r.vertex, r.latitude, r.longitude, r.biome, r.descriptor
         ));
     }
     if shown < total {
@@ -2272,7 +2322,7 @@ fn cmd_locale_sample(
     println!("{:<24} {:>11}  descriptor", "biome", "strangeness");
     for i in 0..n {
         let position = fibonacci_sphere_point(i, n);
-        let addr = RoomAddr::containing(position, depth);
+        let addr = Facet::containing(position, depth);
         let locale = ctx
             .describe(&addr, WorldTime::GENESIS)
             .map_err(|e| e.to_string())?;

@@ -17,14 +17,14 @@
 //! reaching `Pinned`.
 //!
 //! This table deliberately does NOT assert that every declared variant has a
-//! witness. Deliberately-empty cells are legitimate creature-design
+//! witness. Deliberately-empty vertices are legitimate creature-design
 //! predictions, and an assertion forbidding them would either be false or
 //! would force junk kinds into the roster to satisfy it. What it DOES assert
 //! is that the intended rung matches reality — so promoting a state, or
 //! letting one rot, forces a deliberate edit here.
 
 use hornvale_species::{
-    ActivityCycle, HabitatRealm, LifeSchedule, MetabolicClass, SocialForm, StatusBasis,
+    ActivityCycle, HabitatRealm, LifeSchedule, SocialForm, StatusBasis, ThermalStrategy,
     biosphere_registry, habitat_realm_registry, perception_registry, psyche_registry,
     society_registry,
 };
@@ -38,11 +38,11 @@ enum Rung {
     Witnessed,
 }
 
-/// The witnesses of each `MetabolicClass`, ascending by `KindId`.
-fn metabolic_witnesses(class: MetabolicClass) -> Vec<&'static str> {
+/// The witnesses of each `ThermalStrategy`, ascending by `KindId`.
+fn thermal_witnesses(strategy: ThermalStrategy) -> Vec<&'static str> {
     biosphere_registry()
         .iter()
-        .filter(|(_, b)| b.metabolic_class == class)
+        .filter(|(_, b)| b.thermal_strategy == strategy)
         .map(|(k, _)| k.0)
         .collect()
 }
@@ -76,20 +76,20 @@ fn status_basis_witnesses(basis: StatusBasis) -> Vec<&'static str> {
 
 #[test]
 fn metabolic_class_coverage_matches_the_table() {
-    let expected: &[(MetabolicClass, Rung, &[&str])] = &[
+    let expected: &[(ThermalStrategy, Rung, &[&str])] = &[
         (
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
             Rung::Witnessed,
             &[
                 "black-dragon",
                 "bugbear",
                 "carrion-crawler",
                 // C2c (The Delvers): three dwarves, all endotherms of human
-                // mass class. The metabolic cell they actually move is
+                // mass class. The metabolic vertex they actually move is
                 // `LifeSchedule`, not this one — see the life-schedule table.
                 "desert-dwarf",
                 // C2d (The Radiation): six elves, all endotherms in the
-                // 50-60 kg band. Like the dwarves, the metabolic cell they
+                // 50-60 kg band. Like the dwarves, the metabolic vertex they
                 // move is `LifeSchedule`, not this one.
                 "desert-elf",
                 "dire-wolf",
@@ -117,7 +117,7 @@ fn metabolic_class_coverage_matches_the_table() {
             ],
         ),
         (
-            MetabolicClass::Ectotherm,
+            ThermalStrategy::Ectothermic,
             Rung::Witnessed,
             &[
                 "giant-constrictor-snake",
@@ -130,19 +130,20 @@ fn metabolic_class_coverage_matches_the_table() {
                 "rust-monster",
             ],
         ),
-        // WITNESSED but NOT exercised: allometry computes Autotroph exactly as
-        // Endotherm despite the class doc's surface-limited claim. See BIO-autotroph-physics
-        // and `autotroph_is_computed_as_an_endotherm_today` in this file.
+        // WITNESSED but NOT exercised: allometry computes the old `Autotroph`
+        // exactly as an endotherm despite the class doc's surface-limited
+        // claim. See BIO-autotroph-physics and
+        // `autotroph_is_computed_as_an_endotherm_today` in this file.
         (
-            MetabolicClass::Autotroph,
+            ThermalStrategy::Unmodelled,
             Rung::Witnessed,
             &["shrieker", "treant", "twig-blight"],
         ),
         // The sole carrier of the `None` life-history branch.
-        (MetabolicClass::Ametabolic, Rung::Witnessed, &["xorn"]),
+        (ThermalStrategy::Absent, Rung::Witnessed, &["xorn"]),
     ];
     for (class, rung, witnesses) in expected {
-        let actual = metabolic_witnesses(*class);
+        let actual = thermal_witnesses(*class);
         assert_eq!(&actual, witnesses, "{class:?} witnesses");
         let actual_rung = if actual.is_empty() {
             Rung::Declared
@@ -186,8 +187,8 @@ fn status_basis_coverage_matches_the_table() {
         // desert forage base rewards windfall-sharing), not from lore — see
         // `society_registry`'s doc comment on the gnoll's `SocietyVector`.
         //
-        // C2c (The Delvers) gives the cell two more witnesses that reach it
-        // from two further directions, which is what a three-witness cell is
+        // C2c (The Delvers) gives the vertex two more witnesses that reach it
+        // from two further directions, which is what a three-witness vertex is
         // worth. Read `society_registry`'s own rows rather than inferring a
         // shared story from the shared variant: gnoll shares a windfall too
         // large to keep, gully-dwarf a find too small to fight over, and
@@ -253,10 +254,10 @@ fn activity_cycle_coverage_matches_the_table() {
         // minded SPEAKING kinds only — `speech ⊆ perception ⊆ mind`), but a
         // SPEAKING kind can: The Vacancy T9's gnoll is read off its own
         // authored low insolation optimum (a desert forager sheltering
-        // through the day's peak heat), giving this cell its second witness
+        // through the day's peak heat), giving this vertex its second witness
         // and its first non-dragon one.
         //
-        // C2c (The Delvers) takes the cell from two witnesses to four, and
+        // C2c (The Delvers) takes the vertex from two witnesses to four, and
         // the two it adds arrive for unrelated reasons: desert-dwarf shelters
         // through the peak heat (gnoll's own argument, on the same climate
         // tile), gully-dwarf works the margins of the day because that is
@@ -380,7 +381,7 @@ fn life_schedule_witnesses(paced: bool) -> Vec<&'static str> {
 #[test]
 fn life_schedule_coverage_matches_the_table() {
     // THE LONG AGE shipped lifespan's authoring channel with NO occupant, so
-    // `Paced` sat at `Declared` and nothing witnessed it. That empty cell was
+    // `Paced` sat at `Declared` and nothing witnessed it. That empty vertex was
     // that campaign's stated result rather than an oversight, and it named the
     // first campaign to author a long-lived kind as the one that would have to
     // make a deliberate edit here.
@@ -395,7 +396,7 @@ fn life_schedule_coverage_matches_the_table() {
     // habitat-specific one. Note what the second family makes visible that
     // the first could not — the variant now has TWO distinct factors, so a
     // classifier that compared by value instead of by variant would split
-    // this cell in two. That is why `life_schedule_witnesses` classifies by
+    // this vertex in two. That is why `life_schedule_witnesses` classifies by
     // variant, and why `only_the_dwarves_depart_from_pure_allometry` (now
     // renamed) is the test that carries the factors.
     //
@@ -476,7 +477,7 @@ fn life_schedule_coverage_matches_the_table() {
 
 #[test]
 fn the_dark_trait_combinations_are_named() {
-    // Combinations, not single variants — each is a cell the roster does not
+    // Combinations, not single variants — each is a vertex the roster does not
     // occupy, recorded so the vacancy is a decision rather than an oversight.
     use hornvale_kernel::{ANIMAL_PREY, DETRITUS, MARINE_FORAGE};
 
@@ -538,7 +539,8 @@ fn the_dark_trait_combinations_are_named() {
 #[test]
 fn autotroph_is_computed_as_an_endotherm_today() {
     // A KNOWN DIVERGENCE, pinned deliberately so BIO-autotroph-physics's fix is a visible
-    // diff rather than a silent change. `MetabolicClass::Autotroph`'s doc says
+    // diff rather than a silent change. THE GOSSAN renamed the value; the
+    // divergence it pins is unchanged. `ThermalStrategy::Unmodelled`'s doc says
     // a phototroph's basal rate is surface/area-limited so Kleiber's 3/4 mass
     // exponent does not apply; `allometry.rs` nonetheless gives it
     // `B0_ENDOTHERM` and a pace multiplier of 1.0. This test asserts the
@@ -549,13 +551,13 @@ fn autotroph_is_computed_as_an_endotherm_today() {
 
     let mass = Mass::new(1800.0).expect("positive mass");
     assert_eq!(
-        basal_metabolic_rate_w(mass, MetabolicClass::Autotroph),
-        basal_metabolic_rate_w(mass, MetabolicClass::Endotherm),
+        basal_metabolic_rate_w(mass, ThermalStrategy::Unmodelled),
+        basal_metabolic_rate_w(mass, ThermalStrategy::Endothermic),
         "Autotroph BMR is identical to Endotherm today (BIO-autotroph-physics)"
     );
     assert_eq!(
-        lifespan(mass, MetabolicClass::Autotroph, LifeSchedule::ALLOMETRIC),
-        lifespan(mass, MetabolicClass::Endotherm, LifeSchedule::ALLOMETRIC),
+        lifespan(mass, ThermalStrategy::Unmodelled, LifeSchedule::ALLOMETRIC),
+        lifespan(mass, ThermalStrategy::Endothermic, LifeSchedule::ALLOMETRIC),
         "Autotroph lifespan is identical to Endotherm today (BIO-autotroph-physics)"
     );
 }
@@ -650,7 +652,7 @@ fn only_the_dwarf_and_elf_families_depart_from_pure_allometry() {
 fn the_subterranean_roster_is_the_two_rehomed_kinds_and_the_drow() {
     // THE WARREN: C2a re-authored these two for true darkness and for what was
     // then a fixed `SUBTERRANEAN_MOISTURE` (retired by The Underworld, whose
-    // chamber moisture is derived per cell), and nothing scored them there.
+    // chamber moisture is derived per vertex), and nothing scored them there.
     // This store is the consumer half. It ships with exactly these two, and adding a row is a
     // deliberate edit.
     //
@@ -665,8 +667,8 @@ fn the_subterranean_roster_is_the_two_rehomed_kinds_and_the_drow() {
     //
     // So this store stayed at two through C2c, and the reason it did is worth
     // more than the rows would have been: the realm gate places a kind at a
-    // cave MOUTH, because settlements are cell-keyed and a Subterranean kind
-    // lives on the surface of a cell that has a cave in it. The model has no
+    // cave MOUTH, because settlements are vertex-keyed and a Subterranean kind
+    // lives on the surface of a vertex that has a cave in it. The model has no
     // vocabulary for the inside of the world — the sea got depth-named biomes
     // and the rock got a graph. `BIO-kinds-declare-biomes` is the successor.
     //

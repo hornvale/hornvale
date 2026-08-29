@@ -70,7 +70,13 @@ set -euo pipefail
 #   no world at all). `systems report`/`matrix` (The Compendium) joined this
 #   group later still, and builds no world at all — not even its own —
 #   because its anchors resolve against the digest, the idea registry, and
-#   the filesystem, never a genesis. All of these are safe to co-schedule with B:
+#   the filesystem, never a genesis. `lab confidant` (The Confidant, Task 7
+#   reshape) joined it the same way `first_light` did: it builds its own
+#   internal `Seed(42)` `FullView`, never touches $w42/$wsky/$wlocked, and
+#   its answers are world-invariant by measurement (a 1000-seed census run
+#   found all three metric families it reads constant across every seed), so
+#   any seed would do and Group A's already-built worlds are simply not
+#   needed. All of these are safe to co-schedule with B:
 #   distinct write targets, and no read dependency on B's or A's outputs.
 #
 #   GROUP D — the lab studies (`lab run`, traced: internally parallel across
@@ -189,6 +195,21 @@ wlocked="$work/hv-locked.json" # seed 42, tidally locked
 
 run() { cargo run -q "$@"; }
 run_release() { cargo run -q --release "$@"; }
+
+# `docs/audits/sentence-coverage.md` (The Stile). Unlike every artifact
+# above, the generator is a `cargo test`, not a `cargo run` binary printing
+# to stdout — `sentence_coverage_report` (`cli/tests/suite/sentence_corpus.rs`)
+# writes the file itself via `std::fs::write` under `HV_SENTENCE_REBASELINE=1`,
+# the same env-var-gated-test shape `make rebaseline-goldens` already uses
+# for byte-golden fixtures, so this copies THAT working pattern rather than
+# inventing a `> file` redirect this generator has no need of. Until this
+# campaign nothing ever set the env var here, so the drift check on this
+# file (covered by `docs/audits/` in `docs/generated-paths.txt`) could only
+# ever compare the committed file against itself — a remedy (`make
+# rebaseline` regenerates every artifact) that named no actual writer. See
+# `REPORT_PATH`'s own doc comment in `sentence_corpus.rs` for the fuller
+# account.
+gen_sentence_coverage() { HV_SENTENCE_REBASELINE=1 cargo test -q -p hornvale --test suite -- sentence_coverage_report; }
 
 echo "regenerate-artifacts: GROUP A — world builders (parallel)" >&2
 spawn run -p hornvale -- new --seed 42 --sky constant --out "$w42"
@@ -508,6 +529,15 @@ gen_chart_reference() {
 # moved the bake — so this cell's stratigraphy is a different one and the
 # framing prose below was re-derived from the new block rather than patched.
 #
+#
+# RE-READ 2026-08-24 (The Granary, T7): the campaign's sub-year phase
+# placement moved seed-42's raid/founding outcomes, and 5585 now renders an
+# EMPTY column — the showcase had nothing to show. Repointed to 10626, found
+# by dumping candidate cells through `history --site`: TWELVE kobold
+# occupations from the year 200 to the present, seven put to flight by other
+# kobolds, four departures that carried the settlement onto land taken from
+# neighbours (2666 once, 10628 three times), one still standing.
+#
 # Read off the live block for 5585: SIX layers from the year 100, five
 # completed, and the split is no longer even — THREE were put to flight, TWO
 # left because they had taken a neighbour's ground and carried the settlement
@@ -518,37 +548,37 @@ gen_chart_reference() {
 # shorter arc than before: bronze at the base, then iron, then classical, with
 # no neolithic layer left. The standing sixth was founded in 800 by
 # Venggomnjen and holds 84 souls.
-history_site=5585
+history_site=10626
 gen_history() {
     printf '# The Contested Clearing of Seed 42\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
     printf 'A site read back out of the ledger by the `history` verb: the stratigraphy\n'
-    printf 'of every people that ever settled one cell, oldest layer deepest, and the\n'
+    printf 'of every people that ever settled one vertex, oldest layer deepest, and the\n'
     printf 'derived flesh — the structures they raised, the residue in the grass\n'
     printf 'today. Nothing here replays the deep-history bake; it is all a\n'
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
     printf '(structures, residue) derived on demand and never committed.\n\n'
-    printf 'This is a real clearing on the world of seed 42 — cell %s — and\n' "$history_site"
-    printf 'six hobgoblin steadings have risen on it, one settling atop the ruins of\n'
-    printf 'the last, from the year 100 down to the present. Every one of the five\n'
-    printf 'completed layers ended at the hands of other hobgoblins, but the split\n'
-    printf 'is uneven. Two were not evictions at all: the occupants had taken\n'
-    printf 'better ground from a neighbour and carried the settlement onto it, so\n'
-    printf 'the layer closes on a departure. The other three fell to a rival band.\n'
-    printf 'This is a people with only itself to fight, and on this rise it has\n'
-    printf 'been the taken rather more often than the taker.\n\n'
+    printf 'This is a real clearing on the world of seed 42 — vertex %s — and\n' "$history_site"
+    printf 'twelve kobold steadings have risen on it, one settling atop the ruins\n'
+    printf 'of the last, from the year 200 down to the present. No other people\n'
+    printf 'ever touched this ground: it is a people with only itself to fight,\n'
+    printf 'and it has fought itself here for eighteen centuries. Seven of the\n'
+    printf 'eleven completed layers ended at kobold hands; four were not\n'
+    printf 'evictions at all — the occupants drove rival kobolds off better\n'
+    printf 'ground nearby (once off vertex 2666, three times off vertex 10628) and\n'
+    printf 'carried the settlement onto the land they had taken, so the layer\n'
+    printf 'closes on a departure rather than a defeat.\n\n'
     printf 'The cold is in this column, but never as an ending. Not one layer\n'
-    printf 'here fell to ice. Every layer instead *arrived* fleeing it — all\n'
-    printf 'six, the deepest included, driven off one of two neighbouring\n'
-    printf 'clearings, and one of those two is the clearing this ground took\n'
-    printf 'from in return. No one ever broke this soil by choice: it has been\n'
-    printf 'a refuge from its first layer to its last, and a staging ground for\n'
-    printf 'the next advance rather less often than a last resort. Read bottom\n'
-    printf 'to top, the column carries a technological arc that starts already\n'
-    printf 'underway: bronze at the base, then iron, then classical, with no\n'
-    printf 'neolithic layer left to read. The sixth was founded in the year 800\n'
-    printf 'by Venggomnjen and stands yet, 1200 years on: some 84 souls, two\n'
-    printf 'huts and a granary, and no ruin yet to read.\n\n'
+    printf 'fell to ice. Every layer instead *arrived* fleeing it — all twelve,\n'
+    printf 'the deepest included, driven off one of four neighbouring clearings\n'
+    printf '(2666 and 10628 most often, 10627 and 10638 once each). No one ever\n'
+    printf 'broke this soil by choice: it has been a refuge from its first layer\n'
+    printf 'to its last. Read bottom to top, the column carries a complete\n'
+    printf 'technological arc — two neolithic layers at the base, then bronze,\n'
+    printf 'iron, and six classical layers on top, the whole craft history of a\n'
+    printf 'people in one stack of earth. The twelfth was founded in the year\n'
+    printf '1875 and stands yet: some 24 souls, two huts and a granary, and no\n'
+    printf 'ruin yet to read.\n\n'
     printf '```text\n'
     run -p hornvale -- history --world "$wsky" --site "$history_site"
     printf '```\n'
@@ -582,7 +612,7 @@ gen_connections() {
     run -p hornvale -- connections --world "$wsky" --site 13980
     printf '```\n\n'
     printf '## A hub on a different shore\n\n'
-    printf 'Cell 28435 sits on a *separate* landmass under natural travel -- close\n'
+    printf 'Vertex 28435 sits on a *separate* landmass under natural travel -- close\n'
     printf 'enough to its neighbors to reach several by both sea-lane and land route,\n'
     printf 'but with no natural corridor at all bridging it back to the flagship'\''s\n'
     printf 'larger region.\n\n'
@@ -798,6 +828,17 @@ spawn run -p hornvale -- tropes --corpus tropes/tvtropes-2012.trope.json report 
 spawn run -p hornvale -- tropes matrix > docs/audits/trope-matrix.md
 spawn run -p hornvale -- systems report > docs/audits/system-coverage-wolverson-2021.md
 spawn run -p hornvale -- systems matrix > docs/audits/system-matrix.md
+spawn gen_sentence_coverage
+# The Confidant, Task 7 reshape: world-invariant (builds its own internal
+# Seed(42), like `first_light` above), so it belongs in Group C alongside
+# the other world-free/self-contained dumps rather than among $w42's readers.
+spawn run -p hornvale -- lab confidant > docs/audits/the-confidant-report.md
+# The Reticence, Task 6: builds its own internal Seed(42) too (see
+# `render_reticence_report`'s own doc for why the full sculpt is paid for
+# despite the felt-state half of its answer being world-invariant), so it
+# belongs in Group C beside the Confidant's line rather than among $w42's
+# readers.
+spawn run -p hornvale -- lab reticence > docs/audits/the-reticence-report.md
 spawn run --manifest-path tools/digest/Cargo.toml -- render delta \
   > docs/digest/intent-vs-reality.md
 spawn gen_underworld_lattice > docs/audits/underworld-lattice-seed-panel.md

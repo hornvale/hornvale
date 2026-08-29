@@ -1,5 +1,5 @@
 //! Diurnal (day/night) temperature swing (spec §2). A pure seam module: the
-//! per-cell half-range amplitude (dryness × continentality × elevation), a
+//! per-vertex half-range amplitude (dryness × continentality × elevation), a
 //! zero-mean normalized waveform (afternoon-peaked, damped by thermal
 //! inertia and zeroed in polar night), and the composed anomaly. Preserves
 //! `mean_temperature` exactly because the waveform integrates to ~0 over one
@@ -15,7 +15,7 @@ const TAU: f64 = std::f64::consts::TAU;
 /// moisture, continentality, and up by elevation to give `A_climate`.
 const BASE_DTR_HALF_C: f64 = 15.0;
 
-/// The floor on dryness at full moisture (a saturated cell still swings a
+/// The floor on dryness at full moisture (a saturated vertex still swings a
 /// little — water never damps the range to exactly zero).
 const DRY_FLOOR: f64 = 0.15;
 
@@ -31,8 +31,8 @@ const TAU_THERMAL: f64 = 0.5;
 /// after solar noon, reflecting thermal lag.
 const PEAK_FRAC: f64 = 0.60;
 
-/// The per-cell diurnal half-range `A_climate` in °C (always `>= 0`):
-/// drier, more continental, higher cells swing harder between day and night.
+/// The per-vertex diurnal half-range `A_climate` in °C (always `>= 0`):
+/// drier, more continental, higher vertices swing harder between day and night.
 /// type-audit: bare-ok(ratio: moisture), bare-ok(ratio: continentality), bare-ok(diagnostic-value: elevation_above_sea_m), bare-ok(diagnostic-value: return)
 pub fn diurnal_amplitude(moisture: f64, continentality: f64, elevation_above_sea_m: f64) -> f64 {
     let dryness = DRY_FLOOR + (1.0 - DRY_FLOOR) * (1.0 - moisture.clamp(0.0, 1.0));
@@ -46,7 +46,7 @@ pub fn diurnal_amplitude(moisture: f64, continentality: f64, elevation_above_sea
 /// zero when the sun never rises (polar night). A real day/night cycle is
 /// per-longitude: at any instant half the planet is in daytime and half in
 /// night, and the warm band sweeps as the planet turns — `longitude_deg`
-/// shifts the phase so cells at different meridians peak at different
+/// shifts the phase so vertices at different meridians peak at different
 /// moments of the same rotation.
 /// type-audit: bare-ok(diagnostic-value: latitude_deg), bare-ok(diagnostic-value: longitude_deg), bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: year_phase), bare-ok(ratio: day_fraction), bare-ok(diagnostic-value: day_length_std), bare-ok(ratio: return)
 pub fn diurnal_waveform(
@@ -67,7 +67,7 @@ pub fn diurnal_waveform(
     a_geo * inertia * math::cos(TAU * (local_solar_time - PEAK_FRAC))
 }
 
-/// The diurnal temperature anomaly at a cell and moment: `amplitude *
+/// The diurnal temperature anomaly at a vertex and moment: `amplitude *
 /// diurnal_waveform(...)`, wrapped as a [`TempAnomaly`].
 /// type-audit: bare-ok(diagnostic-value: amplitude), bare-ok(diagnostic-value: latitude_deg), bare-ok(diagnostic-value: longitude_deg), bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: year_phase), bare-ok(ratio: day_fraction), bare-ok(diagnostic-value: day_length_std)
 #[allow(clippy::too_many_arguments)]
@@ -97,7 +97,7 @@ mod tests {
 
     // The keystone: the waveform integrates to ~0 over one rotation (so the daily
     // mean, and thus mean_temperature, is preserved). Sample 1000 fractions.
-    // A fixed nonzero longitude (40.0) is used throughout: per-cell,
+    // A fixed nonzero longitude (40.0) is used throughout: per-vertex,
     // sweeping `day_fraction` over `[0,1)` still sweeps all local solar
     // times (just phase-shifted), so the integral is still zero regardless
     // of longitude.
@@ -142,11 +142,11 @@ mod tests {
         );
     }
 
-    // Two cells 180 deg apart in longitude, at a FIXED day_fraction, are in
+    // Two vertices 180 deg apart in longitude, at a FIXED day_fraction, are in
     // opposite local times of day: one in local afternoon (warm), the other
     // in local pre-dawn/night (cool) — the anti-regression guard for the
     // planet-synchronized bug. This FAILS against the old longitude-free
-    // formula (both cells would read the identical D) and PASSES now.
+    // formula (both vertices would read the identical D) and PASSES now.
     #[test]
     fn two_longitudes_have_different_local_phase() {
         // day_fraction = 0.60 puts longitude 0 exactly at its local peak

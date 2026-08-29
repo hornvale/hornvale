@@ -36,6 +36,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 |---|---|---|---|
 | `abyssal` | a biome class | *Tatash | /tataʃ/ |
 | `abyssal-plain` | The flat floor of the deep ocean. | *Nganash | /ŋanaʃ/ |
+| `affords-passage` | a seam between two rooms a body may pass through | *Saxag | /saxag/ |
 | `alpine` | a biome class | *Shasaz | /ʃasaz/ |
 | `bait-ball` | A dense turning mass of fish. | *Tajat | /tajat/ |
 | `barley` | a staple crop | *Zajaj | /zajaj/ |
@@ -55,6 +56,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `coast` | where the land meets the sea | *Sasaz | /sasaz/ |
 | `cold` | felt, biting chill | *Baxat | /baxat/ |
 | `cold-upwelling` | Cold nutrient-rich water rising from below. | *Gaxab | /gaxab/ |
+| `content` | positive, low arousal: needs met, at rest | *Tabat | /tabat/ |
 | `coral-head` | A massive coral colony standing proud of the reef. | *Xajab | /xajab/ |
 | `coral-reef` | a biome class | *Zangad | /zaŋad/ |
 | `crevasse-field` | Ice split by crevasses. | *Xashav | /xaʃav/ |
@@ -68,10 +70,12 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `dire-wolf-kind` | a dire wolf | *Gaxang | /gaxaŋ/ |
 | `drink` | to swallow liquid | *Nangaj | /naŋaj/ |
 | `drow-kind` | a drow | *Shavaz | /ʃavaz/ |
+| `eager` | positive, high arousal: chasing a satisfiable need | *Zaxav | /zaxav/ |
 | `earth` | the ground underfoot | *Zavag | /zavag/ |
 | `east` | the direction of increasing longitude | *Gashagav | /gaʃagav/ |
 | `eat` | to consume food | *Shadang | /ʃadaŋ/ |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | *Bangaj | /baŋaj/ |
+| `encloses` | an anchor that reveals what lies within it | *Davaq | /davaq/ |
 | `epipelagic` | a biome class | *Jagang | /jagaŋ/ |
 | `erg` | A sand sea of dunes. | *Qajat | /qajat/ |
 | `eye` | the organ of sight | *Satan | /satan/ |
@@ -83,6 +87,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `ford` | where a river runs shallow enough to cross | *Shaxas | /ʃaxas/ |
 | `forest-gap` | A break in the canopy where light reaches the ground. | *Sadax | /sadax/ |
 | `frost-heave` | Ground churned and patterned by freezing. | *Vagav | /vagav/ |
+| `frustrated` | negative: blocked with a known target out of reach | *Zasax | /zasax/ |
 | `gallery-forest` | Forest following a watercourse. | *Vataq | /vataq/ |
 | `giant-constrictor-snake-kind` | a giant constrictor snake | *Gazaz | /gazaz/ |
 | `giant-crocodile-kind` | a giant crocodile | *Sangag | /saŋag/ |
@@ -105,12 +110,14 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `hand` | the manipulating limb-end | *Javas | /javas/ |
 | `hearth` | the fire at the center of a home | *Xadat | /xadat/ |
 | `heat` | felt, oppressive warmth | *Naxaz | /naxaz/ |
+| `helpless` | negative and persistent: given up despite an active drive | *Qagash | /qagaʃ/ |
 | `high` | far above the ground | *Nganas | /ŋanas/ |
 | `high-elf-kind` | a high elf | *Qaxav | /qaxav/ |
 | `hill` | ground that rises above what surrounds it | *Shagag | /ʃagag/ |
 | `hill-dwarf-kind` | a hill dwarf | *Ngashax | /ŋaʃax/ |
 | `hobgoblin-kind` | a hobgoblin | *Babaj | /babaj/ |
 | `holdfast-tangle` | The anchored base of a kelp forest. | *Basat | /basat/ |
+| `holds-liquid` | a place a body may drink from | *Zanan | /zanan/ |
 | `home` | one's dwelling | *Jadan | /jadan/ |
 | `human-kind` | a human | *Vavab | /vavab/ |
 | `hydrothermal-vent` | a biome class | *Zajang | /zajaŋ/ |
@@ -119,6 +126,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `island` | land the water surrounds | *Ngaqab | /ŋaqab/ |
 | `kelp-canopy` | The floating canopy of a kelp forest. | *Sasax | /sasax/ |
 | `kelp-forest` | a biome class | *Qaqas | /qaqas/ |
+| `kill` | to cause to cease living | *Qadag | /qadag/ |
 | `killer-whale-kind` | a killer whale | *Naqash | /naqaʃ/ |
 | `know` | to hold something in memory or understanding — `knows` | *Vavash | /vavaʃ/ |
 | `kobold-kind` | a kobold | *Satag | /satag/ |
@@ -128,6 +136,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `lightless-water` | Water below all light. | *Xavab | /xavab/ |
 | `little` | small in size or extent | *Danag | /danag/ |
 | `look` | to visually attend to something, near or far — `look`, `examine` | *Qashad | /qaʃad/ |
+| `lost` | negative: blocked with no target to move toward | *Jasab | /jasab/ |
 | `low` | near the ground | *Xasash | /xasaʃ/ |
 | `many` | an indefinitely large count | *Dangang | /daŋaŋ/ |
 | `marine-snow` | Organic debris drifting endlessly down. | *Zadas | /zadas/ |
@@ -160,6 +169,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `plankton-bloom` | Water thick with plankton. | *Xabash | /xabaʃ/ |
 | `playa` | A dry lake bed of salt and cracked clay. | *Jajav | /jajav/ |
 | `pressure-ridge` | Sea ice buckled into a ridge. | *Nanat | /nanat/ |
+| `radiates-heat` | an anchor that emits warmth | *Tashab | /taʃab/ |
 | `rafted-floe` | Ice floes driven over one another. | *Xaxab | /xaxab/ |
 | `rain` | liquid precipitation | *Xangag | /xaŋag/ |
 | `read` | to take meaning from written words — `consult` | *Dataz | /dataz/ |
@@ -181,6 +191,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `sea` | a body of salt water | *Shaqash | /ʃaqaʃ/ |
 | `sea-elf-kind` | a sea elf | *Ngatax | /ŋatax/ |
 | `sea-ice` | a biome class | *Vangang | /vaŋaŋ/ |
+| `searching` | neutral, mid arousal: seeking with a gradient | *Shangaj | /ʃaŋaj/ |
 | `sense` | to perceive another's felt bodily state — `needs` | *Xashax | /xaʃax/ |
 | `shadow` | cast dark, distinct from open gloom | *Naxav | /naxav/ |
 | `shrieker-kind` | a shrieker | *Vaxas | /vaxas/ |
@@ -202,10 +213,12 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `starlit` | dark faintly lit by stars | *Javab | /javab/ |
 | `stone` | rock | *Shazaq | /ʃazaq/ |
 | `sun` | the sun | *Qashax | /qaʃax/ |
+| `supports-rest` | a place a body may lie down and sleep | *Bashav | /baʃav/ |
 | `taiga` | a biome class | *Nangab | /naŋab/ |
 | `temperate-forest` | a biome class | *Nadash | /nadaʃ/ |
 | `temperate-grassland` | a biome class | *Qadaq | /qadaq/ |
 | `temperate-rainforest` | a biome class | *Qajang | /qajaŋ/ |
+| `think` | to hold an uncertain belief | *Gangav | /gaŋav/ |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | *Qatat | /qatat/ |
 | `tide` | the rise and fall of the waters under the moons | *Xangash | /xaŋaʃ/ |
 | `treant-kind` | a treant | *Vajaq | /vajaq/ |

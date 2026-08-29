@@ -1,11 +1,13 @@
 //! Tier-1 metrics extractors: analyzable properties of generated worlds.
 
+use std::cell::Ref; // lexicon: std::cell::Ref, the Rust interior-mutability type, not the mesh sense
+
 use hornvale_astronomy::{
     Calendar, NeighborClass, Rotation, StarSystem, streams::ROOT as ASTRONOMY_STREAM_ROOT,
 };
 use hornvale_climate::GeneratedClimate;
 use hornvale_history::record::{Ended, OccupationRecord};
-use hornvale_kernel::{CellId, EntityId, Phenomenon, Seed, Value, World};
+use hornvale_kernel::{EntityId, Phenomenon, Seed, Value, Vertex, World};
 use hornvale_language::{
     GapReason, LexEntry, Manner, NameKind, Namer, Phonology, Segment, concept_domain,
     distinctiveness, distortion, domain_distortion, recoverability, romanize,
@@ -38,7 +40,7 @@ pub struct WorldView {
     pub notes: Vec<String>,
     /// The tectonic globe summary (plates, ocean fraction, sea level, peak).
     pub globe: GlobeSummary,
-    /// The full tectonic globe (for coverage metrics over cells).
+    /// The full tectonic globe (for coverage metrics over vertices).
     pub terrain: hornvale_terrain::GeneratedTerrain,
     /// The derived climate (biome + habitability).
     pub climate: GeneratedClimate,
@@ -199,7 +201,7 @@ pub struct TerrainView {
     pub astronomy: AstronomyView,
     /// The tectonic globe summary (plates, ocean fraction, sea level, peak).
     pub globe: GlobeSummary,
-    /// The full tectonic globe (for coverage metrics over cells).
+    /// The full tectonic globe (for coverage metrics over vertices).
     pub terrain: hornvale_terrain::GeneratedTerrain,
     /// This view's one channel-transect sweep, computed on first demand by
     /// [`TerrainView::band_transects`] and then reused (The Rill: three
@@ -207,19 +209,19 @@ pub struct TerrainView {
     /// registry was paying for it three times — measured at exactly 2.99×).
     ///
     /// **Scoping is the whole safety argument, so it is stated here.** The
-    /// cell is a private field of the view, so its lifetime is exactly one
+    /// vertex is a private field of the view, so its lifetime is exactly one
     /// world's evaluation: `build_row` constructs a `BuiltView` per (seed,
     /// pin set), applies every metric to it, and drops it. There is no key
     /// to collide, no `static` to outlive a world, and no way to hand this
-    /// cell a network other than the `terrain` beside it — the initializer
+    /// vertex a network other than the `terrain` beside it — the initializer
     /// below reads `self.terrain.channels()` and nothing else. `OnceCell`
     /// (not `OnceLock`) is deliberate: it is `!Sync`, so a view carrying a
-    /// filled cell cannot be shared across the runner's worker threads even
+    /// filled vertex cannot be shared across the runner's worker threads even
     /// by accident.
     ///
     /// The stored value is an `Option`, so "swept, and this world has no
     /// channels" (`Some(None)` once filled) stays distinct from "not yet
-    /// swept" (the cell itself unset). A world with no channels is
+    /// swept" (the vertex itself unset). A world with no channels is
     /// therefore swept once and answered `Absent` three times, never
     /// re-swept.
     band_transects: std::cell::OnceCell<Option<LabBandTransects>>,
@@ -371,6 +373,22 @@ impl AsRef<AstronomyView> for ClimateView {
     }
 }
 
+#[cfg(test)]
+thread_local! {
+    /// Test-only diagnostic (task 3 of The Governor, mirroring
+    /// `LEX_BUILD_CALLS`): counts calls to [`SettlementView::demography_report`]'s
+    /// uncached build path, i.e. actual `hornvale_worldgen::demography_report_from`
+    /// invocations. A `thread_local`, not a plain `static AtomicUsize`, for the
+    /// same reason `LEX_BUILD_CALLS` is one — nextest is process-per-test
+    /// (`windows/lab/CLAUDE.md`), so a plain `static` is already exclusive to
+    /// one test, but a thread-local also survives if that ever changes to a
+    /// multi-threaded test harness without becoming a cross-test race. Exists
+    /// to let a test measure "one report build per view, not one per metric"
+    /// by counting, not by reading the call graph, and then guard the
+    /// memoised path against silently regressing back to a rebuild per metric.
+    static DEMOGRAPHY_BUILD_CALLS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };  // lexicon: std::cell::RefCell/Cell/Ref/OnceCell — the Rust interior-mutability type, not the mesh sense
+}
+
 /// Settlement rung: climate + a world built to settlement depth (spec §4 /
 /// MAP-25). A metric handed a `SettlementView` reads a world whose
 /// religion/culture/species/deep-time facts do not exist yet — the type
@@ -379,6 +397,32 @@ impl AsRef<AstronomyView> for ClimateView {
 pub struct SettlementView {
     /// The climate rung this view extends.
     pub climate: ClimateView,
+    /// This view's own demography report, computed on first demand by
+    /// [`SettlementView::demography_report`] and reused thereafter (task 3
+    /// of The Governor). Two Settlement-rung metrics
+    /// (`per-cell-diversity`, `composition-variance`) each called  // lexicon: frozen metric name (per-cell-diversity), not the mesh sense
+    /// `hornvale_worldgen::demography_report_from` independently against the
+    /// same `(world, components, terrain, climate)` and rebuilt the
+    /// identical report — profiled at 7.58% + 7.53% of census study cycles.
+    ///
+    /// **Scoping is the whole safety argument, so it is stated here, the
+    /// same way [`FullView::lexicon_cache`] states it for its own per-view
+    /// cache.** This field is private, so its lifetime is exactly one
+    /// world's evaluation: `build_row` constructs a `BuiltView` per (seed,
+    /// pin set), applies every metric to it, and drops it. `RefCell` (never  // lexicon: std::cell::RefCell/Cell/Ref/OnceCell — the Rust interior-mutability type, not the mesh sense
+    /// a `Mutex`) is deliberate: it is `!Sync`, so a view carrying a filled
+    /// cache cannot be shared across the runner's worker threads even by
+    /// accident.
+    ///
+    /// `Option<Result<..>>` rather than caching only the `Ok` payload:
+    /// `BuildError` is not `Clone`, so the whole `Result` — including a
+    /// failed build — is memoised, and a world whose report fails to build
+    /// re-uses that SAME error on every later call instead of re-attempting
+    /// (and re-paying for) the build. Byte-identical to the un-memoised
+    /// path either way, since `demography_report_from` is a pure function
+    /// of this view's own already-committed fields.
+    demography_cache:
+        std::cell::RefCell<Option<Result<hornvale_demography::DemographyReport, BuildError>>>, // lexicon: std::cell::RefCell/Cell/Ref/OnceCell — the Rust interior-mutability type, not the mesh sense
 }
 
 impl SettlementView {
@@ -394,7 +438,39 @@ impl SettlementView {
         wc: WorldComponents,
     ) -> Result<SettlementView, BuildError> {
         let climate = ClimateView::build_to(seed, pins, wc, BuildDepth::Settlements)?;
-        Ok(SettlementView { climate })
+        Ok(SettlementView {
+            climate,
+            demography_cache: std::cell::RefCell::new(None), // lexicon: std::cell::RefCell/Cell/Ref/OnceCell — the Rust interior-mutability type, not the mesh sense
+        })
+    }
+
+    /// This view's demography report, memoised against
+    /// [`SettlementView::demography_cache`] — see that field's doc for the
+    /// scoping argument. Every settlement-rung metric that needs
+    /// `hornvale_worldgen::demography_report_from` should call this instead
+    /// of the worldgen function directly, so the whole crate shares one
+    /// build per view.
+    // Named construction site (decision 0092): the ONE place this view
+    // calls the derivation entry point; every metric extractor reads the
+    // memoised result back out instead.
+    #[allow(clippy::disallowed_methods)]
+    pub fn demography_report(
+        &self,
+    ) -> Ref<'_, Result<hornvale_demography::DemographyReport, BuildError>> {
+        if self.demography_cache.borrow().is_none() {
+            #[cfg(test)]
+            DEMOGRAPHY_BUILD_CALLS.with(|c| c.set(c.get() + 1));
+            let built = hornvale_worldgen::demography_report_from(
+                self.world(),
+                self.components(),
+                self.terrain(),
+                self.climate(),
+            );
+            *self.demography_cache.borrow_mut() = Some(built);
+        }
+        Ref::map(self.demography_cache.borrow(), |cached| {
+            cached.as_ref().expect("populated immediately above")
+        })
     }
 
     /// The world ledger, reached through the climate/terrain/astronomy
@@ -445,6 +521,36 @@ impl AsRef<AstronomyView> for SettlementView {
 pub struct FullView {
     /// The settlement rung this view extends.
     pub settlement: SettlementView,
+    /// This view's own per-species lexicon builds, computed on first demand
+    /// by [`lex`] and then reused (The Confidant, Task 7 followup: three
+    /// metric families — `reportable-fraction-*`, `collapse-ratio-*`,
+    /// `misreport-distance-*` — each called `lex(v, species)` independently
+    /// for all fifteen `society_registry()` peoples, so a world paid for 45
+    /// uncached `lexicon_from_in` builds instead of 15. Measured at ≈2.9
+    /// ms/metric/world, ≈133 ms/world aggregate — see this task's report).
+    ///
+    /// **Scoping is the whole safety argument, so it is stated here, the
+    /// same way [`TerrainView::band_transects`] states it.** The map is a
+    /// private field of the view, so its lifetime is exactly one world's
+    /// evaluation: `build_row` constructs a `BuiltView` per (seed, pin set),
+    /// applies every metric to it, and drops it. There is no key to
+    /// collide, no `static` to outlive a world, and no way to hand this
+    /// cache a lexicon other than the one `lex`'s own uncached body builds
+    /// for THIS view's `world()`/`components()`/`terrain()`/`climate()`.
+    /// `RefCell` (never a `Mutex`) is deliberate: it is `!Sync`, so a view
+    /// carrying a filled cache cannot be shared across the runner's worker
+    /// threads even by accident — the same reasoning
+    /// [`TerrainView::band_transects`] documents for its `OnceCell`, applied
+    /// here to a per-species keyed cache instead of one global cell (a
+    /// species not yet built simply has no entry, so there is no need for
+    /// the `Option`-inside-the-cell trick that field uses — absence of a key
+    /// already distinguishes "not yet built" from every real answer). Keyed
+    /// by species name rather than a fixed-size array so this stays correct
+    /// for any roster, not only the shipped fifteen. `BTreeMap`, never a
+    /// `HashMap` (the project-wide ban): lookups are a handful of species
+    /// per world, so ordering has no cost here worth trading away.
+    lexicon_cache:
+        std::cell::RefCell<std::collections::BTreeMap<String, hornvale_language::Lexicon>>,
 }
 
 impl FullView {
@@ -461,7 +567,11 @@ impl FullView {
     ) -> Result<FullView, BuildError> {
         let climate = ClimateView::build_to(seed, pins, wc, BuildDepth::Full)?;
         Ok(FullView {
-            settlement: SettlementView { climate },
+            settlement: SettlementView {
+                climate,
+                demography_cache: std::cell::RefCell::new(None), // lexicon: std::cell::RefCell/Cell/Ref/OnceCell — the Rust interior-mutability type, not the mesh sense
+            },
+            lexicon_cache: std::cell::RefCell::new(std::collections::BTreeMap::new()),
         })
     }
 
@@ -915,8 +1025,8 @@ fn scan_century(v: &AstronomyView) -> Vec<hornvale_astronomy::EclipseEvent> {
     hornvale_astronomy::eclipse_events(
         &v.system,
         &v.calendar,
-        hornvale_astronomy::StdDays::new(0.0).unwrap(),
-        hornvale_astronomy::StdDays::new(100.0 * 365.25).unwrap(),
+        hornvale_astronomy::StdInstant::new(0.0).unwrap(),
+        hornvale_astronomy::StdInstant::new(100.0 * 365.25).unwrap(),
     )
 }
 
@@ -966,7 +1076,7 @@ pub fn registry() -> Vec<Metric> {
             role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| match &v.system.anchor.rotation {
                 Rotation::Locked => MetricValue::Absent,
-                Rotation::Spinning { day, .. } => MetricValue::Number(day.get() * 24.0),
+                Rotation::Spinning { day, .. } => MetricValue::Number(day.as_std_days() * 24.0),
             }),
         },
         Metric {
@@ -1218,8 +1328,8 @@ pub fn registry() -> Vec<Metric> {
                 let Some(lat) = flagship_latitude(v) else {
                     return MetricValue::Absent;
                 };
-                let t0 = hornvale_astronomy::StdDays::new(0.0).unwrap();
-                let t1 = hornvale_astronomy::StdDays::new(1000.0 * 365.25).unwrap();
+                let t0 = hornvale_astronomy::StdInstant::new(0.0).unwrap();
+                let t1 = hornvale_astronomy::StdInstant::new(1000.0 * 365.25).unwrap();
                 match a.calendar.alignment_drift_deg(lat, t0, t1) {
                     Some(d) => MetricValue::Number(d.abs()),
                     None => MetricValue::Absent,
@@ -1328,7 +1438,7 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "ocean-fraction",
-            doc: "Fraction of globe cells below sea level",
+            doc: "Fraction of globe vertices below sea level",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
             },
@@ -1340,7 +1450,7 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "mountain-coverage",
-            doc: "Fraction of land cells standing above 2000 m over the sea",
+            doc: "Fraction of land vertices standing above 2000 m over the sea",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
             },
@@ -1350,8 +1460,8 @@ pub fn registry() -> Vec<Metric> {
                 let geo = v.terrain.geosphere();
                 let sea = v.terrain.sea_level();
                 let (mut land, mut high) = (0usize, 0usize);
-                for cell in geo.cells() {
-                    let e = v.terrain.elevation_at(cell);
+                for vertex in geo.vertices() {
+                    let e = v.terrain.elevation_at(vertex);
                     if e >= sea {
                         land += 1;
                         if e - sea > 2000.0 {
@@ -1368,10 +1478,10 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "mean-land-elevation-m",
-            doc: "Mean elevation above sea level over land cells, m — the term the \
+            doc: "Mean elevation above sea level over land vertices, m — the term the \
                   lapse rate turns into a temperature penalty. Land is `e >= sea`, \
                   matching `mountain-coverage`'s land definition; `mean-land-temperature-c` \
-                  uses `!is_ocean(cell)`, which is the same condition (`is_ocean` is \
+                  uses `!is_ocean(vertex)`, which is the same condition (`is_ocean` is \
                   `e < sea`), so the two metrics ARE mutually comparable — this is the \
                   coupling the campaign's lapse-rate regression rests on. Absent on a \
                   landless world",
@@ -1384,8 +1494,8 @@ pub fn registry() -> Vec<Metric> {
                 let geo = v.terrain.geosphere();
                 let sea = v.terrain.sea_level();
                 let (mut sum, mut count) = (0.0_f64, 0_u32);
-                for cell in geo.cells() {
-                    let e = v.terrain.elevation_at(cell);
+                for vertex in geo.vertices() {
+                    let e = v.terrain.elevation_at(vertex);
                     if e >= sea {
                         sum += e - sea;
                         count += 1;
@@ -1411,7 +1521,7 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "habitable-fraction",
-            doc: "Fraction of cells that are habitable (land, water, tolerable season)",
+            doc: "Fraction of vertices that are habitable (land, water, tolerable season)",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5],
             },
@@ -1423,7 +1533,7 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "unrest-coverage",
-            doc: "Fraction of cells with tectonic unrest above 0.3",
+            doc: "Fraction of vertices with tectonic unrest above 0.3",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.5],
             },
@@ -1431,9 +1541,9 @@ pub fn registry() -> Vec<Metric> {
             role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
-                let total = geo.cell_count();
+                let total = geo.vertex_count();
                 let restless = geo
-                    .cells()
+                    .vertices()
                     .filter(|c| v.terrain.unrest_at(*c) > 0.3)
                     .count();
                 MetricValue::Number(if total == 0 {
@@ -1444,10 +1554,10 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
         // --- The Ground (Task 7): rock/soil/hydrogeology census metrics,
-        // over land cells only (`terrain.is_ocean` guards each). ---
+        // over land vertices only (`terrain.is_ocean` guards each). ---
         Metric {
             name: "dominant-rock",
-            doc: "The most common land rock class by cell count, spec §4's fine \
+            doc: "The most common land rock class by vertex count, spec §4's fine \
                   taxonomy (The Ground); Absent on a landless world",
             summary: SummaryKind::Categorical,
             domain: Domain::Terrain,
@@ -1456,9 +1566,9 @@ pub fn registry() -> Vec<Metric> {
                 let geo = v.terrain.geosphere();
                 let mut counts: std::collections::BTreeMap<RockClass, usize> =
                     std::collections::BTreeMap::new();
-                for cell in geo.cells() {
-                    if !v.terrain.is_ocean(cell) {
-                        *counts.entry(v.terrain.rock_at(cell)).or_insert(0) += 1;
+                for vertex in geo.vertices() {
+                    if !v.terrain.is_ocean(vertex) {
+                        *counts.entry(v.terrain.rock_at(vertex)).or_insert(0) += 1;
                     }
                 }
                 match counts.iter().max_by(|a, b| a.1.cmp(b.1).then(b.0.cmp(a.0))) {
@@ -1469,7 +1579,7 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "karst-fraction",
-            doc: "Fraction of land cells whose hydrogeology classifies as karst \
+            doc: "Fraction of land vertices whose hydrogeology classifies as karst \
                   (The Ground, spec §3)",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
@@ -1479,10 +1589,10 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut karst) = (0usize, 0usize);
-                for cell in geo.cells() {
-                    if !v.terrain.is_ocean(cell) {
+                for vertex in geo.vertices() {
+                    if !v.terrain.is_ocean(vertex) {
                         land += 1;
-                        if v.terrain.hydro_at(cell) == Hydro::Karst {
+                        if v.terrain.hydro_at(vertex) == Hydro::Karst {
                             karst += 1;
                         }
                     }
@@ -1508,8 +1618,8 @@ pub fn registry() -> Vec<Metric> {
                 let geo = v.terrain.geosphere();
                 let mut seen: std::collections::BTreeSet<hornvale_terrain::Hydro> =
                     std::collections::BTreeSet::new();
-                for cell in geo.cells() {
-                    seen.insert(v.terrain.hydro_at(cell));
+                for vertex in geo.vertices() {
+                    seen.insert(v.terrain.hydro_at(vertex));
                 }
                 // `Hydro::ALL` order, not BTreeSet order, so the string is stable
                 // against a future reordering of the enum's `Ord` derivation.
@@ -1524,7 +1634,7 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "aquifer-fraction",
-            doc: "Fraction of land cells whose hydrogeology classifies as an \
+            doc: "Fraction of land vertices whose hydrogeology classifies as an \
                   aquifer (The Ground, spec §3)",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.4],
@@ -1534,10 +1644,10 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut aquifer) = (0usize, 0usize);
-                for cell in geo.cells() {
-                    if !v.terrain.is_ocean(cell) {
+                for vertex in geo.vertices() {
+                    if !v.terrain.is_ocean(vertex) {
                         land += 1;
-                        if v.terrain.hydro_at(cell) == Hydro::Aquifer {
+                        if v.terrain.hydro_at(vertex) == Hydro::Aquifer {
                             aquifer += 1;
                         }
                     }
@@ -1560,10 +1670,10 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut sum) = (0usize, 0.0f64);
-                for cell in geo.cells() {
-                    if !v.terrain.is_ocean(cell) {
+                for vertex in geo.vertices() {
+                    if !v.terrain.is_ocean(vertex) {
                         land += 1;
-                        sum += v.terrain.depth_to_basement_at(cell);
+                        sum += v.terrain.depth_to_basement_at(vertex);
                     }
                 }
                 MetricValue::Number(if land == 0 { 0.0 } else { sum / land as f64 })
@@ -1571,7 +1681,7 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "unconformity-fraction",
-            doc: "Fraction of land cells recording a nonconformity (missing time) — the archive's floating gaps.",
+            doc: "Fraction of land vertices recording a nonconformity (missing time) — the archive's floating gaps.",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
             },
@@ -1580,10 +1690,10 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut gaps) = (0usize, 0usize);
-                for cell in geo.cells() {
-                    if !v.terrain.is_ocean(cell) {
+                for vertex in geo.vertices() {
+                    if !v.terrain.is_ocean(vertex) {
                         land += 1;
-                        if v.terrain.unconformity_at(cell) {
+                        if v.terrain.unconformity_at(vertex) {
                             gaps += 1;
                         }
                     }
@@ -1606,21 +1716,21 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut sum) = (0usize, 0.0f64);
-                for cell in geo.cells() {
-                    if !v.terrain.is_ocean(cell) {
+                for vertex in geo.vertices() {
+                    if !v.terrain.is_ocean(vertex) {
                         land += 1;
-                        sum += v.terrain.geothermal_gradient_at(cell).get();
+                        sum += v.terrain.geothermal_gradient_at(vertex).get();
                     }
                 }
                 MetricValue::Number(if land == 0 { 0.0 } else { sum / land as f64 })
             }),
         },
         // --- The Lode (Task 7): cave and ore-deposit census metrics, over
-        // land cells only (`terrain.is_ocean` guards each), mirroring The
+        // land vertices only (`terrain.is_ocean` guards each), mirroring The
         // Ground. ---
         Metric {
             name: "cave-fraction",
-            doc: "Fraction of land cells with a cave (The Lode, spec §5; \
+            doc: "Fraction of land vertices with a cave (The Lode, spec §5; \
                   MAP-10's lab candidate)",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
@@ -1630,10 +1740,10 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut caves) = (0usize, 0usize);
-                for cell in geo.cells() {
-                    if !v.terrain.is_ocean(cell) {
+                for vertex in geo.vertices() {
+                    if !v.terrain.is_ocean(vertex) {
                         land += 1;
-                        if v.terrain.cave_at(cell).is_some() {
+                        if v.terrain.cave_at(vertex).is_some() {
                             caves += 1;
                         }
                     }
@@ -1647,7 +1757,7 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "deposit-density",
-            doc: "Fraction of land cells with an ore deposit (The Lode, spec §5)",
+            doc: "Fraction of land vertices with an ore deposit (The Lode, spec §5)",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
             },
@@ -1656,10 +1766,10 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut deposits) = (0usize, 0usize);
-                for cell in geo.cells() {
-                    if !v.terrain.is_ocean(cell) {
+                for vertex in geo.vertices() {
+                    if !v.terrain.is_ocean(vertex) {
                         land += 1;
-                        if v.terrain.deposit_at(cell).is_some() {
+                        if v.terrain.deposit_at(vertex).is_some() {
                             deposits += 1;
                         }
                     }
@@ -1673,8 +1783,8 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "dominant-commodity",
-            doc: "The most common land ore commodity by cell count (The \
-                  Lode, spec §5); Absent where no land cell has a deposit",
+            doc: "The most common land ore commodity by vertex count (The \
+                  Lode, spec §5); Absent where no land vertex has a deposit",
             summary: SummaryKind::Categorical,
             domain: Domain::Terrain,
             role: Role::Descriptor,
@@ -1682,9 +1792,9 @@ pub fn registry() -> Vec<Metric> {
                 let geo = v.terrain.geosphere();
                 let mut counts: std::collections::BTreeMap<Commodity, usize> =
                     std::collections::BTreeMap::new();
-                for cell in geo.cells() {
-                    if !v.terrain.is_ocean(cell)
-                        && let Some(deposit) = v.terrain.deposit_at(cell)
+                for vertex in geo.vertices() {
+                    if !v.terrain.is_ocean(vertex)
+                        && let Some(deposit) = v.terrain.deposit_at(vertex)
                     {
                         *counts.entry(deposit.commodity).or_insert(0) += 1;
                     }
@@ -1699,8 +1809,8 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "mean-ore-grade",
-            doc: "Mean ore grade [0,1] over land cells with a deposit (The \
-                  Lode, spec §5); 0.0 where no land cell has a deposit",
+            doc: "Mean ore grade [0,1] over land vertices with a deposit (The \
+                  Lode, spec §5); 0.0 where no land vertex has a deposit",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.1, 0.2, 0.4, 0.6, 0.8],
             },
@@ -1709,9 +1819,9 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut deposits, mut sum) = (0usize, 0.0f64);
-                for cell in geo.cells() {
-                    if !v.terrain.is_ocean(cell)
-                        && let Some(deposit) = v.terrain.deposit_at(cell)
+                for vertex in geo.vertices() {
+                    if !v.terrain.is_ocean(vertex)
+                        && let Some(deposit) = v.terrain.deposit_at(vertex)
                     {
                         deposits += 1;
                         sum += deposit.grade;
@@ -1725,17 +1835,17 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
         // --- The Vestige (Task 7): subsurface historical-residue census
-        // metrics, over land cells only (`terrain.is_ocean` guards each),
+        // metrics, over land vertices only (`terrain.is_ocean` guards each),
         // mirroring The Ground/The Lode. `Extractor::Full`, not `Terrain`:
         // residue is derived from committed settlement history
         // (`vestiges_field`), which does not exist until `BuildDepth::Full`.
         // Each metric computes `vestiges_field` exactly ONCE (a single
-        // grouped ledger scan) and then iterates its `CellMap` — never
-        // `vestiges_at` per cell, which would rescan the whole ledger once
-        // per cell. ---
+        // grouped ledger scan) and then iterates its `VertexMap` — never
+        // `vestiges_at` per vertex, which would rescan the whole ledger once
+        // per vertex. ---
         Metric {
             name: "vestige-density",
-            doc: "Fraction of land cells with a non-empty vestige stack \
+            doc: "Fraction of land vertices with a non-empty vestige stack \
                   (The Vestige, spec §9.2)",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
@@ -1747,10 +1857,10 @@ pub fn registry() -> Vec<Metric> {
                 let geo = terrain.geosphere();
                 let field = vestiges_field(v.world(), terrain);
                 let (mut land, mut bearing) = (0usize, 0usize);
-                for cell in geo.cells() {
-                    if !terrain.is_ocean(cell) {
+                for vertex in geo.vertices() {
+                    if !terrain.is_ocean(vertex) {
                         land += 1;
-                        if !field.get(cell).is_empty() {
+                        if !field.get(vertex).is_empty() {
                             bearing += 1;
                         }
                     }
@@ -1786,9 +1896,9 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "forgotten-fraction",
-            doc: "Over land cells with a non-empty vestige stack, the fraction \
+            doc: "Over land vertices with a non-empty vestige stack, the fraction \
                   whose most-dread layer is Forgotten rather than Venerated \
-                  (The Vestige, spec §9.2); 0.0 where no land cell bears a vestige",
+                  (The Vestige, spec §9.2); 0.0 where no land vertex bears a vestige",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8],
             },
@@ -1799,9 +1909,9 @@ pub fn registry() -> Vec<Metric> {
                 let geo = terrain.geosphere();
                 let field = vestiges_field(v.world(), terrain);
                 let (mut bearing, mut forgotten) = (0usize, 0usize);
-                for cell in geo.cells() {
-                    if !terrain.is_ocean(cell)
-                        && let Some(top) = most_dread_vestige(field.get(cell))
+                for vertex in geo.vertices() {
+                    if !terrain.is_ocean(vertex)
+                        && let Some(top) = most_dread_vestige(field.get(vertex))
                     {
                         bearing += 1;
                         if top.valence == Valence::Forgotten {
@@ -1818,9 +1928,9 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "dominant-hazard",
-            doc: "The most common hazard kind among land-cell vestiges by \
+            doc: "The most common hazard kind among land-vertex vestiges by \
                   layer count (The Vestige, spec §9.2); Absent where no land \
-                  cell bears a vestige",
+                  vertex bears a vestige",
             summary: SummaryKind::Categorical,
             domain: Domain::History,
             role: Role::Descriptor,
@@ -1837,9 +1947,9 @@ pub fn registry() -> Vec<Metric> {
                     HazardKind::Cursed,
                 ];
                 let mut counts = [0usize; 6];
-                for cell in geo.cells() {
-                    if !terrain.is_ocean(cell) {
-                        for vestige in field.get(cell) {
+                for vertex in geo.vertices() {
+                    if !terrain.is_ocean(vertex) {
+                        for vestige in field.get(vertex) {
                             let idx = kinds
                                 .iter()
                                 .position(|k| *k == vestige.hazard)
@@ -1863,8 +1973,8 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "mean-warning-legibility",
-            doc: "Mean warning_legibility over every land-cell vestige layer \
-                  (The Vestige, spec §9.2); 0.0 where no land cell bears a vestige",
+            doc: "Mean warning_legibility over every land-vertex vestige layer \
+                  (The Vestige, spec §9.2); 0.0 where no land vertex bears a vestige",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8],
             },
@@ -1875,9 +1985,9 @@ pub fn registry() -> Vec<Metric> {
                 let geo = terrain.geosphere();
                 let field = vestiges_field(v.world(), terrain);
                 let (mut count, mut sum) = (0usize, 0.0f64);
-                for cell in geo.cells() {
-                    if !terrain.is_ocean(cell) {
-                        for vestige in field.get(cell) {
+                for vertex in geo.vertices() {
+                    if !terrain.is_ocean(vertex) {
+                        for vestige in field.get(vertex) {
                             count += 1;
                             sum += vestige.warning_legibility;
                         }
@@ -2127,7 +2237,7 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "dominant-land-biome",
-            doc: "The most common land biome by cell count, kebab-case",
+            doc: "The most common land biome by vertex count, kebab-case",
             summary: SummaryKind::Categorical,
             domain: Domain::Climate,
             role: Role::Descriptor,
@@ -2137,8 +2247,8 @@ pub fn registry() -> Vec<Metric> {
                 let mut counts: std::collections::BTreeMap<&'static str, usize> =
                     std::collections::BTreeMap::new();
                 for (_, b) in biomes.iter() {
-                    // Buckets cells by SURFACE medium (`is_marine()`); not a
-                    // question about the column beneath a cell.
+                    // Buckets vertices by SURFACE medium (`is_marine()`); not a
+                    // question about the column beneath a vertex.
                     if !b.is_marine() {
                         *counts.entry(b.name()).or_insert(0) += 1;
                     }
@@ -2154,7 +2264,7 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "mean-land-temperature-c",
-            doc: "Annual-mean temperature averaged over land cells, °C; Absent \
+            doc: "Annual-mean temperature averaged over land vertices, °C; Absent \
                    if the world has no land",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[-30.0, -20.0, -10.0, 0.0, 10.0, 20.0, 30.0],
@@ -2164,9 +2274,9 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Climate(|v: &ClimateView| {
                 let geo = v.terrain().geosphere();
                 let (mut sum, mut count) = (0.0_f64, 0_u32);
-                for cell in geo.cells() {
-                    if !v.terrain().is_ocean(cell) {
-                        sum += v.climate.mean_temperature_at(cell).get();
+                for vertex in geo.vertices() {
+                    if !v.terrain().is_ocean(vertex) {
+                        sum += v.climate.mean_temperature_at(vertex).get();
                         count += 1;
                     }
                 }
@@ -2179,7 +2289,7 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "dominant-soil-order",
-            doc: "The most common land soil order by cell count, spec §4's soil \
+            doc: "The most common land soil order by vertex count, spec §4's soil \
                   taxonomy (The Ground); Absent on a landless world",
             summary: SummaryKind::Categorical,
             domain: Domain::Climate,
@@ -2189,9 +2299,9 @@ pub fn registry() -> Vec<Metric> {
                 let soils = soil_of(v.terrain(), &v.climate, geo);
                 let mut counts: std::collections::BTreeMap<SoilOrder, usize> =
                     std::collections::BTreeMap::new();
-                for cell in geo.cells() {
-                    if !v.terrain().is_ocean(cell) {
-                        *counts.entry(*soils.get(cell)).or_insert(0) += 1;
+                for vertex in geo.vertices() {
+                    if !v.terrain().is_ocean(vertex) {
+                        *counts.entry(*soils.get(vertex)).or_insert(0) += 1;
                     }
                 }
                 match counts.iter().max_by(|a, b| a.1.cmp(b.1).then(b.0.cmp(a.0))) {
@@ -2202,7 +2312,7 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "fertile-land-fraction",
-            doc: "Fraction of land cells whose soil fertility's grain-suitability \
+            doc: "Fraction of land vertices whose soil fertility's grain-suitability \
                   exceeds 0.6 (The Ground, spec §3/§4)",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.1, 0.2, 0.3, 0.4, 0.6, 0.8],
@@ -2213,11 +2323,11 @@ pub fn registry() -> Vec<Metric> {
                 let geo = v.terrain().geosphere();
                 let soils = soil_of(v.terrain(), &v.climate, geo);
                 let (mut land, mut fertile) = (0usize, 0usize);
-                for cell in geo.cells() {
-                    if !v.terrain().is_ocean(cell) {
+                for vertex in geo.vertices() {
+                    if !v.terrain().is_ocean(vertex) {
                         land += 1;
-                        let depth = v.terrain().material_at(cell).soil_depth;
-                        let f = fertility(*soils.get(cell), &depth);
+                        let depth = v.terrain().material_at(vertex).soil_depth;
+                        let f = fertility(*soils.get(vertex), &depth);
                         if f.grain_suit > 0.6 {
                             fertile += 1;
                         }
@@ -2306,7 +2416,7 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "capacity-by-abs-latitude",
             doc: "The carrying-capacity field's headline calibration (design spec §5): the \
-                   ratio of mean per-land-cell K (summed over the roster's PEOPLED kinds' \
+                   ratio of mean per-land-vertex K (summed over the roster's PEOPLED kinds' \
                    individual fields, each species' own psychology folded in — fauna kinds \
                    have no psychology and are excluded, preserving this metric's \
                    pre-menagerie population) in the \
@@ -2315,7 +2425,7 @@ pub fn registry() -> Vec<Metric> {
                    the K formula's baseline unit) so an exactly-zero polar band — the Miami NPP \
                    proxy's honest reading of hard cold, not a bug — reports a large-but-bounded \
                    ratio rather than a division blowup. A field grounded in the real biomass \
-                   gradient reads well above 1 here; Absent if either band has no land cells (a \
+                   gradient reads well above 1 here; Absent if either band has no land vertices (a \
                    wholly ocean or wholly polar world)",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 3.0, 5.0, 10.0, 20.0, 40.0, 60.0],
@@ -2342,16 +2452,16 @@ pub fn registry() -> Vec<Metric> {
                     {
                         continue;
                     }
-                    let inputs = hornvale_kernel::CellMap::from_fn(geo, |c| {
+                    let inputs = hornvale_kernel::VertexMap::from_fn(geo, |c| {
                         hornvale_worldgen::species_carrying_input(*base_inputs.get(c), psych)
                     });
                     let k = hornvale_demography::carrying_capacity(geo, &inputs);
-                    for cell in geo.cells() {
-                        if v.terrain().is_ocean(cell) {
+                    for vertex in geo.vertices() {
+                        if v.terrain().is_ocean(vertex) {
                             continue;
                         }
-                        let lat = geo.coord(cell).latitude.abs();
-                        let kv = k.at(cell);
+                        let lat = geo.coord(vertex).latitude.abs();
+                        let kv = k.at(vertex);
                         if lat < 30.0 {
                             trop_sum += kv;
                             trop_n += 1;
@@ -2368,7 +2478,7 @@ pub fn registry() -> Vec<Metric> {
                 // unit (the NPP proxy's baseline scale is O(1)): an exactly-
                 // zero polar band reads as a bounded ratio, not a division
                 // blowup, while a genuinely-small-but-measured polar K (e.g.
-                // a mild subpolar cell) still moves the ratio honestly.
+                // a mild subpolar vertex) still moves the ratio honestly.
                 const POLE_FLOOR: f64 = 0.01;
                 let trop_mean = trop_sum / f64::from(trop_n);
                 let pole_mean = pole_sum / f64::from(pole_n);
@@ -2377,40 +2487,38 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "per-cell-diversity",
-            doc: "Mean per-cell species diversity of the coexistence density stack (task \
-                   A16a; feeds the A16b β calibration): the mean, over habitable land cells, \
+            doc: "Mean per-vertex species diversity of the coexistence density stack (task \
+                   A16a; feeds the A16b β calibration): the mean, over habitable land vertices, \
                    of the demography report's `byproducts.strife` field — already the \
-                   per-cell inverse-Herfindahl diversity 1/Σ frac_s² (1.0 when one species \
-                   dominates a cell, →N when N species share it evenly). Recomputed via \
-                   `hornvale_worldgen::demography_report_from`, which reconstructs the IDENTICAL \
-                   report the settlement-genesis path builds internally (the shared-assembly \
-                   refactor of task A16a), so this measures the stack the world actually \
-                   ships, not a parallel one. Absent if the report fails to build or the \
-                   world has no habitable cells",
+                   per-vertex inverse-Herfindahl diversity 1/Σ frac_s² (1.0 when one species \
+                   dominates a vertex, →N when N species share it evenly). Read via \
+                   `SettlementView::demography_report`, the view's own memoised build of \
+                   `hornvale_worldgen::demography_report_from` (task 3 of The Governor: shared \
+                   with `composition-variance` below rather than each rebuilding it), which \
+                   reconstructs the IDENTICAL report the settlement-genesis path builds \
+                   internally (the shared-assembly refactor of task A16a), so this measures the \
+                   stack the world actually ships, not a parallel one. Absent if the report \
+                   fails to build or the world has no habitable vertices",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 1.5, 2.0, 3.0, 4.0, 6.0, 8.0],
             },
             domain: Domain::Settlement,
             role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
-                // Named construction site (decision 0092): a metric extractor
-                // deliberately recomputes the fit per read against already-derived
-                // artifacts (documented in the metric's doc string above).
-                #[allow(clippy::disallowed_methods)]
-                let Ok(report) = hornvale_worldgen::demography_report_from(
-                    v.world(),
-                    v.components(),
-                    v.terrain(),
-                    v.climate(),
-                ) else {
+                // Reads the view's own memoised report (task 3 of The
+                // Governor) rather than deriving one — see
+                // `SettlementView::demography_report`'s doc for the
+                // construction site and scoping argument.
+                let cached = v.demography_report();
+                let Ok(report) = &*cached else {
                     return MetricValue::Absent;
                 };
                 let geo = v.terrain().geosphere();
                 let habitability = v.climate().habitability();
                 let (mut sum, mut n) = (0.0_f64, 0u32);
-                for cell in geo.cells() {
-                    if *habitability.get(cell) {
-                        sum += *report.byproducts.strife.get(cell);
+                for vertex in geo.vertices() {
+                    if *habitability.get(vertex) {
+                        sum += *report.byproducts.strife.get(vertex);
                         n += 1;
                     }
                 }
@@ -2428,26 +2536,25 @@ pub fn registry() -> Vec<Metric> {
                    `stack_settlements`, of each species' composition fraction. 0.0 iff \
                    every settlement has the identical species mix (the pre-Niche \
                    'oatmeal' — one flat blend worldwide); > 0 when composition varies \
-                   across space (species dominant in different strongholds). Recomputed \
-                   via `hornvale_worldgen::demography_report_from` (the niche-differentiated \
-                   coexistence shadow). Absent if the report fails to build or the world \
-                   has fewer than 2 settlements",
+                   across space (species dominant in different strongholds). Read via \
+                   `SettlementView::demography_report`, the view's own memoised build of \
+                   `hornvale_worldgen::demography_report_from` (the niche-differentiated \
+                   coexistence shadow) — shared with the settlement diversity metric \
+                   registered above rather than \
+                   each rebuilding it (task 3 of The Governor). Absent if the report fails to \
+                   build or the world has fewer than 2 settlements",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.005, 0.01, 0.02, 0.05, 0.1],
             },
             domain: Domain::Settlement,
             role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
-                // Named construction site (decision 0092): a metric extractor
-                // deliberately recomputes the fit per read against already-derived
-                // artifacts (documented in the metric's doc string above).
-                #[allow(clippy::disallowed_methods)]
-                let Ok(report) = hornvale_worldgen::demography_report_from(
-                    v.world(),
-                    v.components(),
-                    v.terrain(),
-                    v.climate(),
-                ) else {
+                // Reads the view's own memoised report (task 3 of The
+                // Governor) rather than deriving one — see
+                // `SettlementView::demography_report`'s doc for the
+                // construction site and scoping argument.
+                let cached = v.demography_report();
+                let Ok(report) = &*cached else {
                     return MetricValue::Absent;
                 };
                 let settlements = &report.stack_settlements;
@@ -2612,7 +2719,7 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "flagship-coastal",
-            doc: "Whether the goblin flagship settlement's cell borders an ocean cell, \
+            doc: "Whether the goblin flagship settlement's vertex borders an ocean vertex, \
                    recomputed from the terrain provider; Absent if there is no goblin flagship",
             summary: SummaryKind::Flag,
             domain: Domain::Settlement,
@@ -2621,18 +2728,18 @@ pub fn registry() -> Vec<Metric> {
                 let Some(info) = flagship_of(v.world(), "goblin") else {
                     return MetricValue::Absent;
                 };
-                let Some(Value::Number(cell_id)) = v
+                let Some(Value::Number(vertex_id)) = v
                     .world()
                     .ledger
-                    .value_of(info.id, hornvale_settlement::CELL_ID)
+                    .value_of(info.id, hornvale_settlement::VERTEX_ID)
                 else {
                     return MetricValue::Absent;
                 };
-                let cell = CellId(*cell_id as u32);
+                let vertex = Vertex(*vertex_id as u32);
                 let coastal = v
                     .terrain()
                     .geosphere()
-                    .neighbors(cell)
+                    .neighbors(vertex)
                     .iter()
                     .any(|n| v.terrain().is_ocean(*n));
                 MetricValue::Flag(coastal)
@@ -2660,7 +2767,7 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "endorheic-coverage",
-            doc: "Fraction of land cells that are endorheic (interior-draining)",
+            doc: "Fraction of land vertices that are endorheic (interior-draining)",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
             },
@@ -2669,10 +2776,10 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut endorheic) = (0usize, 0usize);
-                for cell in geo.cells() {
-                    if !v.terrain.is_ocean(cell) {
+                for vertex in geo.vertices() {
+                    if !v.terrain.is_ocean(vertex) {
                         land += 1;
-                        if v.terrain.is_endorheic(cell) {
+                        if v.terrain.is_endorheic(vertex) {
                             endorheic += 1;
                         }
                     }
@@ -2836,7 +2943,7 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "goblin-flagship-surplus",
-            doc: "The goblin flagship cell's subsistence surplus, recomputed \
+            doc: "The goblin flagship vertex's subsistence surplus, recomputed \
                    from providers as fertility(biome_class) × moisture (the \
                    independent column the slave calibration needs); Absent \
                    if goblins placed no settlement",
@@ -2849,7 +2956,7 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "kobold-flagship-surplus",
-            doc: "The kobold flagship cell's subsistence surplus, recomputed \
+            doc: "The kobold flagship vertex's subsistence surplus, recomputed \
                    from providers as fertility(biome_class) × moisture (the \
                    independent column the slave calibration needs); Absent \
                    if kobolds placed no settlement",
@@ -2862,8 +2969,8 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "goblin-flagship-coastal",
-            doc: "Whether the goblin flagship settlement's cell borders an \
-                   ocean cell, recomputed from the terrain provider; Absent \
+            doc: "Whether the goblin flagship settlement's vertex borders an \
+                   ocean vertex, recomputed from the terrain provider; Absent \
                    if goblins placed no settlement",
             summary: SummaryKind::Flag,
             domain: Domain::Settlement,
@@ -2872,8 +2979,8 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "kobold-flagship-coastal",
-            doc: "Whether the kobold flagship settlement's cell borders an \
-                   ocean cell, recomputed from the terrain provider; Absent \
+            doc: "Whether the kobold flagship settlement's vertex borders an \
+                   ocean vertex, recomputed from the terrain provider; Absent \
                    if kobolds placed no settlement",
             summary: SummaryKind::Flag,
             domain: Domain::Settlement,
@@ -3245,7 +3352,7 @@ pub fn registry() -> Vec<Metric> {
             doc: "Whether every committed settlement name-gloss fact in this world is a \
                    truthful composition of that SAME settlement's own re-derived site \
                    concepts — up to twelve: the nine toponymic terrain concepts its own \
-                   cell offers (hydrography, elevation extrema, landmass size, wetness), \
+                   vertex offers (hydrography, elevation extrema, landmass size, wetness), \
                    The Toponym's characteristic climate variant, the biome, and the \
                    presiding sky phenomenon. The Wearing's Task 5 widened this vector \
                    past the original biome + presiding pair, and the close merge with The \
@@ -3456,8 +3563,8 @@ pub fn registry() -> Vec<Metric> {
             doc: "Multi-scale coastline-roughness slope, unbanded: the \
                   least-squares slope of ln(shoreline development) against \
                   mesh level, measured at L4/L5/L6 by projecting each \
-                  level's cells onto the canonical L6 land/ocean truth \
-                  (NearestCellIndex). A companion to shoreline-development, \
+                  level's vertices onto the canonical L6 land/ocean truth \
+                  (NearestVertexIndex). A companion to shoreline-development, \
                   not a replacement — that estimator is unchanged. Positive \
                   means roughness concentrates at fine scales, which makes \
                   this slope immune to the single-hex land/ocean \
@@ -3494,7 +3601,7 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "shelf-fraction",
-            doc: "Fraction of cells within the shelf band (±200 m) of sea \
+            doc: "Fraction of vertices within the shelf band (±200 m) of sea \
                   level — the populated shelf Earth's hypsometry keeps",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.15, 0.2, 0.3],
@@ -3512,7 +3619,7 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "continent-count",
             doc: "Connected land components at least 0.5% of the world's \
-                  total land cells (Task 9 iteration 3's size floor, \
+                  total land vertices (Task 9 iteration 3's size floor, \
                   Earth-calibrated: Greenland is ~1.4% of Earth's land and \
                   qualifies, Iceland ~0.07% does not) — the unfloored \
                   fringe of sub-floor fragments is preserved separately by \
@@ -3537,7 +3644,7 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "largest-continent-share",
-            doc: "Largest land component's share of all land cells; Absent \
+            doc: "Largest land component's share of all land vertices; Absent \
                   on a landless world",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 0.9],
@@ -3560,7 +3667,7 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "plate-size-gini",
-            doc: "Gini coefficient over plate cell counts (Earth's plate \
+            doc: "Gini coefficient over plate vertex counts (Earth's plate \
                   sizes are heavy-tailed; uniform Voronoi scores low)",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
@@ -3606,10 +3713,10 @@ pub fn registry() -> Vec<Metric> {
         // counts, and the A→B→C escalation diagnostic (spec §8). ---
         Metric {
             name: "shelf-width-passive-median",
-            doc: "Median shelf width over PASSIVE-margin coast land cells \
+            doc: "Median shelf width over PASSIVE-margin coast land vertices \
                   (Passive/Interior/Oceanic, mirroring the carve's own \
                   wedge-reach margin split): hops seaward from the coast \
-                  cell, each hop to the deepest ocean neighbor, until \
+                  vertex, each hop to the deepest ocean neighbor, until \
                   depth first exceeds twice the sediment wedge's freeboard \
                   cap or 8 hops are spent — spec §8's passive/active shelf \
                   asymmetry battery (passive median should exceed active); \
@@ -3623,8 +3730,8 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "shelf-width-active-median",
-            doc: "Median shelf width over ACTIVE-margin coast land cells: \
-                  hops seaward from the coast cell, each hop to the \
+            doc: "Median shelf width over ACTIVE-margin coast land vertices: \
+                  hops seaward from the coast vertex, each hop to the \
                   deepest ocean neighbor, until depth first exceeds twice \
                   the sediment wedge's freeboard cap or 8 hops are spent — \
                   spec §8's passive/active shelf asymmetry battery (active \
@@ -3640,8 +3747,8 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "sediment-volume",
             doc: "Total deposited sediment volume proxy: Σ sediment \
-                  thickness (meters) over every cell, one cell-area unit \
-                  per cell — the carve's own volume-proxy convention (spec \
+                  thickness (meters) over every vertex, one vertex-area unit \
+                  per vertex — the carve's own volume-proxy convention (spec \
                   §5): repose's receiver-side gains, routing's floodplain/ \
                   playa deposit, the marine wedge/delta fill, and atoll \
                   cap material, all summed",
@@ -3658,7 +3765,7 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "waterfall-count",
             doc: "Count of waterfall (knickpoint) sites the carve found: \
-                  land cells where a high-drainage watercourse crosses a \
+                  land vertices where a high-drainage watercourse crosses a \
                   sharp PRE-carve induration step (spec §5's derived point \
                   observations)",
             summary: SummaryKind::Numeric {
@@ -3672,11 +3779,11 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "delta-count",
-            doc: "Count of cells a river-mouth delta lobe raised above sea \
-                  level (spec §5's top-K discrete deltas) — a cell count, \
+            doc: "Count of vertices a river-mouth delta lobe raised above sea \
+                  level (spec §5's top-K discrete deltas) — a vertex count, \
                   not a mouth count: each of the top-K mouths can raise the \
-                  mouth cell itself plus up to two adjacent hop-1 ocean \
-                  cells",
+                  mouth vertex itself plus up to two adjacent hop-1 ocean \
+                  vertices",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 4.0, 8.0, 16.0],
             },
@@ -3690,7 +3797,7 @@ pub fn registry() -> Vec<Metric> {
             name: "rerouted-flow-fraction",
             doc: "The A→B→C escalation diagnostic (spec §8, preregistered, \
                   a permanent census column): the flux-weighted fraction of \
-                  the world's 20 largest pre-carve rivers' mainstem cells \
+                  the world's 20 largest pre-carve rivers' mainstem vertices \
                   whose downhill target changed across the carve. \
                   Thresholds: < 0.10 engine A self-consistent; 0.10-0.30 \
                   flag, Nathan decides; > 0.30 A rejected as sole engine, \
@@ -3705,18 +3812,18 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
         // --- The Ford (spec §10): the channel network's three preregistered
-        // axes. The estimators, and why they are not per-cell samples, are
+        // axes. The estimators, and why they are not per-vertex samples, are
         // documented at `LAB_FORD_TRANSECT_STEPS`. ---
         Metric {
             name: "channel-land-fraction",
             doc: "H1's axis (The Ford, spec §10): the fraction of LAND AREA \
                   the channel network occupies — the area of the river tube \
                   (every polyline segment's arc length times its channel \
-                  width) over the land area (land cells over all cells, times \
+                  width) over the land area (land vertices over all vertices, times \
                   4π). Preregistered interval [0.005%, 0.5%]; below it rivers \
                   are invisible at room scale, above it a river is still \
-                  effectively as wide as the cell carrying it. NOT a per-cell \
-                  reading: the polylines run THROUGH cell centres, so \
+                  effectively as wide as the vertex carrying it. NOT a per-vertex \
+                  reading: the polylines run THROUGH vertex centres, so \
                   sampling at them overstates this by ~127x. ABSENT ONLY ON A \
                   WORLD WITH NO LAND: unlike its four Ford siblings, which go \
                   Absent whenever the network is empty, this column reads a \
@@ -3736,14 +3843,14 @@ pub fn registry() -> Vec<Metric> {
                 let land = v
                     .terrain
                     .geosphere()
-                    .cells()
+                    .vertices()
                     .filter(|&c| !v.terrain.is_ocean(c))
                     .count();
                 if land == 0 {
                     return MetricValue::Absent;
                 }
                 let land_area = 4.0 * std::f64::consts::PI * land as f64
-                    / v.terrain.geosphere().cell_count() as f64;
+                    / v.terrain.geosphere().vertex_count() as f64;
                 MetricValue::Number(lab_channel_area(v.terrain.channels()) / land_area)
             }),
         },
@@ -3757,22 +3864,22 @@ pub fn registry() -> Vec<Metric> {
                   in-channel by construction, so this measures the JOINS. It \
                   first read 0.862-0.953 (falsified; 4 of 64 probe worlds \
                   cleared the floor), which diagnosed an anchoring asymmetry: \
-                  a tributary's mouth sat at its cell's undisplaced position \
-                  while the trunk's vertex for that same cell was \
+                  a tributary's mouth sat at its vertex's undisplaced position \
+                  while the trunk's vertex for that same vertex was \
                   meander-displaced. **Since the confluence repair this \
                   column is a CONSTANT: 1.0 on every world with a channel \
                   network, Absent on every world without one.** Both of its \
                   failure branches are unreachable — a join is now a \
                   zero-length crossing, and the walk can no longer leave the \
-                  network because `build` pushes a cell onto its claiming run \
-                  BEFORE testing whether it was already claimed, so any cell \
+                  network because `build` pushes a vertex onto its claiming run \
+                  BEFORE testing whether it was already claimed, so any vertex \
                   the flow continues past is necessarily a non-final vertex of \
                   a kept run and always has an owner. Read a 1.0 here as a \
                   tripwire that the repair is still in place, never as a \
                   measurement of the world. **THE RILL'S TASK 3 THEN LEFT \
                   THAT TRIPWIRE LARGELY UNARMED, AND THE MILLRACE MEASURED \
                   AND REPAIRED IT.** The walk used to continue only while the \
-                  next cell classified as `River`, while \
+                  next vertex classified as `River`, while \
                   `ChannelNetwork::build`'s reach predicate is `!Ocean && \
                   downhill.is_some()` — strictly wider once Task 3 rendered \
                   the whole land flow tree (3,606 runs at seed 42, from 183). \
@@ -4346,7 +4453,7 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Full(|v: &FullView| distinguishable_capacity_metric(v, "kobold")),
         },
         // --- BIO-2 (Task 6): the six life-history traits (spec §4/§5), a
-        // pure f(Mass, MetabolicClass) with zero draws — every row of a
+        // pure f(Mass, ThermalStrategy) with zero draws — every row of a
         // study reads the same value for a given roster. Registered per
         // species (goblin, kobold), matching the `tone-count-{species}`
         // family's convention (see above) — the campaign's headline
@@ -4355,7 +4462,7 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "lifespan-years-goblin",
             doc: "Goblin's maximum lifespan in years (BIO-2 spec §4); Absent \
-                   if goblin is off-roster or Ametabolic",
+                   if goblin is off-roster or ametabolic",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[20.0, 40.0, 60.0, 80.0, 100.0],
             },
@@ -4366,7 +4473,7 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "lifespan-years-kobold",
             doc: "Kobold's maximum lifespan in years (BIO-2 spec §4); Absent \
-                   if kobold is off-roster or Ametabolic",
+                   if kobold is off-roster or ametabolic",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[20.0, 40.0, 60.0, 80.0, 100.0],
             },
@@ -4377,7 +4484,7 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "age-at-maturity-years-goblin",
             doc: "Goblin's age at first reproduction in years (BIO-2 spec §4); \
-                   Absent if goblin is off-roster or Ametabolic",
+                   Absent if goblin is off-roster or ametabolic",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[5.0, 10.0, 15.0, 20.0, 25.0],
             },
@@ -4388,7 +4495,7 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "age-at-maturity-years-kobold",
             doc: "Kobold's age at first reproduction in years (BIO-2 spec §4); \
-                   Absent if kobold is off-roster or Ametabolic",
+                   Absent if kobold is off-roster or ametabolic",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[5.0, 10.0, 15.0, 20.0, 25.0],
             },
@@ -4426,7 +4533,7 @@ pub fn registry() -> Vec<Metric> {
             name: "reproductive-tempo-goblin",
             doc: "Goblin's reproductive output on the r-K axis, 0 (fast/prolific) \
                    ... 1 (slow/sparse) (BIO-2 spec §4/CAP-2); Absent if goblin is \
-                   off-roster or Ametabolic",
+                   off-roster or ametabolic",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.2, 0.4, 0.6, 0.8, 1.0],
             },
@@ -4438,7 +4545,7 @@ pub fn registry() -> Vec<Metric> {
             name: "reproductive-tempo-kobold",
             doc: "Kobold's reproductive output on the r-K axis, 0 (fast/prolific) \
                    ... 1 (slow/sparse) (BIO-2 spec §4/CAP-2); Absent if kobold is \
-                   off-roster or Ametabolic",
+                   off-roster or ametabolic",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.2, 0.4, 0.6, 0.8, 1.0],
             },
@@ -4449,7 +4556,7 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "generation-length-years-goblin",
             doc: "Goblin's generation length in years (BIO-2 spec §5, MEM-7's \
-                   handle); Absent if goblin is off-roster or Ametabolic",
+                   handle); Absent if goblin is off-roster or ametabolic",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[10.0, 20.0, 30.0, 40.0, 50.0],
             },
@@ -4460,7 +4567,7 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "generation-length-years-kobold",
             doc: "Kobold's generation length in years (BIO-2 spec §5, MEM-7's \
-                   handle); Absent if kobold is off-roster or Ametabolic",
+                   handle); Absent if kobold is off-roster or ametabolic",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[10.0, 20.0, 30.0, 40.0, 50.0],
             },
@@ -4652,13 +4759,13 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "defensibility-capacity-rank-corr",
-            doc: "M4: Spearman rank correlation between a habitable cell's weakest-point \
+            doc: "M4: Spearman rank correlation between a habitable vertex's weakest-point \
                   defensibility and its carrying capacity, BOTH READ FROM PRESENT-DAY \
                   terrain, climate, and connection graph — NOT the bake's own final era, \
                   which can differ on a world with real orbital forcing (spec §2.4 \
                   amendment 4). Checks §2.2's structural claim that defensible ground \
                   is also poor ground, on the geography as it stands today. Ties get \
-                  average ranks; Absent if fewer than 2 habitable cells, or if either \
+                  average ranks; Absent if fewer than 2 habitable vertices, or if either \
                   series is constant (no variance, so no correlation is defined)",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[-0.6, -0.3, 0.0, 0.3, 0.6],
@@ -4712,7 +4819,7 @@ pub fn registry() -> Vec<Metric> {
             domain: Domain::Religion,
             role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
-                let at = match hornvale_astronomy::StdDays::new(DIACHRONIC_EPOCH_DAYS) {
+                let at = match hornvale_astronomy::StdInstant::new(DIACHRONIC_EPOCH_DAYS) {
                     Ok(days) => days,
                     Err(_) => return MetricValue::Absent,
                 };
@@ -4835,6 +4942,83 @@ pub fn registry() -> Vec<Metric> {
                     return MetricValue::Absent;
                 }
                 MetricValue::Number(a.unresolved as f64)
+            }),
+        },
+        // --- THE GRANARY readouts: do raids land on the hunger side of the
+        // year? (The Granary, T8.) ---
+        //
+        // T4 stamps raid endings at sub-year phases (`year + phase /
+        // PHASES_PER_YEAR`), so an occupation record's `ended` bake-year stamp
+        // now carries its day-of-year in the fractional part. Two aggregate
+        // per-world columns ask whether those stamps cluster away from
+        // uniformity and toward each site's depleted (zero-production) half of
+        // the authored harvest curve. Per-event rows do not fit the lab's
+        // aggregate-metric model, so both fold every raid ending on a world
+        // into one number. Settlement rung for the same reason as the three
+        // raid columns above.
+        Metric {
+            name: "granary-raid-phase-concentration",
+            doc: "Circular (Rayleigh-style) concentration R of this world's \
+                  raid-caused occupation endings' day-of-year stamps (The \
+                  Granary T8): the mean resultant length of the phases, 0 when \
+                  uniformly spread around the year and approaching 1 as all \
+                  raids land at one moment. Day-of-year is the fractional part \
+                  of the record's bake-year `ended` stamp. Absent on a world \
+                  with fewer than 5 raid-caused endings — below that floor the \
+                  concentration statistic is noise, not signal.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.1, 0.2, 0.3, 0.5, 0.7],
+            },
+            domain: Domain::Society,
+            role: Role::Descriptor,
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                let stamps = raid_stamps(
+                    &occupation_records(v.world()),
+                    v.climate.climate.geosphere(),
+                    &v.climate.climate,
+                );
+                if stamps.len() < RAID_FLOOR {
+                    return MetricValue::Absent;
+                }
+                let (mut cs, mut sn) = (0.0_f64, 0.0_f64);
+                for &(phase, _) in &stamps {
+                    let theta = std::f64::consts::TAU * phase;
+                    cs += hornvale_kernel::math::cos(theta);
+                    sn += hornvale_kernel::math::sin(theta);
+                }
+                let n = stamps.len() as f64;
+                MetricValue::Number((cs * cs + sn * sn).sqrt() / n)
+            }),
+        },
+        Metric {
+            name: "granary-raids-in-depleted-half",
+            doc: "Fraction of this world's raid-caused occupation endings whose \
+                  day-of-year stamp falls in the DEPLETED half of the victim \
+                  site's authored harvest curve (The Granary T8): the half-year \
+                  starting half a year past the curve peak, where `Curve::at` \
+                  returns exactly zero and a settlement lives off stores. The \
+                  curve is keyed exactly as the bake keys it at open — \
+                  `geo.coord(site).latitude` and `biome_class(climate.biome_map())` \
+                  through `worldgen::harvest::Curve` — so the column measures the \
+                  same seasonality the granary integrates. Uniform raids give \
+                  0.5; hunger-side clustering gives > 0.5. Absent under the same \
+                  5-ending floor as `granary-raid-phase-concentration`.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.25, 0.4, 0.5, 0.6, 0.75],
+            },
+            domain: Domain::Society,
+            role: Role::Descriptor,
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                let stamps = raid_stamps(
+                    &occupation_records(v.world()),
+                    v.climate.climate.geosphere(),
+                    &v.climate.climate,
+                );
+                if stamps.len() < RAID_FLOOR {
+                    return MetricValue::Absent;
+                }
+                let depleted = stamps.iter().filter(|&&(_, d)| d).count();
+                MetricValue::Number(depleted as f64 / stamps.len() as f64)
             }),
         },
         // THE CENSUS COLUMN THAT RETIRES THE SINGLE-SEED DISPLACEMENT GATES
@@ -5045,8 +5229,8 @@ fn first_day(world: &World, predicate: &str, object: Option<&str>) -> MetricValu
         }
         let Some(d) = f.day else { continue };
         best = Some(match best {
-            Some(b) if b <= d.day() => b,
-            _ => d.day(),
+            Some(b) if b <= d.as_std_days() => b,
+            _ => d.as_std_days(),
         });
     }
     match best {
@@ -5107,6 +5291,47 @@ fn raid_attribution(records: &[OccupationRecord]) -> RaidAttribution {
         initiators: initiators.len() as u64,
         unresolved,
     }
+}
+
+/// Minimum raid-caused endings a world must carry before either Granary
+/// column reports (T8): below five stamps the circular concentration is noise
+/// rather than signal, so the world reads Absent instead.
+const RAID_FLOOR: usize = 5;
+
+/// One raid-caused ending's sub-year stamp, folded off a record list: the
+/// annual phase of the `ended` bake-year stamp (its fractional part), plus
+/// whether that phase falls in the DEPLETED half of the victim site's
+/// authored harvest curve. The curve is keyed exactly as [`Bake`] keys it at
+/// open — latitude off the geosphere, coarse biome class off the climate's
+/// biome map — via the same public [`hornvale_worldgen::harvest::Curve`] the bake
+/// consumes, so these columns measure the seasonality the granary actually
+/// integrates. Records without a raid hand or an end stamp contribute
+/// nothing; a site whose latitude or biome cannot key a curve contributes
+/// nothing rather than aborting the fold.
+fn raid_stamps(
+    records: &[OccupationRecord],
+    geo: &hornvale_kernel::Geosphere,
+    climate: &GeneratedClimate,
+) -> Vec<(f64, bool)> {
+    let mut stamps = Vec::new();
+    for r in records {
+        if !matches!(r.ended_by, Ended::By(_)) {
+            continue;
+        }
+        let Some(year) = r.core.ended else { continue };
+        let site = r.core.site;
+        let Ok(lat) = hornvale_worldgen::harvest::LatDeg::new(geo.coord(site).latitude) else {
+            continue;
+        };
+        let biome = hornvale_worldgen::biome_class(*climate.biome_map().get(site));
+        let curve = hornvale_worldgen::harvest::Curve::new(lat, biome);
+        let peak = curve.peak_day_of_year() / hornvale_kernel::units::Years::DAYS_PER_YEAR;
+        // Growing half: [peak, peak+0.5). Depleted half: the complement,
+        // [peak+0.5, peak+1.0) mod 1 — where `Curve::at` returns zero.
+        let depleted = (year.fract().rem_euclid(1.0) - peak - 0.5).rem_euclid(1.0) < 0.5;
+        stamps.push((year.fract().rem_euclid(1.0), depleted));
+    }
+    stamps
 }
 
 /// The preregistered readout epoch the diachronic battery uses (`EPOCH_2` in
@@ -5376,18 +5601,22 @@ fn pearson_correlation(xs: &[f64], ys: &[f64]) -> Option<f64> {
 /// M4's extractor (spec §2.4 amendment 4): Spearman rank correlation
 /// between [`hornvale_worldgen::weakest_point_defensibility`] and
 /// [`hornvale_demography::carrying_capacity`], over every PRESENT-DAY
-/// habitable cell (`v.climate().habitability()`) — NOT the bake's own final
-/// era. `hornvale_worldgen::connection_graph_of` is the crate's existing
-/// present-day-graph entry point (already used by the legibility surface
-/// and the DoD check), reused here wholesale rather than reconstructed by
-/// hand; `hornvale_demography::carrying_capacity` over
+/// habitable vertex (`v.climate().habitability()`) — NOT the bake's own final
+/// era. `hornvale_worldgen::connection_graph_from` is the crate's
+/// already-built-terrain-and-climate present-day-graph entry point --
+/// `v.terrain()`/`v.climate()` are already the `FullView`'s own
+/// reconstruction, so this reuses them wholesale instead of paying
+/// `connection_graph_of` to reconstruct a second, identical terrain and
+/// climate (The Governor, Task 2: this call was profiled at 13.17% of
+/// census study cycles before the split);
+/// `hornvale_demography::carrying_capacity` over
 /// `hornvale_worldgen::carrying_inputs_of` is the SAME species-agnostic
 /// capacity field `bake_history_from` itself feeds into the bake (up to
 /// its private `SETTLERS_PER_CAPACITY` scale, which cannot move a RANK
 /// correlation — Spearman is invariant under any positive linear
-/// rescaling). Cells iterate in ascending `CellId` order
-/// (`Geosphere::cells()`), so this is deterministic without an explicit
-/// sort of the cell set itself.
+/// rescaling). Vertices iterate in ascending `Vertex` order
+/// (`Geosphere::vertices()`), so this is deterministic without an explicit
+/// sort of the vertex set itself.
 fn spearman_defensibility_capacity(v: &FullView) -> MetricValue {
     let geo = v.terrain().geosphere();
     let habitability = v.climate().habitability();
@@ -5395,19 +5624,23 @@ fn spearman_defensibility_capacity(v: &FullView) -> MetricValue {
         geo,
         &hornvale_worldgen::carrying_inputs_of(geo, v.terrain(), v.climate()),
     );
-    let graph = hornvale_worldgen::connection_graph_of(
+    let graph = hornvale_worldgen::connection_graph_from(
         v.world(),
+        v.terrain(),
+        v.climate(),
         &hornvale_worldgen::GraphConfig::default(),
     );
 
     let mut defs: Vec<f64> = Vec::new();
     let mut caps: Vec<f64> = Vec::new();
-    for cell in geo.cells() {
-        if !*habitability.get(cell) {
+    for vertex in geo.vertices() {
+        if !*habitability.get(vertex) {
             continue;
         }
-        defs.push(hornvale_worldgen::weakest_point_defensibility(&graph, cell));
-        caps.push(capacity.at(cell));
+        defs.push(hornvale_worldgen::weakest_point_defensibility(
+            &graph, vertex,
+        ));
+        caps.push(capacity.at(vertex));
     }
     if defs.len() < 2 {
         return MetricValue::Absent;
@@ -5433,19 +5666,19 @@ fn median(values: &mut [f64]) -> Option<f64> {
     })
 }
 
-/// Shelf width (Sculpting Task 12, spec §8) from a single coast land cell:
-/// hops seaward, each hop stepping to the current cell's deepest ocean
-/// neighbor (`CellId`-ascending tiebreak among equally deep candidates),
-/// until a stepped-to cell's depth first exceeds `cap_depth_m`, or 8 hops
-/// are spent. A coast cell always has at least one ocean neighbor by
-/// definition; a dead end thereafter (an ocean cell with no further ocean
-/// neighbor — a landlocked single-cell inlet) returns however many hops
+/// Shelf width (Sculpting Task 12, spec §8) from a single coast land vertex:
+/// hops seaward, each hop stepping to the current vertex's deepest ocean
+/// neighbor (`Vertex`-ascending tiebreak among equally deep candidates),
+/// until a stepped-to vertex's depth first exceeds `cap_depth_m`, or 8 hops
+/// are spent. A coast vertex always has at least one ocean neighbor by
+/// definition; a dead end thereafter (an ocean vertex with no further ocean
+/// neighbor — a landlocked single-vertex inlet) returns however many hops
 /// were completed.
-fn shelf_width_hops(v: &TerrainView, coast: CellId, cap_depth_m: f64) -> u32 {
+fn shelf_width_hops(v: &TerrainView, coast: Vertex, cap_depth_m: f64) -> u32 {
     let geo = v.terrain.geosphere();
     let mut cur = coast;
     for hop in 1..=8u32 {
-        let mut candidates: Vec<CellId> = geo
+        let mut candidates: Vec<Vertex> = geo
             .neighbors(cur)
             .iter()
             .copied()
@@ -5471,32 +5704,32 @@ fn shelf_width_hops(v: &TerrainView, coast: CellId, cap_depth_m: f64) -> u32 {
     8
 }
 
-/// Median shelf width (`shelf_width_hops`) over every coast land cell
-/// (a land cell with at least one ocean neighbor) whose own `MarginPolarity`
+/// Median shelf width (`shelf_width_hops`) over every coast land vertex
+/// (a land vertex with at least one ocean neighbor) whose own `MarginPolarity`
 /// is Active (`active_only == true`) or not (`Passive`/`Interior`/
 /// `Oceanic`, mirroring `deposit_wedge`'s own margin split, `active_only ==
 /// false`). The cap depth is twice `CarveParams::wedge_freeboard_m` — the
 /// carve's own physical shelf cap, doubled so a coast sitting right at the
 /// cap still registers a nonzero width; tracks any future retuning of
 /// `wedge_freeboard_m` automatically rather than duplicating the constant.
-/// `Absent` when the requested margin group has no coast cells at all.
+/// `Absent` when the requested margin group has no coast vertices at all.
 fn shelf_width_median(v: &TerrainView, active_only: bool) -> MetricValue {
     let geo = v.terrain.geosphere();
     let cap_depth_m = 2.0 * CarveParams::default().wedge_freeboard_m;
     let mut widths: Vec<f64> = Vec::new();
-    for cell in geo.cells() {
-        if v.terrain.is_ocean(cell) {
+    for vertex in geo.vertices() {
+        if v.terrain.is_ocean(vertex) {
             continue;
         }
-        let is_coast = geo.neighbors(cell).iter().any(|&n| v.terrain.is_ocean(n));
+        let is_coast = geo.neighbors(vertex).iter().any(|&n| v.terrain.is_ocean(n));
         if !is_coast {
             continue;
         }
-        let is_active = matches!(v.terrain.material_at(cell).margin, MarginPolarity::Active);
+        let is_active = matches!(v.terrain.material_at(vertex).margin, MarginPolarity::Active);
         if is_active != active_only {
             continue;
         }
-        widths.push(f64::from(shelf_width_hops(v, cell, cap_depth_m)));
+        widths.push(f64::from(shelf_width_hops(v, vertex, cap_depth_m)));
     }
     match median(&mut widths) {
         Some(m) => MetricValue::Number(m),
@@ -5507,11 +5740,11 @@ fn shelf_width_median(v: &TerrainView, active_only: bool) -> MetricValue {
 /// Multi-scale coastline-roughness slope (rift-and-fit spec §7): a
 /// companion to `shoreline-development`, not a replacement — that estimator
 /// is unchanged. Builds the level 4/5/6 `Geosphere`s and, for each, derives
-/// a land mask by looking up each cell's NEAREST canonical L6 cell (by
-/// unit-sphere position, `NearestCellIndex::nearest_to_position` — the same
+/// a land mask by looking up each vertex's NEAREST canonical L6 vertex (by
+/// unit-sphere position, `NearestVertexIndex::nearest_to_position` — the same
 /// projection the scene/region window uses to sample canonical truth from a
-/// coarser or finer mesh) and testing that L6 cell's elevation against the
-/// world's sea level; at k = 6 every cell is its own nearest, so the mapping
+/// coarser or finer mesh) and testing that L6 vertex's elevation against the
+/// world's sea level; at k = 6 every vertex is its own nearest, so the mapping
 /// is the identity. `D_k = shoreline_development_of_mask` at each level,
 /// then the function returns the least-squares slope of `ln D_k` regressed
 /// on `k` (three points, k = 4, 5, 6). A positive slope means roughness
@@ -5524,15 +5757,15 @@ fn shelf_width_median(v: &TerrainView, active_only: bool) -> MetricValue {
 fn coast_roughness_slope(v: &TerrainView) -> MetricValue {
     let l6_geo = v.terrain.geosphere();
     let globe = v.terrain.globe();
-    let l6_index = hornvale_kernel::NearestCellIndex::new(l6_geo);
+    let l6_index = hornvale_kernel::NearestVertexIndex::new(l6_geo);
     let mut ks: Vec<f64> = Vec::new();
     let mut ys: Vec<f64> = Vec::new();
     for k in [4u32, 5, 6] {
         let geo_k = hornvale_kernel::Geosphere::new(k);
-        let land = hornvale_kernel::CellMap::from_fn(&geo_k, |cell| {
-            let pos = geo_k.position(cell);
-            let l6_cell = l6_index.nearest_to_position(l6_geo, pos);
-            *globe.elevation.get(l6_cell) >= globe.sea_level
+        let land = hornvale_kernel::VertexMap::from_fn(&geo_k, |vertex| {
+            let pos = geo_k.position(vertex);
+            let l6_vertex = l6_index.nearest_to_position(l6_geo, pos);
+            *globe.elevation.get(l6_vertex) >= globe.sea_level
         });
         match hornvale_terrain::shape::shoreline_development_of_mask(&geo_k, &land) {
             Some(d) => {
@@ -5649,38 +5882,38 @@ fn flagship_surplus(v: &SettlementView, species: &str) -> MetricValue {
     let Some(info) = flagship_of(v.world(), species) else {
         return MetricValue::Absent;
     };
-    let Some(Value::Number(cell_id)) = v
+    let Some(Value::Number(vertex_id)) = v
         .world()
         .ledger
-        .value_of(info.id, hornvale_settlement::CELL_ID)
+        .value_of(info.id, hornvale_settlement::VERTEX_ID)
     else {
         return MetricValue::Absent;
     };
-    let cell = CellId(*cell_id as u32);
-    let class = hornvale_worldgen::biome_class(v.climate().biome_at(cell));
+    let vertex = Vertex(*vertex_id as u32);
+    let class = hornvale_worldgen::biome_class(v.climate().biome_at(vertex));
     let surplus =
-        (hornvale_culture::fertility(class) * v.climate().moisture_at(cell)).clamp(0.0, 1.0);
+        (hornvale_culture::fertility(class) * v.climate().moisture_at(vertex)).clamp(0.0, 1.0);
     MetricValue::Number(surplus)
 }
 
-/// Recompute whether a species flagship's cell borders an ocean cell,
+/// Recompute whether a species flagship's vertex borders an ocean vertex,
 /// directly from the terrain provider.
 fn flagship_coastal(v: &SettlementView, species: &str) -> MetricValue {
     let Some(info) = flagship_of(v.world(), species) else {
         return MetricValue::Absent;
     };
-    let Some(Value::Number(cell_id)) = v
+    let Some(Value::Number(vertex_id)) = v
         .world()
         .ledger
-        .value_of(info.id, hornvale_settlement::CELL_ID)
+        .value_of(info.id, hornvale_settlement::VERTEX_ID)
     else {
         return MetricValue::Absent;
     };
-    let cell = CellId(*cell_id as u32);
+    let vertex = Vertex(*vertex_id as u32);
     let coastal = v
         .terrain()
         .geosphere()
-        .neighbors(cell)
+        .neighbors(vertex)
         .iter()
         .any(|n| v.terrain().is_ocean(*n));
     MetricValue::Flag(coastal)
@@ -6235,13 +6468,46 @@ fn referent_is_nameable(
     )
 }
 
+#[cfg(test)]
+thread_local! {
+    /// Test-only diagnostic (The Confidant, Task 7 followup): counts calls to
+    /// [`lex`]'s uncached build path, i.e. actual `lexicon_from_in`
+    /// invocations. A `thread_local`, not a `static AtomicUsize` — nextest is
+    /// process-per-test (`windows/lab/CLAUDE.md`) so a plain `static` would
+    /// already be exclusive to one test, but a thread-local also survives if
+    /// that ever changes to a multi-threaded test harness without becoming a
+    /// cross-test race. Exists to let a test measure the 45-vs-15
+    /// lexicon-rebuild finding directly (by counting, not by reading the
+    /// call graph) and then guard the memoised path against silently
+    /// regressing back to one build per metric.
+    static LEX_BUILD_CALLS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+}
+
 /// This world's `species` lexicon, reusing the view's already-built terrain
 /// and climate instead of re-sculpting the globe inside `exposure_from` — the
 /// census's dominant cost once the name-gloss sculpts were removed (the
 /// terrain pipeline ran twice per `lexicon_from` call, ~14 metrics deep). The
 /// Single Sculpt, applied to the lexicon path; byte-identical to
 /// `lex(v, species)`.
+///
+/// **Memoised per view, against `v`'s own [`FullView::lexicon_cache`]** —
+/// see that field's doc for the scoping argument (The Confidant, Task 7
+/// followup). Every call site in this file goes through this one function
+/// (this crate's own `lex(...)` convention), so they all share the fix: a
+/// species already built for this view clones its cached
+/// [`hornvale_language::Lexicon`] instead of paying for a second
+/// `lexicon_from_in`. Cloning a `Lexicon` is a `BTreeMap` clone plus a few
+/// small owned fields — far cheaper than re-deriving it. Only the `Ok` path
+/// is cached; a species that fails to resolve is recomputed (and re-fails)
+/// on every call, which costs nothing extra in practice — `lexicon_from_in`
+/// fails before any sculpting, and no shipped `society_registry()` people
+/// ever takes this branch (this function's own doc has always said so).
 fn lex(v: &FullView, species: &str) -> Result<hornvale_language::Lexicon, BuildError> {
+    if let Some(cached) = v.lexicon_cache.borrow().get(species) {
+        return Ok(cached.clone());
+    }
+    #[cfg(test)]
+    LEX_BUILD_CALLS.with(|c| c.set(c.get() + 1));
     // `lexicon_from_in` against THIS VIEW's own component set, not
     // `lexicon_from`'s freshly-assembled canonical one (The Delvers, F1).
     // A lexicon is a function of the roster: its family's daughter list and
@@ -6251,17 +6517,311 @@ fn lex(v: &FullView, species: &str) -> Result<hornvale_language::Lexicon, BuildE
     // and it PANICS on `goblin-twin-solo`, whose re-keyed kind the canonical
     // registry cannot resolve at all. Identical on the default roster, where
     // `v.components()` IS the assembled canonical set.
-    hornvale_worldgen::lexicon_from_in(v.world(), v.components(), species, v.terrain(), v.climate())
+    let built = hornvale_worldgen::lexicon_from_in(
+        v.world(),
+        v.components(),
+        species,
+        v.terrain(),
+        v.climate(),
+    )?;
+    v.lexicon_cache
+        .borrow_mut()
+        .insert(species.to_string(), built.clone());
+    Ok(built)
+}
+
+/// Every [`hornvale_vessel::liveness::AffectLabel`] variant, in the SAME
+/// declaration order `windows/vessel/src/testimony.rs`'s own private
+/// `ALL_LABELS` walks — mirrored here rather than imported (that const is
+/// private to its crate, the same reason `windows/worldgen/tests/suite/
+/// solitary_tongue.rs` mirrors `GOBLINOID_DAUGHTERS`). Order only matters
+/// for [`felt_state_index`] staying consistent with itself; the three
+/// metric families below never rely on `nearest`'s own tie-break order,
+/// since they read `testify`'s already-resolved answer.
+const ALL_FELT_STATES: [hornvale_vessel::liveness::AffectLabel; 6] = [
+    hornvale_vessel::liveness::AffectLabel::Content,
+    hornvale_vessel::liveness::AffectLabel::Eager,
+    hornvale_vessel::liveness::AffectLabel::Searching,
+    hornvale_vessel::liveness::AffectLabel::Frustrated,
+    hornvale_vessel::liveness::AffectLabel::Lost,
+    hornvale_vessel::liveness::AffectLabel::Helpless,
+];
+
+/// `label`'s position in [`ALL_FELT_STATES`]'s declaration order — a small
+/// fixed lookup rather than a `BTreeMap<AffectLabel, _>` keyed collection
+/// (`AffectLabel` derives neither `Ord` nor `Hash`, and the project bans
+/// `HashMap`/`HashSet` outright), so [`collapse_ratio_for`] tallies into a
+/// plain `[u32; 6]` indexed by this.
+fn felt_state_index(label: hornvale_vessel::liveness::AffectLabel) -> usize {
+    use hornvale_vessel::liveness::AffectLabel::*;
+    match label {
+        Content => 0,
+        Eager => 1,
+        Searching => 2,
+        Frustrated => 3,
+        Lost => 4,
+        Helpless => 5,
+    }
+}
+
+/// `species`'s testimony (Task 6's `testify`, `windows/vessel/src/
+/// testimony.rs`) about each of [`ALL_FELT_STATES`], in that order — the
+/// SAME mechanism a live `ask` verb consults, so the three metric families
+/// below measure what the game actually says rather than a parallel
+/// derivation. `None` only when `species` cannot be resolved against this
+/// view's roster (never true for one of the fifteen `society_registry()`
+/// peoples; defensive here the same way `lex`'s own `Result` is).
+fn felt_testimonies(
+    v: &FullView,
+    species: &str,
+) -> Option<[Option<hornvale_vessel::testimony::FeltStateWord>; 6]> {
+    let lexicon = lex(v, species).ok()?;
+    Some(ALL_FELT_STATES.map(|state| hornvale_vessel::testimony::testify(&lexicon, state)))
+}
+
+/// `reportable_fraction` (spec §3.4): of the six reachable felt states, the
+/// share `species` has its OWN word for — `testify` returning
+/// `FeltStateWord::Direct`, never a `Nearest` substitute. **Capped at 50% by
+/// construction, and that ceiling is an artifact of Task 4b's exposure rule,
+/// not a finding about impoverished creature minds**: `MindVector` carries
+/// exactly three `[0, 1]` scalars, each governing one valence-opposed pair,
+/// and a species Steeps at most one pole per pair — never both, so no
+/// people can ever hold more than 3 of the 6 words. Real tongues have words
+/// for both frustration and hopelessness at once; this mapping forbids it by
+/// construction. A real, non-Absent zero is a valid reading (goblin's
+/// `MindVector` sits exactly at the manikin on every axis, Task 4b), so this
+/// never returns `Absent` for any of the fifteen.
+fn reportable_fraction_for(v: &FullView, species: &str) -> MetricValue {
+    let Some(testimonies) = felt_testimonies(v, species) else {
+        return MetricValue::Absent;
+    };
+    let known = testimonies
+        .iter()
+        .filter(|t| {
+            matches!(
+                t,
+                Some(hornvale_vessel::testimony::FeltStateWord::Direct(_))
+            )
+        })
+        .count();
+    MetricValue::Number(known as f64 / ALL_FELT_STATES.len() as f64)
+}
+
+/// `collapse_ratio` (spec §3.4): the largest number of the six reachable
+/// felt states that end up reported through the SAME word in `species`'s
+/// tongue — conflation, the two-or-more true feelings a culture cannot tell
+/// apart in speech. A state with its own word always reports itself (group
+/// size >= 1); a wordless state reports whichever known state `testify`'s
+/// `nearest` search picks, joining that state's group. **Deliberately the
+/// MAX group size, not `6 / distinct reported words`**: every known word
+/// reports itself, so the distinct-word count is always exactly the known-
+/// word count and `6 / known` collapses to `1 / reportable_fraction` by
+/// construction — a value with no information `reportable_fraction` doesn't
+/// already carry, exactly the "reports a default rather than a measurement"
+/// failure this campaign's brief warns about. The max, by contrast, depends
+/// on which particular states cluster onto which word (circumplex adjacency
+/// and `nearest`'s tie-breaks), so it varies independently — hobgoblin's 2
+/// known words split 4-and-2, desert-dwarf's 3 split 3-and-2-and-1, not the
+/// even split a mean would imply. `Absent` only when `species` has no word
+/// for any felt state at all (goblin): there is then no reported word to
+/// group states onto, so no ratio is defined.
+fn collapse_ratio_for(v: &FullView, species: &str) -> MetricValue {
+    let Some(testimonies) = felt_testimonies(v, species) else {
+        return MetricValue::Absent;
+    };
+    let mut counts = [0u32; 6];
+    let mut has_word = false;
+    for (state, testimony) in ALL_FELT_STATES.into_iter().zip(testimonies) {
+        let reported = match testimony {
+            Some(hornvale_vessel::testimony::FeltStateWord::Direct(_)) => state,
+            Some(hornvale_vessel::testimony::FeltStateWord::Nearest { reported_as, .. }) => {
+                reported_as
+            }
+            None => continue,
+        };
+        counts[felt_state_index(reported)] += 1;
+        has_word = true;
+    }
+    if !has_word {
+        return MetricValue::Absent;
+    }
+    MetricValue::Number(counts.into_iter().max().unwrap_or(0) as f64)
+}
+
+/// `misreport_distance` (spec §3.4): the mean circumplex distance (Task 4's
+/// `circumplex_distance`, now `pub` for exactly this caller) between each of
+/// the six reachable felt states and what `species`'s tongue actually
+/// reports for it — 0 for a state with its own word (`testify` returns
+/// `Direct`), `circumplex_distance(state, reported_as)` for a substituted
+/// one. **Unweighted mean over the reachable state space**, deliberately not
+/// a frequency-weighted mean over a simulated trajectory: nothing in the
+/// authored mechanism assigns the six states different a-priori weights, and
+/// weighting by a live simulation's visitation frequency would need either a
+/// live `Session` or the stateless `affect_of`/`affect_of_memo_occupied`
+/// snapshot path threaded per species — machinery this task's brief flagged
+/// as a possible forward dependency and which turns out to be unnecessary:
+/// every term this metric needs (`testify`'s per-state answer) is already
+/// fully determined by the lexicon alone, with no simulated trajectory
+/// required. See this task's report for the fuller justification, including
+/// why this reads the design spec's "per utterance" phrasing as a nuance
+/// deliberately not implemented here. `Absent` only when `species` has no
+/// word for any felt state at all (goblin): every state is then a `None`
+/// testimony (nothing said), so no mean is defined.
+fn misreport_distance_for(v: &FullView, species: &str) -> MetricValue {
+    let Some(testimonies) = felt_testimonies(v, species) else {
+        return MetricValue::Absent;
+    };
+    let mut total = 0i32;
+    let mut n = 0i32;
+    for (state, testimony) in ALL_FELT_STATES.into_iter().zip(testimonies) {
+        match testimony {
+            Some(hornvale_vessel::testimony::FeltStateWord::Direct(_)) => n += 1,
+            Some(hornvale_vessel::testimony::FeltStateWord::Nearest { reported_as, .. }) => {
+                total += hornvale_vessel::testimony::circumplex_distance(state, reported_as);
+                n += 1;
+            }
+            None => {}
+        }
+    }
+    if n == 0 {
+        return MetricValue::Absent;
+    }
+    MetricValue::Number(f64::from(total) / f64::from(n))
+}
+
+/// The fifteen settled peoples The Confidant's instrument (Task 7, spec
+/// §3.4) compares — `hornvale_species::society_registry()`'s exact roster,
+/// alphabetical (pinned by that crate's own
+/// `society_registry_holds_exactly_the_settled_peoples` test). Dragons carry
+/// a `MindVector` but never settle or speak (no `SocietyVector` row), so
+/// they sit outside this instrument entirely — Task 4b's own finding, not an
+/// oversight here. Production scope, not `#[cfg(test)]`: [`render_confidant_report`]
+/// walks it too, not only the tests that used to be its only reader before
+/// the Task 7 reshape moved the instrument out of the metric registry.
+const CONFIDANT_PEOPLES: [&str; 15] = [
+    "bugbear",
+    "desert-dwarf",
+    "desert-elf",
+    "drow",
+    "gnoll",
+    "goblin",
+    "gully-dwarf",
+    "high-elf",
+    "hill-dwarf",
+    "hobgoblin",
+    "human",
+    "kobold",
+    "sea-elf",
+    "snow-elf",
+    "wood-elf",
+];
+
+/// Render one of [`reportable_fraction_for`]/[`collapse_ratio_for`]/
+/// [`misreport_distance_for`]'s values as a markdown table field for
+/// [`render_confidant_report`] — quantized to the platform-stable canonical
+/// form at this emit boundary (decision 0033), the same as `runner.rs`'s
+/// `render_csv` does at the census's own emit boundary. `Absent` (goblin's
+/// `collapse_ratio` and `misreport_distance`: no felt-state word at all, so
+/// nothing to aggregate) renders as an em dash rather than a blank field, so
+/// a reader cannot mistake a deliberately-undefined value for a zero that
+/// failed to render.
+fn confidant_field(value: &MetricValue) -> String {
+    match value {
+        MetricValue::Number(n) => hornvale_kernel::quantize(*n).to_string(),
+        MetricValue::Absent => "—".to_string(),
+        other => unreachable!(
+            "reportable_fraction_for/collapse_ratio_for/misreport_distance_for only ever \
+             return Number or Absent, got {other:?}"
+        ),
+    }
+}
+
+/// Render The Confidant's report (Task 7 reshape, spec §3.4): fifteen rows,
+/// one per [`CONFIDANT_PEOPLES`], three columns — `reportable_fraction`,
+/// `collapse_ratio`, `misreport_distance` — computed once, at `Seed(42)`,
+/// rather than assembled across a census's ~2000 worlds.
+///
+/// **Why one seed is sufficient, and why this is a window's job rather than
+/// a metric's:** the three families this reads (`reportable_fraction_for`/
+/// `collapse_ratio_for`/`misreport_distance_for`) were registered as lab
+/// metrics for one task of this campaign, and a 1000-seed census run found
+/// all 45 resulting columns CONSTANT across every seed. The reason is
+/// structural, not coincidental: `felt_testimonies`'s branch on whether
+/// `species` *has* a word for a felt state reads `MindVector`, an authored,
+/// species-level constant (Task 4b) — never a world-drawn one. A word's
+/// FORM can vary by seed (the lexicon's phonology draws from the seed);
+/// whether the word EXISTS at all does not, and existence — not form — is
+/// everything these three metrics read. So the derivation is world-
+/// invariant in exactly `windows/sentiment`'s sense ("a pure, world-
+/// invariant derivation … computable before any seed exists"), and belongs
+/// where that crate's module doc puts one: computed once, not re-paid for
+/// on every world of a census that could never see it move, and — the
+/// sharper cost — incapable of detecting drift as a census column, since a
+/// constant column never moves no matter what regresses.
+///
+/// `Seed(42)` only because *some* seed must build the [`FullView`] this
+/// reads `lex(v, species)` from (`lexicon_from_in` still takes a world's
+/// terrain and climate as arguments, even though its felt-state answers do
+/// not vary with them) — any seed reads identically, and this repository's
+/// standing convention for "the one seed a world-invariant reader needs" is
+/// 42 (the three committed seed-42 almanacs, the `first_light` example, the
+/// lens-purity fixture).
+/// type-audit: bare-ok(artifact: return)
+pub fn render_confidant_report() -> Result<String, BuildError> {
+    let view = FullView::build(Seed(42), &SkyPins::default())?;
+    let mut out = String::new();
+    out.push_str(
+        "<!-- GENERATED FILE — do not edit. Regenerate with `hornvale lab confidant`. -->\n\n",
+    );
+    out.push_str("# The Confidant: felt-state reportability by people\n\n");
+    out.push_str(
+        "One row per one of the fifteen `hornvale_species::society_registry()` peoples \
+         (dragons carry a `MindVector` but never settle or speak, so they sit outside this \
+         instrument — Task 4b). Three columns, spec §3.4:\n\n",
+    );
+    out.push_str(
+        "- **`reportable_fraction`** — of the six reachable felt states, the share `species` \
+         has its own word for (`testify` returns `Direct`, never a `Nearest` substitute). \
+         **Capped at 50% by construction**: `MindVector` carries three `[0, 1]` scalars, one \
+         per valence-opposed pair, and a species Steeps at most one pole per pair — never \
+         both — so no people can ever hold more than 3 of the 6 words. That ceiling is an \
+         artifact of Task 4b's exposure mapping, not a finding about impoverished minds.\n",
+    );
+    out.push_str(
+        "- **`collapse_ratio`** — the largest number of the six reachable felt states that \
+         resolve to the SAME reported word (conflation). `Absent` when `species` has no word \
+         for any felt state at all, since there is then nothing to collapse onto.\n",
+    );
+    out.push_str(
+        "- **`misreport_distance`** — the mean circumplex distance between each reachable \
+         felt state and what `species`'s tongue actually reports for it (0 for a state with \
+         its own word). `Absent` for the same reason as `collapse_ratio`.\n\n",
+    );
+    out.push_str(
+        "Computed once, at `Seed(42)` — see this function's own doc for why a single world \
+         suffices; every value here is world-invariant.\n\n",
+    );
+    out.push_str("| people | reportable_fraction | collapse_ratio | misreport_distance |\n");
+    out.push_str("|---|---|---|---|\n");
+    for species in CONFIDANT_PEOPLES {
+        out.push_str(&format!(
+            "| {species} | {} | {} | {} |\n",
+            confidant_field(&reportable_fraction_for(&view, species)),
+            confidant_field(&collapse_ratio_for(&view, species)),
+            confidant_field(&misreport_distance_for(&view, species)),
+        ));
+    }
+    Ok(out)
 }
 
 /// A settlement's own re-derived site concepts: calls worldgen's own
 /// [`worldgen_settlement_site_concepts`] — the SAME composition the naming
-/// pass itself used (Task 5, F2) — over this settlement's committed cell,
+/// pass itself used (Task 5, F2) — over this settlement's committed vertex,
 /// this view's terrain/climate, and the presiding phenomenon its species
 /// observes from THIS settlement's own vantage (its committed coordinates
 /// cull the sky — SEQ-5; spec §9.3 defines gloss truthfulness against the
 /// entity's own facts). A real cross-check, not an echo: it never calls
-/// worldgen's internal name-drawing code, only its committed `CELL_ID`/
+/// worldgen's internal name-drawing code, only its committed `VERTEX_ID`/
 /// `NAME_GLOSS` facts and this SAME public site-concept function every
 /// other name-truthfulness consumer (the worldgen keystone test, this
 /// metric) also calls, so all three stay in lockstep by construction
@@ -6271,21 +6831,21 @@ fn lex(v: &FullView, species: &str) -> Result<hornvale_language::Lexicon, BuildE
 /// call (see the comment on `presiding` below), so it is appended here
 /// instead, in a position that has to be hand-kept in sync with where
 /// worldgen appends it internally. `None` if the settlement is
-/// missing a cell-id/species fact, which `name_gloss_true` below treats as
+/// missing a vertex-id/species fact, which `name_gloss_true` below treats as
 /// an unverifiable (failing) row rather than skipping it silently.
 fn settlement_site_concepts(
     v: &FullView,
     id: EntityId,
     climate: &GeneratedClimate,
 ) -> Option<Vec<String>> {
-    let Value::Number(cell_id) = v
+    let Value::Number(vertex_id) = v
         .world()
         .ledger
-        .value_of(id, hornvale_settlement::CELL_ID)?
+        .value_of(id, hornvale_settlement::VERTEX_ID)?
     else {
         return None;
     };
-    let cell = CellId(*cell_id as u32);
+    let vertex = Vertex(*vertex_id as u32);
     let species = hornvale_species::species_of(v.world(), id)?;
     let phenomena =
         observed_phenomena_as_at_from(v.world(), v.components(), &species, id, climate).ok()?;
@@ -6317,7 +6877,7 @@ fn settlement_site_concepts(
         v.world(),
         &v.world().seed,
         &species,
-        cell,
+        vertex,
         v.terrain(),
         climate,
         None,
@@ -6375,9 +6935,9 @@ fn gloss_is_a_composition_of(gloss: &str, concepts: &[String]) -> bool {
 /// truthful composition of that SAME settlement's own re-derived site
 /// concepts (spec §9.3). Still a real cross-check, not a tautology: it
 /// never calls worldgen's internal name-drawing code (`glossed_name` or
-/// anything downstream of it), only the committed `CELL_ID`/`NAME_GLOSS`
+/// anything downstream of it), only the committed `VERTEX_ID`/`NAME_GLOSS`
 /// facts plus this view's own re-derived terrain/climate, so it still
-/// catches a gloss committed against the wrong cell or a `NAME_GLOSS`
+/// catches a gloss committed against the wrong vertex or a `NAME_GLOSS`
 /// written by a broken pipeline.
 ///
 /// Since Task 5 this is NOT independent of worldgen's own composition,
@@ -6386,7 +6946,7 @@ fn gloss_is_a_composition_of(gloss: &str, concepts: &[String]) -> bool {
 /// things genuinely weakens rather than only appearing to:
 /// - it no longer reads the committed `BIOME` fact, so nothing in this
 ///   metric cross-checks `BIOME` against the settlement's own re-derived
-///   `biome_at(CELL_ID)` any more (that check now lives only in worldgen's
+///   `biome_at(VERTEX_ID)` any more (that check now lives only in worldgen's
 ///   own keystone test,
 ///   `a_settlement_name_gloss_is_truthful_to_its_own_site_facts`, which
 ///   restored it after the same widening dropped it there too).
@@ -6594,10 +7154,10 @@ fn name_transparency(v: &FullView) -> MetricValue {
             continue;
         }
         glossed += 1;
-        let (Some(name), Some(species), Some(Value::Number(cell))) = (
+        let (Some(name), Some(species), Some(Value::Number(vertex))) = (
             world.ledger.text_of(id, hornvale_kernel::NAME),
             species,
-            world.ledger.value_of(id, hornvale_settlement::CELL_ID),
+            world.ledger.value_of(id, hornvale_settlement::VERTEX_ID),
         ) else {
             continue;
         };
@@ -6611,7 +7171,7 @@ fn name_transparency(v: &FullView) -> MetricValue {
             v.world(),
             &v.world().seed,
             &species,
-            CellId(*cell as u32),
+            Vertex(*vertex as u32),
             v.terrain(),
             v.climate(),
             None,
@@ -6773,7 +7333,7 @@ fn cascade_rules_fired(v: &FullView, species: &str) -> MetricValue {
 /// One occupation founder, resolved to the words their culture's naming
 /// pattern actually produces.
 struct FounderName {
-    /// The `occ-site` cell the occupation sits on — the settlement scope.
+    /// The `occ-site` vertex the occupation sits on — the settlement scope.
     site: u32,
     /// The name, element by element, in the culture's own order.
     rendered: hornvale_language::anthroponym::Rendered,
@@ -7023,7 +7583,7 @@ fn name_people_recoverability(v: &FullView) -> MetricValue {
 /// >= 80%).
 ///
 /// The scope is the other founders of occupations sharing this founder's
-/// `occ-site` cell — every community that has ever stood on that site, which
+/// `occ-site` vertex — every community that has ever stood on that site, which
 /// is the population a name uttered there has to pick out. `Absent` if the
 /// world has no founders.
 fn name_prefix_settlement_scope(v: &FullView) -> MetricValue {
@@ -7107,7 +7667,7 @@ fn name_prefix_region_full_stack(v: &FullView) -> MetricValue {
 //
 // Task 4 gave `hornvale_worldgen::exposure_from` seven new `Steeped` rules —
 // `river`, `ford`, `hill`, `valley`, `marsh`, `spring`, `island` — each
-// gated on a real terrain query over a species' settled cells rather than
+// gated on a real terrain query over a species' settled vertices rather than
 // on roster membership. `independently_steeped_concepts` never learned
 // them, so from the regen at `f32d6ce2` it classified as non-Steeped seven
 // concepts worldgen classifies `Steeped`, and `exposure-sound-{goblin,
@@ -7117,7 +7677,7 @@ fn name_prefix_region_full_stack(v: &FullView) -> MetricValue {
 // The rules below are re-derived here rather than imported, and that is
 // the whole point of the duplicate: the metric is a SECOND OPINION on
 // `exposure_from`, so calling `hornvale_worldgen::exposure_from` (or its
-// private `is_river_cell`/`is_hill_cell`/… helpers, which are not `pub`
+// private `is_river_vertex`/`is_hill_vertex`/… helpers, which are not `pub`
 // in any case) would turn the check into an echo of the thing it exists
 // to check. What these functions share with worldgen is only the terrain
 // domain's own public readings — `water_kind_at`, `drainage_at`,
@@ -7126,7 +7686,7 @@ fn name_prefix_region_full_stack(v: &FullView) -> MetricValue {
 // it. The classification is restated.
 //
 // The two thresholds worldgen keeps private (its `MARSH_MIN_DRAINAGE` and
-// `ISLAND_CELL_CAP`) are therefore restated as literals below rather than
+// `ISLAND_VERTEX_CAP`) are therefore restated as literals below rather than
 // imported, and the drift that creates is the CORRECT drift for a
 // soundness check. `exposure_sound` asserts "no `Root` at a concept this
 // set does not hold", so an over-inclusive set here is silent and an
@@ -7143,10 +7703,10 @@ fn name_prefix_region_full_stack(v: &FullView) -> MetricValue {
 // they cannot reach the check (the same argument the doc comment below
 // already makes for the KnowsOf-via-neighbour and sea-proximity rules).
 
-/// One toponymic gate: does this cell satisfy the terrain condition that
+/// One toponymic gate: does this vertex satisfy the terrain condition that
 /// steeps a concept? Named so the seven-entry table below reads as a table
 /// rather than as a type signature.
-type TerrainGate = fn(&hornvale_terrain::GeneratedTerrain, CellId) -> bool;
+type TerrainGate = fn(&hornvale_terrain::GeneratedTerrain, Vertex) -> bool;
 
 /// The wetness floor `marsh` sits above. Restated, not imported —
 /// worldgen's own `MARSH_MIN_DRAINAGE` is private, and see the module note
@@ -7156,54 +7716,54 @@ const LAB_MARSH_MIN_DRAINAGE: f64 = 5.0;
 
 /// The small-landmass ceiling `island` sits under. Restated for the same
 /// reason as [`LAB_MARSH_MIN_DRAINAGE`].
-const LAB_ISLAND_CELL_CAP: usize = 200;
+const LAB_ISLAND_VERTEX_CAP: usize = 200;
 
-/// Whether `cell` is a river channel: its water kind is exactly `River`.
-fn lab_is_river_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
-    terrain.water_kind_at(cell) == hornvale_terrain::WaterKind::River
+/// Whether `vertex` is a river channel: its water kind is exactly `River`.
+fn lab_is_river_vertex(terrain: &hornvale_terrain::GeneratedTerrain, vertex: Vertex) -> bool {
+    terrain.water_kind_at(vertex) == hornvale_terrain::WaterKind::River
 }
 
-/// Whether `cell` is a river shallow enough to cross: a river cell whose
+/// Whether `vertex` is a river shallow enough to cross: a river vertex whose
 /// drainage has not reached waterfall scale.
-fn lab_is_ford_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
-    lab_is_river_cell(terrain, cell)
-        && terrain.drainage_at(cell) < hornvale_terrain::carve::WATERFALL_MIN_DRAINAGE
+fn lab_is_ford_vertex(terrain: &hornvale_terrain::GeneratedTerrain, vertex: Vertex) -> bool {
+    lab_is_river_vertex(terrain, vertex)
+        && terrain.drainage_at(vertex) < hornvale_terrain::carve::WATERFALL_MIN_DRAINAGE
 }
 
-/// Whether `cell` is a strict local elevation maximum over its full
+/// Whether `vertex` is a strict local elevation maximum over its full
 /// neighbour ring, with an ocean neighbour read at sea level rather than at
-/// its true depth — otherwise every coastal cell is a hill, since an ocean
-/// cell is by definition below any land cell.
-fn lab_is_hill_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
+/// its true depth — otherwise every coastal vertex is a hill, since an ocean
+/// vertex is by definition below any land vertex.
+fn lab_is_hill_vertex(terrain: &hornvale_terrain::GeneratedTerrain, vertex: Vertex) -> bool {
     let sea_level = terrain.sea_level().get();
-    let here = terrain.elevation_at(cell).get();
-    let neighbors = terrain.geosphere().neighbors(cell);
+    let here = terrain.elevation_at(vertex).get();
+    let neighbors = terrain.geosphere().neighbors(vertex);
     !neighbors.is_empty()
         && neighbors
             .iter()
             .all(|&n| terrain.elevation_at(n).get().max(sea_level) < here)
 }
 
-/// The symmetric counterpart of [`lab_is_hill_cell`]: a strict local
+/// The symmetric counterpart of [`lab_is_hill_vertex`]: a strict local
 /// elevation minimum over the same sea-level-clamped ring.
-fn lab_is_valley_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
+fn lab_is_valley_vertex(terrain: &hornvale_terrain::GeneratedTerrain, vertex: Vertex) -> bool {
     let sea_level = terrain.sea_level().get();
-    let here = terrain.elevation_at(cell).get();
-    let neighbors = terrain.geosphere().neighbors(cell);
+    let here = terrain.elevation_at(vertex).get();
+    let neighbors = terrain.geosphere().neighbors(vertex);
     !neighbors.is_empty()
         && neighbors
             .iter()
             .all(|&n| terrain.elevation_at(n).get().max(sea_level) > here)
 }
 
-/// Whether `cell` is damp ground that has not channelized: dry land whose
+/// Whether `vertex` is damp ground that has not channelized: dry land whose
 /// drainage clears [`LAB_MARSH_MIN_DRAINAGE`].
-fn lab_is_marsh_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
-    terrain.water_kind_at(cell) == hornvale_terrain::WaterKind::DryLand
-        && terrain.drainage_at(cell) >= LAB_MARSH_MIN_DRAINAGE
+fn lab_is_marsh_vertex(terrain: &hornvale_terrain::GeneratedTerrain, vertex: Vertex) -> bool {
+    terrain.water_kind_at(vertex) == hornvale_terrain::WaterKind::DryLand
+        && terrain.drainage_at(vertex) >= LAB_MARSH_MIN_DRAINAGE
 }
 
-/// Whether `cell` reads directly as `Hydro::Spring`. Previously a Karst
+/// Whether `vertex` reads directly as `Hydro::Spring`. Previously a Karst
 /// proxy (`hydro_at == Karst && drainage_at >= RIVER_MIN_DRAINAGE`), because
 /// `Hydro::Spring` was analytically unreachable under the original
 /// carbonate-scale gate (The Witness, F5), and F5's own replacement gate was
@@ -7213,28 +7773,28 @@ fn lab_is_marsh_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId)
 /// case on a porosity threshold measured on the correct population, and
 /// `Spring` is no longer a still-vs-flowing drainage split at all — it is a
 /// geometric descending contact (`GeneratedTerrain::hydro_at` promotes an
-/// `Aquifer` cell with a lower non-`Aquifer` neighbour) — independently
-/// restated here rather than calling `worldgen`'s `is_spring_cell` (the lab
+/// `Aquifer` vertex with a lower non-`Aquifer` neighbour) — independently
+/// restated here rather than calling `worldgen`'s `is_spring_vertex` (the lab
 /// does not depend on worldgen's window-local predicates).
-fn lab_is_spring_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
-    terrain.hydro_at(cell) == Hydro::Spring
+fn lab_is_spring_vertex(terrain: &hornvale_terrain::GeneratedTerrain, vertex: Vertex) -> bool {
+    terrain.hydro_at(vertex) == Hydro::Spring
 }
 
-/// Whether the contiguous non-ocean landmass under `cell` stays within
-/// [`LAB_ISLAND_CELL_CAP`] cells — a flood-fill that stops as soon as it
+/// Whether the contiguous non-ocean landmass under `vertex` stays within
+/// [`LAB_ISLAND_VERTEX_CAP`] vertices — a flood-fill that stops as soon as it
 /// has seen more than the cap, so a continent costs the same bounded walk
 /// as an islet. Tests the ground underfoot, not proximity to open water.
-fn lab_is_island_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
+fn lab_is_island_vertex(terrain: &hornvale_terrain::GeneratedTerrain, vertex: Vertex) -> bool {
     let geo = terrain.geosphere();
-    let mut visited: std::collections::BTreeSet<CellId> = std::collections::BTreeSet::new();
-    visited.insert(cell);
-    let mut frontier = vec![cell];
+    let mut visited: std::collections::BTreeSet<Vertex> = std::collections::BTreeSet::new();
+    visited.insert(vertex);
+    let mut frontier = vec![vertex];
     while !frontier.is_empty() {
         let mut next = Vec::new();
         for &c in &frontier {
             for &n in geo.neighbors(c) {
                 if !terrain.is_ocean(n) && visited.insert(n) {
-                    if visited.len() > LAB_ISLAND_CELL_CAP {
+                    if visited.len() > LAB_ISLAND_VERTEX_CAP {
                         return false;
                     }
                     next.push(n);
@@ -7249,11 +7809,11 @@ fn lab_is_island_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId
 // --- The Ford (spec §10): the channel network's three preregistered axes.
 //
 // H1 is an AREA fraction, and the estimator is the part that has to be got
-// right rather than the arithmetic. A channel is deliberately sub-cell — a
-// tube of order 1e-4 rad across a mesh whose cells are 1.9e-2 rad apart — so
-// the mesh cannot resolve it and CELL-CENTRE SAMPLING IS NOT A NEUTRAL
-// INSTRUMENT HERE: the polylines are built THROUGH cell centres, so a
-// per-cell sample lands the sample point on the very feature whose area it is
+// right rather than the arithmetic. A channel is deliberately sub-vertex — a
+// tube of order 1e-4 rad across a mesh whose vertices are 1.9e-2 rad apart — so
+// the mesh cannot resolve it and VERTEX-CENTRE SAMPLING IS NOT A NEUTRAL
+// INSTRUMENT HERE: the polylines are built THROUGH vertex centres, so a
+// per-vertex sample lands the sample point on the very feature whose area it is
 // trying to estimate. Measured on seed 42 at level 6, that reading is 3.29%
 // of land — 127x the tube's actual 0.0259% — and it would be 127x wrong in
 // the same direction on every world. A mesh-independent uniform-area sample
@@ -7271,7 +7831,7 @@ const LAB_FORD_TRANSECT_STEPS: usize = 48;
 /// At most this many vertices are transected for
 /// `channel-band-monotonicity`, so a large world does not cost more than a
 /// small one. The stride is derived from it, never the count truncated —
-/// taking the first N vertices would sample only the lowest-`CellId` rivers.
+/// taking the first N vertices would sample only the lowest-`Vertex` rivers.
 const LAB_FORD_MAX_TRANSECTS: usize = 256;
 
 fn lab_dot(a: [f64; 3], b: [f64; 3]) -> f64 {
@@ -7347,7 +7907,7 @@ fn lab_channel_area(net: &hornvale_terrain::channel::ChannelNetwork) -> f64 {
 /// Returns **two** widths, and the pair is the point (The Rill, Task 3). The
 /// first counts every offset reading `Channel` whichever line won it; the
 /// second counts only those `nearest_line` awards to line `i` itself. While the
-/// network rendered river cells only, the two were the same number to within a
+/// network rendered river vertices only, the two were the same number to within a
 /// percent and one would have done. Rendering the whole land flow tree puts
 /// ~6400 confluences in a world that had ~90, so at a tributary's mouth the
 /// TRUNK owns the water — its band is wider, and it wins the nearest-line
@@ -7387,15 +7947,15 @@ fn lab_channel_transect_width(
     (inside as f64 * step, own as f64 * step)
 }
 
-/// For each cell, the `(line, vertex)` of the run that CLAIMED it — the run
+/// For each vertex, the `(line, vertex)` of the run that CLAIMED it — the run
 /// it is an interior or head vertex of, never the run it merely terminates.
 /// That distinction is the whole of confluence topology: a tributary's last
-/// cell is also the trunk's, and only the trunk continues downstream from it.
+/// vertex is also the trunk's, and only the trunk continues downstream from it.
 ///
 /// **This is a per-world rebuild of a relation the network already publishes**
 /// ([`hornvale_terrain::channel::ChannelNetwork::trunk_vertex`]), and since
 /// The Millrace the metric reads the published accessor instead — one
-/// implementation of "who carries this cell", not two. It is kept, under
+/// implementation of "who carries this vertex", not two. It is kept, under
 /// `#[cfg(test)]`, as the *other* implementation the agreement assertion needs:
 /// the two are not identical by construction (this keeps the **last** claiming
 /// run, `trunk_vertex` keeps the **first**), and they agree only because the
@@ -7404,10 +7964,10 @@ fn lab_channel_transect_width(
 #[cfg(test)]
 fn lab_run_owner(
     net: &hornvale_terrain::channel::ChannelNetwork,
-    cell_count: usize,
+    vertex_count: usize,
 ) -> Vec<Option<(usize, usize)>> {
-    let mut owner = vec![None; cell_count];
-    for (i, run) in net.run_cells.iter().enumerate() {
+    let mut owner = vec![None; vertex_count];
+    for (i, run) in net.run_vertices.iter().enumerate() {
         for (j, &c) in run.iter().enumerate() {
             if j + 1 < run.len() {
                 owner[c.0 as usize] = Some((i, j));
@@ -7417,26 +7977,26 @@ fn lab_run_owner(
     owner
 }
 
-/// Does the flow continue past `cell` — is there a downstream reach for a run
+/// Does the flow continue past `vertex` — is there a downstream reach for a run
 /// to carry it into?
 ///
 /// **This is `ChannelNetwork::build`'s own reach predicate** (`channel.rs`:
 /// `!Ocean && downhill.is_some()`), spelled here rather than approximated,
-/// because "does a run continue past this cell" is exactly what a downstream
+/// because "does a run continue past this vertex" is exactly what a downstream
 /// walk needs to know and exactly what `build` decides with. A run stops on
-/// the first cell that fails it — the sea, or a terminal sink with nowhere to
-/// send what it receives — and continues past every cell that passes.
+/// the first vertex that fails it — the sea, or a terminal sink with nowhere to
+/// send what it receives — and continues past every vertex that passes.
 ///
 /// It replaces a `WaterKind::River` test (The Rill's Task 3 made that strictly
 /// narrower than the reach predicate: `River` additionally requires
 /// `drainage >= RIVER_MIN_DRAINAGE`, so a tributary ending on a *sub-threshold*
 /// trunk stopped the walk before its join was ever examined). See
 /// [`lab_channel_connectivity`] for what that cost the measurement.
-fn lab_flow_continues(globe: &hornvale_terrain::TectonicGlobe, cell: CellId) -> bool {
+fn lab_flow_continues(globe: &hornvale_terrain::TectonicGlobe, vertex: Vertex) -> bool {
     !matches!(
-        *globe.water_kind.get(cell),
+        *globe.water_kind.get(vertex),
         hornvale_terrain::WaterKind::Ocean
-    ) && globe.downhill.get(cell).is_some()
+    ) && globe.downhill.get(vertex).is_some()
 }
 
 /// What one run's own hop contributes to its walk, **before** the walk's
@@ -7447,16 +8007,16 @@ fn lab_flow_continues(globe: &hornvale_terrain::TectonicGlobe, cell: CellId) -> 
 /// on how a walk arrived at it, so intactness is a pure suffix property.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum LabHopVerdict {
-    /// The flow does not continue past this run's last cell: it reached the
+    /// The flow does not continue past this run's last vertex: it reached the
     /// sea or a terminal sink. The walk is over, and it is intact.
     Ends,
-    /// The flow continues past the last cell, but no run carries it onward —
+    /// The flow continues past the last vertex, but no run carries it onward —
     /// the walk falls out of the network.
     ///
     /// **This is the arm that used to be reached through a second, differently
     /// worded question**, and it is kept as its own verdict rather than folded
     /// into [`Self::Ends`] for that reason. Since the predicate repair the two
-    /// questions — "does the flow continue past this cell" (the terrain's
+    /// questions — "does the flow continue past this vertex" (the terrain's
     /// reach predicate) and "does a run carry it onward" (the network's
     /// `trunk_vertex` index) — are logically the same question, so this arm is
     /// unreachable while the network renders everything the flow tree carries.
@@ -7482,12 +8042,12 @@ enum LabHopVerdict {
 /// reads a constant, so a badly wrong transcription reproduces it exactly.
 fn lab_connectivity_verdicts(
     net: &hornvale_terrain::channel::ChannelNetwork,
-    flow_continues: impl Fn(CellId) -> bool,
+    flow_continues: impl Fn(Vertex) -> bool,
 ) -> Vec<LabHopVerdict> {
     (0..net.polylines.len())
         .map(|line| {
-            let last_cell = *net.run_cells[line].last().expect("a run has cells");
-            if !flow_continues(last_cell) {
+            let last_vertex = *net.run_vertices[line].last().expect("a run has vertices");
+            if !flow_continues(last_vertex) {
                 return LabHopVerdict::Ends;
             }
             // The published inverse index, NOT a per-world rebuild of it. The
@@ -7496,7 +8056,7 @@ fn lab_connectivity_verdicts(
             // claim relation is functional, which `domains/terrain`'s R-4
             // asserts and `run_owner_agrees_with_the_published_trunk_vertex`
             // re-checks here on real worlds.
-            let Some((trunk, vertex)) = net.trunk_vertex(last_cell) else {
+            let Some((trunk, vertex)) = net.trunk_vertex(last_vertex) else {
                 return LabHopVerdict::FellOut;
             };
             let from = *net.polylines[line].points.last().expect("a run has points");
@@ -7557,7 +8117,7 @@ fn lab_connectivity_verdicts(
 /// +0.012 CPU-s/world, inside the spread of repeated runs of either arm.
 ///
 /// **Why shallow is an observation and not a guarantee.** It is tempting to
-/// derive it: `build` claims along `Geosphere::cells()` in ascending order, so
+/// derive it: `build` claims along `Geosphere::vertices()` in ascending order, so
 /// a run's trunk always has a lower run index. That is a real argument, and it
 /// yields acyclicity and a bound of the **run count** — it does **not** bound
 /// the depth, which is what a quadratic term would be quadratic in. Nothing
@@ -7627,13 +8187,13 @@ fn lab_fold_intact(verdicts: &[LabHopVerdict]) -> Vec<bool> {
 /// by construction — every point of a segment is at distance zero from the
 /// line it belongs to — so the entire content of this measurement is at the
 /// **joins**, which is where the design put its risk: a tributary's mouth
-/// vertex was anchored at its cell's undisplaced position while the trunk's
-/// vertex for that same cell was meander-displaced, so two runs joined in the
+/// vertex was anchored at its vertex's undisplaced position while the trunk's
+/// vertex for that same vertex was meander-displaced, so two runs joined in the
 /// drainage graph were separated in space. The walk crosses that separation
 /// the only way a walker could, and reads the band along the way.
 ///
 /// **THE MILLRACE REPAIRED THE CONTINUATION TEST, AND QUANTIFIED WHAT IT WAS
-/// COSTING.** The walk used to continue only while the next cell classified
+/// COSTING.** The walk used to continue only while the next vertex classified
 /// `WaterKind::River`, while `ChannelNetwork::build`'s reach predicate is
 /// `!Ocean && downhill.is_some()` — strictly wider since The Rill's Task 3
 /// rendered the whole land flow tree. A run ending on a *sub-threshold* trunk
@@ -7667,7 +8227,7 @@ fn lab_fold_intact(verdicts: &[LabHopVerdict]) -> Vec<bool> {
 ///   exactly, all seven interpolated samples land on one point at distance
 ///   zero from a polyline, and `band(0.0, edges) == Channel`.
 /// - *Falling out of the network.* `build` does `run.push(target)` **before**
-///   testing `claimed.insert(target)`, so a cell the flow continues past is
+///   testing `claimed.insert(target)`, so a vertex the flow continues past is
 ///   necessarily a non-final vertex of the run that first claimed it, and
 ///   `trunk_vertex` is therefore always `Some` there. That is now the same
 ///   question the continuation test asks, which is exactly why
@@ -7711,8 +8271,8 @@ fn lab_connectivity_hops(
         return None;
     }
     let globe = terrain.globe();
-    Some(lab_connectivity_verdicts(net, |cell| {
-        lab_flow_continues(globe, cell)
+    Some(lab_connectivity_verdicts(net, |vertex| {
+        lab_flow_continues(globe, vertex)
     }))
 }
 
@@ -7871,19 +8431,34 @@ fn lab_band_transects(net: &hornvale_terrain::channel::ChannelNetwork) -> Option
 /// keeping its own copy of the concept names (The Witness, Task 3: a second
 /// copy of this list is exactly the drift F13 recurred on three times).
 const TOPONYMIC_GATES: [(&str, TerrainGate); 7] = [
-    ("river", lab_is_river_cell),
-    ("ford", lab_is_ford_cell),
-    ("hill", lab_is_hill_cell),
-    ("valley", lab_is_valley_cell),
-    ("marsh", lab_is_marsh_cell),
-    ("spring", lab_is_spring_cell),
-    ("island", lab_is_island_cell),
+    ("river", lab_is_river_vertex),
+    ("ford", lab_is_ford_vertex),
+    ("hill", lab_is_hill_vertex),
+    ("valley", lab_is_valley_vertex),
+    ("marsh", lab_is_marsh_vertex),
+    ("spring", lab_is_spring_vertex),
+    ("island", lab_is_island_vertex),
 ];
 
 /// The four settlement/religion social concepts steeped unconditionally for
 /// any settled species, once the registry carries them — declared once for
 /// the same reason as [`TOPONYMIC_GATES`].
 const FIXED_STEEPED_CONCEPTS: [&str; 4] = ["home", "hearth", "god", "spirit"];
+
+/// The six felt-state concepts (`hornvale_language::felt_state_pack`, The
+/// Confidant's Task 4b) and the `MindVector` scalar that governs each
+/// valence-opposed pair, in `(above-midpoint, below-midpoint)` order —
+/// declared once, here, for the same reason as [`TOPONYMIC_GATES`]: a second
+/// copy of this table in [`steepable_concept_roster`] is exactly the drift
+/// this file exists to stop. Mirrors `windows/worldgen/src/lib.rs`'s Task 4b
+/// block field-for-field; that block's own doc carries the reasoning for why
+/// three scalars times two poles, not the code, which this file must not
+/// share (see the function doc below).
+const FELT_STATE_PAIRS: [(&str, &str); 3] = [
+    ("frustrated", "lost"),
+    ("content", "eager"),
+    ("helpless", "searching"),
+];
 
 /// The concepts an INDEPENDENT re-derivation of `species`' exposure would
 /// classify `Steeped` — duplicating `exposure_from`'s own Steeped rules
@@ -7902,6 +8477,21 @@ const FIXED_STEEPED_CONCEPTS: [&str; 4] = ["home", "hearth", "god", "spirit"];
 /// module note above `LAB_MARSH_MIN_DRAINAGE` for how they are restated
 /// and why that keeps the second opinion second. `None` if `species` is
 /// not in this world's roster.
+///
+/// **The Confidant (Task 4b):** this function re-derives the six felt-state
+/// concepts independently from `species`' own `MindVector`
+/// (`v.components().psyche`) rather than calling
+/// `hornvale_worldgen::exposure_of_impl`'s felt-state block directly — same
+/// discipline as every other rule here, restated from `MindVector`'s three
+/// `[0, 1]` scalars rather than imported from the function that classifies
+/// them. **What actually keeps the two copies in step** is
+/// `exposure_classification_agrees_with_the_independent_rederivation`
+/// (below, in this module's `tests`), which sweeps several seeds and every
+/// placed people comparing `hornvale_worldgen::exposure_from`'s verdict
+/// against this function's — the question `windows/lab/tests/suite/
+/// calibration.rs`'s `lexicon_is_exposure_sound_for_both_species` doc leaves
+/// open ("the repair, its regen, and the question of what keeps the two
+/// copies in step are a campaign, not a followup").
 fn independently_steeped_concepts(
     v: &FullView,
     species: &str,
@@ -7928,29 +8518,29 @@ fn independently_steeped_concepts(
         }
     }
 
-    let settled: Vec<CellId> = hornvale_terrain::places(v.world())
+    let settled: Vec<Vertex> = hornvale_terrain::places(v.world())
         .into_iter()
         .filter(|p| hornvale_species::species_of(v.world(), p.id).as_deref() == Some(species))
         .filter_map(|p| {
             match v
                 .world()
                 .ledger
-                .value_of(p.id, hornvale_settlement::CELL_ID)
+                .value_of(p.id, hornvale_settlement::VERTEX_ID)
             {
-                Some(Value::Number(n)) => Some(CellId(*n as u32)),
+                Some(Value::Number(n)) => Some(Vertex(*n as u32)),
                 _ => None,
             }
         })
         .collect();
-    for &cell in &settled {
-        steeped.insert(v.climate().biome_at(cell).concept_name().to_string());
-        // The Toponym: a people is steeped in the VARIANT of every cell it
+    for &vertex in &settled {
+        steeped.insert(v.climate().biome_at(vertex).concept_name().to_string());
+        // The Toponym: a people is steeped in the VARIANT of every vertex it
         // settled, as it is in the biome. Re-derived here independently of
         // `exposure_from`, which is the point of this function.
-        let expr = v.climate().biome_expr_at(cell);
-        if let Some(var) = hornvale_climate::variant_at_cell(
+        let expr = v.climate().biome_expr_at(vertex);
+        if let Some(var) = hornvale_climate::variant_at_vertex(
             v.world().seed,
-            cell,
+            vertex,
             expr.formation,
             expr.stratum,
             hornvale_climate::GroundKind::Ordinary,
@@ -7959,10 +8549,10 @@ fn independently_steeped_concepts(
         }
     }
 
-    // Steeped: the STAPLE of every settled cell whose subsistence is
+    // Steeped: the STAPLE of every settled vertex whose subsistence is
     // Farming (The Watershed). Re-derived independently of `exposure_of`,
     // which is the point of this function: worldgen reads
-    // `hornvale_culture::subsistence(biome_class(biome_at(cell)), coastal)`
+    // `hornvale_culture::subsistence(biome_class(biome_at(vertex)), coastal)`
     // and gates on `Subsistence::Farming`; this reading calls the same
     // public climate/culture functions (never `exposure_of` itself, and
     // `hornvale_worldgen::biome_class` is a domain-agnostic biome→culture
@@ -7973,23 +8563,23 @@ fn independently_steeped_concepts(
     // staples (`hornvale_climate::Crop::catalog()`) are F13's third
     // recurrence: `exposure-sound-{goblin,kobold}` read false on 767/759 of
     // 1000 worlds because this loop did not exist.
-    for &cell in &settled {
-        let expr = v.climate().biome_expr_at(cell);
+    for &vertex in &settled {
+        let expr = v.climate().biome_expr_at(vertex);
         let Some(crop) = hornvale_climate::crop_at(
             expr.formation,
-            v.climate().mean_temperature_at(cell),
-            v.climate().moisture_at(cell),
+            v.climate().mean_temperature_at(vertex),
+            v.climate().moisture_at(vertex),
         ) else {
             continue;
         };
         let coastal = v
             .terrain()
             .geosphere()
-            .neighbors(cell)
+            .neighbors(vertex)
             .iter()
             .any(|&n| v.terrain().is_ocean(n));
         let subsistence = hornvale_culture::subsistence(
-            hornvale_worldgen::biome_class(v.climate().biome_at(cell)),
+            hornvale_worldgen::biome_class(v.climate().biome_at(vertex)),
             coastal,
         );
         if subsistence == hornvale_culture::Subsistence::Farming {
@@ -8024,9 +8614,43 @@ fn independently_steeped_concepts(
         }
     }
 
+    // Steeped: the six felt states (`hornvale_language::felt_state_pack`,
+    // The Confidant's Task 4b), re-derived independently from `species`' own
+    // `MindVector` (`v.components().psyche`) — the same lookup pattern
+    // `perception` above already uses, not `hornvale_worldgen::
+    // exposure_of_impl`'s felt-state block. One scalar governs one
+    // valence-opposed pair ([`FELT_STATE_PAIRS`]), by which side of the
+    // midpoint (0.5, the manikin's own neutral reading) `species` falls on;
+    // exactly AT the midpoint earns neither pole — a real reading, not an
+    // omission, matching `exposure_of_impl`'s own gate exactly. Registered
+    // unconditionally at genesis (`hornvale_language::register_concepts`),
+    // so — like the universal stratum above — no `registry.concept(..)
+    // .is_some()` guard is needed here, matching `exposure_of_impl`'s own
+    // ungated inserts.
+    if let Some((_, mind)) = v.components().psyche.iter().find(|(k, _)| k.0 == species) {
+        let (above, below) = FELT_STATE_PAIRS[0];
+        if mind.threat_response > 0.5 {
+            steeped.insert(above.to_string());
+        } else if mind.threat_response < 0.5 {
+            steeped.insert(below.to_string());
+        }
+        let (above, below) = FELT_STATE_PAIRS[1];
+        if mind.deliberation_latency > 0.5 {
+            steeped.insert(above.to_string());
+        } else if mind.deliberation_latency < 0.5 {
+            steeped.insert(below.to_string());
+        }
+        let (above, below) = FELT_STATE_PAIRS[2];
+        if mind.time_horizon > 0.5 {
+            steeped.insert(above.to_string());
+        } else if mind.time_horizon < 0.5 {
+            steeped.insert(below.to_string());
+        }
+    }
+
     // The seven toponymic terrain gates (Task 4), each fired by a settled
-    // cell that actually satisfies it. The tuple table is deliberate: the
-    // rules are uniform ("any settled cell where this predicate holds
+    // vertex that actually satisfies it. The tuple table is deliberate: the
+    // rules are uniform ("any settled vertex where this predicate holds
     // steeps this concept"), so writing them as seven near-identical loops
     // would only invite one of them to drift out of the shape. `valley` is
     // in the table even though the census never saw it fire — a rule left
@@ -8036,7 +8660,7 @@ fn independently_steeped_concepts(
     // [`steepable_concept_roster`].
     let terrain = v.terrain();
     for (concept, holds) in TOPONYMIC_GATES {
-        if settled.iter().any(|&cell| holds(terrain, cell)) {
+        if settled.iter().any(|&vertex| holds(terrain, vertex)) {
             steeped.insert(concept.to_string());
         }
     }
@@ -8058,20 +8682,20 @@ fn independently_steeped_concepts(
 ///
 /// Built from exactly the same tables `independently_steeped_concepts`
 /// reads for its unconditional/static rules ([`TOPONYMIC_GATES`],
-/// [`FIXED_STEEPED_CONCEPTS`]) so there is only one copy of each list, plus
-/// the closed catalogs the *dynamic per-cell* rules draw their concept
-/// names from:
+/// [`FIXED_STEEPED_CONCEPTS`], [`FELT_STATE_PAIRS`]) so there is only one
+/// copy of each list, plus the closed catalogs the *dynamic per-vertex*
+/// rules draw their concept names from:
 ///
-/// - `biome`/`variant`/`staple` are read per settled CELL (a species is
-///   steeped in whichever biome/variant/crop that cell's geography and
-///   climate actually produce), so no fixed cell-by-cell comparison is
+/// - `biome`/`variant`/`staple` are read per settled VERTEX (a species is
+///   steeped in whichever biome/variant/crop that vertex's geography and
+///   climate actually produce), so no fixed vertex-by-vertex comparison is
 ///   meaningful — a census sweep would only ever witness the biomes this
 ///   run's seeds happen to generate. What IS meaningful, and what this
 ///   returns, is the full closed catalog each rule draws from:
 ///   [`hornvale_climate::biome::ALL`], [`hornvale_climate::Variant::catalog`],
 ///   [`hornvale_climate::Crop::catalog`]. Parity here means "the lab knows
 ///   every biome/variant/crop NAME that could ever appear," not "the lab
-///   saw the same biome as some particular cell."
+///   saw the same biome as some particular vertex."
 /// - `{species}-kind` is read per COEXISTING roster (a species is steeped in
 ///   the kind-concept of every OTHER species that places a settlement in
 ///   the same world, which varies seed to seed — see
@@ -8109,6 +8733,10 @@ pub fn steepable_concept_roster() -> std::collections::BTreeSet<String> {
     }
     for concept in FIXED_STEEPED_CONCEPTS {
         roster.insert(concept.to_string());
+    }
+    for (above, below) in FELT_STATE_PAIRS {
+        roster.insert(above.to_string());
+        roster.insert(below.to_string());
     }
 
     for biome in hornvale_climate::biome::ALL {
@@ -8749,8 +9377,8 @@ fn confusable_homophony(v: &FullView, species: &str) -> MetricValue {
 }
 
 /// `species`' derived life-history profile (BIO-2 spec §5), read from the
-/// biosphere component's `mass`/`metabolic_class` — a pure `f(Mass,
-/// MetabolicClass)`, no draws. `None` if `species` is off-roster.
+/// biosphere component's `mass`/`thermal_strategy` — a pure `f(Mass,
+/// ThermalStrategy)`, no draws. `None` if `species` is off-roster.
 fn species_life_history(v: &FullView, species: &str) -> Option<hornvale_species::LifeHistory> {
     let bio = v
         .components()
@@ -8760,14 +9388,14 @@ fn species_life_history(v: &FullView, species: &str) -> Option<hornvale_species:
         .map(|(_, b)| b)?;
     Some(hornvale_species::life_history(
         bio.mass,
-        bio.metabolic_class,
+        bio.thermal_strategy,
         bio.schedule,
     ))
 }
 
 /// `species`' maximum lifespan in years (BIO-2 spec §4/§5). `Absent` if
-/// `species` is off-roster or `Ametabolic` (a construct has no mass-derived
-/// lifespan).
+/// `species` is off-roster or ametabolic (`ThermalStrategy::Absent` — a
+/// construct has no mass-derived lifespan).
 fn species_lifespan_metric(v: &FullView, species: &str) -> MetricValue {
     match species_life_history(v, species).and_then(|lh| lh.lifespan) {
         Some(years) => MetricValue::Number(years.get()),
@@ -8776,7 +9404,7 @@ fn species_lifespan_metric(v: &FullView, species: &str) -> MetricValue {
 }
 
 /// `species`' age at first reproduction in years (BIO-2 spec §4/§5). `Absent`
-/// if `species` is off-roster or `Ametabolic`.
+/// if `species` is off-roster or ametabolic (`ThermalStrategy::Absent`).
 fn species_age_at_maturity_metric(v: &FullView, species: &str) -> MetricValue {
     match species_life_history(v, species).and_then(|lh| lh.age_at_maturity) {
         Some(years) => MetricValue::Number(years.get()),
@@ -8785,7 +9413,7 @@ fn species_age_at_maturity_metric(v: &FullView, species: &str) -> MetricValue {
 }
 
 /// `species`' reference-temperature basal metabolic rate in watts (BIO-2
-/// spec §4). Always present — `0.0` for `Ametabolic`, never `None`. `Absent`
+/// spec §4). Always present — `0.0` for an ametabolic species, never `None`. `Absent`
 /// only if `species` is off-roster.
 fn species_basal_metabolic_rate_metric(v: &FullView, species: &str) -> MetricValue {
     match species_life_history(v, species) {
@@ -8796,7 +9424,7 @@ fn species_basal_metabolic_rate_metric(v: &FullView, species: &str) -> MetricVal
 
 /// `species`' reproductive output on the r–K axis, 0 (fast/prolific) … 1
 /// (slow/sparse) (BIO-2 spec §4/CAP-2). `Absent` if `species` is off-roster
-/// or `Ametabolic`.
+/// or ametabolic (`ThermalStrategy::Absent`).
 fn species_reproductive_tempo_metric(v: &FullView, species: &str) -> MetricValue {
     match species_life_history(v, species).and_then(|lh| lh.reproductive_tempo) {
         Some(tempo) => MetricValue::Number(tempo),
@@ -8805,7 +9433,7 @@ fn species_reproductive_tempo_metric(v: &FullView, species: &str) -> MetricValue
 }
 
 /// `species`' generation length in years (BIO-2 spec §5, MEM-7's handle).
-/// `Absent` if `species` is off-roster or `Ametabolic`.
+/// `Absent` if `species` is off-roster or ametabolic (`ThermalStrategy::Absent`).
 fn species_generation_length_metric(v: &FullView, species: &str) -> MetricValue {
     match species_life_history(v, species).and_then(|lh| lh.generation_length) {
         Some(years) => MetricValue::Number(years.get()),
@@ -8815,7 +9443,7 @@ fn species_generation_length_metric(v: &FullView, species: &str) -> MetricValue 
 
 /// `species`' overall life-history speed, 0 (fast) … 1 (slow) — an absolute,
 /// roster-independent position defined for anything with mass (BIO-2 spec
-/// §5), so this is present even for `Ametabolic`. `Absent` only if `species`
+/// §5), so this is present even for an ametabolic species. `Absent` only if `species`
 /// is off-roster.
 fn species_pace_of_life_metric(v: &FullView, species: &str) -> MetricValue {
     match species_life_history(v, species) {
@@ -9143,7 +9771,7 @@ mod tests {
 
     #[test]
     fn seed_42_belief_kind_goblin_is_text_and_not_absent() {
-        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let view = FullView::build(Seed(5), &SkyPins::default()).unwrap();
         let built = BuiltView::Full(view);
         let value = extract_from(&built, "belief-kind-goblin");
         match value {
@@ -9229,7 +9857,7 @@ mod tests {
         OccupationRecord {
             core: Occupation {
                 people: hornvale_kernel::KindId("goblin"),
-                site: CellId(0),
+                site: Vertex(0),
                 founded: 0.0,
                 ended: match ended_by {
                     Ended::By(_) => Some(1.0),
@@ -9247,7 +9875,7 @@ mod tests {
                 notability: Notability::Common,
             },
             id: eid(id),
-            founded_from: Founding::Genesis(CellId(0)),
+            founded_from: Founding::Genesis(Vertex(0)),
             ended_by,
         }
     }
@@ -9679,14 +10307,46 @@ mod tests {
         // dimensionless atmospheric greenhouse residual drawn in astronomy.
         // A field read directly off `AstronomyView`, no sweep, so no cost
         // concern; nothing consumes the predicate or the metric yet.
-        assert_eq!(registry().len(), 224);
+        // +2 for THE GRANARY (T8: granary-raid-phase-concentration,
+        // granary-raids-in-depleted-half) — per-world aggregates over the
+        // bake's raid-ending day-of-year stamps; both read committed history
+        // records only, so no sweep cost beyond the bake itself.
+        assert_eq!(registry().len(), 226);
+        //
+        // THE CONFIDANT (Task 7) registered +45 here — `reportable-
+        // fraction-<species>`, `collapse-ratio-<species>`,
+        // `misreport-distance-<species>`, one triple per one of the fifteen
+        // `society_registry()` peoples — and then UNREGISTERED them again in
+        // the same campaign's reshape (Task 7 reshape): a census run showed
+        // all 45 columns constant across every one of 1000 seeds, because
+        // `felt_testimonies`' branch on whether a culture *has* a felt-state
+        // word is exposure-determined (`MindVector`, a species-level
+        // authored constant), never world-determined. A metric registry
+        // entry that is byte-identical on every world of a `"metrics":
+        // "all"` study is dead weight in the census (paid on ~2000 worlds
+        // for one world's worth of information) and, worse, cannot detect
+        // drift (a constant column never moves). The instrument survives —
+        // `reportable_fraction_for`/`collapse_ratio_for`/
+        // `misreport_distance_for` are unchanged and mutation-proven, still
+        // reading Task 6's `testify` over `lex(v, species)` — but its home
+        // is now [`render_confidant_report`], a world-invariant artifact
+        // (one [`FullView::build`] at `Seed(42)`, fifteen rows) following
+        // `windows/sentiment`'s precedent: a world-invariant quantity is a
+        // window's job, not a per-world census column. See this task's
+        // report for the full account and the proof the moved values are
+        // unchanged.
+        // THE GRANARY absorb (T8): 224 -> 226 — the same +2 this test's first
+        // assertion already counts (granary-raid-phase-concentration,
+        // granary-raids-in-depleted-half); the trailing assert here had not
+        // caught up with them until now.
+        assert_eq!(registry().len(), 226);
     }
 
     // --- The Ford (spec §10): the estimators behind the three channel
     // metrics, checked against the shipped band predicate. ---
 
     /// A real (small) world's channel network. Level 5, not the canonical 6:
-    /// level 4 accumulates no river cells at all on seed 42, and level 6 is
+    /// level 4 accumulates no river vertices at all on seed 42, and level 6 is
     /// the READOUT's grid, not a gate test's.
     fn ford_test_terrain() -> hornvale_terrain::GeneratedTerrain {
         let geo = hornvale_kernel::Geosphere::new(5);
@@ -9978,15 +10638,15 @@ mod tests {
     // --- The Millrace (Task 5): the connectivity walk's memo and its
     // continuation rule. ---
 
-    /// The **superseded** continuation rule: continue while the cell
+    /// The **superseded** continuation rule: continue while the vertex
     /// downstream of this one classifies `WaterKind::River`.
     ///
     /// Kept, and run through the shipped [`lab_connectivity_verdicts`] rather
     /// than through a transcribed walk, so the two arms of the repair are
     /// comparable on the shipped geometry. Nothing in the shipped path calls
     /// it.
-    fn lab_river_continues(globe: &hornvale_terrain::TectonicGlobe, cell: CellId) -> bool {
-        match *globe.downhill.get(cell) {
+    fn lab_river_continues(globe: &hornvale_terrain::TectonicGlobe, vertex: Vertex) -> bool {
+        match *globe.downhill.get(vertex) {
             Some(next) => matches!(
                 *globe.water_kind.get(next),
                 hornvale_terrain::WaterKind::River
@@ -10089,7 +10749,7 @@ mod tests {
     /// is exact under BOTH continuation rules, the published `trunk_vertex`
     /// agrees with the per-world `lab_run_owner` rebuild, and the terrain's
     /// reach predicate agrees with the network's index on every run's last
-    /// cell.
+    /// vertex.
     ///
     /// Returned counts let the ignored 64-seed probe report what it asserted.
     fn assert_connectivity_invariants(
@@ -10098,17 +10758,17 @@ mod tests {
         let net = terrain.channels();
         let globe = terrain.globe();
 
-        // (1) One implementation of "who carries this cell", checked against
+        // (1) One implementation of "who carries this vertex", checked against
         // the other. `lab_run_owner` keeps the LAST claiming run and
         // `trunk_vertex` the FIRST, so this is an assertion that the claim
         // relation is functional — `domains/terrain`'s R-4 — re-checked at the
         // point where this file starts depending on it.
-        let owner = lab_run_owner(net, terrain.geosphere().cell_count());
+        let owner = lab_run_owner(net, terrain.geosphere().vertex_count());
         for (index, entry) in owner.iter().enumerate() {
             assert_eq!(
                 *entry,
-                net.trunk_vertex(CellId(index as u32)),
-                "the per-world owner rebuild and the published trunk_vertex disagree at cell \
+                net.trunk_vertex(Vertex(index as u32)),
+                "the per-world owner rebuild and the published trunk_vertex disagree at vertex \
                  {index}: the claim relation is not functional, and R-4 — which the metric's \
                  substitution of the published accessor rests on — does not hold here"
             );
@@ -10118,12 +10778,12 @@ mod tests {
         // question, which is what makes `FellOut` unreachable rather than
         // deleted. Asserted on the population the walk actually consults.
         for line in 0..net.polylines.len() {
-            let last_cell = *net.run_cells[line].last().expect("a run has cells");
+            let last_vertex = *net.run_vertices[line].last().expect("a run has vertices");
             assert_eq!(
-                lab_flow_continues(globe, last_cell),
-                net.trunk_vertex(last_cell).is_some(),
+                lab_flow_continues(globe, last_vertex),
+                net.trunk_vertex(last_vertex).is_some(),
                 "the terrain's reach predicate and the network's trunk index disagree at the \
-                 last cell of run {line}: a walk can now fall out of the network, and \
+                 last vertex of run {line}: a walk can now fall out of the network, and \
                  LabHopVerdict::FellOut is reachable"
             );
         }
@@ -10281,7 +10941,7 @@ mod tests {
 
     /// claim: invariant(forall-seed) — over `the-ford-probe`'s 64 seeds, the
     /// memo reproduces the unmemoised walk per run and the two "who carries
-    /// this cell" answers agree. The P3 fraction and the branch table beside
+    /// this vertex" answers agree. The P3 fraction and the branch table beside
     /// them are a readout: printed, never asserted, because the decision they
     /// feed (spec §6.3) is a human one.
     ///
@@ -10309,7 +10969,7 @@ mod tests {
             let view = TerrainView::build(Seed(seed), &pins)
                 .unwrap_or_else(|e| panic!("seed {seed} builds to the terrain rung: {e:?}"));
             assert_eq!(
-                view.terrain.geosphere().level(),
+                view.terrain.geosphere().depth(),
                 hornvale_terrain::GLOBE_LEVEL,
                 "this probe is only meaningful on the canonical grid"
             );
@@ -10558,7 +11218,7 @@ mod tests {
     /// roster. `hydrogeology`'s clastic aquifer threshold moved from a
     /// mismeasured `0.25` to the correctly-measured `0.46`, and `Spring`
     /// stopped being a drainage split and became a geometric descending
-    /// contact — both reclassify which cells read `Aquifer`/`Spring`, which
+    /// contact — both reclassify which vertices read `Aquifer`/`Spring`, which
     /// moves settlement placement exactly the way the history-bake landing
     /// did above. Goblin is untouched by this pass.
     ///
@@ -10695,7 +11355,7 @@ mod tests {
         // THE UNDERWORLD re-pin (Task 8, spec §4.6's node-index re-key):
         // 2.3225806451612905 (72/31) -> 2.3846153846153846 (62/26). Same
         // mechanism a fourth time: re-keying the deep-history node index on
-        // `(cell, rung)` takes drow out of the competition for surface cells,
+        // `(vertex, rung)` takes drow out of the competition for surface vertices,
         // every people seeded after it draws from a different pool, and goblin
         // names a different — and smaller — set of sites (26 against 31).
         // Still inside the 2-3 target, which is the row's actual claim; the
@@ -10709,7 +11369,7 @@ mod tests {
         // spelled `"karst-cave"` and `"fracture-cave"`, so two formations of
         // three never matched and silently read the genus-blind fallback.
         // Repairing the join moves drow's seating, which moves which surface
-        // cells it vacates, which moves goblin's site pool again (23 against
+        // vertices it vacates, which moves goblin's site pool again (23 against
         // 26). Still inside the 2-3 target, which is the row's actual claim;
         // the exact value is a world-byte tripwire. **NOT corroborated against
         // a canonical census**: this campaign's refresh has not been run yet,
@@ -10770,7 +11430,7 @@ mod tests {
         // very-hot bands the old conflated flag excluded outright now carry
         // (low) capacity — main measured 254/97 -> 252/97 on ITS side of the
         // fork, denominator holding at 97 because seed 42's 70 newly-reachable
-        // cells all fall below the viability floor.
+        // vertices all fall below the viability floor.
         //
         // MERGE (2026-08-04, main absorbed into the-tolerance): RE-MEASURED on
         // the merged tree, and the composed value is 111/43 — i.e. The
@@ -10901,7 +11561,7 @@ mod tests {
         // Goblin RISES too (2.3225806451612905 -> 2.3846153846153846), so the
         // two move together for the first time since the thermostat. Read that
         // as the sample, not the machinery: re-keying the node index takes
-        // drow out of the competition for surface cells, seed 42 settles
+        // drow out of the competition for surface vertices, seed 42 settles
         // fewer sites (521 occupations across 217, against 826 across 302),
         // and BOTH peoples are naming a smaller set. Nothing in this campaign
         // touches phonology, wear or the namer. **Not corroborated against a
@@ -10940,9 +11600,15 @@ mod tests {
         // The Burr DOES touch phonology and the namer for every family, so kobold's
         // syllable count moves on the merged product's site pool. Re-pinned from the
         // merged run.
+        //
+        // THE GRANARY re-pin: 2.6792452830188678 -> 2.5414012738853504. Seasonal
+        // raid timing changes committed history, reseating seed 42's settlements
+        // and so kobold's named-site pool. Corroborated: the canonical census
+        // refreshed at this branch's tip (`c54fb62c9`) reads name-syllables-kobold
+        // = 2.5414013 on its own seed-42 row.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.6792452830188678)
+            MetricValue::Number(2.5414012738853504)
         );
     }
 
@@ -10979,7 +11645,7 @@ mod tests {
         // aquifer threshold moved from a mismeasured `0.25` to the
         // correctly-measured `0.46`, and `Spring` became a geometric
         // descending contact rather than a drainage split — both
-        // reclassify which cells read `Aquifer`/`Spring`/`Aquitard`/`Runoff`,
+        // reclassify which vertices read `Aquifer`/`Spring`/`Aquitard`/`Runoff`,
         // which is exactly the exposure vocabulary transparency's gloss
         // check reads against.
         //
@@ -11135,8 +11801,8 @@ mod tests {
         // THE UNDERWORLD re-pin (Task 8, spec §4.6's node-index re-key):
         // 0.6556016597510373 (158/241) -> 0.6510416666666666 (125/192). A
         // FIFTH distinct placement, and the first whose denominator FALLS
-        // (241 -> 192): re-keying the deep-history node index on `(cell, rung)`
-        // takes drow out of the surface-cell competition, so seed 42 settles
+        // (241 -> 192): re-keying the deep-history node index on `(vertex, rung)`
+        // takes drow out of the surface-vertex competition, so seed 42 settles
         // fewer sites (521 occupations across 217, against 826 across 302).
         // The value barely moves — 0.6556 -> 0.6510,
         // under half a percentage point — across a 20% fall in n, which is
@@ -11151,7 +11817,7 @@ mod tests {
         // `CaveKind::name()` against genera spelled with a `-cave` suffix, so
         // karst and fracture columns never matched their own rows and read the
         // genus-blind fallback instead. Repairing it moves drow's seating,
-        // which moves which surface cells it leaves free, which moves the
+        // which moves which surface vertices it leaves free, which moves the
         // settled set again — and this time the denominator RISES (192 -> 221)
         // while the numerator falls by five.
         //
@@ -11172,7 +11838,13 @@ mod tests {
         // Burr's per-bundle orthography and root-and-pattern change WHICH names read as
         // transparent (a name is transparent when its glosses recur in its own site
         // vector), on the merged site pool. Re-pinned from the merged run.
-        assert_eq!(share, 0.669683257918552, "seed 42 transparency drifted");
+        //
+        // THE GRANARY re-pin: 0.669683257918552 -> 0.6195372750642674. Seasonal raid
+        // timing changes committed history and reseats seed 42's site pool, which
+        // changes WHICH names read as transparent. Corroborated: the canonical census
+        // refreshed at this branch's tip (`c54fb62c9`) reads name-transparency =
+        // 0.61953728 on its own seed-42 row.
+        assert_eq!(share, 0.6195372750642674, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -11776,8 +12448,8 @@ mod tests {
             // FIVE — "valley" returns beside "river", "ford", "marsh" and
             // "spring", the widest this precondition has read since the 2026-
             // 08-04 merge. Re-keying the deep-history node index on
-            // `(cell, rung)` takes drow out of the competition for surface
-            // cells, so every people seeded after it draws from a different
+            // `(vertex, rung)` takes drow out of the competition for surface
+            // vertices, so every people seeded after it draws from a different
             // pool and seed 7's goblins reach wider ground again — the eighth
             // oscillation. Re-pin the set, do not swap the seed, per the
             // precedent this comment has now followed through all eight.
@@ -11792,7 +12464,7 @@ mod tests {
             // `CaveKind::name()` (`"karst"`, `"fracture"`) against genera
             // spelled with a `-cave` suffix, so two of three formations never
             // matched their own rows; repairing the join moves drow's seating,
-            // which moves which surface cells it vacates, which narrows seed
+            // which moves which surface vertices it vacates, which narrows seed
             // 7's goblins' reach again. Re-pin the set, do not swap the seed,
             // per the precedent this comment has now followed through all
             // nine. Coverage falls back with it: the river and karst/wetland
@@ -12079,8 +12751,8 @@ mod tests {
         // same world, so this witness is not load-bearing alone.
         //
         // SEVENTH PASS (The Underworld, Task 8, spec §4.6's node-index
-        // re-key). Re-keying the deep-history node index on `(cell, rung)`
-        // takes drow out of the competition for surface cells, re-placing
+        // re-key). Re-keying the deep-history node index on `(vertex, rung)`
+        // takes drow out of the competition for surface vertices, re-placing
         // every world, and seed 2's bugbear stopped rooting `island`. The
         // precondition below caught it rather than letting the test pass on
         // nothing — the seventh time it has done so.
@@ -12190,7 +12862,7 @@ mod tests {
     }
 
     #[test]
-    fn per_cell_diversity_is_finite_and_bounded_by_species_count_at_seed_42() {
+    fn per_vertex_diversity_is_finite_and_bounded_by_species_count_at_seed_42() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         let n_species = view.components().biosphere.len() as f64;
         let built = BuiltView::Full(view);
@@ -12199,14 +12871,14 @@ mod tests {
             MetricValue::Number(v) => {
                 assert!(v.is_finite(), "per-cell-diversity must be finite, got {v}");
                 // `strife` is 0.0 (not >= 1.0) at a habitable-but-unclaimed
-                // cell — byproducts.rs: "a cell with zero total density...
+                // vertex — byproducts.rs: "a vertex with zero total density...
                 // reports 0.0 rather than dividing by zero... there is no
                 // contest where nobody is contesting". Averaged over EVERY
-                // habitable cell (this metric's definition), the mean
+                // habitable vertex (this metric's definition), the mean
                 // therefore ranges over [0, N_species], not [1, N_species]:
                 // measured directly (debug instrumentation, since removed)
                 // at seed 42 with today's pre-calibration BETA it reads
-                // ~0.75 — every occupied cell is currently winner-take-all
+                // ~0.75 — every occupied vertex is currently winner-take-all
                 // (strife == 1.0 exactly, nowhere higher) and ~25% of
                 // habitable land is claimed by no roster species at all.
                 // That floor-diversity reading is exactly the signal task
@@ -12291,11 +12963,11 @@ mod tests {
 
         let geo = view.settlement.terrain().geosphere();
         let mut strife: Vec<f64> = geo
-            .cells()
+            .vertices()
             .map(|c| *report.byproducts.strife.get(c))
             .filter(|x| *x > 0.0)
             .collect();
-        assert!(strife.len() > 10, "enough cells have strife");
+        assert!(strife.len() > 10, "enough vertices have strife");
         strife.sort_by(f64::total_cmp);
         let (lo, hi) = (strife.first().unwrap(), strife.last().unwrap());
         assert!(
@@ -12307,7 +12979,7 @@ mod tests {
     #[test]
     fn ground_metrics_extract_for_seed_42() {
         // The Ground (Task 7): rock/soil/hydrogeology census metrics, over
-        // land cells only; a landed seed like 42 must name a rock and a
+        // land vertices only; a landed seed like 42 must name a rock and a
         // soil order and report every fraction inside [0, 1].
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         let built = BuiltView::Full(view);
@@ -12410,7 +13082,7 @@ mod tests {
 
     #[test]
     fn the_lode_metrics_extract_for_seed_42() {
-        // The Lode (Task 7): cave/deposit census metrics, over land cells
+        // The Lode (Task 7): cave/deposit census metrics, over land vertices
         // only; fractions and grade must land in [0, 1], and the dominant
         // commodity is either a named commodity or Absent (no land deposit).
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
@@ -12429,9 +13101,9 @@ mod tests {
     #[test]
     fn the_vestige_metrics_extract_for_seed_42() {
         // The Vestige (Task 7): subsurface historical-residue census
-        // metrics, over land cells only; fractions must land in [0, 1], and
+        // metrics, over land vertices only; fractions must land in [0, 1], and
         // the dominant hazard is either a named hazard or Absent (no land
-        // cell bears a vestige).
+        // vertex bears a vestige).
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         let built = BuiltView::Full(view);
         let m = |name: &str| extract_from(&built, name);
@@ -12470,7 +13142,7 @@ mod tests {
         // coastal, tropical-rainforest — but that was Sculpting-alone. The
         // niche-differentiated-K coexistence-stack cutover (The Niche,
         // merged here at Sculpting's close) repacked settlement genesis
-        // onto a competitive per-species K, relocating which cell goblin's
+        // onto a competitive per-species K, relocating which vertex goblin's
         // flagship wins world-wide on the composed tree: re-derived
         // empirically post-merge (not carried from either parent), the
         // flagship lands back on non-coastal, temperate-forest — matching
@@ -12479,23 +13151,23 @@ mod tests {
         // output and `cli/tests/branches_identity.rs`).
         //
         // The Tithe's adaptive demand (spec §4.3) moved it to a **coastal
-        // tropical-rainforest** cell. Nothing about biomes changed: a patron
+        // tropical-rainforest** vertex. Nothing about biomes changed: a patron
         // that corrects its demand each epoch collects a different amount, so
         // its subordinates grow and fail on a different schedule, and seed
-        // 42's occupation history — which cells are held when the bake closes
-        // — is redrawn. Which cell goblin's flagship wins follows the history,
+        // 42's occupation history — which vertices are held when the bake closes
+        // — is redrawn. Which vertex goblin's flagship wins follows the history,
         // as it has followed every world-byte change before it. **The Tithe's
         // bleed (task 5b, spec §4.2b) then moved it back**: letting a greedy
         // patron take from the standing stock and not only from the epoch's
         // surplus holds every vassal near `FARM_FLOOR`, which throws off far
         // fewer daughters, so seed 42 closes with 97 live records instead of
-        // 292 and a different cell wins. Re-derived empirically at each step,
+        // 292 and a different vertex wins. Re-derived empirically at each step,
         // never carried.
         //
         // **The Tithe's vassal agency (task 5f, spec §4.3d) moves it to a
-        // coastal tropical-rainforest cell.** Eight vassals on seed 42 walk
+        // coastal tropical-rainforest vertex.** Eight vassals on seed 42 walk
         // away from patrons whose demand they could not regrow, and a
-        // departure both frees a cell and re-seats a people elsewhere — so the
+        // departure both frees a vertex and re-seats a people elsewhere — so the
         // `DAUGHTER_PROB` draw sequence downstream of the first flight shifts
         // and the whole occupation history is redrawn, exactly as every
         // world-byte change in this list has redrawn it. Nothing about biomes
@@ -12505,9 +13177,9 @@ mod tests {
         // (the gnoll), which shifts the world-wide competitive landscape
         // settlement genesis resolves — and which, on its own tree, moved
         // goblin's flagship to COASTAL tropical-rainforest as well, since a
-        // new competitor claiming the interior cell the old flagship held
+        // new competitor claiming the interior vertex the old flagship held
         // pushed goblin's own flagship elsewhere. **The two campaigns
-        // arrived at the same cell reading by different routes**, and the
+        // arrived at the same vertex reading by different routes**, and the
         // composed tree is re-derived empirically here rather than carried
         // from either parent — as it has been at every entry in this list.
         assert_eq!(
@@ -12521,7 +13193,7 @@ mod tests {
         //
         // The Delvers re-pin (C2c, 2026-08-07): temperate-forest -> taiga.
         // Five settling peoples shift the world-wide competitive landscape
-        // settlement genesis resolves, which moves which cell goblin's
+        // settlement genesis resolves, which moves which vertex goblin's
         // flagship wins — the same class of movement every entry in this long
         // list records, re-derived empirically rather than carried.
         // `flagship-subsistence` above is STILL "farming", so the cascade
@@ -12529,10 +13201,10 @@ mod tests {
         //
         // Second pass, same day: taiga -> temperate-forest, i.e. BACK to the
         // value The Tense pinned. Correcting the dwarf diets off the MINERAL
-        // trophic axis moved goblin's flagship cell a second time and it
+        // trophic axis moved goblin's flagship vertex a second time and it
         // landed where it had been. That this list's readings can return is
         // itself the point it has been making since Sculpting: the biome is
-        // downstream of which cell wins, and cells are re-decided by every
+        // downstream of which vertex wins, and vertices are re-decided by every
         // world-byte change. `flagship-subsistence` is STILL "farming".
         //
         // Third pass, same day: temperate-forest -> taiga, when the roster was
@@ -12547,7 +13219,7 @@ mod tests {
         // temperate-forest, oscillating between the same two biomes a fifth
         // time. Cause: the campaign's first biome-affinity row (gnoll,
         // desert-preferring) suppresses gnoll's capacity off arid ground,
-        // which frees interior cells the other peoples re-contest — the
+        // which frees interior vertices the other peoples re-contest — the
         // competitive cascade `windows/worldgen/tests/range_readout.rs`
         // measures directly (seed 7: gnoll unchanged at 4 settlements while
         // bugbear goes 49 -> 153). `flagship-subsistence` is STILL "farming"
@@ -12557,7 +13229,7 @@ mod tests {
         // taiga, oscillating between the same two biomes a SIXTH time. Cause:
         // six elves enter the contest, so the world-wide competitive landscape
         // settlement genesis resolves moves again and goblin's flagship wins a
-        // different cell. `flagship-subsistence` is STILL "farming" through all
+        // different vertex. `flagship-subsistence` is STILL "farming" through all
         // six, and `flagship-coastal` is still false. Six oscillations between
         // exactly two farmable biomes is now enough history to say plainly what
         // this list has been circling: **`flagship-biome` at seed 42 is a
@@ -12620,8 +13292,8 @@ mod tests {
         // (goblin + kobold both registered) so the campaign's headline
         // cross-species claim (ectotherm kobold vs endotherm goblinoids) is
         // queryable. Both species are always on the default roster and
-        // neither is `Ametabolic` (goblin is Endotherm, kobold is
-        // Ectotherm), so these read `Number` at seed 42, but `Absent` stays
+        // neither is ametabolic (goblin is Endothermic, kobold is
+        // Ectothermic), so these read `Number` at seed 42, but `Absent` stays
         // a legal kind for a roster where a species is missing or
         // ametabolic.
         let names: std::collections::BTreeSet<&str> =
@@ -12722,13 +13394,13 @@ mod tests {
     fn solo_goblin_and_twin_share_head_domain_at_seed_42() {
         // Superseded under The Living Community epoch (this merge): the draft
         // demography attractor placed by vectors alone, so identical-vector
-        // peoples with no competitor landed in the SAME cell (the old spec-§3
+        // peoples with no competitor landed in the SAME vertex (the old spec-§3
         // assertion). History is the sole settlement placer now, and its
         // genesis seeds each people's site from a per-people (identity-labelled)
         // draw stream so co-placed peoples don't collide — which necessarily
         // makes a solo world's placement depend on the people's identity too.
-        // Measured: solo goblin and goblin-twin now land in DIFFERENT cells
-        // (28487 vs 17567). The same-cell claim is retired; what survives, and
+        // Measured: solo goblin and goblin-twin now land in DIFFERENT vertices
+        // (28487 vs 17567). The same-vertex claim is retired; what survives, and
         // is asserted below, is that identical vectors still yield the SAME
         // head-deity domain (the religion cascade is vector-pure) while the
         // independent name stream still yields DIFFERENT names.
@@ -12748,7 +13420,7 @@ mod tests {
         let tf = flagship_of(t.world(), "goblin-twin").unwrap();
         // Identical vectors ⇒ same head-deity domain (the religion cascade is
         // a pure function of the vectors, independent of the identity-seeded
-        // placement cell).
+        // placement vertex).
         let reg = registry();
         let dom = |built: &BuiltView, name: &str| match reg
             .iter()
@@ -12859,7 +13531,7 @@ mod tests {
 
     #[test]
     fn first_day_is_settlement_is_present_and_finite_on_seed_42() {
-        let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let v = FullView::build(Seed(11), &SkyPins::default()).expect("seed 11 builds");
         match extract(&v, "first-day-is-settlement") {
             MetricValue::Number(d) => assert!(d.is_finite(), "a first day must be finite, got {d}"),
             other => panic!("expected a Number, got {other:?}"),
@@ -12868,7 +13540,7 @@ mod tests {
 
     #[test]
     fn first_day_of_an_unmatched_object_is_absent() {
-        let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let v = FullView::build(Seed(11), &SkyPins::default()).expect("seed 11 builds");
         assert!(
             matches!(
                 first_day(v.world(), "occ-people", Some("no-such-species")),
@@ -12889,13 +13561,13 @@ mod tests {
     /// passing if that ever stops being true.
     #[test]
     fn first_day_is_settlement_matches_an_independently_computed_minimum() {
-        let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let v = FullView::build(Seed(11), &SkyPins::default()).expect("seed 11 builds");
         let mut days: Vec<f64> = v
             .world()
             .ledger
             .find("is-settlement")
             .filter_map(|f| f.day)
-            .map(|d| d.day())
+            .map(|d| d.as_std_days())
             .collect();
         assert!(
             days.len() > 1,
@@ -12987,7 +13659,7 @@ mod tests {
                 std::collections::BTreeMap::new();
             for f in v.world().ledger.find("occ-people") {
                 if let (Value::Text(t), Some(d)) = (&f.object, f.day) {
-                    per.entry(t.clone()).or_default().push(d.day());
+                    per.entry(t.clone()).or_default().push(d.as_std_days());
                 }
             }
             for (species, mut days) in per {
@@ -13002,7 +13674,7 @@ mod tests {
 
     #[test]
     fn first_day_of_a_keyed_object_matches_an_independently_computed_minimum() {
-        let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let v = FullView::build(Seed(11), &SkyPins::default()).expect("seed 11 builds");
         let mut days: Vec<f64> = v
             .world()
             .ledger
@@ -13025,7 +13697,7 @@ mod tests {
             // corroborated rather than load-bearing alone.
             .filter(|f| matches!(&f.object, Value::Text(t) if t == "bugbear"))
             .filter_map(|f| f.day)
-            .map(|d| d.day())
+            .map(|d| d.as_std_days())
             .collect();
         assert!(
             days.len() > 1,
@@ -13065,7 +13737,11 @@ mod tests {
     /// `occ-tech` unfiltered min is `0.0` (neolithic settlements exist from
     /// genesis) but `iron`-keyed occupations do not begin until day
     /// `54_787.5`, strictly later (max `483_956.25`, 143 iron-keyed facts).
-    /// This is a technical witness, not a preregistered claim on a subject
+    /// **THE GRANARY re-pin: seed 7 -> seed 100.** The sub-year raid timing
+    /// moved the worlds again and seed 7 no longer exhibits the gap (iron
+    /// minimum no longer strictly later than the unfiltered one). Re-swept
+    /// seeds 1/2/3/5/7/42/100 on the merged tree: seed 100 shows it — this is
+    /// a technical witness, not a preregistered claim on a subject
     /// world — the seed exists only to exhibit the gap `first_day`'s object
     /// filter must preserve — so swapping it (rather than re-pinning the
     /// numbers on the seed that lost the gap) is the right move, unlike the
@@ -13087,13 +13763,13 @@ mod tests {
     /// passing for the wrong reason.
     #[test]
     fn first_day_of_a_keyed_object_with_a_higher_floor_matches_an_independently_computed_minimum() {
-        let v = FullView::build(Seed(7), &SkyPins::default()).expect("seed 7 builds");
+        let v = FullView::build(Seed(11), &SkyPins::default()).expect("seed 11 builds");
         let mut unfiltered_days: Vec<f64> = v
             .world()
             .ledger
             .find("occ-tech")
             .filter_map(|f| f.day)
-            .map(|d| d.day())
+            .map(|d| d.as_std_days())
             .collect();
         assert!(
             !unfiltered_days.is_empty(),
@@ -13108,7 +13784,7 @@ mod tests {
             .find("occ-tech")
             .filter(|f| matches!(&f.object, Value::Text(t) if t == "iron"))
             .filter_map(|f| f.day)
-            .map(|d| d.day())
+            .map(|d| d.as_std_days())
             .collect();
         assert!(
             days.len() > 1,
@@ -13211,7 +13887,7 @@ mod tests {
     /// assertion.
     #[test]
     fn at_least_one_first_day_metric_is_absent_on_seed_42() {
-        let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let v = FullView::build(Seed(11), &SkyPins::default()).expect("seed 11 builds");
         let absent: Vec<&str> = FIRST_DAY_METRICS
             .iter()
             .filter(|name| matches!(extract(&v, name), MetricValue::Absent))
@@ -13977,7 +14653,7 @@ mod tests {
     }
 
     /// The Watershed's six staples (`hornvale_climate::Crop::catalog()`,
-    /// gated `Steeped` in `exposure_of` only where a settled cell's
+    /// gated `Steeped` in `exposure_of` only where a settled vertex's
     /// subsistence is `Farming`) reach `Steeped` through the crop gate that
     /// `independently_steeped_concepts` never learned — F13, the third
     /// recurrence of the duplicate going stale. Named individually so ADDING
@@ -14367,8 +15043,8 @@ mod tests {
         // survived.
         //
         // ELEVENTH PASS (The Underworld, Task 8, spec §4.6's node-index
-        // re-key). Re-keying the deep-history node index on `(cell, rung)`
-        // takes drow out of the competition for surface cells, re-placing
+        // re-key). Re-keying the deep-history node index on `(vertex, rung)`
+        // takes drow out of the competition for surface vertices, re-placing
         // every world, and seed 26's hobgoblin lost its barley band. Re-swept
         // 0..150 with `sweep_for_the_independent_reading_witness` above — the
         // shipped method, run with `--ignored --release` (333.60 s), the
@@ -14413,10 +15089,16 @@ mod tests {
         // earliest-pair rule, not because it came back.
         //
         // **THE SUBJECT MOVED AGAIN.** Seed 78 -> 26 and goblin -> hobgoblin.
-        let view = FullView::build(Seed(26), &SkyPins::default()).unwrap();
-        let lexicon = lex(&view, "hobgoblin").expect("seed 26 hobgoblins hold a lexicon");
-        let steeped = independently_steeped_concepts(&view, "hobgoblin")
-            .expect("hobgoblin is placed at seed 26");
+        //
+        // **THE GRANARY re-witness (2026-08-24): seed 26 -> seed 133.** The
+        // sub-year raid timing moved the worlds again and (26, hobgoblin) no
+        // longer roots barley. Re-swept seeds 0..150 against every placed
+        // people by the same dynamic method; (133, hobgoblin) clears all six
+        // staple bands, with (145, hobgoblin) and (145, bugbear) behind it.
+        let view = FullView::build(Seed(133), &SkyPins::default()).unwrap();
+        let lexicon = lex(&view, "hobgoblin").expect("hobgoblins hold a lexicon");
+        let steeped =
+            independently_steeped_concepts(&view, "hobgoblin").expect("hobgoblin is placed");
         for staple in STAPLE_CONCEPTS {
             // The sweep's own criterion, asserted rather than assumed: this
             // test bites only where WORLDGEN steeps the staple, and a lexicon
@@ -14434,5 +15116,325 @@ mod tests {
                  worldgen does — the duplicate is stale again"
             );
         }
+    }
+
+    /// **The Confidant, the campaign `calibration.rs`'s
+    /// `lexicon_is_exposure_sound_for_both_species` doc calls for**: "the
+    /// repair, its regen, and the question of what keeps the two copies in
+    /// step are a campaign, not a followup." This is that third thing —
+    /// F13 recurred three times (Task 4's toponymic gates, The Toponym's
+    /// variants, The Watershed's staples) purely because nothing checked
+    /// `independently_steeped_concepts` against `hornvale_worldgen::
+    /// exposure_from` directly; every prior repair only checked one axis
+    /// (the staple sweep above checks staples, the toponymic test checks
+    /// toponyms) and left the general case to the census.
+    ///
+    /// Sweeps several seeds and every placed people, and for every concept
+    /// `exposure_from` classifies (its full `BTreeMap`, not a curated
+    /// subset) asserts the two agree on the one bit `exposure_sound` cares
+    /// about — is this concept `Steeped`. Concepts the lab's independent
+    /// reading deliberately never reproduces (the `KnowsOf`-only rules —
+    /// biome-of-neighbor, sea/coast/lake proximity, the intercardinal
+    /// bearings; see `independently_steeped_concepts`'s own doc) still pass:
+    /// `exposure_from` classifies those `KnowsOf`, never `Steeped`, so
+    /// "does the lab's set contain it" (`false`) agrees with "is it
+    /// `Steeped`" (`false`) without needing to know the rule that produced
+    /// either reading.
+    ///
+    /// Failure names the seed, species and concept that disagree — the loud
+    /// version of the silent drift F13 recurred as three times, caught here
+    /// instead of on the next census's `exposure-sound-*` column.
+    ///
+    /// claim: invariant(forall-seed) — over [1,5,7,26,42,83,100]
+    #[test]
+    fn exposure_classification_agrees_with_the_independent_rederivation() {
+        let mut checked = 0usize;
+        for seed in [1u64, 5, 7, 26, 42, 83, 100] {
+            let Ok(view) = FullView::build(Seed(seed), &SkyPins::default()) else {
+                continue;
+            };
+            let (world, terrain, climate) = (view.world(), view.terrain(), view.climate());
+            for species in all_daughters(&view) {
+                let Ok(authoritative) =
+                    hornvale_worldgen::exposure_from(world, species, terrain, climate)
+                else {
+                    continue;
+                };
+                let Some(independent) = independently_steeped_concepts(&view, species) else {
+                    continue;
+                };
+                for (concept, class) in &authoritative {
+                    let worldgen_steeped =
+                        matches!(class, hornvale_language::ExposureClass::Steeped);
+                    let lab_steeped = independent.contains(concept);
+                    assert_eq!(
+                        worldgen_steeped, lab_steeped,
+                        "seed {seed}, species {species}, concept {concept}: \
+                         hornvale_worldgen::exposure_from says Steeped={worldgen_steeped}, \
+                         independently_steeped_concepts says {lab_steeped} — the two \
+                         exposure derivations have diverged"
+                    );
+                    checked += 1;
+                }
+            }
+        }
+        assert!(
+            checked > 0,
+            "no (seed, species, concept) triples were checked — the sweep is vacuous"
+        );
+    }
+
+    /// Extract a metric's `f64`, panicking on anything else — a test
+    /// convenience mirroring `extract_from`'s own "fail loudly, don't guess"
+    /// posture.
+    fn number_of(value: &MetricValue) -> f64 {
+        match value {
+            MetricValue::Number(n) => *n,
+            other => panic!("expected Number, got {other:?}"),
+        }
+    }
+
+    /// **Task 7 reshape.** The census found all 45 of these columns constant
+    /// across 1000 seeds, so they were unregistered — this is the check that
+    /// proves unregistration is COMPLETE, the exact condition
+    /// `assert_eq!(registry().len(), 224)` above states in aggregate but
+    /// cannot localize by name. Replaces the pre-reshape
+    /// `confidant_metrics_are_registered_for_all_fifteen_peoples`, which
+    /// asserted the opposite.
+    #[test]
+    fn confidant_metrics_are_not_registered_in_the_lab_registry() {
+        let reg = registry();
+        for species in CONFIDANT_PEOPLES {
+            for prefix in [
+                "reportable-fraction",
+                "collapse-ratio",
+                "misreport-distance",
+            ] {
+                let name = format!("{prefix}-{species}");
+                assert!(
+                    !reg.iter().any(|m| m.name == name),
+                    "{name} is still registered as a lab metric — Task 7's reshape moved \
+                     this instrument to render_confidant_report precisely because every one \
+                     of its 45 columns read constant across a 1000-seed census, so it must \
+                     not re-enter the registry a `\"metrics\": \"all\"` study would pick up"
+                );
+            }
+        }
+    }
+
+    /// The artifact [`render_confidant_report`] now carries what the
+    /// registry used to: one row per one of the fifteen
+    /// [`CONFIDANT_PEOPLES`], with all three columns present, and no second
+    /// derivation — every field is built with the exact same
+    /// [`confidant_field`] call the renderer itself makes over the exact same
+    /// helper functions the pinned constraint tests below exercise directly.
+    /// goblin's `Absent` columns (no felt-state word at all) are covered by
+    /// this same loop, not a special case: [`confidant_field`] renders them
+    /// as the em-dash marker, and this test confirms the report contains
+    /// that exact rendering rather than a blank field or a manufactured
+    /// zero.
+    #[test]
+    fn render_confidant_report_carries_every_peoples_three_columns() {
+        let report = render_confidant_report().unwrap();
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        for species in CONFIDANT_PEOPLES {
+            let rf = confidant_field(&reportable_fraction_for(&view, species));
+            let cr = confidant_field(&collapse_ratio_for(&view, species));
+            let md = confidant_field(&misreport_distance_for(&view, species));
+            let row = format!("| {species} | {rf} | {cr} | {md} |");
+            assert!(
+                report.contains(&row),
+                "render_confidant_report is missing the expected row {row:?} in:\n{report}"
+            );
+        }
+    }
+
+    /// Same standing as `windows/sentiment`'s `catalog_is_deterministic`:
+    /// this artifact is a pure function of `Seed(42)` and the authored
+    /// catalogs `lex` reads through, so two calls must be byte-identical —
+    /// the same guarantee the drift check over `docs/generated-paths.txt`
+    /// relies on to make a stale committed copy detectable at all.
+    #[test]
+    fn render_confidant_report_is_deterministic() {
+        assert_eq!(
+            render_confidant_report().unwrap(),
+            render_confidant_report().unwrap()
+        );
+    }
+
+    /// **Task 7 brief constraint 1: the 50% ceiling is an artifact of Task
+    /// 4b's exposure rule, not a finding, and must be reported as such.**
+    /// `reportable_fraction` can never exceed 3/6 for any of the fifteen.
+    /// Also the non-degenerate case constraint 3 demands: goblin's exact
+    /// `0.0` is real (its `MindVector` sits at the manikin on every axis,
+    /// Task 4b), not a bug and not `Absent`; and the roster's distribution
+    /// spans three distinct values (0, 1/6, 1/3), never collapsing to one
+    /// number shared by all fifteen.
+    #[test]
+    fn reportable_fraction_never_exceeds_the_construction_ceiling_at_seed_42() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let mut distinct_sixths = std::collections::BTreeSet::new();
+        for species in CONFIDANT_PEOPLES {
+            let value = number_of(&reportable_fraction_for(&view, species));
+            assert!(
+                value <= 0.5 + 1.0e-12,
+                "{species}'s reportable_fraction {value} exceeds the 3-of-6 construction \
+                 ceiling — Task 4b's exposure rule Steeps at most one pole per pair"
+            );
+            // f64 has no total order for a BTreeSet key; every value this
+            // metric can produce is an exact multiple of 1/6 by construction
+            // (a plain count over six states), so round-tripping through
+            // sixths is exact, not an approximation.
+            distinct_sixths.insert((value * 6.0).round() as i64);
+        }
+        assert!(
+            distinct_sixths.len() > 1,
+            "reportable_fraction reads the same for all fifteen peoples — a uniform value \
+             across the whole roster is a finding (probably a bug), not a pass"
+        );
+        assert_eq!(
+            number_of(&reportable_fraction_for(&view, "goblin")),
+            0.0,
+            "goblin's MindVector sits exactly at the manikin on every axis (Task 4b): a \
+             real zero, not a rounding artifact"
+        );
+        assert!(
+            (number_of(&reportable_fraction_for(&view, "snow-elf")) - 1.0 / 6.0).abs() < 1.0e-12
+        );
+        assert!(
+            (number_of(&reportable_fraction_for(&view, "hobgoblin")) - 1.0 / 3.0).abs() < 1.0e-12
+        );
+    }
+
+    /// **Constraint 3's non-degenerate case for `collapse_ratio`.** `goblin`
+    /// has no word for anything, so the metric is undefined for it —
+    /// `Absent`, not a manufactured zero. `snow-elf` (one known word,
+    /// `helpless`) fully collapses: all six reachable states report through
+    /// it, so the max group size hits the metric's own ceiling of 6.
+    #[test]
+    fn collapse_ratio_is_absent_for_the_wordless_and_full_for_the_single_worded() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        assert_eq!(collapse_ratio_for(&view, "goblin"), MetricValue::Absent);
+        assert_eq!(
+            number_of(&collapse_ratio_for(&view, "snow-elf")),
+            6.0,
+            "snow-elf holds exactly one felt-state word (helpless); every other reachable \
+             state must report through it"
+        );
+    }
+
+    /// **`collapse_ratio` is not a disguised `reportable_fraction`.** Two
+    /// peoples holding the SAME NUMBER of felt-state words (0.5 == 3/6, the
+    /// modal reading eleven of fifteen share) can still collapse their other
+    /// three states onto their known words very differently, because the max
+    /// group size this metric reads depends on WHICH words a people has, not
+    /// merely how many: bugbear's three
+    /// (`eager`/`frustrated`/`searching`) sit at three distinct circumplex
+    /// points and split the remaining three states 2-and-1; drow's three
+    /// (`content`/`frustrated`/`helpless`) sit at only TWO distinct points —
+    /// `frustrated` and `helpless` coincide on the circumplex (Task 4's own
+    /// pinned `frustrated_and_helpless_coincide_on_the_circumplex`) — so one
+    /// of drow's "three" words carries double duty and the split is 4-and-1.
+    /// This is the mutation-provable seam: deriving `collapse_ratio` from
+    /// `6 / known_word_count` instead of the actual per-state mapping would
+    /// pass every OTHER test in this file yet fail this one, because it
+    /// would force bugbear and drow to the same reading.
+    #[test]
+    fn collapse_ratio_varies_independently_of_reportable_fraction_at_seed_42() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        assert_eq!(
+            number_of(&reportable_fraction_for(&view, "bugbear")),
+            number_of(&reportable_fraction_for(&view, "drow")),
+            "this test's whole point needs equal reportable_fraction going in"
+        );
+        let bugbear = number_of(&collapse_ratio_for(&view, "bugbear"));
+        let drow = number_of(&collapse_ratio_for(&view, "drow"));
+        assert_ne!(
+            bugbear, drow,
+            "equal reportable_fraction (0.5) produced equal collapse_ratio ({bugbear}) — \
+             the metric would carry no information reportable_fraction doesn't already"
+        );
+        assert_eq!(bugbear, 2.0);
+        assert_eq!(drow, 4.0);
+    }
+
+    /// **Constraint 3's non-degenerate case for `misreport_distance`.**
+    /// `Absent` exactly when there is no word to report through (goblin); a
+    /// real, non-zero mean elsewhere, and NOT the same number for every
+    /// non-goblin people — bugbear's three known words sit closer, on
+    /// average, to the states they stand in for than drow's do (the same
+    /// `frustrated`/`helpless` coincidence `collapse_ratio`'s sibling test
+    /// documents changes drow's effective coverage, not just its count).
+    #[test]
+    fn misreport_distance_is_absent_for_goblin_and_varies_elsewhere_at_seed_42() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        assert_eq!(misreport_distance_for(&view, "goblin"), MetricValue::Absent);
+        let bugbear = number_of(&misreport_distance_for(&view, "bugbear"));
+        let drow = number_of(&misreport_distance_for(&view, "drow"));
+        assert!(
+            bugbear > 0.0 && drow > 0.0,
+            "both peoples hold words but still misreport at least one reachable state"
+        );
+        assert_ne!(bugbear, drow);
+        assert!((bugbear - 2.0 / 3.0).abs() < 1.0e-12);
+        assert!((drow - 1.0).abs() < 1.0e-12);
+    }
+
+    /// **Confirms, by direct measurement, the redundant-build finding this
+    /// task's report names and then guards the fix against regressing.**
+    /// Before memoisation, this test measured **45** (`LEX_BUILD_CALLS`
+    /// incremented once per `reportable_fraction_for`/`collapse_ratio_for`/
+    /// `misreport_distance_for` call across the fifteen
+    /// `society_registry()` peoples — 3 families x 15 species, each paying
+    /// its own uncached `lexicon_from_in`). After adding [`FullView`]'s
+    /// `lexicon_cache`, it is **15**: one build per species, shared by all
+    /// three families through [`lex`]'s memoised body. A future change that
+    /// reintroduces a second uncached path (a new family bypassing `lex`, or
+    /// a cache keyed wrong) would move this number back toward 45 and this
+    /// test would catch it, the same way `windows/lab/CLAUDE.md`'s Rill
+    /// section describes for `TerrainView::band_transects`.
+    #[test]
+    fn felt_testimony_metrics_share_one_lexicon_build_per_species() {
+        LEX_BUILD_CALLS.with(|c| c.set(0));
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        for species in CONFIDANT_PEOPLES {
+            let _ = reportable_fraction_for(&view, species);
+            let _ = collapse_ratio_for(&view, species);
+            let _ = misreport_distance_for(&view, species);
+        }
+        let calls = LEX_BUILD_CALLS.with(|c| c.get());
+        assert_eq!(
+            calls, 15,
+            "expected one lexicon build per species (15), shared across all three metric \
+             families by FullView's per-view cache — {calls} means the memoisation regressed"
+        );
+    }
+
+    /// **Confirms, by direct measurement, the redundant-build finding this
+    /// task's report names and then guards the fix against regressing**
+    /// (task 3 of The Governor, mirroring
+    /// `felt_testimony_metrics_share_one_lexicon_build_per_species` above).
+    /// Before memoisation, evaluating both `per-cell-diversity` and  // lexicon: frozen metric name (per-cell-diversity), not the mesh sense
+    /// `composition-variance` on the same view called
+    /// `hornvale_worldgen::demography_report_from` **twice** — each metric's
+    /// extractor built its own report, profiled at 7.58% + 7.53% of census
+    /// study cycles. After `SettlementView::demography_report`'s memoised
+    /// body, it is **once**: both metrics read the same cached report. A
+    /// future change that reintroduces a second uncached path (a metric
+    /// bypassing `demography_report`, or a cache that gets rebuilt) would
+    /// move this number back toward 2, and this test would catch it.
+    #[test]
+    fn demography_metrics_share_one_report_build_per_view() {
+        DEMOGRAPHY_BUILD_CALLS.with(|c| c.set(0));
+        let view = SettlementView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Settlement(view);
+        let _ = extract_from(&built, "per-cell-diversity"); // lexicon: frozen metric name (per-cell-diversity), not the mesh sense
+        let _ = extract_from(&built, "composition-variance");
+        let calls = DEMOGRAPHY_BUILD_CALLS.with(|c| c.get());
+        assert_eq!(
+            calls, 1,
+            "expected one demography report build shared by both metrics — {calls} means the \
+             memoisation regressed"
+        );
     }
 }

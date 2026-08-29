@@ -26,7 +26,7 @@
 //! is disclosed in the campaign's chronicle.
 //!
 //! **What is reported is band VARIETY, not reach-the-deepest.** The frozen
-//! wording asked "how many cells have reach 4", and the naive translation is
+//! wording asked "how many vertices have reach 4", and the naive translation is
 //! "what fraction reach `Roots`". That translation is unfaithful in the
 //! direction that matters: a world where *every* cave is `Roots` scores 100%
 //! on it and is exactly the falsification §7 names — a uniform column with
@@ -40,10 +40,10 @@
 //! (`Regolith/Cover/Basement/Roots`) does not include. A nonzero count is a
 //! finding for Task 1, not a gate result.
 //!
-//! **Land** is `!terrain.is_ocean(cell)` — the identical predicate
+//! **Land** is `!terrain.is_ocean(vertex)` — the identical predicate
 //! `windows/worldgen/tests/{confluence,demesne,watershed_measure}.rs` use
 //! throughout, and the one `cave_at` itself already gates on internally (it
-//! returns `None` on every `is_ocean` cell — see `GeneratedTerrain::cave_at`),
+//! returns `None` on every `is_ocean` vertex — see `GeneratedTerrain::cave_at`),
 //! so this harness introduces no second, independently-chosen land test.
 //!
 //! Built to `BuildDepth::Terrain`, the shallowest rung that produces terrain
@@ -60,8 +60,8 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{Band, CellId, Geosphere, Seed, Value};
-use hornvale_settlement::CELL_ID;
+use hornvale_kernel::{Band, Geosphere, Seed, Value, Vertex};
+use hornvale_settlement::VERTEX_ID;
 use hornvale_terrain::{
     Cave, CaveKind, GeneratedTerrain, GeothermalGradient, Horizon, TerrainPins, rung_at_depth,
 };
@@ -112,14 +112,14 @@ fn rung_index(rung: Band) -> usize {
     }
 }
 
-/// One seed's measured cave substrate: land/cave cell counts, the
+/// One seed's measured cave substrate: land/cave vertex counts, the
 /// [`Cave::deepest_horizon`] histogram (indexed by [`band_index`]), the
-/// `CaveKind` breakdown, and the clustering split (cave cells with >=1
+/// `CaveKind` breakdown, and the clustering split (cave vertices with >=1
 /// neighbouring cave, vs. none).
 struct SeedReport {
     seed: u64,
-    land_cells: usize,
-    cave_cells: usize,
+    land_vertices: usize,
+    cave_vertices: usize,
     band_histogram: [usize; 5],
     kind_karst: usize,
     kind_lava_tube: usize,
@@ -139,7 +139,7 @@ impl SeedReport {
 }
 
 /// Build `seed` to `BuildDepth::Terrain` and measure its cave substrate over
-/// every land cell (`!terrain.is_ocean`).
+/// every land vertex (`!terrain.is_ocean`).
 fn measure_one(seed: Seed) -> SeedReport {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let artifacts = build_world_to_with_artifacts(
@@ -157,37 +157,37 @@ fn measure_one(seed: Seed) -> SeedReport {
         .unwrap_or_else(|| panic!("{seed:?} at BuildDepth::Terrain produced no terrain"));
     let geo = terrain.geosphere();
 
-    let mut land_cells = 0usize;
-    let mut cave_cells = 0usize;
+    let mut land_vertices = 0usize;
+    let mut cave_vertices = 0usize;
     let mut band_histogram = [0usize; 5];
     let mut kind_karst = 0usize;
     let mut kind_lava_tube = 0usize;
     let mut kind_fracture = 0usize;
-    let mut cave_set: BTreeSet<CellId> = BTreeSet::new();
+    let mut cave_set: BTreeSet<Vertex> = BTreeSet::new();
 
-    for cell in geo.cells() {
-        if terrain.is_ocean(cell) {
+    for vertex in geo.vertices() {
+        if terrain.is_ocean(vertex) {
             continue;
         }
-        land_cells += 1;
-        if let Some(cave) = terrain.cave_at(cell) {
-            cave_cells += 1;
+        land_vertices += 1;
+        if let Some(cave) = terrain.cave_at(vertex) {
+            cave_vertices += 1;
             band_histogram[band_index(cave.deepest_horizon)] += 1;
             match cave.kind {
                 CaveKind::Karst => kind_karst += 1,
                 CaveKind::LavaTube => kind_lava_tube += 1,
                 CaveKind::Fracture => kind_fracture += 1,
             }
-            cave_set.insert(cell);
+            cave_set.insert(vertex);
         }
     }
 
-    // Clustering: a cave cell "clusters" if any of its mesh neighbours also
+    // Clustering: a cave vertex "clusters" if any of its mesh neighbours also
     // carries a cave; "stands alone" otherwise.
     let mut clustered = 0usize;
     let mut solitary = 0usize;
-    for &cell in &cave_set {
-        let has_cave_neighbor = geo.neighbors(cell).iter().any(|nb| cave_set.contains(nb));
+    for &vertex in &cave_set {
+        let has_cave_neighbor = geo.neighbors(vertex).iter().any(|nb| cave_set.contains(nb));
         if has_cave_neighbor {
             clustered += 1;
         } else {
@@ -197,8 +197,8 @@ fn measure_one(seed: Seed) -> SeedReport {
 
     SeedReport {
         seed: seed.0,
-        land_cells,
-        cave_cells,
+        land_vertices,
+        cave_vertices,
         band_histogram,
         kind_karst,
         kind_lava_tube,
@@ -212,7 +212,7 @@ fn measure_one(seed: Seed) -> SeedReport {
 /// per seed (audit note: coincidental duplicate name with worldgen's
 /// hollow_readout.rs::report_cave_substrate, a different test)
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: cave-substrate band coverage over the realm; run by hand (The Deep Realm/The Hollow, Task 0, answered its question; demoted by The Governor 2026-08-28)"]
 fn report_cave_substrate() {
     let mut per_seed: Vec<SeedReport> = Vec::new();
     for seed in SEEDS {
@@ -232,8 +232,8 @@ fn report_cave_substrate() {
         println!(
             "seed {}: land={} caves={} bands(Reg,Cov,Bas,Roo,Und)={:?} distinct_bands={} karst={} lava_tube={} fracture={} clustered={} solitary={}",
             r.seed,
-            r.land_cells,
-            r.cave_cells,
+            r.land_vertices,
+            r.cave_vertices,
             r.band_histogram,
             r.distinct_bands(),
             r.kind_karst,
@@ -242,8 +242,8 @@ fn report_cave_substrate() {
             r.clustered,
             r.solitary
         );
-        total_land += r.land_cells;
-        total_caves += r.cave_cells;
+        total_land += r.land_vertices;
+        total_caves += r.cave_vertices;
         for (total, count) in total_hist.iter_mut().zip(r.band_histogram.iter()) {
             *total += count;
         }
@@ -255,8 +255,8 @@ fn report_cave_substrate() {
     }
 
     println!("== aggregate over seeds {:?} ==", SEEDS);
-    println!("TOTAL land_cells = {total_land}");
-    println!("TOTAL cave_cells = {total_caves}");
+    println!("TOTAL land_vertices = {total_land}");
+    println!("TOTAL cave_vertices = {total_caves}");
     println!(
         "1. cave fraction of land = {:.6} ({total_caves}/{total_land})",
         total_caves as f64 / total_land as f64
@@ -270,7 +270,7 @@ fn report_cave_substrate() {
     }
 
     // 3. The gate's load-bearing number. The frozen wording asked "how many
-    //    cells have reach 4"; the ceiling reading is reported for continuity,
+    //    vertices have reach 4"; the ceiling reading is reported for continuity,
     //    but the number C2a's chamber graph actually consumes is whether the
     //    depth budget DIFFERS BY PLACE. A substrate where every cave sits at
     //    one band scores 100% on a reach-the-deepest criterion and is spec
@@ -323,12 +323,12 @@ fn report_cave_substrate() {
     // looks identical to one that works.
     assert!(!per_seed.is_empty(), "no seeds sampled");
     assert!(
-        per_seed.iter().all(|r| r.land_cells > 0),
+        per_seed.iter().all(|r| r.land_vertices > 0),
         "a seed had no land"
     );
     assert!(
-        per_seed.iter().all(|r| r.cave_cells <= r.land_cells),
-        "more caves than land cells — the land mask and cave_at disagree"
+        per_seed.iter().all(|r| r.cave_vertices <= r.land_vertices),
+        "more caves than land vertices — the land mask and cave_at disagree"
     );
 
     // Exhaustiveness. The Hollow's operational finding: checking that a
@@ -354,11 +354,11 @@ fn report_cave_substrate() {
 // measures nothing must not look identical to one that works:
 //
 // 1. H2, reported on TWO different populations. The spec's own wording
-//    ("chambers per cell is heavily zero-weighted") is true for a trivial
-//    reason: ~88% of land cells hold no cave at all (Task 0), so a per-CELL
+//    ("chambers per vertex is heavily zero-weighted") is true for a trivial
+//    reason: ~88% of land vertices hold no cave at all (Task 0), so a per-VERTEX
 //    histogram is zero-weighted by cave RARITY, not by chamber SPARSITY.
 //    Reporting chambers-per-CAVE (the population that actually has a lattice
-//    to be sparse or dense in) alongside chambers-per-CELL is what keeps H2
+//    to be sparse or dense in) alongside chambers-per-VERTEX is what keeps H2
 //    from passing for the wrong reason.
 // 2. The coin-flip prediction. `EXISTENCE_DENSITY = 0.5` (private to
 //    `chamber.rs`; restated here as [`PREDICTED_EXISTENCE_DENSITY`], the
@@ -383,12 +383,12 @@ fn report_cave_substrate() {
 // (can a player get there, not what the graph looks like once they do).
 //
 // -----------------------------------------------------------------------------
-// WHAT IT MEASURED (2026-08-06, seeds 1..=30, 469,122 land cells, 55,947 caves).
+// WHAT IT MEASURED (2026-08-06, seeds 1..=30, 469,122 land vertices, 55,947 caves).
 // Recorded here because a readout whose results live only in stdout is one
 // somebody has to re-run to learn anything.
 //
 //   chambers per CAVE   median 5, p25 4, p75 7, max 15, mean 5.6799, cv 0.4044
-//   chambers per CELL   median 0 (88.07% of land is cave-free), mean 0.6774
+//   chambers per VERTEX   median 0 (88.07% of land is cave-free), mean 0.6774
 //
 //   by band, measured vs theory:
 //     Cover     ( 8 addr, 22395)  mean 4.0096 sd 1.4148 cv 0.3529
@@ -430,11 +430,11 @@ fn report_cave_substrate() {
 // -----------------------------------------------------------------------------
 // =============================================================================
 
-/// Land-only graph-distance radii (terrain-cell hops — see [`land_distances`])
-/// the coverage readout reports land-cell fractions at. These are NOT
+/// Land-only graph-distance radii (terrain-vertex hops — see [`land_distances`])
+/// the coverage readout reports land-vertex fractions at. These are NOT
 /// simulated walk steps: Task 5's implementer's 8000-step locale-mesh walk
 /// (room-scale) covered only 64 of these much coarser (~110 km) terrain
-/// cells, so even a handful of hops here already spans a large real
+/// vertices, so even a handful of hops here already spans a large real
 /// distance.
 const REPORT_RADII: [u32; N_RADII] = [1, 2, 3, 5, 10];
 
@@ -529,7 +529,7 @@ fn addresses_in_budget_per_floor(rung_idx: usize) -> usize {
 }
 
 /// Every chamber address that exists over the five bands **of floor 0** at
-/// `(seed, cell)`, gated by `cave`'s own measured depth budget.
+/// `(seed, vertex)`, gated by `cave`'s own measured depth budget.
 ///
 /// **Floor 0, not the whole lattice** (The Stope, `chamber/v3`): the lattice
 /// admits `LEVELS_PER_BRANCH_CEILING` floors per run, so this walks 1/20 of the
@@ -544,13 +544,18 @@ fn addresses_in_budget_per_floor(rung_idx: usize) -> usize {
 /// rather than shared — a test helper is not part of any crate's public
 /// surface, and that file already restates the band ladder for the same
 /// reason. Always probes `entrance: 0`: today's terrain model reports one
-/// aperture per cave cell (see `ChamberAddr::entrance`'s own doc).
-fn chamber_count_at(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: CellId) -> usize {
+/// aperture per cave vertex (see `ChamberAddr::entrance`'s own doc).
+fn chamber_count_at(
+    seed: Seed,
+    cave: &Cave,
+    gradient: GeothermalGradient,
+    vertex: Vertex,
+) -> usize {
     let mut count = 0usize;
     for &band in Band::habitation() {
         for branch in 0..BRANCHES_PER_SYSTEM {
             let addr = ChamberAddr {
-                cell,
+                vertex,
                 band,
                 branch,
                 level: 0,
@@ -577,13 +582,13 @@ fn chamber_count_at(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell:
 /// kept rather than deleted because restricted passage is owed work
 /// (`MAP-restricted-passage`) and this is the instrument that will report it
 /// returning; a constant `false` today is a measurement, not dead code.
-fn is_sealed(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: CellId) -> bool {
+fn is_sealed(seed: Seed, cave: &Cave, gradient: GeothermalGradient, vertex: Vertex) -> bool {
     !chamber_exists(
         seed,
         cave,
         gradient,
         ChamberAddr {
-            cell,
+            vertex,
             band: Band::Undercroft,
             branch: 0,
             level: 0,
@@ -592,31 +597,31 @@ fn is_sealed(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: CellId
 }
 
 /// Multi-source, LAND-ONLY (`!terrain.is_ocean`) graph distance in
-/// terrain-cell hops from every cell in `sources` simultaneously, over
+/// terrain-vertex hops from every vertex in `sources` simultaneously, over
 /// `geo.neighbors` — the "cheap graph/mesh distance" Task 8's brief asks for
 /// explicitly INSTEAD OF a simulated walk. Mirrors `domains/terrain/src/
-/// boundaries.rs`'s `boundary_distance`: a dense `Vec` indexed by `cell.0`
+/// boundaries.rs`'s `boundary_distance`: a dense `Vec` indexed by `vertex.0`
 /// (kernel convention: dense-index storage is `Vec`, never a map), a
 /// `VecDeque` FIFO queue, ascending source/neighbor enqueue order — fully
 /// deterministic regardless of `sources`' own iteration order (a
-/// `BTreeSet`). `None` for a cell no source can reach without crossing ocean
+/// `BTreeSet`). `None` for a vertex no source can reach without crossing ocean
 /// (a different landmass).
 fn land_distances(
     geo: &Geosphere,
     terrain: &GeneratedTerrain,
-    sources: &BTreeSet<CellId>,
+    sources: &BTreeSet<Vertex>,
 ) -> Vec<Option<u32>> {
-    let mut dist: Vec<Option<u32>> = vec![None; geo.cell_count()];
-    let mut queue: VecDeque<CellId> = VecDeque::new();
-    for cell in geo.cells() {
-        if sources.contains(&cell) {
-            dist[cell.0 as usize] = Some(0);
-            queue.push_back(cell);
+    let mut dist: Vec<Option<u32>> = vec![None; geo.vertex_count()];
+    let mut queue: VecDeque<Vertex> = VecDeque::new();
+    for vertex in geo.vertices() {
+        if sources.contains(&vertex) {
+            dist[vertex.0 as usize] = Some(0);
+            queue.push_back(vertex);
         }
     }
-    while let Some(cell) = queue.pop_front() {
-        let d = dist[cell.0 as usize].expect("queued cells are always labeled before dequeue");
-        for &neighbor in geo.neighbors(cell) {
+    while let Some(vertex) = queue.pop_front() {
+        let d = dist[vertex.0 as usize].expect("queued vertices are always labeled before dequeue");
+        for &neighbor in geo.neighbors(vertex) {
             if terrain.is_ocean(neighbor) {
                 continue;
             }
@@ -730,32 +735,32 @@ fn summarize(values: &[usize]) -> Summary {
 struct T8SeedReport {
     /// The seed measured.
     seed: u64,
-    /// Land cells this seed's terrain sculpted (`!terrain.is_ocean`).
-    land_cells: usize,
-    /// `(chamber_count, delve_rung, sealed)` — one entry per land cell that
+    /// Land vertices this seed's terrain sculpted (`!terrain.is_ocean`).
+    land_vertices: usize,
+    /// `(chamber_count, delve_rung, sealed)` — one entry per land vertex that
     /// carries a cave. The middle element is the **gate's own axis**: it was
     /// `deepest_horizon` while the gate was `band_rank`, and became the cave's
     /// delve rung when `chamber/v2` re-pointed the lattice, so the
     /// count-versus-prediction breakdown keeps comparing like with like.
-    cave_cells: Vec<(usize, Band, bool)>,
-    /// Chamber count for EVERY land cell, cave or not (0 where there is no
+    cave_vertices: Vec<(usize, Band, bool)>,
+    /// Chamber count for EVERY land vertex, cave or not (0 where there is no
     /// cave) — H2's own literal wording, reported so its zero-weighting can
     /// be attributed correctly rather than assumed.
-    per_cell_counts: Vec<usize>,
+    per_vertex_counts: Vec<usize>,
     /// Land-only graph-hop distance ([`land_distances`]) from the flagship
-    /// settlement's cell to the nearest land cell holding a NON-SEALED cave.
+    /// settlement's vertex to the nearest land vertex holding a NON-SEALED cave.
     /// `None` if this seed placed no settlement, or the flagship's landmass
     /// holds no reachable non-sealed cave.
     flagship_to_open_cave: Option<u32>,
-    /// Fraction of land cells within each [`REPORT_RADII`] hop-radius of ANY
-    /// non-sealed cave cell, aligned index-for-index with `REPORT_RADII`.
+    /// Fraction of land vertices within each [`REPORT_RADII`] hop-radius of ANY
+    /// non-sealed cave vertex, aligned index-for-index with `REPORT_RADII`.
     coverage_by_radius: [f64; N_RADII],
 }
 
 /// Builds `seed` to `BuildDepth::Settlements` — the shallowest rung that
 /// places a flagship (`BuildDepth`'s own doc: "…plus settlement placement,
 /// naming, and glosses") — and measures Task 8's whole readout in one build:
-/// H2's chamber distribution (per cave AND per cell), the depth-weld's
+/// H2's chamber distribution (per cave AND per vertex), the depth-weld's
 /// per-band breakdown (via each cave's own `deepest_horizon`), and
 /// reachability from the flagship start. Terrain facts are a byte-identical
 /// prefix of the `BuildDepth::Terrain` build Task 0 uses (`BuildDepth`'s own
@@ -779,63 +784,63 @@ fn measure_t8(seed: Seed) -> T8SeedReport {
     let world = artifacts.world;
     let geo = terrain.geosphere();
 
-    // The flagship's cell, via the same `CELL_ID` fact `confluence.rs`
+    // The flagship's vertex, via the same `VERTEX_ID` fact `confluence.rs`
     // already reads a settlement's location through — no separate,
     // independently-chosen lookup.
-    let flagship_cell: Option<CellId> = hornvale_settlement::all_settlements(&world)
+    let flagship_vertex: Option<Vertex> = hornvale_settlement::all_settlements(&world)
         .into_iter()
         .next()
-        .and_then(|s| match world.ledger.value_of(s.id, CELL_ID) {
-            Some(Value::Number(n)) => Some(CellId(*n as u32)),
+        .and_then(|s| match world.ledger.value_of(s.id, VERTEX_ID) {
+            Some(Value::Number(n)) => Some(Vertex(*n as u32)),
             _ => None,
         });
 
-    let mut land_cells = 0usize;
-    let mut land_cell_ids: Vec<CellId> = Vec::new();
-    let mut cave_cells: Vec<(usize, Band, bool)> = Vec::new();
-    let mut per_cell_counts: Vec<usize> = Vec::new();
-    let mut non_sealed: BTreeSet<CellId> = BTreeSet::new();
+    let mut land_vertices = 0usize;
+    let mut land_vertex_ids: Vec<Vertex> = Vec::new();
+    let mut cave_vertices: Vec<(usize, Band, bool)> = Vec::new();
+    let mut per_vertex_counts: Vec<usize> = Vec::new();
+    let mut non_sealed: BTreeSet<Vertex> = BTreeSet::new();
 
-    for cell in geo.cells() {
-        if terrain.is_ocean(cell) {
+    for vertex in geo.vertices() {
+        if terrain.is_ocean(vertex) {
             continue;
         }
-        land_cells += 1;
-        land_cell_ids.push(cell);
-        match terrain.cave_at(cell) {
+        land_vertices += 1;
+        land_vertex_ids.push(vertex);
+        match terrain.cave_at(vertex) {
             Some(cave) => {
-                let gradient = terrain.geothermal_gradient_at(cell);
-                let count = chamber_count_at(seed, &cave, gradient, cell);
-                let sealed = is_sealed(seed, &cave, gradient, cell);
+                let gradient = terrain.geothermal_gradient_at(vertex);
+                let count = chamber_count_at(seed, &cave, gradient, vertex);
+                let sealed = is_sealed(seed, &cave, gradient, vertex);
                 if !sealed {
-                    non_sealed.insert(cell);
+                    non_sealed.insert(vertex);
                 }
-                cave_cells.push((count, rung_at_depth(cave.depth_reach_m, gradient), sealed));
-                per_cell_counts.push(count);
+                cave_vertices.push((count, rung_at_depth(cave.depth_reach_m, gradient), sealed));
+                per_vertex_counts.push(count);
             }
-            None => per_cell_counts.push(0),
+            None => per_vertex_counts.push(0),
         }
     }
 
     let dist = land_distances(geo, &terrain, &non_sealed);
-    let flagship_to_open_cave = flagship_cell.and_then(|c| dist[c.0 as usize]);
+    let flagship_to_open_cave = flagship_vertex.and_then(|c| dist[c.0 as usize]);
 
     let mut coverage_by_radius = [0.0f64; N_RADII];
-    if land_cells > 0 {
+    if land_vertices > 0 {
         for (i, &radius) in REPORT_RADII.iter().enumerate() {
-            let within = land_cell_ids
+            let within = land_vertex_ids
                 .iter()
                 .filter(|&&c| matches!(dist[c.0 as usize], Some(d) if d <= radius))
                 .count();
-            coverage_by_radius[i] = within as f64 / land_cells as f64;
+            coverage_by_radius[i] = within as f64 / land_vertices as f64;
         }
     }
 
     T8SeedReport {
         seed: seed.0,
-        land_cells,
-        cave_cells,
-        per_cell_counts,
+        land_vertices,
+        cave_vertices,
+        per_vertex_counts,
         flagship_to_open_cave,
         coverage_by_radius,
     }
@@ -845,7 +850,7 @@ fn measure_t8(seed: Seed) -> T8SeedReport {
 /// with harness-sanity guard assertions per the module's own "a harness
 /// that measures nothing" doc
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the H2 depth-weld and reachability coverage report; run by hand (The Deep Realm, Task 8, answered its question; demoted by The Governor 2026-08-28)"]
 fn report_h2_depth_weld_and_reachability() {
     let mut per_seed: Vec<T8SeedReport> = Vec::new();
     for seed in SEEDS {
@@ -856,19 +861,21 @@ fn report_h2_depth_weld_and_reachability() {
     // looks identical to one that works.
     assert!(!per_seed.is_empty(), "no seeds sampled");
     assert!(
-        per_seed.iter().all(|r| r.land_cells > 0),
+        per_seed.iter().all(|r| r.land_vertices > 0),
         "a seed had no land"
     );
     assert!(
         per_seed
             .iter()
-            .all(|r| r.per_cell_counts.len() == r.land_cells),
-        "per-cell chamber counts did not cover every land cell — the harness \
+            .all(|r| r.per_vertex_counts.len() == r.land_vertices),
+        "per-vertex chamber counts did not cover every land vertex — the harness \
          is not measuring the whole population"
     );
     assert!(
-        per_seed.iter().all(|r| r.cave_cells.len() <= r.land_cells),
-        "more cave cells than land cells — the land mask and cave_at disagree"
+        per_seed
+            .iter()
+            .all(|r| r.cave_vertices.len() <= r.land_vertices),
+        "more cave vertices than land vertices — the land mask and cave_at disagree"
     );
     for r in &per_seed {
         for (cov, rad) in r.coverage_by_radius.windows(2).zip(REPORT_RADII.windows(2)) {
@@ -885,28 +892,28 @@ fn report_h2_depth_weld_and_reachability() {
         }
     }
 
-    // ---- 1. H2: chambers per CAVE vs chambers per CELL --------------------
+    // ---- 1. H2: chambers per CAVE vs chambers per VERTEX --------------------
     println!(
-        "== H2: chambers per CAVE vs chambers per CELL (seeds {:?}) ==",
+        "== H2: chambers per CAVE vs chambers per VERTEX (seeds {:?}) ==",
         SEEDS
     );
-    let all_cell_counts: Vec<usize> = per_seed
+    let all_vertex_counts: Vec<usize> = per_seed
         .iter()
-        .flat_map(|r| r.per_cell_counts.iter().copied())
+        .flat_map(|r| r.per_vertex_counts.iter().copied())
         .collect();
     let all_cave_counts: Vec<usize> = per_seed
         .iter()
-        .flat_map(|r| r.cave_cells.iter().map(|&(c, _, _)| c))
+        .flat_map(|r| r.cave_vertices.iter().map(|&(c, _, _)| c))
         .collect();
-    let total_land: usize = per_seed.iter().map(|r| r.land_cells).sum();
+    let total_land: usize = per_seed.iter().map(|r| r.land_vertices).sum();
     let total_caves = all_cave_counts.len();
     println!(
-        "chambers-per-CELL, ALL {total_land} land cells ({:.4} of them cave-free): {}",
+        "chambers-per-VERTEX, ALL {total_land} land vertices ({:.4} of them cave-free): {}",
         1.0 - total_caves as f64 / total_land as f64,
-        summarize(&all_cell_counts)
+        summarize(&all_vertex_counts)
     );
     println!(
-        "chambers-per-CAVE, the {total_caves} cave cells only: {}",
+        "chambers-per-CAVE, the {total_caves} cave vertices only: {}",
         summarize(&all_cave_counts)
     );
     let zero_chamber_caves = all_cave_counts.iter().filter(|&&c| c == 0).count();
@@ -928,7 +935,7 @@ fn report_h2_depth_weld_and_reachability() {
     for (idx, name) in RUNG_NAMES.iter().enumerate() {
         let counts: Vec<usize> = per_seed
             .iter()
-            .flat_map(|r| r.cave_cells.iter().copied())
+            .flat_map(|r| r.cave_vertices.iter().copied())
             .filter(|&(_, rung, _)| rung_index(rung) == idx)
             .map(|(c, _, _)| c)
             .collect();
@@ -999,7 +1006,7 @@ fn report_h2_depth_weld_and_reachability() {
     );
 
     println!();
-    println!("== Land-cell coverage: fraction of land within R hops of ANY non-sealed cave ==");
+    println!("== Land-vertex coverage: fraction of land within R hops of ANY non-sealed cave ==");
     for (i, &radius) in REPORT_RADII.iter().enumerate() {
         let fractions: Vec<f64> = per_seed.iter().map(|r| r.coverage_by_radius[i]).collect();
         let mean = fractions.iter().sum::<f64>() / fractions.len() as f64;
@@ -1013,7 +1020,7 @@ fn report_h2_depth_weld_and_reachability() {
 
     let total_sealed = per_seed
         .iter()
-        .flat_map(|r| r.cave_cells.iter())
+        .flat_map(|r| r.cave_vertices.iter())
         .filter(|&&(_, _, sealed)| sealed)
         .count();
     println!();

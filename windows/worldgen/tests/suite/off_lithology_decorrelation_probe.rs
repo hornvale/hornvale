@@ -4,7 +4,7 @@
 //! **A measurement. Changes no production code.** Task 2M
 //! (`winze_energy_probe.rs`) found the six `MaterialBuffer` lithology axes
 //! (`silica`/`grain`/`induration`/`carbonate`/`metamorphic_grade`/`porosity`)
-//! strongly inter-correlated over cave-bearing cells (no pairwise `|r|` below
+//! strongly inter-correlated over cave-bearing vertices (no pairwise `|r|` below
 //! 0.5488, 64% at or above 0.8) — structural, because six labelled axes
 //! reduce to four shared upstream tectonic inputs plus one noise patch, and
 //! `porosity` and `induration` are literally weighted sums of the others.
@@ -20,12 +20,12 @@
 //!
 //! - **volcanism/arc history** → `GeneratedTerrain::has_edifice` (bool).
 //!   `ARC_GATE` is the private noise stream that feeds it, not itself a
-//!   per-cell accessor.
+//!   per-vertex accessor.
 //! - **sediment thickness** → `GeneratedTerrain::sediment_thickness_at` (m).
 //! - **water table depth** → `hornvale_terrain::water_table_depth_m(drainage,
-//!   porosity, height_asl_m)`, a free function, not a per-cell accessor —
-//!   computed per cell from `drainage_at`, `material_at(cell).porosity`, and
-//!   `elevation_at(cell) - sea_level()`. **This candidate is NOT off-lithology
+//!   porosity, height_asl_m)`, a free function, not a per-vertex accessor —
+//!   computed per vertex from `drainage_at`, `material_at(vertex).porosity`, and
+//!   `elevation_at(vertex) - sea_level()`. **This candidate is NOT off-lithology
 //!   as named**: `porosity` is one of its three inputs (via the function's
 //!   internal `transmissivity(porosity)` term), so it is a partial,
 //!   non-deterministic-but-not-independent function of the very axis Task 2M
@@ -39,9 +39,9 @@
 //!   the free function is `strata::geothermal_gradient`, reached here via
 //!   the provider method.
 //! - **paleoclimate** → `PaleoRecord` (via
-//!   `hornvale_worldgen::paleoclimate_from`) has no single scalar per-cell
-//!   read, but three per-cell **bool** fields do exist and are genuinely
-//!   per-cell: `envelope` (ever glaciated), `shoreline` (swept by eustatic
+//!   `hornvale_worldgen::paleoclimate_from`) has no single scalar per-vertex
+//!   read, but three per-vertex **bool** fields do exist and are genuinely
+//!   per-vertex: `envelope` (ever glaciated), `shoreline` (swept by eustatic
 //!   sea level across eras), `refugia` (habitable through the glacial
 //!   maximum). All three measured as point-biserial correlations, same
 //!   convention as `unconformity`.
@@ -65,26 +65,38 @@
 //! `winze_energy_probe.rs`'s `measure()` sorts each of its six field vectors
 //! **independently** (`for axis in &mut fields { axis.sort_by(...) }`)
 //! *before* computing `pearson(&m.fields[i], &m.fields[j])` on those same
-//! sorted vectors. That destroys the per-cell pairing: by the rearrangement
+//! sorted vectors. That destroys the per-vertex pairing: by the rearrangement
 //! inequality, correlating two independently-ascending-sorted vectors
 //! computes the maximum achievable Pearson correlation over any pairing of
-//! the two multisets (the comonotonic coupling), not the actual per-cell
+//! the two multisets (the comonotonic coupling), not the actual per-vertex
 //! correlation, and can only equal the true correlation when the two fields
-//! already induce the same cell ordering. This probe keeps one **unsorted,
-//! cell-aligned** copy of every field vector for correlation, and only
+//! already induce the same vertex ordering. This probe keeps one **unsorted,
+//! vertex-aligned** copy of every field vector for correlation, and only
 //! clones-and-sorts a copy for the percentile/distinct-count summary, so the
 //! two computations cannot share state. Task 2M's own STOP verdict (branch
 //! 2, majority-`>=0.8`) is not necessarily wrong — the six axes are
 //! mechanically inter-derived regardless of measurement method — but its
-//! *numbers* were not measuring per-cell correlation as reported, and this
+//! *numbers* were not measuring per-vertex correlation as reported, and this
 //! discrepancy is reported here rather than silently repeated.
 //!
-//! World-building idiom, cave-bearing-cell enumeration, and seed panel
+//! World-building idiom, cave-bearing-vertex enumeration, and seed panel
 //! copied from `winze_energy_probe.rs` (in turn from
 //! `delver_depth_probe.rs`/`underworld_lithology_probe.rs`).
 //!
 //! Test fixture (decision 0092): calls the sculpt/fit derivation entry
 //! points directly to build its own world state, once per test.
+//!
+//! # RE-RUN AGAINST `main` (The Sources, Task 1, 2026-08-26)
+//!
+//! Harvested from `campaign/the-winze` (unmerged, 403 commits behind at the
+//! time of this re-run) and re-measured against `main` at `7576eca00`, after
+//! The Glasshouse's temperature re-centring. **Reproduces exactly**, n=3
+//! seeds (42/7/1234): the largest mutually-weak clique is still the same 4
+//! members (`sediment_thickness`, `geothermal_gradient_k_per_km`,
+//! `paleo_envelope`, `paleo_shoreline`), `sediment_thickness`'s own max|r|
+//! is still 0.3610, and the best single pair is still
+//! `sediment_thickness`/`paleo_envelope` at max|r| 0.1009. No doc, registry
+//! or metaplan number changed.
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
@@ -99,9 +111,9 @@ const SEEDS: [u64; 3] = [42, 7, 1234];
 /// The six `MaterialBuffer` lithology axes Task 2M measured, followed by the
 /// off-lithology candidates resolved to their real accessors (see the module
 /// doc for which brief names were wrong and what was substituted) — the
-/// fixed column order for the full cave-bearing-cell correlation matrix
+/// fixed column order for the full cave-bearing-vertex correlation matrix
 /// (index 9 is `cave_depth_reach_m`, the one field that does not exist off a
-/// cave-bearing cell). `water_table_depth_m` and `cave_depth_reach_m` are
+/// cave-bearing vertex). `water_table_depth_m` and `cave_depth_reach_m` are
 /// flagged (not omitted) as partially/fully derived from a lithology axis —
 /// see `CLEAN_OFF_LITHOLOGY_FIELDS` below.
 const ALL_FIELDS: [&str; 15] = [
@@ -123,8 +135,8 @@ const ALL_FIELDS: [&str; 15] = [
 ];
 
 /// `ALL_FIELDS` without `cave_depth_reach_m` (index 9) — used for the
-/// land-cell contrast distributions, since a cave's depth reach has no
-/// meaning off a cave-bearing cell.
+/// land-vertex contrast distributions, since a cave's depth reach has no
+/// meaning off a cave-bearing vertex.
 const LAND_FIELDS: [&str; 14] = [
     "silica",
     "grain",
@@ -173,14 +185,14 @@ fn distinct_count(sorted: &[f64]) -> usize {
     d.len()
 }
 
-/// Pearson correlation coefficient between two equal-length, **cell-aligned**
-/// series (index i of `xs` and index i of `ys` must be the same cell). `NaN`
+/// Pearson correlation coefficient between two equal-length, **vertex-aligned**
+/// series (index i of `xs` and index i of `ys` must be the same vertex). `NaN`
 /// when either series has zero variance — a genuinely undefined correlation,
 /// not a zero one. A bool field encoded as `0.0`/`1.0` and correlated this
 /// way is the point-biserial coefficient (they are the same statistic).
 ///
 /// **Callers must never sort `xs`/`ys` before calling this** — sorting
-/// either series independently destroys the cell pairing (see the module
+/// either series independently destroys the vertex pairing (see the module
 /// doc's methodology note against `winze_energy_probe.rs`).
 fn pearson(xs: &[f64], ys: &[f64]) -> f64 {
     assert_eq!(xs.len(), ys.len(), "pearson: mismatched series lengths");
@@ -207,7 +219,7 @@ fn pearson(xs: &[f64], ys: &[f64]) -> f64 {
 }
 
 /// One seed's full measurement. `cave_fields`/`land_fields` hold one
-/// **unsorted, cell-aligned** `Vec<f64>` per field in `ALL_FIELDS`/
+/// **unsorted, vertex-aligned** `Vec<f64>` per field in `ALL_FIELDS`/
 /// `LAND_FIELDS` order — never sorted in place, so correlation and
 /// percentile summaries can never disagree about which computation ran on
 /// which copy.
@@ -215,8 +227,8 @@ struct SeedMeasurement {
     seed_value: u64,
     cave_fields: Vec<Vec<f64>>,
     land_fields: Vec<Vec<f64>>,
-    cave_cell_count: usize,
-    land_cell_count: usize,
+    cave_vertex_count: usize,
+    land_vertex_count: usize,
 }
 
 fn measure(seed_value: u64) -> SeedMeasurement {
@@ -237,25 +249,37 @@ fn measure(seed_value: u64) -> SeedMeasurement {
     let mut cave_fields: Vec<Vec<f64>> = vec![Vec::new(); ALL_FIELDS.len()];
     let mut land_fields: Vec<Vec<f64>> = vec![Vec::new(); LAND_FIELDS.len()];
 
-    for cell in geo.cells() {
-        if terrain.is_ocean(cell) {
+    for vertex in geo.vertices() {
+        if terrain.is_ocean(vertex) {
             continue;
         }
-        let b = terrain.material_at(cell);
-        let sediment_thickness = terrain.sediment_thickness_at(cell);
-        let geothermal = terrain.geothermal_gradient_at(cell).get();
-        let drainage = terrain.drainage_at(cell);
-        let height_asl_m = terrain.elevation_at(cell).get() - sea;
+        let b = terrain.material_at(vertex);
+        let sediment_thickness = terrain.sediment_thickness_at(vertex);
+        let geothermal = terrain.geothermal_gradient_at(vertex).get();
+        let drainage = terrain.drainage_at(vertex);
+        let height_asl_m = terrain.elevation_at(vertex).get() - sea;
         let table = water_table_depth_m(drainage, b.porosity, height_asl_m);
-        let has_edifice = if terrain.has_edifice(cell) { 1.0 } else { 0.0 };
-        let unconformity = if terrain.unconformity_at(cell) {
+        let has_edifice = if terrain.has_edifice(vertex) {
             1.0
         } else {
             0.0
         };
-        let paleo_envelope = if *paleo.envelope.get(cell) { 1.0 } else { 0.0 };
-        let paleo_shoreline = if *paleo.shoreline.get(cell) { 1.0 } else { 0.0 };
-        let paleo_refugia = if *paleo.refugia.get(cell) { 1.0 } else { 0.0 };
+        let unconformity = if terrain.unconformity_at(vertex) {
+            1.0
+        } else {
+            0.0
+        };
+        let paleo_envelope = if *paleo.envelope.get(vertex) {
+            1.0
+        } else {
+            0.0
+        };
+        let paleo_shoreline = if *paleo.shoreline.get(vertex) {
+            1.0
+        } else {
+            0.0
+        };
+        let paleo_refugia = if *paleo.refugia.get(vertex) { 1.0 } else { 0.0 };
 
         let land_values = [
             b.silica,
@@ -277,7 +301,7 @@ fn measure(seed_value: u64) -> SeedMeasurement {
             axis.push(v);
         }
 
-        if let Some(cave) = terrain.cave_at(cell) {
+        if let Some(cave) = terrain.cave_at(vertex) {
             let cave_values = [
                 b.silica,
                 b.grain,
@@ -301,14 +325,14 @@ fn measure(seed_value: u64) -> SeedMeasurement {
         }
     }
 
-    let cave_cell_count = cave_fields[0].len();
-    let land_cell_count = land_fields[0].len();
+    let cave_vertex_count = cave_fields[0].len();
+    let land_vertex_count = land_fields[0].len();
     SeedMeasurement {
         seed_value,
         cave_fields,
         land_fields,
-        cave_cell_count,
-        land_cell_count,
+        cave_vertex_count,
+        land_vertex_count,
     }
 }
 
@@ -339,7 +363,7 @@ fn print_distribution(name: &str, values: &[f64]) {
 /// assertions) — Task P1 of `task-p1-brief.md`, seeds 42/7/1234. A decision
 /// instrument, not a pass/fail gate on a chosen constant.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the off-lithology decorrelation branch table; run by hand (The Winze Task P1 / The Sources answered its question; demoted by The Governor 2026-08-28)"]
 fn off_lithology_decorrelation_probe() {
     let mut any_field_measured = false;
 
@@ -355,7 +379,7 @@ fn off_lithology_decorrelation_probe() {
     let mut max_abs_r_vs_all = vec![vec![0.0_f64; n_all]; n_all];
     // Task 2M's own branch-1 check, applied here: how many of the three
     // seeds does each field read as a literal zero-variance constant over
-    // cave-bearing cells (not merely a small IQR/range — an exact constant,
+    // cave-bearing vertices (not merely a small IQR/range — an exact constant,
     // which makes any correlation reading for it either NaN or a near-zero
     // artifact of no information, not evidence of independence). A field
     // degenerate on any seed is excluded from the ranking and clique search
@@ -365,16 +389,16 @@ fn off_lithology_decorrelation_probe() {
     for seed_value in SEEDS {
         let m = measure(seed_value);
         println!(
-            "\n== seed {} ==  cave-bearing cells {}  land cells {}",
-            m.seed_value, m.cave_cell_count, m.land_cell_count
+            "\n== seed {} ==  cave-bearing vertices {}  land vertices {}",
+            m.seed_value, m.cave_vertex_count, m.land_vertex_count
         );
 
-        println!("  -- distributions, cave-bearing cells --");
+        println!("  -- distributions, cave-bearing vertices --");
         for (name, v) in ALL_FIELDS.iter().zip(m.cave_fields.iter()) {
             any_field_measured |= !v.is_empty();
             print_distribution(name, v);
         }
-        println!("  -- distributions, all land cells (contrast) --");
+        println!("  -- distributions, all land vertices (contrast) --");
         for (name, v) in LAND_FIELDS.iter().zip(m.land_fields.iter()) {
             print_distribution(name, v);
         }
@@ -386,9 +410,9 @@ fn off_lithology_decorrelation_probe() {
             }
         }
 
-        // Full correlation matrix, cave-bearing cells, ALL_FIELDS order —
-        // computed on the UNSORTED, cell-aligned vectors in `m.cave_fields`.
-        println!("  -- correlation matrix, cave-bearing cells --");
+        // Full correlation matrix, cave-bearing vertices, ALL_FIELDS order —
+        // computed on the UNSORTED, vertex-aligned vectors in `m.cave_fields`.
+        println!("  -- correlation matrix, cave-bearing vertices --");
         print!("                                  ");
         for name in &ALL_FIELDS {
             print!("{:>12}", &name[..name.len().min(12)]);
@@ -427,11 +451,11 @@ fn off_lithology_decorrelation_probe() {
 
     assert!(
         any_field_measured,
-        "the survey found no cave-bearing cells across {} seeds — this probe is measuring nothing",
+        "the survey found no cave-bearing vertices across {} seeds — this probe is measuring nothing",
         SEEDS.len()
     );
 
-    println!("\n== near-constant check, cave-bearing cells (branch-1-style floor) ==");
+    println!("\n== near-constant check, cave-bearing vertices (branch-1-style floor) ==");
     let mut any_degenerate = false;
     for (i, name) in ALL_FIELDS.iter().enumerate() {
         if degenerate_seed_count[i] > 0 {
@@ -452,7 +476,7 @@ fn off_lithology_decorrelation_probe() {
     // CLEAN_OFF_LITHOLOGY_FIELDS (0..n_clean) whose ALL_FIELDS vector was
     // never a literal constant. `has_edifice` is expected to drop out here
     // (see task-p1-report.md): zero-variance on 2 of 3 seeds over
-    // cave-bearing cells, so its near-zero correlation readings are an
+    // cave-bearing vertices, so its near-zero correlation readings are an
     // absence of information, not evidence of independence.
     let usable_clean: Vec<usize> = (0..n_clean)
         .filter(|&ci| {
@@ -580,7 +604,7 @@ fn off_lithology_decorrelation_probe() {
         degenerate_seed_count[sediment_idx],
         0,
         "sediment_thickness (the #1-ranked independent-signal candidate, 2026-08-20) read \
-         as a zero-variance constant on {}/{} seeds over cave-bearing cells — its \
+         as a zero-variance constant on {}/{} seeds over cave-bearing vertices — its \
          correlations collapsed to NaN. Re-derive the P1 independent-signal ranking: this \
          field no longer carries measurable signal.",
         degenerate_seed_count[sediment_idx],

@@ -4,7 +4,7 @@
 //! Discrete estimators (documented per function) are declared
 //! approximations; each is deterministic and consistent across metrics.
 
-use hornvale_kernel::{CellMap, Geosphere, ReferenceElevation, math};
+use hornvale_kernel::{Geosphere, ReferenceElevation, VertexMap, math};
 
 /// Half-width of the shelf band around sea level, meters (Earth's
 /// continental shelf lies within ~200 m of the sea surface).
@@ -19,8 +19,8 @@ fn angle(a: [f64; 3], b: [f64; 3]) -> f64 {
 /// Shoreline development index `D = L / (2 sqrt(pi A))`: coastline length
 /// over the circumference of the circle with the land's area. 1 is
 /// maximally compact; fjorded coasts score several times that. Estimators:
-/// cell area is the equal-area approximation `4 pi / N`; the shared edge
-/// between two neighboring cells is approximated as their center distance
+/// vertex area is the equal-area approximation `4 pi / N`; the shared edge
+/// between two neighboring vertices is approximated as their center distance
 /// over sqrt(3) (the regular-hexagon dual). `None` when the mask has no
 /// land or no shoreline. This is the estimator core: [`shoreline_development`]
 /// derives a mask from elevation and delegates here, so both share exactly
@@ -28,23 +28,23 @@ fn angle(a: [f64; 3], b: [f64; 3]) -> f64 {
 /// spec §7 — the Earth-mask anchor measures `D_earth` through this same,
 /// unchanged core).
 /// type-audit: bare-ok(flag: land), bare-ok(ratio: return)
-pub fn shoreline_development_of_mask(geo: &Geosphere, land: &CellMap<bool>) -> Option<f64> {
-    let cell_area = 4.0 * std::f64::consts::PI / geo.cell_count() as f64;
+pub fn shoreline_development_of_mask(geo: &Geosphere, land: &VertexMap<bool>) -> Option<f64> {
+    let vertex_area = 4.0 * std::f64::consts::PI / geo.vertex_count() as f64;
     let mut land_area = 0.0;
     let mut shoreline = 0.0;
-    for cell in geo.cells() {
-        let is_land = *land.get(cell);
+    for vertex in geo.vertices() {
+        let is_land = *land.get(vertex);
         if is_land {
-            land_area += cell_area;
+            land_area += vertex_area;
         }
-        for &neighbor in geo.neighbors(cell) {
+        for &neighbor in geo.neighbors(vertex) {
             // Each unordered pair once.
-            if neighbor.0 <= cell.0 {
+            if neighbor.0 <= vertex.0 {
                 continue;
             }
             let neighbor_land = *land.get(neighbor);
             if is_land != neighbor_land {
-                shoreline += angle(geo.position(cell), geo.position(neighbor)) / 3f64.sqrt();
+                shoreline += angle(geo.position(vertex), geo.position(neighbor)) / 3f64.sqrt();
             }
         }
     }
@@ -55,26 +55,26 @@ pub fn shoreline_development_of_mask(geo: &Geosphere, land: &CellMap<bool>) -> O
 }
 
 /// Shoreline development index over an elevation field: derives the land
-/// mask (`elevation >= sea_level`, per cell, ascending) and delegates to
+/// mask (`elevation >= sea_level`, per vertex, ascending) and delegates to
 /// [`shoreline_development_of_mask`] — the estimator formula itself never
 /// changes mid-family (Census II discipline). `None` when the globe has no
 /// land or no shoreline.
 /// type-audit: bare-ok(ratio: return)
 pub fn shoreline_development(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
 ) -> Option<f64> {
-    let land = CellMap::from_fn(geo, |c| *elevation.get(c) >= sea_level);
+    let land = VertexMap::from_fn(geo, |c| *elevation.get(c) >= sea_level);
     shoreline_development_of_mask(geo, &land)
 }
 
-/// Fraction of all cells within [`SHELF_BAND_M`] of sea level — Earth's
+/// Fraction of all vertices within [`SHELF_BAND_M`] of sea level — Earth's
 /// hypsometry keeps a populated shelf here; a cliff-coast generator does
 /// not.
 /// type-audit: bare-ok(ratio: return)
 pub fn shelf_fraction(
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
 ) -> f64 {
     let within = elevation
@@ -84,15 +84,15 @@ pub fn shelf_fraction(
     within as f64 / elevation.len() as f64
 }
 
-/// Shelf area relative to land area: cells within [`SHELF_BAND_M`] of sea
-/// level (both sides of it), over cells at or above sea level. The
+/// Shelf area relative to land area: vertices within [`SHELF_BAND_M`] of sea
+/// level (both sides of it), over vertices at or above sea level. The
 /// whole-sphere `shelf_fraction` silently assumes an Earth-scale land
 /// fraction — a small-continent world can carry a proportionally healthy
 /// shelf while clearing only a sliver of the sphere (decision 0053's
 /// measured tables). `None` when the globe has no land.
 /// type-audit: bare-ok(ratio: return)
 pub fn shelf_land_ratio(
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
 ) -> Option<f64> {
     let mut shelf = 0usize;
@@ -118,7 +118,7 @@ pub fn shelf_land_ratio(
 /// (zero variance).
 /// type-audit: bare-ok(ratio: return)
 pub fn hypsometric_bimodality(
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
 ) -> Option<f64> {
     let mut land = Vec::new();
@@ -148,13 +148,13 @@ pub fn hypsometric_bimodality(
     Some((mean_land - mean_ocean).abs() / denominator)
 }
 
-/// Sizes (cell counts) of connected land components, descending. BFS in
-/// ascending cell-id order — fully deterministic. Empty when there is no
+/// Sizes (vertex counts) of connected land components, descending. BFS in
+/// ascending vertex-id order — fully deterministic. Empty when there is no
 /// land.
 /// type-audit: bare-ok(count: return)
 pub fn land_component_sizes(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
 ) -> Vec<usize> {
     let mut sizes: Vec<usize> =
@@ -192,11 +192,11 @@ pub fn gini(counts: &[usize]) -> Option<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::{CellMap, Geosphere, ReferenceElevation};
+    use hornvale_kernel::{Geosphere, ReferenceElevation, VertexMap};
 
-    /// Land where the cell's z-coordinate clears `z_min` — a polar cap.
-    fn cap_elevation(geo: &Geosphere, z_min: f64) -> CellMap<ReferenceElevation> {
-        CellMap::from_fn(geo, |c| {
+    /// Land where the vertex's z-coordinate clears `z_min` — a polar cap.
+    fn cap_elevation(geo: &Geosphere, z_min: f64) -> VertexMap<ReferenceElevation> {
+        VertexMap::from_fn(geo, |c| {
             let m = if geo.position(c)[2] >= z_min {
                 100.0
             } else {
@@ -216,10 +216,10 @@ mod tests {
         // `shoreline_development_of_mask` (rift-and-fit spec §7).
         let geo = Geosphere::new(3);
         let sea = ReferenceElevation::new(0.0).unwrap();
-        let elevation = CellMap::from_fn(&geo, |c| {
+        let elevation = VertexMap::from_fn(&geo, |c| {
             ReferenceElevation::new(1000.0 * geo.position(c)[2]).unwrap()
         });
-        let mask = CellMap::from_fn(&geo, |c| *elevation.get(c) >= sea);
+        let mask = VertexMap::from_fn(&geo, |c| *elevation.get(c) >= sea);
         let d_elevation = shoreline_development(&geo, &elevation, sea);
         let d_mask = shoreline_development_of_mask(&geo, &mask);
         assert_eq!(d_elevation, d_mask, "elevation path and mask path diverged");
@@ -235,7 +235,7 @@ mod tests {
         assert!((0.6..=1.4).contains(&d_cap), "compact cap D = {d_cap}");
         // Same latitude band, but land only in alternating longitude sectors:
         // far more shoreline for less area.
-        let stripes = CellMap::from_fn(&geo, |c| {
+        let stripes = VertexMap::from_fn(&geo, |c| {
             let p = geo.position(c);
             let sector = ((math::atan2(p[1], p[0]) + std::f64::consts::PI)
                 / (std::f64::consts::PI / 6.0)) as i64;
@@ -254,8 +254,8 @@ mod tests {
     fn worlds_without_a_shoreline_are_absent() {
         let geo = Geosphere::new(2);
         let sea = ReferenceElevation::new(0.0).unwrap();
-        let all_land = CellMap::from_fn(&geo, |_| ReferenceElevation::new(100.0).unwrap());
-        let all_ocean = CellMap::from_fn(&geo, |_| ReferenceElevation::new(-100.0).unwrap());
+        let all_land = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(100.0).unwrap());
+        let all_ocean = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(-100.0).unwrap());
         assert_eq!(shoreline_development(&geo, &all_land, sea), None);
         assert_eq!(shoreline_development(&geo, &all_ocean, sea), None);
     }
@@ -266,12 +266,12 @@ mod tests {
         let sea = ReferenceElevation::new(0.0).unwrap();
         // Elevation = 1000·z: the ±200 m band is |z| <= 0.2, ~20% of a
         // sphere by area (z is area-uniform).
-        let e = CellMap::from_fn(&geo, |c| {
+        let e = VertexMap::from_fn(&geo, |c| {
             ReferenceElevation::new(1000.0 * geo.position(c)[2]).unwrap()
         });
         let f = shelf_fraction(&e, sea);
         assert!((0.12..=0.28).contains(&f), "shelf fraction {f}");
-        let flat = CellMap::from_fn(&geo, |_| ReferenceElevation::new(50.0).unwrap());
+        let flat = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(50.0).unwrap());
         assert_eq!(shelf_fraction(&flat, sea), 1.0);
     }
 
@@ -281,13 +281,13 @@ mod tests {
         let sea = ReferenceElevation::new(0.0).unwrap();
         // Elevation = 1000·z: land is z >= 0 (half the sphere by area), the
         // ±200 m band is |z| <= 0.2 (~20% of the sphere) → ratio ≈ 0.4.
-        let e = CellMap::from_fn(&geo, |c| {
+        let e = VertexMap::from_fn(&geo, |c| {
             ReferenceElevation::new(1000.0 * geo.position(c)[2]).unwrap()
         });
         let r = shelf_land_ratio(&e, sea).expect("has land");
         assert!((0.25..=0.55).contains(&r), "ratio {r}");
         // All-ocean: no land, absent.
-        let ocean = CellMap::from_fn(&geo, |_| ReferenceElevation::new(-100.0).unwrap());
+        let ocean = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(-100.0).unwrap());
         assert_eq!(shelf_land_ratio(&ocean, sea), None);
     }
 
@@ -297,19 +297,19 @@ mod tests {
         let sea = ReferenceElevation::new(0.0).unwrap();
         // Earth-like: two tight modes far apart (tiny within-mode spread so
         // Ashman's denominator is nonzero).
-        let bimodal = CellMap::from_fn(&geo, |c| {
+        let bimodal = VertexMap::from_fn(&geo, |c| {
             let z = geo.position(c)[2];
             let m = if z >= 0.0 { 400.0 + z } else { -4000.0 + z };
             ReferenceElevation::new(m).unwrap()
         });
         // A single uniform ramp split at sea level.
-        let unimodal = CellMap::from_fn(&geo, |c| {
+        let unimodal = VertexMap::from_fn(&geo, |c| {
             ReferenceElevation::new(100.0 * geo.position(c)[2]).unwrap()
         });
         let d_bi = hypsometric_bimodality(&bimodal, sea).expect("bimodal");
         let d_uni = hypsometric_bimodality(&unimodal, sea).expect("unimodal");
         assert!(d_bi > 10.0 * d_uni, "bimodal {d_bi} vs unimodal {d_uni}");
-        let all_land = CellMap::from_fn(&geo, |_| ReferenceElevation::new(100.0).unwrap());
+        let all_land = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(100.0).unwrap());
         assert_eq!(hypsometric_bimodality(&all_land, sea), None);
     }
 
@@ -318,7 +318,7 @@ mod tests {
         let geo = Geosphere::new(3);
         let sea = ReferenceElevation::new(0.0).unwrap();
         // North cap bigger than south cap.
-        let e = CellMap::from_fn(&geo, |c| {
+        let e = VertexMap::from_fn(&geo, |c| {
             let z = geo.position(c)[2];
             let m = if z >= 0.5 || z <= -0.8 { 100.0 } else { -100.0 };
             ReferenceElevation::new(m).unwrap()
@@ -326,7 +326,7 @@ mod tests {
         let sizes = land_component_sizes(&geo, &e, sea);
         assert_eq!(sizes.len(), 2, "components: {sizes:?}");
         assert!(sizes[0] > sizes[1]);
-        let ocean = CellMap::from_fn(&geo, |_| ReferenceElevation::new(-1.0).unwrap());
+        let ocean = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(-1.0).unwrap());
         assert!(land_component_sizes(&geo, &ocean, sea).is_empty());
     }
 

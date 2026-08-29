@@ -4,14 +4,16 @@
 //! The Walk).
 
 pub mod action;
+pub mod affordance;
 mod agent;
-pub mod band;
 pub mod body;
 pub mod brief;
 pub mod chamber_prose;
 pub mod clock;
 pub mod controller;
 pub mod course;
+pub mod depth;
+pub mod doctrine;
 pub mod eyes;
 pub mod fabric;
 mod focalize;
@@ -20,24 +22,32 @@ pub mod interior;
 mod knowledge;
 pub mod lattice;
 pub mod lens;
+pub mod level_doc;
 pub mod light;
 pub mod liveness;
+pub mod passage;
 pub mod plan;
 mod purview;
 mod session;
 pub mod snapshot;
+pub mod stance;
 pub mod streams;
 pub mod structure;
+pub mod testimony;
+mod underground;
 pub mod underworld_level;
 mod vantage;
 pub use agent::{most_populous_settlement, walk_depth};
-pub use band::{CHAMBER_DEPTH_OFFSET, chamber_depth, truncate_to_walk};
 pub use brief::{Brief, brief_of};
 pub use chamber_prose::describe_chamber;
-pub use controller::{Controller, DefaultController, PlayerController};
+pub use controller::{Controller, DefaultController, ImposedController, PlayerController};
+pub use depth::{CHAMBER_DEPTH_OFFSET, chamber_depth, truncate_to_walk};
 pub use focalize::*;
 pub use knowledge::*;
 pub use lattice::{Cell, CellKind, Lattice, Plan, Rect, allocate, embed_with, extent_for, render};
+pub use level_doc::{
+    LEVEL_SCHEMA, LevelCell, LevelExtent, LevelPaletteEntry, LevelPoint, SessionLevel, level_of,
+};
 pub use plan::{
     PLAN_SCHEMA, PaletteEntry, PlanExtent, PlanMark, PlanPoint, SessionPlan, Shading, plan_of,
 };
@@ -205,7 +215,7 @@ impl Default for PossessOpts {
     /// on the midnight boundary every integer day would.
     fn default() -> Self {
         PossessOpts {
-            day: hornvale_kernel::WorldTime::new(0.5).expect("a day value is finite"),
+            day: hornvale_kernel::WorldTime::from_std_days(0.5).expect("a day value is finite"),
             echo: false,
             wild_agents: true,
             eyes: eyes::Eyes::Own,

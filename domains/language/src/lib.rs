@@ -17,7 +17,7 @@ pub mod account;
 /// [`naming::NameKind::Person`] seed path a given name draws off. Plain data,
 /// kernel-only; it never learns which people a name belongs to.
 pub mod anthroponym;
-/// The clause layer: a language-neutral `ClauseSpec` and the Common
+/// The clause layer: a language-neutral `Clause` and the Common
 /// realizer that turns it into a sentence. Generalizes the `render_line`
 /// seam from a bespoke tenet spec to any clause.
 pub mod clause;
@@ -91,7 +91,11 @@ pub use account::{
     domain_distortion, identity_params, recoverability,
 };
 pub use clause::{
-    ClauseSpec, Definiteness, Frame, Number, ParseContext, ParseError, parse_common, realize_common,
+    Adjunct, AdjunctPosition, Argument, COPULA_PARADIGM, Clause, Coordination, CopulaRow,
+    Definiteness, Number, PRONOUN_PARADIGM, ParseContext, ParseError, Person, Polarity,
+    PronounCase, PronounRow, Subject, Tense, VERB_PARADIGM, Valence, VerbRow, common_pronoun,
+    nominative_person, parse_common, parse_common_with_tail, predicate_valence, realize_common,
+    realize_common_coordination, realize_common_polar_question,
 };
 pub use common_vocab::{CommonVocabulary, MissingCommonWords};
 pub use etymology::{
@@ -124,8 +128,9 @@ pub fn assign_proto_roots_with_epoch_for_test(
 }
 pub use exemplars::{HUE_CONCEPTS, hue_exemplar};
 pub use grammar::{
-    ConstituentOrder, TongueClause, TongueGap, TongueGrammar, realize_tongue, realize_tongue_deep,
-    tongue_grammar,
+    ConstituentOrder, TongueGap, TongueGrammar, TongueParadigm, realize_tongue,
+    realize_tongue_coordination, realize_tongue_deep, realize_tongue_deep_coordination,
+    realize_tongue_polar_question, tongue_grammar,
 };
 pub use lexicon::{
     ExposureClass, GapReason, Headedness, LexEntry, Lexicon, WordViews, build_lexicon,
@@ -133,15 +138,16 @@ pub use lexicon::{
 };
 pub use morphology::{
     ClassPosition, Evidential, MorphDepth, MorphForm, NounClass, SKY_OVERRIDE, TongueMorphology,
-    affix, morph_depths, morph_forms, noun_class_with_sky,
+    affix, morph_depths, morph_forms, noun_class_with_sky, pronoun_forms,
 };
 pub use naming::{
     GeneratedName, MorphOptions, NameCorpus, NameKind, NameShape, Namer, SiteConcepts, render_views,
 };
 pub use packs::{
     BEARINGS, PackDepths, PackEntry, action_suite_pack, bearing_compounds, body_pack, color_pack,
-    compound_recipe, concept_domain, extradiegetic_pack, in_ladder, is_core_concept,
-    is_extradiegetic, kin_pack, register_concepts, universal_stratum,
+    compound_recipe, concept_domain, extradiegetic_pack, felt_state_pack, in_ladder,
+    is_core_concept, is_extradiegetic, kin_pack, object_property_pack, register_concepts,
+    universal_stratum,
 };
 pub use phoneme::{
     Backness, Height, Manner, Place, Segment, Tone, espeak, espeak_word, ipa, romanize, sonority,
@@ -984,7 +990,7 @@ pub use speech::{
 
 /// Every seed-derivation label (or pattern) this crate uses, with docs.
 /// `<species>` stands for the concrete species leg of the path (e.g.
-/// `goblin`, `kobold`) and the per-entity salt leg (the settlement cell id,
+/// `goblin`, `kobold`) and the per-entity salt leg (the settlement vertex id,
 /// the belief id) is omitted, matching the documentation convention of the
 /// other domains' `stream_labels()`. Labels are permanent save-format
 /// contracts (spec §3); regeneration uses epoch suffixes, never renames.
@@ -1011,7 +1017,7 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         ),
         (
             "language/<species>/name/settlement",
-            "(retired at The Words, superseded by name/settlement/v2) per-settlement name (salted by cell id): a bare stem",
+            "(retired at The Words, superseded by name/settlement/v2) per-settlement name (salted by vertex id): a bare stem",
         ),
         (
             "language/<species>/name/deity",
@@ -1027,7 +1033,7 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         ),
         (
             "language/<species>/name/landform",
-            "(The Repose, Task 3) per-landform name, keyed at the composition root by (seed, cell, species) rather than by the landform's own identity — one landform has many names, one per people with a word for it: a bare 2-3 syllable stem, like the settlement/person v1 draw above. A fifth, disjoint `NameKind` — no epoch suffix, since this label is new rather than a regeneration (decision 0084)",
+            "(The Repose, Task 3) per-landform name, keyed at the composition root by (seed, vertex, species) rather than by the landform's own identity — one landform has many names, one per people with a word for it: a bare 2-3 syllable stem, like the settlement/person v1 draw above. A fifth, disjoint `NameKind` — no epoch suffix, since this label is new rather than a regeneration (decision 0084)",
         ),
         (
             "language/<species>/name/settlement/v2",
@@ -1098,6 +1104,18 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "whether the tongue has articles (floor: drawn but surfaces no article lexeme until the morphology campaign)",
         ),
         (
+            "language/<species>/grammar/subordinator",
+            "whether an embedded clause is marked with an overt complementizer, and (when it is) the complementizer's one-syllable drawn form from the tongue's own phonology — a tongue that draws none subordinates by bare parataxis, a legitimate grammar and not a gap (The Mortise, Task 5, spec §4.6)",
+        ),
+        (
+            "language/<species>/grammar/conjunction",
+            "whether coordinated clauses are joined with an overt coordinating conjunction, and (when they are) the conjunction's one-syllable drawn form from the tongue's own phonology — a tongue that draws none coordinates by bare juxtaposition, a legitimate grammar and not a gap (The Mortise, Task 6, spec §4.10). A function word earns this label because its PRESENCE is typological, not lexical; a vocabulary word costs zero labels, drawn instead as a `dynamic(concept)` value on the existing `lexicon/root` axis",
+        ),
+        (
+            "language/<species>/grammar/interrogative",
+            "whether a polar question is marked with an overt free particle, and (when it is) the particle's one-syllable drawn form from the tongue's own phonology, skewed toward absent — a tongue that draws none questions by INTONATION, the cross-linguistic majority strategy (Ultan 1978; Dryer, WALS 116), which a text renderer cannot show, so it questions by a transcription convention instead: its declarative surface plus `?` (The Rail, Task 9, spec §4)",
+        ),
+        (
             "language/<species>/grammar/depth/evidential",
             "C7's depth vector: how deeply evidentiality grammaticalizes (None/Particle/Affix, weighted [60,25,15])",
         ),
@@ -1126,6 +1144,22 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "The Residue: which side of the marked word the Tense affix binds",
         ),
         (
+            "language/<species>/grammar/depth/polarity",
+            "The Inquest: the species' drawn Polarity grammaticalization depth (None/Particle/Affix) — how a tongue marks a negated clause; an independent stream, added additively (spec §3.4)",
+        ),
+        (
+            "language/<species>/grammar/polarity-position",
+            "The Inquest: which side of the marked word the Polarity affix binds",
+        ),
+        (
+            "language/<species>/grammar/depth/person",
+            "The Rail (Task 7): the species' drawn Person (subject-agreement) grammaticalization depth (None/Particle/Affix), independent of number/tense/polarity — a tongue's own take on how deeply it grammaticalizes person, distinct from Common's fixed rules",
+        ),
+        (
+            "language/<species>/grammar/person-position",
+            "The Rail (Task 7): which side of the marked word the Person affix binds",
+        ),
+        (
             "language/family/<family>/morph/evidential/<value>",
             "C7: the family's one-syllable evidential-marker proto-form for <value> (witnessed/taught/inferred), drawn once per family and evolved per daughter via its own cascade — the cognate law",
         ),
@@ -1140,6 +1174,14 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         (
             "language/family/<family>/morph/tense/past",
             "The Residue: the family's Past-tense affix proto-form, shared by every daughter",
+        ),
+        (
+            "language/family/<family>/morph/polarity/negative",
+            "The Inquest: the family's Negative affix proto-form, shared by every daughter — negative is the marked member and positive is zero, so no positive form is ever drawn",
+        ),
+        (
+            "language/family/<family>/morph/pronoun/<person-number>",
+            "The Inquest: the family's personal-pronoun proto-form for one person-number slot, drawn once per family and evolved per daughter via its own cascade — the cognate law. Six slots, `<person-number>` ranging over 1sg/2sg/3sg/1pl/2pl/3pl: person and number ONLY, no gender, because nothing in the ledger assigns grammatical gender. Written with a placeholder leg rather than six rows on the same precedent the multi-valued morph/evidential/<value> and morph/class/<value> rows above set; the singular number/tense/polarity rows are spelled out because each of those axes draws exactly ONE marked member",
         ),
         (
             "language/<species>/grammar/numeracy-rung",
@@ -1242,6 +1284,20 @@ mod tests {
     /// `tone_count` depends on `tonality` alone, so a hand-built envelope
     /// with the proto's `tonality` copied in is sufficient to prove the
     /// value reaches the tier.
+    /// The stream roster is HAND-MAINTAINED and nothing checks it for
+    /// completeness, so a draw added without its row ships a silently
+    /// incomplete manifest with every gate green. This pins the one row The
+    /// Inquest's pronoun draw adds; it is a spot check, not the missing
+    /// completeness test.
+    #[test]
+    fn stream_labels_declare_the_pronoun_draw() {
+        let labels: Vec<&str> = stream_labels().iter().map(|(l, _)| *l).collect();
+        assert!(
+            labels.contains(&"language/family/<family>/morph/pronoun/<person-number>"),
+            "the pronoun proto draw is missing from the stream roster"
+        );
+    }
+
     #[test]
     fn the_draconic_family_draws_a_contrastive_tone() {
         let proto = family_proto();

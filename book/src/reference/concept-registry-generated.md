@@ -158,6 +158,7 @@
 |---|---|---|---|
 | `abyssal` | climate | terrain | a biome class |
 | `abyssal-plain` | climate | substance | The flat floor of the deep ocean. |
+| `affords-passage` | language | quality | a seam between two rooms a body may pass through |
 | `alpine` | climate | terrain | a biome class |
 | `bait-ball` | climate | substance | A dense turning mass of fish. |
 | `barley` | climate | substance | a staple crop |
@@ -178,6 +179,7 @@
 | `coast` | terrain | terrain | where the land meets the sea |
 | `cold` | climate | quality | felt, biting chill |
 | `cold-upwelling` | climate | substance | Cold nutrient-rich water rising from below. |
+| `content` | language | affect | positive, low arousal: needs met, at rest |
 | `coral-head` | climate | substance | A massive coral colony standing proud of the reef. |
 | `coral-reef` | climate | terrain | a biome class |
 | `crevasse-field` | climate | substance | Ice split by crevasses. |
@@ -191,10 +193,12 @@
 | `dire-wolf-kind` | species | living | a dire wolf |
 | `drink` | language | act | to swallow liquid |
 | `drow-kind` | species | living | a drow |
+| `eager` | language | affect | positive, high arousal: chasing a satisfiable need |
 | `earth` | language | terrain | the ground underfoot |
 | `east` | language | quality | the direction of increasing longitude |
 | `eat` | language | act | to consume food |
 | `eclipse` | astronomy | celestial | the darkening when a moon crosses the sun, or the world's shadow crosses a moon |
+| `encloses` | language | quality | an anchor that reveals what lies within it |
 | `epipelagic` | climate | terrain | a biome class |
 | `erg` | climate | substance | A sand sea of dunes. |
 | `eye` | language | body | the organ of sight |
@@ -206,6 +210,7 @@
 | `ford` | terrain | terrain | where a river runs shallow enough to cross |
 | `forest-gap` | climate | substance | A break in the canopy where light reaches the ground. |
 | `frost-heave` | climate | substance | Ground churned and patterned by freezing. |
+| `frustrated` | language | affect | negative: blocked with a known target out of reach |
 | `gallery-forest` | climate | substance | Forest following a watercourse. |
 | `giant-constrictor-snake-kind` | species | living | a giant constrictor snake |
 | `giant-crocodile-kind` | species | living | a giant crocodile |
@@ -229,12 +234,14 @@
 | `hearth` | settlement | social | the fire at the center of a home |
 | `heat` | climate | quality | felt, oppressive warmth |
 | `help` | language | act | to list the operator's own instructions — `!help` |
+| `helpless` | language | affect | negative and persistent: given up despite an active drive |
 | `high` | language | quality | far above the ground |
 | `high-elf-kind` | species | living | a high elf |
 | `hill` | terrain | terrain | ground that rises above what surrounds it |
 | `hill-dwarf-kind` | species | living | a hill dwarf |
 | `hobgoblin-kind` | species | living | a hobgoblin |
 | `holdfast-tangle` | climate | substance | The anchored base of a kelp forest. |
+| `holds-liquid` | language | quality | a place a body may drink from |
 | `home` | settlement | social | one's dwelling |
 | `human-kind` | species | living | a human |
 | `hydrothermal-vent` | climate | terrain | a biome class |
@@ -244,6 +251,7 @@
 | `island` | terrain | terrain | land the water surrounds |
 | `kelp-canopy` | climate | substance | The floating canopy of a kelp forest. |
 | `kelp-forest` | climate | terrain | a biome class |
+| `kill` | language | act | to cause to cease living |
 | `killer-whale-kind` | species | living | a killer whale |
 | `know` | language | act | to hold something in memory or understanding — `knows` |
 | `kobold-kind` | species | living | a kobold |
@@ -254,6 +262,7 @@
 | `lightless-water` | climate | substance | Water below all light. |
 | `little` | language | quality | small in size or extent |
 | `look` | language | act | to visually attend to something, near or far — `look`, `examine` |
+| `lost` | language | affect | negative: blocked with no target to move toward |
 | `low` | language | quality | near the ground |
 | `many` | language | quality | an indefinitely large count |
 | `marine-snow` | climate | substance | Organic debris drifting endlessly down. |
@@ -289,6 +298,7 @@
 | `playa` | climate | substance | A dry lake bed of salt and cracked clay. |
 | `pressure-ridge` | climate | substance | Sea ice buckled into a ridge. |
 | `provoke` | language | act | to make someone hostile by an act the simulation itself did not choose — `!provoke` |
+| `radiates-heat` | language | quality | an anchor that emits warmth |
 | `rafted-floe` | climate | substance | Ice floes driven over one another. |
 | `rain` | climate | substance | liquid precipitation |
 | `read` | language | act | to take meaning from written words — `consult` |
@@ -313,6 +323,7 @@
 | `sea` | terrain | terrain | a body of salt water |
 | `sea-elf-kind` | species | living | a sea elf |
 | `sea-ice` | climate | terrain | a biome class |
+| `searching` | language | affect | neutral, mid arousal: seeking with a gradient |
 | `sense` | language | act | to perceive another's felt bodily state — `needs` |
 | `shadow` | language | quality | cast dark, distinct from open gloom |
 | `shrieker-kind` | species | living | a shrieker |
@@ -336,11 +347,13 @@
 | `stone` | terrain | substance | rock |
 | `sun` | astronomy | celestial | the sun |
 | `sun-like-star` | astronomy | celestial | a distant star resembling this world's own sun |
+| `supports-rest` | language | quality | a place a body may lie down and sleep |
 | `survey` | language | act | to enumerate every creature the world holds — `!npcs` |
 | `taiga` | climate | terrain | a biome class |
 | `temperate-forest` | climate | terrain | a biome class |
 | `temperate-grassland` | climate | terrain | a biome class |
 | `temperate-rainforest` | climate | terrain | a biome class |
+| `think` | language | act | to hold an uncertain belief |
 | `thorn-scrub` | climate | substance | Dry scrub of thorned shrubs. |
 | `tide` | astronomy | celestial | the rise and fall of the waters under the moons |
 | `treant-kind` | species | living | a treant |

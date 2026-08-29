@@ -51,7 +51,7 @@ const SEEDS: std::ops::RangeInclusive<u64> = 1..=30;
 /// changed (the niche curves, and the substrate a subterranean reading
 /// scores against) from what it did not (the resource-supply model, whose
 /// shape is unmodified by this task). Mirrors the condition-response half of
-/// `hornvale_worldgen::per_species_suitability`'s per-cell product.
+/// `hornvale_worldgen::per_species_suitability`'s per-vertex product.
 fn niche_fit(cn: &ConditionNiche, s: &Substrate, floor: f64) -> f64 {
     cn.temperature.eval(s.temperature_c, floor)
         * cn.moisture.eval(s.moisture, floor)
@@ -60,15 +60,15 @@ fn niche_fit(cn: &ConditionNiche, s: &Substrate, floor: f64) -> f64 {
 }
 
 /// One seed's mean surface vs. subterranean niche fit for one species,
-/// averaged over every LAND cell (`!terrain.is_ocean`) — the same predicate
+/// averaged over every LAND vertex (`!terrain.is_ocean`) — the same predicate
 /// Task 0's battery uses, and the one `GeneratedTerrain::cave_at` itself
-/// already gates on (it returns `None` on every ocean cell), so this
+/// already gates on (it returns `None` on every ocean vertex), so this
 /// introduces no second, independently-chosen population.
 struct SeedFit {
-    /// Mean niche-fit product over land cells, scored against the real
+    /// Mean niche-fit product over land vertices, scored against the real
     /// surface `Substrate`.
     surface_mean: f64,
-    /// Mean niche-fit product over the SAME land cells, scored against
+    /// Mean niche-fit product over the SAME land vertices, scored against
     /// `subterranean_substrate` of that same surface reading.
     subterranean_mean: f64,
 }
@@ -77,7 +77,7 @@ struct SeedFit {
 /// terrain/climate this readout reads — `climate_of` reconstructs climate
 /// from committed facts independent of build depth, so `Terrain` suffices;
 /// see `insolation_probe.rs` for the same pattern) and measure `label`'s
-/// (`"xorn"` or `"rust-monster"`) mean niche fit over every land cell.
+/// (`"xorn"` or `"rust-monster"`) mean niche fit over every land vertex.
 fn measure_one(seed: Seed, wc: &WorldComponents, label: &str) -> SeedFit {
     let world = build_world_to(
         seed,
@@ -109,27 +109,27 @@ fn measure_one(seed: Seed, wc: &WorldComponents, label: &str) -> SeedFit {
         &climate.regime(),
     );
 
-    // The Underworld: a chamber's conditions now need the cell's own depth,
+    // The Underworld: a chamber's conditions now need the vertex's own depth,
     // gradient, water table and porosity, so the reading is taken from the one
     // shared derivation rather than rebuilt here — see
-    // `subterranean_substrate_field`'s docs for what a cave-less land cell
+    // `subterranean_substrate_field`'s docs for what a cave-less land vertex
     // reads and why.
     let subterranean = subterranean_substrate_field(geo, &terrain, &surface);
 
     let mut surface_total = 0.0;
     let mut subterranean_total = 0.0;
     let mut n = 0usize;
-    for cell in geo.cells() {
-        if terrain.is_ocean(cell) {
+    for vertex in geo.vertices() {
+        if terrain.is_ocean(vertex) {
             continue;
         }
-        let s = *surface.get(cell);
-        let sub = *subterranean.get(cell);
+        let s = *surface.get(vertex);
+        let sub = *subterranean.get(vertex);
         surface_total += niche_fit(cn, &s, floor);
         subterranean_total += niche_fit(cn, &sub, floor);
         n += 1;
     }
-    assert!(n > 0, "{seed:?} has no land cells");
+    assert!(n > 0, "{seed:?} has no land vertices");
     SeedFit {
         surface_mean: surface_total / n as f64,
         subterranean_mean: subterranean_total / n as f64,
@@ -144,7 +144,7 @@ fn measure_one(seed: Seed, wc: &WorldComponents, label: &str) -> SeedFit {
 /// claim: readout(off-gate, heavy:) — prints per-seed mean niche fit,
 /// with a finite/non-negative sanity assertion per seed
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the xorn niche fit before and after the realm re-key; run by hand (The Deep Realm, Task 6, H1, answered its question; demoted by The Governor 2026-08-28)"]
 fn report_the_xorn_before_and_after() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
 
@@ -152,7 +152,7 @@ fn report_the_xorn_before_and_after() {
         let mut surface_sum = 0.0;
         let mut subterranean_sum = 0.0;
         let mut count = 0usize;
-        println!("\n=== {label}: per-seed mean niche fit (land cells only) ===");
+        println!("\n=== {label}: per-seed mean niche fit (land vertices only) ===");
         println!(
             "{:>6} | {:>16} | {:>16}",
             "seed", "surface_fit", "subterranean_fit"
@@ -197,7 +197,7 @@ fn report_the_xorn_before_and_after() {
 // `subterranean_substrate` directly, because nothing live used it. Task 2
 // wired `per_species_suitability` to ask `HabitatRealm` and score a
 // `Subterranean` kind against that same function's output. These two tests
-// are the wiring check, on seed 42, restricted to cave-bearing land cells
+// are the wiring check, on seed 42, restricted to cave-bearing land vertices
 // (where the cave-availability factor is 1.0 for both readings, so the ratio
 // isolates the niche-curve difference rather than the gate).
 //
@@ -205,7 +205,7 @@ fn report_the_xorn_before_and_after() {
 // pinned rather than a test relaxed.** The Tilth's Liebig minimum floors
 // temperature, moisture and insolation by the sovereignty floor and leaves
 // elevation bare, so the unfloored elevation term is the sole determinant —
-// and `subterranean_substrate` inherits `height_asl_m` from the surface cell
+// and `subterranean_substrate` inherits `height_asl_m` from the surface vertex
 // unchanged. Going underground improves exactly the axes it was built to
 // improve (moisture .585 -> .787, insolation .467 -> .840) and the minimum
 // never sees it; `warren_liebig_probe.rs` prints all four terms. The Warren's
@@ -229,15 +229,15 @@ fn realm_slice(wc: &WorldComponents) -> Vec<HabitatRealm> {
         .collect()
 }
 
-/// Seed 42's mean suitability for `label`, over every LAND cell that HOLDS A
+/// Seed 42's mean suitability for `label`, over every LAND vertex that HOLDS A
 /// CAVE, scored two ways through the SAME live `per_species_suitability`
 /// call site: once with the real (sparse) realm slice — "live", identical to
 /// what `demography_report_with_beta_from` computes — and once with every
 /// kind forced to `Surface` — "surface-forced", the pre-campaign scoring.
-/// Restricting to cave-bearing cells holds the availability factor at `1.0`
+/// Restricting to cave-bearing vertices holds the availability factor at `1.0`
 /// on both sides, so the ratio measures only the niche-curve asymmetry Task
 /// 6 of The Deep Realm measured by hand.
-fn live_vs_surface_forced_on_cave_cells(label: &str) -> (f64, f64, usize) {
+fn live_vs_surface_forced_on_cave_vertices(label: &str) -> (f64, f64, usize) {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let world = build_world_to(
         Seed(42),
@@ -311,15 +311,15 @@ fn live_vs_surface_forced_on_cave_cells(label: &str) -> (f64, f64, usize) {
     let mut live_total = 0.0;
     let mut surface_total = 0.0;
     let mut n = 0usize;
-    for cell in geo.cells() {
-        if terrain.is_ocean(cell) || terrain.cave_at(cell).is_none() {
+    for vertex in geo.vertices() {
+        if terrain.is_ocean(vertex) || terrain.cave_at(vertex).is_none() {
             continue;
         }
-        live_total += *live_map.get(cell);
-        surface_total += *surface_map.get(cell);
+        live_total += *live_map.get(vertex);
+        surface_total += *surface_map.get(vertex);
         n += 1;
     }
-    assert!(n > 0, "seed 42 must have cave-bearing land cells");
+    assert!(n > 0, "seed 42 must have cave-bearing land vertices");
     (live_total / n as f64, surface_total / n as f64, n)
 }
 
@@ -329,17 +329,17 @@ fn rust_monster_live_path_reproduces_c2as_subterranean_asymmetry() {
     // by hand, and this branch reproduced it at 2.557x through the live path
     // BEFORE absorbing The Tilth. It now reads exactly 1.000 — see this
     // module's header for why, and do not relax this bound to make it pass.
-    let (live, surface_forced, n) = live_vs_surface_forced_on_cave_cells("rust-monster");
+    let (live, surface_forced, n) = live_vs_surface_forced_on_cave_vertices("rust-monster");
     let ratio = live / surface_forced;
     println!(
         "rust-monster (live path): live={live:.6} surface-forced={surface_forced:.6} \
-         ratio={ratio:.3} over {n} cave-bearing land cells"
+         ratio={ratio:.3} over {n} cave-bearing land vertices"
     );
     assert!(
         (ratio - 1.0).abs() < 1e-9,
         "rust-monster's live ratio is expected to be EXACTLY 1.000 while the unfloored \
          elevation axis is the sole determinant of `tolerance_liebig` (see this module's \
-         header). Got {ratio:.6} ({live:.6} vs {surface_forced:.6} over {n} cells). If this \
+         header). Got {ratio:.6} ({live:.6} vs {surface_forced:.6} over {n} vertices). If this \
          moved, a tolerance model in which a non-lethal preference can bind has landed — that \
          is good news, and The Warren's spec §10.3 and chronicle need re-measuring rather \
          than this assertion needing a nudge."
@@ -347,22 +347,39 @@ fn rust_monster_live_path_reproduces_c2as_subterranean_asymmetry() {
 }
 
 #[test]
-fn xorn_live_path_reproduces_c2as_flat_ratio() {
-    // C2a measured the xorn's ratio at 1.02, flat within noise: its potency
-    // buys a large sovereignty floor and its devotions are near-zero on
-    // every axis, so no curve moves it. THIS is the campaign's wiring check
-    // (plan Task 3) — reproducing that flatness through a DIFFERENT code
-    // path is what proves the right thing got connected, rather than
-    // something that merely moves numbers.
-    let (live, surface_forced, n) = live_vs_surface_forced_on_cave_cells("xorn");
+fn xorn_live_path_no_longer_reproduces_c2as_flat_ratio() {
+    // C2a measured the xorn's ratio at 1.02, flat within noise — but that
+    // flatness was an artifact of an UNFED axis, not a structural property
+    // of xorn's authored condition curves. Its `niche` carried no
+    // `CHEMOSYNTHATE` weight (witnessed by `TrophicMode::Chemotrophic`, fed
+    // by nothing), so nothing about the subterranean per-rung reading this
+    // ratio exercises could ever move xorn's live score away from a
+    // surface-forced one.
+    //
+    // THE SOURCES, Task 9 fed that weight (0.65 `MINERAL` / 0.35
+    // `CHEMOSYNTHATE`) in the same commit that wired the real per-rung
+    // energy field to the capacity loop — Ruling P2's deliberate deferral,
+    // landed on purpose, precisely so this flatness would stop holding.
+    // Measured 2026-08-26, seed 42: ratio 1.697 — xorn now reads
+    // MEASURABLY BETTER underground than a surface-forced reading of the
+    // same kind, the right direction for a chemotroph whose real energy
+    // supply exists only at depth. Do not narrow this band back toward 1.0
+    // to "fix" it; that would silently un-wire the axis this task exists to
+    // feed. Renamed from `xorn_live_path_reproduces_c2as_flat_ratio` because
+    // a test named after a premise it now falsifies is worse than an honest
+    // rename (the same rule `subterranean_energy_probe.rs`'s own
+    // `derived_energy_is_monotone_not_a_trough` states).
+    let (live, surface_forced, n) = live_vs_surface_forced_on_cave_vertices("xorn");
     let ratio = live / surface_forced;
     println!(
         "xorn (live path): live={live:.6} surface-forced={surface_forced:.6} ratio={ratio:.3} \
-         over {n} cave-bearing land cells"
+         over {n} cave-bearing land vertices"
     );
     assert!(
-        (0.8..=1.25).contains(&ratio),
-        "xorn's ratio must stay essentially flat between subterranean and surface scoring \
-         (C2a measured 1.02); got ratio {ratio:.3} ({live:.6} vs {surface_forced:.6} over {n} cells)"
+        ratio > 1.25,
+        "xorn's live/surface-forced ratio is expected to have moved OFF the pre-Task-9 flat \
+         band (C2a measured 1.02, bounded [0.8, 1.25]) now that CHEMOSYNTHATE is fed; got \
+         ratio {ratio:.3} ({live:.6} vs {surface_forced:.6} over {n} vertices) — a value back \
+         inside [0.8, 1.25] means the per-rung switch or xorn's niche weight regressed"
     );
 }

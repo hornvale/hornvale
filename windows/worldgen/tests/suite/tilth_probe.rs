@@ -103,13 +103,15 @@ fn tilth_derivation_probe() {
         let obliquity_deg = system.anchor.obliquity.get();
         let regime = match system.anchor.rotation {
             hornvale_astronomy::Rotation::Spinning { day, .. } => {
-                hornvale_climate::RotationRegime::Spinning { day_std: day.get() }
+                hornvale_climate::RotationRegime::Spinning {
+                    day_std: day.as_std_days(),
+                }
             }
             hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
         };
 
         let wc = WorldComponents::assemble().unwrap();
-        let land: Vec<_> = geo.cells().filter(|c| !terrain.is_ocean(*c)).collect();
+        let land: Vec<_> = geo.vertices().filter(|c| !terrain.is_ocean(*c)).collect();
 
         // (1) moisture over land
         let mut moisture: Vec<f64> = land.iter().map(|c| climate.moisture_at(*c)).collect();
@@ -145,7 +147,7 @@ fn tilth_derivation_probe() {
             insolation_scalar,
             &regime,
         );
-        let base = capacity.as_cell_map();
+        let base = capacity.as_vertex_map();
         let forage = hornvale_worldgen::forage_supply_field(geo, base);
         let mineral = hornvale_worldgen::mineral_supply_field(geo, &terrain, MINERAL_SUPPLY_SCALE);
         let detritus = hornvale_worldgen::detritus_supply_field(geo, &terrain);
@@ -181,7 +183,7 @@ fn tilth_derivation_probe() {
         supply.sort_by(f64::total_cmp);
         all_supply.extend(supply.iter().copied());
 
-        // H1 per seed: who wins each land cell under each combination rule?
+        // H1 per seed: who wins each land vertex under each combination rule?
         let mut wins_p = vec![0usize; SETTLERS.len()];
         let mut wins_l = vec![0usize; SETTLERS.len()];
         for &c in &land {
@@ -275,7 +277,7 @@ fn tilth_derivation_probe() {
     // ---- H1, tested as a pure measurement before any production change ----
     // best-fit territory is argmax_sp of eff(c,sp), and the species-blind capacity
     // CANCELS from that argmax (spec §5d), so best-fit depends ONLY on how the
-    // per-species term combines. Compute it both ways over the same cells and the
+    // per-species term combines. Compute it both ways over the same vertices and the
     // attribution is exact: PRODUCT (today) versus LIEBIG MINIMUM (stage 5).
     println!("\n=== H1: does the combination rule redistribute best-fit territory? ===");
     println!(

@@ -1,7 +1,7 @@
 //! The REPL window: interrogate a world line by line. Generic over
 //! input/output so tests drive it with buffers.
 
-use hornvale_kernel::{CellId, EntityId, Value, World, WorldTime};
+use hornvale_kernel::{EntityId, Value, Vertex, World, WorldTime};
 use hornvale_worldgen as world_builder;
 use std::io::{BufRead, Write};
 
@@ -50,7 +50,7 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
             "help" => write!(output, "{HELP}")?,
             "sky" => {
                 let day = argument.and_then(|a| a.parse().ok()).unwrap_or(0.0);
-                match WorldTime::new(day) {
+                match WorldTime::from_std_days(day) {
                     Ok(time) => match world_builder::sky_report(world, time) {
                         Ok(report) => writeln!(output, "{}", report.description)?,
                         Err(e) => writeln!(output, "error: {e}")?,
@@ -89,19 +89,20 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                     None => writeln!(output, "usage: land <latitude> <longitude>")?,
                     Some((lat, lon)) => match world_builder::terrain_of(world) {
                         Ok(terrain) => {
-                            let cell = terrain.nearest_cell(lat, lon);
-                            let relative = terrain.elevation_at(cell) - terrain.sea_level();
-                            let surface = if terrain.is_ocean(cell) {
+                            let vertex = terrain.nearest_vertex(lat, lon);
+                            let relative = terrain.elevation_at(vertex) - terrain.sea_level();
+                            let surface = if terrain.is_ocean(vertex) {
                                 format!("ocean, {:.0} m deep", -relative)
                             } else {
                                 format!("land, {relative:.0} m above the sea")
                             };
+                            // lexicon: rendered REPL prose, kept "cell" (windows/almanac precedent)
                             writeln!(
                                 output,
-                                "cell {}: {surface}; plate {}; unrest {:.2}",
-                                cell.0,
-                                terrain.plate_of(cell),
-                                terrain.unrest_at(cell)
+                                "vertex {}: {surface}; plate {}; unrest {:.2}",
+                                vertex.0,
+                                terrain.plate_of(vertex),
+                                terrain.unrest_at(vertex)
                             )?;
                         }
                         Err(e) => writeln!(output, "error: {e}")?,
@@ -130,14 +131,14 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                     Some((lat, lon)) => match world_builder::terrain_of(world) {
                         Ok(terrain) => match world_builder::climate_from(world, &terrain) {
                             Ok(climate) => {
-                                let cell = terrain.nearest_cell(lat, lon);
+                                let vertex = terrain.nearest_vertex(lat, lon);
                                 writeln!(
                                     output,
-                                    "cell {}: biome {} — {:.0}°C, moisture {:.2}",
-                                    cell.0,
-                                    climate.biome_at(cell).name(),
-                                    climate.mean_temperature_at(cell).get(),
-                                    climate.moisture_at(cell)
+                                    "vertex {}: biome {} — {:.0}°C, moisture {:.2}",
+                                    vertex.0,
+                                    climate.biome_at(vertex).name(),
+                                    climate.mean_temperature_at(vertex).get(),
+                                    climate.moisture_at(vertex)
                                 )?;
                             }
                             Err(e) => writeln!(output, "error: {e}")?,
@@ -175,7 +176,7 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                 // entities' own site facts, and only where the whole line
                 // coincides -- population and biome already separate most
                 // colliding names here, and `for_lines` is told so.
-                let rows: Vec<(hornvale_terrain::PlaceInfo, u32, Option<CellId>)> =
+                let rows: Vec<(hornvale_terrain::PlaceInfo, u32, Option<Vertex>)> =
                     hornvale_terrain::places(world)
                         .into_iter()
                         .map(|place| {
@@ -186,26 +187,26 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                                 Some(Value::Number(n)) => *n as u32,
                                 _ => 0,
                             };
-                            let cell = match world
+                            let vertex = match world
                                 .ledger
-                                .value_of(place.id, hornvale_settlement::CELL_ID)
+                                .value_of(place.id, hornvale_settlement::VERTEX_ID)
                             {
-                                Some(Value::Number(n)) => Some(CellId(*n as u32)),
+                                Some(Value::Number(n)) => Some(Vertex(*n as u32)),
                                 _ => None,
                             };
-                            (place, population, cell)
+                            (place, population, vertex)
                         })
                         .collect();
-                let lines: Vec<(CellId, String)> = rows
+                let lines: Vec<(Vertex, String)> = rows
                     .iter()
-                    .filter_map(|(place, population, cell)| {
-                        Some(((*cell)?, format!("{population} — {}", place.biome)))
+                    .filter_map(|(place, population, vertex)| {
+                        Some(((*vertex)?, format!("{population} — {}", place.biome)))
                     })
                     .collect();
                 let labels = hornvale_almanac::qualify::SiteLabels::for_lines(world, &lines);
-                for (place, population, cell) in &rows {
-                    let label = match cell {
-                        Some(cell) => labels.label(*cell),
+                for (place, population, vertex) in &rows {
+                    let label = match vertex {
+                        Some(vertex) => labels.label(*vertex),
                         None => place.name.clone(),
                     };
                     writeln!(
@@ -225,11 +226,11 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                     None => writeln!(output, "usage: settlement <latitude> <longitude>")?,
                     Some((lat, lon)) => match world_builder::terrain_of(world) {
                         Ok(terrain) => {
-                            let cell = terrain.nearest_cell(lat, lon);
+                            let vertex = terrain.nearest_vertex(lat, lon);
                             let found = hornvale_terrain::places(world).into_iter().find(|p| {
                                 matches!(
-                                    world.ledger.value_of(p.id, hornvale_settlement::CELL_ID),
-                                    Some(Value::Number(n)) if *n as u32 == cell.0
+                                    world.ledger.value_of(p.id, hornvale_settlement::VERTEX_ID),
+                                    Some(Value::Number(n)) if *n as u32 == vertex.0
                                 )
                             });
                             match found {
@@ -238,7 +239,7 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                                     "{} — {} (entity {})",
                                     place.name, place.biome, place.id.0
                                 )?,
-                                None => writeln!(output, "no settlement on this cell")?,
+                                None => writeln!(output, "no settlement on this vertex")?,
                             }
                         }
                         Err(e) => writeln!(output, "error: {e}")?,
@@ -710,7 +711,7 @@ mod tests {
 
     /// `f64::from_str` accepts `inf`/`-inf`/`nan`/`infinity`, which are not
     /// finite days — a value typed at repl stdin, not a bug in any caller.
-    /// Before the fix round this reached `WorldTime::new(day).expect(...)`
+    /// Before the fix round this reached `WorldTime::from_std_days(day).expect(...)`
     /// and panicked the process; it must instead fail through the same
     /// `error: {e}` path every other malformed-input arm uses.
     #[test]
@@ -835,11 +836,12 @@ mod tests {
         // Each fact line is tagged with the domain that asserted it. Under The
         // Living Community epoch the flagship settlement's
         // is-settlement/population/cell-id facts are committed by the
-        // deep-history bake (tag "(history/bake/v2)" since The Contour bumped
-        // the label — decision 0006, an epoch suffix, never a rename) rather
-        // than the settlement domain.
+        // deep-history bake (tag "(history/bake/vN)" — The Contour bumped the
+        // label to v2, The Granary to v3; decision 0006, an epoch suffix,
+        // never a rename) rather than the settlement domain. Match the prefix
+        // so the next epoch suffix doesn't repeat this edit.
         assert!(
-            out.contains("(history/bake/v2)") || out.contains("(terrain)"),
+            out.contains("(history/bake/") || out.contains("(terrain)"),
             "expected a domain-tagged fact line for {subject:?}: {out}"
         );
     }
@@ -848,7 +850,7 @@ mod tests {
     fn map_and_land_answer_terrain_queries() {
         let out = drive("map\nland 45 -30\nquit\n");
         assert!(out.contains('~'), "no ascii ocean");
-        assert!(out.contains("plate"), "no per-cell land report");
+        assert!(out.contains("plate"), "no per-vertex land report");
     }
 
     #[test]
@@ -924,7 +926,7 @@ mod tests {
         run(&world, "biomes\nbiome 5 -40\nquit\n".as_bytes(), &mut out).unwrap();
         let out = String::from_utf8(out).unwrap();
         assert!(out.lines().count() > 24, "no ascii biome map");
-        assert!(out.contains("biome"), "no per-cell biome report");
+        assert!(out.contains("biome"), "no per-vertex biome report");
     }
 
     fn drive_generated(commands: &str) -> String {

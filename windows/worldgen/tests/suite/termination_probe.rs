@@ -15,23 +15,23 @@
 //!
 //! ## What is measured, and against what denominator
 //!
-//! A **cave system** is a cave-bearing LAND cell. Today's terrain model
-//! reports at most one [`hornvale_terrain::Cave`] per cell
-//! (`GeneratedTerrain::cave_at(id) -> Option<Cave>`), so one such cell is one
-//! system and the denominator is the count of them. Ocean cells are excluded
+//! A **cave system** is a cave-bearing LAND vertex. Today's terrain model
+//! reports at most one [`hornvale_terrain::Cave`] per vertex
+//! (`GeneratedTerrain::cave_at(id) -> Option<Cave>`), so one such vertex is one
+//! system and the denominator is the count of them. Ocean vertices are excluded
 //! and counted separately below so the choice is visible rather than implied;
 //! a share here is always `systems terminating at rung r / cave-bearing land
-//! cells`, never a share of all cells.
+//! vertices`, never a share of all vertices.
 //!
 //! The **terminating rung** is
-//! `rung_at_depth(cave.depth_reach_m, terrain.geothermal_gradient_at(cell))`
+//! `rung_at_depth(cave.depth_reach_m, terrain.geothermal_gradient_at(vertex))`
 //! — the DELVE ladder (`domains/terrain/src/delve.rs`), which is spaced by
-//! temperature offset above the cell's surface datum. It is NOT
+//! temperature offset above the vertex's surface datum. It is NOT
 //! `Cave::deepest_horizon`, which is the STRATIGRAPHIC ladder (Regolith / Cover
 //! / Basement / Roots / Underneath). The two are independent and neither
 //! derives the other (`windows/worldgen/src/chamber.rs`'s module doc says so
 //! explicitly), so the same `depth_reach_m` is two different rungs in two
-//! cells whose gradients differ. A probe that read `deepest_horizon` would be
+//! vertices whose gradients differ. A probe that read `deepest_horizon` would be
 //! answering a different question than §4.1's branch table asks.
 //!
 //! ## The branch table (the campaign brief's Step 3), as a decision rule
@@ -62,7 +62,7 @@
 //! scan over them): **1.059 s**, warm tree.
 //!
 //! ```text
-//! seed 42     land cells 11283   cave systems  874
+//! seed 42     land vertices 11283   cave systems  874
 //!   rung        systems     share    reach p50  reach p90  reach max
 //!   Undercroft       77     8.81%         29.1       29.1       29.1
 //!   Shallows        131    14.99%        234.9      252.1      266.1
@@ -71,7 +71,7 @@
 //!   Nadir           214    24.49%       2145.7     2398.9     2723.6
 //!   depth_reach_m all systems: p10 200.0 p25 399.5 p50 483.5 p75 1502.0 p90 2271.9 max 2723.6
 //!
-//! seed 7      land cells 19332   cave systems 1681
+//! seed 7      land vertices 19332   cave systems 1681
 //!   Undercroft       84     5.00%         28.0       44.4       44.4
 //!   Shallows        599    35.63%        227.9      250.8      250.8
 //!   Deeps           121     7.20%        518.0      985.1      986.0
@@ -79,7 +79,7 @@
 //!   Nadir           727    43.25%       2260.4     2474.3     2913.4
 //!   depth_reach_m all systems: p10 215.3 p25 227.9 p50 1408.6 p75 2246.6 p90 2474.3 max 2913.4
 //!
-//! seed 1234   land cells 11684   cave systems 1266
+//! seed 1234   land vertices 11684   cave systems 1266
 //!   Undercroft       91     7.19%         29.3       46.5       73.6
 //!   Shallows        144    11.37%        207.6      227.4      234.3
 //!   Deeps           366    28.91%        478.2      686.9      932.9
@@ -279,7 +279,7 @@ fn pct(sorted: &[f64], q: f64) -> f64 {
 }
 
 /// claim: rate(Nadir share of cave systems; seeds 42 / 7 / 1234) — over the
-/// cave-bearing land cells of each seed, the share of cave systems whose
+/// cave-bearing land vertices of each seed, the share of cave systems whose
 /// delve terminates at each rung of the delve ladder, and the branch of the
 /// campaign brief's Step 3 table that the pooled `Nadir` share selects.
 ///
@@ -288,7 +288,7 @@ fn pct(sorted: &[f64], q: f64) -> f64 {
 /// the rate out of the band this campaign was authorised under reddens here
 /// instead of printing a different number into a log nobody reads.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: where a delve terminates (pooled Nadir-share branch); run by hand (The Stope, Task 0, answered its question; demoted by The Governor 2026-08-28)"]
 fn where_does_a_delve_terminate() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
 
@@ -325,19 +325,19 @@ fn where_does_a_delve_terminate() {
         let mut reach: Vec<f64> = Vec::new();
         let mut reach_by_rung: [Vec<f64>; 5] = Default::default();
 
-        for cell in geo.cells() {
-            if terrain.is_ocean(cell) {
-                if terrain.cave_at(cell).is_some() {
+        for vertex in geo.vertices() {
+            if terrain.is_ocean(vertex) {
+                if terrain.cave_at(vertex).is_some() {
                     ocean_caves += 1;
                 }
                 continue;
             }
             land += 1;
-            let Some(cave) = terrain.cave_at(cell) else {
+            let Some(cave) = terrain.cave_at(vertex) else {
                 continue;
             };
             systems += 1;
-            let gradient = terrain.geothermal_gradient_at(cell);
+            let gradient = terrain.geothermal_gradient_at(vertex);
             let rung = rung_at_depth(cave.depth_reach_m, gradient);
             let rank = rung_rank(rung).expect("rung_at_depth never returns Surface");
             hist[rank] += 1;
@@ -349,8 +349,8 @@ fn where_does_a_delve_terminate() {
         let nadir_share = hist[4] as f64 / systems.max(1) as f64;
 
         println!(
-            "\n== seed {seed_value} ==  land cells {land}  cave systems {systems}  \
-             (ocean cells carrying a cave: {ocean_caves}, excluded)"
+            "\n== seed {seed_value} ==  land vertices {land}  cave systems {systems}  \
+             (ocean vertices carrying a cave: {ocean_caves}, excluded)"
         );
         println!(
             "  {:<11} {:>7} {:>9}   {:>10} {:>10} {:>10}",
@@ -574,15 +574,15 @@ fn could_nadir_be_split_into_a_sixth_rung() {
         let lavatube_ceiling_m = 200.0_f64;
         let mut at_lavatube_ceiling = 0usize;
 
-        for cell in geo.cells() {
-            if terrain.is_ocean(cell) {
+        for vertex in geo.vertices() {
+            if terrain.is_ocean(vertex) {
                 continue;
             }
             land += 1;
-            let Some(cave) = terrain.cave_at(cell) else {
+            let Some(cave) = terrain.cave_at(vertex) else {
                 continue;
             };
-            let gradient = terrain.geothermal_gradient_at(cell);
+            let gradient = terrain.geothermal_gradient_at(vertex);
             delta_t.push(gradient.get() * (cave.depth_reach_m / 1000.0));
             gradients.push(gradient.get());
             if (cave.depth_reach_m - CAVE_REACH_CEILING_M).abs() <= CLAMP_EPSILON_M {
@@ -612,7 +612,7 @@ fn could_nadir_be_split_into_a_sixth_rung() {
         let seed_max = delta_t.last().copied().unwrap_or(f64::NAN);
         observed_max_delta_t = observed_max_delta_t.max(seed_max);
 
-        println!("\n===== seed {seed_value} =====  land cells {land}  cave systems {systems}");
+        println!("\n===== seed {seed_value} =====  land vertices {land}  cave systems {systems}");
 
         // (4) The gradient band actually realized.
         println!(

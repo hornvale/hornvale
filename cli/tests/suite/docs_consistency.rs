@@ -1050,30 +1050,30 @@ fn cite_errors_in_catches_line_wrapped_cites() {
 /// was current; nothing gated the hand-authored half. That is the mirror of the
 /// usual freshness bug, and this is the cheap guard for it.
 #[test]
-fn the_history_page_prose_names_the_cell_it_renders() {
+fn the_history_page_prose_names_the_vertex_it_renders() {
     let page = read(&repo_root().join("book/src/gallery/history-seed-42.md"));
 
-    // The prose cites "cell N"; the rendered block heads with "The clearing at cell N".
+    // The prose cites "vertex N"; the rendered block heads with "The clearing at vertex N".
     let rendered = page
         .lines()
-        .find_map(|l| l.strip_prefix("The clearing at cell "))
+        .find_map(|l| l.strip_prefix("The clearing at vertex "))
         .map(|c| c.trim().to_string())
-        .expect("the rendered block heads with 'The clearing at cell N'");
+        .expect("the rendered block heads with 'The clearing at vertex N'");
 
     let cited = page
         .lines()
-        .filter(|l| !l.starts_with("The clearing at cell "))
+        .filter(|l| !l.starts_with("The clearing at vertex "))
         .find_map(|l| {
-            l.split("cell ").nth(1).and_then(|rest| {
+            l.split("vertex ").nth(1).and_then(|rest| {
                 let n: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
                 (!n.is_empty()).then_some(n)
             })
         })
-        .expect("the framing prose cites a cell id");
+        .expect("the framing prose cites a vertex id");
 
     assert_eq!(
         cited, rendered,
-        "history-seed-42.md prose cites cell {cited} but renders cell {rendered} — \
+        "history-seed-42.md prose cites vertex {cited} but renders vertex {rendered} — \
          the framing prose in scripts/regenerate-artifacts.sh (the `history_site` \
          block, ~lines 219-243) has gone stale against the rendered column. Fix \
          the printf literals there, not this generated .md file — it is \

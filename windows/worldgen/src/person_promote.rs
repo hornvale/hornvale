@@ -242,7 +242,7 @@ pub fn select_founders(records: &[OccupationRecord]) -> FounderCast {
 /// years once, at the top of the loop below. The
 /// `person-died` fact is committed only once that day has passed at `now`; a
 /// living person is the absence of one. A species with no lifespan
-/// (`Ametabolic`) yields no death fact either, which reads as "not known to have
+/// (ametabolic) yields no death fact either, which reads as "not known to have
 /// died", and one with no maturity falls back to founding day as birth.
 pub fn promote(
     world: &mut hornvale_kernel::World,
@@ -287,7 +287,7 @@ pub fn promote(
             // matures later at unchanged mass, so passing the kind's own
             // schedule (rather than ALLOMETRIC) is what keeps a founder's birth
             // day consistent with the species it belongs to.
-            .map(|b| hornvale_species::life_history(b.mass, b.metabolic_class, b.schedule));
+            .map(|b| hornvale_species::life_history(b.mass, b.thermal_strategy, b.schedule));
         // A founder was already grown when they founded, so birth precedes the
         // founding by a maturity. This goes NEGATIVE for day-0 settlements —
         // the history record begins at day 0 and the founder did not. Honest,
@@ -346,13 +346,13 @@ mod tests {
     use hornvale_history::record::{
         Ended, Founding, Function, Notability, Occupation, OccupationRecord, TechHorizon,
     };
-    use hornvale_kernel::{CellId, EntityId, KindId};
+    use hornvale_kernel::{EntityId, KindId, Vertex};
 
     fn rec(people: &'static str, site: u32, founded: f64, peak: u32) -> OccupationRecord {
         OccupationRecord {
             core: Occupation {
                 people: KindId(people),
-                site: CellId(site),
+                site: Vertex(site),
                 founded,
                 ended: None,
                 peak_population: peak,
@@ -365,7 +365,7 @@ mod tests {
             },
             id: EntityId::new(1).expect("nonzero"),
             ended_by: Ended::Nature,
-            founded_from: Founding::Genesis(CellId(site)),
+            founded_from: Founding::Genesis(Vertex(site)),
         }
     }
 

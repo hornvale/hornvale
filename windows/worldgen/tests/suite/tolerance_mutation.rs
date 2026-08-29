@@ -173,10 +173,11 @@
 
 use hornvale_astronomy::SkyPins;
 use hornvale_history::record::{CauseOfEnd, Ended};
-use hornvale_kernel::{CellId, KindId, Seed};
+use hornvale_kernel::{KindId, Seed, Vertex};
 use hornvale_species::Dispersion;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::disposition::{drawn_threat_response, occupation_draw_key};
+use hornvale_worldgen::seed_sweep;
 use hornvale_worldgen::{SettlementPins, SkyChoice, WorldComponents, history_for};
 use std::collections::BTreeMap;
 
@@ -249,8 +250,8 @@ struct Settlement {
     seed: u64,
     /// The people occupying the site.
     people: KindId,
-    /// The Geosphere cell the occupation sits on.
-    site: CellId,
+    /// The Geosphere vertex the occupation sits on.
+    site: Vertex,
     /// The founding year, reduced through `occupation_draw_key`.
     founded_key: i64,
 }
@@ -289,54 +290,6 @@ fn authored(wc: &WorldComponents) -> (BTreeMap<KindId, f64>, BTreeMap<KindId, f6
         spreads.insert(*kind, spread);
     }
     (locations, spreads)
-}
-
-/// Build every seed in [`SEEDS`] and return one [`Settlement`] per occupation
-/// record of the six settling peoples, plus the number of raids each people
-/// **initiated** (resolved victim-side: a raid closes its victim's record with
-/// `CauseOfEnd::Fled` + `Ended::By(raider_id)`, and `Bake::open` mints a fresh
-/// id per record, so `raider_id` names exactly one record — the raider's).
-fn population(wc: &WorldComponents) -> (Vec<Settlement>, BTreeMap<KindId, u64>) {
-    let mut rows = Vec::new();
-    let mut initiated: BTreeMap<KindId, u64> = BTreeMap::new();
-    for seed in SEEDS {
-        let history = history_for(
-            Seed(seed),
-            &SkyPins::default(),
-            SkyChoice::Generated,
-            &TerrainPins::default(),
-            &SettlementPins::default(),
-            wc,
-        )
-        .unwrap_or_else(|e| panic!("seed {seed} failed to build: {e:?}"));
-
-        let by_community: BTreeMap<_, KindId> = history
-            .records
-            .iter()
-            .map(|rec| (rec.community, rec.core.people))
-            .collect();
-
-        for rec in &history.records {
-            if matches!(rec.core.cause, Some(CauseOfEnd::Fled))
-                && let Ended::By(raider) = rec.ended_by
-            {
-                let people = by_community.get(&raider).copied().unwrap_or_else(|| {
-                    panic!("seed {seed}: raider {raider:?} names no occupation record")
-                });
-                *initiated.entry(people).or_default() += 1;
-            }
-            if !PEOPLES_AS_OF_THE_GENERALIST.contains(&rec.core.people.0) {
-                continue;
-            }
-            rows.push(Settlement {
-                seed,
-                people: rec.core.people,
-                site: rec.core.site,
-                founded_key: occupation_draw_key(rec.core.founded),
-            });
-        }
-    }
-    (rows, initiated)
 }
 
 /// Every drawn gate input for one people, under one dispersion regime.
@@ -413,6 +366,8 @@ const ZERO_DISPERSION: Dispersion = Dispersion {
 /// *parameter-is-read* proof, not a preregistered prediction.
 /// claim: rate(forall-seed, variance in (HUMAN_VARIANCE_FLOOR,
 /// HUMAN_VARIANCE_CEILING)) — over SEEDS, off-gate (heavy:)
+///
+/// nextest: sized-sweep
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn zero_dispersion_collapses_between_settlement_variance() {
@@ -424,7 +379,74 @@ fn zero_dispersion_collapses_between_settlement_variance() {
         "all six settling peoples must carry an authored threat_response; got {:?}",
         locations.keys().collect::<Vec<_>>()
     );
-    let (pop, initiated) = population(&wc);
+
+    // Build every seed in SEEDS and collect one Settlement per occupation
+    // record of the six settling peoples, plus the number of raids each
+    // people INITIATED (resolved victim-side: a raid closes its victim's
+    // record with CauseOfEnd::Fled + Ended::By(raider_id), and Bake::open
+    // mints a fresh id per record, so raider_id names exactly one record —
+    // the raider's).
+    //
+    // The seed sweep runs across the machine's CPUs (see
+    // `seed_sweep::map_seeds`), but `pop`/`initiated` below are
+    // byte-identical to the serial loop this replaced: each seed's
+    // settlements and raid-initiation counts are a pure function of its
+    // seed, each worker shares nothing, and results come back in SEED
+    // order, then get concatenated (for the settlements) and summed key by
+    // key (for the initiation counts) — both operations that do not care
+    // what order the seeds arrive in, only that the underlying per-seed
+    // values are exactly what the serial loop would have produced. Set
+    // `HV_SEED_SWEEP_THREADS=1` to reproduce that serial loop exactly.
+    let per_seed: Vec<(Vec<Settlement>, BTreeMap<KindId, u64>)> =
+        seed_sweep::map_seeds(SEEDS, |seed| {
+            let history = history_for(
+                Seed(seed),
+                &SkyPins::default(),
+                SkyChoice::Generated,
+                &TerrainPins::default(),
+                &SettlementPins::default(),
+                &wc,
+            )
+            .unwrap_or_else(|e| panic!("seed {seed} failed to build: {e:?}"));
+
+            let by_community: BTreeMap<_, KindId> = history
+                .records
+                .iter()
+                .map(|rec| (rec.community, rec.core.people))
+                .collect();
+
+            let mut rows = Vec::new();
+            let mut initiated: BTreeMap<KindId, u64> = BTreeMap::new();
+            for rec in &history.records {
+                if matches!(rec.core.cause, Some(CauseOfEnd::Fled))
+                    && let Ended::By(raider) = rec.ended_by
+                {
+                    let people = by_community.get(&raider).copied().unwrap_or_else(|| {
+                        panic!("seed {seed}: raider {raider:?} names no occupation record")
+                    });
+                    *initiated.entry(people).or_default() += 1;
+                }
+                if !PEOPLES_AS_OF_THE_GENERALIST.contains(&rec.core.people.0) {
+                    continue;
+                }
+                rows.push(Settlement {
+                    seed,
+                    people: rec.core.people,
+                    site: rec.core.site,
+                    founded_key: occupation_draw_key(rec.core.founded),
+                });
+            }
+            (rows, initiated)
+        });
+
+    let mut pop = Vec::new();
+    let mut initiated: BTreeMap<KindId, u64> = BTreeMap::new();
+    for (rows, seed_initiated) in per_seed {
+        pop.extend(rows);
+        for (people, n) in seed_initiated {
+            *initiated.entry(people).or_default() += n;
+        }
+    }
     assert!(!pop.is_empty(), "no settlements sampled");
 
     let human = KindId("human");
@@ -543,12 +565,12 @@ fn every_zeroed_draw_is_the_authored_location() {
     let (locations, _) = authored(&wc);
     for (people, &location) in &locations {
         for year in [0i64, 25, 725, 1975, 2000] {
-            for cell in [0u32, 7, 4242, 65_535] {
+            for vertex in [0u32, 7, 4242, 65_535] {
                 assert_eq!(
-                    drawn_threat_response(Seed(42), CellId(cell), year, location, 0.0),
+                    drawn_threat_response(Seed(42), Vertex(vertex), year, location, 0.0),
                     location,
-                    "{}: spread 0 moved the draw off the authored location at cell \
-                     {cell}, year {year}",
+                    "{}: spread 0 moved the draw off the authored location at vertex \
+                     {vertex}, year {year}",
                     people.0
                 );
             }

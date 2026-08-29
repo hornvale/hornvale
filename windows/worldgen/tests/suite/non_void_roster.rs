@@ -1,7 +1,7 @@
 //! The Vacancy: no kind may be a ghost.
 //!
 //! A kind can be authored, load, satisfy every referential-integrity check in
-//! `components.rs`, and still have K = 0 on every cell of every world - present
+//! `components.rs`, and still have K = 0 on every vertex of every world - present
 //! in the registry, absent from the world, with no error anywhere. That is not
 //! hypothetical: the kobold's elevation optimum once sat at or above the
 //! highest land on most seeds, so its documented "exclusive highland
@@ -35,14 +35,14 @@ use hornvale_worldgen::{
 };
 use std::collections::BTreeSet;
 
-/// The viability floor below which a cell's K is ecological noise rather
+/// The viability floor below which a vertex's K is ecological noise rather
 /// than presence - [`hornvale_demography::FLOOR`], unchanged. Reused
 /// identical to `occupancy_readout.rs`'s `VIABILITY_FLOOR`; two different
 /// floors would let a kind pass one test and fail the other.
 const VIABILITY_FLOOR: f64 = hornvale_demography::FLOOR;
 
 /// The set of kind names viable (K at or above [`VIABILITY_FLOOR`] on at
-/// least one cell) on the world built from `seed`. Builds the world and the
+/// least one vertex) on the world built from `seed`. Builds the world and the
 /// registries once and checks every kind against it in a single pass,
 /// mirroring `occupancy_readout.rs`'s per-seed structure rather than
 /// rebuilding the world once per (seed, kind) pair.
@@ -72,13 +72,13 @@ fn viable_kinds_on(seed: u64) -> BTreeSet<&'static str> {
     // is the one place on the branch where that distinction has teeth.
     //
     // This test is the ghost guard: "a kind can be authored, load, satisfy every
-    // referential-integrity check, and still have K = 0 on every cell of every
+    // referential-integrity check, and still have K = 0 on every vertex of every
     // world". A biome affinity is a per-biome MULTIPLIER on exactly that K, and
     // it is the only mechanism in the codebase that can push a kind's field
     // toward zero across a whole class of biomes at once. A guard against
     // vanishing kinds that is handed `None` for every kind is structurally blind
     // to the newest way a kind can vanish — it would keep passing while the
-    // shipped registry drove a row's factor to a value no cell could clear.
+    // shipped registry drove a row's factor to a value no vertex could clear.
     //
     // Same `wc.biosphere` order as `bios` and `realm`, so the three slices stay
     // index-aligned; a kind absent from the sparse store resolves to `None`,
@@ -112,7 +112,9 @@ fn viable_kinds_on(seed: u64) -> BTreeSet<&'static str> {
     let obliquity = system.anchor.obliquity.get();
     let regime = match system.anchor.rotation {
         hornvale_astronomy::Rotation::Spinning { day, .. } => {
-            hornvale_climate::RotationRegime::Spinning { day_std: day.get() }
+            hornvale_climate::RotationRegime::Spinning {
+                day_std: day.as_std_days(),
+            }
         }
         hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
     };
@@ -124,7 +126,10 @@ fn viable_kinds_on(seed: u64) -> BTreeSet<&'static str> {
     let mut viable = BTreeSet::new();
     for (tag, k) in &ks {
         let name = kinds[*tag as usize].0;
-        if geo.cells().any(|cell| *k.get(cell) >= VIABILITY_FLOOR) {
+        if geo
+            .vertices()
+            .any(|vertex| *k.get(vertex) >= VIABILITY_FLOOR)
+        {
             viable.insert(name);
         }
     }

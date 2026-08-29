@@ -3,9 +3,9 @@
 //! [`crate::Horizon`] keeps its five stratigraphic rungs and its entire
 //! archival job (`Era`, `RockClass`, `unconformity`); it is not modified and
 //! nothing here reads it. This is a **second, independent ladder**: its rungs
-//! are placed at temperature offsets above the cell's surface datum, so a
+//! are placed at temperature offsets above the vertex's surface datum, so a
 //! rung's depth in metres is derived from
-//! [`crate::strata::geothermal_gradient`] and therefore *varies by cell* — the
+//! [`crate::strata::geothermal_gradient`] and therefore *varies by vertex* — the
 //! same rung sits twice as deep under an ancient craton (15 K/km) as under
 //! young thin crust (30 K/km). Neither ladder derives the other.
 //!
@@ -22,7 +22,7 @@
 //! `windows/worldgen/tests/underworld_ladder_probe.rs`'s module doc — the
 //! second of that file's two tables, taken after a cave's depth became a
 //! budget in metres (spec §4.0). Seeds 42 / 7 / 1234; 874 / 1681 / 1266
-//! cave-bearing land cells.
+//! cave-bearing land vertices.
 //!
 //! The first of those two tables is retained there as a before-arm and is
 //! **not** the input to this table. It was taken while depth was a band index,
@@ -47,7 +47,7 @@
 //! bin `[10, 11)` holds **39.9% of seed 42**, and 19.6% of that seed lies
 //! within ±0.5 K of the edge. See [`DEEPS_TOP_K`] for the move and its rule.
 //!
-//! Per-class share of cave-bearing cells, seeds 42 / 7 / 1234:
+//! Per-class share of cave-bearing vertices, seeds 42 / 7 / 1234:
 //!
 //! ```text
 //! rung        ΔT (K)      seed 42        seed 7         seed 1234
@@ -94,7 +94,7 @@
 //! ## Nadir: a refused split, and its true bound
 //!
 //! [`Band::Nadir`] is the open-ended leftover bin, and leftover bins are
-//! large by construction: 38.65% of cave-bearing land cells terminate here
+//! large by construction: 38.65% of cave-bearing land vertices terminate here
 //! (24.49 / 43.25 / 42.34% on seeds 42 / 7 / 1234), which falsified the
 //! campaign's own prediction that reaching it would be uncommon.
 //!
@@ -129,11 +129,11 @@ use hornvale_kernel::Band;
 ///
 /// **Authored, not derived.** Spec §4.1 fixes this value in the spec *before*
 /// any fit precisely so that no measurement can be read as having produced it:
-/// 50 K puts a temperate cell's chamber near 60 °C, past sustained human
+/// 50 K puts a temperate vertex's chamber near 60 °C, past sustained human
 /// tolerance, and lands the ladder's floor at 1.7–3.3 km over the 15–30 K/km
 /// gradient band — the same order as the deepest worked mines on Earth. It is
 /// a fidelity choice and is recorded as one. The measured distribution is what
-/// tells us the class is *occupied* (24.5 / 43.2 / 42.3% of cave-bearing cells
+/// tells us the class is *occupied* (24.5 / 43.2 / 42.3% of cave-bearing vertices
 /// on seeds 42 / 7 / 1234); it did not choose the number.
 /// type-audit: bare-ok(diagnostic-value)
 pub const HABITABLE_CEILING_K: f64 = 50.0;
@@ -186,7 +186,7 @@ const SHALLOWS_TOP_K: f64 = 2.0;
 /// metric-chasing this move is not.
 ///
 /// *Effect on the table:* `Deeps` gains the `[8, 10)` caves from `Shallows` —
-/// 18 / 40 / 18 cells — so its thinnest seed goes 4.8% → 7.2% and the table's
+/// 18 / 40 / 18 vertices — so its thinnest seed goes 4.8% → 7.2% and the table's
 /// minimum class 4.8% → 5.0%. The rung names, arity and ordering are
 /// unchanged, so `chamber/v2`'s key spellings do not move with it.
 /// type-audit: bare-ok(diagnostic-value)
@@ -196,7 +196,7 @@ const DEEPS_TOP_K: f64 = 8.0;
 ///
 /// **An a-priori bin, kept.** Spec §4.1 published `25 – 50 K` before Task 1
 /// ran, the probe binned against it, and the class holds 6.1 / 8.9 / 10.2% of
-/// cave-bearing cells on seeds 42 / 7 / 1234 — occupied on every seed, which
+/// cave-bearing vertices on seeds 42 / 7 / 1234 — occupied on every seed, which
 /// is the claim.
 ///
 /// It is not in a valley the way [`SHALLOWS_TOP_K`] and [`DEEPS_TOP_K`] are:
@@ -269,7 +269,7 @@ pub fn delta_t_range_of(rung: Band) -> (f64, Option<f64>) {
 /// The rung a ΔT (K above the surface datum) falls in.
 ///
 /// **Total.** A negative ΔT — a surface datum warmer than the rock beneath it,
-/// which a cold-season or high-albedo cell can genuinely produce — and a
+/// which a cold-season or high-albedo vertex can genuinely produce — and a
 /// non-finite ΔT both resolve to the top habitation rung rather than
 /// panicking, because the ladder is a classification of places and every place
 /// is somewhere. Never returns [`Band::Surface`]; see the module docs.
@@ -286,7 +286,7 @@ pub fn rung_at_delta_t(delta_t_k: f64) -> Band {
     found
 }
 
-/// The rung a depth below the surface falls in, for a cell with this
+/// The rung a depth below the surface falls in, for a vertex with this
 /// geothermal gradient.
 ///
 /// ΔT = gradient × depth, the same expression
@@ -299,6 +299,69 @@ pub fn rung_at_delta_t(delta_t_k: f64) -> Band {
 /// type-audit: bare-ok(ratio: depth_m)
 pub fn rung_at_depth(depth_m: f64, gradient: GeothermalGradient) -> Band {
     rung_at_delta_t(gradient.get() * (depth_m / 1000.0))
+}
+
+/// The depth at which a rung's conditions are read, metres below the
+/// surface — the **ΔT midpoint** of the rung's band, converted through the
+/// vertex's own gradient, and never deeper than the cave actually reaches.
+///
+/// **The midpoint, not the top, and this is `MAP-per-rung-substrate`'s own
+/// prescription** rather than a fresh choice: the top of a rung makes its
+/// shallowest rank degenerate, because a rung's top ΔT is the next rung's
+/// bottom.
+///
+/// [`Band::Nadir`] has no midpoint — [`delta_t_range_of`] gives it an open
+/// top — so it reads `depth_reach_m`. **This is exactly `depth_reach_m`
+/// only for the domain this function's one real producer emits**:
+/// [`crate::cave_depth::cave_depth_reach_m`] (`cave_depth.rs:202-220`)
+/// clamps every reach it returns to `[0.0, CAVE_REACH_CEILING_M]`
+/// ([`crate::cave_depth::CAVE_REACH_CEILING_M`] = 3000 m), so every
+/// `depth_reach_m` a real caller passes is finite and non-negative, and on
+/// that domain Nadir's answer is exactly `depth_reach_m` — where EVERY rung
+/// was read before per-rung resolution existed, which makes `Nadir` the
+/// positive control for the change: its answer must not move.
+///
+/// **The guarantee is not total, and no code here makes it one.** A
+/// negative `depth_reach_m` hits the trailing `.max(0.0)` below and
+/// returns `Some(0.0)`, not the reach it was given. A `depth_reach_m` of
+/// `f64::INFINITY` returns `Some(f64::INFINITY)` unchanged — `.max`
+/// sanitizes `NaN` via its fixed non-NaN partner but has no such partner
+/// for `+Infinity`. Neither input is reachable today (the one real
+/// producer's clamp rules both out), so neither is defended against at
+/// runtime — that would be paying rent for a caller that does not exist.
+/// The precondition is instead named in a debug-only assertion below, the
+/// same role `debug_assert!` plays on [`GeothermalGradient::new`]:
+/// documentation a test build enforces, not a guard a release build pays
+/// for.
+///
+/// [`Band::Surface`] names no chamber and returns `None`.
+/// type-audit: bare-ok(diagnostic-value: depth_reach_m), bare-ok(diagnostic-value: return)
+pub fn rung_evaluation_depth_m(
+    rung: Band,
+    gradient: GeothermalGradient,
+    depth_reach_m: f64,
+) -> Option<f64> {
+    // Documents the domain the guarantee above actually covers; see the
+    // doc comment. `cave_depth_reach_m` is the one real producer and it
+    // never emits outside this range, so this never fires in production.
+    debug_assert!(
+        depth_reach_m.is_finite() && depth_reach_m >= 0.0,
+        "rung_evaluation_depth_m's Nadir guarantee (== depth_reach_m) holds only for a \
+         finite, non-negative depth_reach_m; got {depth_reach_m}"
+    );
+    if rung == Band::Surface {
+        return None;
+    }
+    let (lo, hi) = delta_t_range_of(rung);
+    let depth = match hi {
+        // The open-ended bottom rung: read the column where it actually ends.
+        None => depth_reach_m,
+        Some(hi) => {
+            let midpoint_k = 0.5 * (lo + hi);
+            1000.0 * midpoint_k / gradient.get()
+        }
+    };
+    Some(depth.min(depth_reach_m).max(0.0))
 }
 
 #[cfg(test)]
@@ -432,11 +495,11 @@ mod tests {
     }
 
     /// A rung is a class of *place*, so the depth it occupies must move with
-    /// the cell's gradient rather than being a fixed metre band. Asserted as
+    /// the vertex's gradient rather than being a fixed metre band. Asserted as
     /// an inequality on the boundary depth, not on a rung lookup, so it says
     /// something about the mapping itself.
     #[test]
-    fn a_rungs_depth_in_metres_varies_by_cell() {
+    fn a_rungs_depth_in_metres_varies_by_vertex() {
         let (deeps_low, _) = delta_t_range_of(Band::Deeps);
         let craton = GeothermalGradient::new(15.0);
         let young = GeothermalGradient::new(30.0);
@@ -455,5 +518,76 @@ mod tests {
             Band::Shallows
         );
         assert_eq!(rung_at_depth(depth_under(craton), craton), Band::Deeps);
+    }
+
+    #[test]
+    fn the_surface_rung_has_no_evaluation_depth() {
+        let g = GeothermalGradient::new(25.0);
+        assert_eq!(rung_evaluation_depth_m(Band::Surface, g, 800.0), None);
+    }
+
+    #[test]
+    fn nadir_is_evaluated_at_the_caves_own_reach() {
+        // THE POSITIVE CONTROL FOR THE WHOLE CAMPAIGN. Today every rung reads
+        // `depth_reach_m`; after the per-rung change the deepest rung still
+        // must, so its substrate and moisture are byte-identical across the
+        // change and every movement is attributable to a shallower rung.
+        let g = GeothermalGradient::new(25.0);
+        for reach in [120.0, 800.0, 2500.0] {
+            assert_eq!(
+                rung_evaluation_depth_m(Band::Nadir, g, reach),
+                Some(reach),
+                "Nadir must read the cave's own reach, not a midpoint"
+            );
+        }
+    }
+
+    #[test]
+    fn a_bounded_rung_is_evaluated_at_its_delta_t_midpoint() {
+        let g = GeothermalGradient::new(25.0);
+        // `rungs()` INCLUDES `Band::Surface` (it returns ALL_RUNGS, Surface
+        // first) and Surface's range is the degenerate `(0.0, Some(0.0))`, so
+        // it survives the `hi` filter below and would then panic on the
+        // `expect`. Filter it explicitly.
+        for rung in rungs().iter().filter(|r| **r != Band::Surface) {
+            let (lo, hi) = delta_t_range_of(*rung);
+            let Some(hi) = hi else { continue }; // Nadir, covered above
+            let depth = rung_evaluation_depth_m(*rung, g, 100_000.0)
+                .expect("a habitation rung has an evaluation depth");
+            let delta_t = depth * g.get() / 1000.0;
+            assert!(
+                delta_t > lo && delta_t < hi,
+                "{rung:?}: evaluation ΔT {delta_t} is not strictly inside ({lo}, {hi}) \
+                 — the TOP of a rung is what MAP-per-rung-substrate says makes \
+                 rank 0 degenerate"
+            );
+        }
+    }
+
+    #[test]
+    fn evaluation_depth_never_exceeds_the_caves_reach() {
+        // A rung deeper than the cave goes is not a place. Whatever the ΔT
+        // midpoint says, the answer is bounded by the column that exists.
+        let g = GeothermalGradient::new(25.0);
+        for rung in rungs() {
+            if let Some(d) = rung_evaluation_depth_m(*rung, g, 150.0) {
+                assert!(d <= 150.0, "{rung:?} evaluated at {d} m in a 150 m column");
+            }
+        }
+    }
+
+    #[test]
+    fn evaluation_depth_is_monotone_in_the_rung() {
+        let g = GeothermalGradient::new(25.0);
+        let depths: Vec<f64> = rungs()
+            .iter()
+            .filter_map(|r| rung_evaluation_depth_m(*r, g, 100_000.0))
+            .collect();
+        for w in depths.windows(2) {
+            assert!(
+                w[0] < w[1],
+                "rung depths must increase with the ladder: {depths:?}"
+            );
+        }
     }
 }

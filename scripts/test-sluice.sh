@@ -446,7 +446,7 @@ else
     bad "the refused adjudication rewrote the baseline"
 fi
 
-echo "== phases: what the chamber ACTUALLY runs (decision 0148)"
+echo "== phases: what the chamber ACTUALLY runs (decisions 0148, 0426)"
 # THE CASE ABOVE TESTS THE FUNCTION AGAINST A LITERAL, WHICH IS NOT THE SAME AS
 # TESTING THE CHAMBER. Nothing asserted what sluice-run.sh actually sets, so the
 # phase list could change without a single test noticing — the exact
@@ -454,20 +454,42 @@ echo "== phases: what the chamber ACTUALLY runs (decision 0148)"
 # Read from the script rather than restated here, so this cannot drift from it.
 merge_list="$(sed -n 's/^merge_phases="\(.*\)"$/\1/p' "$repo_root/scripts/sluice-run.sh")"
 stage_list="$(sed -n 's/^stage_phases="\(.*\)"$/\1/p' "$repo_root/scripts/sluice-run.sh")"
-if [ "$merge_list" = "artifacts outboard gate clients" ]; then
+if [ "$merge_list" = "artifacts outboard gate clients heavy" ]; then
     ok "a merge runs exactly: $merge_list"
 else
-    bad "merge_phases is '$merge_list' — decision 0148 fixed it at 'artifacts outboard gate clients'"
+    bad "merge_phases is '$merge_list' — decision 0426 fixed it at 'artifacts outboard gate clients heavy'"
 fi
+# `heavy` LAST is load-bearing, not cosmetic: it is the most expensive phase,
+# so running it before a cheap phase that would have gone red wastes the one
+# serial box. Asserted separately from the equality above so a reorder that
+# still contains the right five names cannot pass as "the list is right".
 case "$merge_list" in
-    *seam-guard*) bad "seam-guard is back in the merge list; 0148 took it off and nothing has superseded that" ;;
-    *heavy*)      bad "heavy is back in the merge list; 0148 took it off and nothing has superseded that" ;;
-    *)            ok "neither seam-guard nor heavy runs on a merge" ;;
+    *heavy) ok "heavy runs last" ;;
+    *)      bad "heavy is not the last phase of a merge — see sluice-run.sh's own ordering comment" ;;
 esac
-if [ "$merge_list" = "$stage_list" ]; then
-    ok "a merge and a stage gate run the same phases, differing only in the push"
+# seam-guard stays off (0148, undisturbed by 0426); heavy came BACK on (0426).
+case "$merge_list" in
+    *seam-guard*) bad "seam-guard is back in the merge list; 0148 took it off and 0426 deliberately did not put it back" ;;
+    *heavy*)      ok "heavy runs on a merge (decision 0426) and seam-guard does not" ;;
+    *)            bad "heavy is missing from the merge list; decision 0426 put it back after The Governor cut the tier 3.52x" ;;
+esac
+# THE TWO LISTS DIVERGE BY EXACTLY `heavy`, AND THAT IS ASSERTED RATHER THAN
+# ALLOWED. 0148 made them identical; 0426 put `heavy` back on the merge list
+# ONLY, restoring the pre-0148 arrangement (at 3163ceb2c^ the stage list was
+# already `artifacts outboard gate clients` — `heavy` has never been a
+# stage-gate phase). The reason is specific: heavy's
+# `census_fixtures_match_a_probe_of_live_seeds` compares a live probe against
+# committed census fixtures that are refreshed once per campaign at pre-merge
+# close, so on a stage gate it would red predictably and benignly for the
+# whole middle of any world-touching campaign.
+# Checked as "stage plus heavy equals merge" rather than as two literals, so a
+# future change to the shared four is not required to touch this line twice.
+if [ "$stage_list heavy" = "$merge_list" ]; then
+    ok "a stage gate runs the merge's phases minus heavy: $stage_list"
+elif [ "$merge_list" = "$stage_list" ]; then
+    bad "merge and stage are identical ('$merge_list') — 0426 puts heavy on the merge list ONLY; if a stage gate should run it, the census-fixture red argued in sluice-run.sh must be answered first"
 else
-    bad "merge ('$merge_list') and stage ('$stage_list') diverged — 0148 made them identical; if that is deliberate, update this test and say why"
+    bad "merge ('$merge_list') and stage ('$stage_list') differ by something other than a trailing 'heavy'; if that is deliberate, update this test and say why"
 fi
 
 echo "== phases: MUTATION — an allowlist without its exclusions would skip heavy for a generated artifact"
@@ -2932,6 +2954,48 @@ if [ "$rc_fail" != "0" ] && [ "$after_fail" = "$after_n" ]; then
     ok "a failed census propagates non-zero and delivers nothing"
 else
     bad "failed census: rc=$rc_fail, branches $after_n -> $after_fail (expected non-zero and no branch)"
+fi
+
+echo "== request path: every kind the usage string offers is a kind it ACCEPTS =="
+# THE DEFECT THIS PINS, and it is the reason this test is shaped as a LOOP over
+# the advertised kinds rather than three hand-written cases. `kind=census`
+# shipped with sluice-request.sh's usage strings widened and its validating
+# `case` left alone, so `make sluice-census` printed
+# "unknown kind 'census' (merge|stage)" — a feature whose documentation and
+# whose entry point both worked and whose validation did not. It survived a
+# green four-phase merge because the census tests exercised
+# `sluice-queue.sh add census`, the half that HAD been widened, and never the
+# request path a caller takes.
+#
+# So the assertion is not "census is accepted". It is "the usage string and the
+# validation agree", derived from the script itself, which cannot drift the way
+# a hand-listed set can: add a fourth kind to the usage text and forget the
+# case, and this reddens without anyone editing this file.
+req="$repo_root/scripts/sluice-request.sh"
+advertised="$(grep -om1 '\[merge[a-z|]*\]' "$req" | tr -d '[]' | tr '|' ' ')"
+if [ -z "$advertised" ]; then
+    bad "could not read the advertised kinds out of sluice-request.sh's usage string"
+else
+    ok "usage string advertises: $advertised"
+    rejected=""
+    for k in $advertised; do
+        # A bogus REF: we want the KIND check's verdict, and it runs before any
+        # network or host work, so an invalid sha is enough to stop it there.
+        out="$(bash "$req" some/branch not-a-sha "$k" 2>&1 || true)"
+        case "$out" in
+            *"unknown kind"*) rejected="$rejected $k" ;;
+        esac
+    done
+    if [ -n "$rejected" ]; then
+        bad "sluice-request.sh ADVERTISES these kinds and REFUSES them:$rejected"
+    else
+        ok "every advertised kind survives the validating case (no usage/validation drift)"
+    fi
+    out="$(bash "$req" some/branch not-a-sha definitely-not-a-kind 2>&1 || true)"
+    case "$out" in
+        *"unknown kind"*) ok "a bogus kind is still rejected (the widening kept its teeth)" ;;
+        *) bad "a bogus kind was NOT rejected — the kind check has stopped checking" ;;
+    esac
 fi
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"

@@ -303,17 +303,51 @@ romanization states about one phoneme sequence, restated one level up about
 an entire told belief.
 
 The seam has since grown a second, more general storey: the **clause
-layer** (`clause.rs`), where a language-neutral `ClauseSpec` — frame,
-subject, complement, number, definiteness, a modifier tail — realizes into
+layer** (`clause.rs`), where a language-neutral `Clause` realizes into
 a Common sentence through a **construction inventory**: the grammar as
 data, an ordered list of surface parts one interpreter walks forward. The
 Self-Writing Book program builds on this layer ("Vebe is a planet with two
-moons…"), and since The Echo the same inventory runs **backward**: a
-parser binds the parts against a closed complement lexicon and
-reconstructs the `ClauseSpec` a sentence came from, under the standing
-round-trip law `parse(realize(spec)) == spec`. One committed grammar, two
-directions — production and comprehension cannot drift apart, because
-they are the same data read opposite ways. And since The Tongues, the
+moons…").
+
+Since The Interlinear the clause is **fact-shaped**, and the shape is the
+claim: an utterance *is* a fact.
+
+| | Who | What relation | To what | Circumstances |
+|---|---|---|---|---|
+| `Fact` | subject | predicate | object | place / day, provenance |
+| `Clause` | subject | predicate | object | adjuncts, speaker features |
+
+A clause therefore names its predicate — `is-a`, the kernel's own
+constant, the same string a committed fact carries — rather than hiding
+one relation inside a `Frame` enum, and the construction inventory is
+keyed by that predicate. Its **adjuncts** bind further registered
+predicates to arguments (`moon-count` to a count, `star-class` to a
+concept id), replacing a `modifiers: Vec<String>` of pre-rendered English.
+The difference is what a language may decide: how a role surfaces, and
+whether it surfaces inline ("with two moons") or as a trailing clause
+("its day lasts about 1.5 standard days"), is now the realizer's
+business. Before, the caller composed the phrase — which is why
+`windows/book`, a *window*, had to know English article selection.
+
+Since The Echo the same inventory also runs **backward**: a parser binds
+the parts against a closed complement lexicon and reconstructs the clause
+a sentence came from. One committed grammar, two directions — production
+and comprehension cannot drift apart, because they are the same data read
+opposite ways.
+
+**The round-trip law is narrower than it was, and deliberately so.** It
+once read `parse(realize(spec)) == spec` outright. The Interlinear
+narrowed it to the clause *skeleton*: `parse_common` recovers subject,
+predicate, object, number and definiteness exactly, and returns **no
+adjuncts at all**. Common realizes a role's surface but does not yet
+recognize one, so the tail comes back — through a separate entry point —
+as the text it was rendered to, never as structure. That asymmetry is
+recorded as a **loss, not a product**: a caller asking for a clause is
+handed a clause, and the one caller that still owns an English recognizer
+has to say so at the call site. Teaching Common to recognize its own role
+constructions is a later campaign's subject, because recognition is where
+controlled languages historically rot and it deserves a corpus to be
+measured against first. And since The Tongues, the
 clause layer speaks in more than Common: each tongue draws a surface
 grammar of its own (`grammar.rs` — constituent order and copula presence
 on permanent per-species streams, weighted by real cross-linguistic
@@ -430,7 +464,68 @@ culture with an organized priesthood says one thing more, in its own
 doctrinal voice: that it has never been caught (or, once it has, that it
 could be) — echoing, without yet routing through, the very conflict
 machinery The Doctrine built for exactly this shape of claim. See
-[The Corrigendum](../chronicle/the-corrigendum.md).
+[The Corrigendum](../chronicle/the-corrigendum.md). And since The Inquest,
+a clause can be about something that is over. It carries a **tense** and a
+**polarity**; its predicate may be an act with an actor and a patient
+rather than only a classification; and a speaker may refer back to
+somebody already mentioned, out of a personal-pronoun inventory each
+family draws once and evolves down its own daughters like any other
+cognate morpheme. Tense is the first feature in this domain that is not a
+property *of* the clause at all but a **relation to a moment outside it**,
+so it is stated by whoever holds both instants rather than worked out by
+the clause, which has no clock — the settlement that ended six hundred
+years ago is now said to have *been* the home of its people, not to *be*
+one. Past is marked and present is the zero member, negative is marked and
+positive is zero, and each tongue marks or ignores both according to a
+grammaticalization depth it had already drawn and nothing had ever read.
+See [The Inquest](../chronicle/the-inquest.md).
+
+And since The Mortise, a clause can hold another clause. `Argument::Clause`
+and `Subject::Clause` let an argument or a subject slot carry a full nested
+clause one level deep — *"I don't know why he killed her"* is a `know`-clause
+whose object is itself a `Clause` — riding the predicate's existing
+transitive frame rather than a new sentential valence, so `know` and `think`
+gain a category-flexible object and nothing about `Clause`'s own shape
+changes at any of its sixty-one existing construction sites. A sibling
+`Coordination` node sits *above* the type entirely — a list of clauses, not a
+new kind of clause — so two clauses can stand side by side without a single
+existing realizer call changing either. Both operators share only a boundary
+marker, each drawn per tongue on the copula's own presence-and-form pattern
+and each admitting a genuine zero-marker outcome, and the parser leans on
+that shared discipline to tell them apart: a coordination's own marker is
+checked before any embedding attempt is tried, at every recursion depth, so
+the two can never be misread into each other. The nesting itself stops at one
+level, stated as the depth this campaign built and tested rather than argued
+as a safety limit. See [The Mortise](../chronicle/the-mortise.md).
+
+And since The Rail, a clause can predicate five ways rather than two, ask
+rather than assert, and say who is speaking. Its **valence** — the field
+that decides which surface parts a predicate's clause is built from — now
+enumerates Stassen (1997)'s four intransitive predication strategies
+(nominal, adjectival, locational, verbal) plus the two-argument transitive
+case, and the list is **closed by that typology**: a further predicate is one
+row in a lookup table, while a further *strategy* would need the typology to
+be wrong. The two new copular strategies share one uninflected predicate
+slot and differ only in the object: a property relates a subject to a state
+(*"the road is old"*, with no determiner and no third definiteness value —
+the classification frame's *road is-a old* was the wrong relation, not
+merely the wrong string), a locative relates it to a located thing. An
+intransitive clause's object is a named **absence** rather than a nullable
+field, which keeps the fact-shape claim intact by the route the kernel
+already uses for an objectless assertion. The copula and verb paradigms gain
+a **person** axis and stop being injective — English spells *are* for four
+different feature bundles — and the parse nominates no canonical row: person
+lives on the *subject*, not on the clause, so the backward read narrows the
+candidates instead of choosing among them, and nothing is lost. Interrogative
+force is an **operator over** a clause rather than a field on it, on the same
+footing embedding and coordination already stand: Common asks by inverting
+its one auxiliary and refuses loudly where English would need *do*-support,
+while a tongue asks with a drawn particle — or, for the majority of tongues,
+which mark a question by intonation alone, by a **transcription convention**
+that writes the question mark and says in as many words that it is
+punctuation and not morphology. The capability ladder these five rungs come
+from is now scored and publishes its own **frontier**: the build-next list,
+recomputed on every regeneration. See [The Rail](../chronicle/the-rail.md).
 
 **The full model card.** The articulation-vector table above types the
 species' *envelope* — six authored capacities per people. Everything this
@@ -652,8 +747,15 @@ the vocabulary is part of its identity. Each carries the generation in which
 it joined, and generation sorts ahead of everything else, placing a newly
 named thing last in the queue where it can displace nothing. A world's
 vocabulary can therefore grow without disturbing a single word already
-spoken: naming the world's twelve unnamed beasts leaves every existing name,
-in every language, exactly as it was. The price is that priority now follows
+spoken: naming the world's twelve unnamed beasts leaves every existing *word*,
+in every language, exactly as it was. **Proper names are the exception, and it
+took The Confidant to notice.** A settlement's name is repaired against the
+attested tier described below — its species' whole standing vocabulary — so
+growing that vocabulary changes which forms are attested and therefore which
+repairs are identity. Six new concepts moved two settlement names in this
+world. The guarantee is exact about words and silent about the names built
+out of them, which is a coupling worth stating once rather than rediscovering.
+The price of the guarantee itself is that priority now follows
 arrival before frequency — a latecomer takes the forms left over, however
 common it proves — which is close enough to how real tongues treat their
 newest coinages to be worth the guarantee. The cascade's target is fixed and deliberate: it
@@ -700,6 +802,22 @@ eyes are tuned for the dark and the color ladder never reached that far
 down regardless of how thoroughly the world exposed the color. Two
 provenances, never a shrug: a lexicon is allowed to be silent, but never
 silently.
+
+**Exposure need not come from outside.** Since The Confidant a species is also
+exposed — or not — to its own **felt states**: the six positions of the affect
+circumplex its own minds actually reach are registered concepts like any other,
+and a culture holds a word for one, or does not. What decides it is not the
+world at all but the species' own authored psychology, three scalars with a
+meaningful midpoint governing three valence-opposed pairs. A people that meets
+a blockage by standing has a word for *frustrated*; one that flees has a word
+for *lost*. A slow deliberator names the rest at the end of a satisfied need;
+a fast one names the chase. A generational planner has a word for giving up on
+something it can still want; an immediate opportunist has one for working the
+gradient instead. Nobody authored which people lacks which feeling — the
+distribution falls out of numbers written long before the question existed,
+which is the only version in which measuring it means anything. A creature at
+the neutral midpoint on all three axes earns no word for any of the six, and
+goblins are authored exactly there.
 
 **Glossed names (as Campaign 27, The Words, built them — the drawn stem
 below has since been retired; see "Names you can say," below).** A proper

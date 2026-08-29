@@ -20,9 +20,9 @@
 //! ## The ocean trap, inherited
 //!
 //! `waterline_probe.rs` documents a correction worth repeating: ocean is
-//! `terrain.is_ocean(cell)` (`elevation < sea_level`), **never**
+//! `terrain.is_ocean(vertex)` (`elevation < sea_level`), **never**
 //! `elevation < 0.0`. Sea level on seed 42 is −2,936.17 m, and the two
-//! predicates disagree on 8,162 cells. This probe uses `is_ocean` throughout and
+//! predicates disagree on 8,162 vertices. This probe uses `is_ocean` throughout and
 //! reports elevation as height *above sea level*.
 //!
 //! ## CORRECTION (2026-08-04, before any result was acted on)
@@ -61,7 +61,7 @@
 //! ## 1. BLOCKING: the gate is applied TWICE and the spec targets the wrong copy
 //!
 //! ```text
-//! Bake::factor                  if !era.habitable.get(cell) { 0.0 }   <- spec's target
+//! Bake::factor                  if !era.habitable.get(vertex) { 0.0 }   <- spec's target
 //! carrying_capacity             if !i.habitable { return 0.0 }        <- what BINDS
 //!                               (domains/demography/src/carrying_capacity.rs:59)
 //! ```
@@ -71,7 +71,7 @@
 //! uninhabitable. Measured consequence, all five seeds:
 //!
 //! ```text
-//!   cells with K>0 that the gate excludes (NEW ground):   0    0    0    0    0
+//!   vertices with K>0 that the gate excludes (NEW ground):   0    0    0    0    0
 //! ```
 //!
 //! **Rewiring `Bake::factor` alone opens exactly zero new ground.** It would have
@@ -82,8 +82,8 @@
 //! ## 2. The scale is wrong by 1–2 orders of magnitude
 //!
 //! ```text
-//!   today's eff_capacity on habitable cells   median 29.65 .. 44.90, max 89 .. 130
-//!   cells clearing the daughter bar (11.43)
+//!   today's eff_capacity on habitable vertices   median 29.65 .. 44.90, max 89 .. 130
+//!   vertices clearing the daughter bar (11.43)
 //!     with K as the factor                    0 .. 5   of 40,962   (every species)
 //! ```
 //!
@@ -96,17 +96,17 @@
 //! ## 3. The gate is LOOSER than capacity, not tighter
 //!
 //! ```text
-//!   cells the gate admits where K==0 (DEAD ground)
+//!   vertices the gate admits where K==0 (DEAD ground)
 //!     seed 42 1171 (10.58%)   7 765 (4.02%)   999999 213 (1.33%)
 //!     16244..  312 (2.63%)    1234 2393 (20.68%)
 //! ```
 //!
-//! Seed 1234's median capacity on habitable cells is **0.00**, which is why it
+//! Seed 1234's median capacity on habitable vertices is **0.00**, which is why it
 //! has no settlements at all.
 //!
 //! ## 4. Best-fit territory has already collapsed onto two species
 //!
-//! `hobgoblin` and `kobold` take essentially every cell; **`goblin`, `bugbear`
+//! `hobgoblin` and `kobold` take essentially every vertex; **`goblin`, `bugbear`
 //! and `gnoll` win zero on every seed.** The authored optima are well separated
 //! (spec §2.1) and it does not translate into distinct territory — MAP-22's Gause
 //! collapse, measured.
@@ -124,7 +124,7 @@
 // takes for the same reason.
 #![allow(clippy::disallowed_methods)]
 
-use hornvale_kernel::CellMap;
+use hornvale_kernel::VertexMap;
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
     SETTLERS_PER_CAPACITY, SettlementPins, SkyChoice, build_world, carrying_inputs_of, climate_of,
@@ -197,7 +197,9 @@ fn probe_seed(seed: u64) {
     let obliquity_deg = system.anchor.obliquity.get();
     let regime = match system.anchor.rotation {
         hornvale_astronomy::Rotation::Spinning { day, .. } => {
-            hornvale_climate::RotationRegime::Spinning { day_std: day.get() }
+            hornvale_climate::RotationRegime::Spinning {
+                day_std: day.as_std_days(),
+            }
         }
         hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
     };
@@ -244,7 +246,7 @@ fn probe_seed(seed: u64) {
         &affinity,
     );
     let tag_of = |name: &str| -> u32 { names.iter().position(|n| *n == name).unwrap() as u32 };
-    let k_of = |tag: u32| -> &CellMap<f64> { &ks.iter().find(|(t, _)| *t == tag).unwrap().1 };
+    let k_of = |tag: u32| -> &VertexMap<f64> { &ks.iter().find(|(t, _)| *t == tag).unwrap().1 };
 
     // The bake's own capacity field, verbatim from `bake_history_from`. K is a
     // dimensionless factor in [0,1]; this is what carries the headcount units.
@@ -253,18 +255,18 @@ fn probe_seed(seed: u64) {
     // `scaled` keeps this a capacity by construction (decision 0103).
     let capacity = base.scaled(SETTLERS_PER_CAPACITY);
     // eff_capacity as the rewired bake would compute it: base x per-species K.
-    let eff = |c: hornvale_kernel::CellId, tag: u32| -> f64 { capacity.at(c) * *k_of(tag).get(c) };
+    let eff = |c: hornvale_kernel::Vertex, tag: u32| -> f64 { capacity.at(c) * *k_of(tag).get(c) };
 
     let sea = terrain.sea_level();
-    let cells: Vec<_> = geo.cells().collect();
-    let land: Vec<_> = cells
+    let vertices: Vec<_> = geo.vertices().collect();
+    let land: Vec<_> = vertices
         .iter()
         .copied()
         .filter(|c| !terrain.is_ocean(*c))
         .collect();
 
     // Today's gate, recomputed exactly as `habitability_map` does.
-    let habitable: Vec<_> = cells
+    let habitable: Vec<_> = vertices
         .iter()
         .copied()
         .filter(|c| {
@@ -278,9 +280,9 @@ fn probe_seed(seed: u64) {
         .collect();
 
     println!(
-        "\n=== seed {seed} — {} cells, {} land, {} habitable today \
+        "\n=== seed {seed} — {} vertices, {} land, {} habitable today \
               ({:.2}% of land)",
-        cells.len(),
+        vertices.len(),
         land.len(),
         habitable.len(),
         100.0 * habitable.len() as f64 / land.len().max(1) as f64,
@@ -314,7 +316,7 @@ fn probe_seed(seed: u64) {
     }
     let pct = |n: usize| 100.0 * n as f64 / land.len().max(1) as f64;
     println!(
-        "  HEADROOM (land cells the global gate excludes today):\n\
+        "  HEADROOM (land vertices the global gate excludes today):\n\
          \x20   gnoll corner (moisture<0.2 AND temp>25C) : {gnoll_corner:6} ({:.2}% of land)\n\
          \x20   arid          (moisture<0.2)             : {too_arid:6} ({:.2}%)\n\
          \x20   too hot       (temp>35C)                 : {too_hot:6} ({:.2}%)\n\
@@ -328,13 +330,13 @@ fn probe_seed(seed: u64) {
     );
 
     // --- Item 1/4/5: per-species capacity over land ------------------------
-    // Scale baseline: today's eff_capacity on a habitable cell IS `capacity`
+    // Scale baseline: today's eff_capacity on a habitable vertex IS `capacity`
     // (factor == 1), so this is the frame the bake reasons in right now.
     let mut caps: Vec<f64> = habitable.iter().map(|c| capacity.at(*c)).collect();
     caps.sort_by(f64::total_cmp);
     if !caps.is_empty() {
         println!(
-            "  SCALE (today's eff_capacity on habitable cells = base capacity): \
+            "  SCALE (today's eff_capacity on habitable vertices = base capacity): \
              median {:.2}  p90 {:.2}  max {:.2}",
             caps[caps.len() / 2],
             caps[caps.len() * 9 / 10],
@@ -347,7 +349,7 @@ fn probe_seed(seed: u64) {
         "species", "floor", "K>0", ">0.5", ">1.0", ">11.5", "best-fit"
     );
 
-    let mut any_fit = vec![false; cells.len()];
+    let mut any_fit = vec![false; vertices.len()];
     let mut cling = vec![0usize; SETTLERS.len()];
 
     for (si, name) in SETTLERS.iter().enumerate() {
@@ -391,16 +393,16 @@ fn probe_seed(seed: u64) {
     println!("  CLINGING BAND (survives at pop {VIABLE_MIN}, cannot throw a daughter):");
     for (si, name) in SETTLERS.iter().enumerate() {
         println!(
-            "    {:<10} {:>7} cells ({:.2}% of land)",
+            "    {:<10} {:>7} vertices ({:.2}% of land)",
             name,
             cling[si],
             pct(cling[si])
         );
     }
 
-    // THE HEADROOM, correctly posed: cells someone could live on that today's
-    // gate excludes, and cells the gate admits that nobody could live on anyway.
-    let is_hab = |c: hornvale_kernel::CellId| -> bool {
+    // THE HEADROOM, correctly posed: vertices someone could live on that today's
+    // gate excludes, and vertices the gate admits that nobody could live on anyway.
+    let is_hab = |c: hornvale_kernel::Vertex| -> bool {
         hornvale_climate::is_habitable(
             climate.mean_temperature_at(c),
             climate.moisture_at(c),
@@ -445,7 +447,7 @@ fn probe_seed(seed: u64) {
 
     let expanded = any_fit.iter().filter(|b| **b).count();
     println!(
-        "  EXPANSION: {expanded} land cells have K>0 for at least one settler \
+        "  EXPANSION: {expanded} land vertices have K>0 for at least one settler \
          ({:.2}% of land) vs {} habitable today ({:.2}% of land) — ratio {:.2}x",
         pct(expanded),
         habitable.len(),

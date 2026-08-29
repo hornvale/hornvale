@@ -1,6 +1,6 @@
 //! Drawn weather (The Firmament) — a sampled synoptic weather-state field and
-//! its cloud face. Weather is a pure function of `(cell, day, seed)`: the
-//! climate fields set a per-cell storm *propensity*, and a time-smooth drifting
+//! its cloud face. Weather is a pure function of `(vertex, day, seed)`: the
+//! climate fields set a per-vertex storm *propensity*, and a time-smooth drifting
 //! Fbm phase picks the instantaneous state. Nothing integrates forward (the
 //! Lorenz guard-rail); no per-day state is stored. Level 0 — an observation
 //! read that changes nothing a biome reads.
@@ -9,7 +9,7 @@ use crate::streams::WEATHER_PHASE;
 use hornvale_kernel::Seed;
 use hornvale_kernel::noise::Fbm;
 
-/// The synoptic state of a cell's sky on a day — the rungs of a small state
+/// The synoptic state of a vertex's sky on a day — the rungs of a small state
 /// machine, ordered from calm to violent. `Cirrus` is a separate high overlay
 /// (see [`cirrus_present`]), not a rung here.
 #[repr(u8)]
@@ -55,11 +55,11 @@ const WEATHER_OCTAVES: u32 = 3;
 /// Degrees of longitude the weather pattern drifts per standard day (weather
 /// systems track roughly west-to-east); small so day-to-day is smooth.
 const DRIFT_DEG_PER_DAY: f64 = 6.0;
-/// Spatial scale (degrees per Fbm unit) — larger cells of weather read as
-/// coherent systems rather than per-cell noise.
+/// Spatial scale (degrees per Fbm unit) — larger vertices of weather read as
+/// coherent systems rather than per-vertex noise.
 const SPATIAL_SCALE_DEG: f64 = 40.0;
 
-/// The climatological storm *propensity* of a cell, `[0,1]` — the slow prior the
+/// The climatological storm *propensity* of a vertex, `[0,1]` — the slow prior the
 /// fast phase is centred on. Storm-prone where the air is moist, rising, warm,
 /// and near its evaporative source; clear-prone where dry, subsiding, cool, and
 /// interior. A pure blend of fields already computed — no draws.
@@ -83,9 +83,9 @@ pub fn storm_propensity(
 
 /// Build the weather-phase [`Fbm`] sampler for a world's `weather_seed` —
 /// the derive-once pattern (`kernel/CLAUDE.md`, "Noise: build a sampler
-/// once, sample many"): a caller sampling many `(cell, day)` pairs against
+/// once, sample many"): a caller sampling many `(vertex, day)` pairs against
 /// the same fixed seed (`GeneratedClimate::year_of_day_contexts` calls
-/// `weather_at` once per day per cell — 360 x 40,962 cells at production
+/// `weather_at` once per day per vertex — 360 x 40,962 vertices at production
 /// mesh) builds this once and reuses it via [`weather_phase_with_fbm`],
 /// rather than paying `Fbm::new`'s per-octave derivation on every call.
 pub(crate) fn weather_fbm(weather_seed: Seed) -> Fbm {
@@ -296,10 +296,10 @@ mod tests {
         }
     }
 
-    // Temporal VARIETY: over a season a cell must actually experience DIFFERENT
+    // Temporal VARIETY: over a season a vertex must actually experience DIFFERENT
     // weather, not sit frozen in one state. Guards the opposite failure of
     // smoothness — a phase amplitude too small (or a dead noise) would leave the
-    // sky static, which is smooth but wrong. A mid-propensity cell visits at
+    // sky static, which is smooth but wrong. A mid-propensity vertex visits at
     // least three distinct states across a year.
     #[test]
     fn weather_varies_over_a_season() {

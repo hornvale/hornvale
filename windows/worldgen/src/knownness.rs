@@ -50,14 +50,14 @@
 //! The stock is folded over *events*, so it never needs a rate — and that
 //! matters, because there are two rates here and they disagree.
 //! [`crate::hazard::Recurrence::volcanic`] is the **local field value** at a
-//! cell; the rate a mountain's eruptions are actually drawn at is
-//! `volcano_at(seed, terrain, cell).recurrence`, sampled once at the
+//! vertex; the rate a mountain's eruptions are actually drawn at is
+//! `volcano_at(seed, terrain, vertex).recurrence`, sampled once at the
 //! edifice's source contact. Off-source the two differ by up to ~2.3x on the
 //! globes Task 6 measured, one-sidedly, with the local field always the
 //! quieter. `events_in` draws at the mountain's rate, so folding its output
 //! is right by construction where deriving anything from
-//! `hazard_at(cell).volcanic` would have been quietly wrong on every flank
-//! cell. `every_cell_of_one_cone_is_remembered_alike` is the assertion that
+//! `hazard_at(vertex).volcanic` would have been quietly wrong on every flank
+//! vertex. `every_vertex_of_one_cone_is_remembered_alike` is the assertion that
 //! keeps it so.
 //!
 //! # No cross-species memory claim is preregistered here
@@ -82,7 +82,7 @@
 //! tested prediction. A campaign that wants the question answered properly
 //! now has a live axis and should preregister against it from a fresh spec.
 
-use hornvale_kernel::{CellId, Seed, WorldTime, Years, math};
+use hornvale_kernel::{Seed, Vertex, WorldTime, Years, math};
 use hornvale_terrain::GeneratedTerrain;
 
 use crate::hazard::HazardEventKind;
@@ -90,7 +90,7 @@ use crate::hazard::HazardEventKind;
 /// What one people still knows of one mountain, at one moment.
 ///
 /// Never committed and never stored: C0 writes no facts, and the stock is
-/// recomputed on demand from `(seed, terrain, holder, cell, now)` exactly as
+/// recomputed on demand from `(seed, terrain, holder, vertex, now)` exactly as
 /// the volcano and its events are (decision 0100's recompute test puts all
 /// three in the phenomenon register).
 /// type-audit: bare-ok(ratio: stock), bare-ok(identifier-text: holder)
@@ -165,9 +165,9 @@ const MEMORY_HORIZON_HALF_LIVES: f64 = 10.0;
 /// same statement the rest of the roster is measured against instead of a
 /// second, unrelated opinion about how long a generation is.
 ///
-/// **It is reached only by an `Ametabolic` holder** — a construct, which has
-/// no mass-derived life history at all (`life_history` nulls every biological
-/// field for that class). No such kind founds a settlement on today's roster,
+/// **It is reached only by an AMETABOLIC holder** (`ThermalStrategy::Absent`)
+/// — a construct, which has no mass-derived life history at all
+/// (`life_history` nulls every biological field for that value). No such kind founds a settlement on today's roster,
 /// so this constant is exercised by
 /// `a_holder_with_no_generation_length_falls_back_on_the_allometry_anchor`
 /// and by nothing else; that test also fails the moment the anchor moves, so
@@ -193,7 +193,7 @@ pub fn memory_half_life(generation_length: Option<Years>) -> Years {
         .expect("a generation length is finite and non-negative, and so is a multiple of one")
 }
 
-/// What `holder` still knows, at `now`, of the mountain the cell belongs to.
+/// What `holder` still knows, at `now`, of the mountain the vertex belongs to.
 ///
 /// A fold over [`crate::hazard::events_in`]: the most recent eruption inside
 /// the horizon sets the stock to 1 and it halves every [`memory_half_life`]
@@ -208,7 +208,7 @@ pub fn memory_half_life(generation_length: Option<Years>) -> Years {
 /// instant and the convention is what makes two adjacent moments partition
 /// their events with nothing counted twice.
 ///
-/// **A cell with no edifice reads 0**, because there is no mountain to know
+/// **A vertex with no edifice reads 0**, because there is no mountain to know
 /// about. That case is answered before any draw — the early return is exactly
 /// [`crate::volcano::volcano_at`]'s own gate and skips a seismic block draw
 /// that could not have contributed an eruption anyway, so removing it would
@@ -233,15 +233,15 @@ pub fn knownness(
     terrain: &GeneratedTerrain,
     holder: &'static str,
     generation_length: Option<Years>,
-    cell: CellId,
+    vertex: Vertex,
     now: WorldTime,
 ) -> Knownness {
-    if crate::volcano::volcano_at(seed, terrain, cell).is_none() {
+    if crate::volcano::volcano_at(seed, terrain, vertex).is_none() {
         return Knownness { stock: 0.0, holder };
     }
     let half_life_days = memory_half_life(generation_length).days();
     let horizon_days = MEMORY_HORIZON_HALF_LIVES * half_life_days;
-    let start = WorldTime::new(now.day() - horizon_days)
+    let start = WorldTime::from_std_days(now.as_std_days() - horizon_days)
         .expect("a finite horizon before a finite present is a finite day");
     // `.rev()` IS THE SOURCE RULE, not a style choice: `events_in` returns
     // time-ordered events, so reversing before `find` takes the MOST RECENT
@@ -250,7 +250,7 @@ pub fn knownness(
     // by up to 0.9989 wherever two eruptions share one horizon.
     // `the_most_recent_eruption_wins_over_an_earlier_one_in_the_same_horizon`
     // is the only assertion that objects.
-    let last = crate::hazard::events_in(seed, terrain, cell, (start, now))
+    let last = crate::hazard::events_in(seed, terrain, vertex, (start, now))
         .into_iter()
         .rev()
         .find(|e| e.kind == HazardEventKind::Eruption);
@@ -259,7 +259,10 @@ pub fn knownness(
         // negatives and the only zero it could take is a zero generation
         // length, which the allometry cannot produce (maturity is positive
         // for any positive mass).
-        Some(event) => math::powf(0.5, (now.day() - event.day.day()) / half_life_days),
+        Some(event) => math::powf(
+            0.5,
+            (now.as_std_days() - event.day.as_std_days()) / half_life_days,
+        ),
         None => 0.0,
     };
     Knownness { stock, holder }
@@ -274,9 +277,9 @@ mod tests {
     use std::collections::BTreeMap;
 
     /// The mesh level these tests build at. Level 6 for the same reason
-    /// `volcano.rs` pays for it: a level-5 cone is usually a single cell, and
-    /// `every_cell_of_one_cone_is_remembered_alike` cannot be exercised at
-    /// all by a one-cell cone.
+    /// `volcano.rs` pays for it: a level-5 cone is usually a single vertex, and
+    /// `every_vertex_of_one_cone_is_remembered_alike` cannot be exercised at
+    /// all by a one-vertex cone.
     const LEVEL: u32 = 6;
 
     /// A test holder's generation length: 20 years, so the half-life is 40
@@ -322,13 +325,13 @@ mod tests {
         globe_of(42)
     }
 
-    /// Every edifice cell on a globe, grouped by the source contact that
+    /// Every edifice vertex on a globe, grouped by the source contact that
     /// identifies its cone.
-    fn cones(geo: &Geosphere, terrain: &GeneratedTerrain) -> BTreeMap<CellId, Vec<CellId>> {
-        let mut cones: BTreeMap<CellId, Vec<CellId>> = BTreeMap::new();
-        for cell in geo.cells() {
-            if let Some(source) = terrain.edifice_source_at(cell) {
-                cones.entry(source).or_default().push(cell);
+    fn cones(geo: &Geosphere, terrain: &GeneratedTerrain) -> BTreeMap<Vertex, Vec<Vertex>> {
+        let mut cones: BTreeMap<Vertex, Vec<Vertex>> = BTreeMap::new();
+        for vertex in geo.vertices() {
+            if let Some(source) = terrain.edifice_source_at(vertex) {
+                cones.entry(source).or_default().push(vertex);
             }
         }
         cones
@@ -336,19 +339,19 @@ mod tests {
 
     /// A day, as a [`WorldTime`].
     fn at(day: f64) -> WorldTime {
-        WorldTime::new(day).expect("a finite day")
+        WorldTime::from_std_days(day).expect("a finite day")
     }
 
-    /// This cell's eruptions over a long span of world time, in order.
-    fn eruptions(seed: u64, terrain: &GeneratedTerrain, cell: CellId) -> Vec<HazardEvent> {
+    /// This vertex's eruptions over a long span of world time, in order.
+    fn eruptions(seed: u64, terrain: &GeneratedTerrain, vertex: Vertex) -> Vec<HazardEvent> {
         let window = (WorldTime::GENESIS, at(200_000.0 * Years::DAYS_PER_YEAR));
-        crate::hazard::events_in(Seed(seed), terrain, cell, window)
+        crate::hazard::events_in(Seed(seed), terrain, vertex, window)
             .into_iter()
             .filter(|e| e.kind == HazardEventKind::Eruption)
             .collect()
     }
 
-    /// The first `(cell, eruption, gap_to_the_next)` on the globe whose gap is
+    /// The first `(vertex, eruption, gap_to_the_next)` on the globe whose gap is
     /// at least `min_gap_days` — the shape both the decay and the sink tests
     /// need, since an intervening eruption would reset the stock they are
     /// following.
@@ -357,11 +360,11 @@ mod tests {
         geo: &Geosphere,
         terrain: &GeneratedTerrain,
         min_gap_days: f64,
-    ) -> (CellId, HazardEvent, f64) {
+    ) -> (Vertex, HazardEvent, f64) {
         for source in cones(geo, terrain).keys() {
             let events = eruptions(seed, terrain, *source);
             for pair in events.windows(2) {
-                let gap = pair[1].day.day() - pair[0].day.day();
+                let gap = pair[1].day.as_std_days() - pair[0].day.as_std_days();
                 if gap >= min_gap_days {
                     return (*source, pair[0], gap);
                 }
@@ -370,7 +373,7 @@ mod tests {
         panic!("no eruption on the globe is followed by {min_gap_days} quiet days");
     }
 
-    /// The first `(cell, earlier, later)` on the globe where two CONSECUTIVE
+    /// The first `(vertex, earlier, later)` on the globe where two CONSECUTIVE
     /// eruptions both fall inside one horizon measured from just after the
     /// later one — the only shape that can tell "most recent wins" from "any
     /// eruption in the horizon wins".
@@ -387,12 +390,12 @@ mod tests {
         seed: u64,
         geo: &Geosphere,
         terrain: &GeneratedTerrain,
-    ) -> (CellId, HazardEvent, HazardEvent) {
+    ) -> (Vertex, HazardEvent, HazardEvent) {
         let (lower, upper) = (half_life_days(), 0.9 * horizon_days());
         for source in cones(geo, terrain).keys() {
             let events = eruptions(seed, terrain, *source);
             for pair in events.windows(2) {
-                let gap = pair[1].day.day() - pair[0].day.day();
+                let gap = pair[1].day.as_std_days() - pair[0].day.as_std_days();
                 if gap > lower && gap < upper {
                     return (*source, pair[0], pair[1]);
                 }
@@ -420,15 +423,15 @@ mod tests {
     #[test]
     fn knownness_peaks_at_an_eruption_and_decays_after_it() {
         let (geo, terrain) = globe();
-        let (cell, event, _) =
+        let (vertex, event, _) =
             eruption_with_quiet_after(42, &geo, &terrain, half_life_days() * 1.5);
         let just_after = knownness(
             Seed(42),
             &terrain,
             "aeldrin",
             test_generation(),
-            cell,
-            at(event.day.day() + 1.0),
+            vertex,
+            at(event.day.as_std_days() + 1.0),
         );
         assert!(
             just_after.stock > 0.999,
@@ -440,8 +443,8 @@ mod tests {
             &terrain,
             "aeldrin",
             test_generation(),
-            cell,
-            at(event.day.day() + half_life_days()),
+            vertex,
+            at(event.day.as_std_days() + half_life_days()),
         );
         assert!(
             (one_half_life.stock - 0.5).abs() < 1e-9,
@@ -465,7 +468,7 @@ mod tests {
     /// the gap is worth recording rather than quietly closing. Deleting
     /// `.rev()` from the fold — making it take the EARLIEST eruption in the
     /// horizon instead of the latest — left all eleven of this file's tests
-    /// green, while moving the answer by up to 0.9989 on 4,644 (cell, now)
+    /// green, while moving the answer by up to 0.9989 on 4,644 (vertex, now)
     /// samples of seed 42 alone. It hid because every other test here selects
     /// an eruption with a quiet gap AFTER it and never constrains the window
     /// BEFORE it, and because the 400-year test horizon is usually shorter
@@ -484,13 +487,13 @@ mod tests {
     #[test]
     fn the_most_recent_eruption_wins_over_an_earlier_one_in_the_same_horizon() {
         let (geo, terrain) = globe();
-        let (cell, earlier, later) = two_eruptions_inside_one_horizon(42, &geo, &terrain);
-        let now = at(later.day.day() + 1.0);
+        let (vertex, earlier, later) = two_eruptions_inside_one_horizon(42, &geo, &terrain);
+        let now = at(later.day.as_std_days() + 1.0);
 
         // Non-vacuity, asserted rather than argued: BOTH eruptions must lie
         // inside the window the fold actually reads, or the later one wins
         // for the trivial reason that the earlier one was never a candidate.
-        let elapsed_since_earlier = now.day() - earlier.day.day();
+        let elapsed_since_earlier = now.as_std_days() - earlier.day.as_std_days();
         assert!(
             elapsed_since_earlier < horizon_days(),
             "the earlier eruption is {elapsed_since_earlier} days back, outside the \
@@ -498,8 +501,19 @@ mod tests {
             horizon_days()
         );
 
-        let stock = knownness(Seed(42), &terrain, "aeldrin", test_generation(), cell, now).stock;
-        let from_later = math::powf(0.5, (now.day() - later.day.day()) / half_life_days());
+        let stock = knownness(
+            Seed(42),
+            &terrain,
+            "aeldrin",
+            test_generation(),
+            vertex,
+            now,
+        )
+        .stock;
+        let from_later = math::powf(
+            0.5,
+            (now.as_std_days() - later.day.as_std_days()) / half_life_days(),
+        );
         let from_earlier = math::powf(0.5, elapsed_since_earlier / half_life_days());
         assert!(
             (stock - from_later).abs() < 1e-9,
@@ -532,7 +546,7 @@ mod tests {
     fn knownness_decays_to_nothing_when_the_mountain_is_quiet() {
         let (geo, terrain) = globe();
         let horizon = horizon_days();
-        let (cell, event, gap) = eruption_with_quiet_after(42, &geo, &terrain, horizon + 2.0);
+        let (vertex, event, gap) = eruption_with_quiet_after(42, &geo, &terrain, horizon + 2.0);
         assert!(
             gap > horizon,
             "the selected gap {gap} does not exceed the horizon {horizon}"
@@ -542,8 +556,8 @@ mod tests {
             &terrain,
             "aeldrin",
             test_generation(),
-            cell,
-            at(event.day.day() + horizon - 1.0),
+            vertex,
+            at(event.day.as_std_days() + horizon - 1.0),
         );
         assert!(
             inside.stock > 0.0,
@@ -561,8 +575,8 @@ mod tests {
             &terrain,
             "aeldrin",
             test_generation(),
-            cell,
-            at(event.day.day() + horizon + 1.0),
+            vertex,
+            at(event.day.as_std_days() + horizon + 1.0),
         );
         assert_eq!(
             outside.stock, 0.0,
@@ -636,16 +650,16 @@ mod tests {
         );
     }
 
-    /// A cell with no edifice has nothing to remember, so the stock is zero
+    /// A vertex with no edifice has nothing to remember, so the stock is zero
     /// there whatever the ground has been doing seismically.
     ///
     /// Direction: red against a fold that treats an earthquake as a source.
     #[test]
-    fn a_cell_with_no_edifice_has_nothing_to_remember() {
+    fn a_vertex_with_no_edifice_has_nothing_to_remember() {
         let (geo, terrain) = globe();
         let mut checked = 0_u32;
-        for cell in geo.cells().take(2_000) {
-            if crate::hazard::has_edifice(&terrain, cell) {
+        for vertex in geo.vertices().take(2_000) {
+            if crate::hazard::has_edifice(&terrain, vertex) {
                 continue;
             }
             checked += 1;
@@ -654,15 +668,15 @@ mod tests {
                 &terrain,
                 "aeldrin",
                 test_generation(),
-                cell,
+                vertex,
                 at(5_000.0 * Years::DAYS_PER_YEAR),
             );
             assert_eq!(
                 known.stock, 0.0,
-                "{cell:?} carries no edifice yet something is remembered of its mountain"
+                "{vertex:?} carries no edifice yet something is remembered of its mountain"
             );
         }
-        assert!(checked > 0, "no amagmatic cell in the scan");
+        assert!(checked > 0, "no amagmatic vertex in the scan");
     }
 
     /// **The coupling.** The half-life is [`MEMORY_GENERATIONS`] of the
@@ -683,10 +697,10 @@ mod tests {
         assert_eq!(memory_half_life(Some(long)).get(), 200.0);
 
         let (geo, terrain) = globe();
-        let (cell, event, _) = eruption_with_quiet_after(42, &geo, &terrain, horizon_days());
-        let now = at(event.day.day() + memory_half_life(Some(short)).days());
-        let quick = knownness(Seed(42), &terrain, "aeldrin", Some(short), cell, now);
-        let slow = knownness(Seed(42), &terrain, "khorrun", Some(long), cell, now);
+        let (vertex, event, _) = eruption_with_quiet_after(42, &geo, &terrain, horizon_days());
+        let now = at(event.day.as_std_days() + memory_half_life(Some(short)).days());
+        let quick = knownness(Seed(42), &terrain, "aeldrin", Some(short), vertex, now);
+        let slow = knownness(Seed(42), &terrain, "khorrun", Some(long), vertex, now);
         assert!(
             slow.stock > quick.stock,
             "the longer-generation holder does not remember more: {} against {}",
@@ -711,7 +725,7 @@ mod tests {
         );
         let anchor = hornvale_species::life_history(
             hornvale_kernel::Mass::new(40.0).expect("a positive mass"),
-            hornvale_species::MetabolicClass::Endotherm,
+            hornvale_species::ThermalStrategy::Endothermic,
             hornvale_species::LifeSchedule::Allometric,
         )
         .generation_length
@@ -730,16 +744,30 @@ mod tests {
     #[test]
     fn knownness_is_pure_and_carries_no_state() {
         let (geo, terrain) = globe();
-        let (cell, event, _) = eruption_with_quiet_after(42, &geo, &terrain, half_life_days());
-        let now = at(event.day.day() + 1.0);
-        let first = knownness(Seed(42), &terrain, "aeldrin", test_generation(), cell, now);
+        let (vertex, event, _) = eruption_with_quiet_after(42, &geo, &terrain, half_life_days());
+        let now = at(event.day.as_std_days() + 1.0);
+        let first = knownness(
+            Seed(42),
+            &terrain,
+            "aeldrin",
+            test_generation(),
+            vertex,
+            now,
+        );
         assert!(
             first.stock > 0.0,
             "nothing remembered — the check is vacuous"
         );
         for _ in 0..20 {
             assert_eq!(
-                knownness(Seed(42), &terrain, "aeldrin", test_generation(), cell, now),
+                knownness(
+                    Seed(42),
+                    &terrain,
+                    "aeldrin",
+                    test_generation(),
+                    vertex,
+                    now
+                ),
                 first,
                 "the stock carried state between calls"
             );
@@ -766,56 +794,63 @@ mod tests {
         }
     }
 
-    /// **One mountain, one memory.** Two different cells of one cone are
+    /// **One mountain, one memory.** Two different vertices of one cone are
     /// remembered identically by one people, because the eruptions being
-    /// folded are the mountain's and not the cell's.
+    /// folded are the mountain's and not the vertex's.
     ///
-    /// Direction: red the moment the fold reads a per-cell eruption history —
+    /// Direction: red the moment the fold reads a per-vertex eruption history —
     /// the Task 6 trap one level up. A cone's flank reads a *quieter* local
     /// volcanic field than its source (one-sided, up to ~2.3x), so a stock
-    /// derived from `hazard_at(cell).volcanic` rather than folded over
+    /// derived from `hazard_at(vertex).volcanic` rather than folded over
     /// `events_in` would give the two halves of one mountain different
     /// memories of the same eruption, and nothing else in this file would
     /// notice.
     #[test]
-    fn every_cell_of_one_cone_is_remembered_alike() {
+    fn every_vertex_of_one_cone_is_remembered_alike() {
         let (geo, terrain) = globe();
         let now = at(8_000.0 * Years::DAYS_PER_YEAR);
         let all = cones(&geo, &terrain);
-        let multi = all.values().filter(|cells| cells.len() > 1).count();
+        let multi = all.values().filter(|vertices| vertices.len() > 1).count();
         assert!(
             multi > 0,
-            "no cone spans more than one cell — the agreement property is untestable here"
+            "no cone spans more than one vertex — the agreement property is untestable here"
         );
         let mut compared = 0_u32;
         let mut remembered = 0_u32;
-        for (source, cells) in all.iter().filter(|(_, cells)| cells.len() > 1) {
+        for (source, vertices) in all.iter().filter(|(_, vertices)| vertices.len() > 1) {
             let first = knownness(
                 Seed(42),
                 &terrain,
                 "aeldrin",
                 test_generation(),
-                cells[0],
+                vertices[0],
                 now,
             );
             remembered += u32::from(first.stock > 0.0);
-            for cell in &cells[1..] {
+            for vertex in &vertices[1..] {
                 assert_eq!(
-                    knownness(Seed(42), &terrain, "aeldrin", test_generation(), *cell, now),
+                    knownness(
+                        Seed(42),
+                        &terrain,
+                        "aeldrin",
+                        test_generation(),
+                        *vertex,
+                        now
+                    ),
                     first,
-                    "{cell:?} and {:?} are cells of the cone at {source:?} yet their people \
+                    "{vertex:?} and {:?} are vertices of the cone at {source:?} yet their people \
                      remembers them differently",
-                    cells[0]
+                    vertices[0]
                 );
                 compared += 1;
             }
         }
-        assert!(compared > 0, "no multi-cell cone compared");
+        assert!(compared > 0, "no multi-vertex cone compared");
         // Non-vacuity: agreement on a globe where every stock is zero would
         // be free. At least one cone must actually be remembered.
         assert!(
             remembered > 0,
-            "{multi} multi-cell cones and not one of them is remembered at all — the \
+            "{multi} multi-vertex cones and not one of them is remembered at all — the \
              agreement asserted above is agreement on nothing"
         );
     }
@@ -851,7 +886,7 @@ mod tests {
                     assert!(
                         (0.0..=1.0).contains(&stock),
                         "seed {seed}: {source:?} at day {} reads a stock of {stock}",
-                        now.day()
+                        now.as_std_days()
                     );
                 }
             }
@@ -880,7 +915,7 @@ mod tests {
         for source in cones(&geo, &terrain).keys() {
             let field = hazard_at(&terrain, *source)
                 .volcanic
-                .expect("a source contact is an edifice cell")
+                .expect("a source contact is an edifice vertex")
                 .get();
             let stock = knownness(
                 Seed(42),

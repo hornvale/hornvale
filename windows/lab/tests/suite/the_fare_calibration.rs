@@ -19,7 +19,7 @@
 //!
 //! ## The sampling frame (spec §4a, project owner's ruling 2026-08-04)
 //!
-//! F1/F2/F3 are measured between **deterministically sampled land cells**,
+//! F1/F2/F3 are measured between **deterministically sampled land vertices**,
 //! not settlement pairs — settlements sit in six to twelve tight carpets on
 //! high-capacity river basins, and weather bites hardest on marginal ground
 //! (boggy lowland, snow-loaded upland) that is exactly where settlements are
@@ -34,7 +34,7 @@ use hornvale_climate::snowpack::DEFAULT_SNOWPACK;
 use hornvale_climate::substrate::SubstrateField;
 use hornvale_climate::wetness::{DEFAULT_WETNESS, receptivity};
 use hornvale_kernel::math::acos;
-use hornvale_kernel::{CellId, CellMap, Geosphere, Seed, Value};
+use hornvale_kernel::{Geosphere, Seed, Value, Vertex, VertexMap, WorldTime};
 use hornvale_terrain::TerrainPins;
 use hornvale_topology::{CostSweep, least_cost_from};
 use hornvale_worldgen::graph_derive::weather_conductance_factor;
@@ -44,7 +44,7 @@ use hornvale_worldgen::{
 };
 use std::collections::BTreeSet;
 
-use crate::seed_sweep;
+use hornvale_worldgen::seed_sweep;
 
 /// AUTHORED (spec §5a), **not calibrated**: the floor
 /// `weather_conductance_factor`'s output is clamped to before inversion.
@@ -54,7 +54,7 @@ use crate::seed_sweep;
 /// `1/f` diverges. Mapping that to `u64::MAX` would be worse than wrong: it
 /// would reintroduce the passability threshold The Mire already measured, and
 /// `least_cost` returns `None` for an unreachable pair, so weather-impassable
-/// cells would silently drop the hardest pairs from the sample and bias F1
+/// vertices would silently drop the hardest pairs from the sample and bias F1
 /// toward those that stayed connected.
 ///
 /// At `0.25` the cap is `4x` flat ground, binding only in the combined
@@ -95,16 +95,16 @@ mod transform {
     #[test]
     fn the_floor_binds_and_weather_is_never_impassable() {
         // THE KEYSTONE. `weather_conductance_factor` really does return
-        // exactly 0.0 for a saturated, snowed, unfrozen cell. Remove the
+        // exactly 0.0 for a saturated, snowed, unfrozen vertex. Remove the
         // clamp in `weather_surcharge` and `1.0 / 0.0` is `inf`, which
         // saturates to `u64::MAX` under Rust's `as` cast — turning a muddy
-        // cell into an impassable one and silently dropping pairs from the
+        // vertex into an impassable one and silently dropping pairs from the
         // sample. This test must go red under that mutation.
         let at_zero = weather_surcharge(0.0);
         assert_ne!(
             at_zero,
             u64::MAX,
-            "weather must never make a cell impassable"
+            "weather must never make a vertex impassable"
         );
         assert_eq!(at_zero, weather_surcharge(WEATHER_FACTOR_FLOOR));
         // 4x flat ground: BASE_COST * (1/0.25 - 1) == BASE_COST * 3.
@@ -150,7 +150,7 @@ const PILOT_SEEDS: std::ops::RangeInclusive<u64> = 1..=5;
 /// redundancy control sample per seed — a deterministic stride over the
 /// ordered reachable-pair list, same idiom as `the_mire_calibration.rs`'s
 /// `H3_SAMPLE_STRIDE_TARGET`. The redundancy control needs a blocked
-/// re-sweep PER PAIR (a fresh `CellMap` plus a fresh `least_cost_from`), so
+/// re-sweep PER PAIR (a fresh `VertexMap` plus a fresh `least_cost_from`), so
 /// running it over every reachable pair (up to ~62k for one pilot seed)
 /// would dominate the pilot's cost; F2 is measured over the same sampled
 /// subset rather than exhaustively, so the two numbers are read together
@@ -168,7 +168,7 @@ const PATH_SAMPLE_STRIDE_TARGET: usize = 200;
 /// from the pilot").
 const SEPARATION_BANDS_DEG: &[f64] = &[5.0, 10.0, 20.0, 40.0, 80.0];
 
-/// How many land cells (`!Biome::is_marine()`, read off `dry != u64::MAX` —
+/// How many land vertices (`!Biome::is_marine()`, read off `dry != u64::MAX` —
 /// the same test `traversal_cost` already encodes, so no separate biome
 /// field is needed anywhere in this file) the geographic frame draws as
 /// landmarks: a deterministic stride across the whole land roster, never
@@ -182,19 +182,19 @@ const SEPARATION_BANDS_DEG: &[f64] = &[5.0, 10.0, 20.0, 40.0, 80.0];
 const GEO_LANDMARK_STRIDE_TARGET: usize = 200;
 
 /// The stride [`GEO_LANDMARK_STRIDE_TARGET`]'s doc comment describes.
-fn geo_landmark_stride(land_cell_count: usize) -> usize {
-    (land_cell_count / GEO_LANDMARK_STRIDE_TARGET).max(1)
+fn geo_landmark_stride(land_vertex_count: usize) -> usize {
+    (land_vertex_count / GEO_LANDMARK_STRIDE_TARGET).max(1)
 }
 
-/// Great-circle angular separation between two cells, in DEGREES. Never
+/// Great-circle angular separation between two vertices, in DEGREES. Never
 /// converted to a physical distance — this sim defines no planetary radius
 /// (spec §4a), so degrees (or [`Geosphere::hops_between`]'s hop count) is
-/// the only honest unit. Cells sit on the unit sphere (`Geosphere::
+/// the only honest unit. Vertices sit on the unit sphere (`Geosphere::
 /// position`), so the separation is just the angle between their two
 /// position vectors — no latitude/longitude wraparound edge case near a
 /// pole or the dateline the way a haversine-on-coordinates formula would
 /// carry.
-fn angular_separation_deg(geo: &Geosphere, a: CellId, b: CellId) -> f64 {
+fn angular_separation_deg(geo: &Geosphere, a: Vertex, b: Vertex) -> f64 {
     let pa = geo.position(a);
     let pb = geo.position(b);
     let dot = pa[0] * pb[0] + pa[1] * pb[1] + pa[2] * pb[2];
@@ -203,18 +203,18 @@ fn angular_separation_deg(geo: &Geosphere, a: CellId, b: CellId) -> f64 {
 
 /// Among `landmarks` (excluding `landmarks[src_idx]` itself), the one whose
 /// angular separation from the source is closest to `target_deg`, and that
-/// achieved separation. Ties (equal `|diff|`) break on the lower `CellId` —
+/// achieved separation. Ties (equal `|diff|`) break on the lower `Vertex` —
 /// a pure function of the mesh and the target, never of iteration order,
 /// same discipline `CostSweep`'s tie-break follows. Returns `(destination,
 /// actual_separation_deg)`.
 fn nearest_at_separation(
     geo: &Geosphere,
-    landmarks: &[CellId],
+    landmarks: &[Vertex],
     src_idx: usize,
     target_deg: f64,
-) -> (CellId, f64) {
+) -> (Vertex, f64) {
     let src = landmarks[src_idx];
-    let mut best: Option<(f64, CellId)> = None;
+    let mut best: Option<(f64, Vertex)> = None;
     for (j, &candidate) in landmarks.iter().enumerate() {
         if j == src_idx {
             continue;
@@ -222,18 +222,18 @@ fn nearest_at_separation(
         let diff = (angular_separation_deg(geo, src, candidate) - target_deg).abs();
         best = Some(match best {
             None => (diff, candidate),
-            Some((best_diff, best_cell)) => {
+            Some((best_diff, best_vertex)) => {
                 if diff.total_cmp(&best_diff).is_lt()
-                    || (diff.total_cmp(&best_diff).is_eq() && candidate < best_cell)
+                    || (diff.total_cmp(&best_diff).is_eq() && candidate < best_vertex)
                 {
                     (diff, candidate)
                 } else {
-                    (best_diff, best_cell)
+                    (best_diff, best_vertex)
                 }
             }
         });
     }
-    let (_, dst) = best.expect("landmarks must hold at least 2 cells");
+    let (_, dst) = best.expect("landmarks must hold at least 2 vertices");
     (dst, angular_separation_deg(geo, src, dst))
 }
 
@@ -248,14 +248,14 @@ struct WorldSample {
     /// The mesh, kept for neighbour and coordinate reads.
     geo: Geosphere,
     /// The **dry** traversal-cost field — the one production plans over.
-    dry: CellMap<u64>,
-    /// Every settlement's cell, ascending and deduplicated.
-    settlements: Vec<CellId>,
+    dry: VertexMap<u64>,
+    /// Every settlement's vertex, ascending and deduplicated.
+    settlements: Vec<Vertex>,
     /// The converged annual period, standard days.
     year_length: f64,
-    /// Surface wetness's converged annual trajectory, every cell.
+    /// Surface wetness's converged annual trajectory, every vertex.
     wetness: SubstrateField,
-    /// Snowpack's converged annual trajectory, every cell.
+    /// Snowpack's converged annual trajectory, every vertex.
     snow: SubstrateField,
     /// The reconstructed climate, for `is_frozen_at` reads.
     climate: GeneratedClimate,
@@ -292,11 +292,11 @@ fn build_sample(seed: u64, wc: &WorldComponents) -> WorldSample {
     let elevation = &terrain.globe().elevation;
     let biome = climate.biome_map();
 
-    let mut settlements: Vec<CellId> = hornvale_settlement::all_settlements(&world)
+    let mut settlements: Vec<Vertex> = hornvale_settlement::all_settlements(&world)
         .iter()
         .map(
-            |s| match world.ledger.value_of(s.id, hornvale_settlement::CELL_ID) {
-                Some(Value::Number(n)) => CellId(*n as u32),
+            |s| match world.ledger.value_of(s.id, hornvale_settlement::VERTEX_ID) {
+                Some(Value::Number(n)) => Vertex(*n as u32),
                 _ => panic!("settlement {} has no cell-id fact", s.id.0),
             },
         )
@@ -320,25 +320,27 @@ fn build_sample(seed: u64, wc: &WorldComponents) -> WorldSample {
     }
 }
 
-/// The dry traversal-cost field plus this day's weather surcharge, per cell.
+/// The dry traversal-cost field plus this day's weather surcharge, per vertex.
 ///
 /// Reads exactly the substrate state `graph_derive`'s own `factor_at` closure
 /// reads, so the cost instrument and the conductance instrument agree on the
-/// world and differ only in transform. Marine cells stay `u64::MAX` untouched:
+/// world and differ only in transform. Marine vertices stay `u64::MAX` untouched:
 /// weather never creates or removes impassability (spec §5a).
-fn weathered_cost(sample: &WorldSample, day: f64) -> CellMap<u64> {
-    CellMap::from_fn(&sample.geo, |cell| {
-        let base = *sample.dry.get(cell);
+fn weathered_cost(sample: &WorldSample, day: f64) -> VertexMap<u64> {
+    VertexMap::from_fn(&sample.geo, |vertex| {
+        let base = *sample.dry.get(vertex);
         if base == u64::MAX {
             return u64::MAX;
         }
         let factor = weather_conductance_factor(
             receptivity(
-                sample.wetness.at(cell, day),
+                sample.wetness.at(vertex, day),
                 DEFAULT_WETNESS.field_capacity_mm,
             ),
-            sample.snow.at(cell, day),
-            sample.climate.is_frozen_at(cell, day),
+            sample.snow.at(vertex, day),
+            sample
+                .climate
+                .is_frozen_at(vertex, WorldTime::from_std_days(day).expect("finite")),
         );
         base.saturating_add(weather_surcharge(factor))
     })
@@ -514,7 +516,7 @@ const HYPOTHESIS_BAND_COUNT: usize = 4;
 /// caller), using [`LAT_BANDS`]' boundaries with the LAST band inclusive of
 /// its upper bound (90°) — same idiom `the_mire_calibration.rs`'s own
 /// `land_by_band` construction uses (`lat >= lo && (lat < hi ||
-/// is_last_band)`), so a cell at exactly the pole is not dropped by every
+/// is_last_band)`), so a vertex at exactly the pole is not dropped by every
 /// band's exclusive-upper-bound test.
 fn lat_band_index(lat_abs: f64) -> usize {
     for (idx, &(lo, hi)) in LAT_BANDS.iter().enumerate() {
@@ -566,13 +568,13 @@ struct FullSeedReadout {
     /// F3: this seed's median swing, POOLED ACROSS THE FOUR INCLUDED
     /// SEPARATION BANDS (`SEPARATION_BANDS_DEG[..HYPOTHESIS_BAND_COUNT]`,
     /// i.e. 5°/10°/20°/40° — the 80° band is excluded here too, per §6b),
-    /// split by [`LAT_BANDS`] on the swing's SOURCE landmark cell's
+    /// split by [`LAT_BANDS`] on the swing's SOURCE landmark vertex's
     /// `|latitude|`. `None` if this seed contributed no reachable pair to
     /// that latitude band across all four included separation bands.
-    /// Bucketing on the SOURCE cell (rather than the destination, or some
+    /// Bucketing on the SOURCE vertex (rather than the destination, or some
     /// midpoint) is a judgment call the task report names explicitly: F3's
     /// instruction says "partitioned on `geo.coord(c).latitude.abs()`"
-    /// without specifying which cell `c` is for a two-endpoint pair.
+    /// without specifying which vertex `c` is for a two-endpoint pair.
     f3_band_swings: [Option<f64>; 3],
     /// Secondary settlement-pair frame (§4a, §6a): this seed's median swing.
     settlement_median_swing: f64,
@@ -614,13 +616,13 @@ fn build_full_readout(seed: u64, wc: &WorldComponents) -> FullSeedReadout {
     let sample = build_sample(seed, wc);
 
     // ---------- Geographic frame (primary) ----------
-    let land_cells: Vec<CellId> = sample
+    let land_vertices: Vec<Vertex> = sample
         .geo
-        .cells()
+        .vertices()
         .filter(|&c| *sample.dry.get(c) != u64::MAX)
         .collect();
-    let geo_stride = geo_landmark_stride(land_cells.len());
-    let landmarks: Vec<CellId> = land_cells.iter().step_by(geo_stride).copied().collect();
+    let geo_stride = geo_landmark_stride(land_vertices.len());
+    let landmarks: Vec<Vertex> = land_vertices.iter().step_by(geo_stride).copied().collect();
     let landmark_count = landmarks.len();
     let band_count = SEPARATION_BANDS_DEG.len();
 
@@ -629,7 +631,7 @@ fn build_full_readout(seed: u64, wc: &WorldComponents) -> FullSeedReadout {
         .map(|&src| least_cost_from(&sample.geo, &sample.dry, src))
         .collect();
 
-    let mut pair_dst: Vec<CellId> = Vec::with_capacity(landmark_count * band_count);
+    let mut pair_dst: Vec<Vertex> = Vec::with_capacity(landmark_count * band_count);
     for i in 0..landmark_count {
         for &target in SEPARATION_BANDS_DEG {
             let (dst, _actual) = nearest_at_separation(&sample.geo, &landmarks, i, target);
@@ -746,7 +748,7 @@ fn build_full_readout(seed: u64, wc: &WorldComponents) -> FullSeedReadout {
             assert!(
                 path_a.is_some() && path_b.is_some(),
                 "seed {seed} geo band {k} landmark {i} lost reachability under weathering \
-                 (the keystone's guarantee that weathering never makes a passable cell \
+                 (the keystone's guarantee that weathering never makes a passable vertex \
                  impassable should preclude this)"
             );
             if path_a != path_b {
@@ -767,9 +769,9 @@ fn build_full_readout(seed: u64, wc: &WorldComponents) -> FullSeedReadout {
                 continue;
             }
             redundancy_sample += 1;
-            let blocked: BTreeSet<CellId> =
+            let blocked: BTreeSet<Vertex> =
                 best_path[1..best_path.len() - 1].iter().copied().collect();
-            let scratch = CellMap::from_fn(&sample.geo, |c| {
+            let scratch = VertexMap::from_fn(&sample.geo, |c| {
                 if blocked.contains(&c) {
                     u64::MAX
                 } else {
@@ -920,8 +922,8 @@ fn build_full_readout(seed: u64, wc: &WorldComponents) -> FullSeedReadout {
             continue;
         }
         redundancy_sample_count += 1;
-        let blocked: BTreeSet<CellId> = best_path[1..best_path.len() - 1].iter().copied().collect();
-        let scratch = CellMap::from_fn(&sample.geo, |c| {
+        let blocked: BTreeSet<Vertex> = best_path[1..best_path.len() - 1].iter().copied().collect();
+        let scratch = VertexMap::from_fn(&sample.geo, |c| {
             if blocked.contains(&c) {
                 u64::MAX
             } else {
@@ -1003,17 +1005,17 @@ struct ExploratorySeedReadout {
     /// Per band: this seed's raw COMMITTED-ROUTE (fixed dry-optimal path,
     /// never re-planned) per-pair seasonal swings (E2's population).
     e2_swings_by_band: [Vec<f64>; 5],
-    /// Per band: this seed's per-pair worst-surcharge-cell fraction, on
+    /// Per band: this seed's per-pair worst-surcharge-vertex fraction, on
     /// that pair's own committed-route costliest sampled day (E3's
     /// population).
     e3_fracs_by_band: [Vec<f64>; 5],
 }
 
-/// Builds one seed's [`ExploratorySeedReadout`]. Reconstructs land cells,
+/// Builds one seed's [`ExploratorySeedReadout`]. Reconstructs land vertices,
 /// landmarks, and per-band pair destinations EXACTLY as `build_full_readout`
 /// does (deterministic, so byte-identical for a given seed) but computes
 /// E1 (F1 re-derived, raw), E2 (the committed-route/fixed-path swing), and
-/// E3 (the worst-cell surcharge fraction) instead of F1-F4's own
+/// E3 (the worst-vertex surcharge fraction) instead of F1-F4's own
 /// aggregates. Does not call, import from, or share mutable state with
 /// `build_full_readout` — a disclosed duplication, chosen so this
 /// exploratory work cannot alter F1-F4's frozen computation even by
@@ -1021,13 +1023,13 @@ struct ExploratorySeedReadout {
 fn build_exploratory_readout(seed: u64, wc: &WorldComponents) -> ExploratorySeedReadout {
     let sample = build_sample(seed, wc);
 
-    let land_cells: Vec<CellId> = sample
+    let land_vertices: Vec<Vertex> = sample
         .geo
-        .cells()
+        .vertices()
         .filter(|&c| *sample.dry.get(c) != u64::MAX)
         .collect();
-    let geo_stride = geo_landmark_stride(land_cells.len());
-    let landmarks: Vec<CellId> = land_cells.iter().step_by(geo_stride).copied().collect();
+    let geo_stride = geo_landmark_stride(land_vertices.len());
+    let landmarks: Vec<Vertex> = land_vertices.iter().step_by(geo_stride).copied().collect();
     let landmark_count = landmarks.len();
     let band_count = SEPARATION_BANDS_DEG.len();
 
@@ -1036,7 +1038,7 @@ fn build_exploratory_readout(seed: u64, wc: &WorldComponents) -> ExploratorySeed
         .map(|&src| least_cost_from(&sample.geo, &sample.dry, src))
         .collect();
 
-    let mut pair_dst: Vec<CellId> = Vec::with_capacity(landmark_count * band_count);
+    let mut pair_dst: Vec<Vertex> = Vec::with_capacity(landmark_count * band_count);
     for i in 0..landmark_count {
         for &target in SEPARATION_BANDS_DEG {
             let (dst, _actual) = nearest_at_separation(&sample.geo, &landmarks, i, target);
@@ -1048,7 +1050,7 @@ fn build_exploratory_readout(seed: u64, wc: &WorldComponents) -> ExploratorySeed
     // and never re-planned across the day loop below. `None` if
     // unreachable on the dry field (matches every other frame's
     // reachability test in this file).
-    let pair_path: Vec<Option<Vec<CellId>>> = (0..landmark_count * band_count)
+    let pair_path: Vec<Option<Vec<Vertex>>> = (0..landmark_count * band_count)
         .map(|idx| {
             let i = idx / band_count;
             landmark_dry_sweeps[i].path_to(pair_dst[idx])
@@ -1062,10 +1064,10 @@ fn build_exploratory_readout(seed: u64, wc: &WorldComponents) -> ExploratorySeed
         .collect();
 
     // All SAMPLE_DAYS weathered fields, retained rather than rebuilt per
-    // pair or per E3 lookup — SAMPLE_DAYS (12) x cell_count u64s is a few
+    // pair or per E3 lookup — SAMPLE_DAYS (12) x vertex_count u64s is a few
     // MB, trivial, and this is what makes E3's "look up an arbitrary day's
-    // field for the worst-cell surcharge" cheap instead of a rebuild storm.
-    let weathered_fields: Vec<CellMap<u64>> = (0..SAMPLE_DAYS)
+    // field for the worst-vertex surcharge" cheap instead of a rebuild storm.
+    let weathered_fields: Vec<VertexMap<u64>> = (0..SAMPLE_DAYS)
         .map(|day_idx| {
             let day = day_idx as f64 * sample.year_length / SAMPLE_DAYS as f64;
             weathered_cost(&sample, day)
@@ -1101,15 +1103,15 @@ fn build_exploratory_readout(seed: u64, wc: &WorldComponents) -> ExploratorySeed
         }
         // E2: the FIXED dry-optimal path's cost under THIS day's weathered
         // field — NO re-planning, no sweep, just a sum along the already-
-        // known path, excluding the source cell, exactly as `least_cost`
-        // totals a path (`route.rs`'s `for cell in actions { total +=
-        // cost.get(cell) }`, which also excludes the start). Cheaper than
+        // known path, excluding the source vertex, exactly as `least_cost`
+        // totals a path (`route.rs`'s `for vertex in actions { total +=
+        // cost.get(vertex) }`, which also excludes the start). Cheaper than
         // E1/F1: O(path length) per pair per day, not a full Dijkstra sweep.
         for (idx, path) in pair_path.iter().enumerate() {
             if let Some(path) = path {
                 let total: u64 = path[1..]
                     .iter()
-                    .fold(0u64, |acc, &cell| acc.saturating_add(*wet.get(cell)));
+                    .fold(0u64, |acc, &vertex| acc.saturating_add(*wet.get(vertex)));
                 let c = total as f64;
                 if c.total_cmp(&e2_min[idx]).is_lt() {
                     e2_min[idx] = c;
@@ -1143,10 +1145,10 @@ fn build_exploratory_readout(seed: u64, wc: &WorldComponents) -> ExploratorySeed
             // E3: on the committed route's own costliest sampled day (E2's
             // argmax for THIS pair — the day the fixed path was priciest
             // under weather, continuing E2's "committed route" framing
-            // rather than F1's re-planned argmax day), the path cell with
+            // rather than F1's re-planned argmax day), the path vertex with
             // the largest weather surcharge, reported as a fraction of that
-            // cell's OWN dry cost. Well-defined for every reachable pair:
-            // §5a's WEATHER_FACTOR_FLOOR guarantees no cell's weathered cost
+            // vertex's OWN dry cost. Well-defined for every reachable pair:
+            // §5a's WEATHER_FACTOR_FLOOR guarantees no vertex's weathered cost
             // is u64::MAX, so the subtraction below never underflows a real
             // (non-defensive) case.
             let path = pair_path[idx]
@@ -1154,12 +1156,12 @@ fn build_exploratory_readout(seed: u64, wc: &WorldComponents) -> ExploratorySeed
                 .expect("a finite dry cost implies a dry path");
             let costliest_day = &weathered_fields[e2_argmax_day[idx]];
             let mut worst_frac = f64::NEG_INFINITY;
-            for &cell in &path[1..] {
-                let dry_here = *sample.dry.get(cell);
+            for &vertex in &path[1..] {
+                let dry_here = *sample.dry.get(vertex);
                 if dry_here == 0 {
-                    continue; // defensive only: BASE_COST=10 floors every land cell above 0
+                    continue; // defensive only: BASE_COST=10 floors every land vertex above 0
                 }
-                let surcharge = (*costliest_day.get(cell)).saturating_sub(dry_here);
+                let surcharge = (*costliest_day.get(vertex)).saturating_sub(dry_here);
                 let frac = surcharge as f64 / dry_here as f64;
                 if frac.total_cmp(&worst_frac).is_gt() {
                     worst_frac = frac;
@@ -1179,12 +1181,12 @@ mod weathering {
 
     #[test]
     #[ignore = "probe: the-fare exploratory/pilot readouts over a live-worldgen battery; run by hand (decision 0148 took them off the heavy set)"]
-    fn weathering_raises_cost_somewhere_and_never_makes_a_cell_impassable() {
+    fn weathering_raises_cost_somewhere_and_never_makes_a_vertex_impassable() {
         // THE KEYSTONE for this task. Two failure modes it must catch: a
         // weathered field that is byte-identical to the dry one (the
         // substrate never reaching the cost field at all — the latent-
         // mechanism failure The Mire's own Task 6 test guarded against), and
-        // a weathered field that turns a passable cell impassable (which
+        // a weathered field that turns a passable vertex impassable (which
         // would silently drop pairs from F1's sample).
         let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
         let sample = build_sample(1, &wc);
@@ -1192,21 +1194,21 @@ mod weathering {
         let wet = weathered_cost(&sample, day);
 
         let mut raised = 0usize;
-        for cell in sample.geo.cells() {
-            let dry = *sample.dry.get(cell);
-            let w = *wet.get(cell);
+        for vertex in sample.geo.vertices() {
+            let dry = *sample.dry.get(vertex);
+            let w = *wet.get(vertex);
             assert!(
                 w >= dry,
-                "weathering lowered cost at {cell:?}: {dry} -> {w}"
+                "weathering lowered cost at {vertex:?}: {dry} -> {w}"
             );
             if dry == u64::MAX {
                 assert_eq!(
                     w,
                     u64::MAX,
-                    "a marine cell stopped being marine at {cell:?}"
+                    "a marine vertex stopped being marine at {vertex:?}"
                 );
             } else {
-                assert_ne!(w, u64::MAX, "weathering made {cell:?} impassable");
+                assert_ne!(w, u64::MAX, "weathering made {vertex:?} impassable");
                 if w > dry {
                     raised += 1;
                 }
@@ -1214,7 +1216,7 @@ mod weathering {
         }
         assert!(
             raised > 0,
-            "weathering raised no cell's cost in the whole world"
+            "weathering raised no vertex's cost in the whole world"
         );
     }
 
@@ -1228,8 +1230,8 @@ mod weathering {
         // 2026-08-04):
         //
         // PRIMARY — `PILOT` lines, one per (seed, band): the geographic
-        // land-cell frame. Landmarks are a deterministic stride over land
-        // cells (`GEO_LANDMARK_STRIDE_TARGET`); every landmark pairs with
+        // land-vertex frame. Landmarks are a deterministic stride over land
+        // vertices (`GEO_LANDMARK_STRIDE_TARGET`); every landmark pairs with
         // whichever other landmark's actual angular separation is closest
         // to each of `SEPARATION_BANDS_DEG`'s targets
         // (`nearest_at_separation`). F1/F2 are reported SEPARATELY per band
@@ -1261,14 +1263,15 @@ mod weathering {
         for seed in PILOT_SEEDS {
             let sample = build_sample(seed, &wc);
 
-            // ============ PRIMARY: geographic land-cell frame (§4a) ============
-            let land_cells: Vec<CellId> = sample
+            // ============ PRIMARY: geographic land-vertex frame (§4a) ============
+            let land_vertices: Vec<Vertex> = sample
                 .geo
-                .cells()
+                .vertices()
                 .filter(|&c| *sample.dry.get(c) != u64::MAX)
                 .collect();
-            let geo_stride = geo_landmark_stride(land_cells.len());
-            let landmarks: Vec<CellId> = land_cells.iter().step_by(geo_stride).copied().collect();
+            let geo_stride = geo_landmark_stride(land_vertices.len());
+            let landmarks: Vec<Vertex> =
+                land_vertices.iter().step_by(geo_stride).copied().collect();
             let landmark_count = landmarks.len();
             let band_count = SEPARATION_BANDS_DEG.len();
 
@@ -1283,7 +1286,7 @@ mod weathering {
             // Each landmark pairs with the OTHER landmark whose actual
             // separation is closest to each band's target. `pair_dst`/
             // `pair_sep` are flat, indexed `i * band_count + k`.
-            let mut pair_dst: Vec<CellId> = Vec::with_capacity(landmark_count * band_count);
+            let mut pair_dst: Vec<Vertex> = Vec::with_capacity(landmark_count * band_count);
             let mut pair_sep: Vec<f64> = Vec::with_capacity(landmark_count * band_count);
             for i in 0..landmark_count {
                 for &target in SEPARATION_BANDS_DEG {
@@ -1383,7 +1386,7 @@ mod weathering {
                         path_a.is_some() && path_b.is_some(),
                         "seed {seed} band {target} landmark {i} lost reachability \
                          under weathering (the keystone's guarantee that weathering \
-                         never makes a passable cell impassable should preclude this)"
+                         never makes a passable vertex impassable should preclude this)"
                     );
                     if path_a != path_b {
                         rerouted += 1;
@@ -1404,9 +1407,9 @@ mod weathering {
                         continue;
                     }
                     redundancy_sample_count += 1;
-                    let blocked: BTreeSet<CellId> =
+                    let blocked: BTreeSet<Vertex> =
                         best_path[1..best_path.len() - 1].iter().copied().collect();
-                    let scratch = CellMap::from_fn(&sample.geo, |c| {
+                    let scratch = VertexMap::from_fn(&sample.geo, |c| {
                         if blocked.contains(&c) {
                             u64::MAX
                         } else {
@@ -1611,14 +1614,14 @@ mod weathering {
                     path_a.is_some() && path_b.is_some(),
                     "seed {seed} pair ({i},{j}) lost reachability under weathering \
                      (the keystone's guarantee that weathering never makes a \
-                     passable cell impassable should preclude this)"
+                     passable vertex impassable should preclude this)"
                 );
                 if path_a != path_b {
                     rerouted += 1;
                 }
 
                 // Redundancy control: on the DRY field, the best path's
-                // interior cells (everything but the two endpoints) blocked
+                // interior vertices (everything but the two endpoints) blocked
                 // to u64::MAX in a scratch field, re-swept. A directly
                 // adjacent pair's best path has NO interior to block — the
                 // re-sweep would trivially reproduce the same path and read
@@ -1638,9 +1641,9 @@ mod weathering {
                     continue;
                 }
                 redundancy_sample_count += 1;
-                let blocked: BTreeSet<CellId> =
+                let blocked: BTreeSet<Vertex> =
                     best_path[1..best_path.len() - 1].iter().copied().collect();
-                let scratch = CellMap::from_fn(&sample.geo, |c| {
+                let scratch = VertexMap::from_fn(&sample.geo, |c| {
                     if blocked.contains(&c) {
                         u64::MAX
                     } else {
@@ -2054,7 +2057,7 @@ mod weathering {
              polar={:.6} does not reproduce The Mire's equatorial > temperate > polar \
              ordering on the cost instrument -- a real finding about whether the \
              polar zero was a property of the world or of The Mire's threshold, not \
-             a test bug. §5a's mechanism (a permanently frozen cell has constant \
+             a test bug. §5a's mechanism (a permanently frozen vertex has constant \
              conductance, hence constant cost) predicted this ordering SHOULD survive \
              a better instrument; if it does not, that prediction is falsified and \
              belongs in the chronicle as such.",
@@ -2120,15 +2123,15 @@ mod weathering {
         // E2 -- the committed-route cost (the Donner number). Per band:
         // for each pair, the DRY-OPTIMAL PATH computed ONCE, then that
         // SAME FIXED path's cost evaluated under each sampled day's
-        // weathered field (summed over the path's cells, excluding the
+        // weathered field (summed over the path's vertices, excluding the
         // source) -- no re-planning. Same p50/p90/p99/max tail as E1, plus
         // E2/F1 (the ratio of committed-route to re-planned swing, at each
         // percentile) -- the value of foresight.
         //
-        // E3 -- the worst cell on the route. For each pair's fixed path, on
-        // that pair's own committed-route costliest sampled day, the cell
+        // E3 -- the worst vertex on the route. For each pair's fixed path, on
+        // that pair's own committed-route costliest sampled day, the vertex
         // with the largest weather surcharge, reported as a fraction of
-        // THAT CELL's own dry cost. Pooled p50/p90/p99/max, both overall
+        // THAT VERTEX's own dry cost. Pooled p50/p90/p99/max, both overall
         // (every band's pairs combined, the number the task literally
         // asked for) and per band (a free bonus from the same data).
         //
@@ -2248,7 +2251,7 @@ mod weathering {
                 continue;
             }
             eprintln!(
-                "band_deg={:.1}: E3(worst-cell surcharge fraction, n={}) p50={:.6} p90={:.6} \
+                "band_deg={:.1}: E3(worst-vertex surcharge fraction, n={}) p50={:.6} p90={:.6} \
                  p99={:.6} max={:.6}",
                 SEPARATION_BANDS_DEG[k],
                 e3.len(),

@@ -1,42 +1,65 @@
 //! The ACTION CLOCK: what an action costs, in exact integer ticks.
 //!
-//! Scheduling is integer and internal; committing is `f64` days and unchanged
-//! (spec §4). `Ticks` is never serialized — it exists so the scheduler's
-//! ordering is a total order with exact arithmetic, the same reason
-//! `kernel/src/astar.rs` uses `u64` costs.
+//! Scheduling is integer, the same reason `kernel/src/astar.rs` uses integer
+//! costs: an exact total order.
+//!
+//! **This clock IS the kernel's clock now** (The Foliot). It was not, and the
+//! history is worth keeping because the reason was subtle. The Escapement
+//! (decision 0186) retyped `WorldTime` to exact ticks at the same
+//! 100,000/std-day rate this module declared, but a world's day length was a
+//! drawn `f64`, so a local day was an exact integer of VESSEL ticks and
+//! `d * 100_000` KERNEL ticks — not an integer. The two lattices therefore
+//! differed by up to half a tick per day, and every charge crossed between
+//! them through `f64` days.
+//!
+//! That crossing was CORRECT, not a bug: the campaign that came to delete it
+//! measured 213 losses against 211 gains, net -2 ticks, over 5,764 samples —
+//! symmetric noise with nothing accumulating. Deleting it as an identity, as
+//! that campaign first intended, would have introduced an error.
+//!
+//! What actually fixed it was removing the REASON for two lattices: a world's
+//! day is now drawn as an exact tick count, so a local day divides the kernel
+//! lattice exactly, a vessel tick IS a kernel tick, and there is nothing left
+//! to convert. `Ticks` and `days_of` are gone rather than renamed — with one
+//! lattice there is one tick concept and no second name for it.
 
 use crate::action::Action;
-use hornvale_kernel::KindId;
 use hornvale_kernel::component::ComponentStore;
+use hornvale_kernel::units::TickSpan;
+use hornvale_kernel::{KindId, WorldTime};
 use hornvale_species::BiosphereTraits;
 
-/// An exact count of scheduler ticks. Internal; never serialized.
-/// type-audit: bare-ok(count)
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Ticks(pub u64);
-
-/// The base resolution: ticks per STANDARD day, before the planet's rotation is
-/// taken into account. `100_000` puts a tick at ~0.86 seconds, which is what
-/// makes a within-room step (seconds long) REPRESENTABLE — at `1_000` a tick is
-/// ~86 seconds and the fine layer could not be expressed at all (spec §3.2).
-/// An Earth-like world therefore has `10_000` ticks per `MoveTo`, the historical
-/// `MOVE_DURATION` of `0.1` days.
-/// type-audit: bare-ok(count)
-pub const BASE_TICKS_PER_STD_DAY: u64 = 100_000;
-
-/// How many ticks make one LOCAL day on a world whose rotation period is
-/// `day_length_std` standard days — `round(day × base)`, at least one.
+/// The base resolution: ticks per STANDARD day.
 ///
-/// Deriving this rather than fixing it is what makes a whole local day an
-/// EXACT integer of ticks (spec §4.1). `ActivityCycle` is the sim's one
-/// local-day-keyed mechanism, and under an arbitrary granularity every dawn
-/// rounds to the nearest tick and the error beats against the day cycle over a
-/// long run. `None` — a tidally-locked world, which the rotation pin admits —
-/// has no day to divide, so it takes the base rate.
-/// type-audit: bare-ok(ratio: day_length_std), bare-ok(count: return)
-pub fn ticks_per_local_day(day_length_std: Option<f64>) -> u64 {
-    match day_length_std.filter(|d| d.is_finite() && *d > 0.0) {
-        Some(d) => ((d * BASE_TICKS_PER_STD_DAY as f64).round() as u64).max(1),
+/// **This is the kernel's constant, not a second copy of it** (The Foliot).
+/// It used to be an independent literal that happened to agree, which is
+/// what let two tick lattices exist side by side; re-exporting the kernel's
+/// makes the agreement structural. `100_000` puts a tick at ~0.86 seconds,
+/// which is what makes a within-room step (seconds long) REPRESENTABLE — at
+/// `1_000` a tick is ~86 seconds and the fine layer could not be expressed at
+/// all (spec §3.2). An Earth-like world therefore has `10_000` ticks per
+/// `MoveTo`, the historical `MOVE_DURATION` of `0.1` days.
+/// type-audit: bare-ok(count)
+pub const BASE_TICKS_PER_STD_DAY: i64 = WorldTime::TICKS_PER_STD_DAY;
+
+/// How many ticks make one LOCAL day.
+///
+/// **A field read now, not a computation** (The Foliot). It used to round
+/// `day_length_std * base` out of an `f64`, which is what created a second
+/// lattice: the rounded value and the true `d * base` differed by up to half
+/// a tick, so a vessel tick was not quite a kernel tick and every action had
+/// to convert between them. A world's day is now drawn as an exact tick count
+/// (`Rotation::Spinning`), so this just reports it.
+///
+/// A whole local day being an EXACT integer of ticks is what `ActivityCycle`
+/// needs (spec §4.1): under an arbitrary granularity every dawn rounds and the
+/// error beats against the day cycle over a long run. `None` — a tidally
+/// locked world, which the rotation pin admits — has no day to divide, so it
+/// takes the base rate.
+/// type-audit: bare-ok(count: return)
+pub fn ticks_per_local_day(day: Option<TickSpan>) -> i64 {
+    match day.filter(|d| d.ticks() > 0) {
+        Some(d) => d.ticks(),
         None => BASE_TICKS_PER_STD_DAY,
     }
 }
@@ -92,17 +115,13 @@ const CLIMB_SCALE_M: f64 = 500.0;
 /// type-audit: bare-ok(ratio)
 const MAX_CLIMB_FACTOR: f64 = 4.0;
 
-/// `t` in STANDARD days — the conversion at the commit boundary, where floats
-/// belong. A local day of `day_length_std` is exactly
-/// [`ticks_per_local_day`] ticks, so this is that ratio scaled.
-/// type-audit: bare-ok(ratio: day_length_std), bare-ok(ratio: return)
-pub fn days_of(t: Ticks, day_length_std: Option<f64>) -> f64 {
-    let per_day = ticks_per_local_day(day_length_std);
-    match day_length_std.filter(|d| d.is_finite() && *d > 0.0) {
-        Some(d) => t.0 as f64 * d / per_day as f64,
-        None => t.0 as f64 / per_day as f64,
-    }
-}
+// `days_of` is DELETED (The Foliot). It converted a scheduler tick count into
+// continuous standard days so a charge could re-enter the lattice through
+// `WorldTime::from_std_days`. With the day lattice-aligned that conversion is
+// the identity, so the function would be a no-op wearing the costume of a
+// unit conversion — the most misleading thing it could be. A caller that
+// genuinely wants continuous days converts through the kernel's own named
+// hatch at its own call site, where the crossing is visible.
 
 /// How much slower than reference this creature acts: `(mass / reference) ^
 /// TIME_EXPONENT`, clamped to [`MASS_BAND_KG`] and **quantized**.
@@ -133,7 +152,7 @@ pub fn tempo(mass_kg: f64) -> f64 {
 ///
 /// Group A's seven operator instruments (The Deed) are the deliberate
 /// exception: an out-of-character act "charges nothing by default" (spec
-/// Arc I.b §3.4), so their dial is `Ticks(0)`. This is inert today — nothing
+/// Arc I.b §3.4), so their dial is `TickSpan::from_ticks(0)`. This is inert today — nothing
 /// routes a group-A `Action` through [`cost_ticks`], dispatch stays
 /// string-based for them — but the match must still be exhaustive, and
 /// `0` is the honest answer for what they *would* cost if ever charged.
@@ -141,10 +160,10 @@ pub fn tempo(mass_kg: f64) -> f64 {
 /// The match is exhaustive by variant deliberately, the same discipline
 /// `action::precondition_reads_committed_state` keeps: a new `Action` must
 /// fail to compile here rather than silently become free.
-pub fn base_ticks(action: &Action) -> Ticks {
+pub fn base_cost(action: &Action) -> TickSpan {
     match action {
         // 10_000 ticks = 0.1 days on an Earth-like world: today's MOVE_DURATION.
-        Action::MoveTo(_) => Ticks(10_000),
+        Action::MoveTo(_) => TickSpan::from_ticks(10_000),
         // A step WITHIN a room (The Threshold): a tenth of a room-to-room move,
         // which is the ratio that campaign authored for it (`MOVE_DURATION /
         // 10.0`), carried over exactly. Crossing a room is at most eight
@@ -154,13 +173,13 @@ pub fn base_ticks(action: &Action) -> Ticks {
         // mass like every other act — a bear crosses a room more slowly than a
         // person does — and so the two movement scales stay comparable by
         // construction as either is retuned.
-        Action::MoveWithin(_) => Ticks(1_000),
+        Action::MoveWithin(_) => TickSpan::from_ticks(1_000),
         // A drink is quick — a couple of minutes.
-        Action::Drink => Ticks(150),
+        Action::Drink => TickSpan::from_ticks(150),
         // A meal is not — the better part of an hour.
-        Action::Eat => Ticks(3_000),
+        Action::Eat => TickSpan::from_ticks(3_000),
         // Lying DOWN is quick; the sleep itself is the jump-to-waking, not this.
-        Action::Rest => Ticks(150),
+        Action::Rest => TickSpan::from_ticks(150),
         // Group A: operator instruments charge nothing by default (spec
         // §3.4) — see the doc above.
         Action::Why
@@ -169,7 +188,7 @@ pub fn base_ticks(action: &Action) -> Ticks {
         | Action::Eyes
         | Action::Whoami
         | Action::Provoke
-        | Action::Soothe => Ticks(0),
+        | Action::Soothe => TickSpan::from_ticks(0),
         // Group B's objective halves (The Deed, Task 6) charge nothing for
         // the same reason, `!wait` INCLUDED — and that last one is worth a
         // sentence, because spec §3.4 calls `!wait` "the exception that moves
@@ -188,7 +207,7 @@ pub fn base_ticks(action: &Action) -> Ticks {
         | Action::ObjectiveNeeds
         | Action::ObjectiveWait
         | Action::ObjectiveLook
-        | Action::ObjectiveKnows => Ticks(0),
+        | Action::ObjectiveKnows => TickSpan::from_ticks(0),
     }
 }
 
@@ -216,50 +235,58 @@ pub fn climb_factor(from_elev_m: f64, to_elev_m: f64) -> f64 {
 /// tick count and never zero — a free action would let a creature act
 /// unboundedly at one instant.
 /// type-audit: bare-ok(ratio: mass_kg), bare-ok(ratio: terrain_factor)
-pub fn cost_ticks(action: &Action, mass_kg: f64, terrain_factor: f64) -> Ticks {
+pub fn cost_of(action: &Action, mass_kg: f64, terrain_factor: f64) -> TickSpan {
     let factor = if terrain_factor.is_finite() && terrain_factor > 0.0 {
         terrain_factor
     } else {
         1.0
     };
-    let scaled = base_ticks(action).0 as f64 * tempo(mass_kg) * factor;
-    Ticks((scaled.round() as u64).max(1))
+    let scaled = base_cost(action).ticks() as f64 * tempo(mass_kg) * factor;
+    TickSpan::from_ticks((scaled.round() as i64).max(1))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::action::Action;
-    use hornvale_kernel::room::RoomAddr;
+    use hornvale_kernel::room::Facet;
 
     #[test]
     fn a_move_costs_exactly_todays_duration_on_an_earthlike_world() {
         // The bridge to today's behaviour: MOVE_DURATION was 0.1 days, and an
         // Earth-like rotation gives 100_000 ticks per local day, so a
         // reference-mass creature's move is 10_000 ticks = 0.1 days exactly.
-        let mv = Action::MoveTo(RoomAddr {
+        let mv = Action::MoveTo(Facet {
             face: 0,
             path: vec![0],
         });
-        assert_eq!(base_ticks(&mv), Ticks(10_000));
-        assert_eq!(cost_ticks(&mv, REFERENCE_MASS_KG, 1.0), Ticks(10_000));
-        assert_eq!(days_of(Ticks(10_000), Some(1.0)), 0.1);
+        assert_eq!(base_cost(&mv), TickSpan::from_ticks(10_000));
+        assert_eq!(
+            cost_of(&mv, REFERENCE_MASS_KG, 1.0),
+            TickSpan::from_ticks(10_000)
+        );
+        // A cost IS a kernel span now, so its length in days is the span's
+        // own continuous view (The Foliot) — there is no clock conversion in
+        // between to check.
+        assert_eq!(TickSpan::from_ticks(10_000).as_std_days(), 0.1);
     }
 
     #[test]
     fn the_local_day_is_an_exact_integer_number_of_ticks() {
-        // THE REASON THE RATE IS DERIVED (spec §4.1). Whatever the rotation, a
-        // whole local day must be a whole number of ticks — otherwise every
-        // dawn rounds and the error beats against the day cycle over a long run.
-        for d in [1.0_f64, 0.41, 2.7, 1.0 / 3.0, 17.25] {
-            let n = ticks_per_local_day(Some(d));
-            assert!(n >= 1, "day {d} gives {n} ticks");
-            // A day is exactly `n` ticks by construction, so converting them
-            // back lands on the day length itself.
-            let round_trip = days_of(Ticks(n), Some(d));
-            assert!(
-                (round_trip - d).abs() < 1e-12,
-                "day {d}: {n} ticks converts back to {round_trip}, not {d}"
+        // THE REASON §4.1 WANTS IT, now true by construction rather than by
+        // rounding (The Foliot). A whole local day must be a whole number of
+        // ticks — otherwise every dawn rounds and the error beats against the
+        // day cycle over a long run. The day arrives as a tick count, so this
+        // asserts the report is faithful rather than that a rounding behaved.
+        for ticks in [100_000_i64, 41_000, 270_000, 33_333, 1_725_000] {
+            let d = TickSpan::from_ticks(ticks);
+            assert_eq!(ticks_per_local_day(Some(d)), ticks);
+            // And the continuous view round-trips exactly, which is what makes
+            // the old `days_of` conversion unnecessary rather than merely
+            // redundant.
+            assert_eq!(
+                (d.as_std_days() * BASE_TICKS_PER_STD_DAY as f64).round() as i64,
+                ticks
             );
         }
     }
@@ -268,17 +295,28 @@ mod tests {
     fn the_tick_stays_approximately_absolute_across_worlds() {
         // The other half of §4.1: base costs are authored in TICKS, so a move
         // must mean the same absolute duration whatever the planet does — a
-        // bear's gait is set by the bear, not by the sky. Under 0.1% spread.
-        let mv = Action::MoveTo(RoomAddr {
+        // bear's gait is set by the bear, not by the sky.
+        //
+        // This used to allow a 0.1% spread, because the cost crossed the
+        // local-tick lattice and back and the two rates differed slightly. It
+        // is now EXACTLY equal on every world (The Foliot): a cost is a kernel
+        // span and the planet never enters the arithmetic. Asserting equality
+        // rather than a tolerance is the stronger claim the unification earned.
+        let mv = Action::MoveTo(Facet {
             face: 0,
             path: vec![0],
         });
-        let reference = days_of(cost_ticks(&mv, REFERENCE_MASS_KG, 1.0), Some(1.0));
-        for d in [0.41_f64, 2.7, 17.25] {
-            let here = days_of(cost_ticks(&mv, REFERENCE_MASS_KG, 1.0), Some(d));
-            assert!(
-                ((here - reference) / reference).abs() < 0.001,
-                "a move takes {here} days on a {d}-day world vs {reference} on Earth"
+        let reference = cost_of(&mv, REFERENCE_MASS_KG, 1.0);
+        for ticks in [41_000_i64, 270_000, 1_725_000] {
+            assert_eq!(
+                ticks_per_local_day(Some(TickSpan::from_ticks(ticks))),
+                ticks,
+                "the day is reported as drawn"
+            );
+            assert_eq!(
+                cost_of(&mv, REFERENCE_MASS_KG, 1.0),
+                reference,
+                "a move costs the same span on every world"
             );
         }
     }
@@ -289,7 +327,9 @@ mod tests {
         // derive from. Stated, not unwrap_or'd (spec §4.1).
         assert_eq!(ticks_per_local_day(None), BASE_TICKS_PER_STD_DAY);
         assert_eq!(BASE_TICKS_PER_STD_DAY, 100_000);
-        assert_eq!(days_of(Ticks(100_000), None), 1.0);
+        // And the base rate is the KERNEL's rate, not a second literal that
+        // happens to agree — which is what let two lattices coexist.
+        assert_eq!(BASE_TICKS_PER_STD_DAY, WorldTime::TICKS_PER_STD_DAY);
     }
 
     #[test]
@@ -305,7 +345,7 @@ mod tests {
         // rather than `Action::all()` so it cannot silently start failing
         // on an instrument this test was never about.
         let every = [
-            Action::MoveTo(RoomAddr {
+            Action::MoveTo(Facet {
                 face: 0,
                 path: vec![0],
             }),
@@ -315,11 +355,11 @@ mod tests {
         ];
         for a in &every {
             assert!(
-                base_ticks(a).0 > 0,
+                base_cost(a).ticks() > 0,
                 "{a:?} is free — every action must cost time"
             );
             assert!(
-                cost_ticks(a, REFERENCE_MASS_KG, 1.0).0 > 0,
+                cost_of(a, REFERENCE_MASS_KG, 1.0).ticks() > 0,
                 "{a:?} costs nothing"
             );
         }
@@ -384,12 +424,12 @@ mod tests {
         // Bounded: a cliff must not stall a walk outright.
         assert!(climb_factor(0.0, 1.0e9) <= MAX_CLIMB_FACTOR);
         // And it reaches the cost model.
-        let mv = Action::MoveTo(RoomAddr {
+        let mv = Action::MoveTo(Facet {
             face: 0,
             path: vec![0],
         });
-        let level = cost_ticks(&mv, REFERENCE_MASS_KG, 1.0);
-        let steep = cost_ticks(&mv, REFERENCE_MASS_KG, climb_factor(0.0, 500.0));
+        let level = cost_of(&mv, REFERENCE_MASS_KG, 1.0);
+        let steep = cost_of(&mv, REFERENCE_MASS_KG, climb_factor(0.0, 500.0));
         assert!(
             steep > level,
             "the climb reaches the cost: {steep:?} vs {level:?}"

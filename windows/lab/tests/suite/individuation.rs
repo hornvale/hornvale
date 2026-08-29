@@ -64,7 +64,7 @@ fn awakening_is_a_fact_and_the_large_owlbear_stays_large() {
         .change_kind(
             e,
             "awakened-owlbear",
-            Some(WorldTime::new(40.0).expect("finite")),
+            Some(WorldTime::from_std_days(40.0).expect("finite")),
             "lab: the awakening",
             &w.registry,
         )

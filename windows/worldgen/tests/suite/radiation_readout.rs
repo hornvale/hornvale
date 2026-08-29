@@ -10,7 +10,7 @@
 //!   Wood / Desert / Snow / Sea   PLACEMENT. The biome affinity moves where they
 //!                                live; the settlement distribution is the probe.
 //!
-//!   Drow                         PLACEMENT, via the REALM GATE (~1,667 cells).
+//!   Drow                         PLACEMENT, via the REALM GATE (~1,667 vertices).
 //!                                Its dark-adaptation authoring is DORMANT and
 //!                                contributes nothing — by measurement, not by
 //!                                omission. Guarded by the Warren tripwire.
@@ -55,7 +55,7 @@
 //!
 //! So this file compares `serde_json::to_string(&world.ledger)` — the plan's own
 //! parenthetical alternative, and the strictly narrower instrument. The full
-//! sorted `(species, cell)` placement list and the fact count are reported
+//! sorted `(species, vertex)` placement list and the fact count are reported
 //! beside it as the cheaper, more legible cross-check.
 //!
 //! **The honest limit, stated before the result.** Removing a kind removes its
@@ -144,7 +144,7 @@
 //! `elevation.devotion` below its floor. The live path is the row's level, and
 //! it is the one this campaign created.)
 //!
-//! **(b) Placements.** The `(people, cell)` settlement lists. The bake's contest
+//! **(b) Placements.** The `(people, vertex)` settlement lists. The bake's contest
 //! is **not** a pure function of the capacity field — iteration order,
 //! tie-breaks, migration and the raid comparison all participate — so two kinds
 //! with identical fields *can* still place differently. If they do, that is a
@@ -182,7 +182,7 @@
 //! affinity row at the same level, the same elevation curve, and now the same
 //! resource vector; their masses differ (52.0 vs 55.0 kg) but mass reaches this
 //! path only through `sovereignty_floor`, which `tolerance_liebig` floors three
-//! axes by and which the unfloored elevation term undercuts at every cell. If
+//! axes by and which the unfloored elevation term undercuts at every vertex. If
 //! A4's fields are *not* bit-identical, an **unenumerated third difference
 //! exists**, and that outranks P4's stated result.
 //!
@@ -232,7 +232,7 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{CellId, ComponentStore, KindId, Seed, Value};
+use hornvale_kernel::{ComponentStore, KindId, Seed, Value, Vertex};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
@@ -448,15 +448,15 @@ fn substitute_wood_niche_into_drow(wc: &mut WorldComponents) {
 struct Sited {
     /// The founding people.
     people: String,
-    /// The committed cell.
-    cell: u32,
-    /// The biome resolved from the CELL, not from the settlement's `biome` text
+    /// The committed vertex.
+    vertex: u32,
+    /// The biome resolved from the VERTEX, not from the settlement's `biome` text
     /// fact — the descriptor facts are written by the naming pass, and reading
-    /// the cell keeps this independent of which depth committed which
+    /// the vertex keeps this independent of which depth committed which
     /// descriptor.
     biome: &'static str,
-    /// Whether that cell holds an enterable cave — the realm gate's own
-    /// predicate, `terrain.cave_at(cell).is_some()`.
+    /// Whether that vertex holds an enterable cave — the realm gate's own
+    /// predicate, `terrain.cave_at(vertex).is_some()`.
     cave: bool,
 }
 
@@ -473,21 +473,21 @@ struct WorldRead {
 }
 
 impl WorldRead {
-    /// `(people, cell)` for every settlement, in ledger-commit order.
+    /// `(people, vertex)` for every settlement, in ledger-commit order.
     fn placement(&self) -> Vec<(String, u32)> {
         self.sited
             .iter()
-            .map(|s| (s.people.clone(), s.cell))
+            .map(|s| (s.people.clone(), s.vertex))
             .collect()
     }
 
-    /// `(people, cell)` for every settlement founded by someone other than
+    /// `(people, vertex)` for every settlement founded by someone other than
     /// `people` — the discriminating half of P1′.
     fn placement_excluding(&self, people: &str) -> Vec<(String, u32)> {
         self.sited
             .iter()
             .filter(|s| s.people != people)
-            .map(|s| (s.people.clone(), s.cell))
+            .map(|s| (s.people.clone(), s.vertex))
             .collect()
     }
 
@@ -527,18 +527,18 @@ fn read_world(seed: u64, arm: Arm) -> WorldRead {
         placed += 1;
         let people = hornvale_species::species_of(world, fact.subject)
             .expect("a committed settlement names its people at Full depth");
-        let cell = match world
+        let vertex = match world
             .ledger
-            .value_of(fact.subject, hornvale_settlement::CELL_ID)
+            .value_of(fact.subject, hornvale_settlement::VERTEX_ID)
         {
-            Some(Value::Number(n)) => CellId(*n as u32),
+            Some(Value::Number(n)) => Vertex(*n as u32),
             _ => panic!("a committed settlement must carry a cell-id"),
         };
         sited.push(Sited {
             people,
-            cell: cell.0,
-            biome: climate.biome_at(cell).name(),
-            cave: terrain.cave_at(cell).is_some(),
+            vertex: vertex.0,
+            biome: climate.biome_at(vertex).name(),
+            cave: terrain.cave_at(vertex).is_some(),
         });
     }
     assert!(placed > 0, "seed {seed} placed no settlements at all");
@@ -564,9 +564,9 @@ fn read_world(seed: u64, arm: Arm) -> WorldRead {
 struct Fields {
     /// The biosphere roster, in ascending `KindId` order.
     roster: Vec<&'static str>,
-    /// One column per roster entry, over the land cells, in `roster` order.
+    /// One column per roster entry, over the land vertices, in `roster` order.
     columns: Vec<Vec<f64>>,
-    /// How many land cells the columns are over.
+    /// How many land vertices the columns are over.
     land: usize,
 }
 
@@ -589,7 +589,7 @@ impl Fields {
                 .all(|(p, q)| p.to_bits() == q.to_bits())
     }
 
-    /// The largest absolute per-cell difference between two kinds' fields.
+    /// The largest absolute per-vertex difference between two kinds' fields.
     fn max_abs_diff(&self, a: &str, b: &str) -> f64 {
         self.column(a)
             .iter()
@@ -636,7 +636,9 @@ fn fields(seed: u64, arm: Arm) -> Fields {
     let obliquity_deg = system.anchor.obliquity.get();
     let regime = match system.anchor.rotation {
         hornvale_astronomy::Rotation::Spinning { day, .. } => {
-            hornvale_climate::RotationRegime::Spinning { day_std: day.get() }
+            hornvale_climate::RotationRegime::Spinning {
+                day_std: day.as_std_days(),
+            }
         }
         hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
     };
@@ -672,7 +674,7 @@ fn fields(seed: u64, arm: Arm) -> Fields {
         &species_affinity,
     );
 
-    let land: Vec<CellId> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+    let land: Vec<Vertex> = geo.vertices().filter(|&c| !terrain.is_ocean(c)).collect();
     let columns: Vec<Vec<f64>> = (0..roster.len())
         .map(|idx| {
             let (_, k) = per_species
@@ -700,7 +702,7 @@ fn fields(seed: u64, arm: Arm) -> Fields {
 /// the same estimator.
 ///
 /// **Scope limit.** Pearson `r` is invariant under a positive affine rescale, so
-/// it measures how two fields *sort* cells, not how large they are. A pair
+/// it measures how two fields *sort* vertices, not how large they are. A pair
 /// reading `1.0` still admits wholly different absolute capacities — which is
 /// exactly why [`Fields::bit_identical`] and [`Fields::max_abs_diff`] are
 /// reported beside it and carry the assertions.
@@ -1070,7 +1072,7 @@ fn the_two_p2_rosters_partition_the_family_exactly_once() {
 /// quantifier the prediction was frozen with. Not `forall-seed`: a kind may
 /// honestly place nothing on one globe and still be a live competitor.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: whether each elf changes the committed ledger; run by hand (The Radiation, P1-prime, answered its question; demoted by The Governor 2026-08-28)"]
 fn each_elf_changes_the_committed_ledger() {
     let shipped: Vec<WorldRead> = SEEDS.iter().map(|&s| read_world(s, Arm::Shipped)).collect();
 
@@ -1273,7 +1275,7 @@ const P2_FALSIFICATION_DIAGNOSIS: &str = "the stronghold share was flat or \
 /// failure mode on a majority of seeds) — a per-elf majority over seeds, frozen
 /// at that quantifier in the spec before any row was authored.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: whether each elf concentrates in its authored stronghold biomes; RED as of 2026-08-28 — a closed, preregistered finding (The Radiation P2), CONFIRMED for the five elves this test covers, never ran under any gate at the time it was demoted (the heavy tier was off-gate then; decision 0426, landing in this same branch, put it back on every merge), so demoting it did not hide a live red from any gate; run by hand; demoted by The Governor"]
 fn each_elf_concentrates_in_its_authored_stronghold_biomes() {
     let falsified = p2_falsified_among(&P2_ON_AXIS);
     assert!(
@@ -1402,21 +1404,21 @@ fn wood_and_high_do_not_separate_in_field_or_placement() {
     println!("== P3(b): wood vs high placement ==");
     for &seed in SEEDS {
         let read = read_world(seed, Arm::Shipped);
-        let wood: Vec<u32> = read.of("wood-elf").iter().map(|s| s.cell).collect();
-        let high: Vec<u32> = read.of("high-elf").iter().map(|s| s.cell).collect();
+        let wood: Vec<u32> = read.of("wood-elf").iter().map(|s| s.vertex).collect();
+        let high: Vec<u32> = read.of("high-elf").iter().map(|s| s.vertex).collect();
         let wood_home = tally(&read, "wood-elf", &strongholds("wood-elf"));
         let high_home = tally(&read, "high-elf", &strongholds("high-elf"));
         println!(
             "   seed {seed:<5} wood {:>3} settlements (home share {:.6})   \
-             high {:>3} settlements (home share {:.6})   shared cells {}",
+             high {:>3} settlements (home share {:.6})   shared vertices {}",
             wood.len(),
             wood_home.share(),
             high.len(),
             high_home.share(),
             wood.iter().filter(|c| high.contains(c)).count(),
         );
-        println!("      wood cells {wood:?}");
-        println!("      high cells {high:?}");
+        println!("      wood vertices {wood:?}");
+        println!("      high vertices {high:?}");
     }
 
     assert!(
@@ -1461,14 +1463,14 @@ fn wood_and_high_do_not_separate_in_field_or_placement() {
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn drow_separates_from_wood_and_the_five_arms_say_what_does_it() {
-    println!("== P4 clause 1: every drow settlement sits on a cave cell ==");
+    println!("== P4 clause 1: every drow settlement sits on a cave vertex ==");
     let mut off_cave: Vec<(u64, usize, usize)> = Vec::new();
     for &seed in SEEDS {
         let read = read_world(seed, Arm::Shipped);
         let mine = read.of("drow");
         let on_cave = mine.iter().filter(|s| s.cave).count();
         println!(
-            "   seed {seed:<5} drow {:>3} settlements   on a cave cell {:>3}   share {:.6}",
+            "   seed {seed:<5} drow {:>3} settlements   on a cave vertex {:>3}   share {:.6}",
             mine.len(),
             on_cave,
             if mine.is_empty() {
@@ -1527,7 +1529,7 @@ fn drow_separates_from_wood_and_the_five_arms_say_what_does_it() {
     assert!(
         off_cave.is_empty(),
         "P4 clause 1 FALSIFIED on {off_cave:?} (seed, on-cave, total): a drow \
-         settlement sits on a cell with no enterable cave. The realm gate is a \
+         settlement sits on a vertex with no enterable cave. The realm gate is a \
          HARD ZERO off-cave in `per_species_capacity_at`, and genesis filters \
          its founding pool on capacity > 0.0, so this cannot happen unless the \
          gate stopped reaching the dimensional path."

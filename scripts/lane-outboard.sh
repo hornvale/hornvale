@@ -106,6 +106,17 @@ run "pre-push hook"    bash scripts/test-pre-push.sh
 # prints under no lock, or the refusal path, which exits before the lock is
 # taken. Safe inside a chamber phase for that reason.
 run "census path"      bash scripts/test-census-path.sh
+# The golden-pins trigger. NOT `make census-check` itself — that costs 148s and
+# would tax every merge; this asserts the pre-commit TRIGGER names both of a
+# pin's operands, which is the property that actually failed. The literal side
+# was guarded and the census side was not, so a refresh moved `computed` for all
+# 28 pins while the hook fired on nothing (c54fb62c9, the third such staleness
+# after 2026-07-13 and 2026-07-20).
+run "census guard"    bash scripts/test-census-guard.sh
+# The drain harness. Registered here at the same moment it was promoted out of
+# an operator's scratchpad, because an unrun test is the failure this set was
+# widened to fix twice already (test-pre-push.sh, then the seam-guard suite).
+run "sluice drain"    bash scripts/test-sluice-drain.sh
 run "shellcheck"       make --no-print-directory shellcheck
 
 if [ "$fails" -ne 0 ]; then

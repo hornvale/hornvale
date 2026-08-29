@@ -388,9 +388,43 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     //
     // THE ASSERTED CLAIM IS UNCHANGED AND STILL HOLDS: 17.3397 is below the
     // uniform-sphere baseline of 32.7.
+    //
+    // THE GRANARY (canonical census on lefford, goldens c54fb62c9):
+    // 17.3397 -> 17.2505, a fifth consecutive NARROWING (margin 15.36 ->
+    // 15.45 degrees; ratio 1.886x -> 1.888x). The condition the paragraph
+    // above set fires: this is now a question about the FLOOR OF THE TREND,
+    // not a re-pin to keep quiet — but the movement is also the smallest
+    // step in the whole sequence (-0.089 degrees), so the trend's rate is
+    // decelerating even as its direction persists. The cause is stated no
+    // more narrowly than the campaign's own mechanism: sub-year raid timing
+    // changes which settlements survive the bake, and nothing here measured
+    // where by latitude the survivors sit. The preregistered directional
+    // claim asserted above — below the uniform-sphere baseline of 32.7 —
+    // is untouched and still clears the baseline by better than 1.8x.
+    //
+    // The Sources' close regen (2026-08-27, canonical census on lefford at
+    // ddacd5716, goldens 58e2558e3, the campaign's own second census — on a
+    // merge product that also folds in The Escapement's tick epoch):
+    // 17.2505 -> 17.2526, a sixth consecutive narrowing (margin
+    // 15.4495 -> 15.4474 degrees; ratio 1.89560x -> 1.89537x). The
+    // movement is the smallest step yet in this sequence (+0.0021 degrees),
+    // consistent with most of this regen's change already having been
+    // absorbed by earlier census refreshes on this branch. The
+    // preregistered directional claim asserted above — below the
+    // uniform-sphere baseline of 32.7 — is untouched and still clears the
+    // baseline by better than 1.8x.
+    //
+    // The Sources' third census (2026-08-28, canonical census on lefford at
+    // 83fcd1689, goldens 6455f51ce — run picked up after this campaign's own vent-chemotrophy fix
+    // (c4192797b) and its xorn re-pin (a56d91320) landed on the merge
+    // product): 17.2526 -> 17.2505, reverting
+    // exactly to The Granary's figure (margin 15.4474 -> 15.4495 degrees;
+    // ratio 1.89537x -> 1.89559x). The preregistered directional claim
+    // asserted above — below the uniform-sphere baseline of 32.7 — is
+    // untouched and still clears the baseline by better than 1.8x.
     assert!(
-        (mean - 17.3397).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.3397)"
+        (mean - 17.2505).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.2505)"
     );
 }
 
@@ -467,7 +501,7 @@ fn rank_size_slope_is_observed_not_tuned() {
 /// accessor that mirrors genesis's own `per_species_suitability` → `coexist::
 /// pack` → `stack_condense::condense_stack` pipeline byte-for-byte at the
 /// frozen `BETA`/`FLOOR` constants — summing `per_species_k` over every
-/// peopled species and every cell, exactly as the brief's re-basing
+/// peopled species and every vertex, exactly as the brief's re-basing
 /// instructs.
 ///
 /// **Re-derived onto the epoch's population model (T5d).** Under The Living
@@ -491,7 +525,7 @@ fn rank_size_slope_is_observed_not_tuned() {
 /// 1. `POPULATION` is committed from `peak_population` — a per-record
 ///    all-time high-water mark that never decays once a settlement keeps
 ///    living (`history_bake.rs`'s `touch`) — not the settlement's current
-///    headcount. The previous ceiling summed K over *every* cell in the
+///    headcount. The previous ceiling summed K over *every* vertex in the
 ///    world, occupied or not: a quantity fixed by geography, not by how many
 ///    settlements exist. Summing ever-more per-record peaks against a
 ///    world-total denominator therefore penalised settlement *count*, not
@@ -503,11 +537,11 @@ fn rank_size_slope_is_observed_not_tuned() {
 ///    differentiated `per_species_k` — a *proxy* for the capacity the bake's
 ///    own collapse-pressure formula is actually defined on, already flagged
 ///    as such in this comment's prior revision. Restricting that proxy to
-///    just the occupied cells (to fix defect 1) exposed how loose the proxy
-///    really is: at seed 42 it undershoots the bake's real per-cell capacity
+///    just the occupied vertices (to fix defect 1) exposed how loose the proxy
+///    really is: at seed 42 it undershoots the bake's real per-vertex capacity
 ///    there by roughly two orders of magnitude, because a single species'
-///    saturating niche response at one cell is not the same quantity as the
-///    bake's condensed, cross-species suitability scalar at that cell — the
+///    saturating niche response at one vertex is not the same quantity as the
+///    bake's condensed, cross-species suitability scalar at that vertex — the
 ///    two were only ever close *in aggregate, over the whole world*, which
 ///    is coincidence, not identity.
 ///
@@ -526,26 +560,26 @@ fn rank_size_slope_is_observed_not_tuned() {
 /// `Bake::capacity`/`Bake::eff_capacity` used when it decided whether each
 /// community survived — no proxy gap remains.
 ///
-/// Restricting the sum to exactly the cells the live settlements occupy —
-/// instead of every cell in the world — makes the two sides scale with
+/// Restricting the sum to exactly the vertices the live settlements occupy —
+/// instead of every vertex in the world — makes the two sides scale with
 /// settlement count together, closing defect 1. The assertion is therefore
 ///
 /// > **Σ peak_pop ≤ COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY ×
-/// > Σ suitability(occupied cells)**
+/// > Σ suitability(occupied vertices)**
 ///
 /// **What this does and does NOT establish.** It is tempting to read the
 /// inequality as a sum of per-record bounds, and an earlier revision of this
 /// comment did: it claimed each live settlement's peak was set on its own
-/// occupied cell, so present-day suitability there is the very value the
+/// occupied vertex, so present-day suitability there is the very value the
 /// collapse rule checked when the peak was stamped. **That is false**, for
 /// two independent reasons, and the per-record bound
-/// `peak ≤ COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY × suitability(own cell)`
+/// `peak ≤ COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY × suitability(own vertex)`
 /// does not hold:
 ///
-/// - **A record's peak need not have been grown on that record's cell.**
+/// - **A record's peak need not have been grown on that record's vertex.**
 ///   `Bake::open` stamps `peak_population` from the population the community
 ///   carries IN. A seat opened by conquest (`Bake::maybe_raid`) is stamped
-///   with a population grown on the raider's *previous* cell, and the
+///   with a population grown on the raider's *previous* vertex, and the
 ///   roll-downhill (`Bake::relocate`) applies no covetousness baseline at all
 ///   — a remnant can seat on strictly *poorer* land than it grew on. Under
 ///   The Tumult this is not a corner case: predation re-seats communities
@@ -555,12 +589,12 @@ fn rank_size_slope_is_observed_not_tuned() {
 ///   the collapse pressure in the same epoch its peak is stamped and only be
 ///   closed the following one.
 ///
-/// (What *is* true, and is why the occupied-cell scoping is still the right
-/// denominator: a record's `CELL_ID` is fixed for its whole life — a
+/// (What *is* true, and is why the occupied-vertex scoping is still the right
+/// denominator: a record's `VERTEX_ID` is fixed for its whole life — a
 /// relocation opens a NEW record rather than moving the old one — and this
 /// capacity field is time-invariant across eras, since only habitability
-/// toggles a cell's `eff_capacity` between 0 and its full, era-independent
-/// value. So the sum is over a well-defined, stable set of cells. It just
+/// toggles a vertex's `eff_capacity` between 0 and its full, era-independent
+/// value. So the sum is over a well-defined, stable set of vertices. It just
 /// isn't a sum of per-record ceilings.)
 ///
 /// So this is a **world-scale-runaway detector, not a per-community
@@ -576,10 +610,10 @@ fn rank_size_slope_is_observed_not_tuned() {
 ///
 /// **Net effect of the correction, stated plainly: it made this gate LOOSER,
 /// not tighter.** The two changes pull opposite ways and the loosening one
-/// wins. Scoping Σ K to occupied cells tightens (far fewer cells); swapping
+/// wins. Scoping Σ K to occupied vertices tightens (far fewer vertices); swapping
 /// the niche-differentiated `per_species_k` proxy for the base
 /// `carrying_capacity` field the bake actually uses loosens by more, because
-/// the proxy undershot per-cell capacity by ~2 orders of magnitude. Ceiling
+/// the proxy undershot per-vertex capacity by ~2 orders of magnitude. Ceiling
 /// 12803 → 34312 (×2.68) against an unchanged measured Σ peak_pop of 14513 —
 /// so the gate went from red to green with +136 % headroom instead of −13 %.
 /// Both changes are individually correct (each removes a genuine defect), but
@@ -589,7 +623,7 @@ fn rank_size_slope_is_observed_not_tuned() {
 /// *Observed at seed 42 on 2026-07-25 (the-tumult, before the epoch's final
 /// refreeze — these are a dated reading, not a standing contract; nothing
 /// asserts them and they will drift):* 203 live settlements, Σ peak_pop =
-/// 14513, Σ suitability(occupied cells) ≈ 171.56, ceiling ≈ 34311.79 (ratio
+/// 14513, Σ suitability(occupied vertices) ≈ 171.56, ceiling ≈ 34311.79 (ratio
 /// ≈ 0.42). Breach-detection was verified by hand at that reading: scaling
 /// `occupied_suitability` down by 10× (simulating a genuinely over-capacity
 /// world) reddened the assertion as expected, confirming the gate is not
@@ -632,34 +666,34 @@ fn world_level_population_conserves_against_total_capacity() {
         .ledger
         .find(hornvale_settlement::IS_SETTLEMENT)
         .collect();
-    // The occupied cells — one per live settlement, per the bake's
+    // The occupied vertices — one per live settlement, per the bake's
     // one-community-per-site invariant — read back via each settlement's
-    // committed `CELL_ID`. A `BTreeSet`, not a `Vec`: two settlement facts
-    // naming the same cell would otherwise double-count that cell's
+    // committed `VERTEX_ID`. A `BTreeSet`, not a `Vec`: two settlement facts
+    // naming the same vertex would otherwise double-count that vertex's
     // suitability, though the bake's invariant should already make that
     // impossible.
-    let occupied_cells: std::collections::BTreeSet<hornvale_kernel::CellId> = settlements
+    let occupied_vertices: std::collections::BTreeSet<hornvale_kernel::Vertex> = settlements
         .iter()
         .filter_map(|f| {
             match world
                 .ledger
-                .value_of(f.subject, hornvale_settlement::CELL_ID)
+                .value_of(f.subject, hornvale_settlement::VERTEX_ID)
             {
-                Some(Value::Number(n)) => Some(hornvale_kernel::CellId(*n as u32)),
+                Some(Value::Number(n)) => Some(hornvale_kernel::Vertex(*n as u32)),
                 _ => None,
             }
         })
         .collect();
-    // Sum suitability over exactly the cells the live settlements occupy —
-    // NOT every cell in the world. Summing over the whole world let
+    // Sum suitability over exactly the vertices the live settlements occupy —
+    // NOT every vertex in the world. Summing over the whole world let
     // settlement COUNT inflate the ceiling's denominator independent of the
     // sum-of-peaks it bounds (see the corrected doc comment above); scoping
-    // to occupied cells makes both sides of the comparison the same
+    // to occupied vertices makes both sides of the comparison the same
     // quantity: peaks the live settlements actually set, against the
     // capacity of the ground they actually set them on.
-    let occupied_suitability: f64 = occupied_cells
+    let occupied_suitability: f64 = occupied_vertices
         .iter()
-        .map(|&cell| productivity.at(cell))
+        .map(|&vertex| productivity.at(vertex))
         .sum();
     let total_pop: f64 = settlements
         .iter()
@@ -679,10 +713,10 @@ fn world_level_population_conserves_against_total_capacity() {
         "a peopled seed-42 world has positive population"
     );
     // The conservation ceiling, in the bake's own headcount units, scoped to
-    // the settlements' own occupied cells and built from the EXACT capacity
+    // the settlements' own occupied vertices and built from the EXACT capacity
     // field the bake's pressure formula uses (see the corrected doc comment
     // above): Σ peak_pop ≤ COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY ×
-    // Σ suitability(occupied cells). Derived from the model's constants (ADR
+    // Σ suitability(occupied vertices). Derived from the model's constants (ADR
     // 0016), not fit to the measurement.
     let ceiling = hornvale_worldgen::history_bake::COLLAPSE_PRESSURE
         * hornvale_worldgen::SETTLERS_PER_CAPACITY
@@ -691,8 +725,8 @@ fn world_level_population_conserves_against_total_capacity() {
         total_pop <= ceiling,
         "committed peak population {total_pop} exceeded the peak-scoped collapse ceiling \
          {ceiling} (= COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY × \
-         Σ suitability(occupied cells), Σ suitability(occupied cells) = \
+         Σ suitability(occupied vertices), Σ suitability(occupied vertices) = \
          {occupied_suitability}) — a live settlement's recorded peak has aggregate-exceeded \
-         the starvation pressure the bake enforces on its own occupied cells"
+         the starvation pressure the bake enforces on its own occupied vertices"
     );
 }

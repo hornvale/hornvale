@@ -22,10 +22,10 @@ Tropical rainforest — buttressed canopy, damp — in the lands of Doaba. The s
 No direction here is closed; the nearest ground lies E, NW, SW.
 > !npcs
 6 NPC(s) derived this session:
-  [1] hobgoblin of Noaba
-  [2] hobgoblin of Na
-  [3] a wild rust-monster
-  [4] a wild xorn
+  [1] hobgoblin of Na
+  [2] hobgoblin of Naabeena
+  [3] a wild xorn
+  [4] a wild rust-monster
   [5] a wild otyugh
   [6] a wild carrion-crawler
 > needs
@@ -55,13 +55,13 @@ No direction here is closed; the nearest ground lies E, NW, SW.
 > needs
 No one else is here to read.
 > !why hobgoblin
-hobgoblin of Noaba:
-- canonical name of an entity: hobgoblin of Noaba (asserted by the-quickening)
+hobgoblin of Na:
+- canonical name of an entity: hobgoblin of Na (asserted by the-quickening)
 - an agent satisfied its sustenance goal: true (asserted by drank from the river (thirst sated), day 5.00153)
 - an agent rested (eased its fatigue) on a day: true (asserted by slept at home (fatigue eased), day 5.00306)
 
 > wait 90
-Time passes. You sense movement nearby (154 stirred).
+Time passes. You sense movement nearby (155 stirred).
 > look
 [room 896860167, day 97]
 Tropical rainforest — buttressed canopy, damp — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.

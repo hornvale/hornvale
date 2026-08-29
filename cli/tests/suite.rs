@@ -27,6 +27,8 @@ mod cave_kind_correspondence;
 mod census_duration;
 #[path = "suite/claim_shape.rs"]
 mod claim_shape;
+#[path = "suite/client_band_coverage.rs"]
+mod client_band_coverage;
 #[path = "suite/common_is_total.rs"]
 mod common_is_total;
 #[path = "suite/correspondence.rs"]
@@ -53,6 +55,9 @@ mod id_stability_under_insertion;
 mod lane_claim_roundtrip;
 #[path = "suite/lane_sets.rs"]
 mod lane_sets;
+#[path = "suite/lexicon_guard.rs"]
+mod lexicon_guard;
+
 #[path = "suite/lens_purity.rs"]
 mod lens_purity;
 #[path = "suite/locale_cli.rs"]
@@ -75,6 +80,8 @@ mod scene_cost;
 mod scene_moons_cli;
 #[path = "suite/scene_surrounds_colour_cli.rs"]
 mod scene_surrounds_colour_cli;
+#[path = "suite/sentence_corpus.rs"]
+mod sentence_corpus;
 #[path = "suite/session_cost.rs"]
 mod session_cost;
 #[path = "suite/sky_exit_criterion.rs"]

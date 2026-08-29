@@ -16,7 +16,7 @@
 //!    preregistered around a raid→flee→resettle floor (`fled + resettled`).
 //!    The epoch showed that on the *real* seed-42 world — ample vacant
 //!    habitable land — glacially-displaced communities *migrate to empty
-//!    cells* rather than crowd into raids: raids ≈ 0. So the displacement gate
+//!    vertices* rather than crowd into raids: raids ≈ 0. So the displacement gate
 //!    is re-pointed at the signal that genuinely fires, `census(bake).migrated`
 //!    (read off the ledger as `migration_events`). Raid-driven displacement is
 //!    deferred to campaign C3.
@@ -28,14 +28,14 @@
 //!    one-time reconstruction of the true carrying-capacity field agrees, so it
 //!    is not a proxy artifact). Re-occupation stacks form on contested,
 //!    climate-volatile land that is repeatedly abandoned and resettled, while
-//!    prime cells are settled once and simply persist. The gate asserts the
+//!    prime vertices are settled once and simply persist. The gate asserts the
 //!    measured reality (negative coupling), and the falsification is the real
 //!    finding — recorded, not buried.
 //!
 //! 3. **The moving sea corrected the migration count 51 → 12 (spec §7
 //!    re-scope).** The Sundering rerouted the bake onto a time-varying
 //!    connection graph — one per era, ocean where `elevation < sea_level` — so
-//!    a community can only step across cells that era's sea level leaves as
+//!    a community can only step across vertices that era's sea level leaves as
 //!    land. The pre-Sundering static count (51) was inflated by unphysical
 //!    ocean-walking: the raw-mesh BFS strode straight across open ocean. The
 //!    moving-sea graph removes those illegitimate strides, so seed-42 now
@@ -94,7 +94,7 @@ use hornvale_worldgen::{
 //
 // The Tumult (predation) re-pin: seed 42 now measures 58 climate migrations —
 // UP from the Sundering's 12, because conquest re-seats communities onto new
-// cells and so exposes many more of them to a later era's habitability flip.
+// vertices and so exposes many more of them to a later era's habitability flip.
 // The floor is deliberately NOT raised to track it: 5 was set clear of the
 // cross-seed minimum, not of seed 42, and this campaign's readout (Task 3) is
 // what re-measures the sample. Note the raw `occ-cause = migrated` fact count
@@ -145,7 +145,7 @@ const MIGRATION_SEEDS: [u64; 5] = [42, 7, 999_999, 16_244_526_067_196_353_746, 1
 const MIGRATION_MIN_FIRING_SEEDS: usize = 3;
 
 /// Gate 2. Seed-42 measured 0.0466 region overlap under the moving sea (0.055
-/// pre-Sundering; raw cell-set overlap is a structural 0). A world above this
+/// pre-Sundering; raw vertex-set overlap is a structural 0). A world above this
 /// ceiling has interleaved, not separated,
 /// peoples — the diversity payoff would have failed.
 const MAX_REGION_OVERLAP: f64 = 0.25;
@@ -263,8 +263,8 @@ fn migration_events_counts_climate_displacement_only() {
 
 /// Gate 2 — **territories-separated.** THE peoples-diversity payoff: the four
 /// goblinoids must occupy measurably distinct regions. Measured on their
-/// regions of influence (occupied cells dilated by one neighbour ring), since
-/// the raw alive-cell sets are structurally disjoint and their Jaccard is a
+/// regions of influence (occupied vertices dilated by one neighbour ring), since
+/// the raw alive-vertex sets are structurally disjoint and their Jaccard is a
 /// vacuous 0.
 /// claim: structural(seed: 42)
 #[test]

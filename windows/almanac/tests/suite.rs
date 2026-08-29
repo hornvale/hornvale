@@ -17,3 +17,6 @@ mod flesh_id_invariance;
 mod history_units;
 #[path = "suite/qualify_render.rs"]
 mod qualify_render;
+
+#[path = "suite/interlinear.rs"]
+mod interlinear;

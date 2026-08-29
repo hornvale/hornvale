@@ -4,7 +4,7 @@
 //! T1 built `mineral_supply_field`/`forage_supply_field`/`DETRITUS_AMBIENT`
 //! as pure builders nothing yet consumed. T2 wires them into
 //! `per_species_suitability` via [`hornvale_worldgen::axis_supply`], the axis
-//! dot product that replaces the old `base_carrying(cell) × Σuptake` scalar
+//! dot product that replaces the old `base_carrying(vertex) × Σuptake` scalar
 //! — a niche direction now SELECTS a spatial combination instead of merely
 //! rescaling one shared field, so two species with different uptake
 //! *directions* can peak in different *places* (the rank-restoration
@@ -47,9 +47,9 @@ fn mineral_supply_tracks_prospectivity_spatially() {
     let scale = 10.0;
     let field = hornvale_worldgen::mineral_supply_field(geo, &terrain, scale);
 
-    // Genuinely spatial: at least two distinct values across cells.
+    // Genuinely spatial: at least two distinct values across vertices.
     let mut distinct: Vec<f64> = Vec::new();
-    for c in geo.cells() {
+    for c in geo.vertices() {
         let v = *field.get(c);
         if !distinct.iter().any(|d: &f64| (*d - v).abs() < 1e-12) {
             distinct.push(v);
@@ -60,19 +60,22 @@ fn mineral_supply_tracks_prospectivity_spatially() {
     }
     assert!(
         distinct.len() >= 2,
-        "mineral supply field must vary across cells, not be a constant"
+        "mineral supply field must vary across vertices, not be a constant"
     );
 
-    // Monotone in prospectivity at two probe cells: whichever cell has
+    // Monotone in prospectivity at two probe vertices: whichever vertex has
     // higher prospectivity must have a proportionally higher supply value
     // (field = prospectivity * scale, so equality up to float epsilon).
-    // The probes must be LAND cells: since The Tumult's land mask the field
+    // The probes must be LAND vertices: since The Tumult's land mask the field
     // is 0 at sea regardless of the seafloor's (honestly derived, but
-    // unreachable) prospectivity — the first and last land cell in ascending
-    // `CellId` order, a deterministic choice with no float ordering.
-    let land: Vec<hornvale_kernel::CellId> =
-        geo.cells().filter(|c| !terrain.is_ocean(*c)).collect();
-    assert!(land.len() >= 2, "seed 42 must have at least two land cells");
+    // unreachable) prospectivity — the first and last land vertex in ascending
+    // `Vertex` order, a deterministic choice with no float ordering.
+    let land: Vec<hornvale_kernel::Vertex> =
+        geo.vertices().filter(|c| !terrain.is_ocean(*c)).collect();
+    assert!(
+        land.len() >= 2,
+        "seed 42 must have at least two land vertices"
+    );
     let probe_a = land[0];
     let probe_b = land[land.len() - 1];
     let prospectivity_a = terrain.prospectivity_at(probe_a);
@@ -88,7 +91,7 @@ fn mineral_supply_tracks_prospectivity_spatially() {
     }
 
     // Bounds: prospectivity is [0,1], so the field is [0, scale].
-    for c in geo.cells() {
+    for c in geo.vertices() {
         let v = *field.get(c);
         assert!(
             (0.0..=scale + 1e-9).contains(&v),
@@ -110,9 +113,9 @@ fn mineral_supply_tracks_prospectivity_spatially() {
 ///
 /// This states explicitly what a bug used to do by accident. Before The
 /// Tumult's elevation re-datum, `ConditionNiche.elevation` was scored against
-/// the raw isostatic `ReferenceElevation`, which put an ocean cell ~4 km from
+/// the raw isostatic `ReferenceElevation`, which put an ocean vertex ~4 km from
 /// every authored optimum and so zeroed the seafloor through the *condition*
-/// term. Correcting the datum left ocean cells only ~1100 m below sea level
+/// term. Correcting the datum left ocean vertices only ~1100 m below sea level
 /// and exposed two supply axes that never had a mask of their own: `MINERAL`
 /// (a prospectivity read, defined on the seafloor) and `DETRITUS` (a global
 /// constant). Measured at seed 42 with the datum corrected and no mask, the
@@ -149,7 +152,7 @@ fn no_species_draws_carrying_capacity_from_the_wrong_medium() {
     // plus 0.25 across two terrestrial axes, because a settled shore people
     // does not live entirely in the water. It arrived at this branch as a
     // FAILURE of the `else` arm ("sea-elf draws 140.02 of its 147.84 total
-    // carrying capacity from submerged cells"), which is the guard working:
+    // carrying capacity from submerged vertices"), which is the guard working:
     // the test had no way to express a second mixed kind, and a `const` was
     // the reason.
     let amphibious: std::collections::BTreeSet<&str> =
@@ -166,7 +169,9 @@ fn no_species_draws_carrying_capacity_from_the_wrong_medium() {
     let obliquity = system.anchor.obliquity.get();
     let regime = match system.anchor.rotation {
         hornvale_astronomy::Rotation::Spinning { day, .. } => {
-            hornvale_climate::RotationRegime::Spinning { day_std: day.get() }
+            hornvale_climate::RotationRegime::Spinning {
+                day_std: day.as_std_days(),
+            }
         }
         hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
     };
@@ -195,7 +200,7 @@ fn no_species_draws_carrying_capacity_from_the_wrong_medium() {
     // Deliberate because this readout is about the SUBMERGED/land partition and
     // the marine roster, a question upstream of any per-biome preference: an
     // affinity re-weights a kind across biomes it can already reach, it does not
-    // change which cells the field reaches. All-`None` is bit-identical to the
+    // change which vertices the field reaches. All-`None` is bit-identical to the
     // pre-affinity physics this file's numbers were taken under (task 3's
     // `an_absent_affinity_is_bit_identical`).
     let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; bios.len()];
@@ -203,11 +208,11 @@ fn no_species_draws_carrying_capacity_from_the_wrong_medium() {
         geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm, &affinity,
     );
 
-    let submerged: Vec<hornvale_kernel::CellId> =
-        geo.cells().filter(|c| terrain.is_ocean(*c)).collect();
+    let submerged: Vec<hornvale_kernel::Vertex> =
+        geo.vertices().filter(|c| terrain.is_ocean(*c)).collect();
     assert!(
         !submerged.is_empty(),
-        "seed 42 must have ocean cells for this test to mean anything"
+        "seed 42 must have ocean vertices for this test to mean anything"
     );
 
     let mut placed_on_land = 0u32;
@@ -215,7 +220,7 @@ fn no_species_draws_carrying_capacity_from_the_wrong_medium() {
         let kind = kinds[*tag as usize].0;
         let mut wet = 0.0_f64;
         let mut dry = 0.0_f64;
-        for c in geo.cells() {
+        for c in geo.vertices() {
             let v = *k.get(c);
             if terrain.is_ocean(c) {
                 wet += v;
@@ -227,7 +232,7 @@ fn no_species_draws_carrying_capacity_from_the_wrong_medium() {
         if marine_only.contains(kind) {
             assert_eq!(
                 dry, 0.0,
-                "{kind} draws {dry} of its {total} total carrying capacity from LAND cells — \
+                "{kind} draws {dry} of its {total} total carrying capacity from LAND vertices — \
                  a purely marine kind's terrestrial supply axes must be 0"
             );
         } else if amphibious.contains(kind) {
@@ -240,7 +245,7 @@ fn no_species_draws_carrying_capacity_from_the_wrong_medium() {
             assert_eq!(
                 wet, 0.0,
                 "{kind} draws {wet} of its {total} total carrying capacity from submerged \
-                 cells — the terrestrial supply axes must be 0 at sea"
+                 vertices — the terrestrial supply axes must be 0 at sea"
             );
         }
         if total > 0.0 {
@@ -258,10 +263,10 @@ fn no_species_draws_carrying_capacity_from_the_wrong_medium() {
 #[test]
 fn forage_supply_is_a_fraction_of_base_carrying_and_deterministic() {
     let geo = hornvale_kernel::Geosphere::new(3);
-    let base = hornvale_kernel::CellMap::from_fn(&geo, |c| (c.0 as f64) * 0.1);
+    let base = hornvale_kernel::VertexMap::from_fn(&geo, |c| (c.0 as f64) * 0.1);
     let a = hornvale_worldgen::forage_supply_field(&geo, &base);
     let b = hornvale_worldgen::forage_supply_field(&geo, &base);
-    for c in geo.cells() {
+    for c in geo.vertices() {
         assert_eq!(a.get(c), b.get(c));
         assert!(
             *a.get(c) <= *base.get(c),
@@ -270,31 +275,31 @@ fn forage_supply_is_a_fraction_of_base_carrying_and_deterministic() {
     }
 }
 
-/// THE RANK-RESTORATION KEYSTONE (T2, `axis_supply`): two cells — A
+/// THE RANK-RESTORATION KEYSTONE (T2, `axis_supply`): two vertices — A
 /// photosynthate-rich, B mineral-rich — and two niches (a plant-eater, a
 /// rock-eater) with opposite axis weights. Each niche's supply must peak in
-/// the cell that supplies ITS axis, not in the same cell for both.
+/// the vertex that supplies ITS axis, not in the same vertex for both.
 ///
-/// MUTATION GUARD: the OLD scalar `supply = base(cell) × Σuptake` gives
-/// every niche the SAME cell ranking (`base` is identical per cell,
-/// `Σuptake` is a per-niche CONSTANT that does not depend on the cell), so
+/// MUTATION GUARD: the OLD scalar `supply = base(vertex) × Σuptake` gives
+/// every niche the SAME vertex ranking (`base` is identical per vertex,
+/// `Σuptake` is a per-niche CONSTANT that does not depend on the vertex), so
 /// this pair of strict inequalities cannot both hold under the collapsed
 /// model — only the per-axis dot product can differentiate WHERE two
 /// differently-shaped niches peak.
 #[test]
-fn different_uptake_vectors_peak_in_different_cells() {
+fn different_uptake_vectors_peak_in_different_vertices() {
     use hornvale_kernel::{MINERAL, PHOTOSYNTHATE, ResourceVector};
-    let cell_a = [(PHOTOSYNTHATE, 10.0), (MINERAL, 0.0)];
-    let cell_b = [(PHOTOSYNTHATE, 0.0), (MINERAL, 10.0)];
+    let vertex_a = [(PHOTOSYNTHATE, 10.0), (MINERAL, 0.0)];
+    let vertex_b = [(PHOTOSYNTHATE, 0.0), (MINERAL, 10.0)];
     let plant = ResourceVector::new(&[(PHOTOSYNTHATE, 1.0), (MINERAL, 0.0)]).unwrap();
     let rock = ResourceVector::new(&[(PHOTOSYNTHATE, 0.0), (MINERAL, 1.0)]).unwrap();
     // the plant-eater's supply is higher in A; the rock-eater's is higher in B.
     assert!(
-        axis_supply(&plant, &cell_a) > axis_supply(&plant, &cell_b),
+        axis_supply(&plant, &vertex_a) > axis_supply(&plant, &vertex_b),
         "plant-eater peaks in A"
     );
     assert!(
-        axis_supply(&rock, &cell_b) > axis_supply(&rock, &cell_a),
+        axis_supply(&rock, &vertex_b) > axis_supply(&rock, &vertex_a),
         "rock-eater peaks in B"
     );
 }
@@ -344,7 +349,7 @@ fn peopled_kinds(world: &World) -> std::collections::BTreeSet<String> {
 /// tops `.dominant` on at least this many settlements.
 const MIN_SETTLEMENTS_FOR_DOMINANCE: u32 = 2;
 
-/// BASELINE (measured 2026-07-19, PRE-repoint — the old `base_carrying(cell)
+/// BASELINE (measured 2026-07-19, PRE-repoint — the old `base_carrying(vertex)
 /// × Σuptake` scalar supply — over the REAL production roster: 16 kinds
 /// (four peopled goblinoid-family + kobold, plus twelve fauna: treant,
 /// twig-blight, giant-elk, woolly-mammoth, giant-goat, otyugh, xorn,
@@ -502,7 +507,7 @@ fn settlements_and_dominants_diversify_on_seed_42() {
     // The Deep Realm's repair above does not survive this campaign's
     // productivity model, and the margin is exactly one settlement.
     //
-    // Measured on the merged tree: rust-monster holds **1** dominant cell and
+    // Measured on the merged tree: rust-monster holds **1** dominant vertex and
     // xorn holds none. `MIN_SETTLEMENTS_FOR_DOMINANCE` is 2 — a kind topping
     // exactly one attractor is the Confluence campaign's denominator artifact,
     // measurement noise rather than placement — so neither specialist clears
@@ -528,7 +533,7 @@ fn settlements_and_dominants_diversify_on_seed_42() {
     // The assertion above ended with an instruction: "rust-monster was ONE
     // settlement short; if it is back, re-read the comment above and establish
     // which productivity model is in play before flipping this." It is back,
-    // at exactly 2 dominant cells — the ruler's floor — so the instruction is
+    // at exactly 2 dominant vertices — the ruler's floor — so the instruction is
     // discharged here rather than the assertion quietly bumped.
     //
     // WHICH PRODUCTIVITY MODEL: unchanged. This campaign's diff touches
@@ -539,7 +544,7 @@ fn settlements_and_dominants_diversify_on_seed_42() {
     //
     // WHAT DID MOVE: the competition. Six elves entered the contest for
     // attractors, and one of them (sea-elf) is the roster's first marine
-    // PEOPLE, holding 34 dominant cells of its own. Rust-monster regained
+    // PEOPLE, holding 34 dominant vertices of its own. Rust-monster regained
     // its one missing settlement out of that re-contest. The honest reading
     // is that this quantity has now been 1 -> 2 across a roster change with
     // no mechanism change, which makes it a **margin-of-one witness**: the
@@ -570,13 +575,25 @@ fn settlements_and_dominants_diversify_on_seed_42() {
     //
     //   rust-monster clears the ruler on 18 of 24 seeds (75%)
     //   counts range 0..16, median 4; seed 42's 1 sits in the bottom sixth
-    //   xorn holds ZERO dominant cells on 24 of 24 seeds
+    //   xorn holds ZERO dominant vertices on 24 of 24 seeds
+    //
+    // RE-MEASURED 2026-08-27, AFTER THE SOURCES TASK 9'S PER-RUNG SWITCH gave
+    // xorn a real `CHEMOSYNTHATE` weight and a per-rung (not single-deepest-
+    // point) subterranean reading. Both numbers above are now stale; this is
+    // a fresh re-measurement, not the original one re-derived:
+    //
+    //   rust-monster clears the ruler on 13 of 24 seeds (54%)
+    //   counts range 0..13, median 2; seed 42's 1 still sits below the ruler
+    //   xorn clears the ruler on 2 of 24 seeds (21, 23) — no longer zero
     //
     // So the claim "the pure-MINERAL specialist clears the dominance ruler" is
-    // TRUE of the world and FALSE of seed 42 about a quarter of the time. The
-    // three flips this comment records (1 -> 2 -> 1, across The Tense, C2d and
-    // C2d again) were never evidence about the mechanism; they are one world's
-    // draw wandering across a bar of 2 in a distribution whose median is 4.
+    // TRUE of the world and FALSE of seed 42 about half the time now (was a
+    // quarter). The three flips this comment records (1 -> 2 -> 1, across The
+    // Tense, C2d and C2d again) were never evidence about the mechanism; they
+    // are one world's draw wandering across a bar of 2 in a distribution
+    // whose median SAT AT 4 and now sits AT the bar itself (2) — closer to
+    // the threshold than before, which strengthens rather than weakens the
+    // case for treating this as a reported rate rather than a per-seed gate.
     //
     // That is exactly the shape ratified decision 0097 names — an EXISTENCE
     // CLAIM NEAR ITS THRESHOLD, carrying "a value pin's noise profile with an
@@ -584,7 +601,7 @@ fn settlements_and_dominants_diversify_on_seed_42() {
     // belong in the commit gate at all, but is measured as a rate with a
     // sampling bound. The per-kind assertion is therefore WITHDRAWN rather
     // than flipped a fourth time. It is not relaxed and no threshold is
-    // moved: 18/24 is reported, not asserted, and the follow-up to measure it
+    // moved: 13/24 is reported, not asserted, and the follow-up to measure it
     // properly at census n is filed as `BIO-mineral-dominance-rate`.
     //
     // The STRUCTURAL claims are unaffected and still asserted above (the
@@ -592,17 +609,38 @@ fn settlements_and_dominants_diversify_on_seed_42() {
     // baseline, the preregistered union floor). What is withdrawn is the
     // per-kind prediction — for the third time, and this time with a stated
     // rule for why it should not come back.
-    println!("rust-monster dominant cells at seed 42: {dominant_counts:?}");
+    println!("rust-monster dominant vertices at seed 42: {dominant_counts:?}");
 
-    // The xorn half STAYS asserted, and it is a different kind of claim: the
-    // same sweep measures xorn at ZERO dominant cells on 24 of 24 seeds, so it
-    // is not near any threshold and 0097's rule does not reach it. It was
-    // previously a seed-42 point claim with no measured basis; it now has one.
+    // The xorn half STAYS asserted (for now — see below), but the ORIGINAL
+    // ARGUMENT for keeping it as a hard gate does not fully survive its own
+    // re-measurement. RE-MEASURED 2026-08-27, AFTER THE SOURCES TASK 9: the
+    // same sweep now measures xorn dominant on 2 of 24 seeds (21, 23), not
+    // zero. This is not sampling noise on an unrelated axis — it is the
+    // mechanistically expected fingerprint of the exact change that produced
+    // it: xorn's suitability was previously "climate-indifferent by potency
+    // rather than curve... flat within noise" (see the `habitat_realm_
+    // registry` row's own comment, `domains/species/src/lib.rs`), which is
+    // WHY it could not concentrate anywhere enough to dominate. Task 9
+    // deliberately removed that flatness (xorn's live/surface-forced
+    // suitability ratio moved 1.02 -> 1.697, `deep_realm_rehome.rs`), so a
+    // nonzero dominance rate is exactly what should be expected once the
+    // mechanism producing the old zero is gone.
+    //
+    // So the argument is WEAKENED, not merely renumbered: the assertion below
+    // is no longer backed by "this cannot structurally happen" (0/24), only
+    // by "seed 42 specifically is not one of the ~8% of seeds where it does"
+    // (2/24) — the same fragile near-a-boundary shape decision 0097 exists to
+    // name for rust-monster above, now arguably reaching xorn too. This
+    // report does not withdraw the assertion unilaterally: seed 42 itself is
+    // unaffected and the gate is still green, and whether to downgrade xorn
+    // to a reported rate (matching rust-monster) is a call for whoever reads
+    // this next, not one this comment update makes for them.
     assert!(
         !material_dominants.contains("xorn"),
-        "xorn cleared the dominance ruler ({dominant_counts:?}) — it has held none since \
-         The Deep Realm sharpened rust-monster's curves and left xorn's flat, and it holds \
-         none on any of seeds 0..=23; if this fires, that re-authoring is what to re-read."
+        "xorn cleared the dominance ruler ({dominant_counts:?}) at seed 42 — it held on 2 of \
+         seeds 0..=23 (21, 23) as of the 2026-08-27 re-measurement above, so this gate is \
+         narrower than it looks; if this fires, re-read that re-measurement before assuming a \
+         fresh regression."
     );
 }
 
@@ -647,16 +685,16 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
         {
             continue;
         }
-        let inputs = hornvale_kernel::CellMap::from_fn(geo, |c| {
+        let inputs = hornvale_kernel::VertexMap::from_fn(geo, |c| {
             species_carrying_input(*base_inputs.get(c), psych)
         });
         let k = hornvale_demography::carrying_capacity(geo, &inputs);
-        for cell in geo.cells() {
-            if terrain.is_ocean(cell) {
+        for vertex in geo.vertices() {
+            if terrain.is_ocean(vertex) {
                 continue;
             }
-            let lat = geo.coord(cell).latitude.abs();
-            let kv = k.at(cell);
+            let lat = geo.coord(vertex).latitude.abs();
+            let kv = k.at(vertex);
             if lat < 30.0 {
                 trop_sum += kv;
                 trop_n += 1;
@@ -666,8 +704,8 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
             }
         }
     }
-    assert!(trop_n > 0, "seed 42 has no tropical land cells");
-    assert!(pole_n > 0, "seed 42 has no polar land cells");
+    assert!(trop_n > 0, "seed 42 has no tropical land vertices");
+    assert!(pole_n > 0, "seed 42 has no polar land vertices");
     const POLE_FLOOR: f64 = 0.01;
     let trop_mean = trop_sum / f64::from(trop_n);
     let pole_mean = (pole_sum / f64::from(pole_n)).max(POLE_FLOOR);
@@ -679,8 +717,8 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     let pole_is_floored = raw_pole_mean < POLE_FLOOR;
     println!(
         "seed 42 capacity-by-abs-latitude: ratio={ratio:.4} \
-         (trop_mean={trop_mean:.6} over {trop_n} cells, raw_pole_mean={raw_pole_mean:.6} \
-         over {pole_n} cells, pole floored at {POLE_FLOOR}: {pole_is_floored})"
+         (trop_mean={trop_mean:.6} over {trop_n} vertices, raw_pole_mean={raw_pole_mean:.6} \
+         over {pole_n} vertices, pole floored at {POLE_FLOOR}: {pole_is_floored})"
     );
     assert!(
         ratio >= 3.0,
@@ -747,7 +785,7 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // productivity — an internal-consistency check on a Hornvale-internal
     // number, which decision 0106 rules a VALID use of internal measurement.
     // It is NOT evidence for the biomass-by-latitude gradient; treating it as
-    // evidence would be 0106's CIRCULAR cell, which names
+    // evidence would be 0106's CIRCULAR vertex, which names
     // `capacity-by-abs-latitude` explicitly. The preregistered floor of 3
     // above is the real surviving claim, and it clears tenfold.
     //
@@ -796,8 +834,8 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // correction below.
     //
     // WHAT THIS LOOP ACTUALLY READS, since two campaigns have now got it
-    // wrong. Per cell it reads `carrying_inputs_of(geo, terrain, climate)` —
-    // a species-BLIND per-cell record of land/temperature/precipitation/
+    // wrong. Per vertex it reads `carrying_inputs_of(geo, terrain, climate)` —
+    // a species-BLIND per-vertex record of land/temperature/precipitation/
     // freshwater/coast/hostility. Per species it reads exactly one thing:
     // `species_carrying_input(CarryingInput, &MindVector)`, whose signature
     // (`windows/worldgen/src/lib.rs`) contains no `ConditionNiche`, and whose
@@ -810,7 +848,7 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // THE MOVEMENT, ATTRIBUTED ARITHMETICALLY rather than narrated. The pole
     // is floored, so ratio == 100 * trop_mean exactly, and trop_mean is the
     // unweighted mean of the per-kind tropical means (every kind contributes
-    // the same 4380 tropical land cells). Measured per kind on seed 42:
+    // the same 4380 tropical land vertices). Measured per kind on seed 42:
     //
     //   bugbear   0.344060   desert-dwarf 0.369867   gnoll      0.338622
     //   goblin    0.353578   gully-dwarf  0.364961   hill-dwarf 0.369628
@@ -831,7 +869,7 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // ---- the roster, and never was the roster.
     //
     // Measured on seed 42 (probe run 2026-08-10, reverted): polar land
-    // averages **T = -42.65 C** and 757.1 mm/yr over its 1855 cells, so
+    // averages **T = -42.65 C** and 757.1 mm/yr over its 1855 vertices, so
     // inside `carrying_capacity` the species-blind Liebig minimum reads
     //
     //     npp_temperature(-42.65) = 0.001674
@@ -932,8 +970,8 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // the ratio NARROWS because both ends rose. A smaller residual fraction
     // compensates more of seed 42's insolation shortfall, so the whole world
     // warms — but the two ends do not warm equally in effect:
-    //   trop_mean     0.435333 -> 0.450636   (+3.5%, 68565 cells)
-    //   raw_pole_mean 0.035406 -> 0.044410  (+25.4%,  7920 cells)
+    //   trop_mean     0.435333 -> 0.450636   (+3.5%, 68565 vertices)
+    //   raw_pole_mean 0.035406 -> 0.044410  (+25.4%,  7920 vertices)
     // Warming a near-unproductive pole buys far more proportional
     // productivity than warming an already-productive tropics, which is
     // ordinary saturation and not a latitudinal mechanism moving. The
@@ -961,7 +999,7 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
 // (`mineral_supply_field`/`forage_supply_field`/`axis_supply`/
 // `per_species_suitability` are pure functions of terrain/climate/biosphere —
 // no `Seed`, no `Stream`, no RNG). The per-axis vector supply changes WHICH
-// cells a species' K peaks in (a derived-FORMULA change), never adds or
+// vertices a species' K peaks in (a derived-FORMULA change), never adds or
 // reorders a seed draw, so the settlement seed-derivation's
 // stream-consumption order is unchanged. Confirmed directly (not just
 // argued): the generated stream manifest (`cargo run -p hornvale --

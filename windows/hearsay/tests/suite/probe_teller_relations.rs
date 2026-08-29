@@ -114,7 +114,7 @@ fn labels(
 ///
 /// claim: structural(seed: 42) — false-positive seed-loop flag.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: how many generations one retelling spans on seed 42; run by hand (Myth campaign 3, The Palimpsest, answered its question; demoted by The Governor 2026-08-28)"]
 fn how_many_generations_does_one_retelling_span_on_seed_42() {
     let world = hornvale_worldgen::build_world(
         hornvale_kernel::Seed(42),
@@ -148,7 +148,7 @@ fn how_many_generations_does_one_retelling_span_on_seed_42() {
         let Some(bio) = wc.biosphere.get_by_label(people) else {
             continue;
         };
-        let lh = hornvale_species::life_history(bio.mass, bio.metabolic_class, bio.schedule);
+        let lh = hornvale_species::life_history(bio.mass, bio.thermal_strategy, bio.schedule);
         if let Some(g) = lh.generation_length {
             gen_days.insert(occ, g.get() * year_days);
         }
@@ -278,7 +278,7 @@ fn how_many_generations_does_one_retelling_span_on_seed_42() {
 ///
 /// claim: structural(seed: 42) — false-positive seed-loop flag.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: whether retelling generation length varies by people on seed 42; run by hand (Myth campaign 3, The Palimpsest, answered its question; demoted by The Governor 2026-08-28)"]
 fn does_generation_length_vary_by_people_on_seed_42() {
     let world = hornvale_worldgen::build_world(
         hornvale_kernel::Seed(42),
@@ -323,7 +323,7 @@ fn does_generation_length_vary_by_people_on_seed_42() {
             .ok()
             .and_then(|wc| {
                 wc.biosphere.get_by_label(people).map(|bio| {
-                    hornvale_species::life_history(bio.mass, bio.metabolic_class, bio.schedule)
+                    hornvale_species::life_history(bio.mass, bio.thermal_strategy, bio.schedule)
                         .generation_length
                 })
             })
@@ -446,7 +446,7 @@ fn remove_from(led: &Ledger, who: EntityId, day: f64) -> Option<f64> {
 ///
 /// claim: structural(seed: 42) — false-positive seed-loop flag.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: what scale the teller-remove amplitude is on seed 42; run by hand (Myth campaign 3, The Palimpsest, answered its question; demoted by The Governor 2026-08-28)"]
 fn what_scale_is_the_teller_remove_amplitude_on_seed_42() {
     let world = hornvale_worldgen::build_world(
         hornvale_kernel::Seed(42),
@@ -555,7 +555,7 @@ fn what_scale_is_the_teller_remove_amplitude_on_seed_42() {
 /// claim: structural(seed: 42) — false-positive seed-loop flag; the loops bind
 /// occupation ids and relation indices, not seeds.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: which teller/event relations flip more than once on seed 42; run by hand (Myth campaign 3, The Palimpsest, answered its question; demoted by The Governor 2026-08-28)"]
 fn which_teller_event_relations_flip_more_than_once_on_seed_42() {
     let world = hornvale_worldgen::build_world(
         hornvale_kernel::Seed(42),

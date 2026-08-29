@@ -39,6 +39,16 @@
 //! `overflowing_prose_gets_a_visible_truncation_marker_not_a_silent_drop`
 //! test for the regression this decision is pinned against.
 //!
+//! ## The weight channel on this surface
+//!
+//! On a COMPLETION surface (the hint row, Task 9) [`Weight`] carries
+//! typed-vs-suggested, not emphasis: the stem — what the buffer already
+//! holds — is bold; each candidate's remainder — what completion is
+//! *suggesting* — stays normal. This deliberately diverges from the chart
+//! surfaces, where weight keeps its perishable ladder (see `chart.rs`).
+//! The two are never co-rendered, so one channel can safely mean different
+//! things per surface; see [`Hint`]'s doc for the full statement.
+//!
 //! **This was reconsidered once, and the marker won again.** Task 9b (commit
 //! `630d41c0`) tried the second option: a dedicated, always-visible ways-on
 //! row (`ways.rs`), re-deriving the exit list from `sensed.room.exits` and
@@ -79,24 +89,85 @@ const PROMPT_COLUMNS: u16 = 2;
 /// the module doc's "Overflow is a decision, not an accident".
 const TRUNCATION_MARKER: &str = "\u{2026} more, not shown \u{2026}";
 
-/// Word-wrap `text` into lines no wider than `width` columns.
+/// One pending completion ambiguity, threaded from the driver: the stem
+/// the command buffer was extended to and every candidate that shares it,
+/// in candidate order. Borrowed rather than owned — the driver holds the
+/// strings; this pane only renders them.
 ///
-/// Existing newlines in `text` are hard breaks: each source line is
-/// wrapped independently, so the prose's own structure — its opening tag,
-/// its body, its "Ways on:" sentence — survives exactly, and only an
-/// overlong *visual* line is ever split, and only at whitespace between
-/// words. No word is dropped, abbreviated, or reordered; this is wrapping,
-/// never re-wording. A single word wider than `width` is placed alone on
-/// its own line rather than sliced, since slicing mid-word would drop
-/// letters — a smaller act of re-wording, but still one.
+/// **The weight channel on this surface (spec §4.3, decision 0142).** On a
+/// COMPLETION surface weight carries typed-vs-suggested, not emphasis:
+/// the stem — what the buffer already holds, i.e. what the player typed —
+/// is [`Weight::Bold`]; the remainder of each candidate — what completion
+/// is *suggesting* — stays [`Weight::Normal`]. This deliberately diverges
+/// from the chart surfaces, where weight keeps its perishable ladder; the
+/// two are never co-rendered, so one channel can safely mean different
+/// things per surface.
+pub struct Hint<'a> {
+    /// The longest common prefix of all matches — what the buffer holds.
+    pub stem: &'a str,
+    /// Every matching name, input order preserved.
+    pub matches: &'a [&'a str],
+}
+
+/// Columns separating two adjacent candidates on the hint row.
+const HINT_JOIN_COLUMNS: &str = "  ";
+
+/// Lay `text` out for a `width`-column prose pane, one returned string per
+/// visual row.
+///
+/// Existing newlines in `text` are hard breaks: each source line is laid
+/// out independently, so the prose's own structure — its opening tag, its
+/// body, its "Ways on:" sentence — survives exactly. What happens to a
+/// source line after that turns on one question, asked per line: does it
+/// fit?
+///
+/// - **A line that fits is preserved VERBATIM** — every run of interior
+///   spaces, and every column of leading indent, exactly as the sim sent
+///   it. This is the half decision 0291 settles. The sim emits
+///   pre-formatted pictures on the very same prose channel it emits
+///   narration on (the walk-band chart, the chamber plan, the underground
+///   level), and the wire carries no marker saying which a given line is.
+///   This function used to
+///   split every line on [`str::split_whitespace`] and rejoin on a single
+///   space, which collapsed every run of spaces and left-flushed each
+///   chart row into a picture of a different place.
+/// - **A line that does NOT fit is word-wrapped, if it reads as prose.**
+///   Growing downward is what a prose pane is for; see [`reads_as_prose`]
+///   for the test and for what it can and cannot tell apart. No word is
+///   dropped, abbreviated, or reordered; this is wrapping, never
+///   re-wording. A single word wider than `width` is placed alone on its
+///   own line rather than sliced, since slicing mid-word would drop
+///   letters — a smaller act of re-wording, but still one.
+/// - **A line that does not fit and does not read as prose is CLIPPED,
+///   never re-flowed.** Prose may grow downward; a picture may not grow at
+///   all, and re-flowing an over-wide picture line reproduces the defect
+///   above at a wider band rather than fixing it. Clipped without a
+///   marker, deliberately: the pane's own [`TRUNCATION_MARKER`] signals
+///   the loss it can honestly signal (whole rows, below), while a `…` in a
+///   picture's last column would draw a glyph that picture does not
+///   contain, and a reader cannot tell an invented glyph from a real one.
+///   The pane widening (`crate::spread`) is what actually recovers those
+///   columns.
+///
+/// Every line is passed through [`strip_sgr`] first, so an escape sequence
+/// neither reaches the grid nor counts toward the width.
 fn wrap(text: &str, width: usize) -> Vec<String> {
     if width == 0 {
         return Vec::new();
     }
     let mut lines = Vec::new();
-    for paragraph in text.split('\n') {
+    for source in text.split('\n') {
+        let paragraph = strip_sgr(source);
         if paragraph.trim().is_empty() {
             lines.push(String::new());
+            continue;
+        }
+        if paragraph.chars().count() <= width {
+            lines.push(paragraph);
+            continue;
+        }
+        if !reads_as_prose(&paragraph) {
+            lines.push(paragraph.chars().take(width).collect());
             continue;
         }
         let mut current = String::new();
@@ -119,6 +190,111 @@ fn wrap(text: &str, width: usize) -> Vec<String> {
         }
     }
     lines
+}
+
+/// Whether an over-wide `line` may be re-flowed — whether it reads as
+/// prose rather than as a picture.
+///
+/// **The test is TWO DISTINCT LETTERS anywhere in the line.** Prose is
+/// built from an alphabet; the sim's pre-formatted surfaces are built from
+/// a glyph vocabulary that contains exactly one alphabetic character.
+/// A chart draws `@ & # ~ = +` and the five impedance rungs `_ . : ^ A`
+/// (`windows/scene/src/surrounds_ascii.rs`); a chamber plan draws
+/// `. # + @` and no letter at all (`windows/vessel/src/lattice/render.rs`).
+/// So the most letters a picture row can carry is any number of `A`s — one
+/// distinct letter — while a caption line (`placement: north-up, one row
+/// per ring, …`) or a sentence carries dozens. The caption wrapping and
+/// the picture beside it not wrapping is the right outcome for both.
+///
+/// **Distinctness, not adjacency, and that difference is the whole
+/// correction.** An earlier revision asked for a RUN of two or more
+/// letters, on the belief that a chart row holds its glyphs apart with
+/// spaces. It does not: `render_surrounds_ascii` pushes one character per
+/// occupied column with no separator, and only an unoccupied column
+/// becomes a space — the committed gallery chart carries `~  ~~ ~   ~  ~~`
+/// (`book/src/gallery/generated/surrounds-seed-42/seam.txt`). `A` is an
+/// ordinary alpine locale, so two neighbouring alpine facets render `AA`,
+/// which the run test read as a word: an over-wide alpine row would have
+/// been word-wrapped, which is the defect this function exists to prevent.
+/// A rule that never looks at adjacency cannot be fooled by contiguity.
+///
+/// **This classifies per LINE, not per block, and that is a named limit
+/// rather than an oversight** (spec §4.2): the wire carries no marker
+/// distinguishing pre-formatted output from narration, so there is nothing
+/// else to go on.
+///
+/// **The residual risk is a SECOND alphabetic glyph** entering one of
+/// those vocabularies — two different letters on one row would read as
+/// prose however far apart they sat. That premise is not left to prose:
+/// `clients/game/bin`'s `the_chart_vocabulary_carries_at_most_one_letter`
+/// renders a real chart across every impedance rung and fails if the
+/// picture ever holds two distinct letters. (The old doc named the risk as
+/// an over-wide line of one-letter words. That was never the risk, and it
+/// pointed away from the one that was live.)
+fn reads_as_prose(line: &str) -> bool {
+    let mut seen: Option<char> = None;
+    for ch in line.chars() {
+        if !ch.is_alphabetic() {
+            continue;
+        }
+        match seen {
+            None => seen = Some(ch),
+            Some(first) if first != ch => return true,
+            Some(_) => {}
+        }
+    }
+    false
+}
+
+/// Drop every ANSI escape sequence from `line`.
+///
+/// **The prose pane has no colour channel at all.** The grid stores one
+/// `char` per column, plus a [`Weight`] and a [`Source`]; there is nowhere
+/// for an SGR parameter to go. So the bytes of `\x1b[38;2;r;g;bm` — which the sim's
+/// `colour` chart lens emits around every tinted glyph — would land in the
+/// grid as literal glyphs, one per column: `[`, `3`, `8`, `;`, and the
+/// rest. The client has no use for SGR either way; it applies its own ink
+/// from the wire's `color` field.
+///
+/// Latent rather than hypothetical, and latent is why it survived: seed 42
+/// at turn 0 draws a band that is all water, marks and observer, so the
+/// lens reports "0 tinted, 31 withheld" and emits nothing. The first
+/// tinted chart is the first broken one.
+///
+/// **Stripped BEFORE the width is measured**, which is the half that is
+/// easy to get wrong: a tinted glyph costs 17-23 bytes of overhead on top
+/// of itself — `\x1b[38;2;` and `m` and the four-byte reset are fixed, the
+/// three channel values are one to three digits each, and a realistic tint
+/// such as `120;140;60` costs 22 — so a picture that fits the pane
+/// comfortably measures several times over-wide and would be clipped down
+/// to its first few glyphs.
+///
+/// A `\x1b[` sequence runs to its first final byte (`0x40..=0x7e`), per
+/// ECMA-48's CSI form — which covers both halves the lens emits, the
+/// truecolour `m` and the `\x1b[0m` reset, and the `\x1b[2m` dim the
+/// epistemic channel wraps around them. A bare `ESC` not followed by `[`
+/// is dropped alone rather than swallowing the rest of the line: a lone
+/// escape is already unrenderable, and eating the text after it would turn
+/// a stray byte into a missing sentence.
+fn strip_sgr(line: &str) -> String {
+    let mut out = String::with_capacity(line.len());
+    let mut chars = line.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch != '\u{1b}' {
+            out.push(ch);
+            continue;
+        }
+        if chars.peek() != Some(&'[') {
+            continue;
+        }
+        chars.next();
+        for c in chars.by_ref() {
+            if ('\u{40}'..='\u{7e}').contains(&c) {
+                break;
+            }
+        }
+    }
+    out
 }
 
 /// Write `line` into `into`, starting at `(x0, y)`, one glyph per column,
@@ -174,6 +350,108 @@ fn write_command_line(
         );
     }
     x0 + (caret - window_start) as u16
+}
+
+/// Draw one candidate's glyphs starting at `(x0, y)`, stopping at `limit`:
+/// the stem bold (typed), the remainder normal (suggested). Returns the
+/// next free column.
+fn write_candidate(
+    into: &mut crate::Grid,
+    x0: u16,
+    y: u16,
+    limit: u16,
+    candidate: &str,
+    stem_len: usize,
+) -> u16 {
+    let mut x = x0;
+    for (i, ch) in candidate.chars().enumerate() {
+        if x >= limit {
+            break;
+        }
+        let weight = if i < stem_len {
+            Weight::Bold
+        } else {
+            Weight::Normal
+        };
+        into.set(x, y, Cell::glyph(ch, weight, Source::Hint));
+        x += 1;
+    }
+    x
+}
+
+/// Draw the completion-hint row at `y`, beneath the command row: as many
+/// full candidates as fit (joined with two spaces), then — when any are
+/// left over — a plain "… +N more" count. See [`Hint`]'s doc for the
+/// weight channel and [`draw`]'s doc for the layout.
+fn write_hint_line(into: &mut crate::Grid, x0: u16, y: u16, limit: u16, hint: &Hint<'_>) {
+    let join = HINT_JOIN_COLUMNS.chars().count() as u16;
+    let stem_len = hint.stem.chars().count();
+
+    // PLAN first, then write. Measure where each full candidate would end
+    // (joins included), decide how many fit, and — when any will be left
+    // over — reserve room for the count marker by dropping whole trailing
+    // candidates rather than clipping it. An honest "… +N more" that lost
+    // its digits to the pane edge is not honest.
+    let mut ends: Vec<u16> = Vec::with_capacity(hint.matches.len());
+    let mut x = x0;
+    for candidate in hint.matches {
+        let w = candidate.chars().count() as u16;
+        if !ends.is_empty() {
+            x += join;
+        }
+        x += w;
+        ends.push(x);
+    }
+    let marker_len =
+        |remaining: usize| format!("\u{2026} +{remaining} more").chars().count() as u16;
+    let mut drawn = ends.len();
+    // Two ways the planned row can overflow the fold: a candidate beyond
+    // the last was dropped outright, or the LAST candidate itself ran
+    // past `limit` while being written. Either way, drop trailing
+    // candidates until what remains — plus an honest "… +N more" count,
+    // owed whenever anything was dropped — fits. The marker's width
+    // shrinks as candidates are dropped ("+10 more" is wider than
+    // "+9 more"), so recompute INSIDE the loop.
+    loop {
+        let dropped = hint.matches.len() - drawn;
+        let marker = if dropped > 0 { marker_len(dropped) } else { 0 };
+        let join_after = if drawn > 0 { join } else { 0 };
+        let occupied = if drawn > 0 {
+            ends[drawn - 1] + join_after + marker
+        } else {
+            marker
+        };
+        if drawn == 0 || occupied <= limit {
+            break;
+        }
+        drawn -= 1;
+    }
+
+    // WRITE the planned row.
+    let mut x = x0;
+    for (i, candidate) in hint.matches.iter().take(drawn).enumerate() {
+        if i > 0 {
+            for ch in HINT_JOIN_COLUMNS.chars() {
+                if x < limit {
+                    into.set(x, y, Cell::glyph(ch, Weight::Normal, Source::Hint));
+                    x += 1;
+                }
+            }
+        }
+        x = write_candidate(into, x, y, limit, candidate, stem_len);
+    }
+    let remaining = hint.matches.len() - drawn;
+    if remaining > 0 {
+        // Plain count, never bold: it is arithmetic, not a suggested name.
+        let marker = format!("\u{2026} +{remaining} more");
+        let mut mx = x + if drawn > 0 { join } else { 0 };
+        for ch in marker.chars() {
+            if mx < limit {
+                into.set(mx, y, Cell::glyph(ch, Weight::Normal, Source::Hint));
+                mx += 1;
+            }
+        }
+    }
 }
 
 /// Draw the entry into `into`: `narration.prose` word-wrapped to `width`
@@ -235,7 +513,15 @@ fn write_command_line(
 /// just drop it" rule is a single `…` in the last column when the line does
 /// not fit, rather than a longer marker string that would itself overflow a
 /// narrow pane.
-#[allow(clippy::too_many_arguments)] // `echo` (Task 3) pushed this to 8; splitting the position/size pair or the two text channels into a struct would hide, not clarify, the ask-then-answer layout this function's own doc explains
+///
+/// `hint`, when `Some`, is the pending completion ambiguity (Task 9, The
+/// Lexicon) drawn on the row immediately BENEATH the command row — see
+/// [`Hint`] for the weight channel and [`write_hint_line`] for the fitting
+/// rule. Like `echo`'s row, it is RESERVED out of `prose_rows` rather than
+/// drawn over whatever sits below (the command row lifts one above the
+/// pane's floor while a hint is pending), and like `echo` it is dropped in
+/// the degenerate `height < 2` pane.
+#[allow(clippy::too_many_arguments)] // `hint` (Task 9) pushed this to 9; see the echo-era note above — the parameters ARE the layout
 pub fn draw(
     narration: &Narration,
     into: &mut crate::Grid,
@@ -245,12 +531,17 @@ pub fn draw(
     focus: Focus,
     line: CommandLine<'_>,
     echo: Option<&str>,
+    hint: Option<&Hint<'_>>,
 ) -> Option<(u16, u16)> {
     if height == 0 {
         return None;
     }
     let echo_rows: u16 = if echo.is_some() { 1 } else { 0 };
-    let prose_rows = height.saturating_sub(1).saturating_sub(echo_rows);
+    let hint_rows: u16 = if hint.is_some() && height >= 2 { 1 } else { 0 };
+    let prose_rows = height
+        .saturating_sub(1)
+        .saturating_sub(echo_rows)
+        .saturating_sub(hint_rows);
     let wrapped = wrap(&narration.prose, width as usize);
     let overflows = wrapped.len() as u16 > prose_rows;
     // When the prose overflows, the last visible row is sacrificed to the
@@ -267,7 +558,10 @@ pub fn draw(
         let marker_row = origin.1 + visible_rows;
         write_line(into, origin.0, marker_row, TRUNCATION_MARKER);
     }
-    let command_row = origin.1 + height - 1;
+    // The command row lifts one above the pane's floor while a hint is
+    // pending — the same reserved-row discipline `echo` follows, never
+    // silently drawing over whatever the plate or strip put below.
+    let command_row = origin.1 + height - 1 - hint_rows;
     // Guard the degenerate `height == 1` case: `echo_row` would be
     // `command_row.saturating_sub(1)`, one row ABOVE `origin`'s pane —
     // writing into whatever the plate or strip drew there. Unreachable
@@ -312,6 +606,9 @@ pub fn draw(
         line,
         available,
     );
+    if let Some(hint) = hint.filter(|_| height >= 2) {
+        write_hint_line(into, origin.0, command_row + 1, origin.0 + width, hint);
+    }
     (focus == Focus::Cli).then_some((caret_col, command_row))
 }
 
@@ -337,6 +634,154 @@ mod tests {
         assert!(lines.iter().any(|l| l.contains("supercali")));
     }
 
+    /// The reported defect, at the width the pane actually gives a chart.
+    /// `wrap` split each line on `split_whitespace()` and rejoined on a
+    /// single space, so every run of interior spaces collapsed and each
+    /// row left-flushed into a picture of a different place.
+    ///
+    /// **This input discriminates.** Every line here carries a run of two
+    /// or more interior spaces, or leading indent, or both — the exact
+    /// thing the old rule destroyed. A picture built from single-space
+    /// columns would survive the old code unchanged and prove nothing.
+    #[test]
+    fn wrap_preserves_a_line_that_fits_verbatim() {
+        let picture = "      +\n   + +   +\n+ +   @ +   +";
+        assert_eq!(
+            wrap(picture, 40),
+            vec!["      +", "   + +   +", "+ +   @ +   +"]
+        );
+    }
+
+    /// Prose may grow downward; a picture may not grow at all. Re-flowing
+    /// an over-wide picture line reproduces the defect at a wider band,
+    /// which is exactly what a naive "wrap whatever does not fit" rule
+    /// does — and what the old rule did to this very input.
+    #[test]
+    fn wrap_clips_an_over_wide_line_and_never_reflows_it() {
+        let wide = "+ + + + + + + + + + + + + + + + + + + +";
+        let out = wrap(wide, 10);
+        assert_eq!(
+            out.len(),
+            1,
+            "an over-wide line was re-flowed onto {} lines",
+            out.len()
+        );
+        assert_eq!(out[0].chars().count(), 10);
+    }
+
+    /// The other direction, and the one a rule that preserved everything
+    /// would break: narration is the pane's actual job.
+    #[test]
+    fn wrap_still_wraps_ordinary_prose() {
+        let prose = "The sky above: Night. The vast moon is a smear of light.";
+        let out = wrap(prose, 20);
+        assert!(out.len() > 1, "ordinary prose stopped wrapping");
+        assert!(out.iter().all(|l| l.chars().count() <= 20));
+    }
+
+    /// A chart's own caption is prose that arrives beside a picture, and
+    /// it must still wrap — the classifier is per line, so the two halves
+    /// of one reply are laid out differently on purpose.
+    #[test]
+    fn wrap_wraps_a_captioned_picture_by_the_line() {
+        let reply = "  placement: north-up, one row per ring, east doubled\n   + +   +";
+        let out = wrap(reply, 20);
+        assert!(out.len() > 2, "the caption line did not wrap, got {out:?}");
+        assert_eq!(
+            out.last().map(String::as_str),
+            Some("   + +   +"),
+            "the picture line did not survive verbatim, got {out:?}"
+        );
+    }
+
+    /// The latent half (spec §4.2). The `colour` lens wraps each tinted
+    /// glyph in `\x1b[38;2;r;g;bm … \x1b[0m`; the grid has nowhere to put
+    /// an SGR parameter, so those bytes would be drawn as glyphs.
+    #[test]
+    fn wrap_drops_sgr_before_it_reaches_the_grid() {
+        let tinted =
+            "\u{1b}[38;2;10;20;30m^\u{1b}[0m \u{1b}[2m\u{1b}[38;2;1;2;3m~\u{1b}[0m\u{1b}[0m";
+        assert_eq!(wrap(tinted, 40), vec!["^ ~"]);
+    }
+
+    /// And it is dropped BEFORE the width is measured. Escaped, this row
+    /// is 40 characters against a 10-column pane; stripped it is 3, so
+    /// measuring first would clip a picture that fits down to its opening
+    /// escape bytes.
+    #[test]
+    fn sgr_is_stripped_before_the_width_is_measured() {
+        let tinted = "\u{1b}[38;2;10;20;30m^\u{1b}[0m \u{1b}[38;2;1;2;3m~\u{1b}[0m";
+        assert!(
+            tinted.chars().count() > 10,
+            "this test needs an over-wide escaped row"
+        );
+        assert_eq!(wrap(tinted, 10), vec!["^ ~"]);
+    }
+
+    /// A lone `ESC` is dropped alone. Swallowing to end-of-line would turn
+    /// one stray byte into a missing sentence.
+    #[test]
+    fn a_bare_escape_does_not_swallow_the_line() {
+        assert_eq!(wrap("a\u{1b}b c", 40), vec!["ab c"]);
+    }
+
+    /// **An alpine chart row is still a picture.** Two facts compose into
+    /// the defect an earlier revision of [`reads_as_prose`] had:
+    /// `impedance_glyph` returns `'A'` at the top rung — an ordinary
+    /// alpine locale, not an exotic one — and `render_surrounds_ascii`
+    /// pushes glyphs into contiguous columns, so neighbouring alpine
+    /// facets render `AA`. A run-of-two-letters test called that a word
+    /// and word-wrapped the ridge.
+    ///
+    /// The row below is a real chart's shape: impedance rungs, contiguous
+    /// runs, gaps only where a column is unoccupied.
+    #[test]
+    fn wrap_clips_an_over_wide_alpine_row_rather_than_re_flowing_it() {
+        let ridge = "AA^AA  ^AA_ AAAA:AA^AA  AA_AA AAA^AA";
+        assert!(
+            ridge.chars().count() > 20,
+            "this test needs an over-wide row"
+        );
+        let out = wrap(ridge, 20);
+        assert_eq!(
+            out.len(),
+            1,
+            "an alpine ridge was re-flowed onto {} lines: {out:?}",
+            out.len()
+        );
+        assert_eq!(out[0].chars().count(), 20);
+    }
+
+    /// The same row at a width it FITS keeps every column, doubled `A`s
+    /// and interior gaps included.
+    #[test]
+    fn an_alpine_row_that_fits_survives_verbatim() {
+        let ridge = "AA^AA  ^AA_ AAAA:AA^AA";
+        assert_eq!(wrap(ridge, 40), vec![ridge]);
+    }
+
+    /// The other direction for the same rule: distinctness is what marks
+    /// prose, so SHOUTED prose still wraps. A test keyed on lower case
+    /// would have passed this by accident and failed a real all-caps line.
+    #[test]
+    fn wrap_still_wraps_prose_that_carries_no_lower_case() {
+        let shouted = "THE SKY ABOVE IS NIGHT AND THE VAST MOON IS A SMEAR";
+        let out = wrap(shouted, 20);
+        assert!(out.len() > 1, "all-caps prose stopped wrapping: {out:?}");
+        assert!(out.iter().all(|l| l.chars().count() <= 20));
+    }
+
+    /// The classifier's own boundary, stated directly so a later reader
+    /// need not infer it from the two tests above: one repeated letter is
+    /// a picture, two different ones are prose.
+    #[test]
+    fn one_repeated_letter_is_a_picture_and_two_different_ones_are_prose() {
+        assert!(!reads_as_prose("AAA A  AA"));
+        assert!(!reads_as_prose("~~ ^ _ .:"));
+        assert!(reads_as_prose("AB"));
+        assert!(reads_as_prose("A ridge"));
+    }
+
     #[test]
     fn draw_places_the_prompt_on_the_last_row() {
         let n = Narration {
@@ -352,6 +797,7 @@ mod tests {
             3,
             crate::Focus::Cli,
             crate::CommandLine::default(),
+            None,
             None,
         );
         assert_eq!(g.get(0, 2).unwrap().glyph, Some(PROMPT_GLYPH));
@@ -379,6 +825,7 @@ mod tests {
                 text: "look",
                 caret: 4,
             },
+            None,
             None,
         );
         let row: String = (0..6)
@@ -415,6 +862,7 @@ mod tests {
                 caret: 4,
             },
             None,
+            None,
         );
         assert_eq!(caret, None);
         let row: String = (0..6)
@@ -446,6 +894,7 @@ mod tests {
                 caret: 1,
             },
             None,
+            None,
         );
         assert_eq!(caret, Some((3, 2)));
     }
@@ -475,6 +924,7 @@ mod tests {
                 text: &long,
                 caret: 60,
             },
+            None,
             None,
         );
         let (cx, _) = caret.expect("the CLI is focused, so a caret is reported");
@@ -512,6 +962,7 @@ mod tests {
                 caret: available as usize,
             },
             None,
+            None,
         );
         let (cx, _) = caret.expect("the CLI is focused, so a caret is reported");
         assert_eq!(cx, width - 1, "caret should sit on the pane's last column");
@@ -544,6 +995,7 @@ mod tests {
             10,
             crate::Focus::Cli,
             crate::CommandLine::default(),
+            None,
             None,
         );
         let text = g.to_plain_text();
@@ -580,6 +1032,7 @@ mod tests {
             crate::Focus::Cli,
             crate::CommandLine::default(),
             None,
+            None,
         );
         let text = g.to_plain_text();
         assert!(!text.contains("more, not shown"));
@@ -606,6 +1059,7 @@ mod tests {
             crate::Focus::Cli,
             crate::CommandLine::default(),
             Some("look"),
+            None,
         );
         let echo_row: String = (0..6)
             .map(|x| g.get(x, 2).unwrap().glyph.unwrap_or(' '))
@@ -646,6 +1100,7 @@ mod tests {
             crate::Focus::Cli,
             crate::CommandLine::default(),
             Some(&long),
+            None,
         );
         let echo_row: String = (0..width)
             .map(|x| g.get(x, 2).unwrap().glyph.unwrap_or(' '))
@@ -675,6 +1130,7 @@ mod tests {
             crate::Focus::Cli,
             crate::CommandLine::default(),
             Some("look"),
+            None,
         );
         let text = g.to_plain_text();
         assert!(!text.contains('\u{2026}'));
@@ -700,11 +1156,110 @@ mod tests {
             crate::Focus::Cli,
             crate::CommandLine::default(),
             None,
+            None,
         );
         let text = g.to_plain_text();
         assert!(
             text.contains("three"),
             "with no echo, all three prose rows fit above the command row: {text:?}"
         );
+    }
+
+    /// A pending ambiguity draws one hint row beneath the command row:
+    /// the stem — what the buffer already holds — BOLD in every candidate,
+    /// each remainder NORMAL (suggested, never typed). See [`Hint`]'s doc
+    /// for the typed-vs-suggested weight channel.
+    #[test]
+    fn ambiguous_hint_renders_beneath_the_command_row_with_bold_stems() {
+        let n = Narration {
+            prose: String::new(),
+            nouns: vec![],
+        };
+        let mut g = crate::Grid::new(20, 3);
+        draw(
+            &n,
+            &mut g,
+            (0, 0),
+            20,
+            3,
+            crate::Focus::Cli,
+            crate::CommandLine::default(),
+            None,
+            Some(&Hint {
+                stem: "lo",
+                matches: &["look", "loop"],
+            }),
+        );
+        // The command row lifts to make room: prompt on row 1, hint on 2.
+        assert_eq!(g.get(0, 1).unwrap().glyph, Some(PROMPT_GLYPH));
+        // "lo" bold, "ok" normal; two-space join; "lo" bold, "op" normal.
+        let expect = [
+            ('l', Weight::Bold),
+            ('o', Weight::Bold),
+            ('o', Weight::Normal),
+            ('k', Weight::Normal),
+            (' ', Weight::Normal),
+            (' ', Weight::Normal),
+            ('l', Weight::Bold),
+            ('o', Weight::Bold),
+            ('o', Weight::Normal),
+            ('p', Weight::Normal),
+        ];
+        for (i, (glyph, weight)) in expect.iter().enumerate() {
+            let cell = g.get(i as u16, 2).unwrap();
+            assert_eq!(cell.glyph, Some(*glyph), "column {i}: glyph");
+            assert_eq!(cell.weight, *weight, "column {i}: weight");
+            assert_eq!(cell.source, Source::Hint, "column {i}: source");
+        }
+    }
+
+    /// When the match list is wider than the pane, as many full
+    /// candidates as fit are drawn and the rest collapse to a PLAIN
+    /// "… +N more" count — arithmetic, not a suggested name, so it never
+    /// carries the bold stem.
+    #[test]
+    fn overlong_hint_collapses_to_fitting_matches_plus_a_count() {
+        let n = Narration {
+            prose: String::new(),
+            nouns: vec![],
+        };
+        // 22 columns: "look  loop  … +2 more" is 21 columns (10 for the two
+        // candidates and join, 2 for the second join, 9 for the marker), so
+        // the first two candidates fit beside an honest count — but adding
+        // "lord" would end at 16 + 2 + 9 = 27, past the fold.
+        let mut g = crate::Grid::new(22, 4);
+        draw(
+            &n,
+            &mut g,
+            (0, 0),
+            22,
+            4,
+            crate::Focus::Cli,
+            crate::CommandLine::default(),
+            None,
+            Some(&Hint {
+                stem: "lo",
+                matches: &["look", "loop", "lord", "long"],
+            }),
+        );
+        let row: String = (0..22)
+            .map(|x| g.get(x, 3).unwrap().glyph.unwrap_or(' '))
+            .collect();
+        let text = row.trim_end();
+        assert!(text.starts_with("look  loop"), "got {row:?}");
+        assert!(text.ends_with("+2 more"), "got {row:?}");
+        assert!(!text.contains("lord") && !text.contains("long"));
+        // The count marker is plain throughout — no bold anywhere in it.
+        // Char columns, not bytes: the ellipsis is three bytes but one cell.
+        let marker_chars = "+2 more".chars().count();
+        let total_chars = row.trim_end().chars().count();
+        let marker_start = total_chars - marker_chars;
+        for x in marker_start..total_chars {
+            assert_eq!(
+                g.get(x as u16, 3).unwrap().weight,
+                Weight::Normal,
+                "count marker column {x} must be plain"
+            );
+        }
     }
 }

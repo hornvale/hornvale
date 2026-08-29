@@ -8,7 +8,7 @@
 //! sanctioned test-fixture posture the weir's spec carves out.
 #![allow(clippy::disallowed_methods)]
 
-use hornvale_astronomy::{EclipseBody, StdDays};
+use hornvale_astronomy::{EclipseBody, StdInstant};
 use hornvale_worldgen::{
     LadderRung, SettlementPins, SkyChoice, crisis_from, doctrine_from, ladder_from,
     observations_from, placed_peoples,
@@ -34,8 +34,8 @@ fn generated(seed: u64) -> hornvale_kernel::World {
 const EPOCH_1: f64 = 0.0;
 const EPOCH_2: f64 = 36_525.0;
 
-fn at(day: f64) -> StdDays {
-    StdDays::new(day).unwrap()
+fn at(day: f64) -> StdInstant {
+    StdInstant::new(day).unwrap()
 }
 
 /// claim: invariant(forall-seed) — day-0 witnessed set is empty
@@ -340,7 +340,7 @@ type Row = (
 //
 // **Every witnessed COUNT held, for the seventh re-measure running.** This is
 // the narrowest movement this table has ever recorded, and it is narrow for a
-// legible reason: the re-key changes WHO COMPETES FOR A CELL, not what any
+// legible reason: the re-key changes WHO COMPETES FOR A VERTEX, not what any
 // world's eclipse arithmetic is, and the one people it moves out of the
 // surface competition is drow. One row, and it is drow's. The movement is
 // one-way this time only because there is one of it.
@@ -380,7 +380,7 @@ type Row = (
 // `"fracture"` — against genera spelled `"karst-cave"` and `"fracture-cave"`,
 // so two of the three formations never matched their own rows and silently
 // read the genus-blind fallback. Repairing the join changes which rung drow
-// seats at in those columns, which changes which surface cells it competes
+// seats at in those columns, which changes which surface vertices it competes
 // for, which is the same mechanism Task 8's entry describes — so the same one
 // row moves, and this time downward.
 //

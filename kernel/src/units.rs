@@ -7,6 +7,20 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::ops::{Add, Sub};
 
+/// The exclusive upper bound on a tick count, as an `f64`: 2^63.
+///
+/// **Not** `i64::MAX as f64`. `i64::MAX` is `2^63 - 1`, which is not
+/// representable in `f64` — the cast rounds it *up* to `2^63`. So a guard
+/// written `ticks > i64::MAX as f64` admits a `ticks` of exactly `2^63`,
+/// which then saturates to `i64::MAX` under `as i64` and yields a silently
+/// wrong instant instead of a refusal. Comparing `>=` against `2^63` itself
+/// closes that one-ULP hole. The negative edge needs no equivalent: `i64::MIN`
+/// is `-2^63` exactly, so `i64::MIN as f64` is lossless.
+///
+/// Shared by [`crate::field::WorldTime::from_std_days`] and
+/// [`TickSpan::from_std_days`] so the two range checks cannot drift apart.
+pub(crate) const TICKS_EXCLUSIVE_UPPER_BOUND: f64 = 9_223_372_036_854_775_808.0;
+
 /// Why a quantity constructor refused a value.
 /// type-audit: bare-ok(identifier-text: unit), bare-ok(diagnostic-value: value), bare-ok(identifier-text: reason)
 #[derive(Debug, Clone, PartialEq)]
@@ -161,8 +175,8 @@ impl SeaLevelHeight {
 /// The signed metre difference between two elevations, as a bare `f64`.
 ///
 /// **Deliberately not a [`SeaLevelHeight`].** Subtracting two elevations is
-/// polymorphic in *meaning*: `cell - sea_level` is a height above sea level,
-/// but `cell - upwind_neighbour` is an orographic rise between two places
+/// polymorphic in *meaning*: `vertex - sea_level` is a height above sea level,
+/// but `vertex - upwind_neighbour` is an orographic rise between two places
 /// (`domains/climate`'s `moisture.rs` and `provider.rs` both do exactly that),
 /// and a terrain-detail delta is neither. Only the first has anything to do
 /// with a datum, so typing this operator's output as a datum-named quantity
@@ -182,7 +196,7 @@ impl Sub for ReferenceElevation {
 /// An absolute temperature, degrees Celsius.
 ///
 /// Distinguished at the type level from [`TempAnomaly`] (decision 0008):
-/// the two were previously both bare `CellMap<f64>`, and code has twice
+/// the two were previously both bare `VertexMap<f64>`, and code has twice
 /// mixed up "absolute reading" with "difference from present" when feeding
 /// the same function. A `Temperature` is a reading; it cannot be compared to a
 /// threshold meant for a difference, because there is no such comparison —
@@ -247,7 +261,7 @@ impl Add<TempAnomaly> for Temperature {
 
 /// A temperature difference relative to the world's present climate,
 /// degrees Celsius (e.g. an era's reading minus the present reading at the
-/// same cell). Only producible via [`Temperature`] subtraction — see that impl.
+/// same vertex). Only producible via [`Temperature`] subtraction — see that impl.
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct TempAnomaly(f64);
 
@@ -372,6 +386,72 @@ impl Years {
     /// type-audit: bare-ok(constructor-edge: return)
     pub fn days(self) -> f64 {
         self.0 * Self::DAYS_PER_YEAR
+    }
+}
+
+/// A signed difference between two [`crate::field::WorldTime`] instants, in
+/// ticks. Signed because a span is directional: `earlier - later` is negative
+/// and that ordering must not be silently lost.
+///
+/// Distinct from `Years`, which is a NON-NEGATIVE coarse span, and from
+/// astronomy's `StdDays`. The field is `pub(crate)` so the kernel's own `Sub`
+/// impl can build one without a fallible constructor, while no crate outside
+/// the kernel can bypass the named crossings.
+///
+/// The span is exact ticks (The Escapement, decision 0186), so it derives
+/// `Eq`/`Ord`/`Hash` alongside `WorldTime` and a difference of two instants
+/// carries no rounding at all.
+/// type-audit: bare-ok(count)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TickSpan(pub(crate) i64);
+
+impl TickSpan {
+    /// The span in ticks — an exact field read.
+    /// type-audit: bare-ok(count: return)
+    pub const fn ticks(self) -> i64 {
+        self.0
+    }
+
+    /// Build a span from an exact tick count.
+    /// type-audit: bare-ok(count: ticks)
+    pub const fn from_ticks(ticks: i64) -> TickSpan {
+        TickSpan(ticks)
+    }
+
+    /// Build a span from a DURATION in fractional standard days, rounding to
+    /// the nearest tick.
+    ///
+    /// The span twin of [`crate::field::WorldTime::from_std_days`], and it
+    /// exists for the same reason: spec §2.1 requires the crossing from the
+    /// continuous domain onto the lattice happen ONCE, explicitly. Without it
+    /// a caller holding an `f64` duration has no way to reach the lattice
+    /// except by re-deriving a float day from an instant, adding, and
+    /// re-rounding — two crossings where one belongs, and the arithmetic
+    /// happening in the domain the campaign left.
+    /// type-audit: bare-ok(constructor-edge: days)
+    pub fn from_std_days(days: f64) -> Result<TickSpan, UnitError> {
+        if !days.is_finite() {
+            return Err(UnitError {
+                unit: "standard days",
+                value: days,
+                reason: "must be finite",
+            });
+        }
+        let ticks = (days * crate::field::WorldTime::TICKS_PER_STD_DAY as f64).round();
+        if ticks < i64::MIN as f64 || ticks >= TICKS_EXCLUSIVE_UPPER_BOUND {
+            return Err(UnitError {
+                unit: "standard days",
+                value: days,
+                reason: "outside the representable tick range",
+            });
+        }
+        Ok(TickSpan(ticks as i64))
+    }
+
+    /// The span in fractional standard days.
+    /// type-audit: bare-ok(constructor-edge: return)
+    pub fn as_std_days(self) -> f64 {
+        self.0 as f64 / crate::field::WorldTime::TICKS_PER_STD_DAY as f64
     }
 }
 
@@ -561,7 +641,7 @@ mod tests {
 
     #[test]
     fn subtraction_stays_a_bare_number_because_it_is_polymorphic() {
-        // `cell - upwind_neighbour` is an orographic rise, not a height above
+        // `vertex - upwind_neighbour` is an orographic rise, not a height above
         // any datum, and `domains/climate` computes exactly that. Typing this
         // operator's output as a SeaLevelHeight would make it assert a datum
         // that isn't there.
@@ -578,5 +658,35 @@ mod tests {
         let h = floor.above(sea);
         assert!(h.get() < 0.0, "the sea floor is below sea level");
         assert!(h.depth() > 1000.0, "and its depth reads positive");
+    }
+
+    #[test]
+    fn a_tick_span_range_check_rejects_exactly_two_to_the_sixty_three() {
+        // The span twin of
+        // `field::tests::the_tick_range_check_rejects_exactly_two_to_the_sixty_three`,
+        // duplicated deliberately: the two constructors are separate bodies
+        // and a guard fixed in one is worth nothing to the other. Both now
+        // read TICKS_EXCLUSIVE_UPPER_BOUND, and both are pinned.
+        let per_day = crate::field::WorldTime::TICKS_PER_STD_DAY as f64;
+        let over = TICKS_EXCLUSIVE_UPPER_BOUND / per_day;
+        assert!(
+            TickSpan::from_std_days(over).is_err(),
+            "a span of 2^63 ticks is one past the axis; `as i64` would saturate it to i64::MAX"
+        );
+
+        let last = f64::from_bits(TICKS_EXCLUSIVE_UPPER_BOUND.to_bits() - 1);
+        assert_eq!(
+            TickSpan::from_std_days(last / per_day)
+                .expect("2^63 - 1024 ticks is a representable span")
+                .ticks(),
+            9_223_372_036_854_774_784,
+        );
+
+        assert_eq!(
+            TickSpan::from_std_days(-TICKS_EXCLUSIVE_UPPER_BOUND / per_day)
+                .expect("i64::MIN ticks is representable exactly")
+                .ticks(),
+            i64::MIN,
+        );
     }
 }

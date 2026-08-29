@@ -862,16 +862,22 @@ mod tests {
         // merge re-run: the previous chamber run reddened on `census_duration`
         // first and nextest's fail-fast cancelled this test, so the budget red
         // masked it (this test is not in the sub-floor tier a local gate runs).
+        // THE GRANARY: evaluable 114 -> 117, excluded 51 -> 50, total
+        // 227 -> 229 — the campaign's two new census columns
+        // (`granary-raid-phase-concentration`,
+        // `granary-raids-in-depleted-half`) plus one further column crossing
+        // onto the evaluable side at this epoch. Both granary metrics are
+        // Numeric and vary across worlds, so they are real ranker surface.
         let c = committed();
         let (evaluable, excluded) = evaluable_columns(&c);
         assert_eq!(
             evaluable.len(),
-            114,
+            117,
             "evaluable count moved — re-measure and update this"
         );
         assert_eq!(
             excluded.len(),
-            51,
+            50,
             "excluded count moved — re-measure and update this"
         );
     }

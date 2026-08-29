@@ -14,7 +14,7 @@
 //! # WIDENED TWICE SINCE IT WAS FIRST WRITTEN
 //!
 //! This probe was written against the pre-`chamber/v3` lattice, where one
-//! `(cell, entrance, band, slot)` **was** one chamber. Two epochs have moved
+//! `(vertex, entrance, band, slot)` **was** one chamber. Two epochs have moved
 //! underneath it since, and the loop below has been repointed for each
 //! without changing what it COUNTS — deliberately, because silently changing
 //! a committed measurement inside a merge commit is worse than leaving it
@@ -35,7 +35,7 @@
 //! derived U1 exactly, on all three seeds — 4512 / 9353 / 7372 — so the
 //! counter is right about the population it names.) **Every M2/M3 figure
 //! denominated in `chamber_count` — the energy total at `SURVIVE_K`, the
-//! per-place parity, the land-cells-per-chamber ratio — therefore understates
+//! per-place parity, the land-vertices-per-chamber ratio — therefore understates
 //! the underworld it is trying to feed by that factor.**
 //!
 //! Re-running it is campaign work under preregistration discipline, not a
@@ -56,7 +56,7 @@
 //! wearing six hats.
 //!
 //! - **M4** — do `silica`/`grain`/`induration`/`carbonate`/
-//!   `metamorphic_grade`/`porosity` discriminate, over cave-bearing cells?
+//!   `metamorphic_grade`/`porosity` discriminate, over cave-bearing vertices?
 //!   Distributions plus the pairwise correlation matrix.
 //! - **M1** — the surface calibration target: `PHOTOSYNTHATE`
 //!   (`base_carrying`) and `PLANT_FORAGE` supply, over land.
@@ -66,7 +66,7 @@
 //! - **M3** — "as lush as the Overworld": comparable-total or
 //!   comparable-per-place? The two read wildly differently given the
 //!   ~50-80x address-count ratio between the underworld's chamber lattice
-//!   and the surface's land cells.
+//!   and the surface's land vertices.
 //! - **M5** — is `prospectivity` an abundance, or only a `[0,1]`
 //!   probability? (`domains/terrain/src/lithology.rs`'s own doc comment on
 //!   `prospectivity`: "the deposits campaign turns this field into point
@@ -76,21 +76,36 @@
 //! World-building idiom copied from `delver_depth_probe.rs`/
 //! `ore_separation_probe.rs` (`build_world`/`terrain_of`, no
 //! `BuildDepth::Full` — that symbol does not exist in this idiom).
-//! Cave-bearing-cell enumeration copied from `underworld_lithology_probe.rs`
-//! (`geo.cells()` filtered by `terrain.cave_at(cell).is_some()`, ocean cells
-//! excluded first since `cave_at` already refuses them). Chamber addressing
-//! copied from `delve_seating.rs::made_chambers` (`ChamberAddr { cell, band,
-//! branch, level }`, `chamber_exists` gating existence, never assumed —
-//! `entrance` was a field of that address when this was copied and is not
-//! one now).
+//! Cave-bearing-vertex enumeration copied from `underworld_lithology_probe.rs`
+//! (`geo.vertices()` filtered by `terrain.cave_at(vertex).is_some()`, ocean
+//! vertices excluded first since `cave_at` already refuses them). Chamber
+//! addressing copied from `delve_seating.rs::made_chambers` (`ChamberAddr {
+//! vertex, band, branch, level }`, `chamber_exists` gating existence, never
+//! assumed — `entrance` was a field of that address when this was copied and
+//! is not one now, and that field's own name has since changed too,
+//! matching the project's lexicon of place (book/src/reference/
+//! lexicon-of-place.md): the point-sense name it carried at copy time is
+//! `vertex` today).
 //!
 //! Test fixture (decision 0092): calls the sculpt/fit derivation entry
 //! points directly to build its own world state, once per test — the
 //! sanctioned test-fixture posture the weir's spec carves out.
+//!
+//! # RE-RUN AGAINST `main` (The Sources, Task 1, 2026-08-26)
+//!
+//! Harvested from `campaign/the-winze` (unmerged, 403 commits behind at the
+//! time of this re-run) and re-measured against `main` at `7576eca00`, after
+//! The Glasshouse's temperature re-centring. M4's decoupling verdict
+//! **reproduces exactly**, n=3 seeds (42/7/1234): the same three
+//! representative pairs the metaplan (§3.2) cites off seed 1234's matrix —
+//! `silica`x`porosity` -0.0279, `silica`x`carbonate` 0.1983,
+//! `grain`x`metamorphic_grade` 0.0988 — and the coupled pair,
+//! `induration`x`metamorphic_grade` 0.9818, all bit-for-bit unchanged. No
+//! doc, registry or metaplan number changed.
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{CellId, Seed};
+use hornvale_kernel::{Seed, Vertex};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, chamber_exists, rung_rank};
 use hornvale_worldgen::{
@@ -178,15 +193,15 @@ fn habitation_ranks() -> Vec<u8> {
 }
 
 /// One seed's full measurement: the six field vectors over cave-bearing
-/// cells (M4), `PHOTOSYNTHATE`/`PLANT_FORAGE` over land (M1), the
-/// addressable-chamber count (M2), and land-cell/surface-total figures used
+/// vertices (M4), `PHOTOSYNTHATE`/`PLANT_FORAGE` over land (M1), the
+/// addressable-chamber count (M2), and land-vertex/surface-total figures used
 /// by M2/M3. Bundled into one struct so the per-seed print block and the
 /// cross-seed assertions read off the same computation rather than two
 /// passes that could disagree.
 struct SeedMeasurement {
     seed_value: u64,
-    /// Six vectors, cave-bearing cells only, in `FIELD_NAMES` order.
-    /// **PAIRED by cell** — index `i` is the same cell in every vector, which
+    /// Six vectors, cave-bearing vertices only, in `FIELD_NAMES` order.
+    /// **PAIRED by vertex** — index `i` is the same vertex in every vector, which
     /// is what makes `pearson` over them meaningful. Never sort these.
     fields: [Vec<f64>; 6],
     /// The same six, each independently ascending. For percentiles ONLY;
@@ -194,7 +209,7 @@ struct SeedMeasurement {
     sorted_fields: [Vec<f64>; 6],
     photosynthate_land: Vec<f64>,
     plant_forage_land: Vec<f64>,
-    land_cells: usize,
+    land_vertices: usize,
     chamber_count: u64,
 }
 
@@ -212,17 +227,17 @@ fn measure(seed_value: u64) -> SeedMeasurement {
     let climate = climate_of(&world).expect("climate");
     let geo = terrain.geosphere();
 
-    // M4 — the six lithology axes, over cave-bearing cells (not just land:
+    // M4 — the six lithology axes, over cave-bearing vertices (not just land:
     // that is where the energy would be consumed).
     let mut fields: [Vec<f64>; 6] = Default::default();
-    let mut cave_cells: Vec<CellId> = Vec::new();
-    for cell in geo.cells() {
-        if terrain.cave_at(cell).is_some() {
-            cave_cells.push(cell);
+    let mut cave_vertices: Vec<Vertex> = Vec::new();
+    for vertex in geo.vertices() {
+        if terrain.cave_at(vertex).is_some() {
+            cave_vertices.push(vertex);
         }
     }
-    for &cell in &cave_cells {
-        let b = terrain.material_at(cell);
+    for &vertex in &cave_vertices {
+        let b = terrain.material_at(vertex);
         let values = [
             b.silica,
             b.grain,
@@ -236,7 +251,7 @@ fn measure(seed_value: u64) -> SeedMeasurement {
         }
     }
     // PAIRED, not sorted. An earlier version sorted each axis here, before
-    // `pearson` saw them — which destroys the per-cell pairing and, by the
+    // `pearson` saw them — which destroys the per-vertex pairing and, by the
     // rearrangement inequality, computes the MAXIMUM correlation achievable
     // over any pairing of the two multisets rather than the correlation of
     // the data. Two unrelated fields with similar marginal shapes score near
@@ -254,31 +269,31 @@ fn measure(seed_value: u64) -> SeedMeasurement {
     // M1 — PHOTOSYNTHATE (`base_carrying`) and PLANT_FORAGE, over land.
     let inputs = carrying_inputs_of(geo, &terrain, &climate);
     let base_carrying = hornvale_demography::carrying_capacity(geo, &inputs);
-    let forage = forage_supply_field(geo, base_carrying.as_cell_map());
+    let forage = forage_supply_field(geo, base_carrying.as_vertex_map());
     let mut photosynthate_land = Vec::new();
     let mut plant_forage_land = Vec::new();
-    let mut land_cells = 0usize;
-    for cell in geo.cells() {
-        if terrain.is_ocean(cell) {
+    let mut land_vertices = 0usize;
+    for vertex in geo.vertices() {
+        if terrain.is_ocean(vertex) {
             continue;
         }
-        land_cells += 1;
-        photosynthate_land.push(base_carrying.at(cell));
-        plant_forage_land.push(*forage.get(cell));
+        land_vertices += 1;
+        photosynthate_land.push(base_carrying.at(vertex));
+        plant_forage_land.push(*forage.get(vertex));
     }
     photosynthate_land.sort_by(f64::total_cmp);
     plant_forage_land.sort_by(f64::total_cmp);
 
-    // M2 — addressable chambers: read `chamber_exists` at every (cell, band,
-    // slot) a cave-bearing cell's lattice could hold, rather than assuming
+    // M2 — addressable chambers: read `chamber_exists` at every (vertex, band,
+    // slot) a cave-bearing vertex's lattice could hold, rather than assuming
     // the lattice is full (spec: `chamber.rs`'s own existence gate is a
     // fixed-density draw, `EXISTENCE_DENSITY = 0.5`, never a certainty).
     let mut chamber_count: u64 = 0;
-    for &cell in &cave_cells {
+    for &vertex in &cave_vertices {
         let cave = terrain
-            .cave_at(cell)
-            .expect("cave_cells only holds cave-bearing cells");
-        let gradient = terrain.geothermal_gradient_at(cell);
+            .cave_at(vertex)
+            .expect("cave_vertices only holds cave-bearing vertices");
+        let gradient = terrain.geothermal_gradient_at(vertex);
         for &rank in &habitation_ranks() {
             let band = hornvale_kernel::Band::from_rank(rank)
                 .expect("habitation_ranks() yields real habitation ranks");
@@ -289,7 +304,7 @@ fn measure(seed_value: u64) -> SeedMeasurement {
                 // A.3), so the old `entrance: 0` pin is gone with it — one
                 // shared lattice per system, addressed by every aperture.
                 let addr = ChamberAddr {
-                    cell,
+                    vertex,
                     band,
                     branch,
                     level: 0,
@@ -307,7 +322,7 @@ fn measure(seed_value: u64) -> SeedMeasurement {
         sorted_fields,
         photosynthate_land,
         plant_forage_land,
-        land_cells,
+        land_vertices,
         chamber_count,
     }
 }
@@ -316,7 +331,7 @@ fn measure(seed_value: u64) -> SeedMeasurement {
 /// assertions) — M1-M5 of task-2m-brief.md, seeds 42/7/1234. Ruling 2: this
 /// is a decision instrument, not a pass/fail gate on a chosen constant.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: whether plural chemotrophic sources decorrelate; run by hand (The Winze, Task 2M, answered its question; demoted by The Governor 2026-08-28)"]
 fn winze_energy_probe() {
     // Cross-seed accumulators for the branch-table assertions below.
     let mut max_abs_corr_over_all_seeds: f64 = 0.0;
@@ -329,10 +344,10 @@ fn winze_energy_probe() {
     for seed_value in SEEDS {
         let m = measure(seed_value);
         println!(
-            "\n== seed {} ==  cave-bearing cells {}  land cells {}",
+            "\n== seed {} ==  cave-bearing vertices {}  land vertices {}",
             m.seed_value,
             m.fields[0].len(),
-            m.land_cells
+            m.land_vertices
         );
 
         // --- M4: distributions ---
@@ -412,7 +427,7 @@ fn winze_energy_probe() {
 
         // --- M2 ---
         let surface_total: f64 = m.photosynthate_land.iter().sum();
-        let surface_per_cell = surface_total / m.land_cells.max(1) as f64;
+        let surface_per_vertex = surface_total / m.land_vertices.max(1) as f64;
         let total_underworld_needed_at_survive_k = SURVIVE_K * m.chamber_count as f64;
         println!(
             "  [M2] addressable chambers: {}  (SURVIVE_K {:.1} per chamber -> total {:.2} needed to found everywhere)",
@@ -420,39 +435,39 @@ fn winze_energy_probe() {
         );
 
         // --- M3: per-place parity vs total parity ---
-        let per_place_parity_total = surface_per_cell * m.chamber_count as f64;
+        let per_place_parity_total = surface_per_vertex * m.chamber_count as f64;
         let per_place_parity_ratio = if surface_total > 0.0 {
             per_place_parity_total / surface_total
         } else {
             f64::NAN
         };
         let total_parity_per_chamber = surface_total / m.chamber_count.max(1) as f64;
-        let total_parity_ratio = if surface_per_cell > 0.0 {
-            total_parity_per_chamber / surface_per_cell
+        let total_parity_ratio = if surface_per_vertex > 0.0 {
+            total_parity_per_chamber / surface_per_vertex
         } else {
             f64::NAN
         };
         println!(
-            "  [M3] surface total {:.2} over {} land cells (mean/cell {:.6})",
-            surface_total, m.land_cells, surface_per_cell,
+            "  [M3] surface total {:.2} over {} land vertices (mean/vertex {:.6})",
+            surface_total, m.land_vertices, surface_per_vertex,
         );
         println!(
-            "  [M3] per-place parity: underworld total would need to be {:.2} ({:.2}x surface total, = chambers/land_cells)",
+            "  [M3] per-place parity: underworld total would need to be {:.2} ({:.2}x surface total, = chambers/land_vertices)",
             per_place_parity_total, per_place_parity_ratio,
         );
         println!(
-            "  [M3] total parity:     underworld per-chamber would need to be {:.6} ({:.4}x surface per-cell, = land_cells/chambers = {:.4})",
+            "  [M3] total parity:     underworld per-chamber would need to be {:.6} ({:.4}x surface per-vertex, = land_vertices/chambers = {:.4})",
             total_parity_per_chamber,
             total_parity_ratio,
-            m.land_cells as f64 / m.chamber_count.max(1) as f64,
+            m.land_vertices as f64 / m.chamber_count.max(1) as f64,
         );
     }
 
-    // Harness guard: a survey that saw no cave-bearing cells measured
+    // Harness guard: a survey that saw no cave-bearing vertices measured
     // nothing, and every table above would be a page of NaNs read as data.
     assert!(
         any_field_measured,
-        "the survey found no cave-bearing cells across {} seeds — M4 is measuring nothing",
+        "the survey found no cave-bearing vertices across {} seeds — M4 is measuring nothing",
         SEEDS.len()
     );
 
@@ -494,7 +509,7 @@ fn winze_energy_probe() {
     //
     //    The probe that produced "no pairwise |r| below 0.5488, 29/45 at
     //    >= 0.8" sorted each field's vector INDEPENDENTLY before computing
-    //    `pearson`, which destroys the per-cell pairing. By the rearrangement
+    //    `pearson`, which destroys the per-vertex pairing. By the rearrangement
     //    inequality that computes the MAXIMUM correlation achievable over any
     //    pairing of two multisets, not the correlation of the data — so two
     //    unrelated fields with similar marginal shapes score near 1.0. A

@@ -4,7 +4,7 @@
 #
 # Provenance: captured at commit aacbd70d ("docs(the-rill): Task 1's guard is
 # the width law, not the network"), from a throwaway unit test inside
-# `channel.rs`'s own `mod tests` — `cell_spacing` and `local_slope` are
+# `channel.rs`'s own `mod tests` — `vertex_spacing` and `local_slope` are
 # private, so the triples cannot be read from outside the crate. The capture
 # code is deliberately not committed; this file predates every change to the
 # law by construction, since it is committed alone and first.
@@ -16,9 +16,9 @@
 # near it.
 #
 # Columns: drainage slope spacing edge0 edge1 edge2 edge3
-#   drainage  upstream land-cell COUNT, `TectonicGlobe.drainage`
+#   drainage  upstream land-vertex COUNT, `TectonicGlobe.drainage`
 #   slope     `local_slope`, metres of fall per radian
-#   spacing   `cell_spacing`, mean angular separation to neighbours, radians
+#   spacing   `vertex_spacing`, mean angular separation to neighbours, radians
 #   edge0..3  `band_edges(drainage, slope, spacing)` under the law at capture
 #
 # The guard this exists for is THE WIDTH LAW AS A PURE FUNCTION: feed the

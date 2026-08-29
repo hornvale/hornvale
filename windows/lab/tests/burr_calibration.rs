@@ -59,13 +59,76 @@ const DICTIONARY: &str = "../../book/src/reference/dictionary-generated.md";
 /// Absorb of main (Task 16, The Underworld and peers merged in): 0.7994579945799458.
 /// Accuracy **rose** +0.0081. The Burr never changed a word after Stage 5; this
 /// move is The Underworld's placement re-key (decision 0102, keying the bake to a
-/// PLACE not a cell), which shifts which concepts each tongue is exposed to and so
+/// PLACE not a vertex), which shifts which concepts each tongue is exposed to and so
 /// which words populate the dictionary the classifier reads — a different corpus of
 /// the SAME per-family character, measured once more on the merged product. The
 /// campaign's thesis is unaffected: every typological stage still raised
 /// distinguishability, and the merged readout is the highest of the run. Pinned from
 /// the merged run per decision 0016; never tuned.
-const BASELINE: f64 = 0.7994579945799458;
+///
+/// The Confidant (Arc III of The Bridle): 0.7993421052631579. Accuracy **fell**
+/// 0.0116 percentage points — the smallest move this pin has recorded. Same
+/// mechanism the entry above names, from the other direction: that campaign
+/// registered six felt-state concepts and gave each people a derived exposure to
+/// some of them (`MindVector`-governed, at most one pole of each valence-opposed
+/// pair), so six new words enter every tongue's dictionary and the classifier
+/// reads a slightly larger corpus. Not a typological change and not a claim about
+/// distinguishability: The Burr's thesis is untouched, and a readout that moves by
+/// one part in ten thousand when the corpus grows is the pin behaving as designed.
+/// Re-pinned deliberately, per this test's own instruction, and recorded in the
+/// chronicle. Never tuned.
+///
+/// The Granary: sub-year raid timing moved settlement survival/naming; the
+/// canonical census re-pin (lefford, goldens c54fb62c9) reads
+/// 0.7980645161290323. Accuracy **fell** 0.0013 — the second-smallest move
+/// this pin has recorded. The Granary touches no language code; the mover is
+/// the same corpus effect the two entries above name — which settlements
+/// survive to be named changes which words populate the dictionary the
+/// classifier reads. The Burr's thesis (typological stages raise
+/// distinguishability) is untouched. Re-pinned deliberately, per this test's
+/// own instruction. Never tuned.
+///
+/// The Inquest (Task 6): 0.7978316326530612. Accuracy **fell** 0.00023 — the
+/// smallest move this pin has ever recorded, and the first one whose cause is
+/// legible as an exact fraction rather than inferred. The campaign registered
+/// `kill` (one concept, universal stratum), so every one of the 18 daughters
+/// gains one word: the readout goes from **1237/1550 to 1251/1568**. The
+/// denominator grew by exactly 18 and the numerator by 14 — `kill` classified
+/// correctly in 14 of the 18 tongues, marginally below the running rate, which
+/// is the whole of the move. **1237/1550 is a subset of the new reading**: not
+/// one pre-existing word changed corpus or classification, which is the same
+/// thing the campaign's three byte-goldens show as zero-deletion diffs. Same
+/// mechanism as The Confidant's entry above, one concept instead of six. The
+/// Burr's thesis (typological stages raise distinguishability) is untouched.
+/// Re-pinned deliberately, per this test's own instruction. Never tuned.
+///
+/// The Mortise: 0.798234552332913. Accuracy **rose** 0.00040 — the third-
+/// smallest move this pin has recorded (The Confidant's 0.000116 and The
+/// Inquest's 0.000233 are both smaller; The Confidant's own entry states its
+/// move in percentage points rather than absolute, which is what made The
+/// Inquest call itself the smallest). The campaign registered `think` (one
+/// concept), so every one of the 18 daughters gains one word: the readout
+/// goes from **1251/1568 to 1266/1586**.
+///
+/// The denominator grew by exactly 18 and the numerator by 15, and **the
+/// numerator's 15 is not `think` alone.** Decomposed word by word against the
+/// base tree: `think` is classified correctly in **13** of the 18 tongues,
+/// and the remaining **+2 is net movement among 8 PRE-EXISTING words** that
+/// re-classified — 5 gained credit, 3 lost it — because adding a word to
+/// every daughter shifts each tongue's trigram profile, which is what the
+/// classifier reads.
+///
+/// **That makes this entry differ from The Inquest's above in kind, not only
+/// in size.** The Inquest deliberately asserted the subset property — not one
+/// pre-existing word changed corpus or classification. For The Mortise that
+/// property is **false**, and it was asserted here before it was measured.
+/// A registration is not always additive in what the CLASSIFIER sees, even
+/// when it is strictly additive in what the LEXICON holds.
+///
+/// The Burr's thesis (typological stages raise distinguishability) is
+/// untouched. Re-pinned deliberately, per this test's own instruction. Never
+/// tuned.
+const BASELINE: f64 = 0.798234552332913;
 
 /// The chance floor for an 18-way assignment. Reported alongside the baseline
 /// because an accuracy figure without its denominator is not interpretable.

@@ -62,6 +62,18 @@ editing:
   calibration* ("how many named units a satisfying space carries"),
   explicitly not coverage audit: same 0095 discipline, different job,
   different output type.
+- `sentences/` — the third sibling, founded by The Interlinear: frozen,
+  provenance-stamped corpora for `domains/language`, measuring whether
+  today's grammar can produce or parse a demand a real utterance makes. It
+  holds **two kinds of corpus, not one**: recorded or authored *dialogue*
+  (`the-merchant`, `the-flood-watch`), and a typology-ordered *capability
+  ladder* of graded rungs (`the-ladder`, an unfrozen `.DRAFT`) which is not
+  dialogue at all. A corpus **declares** its demands or **derives** them
+  by transitive closure, never both (decision 0386). Same data/code split as
+  `tropes/`/`systems/` (decision 0011) — the corpus is data, the resolver is
+  `cli/tests/suite/sentence_corpus.rs` and nothing in `domains/language`
+  reads a corpus file — and the same freeze-before-measurement discipline
+  (decision 0016).
 - `docs/` and `book/src/frontier/` — the knowledge-architecture discipline.
 
 `make doctor` prints the live self-map — layering, gate targets, artifact
@@ -77,11 +89,16 @@ canonical box. Everything costing minutes or more — the stage gate, the
 merge queue, the heavy tier, and censuses — runs on
 **lefford**, the canonical box for the artifacts several of them author,
 behind one strictly serial claim (below). The heavy tier is an *authoring*
-path, not merely an expensive one — three of its tests write committed
-artifacts and one compares a live probe against lefford-authored census
-fixtures — so `heavy-run.sh` carries the same canonical-host guard a census
-does. Dispatch it from the Mac with `make heavy-remote REF=<full-sha>` (a
-SHA, not a branch name).
+path, not merely an expensive one — **one** of its tests writes a committed
+artifact (`history_battery::history_gates_full_world_and_cross_seed`, writing
+`book/src/laboratory/generated/the-history/`; the count read three until The
+Governor, 2026-08-28, which demoted `sounding_sweep` out of the tier and
+found that the third, `occupancy_readout_is_current`, only ever COMPARED
+against its fixture and was never a writer at all — see decision 0086's three
+amendments) and one compares a live probe against
+lefford-authored census fixtures — so `heavy-run.sh` carries the same
+canonical-host guard a census does. Dispatch it from the Mac with
+`make heavy-remote REF=<full-sha>` (a SHA, not a branch name).
 
 **The claim, not the Mac, absorbs contention now (decision 0133).** The old
 loadavg-42–63 shape The Timekeeper measured — three campaign sessions each
@@ -135,7 +152,27 @@ make doctor        # the repo self-map — run this first in a fresh session
 #   make quick                                        # cheap half only: fmt-check + clippy + type-audit
 #   make gate-commit                                  # THE COMMIT GATE: local, seconds, every commit
 #   make sluice-stage BRANCH=<branch> REF=<full-sha>  # THE STAGE GATE: the queue, minutes, each plan-stage boundary — never pushes
-#   make sluice       BRANCH=<branch> REF=<full-sha>  # THE MERGE: same queue, same FOUR phases as the stage gate, pushes the SHA it tested
+#   make sluice       BRANCH=<branch> REF=<full-sha>  # THE MERGE: same queue, the stage phases PLUS heavy, pushes the SHA it tested
+#
+# A MERGE RUNS ONE MORE PHASE THAN A STAGE GATE AGAIN (decision 0426,
+# 2026-08-28). `heavy` is back on `scripts/sluice-run.sh`'s MERGE list, last,
+# after The Governor cut the tier 3.52x (1551.631 s -> 440.269 s nextest wall,
+# 118 -> 64 tests, 10 -> 0 failures on lefford, measured at `e76ea0497`). The
+# roster is 64: that campaign's final review restored
+# `occupancy_readout_is_current` to `heavy:` (decision 0086's third amendment),
+# and a re-measure against the full 64-test roster confirmed the restoration
+# cost nothing — the restored test slotted under the tier's existing pole and
+# the wall moved down, not up. A merge goes from ~1129.5 s to ~1595.3 s
+# (+41%) — the mean of the four 2026-08-28 four-phase merges plus ~465.8 s, both
+# derived in decision 0426 and not restated in a second form here; a
+# prose-only candidate still pays none of it. `seam-guard`
+# stays off both. THE STAGE LIST IS UNTOUCHED, and deliberately: heavy compares
+# a live probe against the COMMITTED census fixtures, which are refreshed once
+# per campaign at pre-merge close, so on a stage gate it would red predictably
+# for the whole middle of any world-touching campaign. This restores the
+# pre-0148 arrangement exactly — heavy was never a stage phase. The phase names
+# themselves stay in `scripts/lane-sets.tsv`, which this block points at rather
+# than restates.
 #
 # THE STAGE GATE IS THE SAME OBJECT AS A MERGE, MINUS THE PUSH. It is not a
 # separate system: one column in the queue TSV (`kind`), one branch at the
@@ -266,11 +303,15 @@ make doctor        # the repo self-map — run this first in a fresh session
 # closed rather than falling back to an uncontrolled local run.
 #
 # THERE IS NO LONGER AN "ONE SET ON DEMAND" ESCAPE. `make lane SET=<set>` is
-# gone with the rest of the dispatch layer. The two sets the chamber does not
-# run keep their own entry points (`make heavy-remote`, `census-run.sh`); for
+# gone with the rest of the dispatch layer. The sets the chamber does not run
+# keep their own entry points (`make seam-guard`, `census-run.sh`); for
 # anything else, the honest answer is that an operator resident on the box
 # runs that set's own command from `scripts/lane-sets.tsv` directly, which is
-# what "one session managing one machine" means in practice.
+# what "one session managing one machine" means in practice. (`make
+# heavy-remote` used to be listed here as a set the chamber does not run.
+# Decision 0426 put the tier back on the MERGE phase list; the by-hand entry
+# point survives, and is still the only way to run the tier at a plan-stage
+# boundary, but it is no longer the only thing that dispatches it.)
 #
 #   make sluice-census BRANCH=<requester> REF=<full-sha>  # A CENSUS, QUEUED
 #
@@ -473,9 +514,11 @@ cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/ty
 #     /// seam-guard: identity(0) scope(hornvale-kernel)
 # `identity(N)` replaces the call with its Nth argument (unit conversions,
 # clamps, wrappers); `returns(EXPR)` replaces it outright. Runs as its own
-# `campaign`-rung set, run as one of the merge queue's chamber phases (there
-# is no aggregate campaign-gate target and no on-demand set dispatch anymore
-# — see the gate ladder above), not the commit gate — each call site costs a full scoped
+# `campaign`-rung set, run ONLY when a human types `make seam-guard` — it is
+# not a chamber phase (decision 0148 took it off and 0426 did not put it
+# back), there is no aggregate campaign-gate target, and there is no on-demand
+# set dispatch anymore — see the gate ladder above. Nor is it in the commit
+# gate — each call site costs a full scoped
 # test run, so `list` (which shows the site count without building) is worth
 # reading first: an experimental tag on `quantize` listed 36 sites, and a
 # broadly-called function makes a poor seam.
@@ -509,7 +552,11 @@ cargo run --manifest-path tools/seam-guard/Cargo.toml -- run <seam> <file>  # na
 # ROSTER MEANS (decision 0148).** 0148 took `seam-guard` and `heavy` off the
 # merge phase list because the two were 80.5% of a merge's wall time. So it
 # now runs only when a human types `make seam-guard` — there is no schedule,
-# no gate, and no phase behind it.
+# no gate, and no phase behind it. **This is now true of seam-guard ALONE**:
+# decision 0426 put the heavy tier back on the merge phase list once The
+# Governor had cut it 3.52x, and declined to do the same for seam-guard, whose cost is
+# a full scoped test run per call site and whose guarantee moves at campaign
+# cadence. Do not read the two as still sharing a fate.
 #
 # `docs/audits/seam-guard-roster.md` (the committed, drift-checked artifact)
 # lists what is REGISTERED and what has been DECLARED. It has never carried
@@ -662,10 +709,35 @@ unknown`), excluded from the cargo workspace by `Cargo.toml`. The repo
 boundary **is** the determinism boundary (decision 0055): Hornvale
 guarantees byte-identical seeded output up to and including the wasm ABI;
 what a client does with that output is unconstrained (decisions 0022/0023).
-The external Orrery client (a sibling repo) consumes `clients/world-wasm`'s
-released catalog — so **scene schemas (`scene/system/v1`, `scene/tiles/v1`,
-…) are cross-repo contracts: additive-or-versioned only**, the same
-discipline seed labels carry.
+**THE EXTERNAL CLIENTS ARE RETIRED (decision 0356), AND THIS PARAGRAPH USED
+TO SAY OTHERWISE.** It read: "The external Orrery client (a sibling repo)
+consumes `clients/world-wasm`'s released catalog — so **scene schemas are
+cross-repo contracts: additive-or-versioned only**." Goldengrove and the
+Orrery are gone, so the released catalog has no reader outside this
+repository and a scene schema (`scene/system/v1`, `scene/tiles/v1`, …) is no
+longer a cross-repo contract. Change one outright where that is the simpler
+design; version it where that is clearer; neither choice owes anything to a
+consumer that does not exist. Decision 0055's *mechanism* — a versioned wasm
+catalog, never a re-implementation and never a server — stands unchanged and
+is still the right answer for any future external client; only its premise
+lapsed.
+
+**Two things do NOT relax with it, and the sentence above used to bundle all
+three together.** The repo boundary is still the determinism boundary:
+byte-identical seeded output up to and including the wasm ABI is a guarantee
+Hornvale makes to *itself*, pinned by the golden smoke test that compares
+wasm output against the native CLI for the same seed and pins. And **seed
+labels are still permanent contracts** — a seed label binds every world ever
+generated, not a client, so "the same discipline seed labels carry" was
+never the reason schemas were disciplined and survives the clients that were.
+
+**Why the correction is loud rather than a quiet edit:** a record that
+outlives its subject does not sit inert, it produces wrong answers from
+readers acting in good faith. The merge queue vetted a `scene/eclipses` v1→v2
+bump as *correct* on the strength of the retired sentence, which made a
+version bump look like the disciplined choice and hid that the change also
+**removed** the float fields. The gate caught it; the vet, reading this file,
+did not.
 
 **A world is a seed plus a ledger.** `World { seed, registry, ledger }`
 serializes to JSON; everything else is re-derived deterministically.
@@ -709,9 +781,31 @@ contradicts, lower ("coarse constrains fine").
   because reload re-derives from the lossless seed — never seed a chaotic
   forward-integrator from quantized ledger floats; resumption re-derives
   from the seed, and any chaotic checkpoint needs its own full-precision
-  format.
-- **No wall-clock time anywhere**. Time is `WorldTime { day: f64 }` —
-  absolute standard days.
+  format. **Time is carved out of this contract** (decision 0188, The
+  Escapement): significant-digit rounding buys constant absolute precision
+  only for a magnitude-bounded quantity, and time is unbounded, so a
+  committed day's resolution decayed with world age under this scheme: adjacent
+  storable instants were 86.4 s apart at world-year 100 and **24 hours** apart
+  at world-year 200,000, a horizon `windows/worldgen/src/hazard.rs` actually
+  constructs. (Both figures are the FULL spacing between storable values. Half
+  that — the distance you must move to change the stored number — is an equally
+  real quantity and mixing the two in one sentence is how this line read before
+  it was corrected.) `Ledger::commit`'s
+  day-quantization block is deleted outright rather than made a no-op; every
+  other quantized surface 0033 named — `Value::Number` in a committed
+  `Fact`, the lab CSV, the scene/ephemeris `f64` fields — is unchanged.
+- **No wall-clock time anywhere**. Time is `WorldTime { ticks: i64 }` — an
+  exact tick count since genesis, 100,000 ticks per standard day, one tick =
+  0.864 s (decision 0186). Negative ticks are legal (a founder can be born
+  before the history record begins, decision 0126); `TickSpan(i64)` is the
+  signed difference between two instants. Being an exact integer, `WorldTime`
+  needs no quantization at any magnitude and is a legal `BTreeMap` key
+  (`Ord`/`Eq`/`Hash` all derive). The kernel hosts one named, world-independent
+  hatch between ticks and `f64` standard days for continuous consumers
+  (astronomy, climate, lab); ticks→`f64` is lossless below ~2.47e8 years,
+  `f64`→ticks always rounds and the rounding rule is named at the call. A
+  world file written before this flip does not load (decision 0189,
+  deliberately) — regenerate it from its seed and pins.
 - No `HashMap`/`HashSet` — `BTreeMap`/`BTreeSet`/`Vec` only. Float sorting
   uses `total_cmp` with deterministic tie-breaks. (This ban and the
   wall-clock one are enforced workspace-wide by `clippy.toml`
@@ -819,11 +913,33 @@ idle. `HV_PUSH_OK=1` is the hotfix escape and the refusal names it.
 and so does a human pushing by hand there, so "am I on lefford" would have
 allowed the very landing that prompted this (`ca6f34310`, 2026-08-19) while
 blocking a legitimate hotfix from the Mac. Holding the claim answers the host
-question for free. **`pre-commit` cannot do this job at all** — verified: a
+question for free. **`pre-commit` cannot do this job at all** — a
 fast-forward merge, which is how main advances locally, creates no commit and
-fires no hook; a true merge commit fires `pre-merge-commit`, never
-`pre-commit`. The push is the only choke point every route to `origin/main`
+fires no hook. The push is the only choke point every route to `origin/main`
 passes through.
+
+**The second half of that sentence used to read "a true merge commit fires
+`pre-merge-commit`, never `pre-commit`", labelled *verified*, and it is
+false.** The Escapement measured the full matrix on git 2.50.1 in a scratch
+repo with both hooks installed under `core.hooksPath`:
+
+| merge shape | hook that fires |
+| --- | --- |
+| fast-forward | **neither** — no commit is created |
+| automatic (non-conflicted) true merge commit | `pre-merge-commit` only |
+| **conflicted** merge, resolved by hand, concluded with an explicit `git commit` | **`pre-commit`** |
+
+A conflicted merge is an ordinary `git commit` invocation as far as git is
+concerned. This is not hypothetical: a conflicted 47-commit absorption ran the
+full gate through `pre-commit` (fmt, clippy, type-audit, 3 subfloor chunks,
+3302 tests, rc=0, 50.1 s), and `scripts/hooks/` holds no `pre-merge-commit` at
+all. **The gap is real but the opposite shape from the old warning**: the
+ungated case is the CLEAN auto-merge, where nobody hand-edited anything; the
+conflicted absorption — where someone is resolving files by hand and is most
+likely to mis-resolve a generated artifact — is the one that IS gated. Worth
+knowing before deciding whether to gate by hand after an absorption. None of
+this changes the paragraph above: the push hook remains the only choke point,
+because the fast-forward row creates no commit for any hook to see.
 
 **Campaign branches absorb main at every plan-stage boundary**, not only at
 close: submit `make sluice-stage BRANCH=<branch> REF=<full-sha>`, which

@@ -408,7 +408,7 @@ fn read_world(
         let Some(bio) = components.biosphere.get_by_label(people) else {
             continue;
         };
-        let life = hornvale_species::life_history(bio.mass, bio.metabolic_class, bio.schedule);
+        let life = hornvale_species::life_history(bio.mass, bio.thermal_strategy, bio.schedule);
         let to_days = |years: hornvale_kernel::Years| StdDays::new(years.get() * year_days).ok();
         let generation = life.generation_length.and_then(to_days);
         let lifespan = life.lifespan.and_then(to_days);
@@ -598,7 +598,7 @@ fn print_scale_check(seed: u64, components: &hornvale_worldgen::WorldComponents)
             .span(Precision::FINEST)
             .map(|span| span.get())
             .unwrap_or(0.0);
-        let cells: Vec<String> = ladder
+        let vertices: Vec<String> = ladder
             .labels()
             .iter()
             .enumerate()
@@ -612,7 +612,7 @@ fn print_scale_check(seed: u64, components: &hornvale_worldgen::WorldComponents)
                 )
             })
             .collect();
-        println!("    {people:<14} {}", cells.join("  "));
+        println!("    {people:<14} {}", vertices.join("  "));
     }
 
     let coarsest_spans: Vec<f64> = read
@@ -672,7 +672,7 @@ fn print_scale_check(seed: u64, components: &hornvale_worldgen::WorldComponents)
 /// substrate controls and the one scale control that would catch an inverted
 /// conversion.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the unit-corrected exploratory follow-up readout for the Palimpsest's unit-conversion erratum; run by hand (Myth campaign 3, The Palimpsest, answered its question; demoted by The Governor 2026-08-28)"]
 fn the_palimpsest_unit_corrected_exploratory_readout() {
     let components = hornvale_worldgen::WorldComponents::assemble().expect("components assemble");
 

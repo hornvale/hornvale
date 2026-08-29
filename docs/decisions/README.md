@@ -198,11 +198,52 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0171](0171-a-players-acts-are-not-filtered-out-of-a-saved-world.md) | A player's acts are not filtered out of a saved played world | Accepted |
 | [0172](0172-a-concept-with-no-possible-referent-is-an-extradiegetic-gap.md) | A concept with no possible referent is lexicalised as an extradiegetic gap | Accepted |
 | [0176](0176-the-chamber-address-gains-a-floor-and-sunless-becomes-nadir.md) | The chamber address gains a floor, and `Sunless` becomes `Nadir`, on one `chamber/v3` epoch | Accepted |
+| [0186](0186-an-instant-is-an-exact-tick-count.md) | An instant is an exact tick count — the lattice is the time domain | Accepted |
+| [0187](0187-a-pre-genesis-sky-query-is-clamped-to-genesis.md) | A pre-genesis sky query is clamped to genesis, deliberately | Accepted |
+| [0188](0188-quantize-still-governs-magnitude-time-leaves-it.md) | Quantize still governs magnitude; time leaves the contract entirely | Accepted |
+| [0189](0189-a-pre-flip-world-file-does-not-load-and-that-is-the-point.md) | A pre-flip world file does not load, and that is the point | Accepted |
+| [0190](0190-a-reachability-trace-is-not-closed-by-finding-one-funnel.md) | A reachability trace is not closed by finding one funnel | Accepted |
+| [0191](0191-an-exact-store-needs-no-quantized-query-bound.md) | An exact store needs no quantized query bound | Accepted |
 | [0196](0196-a-map-is-a-fact-about-the-world-and-a-view-is-a-lens.md) | A map's frame is a fact about the world, and a view of the world is a lens | Accepted |
 | [0197](0197-co-location-is-not-discovery.md) | Co-location is not discovery | Accepted |
+| [0206](0206-a-derived-values-key-is-its-validity.md) | A derived value's key is its validity | Accepted |
+| [0207](0207-the-derived-store-is-generic-per-shape.md) | The derived store is generic per value shape, never heterogeneous | Accepted |
+| [0208](0208-completing-the-key-retired-the-level-guard.md) | Completing `corner_weights`'s key retired its level guard | Accepted |
 | [0216](0216-the-depth-band-roster-is-a-kernel-type.md) | The depth-band roster is a kernel type, and moving it is not an epoch | Accepted |
 | [0226](0226-a-possessed-host-is-co-present-not-displaced.md) | A possessed host is co-present, not displaced | Accepted |
 | [0227](0227-possession-selects-a-body-it-does-not-mint-one.md) | Possession selects a body; it does not mint one | Accepted |
 | [0228](0228-a-controller-is-a-parameter-of-the-tick.md) | A controller is a parameter of the tick, not a property of the body | Accepted |
 | [0229](0229-one-body-type.md) | One body type | Accepted |
-| [0230](0230-a-query-bound-is-quantized-to-read-a-quantized-store.md) | A query bound is quantized to read a quantized store | Accepted |
+| [0230](0230-a-query-bound-is-quantized-to-read-a-quantized-store.md) | A query bound is quantized to read a quantized store | Superseded by 0191 |
+| [0246](0246-a-renamed-concept-keeps-its-serialized-spelling-forever.md) | A renamed concept keeps its serialized spelling forever, and the freeze needs a test that cannot be rebaselined | Accepted |
+| [0247](0247-a-mesh-vertex-is-a-vertex-and-a-face-is-a-facet.md) | A mesh vertex is a `Vertex` and a face is a `Facet` | Accepted |
+| [0256](0256-a-hosts-testimony-is-fallible-by-construction.md) | A host's testimony is fallible by construction, and the gap is the deliverable | Accepted |
+| [0257](0257-felt-states-are-concepts.md) | Felt states are concepts, and they accede as an appended cohort | Accepted |
+| [0258](0258-introspective-access-is-bounded.md) | Introspective access is bounded — a creature cannot perceive what its own arbitration suppressed | Accepted |
+| [0259](0259-conceptual-deficiency-is-derived-not-authored.md) | Conceptual deficiency is derived from authored psychology, never authored per people | Accepted |
+| [0260](0260-a-seed-invariant-derivation-is-a-window.md) | A seed-invariant derivation is a window, not a census metric | Accepted |
+| [0261](0261-a-rule-duplicated-on-purpose-carries-a-two-way-agreement-test.md) | A rule duplicated on purpose carries a pointer in both copies and a two-way agreement test | Accepted |
+| [0266](0266-an-utterance-is-a-fact.md) | An utterance is a fact, an event is an entity, and roles are predicates on that entity | Accepted |
+| [0286](0286-each-realizer-ignores-part-of-the-clause.md) | A language-neutral clause states more than any one realizer surfaces | Accepted |
+| [0287](0287-a-zoom-rung-is-a-mesh-depth.md) | A zoom rung is a mesh depth | Accepted |
+| [0288](0288-fog-of-war-is-band-as-alone.md) | Bands B through E share one epistemic model; fog of war is band A's alone | Accepted |
+| [0289](0289-the-map-is-layers-with-distinct-cache-keys.md) | The map is layers with distinct cache keys, and terrain never shares an invalidation key with discovery | Accepted |
+| [0290](0290-the-perception-layer-is-drawn-where-the-mesh-is-reachable.md) | The perception layer is drawn where the mesh is reachable | Accepted |
+| [0291](0291-the-point-under-the-cursor-is-invariant-across-a-zoom-step.md) | The geographic point under the cursor is invariant across a zoom step | Accepted |
+| [0292](0292-centre-on-arrival-anchor-on-gesture.md) | Centre on arrival, anchor on gesture | Accepted |
+| [0293](0293-a-rung-is-a-property-of-consulting-the-map.md) | A rung is a property of consulting the map, not of the walker | Accepted |
+| [0294](0294-a-mode-gesture-is-not-a-fetch.md) | A mode gesture is not a fetch | Accepted |
+| [0295](0295-pre-formatted-sim-output-survives-the-prose-pane.md) | Pre-formatted sim output survives the prose pane | Accepted |
+| [0296](0296-tense-is-stated-never-derived.md) | Tense is stated, never derived — a clause has no clock | Accepted |
+| [0297](0297-a-predicates-valence-is-stated-once-and-commons-parts-are-selected-from-it.md) | A predicate's valence is stated once, and Common's parts are selected from it | Accepted |
+| [0306](0306-a-hosts-cooperation-is-derived-from-doctrine-and-conduct-never-authored.md) | A host's cooperation is derived from doctrine and conduct, never authored | Accepted |
+| [0307](0307-a-deliberate-falsehood-is-a-distinct-testimony-variant-from-a-lexical-substitution.md) | A deliberate falsehood is a distinct testimony variant from a lexical substitution | Accepted |
+| [0308](0308-prior-and-fold-are-stored-separately-their-disagreement-is-the-output.md) | Prior and fold are stored separately; their disagreement is the output | Accepted |
+| [0326](0326-a-clause-complement-rides-the-transitive-frame-no-sentential-valence.md) | A clause complement rides the transitive frame — no `Valence::Sentential` | Accepted |
+| [0327](0327-embedding-and-coordination-are-two-operators-a-slot-and-a-list.md) | Embedding and coordination are two operators — a slot and a list | Accepted |
+| [0328](0328-embedding-nests-one-level-a-cap-on-demonstrated-depth.md) | Embedding nests one level — a cap on demonstrated depth, not a safety belt | Accepted |
+| [0329](0329-subordination-strategy-and-conjunction-are-drawn-per-tongue.md) | Subordination strategy and conjunction are drawn per tongue, not assumed | Accepted |
+| [0330](0330-the-corpus-score-is-demonstrated-not-declared.md) | The corpus score is demonstrated, not declared | Accepted |
+| [0386](0386-a-corpus-declares-its-demands-or-derives-them-never-both.md) | A corpus declares its demands or derives them, never both | Accepted |
+| [0387](0387-an-absent-direction-is-unknown-never-inferred.md) | Coverage is reported per direction, and an absent direction is unknown | Accepted |
+| [0388](0388-the-ladder-is-a-production-instrument-and-parse-robustness-is-a-separate-axis.md) | The ladder is a production instrument; parse-robustness is a separate axis | Accepted |

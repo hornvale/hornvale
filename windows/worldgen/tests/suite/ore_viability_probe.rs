@@ -4,15 +4,15 @@
 //! Changes no production code. Task 1
 //! (`ore_separation_probe.rs`, `task-1-report.md`) measured that mineral
 //! prospectivity does not separate settlements, and on two of three seeds
-//! occupied cells are *under*-represented in the top prospectivity decile.
+//! occupied vertices are *under*-represented in the top prospectivity decile.
 //! `prospectivity` is high on plate boundaries and unrest; settlement founding
 //! is a capacity-maximising ring search. Those are plausibly anti-correlated —
-//! and if high-prospectivity cells carry near-zero carrying capacity, a mine
+//! and if high-prospectivity vertices carry near-zero carrying capacity, a mine
 //! founded there starves on arrival regardless of what founding rule chooses
 //! it, and mines must be *satellites* supplied from elsewhere rather than
 //! settlements in their own right.
 //!
-//! **The question, precisely: over land cells, what is the joint distribution
+//! **The question, precisely: over land vertices, what is the joint distribution
 //! of prospectivity and carrying capacity?**
 //!
 //! ## Capacity accessor
@@ -22,7 +22,7 @@
 //! [`EraAdjust::present`] (documented on `per_species_capacity_at`), and
 //! `per_species_capacity` is the form that does not require building an era
 //! series first. `Bake::eff_capacity` (`history_bake.rs`) is
-//! `caps_now()[pidx].at(cell) * factor(era, cell)`, where `caps_now` is this
+//! `caps_now()[pidx].at(vertex) * factor(era, vertex)`, where `caps_now` is this
 //! exact per-species-capacity field for the current era and `factor` is an
 //! ice mask that is **currently inert** (`bake_eras` fills `era.ice` all-false
 //! on every production path — see `Bake::factor`'s doc). So at genesis (era
@@ -44,7 +44,7 @@
 //! an aggregate that averaged over peoples with different niches would be a
 //! number that looks authoritative and means nothing (task brief). The one
 //! place a single number is needed (the decisive fraction, and the "good
-//! capacity" cell set for the converse) uses **max over the roster**: a cell
+//! capacity" vertex set for the converse) uses **max over the roster**: a vertex
 //! is viable if *any* people in the roster could live there, which is exactly
 //! the disjunction "could a mine (settled by whichever people) exist here".
 //!
@@ -62,7 +62,7 @@
 //! `GENESIS_POP / COLLAPSE_PRESSURE = 10.0 / 2.0 = 5.0`
 //! (`pressure = population * NEED / eff_capacity`, `NEED = 1.0`,
 //! `COLLAPSE_PRESSURE = 2.0`, genesis opens at `GENESIS_POP = 10.0` —
-//! `history_bake.rs`): a cell whose capacity is below 5.0 starves a
+//! `history_bake.rs`): a vertex whose capacity is below 5.0 starves a
 //! ten-person genesis community above `COLLAPSE_PRESSURE` on the very epoch
 //! it is founded. This is also the exact floor `niche_breadth_probe.rs`
 //! independently derived and named `SURVIVE_K` for the identical question.
@@ -82,6 +82,15 @@
 //! Test fixture (decision 0092): calls the sculpt/fit derivation entry points
 //! directly to build its own world state, once per test — the sanctioned
 //! test-fixture posture the weir's spec carves out.
+//!
+//! # RE-RUN AGAINST `main` (The Sources, Task 1, 2026-08-26)
+//!
+//! Harvested from `campaign/the-winze` (unmerged, 403 commits behind at the
+//! time of this re-run) and re-measured against `main` at `7576eca00`, after
+//! The Glasshouse's temperature re-centring. **Reproduces exactly**, n=3
+//! seeds (42/7/1234): the panel minimum on both floors is still seed 1234 —
+//! 71.49% (VIABLE_MIN) and 56.51% (SURVIVE_K), bit-for-bit. No doc, registry
+//! or metaplan number changed.
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
@@ -123,13 +132,13 @@ fn pct(sorted: &[f64], q: f64) -> f64 {
 
 /// claim: readout(off-gate, heavy:, prints the joint table, asserts the
 /// branch landed in) — the joint distribution of `prospectivity_at` and
-/// per-species carrying capacity over land cells, for seeds 42 / 7 / 1234.
+/// per-species carrying capacity over land vertices, for seeds 42 / 7 / 1234.
 /// Ruling 2: a decision instrument, not a pass/fail gate on a chosen cut
 /// point — but the branch table IS a decision rule (task-1b-brief.md), so
 /// this probe's assertions pin the branch actually landed in, not a
 /// preferred one.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the ore-viability branch-table verdict; run by hand (The Winze Task 1b / The Sources Task 1 answered its question; demoted by The Governor 2026-08-28)"]
 fn ore_viability_probe() {
     // Per-seed decisive fractions, collected so the cross-seed summary at the
     // very end can state one branch for the whole panel rather than three
@@ -161,14 +170,16 @@ fn ore_viability_probe() {
         let obliquity_deg = system.anchor.obliquity.get();
         let regime = match system.anchor.rotation {
             hornvale_astronomy::Rotation::Spinning { day, .. } => {
-                hornvale_climate::RotationRegime::Spinning { day_std: day.get() }
+                hornvale_climate::RotationRegime::Spinning {
+                    day_std: day.as_std_days(),
+                }
             }
             hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
         };
 
-        // Land cells, in one fixed order shared by every vector below.
-        let land: Vec<hornvale_kernel::CellId> =
-            geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+        // Land vertices, in one fixed order shared by every vector below.
+        let land: Vec<hornvale_kernel::Vertex> =
+            geo.vertices().filter(|&c| !terrain.is_ocean(c)).collect();
         let n = land.len();
 
         // 1. `prospectivity_at` over land — item 1's field.
@@ -234,7 +245,7 @@ fn ore_viability_probe() {
             })
             .collect();
 
-        // 2. Bucket land cells into deciles by RANK on prospectivity (equal-
+        // 2. Bucket land vertices into deciles by RANK on prospectivity (equal-
         // sized buckets, ties broken by land order — stable sort).
         let mut order: Vec<usize> = (0..n).collect();
         order.sort_by(|&a, &b| land_prosp[a].total_cmp(&land_prosp[b]));
@@ -244,7 +255,7 @@ fn ore_viability_probe() {
             decile_of[i] = d;
         }
 
-        println!("\n== seed {seed_value} ==  land cells {n}");
+        println!("\n== seed {seed_value} ==  land vertices {n}");
         println!(
             "  [1] land prospectivity:  min {:.4}  p50 {:.4}  p90 {:.4}  max {:.4}",
             land_prosp.iter().cloned().fold(f64::INFINITY, f64::min),
@@ -268,11 +279,11 @@ fn ore_viability_probe() {
         );
 
         // 2. The joint table: per decile bucket, per species median/p90
-        // capacity, plus the bucket's cell count.
+        // capacity, plus the bucket's vertex count.
         println!("  [2] joint table (decile 0 = lowest prospectivity, 9 = highest):");
         println!(
             "      {:>3} {:>6}  {:>44}",
-            "dec", "cells", "median / p90 capacity, per species"
+            "dec", "vertices", "median / p90 capacity, per species"
         );
         println!(
             "      {:>3} {:>6}  {}",
@@ -286,7 +297,7 @@ fn ore_viability_probe() {
         );
         for d in 0..10 {
             let idxs: Vec<usize> = (0..n).filter(|&i| decile_of[i] == d).collect();
-            let cells_in_bucket = idxs.len();
+            let vertices_in_bucket = idxs.len();
             let mut row = String::new();
             for species_caps in &cap_vals {
                 let mut vals: Vec<f64> = idxs.iter().map(|&i| species_caps[i]).collect();
@@ -304,14 +315,14 @@ fn ore_viability_probe() {
             let v_vmin = idxs.iter().filter(|&&i| max_cap[i] > VIABLE_MIN).count();
             let v_sk = idxs.iter().filter(|&&i| max_cap[i] > SURVIVE_K).count();
             println!(
-                "      {d:>3} {cells_in_bucket:>6}  {row} viable[VMIN {:>5.1}% SK {:>5.1}%]",
-                v_vmin as f64 / cells_in_bucket.max(1) as f64 * 100.0,
-                v_sk as f64 / cells_in_bucket.max(1) as f64 * 100.0,
+                "      {d:>3} {vertices_in_bucket:>6}  {row} viable[VMIN {:>5.1}% SK {:>5.1}%]",
+                v_vmin as f64 / vertices_in_bucket.max(1) as f64 * 100.0,
+                v_sk as f64 / vertices_in_bucket.max(1) as f64 * 100.0,
             );
         }
 
         // 3. THE DECISIVE NUMBER. Among the top prospectivity decile (9),
-        // what fraction of cells are viable for ANY people in the roster, at
+        // what fraction of vertices are viable for ANY people in the roster, at
         // each of the two floors discussed above?
         let top_idxs: Vec<usize> = (0..n).filter(|&i| decile_of[i] == 9).collect();
         let top_n = top_idxs.len();
@@ -322,7 +333,7 @@ fn ore_viability_probe() {
         let top_viable_sk = top_idxs.iter().filter(|&&i| max_cap[i] > SURVIVE_K).count();
         let frac_vmin = top_viable_vmin as f64 / top_n.max(1) as f64;
         let frac_sk = top_viable_sk as f64 / top_n.max(1) as f64;
-        println!("  [3] top decile ({top_n} cells): viable (max-over-roster capacity > floor):");
+        println!("  [3] top decile ({top_n} vertices): viable (max-over-roster capacity > floor):");
         println!(
             "      VIABLE_MIN ({VIABLE_MIN}): {top_viable_vmin} / {top_n}  ({:.2}%)",
             frac_vmin * 100.0
@@ -332,7 +343,7 @@ fn ore_viability_probe() {
             frac_sk * 100.0
         );
 
-        // 4. The converse, for context: among "good capacity" cells (max
+        // 4. The converse, for context: among "good capacity" vertices (max
         // over roster above VIABLE_MIN — the brief's named floor), what is
         // the prospectivity distribution, against land overall?
         let good_idxs: Vec<usize> = (0..n).filter(|&i| max_cap[i] > VIABLE_MIN).collect();
@@ -341,7 +352,7 @@ fn ore_viability_probe() {
         let mut land_prosp_sorted = land_prosp.clone();
         land_prosp_sorted.sort_by(f64::total_cmp);
         println!(
-            "  [4] converse: {} / {n} land cells ({:.2}%) are 'good capacity' (max-over-roster \
+            "  [4] converse: {} / {n} land vertices ({:.2}%) are 'good capacity' (max-over-roster \
              > VIABLE_MIN); their prospectivity distribution vs. land overall:",
             good_idxs.len(),
             good_idxs.len() as f64 / n.max(1) as f64 * 100.0,
@@ -370,7 +381,7 @@ fn ore_viability_probe() {
     println!("  top-decile viable fraction (SURVIVE_K):  {top_decile_frac_survive_k:?}");
 
     // BRANCH ASSERTION (task-1b-brief.md's decision rule). Landed branch:
-    // "most top-decile-ore cells are viable" at BOTH floors, on every
+    // "most top-decile-ore vertices are viable" at BOTH floors, on every
     // seed — the brief's SURPRISING branch, since it says ore and fertility
     // are not anti-correlated in a way the viability floor can see, even
     // though the per-decile MEDIAN capacity (item 2's table) does decline as
@@ -393,7 +404,7 @@ fn ore_viability_probe() {
             f > 0.30,
             "top-decile viable fraction (VIABLE_MIN) fell to {:.4}, below the measured \
              panel minimum's margin (71.49% on seed 1234) — no longer solidly in the \
-             'most top-decile-ore cells are viable' branch task-1b-report.md landed in; \
+             'most top-decile-ore vertices are viable' branch task-1b-report.md landed in; \
              re-derive the branch table before trusting that report",
             f
         );
@@ -409,7 +420,7 @@ fn ore_viability_probe() {
             f > 0.30,
             "top-decile viable fraction (SURVIVE_K) fell to {:.4}, below the measured \
              panel minimum's margin (56.51% on seed 1234) — no longer solidly in the \
-             'most top-decile-ore cells are viable' branch task-1b-report.md landed in; \
+             'most top-decile-ore vertices are viable' branch task-1b-report.md landed in; \
              re-derive the branch table before trusting that report",
             f
         );

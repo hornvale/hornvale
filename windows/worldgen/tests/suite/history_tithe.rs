@@ -441,7 +441,7 @@ fn secondaries(hist: &[u64; 12]) -> (u64, u64) {
 /// Spec §8.1 — **subordination fires, at volume.** The gate that says branch 2
 /// of the raid rule is new motive rather than a relabelling of the shipped
 /// covet gate: seed 42 forms hundreds of standing relations on targets that
-/// keep their cell, their people and their life, none of which the eviction
+/// keep their vertex, their people and their life, none of which the eviction
 /// branch could have produced. Takeovers are excluded, so churn between rival
 /// patrons cannot be read as volume (§4.4's hysteresis note).
 #[test]
@@ -665,7 +665,7 @@ fn no_emitted_tribute_fact_predates_either_party() {
             Value::Entity(patron) => (
                 f.subject,
                 patron,
-                f.day.expect("a dated relation fact").day(),
+                f.day.expect("a dated relation fact").as_std_days(),
             ),
             ref other => panic!("pays-tribute-to must carry an entity, got {other:?}"),
         })
@@ -908,7 +908,7 @@ fn the_cascade_distribution_is_adjudicated() {
 /// patron people over SHAPE_SAMPLE, asserting only the whole-roster rank
 /// correlation against the roster's own noise bar
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: whether the tribute-strategy family stays various across the roster; run by hand (The Tithe / The Underworld section 8.0 answered its question; demoted by The Governor 2026-08-28)"]
 fn the_strategy_family_is_various() {
     let wc = WorldComponents::assemble().expect("registries");
     // Standing-relation ages, in standard days, grouped by the patron's people.

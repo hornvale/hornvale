@@ -2,15 +2,60 @@
 //! screen, and which channel from the inventory it came from." `Cell::source`
 //! and `Grid::provenance()` make that executable rather than a document.
 //!
-//! Run against **both** committed fixtures deliberately — the walk band
-//! (`chart.rs`) and the chamber band (`plan.rs`) exercise different draw
-//! paths, and a provenance bug confined to one band would be invisible to a
-//! suite that only ever rendered the other.
+//! Run against **all three** bands deliberately — the walk band
+//! (`chart.rs`), the chamber band (`plan.rs`), and the underground band
+//! (`level.rs`) exercise different draw paths, and a provenance bug confined
+//! to one band would be invisible to a suite that only ever rendered the
+//! others. This is the exact reasoning the campaign's own review flagged as
+//! missing for the third band (The Gallery, Task 9, review round 1,
+//! Important 2): the original two-band coverage here was never extended
+//! when `level.rs` shipped, so nothing anywhere asserted a drawn cell's
+//! `.source == Source::Level`.
 
 use hornvale_game_core::{CommandLine, Focus, Grid, Source, render, render_with};
 
 const WALK_FIXTURE: &str = include_str!("fixtures/session-seed-42-turn-0.json");
 const CHAMBER_FIXTURE: &str = include_str!("fixtures/session-seed-42-chamber.json");
+
+/// A synthetic `band: "underground"` document — no committed
+/// `session-seed-42-underground.json` fixture exists yet. Same shape and
+/// same reason as `tests/schema.rs::UNDERGROUND_SNAPSHOT`; duplicated
+/// rather than shared because each integration-test file in this crate is
+/// its own compiled binary and there is no `tests/common/` module here to
+/// share one through.
+const UNDERGROUND_FIXTURE: &str = r#"{
+  "schema": "vessel/session/v2",
+  "turn": 3,
+  "day": 0.02,
+  "self": {
+    "agent": "1",
+    "species": "human",
+    "settlement": "Test",
+    "population": 1
+  },
+  "narration": {
+    "prose": "You stand in a dripping cave.",
+    "nouns": []
+  },
+  "spatial": {
+    "band": "underground",
+    "level": {
+      "rung": "undercroft",
+      "depth_m": 12.5,
+      "extent": { "x": 0, "y": 0, "w": 2, "h": 1 },
+      "palette": [
+        { "kind": "floor", "state": "here" },
+        { "kind": "wall", "state": "remembered" }
+      ],
+      "cells": [
+        { "x": 0, "y": 0, "ix": 0 },
+        { "x": 1, "y": 0, "ix": 1 }
+      ],
+      "you": { "x": 0, "y": 0 },
+      "marks": []
+    }
+  }
+}"#;
 
 /// ACCEPTANCE TEST 3: every visible datum traces to a named channel. A cell
 /// whose source is Unattributed is a datum nobody can justify.
@@ -86,6 +131,38 @@ fn every_drawn_cell_names_its_channel_in_the_chamber_band() {
     );
 }
 
+/// The underground band's equivalent of the acceptance test above, over the
+/// THIRD draw path (`level.rs`). `Source::Level` is the one variant neither
+/// `every_drawn_cell_names_its_channel` nor its chamber-band sibling above
+/// can exercise, since neither fixture ever calls `level::draw` — exactly
+/// the gap review round 1 flagged (Important 2).
+#[test]
+fn every_drawn_cell_names_its_channel_in_the_underground_band() {
+    let g = render(UNDERGROUND_FIXTURE, 80, 24).unwrap();
+    let p = g.provenance();
+    assert_eq!(
+        p.get(&Source::Unattributed).copied().unwrap_or(0),
+        0,
+        "every drawn cell must name the channel it came from: {p:?}"
+    );
+    assert!(
+        p.get(&Source::Level).copied().unwrap_or(0) > 0,
+        "the cave level is drawn"
+    );
+    assert!(
+        p.get(&Source::Prose).copied().unwrap_or(0) > 0,
+        "the entry is drawn"
+    );
+    assert!(
+        p.get(&Source::Identity).copied().unwrap_or(0) > 0,
+        "the endpaper is drawn"
+    );
+    assert!(
+        p.get(&Source::Chrome).copied().unwrap_or(0) > 0,
+        "the command line is drawn"
+    );
+}
+
 /// The redaction, restated over the chamber band. `Chart` and `Chamber`
 /// carry different producers on the wire (`scene/surrounds/v2` vs
 /// `vessel/plan/v1`), but neither mirrors `social` — belt and braces against
@@ -124,6 +201,7 @@ fn the_typed_buffer_is_reachable_from_a_real_render() {
         None,
         None,
         0,
+        None,
     )
     .unwrap();
     let p = grid.provenance();
@@ -152,6 +230,7 @@ fn the_echoed_line_is_reachable_from_a_real_render() {
         Some("look"),
         None,
         0,
+        None,
     )
     .unwrap();
     let p = grid.provenance();

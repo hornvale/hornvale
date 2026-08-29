@@ -112,12 +112,12 @@ const BASELINE_MUTUALLY_EXCLUSIVE_12: usize = 15;
 /// ```
 ///
 /// **WHY, AND THE ATTRIBUTION IS NOT THE OBVIOUS ONE.** The Underworld re-keyed
-/// the history bake's node index from `CellId` to `(CellId, Band)` —
-/// decision 0145, one community per *place* rather than per cell — which is the
+/// the history bake's node index from `Vertex` to `(Vertex, Band)` —
+/// decision 0145, one community per *place* rather than per vertex — which is the
 /// change that most visibly touches settlement placement, and the natural
 /// reading is that it accounts for the move. It does not. Neutralising it
 /// alone (`Bake::rung_for` forced to `Band::Surface`, which makes every
-/// node-index key `(cell, Surface)` and so restores the old one-per-cell
+/// node-index key `(vertex, Surface)` and so restores the old one-per-vertex
 /// semantics exactly, with everything else about the campaign intact) reads:
 ///
 /// ```text
@@ -434,7 +434,7 @@ fn read_world(led: &Ledger, components: &hornvale_worldgen::WorldComponents) -> 
         let Some(bio) = components.biosphere.get_by_label(people) else {
             continue;
         };
-        let life = hornvale_species::life_history(bio.mass, bio.metabolic_class, bio.schedule);
+        let life = hornvale_species::life_history(bio.mass, bio.thermal_strategy, bio.schedule);
         let to_days = |years: hornvale_kernel::Years| StdDays::new(years.get() * year_days).ok();
         durations.insert(
             people,
@@ -685,7 +685,7 @@ fn show_hist<K: std::fmt::Debug + Ord>(hist: &BTreeMap<K, usize>) -> String {
 /// `PANEL`; reports H1–H4 and the §6.6 null against their decision tables and
 /// asserts only substrate controls. A falsified prediction is a finding here.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the Parley's preregistered readout over a seed panel; RED as of 2026-08-28 — this is the origin of the BASELINE_ENDINGS_12/FOREIGN_12/MUTUALLY_EXCLUSIVE_12 pins, which have drifted again since The Underworld changed settlement placement; The Parley's question is closed; run by hand; demoted by The Governor"]
 fn the_parley_readout_over_a_seed_panel() {
     let components = hornvale_worldgen::WorldComponents::assemble().expect("components assemble");
     let mut rows: Vec<SeedRow> = Vec::new();

@@ -10,17 +10,18 @@ use crate::action::{
 };
 use crate::agent::{settlement_position, walk_depth};
 use crate::body::Body;
-use crate::clock::{climb_factor, cost_ticks, days_of, ticks_per_local_day};
+use crate::clock::{climb_factor, cost_of};
 use crate::controller::{Controller, DefaultController, PlayerController};
 use crate::interior::{
     AnchorId, Interior, SeamKind, interior_of, landing, route_within, seam_kind, warmth_at,
 };
+use hornvale_kernel::units::TickSpan;
 use hornvale_kernel::{
-    ANIMAL_PREY, ConditionResponse, EntityId, Fact, Ledger, Lineage, PHOTOSYNTHATE, PLANT_FORAGE,
-    ResourceVector, RoomAddr, RoomId, RoomMeshMemo, TickSystem, Value, World, WorldTime,
+    ANIMAL_PREY, ConditionResponse, EntityId, Facet, FacetId, Fact, Ledger, Lineage, PHOTOSYNTHATE,
+    PLANT_FORAGE, ResourceVector, RoomMeshMemo, TickSystem, Value, World, WorldTime,
 };
 use hornvale_locale::LocaleContext;
-use hornvale_species::{ActivityCycle, MetabolicClass};
+use hornvale_species::{ActivityCycle, ThermalStrategy};
 
 /// A game-layer predicate: an agent's room position on a day. Non-functional
 /// (position changes over sim time — c5's kind-change shape); the current
@@ -38,7 +39,7 @@ pub const AGENT_AT: &str = "agent-at";
 /// transient-danger memory (The Phantom, §1) re-derive a PAST alarm field:
 /// re-placing each emitter where it stood on the remembered day, not where it
 /// stands now (a herd's panic is recovered even after the herd has moved on).
-pub fn agent_position(ledger: &Ledger, npc: &Body, t: WorldTime) -> RoomAddr {
+pub fn agent_position(ledger: &Ledger, npc: &Body, t: WorldTime) -> Facet {
     latest_committed_position(ledger, npc, t).unwrap_or_else(|| npc.home.clone())
 }
 
@@ -66,26 +67,24 @@ pub fn village_or_fallback(npc: &Body) -> hornvale_settlement::VillageInfo {
 /// Commit order is time order, so the last matching fact is the position held
 /// at `t` (the whole-history case — every fact ≤ `t` — is the absolute latest).
 ///
-/// **`t` is quantized before the comparison** (`KNOW-commit-read-same-instant`,
-/// The Hand Task 3 Step 2b). `Ledger::commit` quantizes a fact's `day` to 8
-/// significant digits, and that quantization rounds UPWARD as often as down
-/// (`quantize(0.011719999738288106) == 0.01172`, strictly greater) — so a fact
-/// committed at exactly `t` could fail its own `d <= t` filter, reading back as
-/// "no position committed yet" and falling to `npc.home`, one line away from
-/// the commit that just happened. Quantizing the query bound the same way the
-/// stored value already was makes the two directly comparable: a same-instant
-/// commit-then-read now finds itself, and every other case is unaffected — the
-/// tiny rounding quantization introduces cannot flip the ordering between a
-/// `t` and a `d` that were not already within one part in 10^8 of each other.
-/// Its own commit, ahead of The Hand's merge, because the merge is what makes
-/// this comparison run on the possessed body's OWN position every turn
-/// (previously a mutable field, byte-identical by construction) rather than
-/// only in the narrow `wait`/`narrate_motion` case that exposed it first.
-fn latest_committed_position(ledger: &Ledger, npc: &Body, t: WorldTime) -> Option<RoomAddr> {
-    let t = hornvale_kernel::quantize(t.day());
+/// **The comparison is an exact tick comparison, and `t` is NOT rounded**
+/// (decision 0186; spec §1's paired workaround). The Hand carried
+/// `let t = quantize(t.day())` here, because `Ledger::commit` quantized a
+/// fact's `day` to 8 *significant* digits and that rounding went UPWARD as
+/// often as down (`quantize(0.011719999738288106)` is strictly greater), so a
+/// fact committed at exactly `t` could fail its own `d <= t` filter, read back
+/// as "no position committed yet", and fall to `npc.home` one line after the
+/// commit that made it. The Escapement removed the cause instead of the
+/// symptom: a [`WorldTime`] is an exact `i64` tick count, `Ledger::commit`
+/// stores it unrounded, and `1172 == 1172`. Rounding the query bound now would
+/// reintroduce the same mismatch in the opposite direction — a quantized bound
+/// compared against exactly-stored days — silently, with nothing going red,
+/// which is why spec §1 requires the second merger to delete this half rather
+/// than keep both.
+fn latest_committed_position(ledger: &Ledger, npc: &Body, t: WorldTime) -> Option<Facet> {
     ledger
         .facts_of(npc.entity, AGENT_AT)
-        .filter(|f| f.day.map(|d| d.day() <= t).unwrap_or(false))
+        .filter(|f| f.day.map(|d| d <= t).unwrap_or(false))
         .last()
         .and_then(|f| match &f.object {
             Value::Text(s) => Some(room_from_text(s)),
@@ -93,26 +92,26 @@ fn latest_committed_position(ledger: &Ledger, npc: &Body, t: WorldTime) -> Optio
         })
 }
 
-/// Encode a `RoomAddr` as save-format text: the packed `RoomId` (decision
+/// Encode a `Facet` as save-format text: the packed `FacetId` (decision
 /// 0006), rendered as a decimal `u64` string. Reuses the existing pack/unpack
 /// contract rather than inventing a new encoding.
-fn room_to_text(r: &RoomAddr) -> String {
+fn room_to_text(r: &Facet) -> String {
     r.pack()
         .expect("a scheduled room is always within MAX_DEPTH")
         .0
         .to_string()
 }
 
-/// Decode a `RoomAddr` from its packed-`RoomId` decimal text. Panics on a
+/// Decode a `Facet` from its packed-`FacetId` decimal text. Panics on a
 /// malformed committed value — a corrupted save is a bug, not a runtime case
 /// to route around.
-fn room_from_text(s: &str) -> RoomAddr {
+fn room_from_text(s: &str) -> Facet {
     let id: u64 = s
         .parse()
-        .unwrap_or_else(|_| panic!("agent-at text '{s}' is not a decimal RoomId"));
-    RoomId(id)
+        .unwrap_or_else(|_| panic!("agent-at text '{s}' is not a decimal FacetId"));
+    FacetId(id)
         .unpack()
-        .unwrap_or_else(|_| panic!("agent-at RoomId {id} does not unpack to a valid RoomAddr"))
+        .unwrap_or_else(|_| panic!("agent-at FacetId {id} does not unpack to a valid Facet"))
 }
 
 /// The homeostatic-drive parameters (authored constants; §4.2/§4.3): the rise
@@ -172,8 +171,14 @@ const HELPLESS_PROBE_DAYS: f64 = 5.0;
 /// `(last_drank, day)` — a fold, exactly like the drive it reads, so
 /// `affect_of` (the read) and the drive tick (the mover) compute it identically
 /// and never disagree.
-fn learned_helplessness(last_drank: f64, day: f64) -> bool {
-    let unmet = day - last_drank;
+fn learned_helplessness(last_drank: WorldTime, day: WorldTime) -> bool {
+    // Both arguments are INSTANTS, so their difference is an exact tick span.
+    // The onset threshold and the probe cadence below are authored in
+    // continuous days (`HELPLESS_ONSET_DAYS`, `HELPLESS_PROBE_DAYS`) and the
+    // cadence is a real-valued modulo, so the SPAN crosses to `f64` standard
+    // days HERE, once, at that arithmetic's own edge — the walk does not carry
+    // a float clock to suit it. Lossless below ~2.47e8 years (decision 0186).
+    let unmet = (day - last_drank).as_std_days();
     if unmet < HELPLESS_ONSET_DAYS {
         return false;
     }
@@ -211,7 +216,7 @@ pub const FURNISHING_REFERENCE_DAY: WorldTime = WorldTime::GENESIS;
 /// type-audit: pending(wave-3)
 pub const FURNISHING_COLD_C: f64 = 5.0;
 
-/// A cell's per-axis HAZARD field in `[0, 1]` (The Bane) — the raw, creature-
+/// A room's per-axis HAZARD field in `[0, 1]` (The Bane) — the raw, creature-
 /// INDEPENDENT presence of each kind of hazard, the sources a creature's threat
 /// niche dots against. v1 carries the three axes The Dread's scalar field already
 /// sourced; reserved axes (HOLY/UNHOLY, POISON, DROWNING, PSY-10's PREDATOR) are
@@ -223,7 +228,7 @@ pub const FURNISHING_COLD_C: f64 = 5.0;
 pub struct Hazards {
     /// The UNCANNY — a strange/exotic/cursed place (the strangeness magnitude).
     pub uncanny: f64,
-    /// HEAT — how far the cell's temperature is above the survivable band.
+    /// HEAT — how far the room's temperature is above the survivable band.
     pub heat: f64,
     /// COLD — how far below.
     pub cold: f64,
@@ -234,7 +239,7 @@ pub struct Hazards {
 }
 
 impl Hazards {
-    /// A safe cell — no hazard on any axis (the `Terrain::hazards` default).
+    /// A safe room — no hazard on any axis (the `Terrain::hazards` default).
     pub const ZERO: Hazards = Hazards {
         uncanny: 0.0,
         heat: 0.0,
@@ -247,15 +252,15 @@ impl Hazards {
 /// hazard, the fear twin of the diet `ResourceVector`. Derived from what the
 /// creature already is: the HEAT/COLD weights from its temperature niche (a
 /// creature fears the extreme away from its comfort optimum), the UNCANNY weight
-/// from its metabolic class (a mortal fears the eldritch; an Ametabolic elemental
-/// IS eldritch and does not). v1 weights are `≥ 0` (differential FEAR — a
+/// from its thermal strategy (a mortal fears the eldritch; an ametabolic
+/// elemental IS eldritch and does not). v1 weights are `≥ 0` (differential FEAR — a
 /// creature can be *fearless* of a hazard, weight `0`); NEGATIVE weights (true
 /// *attraction* — drawn to the hazard) are the reserved approach shore, shared
 /// with The Mettle's reckless pole.
 /// type-audit: bare-ok(ratio: uncanny), bare-ok(ratio: heat), bare-ok(ratio: cold), bare-ok(ratio: predator)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ThreatNiche {
-    /// Dread of the UNCANNY (`1` mortal, `0` an Ametabolic elemental).
+    /// Dread of the UNCANNY (`1` mortal, `0` an ametabolic elemental).
     pub uncanny: f64,
     /// Dread of HEAT (high for the cold-adapted).
     pub heat: f64,
@@ -267,8 +272,8 @@ pub struct ThreatNiche {
     pub predator: f64,
 }
 
-/// The felt threat of a cell FOR a creature (The Bane / The Quarry): its threat
-/// niche dotted with the cell's hazards — `Σ niche·hazard` over the axes, the
+/// The felt threat of a room FOR a creature (The Bane / The Quarry): its threat
+/// niche dotted with the room's hazards — `Σ niche·hazard` over the axes, the
 /// fear twin of `food_value = diet_niche · availability`. `≥ 0` in v1 (the
 /// reserved negative-weight attraction would make this go negative — the approach
 /// shore).
@@ -294,8 +299,9 @@ const THERMAL_FEAR_SPAN_C: f64 = 40.0;
 /// Derive a creature's [`ThreatNiche`] from what it already is (The Bane — no
 /// fresh authoring): the HEAT/COLD weights from its temperature-niche optimum (a
 /// creature dreads the extreme AWAY from its comfort — cold-adapted fears heat,
-/// heat-adapted fears cold), and the UNCANNY weight from its metabolic class (a
-/// metabolising mortal fears the eldritch, weight `1`; an `Ametabolic` creature —
+/// heat-adapted fears cold), and the UNCANNY weight from its thermal strategy (a
+/// metabolising mortal fears the eldritch, weight `1`; an ametabolic creature
+/// (`ThermalStrategy::Absent`) —
 /// a construct, an elemental like the xorn — IS eldritch and does not, weight
 /// `0`). v1 weights are `≥ 0` (differential fear; the reserved negative-weight
 /// attraction is the approach shore).
@@ -318,12 +324,12 @@ const PREDATOR_LATENT_SCALE: f64 = 0.5;
 /// all (`0` — it IS one). The defendedness (mass/potency) refinement is reserved.
 fn derive_threat_niche(
     temperature_niche: &ConditionResponse,
-    class: MetabolicClass,
+    class: ThermalStrategy,
     diet_niche: &ResourceVector,
 ) -> ThreatNiche {
     let optimum = temperature_niche.optimum;
     ThreatNiche {
-        uncanny: if matches!(class, MetabolicClass::Ametabolic) {
+        uncanny: if hornvale_species::is_ametabolic(class) {
             0.0
         } else {
             1.0
@@ -345,7 +351,7 @@ pub trait Terrain {
     /// itself is no longer classified by elevation (the-surmise T5 re-wire;
     /// see `is_fresh_water`).
     /// type-audit: waiver(elevation-convention: return)
-    fn elevation(&self, room: &RoomAddr) -> f64;
+    fn elevation(&self, room: &Facet) -> f64;
 
     /// Whether the room's water is FRESH — drinkable — rather than salt.
     /// Reads The Freshet's own classification (`WaterKind::is_fresh`), not
@@ -355,10 +361,10 @@ pub trait Terrain {
     /// this from the locale's own `water` field; planted test terrain marks
     /// specific rooms fresh directly.
     /// type-audit: bare-ok(flag: return)
-    fn is_fresh_water(&self, room: &RoomAddr) -> bool;
+    fn is_fresh_water(&self, room: &Facet) -> bool;
 
     /// The room's PER-DAY temperature on `day`, °C — the diurnal+seasonal
-    /// signal a thermal (flow) drive senses at its own cell, distinct from
+    /// signal a thermal (flow) drive senses at its own room, distinct from
     /// the render path's annual-MEAN `temperature_c` (untouched, so the
     /// possession walk and almanac stay byte-identical). `LocaleTerrain`
     /// reads the locale's per-day `temperature_at`; planted test terrain
@@ -367,7 +373,7 @@ pub trait Terrain {
     /// is never chosen as a comfort target (mirroring `elevation`'s
     /// never-chosen-downhill convention).
     /// type-audit: waiver(temperature-convention: return)
-    fn temperature(&self, room: &RoomAddr, day: WorldTime) -> f64;
+    fn temperature(&self, room: &Facet, day: WorldTime) -> f64;
 
     /// The sun's altitude above the horizon at `room` on `day`, in degrees
     /// (positive = up, negative = below), or `None` on a world with NO day/night
@@ -378,27 +384,27 @@ pub trait Terrain {
     /// `LocaleTerrain` OVERRIDES it with the real astronomy altitude (latitude ×
     /// season × the terminator).
     /// type-audit: waiver(altitude-convention: return)
-    fn solar_altitude(&self, _room: &RoomAddr, day: WorldTime) -> Option<f64> {
+    fn solar_altitude(&self, _room: &Facet, day: WorldTime) -> Option<f64> {
         fractional_day_sun(day)
     }
 
-    /// The cell's material food PRODUCTIVITY in `[0, 1]` (The Provender) — the
+    /// The room's material food PRODUCTIVITY in `[0, 1]` (The Provender) — the
     /// standing plant/prey biomass a forager or grazer can eat there, a
     /// net-primary-productivity proxy over the climate (a slow, annual field,
     /// so it takes no `day`). The `food_value` a specific creature reads
     /// (`food_value`) dots this against the material axes of its niche
     /// (PLANT_FORAGE + ANIMAL_PREY); the PHOTOSYNTHATE (sun-fed) axis reads
     /// `solar_altitude` instead, so an autotroph's food is light, not this.
-    /// The DEFAULT is `DEFAULT_FORAGE` (a generically productive cell) — so
+    /// The DEFAULT is `DEFAULT_FORAGE` (a generically productive room) — so
     /// planted/synthetic test terrains feed an omnivore in place and stay
     /// undisturbed unless a scenario plants barrenness; a live `LocaleTerrain`
     /// OVERRIDES it with the real climate's NPP proxy (`productivity_at`).
     /// type-audit: bare-ok(ratio: return)
-    fn forage_value(&self, _room: &RoomAddr) -> f64 {
+    fn forage_value(&self, _room: &Facet) -> f64 {
         DEFAULT_FORAGE
     }
 
-    /// The cell's per-axis HAZARD field (The Dread's field, split per-axis by
+    /// The room's per-axis HAZARD field (The Dread's field, split per-axis by
     /// The Bane) — the raw, creature-independent presence of each kind of hazard
     /// (uncanny / heat / cold), which a creature's threat niche dots against. The
     /// DEFAULT is [`Hazards::ZERO`] (safe) — so planted/synthetic test terrains
@@ -406,7 +412,7 @@ pub trait Terrain {
     /// live `LocaleTerrain` OVERRIDES it with the real climate (`hazards_at`: the
     /// uncanny strangeness plus graded heat/cold). A slow field, so it takes no
     /// `day`.
-    fn hazards(&self, _room: &RoomAddr) -> Hazards {
+    fn hazards(&self, _room: &Facet) -> Hazards {
         Hazards::ZERO
     }
 
@@ -418,7 +424,7 @@ pub trait Terrain {
     /// territory this? Defaults false, so every existing implementation reads
     /// as wilderness and nothing moves.
     /// type-audit: bare-ok(flag: return)
-    fn is_built(&self, _room: &RoomAddr) -> bool {
+    fn is_built(&self, _room: &Facet) -> bool {
         false
     }
 
@@ -437,28 +443,28 @@ pub trait Terrain {
     /// `temperature`, and one that returns a non-finite value reads as
     /// temperate, since the comparison is false for `NaN`.
     /// type-audit: bare-ok(flag: return)
-    fn is_cold(&self, room: &RoomAddr) -> bool {
+    fn is_cold(&self, room: &Facet) -> bool {
         self.temperature(room, FURNISHING_REFERENCE_DAY) < FURNISHING_COLD_C
     }
 
-    /// The cell's PREY-PRESENCE field in `[0, 1]` (The Teeth) — the standing
+    /// The room's PREY-PRESENCE field in `[0, 1]` (The Teeth) — the standing
     /// prey-base biomass a HUNTER can eat there, the anti-symmetric dual of the
     /// predator hazard (`worldgen::prey_pressure_from`). A creature's
     /// `food_value` dots this against its `ANIMAL_PREY` diet weight, so a
     /// carnivore is drawn up the prey gradient. The DEFAULT is `0.0` (a
-    /// prey-empty cell) — so planted/synthetic test terrains have no prey
+    /// prey-empty room) — so planted/synthetic test terrains have no prey
     /// field and a carnivore reads only the ordinary productivity unless a
     /// scenario plants prey; a live `LocaleTerrain` OVERRIDES it with the
     /// injected prey-pressure field. A slow field, so it takes no `day`.
     /// type-audit: bare-ok(ratio: return)
-    fn prey_value(&self, _room: &RoomAddr) -> f64 {
+    fn prey_value(&self, _room: &Facet) -> f64 {
         0.0
     }
 }
 
-/// The default cell productivity (`Terrain::forage_value`) for a terrain that
-/// plants none — a generically food-rich cell, so an omnivore in a
-/// planted/synthetic test world (or an undescribed live cell) can always eat
+/// The default room productivity (`Terrain::forage_value`) for a terrain that
+/// plants none — a generically food-rich room, so an omnivore in a
+/// planted/synthetic test world (or an undescribed live room) can always eat
 /// where it stands and hunger never spuriously drives it to wander. The live
 /// `LocaleTerrain` never uses this (it reads the real NPP); it exists so pure
 /// tests that don't care about food are not perturbed by the hunger drive.
@@ -469,7 +475,10 @@ const DEFAULT_FORAGE: f64 = 1.0;
 /// `Terrain::solar_altitude` default, and `LocaleTerrain`'s fallback when a
 /// world carries no calendar.
 fn fractional_day_sun(day: WorldTime) -> Option<f64> {
-    let frac = day.day() - day.day().floor();
+    // `tick_of_day()` IS the time of day (The Escapement, decision 0186): an
+    // exact tick within the day, correct for negative instants where
+    // `x - x.floor()` on an f64 day was not.
+    let frac = day.tick_of_day() as f64 / WorldTime::TICKS_PER_STD_DAY as f64;
     Some(90.0 * hornvale_kernel::math::cos(std::f64::consts::TAU * (frac - 0.5)))
 }
 
@@ -478,17 +487,17 @@ fn fractional_day_sun(day: WorldTime) -> Option<f64> {
 /// ocean or a salt basin). Pure over the terrain field; rivers scatter along
 /// drainage, so sources are naturally many, not one.
 /// type-audit: bare-ok(flag: return)
-pub fn is_water(room: &RoomAddr, terrain: &dyn Terrain) -> bool {
+pub fn is_water(room: &Facet, terrain: &dyn Terrain) -> bool {
     terrain.is_fresh_water(room)
 }
 
 /// The single steepest-descent neighbour ("water lies low" — the prior an
-/// ignorant agent explores along). `total_cmp` with an ascending-`RoomAddr`
+/// ignorant agent explores along). `total_cmp` with an ascending-`Facet`
 /// tie-break (the constitutional no-native-float-cmp rule), the same rule
 /// `nearest_water`'s BFS and `lowest_unvisited_neighbor_memo` use. Always a
 /// neighbour (never `from` itself).
-pub fn downhill_step(from: &RoomAddr, terrain: &dyn Terrain) -> RoomAddr {
-    let mut best: Option<(RoomAddr, f64)> = None;
+pub fn downhill_step(from: &Facet, terrain: &dyn Terrain) -> Facet {
+    let mut best: Option<(Facet, f64)> = None;
     for n in from.neighbors() {
         let elev = terrain.elevation(&n);
         let keep_existing = match &best {
@@ -504,12 +513,12 @@ pub fn downhill_step(from: &RoomAddr, terrain: &dyn Terrain) -> RoomAddr {
 
 /// The true nearest water room to `from` (ground-truth-best) — a deterministic
 /// breadth-first walk over the mesh to the closest `is_water` room, frontier
-/// processed in `RoomAddr` order, capped at `budget` expansions (`None` if no
+/// processed in `Facet` order, capped at `budget` expansions (`None` if no
 /// water within it). The agent does not know this until it has PERCEIVED it.
 /// type-audit: bare-ok(count: budget)
-pub fn nearest_water(from: &RoomAddr, terrain: &dyn Terrain, budget: usize) -> Option<RoomAddr> {
-    let mut visited: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
-    let mut frontier: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+pub fn nearest_water(from: &Facet, terrain: &dyn Terrain, budget: usize) -> Option<Facet> {
+    let mut visited: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
+    let mut frontier: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
     frontier.insert(from.clone());
     let mut expansions = 0usize;
     while let Some(room) = frontier.iter().next().cloned() {
@@ -551,18 +560,18 @@ pub struct LocaleTerrain<'a> {
     /// The world's predator-pressure field (The Quarry — `worldgen::
     /// predator_pressure_from`), injected here (a domain/window can't reach up
     /// to demography); `None` → no PREDATOR hazard (throwaway reads / no field).
-    predator: Option<&'a hornvale_kernel::CellMap<f64>>,
+    predator: Option<&'a hornvale_kernel::VertexMap<f64>>,
     /// The world's prey-pressure field (The Teeth — `worldgen::
     /// prey_pressure_from`), the dual of `predator`, injected the same way;
     /// `None` → no prey draw (throwaway reads / no field), so a carnivore
     /// reads only ordinary productivity.
-    prey: Option<&'a hornvale_kernel::CellMap<f64>>,
+    prey: Option<&'a hornvale_kernel::VertexMap<f64>>,
     /// The world's settlement-territory set (The Threshold, task 5b —
     /// `built_rooms`), injected the same way (a domain/window can't reach up
     /// to `hornvale_settlement`); `None` → every room reads unbuilt (a
     /// throwaway read with no world), the same fail-safe-to-wilderness
     /// posture `Terrain::is_built`'s own default takes.
-    built: Option<&'a std::collections::BTreeSet<RoomId>>,
+    built: Option<&'a std::collections::BTreeSet<FacetId>>,
     /// A PREFILLED, READ-ONLY [`hornvale_kernel::RoomMeshMemo`] (the-waymark
     /// fix round, Finding 1): every `corner_weights`-backed read below
     /// consults it first, falling through to a fresh recompute on a miss.
@@ -620,7 +629,7 @@ impl<'a> LocaleTerrain<'a> {
     pub fn with_calendar_and_predators(
         ctx: &'a LocaleContext,
         calendar: Option<&'a hornvale_astronomy::Calendar>,
-        predator: Option<&'a hornvale_kernel::CellMap<f64>>,
+        predator: Option<&'a hornvale_kernel::VertexMap<f64>>,
     ) -> Self {
         Self::with_fields(ctx, calendar, predator, None, None, None)
     }
@@ -638,9 +647,9 @@ impl<'a> LocaleTerrain<'a> {
     pub fn with_fields(
         ctx: &'a LocaleContext,
         calendar: Option<&'a hornvale_astronomy::Calendar>,
-        predator: Option<&'a hornvale_kernel::CellMap<f64>>,
-        prey: Option<&'a hornvale_kernel::CellMap<f64>>,
-        built: Option<&'a std::collections::BTreeSet<RoomId>>,
+        predator: Option<&'a hornvale_kernel::VertexMap<f64>>,
+        prey: Option<&'a hornvale_kernel::VertexMap<f64>>,
+        built: Option<&'a std::collections::BTreeSet<FacetId>>,
         cache: Option<&'a hornvale_kernel::RoomMeshMemo>,
     ) -> Self {
         Self {
@@ -654,19 +663,19 @@ impl<'a> LocaleTerrain<'a> {
     }
 }
 impl<'a> Terrain for LocaleTerrain<'a> {
-    fn elevation(&self, room: &RoomAddr) -> f64 {
+    fn elevation(&self, room: &Facet) -> f64 {
         self.ctx
             .describe_at_cached(room, WorldTime::GENESIS, None, self.cache)
             .map(|l| l.fields.elevation_m)
             .unwrap_or(f64::INFINITY)
     }
-    fn is_fresh_water(&self, room: &RoomAddr) -> bool {
+    fn is_fresh_water(&self, room: &Facet) -> bool {
         self.ctx
             .describe_at_cached(room, WorldTime::GENESIS, None, self.cache)
             .map(|l| l.fields.water.is_fresh())
             .unwrap_or(false)
     }
-    fn temperature(&self, room: &RoomAddr, day: WorldTime) -> f64 {
+    fn temperature(&self, room: &Facet, day: WorldTime) -> f64 {
         // The PER-DAY field (`LocaleContext::temperature_at`), NOT `describe`'s
         // annual-mean `temperature_c` — so the drive gets a diurnal/seasonal
         // swing while the render path stays byte-identical. INFINITY for an
@@ -675,19 +684,19 @@ impl<'a> Terrain for LocaleTerrain<'a> {
             .temperature_at_cached(room, day, self.cache)
             .unwrap_or(f64::INFINITY)
     }
-    fn solar_altitude(&self, room: &RoomAddr, day: WorldTime) -> Option<f64> {
+    fn solar_altitude(&self, room: &Facet, day: WorldTime) -> Option<f64> {
         // The real sun where the world carries a calendar (latitude from the
         // room's centroid; `None` on a locked world → no cycle); else the
         // fractional-day fallback. No `corner_weights` read here (a pure
         // astronomy calc over the room's centroid), so no cache to consult.
         match self.calendar {
-            Some(cal) => hornvale_astronomy::StdDays::new(day.day())
+            Some(cal) => hornvale_astronomy::StdInstant::new(day.as_std_days())
                 .ok()
                 .and_then(|t| cal.solar_altitude_at(t, room.coord().latitude)),
             None => fractional_day_sun(day),
         }
     }
-    fn forage_value(&self, room: &RoomAddr) -> f64 {
+    fn forage_value(&self, room: &Facet) -> f64 {
         // The real climate's net-primary-productivity proxy (The Provender);
         // an undescribable/above-grid room reads 0 (no food), the never-fed
         // fallback (the dual of `temperature`'s never-chosen INFINITY).
@@ -695,7 +704,7 @@ impl<'a> Terrain for LocaleTerrain<'a> {
             .productivity_at_cached(room, self.cache)
             .unwrap_or(0.0)
     }
-    fn hazards(&self, room: &RoomAddr) -> Hazards {
+    fn hazards(&self, room: &Facet) -> Hazards {
         // The real climate's per-axis hazard field (The Bane: the uncanny plus
         // graded heat/cold); an undescribable/above-grid room reads all-zero
         // (safe) — the never-feared fallback, the dual of `forage_value`'s 0.
@@ -717,7 +726,7 @@ impl<'a> Terrain for LocaleTerrain<'a> {
             predator,
         }
     }
-    fn prey_value(&self, room: &RoomAddr) -> f64 {
+    fn prey_value(&self, room: &Facet) -> f64 {
         // The PREY field (The Teeth): the injected prey-pressure field, corner-
         // blended per room (the same read as the predator axis); `0` where no
         // field is injected or the room is above the grid — the prey-empty
@@ -726,7 +735,7 @@ impl<'a> Terrain for LocaleTerrain<'a> {
             .and_then(|field| self.ctx.blend_at_cached(room, field, self.cache))
             .unwrap_or(0.0)
     }
-    fn is_built(&self, room: &RoomAddr) -> bool {
+    fn is_built(&self, room: &Facet) -> bool {
         // THE THRESHOLD's real answer (task 5b): built iff `room` packs to a
         // room id in the injected settlement-territory set (`built_rooms`).
         // `None` (no set injected — a throwaway read with no world) or a pack
@@ -774,40 +783,40 @@ const ECTOTHERM_K: f64 = 1.5;
 const ECTOTHERM_FLOOR: f64 = 0.2;
 
 /// The per-day thirst (dehydration) RATE at ambient temperature `temp` (°C) for
-/// a creature of metabolic `class` — The Kindling's coupling of heat to the
-/// survival drive (spec §3). Endotherms sweat (base below thermoneutral,
+/// a creature of thermal-strategy `class` — The Kindling's coupling of heat to
+/// the survival drive (spec §3). Endotherms sweat (base below thermoneutral,
 /// accelerating above — heat-only); ectotherms track ambient (CAP-1's
-/// principle: symmetric, floored); autotrophs are flat (a deferred seam). An
-/// unreadable cell (non-finite temperature — undescribable/unplanted) couples
+/// principle: symmetric, floored); `Unmodelled` is flat (a deferred seam). An
+/// unreadable room (non-finite temperature — undescribable/unplanted) couples
 /// as neutral (base rate), mirroring the thermal drive's `is_finite` guard.
-fn rise_at(temp: f64, class: MetabolicClass, p: &DriveParams) -> f64 {
+fn rise_at(temp: f64, class: ThermalStrategy, p: &DriveParams) -> f64 {
     let base = p.rise;
     if !temp.is_finite() {
         return base;
     }
     match class {
-        MetabolicClass::Endotherm => {
+        ThermalStrategy::Endothermic => {
             let excess = (temp - THERMONEUTRAL_C).max(0.0);
             base * (1.0 + ENDOTHERM_HEAT_K * excess / HEAT_SCALE_C)
         }
-        MetabolicClass::Ectotherm => {
+        ThermalStrategy::Ectothermic => {
             let factor = 1.0 + ECTOTHERM_K * (temp - THERMONEUTRAL_C) / HEAT_SCALE_C;
             base * factor.max(ECTOTHERM_FLOOR)
         }
-        // Autotroph: a deferred seam (transpiration is its own later work).
-        // Ametabolic: never reaches here (no thirst drive); arm kept total.
-        MetabolicClass::Autotroph | MetabolicClass::Ametabolic => base,
+        // Unmodelled: a deferred seam (transpiration is its own later work).
+        // Absent: never reaches here (no thirst drive); arm kept total.
+        ThermalStrategy::Unmodelled | ThermalStrategy::Absent => base,
     }
 }
 
 /// The committed `agent-at` sightings of `entity` at or before day `upto`, as
 /// `(arrival_day, room)` sorted ascending — the occupancy timeline the thirst
 /// integral reads.
-fn agent_sightings(ledger: &Ledger, entity: EntityId, upto: f64) -> Vec<(f64, RoomAddr)> {
-    let mut v: Vec<(f64, RoomAddr)> = ledger
+fn agent_sightings(ledger: &Ledger, entity: EntityId, upto: f64) -> Vec<(f64, Facet)> {
+    let mut v: Vec<(f64, Facet)> = ledger
         .facts_of(entity, AGENT_AT)
         .filter_map(|f| {
-            let d = f.day?.day();
+            let d = f.day?.as_std_days();
             if d > upto {
                 return None;
             }
@@ -823,22 +832,22 @@ fn agent_sightings(ledger: &Ledger, entity: EntityId, upto: f64) -> Vec<(f64, Ro
 
 /// The thirst drive as a PATH INTEGRAL of the dehydration rate over the
 /// creature's occupancy since its last drink (The Kindling, spec §3/§4): for
-/// each segment during which it stood at one cell, `rise_at(temp(cell,
+/// each segment during which it stood at one room, `rise_at(temp(room,
 /// segment_start), class) × segment_length`, summed and clamped `[0, 1]`.
 /// Position at any day is the latest sighting arriving at or before it, else
-/// `home`; temperature is sampled once per segment at its start (so a held cell
+/// `home`; temperature is sampled once per segment at its start (so a held room
 /// couples at a fixed rate — the Hold-jump stays closed-form). DRIVE == FOLD:
 /// pure over the committed occupancy + terrain, so the tick (which folds
 /// `frozen + out`) and `affect_of` (which folds the final ledger) compute it
 /// identically. `sightings` must be ascending and ≤ `t`.
 #[allow(clippy::too_many_arguments)]
 fn integrate_thirst(
-    sightings: &[(f64, RoomAddr)],
-    home: &RoomAddr,
+    sightings: &[(f64, Facet)],
+    home: &Facet,
     last_drank: f64,
     t: f64,
     terrain: &dyn Terrain,
-    class: MetabolicClass,
+    class: ThermalStrategy,
     p: &DriveParams,
 ) -> f64 {
     if t <= last_drank {
@@ -866,7 +875,10 @@ fn integrate_thirst(
             .map(|(_, r)| r)
             .unwrap_or(home);
         let rate = rise_at(
-            terrain.temperature(pos, WorldTime::new(s).expect("a day value is finite")),
+            terrain.temperature(
+                pos,
+                WorldTime::from_std_days(s).expect("a day value is finite"),
+            ),
             class,
             p,
         );
@@ -877,31 +889,39 @@ fn integrate_thirst(
 
 /// The drive at `t`: the temperature-coupled thirst path integral (The
 /// Kindling) over `entity`'s committed occupancy since its last drink, at its
-/// metabolic `class`. Reduces to the old flat `rise × elapsed` at a
+/// thermal-strategy `class`. Reduces to the old flat `rise × elapsed` at a
 /// thermoneutral (or unreadable) climate. DRIVE == FOLD — over `drank` (the
 /// reset) and `agent-at` (the occupancy).
 /// type-audit: bare-ok(ratio: return)
 pub fn drive_at(
     ledger: &Ledger,
     entity: EntityId,
-    home: &RoomAddr,
+    home: &Facet,
     t: WorldTime,
     p: &DriveParams,
     terrain: &dyn Terrain,
-    class: MetabolicClass,
+    class: ThermalStrategy,
 ) -> f64 {
     let last_drank = ledger
         .facts_of(entity, DRANK)
         .filter_map(|f| f.day)
-        .fold(0.0_f64, |acc, d| acc.max(d.day()));
-    let sightings = agent_sightings(ledger, entity, t.day());
-    integrate_thirst(&sightings, home, last_drank, t.day(), terrain, class, p)
+        .fold(0.0_f64, |acc, d| acc.max(d.as_std_days()));
+    let sightings = agent_sightings(ledger, entity, t.as_std_days());
+    integrate_thirst(
+        &sightings,
+        home,
+        last_drank,
+        t.as_std_days(),
+        terrain,
+        class,
+        p,
+    )
 }
 
 /// Belief (L1): the agent's nearest KNOWN water — a pure fold over its committed
 /// `agent-at` history ∩ water-truth. Among the water rooms the agent has stood in
 /// at or before `t`, the one nearest to `npc.home` by planned hop-distance (ties
-/// by ascending `RoomAddr`), else `None` (ignorant). BELIEF == FOLD-OVER-PERCEIVED:
+/// by ascending `Facet`), else `None` (ignorant). BELIEF == FOLD-OVER-PERCEIVED:
 /// no stored belief — it re-derives from facts already committed (the matrix
 /// verdict; UNI-20). Nearness anchors to home (nearest-to-current is a followup).
 /// type-audit: bare-ok(count: budget)
@@ -911,8 +931,8 @@ pub fn believed_water(
     t: WorldTime,
     terrain: &dyn Terrain,
     budget: usize,
-) -> Option<RoomAddr> {
-    let mut seen: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+) -> Option<Facet> {
+    let mut seen: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
     for f in ledger.facts_of(npc.entity, AGENT_AT) {
         let sighted = f.day.map(|d| d <= t).unwrap_or(false);
         if sighted && let Value::Text(s) = &f.object {
@@ -934,7 +954,7 @@ pub fn believed_water(
 /// A memo of the PRIMARY-AFRAID emission `(entity, day) → arousal` (`0.0` when
 /// the creature's Danger drive does NOT win — no emission). The Phantom's
 /// re-derivation asks "was this emitter primary-afraid on that past day?" the
-/// same way for many creatures and many cells within a single tick; each such
+/// same way for many creatures and many rooms within a single tick; each such
 /// verdict is an `affect_of` (a full arbitration with an A* plan), so the
 /// re-derivation without a memo re-computes the SAME verdict hundreds of times.
 ///
@@ -946,8 +966,10 @@ pub fn believed_water(
 /// `frozen`, and `run_simulation` (the lab's headless sim) builds one per tick
 /// for its post-tick affect reads. This collapses the dominant within-tick
 /// re-derivation to O(roster × distinct-days) while keeping the verdict provably
-/// identical to a fresh `affect_of` (day quantized to its bit pattern, which
-/// recurs exactly across the `agent-at` days that key it).
+/// identical to a fresh `affect_of` (the day is an exact tick count, which
+/// recurs exactly across the `agent-at` days that key it — see the field docs
+/// below; this read "quantized to its bit pattern" until The Escapement,
+/// decision 0186, made the key the instant itself).
 ///
 /// It also caches the per-time EMITTER SCAN — which roster members could ever
 /// raise an alarm and where, plus their position timelines — since that scan is
@@ -955,10 +977,16 @@ pub fn believed_water(
 /// same fixed ledger (built once per tick instead of once per creature).
 #[derive(Default)]
 pub struct PrimaryAfraidMemo {
-    /// `(entity, day-bits) → emitted arousal` (`0.0` = not primary-afraid).
-    afraid: std::collections::BTreeMap<(EntityId, u64), f64>,
-    /// `t-day-bits → the emitter scan` over the (tick-fixed) roster and ledger.
-    scans: std::collections::BTreeMap<u64, EmitterScan>,
+    /// `(entity, instant) → emitted arousal` (`0.0` = not primary-afraid).
+    ///
+    /// Keyed on the `WorldTime` itself. It used to be keyed on
+    /// `day().to_bits()`, because an `f64` day has no total order and so could
+    /// not key a `BTreeMap`; a tick count is an exact `i64` and `WorldTime`
+    /// derives `Ord`/`Eq`/`Hash` (The Escapement, decision 0186).
+    afraid: std::collections::BTreeMap<(EntityId, WorldTime), f64>,
+    /// `t → the emitter scan` over the (tick-fixed) roster and ledger. Keyed on
+    /// the instant itself, same reason as `afraid`.
+    scans: std::collections::BTreeMap<WorldTime, EmitterScan>,
 }
 
 impl PrimaryAfraidMemo {
@@ -969,18 +997,18 @@ impl PrimaryAfraidMemo {
 }
 
 /// The tick-fixed scan of a roster: the members that could EVER emit an alarm
-/// (with their committed position timelines) and the union of cells any of their
+/// (with their committed position timelines) and the union of rooms any of their
 /// alarms could reach. Shared across every creature's re-derivation at one time.
 struct EmitterScan {
     /// The ever-terrain-afraid members and their day-sorted position timelines.
-    emitters: Vec<(Body, Vec<(f64, RoomAddr)>)>,
-    /// Every cell within one hop of some emitter's frightening position.
-    alarm_source_cells: std::collections::BTreeSet<RoomAddr>,
+    emitters: Vec<(Body, Vec<(f64, Facet)>)>,
+    /// Every room within one hop of some emitter's frightening position.
+    alarm_source_rooms: std::collections::BTreeSet<Facet>,
 }
 
 /// Scan `roster` for the members ever on terrain frightening to them (the only
 /// possible alarm emitters), building each one's day-sorted position timeline
-/// (day ≤ `t`) and the union of cells their alarms could reach. Pure over
+/// (day ≤ `t`) and the union of rooms their alarms could reach. Pure over
 /// `(roster, ledger, terrain, t)`; cached per `t` in [`PrimaryAfraidMemo`].
 fn build_emitter_scan(
     roster: &[Body],
@@ -988,17 +1016,17 @@ fn build_emitter_scan(
     terrain: &dyn Terrain,
     t: WorldTime,
 ) -> EmitterScan {
-    let mut emitters: Vec<(Body, Vec<(f64, RoomAddr)>)> = Vec::new();
-    let mut alarm_source_cells: std::collections::BTreeSet<RoomAddr> =
+    let mut emitters: Vec<(Body, Vec<(f64, Facet)>)> = Vec::new();
+    let mut alarm_source_rooms: std::collections::BTreeSet<Facet> =
         std::collections::BTreeSet::new();
     for m in roster {
         let mettle = mettle_factor(m.boldness);
         let frightening =
-            |room: &RoomAddr| threat_field(room, &m.threat_niche, terrain) * mettle >= DANGER_ACT;
-        let mut timeline: Vec<(f64, RoomAddr)> = ledger
+            |room: &Facet| threat_field(room, &m.threat_niche, terrain) * mettle >= DANGER_ACT;
+        let mut timeline: Vec<(f64, Facet)> = ledger
             .facts_of(m.entity, AGENT_AT)
             .filter_map(|f| {
-                let d = f.day.filter(|d| *d <= t)?.day();
+                let d = f.day.filter(|d| *d <= t)?.as_std_days();
                 match &f.object {
                     Value::Text(s) => Some((d, room_from_text(s))),
                     _ => None,
@@ -1009,10 +1037,10 @@ fn build_emitter_scan(
         // `agent_position`'s last-committed-≤-day read on the monotonic timeline).
         timeline.sort_by(|a, b| a.0.total_cmp(&b.0));
         let mut ever = false;
-        let mut note_halo = |p: &RoomAddr| {
-            alarm_source_cells.insert(p.clone());
+        let mut note_halo = |p: &Facet| {
+            alarm_source_rooms.insert(p.clone());
             for n in p.neighbors() {
-                alarm_source_cells.insert(n);
+                alarm_source_rooms.insert(n);
             }
         };
         if frightening(&m.home) {
@@ -1031,7 +1059,7 @@ fn build_emitter_scan(
     }
     EmitterScan {
         emitters,
-        alarm_source_cells,
+        alarm_source_rooms,
     }
 }
 
@@ -1043,13 +1071,13 @@ fn build_emitter_scan(
 /// inner `affect_of` reads an EMPTY band, so its own `believed_hazard` is
 /// emitter-free and never re-enters this path (the recursion break).
 fn emitter_arousal(
-    afraid: &mut std::collections::BTreeMap<(EntityId, u64), f64>,
+    afraid: &mut std::collections::BTreeMap<(EntityId, WorldTime), f64>,
     frozen: &Ledger,
     npc: &Body,
     day: WorldTime,
     terrain: &dyn Terrain,
 ) -> f64 {
-    let key = (npc.entity, day.day().to_bits());
+    let key = (npc.entity, day);
     if let Some(&v) = afraid.get(&key) {
         return v;
     }
@@ -1075,14 +1103,14 @@ fn emitter_arousal(
 /// type-audit: bare-ok(ratio: dread)
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct HazardMemory {
-    /// Every remembered-frightening cell, both provenances — the planner's
+    /// Every remembered-frightening room, both provenances — the planner's
     /// finite route-cost set (exactly the historical `believed_hazard`).
-    pub shunned: std::collections::BTreeSet<RoomAddr>,
+    pub shunned: std::collections::BTreeSet<Facet>,
     /// The TRANSIENT subset, keyed to the remembered ALARM magnitude at that
-    /// cell: ground whose terrain alone never crossed `DANGER_ACT`, tipped over
+    /// room: ground whose terrain alone never crossed `DANGER_ACT`, tipped over
     /// it only by the re-derived alarm of a herd that has long since moved on.
     /// A subset of `shunned`'s keys. Empty ⇒ no phobia (the settled worlds).
-    pub dread: std::collections::BTreeMap<RoomAddr, f64>,
+    pub dread: std::collections::BTreeMap<Facet, f64>,
 }
 
 /// Belief (L1): the ground the creature has stood on that FRIGHTENS it — a pure
@@ -1097,12 +1125,12 @@ pub struct HazardMemory {
 /// frightened on their good ground) carry an empty set and every planner edge
 /// stays `1` — byte-identical by construction.
 ///
-/// STALENESS — now LIVE (spec §2, The Phantom). The rule is *a cell is
+/// STALENESS — now LIVE (spec §2, The Phantom). The rule is *a room is
 /// remembered-dangerous iff the creature's MOST RECENT visit there was
 /// frightened*: a later SAFE visit CLEARS the memory (experience disproving the
 /// fear). The Haunt specified this but left it inert — static terrain makes
 /// every visit's verdict identical, so it reduced to *visited ∧ still-
-/// frightening*. The Phantom makes it bite: a cell alarm-frightened on day t₁
+/// frightening*. The Phantom makes it bite: a room alarm-frightened on day t₁
 /// and safely revisited on t₂ > t₁ is no longer shunned. With an EMPTY
 /// `roster` the re-derived alarm is 0 (terrain is time-invariant), so the rule
 /// collapses back to any-visit — The Haunt's exact set, byte-identical.
@@ -1111,22 +1139,22 @@ pub struct HazardMemory {
 /// [`affect_of`] passes its `band`; and the transient re-derivation's own
 /// primary-fear read passes `&[]` — so an empty roster re-derives no alarm and
 /// never re-enters the transient path. Deterministic: the most-recent day per
-/// cell accumulates into a `BTreeMap` (max day wins), the verdict is
+/// room accumulates into a `BTreeMap` (max day wins), the verdict is
 /// order-independent, and the shunned set is yielded sorted.
 ///
 /// # Cost — the re-derivation is cheap on the settled worlds (spec §3)
 ///
-/// Naively re-deriving [`alarm_field`] per visited cell is ruinous (an A* plan
-/// per roster member per cell). Instead we precompute, ONCE, each roster
+/// Naively re-deriving [`alarm_field`] per visited room is ruinous (an A* plan
+/// per roster member per room). Instead we precompute, ONCE, each roster
 /// member that is EVER on terrain frightening to it (the only creatures that can
 /// emit) and its committed position timeline (a `partition_point` gives its
-/// position at any past day). A cell's transient alarm is then the clamped sum
+/// position at any past day). A room's transient alarm is then the clamped sum
 /// of the arousals of just those emitters whose position on that day lies within
-/// the cell's one-hop halo — the SAME quantity `alarm_field` computes, but
+/// the room's one-hop halo — the SAME quantity `alarm_field` computes, but
 /// evaluated only where an emitter actually stood, so an emitter-free world
 /// (seed 42) pays nothing beyond the terrain fold. `affect_of` (to confirm an
 /// emitter's Danger drive WINS) runs only for a terrain-afraid member standing
-/// beside the very cell being judged — rare.
+/// beside the very room being judged — rare.
 ///
 /// The planner half of [`hazard_memory`]; the transient half is
 /// [`HazardMemory::dread`].
@@ -1136,7 +1164,7 @@ pub fn believed_hazard(
     t: WorldTime,
     terrain: &dyn Terrain,
     roster: &[Body],
-) -> std::collections::BTreeSet<RoomAddr> {
+) -> std::collections::BTreeSet<Facet> {
     hazard_memory(ledger, npc, t, terrain, roster).shunned
 }
 
@@ -1152,7 +1180,7 @@ pub fn believed_hazard_memo(
     terrain: &dyn Terrain,
     roster: &[Body],
     memo: &mut PrimaryAfraidMemo,
-) -> std::collections::BTreeSet<RoomAddr> {
+) -> std::collections::BTreeSet<Facet> {
     hazard_memory_memo(ledger, npc, t, terrain, roster, memo).shunned
 }
 
@@ -1181,11 +1209,11 @@ pub fn hazard_memory_memo(
     roster: &[Body],
     memo: &mut PrimaryAfraidMemo,
 ) -> HazardMemory {
-    // Most-recent visit per cell (day ≤ t): the cell is judged at its LATEST
+    // Most-recent visit per room (day ≤ t): the room is judged at its LATEST
     // visit, so a later safe visit clears an earlier phantom (the staleness rule).
-    let mut latest: std::collections::BTreeMap<RoomAddr, f64> = std::collections::BTreeMap::new();
+    let mut latest: std::collections::BTreeMap<Facet, f64> = std::collections::BTreeMap::new();
     for f in ledger.facts_of(npc.entity, AGENT_AT) {
-        if let Some(fday) = f.day.filter(|d| *d <= t).map(WorldTime::day)
+        if let Some(fday) = f.day.filter(|d| *d <= t).map(WorldTime::as_std_days)
             && let Value::Text(s) = &f.object
         {
             latest
@@ -1200,21 +1228,20 @@ pub fn hazard_memory_memo(
     }
 
     // The emitter scan (which members could ever raise an alarm, their position
-    // timelines, and the cells any alarm could reach) is IDENTICAL for every
+    // timelines, and the rooms any alarm could reach) is IDENTICAL for every
     // creature's re-derivation at this time over this ledger — build it once and
     // cache it per `t` (see [`PrimaryAfraidMemo`]).
-    let tbits = t.day().to_bits();
     memo.scans
-        .entry(tbits)
+        .entry(t)
         .or_insert_with(|| build_emitter_scan(roster, ledger, terrain, t));
     // Disjoint field borrows: the scan (read) and the affect memo (write).
     let PrimaryAfraidMemo { afraid, scans } = memo;
-    let scan = &scans[&tbits];
+    let scan = &scans[&t];
 
     // The emitter's committed position AT `day`: the latest entry with day ≤ it,
     // else its home (the pre-history fallback) — `agent_position` over the
     // precomputed timeline.
-    let position_at = |m: &Body, timeline: &[(f64, RoomAddr)], day: f64| -> RoomAddr {
+    let position_at = |m: &Body, timeline: &[(f64, Facet)], day: f64| -> Facet {
         let idx = timeline.partition_point(|(d, _)| *d <= day);
         if idx == 0 {
             m.home.clone()
@@ -1232,44 +1259,44 @@ pub fn hazard_memory_memo(
         // It is also why `dread` is empty on every settled world: this returns
         // BEFORE any dread is ever recorded, so byte-identity costs not one
         // instruction.
-        for (cell, day) in latest {
+        for (room, day) in latest {
             if frightened_at(
-                &cell,
+                &room,
                 npc,
                 terrain,
-                WorldTime::new(day).expect("a day value is finite"),
+                WorldTime::from_std_days(day).expect("a day value is finite"),
                 &[],
                 ledger,
             ) {
-                mem.shunned.insert(cell);
+                mem.shunned.insert(room);
             }
         }
         return mem;
     }
-    for (cell, day) in latest {
-        let terrain_threat = threat_field(&cell, &npc.threat_niche, terrain);
+    for (room, day) in latest {
+        let terrain_threat = threat_field(&room, &npc.threat_niche, terrain);
         // THE TERRAIN SHORTCUT (free win): if TERRAIN alone already frightens the
-        // creature here, the cell is shunned no matter what the alarm adds (the
+        // creature here, the room is shunned no matter what the alarm adds (the
         // alarm is additive, ≥ 0), so skip the alarm re-derivation entirely. Only
-        // a terrain-BELOW-act cell can be tipped over by a remembered alarm —
+        // a terrain-BELOW-act room can be tipped over by a remembered alarm —
         // exactly where the phantom lives. (The most-recent-visit verdict is
         // unchanged: a terrain-frightened latest visit still shuns.)
         if feels_frightening(terrain_threat, 0.0, npc.boldness) {
             // STATIC provenance: present danger, not a phantom — shunned only.
-            mem.shunned.insert(cell);
+            mem.shunned.insert(room);
             continue;
         }
-        // The re-derived transient alarm at (cell, day): the clamped sum of the
+        // The re-derived transient alarm at (room, day): the clamped sum of the
         // arousals of emitters primary-afraid on `day` whose position lies in the
-        // cell's one-hop halo — exactly `alarm_field(day).get(cell)`. A cell
-        // outside `alarm_source_cells` can receive no alarm at ANY day (no
+        // room's one-hop halo — exactly `alarm_field(day).get(room)`. A room
+        // outside `alarm_source_rooms` can receive no alarm at ANY day (no
         // emitter is ever frightening within one hop of it), so it is judged
         // terrain-only — the byte-identity pre-filter that keeps the settled
         // worlds cheap even when a distant beast occasionally treads hazard.
         let mut alarm = 0.0_f64;
-        if scan.alarm_source_cells.contains(&cell) {
-            let mut sources = cell.neighbors().to_vec();
-            sources.push(cell.clone());
+        if scan.alarm_source_rooms.contains(&room) {
+            let mut sources = room.neighbors().to_vec();
+            sources.push(room.clone());
             for (m, timeline) in &scan.emitters {
                 let pos = position_at(m, timeline, day);
                 if !sources.contains(&pos) {
@@ -1288,7 +1315,7 @@ pub fn hazard_memory_memo(
                     afraid,
                     ledger,
                     m,
-                    WorldTime::new(day).expect("a day value is finite"),
+                    WorldTime::from_std_days(day).expect("a day value is finite"),
                     terrain,
                 );
             }
@@ -1299,10 +1326,10 @@ pub fn hazard_memory_memo(
         if feels_frightening(terrain_threat, alarm, npc.boldness) {
             // TRANSIENT provenance by construction: control only reaches here
             // when terrain ALONE did not frighten (the shortcut above `continue`d
-            // otherwise), so a cell shunned here is shunned BECAUSE of a
+            // otherwise), so a room shunned here is shunned BECAUSE of a
             // remembered alarm. That is the whole isolation — no second pass.
-            mem.shunned.insert(cell.clone());
-            mem.dread.insert(cell, alarm);
+            mem.shunned.insert(room.clone());
+            mem.dread.insert(room, alarm);
         }
     }
     mem
@@ -1314,7 +1341,7 @@ pub fn hazard_memory_memo(
 /// (this is what keeps the live one-per-settlement population byte-identical).
 /// With a co-located peer, pools `npc`'s and every co-located peer's
 /// `believed_water` and returns the one nearest to `npc`'s CURRENT position
-/// (ties: ascending `RoomAddr`), `None` if the pool is empty. Current-position
+/// (ties: ascending `Facet`), `None` if the pool is empty. Current-position
 /// anchoring is the semantics of hearsay — "water near HERE" — and is what lets
 /// a stranded creature adopt a here-reachable water its home-anchored memory
 /// could never admit. Order-independent by construction (`BTreeSet` union +
@@ -1327,10 +1354,10 @@ pub fn shared_believed_water(
     t: WorldTime,
     terrain: &dyn Terrain,
     budget: usize,
-) -> Option<RoomAddr> {
+) -> Option<Facet> {
     let own = believed_water(frozen, npc, t, terrain, budget);
     let here = agent_position(frozen, npc, t);
-    let mut pool: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+    let mut pool: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
     let mut has_peer = false;
     // Co-located OTHERS (never npc itself) contribute what they know of water.
     for other in band {
@@ -1346,7 +1373,7 @@ pub fn shared_believed_water(
         return own;
     }
     // CO-LOCATED: rank the pooled beliefs (npc's + peers') by nearness to npc's
-    // CURRENT position (ties: ascending RoomAddr) — act on what's reachable HERE.
+    // CURRENT position (ties: ascending Facet) — act on what's reachable HERE.
     if let Some(w) = own {
         pool.insert(w);
     }
@@ -1369,23 +1396,23 @@ pub fn shared_believed_water(
 #[derive(Clone, Debug)]
 pub struct Perceived {
     /// The agent's current room (self-knowledge — always true).
-    pub position: RoomAddr,
+    pub position: Facet,
     /// The agent's perceived thirst drive level (self-knowledge — always true).
     pub drive: f64,
     /// The agent's perceived fatigue level (self-knowledge — always true, The
     /// Slumber): time since it last rested, normalized `[0, 1]`.
     pub fatigue: f64,
     /// The nearest water the agent KNOWS of (belief), or `None` (ignorant).
-    pub believed_water: Option<RoomAddr>,
+    pub believed_water: Option<Facet>,
     /// The ground the agent remembers being FRIGHTENED on (belief, The Haunt):
-    /// the set of cells its planners route AROUND — the inverted twin of
+    /// the set of rooms its planners route AROUND — the inverted twin of
     /// `believed_water`. EMPTY ⇒ today's behaviour (every planner edge stays
     /// `1`, byte-identical). Read by the planning drives (thirst/homing) as a
     /// finite route cost; the greedy drives ignore it.
-    pub believed_hazard: std::collections::BTreeSet<RoomAddr>,
+    pub believed_hazard: std::collections::BTreeSet<Facet>,
     /// The next exploration move for an ignorant agent (lowest-elevation
     /// unvisited neighbour), or `None` (nowhere new to look → Hold).
-    pub explore_step: Option<RoomAddr>,
+    pub explore_step: Option<Facet>,
 }
 
 /// The decision's output — the FIRST action of the agent's current plan, or
@@ -1410,9 +1437,9 @@ pub enum Intent {
 /// `Perceived` view (self-knowledge + belief + immediate proposal) — never
 /// truth — so it is pure over the view a tick already assembled. A FLOW drive
 /// (`Thermal`) additionally senses the ambient field at its OWN position
-/// directly (you feel the temperature of the cell you stand in), so it carries
+/// directly (you feel the temperature of the room you stand in), so it carries
 /// the terrain and the day it senses at; that self-perception of the current
-/// cell is still pure, keyed only on the drive's own held inputs.
+/// room is still pure, keyed only on the drive's own held inputs.
 pub trait Drive {
     /// The drive's current urgency in [0, 1] — its felt pressure, read from
     /// the (already-folded) view. Thirst returns `view.drive` (the `drive_at`
@@ -1638,6 +1665,14 @@ pub struct Resolution {
     pub mode: Mode,
     /// The felt state this decision expresses.
     pub affect: Affect,
+    /// The other drives arbitration found ACTIVE this decision but did not
+    /// pursue (The Confidant, Task 5) — the discarded ranks `affect`/
+    /// `object` never carry, kept here rather than dropped so a caller can
+    /// retrieve them. This is the residue the creature itself cannot
+    /// introspect: a host-facing utterance (the lexicon lookup,
+    /// `windows/vessel/src/testimony.rs`) must draw from `affect` alone,
+    /// never from this field.
+    pub suppressed: Vec<DriveKind>,
 }
 
 /// Thirst — the one authored (sustenance) drive, Drive #1. `urgency` is the
@@ -1707,7 +1742,7 @@ impl Drive for Thirst {
 
 /// The urgency at which the thermal comfort drive is considered to act (its
 /// `act_threshold`). Comfort is a low-stakes flow drive, so the threshold sits
-/// modestly above the tolerance edge (where urgency is exactly `0.0`): a cell
+/// modestly above the tolerance edge (where urgency is exactly `0.0`): a room
 /// merely a touch outside the niche band is felt but not yet acted on, while a
 /// genuinely uncomfortable one (urgency past this) does. An authored Stage-1
 /// placeholder; Stage 2's arbitration contextualizes it against the other
@@ -1737,14 +1772,14 @@ const SWITCH_MARGIN: f64 = 0.1;
 /// Thermal comfort — a FLOW (reactive, state-satisfied) drive, a second
 /// [`Drive`] implementor beside [`Thirst`]. Where thirst is a STOCK drive
 /// (urgency accrues over time and is reset by a discrete `Drink`), thermal
-/// comfort reads the CURRENT cell's per-day temperature against the species'
+/// comfort reads the CURRENT room's per-day temperature against the species'
 /// temperature niche every tick: discomfort is instantaneous, and stepping to
 /// a more comfortable neighbour reduces it directly (no belief cache, no A* —
 /// the comfort gradient step IS the proposal, like thirst's `explore_step`).
 ///
 /// Holds the species' temperature [`ConditionResponse`] (its thermal setpoint
 /// `optimum` and tolerance `width`) plus the terrain and day it senses at — a
-/// flow drive perceives the ambient temperature of the cell it occupies
+/// flow drive perceives the ambient temperature of the room it occupies
 /// directly (see the [`Drive`] trait's stock-vs-flow note). NOT wired into the
 /// live NPC `decide` this stage (Stage 1 unit-tests it in isolation);
 /// arbitration of thirst + thermal together is Stage 2. No field here is a
@@ -1756,7 +1791,7 @@ pub struct Thermal<'a> {
     /// the tolerance half-band. Discomfort is deviation past `width` from
     /// `optimum`.
     pub niche: ConditionResponse,
-    /// The temperature field this drive senses (the cell it stands in and the
+    /// The temperature field this drive senses (the room it stands in and the
     /// three neighbours it may step to).
     pub terrain: &'a dyn Terrain,
     /// The day the temperature is sensed at (the diurnal+seasonal phase).
@@ -1791,7 +1826,7 @@ impl<'a> Thermal<'a> {
     /// The absolute temperature deviation from the niche optimum at `room`,
     /// °C — the discomfort distance the drive minimizes. `INFINITY` for an
     /// undescribable room (never chosen as a comfort target).
-    fn deviation(&self, room: &RoomAddr) -> f64 {
+    fn deviation(&self, room: &Facet) -> f64 {
         (self.terrain.temperature(room, self.day) - self.niche.optimum).abs()
     }
 
@@ -1800,14 +1835,14 @@ impl<'a> Thermal<'a> {
     /// by the band width (one further band-width reaches full urgency). Exactly
     /// `0.0` inside the band (`|temp − optimum| ≤ width`), rising outside.
     ///
-    /// An UNREADABLE cell (non-finite temperature — an undescribable room, or
+    /// An UNREADABLE room (non-finite temperature — undescribable, or
     /// planted-`INFINITY` test terrain) yields `0.0`: you cannot feel the
-    /// temperature of a cell that reports none, so it registers no discomfort.
+    /// temperature of a room that reports none, so it registers no discomfort.
     /// This is exactly what keeps the thirst-only walk byte-identical — the
     /// thirst tests plant no temperatures, so their thermal drive stays
-    /// inactive (urgency `0.0`) at every cell and never enters arbitration.
+    /// inactive (urgency `0.0`) at every room and never enters arbitration.
     /// type-audit: bare-ok(ratio: return)
-    fn urgency_at(&self, room: &RoomAddr) -> f64 {
+    fn urgency_at(&self, room: &Facet) -> f64 {
         self.urgency_of(self.terrain.temperature(room, self.day))
     }
 
@@ -1832,7 +1867,7 @@ impl<'a> Thermal<'a> {
     /// eased and no creature is made colder by a hearth. `None` returns the
     /// ambient reading UNTOUCHED — not `temp + 0.0` — so an interior-free
     /// world takes the same arithmetic path it did before The Hearth. An
-    /// unreadable cell stays unreadable: a non-finite ambient temperature
+    /// unreadable room stays unreadable: a non-finite ambient temperature
     /// plus a finite warmth is still non-finite, so it still registers `0.0`.
     ///
     /// The warmth field is emitted in °C at its source
@@ -1840,7 +1875,7 @@ impl<'a> Thermal<'a> {
     /// there, so it is folded 1:1 with no second dial to tune — one source of
     /// scale, unlike the alarm's separate [`ALARM_SCALE`].
     /// type-audit: bare-ok(count: budget), bare-ok(ratio: return)
-    fn urgency_here(&self, room: &RoomAddr, budget: usize) -> f64 {
+    fn urgency_here(&self, room: &Facet, budget: usize) -> f64 {
         let temp = self.terrain.temperature(room, self.day);
         match self.interior {
             Some((interior, anchor)) => self.urgency_of(temp + warmth_at(interior, anchor, budget)),
@@ -1867,7 +1902,7 @@ impl<'a> Thermal<'a> {
     /// reachability check of its own, so an unguarded `warmest_anchor` call
     /// would teleport a stranded creature across an impassable edge.
     /// type-audit: bare-ok(count: budget)
-    fn preferred_anchor(&self, position: &RoomAddr, budget: usize) -> Option<AnchorId> {
+    fn preferred_anchor(&self, position: &Facet, budget: usize) -> Option<AnchorId> {
         if self.deviation(position) <= self.niche.width {
             return None;
         }
@@ -1949,7 +1984,7 @@ impl<'a> Drive for Thermal<'a> {
     }
     fn candidate_actions(&self, view: &Perceived, budget: usize) -> Vec<Action> {
         // Make the within-room step visible to `arbitrate`'s multi-drive
-        // utility scan: its fixed candidate set is built from `RoomAddr`
+        // utility scan: its fixed candidate set is built from `Facet`
         // neighbours and cannot express an `AnchorId`. Rather than a second,
         // independent enumeration of the interior's anchors (which could
         // drift from what `proposal` itself would choose), this simply
@@ -1978,7 +2013,7 @@ impl<'a> Drive for Thermal<'a> {
         budget: usize,
         _proposal: &mut dyn FnMut() -> Option<Action>,
     ) -> f64 {
-        // A flow drive is served by PRESENCE in a kinder cell: the reduction in
+        // A flow drive is served by PRESENCE in a kinder room: the reduction in
         // thermal urgency at the destination (0 if the step doesn't improve
         // comfort). No consume — `Drink` serves it not at all. Scores each
         // candidate DIRECTLY (never via `proposal`), so the ledger #9 cache
@@ -2041,18 +2076,18 @@ impl<'a> Drive for Thermal<'a> {
 /// CLOSEST to `optimum` (minimizing `|temp − optimum|`), or `None` when no
 /// neighbour is strictly more comfortable than `from` itself. A near-copy of
 /// [`downhill_step`] — the same three-neighbour scan and the same
-/// `total_cmp`-then-ascending-`RoomAddr` tie-break — but the objective is the
+/// `total_cmp`-then-ascending-`Facet` tie-break — but the objective is the
 /// minimized absolute temperature deviation rather than elevation, so a
-/// too-cold cell steps toward a warmer neighbour and a too-hot one toward a
+/// too-cold room steps toward a warmer neighbour and a too-hot one toward a
 /// cooler, both toward the optimum.
 fn comfort_step(
-    from: &RoomAddr,
+    from: &Facet,
     optimum: f64,
     terrain: &dyn Terrain,
     day: WorldTime,
-) -> Option<RoomAddr> {
-    let deviation = |room: &RoomAddr| (terrain.temperature(room, day) - optimum).abs();
-    let mut best: Option<(RoomAddr, f64)> = None;
+) -> Option<Facet> {
+    let deviation = |room: &Facet| (terrain.temperature(room, day) - optimum).abs();
+    let mut best: Option<(Facet, f64)> = None;
     for n in from.neighbors() {
         let dev = deviation(&n);
         let keep_existing = match &best {
@@ -2154,9 +2189,12 @@ const SURVIVAL_OVERRIDE: f64 = 0.9;
 /// `ActivityCycle` and the time of day (the fractional part of `day`; The
 /// Slumber, spec §1). Diurnal is awake through the day window, nocturnal the
 /// complement, crepuscular the twilight edges. A fractional-day approximation
-/// The resolution at which the tick scans for the next wake transition (days).
-/// Fine enough to catch a crepuscular creature's narrow dawn/dusk bands.
-const WAKE_SCAN_STEP: f64 = 0.05;
+/// The resolution at which the tick scans for the next wake transition — one
+/// twentieth of a standard day (the historical `0.05` days), held as an EXACT
+/// tick span so the scan walks the lattice itself rather than re-rounding an
+/// accumulating `f64` day at every step. Fine enough to catch a crepuscular
+/// creature's narrow dawn/dusk bands.
+const WAKE_SCAN_STEP: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY / 20);
 
 /// A representative AWAKE fraction of the day for `activity` — where the health
 /// metric samples a creature's felt state (The Slumber). Sampling at midnight
@@ -2185,34 +2223,29 @@ pub fn waking_offset(activity: ActivityCycle) -> f64 {
 pub(crate) fn next_awake_day(
     activity: ActivityCycle,
     terrain: &dyn Terrain,
-    room: &RoomAddr,
-    day: f64,
-) -> f64 {
-    let limit = day + 1.5;
+    room: &Facet,
+    day: WorldTime,
+) -> WorldTime {
+    // The scan's bound and its give-up fallback as EXACT spans: `day + 1.5`
+    // and `day + 1.0` were instant-plus-duration all along, and an instant is
+    // a tick count now, so the durations are spans rather than float days.
+    const SCAN_LIMIT: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY * 3 / 2);
+    const ONE_DAY: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY);
+    let limit = day + SCAN_LIMIT;
     let mut t = day + WAKE_SCAN_STEP;
     while t < limit {
-        if is_awake(
-            activity,
-            terrain,
-            room,
-            WorldTime::new(t).expect("a day value is finite"),
-        ) {
+        if is_awake(activity, terrain, room, t) {
             return t;
         }
-        t += WAKE_SCAN_STEP;
+        t = t + WAKE_SCAN_STEP;
     }
     // No waking within a cycle (e.g. polar night for a diurnal creature): sleep
     // on to the next day; the survival override still wakes a dying creature.
-    day + 1.0
+    day + ONE_DAY
 }
 
 /// (true solar altitude is deferred).
-fn is_awake(
-    activity: ActivityCycle,
-    terrain: &dyn Terrain,
-    room: &RoomAddr,
-    day: WorldTime,
-) -> bool {
+fn is_awake(activity: ActivityCycle, terrain: &dyn Terrain, room: &Facet, day: WorldTime) -> bool {
     match terrain.solar_altitude(room, day) {
         // No day/night cycle (a tidally locked world): the solar zeitgeber is
         // absent, so the wake-gate cannot fire — the creature is effectively
@@ -2231,11 +2264,23 @@ fn is_awake(
 /// over `rested` — the structural twin of thirst's `drive_at` over `drank`.
 /// type-audit: bare-ok(ratio: return)
 pub fn fatigue_at(ledger: &Ledger, entity: EntityId, t: WorldTime) -> f64 {
+    // THE READ AND THE MOVER MUST COMPUTE THIS THE SAME WAY (this module's own
+    // FOLD doctrine, stated on `learned_helplessness` and `drive_at`). The
+    // walk's own fatigue (`decide_step`) subtracts two INSTANTS on the lattice
+    // and crosses their exact span once. This read used to subtract two
+    // separately-crossed `f64` days, which is a different arithmetic shape:
+    // `t/K - r/K` and `(t - r)/K` disagree by an ULP for **56.7%** of tick
+    // pairs in the walk band (measured over 2e6 random pairs), so the two were
+    // no longer computing one function. The shapes are aligned here rather
+    // than in `decide_step`, because the exact-span form is the numerically
+    // better one and regressing the mover to match a float read would be
+    // backwards. `a_fatigue_read_matches_the_walks_own_fatigue_arithmetic`
+    // pins it on inputs measured to disagree under the old shape.
     let last_rested = ledger
         .facts_of(entity, RESTED)
         .filter_map(|f| f.day)
-        .fold(0.0_f64, |acc, d| acc.max(d.day()));
-    (FATIGUE_RISE * (t.day() - last_rested)).clamp(0.0, 1.0)
+        .fold(WorldTime::GENESIS, WorldTime::max);
+    (FATIGUE_RISE * (t - last_rested).as_std_days()).clamp(0.0, 1.0)
 }
 
 /// The rest (fatigue) drive, Drive #3 (The Slumber). A STOCK drive like thirst:
@@ -2248,7 +2293,7 @@ pub fn fatigue_at(ledger: &Ledger, entity: EntityId, t: WorldTime) -> f64 {
 pub struct Fatigue {
     /// The creature's home — reserved for a future rest-quality refinement
     /// (unused by the proposal today: rest is in place).
-    pub home: RoomAddr,
+    pub home: Facet,
 }
 
 impl Drive for Fatigue {
@@ -2298,7 +2343,7 @@ pub const EATEN: &str = "eaten";
 /// The per-day hunger (metabolic burn) base RATE — The Provender. Slower than
 /// thirst's `SUSTENANCE.rise` (0.15): a creature outlasts hunger longer than
 /// thirst, so at base this is a ~8.5-day starvation cycle (`act/rise`). Like
-/// thirst it couples to metabolism and cell temperature through the SAME
+/// thirst it couples to metabolism and room temperature through the SAME
 /// `rise_at`/path-integral machinery (The Kindling, a second consumer), so a
 /// hot endotherm burns — and hungers — faster. Authored.
 const HUNGER: DriveParams = DriveParams {
@@ -2307,8 +2352,8 @@ const HUNGER: DriveParams = DriveParams {
 };
 
 /// The food-value at/above which a creature can EAT where it stands (The
-/// Provender). Below it a cell is too barren to feed on and the creature must
-/// forage toward a richer neighbour. Low, so any ordinarily productive cell
+/// Provender). Below it a room is too barren to feed on and the creature must
+/// forage toward a richer neighbour. Low, so any ordinarily productive room
 /// (an inhabited settlement's surroundings) feeds; only genuine barrens
 /// (desert/ice, a planted wasteland) starve. Authored.
 const EAT_THRESHOLD: f64 = 0.15;
@@ -2325,9 +2370,9 @@ const EAT_THRESHOLD: f64 = 0.15;
 /// Authored; the woken-hunt analog of The Quarry's `PREDATOR_LATENT_SCALE`.
 const PREY_LATENT_SCALE: f64 = 1.0;
 
-/// The food-value of a cell FOR a specific creature (The Provender, spec §1):
-/// its niche dotted with the cell's resource availability. The MATERIAL axes
-/// (plant forage + animal prey) read the cell's productivity
+/// The food-value of a room FOR a specific creature (The Provender, spec §1):
+/// its niche dotted with the room's resource availability. The MATERIAL axes
+/// (plant forage + animal prey) read the room's productivity
 /// ([`Terrain::forage_value`], an NPP proxy); the PHOTOSYNTHATE axis reads
 /// LIGHT (the sun above the horizon — an autotroph is fed by day, starved at
 /// night; the wake-gated autotroph seam); DETRITUS/MINERAL are reserved (no
@@ -2336,12 +2381,7 @@ const PREY_LATENT_SCALE: f64 = 1.0;
 /// carnivore" branch (spec §0). A locked world (no solar cycle) counts as lit
 /// for the sun-fed (its permanently-lit hemisphere); no autotroph is an agent
 /// yet, so this is a reserved seam either way.
-fn food_value(
-    niche: &ResourceVector,
-    terrain: &dyn Terrain,
-    room: &RoomAddr,
-    day: WorldTime,
-) -> f64 {
+fn food_value(niche: &ResourceVector, terrain: &dyn Terrain, room: &Facet, day: WorldTime) -> f64 {
     let productivity = terrain.forage_value(room);
     let material = niche.weight(PLANT_FORAGE) + niche.weight(ANIMAL_PREY);
     let light = match terrain.solar_altitude(room, day) {
@@ -2368,19 +2408,19 @@ fn food_value(
 /// `from` itself (boxed in / a local food optimum — the creature holds). The
 /// hunger analogue of [`comfort_step`], maximizing food rather than minimizing
 /// thermal deviation; same three-neighbour scan and the same
-/// `total_cmp`-then-ascending-`RoomAddr` tie-break.
+/// `total_cmp`-then-ascending-`Facet` tie-break.
 fn forage_step(
-    from: &RoomAddr,
+    from: &Facet,
     niche: &ResourceVector,
     terrain: &dyn Terrain,
     day: WorldTime,
-) -> Option<RoomAddr> {
-    let value = |room: &RoomAddr| food_value(niche, terrain, room, day);
-    let mut best: Option<(RoomAddr, f64)> = None;
+) -> Option<Facet> {
+    let value = |room: &Facet| food_value(niche, terrain, room, day);
+    let mut best: Option<(Facet, f64)> = None;
     for n in from.neighbors() {
         let v = value(&n);
         let take = match &best {
-            // Higher food wins; ties break to the smaller RoomAddr (replace the
+            // Higher food wins; ties break to the smaller Facet (replace the
             // incumbent only when the candidate is strictly richer, or equal but
             // a smaller address).
             Some((ba, bv)) => v.total_cmp(bv).then_with(|| ba.cmp(&n)).is_gt(),
@@ -2401,7 +2441,7 @@ fn forage_step(
 
 /// The hunger at `t`: the temperature-coupled metabolic-burn path integral (The
 /// Kindling machinery, reused) over `entity`'s committed occupancy since its
-/// last meal, at its metabolic `class` — the structural twin of thirst's
+/// last meal, at its thermal-strategy `class` — the structural twin of thirst's
 /// [`drive_at`], folding `eaten` (the reset) and `agent-at` (the occupancy)
 /// with the `HUNGER` params. HUNGER == FOLD, so the tick and `affect_of`
 /// compute it identically.
@@ -2409,17 +2449,25 @@ fn forage_step(
 pub fn hunger_at(
     ledger: &Ledger,
     entity: EntityId,
-    home: &RoomAddr,
+    home: &Facet,
     t: WorldTime,
     terrain: &dyn Terrain,
-    class: MetabolicClass,
+    class: ThermalStrategy,
 ) -> f64 {
     let last_ate = ledger
         .facts_of(entity, EATEN)
         .filter_map(|f| f.day)
-        .fold(0.0_f64, |acc, d| acc.max(d.day()));
-    let sightings = agent_sightings(ledger, entity, t.day());
-    integrate_thirst(&sightings, home, last_ate, t.day(), terrain, class, &HUNGER)
+        .fold(0.0_f64, |acc, d| acc.max(d.as_std_days()));
+    let sightings = agent_sightings(ledger, entity, t.as_std_days());
+    integrate_thirst(
+        &sightings,
+        home,
+        last_ate,
+        t.as_std_days(),
+        terrain,
+        class,
+        &HUNGER,
+    )
 }
 
 /// Hunger — the fourth drive (The Provender): a STOCK drive like thirst, but
@@ -2427,8 +2475,8 @@ pub fn hunger_at(
 /// (the `hunger_at` fold, held here rather than surfaced on the shared
 /// `Perceived` view — like [`Thermal`], hunger reads inputs it carries: the
 /// pre-folded urgency, the diet niche, and the food field it senses). Its
-/// proposal is to EAT where the cell's [`food_value`] clears
-/// [`EAT_THRESHOLD`], else to climb the food gradient toward a richer cell
+/// proposal is to EAT where the room's [`food_value`] clears
+/// [`EAT_THRESHOLD`], else to climb the food gradient toward a richer room
 /// ([`forage_step`]). Its ceiling is SURVIVAL (starving is lethal, like
 /// thirst, unlike comfort/fatigue). Reads the niche as a continuous mix — no
 /// hardcoded diet branch (spec §0).
@@ -2442,7 +2490,7 @@ pub struct Hunger<'a> {
     /// dial that decides WHAT is food (forage/prey/light/…); read as a
     /// continuous mix, never branched on a diet type.
     pub niche: ResourceVector,
-    /// The food field this drive senses (the cell it stands in and the three
+    /// The food field this drive senses (the room it stands in and the three
     /// neighbours it may step to) — like [`Thermal`]'s terrain.
     pub terrain: &'a dyn Terrain,
     /// The day the food is sensed at (for the sun-fed autotroph seam's light).
@@ -2451,8 +2499,8 @@ pub struct Hunger<'a> {
 
 impl<'a> Hunger<'a> {
     /// The food-value at `room` for this creature's niche — the drive's own
-    /// perception of a cell.
-    fn food_value_at(&self, room: &RoomAddr) -> f64 {
+    /// perception of a room.
+    fn food_value_at(&self, room: &Facet) -> f64 {
         food_value(&self.niche, self.terrain, room, self.day)
     }
 }
@@ -2470,7 +2518,7 @@ impl<'a> Drive for Hunger<'a> {
         HUNGER.rise * horizon * ANTICIPATION_HORIZON_DAYS
     }
     fn proposal(&self, view: &Perceived, _budget: usize) -> Option<Action> {
-        // Eat in place where the cell is rich enough; else forage toward a
+        // Eat in place where the room is rich enough; else forage toward a
         // richer neighbour (None when boxed in / everywhere barren → the
         // creature holds, reading distress if hungry).
         if self.food_value_at(&view.position) >= EAT_THRESHOLD {
@@ -2532,7 +2580,7 @@ const DANGER_ACT: f64 = 0.3;
 const ALARM_SCALE: f64 = 1.0;
 
 /// Danger — the fifth drive (The Dread), the avoidance twin of hunger: a FLOW
-/// drive (like [`Thermal`]) that senses the threat at the cell it occupies and
+/// drive (like [`Thermal`]) that senses the threat at the room it occupies and
 /// FLEES down the threat gradient. Where hunger climbs *toward* a resource,
 /// danger flees *from* a hazard; where thermal minimizes temperature deviation,
 /// danger minimizes threat. It carries no internal stock and no discharge event
@@ -2542,17 +2590,17 @@ const ALARM_SCALE: f64 = 1.0;
 /// sleeping creature. Its serviceability is SIGNED (unclamped) — a step into
 /// worse danger scores NEGATIVE, so danger reshapes the other drives' paths
 /// (a thirsty creature routes around a hazard). Its felt threat is the
-/// creature's THREAT NICHE dotted with the cell's hazards (The Bane — per-kind
-/// fear, so two species flee different cells), then scaled by its `boldness`
+/// creature's THREAT NICHE dotted with the room's hazards (The Bane — per-kind
+/// fear, so two species flee different rooms), then scaled by its `boldness`
 /// (The Mettle) — a bold creature fears less, so its weaker veto lets it cross
 /// ground a timid one flees.
 /// type-audit: bare-ok(ratio: boldness), bare-ok(ratio: alarm), bare-ok(ratio: dread)
 pub struct Danger<'a> {
-    /// The hazard field this drive senses (the cell it stands in and the three
+    /// The hazard field this drive senses (the room it stands in and the three
     /// neighbours it may flee to) — like [`Thermal`]'s terrain.
     pub terrain: &'a dyn Terrain,
     /// The creature's threat niche (The Bane): how much it dreads each kind of
-    /// hazard, dotted with the cell's [`Hazards`] to give the felt threat.
+    /// hazard, dotted with the room's [`Hazards`] to give the felt threat.
     pub threat_niche: ThreatNiche,
     /// The creature's boldness (the banked `threat_response` at creature scope,
     /// The Mettle): scales the felt threat by `2·(1 − boldness)`, centered on
@@ -2560,22 +2608,22 @@ pub struct Danger<'a> {
     /// creature fears less; toward `1` it is fearless.
     pub boldness: f64,
     /// The per-tick ALARM field (The Alarm): borrowed distress from nearby
-    /// primary-afraid creatures, keyed by cell. Read at the creature's OWN cell
+    /// primary-afraid creatures, keyed by room. Read at the creature's OWN room
     /// only (the field build already spread each emitter's alarm to its
     /// neighbours, so reading neighbours again would double-count) and folded
     /// ADDITIVELY into the felt threat, scaled by [`ALARM_SCALE`]. `None` ⇒ no
     /// contagion — the current (pre-Alarm) behaviour, byte-identical.
-    pub alarm: Option<&'a std::collections::BTreeMap<RoomAddr, f64>>,
+    pub alarm: Option<&'a std::collections::BTreeMap<Facet, f64>>,
     /// The remembered DREAD map (The Shudder): the TRANSIENT subset of this
-    /// creature's hazard memory — cells whose present terrain is safe but where
+    /// creature's hazard memory — rooms whose present terrain is safe but where
     /// a herd's alarm once frightened it — keyed to the remembered alarm
-    /// magnitude. Read at the creature's OWN cell and folded into the same
+    /// magnitude. Read at the creature's OWN room and folded into the same
     /// additive slot as [`Danger::alarm`], because it IS an alarm term: the
     /// alarm as it was, not as it is. `None` ⇒ no phobia — byte-identical.
     /// Provenance is the only difference from `alarm`: that one is SENSED
     /// (present, external, a per-tick field), this one is BELIEVED (past,
     /// internal, a fold over committed history).
-    pub dread: Option<&'a std::collections::BTreeMap<RoomAddr, f64>>,
+    pub dread: Option<&'a std::collections::BTreeMap<Facet, f64>>,
 }
 
 /// The boldness at which fear is felt AS IS (unscaled) — the steady value the
@@ -2597,11 +2645,11 @@ fn mettle_factor(boldness: f64) -> f64 {
 
 /// The terrain-sourced felt threat over `room` and its neighbours (the
 /// potential-field reading the Danger drive engages on — the greatest over the
-/// cell it stands in and the three it may flee to of the per-kind
+/// room it stands in and the three it may flee to of the per-kind
 /// [`threat_value`], boldness applied separately). The alarm-free terrain half
 /// of the drive's urgency, factored out so the live drive and
 /// [`believed_hazard`]'s memory read the SAME danger — one source of truth.
-fn threat_field(room: &RoomAddr, niche: &ThreatNiche, terrain: &dyn Terrain) -> f64 {
+fn threat_field(room: &Facet, niche: &ThreatNiche, terrain: &dyn Terrain) -> f64 {
     let here = threat_value(niche, &terrain.hazards(room));
     room.neighbors()
         .iter()
@@ -2623,7 +2671,7 @@ fn threat_field(room: &RoomAddr, niche: &ThreatNiche, terrain: &dyn Terrain) -> 
 /// `believed_hazard` → `frightened_at` → here as an empty roster, so the field
 /// build sees a terrain-only replay and never re-enters the transient path.
 fn alarm_at(
-    room: &RoomAddr,
+    room: &Facet,
     day: WorldTime,
     roster: &[Body],
     terrain: &dyn Terrain,
@@ -2649,7 +2697,7 @@ fn alarm_at(
 /// this to The Haunt's terrain-only verdict (the recursion base case / the
 /// seed-42 path, where no primary-afraid emitter ever raises an alarm).
 fn frightened_at(
-    room: &RoomAddr,
+    room: &Facet,
     npc: &Body,
     terrain: &dyn Terrain,
     day: WorldTime,
@@ -2667,7 +2715,7 @@ fn frightened_at(
 /// mettle_factor ≥ DANGER_ACT`, clamped. The ONE formula [`frightened_at`] and
 /// [`believed_hazard`]'s fast path share, so the memory and the live Danger
 /// drive never disagree about what ground is frightening. `alarm` is the already
-/// clamped alarm-field value at the cell (`0.0` for terrain-only).
+/// clamped alarm-field value at the room (`0.0` for terrain-only).
 /// type-audit: bare-ok(ratio: terrain_threat), bare-ok(ratio: alarm), bare-ok(ratio: boldness)
 fn feels_frightening(terrain_threat: f64, alarm: f64, boldness: f64) -> bool {
     ((terrain_threat + ALARM_SCALE * alarm) * mettle_factor(boldness)).clamp(0.0, 1.0) >= DANGER_ACT
@@ -2675,15 +2723,15 @@ fn feels_frightening(terrain_threat: f64, alarm: f64, boldness: f64) -> bool {
 
 impl<'a> Danger<'a> {
     /// The creature's OWN felt threat at `room` (The Bane): its threat niche
-    /// dotted with the cell's hazards. Per-kind — two species read the same cell
+    /// dotted with the room's hazards. Per-kind — two species read the same room
     /// differently. (Boldness is applied separately, in `urgency`.)
-    fn threat_at(&self, room: &RoomAddr) -> f64 {
+    fn threat_at(&self, room: &Facet) -> f64 {
         threat_value(&self.threat_niche, &self.terrain.hazards(room))
     }
 
     /// The remembered dread at `room` (`0.0` when unremembered or `None`).
     /// type-audit: bare-ok(ratio: return)
-    fn dread_at(&self, room: &RoomAddr) -> f64 {
+    fn dread_at(&self, room: &Facet) -> f64 {
         self.dread.and_then(|m| m.get(room)).copied().unwrap_or(0.0)
     }
 
@@ -2694,7 +2742,7 @@ impl<'a> Danger<'a> {
     /// always exists), dread sits on now-SAFE ground: without it in the
     /// gradient a dreading creature has nowhere to go and reads `Lost`.
     /// type-audit: bare-ok(ratio: return)
-    fn felt_threat_at(&self, room: &RoomAddr) -> f64 {
+    fn felt_threat_at(&self, room: &Facet) -> f64 {
         self.threat_at(room) + ALARM_SCALE * self.dread_at(room)
     }
 }
@@ -2705,13 +2753,13 @@ impl<'a> Drive for Danger<'a> {
         // AND the dangerous ground within one step (the potential-field reading —
         // the drive must be ACTIVE while adjacent to a hazard for its signed
         // serviceability to veto a step INTO it). So the base threat is the
-        // greatest over the current cell and its neighbours; the creature's
+        // greatest over the current room and its neighbours; the creature's
         // boldness (The Mettle) then scales how much it FEELS it. Clamped [0, 1].
         let base = threat_field(&view.position, &self.threat_niche, self.terrain);
-        // THE ALARM: fold the borrowed distress at the creature's OWN cell into
+        // THE ALARM: fold the borrowed distress at the creature's OWN room into
         // the felt threat, ADDITIVELY and BEFORE the boldness scaling — so a calm
         // creature beside genuine distress feels it, scaled by its own mettle,
-        // exactly as it feels a terrain hazard. `None` (or a cell absent from the
+        // exactly as it feels a terrain hazard. `None` (or a room absent from the
         // sparse field) contributes `0.0`, keeping the current worlds byte-
         // identical. Read at `position` only: the field build already haloed the
         // alarm to the neighbours.
@@ -2720,7 +2768,7 @@ impl<'a> Drive for Danger<'a> {
             .and_then(|field| field.get(&view.position))
             .copied()
             .unwrap_or(0.0);
-        // THE SHUDDER: the REMEMBERED alarm at this cell joins the BORROWED one
+        // THE SHUDDER: the REMEMBERED alarm at this room joins the BORROWED one
         // in the same additive slot — the dread is an alarm term, so it needs no
         // scale of its own. Feeding back the very magnitude that recorded the
         // memory reproduces the verdict that created it: the memory and the
@@ -2798,29 +2846,29 @@ impl<'a> Drive for Danger<'a> {
 }
 
 /// The flee gradient step: the neighbour of LOWEST FELT threat — present terrain
-/// (for this creature's threat niche) PLUS the remembered `dread` at each cell
+/// (for this creature's threat niche) PLUS the remembered `dread` at each room
 /// (The Shudder) — or `None` when no neighbour is strictly safer than `from`
 /// itself (boxed in — the creature holds, cornered). The dread term is what lets
-/// a creature flee ground that is frightening only in MEMORY: a phantom cell is
+/// a creature flee ground that is frightening only in MEMORY: a phantom room is
 /// now-safe, so terrain alone offers no gradient to step down. The sign-flip of
 /// [`comfort_step`] / [`forage_step`]: minimize threat rather than thermal
 /// deviation or maximize food; same three-neighbour scan and
-/// `total_cmp`-then-ascending-`RoomAddr` tie-break.
+/// `total_cmp`-then-ascending-`Facet` tie-break.
 fn flee_step(
-    from: &RoomAddr,
+    from: &Facet,
     terrain: &dyn Terrain,
     niche: &ThreatNiche,
-    dread: Option<&std::collections::BTreeMap<RoomAddr, f64>>,
-) -> Option<RoomAddr> {
-    let threat = |room: &RoomAddr| {
+    dread: Option<&std::collections::BTreeMap<Facet, f64>>,
+) -> Option<Facet> {
+    let threat = |room: &Facet| {
         threat_value(niche, &terrain.hazards(room))
             + ALARM_SCALE * dread.and_then(|m| m.get(room)).copied().unwrap_or(0.0)
     };
-    let mut best: Option<(RoomAddr, f64)> = None;
+    let mut best: Option<(Facet, f64)> = None;
     for n in from.neighbors() {
         let t = threat(&n);
         let keep_existing = match &best {
-            // Lower threat wins; ties break to the smaller RoomAddr.
+            // Lower threat wins; ties break to the smaller Facet.
             Some((ba, bt)) => t.total_cmp(bt).then_with(|| n.cmp(ba)).is_ge(),
             None => false,
         };
@@ -2965,7 +3013,7 @@ struct HomeNavState {
     avoid_epoch: u64,
     /// The avoid set as of the most recent `home_nav` call, compared against
     /// on the NEXT call to detect a belief change.
-    last_avoid: std::collections::BTreeSet<RoomAddr>,
+    last_avoid: std::collections::BTreeSet<Facet>,
     /// `(pos, home, budget, avoid_epoch, feature)` as of the last real search
     /// for this entity — `None` before its first `home_nav` call. `home`/
     /// `budget` are part of the key (Task 4 fix round, key hardening): they
@@ -2975,7 +3023,7 @@ struct HomeNavState {
     /// future caller asking about a DIFFERENT home or budget for the same
     /// entity must miss the cache, not silently read a stale answer computed
     /// for a different question.
-    cached: Option<(RoomAddr, RoomAddr, usize, u64, HomeNavFeature)>,
+    cached: Option<(Facet, Facet, usize, u64, HomeNavFeature)>,
 }
 
 /// `home_nav`'s cross-tick, per-entity backing (the-waymark, Task 4 — the
@@ -3002,7 +3050,7 @@ struct HomeNavState {
 /// spec, "the scaling stake").
 ///
 /// Also gates the search itself, not only its cache: `decide_step` only calls
-/// `home_nav` for a non-`Ametabolic` creature (plan-time verification (a) —
+/// `home_nav` for a non-ametabolic creature (plan-time verification (a) —
 /// the Social drive, the plan's only consumer, is never pushed onto an
 /// ametabolic creature's `drives` vec — "lazy AND cached" per the campaign
 /// spec's Stage 3 clause).
@@ -3048,16 +3096,16 @@ impl HomeNavCache {
     /// counts it in `searches`. `mesh_memo` (the-waymark, Task 6 — ledger #7's
     /// re-plan) is threaded straight through to a real search's
     /// [`crate::action::plan_to_room_memo`] call, so a MISS no longer recomputes
-    /// `RoomAddr::neighbors` from scratch on every `astar` expansion when the
+    /// `Facet::neighbors` from scratch on every `astar` expansion when the
     /// caller has a session-lived [`RoomMeshMemo`] to share — a cache HIT
     /// above never touches it at all.
     #[allow(clippy::too_many_arguments)]
     fn home_nav(
         &mut self,
         entity: EntityId,
-        pos: &RoomAddr,
-        home: &RoomAddr,
-        avoid: &std::collections::BTreeSet<RoomAddr>,
+        pos: &Facet,
+        home: &Facet,
+        avoid: &std::collections::BTreeSet<Facet>,
         budget: usize,
         mesh_memo: &mut RoomMeshMemo,
     ) -> HomeNavFeature {
@@ -3111,7 +3159,7 @@ impl HomeNavCache {
 /// costs nothing beyond what this seam always paid. Likewise builds a
 /// throwaway [`RoomMeshMemo`] (the-waymark, Task 6) for the same reason.
 /// type-audit: bare-ok(count: budget)
-pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize) -> Intent {
+pub fn decide(view: &Perceived, home: &Facet, p: &DriveParams, budget: usize) -> Intent {
     let thirst = Thirst { params: *p };
     let drives: [&dyn Drive; 1] = [&thirst];
     // The Stage-0 default disposition: grab (latency 0), myopic (horizon 0),
@@ -3167,7 +3215,7 @@ pub struct Disposition {
 /// state into an `Intent` when SEVERAL drives may compete. It does NOT pick a
 /// drive and follow its gradient — it enumerates the candidate ACTIONS (the ≤3
 /// neighbour `MoveTo`s plus `Drink`) and picks the one of maximum utility, so a
-/// single move can serve two needs at once (a cell both warmer AND nearer
+/// single move can serve two needs at once (a room both warmer AND nearer
 /// water). Returns the chosen `Intent` and the NEW commitment [`Mode`] (carry
 /// it into the next call for hysteresis).
 ///
@@ -3184,7 +3232,7 @@ pub struct Disposition {
 ///   releases below `act − h`, and is switched for a challenger only when the
 ///   challenger's best-action utility beats the incumbent's by `δ`. With no
 ///   active drive the NPC falls to `Homing` (a step toward `home`) or `Idle`.
-/// - **Determinism:** candidate actions are scanned in ascending-`RoomAddr`
+/// - **Determinism:** candidate actions are scanned in ascending-`Facet`
 ///   order (then `Drink`), and every max is a `total_cmp` keeping the earliest
 ///   on ties — reload-stable.
 ///
@@ -3287,7 +3335,7 @@ fn cached_serviceability(
 #[allow(clippy::too_many_arguments)]
 pub fn arbitrate(
     view: &Perceived,
-    home: &RoomAddr,
+    home: &Facet,
     drives: &[&dyn Drive],
     disposition: &Disposition,
     incoming: Mode,
@@ -3325,6 +3373,10 @@ pub fn arbitrate(
                 label: AffectLabel::Helpless,
                 object: Some(DriveKind::Thirst),
             },
+            // The short-circuit bypasses per-drive threshold engagement
+            // entirely (no `active` vector is ever computed on this path),
+            // so there are no OTHER ranks to have discarded this decision.
+            suppressed: Vec::new(),
         };
     }
 
@@ -3391,12 +3443,16 @@ pub fn arbitrate(
                 intent: feature.first_step.map(Intent::Do).unwrap_or(Intent::Hold),
                 mode: Mode::Homing,
                 affect,
+                // `active` is all-false on this path by construction (the
+                // guard above), so nothing was discarded.
+                suppressed: Vec::new(),
             };
         }
         return Resolution {
             intent: Intent::Hold,
             mode: Mode::Idle,
             affect,
+            suppressed: Vec::new(),
         };
     }
 
@@ -3476,6 +3532,19 @@ pub fn arbitrate(
     };
     let pursued_kind = drives[pursued].kind();
 
+    // Arbitration's own discarded ranks (The Confidant, Task 5): every OTHER
+    // drive that crossed its own engagement threshold this decision but lost
+    // the contest for `pursued` — computed from the same `active`/
+    // `pursued_kind` this resolution already derived, not a second pass.
+    // THE FILTER: excludes `pursued_kind` itself, which is what keeps the
+    // winner and its residue disjoint — see `Resolution::suppressed`'s own
+    // doc for why nothing downstream may fold this back into `affect`/
+    // `object`.
+    let suppressed: Vec<DriveKind> = (0..drives.len())
+        .filter(|&i| active[i] && drives[i].kind() != pursued_kind)
+        .map(|i| drives[i].kind())
+        .collect();
+
     // Weight each active drive: the pursued drive at 1, every other active
     // drive at `latency` (grab 0 ↔ weigh 1). Then utility = weighted sum.
     let utility = |cache: &mut Vec<Option<Option<Action>>>, a: &Action| -> f64 {
@@ -3492,7 +3561,7 @@ pub fn arbitrate(
             .sum()
     };
 
-    // The max-utility action, earliest-on-ties (ascending RoomAddr, Drink last).
+    // The max-utility action, earliest-on-ties (ascending Facet, Drink last).
     let mut best_i = 0usize;
     let mut best_u = utility(&mut proposal_cache, &candidates[0]);
     for (i, a) in candidates.iter().enumerate().skip(1) {
@@ -3515,7 +3584,7 @@ pub fn arbitrate(
         // (spec §7 — searching is normal seeking, NOT confusion, the load-bearing
         // exclusion from the distress metric). Thermal, which sets no
         // `believed_water`, reads Searching while gradient-seeking comfort — and
-        // once the cell is comfortable no drive is active, so it reads Content.
+        // once the room is comfortable no drive is active, so it reads Content.
         let known = view.believed_water.is_some();
         let (label, valence) = match &chosen {
             // A need directly MET — a drink, a rest, or a meal.
@@ -3575,6 +3644,7 @@ pub fn arbitrate(
                 label,
                 object,
             },
+            suppressed: suppressed.clone(),
         }
     } else {
         // Blocked: no candidate reduces the drive. With a KNOWN target it cannot
@@ -3595,6 +3665,7 @@ pub fn arbitrate(
                 label,
                 object,
             },
+            suppressed,
         }
     }
 }
@@ -3709,7 +3780,7 @@ pub fn affect_of_memo(
 /// budget-1000 search from `decide_step`'s own, since this is a stateless
 /// re-derivation of felt state, not the live decision. Reads the Social
 /// drive's feature from the caller-owned cache instead, gated on
-/// non-`Ametabolic` exactly as `decide_step`'s own gate is (see that
+/// non-ametabolic exactly as `decide_step`'s own gate is (see that
 /// function's doc). Sharing IS safe across the two consumers: a cache hit
 /// requires an EXACT `(pos, avoid)` match regardless of who asked, so this
 /// can only ever save a search, never answer one incorrectly.
@@ -3726,10 +3797,22 @@ pub fn affect_of_memo_occupied(
     home_nav_cache: &mut HomeNavCache,
 ) -> Affect {
     let pos = agent_position(frozen, npc, day);
+    // BEHAVIOUR-PRESERVING, AND THE NEGATIVE CASE IS DELIBERATELY NOT HANDLED.
+    // `WorldTime::GENESIS` is `ticks: 0`, which is byte-for-byte the identity
+    // the old `fold(0.0, f64::max)` used — so a fact dated BEFORE genesis
+    // still reads as genesis here, exactly as it always has. What the retype
+    // buys is the removal of a float round-trip (`WorldTime` is `Ord`, so the
+    // fold orders instants directly), NOT a change of answer.
+    //
+    // Do not read decision 0126 into this. Negative days ARE legal, and
+    // flooring a pre-genesis fact at genesis is a real (if benign) loss —
+    // fixing it means returning `Option` and making each caller name its
+    // default, the way `last_fact_day_at_or_before` now does, which is a
+    // BEHAVIOUR change and is deliberately out of this retype's scope.
     let last_drank = frozen
         .facts_of(npc.entity, DRANK)
         .filter_map(|f| f.day)
-        .fold(0.0_f64, |acc, d| acc.max(d.day()));
+        .fold(WorldTime::GENESIS, WorldTime::max);
     let believed = shared_believed_water(frozen, npc, band, day, terrain, PLAN_BUDGET);
     let drive = drive_at(
         frozen,
@@ -3738,7 +3821,7 @@ pub fn affect_of_memo_occupied(
         day,
         &SUSTENANCE,
         terrain,
-        npc.metabolic_class,
+        npc.thermal_strategy,
     );
     let visited = std::collections::BTreeSet::new();
     let explore_step = lowest_unvisited_neighbor_memo(&pos, &visited, terrain, mesh_memo);
@@ -3791,7 +3874,7 @@ pub fn affect_of_memo_occupied(
             &npc.home,
             day,
             terrain,
-            npc.metabolic_class,
+            npc.thermal_strategy,
         ),
         niche: npc.niche.clone(),
         terrain,
@@ -3814,7 +3897,7 @@ pub fn affect_of_memo_occupied(
         // bandless replay — gives termination, byte-identity, and no contagion.
         dread: Some(&memory.dread),
     };
-    // The metabolism gate (The Kindling): an Ametabolic creature has no
+    // The metabolism gate (The Kindling): an ametabolic creature has no
     // homeostatic drives at all — it neither thirsts, thermoregulates, tires
     // (The Slumber), hungers (The Provender), fears (The Dread — a construct
     // does not flinch), nor pines for company (The Belonging), so it reads
@@ -3826,7 +3909,7 @@ pub fn affect_of_memo_occupied(
     // ONLY consumer of a home plan, and it is never pushed onto `drives` for
     // an ametabolic creature — see `decide_step`'s identical gate for the
     // full rationale.
-    let ametabolic = matches!(npc.metabolic_class, MetabolicClass::Ametabolic);
+    let ametabolic = hornvale_species::is_ametabolic(npc.thermal_strategy);
     // Affiliation (The Belonging): loneliness + the home-step, read from the
     // cross-tick cache instead of an unconditional `plan_to_room` (the-waymark,
     // Task 4) — precomputed once so the drive's urgency stays O(1) either way.
@@ -3860,7 +3943,7 @@ pub fn affect_of_memo_occupied(
         drives.push(&danger);
         drives.push(&social);
     }
-    let helpless = !ametabolic && learned_helplessness(last_drank, day.day());
+    let helpless = !ametabolic && learned_helplessness(last_drank, day);
     let disposition = Disposition {
         latency: npc.deliberation_latency,
         horizon: npc.time_horizon,
@@ -3886,7 +3969,7 @@ pub fn affect_of_memo_occupied(
 /// sibling of `worldgen::predator_pressure_from`. For each creature that is
 /// **primary-afraid** (its own Danger drive is active — `affect_of` reads
 /// `object == Some(Danger)` with `arousal ≥ DANGER_ACT`), it stamps the
-/// emitter's felt-threat magnitude onto its cell and each `neighbors()` cell
+/// emitter's felt-threat magnitude onto its room and each `neighbors()` room
 /// (a one-hop halo), accumulating (`+=`) across emitters, then clamps every
 /// entry to `[0, 1]`. Empty when no creature is primary-afraid.
 ///
@@ -3915,7 +3998,7 @@ pub fn alarm_field(
     npcs: &[Body],
     terrain: &dyn Terrain,
     day: WorldTime,
-) -> std::collections::BTreeMap<RoomAddr, f64> {
+) -> std::collections::BTreeMap<Facet, f64> {
     let mut memo = PrimaryAfraidMemo::new();
     alarm_field_memo(frozen, npcs, terrain, day, &mut memo)
 }
@@ -3930,8 +4013,8 @@ pub fn alarm_field_memo(
     terrain: &dyn Terrain,
     day: WorldTime,
     memo: &mut PrimaryAfraidMemo,
-) -> std::collections::BTreeMap<RoomAddr, f64> {
-    let mut field: std::collections::BTreeMap<RoomAddr, f64> = std::collections::BTreeMap::new();
+) -> std::collections::BTreeMap<Facet, f64> {
+    let mut field: std::collections::BTreeMap<Facet, f64> = std::collections::BTreeMap::new();
     for npc in npcs {
         let pos = agent_position(frozen, npc, day);
         // THE CHEAP GATE (The Phantom perf, byte-identical). A creature can be
@@ -3947,7 +4030,7 @@ pub fn alarm_field_memo(
         // superstition is reserved. Widening this gate to admit dread-only
         // creatures would open it. A terrain-afraid creature still goes through
         // `affect_of` below to confirm Danger WINS. It is what keeps the transient
-        // memory (`believed_hazard` folds this per visited cell) cheap on the
+        // memory (`believed_hazard` folds this per visited room) cheap on the
         // emitter-free common case: no hazard underfoot ⇒ no `affect_of` at all.
         if threat_field(&pos, &npc.threat_niche, terrain) * mettle_factor(npc.boldness) < DANGER_ACT
         {
@@ -3965,7 +4048,7 @@ pub fn alarm_field_memo(
         if magnitude <= 0.0 {
             continue;
         }
-        // Stamp the emitter's felt-threat magnitude on its cell and the one-hop
+        // Stamp the emitter's felt-threat magnitude on its room and the one-hop
         // halo (its three edge-neighbours), accumulating across emitters.
         *field.entry(pos.clone()).or_insert(0.0) += magnitude;
         for n in pos.neighbors() {
@@ -4062,7 +4145,7 @@ const INTERIOR_WARMTH_BUDGET: usize = 64;
 /// answer; [`Thermal::interior`]'s own `None` case already reads as the
 /// correct identity (no interior applies) regardless of which of these two
 /// reasons produced it.
-fn landing_interior(pos: &RoomAddr, terrain: &dyn Terrain) -> Option<(Interior, AnchorId)> {
+fn landing_interior(pos: &Facet, terrain: &dyn Terrain) -> Option<(Interior, AnchorId)> {
     let interior = interior_of(pos, terrain);
     let kind = seam_kind(terrain.is_built(pos));
     let anchor = landing(&interior, kind)?;
@@ -4073,8 +4156,8 @@ fn landing_interior(pos: &RoomAddr, terrain: &dyn Terrain) -> Option<(Interior, 
 /// `provenance` naming why.
 pub(crate) fn agent_at_fact(
     entity: EntityId,
-    target: &RoomAddr,
-    day: f64,
+    target: &Facet,
+    day: WorldTime,
     provenance: &str,
 ) -> Fact {
     Fact {
@@ -4082,7 +4165,7 @@ pub(crate) fn agent_at_fact(
         predicate: AGENT_AT.to_string(),
         object: Value::Text(room_to_text(target)),
         place: None,
-        day: Some(WorldTime::new(day).expect("simulated day is finite")),
+        day: Some(day),
         provenance: provenance.to_string(),
     }
 }
@@ -4095,44 +4178,44 @@ pub(crate) fn agent_at_fact(
 /// over it is the synthetic complement to the real-world health sweep — the
 /// same seam, a hand-built scenario instead of a derived population. Typed
 /// throughout (no primitive at the boundary), so it needs no type-audit tag.
-pub fn place_agent(entity: EntityId, room: &RoomAddr, day: WorldTime) -> Fact {
-    agent_at_fact(entity, room, day.day(), "harness-placement")
+pub fn place_agent(entity: EntityId, room: &Facet, day: WorldTime) -> Fact {
+    agent_at_fact(entity, room, day, "harness-placement")
 }
 
 /// A committed `drank` fact: `entity` satisfied its sustenance goal on `day`.
-fn drank_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
+fn drank_fact(entity: EntityId, day: WorldTime, provenance: &str) -> Fact {
     Fact {
         subject: entity,
         predicate: DRANK.to_string(),
         object: Value::Flag(true),
         place: None,
-        day: Some(WorldTime::new(day).expect("simulated day is finite")),
+        day: Some(day),
         provenance: provenance.to_string(),
     }
 }
 
 /// A committed `rested` fact: `entity` slept (reset its fatigue) on `day` — The
 /// Slumber's discharge, the fatigue twin of [`drank_fact`].
-pub(crate) fn rested_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
+pub(crate) fn rested_fact(entity: EntityId, day: WorldTime, provenance: &str) -> Fact {
     Fact {
         subject: entity,
         predicate: RESTED.to_string(),
         object: Value::Flag(true),
         place: None,
-        day: Some(WorldTime::new(day).expect("simulated day is finite")),
+        day: Some(day),
         provenance: provenance.to_string(),
     }
 }
 
 /// A committed `eaten` fact: `entity` ate (reset its hunger) on `day` — The
 /// Provender's discharge, the hunger twin of [`drank_fact`].
-fn eaten_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
+fn eaten_fact(entity: EntityId, day: WorldTime, provenance: &str) -> Fact {
     Fact {
         subject: entity,
         predicate: EATEN.to_string(),
         object: Value::Flag(true),
         place: None,
-        day: Some(WorldTime::new(day).expect("simulated day is finite")),
+        day: Some(day),
         provenance: provenance.to_string(),
     }
 }
@@ -4142,7 +4225,6 @@ fn eaten_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
 /// once it knows water — committing a dated `agent-at`/`drank` at each
 /// executed step. Holds a `Terrain` to compute belief and exploration
 /// mid-walk. Run through c6's `tick`.
-/// type-audit: bare-ok(ratio: day_length_std)
 pub struct DriveMovements<'a> {
     /// The NPCs this tick advances.
     pub npcs: Vec<Body>,
@@ -4152,20 +4234,22 @@ pub struct DriveMovements<'a> {
     pub to: WorldTime,
     /// The drive parameters.
     pub params: DriveParams,
-    /// The world's rotation period in standard days (`Calendar::day_length`),
-    /// `None` on a tidally-locked world. The action clock divides the planet's
-    /// day into an exact integer number of ticks (The Action Clock, spec §4.1),
-    /// so the scheduler needs the day length the same way it needs the drive
-    /// parameters. Read by the shared clock (the queue's tick scale) and by
-    /// every charge `advance_one` and `catch_up` make against `clock::days_of`.
-    pub day_length_std: Option<f64>,
+    /// The world's rotation period as an exact tick span
+    /// (`Calendar::day_ticks`), `None` on a tidally locked world. The action
+    /// clock divides the planet's day into an exact integer number of ticks
+    /// (The Action Clock, spec §4.1), so the scheduler needs the day length
+    /// the same way it needs the drive parameters.
+    ///
+    /// Was `day_ticks: Option<f64>` until The Foliot; a day is a whole
+    /// number of ticks now, so the scheduler reads the integer directly.
+    pub day_ticks: Option<TickSpan>,
     /// The elevation field belief and exploration read.
     pub terrain: &'a dyn Terrain,
 }
 
 /// The day `npc` entered the room it occupies as of `t` — the day of the
 /// latest committed `agent-at` fact with day ≤ `t.day`, or the world's own
-/// origin (`0.0`) when no such fact exists yet (the same pre-history
+/// origin ([`WorldTime::GENESIS`]) when no such fact exists yet (the same pre-history
 /// fallback [`agent_position`] uses for the ROOM itself: a creature with no
 /// committed history has been home since the world began). This is catch-up's
 /// (The Threshold task 7, spec §5) own "pre-entry state" boundary: the
@@ -4173,14 +4257,13 @@ pub struct DriveMovements<'a> {
 /// between them changed the creature's COARSE position — if it had, a later
 /// `agent-at` would be the latest one instead, and this function would
 /// return that later day.
-fn room_entry_day(ledger: &Ledger, npc: &Body, t: WorldTime) -> f64 {
+fn room_entry_day(ledger: &Ledger, npc: &Body, t: WorldTime) -> WorldTime {
     ledger
         .facts_of(npc.entity, AGENT_AT)
         .filter(|f| f.day.map(|d| d <= t).unwrap_or(false))
         .last()
         .and_then(|f| f.day)
-        .map(WorldTime::day)
-        .unwrap_or(0.0)
+        .unwrap_or(WorldTime::GENESIS)
 }
 
 /// The three outcomes [`Intent::Hold`]'s closed-form day-jump can produce —
@@ -4191,8 +4274,8 @@ fn room_entry_day(ledger: &Ledger, npc: &Body, t: WorldTime) -> f64 {
 /// which `ceiling` bounds the jump (`self.to.day` for the live walk,
 /// `self.from.day` — "now" — for catch-up's own unobserved-span replay).
 enum HoldStep {
-    /// Advance to this day and keep going.
-    Advance(f64),
+    /// Advance to this instant and keep going.
+    Advance(WorldTime),
     /// The jump is degenerate (`rate_here == 0.0` makes it non-finite) —
     /// spend this iteration without moving `day`, matching the live walk's
     /// own `continue`.
@@ -4210,23 +4293,35 @@ enum HoldStep {
 /// would be redundant, not a second judgment, but threading it removes even
 /// that redundancy.
 fn hold_step(
-    day: f64,
-    pos: &RoomAddr,
+    day: WorldTime,
+    pos: &Facet,
     npc: &Body,
     terrain: &dyn Terrain,
     drive: f64,
     params: &DriveParams,
-    ceiling: f64,
+    ceiling: WorldTime,
 ) -> HoldStep {
-    let rate_here = rise_at(
-        terrain.temperature(pos, WorldTime::new(day).expect("a day value is finite")),
-        npc.metabolic_class,
-        params,
-    );
-    let next_act = day + (params.act - drive) / rate_here;
-    if !next_act.is_finite() {
+    let rate_here = rise_at(terrain.temperature(pos, day), npc.thermal_strategy, params);
+    // The jump's LENGTH is a continuous quantity — an urgency gap divided by
+    // an urgency rate — so it is computed in `f64` days and crosses onto the
+    // lattice ONCE, here, as a span added to the instant. `rate_here == 0.0`
+    // makes it non-finite: the same degenerate jump the `f64` form detected
+    // with this same `is_finite` test, before adding rather than after.
+    let ahead_days = (params.act - drive) / rate_here;
+    if !ahead_days.is_finite() {
         return HoldStep::Stall;
     }
+    let Ok(ahead) = TickSpan::from_std_days(ahead_days) else {
+        // Finite but outside the representable tick range: a jump that far
+        // ahead overshoots any ceiling a walk can carry, which is exactly the
+        // `next_act > ceiling` verdict the `f64` form reached for it.
+        return HoldStep::GiveUp;
+    };
+    let next_act = day + ahead;
+    // `next_act <= day` now also covers the sub-tick case: a jump shorter than
+    // one tick rounds to no jump at all, and a step that does not move the
+    // clock cannot be an `Advance` without breaking the loop's own strict-
+    // progress guarantee.
     if next_act <= day || next_act > ceiling {
         return HoldStep::GiveUp;
     }
@@ -4283,17 +4378,17 @@ fn hold_step(
 /// reach zero searches across ticks, not merely within one).
 #[allow(clippy::too_many_arguments)]
 fn decide_step(
-    day: f64,
-    pos: &RoomAddr,
+    day: WorldTime,
+    pos: &Facet,
     npc: &Body,
     terrain: &dyn Terrain,
-    believed: &mut Option<RoomAddr>,
+    believed: &mut Option<Facet>,
     hazard: &HazardMemory,
-    alarm: &std::collections::BTreeMap<RoomAddr, f64>,
-    visited: &std::collections::BTreeSet<RoomAddr>,
-    last_drank: f64,
-    last_ate: f64,
-    last_rested: f64,
+    alarm: &std::collections::BTreeMap<Facet, f64>,
+    visited: &std::collections::BTreeSet<Facet>,
+    last_drank: WorldTime,
+    last_ate: WorldTime,
+    last_rested: WorldTime,
     interior: Option<(&Interior, AnchorId)>,
     mode: Mode,
     params: &DriveParams,
@@ -4308,41 +4403,64 @@ fn decide_step(
     if is_water(pos, terrain) {
         *believed = nearer_to_home(&npc.home, believed.take(), pos.clone(), PLAN_BUDGET);
     }
+    // THE ONE CROSSING IN THIS FUNCTION. The thirst and hunger path integrals
+    // are CONTINUOUS quantities — a temperature-weighted rate integrated over
+    // an occupancy timeline — so the instants cross to `f64` standard days
+    // HERE, at the integrals' own edge, rather than the walk carrying a float
+    // clock upstream to suit them. Lossless below ~2.47e8 years (decision
+    // 0186). Everything above and below this block compares ticks exactly.
+    let day_days = day.as_std_days();
+    let last_drank_days = last_drank.as_std_days();
+    let last_ate_days = last_ate.as_std_days();
+    // AND THE CROSSING STOPS HERE, ON PURPOSE. `agent_sightings`' `upto` and
+    // its returned `(day, room)` timeline, and `integrate_thirst`'s
+    // `sightings`/`last_drank`/`t`, are all genuinely INSTANTS and are all
+    // deliberately left as `f64` standard days. Retyping them would push the
+    // crossing INWARD, past the integral's own edge, so the integral would
+    // cross back out to `f64` per segment to multiply a rate by a span — more
+    // crossings than the one that belongs here, and the opposite of the seam
+    // principle. The edge of a continuous integral is where an instant stops
+    // being a lattice point and starts being a limit of integration.
     // The temperature-coupled thirst integral, re-derived over the committed
     // history (`frozen`) PLUS this tick's own emitted moves (`out`) — see the
     // live walk's own doc for why both are folded together.
-    let mut sightings = agent_sightings(frozen, npc.entity, day);
+    let mut sightings = agent_sightings(frozen, npc.entity, day_days);
     for f in out {
         if f.subject == npc.entity
             && f.predicate == AGENT_AT
             && let Value::Text(s) = &f.object
             && let Some(d) = f.day
-            && d.day() <= day
+            // An exact tick comparison — the emitted fact's day and `day` are
+            // both instants, so this no longer round-trips either through
+            // `f64` merely to order them.
+            && d <= day
         {
-            sightings.push((d.day(), room_from_text(s)));
+            sightings.push((d.as_std_days(), room_from_text(s)));
         }
     }
     sightings.sort_by(|a, b| a.0.total_cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
     let drive = integrate_thirst(
         &sightings,
         &npc.home,
-        last_drank,
-        day,
+        last_drank_days,
+        day_days,
         terrain,
-        npc.metabolic_class,
+        npc.thermal_strategy,
         params,
     );
     let hunger_urgency = integrate_thirst(
         &sightings,
         &npc.home,
-        last_ate,
-        day,
+        last_ate_days,
+        day_days,
         terrain,
-        npc.metabolic_class,
+        npc.thermal_strategy,
         &HUNGER,
     );
     let explore_step = lowest_unvisited_neighbor_memo(pos, visited, terrain, mesh_memo);
-    let fatigue = (FATIGUE_RISE * (day - last_rested)).clamp(0.0, 1.0);
+    // The fatigue ramp is continuous too, but the SPAN it reads is exact: two
+    // instants subtract on the lattice and only their difference crosses.
+    let fatigue = (FATIGUE_RISE * (day - last_rested).as_std_days()).clamp(0.0, 1.0);
     let view = Perceived {
         position: pos.clone(),
         drive,
@@ -4355,7 +4473,7 @@ fn decide_step(
     let thermal = Thermal {
         niche: npc.temperature_niche,
         terrain,
-        day: WorldTime::new(day).expect("a day value is finite"),
+        day,
         interior,
     };
     let rest = Fatigue {
@@ -4365,7 +4483,7 @@ fn decide_step(
         urgency: hunger_urgency,
         niche: npc.niche.clone(),
         terrain,
-        day: WorldTime::new(day).expect("a day value is finite"),
+        day,
     };
     let danger = Danger {
         terrain,
@@ -4381,7 +4499,7 @@ fn decide_step(
     // call itself (not merely caching its result) is the "lazy AND cached"
     // half of the campaign spec's Stage 3 clause — an ametabolic creature now
     // never even touches the cache, let alone runs a search.
-    let ametabolic = matches!(npc.metabolic_class, MetabolicClass::Ametabolic);
+    let ametabolic = hornvale_species::is_ametabolic(npc.thermal_strategy);
     let social = if ametabolic {
         Social {
             loneliness: 0.0,
@@ -4417,12 +4535,7 @@ fn decide_step(
         latency: npc.deliberation_latency,
         horizon: npc.time_horizon,
         helpless,
-        awake: is_awake(
-            npc.activity,
-            terrain,
-            pos,
-            WorldTime::new(day).expect("a day value is finite"),
-        ),
+        awake: is_awake(npc.activity, terrain, pos, day),
     };
     let resolution = arbitrate(
         &view,
@@ -4438,8 +4551,8 @@ fn decide_step(
     (resolution, drive)
 }
 
-/// The subject's most recent `predicate` fact day at or before `day`,
-/// `0.0` if none — the per-day counterpart to the whole-history folds
+/// The subject's most recent `predicate` fact day at or before `day`, or
+/// `None` if there is none — the per-day counterpart to the whole-history folds
 /// computed once outside the walk (`drive_at`, `fatigue_at`, and
 /// `step_with_occupancy`'s own `last_drank`/`last_ate`/`last_rested`
 /// locals). Those are correct for a SINGLE evaluation instant; catch-up's
@@ -4448,13 +4561,23 @@ fn decide_step(
 /// `<= day` at each one rather than reuse a value folded over the whole
 /// committed history, which could be looking chronologically PAST the day
 /// it is being asked about.
-fn last_fact_day_at_or_before(ledger: &Ledger, predicate: &str, entity: EntityId, day: f64) -> f64 {
+///
+/// `Option` rather than a `0.0` sentinel: "no such fact" and "a fact at
+/// genesis" are different answers, and the `f64` fold could not tell them
+/// apart — nor was `0.0` ever a safe identity for a SIGNED instant (decision
+/// 0126 makes negative days legal). Each caller now names the default it
+/// wants, at the call site, where the choice is visible.
+fn last_fact_day_at_or_before(
+    ledger: &Ledger,
+    predicate: &str,
+    entity: EntityId,
+    day: WorldTime,
+) -> Option<WorldTime> {
     ledger
         .facts_of(entity, predicate)
         .filter_map(|f| f.day)
-        .map(WorldTime::day)
         .filter(|&d| d <= day)
-        .fold(0.0_f64, f64::max)
+        .max()
 }
 
 /// Catch-up's own replay loop (The Threshold task 7, spec §5): reconstruct
@@ -4500,15 +4623,15 @@ fn last_fact_day_at_or_before(ledger: &Ledger, predicate: &str, entity: EntityId
 /// from cache.
 #[allow(clippy::too_many_arguments)]
 fn catch_up(
-    entry_day: f64,
-    horizon: f64,
-    pos: &RoomAddr,
+    entry_day: WorldTime,
+    horizon: WorldTime,
+    pos: &Facet,
     npc: &Body,
     terrain: &dyn Terrain,
-    believed: &mut Option<RoomAddr>,
+    believed: &mut Option<Facet>,
     hazard: &HazardMemory,
-    alarm: &std::collections::BTreeMap<RoomAddr, f64>,
-    visited: &std::collections::BTreeSet<RoomAddr>,
+    alarm: &std::collections::BTreeMap<Facet, f64>,
+    visited: &std::collections::BTreeSet<Facet>,
     occupancy: &mut Occupancy,
     interior: &Interior,
     mut mode: Mode,
@@ -4517,7 +4640,10 @@ fn catch_up(
     frozen: &Ledger,
     out: &[Fact],
     cap: usize,
-    day_length_std: Option<f64>,
+    // `day_ticks` was a parameter here until The Foliot. It is gone rather
+    // than underscored: a replay's charge no longer consults the planet at
+    // all, because a cost IS a kernel span. Its absence is the clearest
+    // statement that the two lattices have merged.
     mesh_memo: &mut RoomMeshMemo,
     home_nav_cache: &mut HomeNavCache,
     controller: &mut dyn Controller,
@@ -4541,9 +4667,19 @@ fn catch_up(
         // for every day before it. Filtering to `<= day` at each iteration
         // is what makes `decide_step` see the world as it actually was on
         // that day, not as it will be once the gap is fully closed.
-        let last_drank = last_fact_day_at_or_before(frozen, DRANK, npc.entity, day);
-        let last_ate = last_fact_day_at_or_before(frozen, EATEN, npc.entity, day);
-        let last_rested = last_fact_day_at_or_before(frozen, RESTED, npc.entity, day);
+        //
+        // `None` — no such fact at or before `day` — defaults to GENESIS here
+        // rather than inside the query, because that is what the drive folds
+        // this replay stands in for have always meant by it: a creature that
+        // has never drunk has been accruing thirst since the world began.
+        // Naming it at the call site is what keeps "no fact" and "a fact at
+        // genesis" distinguishable everywhere else.
+        let last_drank = last_fact_day_at_or_before(frozen, DRANK, npc.entity, day)
+            .unwrap_or(WorldTime::GENESIS);
+        let last_ate = last_fact_day_at_or_before(frozen, EATEN, npc.entity, day)
+            .unwrap_or(WorldTime::GENESIS);
+        let last_rested = last_fact_day_at_or_before(frozen, RESTED, npc.entity, day)
+            .unwrap_or(WorldTime::GENESIS);
         let (resolution, drive) = decide_step(
             day,
             pos,
@@ -4594,7 +4730,12 @@ fn catch_up(
                 // derivation failure `decide_step` is shared to avoid. No
                 // terrain factor: a within-room step does not change room, so
                 // there is no elevation pair to climb.
-                day += days_of(cost_ticks(&action, npc.mass_kg, 1.0), day_length_std);
+                // EXACT INTEGER ADDITION: a cost IS a `TickSpan` and an
+                // instant IS a tick count, so the charge is `WorldTime +
+                // TickSpan` with no conversion in either direction — the
+                // `f64` round-trip this line used to make is gone rather than
+                // made more carefully.
+                day = day + cost_of(&action, npc.mass_kg, 1.0);
                 if day > horizon {
                     break;
                 }
@@ -4627,7 +4768,7 @@ fn catch_up(
         let thermal = Thermal {
             niche: npc.temperature_niche,
             terrain,
-            day: WorldTime::new(horizon).expect("a day value is finite"),
+            day: horizon,
             interior: occupancy.at(npc.entity).map(|a| (interior, a)),
         };
         if let Some(target) = thermal.preferred_anchor(pos, budget) {
@@ -4703,7 +4844,7 @@ impl<'a> DriveMovements<'a> {
         // population, before advancing any creature — it is fixed across the whole
         // interval (the next-tick wave). Built alarm-free (via `affect_of`), so
         // emission is terrain-sourced and the wave terminates; the per-step Danger
-        // drive below then reads it at each creature's cell.
+        // drive below then reads it at each creature's room.
         let alarm = alarm_field_memo(
             frozen,
             &self.npcs,
@@ -4736,16 +4877,23 @@ impl<'a> DriveMovements<'a> {
             std::collections::BTreeMap::new();
         let mut queue: std::collections::BTreeSet<(u64, EntityId)> =
             std::collections::BTreeSet::new();
-        // Ticks per STANDARD day on this world: a local day is exactly
-        // `ticks_per_local_day` ticks (spec §4.1), so this is the inverse of
-        // `clock::days_of` and the two agree to the tick.
-        let per_day = ticks_per_local_day(self.day_length_std) as f64;
-        let scale = match self.day_length_std.filter(|d| d.is_finite() && *d > 0.0) {
-            Some(d) => per_day / d,
-            None => per_day,
-        };
-        let to_ticks = (self.to.day() * scale).round() as u64;
-        let from_ticks = (self.from.day() * scale).round() as u64;
+        // THE RESCALE IS GONE (The Foliot): a `scale` of standard-ticks-per-
+        // standard-day used to sit here, converting the walk's float day into
+        // the scheduler's lattice at every requeue. The walk's clock IS a tick
+        // count now (The Precedence), so there is nothing left to scale and
+        // `local_ticks_of` below is the whole crossing.
+        //
+        // THE IDENTITY (The Foliot). This used to branch: an unpinned world's
+        // two lattices coincided, but a rotation pin put them at different
+        // rates and the crossing was a genuine `f64` rescale. With the day
+        // drawn as an exact tick count there is one lattice for every world,
+        // pinned or not, so a scheduler tick IS a kernel tick.
+        //
+        // `max(0)` states what the old saturating `as u64` cast did silently
+        // for a pre-genesis instant.
+        let local_ticks_of = |t: WorldTime| -> u64 { t.ticks().max(0) as u64 };
+        let to_ticks = local_ticks_of(self.to);
+        let from_ticks = local_ticks_of(self.from);
         for npc in &self.npcs {
             let mut st = WalkState::begin(frozen, npc, &self.npcs, self.from, self.terrain);
             // THE THRESHOLD's crossing: arrive at the landing anchor of the
@@ -4799,7 +4947,7 @@ impl<'a> DriveMovements<'a> {
             // queue — keeps the order-independence above trivially true.
             st.mode = catch_up(
                 room_entry_day(frozen, npc, self.from),
-                self.from.day(),
+                self.from,
                 &st.pos,
                 npc,
                 self.terrain,
@@ -4815,7 +4963,6 @@ impl<'a> DriveMovements<'a> {
                 frozen,
                 &out,
                 CATCH_UP_STEP_CAP,
-                self.day_length_std,
                 mesh_memo,
                 home_nav_cache,
                 // Every body here is GOAP-driven (the driven body's own
@@ -4861,15 +5008,56 @@ impl<'a> DriveMovements<'a> {
             // `advance_one` has already advanced `st.day` by what the action
             // cost, so the requeue time is READ FROM THE STATE rather than
             // recomputed: one source of truth for when a creature next acts.
-            let next = (st.day * scale).round() as u64;
+            let next = local_ticks_of(st.day);
             if next > to_ticks {
-                // `round` is monotone, so this can only fire when `st.day`
-                // genuinely exceeds `to.day` — exactly the guard `advance_one`
-                // would apply on the next pop, applied a pop early.
+                // An exact tick read, so this fires exactly when `st.day`
+                // genuinely exceeds `to` — the guard `advance_one` would apply
+                // on the next pop, applied a pop early. It used to round a
+                // float day here, and monotonicity was the argument that the
+                // rounding could not move the verdict; no rounding happens.
                 continue;
             }
             queue.insert((next, e));
         }
+        // THE LEDGER'S CHRONOLOGY IS NOT THE POP ORDER (The Precedence,
+        // decision 0376, spec section 3). The queue pops creatures by when
+        // an action BEGINS; every fact above is stamped at the instant its
+        // action ENDS. Those two orderings differ by the population's cost
+        // spread whenever creatures act at different tempos — measured at
+        // 10,014 ticks on the real seed-42 population, against an invariant
+        // that allowed one tick.
+        //
+        // Sorting here is not a patch on the queue's output: it IS the
+        // queue's only cross-entity product. Pop order affects nothing else
+        // observable — every `occupancy` access is keyed by the creature's OWN
+        // entity, and perception is built from `frozen` before anyone moves —
+        // which `the_queues_tie_break_decides_nothing_but_order` asserts, and
+        // which will fail loudly the day that stops being true.
+        //
+        // Sound because a tick is a CLOSED WINDOW: nothing may be dated
+        // outside `[from, to]`, so reordering within it can never need to
+        // reach past a fact an earlier tick emitted. That watermark is
+        // asserted by `every_emitted_fact_is_dated_inside_the_tick_that_emitted_it`.
+        //
+        // `sort_by_key` on `Option<WorldTime>` is a STABLE, EXACT INTEGER
+        // comparison — `WorldTime` is an `i64` tick count with a derived `Ord`
+        // (decision 0186), so no float enters the ordering. Stability is
+        // load-bearing twice over: a creature's own facts are already
+        // monotone and stay in place, and cross-entity ties keep the entity-id
+        // order the queue chose, which is what keeps the emitted sequence a
+        // pure function of the frozen ledger rather than of the input vector.
+        // `decide_step` reads this vector mid-tick, but filters to its own
+        // subject and sorts what it finds, so it cannot observe this at all.
+        //
+        // `Option`'s derived `Ord` sorts `None` FIRST, before any `Some`, so
+        // an undated fact would be silently hoisted to the head of the tick
+        // rather than left in place or pushed to the end. Unreachable today:
+        // all four fact constructors in this module (`agent_at_fact`,
+        // `drank_fact`, `rested_fact`, `eaten_fact`) set `day: Some(...)`
+        // unconditionally. A future emission path that skips one of them —
+        // or constructs a `Fact` directly with `day: None` — would not fail
+        // loudly here; it would just reorder silently.
+        out.sort_by_key(|f| f.day);
         (out, occupancy)
     }
 }
@@ -4909,25 +5097,41 @@ impl<'a> TickSystem for DriveMovements<'a> {
 /// Tick-local and re-derived, never persisted — like [`Mode`], which it carries.
 struct WalkState {
     /// Where the creature currently stands.
-    pos: RoomAddr,
-    /// How far into the interval the walk has got.
-    day: f64,
-    /// The day of its most recent drink, `frozen`-seeded and advanced by this
-    /// walk's own emitted `drank` facts.
-    last_drank: f64,
-    /// The day of its most recent sleep, the fatigue twin of `last_drank`.
-    last_rested: f64,
-    /// The day of its most recent meal, the hunger twin of `last_drank`.
-    last_ate: f64,
+    pos: Facet,
+    /// How far into the interval the walk has got — an INSTANT on the tick
+    /// lattice, not a float day: the walk's clock is the kernel's clock.
+    day: WorldTime,
+    /// The INSTANT of its most recent drink, `frozen`-seeded and advanced by
+    /// this walk's own emitted `drank` facts.
+    last_drank: WorldTime,
+    /// The INSTANT of its most recent sleep, the fatigue twin of `last_drank`.
+    last_rested: WorldTime,
+    /// The INSTANT of its most recent meal, the hunger twin of `last_drank`.
+    last_ate: WorldTime,
     /// The water source it believes in, seeded from the band's pooled belief and
     /// grown whenever it stands in water.
-    believed: Option<RoomAddr>,
-    /// The cells this walk has already stood on — the explorer's frontier.
-    visited: std::collections::BTreeSet<RoomAddr>,
+    believed: Option<Facet>,
+    /// The rooms this walk has already stood on — the explorer's frontier.
+    visited: std::collections::BTreeSet<Facet>,
     /// How many decisions this walk has taken, against `MAX_STEPS`.
     steps: usize,
     /// The commitment mode carried across this walk's steps (hysteresis).
     mode: Mode,
+    /// The most recent resolution's felt state (The Confidant, Task 2) — NOT
+    /// hysteresis like `mode`: a pure per-decision read, overwritten by every
+    /// `advance_one` iteration and never fed back into `decide_step`. The
+    /// placeholder `begin` seeds it with is always overwritten before being
+    /// read, because `advance_one`'s loop runs at least once whenever any
+    /// time has elapsed (`Session::wait` validates `days > 0.0`, so
+    /// `st.day == from.day() < to.day()` after `catch_up` returns, and the
+    /// loop's own guard is `st.day > self.to.day()`).
+    affect: Affect,
+    /// The same resolution's discarded ranks (The Confidant, Task 5) —
+    /// alongside `affect`, a pure per-decision read overwritten every
+    /// `advance_one` iteration, never hysteresis. See that field's own doc
+    /// for why the placeholder `begin` seeds this with is always overwritten
+    /// before any caller reads it back.
+    suppressed: Vec<DriveKind>,
     /// The derived interior of the room at `pos` (The Threshold) — the anchor
     /// graph `Thermal`'s within-room branch routes over, and the graph the
     /// creature's `Occupancy` entry indexes into. Re-derived every time `pos`
@@ -4950,33 +5154,46 @@ impl WalkState {
         terrain: &dyn Terrain,
     ) -> WalkState {
         let pos = agent_position(frozen, npc, from);
-        let day = from.day();
+        // The interval start, carried as the instant it already is — the walk
+        // opens on the kernel's own clock rather than on a float rendering of
+        // it.
+        let day = from;
         // A scratch ledger view isn't available; track drank locally: derive
         // the starting last-drank day from `frozen`, then simulate forward,
         // updating a local `last_drank` as we emit `DRANK` facts.
+        //
+        // ALL THREE FOLDS BELOW ARE BEHAVIOUR-PRESERVING, AND NONE HANDLES THE
+        // NEGATIVE CASE. `WorldTime::GENESIS` is `ticks: 0` — byte-for-byte
+        // the identity the old `fold(0.0, f64::max)` used — so a fact dated
+        // before genesis still reads as genesis, exactly as it always has.
+        // What the retype removes is a float round-trip, not an answer. Do not
+        // read decision 0126 into this: fixing the pre-genesis floor means
+        // returning `Option` and making each caller name its default (as
+        // `last_fact_day_at_or_before` now does), which is a behaviour change
+        // and is deliberately out of this retype's scope.
         let last_drank = frozen
             .facts_of(npc.entity, DRANK)
             .filter_map(|f| f.day)
-            .fold(0.0_f64, |acc, d| acc.max(d.day()));
+            .fold(WorldTime::GENESIS, WorldTime::max);
         // Likewise the last rest day (The Slumber): fatigue is time since it,
         // reset when a `rested` fact is emitted.
         let last_rested = frozen
             .facts_of(npc.entity, RESTED)
             .filter_map(|f| f.day)
-            .fold(0.0_f64, |acc, d| acc.max(d.day()));
+            .fold(WorldTime::GENESIS, WorldTime::max);
         // Likewise the last meal day (The Provender): hunger is a path
         // integral since it, reset when an `eaten` fact is emitted.
         let last_ate = frozen
             .facts_of(npc.entity, EATEN)
             .filter_map(|f| f.day)
-            .fold(0.0_f64, |acc, d| acc.max(d.day()));
+            .fold(WorldTime::GENESIS, WorldTime::max);
         // Belief and exploration state, evolved locally across the walk (the
         // fold includes this tick's own emitted moves). Seed belief from the
         // pre-tick history; grow it whenever the agent stands in water.
         // The Tidings: seed from the BAND's pooled belief (co-located
         // members share what they know), not the creature's alone.
         let believed = shared_believed_water(frozen, npc, band, from, terrain, PLAN_BUDGET);
-        let mut visited: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let mut visited: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
         visited.insert(pos.clone());
         let steps = 0usize;
         // The commitment mode, carried across this walk's steps (session-
@@ -4988,6 +5205,18 @@ impl WalkState {
         // `&mut Occupancy`, which is shared across the whole population and so
         // lives one level up rather than in this per-creature constructor.
         let interior = interior_of(&pos, terrain);
+        // A placeholder (spec §7's normal state, zeroed and objectless) —
+        // see the field's own doc for why this is always overwritten before
+        // any caller reads it back.
+        let affect = Affect {
+            arousal: 0.0,
+            valence: 0.0,
+            label: AffectLabel::Content,
+            object: None,
+        };
+        // A placeholder (nothing suppressed) — see the field's own doc for
+        // why this is always overwritten before any caller reads it back.
+        let suppressed = Vec::new();
         WalkState {
             pos,
             day,
@@ -4998,6 +5227,8 @@ impl WalkState {
             visited,
             steps,
             mode,
+            affect,
+            suppressed,
             interior,
         }
     }
@@ -5035,14 +5266,14 @@ impl<'a> DriveMovements<'a> {
         npc: &Body,
         st: &mut WalkState,
         occupancy: &mut Occupancy,
-        alarm: &std::collections::BTreeMap<RoomAddr, f64>,
+        alarm: &std::collections::BTreeMap<Facet, f64>,
         memory: &HazardMemory,
         out: &mut Vec<Fact>,
         mesh_memo: &mut RoomMeshMemo,
         home_nav_cache: &mut HomeNavCache,
         controller: &mut dyn Controller,
     ) -> bool {
-        if st.day > self.to.day() || st.steps >= MAX_STEPS {
+        if st.day > self.to || st.steps >= MAX_STEPS {
             return false;
         }
         st.steps += 1;
@@ -5082,6 +5313,16 @@ impl<'a> DriveMovements<'a> {
             home_nav_cache,
         );
         st.mode = resolution.mode;
+        // The felt state this same resolution carries (The Confidant, Task 2):
+        // recorded alongside `mode` from the identical computation, never a
+        // second derivation — see `Resolution`'s own doc.
+        st.affect = resolution.affect;
+        // The same resolution's discarded ranks (The Confidant, Task 5):
+        // recorded alongside `affect` from the identical computation, never
+        // a second derivation. `resolution` is still borrowed below
+        // (`controller.intend`), so this clones rather than moving the field
+        // out of it.
+        st.suppressed = resolution.suppressed.clone();
         // THE CONTROLLER SEAM (The Hand, Task 5 fix round 1, spec §3.3): the
         // walk arbitrates UNCONDITIONALLY, above — `resolution` is the body's
         // own felt state (mode, affect) and what its own drives would do,
@@ -5126,8 +5367,15 @@ impl<'a> DriveMovements<'a> {
                 }
                 _ => 1.0,
             };
-            st.day += days_of(cost_ticks(action, npc.mass_kg, ground), self.day_length_std);
-            if st.day > self.to.day() {
+            // EXACT INTEGER ADDITION, the whole point of this retype: a cost
+            // IS a `TickSpan` (The Foliot) and the walk's clock IS a tick
+            // count, so charging an action is `WorldTime + TickSpan` with no
+            // conversion at either end. The `f64` round-trip this line used to
+            // make — span to days, add to a float clock, round back at every
+            // emitted fact — is gone rather than performed more carefully, and
+            // with it the drift it accumulated across a long walk.
+            st.day = st.day + cost_of(action, npc.mass_kg, ground);
+            if st.day > self.to {
                 return false;
             }
         }
@@ -5186,7 +5434,7 @@ impl<'a> DriveMovements<'a> {
                 // Sleep through the off-phase in one jump to the next
                 // waking, rather than re-resting every step (The Slumber).
                 st.day = next_awake_day(npc.activity, self.terrain, &st.pos, st.day);
-                if st.day > self.to.day() {
+                if st.day > self.to {
                     return false;
                 }
             }
@@ -5218,7 +5466,7 @@ impl<'a> DriveMovements<'a> {
             // KEPT as `unreachable!` (fix round 1, Finding 1) — unlike the
             // two `Drive::serviceability` sites this task also touches,
             // this arm sits DOWNSTREAM of a charge this same function
-            // already took: `st.day += days_of(cost_ticks(action, ...))`
+            // already took: `st.day = st.day + cost_of(action, ...)`
             // above (before this match) reads `base_ticks(action)`, which
             // is `Ticks(0)` for every group-A instrument. `cost_ticks`'s
             // own `.max(1)` floor happens to keep today's actual charge
@@ -5266,7 +5514,7 @@ impl<'a> DriveMovements<'a> {
                     self.terrain,
                     drive,
                     &self.params,
-                    self.to.day(),
+                    self.to,
                 ) {
                     HoldStep::Stall => return true,
                     HoldStep::GiveUp => return false,
@@ -5301,9 +5549,16 @@ impl<'a> DriveMovements<'a> {
     /// Returns the facts this body's OWN walk would commit (empty under
     /// [`crate::controller::PlayerController`] with nothing queued — see that
     /// controller's own doc for why nothing here ever double-moves a body the
-    /// player drives through the verb loop) and the LAST commitment mode its
-    /// own arbitration reached this call: the host's felt state, independent
-    /// of whether the controller let it act on it.
+    /// player drives through the verb loop), the LAST commitment mode its own
+    /// arbitration reached this call, the [`Affect`] that SAME resolution
+    /// carried (The Confidant, Task 2) — the host's felt state, independent
+    /// of whether the controller let it act on it — and that SAME
+    /// resolution's discarded ranks (The Confidant, Task 5): the drives that
+    /// were active but not pursued, present so a caller can retrieve them
+    /// without a second arbitration. `advance_one`'s loop always runs at
+    /// least once whenever any time has elapsed (see [`WalkState`]'s own
+    /// `affect` field doc), so both always reflect a live decision this call
+    /// made, never `begin`'s placeholders.
     pub(crate) fn step_one_with_controller(
         &self,
         frozen: &Ledger,
@@ -5311,7 +5566,7 @@ impl<'a> DriveMovements<'a> {
         mesh_memo: &mut RoomMeshMemo,
         home_nav_cache: &mut HomeNavCache,
         controller: &mut dyn Controller,
-    ) -> (Vec<Fact>, Mode) {
+    ) -> (Vec<Fact>, Mode, Affect, Vec<DriveKind>) {
         let band = [body.clone()];
         let mut occupancy = Occupancy::default();
         let mut afraid_memo = PrimaryAfraidMemo::new();
@@ -5368,7 +5623,7 @@ impl<'a> DriveMovements<'a> {
         // controller ultimately governs that live decision.
         st.mode = catch_up(
             room_entry_day(frozen, body, self.from),
-            self.from.day(),
+            self.from,
             &st.pos,
             body,
             self.terrain,
@@ -5384,7 +5639,6 @@ impl<'a> DriveMovements<'a> {
             frozen,
             &out,
             CATCH_UP_STEP_CAP,
-            self.day_length_std,
             mesh_memo,
             home_nav_cache,
             &mut PlayerController::new(),
@@ -5401,23 +5655,23 @@ impl<'a> DriveMovements<'a> {
             home_nav_cache,
             controller,
         ) {}
-        (out, st.mode)
+        (out, st.mode, st.affect, st.suppressed)
     }
 }
 
 /// The nearer-to-home of an existing belief and a newly-perceived water room.
 /// The tick's incremental fold — and its tie-break MUST match `believed_water`'s
-/// (smaller `RoomAddr` wins on an equal hop-distance), or a mid-walk incremental
+/// (smaller `Facet` wins on an equal hop-distance), or a mid-walk incremental
 /// belief could disagree with the same belief re-derived from the committed
 /// history, making the chosen source faintly sensitive to `wait` granularity
 /// (the-surmise T3+T4 review). Aligned here so the two folds are identical.
 fn nearer_to_home(
-    home: &RoomAddr,
-    current: Option<RoomAddr>,
-    found: RoomAddr,
+    home: &Facet,
+    current: Option<Facet>,
+    found: Facet,
     budget: usize,
-) -> Option<RoomAddr> {
-    let d = |r: &RoomAddr| {
+) -> Option<Facet> {
+    let d = |r: &Facet| {
         plan_to_room(home, r, budget, &std::collections::BTreeSet::new()).map(|p| p.len())
     };
     match current {
@@ -5426,8 +5680,8 @@ fn nearer_to_home(
             (Some(dc), Some(df)) => Some(match df.cmp(&dc) {
                 std::cmp::Ordering::Less => found,
                 std::cmp::Ordering::Greater => c,
-                // Tie on hop-distance: smaller RoomAddr wins (matches
-                // `believed_water`'s `min_by((hop, RoomAddr))`).
+                // Tie on hop-distance: smaller Facet wins (matches
+                // `believed_water`'s `min_by((hop, Facet))`).
                 std::cmp::Ordering::Equal => std::cmp::min(c, found),
             }),
             (None, Some(_)) => Some(found),
@@ -5447,12 +5701,12 @@ fn nearer_to_home(
 /// [`affect_of_memo_occupied`] (rider (b)) — both thread whatever memo THEIR
 /// own caller supplies, never build one silently inline.
 fn lowest_unvisited_neighbor_memo(
-    from: &RoomAddr,
-    visited: &std::collections::BTreeSet<RoomAddr>,
+    from: &Facet,
+    visited: &std::collections::BTreeSet<Facet>,
     terrain: &dyn Terrain,
     memo: &mut RoomMeshMemo,
-) -> Option<RoomAddr> {
-    let mut best: Option<(RoomAddr, f64)> = None;
+) -> Option<Facet> {
+    let mut best: Option<(Facet, f64)> = None;
     for n in from.neighbors_memo(memo) {
         if visited.contains(&n) {
             continue;
@@ -5523,10 +5777,10 @@ pub fn body_at(
         .get_by_label(&species)
         .map(|t| t.condition_niche.temperature)
         .unwrap_or(DEFAULT_TEMPERATURE_NICHE);
-    let metabolic_class = biosphere
+    let thermal_strategy = biosphere
         .get_by_label(&species)
-        .map(|t| t.metabolic_class)
-        .unwrap_or(MetabolicClass::Endotherm);
+        .map(|t| t.thermal_strategy)
+        .unwrap_or(ThermalStrategy::Endothermic);
     let niche = biosphere
         .get_by_label(&species)
         .map(|t| t.niche.clone())
@@ -5555,8 +5809,8 @@ pub fn body_at(
         .map(|p| p.threat_response)
         .unwrap_or(BOLDNESS_STEADY);
     // The threat niche (The Bane): derived from the temperature niche +
-    // metabolic class already on hand — no fresh authoring.
-    let threat_niche = derive_threat_niche(&temperature_niche, metabolic_class, &niche);
+    // thermal strategy already on hand — no fresh authoring.
+    let threat_niche = derive_threat_niche(&temperature_niche, thermal_strategy, &niche);
     // The same perception vector a possessed body resolves — an unresolved
     // species falls back to the manikin's neutral perception, the same way
     // every other per-species trait above falls back rather than
@@ -5576,7 +5830,7 @@ pub fn body_at(
         temperature_niche,
         deliberation_latency,
         time_horizon,
-        metabolic_class,
+        thermal_strategy,
         niche,
         boldness,
         threat_niche,
@@ -5593,7 +5847,7 @@ pub fn body_at(
 /// payoff (spec: "the herder has gone down to the river") can never fire
 /// (the-quickening T3 review). Each NPC is minted in `ledger` (a
 /// session-owned clone), then built by [`body_at`] — homed at its
-/// settlement's cell room, with its drive's resource anchor (`nearest_water`
+/// settlement's room, with its drive's resource anchor (`nearest_water`
 /// over the true terrain, The Surmise) and species' activity-cycle.
 /// type-audit: bare-ok(count: k)
 pub fn derive_npcs(
@@ -5657,7 +5911,7 @@ pub fn derive_npcs(
 /// Derive WILD NPCs (The Wilding) — beast agents, one per distinct
 /// mobile-beast `concentrations` entry (`worldgen::wild_concentrations_from`:
 /// a herd, a lair). A wild NPC is the same `Body` a settlement produces — its
-/// home is the concentration's cell, its traits its biosphere's, its psyche
+/// home is the concentration's room, its traits its biosphere's, its psyche
 /// the DEFAULT (beasts carry no `psyche_registry` entry, so the `.unwrap_or`
 /// fallbacks apply, exactly as they already do for a settlement of a
 /// non-peopled species). The threat niche derives (The Bane/Quarry) with LIVE
@@ -5684,7 +5938,7 @@ pub fn derive_wild_npcs(
         .into_iter()
         .enumerate()
         .map(|(i, (species, position))| {
-            let home = RoomAddr::containing(position, walk_depth(ctx));
+            let home = Facet::containing(position, walk_depth(ctx));
             let resource = nearest_water(&home, &LocaleTerrain::new(ctx), PLAN_BUDGET)
                 .unwrap_or_else(|| home.clone());
             let activity = species_activity(world, &species);
@@ -5692,10 +5946,10 @@ pub fn derive_wild_npcs(
                 .get_by_label(&species)
                 .map(|t| t.condition_niche.temperature)
                 .unwrap_or(DEFAULT_TEMPERATURE_NICHE);
-            let metabolic_class = biosphere
+            let thermal_strategy = biosphere
                 .get_by_label(&species)
-                .map(|t| t.metabolic_class)
-                .unwrap_or(MetabolicClass::Endotherm);
+                .map(|t| t.thermal_strategy)
+                .unwrap_or(ThermalStrategy::Endothermic);
             let niche = biosphere
                 .get_by_label(&species)
                 .map(|t| t.niche.clone())
@@ -5718,7 +5972,7 @@ pub fn derive_wild_npcs(
                 .get_by_label(&species)
                 .map(|p| p.threat_response)
                 .unwrap_or(BOLDNESS_STEADY);
-            let threat_niche = derive_threat_niche(&temperature_niche, metabolic_class, &niche);
+            let threat_niche = derive_threat_niche(&temperature_niche, thermal_strategy, &niche);
             // A wild species is plain fauna, not one of the six settling
             // peoples or the three dragons `perception_registry` actually
             // rosters (see `agent::mint_at`'s comment on that roster), so this
@@ -5761,7 +6015,7 @@ pub fn derive_wild_npcs(
                 temperature_niche,
                 deliberation_latency,
                 time_horizon,
-                metabolic_class,
+                thermal_strategy,
                 niche,
                 boldness,
                 threat_niche,
@@ -5800,11 +6054,11 @@ const DEFAULT_TEMPERATURE_NICHE: ConditionResponse = ConditionResponse {
     devotion: 0.5,
 };
 
-/// The room containing a settlement's cell at walk depth (mirrors
+/// The room containing a settlement's site at walk depth (mirrors
 /// `mint_flagship`, via the shared `settlement_position` helper).
-fn settlement_room(world: &World, ctx: &LocaleContext, settlement: EntityId) -> RoomAddr {
+fn settlement_room(world: &World, ctx: &LocaleContext, settlement: EntityId) -> Facet {
     let pos = settlement_position(world, settlement);
-    RoomAddr::containing(pos, walk_depth(ctx))
+    Facet::containing(pos, walk_depth(ctx))
 }
 
 /// The set of packed room ids a settlement's territory occupies — the real
@@ -5814,7 +6068,7 @@ fn settlement_room(world: &World, ctx: &LocaleContext, settlement: EntityId) -> 
 /// not a property of the room itself; it belongs to the people whose
 /// territory contains it, so this asks the only question derivable from
 /// `hornvale_settlement::all_settlements`: which room is each settlement's
-/// own cell? Today's model gives a settlement exactly ONE room (the same one
+/// own room? Today's model gives a settlement exactly ONE room (the same one
 /// `settlement_room` homes its derived NPC at) — so "built" here means
 /// precisely that room, not a radius of surrounding countryside. That is a
 /// deliberately NARROW answer: widening it to a settlement's outskirts or
@@ -5823,14 +6077,14 @@ fn settlement_room(world: &World, ctx: &LocaleContext, settlement: EntityId) -> 
 /// honest about) — a later campaign's to ask, not an oversight here. Built
 /// once, at session/sweep start, and injected into `LocaleTerrain` the same
 /// way the predator/prey fields are (`with_fields`) — a domain/window can't
-/// reach up to `hornvale_settlement` on its own. `RoomAddr::pack`'s only
+/// reach up to `hornvale_settlement` on its own. `Facet::pack`'s only
 /// failure mode is a path past `MAX_DEPTH`, never reached at a session's own
 /// walk depth, so a pack failure is silently dropped rather than panicking —
 /// the same "coarse constrains fine, never blocks" posture the rest of this
 /// module takes toward world-derived data. `BTreeSet`, never `HashSet`
-/// (constitutional): `RoomId` is the packed, `Ord` form of a `RoomAddr`, the
+/// (constitutional): `FacetId` is the packed, `Ord` form of a `Facet`, the
 /// natural key.
-pub fn built_rooms(world: &World, ctx: &LocaleContext) -> std::collections::BTreeSet<RoomId> {
+pub fn built_rooms(world: &World, ctx: &LocaleContext) -> std::collections::BTreeSet<FacetId> {
     hornvale_settlement::all_settlements(world)
         .iter()
         .filter_map(|v| settlement_room(world, ctx, v.id).pack().ok())
@@ -5883,7 +6137,7 @@ fn parse_activity(t: &str) -> ActivityCycle {
 /// follows suit rather than inventing a parallel identity for the same thing.
 ///
 /// Two creatures standing at the same anchor is intentional, not an
-/// oversight: the map is a `BTreeMap<EntityId, (RoomAddr, AnchorId)>`, one
+/// oversight: the map is a `BTreeMap<EntityId, (Facet, AnchorId)>`, one
 /// entry per creature, and nothing here enforces exclusivity over the value
 /// side. A hearth crowded with three NPCs is a legitimate occupancy, the same
 /// way a room can hold more than one creature at the coarser scale.
@@ -5902,7 +6156,7 @@ fn parse_activity(t: &str) -> ActivityCycle {
 /// belongs to the room it is about to pair it with, via [`Self::anchor_in`],
 /// before ever handing it to [`crate::interior::warmth_at`].
 #[derive(Debug, Default)]
-pub struct Occupancy(std::collections::BTreeMap<EntityId, (RoomAddr, AnchorId)>);
+pub struct Occupancy(std::collections::BTreeMap<EntityId, (Facet, AnchorId)>);
 
 impl Occupancy {
     /// Where `who` currently stands, or `None` if it has not arrived (or has
@@ -5927,7 +6181,7 @@ impl Occupancy {
     /// its own room-only answer (e.g. [`landing_interior`]) rather than risk
     /// [`crate::interior::warmth_at`] indexing a foreign `Interior` with a
     /// stale offset.
-    pub fn anchor_in(&self, who: EntityId, room: &RoomAddr) -> Option<AnchorId> {
+    pub fn anchor_in(&self, who: EntityId, room: &Facet) -> Option<AnchorId> {
         self.0
             .get(&who)
             .and_then(|(r, anchor)| (r == room).then_some(*anchor))
@@ -5942,7 +6196,7 @@ impl Occupancy {
     /// anchor (see the struct doc) so a later, room-checked read
     /// ([`Self::anchor_in`]) can tell this arrival apart from one in some
     /// other room.
-    pub fn arrive(&mut self, who: EntityId, room: &RoomAddr, interior: &Interior, kind: SeamKind) {
+    pub fn arrive(&mut self, who: EntityId, room: &Facet, interior: &Interior, kind: SeamKind) {
         if let Some(at) = landing(interior, kind) {
             self.0.insert(who, (room.clone(), at));
         }
@@ -5990,7 +6244,7 @@ impl Occupancy {
     /// otherwise have occurred. Callers elsewhere should almost always
     /// prefer [`Self::walk`] — this exists for exactly the one case where
     /// stepping through is what the budget was spent trying to avoid.
-    pub fn place(&mut self, who: EntityId, room: &RoomAddr, at: AnchorId) {
+    pub fn place(&mut self, who: EntityId, room: &Facet, at: AnchorId) {
         self.0.insert(who, (room.clone(), at));
     }
 
@@ -6041,7 +6295,7 @@ mod tests {
     #[allow(clippy::too_many_arguments)]
     fn arb(
         view: &Perceived,
-        home: &RoomAddr,
+        home: &Facet,
         drives: &[&dyn Drive],
         latency: f64,
         horizon: f64,
@@ -6070,16 +6324,31 @@ mod tests {
         )
     }
 
+    /// A test day, authored in standard days and crossed onto the tick
+    /// lattice once — the test-side twin of the production seam: a scenario is
+    /// still written in readable days, but what it hands the sim is an
+    /// instant.
+    fn td(days: f64) -> WorldTime {
+        WorldTime::from_std_days(days).expect("a test day is finite")
+    }
+
+    /// A test DURATION in standard days, crossed onto the tick lattice once —
+    /// the span twin of [`td`], for the `entry_day + <so many days>` shape a
+    /// catch-up scenario writes its horizon with.
+    fn tspan(days: f64) -> TickSpan {
+        TickSpan::from_std_days(days).expect("a test span is finite")
+    }
+
     /// Commit an `agent-at` fact placing `entity` at `room` on `day`.
     fn commit_agent_at(
         ledger: &mut Ledger,
         reg: &ConceptRegistry,
         entity: EntityId,
-        room: &RoomAddr,
+        room: &Facet,
         day: f64,
     ) {
         ledger
-            .commit(agent_at_fact(entity, room, day, "test"), reg)
+            .commit(agent_at_fact(entity, room, td(day), "test"), reg)
             .unwrap();
     }
 
@@ -6122,7 +6391,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -6136,7 +6405,7 @@ mod tests {
             believed_water(
                 &ledger,
                 &npc,
-                WorldTime::new(5.0).expect("a day value is finite"),
+                WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
                 10_000
             ),
@@ -6148,7 +6417,7 @@ mod tests {
             believed_water(
                 &ledger,
                 &npc,
-                WorldTime::new(5.0).expect("a day value is finite"),
+                WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
                 10_000
             ),
@@ -6175,7 +6444,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -6189,7 +6458,7 @@ mod tests {
             believed_water(
                 &ledger,
                 &npc,
-                WorldTime::new(5.0).expect("a day value is finite"),
+                WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
                 10_000
             ),
@@ -6224,7 +6493,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -6238,7 +6507,7 @@ mod tests {
             believed_water(
                 &ledger,
                 &npc,
-                WorldTime::new(5.0).expect("a day value is finite"),
+                WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
                 10_000
             ),
@@ -6249,7 +6518,7 @@ mod tests {
             believed_water(
                 &ledger,
                 &npc,
-                WorldTime::new(5.0).expect("a day value is finite"),
+                WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
                 10_000
             ),
@@ -6277,7 +6546,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -6291,7 +6560,7 @@ mod tests {
             believed_water(
                 &ledger,
                 &npc,
-                WorldTime::new(5.0).expect("a day value is finite"),
+                WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
                 10_000
             ),
@@ -6321,7 +6590,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -6335,7 +6604,7 @@ mod tests {
             believed_water(
                 &ledger,
                 &npc,
-                WorldTime::new(5.0).expect("a day value is finite"),
+                WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
                 10_000
             ),
@@ -6346,7 +6615,7 @@ mod tests {
         let a = believed_water(
             &ledger,
             &npc,
-            WorldTime::new(5.0).expect("a day value is finite"),
+            WorldTime::from_std_days(5.0).expect("a day value is finite"),
             &t,
             10_000,
         );
@@ -6356,7 +6625,7 @@ mod tests {
             believed_water(
                 &reloaded,
                 &npc,
-                WorldTime::new(5.0).expect("a day value is finite"),
+                WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
                 10_000
             ),
@@ -6370,9 +6639,9 @@ mod tests {
         // DETERMINISM UNDER GENUINE TIES (the tie-break the reload/isolation test
         // can't reach — it never has two equal-distance candidates): two water
         // sources the SAME hop-distance from home (two neighbours, both 1 hop) must
-        // resolve to the smaller-`RoomAddr` one, identically every run and across
+        // resolve to the smaller-`Facet` one, identically every run and across
         // reload. A nondeterministic (HashSet) accumulation would make this flaky;
-        // the `BTreeSet` + `min_by((hop, RoomAddr))` fold makes it total.
+        // the `BTreeSet` + `min_by((hop, Facet))` fold makes it total.
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
@@ -6393,7 +6662,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -6409,14 +6678,14 @@ mod tests {
         let got = believed_water(
             &ledger,
             &npc,
-            WorldTime::new(5.0).expect("a day value is finite"),
+            WorldTime::from_std_days(5.0).expect("a day value is finite"),
             &t,
             10_000,
         );
         assert_eq!(
             got,
             Some(smaller.clone()),
-            "an equal-hop tie resolves to the smaller RoomAddr, not sighting order"
+            "an equal-hop tie resolves to the smaller Facet, not sighting order"
         );
         let json = serde_json::to_string(&ledger).unwrap();
         let reloaded: Ledger = serde_json::from_str(&json).unwrap();
@@ -6424,7 +6693,7 @@ mod tests {
             believed_water(
                 &reloaded,
                 &npc,
-                WorldTime::new(5.0).expect("a day value is finite"),
+                WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
                 10_000
             ),
@@ -6436,7 +6705,7 @@ mod tests {
     /// A steady mortal NPC for the believed_hazard folds — the default mortal
     /// threat niche weights UNCANNY `1`, so a planted UNCANNY hazard reads as
     /// felt threat directly, and steady boldness (`0.5`) leaves it unscaled.
-    fn haunt_npc(entity: EntityId, home: RoomAddr) -> Body {
+    fn haunt_npc(entity: EntityId, home: Facet) -> Body {
         Body {
             entity,
             village: None,
@@ -6448,7 +6717,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -6464,12 +6733,7 @@ mod tests {
     /// label. Mirrors the `Body` literal repeated across the `believed_water`
     /// tests above — factored here only to keep the four-band-member Tidings
     /// tests below from repeating it four times over.
-    fn shared_belief_npc(
-        entity: EntityId,
-        home: RoomAddr,
-        resource: RoomAddr,
-        label: &str,
-    ) -> Body {
+    fn shared_belief_npc(entity: EntityId, home: Facet, resource: Facet, label: &str) -> Body {
         Body {
             entity,
             village: None,
@@ -6481,7 +6745,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -6510,7 +6774,7 @@ mod tests {
             believed_hazard(
                 &ledger,
                 &npc,
-                WorldTime::new(5.0).expect("a day value is finite"),
+                WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
                 &[]
             )
@@ -6521,15 +6785,15 @@ mod tests {
 
     #[test]
     fn believed_hazard_holds_the_visited_dangerous_cells() {
-        // The fold ∩ frightening-truth: exactly the visited-and-dangerous cells.
-        // A visited SAFE cell is absent, and an UNVISITED dangerous cell is
+        // The fold ∩ frightening-truth: exactly the visited-and-dangerous rooms.
+        // A visited SAFE room is absent, and an UNVISITED dangerous room is
         // absent (the creature must have STOOD there to remember it).
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let home = raddr(1.0); // safe, visited ([1,0,0])
         let scary = raddr(-1.0); // UNCANNY 0.8 ≥ act, visited → shunned ([-1,0,0])
-        let unvisited_scary = RoomAddr::containing([0.0, 1.0, 0.0], 6); // dangerous, never stood in ([0,1,0])
+        let unvisited_scary = Facet::containing([0.0, 1.0, 0.0], 6); // dangerous, never stood in ([0,1,0])
         let t = PlantedTerrain::hazard(
             std::iter::empty(),
             [(scary.clone(), 0.8), (unvisited_scary.clone(), 0.8)],
@@ -6540,14 +6804,14 @@ mod tests {
         let got = believed_hazard(
             &ledger,
             &npc,
-            WorldTime::new(5.0).expect("a day value is finite"),
+            WorldTime::from_std_days(5.0).expect("a day value is finite"),
             &t,
             &[],
         );
-        let expected: std::collections::BTreeSet<RoomAddr> = [scary].into_iter().collect();
+        let expected: std::collections::BTreeSet<Facet> = [scary].into_iter().collect();
         assert_eq!(
             got, expected,
-            "shuns exactly the visited-and-dangerous cell"
+            "shuns exactly the visited-and-dangerous room"
         );
     }
 
@@ -6570,31 +6834,31 @@ mod tests {
         let got = believed_hazard(
             &ledger,
             &npc,
-            WorldTime::new(5.0).expect("a day value is finite"),
+            WorldTime::from_std_days(5.0).expect("a day value is finite"),
             &t,
             &[],
         );
-        let expected: std::collections::BTreeSet<RoomAddr> = [scary].into_iter().collect();
+        let expected: std::collections::BTreeSet<Facet> = [scary].into_iter().collect();
         assert_eq!(got, expected, "empty roster ⇒ The Haunt's any-visit set");
     }
 
     #[test]
     fn believed_hazard_clears_a_disproven_phantom() {
-        // The staleness rule, now LIVE: a cell alarm-frightened on an early
+        // The staleness rule, now LIVE: a room alarm-frightened on an early
         // visit and SAFELY revisited later is no longer shunned (the fear
         // disproved), while a creature that never revisits still shuns it (the
-        // phantom, re-derived from the emitter's PAST cell).
+        // phantom, re-derived from the emitter's PAST room).
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let d_cell = raddr(1.0);
-        let ns = d_cell.neighbors();
+        let d_room = raddr(1.0);
+        let ns = d_room.neighbors();
         let hazard = ns[0].clone(); // E: frightens the emitter B
-        let x = ns[1].clone(); // X: safe, in B's halo (the phantom cell)
+        let x = ns[1].clone(); // X: safe, in B's halo (the phantom room)
         let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
         // Emitter B: beside X on day 0.5, then far away by 9.5.
         let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
-        let b = haunt_npc(b_e, d_cell.clone());
-        commit_agent_at(&mut ledger, &reg, b_e, &d_cell, 0.5);
+        let b = haunt_npc(b_e, d_room.clone());
+        commit_agent_at(&mut ledger, &reg, b_e, &d_room, 0.5);
         let far = raddr(-1.0);
         commit_agent_at(&mut ledger, &reg, b_e, &far, 9.5);
         // A (coward) stands at X while B is beside it (0.5), then SAFELY
@@ -6610,7 +6874,7 @@ mod tests {
         c.boldness = 0.0;
         commit_agent_at(&mut ledger, &reg, c_e, &x, 0.5);
 
-        let now = WorldTime::new(10.0).expect("a day value is finite");
+        let now = WorldTime::from_std_days(10.0).expect("a day value is finite");
         let roster = [b.clone()];
         // A's most-recent visit to X was safe → the phantom is cleared.
         assert!(
@@ -6618,7 +6882,7 @@ mod tests {
             "a safe revisit clears the disproven phantom"
         );
         // C never revisited → the phantom persists (re-derived from B's PAST
-        // cell — requires the day-aware position lookup).
+        // room — requires the day-aware position lookup).
         assert!(
             believed_hazard(&ledger, &c, now, &terrain, &roster).contains(&x),
             "without a corrective revisit, the phantom is still shunned"
@@ -6627,25 +6891,25 @@ mod tests {
 
     #[test]
     fn hazard_memory_splits_static_from_transient() {
-        // PROVENANCE. Two shunned cells for two different reasons:
+        // PROVENANCE. Two shunned rooms for two different reasons:
         //   H — frightening for its own TERRAIN (The Haunt). Shunned, NOT dreaded:
-        //       the present cell already frightens the creature, so there is
+        //       the present room already frightens the creature, so there is
         //       nothing remembered-but-absent about it.
         //   X — terrain-SAFE, tipped over `act` only by emitter B's re-derived
         //       alarm (The Phantom). Shunned AND dreaded, carrying the remembered
         //       alarm magnitude.
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let d_cell = raddr(1.0);
-        let ns = d_cell.neighbors();
+        let d_room = raddr(1.0);
+        let ns = d_room.neighbors();
         let hazard = ns[0].clone(); // E: frightens the emitter B (and A, if A stands there)
         let x = ns[1].clone(); // X: terrain-safe, inside B's one-hop halo
         let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
         // Emitter B: beside X on day 0.5 (primary-afraid — E is its neighbour).
         let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
-        let b = haunt_npc(b_e, d_cell.clone());
-        commit_agent_at(&mut ledger, &reg, b_e, &d_cell, 0.5);
-        // A (coward) stood on BOTH the transient cell X and the terrain hazard E.
+        let b = haunt_npc(b_e, d_room.clone());
+        commit_agent_at(&mut ledger, &reg, b_e, &d_room, 0.5);
+        // A (coward) stood on BOTH the transient room X and the terrain hazard E.
         let a_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let mut a = haunt_npc(a_e, x.clone());
         a.boldness = 0.0;
@@ -6655,18 +6919,18 @@ mod tests {
         let mem = hazard_memory(
             &ledger,
             &a,
-            WorldTime::new(10.0).expect("a day value is finite"),
+            WorldTime::from_std_days(10.0).expect("a day value is finite"),
             &terrain,
             &[b],
         );
-        assert!(mem.shunned.contains(&x), "the phantom cell is shunned");
+        assert!(mem.shunned.contains(&x), "the phantom room is shunned");
         assert!(
             mem.shunned.contains(&hazard),
             "the terrain hazard is shunned"
         );
         assert!(
             mem.dread.contains_key(&x),
-            "the phantom cell is DREADED (transient provenance): {:?}",
+            "the phantom room is DREADED (transient provenance): {:?}",
             mem.dread
         );
         assert!(
@@ -6687,9 +6951,9 @@ mod tests {
         // on superstition contagion (the emission read is bandless).
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let d_cell = raddr(1.0);
-        let hazard = d_cell.neighbors()[0].clone();
-        let x = d_cell.neighbors()[1].clone();
+        let d_room = raddr(1.0);
+        let hazard = d_room.neighbors()[0].clone();
+        let x = d_room.neighbors()[1].clone();
         let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
         let a_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let mut a = haunt_npc(a_e, x.clone());
@@ -6700,7 +6964,7 @@ mod tests {
         let mem = hazard_memory(
             &ledger,
             &a,
-            WorldTime::new(10.0).expect("a day value is finite"),
+            WorldTime::from_std_days(10.0).expect("a day value is finite"),
             &terrain,
             &[],
         );
@@ -6721,19 +6985,19 @@ mod tests {
         // its meaning, so The Haunt's planner reads what it always read.
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let d_cell = raddr(1.0);
-        let hazard = d_cell.neighbors()[0].clone();
-        let x = d_cell.neighbors()[1].clone();
+        let d_room = raddr(1.0);
+        let hazard = d_room.neighbors()[0].clone();
+        let x = d_room.neighbors()[1].clone();
         let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
         let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
-        let b = haunt_npc(b_e, d_cell.clone());
-        commit_agent_at(&mut ledger, &reg, b_e, &d_cell, 0.5);
+        let b = haunt_npc(b_e, d_room.clone());
+        commit_agent_at(&mut ledger, &reg, b_e, &d_room, 0.5);
         let a_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let mut a = haunt_npc(a_e, x.clone());
         a.boldness = 0.0;
         commit_agent_at(&mut ledger, &reg, a_e, &x, 0.5);
 
-        let now = WorldTime::new(10.0).expect("a day value is finite");
+        let now = WorldTime::from_std_days(10.0).expect("a day value is finite");
         let roster = [b];
         assert_eq!(
             believed_hazard(&ledger, &a, now, &terrain, &roster),
@@ -6746,7 +7010,7 @@ mod tests {
         // THE FELT HALF, through the public read the narration and the health
         // metric both use. A creature standing where a herd's alarm once caught
         // it reads Danger — on ground whose PRESENT terrain threat is below act.
-        // A never-alarmed control on the same cell reads no danger at all.
+        // A never-alarmed control on the same room reads no danger at all.
         //
         // A does NOT revisit X after B leaves: a later SAFE visit is exactly the
         // staleness disproof `believed_hazard_clears_a_disproven_phantom` pins,
@@ -6754,8 +7018,8 @@ mod tests {
         // A simply never moved — its committed position at `now` is still X.
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let d_cell = raddr(1.0);
-        let ns = d_cell.neighbors();
+        let d_room = raddr(1.0);
+        let ns = d_room.neighbors();
         let hazard = ns[0].clone(); // E: frightens the emitter B
         let x = ns[1].clone(); // X: terrain-safe, in B's halo
         let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
@@ -6763,8 +7027,8 @@ mod tests {
         // The days are DAYLIGHT ones (the fractional-day sun is up around noon):
         // a sleeping Diurnal emitter pursues rest, not fear, and emits nothing.
         let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
-        let b = haunt_npc(b_e, d_cell.clone());
-        commit_agent_at(&mut ledger, &reg, b_e, &d_cell, 0.45);
+        let b = haunt_npc(b_e, d_room.clone());
+        commit_agent_at(&mut ledger, &reg, b_e, &d_room, 0.45);
         commit_agent_at(&mut ledger, &reg, b_e, &raddr(-1.0), 0.55);
         // A (coward): stood at X while B panicked beside it, and is there still.
         let a_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
@@ -6780,7 +7044,7 @@ mod tests {
 
         // Early in the world, so the sustenance drives are quiet and the felt
         // state reports the fear rather than a louder thirst.
-        let now = WorldTime::new(0.6).expect("a day value is finite");
+        let now = WorldTime::from_std_days(0.6).expect("a day value is finite");
         let band = [a.clone(), b.clone(), c.clone()];
         let felt = affect_of(&ledger, &a, &band, now, &terrain);
         assert_eq!(
@@ -6806,14 +7070,14 @@ mod tests {
         // A's remembered dread — and the field must be empty at X.
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let d_cell = raddr(1.0);
-        let ns = d_cell.neighbors();
+        let d_room = raddr(1.0);
+        let ns = d_room.neighbors();
         let hazard = ns[0].clone();
         let x = ns[1].clone();
         let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
         let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
-        let b = haunt_npc(b_e, d_cell.clone());
-        commit_agent_at(&mut ledger, &reg, b_e, &d_cell, 0.45);
+        let b = haunt_npc(b_e, d_room.clone());
+        commit_agent_at(&mut ledger, &reg, b_e, &d_room, 0.45);
         commit_agent_at(&mut ledger, &reg, b_e, &raddr(-1.0), 0.55);
         let a_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let mut a = haunt_npc(a_e, x.clone());
@@ -6822,7 +7086,7 @@ mod tests {
 
         // A really is dread-afraid here (the same fixture the felt test pins) —
         // so an empty field at X is the contagion block, not an empty memory.
-        let now = WorldTime::new(0.6).expect("a day value is finite");
+        let now = WorldTime::from_std_days(0.6).expect("a day value is finite");
         assert!(
             hazard_memory(&ledger, &a, now, &terrain, &[a.clone(), b.clone()])
                 .dread
@@ -6855,7 +7119,7 @@ mod tests {
         // lost has only ever been at `here`.
         commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
         let band = [knower.clone(), lost.clone()];
-        let now = WorldTime::new(1.0).expect("a day value is finite");
+        let now = WorldTime::from_std_days(1.0).expect("a day value is finite");
 
         // Alone, `lost` is ignorant.
         assert_eq!(believed_water(&ledger, &lost, now, &t, 10_000), None);
@@ -6869,7 +7133,7 @@ mod tests {
     #[test]
     fn frightened_at_matches_the_danger_drive() {
         // ONE SOURCE OF TRUTH: `frightened_at` agrees with the Danger drive's own
-        // reading (`urgency ≥ DANGER_ACT`, alarm-free) on the same cell — the
+        // reading (`urgency ≥ DANGER_ACT`, alarm-free) on the same room — the
         // memory and the live drive never disagree about frightening ground.
         let mut ledger = Ledger::default();
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
@@ -6880,7 +7144,7 @@ mod tests {
             [(scary.clone(), 0.8), (mild.clone(), 0.1)],
         );
         let npc = haunt_npc(e, scary.clone());
-        for cell in [&scary, &mild] {
+        for room in [&scary, &mild] {
             let drive = Danger {
                 terrain: &t,
                 threat_niche: npc.threat_niche,
@@ -6888,11 +7152,11 @@ mod tests {
                 alarm: None,
                 dread: None,
             };
-            let drive_afraid = drive.urgency(&view_at(cell.clone())) >= DANGER_ACT;
+            let drive_afraid = drive.urgency(&view_at(room.clone())) >= DANGER_ACT;
             assert_eq!(
-                frightened_at(cell, &npc, &t, WorldTime::GENESIS, &[], &ledger),
+                frightened_at(room, &npc, &t, WorldTime::GENESIS, &[], &ledger),
                 drive_afraid,
-                "frightened_at agrees with the Danger drive at {cell:?}"
+                "frightened_at agrees with the Danger drive at {room:?}"
             );
         }
     }
@@ -6917,22 +7181,22 @@ mod tests {
                     &scary,
                     &npc,
                     &t,
-                    WorldTime::new(day).expect("a day value is finite"),
+                    WorldTime::from_std_days(day).expect("a day value is finite"),
                     &[],
                     &ledger
                 ),
-                "the scary cell frightens terrain-only on day {day}"
+                "the scary room frightens terrain-only on day {day}"
             );
             assert!(
                 !frightened_at(
                     &mild,
                     &npc,
                     &t,
-                    WorldTime::new(day).expect("a day value is finite"),
+                    WorldTime::from_std_days(day).expect("a day value is finite"),
                     &[],
                     &ledger
                 ),
-                "the mild cell never frightens on day {day}"
+                "the mild room never frightens on day {day}"
             );
         }
     }
@@ -6941,29 +7205,29 @@ mod tests {
     fn frightened_at_fires_on_re_derived_past_alarm() {
         // A primary-afraid emitter B stands on ground whose hazard (E, one hop
         // from B) makes B's own Danger cross act; B's one-hop alarm halo covers
-        // a SAFE cell X (two hops from the hazard, terrain-safe). The re-derived
+        // a SAFE room X (two hops from the hazard, terrain-safe). The re-derived
         // alarm at (X, day) pushes a coward rememberer over act — though the
-        // same cell read terrain-only (empty roster) is calm. And it re-derives
+        // same room read terrain-only (empty roster) is calm. And it re-derives
         // B's PAST position: though B later walks far off, `frightened_at` at
         // `day` still fires (agent_position honours the remembered day).
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let d_cell = raddr(1.0); // where B stands (safe)
-        let ns = d_cell.neighbors();
+        let d_room = raddr(1.0); // where B stands (safe)
+        let ns = d_room.neighbors();
         let hazard = ns[0].clone(); // E: the hazard that frightens B
         let x = ns[1].clone(); // X: safe, in B's halo, two hops from E
         let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
         // B: a steady emitter, committed at D on `day`, then walks far LATER.
         let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
-        let b = haunt_npc(b_e, d_cell.clone());
-        commit_agent_at(&mut ledger, &reg, b_e, &d_cell, 0.5);
+        let b = haunt_npc(b_e, d_room.clone());
+        commit_agent_at(&mut ledger, &reg, b_e, &d_room, 0.5);
         let far = raddr(-1.0);
         commit_agent_at(&mut ledger, &reg, b_e, &far, 9.5);
         // A: a coward rememberer (feels borrowed alarm strongly).
         let a_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let mut a = haunt_npc(a_e, x.clone());
         a.boldness = 0.0;
-        let day = WorldTime::new(0.5).expect("a day value is finite");
+        let day = WorldTime::from_std_days(0.5).expect("a day value is finite");
         // X read terrain-only (empty roster) is safe.
         assert!(
             !frightened_at(&x, &a, &terrain, day, &[], &ledger),
@@ -6984,14 +7248,14 @@ mod tests {
         // lingers forever).
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let d_cell = raddr(1.0);
-        let ns = d_cell.neighbors();
+        let d_room = raddr(1.0);
+        let ns = d_room.neighbors();
         let hazard = ns[0].clone();
         let x = ns[1].clone();
         let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
         let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
-        let b = haunt_npc(b_e, d_cell.clone());
-        commit_agent_at(&mut ledger, &reg, b_e, &d_cell, 0.5);
+        let b = haunt_npc(b_e, d_room.clone());
+        commit_agent_at(&mut ledger, &reg, b_e, &d_room, 0.5);
         let far = raddr(-1.0);
         commit_agent_at(&mut ledger, &reg, b_e, &far, 9.5);
         let a_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
@@ -7003,7 +7267,7 @@ mod tests {
                 &x,
                 &a,
                 &terrain,
-                WorldTime::new(0.5).expect("a day value is finite"),
+                WorldTime::from_std_days(0.5).expect("a day value is finite"),
                 std::slice::from_ref(&b),
                 &ledger
             ),
@@ -7015,7 +7279,7 @@ mod tests {
                 &x,
                 &a,
                 &terrain,
-                WorldTime::new(9.5).expect("a day value is finite"),
+                WorldTime::from_std_days(9.5).expect("a day value is finite"),
                 std::slice::from_ref(&b),
                 &ledger
             ),
@@ -7039,7 +7303,7 @@ mod tests {
         commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
         commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
         commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
-        let now = WorldTime::new(1.0).expect("a day value is finite");
+        let now = WorldTime::from_std_days(1.0).expect("a day value is finite");
         let ab = [knower.clone(), lost.clone()];
         let ba = [lost.clone(), knower.clone()];
         let result = shared_believed_water(&ledger, &lost, &ab, now, &t, 10_000);
@@ -7065,7 +7329,7 @@ mod tests {
         let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
         commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
         commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
-        let now = WorldTime::new(1.0).expect("a day value is finite");
+        let now = WorldTime::from_std_days(1.0).expect("a day value is finite");
         let solo = believed_water(&ledger, &knower, now, &t, 10_000);
         assert_eq!(solo, Some(water));
 
@@ -7110,7 +7374,7 @@ mod tests {
         // lost stands at `here`.
         commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
         let band = [knower.clone(), lost.clone()];
-        let now = WorldTime::new(1.0).expect("a day value is finite");
+        let now = WorldTime::from_std_days(1.0).expect("a day value is finite");
 
         // sanity: knower does know water when consulted directly...
         assert_eq!(
@@ -7169,12 +7433,12 @@ mod tests {
 
         let sys = DriveMovements {
             npcs: vec![knower, lost],
-            from: WorldTime::new(1.0).expect("a day value is finite"),
-            to: WorldTime::new(40.0).expect("a day value is finite"),
+            from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
         // The subject prints as its ROLE in this fixture, not as its raw id.
@@ -7201,7 +7465,7 @@ mod tests {
                     role(f.subject),
                     f.predicate,
                     f.object,
-                    f.day.map(|d| d.day().to_bits()),
+                    f.day.map(|d| d.ticks()),
                     f.provenance
                 )
             })
@@ -7214,8 +7478,12 @@ mod tests {
         // being hoisted out of `DriveMovements::step`'s loop into `WalkState` +
         // `advance_one`, and the claim is that this changes NOTHING. So the
         // emitted fact sequence — subject, predicate, object, the day's exact
-        // bits, and provenance, IN ORDER — is pinned here against the loop as it
-        // stood before the extraction. Written and passing BEFORE the hoist; it
+        // TICK COUNT, and provenance, IN ORDER — is pinned here against the loop
+        // as it stood before the extraction. (The day column read `f64` bits
+        // until The Escapement, decision 0186, made an instant an exact `i64`
+        // tick; every one of the eighty rows below moved from `to_bits()` to
+        // `round(day * 100_000)` of the very same instant, and nothing else in
+        // any row moved at all.) Written and passing BEFORE the hoist; it
         // must still pass after, or the extraction is wrong.
         //
         // It is a golden, deliberately: a self-consistency check (run twice, get
@@ -7263,87 +7531,136 @@ mod tests {
         // first's new position — and the day bits would have moved. They did
         // not, so the emitted stream is still a pure function of the pre-tick
         // ledger.
+        // THIS FIXTURE MOVED ONCE MORE, AND IT IS QUANTIZATION PLACEMENT —
+        // NOT DRIFT, NOT A DEFECT, AND NOT TO BE RE-DERIVED (The Precedence).
+        // If you are reading this because these days moved again, compare your
+        // delta profile against the one recorded below FIRST: if it matches,
+        // your change is this known one and the fixture is already correct; if
+        // it does not, you have a DIFFERENT mechanism and must not rebaseline.
+        //
+        // THE MECHANISM. The walk's clock is a `WorldTime` — an exact tick
+        // count — rather than an `f64` day (decision 0186 makes the tick
+        // lattice the time domain, and decision 0188 carves time out of the
+        // quantize-at-emit rule). `hold_step`'s closed-form Hold jump
+        // (`(act - drive) / rate`) evaluates in this fixture to exactly
+        // `N + 2/3` ticks, at both of its two distinct lengths. The OLD scheme
+        // kept a real-valued clock, carried that 2/3 forward, and rounded ONCE
+        // at emission, so an emitted day was `round(exact)`. The NEW scheme
+        // rounds each jump onto the lattice as it is TAKEN (`+1/3` per jump)
+        // and the clock is exact thereafter. After `k` jumps the two differ by
+        // `k - round(2k/3)`: 0, 1, 1, 1, 2, 2, 2 for `k = 1..7`.
+        //
+        // THE PROFILE. Seven Hold jumps per creature over this walk, so the
+        // staircase tops out at +2:
+        //
+        //     facts  0-13   +0 ticks (byte-identical)
+        //     facts 14-53   +1 tick
+        //     facts 54-79   +2 ticks
+        //
+        // THREE ANCHORS, so checking which side of the change you are on is a
+        // lookup rather than a re-derivation. If your run produces the LEFT
+        // column, you have reverted the snapping; the RIGHT column is what is
+        // recorded below.
+        //
+        //     fact  0   100150  ->   100150   (unchanged)
+        //     fact 14  1206633  ->  1206634
+        //     fact 79  3665800  ->  3665802
+        //
+        // Nothing else moved: not an order, not a room, not a provenance, not
+        // a subject. Only the day column, only upward, both twins identically.
+        // Attribution is exclusive, not inferred — a variant that carried the
+        // remainder `TickSpan::from_std_days` discards reproduced all eighty of
+        // the previous values with zero mismatches, so this jump is 100% of the
+        // difference. The charge site, `next_awake_day` and the requeue were
+        // each measured to discard nothing at all.
+        //
+        // IT WAS ACCEPTED DELIBERATELY. Nathan took the fidelity/accuracy
+        // tradeoff and chose to let the snapping stand rather than carry a
+        // sub-tick remainder beside the lattice clock, because carrying one
+        // would reintroduce the very `f64` the campaign exists to delete. This
+        // value is the accepted one. Do not "fix" it back.
+        //
         const EXPECTED: &[&str] = &[
-            r#"knower|rested|Flag(true)|Some(4607189174199458464)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(4607189174199458464)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(4618178707890180369)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(4618178707890180369)|went down to the river it knew (thirst)"#,
-            r#"knower|rested|Flag(true)|Some(4618180396740040633)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(4618180396740040633)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180339")|Some(4618855936684146205)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(4618855936684146205)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(4618857625534006469)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(4618857625534006469)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(4618970215524690731)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(4618970215524690731)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(4619082805515374993)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(4619082805515374993)|walking home (sated)"#,
-            r#"knower|eaten|Flag(true)|Some(4622982359842724423)|grazed the productive ground (hunger sated)"#,
-            r#"lost|eaten|Flag(true)|Some(4622982359842724423)|grazed the productive ground (hunger sated)"#,
-            r#"knower|rested|Flag(true)|Some(4622983204267654555)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(4622983204267654555)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(4623152089253680950)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(4623152089253680950)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(4623208384249023081)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(4623208384249023081)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(4623209228673953213)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(4623209228673953213)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(4623265523669295344)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(4623265523669295344)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(4623321818664637475)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(4623321818664637475)|walking home (sated)"#,
-            r#"knower|rested|Flag(true)|Some(4625798470072218419)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(4625798470072218419)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(4625868838816396084)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(4625868838816396084)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(4625896986314067150)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(4625896986314067150)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(4625897408526532216)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(4625897408526532216)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(4625925556024203282)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(4625925556024203282)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(4625953703521874348)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(4625953703521874348)|walking home (sated)"#,
-            r#"knower|eaten|Flag(true)|Some(4627500877643860586)|grazed the productive ground (hunger sated)"#,
-            r#"lost|eaten|Flag(true)|Some(4627500877643860586)|grazed the productive ground (hunger sated)"#,
-            r#"knower|rested|Flag(true)|Some(4627501299856325652)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(4627501299856325652)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(4627557594851667784)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(4627557594851667784)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(4627585742349338850)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(4627585742349338850)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(4627586164561803916)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(4627586164561803916)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(4627614312059474982)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(4627614312059474982)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(4627642459557146048)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(4627642459557146048)|walking home (sated)"#,
-            r#"knower|rested|Flag(true)|Some(4629181611642296032)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(4629181611642296032)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(4629237906637638164)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(4629237906637638164)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(4629266054135309230)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(4629266054135309230)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(4629266476347774296)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(4629266476347774296)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(4629294623845445362)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(4629294623845445362)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(4629322771343116428)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(4629322771343116428)|walking home (sated)"#,
-            r#"knower|eaten|Flag(true)|Some(4630285181200986277)|grazed the productive ground (hunger sated)"#,
-            r#"lost|eaten|Flag(true)|Some(4630285181200986277)|grazed the productive ground (hunger sated)"#,
-            r#"knower|rested|Flag(true)|Some(4630285392307218810)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(4630285392307218810)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(4630313539804889875)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(4630313539804889875)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(4630327613553725408)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(4630327613553725408)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(4630327824659957941)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(4630327824659957941)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(4630341898408793474)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(4630341898408793474)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(4630355972157629007)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(4630355972157629007)|walking home (sated)"#,
+            r#"knower|rested|Flag(true)|Some(100150)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(100150)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(576667)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(576667)|went down to the river it knew (thirst)"#,
+            r#"knower|rested|Flag(true)|Some(576817)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(576817)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180339")|Some(636817)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(636817)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(636967)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(636967)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(646967)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(646967)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(656967)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(656967)|walking home (sated)"#,
+            r#"knower|eaten|Flag(true)|Some(1206634)|grazed the productive ground (hunger sated)"#,
+            r#"lost|eaten|Flag(true)|Some(1206634)|grazed the productive ground (hunger sated)"#,
+            r#"knower|rested|Flag(true)|Some(1206784)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(1206784)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(1236784)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(1236784)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(1246784)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(1246784)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(1246934)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(1246934)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(1256934)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(1256934)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(1266934)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(1266934)|walking home (sated)"#,
+            r#"knower|rested|Flag(true)|Some(1813751)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(1813751)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(1838751)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(1838751)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(1848751)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(1848751)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(1848901)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(1848901)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(1858901)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(1858901)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(1868901)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(1868901)|walking home (sated)"#,
+            r#"knower|eaten|Flag(true)|Some(2418568)|grazed the productive ground (hunger sated)"#,
+            r#"lost|eaten|Flag(true)|Some(2418568)|grazed the productive ground (hunger sated)"#,
+            r#"knower|rested|Flag(true)|Some(2418718)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(2418718)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(2438718)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(2438718)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(2448718)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(2448718)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(2448868)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(2448868)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(2458868)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(2458868)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(2468868)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(2468868)|walking home (sated)"#,
+            r#"knower|rested|Flag(true)|Some(3015685)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(3015685)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(3035685)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(3035685)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(3045685)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(3045685)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(3045835)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(3045835)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(3055835)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(3055835)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(3065835)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(3065835)|walking home (sated)"#,
+            r#"knower|eaten|Flag(true)|Some(3615502)|grazed the productive ground (hunger sated)"#,
+            r#"lost|eaten|Flag(true)|Some(3615502)|grazed the productive ground (hunger sated)"#,
+            r#"knower|rested|Flag(true)|Some(3615652)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(3615652)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(3635652)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(3635652)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(3645652)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(3645652)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(3645802)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(3645802)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(3655802)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(3655802)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(3665802)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(3665802)|walking home (sated)"#,
         ];
         let shape = hoist_walk_shape();
         assert_eq!(
@@ -7431,10 +7748,10 @@ mod tests {
             npc.mass_kg = mass_kg;
             let sys = DriveMovements {
                 npcs: vec![npc],
-                from: WorldTime::new(1.0).expect("a day value is finite"),
-                to: WorldTime::new(40.0).expect("a day value is finite"),
+                from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+                to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
                 params: SUSTENANCE,
-                day_length_std: None,
+                day_ticks: None,
                 terrain: &terrain,
             };
             sys.step(&ledger)
@@ -7444,7 +7761,7 @@ mod tests {
         };
         // Not two buckets but a graded spread across the mass band — the spec's
         // own acceptance prediction (§8), and the reason tempo is derived from
-        // continuous mass rather than the four-valued metabolic class.
+        // continuous mass rather than the four-valued thermal strategy.
         let walked: Vec<(f64, usize)> = [1.0_f64, 70.0, 5_000.0, 100_000.0]
             .into_iter()
             .map(|m| (m, moves(m)))
@@ -7470,10 +7787,10 @@ mod tests {
         let mass = npc.mass_kg;
         let sys = DriveMovements {
             npcs: vec![npc],
-            from: WorldTime::new(1.0).expect("a day value is finite"),
-            to: WorldTime::new(40.0).expect("a day value is finite"),
+            from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let facts = sys.step(&ledger);
@@ -7489,25 +7806,23 @@ mod tests {
             .filter(|f| f.predicate == AGENT_AT)
             .filter_map(|f| f.day)
             .filter(|d| *d <= drank_day)
-            .map(WorldTime::day)
+            .map(WorldTime::as_std_days)
             .fold(f64::NEG_INFINITY, f64::max);
         assert!(
             arrived.is_finite(),
             "it walked to the water before drinking"
         );
         assert!(
-            drank_day.day() > arrived,
+            drank_day.as_std_days() > arrived,
             "the drink still happens in the same instant as the arrival ({arrived})"
         );
-        let expected = crate::clock::days_of(
-            crate::clock::cost_ticks(&Action::Drink, mass, 1.0),
-            // The fixture has no sky, so the clock takes its base rate.
-            None,
-        );
+        // A cost IS a kernel span now (The Foliot), so its length in days is
+        // the span's own continuous view — no clock conversion in between.
+        let expected = crate::clock::cost_of(&Action::Drink, mass, 1.0).as_std_days();
         assert!(
-            (drank_day.day() - arrived - expected).abs() < 1e-12,
+            (drank_day.as_std_days() - arrived - expected).abs() < 1e-12,
             "a drink should cost exactly {expected} days; the gap is {}",
-            drank_day.day() - arrived
+            drank_day.as_std_days() - arrived
         );
         // The same property across the WHOLE walk: one creature, so every fact
         // it emits must be strictly later than the one before. That also pins
@@ -7515,7 +7830,7 @@ mod tests {
         // `4622963782494261520`) as gone — a meal and lying down cost time too.
         let mut prev = f64::NEG_INFINITY;
         for f in &facts {
-            let d = f.day.expect("every emitted fact is dated").day();
+            let d = f.day.expect("every emitted fact is dated").as_std_days();
             assert!(
                 d > prev,
                 "`{}` at {d} did not advance the clock past {prev}",
@@ -7565,21 +7880,15 @@ mod tests {
         let run = |npcs: Vec<Body>| {
             let sys = DriveMovements {
                 npcs,
-                from: WorldTime::new(1.0).expect("a day value is finite"),
-                to: WorldTime::new(20.0).expect("a day value is finite"),
+                from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+                to: WorldTime::from_std_days(20.0).expect("a day value is finite"),
                 params: SUSTENANCE,
-                day_length_std: None,
+                day_ticks: None,
                 terrain: &terrain,
             };
             sys.step(&ledger)
                 .iter()
-                .map(|f| {
-                    (
-                        f.subject,
-                        f.predicate.clone(),
-                        f.day.map(|d| d.day().to_bits()),
-                    )
-                })
+                .map(|f| (f.subject, f.predicate.clone(), f.day.map(|d| d.ticks())))
                 .collect::<Vec<_>>()
         };
         let forward = run(npcs.clone());
@@ -7595,6 +7904,56 @@ mod tests {
     }
 
     #[test]
+    fn every_emitted_fact_is_dated_inside_the_tick_that_emitted_it() {
+        // THE SORT'S PRECONDITION (The Precedence, spec §5 guard 2). Making
+        // the emitted stream chronological by sorting it is correct only
+        // because a tick is a CLOSED WINDOW: no fact may be dated outside
+        // `[from, to]`, so reordering within the window can never need to
+        // reach back past a fact an earlier tick already emitted. That is the
+        // watermark the whole design rests on, and it was previously assumed
+        // rather than asserted.
+        //
+        // DIRECTION THIS ENFORCES: `emitted` is a subset of the window. It is
+        // blind to a fact the walk DECLINED to emit — a step past `to` returns
+        // early and commits nothing, which this cannot see and does not claim
+        // to.
+        //
+        // Three masses, so the population genuinely falls out of step — the
+        // INTENT of picking three widely-separated masses over `interleaving_fixture`'s
+        // usual two is to exercise the jump arms (`hold_step`'s closed form,
+        // `next_awake_day`'s sleep jump) rather than merely have them present
+        // in the binary. Nothing in this test verifies that either arm is
+        // actually taken (no counter, no branch coverage, no arm-specific
+        // assertion) — stated here as intent, not as a checked fact.
+        let (ledger, terrain, npcs) = interleaving_fixture(&[4.375, 70.0, 1_120.0]);
+        let from = WorldTime::from_std_days(1.0).expect("a day value is finite");
+        let to = WorldTime::from_std_days(20.0).expect("a day value is finite");
+        let sys = DriveMovements {
+            npcs,
+            from,
+            to,
+            params: SUSTENANCE,
+            day_ticks: None,
+            terrain: &terrain,
+        };
+        let facts = sys.step(&ledger);
+        assert!(
+            !facts.is_empty(),
+            "the fixture emitted nothing; it cannot pin a window"
+        );
+        for f in &facts {
+            let d = f.day.expect("every emitted fact is dated");
+            assert!(
+                d >= from && d <= to,
+                "`{}` at {d:?} fell outside the tick's window [{from:?}, {to:?}] — \
+                 the sort in `step_with_occupancy` is only sound inside a closed \
+                 window, so this is a design refutation, not a test to relax",
+                f.predicate
+            );
+        }
+    }
+
+    #[test]
     fn a_faster_creature_acts_more_often_between_a_slower_ones_actions() {
         // INTERLEAVING, OBSERVABLY. Two creatures sixteen-fold apart in mass are
         // exactly two-fold apart in tempo (`16 ^ 0.25 == 2`), so the lighter one
@@ -7602,52 +7961,264 @@ mod tests {
         // clock its facts must appear BETWEEN the heavier one's; under the old
         // sequential loop they appeared entirely before them.
         //
-        // The assertion counts SWITCHES of subject along the emitted sequence.
-        // The sequential loop scores exactly one (all of A, then all of B) for
-        // any pair, however far apart in tempo; a scheduler scores many. `>= 2`
-        // is therefore the smallest threshold the old loop cannot reach.
-        let (ledger, terrain, npcs) = interleaving_fixture(&[4.375, 70.0]);
-        let sys = DriveMovements {
-            npcs,
-            from: WorldTime::new(1.0).expect("a day value is finite"),
-            to: WorldTime::new(20.0).expect("a day value is finite"),
+        // BOTH MASS ORDERS (The Precedence). `interleaving_fixture` mints entity
+        // ids in the order the masses are listed, so the list order IS the
+        // queue's tie-break order. This test used to run only `[4.375, 70.0]`,
+        // which hands the FAST creature the lower id — so at every tie the
+        // cheaper action was emitted first and the inversion below could not
+        // show. Swapping the order was worth 9,925 ticks against a one-tick
+        // tolerance. The fixture must not depend on which creature is lighter.
+        for masses in [[4.375_f64, 70.0], [70.0, 4.375]] {
+            let (ledger, terrain, npcs) = interleaving_fixture(&masses);
+            let sys = DriveMovements {
+                npcs,
+                from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+                to: WorldTime::from_std_days(20.0).expect("a day value is finite"),
+                params: SUSTENANCE,
+                day_ticks: None,
+                terrain: &terrain,
+            };
+            let facts = sys.step(&ledger);
+            let seq: Vec<EntityId> = facts
+                .iter()
+                .filter(|f| f.predicate == AGENT_AT)
+                .map(|f| f.subject)
+                .collect();
+            // The assertion counts SWITCHES of subject along the emitted
+            // sequence. The sequential loop scores exactly one (all of A, then
+            // all of B) for any pair, however far apart in tempo; a scheduler
+            // scores many. `>= 2` is the smallest threshold the old loop
+            // cannot reach.
+            let switches = seq.windows(2).filter(|w| w[0] != w[1]).count();
+            assert!(
+                switches >= 2,
+                "the two creatures never interleave (masses={masses:?}, \
+                 switches={switches}, seq={seq:?}) — the queue is not \
+                 scheduling, it is still walking each in turn"
+            );
+            // And the emitted days run forward on ONE timeline, EXACTLY.
+            //
+            // This assertion carried a one-tick tolerance until The Precedence,
+            // justified as "creatures tied at the same rounded tick are
+            // separated by entity id and their exact `f64` days then differ
+            // within that tick." That rationale was false, and the tolerance
+            // was never bounding the quantity that actually varies: the queue
+            // pops by when an action BEGINS while every fact is stamped at the
+            // instant it ENDS, so an emission could precede the running max by
+            // the population's whole COST SPREAD — 9,925 ticks in this very
+            // fixture, and 10,014 on the real seed-42 population.
+            //
+            // `step_with_occupancy` now sorts its emissions by day, so this is
+            // exact and needs no allowance. A tolerance here would silently
+            // re-admit the defect.
+            let mut prev: Option<WorldTime> = None;
+            for f in &facts {
+                let d = f.day.expect("every emitted fact is dated");
+                if let Some(p) = prev {
+                    assert!(
+                        d >= p,
+                        "`{}` at {d:?} went back past {p:?} (masses={masses:?}) — \
+                         the emitted stream is not chronological",
+                        f.predicate
+                    );
+                }
+                prev = Some(d);
+            }
+        }
+    }
+
+    #[test]
+    fn the_queues_tie_break_decides_nothing_but_order() {
+        // THE PRECEDENCE'S LOAD-BEARING PRECONDITION. Sorting the emitted
+        // stream by day is a sufficient fix ONLY because pop order affects
+        // nothing else observable: every `occupancy` access is keyed by the
+        // creature's own entity, and perception (`alarm`, hazard memory,
+        // belief seeding) is built from `frozen` BEFORE anyone moves. So two
+        // populations that differ only in which creature wins a tie must
+        // produce the SAME FACTS.
+        //
+        // `interleaving_fixture` mints entity ids in list order, so reversing
+        // the masses reverses the tie-break while keeping the same two
+        // creatures. Compare as a MULTISET keyed by (mass, predicate, tick,
+        // object, provenance) — the full content of every emission, not just
+        // its shape:
+        // the two runs assign the ids oppositely, so comparing by raw
+        // `EntityId` would report a difference that is only a relabelling.
+        //
+        // WHEN THIS FAILS, DO NOT RELAX IT. It means a creature has begun to
+        // observe another's mid-tick state, pop order has become semantically
+        // load-bearing, and the sort is no longer sufficient — the
+        // begin/complete event queue named in the spec is then required.
+        // ANOTHER BOUNDARY CONDITION THE KEY LEAVES UNNAMED: `mass_of`
+        // collapses to the rounded mass in millgrams, so two creatures of
+        // EQUAL mass collide in this key and the guard would then be blind
+        // to which of the two did what — a real regression could hide behind
+        // an accidental mass tie. The fixture below uses 4.375 and 70.0,
+        // which differ, so this does not bite today; keying on mass rather
+        // than entity id is deliberate (it is what survives the id-swap
+        // between the forward and reversed runs), so the fix is not to
+        // change the key but to keep the fixture's masses distinct.
+        let run = |masses: [f64; 2]| -> Vec<(u64, String, i64, String, String)> {
+            let (ledger, terrain, npcs) = interleaving_fixture(&masses);
+            let mass_of: std::collections::BTreeMap<EntityId, u64> = npcs
+                .iter()
+                .map(|n| (n.entity, (n.mass_kg * 1000.0).round() as u64))
+                .collect();
+            let sys = DriveMovements {
+                npcs,
+                from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+                to: WorldTime::from_std_days(20.0).expect("a day value is finite"),
+                params: SUSTENANCE,
+                day_ticks: None,
+                terrain: &terrain,
+            };
+            let mut rows: Vec<(u64, String, i64, String, String)> = sys
+                .step(&ledger)
+                .iter()
+                .map(|f| {
+                    (
+                        *mass_of
+                            .get(&f.subject)
+                            .expect("every emitter is in the roster"),
+                        f.predicate.clone(),
+                        f.day.expect("every emitted fact is dated").ticks(),
+                        // The OBJECT and the PROVENANCE, not just the shape.
+                        // `agent-at` carries the destination room and the
+                        // reason it was chosen; the other three predicates
+                        // carry `Flag(true)` and nothing is lost. Without
+                        // these two fields the key is blind to the exact
+                        // regression this guard exists to catch — pop order
+                        // leaking into a creature's ROUTING, which shows up
+                        // as the same creature reaching a DIFFERENT room on
+                        // the same tick under the same predicate.
+                        format!("{:?}", f.object),
+                        f.provenance.clone(),
+                    )
+                })
+                .collect();
+            rows.sort();
+            rows
+        };
+        let forward = run([4.375, 70.0]);
+        let reversed = run([70.0, 4.375]);
+        assert!(
+            !forward.is_empty(),
+            "the fixture emitted nothing; it cannot pin a tie-break"
+        );
+        // A CARDINALITY FLOOR, not just non-empty. `!is_empty()` alone would
+        // still pass if a future change made the reversal stop perturbing
+        // pop order at all (e.g. by making the walk deterministic in a way
+        // that no longer routes through the tie-break), since a single
+        // leftover emission satisfies it while asserting nothing about
+        // whether ties are actually being exercised. This fixture over days
+        // 1..20 measures 300 emitted facts; 20 is well below that so the
+        // floor stays cheap to satisfy while still catching a fixture that
+        // has gone degenerate (emitting only a handful of facts, or none of
+        // the interleaving this test exists to probe).
+        assert!(
+            forward.len() >= 20,
+            "the fixture emitted only {} facts (expected ~300) — it may no \
+             longer be exercising the tie-break this test probes",
+            forward.len()
+        );
+        assert_eq!(
+            forward, reversed,
+            "reversing the queue's tie-break changed WHAT happened, not just \
+             the order it was reported in — pop order has become semantically \
+             load-bearing and sorting the emissions is no longer a sufficient fix"
+        );
+    }
+
+    #[test]
+    fn facts_are_chronological_across_consecutive_ticks() {
+        // THE SORT'S OTHER HALF (The Precedence review, finding F1). Sorting
+        // `step_with_occupancy`'s own output makes ONE tick chronological.
+        // That only makes the WHOLE emitted stream chronological if a second
+        // premise also holds: consecutive ticks' `[from, to]` windows do not
+        // overlap. `every_emitted_fact_is_dated_inside_the_tick_that_emitted_it`
+        // covers the first half (every fact lands inside ITS OWN tick's
+        // window) but is structurally blind to the second — a single call
+        // cannot see a neighbouring tick at all. This test drives two
+        // consecutive ticks the way the production callers do (`health.rs`'s
+        // `run_simulation` loop: `from: day, to: day + 1.0`, then `day +=
+        // 1.0`; `Session::wait` likewise sets the next tick's `from` to the
+        // previous tick's `to`) and checks the composite property that
+        // actually matters: the concatenation of both ticks' emissions is
+        // non-decreasing in `day`, start to finish.
+        //
+        // The first tick's facts are committed into the ledger before the
+        // second tick runs, exactly as both real callers do — `step_with_occupancy`
+        // reads `frozen` fresh each call and reflects nothing from a call
+        // that never landed in the ledger. Unlike the single-tick guards
+        // above, this test actually COMMITS what it emits, so the registry
+        // needs every predicate `DriveMovements` can produce, not just
+        // `agent-at` — a two-day span is long enough for a creature to rest.
+        let reg = {
+            let mut r = agent_at_reg();
+            r.register_predicate(DRANK, false, "drank").unwrap();
+            r.register_predicate(RESTED, false, "rested").unwrap();
+            r.register_predicate(EATEN, false, "eaten").unwrap();
+            r
+        };
+        let (ledger, terrain, npcs) = interleaving_fixture(&[4.375, 70.0, 1_120.0]);
+        let mut mesh_memo = RoomMeshMemo::new();
+        let mut home_nav_cache = HomeNavCache::new();
+
+        let day1_from = WorldTime::from_std_days(1.0).expect("a day value is finite");
+        let day1_to = WorldTime::from_std_days(2.0).expect("a day value is finite");
+        let sys1 = DriveMovements {
+            npcs: npcs.clone(),
+            from: day1_from,
+            to: day1_to,
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
-        let facts = sys.step(&ledger);
-        let seq: Vec<EntityId> = facts
-            .iter()
-            .filter(|f| f.predicate == AGENT_AT)
-            .map(|f| f.subject)
-            .collect();
-        let switches = seq.windows(2).filter(|w| w[0] != w[1]).count();
+        let (facts1, _occ1) =
+            sys1.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
         assert!(
-            switches >= 2,
-            "the two creatures never interleave (switches={switches}, seq={seq:?}) — \
-             the queue is not scheduling, it is still walking each in turn"
+            !facts1.is_empty(),
+            "the fixture's first tick emitted nothing; it cannot pin cross-tick order"
         );
-        // And the emitted days run forward on ONE timeline — up to the tick,
-        // which is the resolution the schedule actually orders at. The sequential
-        // loop jumped the full interval backwards at its single handover (the
-        // second creature restarted at `from`); a shared clock can only ever go
-        // back by less than one tick, because creatures tied at the same rounded
-        // tick are separated by entity id and their exact `f64` days then differ
-        // by whatever float accumulation put inside that tick. Bounding the
-        // regression by a tick is the honest form of "one timeline": asserting
-        // strict monotonicity would be asserting that scheduling happens in
-        // `f64`, which is the thing spec §4 refuses to do.
-        let tick = crate::clock::days_of(crate::clock::Ticks(1), None);
-        let mut prev = f64::NEG_INFINITY;
-        for f in &facts {
-            let d = f.day.expect("every emitted fact is dated").day();
-            assert!(
-                d >= prev - tick,
-                "`{}` at {d} went back more than a tick past {prev} — \
-                 the clock is not shared",
-                f.predicate
-            );
-            prev = prev.max(d);
+        let mut ledger2 = ledger.clone();
+        for f in &facts1 {
+            ledger2.commit(f.clone(), &reg).unwrap();
+        }
+
+        // The second tick's `from` is exactly the first tick's `to` — the
+        // abutting-window shape both production callers use, and the one
+        // this property depends on.
+        let day2_from = day1_to;
+        let day2_to = WorldTime::from_std_days(3.0).expect("a day value is finite");
+        let sys2 = DriveMovements {
+            npcs: npcs.clone(),
+            from: day2_from,
+            to: day2_to,
+            params: SUSTENANCE,
+            day_ticks: None,
+            terrain: &terrain,
+        };
+        let (facts2, _occ2) =
+            sys2.step_with_occupancy(&ledger2, &mut mesh_memo, &mut home_nav_cache);
+        assert!(
+            !facts2.is_empty(),
+            "the fixture's second tick emitted nothing; it cannot pin cross-tick order"
+        );
+
+        let mut prev: Option<WorldTime> = None;
+        for f in facts1.iter().chain(facts2.iter()) {
+            let d = f.day.expect("every emitted fact is dated");
+            if let Some(p) = prev {
+                assert!(
+                    d >= p,
+                    "`{}` at {d:?} went back past {p:?} across the tick boundary \
+                     ({day1_from:?}..{day1_to:?} then {day2_from:?}..{day2_to:?}) — \
+                     within-tick sorting is not enough when ticks' windows \
+                     overlap or a caller commits out of order",
+                    f.predicate
+                );
+            }
+            prev = Some(d);
         }
     }
 
@@ -7707,12 +8278,12 @@ mod tests {
 
         let sys = DriveMovements {
             npcs: vec![knower.clone(), lost.clone()],
-            from: WorldTime::new(1.0).expect("a day value is finite"),
-            to: WorldTime::new(40.0).expect("a day value is finite"),
+            from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
         let next =
@@ -7914,7 +8485,7 @@ mod tests {
         // the river network.
         //
         // The Confluence re-points the carrying-capacity freshwater term at
-        // real proximity to `WaterKind::River` cells, so settlements now
+        // real proximity to `WaterKind::River` rooms, so settlements now
         // condense onto/adjacent-to rivers (measured: seed 42 fraction
         // within reach 0.7222, up from a pre-Confluence baseline nowhere
         // close). Re-measuring this exact settlement (same accessor,
@@ -7941,10 +8512,10 @@ mod tests {
         // basin) is not disproven by this result — it's just no longer
         // triggered by seed 42's home settlement. It remains a real,
         // out-of-scope gap for settlements condensation still leaves off a
-        // river (decision-ledger followup #2), and the coarse-cell vs.
+        // river (decision-ledger followup #2), and the coarse-room vs.
         // walk-depth resolution bridge (followup #1) is a related, separate
         // concern this measurement does not exercise (0 moves means the
-        // coarse cell itself already reads as water at walk depth too).
+        // coarse room itself already reads as water at walk depth too).
         //
         // MEASURED, ALSO SURPRISING: only 2 drinks register over the
         // 100,000-day wait, not the thousands a ~5.667-day drive cycle would
@@ -7996,7 +8567,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -8011,11 +8582,11 @@ mod tests {
             from: WorldTime::GENESIS,
             // Deliberately enormous: rules out "it just needed a longer
             // wait" — a real session's `wait` would never span this.
-            to: WorldTime::new(100_000.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(100_000.0).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let next =
@@ -8156,7 +8727,7 @@ mod tests {
 
     #[test]
     fn room_text_round_trips() {
-        let home = hornvale_kernel::RoomAddr::containing([1.0, 0.0, 0.0], 6);
+        let home = hornvale_kernel::Facet::containing([1.0, 0.0, 0.0], 6);
         let dest = home.neighbors()[0].clone();
         for r in [home, dest] {
             assert_eq!(room_from_text(&room_to_text(&r)), r);
@@ -8181,10 +8752,10 @@ mod tests {
                 &ledger,
                 e,
                 &home,
-                WorldTime::new(2.0).expect("a day value is finite"),
+                WorldTime::from_std_days(2.0).expect("a day value is finite"),
                 &p,
                 &terrain,
-                MetabolicClass::Endotherm
+                ThermalStrategy::Endothermic
             ) - (p.rise * 2.0))
                 .abs()
                 < 1e-9
@@ -8197,7 +8768,7 @@ mod tests {
                     predicate: DRANK.to_string(),
                     object: Value::Flag(true),
                     place: None,
-                    day: Some(WorldTime::new(5.0).expect("finite")),
+                    day: Some(WorldTime::from_std_days(5.0).expect("finite")),
                     provenance: "t".into(),
                 },
                 &reg,
@@ -8208,10 +8779,10 @@ mod tests {
                 &ledger,
                 e,
                 &home,
-                WorldTime::new(6.0).expect("a day value is finite"),
+                WorldTime::from_std_days(6.0).expect("a day value is finite"),
                 &p,
                 &terrain,
-                MetabolicClass::Endotherm
+                ThermalStrategy::Endothermic
             ) - (p.rise * 1.0))
                 .abs()
                 < 1e-9
@@ -8238,7 +8809,7 @@ mod tests {
                     predicate: DRANK.to_string(),
                     object: Value::Flag(true),
                     place: None,
-                    day: Some(WorldTime::new(1.0).expect("finite")),
+                    day: Some(WorldTime::from_std_days(1.0).expect("finite")),
                     provenance: "t".into(),
                 },
                 &reg,
@@ -8249,10 +8820,10 @@ mod tests {
                 &ledger,
                 e,
                 &home,
-                WorldTime::new(1_000.0).expect("a day value is finite"),
+                WorldTime::from_std_days(1_000.0).expect("a day value is finite"),
                 &p,
                 &terrain,
-                MetabolicClass::Endotherm
+                ThermalStrategy::Endothermic
             ),
             1.0
         );
@@ -8260,65 +8831,83 @@ mod tests {
 
     #[test]
     fn rise_at_couples_heat_to_thirst_per_metabolic_class() {
-        use MetabolicClass::*;
+        use ThermalStrategy::*;
         let p = SUSTENANCE;
         let base = p.rise;
-        // Endotherm — heat-only (sweating): base at/below thermoneutral,
+        // Endothermic — heat-only (sweating): base at/below thermoneutral,
         // accelerating above.
-        assert!((rise_at(THERMONEUTRAL_C, Endotherm, &p) - base).abs() < 1e-12);
+        assert!((rise_at(THERMONEUTRAL_C, Endothermic, &p) - base).abs() < 1e-12);
         assert!(
-            (rise_at(0.0, Endotherm, &p) - base).abs() < 1e-12,
+            (rise_at(0.0, Endothermic, &p) - base).abs() < 1e-12,
             "cold does not slow an endotherm"
         );
         assert!(
-            (rise_at(THERMONEUTRAL_C + HEAT_SCALE_C, Endotherm, &p)
+            (rise_at(THERMONEUTRAL_C + HEAT_SCALE_C, Endothermic, &p)
                 - base * (1.0 + ENDOTHERM_HEAT_K))
                 .abs()
                 < 1e-12,
             "one scale above thermoneutral applies the full multiplier"
         );
-        // Ectotherm — symmetric (rate tracks ambient, CAP-1), floored.
+        // Ectothermic — symmetric (rate tracks ambient, CAP-1), floored.
         assert!(
-            rise_at(THERMONEUTRAL_C + HEAT_SCALE_C, Ectotherm, &p)
-                > rise_at(THERMONEUTRAL_C, Ectotherm, &p),
+            rise_at(THERMONEUTRAL_C + HEAT_SCALE_C, Ectothermic, &p)
+                > rise_at(THERMONEUTRAL_C, Ectothermic, &p),
             "heat speeds an ectotherm"
         );
         assert!(
-            rise_at(-100.0, Ectotherm, &p) < base,
+            rise_at(-100.0, Ectothermic, &p) < base,
             "deep cold slows an ectotherm below base (torpor)"
         );
         assert!(
-            (rise_at(-100.0, Ectotherm, &p) - base * ECTOTHERM_FLOOR).abs() < 1e-12,
+            (rise_at(-100.0, Ectothermic, &p) - base * ECTOTHERM_FLOOR).abs() < 1e-12,
             "but never below the floor"
         );
-        // Autotroph flat; an unreadable cell couples as neutral.
-        assert!((rise_at(80.0, Autotroph, &p) - base).abs() < 1e-12);
-        assert!((rise_at(f64::INFINITY, Endotherm, &p) - base).abs() < 1e-12);
+        // Unmodelled flat, in BOTH directions. The heat side alone is what C1
+        // mutated, so a cold-side (torpor-shaped) defect on `Unmodelled` —
+        // giving it the ectotherm's floored, symmetric response — would have
+        // slipped past a heat-only pin. Both sides, or the branch is only half
+        // held.
+        assert!((rise_at(80.0, Unmodelled, &p) - base).abs() < 1e-12);
+        assert!(
+            (rise_at(-100.0, Unmodelled, &p) - base).abs() < 1e-12,
+            "deep cold does not slow an Unmodelled creature either"
+        );
+        // An unreadable room (non-finite temperature) couples as neutral.
+        assert!((rise_at(f64::INFINITY, Endothermic, &p) - base).abs() < 1e-12);
+        // Absent flat, in BOTH directions. `rise_at` never reaches here in
+        // production (a construct has no thirst drive) and the arm is kept
+        // total; asserting it anyway is what makes this test an instrument for
+        // THE GOSSAN, which needs every thermal branch pinned before the type
+        // splits. Unmodelled and Absent share this arm today, and that is
+        // exactly the grouping `basal_metabolic_rate_w` does NOT use — the
+        // disagreement `ThermalStrategy::Unmodelled` exists to express.
+        assert!((rise_at(80.0, Absent, &p) - base).abs() < 1e-12);
+        assert!((rise_at(-100.0, Absent, &p) - base).abs() < 1e-12);
     }
 
     #[test]
     fn thirst_integrates_faster_over_a_hot_occupancy() {
         // The path integral (The Kindling): the same elapsed time accrues more
-        // thirst in a hot cell than a temperate one.
+        // thirst in a hot room than a temperate one.
         let p = SUSTENANCE;
         let home = raddr(1.0);
         let hot = PlantedTerrain::thermal([(home.clone(), 45.0)]); // 2× rate (endotherm)
         let temperate = PlantedTerrain::thermal([(home.clone(), 20.0)]); // < thermoneutral → base
-        let d_hot = integrate_thirst(&[], &home, 0.0, 3.0, &hot, MetabolicClass::Endotherm, &p);
+        let d_hot = integrate_thirst(&[], &home, 0.0, 3.0, &hot, ThermalStrategy::Endothermic, &p);
         let d_temp = integrate_thirst(
             &[],
             &home,
             0.0,
             3.0,
             &temperate,
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
             &p,
         );
         assert!(
             d_hot > d_temp,
             "the desert dehydrates faster: {d_hot} vs {d_temp}"
         );
-        // A temperate (sub-thermoneutral) cell recovers the old flat model.
+        // A temperate (sub-thermoneutral) room recovers the old flat model.
         assert!((d_temp - p.rise * 3.0).abs() < 1e-9);
         // And the desert is exactly the doubled rate here.
         assert!((d_hot - p.rise * 2.0 * 3.0).abs() < 1e-9);
@@ -8345,14 +8934,16 @@ mod tests {
                         predicate: DRANK.to_string(),
                         object: Value::Flag(true),
                         place: None,
-                        day: Some(WorldTime::new(day).expect("test fixture day is finite")),
+                        day: Some(
+                            WorldTime::from_std_days(day).expect("test fixture day is finite"),
+                        ),
                         provenance: "t".into(),
                     },
                     &reg,
                 )
                 .unwrap();
         }
-        let t = WorldTime::new(12.3).expect("a day value is finite");
+        let t = WorldTime::from_std_days(12.3).expect("a day value is finite");
         let a = drive_at(
             &ledger,
             e,
@@ -8360,7 +8951,7 @@ mod tests {
             t,
             &p,
             &terrain,
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
         );
         let b = drive_at(
             &ledger,
@@ -8369,7 +8960,7 @@ mod tests {
             t,
             &p,
             &terrain,
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
         );
         assert_eq!(a, b);
         let json = serde_json::to_string(&ledger).unwrap();
@@ -8382,15 +8973,15 @@ mod tests {
                 t,
                 &p,
                 &terrain,
-                MetabolicClass::Endotherm
+                ThermalStrategy::Endothermic
             ),
             a,
             "drive re-derives identically after reload"
         );
     }
 
-    fn addr(seed: f64) -> RoomAddr {
-        RoomAddr::containing([seed, 0.0, 0.0], 6)
+    fn addr(seed: f64) -> Facet {
+        Facet::containing([seed, 0.0, 0.0], 6)
     }
 
     #[test]
@@ -8465,8 +9056,8 @@ mod tests {
         assert_eq!(decide(&away_not_thirsty, &home, &p, 0), Intent::Hold);
     }
 
-    fn raddr(seed: f64) -> RoomAddr {
-        RoomAddr::containing([seed, 0.0, 0.0], 6)
+    fn raddr(seed: f64) -> Facet {
+        Facet::containing([seed, 0.0, 0.0], 6)
     }
 
     #[test]
@@ -8573,7 +9164,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -8585,7 +9176,7 @@ mod tests {
         // Elevation still steers the exploration prior (downhill), separate
         // from fresh-water truth: `water` must be the uniquely lowest
         // neighbor for the comment above's "very first thirsty step"
-        // guarantee to hold deterministically (not by RoomAddr tie-break
+        // guarantee to hold deterministically (not by Facet tie-break
         // luck among equally-INFINITY neighbors).
         let t = PlantedTerrain {
             elevations: [(water.clone(), 0.0)].into_iter().collect(),
@@ -8595,11 +9186,11 @@ mod tests {
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
             from: WorldTime::GENESIS,
-            to: WorldTime::new(40.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
         let next =
@@ -8663,7 +9254,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -8678,13 +9269,13 @@ mod tests {
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
             from: WorldTime::GENESIS,
-            to: WorldTime::new(40.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
 
-        let (default_facts, _mode) = sys.step_one_with_controller(
+        let (default_facts, _mode, _affect, _suppressed) = sys.step_one_with_controller(
             &ledger,
             &npc,
             &mut RoomMeshMemo::new(),
@@ -8697,7 +9288,7 @@ mod tests {
              (which wants water) — it must act: {default_facts:?}"
         );
 
-        let (player_facts, _mode) = sys.step_one_with_controller(
+        let (player_facts, _mode, _affect, _suppressed) = sys.step_one_with_controller(
             &ledger,
             &npc,
             &mut RoomMeshMemo::new(),
@@ -8708,6 +9299,306 @@ mod tests {
             player_facts.is_empty(),
             "PlayerController holds the body regardless of what its own \
              arbitration wants, and commits nothing: {player_facts:?}"
+        );
+    }
+
+    /// The Coercion, spec §7 H3 — "the act trail is indistinguishable": a
+    /// body driven by [`crate::controller::ImposedController`] and the same
+    /// body driven by [`DefaultController`], same seed, same tick span,
+    /// commit facts differing only in *which* acts were chosen, never in
+    /// their shape, cost, or subject.
+    ///
+    /// **Chosen instrument, and why.** `step_one_with_controller` is
+    /// `pub(crate)`, so — like H2 — this cannot live in the integration
+    /// suite; it lives here, beside
+    /// `a_default_controller_passes_through_and_a_player_controller_holds`,
+    /// whose exact shape (one fixture, two controllers, compare the
+    /// returned facts) this test follows. The fixture is `charged_walk_fixture`
+    /// (below), not a fresh minimal one: over its 39-day span it is already
+    /// proven (by `drinking_and_eating_now_cost_time`) to emit `drank`,
+    /// `eaten`, AND `rested` alongside `agent-at` — the richest walk this
+    /// file has, so a comparison over it exercises every predicate shape
+    /// `DriveMovements` can commit, not only the one thirst allows.
+    ///
+    /// **The prediction is stronger than the spec's own wording asks for,
+    /// deliberately.** `ImposedController::intend` (`controller.rs`) is an
+    /// unconditional, stateless delegation to `DefaultController::intend`,
+    /// which is itself a pure pass-through of `resolution.intent` — so
+    /// nothing about which controller is live can change what either one
+    /// answers at any decision point of an identical walk. The two
+    /// committed `Vec<Fact>` are therefore predicted to be BYTE-IDENTICAL
+    /// (`Fact` derives `PartialEq`), not merely same-shaped, and the same
+    /// last-decision mode/affect/suppressed-ranks triple this walk returns
+    /// is predicted identical too.
+    ///
+    /// **Coordinator review (post-Task-5): this result is DEDUCIBLE from
+    /// `controller.rs:162-166` before the fixture ever runs, not evidence
+    /// this fixture gathered** — today's `ImposedController` is a provable
+    /// no-op relative to `DefaultController`, so this assertion holds
+    /// trivially and must be re-measured once `ImposedController` gains
+    /// real intent (see H4's own doc comment, right below, for the fuller
+    /// statement of this and a pointer to the comparison that IS live
+    /// today: `PlayerController` vs `ImposedController`, free versus HELD,
+    /// which Task 4 already measured and found DIVERGES in felt state
+    /// while committing identical facts).
+    #[test]
+    fn h3_the_act_trail_under_an_imposed_controller_is_byte_identical_to_the_default_controller() {
+        let (ledger, terrain, npc) = charged_walk_fixture();
+        let sys = DriveMovements {
+            npcs: vec![npc.clone()],
+            from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
+            params: SUSTENANCE,
+            day_ticks: None,
+            terrain: &terrain,
+        };
+
+        let (default_facts, default_mode, default_affect, default_suppressed) = sys
+            .step_one_with_controller(
+                &ledger,
+                &npc,
+                &mut RoomMeshMemo::new(),
+                &mut HomeNavCache::new(),
+                &mut DefaultController,
+            );
+        let (imposed_facts, imposed_mode, imposed_affect, imposed_suppressed) = sys
+            .step_one_with_controller(
+                &ledger,
+                &npc,
+                &mut RoomMeshMemo::new(),
+                &mut HomeNavCache::new(),
+                &mut crate::controller::ImposedController::new(),
+            );
+
+        assert!(
+            !default_facts.is_empty(),
+            "the fixture must actually walk and commit something, or this \
+             proves nothing: {default_facts:?}"
+        );
+        assert_eq!(
+            default_facts, imposed_facts,
+            "H3: an imposed controller's committed trail must be BYTE-IDENTICAL \
+             to the default controller's — ImposedController::intend is a pure, \
+             stateless delegation to DefaultController::intend, and nothing else \
+             in the walk reads which controller is live"
+        );
+        assert_eq!(
+            default_mode, imposed_mode,
+            "H3: the same last commitment mode either way"
+        );
+        assert_eq!(
+            default_affect, imposed_affect,
+            "H3: the same last resolution's felt state either way"
+        );
+        assert_eq!(
+            default_suppressed, imposed_suppressed,
+            "H3: the same discarded drive ranks either way"
+        );
+    }
+
+    /// The Coercion, spec §7 H4 — "the null this campaign is prepared to
+    /// report": count the distinct FACT SHAPES emitted under imposition
+    /// versus free running, over a stated denominator. A fact SHAPE here is
+    /// its PREDICATE identity — this file's own closed roster of everything
+    /// `DriveMovements` can ever commit is exactly four constants
+    /// ([`AGENT_AT`], [`DRANK`], [`RESTED`], [`EATEN`], grep-verified: the
+    /// only `pub const _: &str` predicate names this file defines), so the
+    /// stated denominator is **4**.
+    ///
+    /// **Coordinator review correction (post-Task-5, prose-only — no
+    /// assertion in this test changed): this equality is DEDUCIBLE, not
+    /// measured, and this is the same finding H3's doc comment now states
+    /// too.** `ImposedController::intend` (`controller.rs:162-166`) is
+    /// `self.inner.intend(body, resolution)` with `inner: DefaultController`
+    /// — a stateless pass-through taking no fixture-dependent branch at
+    /// all. That means the SET-equality this test measures follows from
+    /// `controller.rs`'s own text before either fixture below ever runs: no
+    /// trajectory choice, however varied, could have produced a different
+    /// outcome. **Today's stub `ImposedController` is provably a no-op
+    /// relative to `DefaultController`, so H3 and H4 both hold trivially,
+    /// and must be RE-MEASURED once `ImposedController` gains real intent**
+    /// (a possessing creature's own arbitration — spec §5's deferred future
+    /// work) — at that point the delegation this deduction rests on no
+    /// longer holds, and the two hypotheses become live measurements again
+    /// rather than restatements of `controller.rs`'s own source.
+    ///
+    /// **What this test still buys, framed correctly: a regression guard,
+    /// not a discovery.** It reddens the moment `ImposedController` grows
+    /// any logic that diverges from `DefaultController` — exactly this
+    /// campaign's own stated trajectory — so it is worth keeping as a
+    /// tripwire for that day, not as evidence about possession's
+    /// consequences today.
+    ///
+    /// **The comparison that IS live today, and is NOT this one:**
+    /// `PlayerController` vs `ImposedController` — free versus HELD, the
+    /// pair the game actually runs at `Session::wait`'s one real call site
+    /// — which Task 4 already measured directly
+    /// (`session::tests::driven_felt_state_can_move_under_an_imposed_controller_during_wait`)
+    /// and found produces IDENTICAL committed facts but DIVERGENT felt
+    /// state (`driven_mode`/`driven_affect`: `Pursuing(Fatigue)`/`Eager`
+    /// free vs `Idle`/`Content` held, seed 42). A reader who wants the
+    /// interesting result belongs there, not here — H3/H4 answer a
+    /// preregistered question about two controllers that happen, today, to
+    /// be the same controller in disguise.
+    ///
+    /// Instrument (unchanged from the original run — this correction is
+    /// prose-only): same call as H3 (`step_one_with_controller`, in-module
+    /// for the same `pub(crate)` reason H3 gives), reduced to the SET of
+    /// predicate names each run touched, pooled over TWO fixtures:
+    /// `charged_walk_fixture` (drink + eat + rest) and a second,
+    /// differently-planted single-drive fixture (the body
+    /// `a_default_controller_passes_through_and_a_player_controller_holds`
+    /// uses — a different species/terrain/genesis-vs-day-1 start). **The
+    /// two fixtures corroborate nothing beyond the deduction above** — they
+    /// are two instances of a comparison whose outcome the delegation
+    /// already fixed, not two independent trials that could have
+    /// disagreed.
+    ///
+    /// **A prediction this test made and got wrong, worth stating rather
+    /// than quietly dropping — and independent of the deduction above.**
+    /// The second fixture was chosen expecting a NARROWER reachable set
+    /// than the first (thirst-only, on the theory that a body minted fresh
+    /// with no prior `eaten`/`rested` history and a one-hop water source
+    /// would satisfy thirst long before hunger or fatigue crossed their own
+    /// thresholds in a 39-day window). Measured directly: it is not
+    /// narrower — over 39 days this fixture ALSO emits `eaten` and
+    /// `rested`, the same full four-predicate set the first fixture does.
+    /// That is a real fact about how generous a 39-day window is against
+    /// this file's own drive-cycle constants (`SUSTENANCE.act/
+    /// SUSTENANCE.rise ≈ 5.7` days), not a defect in the test — and it is
+    /// the one thing about this test's own setup that genuinely needed
+    /// running to find out, even though the imposed/free equality itself
+    /// did not.
+    #[test]
+    fn h4_the_distinct_fact_shapes_imposed_and_free_can_reach_are_identical() {
+        let known_predicates: std::collections::BTreeSet<String> = [AGENT_AT, DRANK, RESTED, EATEN]
+            .into_iter()
+            .map(str::to_string)
+            .collect();
+        assert_eq!(
+            known_predicates.len(),
+            4,
+            "the stated denominator: DriveMovements's own closed predicate \
+             roster (AGENT_AT/DRANK/RESTED/EATEN)"
+        );
+
+        fn shapes_of(facts: &[Fact]) -> std::collections::BTreeSet<String> {
+            facts.iter().map(|f| f.predicate.clone()).collect()
+        }
+
+        // Fixture A: `charged_walk_fixture` — drink, eat, AND rest are all
+        // reachable in its 39-day span (pinned by
+        // `drinking_and_eating_now_cost_time`, which asserts all three
+        // predicates appear on this exact fixture).
+        let (ledger_a, terrain_a, npc_a) = charged_walk_fixture();
+        let sys_a = DriveMovements {
+            npcs: vec![npc_a.clone()],
+            from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
+            params: SUSTENANCE,
+            day_ticks: None,
+            terrain: &terrain_a,
+        };
+        let (default_facts_a, ..) = sys_a.step_one_with_controller(
+            &ledger_a,
+            &npc_a,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut DefaultController,
+        );
+        let (imposed_facts_a, ..) = sys_a.step_one_with_controller(
+            &ledger_a,
+            &npc_a,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut crate::controller::ImposedController::new(),
+        );
+
+        // Fixture B: the single-drive thirst fixture
+        // `a_default_controller_passes_through_and_a_player_controller_holds`
+        // uses — a different species, terrain, and starting history than
+        // fixture A (see this test's own doc comment for the measured
+        // finding that its reachable set is NOT narrower in practice, over
+        // this 39-day window).
+        let mut ledger_b = Ledger::default();
+        let e_b = ledger_b.mint_entity(test_lineage(ledger_b.entity_count() as u16));
+        let home_b = raddr(1.0);
+        let water_b = home_b.neighbors()[0].clone();
+        let npc_b = Body {
+            entity: e_b,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
+            home: home_b.clone(),
+            resource: water_b.clone(),
+            species: "goblin".into(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            thermal_strategy: ThermalStrategy::Endothermic,
+            niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
+            label: "herder".into(),
+        };
+        let t_b = PlantedTerrain {
+            elevations: [(water_b.clone(), 0.0)].into_iter().collect(),
+            fresh: [water_b.clone()].into_iter().collect(),
+            ..Default::default()
+        };
+        let sys_b = DriveMovements {
+            npcs: vec![npc_b.clone()],
+            from: WorldTime::GENESIS,
+            to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
+            params: SUSTENANCE,
+            day_ticks: None,
+            terrain: &t_b,
+        };
+        let (default_facts_b, ..) = sys_b.step_one_with_controller(
+            &ledger_b,
+            &npc_b,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut DefaultController,
+        );
+        let (imposed_facts_b, ..) = sys_b.step_one_with_controller(
+            &ledger_b,
+            &npc_b,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut crate::controller::ImposedController::new(),
+        );
+
+        let mut free_shapes = shapes_of(&default_facts_a);
+        free_shapes.extend(shapes_of(&default_facts_b));
+        let mut imposed_shapes = shapes_of(&imposed_facts_a);
+        imposed_shapes.extend(shapes_of(&imposed_facts_b));
+
+        assert!(
+            !free_shapes.is_empty(),
+            "the pooled fixtures must actually commit something, or this \
+             proves nothing"
+        );
+        assert!(
+            free_shapes.is_subset(&known_predicates),
+            "every emitted predicate must be one of the four this file can \
+             ever commit: got {free_shapes:?}"
+        );
+        assert_eq!(
+            imposed_shapes,
+            free_shapes,
+            "H4: the set of distinct fact shapes (predicates) an imposed run \
+             can reach and the set a free run can reach, pooled over {} \
+             predicates' worth of denominator and 2 fixtures, are IDENTICAL \
+             — but that equality is DEDUCIBLE from \
+             `ImposedController::intend`'s pass-through delegation \
+             (controller.rs:162-166) before either fixture runs, NOT \
+             established by running them. Today's stub is provably a no-op \
+             relative to `DefaultController`, so this assertion is a \
+             regression tripwire for the day it gains real intent, not \
+             evidence that possession is invisible in reachable consequence",
+            known_predicates.len()
         );
     }
 
@@ -8739,7 +9630,7 @@ mod tests {
         // The gap catch_up will reconstruct: last seen here on day 0, and the
         // walk itself does not open until day 3.
         ledger
-            .commit(agent_at_fact(e, &home, 0.0, "test setup"), &registry)
+            .commit(agent_at_fact(e, &home, td(0.0), "test setup"), &registry)
             .unwrap();
         let npc = Body {
             entity: e,
@@ -8752,7 +9643,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -8762,19 +9653,19 @@ mod tests {
         let t = PlantedTerrain::default();
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
-            from: WorldTime::new(3.0).expect("a day value is finite"),
+            from: WorldTime::from_std_days(3.0).expect("a day value is finite"),
             // Slack beyond `from`: `Drink`'s own clock charge (`cost_ticks`)
             // must land at or before `to`, or `advance_one`'s interval guard
             // returns before ever reaching the commit match — a half-day is
             // generous next to `Drink`'s 150-tick base cost.
-            to: WorldTime::new(3.5).expect("a day value is finite"),
+            to: WorldTime::from_std_days(3.5).expect("a day value is finite"),
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
         let mut player = PlayerController::new();
         player.queue(Action::Drink);
-        let (facts, _mode) = sys.step_one_with_controller(
+        let (facts, _mode, _affect, _suppressed) = sys.step_one_with_controller(
             &ledger,
             &npc,
             &mut RoomMeshMemo::new(),
@@ -8855,7 +9746,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -8877,11 +9768,11 @@ mod tests {
         let sys = DriveMovements {
             npcs: vec![npc],
             from: WorldTime::GENESIS,
-            to: WorldTime::new(40.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
         world.ledger = hornvale_kernel::tick(
@@ -8925,7 +9816,7 @@ mod tests {
         let ledger = Ledger::default();
         let e = EntityId::new(1).unwrap();
         let home = raddr(1.0);
-        let water = RoomAddr::containing([-1.0, 0.0, 0.0], 6); // irrelevant now: no water exists anywhere
+        let water = Facet::containing([-1.0, 0.0, 0.0], 6); // irrelevant now: no water exists anywhere
         let npc = Body {
             entity: e,
             village: None,
@@ -8937,7 +9828,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -8955,11 +9846,11 @@ mod tests {
         let sys = DriveMovements {
             npcs: vec![npc],
             from: WorldTime::GENESIS,
-            to: WorldTime::new(10_000.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(10_000.0).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -9028,7 +9919,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -9050,11 +9941,11 @@ mod tests {
         let sys = DriveMovements {
             npcs: vec![npc],
             from: WorldTime::GENESIS,
-            to: WorldTime::new(1_000_000.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(1_000_000.0).expect("a day value is finite"),
             params: degenerate,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -9104,7 +9995,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -9117,11 +10008,11 @@ mod tests {
         let sys = DriveMovements {
             npcs: vec![npc],
             from: WorldTime::GENESIS,
-            to: WorldTime::new(10.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(10.0).expect("a day value is finite"),
             params: p,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &t,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -9227,7 +10118,7 @@ mod tests {
 
     #[test]
     fn planner_routes_around_a_remembered_cell() {
-        // THE SHUN: a remembered-dangerous cell on the straight path becomes a
+        // THE SHUN: a remembered-dangerous room on the straight path becomes a
         // finite detour cost, so the A* routes AROUND it when a cheaper detour
         // exists — and with an EMPTY avoid set the plan is unchanged (the
         // byte-identity property, at the planner seam).
@@ -9246,14 +10137,14 @@ mod tests {
             3,
             "the straight path is two moves then a drink"
         );
-        // The via-cell the straight plan actually steps through (not water itself).
+        // The via-room the straight plan actually steps through (not water itself).
         let via = direct
             .iter()
             .find_map(|a| match a {
                 Action::MoveTo(r) if *r != water => Some(r.clone()),
                 _ => None,
             })
-            .expect("a via-cell on the straight path");
+            .expect("a via-room on the straight path");
         let mut avoid = std::collections::BTreeSet::new();
         avoid.insert(via.clone());
         let around = plan_to_water(&home, &water, 10_000, &avoid).expect("still reachable");
@@ -9261,7 +10152,7 @@ mod tests {
             !around
                 .iter()
                 .any(|a| matches!(a, Action::MoveTo(r) if *r == via)),
-            "the plan routes AROUND the remembered cell"
+            "the plan routes AROUND the remembered room"
         );
         assert!(
             matches!(around.last(), Some(Action::Drink)),
@@ -9276,7 +10167,7 @@ mod tests {
     #[test]
     fn planner_braves_it_when_the_detour_exceeds_the_penalty() {
         // SURVIVAL-OVERRIDE FOR FREE: the penalty is FINITE, so when the
-        // remembered-bad cell is the ONLY route to water (no detour at all — an
+        // remembered-bad room is the ONLY route to water (no detour at all — an
         // infinite alternative), the creature still takes it. A dying-thirsty
         // creature braves the haunted ground; the flinch is a preference, not a
         // wall.
@@ -9289,14 +10180,14 @@ mod tests {
         assert_eq!(
             plan,
             vec![Action::MoveTo(water.clone()), Action::Drink],
-            "braves the remembered cell when it is the only route"
+            "braves the remembered room when it is the only route"
         );
     }
 
     #[test]
     fn the_shun_a_frightened_creature_detours_around_remembered_ground_a_control_goes_through() {
         // THE SHUN, end-to-end through the real DriveMovements tick (spec §e2e):
-        // a creature frightened at a cell X on an early trip plans its LATER
+        // a creature frightened at a room X on an early trip plans its LATER
         // journeys to water AROUND X — proactively — while an otherwise-identical
         // control that never stood at X takes the straight path THROUGH it. Both
         // reach water (the frightened one is never trapped — the finite penalty is
@@ -9312,13 +10203,13 @@ mod tests {
         reg.register_predicate(EATEN, false, "eaten").unwrap();
 
         // Geometry: discover the straight S→W path (hazard-free planning) and pick
-        // an INTERIOR cell X (distance 2 from S) as the frightening ground. X is
+        // an INTERIOR room X (distance 2 from S) as the frightening ground. X is
         // not adjacent to S or W, so standing at S/W is never itself frightening
         // (`threat_field` maxes over neighbours) — the remembered set is exactly
         // {X}.
         let start = raddr(1.0);
-        // Chain neighbours to a distant water cell, then take the true shortest
-        // path so an interior cell is guaranteed.
+        // Chain neighbours to a distant water room, then take the true shortest
+        // path so an interior room is guaranteed.
         let c1 = start.neighbors()[0].clone();
         let c2 = c1
             .neighbors()
@@ -9342,16 +10233,16 @@ mod tests {
         let straight = plan_to_room(&start, &water, PLAN_BUDGET, &empty).expect("reachable");
         assert!(
             straight.len() >= 4,
-            "need a path with an interior cell not adjacent to either endpoint"
+            "need a path with an interior room not adjacent to either endpoint"
         );
-        let path_cells: Vec<RoomAddr> = straight
+        let path_rooms: Vec<Facet> = straight
             .iter()
             .map(|a| match a {
                 Action::MoveTo(r) => r.clone(),
                 _ => unreachable!("plan_to_room emits only MoveTo"),
             })
             .collect();
-        let x = path_cells[1].clone(); // distance 2 from start ⇒ not adjacent to start; ≥2 from water
+        let x = path_rooms[1].clone(); // distance 2 from start ⇒ not adjacent to start; ≥2 from water
         assert!(
             !start.neighbors().contains(&x) && !water.neighbors().contains(&x),
             "X must be interior (not adjacent to start or water)"
@@ -9375,7 +10266,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -9399,12 +10290,12 @@ mod tests {
             commit_agent_at(&mut ledger, &reg, e, &start, 0.2); // now at start
             let sys = DriveMovements {
                 npcs: vec![npc_at(e)],
-                from: WorldTime::new(1.0).expect("a day value is finite"), // after the seeded history
-                to: WorldTime::new(60.0).expect("a day value is finite"), // several thirst cycles (act/rise ≈ 5.7 days)
+                from: WorldTime::from_std_days(1.0).expect("a day value is finite"), // after the seeded history
+                to: WorldTime::from_std_days(60.0).expect("a day value is finite"), // several thirst cycles (act/rise ≈ 5.7 days)
                 params: SUSTENANCE,
                 // No sky in a planted-terrain fixture: the action clock takes its
                 // base rate (spec §4.1).
-                day_length_std: None,
+                day_ticks: None,
                 terrain: &terrain,
             };
             let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -9412,11 +10303,11 @@ mod tests {
         };
 
         // The committed positions the tick EMITTED (day ≥ from), decoded to rooms.
-        let walked = |ledger: &Ledger, e: EntityId| -> Vec<RoomAddr> {
+        let walked = |ledger: &Ledger, e: EntityId| -> Vec<Facet> {
             ledger
                 .find(AGENT_AT)
                 .filter(|f| f.subject == e)
-                .filter(|f| f.day.map(|d| d.day() >= 1.0).unwrap_or(false))
+                .filter(|f| f.day.map(|d| d.as_std_days() >= 1.0).unwrap_or(false))
                 .filter_map(|f| match &f.object {
                     Value::Text(s) => Some(room_from_text(s)),
                     _ => None,
@@ -9438,7 +10329,7 @@ mod tests {
             let hz = believed_hazard(
                 &fl,
                 &n,
-                WorldTime::new(1.0).expect("a day value is finite"),
+                WorldTime::from_std_days(1.0).expect("a day value is finite"),
                 &terrain,
                 &[],
             );
@@ -9478,7 +10369,7 @@ mod tests {
     #[test]
     fn the_phantom_detours_around_a_passed_alarm_then_relearns_the_ground_safe() {
         // THE PHANTOM, end-to-end through the real DriveMovements tick (spec §e2e):
-        // a creature alarm-frightened at a now-SAFE cell X — where a herd-mate B
+        // a creature alarm-frightened at a now-SAFE room X — where a herd-mate B
         // briefly panicked beside it — plans its LATER journeys to water AROUND X,
         // shunning ground that is no longer dangerous (the phobia, a fear of
         // nothing). A control that never stood at X blunders straight through. And
@@ -9492,7 +10383,7 @@ mod tests {
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
 
-        // Geometry (as THE SHUN): the straight S→W path, X an interior cell not
+        // Geometry (as THE SHUN): the straight S→W path, X an interior room not
         // adjacent to either endpoint (so standing at S/W is never frightening).
         let start = raddr(1.0);
         let c1 = start.neighbors()[0].clone();
@@ -9516,34 +10407,34 @@ mod tests {
             .clone();
         let empty = std::collections::BTreeSet::new();
         let straight = plan_to_room(&start, &water, PLAN_BUDGET, &empty).expect("reachable");
-        assert!(straight.len() >= 4, "need a path with an interior cell");
-        let path_cells: Vec<RoomAddr> = straight
+        assert!(straight.len() >= 4, "need a path with an interior room");
+        let path_rooms: Vec<Facet> = straight
             .iter()
             .map(|a| match a {
                 Action::MoveTo(r) => r.clone(),
                 _ => unreachable!("plan_to_room emits only MoveTo"),
             })
             .collect();
-        let x = path_cells[1].clone(); // interior, distance 2 from start
-        let p0 = path_cells[0].clone(); // X's on-path predecessor (distance 1)
-        let p2 = path_cells[2].clone(); // X's on-path successor (distance 3)
+        let x = path_rooms[1].clone(); // interior, distance 2 from start
+        let p0 = path_rooms[0].clone(); // X's on-path predecessor (distance 1)
+        let p2 = path_rooms[2].clone(); // X's on-path successor (distance 3)
         assert!(
             !start.neighbors().contains(&x) && !water.neighbors().contains(&x),
             "X must be interior (not adjacent to start or water)"
         );
 
-        // The emitter's cell D: X's OFF-path neighbour (not p0, not p2). Its own
-        // neighbour E carries the hazard, so B — standing at the SAFE cell D beside
+        // The emitter's room D: X's OFF-path neighbour (not p0, not p2). Its own
+        // neighbour E carries the hazard, so B — standing at the SAFE room D beside
         // the hazard — is primary-afraid (anticipatory) and its one-hop alarm halo
         // covers X. E is two hops from X, so X itself stays terrain-SAFE (a pure
         // phantom, not a Haunt).
-        let d_cell = x
+        let d_room = x
             .neighbors()
             .iter()
             .find(|n| **n != p0 && **n != p2)
             .expect("X has a third, off-path neighbour")
             .clone();
-        let hazard_e = d_cell
+        let hazard_e = d_room
             .neighbors()
             .iter()
             .find(|n| **n != x && **n != p0 && **n != p2 && **n != start && **n != water)
@@ -9564,7 +10455,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: BOLDNESS_STEADY,
             threat_niche: mortal_threat_niche(),
@@ -9586,7 +10477,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: BOLDNESS_STEADY,
             threat_niche: mortal_threat_niche(),
@@ -9596,21 +10487,21 @@ mod tests {
             label: "herd-mate".into(),
         };
 
-        // Guard: every cell on the straight path is terrain-SAFE — the phantom is
+        // Guard: every room on the straight path is terrain-SAFE — the phantom is
         // a fear of nothing, never a static Haunt (empty-roster verdict is FALSE).
         let dummy = npc_at(EntityId::new(1).unwrap());
         let empty_ledger = Ledger::default();
-        for cell in [&start, &p0, &x, &p2, &water] {
+        for room in [&start, &p0, &x, &p2, &water] {
             assert!(
                 !frightened_at(
-                    cell,
+                    room,
                     &dummy,
                     &terrain,
-                    WorldTime::new(1.0).expect("a day value is finite"),
+                    WorldTime::from_std_days(1.0).expect("a day value is finite"),
                     &[],
                     &empty_ledger
                 ),
-                "path cell {cell:?} must be terrain-safe (no static hazard)"
+                "path room {room:?} must be terrain-safe (no static hazard)"
             );
         }
 
@@ -9624,7 +10515,7 @@ mod tests {
             commit_agent_at(&mut fl, &reg, a, &x, 0.35);
             commit_agent_at(&mut fl, &reg, a, &start, 0.40);
             let b = fl.mint_entity(test_lineage(fl.entity_count() as u16));
-            commit_agent_at(&mut fl, &reg, b, &d_cell, 0.35);
+            commit_agent_at(&mut fl, &reg, b, &d_room, 0.35);
             commit_agent_at(&mut fl, &reg, b, &far, 0.40);
             let an = npc_at(a);
             let bn = emitter_npc(b);
@@ -9632,7 +10523,7 @@ mod tests {
                 believed_hazard(
                     &fl,
                     &an,
-                    WorldTime::new(1.0).expect("a day value is finite"),
+                    WorldTime::from_std_days(1.0).expect("a day value is finite"),
                     &terrain,
                     &[]
                 )
@@ -9642,7 +10533,7 @@ mod tests {
             let hz = believed_hazard(
                 &fl,
                 &an,
-                WorldTime::new(1.0).expect("a day value is finite"),
+                WorldTime::from_std_days(1.0).expect("a day value is finite"),
                 &terrain,
                 std::slice::from_ref(&bn),
             );
@@ -9681,18 +10572,18 @@ mod tests {
                 // a memory to re-derive (the control needs no alarm source).
                 let b = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
                 commit_agent_at(&mut ledger, &reg, b, &water, 0.29);
-                commit_agent_at(&mut ledger, &reg, b, &d_cell, 0.35);
+                commit_agent_at(&mut ledger, &reg, b, &d_room, 0.35);
                 commit_agent_at(&mut ledger, &reg, b, &far, 0.40);
                 npcs.push(emitter_npc(b));
             }
             let sys = DriveMovements {
                 npcs,
-                from: WorldTime::new(from_day).expect("a day value is finite"),
-                to: WorldTime::new(60.0).expect("a day value is finite"), // several thirst cycles (act/rise ≈ 5.7 days)
+                from: WorldTime::from_std_days(from_day).expect("a day value is finite"),
+                to: WorldTime::from_std_days(60.0).expect("a day value is finite"), // several thirst cycles (act/rise ≈ 5.7 days)
                 params: SUSTENANCE,
                 // No sky in a planted-terrain fixture: the action clock takes its
                 // base rate (spec §4.1).
-                day_length_std: None,
+                day_ticks: None,
                 terrain: &terrain,
             };
             let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -9700,11 +10591,11 @@ mod tests {
         };
 
         // The committed positions the tick EMITTED (day ≥ from), decoded to rooms.
-        let walked = |ledger: &Ledger, e: EntityId, from_day: f64| -> Vec<RoomAddr> {
+        let walked = |ledger: &Ledger, e: EntityId, from_day: f64| -> Vec<Facet> {
             ledger
                 .find(AGENT_AT)
                 .filter(|f| f.subject == e)
-                .filter(|f| f.day.map(|d| d.day() >= from_day).unwrap_or(false))
+                .filter(|f| f.day.map(|d| d.as_std_days() >= from_day).unwrap_or(false))
                 .filter_map(|f| match &f.object {
                     Value::Text(s) => Some(room_from_text(s)),
                     _ => None,
@@ -9762,7 +10653,7 @@ mod tests {
         //                    present.
         //   (2) DISCHARGED — it is not stuck: its affect is not a distress label,
         //                    and the drive offers a step OFF X, not a Hold.
-        //   (3) DISPROVEN  — having stood there and come to no harm, the cell
+        //   (3) DISPROVEN  — having stood there and come to no harm, the room
         //                    leaves both the shunned set and the dread map: the
         //                    fear the avoidance had been protecting is undone by
         //                    the one experience that can undo it.
@@ -9774,7 +10665,7 @@ mod tests {
 
         // GEOMETRY — copied verbatim from
         // `the_phantom_detours_around_a_passed_alarm_then_relearns_the_ground_safe`
-        // above: the straight S→W path, X an interior cell, D its off-path
+        // above: the straight S→W path, X an interior room, D its off-path
         // neighbour, E the hazard beside D (so X itself is terrain-SAFE and the
         // only thing that ever frightened anyone there was B's passing panic).
         let start = raddr(1.0);
@@ -9799,24 +10690,24 @@ mod tests {
             .clone();
         let empty = std::collections::BTreeSet::new();
         let straight = plan_to_room(&start, &water, PLAN_BUDGET, &empty).expect("reachable");
-        assert!(straight.len() >= 4, "need a path with an interior cell");
-        let path_cells: Vec<RoomAddr> = straight
+        assert!(straight.len() >= 4, "need a path with an interior room");
+        let path_rooms: Vec<Facet> = straight
             .iter()
             .map(|a| match a {
                 Action::MoveTo(r) => r.clone(),
                 _ => unreachable!("plan_to_room emits only MoveTo"),
             })
             .collect();
-        let x = path_cells[1].clone(); // interior, distance 2 from start
-        let p0 = path_cells[0].clone();
-        let p2 = path_cells[2].clone();
-        let d_cell = x
+        let x = path_rooms[1].clone(); // interior, distance 2 from start
+        let p0 = path_rooms[0].clone();
+        let p2 = path_rooms[2].clone();
+        let d_room = x
             .neighbors()
             .iter()
             .find(|n| **n != p0 && **n != p2)
             .expect("X has a third, off-path neighbour")
             .clone();
-        let hazard_e = d_cell
+        let hazard_e = d_room
             .neighbors()
             .iter()
             .find(|n| **n != x && **n != p0 && **n != p2 && **n != start && **n != water)
@@ -9825,7 +10716,7 @@ mod tests {
         let far = raddr(-1.0);
         let terrain = PlantedTerrain::hazard([water.clone()], [(hazard_e.clone(), 0.8)]);
 
-        let npc_at = |entity: EntityId, home: RoomAddr, label: &str| Body {
+        let npc_at = |entity: EntityId, home: Facet, label: &str| Body {
             entity,
             village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
@@ -9836,7 +10727,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: BOLDNESS_STEADY,
             threat_niche: mortal_threat_niche(),
@@ -9855,7 +10746,7 @@ mod tests {
         // by 0.55 — so at `now` the ground is unremarkable and B is long gone.
         let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let b = npc_at(b_e, far.clone(), "herd-mate");
-        commit_agent_at(&mut ledger, &reg, b_e, &d_cell, 0.45);
+        commit_agent_at(&mut ledger, &reg, b_e, &d_room, 0.45);
         commit_agent_at(&mut ledger, &reg, b_e, &far, 0.55);
         // A: stood at X while B panicked beside it — and has NOT moved since. It
         // gets no safe revisit before `now`: that revisit is exactly the staleness
@@ -9866,7 +10757,7 @@ mod tests {
         let a = npc_at(a_e, x.clone(), "rememberer");
         commit_agent_at(&mut ledger, &reg, a_e, &x, 0.45);
 
-        let now = WorldTime::new(0.6).expect("a day value is finite");
+        let now = WorldTime::from_std_days(0.6).expect("a day value is finite");
         let band = [a.clone(), b.clone()];
 
         // (1) FELT.
@@ -9918,16 +10809,16 @@ mod tests {
         let sys = DriveMovements {
             npcs: band.to_vec(),
             from: now,
-            to: WorldTime::new(now.day() + 1.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(now.as_std_days() + 1.0).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let next =
             hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).expect("tick");
-        let walked: Vec<RoomAddr> = next
+        let walked: Vec<Facet> = next
             .find(AGENT_AT)
             .filter(|f| f.subject == a_e)
             .filter(|f| f.day.map(|d| d >= now).unwrap_or(false))
@@ -9942,7 +10833,7 @@ mod tests {
         assert_eq!(
             walked.first(),
             Some(&p0),
-            "the first step of the tick is OFF the haunted cell: {walked:?}"
+            "the first step of the tick is OFF the haunted room: {walked:?}"
         );
         assert!(
             walked[1..].contains(&x),
@@ -9952,7 +10843,7 @@ mod tests {
         let after = hazard_memory(
             &next,
             &a,
-            WorldTime::new(now.day() + 1.0).expect("a day value is finite"),
+            WorldTime::from_std_days(now.as_std_days() + 1.0).expect("a day value is finite"),
             &terrain,
             &band,
         );
@@ -9974,33 +10865,33 @@ mod tests {
     /// an elevation threshold — `Terrain::is_fresh_water` is authoritative).
     #[derive(Default)]
     struct PlantedTerrain {
-        elevations: std::collections::BTreeMap<RoomAddr, f64>,
-        fresh: std::collections::BTreeSet<RoomAddr>,
+        elevations: std::collections::BTreeMap<Facet, f64>,
+        fresh: std::collections::BTreeSet<Facet>,
         /// Planted per-room temperatures (°C) for the thermal-drive tests;
         /// INFINITY elsewhere (the thirst tests never read temperature).
-        temps: std::collections::BTreeMap<RoomAddr, f64>,
+        temps: std::collections::BTreeMap<Facet, f64>,
         /// Planted per-room food productivity for the hunger-drive tests;
         /// rooms without an entry read `DEFAULT_FORAGE` (fed) — so the thirst/
         /// thermal tests, which plant none, keep their creatures fed and
         /// hunger-inactive (byte-identical to pre-Provender behaviour).
-        forage: std::collections::BTreeMap<RoomAddr, f64>,
+        forage: std::collections::BTreeMap<Facet, f64>,
         /// Planted per-room hazards for the danger-drive tests; rooms without an
         /// entry read `Hazards::ZERO` (safe) — so the other tests, which plant
         /// none, are danger-inactive. Named `threat` for continuity; the
         /// `hazard()` constructor plants a scalar as the UNCANNY axis (the axis a
         /// mortal niche weights `1`, so the pre-Bane danger tests are byte-
         /// identical), and thermal tests plant `Hazards` directly.
-        threat: std::collections::BTreeMap<RoomAddr, Hazards>,
+        threat: std::collections::BTreeMap<Facet, Hazards>,
         /// Planted per-room prey presence (The Teeth's hunt tests); rooms without
         /// an entry read `0.0` (prey-empty) — so every other test is byte-
         /// identical (a carnivore there reads only ordinary productivity).
-        prey: std::collections::BTreeMap<RoomAddr, f64>,
+        prey: std::collections::BTreeMap<Facet, f64>,
     }
     impl PlantedTerrain {
         /// No elevation data — just a set of fresh-water rooms (the common
         /// case for the belief-fold tests, which never exercise
         /// `downhill_step`/`nearest_water`'s elevation reads).
-        fn fresh_only(rooms: impl IntoIterator<Item = RoomAddr>) -> Self {
+        fn fresh_only(rooms: impl IntoIterator<Item = Facet>) -> Self {
             Self {
                 fresh: rooms.into_iter().collect(),
                 ..Default::default()
@@ -10008,7 +10899,7 @@ mod tests {
         }
         /// No fresh water anywhere — just planted elevations (the
         /// exploration/downhill tests, which never exercise belief).
-        fn dry(elevations: std::collections::BTreeMap<RoomAddr, f64>) -> Self {
+        fn dry(elevations: std::collections::BTreeMap<Facet, f64>) -> Self {
             Self {
                 elevations,
                 ..Default::default()
@@ -10017,7 +10908,7 @@ mod tests {
         /// Just planted per-room temperatures (the thermal-drive tests, which
         /// never exercise elevation/water). Rooms without a planted temperature
         /// read `INFINITY` (never chosen as a comfort target).
-        fn thermal(temps: impl IntoIterator<Item = (RoomAddr, f64)>) -> Self {
+        fn thermal(temps: impl IntoIterator<Item = (Facet, f64)>) -> Self {
             Self {
                 temps: temps.into_iter().collect(),
                 ..Default::default()
@@ -10025,7 +10916,7 @@ mod tests {
         }
         /// Just planted per-room food productivity (the hunger-drive tests).
         /// Rooms without an entry read `DEFAULT_FORAGE` (fed).
-        fn forage(forage: impl IntoIterator<Item = (RoomAddr, f64)>) -> Self {
+        fn forage(forage: impl IntoIterator<Item = (Facet, f64)>) -> Self {
             Self {
                 forage: forage.into_iter().collect(),
                 ..Default::default()
@@ -10037,8 +10928,8 @@ mod tests {
         /// A mortal threat niche weights UNCANNY `1`, so a scalar `s` reads as
         /// felt threat `s` — the pre-Bane danger tests stay byte-identical.
         fn hazard(
-            fresh: impl IntoIterator<Item = RoomAddr>,
-            threat: impl IntoIterator<Item = (RoomAddr, f64)>,
+            fresh: impl IntoIterator<Item = Facet>,
+            threat: impl IntoIterator<Item = (Facet, f64)>,
         ) -> Self {
             Self {
                 fresh: fresh.into_iter().collect(),
@@ -10058,7 +10949,7 @@ mod tests {
             }
         }
         /// Planted per-room `Hazards` directly (the per-axis thermal-fear tests).
-        fn hazards_map(hazards: impl IntoIterator<Item = (RoomAddr, Hazards)>) -> Self {
+        fn hazards_map(hazards: impl IntoIterator<Item = (Facet, Hazards)>) -> Self {
             Self {
                 threat: hazards.into_iter().collect(),
                 ..Default::default()
@@ -10069,8 +10960,8 @@ mod tests {
         /// forage axis and the prey field for its prey axis. Rooms without a
         /// forage entry read `DEFAULT_FORAGE`; without a prey entry, `0.0`.
         fn forage_and_prey(
-            forage: impl IntoIterator<Item = (RoomAddr, f64)>,
-            prey: impl IntoIterator<Item = (RoomAddr, f64)>,
+            forage: impl IntoIterator<Item = (Facet, f64)>,
+            prey: impl IntoIterator<Item = (Facet, f64)>,
         ) -> Self {
             Self {
                 forage: forage.into_iter().collect(),
@@ -10080,22 +10971,22 @@ mod tests {
         }
     }
     impl Terrain for PlantedTerrain {
-        fn elevation(&self, room: &RoomAddr) -> f64 {
+        fn elevation(&self, room: &Facet) -> f64 {
             self.elevations.get(room).copied().unwrap_or(f64::INFINITY)
         }
-        fn is_fresh_water(&self, room: &RoomAddr) -> bool {
+        fn is_fresh_water(&self, room: &Facet) -> bool {
             self.fresh.contains(room)
         }
-        fn temperature(&self, room: &RoomAddr, _day: WorldTime) -> f64 {
+        fn temperature(&self, room: &Facet, _day: WorldTime) -> f64 {
             self.temps.get(room).copied().unwrap_or(f64::INFINITY)
         }
-        fn forage_value(&self, room: &RoomAddr) -> f64 {
+        fn forage_value(&self, room: &Facet) -> f64 {
             self.forage.get(room).copied().unwrap_or(DEFAULT_FORAGE)
         }
-        fn hazards(&self, room: &RoomAddr) -> Hazards {
+        fn hazards(&self, room: &Facet) -> Hazards {
             self.threat.get(room).copied().unwrap_or(Hazards::ZERO)
         }
-        fn prey_value(&self, room: &RoomAddr) -> f64 {
+        fn prey_value(&self, room: &Facet) -> f64 {
             self.prey.get(room).copied().unwrap_or(0.0)
         }
     }
@@ -10109,7 +11000,7 @@ mod tests {
     fn mortal_threat_niche() -> ThreatNiche {
         derive_threat_niche(
             &DEFAULT_TEMPERATURE_NICHE,
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
             &default_diet_niche(),
         )
     }
@@ -10121,13 +11012,13 @@ mod tests {
 
     #[test]
     fn food_value_is_the_niche_dotted_with_availability() {
-        // An omnivore reads the cell's material productivity (forage+prey);
-        // a barren cell feeds it less than a rich one.
+        // An omnivore reads the room's material productivity (forage+prey);
+        // a barren room feeds it less than a rich one.
         let rich = raddr(1.0);
         let barren = rich.neighbors()[0].clone();
         let t = PlantedTerrain::forage([(rich.clone(), 1.0), (barren.clone(), 0.0)]);
         let omni = omnivore_niche();
-        let day = WorldTime::new(0.5).expect("a day value is finite"); // noon (sun up) — irrelevant to an omnivore
+        let day = WorldTime::from_std_days(0.5).expect("a day value is finite"); // noon (sun up) — irrelevant to an omnivore
         assert!(
             food_value(&omni, &t, &rich, day)
                 .total_cmp(&food_value(&omni, &t, &barren, day))
@@ -10152,7 +11043,7 @@ mod tests {
             [(preyful.clone(), 1.0), (empty.clone(), 1.0)],
             [(preyful.clone(), 1.0)],
         );
-        let day = WorldTime::new(0.5).expect("a day value is finite");
+        let day = WorldTime::from_std_days(0.5).expect("a day value is finite");
         let carnivore = ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap();
         let herbivore = ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap();
         assert!(
@@ -10174,28 +11065,28 @@ mod tests {
         // field, follows only the (flat) forage and breaks the tie elsewhere.
         let c = raddr(1.0);
         let neighbors = c.neighbors();
-        // The prey cell is the LARGEST-address neighbour, so a herbivore's
+        // The prey room is the LARGEST-address neighbour, so a herbivore's
         // uniform-forage tie-break (smallest address) can never land on it —
         // any pull toward it is the prey draw, not an artefact of the tie-break.
-        let prey_cell = neighbors.iter().max().unwrap().clone();
-        let uniform: Vec<(RoomAddr, f64)> = neighbors
+        let prey_room = neighbors.iter().max().unwrap().clone();
+        let uniform: Vec<(Facet, f64)> = neighbors
             .iter()
             .cloned()
             .chain(std::iter::once(c.clone()))
             .map(|r| (r, 1.0))
             .collect();
-        let t = PlantedTerrain::forage_and_prey(uniform, [(prey_cell.clone(), 1.0)]);
-        let day = WorldTime::new(0.5).expect("a day value is finite");
+        let t = PlantedTerrain::forage_and_prey(uniform, [(prey_room.clone(), 1.0)]);
+        let day = WorldTime::from_std_days(0.5).expect("a day value is finite");
         let carnivore = ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap();
         let herbivore = ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap();
         assert_eq!(
             forage_step(&c, &carnivore, &t, day),
-            Some(prey_cell.clone()),
+            Some(prey_room.clone()),
             "a carnivore forages toward prey-dense ground"
         );
         assert_ne!(
             forage_step(&c, &herbivore, &t, day),
-            Some(prey_cell),
+            Some(prey_room),
             "a herbivore ignores the prey field (uniform forage → tie-break, not prey)"
         );
     }
@@ -10204,17 +11095,17 @@ mod tests {
     fn an_autotroph_is_fed_by_light_not_forage() {
         // A pure photosynthate niche reads the SUN, not the productivity field:
         // fed by day (sun up), starved at night — even on barren ground.
-        let cell = raddr(1.0);
-        let t = PlantedTerrain::forage([(cell.clone(), 0.0)]); // no material food
+        let room = raddr(1.0);
+        let t = PlantedTerrain::forage([(room.clone(), 0.0)]); // no material food
         let autotroph = ResourceVector::new(&[(PHOTOSYNTHATE, 1.0)]).unwrap();
-        let noon = WorldTime::new(0.5).expect("a day value is finite"); // fractional_day_sun → +90°
+        let noon = WorldTime::from_std_days(0.5).expect("a day value is finite"); // fractional_day_sun → +90°
         let midnight = WorldTime::GENESIS; // → −90°
         assert!(
-            food_value(&autotroph, &t, &cell, noon) > 0.0,
+            food_value(&autotroph, &t, &room, noon) > 0.0,
             "an autotroph eats by day"
         );
         assert_eq!(
-            food_value(&autotroph, &t, &cell, midnight),
+            food_value(&autotroph, &t, &room, midnight),
             0.0,
             "an autotroph starves at night"
         );
@@ -10232,26 +11123,26 @@ mod tests {
         let mut ledger = Ledger::default();
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         // No meal yet → hunger has risen by day 5 (a thermoneutral/unreadable
-        // cell couples at the base HUNGER rate).
+        // room couples at the base HUNGER rate).
         let t = PlantedTerrain::forage(std::iter::empty());
         let before = hunger_at(
             &ledger,
             e,
             &home,
-            WorldTime::new(5.0).expect("a day value is finite"),
+            WorldTime::from_std_days(5.0).expect("a day value is finite"),
             &t,
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
         );
         assert!(before > 0.0, "hunger accrues without a meal");
         // Eat on day 5 → hunger is 0 right after.
-        ledger.commit(eaten_fact(e, 5.0, "ate"), &reg).unwrap();
+        ledger.commit(eaten_fact(e, td(5.0), "ate"), &reg).unwrap();
         let after = hunger_at(
             &ledger,
             e,
             &home,
-            WorldTime::new(5.0).expect("a day value is finite"),
+            WorldTime::from_std_days(5.0).expect("a day value is finite"),
             &t,
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
         );
         assert_eq!(after, 0.0, "a meal resets hunger");
     }
@@ -10285,13 +11176,13 @@ mod tests {
             terrain: &t,
             day,
         };
-        // Barren cell: forage toward the richer neighbour.
+        // Barren room: forage toward the richer neighbour.
         assert_eq!(
             hunger.proposal(&view_barren, PLAN_BUDGET),
             Some(Action::MoveTo(rich.clone())),
             "a hungry creature on barren ground forages toward richer ground"
         );
-        // Rich cell: eat in place.
+        // Rich room: eat in place.
         let view_rich = Perceived {
             position: rich.clone(),
             drive: 0.0,
@@ -10316,9 +11207,9 @@ mod tests {
         let mild = PlantedTerrain::thermal([(home.clone(), 25.0)]);
         let mut ledger = Ledger::default(); // no eaten, no sightings → held at home
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
-        let day = WorldTime::new(3.0).expect("a day value is finite");
-        let hot_h = hunger_at(&ledger, e, &home, day, &hot, MetabolicClass::Endotherm);
-        let mild_h = hunger_at(&ledger, e, &home, day, &mild, MetabolicClass::Endotherm);
+        let day = WorldTime::from_std_days(3.0).expect("a day value is finite");
+        let hot_h = hunger_at(&ledger, e, &home, day, &hot, ThermalStrategy::Endothermic);
+        let mild_h = hunger_at(&ledger, e, &home, day, &mild, ThermalStrategy::Endothermic);
         assert!(
             hot_h.total_cmp(&mild_h).is_gt(),
             "heat hastens hunger for an endotherm"
@@ -10327,7 +11218,7 @@ mod tests {
 
     /// A `Perceived` view standing at `pos`, with the non-danger drives quiet
     /// (danger reads only `position` + the terrain it holds).
-    fn view_at(pos: RoomAddr) -> Perceived {
+    fn view_at(pos: Facet) -> Perceived {
         Perceived {
             position: pos,
             drive: 0.0,
@@ -10341,7 +11232,7 @@ mod tests {
     #[test]
     fn danger_urgency_reads_the_cell_threat_and_defaults_safe() {
         let scary = raddr(1.0);
-        // A cell on the far side of the world — neither it nor its neighbours
+        // A room on the far side of the world — neither it nor its neighbours
         // touch the threat, so anticipatory urgency reads 0.
         let far = raddr(-1.0);
         let t = PlantedTerrain::hazard(std::iter::empty(), [(scary.clone(), 0.8)]);
@@ -10355,20 +11246,20 @@ mod tests {
         assert_eq!(
             danger.urgency(&view_at(scary)),
             0.8,
-            "feels the cell's threat"
+            "feels the room's threat"
         );
         assert_eq!(
             danger.urgency(&view_at(far)),
             0.0,
-            "a cell far from any threat is safe"
+            "a room far from any threat is safe"
         );
     }
 
     #[test]
     fn danger_urgency_reads_remembered_dread_on_now_safe_ground() {
-        // THE SHUDDER: a cell with NO hazard anywhere near it — present threat 0 —
+        // THE SHUDDER: a room with NO hazard anywhere near it — present threat 0 —
         // frightens a creature that remembers a herd's alarm there. Fear of
-        // nothing present. `None` dread on the same cell reads calm, so the term
+        // nothing present. `None` dread on the same room reads calm, so the term
         // is additive-latent: byte-identical wherever the map is empty.
         let safe = raddr(-1.0); // neither it nor its neighbours carry any hazard
         let t = PlantedTerrain::hazard(std::iter::empty(), std::iter::empty());
@@ -10405,7 +11296,7 @@ mod tests {
 
     #[test]
     fn danger_discharges_dread_by_stepping_off_the_haunted_cell() {
-        // THE AFFORDANCE (spec §2, ledger #1). A phantom cell is now-SAFE ground,
+        // THE AFFORDANCE (spec §2, ledger #1). A phantom room is now-SAFE ground,
         // so terrain offers no gradient to flee down: without a dread-aware
         // serviceability the creature would Hold and read `Lost` — a distress
         // tick for a feature that is a feeling, not a pathology. With it, every
@@ -10431,7 +11322,7 @@ mod tests {
         assert!(here.neighbors().contains(&to), "it steps to a neighbour");
         assert!(
             danger.serviceability(&Action::MoveTo(to), &view, PLAN_BUDGET, &mut || None) > 0.0,
-            "stepping off the dreaded cell positively serves the drive"
+            "stepping off the dreaded room positively serves the drive"
         );
     }
 
@@ -10537,14 +11428,14 @@ mod tests {
     #[test]
     fn danger_routes_a_thirsty_creature_around_a_hazard_to_water() {
         // THE KEYSTONE (the potential-field modulation): water lies past a
-        // dangerous cell; a safe detour neighbour exists. The creature, though
+        // dangerous room; a safe detour neighbour exists. The creature, though
         // thirsty and knowing the water, does NOT step onto the hazard — danger's
         // negative serviceability outweighs thirst's pull on that move.
         let home = raddr(1.0);
         let ns = home.neighbors();
         let hazard = ns[0].clone(); // the direct step toward water, but deadly
         let detour = ns[1].clone(); // a safe alternative step
-        let water = hazard.clone(); // believed water sits on/at the hazard cell
+        let water = hazard.clone(); // believed water sits on/at the hazard room
         let t = PlantedTerrain::hazard([water.clone()], [(hazard.clone(), 1.0)]);
         let danger = Danger {
             terrain: &t,
@@ -10574,7 +11465,7 @@ mod tests {
             Mode::Idle,
             PLAN_BUDGET,
         );
-        // Whatever it does, it must NOT step onto the deadly hazard cell.
+        // Whatever it does, it must NOT step onto the deadly hazard room.
         assert_ne!(
             res.intent,
             Intent::Do(Action::MoveTo(hazard.clone())),
@@ -10584,9 +11475,9 @@ mod tests {
 
     #[test]
     fn danger_urgency_is_clamped_and_a_flow_drive_carries_no_state() {
-        // A flow drive: urgency is purely the cell field, no fold, clamped [0,1].
-        let cell = raddr(1.0);
-        let t = PlantedTerrain::hazard(std::iter::empty(), [(cell.clone(), 1.5)]);
+        // A flow drive: urgency is purely the room field, no fold, clamped [0,1].
+        let room = raddr(1.0);
+        let t = PlantedTerrain::hazard(std::iter::empty(), [(room.clone(), 1.5)]);
         let danger = Danger {
             terrain: &t,
             threat_niche: mortal_threat_niche(),
@@ -10595,7 +11486,7 @@ mod tests {
             dread: None,
         };
         assert_eq!(
-            danger.urgency(&view_at(cell)),
+            danger.urgency(&view_at(room)),
             1.0,
             "threat urgency clamps at 1.0"
         );
@@ -10604,9 +11495,9 @@ mod tests {
     #[test]
     fn boldness_scales_the_felt_threat_across_the_mettle_axis() {
         // THE METTLE: `effective = base × 2(1 − boldness)`, centered on 0.5.
-        let cell = raddr(1.0);
-        let t = PlantedTerrain::hazard(std::iter::empty(), [(cell.clone(), 0.4)]);
-        let v = view_at(cell);
+        let room = raddr(1.0);
+        let t = PlantedTerrain::hazard(std::iter::empty(), [(room.clone(), 0.4)]);
+        let v = view_at(room);
         let feel = |boldness: f64| {
             Danger {
                 terrain: &t,
@@ -10639,12 +11530,12 @@ mod tests {
     #[test]
     fn alarm_raises_a_calm_creatures_danger() {
         // THE ALARM: a creature on hazard-free ground feels nothing of its own,
-        // but a borrowed alarm at its cell wakes its Danger drive additively.
-        let cell = raddr(1.0);
+        // but a borrowed alarm at its room wakes its Danger drive additively.
+        let room = raddr(1.0);
         let t = PlantedTerrain::default(); // no hazard anywhere — nothing to fear
-        let mut map: std::collections::BTreeMap<RoomAddr, f64> = std::collections::BTreeMap::new();
-        map.insert(cell.clone(), 0.8);
-        let feel = |alarm: Option<&std::collections::BTreeMap<RoomAddr, f64>>| {
+        let mut map: std::collections::BTreeMap<Facet, f64> = std::collections::BTreeMap::new();
+        map.insert(room.clone(), 0.8);
+        let feel = |alarm: Option<&std::collections::BTreeMap<Facet, f64>>| {
             Danger {
                 terrain: &t,
                 threat_niche: mortal_threat_niche(),
@@ -10652,7 +11543,7 @@ mod tests {
                 alarm,
                 dread: None,
             }
-            .urgency(&view_at(cell.clone()))
+            .urgency(&view_at(room.clone()))
         };
         let felt = feel(Some(&map));
         assert!(felt > 0.0, "borrowed alarm raises felt threat above zero");
@@ -10672,10 +11563,10 @@ mod tests {
         // THE ALARM reuses THE METTLE's dial: borrowed fear is scaled by the
         // reader's own `mettle_factor`, so a bold creature shrugs off the herd's
         // panic exactly as it shrugs off a hazard.
-        let cell = raddr(1.0);
+        let room = raddr(1.0);
         let t = PlantedTerrain::default();
-        let mut map: std::collections::BTreeMap<RoomAddr, f64> = std::collections::BTreeMap::new();
-        map.insert(cell.clone(), 0.8);
+        let mut map: std::collections::BTreeMap<Facet, f64> = std::collections::BTreeMap::new();
+        map.insert(room.clone(), 0.8);
         let feel = |boldness: f64| {
             Danger {
                 terrain: &t,
@@ -10684,7 +11575,7 @@ mod tests {
                 alarm: Some(&map),
                 dread: None,
             }
-            .urgency(&view_at(cell.clone()))
+            .urgency(&view_at(room.clone()))
         };
         // Bold < steady < coward — the monotone Mettle ordering, borrowed.
         assert!(
@@ -10702,10 +11593,10 @@ mod tests {
     fn alarm_is_additive_over_terrain_hazard() {
         // THE ALARM is ADDITIVE: on mildly hazardous ground the borrowed alarm
         // stacks on the creature's own felt threat, strictly above either alone.
-        let cell = raddr(1.0);
-        let t = PlantedTerrain::hazard(std::iter::empty(), [(cell.clone(), 0.2)]);
-        let mut map: std::collections::BTreeMap<RoomAddr, f64> = std::collections::BTreeMap::new();
-        map.insert(cell.clone(), 0.5);
+        let room = raddr(1.0);
+        let t = PlantedTerrain::hazard(std::iter::empty(), [(room.clone(), 0.2)]);
+        let mut map: std::collections::BTreeMap<Facet, f64> = std::collections::BTreeMap::new();
+        map.insert(room.clone(), 0.5);
         let both = Danger {
             terrain: &t,
             threat_niche: mortal_threat_niche(),
@@ -10713,7 +11604,7 @@ mod tests {
             alarm: Some(&map),
             dread: None,
         }
-        .urgency(&view_at(cell.clone()));
+        .urgency(&view_at(room.clone()));
         let terrain_only = Danger {
             terrain: &t,
             threat_niche: mortal_threat_niche(),
@@ -10721,7 +11612,7 @@ mod tests {
             alarm: None,
             dread: None,
         }
-        .urgency(&view_at(cell.clone()));
+        .urgency(&view_at(room.clone()));
         // With ALARM_SCALE = 1.0 and steady boldness: 0.2 + 0.5 = 0.7.
         assert!(
             (both - 0.7).abs() < 1e-9,
@@ -10736,12 +11627,7 @@ mod tests {
     /// A steady mortal NPC placed (via `commit_agent_at`) at `pos`, minted into
     /// `ledger` — the common emitter/reader for the `alarm_field` tests.
     /// `boldness` dials whether it is primary-afraid on hazard ground.
-    fn alarm_npc(
-        ledger: &mut Ledger,
-        reg: &ConceptRegistry,
-        pos: &RoomAddr,
-        boldness: f64,
-    ) -> Body {
+    fn alarm_npc(ledger: &mut Ledger, reg: &ConceptRegistry, pos: &Facet, boldness: f64) -> Body {
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         commit_agent_at(ledger, reg, e, pos, 0.0);
         Body {
@@ -10755,7 +11641,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness,
             threat_niche: mortal_threat_niche(),
@@ -10781,7 +11667,7 @@ mod tests {
             &ledger,
             &[npc_a, npc_b],
             &terrain,
-            WorldTime::new(0.5).expect("a day value is finite"),
+            WorldTime::from_std_days(0.5).expect("a day value is finite"),
         );
         assert!(
             field.is_empty(),
@@ -10791,33 +11677,33 @@ mod tests {
 
     #[test]
     fn alarm_field_haloes_a_primary_afraid_creature() {
-        // THE ALARM: one creature on an UNCANNY-hazard cell (its Danger crosses
-        // act) stamps a one-hop halo — its cell and its three neighbours carry
-        // alarm in [0, 1]; a distant cell is untouched.
+        // THE ALARM: one creature on an UNCANNY-hazard room (its Danger crosses
+        // act) stamps a one-hop halo — its room and its three neighbours carry
+        // alarm in [0, 1]; a distant room is untouched.
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let cell = raddr(1.0);
-        let ns = cell.neighbors();
+        let room = raddr(1.0);
+        let ns = room.neighbors();
         let far = raddr(-1.0); // the far side of the world, outside the halo
-        let npc = alarm_npc(&mut ledger, &reg, &cell, BOLDNESS_STEADY);
-        // A full-strength uncanny hazard ONLY on the creature's cell.
-        let terrain = PlantedTerrain::hazard(std::iter::empty(), [(cell.clone(), 0.8)]);
+        let npc = alarm_npc(&mut ledger, &reg, &room, BOLDNESS_STEADY);
+        // A full-strength uncanny hazard ONLY on the creature's room.
+        let terrain = PlantedTerrain::hazard(std::iter::empty(), [(room.clone(), 0.8)]);
         let field = alarm_field(
             &ledger,
             &[npc],
             &terrain,
-            WorldTime::new(0.5).expect("a day value is finite"),
+            WorldTime::from_std_days(0.5).expect("a day value is finite"),
         );
-        for room in std::iter::once(&cell).chain(ns.iter()) {
+        for room in std::iter::once(&room).chain(ns.iter()) {
             let v = field.get(room).copied().unwrap_or(0.0);
             assert!(
                 v > 0.0 && v <= 1.0,
-                "the halo cell {room:?} carries alarm in (0, 1]: {v}"
+                "the halo room {room:?} carries alarm in (0, 1]: {v}"
             );
         }
         assert!(
             !field.contains_key(&far),
-            "a cell far from the distress carries no alarm"
+            "a room far from the distress carries no alarm"
         );
     }
 
@@ -10825,37 +11711,37 @@ mod tests {
     fn alarm_field_does_not_re_emit() {
         // THE ALARM's termination guarantee (built alarm-free): a creature A on
         // genuine hazard ground is primary-afraid and emits; a BOLD creature B on
-        // an adjacent cell shrugs the hazard off (its own terrain danger is below
+        // an adjacent room shrugs the hazard off (its own terrain danger is below
         // act) and so contributes NOTHING — borrowed alarm is never re-emitted.
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let h = raddr(1.0); // A's hazard cell
+        let h = raddr(1.0); // A's hazard room
         let ns = h.neighbors();
-        let b_cell = ns[0].clone(); // B sits one hop from A, inside A's halo
+        let b_room = ns[0].clone(); // B sits one hop from A, inside A's halo
         // A is a coward (feels the hazard fully); B is bold (shrugs it off).
         let a = alarm_npc(&mut ledger, &reg, &h, BOLDNESS_STEADY);
-        let b = alarm_npc(&mut ledger, &reg, &b_cell, 0.95);
+        let b = alarm_npc(&mut ledger, &reg, &b_room, 0.95);
         let terrain = PlantedTerrain::hazard(std::iter::empty(), [(h.clone(), 0.8)]);
         // The field over BOTH creatures.
         let both = alarm_field(
             &ledger,
             &[a.clone(), b.clone()],
             &terrain,
-            WorldTime::new(0.5).expect("a day value is finite"),
+            WorldTime::from_std_days(0.5).expect("a day value is finite"),
         );
         // The field over A ALONE — the reference: B must add nothing.
         let a_only = alarm_field(
             &ledger,
             &[a],
             &terrain,
-            WorldTime::new(0.5).expect("a day value is finite"),
+            WorldTime::from_std_days(0.5).expect("a day value is finite"),
         );
         assert_eq!(
             both, a_only,
             "the bold neighbour B is not primary-afraid, so it re-emits no alarm"
         );
         // And B's own neighbours OUTSIDE A's halo are untouched — no secondary wave.
-        for n in b_cell.neighbors() {
+        for n in b_room.neighbors() {
             if n != h && !ns.contains(&n) {
                 assert!(
                     !both.contains_key(&n),
@@ -10869,12 +11755,12 @@ mod tests {
     fn the_herd_bolts_borrowed_alarm_makes_a_calm_creature_flee_then_settle() {
         // THE ALARM, end-to-end (the spec's e2e criterion): drive the REAL
         // field-aware `DriveMovements` tick, not a hand-built affect. Creature A
-        // is CORNERED on genuine UNCANNY hazard ground (its cell and every
+        // is CORNERED on genuine UNCANNY hazard ground (its room and every
         // neighbour are hazardous, so no step is strictly safer — it holds, and
         // keeps screaming every tick). Creature B stands one hop away, INSIDE
         // A's alarm halo, but dreads the uncanny only WEAKLY (a low threat-niche
         // weight), so its OWN terrain-sourced danger stays below `act`: B has NO
-        // primary fear of its own. Yet the BORROWED alarm at B's cell pushes it
+        // primary fear of its own. Yet the BORROWED alarm at B's room pushes it
         // over `act`, and B flees down the local threat gradient to safe ground
         // OUTSIDE the halo — then, separated from the distress, it settles. The
         // wave is bounded and terminates (spec §3): no perpetual stampede.
@@ -10887,17 +11773,17 @@ mod tests {
         reg.register_predicate(EATEN, false, "eaten").unwrap();
 
         // Geometry, read from the real mesh so the scenario is topology-robust.
-        let x = raddr(1.0); // A's cell — the core of the hazard
+        let x = raddr(1.0); // A's room — the core of the hazard
         let ns = x.neighbors(); // A's three edge-neighbours
         let b_start = ns[0].clone(); // B stands here: one hop from A, in the halo
-        // The hazard patch = A's cell AND its neighbours, so A is boxed in (no
+        // The hazard patch = A's room AND its neighbours, so A is boxed in (no
         // neighbour is strictly safer → cornered, holds, keeps emitting).
-        let patch: std::collections::BTreeSet<RoomAddr> = std::iter::once(x.clone())
+        let patch: std::collections::BTreeSet<Facet> = std::iter::once(x.clone())
             .chain(ns.iter().cloned())
             .collect();
-        // B's escape: a neighbour of B's cell OUTSIDE the patch — and thus
+        // B's escape: a neighbour of B's room OUTSIDE the patch — and thus
         // outside A's one-hop halo. The mesh gives B such a way out; assert it.
-        let escape: std::collections::BTreeSet<RoomAddr> = b_start
+        let escape: std::collections::BTreeSet<Facet> = b_start
             .neighbors()
             .into_iter()
             .filter(|n| !patch.contains(n))
@@ -10907,7 +11793,7 @@ mod tests {
             "B must have a hop out of the halo for the wave to terminate"
         );
         // `flee_step` (and arbitration) pick the safest neighbour, ties to the
-        // smallest RoomAddr — among the equally-safe escape cells that is the
+        // smallest Facet — among the equally-safe escape rooms that is the
         // minimum. Make it B's home, so B flees home to safety and rests there
         // (no home-ward pull back into the halo → no oscillation).
         let b_home = escape.iter().min().unwrap().clone();
@@ -10932,7 +11818,7 @@ mod tests {
                 temperature_niche: test_niche(),
                 deliberation_latency: 0.5,
                 time_horizon: 0.0,
-                metabolic_class: MetabolicClass::Endotherm,
+                thermal_strategy: ThermalStrategy::Endothermic,
                 niche: default_diet_niche(),
                 boldness: BOLDNESS_STEADY,
                 threat_niche: mortal_threat_niche(),
@@ -10944,7 +11830,7 @@ mod tests {
         };
         // B — dreads the uncanny only WEAKLY (0.25), so 0.8·0.25 = 0.20 <
         // DANGER_ACT (0.3): NO primary fear of its own. Its home is the safe
-        // escape cell it flees to.
+        // escape room it flees to.
         let build_b = |ledger: &mut Ledger| -> Body {
             let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
             commit_agent_at(ledger, &reg, e, &b_start, 0.0);
@@ -10959,7 +11845,7 @@ mod tests {
                 temperature_niche: test_niche(),
                 deliberation_latency: 0.5,
                 time_horizon: 0.0,
-                metabolic_class: MetabolicClass::Endotherm,
+                thermal_strategy: ThermalStrategy::Endothermic,
                 niche: default_diet_niche(),
                 boldness: BOLDNESS_STEADY,
                 threat_niche: ThreatNiche {
@@ -10983,15 +11869,15 @@ mod tests {
         let b_entity = b.entity;
 
         // TICK 1 — the daytime window (frac 0.30 → 0.40, both awake). The alarm
-        // field haloes A's neighbourhood (B's cell included), so B bolts.
+        // field haloes A's neighbourhood (B's room included), so B bolts.
         let sys1 = DriveMovements {
             npcs: vec![a.clone(), b.clone()],
-            from: WorldTime::new(0.30).expect("a day value is finite"),
-            to: WorldTime::new(0.40).expect("a day value is finite"),
+            from: WorldTime::from_std_days(0.30).expect("a day value is finite"),
+            to: WorldTime::from_std_days(0.40).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let after1 = hornvale_kernel::tick(&ledger, &[&sys1], &["drive-movements"], &reg).unwrap();
@@ -11035,12 +11921,12 @@ mod tests {
         // (A still screams) but because B escaped the one-hop halo.
         let sys2 = DriveMovements {
             npcs: vec![a.clone(), b.clone()],
-            from: WorldTime::new(0.40).expect("a day value is finite"),
-            to: WorldTime::new(0.55).expect("a day value is finite"),
+            from: WorldTime::from_std_days(0.40).expect("a day value is finite"),
+            to: WorldTime::from_std_days(0.55).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let after2 = hornvale_kernel::tick(&after1, &[&sys2], &["drive-movements"], &reg).unwrap();
@@ -11063,12 +11949,12 @@ mod tests {
         let cb_entity = cb.entity;
         let csys = DriveMovements {
             npcs: vec![cb.clone()],
-            from: WorldTime::new(0.30).expect("a day value is finite"),
-            to: WorldTime::new(0.40).expect("a day value is finite"),
+            from: WorldTime::from_std_days(0.30).expect("a day value is finite"),
+            to: WorldTime::from_std_days(0.40).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let cafter = hornvale_kernel::tick(&control, &[&csys], &["drive-movements"], &reg).unwrap();
@@ -11085,7 +11971,7 @@ mod tests {
     #[test]
     fn the_threat_niche_is_derived_from_nature() {
         // THE BANE: HEAT/COLD derive from the temperature optimum, UNCANNY from
-        // the metabolic class.
+        // the thermal strategy.
         let cold_adapted = ConditionResponse {
             optimum: -10.0,
             width: 20.0,
@@ -11098,23 +11984,23 @@ mod tests {
         };
         let cold = derive_threat_niche(
             &cold_adapted,
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
             &default_diet_niche(),
         );
         let warm = derive_threat_niche(
             &warm_adapted,
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
             &default_diet_niche(),
         );
         // A cold-adapted creature dreads HEAT more than a warm one; the reverse
         // for COLD.
         assert!(cold.heat > warm.heat, "the cold-adapted fear heat more");
         assert!(warm.cold > cold.cold, "the warm-adapted fear cold more");
-        // A mortal fears the uncanny; an Ametabolic elemental does not.
+        // A mortal fears the uncanny; an ametabolic elemental does not.
         assert_eq!(cold.uncanny, 1.0, "a mortal fears the eldritch");
         let elemental = derive_threat_niche(
             &cold_adapted,
-            MetabolicClass::Ametabolic,
+            ThermalStrategy::Absent,
             &default_diet_niche(),
         );
         assert_eq!(elemental.uncanny, 0.0, "an elemental IS the eldritch");
@@ -11122,11 +12008,11 @@ mod tests {
 
     #[test]
     fn two_species_read_the_same_hot_cell_differently() {
-        // THE BANE, per-kind fear: a HOT cell dreaded by a cold-adapted creature,
+        // THE BANE, per-kind fear: a HOT room dreaded by a cold-adapted creature,
         // shrugged off by a heat-adapted one — the niche·hazard dot.
-        let cell = raddr(1.0);
+        let room = raddr(1.0);
         let t = PlantedTerrain::hazards_map([(
-            cell.clone(),
+            room.clone(),
             Hazards {
                 uncanny: 0.0,
                 heat: 0.8,
@@ -11134,14 +12020,14 @@ mod tests {
                 predator: 0.0,
             },
         )]);
-        let v = view_at(cell.clone());
+        let v = view_at(room.clone());
         let cold_adapted = derive_threat_niche(
             &ConditionResponse {
                 optimum: -10.0,
                 width: 20.0,
                 devotion: 0.5,
             },
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
             &default_diet_niche(),
         );
         let warm_adapted = derive_threat_niche(
@@ -11150,7 +12036,7 @@ mod tests {
                 width: 20.0,
                 devotion: 0.5,
             },
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
             &default_diet_niche(),
         );
         let fears = Danger {
@@ -11191,7 +12077,7 @@ mod tests {
         let omnivore = ResourceVector::new(&[(PLANT_FORAGE, 0.5), (ANIMAL_PREY, 0.5)]).unwrap();
         let apex = ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap();
         let w = |diet: &ResourceVector| {
-            derive_threat_niche(&temp, MetabolicClass::Endotherm, diet).predator
+            derive_threat_niche(&temp, ThermalStrategy::Endothermic, diet).predator
         };
         assert!(
             (w(&herbivore) - PREDATOR_LATENT_SCALE).abs() < 1e-9,
@@ -11207,11 +12093,11 @@ mod tests {
 
     #[test]
     fn a_vulnerable_creature_dreads_predator_ground_an_apex_does_not() {
-        // THE QUARRY, per-kind biotic fear: a HIGH-predator cell dreaded by a
+        // THE QUARRY, per-kind biotic fear: a HIGH-predator room dreaded by a
         // (vulnerable, coward-to-amplify-the-latent) herbivore, ignored by an apex.
-        let cell = raddr(1.0);
+        let room = raddr(1.0);
         let t = PlantedTerrain::hazards_map([(
-            cell.clone(),
+            room.clone(),
             Hazards {
                 uncanny: 0.0,
                 heat: 0.0,
@@ -11219,16 +12105,16 @@ mod tests {
                 predator: 1.0,
             },
         )]);
-        let v = view_at(cell);
+        let v = view_at(room);
         let temp = DEFAULT_TEMPERATURE_NICHE;
         let herbivore = derive_threat_niche(
             &temp,
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
             &ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap(),
         );
         let apex = derive_threat_niche(
             &temp,
-            MetabolicClass::Endotherm,
+            ThermalStrategy::Endothermic,
             &ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
         );
         // A coward (boldness 0 → ×2) to lift the latent-scaled dread above act.
@@ -11381,7 +12267,7 @@ mod tests {
 
     #[test]
     fn an_ametabolic_creature_is_never_lonely() {
-        // THE METABOLISM GATE, social edge (The Belonging): an Ametabolic
+        // THE METABOLISM GATE, social edge (The Belonging): an ametabolic
         // creature carries no social drive — placed far from home it still reads
         // Content, where a metabolizer would head home.
         let home = raddr(1.0);
@@ -11407,7 +12293,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Ametabolic,
+            thermal_strategy: ThermalStrategy::Absent,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -11420,7 +12306,7 @@ mod tests {
             &ledger,
             &base,
             &[],
-            WorldTime::new(0.5).expect("a day value is finite"),
+            WorldTime::from_std_days(0.5).expect("a day value is finite"),
             &terrain,
         );
         assert_eq!(
@@ -11432,7 +12318,7 @@ mod tests {
 
     #[test]
     fn is_water_delegates_to_terrain_is_fresh_water() {
-        // `raddr(seed)` feeds `RoomAddr::containing([seed, 0.0, 0.0], 6)`, which
+        // `raddr(seed)` feeds `Facet::containing([seed, 0.0, 0.0], 6)`, which
         // normalizes its input direction first — so `raddr(1.0)` and `raddr(2.0)`
         // collapse to the SAME room (both are the direction [1,0,0]). Use a
         // genuine mesh neighbor for `high` instead, so the two planted rooms
@@ -11507,7 +12393,7 @@ mod tests {
             .unwrap()
             .clone(); // far source
         let terrain = PlantedTerrain::fresh_only([w1.clone(), w2.clone()]);
-        let run = |seed_room: &RoomAddr| -> Vec<RoomAddr> {
+        let run = |seed_room: &Facet| -> Vec<Facet> {
             let mut ledger = Ledger::default();
             let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
             // The prior sighting (day 0), THEN a return-home (day 0.5): history holds
@@ -11526,7 +12412,7 @@ mod tests {
                 temperature_niche: test_niche(),
                 deliberation_latency: 0.5,
                 time_horizon: 0.0,
-                metabolic_class: MetabolicClass::Endotherm,
+                thermal_strategy: ThermalStrategy::Endothermic,
                 niche: default_diet_niche(),
                 boldness: 0.5,
                 threat_niche: mortal_threat_niche(),
@@ -11539,12 +12425,12 @@ mod tests {
             // agent starts at home, not yet thirsty.
             let sys = DriveMovements {
                 npcs: vec![npc],
-                from: WorldTime::new(1.0).expect("a day value is finite"),
-                to: WorldTime::new(41.0).expect("a day value is finite"),
+                from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
+                to: WorldTime::from_std_days(41.0).expect("a day value is finite"),
                 params: SUSTENANCE,
                 // No sky in a planted-terrain fixture: the action clock takes its
                 // base rate (spec §4.1).
-                day_length_std: None,
+                day_ticks: None,
                 terrain: &terrain,
             };
             let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -11557,7 +12443,9 @@ mod tests {
                         .filter(|g| g.subject == e)
                         .filter(|g| g.day.is_some_and(|gd| gd <= d))
                         .filter_map(|g| match &g.object {
-                            Value::Text(s) => Some((g.day.unwrap().day(), room_from_text(s))),
+                            Value::Text(s) => {
+                                Some((g.day.unwrap().as_std_days(), room_from_text(s)))
+                            }
                             _ => None,
                         })
                         .max_by(|a, b| a.0.total_cmp(&b.0))
@@ -11618,7 +12506,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -11630,11 +12518,11 @@ mod tests {
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
             from: WorldTime::GENESIS,
-            to: WorldTime::new(40.0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(40.0).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -11649,7 +12537,7 @@ mod tests {
             believed_water(
                 &next,
                 &npc,
-                WorldTime::new(40.0).expect("a day value is finite"),
+                WorldTime::from_std_days(40.0).expect("a day value is finite"),
                 &terrain,
                 PLAN_BUDGET
             ),
@@ -11682,7 +12570,7 @@ mod tests {
     }
     /// The zero-drive, ignorant view a flow-drive test reads (thirst state is
     /// irrelevant to the thermal drive — it senses temperature at `position`).
-    fn at(position: RoomAddr) -> Perceived {
+    fn at(position: Facet) -> Perceived {
         Perceived {
             position,
             drive: 0.0,
@@ -11776,7 +12664,7 @@ mod tests {
 
     #[test]
     fn thermal_respects_the_niche_cold_tolerates_what_warm_flees() {
-        // NICHE RESPECT: the SAME cell (a cold 2 °C room) is tolerated by a
+        // NICHE RESPECT: the SAME room (a cold 2 °C) is tolerated by a
         // cold-adapted niche (optimum 6, dev 4 ≤ 8) but fled by a warm one
         // (optimum 18, dev 16 > 8). Different setpoint → different verdict.
         let home = raddr(1.0);
@@ -11824,7 +12712,7 @@ mod tests {
         // twice is byte-identical.
         let home = raddr(1.0);
         let ns = home.neighbors();
-        let day = WorldTime::new(3.5).expect("a day value is finite");
+        let day = WorldTime::from_std_days(3.5).expect("a day value is finite");
         let t = PlantedTerrain::thermal([
             (home.clone(), -12.0),
             (ns[0].clone(), 4.0),
@@ -11849,8 +12737,8 @@ mod tests {
     fn thermal_comfort_step_breaks_ties_by_ascending_room_addr() {
         // DETERMINISM UNDER A GENUINE TIE: two neighbours EQUIDISTANT from the
         // optimum (symmetric about it, 0 °C and 12 °C around optimum 6, both
-        // dev 6) must resolve to the smaller-`RoomAddr` one — the same
-        // `total_cmp` + ascending-`RoomAddr` tie-break `downhill_step` uses (cf.
+        // dev 6) must resolve to the smaller-`Facet` one — the same
+        // `total_cmp` + ascending-`Facet` tie-break `downhill_step` uses (cf.
         // `downhill_step_picks_the_lowest_neighbor_deterministically`).
         let home = raddr(1.0);
         let ns = home.neighbors();
@@ -11872,7 +12760,7 @@ mod tests {
         assert_eq!(
             drive.proposal(&view, PLAN_BUDGET),
             Some(Action::MoveTo(smaller)),
-            "an equal-deviation tie resolves to the smaller RoomAddr"
+            "an equal-deviation tie resolves to the smaller Facet"
         );
     }
 
@@ -11968,7 +12856,7 @@ mod tests {
             AffectLabel::Searching,
         );
         // (FRUSTRATED — Hold while KNOWING where water is — is rare by design:
-        // believed water is a cell the creature stood in, so it is almost always
+        // believed water is a room the creature stood in, so it is almost always
         // reachable; it fires only when a known source falls beyond the plan
         // budget in a large world. The branch is `believed.is_some()` on Hold;
         // its sibling LOST below exercises the same Hold path.)
@@ -12060,7 +12948,7 @@ mod tests {
     #[test]
     fn arbitrate_in_a_comfortable_cell_is_byte_identical_to_thirst_only_decide() {
         // THE CRUX (thirst-only preserved): where thermal is INACTIVE (a
-        // comfortable cell — every reachable cell at the niche optimum, urgency
+        // comfortable room — every reachable room at the niche optimum, urgency
         // 0), the two-drive arbitration must produce the EXACT `Intent` the
         // Stage-0 thirst-only `decide` does, for every state. Proven by direct
         // equality against `decide` on the same views.
@@ -12068,7 +12956,7 @@ mod tests {
         let ns = home.neighbors();
         let water = ns[0].clone();
         let day = WorldTime::GENESIS;
-        // All cells at the warm niche's optimum → thermal urgency 0 everywhere.
+        // All rooms at the warm niche's optimum → thermal urgency 0 everywhere.
         let terrain = PlantedTerrain::thermal([
             (home.clone(), 18.0),
             (ns[0].clone(), 18.0),
@@ -12149,7 +13037,7 @@ mod tests {
                 )
                 .intent,
                 decide(v, &home, &params, PLAN_BUDGET),
-                "a comfortable-cell creature must decide exactly as thirst-only: {v:?}"
+                "a comfortable-room creature must decide exactly as thirst-only: {v:?}"
             );
         }
     }
@@ -12285,6 +13173,85 @@ mod tests {
         assert_ne!(grab, weigh, "psychology alone changed the resolution");
         // Grab committed to the loudest drive (thermal).
         assert_eq!(gm, Mode::Pursuing(DriveKind::Thermal));
+    }
+
+    #[test]
+    fn arbitration_reports_only_the_dominant_drive_and_keeps_the_suppressed_one_retrievable() {
+        // THE COGNITIVE GAP (The Confidant, Task 5). The SAME two-drive
+        // conflict `grab_and_weigh_resolve_the_same_conflict_differently`
+        // pins above: thirst moderately active (eager_thirst, drive 0.5),
+        // thermal severely active (freezing home) and the louder single
+        // need. Under grab psychology (latency 0.0) arbitration commits to
+        // Thermal alone — `mode`/`affect.object` name only it. Thirst stays
+        // genuinely ACTIVE (it crosses its own engagement threshold) but
+        // loses the contest for `pursued`; this is the residue the creature
+        // itself cannot introspect. It must still be retrievable through
+        // `Resolution::suppressed` — the accessor this task introduces —
+        // even though nothing about `mode`/`affect` ever names it.
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let warm = ns[0].clone(); // pure warmth (loudest single relief)
+        let both = ns[1].clone(); // water + moderate warmth
+        let cold = ns[2].clone();
+        let day = WorldTime::GENESIS;
+        let terrain = PlantedTerrain::thermal([
+            (home.clone(), -20.0), // urgency 1.0 (capped 0.6)
+            (warm.clone(), 18.0),  // thermal serv 1.0
+            (both.clone(), 6.0),   // urgency 0.5 → thermal serv 0.5
+            (cold.clone(), -20.0),
+        ]);
+        let view = Perceived {
+            position: home.clone(),
+            drive: 0.5, // moderate thirst (capped 0.5), active under eager_thirst
+            fatigue: 0.0,
+            believed_water: Some(both.clone()),
+            believed_hazard: std::collections::BTreeSet::new(),
+            explore_step: None,
+        };
+        let thirst = Thirst {
+            params: eager_thirst(),
+        };
+        let thermal = Thermal {
+            niche: warm_niche(),
+            terrain: &terrain,
+            day,
+            interior: None,
+        };
+        let drives: [&dyn Drive; 2] = [&thirst, &thermal];
+        let resolution = arb(
+            &view,
+            &home,
+            &drives,
+            0.0,
+            0.0,
+            false,
+            true,
+            Mode::Idle,
+            PLAN_BUDGET,
+        );
+        assert_eq!(
+            resolution.mode,
+            Mode::Pursuing(DriveKind::Thermal),
+            "grab commits to the loudest single need, thermal: {resolution:?}"
+        );
+        assert_eq!(
+            resolution.affect.object,
+            Some(DriveKind::Thermal),
+            "what the host's felt state is ABOUT is the pursued drive alone: \
+             {resolution:?}"
+        );
+        assert_eq!(
+            resolution.suppressed,
+            vec![DriveKind::Thirst],
+            "thirst was genuinely active this decision and lost the contest \
+             for `pursued` — it must be retrievable through \
+             Resolution::suppressed: {resolution:?}"
+        );
+        assert!(
+            !resolution.suppressed.contains(&DriveKind::Thermal),
+            "the pursued drive must never also appear as suppressed — the \
+             two are disjoint by construction: {resolution:?}"
+        );
     }
 
     #[test]
@@ -12469,30 +13436,80 @@ mod tests {
         );
     }
 
+    /// THE READ AND THE MOVER COMPUTE FATIGUE WITH ONE ARITHMETIC SHAPE.
+    ///
+    /// `fatigue_at` (the read, behind `affect_of`) and `decide_step` (the
+    /// mover, inside the walk) must agree — this module's FOLD doctrine, and
+    /// the reason `learned_helplessness` carries the same sentence. The retype
+    /// briefly broke it: the mover subtracts two INSTANTS and crosses the
+    /// exact span (`(t - r).as_std_days()`), while the read subtracted two
+    /// separately-crossed days (`t.as_std_days() - r.as_std_days()`).
+    ///
+    /// Those two shapes are NOT interchangeable. Measured over 2e6 random tick
+    /// pairs in the walk band, they differ by an ULP for **56.7%** of them —
+    /// so a test asserting they agree could never have passed, which is why
+    /// this pins the SHAPE rather than asserting an equality between them.
+    ///
+    /// Every pair below was measured to disagree under the old shape and to
+    /// land strictly inside the clamp, so reverting `fatigue_at` to the float
+    /// difference turns this red deterministically rather than by luck.
+    #[test]
+    fn a_fatigue_read_matches_the_walks_own_fatigue_arithmetic() {
+        let mut reg = hornvale_kernel::ConceptRegistry::default();
+        reg.register_predicate(RESTED, false, "rested").unwrap();
+        // (query_ticks, rested_ticks) pairs whose two arithmetic shapes were
+        // measured to differ in the last bit.
+        const PAIRS: &[(i64, i64)] = &[
+            (207002, 170638),
+            (191727, 152774),
+            (30409, 29809),
+            (36625, 15772),
+            (47560, 36113),
+        ];
+        for &(t_ticks, r_ticks) in PAIRS {
+            let mut ledger = Ledger::default();
+            let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+            let rested = WorldTime::from_ticks(r_ticks);
+            let t = WorldTime::from_ticks(t_ticks);
+            ledger.commit(rested_fact(e, rested, "t"), &reg).unwrap();
+            // The MOVER's shape, written out here exactly as `decide_step`
+            // computes it, so this test states the contract rather than
+            // calling the code it is pinning.
+            let mover = (FATIGUE_RISE * (t - rested).as_std_days()).clamp(0.0, 1.0);
+            assert_eq!(
+                fatigue_at(&ledger, e, t).to_bits(),
+                mover.to_bits(),
+                "the fatigue read must be BIT-identical to the walk's own \
+                 fatigue arithmetic at t={t_ticks} ticks, rested={r_ticks} \
+                 ticks; a float-difference read disagrees here in the last bit"
+            );
+        }
+    }
+
     #[test]
     fn learned_helplessness_onsets_after_prolonged_thirst_and_probes_periodically() {
         // The fold (§7): unmet survival drive past the onset → helpless, but with
         // a periodic probe (renewed effort) so the state reverses rather than
         // trapping the creature forever.
         assert!(
-            !learned_helplessness(0.0, HELPLESS_ONSET_DAYS - 1.0),
+            !learned_helplessness(td(0.0), td(HELPLESS_ONSET_DAYS - 1.0)),
             "ordinary thirst is not helplessness"
         );
         assert!(
-            learned_helplessness(0.0, HELPLESS_ONSET_DAYS + 1.0),
+            learned_helplessness(td(0.0), td(HELPLESS_ONSET_DAYS + 1.0)),
             "unmet past onset → helpless"
         );
         // The probe: the first day of each period is a retry (not helpless).
         assert!(
-            !learned_helplessness(0.0, HELPLESS_ONSET_DAYS),
+            !learned_helplessness(td(0.0), td(HELPLESS_ONSET_DAYS)),
             "the onset day itself probes"
         );
         assert!(
-            !learned_helplessness(0.0, HELPLESS_ONSET_DAYS + HELPLESS_PROBE_DAYS),
+            !learned_helplessness(td(0.0), td(HELPLESS_ONSET_DAYS + HELPLESS_PROBE_DAYS)),
             "each period opens with a probe"
         );
         assert!(
-            !learned_helplessness(30.0, 31.0),
+            !learned_helplessness(td(30.0), td(31.0)),
             "a fresh drink clears helplessness"
         );
     }
@@ -12564,9 +13581,9 @@ mod tests {
 
     #[test]
     fn an_ametabolic_creature_has_no_drives_and_never_distresses() {
-        // THE METABOLISM GATE (The Kindling): an Ametabolic creature
+        // THE METABOLISM GATE (The Kindling): an ametabolic creature
         // (construct/undead/elemental) has no homeostatic drives, so even
-        // parched-long in a blistering cell it reads Content — never thirst,
+        // parched-long in a blistering room it reads Content — never thirst,
         // never distress. A metabolizer in the same spot is wrecked.
         let home = raddr(1.0);
         let terrain = PlantedTerrain::thermal([(home.clone(), 80.0)]); // blistering, no water
@@ -12583,7 +13600,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Ametabolic,
+            thermal_strategy: ThermalStrategy::Absent,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -12597,13 +13614,13 @@ mod tests {
             &ledger,
             &base,
             &[],
-            WorldTime::new(100.0).expect("a day value is finite"),
+            WorldTime::from_std_days(100.0).expect("a day value is finite"),
             &terrain,
         );
         assert_eq!(a.label, AffectLabel::Content, "the deathless are still");
         assert_eq!(a.object, None, "no drive is engaged");
         let meta = Body {
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -12613,7 +13630,7 @@ mod tests {
             &ledger,
             &meta,
             &[],
-            WorldTime::new(100.0).expect("a day value is finite"),
+            WorldTime::from_std_days(100.0).expect("a day value is finite"),
             &terrain,
         );
         assert_ne!(
@@ -12625,7 +13642,7 @@ mod tests {
 
     #[test]
     fn an_ametabolic_creature_does_not_flinch_at_a_hazard() {
-        // THE METABOLISM GATE, danger edge (The Dread): an Ametabolic creature
+        // THE METABOLISM GATE, danger edge (The Dread): an ametabolic creature
         // (a construct) carries no danger drive — surrounded by lethal threat it
         // still reads Content, where a metabolizer recoils.
         let home = raddr(1.0);
@@ -12650,7 +13667,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Ametabolic,
+            thermal_strategy: ThermalStrategy::Absent,
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
@@ -12663,19 +13680,19 @@ mod tests {
             &ledger,
             &base,
             &[],
-            WorldTime::new(0.5).expect("a day value is finite"),
+            WorldTime::from_std_days(0.5).expect("a day value is finite"),
             &terrain,
         );
         assert_eq!(a.label, AffectLabel::Content, "a construct does not flinch");
         let meta = Body {
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             ..base.clone()
         };
         let b = affect_of(
             &ledger,
             &meta,
             &[],
-            WorldTime::new(0.5).expect("a day value is finite"),
+            WorldTime::from_std_days(0.5).expect("a day value is finite"),
             &terrain,
         );
         assert_eq!(
@@ -12772,7 +13789,7 @@ mod tests {
         // dawn/dusk, down at midnight — the coarse cycle planted terrain uses.
         let t = PlantedTerrain::thermal([]);
         let r = raddr(1.0);
-        let at = |d: f64| WorldTime::new(d).expect("a day value is finite");
+        let at = |d: f64| WorldTime::from_std_days(d).expect("a day value is finite");
         // Noon (sun up): diurnal awake, nocturnal asleep. Midnight: the reverse.
         assert!(is_awake(Diurnal, &t, &r, at(3.5)));
         assert!(!is_awake(Nocturnal, &t, &r, at(3.5)));
@@ -12797,24 +13814,24 @@ mod tests {
             (fatigue_at(
                 &ledger,
                 e,
-                WorldTime::new(0.5).expect("a day value is finite")
+                WorldTime::from_std_days(0.5).expect("a day value is finite")
             ) - FATIGUE_RISE * 0.5)
                 .abs()
                 < 1e-9
         );
-        ledger.commit(rested_fact(e, 2.0, "t"), &reg).unwrap();
+        ledger.commit(rested_fact(e, td(2.0), "t"), &reg).unwrap();
         assert!(
             fatigue_at(
                 &ledger,
                 e,
-                WorldTime::new(2.0).expect("a day value is finite")
+                WorldTime::from_std_days(2.0).expect("a day value is finite")
             ) < 1e-9
         );
         assert!(
             (fatigue_at(
                 &ledger,
                 e,
-                WorldTime::new(3.0).expect("a day value is finite")
+                WorldTime::from_std_days(3.0).expect("a day value is finite")
             ) - FATIGUE_RISE)
                 .abs()
                 < 1e-9
@@ -12823,7 +13840,7 @@ mod tests {
             fatigue_at(
                 &ledger,
                 e,
-                WorldTime::new(100.0).expect("a day value is finite")
+                WorldTime::from_std_days(100.0).expect("a day value is finite")
             ),
             1.0
         );
@@ -12960,7 +13977,7 @@ mod tests {
         // DETERMINISM + TIE-BREAK: arbitration reads only view + terrain + niche
         // (no ledger), so it recomputes identically (reload-stable by
         // construction). And a genuine two-way utility tie resolves to the
-        // smaller `RoomAddr` — the constitutional `total_cmp` + ascending-addr
+        // smaller `Facet` — the constitutional `total_cmp` + ascending-addr
         // rule, here on the arbitration's own action scan.
         let home = raddr(1.0);
         let ns = home.neighbors();
@@ -13017,7 +14034,7 @@ mod tests {
         assert_eq!(
             a.intent,
             Intent::Do(Action::MoveTo(smaller)),
-            "an equal-utility tie resolves to the smaller RoomAddr"
+            "an equal-utility tie resolves to the smaller Facet"
         );
     }
 
@@ -13055,7 +14072,7 @@ mod tests {
         // 15-day learned-helplessness onset (which, being a pure function of
         // `last_drank`/day, would be identical alone or in-band and so could
         // never distinguish them).
-        let now = WorldTime::new(10.0).expect("a day value is finite");
+        let now = WorldTime::from_std_days(10.0).expect("a day value is finite");
 
         let alone = affect_of(&ledger, &lost, &[], now, &t);
         let in_band = affect_of(&ledger, &lost, &[knower.clone(), lost.clone()], now, &t);
@@ -13136,7 +14153,7 @@ mod tests {
     #[test]
     fn the_thermal_drive_folds_the_hearths_warmth_additively() {
         // THE HEARTH's drive seam. Warmth is folded ADDITIVELY into the sensed
-        // temperature, so the SAME cold cell is urgent unwarmed and comfortable
+        // temperature, so the SAME cold room is urgent unwarmed and comfortable
         // beside a fire — and a hearthless interior reads exactly like `None`,
         // the identity every live construction site relies on for
         // byte-identity. Unlike the pre-crossing model (a hand-picked
@@ -13225,13 +14242,13 @@ mod tests {
             built: bool,
         }
         impl Terrain for FurnishingStub {
-            fn elevation(&self, _r: &RoomAddr) -> f64 {
+            fn elevation(&self, _r: &Facet) -> f64 {
                 0.0
             }
-            fn is_fresh_water(&self, _r: &RoomAddr) -> bool {
+            fn is_fresh_water(&self, _r: &Facet) -> bool {
                 false
             }
-            fn temperature(&self, _r: &RoomAddr, _d: WorldTime) -> f64 {
+            fn temperature(&self, _r: &Facet, _d: WorldTime) -> f64 {
                 // Just past `test_niche`'s tolerance band (optimum 15, width
                 // 10 → band edge at 5.0): deviation 10.5, comfortably inside
                 // the open interval (0, 1) on urgency before AND after a
@@ -13240,7 +14257,7 @@ mod tests {
                 // unrelated to the hearth.
                 4.5
             }
-            fn is_built(&self, _r: &RoomAddr) -> bool {
+            fn is_built(&self, _r: &Facet) -> bool {
                 self.built
             }
         }
@@ -13259,7 +14276,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             // An EMPTY diet niche: the hunger drive's niche-gate
             // (`!npc.niche.is_zero()`) never engages it, one fewer drive to
             // rule out.
@@ -13504,7 +14521,7 @@ mod tests {
     #[test]
     fn arbitrate_chooses_the_within_room_step_when_thermal_proposes_one() {
         // THE THRESHOLD'S CROSSING wired all the way through: `arbitrate`'s
-        // fixed room-scale candidate set is built from `RoomAddr` neighbours
+        // fixed room-scale candidate set is built from `Facet` neighbours
         // and cannot express an `AnchorId` on its own — this proves
         // `Drive::candidate_actions` actually makes `MoveWithin` reachable
         // via the live multi-drive path, not merely via `Thermal::proposal`
@@ -13584,16 +14601,16 @@ mod tests {
             inner: &'a PlantedTerrain,
         }
         impl Terrain for BuiltOverlay<'_> {
-            fn elevation(&self, r: &RoomAddr) -> f64 {
+            fn elevation(&self, r: &Facet) -> f64 {
                 self.inner.elevation(r)
             }
-            fn is_fresh_water(&self, r: &RoomAddr) -> bool {
+            fn is_fresh_water(&self, r: &Facet) -> bool {
                 self.inner.is_fresh_water(r)
             }
-            fn temperature(&self, r: &RoomAddr, d: WorldTime) -> f64 {
+            fn temperature(&self, r: &Facet, d: WorldTime) -> f64 {
                 self.inner.temperature(r, d)
             }
-            fn is_built(&self, _r: &RoomAddr) -> bool {
+            fn is_built(&self, _r: &Facet) -> bool {
                 self.built
             }
         }
@@ -13643,7 +14660,7 @@ mod tests {
             temperature_niche: niche,
             deliberation_latency: 0.0,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             // An EMPTY diet niche: no hunger drive to rule out.
             niche: ResourceVector::new(&[]).unwrap(),
             boldness: 0.5,
@@ -13667,10 +14684,10 @@ mod tests {
             // Start mid-morning (`waking_offset(Diurnal)`), not midnight: The
             // Slumber wake-gates Thermal, so a diurnal creature simulated
             // from `day: 0.0` starts ASLEEP and never engages it at all.
-            from: WorldTime::new(0.35).expect("a day value is finite"),
-            to: WorldTime::new(1.35).expect("a day value is finite"),
+            from: WorldTime::from_std_days(0.35).expect("a day value is finite"),
+            to: WorldTime::from_std_days(1.35).expect("a day value is finite"),
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &hearth_terrain,
         };
         let (_facts, occ) =
@@ -13714,10 +14731,10 @@ mod tests {
             // Start mid-morning (`waking_offset(Diurnal)`), not midnight: The
             // Slumber wake-gates Thermal, so a diurnal creature simulated
             // from `day: 0.0` starts ASLEEP and never engages it at all.
-            from: WorldTime::new(0.35).expect("a day value is finite"),
-            to: WorldTime::new(1.35).expect("a day value is finite"),
+            from: WorldTime::from_std_days(0.35).expect("a day value is finite"),
+            to: WorldTime::from_std_days(1.35).expect("a day value is finite"),
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &wild_terrain,
         };
         let (_facts2, occ2) =
@@ -13743,7 +14760,7 @@ mod tests {
         // The check: every action is classified, and every movement action's
         // precondition is declared positional.
         for a in [
-            Action::MoveTo(RoomAddr {
+            Action::MoveTo(Facet {
                 face: 0,
                 path: vec![],
             }),
@@ -13767,7 +14784,7 @@ mod tests {
     fn exactly_the_non_committing_actions_are_replayable() {
         assert!(is_replayable_in_catch_up(&Action::MoveWithin(AnchorId(0))));
         // Coarse movement writes `agent-at` — replaying it would fabricate history.
-        assert!(!is_replayable_in_catch_up(&Action::MoveTo(RoomAddr {
+        assert!(!is_replayable_in_catch_up(&Action::MoveTo(Facet {
             face: 0,
             path: vec![]
         })));
@@ -13782,7 +14799,7 @@ mod tests {
         // them together. This is the tie: an action catch-up may replay must
         // be one whose effect is position, or the partition has drifted.
         for a in [
-            Action::MoveTo(RoomAddr {
+            Action::MoveTo(Facet {
                 face: 0,
                 path: vec![],
             }),
@@ -14016,16 +15033,16 @@ mod tests {
         inner: &'a PlantedTerrain,
     }
     impl Terrain for BuiltOverlay<'_> {
-        fn elevation(&self, r: &RoomAddr) -> f64 {
+        fn elevation(&self, r: &Facet) -> f64 {
             self.inner.elevation(r)
         }
-        fn is_fresh_water(&self, r: &RoomAddr) -> bool {
+        fn is_fresh_water(&self, r: &Facet) -> bool {
             self.inner.is_fresh_water(r)
         }
-        fn temperature(&self, r: &RoomAddr, d: WorldTime) -> f64 {
+        fn temperature(&self, r: &Facet, d: WorldTime) -> f64 {
             self.inner.temperature(r, d)
         }
-        fn is_built(&self, _r: &RoomAddr) -> bool {
+        fn is_built(&self, _r: &Facet) -> bool {
             true
         }
     }
@@ -14034,7 +15051,7 @@ mod tests {
     /// OTHER drive (ignorant of water, empty diet, no hazards, already
     /// home) — the shared fixture the catch-up tests below build on, so
     /// Thermal is provably the ONLY drive that can ever move it.
-    fn cold_thermal_npc(entity: EntityId, home: RoomAddr, niche: ConditionResponse) -> Body {
+    fn cold_thermal_npc(entity: EntityId, home: Facet, niche: ConditionResponse) -> Body {
         Body {
             entity,
             village: None,
@@ -14046,7 +15063,7 @@ mod tests {
             temperature_niche: niche,
             deliberation_latency: 0.0,
             time_horizon: 0.0,
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
             // An EMPTY diet: no hunger drive to rule out.
             niche: ResourceVector::new(&[]).unwrap(),
             boldness: 0.5,
@@ -14104,13 +15121,13 @@ mod tests {
         // ledger) never crosses `FATIGUE_ACT` (0.85 at `FATIGUE_RISE`
         // 0.3/day ⇒ ~2.8 days) and competes for the arbitration this test
         // means to isolate to Thermal.
-        let now = WorldTime::new(entry_day + 1.0).expect("a day value is finite");
+        let now = WorldTime::from_std_days(entry_day + 1.0).expect("a day value is finite");
         let sys = DriveMovements {
             npcs: vec![npc],
             from: now,
             to: now,
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let (facts, occ) =
@@ -14172,22 +15189,25 @@ mod tests {
         // thirst at (day 2), but it is still the only `DRANK` fact in the
         // creature's whole history, so an unfiltered fold over that history
         // finds it regardless of which day is being asked about.
-        let drank_day = 3.0;
-        let read_day = 2.0;
+        let drank_day = td(3.0);
+        let read_day = td(2.0);
         ledger
             .commit(drank_fact(npc.entity, drank_day, "test"), &reg)
             .unwrap();
 
         let hazard = HazardMemory::default();
-        let alarm: std::collections::BTreeMap<RoomAddr, f64> = Default::default();
-        let visited: std::collections::BTreeSet<RoomAddr> = [home.clone()].into_iter().collect();
+        let alarm: std::collections::BTreeMap<Facet, f64> = Default::default();
+        let visited: std::collections::BTreeSet<Facet> = [home.clone()].into_iter().collect();
 
         let correct_last_drank = last_fact_day_at_or_before(&ledger, DRANK, npc.entity, read_day);
         assert_eq!(
-            correct_last_drank, 0.0,
+            correct_last_drank, None,
             "no drink has been committed as of read_day yet"
         );
-        let mut believed_correct: Option<RoomAddr> = None;
+        // What `catch_up` itself names at its own call site: no such fact means
+        // "since the world began".
+        let correct_last_drank = correct_last_drank.unwrap_or(WorldTime::GENESIS);
+        let mut believed_correct: Option<Facet> = None;
         let (_, correct_thirst) = decide_step(
             read_day,
             &home,
@@ -14198,8 +15218,8 @@ mod tests {
             &alarm,
             &visited,
             correct_last_drank,
-            0.0,
-            0.0,
+            WorldTime::GENESIS,
+            WorldTime::GENESIS,
             None,
             Mode::Idle,
             &SUSTENANCE,
@@ -14221,12 +15241,12 @@ mod tests {
             .find(DRANK)
             .filter(|f| f.subject == npc.entity)
             .filter_map(|f| f.day)
-            .fold(0.0_f64, |acc, d| acc.max(d.day()));
+            .fold(WorldTime::GENESIS, WorldTime::max);
         assert_eq!(
             buggy_last_drank, drank_day,
             "sanity check: the unfiltered fold finds the FUTURE drink"
         );
-        let mut believed_buggy: Option<RoomAddr> = None;
+        let mut believed_buggy: Option<Facet> = None;
         let (_, buggy_thirst) = decide_step(
             read_day,
             &home,
@@ -14237,8 +15257,8 @@ mod tests {
             &alarm,
             &visited,
             buggy_last_drank,
-            0.0,
-            0.0,
+            WorldTime::GENESIS,
+            WorldTime::GENESIS,
             None,
             Mode::Idle,
             &SUSTENANCE,
@@ -14294,16 +15314,16 @@ mod tests {
         let ledger = Ledger::default();
         let mut occ = Occupancy::default();
         occ.place(npc.entity, &home, door);
-        let mut believed: Option<RoomAddr> = None;
+        let mut believed: Option<Facet> = None;
         let hazard = HazardMemory::default();
-        let alarm: std::collections::BTreeMap<RoomAddr, f64> = Default::default();
-        let visited: std::collections::BTreeSet<RoomAddr> = [home.clone()].into_iter().collect();
+        let alarm: std::collections::BTreeMap<Facet, f64> = Default::default();
+        let visited: std::collections::BTreeSet<Facet> = [home.clone()].into_iter().collect();
 
-        let entry_day = waking_offset(ActivityCycle::Diurnal);
+        let entry_day = td(waking_offset(ActivityCycle::Diurnal));
         let before = ledger.len();
         let _mode = catch_up(
             entry_day,
-            entry_day + 1.0,
+            entry_day + tspan(1.0),
             &home,
             &npc,
             &terrain,
@@ -14319,7 +15339,6 @@ mod tests {
             &ledger,
             &[],
             CATCH_UP_STEP_CAP,
-            None,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
             &mut DefaultController,
@@ -14373,7 +15392,7 @@ mod tests {
         // A ONE-day gap, same reasoning as the reconstruction test above:
         // generous for the 3-hop journey, short of Fatigue's own act
         // threshold.
-        let now = WorldTime::new(entry_day + 1.0).expect("a day value is finite");
+        let now = WorldTime::from_std_days(entry_day + 1.0).expect("a day value is finite");
         let forward = DriveMovements {
             npcs: vec![
                 cold_thermal_npc(a, home.clone(), niche),
@@ -14382,7 +15401,7 @@ mod tests {
             from: now,
             to: now,
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let (_f1, occ_forward) = forward.step_with_occupancy(
@@ -14399,7 +15418,7 @@ mod tests {
             from: now,
             to: now,
             params: SUSTENANCE,
-            day_length_std: None,
+            day_ticks: None,
             terrain: &terrain,
         };
         let (_f2, occ_reversed) = reversed.step_with_occupancy(
@@ -14495,25 +15514,23 @@ mod tests {
         ]);
         let npc = cold_thermal_npc(npc_id(1), home.clone(), niche);
         let ledger = Ledger::default();
-        let entry_day = waking_offset(ActivityCycle::Diurnal);
+        let entry_day = td(waking_offset(ActivityCycle::Diurnal));
         // What ONE replayed within-room hop costs this creature, asked of the
         // action clock exactly as `catch_up` itself asks (same action, same
         // mass, no terrain factor, no rotation) — rather than restated as a
         // literal here, so a retune of the `MoveWithin` dial cannot leave this
         // test's arithmetic quietly disagreeing with the loop it measures.
-        let step_days = days_of(
-            cost_ticks(&Action::MoveWithin(anchors[0]), npc.mass_kg, 1.0),
-            None,
-        );
+        // A cost IS a kernel span now (The Foliot), so its length in days is
+        // the span's own continuous view.
+        let step_days = cost_of(&Action::MoveWithin(anchors[0]), npc.mass_kg, 1.0).as_std_days();
 
-        let run = |horizon: f64| -> Option<AnchorId> {
+        let run = |horizon: WorldTime| -> Option<AnchorId> {
             let mut occ = Occupancy::default();
             occ.place(npc.entity, &home, anchors[0]);
-            let mut believed: Option<RoomAddr> = None;
+            let mut believed: Option<Facet> = None;
             let hazard = HazardMemory::default();
-            let alarm: std::collections::BTreeMap<RoomAddr, f64> = Default::default();
-            let visited: std::collections::BTreeSet<RoomAddr> =
-                [home.clone()].into_iter().collect();
+            let alarm: std::collections::BTreeMap<Facet, f64> = Default::default();
+            let visited: std::collections::BTreeSet<Facet> = [home.clone()].into_iter().collect();
             let _mode = catch_up(
                 entry_day,
                 horizon,
@@ -14533,7 +15550,6 @@ mod tests {
                 &ledger,
                 &[],
                 CAP,
-                None,
                 &mut RoomMeshMemo::new(),
                 &mut HomeNavCache::new(),
                 &mut DefaultController,
@@ -14545,11 +15561,11 @@ mod tests {
         // loop exhausts its horizon (not the cap) and lands 4 hops down the
         // corridor. The extra half-step of slack absorbs float summation
         // drift between `entry_day + 4.0 * step_days` (computed once) and
-        // `catch_up`'s own `day += days_of(cost_ticks(..))` run four times in
+        // `catch_up`'s own `day = day + cost_of(..)` run four times in
         // a row — the two need not land on the identical f64, and an exact
         // boundary would make this test's own arithmetic, not the mechanism,
         // decide whether the 4th hop lands in time.
-        let under = run(entry_day + 4.5 * step_days);
+        let under = run(entry_day + tspan(4.5 * step_days));
         assert_eq!(
             under,
             Some(anchors[4]),
@@ -14561,7 +15577,7 @@ mod tests {
         // need, but still short of the LEN-hop corridor), so the cap ends
         // the replay after exactly CAP hops, and the fallback jumps
         // straight to the hearth.
-        let over = run(entry_day + 1.0);
+        let over = run(entry_day + tspan(1.0));
         assert_eq!(
             over,
             Some(anchors[LEN - 1]),
@@ -14583,7 +15599,7 @@ mod tests {
     fn home_nav_pays_zero_searches_for_a_stationary_unchanged_belief_entity_after_warmup() {
         let start = raddr(1.0);
         let home = start.neighbors()[0].neighbors()[0].clone();
-        let avoid: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let avoid: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
         let mut cache = HomeNavCache::new();
         let mut mesh = RoomMeshMemo::new();
         let e = npc_id(1);
@@ -14618,7 +15634,7 @@ mod tests {
         let start = raddr(1.0);
         let elsewhere = start.neighbors()[1].clone();
         let home = start.neighbors()[0].neighbors()[0].clone();
-        let avoid: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let avoid: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
         let mut cache = HomeNavCache::new();
         let mut mesh = RoomMeshMemo::new();
         let e = npc_id(1);
@@ -14654,7 +15670,7 @@ mod tests {
     fn home_nav_a_belief_change_triggers_exactly_one_new_search() {
         let start = raddr(1.0);
         let home = start.neighbors()[0].neighbors()[0].clone();
-        let mut avoid: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let mut avoid: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
         let mut cache = HomeNavCache::new();
         let mut mesh = RoomMeshMemo::new();
         let e = npc_id(1);
@@ -14695,7 +15711,7 @@ mod tests {
         let mut cache = HomeNavCache::new();
         let mut mesh = RoomMeshMemo::new();
         let (a, b) = (npc_id(1), npc_id(2));
-        let empty: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let empty: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
 
         let _ = cache.home_nav(a, &start, &home, &empty, PLAN_BUDGET, &mut mesh);
         let _ = cache.home_nav(b, &start, &home, &empty, PLAN_BUDGET, &mut mesh);
@@ -14735,7 +15751,7 @@ mod tests {
             .find(|n| **n != start)
             .unwrap()
             .clone();
-        let empty: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let empty: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
         let mut cache = HomeNavCache::new();
         let mut mesh = RoomMeshMemo::new();
         let e = npc_id(1);
@@ -14759,7 +15775,7 @@ mod tests {
         assert_ne!(
             after.first_step,
             Some(Action::MoveTo(via.clone())),
-            "the new plan must not still route through the now-avoided cell"
+            "the new plan must not still route through the now-avoided room"
         );
     }
 
@@ -14777,7 +15793,7 @@ mod tests {
         let home_a = start.neighbors()[0].clone();
         let home_b = start.neighbors()[1].clone();
         assert_ne!(home_a, home_b, "sanity: two distinct neighbor destinations");
-        let avoid: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let avoid: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
         let mut cache = HomeNavCache::new();
         let mut mesh = RoomMeshMemo::new();
         let e = npc_id(1);
@@ -14835,7 +15851,7 @@ mod tests {
     struct ReverseField {
         /// Every room reached within the build budget: `(distance-to-home,
         /// next-hop-toward-home)`. `home` itself maps to `(0, None)`.
-        nodes: std::collections::BTreeMap<RoomAddr, (usize, Option<RoomAddr>)>,
+        nodes: std::collections::BTreeMap<Facet, (usize, Option<Facet>)>,
     }
 
     impl ReverseField {
@@ -14843,7 +15859,7 @@ mod tests {
         /// own shape — both `None` if `room` was not reached within budget
         /// (mirrors `plan_to_room`'s budget-exhaustion `None`); `first_step`
         /// is `None` exactly at `home` itself (mirrors the empty-plan case).
-        fn feature(&self, room: &RoomAddr) -> HomeNavFeature {
+        fn feature(&self, room: &Facet) -> HomeNavFeature {
             match self.nodes.get(room) {
                 None => HomeNavFeature {
                     distance: None,
@@ -14859,11 +15875,11 @@ mod tests {
 
     /// Build a [`ReverseField`] rooted at `home`, expanding up to `budget`
     /// nodes — a full single-source search with no goal test.
-    fn build_reverse_field(home: &RoomAddr, budget: usize) -> ReverseField {
+    fn build_reverse_field(home: &Facet, budget: usize) -> ReverseField {
         use std::collections::{BTreeMap, BTreeSet};
-        let mut frontier: BTreeSet<(u64, u64, RoomAddr)> = BTreeSet::new();
-        let mut best_g: BTreeMap<RoomAddr, u64> = BTreeMap::new();
-        let mut came_from: BTreeMap<RoomAddr, RoomAddr> = BTreeMap::new();
+        let mut frontier: BTreeSet<(u64, u64, Facet)> = BTreeSet::new();
+        let mut best_g: BTreeMap<Facet, u64> = BTreeMap::new();
+        let mut came_from: BTreeMap<Facet, Facet> = BTreeMap::new();
 
         frontier.insert((0, 0, home.clone()));
         best_g.insert(home.clone(), 0);
@@ -14930,7 +15946,7 @@ mod tests {
     #[test]
     fn reverse_field_matches_forward_search_for_every_empty_avoid_room() {
         let home = raddr(1.0);
-        let avoid: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let avoid: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
         // A modest budget: large enough to reach several hundred rooms
         // (well past the health population's actual walking radius) while
         // keeping the O(field_size) forward re-searches below it fast.
@@ -14942,7 +15958,7 @@ mod tests {
             field.nodes.len()
         );
 
-        let mut mismatches: Vec<(RoomAddr, HomeNavFeature, HomeNavFeature)> = Vec::new();
+        let mut mismatches: Vec<(Facet, HomeNavFeature, HomeNavFeature)> = Vec::new();
         for room in field.nodes.keys() {
             if *room == home {
                 continue;
@@ -14963,7 +15979,7 @@ mod tests {
             "the field/forward equivalence FAILED for {} of {} rooms (showing \
              up to 5): {:#?}\n\
              This is the tie-break-root-dependence failure mode the campaign \
-             spec names as a legitimate exit: astar's smallest-RoomAddr \
+             spec names as a legitimate exit: astar's smallest-Facet \
              relaxation winner is root-relative (see ReverseField's own \
              doc), so a field rooted at `home` need not agree with a forward \
              search rooted at each individual query room whenever a room has \

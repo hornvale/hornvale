@@ -441,3 +441,22 @@ holds unchanged from a fourth: the question is open, the instrument is
 underpowered, and the fix is more pairs rather than a moved bar. The registry
 row's status is unchanged by this re-read, exactly as it was unchanged by the
 second.
+
+## Postscript 4 — re-read at The Granary's close (2026-08-24)
+
+The Granary's sub-year raid timing moved the worlds again (its fixtures were
+re-authored against the new history), and with them the tally. The campaign's
+first measurement read **70/120 = 0.5833** — but on LOCAL PILOT fixtures
+(`HV_GNOMON_PILOT=1`, Nathan-authorized), which sit in the known ~0.1%
+discrete-count host-divergence class against the census goldens. The CANONICAL
+re-author on lefford (fixtures at `13695c4ae`, census goldens at `c54fb62c9`)
+restored **73/120 = 0.6083, +0.19 SE**, numerically identical to the
+Glasshouse/Burr readings; the report was untouched throughout. The canonical
+reading list therefore stays five epochs of one unchanged report:
+0.5667 / 0.6083 / 0.6000 / 0.6083 / 0.6083 — all within one SE of the bar.
+The underpower diagnosis is unchanged, and arguably strengthened: even a
+world-moving campaign leaves the canonical reading inside one SE of the bar,
+and the pilot detour is its own small lesson — an off-host fixture set can
+move the tally by three hits, which is exactly why only canonical readings
+enter the list. The registry row's status is unchanged, exactly as it was
+unchanged by each of the four before this one.

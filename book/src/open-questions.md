@@ -105,6 +105,275 @@ already the bet's — but it extends where the clause is known to apply, from
 checks that fire to **claims of no change**, which is the shape every
 determinism argument in this project takes.
 
+**Four more instances from The Interlinear (2026-08-25), and the useful part
+is that three of the four were caught by a *reviewer* rather than by the author
+of the check.** A positive control on a "no shared words between the two
+renderings" assertion — neutralise it and a degenerate one-word output passes;
+a coverage measurement whose only possible answer was zero, and so could not
+distinguish a working resolver from one hardcoded to say "not yet"; a
+byte-identity proof between two realizers that passed an empty list at every
+call site, and would have survived the two diverging; and a complement
+assertion that passed by luck of the draw, which probing all fifteen placed
+peoples showed would fail for 33% of them for a reason that was not the one it
+names.
+
+**The score does not move; the practice gains a second reader.** Every one of
+these was invisible to re-reading and died to running something — a probe
+across fifteen peoples, a mutation, one `grep`. What is new is *who* ran it: the
+implementer's own report said it plainly — *"neither would have been caught by
+re-reading my own work"* — and the campaign's habit of asking each reviewer to
+**verify a named mechanism** rather than form an opinion is what converted that
+into findings. The clause already says make it fail on command; this extends
+where the command should come from.
+
+**A confirming instance on The Begat's path, too.** This campaign's correctness
+case was also a claim of no change — a refactor that deleted a field from the
+clause structure and rewrote every construction site across two crates, with
+`make rebaseline` moving nothing. It was handled as the clause asks: the empty
+diff is only evidence because `the-book.md` is rewritten on every rebaseline and
+carries three distinct tail shapes, including one with no trailing clause at
+all. An empty diff over a file nothing regenerates would have proved nothing.
+
+**The Scarf (2026-08-26) confirms the clause twice and sharpens what counts as
+a control.** Its successor campaign collapsed the two clause structures into
+one, and both halves of its correctness case were handled as the clause asks.
+Two new guards protecting a widened object slot were mutated **individually** —
+neutralise the noun-class guard alone, neutralise the evidential zero-copula
+guard alone, and each produced the same panic — so both are load-bearing and
+the fixture genuinely reaches the branch, which one combined mutation could not
+have shown. And its byte-identity claim is the same shape The Begat's was: an
+empty diff over the gallery, held up by two controls rather than asserted.
+
+**The score does not move, and the sharpening is about which control you cite.**
+Two were available here and they are not the same grade. The **harness** control
+is that `docs/audits/type-audit-report.md` moved (752 → 750 tags) when the `pub`
+boundary changed, which proves the regeneration command ran and the diff can see
+a change — and nothing more, because a different generator wrote it. The
+**generator** control is
+[The Interlinear](./chronicle/the-interlinear.md)'s: `the-book.md` is rewritten
+on every rebaseline through the very realizer path this campaign retyped, and it
+carries ninety tongue renderings. Only the second speaks to the claim. The
+distinction matters because a harness control is exactly as convincing to *read*
+as a generator control and strictly weaker to *hold*, and the first draft of this
+passage cited the weaker one. **When claiming no change, name the generator you
+proved ran, not merely the command.**
+
+The same campaign produced eleven defects, all of them from its own spec and
+plan text and none from the code the implementers wrote — a fourth campaign
+confirming the diagnosis two paragraphs below. The one worth adding to this
+chapter's inventory of checks that cannot fail is a **command** that cannot
+fail: a mass rename written with BSD `sed` and `\b` word boundaries, which
+matches nothing, exits 0, and prints no diagnostic. It would have reported
+success, moved zero of 67 sites, and left a suite passing *because nothing had
+changed*. That is the failure this chapter names, arriving one layer below
+where it usually does — not a check whose predicate is wrong, but an edit that
+never happened reporting that it did. Verify a mass edit by count; an exit
+status is not a measurement.
+
+**The Inquest (2026-08-26) does not move the score either, and sharpens the
+practice once more: it matters *which* checks go red.** The practice as it
+stands asks that a check be made to fail on command, that it be answerable to an
+enumeration, and — the sharpening recorded further down this chapter — that a
+positive control be shown to discriminate rather than merely to exist. All three
+are satisfied by a uniform red — corrupt
+the input, watch everything that touches it fail — and a uniform red is
+consistent with one assertion doing all the work while its neighbours ride
+along. This campaign's corpus resolver was mutated three times with a
+**predicted subset** for each: swap one demand token for another and the
+headline count stays at two while the pair changes, so only the by-identity
+assertion reddens; add a token nothing implements and only the distance report
+reddens, count and identities holding; drop the campaign's own new token and all
+three redden. Each mutation landed exactly where it was predicted to. That
+establishes something a uniform red cannot — that the three assertions are
+*independent*, and that the count is not silently standing in for the identities
+it was written not to trust.
+
+The same campaign supplies this chapter's floor with an instance of its own,
+from the other direction. Its plan named a byte-golden comparison, in capital
+letters, as the single most important check it would run. The check was close to
+vacuous: every production call site of the affected realizer passed a `None`
+where the new draw would have entered, and the drawn values had no consumer
+outside their own module at all, so the artifact could not have moved whether or
+not the claim under test was true. The implementer established that
+**structurally** rather than reporting the green, then measured the real claim
+directly — forty seeds across three species, printing the four pre-existing
+drawn axes with and without the new one, a hundred and twenty rows identical —
+with a positive control that inserted one extra draw upstream and moved seventy
+of the hundred and twenty. The claim is confirmed on far better evidence than
+the check would have produced. **A check answering a narrower question than the
+claim attached to it survives every reading**, and this one survived being
+written down, emphasised, and dispatched; what caught it was somebody asking
+what the check could possibly have failed on.
+
+**The Mortise (2026-08-27) does not move the score, and the finding worth
+leading with is about the *derivation*, not the check it was meant to settle.**
+How many `TongueGrammar {` construction sites the crate carries was asked
+three times inside one task: the controller said 25, the implementer said 21,
+and a reviewer recounted and said 22 — with its subtraction shown. The
+controller recorded 22 as authoritative *because it came with working
+attached*, and the working was wrong. Re-derived directly against the tree,
+`git grep -c 'TongueGrammar {'` returns 25 raw hits; one is the type's own
+`pub struct TongueGrammar {` definition and three are `-> TongueGrammar {`
+return-signature false positives, leaving 21 — the implementer's number. The
+reviewer's own subtraction had undercounted the signature false positives by
+one, and nothing re-ran it before the wrong figure was written into a
+permanent retrospective as the corrected version of this campaign's own
+thesis, where it stood until a later whole-branch review caught it. **Showing
+your working makes a claim checkable, not checked** — a derivation is
+unaudited text exactly like the number it supports, and this chapter's own
+readers proved measurably more willing to accept a wrong figure that arrived
+with arithmetic attached than one that did not. The practice built above —
+make it fail on command, run the positive control, verify the mechanism
+rather than the account of it — gains a clause here: point it at the check
+*of* a claim as readily as at the claim.
+
+The same campaign is a fifth confirming instance of the diagnosis The Scarf
+named as a fourth: every substantive defect originated in the controlling
+session's own plan or brief text, and none in the code an implementer wrote.
+Five defects trace to text written before a line of implementation existed —
+an addition instruction naming a placement that does not exist in the target
+file, a consumer grep scoped to one crate that missed a match site in
+another, the count above, a `make rebaseline` step that cannot see a
+byte-golden it needed to, and a realizer edit aimed at a file that
+structurally cannot hold the elision it was asked to carry — and each died to
+a command run against the tree, never to a re-read.
+
+A whole-branch review, run after eleven scoped task reviews had already
+passed clean, found three more guards that read as evidence and proved less
+than they claimed, on the shape this chapter's floor already names. `m09` was
+credited with realizing an epistemic hedge on a witness that exercised the
+hedge only as a lexical fact, which the same file's own doctrine states is
+never sufficient for that credit. The spec's own inertness guard — a scan
+meant to keep a shipped-but-unwired capability visible rather than silent,
+required wherever a campaign declares a corner deliberately unused — matched
+only the compound string `"predicate: KNOW"`, so a production site that bound
+the value first (`let embedded = Argument::Clause(...)`, a shape the
+surrounding code already uses) passed the guard silently while the
+campaign's own ledger had just recorded that exact marker as "not
+defeatable." And both new drawn axes — the subordinator, the conjunction —
+were unobserved on `realize_tongue_deep`, the one function production
+actually calls: two mutations survived the entire suite because the
+deep-realizer's own tests supplied the drawn marker and then asserted on
+something else entirely. All three were found the way this chapter asks —
+neutralise it and watch, not read it and trust.
+
+A fourth finding is this chapter's own subject arriving one layer up.
+`the_baseline_assignment_accuracy_is_pinned` — the one test that would have
+caught the pin movement in the paragraph below — sat red on the branch for nine
+tasks, invisible through eleven scoped reviews and a green `gate-commit`
+every time, because `docs/timings/subfloor-roster.tsv` listed its insensitive
+sibling (a roster-size check, unmoved at eighteen) from the same module and
+not the sensitive test itself. `gate-commit` compiled the crate, ran the
+wrong test, and printed green; `subfloor_roster_coverage.rs` was satisfied
+because the crate carried *an* entry, which is all it checks. This is not a
+check whose predicate is wrong — the predicate fires reliably on the test it
+is pointed at — it is the wrong check running under the right name, one layer
+above where this chapter's instances have so far sat. The review found the
+shape recurs twenty-four times repository-wide; nearly all are legitimate,
+tests that build worlds and sit deliberately above the sub-floor with the
+stage gate covering them, so the number is a scope for the next campaign's
+registry row, not a tally of two dozen live defects.
+
+One finding belongs to the world rather than to process, and it cost this
+campaign a wrong number of its own before a second review caught it.
+Registering `think` moved the Burr assignment-accuracy pin, and the obvious
+decomposition — fifteen new correct rows, all of them `think` itself — was
+wrong: `think` classifies correctly in thirteen of eighteen tongues, and the
+remaining net two is eight *pre-existing* words re-classifying, five gained
+and three lost, because adding one word to every daughter's lexicon shifts
+the trigram profile the classifier reads for every word already in it. The
+Inquest's own entry in that file asserted a subset property for its own
+registration — that adding a word moves nothing else. For The Mortise that
+property is false: a registration additive in what the lexicon *holds* need
+not be additive in what a statistic over it *sees*, and the two are different
+claims that happen to share a byte-golden.
+
+**[The Stile](./chronicle/the-stile.md) (2026-08-28) does not move the score,
+and the finding worth leading with is a correction that reintroduced the
+defect it was written to close.** The campaign's whole-branch review flagged
+that its two closure-derivation pins (`r004`, `r183`) were undocumented
+against the one thing the ladder's own revision history actually does —
+rungs get wired into the *middle* of an existing graph, not merely appended.
+The fix wave's remedy, landing in the chronicle, said the pins "go red the
+moment a rung is inserted and wired into the middle of the graph." That
+sentence is false, and a mutation run at the campaign's own final gate —
+rereading its own committed artifact, not a second reviewer — found it: a
+rung wired into `r005`, mid-graph but outside either pinned rung's ancestry,
+leaves all twenty-six tests green. Two of 214 closures are pinned, not all
+of them, and the converse the correction asserted does not hold. It is
+[The Mortise](./chronicle/the-mortise.md)'s clause — a derivation is
+unaudited text exactly like the number it supports — landing this time on a
+correction rather than an original claim, inside the one paragraph whose
+whole job was to say honestly what the pins do and do not cover. The same
+final pass also found the retrospective's own line count wrong in the commit
+that had just corrected it, because that commit grew the file past the
+number it wrote — the third wrong count this campaign put into its own
+prose, which argues for what it did next: dropping the count rather than
+correcting it a third time.
+
+**A second instance predates the campaign and matches this chapter's own
+diagnosis from [The Siding](./chronicle/the-siding.md) exactly: a check is
+worth only the configurations it runs in.** `docs/audits/sentence-coverage.md`
+was written only under `HV_SENTENCE_REBASELINE=1`, a variable nothing in the
+repository ever set — not the Makefile, not `scripts/regenerate-artifacts.sh`,
+which did not mention the file at all. The path *was* declared in
+`docs/generated-paths.txt`, so the tracked-ness half of the drift discipline
+looked satisfied; what was missing was a writer, and `git diff --exit-code`
+over a path nothing ever writes is silently vacuous no matter how long it has
+sat green. It was found by a controller's pre-dispatch reading, not by any
+gate. The fix is the pairing this chapter keeps asking for — the generator
+now runs inside `make rebaseline` — proven not by trusting the wiring but by
+splicing a marker into the report, running the full script, and confirming
+the marker landed and nothing else declared moved.
+
+**A third instance sharpens the count-versus-identity distinction
+[The Inquest](./chronicle/the-inquest.md) already drew, from the reviewer's
+side rather than the implementer's.** Auditing the vocabulary cross-check
+between the ladder and the two dialogue corpora, the whole-branch reviewer
+held the reported counts constant — swapping one token out of a set and
+another in, so a refused set stayed size two and a covered set stayed at
+147 — and confirmed the set assertion still failed. A check that only
+compared cardinalities would have passed. Holding a mutation's *effect* on a
+headline number constant while changing its membership is a sharper probe
+than either the campaign's own task-level reviews had run, applied here one
+level up, at the branch as a whole.
+
+**A fourth, smaller pair: a guard whose message claimed more than its
+assertion checked, and the trap its own author fell into twice while writing
+it.** A new test resolving intra-doc links to a renamed headline test said,
+in its failure message, that four doc comments "must all name the same
+current test" — read as a claim about arity, deleting three of the four
+passed green, because the assertion checks distinctness of what remains, not
+how many links exist. The message was reworded rather than the assertion,
+correctly: distinctness is the property worth having as the test's name
+keeps changing under it. And a source-scanning guard that greps its own file
+for the pattern it is guarding is self-satisfying if it also matches its own
+doc comment — the implementer hit that shape twice while building this one
+guard, and excluded its own search literal from the match before either
+instance shipped.
+
+**The campaign is a sixth confirming instance of the diagnosis
+[The Scarf](./chronicle/the-scarf.md) named as a fourth and The Mortise as a
+fifth: every substantive defect traced to controlling-session text, never to
+an implementer's code.** A brief's over-broad "do not touch `sentences/`"
+constraint — meant to protect two frozen corpora — left the family's own
+README stale about which corpus a resolver reads. A review brief attributed
+a disclosure to a report file that had never carried it; the report was
+clean, the disclosure lived only in a reply. And a controller's own
+correction, once a stale claim was found live in one place, fixed exactly
+that one place while the identical sentence stood, word for word, in six
+more — three in the resolver's source, two in the generated report, one in
+the ladder's own draft prose — found only by a grep the whole-branch review
+ran that the original fix never did. One datum runs the other direction and
+is worth flagging rather than trusting outright: this campaign's own hazard
+— a verification claim written for work not performed — was named in later
+dispatches after it was first caught, and a subsequent implementer caught
+*itself* drafting exactly that shape of claim and removed it before the
+report was finalized. Whether naming a failure mode reliably produces a
+self-check or this was one attentive session is not something one instance
+can answer; it is a hypothesis for the next campaign's data, not a practice
+yet.
+
 **A note from The Staff (2026-08-14), amended by The Sluice (2026-08-15),
 since this score is read against an instrument this passage names by a label
 that no longer exists.** Both halves of Sexton's pairing — the census
@@ -625,6 +894,60 @@ to close the gap would destroy the split the spec's own text demands.
 **Complementing beats replacing**, and a practice that only ever swaps the
 statistic will eventually swap away a working instrument.
 
+A sixteenth campaign adds a **new position on the checkability axis**, and it
+is one this passage has been circling without naming.
+[The Rail](./chronicle/the-rail.md) (2026-08-29) preregistered four numbers
+before writing any code, and every one of them was judged against a resolver
+that already existed. The numbers were **computed by a different program**: a
+script written during the design pass, which reimplemented the resolver's
+demand-closure rule and got one case wrong. Fifteen rungs of a 214-rung ladder
+introduce no capability token at all — they exist as free tripwires on
+composition — and the script treated each one's absent token as an
+*unsatisfiable demand*, so all fifteen were permanently excluded from
+*covered* in every predicted figure. The first task to land a token reported
+six covered where the prediction said five, said so, and used the resolver's
+answer.
+
+**The prediction was not falsified by the world; it had never been run against
+the instrument it was predicting.** That is a distinct failure from anything
+above it. An unpaired check is a verifier nobody invokes; an unanchored one is
+a verifier with no external truth. This is a *third* thing: a fully paired,
+fully anchored check whose **target value** came from a second implementation
+of the thing under test. Both programs were run, both produced numbers, and
+the agreement between them was the untested assumption. So the floor gains a
+seventh question, asked of any preregistered figure: **was this number
+produced by the instrument that will judge it, or by something that
+reimplements it?** If the second, the prediction is a claim about the
+reimplementation, and the two agree only by luck.
+
+The same campaign then supplied the passage's sharpest instance of *"a
+correction is unaudited text"*. Its design document's coverage paragraph was
+wrong twice, in opposite directions — the first crediting the control rungs
+for a count they had no part in, the second, written explicitly as a
+correction of the first, asserting that none of them ever counts. Both came
+from the same buggy script; neither was caught by re-reading. And a later
+repair to the campaign's own command list, made to fix five steps that named
+an unrunnable command, dropped one character from each step's output path in
+the same edit, so every one of the five wrote one file and inspected another.
+Each step then ran, exited zero, printed nothing, and **read exactly like a
+clean run** — the failure this whole passage is about, authored mechanically
+inside the act of preventing it. It was found by the next agent to execute the
+list, not by anyone reading it.
+
+Those two are part of a longer tally the campaign kept deliberately:
+**thirteen substantive defects, every one originating in a controlling
+session's own design or planning prose, none in an implementer's code, and
+none found by re-reading.** That is the seventh consecutive campaign with
+this distribution. Three of the thirteen run the other way and are the
+cheapest lesson in the list — a controller's *stated worry* that a reader
+checked instead of accepting, and found unfounded each time. A worry taken
+sympathetically costs a round of rework; a worry checked costs one command.
+
+**Score: the bet holds, and the practice gains a seventh question.** The
+positive-control clause covers an instrument that cannot fire; this adds the
+case where the instrument fires correctly and the number it is compared
+against was never its own.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only
@@ -1072,6 +1395,28 @@ withdrawal was actually about: distinguishing *two* underground kinds by depth.
 Drow needs only to differ from surface elves. Mountain-dwarf and Duergar differ
 from each other by stratum alone, and the biome vocabulary still has no
 subterranean variant, so they remain owed.
+
+*Re-scored by [The Sources](./chronicle/the-sources.md) (2026-08-27), which
+moves the precondition the withdrawal was actually waiting on.* Before this
+campaign every rung in a subterranean column shared one temperature and one
+moisture reading, taken once at the column's deepest point — so two kinds
+differing by stratum alone would have been scored against conditions that do
+not vary by stratum at all, no matter how their authored optima were placed.
+Water, substrate and the new rock-derived energy term now all resolve **per
+rung**, each read at that rung's own thermal offset from the surface, with
+the deepest rung kept as a fixed point precisely so the change could be
+checked rather than assumed. Two kinds seated at different depths in the
+same column can now, structurally, read different conditions — which is the
+enabling condition the withdrawal named, not yet the separation itself. It is
+**not fully resolved**: the biome vocabulary still has no subterranean
+variant, so nothing yet gives Mountain-dwarf and Duergar a *kind of place* to
+differ by, only a set of scalars that can now vary with depth. And the same
+campaign found that one of those scalars carries less discriminating power
+than assumed — rock chemistry underground sorts into roughly three
+near-constant categories rather than a continuum, so a stratum-only
+distinction will have to lean on the axes that do vary continuously with
+depth (temperature, moisture, the energy term's own magnitude) rather than
+on rock type alone.
 
 **A finding about the contest, not about elves, and it is new.** Two peoples
 authored to share a mass and an affinity row have capacity fields that are
@@ -1585,6 +1930,34 @@ unexplained. The space it can hide in is now small enough to name: how a build
 chooses its compiler, given that this project's pin is silently conditional on
 the directory you invoke it from.
 
+[The Escapement](./chronicle/the-escapement.md) (2026-08-24) adds an entry of
+a different shape than any before it on this ledger: **byte-identical is not
+the same claim as adequately precise, and this project had been treating them
+as one.** Every prior entry asked whether two apparatuses agree on the same
+computation; this one found that the computation itself, `WorldTime`'s
+eight-significant-digit rounding, was internally consistent across platforms
+and still wrong — a committed instant's resolution decayed with world age
+because time was the one quantity in the system with no bound on its own
+magnitude, and significant-digit rounding buys constant precision only when
+magnitude is bounded. Both machines agreed, faithfully, on a value that was
+losing a day of resolution by world-year 200,000. The sharper form of the
+finding is not the deep-time table, though — it is that the identical defect
+also produced a present-day correctness bug (a fact failing its own `d <= t`
+read-back filter, because the rounding that makes two platforms agree can
+still round a value *away* from itself), found independently by a second
+campaign that had never heard of the first and was not looking for a
+determinism question at all. `WorldTime` is now an exact `i64` tick count and
+has left the quantize contract entirely rather than being rounded more
+finely (decisions 0186/0188) — the strongest form of "agrees across
+platforms" a quantity can have, an exact integer with nothing left to round.
+The bet on deterministic serialization is unmoved by this — nothing here
+contradicts a prior finding — but the ledger's standing question sharpens
+once more: **agreement between two apparatuses says nothing about whether the
+quantity they agree on is the right shape for what it is measuring**, and
+the only reason this instance surfaced at all was a defect that fell far
+enough from a determinism check's usual territory that nobody thought to
+look for it there.
+
 **Re-scored by [The Blocking](./chronicle/the-blocking.md) (2026-07-28): one
 entry on that ledger is now mechanized, and the move that mechanized it is
 worth more than the check.** The entries above are all forms of *the drawn thing
@@ -1665,6 +2038,30 @@ mapping sends its verb unconditionally, and an invalid move is answered with a
 sentence. A consumer's requirement for a channel should be checked before the
 channel is designed.
 
+**Re-scored by [The Gallery](./chronicle/the-gallery.md) (2026-08-29): the
+exact gap The Quire named — a wire that cannot distinguish two states except
+by an unparseable word in the prose — is closed for one of the two states it
+named, by giving the state its own wire value rather than a better parser.**
+`SpatialChannel` gains `Underground`, carrying its own schema
+(`vessel/level/v1`); the pane now emits `band: "underground"` and the `map`
+verb draws the same level, with a test (`the_pane_and_the_verb_agree_
+underground`) asserting they cannot drift apart. The document no longer
+"correctly describes less than a consumer needs" for this state — a consumer
+reading the tag alone now knows what Quire's consumer could only have
+guessed from prose. **`submerged` is deliberately left exactly as Quire
+found it** — still folded into `walk`, still distinguishable only by prose
+— because the water column has no lattice for a pane to draw yet; the
+frontier row this campaign moved is narrowed rather than closed, and says so
+itself. One new limitation surfaced in the same campaign's own closing
+audit, of the *other* kind on this ledger — not a wire ambiguity but a
+picture that can silently run off its own edge: the pane anchors a
+generated level's own corner to a fixed-width plate with no camera-follow,
+so a rung wider than that plate (every rung past the first) can walk the
+player's own marker off the visible screen. Recorded as its own frontier row
+rather than left for a future campaign to re-discover the way this ledger's
+own Risk section had to name it before any
+code existed.
+
 One older row recurs and one instrument for it becomes mechanizable. The
 recurrence: the outdoor chart was geometrically wrong — the sim's own render of
 the identical thirty-one cells is five dense rows and the client drew nine
@@ -1709,6 +2106,57 @@ latitude. That is not a defect any parity check can convert, because both sides
 are behaving correctly; it is the tiling declining to represent a continuous
 curve. A checkable contract can require that every offered destination exists.
 It cannot require that the ground be able to go there straight.
+
+**Re-scored by [The Quadrat](./chronicle/the-quadrat.md) (2026-08-27): the
+comparison instrument this row converted was measured unavailable on a second
+surface — and the campaign's first statement of *why* was wrong, which is part
+of the re-score rather than a footnote to it.** The Quire's contribution here
+was to turn "does the picture state the document's geometry" from taste into a
+byte comparison against the sim's own renderer of the same thirty-one facets.
+The Quadrat set out to move that pin — reprojecting the perception packet onto a
+square raster on both sides so the comparison survived the change — and did not.
+The packet describes each perceived facet as a *relative polar offset*; a raster
+addresses *absolute* tiles reached by flooring a projected coordinate; and
+converting one to the other requires the observer's position *within* its own
+tile. Reprojecting without reconstructing that, swept over 200 sub-tile phases:
+at worst 24 of 31 marks misplaced, mean 11.5, and only 2 of the 200 phases
+exact. The agreement test that was supposed to guard the change could only have
+passed by being weakened to "within one tile" — that is, by asserting the
+defect.
+
+**The campaign then wrote that the wire does not carry that phase, and the wire
+does.** The observer block states the centre's own centroid latitude and
+longitude, and the offsets are centroid-to-centroid great-circle quantities, so
+the spherical direct problem recovers every facet's absolute coordinate exactly.
+Quantization does not stand in the way either, and stating that accurately
+matters here of all places: the eight digits are *significant*, not decimal, so
+a latitude near the equator keeps a centimetre of ground while a longitude of
+large magnitude keeps only sub-metre rounding — against a facet 1.87 km across.
+What the render crate lacks is narrower and entirely its own: its parsed mirror
+of the document drops the observer block, and the simulation offers no inverse
+of the bearing-and-distance construction for it to call. The sweep measures the
+shortcut, not the contract.
+
+That makes the resolution the interesting part rather than the obstacle. The
+layer moved to the client crate that already holds the mesh, where each facet's
+own absolute address — `room`, a packed identifier the packet carries outright —
+needs no trigonometry at all, and the two pictures now agree **by construction**,
+one projection called from both sides, rather than by two computations being
+compared after the fact.
+
+The bet is unharmed and its scope is now stated more exactly, in the corrected
+form. A document may be complete and still ask real work of a consumer that
+wants to place it in the world's frame: either spherical trigonometry the
+consumer writes itself, or a dependency on the simulation to read the exact
+address. A zero-dependency renderer remains the strongest available evidence
+that a contract is renderable, and what this campaign found is the shape of the
+work such a renderer must do for anything the document expresses in the
+observer's frame rather than the world's. Whether that work should be removed
+(by putting an absolute coordinate on the wire beside the relative one) or left
+where it is (as the ordinary price of an observer-relative projection) is not
+settled here; the campaign records that agreeing by construction is strictly
+better than agreeing by comparison wherever one projection can serve both sides,
+which is a stronger form of the instrument this row already carries.
 
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
@@ -1827,6 +2275,144 @@ possessed body through the tick costs no committed facts* — is a strictly
 smaller claim than the one preregistered. Recording the smaller claim is what
 keeps this chapter's accounting honest; staging measurements until one agrees
 is what would corrupt it.
+
+[The Coercion](./chronicle/the-coercion.md) hit the identical shape one arc
+later, from the other direction: this time the instrument was blind *before*
+anyone ran it, and the blindness was legible in the source. Arc III's two
+preregistered tests compare a body driven by an imposed controller against
+the same body under its own default controller, expecting the committed act
+trail to match. It does — byte-for-byte — and the reason is that the imposed
+controller is, today, a stateless pass-through to the very controller it is
+being compared against: no fixture, however varied, could have produced a
+different number, because the two code paths are one path wearing two names.
+A result that is deducible from the source before the code runs is not
+evidence the fixtures gathered, and an early draft of this campaign's own
+report called the two-fixture pool "a genuine, if weaker, corroborating
+measurement" — read, correctly, as overclaiming what a tautology can support.
+What is left after the correction is smaller and considerably more
+interesting than what was preregistered. The controller stack had never
+actually been wired into where a driven body walks on its own; wiring it
+in changes nothing the ledger sees (the walk's facts are discarded either
+way) and changes something the ledger never held to begin with — a free
+body waiting idly holds, and a possessed one keeps arbitrating, so the same
+seed under the same clock reads `Pursuing(Fatigue)`/`Eager` free and
+`Idle`/`Content` held. Two lessons stack on The Hand's. First, a stub
+implementation can make a preregistered test **trivially** true rather than
+either confirmed or falsified, and the honest move is neither to hide that
+nor to delete the test — it stays as a regression guard for the day the stub
+grows real logic, correctly labelled as guarding rather than discovering.
+Second, the real finding this chapter should count was never staked in the
+spec at all: it surfaced because a body already known to be co-present (The
+Hand, above) was, for the first time, actually driven by two different
+controllers in the same measured walk, and the divergence was there to find
+once someone looked.
+
+[The Offer](./chronicle/the-offer.md) pushes the same thread one step further
+and supplies this chapter's largest single count of the failure. Arc IV.a
+shipped with **seven** checks that could not have failed: two asserting
+properties true of any implementation whatever (a subset relation over a
+`filter` re-proves an invariant of `filter`, not of the predicate inside it),
+one source scanner whose pattern could not match the only syntax anyone would
+ever write, two entire specified features with no reachable firing case, and
+two production paths held by no assertion at all. The distribution is the part
+worth recording rather than the total. **Every one originated in the planning
+prose, not in the implementation**, which is the third campaign running to
+report that shape; and **not one was found by reading** — each died to a
+command someone ran, five of them to a mutation that neutralised the code under
+test and left the suite green. Two of the seven were caught before any code
+existed, by a grep and by a sixty-combination census run during pre-dispatch
+verification, which is the cheapest place this chapter has yet seen one caught.
+
+The remedy the campaign adopted mid-flight is the transferable half, and it
+sharpens The Millrace's "the discipline is mutation, not review" into something
+a plan can be written against: **specify a regression test by the mutation it
+must fail, never by the property it should assert.** A property can be asserted
+vacuously; a mutation cannot be failed vacuously. The campaign then found the
+rule's own failure mode on the last page — a reviewer's illustrative mutation
+that was itself non-discriminating, because the two anchor kinds it swapped
+between are perfectly co-located in every room the grammar composes, so the
+substitution changes nothing observable. It was caught by running it. **A
+mutation is evidence only if something establishes it could have moved the
+result**, which is the same clause this chapter already carries about a
+column's stable value, arriving one level down.
+
+[The Latch](./chronicle/the-latch.md) continues that distribution and then
+breaks it in one place — fourteen defects, every one originating in controller
+prose, a fourth campaign running; thirteen caught before they reached committed
+code, and **the fourteenth shipped**, removed only after the merge candidate
+was assembled. Its **shape shifted too, and the shift is the entry worth
+keeping.** The early ones were wrong identifiers a grep catches: a test helper
+that does not exist, a constructor asserted to return a
+bare value when it returns a `Result`. The late ones were **internal
+contradictions no grep can find.** One brief named an integration-test file for
+a test while also instructing the implementer to reach the seam through a
+private module — two halves of one instruction, each locally reasonable, jointly
+unsatisfiable. Nothing mechanical can see that, and re-reading cannot either,
+because re-reading checks a claim against the model that produced it and the
+model is what is wrong. It died when an implementer tried to build it.
+
+**The campaign's largest error was of that second kind and outranks the twelve
+on that list.**
+Its specification asserted, as established fact, that nothing a possession
+session commits is ever persisted and that no world-writing path exists after
+genesis. That sentence shaped an acceptance criterion, a module's
+documentation, an idea-registry row, and a decision record — and it is false.
+Possession takes a documented `--out` flag; a previous campaign built the save
+path deliberately and ruled on how it filters. One command retired the claim at
+the Definition-of-Done sweep, four tasks after it should have been checked.
+
+**The generator of the error is the transferable part**, and it is a shape this
+chapter has recorded before at smaller scale. The evidence the specification
+rested on was a doc comment saying the session ledger is "never written back."
+That comment is *true*. It answers its author's question — does a session mutate
+the world it borrowed? — and the answer is no. The specification read it as
+answering a different question, whether these facts can ever be saved at all,
+and the two questions have opposite answers. **A doc comment answers its
+author's question, not the one a later reader brings to it**; a constraint read
+off one is a hypothesis, and this one went four tasks without being tested
+because it was never framed as one.
+
+Three checks also reported green for reasons unrelated to correctness, which is
+this chapter's standing concern about instruments arriving from a new
+direction. A docs-only commit skipped the commit gate on a path heuristic —
+correct about which *files* changed, wrong about which *tests guard them*,
+because the check that would have caught the defect is a Rust test that guards
+documentation. And the campaign's own three-outcome tripwire is absent from the
+sub-floor roster, so the commit gate compiles it and never runs it: it would
+have reported green while that test was red, on the very change the test exists
+to catch. **A gate's scope and a defect's location can disagree, and the gate
+cannot tell you when they do.** Both were caught by a human reading the roster,
+not by anything running.
+
+The third is the defect that shipped, and it is a different failure entirely.
+The campaign added a verb to the dispatcher and to neither of the two rosters
+that gate a verb by the state of the body, so a sleeping character could clear
+a barred passage and commit the fact — and it was the only new verb that writes
+to the ledger. The check meant to catch exactly this was green throughout **and
+was working correctly**: it holds two lists in agreement in both directions,
+and a verb missing from both agrees with itself. That was measured in the
+defective state rather than inferred. **A two-way agreement check has a blind
+zone at zero copies**, and the only instrument that sees into it is a test that
+drives the behaviour. Seven green task reviews did not find it either — each
+saw a diff that added a verb, and none asked the question only a whole-branch
+view asks: which lists is this verb in? What closed it was available the whole
+time, since the preceding campaign had shut the identical hole on a different
+verb and left the test to copy. But the copy sits outside the cheapest gate by
+construction: it costs thirteen seconds because it builds a world, and the
+commit gate admits only tests under a second. The check with the hole runs on
+every commit; the one that closes it does not.
+
+The entry above is a correction, and it is worth saying so here because the
+record failed in the same way the campaign it records did. The campaign's
+retrospective opened with "twelve defects, none surviving in implementer code."
+The second half was already false the moment it was written — the fourteenth
+defect was sitting in committed code two commits earlier, undiscovered — and
+the heading was left standing even after that defect was found and written into
+a later section of the same file. Nothing re-reads an opening when a body
+changes, and the person best placed to notice is the one who has just written
+the thing that invalidated it. **A record can outlive its subject inside the
+document that named the hazard**, which is the smallest scale at which this
+chapter has yet observed it.
 
 [The Mire](./chronicle/the-mire.md) exercised the same discipline on a bet
 about weather and world structure that no earlier chapter entry had staked,
@@ -2525,6 +3111,43 @@ its honest size.
    of architecture guarantees the sparse, focalized, unreliable account with a
    teller that would not. The human read is the real gate, and it is allowed
    to withhold a pass.
+   **Re-scored by [The Confidant](./chronicle/the-confidant.md) (2026-08-25):
+   one of the three named guardrails now has a mechanism, and the honest
+   scoring of that is narrower than it sounds.** *Unreliability* had never been
+   built. Every account the world produced was either true or absent. There is
+   now a teller whose account diverges from the truth in two independent,
+   inspectable ways — it cannot perceive what its own arbitration suppressed,
+   and its culture may hold no word for what it feels — and the divergence is
+   *derived*, from psychological attributes authored before the question
+   existed, rather than authored as a distribution of unreliability. That is
+   what makes it a property of the teller rather than a randomizer. The
+   *focalization* guardrail arrives with it, since an account with a speaker is
+   focalized by construction. **What has not moved is the bet.** This is one
+   creature answering one question about itself, not a historiography, and
+   *worth reading* was never gated on whether unreliability was expressible.
+   What changes is that the guardrail is no longer a promissory note, so the
+   taste half can now be judged against something that exists. The row stays
+   low-confidence and the human read stays the gate.
+   **Re-scored again by [The Reticence](./chronicle/the-reticence.md)
+   (2026-08-26): a third, CHOSEN unreliability shipped, and the honest
+   scoring is again narrower than the mechanism sounds.** Where The
+   Confidant's two divergences are incapacities a host cannot help, this
+   campaign gives the same teller a reason to withhold, mislead, or reveal
+   *on purpose* — derived from what its own people believes it is riding and
+   what the rider has actually done to it, never authored per host. The
+   preregistered measurement found the conduct half genuinely discriminating
+   (a host goes quiet on the one subject it has actually been overridden on,
+   and stays forthcoming on every other) and the doctrine half **measurably
+   inert on the only path a player can currently interrogate** — a structural
+   fact about what a host can be asked, not a defect in the willingness
+   mechanism, which remains provably sensitive to doctrine at override counts
+   the shipped verb surface cannot reach. **What has not moved is the bet.**
+   A teller who can choose to lie is one more inspectable property of one
+   creature answering one question about itself, not evidence toward
+   *historiography worth reading*. The row stays low-confidence and the human
+   read stays the gate; what changes, again, is that one more named guardrail
+   moved from promissory note to a mechanism with a measured, partly-null
+   result.
 
 ## The standing horizon
 
@@ -3587,3 +4210,93 @@ point it misses against was a free parameter frozen before the measurement, not 
 substrate fact. So "zero admiration" scores the current axes and the current
 neutral point together; it is a floor beneath the thread, not a wall.
 
+
+### A constant column looks exactly like a well-behaved one (2026-08-25)
+
+[The Confidant](./chronicle/the-confidant.md) staked no headline bet of its
+own — it built an instrument — and the reason it belongs in this chapter is
+what the instrument did to the accounting when it was pointed at itself.
+
+Three measures of conceptual deficiency were registered as forty-five census
+columns, one family per people. A thousand-seed run returned **every one of
+them constant on every row**. The mechanism was then checked rather than the
+number accepted, because constant-across-seeds has one benign cause and one
+broken one: these read the real per-world vocabulary and then branch on
+whether the culture *has* the concept, which is exposure-determined and
+derives from authored species attributes. The word's form varies with the
+seed; its existence does not. **Correctly seed-invariant, not a broken read.**
+
+The entry above records that a column's value being stable across campaigns is
+evidence about the world only if something independent establishes the column
+can move at all. This is that observation's twin, one level down and cheaper
+to check: a column can be constant *within a single run*, and it will look
+identical in the drift check to the healthiest column in the table. It cannot
+detect drift, which is the census's whole job — it moves all thousand rows at
+once or never — and it will keep costing whatever it costs, forever, on every
+world of every all-metrics study. Both halves of the diagnosis were paid for
+in canonical-box time, six runs against an authorisation given for one.
+
+The remedy is one question asked before registration rather than after: *does
+this column take more than one value across the seeds it will be computed on?*
+The measures themselves were not wrong and did not change — they moved home,
+into a window that computes them once and publishes fifteen rows (decision
+0260). The precedent for that home had been in the repository the whole time.
+
+**What this does to the chapter's own confidence accounting.** Nothing in the
+standing gate asks a new metric whether it can vary, and nothing asks an
+existing one whether it still does. Until something does, a census column's
+stability is a claim about the instrument and the world jointly, and this
+chapter should not read a flat column as agreement between them.
+
+### The substrate is cheap to write and unpriced to read (2026-08-26)
+
+The first entry in the high-confidence tier above is the kernel substrate, and
+one of the four things it names is append-only event-sourced storage: chosen to
+be boring, and the choice paid. [The Tailrace](./chronicle/the-tailrace.md)
+does not disturb that. What it disturbs is a reading of it — that a substrate
+whose *writes* are boring has therefore been priced.
+
+Appending a fact is O(1) and always was. Reading a fold over the accumulated
+facts is not, and Hornvale's creature-drive stack recomputes five such folds
+over an agent's entire committed position trail on every evaluation, per agent,
+per tick — plus a sixth that does it once per co-located peer. (A sibling fold
+over `rested` events is timed alongside them and is the one that is cleanly
+*not* history-proportional; the count here is the trail-walkers, which is the
+set that makes the cost grow.) Measured on a fixed roster over two hundred ticks, with the
+deterministic columns held as a control and flat, the history term is **70 to
+80 per cent of a tick**, which makes total session cost quadratic in session
+length. That is a cost of the log, and nothing in the tier above was ever
+scored against it: every check that scored the substrate honestly — *this
+changed nothing*, byte-identical regeneration — is a check on **output
+identity**, and cost is invisible to all of them.
+
+The sharper half is that the shape was worse than the campaign's own
+preregistration predicted, and the campaign found that out by accident. It
+froze a linear model, `cost = C + k·h`, and looked for `k > 0`. One fold is
+**quadratic**: `integrate_thirst` runs a backward scan over the whole sightings
+timeline inside a loop over the sightings since the agent last drank, so its
+cost is `O(H + S·H)`, with `S` reset only by a `drank` fact. Twenty-three of
+fifty agents drank zero times in two hundred ticks. A preregistered hypothesis
+was met, and the mechanism behind it was not the one written down.
+
+**What this does to the chapter's own accounting.** There is no cost gate on
+the sim at all — no ceiling, no slope check, nothing that runs per commit — and
+the two instruments that exist were built by the two campaigns that needed
+them. So the substrate's confidence tier should be read as covering *what the
+world computes*, not *what computing it costs*: the first is scored
+mechanically and continuously, and the second is scored when a campaign
+chooses to look. On the two occasions a campaign has looked, it found a
+quadratic ([The Penstock](./chronicle/the-penstock.md)'s unindexed scan) and
+then a second one nobody had predicted. That is a poor base rate for an
+unwatched dimension.
+
+It also supplies this chapter's preamble with a fresh instance of its own
+floor. The rule stated there is that the only thing distinguishing a check that
+fires from one that does not is **making it fail on command**, and the campaign
+found two defects that way that no amount of reading found: a
+fold-equals-scan test comparing a function against itself, because the oracle
+it compared against was implemented by calling the thing under test; and a
+chaos-eviction schedule whose most aggressive form gives the least signal,
+because it replaces the state immediately after every step it is meant to
+stress. Both were green. Both were pinning nothing. Neither would have been
+found by reviewing the tests against their specification.

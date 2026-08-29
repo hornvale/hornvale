@@ -275,7 +275,7 @@ fn read_world(
         let Some(bio) = components.biosphere.get_by_label(people) else {
             continue;
         };
-        let life = hornvale_species::life_history(bio.mass, bio.metabolic_class, bio.schedule);
+        let life = hornvale_species::life_history(bio.mass, bio.thermal_strategy, bio.schedule);
         let to_days = |years: hornvale_kernel::Years| StdDays::new(years.get() * year_days).ok();
         let generation = life.generation_length.and_then(to_days);
         let lifespan = life.lifespan.and_then(to_days);
@@ -351,7 +351,7 @@ fn summarise_counts(name: &str, values: &[f64]) {
 /// only substrate controls. A falsified prediction is a finding here, and
 /// saturation is one §3.7 predicted in advance.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the Palimpsest's preregistered readout over a seed panel; run by hand (Myth campaign 3, The Palimpsest, answered its question; demoted by The Governor 2026-08-28)"]
 fn the_palimpsest_readout_over_a_seed_panel() {
     let components = hornvale_worldgen::WorldComponents::assemble().expect("components assemble");
 

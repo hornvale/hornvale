@@ -73,7 +73,59 @@
 //! which tests measure wall clock, so a test opts in explicitly and the same
 //! two-directional guard applies. See `pinned_filter_names_for_class` and
 //! `co_schedule_sensitive_heavy_tests` below.
+//!
+//! ## A third class, sized this time (The Governor, Task 8)
+//!
+//! The scatter-sweep guard above is a strict two-way match against every
+//! heavy/probe test calling [`SWEEP_CALL`], with no notion of HOW BIG a
+//! sweep is. Task 9 gives several hearsay/worldgen tests their own
+//! `map_seeds` call, but on small, bounded panels — parallelising a sweep
+//! that used to run its seeds one at a time, not scattering two hundred of
+//! them across every core. The moment one of those calls lands, this
+//! guard's strict equality fails, and the NAIVE fix — adding the newly
+//! parallel test to `.config/nextest.toml`'s `"num-cpus"` table — turns the
+//! guard green while creating one full-drain-then-cold-restart barrier PER
+//! CONVERTED TEST (see that table's comment for the measured 484-485 s
+//! cost of just one). So a `map_seeds` caller marked [`SIZED_SWEEP_MARKER`]
+//! is excluded from the scatter-sweep roster and moved to a THIRD,
+//! independent class instead — `.config/nextest.toml`'s `# class:
+//! sized-sweep` table, `threads-required = <a bounded integer>` rather than
+//! `"num-cpus"` — checked by its own two-directional guard,
+//! `the_sized_sweep_pin_names_exactly_the_batteries_marked_for_a_bounded_panel`.
+//!
+//! **This class started empty, and its guard says why that was acceptable
+//! here and would not have been for the two above** — see that guard's own
+//! doc comment rather than duplicating the reasoning in two places. Task 9
+//! then filled it: the table pins three names today, and the guard carries
+//! the same non-emptiness assert as the other two.
+//!
+//! **The detector-fragility residual named two sections up applied to THIS
+//! class too, and Task 9 resolved it by moving the helper rather than by
+//! accepting the risk.** `SWEEP_CALL` is matched as literal call text
+//! (`seed_sweep::map_seeds(`), and the helper it names used to live in
+//! `windows/lab/tests/seed_sweep/mod.rs` — a test-only module `windows/
+//! hearsay` and `windows/worldgen` tests could not reach (spec §8.1). Task 9
+//! moved it to `hornvale_worldgen::seed_sweep` (see that module's own doc
+//! comment for the reachability argument) — **and every caller, old and
+//! new, still imports it under the short name `seed_sweep` and calls
+//! `seed_sweep::map_seeds(...)`, so the literal text `SWEEP_CALL` matches is
+//! UNCHANGED by the move.** Nothing here needed updating as a result, which
+//! is itself worth recording: the risk this paragraph used to warn about
+//! (a silent detector blind spot from a respelled call) was avoided by
+//! construction, not discovered and patched. A FUTURE move that changes the
+//! import spelling (`use hornvale_worldgen::seed_sweep as sweep;`, say)
+//! would still need `SWEEP_CALL` updated in the same commit, or BOTH
+//! `internally_parallel_heavy_tests` and `sized_sweep_heavy_tests` go blind
+//! to every caller using the new spelling — silently for a sized-sweep
+//! conversion (that class tolerates zero matches by design, so a
+//! mis-spelled call just never shows up), loudly for the three existing
+//! scatter-sweep batteries (their names stay pinned in
+//! `.config/nextest.toml` while detection drops to zero, which is exactly
+//! the mismatch
+//! [`the_serialization_pin_names_exactly_the_batteries_that_scatter_their_sweeps`]'s
+//! non-emptiness assert exists to catch).
 
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -154,6 +206,157 @@ fn the_canonical_heavy_reason_states_no_duration() {
             && !CANONICAL.contains("second")
             && !CANONICAL.contains("hour"),
         "the canonical reason must not assert a duration: {CANONICAL}"
+    );
+}
+
+/// The frozen `heavy:` roster (The Governor, Task 7; spec §4 — "the `heavy:`
+/// tag is unpriced"). Each entry is `<repo-relative source path>::<fn
+/// name>` — see [`heavy_tagged_tests`] for why the path is part of the key.
+const FROZEN_HEAVY_ROSTER: &str = include_str!("../fixtures/heavy-roster.txt");
+
+/// Every `#[ignore = "..."]` test whose reason contains `heavy:`, keyed as
+/// `<repo-relative source path>::<fn name>` rather than the bare function
+/// name.
+///
+/// **Why the path is part of the key, not an afterthought.** A bare-name
+/// roster (`sort -u` over function names alone) is structurally blind to two
+/// tests in different files sharing a name — and this repo already has that
+/// hazard live: `windows/worldgen/tests/suite/deep_realm_substrate.rs` and
+/// `windows/worldgen/tests/suite/hollow_readout.rs` both define
+/// `report_cave_substrate` (the former's own doc comment calls out the
+/// coincidence). Neither is `heavy:`-tagged today, but a bare-name roster
+/// would silently collapse a future `heavy:` tag on one of them into an
+/// entry already satisfied by the other — hiding that a SECOND heavy
+/// battery had been added under cover of a name already on the list. Keying
+/// on the source path — necessarily unique, since two files cannot share a
+/// path — closes that hole without needing to replicate nextest's own
+/// `binary-id::module::fn` naming, which would require re-deriving
+/// crate/binary boundaries and any enclosing `mod tests { ... }` nesting
+/// from source text alone; the source path already carries strictly more
+/// disambiguating power than that scheme needs.
+///
+/// Scans every `.rs` file in the repo (mirroring [`ignore_reasons`] and
+/// [`internally_parallel_heavy_tests`]), matching only an `#[ignore = "..."]`
+/// line whose `fn` follows on the VERY NEXT line — the same single-line,
+/// no-intervening-attribute shape [`internally_parallel_heavy_tests`]
+/// already assumes for this tag. Verified by hand against every one of the
+/// `heavy:` sites in the tree while writing the fixture this checks against
+/// (63 at that moment; 64 since the campaign's final review restored
+/// `occupancy_readout_is_current`): all are single-line reasons with no
+/// attribute between `#[ignore = "..."]` and their `fn`.
+fn heavy_tagged_tests() -> Vec<String> {
+    let root = repo_root();
+    let mut sources = Vec::new();
+    collect_rs(&root, &mut sources);
+    sources.sort();
+
+    let mut found = Vec::new();
+    for path in sources {
+        let text = fs::read_to_string(&path).expect("source file is utf8");
+        let lines: Vec<&str> = text.lines().collect();
+        for (i, line) in lines.iter().enumerate() {
+            let trimmed = line.trim();
+            if !(trimmed.starts_with("#[ignore = \"") && trimmed.contains("heavy:")) {
+                continue;
+            }
+            let Some(next_trimmed) = lines.get(i + 1).map(|l| l.trim()) else {
+                continue;
+            };
+            let Some(rest) = next_trimmed.strip_prefix("fn ") else {
+                continue;
+            };
+            let Some((name, _)) = rest.split_once('(') else {
+                continue;
+            };
+            let rel = path
+                .strip_prefix(&root)
+                .expect("scanned path is under the repo root")
+                .to_string_lossy()
+                .replace('\\', "/");
+            found.push(format!("{rel}::{name}"));
+        }
+    }
+    found.sort();
+    found
+}
+
+/// The `heavy:` roster is exactly [`FROZEN_HEAVY_ROSTER`] — checked in BOTH
+/// directions, with its own anti-vacuity assertion, the same shape as
+/// [`the_untokenised_ignore_reasons_are_exactly_this_roster`] below and
+/// `test_binary_ratchet.rs::no_new_top_level_test_binary_appears`.
+///
+/// **THIS GUARD CATCHES THE ROSTER GROWING OR SHRINKING; IT DOES NOT PRICE
+/// ANY SINGLE ENTRY'S DURATION.** Nothing charged a `heavy:` tag before this
+/// (spec §4) — this closes exactly that gap and no more: adding one requires
+/// editing this committed fixture in the same commit, a deliberate,
+/// reviewable, visible diff, rather than a tag nobody sees. To add a test
+/// deliberately, append its `<path>::<fn>` line to
+/// `cli/tests/fixtures/heavy-roster.txt` in the same commit and say why in
+/// the message. To remove one — demoting it to `probe:` or deleting it —
+/// delete its line; this direction is checked too, so the roster cannot rot
+/// into a permission slip nobody re-reads.
+///
+/// **WHAT AN ADDITION NOW COSTS CHANGED UNDER DECISION 0426.** When this
+/// ratchet was written the tier ran only when a human typed `make
+/// heavy-remote`, so a new tag could only ever be made *visible* — a test no
+/// gate ran cost nobody anything. 0426 (The Governor, 2026-08-28) put `heavy`
+/// back on `scripts/sluice-run.sh`'s **merge** phase list, so a line appended
+/// here is charged to **every subsequent merge** on the one strictly serial
+/// box, forever. That is the coupling spec §4 wanted and could not have while
+/// the tier ran by hand. (Not the stage gate: 0426 leaves `stage_phases`
+/// alone, because heavy's live-vs-committed census-fixture check would red
+/// predictably for the whole middle of any world-touching campaign.)
+///
+/// It still prices **membership**, not duration — §4 chose a frozen roster
+/// over a wall-clock budget on purpose, because a committed baseline is a
+/// claim with a date and roster membership does not decay. 0426 records that
+/// as a named residual: the ~465.8 s figure that makes the phase affordable is
+/// exactly the quantity nothing ratchets.
+#[test]
+fn the_heavy_roster_is_exactly_this_fixture() {
+    let frozen: BTreeSet<String> = FROZEN_HEAVY_ROSTER
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .map(str::to_string)
+        .collect();
+    let found: BTreeSet<String> = heavy_tagged_tests().into_iter().collect();
+
+    assert!(
+        !found.is_empty(),
+        "found no heavy:-tagged test in the tree. Either every heavy battery was \
+         demoted (then FROZEN_HEAVY_ROSTER must be emptied deliberately, and this \
+         assertion updated to say so) or the scanner's #[ignore = \"...\"]/heavy: \
+         match broke — the one outcome this guard must never quietly reach."
+    );
+
+    let added: Vec<&String> = found.difference(&frozen).collect();
+    assert!(
+        added.is_empty(),
+        "new heavy:-tagged test(s) not in the frozen roster (spec §4, The \
+         Governor):\n{}\n\nSince decision 0426 the tier is a chamber phase again, so \
+         each of these is charged to EVERY subsequent merge. Append \
+         the line(s) to cli/tests/fixtures/heavy-roster.txt in the same commit and \
+         say why in the message.",
+        added
+            .iter()
+            .map(|p| format!("  {p}"))
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+
+    let stale: Vec<&String> = frozen.difference(&found).collect();
+    assert!(
+        stale.is_empty(),
+        "the frozen roster names heavy:-tagged test(s) that no longer exist as such:\n{}\n\n\
+         If they were demoted (e.g. to probe:) or deleted, remove their lines — this \
+         direction is checked so the roster cannot rot into a permission slip nobody \
+         re-reads.",
+        stale
+            .iter()
+            .map(|p| format!("  {p}"))
+            .collect::<Vec<_>>()
+            .join("\n")
     );
 }
 
@@ -251,16 +454,16 @@ fn the_canonical_heavy_reason_states_no_duration() {
 /// outside **both**: outside `preregistration_guard`'s path filter, and
 /// outside this file's adjudication unless its reason happens to carry a
 /// token. Four of the seven blind spots listed above are exactly that case.
-const EXPECTED_UNTOKENISED: [&str; 32] = [
+const EXPECTED_UNTOKENISED: [&str; 33] = [
     "...",
-    "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.6083 over 120 pairs, +0.19 SE from the 0.60 bar; four census epochs of one unchanged report read 0.5667, 0.6083, 0.6000 and 0.6083, all inside one SE of the bar, so the battery separates nothing)",
+    "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.6083 over 120 pairs, +0.19 SE from the 0.60 bar; five census epochs of one unchanged report read 0.5667, 0.6083, 0.6000, 0.6083 and 0.6083, all inside one SE of the bar, so the battery separates nothing)",
     "PREREGISTERED, not met: awaits BIO-gause-distinctness-vacuous (the corrected climate collapsed all three arms of the cv-ratio instrument - real 0.9945, goblin-niche-substituted 0.9964, width-only 0.9964 against 0.9747 when last authored - so the real gap 0.0055 no longer clears the 0.007 floor and the statistic can no longer separate human from a goblin-substituted human; lowering the floor would retune away the very vacuity it exists to announce)",
-    "PREREGISTERED, not met: awaits BIO-raid-partition-order-statistic (decision 0138; drow fell to 14/60 = 0.233 under the 0.30 raider floor when The Glasshouse corrected the climate and to 12/60 = 0.200 at The Underworld's close, denominator held at 60 both times, and the floor's stated mechanism - that the raid branch stopped running - is refuted by 12 live re-seats, so the floor is reading a post-epoch world at a pre-epoch scale)",
+    "PREREGISTERED, not met: awaits BIO-raid-partition-order-statistic (decision 0138; drow fell to 14/60 = 0.233 under the 0.30 raider floor when The Glasshouse corrected the climate, to 12/60 = 0.200 at The Underworld's close, and to 10/60 = 0.167 at The Granary's close (named at The Governor's close, 2026-08-28: eeaa011fd, BAKE stream epoch v2 -> v3), denominator held at 60 throughout, and the floor's stated mechanism - that the raid branch stopped running - is refuted by 10 live re-seats, so the floor is reading a post-epoch world at a pre-epoch scale)",
     "PREREGISTERED, not met: awaits BIO-rung-weighted-concentration (a stronghold-only axis reads relocation one rung down as suppression)",
     "PREREGISTERED, not met: awaits BIO-supply-drowns-niche (supply magnitude drowns the condition niche)",
-    "PREREGISTERED, not met: awaits CLIM-shelf-single-rung-threshold (an unmeasured 5% ceiling on shelf-only ocean cells; measured 5.85%, unremarkable against Earth's ~7-8% shelf fraction)",
+    "PREREGISTERED, not met: awaits CLIM-shelf-single-rung-threshold (an unmeasured 5% ceiling on shelf-only ocean vertices; measured 5.85%, unremarkable against Earth's ~7-8% shelf fraction)",
     "PREREGISTERED, not met: awaits LOC-riparian-dry-overlap (1 of 35 riparian rooms on seed 42 reads dry; the riparian noun and the dry clause are two different functions of moisture, which R-8's by-construction wording assumed away, and at n=1 a tolerance is indistinguishable from switching the test off)",
-    "PREREGISTERED, not met: awaits MAP-waterfall-threshold-mis-scaled (WATERFALL_MIN_DRAINAGE = 80 was calibrated on pre-epoch catchments; the sea-level epoch shortened drainage paths, so seed 42's loud cells fell 34 -> 16 against a floor of 17 and strong crossings 8 -> 2 against a floor of 4, and lowering either floor would delete the only instrument that noticed)",
+    "PREREGISTERED, not met: awaits MAP-waterfall-threshold-mis-scaled (WATERFALL_MIN_DRAINAGE = 80 was calibrated on pre-epoch catchments; the sea-level epoch shortened drainage paths, so seed 42's loud vertices fell 34 -> 16 against a floor of 17 and strong crossings 8 -> 2 against a floor of 4, and lowering either floor would delete the only instrument that noticed)",
     "PREREGISTERED, not met: awaits PROC-domesday-all-absent-blind-spot (5 zero-present-value columns are invisible to D2/D4 — stats::numeric returns None on an empty column)",
     "PREREGISTERED, not met: awaits TOOL-min-vs-max-separation-compares-an-overlap (decision 0134 retires it; the whole-roster Spearman rho, already asserted above, carries the direction)",
     "TODO: re-enable once the number settles",
@@ -273,6 +476,7 @@ const EXPECTED_UNTOKENISED: [&str; 32] = [
     "measurement: builds one full world; run explicitly with --ignored",
     "measurement: builds one world to BuildDepth::Terrain; run explicitly with --ignored",
     "one-shot before-arm capture (The Fathom, Task 4 Step 1); run by hand, not a standing regression test - see module doc",
+    "one-shot before-arm capture (The Sources, Task 9 Step 1); run by hand, not a standing regression test - see module doc",
     "readout: chronicle evidence, run manually with --nocapture",
     "regenerates the committed occupancy fixture; run by hand - the drift check above is the gate",
     "regenerates the committed repose exposure fixture; run by hand - the drift check above is the gate",
@@ -410,8 +614,9 @@ fn the_untokenised_ignore_reasons_are_exactly_this_roster() {
 
 // ============================================================================
 // The serialized-battery filters. `.config/nextest.toml` pins two DIFFERENT
-// classes of heavy test to `threads-required = "num-cpus"`, each in its own
-// override table, so each runs ALONE on the canonical box:
+// classes of heavy test to `threads-required = "num-cpus"` — the WHOLE
+// runner — each in its own override table, so each runs ALONE on the
+// canonical box:
 //
 //   scatter-sweep      three batteries that parallelise their own 200-seed
 //                      sweeps across every core (The Scatter) — pinned so
@@ -419,6 +624,18 @@ fn the_untokenised_ignore_reasons_are_exactly_this_roster() {
 //   wall-clock-budget  two cost-ceiling tests that cannot tell contention
 //                      from a regression on their own (The Ballast) — pinned
 //                      so the tier's OWN saturation does not redden them.
+//
+// A THIRD class, `sized-sweep` (The Governor, Task 8), pins
+// `threads-required = <a bounded integer>` instead — a panel-width
+// reservation for `map_seeds` callers that do NOT want the whole runner, so
+// they never drain it and never need front-loading either. Its own guard,
+// [`the_sized_sweep_pin_names_exactly_the_batteries_marked_for_a_bounded_panel`],
+// is below the two guards for the classes above, and its own doc comment
+// covers why its anti-vacuity check has a different shape than theirs. It is
+// not folded into the "two classes" language throughout the rest of this
+// section comment because everything below was written before it existed
+// and still describes those two accurately; the sized class's own functions
+// and guard are self-contained rather than threaded through this comment.
 //
 // `gate-full-heavy.sh` (now run by the `heavy` lane set — `make lane
 // SET=heavy REF=<full-sha>`, `make heavy-remote REF=<full-sha>`, or as a
@@ -443,6 +660,23 @@ fn the_untokenised_ignore_reasons_are_exactly_this_roster() {
 // cannot silently vanish from `make gate-full`. This is the same guard for
 // the same class of drift, one directory over — now applied to two classes
 // rather than one, each still checked in both directions.
+//
+// A THIRD MARKER, `front-loaded` (The Governor, Task 1), tags BOTH tables
+// above rather than adding a table of its own. `threads-required =
+// "num-cpus"` makes nextest drain the WHOLE runner before starting the
+// pinned test, then restart everything scheduled after it from cold — a
+// barrier tax measured at 484 s and 485 s on two runs of this tier, at
+// different SHAs, against a ~1068 s theoretical optimum on a 1552 s tier.
+// `priority = 100` (nextest 0.9.140, `i8`, higher runs earlier) makes
+// nextest schedule the reserving test FIRST instead, so the drain happens
+// once, at the start, instead of mid-run. Verified on a seven-test scratch
+// probe outside this repo (four cores): no `priority`, wall 10.076 s, the
+// reserving test completes 3rd; `priority = 100` on the reserving test and
+// `priority = 50` on the tier's next-longest test, wall 8.041 s, the
+// reserving test completes 1st. A positive control (`priority = 500`) is
+// rejected by nextest with `invalid type: 64-bit integer 500, expected an
+// signed 8 bit integer`, which is why the config parses `priority` as
+// `i8` at all rather than silently ignoring an out-of-range value.
 // ============================================================================
 
 /// Where the serialized-battery pins live.
@@ -451,10 +685,51 @@ const NEXTEST_CONFIG: &str = ".config/nextest.toml";
 /// The marker that makes an override a serialization pin.
 const THREADS_REQUIRED: &str = "threads-required = \"num-cpus\"";
 
-/// The call that makes a battery internally parallel — the property the
-/// scatter-sweep pin exists for. Matching the CALL (not the module) is
-/// deliberate: a test that merely mentions the helper in prose is not the
-/// thing that saturates a box.
+/// The setting prefix that opts a whole-runner test into scheduling FIRST
+/// (The Governor, Task 1) — checked as a live SETTING, mirroring
+/// [`THREADS_REQUIRED`], for the same reason: the `# class: front-loaded`
+/// marker COMMENT records intent, but only a live `priority = ` line
+/// carries it out. Found by mutation-testing this guard: deleting the real
+/// `priority = 100` line and leaving the marker comment and
+/// `threads-required` line untouched left the guard GREEN, because nothing
+/// checked for this line at all. Matched by prefix, not by parsing the
+/// `i8` value — this guard verifies a whole-runner test IS front-loaded,
+/// not that the chosen priority is well-chosen.
+const PRIORITY_SETTING_PREFIX: &str = "priority = ";
+
+/// Markers allowed to tag MORE THAN ONE override table (The Governor,
+/// Task 1). Every other marker must tag at most one table — the original,
+/// stricter invariant — because a duplicated table under the SAME marker is
+/// the copy-paste mistake that silently reintroduces an unprimed
+/// `threads-required` reservation: found by mutation-testing this guard,
+/// duplicating the `# class: scatter-sweep` table (same filter, same
+/// `threads-required`, no `priority`, no `front-loaded` tag on the copy)
+/// left the whole heavy_tier suite GREEN once per-marker uniqueness was
+/// dropped for every marker rather than just this one. `front-loaded` is
+/// the deliberate exception: it tags BOTH the scatter-sweep and
+/// wall-clock-budget tables, because every test that reserves the whole
+/// runner must be front-loaded and those two classes are what reserves it.
+///
+/// THIS LIST BINDS TWO STRUCTURALLY DIFFERENT PREDICATES TO ONE ALLOWLIST —
+/// "may tag multiple override tables" and "must carry a live `priority`
+/// setting" (see `requires_priority` in [`pinned_filter_names_for_class`]) —
+/// and they coincide today only because `front-loaded` is the sole marker
+/// with both properties. The sized-sweep class (The Governor, Task 8) needs
+/// NEITHER: one shared bounded width can serve every sized-sweep test in a
+/// single table (no barrier tax means no reason yet to split by width), and
+/// a bounded reservation never drains the whole runner, so there is nothing
+/// to front-load. So `sized-sweep` is deliberately NOT added here — the
+/// default (single table, no `priority` required) is already correct for
+/// it, and forcing it into this list for either property would grant it a
+/// behaviour it does not need and this test suite would then have to justify.
+const MARKERS_ALLOWING_MULTIPLE_TABLES: &[&str] = &["front-loaded"];
+
+/// The call that makes a battery internally parallel — the property BOTH
+/// the scatter-sweep pin and the sized-sweep pin exist for (The Governor,
+/// Task 8 split membership between the two by [`SIZED_SWEEP_MARKER`], not
+/// by a different call). Matching the CALL (not the module) is deliberate: a
+/// test that merely mentions the helper in prose is not the thing that
+/// saturates a box.
 const SWEEP_CALL: &str = "seed_sweep::map_seeds(";
 
 /// The doc-comment marker that opts a wall-clock budget test INTO serialized
@@ -466,14 +741,150 @@ const SWEEP_CALL: &str = "seed_sweep::map_seeds(";
 /// needs isolating.
 const CO_SCHEDULE_SENSITIVE_MARKER: &str = "nextest: co-schedule-sensitive";
 
+/// The doc-comment marker that opts a [`SWEEP_CALL`] caller OUT of the
+/// whole-runner scatter-sweep class and INTO the bounded sized-sweep class
+/// instead (The Governor, Task 8) — the mirror-image of
+/// [`CO_SCHEDULE_SENSITIVE_MARKER`]: that one pulls a test INTO serialized
+/// scheduling that would otherwise run unpinned; this one pulls a
+/// `map_seeds` caller OUT of the reservation it would otherwise default
+/// into. A test carrying this marker but never calling [`SWEEP_CALL`] pins
+/// nothing on its own — see [`map_seeds_callers`].
+const SIZED_SWEEP_MARKER: &str = "nextest: sized-sweep";
+
+/// The setting PREFIX shared by both forms `threads-required` can take —
+/// distinct from [`THREADS_REQUIRED`], which is the exact whole-runner
+/// STRING form. A `# class: sized-sweep` table's setting must start with
+/// this prefix but must NOT equal [`THREADS_REQUIRED`]: using the
+/// `"num-cpus"` string on the sized class would silently reproduce the
+/// whole-runner reservation the class exists to avoid — the exact "naive
+/// fix" trap this campaign's spec names explicitly (The Governor, Task 8).
+const THREADS_REQUIRED_PREFIX: &str = "threads-required = ";
+
+/// Which form of `threads-required` a class's override table(s) must carry
+/// — the whole-runner `"num-cpus"` string, or a bounded integer (The
+/// Governor, Task 8). Passed to [`pinned_filter_names_for_class`] so one
+/// scanner serves all three classes without silently accepting the wrong
+/// shape for any of them.
+enum ThreadsRequiredKind {
+    /// The exact [`THREADS_REQUIRED`] string — reserves the WHOLE runner.
+    WholeRunner,
+    /// Any live `threads-required = ` setting OTHER than [`THREADS_REQUIRED`]
+    /// — reserves a bounded number of slots, never the whole runner.
+    Bounded,
+}
+
+/// Where an override table starting at `start` (the index of its own
+/// `[[profile.default.overrides]]` header line) ENDS: the next such header,
+/// or the next `[profile.` SECTION header (e.g. `[profile.ci]`), whichever
+/// comes first — never simply "end of file" (The Governor, Task 9,
+/// precondition).
+///
+/// **The bug this replaces, and why it was latent rather than loud.** The
+/// original scan bounded every table at the next
+/// `[[profile.default.overrides]]` header only, via
+/// `block_starts.get(bi + 1).unwrap_or(lines.len())` — so the LAST override
+/// table's block ran all the way to end-of-file, silently absorbing
+/// whatever non-override content came after it. That was harmless while
+/// `# class: wall-clock-budget` was the last table in the file, because
+/// nothing below it (`[profile.ci]`, `[profile.heavy]`) carried a stray
+/// `filter = ` or `threads-required = ` line for the scan to mis-attribute.
+/// Task 8 made `# class: sized-sweep` the new last table, with those same
+/// two profiles still sitting below it — so the LATENT bug is still latent
+/// today, but the next profile section that happens to declare either
+/// setting (for an unrelated reason of its own) would silently corrupt the
+/// sized-sweep table's scan, and nothing would say so.
+fn override_table_end(lines: &[&str], start: usize) -> usize {
+    lines
+        .iter()
+        .enumerate()
+        .skip(start + 1)
+        .find(|(_, l)| {
+            let t = l.trim();
+            t == "[[profile.default.overrides]]" || t.starts_with("[profile.")
+        })
+        .map(|(i, _)| i)
+        .unwrap_or(lines.len())
+}
+
+/// The regression proof for [`override_table_end`]: a `[profile.*]` section
+/// appended after the last override table must never be folded into that
+/// table's scan, even though it is not itself another override header.
+///
+/// **Fails without the fix.** The old inline logic
+/// (`block_starts.get(bi + 1).unwrap_or(lines.len())`) has no notion of a
+/// `[profile.*]` boundary at all — with only one override header in this
+/// synthetic text, it would return `lines.len()` unconditionally, and the
+/// block would swallow `[profile.ci]` whole: the assertions below (no
+/// `[profile.ci]` line in the block, exactly one `filter = ` line) would
+/// both fail against that behaviour.
+#[test]
+fn override_table_end_stops_at_the_next_profile_section_not_just_eof() {
+    let text = "\
+[[profile.default.overrides]]
+# class: alpha
+filter = 'test(/a$/)'
+threads-required = 4
+
+[profile.ci]
+# a profile section appended after the last override table — its settings
+# must never be mistaken for the override table's own.
+filter = 'test(/stray$/)'
+threads-required = \"num-cpus\"
+";
+    let lines: Vec<&str> = text.lines().collect();
+    let start = lines
+        .iter()
+        .position(|l| l.trim() == "[[profile.default.overrides]]")
+        .expect("synthetic text has an override header");
+    let end = override_table_end(&lines, start);
+    let block = &lines[start..end];
+
+    assert!(
+        !block.iter().any(|l| l.trim() == "[profile.ci]"),
+        "the override table's bound must stop before the next `[profile.*]` \
+         section, not swallow it: {block:?}"
+    );
+    assert_eq!(
+        block
+            .iter()
+            .filter(|l| l.trim().starts_with("filter = "))
+            .count(),
+        1,
+        "exactly one `filter = ` line belongs to the override table itself; \
+         found in block {block:?}"
+    );
+}
+
 /// Extracts the sorted, deduped test names from the `filter = 'test(/…/) |
-/// …'` line inside the `.config/nextest.toml` override table tagged
+/// …'` line inside the `.config/nextest.toml` override table(s) tagged
 /// `# class: <marker>` — an INLINE marker line living INSIDE the
 /// `[[profile.default.overrides]]` table it identifies, not the banner
 /// comment above it, so the two `threads-required` tables The Ballast leaves
 /// behind cannot be confused with each other. Std-only string scanning —
 /// this workspace admits no TOML parser (decision 0004).
-fn pinned_filter_names_for_class(marker: &str) -> Vec<String> {
+///
+/// Every matched table must carry a live `threads-required` SETTING (never
+/// just a comment mentioning it) matching `kind` — the exact
+/// [`THREADS_REQUIRED`] string for [`ThreadsRequiredKind::WholeRunner`], or
+/// any OTHER live `threads-required = ` setting for
+/// [`ThreadsRequiredKind::Bounded`] (The Governor, Task 8 — a `Bounded`
+/// class whose table used the whole-runner string would silently reproduce
+/// the reservation it exists to avoid, so that exact value is rejected, not
+/// just any-value-accepted). A marker in [`MARKERS_ALLOWING_MULTIPLE_TABLES`]
+/// may tag more than one table — every other marker may tag at most one, or
+/// this panics — and for exactly those multiple-table markers, every matched
+/// table must ALSO carry a live `priority = ` setting (see
+/// [`PRIORITY_SETTING_PREFIX`]). The `i8` value itself is never inspected,
+/// only whether the line is present.
+///
+/// The `filter = ` line's TEST NAMES are extracted only from `test(/…/)`
+/// terms; a filter with none (nextest's `none()` predicate, the sized-sweep
+/// table's value while it has no members — see `.config/nextest.toml`'s
+/// comment) yields an empty roster rather than a parse failure, which is
+/// what makes a legitimately empty class distinguishable from a missing
+/// table: the table-existence and setting checks above still run and still
+/// panic on absence; only the NAME list is allowed to be empty.
+fn pinned_filter_names_for_class(marker: &str, kind: ThreadsRequiredKind) -> Vec<String> {
     let text = fs::read_to_string(repo_root().join(NEXTEST_CONFIG))
         .expect(".config/nextest.toml is readable");
     let class_line = format!("# class: {marker}");
@@ -490,98 +901,231 @@ fn pinned_filter_names_for_class(marker: &str) -> Vec<String> {
         "{NEXTEST_CONFIG} has no `[[profile.default.overrides]]` table at all"
     );
 
-    let mut target: Option<&[&str]> = None;
-    for (bi, &start) in block_starts.iter().enumerate() {
-        let end = block_starts.get(bi + 1).copied().unwrap_or(lines.len());
+    // A class marker may tag MORE THAN ONE override table only if it is
+    // listed in `MARKERS_ALLOWING_MULTIPLE_TABLES` (The Governor, Task 1;
+    // see that const's comment for why `front-loaded` is the one marker
+    // that needs this and why every other marker keeps the original,
+    // stricter one-table invariant).
+    let allows_multiple = MARKERS_ALLOWING_MULTIPLE_TABLES.contains(&marker);
+    let mut targets: Vec<&[&str]> = Vec::new();
+    for &start in &block_starts {
+        let end = override_table_end(&lines, start);
         let block = &lines[start..end];
         if block.iter().any(|l| l.trim() == class_line) {
             assert!(
-                target.is_none(),
+                allows_multiple || targets.is_empty(),
                 "more than one override table in {NEXTEST_CONFIG} is tagged \
-                 {class_line:?} — the marker must be unique per class"
+                 {class_line:?} — the marker must be unique per class (add it to \
+                 MARKERS_ALLOWING_MULTIPLE_TABLES if that is now deliberate). A \
+                 duplicated override table under the same marker is the copy-paste \
+                 mistake that silently reintroduces an unprimed reservation: the \
+                 stray copy inherits the marker and the filter but not necessarily \
+                 the settings that made the original one safe."
             );
-            target = Some(block);
+            targets.push(block);
         }
     }
-    let block = target.unwrap_or_else(|| {
-        panic!(
-            "no override table in {NEXTEST_CONFIG} is tagged {class_line:?}. The \
-             `{class_line}` marker line lives INSIDE the `[[profile.default.overrides]]` \
-             table it identifies (see this file's section comment)."
-        )
-    });
-
-    // SETTINGS ONLY, never comments. Found by mutation-testing this guard:
-    // deleting the real `threads-required` line left the check GREEN, because
-    // the section comment above the override quotes the setting verbatim while
-    // explaining it. A guard that a comment can satisfy is not a guard.
-    let settings: Vec<&str> = block
-        .iter()
-        .map(|l| l.trim())
-        .filter(|l| !l.starts_with('#') && !l.is_empty())
-        .collect();
     assert!(
-        settings.contains(&THREADS_REQUIRED),
-        "the {class_line:?} table in {NEXTEST_CONFIG} has no live {THREADS_REQUIRED:?} \
-         SETTING (a comment mentioning it does not count). The serialization pin for \
-         this class is GONE, which silently re-exposes it to canonical-box contention \
-         — see this file's section comment."
+        !targets.is_empty(),
+        "no override table in {NEXTEST_CONFIG} is tagged {class_line:?}. The \
+         `{class_line}` marker line lives INSIDE the `[[profile.default.overrides]]` \
+         table it identifies (see this file's section comment)."
     );
-    let filter_lines: Vec<&str> = settings
-        .iter()
-        .copied()
-        .filter(|l| l.starts_with("filter = ") && l.contains("test(/"))
-        .collect();
-    assert_eq!(
-        filter_lines.len(),
-        1,
-        "expected exactly one `filter = ` line naming tests in the {class_line:?} \
-         table of {NEXTEST_CONFIG}; found {}.",
-        filter_lines.len()
-    );
+
+    // Markers in MARKERS_ALLOWING_MULTIPLE_TABLES additionally certify a
+    // live `priority = ` setting per table, mirroring the THREADS_REQUIRED
+    // check below — see PRIORITY_SETTING_PREFIX's comment for why: the
+    // `# class: front-loaded` marker comment records intent, and only a
+    // live setting carries it out.
+    let requires_priority = allows_multiple;
 
     let mut names = Vec::new();
-    let mut rest = filter_lines[0];
-    while let Some((_, after)) = rest.split_once("test(/") {
-        let (name, tail) = after
-            .split_once("$/)")
-            .expect("a test(/…/) term in the filterset is end-anchored with `$/)`");
-        names.push(name.to_string());
-        rest = tail;
+    for block in targets {
+        // SETTINGS ONLY, never comments. Found by mutation-testing this guard:
+        // deleting the real `threads-required` line left the check GREEN, because
+        // the section comment above the override quotes the setting verbatim while
+        // explaining it. A guard that a comment can satisfy is not a guard.
+        let settings: Vec<&str> = block
+            .iter()
+            .map(|l| l.trim())
+            .filter(|l| !l.starts_with('#') && !l.is_empty())
+            .collect();
+        match kind {
+            ThreadsRequiredKind::WholeRunner => {
+                assert!(
+                    settings.contains(&THREADS_REQUIRED),
+                    "the {class_line:?} table in {NEXTEST_CONFIG} has no live \
+                     {THREADS_REQUIRED:?} SETTING (a comment mentioning it does not \
+                     count). The serialization pin for this class is GONE, which \
+                     silently re-exposes it to canonical-box contention — see this \
+                     file's section comment."
+                );
+            }
+            ThreadsRequiredKind::Bounded => {
+                let bounded = settings
+                    .iter()
+                    .find(|l| l.starts_with(THREADS_REQUIRED_PREFIX));
+                assert!(
+                    bounded.is_some(),
+                    "the {class_line:?} table in {NEXTEST_CONFIG} has no live \
+                     {THREADS_REQUIRED_PREFIX:?}<int> SETTING (a comment mentioning it \
+                     does not count). A sized-sweep table with no reservation at all \
+                     re-exposes its members to canonical-box contention exactly like a \
+                     missing whole-runner pin does."
+                );
+                assert_ne!(
+                    *bounded.expect("checked above"),
+                    THREADS_REQUIRED,
+                    "the {class_line:?} table in {NEXTEST_CONFIG} sets \
+                     {THREADS_REQUIRED:?} — the WHOLE-RUNNER value. That is exactly the \
+                     naive-fix trap this class exists to avoid: a bounded class must \
+                     reserve a bounded integer, never `\"num-cpus\"`, or every member \
+                     pays a full-drain barrier again."
+                );
+            }
+        }
+        if requires_priority {
+            assert!(
+                settings
+                    .iter()
+                    .any(|l| l.starts_with(PRIORITY_SETTING_PREFIX)),
+                "the {class_line:?} table in {NEXTEST_CONFIG} has no live \
+                 {PRIORITY_SETTING_PREFIX:?} SETTING (the `{class_line}` marker \
+                 comment does not count — see PRIORITY_SETTING_PREFIX's doc \
+                 comment). This test reserves the whole runner but is not \
+                 scheduled first, which reintroduces the drain-then-cold-restart \
+                 barrier tax this class exists to remove."
+            );
+        }
+        // NOT filtered on `.contains("test(/")` — a class may legitimately have
+        // no `test(/…/)` terms at all (nextest's `none()` predicate, the
+        // sized-sweep table's value while it has no members). The `filter = `
+        // line must still be present exactly once; the loop below simply
+        // extracts zero names from a filter that names none.
+        let filter_lines: Vec<&str> = settings
+            .iter()
+            .copied()
+            .filter(|l| l.starts_with("filter = "))
+            .collect();
+        assert_eq!(
+            filter_lines.len(),
+            1,
+            "expected exactly one `filter = ` line in the {class_line:?} \
+             table of {NEXTEST_CONFIG}; found {}.",
+            filter_lines.len()
+        );
+
+        let mut rest = filter_lines[0];
+        while let Some((_, after)) = rest.split_once("test(/") {
+            let (name, tail) = after
+                .split_once("$/)")
+                .expect("a test(/…/) term in the filterset is end-anchored with `$/)`");
+            names.push(name.to_string());
+            rest = tail;
+        }
     }
     names.sort();
+    names.dedup();
     names
 }
 
 /// The scatter-sweep class's pinned roster (The Scatter).
 fn serialized_filter_names() -> Vec<String> {
-    pinned_filter_names_for_class("scatter-sweep")
+    pinned_filter_names_for_class("scatter-sweep", ThreadsRequiredKind::WholeRunner)
 }
 
 /// The wall-clock-budget class's pinned roster (The Ballast).
 fn budget_filter_names() -> Vec<String> {
-    pinned_filter_names_for_class("wall-clock-budget")
+    pinned_filter_names_for_class("wall-clock-budget", ThreadsRequiredKind::WholeRunner)
 }
 
-/// Every heavy-tagged test whose body calls [`SWEEP_CALL`] — i.e. every heavy
-/// battery that parallelises its own seed sweep and therefore MUST be pinned.
+/// The sized-sweep class's pinned roster (The Governor, Task 8) — a bounded
+/// `threads-required` integer rather than the whole-runner string, so this
+/// is the one caller of [`pinned_filter_names_for_class`] passing
+/// [`ThreadsRequiredKind::Bounded`]. It was empty on the tree Task 8 landed
+/// on — `.config/nextest.toml`'s table pinned `filter = 'none()'`,
+/// deliberately — and Task 9 then gave it its three members
+/// (`the_blast_radius_readout`,
+/// `is_the_raid_proxy_ambiguous_or_is_its_population_stale`,
+/// `zero_dispersion_collapses_between_settlement_variance`). The roster of
+/// record is that table, never this comment; see
+/// [`the_sized_sweep_pin_names_exactly_the_batteries_marked_for_a_bounded_panel`]'s
+/// doc comment for why an empty roster was the correct state then and is not
+/// now.
+fn sized_filter_names() -> Vec<String> {
+    pinned_filter_names_for_class("sized-sweep", ThreadsRequiredKind::Bounded)
+}
+
+/// Every test that reserves the whole runner — the union of both
+/// `threads-required = "num-cpus"` classes above (The Governor, Task 1).
+/// Built from [`serialized_filter_names`] and [`budget_filter_names`]
+/// unchanged, so it is exactly "whichever named classes reserve the
+/// runner today", not a blanket scan of the config file.
+fn whole_runner_filter_names() -> Vec<String> {
+    let mut names = serialized_filter_names();
+    names.extend(budget_filter_names());
+    names.sort();
+    names.dedup();
+    names
+}
+
+/// The `front-loaded` class's pinned roster (The Governor, Task 1): every
+/// test given a `priority` so nextest starts it before draining the runner
+/// for it mid-tier. Unlike the two classes above, this marker tags BOTH the
+/// scatter-sweep and wall-clock-budget tables — see
+/// [`pinned_filter_names_for_class`]'s comment on why that is safe.
+fn front_loaded_filter_names() -> Vec<String> {
+    pinned_filter_names_for_class("front-loaded", ThreadsRequiredKind::WholeRunner)
+}
+
+/// Every heavy/probe-tagged test whose body calls [`SWEEP_CALL`], paired
+/// with whether its doc comment ALSO carries [`SIZED_SWEEP_MARKER`] — the
+/// single scan [`internally_parallel_heavy_tests`] and
+/// [`sized_sweep_heavy_tests`] both build on (The Governor, Task 8), so the
+/// one subtle piece of state tracking here — the marker is written in the
+/// doc comment ABOVE `#[test]`/`#[ignore]`/`fn`, but must still be readable
+/// while scanning the test's BODY below `fn`, which is a different span than
+/// [`co_schedule_sensitive_heavy_tests`]'s marker (consumed immediately, at
+/// the `fn` line) — is written and gets-it-right exactly once. The marker is
+/// snapshotted into `current_is_sized` AT the `fn` line (alongside `current`
+/// itself), then the accumulating flag resets so a later, unrelated test's
+/// doc comment cannot inherit it.
 ///
 /// Line-oriented, matching `gate-full-heavy.sh`'s own grep-based discovery, so
 /// the two agree about what a heavy test is. A heavy `#[ignore]` tag sits
 /// directly above its `fn`; a test's region runs from that `fn` to the next
 /// `#[test]` attribute or end of file.
-fn internally_parallel_heavy_tests() -> Vec<String> {
+///
+/// **Consequence: a [`SWEEP_CALL`] inside a HELPER defined ABOVE the test is
+/// invisible.** `current` only becomes `Some(name)` at the test's own `fn`
+/// line, so a call textually earlier in the file — inside a helper the test
+/// happens to invoke — is scanned while `current` is still `None` or names an
+/// unrelated earlier test, and is silently never attributed to this test at
+/// all (The Governor, Task 9; found converting
+/// `tolerance_mutation.rs::zero_dispersion_collapses_between_settlement_
+/// variance`, whose sweep originally lived in a `population` helper defined
+/// earlier in the file). The fix is not to widen this scanner — it is to
+/// inline the `map_seeds` call into the test body, the shape every other
+/// caller in this tree already uses. See
+/// [`the_sized_sweep_pin_names_exactly_the_batteries_marked_for_a_bounded_panel`]'s
+/// failure message, which names this before it names dropping the pin.
+fn map_seeds_callers() -> Vec<(String, bool)> {
     let mut sources = Vec::new();
     collect_rs(&repo_root(), &mut sources);
     sources.sort();
 
-    let mut found = Vec::new();
+    let mut found: Vec<(String, bool)> = Vec::new();
     for path in sources {
         let text = fs::read_to_string(&path).expect("source file is utf8");
         let mut next_fn_is_heavy = false;
+        let mut marker_seen = false;
         let mut current: Option<String> = None;
+        let mut current_is_sized = false;
         for line in text.lines() {
             let trimmed = line.trim();
+            if trimmed.contains(SIZED_SWEEP_MARKER) {
+                marker_seen = true;
+            }
             if trimmed.starts_with("#[test]") {
                 current = None;
             }
@@ -605,18 +1149,51 @@ fn internally_parallel_heavy_tests() -> Vec<String> {
                 && let Some((name, _)) = rest.split_once('(')
             {
                 current = next_fn_is_heavy.then(|| name.to_string());
+                current_is_sized = marker_seen;
                 next_fn_is_heavy = false;
+                marker_seen = false;
                 continue;
             }
             if line.contains(SWEEP_CALL)
                 && let Some(name) = &current
-                && !found.contains(name)
+                && !found.iter().any(|(n, _)| n == name)
             {
-                found.push(name.clone());
+                found.push((name.clone(), current_is_sized));
             }
         }
     }
     found.sort();
+    found
+}
+
+/// Every heavy/probe battery that parallelises its own seed sweep and is
+/// NOT marked [`SIZED_SWEEP_MARKER`] — i.e. the batteries that MUST reserve
+/// the whole runner (The Scatter). A [`SWEEP_CALL`] caller carrying the
+/// marker is deliberately excluded here: it belongs to
+/// [`sized_sweep_heavy_tests`] instead (The Governor, Task 8).
+fn internally_parallel_heavy_tests() -> Vec<String> {
+    let mut found: Vec<String> = map_seeds_callers()
+        .into_iter()
+        .filter(|(_, is_sized)| !is_sized)
+        .map(|(name, _)| name)
+        .collect();
+    found.sort();
+    found.dedup();
+    found
+}
+
+/// Every heavy/probe battery that parallelises its own seed sweep AND is
+/// marked [`SIZED_SWEEP_MARKER`] — the bounded-panel counterpart of
+/// [`internally_parallel_heavy_tests`] (The Governor, Task 8). Empty until
+/// Task 9 marks its first conversion.
+fn sized_sweep_heavy_tests() -> Vec<String> {
+    let mut found: Vec<String> = map_seeds_callers()
+        .into_iter()
+        .filter(|(_, is_sized)| *is_sized)
+        .map(|(name, _)| name)
+        .collect();
+    found.sort();
+    found.dedup();
     found
 }
 
@@ -673,6 +1250,14 @@ fn co_schedule_sensitive_heavy_tests() -> Vec<String> {
 /// processes against a box whose batteries each want forty worker threads,
 /// and the first thing anyone sees is a wall-clock budget test going red for
 /// reasons that have nothing to do with the code it measures.
+///
+/// A [`SWEEP_CALL`] caller marked [`SIZED_SWEEP_MARKER`] is EXCLUDED from
+/// `internally_parallel_heavy_tests` (The Governor, Task 8) — it belongs to
+/// the sized-sweep class checked below instead, by
+/// [`the_sized_sweep_pin_names_exactly_the_batteries_marked_for_a_bounded_panel`].
+/// A newly-converted, unmarked `map_seeds` caller still lands HERE by
+/// default and still demands `"num-cpus"` — the marker is an opt-OUT into
+/// the bounded class, not a silent default.
 #[test]
 fn the_serialization_pin_names_exactly_the_batteries_that_scatter_their_sweeps() {
     let pinned = serialized_filter_names();
@@ -733,5 +1318,113 @@ fn the_serialization_pin_names_exactly_the_wall_clock_budget_tests_marked_co_sch
          schedules the unpinned budget test alongside the rest of the tier, and it \
          may fail under contention for reasons that have nothing to do with the code \
          it measures."
+    );
+}
+
+/// The sized-sweep pin's roster is exactly the set of heavy/probe batteries
+/// marked [`SIZED_SWEEP_MARKER`] that also call [`SWEEP_CALL`] — the third
+/// guard, the same two-directional shape as the two above (The Governor,
+/// Task 8).
+///
+/// **NOW CARRIES THE SAME NON-EMPTINESS ASSERT AS THE OTHER TWO, SINCE THE
+/// GAP THIS PARAGRAPH USED TO DESCRIBE CLOSED (The Governor, Task 9).** At
+/// the commit that introduced this class (Task 8) it deliberately omitted
+/// `assert!(!sized.is_empty(), …)`: both sides of the comparison below were
+/// genuinely, correctly empty, and reusing the other two guards' belt would
+/// have failed the guard on arrival, before there was anything to guard —
+/// the exact trap that task's brief warned against. Task 9 landed the
+/// class's first real member (`warren_readout.rs::the_blast_radius_readout`,
+/// this campaign's own pole test, and two more after it), so "empty" stopped
+/// being this class's
+/// correct, default state, and the belt is added now exactly as that
+/// earlier version of this comment said a future editor should.
+///
+/// **"EMPTY" WAS DISTINGUISHABLE FROM "THE CLASS WAS DELETED" EVEN BEFORE
+/// THIS CHANGE, AND THAT DISTINCTION IS STILL WHAT PART OF THIS GUARD LEANS
+/// ON** — the same fixture-vs-source shape
+/// [`the_heavy_roster_is_exactly_this_fixture`] uses a committed file for,
+/// done here with the config table itself as the fixture:
+/// - **The override table's existence is hard-required**, non-emptiness
+///   assert or not. [`pinned_filter_names_for_class`] panics if no table in
+///   `.config/nextest.toml` carries `# class: sized-sweep`, or if it has no
+///   live `threads-required = <int>` setting, or if that setting is the
+///   whole-runner `"num-cpus"` string — so deleting the class outright, or
+///   quietly reintroducing the naive-fix trap, both still fail loudly with
+///   nothing else touched.
+/// - **The two-way equality below is checked first**, so a name added to
+///   only one side is always caught with a precise diff, before the
+///   coarser non-emptiness assert would even have a chance to fire.
+#[test]
+fn the_sized_sweep_pin_names_exactly_the_batteries_marked_for_a_bounded_panel() {
+    let pinned = sized_filter_names();
+    let sized = sized_sweep_heavy_tests();
+
+    assert!(
+        !sized.is_empty(),
+        "found no heavy/probe test carrying {SIZED_SWEEP_MARKER:?} alongside a \
+         {SWEEP_CALL:?} call. Either the marker was renamed (update \
+         SIZED_SWEEP_MARKER) or this guard is now asserting nothing — which is \
+         the one outcome it must never quietly reach. (This assert was \
+         deliberately absent while the class was empty by design — see this \
+         test's doc comment for when and why it was added.)"
+    );
+    assert_eq!(
+        pinned, sized,
+        "\n{NEXTEST_CONFIG}'s sized-sweep filter and the set of heavy/probe \
+         batteries marked {SIZED_SWEEP_MARKER:?} have diverged.\n  pinned in \
+         config: {pinned:?}\n  marked in source: {sized:?}\nIf a name is \
+         pinned but not found in source, check whether its `{SWEEP_CALL:?}` \
+         call lives in a HELPER defined above the test rather than in the \
+         test body itself — `map_seeds_callers` cannot see it there (see that \
+         function's own doc comment), and inlining the call into the test is \
+         the fix, NOT dropping the name from the filter: the name is real and \
+         still needs its reservation. Only once the call is confirmed gone \
+         (or never existed) does dropping it apply. Otherwise add the missing \
+         name(s) to the `filter = ` line in the `# class: sized-sweep` table. \
+         Left alone this does NOT redden on its own: nextest either schedules \
+         an unpinned sized-sweep battery without any reservation at all, or \
+         keeps reserving slots for a battery that no longer needs them."
+    );
+}
+
+/// Every test that reserves the whole runner must also be front-loaded, and
+/// nothing else may be.
+///
+/// PRECISELY WHAT IS CHECKED, SO THIS CANNOT BE MISREAD AS EITHER MORE OR
+/// LESS THAN IT IS: `front_loaded_filter_names()` only admits a table into
+/// its roster if it carries a live `priority = ` SETTING line — a
+/// `# class: front-loaded` marker COMMENT alone gets the table rejected by
+/// `pinned_filter_names_for_class` before this test ever runs (see
+/// [`PRIORITY_SETTING_PREFIX`]). So PRESENCE of a `priority` setting on
+/// every whole-runner test IS checked, both by construction (a table
+/// without one cannot contribute to `front_loaded`, so it would make
+/// `reserving` and `front_loaded` diverge) and directly. What is NOT
+/// checked is the priority VALUE — this does not assert `100`, or any
+/// particular number, or that a lower-priority test hasn't been given a
+/// HIGHER one; it asserts set EQUALITY between the `threads-required =
+/// "num-cpus"` roster and the roster of tables that live-set `priority`.
+///
+/// WHY: a `threads-required = "num-cpus"` test that is not front-loaded makes
+/// nextest drain the entire runner mid-run and restart the remainder cold.
+/// Measured on the canonical box, twice, at different SHAs: a 484-485 s
+/// barrier tax on a 1551 s tier.
+#[test]
+fn every_whole_runner_test_is_front_loaded() {
+    let reserving = whole_runner_filter_names();
+    let front_loaded = front_loaded_filter_names();
+
+    assert!(
+        !reserving.is_empty(),
+        "found no test reserving the whole runner in {NEXTEST_CONFIG}. Either \
+         the roster emptied (then this guard asserts nothing) or the key was \
+         renamed — the one outcome it must never quietly reach."
+    );
+    assert_eq!(
+        reserving, front_loaded,
+        "\n{NEXTEST_CONFIG}: the whole-runner roster and the front-loaded \
+         roster have diverged.\n  reserves the runner: {reserving:?}\n  \
+         front-loaded:        {front_loaded:?}\nA reserving test that is not \
+         front-loaded costs a full drain plus a cold restart of everything \
+         scheduled after it."
     );
 }

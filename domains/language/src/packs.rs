@@ -20,6 +20,145 @@ use hornvale_kernel::{
     RegistryError, Void,
 };
 
+/// The `eat` concept's id.
+///
+/// Named once so the pack entry that REGISTERS the concept and the Common
+/// construction that REALIZES it cannot drift apart — the same discipline
+/// `hornvale_kernel::world::IS_A` carries for the classification, applied at
+/// the layer that actually owns this concept. A future epoch bump must break
+/// the render rather than recompile cleanly and panic at every call site.
+/// type-audit: bare-ok(identifier-text)
+pub const EAT: &str = "eat";
+
+/// The `kill` concept's id.
+///
+/// Named for the same reason [`EAT`] is: the pack entry that REGISTERS the
+/// concept and the `clause::PREDICATE_VALENCE` row that REALIZES it must
+/// not drift apart, and a future epoch bump must break the render
+/// rather than recompile cleanly and panic at every call site.
+///
+/// **It is the causative of the core `die`, and it creates no obligation to
+/// implement combat.** `ConceptKind::Act`'s reconciliation runs in exactly
+/// one direction — `cli/src/concepts.rs`'s `orphan_acts` walks
+/// `Action::all()` and reports acts that no concept names, so it is
+/// structurally blind to a concept with no action. `kill` enters as
+/// vocabulary: the world gains the ability to *say* it long before anything
+/// can *do* it.
+/// type-audit: bare-ok(identifier-text)
+pub const KILL: &str = "kill";
+
+/// The `know` concept's id.
+///
+/// Named for the same reason [`EAT`] and [`KILL`] are: the pack row that
+/// REGISTERS the concept (in [`action_suite_pack`]) and the
+/// `clause::PREDICATE_VALENCE` row that REALIZES it must not drift apart.
+/// Before this constant existed the pack row was a bare `"know"` literal and
+/// `PREDICATE_VALENCE` had no row for it at all — `realize_common` panicked
+/// with "Common has no construction for predicate \"know\"" the moment a
+/// caller tried, which is the red `cli/tests/suite/sentence_corpus.rs`'s
+/// `every_covered_entry_realizes_in_common` witness exists to catch.
+/// type-audit: bare-ok(identifier-text)
+pub const KNOW: &str = "know";
+
+/// The `think` concept's id.
+///
+/// Named for the same reason [`EAT`], [`KILL`], and [`KNOW`] are: the pack
+/// row that REGISTERS the concept (in [`universal_stratum`]) and the
+/// `clause::PREDICATE_VALENCE` row that REALIZES it must not drift apart.
+///
+/// **Placed in the universal stratum, not beside [`KNOW`] in
+/// [`action_suite_pack`].** `know`'s exposure-gated placement rests on an
+/// UNRESOLVED question — `action_suite_pack`'s own doc says a culture's
+/// exposure to literacy, cartography, or reading another's state is a
+/// question it does not resolve (registry row
+/// `LANG-in-character-acts-are-unspeakable`). `think` has no such gate:
+/// the same reasoning [`KILL`]'s doc gives — no biome, climate, or
+/// perception ladder a people's word for a private mental act could hang
+/// off — applies to `think` and not to `know`. The consequence is a real,
+/// named asymmetry, not an oversight: *"I think…"* (m09) realizes in every
+/// tongue; *"I don't know…"* (m06) still gaps in all of them, because
+/// `know` was deliberately left where it is (out of scope for this task —
+/// moving it belongs to a future campaign, would shift exposure and
+/// byte-goldens, and is not this decision to make).
+/// type-audit: bare-ok(identifier-text)
+pub const THINK: &str = "think";
+
+/// The `sleep` concept's id.
+///
+/// Named for the same reason [`EAT`], [`KILL`], [`KNOW`] and [`THINK`] are:
+/// the pack row that REGISTERS the concept and the
+/// `clause::PREDICATE_VALENCE` row that REALIZES it must not drift apart.
+///
+/// **It adds no pack entry.** `sleep` has been in [`universal_stratum`]
+/// since long before this campaign — it is Swadesh-core and needs no
+/// exposure gate — so this constant names an existing registration rather
+/// than creating one. That is why The Rail registers no concept and moves
+/// no keystone golden.
+/// type-audit: bare-ok(identifier-text)
+pub const SLEEP: &str = "sleep";
+
+/// The `old` concept's id.
+///
+/// Named for the same reason [`EAT`], [`KILL`], [`KNOW`], [`THINK`] and
+/// [`SLEEP`] are: the pack row that REGISTERS the concept and the
+/// `clause::PREDICATE_VALENCE` row that REALIZES it must not drift apart.
+///
+/// **It adds no pack entry, the same way [`SLEEP`]'s doc explains for
+/// itself.** `old` has been in [`universal_stratum`] since long before this
+/// campaign (`ConceptKind::Quality`, alongside `new`, `great`, `high`,
+/// `low` and `little`), so this constant names an existing registration
+/// rather than creating one.
+///
+/// **It stands in for the rung's own `long`.** `r003`'s authored text is
+/// *"The road is long"*, and `long` is not a registered concept anywhere in
+/// this crate — registering it would move `world-seed-42.json`, a
+/// byte-golden `make rebaseline` cannot write, and Task 0 established that
+/// this campaign registers no concept. `old` is the substitution, recorded
+/// again at its witness (`cli/tests/suite/sentence_corpus.rs`'s
+/// `ladder_construction`, `"r003"` arm) the same way `r006`'s witness
+/// records `kill` standing in for the unregistered `strike`.
+/// type-audit: bare-ok(identifier-text)
+pub const OLD: &str = "old";
+
+/// The `under` concept's id.
+///
+/// Named for the same reason [`EAT`], [`KILL`], [`KNOW`], [`THINK`],
+/// [`SLEEP`] and [`OLD`] are: the pack row that REGISTERS the concept and
+/// the `clause::PREDICATE_VALENCE` row that REALIZES it must not drift
+/// apart.
+///
+/// **It adds no pack entry, the same way [`SLEEP`]'s and [`OLD`]'s docs
+/// explain for themselves.** `under` has been in [`universal_stratum`]
+/// since long before this campaign (`ConceptKind::Quality`, doc "beneath;
+/// below"), so this constant names an existing registration rather than
+/// creating one.
+///
+/// **It stands in for the rung's own `at`.** `r005`'s authored text is
+/// *"The merchant is at the gate."*, and neither `at` nor `gate` is a
+/// registered concept anywhere in this crate — registering either would
+/// move `world-seed-42.json`, a byte-golden `make rebaseline` cannot write,
+/// and Task 0 established that this campaign registers no concept. `under`
+/// and `tree` are the substitution, recorded again at their witness
+/// (`cli/tests/suite/sentence_corpus.rs`'s `ladder_construction`, `"r005"`
+/// arm) the same way `r003`'s witness records `old` standing in for the
+/// unregistered `long`, and `r006`'s records `kill` for `strike`.
+///
+/// **Its registry KIND is a second, quieter compromise, recorded here so it
+/// is not rediscovered.** `under` is a `ConceptKind::Quality` — the same
+/// kind [`OLD`] carries, and [`OLD`] is the crate's only
+/// `Valence::Property` predicate. An adposition is not a quality, and in a
+/// registry designed around this crate's needs it would carry a kind of its
+/// own; it carries `Quality` because the no-new-concept constraint above
+/// forced the choice to be made from the kinds `universal_stratum` already
+/// had, and `Quality` was the nearest. **Nothing checks kind against
+/// valence.** The only thing separating a locative relation from a property
+/// word in this crate is `clause::PREDICATE_VALENCE`'s two rows, so a
+/// reader who infers valence from `ConceptKind` will infer it wrongly for
+/// exactly this concept. A campaign free to move `world-seed-42.json` could
+/// register an adposition kind and delete this paragraph.
+/// type-audit: bare-ok(identifier-text)
+pub const UNDER: &str = "under";
+
 /// One entry in a vocabulary pack: a concept id, its broad category, a doc,
 /// and its rank on whichever acquisition ladder it belongs to (0 for
 /// entries outside any ladder — always in the lexicon once the pack is
@@ -116,13 +255,13 @@ pub fn universal_stratum() -> &'static [PackEntry] {
             ladder_rank: 0,
         },
         PackEntry {
-            concept: "eat",
+            concept: EAT,
             kind: ConceptKind::Act,
             doc: "to consume food",
             ladder_rank: 0,
         },
         PackEntry {
-            concept: "sleep",
+            concept: SLEEP,
             kind: ConceptKind::Act,
             doc: "to rest unconscious",
             ladder_rank: 0,
@@ -131,6 +270,33 @@ pub fn universal_stratum() -> &'static [PackEntry] {
             concept: "die",
             kind: ConceptKind::Act,
             doc: "to cease living",
+            ladder_rank: 0,
+        },
+        // The causative of `die` above, and Swadesh-core on the same list
+        // that put `die` here. Universal stratum rather than a gated pack:
+        // there is no biome, climate or perception ladder a people's word
+        // for killing could hang off, so gating it would be authoring a
+        // silence rather than deriving one. `ladder_rank: 0` follows from
+        // the stratum — every member is unranked and unconditionally in.
+        PackEntry {
+            concept: KILL,
+            kind: ConceptKind::Act,
+            doc: "to cause to cease living",
+            ladder_rank: 0,
+        },
+        // The epistemic-hedge predicate (m09, "I think her name was
+        // Gilda"). Universal stratum rather than beside `know` in
+        // `action_suite_pack`: `know`'s exposure gate is an acknowledged
+        // open question (registry row
+        // `LANG-in-character-acts-are-unspeakable`), not a principled
+        // placement, and there is no biome, climate or perception ladder a
+        // people's word for thinking could hang off — the same argument
+        // `KILL` above already carries. `ladder_rank: 0` follows from the
+        // stratum for the same reason `KILL`'s does.
+        PackEntry {
+            concept: THINK,
+            kind: ConceptKind::Act,
+            doc: "to hold an uncertain belief",
             ladder_rank: 0,
         },
         PackEntry {
@@ -234,13 +400,13 @@ pub fn universal_stratum() -> &'static [PackEntry] {
             ladder_rank: 0,
         },
         PackEntry {
-            concept: "old",
+            concept: OLD,
             kind: ConceptKind::Quality,
             doc: "long in existence",
             ladder_rank: 0,
         },
         PackEntry {
-            concept: "under",
+            concept: UNDER,
             kind: ConceptKind::Quality,
             doc: "beneath; below",
             ladder_rank: 0,
@@ -628,7 +794,7 @@ pub fn action_suite_pack() -> &'static [(&'static str, &'static str)] {
         ),
         ("sense", "to perceive another's felt bodily state — `needs`"),
         (
-            "know",
+            KNOW,
             "to hold something in memory or understanding — `knows`",
         ),
         ("wait", "to let time pass without acting — `wait`"),
@@ -725,6 +891,81 @@ pub fn is_extradiegetic(concept: &str) -> bool {
     extradiegetic_pack()
         .iter()
         .any(|(name, _)| *name == concept)
+}
+
+/// The six felt states a creature can undergo, one per region of the vessel
+/// window's valence x arousal circumplex (`AffectLabel`, spec §7):
+/// `content`/`eager` (positive), `searching` (neutral seeking), `frustrated`/
+/// `lost` (the two negative shapes — a known target out of reach versus no
+/// target to move toward), and `helpless` (the persistent scar the other two
+/// upgrade into). `(concept, doc)` pairs, registered directly by
+/// [`register_concepts`] under [`hornvale_kernel::ConceptKind::Affect`],
+/// deliberately NOT chained into any Swadesh pack: nothing today grants a
+/// culture `ExposureClass::Steeped` or `KnowsOf` over another creature's felt
+/// state, so each registers an honest `Void::Gap` lexeme, the same footing
+/// [`action_suite_pack`] uses and for the same reason.
+///
+/// `hornvale_language` cannot import `AffectLabel` itself — it lives in
+/// `windows/vessel`, a window, and a domain depends on the kernel and
+/// nothing else (`domains/CLAUDE.md`'s one rule). The two rosters are kept
+/// in step by a test in `windows/vessel`, which already depends on this
+/// crate, rather than by an import running the wrong way across the
+/// kernel -> domains -> windows layering.
+/// type-audit: bare-ok(identifier-text)
+pub fn felt_state_pack() -> &'static [(&'static str, &'static str)] {
+    &[
+        ("content", "positive, low arousal: needs met, at rest"),
+        (
+            "eager",
+            "positive, high arousal: chasing a satisfiable need",
+        ),
+        (
+            "frustrated",
+            "negative: blocked with a known target out of reach",
+        ),
+        (
+            "helpless",
+            "negative and persistent: given up despite an active drive",
+        ),
+        ("lost", "negative: blocked with no target to move toward"),
+        ("searching", "neutral, mid arousal: seeking with a gradient"),
+    ]
+}
+
+/// The five object properties an anchor may carry (`ObjectProperty`, The
+/// Offer, spec §3.1/§3.3/§8/§12): what an object OFFERS, independent of any
+/// verb that reads it — `supports-rest` (a place a body may lie down and
+/// sleep), `holds-liquid` (a place a body may drink from), `affords-passage`
+/// (a seam between two rooms a body may pass through), `encloses` (an anchor
+/// that reveals what lies within it), `radiates-heat` (an anchor that emits
+/// warmth). `(concept, doc)` pairs, registered directly by
+/// [`register_concepts`] under [`hornvale_kernel::ConceptKind::Quality`]
+/// (its definition is already "an abstract property or attribute", the fit
+/// The Offer's G3 ruling names for a property a thing HAS, spec §12) —
+/// deliberately NOT chained into any Swadesh pack, the same footing
+/// [`felt_state_pack`] uses and for the same reason: nothing today grants a
+/// culture `ExposureClass::Steeped` or `KnowsOf` over an object's carried
+/// property, so each registers an honest `Void::Gap` lexeme.
+///
+/// `hornvale_language` cannot import `ObjectProperty` itself — it lives in
+/// `windows/vessel`, a window, and a domain depends on the kernel and
+/// nothing else (`domains/CLAUDE.md`'s one rule). The two rosters are kept
+/// in step by a test in `windows/vessel`, which already depends on this
+/// crate, rather than by an import running the wrong way across the
+/// kernel -> domains -> windows layering — the exact shape
+/// `felt_state_pack`'s own doc explains for `AffectLabel`.
+/// type-audit: bare-ok(identifier-text)
+pub fn object_property_pack() -> &'static [(&'static str, &'static str)] {
+    &[
+        (
+            "affords-passage",
+            "a seam between two rooms a body may pass through",
+        ),
+        ("encloses", "an anchor that reveals what lies within it"),
+        ("holds-liquid", "a place a body may drink from"),
+        ("radiates-heat", "an anchor that emits warmth"),
+        ("supports-rest", "a place a body may lie down and sleep"),
+    ]
 }
 
 /// Input to [`in_ladder`]: how many acquisition-ladder stages are unlocked,
@@ -858,6 +1099,56 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
             percept: Correspondent::Absent(Void::Imperceptible(
                 "the world never emits this as a phenomenon; it has no in-world referent",
             )),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })?;
+    }
+
+    // The six felt states (The Confidant, Task 3): honest `Void::Gap`
+    // lexemes for the same reason the action suite's in-character concepts
+    // get one — nothing grants any of these `Steeped`/`KnowsOf` today. See
+    // `felt_state_pack`'s own doc.
+    for (concept, doc) in felt_state_pack() {
+        if registry.concept(concept).is_some() {
+            continue;
+        }
+        registry.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: concept.to_string(),
+                domain: "language".to_string(),
+                kind: ConceptKind::Affect,
+                doc: doc.to_string(),
+            },
+            lexeme: Correspondent::Absent(Void::Gap(
+                "no exposure rule grants this concept Steeped or KnowsOf yet",
+            )),
+            percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })?;
+    }
+
+    // The five object properties (The Offer, Task 9): honest `Void::Gap`
+    // lexemes for the same reason the felt states get one — nothing grants
+    // any of these `Steeped`/`KnowsOf` today. See `object_property_pack`'s
+    // own doc.
+    for (concept, doc) in object_property_pack() {
+        if registry.concept(concept).is_some() {
+            continue;
+        }
+        registry.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: concept.to_string(),
+                domain: "language".to_string(),
+                kind: ConceptKind::Quality,
+                doc: doc.to_string(),
+            },
+            lexeme: Correspondent::Absent(Void::Gap(
+                "no exposure rule grants this concept Steeped or KnowsOf yet",
+            )),
+            percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
             cognition: Correspondent::Absent(Void::Uncognized {
                 pending_wave: "wave-cognition",
             }),

@@ -37,11 +37,11 @@ pub use provider::{ClimateInputs, ClimateSummary, GeneratedClimate, summarize};
 pub use snowpack::{DEFAULT_SNOWPACK, Snowpack};
 pub use streams::stream_labels;
 pub use substellar::{
-    SUBSTELLAR, locked_cell_temperature, substellar_at, substellar_cosine, substellar_cosine_dir,
+    SUBSTELLAR, locked_vertex_temperature, substellar_at, substellar_cosine, substellar_cosine_dir,
 };
 pub use substrate::{DayContext, SpinUp, Substrate, spin_up};
 pub use temperature::locked_temperature_at_position;
-pub use variants::{GroundKind, Variant, VariantEntry, variant_at_cell, variant_pool};
+pub use variants::{GroundKind, Variant, VariantEntry, variant_at_vertex, variant_pool};
 pub use weather::{
     CloudType, WeatherState, cloud_type, storm_propensity, weather_phase, weather_seed,
     weather_state,
@@ -58,22 +58,22 @@ use hornvale_kernel::{
 /// type-audit: bare-ok(identifier-text)
 pub const AMBIENT: &str = "ambient";
 
-/// Phenomenon kind for a felt, oppressive warmth (a cell far above the
+/// Phenomenon kind for a felt, oppressive warmth (a vertex far above the
 /// temperate baseline).
 /// type-audit: bare-ok(identifier-text)
 pub const HEAT: &str = "heat";
 
-/// Phenomenon kind for a felt, biting chill (a cell far below the temperate
+/// Phenomenon kind for a felt, biting chill (a vertex far below the temperate
 /// baseline).
 /// type-audit: bare-ok(identifier-text)
 pub const COLD: &str = "cold";
 
-/// Phenomenon kind for liquid precipitation falling on a clearly-wet cell.
+/// Phenomenon kind for liquid precipitation falling on a clearly-wet vertex.
 /// type-audit: bare-ok(identifier-text)
 pub const RAIN: &str = "rain";
 
 /// Phenomenon kind for frozen precipitation falling on a clearly-wet, cold
-/// cell.
+/// vertex.
 /// type-audit: bare-ok(identifier-text)
 pub const SNOW: &str = "snow";
 
@@ -108,7 +108,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     // tier-1 provider DOES emit these as phenomena (Stage 2), so the percept
     // edge is `Present` at once — no language pack names them yet (lexeme
     // Gap). Cognition is now `Present` too: The Temperament gave creatures a
-    // thermal drive that READS a cell's temperature against its niche and ACTS
+    // thermal drive that READS a vertex's temperature against its niche and ACTS
     // on the discomfort (seeks a kinder clime) — cold and heat are cognized,
     // not merely felt. The correspondence payoff of the cognition wave's first
     // edge (the audit moves 0/76 → 2/76).
@@ -140,7 +140,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     ] {
         // snow and rain are now emitted as felt phenomena (the weather emitter),
         // so their percept edge references that kind. `ice` is not emitted as a
-        // phenomenon of its own (a cold, wet cell reads as snow), so it stays an
+        // phenomenon of its own (a cold, wet vertex reads as snow), so it stays an
         // honest Gap.
         let percept = if name == "ice" {
             Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet"))
@@ -319,7 +319,7 @@ mod tests {
         let c = UniformClimate;
         let seen = c.phenomena(&ObserverContext::at(
             EntityId::new(1).unwrap(),
-            WorldTime::new(3.0).expect("a day value is finite"),
+            WorldTime::from_std_days(3.0).expect("a day value is finite"),
         ));
         assert_eq!(seen.len(), 1);
         assert_eq!(seen[0].kind, AMBIENT);

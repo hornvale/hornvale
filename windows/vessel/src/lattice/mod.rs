@@ -62,7 +62,7 @@ pub use classify::{
 pub use grow::grow;
 pub use occupancy::{Occupancy, Refusal};
 pub use render::{Plan, render};
-pub use sight::shadowcast;
+pub use sight::{shadowcast, shadowcast_with};
 
 use crate::brief::Brief;
 use crate::structure::Structure;
@@ -316,12 +316,12 @@ mod tests {
     use super::*;
     use crate::brief::Brief;
     use crate::structure::structure_at;
-    use hornvale_kernel::{RoomAddr, Seed};
+    use hornvale_kernel::{Facet, Seed};
 
     const WALK: u32 = 12;
 
-    fn locale() -> RoomAddr {
-        RoomAddr {
+    fn locale() -> Facet {
+        Facet {
             face: 3,
             path: (0..WALK).map(|i| (i % 4) as u8).collect(),
         }
@@ -523,8 +523,8 @@ mod tests {
     /// A structure of `n` chambers, built by hand: `extent_for` reads only the
     /// count, so the addresses need not be real places.
     fn structure_of(n: usize) -> crate::structure::Structure {
-        let chambers: Vec<RoomAddr> = (0..n)
-            .map(|i| RoomAddr {
+        let chambers: Vec<Facet> = (0..n)
+            .map(|i| Facet {
                 face: 3,
                 path: (0..WALK).map(|_| (i % 4) as u8).collect(),
             })

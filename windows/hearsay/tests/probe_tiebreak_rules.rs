@@ -58,7 +58,7 @@
 //! **Bound 2, the population.** Simple paths alone do not make this
 //! affordable. A first pilot enumerated both arms on every ending and walked
 //! **63,054,018 routes over three seeds**, exhausting a four-million
-//! expansion ceiling on 12 endings per contact cell — silently truncating
+//! expansion ceiling on 12 endings per contact vertex — silently truncating
 //! precisely the best-connected endings. The descent arm is not the problem
 //! (the founding tree is a forest; its largest ending costs **338**
 //! expansions on the merge product), so the contact arm is enumerated on
@@ -782,7 +782,7 @@ fn read_world(led: &Ledger, components: &hornvale_worldgen::WorldComponents) -> 
         let Some(bio) = components.biosphere.get_by_label(people) else {
             continue;
         };
-        let life = hornvale_species::life_history(bio.mass, bio.metabolic_class, bio.schedule);
+        let life = hornvale_species::life_history(bio.mass, bio.thermal_strategy, bio.schedule);
         let to_days = |years: hornvale_kernel::Years| StdDays::new(years.get() * year_days).ok();
         durations.insert(
             people,
@@ -1250,7 +1250,7 @@ fn sum<F: Fn(&SeedRow) -> usize>(rows: &[SeedRow], f: F) -> usize {
     rows.iter().map(f).sum()
 }
 
-/// Fold one [`ChoiceRow`] cell over the panel.
+/// Fold one [`ChoiceRow`] vertex over the panel.
 fn fold_choice(rows: &[SeedRow], ci: usize, ri: usize) -> ChoiceRow {
     let mut out = ChoiceRow::default();
     for r in rows {
@@ -1280,7 +1280,7 @@ fn fold_choice(rows: &[SeedRow], ci: usize, ri: usize) -> ChoiceRow {
     out
 }
 
-/// Fold one [`DivRow`] cell over the panel. `matched` selects
+/// Fold one [`DivRow`] vertex over the panel. `matched` selects
 /// [`SeedRow::div_matched`] (the like-for-like population) over
 /// [`SeedRow::div`] (the full one).
 fn fold_div(rows: &[SeedRow], matched: bool, ci: usize, ri: usize, si: usize) -> DivRow {
@@ -1310,7 +1310,7 @@ fn fold_div(rows: &[SeedRow], matched: bool, ci: usize, ri: usize, si: usize) ->
 /// claim: structural(seed: panel) — false-positive seed-loop flag; the loop
 /// binds a census-panel prefix, not a search over seeds.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: whether the tiebreak rule or the contact pooled the accounts; RED as of 2026-08-28 — the shared BASELINE_* live-worldgen pins have drifted again since The Underworld changed settlement placement, and this question (The Undertow, Myth campaign 5) is closed; run by hand; demoted by The Governor"]
 fn whether_the_tiebreak_or_the_contact_pooled_the_accounts() {
     let components = hornvale_worldgen::WorldComponents::assemble().expect("components assemble");
     let mut rows: Vec<SeedRow> = Vec::new();
@@ -1618,9 +1618,9 @@ fn whether_the_tiebreak_or_the_contact_pooled_the_accounts() {
     println!("\n=== VERDICT — DOES POOLING SURVIVE THE TIE-BREAK? ===");
     println!(
         "  POOLS = contact lowered the mutually-exclusive count AND raised the identical \
-         count, which is exactly what The Parley reported. **A CELL IS ONLY EVIDENCE ABOUT \
+         count, which is exactly what The Parley reported. **A VERTEX IS ONLY EVIDENCE ABOUT \
          THE TIE-BREAK WHERE THE BASELINE ITSELF POOLS** — where it does not, no alternative \
-         can discriminate and the cell is marked `n/a`, not `no`."
+         can discriminate and the vertex is marked `n/a`, not `no`."
     );
     let mut baseline_pools = [false; 3];
     for (ri, flag) in baseline_pools.iter_mut().enumerate() {
@@ -1636,7 +1636,7 @@ fn whether_the_tiebreak_or_the_contact_pooled_the_accounts() {
     let mut discriminating = 0usize;
     let mut worst_mutex_gap = 0i64;
     for (si, sel) in Selection::ALL.iter().enumerate() {
-        let mut cells: Vec<String> = Vec::new();
+        let mut vertices: Vec<String> = Vec::new();
         for (ri, base_pools) in baseline_pools.iter().enumerate() {
             let d = fold_div(&rows, true, 0, ri, si);
             let c = fold_div(&rows, true, 1, ri, si);
@@ -1650,7 +1650,7 @@ fn whether_the_tiebreak_or_the_contact_pooled_the_accounts() {
                     breaks += 1;
                 }
             }
-            cells.push(format!(
+            vertices.push(format!(
                 "{} {:.2}x {:+}",
                 if !*base_pools {
                     "n/a  "
@@ -1666,9 +1666,9 @@ fn whether_the_tiebreak_or_the_contact_pooled_the_accounts() {
         println!(
             "  {:<15} {:<20} {:<20} {:<20}",
             sel.label(),
-            cells[0],
-            cells[1],
-            cells[2]
+            vertices[0],
+            vertices[1],
+            vertices[2]
         );
     }
     println!(
@@ -1678,7 +1678,7 @@ fn whether_the_tiebreak_or_the_contact_pooled_the_accounts() {
         fold_div(&rows, true, 1, 0, 0).compared
     );
     println!(
-        "\n  VERDICT: of the {discriminating} (selection x accumulation) cells where the \
+        "\n  VERDICT: of the {discriminating} (selection x accumulation) vertices where the \
          BASELINE pools and an alternative could therefore disagree, {breaks} did. The \
          largest gap between any rule's mutually-exclusive count and the baseline's, on any \
          accumulation rule, is {worst_mutex_gap} event(s) out of {}.",
@@ -1692,7 +1692,7 @@ fn whether_the_tiebreak_or_the_contact_pooled_the_accounts() {
              statement about contact, not about the argmin."
         } else {
             "at least one alternative rule fails to pool where the baseline does — the \
-             tie-break is IMPLICATED, and the BREAK cells say which rules and which \
+             tie-break is IMPLICATED, and the BREAK vertices say which rules and which \
              accumulation rules."
         }
     );
@@ -1707,7 +1707,7 @@ fn whether_the_tiebreak_or_the_contact_pooled_the_accounts() {
     println!(
         "  ANTI-VACUITY: {multi_value_total} holder-observations across the whole matrix had \
          two or more distinct remembered values to choose from, and the rules moved as many \
-         as {:.1}% of holders apart on a single cell (contact x multiplicative). SO THE \
+         as {:.1}% of holders apart on a single vertex (contact x multiplicative). SO THE \
          MATRIX IS NOT VACUOUS — the tie-break is doing a great deal of work at the level of \
          the individual community, and almost none at the level of the §6.5 aggregate.",
         Accumulation::ALL

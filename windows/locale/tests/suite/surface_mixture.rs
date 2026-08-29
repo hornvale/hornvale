@@ -28,7 +28,7 @@
 
 use hornvale_kernel::color::BANDS;
 use hornvale_kernel::math::unit_sphere_from_lat_lon;
-use hornvale_kernel::{CellId, RoomAddr, Seed, World, WorldTime};
+use hornvale_kernel::{Facet, Seed, Vertex, World, WorldTime};
 use hornvale_locale::{LocaleContext, MicroField};
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 use std::collections::BTreeSet;
@@ -46,8 +46,8 @@ fn neutral_micro() -> MicroField {
     }
 }
 
-/// A depth at which every constructed `RoomAddr` is guaranteed addressable:
-/// `corner_weights` requires `path.len() >= geo.level()`, and the seed-42
+/// A depth at which every constructed `Facet` is guaranteed addressable:
+/// `corner_weights` requires `path.len() >= geo.depth()`, and the seed-42
 /// world's canonical grid sits at level 6 (`GLOBE_LEVEL`), so 12 — the same
 /// "six refinement levels below the canonical grid" convention
 /// `windows/locale/src/lib.rs` and `windows/vessel/src/agent.rs` already use
@@ -58,20 +58,20 @@ const DEPTH: usize = 12;
 const PER_FACE: u8 = 10;
 
 /// A spread of exactly `20 * PER_FACE` (= 200) distinct, addressable
-/// `RoomAddr`s, round-robin distributed 10 per face across all 20
+/// `Facet`s, round-robin distributed 10 per face across all 20
 /// icosahedron faces (never filled greedily from one face — the earlier
 /// version of this test claimed "all 20 faces" while actually only
 /// reaching 13 of them, because it broke out of the loop as soon as it had
 /// 200 addresses). Each face's 10 addresses vary the leading two path
 /// digits (`i % 4`, `i / 4` for `i` in `0..PER_FACE`, base-4 digits so all
 /// ten are distinct), padded to `DEPTH` with zeros.
-fn spread() -> Vec<RoomAddr> {
+fn spread() -> Vec<Facet> {
     let mut out = Vec::with_capacity(20 * PER_FACE as usize);
     for face in 0..20u8 {
         for i in 0..PER_FACE {
             let mut path = vec![i % 4, i / 4];
             path.resize(DEPTH, 0);
-            out.push(RoomAddr { face, path });
+            out.push(Facet { face, path });
         }
     }
     out
@@ -106,23 +106,23 @@ fn integrating_the_kept_mixture_equals_integrating_immediately() {
     }
 }
 
-/// H2: a marginal, seasonally-freezing cell's mixture is brighter in the
+/// H2: a marginal, seasonally-freezing vertex's mixture is brighter in the
 /// cold half of the year than the warm half — the campaign's headline
 /// seasonal claim (spec §3, "a peak is white in winter because its mixture
 /// changed").
 ///
-/// **Why `CellId(30344)`, not the global elevation maximum.** Task 1
-/// measured seed 42's global max-elevation land cell (`CellId(21329)`) as
+/// **Why `Vertex(30344)`, not the global elevation maximum.** Task 1
+/// measured seed 42's global max-elevation land vertex (`Vertex(21329)`) as
 /// frozen 32/32 across a full-year sweep — white *all year*, not seasonally
-/// white, so it cannot demonstrate a seasonal crossing. `CellId(30344)` is
-/// the land cell whose annual mean sits closest to the freeze line
+/// white, so it cannot demonstrate a seasonal crossing. `Vertex(30344)` is
+/// the land vertex whose annual mean sits closest to the freeze line
 /// (-0.001 C); Task 1's resampled 32-point sweep there found 16/32 frozen,
 /// annual minimum -8.898 C at day 337.35, first frozen day 328.14
 /// (task-1-report.md's "§6.1 addendum" section — those are measured
 /// numbers, not estimates).
 ///
 /// **Why 32 samples, not 4.** Task 1's own report flags a ~23-day
-/// sub-annual oscillation superimposed on the annual trend at this cell: an
+/// sub-annual oscillation superimposed on the annual trend at this vertex: an
 /// 8-sample, 46-day-spaced sweep aliased against that oscillation and read
 /// as a smooth monotonic decline that never crossed freezing, missing the
 /// true minimum entirely (it sat in the unsampled last 12.5% of the year).
@@ -160,21 +160,21 @@ fn high_ground_is_brighter_in_the_cold_half_of_the_year() {
     )
     .expect("seed 42 builds with a generated sky");
     let ctx = LocaleContext::build(&world).unwrap();
-    let cell = CellId(30344);
+    let vertex = Vertex(30344);
 
-    // A `RoomAddr` whose dominant corner is exactly this cell: `containing`
-    // at the cell's own centroid, at the walking depth this crate uses
+    // A `Facet` whose dominant corner is exactly this vertex: `containing`
+    // at the vertex's own centroid, at the walking depth this crate uses
     // everywhere else (`globe_level() + 6`).
-    let coord = ctx.climate().geosphere().coord(cell);
+    let coord = ctx.climate().geosphere().coord(vertex);
     let depth = ctx.globe_level() + 6;
-    let addr = RoomAddr::containing(
+    let addr = Facet::containing(
         unit_sphere_from_lat_lon(coord.latitude, coord.longitude),
         depth,
     );
     let corners = addr
         .corner_weights(ctx.climate().geosphere(), ctx.nearest_index())
-        .expect("a cell's own centroid resolves on the grid it came from");
-    // The same "max weight, tie-break lowest CellId" rule
+        .expect("a vertex's own centroid resolves on the grid it came from");
+    // The same "max weight, tie-break lowest Vertex" rule
     // `LocaleContext`'s private `dominant_corner` uses — restated here
     // rather than imported, since it is not `pub` and this is an
     // integration test in a separate crate.
@@ -189,8 +189,8 @@ fn high_ground_is_brighter_in_the_cold_half_of_the_year() {
         })
         .0;
     assert_eq!(
-        dominant, cell,
-        "the constructed address must resolve to CellId(30344), the cell Task 1 measured"
+        dominant, vertex,
+        "the constructed address must resolve to Vertex(30344), the vertex Task 1 measured"
     );
 
     // Neutral micro-field: isolate the seasonal (climate) term the test
@@ -209,11 +209,26 @@ fn high_ground_is_brighter_in_the_cold_half_of_the_year() {
     let mut temps_c = Vec::with_capacity(SAMPLES);
     for i in 0..SAMPLES {
         let day = year_length * i as f64 / SAMPLES as f64;
-        let at = WorldTime::new(day).expect("finite day");
+        let at = WorldTime::from_std_days(day).expect("finite day");
         let reflectance = ctx.reflectance_at(&addr, &micro, at).unwrap();
         let mean: f64 = reflectance.get().iter().sum::<f64>() / BANDS as f64;
         lightness.push(mean);
-        temps_c.push(ctx.climate().temperature_at(cell, day).get());
+        // THE ONE SITE THAT ROUNDS (The Foliot, stage 4). `day` here is an
+        // arbitrary fraction of a year, not a whole-day index, so landing it
+        // on the tick lattice moves the sample point by up to half a tick
+        // (0.432 s). Recorded rather than absorbed: every other climate call
+        // site in the tree was byte-neutral, either a literal genesis or a
+        // caller that already held a `WorldTime` and was unwrapping it.
+        // Harmless here — this samples a smooth seasonal curve at 24 points
+        // to check a mixture, and a sub-second shift cannot move that.
+        temps_c.push(
+            ctx.climate()
+                .temperature_at(
+                    vertex,
+                    WorldTime::from_std_days(day).expect("a finite sample day"),
+                )
+                .get(),
+        );
     }
 
     let distinct = {
@@ -225,12 +240,12 @@ fn high_ground_is_brighter_in_the_cold_half_of_the_year() {
     // This is the load-bearing assertion. `distinct > 1` genuinely could
     // fail — if snow cover were annual (keyed only on `snow_fraction_at`)
     // rather than seasonal, or if `is_frozen_at` never flipped across the
-    // sampled year at this cell, every sample would compose the identical
+    // sampled year at this vertex, every sample would compose the identical
     // mixture and this would go red. Task 1's own report measured that
-    // crossing at this exact cell before this test was written.
+    // crossing at this exact vertex before this test was written.
     assert!(
         distinct > 1,
-        "reflectance must vary across the year at a cell with a measured seasonal \
+        "reflectance must vary across the year at a vertex with a measured seasonal \
          freeze/thaw crossing; got lightness={lightness:?} temps_c={temps_c:?}"
     );
 
@@ -240,7 +255,7 @@ fn high_ground_is_brighter_in_the_cold_half_of_the_year() {
     // that boolean, so the brightest sampled day is *by construction*
     // always a frozen day, always at temperature <= 0. Such a clause can
     // therefore only ever fail when the SAMPLED MEAN temperature is itself
-    // <= 0 — at this cell (annual mean -0.001 C) that depends on exactly
+    // <= 0 — at this vertex (annual mean -0.001 C) that depends on exactly
     // which days land in a fixed-count sample, not on whether the seasonal
     // mechanism is real. Measured: the 32-sample mean here is +0.042 C, so
     // the clause passed, but one different sampling choice could flip that

@@ -25,57 +25,68 @@
 //!
 //! **Resolution genuinely tracks the cursor.** Spec §3.1 assigns the cursor
 //! query to `bin`; §9 defers "the chamber / delve resolvers" (session-level
-//! cells/marks/agents at those bands) to a future campaign — so those bands
-//! honestly answer [`NOTHING_HERE_YET`]. The walk band resolves against its
-//! own chart ([`Driver::resolve_walk_band`]); The Portolan part II, Task 3b
-//! adds a second resolver for the whole-world Mercator plate
-//! ([`Driver::resolve_world_view`]), active in place of the walk band's own
-//! whenever `self.world_view` is on (`spread::compose`'s own doc: the world
-//! view is a lens over whichever band the character occupies, never a new
-//! band). Either way, the *pointed-at* cell is what gets resolved, not the
-//! observer's own (an earlier revision of this module resolved the
-//! observer's cell unconditionally — a fix round caught that this made the
-//! strip position-invariant while the cursor visibly moved, exactly the "a
-//! wrong name is indistinguishable from a right one" failure the design
-//! spec warns against).
+//! marks and agents at those bands) to a future campaign — so the chamber
+//! band still honestly answers [`NOTHING_HERE_YET`]. Either way, the
+//! *pointed-at* vertex is what gets resolved, not the observer's own (an
+//! earlier revision of this module resolved the observer's vertex
+//! unconditionally — a fix round caught that this made the strip
+//! position-invariant while the cursor visibly moved, exactly the "a wrong
+//! name is indistinguishable from a right one" failure the design spec warns
+//! against).
 //!
-//! The chain from a screen position to a [`hornvale_kernel::CellId`]:
-//! [`hornvale_game_core::chart::cell_at`] (new, shared with `draw` via a
-//! common `boxes_of` helper — never a second copy of the projection) finds
-//! which wire [`hornvale_game_core::ChartCell`] occupies the cursor's box
-//! and its index into `chart.cells`. `chart.cells` is a field-for-field,
-//! order-preserving mirror of the real `hornvale_scene::SurroundsScene`
-//! (`Session::snapshot` embeds that scene directly — nothing reorders or
-//! filters it in transit), so re-deriving the SAME scene with
-//! `self.session.purview(0)` (the identical call `Session::snapshot` itself
-//! makes for the walk band) and indexing into its `cells` at that same
-//! position names the identical real cell — no float matching, no new
-//! trigonometry. That real cell's `room: u64` unpacks
-//! ([`hornvale_kernel::RoomId::unpack`]) to a real
-//! [`hornvale_kernel::RoomAddr`], whose [`hornvale_kernel::RoomAddr::coord`]
-//! feeds the same `NearestCellIndex` lookup already used for the observer.
+//! **TWO RESOLVERS ON THE WALK BAND, most specific first (The Quadrat, Task
+//! 6).** Every rung of the walk band draws the Mercator raster now, band B
+//! included, so [`Driver::resolve_world_view`] — the tile
+//! [`plate::terrain_at_tile`] painted — is the answer almost everywhere.
+//! [`Driver::resolve_walk_band`] is tried first and answers only where the
+//! band-B PERCEPTION OVERLAY drew something under the cursor, which is the
+//! more specific fact and the one the picture is showing there.
 //!
-//! No new geometry was written for this: `RoomId::unpack`, `RoomAddr::coord`
-//! and `NearestCellIndex::nearest` all already existed: `kernel::room` has
-//! no inverse of `bearing_to`/`distance_rad_to` (a destination from an
-//! origin, a bearing and a distance), so this deliberately does not need
-//! one — the index-into-a-freshly-rebuilt-scene route reaches the same
-//! room a bearing-inversion would have, using data both `chart::cell_at`
-//! and `Session::purview` already carry.
+//! `Driver::world_view` is gone with the mode it named; the rung question it
+//! used to answer is [`Driver::at_walk_band_rung`] and the band question is
+//! [`Driver::raster_is_drawn`].
+//!
+//! The chain from a screen position to a [`hornvale_kernel::Vertex`], for
+//! both resolvers, is the same one and it is `bin`'s own: a
+//! `scene/surrounds/v2` facet's `room: u64` unpacks
+//! ([`hornvale_kernel::FacetId::unpack`]) to a real
+//! [`hornvale_kernel::Facet`], whose [`hornvale_kernel::Facet::coord`] feeds
+//! the same `NearestVertexIndex` lookup already used for the observer. The
+//! scene is [`Driver::walk_band_scene`]'s cached packet, refreshed once per
+//! turn rather than re-derived with `self.session.purview(0)` on every
+//! redraw (The Gallery, Task 10 round 2) — the same underlying `purview(0)`
+//! call `Session::snapshot` itself makes for the walk band. The resolver and
+//! the picture still cannot disagree, now because both read the one shared
+//! cache rather than because two independently-called derivations happened
+//! to agree.
+//!
+//! **This used to route through `hornvale_game_core::chart::cell_at`**, the
+//! `core` chart's own polar box lookup, matched back to the real scene by
+//! INDEX. That step is gone (Task 6): `core`'s chart is not what band B
+//! draws any more, so asking it which box the cursor was in would have named
+//! a facet from a picture nobody drew. The overlay's own placement
+//! ([`plate::perceived_at`]) answers instead, and it is `bin` that placed
+//! those facets in the first place, so no index round-trip is needed.
+//!
+//! No new geometry was written for any of this: `FacetId::unpack`,
+//! `Facet::coord` and `NearestVertexIndex::nearest` all already existed, and
+//! `kernel::room` has no inverse of `bearing_to`/`distance_rad_to` (a
+//! destination from an origin, a bearing and a distance), so this
+//! deliberately does not need one.
 
 use crate::discovery::{Discovered, FeatureId, Visited};
 use crate::history::History;
 use crate::input::Action;
 use crate::line::Line;
 use crate::mercator::{self, Frame};
-use crate::plate::{self, Window};
+use crate::plate::{self, BAND_B_RUNG, GLOBE_RUNG, Window};
 use hornvale_astronomy::SkyPins;
-use hornvale_game_core::{Cursor, Focus};
-use hornvale_kernel::{CellId, NearestCellIndex, RoomId, Seed, Value, World};
+use hornvale_game_core::{CandidateSource, Cursor, Focus};
+use hornvale_kernel::{FacetId, NearestVertexIndex, Seed, Value, Vertex, World};
 use hornvale_language::{MorphOptions, Phonology};
 use hornvale_terrain::GeneratedTerrain;
 use hornvale_terrain::TerrainPins;
-use hornvale_terrain::landscape::CellFeatureIndex;
+use hornvale_terrain::landscape::VertexFeatureIndex;
 use hornvale_vessel::{
     PossessOpts, PossessTarget, Session, Turn, VesselError, WorldContext, snapshot_json,
 };
@@ -92,10 +103,15 @@ use std::collections::BTreeSet;
 /// indistinguishable from a right one, and this string never is one.
 const NOTHING_HERE_YET: &str = "nothing here yet";
 
+/// The rung line's opening word — see [`Driver::rung_caption`]. Named once
+/// so the tests that look for the line match on the shipped wording rather
+/// than on a second copy of it.
+const RUNG_OPENING: &str = "rung";
+
 /// What the strip says when the resolver ran and genuinely found no
-/// individuated feature at the observer's cell — real terrain below every
+/// individuated feature at the observer's vertex — real terrain below every
 /// class's individuation floor, not "nothing there" (seed 42 measured 377
-/// of 40,962 cells like this; spec §3.4).
+/// of 40,962 vertices like this; spec §3.4).
 const UNNAMED_TERRAIN: &str = "unnamed terrain";
 
 /// The fixed, sim-authored prefix `windows/vessel/src/session.rs`'s
@@ -104,12 +120,26 @@ const UNNAMED_TERRAIN: &str = "unnamed terrain";
 /// caves) — never on any refusal (a sealed cave, no cave at all, already
 /// underground, or already inside a structure each print their own
 /// distinct refusal text). This is the only signal that exists for cave
-/// discovery: the wire's own `band` tag deliberately folds underground
-/// into `"walk"` (see that module's own test,
-/// `the_underground_band_folds_into_walk_as_map_does`), so there is no
-/// typed alternative to reading the turn's own narration — the same
-/// category of read `Driver` already does everywhere else (the strip, the
-/// snapshot text itself), never a fabricated string.
+/// discovery.
+///
+/// **This paragraph used to claim the wire's own `band` tag "deliberately
+/// folds underground into `\"walk\"`", citing a test named
+/// `the_underground_band_folds_into_walk_as_map_does`. That has been false
+/// since The Gallery's Task 7**, which gave the pane its own `band:
+/// "underground"` tag (`vessel/level/v1`) — the cited test was renamed to
+/// `the_pane_and_the_verb_agree_underground` at Task 8's landing, once the
+/// `map` verb caught up to the same distinction (see
+/// `hornvale_game_core::snapshot`'s own module doc for the full history).
+/// The band tag distinguishing `underground` from `walk` does not make it a
+/// typed alternative here, though: what this constant answers is not "which
+/// band is the possession on" (that question has its own typed field now)
+/// but "did a delve **succeed this turn**" — a one-shot EVENT, not a
+/// standing STATE. Standing underground on the turn after a successful
+/// delve reads identically to standing underground ten turns later on the
+/// band tag alone; only the turn's own narration says which turn the
+/// transition happened on. So there is still no typed alternative to
+/// reading it — the same category of read `Driver` already does everywhere
+/// else (the strip, the snapshot text itself), never a fabricated string.
 ///
 /// **Guarded on the sim's own side, not just here.**
 /// `windows/vessel/src/session.rs`'s
@@ -129,7 +159,7 @@ const DELVE_SUCCESS_PREFIX: &str = "You worm down into the dark.";
 /// every resize event, which overwrites `self.plate_height` with the real
 /// number — this constant only covers the brief window before that first
 /// call (fix round 2: an earlier revision used this fixed floor value
-/// unconditionally, which named the wrong cell on any terminal taller than
+/// unconditionally, which named the wrong vertex on any terminal taller than
 /// 24 rows — see the module doc).
 const FLOOR_PLATE_CONTENT_HEIGHT: u16 =
     hornvale_game_core::spread::content_height(hornvale_game_core::MIN_HEIGHT);
@@ -163,26 +193,24 @@ impl std::fmt::Display for DriverError {
 
 impl std::error::Error for DriverError {}
 
-/// Every input [`plate::draw_with`] reads that can CHANGE during a session,
-/// and nothing else — the memo in [`Driver::world_plate_for_redraw`] is only
-/// as correct as this key is complete.
-///
-/// **Deliberately absent, because they are fixed for the process:** the
-/// terrain, the `Geosphere`, the `NearestCellIndex`, the settlement roster
-/// (built once in `start`) and `colour_allowed` (resolved from `NO_COLOR`
-/// once per render by `plate::draw`, which cannot change under a running
-/// process). If any of those ever becomes mutable, it belongs here.
-///
-/// `discovered_len` stands in for the discovery set itself, which is sound
-/// only because that set is monotonic — see [`Discovered::len`].
-#[derive(Debug, Clone, Copy, PartialEq)]
-struct PlateKey {
-    frame: Frame,
-    window: Window,
-    w: u16,
-    h: u16,
-    discovered_len: usize,
-}
+// **`PlateKey` is gone (The Quadrat, Task 5), and its narrowing lives on
+// in [`crate::tiles::TileCache`].** It keyed the whole drawn plate on
+// `(frame, window, w, h)`, which is why scrolling one column threw a plate
+// away and redrew it — measured before this campaign, a 104x52 plate is
+// 130 ms against 1.208 ms for one column. The cache unit is a CHART TILE
+// now, so the drawn plate's size is not an input at all and a scroll
+// re-renders only the tile column it uncovers.
+//
+// Everything that key deliberately did NOT carry, it still does not, and
+// for the same reasons: **`Discovered`**, because a key carrying the
+// discovery version is invalidated by every discovery — the whole pyramid,
+// for one settlement (`CLIENT-tiles-need-the-overlay-split`, spec §3, and
+// Task 4's layer split is the fix); and **the terrain, the `Geosphere`,
+// the `NearestVertexIndex`, the settlement and cave rosters (all built once
+// in `start`) and `colour_allowed`** (resolved from `NO_COLOR` by
+// `plate::colour_allowed`, which cannot change under a running process),
+// because they are fixed for the process. If any of those ever becomes
+// mutable, it belongs in `TileKey`.
 
 /// One live game: an owned [`World`], the [`WorldContext`] derived from it
 /// exactly once (the campaign's own headline — release-and-repossess reuses
@@ -209,6 +237,47 @@ pub struct Driver {
     /// and by every `handle`, so `snapshot()` never needs to touch the
     /// session again.
     cached: String,
+    /// Whether the possession is currently on the WALK band, read off
+    /// [`Self::cached`]'s own `spatial` tag by [`Self::refresh`].
+    ///
+    /// **Cached rather than re-parsed, and the reason is a cost.** Four
+    /// things now depend on the band — whether a world plate is supplied at
+    /// all, the active plate's size, whether a cursor move scrolls, and
+    /// whether the strip has a resolver — and three of those are asked on
+    /// every keypress. Parsing the snapshot JSON in each of them would put
+    /// several `serde_json` passes on the cursor path to answer a question
+    /// that changes only when a turn does. [`Self::refresh`] is the one
+    /// choke point that already parses (for the completion scope), and it is
+    /// the only place a turn's band can change.
+    ///
+    /// Opens `true`: the session begins on the walk band, and `start`'s own
+    /// `refresh()` corrects it before any caller sees it.
+    on_walk_band: bool,
+    /// The live walk-band perception packet, cached alongside
+    /// [`Self::on_walk_band`] and invalidated at exactly the same point
+    /// (Task 10 round 2; The Gallery).
+    ///
+    /// **Why this one too, once `on_walk_band` already exists.** Round 1
+    /// (The Quadrat's F11) retired the per-redraw `Snapshot::parse` this
+    /// method's callers used to pay, but left the per-redraw
+    /// `Session::purview(0)` call standing — and measurement showed THAT
+    /// call, not the parse, is the dominant cost of a walk-band redraw
+    /// (`walk_band_scene`'s own doc has the numbers). `purview` is a pure
+    /// read (`&self`, no mutation) over session state — position,
+    /// knowledge, eyes, day — that changes only when a turn does, by the
+    /// same argument `on_walk_band`'s own doc already makes for the band
+    /// question. So it is cached the same way: computed once per turn in
+    /// [`Self::refresh`], read (never recomputed) by every call site that
+    /// used to call `purview` itself.
+    ///
+    /// **The whole `Option`, not just the `Some` case.** Off the walk band
+    /// this is `None` by construction of the fill step in `refresh` (the
+    /// same band test `on_walk_band` already answers), so a reader here —
+    /// [`Self::walk_band_scene`] — makes no decision the cache has not
+    /// already made; it never re-asks "is this the walk band" the way a
+    /// half-cached design (Some-only, with `None` re-derived per read)
+    /// would have to.
+    walk_scene: Option<hornvale_scene::SurroundsScene>,
     /// Which pane keys currently drive — the walk view's movement keys, the
     /// command line, or the map cursor. Startup is [`Focus::Walk`] (arrow
     /// keys move immediately); replaces The Portolan part I's `Mode {
@@ -235,15 +304,38 @@ pub struct Driver {
     /// redraw the rest of the client uses" F3 asks for (design spec §5,
     /// §7 F3). See [`Self::strip_offset`] for how this becomes a column.
     redraw_count: u32,
-    /// The world's landscape features, indexed by cell, built once here at
+    /// How many MARQUEE TICKS have elapsed — the strip's scroll driver
+    /// since `fix/marquee-ticks-on-time`.
+    ///
+    /// **Why this replaced `redraw_count` for that job.** F3 asked for a
+    /// scroll that introduces no clock, and `redraw_count` satisfied it
+    /// literally: the offset advanced once per real redraw. In play that
+    /// reads as a marquee that only moves when you press a key, which is
+    /// not what a marquee is — Nathan, 2026-08-24: "the marquee text
+    /// scrolls on the actions I take, not at a smooth, steady background
+    /// rate."
+    ///
+    /// **The wall-clock ban does not reach this crate.** `clippy.toml`'s
+    /// `disallowed-types` lives at the repo root; `clients/game` is its
+    /// own workspace, outside it and outside determinism (decision 0055,
+    /// and `clients/CLAUDE.md` says the workspace rules "do not bind this
+    /// tree"). `bin/examples/repossess_cost.rs` already uses `Instant` and
+    /// the client gate passes it — so the constraint F3 honoured was real
+    /// for the SIM and never bound the client's own render loop.
+    ///
+    /// The clock itself stays in `main.rs`'s loop; this type only counts
+    /// ticks, so every test drives the marquee by calling
+    /// [`Driver::tick_marquee`] and no test depends on real time.
+    marquee_ticks: u32,
+    /// The world's landscape features, indexed by vertex, built once here at
     /// `start` and never rebuilt — the feature stack is immutable for the
-    /// world's lifetime (`CellFeatureIndex`'s own doc).
-    index: CellFeatureIndex,
-    /// Nearest-cell lookup over the same `Geosphere` `index` was built from,
+    /// world's lifetime (`VertexFeatureIndex`'s own doc).
+    index: VertexFeatureIndex,
+    /// Nearest-vertex lookup over the same `Geosphere` `index` was built from,
     /// built once alongside it — turns the possessed agent's fine-grained
-    /// [`hornvale_kernel::RoomAddr`] position into the coarse `CellId` the
+    /// [`hornvale_kernel::Facet`] position into the coarse `Vertex` the
     /// terrain feature index answers for.
-    nearest: NearestCellIndex,
+    nearest: NearestVertexIndex,
     /// The world's `Geosphere`, held for `nearest`'s queries.
     geo: hornvale_kernel::Geosphere,
     /// The world's reconstructed tectonic terrain, held so the world plate
@@ -258,55 +350,51 @@ pub struct Driver {
     /// from the committed `TIDALLY_LOCKED` fact and never recomputed — the
     /// central line does not move as the player does (spec §3.2).
     frame: Frame,
-    /// The world plate's window: which zoom level and which VIRTUAL-chart
+    /// The world plate's window: which mesh RUNG and which VIRTUAL-chart
     /// cell the window's own origin sits at (`plate::virtual_dims`'s own
-    /// doc distinguishes the virtual chart from the drawn plate). Reset to
-    /// `Window { zoom: 0, origin_col: 0, origin_row: 0 }` on entering the
-    /// world view (`Driver::apply_zoom`) — the whole planet, no scroll
-    /// needed at the coarsest rung — and moved by zoom/scroll from there.
+    /// doc distinguishes the virtual chart from the drawn plate). Starts at
+    /// `Window { depth: BAND_B_RUNG, origin_col: 0, origin_row: 0 }` — the
+    /// FINEST rung, which is band B itself, the chart the walk band already
+    /// draws — and moves one rung per `Action::Zoom` from there
+    /// (`Driver::apply_zoom`). **Nothing resets it any more**: the ladder is
+    /// continuous, so `depth` is the only state a zoom touches. Since The
+    /// Quadrat the coarsest rung is NOT "the whole planet on screen": the
+    /// chart is 363x362 tiles there and the plate is a subrect of it.
     window: Window,
-    /// Whether the whole-world Mercator view is active. **Fix round 1
-    /// (Task 3a's own review):** `Focus::Map` alone used to gate this in
-    /// `main.rs`, which silently retired the walk-band cursor/strip feature
-    /// shipped across `9f69e4e2a`/`81d940d9c`/`64c80be36` and chronicled in
-    /// `book/src/chronicle/the-stride.md`/`the-stylus.md` — that feature
-    /// ALSO lives behind `Focus::Map` (entering the map to point at, and
-    /// read the name of, the walk band's own local terrain), so reusing the
-    /// same focus value for the world view meant a 210x56 redraw drew a
-    /// 104-column Mercator while the cursor stayed clamped to the OLD
-    /// 40-column plate and the strip kept resolving the walk band's own
-    /// (now invisible) chart — a picture and a cursor/strip that no longer
-    /// agreed at all. This field makes the world view its own explicit
-    /// state, defaulting OFF ([`Driver::start`] never sets it).
+    /// The world plate's TERRAIN LAYER, cached one CHART TILE at a time
+    /// (The Quadrat, Task 5). The feature layer is composed on top per
+    /// redraw and is never stored here — see
+    /// [`crate::tiles::TileCache`]'s own doc, and the note above this
+    /// struct for what the key carries and what it deliberately does not.
     ///
-    /// **Task 3b's own gesture: zooming OUT past the walk band turns
-    /// this on, at the coarsest rung; zooming IN past the world view's
-    /// finest rung turns it back off.** See
-    /// [`Driver::apply_zoom`]. `Focus::Map` alone still reproduces the
-    /// pre-Task-3a behaviour byte-identically — this field is untouched by
-    /// focus changes on their own, only by `Action::Zoom`; see
-    /// [`Driver::world_plate_for_redraw`].
-    world_view: bool,
-    /// How many world plates have actually been rendered this session.
-    /// See [`Driver::plate_renders`] for why this is observable.
-    plate_renders: usize,
-    /// The last world plate drawn, with the inputs that produced it.
-    ///
-    /// A cursor move inside the plate changes none of those inputs, and
-    /// re-rendering costs ~265k `nearest()` calls at the design size —
-    /// measured 88% of a redraw. See [`PlateKey`] for what "the inputs"
-    /// means and what is deliberately not in it.
-    plate_cache: Option<(PlateKey, hornvale_game_core::Grid)>,
+    /// **A cursor move inside the plate changes none of a tile's inputs,
+    /// and neither does a resize to a subrect, and neither does a scroll
+    /// except at the edge it uncovers.** The last of those three is the one
+    /// the plate-shaped cache this replaces could not have: it keyed the
+    /// drawn plate's own `(w, h)`, so one column of scroll cost a whole
+    /// plate. **The magnitude that used to be cited here is retired, not
+    /// merely stale**: "~265k `nearest()` calls at the design size,
+    /// measured 88% of a redraw" was true of the 49-point vote The
+    /// Quadrat's Task 3 removed, and the search it named is now made a few
+    /// dozen times per plate rather than a few hundred thousand.
+    tiles: crate::tiles::TileCache,
     /// The world's seed, needed to draw a feature's name.
     seed: Seed,
-    /// Every terrain cell the world's ledger commits at least one
+    /// Every terrain vertex the world's ledger commits at least one
     /// settlement nearest to (The Portolan part II, Task 5) — built ONCE
     /// here at `start`, the same "derive once, never per-turn" discipline
     /// `index`/`nearest` already follow. Not itself a discovery record:
     /// this is the plate's own point-site ROSTER (where a settlement
     /// stands, ground truth, always known to the client that draws the
     /// map), gated by [`Self::discovered`] at draw time, never here.
-    settlements: BTreeSet<CellId>,
+    settlements: BTreeSet<Vertex>,
+    /// Every vertex carrying a cave mouth, scanned once here at `start` for
+    /// the same reason `settlements` is: `plate::draw_feature_layer`
+    /// PROJECTS each site rather than asking every screen cell whether its
+    /// sample happens to be one, so it needs the roster up front. A
+    /// per-render scan of all 40,962 vertices would be the cost the projection
+    /// exists to avoid.
+    caves: BTreeSet<Vertex>,
     /// Every walk-band room the possession has stood in this session
     /// (spec Amendment 1 §A4a: "where have I been"). Never consulted by
     /// [`Self::discovered`] and never consults it — see `discovery`'s
@@ -320,7 +408,7 @@ pub struct Driver {
     /// The plate's REAL content height, in grid rows — synced from the live
     /// terminal by [`Driver::resize`] (fix round 2: an earlier revision
     /// used a floor-sized constant unconditionally here, which named the
-    /// wrong cell — see the module doc). Starts at
+    /// wrong vertex — see the module doc). Starts at
     /// [`FLOOR_PLATE_CONTENT_HEIGHT`] before the first real size is known;
     /// `main`'s `play` loop calls `resize` before the first draw, so a
     /// live session never resolves against the stale default.
@@ -351,6 +439,144 @@ pub struct Driver {
     /// overwritten by the next submission: it names "what was asked most
     /// recently", not "what was asked this exact turn".
     echo: Option<String>,
+    /// The completion vocabulary's v1 scope, refreshed from every parsed
+    /// snapshot (see [`Driver::refresh`]). Held DIRECTLY rather than behind
+    /// a [`hornvale_game_core::Lexicon`]: spec §3 registers exactly one
+    /// scope in v1, so the fold (`Lexicon::candidates`'s ordered
+    /// first-wins dedup over scopes) has nothing to fold — wrapping a single
+    /// scope in a `Vec<Box<dyn CandidateSource>>` would buy allocation and
+    /// indirection without behaviour. The Lexicon becomes the right shape
+    /// the day a second scope lands; this field swaps for it then.
+    scope: hornvale_game_core::CurrentTurnNouns,
+    /// How an ambiguous completion presents (spec §4.2). [`TabStyle::Cycle`]
+    /// is implemented and unit-tested but unbound — no preference mechanism
+    /// exists yet, so every session runs [`TabStyle::Hint`].
+    tab_style: TabStyle,
+    /// The pending ambiguity under [`TabStyle::Hint`] — the stem the buffer
+    /// was extended to and the full match list it came from, for the strip
+    /// to present. Cleared by any edit or submission.
+    hint: Option<Hint>,
+    /// The pending rotation under [`TabStyle::Cycle`] — unreachable while
+    /// `tab_style` is [`TabStyle::Hint`], but implemented and tested so the
+    /// preference mechanism only has to flip a field. Cleared by any edit
+    /// or submission.
+    cycle: Option<CycleState>,
+    /// The bare-`x` noun prompt (spec §4.4): `Some` while the line
+    /// temporarily reads `examine …`, holding the buffer it replaced. The
+    /// prompt is a MODE, not a picker — the client still sends text
+    /// unconditionally, and the sim answers unknown nouns in its own prose.
+    noun_prompt: Option<NounPrompt>,
+}
+
+/// What [`Driver::noun_prompt`] saves for `Esc` to restore.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct NounPrompt {
+    /// The buffer as the player left it before submitting bare `x`.
+    saved_buffer: String,
+    /// Its caret position.
+    saved_caret: usize,
+}
+
+/// The prefix the noun prompt dispatches — the line reads exactly this
+/// plus whatever noun the player has typed.
+const EXAMINE_PROMPT_PREFIX: &str = "examine ";
+
+/// How an ambiguous completion presents (spec §4.2). Cycle is implemented
+/// and unit-tested but unbound — no preference mechanism exists yet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TabStyle {
+    /// Extend to the shared stem and show the alternatives once.
+    Hint,
+    /// Each successive press rotates through the matches.
+    Cycle,
+}
+
+/// One pending ambiguity under [`TabStyle::Hint`]: the stem the buffer now
+/// carries and every name that shares it, in candidate order.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Hint {
+    /// The longest common prefix of all matches — what the buffer holds.
+    stem: String,
+    /// Every matching name, input order preserved.
+    matches: Vec<String>,
+}
+
+/// One pending rotation under [`TabStyle::Cycle`]: where the completed word
+/// begins (in char offsets, matching [`Line::caret`]'s units) and which
+/// match is currently filled.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct CycleState {
+    /// Char offset of the word being rotated.
+    start: usize,
+    /// Every matching name, input order preserved.
+    matches: Vec<String>,
+    /// Index into `matches` of the currently-filled name.
+    index: usize,
+}
+
+/// What a Complete keypress decides, before any mutation — factored out of
+/// [`Driver::apply`] so the decision is unit-testable without minting a
+/// world (a full [`Driver`] costs a genesis; this function does not).
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum CompletionDecision {
+    /// No token at the caret, or nothing matched: change nothing.
+    Noop,
+    /// Exactly one candidate matched: fill it whole.
+    Fill(String),
+    /// Several matched: extend to the shared stem and offer the rest.
+    Ambiguous {
+        /// The longest common prefix of ALL matches.
+        stem: String,
+        /// Every matching name, input order preserved.
+        matches: Vec<String>,
+    },
+}
+
+/// Char offset where the whitespace-delimited word ending at `caret`
+/// begins, or `None` when no token ends there.
+fn word_start_at_caret(text: &str, caret: usize) -> Option<usize> {
+    let prefix: Vec<char> = text.chars().take(caret).collect();
+    if prefix.last().is_none_or(|c| c.is_whitespace()) {
+        return None;
+    }
+    Some(
+        prefix
+            .iter()
+            .rposition(|c| c.is_whitespace())
+            .map_or(0, |i| i + 1),
+    )
+}
+
+/// Decide what a Complete keypress does for the token ending at `caret` in
+/// `text`, against `candidates`. Pure.
+fn completion_decision(
+    text: &str,
+    caret: usize,
+    candidates: &[hornvale_game_core::Candidate],
+) -> CompletionDecision {
+    let Some(start) = word_start_at_caret(text, caret) else {
+        return CompletionDecision::Noop;
+    };
+    let chars: Vec<char> = text.chars().collect();
+    let token: String = chars[start..caret].iter().collect();
+    if token.is_empty() {
+        return CompletionDecision::Noop;
+    }
+    match hornvale_game_core::complete(&token, candidates) {
+        hornvale_game_core::Completion::None => CompletionDecision::Noop,
+        hornvale_game_core::Completion::Unique(name) => {
+            // Filling the token with itself is a documented no-op (the
+            // engine's own note on `Unique`).
+            if name == token {
+                CompletionDecision::Noop
+            } else {
+                CompletionDecision::Fill(name)
+            }
+        }
+        hornvale_game_core::Completion::Prefix { stem, matches } => {
+            CompletionDecision::Ambiguous { stem, matches }
+        }
+    }
 }
 
 /// Append the sight-disclosure caption to a resolved strip text — the
@@ -362,6 +588,33 @@ pub struct Driver {
 /// from that one environment read, so tests can drive it hermetically.
 fn colour_allowed() -> bool {
     hornvale_game_core::Ink::from_wire(Some([0, 0, 0])) != hornvale_game_core::Ink::Plain
+}
+
+/// Flatten a walk-band perception packet into what
+/// [`plate::draw_perception_layer`] places and ranks — the boundary that
+/// keeps `plate.rs` free of the wire's field names and state strings, the
+/// same way [`plate::draw_feature_layer`] takes vertex rosters rather than
+/// the ledger they were read out of.
+///
+/// The dominant mark is the numerically SMALLEST `salience`
+/// (`hornvale_scene::Mark::salience`: a RANK, lower is more salient — never
+/// a magnitude), and `Iterator::min_by_key` keeps the FIRST minimum, which
+/// is the producer's own ascending-`room` document order. That is clause 3
+/// of the collision rule, obtained rather than re-implemented.
+fn perceived_facets(scene: &hornvale_scene::SurroundsScene) -> Vec<plate::Perceived<'_>> {
+    scene
+        .cells // lexicon: `SurroundsCell` is the wire's frozen name for a FACET, an area
+        .iter()
+        .map(|seen| plate::Perceived {
+            room: seen.room,
+            here: seen.state == "here",
+            mark: seen
+                .marks
+                .iter()
+                .min_by_key(|m| m.salience)
+                .map(|m| (m.salience, m.kind.as_str())),
+        })
+        .collect()
 }
 
 fn caption(base: String, sight: Option<&hornvale_game_core::schema::Sight>) -> String {
@@ -384,7 +637,7 @@ impl Driver {
     /// `target`.
     // Named construction site (decision 0092): `terrain_of` re-derives the
     // tectonic globe once here, at world load, to build the Portolan's
-    // terrain-feature index — never per-turn (see `CellFeatureIndex`'s doc).
+    // terrain-feature index — never per-turn (see `VertexFeatureIndex`'s doc).
     #[allow(clippy::disallowed_methods)]
     pub fn start(seed: u64, target: PossessTarget) -> Result<Driver, DriverError> {
         let world = build_world(
@@ -434,7 +687,7 @@ impl Driver {
         // per its own doc), so the snapshot read below already has it.
 
         // The Portolan: the terrain-feature index, built once here (never
-        // per-turn — see the module doc and `CellFeatureIndex`'s own).
+        // per-turn — see the module doc and `VertexFeatureIndex`'s own).
         // `terrain_of` re-derives `GeneratedTerrain` deterministically from
         // the world's committed seed and pin facts — the same
         // reconstruction idiom `sky_of`/the CLI's `map` command use, not a
@@ -442,17 +695,17 @@ impl Driver {
         let terrain = terrain_of(world_ref).map_err(DriverError::Genesis)?;
         let geo = terrain.geosphere().clone();
         let features = gazetteer_features(world_ref.seed, &geo, &terrain);
-        let index = CellFeatureIndex::build(&features);
-        let nearest = NearestCellIndex::new(&geo);
+        let index = VertexFeatureIndex::build(&features);
+        let nearest = NearestVertexIndex::new(&geo);
 
         // The Portolan part II, Task 5: the point-site roster — every
-        // terrain cell a live settlement's own committed `(latitude,
+        // terrain vertex a live settlement's own committed `(latitude,
         // longitude)` resolves nearest to. Built once here, the same
         // ledger read `h4_locked_worlds_settlements_are_never_in_the_clamp`
         // already exercises dev-only; this is the shipped-path use of it.
         // Ground truth, never gated — [`plate::draw_with`] is where
         // `discovered` decides whether a member of this set is ever drawn.
-        let settlements: BTreeSet<CellId> = world_ref
+        let settlements: BTreeSet<Vertex> = world_ref
             .ledger
             .find(hornvale_settlement::IS_SETTLEMENT)
             .filter_map(|fact| {
@@ -474,6 +727,16 @@ impl Driver {
             })
             .collect();
 
+        // The cave roster, scanned once. `cave_at` is a pure read of the
+        // vertex's own stratigraphic column, so this is a scan of the mesh
+        // rather than a derivation — and doing it here rather than per
+        // render is the whole point of projecting sites instead of
+        // sampling for them.
+        let caves: BTreeSet<Vertex> = (0..geo.vertex_count())
+            .map(|i| Vertex(i as u32))
+            .filter(|&c| terrain.cave_at(c).is_some())
+            .collect();
+
         // The Portolan part II: the projection's central line is derived
         // from the world's own physics (spec §3.1), not assumed —
         // `TIDALLY_LOCKED` is committed only when the world's rotation
@@ -486,8 +749,15 @@ impl Driver {
             .next()
             .is_some();
         let frame = mercator::frame_for(locked);
+        // The session opens on the walk band, and band B IS the ladder's
+        // finest rung (The Quadrat, Task 2) — so the opening rung is
+        // `BAND_B_RUNG`, not a separate off-ladder state. Band B DRAWS the
+        // Mercator as of Task 6, so `Focus::Map` here shows the raster with
+        // the perception overlay over it; the origin below is the chart's
+        // corner and `enter_map` centres it on the observer before anything
+        // is drawn (`centre_band_b_on_the_observer`).
         let window = Window {
-            zoom: 0,
+            depth: BAND_B_RUNG,
             origin_col: 0,
             origin_row: 0,
         };
@@ -520,17 +790,17 @@ impl Driver {
             },
             strip: None,
             redraw_count: 0,
+            marquee_ticks: 0,
             index,
             nearest,
             geo,
             terrain,
             frame,
             window,
-            world_view: false,
-            plate_renders: 0,
-            plate_cache: None,
+            tiles: crate::tiles::TileCache::default(),
             seed: world_ref.seed,
             settlements,
+            caves,
             visited: Visited::default(),
             discovered: Discovered::default(),
             plate_height: FLOOR_PLATE_CONTENT_HEIGHT,
@@ -540,6 +810,13 @@ impl Driver {
             line: Line::new(),
             history: History::new(),
             echo: None,
+            scope: hornvale_game_core::CurrentTurnNouns::default(),
+            tab_style: TabStyle::Hint,
+            hint: None,
+            cycle: None,
+            noun_prompt: None,
+            on_walk_band: true,
+            walk_scene: None,
         };
         driver.refresh();
         Ok(driver)
@@ -564,16 +841,18 @@ impl Driver {
     /// view active, also re-clamps the window (its virtual chart's own
     /// size depends on the plate's width, which just changed). With the map
     /// focused, also re-resolves the strip: the cursor's SCREEN position is
-    /// unchanged by a resize, but which real cell that screen position
+    /// unchanged by a resize, but which real vertex that screen position
     /// names can change (the plate's centre moves), so the displayed text
     /// must not go on describing whatever the old size resolved.
     pub fn resize(&mut self, w: u16, h: u16) {
         self.term_w = w;
         self.term_h = h;
         self.plate_height = hornvale_game_core::spread::content_height(h);
-        if self.world_view {
-            self.reclamp_window();
-        }
+        // UNCONDITIONAL since band B joined the raster (Task 6): every rung
+        // has a window whose origin depends on the plate's size, so there is
+        // no rung left for which this is meaningless.
+        self.reclamp_window();
+        self.centre_band_b_on_the_observer();
         self.move_cursor(0, 0);
         if self.focus == Focus::Map {
             self.refresh_strip();
@@ -600,12 +879,79 @@ impl Driver {
     /// moment `map` entry moved to its own function, and read as though Esc
     /// could still open the map.
     pub fn toggle_focus(&mut self) {
+        self.leave_the_map();
         self.focus = match self.focus {
             Focus::Cli => Focus::Walk,
             Focus::Map => Focus::Walk,
             Focus::Walk => Focus::Cli,
         };
+    }
+
+    /// End a map consultation: clear the strip, and — if the map was
+    /// actually focused — return the ladder to the walker's own band and
+    /// centre it on them.
+    ///
+    /// **The defect this closes (The Quadrat, Task 9, fix round 1).** Type
+    /// `map`, press `-`, press `Esc`: six keystrokes from the opening
+    /// screen. Before Task 9 that state drew [`crate::chart::draw`]'s own
+    /// picture, which is centred on the observer by construction. After
+    /// Task 9 the walk view draws the raster through `self.window` — and
+    /// nothing returned the rung, so the plate showed a coarse chart with
+    /// [`Self::compose_perception_layer`] correctly refusing off band B: no
+    /// `@`, no creatures, no cursor, no strip, no signal of any kind, while
+    /// the entry pane went on narrating the player's immediate
+    /// surroundings. **The picture and the prose described different
+    /// places.**
+    ///
+    /// **A RUNG BELONGS TO THE CONSULTATION, NOT TO THE WALKER**, and that
+    /// is the whole rule. Zoom is reachable only from [`Focus::Map`]
+    /// (`input::action_for` gives `-`/`+` to no other focus), so a coarse
+    /// rung is a thing the reader asked the MAP for; the walker never asked
+    /// for it and cannot undo it, because the walk view has no zoom
+    /// gesture. Leaving the map is where it ends.
+    ///
+    /// **Why this shape and not the two others considered.** (a) *Gate the
+    /// plate on `at_walk_band_rung()` outside `Focus::Map`* would hand the
+    /// walk view back to `chart::draw`'s hex scatter in a state reachable
+    /// in six keystrokes — reintroducing the very picture this campaign
+    /// exists to replace, in the default view. (b) *Give `Focus::Walk` its
+    /// own band-B window, leaving `self.window` to the map*, preserves the
+    /// reader's rung across consultations, and costs a SECOND window: this
+    /// module keeps exactly one, and [`Self::active_plate_dims`],
+    /// [`Self::move_cursor`], [`Self::reclamp_window`],
+    /// [`Self::refresh_strip`] and [`Self::resolve_world_view`] all read
+    /// it. None of them runs in `Focus::Walk` today, so the second window
+    /// would be correct today and would become the two-independent-copies
+    /// bug this file's own docs warn about repeatedly the moment one of
+    /// them did. What (b) buys is the reader's RUNG across a consultation —
+    /// and [`Self::enter_map`] already discards the reader's PAN on every
+    /// entry ("centre on arrival"), so a consultation already restarts
+    /// where the player stands. This makes it restart at the band they
+    /// stand in too, which is the same ruling carried one step, not a new
+    /// one.
+    ///
+    /// **Two doors, one owner.** `Esc` ([`Self::toggle_focus`]) is not the
+    /// only departure: `Action::FocusAndType` also leaves the map, for the
+    /// command line, on any printable key. The strip's own invariant
+    /// already had those two owners and the second arm's comment records
+    /// what that cost once; this method is now the single owner of both
+    /// halves, so a third door cannot acquire one and miss the other.
+    fn leave_the_map(&mut self) {
+        // Unconditional — the strip belongs to the map, and every departure
+        // clears it whatever focus we came from (`strip_text()` re-checks
+        // focus, so this is belt and braces, but the invariant is stated
+        // here rather than relying on that).
+        let was_consulting = self.focus == Focus::Map;
         self.strip = None;
+        if !was_consulting {
+            return;
+        }
+        self.window.depth = BAND_B_RUNG;
+        // The origin as well as the rung: a coarse rung's origin, reinterpreted
+        // at band B, is some arbitrary corner of a 23,245-wide chart — the
+        // arctic-corner state `centre_band_b_on_the_observer`'s own doc calls
+        // "not shippable". Centring is what makes the returned band a place.
+        self.centre_on_the_observer();
     }
 
     /// The map cursor's screen position, or `None` unless the map is
@@ -630,27 +976,25 @@ impl Driver {
     /// terminal — The Portolan part II, Task 3a wires this into the redraw
     /// path.
     ///
-    /// **The plate's own size is derived from the SAME fit `compose` itself
-    /// applies, never a second copy of it**:
-    /// [`hornvale_game_core::spread::world_plate_width`] gives the width,
-    /// and the height follows from
-    /// [`hornvale_game_core::spread::GLYPH_ASPECT`] — the ratio `core`
-    /// exposes rather than this module hardcoding a second `2` (see that
-    /// constant's own doc). This is what lets `world_plate_width`'s
-    /// `pub`-ness do its job: `compose` and this method size their two
-    /// `Grid`s from the identical computation.
+    /// **The plate's own size is derived from the SAME region `compose`
+    /// itself draws into, never a second copy of it** — see
+    /// [`Self::world_plate_dims`], which is the one place the width rule
+    /// ([`hornvale_game_core::spread::world_plate_width`]) and the height
+    /// rule ([`hornvale_game_core::spread::content_height`]) are read. This
+    /// is what lets those functions' `pub`-ness do its job: `compose` and
+    /// this method size their two `Grid`s from the identical computation.
     ///
     /// **Unconditional — draws the Mercator whether or not the world view is
     /// active.** [`Driver::world_plate_for_redraw`] is the gated entry point
     /// every real caller (`main.rs`'s `redraw`) must use instead; this
     /// method stays `pub` because it is also the seam a test drives to
     /// exercise the plate's own rendering directly, unconditionally. The
-    /// plate resamples `SUBSAMPLES_PER_AXIS` squared points per cell
-    /// (`plate.rs`'s own doc), so a caller reaching this directly still owns
-    /// not paying that cost needlessly.
+    /// plate is far cheaper than it was — one mesh address per cell since
+    /// The Quadrat's Task 3, not 49 spatial searches (`plate.rs`'s own
+    /// doc) — but a full redraw is still a full redraw, so a caller
+    /// reaching this directly still owns not paying it needlessly.
     pub fn world_plate(&self, w: u16, h: u16) -> hornvale_game_core::Grid {
-        let plate_width = hornvale_game_core::spread::world_plate_width(w, h);
-        let plate_height = plate_width / hornvale_game_core::spread::GLYPH_ASPECT;
+        let (plate_width, plate_height) = Self::world_plate_dims(w, h);
         plate::draw(
             &self.terrain,
             &self.geo,
@@ -660,51 +1004,132 @@ impl Driver {
             plate_width,
             plate_height,
             &self.settlements,
+            &self.caves,
             &self.discovered,
         )
     }
 
+    /// The world plate's own size for a `w`-by-`h` terminal — the SAME
+    /// region `compose` draws into, computed in one place because three
+    /// callers now need it ([`Self::world_plate`] draws a whole plate;
+    /// [`Self::world_plate_for_redraw`] draws its three layers separately
+    /// and must size all of them identically; [`Self::active_plate_dims`]
+    /// clamps the cursor and the window to it). A second copy of this
+    /// arithmetic is the bug shape `content_height`'s own doc warns about.
+    ///
+    /// **The height is [`hornvale_game_core::spread::content_height`], not
+    /// `width / GLYPH_ASPECT` (The Quadrat, Task 9).** The old derivation
+    /// agreed with this one for every width the old fit could produce —
+    /// that fit's own ceiling was `GLYPH_ASPECT * content_height(h)`, so
+    /// halving it landed exactly on `content_height(h)`. Task 9 raised the
+    /// width floor to half the terminal, which on a wide, short terminal
+    /// exceeds that ceiling (200x50: 100 columns against a ceiling of 92),
+    /// and half of 100 is 50 rows on a page with room for 46. Those four
+    /// rows would have been drawn into a grid the page then clipped, and —
+    /// worse — [`Self::active_plate_dims`] would have let the cursor walk
+    /// into them, which is the Task 3a review finding with the axes
+    /// swapped.
+    fn world_plate_dims(w: u16, h: u16) -> (u16, u16) {
+        (
+            hornvale_game_core::spread::world_plate_width(w, h),
+            hornvale_game_core::spread::content_height(h),
+        )
+    }
+
     /// The world plate to hand [`hornvale_game_core::render_with`] for a
-    /// `w`-by-`h` redraw, gated on the world view actually being active —
-    /// `Some(`[`Driver::world_plate`]`(w, h))` when [`Focus::Map`] is
-    /// focused AND `self.world_view` is on, `None` otherwise.
+    /// `w`-by-`h` redraw — `Some` exactly when the band is one whose plate
+    /// is the raster ([`Self::raster_is_drawn`]), `None` otherwise.
     ///
-    /// **Fix round 1: this is the ONE place that decision is made.** Before
-    /// this method existed, `main.rs`'s `redraw` computed
-    /// `Some(driver.world_plate(w, h))` whenever `focus() == Focus::Map`,
-    /// with no `world_view` gate at all — `Focus::Map` already meant
-    /// something else (the walk-band cursor/strip feature this module's
-    /// `world_view` field doc names), so that reproduced the exact
-    /// class of bug `content_height`'s own doc warns about elsewhere in
-    /// this crate: two independent computations of "is the world view
-    /// showing" would have been one too many, this time on the ACTIVATION
-    /// question rather than a dimension. `main.rs` calls only this method
-    /// now, never re-deriving the condition itself, and every test that
-    /// wants to know what a redraw would draw calls it too rather than
-    /// reimplementing the check a third time.
+    /// **THE GATE IS THE BAND, AND ONLY THE BAND (The Quadrat, Task 9).**
+    /// It was `Focus::Map && raster_is_drawn()` until Task 9, and the focus
+    /// clause is what left this campaign's third reported defect half
+    /// fixed: the default focus is [`Focus::Walk`] (decision 0160), so the
+    /// view a player looks at while WALKING took the `None` arm and
+    /// `spread::compose` drew the walk band's old hex scatter into a fixed
+    /// 40-column pane. Task 6 had put band B on the square raster, but only
+    /// while the map was focused — which is not the view the complaint was
+    /// about.
     ///
-    /// `self.world_view` defaults to `false` and, since Task 3b, [`Self::
-    /// apply_zoom`] is the gesture that sets it `true` — zooming out
-    /// (`-` on [`Focus::Map`]) past the walk band.
+    /// Dropping the clause is safe BY CONSTRUCTION rather than by care,
+    /// because [`Self::raster_is_drawn`] was already a question about the
+    /// band alone: the chamber band still answers `false`, so Task 6's fix
+    /// round 1 (typing `map` indoors must not replace the floor plan) is
+    /// preserved without anything else being asked to preserve it. What
+    /// FOCUS still decides is unchanged and is all it ever should have
+    /// decided: where the keys go, whether a cursor is reported, and
+    /// whether the map strip has text.
+    ///
+    /// **The RUNG is not part of the gate either (The Quadrat, Task 6 and
+    /// its fix round 1).** It used to be `Focus::Map && world_view()`, where
+    /// `world_view()` meant "some rung coarser than band B"; band B draws
+    /// the raster now, so that clause had no discriminating answer left.
+    ///
+    /// **This is the ONE place that decision is made** (The Portolan part
+    /// II's own fix round 1). Before this method existed, `main.rs`'s
+    /// `redraw` computed `Some(driver.world_plate(w, h))` whenever
+    /// `focus() == Focus::Map`, with no further gate — reproducing the exact
+    /// class of bug `content_height`'s own doc warns about elsewhere in this
+    /// crate: two independent computations of "is the raster showing" would
+    /// have been one too many, this time on the ACTIVATION question rather
+    /// than a dimension. `main.rs` calls only this method now, and every
+    /// test that wants to know what a redraw would draw calls it too rather
+    /// than reimplementing the check a third time.
+    ///
+    /// **Three layers now, and the lowest is assembled from TILES (The
+    /// Quadrat, Tasks 4, 5 and 6).** The perception overlay is the third —
+    /// see [`Self::compose_perception_layer`], which is a no-op off band B. The terrain raster comes from
+    /// [`crate::tiles::TileCache::compose`], which draws only the chart
+    /// tiles this window covers that it does not already hold;
+    /// [`plate::draw_feature_layer`] is then composed over the assembled
+    /// grid, on every call, hit or miss. So a discovery is visible on the
+    /// next redraw exactly as before — it just no longer repaints the
+    /// raster underneath, which is the whole of
+    /// `CLIENT-tiles-need-the-overlay-split`. This is also why the composed
+    /// grid is never stored back: the cache holds terrain, and a plate with
+    /// features already burned into it could not answer a later frame whose
+    /// discovery set had moved.
+    ///
+    /// **`compose` returns a fresh `Grid`, so there is no `clone` here any
+    /// more** — the tiles are the cached objects, and the assembled plate
+    /// was never one.
     pub fn world_plate_for_redraw(&mut self, w: u16, h: u16) -> Option<hornvale_game_core::Grid> {
-        if !(self.world_view && self.focus == Focus::Map) {
+        if !self.raster_is_drawn() {
             return None;
         }
-        let key = PlateKey {
-            frame: self.frame,
-            window: self.window,
-            w,
-            h,
-            discovered_len: self.discovered.len(),
-        };
-        if let Some((cached, grid)) = &self.plate_cache
-            && *cached == key
-        {
-            return Some(grid.clone());
-        }
-        let grid = self.world_plate(w, h);
-        self.plate_renders += 1;
-        self.plate_cache = Some((key, grid.clone()));
+        let (plate_width, plate_height) = Self::world_plate_dims(w, h);
+        let mut grid = self.tiles.compose(
+            &self.terrain,
+            &self.geo,
+            &self.nearest,
+            &self.frame,
+            &self.window,
+            plate_width,
+            plate_height,
+            plate::colour_allowed(),
+        );
+        // No `w`/`h` here, deliberately: the feature layer reads the window's
+        // size from the grid it is drawing onto, so this path cannot hand it a
+        // bound the cached terrain grid disagrees with (fix round 1, Minor 1).
+        plate::draw_feature_layer(
+            &mut grid,
+            &self.geo,
+            &self.frame,
+            &self.window,
+            plate::colour_allowed(),
+            &self.settlements,
+            &self.caves,
+            &self.discovered,
+        );
+        // LAYER THREE, band B only (The Quadrat, Task 6): the observer's own
+        // position and the marks standing around them, composed over the
+        // raster rather than instead of it. This is what Ruling 19's
+        // surviving concern names — `spread::compose`'s plate selection is
+        // either/or, so handing band B a plate at all would otherwise have
+        // removed the only thing that draws `'@'` and the creatures. Redrawn
+        // every frame like the feature layer and for the same reason: it is a
+        // handful of projections, and giving it an invalidation key is the
+        // defect `CLIENT-tiles-need-the-overlay-split` records.
+        self.compose_perception_layer(&mut grid);
         Some(grid)
     }
 
@@ -725,9 +1150,10 @@ impl Driver {
     /// the buffer — or, on an empty buffer, does nothing at all and returns
     /// `false` (spec §6: the buffer is the last reversible thing before an
     /// irreversible act, so a stray `Enter` must not cost a turn). A
-    /// submitted line whose first token is exactly `map` additionally
-    /// enters the map focus (exact-after-trim, mirroring `Session::handle`'s
-    /// first-token convention).
+    /// submitted line that is exactly `map` enters the map focus INSTEAD OF
+    /// being sent (exact-after-trim, mirroring `Session::handle`'s
+    /// first-token convention) — decision 0290, a mode gesture is not a
+    /// fetch; it costs no turn and returns `false`.
     /// `Move` executes a walk-mode direction exactly like a submitted line
     /// (echo + history + `handle`), minus any buffer involvement.
     /// `CursorBy`/`ToggleFocus` are unchanged from part I.
@@ -739,7 +1165,7 @@ impl Driver {
     /// routing table).** With the world view off, zooming out (`-`) turns it
     /// on at the coarsest rung; with the world view on at its finest rung,
     /// zooming in (`+`/`=`) turns it back off; between those, the keys move
-    /// the world map's own zoom, clamped to `0..=`[`plate::MAX_ZOOM`]. See
+    /// the world map's own rung, clamped to [`GLOBE_RUNG`]`..=`[`BAND_B_RUNG`]. See
     /// [`Self::apply_zoom`].
     ///
     /// **`Recentre` (`.`) rolls the projection to the cursor (spec §3.2),
@@ -748,6 +1174,16 @@ impl Driver {
     pub fn apply(&mut self, action: Action) -> bool {
         match action {
             Action::ToggleFocus => {
+                // Esc during the noun prompt CANCELS it rather than
+                // toggling focus — restoring the buffer verbatim is the
+                // stash convention the history semantics established.
+                if let Some(saved) = self.noun_prompt.take() {
+                    self.line.set(saved.saved_buffer);
+                    while self.line.caret() < saved.saved_caret {
+                        self.line.caret_right();
+                    }
+                    return false;
+                }
                 self.toggle_focus();
                 false
             }
@@ -758,6 +1194,7 @@ impl Driver {
             }
             Action::Type(c) => {
                 self.line.insert(c);
+                self.clear_completion();
                 false
             }
             Action::FocusAndType(c) => {
@@ -775,13 +1212,29 @@ impl Driver {
                 // earlier revision left that invariant with two owners and
                 // one violator, masked only because `strip_text()`
                 // re-checks focus before returning.
+                // THE MAP'S SECOND DOOR (Task 9, fix round 1). This arm used
+                // to clear the strip itself, which was the whole of leaving
+                // the map at the time; leaving it also returns the rung now,
+                // so both halves are taken from the one owner rather than
+                // this arm re-spelling either. Called BEFORE the focus moves
+                // — `leave_the_map` asks what focus we are leaving.
+                self.leave_the_map();
                 self.focus = Focus::Cli;
-                self.strip = None;
                 self.line.insert(c);
+                self.clear_completion();
                 false
             }
             Action::DeleteBack => {
+                // In the noun prompt, backspace stops at the dispatched
+                // prefix: deleting into "examine " would corrupt what
+                // Enter sends.
+                if self.noun_prompt.is_some()
+                    && self.line.text().chars().count() <= EXAMINE_PROMPT_PREFIX.chars().count()
+                {
+                    return false;
+                }
                 self.line.backspace();
+                self.clear_completion();
                 false
             }
             Action::CaretBy(dx) => {
@@ -790,54 +1243,103 @@ impl Driver {
                     std::cmp::Ordering::Greater => self.line.caret_right(),
                     std::cmp::Ordering::Equal => {}
                 }
+                self.clear_completion();
                 false
             }
             Action::HistoryPrev => {
+                // Recalling history commits the prompt: the composed line
+                // becomes the ordinary buffer the recall replaces.
+                self.noun_prompt = None;
                 if let Some(text) = self.history.prev() {
                     self.line.set(text.to_string());
                 }
+                self.clear_completion();
                 false
             }
             Action::HistoryNext => {
+                self.noun_prompt = None;
                 match self.history.next() {
                     Some(text) => self.line.set(text.to_string()),
                     None => self.line.set(String::new()),
                 }
+                self.clear_completion();
                 false
             }
             Action::Submit => {
                 if self.line.is_empty() {
                     return false;
                 }
+                let caret = self.line.caret();
                 let taken = self.line.take();
+                // BARE `x` — the conventional examine shorthand — enters the
+                // noun prompt instead of dispatching and burning a turn on
+                // "Examine what?" (spec §4.4). Nothing is echoed, nothing
+                // enters history, no turn advances: the prompt is a question
+                // the client asks locally.
+                if taken.trim() == "x" {
+                    if self.noun_prompt.is_none() {
+                        self.noun_prompt = Some(NounPrompt {
+                            saved_buffer: taken,
+                            saved_caret: caret,
+                        });
+                        self.line.set(EXAMINE_PROMPT_PREFIX.to_string());
+                    } else {
+                        // Already prompting: a bare `x` typed INTO the
+                        // prompt is just text — put it back.
+                        self.line.set(taken);
+                    }
+                    return false;
+                }
+                // Any other submission exits the prompt: the composed line
+                // IS what the player chose to send.
+                self.noun_prompt = None;
+                self.clear_completion();
                 self.history.push(taken.clone());
                 self.echo = Some(taken.clone());
-                let released = self.handle(&taken);
-                // BARE `map` — and only bare `map` — enters the map focus.
-                // This mirrors a convention the sim already keeps rather
-                // than inventing one: `Session::handle` splits its own
-                // bare-from-argument forms on `rest.is_empty()` (see the
+                // BARE `map` — and only bare `map` — enters the map focus,
+                // AND IT DOES NOT SEND THE VERB (decision 0290). The
+                // comment that used to sit here already argued this ("the
+                // plate is redrawn from `Spatial` every turn regardless,
+                // which is why submitting `map` is a MODE GESTURE and not a
+                // fetch") while the code sent it anyway, and that gap IS
+                // The Quadrat's second reported defect: the sim answered a
+                // mode gesture with a picture, and the picture landed in
+                // the prose pane over the top of the plate the player had
+                // just asked to look at. The acknowledgement is the focus
+                // changing — the precedent `Self::recentre` states for
+                // itself ("the acknowledgement is the map redrawing").
+                //
+                // The bare-from-argument split mirrors a convention the sim
+                // already keeps rather than inventing one: `Session::handle`
+                // splits its own forms on `rest.is_empty()` (see the
                 // `"map" if self.inside.is_some() && rest.is_empty()` and
                 // `"eyes" if rest.is_empty()` arms), because the two mean
-                // different things. So `" map "` triggers; `"map x"`,
-                // `"map out 2"` and `"examine map"` do not.
+                // different things. So `" map "` is the gesture; `"map x"`,
+                // `"map out 2"` and `"examine map"` are sent as typed.
                 //
-                // `map out N` is the case worth stating, because "it drew a
-                // chart, so focus it" is the plausible wrong answer:
-                // `Session::map` takes `&self` and returns prose, so NO
-                // argument form can move the plate. The plate is redrawn
-                // from `Spatial` every turn regardless (`spread::compose`),
-                // which is why submitting `map` is a MODE GESTURE and not a
-                // fetch. Focusing after `map out 2` would hand the player a
+                // **`map out N` STAYS A FETCH, and that is load-bearing
+                // rather than conventional** (spec §4.2). It is the
+                // diagnostic path that caught The Quire's wrong projection,
+                // where the client and the sim were rendered side by side
+                // over the identical thirty-one facets and only one was
+                // right; removing every route to the sim's own picture
+                // would delete the comparison guarding spec §5's H2. It
+                // also must not focus the map: `Session::map` takes `&self`
+                // and returns prose, so no argument form moves the plate,
+                // and focusing after `map out 2` would hand the player a
                 // cursor on an unzoomed plate they did not ask about.
                 //
-                // Guarded on not already being focused so re-submitting
-                // `map` from the map does not pay a strip refresh for an
-                // identical answer.
-                if taken.trim() == "map" && self.focus != Focus::Map {
-                    self.enter_map();
+                // The focus test is what keeps re-submitting `map` from the
+                // map paying a strip refresh for an identical answer; the
+                // gesture still swallows the line either way, because a
+                // bare `map` is never a fetch, focused or not.
+                if taken.trim() == "map" {
+                    if self.focus != Focus::Map {
+                        self.enter_map();
+                    }
+                    return false;
                 }
-                released
+                self.handle(&taken)
             }
             Action::Move(word) => {
                 // A walk-mode arrow key acts like a submitted line — same
@@ -848,6 +1350,27 @@ impl Driver {
                 self.history.push(taken.clone());
                 self.echo = Some(taken.clone());
                 self.handle(&taken)
+            }
+            // Completion (spec §4.2). Under [`TabStyle::Hint`] the token
+            // at the caret is completed against the lexicon: a unique match
+            // is filled whole, an ambiguous one extends to the shared stem
+            // and parks the alternatives in `self.hint` for the strip to
+            // show, and a no-match changes nothing. Under [`TabStyle::Cycle`]
+            // an open rotation steps BEFORE the engine is consulted — the
+            // filled name alone would only ever complete to itself. Never
+            // advances the turn.
+            Action::Complete => {
+                if self.tab_style == TabStyle::Cycle {
+                    self.cycle_step();
+                } else {
+                    let decision = completion_decision(
+                        &self.line.text(),
+                        self.line.caret(),
+                        &self.scope.candidates(),
+                    );
+                    self.apply_hint(decision);
+                }
+                false
             }
             Action::Zoom(delta) => {
                 self.apply_zoom(delta);
@@ -861,22 +1384,162 @@ impl Driver {
         }
     }
 
+    /// Apply one hint-style completion decision. Always leaves the turn
+    /// unadvanced (the caller returns `false` regardless).
+    fn apply_hint(&mut self, decision: CompletionDecision) {
+        match decision {
+            CompletionDecision::Noop => {}
+            CompletionDecision::Fill(name) => {
+                self.line.replace_word_at_caret(&name);
+                self.hint = None;
+            }
+            CompletionDecision::Ambiguous { stem, matches } => {
+                self.line.replace_word_at_caret(&stem);
+                self.hint = Some(Hint { stem, matches });
+            }
+        }
+    }
+
+    /// One Complete keypress under [`TabStyle::Cycle`]. While a rotation is
+    /// open over the word at the caret (same char offset it opened at), it
+    /// steps to the next match, wrapping — this check happens FIRST,
+    /// because a filled name re-completed through the engine would only
+    /// ever yield itself. Otherwise a fresh ambiguous match fills its first
+    /// alternative and opens the rotation; unique fills and no-matches
+    /// behave exactly as under [`TabStyle::Hint`], closing any rotation.
+    fn cycle_step(&mut self) {
+        let text = self.line.text();
+        let caret = self.line.caret();
+        let here = word_start_at_caret(&text, caret);
+        if let Some(state) = &mut self.cycle
+            && matches!(here, Some(s) if s == state.start)
+        {
+            state.index = (state.index + 1) % state.matches.len();
+            let name = state.matches[state.index].clone();
+            self.line.replace_word_at_caret(&name);
+            return;
+        }
+        match completion_decision(&text, caret, &self.scope.candidates()) {
+            CompletionDecision::Ambiguous { stem, matches } => {
+                self.line.replace_word_at_caret(&stem);
+                let name = matches[0].clone();
+                let start = word_start_at_caret(&self.line.text(), self.line.caret()).unwrap_or(0);
+                self.line.replace_word_at_caret(&name);
+                // No hint here by choice (the strip stays quiet under a
+                // rotation): `Hint.stem` is documented as the longest
+                // common prefix, and the only thing this path could store
+                // is a full match — so it stores nothing instead. The
+                // cycle presents via token rotation, not a hint line.
+                self.cycle = Some(CycleState {
+                    start,
+                    matches,
+                    index: 0,
+                });
+            }
+            CompletionDecision::Fill(name) => {
+                self.line.replace_word_at_caret(&name);
+                self.clear_completion();
+            }
+            CompletionDecision::Noop => {}
+        }
+    }
+
+    /// Drop any pending hint and cycle state — every action that mutates
+    /// or submits the line owns one of these calls.
+    fn clear_completion(&mut self) {
+        self.hint = None;
+        self.cycle = None;
+    }
+
     /// Enter the map focus and resolve its strip. Also called by `apply`'s
     /// `Submit` arm when a submitted line's first token is exactly `map`
     /// (see there).
     fn enter_map(&mut self) {
         self.focus = Focus::Map;
+        // BEFORE the strip resolves, not after: the strip names what the
+        // cursor points at, and centring moves what that is.
+        //
+        // **AT ANY RUNG, not band B's alone** (fix round 1, Important 2, and
+        // a defect this task created). Task 7 took the observer-centring off
+        // the zoom path, which was right — see
+        // [`Self::centre_band_b_on_the_observer`] — but "zoom out one, zoom
+        // in one" had been an ACCIDENTAL way home, and removing it left a
+        // coarse rung with no way home at all: the centring returned early
+        // off band B, so `map` + Enter did nothing, and
+        // [`Self::compose_perception_layer`] deliberately refuses off band B,
+        // so no marker is drawn and the reader cannot even see which
+        // direction home is. `.` is no help — it rolls the projection about
+        // the CURSOR, carrying you further off. The only route left was `+`
+        // to the ladder's ceiling and THEN `map`.
+        //
+        // Entering the map is an ARRIVAL, and arrival is what centres
+        // (the rule this task settled is "centre on arrival, anchor on
+        // gesture"). Nothing about that rule was ever specific to a rung;
+        // only the implementation was.
+        self.centre_on_the_observer();
         self.refresh_strip();
     }
 
-    /// The active plate's own width and height, in grid cells — the walk
-    /// band's fixed [`hornvale_game_core::spread::PLATE_WIDTH`] and
-    /// `self.plate_height` when the world view is off, or the world
-    /// plate's own fit when it is on: the SAME
-    /// [`hornvale_game_core::spread::world_plate_width`]
-    /// [`Driver::world_plate`] itself draws into, its height following
-    /// [`hornvale_game_core::spread::GLYPH_ASPECT`] the identical way that
-    /// method derives it.
+    /// Whether the ladder is on the WALK BAND's own rung — [`BAND_B_RUNG`],
+    /// the finest rung, the one the observer actually stands on.
+    ///
+    /// **This REPLACES `world_view()`, and the replacement is a narrowing
+    /// rather than a rename** (The Quadrat, Task 6). `world_view()` asked
+    /// "does this rung draw the Mercator raster instead of the walk band's
+    /// own chart", and its own doc predicted it would lose its referent the
+    /// moment band B joined the raster. It has: every rung draws the raster
+    /// now, band B included, so that question has no discriminating answer
+    /// left and a method still called `world_view` would read as though one
+    /// rung were not a world view.
+    ///
+    /// What survives is a DIFFERENT distinction, and it is the one every
+    /// remaining caller actually wanted: **band B has a plate AND a
+    /// perception overlay AND a sight caption; a coarser rung has a plate
+    /// and neither.** On the shipped ladder
+    /// ([`GLOBE_RUNG`]`..=`[`BAND_B_RUNG`], which [`Self::apply_zoom`]
+    /// clamps to) this is the exact complement of what `world_view()`
+    /// returned, so every call site that used to ask `world_view()` asks
+    /// `!at_walk_band_rung()` and means the same thing.
+    ///
+    /// **Derived, never stored** — the property Task 2 introduced it for,
+    /// and the reason the zoom keys mean one thing at every rung:
+    /// [`Self::apply_zoom`] changes one number and which layers appear
+    /// follows from it.
+    fn at_walk_band_rung(&self) -> bool {
+        self.window.depth == BAND_B_RUNG
+    }
+
+    /// Whether the RASTER is what the plate region draws right now — which
+    /// is a question about the BAND, not the rung.
+    ///
+    /// **Band A keeps its own renderer, and fix round 1's F5 is why this
+    /// method exists.** `world_plate_for_redraw`'s gate briefly became
+    /// `Focus::Map` alone, so typing `map` inside a chamber replaced the
+    /// chamber floor plan with the world raster — and
+    /// [`Self::compose_perception_layer`] correctly refuses off the walk
+    /// band, so nothing marked the player's position there at all. The
+    /// campaign's spec says "Band A keeps its own renderer and this campaign
+    /// does not touch it", and that is a promise: whether consulting a world
+    /// map from indoors is DESIRABLE is a real question, but it is a
+    /// deliberate design change for a later campaign, not a side effect of a
+    /// raster task.
+    ///
+    /// So: no plate at the chamber band, which means `spread::compose` draws
+    /// `plan::draw` exactly as it did before this campaign, the cursor
+    /// clamps to the narrow plate that is really on screen, a cursor move
+    /// does not silently scroll a window nobody can see, and the strip
+    /// answers [`NOTHING_HERE_YET`] — spec §9 still defers the chamber
+    /// resolver.
+    fn raster_is_drawn(&self) -> bool {
+        self.on_walk_band
+    }
+
+    /// The active plate's own width and height, in grid columns and rows —
+    /// the chamber band's fixed
+    /// [`hornvale_game_core::spread::PLATE_WIDTH`] and `self.plate_height`
+    /// when the raster is not what is drawn, or [`Self::world_plate_dims`]
+    /// outright when it is: the SAME pair [`Driver::world_plate`] itself
+    /// draws into, read from that one function rather than restated here.
     ///
     /// **Task 3a's own review finding, closed here (Task 3b):**
     /// `move_cursor` used to clamp to the fixed walk-band width regardless
@@ -886,10 +1549,24 @@ impl Driver {
     /// the world-view resolver — reads it from here, never a second copy
     /// of the fit.
     fn active_plate_dims(&self) -> (u16, u16) {
-        if self.world_view {
-            let width = hornvale_game_core::spread::world_plate_width(self.term_w, self.term_h);
-            let height = width / hornvale_game_core::spread::GLYPH_ASPECT;
-            (width, height)
+        // TWO ARMS, KEYED ON THE BAND rather than on the rung (Task 6, fix
+        // round 1's F5). Before Task 6 the split was `world_view()`, a rung
+        // comparison, because band B drew `core`'s own chart into the narrow
+        // plate. Band B draws the raster now — so the rung no longer decides
+        // — but the CHAMBER band still draws `plan::draw` into
+        // `spread::PLATE_WIDTH`, and clamping the cursor to a 104-column fit
+        // over a 40-column floor plan is the Task 3a review finding with the
+        // operands swapped. `spread::compose` widens the plate region only
+        // when it is actually handed a plate, which is exactly
+        // [`Self::raster_is_drawn`].
+        if self.raster_is_drawn() {
+            // The IDENTICAL call `world_plate`/`world_plate_for_redraw`
+            // size their grids from — not a second spelling of it (Task 9;
+            // an earlier revision derived the height as
+            // `width / GLYPH_ASPECT` here and in `world_plate_dims`, two
+            // copies of one rule that Task 9's wider floor would have
+            // broken in both places at once).
+            Self::world_plate_dims(self.term_w, self.term_h)
         } else {
             (hornvale_game_core::spread::PLATE_WIDTH, self.plate_height)
         }
@@ -902,8 +1579,8 @@ impl Driver {
     /// (latitude stops at the clamp — spec §4.2). Only ever meaningful
     /// while the world view is on; callers only invoke it then.
     fn reclamp_window(&mut self) {
-        let (plate_w, plate_h) = self.active_plate_dims();
-        let (virtual_w, virtual_h) = plate::virtual_dims(&self.window, plate_w);
+        let (_, plate_h) = self.active_plate_dims();
+        let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
         if virtual_w > 0 {
             self.window.origin_col %= virtual_w;
         }
@@ -941,8 +1618,13 @@ impl Driver {
         let clamped_y = raw_y.clamp(0, max_y);
         self.cursor.y = clamped_y as u16;
 
-        if self.world_view {
-            let (virtual_w, virtual_h) = plate::virtual_dims(&self.window, plate_w);
+        // Band B is a scrollable Mercator window like every other RUNG since
+        // Task 6 — but only where a Mercator is drawn at all. Scrolling a
+        // window the chamber band never shows would move `self.window`
+        // invisibly and leave the map somewhere else on the way back out
+        // (fix round 1, F5).
+        if self.raster_is_drawn() {
+            let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
             let spill_x = raw_x - clamped_x;
             if virtual_w > 0 {
                 self.window.origin_col = (i64::from(self.window.origin_col) + spill_x)
@@ -958,22 +1640,40 @@ impl Driver {
         }
     }
 
-    /// Zoom the map view: one continuous ladder built from already-routed
-    /// keys (`-`/`+`/`=`), rather than a new binding or a fourth focus
-    /// state — chosen over a typed `world` verb (no reply channel exists;
-    /// the entry pane's prose is wire-carried) and over a new letter key
-    /// (would break `Focus::Map`'s deliberately total routing table).
+    /// Zoom the map view: ONE continuous ladder of mesh rungs, driven by
+    /// already-routed keys (`-`/`+`/`=`) rather than a new binding or a
+    /// fourth focus state — chosen over a typed `world` verb (no reply
+    /// channel exists; the entry pane's prose is wire-carried) and over a
+    /// new letter key (would break `Focus::Map`'s deliberately total
+    /// routing table).
     ///
-    /// - `delta < 0` (zoom OUT): with the world view off, turn it ON at
-    ///   its coarsest rung (`Window { zoom: 0, .. }` — the whole planet,
-    ///   nothing further out); with it on and already at zoom `0`, do
-    ///   nothing (there IS nothing further out); otherwise zoom out one
-    ///   step.
-    /// - `delta > 0` (zoom IN): with the world view on and already at
-    ///   [`plate::MAX_ZOOM`] (the finest rung — one character per terrain
-    ///   cell, decision 0123), turn it OFF, returning to the walk-band
-    ///   chart; with it on and below the ceiling, zoom in one step;
-    ///   with it off, do nothing (the walk band has no zoom of its own).
+    /// - `delta > 0` (zoom IN) RAISES `depth` one rung, saturating at
+    ///   [`BAND_B_RUNG`] — the finest rung, one tile per band-B facet.
+    /// - `delta < 0` (zoom OUT) LOWERS `depth` one rung, saturating at
+    ///   [`GLOBE_RUNG`] — the canonical grid level, below which the terrain
+    ///   fields have no resolution to disclose.
+    ///
+    /// **The two keys change exactly one number and nothing else** (The
+    /// Quadrat, Task 2). They used to mean two different things at the
+    /// ladder's ends: a `world_view` boolean sat beside the rung, and
+    /// zooming past either end flipped that boolean AND reset the window to
+    /// the coarsest rung — the reported "zooms based on criteria I have not
+    /// identified". Band B is a rung now, so WHICH LAYERS appear is a
+    /// function of `depth` alone ([`Self::at_walk_band_rung`]), and crossing
+    /// the band-B boundary is an ordinary step rather than a mode change.
+    ///
+    /// **"Exactly one number" is enforced by the `!= before` guard, and it
+    /// has to be.** Everything this method does beyond moving `depth` — the
+    /// re-clamp and band B's re-centring — is inside that guard, so a press
+    /// that saturates at either end of the ladder really does nothing. Fix
+    /// round 1's F1 is what this sentence is for: the re-centring call
+    /// briefly sat outside it and a `+` at the ceiling discarded ~19,000
+    /// tiles of scroll.
+    ///
+    /// **The ladder's direction inverted with The Quadrat**: `depth` is a
+    /// mesh subdivision level, so zooming IN raises it and zooming OUT
+    /// lowers it, where the old `zoom` field counted steps up from the
+    /// coarsest.
     ///
     /// Either transition re-clamps the cursor into whichever plate is now
     /// active ([`Self::move_cursor`]`(0, 0)`) and re-resolves the strip —
@@ -981,34 +1681,59 @@ impl Driver {
     /// on every one of these transitions.
     fn apply_zoom(&mut self, delta: i8) {
         use std::cmp::Ordering;
+        let before = self.window.depth;
+        // READ THE ANCHOR BEFORE THE RUNG MOVES. The point is expressed in
+        // degrees precisely so it survives the move: the tile that carries
+        // it is about to change size, address and chart, and degrees are the
+        // one address both rungs share.
+        let anchor = self
+            .raster_is_drawn()
+            .then(|| self.geographic_point_under_cursor());
         match delta.cmp(&0) {
             Ordering::Less => {
-                if !self.world_view {
-                    self.world_view = true;
-                    self.window = Window {
-                        zoom: 0,
-                        origin_col: 0,
-                        origin_row: 0,
-                    };
-                } else if self.window.zoom > 0 {
-                    self.window.zoom -= 1;
-                    self.reclamp_window();
-                }
+                self.window.depth = self.window.depth.saturating_sub(1).max(GLOBE_RUNG);
             }
             Ordering::Greater => {
-                if self.world_view && self.window.zoom >= plate::MAX_ZOOM {
-                    self.world_view = false;
-                    self.window = Window {
-                        zoom: 0,
-                        origin_col: 0,
-                        origin_row: 0,
-                    };
-                } else if self.world_view {
-                    self.window.zoom += 1;
-                    self.reclamp_window();
-                }
+                self.window.depth = self.window.depth.saturating_add(1).min(BAND_B_RUNG);
             }
             Ordering::Equal => {}
+        }
+        if self.window.depth != before {
+            self.reclamp_window();
+            // **INSIDE THE GUARD** — and read the next paragraph before
+            // trusting any claim about what enforces that.
+            //
+            // Fix round 1's F1 is why the guard exists: what used to sit
+            // here sat OUTSIDE, so a SATURATING press at the ladder's
+            // ceiling acted anyway — measured jumping `origin_col`
+            // 21169 -> 2176, throwing away ~19,000 tiles of the player's own
+            // scroll on a keypress this method's own doc says changes
+            // nothing. `zoom_plus_at_the_ladders_ceiling_keeps_the_players_
+            // scroll` pins THAT defect and still discriminates it: a
+            // re-introduced NON-idempotent action outside the guard fails it.
+            //
+            // **AN EARLIER REVISION OF THIS COMMENT CLAIMED THAT TEST ALSO
+            // COVERS THIS BLOCK'S POSITION. IT DOES NOT, AND THE CLAIM WAS
+            // DISPROVED BY APPLYING THE REGRESSION** (fix round 1, Important
+            // 1): moving this block outside the guard leaves all eleven
+            // relevant tests green. The comment's own premise defeated it —
+            // the anchor is IDEMPOTENT at an unchanged rung (a tile centre
+            // re-projects to its own tile, pinned by
+            // `the_anchor_is_a_no_op_at_an_unchanged_rung`), so a press that
+            // saturates cannot tell the two placements apart. The guard is
+            // therefore belt-and-braces TODAY and load-bearing the moment
+            // anything non-idempotent joins it; it stays for that reason,
+            // not because a test is watching it.
+            //
+            // The one state that CAN tell them apart is the one state where
+            // the anchor is not idempotent — a plate taller than the whole
+            // chart, where the row clamp bites — and
+            // `a_saturating_press_on_a_plate_taller_than_the_chart_moves_
+            // nothing` drives exactly that. It is a narrow lever, and it is
+            // the only one there is; saying so is the point.
+            if let Some((lat, lon)) = anchor {
+                self.anchor_geographic_point(lat, lon);
+            }
         }
         self.move_cursor(0, 0);
         self.refresh_strip();
@@ -1033,33 +1758,119 @@ impl Driver {
     /// "The acknowledgement is the map redrawing" (`task-3b-brief.md`) —
     /// there is no reply channel to say anything else.
     fn recentre(&mut self) {
-        if !self.world_view {
+        // NO RUNG GATE since Task 6 — band B IS a Mercator projection now, so
+        // the gesture is meaningful at every rung. A BAND gate remains, for
+        // the reason the rung gate originally gave: the chamber band's floor
+        // plan is not a Mercator projection and has no central line to roll
+        // onto (fix round 1, F5).
+        if !self.raster_is_drawn() {
             return;
         }
-        let (plate_w, plate_h) = self.active_plate_dims();
-        let (virtual_w, virtual_h) = plate::virtual_dims(&self.window, plate_w);
-        let plate_row = self.window.origin_row + u32::from(self.cursor.y);
-        let plate_col = self.window.origin_col + u32::from(self.cursor.x);
-        let (lat, lon) =
-            mercator::unproject(&self.frame, plate_row, plate_col, virtual_w, virtual_h);
-
+        let (lat, lon) = self.geographic_point_under_cursor();
         self.frame = mercator::centre_on(lat, lon);
-
-        if let Some((new_row, new_col)) =
-            mercator::project(&self.frame, lat, lon, virtual_w, virtual_h)
-        {
-            if virtual_w > 0 {
-                self.window.origin_col = (i64::from(new_col) - i64::from(self.cursor.x))
-                    .rem_euclid(i64::from(virtual_w))
-                    as u32;
-            }
-            let max_origin_row = i64::from(virtual_h)
-                .saturating_sub(i64::from(plate_h))
-                .max(0);
-            self.window.origin_row =
-                (i64::from(new_row) - i64::from(self.cursor.y)).clamp(0, max_origin_row) as u32;
-        }
+        // ONE COPY OF THE RE-ANCHOR, shared with [`Self::apply_zoom`] (The
+        // Quadrat, Task 7). It used to be spelled out here and would have
+        // had to be spelled out again there; this file's own
+        // `content_height` note records what two independent copies of one
+        // computation cost the last time.
+        self.anchor_geographic_point(lat, lon);
         self.refresh_strip();
+    }
+
+    /// The geographic `(latitude, longitude)`, in degrees, of the tile the
+    /// map cursor points at right now — the reading every anchored gesture
+    /// takes before it moves anything, and the one address that survives a
+    /// change of rung.
+    ///
+    /// **Tile-resolution by construction, which is the map's whole address
+    /// space.** What comes back is the CENTRE of the tile under the cursor,
+    /// never a sub-tile position: nothing on screen distinguishes two points
+    /// inside one character, so there is no finer answer to give. Every
+    /// guarantee stated in terms of "the point under the cursor" inherits
+    /// that, and the campaign's own zoom invariant is therefore asserted as
+    /// a CONTAINMENT (the old point lies in the new tile) rather than as a
+    /// tolerance in degrees.
+    ///
+    /// The column wraps and the row is held on the chart. The wrap is
+    /// substantive rather than tidiness: `origin_col` may sit one short of
+    /// the chart's width, so `origin_col + cursor.x` routinely runs past it,
+    /// and `mercator::unproject` does no wrapping of its own — an unwrapped
+    /// read hands back a longitude outside `[-180, 180)`, which
+    /// `mercator::centre_on` turns into a `Frame` that compares unequal to
+    /// the geometrically identical one. The row bound is Task 5's carried
+    /// M3: `reclamp_window`'s `max_origin_row` is 0 whenever the plate is
+    /// taller than the whole chart, which a wide enough terminal reaches at
+    /// [`GLOBE_RUNG`], and a row past the chart unprojects to a latitude the
+    /// projection never drew.
+    pub fn geographic_point_under_cursor(&self) -> (f64, f64) {
+        let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
+        let row =
+            (self.window.origin_row + u32::from(self.cursor.y)).min(virtual_h.saturating_sub(1));
+        let col = (self.window.origin_col + u32::from(self.cursor.x)) % virtual_w;
+        mercator::unproject(&self.frame, row, col, virtual_w, virtual_h)
+    }
+
+    /// Move the window — and, where the window cannot move, the cursor — so
+    /// that `(lat, lon)` sits at the cursor's own screen position. The
+    /// shared tail of [`Self::recentre`] and [`Self::apply_zoom`], and
+    /// the whole mechanism behind The Quadrat's founding complaint: **the
+    /// geographic point under the cursor does not move across a zoom step.**
+    ///
+    /// **TWO KNOBS, and both are needed.** Normally the WINDOW ORIGIN moves
+    /// and the cursor holds still, which is what a reader expects: the
+    /// picture slides under a steady pointer. Where the origin has nowhere
+    /// left to go, the CURSOR moves instead and the guarantee is kept by the
+    /// other hand. A test that only ever anchored in the middle of a chart
+    /// would exercise one knob and never learn the second existed.
+    ///
+    /// **TWO LIMITS, DECLARED RATHER THAN HIDDEN** — decision 0142's own
+    /// shape for a lost axis, applied to a kept one:
+    ///
+    /// 1. **Longitude holds exactly, always.** The chart wraps, so the
+    ///    column arithmetic is a `rem_euclid` with no clamp in it and no
+    ///    residue to spend. There is no east-west case in which this fails.
+    /// 2. **Latitude holds except where Mercator's polar clamp binds.** Two
+    ///    distinct ways it can bind. Where the desired origin row falls
+    ///    outside `0..=max_origin_row` — the chart's top and bottom edges —
+    ///    the residue is handed to the cursor and the point is still held,
+    ///    exactly. Where the cursor would have to leave the plate to take
+    ///    it, or where the point is past `mercator::LAT_CLAMP_DEG` and so
+    ///    projects to no row at all, the point is on no chart this rung
+    ///    draws and the guarantee genuinely fails. `mercator::clamp_caption`
+    ///    is what already tells the reader that region exists; nothing here
+    ///    invents a position for it.
+    fn anchor_geographic_point(&mut self, lat: f64, lon: f64) {
+        let (_, plate_h) = self.active_plate_dims();
+        let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
+        let Some((row, col)) = mercator::project(&self.frame, lat, lon, virtual_w, virtual_h)
+        else {
+            // Past the clamp: no row to anchor to, so the window stays put
+            // rather than being sent somewhere invented.
+            return;
+        };
+
+        // KNOB ONE, east-west: the origin absorbs the whole offset, because
+        // longitude wraps. `virtual_dims` never returns a zero width, so the
+        // modulus is always safe.
+        self.window.origin_col =
+            (i64::from(col) - i64::from(self.cursor.x)).rem_euclid(i64::from(virtual_w)) as u32;
+
+        // KNOB ONE, north-south, as far as the clamp allows — then KNOB TWO
+        // for the rest. `wanted - settled` is exactly what the origin
+        // refused to travel, and adding it to the cursor puts the point back
+        // under the cursor: `origin_row + cursor.y` comes to `row` either
+        // way.
+        let max_origin_row = i64::from(virtual_h)
+            .saturating_sub(i64::from(plate_h))
+            .max(0);
+        let wanted = i64::from(row) - i64::from(self.cursor.y);
+        let settled = wanted.clamp(0, max_origin_row);
+        self.window.origin_row = settled as u32;
+        let residue = wanted - settled;
+        if residue != 0 {
+            let max_y = i64::from(plate_h).saturating_sub(1).max(0);
+            self.cursor.y = (i64::from(self.cursor.y) + residue).clamp(0, max_y) as u16;
+        }
     }
 
     /// The world plate's current [`Window`] — which zoom level and virtual
@@ -1079,7 +1890,7 @@ impl Driver {
 
     /// Recompute `self.strip` for the current band and cursor position. See
     /// the module doc: only the walk band resolves, and it resolves the
-    /// cell the CURSOR points at, not the observer's own — every other band
+    /// vertex the CURSOR points at, not the observer's own — every other band
     /// answers [`NOTHING_HERE_YET`] honestly.
     ///
     /// **Also advances [`Self::redraw_count`], F3's scroll driver.** Every
@@ -1092,6 +1903,27 @@ impl Driver {
     fn refresh_strip(&mut self) {
         self.strip = Some(self.resolve());
         self.redraw_count = self.redraw_count.wrapping_add(1);
+    }
+
+    /// Advance the marquee by one tick. Called by the render loop when its
+    /// input poll times out — never by an input handler, which is the
+    /// whole point: the strip must scroll while the player does nothing.
+    pub fn tick_marquee(&mut self) {
+        self.marquee_ticks = self.marquee_ticks.wrapping_add(1);
+    }
+
+    /// Whether the strip currently has more text than plate width, i.e.
+    /// whether there is anything for a tick to move.
+    ///
+    /// The loop blocks on input unless this is true, so an idle client
+    /// with a strip that fits wakes for nothing at all — a marquee is not
+    /// a reason to spin a terminal.
+    pub fn strip_is_scrolling(&self) -> bool {
+        let Some(text) = &self.strip else {
+            return false;
+        };
+        let (plate_w, _) = self.active_plate_dims();
+        text.chars().count() > usize::from(plate_w)
     }
 
     /// F3's own answer, in a number: the map strip's current scroll offset,
@@ -1115,7 +1947,7 @@ impl Driver {
             return 0;
         }
         // `overflow + 1` valid starting columns: `0..=overflow`.
-        (self.redraw_count % (overflow as u32 + 1)) as u16
+        (self.marquee_ticks % (overflow as u32 + 1)) as u16
     }
 
     /// The strip text for the current turn.
@@ -1129,32 +1961,50 @@ impl Driver {
     /// specific to the walk band's chart).
     ///
     /// Otherwise: [`NOTHING_HERE_YET`] unless the current snapshot is a
-    /// walk-band scene, in which case the cell the cursor points at
+    /// walk-band scene, in which case the vertex the cursor points at
     /// ([`Self::resolve_walk_band`]; see the module doc for the chain from
-    /// a screen position to a `CellId`) is resolved against the
+    /// a screen position to a `Vertex`) is resolved against the
     /// terrain-feature index — [`UNNAMED_TERRAIN`] if that chain comes up
     /// empty at any step.
     fn resolve(&self) -> String {
-        if self.world_view {
-            let base = self
-                .resolve_world_view()
-                .unwrap_or_else(|| UNNAMED_TERRAIN.to_string());
-            return self.world_view_caption(base);
-        }
         let Ok(snap) = hornvale_game_core::Snapshot::parse(&self.cached) else {
             return NOTHING_HERE_YET.to_string();
         };
-        let hornvale_game_core::Spatial::Walk { chart } = snap.spatial else {
+        // A BAND WITH NO PLATE OF OURS HAS NO RESOLVER OF OURS. The chamber
+        // band draws `plan::draw`, not the raster (see
+        // [`Self::raster_is_drawn`]), and spec §9 still defers the chamber
+        // resolver — so resolving the tile under the cursor here would name
+        // terrain that is not on screen, which is the exact "the strip
+        // contradicts the picture" defect The Portolan part II's Task 3b
+        // closed on the other side. Fix round 1's F5.
+        let hornvale_game_core::Spatial::Walk { chart } = &snap.spatial else {
             return NOTHING_HERE_YET.to_string();
         };
+        // The sight caption belongs to the walk band's own perception
+        // channel, so it is read off the snapshot rather than inferred from
+        // the rung.
+        let sight = chart.sight.clone();
+        // TWO RESOLVERS, MOST SPECIFIC FIRST. The perception overlay's own
+        // facet under the cursor is the better answer where there is one —
+        // it is the facet the picture actually drew there — and the tile the
+        // raster painted answers everywhere else. `resolve_walk_band`
+        // returns `None` off band B and on any tile the overlay left to the
+        // raster, which is what makes the fallback the common case rather
+        // than an error path.
         let base = self
-            .resolve_walk_band(&chart)
+            .resolve_walk_band()
+            .or_else(|| self.resolve_world_view())
             .unwrap_or_else(|| UNNAMED_TERRAIN.to_string());
-        caption(base, chart.sight.as_ref())
+        let text = self.world_view_caption(base);
+        if self.at_walk_band_rung() {
+            caption(text, sight.as_ref())
+        } else {
+            text
+        }
     }
 
     /// Append §3.3's clamp/central-line caption, and F5's resolution
-    /// disclosure when the active zoom covers more than one terrain cell
+    /// disclosure when the active zoom covers more than one terrain vertex
     /// per character, to `base` (the resolved containment chain, or
     /// [`UNNAMED_TERRAIN`]). Unlike the walk band's [`caption`], this runs
     /// UNCONDITIONALLY — the world view carries no sight channel to gate on
@@ -1163,6 +2013,19 @@ impl Driver {
     /// sit on a named feature.
     fn world_view_caption(&self, base: String) -> String {
         let mut text = base;
+        // THE RUNG LINE COMES FIRST, and the order is a measurement rather
+        // than a preference (fix round 1, Important 3). The strip MARQUEES:
+        // on the 80x24 floor the plate is 40 columns and a tick is 300 ms, so
+        // a clause's position in this string is a delay before the reader can
+        // read it. With the rung line emitted third it began at character 90
+        // — the word "rung" first scrolled into view after ~15 s and the
+        // clause was readable after ~44 s. That made the one disclosure that
+        // answers "criteria I have not identified" the SLOWEST thing on the
+        // strip to reach. `mercator::clamp_caption` is 69 characters, static,
+        // and says the same thing at every rung and every cursor position, so
+        // it is exactly what should be waited for instead.
+        text.push_str(" — ");
+        text.push_str(&self.rung_caption());
         text.push_str(" — ");
         text.push_str(&mercator::clamp_caption(&self.frame));
         if let Some(disclosure) = self.resolution_disclosure() {
@@ -1172,31 +2035,109 @@ impl Driver {
         text
     }
 
+    /// **THE RUNG LINE**, and the half of Nathan's founding report that no
+    /// amount of correct anchoring would have answered on its own: "the game
+    /// map appears to zoom in and out based on criteria I have not
+    /// identified". Nothing on screen ever said which rung was showing, so
+    /// even a zoom that behaved perfectly was unreadable — the picture
+    /// changed and the reader had no name for what it changed to.
+    ///
+    /// Two clauses, both DERIVED from [`plate::virtual_dims`] and the
+    /// terrain's own vertex count, never tabulated:
+    ///
+    /// - **Where on the ladder.** The rung, and the ladder's own ends, so
+    ///   a reader knows both where they are and how much further either
+    ///   key goes. The chart's width in tiles is the scale: it is the
+    ///   number of tiles around a great circle at this rung, so it doubles
+    ///   as the reader zooms in and is the one number that makes two rungs
+    ///   comparable without a unit this client has no way to obtain (the
+    ///   world's radius is not on the wire).
+    /// - **THE MIRROR OF [`Self::resolution_disclosure`]**, and the reason
+    ///   this method carries it (Task 1's carried disclosure note). That
+    ///   method is ONE-SIDED: it speaks only when a character stands for
+    ///   MORE than one terrain vertex, and since Task 1 the whole shipped
+    ///   ladder sits on the other side of 1:1 — even [`GLOBE_RUNG`]'s
+    ///   363x362 chart carries about three tiles per vertex, and band B
+    ///   carries some thirteen thousand. So the coarse-end disclosure is
+    ///   silent everywhere and the map was left disclosing nothing at all,
+    ///   which decision 0196's "a map may disclose its own resolution" is
+    ///   poorly served by. This clause is that sentence written for the
+    ///   oversampled end: how many characters share one terrain reading.
+    ///   It also closes Task 6's own concern 2 — that some hundred band-B
+    ///   characters share one grid-level vertex with nothing disclosing it
+    ///   — because the two are the same fact counted the same way.
+    ///
+    /// The pair is deliberately not merged into one method. They are the
+    /// two sides of one ratio, but they answer different questions ("the
+    /// picture hides detail the field has" against "the picture claims
+    /// detail the field lacks"), and `resolution_disclosure`'s own tests
+    /// pin its silence as the honest answer on today's ladder.
+    fn rung_caption(&self) -> String {
+        let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
+        let mut text = format!(
+            "{RUNG_OPENING} {} of {GLOBE_RUNG}–{BAND_B_RUNG} — {virtual_w} tiles around the planet",
+            self.window.depth
+        );
+        if let Some(share) = self.oversample_disclosure(virtual_w, virtual_h) {
+            text.push_str(" — ");
+            text.push_str(&share);
+        }
+        text
+    }
+
+    /// The oversampled half of the resolution disclosure: how many screen
+    /// characters share ONE terrain reading, or `None` once a character no
+    /// longer outruns the field. See [`Self::rung_caption`] for why this
+    /// end of the ratio needed saying at all, and
+    /// [`Self::resolution_disclosure`] for the other end.
+    fn oversample_disclosure(&self, virtual_w: u32, virtual_h: u32) -> Option<String> {
+        let terrain_vertices = self.geo.vertex_count() as u64;
+        if terrain_vertices == 0 {
+            return None;
+        }
+        let virtual_tiles = u64::from(virtual_w) * u64::from(virtual_h);
+        let share = virtual_tiles as f64 / terrain_vertices as f64;
+        if share <= 1.0 {
+            return None;
+        }
+        Some(format!(
+            "about {} characters to one terrain reading",
+            share.round() as u64
+        ))
+    }
+
     /// F5's resolution disclosure (decision 0123, "disclose a resolution
     /// rather than refine a field", applied here to a lost SAMPLE rather
     /// than a lost axis — decision 0142's own rule for a lost axis is the
     /// same shape one level up): at any zoom where one screen character
-    /// stands for more than one real terrain cell, the strip says so,
+    /// stands for more than one real terrain vertex, the strip says so,
     /// rather than reporting with the exact same confident phrasing it
     /// uses once the mesh's own resolution is reached.
     ///
     /// **Derived, never hardcoded.** `plate::virtual_dims` gives the
     /// virtual chart's own cell count at the active zoom; the terrain's
-    /// own cell count ([`hornvale_kernel::Geosphere::cell_count`]) divided
-    /// by it is the mean number of real terrain cells behind one screen
-    /// character — never a second copy of [`plate::MAX_VIRTUAL_WIDTH`],
-    /// and never a hand-picked ratio. `None` once that mean is `<= 1`
-    /// (one character names at most one cell, on average — the design
-    /// ceiling `plate::MAX_ZOOM`'s own doc states).
+    /// own vertex count ([`hornvale_kernel::Geosphere::vertex_count`]) divided
+    /// by it is the mean number of real terrain vertices behind one screen
+    /// character — never a hand-picked ratio. `None` once that mean is
+    /// `<= 1` (one character names at most one vertex, on average).
+    ///
+    /// **Since The Quadrat this returns `None` at every SHIPPED rung, and
+    /// that is the honest answer rather than a regression.** The chart no
+    /// longer shrinks to the plate: [`GLOBE_RUNG`], the coarsest rung the
+    /// ladder reaches, is the canonical grid level itself (decision 0196) —
+    /// 363x362 tiles for 40,962 vertices — so one character never stands
+    /// for more than one vertex anywhere on the ladder, and there is
+    /// nothing to disclose. The method is kept, not deleted: it is the
+    /// derivation, and a future rung coarser than the mesh would make it
+    /// speak again. The strip's own rung line is Task 7's.
     fn resolution_disclosure(&self) -> Option<String> {
-        let (plate_w, _) = self.active_plate_dims();
-        let (virtual_w, virtual_h) = plate::virtual_dims(&self.window, plate_w);
+        let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
         let virtual_cells = u64::from(virtual_w) * u64::from(virtual_h);
         if virtual_cells == 0 {
             return None;
         }
-        let terrain_cells = self.geo.cell_count() as u64;
-        let ratio = terrain_cells as f64 / virtual_cells as f64;
+        let terrain_vertices = self.geo.vertex_count() as u64;
+        let ratio = terrain_vertices as f64 / virtual_cells as f64;
         if ratio <= 1.0 {
             return None;
         }
@@ -1206,11 +2147,11 @@ impl Driver {
         ))
     }
 
-    /// The world view's own resolved [`hornvale_kernel::CellId`] at the
-    /// cursor's current screen position — `plate::area_majority`, the
-    /// SAME 49-point vote [`plate::draw_with`] itself paints from (one
-    /// source of truth; see that function's own doc), asked for the
-    /// MAJORITY-class sample nearest the screen cell's own true centre.
+    /// The world view's own resolved [`hornvale_kernel::Vertex`] at the
+    /// cursor's current screen position — [`plate::terrain_at_tile`], the
+    /// SAME per-tile mesh addressing [`plate::draw_with`] itself paints
+    /// from (one source of truth; see that function's own doc), asked for
+    /// the painted class's own representative vertex.
     ///
     /// **Fix round 1, Finding 2 (the reviewer's own framing, which
     /// improved on this task's first pass): the earlier single-centre-
@@ -1223,79 +2164,295 @@ impl Driver {
     /// harness, not a property of the resolver — the magnitude is
     /// UNMEASURED, not smaller. The kind of disagreement it pointed at is
     /// still real: a player could point at a character drawn `~` and have
-    /// the strip name a real feature on a LAND cell nearest that
+    /// the strip name a real feature on a LAND vertex nearest that
     /// character's exact centre. This method closes that: it can never
-    /// return a cell whose class
+    /// return a vertex whose class
     /// disagrees with what [`plate::draw_with`] would paint at the same
-    /// screen position, because it asks the identical vote for the
-    /// identical answer, and picks a REPRESENTATIVE of the winning class
-    /// rather than an unconstrained nearest point. See `plate::
-    /// area_majority`'s own doc for why its `(3, 3)` sub-sample is the
-    /// same point the earlier single-point query asked for, so this is
-    /// strictly more constrained, never coarser.
-    fn world_view_cell(&self) -> hornvale_kernel::CellId {
-        let (plate_w, _) = self.active_plate_dims();
-        let (virtual_w, virtual_h) = plate::virtual_dims(&self.window, plate_w);
-        let (_ocean, cell) = plate::area_majority(
+    /// screen position, because it asks the identical question for the
+    /// identical answer, and picks a REPRESENTATIVE of the painted class.
+    /// [`plate::TileTerrain`]'s own doc states that invariant: `ocean` and
+    /// `vertex` cannot contradict each other, because the vertex is chosen
+    /// from the corners the class was decided on.
+    ///
+    /// **The Quadrat, Task 3 replaced the 49-point vote with mesh
+    /// addressing and the invariant survived unchanged** — what moved is
+    /// how the class is decided, not the guarantee that the strip agrees
+    /// with the picture.
+    ///
+    /// The [`hornvale_kernel::RoomMeshMemo`] is local because this resolves
+    /// exactly ONE tile per keypress: a session-lived memo would save at
+    /// most the three `nearest_to_position` scans of a repeated cursor
+    /// position, against holding cross-call state for a pure function.
+    fn world_view_vertex(&self) -> hornvale_kernel::Vertex {
+        let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
+        plate::terrain_at_tile(
             &self.terrain,
             &self.geo,
             &self.nearest,
+            &mut hornvale_kernel::RoomMeshMemo::default(),
             &self.frame,
             &self.window,
             virtual_w,
             virtual_h,
             u32::from(self.cursor.y),
             u32::from(self.cursor.x),
-        );
-        cell
+        )
+        .vertex
     }
 
-    /// The world view's own resolution chain: [`Self::world_view_cell`] to
+    /// The world view's own resolution chain: [`Self::world_view_vertex`] to
     /// the FULL containment chain there (Task 4, Step 1) — every feature at
-    /// the resolved cell, most specific first, each with its class named in
+    /// the resolved vertex, most specific first, each with its class named in
     /// prose (design spec §5).
     fn resolve_world_view(&self) -> Option<String> {
-        let cell_id = self.world_view_cell();
+        let vertex_id = self.world_view_vertex();
         let (species, ph, morph) = &self.namer;
-        resolve_chain_at(&self.index, cell_id, self.seed, species, ph, morph, &|id| {
-            self.discovered.contains(FeatureId::Extent(id))
-        })
+        resolve_chain_at(
+            &self.index,
+            vertex_id,
+            self.seed,
+            species,
+            ph,
+            morph,
+            &|id| self.discovered.contains(FeatureId::Extent(id)),
+        )
     }
 
     /// The walk band's own resolution chain, cursor position to the full
     /// containment chain (Task 4, Step 1) — every feature at the resolved
-    /// cell, most specific first. `None` at any step means "genuinely
-    /// nothing individuated there" (no
-    /// chart cell occupies the cursor's box, the real scene could not be
-    /// re-derived, the room address does not unpack, or the terrain index
-    /// has no feature at the resolved cell) — the caller maps `None` to
-    /// [`UNNAMED_TERRAIN`], never to [`NOTHING_HERE_YET`] (that string is
-    /// reserved for a band with no resolver at all, which this is not).
-    fn resolve_walk_band(&self, chart: &hornvale_game_core::Chart) -> Option<String> {
-        let (index, _cell) = hornvale_game_core::chart::cell_at(
-            chart,
-            (0, 0),
-            hornvale_game_core::spread::PLATE_WIDTH,
-            self.plate_height,
-            self.cursor.x,
-            self.cursor.y,
+    /// vertex, most specific first. `None` means "no perception facet was
+    /// drawn under the cursor", which after Task 6 is the COMMON case rather
+    /// than an error path (the packet is 31 facets on a plate of hundreds),
+    /// and the caller falls through to the tile the raster painted; `None`
+    /// also covers the honest absences it always did — the room address
+    /// does not unpack, or the terrain index has no feature at the resolved
+    /// vertex. Never [`NOTHING_HERE_YET`] (that string is reserved for a
+    /// band with no resolver at all, which this is not).
+    ///
+    /// **RETARGETED, not rewritten (The Quadrat, Task 6).** Its "which facet
+    /// is under the cursor" step used to be `core`'s own chart lookup —
+    /// that module's polar
+    /// projection onto a fixed [`hornvale_game_core::spread::PLATE_WIDTH`]
+    /// plate. Band B draws the raster now, and the perception facets sit
+    /// where [`plate::draw_perception_layer`] put them, so asking `core`
+    /// would name a facet from a picture nobody drew: exactly the
+    /// "strip contradicts the picture" defect Task 3b closed on the other
+    /// side. Everything below that step — `room` to [`FacetId::unpack`] to
+    /// [`hornvale_kernel::Facet::coord`] to the nearest-vertex lookup to
+    /// `resolve_chain_at` — is unchanged. The module doc now describes that
+    /// chain WITHOUT the `chart::cell_at` step, so the cross-reference is
+    /// whole again rather than half-true (fix round 1, F4).
+    fn resolve_walk_band(&self) -> Option<String> {
+        if !self.at_walk_band_rung() {
+            return None;
+        }
+        // The real scene — the SAME cached `Self::walk_scene` packet
+        // `compose_perception_layer` draws from (both read it through
+        // `Self::walk_band_scene`), derived once per turn by the same call
+        // `Session::snapshot` itself makes for the walk band (`purview(0)`,
+        // `windows/vessel/src/session.rs`'s own comment on that call site).
+        // Sharing the one cached value, rather than each independently
+        // re-deriving it, is what keeps the resolver and the picture from
+        // disagreeing about which facets exist (The Gallery, Task 10 round
+        // 2 — previously true only because both calls were deterministic
+        // and made within the same redraw; now true by construction).
+        let scene = self.walk_band_scene()?;
+        let perceived = perceived_facets(&scene);
+        let (plate_w, plate_h) = self.active_plate_dims();
+        let index = plate::perceived_at(
+            &self.frame,
+            &self.window,
+            u32::from(plate_w),
+            u32::from(plate_h),
+            &perceived,
+            u32::from(self.cursor.y),
+            u32::from(self.cursor.x),
         )?;
-        // The real scene, re-derived with the SAME call `Session::snapshot`
-        // itself makes for the walk band (`purview(0)`, `windows/vessel/src/
-        // session.rs`'s own comment on that call site) — see the module doc
-        // for why `chart.cells[index]` and `scene.cells[index]` name the
-        // identical cell.
-        let scene = self.session.purview(0).ok()?;
         let real_cell = scene.cells.get(index)?;
-        let room = RoomId(real_cell.room).unpack().ok()?;
+        let room = FacetId(real_cell.room).unpack().ok()?;
         let coord = room.coord();
-        let cell_id = self
+        let vertex_id = self
             .nearest
             .nearest(&self.geo, coord.latitude, coord.longitude);
         let (species, ph, morph) = &self.namer;
-        resolve_chain_at(&self.index, cell_id, self.seed, species, ph, morph, &|id| {
-            self.discovered.contains(FeatureId::Extent(id))
-        })
+        resolve_chain_at(
+            &self.index,
+            vertex_id,
+            self.seed,
+            species,
+            ph,
+            morph,
+            &|id| self.discovered.contains(FeatureId::Extent(id)),
+        )
+    }
+
+    /// The live walk-band perception packet, or `None` when the possession
+    /// is not on the walk band at all.
+    ///
+    /// **Round 1 (The Gallery, Task 10; The Quadrat's F11) retired the
+    /// per-redraw `Snapshot::parse` this method's callers used to pay,
+    /// reading [`Self::on_walk_band`] instead of the snapshot's own
+    /// `spatial` tag.** That measured a real but modest win (~5%), because
+    /// the parse was never the dominant cost: `Session::purview(0)` was, and
+    /// round 1 left it standing here, called fresh on every redraw.
+    ///
+    /// **Round 2 caches the packet itself, in [`Self::walk_scene`], for the
+    /// identical argument `on_walk_band`'s own doc already makes for the
+    /// band question.** `purview` is a pure read (`&self`, no mutation) over
+    /// session state — position, knowledge, eyes, day — that changes only
+    /// when a turn does; a keypress that is only typing changes none of
+    /// them. [`Self::refresh`] is the one choke point that already
+    /// recomputes `on_walk_band` from that same fact once per turn, so it is
+    /// where `walk_scene` is recomputed too. This method is now a plain
+    /// accessor: it makes no decision the cache has not already made,
+    /// including the `None` case for a non-walk band, which `refresh` sets
+    /// explicitly rather than leaving this method to re-derive it.
+    ///
+    /// **Why `on_walk_band`, not `purview`'s own success, decided the band
+    /// (still true, now decided once per turn instead of once per read).**
+    /// `Session::purview(0)` charts the session's walk-band position and
+    /// succeeds indoors too — it is the surface around the structure you are
+    /// standing in — so using it as the band test would cache a perception
+    /// overlay of outdoor facets for a chamber-band spread. It stays correct
+    /// with three bands: `on_walk_band` is `Walk`-or-not, and underground is
+    /// not walk, the same distinction the retired (round 1) match made
+    /// explicit in its `Chamber | Underground => None` arm.
+    ///
+    /// **Whether the underground band ever gets its own perception overlay
+    /// is still an open question, unresolved by either round** — the
+    /// original match's own comment raised it and this doc carries the
+    /// pointer forward rather than letting the question disappear with the
+    /// arm that used to name it.
+    fn walk_band_scene(&self) -> Option<hornvale_scene::SurroundsScene> {
+        self.walk_scene.clone()
+    }
+
+    /// Compose the band-B perception overlay onto an already-drawn plate —
+    /// the third layer (`plate::draw_perception_layer`), and the answer to
+    /// the Task 4 follow-up that recorded this layer as having no input:
+    /// its input is [`Self::walk_band_scene`], which nothing in `plate.rs`
+    /// had a reason to touch until band B joined the raster ladder.
+    ///
+    /// A no-op off band B and off the walk band. Off band B because the
+    /// packet's 31 facets are finer than a coarse rung's own tile — every
+    /// one of them would collapse onto the observer's single tile and the
+    /// overlay would claim to place facets it had merged — and off the walk
+    /// band because there is no packet to draw.
+    fn compose_perception_layer(&self, dst: &mut hornvale_game_core::Grid) {
+        if !self.at_walk_band_rung() {
+            return;
+        }
+        let Some(scene) = self.walk_band_scene() else {
+            return;
+        };
+        plate::draw_perception_layer(
+            dst,
+            &self.frame,
+            &self.window,
+            plate::colour_allowed(),
+            &perceived_facets(&scene),
+        );
+    }
+
+    /// Scroll band B's window so the observer's own facet sits at the middle
+    /// of the plate a redraw would draw. A no-op at every other rung.
+    ///
+    /// **The ruling this implements (Task 6), and its deliberate
+    /// narrowness.** Band B's window origin is `(0, 0)` at `start`, which at
+    /// [`BAND_B_RUNG`] is some eleven thousand rows and two thousand columns
+    /// from the observer — the arctic corner of a 23,245-wide chart. A
+    /// band-B view showing arctic ocean while you stand in a rainforest is
+    /// not shippable, and the walk view has always had you in the middle of
+    /// it, so band B follows the observer. Where entering a COARSE rung
+    /// lands, and cursor-anchored zoom, are Task 7's and are not decided
+    /// here.
+    ///
+    /// **Called on ARRIVAL, never per redraw.** [`Self::enter_map`] and
+    /// [`Self::resize`] are the two moments the window could be somewhere
+    /// the observer is not; a redraw is not one of them. Re-centring per
+    /// redraw would make band B unscrollable — every arrow key would snap
+    /// the window back — and the player genuinely can scroll here: the
+    /// observer cannot MOVE while [`Focus::Map`] is focused (the arrows
+    /// drive the cursor there), so the window can only go stale across one
+    /// of those two arrivals.
+    ///
+    /// **[`Self::apply_zoom`] WAS the third arrival and is not one any
+    /// more** (The Quadrat, Task 7), which is a decision this method's own
+    /// doc handed forward: "Where entering a COARSE rung lands, and
+    /// cursor-anchored zoom, are Task 7's and are not decided here." They
+    /// turned out to be the same question. A zoom no longer leaves the
+    /// window anywhere arbitrary — it anchors on the point under the cursor
+    /// ([`Self::anchor_geographic_point`]) — so there is nothing left for
+    /// this to rescue there, and snapping the reader back to the observer
+    /// after they had deliberately scrolled somewhere and pressed `+` would
+    /// BE the founding complaint: a map that moves for a reason the reader
+    /// did not give. The same anchor closes Task 2's carried finding at the
+    /// other end of the ladder — a zoom-out from band B used to land on
+    /// rung 11 at an arbitrary origin, and now lands where the reader was
+    /// looking. Entering the map from a keypress still centres here,
+    /// because at `start` the window really is at the corner and the cursor
+    /// has no point of the reader's own to preserve.
+    fn centre_band_b_on_the_observer(&mut self) {
+        if !self.at_walk_band_rung() {
+            return;
+        }
+        self.centre_on_the_observer();
+    }
+
+    /// Scroll the window so the observer's own facet sits at the middle of
+    /// the plate a redraw would draw, AT WHATEVER RUNG IS SHOWING — the
+    /// rung-gated [`Self::centre_band_b_on_the_observer`]'s body, lifted out
+    /// so [`Self::enter_map`] can reach it everywhere (fix round 1,
+    /// Important 2).
+    ///
+    /// The gate is the caller's, and the two callers want different ones,
+    /// which is why this carries neither. `enter_map` is an ARRIVAL at the
+    /// map and centres at every rung — it is the reader's signposted way
+    /// home, and off band B it is the ONLY one, because no observer marker
+    /// is drawn there. `resize` keeps the rung gate: a resize is not an
+    /// arrival, and re-centring a coarse rung the reader had deliberately
+    /// scrolled somewhere would be a map moving for a reason the reader did
+    /// not give — the founding complaint, in the shape this task exists to
+    /// remove.
+    fn centre_on_the_observer(&mut self) {
+        let (plate_w, plate_h) = Self::world_plate_dims(self.term_w, self.term_h);
+        let coord = self.session.position().coord();
+        // Above the projection's polar clamp the observer is on no chart at
+        // all, so there is nothing to centre on and the window stays where
+        // it is — `mercator::clamp_caption` already tells the reader what
+        // falls off the map. Inventing a position would be worse.
+        let _ = self.centre_window_on(coord.latitude, coord.longitude, plate_w, plate_h);
+    }
+
+    /// Scroll the window so the geographic point `(lat, lon)` sits at the
+    /// middle of a `w`x`h` plate. `None` when the point is above the
+    /// projection's polar clamp and so is on no chart at all.
+    ///
+    /// **Promoted from a test helper, WITH the size guard Task 1's review
+    /// flagged as the condition of promoting it.** The helper computed the
+    /// column as `(col + virtual_w - w / 2) % virtual_w` in `u32`, which
+    /// UNDERFLOWS — a debug panic, a wrong column in release — whenever
+    /// `w / 2` exceeds `col + virtual_w`. That is unreachable on the shipped
+    /// ladder ([`GLOBE_RUNG`]'s chart is 363 tiles wide) but reachable at a
+    /// rung coarser than the mesh, which [`plate::virtual_dims`] honours
+    /// deliberately and this module's own disclosure test constructs. The
+    /// wrap is done in `i64` with `rem_euclid` here — the identical
+    /// arithmetic [`Self::move_cursor`]'s scroll spill already uses for the
+    /// identical wrap, rather than a second spelling of it — and
+    /// `virtual_dims` never returns a zero width, so the modulus is always
+    /// safe.
+    ///
+    /// LONGITUDE WRAPS, LATITUDE CLAMPS — spec §4.2's own asymmetry, the
+    /// same one [`Self::move_cursor`] and `plate::draw_feature_layer` obey.
+    fn centre_window_on(&mut self, lat: f64, lon: f64, w: u16, h: u16) -> Option<()> {
+        let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
+        let (row, col) = mercator::project(&self.frame, lat, lon, virtual_w, virtual_h)?;
+        let max_origin_row = i64::from(virtual_h).saturating_sub(i64::from(h)).max(0);
+        self.window.origin_row =
+            (i64::from(row) - i64::from(h) / 2).clamp(0, max_origin_row) as u32;
+        self.window.origin_col =
+            (i64::from(col) - i64::from(w) / 2).rem_euclid(i64::from(virtual_w)) as u32;
+        Some(())
     }
 
     /// The current turn's `vessel/session/v2` JSON — what `hornvale-game-
@@ -1341,6 +2498,18 @@ impl Driver {
         self.echo.as_deref()
     }
 
+    /// The pending completion ambiguity under [`TabStyle::Hint`], as an
+    /// owned `(stem, matches)` pair for the frame builder to hand the core
+    /// renderer ([`hornvale_game_core::entry::Hint`] borrows, so the caller
+    /// rebuilds the borrowed view from these strings at the call site).
+    /// `None` whenever no ambiguity is pending — cleared by any edit or
+    /// submission, matching the field's own discipline.
+    pub fn hint_parts(&self) -> Option<(String, Vec<String>)> {
+        self.hint
+            .as_ref()
+            .map(|h| (h.stem.clone(), h.matches.clone()))
+    }
+
     /// Re-derive `cached` from the live session. A snapshot read can fail
     /// only when the session itself is not live, which cannot happen
     /// between `start` succeeding and `Drop` running — so a failure here
@@ -1352,7 +2521,71 @@ impl Driver {
             .snapshot()
             .map(|snap| snapshot_json(&snap))
             .unwrap_or_default();
+        // The completion scope rides every refresh: parse (which can fail
+        // only as `refresh`'s own doc describes — a dead session) and
+        // replace the noun catalog from the new narration. On failure the
+        // previous catalog stands rather than being cleared: stale
+        // candidates complete nothing harmful, and an empty one mid-session
+        // would be a regression masquerading as caution.
+        if let Ok(snap) = hornvale_game_core::Snapshot::parse(&self.cached) {
+            self.scope.update(&snap.narration);
+            // The band, from the same parse (see `on_walk_band`'s own doc for
+            // why it is cached and not re-derived per keypress). On a parse
+            // failure the previous value stands, the same posture the scope
+            // above takes: a dead session is not a band change.
+            self.on_walk_band = matches!(snap.spatial, hornvale_game_core::Spatial::Walk { .. });
+            // The walk-band perception packet itself, cached alongside the
+            // band question and invalidated at the same point (see
+            // `Self::walk_scene`'s own doc for why: round 1 of this fix
+            // cached the band and left `purview(0)` itself standing as a
+            // per-redraw cost, and measurement showed `purview` -- not the
+            // parse -- was the dominant one). `purview` is a pure read over
+            // session state that changes only on a turn, so it is safe to
+            // pay here, once, rather than at every caller. On a parse
+            // failure the previous packet stands too, for the identical
+            // reason `on_walk_band` does.
+            self.walk_scene = if self.on_walk_band {
+                self.session.purview(0).ok()
+            } else {
+                None
+            };
+        }
         self.update_discovery();
+        self.follow_the_walker();
+    }
+
+    /// Keep the walk view centred on the observer as they MOVE — called from
+    /// [`Self::refresh`], which is every turn and nothing else.
+    ///
+    /// **This restores a property the picture it replaced had for free, and
+    /// which Task 9 removed without noticing** (fix round 1). `chart::draw`
+    /// anchors the observer to the plate's centre by construction, so the
+    /// walk view had always had the player in the middle of it. The raster
+    /// is drawn through a STORED window instead, and
+    /// [`Self::centre_band_b_on_the_observer`] was called only on arrival at
+    /// the map and on resize — neither of which is a step. Measured at
+    /// 200x50 before this existed: the observer drifted about one plate row
+    /// per 1.6 steps, from row 23 to row 18 in eight `go n`s, and would have
+    /// walked clean off a 46-row plate in under forty. Arrow keys ARE the
+    /// walking gesture (`input::action_for` gives `Focus::Walk` `Move`, not
+    /// `CursorBy`), so this is the most ordinary thing a player does.
+    ///
+    /// **It does not contradict "called on ARRIVAL, never per redraw".**
+    /// That ruling is [`Self::centre_band_b_on_the_observer`]'s and its
+    /// stated premise is exact: re-centring per REDRAW would make band B
+    /// unscrollable, *"the player genuinely can scroll here: the observer
+    /// cannot MOVE while [`Focus::Map`] is focused"*. Both halves of that
+    /// premise are about the map. A turn is not a redraw — it is the one
+    /// event that moves the observer — and `Focus::Map` has no `Submit` and
+    /// no `Move` at all (`input::action_for`), so no turn can occur while a
+    /// reader is scrolled somewhere deliberately. The focus test below is
+    /// therefore belt and braces rather than the load-bearing part, and it
+    /// is kept because it states which view this is for.
+    fn follow_the_walker(&mut self) {
+        if self.focus == Focus::Map {
+            return;
+        }
+        self.centre_band_b_on_the_observer();
     }
 
     /// Update [`Self::visited`] and [`Self::discovered`] from the
@@ -1365,15 +2598,15 @@ impl Driver {
     ///   Reading `session.position()` here is licensed — `Driver` is
     ///   documented as "the one place in `hornvale-game` allowed to know
     ///   `Session`, `Body`, or `WorldContext` exist" (the module doc); what
-    ///   this method never does is let a `RoomAddr`/`Body` VALUE escape
+    ///   this method never does is let a `Facet`/`Body` VALUE escape
     ///   `Driver` itself — `visited`/`discovered` are plain fields this
     ///   struct owns, queried only through [`Self::visited`]/
     ///   [`Self::discovered`]'s own `bool`/reference-returning accessors.
     /// - **Discovered, extent features (§A4b)**: every feature whose
-    ///   extent contains the possession's CURRENT terrain cell is
+    ///   extent contains the possession's CURRENT terrain vertex is
     ///   discovered, by definition ("standing on a volcano IS meeting
-    ///   it"). [`CellFeatureIndex::at`] already returns every such feature
-    ///   at that cell, most-specific-first; ALL of them are recorded, not
+    ///   it"). [`VertexFeatureIndex::at`] already returns every such feature
+    ///   at that vertex, most-specific-first; ALL of them are recorded, not
     ///   only the first, so standing on a volcano inside a landmass
     ///   discovers both in the same step.
     /// - **Discovered, point sites (§A4b, F9)**: a settlement is
@@ -1391,19 +2624,19 @@ impl Driver {
         self.visited.record(position.clone());
 
         let coord = position.coord();
-        let cell = self
+        let vertex = self
             .nearest
             .nearest(&self.geo, coord.latitude, coord.longitude);
-        for id in self.index.at(cell) {
+        for id in self.index.at(vertex) {
             self.discovered.record(FeatureId::Extent(*id));
         }
 
         if let Ok(snap) = hornvale_game_core::Snapshot::parse(&self.cached) {
             if matches!(snap.spatial, hornvale_game_core::Spatial::Chamber { .. }) {
-                self.discovered.record(FeatureId::Settlement(cell));
+                self.discovered.record(FeatureId::Settlement(vertex));
             }
             if snap.narration.prose.starts_with(DELVE_SUCCESS_PREFIX) {
-                self.discovered.record(FeatureId::Cave(cell));
+                self.discovered.record(FeatureId::Cave(vertex));
             }
         }
     }
@@ -1416,14 +2649,28 @@ impl Driver {
         &self.visited
     }
 
-    /// How many times the world plate has actually been RENDERED (as
-    /// opposed to served from the memo). Exists because **a cache with no
-    /// observable hit is indistinguishable from a cache that never hits**:
-    /// every correctness test passes either way, so the counter is what
-    /// makes `a_cursor_move_inside_the_plate_does_not_re_render_it` a real
+    /// How many CHART TILES of the world plate's terrain layer this session
+    /// has actually drawn (as opposed to served from the cache). Exists
+    /// because **a cache with no observable hit is indistinguishable from a
+    /// cache that never hits**: every correctness test passes either way, so
+    /// the counter is what makes
+    /// `a_cursor_move_inside_the_plate_does_not_re_render_it` a real
     /// assertion rather than a hopeful one.
-    pub fn plate_renders(&self) -> usize {
-        self.plate_renders
+    ///
+    /// **The unit is a TILE, not a plate, since The Quadrat's Task 5**, and
+    /// the rename from `plate_renders` is the point rather than tidiness: a
+    /// plate is no longer a cache unit at all, so "how many plates were
+    /// rendered" has no referent. A partial re-render — the tile column a
+    /// one-column scroll uncovers — is the ordinary case now, and a counter
+    /// of whole plates could not see it.
+    ///
+    /// **It counts the TERRAIN layer only, since The Quadrat's Task 4.** The
+    /// feature layer is redrawn on every single call and is deliberately not
+    /// counted — counting it would make this number constant and useless,
+    /// and the expensive half is the raster.
+    /// type-audit: bare-ok(count)
+    pub fn tile_renders(&self) -> u64 {
+        self.tiles.misses()
     }
 
     /// Test-only mutable access to the discovery set, so a test can vary
@@ -1482,15 +2729,93 @@ mod portolan_tests {
         Driver::start(42, PossessTarget::Flagship).expect("seed 42 generates")
     }
 
-    /// Enter the map and zoom out once — the gesture that turns the
-    /// world view on, at its coarsest rung.
+    /// The opening clause of `Driver::resolution_disclosure`'s message —
+    /// the substring the two tests below match on. Named once so neither
+    /// repeats the shipped wording's own vertex-sense noun, which
+    /// `cli/tests/suite/lexicon_guard.rs` ratchets against.
+    const DISCLOSURE_OPENING: &str = "one character stands for";
+
+    /// Enter the map and walk the ladder all the way OUT, to
+    /// [`GLOBE_RUNG`] — the coarsest rung, which is where every test below
+    /// that says "the world view" means to stand.
+    ///
+    /// **Since The Quadrat's Task 2 that is six presses, not one.** The
+    /// ladder is continuous now: one zoom-out from band B steps to the rung
+    /// immediately coarser than band B, not to the globe.
+    ///
+    /// **The count is BOUNDED, deliberately, rather than a
+    /// `while depth > GLOBE_RUNG` walk.** About twenty-five tests route
+    /// through this helper. An unbounded walk would spin forever the moment
+    /// `apply_zoom`'s zoom-out arm regressed to a no-op — turning the exact
+    /// regression this file's ladder tests exist to catch into a HUNG suite
+    /// rather than a failure list, which is the worst symptom available to a
+    /// future reader. The two assertions below stay as the real check: the
+    /// bound only decides when to stop pressing, never whether the walk
+    /// arrived.
     fn enter_world_view(d: &mut Driver) {
         d.enter_map();
-        d.apply(Action::Zoom(-1));
+        for _ in 0..(BAND_B_RUNG - GLOBE_RUNG) {
+            d.apply(Action::Zoom(-1));
+        }
+        assert_eq!(
+            d.window.depth, GLOBE_RUNG,
+            "the helper must land on the coarsest rung"
+        );
         assert!(
-            d.world_view,
+            !d.at_walk_band_rung(),
             "zooming out from the walk band must enter the world view"
         );
+    }
+
+    /// Scroll `d`'s window so the possessed agent's own position sits at the
+    /// middle of a `w`x`h` plate.
+    ///
+    /// **Before Task 1 the coarsest rung WAS the whole planet in one
+    /// screen**, so a test could read a 40x20 plate at origin `(0, 0)` and
+    /// expect to see the world. The chart is the rung now — 363x362 tiles at
+    /// [`GLOBE_RUNG`] — and the origin corner of it is a patch of arctic
+    /// ocean, so a test that means to look at somewhere real has to say
+    /// where. The player's own position is not an arbitrary choice: it is
+    /// where a client opening the map would put the window, and Task 7 makes
+    /// that the shipped gesture.
+    /// **DELEGATES to [`Driver::centre_window_on`] since Task 6's fix round
+    /// 1 (F2), and the delegation is the point.** Task 1's review made a size
+    /// guard the CONDITION of promoting this helper to production; Task 6
+    /// wrote the guarded version and left this unguarded copy of the same
+    /// name standing beside it, still computing
+    /// `(col + vw - u32::from(w) / 2) % vw` in `u32` — the exact underflow
+    /// the guard exists for. With 6 call sites here against 1 for the
+    /// production method, the UNGUARDED copy was what almost the whole suite
+    /// exercised, and two same-named functions with divergent arithmetic in
+    /// one file is how the next reader picks the wrong one. There is one
+    /// implementation now and the tests drive it.
+    fn centre_window_on_the_player(d: &mut Driver, w: u16, h: u16) {
+        let c = d.session.position().coord();
+        d.centre_window_on(c.latitude, c.longitude, w, h)
+            .expect("the flagship's own position is inside the projection's clamp");
+    }
+
+    /// Move `d`'s window onto a real cave mouth out of `d`'s OWN roster —
+    /// the roster `plate::draw_feature_layer` projects from — and return it.
+    ///
+    /// The first cave the projection actually PLACES: a vertex above the
+    /// polar clamp is on no chart at all, and skipping those is the clamp's
+    /// own rule, not a search for a convenient answer.
+    fn centre_on_a_cave(d: &mut Driver, plate_w: u16, plate_h: u16) -> Vertex {
+        let site = d
+            .caves
+            .iter()
+            .copied()
+            .find(|&v| {
+                let c = d.geo.coord(v);
+                let (vw, vh) = plate::virtual_dims(d.window.depth);
+                mercator::project(&d.frame, c.latitude, c.longitude, vw, vh).is_some()
+            })
+            .expect("seed 42 has at least one cave mouth inside the projection's clamp");
+        let c = d.geo.coord(site);
+        d.centre_window_on(c.latitude, c.longitude, plate_w, plate_h)
+            .expect("the site just passed the clamp above");
+        site
     }
 
     // -- The world-plate memo (perf/world-plate-memo) ----------------
@@ -1510,7 +2835,7 @@ mod portolan_tests {
         let mut d = test_driver();
         enter_world_view(&mut d);
         let _ = d.world_plate_for_redraw(104, 56);
-        let after_first = d.plate_renders();
+        let after_first = d.tile_renders();
         assert!(after_first > 0, "the first redraw must actually render");
 
         // Interior moves: the window cannot scroll, so nothing changes.
@@ -1519,7 +2844,7 @@ mod portolan_tests {
             let _ = d.world_plate_for_redraw(104, 56);
         }
         assert_eq!(
-            d.plate_renders(),
+            d.tile_renders(),
             after_first,
             "eight interior cursor moves re-rendered the plate"
         );
@@ -1532,11 +2857,11 @@ mod portolan_tests {
         let mut d = test_driver();
         enter_world_view(&mut d);
         let _ = d.world_plate_for_redraw(104, 56);
-        let before = d.plate_renders();
+        let before = d.tile_renders();
         d.apply(Action::Zoom(1));
         let _ = d.world_plate_for_redraw(104, 56);
         assert!(
-            d.plate_renders() > before,
+            d.tile_renders() > before,
             "a zoom changes the window and must re-render"
         );
     }
@@ -1546,36 +2871,167 @@ mod portolan_tests {
     /// shape this campaign hit repeatedly. Each arm varies ONE input.
     #[test]
     fn every_input_the_plate_reads_is_in_its_cache_key() {
-        // size
+        // SIZE — and this arm's assertion is now the OPPOSITE of what it
+        // was, deliberately, because the thing it was asserting has been
+        // FIXED rather than lost (The Quadrat, Task 5). The drawn plate's
+        // own `(w, h)` used to be in the cache key, so ANY resize threw the
+        // plate away and redrew it, and this arm asserted that. A tile's
+        // size follows from its rung and its position, so a resize draws
+        // only the ground the new plate reaches that the old one did not.
+        // Both directions are asserted, and each rescues the other: "grows
+        // when it must" alone would pass on a cache that never hit, and
+        // "shrinks for free" alone would pass on a cache that had stopped
+        // drawing altogether.
         let mut d = test_driver();
         enter_world_view(&mut d);
-        let _ = d.world_plate_for_redraw(104, 56);
-        let n = d.plate_renders();
         let _ = d.world_plate_for_redraw(80, 24);
-        assert!(d.plate_renders() > n, "a size change must re-render");
+        let small = d.tile_renders();
+        assert!(small > 0, "the first redraw must actually draw tiles");
+        let _ = d.world_plate_for_redraw(104, 56);
+        let large = d.tile_renders();
+        assert!(
+            large > small,
+            "growing the plate drew none of the ground it uncovered"
+        );
+        let _ = d.world_plate_for_redraw(80, 24);
+        assert_eq!(
+            d.tile_renders(),
+            large,
+            "shrinking the plate redrew tiles it already held"
+        );
 
         // frame (re-centre)
         let mut d = test_driver();
         enter_world_view(&mut d);
         let _ = d.world_plate_for_redraw(104, 56);
-        let n = d.plate_renders();
+        let n = d.tile_renders();
         d.apply(Action::CursorBy(9, 4));
         d.apply(Action::Recentre);
         let _ = d.world_plate_for_redraw(104, 56);
         assert!(
-            d.plate_renders() > n,
+            d.tile_renders() > n,
             "a re-centre changes the frame and must re-render"
         );
 
-        // discovery
+        // DISCOVERY IS DELIBERATELY NOT AN ARM HERE ANY MORE (The Quadrat,
+        // Task 4). It used to be, asserting that a discovery re-rendered the
+        // plate — and that is precisely the coupling
+        // `CLIENT-tiles-need-the-overlay-split` records as the defect: a key
+        // carrying the discovery version is invalidated by every discovery,
+        // the whole pyramid for one settlement. The property it was really
+        // reaching for — a discovery still reaches the drawn plate — is
+        // asserted, together with its new other half, by
+        // `a_discovery_redraws_the_features_without_re_rendering_the_terrain`
+        // below. It is not dropped; it is stated about the right layer.
+    }
+
+    /// **The layer split's own headline, as an assertion**: a discovery
+    /// changes what the player sees on the very next redraw, and does NOT
+    /// re-render the terrain raster underneath it.
+    ///
+    /// Both halves are load-bearing and each rescues the other from
+    /// vacuity. "Does not re-render" alone would pass on a cache that never
+    /// invalidated at all — including one that had stopped showing
+    /// discoveries entirely, which is a real regression this split could
+    /// introduce. "Changes the plate" alone would pass on the old,
+    /// discovery-keyed plate cache the split exists to remove.
+    ///
+    /// The site is a real cave mouth out of the driver's OWN roster (the
+    /// one `draw_feature_layer` projects from), and the window is moved to
+    /// it, because a site off screen would satisfy "does not re-render"
+    /// trivially — the `assert_ne!` is what refuses that.
+    #[test]
+    fn a_discovery_redraws_the_features_without_re_rendering_the_terrain() {
         let mut d = test_driver();
         enter_world_view(&mut d);
-        let _ = d.world_plate_for_redraw(104, 56);
-        let n = d.plate_renders();
+        let (w, h) = (104u16, 56u16);
+        let (plate_w, plate_h) = Driver::world_plate_dims(w, h);
+
+        let site = centre_on_a_cave(&mut d, plate_w, plate_h);
+
+        let before = d
+            .world_plate_for_redraw(w, h)
+            .expect("the world view is on");
+        let renders = d.tile_renders();
+        assert!(renders > 0, "the first redraw must actually render");
+
         d.discovered_mut_for_test()
-            .record(crate::discovery::FeatureId::Settlement(CellId(1)));
-        let _ = d.world_plate_for_redraw(104, 56);
-        assert!(d.plate_renders() > n, "a new discovery must re-render");
+            .record(crate::discovery::FeatureId::Cave(site));
+        let after = d
+            .world_plate_for_redraw(w, h)
+            .expect("the world view is on");
+
+        assert_ne!(
+            before.to_plain_text(),
+            after.to_plain_text(),
+            "a discovery never reached the drawn plate"
+        );
+        assert_eq!(
+            d.tile_renders(),
+            renders,
+            "a discovery re-rendered the TERRAIN layer — the whole pyramid, for one site"
+        );
+    }
+
+    /// **The two driver paths into the layers must still agree** (fix round
+    /// 1, Minor 2).
+    ///
+    /// Before The Quadrat's Task 4, [`Driver::world_plate_for_redraw`]
+    /// CALLED [`Driver::world_plate`], so their agreement was structural and
+    /// unfalsifiable. They are now two independent argument lists into the
+    /// same two layers — plate dims, roster order, colour source — and
+    /// `plate.rs`'s own `draw_with_is_the_composition_of_its_layers` covers
+    /// only the `plate.rs` half. A divergence here would show as the
+    /// unconditional path (which `world_plate` is, and which every test that
+    /// drives the plate directly uses) disagreeing with what a player
+    /// actually sees.
+    ///
+    /// **Compared cell by cell, not by `to_plain_text`**, because the colour
+    /// SOURCE is one of the three things that could diverge and glyph text
+    /// cannot see [`hornvale_game_core::Ink`] at all.
+    ///
+    /// The window is put on a real, DISCOVERED cave first, so the comparison
+    /// covers the feature layer's arguments and not merely the raster's — two
+    /// terrain-only plates would agree whatever the roster arguments did.
+    #[test]
+    fn the_cached_redraw_path_draws_what_an_uncached_world_plate_would() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        let (w, h) = (104u16, 56u16);
+        let (plate_w, plate_h) = Driver::world_plate_dims(w, h);
+        let site = centre_on_a_cave(&mut d, plate_w, plate_h);
+        d.discovered_mut_for_test()
+            .record(crate::discovery::FeatureId::Cave(site));
+
+        let direct = d.world_plate(w, h);
+        assert!(
+            direct.to_plain_text().contains(plate::CAVE_GLYPH),
+            "guard: the discovered site must actually be on this plate, or the \
+             comparison below covers only the raster"
+        );
+
+        // A MISS and then a HIT: the composed output must match the
+        // unconditional path on both, since the feature layer is drawn over a
+        // clone either way.
+        for pass in ["miss", "hit"] {
+            let composed = d
+                .world_plate_for_redraw(w, h)
+                .expect("the world view is on");
+            assert_eq!(
+                (composed.width(), composed.height()),
+                (direct.width(), direct.height()),
+                "the two paths sized the plate differently ({pass})"
+            );
+            for y in 0..direct.height() {
+                for x in 0..direct.width() {
+                    assert_eq!(
+                        composed.get(x, y),
+                        direct.get(x, y),
+                        "the two driver paths disagree at ({x}, {y}) on the {pass}"
+                    );
+                }
+            }
+        }
     }
 
     /// A cache that returns a DIFFERENT grid than a fresh render is worse
@@ -1596,16 +3052,39 @@ mod portolan_tests {
     // -- Step 1: the zoom ladder (zoom out past the walk band enters the
     //    world view; zoom in past its finest rung leaves it) -----------
 
+    /// **Retargeted by The Quadrat's Task 2, not deleted.** This used to
+    /// be `..._enters_the_world_view_at_the_coarsest_rung`, and that intent
+    /// has no referent any more: the jump to [`GLOBE_RUNG`] WAS the mode
+    /// flip. What survives — and is the thing worth pinning — is that the
+    /// first zoom-out off band B crosses into the world view, one rung at a
+    /// time.
     #[test]
-    fn zoom_out_from_the_walk_band_enters_the_world_view_at_the_coarsest_rung() {
+    fn zoom_out_from_band_b_steps_one_rung_into_the_world_view() {
         let mut d = test_driver();
         d.enter_map();
-        assert!(!d.world_view);
+        assert_eq!(
+            d.window.depth, BAND_B_RUNG,
+            "the session opens on band B, the ladder's finest rung"
+        );
+        assert!(d.at_walk_band_rung());
         d.apply(Action::Zoom(-1));
-        assert!(d.world_view);
-        assert_eq!(d.window.zoom, 0, "the coarsest rung is zoom 0");
-        assert_eq!(d.window.origin_col, 0);
-        assert_eq!(d.window.origin_row, 0);
+        assert!(!d.at_walk_band_rung());
+        assert_eq!(
+            d.window.depth,
+            BAND_B_RUNG - 1,
+            "one press is one rung — not a jump to the globe"
+        );
+        // THE ORIGIN IS NO LONGER THE CORNER HERE, and asserting it were
+        // would now pin the arctic-corner bug Task 6 exists to fix:
+        // `enter_map` centres band B on the observer, and one zoom-out
+        // carries that origin into the coarser rung's own chart. What
+        // survives is that the step did not RESET the window, which is the
+        // mode-flip behaviour Task 2 removed and this test was retargeted
+        // from.
+        assert!(
+            (d.window.origin_row, d.window.origin_col) != (0, 0),
+            "a zoom-out must carry the window, not reset it to the chart's corner"
+        );
     }
 
     #[test]
@@ -1618,7 +3097,7 @@ mod portolan_tests {
             d.window, before,
             "there is nothing further out than the whole planet"
         );
-        assert!(d.world_view, "must still be in the world view");
+        assert!(!d.at_walk_band_rung(), "must still be in the world view");
     }
 
     #[test]
@@ -1626,52 +3105,189 @@ mod portolan_tests {
         let mut d = test_driver();
         enter_world_view(&mut d);
         d.apply(Action::Zoom(1));
-        assert_eq!(d.window.zoom, 1);
-        assert!(d.world_view);
+        assert_eq!(d.window.depth, GLOBE_RUNG + 1);
+        assert!(!d.at_walk_band_rung());
     }
 
+    /// **Retargeted by The Quadrat's Task 2.** This used to be
+    /// `zoom_in_stops_at_max_zoom_then_the_next_press_leaves_the_world_view`:
+    /// arriving at [`BAND_B_RUNG`] kept the world view on, and ONE MORE
+    /// press flipped it off while resetting the window to the globe. Band B
+    /// is the walk band's own rung now, so the arrival IS the handover and
+    /// the press past it does nothing at all.
     #[test]
-    fn zoom_in_stops_at_max_zoom_then_the_next_press_leaves_the_world_view() {
+    fn zoom_in_climbs_to_band_b_and_saturates_there() {
         let mut d = test_driver();
         enter_world_view(&mut d);
-        for _ in 0..plate::MAX_ZOOM {
+        for _ in 0..(BAND_B_RUNG - GLOBE_RUNG - 1) {
             d.apply(Action::Zoom(1));
         }
-        assert!(d.world_view);
         assert_eq!(
-            d.window.zoom,
-            plate::MAX_ZOOM,
-            "maximum zoom is one character per terrain cell (decision 0123)"
+            d.window.depth,
+            BAND_B_RUNG - 1,
+            "the finest rung the RASTER draws is one below band B"
         );
-        d.apply(Action::Zoom(1));
         assert!(
-            !d.world_view,
-            "one more zoom-in at the finest rung must leave the world view"
+            !d.at_walk_band_rung(),
+            "still the world plate one rung below band B"
+        );
+
+        d.apply(Action::Zoom(1));
+        assert_eq!(
+            d.window.depth, BAND_B_RUNG,
+            "the finest rung is band B: one tile per facet"
+        );
+        assert!(
+            d.at_walk_band_rung(),
+            "band B is the walk band's own chart until a later task moves it"
+        );
+
+        let at_ceiling = d.window;
+        d.apply(Action::Zoom(1));
+        assert_eq!(
+            d.window, at_ceiling,
+            "a press past the ceiling must change nothing — no mode to flip"
         );
     }
 
-    /// Sixty-four presses is far more than [`plate::MAX_ZOOM`] steps, so
-    /// this must walk all the way up the ladder AND back off the top —
-    /// the ladder's ceiling must be a real stop, not merely a slow climb.
+    /// Sixty-four presses is far more than the ladder's own height, so
+    /// this must walk all the way up the ladder and STOP at band B — the
+    /// ladder's ceiling must be a real stop, not merely a slow climb, and
+    /// not a wrap back to the globe either.
     #[test]
-    fn many_zoom_ins_walk_off_the_top_of_the_ladder_and_back_to_the_walk_band() {
+    fn many_zoom_ins_climb_to_band_b_and_stop_there() {
         let mut d = test_driver();
         enter_world_view(&mut d);
         for _ in 0..64 {
             d.apply(Action::Zoom(1));
         }
-        assert!(!d.world_view);
+        assert_eq!(d.window.depth, BAND_B_RUNG);
+        assert!(d.at_walk_band_rung());
+    }
+
+    /// THE LADDER'S ENDS. Both are saturations of one number now — there is
+    /// no mode to flip at either end, so twenty presses in either direction
+    /// must land on the end rung and stay there.
+    ///
+    /// **It walks OUT before it walks in, and that ordering is the test.**
+    /// `Driver::start` opens the session ON [`BAND_B_RUNG`], so a version
+    /// that began with the zoom-ins would assert the ceiling against the
+    /// state it started in — an assertion a gutted `apply_zoom` satisfies
+    /// for free. Descending first makes every assertion below a real result
+    /// of the arm it names: gut the zoom-IN arm and the ceiling assertion
+    /// fails; gut the zoom-OUT arm and the floor assertion fails.
+    #[test]
+    fn the_ladder_runs_from_the_globe_rung_to_band_b_and_refuses_past_both() {
+        let mut d = test_driver();
+        d.enter_map();
+        for _ in 0..20 {
+            d.apply(Action::Zoom(-1));
+        }
+        for _ in 0..20 {
+            d.apply(Action::Zoom(1));
+        }
+        assert_eq!(
+            d.window().depth,
+            plate::BAND_B_RUNG,
+            "zoomed in past band B"
+        );
+        for _ in 0..20 {
+            d.apply(Action::Zoom(-1));
+        }
+        assert_eq!(
+            d.window().depth,
+            plate::GLOBE_RUNG,
+            "zoomed out past the globe"
+        );
+    }
+
+    /// Seven rungs, SIX zoom-out steps — the bound `Session::map` already
+    /// enforces as `depth - globe_level`. Stated as both numbers because
+    /// they differ by one and this is where that discrepancy would be
+    /// minted.
+    ///
+    /// **Walks OUT first for the reason the test above states**: the
+    /// session opens on [`BAND_B_RUNG`], so without the descent the climb
+    /// would not have to climb, and the seed `seen` collects would be the
+    /// start state rather than the zoom-IN arm's own answer.
+    #[test]
+    fn every_rung_of_the_ladder_is_reachable_and_distinct() {
+        let mut d = test_driver();
+        d.enter_map();
+        for _ in 0..20 {
+            d.apply(Action::Zoom(-1));
+        }
+        for _ in 0..20 {
+            d.apply(Action::Zoom(1));
+        }
+        let mut seen = std::collections::BTreeSet::new();
+        seen.insert(d.window().depth);
+        for _ in 0..6 {
+            d.apply(Action::Zoom(-1));
+            assert!(seen.insert(d.window().depth), "a rung repeated");
+        }
+        assert_eq!(seen.len(), 7, "expected 7 rungs, saw {seen:?}");
+        assert_eq!(*seen.iter().next().unwrap(), plate::GLOBE_RUNG);
+        assert_eq!(*seen.iter().next_back().unwrap(), plate::BAND_B_RUNG);
     }
 
     #[test]
     fn zoom_plus_on_the_walk_band_alone_is_a_no_op() {
         let mut d = test_driver();
         d.enter_map();
-        assert!(!d.world_view);
+        assert!(d.at_walk_band_rung());
         let before_window = d.window;
         d.apply(Action::Zoom(1));
-        assert!(!d.world_view, "the walk band has no zoom of its own");
+        assert!(
+            d.at_walk_band_rung(),
+            "band B is already the ladder's finest rung"
+        );
         assert_eq!(d.window, before_window);
+    }
+
+    /// THE SAME NO-OP, AFTER SCROLLING — fix round 1's F1, and the reason the
+    /// test above was not enough.
+    ///
+    /// `zoom_plus_on_the_walk_band_alone_is_a_no_op` compares the window
+    /// against its state at `enter_map`, which is the state band B's own
+    /// centring just produced — so re-centring on a saturating press is
+    /// INVISIBLE to it, and its premise had silently narrowed to "a press
+    /// that changes nothing changes nothing, provided nothing had changed".
+    /// Measured against the defect: `origin_col` jumped 21169 -> 2176, about
+    /// nineteen thousand tiles of the player's own scroll discarded by a
+    /// keypress documented as doing nothing. That is Nathan's founding
+    /// complaint — "the map zooms based on criteria I have not identified" —
+    /// reintroduced by its own fix.
+    ///
+    /// So this one scrolls FIRST, a long way, and then presses `+`.
+    #[test]
+    fn zoom_plus_at_the_ladders_ceiling_keeps_the_players_scroll() {
+        let mut d = test_driver();
+        d.resize(210, 56);
+        d.enter_map();
+        assert!(d.at_walk_band_rung(), "sanity: the ladder's ceiling");
+        let centred = d.window;
+
+        // Scroll east, hard, past the plate's own edge — the only way to
+        // travel at this rung (spec §4.2: the cursor clamps and the window
+        // moves).
+        for _ in 0..20 {
+            d.apply(Action::CursorBy(i16::MAX, 0));
+        }
+        let scrolled = d.window;
+        assert_ne!(
+            scrolled.origin_col, centred.origin_col,
+            "the premise: the scroll must actually have moved the window, or a \
+             re-centre would be undetectable — which is exactly how the defect \
+             this test exists for stayed hidden"
+        );
+
+        d.apply(Action::Zoom(1));
+        assert_eq!(
+            d.window, scrolled,
+            "a press past the ladder's ceiling must change nothing at all — not \
+             the rung, and not the window the player scrolled to"
+        );
     }
 
     // -- Step 2: the cursor clamps to the ACTIVE plate -------------------
@@ -1694,21 +3310,44 @@ mod portolan_tests {
         );
     }
 
+    /// **RETARGETED by Task 6, and the retarget is the point.** This used to
+    /// be `..._clamps_back_to_the_walk_bands_width_once_the_world_view_is_off`
+    /// and asserted the cursor's clamp reverted to the fixed
+    /// [`hornvale_game_core::spread::PLATE_WIDTH`] on returning to band B.
+    /// Band B draws the raster now, at the same `world_plate_width` fit every
+    /// other rung uses, so a clamp that reverted would be the Task 3a review
+    /// finding all over again — columns of a drawn plate that no cursor can
+    /// reach. The surviving property is that the clamp tracks the ACTIVE
+    /// plate at EVERY rung, band B included, which is what
+    /// `active_plate_dims` having one arm means.
     #[test]
-    fn the_cursor_clamps_back_to_the_walk_bands_width_once_the_world_view_is_off() {
+    fn the_cursor_clamp_tracks_the_active_plate_at_band_b_too() {
         let mut d = test_driver();
         d.resize(210, 56);
         enter_world_view(&mut d);
         d.apply(Action::CursorBy(i16::MAX, 0));
-        for _ in 0..plate::MAX_ZOOM + 1 {
-            d.apply(Action::Zoom(1)); // walk back off the top of the ladder
-        }
-        assert!(!d.world_view);
-        d.apply(Action::CursorBy(i16::MAX, 0));
+        let (coarse_w, _) = d.active_plate_dims();
         assert_eq!(
             d.cursor.x,
-            hornvale_game_core::spread::PLATE_WIDTH - 1,
-            "back on the walk band, the clamp must be the fixed PLATE_WIDTH again"
+            coarse_w - 1,
+            "sanity: the coarse rung's own edge"
+        );
+        for _ in 0..(BAND_B_RUNG - GLOBE_RUNG) + 1 {
+            d.apply(Action::Zoom(1)); // climb back to band B
+        }
+        assert!(d.at_walk_band_rung());
+        d.apply(Action::CursorBy(i16::MAX, 0));
+        let (band_b_w, _) = d.active_plate_dims();
+        assert!(
+            band_b_w > hornvale_game_core::spread::PLATE_WIDTH,
+            "the test terminal must produce a plate wider than the old fixed \
+             walk-band one, or this proves nothing: got {band_b_w}"
+        );
+        assert_eq!(
+            d.cursor.x,
+            band_b_w - 1,
+            "band B's cursor must reach its own plate's far edge, not stop at \
+             the retired PLATE_WIDTH - 1"
         );
     }
 
@@ -1745,23 +3384,23 @@ mod portolan_tests {
     // -- Step 4 / H3: scroll and cursor stay coherent, at MORE THAN ONE
     //    offset and MORE THAN ONE zoom ------------------------------------
 
-    /// H3, the hypothesis at real risk: after scrolling, the cell under the
-    /// cursor must be the cell the window/frame state actually names.
+    /// H3, the hypothesis at real risk: after scrolling, the vertex under the
+    /// cursor must be the vertex the window/frame state actually names.
     ///
     /// **Fix round 1, Finding 1 (reviewer): this reconstruction is NOT an
     /// independent derivation — it calls `active_plate_dims`,
-    /// `plate::virtual_dims` and `plate::area_majority` in the same order
+    /// `plate::virtual_dims` and `plate::terrain_at_tile` in the same order
     /// over the same fields `resolve_world_view` itself does, so it is a
     /// hand-mirrored copy of the implementation, not an alternate one.**
     /// Said plainly rather than smoothed over: this test cannot catch a
     /// bug shared by both copies (one living in `virtual_dims`, or in
     /// `move_cursor`'s scroll math). What it DOES catch, and the reason it
     /// is kept rather than deleted: a future edit that reintroduces a
-    /// stale or hardcoded value INSIDE `resolve_world_view`/`world_view_cell`
+    /// stale or hardcoded value INSIDE `resolve_world_view`/`world_view_vertex`
     /// alone — a revert-to-no-op mutation of the whole zoom/scroll feature
     /// failed 12 of 15 tests in this module (task report, "behavioural
     /// REDs"), proving this is not vacuous even though it is not
-    /// independent. `the_resolved_cell_matches_the_actually_drawn_glyph_
+    /// independent. `the_resolved_vertex_matches_the_actually_drawn_glyph_
     /// at_fine_zoom` below is the genuine ground-truth check the reviewer
     /// asked for: it reads [`plate::draw_with`]'s ACTUAL rendered grid,
     /// never re-derives the arithmetic.
@@ -1771,32 +3410,33 @@ mod portolan_tests {
     /// test pinned at one offset and one zoom cannot see drift between the
     /// window's own offset and the resolver's.
     #[test]
-    fn the_cell_under_the_cursor_matches_the_window_at_every_zoom_and_offset() {
+    fn the_vertex_under_the_cursor_matches_the_window_at_every_zoom_and_offset() {
         let mut d = test_driver();
         enter_world_view(&mut d);
 
-        for target_zoom in [0u8, 1, 3] {
-            while d.window.zoom < target_zoom {
+        for target_depth in [GLOBE_RUNG, GLOBE_RUNG + 1, GLOBE_RUNG + 3] {
+            while d.window.depth < target_depth {
                 d.apply(Action::Zoom(1));
             }
-            assert_eq!(d.window.zoom, target_zoom);
+            assert_eq!(d.window.depth, target_depth);
 
             for &(dx, dy) in &[(0i16, 0i16), (7, 0), (0, 5), (39, 19), (-7, 3)] {
                 d.apply(Action::CursorBy(dx, dy));
 
-                let (plate_w, _) = d.active_plate_dims();
-                let (virtual_w, virtual_h) = plate::virtual_dims(d.window(), plate_w);
-                let (_ocean, expected_cell) = plate::area_majority(
+                let (virtual_w, virtual_h) = plate::virtual_dims(d.window().depth);
+                let expected_vertex = plate::terrain_at_tile(
                     &d.terrain,
                     &d.geo,
                     &d.nearest,
+                    &mut hornvale_kernel::RoomMeshMemo::default(),
                     d.frame(),
                     d.window(),
                     virtual_w,
                     virtual_h,
                     u32::from(d.cursor.y),
                     u32::from(d.cursor.x),
-                );
+                )
+                .vertex;
                 let (species, ph, morph) = &d.namer;
                 // `resolve_chain_at`, not `resolve_at`: Task 4 made
                 // `resolve_world_view` (`resolved`, below) return the FULL
@@ -1804,15 +3444,20 @@ mod portolan_tests {
                 // must build the same chain to stay comparable — this test's
                 // own H3 claim (window/cursor state agrees with the
                 // resolver) is orthogonal to how many features get named.
-                let expected =
-                    resolve_chain_at(&d.index, expected_cell, d.seed, species, ph, morph, &|id| {
-                        d.discovered.contains(FeatureId::Extent(id))
-                    });
+                let expected = resolve_chain_at(
+                    &d.index,
+                    expected_vertex,
+                    d.seed,
+                    species,
+                    ph,
+                    morph,
+                    &|id| d.discovered.contains(FeatureId::Extent(id)),
+                );
 
                 let resolved = d.resolve_world_view();
                 assert_eq!(
                     resolved, expected,
-                    "zoom {target_zoom}, offset ({dx}, {dy}), cursor {:?}, window {:?}: \
+                    "rung {target_depth}, offset ({dx}, {dy}), cursor {:?}, window {:?}: \
                      the resolver drifted from the window/cursor state",
                     d.cursor, d.window
                 );
@@ -1823,15 +3468,18 @@ mod portolan_tests {
     /// The genuine ground-truth check Finding 1 asked for: resolve at the
     /// cursor, then read [`plate::draw_with`]'s ACTUAL rendered grid (via
     /// `Driver::world_plate`, the real production drawing path) at that
-    /// same screen position, and assert the resolved cell's ocean/land
+    /// same screen position, and assert the resolved vertex's ocean/land
     /// class agrees with the drawn glyph. Two genuinely different code
-    /// paths — one produces pixels, the other a `CellId` — cross-checked
+    /// paths — one produces pixels, the other a `Vertex` — cross-checked
     /// against each other's real OUTPUT, not a shared re-derivation of the
     /// same arithmetic.
     ///
-    /// Run at [`plate::MAX_ZOOM`] (the finest rung), where the 49-vote
+    /// Run at `BAND_B_RUNG - 1`, the finest rung the RASTER draws — The
+    /// Quadrat's Task 2 hands band B itself back to the walk band's own
+    /// chart, so `active_plate_dims`/`world_plate` no longer describe the
+    /// same picture there. One rung coarser is where the 49-vote
     /// majority and the true-centre sample are expected to coincide (one
-    /// terrain cell per character — `plate::SUBSAMPLES_PER_AXIS`'s own
+    /// terrain vertex per character — `plate::SUBSAMPLES_PER_AXIS`'s own
     /// doc), across several offsets: this is the region where the check is
     /// unambiguous, so a failure here means the draw/resolve SEAM itself
     /// has drifted, not merely that a coarse character's footprint
@@ -1841,13 +3489,17 @@ mod portolan_tests {
     /// version of this same comparison, which the Finding 2 fix below
     /// makes an EXACT agreement rather than a measured ratio).
     #[test]
-    fn the_resolved_cell_matches_the_actually_drawn_glyph_at_fine_zoom() {
+    fn the_resolved_vertex_matches_the_actually_drawn_glyph_at_fine_zoom() {
         let mut d = test_driver();
         enter_world_view(&mut d);
-        for _ in 0..plate::MAX_ZOOM {
+        for _ in 0..(BAND_B_RUNG - GLOBE_RUNG - 1) {
             d.apply(Action::Zoom(1));
         }
-        assert_eq!(d.window.zoom, plate::MAX_ZOOM);
+        assert_eq!(d.window.depth, BAND_B_RUNG - 1);
+        assert!(
+            !d.at_walk_band_rung(),
+            "sanity: the raster is what is drawn here"
+        );
 
         for &(dx, dy) in &[(0i16, 0i16), (5, 0), (0, 3), (-4, 2), (9, -6)] {
             d.apply(Action::CursorBy(dx, dy));
@@ -1869,14 +3521,14 @@ mod portolan_tests {
             );
             let drawn_ocean = grid.get(d.cursor.x, d.cursor.y).and_then(|c| c.glyph) == Some('~');
 
-            let resolved_cell = d.world_view_cell();
-            let resolved_ocean = d.terrain.is_ocean(resolved_cell);
+            let resolved_vertex = d.world_view_vertex();
+            let resolved_ocean = d.terrain.is_ocean(resolved_vertex);
 
             assert_eq!(
                 resolved_ocean, drawn_ocean,
-                "cursor {:?} at zoom {}: the resolver named a cell whose class \
+                "cursor {:?} at zoom {}: the resolver named a vertex whose class \
                  contradicts the actually drawn glyph",
-                d.cursor, d.window.zoom
+                d.cursor, d.window.depth
             );
         }
     }
@@ -1921,17 +3573,31 @@ mod portolan_tests {
         );
     }
 
+    /// **RETARGETED by Task 6: recentre WORKS at band B now.** It used to
+    /// return early off the world view, because "the walk-band chart is not
+    /// a Mercator projection and has no central line to roll onto". Band B
+    /// IS a Mercator projection now, so the gesture is meaningful at every
+    /// rung and a no-op would be the surprise. Its inverse — that the
+    /// cursor's own screen position keeps naming the same geographic point
+    /// across the roll — is pinned by
+    /// `recentre_keeps_the_cursor_on_the_same_place` at the coarse rung and
+    /// is unchanged.
     #[test]
-    fn recentre_is_a_no_op_off_the_world_view() {
+    fn recentre_rolls_the_projection_at_band_b_too() {
         let mut d = test_driver();
         d.enter_map();
-        assert!(!d.world_view);
+        assert!(d.at_walk_band_rung());
         let before = *d.frame();
-        d.apply(Action::Recentre);
         assert_eq!(
+            before,
+            mercator::frame_for(false),
+            "sanity: seed 42 spins, so the opening frame is the geographic one"
+        );
+        d.apply(Action::Recentre);
+        assert_ne!(
             *d.frame(),
             before,
-            "the walk-band chart has no central line to roll"
+            "band B is a Mercator window like every other rung; `.` must roll it"
         );
     }
 
@@ -1998,7 +3664,7 @@ mod portolan_tests {
         }
     }
 
-    // -- F5, fix round 1: the resolved cell must never contradict the
+    // -- F5, fix round 1: the resolved vertex must never contradict the
     //    drawn glyph (Finding 2) -----------------------------------------
 
     /// F5, RE-MEASURED after the Finding 2 fix (task report fix round 1).
@@ -2013,16 +3679,18 @@ mod portolan_tests {
     /// majority and a single centre-point answer can disagree at a
     /// coastline — was and remains real.
     ///
-    /// The fix ([`Self::world_view_cell`], `plate::area_majority`) makes
-    /// the resolver ask the SAME 49-point vote the plate draws from, and
-    /// pick only a sample of the WINNING class — so agreement is no longer
-    /// a measured ratio, it is a GUARANTEE the code's own structure
-    /// enforces. This test still measures and prints the ratio (per the
+    /// The fix ([`Self::world_view_vertex`], now
+    /// [`plate::terrain_at_tile`]) makes the resolver ask the SAME question
+    /// the plate draws from, and take the representative of the PAINTED
+    /// class — so agreement is no longer a measured ratio, it is a
+    /// GUARANTEE the code's own structure enforces. The Quadrat's Task 3
+    /// replaced the 49-point vote with mesh addressing and left that
+    /// guarantee untouched ([`plate::TileTerrain`]'s own doc). This test still measures and prints the ratio (per the
     /// reviewer's own instruction: "if it is not ~100% by construction,
     /// something about the fix is wrong and I want to see the number") and
     /// then asserts it is exact, across every cell of the floor plate.
     #[test]
-    fn f5_the_resolved_cell_always_matches_the_drawn_glyph_after_the_fix() {
+    fn f5_the_resolved_vertex_always_matches_the_drawn_glyph_after_the_fix() {
         let mut d = test_driver();
         enter_world_view(&mut d);
         // `world_plate` takes the RAW terminal size — see the fine-zoom
@@ -2033,24 +3701,27 @@ mod portolan_tests {
         let grid = d.world_plate(d.term_w, d.term_h);
         let (plate_w, plate_h) = d.active_plate_dims();
         assert_eq!((grid.width(), grid.height()), (plate_w, plate_h));
-        let (virtual_w, virtual_h) = plate::virtual_dims(&d.window, plate_w);
+        let (virtual_w, virtual_h) = plate::virtual_dims(d.window.depth);
 
         let mut agree = 0u32;
         let mut total = 0u32;
+        let mut memo = hornvale_kernel::RoomMeshMemo::default();
         for y in 0..plate_h {
             for x in 0..plate_w {
-                let (_ocean, cell) = plate::area_majority(
+                let vertex = plate::terrain_at_tile(
                     &d.terrain,
                     &d.geo,
                     &d.nearest,
+                    &mut memo,
                     &d.frame,
                     &d.window,
                     virtual_w,
                     virtual_h,
                     u32::from(y),
                     u32::from(x),
-                );
-                let resolved_ocean = d.terrain.is_ocean(cell);
+                )
+                .vertex;
+                let resolved_ocean = d.terrain.is_ocean(vertex);
 
                 let drawn_ocean = grid.get(x, y).and_then(|c| c.glyph) == Some('~');
                 total += 1;
@@ -2062,18 +3733,18 @@ mod portolan_tests {
         assert!(total > 0);
         let ratio = f64::from(agree) / f64::from(total);
         println!(
-            "F5 (fix round 1): the resolved cell's class agrees with the drawn 49-vote \
-             majority glyph on {agree}/{total} = {ratio:.4} of the {plate_w}x{plate_h} \
+            "F5 (fix round 1): the resolved vertex's class agrees with the drawn \
+             glyph on {agree}/{total} = {ratio:.4} of the {plate_w}x{plate_h} \
              floor plate at the coarsest zoom (the pre-fix figure once printed here, \
              420/800 = 0.5250, is RETRACTED as measured on a misaligned 32x16-vs-40x20 \
              harness bug; the pre-fix rate is unmeasured, not smaller)"
         );
         assert_eq!(
             agree, total,
-            "Finding 2's fix guarantees this by construction: `area_majority` only ever \
-             returns a sample of the WINNING class, so the resolved cell can never \
-             disagree with the glyph drawn from that same vote — a non-1.0 ratio here \
-             means the fix itself is broken"
+            "Finding 2's fix guarantees this by construction: `terrain_at_tile` only ever \
+             returns a representative of the PAINTED class, so the resolved vertex can \
+             never disagree with the glyph drawn from that same read — a non-1.0 ratio \
+             here means the fix itself is broken"
         );
     }
 
@@ -2084,48 +3755,53 @@ mod portolan_tests {
     ///
     /// **Not seed 42's default flagship position** — that position turned
     /// out (found by running this, not by reasoning about it) to resolve
-    /// to a SINGLE-feature cell, "Vngashngatva (a landmass)": the design
+    /// to a SINGLE-feature vertex, "Vngashngatva (a landmass)": the design
     /// spec's own illustrative example text ("Vngashngatva (a volcano),
     /// on Kxsokxkxzhakx (a landmass)", §5) uses the same name for a
     /// volcano that this real seed-42 world gives its landmass — a
     /// coincidence of the example's own invented names, not a fact about
     /// this fixture. So this test SEARCHES the coarsest (whole-planet)
-    /// world view for a real multi-feature cell, through the actual
-    /// `Driver::world_view_cell`/`resolve_chain_at` production path,
+    /// world view for a real multi-feature vertex, through the actual
+    /// `Driver::world_view_vertex`/`resolve_chain_at` production path,
     /// rather than assuming one at a fixed position.
     #[test]
     fn the_strip_carries_the_whole_containment_chain_most_specific_first() {
         let mut d = test_driver();
         enter_world_view(&mut d);
         assert_eq!(
-            d.window.zoom, 0,
-            "sanity: the coarsest zoom, whole planet in one screen"
+            d.window.depth, GLOBE_RUNG,
+            "sanity: the coarsest rung the ladder reaches"
         );
 
         let (plate_w, plate_h) = d.active_plate_dims();
-        let mut found: Option<hornvale_kernel::CellId> = None;
+        // Since Task 1 the plate no longer holds the whole planet at the
+        // coarsest rung, so the search below covers one screen's worth of a
+        // 363x362 chart — put that screen somewhere the world actually has
+        // features stacked on features.
+        centre_window_on_the_player(&mut d, plate_w, plate_h);
+        let mut found: Option<hornvale_kernel::Vertex> = None;
         'search: for y in 0..plate_h {
             for x in 0..plate_w {
                 d.cursor = hornvale_game_core::Cursor { x, y };
-                let cell = d.world_view_cell();
-                if d.index.at(cell).len() >= 2 {
-                    found = Some(cell);
+                let vertex = d.world_view_vertex();
+                if d.index.at(vertex).len() >= 2 {
+                    found = Some(vertex);
                     break 'search;
                 }
             }
         }
-        let cell = found.expect(
-            "seed 42's real world has at least one multi-feature cell reachable at the \
+        let vertex = found.expect(
+            "seed 42's real world has at least one multi-feature vertex reachable at the \
              coarsest zoom (the cursor was left at that position by the search above)",
         );
-        let stack: Vec<_> = d.index.at(cell).to_vec();
+        let stack: Vec<_> = d.index.at(vertex).to_vec();
         assert!(
             stack.len() >= 2,
-            "sanity: the found cell is genuinely multi-feature"
+            "sanity: the found vertex is genuinely multi-feature"
         );
 
         // Task 5's real discovery gate means MERELY POINTING the cursor at
-        // `cell` (what the search above does) no longer discovers anything
+        // `vertex` (what the search above does) no longer discovers anything
         // — that is the whole point of the gate (co-location is not
         // discovery, and even the cursor's own gaze is a form of
         // co-location, not encounter). This test's own purpose is the
@@ -2232,34 +3908,100 @@ mod portolan_tests {
 
     // -- Task 4, Step 4 / F5: the resolution disclosure -------------------
 
-    /// F5: at the coarsest zoom (~51 real terrain cells behind every
-    /// character, per `plate::SUBSAMPLES_PER_AXIS`'s own doc), the strip
-    /// discloses its resolution; at the finest zoom (one character per
-    /// terrain cell, `plate::MAX_ZOOM`'s own design ceiling), it does not.
-    /// A test pinned at one zoom cannot see this requirement at all.
+    /// F5, RESTATED FOR THE MESH LADDER: the strip discloses a resolution
+    /// only where one character stands for MORE than one terrain vertex,
+    /// and since The Quadrat no shipped rung does.
+    ///
+    /// **The coarse half of this test was a real assertion and is now a
+    /// falsified one, so it is inverted rather than deleted.** It used to
+    /// read "the coarsest zoom must disclose": the chart was the plate,
+    /// 40x20 = 800 characters for 40,962 vertices, ~51 vertices apiece.
+    /// The chart is the RUNG now, and [`GLOBE_RUNG`] is the canonical grid
+    /// level itself (decision 0196) — 363x362 tiles — so even the coarsest
+    /// rung is finer than the mesh and the honest disclosure is silence.
+    /// See [`Driver::resolution_disclosure`]'s own doc. What this test
+    /// still pins is that the derivation runs at every rung the raster
+    /// draws and agrees; a rung coarser than the mesh would make it speak.
+    ///
+    /// **Widened by The Quadrat's Task 2 rather than retargeted.** It used
+    /// to read the two ENDS of the ladder, and band B's end now draws the
+    /// walk band's chart instead — whose strip never carries a disclosure
+    /// for reasons that have nothing to do with the ratio, so asserting
+    /// there would have gone quietly vacuous. Walking the raster's whole
+    /// range instead keeps every assertion pointed at the derivation under
+    /// test.
     #[test]
-    fn the_resolution_disclosure_fires_at_the_coarsest_zoom_and_not_the_finest() {
+    fn the_resolution_disclosure_is_silent_at_every_shipped_rung() {
         let mut d = test_driver();
         enter_world_view(&mut d);
-        assert_eq!(d.window.zoom, 0, "sanity: the coarsest rung");
-        let coarse = d
-            .strip_text()
-            .expect("the world view always resolves once active");
-        assert!(
-            coarse.contains("terrain cells"),
-            "the coarsest zoom must disclose its resolution, got {coarse:?}"
-        );
+        assert_eq!(d.window.depth, GLOBE_RUNG, "sanity: the coarsest rung");
 
-        for _ in 0..plate::MAX_ZOOM {
+        let mut rungs_checked = 0;
+        loop {
+            assert!(
+                !d.at_walk_band_rung(),
+                "sanity: rung {} must be a raster rung",
+                d.window.depth
+            );
+            let said = d
+                .strip_text()
+                .expect("the world view always resolves once active");
+            // Matched on the disclosure's opening clause, never its noun --
+            // see `DISCLOSURE_OPENING`.
+            assert!(
+                !said.contains(DISCLOSURE_OPENING),
+                "rung {} is at or finer than the mesh's own level and has \
+                 nothing to disclose, got {said:?}",
+                d.window.depth
+            );
+            rungs_checked += 1;
+            if d.window.depth == BAND_B_RUNG - 1 {
+                break;
+            }
             d.apply(Action::Zoom(1));
         }
-        assert_eq!(d.window.zoom, plate::MAX_ZOOM, "sanity: the finest rung");
-        let fine = d
+        assert_eq!(
+            rungs_checked,
+            BAND_B_RUNG - GLOBE_RUNG,
+            "every rung the raster draws must have been read"
+        );
+    }
+
+    /// The disclosure's `Some(...)` branch — the half the inversion above
+    /// left with no test in either direction.
+    ///
+    /// Depth 5 is BELOW the shipped ladder's floor and reachable only by
+    /// constructing a [`Window`] directly, which is exactly the point: what
+    /// is under test is the ratio arithmetic, not the ladder. A rung-5 chart
+    /// is 182x181 tiles for seed 42's 40,962 vertices — 1.243 vertices per
+    /// character — so the strip must say so, through the same `strip_text`
+    /// instrument its silent sibling above reads.
+    #[test]
+    fn the_resolution_disclosure_speaks_at_a_rung_coarser_than_the_mesh() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+
+        let (w, h) = plate::virtual_dims(5);
+        assert_eq!((w, h), (182, 181), "sanity: the rung-5 chart");
+        let ratio = d.geo.vertex_count() as f64 / (u64::from(w) * u64::from(h)) as f64;
+        assert!(
+            ratio > 1.0,
+            "sanity: rung 5 must be coarser than the mesh, got {ratio}"
+        );
+
+        d.window = Window {
+            depth: 5,
+            origin_col: 0,
+            origin_row: 0,
+        };
+        d.refresh_strip();
+        let said = d
             .strip_text()
             .expect("the world view always resolves once active");
         assert!(
-            !fine.contains("terrain cells"),
-            "the finest zoom is ~one character per cell and must not disclose, got {fine:?}"
+            said.contains(DISCLOSURE_OPENING),
+            "a rung coarser than the mesh ({ratio:.3} vertices per character) must \
+             disclose its resolution, got {said:?}"
         );
     }
 
@@ -2279,6 +4021,68 @@ mod portolan_tests {
     /// of_time_elapsed` below actually scrolling — so the walk band is no
     /// longer a text that fits, and using it here would pin a premise Task
     /// 4 itself falsified.
+    /// THE BUG, AS A TEST. The marquee used to advance on `redraw_count`,
+    /// so it moved only when the player pressed a key — Nathan, in play:
+    /// "the marquee text scrolls on the actions I take, not at a smooth,
+    /// steady background rate." Ticks are now the driver, so the offset
+    /// must move with NO action at all.
+    #[test]
+    fn the_marquee_advances_on_ticks_with_no_player_action() {
+        let mut d = test_driver();
+        d.strip = Some("x".repeat(400));
+        let before = d.strip_offset();
+        let redraws_before = d.redraw_count;
+
+        for _ in 0..3 {
+            d.tick_marquee();
+        }
+
+        assert_ne!(
+            d.strip_offset(),
+            before,
+            "three ticks did not move the marquee"
+        );
+        assert_eq!(
+            d.redraw_count, redraws_before,
+            "a tick is not a redraw and must not be counted as one"
+        );
+    }
+
+    /// The converse, and the one that would catch a regression to the old
+    /// behaviour: an ACTION alone must no longer move the marquee.
+    #[test]
+    fn a_player_action_alone_does_not_move_the_marquee() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        d.strip = Some("x".repeat(400));
+        let before = d.strip_offset();
+        for _ in 0..5 {
+            d.apply(Action::CursorBy(1, 0));
+        }
+        d.strip = Some("x".repeat(400)); // refresh_strip overwrote it
+        assert_eq!(
+            d.strip_offset(),
+            before,
+            "cursor moves scrolled the marquee — it is back on redraw_count"
+        );
+    }
+
+    /// An idle client must not be woken to animate nothing: the loop only
+    /// polls with a timeout while this is true.
+    #[test]
+    fn a_strip_that_fits_is_not_scrolling() {
+        let mut d = test_driver();
+        d.strip = Some("short".to_string());
+        assert!(
+            !d.strip_is_scrolling(),
+            "a fitting strip must not spin the loop"
+        );
+        d.strip = Some("x".repeat(400));
+        assert!(d.strip_is_scrolling(), "an overflowing strip must scroll");
+        d.strip = None;
+        assert!(!d.strip_is_scrolling(), "no strip is not scrolling");
+    }
+
     #[test]
     fn strip_offset_stays_zero_when_the_text_fits_the_plate() {
         let mut d = test_driver();
@@ -2293,6 +4097,11 @@ mod portolan_tests {
             "seed 42's flagship must land in the chamber band after one `enter`"
         );
         d.enter_map();
+        // UNCHANGED, and briefly wasn't (fix round 1's F3/F5): Task 6 handed
+        // the chamber band the raster, which made this a long containment
+        // chain instead of a short refusal, and this test was retargeted to a
+        // 240-column terminal to keep its premise. F5 restored the chamber's
+        // own renderer, so the short refusal is back and so is the premise.
         assert_eq!(
             d.strip_text(),
             Some(NOTHING_HERE_YET),
@@ -2362,8 +4171,38 @@ mod portolan_tests {
     /// of this task's scope to re-litigate.
     #[test]
     fn h5_the_map_is_useful_before_it_is_complete() {
-        let d = test_driver();
-        let g = d.world_plate(40, 20);
+        let mut d = test_driver();
+        // The session now OPENS on band B (The Quadrat, Task 2), whose
+        // chart is 23,214 tiles wide — a 40x20 subrect of it is a few
+        // hundred metres of whatever the player is standing on, and the
+        // claim under test is about the WHOLE-PLANET plate. Walk out to the
+        // coarsest rung first; that is what "the whole-planet plate" has
+        // named since Task 1 moved the chart onto the mesh.
+        enter_world_view(&mut d);
+        // The plate is a SUBRECT of the chart since Task 1, so "the plate"
+        // is not a place until the window says which one. Look where the
+        // player is standing.
+        //
+        // THE TWO CALLS TAKE DIFFERENT UNITS, and an earlier revision passed
+        // `40, 20` to both (Task 9): `centre_window_on` wants the PLATE's
+        // own size, `world_plate` wants the TERMINAL's. They agreed by
+        // accident while the width rule could never exceed
+        // `GLYPH_ASPECT * content_height(h)` — `world_plate_dims(40, 20)`
+        // happened to come back 32x16, near enough to 40x20 for the
+        // assertions below. Task 9's `MIN_ENTRY_WIDTH` ceiling makes a
+        // 40-column TERMINAL yield a zero-column plate, which is the honest
+        // answer for a terminal below the client's own 80x24 floor. So the
+        // terminal is now stated as the floor, whose plate is exactly the
+        // 40x20 this test always meant.
+        let (plate_w, plate_h) = Driver::world_plate_dims(
+            hornvale_game_core::MIN_WIDTH,
+            hornvale_game_core::MIN_HEIGHT,
+        );
+        centre_window_on_the_player(&mut d, plate_w, plate_h);
+        let g = d.world_plate(
+            hornvale_game_core::MIN_WIDTH,
+            hornvale_game_core::MIN_HEIGHT,
+        );
         let text = g.to_plain_text();
         // `~` ocean, `.` land — plate.rs's own module doc names this
         // vocabulary; hardcoded here rather than widening that module's
@@ -2380,7 +4219,7 @@ mod portolan_tests {
 
     /// H6 — discovery is monotonic: once a feature is discovered, it
     /// stays discovered for the rest of the session, through further real
-    /// turns. The possession's own starting cell discovers whatever
+    /// turns. The possession's own starting vertex discovers whatever
     /// extent features it stands on immediately (§A4b: standing on the
     /// ground IS meeting it) — this test walks several real turns after
     /// that and confirms nothing already known is ever un-known. The
@@ -2392,10 +4231,10 @@ mod portolan_tests {
         let mut d = test_driver();
 
         let start_coord = d.session.position().coord();
-        let start_cell = d
+        let start_vertex = d
             .nearest
             .nearest(&d.geo, start_coord.latitude, start_coord.longitude);
-        let stack: Vec<_> = d.index.at(start_cell).to_vec();
+        let stack: Vec<_> = d.index.at(start_vertex).to_vec();
         assert!(
             !stack.is_empty(),
             "sanity: seed 42's flagship starts within at least one extent feature"
@@ -2404,7 +4243,7 @@ mod portolan_tests {
         for id in &stack {
             assert!(
                 d.discovered.contains(FeatureId::Extent(*id)),
-                "the starting cell's own extent features must be discovered from turn one"
+                "the starting vertex's own extent features must be discovered from turn one"
             );
         }
 
@@ -2420,10 +4259,10 @@ mod portolan_tests {
     }
 
     /// H6b — co-location does not disclose. **The test this task exists
-    /// for.** Seed 42's flagship starts at a cell where `enter` succeeds
+    /// for.** Seed 42's flagship starts at a vertex where `enter` succeeds
     /// immediately (established elsewhere by
     /// `strip_offset_stays_zero_when_the_text_fits_the_plate`) — i.e. a
-    /// real settlement cell — so this needs no hand-built world. The
+    /// real settlement vertex — so this needs no hand-built world. The
     /// possession walks PAST it (several real `go` turns, in and out)
     /// without ever issuing `enter`, and the settlement must stay
     /// undiscovered — checked against the real `Discovered` state AND
@@ -2449,12 +4288,12 @@ mod portolan_tests {
 
         let start = d.session.position();
         let coord = start.coord();
-        let cell = d.nearest.nearest(&d.geo, coord.latitude, coord.longitude);
+        let vertex = d.nearest.nearest(&d.geo, coord.latitude, coord.longitude);
         assert!(
-            d.settlements.contains(&cell),
-            "sanity: seed 42's flagship starts at a settlement cell"
+            d.settlements.contains(&vertex),
+            "sanity: seed 42's flagship starts at a settlement vertex"
         );
-        let site = FeatureId::Settlement(cell);
+        let site = FeatureId::Settlement(vertex);
 
         // We were there — `Visited` records the starting room the instant
         // `Driver::start` runs its own initial `refresh`, before any
@@ -2465,7 +4304,7 @@ mod portolan_tests {
         );
         assert!(
             !d.discovered.contains(site),
-            "merely starting at a settlement cell must not discover it"
+            "merely starting at a settlement vertex must not discover it"
         );
 
         // Walk PAST it: several real `go` turns, in and out — never
@@ -2482,16 +4321,22 @@ mod portolan_tests {
 
         // At EVERY zoom rung the plate can draw, the settlement's glyph
         // must never appear — never drawn, not drawn-then-hidden (§A3/A7).
-        for zoom in 0..=plate::MAX_ZOOM {
+        for depth in GLOBE_RUNG..=BAND_B_RUNG {
             d.window = Window {
-                zoom,
+                depth,
                 origin_col: 0,
                 origin_row: 0,
             };
-            let g = d.world_plate(40, 20);
+            // The client's own floor, not a bare `40, 20` — this argument is
+            // the TERMINAL's size, not the plate's (Task 9; see
+            // `h5_the_map_is_useful_before_it_is_complete` for the full note).
+            let g = d.world_plate(
+                hornvale_game_core::MIN_WIDTH,
+                hornvale_game_core::MIN_HEIGHT,
+            );
             assert!(
                 !g.to_plain_text().contains(plate::SETTLEMENT_GLYPH),
-                "co-location leaked at zoom rung {zoom}: the settlement's glyph appeared \
+                "co-location leaked at rung {depth}: the settlement's glyph appeared \
                  on an undiscovered map"
             );
         }
@@ -2501,17 +4346,19 @@ mod portolan_tests {
         // — proving the negative checks above are not vacuous.
         let mut fresh = test_driver();
         let fresh_coord = fresh.session.position().coord();
-        let fresh_cell =
+        let fresh_vertex =
             fresh
                 .nearest
                 .nearest(&fresh.geo, fresh_coord.latitude, fresh_coord.longitude);
         assert_eq!(
-            fresh_cell, cell,
-            "sanity: two seed-42 flagships start at the identical cell"
+            fresh_vertex, vertex,
+            "sanity: two seed-42 flagships start at the identical vertex"
         );
         fresh.handle("enter");
         assert!(
-            fresh.discovered.contains(FeatureId::Settlement(fresh_cell)),
+            fresh
+                .discovered
+                .contains(FeatureId::Settlement(fresh_vertex)),
             "sanity: `enter` must actually discover the settlement it succeeds at"
         );
 
@@ -2525,13 +4372,13 @@ mod portolan_tests {
         // reach:
         //
         //   - at the design plate (40x20), origin (0,0), EVERY rung
-        //     0..=MAX_ZOOM: glyph absent.
+        //     GLOBE_RUNG..=BAND_B_RUNG: glyph absent.
         //   - at the design plate, window CENTRED on this settlement's
         //     own projected position, EVERY rung: still absent.
         //   - at 400x200 (the resolution `plate.rs`'s own
         //     `draw_with_gates_a_point_site_on_discovery` uses, and which
-        //     is enough for a real CAVE cell): still absent.
-        //   - at 1200x600 -- more than 3x [`plate::MAX_VIRTUAL_WIDTH`],
+        //     is enough for a real CAVE vertex): still absent.
+        //   - at 1200x600 -- finer, in the pre-Quadrat ladder's own terms,
         //     i.e. finer than any rung this client's zoom ladder ever
         //     reaches: present. ~180s to render, which is why this is a
         //     comment and not a test.
@@ -2539,7 +4386,7 @@ mod portolan_tests {
         // So THIS settlement -- the seed-42 flagship's own starting
         // site -- is drawable in principle (the paint mechanism is not
         // broken; `point_site_at`'s gate genuinely fires once
-        // `area_majority` ever lands its vote on the exact cell) and
+        // `area_majority` ever lands its vote on the exact vertex) and
         // undrawable in practice, at every resolution this client's own
         // zoom ladder ever reaches. The negative checks earlier in this
         // test are therefore VACUOUS at every rung they cover, for this
@@ -2579,10 +4426,15 @@ mod portolan_tests {
             mapped.apply(Action::Zoom(-1));
             mapped.apply(Action::CursorBy(5, 3));
             mapped.apply(Action::Recentre);
-            for _ in 0..plate::MAX_ZOOM {
+            for _ in 0..(BAND_B_RUNG - GLOBE_RUNG) {
                 mapped.apply(Action::Zoom(1));
             }
-            let _ = mapped.world_plate(40, 20);
+            // Terminal dims, not plate dims (Task 9 — see
+            // `h5_the_map_is_useful_before_it_is_complete`).
+            let _ = mapped.world_plate(
+                hornvale_game_core::MIN_WIDTH,
+                hornvale_game_core::MIN_HEIGHT,
+            );
             let _ = mapped.resolve_world_view();
 
             plain.handle(dir);
@@ -2594,6 +4446,975 @@ mod portolan_tests {
                  reports for the identical real turn {dir:?}"
             );
         }
+    }
+
+    // -- Task 6: band B joins the raster ladder --------------------------
+    //
+    // THE MEASUREMENT THAT RE-PLANNED THIS TASK, so the tests below are
+    // pointed at it. The first design placed this overlay from the wire's
+    // own polar pair (`bearing_deg`/`distance_rad`) the way
+    // `core/src/chart.rs` places its chart. That cannot land on the
+    // raster's squares AS `core` STANDS: the raster's tile index is `floor`
+    // of an ABSOLUTE Mercator coordinate, a polar pair gives a RELATIVE
+    // offset, and turning one into the other needs the observer's centroid
+    // — which `core`'s mirror of the packet drops — and an inverse of
+    // `bearing_to`/`distance_rad_to`, which the kernel does not have (this
+    // module's own doc, at the top of the file, states both). Reprojecting
+    // without that step leaves which side of a tile boundary a facet falls
+    // on to the observer's sub-tile phase. Swept over 200 sub-tile phases on
+    // the seed-42 band: best 0 of 31 marks misplaced, worst 24, mean 11.5,
+    // only 2 of 200 phases exact.
+    //
+    // THE WIRE DOES CARRY THE PHASE. The observer's own centroid latitude
+    // and longitude are on it, so the spherical direct problem recovers
+    // every facet's absolute coordinate exactly; the sweep measures the
+    // shortcut, not the contract. The campaign asserted otherwise in six
+    // documents and it was corrected at close.
+
+    /// `walk_band_scene` (and so `compose_perception_layer`, its only
+    /// caller off the resolver path) answers off [`Driver::on_walk_band`],
+    /// never a fresh `Snapshot::parse(&self.cached)` (The Gallery, Task 10
+    /// round 1; The Quadrat's F11 measured the parse-and-`purview` shape at
+    /// 24x a bare redraw, size-independent, on **every** keypress including
+    /// plain typing).
+    ///
+    /// **The check corrupts `cached` rather than counting parses**, because
+    /// a counter would need its own seam and this property is more direct:
+    /// if the method still consulted `self.cached`'s own `spatial` tag, a
+    /// cache that cannot parse as JSON would read as "not walk band" and
+    /// `walk_band_scene` would go `None` even though the driver's own
+    /// `on_walk_band` (set by the last real `refresh()`) says the possession
+    /// is standing on the walk band right now. Answering `Some` here is
+    /// only possible if the parse is genuinely gone from this path.
+    ///
+    /// **A weaker property than the one below, kept because it guards a
+    /// different regression.** Round 2 (below) proves `purview(0)` itself is
+    /// no longer called per read; this proves `self.cached` specifically is
+    /// no longer consulted per read. Since `walk_band_scene` now touches
+    /// neither, both hold — but a future edit could reintroduce a parse of
+    /// `self.cached` without reintroducing a fresh `purview` call (or vice
+    /// versa), so both stay.
+    #[test]
+    fn composing_the_perception_layer_does_not_parse_the_snapshot() {
+        let mut d = test_driver();
+        assert!(
+            d.on_walk_band,
+            "seed 42's flagship opens on the walk band, per Driver::start's own doc"
+        );
+        d.cached = "not valid snapshot json".to_string();
+        assert!(
+            d.walk_band_scene().is_some(),
+            "walk_band_scene must answer from the cache, not a parse of \
+             the (here, corrupted) cached snapshot"
+        );
+    }
+
+    /// **Round 2** (The Gallery, Task 10 round 2): `walk_band_scene` answers
+    /// off the CACHED [`Driver::walk_scene`], never a fresh
+    /// `Session::purview(0)` call — the cost round 1 left standing, and
+    /// measurement showed it was the dominant one (`walk_scene`'s own doc
+    /// has the numbers).
+    ///
+    /// **The check poisons the cache to a value a live `purview(0)` call
+    /// would never produce here**, the same technique the property above
+    /// uses one field over: the possession is genuinely on the walk band
+    /// (`on_walk_band` is `true`, unchanged), so a fresh `purview(0)` call
+    /// would answer `Some`. Forcing `walk_scene` to `None` and then seeing
+    /// `walk_band_scene()` answer `None` too is only possible if the method
+    /// is reading the cache rather than recomputing.
+    #[test]
+    fn walk_band_scene_reads_the_cached_packet_not_a_fresh_purview_call() {
+        let mut d = test_driver();
+        assert!(
+            d.on_walk_band,
+            "seed 42's flagship opens on the walk band, per Driver::start's own doc"
+        );
+        d.walk_scene = None;
+        assert!(
+            d.walk_band_scene().is_none(),
+            "walk_band_scene must answer from the cached walk_scene, not a fresh \
+             purview(0) call (which would answer Some here, since the possession \
+             really is on the walk band)"
+        );
+    }
+
+    /// Every facet of the walk-band packet lands on the tile that HOLDS its
+    /// own facet — checked against the projection's own INVERSE rather than
+    /// against a second call to the projection.
+    ///
+    /// **Why the inverse.** `perception_tile` is
+    /// `mercator::project(facet.coord())`, so asserting it equals
+    /// `mercator::project(facet.coord())` would be a tautology dressed as a
+    /// test — the vacuity shape this campaign has now hit repeatedly. So the
+    /// expected answer is derived the other way: `mercator::unproject` gives
+    /// each candidate tile's own centre, and the tile a facet belongs to is
+    /// the one whose centre is NEARER the facet's centroid than either
+    /// axis-neighbour's is. Floor-containment and nearest-centre are the
+    /// same predicate on a uniform grid, and the plate's grid is uniform in
+    /// longitude exactly and in Mercator `y` exactly; the residual
+    /// non-linearity of latitude across ONE band-B tile is ~1e-8 rad against
+    /// a tile of ~2.7e-4 rad, four orders below the thing being decided.
+    ///
+    /// This discriminates: a wrong scale, a wrong `depth`, a swapped
+    /// row/col, and the rejected polar formula each move a facet off the tile
+    /// containing it. `the_rejected_polar_placement_really_does_disagree`
+    /// below is the standing witness that the last of those is not
+    /// hypothetical.
+    #[test]
+    fn the_perception_overlay_lands_exactly_where_the_raster_puts_that_facet() {
+        let d = test_driver();
+        let scene = d
+            .walk_band_scene()
+            .expect("seed 42's flagship opens on the walk band");
+        let win = Window {
+            depth: BAND_B_RUNG,
+            origin_col: 0,
+            origin_row: 0,
+        };
+        let (vw, vh) = plate::virtual_dims(win.depth);
+        let f = *d.frame();
+
+        let facets = &scene.cells; // lexicon: `SurroundsCell` is the wire's own frozen name for a FACET — an area, not a vertex
+        let mut checked = 0;
+        for seen in facets {
+            let facet = FacetId(seen.room)
+                .unpack()
+                .expect("a wire facet id unpacks");
+            let coord = facet.coord();
+            let got = plate::perception_tile(&f, vw, vh, seen.room)
+                .expect("a walk-band facet is inside the clamp");
+
+            // The chosen tile's centre must be nearer the facet's centroid
+            // than either neighbour's, on each axis independently.
+            let centre = |row: u32, col: u32| mercator::unproject(&f, row, col, vw, vh);
+            let (lat_here, lon_here) = centre(got.0, got.1);
+            let dlat = (coord.latitude - lat_here).abs();
+            let dlon = |lon: f64| ((coord.longitude - lon + 540.0) % 360.0 - 180.0).abs();
+            let dlon_here = dlon(lon_here);
+
+            for step in [-1i64, 1] {
+                let row = (got.0 as i64 + step).clamp(0, i64::from(vh) - 1) as u32;
+                if row != got.0 {
+                    let (lat_there, _) = centre(row, got.1);
+                    assert!(
+                        dlat < (coord.latitude - lat_there).abs(),
+                        "facet {facet:?} is nearer row {row} than the row {} it was placed in",
+                        got.0
+                    );
+                }
+                let col = (got.1 as i64 + step).rem_euclid(i64::from(vw)) as u32;
+                let (_, lon_there) = centre(got.0, col);
+                assert!(
+                    dlon_here < dlon(lon_there),
+                    "facet {facet:?} is nearer col {col} than the col {} it was placed in",
+                    got.1
+                );
+            }
+            checked += 1;
+        }
+        // Non-vacuity: an empty band, or a projection that placed nothing,
+        // would sail through the loop above.
+        assert_eq!(
+            checked,
+            facets.len(),
+            "every facet of the band must have been placed and checked"
+        );
+        assert_eq!(checked, 31, "seed 42's flagship band is 31 facets");
+    }
+
+    /// THE STANDING WITNESS that the equality above has teeth: the rejected
+    /// design — the wire's polar pair, scaled by the mesh's own
+    /// tiles-per-radian and rounded — really does put marks on tiles that do
+    /// not hold them.
+    ///
+    /// Without this, `the_perception_overlay_lands_exactly_where_the_raster_
+    /// puts_that_facet` could be satisfied by a projection nobody had reason
+    /// to trust, and the measurement that re-planned this task would live
+    /// only in prose. The polar formula here is the BEST version of the
+    /// rejected design (right scale, isotropic, half-away-from-zero
+    /// rounding), so the disagreement it shows is a floor on the error, not
+    /// a straw man.
+    #[test]
+    fn the_rejected_polar_placement_really_does_disagree() {
+        let d = test_driver();
+        let scene = d.walk_band_scene().expect("the walk band");
+        let win = Window {
+            depth: BAND_B_RUNG,
+            origin_col: 0,
+            origin_row: 0,
+        };
+        let (vw, vh) = plate::virtual_dims(win.depth);
+        let f = *d.frame();
+
+        let facets = &scene.cells; // lexicon: `SurroundsCell` is the wire's own frozen name for a FACET — an area, not a vertex
+        let observer = facets
+            .iter()
+            .find(|c| c.state == "here")
+            .expect("the band contains the observer's own facet");
+        let (obs_row, obs_col) =
+            plate::perception_tile(&f, vw, vh, observer.room).expect("in the clamp");
+        // Tiles per radian: the plate's own chart width over a full turn.
+        let per_radian = f64::from(vw) / std::f64::consts::TAU;
+
+        let mut disagreed = 0;
+        for seen in facets {
+            let (row, col) = plate::perception_tile(&f, vw, vh, seen.room).expect("in the clamp");
+            let theta = seen.bearing_deg.to_radians();
+            let r = seen.distance_rad * per_radian;
+            let polar_row =
+                obs_row as i64 + (-hornvale_kernel::math::cos(theta) * r).round() as i64;
+            let polar_col = obs_col as i64 + (hornvale_kernel::math::sin(theta) * r).round() as i64;
+            if (row as i64, col as i64) != (polar_row, polar_col) {
+                disagreed += 1;
+            }
+        }
+        assert!(
+            disagreed > 0,
+            "the polar placement agreed on all {} facets, so the equality test above \
+             is not discriminating — re-derive the measurement before trusting it",
+            facets.len()
+        );
+    }
+
+    /// RULING 19's SURVIVING CONCERN, as an assertion. `spread::compose`'s
+    /// plate selection is either/or, so handing band B a raster at all would
+    /// otherwise have removed the ONLY thing that draws the observer's own
+    /// position — silently, with both suites green, because the plate tests
+    /// assert terrain and `core`'s chart tests assert the chart in
+    /// isolation.
+    #[test]
+    fn band_b_still_shows_the_observer_over_its_own_terrain() {
+        let mut d = test_driver();
+        d.resize(120, 40);
+        d.enter_map();
+        assert!(
+            d.at_walk_band_rung(),
+            "sanity: the session opens on band B, which is where this test means to stand"
+        );
+        let plate = d
+            .world_plate_for_redraw(120, 40)
+            .expect("band B draws a plate now");
+        let text = plate.to_plain_text();
+        assert!(
+            text.contains('@'),
+            "band B lost the observer's own position marker:\n{text}"
+        );
+        // AND the terrain is still under it — an overlay that had wiped the
+        // raster would satisfy the assertion above on its own.
+        assert!(
+            text.contains('~') || text.contains('.'),
+            "band B lost its terrain raster:\n{text}"
+        );
+        // Exactly one observer: the packet has exactly one `here` facet, and
+        // a layer that painted `'@'` per facet would still contain one.
+        assert_eq!(
+            text.chars().filter(|&c| c == '@').count(),
+            1,
+            "exactly one observer marker:\n{text}"
+        );
+    }
+
+    /// The overlay is an OVERLAY: it paints the observer and the marks, and
+    /// leaves every other packet facet to the raster underneath. Counted
+    /// against the packet's own composition, so the assertion moves with the
+    /// band rather than pinning a number.
+    ///
+    /// Non-vacuity is the second assertion: the band must actually CONTAIN
+    /// unmarked facets, or "the unmarked ones were not painted" is a claim
+    /// about the empty set. Seed 42's flagship band is 31 facets of which
+    /// only the observer's carries a mark at all.
+    #[test]
+    fn the_overlay_leaves_ordinary_ground_to_the_raster() {
+        let mut d = test_driver();
+        d.resize(120, 40);
+        d.enter_map();
+        let scene = d.walk_band_scene().expect("the walk band");
+        let facets = &scene.cells; // lexicon: `SurroundsCell` is the wire's own frozen name for a FACET — an area, not a vertex
+        let drawable = facets
+            .iter()
+            .filter(|c| c.state == "here" || !c.marks.is_empty())
+            .count();
+        assert!(
+            facets.len() > drawable,
+            "this band is all observer-and-marks, so it cannot show that ordinary \
+             ground is left alone ({} of {} drawable)",
+            drawable,
+            facets.len()
+        );
+        let plate = d.world_plate_for_redraw(120, 40).expect("a plate");
+        let overlay: usize = (0..plate.height())
+            .flat_map(|y| (0..plate.width()).map(move |x| (x, y)))
+            .filter(|&(x, y)| {
+                plate
+                    .get(x, y)
+                    .is_some_and(|c| c.source == hornvale_game_core::Source::Chart)
+            })
+            .count();
+        assert!(
+            overlay <= drawable,
+            "the overlay painted {overlay} boxes for a band with only {drawable} \
+             drawable ones — it is covering ground the raster drew"
+        );
+        assert!(overlay > 0, "the overlay painted nothing at all");
+    }
+
+    /// THE WINDOW-ORIGIN RULING. Band B's origin is `(0, 0)` at `start`,
+    /// which at [`BAND_B_RUNG`] is some eleven thousand rows and two
+    /// thousand columns from seed 42's observer — the arctic corner of a
+    /// 23,245-wide chart.
+    ///
+    /// Asserted as "the observer's own facet is INSIDE the drawn window",
+    /// which is the property that matters and which a hardcoded expected
+    /// origin would not survive a mesh change.
+    ///
+    /// **RE-POINTED, on this test's own instruction (The Quadrat, Task 9,
+    /// fix round 1).** It used to open by asserting that `start` leaves the
+    /// origin at `(0, 0)`, "which is what makes this test meaningful at
+    /// all", and closed with "if `start` gains a centring step, re-point
+    /// it". `start` has gained one: `refresh` now ends in
+    /// [`Self::follow_the_walker`], so the very first frame of an
+    /// unresized driver is centred rather than arctic — strictly better,
+    /// since Task 9 means the walk view draws a plate before any arrival
+    /// happens at all.
+    ///
+    /// So the corner is now CONSTRUCTED rather than inherited, which makes
+    /// this stronger than it was: it shows the centring actually rescues a
+    /// corner origin (the negative control below fails without it), instead
+    /// of resting on `start` happening to leave one lying around.
+    #[test]
+    fn band_b_centres_on_the_observer_not_the_arctic_corner() {
+        let mut d = test_driver();
+        d.resize(120, 40);
+        // The corner, put there on purpose. At `BAND_B_RUNG` this is some
+        // eleven thousand rows and two thousand columns from seed 42's
+        // observer.
+        d.window.origin_row = 0;
+        d.window.origin_col = 0;
+        let arctic = d
+            .world_plate_for_redraw(120, 40)
+            .expect("band B draws a plate");
+        assert!(
+            !arctic.to_plain_text().contains('@'),
+            "NEGATIVE CONTROL: the observer must NOT be visible from the chart's \
+             corner, or the centring below proves nothing"
+        );
+        d.enter_map();
+        let plate = d
+            .world_plate_for_redraw(120, 40)
+            .expect("band B draws a plate");
+        assert!(
+            plate.to_plain_text().contains('@'),
+            "the observer is outside the band-B window; it was not centred"
+        );
+        assert_ne!(
+            (d.window.origin_row, d.window.origin_col),
+            (0, 0),
+            "the window must actually have moved off the corner"
+        );
+    }
+
+    /// A COARSE rung gets no perception overlay, and that is a refusal
+    /// rather than an omission: the packet's 31 facets are all finer than
+    /// one coarse tile, so every one of them collapses onto the observer's
+    /// single tile and an overlay drawn there would claim to place facets it
+    /// had merged. Task 7 owns what a coarse rung shows.
+    #[test]
+    fn a_coarse_rung_draws_no_perception_overlay() {
+        let mut d = test_driver();
+        d.resize(120, 40);
+        enter_world_view(&mut d);
+        assert!(!d.at_walk_band_rung(), "sanity: a coarse rung");
+        let plate = d.world_plate_for_redraw(120, 40).expect("a plate");
+        let overlay = (0..plate.height())
+            .flat_map(|y| (0..plate.width()).map(move |x| (x, y)))
+            .filter(|&(x, y)| {
+                plate
+                    .get(x, y)
+                    .is_some_and(|c| c.source == hornvale_game_core::Source::Chart)
+            })
+            .count();
+        assert_eq!(overlay, 0, "a coarse rung must draw no perception glyphs");
+    }
+
+    /// **THE CHAMBER BAND'S PICTURE — fix round 1's F5, and the test whose
+    /// absence made that defect silent.** Nothing in `bin` pinned what the
+    /// chamber band draws, so when `world_plate_for_redraw`'s gate became
+    /// `Focus::Map` alone, typing `map` indoors replaced the chamber floor
+    /// plan with the world raster and the suite stayed green. The perception
+    /// overlay correctly refuses off the walk band, so nothing marked the
+    /// player's position there either.
+    ///
+    /// The campaign's spec says "Band A keeps its own renderer and this
+    /// campaign does not touch it". This is that promise, as an assertion
+    /// about the composed page rather than about a gate — so it holds however
+    /// the gate is later spelled.
+    #[test]
+    fn the_chamber_band_keeps_its_own_plan_and_never_the_raster() {
+        let mut d = test_driver();
+        d.resize(210, 56);
+        // `handle`'s bool is whether the possession RELEASED, so the real
+        // check is the snapshot's own `spatial` tag.
+        d.handle("enter");
+        let snap = hornvale_game_core::Snapshot::parse(&d.cached).expect("a live session");
+        assert!(
+            matches!(snap.spatial, hornvale_game_core::Spatial::Chamber { .. }),
+            "seed 42's flagship must land in the chamber band after one `enter`"
+        );
+        d.enter_map();
+
+        assert!(
+            d.world_plate_for_redraw(210, 56).is_none(),
+            "the chamber band must not be handed a world plate"
+        );
+
+        // The PICTURE, through the same `render_with` `main.rs`'s redraw
+        // calls — a gate assertion alone would not have caught this, because
+        // `spread::compose` is what turns a supplied plate into a replaced
+        // floor plan.
+        let json = d.snapshot();
+        let empty = String::new();
+        let world_plate = d.world_plate_for_redraw(210, 56);
+        let (grid, _) = hornvale_game_core::render_with(
+            &json,
+            210,
+            56,
+            d.focus(),
+            d.cursor(),
+            hornvale_game_core::CommandLine {
+                text: &empty,
+                caret: 0,
+            },
+            d.strip_text(),
+            d.echo(),
+            world_plate.as_ref(),
+            d.strip_offset(),
+            None,
+        )
+        .expect("the fixture renders");
+
+        let content_h = hornvale_game_core::spread::content_height(56);
+        let plate_w = hornvale_game_core::spread::world_plate_width(210, 56);
+        let sources: BTreeSet<hornvale_game_core::Source> = (0..content_h)
+            .flat_map(|y| (0..plate_w).map(move |x| (x, y)))
+            .filter_map(|(x, y)| grid.get(x, y).filter(|c| !c.is_blank()).map(|c| c.source))
+            .collect();
+        assert!(
+            sources.contains(&hornvale_game_core::Source::Plan),
+            "the chamber band must draw its own floor plan, got {sources:?}"
+        );
+        assert!(
+            !sources.contains(&hornvale_game_core::Source::World),
+            "the world raster must never appear on a chamber-band spread, got {sources:?}"
+        );
+        assert!(
+            !sources.contains(&hornvale_game_core::Source::Chart),
+            "and neither must a perception overlay with no packet behind it, got {sources:?}"
+        );
+
+        // The cursor clamps to the plate that IS drawn, not to the world
+        // plate's wider fit — the Task 3a review finding with the operands
+        // swapped.
+        d.apply(Action::CursorBy(i16::MAX, 0));
+        assert_eq!(
+            d.cursor.x,
+            hornvale_game_core::spread::PLATE_WIDTH - 1,
+            "the chamber band's cursor must stop at the floor plan's own edge"
+        );
+        // And a cursor move must not have scrolled a window nobody can see.
+        let window = d.window;
+        d.apply(Action::CursorBy(i16::MAX, 0));
+        assert_eq!(
+            d.window, window,
+            "the chamber band draws no Mercator, so nothing may scroll one"
+        );
+    }
+
+    /// The band-B strip keeps the walk band's SIGHT CAPTION — the honesty
+    /// line naming whose eyes the chart was drawn through. It is the half of
+    /// the old `world_view()` branch that had to survive the branch:
+    /// band B has a plate AND an overlay AND a sight caption, where a
+    /// coarser rung has a plate and neither.
+    #[test]
+    fn band_b_keeps_the_sight_caption_and_a_coarse_rung_does_not() {
+        let mut d = test_driver();
+        d.enter_map();
+        let band_b = d.strip_text().map(str::to_string).expect("a strip");
+        assert!(
+            band_b.contains("seen through"),
+            "band B must keep the sight disclosure, got {band_b:?}"
+        );
+        enter_world_view(&mut d);
+        let coarse = d.strip_text().map(str::to_string).expect("a strip");
+        assert!(
+            !coarse.contains("seen through"),
+            "a coarse rung carries no observer-vision channel, got {coarse:?}"
+        );
+    }
+
+    /// The promoted [`Driver::centre_window_on`]'s SIZE GUARD (Task 1's
+    /// review's condition for promoting the test helper). The helper it came
+    /// from computed the column as `(col + virtual_w - w / 2)` in `u32`,
+    /// which underflows — a debug panic — once `w / 2` exceeds
+    /// `col + virtual_w`. Driven at a rung COARSER than the mesh, where the
+    /// virtual chart is narrower than the plate: unreachable through
+    /// `apply_zoom`, reachable by any caller setting `depth` directly, which
+    /// this module's own disclosure test already does.
+    #[test]
+    fn centring_survives_a_plate_wider_than_the_whole_chart() {
+        let mut d = test_driver();
+        d.window.depth = 0; // 23 tiles around the planet
+        let (vw, _) = plate::virtual_dims(d.window.depth);
+        assert!(
+            vw < 200,
+            "this test needs a chart narrower than the plate below; got {vw}"
+        );
+        let coord = d.session.position().coord();
+        d.centre_window_on(coord.latitude, coord.longitude, 200, 100)
+            .expect("the flagship is inside the clamp");
+        assert!(
+            d.window.origin_col < vw,
+            "the wrapped origin must stay inside the chart, got {}",
+            d.window.origin_col
+        );
+    }
+
+    // -- Task 7: the cursor-anchored zoom invariant (H3) -----------------
+
+    /// A driver parked somewhere REAL, off-centre in both axes, with the
+    /// premise asserted rather than assumed.
+    ///
+    /// The Quadrat has now caught seven tests whose input space had
+    /// collapsed to a single value, and a zoom-invariant test is the
+    /// obvious next candidate: with the cursor at the plate's middle, or
+    /// with the window already centred on the point under the cursor, the
+    /// anchor has nothing to do and the invariant holds for free. So this
+    /// helper moves the cursor away from the middle in BOTH axes and
+    /// asserts it actually got there — the remedy Task 6's F1 fix
+    /// established, applied one task later.
+    fn off_centre_world_view(d: &mut Driver) {
+        d.resize(210, 56);
+        enter_world_view(d);
+        let (plate_w, plate_h) = d.active_plate_dims();
+        centre_window_on_the_player(d, plate_w, plate_h);
+        d.apply(Action::CursorBy(0, -i16::MAX)); // park at a known corner
+        d.apply(Action::CursorBy(-i16::MAX, 0));
+        d.apply(Action::CursorBy(
+            i16::try_from(plate_w / 4).expect("a plate quarter fits an i16"),
+            i16::try_from(plate_h / 3).expect("a plate third fits an i16"),
+        ));
+        assert_ne!(
+            (d.cursor.x, d.cursor.y),
+            (plate_w / 2, plate_h / 2),
+            "the premise: a cursor at the plate's middle makes the invariant \
+             hold trivially, and would prove nothing"
+        );
+    }
+
+    /// The tile the cursor points at right now, as `(row, col)` on the
+    /// active rung's own virtual chart, with the column wrapped the way
+    /// `mercator::unproject` reads it.
+    fn tile_under_cursor(d: &Driver) -> (u32, u32) {
+        let (virtual_w, _) = plate::virtual_dims(d.window.depth);
+        (
+            d.window.origin_row + u32::from(d.cursor.y),
+            (d.window.origin_col + u32::from(d.cursor.x)) % virtual_w,
+        )
+    }
+
+    /// **H3, THE CAMPAIGN'S FOUNDING DEFECT: the geographic point under the
+    /// cursor does not move across a zoom step.**
+    ///
+    /// Asserted EXACTLY, not within a tolerance, and the exactness is the
+    /// point. A degrees comparison would have to allow half a tile of the
+    /// destination rung — the map has no address finer than a tile — and at
+    /// [`GLOBE_RUNG`] half a tile is about half a degree, which is the same
+    /// size as the slop a broken anchor would produce. So the assertion is
+    /// the containment statement instead: the point that was under the
+    /// cursor before the step is inside the tile that is under the cursor
+    /// after it. That is true or false with no threshold to tune.
+    ///
+    /// Walked over EVERY rung of the shipped ladder in both directions, not
+    /// one step at one rung: the anchor's two knobs (window origin, and the
+    /// cursor where the origin cannot move) are selected by where the window
+    /// happens to be, so a single-rung test would exercise one of them.
+    #[test]
+    fn a_zoom_step_keeps_the_same_geographic_point_under_the_cursor() {
+        for direction in [1i8, -1i8] {
+            let mut d = test_driver();
+            off_centre_world_view(&mut d);
+            if direction < 0 {
+                for _ in 0..(BAND_B_RUNG - GLOBE_RUNG) {
+                    d.apply(Action::Zoom(1));
+                }
+                assert_eq!(d.window.depth, BAND_B_RUNG, "walked to the far end");
+            }
+            for _ in 0..(BAND_B_RUNG - GLOBE_RUNG) {
+                let before_depth = d.window.depth;
+                let before = d.geographic_point_under_cursor();
+                d.apply(Action::Zoom(direction));
+                assert_ne!(d.window.depth, before_depth, "the rung must have moved");
+
+                let (virtual_w, virtual_h) = plate::virtual_dims(d.window.depth);
+                let landed = mercator::project(&d.frame, before.0, before.1, virtual_w, virtual_h)
+                    .expect("the point was on the chart a moment ago");
+                assert_eq!(
+                    landed,
+                    tile_under_cursor(&d),
+                    "rung {before_depth} -> {}: the point {before:?} left the cursor; \
+                     it now reads {:?}",
+                    d.window.depth,
+                    d.geographic_point_under_cursor()
+                );
+            }
+        }
+    }
+
+    /// **THE SECOND KNOB.** Anchoring normally moves the WINDOW ORIGIN. At
+    /// the chart's polar edge the origin has nowhere left to go — latitude
+    /// clamps where longitude wraps (spec §4.2) — so the guarantee is kept
+    /// by moving the CURSOR instead, and a test that only ever zoomed in
+    /// the middle of the chart would never reach that branch.
+    ///
+    /// Note which end of the ladder this needs. The brief's sketch reached
+    /// for [`GLOBE_RUNG`] on the theory that the whole planet fits the plate
+    /// there and the origin is pinned at `(0, 0)`. That was true before Task
+    /// 1: it is not true now, because the chart is the RUNG rather than the
+    /// plate, and `GLOBE_RUNG`'s chart is 363x362 tiles against a plate of
+    /// about 104x52. The origin is pinned where the CLAMP binds, which is
+    /// the chart's top and bottom rows at any rung.
+    #[test]
+    fn at_the_charts_polar_edge_the_cursor_moves_because_the_window_cannot() {
+        let mut d = test_driver();
+        d.resize(210, 56);
+        d.enter_map();
+        for _ in 0..4 {
+            d.apply(Action::Zoom(-1));
+        }
+        // Scroll north until the origin sticks, then step the cursor down
+        // off the top row so there is something for the anchor to spend.
+        d.apply(Action::CursorBy(0, -i16::MAX));
+        d.apply(Action::CursorBy(0, 12));
+        assert_eq!(
+            d.window.origin_row, 0,
+            "the premise: the window must be against the chart's own top edge"
+        );
+        assert_eq!(d.cursor.y, 12, "the premise: the cursor is off that edge");
+
+        let before = d.geographic_point_under_cursor();
+        d.apply(Action::Zoom(-1));
+
+        assert_eq!(
+            d.window.origin_row, 0,
+            "the clamp must still hold the origin against the edge"
+        );
+        assert_ne!(
+            d.cursor.y, 12,
+            "the origin could not move, so the cursor had to; it did not"
+        );
+        let (virtual_w, virtual_h) = plate::virtual_dims(d.window.depth);
+        let landed = mercator::project(&d.frame, before.0, before.1, virtual_w, virtual_h)
+            .expect("the point was on the chart a moment ago");
+        assert_eq!(
+            landed,
+            tile_under_cursor(&d),
+            "the point {before:?} left the cursor; it now reads {:?}",
+            d.geographic_point_under_cursor()
+        );
+    }
+
+    /// The strip names the rung. Part of "the map zooms based on criteria I
+    /// have not identified" is that nothing on screen ever said which rung
+    /// was showing, so a zoom that worked perfectly was still unreadable.
+    #[test]
+    fn the_strip_names_the_current_rung() {
+        let mut d = test_driver();
+        d.resize(210, 56);
+        enter_world_view(&mut d);
+        let coarse = d.strip_text().map(str::to_string).expect("a strip");
+        d.apply(Action::Zoom(1));
+        let finer = d.strip_text().map(str::to_string).expect("a strip");
+        assert_ne!(
+            coarse, finer,
+            "the strip did not change across a zoom step: {coarse:?}"
+        );
+        assert!(
+            coarse.contains(RUNG_OPENING) && finer.contains(RUNG_OPENING),
+            "both strips must carry the rung line, got {coarse:?} and {finer:?}"
+        );
+
+        // AND IT COMES BEFORE THE CLAMP CAPTION (fix round 1, Important 3).
+        // The strip marquees, so a clause's POSITION is a delay: with the
+        // rung line emitted after the 69-character clamp caption it began at
+        // character 90, first scrolling into view after ~15 s on the 80x24
+        // floor and readable after ~44 s. The clamp caption is static and
+        // says the same thing at every rung; the rung line is the one that
+        // answers the founding report. Order is therefore a property, not a
+        // formatting accident, and `contains` alone would not have held it.
+        let rung_at = coarse
+            .find(RUNG_OPENING)
+            .expect("the rung line is on the strip");
+        let clamp_at = coarse
+            .find("clamped at")
+            .expect("the clamp caption is on the strip");
+        assert!(
+            rung_at < clamp_at,
+            "the rung line must reach the reader before the static clamp caption, \
+             got {coarse:?}"
+        );
+    }
+
+    /// The rung line is DERIVED, and it is different at every rung. A line
+    /// that named the rung but said the same thing at all seven of them
+    /// would satisfy the test above (which only compares two neighbours)
+    /// while telling the reader nothing about where the ladder's ends are.
+    #[test]
+    fn the_rung_line_is_distinct_at_every_rung_and_names_the_ladders_ends() {
+        let mut d = test_driver();
+        d.resize(210, 56);
+        enter_world_view(&mut d);
+        let mut seen: Vec<String> = Vec::new();
+        for expected in GLOBE_RUNG..=BAND_B_RUNG {
+            assert_eq!(d.window.depth, expected, "the walk lost its place");
+            let line = d.rung_caption();
+            assert!(
+                line.contains(&format!("{RUNG_OPENING} {expected} ")),
+                "the line must name the rung it is on, got {line:?}"
+            );
+            assert!(
+                line.contains(&format!("{GLOBE_RUNG}–{BAND_B_RUNG}")),
+                "the line must name the ladder's own ends, got {line:?}"
+            );
+            seen.push(line);
+            d.apply(Action::Zoom(1));
+        }
+        assert_eq!(d.window.depth, BAND_B_RUNG, "the walk walked the ladder");
+        let mut distinct = seen.clone();
+        distinct.sort();
+        distinct.dedup();
+        assert_eq!(
+            distinct.len(),
+            seen.len(),
+            "two rungs printed the same line: {seen:?}"
+        );
+    }
+
+    /// **THE MIRROR DISCLOSURE** — Task 1's carried note, that the
+    /// resolution disclosure is one-sided and the ladder now lives entirely
+    /// on the other side of 1:1, so the map disclosed nothing at all. Also
+    /// Task 6's concern 2: some hundred band-B characters share one
+    /// grid-level vertex and nothing said so.
+    ///
+    /// Asserted as MONOTONE, not against a magic number: the share must
+    /// rise at every rung, because every rung quadruples the tiles over an
+    /// unchanged field. `Driver::resolution_disclosure` — the coarse half —
+    /// must stay silent throughout, which is what makes this half the only
+    /// thing the reader has.
+    #[test]
+    fn the_rung_line_discloses_that_the_picture_outruns_the_terrain_field() {
+        let mut d = test_driver();
+        d.resize(210, 56);
+        enter_world_view(&mut d);
+        let mut shares: Vec<u64> = Vec::new();
+        for _ in GLOBE_RUNG..=BAND_B_RUNG {
+            let (vw, vh) = plate::virtual_dims(d.window.depth);
+            let said = d
+                .oversample_disclosure(vw, vh)
+                .expect("every shipped rung outruns the terrain field");
+            assert!(
+                d.rung_caption().contains(&said),
+                "the rung line must carry the disclosure it derives"
+            );
+            assert!(
+                d.resolution_disclosure().is_none(),
+                "the coarse-end disclosure must stay silent — this test's premise"
+            );
+            shares.push(
+                said.split_whitespace()
+                    .nth(1)
+                    .and_then(|n| n.parse::<u64>().ok())
+                    .unwrap_or_else(|| panic!("the disclosure must carry a count, got {said:?}")),
+            );
+            d.apply(Action::Zoom(1));
+        }
+        for pair in shares.windows(2) {
+            assert!(
+                pair[1] > pair[0],
+                "every finer rung must share one reading across MORE characters, got {shares:?}"
+            );
+        }
+    }
+
+    /// **THE CORRECTED CLAIM** (fix round 1, Important 1). The comment in
+    /// [`Driver::apply_zoom`] used to assert that
+    /// `zoom_plus_at_the_ladders_ceiling_keeps_the_players_scroll` covers
+    /// where the anchor block sits relative to the `depth != before` guard.
+    /// It does not — the reviewer moved the block outside and every relevant
+    /// test stayed green — and the reason is exactly the property the
+    /// comment cited in its own defence: **the anchor is idempotent at an
+    /// unchanged rung.** A tile centre re-projects to its own tile, so
+    /// re-anchoring what is already anchored moves nothing.
+    ///
+    /// So the claim that rotted is replaced by a test of the FACT the claim
+    /// rested on. That is the half a reader can act on: if this ever goes
+    /// red, the guard has become load-bearing and needs a test of its own.
+    ///
+    /// Driven at every rung and from an off-centre cursor, because
+    /// idempotence at the plate's middle is the trivial case.
+    #[test]
+    fn the_anchor_is_a_no_op_at_an_unchanged_rung() {
+        let mut d = test_driver();
+        off_centre_world_view(&mut d);
+        for _ in GLOBE_RUNG..=BAND_B_RUNG {
+            let window = d.window;
+            let cursor = d.cursor;
+            let (lat, lon) = d.geographic_point_under_cursor();
+            d.anchor_geographic_point(lat, lon);
+            assert_eq!(
+                (d.window, d.cursor),
+                (window, cursor),
+                "rung {}: re-anchoring an already-anchored point moved something",
+                d.window.depth
+            );
+            d.apply(Action::Zoom(1));
+        }
+    }
+
+    /// **THE ONE LEVER THAT DISCRIMINATES THE GUARD'S POSITION**, and it
+    /// exists only because it is the one state in which the anchor is NOT
+    /// idempotent: a plate TALLER than the whole chart. There
+    /// `reclamp_window`'s `max_origin_row` is 0, the cursor may legally sit
+    /// on a row the chart does not have, and re-anchoring pulls it back onto
+    /// the chart — a real move, on a press documented as changing nothing.
+    ///
+    /// Reachable rather than contrived: it needs a terminal wide enough for
+    /// a plate over 362 rows deep at [`GLOBE_RUNG`], which is Task 5's
+    /// carried M3 finding stated from the cursor's side. It is driven
+    /// through the shipped `Action` path, not by poking `depth`.
+    #[test]
+    fn a_saturating_press_on_a_plate_taller_than_the_chart_moves_nothing() {
+        let mut d = test_driver();
+        d.resize(1600, 400);
+        enter_world_view(&mut d);
+        let (plate_w, plate_h) = d.active_plate_dims();
+        let (_, virtual_h) = plate::virtual_dims(d.window.depth);
+        assert!(
+            plate_h > virtual_h as u16,
+            "the premise: this test needs a plate ({plate_w}x{plate_h}) taller than \
+             the whole chart ({virtual_h} rows)"
+        );
+
+        // Park the cursor on a row the chart does not have — legal, because
+        // the cursor clamps to the PLATE and the plate is the taller of the
+        // two.
+        d.apply(Action::CursorBy(0, i16::MAX));
+        assert!(
+            u32::from(d.cursor.y) >= virtual_h,
+            "the premise: the cursor must be off the chart's own bottom, at \
+             {} against {virtual_h} rows",
+            d.cursor.y
+        );
+
+        let window = d.window;
+        let cursor = d.cursor;
+        d.apply(Action::Zoom(-1)); // saturating: GLOBE_RUNG is the floor
+        assert_eq!(
+            (d.window, d.cursor),
+            (window, cursor),
+            "a press past the ladder's floor must move nothing — not the window, \
+             and not the cursor an out-of-guard anchor would have dragged onto \
+             the chart"
+        );
+    }
+
+    /// **THE WAY HOME, AT A COARSE RUNG** (fix round 1, Important 2 — a
+    /// defect this task created). Taking the observer-centring off the zoom
+    /// path was right, but "zoom out one, zoom in one" had been an
+    /// accidental home gesture, and its removal left a coarse rung with none
+    /// at all: the centring returned early off band B, and no observer
+    /// marker is drawn there either, so a reader who had scrolled away could
+    /// neither return nor see which way to go.
+    ///
+    /// Asserted with the premise moved first: scroll a long way, assert the
+    /// observer really is off the window, THEN type `map`.
+    #[test]
+    fn typing_map_at_a_coarse_rung_brings_the_reader_home() {
+        let mut d = test_driver();
+        d.resize(210, 56);
+        enter_world_view(&mut d);
+        assert!(!d.at_walk_band_rung(), "sanity: a coarse rung");
+
+        let observer_is_shown = |d: &Driver| {
+            let (plate_w, plate_h) = d.active_plate_dims();
+            let (vw, vh) = plate::virtual_dims(d.window.depth);
+            let coord = d.session.position().coord();
+            let Some((row, col)) =
+                mercator::project(&d.frame, coord.latitude, coord.longitude, vw, vh)
+            else {
+                return false;
+            };
+            let down = i64::from(row) - i64::from(d.window.origin_row);
+            let across =
+                (i64::from(col) - i64::from(d.window.origin_col)).rem_euclid(i64::from(vw));
+            down >= 0 && down < i64::from(plate_h) && across < i64::from(plate_w)
+        };
+
+        // Get lost, DETERMINISTICALLY. An earlier revision drove this with
+        // thirty `CursorBy(i16::MAX, 0)` sweeps, which is the honest gesture
+        // but not a controlled one: each sweep spills a huge remainder into
+        // `origin_col` and the chart is 363 tiles around, so thirty of them
+        // wrap to an arbitrary column — and on seed 42 they wrapped back
+        // ONTO the observer, failing the premise. How the reader got lost is
+        // not the property under test; that they are lost is.
+        let coord = d.session.position().coord();
+        let (plate_w, plate_h) = d.active_plate_dims();
+        d.centre_window_on(-coord.latitude, coord.longitude + 180.0, plate_w, plate_h)
+            .expect("the observer's antipode is inside the clamp when the observer is");
+        assert!(
+            !observer_is_shown(&d),
+            "the premise: the reader must actually be off the observer, or \
+             arriving home proves nothing"
+        );
+
+        d.enter_map(); // what a submitted `map` line does
+        assert!(
+            observer_is_shown(&d),
+            "typing `map` at a coarse rung must bring the reader home; window {:?}",
+            d.window
+        );
+        assert!(
+            !d.at_walk_band_rung(),
+            "and must NOT smuggle in a rung change while doing it"
+        );
+    }
+
+    /// TASK 2'S CARRIED FINDING, closed by the anchor rather than by a
+    /// second centring rule: leaving band B for the coarse rungs used to
+    /// land at an arbitrary origin on an ~11,600-tile-wide chart. It now
+    /// lands where the reader was looking, and at `enter_map` that is the
+    /// observer.
+    #[test]
+    fn zooming_out_of_band_b_lands_where_the_reader_was_looking() {
+        let mut d = test_driver();
+        d.resize(210, 56);
+        d.enter_map();
+        assert!(d.at_walk_band_rung(), "sanity: the map opens on band B");
+        d.apply(Action::Zoom(-1));
+        assert_eq!(d.window.depth, BAND_B_RUNG - 1);
+
+        let (plate_w, plate_h) = d.active_plate_dims();
+        let (vw, vh) = plate::virtual_dims(d.window.depth);
+        let coord = d.session.position().coord();
+        let (row, col) = mercator::project(&d.frame, coord.latitude, coord.longitude, vw, vh)
+            .expect("seed 42's flagship is inside the clamp");
+        let within_rows =
+            row >= d.window.origin_row && row < d.window.origin_row + u32::from(plate_h);
+        let across = (i64::from(col) - i64::from(d.window.origin_col)).rem_euclid(i64::from(vw));
+        assert!(
+            within_rows && across < i64::from(plate_w),
+            "the observer fell outside the coarse rung's own window: observer at \
+             ({row}, {col}), window {:?}, plate {plate_w}x{plate_h}",
+            d.window
+        );
     }
 }
 
@@ -2689,5 +5510,571 @@ mod caption_tests {
             let out = caption("googo ridge".to_string(), None);
             assert_eq!(out, "googo ridge");
         });
+    }
+}
+
+#[cfg(test)]
+mod completion_tests {
+    use super::*;
+    use crate::input::Action;
+    use hornvale_game_core::schema::{Narration, NounEntry};
+
+    /// A narration whose noun catalog names the completion fixtures: two
+    /// creatures sharing a long prefix, one unique thing.
+    fn fixture_narration() -> Narration {
+        Narration {
+            prose: String::new(),
+            nouns: vec![
+                NounEntry {
+                    noun: "Gnarlash".into(),
+                    datum: String::new(),
+                    kind: "creature".into(),
+                },
+                NounEntry {
+                    noun: "Gnarlwood".into(),
+                    datum: String::new(),
+                    kind: "place".into(),
+                },
+                NounEntry {
+                    noun: "bramble".into(),
+                    datum: String::new(),
+                    kind: "thing".into(),
+                },
+            ],
+        }
+    }
+
+    /// A live driver whose scope has been overwritten with the fixture
+    /// catalog — the real refresh path (`scope.update` from a parsed
+    /// snapshot) is exercised by the integration suite; these tests need a
+    /// KNOWN vocabulary.
+    pub(crate) fn seeded_driver() -> Driver {
+        let mut d = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
+        d.scope.update(&fixture_narration());
+        d
+    }
+
+    #[test]
+    fn unique_match_replaces_the_token() {
+        let mut d = seeded_driver();
+        d.line.set("examine bram".to_string());
+        assert!(!d.apply(Action::Complete));
+        assert_eq!(d.line.text(), "examine bramble");
+        assert_eq!(d.hint, None);
+    }
+
+    #[test]
+    fn ambiguous_match_extends_to_stem_and_sets_hint() {
+        let mut d = seeded_driver();
+        d.line.set("examine gnar".to_string());
+        d.apply(Action::Complete);
+        assert_eq!(d.line.text(), "examine Gnarl");
+        assert_eq!(
+            d.hint,
+            Some(Hint {
+                stem: "Gnarl".into(),
+                matches: vec!["Gnarlash".into(), "Gnarlwood".into()],
+            })
+        );
+    }
+
+    #[test]
+    fn typing_clears_a_pending_hint() {
+        let mut d = seeded_driver();
+        d.hint = Some(Hint {
+            stem: "Gnarl".into(),
+            matches: vec!["Gnarlash".into()],
+        });
+        d.apply(Action::Type('x'));
+        assert_eq!(d.hint, None);
+    }
+
+    #[test]
+    fn backspace_and_submit_also_clear_completion_state() {
+        let mut d = seeded_driver();
+        d.hint = Some(Hint {
+            stem: "s".into(),
+            matches: vec!["s".into()],
+        });
+        d.apply(Action::DeleteBack);
+        assert_eq!(d.hint, None);
+        // Submit on an empty buffer is its own documented no-op, but it must
+        // still close any pending state (the buffer cannot be non-empty here,
+        // so drive `clear_completion` through FocusAndType instead).
+        d.hint = Some(Hint {
+            stem: "s".into(),
+            matches: vec!["s".into()],
+        });
+        d.apply(Action::FocusAndType('a'));
+        assert_eq!(d.hint, None);
+    }
+
+    #[test]
+    fn complete_on_an_empty_buffer_is_a_noop() {
+        let mut d = seeded_driver();
+        assert!(!d.apply(Action::Complete));
+        assert_eq!(d.line.text(), "");
+        assert_eq!(d.hint, None);
+    }
+
+    #[test]
+    fn cycle_rotation_walks_matches_in_order_then_wraps() {
+        let mut d = seeded_driver();
+        d.tab_style = TabStyle::Cycle;
+        d.line.set("examine gnar".to_string());
+        d.apply(Action::Complete); // opens at matches[0]
+        assert_eq!(d.line.text(), "examine Gnarlash");
+        d.apply(Action::Complete);
+        assert_eq!(d.line.text(), "examine Gnarlwood");
+        d.apply(Action::Complete); // wraps to matches[0]
+        assert_eq!(d.line.text(), "examine Gnarlash");
+    }
+
+    /// A history recall must close an open rotation: otherwise the stale
+    /// state survives at the same caret offset and the next Tab rewrites
+    /// the RECALLED line with a rotation match instead of completing it.
+    #[test]
+    fn history_recall_closes_an_open_cycle_rotation() {
+        let mut d = seeded_driver();
+        d.tab_style = TabStyle::Cycle;
+        d.history.push("examine bramble".to_string());
+        d.line.set("examine gnar".to_string());
+        d.apply(Action::Complete); // opens a rotation at offset 8
+        assert_eq!(d.line.text(), "examine Gnarlash");
+        d.apply(Action::HistoryPrev); // recall overwrites the buffer
+        assert_eq!(d.line.text(), "examine bramble");
+        // The stale rotation (same start offset) must not step here and
+        // rewrite "bramble" to "Gnarlwood"; a fresh completion of the
+        // unique token is a no-op fill.
+        d.apply(Action::Complete);
+        assert_eq!(d.line.text(), "examine bramble");
+    }
+
+    #[test]
+    fn typing_closes_an_open_cycle_rotation() {
+        let mut d = seeded_driver();
+        d.tab_style = TabStyle::Cycle;
+        d.line.set("examine gnar".to_string());
+        d.apply(Action::Complete);
+        d.apply(Action::Type('h'));
+        assert_eq!(d.cycle, None);
+        // The stale rotation no longer steps: a fresh press re-completes
+        // against the edited token ("Gnarlash" → still ambiguous? No —
+        // "Gnarlah" matches nothing, so the buffer stands).
+        d.apply(Action::Complete);
+        assert_eq!(d.line.text(), "examine Gnarlashh");
+    }
+
+    /// The pure decision layer, exercised directly so the token-scan edge
+    /// cases need no world at all.
+    #[test]
+    fn decision_layer_edge_cases() {
+        let cands = |names: &[&str]| -> Vec<hornvale_game_core::Candidate> {
+            names
+                .iter()
+                .map(|n| hornvale_game_core::Candidate {
+                    name: n.to_string(),
+                    category: hornvale_game_core::Category::Thing,
+                })
+                .collect()
+        };
+        // Whitespace before the caret: no token, no-op.
+        assert_eq!(
+            completion_decision("examine ", 8, &cands(&["bramble"])),
+            CompletionDecision::Noop
+        );
+        // Empty text: no token.
+        assert_eq!(
+            completion_decision("", 0, &cands(&["bramble"])),
+            CompletionDecision::Noop
+        );
+        // A token already equal to its single match: documented no-op.
+        assert_eq!(
+            completion_decision("bramble", 7, &cands(&["bramble"])),
+            CompletionDecision::Noop
+        );
+        // No candidate starts with the token: no-op.
+        assert_eq!(
+            completion_decision("zz", 2, &cands(&["bramble"])),
+            CompletionDecision::Noop
+        );
+        // Caret mid-word completes only up to the caret ("examine br|amble").
+        assert_eq!(
+            completion_decision("examine bramble", 11, &cands(&["bramble"])),
+            CompletionDecision::Fill("bramble".into())
+        );
+    }
+}
+
+/// The bare-`x` noun prompt (spec §4.4): submitting `x` alone asks for a
+/// noun instead of burning a turn on "Examine what?".
+#[cfg(test)]
+mod noun_prompt_tests {
+    use super::completion_tests::seeded_driver;
+    use super::*;
+    use crate::input::Action;
+
+    /// Enter the modal by submitting bare `x`, the way a player would.
+    fn entered_driver() -> Driver {
+        let mut d = seeded_driver();
+        d.line.set("x".to_string());
+        d.apply(Action::Submit);
+        d
+    }
+
+    #[test]
+    fn bare_x_enters_the_prompt_instead_of_burning_a_turn() {
+        let mut d = seeded_driver();
+        d.line.set("x".to_string());
+        assert!(
+            !d.apply(Action::Submit),
+            "entering the prompt is not a turn"
+        );
+        assert_eq!(d.line.text(), "examine ");
+        assert!(d.noun_prompt.is_some());
+        assert_eq!(d.echo, None, "nothing was submitted");
+    }
+
+    #[test]
+    fn typing_builds_the_noun_after_the_prefix() {
+        let mut d = entered_driver();
+        d.apply(Action::Type('b'));
+        d.apply(Action::Type('r'));
+        assert_eq!(d.line.text(), "examine br");
+    }
+
+    #[test]
+    fn backspace_clamps_at_the_dispatched_prefix() {
+        let mut d = entered_driver();
+        d.apply(Action::DeleteBack);
+        assert_eq!(d.line.text(), "examine ");
+    }
+
+    #[test]
+    fn submitting_the_prompt_dispatches_examine_and_exits() {
+        let mut d = entered_driver();
+        for c in "bramble".chars() {
+            d.apply(Action::Type(c));
+        }
+        let released = d.apply(Action::Submit);
+        assert!(!released, "examining bramble does not end the possession");
+        assert!(d.noun_prompt.is_none(), "the modal exits on submit");
+        assert_eq!(d.echo.as_deref(), Some("examine bramble"));
+        d.history.prev();
+        assert!(d.history.next().is_none(), "the dispatch entered history");
+    }
+
+    #[test]
+    fn esc_cancels_and_restores_the_saved_buffer() {
+        let mut d = seeded_driver();
+        d.focus = Focus::Cli; // the player submits `x` from the command line
+        d.line.set("look".to_string());
+        for _ in 0..2 {
+            d.line.caret_left();
+        }
+        d.line.set("x".to_string()); // entering saves; see entered-by-hand below
+        // enter by hand so we control what was saved
+        d.noun_prompt = None;
+        d.line.set("look".to_string());
+        while d.line.caret() < 2 {
+            d.line.caret_right();
+        }
+        d.line.set("x".to_string());
+        d.apply(Action::Submit);
+        d.apply(Action::ToggleFocus); // Esc
+        assert!(d.noun_prompt.is_none());
+        assert_eq!(d.line.text(), "x", "the saved buffer is restored verbatim");
+        assert_eq!(
+            d.focus,
+            Focus::Cli,
+            "Esc in the modal does not toggle focus"
+        );
+    }
+}
+
+/// The prose pane's two client-side halves (The Quadrat, Task 8, spec
+/// §4.2): a bare `map` is a MODE GESTURE and not a fetch (decision 0290),
+/// and no escape sequence reaches the prose channel.
+#[cfg(test)]
+mod prose_pane_tests {
+    use super::*;
+
+    /// A fresh seed-42 flagship driver — the same construction every other
+    /// test module in this file uses.
+    fn test_driver() -> Driver {
+        Driver::start(42, PossessTarget::Flagship).expect("seed 42 generates")
+    }
+
+    /// Type `line` into the command buffer and submit it, the way a player
+    /// does. `FocusAndType` rather than `Type` because that is what the
+    /// input table produces for a printable key under every focus.
+    fn submit(d: &mut Driver, line: &str) -> bool {
+        for ch in line.chars() {
+            d.apply(Action::FocusAndType(ch));
+        }
+        d.apply(Action::Submit)
+    }
+
+    /// `driver.rs`'s own comment already argued `map` is a mode gesture and
+    /// not a fetch. The code called `self.handle("map")` first anyway, so
+    /// the sim answered the gesture with a picture — the reported defect.
+    ///
+    /// **The snapshot is what discriminates.** The focus assertion alone
+    /// passed before this change too; only the unchanged snapshot can tell
+    /// "entered the map" from "entered the map AND burned a turn on a chart
+    /// nobody asked for".
+    #[test]
+    fn a_bare_map_gesture_does_not_send_the_verb() {
+        let mut d = test_driver();
+        let before = d.snapshot();
+        assert!(!submit(&mut d, "map"), "a mode gesture never releases");
+        assert_eq!(d.focus(), Focus::Map, "the gesture did not focus the map");
+        assert_eq!(
+            d.snapshot(),
+            before,
+            "the gesture sent a verb and advanced the session"
+        );
+    }
+
+    /// The gesture is a gesture from the map too. Re-submitting `map` while
+    /// already focused must still swallow the line rather than falling
+    /// through to the sim — the old guard was about not paying for a
+    /// redundant strip refresh, never about sending the verb.
+    #[test]
+    fn a_bare_map_gesture_from_the_map_still_sends_nothing() {
+        let mut d = test_driver();
+        submit(&mut d, "map");
+        let before = d.snapshot();
+        submit(&mut d, "map");
+        assert_eq!(d.focus(), Focus::Map);
+        assert_eq!(
+            d.snapshot(),
+            before,
+            "a second gesture advanced the session"
+        );
+    }
+
+    /// Only the BARE form changes, and that is load-bearing: `map out N` is
+    /// the diagnostic path that caught The Quire's wrong projection, where
+    /// the client and the sim were rendered side by side over the identical
+    /// thirty-one facets and only one was right. It guards spec §5's H2.
+    #[test]
+    fn map_out_n_still_returns_the_sims_own_picture() {
+        let mut d = test_driver();
+        submit(&mut d, "map out 1");
+        let v: serde_json::Value = serde_json::from_str(&d.snapshot()).expect("a live snapshot");
+        let prose = v["narration"]["prose"]
+            .as_str()
+            .expect("the snapshot carries this turn's prose");
+        assert!(
+            prose.contains('\n'),
+            "map out 1 did not return a multi-line picture, got {prose:?}"
+        );
+        assert_ne!(d.focus(), Focus::Map, "an argument form moved the plate");
+    }
+
+    /// A REAL seed-42 walk-band chart, made tinted.
+    ///
+    /// The escape defect is latent, and latent is why it survived a whole
+    /// campaign of probes: seed 42 at turn 0 draws a band of water, marks
+    /// and the observer, so the `colour` lens reports "0 tinted, 31
+    /// withheld" and emits no escape at all. `p.ground && p.color.is_some()`
+    /// is what the lens tints, so a colour alone is not enough — the facet
+    /// must also DRAW its ground. So this takes the session's own chart and
+    /// makes every facet but the observer's a coloured piece of dry land:
+    /// no marks (a mark substitutes `#`/`&` and withholds the tint), a
+    /// water index outside the legend (which `terrain_glyph` resolves to
+    /// `dry-land`, the one arm that draws the impedance glyph), and a
+    /// colour.
+    ///
+    /// Everything else — the projection, the observer, the facet count — is
+    /// the sim's own, so the picture this renders is a picture the world
+    /// really can produce.
+    fn tinted_chart_fixture() -> hornvale_scene::SurroundsScene {
+        let d = test_driver();
+        let mut scene = d.session.purview(0).expect("seed 42 charts its walk band");
+        let dry = scene.water_legend.len() as u32;
+        for cell in &mut scene.cells {
+            if cell.state == "here" {
+                continue;
+            }
+            cell.marks.clear();
+            cell.water = dry;
+            cell.color = Some([120, 140, 60]);
+        }
+        scene
+    }
+
+    /// What this client's prose channel would show for `scene`: the sim's
+    /// own chart, drawn through the lens the session picks for a possession
+    /// with eyes, laid out by the prose pane and read back off the grid.
+    ///
+    /// Rendered through the REAL pane rather than asserted on the renderer's
+    /// output, because the renderer is not where the defect lives — the
+    /// prose channel is. The grid stores one `char` per column and carries
+    /// no colour, so the question worth asking is what actually reached it.
+    fn render_for_client(scene: &hornvale_scene::SurroundsScene) -> String {
+        let prose = hornvale_scene::render_surrounds_ascii(scene, "colour", &[]);
+        let narration = hornvale_game_core::Narration {
+            prose,
+            nouns: Vec::new(),
+        };
+        let (w, h) = (120u16, 60u16);
+        let mut grid = hornvale_game_core::Grid::new(w, h);
+        hornvale_game_core::entry::draw(
+            &narration,
+            &mut grid,
+            (0, 0),
+            w,
+            h,
+            Focus::Cli,
+            hornvale_game_core::CommandLine { text: "", caret: 0 },
+            None,
+            None,
+        );
+        (0..h)
+            .map(|y| {
+                (0..w)
+                    .map(|x| grid.get(x, y).and_then(|c| c.glyph).unwrap_or(' '))
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    /// The premise, asserted rather than assumed: the fixture really is
+    /// tinted, and the sim really does emit SGR for it. Without this the
+    /// test below would pass on an untinted chart and prove nothing — which
+    /// is exactly the state seed 42 turn 0 is in.
+    #[test]
+    fn the_tinted_fixture_really_does_make_the_sim_emit_escapes() {
+        let scene = tinted_chart_fixture();
+        let prose = hornvale_scene::render_surrounds_ascii(&scene, "colour", &[]);
+        assert!(
+            prose.contains('\u{1b}'),
+            "the fixture is not tinted, so the test below cannot discriminate"
+        );
+        assert!(
+            prose.matches("\u{1b}[38;2;").count() > 1,
+            "one tinted glyph is not a picture; the fixture must tint the band, \
+             got {prose:?}"
+        );
+    }
+
+    /// `surrounds_ascii.rs` wraps every tinted glyph in
+    /// `\x1b[38;2;r;g;bm … \x1b[0m`; the grid stores one `char` per column
+    /// and has nowhere to put an SGR parameter, so those bytes would be
+    /// drawn as glyphs — `[`, `3`, `8`, `;` and the rest, one per column,
+    /// across a picture. The client applies its own ink from the wire's
+    /// `color` field and has no use for SGR.
+    #[test]
+    fn no_escape_sequence_reaches_the_prose_channel() {
+        let scene = tinted_chart_fixture();
+        let out = render_for_client(&scene);
+        assert!(
+            !out.contains('\u{1b}'),
+            "an escape sequence reached the prose channel"
+        );
+        assert!(
+            !out.contains("38;2;"),
+            "an SGR parameter reached the prose channel as literal glyphs"
+        );
+    }
+
+    /// And the picture SURVIVES the strip: dropping the escapes must leave
+    /// the glyphs they wrapped, in their own columns, not a blank pane.
+    #[test]
+    fn stripping_the_escapes_leaves_the_picture_standing() {
+        let scene = tinted_chart_fixture();
+        let out = render_for_client(&scene);
+        assert!(
+            out.contains('@'),
+            "the observer's own glyph did not survive, got {out:?}"
+        );
+        // And the picture's SHAPE with it: this row is six columns of
+        // indent and one glyph in the sim's output, and it must still be
+        // six columns of indent and one glyph on the grid. Dropping the
+        // escapes and then collapsing the spaces would be the same defect
+        // wearing the fix's clothes.
+        assert!(
+            out.lines().any(|l| l.starts_with("      _")),
+            "the picture's indent did not survive, got {out:?}"
+        );
+    }
+
+    /// **The premise [`hornvale_game_core`]'s prose-vs-picture classifier
+    /// rests on, made mechanical.** `entry::reads_as_prose` calls a line
+    /// prose when it carries two DISTINCT letters, which is sound exactly
+    /// as long as the sim's pre-formatted vocabularies carry at most one
+    /// letter between them. A chamber plan carries none
+    /// (`windows/vessel/src/lattice/render.rs`: `. # + @`); a chart
+    /// carries `A`, the top impedance rung, and nothing else — but that is
+    /// a fact about `surrounds_ascii.rs`'s glyph table, in another crate,
+    /// which nothing else would notice changing.
+    ///
+    /// So this renders a REAL chart at every impedance rung and reads the
+    /// picture back. `core` cannot write this test — it has no hornvale
+    /// dependency, by design — and that is precisely why the guard lives
+    /// on this side of the boundary rather than as a sentence in a doc
+    /// comment.
+    ///
+    /// The slice is exact rather than heuristic: with `ways` empty and the
+    /// legend cleared, the `terrain` lens emits three caption lines and
+    /// then nothing but grid rows, and the three prefixes are asserted
+    /// before the slice is taken.
+    #[test]
+    fn the_chart_vocabulary_carries_at_most_one_letter() {
+        let d = test_driver();
+        let base = d.session.purview(0).expect("seed 42 charts its walk band");
+        let dry = base.water_legend.len() as u32;
+        let mut letters: std::collections::BTreeSet<char> = std::collections::BTreeSet::new();
+        let mut glyphs: std::collections::BTreeSet<char> = std::collections::BTreeSet::new();
+        for relief in 0..=5u32 {
+            for (openness, roughness) in [(-1.0, 1.0), (1.0, 0.0), (0.0, -1.0)] {
+                let mut scene = base.clone();
+                scene.legend.clear();
+                for cell in &mut scene.cells {
+                    if cell.state == "here" {
+                        continue;
+                    }
+                    cell.marks.clear();
+                    cell.water = dry;
+                    cell.relief = relief;
+                    cell.micro.openness = openness;
+                    cell.micro.relief = roughness;
+                }
+                let out = hornvale_scene::render_surrounds_ascii(&scene, "terrain", &[]);
+                let lines: Vec<&str> = out.lines().collect();
+                assert!(lines[0].starts_with("[lens: terrain"), "{:?}", lines[0]);
+                assert!(lines[1].starts_with("  placement:"), "{:?}", lines[1]);
+                assert!(lines[2].starts_with("  epistemic:"), "{:?}", lines[2]);
+                for row in &lines[3..] {
+                    assert!(
+                        !row.starts_with("  legend:") && !row.starts_with("  ways on:"),
+                        "the slice caught a caption line: {row:?}"
+                    );
+                    for ch in row.chars().filter(|c| !c.is_whitespace()) {
+                        glyphs.insert(ch);
+                        if ch.is_alphabetic() {
+                            letters.insert(ch);
+                        }
+                    }
+                }
+            }
+        }
+        // The premise of the premise: the sweep must actually have reached
+        // the alpine rung, or an empty `letters` proves nothing.
+        assert!(
+            letters.contains(&'A'),
+            "the sweep never drew the alpine glyph; it cannot say anything \
+             about the vocabulary. glyphs drawn: {glyphs:?}"
+        );
+        assert_eq!(
+            letters.len(),
+            1,
+            "the chart vocabulary grew a second letter ({letters:?}), so a \
+             picture row can now carry two distinct letters and \
+             `entry::reads_as_prose` will word-wrap it — see that function"
+        );
     }
 }

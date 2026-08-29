@@ -10,7 +10,7 @@
 //! module is the composition root that gathers the complete set and joins it
 //! to a name.
 
-use hornvale_kernel::{CellId, Geosphere, Seed};
+use hornvale_kernel::{Geosphere, Seed, Vertex};
 use hornvale_language::{GeneratedName, MorphOptions, NameKind, Namer, Phonology};
 use hornvale_terrain::GeneratedTerrain;
 use hornvale_terrain::landscape::{Feature, FeatureClass, FeatureId};
@@ -34,17 +34,17 @@ pub fn gazetteer_features(seed: Seed, geo: &Geosphere, terrain: &GeneratedTerrai
     features
 }
 
-/// Every edifice cell `volcano_at` reports, grouped into one [`Feature`] per
-/// [`crate::Volcano::source`] — the identity a cone shares across every cell
-/// it occupies (`crate::volcano` module docs). Grouping by the query cell
-/// instead of the source would split every multi-cell cone into two
+/// Every edifice vertex `volcano_at` reports, grouped into one [`Feature`] per
+/// [`crate::Volcano::source`] — the identity a cone shares across every vertex
+/// it occupies (`crate::volcano` module docs). Grouping by the query vertex
+/// instead of the source would split every multi-vertex cone into two
 /// features, exactly the mistake `volcano_name`'s signature (taking a
-/// `Volcano`, not a `CellId`) exists to prevent.
+/// `Volcano`, not a `Vertex`) exists to prevent.
 fn volcano_features(seed: Seed, geo: &Geosphere, terrain: &GeneratedTerrain) -> Vec<Feature> {
-    let mut by_source: BTreeMap<CellId, BTreeSet<CellId>> = BTreeMap::new();
-    for cell in geo.cells() {
-        if let Some(volcano) = crate::volcano_at(seed, terrain, cell) {
-            by_source.entry(volcano.source).or_default().insert(cell);
+    let mut by_source: BTreeMap<Vertex, BTreeSet<Vertex>> = BTreeMap::new();
+    for vertex in geo.vertices() {
+        if let Some(volcano) = crate::volcano_at(seed, terrain, vertex) {
+            by_source.entry(volcano.source).or_default().insert(vertex);
         }
     }
     by_source
@@ -52,7 +52,7 @@ fn volcano_features(seed: Seed, geo: &Geosphere, terrain: &GeneratedTerrain) -> 
         .map(|(source, extent)| Feature {
             id: FeatureId {
                 class: FeatureClass::Volcano,
-                cell: source,
+                vertex: source,
             },
             anchor: source,
             magnitude: extent.len() as u32,
@@ -63,19 +63,19 @@ fn volcano_features(seed: Seed, geo: &Geosphere, terrain: &GeneratedTerrain) -> 
 
 /// The naming salt for one feature.
 ///
-/// Injective over `(class, cell)` by construction: `class` occupies the high
-/// 32 bits and `cell` (a `u32`) the low 32, so two features collide only if
-/// both their class and their cell agree — i.e. only if they are the same
+/// Injective over `(class, vertex)` by construction: `class` occupies the high
+/// 32 bits and `vertex` (a `u32`) the low 32, so two features collide only if
+/// both their class and their vertex agree — i.e. only if they are the same
 /// feature. Without the class term, a landmass and a river sharing an
-/// identity cell would draw the identical name from the identical people
-/// (`two_classes_at_one_cell_do_not_share_a_name` pins the collision this
+/// identity vertex would draw the identical name from the identical people
+/// (`two_classes_at_one_vertex_do_not_share_a_name` pins the collision this
 /// prevents). `FeatureClass::Volcano = 0` makes a volcano's salt equal its
-/// bare cell id — byte-identical to what `volcano_name` already draws with
+/// bare vertex id — byte-identical to what `volcano_name` already draws with
 /// (`u64::from(volcano.source.0)`), so adopting this scheme moves no volcano
-/// name in any world (`a_volcanos_salt_is_its_bare_cell_id`).
+/// name in any world (`a_volcanos_salt_is_its_bare_vertex_id`).
 /// type-audit: pending(wave-3: return)
 pub fn feature_salt(id: FeatureId) -> u64 {
-    ((id.class as u64) << 32) | u64::from(id.cell.0)
+    ((id.class as u64) << 32) | u64::from(id.vertex.0)
 }
 
 /// What one people calls one feature.
@@ -106,7 +106,7 @@ mod tests {
     /// The mesh level every test here builds at — the same canonical globe
     /// `windows/worldgen/src/volcano.rs`'s tests use, so seed 42's volcano
     /// population is the same population that module measured (360 edifice
-    /// cells over ~187 contacts on level 6).
+    /// vertices over ~187 contacts on level 6).
     const LEVEL: u32 = 6;
 
     fn test_terrain() -> (Geosphere, GeneratedTerrain) {
@@ -146,40 +146,40 @@ mod tests {
         (ph, morph)
     }
 
-    /// A volcano's two halves are ONE feature. `volcano_at` answers per cell,
-    /// so grouping by cell rather than by `source` would split every cone —
+    /// A volcano's two halves are ONE feature. `volcano_at` answers per vertex,
+    /// so grouping by vertex rather than by `source` would split every cone —
     /// the exact mistake `volcano_name`'s signature exists to prevent.
     #[test]
-    fn a_volcanos_cells_group_into_one_feature_per_source() {
+    fn a_volcanos_vertices_group_into_one_feature_per_source() {
         let (geo, terrain) = test_terrain();
         for f in gazetteer_features(Seed(42), &geo, &terrain) {
             if f.id.class != FeatureClass::Volcano {
                 continue;
             }
-            for cell in &f.extent {
-                let v = crate::volcano_at(Seed(42), &terrain, *cell)
-                    .expect("an edifice cell has a volcano");
+            for vertex in &f.extent {
+                let v = crate::volcano_at(Seed(42), &terrain, *vertex)
+                    .expect("an edifice vertex has a volcano");
                 assert_eq!(
-                    v.source, f.id.cell,
-                    "cell {cell:?} grouped under the wrong source"
+                    v.source, f.id.vertex,
+                    "vertex {vertex:?} grouped under the wrong source"
                 );
             }
         }
     }
 
     /// THE COLLISION THIS SCHEME EXISTS TO PREVENT. Two features of different
-    /// classes sharing an identity cell must not draw the same name from the
+    /// classes sharing an identity vertex must not draw the same name from the
     /// same people. Before the class entered the salt they did — silently,
     /// because two features sharing a name is a thing real toponymy does.
     #[test]
-    fn two_classes_at_one_cell_do_not_share_a_name() {
+    fn two_classes_at_one_vertex_do_not_share_a_name() {
         let (ph, morph) = test_phonology();
-        let cell = CellId(1234);
+        let vertex = Vertex(1234);
         let a = feature_name(
             Seed(42),
             FeatureId {
                 class: FeatureClass::Landmass,
-                cell,
+                vertex,
             },
             "aeldrin",
             &ph,
@@ -189,7 +189,7 @@ mod tests {
             Seed(42),
             FeatureId {
                 class: FeatureClass::River,
-                cell,
+                vertex,
             },
             "aeldrin",
             &ph,
@@ -197,14 +197,14 @@ mod tests {
         );
         assert_ne!(
             a.roman, b.roman,
-            "a landmass and a river at cell 1234 share a name"
+            "a landmass and a river at vertex 1234 share a name"
         );
     }
 
-    /// The salt is injective over (class, cell) — the property the test above
+    /// The salt is injective over (class, vertex) — the property the test above
     /// only samples. Exhaustive over a range wide enough to cross the stride.
     #[test]
-    fn the_salt_is_injective_over_class_and_cell() {
+    fn the_salt_is_injective_over_class_and_vertex() {
         let mut seen: BTreeMap<u64, FeatureId> = BTreeMap::new();
         for class in [
             FeatureClass::Volcano,
@@ -213,10 +213,10 @@ mod tests {
             FeatureClass::SaltLake,
             FeatureClass::River,
         ] {
-            for cell in 0u32..5000 {
+            for vertex in 0u32..5000 {
                 let id = FeatureId {
                     class,
-                    cell: CellId(cell),
+                    vertex: Vertex(vertex),
                 };
                 if let Some(prev) = seen.insert(feature_salt(id), id) {
                     panic!("salt collision between {prev:?} and {id:?}");
@@ -225,16 +225,16 @@ mod tests {
         }
     }
 
-    /// A volcano's salt is its bare cell id — exactly what `volcano_name`
+    /// A volcano's salt is its bare vertex id — exactly what `volcano_name`
     /// already draws with, so this scheme moves no volcano name.
     #[test]
-    fn a_volcanos_salt_is_its_bare_cell_id() {
-        for cell in [0u32, 1, 4095, 99999] {
+    fn a_volcanos_salt_is_its_bare_vertex_id() {
+        for vertex in [0u32, 1, 4095, 99999] {
             let id = FeatureId {
                 class: FeatureClass::Volcano,
-                cell: CellId(cell),
+                vertex: Vertex(vertex),
             };
-            assert_eq!(feature_salt(id), u64::from(cell));
+            assert_eq!(feature_salt(id), u64::from(vertex));
         }
     }
 
@@ -261,7 +261,7 @@ mod tests {
         let (ph, morph) = test_phonology();
         let id = FeatureId {
             class: FeatureClass::Landmass,
-            cell: CellId(77),
+            vertex: Vertex(77),
         };
         let a = feature_name(Seed(42), id, "aeldrin", &ph, &morph);
         let b = feature_name(Seed(42), id, "khorrun", &ph, &morph);

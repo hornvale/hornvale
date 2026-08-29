@@ -1,14 +1,16 @@
 //! The Book window: render a world's committed classification facts as
 //! Common sentences. Reads only the ledger; realizes via `domains/language`.
 //!
-//! Aggregation seam (C2 T4): `domains/language`'s `ClauseSpec.modifiers`
-//! only ever joins fragments into one clause's tail ("`X`, `Y`"), and stays
-//! that way — the seam between a noun-modifier ("with two moons") and a
-//! trailing independent clause ("its day lasts about 1.5 standard days")
-//! belongs here, at the one call site that knows a sentence is about to be
-//! finished. [`fragment_for`] tags each fact's rendering as one or the
-//! other; [`render_volume`] strips the realized clause's terminal period
-//! and re-joins any trailing clauses with `"; "` before restoring it.
+//! **This window states meaning; it no longer composes English** (The
+//! Interlinear). It used to own an aggregation seam: `Clause.modifiers`
+//! carried pre-rendered phrases, so the choice between a noun-modifier
+//! ("with two moons") and a trailing independent clause ("its day lasts
+//! about 1.5 standard days") — and the `"; "` join that assembled them —
+//! lived here, along with a duplicated `indefinite_article`. All of that is
+//! now `domains/language`'s: [`fragment_for`] returns an `Adjunct` binding a
+//! predicate to an argument, and `realize_common` decides how (and where)
+//! each role surfaces. A window that had to know English article selection
+//! was the symptom the interlingua removed.
 #![warn(missing_docs)]
 
 use hornvale_astronomy::facts::{DAY_LENGTH_STD, MOON_COUNT, MOON_PERIOD_RATIO, STAR_CLASS};
@@ -16,13 +18,14 @@ use hornvale_kernel::{EntityId, Value, World};
 use hornvale_language::CommonVocabulary;
 use hornvale_language::account::{Account, AccountEntry, AccountParams, Disposition, Stance};
 use hornvale_language::clause::{
-    ClauseSpec, Definiteness, Frame, Number, ParseContext, ParseError, Subject, cardinal,
-    parse_common, quantity, realize_common,
+    Adjunct, Argument, Clause, Definiteness, Number, ParseContext, ParseError, Person, Polarity,
+    PronounCase, Subject, Tense, cardinal, common_pronoun, common_role_surface, nominative_person,
+    parse_common_with_tail, quantity, realize_common,
 };
 use hornvale_language::numeracy::{NumeracyRung, render_quantity_at_rung};
 use hornvale_language::schemas::Manner;
 use hornvale_language::{
-    ConflictState, Evidential, LexemeId, NounClass, SchemaId, TongueClause, TongueMorphology,
+    ConflictState, Evidential, LexemeId, NounClass, SchemaId, TongueMorphology, TongueParadigm,
     conflict_of, realize_tongue_deep, tongue_grammar,
 };
 use std::collections::{BTreeMap, BTreeSet};
@@ -161,49 +164,6 @@ pub struct ReckoningEpoch {
     pub margin: Vec<String>,
 }
 
-/// One fact's rendering, tagged by how it joins the sentence: a noun
-/// modifier folded into the main clause's tail, or an independent trailing
-/// clause appended after a semicolon (see the module doc's aggregation
-/// seam).
-enum Fragment {
-    /// Joins `ClauseSpec.modifiers`, e.g. `"with two moons"`.
-    Modifier(String),
-    /// Appended after the main clause, semicolon-joined, e.g. `"its day
-    /// lasts about 1.5 standard days"`.
-    Trailing(String),
-}
-
-/// `"a"` or `"an"`, by `word`'s first letter. Duplicated from
-/// `domains/language::clause`'s private helper of the same name rather than
-/// exposed from there — this predicate-specific modifier text is windows/
-/// book's own construction, and the aggregation seam keeps
-/// `domains/language` untouched (see the module doc).
-fn indefinite_article(word: &str) -> &'static str {
-    match word.chars().next().map(|c| c.to_ascii_lowercase()) {
-        Some('a' | 'e' | 'i' | 'o' | 'u') => "an",
-        _ => "a",
-    }
-}
-
-/// Join a realized clause with its trailing independent clause(s) — the
-/// aggregation seam's shared assembly tail, used by both [`render_volume`]
-/// (forward) and [`rerender`] (the corpus law's re-realization check).
-/// `realize_common` always terminates `line` with `'.'`: strip it, join
-/// each trailing clause with `"; "`, then restore the final period. A
-/// no-op when `trailing` is empty (returns `line` unchanged).
-fn assemble_trailing(mut line: String, trailing: &[String]) -> String {
-    if trailing.is_empty() {
-        return line;
-    }
-    line.pop();
-    for t in trailing {
-        line.push_str("; ");
-        line.push_str(t);
-    }
-    line.push('.');
-    line
-}
-
 /// The construction table's authored predicate order: fragments join the
 /// sentence in THIS order (the G3-approved surface — moons, then star, then
 /// day length), not ledger commit order. Deterministic without sorting:
@@ -211,37 +171,30 @@ fn assemble_trailing(mut line: String, trailing: &[String]) -> String {
 /// fact per predicate.
 const CONSTRUCTION_ORDER: &[&str] = &[MOON_COUNT, STAR_CLASS, DAY_LENGTH_STD];
 
-/// The construction table: maps a (predicate, object) pair to the fragment
+/// The construction table: maps a (predicate, object) pair to the **adjunct**
 /// it contributes, or `None` if this predicate has no construction yet
-/// (leaving it on [`uncovered_predicates`]'s list). `vocab` resolves any
-/// concept id the fragment names.
-fn fragment_for(predicate: &str, object: &Value, vocab: &CommonVocabulary) -> Option<Fragment> {
+/// (leaving it on [`uncovered_predicates`]'s list).
+///
+/// It no longer renders. How a role surfaces moved to
+/// `domains/language::clause::common_role_surface` with The Interlinear — a
+/// window composing English is what forced this crate to duplicate
+/// `indefinite_article`, and both are gone. The ledger's own `Value` becomes
+/// the language's `Argument`; the concept id travels unresolved, because
+/// resolving it is the realizing language's job.
+fn fragment_for(predicate: &str, object: &Value) -> Option<Adjunct> {
     match (predicate, object) {
-        (MOON_COUNT, Value::Number(n)) => {
-            let count = *n as u64;
-            Some(Fragment::Modifier(format!(
-                "with {} moon{}",
-                cardinal(count),
-                if count == 1 { "" } else { "s" }
-            )))
-        }
-        (STAR_CLASS, Value::Text(concept)) => {
-            // The ledger holds a concept id; the author's ground-truth register
-            // renders it as Morgan-Keenan taxonomy, which is the author's frame
-            // and not anything a creature says. Resolution goes through the
-            // vocabulary (Task 4 retired `class_display`) and is total, so an
-            // id with no declared word still renders as a word rather than
-            // leaking a raw registry key into prose.
-            let display = vocab.word_for(concept);
-            Some(Fragment::Modifier(format!(
-                "orbiting {} {display}",
-                indefinite_article(&display)
-            )))
-        }
-        (DAY_LENGTH_STD, Value::Number(days)) => Some(Fragment::Trailing(format!(
-            "its day lasts {} standard days",
-            quantity(*days)
-        ))),
+        (MOON_COUNT, Value::Number(n)) => Some(Adjunct {
+            role: MOON_COUNT.to_string(),
+            argument: Argument::Count(*n as u64),
+        }),
+        (STAR_CLASS, Value::Text(concept)) => Some(Adjunct {
+            role: STAR_CLASS.to_string(),
+            argument: Argument::Concept(concept.clone()),
+        }),
+        (DAY_LENGTH_STD, Value::Number(days)) => Some(Adjunct {
+            role: DAY_LENGTH_STD.to_string(),
+            argument: Argument::Quantity(*days),
+        }),
         _ => None,
     }
 }
@@ -254,7 +207,11 @@ fn subject_for(entity: EntityId, name: String, seen: &mut BTreeSet<EntityId>) ->
     if seen.insert(entity) {
         Subject::Name(name)
     } else {
-        Subject::Pronoun("it")
+        // Third person; the NUMBER comes from the clause this subject lands
+        // in, which is what stops a plural people re-mentioning as a
+        // singular pronoun. It held the English literal `"it"` until The
+        // Inquest, which could not agree with anything.
+        Subject::Pronoun(Person::Third)
     }
 }
 
@@ -322,8 +279,7 @@ pub fn render_volume_from(
             .map(str::to_string)
             .unwrap_or_else(|| format!("Entity {}", subject_entity.0));
 
-        let mut modifiers = Vec::new();
-        let mut trailing = Vec::new();
+        let mut adjuncts = Vec::new();
         for predicate in CONSTRUCTION_ORDER {
             // First committed fact per (subject, predicate) — all three
             // construction predicates are functional, so "first" is "the"
@@ -331,26 +287,32 @@ pub fn render_volume_from(
             let Some(object) = world.ledger.value_of(subject_entity, predicate) else {
                 continue;
             };
-            match fragment_for(predicate, object, &vocab) {
-                Some(Fragment::Modifier(m)) => modifiers.push(m),
-                Some(Fragment::Trailing(t)) => trailing.push(t),
-                None => {}
+            if let Some(adjunct) = fragment_for(predicate, object) {
+                adjuncts.push(adjunct);
             }
         }
 
         let subject = subject_for(subject_entity, name, &mut named);
         let line = realize_common(
-            &ClauseSpec {
-                frame: Frame::Classify,
+            &Clause {
+                predicate: hornvale_kernel::world::IS_A.to_string(),
                 subject,
-                complement_concept: kind.clone(),
+                object: Argument::Concept(kind.clone()),
                 number: Number::Sg,
                 definiteness: Definiteness::Indef,
-                modifiers,
+                // The god's-eye register states the committed record itself,
+                // so it is grounded the way an observation is — Witnessed.
+                // Common ignores the feature either way (spec §3.2); the
+                // value is stated honestly rather than left to convenience,
+                // because Task 3 hands this same clause to a tongue, which
+                // does read it.
+                evidential: Evidential::Witnessed,
+                tense: Tense::Present,
+                polarity: Polarity::Pos,
+                adjuncts,
             },
             &vocab,
         );
-        let line = assemble_trailing(line, &trailing);
         lines.push(line);
     }
     // (kind, autonym, common_line) per placed people — the autonym (no
@@ -365,7 +327,7 @@ pub fn render_volume_from(
     for fact in world.ledger.find(hornvale_kernel::INSTANCE_OF) {
         // C2 T5: one collective per placed peopled species — "The
         // ⟨Autonym⟩ are ⟨species⟩." The subject carries its own leading
-        // "The " (there is no per-subject determiner slot in `ClauseSpec`;
+        // "The " (there is no per-subject determiner slot in `Clause`;
         // `definiteness` here governs only the bare-plural complement, per
         // the grammar's existing `classify_generic_plural` shape), so this
         // is the one place that article is written, never doubled.
@@ -382,13 +344,17 @@ pub fn render_volume_from(
         // The kind is the complement CONCEPT; `Number::Pl` is what pluralizes
         // it (the realizer's job since Task 4, not the caller's).
         let line = realize_common(
-            &ClauseSpec {
-                frame: Frame::Classify,
+            &Clause {
+                predicate: hornvale_kernel::world::IS_A.to_string(),
                 subject,
-                complement_concept: kind.clone(),
+                object: Argument::Concept(kind.clone()),
                 number: Number::Pl,
                 definiteness: Definiteness::Indef,
-                modifiers: Vec::new(),
+                // Same god's-eye register as the classification loop above.
+                evidential: Evidential::Witnessed,
+                tense: Tense::Present,
+                polarity: Polarity::Pos,
+                adjuncts: Vec::new(),
             },
             &vocab,
         );
@@ -428,6 +394,19 @@ pub fn render_volume_from(
         let Ok(morph) = hornvale_worldgen::tongue_morphology_of(world, kind) else {
             continue;
         };
+        // The Inquest T8b: the paradigm bundle, assembled beside the
+        // morphology one and from the same components, so the deep realizer
+        // receives a real `TongueParadigm` rather than the `None` that made
+        // tense and polarity reachable only from tests. It changes no line
+        // this window renders: every clause below is present-tense and
+        // positive, and both of those are the ZERO member of their axis (no
+        // marker is drawn for a zero member at all). Same `else { continue }`
+        // posture as the two derivations above, and it can only ever fire
+        // together with the morphology one — both resolve the identical
+        // (kind, family, cascade) chain.
+        let Ok(paradigm) = hornvale_worldgen::tongue_paradigm_of(world, kind) else {
+            continue;
+        };
         // The Shuttle: compute the sky-override's animacy answer ONCE per
         // kind (the same draw `noun_class_of` used to repeat per concept)
         // and hand it to `noun_class_with_sky`, the one shared copy of the
@@ -438,18 +417,33 @@ pub fn render_volume_from(
             |concept: &str| hornvale_worldgen::noun_class_with_sky(sky_animate, concept);
 
         let own_kind = format!("{kind}-kind");
-        let self_statement = TongueClause {
-            subject: autonym.clone(),
-            complement_concept: own_kind,
+        let self_statement = Clause {
+            predicate: hornvale_kernel::world::IS_A.to_string(),
+            subject: Subject::Name(autonym.clone()),
+            object: Argument::Concept(own_kind),
+            // Unread by either tongue realizer (spec §3.2) — a clause states
+            // more than any one language surfaces.
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
             // The self-statement is a folk (self-)statement, grounded in
             // lived experience (its autonym and own-kind concept are
             // Steeped by construction) — Witnessed (C7's readout law).
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            // No role bindings on the self-statement today — this task adds
+            // the capability, not new adjunct data for existing callers.
+            adjuncts: Vec::new(),
         };
         let tongue_line = realize_tongue_deep(
             &self_statement,
             &grammar,
             &morph,
+            // The self-statement is present-tense and positive by
+            // construction, so the paradigm's markers go unread here — it is
+            // supplied because the tongue HAS one, not because this clause
+            // needs it (The Inquest, spec §4.1/§4.2).
+            Some(&paradigm),
             &noun_class_of,
             &lexicon,
             ph.orthography,
@@ -485,6 +479,7 @@ pub fn render_volume_from(
             Evidential::Witnessed,
             &grammar,
             &morph,
+            &paradigm,
             &noun_class_of,
             &lexicon,
             ph.orthography,
@@ -499,6 +494,7 @@ pub fn render_volume_from(
                 kind,
                 &grammar,
                 &morph,
+                &paradigm,
                 &noun_class_of,
                 &lexicon,
                 ph.orthography,
@@ -590,6 +586,17 @@ fn chorus_sections_from(
                              derivation failed: {e:?}"
                             )
                         });
+                    // The Inquest T8b: the paradigm bundle, beside the
+                    // morphology one. The taught world-statement is
+                    // present-tense and positive, so nothing in it reads a
+                    // marker; the tongue is simply handed the paradigm it has.
+                    let paradigm = hornvale_worldgen::tongue_paradigm_of(world, kind)
+                        .unwrap_or_else(|e| {
+                            panic!(
+                                "the taught-contrast law is violated for {kind}: paradigm \
+                             derivation failed: {e:?}"
+                            )
+                        });
                     // The Shuttle: sky_animate computed once per kind (see the
                     // matching comment in `render_volume_from`).
                     let sky_animate =
@@ -610,6 +617,7 @@ fn chorus_sections_from(
                         Evidential::Taught,
                         &grammar,
                         &morph,
+                        &paradigm,
                         &noun_class_of,
                         &lexicon,
                         ph.orthography,
@@ -700,7 +708,7 @@ fn reckoning_epochs_from(
     ]
     .into_iter()
     .map(|(heading, day, margin_phrase)| {
-        let at = hornvale_astronomy::StdDays::new(day).unwrap_or_else(|e| {
+        let at = hornvale_astronomy::StdInstant::new(day).unwrap_or_else(|e| {
             panic!("the Reckoning's preregistered epoch day {day} must be a valid StdDays: {e}")
         });
         reckoning_epoch(
@@ -738,7 +746,7 @@ fn reckoning_epochs_from(
 // Named construction site (decision 0092): this entry wrapper sculpts/fits
 // once, then delegates to `reckoning_at_from`.
 #[allow(clippy::disallowed_methods)]
-pub fn reckoning_at(world: &World, at: hornvale_astronomy::StdDays) -> ReckoningEpoch {
+pub fn reckoning_at(world: &World, at: hornvale_astronomy::StdInstant) -> ReckoningEpoch {
     let terrain = hornvale_worldgen::terrain_of(world)
         .unwrap_or_else(|e| panic!("the Reckoning section requires a derivable terrain: {e}"));
     let climate = hornvale_worldgen::climate_from(world, &terrain)
@@ -752,7 +760,7 @@ pub fn reckoning_at(world: &World, at: hornvale_astronomy::StdDays) -> Reckoning
 /// wants many `--at` lenses over one world) can share it here instead.
 pub fn reckoning_at_from(
     world: &World,
-    at: hornvale_astronomy::StdDays,
+    at: hornvale_astronomy::StdInstant,
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &hornvale_climate::GeneratedClimate,
 ) -> ReckoningEpoch {
@@ -782,13 +790,13 @@ pub fn reckoning_at_from(
 /// zero short-circuits [`reckoning_epoch`] straight to the empty arm
 /// before it ever calls `observations_from`/`ladder_from` (both of which
 /// themselves require a Generated sky).
-fn true_event_count(world: &World, at: hornvale_astronomy::StdDays) -> usize {
+fn true_event_count(world: &World, at: hornvale_astronomy::StdInstant) -> usize {
     let sky = hornvale_worldgen::sky_of(world)
         .unwrap_or_else(|e| panic!("the Reckoning section requires a derivable sky: {e}"));
     match sky {
         hornvale_worldgen::Sky::Generated(sky) => {
             let from =
-                hornvale_astronomy::StdDays::new(0.0).expect("0.0 is always a valid StdDays");
+                hornvale_astronomy::StdInstant::new(0.0).expect("0.0 is always a valid StdInstant");
             hornvale_astronomy::eclipse_events(sky.system(), sky.calendar(), from, at).len()
         }
         hornvale_worldgen::Sky::Constant(_) => 0,
@@ -831,7 +839,7 @@ fn reckoning_epoch(
     world: &World,
     autonyms: &BTreeMap<String, String>,
     heading: &str,
-    at: hornvale_astronomy::StdDays,
+    at: hornvale_astronomy::StdInstant,
     margin_phrase: &str,
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &hornvale_climate::GeneratedClimate,
@@ -1036,7 +1044,7 @@ fn subject_for_text(key: &str, display: String, seen: &mut BTreeSet<String>) -> 
     if seen.insert(key.to_string()) {
         Subject::Name(display)
     } else {
-        Subject::Pronoun("it")
+        Subject::Pronoun(Person::Third)
     }
 }
 
@@ -1066,8 +1074,7 @@ fn render_world_clause(
         Disposition::Explained { .. } => unreachable!("effective() never returns Explained"),
     };
 
-    let mut modifiers = Vec::new();
-    let mut trailing = Vec::new();
+    let mut adjuncts = Vec::new();
     for entry in group {
         if entry.fact.predicate == hornvale_kernel::world::IS_A {
             continue;
@@ -1075,27 +1082,34 @@ fn render_world_clause(
         if !matches!(effective(&entry.disposition), Disposition::Kept) {
             continue;
         }
-        match fragment_for(&entry.fact.predicate, &entry.fact.object, vocab) {
-            Some(Fragment::Modifier(m)) => modifiers.push(m),
-            Some(Fragment::Trailing(t)) => trailing.push(t),
-            None => {}
+        if let Some(adjunct) = fragment_for(&entry.fact.predicate, &entry.fact.object) {
+            adjuncts.push(adjunct);
         }
     }
 
     let name = is_a_entry.fact.subject.clone();
     let subject = subject_for_text(&name, name.clone(), seen);
-    let line = realize_common(
-        &ClauseSpec {
-            frame: Frame::Classify,
+    Some(realize_common(
+        &Clause {
+            predicate: hornvale_kernel::world::IS_A.to_string(),
             subject,
-            complement_concept,
+            object: Argument::Concept(complement_concept),
             number: Number::Sg,
             definiteness,
-            modifiers,
+            // The emic account is what this people HOLDS about the world,
+            // including a classification their own world-carving recast
+            // (`Disposition::Substituted`) — a carving is how a culture
+            // sees, not what it was told, so the whole register is
+            // Witnessed. The doctrinal register that is genuinely `Taught`
+            // is the separate `doctrine_section` path, which already says
+            // so at its own `world_statement` call.
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts,
         },
         vocab,
-    );
-    Some(assemble_trailing(line, &trailing))
+    ))
 }
 
 /// The world subject's etic margin (spec §4.3, the margin law): fires only
@@ -1139,27 +1153,30 @@ fn render_world_margin(
     let Value::Text(truth_kind) = &is_a_entry.fact.object else {
         return None;
     };
-    let mut modifiers = Vec::new();
-    let mut trailing = Vec::new();
+    let mut adjuncts = Vec::new();
     for entry in lost_fragments {
-        match fragment_for(&entry.fact.predicate, &entry.fact.object, vocab) {
-            Some(Fragment::Modifier(m)) => modifiers.push(m),
-            Some(Fragment::Trailing(t)) => trailing.push(t),
-            None => {}
+        if let Some(adjunct) = fragment_for(&entry.fact.predicate, &entry.fact.object) {
+            adjuncts.push(adjunct);
         }
     }
     let line = realize_common(
-        &ClauseSpec {
-            frame: Frame::Classify,
+        &Clause {
+            predicate: hornvale_kernel::world::IS_A.to_string(),
             subject: Subject::Name(is_a_entry.fact.subject.clone()),
-            complement_concept: truth_kind.clone(),
+            object: Argument::Concept(truth_kind.clone()),
             number: Number::Sg,
             definiteness: Definiteness::Indef,
-            modifiers,
+            // The etic margin reads the ground fact's own object text, so
+            // it is the record speaking: Witnessed, like the god's-eye
+            // register it restores.
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts,
         },
         vocab,
     );
-    Some(format!("In truth, {}", assemble_trailing(line, &trailing)))
+    Some(format!("In truth, {line}"))
 }
 
 /// Task 4 (C5): the count-aware head clause an explanation line opens
@@ -1318,13 +1335,18 @@ fn render_people_clause(
     let display = format!("The {raw_name}");
     let subject = subject_for_text(&raw_name, display, seen);
     let mut line = realize_common(
-        &ClauseSpec {
-            frame: Frame::Classify,
+        &Clause {
+            predicate: hornvale_kernel::world::IS_A.to_string(),
             subject,
-            complement_concept: kind_text.clone(),
+            object: Argument::Concept(kind_text.clone()),
             number: Number::Pl,
             definiteness: Definiteness::Indef,
-            modifiers: Vec::new(),
+            // A people subject's collective classification, in the same
+            // emic register as `render_world_clause`.
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
         },
         vocab,
     );
@@ -1872,25 +1894,39 @@ pub fn tongue_probes(world: &World) -> Vec<TongueProbe> {
 /// ⟨concept⟩` through the deep realizer (C7) — `Ok` is a rendered line
 /// (the success path C3 dropped), `Err` the recountable gap (today, always
 /// the `planet` probe: no culture holds that etic concept).
+#[allow(clippy::too_many_arguments)]
 fn probe_tongue(
     probe: &TongueProbe,
     _kind: &str,
     grammar: &hornvale_language::TongueGrammar,
     morph: &TongueMorphology,
+    paradigm: &TongueParadigm,
     noun_class_of: &dyn Fn(&str) -> NounClass,
     lexicon: &hornvale_language::Lexicon,
     orth: hornvale_language::Orthography,
 ) -> Result<String, hornvale_language::TongueGap> {
     realize_tongue_deep(
-        &TongueClause {
-            subject: probe.subject.clone(),
-            complement_concept: probe.concept.clone(),
+        &Clause {
+            predicate: hornvale_kernel::world::IS_A.to_string(),
+            subject: Subject::Name(probe.subject.clone()),
+            object: Argument::Concept(probe.concept.clone()),
+            // Unread by either tongue realizer (spec §3.2).
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
             // Every probe states a claim grounded in the same
             // lived-experience footing as the self-statement above.
             evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            // No role bindings on a C3 probe today.
+            adjuncts: Vec::new(),
         },
         grammar,
         morph,
+        // Every probe is present-tense and positive (spec §4.1/§4.2), so the
+        // paradigm's markers go unread — it is passed because the tongue has
+        // one, not because this clause asks for one.
+        Some(paradigm),
         noun_class_of,
         lexicon,
         orth,
@@ -1912,8 +1948,9 @@ fn planet_name_of(world: &World) -> Option<String> {
         .map(str::to_string)
 }
 
-/// C7 T3: build one tongue's emic world-statement — `TongueClause { subject:
-/// planet_name, complement_concept: "earth", evidential }` — through the
+/// C7 T3: build one tongue's emic world-statement — a `Clause` whose
+/// subject is `Subject::Name(planet_name)`, whose object is
+/// `Argument::Concept("earth")`, carrying the given `evidential` — through the
 /// deep realizer, using that tongue's own already-derived grammar/morphology/
 /// lexicon (never re-derived here; callers pass what they already hold, the
 /// same "measure once" discipline `render_volume`'s loop and
@@ -1930,24 +1967,43 @@ fn world_statement(
     evidential: Evidential,
     grammar: &hornvale_language::TongueGrammar,
     morph: &TongueMorphology,
+    paradigm: &TongueParadigm,
     noun_class_of: &dyn Fn(&str) -> NounClass,
     lexicon: &hornvale_language::Lexicon,
     orth: hornvale_language::Orthography,
 ) -> String {
-    let clause = TongueClause {
-        subject: planet_name.to_string(),
-        complement_concept: "earth".to_string(),
+    let clause = Clause {
+        predicate: hornvale_kernel::world::IS_A.to_string(),
+        subject: Subject::Name(planet_name.to_string()),
+        object: Argument::Concept("earth".to_string()),
+        // Unread by either tongue realizer (spec §3.2).
+        number: Number::Sg,
+        definiteness: Definiteness::Def,
         evidential,
+        tense: Tense::Present,
+        polarity: Polarity::Pos,
+        // No role bindings on the world-statement today.
+        adjuncts: Vec::new(),
     };
-    realize_tongue_deep(&clause, grammar, morph, noun_class_of, lexicon, orth).unwrap_or_else(
-        |gap| {
-            panic!(
-                "the world-statement law is violated for {kind}: gap on {} ({}) — \"earth\" is \
-             universal-stratum Steeped and must never gap",
-                gap.concept, gap.reason
-            )
-        },
+    // The world-statement is present-tense and positive (spec §4.1/§4.2), so
+    // the paradigm's markers go unread — it is passed because the tongue has
+    // one, not because this clause asks for one.
+    realize_tongue_deep(
+        &clause,
+        grammar,
+        morph,
+        Some(paradigm),
+        noun_class_of,
+        lexicon,
+        orth,
     )
+    .unwrap_or_else(|gap| {
+        panic!(
+            "the world-statement law is violated for {kind}: gap on {} ({}) — \"earth\" is \
+             universal-stratum Steeped and must never gap",
+            gap.concept, gap.reason
+        )
+    })
 }
 
 /// Predicates present in the ledger that C1's grammar cannot yet render:
@@ -1999,6 +2055,8 @@ pub struct ParsedLine {
     pub facts: Vec<(String, Value)>,
     number: Number,
     definiteness: Definiteness,
+    tense: Tense,
+    polarity: Polarity,
 }
 
 /// Why [`parse_line`] could not invert a rendered line. Deliberately a
@@ -2029,11 +2087,21 @@ impl std::fmt::Display for LineError {
 impl std::error::Error for LineError {}
 
 /// `cardinal`'s inverse (a private table, not shared with
-/// `domains/language::clause`'s — see this module's `indefinite_article`
-/// for the established precedent of duplicating a small presentation-layer
-/// table across the aggregation seam rather than widening the domain's
-/// public surface for a book-only need): word (`"two"`) or digits
-/// (`"13"`) to the count.
+/// `domains/language::clause`'s): word (`"two"`) or digits (`"13"`) to the
+/// count.
+///
+/// **It survives a duplication its own precedent did not.** The doc here
+/// used to cite this module's `indefinite_article` as the established case
+/// for keeping a small presentation-layer table on the book side of the
+/// aggregation seam. The Interlinear deleted that function, and the seam
+/// with it: article selection was never a book concern, it was English
+/// leaking into a window because `Clause` could not carry structure.
+/// This table stays for a different and narrower reason — it runs
+/// BACKWARD, and the direction is the whole argument. [`fact_for`] must
+/// recognize text the program did not generate (it backs
+/// `windows/vessel`'s spoken-to-heard seam), and recognition is a later
+/// campaign's subject. When Common learns to recognize its own role
+/// constructions, this goes with `fact_for`.
 fn uncardinal(word: &str) -> Option<u64> {
     const WORDS: [&str; 13] = [
         "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
@@ -2046,10 +2114,19 @@ fn uncardinal(word: &str) -> Option<u64> {
         .or_else(|| word.parse().ok())
 }
 
-/// The construction table run backward: recover (predicate, surface
-/// value) from one fragment's text — the mirror of [`fragment_for`].
-/// Returns `None` for text this table's forward direction never produces,
+/// The construction table run backward: recover (predicate, surface value)
+/// from one fragment's TEXT. Returns `None` for text it does not recognize,
 /// which [`parse_line`] treats as `LineError::UnknownFragment`.
+///
+/// **No longer the mirror of [`fragment_for`], and the difference is the
+/// point.** Since The Interlinear the forward direction produces an
+/// `Adjunct` — structure — while this one still consumes English, so the
+/// two no longer share a currency: what inverts this function's output is
+/// `fragment_for` followed by `common_role_surface`. It stays an English
+/// recognizer deliberately, because [`parse_line`] backs
+/// `windows/vessel`'s spoken-to-heard seam, which parses text the program
+/// did not generate. Recognition is a later campaign's subject (The
+/// Interlinear's spec §6 freezes its coverage here).
 fn fact_for(fragment: &str) -> Option<(String, Value)> {
     if let Some(rest) = fragment.strip_prefix("with ") {
         let count_word = rest
@@ -2086,24 +2163,25 @@ pub fn fact_for_public(fragment: &str) -> Option<(String, Value)> {
     fact_for(fragment)
 }
 
-/// The public face of the private [`fragment_for`], exported so
-/// `cli/tests/star_class_is_a_concept.rs` can drive its round-trip
-/// assertion from the actual renderer rather than a hand-rolled fragment —
-/// a hand-rolled `"orbiting a {display}"` never exercises which article
-/// [`fragment_for`] actually chooses, so a wrong-article regression there
-/// would go undetected. Returns the fragment's plain text; the
-/// `Modifier`/`Trailing` tag is a Book-internal aggregation detail the
-/// caller has no need of. Do not make `fragment_for` itself public — its
-/// privacy is what keeps the construction table a Book concern.
+/// The realized surface of the adjunct [`fragment_for`] contributes,
+/// exported so `cli/tests/star_class_is_a_concept.rs` can drive its
+/// round-trip assertion from the actual renderer rather than a hand-rolled
+/// fragment — a hand-rolled `"orbiting a {display}"` never exercises which
+/// article the realizer actually chooses, so a wrong-article regression
+/// would go undetected. Since The Interlinear the article is Common's
+/// choice, not this window's, so this composes the two halves:
+/// `fragment_for` states the role, `common_role_surface` renders it. The
+/// inline/trailing position is a language's decision the caller has no need
+/// of. Do not make `fragment_for` itself public — its privacy is what keeps
+/// the construction table a Book concern.
 /// type-audit: bare-ok(identifier-text: predicate), bare-ok(prose: return)
 pub fn fragment_for_public(
     predicate: &str,
     object: &Value,
     vocab: &CommonVocabulary,
 ) -> Option<String> {
-    match fragment_for(predicate, object, vocab)? {
-        Fragment::Modifier(text) | Fragment::Trailing(text) => Some(text),
-    }
+    let adjunct = fragment_for(predicate, object)?;
+    common_role_surface(&adjunct, vocab).map(|(_, text)| text)
 }
 
 /// Apply a listener's numeracy rung to a heard quantity fragment (LANG-44
@@ -2222,13 +2300,13 @@ fn parse_context_with_voices(
 /// seam (`"; "`), clause-parse the head via T2's `parse_common`, then
 /// recover each modifier/trailing fragment's fact via [`fact_for`].
 ///
-/// The split mirrors [`assemble_trailing`] exactly: the first segment lost
-/// its own terminal `'.'` to the strip in that join (append it back,
-/// unless there was no trailing clause at all — then the head is the
-/// whole, already-terminated line); the LAST segment carries the final
-/// `'.'` restored by that same join, which belongs to the sentence, not
-/// the fragment, so it is stripped before fragment inversion. Middle
-/// segments (more than one trailing clause) carry no punctuation at all.
+/// The split mirrors the realizer's trailing join exactly: the first
+/// segment lost its own terminal `'.'` to that join (append it back, unless
+/// there was no trailing clause at all — then the head is the whole,
+/// already-terminated line); the LAST segment carries the final `'.'`,
+/// which belongs to the sentence, not the fragment, so it is stripped
+/// before fragment inversion. Middle segments (more than one trailing
+/// clause) carry no punctuation at all.
 ///
 /// `ParsedLine.kind` is the recovered complement CONCEPT — always singular,
 /// for a `Pl` clause as much as an `Sg` one, because `parse_common` matches
@@ -2245,10 +2323,14 @@ pub fn parse_line(line: &str, ctx: &ParseContext) -> Result<ParsedLine, LineErro
     } else {
         format!("{head}.")
     };
-    let clause = parse_common(&clause_text, ctx).map_err(LineError::Clause)?;
+    // `parse_common_with_tail`, not `parse_common`: Common recognizes the
+    // clause skeleton and hands back the adjunct tail as TEXT, which this
+    // window's own English recognizer (`fact_for`) inverts. See that
+    // function's doc for why recognition stayed here.
+    let (clause, tail) = parse_common_with_tail(&clause_text, ctx).map_err(LineError::Clause)?;
 
     let mut facts = Vec::new();
-    for modifier in &clause.modifiers {
+    for modifier in &tail {
         let (predicate, value) =
             fact_for(modifier).ok_or_else(|| LineError::UnknownFragment(modifier.clone()))?;
         facts.push((predicate, value));
@@ -2267,13 +2349,46 @@ pub fn parse_line(line: &str, ctx: &ParseContext) -> Result<ParsedLine, LineErro
 
     let subject = match &clause.subject {
         Subject::Name(name) => name.clone(),
-        Subject::Pronoun(p) => (*p).to_string(),
+        // The SUBJECT slot, so the nominative — the same form the realizer
+        // emitted, which is what keeps `rerender` byte-exact.
+        Subject::Pronoun(person) => {
+            common_pronoun(*person, clause.number, PronounCase::Nominative).to_string()
+        }
+        // `parse_common_with_tail` still has no clause-SUBJECT recognizer as
+        // of The Mortise Task 8, which taught it to recover a clause-OBJECT
+        // (`Argument::Clause`, below) but deliberately not this slot: the
+        // walk's subject/verb split already commits to the EARLIEST
+        // verb-group occurrence, and for a subject-embedded clause that
+        // earliest occurrence is the INNER clause's own verb, not the
+        // matrix one — recovering it needs the walk to try more than one
+        // split candidate (a backtracking search), a different and larger
+        // change than extending the give-up point the object slot already
+        // had. So this arm still can never fire. Added for exhaustiveness
+        // against `Subject::Clause`, the same posture the `Argument::Clause`
+        // arm a few lines below now takes for its own slot.
+        Subject::Clause(_) => {
+            unreachable!("parse_common_with_tail never recovers a clause-embedded subject")
+        }
     };
     // The clause layer already recovered the singular concept id: it matched
     // the text against each candidate id's realized surface, so the plural
     // `'s'` was undone by the same rule that added it. No suffix-stripping
     // closed-world assumption survives here.
-    let kind = clause.complement_concept.clone();
+    //
+    // `parse_common`/`parse_common_with_tail` CAN now return an
+    // `Argument::Clause` object (The Mortise, Task 8) — the claim in this
+    // arm's message is no longer true of the function in general. It stays
+    // unreachable for THIS window specifically because every line this
+    // window ever hands to `parse_line` comes from its own generated
+    // classification prose (`rerender`, a few lines down, always builds an
+    // `is-a` clause with an `Argument::Concept` object) or a hand-written
+    // test fixture in the same shape — nothing here ever constructs or
+    // feeds a KNOW/THINK-shaped clause-complement sentence.
+    let Argument::Concept(kind) = clause.object.clone() else {
+        unreachable!(
+            "parse_line only ever receives an is-a classification line, whose object is always a concept"
+        )
+    };
 
     Ok(ParsedLine {
         subject,
@@ -2281,48 +2396,61 @@ pub fn parse_line(line: &str, ctx: &ParseContext) -> Result<ParsedLine, LineErro
         facts,
         number: clause.number,
         definiteness: clause.definiteness,
+        // Recovered, not defaulted: Common has a copula construction for
+        // both, so unlike `evidential` these ARE observable in the surface
+        // and the rerender direction must carry them rather than assume a
+        // present-tense assertion.
+        tense: clause.tense,
+        polarity: clause.polarity,
     })
 }
 
 /// Re-realize a [`ParsedLine`] back to its exact surface text: the corpus
-/// law's other half. Regroups `parsed.facts` into modifiers/trailing via
-/// [`fragment_for`] (the same construction table, forward again) and rebuilds
-/// the clause plus any trailing clause(s) through the same
-/// [`assemble_trailing`] helper `render_volume` uses — so the two never
-/// drift apart into separate join logic. Re-pluralization is no longer done
-/// here: `parsed.kind` is the complement CONCEPT and `parsed.number` is what
+/// law's other half. Turns `parsed.facts` back into adjuncts via
+/// [`fragment_for`] (the same construction table, forward again) and hands
+/// them to the same realizer `render_volume` uses — so the two cannot drift
+/// apart into separate join logic, because there is only one join and it
+/// lives in `domains/language`. Re-pluralization is not done here either:
+/// `parsed.kind` is the complement CONCEPT and `parsed.number` is what
 /// pluralizes it, inside the realizer.
 /// type-audit: bare-ok(prose: return)
 pub fn rerender(parsed: &ParsedLine, vocab: &CommonVocabulary) -> String {
-    let mut modifiers = Vec::new();
-    let mut trailing = Vec::new();
+    let mut adjuncts = Vec::new();
     for (predicate, value) in &parsed.facts {
-        match fragment_for(predicate, value, vocab) {
-            Some(Fragment::Modifier(m)) => modifiers.push(m),
-            Some(Fragment::Trailing(t)) => trailing.push(t),
-            // fact_for only ever recovers (predicate, value) pairs that
-            // fragment_for's forward direction produced, so this is
-            // unreachable for a ParsedLine built by parse_line.
-            None => {}
+        // fact_for only ever recovers (predicate, value) pairs that
+        // fragment_for's forward direction produced, so a None here is
+        // unreachable for a ParsedLine built by parse_line.
+        if let Some(adjunct) = fragment_for(predicate, value) {
+            adjuncts.push(adjunct);
         }
     }
-    let subject = match parsed.subject.as_str() {
-        "it" => Subject::Pronoun("it"),
-        "its" => Subject::Pronoun("its"),
-        other => Subject::Name(other.to_string()),
+    // One statement of the inverse, in `domains/language` — this window kept
+    // its own copy of the mapping until The Inquest, and that copy is exactly
+    // where the stale `"its"` arm survived a rework that had already removed
+    // the fragment producing it.
+    let subject = match nominative_person(&parsed.subject) {
+        Some(person) => Subject::Pronoun(person),
+        None => Subject::Name(parsed.subject.clone()),
     };
-    let line = realize_common(
-        &ClauseSpec {
-            frame: Frame::Classify,
+    realize_common(
+        &Clause {
+            predicate: hornvale_kernel::world::IS_A.to_string(),
             subject,
-            complement_concept: parsed.kind.clone(),
+            object: Argument::Concept(parsed.kind.clone()),
             number: parsed.number,
             definiteness: parsed.definiteness,
-            modifiers,
+            // A `ParsedLine` carries no evidential because Common's surface
+            // carries none to recover (spec §3.2). This is the same
+            // documented default `parse_common_with_tail` returns, so the
+            // corpus law's two directions agree on the feature neither can
+            // observe.
+            evidential: Evidential::Witnessed,
+            tense: parsed.tense,
+            polarity: parsed.polarity,
+            adjuncts,
         },
         vocab,
-    );
-    assemble_trailing(line, &trailing)
+    )
 }
 
 /// The book-layer dress [`parse_chorus_line`] strips before delegating to
@@ -2482,10 +2610,11 @@ pub enum ReckoningLine {
 /// recovered word against, to hand back the same `'static` [`LexemeId`]
 /// these were minted from (a `LexemeId` wraps a `&'static str`, so a
 /// runtime-parsed word can never be boxed into one directly) — duplicated
-/// from `domains/language::schemas`'s own closed table, the same
-/// aggregation-seam precedent [`indefinite_article`]/[`uncardinal`] set for
-/// small closed tables a book-only need doesn't warrant widening the
-/// domain's public surface for.
+/// from `domains/language::schemas`'s own closed table, the same precedent
+/// [`uncardinal`] sets for a small closed table a book-only need doesn't
+/// warrant widening the domain's public surface for. (This cited
+/// `indefinite_article` alongside it until The Interlinear deleted that
+/// function — see [`uncardinal`] for why the two were never the same case.)
 const AGENTIVE_LEXEMES: &[LexemeId] = &[
     LexemeId("walks"),
     LexemeId("strides"),
@@ -2992,6 +3121,7 @@ mod tests {
     //! sanctioned test-fixture posture the weir's spec carves out.
     #![allow(clippy::disallowed_methods)]
     use super::*;
+    use hornvale_language::clause::AdjunctPosition;
 
     /// The world's Common vocabulary, exactly as `render_volume` assembles
     /// it. Built from the composed registry rather than any particular
@@ -3001,6 +3131,29 @@ mod tests {
         let mut registry = hornvale_kernel::ConceptRegistry::default();
         hornvale_worldgen::register_all(&mut registry).expect("the roster registers");
         hornvale_worldgen::common_vocabulary(&registry)
+    }
+
+    /// One construction's realized surface and where Common attaches it:
+    /// `fragment_for` states the role, `common_role_surface` renders it.
+    /// The two halves that used to be one function here.
+    fn surface_of(
+        predicate: &str,
+        object: &Value,
+        vocab: &CommonVocabulary,
+    ) -> Option<(AdjunctPosition, String)> {
+        common_role_surface(&fragment_for(predicate, object)?, vocab)
+    }
+
+    /// The Interlinear: this window hands the language STRUCTURE — a
+    /// predicate bound to an argument — never a rendered phrase. It is the
+    /// one assertion that would redden if `fragment_for` started composing
+    /// English again.
+    #[test]
+    fn the_book_hands_the_language_structure_not_english() {
+        let a =
+            fragment_for(MOON_COUNT, &Value::Number(2.0)).expect("moon-count has a construction");
+        assert_eq!(a.role, MOON_COUNT);
+        assert_eq!(a.argument, Argument::Count(2));
     }
 
     fn constant(seed: u64) -> World {
@@ -3118,10 +3271,9 @@ mod tests {
     #[test]
     fn star_class_modifier_chooses_an_before_a_vowel() {
         let value = Value::Text("orange-dwarf".to_string());
-        let modifier = match fragment_for(STAR_CLASS, &value, &vocab()) {
-            Some(Fragment::Modifier(m)) => m,
-            _ => panic!("expected a Modifier fragment"),
-        };
+        let (position, modifier) =
+            surface_of(STAR_CLASS, &value, &vocab()).expect("star-class has a construction");
+        assert_eq!(position, AdjunctPosition::Inline);
         assert_eq!(modifier, "orbiting an orange dwarf (K)");
     }
 
@@ -3176,7 +3328,7 @@ mod tests {
         );
         assert_eq!(
             subject_for(entity, "Vebe".to_string(), &mut named),
-            Subject::Pronoun("it")
+            Subject::Pronoun(Person::Third)
         );
     }
 
@@ -3436,6 +3588,222 @@ mod tests {
         );
     }
 
+    /// The Mortise, Task 10 (spec §4.9): **this window declares clause
+    /// embedding and coordination deliberately unwired**, checked rather
+    /// than left as prose (the failure `LANG-in-character-acts-are-
+    /// unspeakable` records: three tasks each shipped an inert concept
+    /// without anyone writing down who was supposed to wire it, and nothing
+    /// caught the drift).
+    ///
+    /// Every one of this module's PRODUCTION `Clause`-construction sites
+    /// (the same `production` slice [`the_readout_law`] scans, plus all
+    /// three `realize_tongue_deep` call sites) states a GOD'S-EYE OR EMIC/ETIC
+    /// CLASSIFICATION fact — `predicate: hornvale_kernel::world::IS_A`,
+    /// `object: Argument::Concept(...)` — read straight off a committed
+    /// `is-a`/`instance-of` ledger fact. Nothing in this window's data model
+    /// HOLDS a belief about another clause: `Evidential::Taught` already
+    /// carries doctrine's "this is what is taught" distinction as a
+    /// FEATURE on the very same is-a clause (the adjacency this task was
+    /// warned about, spec §8) — a matrix `THINK`/`KNOW` wrapper around it
+    /// would double-encode the same fact through two unrelated mechanisms,
+    /// exactly the "caller invented to justify a capability" shape the task
+    /// brief warns against, and the two stay orthogonal on purpose (no
+    /// amendment to the readout law above is sanctioned by the spec).
+    /// `windows/almanac`'s own `Speaker` doc records the same shape of
+    /// finding independently: a phenomenon has no subject for a
+    /// clause-level realizer to take at all.
+    ///
+    /// `KNOW`/`THINK` are not even imported into this module: their only
+    /// callers today are `domains/language`'s own tests and the merchant
+    /// corpus witness (`cli/tests/suite/sentence_corpus.rs`), which is a
+    /// TEST-side fixture, not a production caller. `Coordination` is the
+    /// same story. `Subject::Clause` appears exactly once in this file's
+    /// production code, as an exhaustiveness match arm in `parse_line` that
+    /// stays `unreachable!()` (documented in place) — never as a
+    /// constructed value; `Argument::Clause` appears only in that same
+    /// arm's neighboring doc comments, never as code.
+    ///
+    /// This is a finding, not an oversight: every `Clause`-construction call
+    /// site in this module was read for this task, looking for where the
+    /// book already says something that is genuinely one clause inside
+    /// another or two clauses joined — not where one could be forced in.
+    /// None does. If a future campaign gives a people or a character a
+    /// belief distinct from what it perceives, or narrates two committed
+    /// facts as one coordinated sentence, THIS is where that caller goes —
+    /// and this test must be UPDATED, not deleted, the day that happens
+    /// (the same STALE-DECL discipline `seam-guard`'s
+    /// `expect(survives: …)` uses).
+    #[test]
+    fn the_mortise_declares_no_construction_site_embeds_or_coordinates() {
+        let source = include_str!("lib.rs");
+        let production = source
+            .split("#[cfg(test)]\nmod tests {\n")
+            .next()
+            .expect("this module's own `mod tests` boundary must exist");
+
+        assert!(
+            !constructs_variant(production, "Subject::Clause"),
+            "the Task 10 inertness declaration is stale: a production site now \
+             constructs a clause-embedded SUBJECT — update this test's doc, \
+             don't delete it"
+        );
+        assert!(
+            !constructs_variant(production, "Argument::Clause"),
+            "the Task 10 inertness declaration is stale: a production site now \
+             constructs a clause-embedded OBJECT — update this test's doc, \
+             don't delete it"
+        );
+        assert!(
+            !contains_bare_identifier(production, "Coordination"),
+            "the Task 10 inertness declaration is stale: a production site now \
+             constructs a Coordination — update this test's doc, don't \
+             delete it"
+        );
+        assert!(
+            !production.contains("realize_common_coordination(")
+                && !production.contains("realize_tongue_deep_coordination("),
+            "the Task 10 inertness declaration is stale: a production site now \
+             realizes a coordinated utterance — update this test's doc, \
+             don't delete it"
+        );
+        assert!(
+            !contains_bare_identifier(production, "KNOW")
+                && !contains_bare_identifier(production, "THINK"),
+            "the Task 10 inertness declaration is stale: a production site now \
+             constructs a KNOW/THINK matrix clause — update this test's doc, \
+             don't delete it"
+        );
+    }
+
+    /// Whether `needle` (a bare `SCREAMING_SNAKE` identifier, e.g. `"KNOW"`)
+    /// appears as a whole-word TOKEN on any non-comment line of `text`.
+    ///
+    /// This closes a hole Task 10's own review found (The Mortise, Task 11):
+    /// the guard above used to check the literal substring `"predicate:
+    /// KNOW"`, which an ordinary fully-qualified reference —
+    /// `hornvale_language::packs::KNOW` — evades without evading the actual
+    /// construction it names. Tokenizing on non-identifier characters and
+    /// comparing whole tokens catches the qualified path form too, at the
+    /// cost of also catching a token inside CODE that merely happens to be
+    /// named `KNOW` — which does not exist in this module today, and is the
+    /// correct failure direction for a novelty guard (a false alarm is
+    /// cheap; a silent miss is the thing this test exists to prevent).
+    ///
+    /// A line whose trimmed start is `//` (an ordinary comment, a `///` doc
+    /// comment, or a `//!` module comment) is skipped, not scanned: this
+    /// function's own doc comment mentions `KNOW`/`THINK` in prose, and nothing
+    /// about the scanning rule should have to keep such mentions out of the
+    /// tree to stay green.
+    fn contains_bare_identifier(text: &str, needle: &str) -> bool {
+        text.lines().any(|line| {
+            if line.trim_start().starts_with("//") {
+                return false;
+            }
+            let mut token = String::new();
+            let mut hit = false;
+            for ch in line.chars() {
+                if ch.is_alphanumeric() || ch == '_' {
+                    token.push(ch);
+                } else {
+                    if token == needle {
+                        hit = true;
+                    }
+                    token.clear();
+                }
+            }
+            if token == needle {
+                hit = true;
+            }
+            hit
+        })
+    }
+
+    /// Whether `text` constructs the tuple-variant `path` (e.g.
+    /// `"Argument::Clause"`, a `::`-joined pair of bare identifiers) as a
+    /// VALUE on any non-comment line — as opposed to matching it as a
+    /// PATTERN in a match arm.
+    ///
+    /// Closes a second hole in the guard above, found in the same review
+    /// (The Mortise, the fix-wave after Task 11): the original check was
+    /// the literal compound substring `"object: Argument::Clause("`, which
+    /// coupled the construction to being inlined directly into a field's
+    /// literal. A site that BINDS first —
+    ///
+    /// ```text
+    /// let embedded = Argument::Clause(Box::new(inner));
+    /// let self_statement = Clause { ..., object: embedded, ... };
+    /// ```
+    ///
+    /// — never contains that substring, so it passed the old guard
+    /// silently. This instead looks for `path` as a whole token (using the
+    /// same non-identifier-boundary rule [`contains_bare_identifier`]
+    /// uses, so `MyArgument::Clause` or `Argument::ClauseWrapper` cannot
+    /// match) wherever it appears on the line, which catches the bound form
+    /// too.
+    ///
+    /// One shape is deliberately excluded, because it is a real, documented
+    /// site and not a construction: this module's own
+    /// `Subject::Clause(_) => { unreachable!(...) }` exhaustiveness match
+    /// arm (Task 8). A bare tuple-variant followed by `(...)` and then `=>`
+    /// is unambiguously a PATTERN — an expression can never occupy that
+    /// position — so a `=>` immediately after the variant's own closing
+    /// paren marks a pattern and is skipped; anything else (including no
+    /// trailing `(...)` at all, or a construction spanning past the end of
+    /// the line) counts as a hit. Per this test suite's own stated
+    /// direction, a false alarm here is cheap and a silent miss is the
+    /// thing this function exists to prevent, so every ambiguous case
+    /// resolves toward "hit".
+    fn constructs_variant(text: &str, path: &str) -> bool {
+        text.lines().any(|line| {
+            if line.trim_start().starts_with("//") {
+                return false;
+            }
+            let bytes = line.as_bytes();
+            let is_ident_byte = |b: u8| (b as char).is_alphanumeric() || b == b'_';
+            let mut search_from = 0usize;
+            while let Some(rel) = line[search_from..].find(path) {
+                let start = search_from + rel;
+                let end = start + path.len();
+                let boundary_before = start == 0 || !is_ident_byte(bytes[start - 1]);
+                let boundary_after = end >= bytes.len() || !is_ident_byte(bytes[end]);
+                if boundary_before && boundary_after {
+                    let rest = line[end..].trim_start();
+                    match rest.strip_prefix('(') {
+                        None => return true,
+                        Some(after_open) => {
+                            let mut depth = 1i32;
+                            let mut close = None;
+                            for (i, ch) in after_open.char_indices() {
+                                match ch {
+                                    '(' => depth += 1,
+                                    ')' => {
+                                        depth -= 1;
+                                        if depth == 0 {
+                                            close = Some(i);
+                                            break;
+                                        }
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            match close {
+                                None => return true,
+                                Some(i) => {
+                                    let after_close = after_open[i + 1..].trim_start();
+                                    if !after_close.starts_with("=>") {
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                search_from = end;
+            }
+            false
+        })
+    }
+
     /// C7 T3's shallow-identity guarantee (plan G4): for every species T2
     /// measured at depth `(None, None, _)` on both axes — seed 2's goblin
     /// and kobold are the only such (seed, species) pairs within 1..=3 (T2's
@@ -3630,10 +3998,9 @@ mod tests {
         let vocab = vocab();
         for count in 0..=13u64 {
             let value = Value::Number(count as f64);
-            let text = match fragment_for(MOON_COUNT, &value, &vocab) {
-                Some(Fragment::Modifier(m)) => m,
-                _ => panic!("expected a Modifier fragment for moon-count {count}"),
-            };
+            let (position, text) = surface_of(MOON_COUNT, &value, &vocab)
+                .unwrap_or_else(|| panic!("moon-count {count} must render"));
+            assert_eq!(position, AdjunctPosition::Inline);
             assert_eq!(
                 fact_for(&text),
                 Some((MOON_COUNT.to_string(), Value::Number(count as f64))),
@@ -3645,10 +4012,9 @@ mod tests {
             let world = generated(seed);
             for fact in world.ledger.find(STAR_CLASS) {
                 let value = fact.object.clone();
-                let text = match fragment_for(STAR_CLASS, &value, &vocab) {
-                    Some(Fragment::Modifier(m)) => m,
-                    _ => panic!("expected a Modifier fragment for {value:?}"),
-                };
+                let (position, text) = surface_of(STAR_CLASS, &value, &vocab)
+                    .unwrap_or_else(|| panic!("{value:?} must render"));
+                assert_eq!(position, AdjunctPosition::Inline);
                 assert_eq!(
                     fact_for(&text),
                     Some((STAR_CLASS.to_string(), value.clone())),
@@ -3660,10 +4026,9 @@ mod tests {
                     continue;
                 };
                 let value = Value::Number(days);
-                let text = match fragment_for(DAY_LENGTH_STD, &value, &vocab) {
-                    Some(Fragment::Trailing(t)) => t,
-                    _ => panic!("expected a Trailing fragment for {days}"),
-                };
+                let (position, text) = surface_of(DAY_LENGTH_STD, &value, &vocab)
+                    .unwrap_or_else(|| panic!("day-length {days} must render"));
+                assert_eq!(position, AdjunctPosition::Trailing);
                 let truncated = (days * 10.0).trunc() / 10.0;
                 assert_eq!(
                     fact_for(&text),
@@ -3693,10 +4058,8 @@ mod tests {
                     continue;
                 };
                 let value = Value::Number(days);
-                let fragment = match fragment_for(DAY_LENGTH_STD, &value, &vocab) {
-                    Some(Fragment::Trailing(t)) => t,
-                    _ => panic!("expected a Trailing fragment for {days}"),
-                };
+                let (_, fragment) = surface_of(DAY_LENGTH_STD, &value, &vocab)
+                    .unwrap_or_else(|| panic!("day-length {days} must render"));
                 let truncated = (days * 10.0).trunc() / 10.0;
                 for rung in [
                     NumeracyRung::Subitizing,
@@ -3725,10 +4088,8 @@ mod tests {
                 continue;
             };
             let value = Value::Number(days);
-            let fragment = match fragment_for(DAY_LENGTH_STD, &value, &vocab) {
-                Some(Fragment::Trailing(t)) => t,
-                _ => panic!("expected a Trailing fragment for {days}"),
-            };
+            let (_, fragment) = surface_of(DAY_LENGTH_STD, &value, &vocab)
+                .unwrap_or_else(|| panic!("day-length {days} must render"));
             let truncated = (days * 10.0).trunc() / 10.0;
             assert_eq!(
                 fact_for(&fragment),
@@ -3792,11 +4153,14 @@ mod tests {
             concept: "planet".to_string(),
             subject: "Vebe".to_string(),
         };
+        let paradigm = hornvale_worldgen::tongue_paradigm_of(&world, "goblin")
+            .expect("goblin paradigm derives at seed 1");
         let line = probe_tongue(
             &probe,
             "goblin",
             &grammar,
             &morph,
+            &paradigm,
             &noun_class_of,
             &lexicon,
             ph.orthography,
@@ -5852,7 +6216,7 @@ mod tests {
         let world = generated(1);
         let pair = render_volume(&world).reckoning;
 
-        let day0 = reckoning_at(&world, hornvale_astronomy::StdDays::new(0.0).unwrap());
+        let day0 = reckoning_at(&world, hornvale_astronomy::StdInstant::new(0.0).unwrap());
         assert_eq!(
             day0.lines, pair[0].lines,
             "day 0 matches the fixed pair's empty arm"
@@ -5864,7 +6228,7 @@ mod tests {
 
         let day100 = reckoning_at(
             &world,
-            hornvale_astronomy::StdDays::new(RECKONING_EPOCH_2_DAY).unwrap(),
+            hornvale_astronomy::StdInstant::new(RECKONING_EPOCH_2_DAY).unwrap(),
         );
         assert_eq!(
             day100.lines, pair[1].lines,
@@ -5895,7 +6259,10 @@ mod tests {
              lines are unaffected by the lens (they carry no epoch phrase)"
         );
 
-        let mid = reckoning_at(&world, hornvale_astronomy::StdDays::new(20_000.0).unwrap());
+        let mid = reckoning_at(
+            &world,
+            hornvale_astronomy::StdInstant::new(20_000.0).unwrap(),
+        );
         assert!(
             !mid.heading.is_empty() && !mid.lines.is_empty(),
             "an arbitrary day renders: heading={:?} lines={:?}",
@@ -6509,7 +6876,7 @@ mod tests {
         let world = generated(2);
         let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
         let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
-        let at = hornvale_astronomy::StdDays::new(RECKONING_EPOCH_2_DAY).unwrap();
+        let at = hornvale_astronomy::StdInstant::new(RECKONING_EPOCH_2_DAY).unwrap();
         assert_eq!(true_event_count(&world, at), 81);
 
         for kind in ["bugbear", "kobold"] {
@@ -6554,7 +6921,7 @@ mod tests {
         let seed3 = generated(3);
         let terrain3 = hornvale_worldgen::terrain_of(&seed3).expect("terrain reconstructs");
         let climate3 = hornvale_worldgen::climate_from(&seed3, &terrain3).expect("climate derives");
-        let at3 = hornvale_astronomy::StdDays::new(RECKONING_EPOCH_2_DAY).unwrap();
+        let at3 = hornvale_astronomy::StdInstant::new(RECKONING_EPOCH_2_DAY).unwrap();
         assert_eq!(true_event_count(&seed3, at3), 53);
         for kind in ["goblin", "hobgoblin"] {
             let (rung, _) =

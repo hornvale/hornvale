@@ -15,7 +15,7 @@ use hornvale_almanac::history::render_site;
 use hornvale_almanac::hornvale_history::record::{
     CauseOfEnd, Ended, Founding, Function, Notability, Occupation, TechHorizon,
 };
-use hornvale_kernel::{CellId, KindId, Seed, World};
+use hornvale_kernel::{KindId, Seed, Vertex, World};
 use hornvale_worldgen::{BakeId, BakeOccupation, History, emit_history};
 
 /// A bake-local handle for these hand-built fixtures — see the identical
@@ -36,7 +36,7 @@ fn base_record(community: u64, people: &'static str, site: u32, founded: f64) ->
     BakeOccupation {
         core: Occupation {
             people: KindId(people),
-            site: CellId(site),
+            site: Vertex(site),
             founded,
             ended: None,
             peak_population: 50,
@@ -49,15 +49,15 @@ fn base_record(community: u64, people: &'static str, site: u32, founded: f64) ->
         },
         community: bid(community),
         lineage: bid(community),
-        founded_from: Founding::Genesis(CellId(site)),
+        founded_from: Founding::Genesis(Vertex(site)),
         ended_by: Ended::Nature,
     }
 }
 
-/// A single young goblin hamlet at cell 3, put to the torch — the brief's
+/// A single young goblin hamlet at vertex 3, put to the torch — the brief's
 /// acceptance case.
-fn history_with_a_recently_burned_goblin_hamlet_at(cell: u32) -> History {
-    let mut hamlet = base_record(10, "goblin", cell, 340.0);
+fn history_with_a_recently_burned_goblin_hamlet_at(site: u32) -> History {
+    let mut hamlet = base_record(10, "goblin", site, 340.0);
     hamlet.core.ended = Some(1980.0);
     hamlet.core.peak_population = 40; // hamlet-scale (<= 150)
     hamlet.core.tech = TechHorizon::Bronze;
@@ -71,7 +71,7 @@ fn history_with_a_recently_burned_goblin_hamlet_at(cell: u32) -> History {
 fn a_burned_goblin_clearing_shows_its_doll() {
     let mut w = test_world();
     emit_history(&mut w, &history_with_a_recently_burned_goblin_hamlet_at(3)).unwrap();
-    let text = render_site(&w, CellId(3));
+    let text = render_site(&w, Vertex(3));
     assert!(text.contains("goblin"), "names the people:\n{text}");
     assert!(text.contains("burned"), "names the cause:\n{text}");
     assert!(
@@ -92,7 +92,7 @@ fn a_migrated_goblin_clearing_also_shows_its_doll() {
     hamlet.core.cause = Some(CauseOfEnd::Migrated);
     let hist = History::new(vec![hamlet], 2000.0);
     emit_history(&mut w, &hist).unwrap();
-    let text = render_site(&w, CellId(3));
+    let text = render_site(&w, Vertex(3));
     assert!(text.to_lowercase().contains("doll"), "{text}");
     assert!(text.contains("migrated"), "{text}");
 }
@@ -106,20 +106,20 @@ fn a_migrated_goblin_clearing_also_shows_its_doll() {
 /// year. Read naively, cause `migrated` sent that record down the
 /// climate-abandonment prose and the climate-abandonment residue, so on seed
 /// 42 a majority of the world's "migrated" ruins described a war as a people
-/// that "walked away over a generation" while the victim, one cell over, read
+/// that "walked away over a generation" while the victim, one vertex over, read
 /// "put to flight by ⟨them⟩". The distinction is query-side (spec §9 forbids a
 /// new cause variant or committed field): the contemporaneous victim IS the
 /// signal.
 #[test]
 fn a_conquerors_abandoned_seat_does_not_read_as_a_climate_departure() {
     let mut w = test_world();
-    // The conqueror's abandoned record at cell 3: it left in the year 1200.
+    // The conqueror's abandoned record at vertex 3: it left in the year 1200.
     let mut conqueror = base_record(10, "goblin", 3, 340.0);
     conqueror.core.ended = Some(1200.0);
     conqueror.core.peak_population = 40; // hamlet-scale, so the climate path WOULD leave a doll
     conqueror.core.cause = Some(CauseOfEnd::Migrated);
     conqueror.ended_by = Ended::Nature;
-    // The victim it drove off cell 7, that same year, at its hand.
+    // The victim it drove off vertex 7, that same year, at its hand.
     let mut victim = base_record(11, "kobold", 7, 500.0);
     victim.core.ended = Some(1200.0);
     victim.core.cause = Some(CauseOfEnd::Fled);
@@ -127,7 +127,7 @@ fn a_conquerors_abandoned_seat_does_not_read_as_a_climate_departure() {
     let hist = History::new(vec![conqueror, victim], 1250.0);
     emit_history(&mut w, &hist).unwrap();
 
-    let text = render_site(&w, CellId(3));
+    let text = render_site(&w, Vertex(3));
     assert!(
         !text.contains("the cold drove them on"),
         "a conquest must not narrate as a climate departure:\n{text}"
@@ -138,7 +138,7 @@ fn a_conquerors_abandoned_seat_does_not_read_as_a_climate_departure() {
         "the conqueror's line must say what it was:\n{text}"
     );
     assert!(
-        text.contains("cell 7"),
+        text.contains("vertex 7"),
         "and name the ground they took it from:\n{text}"
     );
     assert!(
@@ -154,13 +154,13 @@ fn a_conquerors_abandoned_seat_does_not_read_as_a_climate_departure() {
 #[test]
 fn a_climate_departure_still_reads_as_one_when_a_war_happened_elsewhere() {
     let mut w = test_world();
-    // The climate migrant at cell 3, gone in 1200 — no victim anywhere.
+    // The climate migrant at vertex 3, gone in 1200 — no victim anywhere.
     let mut migrant = base_record(10, "goblin", 3, 340.0);
     migrant.core.ended = Some(1200.0);
     migrant.core.peak_population = 40;
     migrant.core.cause = Some(CauseOfEnd::Migrated);
     migrant.ended_by = Ended::Nature;
-    // An unrelated community driven off cell 7 by a THIRD party, same year.
+    // An unrelated community driven off vertex 7 by a THIRD party, same year.
     let mut victim = base_record(11, "kobold", 7, 500.0);
     victim.core.ended = Some(1200.0);
     victim.core.cause = Some(CauseOfEnd::Fled);
@@ -172,7 +172,7 @@ fn a_climate_departure_still_reads_as_one_when_a_war_happened_elsewhere() {
     let hist = History::new(vec![migrant, victim, raider], 1250.0);
     emit_history(&mut w, &hist).unwrap();
 
-    let text = render_site(&w, CellId(3));
+    let text = render_site(&w, Vertex(3));
     assert!(
         text.contains("migrated"),
         "the climate line is unchanged for a record with no victim:\n{text}"
@@ -181,8 +181,8 @@ fn a_climate_departure_still_reads_as_one_when_a_war_happened_elsewhere() {
         text.to_lowercase().contains("doll"),
         "and it still leaves the climate assemblage:\n{text}"
     );
-    // The third party at cell 9 IS a conqueror, and reads as one.
-    let raider_text = render_site(&w, CellId(9));
+    // The third party at vertex 9 IS a conqueror, and reads as one.
+    let raider_text = render_site(&w, Vertex(9));
     assert!(
         raider_text.contains("were not driven from this ground"),
         "the real conqueror still reads as one:\n{raider_text}"
@@ -195,38 +195,38 @@ fn a_climate_departure_still_reads_as_one_when_a_war_happened_elsewhere() {
 #[test]
 fn a_restacked_site_reads_as_stratigraphy() {
     let mut w = test_world();
-    // Deep layer: a goblin hamlet that fled the ice (migrated) off cell 7.
+    // Deep layer: a goblin hamlet that fled the ice (migrated) off vertex 7.
     let mut first = base_record(1, "goblin", 7, 100.0);
     first.core.ended = Some(400.0);
     first.core.cause = Some(CauseOfEnd::Migrated);
-    // Later layer at cell 3, founded by the first's survivors.
+    // Later layer at vertex 3, founded by the first's survivors.
     let mut second = base_record(2, "goblin", 3, 420.0);
     second.founded_from = Founding::From(bid(1)); // settlers from the first community
     second.core.ended = Some(900.0);
     second.core.cause = Some(CauseOfEnd::Famine);
-    // A third, still-living layer restacked on cell 3.
+    // A third, still-living layer restacked on vertex 3.
     let mut third = base_record(3, "kobold", 3, 1500.0);
-    third.founded_from = Founding::Genesis(CellId(3));
+    third.founded_from = Founding::Genesis(Vertex(3));
     let hist = History::new(vec![first, second, third], 2000.0);
     emit_history(&mut w, &hist).unwrap();
 
-    let text = render_site(&w, CellId(3));
-    // Two layers stacked on cell 3 (the deep goblin layer + the living kobold).
+    let text = render_site(&w, Vertex(3));
+    // Two layers stacked on vertex 3 (the deep goblin layer + the living kobold).
     assert!(
         text.contains("lives have passed over this ground"),
         "{text}"
     );
-    // The founded_from thread: the goblin layer's founders fled cell 7.
+    // The founded_from thread: the goblin layer's founders fled vertex 7.
     assert!(
         text.contains("fled the ice"),
         "the founded-from thread:\n{text}"
     );
-    assert!(text.contains("cell 7"), "{text}");
+    assert!(text.contains("vertex 7"), "{text}");
 }
 
 #[test]
-fn an_empty_cell_says_so() {
+fn an_empty_vertex_says_so() {
     let w = test_world();
-    let text = render_site(&w, CellId(99));
+    let text = render_site(&w, Vertex(99));
     assert!(text.contains("Nothing ever settled here"), "{text}");
 }

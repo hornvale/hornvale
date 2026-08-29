@@ -94,7 +94,7 @@ hornvale-lab::hornvale_lab$metrics::tests::monophyly_elf_holds_at_seed_42	3.022
 hornvale-lab::hornvale_lab$metrics::tests::monophyly_goblinoid_holds_at_seed_42	2.758
 hornvale-lab::hornvale_lab$metrics::tests::monophyly_goblinoid_holds_on_the_seeds_the_unfiltered_universe_broke	9.309
 hornvale-lab::hornvale_lab$metrics::tests::narrowed_views_build_and_coerce	5.966
-hornvale-lab::hornvale_lab$metrics::tests::per_cell_diversity_is_finite_and_bounded_by_species_count_at_seed_42	3.866
+hornvale-lab::hornvale_lab$metrics::tests::per_vertex_diversity_is_finite_and_bounded_by_species_count_at_seed_42	3.866
 hornvale-lab::hornvale_lab$metrics::tests::per_species_metrics_have_the_expected_kinds_for_seed_42	2.664
 hornvale-lab::hornvale_lab$metrics::tests::phonotactic_validity_holds_for_every_species_name_at_seed_0	2.967
 hornvale-lab::hornvale_lab$metrics::tests::presiding_concepts_cover_seed_42s_rostered_concepts	3.004
@@ -142,8 +142,8 @@ hornvale-scene::golden$surrounds_v1_bytes_are_pinned	1.731
 hornvale-scene::golden$surrounds_v1_land_and_mark_bytes_are_pinned	4.085
 hornvale-scene::golden$the_projection_omits_unselected_layers	2.992
 hornvale-scene::golden$v1_bytes_are_pinned	1.416
-hornvale-scene::hornvale_scene$region::tests::continuous_layers_are_interpolated_not_nearest_cell	3.677
-hornvale-scene::hornvale_scene$region::tests::discrete_layers_match_nearest_cell	3.830
+hornvale-scene::hornvale_scene$region::tests::continuous_layers_are_interpolated_not_nearest_vertex	3.677
+hornvale-scene::hornvale_scene$region::tests::discrete_layers_match_nearest_vertex	3.830
 hornvale-scene::hornvale_scene$region::tests::locked_world_zeroes_swing_and_omits_bands	2.327
 hornvale-scene::hornvale_scene$region::tests::region_scene_is_sized_and_byte_deterministic	4.071
 hornvale-scene::hornvale_scene$region::tests::temperature_grid_region_at_zero_phase_equals_t_mean_plus_diurnal	4.109
@@ -163,7 +163,7 @@ hornvale-scene::hornvale_scene$surrounds::tests::every_cell_carries_its_own_micr
 hornvale-scene::hornvale_scene$surrounds::tests::every_non_seam_cell_carries_a_lattice_coordinate_and_seam_cells_carry_none	3.988
 hornvale-scene::hornvale_scene$surrounds::tests::exactly_one_cell_is_here_and_it_sits_at_the_lattice_origin	3.998
 hornvale-scene::hornvale_scene$surrounds::tests::micro_openness_spans_more_than_half_its_range_in_one_neighbourhood	4.084
-hornvale-scene::hornvale_scene$surrounds::tests::no_land_cell_bands_as_marine_relief	3.467
+hornvale-scene::hornvale_scene$surrounds::tests::no_land_vertex_bands_as_marine_relief	3.467
 hornvale-scene::hornvale_scene$surrounds::tests::the_chart_declares_which_fields_are_grid_resolution	4.193
 hornvale-scene::hornvale_scene$surrounds::tests::the_color_is_no_finer_grained_than_the_chart_already_was	3.838
 hornvale-scene::hornvale_scene$surrounds::tests::the_colored_builder_gives_placed_cells_a_color	4.097
@@ -213,10 +213,10 @@ hornvale-terrain::hornvale_terrain$features::tests::uniformize_turns_the_cave_ga
 hornvale-terrain::hornvale_terrain$land_elevation_attribution::the_land_elevation_terms_attribute_their_variance	6.540
 hornvale-terrain::hornvale_terrain$lithology::tests::alluvium_and_coal_are_reachable_across_seeds	1.515
 hornvale-terrain::rill_properties$a_branchs_width_is_anchored_to_its_drained_area_not_to_a_level	1.130
-hornvale-terrain::rill_properties$a_cells_branches_partition_its_own_unit_of_catchment	2.705
+hornvale-terrain::rill_properties$a_vertices_branches_partition_its_own_unit_of_catchment	2.705
 hornvale-terrain::rill_properties$every_branch_is_attached_to_the_line_above_it	2.928
 hornvale-terrain::rill_properties$every_run_reaches_its_outlet	1.178
-hornvale-terrain::rill_properties$the_network_renders_every_river_cells_downhill_edge	1.179
+hornvale-terrain::rill_properties$the_network_renders_every_river_vertices_downhill_edge	1.179
 hornvale-terrain::rill_properties$the_network_renders_the_whole_flow_tree	1.124
 hornvale-terrain::rill_properties$the_rendered_network_composes_to_the_coarse_graphs_terminus	1.140
 hornvale-terrain::tectonic_properties$every_default_globe_satisfies_every_invariant	1.920
@@ -387,7 +387,7 @@ hornvale-vessel::the_lintel$exit_is_still_refused_coarse_ward	3.679
 hornvale-vessel::the_purview$a_noun_at_both_grains_resolves_to_one_datum	4.594
 hornvale-vessel::the_purview$drawing_the_map_never_moves_the_world	4.066
 hornvale-vessel::the_purview$examine_accepts_exactly_the_union_of_both_grains	4.413
-hornvale-vessel::the_purview$map_out_names_the_drawn_cells_own_exits_not_the_walk_depths	4.423
+hornvale-vessel::the_purview$map_out_names_the_drawn_rooms_own_exits_not_the_walk_depths	4.423
 hornvale-vessel::the_purview$map_out_negative_names_the_real_problem_not_a_parse_failure	3.947
 hornvale-vessel::the_purview$map_out_past_u32_names_the_real_problem_not_a_parse_failure	4.457
 hornvale-vessel::the_purview$map_out_reaches_a_coarser_rung_and_stops_at_the_bottom	4.319
@@ -598,7 +598,7 @@ hornvale-worldgen::hornvale_worldgen$tests::settlements_carry_founding_alignment
 hornvale-worldgen::hornvale_worldgen$tests::settlements_reorganize_between_spinning_and_locked	5.369
 hornvale-worldgen::hornvale_worldgen$tests::sky_and_climate_reports_come_from_the_composition_root	1.243
 hornvale-worldgen::hornvale_worldgen$tests::sky_calendar_accessor_present_for_generated_absent_for_constant	3.722
-hornvale-worldgen::hornvale_worldgen$tests::soil_of_land_cells_show_at_least_two_orders	3.787
+hornvale-worldgen::hornvale_worldgen$tests::soil_of_land_vertices_show_at_least_two_orders	3.787
 hornvale-worldgen::hornvale_worldgen$tests::species_facts_touch_no_pre_existing_predicate	3.188
 hornvale-worldgen::hornvale_worldgen$tests::spinning_worlds_are_byte_identical_across_the_fix	4.306
 hornvale-worldgen::hornvale_worldgen$tests::substrate_field_is_finite_and_insolation_peaks_at_the_equator	4.002
@@ -620,11 +620,11 @@ hornvale-worldgen::hornvale_worldgen$tests::water_lines_feed_the_almanac_context
 hornvale-worldgen::hornvale_worldgen$tests::water_lines_report_a_nonzero_fresh_water_share	1.062
 hornvale-worldgen::hornvale_worldgen$tests::wild_concentrations_are_deterministic_beasts	4.098
 hornvale-worldgen::hornvale_worldgen$tests::zero_forcing_world_has_no_glacial_history	11.007
-hornvale-worldgen::hornvale_worldgen$vestige::tests::a_deep_ancient_cell_can_yield_a_prehuman_gate_scar	3.265
-hornvale-worldgen::hornvale_worldgen$vestige::tests::a_shallow_young_cell_yields_no_prehuman_vestige	3.320
+hornvale-worldgen::hornvale_worldgen$vestige::tests::a_deep_ancient_vertex_can_yield_a_prehuman_gate_scar	3.265
+hornvale-worldgen::hornvale_worldgen$vestige::tests::a_shallow_young_vertex_yields_no_prehuman_vestige	3.320
 hornvale-worldgen::hornvale_worldgen$vestige::tests::vestiges_at_orders_prehuman_first_then_people_and_is_deterministic	6.970
 hornvale-worldgen::hornvale_worldgen$vestige::tests::vestiges_at_with_no_prehuman_layer_starts_with_people_only	3.362
-hornvale-worldgen::hornvale_worldgen$vestige::tests::vestiges_field_matches_vestiges_at_per_cell	3.790
+hornvale-worldgen::hornvale_worldgen$vestige::tests::vestiges_field_matches_vestiges_at_per_vertex	3.790
 hornvale-worldgen::non_void_roster$every_kind_is_viable_somewhere	18.231
 hornvale-worldgen::person_promotion$every_person_is_born_before_they_die_and_after_their_community	3.009
 hornvale-worldgen::person_promotion$the_cast_is_byte_identical_across_two_builds	6.135

@@ -97,7 +97,7 @@ pub struct SelfChannel {
     pub settlement: String,
     /// How many live there.
     pub population: u32,
-    /// The agent's room, as a packed `RoomId`.
+    /// The agent's room, as a packed `FacetId`.
     pub room: u64,
 }
 
@@ -201,36 +201,53 @@ pub struct Narration {
 /// chart is not derivable while inside a building. One pane switches; two do
 /// not coexist.
 ///
-/// **Two variants, but the session now has more than two ways to be
+/// **Three variants, but the session has more than three ways to be
 /// somewhere** — and that asymmetry is deliberate rather than an oversight,
 /// so read it before adding a variant. `Session` carries three "not out of
 /// doors at ground level" states: `inside` (a built structure), `submerged`
 /// (the water column, The Column), and `underground` (the cave lattice, The
-/// Deep Realm). Only `inside` gets its own variant. The other two fold into
-/// `Walk`, which is what the `map` VERB does in exactly the same states —
-/// `map`'s band arms guard on `inside` alone, so `map` underground or
-/// submerged draws the surface chart too. Pane and verb therefore still
-/// cannot disagree, which is the property this union exists to hold; what
-/// they agree ON, in those two bands, is a chart of the country overhead.
-/// Whether that is the right answer is an open question, not a settled one
-/// (`CLIENT-band-fold` in the idea registry) — but it is the *same* answer
-/// the sim already gives, and changing it is a sim change before it is a
-/// schema change. `the_underground_band_folds_into_walk_as_map_does` in
-/// `session.rs`'s test module pins the fold (it lives there rather than in
-/// `tests/session_snapshot.rs` because reaching an open cave needs the
-/// private `delve_at`, seed 42's flagship having no cave under it), so a
-/// fourth band cannot be added without meeting this question.
+/// Deep Realm). `inside` and `underground` each get their own variant, and
+/// each now has its own `map` arm to match (The Gallery, Task 8).
+/// **`submerged` is the only one that still folds into `Walk`**, which is
+/// what the `map` VERB does in that same state — `map`'s band arms guard on
+/// `inside` and on `underground`, but there is no `submerged` arm, so `map`
+/// while submerged falls through to the surface chart. Pane and verb
+/// therefore still cannot disagree about `submerged`, which is the property
+/// this union exists to hold there; what they agree ON is a chart of the
+/// country overhead. Whether that is the right answer for `submerged` is an
+/// open question, not a settled one (`CLIENT-band-fold` in the idea
+/// registry, narrowed rather than closed by The Gallery — spec §5) — but it
+/// is the *same* answer the sim already gives, and changing it is a sim
+/// change before it is a schema change.
 ///
-/// The wire tag is `band`, with values `walk` and `chamber`. A client reads
-/// it before anything else, so renaming either is a `vessel/session/v2`.
+/// **The underground half of this doc used to read differently, twice, and
+/// both corrections are worth keeping.** Before The Gallery's Task 7,
+/// `underground` folded into `Walk` too, and `the_underground_band_folds_
+/// into_walk_as_map_does` (`session.rs`'s test module) pinned that fold
+/// under the same argument this doc now makes for `submerged` alone. Task 7
+/// gave the pane its own answer — `band: "underground"`, carrying
+/// `vessel/level/v1` — while the `map` VERB's own underground arm waited for
+/// a later, separate task (The Gallery, Task 8; spec §5's "the fold,
+/// retired"). Between the two, the pane and the verb answered the
+/// underground question differently on purpose, and the pin was renamed
+/// rather than deleted to say so — spec §5 itself states the disposition
+/// ("replaced, not deleted"). **Task 8 has since landed that arm**: `map`
+/// underground now draws the level from the very `SessionLevel` document
+/// the pane emits, and the pin's own second name,
+/// `the_pane_and_the_verb_agree_underground` (`session.rs`'s test module),
+/// asserts the agreement rather than the interval before it.
+///
+/// The wire tag is `band`, with values `walk`, `chamber` and `underground`. A
+/// client reads it before anything else, so renaming any of them is a
+/// `vessel/session/v2`.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(tag = "band", rename_all = "lowercase")]
 pub enum SpatialChannel {
-    /// Not inside a built structure: the walk-band chart,
-    /// `scene/surrounds/v2` embedded verbatim. One schema, one owner — the
-    /// same move `sensed.room` makes with `locale/room/v2`. Covers standing
-    /// out of doors, **and** the two bands that fold into it (submerged,
-    /// underground) — see the enum's own doc for why.
+    /// Not inside a built structure and not underground: the walk-band
+    /// chart, `scene/surrounds/v2` embedded verbatim. One schema, one owner —
+    /// the same move `sensed.room` makes with `locale/room/v2`. Covers
+    /// standing out of doors, **and** the one band that still folds into it
+    /// (submerged) — see the enum's own doc for why.
     Walk {
         /// The chart, as `windows/scene` renders it structurally. Boxed
         /// (The Grain) so `SpatialChannel`'s stack size stays close to
@@ -244,16 +261,55 @@ pub enum SpatialChannel {
         /// The plan, as `vessel/plan/v1`.
         plan: crate::plan::SessionPlan,
     },
+    /// Inside a generated cave descent (The Gallery, Task 7; spec §4).
+    Underground {
+        /// The level, as `vessel/level/v1`. Boxed for the same reason
+        /// `Walk::chart` is: `Box<T>` serializes exactly as `T`, so keeping
+        /// `SpatialChannel`'s own stack size close to its other variants'
+        /// costs no byte on the wire.
+        level: Box<crate::level_doc::SessionLevel>,
+    },
 }
 
 /// One examinable noun and its datum.
-/// type-audit: bare-ok(identifier-text: noun), bare-ok(prose: datum)
+/// type-audit: bare-ok(identifier-text: noun), bare-ok(prose: datum), bare-ok(identifier-text: kind)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct NounEntry {
     /// The noun as the prose mentions it.
     pub noun: String,
     /// What `examine` prints for it.
     pub datum: String,
+    /// Coarse kind for completion-capable clients. Optional on the wire:
+    /// older mirrors load unchanged (serde default), newer fixtures carry it.
+    /// Additive on `vessel/session/v2` per the schema discipline.
+    ///
+    /// **The Offer, Task 7 (spec §4): investigated as one of the four
+    /// advertisement surfaces and found NOT to route through
+    /// [`crate::affordance::offered_to_observer`], and this is a finding
+    /// rather than an oversight.** `kind` is populated in `Session::
+    /// snapshot` from `focalize::NounKind::tag()` (`Creature`/`Place`/
+    /// `Thing`/`Unknown`), which is fed exclusively by walk-band content —
+    /// biome, regime, village, sky (`focalize.rs`'s own `render`). No
+    /// `narration.nouns` entry has ever carried a chamber `AnchorKind` at
+    /// any call site (`grep -rn "AnchorKind" windows/vessel/src/snapshot.rs
+    /// windows/vessel/src/focalize.rs` returns nothing), including while
+    /// the possession stands indoors — `Session::snapshot` always renders
+    /// `self.focalizer.render(&vantage)` from the walk-band `Vantage`,
+    /// never from the chamber's own `Interior`, and a committed chamber-band
+    /// fixture (`clients/game/core/tests/fixtures/session-seed-42-chamber.json`)
+    /// carries only `"place"`/`"thing"` kinds, confirming this at the byte
+    /// level. `offered_to_observer` requires a real `AnchorKind`, so there
+    /// is no value this field could route through it without either (a) a
+    /// nonsensical mapping from a walk-band noun to a chamber anchor kind,
+    /// or (b) newly threading chamber anchors into `narration.nouns` at
+    /// all — a real feature addition, not a re-point of existing ad hoc
+    /// logic, and outside this task's "smallest risk" scope (spec §10.1).
+    /// See the Task 7 report for the full investigation; this doc exists so
+    /// the absence is a stated finding, not a silent gap the next reader
+    /// has to rediscover.
+    /// type-audit: bare-ok(identifier-text: kind)
+    #[serde(default)]
+    pub kind: String,
 }
 
 /// Serialize a snapshot. Floats quantize at this boundary and nowhere else.
@@ -284,7 +340,7 @@ mod tests {
         let npc = crate::liveness::body_at(&world, &ctx, &village, entity);
         ctx.describe(
             &npc.home,
-            WorldTime::new(0.5).expect("a day value is finite"),
+            WorldTime::from_std_days(0.5).expect("a day value is finite"),
         )
         .expect("the minted position describes")
     }
@@ -389,6 +445,7 @@ mod tests {
                 nouns: vec![NounEntry {
                     noun: "sky".to_string(),
                     datum: "Night.".to_string(),
+                    kind: "thing".to_string(),
                 }],
             },
             spatial: SpatialChannel::Chamber {

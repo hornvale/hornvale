@@ -34,6 +34,31 @@ pub const COPULA: StreamLabel<'static> = StreamLabel::from_static("copula");
 /// Article-presence draw, under grammar.
 /// type-audit: bare-ok(identifier-text: return)
 pub const ARTICLES: StreamLabel<'static> = StreamLabel::from_static("articles");
+/// Subordination-strategy (complementizer) presence/form draw, under
+/// grammar (The Mortise, Task 5): whether an embedded clause is marked
+/// with an overt free boundary word, and — when it is — the word's own
+/// drawn form, on the copula's exact pattern (one stream, presence and
+/// form together). A tongue that draws no subordinator marks nothing at
+/// the embedded clause's boundary: bare parataxis is a legitimate grammar,
+/// not a gap (spec §4.6).
+/// type-audit: bare-ok(identifier-text: return)
+pub const SUBORDINATOR: StreamLabel<'static> = StreamLabel::from_static("subordinator");
+/// Conjunction-presence/form draw, under grammar (The Mortise, Task 6):
+/// whether coordinated clauses are joined with an overt free coordinating
+/// word, and — when they are — the word's own drawn form, on the copula's
+/// exact pattern (one stream, presence and form together). A tongue that
+/// draws no conjunction joins coordinated clauses by bare juxtaposition:
+/// a legitimate grammar, not a gap (spec §4.10).
+///
+/// **A vocabulary word costs zero stream labels; a function word costs
+/// one.** A word is a `dynamic(concept)` value on the existing
+/// `PROTO_ROOT` axis ([`crate::etymology::proto_root`]), so the vocabulary
+/// a tongue draws is free. This label exists because the conjunction's
+/// PRESENCE is typological rather than lexical: the tongue that draws no
+/// conjunction is not missing a word, it has a different grammar — the
+/// same argument [`SUBORDINATOR`]'s doc makes for the complementizer axis.
+/// type-audit: bare-ok(identifier-text: return)
+pub const CONJUNCTION: StreamLabel<'static> = StreamLabel::from_static("conjunction");
 /// The numeracy-rung draw, under grammar.
 /// type-audit: bare-ok(identifier-text: return)
 pub const NUMERACY_RUNG: StreamLabel<'static> = StreamLabel::from_static("numeracy-rung");
@@ -155,3 +180,36 @@ pub const NUMBER_POSITION: StreamLabel<'static> = StreamLabel::from_static("numb
 /// Tense-marker position draw, under grammar.
 /// type-audit: bare-ok(identifier-text: return)
 pub const TENSE_POSITION: StreamLabel<'static> = StreamLabel::from_static("tense-position");
+/// Polarity-marking depth draw, under grammar/depth.
+/// type-audit: bare-ok(identifier-text: return)
+pub const POLARITY: StreamLabel<'static> = StreamLabel::from_static("polarity");
+/// Polarity-marker position draw, under grammar.
+/// type-audit: bare-ok(identifier-text: return)
+pub const POLARITY_POSITION: StreamLabel<'static> = StreamLabel::from_static("polarity-position");
+/// Person-marking (subject agreement) depth draw, under grammar/depth (The
+/// Rail, Task 7). A permanent seed-derivation label: renaming it would
+/// silently corrupt every world's drawn person-agreement depth; deliberate
+/// regeneration uses an epoch suffix, never a rename.
+/// type-audit: bare-ok(identifier-text: return)
+pub const PERSON: StreamLabel<'static> = StreamLabel::from_static("person");
+/// Person-marker position draw, under grammar (The Rail, Task 7). A
+/// permanent seed-derivation label, on the same footing as [`PERSON`].
+/// type-audit: bare-ok(identifier-text: return)
+pub const PERSON_POSITION: StreamLabel<'static> = StreamLabel::from_static("person-position");
+/// Interrogative-particle presence/form draw, under grammar (The Rail, Task
+/// 9): whether a tongue marks a polar question with an overt free particle,
+/// and — when it does — the particle's own drawn form, on the copula's
+/// exact pattern (one stream, presence and form together). A tongue that
+/// draws no particle questions by INTONATION — the commonest strategy
+/// cross-linguistically (Ultan 1978; Dryer, WALS 116) — which a text
+/// renderer cannot show, so it questions by transcription convention
+/// instead: its declarative surface plus `?` (spec §3.6,
+/// [`crate::typology::Orthography`] via [`crate::phonology::Phonology::orthography`]
+/// is a stated VIEW of a tongue, and punctuation is how writing encodes
+/// prosody). That is a legitimate drawn grammar, not a gap — the same
+/// argument [`SUBORDINATOR`]'s and [`CONJUNCTION`]'s docs make for their own
+/// axes. A permanent seed-derivation label: renaming it would silently
+/// corrupt every world's drawn interrogative-particle presence and form;
+/// deliberate regeneration uses an epoch suffix, never a rename.
+/// type-audit: bare-ok(identifier-text: return)
+pub const INTERROGATIVE: StreamLabel<'static> = StreamLabel::from_static("interrogative");

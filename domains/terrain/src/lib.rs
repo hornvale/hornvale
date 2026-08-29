@@ -36,10 +36,10 @@ pub mod water_table;
 
 pub use streams::stream_labels;
 
-pub use boundaries::{BoundaryKind, CellBoundary};
+pub use boundaries::{BoundaryKind, VertexBoundary};
 pub use branch::{
-    CatchmentCut, RILL_MIN_CATCHMENT, RILL_WHOLE, RILLS_PER_CELL_MAX, Rill, RillReading,
-    cell_catchment, rill_reading, rills_of, room_spacing,
+    CatchmentCut, RILL_MIN_CATCHMENT, RILL_WHOLE, RILLS_PER_VERTEX_MAX, Rill, RillReading,
+    rill_reading, rills_of, room_spacing, vertex_catchment,
 };
 pub use carve::{
     CarveDelta, CarveParams, Provenance, REROUTE_TOP_RIVERS, apply_repose, carve_incision,
@@ -51,7 +51,10 @@ pub use channel::{
     FLOODPLAIN_MAX_RATIO, GORGE_SLOPE, MEANDER_AMPLITUDE_RATIO, Transverse, band_edges,
     channel_half_width, confinement,
 };
-pub use delve::{HABITABLE_CEILING_K, delta_t_range_of, rung_at_delta_t, rung_at_depth, rungs};
+pub use delve::{
+    HABITABLE_CEILING_K, delta_t_range_of, rung_at_delta_t, rung_at_depth, rung_evaluation_depth_m,
+    rungs,
+};
 pub use features::{
     Cave, CaveKind, Commodity, Deposit, DepositProcess, cave_process, fracture_proneness,
     lavatube_proneness,
@@ -77,12 +80,12 @@ use hornvale_kernel::{
 };
 
 /// The *default* subdivision level of the shared Geosphere (10 × 4^6 + 2 =
-/// 40,962 cells, ~110 km resolution) — used when `TerrainPins.globe_level`
+/// 40,962 vertices, ~110 km resolution) — used when `TerrainPins.globe_level`
 /// is `None`. Canonical grid raised from level 5 to level 6 in the Crust
 /// epoch (spec §5): the coarser grid under-resolved shelf and coastline
 /// structure for the sculpting work that campaign does. The composition
 /// root builds `Geosphere::new(level)` (per-level cached) once per process
-/// per level; every terrain (and, in Plan 3c, climate) CellMap in a world
+/// per level; every terrain (and, in Plan 3c, climate) VertexMap in a world
 /// is built against the mesh its level selected and must only ever be
 /// queried with it.
 /// type-audit: bare-ok(count)
@@ -113,12 +116,14 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     registry.register_predicate(
         facts::OCEAN_FRACTION,
         true,
+        // lexicon: FROZEN — a predicate description is serialized into every world
         "fraction of globe cells below sea level",
     )?;
     registry.register_predicate(facts::SEA_LEVEL_M, true, "sea level in meters")?;
     registry.register_predicate(
         facts::HIGHEST_ELEVATION_M,
         true,
+        // lexicon: FROZEN — a predicate description is serialized into every world
         "highest globe cell elevation in meters",
     )?;
     registry.register_predicate(

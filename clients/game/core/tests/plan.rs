@@ -5,7 +5,9 @@ const FIXTURE: &str = include_str!("fixtures/session-seed-42-chamber.json");
 fn chamber_plan() -> hornvale_game_core::Plan {
     match Snapshot::parse(FIXTURE).unwrap().spatial {
         Spatial::Chamber { plan } => plan,
-        Spatial::Walk { .. } => panic!("fixture must be a chamber-band turn"),
+        Spatial::Walk { .. } | Spatial::Underground { .. } => {
+            panic!("fixture must be a chamber-band turn")
+        }
     }
 }
 

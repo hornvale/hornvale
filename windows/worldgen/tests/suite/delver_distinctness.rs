@@ -1,10 +1,10 @@
 //! THE DELVERS — the pairwise capacity-distinctness instrument.
 //!
 //! Two authored kinds are *the same kind wearing two names* exactly when the
-//! world cannot tell them apart: when the per-cell suitability field
+//! world cannot tell them apart: when the per-vertex suitability field
 //! [`hornvale_worldgen::per_species_suitability`] computes for one is a linear
 //! image of the other's. This measures that directly — Pearson `r` between two
-//! kinds' suitability over the LAND cells of a built world.
+//! kinds' suitability over the LAND vertices of a built world.
 //!
 //! **Built before the five dwarves exist, deliberately.** The campaign's P2 and
 //! P3 are *nulls*: they predict pairs that will read as near-identical. An
@@ -17,7 +17,7 @@
 //! A probe whose every assertion reads "these two are the same" is
 //! indistinguishable from a probe that computes nothing and returns a constant.
 //! The Benchmark shipped exactly that: a guard that was vacuous and green
-//! because it sampled the one cell where the bug was invisible. So this file
+//! because it sampled the one vertex where the bug was invisible. So this file
 //! pins the instrument in BOTH directions before any dwarf is authored —
 //! it must separate two kinds known to differ, and it must return exactly
 //! `1.0` for a kind against itself.
@@ -25,7 +25,7 @@
 //! ## Measured, 2026-08-07, seed 42, on the pre-dwarf roster
 //!
 //! ```text
-//!   pair                            r          land cells
+//!   pair                            r          land vertices
 //!   gnoll   vs kobold        0.291124            11,066
 //!   goblin  vs goblin        1.000000            11,066
 //! ```
@@ -51,7 +51,7 @@
 // for.
 #![allow(clippy::disallowed_methods)]
 
-use hornvale_kernel::CellId;
+use hornvale_kernel::Vertex;
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
     SettlementPins, SkyChoice, build_world, climate_of, per_species_suitability, sky_of, terrain_of,
@@ -74,7 +74,7 @@ fn pearson(xs: &[f64], ys: &[f64]) -> f64 {
     assert_eq!(
         xs.len(),
         ys.len(),
-        "correlation needs paired samples over the same cells"
+        "correlation needs paired samples over the same vertices"
     );
     assert!(!xs.is_empty(), "correlation over an empty land mask");
     let n = xs.len() as f64;
@@ -101,15 +101,15 @@ fn pearson(xs: &[f64], ys: &[f64]) -> f64 {
     sxy / (sxx * syy).sqrt()
 }
 
-/// Pearson correlation of each requested pair of kinds' per-cell suitability,
-/// over the land cells of the world at `seed`, ascending by pair.
+/// Pearson correlation of each requested pair of kinds' per-vertex suitability,
+/// over the land vertices of the world at `seed`, ascending by pair.
 ///
 /// `kinds` is a roster, not a set: every unordered pair of *positions* is
 /// reported, so `["goblin", "goblin"]` yields the one self-pair rather than
 /// being deduplicated away — that pair is the identity control. Each returned
 /// key is the two names in ascending order.
 ///
-/// Land is `!terrain.is_ocean(cell)`, never `elevation < 0`: a world's sea
+/// Land is `!terrain.is_ocean(vertex)`, never `elevation < 0`: a world's sea
 /// level is not zero (seed 42's sits at −2,936 m).
 ///
 /// **The species slices are built exactly as the live path builds them**
@@ -121,7 +121,7 @@ fn pearson(xs: &[f64], ys: &[f64]) -> f64 {
 /// to notice it. `per_species_suitability` scores each kind independently, so
 /// passing the whole roster costs a little time and changes no value.
 ///
-/// The `u32` in the returned `Vec<(u32, CellMap<f64>)>` is a **build-local
+/// The `u32` in the returned `Vec<(u32, VertexMap<f64>)>` is a **build-local
 /// dense index, not a stable species id** — it is a position in the
 /// `species_biosphere` slice, which is why the kind order is captured from that
 /// same iteration and used to map a name back to a column.
@@ -150,7 +150,9 @@ fn pairwise_correlations(seed: u64, kinds: &[&str]) -> Vec<((String, String), f6
     let obliquity_deg = system.anchor.obliquity.get();
     let regime = match system.anchor.rotation {
         hornvale_astronomy::Rotation::Spinning { day, .. } => {
-            hornvale_climate::RotationRegime::Spinning { day_std: day.get() }
+            hornvale_climate::RotationRegime::Spinning {
+                day_std: day.as_std_days(),
+            }
         }
         hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
     };
@@ -198,7 +200,7 @@ fn pairwise_correlations(seed: u64, kinds: &[&str]) -> Vec<((String, String), f6
         &species_affinity,
     );
 
-    let land: Vec<CellId> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+    let land: Vec<Vertex> = geo.vertices().filter(|&c| !terrain.is_ocean(c)).collect();
 
     // A kind's suitability over land, found by mapping its NAME through the
     // roster order above to the build-local index, then through the returned
@@ -216,7 +218,7 @@ fn pairwise_correlations(seed: u64, kinds: &[&str]) -> Vec<((String, String), f6
         land.iter().map(|&c| *k.get(c)).collect()
     };
 
-    println!("== seed {seed} ==  land cells: {}", land.len());
+    println!("== seed {seed} ==  land vertices: {}", land.len());
     let mut out: Vec<((String, String), f64)> = Vec::new();
     for (i, first) in kinds.iter().enumerate() {
         for second in &kinds[i + 1..] {
@@ -244,7 +246,7 @@ fn pairwise_correlations(seed: u64, kinds: &[&str]) -> Vec<((String, String), f6
 /// worthless.
 ///
 /// Measured 2026-08-07 on seed 42's pre-dwarf roster: `r = 0.291124` over
-/// 11,066 land cells. The 0.95 threshold is a discrimination floor, not a
+/// 11,066 land vertices. The 0.95 threshold is a discrimination floor, not a
 /// tuned one — the measured value clears it by a wide margin, and if a future
 /// change pushes the pair above it, the correct response is to report that the
 /// roster has gone degenerate, never to relax the number.

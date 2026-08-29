@@ -2,11 +2,11 @@
 //!
 //! The vacuity check spec §4 gates its readout behind
 //! (`docs/superpowers/specs/2026-08-03-the-generalist-design.md`). Two
-//! generalists whose per-cell fit vectors are one generalist with two names
+//! generalists whose per-vertex fit vectors are one generalist with two names
 //! would make every H1-H3 result in Task 6 an artifact.
 //!
 //! **Why this file does NOT use Spearman rank correlation** (spec §4's
-//! original preregistered wording: "their per-cell fit vectors must not be a
+//! original preregistered wording: "their per-vertex fit vectors must not be a
 //! monotone rescaling of one another"). `ConditionResponse::eval` is
 //! `floor + (1 - floor) * devotion * exp(-0.5 * z^2)`
 //! (`kernel/src/ecology.rs`), `z = (field - optimum) / width`: for a FIXED
@@ -27,8 +27,8 @@
 //! section for the amendment note) - not a quiet rewrite.
 //!
 //! **The statistic this file uses instead: each kind's coefficient of
-//! variation (CV = population stddev / mean) of per-cell fit, pooled over
-//! the same settleable-cell population, compared as `cv(human) / cv(goblin)`.**
+//! variation (CV = population stddev / mean) of per-vertex fit, pooled over
+//! the same settleable-vertex population, compared as `cv(human) / cv(goblin)`.**
 //! CV is scale-free, so it isolates *relative dispersion* (shape), not
 //! overall magnitude - a claim a monotone-invariant rank statistic cannot
 //! make at all.
@@ -56,11 +56,11 @@
 //! `per_species_suitability` (`windows/worldgen/src/lib.rs`) evaluates elevation
 //! with a HARD floor of `0.0` (sovereignty buffers physiology, never
 //! geometry): `cn.elevation.eval(s.elevation, 0.0)` reduces the general
-//! formula to exactly `devotion_E * bump_E(cell)`, where `bump_E` depends
-//! only on `optimum`/`width`. The whole-cell fit is therefore
-//! `K(cell) = devotion_E * [supply(cell) * eval_temp(cell) *
-//! eval_moisture(cell) * eval_insolation(cell) * bump_E(cell)]` - `devotion_E`
-//! multiplies EVERY cell's `K` by the same positive constant, holding
+//! formula to exactly `devotion_E * bump_E(vertex)`, where `bump_E` depends
+//! only on `optimum`/`width`. The whole-vertex fit is therefore
+//! `K(vertex) = devotion_E * [supply(vertex) * eval_temp(vertex) *
+//! eval_moisture(vertex) * eval_insolation(vertex) * bump_E(vertex)]` - `devotion_E`
+//! multiplies EVERY vertex's `K` by the same positive constant, holding
 //! everything else fixed. `CV = stddev / mean` is scale-invariant under a
 //! positive constant multiplier, so varying elevation's `devotion` alone
 //! moves `cv_ratio` by exactly zero: it is algebraically, not just
@@ -88,7 +88,7 @@
 //! every axis (`domains/species/src/lib.rs`). Measured after that change,
 //! seeds 1..=30:
 //!
-//! | case | cv(variant) | cv(goblin) | cv_ratio | gap | n cells |
+//! | case | cv(variant) | cv(goblin) | cv_ratio | gap | n vertices |
 //! |---|---|---|---|---|---|
 //! | real (human's own niche, post re-authoring) | 0.4641 | 0.4871 | 0.9528 | **0.0472** | 142,587 |
 //! | mutated (human's `condition_niche` ← goblin's) | 0.4813 | 0.4871 | 0.9882 | **0.0118** | 142,590 |
@@ -123,42 +123,42 @@ use hornvale_worldgen::{
     SettlementPins, SkyChoice, build_world, climate_of, per_species_suitability, sky_of, terrain_of,
 };
 
-/// The viability floor below which a cell's K is ecological noise rather
+/// The viability floor below which a vertex's K is ecological noise rather
 /// than presence - [`hornvale_demography::FLOOR`], unchanged; reused
 /// identical to `generalist_baseline.rs`'s `VIABILITY_FLOOR`.
 const VIABILITY_FLOOR: f64 = hornvale_demography::FLOOR;
 
 const SEEDS: std::ops::RangeInclusive<u64> = 1..=30;
 
-/// Minimum pooled settleable-cell count [`cv_ratio_human_vs_goblin`] will
+/// Minimum pooled settleable-vertex count [`cv_ratio_human_vs_goblin`] will
 /// accept before asserting on its output. `generalist_baseline.rs` guards
 /// its own measurement against an EMPTY sample; this guards against a
 /// small-but-nonzero one, which is the more dangerous failure here - `NaN`
 /// (an exactly-empty or exactly-zero-mean sample) already fails every
 /// `>=`/`<` comparison below loudly, but a shrunk-yet-nonempty population
-/// (e.g. a future `FLOOR` or land-mask change cutting the cell set to a few
+/// (e.g. a future `FLOOR` or land-mask change cutting the vertex set to a few
 /// hundred) would not: `cv_ratio` on a small sample drifts from `1.0` on
 /// noise alone, `gap >= CV_RATIO_GAP_FLOOR` could pass for the wrong reason,
 /// and the vacuity check would green-light Task 6 on a population too small
 /// to trust. `142_587`/`142_590` were the two measured populations (real and
 /// mutated respectively, seeds 1..=30, mesh level 6); `100_000` sits with
 /// wide margin below both while still being far above "a few hundred".
-const MIN_SETTLEABLE_CELLS: usize = 100_000;
+const MIN_SETTLEABLE_VERTICES: usize = 100_000;
 
-/// Floor on `|cv(human)/cv(goblin) - 1|` above which the two kinds' per-cell
+/// Floor on `|cv(human)/cv(goblin) - 1|` above which the two kinds' per-vertex
 /// fit dispersion is judged measurably different (the gate this file
 /// exists to be); below it the two shapes are judged indistinguishable and
 /// the vacuity check fires.
 ///
 /// **Measured values this constant was set from** (mesh level 6, the
-/// default `Geosphere` subdivision - 40,962 cells/world, ~110 km
-/// resolution; seeds 1..=30; cell filter: pooled over cells where EITHER
+/// default `Geosphere` subdivision - 40,962 vertices/world, ~110 km
+/// resolution; seeds 1..=30; vertex filter: pooled over vertices where EITHER
 /// compared kind's `per_species_suitability` output clears
 /// [`VIABILITY_FLOOR`]). Superseded by the Task 5b re-authoring
 /// (2026-08-04, `domains/species/src/lib.rs`'s `human_condition_niche()`) -
 /// current numbers:
 ///
-/// | case | cv(human variant) | cv(goblin) | cv_ratio | \|ratio − 1\| | n cells |
+/// | case | cv(human variant) | cv(goblin) | cv_ratio | \|ratio − 1\| | n vertices |
 /// |---|---|---|---|---|---|
 /// | real (human's own niche) | 1.0675 | 1.0827 | 0.9859 | **0.0141** | 438,018 |
 /// | mutated (human's `condition_niche` ← goblin's) | 1.0793 | 1.0826 | 0.9969 | **0.0031** | 437,968 |
@@ -170,7 +170,7 @@ const MIN_SETTLEABLE_CELLS: usize = 100_000;
 ///
 /// What actually happened is worth reading before touching this again, because
 /// "the gap shrank 3.3x" invites the wrong conclusion. Era-varying capacity
-/// gives cold ground real capacity, so the scored cell population TRIPLED
+/// gives cold ground real capacity, so the scored vertex population TRIPLED
 /// (142,587 → 438,018) and both species' fit dispersions MORE THAN DOUBLED
 /// (human 0.4641 → 1.0675, goblin 0.4871 → 1.0827). Against that much larger
 /// and more varied sample the two peoples' dispersions are relatively closer,
@@ -194,8 +194,8 @@ const CV_RATIO_GAP_FLOOR: f64 = 0.007;
 /// Population coefficient of variation (stddev / mean) of `vals`.
 ///
 /// A zero-mean `vals` (which [`cv_ratio_human_vs_goblin`]'s
-/// [`MIN_SETTLEABLE_CELLS`] guard makes unreachable in practice, since every
-/// pooled cell has at least one kind's `K` above the tiny
+/// [`MIN_SETTLEABLE_VERTICES`] guard makes unreachable in practice, since every
+/// pooled vertex has at least one kind's `K` above the tiny
 /// [`VIABILITY_FLOOR`]) would make this `NaN`; every comparison this file
 /// makes against the result (`>=`, `<`) is false for `NaN`, so a degenerate
 /// input fails the assertion loudly rather than silently passing it.
@@ -206,13 +206,13 @@ fn coefficient_of_variation(vals: &[f64]) -> f64 {
     variance.sqrt() / mean
 }
 
-/// Build `seed` to full depth and return `(fits_a, fits_b)`: the per-cell K
+/// Build `seed` to full depth and return `(fits_a, fits_b)`: the per-vertex K
 /// (`per_species_suitability`'s raw output) for `bio_a` and `bio_b` respectively,
-/// over exactly the cells where at least one of the two clears
+/// over exactly the vertices where at least one of the two clears
 /// [`VIABILITY_FLOOR`] - the same "settleable by at least one roster member"
 /// filter `generalist_baseline.rs` applies over the five-people roster,
 /// narrowed here to the two kinds under comparison. Both vectors are the
-/// same length and indexed cell-for-cell, same as `measure_one`'s
+/// same length and indexed vertex-for-vertex, same as `measure_one`'s
 /// `per_people_fits` there.
 /// Every variant's `(human_fits, goblin_fits)` pair for one seed, from **one**
 /// world build and **one** `per_species_suitability` call.
@@ -250,7 +250,9 @@ fn measure_fits(
     let obliquity = system.anchor.obliquity.get();
     let regime = match system.anchor.rotation {
         hornvale_astronomy::Rotation::Spinning { day, .. } => {
-            hornvale_climate::RotationRegime::Spinning { day_std: day.get() }
+            hornvale_climate::RotationRegime::Spinning {
+                day_std: day.as_std_days(),
+            }
         }
         hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
     };
@@ -279,7 +281,7 @@ fn measure_fits(
     let k_goblin = at(humans.len() as u32);
 
     // Each variant keeps its OWN viability filter against goblin: the
-    // surviving cell set differs per variant, which is why goblin's fits are
+    // surviving vertex set differs per variant, which is why goblin's fits are
     // re-collected per variant rather than shared. Pooling them would quietly
     // change every reported cv(goblin).
     humans
@@ -289,9 +291,9 @@ fn measure_fits(
             let k_h = at(i as u32);
             let mut fits_h: Vec<f64> = Vec::new();
             let mut fits_g: Vec<f64> = Vec::new();
-            for cell in geo.cells() {
-                let vh = *k_h.get(cell);
-                let vg = *k_goblin.get(cell);
+            for vertex in geo.vertices() {
+                let vh = *k_h.get(vertex);
+                let vg = *k_goblin.get(vertex);
                 if vh >= VIABILITY_FLOOR || vg >= VIABILITY_FLOOR {
                     fits_h.push(vh);
                     fits_g.push(vg);
@@ -348,7 +350,7 @@ fn human_niche_with_goblins_widths() -> ConditionNiche {
 /// taken verbatim from the canonical registry unless `override_human_niche`
 /// is supplied, in which case human's `condition_niche` is replaced before
 /// the K build (mass, resource niche, and potency stay human's own).
-/// Asserts [`MIN_SETTLEABLE_CELLS`] before returning - see that constant's
+/// Asserts [`MIN_SETTLEABLE_VERTICES`] before returning - see that constant's
 /// doc for why a shrunk-but-nonempty population is dangerous here.
 /// Every variant's `cv_ratio` against goblin, over **one** pass of the seed
 /// sweep. `None` means human's own authored niche; `Some(n)` substitutes `n`.
@@ -399,9 +401,9 @@ fn cv_ratios(variants: &[Option<ConditionNiche>]) -> Vec<f64> {
     (0..variants.len())
         .map(|i| {
             assert!(
-                fits_human[i].len() >= MIN_SETTLEABLE_CELLS,
-                "only {} settleable cells pooled over {} seeds (floor {MIN_SETTLEABLE_CELLS}); \
-                 cv_ratio on a population this small cannot be trusted - see MIN_SETTLEABLE_CELLS's doc",
+                fits_human[i].len() >= MIN_SETTLEABLE_VERTICES,
+                "only {} settleable vertices pooled over {} seeds (floor {MIN_SETTLEABLE_VERTICES}); \
+                 cv_ratio on a population this small cannot be trusted - see MIN_SETTLEABLE_VERTICES's doc",
                 fits_human[i].len(),
                 SEEDS.count()
             );
@@ -409,7 +411,7 @@ fn cv_ratios(variants: &[Option<ConditionNiche>]) -> Vec<f64> {
             let cv_goblin = coefficient_of_variation(&fits_goblin[i]);
             let ratio = cv_human / cv_goblin;
             println!(
-                "cv(human) = {cv_human:.4}, cv(goblin) = {cv_goblin:.4}, cv_ratio = {ratio:.4}, n = {} cells",
+                "cv(human) = {cv_human:.4}, cv(goblin) = {cv_goblin:.4}, cv_ratio = {ratio:.4}, n = {} vertices",
                 fits_human[i].len()
             );
             ratio
@@ -459,7 +461,7 @@ fn substituting_goblins_niche_for_humans_is_detected() {
     // different `floor` (~0.447 vs ~0.335) on the three non-elevation axes,
     // and human's resource-niche ResourceVector (PLANT_FORAGE 0.55 /
     // ANIMAL_PREY 0.45) differs slightly from goblin's (0.50/0.50), changing
-    // `axis_supply`'s per-cell weighting a little. Neither difference
+    // `axis_supply`'s per-vertex weighting a little. Neither difference
     // touches the elevation axis's hard floor(0.0) term. If a later
     // campaign changes human's mass or resource niche, this residual will
     // move and this assertion's message ("this statistic cannot distinguish
@@ -547,7 +549,7 @@ fn substituting_goblins_niche_for_humans_is_detected() {
 /// Tracked as `BIO-gause-distinctness-vacuous`. The repair is a statistic
 /// with power against this world, not a lower floor.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the collapsed CV-ratio arms of the Gause-distinctness instrument; run by hand (The Generalist, Task 5, BIO-gause-distinctness-vacuous, answered its question; demoted by The Governor 2026-08-28)"]
 fn the_collapsed_cv_ratio_arms_are_pinned_as_witnesses() {
     let ratios = cv_ratios(&[
         None,
@@ -568,9 +570,11 @@ fn the_collapsed_cv_ratio_arms_are_pinned_as_witnesses() {
             "the {name} cv_ratio moved to {got:.4}, outside the pinned witness {want} \
              +/- 0.0005. This is NOT a number to update — re-read whether the arms have \
              SEPARATED again (which would restore the readout) or drifted together \
-             further, then re-state this witness, both #[ignore] reasons above, their \
-             roster entry in cli/tests/heavy_tier.rs and the \
-             BIO-gause-distinctness-vacuous registry row in the SAME commit."
+             further, then re-state this witness, both #[ignore] reasons above and \
+             the BIO-gause-distinctness-vacuous registry row in the SAME commit. \
+             There is no roster entry to restate: The Governor demoted both tests \
+             to probe:, and cli/tests/fixtures/heavy-roster.txt lists heavy: tests \
+             only."
         );
     }
 }

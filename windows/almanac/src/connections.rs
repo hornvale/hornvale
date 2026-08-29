@@ -26,29 +26,29 @@
 //! only where the ambiguity is.
 
 use crate::qualify::SiteLabels;
-use hornvale_kernel::{CellId, World};
+use hornvale_kernel::{Vertex, World};
 use hornvale_topology::{ConnectionGraph, EdgeKind};
 
 /// Below this conductance, an edge carries no real natural route -- it is
 /// the zero-conductance bare-mesh adjacency `hornvale_worldgen::graph_derive`
 /// emits for a pair straddling impassable terrain (ocean; see
 /// `cost_conductance`'s zero case in that module). Every real route --
-/// adjacency between two passable cells, a sailing lane, a land corridor --
+/// adjacency between two passable vertices, a sailing lane, a land corridor --
 /// carries a strictly positive conductance, so this threshold (well below
 /// the smallest such value, `1 / corridor_max_cost` at the derivation's
 /// default config) separates "genuinely unreachable" from "merely
 /// expensive." Regions computed at this threshold answer "what can a
-/// traveler actually reach," not "what cells happen to share a mesh
+/// traveler actually reach," not "what vertices happen to share a mesh
 /// boundary."
 /// type-audit: bare-ok(ratio: threshold)
 const ISOLATION_THRESHOLD: f64 = 1e-6;
 
 /// The smallest region size this module reports as a real stretch of
-/// geography rather than mesh-adjacency noise. Two ocean cells share a
+/// geography rather than mesh-adjacency noise. Two ocean vertices share a
 /// natural route only via a specific dated [`EdgeKind::WaterRoute`] lane
 /// between two coasts -- there is no general "open ocean" traversal edge --
 /// so under [`ISOLATION_THRESHOLD`] almost every one of a globe's tens of
-/// thousands of ocean cells becomes its own trivial one-cell "region,"
+/// thousands of ocean vertices becomes its own trivial one-vertex "region,"
 /// vastly outnumbering the real landmasses. Reporting that raw count
 /// ("29911 regions divide the world") would bury the handful of regions a
 /// reader actually cares about, so region-count prose filters to `>=` this
@@ -72,7 +72,7 @@ const MIN_NOTABLE_REGION_SIZE: usize = 2;
 /// only against the other sites *this* document names (see
 /// [`crate::qualify`]).
 /// type-audit: bare-ok(artifact: return)
-pub fn render_connections(world: &World, site: CellId, graph: &ConnectionGraph) -> String {
+pub fn render_connections(world: &World, site: Vertex, graph: &ConnectionGraph) -> String {
     let water = destinations(graph, site, EdgeKind::WaterRoute);
     let land = destinations(graph, site, EdgeKind::LandRoute);
 
@@ -100,11 +100,11 @@ pub fn render_connections(world: &World, site: CellId, graph: &ConnectionGraph) 
 }
 
 /// Every distinct destination `site` reaches by an edge of `kind`,
-/// ascending `CellId` order (deterministic regardless of the graph's own
+/// ascending `Vertex` order (deterministic regardless of the graph's own
 /// edge-insertion order, and de-duplicated: a real derivation never emits a
 /// parallel edge between the same pair, but a hand-built graph might).
-fn destinations(graph: &ConnectionGraph, site: CellId, kind: EdgeKind) -> Vec<CellId> {
-    let mut out: Vec<CellId> = graph
+fn destinations(graph: &ConnectionGraph, site: Vertex, kind: EdgeKind) -> Vec<Vertex> {
+    let mut out: Vec<Vertex> = graph
         .edges(site)
         .iter()
         .filter(|e| e.kind == kind)
@@ -120,7 +120,7 @@ fn destinations(graph: &ConnectionGraph, site: CellId, kind: EdgeKind) -> Vec<Ce
 /// `labels` and the already-collected destination lists rather than
 /// re-deriving them, so the roster the qualification was computed over and
 /// the roster this paragraph prints cannot drift apart.
-fn routes_paragraph(labels: &SiteLabels, water: &[CellId], land: &[CellId], label: &str) -> String {
+fn routes_paragraph(labels: &SiteLabels, water: &[Vertex], land: &[Vertex], label: &str) -> String {
     if water.is_empty() && land.is_empty() {
         return format!(
             "{label} opens onto no sea-lane and no natural overland route of its own: \
@@ -152,11 +152,11 @@ fn routes_paragraph(labels: &SiteLabels, water: &[CellId], land: &[CellId], labe
 /// world's largest region, and -- when it is not the largest -- an explicit
 /// "cut off" line naming the gap no natural route bridges. The region count
 /// quoted is filtered to [`MIN_NOTABLE_REGION_SIZE`] (see that constant's
-/// doc for why the raw count is mostly ocean-cell noise); `site`'s own
+/// doc for why the raw count is mostly ocean-vertex noise); `site`'s own
 /// region is always counted even if it falls below that floor, so a
-/// genuinely single-cell islet still reports honestly rather than vanishing
+/// genuinely single-vertex islet still reports honestly rather than vanishing
 /// from its own sentence.
-fn isolation_paragraph(site: CellId, graph: &ConnectionGraph, label: &str) -> String {
+fn isolation_paragraph(site: Vertex, graph: &ConnectionGraph, label: &str) -> String {
     let regions = graph.reachable_regions(ISOLATION_THRESHOLD);
     let region = regions
         .iter()
@@ -172,18 +172,18 @@ fn isolation_paragraph(site: CellId, graph: &ConnectionGraph, label: &str) -> St
     if size == largest {
         format!(
             "{label} sits within the largest connected stretch of the known world ({size} \
-             cell{}, the largest of {notable_regions} real region{} the map resolves into) \
+             {}, the largest of {notable_regions} real region{} the map resolves into) \
              -- well-linked, nothing here is stranded.\n",
-            plural(size),
+            vertex_noun(size),
             plural(notable_regions),
         )
     } else {
         format!(
-            "{label}'s region holds only {size} cell{} -- cut off from the wider world: no \
+            "{label}'s region holds only {size} {} -- cut off from the wider world: no \
              route this graph knows of crosses the gap that separates it from the largest \
-             region ({largest} cells). {notable_regions} real regions divide the known world \
-             in all.\n",
-            plural(size),
+             region ({largest} vertices). {notable_regions} real regions divide the known \
+             world in all.\n",
+            vertex_noun(size),
         )
     }
 }
@@ -193,13 +193,23 @@ fn plural(n: usize) -> &'static str {
     if n == 1 { "" } else { "s" }
 }
 
+/// "vertex" or "vertices" — an irregular plural [`plural`] cannot spell.
+///
+/// The Lexicon of Place's sweep renamed the noun here and left `plural(size)`
+/// behind it, which rendered "5548 vertexs". Byte-identity could not catch it:
+/// seed 42's sampled sites all sit OUTSIDE the largest region, so the branch
+/// carrying it is never taken by any committed artifact.
+fn vertex_noun(n: usize) -> &'static str {
+    if n == 1 { "vertex" } else { "vertices" }
+}
+
 /// A world-level overview of the transport topology's reachability: how many
 /// real regions the natural-route graph resolves into, the largest, and the
 /// sizes of the rest -- the gallery page's second half (a site's own
 /// connections are [`render_connections`]'s job; this is the map-level
 /// summary). Filtered to [`MIN_NOTABLE_REGION_SIZE`] for the same reason
 /// [`isolation_paragraph`] filters its count: almost every one of a globe's
-/// ocean cells is its own trivial one-cell "region" under
+/// ocean vertices is its own trivial one-vertex "region" under
 /// [`ISOLATION_THRESHOLD`] (no general open-ocean traversal edge exists,
 /// only dated coast-to-coast [`EdgeKind::WaterRoute`] lanes), and that noise
 /// would swamp the handful of real landmasses/archipelagos a reader cares
@@ -222,7 +232,7 @@ pub fn render_overview(graph: &ConnectionGraph) -> String {
 
     let Some(&largest) = sizes.first() else {
         out.push_str(
-            "No two cells of this world share a natural route at all: every stretch of \
+            "No two vertices of this world share a natural route at all: every stretch of \
              ground stands entirely alone.\n",
         );
         return out;
@@ -232,7 +242,7 @@ pub fn render_overview(graph: &ConnectionGraph) -> String {
         out.push_str(&format!(
             "Every natural route on this world -- every sea-lane, every land corridor, every \
              plain patch of open ground -- eventually connects: one single region of {largest} \
-             cells holds the whole reachable map. No stretch of ground stands apart from the \
+             vertices holds the whole reachable map. No stretch of ground stands apart from the \
              rest.\n",
         ));
         return out;
@@ -241,9 +251,9 @@ pub fn render_overview(graph: &ConnectionGraph) -> String {
     let rest = &sizes[1..];
     out.push_str(&format!(
         "Natural travel divides the known world into {} real regions (below \
-         {MIN_NOTABLE_REGION_SIZE} cells, a \"region\" is just an island cell no sea-lane \
-         reaches -- not counted here). The largest spans {largest} cells; the rest, smaller \
-         and cut off from it, run {}.\n",
+         {MIN_NOTABLE_REGION_SIZE} vertices, a \"region\" is just an island vertex no \
+         sea-lane reaches -- not counted here). The largest spans {largest} vertices; the \
+         rest, smaller and cut off from it, run {}.\n",
         sizes.len(),
         join_sizes(rest),
     ));
@@ -251,7 +261,7 @@ pub fn render_overview(graph: &ConnectionGraph) -> String {
 }
 
 /// Render a list of region sizes, largest first, as a plain size list --
-/// "1997, then 1977, then 831 cells, down to 22" -- capped at the five
+/// "1997, then 1977, then 831 vertices, down to 22" -- capped at the five
 /// biggest so a world with many small pockets doesn't turn this into a
 /// number dump; the caller already reports the total count.
 fn join_sizes(sizes: &[usize]) -> String {
@@ -259,8 +269,11 @@ fn join_sizes(sizes: &[usize]) -> String {
     let shown: Vec<String> = sizes.iter().take(CAP).map(|n| n.to_string()).collect();
     let joined = crate::history::join_prose(&shown);
     if sizes.len() > CAP {
-        format!("{joined} cells -- plus {} smaller still", sizes.len() - CAP)
+        format!(
+            "{joined} vertices -- plus {} smaller still",
+            sizes.len() - CAP
+        )
     } else {
-        format!("{joined} cells")
+        format!("{joined} vertices")
     }
 }

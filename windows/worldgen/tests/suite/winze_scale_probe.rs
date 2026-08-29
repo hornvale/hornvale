@@ -9,7 +9,7 @@
 //!
 //! The idea registry's `BIO-underworld-has-no-energy` asserts *"Nothing feeds
 //! the underworld, and it is SMALLER than the surface, not larger."* That was
-//! measured against the **pre-`chamber/v3`** lattice, where one `(cell,
+//! measured against the **pre-`chamber/v3`** lattice, where one `(vertex,
 //! entrance, band, slot)` was one chamber. The Stope added a `floor` rung: a
 //! band-branch now holds a drawn run of up to `FLOORS_PER_RUN_CEILING` floors,
 //! and the sibling probe [`super::winze_energy_probe`] says outright that its
@@ -27,9 +27,9 @@
 //!
 //! **Two of the four were the same question asked twice, and The Drift proved
 //! it by deleting the axis they differed on.** They were U2a (chambers of the
-//! *canonical* lattice `(cell, entrance 0)`) and U2b (the same, summed over
+//! *canonical* lattice `(vertex, entrance 0)`) and U2b (the same, summed over
 //! every drawn aperture) — two live readings because `ChamberAddr` carried an
-//! `entrance` field, so `(cell, e=0, …)` and `(cell, e=1, …)` were distinct
+//! `entrance` field, so `(vertex, e=0, …)` and `(vertex, e=1, …)` were distinct
 //! addresses deriving distinct content, while `entrance_mouth`'s own doc
 //! simultaneously said every mouth addresses INTO one canonical lattice. The
 //! Drift's amendment A.3 settled it in favour of the second reading and
@@ -40,7 +40,7 @@
 //! What remains:
 //!
 //! ```text
-//! U1  BAND-BRANCHES /   (cell, branch, band, level 0) that exist — one per
+//! U1  BAND-BRANCHES /   (vertex, branch, band, level 0) that exist — one per
 //!     RUNS              RUN the lattice realizes. What `winze_energy_probe`
 //!                       still counts today, and a CONTAINER of places rather
 //!                       than a place.
@@ -60,10 +60,10 @@
 //! Three are printed, because "the surface" is exactly as ambiguous as "the
 //! underworld" and the ratio changes by a factor of a few between them:
 //!
-//! - **land cells** — every non-ocean cell of the geosphere. The broadest, and
+//! - **land vertices** — every non-ocean vertex of the geosphere. The broadest, and
 //!   the one directly comparable to the chamber lattice's own denominator
-//!   (a chamber lattice hangs off a cave-bearing LAND cell).
-//! - **habitable land cells** — land where at least one settler's
+//!   (a chamber lattice hangs off a cave-bearing LAND vertex).
+//! - **habitable land vertices** — land where at least one settler's
 //!   `per_species_capacity` clears `SURVIVE_K = GENESIS_POP /
 //!   COLLAPSE_PRESSURE = 5.0`. The spec's own amendment B.5 records that
 //!   `SURVIVE_K`, never `VIABLE_MIN`, is the viability floor a founding's
@@ -73,14 +73,14 @@
 //!   Reading it off the bare `carrying_capacity` base field instead is a
 //!   scale error; see the note at the end of this header, which is the error
 //!   this probe made first.
-//! - **cave-bearing land cells** — the systems the lattice actually hangs off.
+//! - **cave-bearing land vertices** — the systems the lattice actually hangs off.
 //!   Printed because it is the denominator of "chambers per system", which is
 //!   what decides whether the underworld grew by acquiring more *places* or by
 //!   getting *taller* in the same places.
 //!
-//! Ocean cells are excluded explicitly, and ocean cells that nonetheless carry
+//! Ocean vertices are excluded explicitly, and ocean vertices that nonetheless carry
 //! a cave are counted separately rather than folded in silently (`cave_at`
-//! already refuses ocean cells, so the count is a guard on that, and it reads
+//! already refuses ocean vertices, so the count is a guard on that, and it reads
 //! 0 in a healthy tree).
 //!
 //! # MEASURED, 2026-08-24 (post-Drift), seeds 42 / 7 / 1234
@@ -92,17 +92,17 @@
 //!
 //! ```text
 //! SURFACE                        seed 42     seed 7   seed 1234     POOLED
-//!   cells (total)                  40962      40962       40962     122886
-//!   land cells                     11283      19332       11684      42299
+//!   vertices (total)                  40962      40962       40962     122886
+//!   land vertices                     11283      19332       11684      42299
 //!   habitable land (> SURVIVE_K)   11025      15081        8234      34340
-//!   cave-bearing land cells          874       1681        1266       3821
+//!   cave-bearing land vertices          874       1681        1266       3821
 //!
 //! UNDERWORLD                     seed 42     seed 7   seed 1234     POOLED
 //!   U1  band-branches / runs        4512       9353        7372      21237
 //!   U2  chambers                   30537      59227       48294     138058
 //!   U3  reachable chambers         30537      59227       48294     138058
 //!
-//! RATIO vs LAND CELLS            seed 42     seed 7   seed 1234     POOLED
+//! RATIO vs LAND VERTICES            seed 42     seed 7   seed 1234     POOLED
 //!   U1  band-branches / runs      0.400x     0.484x      0.631x     0.502x
 //!   U2  chambers                  2.706x     3.064x      4.133x     3.264x
 //!   U3  reachable chambers        2.706x     3.064x      4.133x     3.264x
@@ -114,14 +114,14 @@
 //! ```
 //!
 //! **THE SURFACE HALF DID NOT MOVE AT ALL** — 11283 / 19332 / 11684 land
-//! cells and 11025 / 15081 / 8234 habitable, byte-identical to the pre-Drift
+//! vertices and 11025 / 15081 / 8234 habitable, byte-identical to the pre-Drift
 //! run. Every ratio below moved because its numerator did, which is what makes
 //! the move attributable to the underworld.
 //!
 //! ## THE HEADLINE: THE ROW IS NOW FALSIFIED, FULL STOP
 //!
 //! `BIO-underworld-has-no-energy` says the underworld is *"SMALLER than the
-//! surface, not larger"*. Against land cells, pooled, then and now:
+//! surface, not larger"*. Against land vertices, pooled, then and now:
 //!
 //! ```text
 //!                                pre-Drift        post-Drift
@@ -156,7 +156,7 @@
 //!   runs (U1) pooled                    10681        21237    1.988x
 //!   chambers per cave system            18.241       36.131    1.981x
 //!   chambers per run                     6.526        6.501    0.996x
-//!   ratio vs land cells                 1.648x       3.264x    1.981x
+//!   ratio vs land vertices                 1.648x       3.264x    1.981x
 //!   reachable share of chambers        7.2768%    100.0000%   13.74x
 //! ```
 //!
@@ -206,10 +206,10 @@
 //!
 //! ## THE DENOMINATOR THIS PROBE GOT WRONG FIRST, CAUGHT BY ITS OWN GUARD
 //!
-//! The first draft read habitable land as `carrying_capacity(..).at(cell) >=
-//! SURVIVE_K` and measured **zero habitable land cells on all three seeds**.
+//! The first draft read habitable land as `carrying_capacity(..).at(vertex) >=
+//! SURVIVE_K` and measured **zero habitable land vertices on all three seeds**.
 //! That is spec amendment B.5's error in the mirror: `carrying_capacity` is
-//! the BASE density field (`BASE = 1.0`, a per-cell productivity), while
+//! the BASE density field (`BASE = 1.0`, a per-vertex productivity), while
 //! `SURVIVE_K = 5.0` is the capacity a genesis founding needs — the two are
 //! not on the same scale, and comparing them is the "20-100x silent rescale"
 //! `CapacityMap`'s own doc says decision 0103 exists to stop. The reading is
@@ -242,7 +242,7 @@
 //! ```text
 //! D1  chamber.rs LEVELS_PER_BRANCH_CEILING: 20 -> 10
 //!     headline ratio  3.264x -> 2.899x   INSIDE the band [2.60x, 3.90x]
-//!     land cells      42299  -> 42299    UNCHANGED, on every seed
+//!     land vertices      42299  -> 42299    UNCHANGED, on every seed
 //!     => panics on the WITNESS PIN (seed 42: U2 26550 vs 30537).
 //!        The ratchet alone would have MISSED this: halving the level
 //!        ceiling costs only 11% of the chambers, because most runs draw
@@ -250,7 +250,7 @@
 //!        not an instrument for detecting it. The pin is.
 //! D2  chamber.rs LEVELS_PER_BRANCH_CEILING: 20 -> 4
 //!     headline ratio  3.264x -> 1.752x   OUTSIDE the band, below the floor
-//!     land cells      42299  -> 42299    UNCHANGED, on every seed
+//!     land vertices      42299  -> 42299    UNCHANGED, on every seed
 //!     => panics on the WITNESS PIN first, same as D1 — the correct order,
 //!        since the pin is the more specific diagnosis — and the printed
 //!        POOLED table shows the ratchet's own input has left the band.
@@ -267,7 +267,7 @@
 //! reported, because its single mutation happened to move the headline 40%
 //! and so made the ratchet look sharper than it is.
 //!
-//! **The land-cell denominator is byte-identical across both mutations** —
+//! **The land-vertex denominator is byte-identical across both mutations** —
 //! 11283 / 19332 / 11684 every time — which is what makes the move
 //! attributable to the underworld half rather than to a world that changed
 //! shape. A ratio control that moved both halves would prove nothing about
@@ -305,12 +305,21 @@
 //!
 //! Test fixture (decision 0092): calls the composition-root entry points
 //! directly, the sanctioned posture for this crate's live-worldgen batteries.
+//!
+//! # RE-RUN AGAINST `main` (The Sources, Task 1, 2026-08-26)
+//!
+//! Harvested from `campaign/the-winze` (unmerged, 403 commits behind at the
+//! time of this re-run) and re-measured against `main` at `7576eca00`, after
+//! The Glasshouse's temperature re-centring. **Reproduces exactly**, n=3
+//! seeds (42/7/1234), pooled: chambers 3.264x, reachable chambers 3.264x,
+//! runs 0.502x — bit-for-bit the same figures the metaplan (§3.1) cites. The
+//! size clause stays falsified; no doc, registry or metaplan number changed.
 #![allow(clippy::disallowed_methods)]
 
 use std::collections::BTreeSet;
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{CellId, KindId, Seed};
+use hornvale_kernel::{KindId, Seed, Vertex};
 use hornvale_terrain::{Cave, GeothermalGradient, TerrainPins};
 use hornvale_worldgen::chamber::{
     BRANCHES_PER_SYSTEM, ChamberAddr, LEVELS_PER_BRANCH_CEILING, chamber_exists, entrance_count,
@@ -338,7 +347,7 @@ const SETTLERS: [&str; 6] = ["kobold", "goblin", "hobgoblin", "bugbear", "gnoll"
 /// `history_bake.rs`), and the floor spec amendment B.5 rules on.
 const SURVIVE_K: f64 = 10.0 / 2.0;
 
-/// THE HEADLINE RATCHET, floor — pooled existing chambers (U2) per land cell.
+/// THE HEADLINE RATCHET, floor — pooled existing chambers (U2) per land vertex.
 /// See the module header for why a band and not a point: the quantity is the
 /// campaign's premise, and a printed number cannot fail.
 ///
@@ -346,10 +355,10 @@ const SURVIVE_K: f64 = 10.0 / 2.0;
 /// incidental motion in either half (the per-seed spread is itself 2.706x to
 /// 4.133x), tight enough that the density mutation in the header's ledger
 /// lands outside it.
-const CHAMBERS_PER_LAND_CELL_FLOOR: f64 = 2.6;
+const CHAMBERS_PER_LAND_VERTEX_FLOOR: f64 = 2.6;
 
-/// THE HEADLINE RATCHET, ceiling. See [`CHAMBERS_PER_LAND_CELL_FLOOR`].
-const CHAMBERS_PER_LAND_CELL_CEILING: f64 = 3.9;
+/// THE HEADLINE RATCHET, ceiling. See [`CHAMBERS_PER_LAND_VERTEX_FLOOR`].
+const CHAMBERS_PER_LAND_VERTEX_CEILING: f64 = 3.9;
 
 /// The committed witness's `chambers` and `reachable` lines for the panel, in
 /// [`SEEDS`] order — read off `docs/audits/underworld-lattice-seed-panel.md`,
@@ -389,22 +398,22 @@ fn habitation_ranks() -> Vec<u8> {
 /// pair rather than two that could drift.
 #[derive(Default)]
 struct Scale {
-    /// Every cell of the geosphere, ocean included.
-    cells_total: usize,
-    /// Non-ocean cells — the broad surface denominator.
-    land_cells: usize,
-    /// Land cells where at least ONE settler's per-species capacity clears
+    /// Every vertex of the geosphere, ocean included.
+    vertices_total: usize,
+    /// Non-ocean vertices — the broad surface denominator.
+    land_vertices: usize,
+    /// Land vertices where at least ONE settler's per-species capacity clears
     /// [`SURVIVE_K`] — the disjunction, `ore_viability_probe.rs`'s `max_cap`.
-    habitable_land_cells: usize,
-    /// Cave-bearing land cells — the systems the lattice hangs off.
+    habitable_land_vertices: usize,
+    /// Cave-bearing land vertices — the systems the lattice hangs off.
     cave_systems: usize,
-    /// Ocean cells carrying a cave. `cave_at` refuses ocean cells, so this is
+    /// Ocean vertices carrying a cave. `cave_at` refuses ocean vertices, so this is
     /// a guard reading 0 in a healthy tree, counted rather than assumed.
     ocean_caves: usize,
     /// `entrance_count` summed over systems. Post-Drift this is a count of
     /// APERTURES INTO one lattice, not a multiplier on it — see `read_system`.
     entrances_drawn: u64,
-    /// **U1** — existing `(cell, branch, band, level 0)` addresses: the runs
+    /// **U1** — existing `(vertex, branch, band, level 0)` addresses: the runs
     /// that realize at least their own first level.
     band_branches: u64,
     /// **U2** — every existing chamber of the system's one shared lattice.
@@ -420,9 +429,9 @@ struct Scale {
 impl Scale {
     /// Fold another seed's reading in, for the POOLED row.
     fn merge(&mut self, o: &Scale) {
-        self.cells_total += o.cells_total;
-        self.land_cells += o.land_cells;
-        self.habitable_land_cells += o.habitable_land_cells;
+        self.vertices_total += o.vertices_total;
+        self.land_vertices += o.land_vertices;
+        self.habitable_land_vertices += o.habitable_land_vertices;
         self.cave_systems += o.cave_systems;
         self.ocean_caves += o.ocean_caves;
         self.entrances_drawn += o.entrances_drawn;
@@ -432,21 +441,21 @@ impl Scale {
         self.reachable_chambers += o.reachable_chambers;
     }
 
-    /// THE HEADLINE: existing chambers per land cell.
-    fn chambers_per_land_cell(&self) -> f64 {
-        self.chambers as f64 / self.land_cells.max(1) as f64
+    /// THE HEADLINE: existing chambers per land vertex.
+    fn chambers_per_land_vertex(&self) -> f64 {
+        self.chambers as f64 / self.land_vertices.max(1) as f64
     }
 
     /// Print every table this probe reports, under `label`.
     fn report(&self, label: &str) {
         println!("\n== {label} ==");
         println!(
-            "  SURFACE     cells {}  land {}  habitable land (> {:.1}) {}  \
-             cave-bearing land {}  (ocean cells carrying a cave: {}, excluded)",
-            self.cells_total,
-            self.land_cells,
+            "  SURFACE     vertices {}  land {}  habitable land (> {:.1}) {}  \
+             cave-bearing land {}  (ocean vertices carrying a cave: {}, excluded)",
+            self.vertices_total,
+            self.land_vertices,
             SURVIVE_K,
-            self.habitable_land_cells,
+            self.habitable_land_vertices,
             self.cave_systems,
             self.ocean_caves,
         );
@@ -465,10 +474,10 @@ impl Scale {
             ("U3 reachable cham. ", self.reachable_chambers as f64),
         ] {
             println!(
-                "  RATIO {name} per land cell {:8.3}x   per habitable land cell \
+                "  RATIO {name} per land vertex {:8.3}x   per habitable land vertex \
                  {:8.3}x   per cave system {:8.3}x",
-                n / self.land_cells.max(1) as f64,
-                n / self.habitable_land_cells.max(1) as f64,
+                n / self.land_vertices.max(1) as f64,
+                n / self.habitable_land_vertices.max(1) as f64,
                 n / self.cave_systems.max(1) as f64,
             );
         }
@@ -512,13 +521,13 @@ fn reachable_union(
 /// entry points only, folding them into `out`.
 fn read_system(
     seed: Seed,
-    cell: CellId,
+    vertex: Vertex,
     cave: &Cave,
     gradient: GeothermalGradient,
     ranks: &[u8],
     out: &mut Scale,
 ) {
-    let entrances = entrance_count(seed, cell);
+    let entrances = entrance_count(seed, vertex);
     out.entrances_drawn += u64::from(entrances);
 
     // U1 / U2. The walk is the LATTICE's own ceilings
@@ -543,7 +552,7 @@ fn read_system(
         for branch in 0..BRANCHES_PER_SYSTEM {
             for level in 0..LEVELS_PER_BRANCH_CEILING {
                 let addr = ChamberAddr {
-                    cell,
+                    vertex,
                     branch,
                     band,
                     level,
@@ -565,9 +574,9 @@ fn read_system(
     // nothing else.
     let mouths: Vec<ChamberAddr> = (0..entrances)
         .map(|e| {
-            let m = entrance_mouth(seed, cell, e);
+            let m = entrance_mouth(seed, vertex, e);
             ChamberAddr {
-                cell,
+                vertex,
                 branch: m.branch,
                 band: hornvale_kernel::Band::from_rank(m.band)
                     .expect("entrance_mouth only names a habitation rank"),
@@ -586,6 +595,9 @@ fn read_system(
 /// Re-measures `BIO-underworld-has-no-energy`'s size clause against the
 /// post-`chamber/v3` lattice, cross-checks the two counters that carry the
 /// finding against the committed witness, and ratchets the headline ratio.
+/// Costs three `BuildDepth::Settlements` worlds plus a full-lattice scan —
+/// the heavy tag's own reason states no duration (see its canonical form's
+/// own rule), so that cost is recorded here instead.
 ///
 /// # What would change the verdict
 ///
@@ -593,9 +605,7 @@ fn read_system(
 /// `entrance_count` are the three that move it most, and they move different
 /// pairs of the four populations, which is why all four are reported.
 #[test]
-#[ignore = "heavy: live-worldgen battery (three BuildDepth::Settlements worlds \
-            plus a full-lattice scan); deferred from the commit gate to the \
-            heavy set (decision 0132)"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn is_the_underworld_still_smaller_than_the_surface() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let ranks = habitation_ranks();
@@ -647,7 +657,9 @@ fn is_the_underworld_still_smaller_than_the_surface() {
         let obliquity_deg = system.anchor.obliquity.get();
         let regime = match system.anchor.rotation {
             hornvale_astronomy::Rotation::Spinning { day, .. } => {
-                hornvale_climate::RotationRegime::Spinning { day_std: day.get() }
+                hornvale_climate::RotationRegime::Spinning {
+                    day_std: day.as_std_days(),
+                }
             }
             hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
         };
@@ -691,28 +703,28 @@ fn is_the_underworld_still_smaller_than_the_surface() {
         );
 
         let mut s = Scale::default();
-        for cell in geo.cells() {
-            s.cells_total += 1;
-            if terrain.is_ocean(cell) {
-                if terrain.cave_at(cell).is_some() {
+        for vertex in geo.vertices() {
+            s.vertices_total += 1;
+            if terrain.is_ocean(vertex) {
+                if terrain.cave_at(vertex).is_some() {
                     s.ocean_caves += 1;
                 }
                 continue;
             }
-            s.land_cells += 1;
+            s.land_vertices += 1;
             let best = caps
                 .iter()
-                .map(|(_, map)| map.at(cell))
+                .map(|(_, map)| map.at(vertex))
                 .fold(f64::NEG_INFINITY, f64::max);
             if best > SURVIVE_K {
-                s.habitable_land_cells += 1;
+                s.habitable_land_vertices += 1;
             }
-            let Some(cave) = terrain.cave_at(cell) else {
+            let Some(cave) = terrain.cave_at(vertex) else {
                 continue;
             };
             s.cave_systems += 1;
-            let gradient = terrain.geothermal_gradient_at(cell);
-            read_system(seed, cell, &cave, gradient, &ranks, &mut s);
+            let gradient = terrain.geothermal_gradient_at(vertex);
+            read_system(seed, vertex, &cave, gradient, &ranks, &mut s);
         }
 
         pooled.merge(&s);
@@ -735,13 +747,13 @@ fn is_the_underworld_still_smaller_than_the_surface() {
     );
     for (seed_value, s) in &per_seed {
         assert!(
-            s.land_cells > 0,
-            "seed {seed_value}: no land cells — every surface denominator is 1 \
+            s.land_vertices > 0,
+            "seed {seed_value}: no land vertices — every surface denominator is 1 \
              by saturation and every ratio below is the numerator wearing a hat"
         );
         assert!(
-            s.habitable_land_cells > 0,
-            "seed {seed_value}: no land cell clears SURVIVE_K — the habitable \
+            s.habitable_land_vertices > 0,
+            "seed {seed_value}: no land vertex clears SURVIVE_K — the habitable \
              denominator is vacuous"
         );
         assert!(
@@ -818,20 +830,20 @@ fn is_the_underworld_still_smaller_than_the_surface() {
     // The campaign's premise is this number and nothing else, so it is
     // asserted rather than printed. See the module header's mutation ledger
     // for the positive control: `EXISTENCE_DENSITY` 0.5 -> 0.7 moves it well
-    // outside the band with the land-cell denominator untouched.
-    let headline = pooled.chambers_per_land_cell();
+    // outside the band with the land-vertex denominator untouched.
+    let headline = pooled.chambers_per_land_vertex();
     assert!(
-        (CHAMBERS_PER_LAND_CELL_FLOOR..=CHAMBERS_PER_LAND_CELL_CEILING).contains(&headline),
-        "pooled all-entrance chambers per land cell is {headline:.3}x ({} chambers \
-         over {} land cells), outside the band [{:.2}x, {:.2}x] this campaign's \
+        (CHAMBERS_PER_LAND_VERTEX_FLOOR..=CHAMBERS_PER_LAND_VERTEX_CEILING).contains(&headline),
+        "pooled all-entrance chambers per land vertex is {headline:.3}x ({} chambers \
+         over {} land vertices), outside the band [{:.2}x, {:.2}x] this campaign's \
          premise check reported under. The three dials that move it are \
          `EXISTENCE_DENSITY`, the `floors_range` run lengths and \
          `entrance_count`; a move with none of those touched is a finding about \
          the surface half, not a bound to widen.",
         pooled.chambers,
-        pooled.land_cells,
-        CHAMBERS_PER_LAND_CELL_FLOOR,
-        CHAMBERS_PER_LAND_CELL_CEILING,
+        pooled.land_vertices,
+        CHAMBERS_PER_LAND_VERTEX_FLOOR,
+        CHAMBERS_PER_LAND_VERTEX_CEILING,
     );
 
     // The registry row's own clause. Before The Drift this block printed two
@@ -845,8 +857,8 @@ fn is_the_underworld_still_smaller_than_the_surface() {
          A chamber is a PLACE and a run is a CONTAINER of places, so the two \
          readings that could once save the row's clause are down to one, and \
          it is the one that does not name a place. The clause is FALSIFIED.",
-        pooled.chambers_per_land_cell(),
-        pooled.reachable_chambers as f64 / pooled.land_cells.max(1) as f64,
-        pooled.band_branches as f64 / pooled.land_cells.max(1) as f64,
+        pooled.chambers_per_land_vertex(),
+        pooled.reachable_chambers as f64 / pooled.land_vertices.max(1) as f64,
+        pooled.band_branches as f64 / pooled.land_vertices.max(1) as f64,
     );
 }

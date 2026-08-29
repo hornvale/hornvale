@@ -32,8 +32,14 @@ edit in place):
 byte-identical across platforms (Apple libm vs glibc differ in the last ULP).
 Quantize **only** at serialization boundaries (`Ledger::commit`, CSV/JSON
 emit) — **never** in the compute path. The noise fields, sculpting, and
-orbital mechanics run at full precision. **Lorenz guard-rail:** never seed a
-chaotic forward-integrator from quantized ledger floats; resumption
+orbital mechanics run at full precision. **`WorldTime` is carved out of this
+contract entirely** (decision 0188): significant-digit rounding gives
+constant absolute precision only for a magnitude-bounded quantity, and
+`hornvale_kernel::WorldTime` is an exact `i64` tick count (decision 0186),
+not a quantized `f64` — `Ledger::commit`'s day-quantization block is deleted,
+not merely skipped. Every other quantized surface (`Value::Number` in a
+committed `Fact`, CSV/JSON emit) is unchanged. **Lorenz guard-rail:** never
+seed a chaotic forward-integrator from quantized ledger floats; resumption
 re-derives from the lossless seed. A lossy save is safe *only* because reload
 re-derives.
 
@@ -54,22 +60,22 @@ decision 0061).
 `noise::Fbm` (and terrain's `SphereFbm`) precompute their per-octave/per-slice
 seeds once, then sample without re-deriving. `fbm_2d`/`sphere_fbm01` are the
 random-access convenience forms that construct a sampler per call — fine for
-one-off use, but a hot per-cell loop with a fixed seed must build the sampler
+one-off use, but a hot per-vertex loop with a fixed seed must build the sampler
 above the loop. `Seed::derive` was the dominant cost in world generation
 until this pattern landed; keep it out of inner loops.
 
 ## Dense-index storage uses `Vec`, not a map
 
-A collection keyed by a **dense, complete `0..N` index** — a `CellId`, a
+A collection keyed by a **dense, complete `0..N` index** — a `Vertex`, a
 `KindId`'s dense build-index, any `0..count` id — is a `Vec` indexed by that
-id, never a `BTreeMap`. `CellMap` is the canonical example: one entry per
-cell, O(1) access, iteration in ascending-id order for free. A `BTreeMap`
+id, never a `BTreeMap`. `VertexMap` is the canonical example: one entry per
+vertex, O(1) access, iteration in ascending-id order for free. A `BTreeMap`
 over a dense key buys nothing the `Vec` doesn't already give (the id *is* the
 order) and costs an O(log N) tree traversal plus a per-key allocation on every
 access — which a flamegraph will find (The Lookup, 2026-07-23: a dense-keyed
 `BTreeMap` adjacency list was ~22% of genesis self-time; a `Vec<Vec<_>>`
 dropped it to ~2%). Reserve `BTreeMap`/`BTreeSet` for genuinely **sparse** or
-**non-index** keys (an edge-pair `(u32,u32)`, a working set of some cells, a
+**non-index** keys (an edge-pair `(u32,u32)`, a working set of some vertices, a
 subset accumulation). Same spirit as "build a sampler once": a value that is a
 pure function of immutable dense-indexed data is precomputed into a `Vec` once
 (e.g. `Geosphere::coord`), not re-derived per call.
@@ -78,8 +84,11 @@ pure function of immutable dense-indexed data is precomputed into a `Vec` once
 
 - **No `HashMap`/`HashSet`** — `BTreeMap`/`BTreeSet`/`Vec` only. Float sorts
   use `total_cmp` with a deterministic tie-break.
-- **No wall-clock time** — time is `WorldTime { day: f64 }`, absolute standard
-  days.
+- **No wall-clock time** — time is `WorldTime { ticks: i64 }`, an exact tick
+  count since genesis (100,000 ticks per standard day, decision 0186); the
+  signed difference between two instants is `TickSpan(i64)`. Now that
+  `WorldTime` is an exact integer it derives `Ord`/`Eq`/`Hash` and is a legal
+  `BTreeMap` key.
 - Both are enforced by `clippy.toml` `disallowed-types`; a justified
   exception gets a scoped `#[allow(clippy::disallowed_types)]` with a comment.
 - Every `pub` item, field, and variant carries a one-line doc comment

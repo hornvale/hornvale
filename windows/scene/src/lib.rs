@@ -9,8 +9,9 @@
 
 #![warn(missing_docs)]
 
+use hornvale_astronomy::StdInstant;
 use hornvale_climate::{Biome, GeneratedClimate};
-use hornvale_kernel::{CellMap, NearestCellIndex, Seed, World};
+use hornvale_kernel::{NearestVertexIndex, Seed, VertexMap, World, WorldTime};
 use hornvale_terrain::GeneratedTerrain;
 use serde::Serialize;
 
@@ -61,7 +62,7 @@ pub enum SceneError {
     /// Surrounds query: `radius` must be 0..=MAX_SURROUNDS_RADIUS.
     SurroundsRadiusOutOfRange(u32),
     /// Surrounds query: a neighbourhood cell's address could not be packed
-    /// to a room id (see `RoomAddr::pack`); the `RoomAddrError` debug is
+    /// to a room id (see `Facet::pack`); the `FacetError` debug is
     /// carried. Mirrors `LocaleError::Unaddressable` — fail fast rather
     /// than mint a meaningless `room: 0`.
     SurroundsUnaddressable(String),
@@ -361,7 +362,7 @@ fn dot3(a: [f64; 3], b: [f64; 3]) -> f64 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
 
-/// The unit northward tangent at a cell, given its unit-sphere `position`
+/// The unit northward tangent at a vertex, given its unit-sphere `position`
 /// and eastward tangent: `normalize(cross(position, east))`, completing the
 /// local (east, north) tangent frame the current components project onto.
 /// Zero wherever `east` is zero (the poles, where east is undefined).
@@ -393,22 +394,22 @@ pub struct SceneContext {
     terrain: GeneratedTerrain,
     /// The derived climate, derived once.
     climate: GeneratedClimate,
-    /// Nearest-cell index over the terrain geosphere. Two indices, not one:
+    /// Nearest-vertex index over the terrain geosphere. Two indices, not one:
     /// terrain and climate each carry their own geosphere, and today both
-    /// happen to share the same cell level, so one index could in principle
+    /// happen to share the same vertex level, so one index could in principle
     /// serve both. Keeping them separate is deliberate defensiveness against
     /// that ever diverging — behavior is identical while the two geospheres
     /// agree.
-    terrain_index: NearestCellIndex,
-    /// Nearest-cell index over the climate geosphere (see `terrain_index` for
+    terrain_index: NearestVertexIndex,
+    /// Nearest-vertex index over the climate geosphere (see `terrain_index` for
     /// why the two are kept separate).
-    climate_index: NearestCellIndex,
-    /// The per-cell biome map (`biome_map()` returns by value, so it is built once).
-    biomes: CellMap<Biome>,
+    climate_index: NearestVertexIndex,
+    /// The per-vertex biome map (`biome_map()` returns by value, so it is built once).
+    biomes: VertexMap<Biome>,
 }
 
 impl SceneContext {
-    /// Derive terrain, climate, both nearest-cell indices and the biome map once.
+    /// Derive terrain, climate, both nearest-vertex indices and the biome map once.
     // Named construction site (decision 0092): scene's entry wrapper —
     // sculpts/fits once, shared by every reader built from this context.
     #[allow(clippy::disallowed_methods)]
@@ -417,8 +418,8 @@ impl SceneContext {
             hornvale_worldgen::terrain_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
         let climate = hornvale_worldgen::climate_from(world, &terrain)
             .map_err(|e| SceneError::Build(e.to_string()))?;
-        let terrain_index = NearestCellIndex::new(terrain.geosphere());
-        let climate_index = NearestCellIndex::new(climate.geosphere());
+        let terrain_index = NearestVertexIndex::new(terrain.geosphere());
+        let climate_index = NearestVertexIndex::new(climate.geosphere());
         let biomes = climate.biome_map();
         Ok(SceneContext {
             seed: world.seed,
@@ -515,36 +516,39 @@ pub fn tiles_scene_in(
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
         for px in 0..width {
             let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
-            let t_cell = terrain_index.nearest(terrain.geosphere(), latitude, longitude);
-            let c_cell = climate_index.nearest(climate.geosphere(), latitude, longitude);
-            elevation_m.push(terrain.elevation_at(t_cell).get());
-            ocean.push(terrain.is_ocean(t_cell));
-            water.push(terrain.water_kind_at(t_cell).index());
-            drainage.push(terrain.drainage_at(t_cell));
-            let b = *biomes.get(c_cell);
+            let t_vertex = terrain_index.nearest(terrain.geosphere(), latitude, longitude);
+            let c_vertex = climate_index.nearest(climate.geosphere(), latitude, longitude);
+            elevation_m.push(terrain.elevation_at(t_vertex).get());
+            ocean.push(terrain.is_ocean(t_vertex));
+            water.push(terrain.water_kind_at(t_vertex).index());
+            drainage.push(terrain.drainage_at(t_vertex));
+            let b = *biomes.get(c_vertex);
             let index = catalog
                 .iter()
                 .position(|entry| *entry == b)
                 .expect("every biome is in the catalog") as u16;
             biome.push(index);
-            plate.push(terrain.plate_of(t_cell));
-            unrest.push(terrain.unrest_at(t_cell));
-            t_mean_c.push(climate.mean_temperature_at(c_cell).get());
-            t_swing_c.push(climate.seasonal_swing_at(c_cell));
-            t_diurnal_amp_c.push(climate.diurnal_amp_at(c_cell));
-            let current = climate.current_at(c_cell);
+            plate.push(terrain.plate_of(t_vertex));
+            unrest.push(terrain.unrest_at(t_vertex));
+            t_mean_c.push(climate.mean_temperature_at(c_vertex).get());
+            t_swing_c.push(climate.seasonal_swing_at(c_vertex));
+            t_diurnal_amp_c.push(climate.diurnal_amp_at(c_vertex));
+            let current = climate.current_at(c_vertex);
             let east =
-                hornvale_climate::circulation::wind_east_tangent(climate.geosphere(), c_cell);
-            let north = tangent_north(climate.geosphere().position(c_cell), east);
+                hornvale_climate::circulation::wind_east_tangent(climate.geosphere(), c_vertex);
+            let north = tangent_north(climate.geosphere().position(c_vertex), east);
             current_east.push(dot3(current, east));
             current_north.push(dot3(current, north));
-            moisture.push(climate.moisture_at(c_cell));
-            precip_mm_yr.push(climate.precip_at(c_cell).get());
-            snow_fraction.push(climate.snow_fraction_at(c_cell));
-            precip_regime.push(climate.regime_at(c_cell) as u8);
-            cloud_fraction.push(climate.cloud_fraction_at(c_cell));
-            weather_propensity.push(climate.storm_propensity_at(c_cell));
-            cloud_type.push(climate.cloud_type_at(c_cell, scene_day) as u8);
+            moisture.push(climate.moisture_at(c_vertex));
+            precip_mm_yr.push(climate.precip_at(c_vertex).get());
+            snow_fraction.push(climate.snow_fraction_at(c_vertex));
+            precip_regime.push(climate.regime_at(c_vertex) as u8);
+            cloud_fraction.push(climate.cloud_fraction_at(c_vertex));
+            weather_propensity.push(climate.storm_propensity_at(c_vertex));
+            cloud_type.push(climate.cloud_type_at(
+                c_vertex,
+                WorldTime::from_std_days(scene_day).expect("finite"),
+            ) as u8);
         }
     }
     debug_assert!(
@@ -568,8 +572,8 @@ pub fn tiles_scene_in(
     let waterfalls = terrain
         .waterfalls()
         .iter()
-        .map(|&cell| {
-            let c = terrain.geosphere().coord(cell);
+        .map(|&vertex| {
+            let c = terrain.geosphere().coord(vertex);
             WaterfallPoint {
                 latitude: c.latitude,
                 longitude: c.longitude,
@@ -615,14 +619,14 @@ pub fn tiles_scene_in(
 }
 
 /// Per-tile actual temperature at `day`, °C, on the same lattice as
-/// [`tiles_scene`] — `temperature_at` sampled at each tile's climate cell.
+/// [`tiles_scene`] — `temperature_at` sampled at each tile's climate vertex.
 /// This is the sim's ground truth that a client reconstructs from the
 /// `t_mean_c`/`t_swing_c` layers; the cross-repo contract test compares the
 /// client's reconstruction against these values. Full precision (not
 /// quantized) — callers that need portable bytes quantize at their own
 /// boundary.
-/// type-audit: bare-ok(count: width), bare-ok(diagnostic-value: day), bare-ok(diagnostic-value: return)
-pub fn temperature_grid(world: &World, width: u32, day: f64) -> Result<Vec<f64>, SceneError> {
+/// type-audit: bare-ok(count: width), bare-ok(diagnostic-value: return)
+pub fn temperature_grid(world: &World, width: u32, day: WorldTime) -> Result<Vec<f64>, SceneError> {
     validate_width(width)?;
     temperature_grid_in(world, &SceneContext::build(world)?, width, day)
 }
@@ -634,12 +638,12 @@ pub fn temperature_grid(world: &World, width: u32, day: f64) -> Result<Vec<f64>,
 /// `ctx.climate_index` are read here — `world` is otherwise read only by the
 /// context/world match assertion below, which is the same shape every `_in`
 /// entry point takes.
-/// type-audit: bare-ok(count: width), bare-ok(diagnostic-value: day), bare-ok(diagnostic-value: return)
+/// type-audit: bare-ok(count: width), bare-ok(diagnostic-value: return)
 pub fn temperature_grid_in(
     world: &World,
     ctx: &SceneContext,
     width: u32,
-    day: f64,
+    day: WorldTime,
 ) -> Result<Vec<f64>, SceneError> {
     debug_assert_eq!(
         ctx.seed(),
@@ -656,8 +660,8 @@ pub fn temperature_grid_in(
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
         for px in 0..width {
             let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
-            let c_cell = climate_index.nearest(climate.geosphere(), latitude, longitude);
-            temperature.push(climate.temperature_at(c_cell, day).get());
+            let c_vertex = climate_index.nearest(climate.geosphere(), latitude, longitude);
+            temperature.push(climate.temperature_at(c_vertex, day).get());
         }
     }
     Ok(temperature)
@@ -913,7 +917,7 @@ pub fn system_scene(world: &World) -> Result<SystemScene, SceneError> {
         .ok_or_else(|| SceneError::Build("this world has no generated sky".to_string()))?;
     let anchor = &system.anchor;
     let day_length_days = match &anchor.rotation {
-        hornvale_astronomy::Rotation::Spinning { day, .. } => Some(day.get()),
+        hornvale_astronomy::Rotation::Spinning { day, .. } => Some(day.as_std_days()),
         hornvale_astronomy::Rotation::Locked => None,
     };
     let moons = system
@@ -1323,7 +1327,7 @@ pub fn neighbors_json(scene: &NeighborsScene) -> String {
 
 /// The `scene/eclipses/v1` schema tag.
 /// type-audit: bare-ok(identifier-text)
-pub const ECLIPSES_SCHEMA: &str = "scene/eclipses/v1";
+pub const ECLIPSES_SCHEMA: &str = "scene/eclipses/v2";
 
 /// One solar eclipse's shadow band on the globe.
 /// type-audit: pending(wave-1: center_lat_deg), pending(wave-1: half_width_deg), pending(wave-1: start_lon_deg), pending(wave-1: end_lon_deg), pending(wave-2: duration_days)
@@ -1347,12 +1351,45 @@ pub struct GroundTrackElem {
 }
 
 /// One dated eclipse.
-/// type-audit: pending(wave-2: day), bare-ok(count: moon_index), bare-ok(identifier-text: body), bare-ok(identifier-text: kind)
+///
+/// **The `*_ticks` fields are deliberately bare `i64` and NOT `WorldTime`**
+/// (The Escapement, ruling 12 — the same reasoning governs
+/// [`EclipsesScene`]'s `from_day_ticks`/`until_day_ticks`). `WorldTime` is
+/// `#[serde(transparent)]`, so typing them as `WorldTime` would serialize
+/// identically and shed three type-audit tags and one `.ticks()` call. That
+/// is a real simplification and it is refused, because `scene/eclipses/v1` is
+/// a **cross-repo, additive-or-versioned-only contract** that the external
+/// Orrery consumes from a released catalog.
+///
+/// The two options fail *differently*, and that is the whole argument. With a
+/// bare `i64` and an explicit `.ticks()`, a future change to `WorldTime`'s
+/// representation breaks at **compile time**, at the one line that has to
+/// make a decision. With a `serde(transparent)` `WorldTime`, the same change
+/// is a **silent wire break**, discovered by a sibling repo reading a catalog
+/// that was already released. "Fails loudly at the boundary" beats "three
+/// fewer tags" by a wide margin here — and coupling a published schema to the
+/// kernel's internal representation is the exact class of coupling this
+/// campaign spent itself undoing. If a later pass sees redundant tags and a
+/// manual conversion: that redundancy is the point, and the cost of being
+/// wrong about it was priced at three tags and one call.
+/// type-audit: bare-ok(count: day), bare-ok(count: moon_index), bare-ok(identifier-text: body), bare-ok(identifier-text: kind)
 #[derive(Debug, Serialize)]
 pub struct EclipseElem {
-    /// The syzygy, absolute standard days.
-    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
-    pub day: f64,
+    /// The syzygy, as an exact tick count since genesis.
+    ///
+    /// **v2 dropped the quantized `f64` day that sat beside this** (The
+    /// Foliot). It existed for one stated reason — "kept for the external
+    /// Orrery's existing consumers" — and both external clients (the Orrery
+    /// and goldengrove) are out of scope by Nathan's ruling, so it had no
+    /// consumer left: nothing in `clients/` ever read it. An integer needs no
+    /// quantization and does not decay with world age (decision 0188), which
+    /// is why the tick field was added BESIDE it rather than instead of it at
+    /// the time — the additive step this release completes.
+    ///
+    /// A bare `i64` on the wire rather than a `WorldTime`: this is a JSON
+    /// contract, and a serialized `WorldTime` would carry its own field name
+    /// into the document for no gain.
+    pub day: i64,
     /// Distance-sorted index into the system's moons.
     pub moon_index: usize,
     /// "solar" or "lunar".
@@ -1367,7 +1404,11 @@ pub struct EclipseElem {
 }
 
 /// One `scene/eclipses/v1` document: the dated eclipses in a queried window.
-/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), pending(wave-2: from_day), pending(wave-2: until_day)
+///
+/// `from_day_ticks`/`until_day_ticks` are bare `i64` rather than `WorldTime`
+/// for the reason set out on [`EclipseElem`]: on a cross-repo wire, a
+/// compile-time break beats a silent one.
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), bare-ok(count: from), bare-ok(count: until)
 #[derive(Debug, Serialize)]
 pub struct EclipsesScene {
     /// Always `scene/eclipses/v1`.
@@ -1375,11 +1416,16 @@ pub struct EclipsesScene {
     /// The world's seed.
     pub seed: u64,
     /// The queried window start, echoed back (standard days).
-    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
-    pub from_day: f64,
+    /// The queried window start, echoed back as an exact tick count.
+    pub from: i64,
+    /// The queried window start as an exact tick count, added beside
+    /// `from_day` for the same reason as `EclipseElem::day_ticks`.
+
     /// The queried window end.
-    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
-    pub until_day: f64,
+    /// The queried window end, echoed back as an exact tick count.
+    pub until: i64,
+    /// The queried window end as an exact tick count.
+
     /// The dated eclipses, day-ascending.
     pub events: Vec<EclipseElem>,
 }
@@ -1388,17 +1434,23 @@ pub struct EclipsesScene {
 /// standard days. Errors when the world has no generated sky (no moons, no
 /// eclipses) or when the window itself is invalid (`from`/`until` negative
 /// or non-finite) — mirrors [`moons_scene`]. Pure read: consumes no draws.
-/// type-audit: pending(wave-2: from), pending(wave-2: until)
-pub fn eclipses_scene(world: &World, from: f64, until: f64) -> Result<EclipsesScene, SceneError> {
-    use hornvale_astronomy::StdDays;
+pub fn eclipses_scene(
+    world: &World,
+    from: StdInstant,
+    until: StdInstant,
+) -> Result<EclipsesScene, SceneError> {
     let sky = hornvale_worldgen::sky_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
     let system = sky
         .system()
         .ok_or_else(|| SceneError::Build("this world has no generated sky".to_string()))?;
-    let from_day = StdDays::new(from).map_err(|e| SceneError::Build(e.to_string()))?;
-    let until_day = StdDays::new(until).map_err(|e| SceneError::Build(e.to_string()))?;
+    // The bounds arrive already typed and already validated -- StdInstant's
+    // constructor refuses a non-finite value, so the caller cannot hand in
+    // one. This is what closes The Escapement review's Minor 5: the bound
+    // conversions used to run AFTER the events map, so an out-of-range
+    // `until` hit an `expect` inside the map and panicked before it could
+    // reach the graceful error. There is no conversion left to mis-order.
     let calendar = hornvale_astronomy::calendar_of(system);
-    let events = hornvale_astronomy::eclipse_events(system, &calendar, from_day, until_day)
+    let events = hornvale_astronomy::eclipse_events(system, &calendar, from, until)
         .into_iter()
         .map(|ev| {
             let track =
@@ -1410,7 +1462,9 @@ pub fn eclipses_scene(world: &World, from: f64, until: f64) -> Result<EclipsesSc
                     duration_days: g.duration_days,
                 });
             EclipseElem {
-                day: ev.day.get(),
+                day: WorldTime::from_std_days(ev.day.get())
+                    .expect("an eclipse's own instant is finite and in range")
+                    .ticks(),
                 moon_index: ev.moon,
                 body: match ev.body {
                     hornvale_astronomy::EclipseBody::Solar => "solar",
@@ -1429,8 +1483,12 @@ pub fn eclipses_scene(world: &World, from: f64, until: f64) -> Result<EclipsesSc
     Ok(EclipsesScene {
         schema: ECLIPSES_SCHEMA.to_string(),
         seed: world.seed.0,
-        from_day: from,
-        until_day: until,
+        from: WorldTime::from_std_days(from.get())
+            .map_err(|e| SceneError::Build(e.to_string()))?
+            .ticks(),
+        until: WorldTime::from_std_days(until.get())
+            .map_err(|e| SceneError::Build(e.to_string()))?
+            .ticks(),
         events,
     })
 }
@@ -1836,9 +1894,14 @@ mod tests {
         let width = 32;
         let height = width / 2;
         let climate = climate_of(&world).expect("climate builds");
-        let climate_index = NearestCellIndex::new(climate.geosphere());
+        let climate_index = NearestVertexIndex::new(climate.geosphere());
         let day = 91.3;
-        let grid = temperature_grid(&world, width, day).expect("grid builds");
+        let grid = temperature_grid(
+            &world,
+            width,
+            WorldTime::from_std_days(day).expect("finite"),
+        )
+        .expect("grid builds");
         assert_eq!(grid.len(), (width * height) as usize);
 
         // Independently reconstruct the same lattice sampling in the test
@@ -1849,8 +1912,10 @@ mod tests {
             let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
             for px in 0..width {
                 let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
-                let c_cell = climate_index.nearest(climate.geosphere(), latitude, longitude);
-                let expected = climate.temperature_at(c_cell, day).get();
+                let c_vertex = climate_index.nearest(climate.geosphere(), latitude, longitude);
+                let expected = climate
+                    .temperature_at(c_vertex, WorldTime::from_std_days(day).expect("finite"))
+                    .get();
                 assert_eq!(grid[i], expected, "tile {i} mismatch at day {day}");
                 i += 1;
             }
@@ -1867,32 +1932,70 @@ mod tests {
         let offset = climate.year_phase_offset();
         let obliquity_deg = climate.obliquity_deg();
         let zero_phase_day = (-offset).rem_euclid(1.0) * period;
-        let day_fraction = zero_phase_day.rem_euclid(1.0);
-        let zero_grid = temperature_grid(&world, width, zero_phase_day).expect("grid builds");
+        // BOTH HALVES MUST SAMPLE THE SAME INSTANT (The Foliot, stage 4).
+        // `temperature_grid` takes a `WorldTime` now, so it lands
+        // `zero_phase_day` on the tick lattice; deriving `day_fraction` from
+        // the UNROUNDED value would compare the grid at one instant against
+        // an expectation computed at another, and the two disagreed in the
+        // 8th decimal. Round once, here, and read the fraction back off the
+        // instant the grid will actually use.
+        let zero_phase_at =
+            WorldTime::from_std_days(zero_phase_day).expect("a zero-phase day is finite");
+        let day_fraction = zero_phase_at.as_std_days().rem_euclid(1.0);
+        let zero_grid = temperature_grid(&world, width, zero_phase_at).expect("grid builds");
         let scene = tiles_scene(&world, width).expect("scene builds");
         let mut i = 0;
         for py in 0..height {
             let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
             for px in 0..width {
                 let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
-                let c_cell = climate_index.nearest(climate.geosphere(), latitude, longitude);
+                let c_vertex = climate_index.nearest(climate.geosphere(), latitude, longitude);
                 let diurnal = match climate.regime() {
                     RotationRegime::Locked => 0.0,
                     RotationRegime::Spinning { day_std } => hornvale_climate::diurnal_anomaly(
-                        climate.diurnal_amp_at(c_cell),
-                        climate.geosphere().coord(c_cell).latitude,
-                        climate.geosphere().coord(c_cell).longitude,
+                        climate.diurnal_amp_at(c_vertex),
+                        climate.geosphere().coord(c_vertex).latitude,
+                        climate.geosphere().coord(c_vertex).longitude,
                         obliquity_deg,
-                        0.0, // year phase is exactly zero at zero_phase_day, by construction
+                        // The year phase AT THE INSTANT THE GRID USES, not
+                        // the literal 0.0 this once passed. `zero_phase_day`
+                        // is by construction the day where the phase is
+                        // exactly zero, but landing it on the tick lattice
+                        // moves it by up to half a tick, so the phase there is
+                        // near zero rather than at it. Passing 0.0 compared
+                        // the grid at one phase against an expectation at
+                        // another and disagreed in the 12th decimal.
+                        (zero_phase_at.as_std_days() / period + offset).rem_euclid(1.0),
                         day_fraction,
                         day_std,
                     )
                     .get(),
                 };
                 let expected = scene.t_mean_c[i] + diurnal;
-                assert_eq!(
-                    zero_grid[i], expected,
-                    "zero-phase temperature_grid must equal t_mean_c + diurnal at tile {i}"
+                // A TOLERANCE, AND THE WEAKENING IS DELIBERATE (The Foliot,
+                // stage 4). This was `assert_eq!` on the bits, which held
+                // while the grid took a raw `f64` day: the probe could sit
+                // exactly on the zero-phase day, the seasonal term
+                // `sin(TAU * phase)` was exactly zero, and `t_mean_c +
+                // diurnal` was the whole value.
+                //
+                // The grid takes a `WorldTime` now, so the probe lands on the
+                // tick lattice and the zero-phase instant is generally NOT
+                // representable. The phase there is ~1e-9 rather than 0, and
+                // the seasonal term it produces is ~1.6e-9 — real, and
+                // omitted by this expectation on purpose, because adding it
+                // would mean duplicating another slice of the temperature
+                // model inside its own test.
+                //
+                // What the assertion is FOR survives intact: the grid
+                // decomposes into the zero-phase mean plus the diurnal
+                // anomaly. The bound is 1e-6, six orders under the ~1e-9
+                // residual and far under any real temperature difference.
+                assert!(
+                    (zero_grid[i] - expected).abs() < 1e-6,
+                    "zero-phase temperature_grid must equal t_mean_c + diurnal at tile {i}: \
+                     {} vs {expected}",
+                    zero_grid[i]
                 );
                 i += 1;
             }
@@ -2253,18 +2356,24 @@ mod tests {
     fn eclipses_scene_has_schema_window_and_is_deterministic() {
         let w = mooned_world();
         // A wide window so seed 42's two moons produce several events.
-        let a = eclipses_scene(&w, 0.0, 2000.0).expect("mooned world has eclipses");
-        assert_eq!(a.schema, "scene/eclipses/v1");
+        let a = eclipses_scene(
+            &w,
+            StdInstant::new(0.0).unwrap(),
+            StdInstant::new(2000.0).unwrap(),
+        )
+        .expect("mooned world has eclipses");
+        assert_eq!(a.schema, "scene/eclipses/v2");
         assert_eq!(a.seed, w.seed.0);
-        assert_eq!(a.from_day, 0.0);
-        assert_eq!(a.until_day, 2000.0);
+        // Echoed back as exact ticks now, not quantized days (v2).
+        assert_eq!(a.from, 0);
+        assert_eq!(a.until, 2000 * WorldTime::TICKS_PER_STD_DAY);
         assert!(
             !a.events.is_empty(),
             "seed 42's moons eclipse within 2000 days"
         );
         // Day-ascending, inside the window.
         for e in &a.events {
-            assert!((0.0..=2000.0).contains(&e.day));
+            assert!((0..=2000 * WorldTime::TICKS_PER_STD_DAY).contains(&e.day));
             assert!(e.body == "solar" || e.body == "lunar");
             assert!(e.kind == "total" || e.kind == "annular");
         }
@@ -2284,7 +2393,95 @@ mod tests {
         // Byte-identical on rebuild.
         assert_eq!(
             eclipses_json(&a),
-            eclipses_json(&eclipses_scene(&w, 0.0, 2000.0).unwrap())
+            eclipses_json(
+                &eclipses_scene(
+                    &w,
+                    StdInstant::new(0.0).unwrap(),
+                    StdInstant::new(2000.0).unwrap()
+                )
+                .unwrap()
+            )
+        );
+    }
+
+    /// Every instant this schema emits is an exact tick count, and NO float
+    /// instant survives beside it (v2, The Foliot).
+    ///
+    /// This test is the inverse of the one it replaces. The Escapement added
+    /// the tick fields ADDITIVELY at v1 and pinned exactly that — schema
+    /// still v1, the `f64` still present, a tick beside it — because the
+    /// floats were a cross-repo contract that external consumers read. With
+    /// both external clients out of scope the floats had no consumer left,
+    /// so v2 completes the step 0188 deliberately left half-finished, and the
+    /// property worth pinning inverts with it.
+    ///
+    /// Asserting the ABSENCE of the float fields is the load-bearing half:
+    /// a test that only checked the tick fields exist would pass just as
+    /// happily if the floats had been left behind.
+    #[test]
+    fn an_eclipse_emits_only_exact_ticks() {
+        let w = mooned_world();
+        let scene = eclipses_scene(
+            &w,
+            StdInstant::new(0.0).unwrap(),
+            StdInstant::new(2000.0).unwrap(),
+        )
+        .expect("mooned world has eclipses");
+        let json = serde_json::to_value(&scene).expect("serializes");
+
+        assert_eq!(
+            json["schema"], "scene/eclipses/v2",
+            "the version moved with the shape, so a returning consumer fails \
+             loudly on an unknown schema rather than on a missing field"
+        );
+        assert!(json["from"].is_i64(), "the window start is an exact tick");
+        assert!(json["until"].is_i64(), "and so is the window end");
+        for gone in ["from_day", "from_day_ticks", "until_day", "until_day_ticks"] {
+            assert!(
+                json.get(gone).is_none(),
+                "v1's {gone} must not survive into v2 — checking only that the \
+                 tick fields EXIST would pass with the floats left behind"
+            );
+        }
+
+        assert!(
+            !scene.events.is_empty(),
+            "seed 42's moons eclipse within 2000 days"
+        );
+        let elem = &json["events"][0];
+        assert!(elem["day"].is_i64(), "an event's instant is an exact tick");
+        assert!(
+            elem.get("day_ticks").is_none(),
+            "and there is no separate tick field, because `day` IS the tick"
+        );
+
+        // The tick fields are exact conversions of the standard-day window
+        // bounds and event days actually passed/produced, not the quantized
+        // f64 round-tripped back through ticks.
+        assert_eq!(scene.from, WorldTime::from_std_days(0.0).unwrap().ticks());
+        assert_eq!(
+            scene.until,
+            WorldTime::from_std_days(2000.0).unwrap().ticks()
+        );
+        // THE ESCAPEMENT'S MINOR 6, CLOSED BY DELETION. This asserted that an
+        // event's tick field agreed with converting its own emitted `f64`
+        // day — and it could not fail, because both sides were built from the
+        // same in-memory f64 (quantization happens at serialize, not here).
+        // The review named it tautological and asked for the interesting
+        // comparison instead: the tick against the EMITTED, quantized day.
+        //
+        // v2 removes the subject. There is no emitted f64 day any more, so
+        // that comparison has nothing to compare and the tautology has
+        // nothing to be tautological about. What is worth asserting is that
+        // the event lands inside the window the caller asked for, in the same
+        // units the window is expressed in — which the old pair could not
+        // check, since one side was days and the other ticks.
+        assert!(
+            (scene.from..=scene.until).contains(&scene.events[0].day),
+            "an event's instant lies inside the queried window: {} not in {}..={}",
+            scene.events[0].day,
+            scene.from,
+            scene.until
         );
     }
 
@@ -2292,7 +2489,14 @@ mod tests {
     fn eclipses_scene_rejects_a_world_with_no_generated_sky() {
         // Mirror the moons/neighbors constant-sun refusal test.
         let w = world();
-        assert!(eclipses_scene(&w, 0.0, 100.0).is_err());
+        assert!(
+            eclipses_scene(
+                &w,
+                StdInstant::new(0.0).unwrap(),
+                StdInstant::new(100.0).unwrap()
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -2302,7 +2506,12 @@ mod tests {
         // it leaves the world byte-identical (no Stream draw, no mutation).
         let w = mooned_world();
         let before = serde_json::to_string(&w).unwrap();
-        let _ = eclipses_scene(&w, 0.0, 2000.0).unwrap();
+        let _ = eclipses_scene(
+            &w,
+            StdInstant::new(0.0).unwrap(),
+            StdInstant::new(2000.0).unwrap(),
+        )
+        .unwrap();
         let after = serde_json::to_string(&w).unwrap();
         assert_eq!(before, after, "eclipses_scene must not alter the world");
     }
@@ -2335,8 +2544,19 @@ mod tests {
         }
 
         // Temperature: the third terrain-facing entry point.
-        let via_world = temperature_grid(&world, 64, 100.0).expect("temps");
-        let via_ctx = temperature_grid_in(&world, &ctx, 64, 100.0).expect("temps_in");
+        let via_world = temperature_grid(
+            &world,
+            64,
+            WorldTime::from_std_days(100.0).expect("a finite sample day"),
+        )
+        .expect("temps");
+        let via_ctx = temperature_grid_in(
+            &world,
+            &ctx,
+            64,
+            WorldTime::from_std_days(100.0).expect("a finite sample day"),
+        )
+        .expect("temps_in");
         assert_eq!(
             via_world, via_ctx,
             "temperature_grid diverged from temperature_grid_in"
@@ -2345,10 +2565,27 @@ mod tests {
         // Regional temperature: the fourth, and the one a day loop sweeps —
         // so it is checked across several days on one address, not just one.
         for day in [0.0, 100.0, 233.5] {
-            let via_world =
-                temperature_grid_region(&world, 0, 3, 0, 0, 8, day).expect("region temps");
-            let via_ctx = temperature_grid_region_in(&world, &ctx, 0, 3, 0, 0, 8, day)
-                .expect("region temps_in");
+            let via_world = temperature_grid_region(
+                &world,
+                0,
+                3,
+                0,
+                0,
+                8,
+                WorldTime::from_std_days(day).expect("finite"),
+            )
+            .expect("region temps");
+            let via_ctx = temperature_grid_region_in(
+                &world,
+                &ctx,
+                0,
+                3,
+                0,
+                0,
+                8,
+                WorldTime::from_std_days(day).expect("finite"),
+            )
+            .expect("region temps_in");
             assert_eq!(
                 via_world, via_ctx,
                 "temperature_grid_region diverged at day={day}"

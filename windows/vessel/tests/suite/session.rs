@@ -683,10 +683,10 @@ fn the_water_column_is_a_place_you_can_be() {
     // On the surface: afloat on open water, not standing in the floor's biome.
     assert!(afloat.contains("Open water —"), "{afloat}");
 
-    // A direction this cell ACTUALLY offers, read off the surface `look`
+    // A direction this room ACTUALLY offers, read off the surface `look`
     // before diving. Hardcoding `n` was wrong and The Tense exposed it: the
-    // mesh is triangular, every cell offers one of two exit triads, and the
-    // exit check runs BEFORE the submersion rule — so on a cell without `n`
+    // mesh is triangular, every room offers one of two exit triads, and the
+    // exit check runs BEFORE the submersion rule — so on a room without `n`
     // the reply is "No way n from here." and the lateral-refusal claim below
     // is never reached. The test would have gone green on a refusal it was not
     // testing for, which is worse than the red.
@@ -757,51 +757,60 @@ fn there_is_nothing_to_dive_into_on_dry_land() {
     assert!(up.contains("already at the surface"), "{up}");
 }
 
-/// The Deep Realm, Task 5: at a cell with no cave, `delve` refuses and names
+/// The Deep Realm, Task 5: at a vertex with no cave, `delve` refuses and names
 /// the absence — the first of the outcomes `dive`'s own doc warns a descent
 /// verb must distinguish. The others are exercised in
 /// `windows/vessel/src/session.rs`'s own internal tests
-/// (`delve_has_two_distinguishable_outcomes`), which need a hand-picked cave
-/// cell — a terrain cell spans many walk-band rooms, so a test cannot
-/// reliably steer a walk to land on one specific outcome, and only
+/// (`delve_has_three_distinguishable_outcomes`), which need a hand-picked
+/// cave vertex — a terrain vertex spans many walk-band rooms, so a test
+/// cannot reliably steer a walk to land on one specific outcome, and only
 /// `session.rs`'s own tests can reach the private `delve_at` seam that
 /// sidesteps needing to.
 ///
-/// **There were THREE and there are TWO** (The Drift, spec amendment B).
-/// The third was a cave whose entrance address resolved to no chamber —
-/// SEALED — and it existed because a 0.5 per-address existence coin refused
-/// roughly 48.5% of cave entrances. Spec §4.1 deleted that coin, so a sealed
-/// cave is impossible rather than rare: 0 of 48,316 caves over thirty
-/// worlds. The test was renamed with the outcome it lost, not deleted, and
-/// it reddens if a sealed cave ever returns while it still claims two.
+/// **There were THREE, then TWO, and there are THREE again — through a
+/// different door.** The original third outcome was a cave whose entrance
+/// address resolved to no chamber — SEALED — because a 0.5 per-address
+/// existence coin refused roughly 48.5% of cave entrances. Spec §4.1 (The
+/// Drift) deleted that coin, so that specific outcome is impossible rather
+/// than rare: 0 of 48,316 caves over thirty worlds, still true today. The
+/// Latch restored a third outcome by a different mechanism instead —
+/// `delve_at` now gates on the address's seeded `BarrierState` before it
+/// ever reaches the chamber lookup, and seed 42's terrain barred 639 of 874
+/// cave mouths (`windows/vessel/tests/suite/passage.rs`). The internal test
+/// was renamed once for losing an outcome and again for regaining one
+/// through a different door; see its own doc comment for the full account.
 ///
 /// This mirrored `there_is_nothing_to_dive_into_on_dry_land`: the flagship's
-/// own starting cell had no cave, so no walk was needed to observe the
+/// own starting vertex had no cave, so no walk was needed to observe the
 /// refusal.
 ///
 /// **THE SUBJECT MOVED, NOT THE VERB** (decision 0134, 2026-08-14). That was
-/// always a measured contingency about one cell, and the terrain epoch's new
+/// always a measured contingency about one vertex, and the terrain epoch's new
 /// coastlines put a cave under it — a SEALED one, whose entrance resolves to
-/// no chamber. So the public path here now exercises the *sealed* refusal
-/// instead of the *no-cave* refusal. Both are refusals that name what stopped
-/// you, which is the property this test exists to hold through the public
-/// verb; which of the two the flagship's own ground happens to produce is a
-/// fact about seed 42's karst, not about `delve`.
+/// no chamber. So the public path here briefly exercised the
+/// chamber-unrealized refusal instead of the *no-cave* refusal. Both are
+/// refusals that name what stopped you, which is the property this test
+/// exists to hold through the public verb; which one the flagship's own
+/// ground happens to produce is a fact about seed 42's karst, not about
+/// `delve`.
 ///
-/// The no-cave branch did not lose coverage: `delve_has_two_distinguishable_outcomes`
-/// now reaches it directly through `delve_column(None)` rather than by
+/// The no-cave branch did not lose coverage: `delve_has_three_distinguishable_outcomes`
+/// reaches it directly through `delve_column(None)` rather than by
 /// standing somewhere that happens to qualify, so it can no longer be
 /// falsified by a coastline moving.
 ///
 /// **THE SUBJECT MOVED AGAIN** (The Glasshouse, Stage B Task 4, the
 /// thermostat). The damped, greenhouse-forced insolation baseline
 /// re-places seed 42's settlements a second time this campaign, and the new
-/// flagship's own starting cell has no cave at all — back to the *no-cave*
+/// flagship's own starting vertex has no cave at all — back to the *no-cave*
 /// refusal, the same contingency this comment already names. Still a
 /// refusal that names what stopped you, which is the property this test
-/// holds regardless of which of the two fires.
+/// holds regardless of which refusal fires — and since The Latch, delve at
+/// this same public seam could in principle also land on a barred vertex; it
+/// has not, at this seed and this starting position, so this test still
+/// pins whichever of no-cave / chamber-unrealized it observes.
 #[test]
-fn the_flagships_own_starting_cell_refuses_a_delve_and_names_why() {
+fn the_flagships_own_starting_vertex_refuses_a_delve_and_names_why() {
     let world = seam_world();
     let (mut s, _) = Session::start(&world, &opts()).unwrap();
     let out = match s.handle("delve") {

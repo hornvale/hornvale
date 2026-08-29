@@ -19,7 +19,7 @@
 //!   `vacant_for` filters on, so it bounds where the species may ever be placed.
 //! - **`K>5`** — where a genesis community can *survive*. `GENESIS_POP` is 10 and
 //!   `pressure = pop × NEED / eff`, so `eff > 10/COLLAPSE_PRESSURE = 5.0` is the
-//!   real floor for a founding. **A cell that passes `K>0` but fails `K>5` is a
+//!   real floor for a founding. **A vertex that passes `K>0` but fails `K>5` is a
 //!   trap**: the species may be sited there and will starve.
 //! - **`K>14.3`** — where it can throw a daughter (`DAUGHTER_MAX_PRESSURE` 0.7),
 //!   i.e. where the species can actually *spread* rather than merely cling.
@@ -107,15 +107,17 @@ fn report(seed_value: u64) {
     let obliquity_deg = system.anchor.obliquity.get();
     let regime = match system.anchor.rotation {
         hornvale_astronomy::Rotation::Spinning { day, .. } => {
-            hornvale_climate::RotationRegime::Spinning { day_std: day.get() }
+            hornvale_climate::RotationRegime::Spinning {
+                day_std: day.as_std_days(),
+            }
         }
         hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
     };
 
-    let land: Vec<hornvale_kernel::CellId> =
-        geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+    let land: Vec<hornvale_kernel::Vertex> =
+        geo.vertices().filter(|&c| !terrain.is_ocean(c)).collect();
     println!("== seed {seed_value} ==");
-    println!("land cells: {} of {}", land.len(), geo.cell_count());
+    println!("land vertices: {} of {}", land.len(), geo.vertex_count());
 
     let biosphere: Vec<&hornvale_species::BiosphereTraits> = SETTLERS
         .iter()
@@ -175,7 +177,7 @@ fn report(seed_value: u64) {
         let (p0, p5, p14) = (gt(0.0), gt(SURVIVE_K), gt(SPREAD_K));
         // The column that says whether a species is indifferent to LETHAL cold:
         // how much of the land below the bake's own -10C snowline it would still
-        // call survivable. The era mask calls every one of these cells
+        // call survivable. The era mask calls every one of these vertices
         // uninhabitable; capacity never consults the snowline at all.
         let cold_survivable = land
             .iter()
@@ -301,12 +303,12 @@ fn report(seed_value: u64) {
         print!(" {:>7.2}", q);
     }
     println!();
-    // The bake's era mask admits a cell only at or above this line (worldgen's
+    // The bake's era mask admits a vertex only at or above this line (worldgen's
     // private FREEZE_C, mirrored), before any glacial cooling offset is added.
     const FREEZE_C: f64 = -10.0;
     let frozen = temps.iter().filter(|t| **t < FREEZE_C).count();
     println!(
-        "below the -10C snowline TODAY: {frozen} of {} land cells ({:.1}%)",
+        "below the -10C snowline TODAY: {frozen} of {} land vertices ({:.1}%)",
         temps.len(),
         frozen as f64 / temps.len() as f64 * 100.0
     );

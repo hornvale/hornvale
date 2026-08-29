@@ -130,13 +130,22 @@ exactly that reason: it names the claim, not the deleted machinery.
   earlier notes cite) — on a set that fires at every plan-stage boundary, so
   it moved to its own `campaign`-rung set instead.
 - `gate-full-heavy.sh` — the cost-tagged `heavy:` `#[ignore]`d tier that
-  `gate-commit` and the stage gate's own suite both defer (see
+  `gate-commit` and the `gate` set's own suite both defer (see
   `cli/tests/suite/heavy_tier.rs`). Runs as the `heavy` set — either standalone via
-  `make heavy-remote REF=<sha>`, or as the LAST of the merge queue's chamber
-  phases (`sluice-run.sh`, below), which is what `gate-campaign` used to
-  dispatch it. It is deliberately not a stage-gate phase: at a measured mean
-  1678 s it is 47% of the merge set's ~3602 s, which is a merge-frequency
-  cost, not a plan-stage-boundary one. **Takes the shared box claim** (decisions 0086/0133) — here,
+  `make heavy-remote REF=<sha>`, or as the LAST of the chamber's phases
+  (`sluice-run.sh`, below). **It is a phase of a MERGE and not of a stage gate
+  (decision 0426).** That is the pre-0148 arrangement restored: 0148 took it
+  off the merge list, where it had lived, and it has never been on the stage
+  list at all. The Governor then cut the tier 3.52x (1551.631 s -> 440.269 s
+  nextest wall, 118 -> 64 tests, 10 -> 0 failures, measured at `e76ea0497`;
+  that campaign's final review restored one test and a re-measure confirmed it
+  cost nothing), which is what makes it affordable at
+  ~29% of a ~1595.3 s merge — both figures derived once in decision 0426 and
+  not restated in a second form here. It stays off the stage list because
+  `census_fixtures_match_a_probe_of_live_seeds` compares a live probe against
+  committed census fixtures refreshed once per campaign at pre-merge close, so
+  a stage gate would red predictably for the whole middle of any
+  world-touching campaign. **Takes the shared box claim** (decisions 0086/0133) — here,
   at the seam, rather than only in a wrapper, because a wrapper cannot guard
   a direct invocation of the script. Where there is no `flock` (macOS ships
   none) it proceeds unserialised with a note rather than failing.
@@ -145,13 +154,17 @@ exactly that reason: it names the claim, not the deleted machinery.
   pushed ref in a scratch worktree; `status` asks who holds the box and is
   legal from any machine — but it reads the claim in the **local** `/tmp`, so
   from the Mac it always says "no". Use **`make heavy-status`** to ask the
-  canonical box instead; that is almost always the question you mean. Carries the canonical-host guard, because the tier
-  **authors committed artifacts**: `the-history` (`cli/tests/suite/history_battery.rs`),
-  `the-sounding` (`windows/chronicle/tests/suite/sounding_sweep.rs`), and
-  `occupancy.csv` (`windows/worldgen/tests/suite/occupancy_readout.rs`) — plus
+  canonical box instead; that is almost always the question you mean. Carries
+  the canonical-host guard, because the tier **authors a committed artifact**:
+  `the-history` (`cli/tests/suite/history_battery.rs`) — plus
   `census_fixtures_match_a_probe_of_live_seeds`, which compares a live probe
-  against lefford-authored fixtures. Review and commit those artifacts **on
-  the canonical box**. Dispatch from the Mac with `make heavy-remote REF=<sha>`.
+  against lefford-authored fixtures. **This bullet used to name three
+  writers**; The Governor (2026-08-28) demoted `sounding_sweep` out of the
+  tier, and `occupancy_readout_is_current` only ever *compared* against
+  `occupancy.csv` — its writer, `regenerate_occupancy_readout`, was never
+  `heavy:` at all, so counting it here was wrong rather than merely stale.
+  Review and commit the artifact **on the canonical box**. Dispatch from the
+  Mac with `make heavy-remote REF=<sha>`.
 - `test-heavy-lock.sh` — proves the claim EXCLUDES (second acquirer refused
   while held; a normal exit and a `-9` both release), not merely that a lock
   file exists. Skips where there is no `flock`.
@@ -189,13 +202,18 @@ the exact SHA it tested.
   0081/0086/0133), so the queue pays for one job, not the six separate
   dispatches a campaign gate used to cost (67% of the lane's first 27.4 h of
   wall time was queue wait for exactly that reason). Merges the candidate,
-  then runs `artifacts outboard gate clients` against the real merge commit
-  before pushing it, so a broken interaction with main is caught before it
-  ever reaches main. **That list lost `seam-guard` and `heavy` on 2026-08-19
-  (decision 0148)**: both keep their `campaign`-rung rows and their own entry
-  points (`make seam-guard`, `make heavy-remote REF=<full-sha>`), and those
-  are now the ONLY things that run them — nothing does so automatically. The
-  merge product is still gated as itself, by four phases rather than six.
+  then runs `artifacts outboard gate clients heavy` against the real merge
+  commit before pushing it, so a broken interaction with main is caught before
+  it ever reaches main. A STAGE GATE RUNS THE SAME LIST MINUS `heavy`.
+  **The merge list lost `seam-guard` and `heavy` on 2026-08-19 (decision 0148)
+  and got `heavy` back on 2026-08-28 (decision 0426)**, after The Governor cut
+  the tier 3.52x. `seam-guard` keeps its `campaign`-rung row and its own entry
+  point (`make seam-guard`), and that is still the ONLY thing that runs it —
+  nothing does so automatically. `heavy` keeps `make heavy-remote
+  REF=<full-sha>` as a by-hand entry point, and that is still the only way to
+  run the tier at a plan-stage boundary, but the chamber now dispatches it on
+  every non-prose merge candidate. The merge product is gated as itself, by
+  five phases.
   (`census` refuses as a chamber phase for an unrelated reason: it
   unconditionally clobbers the shared claim on exit.) A `kind=stage` run is the same code with one
   branch turned the other way at the push step: it merges, runs the
@@ -215,6 +233,46 @@ the exact SHA it tested.
   fatal, and skippable with `HV_SLUICE_SKIP_BOARD=1` (which
   `scripts/test-sluice.sh` sets for the whole file, so a test run never
   pushes a board ref to the real `origin`).
+- **`census-duration-alarm.sh`** — reports a census run's wall against the
+  alarm threshold AT THE MOMENT IT IS MEASURED, called from `census-run.sh`.
+  **`cli/tests/suite/census_duration.rs` is the ratchet and it reads
+  `docs/timings.md` on `main` — which a census run's row no longer reaches
+  promptly.** Since the census joined the merge queue (2026-08-27) the row is
+  committed onto the run's `census/*` DELIVERY BRANCH with the goldens, so it
+  lands on main only when a campaign merges that branch, which may be days
+  later or never. Measured that day: four runs, three past the threshold, and
+  the ledger on main still showing a two-day-old figure as its most recent
+  census — the alarm could not see the runs that would have tripped it, while
+  the file the root guide tells you to consult for census cost read as current.
+  This is the live half; the Rust test still guards committed history. It reads
+  `CENSUS_ALARM_SECS` OUT of the Rust source rather than restating it (the
+  `test-census-guard.sh` discipline), and if it cannot find that constant it
+  **refuses to report a threshold** rather than inventing one — a bound stated
+  in a message is a claim, and a made-up one is worse than silence. Exit 0
+  always: a census that ran long is not a census that failed.
+- **`sluice-drain.sh`** — the operator's harness: pop the next row, gate it,
+  dispatch on `kind`, set the terminal state, repeat. Every script it calls was
+  committed and tested; **this one lived in a session scratchpad for weeks**,
+  ungated and untested, while doing real gating work — and caused two defects in
+  one night (2026-08-27). Promoted with its two decision rules extracted as
+  functions (`mouth_applies_to`, `dispatch_for`) precisely so they could be
+  tested; `HV_DRAIN_LIB=1` sources it for those functions without draining.
+  **It never decides whether a job SHOULD run** — a redundant census, a decision
+  minted outside its block, a schema bump that breaks a consumer are all invisible
+  here and must stay so. It decides ORDER and MECHANISM; vetting is the operator's.
+  Two rules it encodes, both learned the hard way: a `census` is exempt from the
+  mouth (a merge-conflict verdict cannot speak to a job that never merges main —
+  it refused campaign/the-sources over conflicts in files a census does not read),
+  and a `census` never goes to `sluice-run.sh` (census-run.sh takes the shared
+  claim itself and deletes the claim file on exit, so nesting it clobbers the
+  outer job's own claim). An unknown `kind` is gated and sent to the chamber —
+  failing toward the check.
+- **`test-sluice-drain.sh`** — tests those two rules, their negative controls,
+  and that they AGREE about what a census is. The agreement test is the load-
+  bearing one: the original defect was not either rule alone but the two
+  disagreeing, one exempting a census while the other did not. Mutation-tested
+  in both directions (gate-everything, and dispatch-census-to-the-chamber); each
+  mutant kills two assertions.
 - **`test-sluice.sh`** — property tests for the queue, shaped after
   the deleted `test-lane.sh`: pins the properties the queue would be worthless without
   (flock ordering, coalescing by ancestry, never superseding a running

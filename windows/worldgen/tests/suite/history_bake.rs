@@ -4,7 +4,7 @@
 //! the paleoclimate era swing, never by a floor (measure-don't-narrate).
 
 use hornvale_history::record::{CauseOfEnd, Ended, Founding};
-use hornvale_kernel::{CellId, CellMap, Geosphere, KindId, ReferenceElevation, Seed};
+use hornvale_kernel::{Geosphere, KindId, ReferenceElevation, Seed, Vertex, VertexMap};
 use hornvale_paleoclimate::EraClimate;
 use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
 use hornvale_worldgen::history_bake::{BakeConfig, bake, census};
@@ -15,17 +15,25 @@ fn e(m: f64) -> ReferenceElevation {
     ReferenceElevation::new(m).unwrap()
 }
 
+/// The biome-class map every bake fixture is handed (The Granary T2): all
+/// `Grassland`, so each community's harvest curve carries the grassland
+/// amplitude and no pre-campaign expectation moves. The bake reads this map
+/// only at community open; none of these tests assert on curves.
+fn biome_map(geo: &Geosphere) -> VertexMap<hornvale_culture::BiomeClass> {
+    VertexMap::from_fn(geo, |_| hornvale_culture::BiomeClass::Grassland)
+}
+
 /// A pure-land connection graph over `geo` (unit-conductance adjacency, no water
 /// routes). `traversable_neighbors` over this equals `geo.neighbors`, so on an
 /// all-land world the bake is byte-identical to the pre-Sundering raw-adjacency
 /// bake — the no-op seam.
 fn full_land_graph(geo: &Geosphere) -> ConnectionGraph {
-    let mut g = ConnectionGraph::new(geo.cell_count());
-    for cell in geo.cells() {
-        for &n in geo.neighbors(cell) {
-            if n.0 > cell.0 {
+    let mut g = ConnectionGraph::new(geo.vertex_count());
+    for vertex in geo.vertices() {
+        for &n in geo.neighbors(vertex) {
+            if n.0 > vertex.0 {
                 g.add_edge(
-                    cell,
+                    vertex,
                     Edge {
                         to: n,
                         kind: EdgeKind::Adjacency,
@@ -48,10 +56,10 @@ fn full_land_graph(geo: &Geosphere) -> ConnectionGraph {
 /// simplification, it is what the composition root would hand it — and it is
 /// what makes each of these tests, unchanged, evidence that the re-key moved
 /// nothing above ground.
-fn surface_seating(geo: &Geosphere, peoples: &[KindId]) -> Vec<CellMap<hornvale_kernel::Band>> {
+fn surface_seating(geo: &Geosphere, peoples: &[KindId]) -> Vec<VertexMap<hornvale_kernel::Band>> {
     peoples
         .iter()
-        .map(|_| CellMap::from_fn(geo, |_| hornvale_kernel::Band::Surface))
+        .map(|_| VertexMap::from_fn(geo, |_| hornvale_kernel::Band::Surface))
         .collect()
 }
 
@@ -69,21 +77,21 @@ fn peoples() -> Vec<KindId> {
 /// passes to `bake` — the two must be the same length and the same order).
 ///
 /// Uniform across peoples on purpose. Every fixture below encodes a value
-/// gradient *across cells* — the refuge step, the escarpment, the value-flat
+/// gradient *across vertices* — the refuge step, the escarpment, the value-flat
 /// world — and that gradient is what the rules under test key on. Varying it per
 /// people as well would add a second independent variable to each test and make
 /// a failure ambiguous between "the rule moved" and "the fixture disagrees about
 /// who likes what". The niche-differentiation behaviour has its own coverage.
 /// One capacity field PER ERA, for fixtures whose hostility oscillates.
 fn caps_per_era(
-    fields: &[CellMap<f64>],
+    fields: &[VertexMap<f64>],
     peoples: &[KindId],
 ) -> Vec<Vec<hornvale_kernel::ecology::CapacityMap>> {
     fields.iter().map(|f| per_people(f, peoples)).collect()
 }
 
 fn caps_of(
-    field: &CellMap<f64>,
+    field: &VertexMap<f64>,
     peoples: &[KindId],
     eras: usize,
 ) -> Vec<Vec<hornvale_kernel::ecology::CapacityMap>> {
@@ -94,7 +102,7 @@ fn caps_of(
 }
 
 fn per_people(
-    field: &CellMap<f64>,
+    field: &VertexMap<f64>,
     peoples: &[KindId],
 ) -> Vec<hornvale_kernel::ecology::CapacityMap> {
     peoples
@@ -130,7 +138,7 @@ fn per_people(
 /// finds a live target, and `raided` stays 0 however crowded the refuge gets —
 /// crowding alone starts no fights.
 ///
-/// Refuge cells are habitable ONLY in glacial eras, so they sit vacant when a
+/// Refuge vertices are habitable ONLY in glacial eras, so they sit vacant when a
 /// glacial onset drives migrants in — that vacancy is what lets the migrants
 /// concentrate instead of colliding with prior settlement.
 ///
@@ -141,27 +149,27 @@ fn fixture(
     _seed: u64,
 ) -> (
     Geosphere,
-    Vec<CellMap<f64>>,
-    CellMap<f64>,
+    Vec<VertexMap<f64>>,
+    VertexMap<f64>,
     Vec<EraClimate>,
-    CellMap<bool>,
+    VertexMap<bool>,
 ) {
-    let geo = Geosphere::new(1); // 42 cells
+    let geo = Geosphere::new(1); // 42 vertices
 
-    // Refuge cluster: cell 0, its neighbours, and their neighbours (two rings)
+    // Refuge cluster: vertex 0, its neighbours, and their neighbours (two rings)
     // — a compact upland island, viable only when the lowlands freeze.
-    let mut refuge: BTreeSet<CellId> = BTreeSet::new();
-    refuge.insert(CellId(0));
-    for &n in geo.neighbors(CellId(0)) {
+    let mut refuge: BTreeSet<Vertex> = BTreeSet::new();
+    refuge.insert(Vertex(0));
+    for &n in geo.neighbors(Vertex(0)) {
         refuge.insert(n);
     }
-    let ring: Vec<CellId> = refuge.iter().copied().collect();
+    let ring: Vec<Vertex> = refuge.iter().copied().collect();
     for c in ring {
         for &n in geo.neighbors(c) {
             refuge.insert(n);
         }
     }
-    let refugia = CellMap::from_fn(&geo, |c| refuge.contains(&c));
+    let refugia = VertexMap::from_fn(&geo, |c| refuge.contains(&c));
 
     // Refuge capacity is well below the lowland's, so a lowland community
     // driven into the refuge by a glacial onset arrives over-capacity — the
@@ -174,7 +182,7 @@ fn fixture(
     // gradient are all preserved exactly; only the mechanism expressing them
     // changed.
     let capacity_at = |glacial: bool| {
-        CellMap::from_fn(&geo, |c| match (refuge.contains(&c), glacial) {
+        VertexMap::from_fn(&geo, |c| match (refuge.contains(&c), glacial) {
             (true, true) => 60.0,    // refuge, alive in the cold
             (false, false) => 120.0, // lowland, alive in the warm
             _ => 0.0,                // the other region is dead this era
@@ -185,20 +193,20 @@ fn fixture(
     // because `EraClimate` still carries the field, and it binds nothing.
     let era = |day: f64, glacial: bool| EraClimate {
         day,
-        ice: CellMap::from_fn(&geo, |_| false),
-        habitable: CellMap::from_fn(&geo, |_| true),
+        ice: VertexMap::from_fn(&geo, |_| false),
+        habitable: VertexMap::from_fn(&geo, |_| true),
         sea_level: e(0.0),
         ice_fraction: if glacial { 0.6 } else { 0.0 },
     };
     // Eight eras across the two millennia: warm/glacial alternating, four
     // glacial cycles.
     let eras: Vec<EraClimate> = (0..8).map(|i| era(i as f64 * 250.0, i % 2 == 1)).collect();
-    let capacity: Vec<CellMap<f64>> = (0..8).map(|i| capacity_at(i % 2 == 1)).collect();
+    let capacity: Vec<VertexMap<f64>> = (0..8).map(|i| capacity_at(i % 2 == 1)).collect();
 
     // River proximity is uniformly zero here (Task 5b): the fixture tests the
     // era-swing displacement mechanism, not the freshwater bias, so the river
     // weighting is a deliberate no-op and the displacement gate is unchanged.
-    let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+    let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
 
     (geo, capacity, river_prox, eras, refugia)
 }
@@ -212,6 +220,7 @@ fn same_seed_bakes_byte_identical_history() {
     let a = bake(
         Seed(42),
         &geo,
+        &biome_map(&geo),
         &caps_per_era(&cap, &people),
         &river,
         &eras,
@@ -224,6 +233,7 @@ fn same_seed_bakes_byte_identical_history() {
     let b = bake(
         Seed(42),
         &geo,
+        &biome_map(&geo),
         &caps_per_era(&cap, &people),
         &river,
         &eras,
@@ -245,6 +255,7 @@ fn different_seeds_diverge() {
     let a = bake(
         Seed(42),
         &geo,
+        &biome_map(&geo),
         &caps_per_era(&cap, &people),
         &river,
         &eras,
@@ -257,6 +268,7 @@ fn different_seeds_diverge() {
     let b = bake(
         Seed(43),
         &geo,
+        &biome_map(&geo),
         &caps_per_era(&cap, &people),
         &river,
         &eras,
@@ -284,6 +296,7 @@ fn the_workload_fires_climate_displacement_at_volume_without_conflict() {
     let h = bake(
         Seed(42),
         &geo,
+        &biome_map(&geo),
         &caps_per_era(&cap, &people),
         &river,
         &eras,
@@ -314,28 +327,28 @@ fn the_workload_fires_climate_displacement_at_volume_without_conflict() {
 }
 
 /// A world with LAND TO SPARE and a sharp value gradient — the fixture that
-/// isolates predation from crowding. Every cell is habitable in every era (the
-/// mask never evicts anyone), capacity steps 20 → 100 from cell to cell (so a
-/// community can sit on poor land beside much richer land), and no cell is so
+/// isolates predation from crowding. Every vertex is habitable in every era (the
+/// mask never evicts anyone), capacity steps 20 → 100 from vertex to vertex (so a
+/// community can sit on poor land beside much richer land), and no vertex is so
 /// poor that a genesis (pop 10) or daughter (pop 8) community starts anywhere
 /// near the crowding thresholds. Nothing here can ever reach `pressure >= 1.0`,
 /// so any conflict this world produces is driven by coveted VALUE down a
 /// STRENGTH gradient, never by density.
 fn land_to_spare_fixture() -> (
     Geosphere,
-    CellMap<f64>,
-    CellMap<f64>,
+    VertexMap<f64>,
+    VertexMap<f64>,
     Vec<EraClimate>,
-    CellMap<bool>,
+    VertexMap<bool>,
 ) {
-    let geo = Geosphere::new(1); // 42 cells
-    let capacity = CellMap::from_fn(&geo, |c| 20.0 + 20.0 * f64::from(c.0 % 5));
-    let river_prox = CellMap::from_fn(&geo, |_| 0.0);
-    let refugia = CellMap::from_fn(&geo, |_| false);
+    let geo = Geosphere::new(1); // 42 vertices
+    let capacity = VertexMap::from_fn(&geo, |c| 20.0 + 20.0 * f64::from(c.0 % 5));
+    let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+    let refugia = VertexMap::from_fn(&geo, |_| false);
     let era = EraClimate {
         day: 0.0,
-        ice: CellMap::from_fn(&geo, |_| false),
-        habitable: CellMap::from_fn(&geo, |_| true),
+        ice: VertexMap::from_fn(&geo, |_| false),
+        habitable: VertexMap::from_fn(&geo, |_| true),
         sea_level: e(0.0),
         ice_fraction: 0.0,
     };
@@ -361,6 +374,7 @@ fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
     let h = bake(
         Seed(42),
         &geo,
+        &biome_map(&geo),
         &caps_of(&cap, &people, eras.len()),
         &river,
         &eras,
@@ -371,23 +385,23 @@ fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
         &graphs,
     );
     let c = census(&h);
-    // (a) Climate displaced nobody: every cell is habitable in every era.
+    // (a) Climate displaced nobody: every vertex is habitable in every era.
     assert_eq!(
         c.migrated, 0,
         "the mask must never evict anyone here: {c:?}"
     );
     // (b) Land genuinely to spare: most of the map is still empty at `now`.
     assert!(
-        (c.alive_at_now as usize) * 2 < geo.cell_count(),
-        "fixture must leave land to spare (alive {} of {} cells): {c:?}",
+        (c.alive_at_now as usize) * 2 < geo.vertex_count(),
+        "fixture must leave land to spare (alive {} of {} vertices): {c:?}",
         c.alive_at_now,
-        geo.cell_count()
+        geo.vertex_count()
     );
     // (c) …and conflict fired anyway — coveted value down a strength gradient.
     assert!(c.raided > 0, "no raid fired with land to spare: {c:?}");
     // (d) The raid had teeth, and it was a CONQUEST OF LAND rather than a
     //     bookkeeping event: some occupation ended `Fled` at a named raider's
-    //     hand, and that same raider seated a new occupation ON THE VERY CELL
+    //     hand, and that same raider seated a new occupation ON THE VERY VERTEX
     //     it drove the loser off. Checked against the records, not the tally:
     //     `raided` and `fled` are incremented unconditionally and adjacently in
     //     `maybe_raid`, so an `assert!(c.fled > 0)` here would be implied by (c)
@@ -396,7 +410,7 @@ fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
     //     loser ended: without those two guards the loser's own record can
     //     satisfy the predicate whenever the loser happens to be a daughter of
     //     the community that later raided it (mutation-verified — moving the
-    //     raider's `open` back onto its own cell must, and does, redden this).
+    //     raider's `open` back onto its own vertex must, and does, redden this).
     let conquest = h.records.iter().any(|loser| {
         loser.core.cause == Some(CauseOfEnd::Fled)
             && match loser.ended_by {
@@ -411,12 +425,12 @@ fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
     });
     assert!(
         conquest,
-        "no raider ever seated itself on the cell it drove a neighbour off: {c:?}"
+        "no raider ever seated itself on the vertex it drove a neighbour off: {c:?}"
     );
 }
 
-/// An ESCARPMENT: capacity falls off in steps with graph distance from cell 0
-/// (200 at the crown, 20 at the rim), every cell habitable in every era. Two
+/// An ESCARPMENT: capacity falls off in steps with graph distance from vertex 0
+/// (200 at the crown, 20 at the rim), every vertex habitable in every era. Two
 /// properties matter:
 ///
 /// - **Neighbours differ in value**, everywhere and always, so covetousness has
@@ -434,38 +448,38 @@ fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
 /// **The escarpment needs room to relax LOCALLY.** Spec §4.3's rule is
 /// nearest-ring, not global, so a chained relaxation is a *neighbourhood*
 /// event: the loser's own first ring has to hold a beatable, richer holding.
-/// At `Geosphere::new(1)` (42 cells, ~5 rings from pole to pole) a displaced
+/// At `Geosphere::new(1)` (42 vertices, ~5 rings from pole to pole) a displaced
 /// people's first ring is most of the interesting world and the escarpment is
 /// only four steps wide, so the fixture measured cascades only on some seeds —
 /// an instrument too coarse for a local rule, not a physics finding. The same
-/// escarpment on `Geosphere::new(2)` (162 cells) gives it the rings it needs;
+/// escarpment on `Geosphere::new(2)` (162 vertices) gives it the rings it needs;
 /// the geometry, the arithmetic (20 per step) and the assertions are
 /// unchanged.
 ///
 /// The gradient is DEEPER, not exhaustive: `(200 - 20 × hops).max(20)` falls
 /// for nine hops and then sits on its 20 floor, while the sphere spans twelve
-/// rings from cell 0. So the outer three rings are flat, uniformly poor rim —
+/// rings from vertex 0. So the outer three rings are flat, uniformly poor rim —
 /// which is fine for what the fixture is for (the interesting relaxations
 /// happen on the slope), but it is not the "out to the full radius" an earlier
 /// revision of this comment claimed.
 fn escarpment_fixture() -> (
     Geosphere,
-    CellMap<f64>,
-    CellMap<f64>,
+    VertexMap<f64>,
+    VertexMap<f64>,
     Vec<EraClimate>,
-    CellMap<bool>,
+    VertexMap<bool>,
 ) {
-    let geo = Geosphere::new(2); // 162 cells
-    let capacity = CellMap::from_fn(&geo, |c| {
-        let hops = geo.hops_between(CellId(0), c, 32).unwrap_or(9);
+    let geo = Geosphere::new(2); // 162 vertices
+    let capacity = VertexMap::from_fn(&geo, |c| {
+        let hops = geo.hops_between(Vertex(0), c, 32).unwrap_or(9);
         (200.0 - 20.0 * hops as f64).max(20.0)
     });
-    let river_prox = CellMap::from_fn(&geo, |_| 0.0);
-    let refugia = CellMap::from_fn(&geo, |_| false);
+    let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+    let refugia = VertexMap::from_fn(&geo, |_| false);
     let era = EraClimate {
         day: 0.0,
-        ice: CellMap::from_fn(&geo, |_| false),
-        habitable: CellMap::from_fn(&geo, |_| true),
+        ice: VertexMap::from_fn(&geo, |_| false),
+        habitable: VertexMap::from_fn(&geo, |_| true),
         sea_level: e(0.0),
         ice_fraction: 0.0,
     };
@@ -479,7 +493,7 @@ fn a_displaced_people_rolls_downhill_and_the_cascade_is_recorded() {
     // vacant land whenever any was reachable, so a displaced people never
     // displaced anyone in turn and the branching ratio could not even be
     // asked about. Spec §4.3's amended rule (one comparison over every
-    // reachable cell, held cells carrying the settled premium) is what makes
+    // reachable vertex, held vertices carrying the settled premium) is what makes
     // a chained relaxation possible at all — this test fails, with an
     // all-zero histogram, against the vacant-first rule.
     let (geo, cap, river, eras, refugia) = escarpment_fixture();
@@ -489,6 +503,7 @@ fn a_displaced_people_rolls_downhill_and_the_cascade_is_recorded() {
     let h = bake(
         Seed(42),
         &geo,
+        &biome_map(&geo),
         &caps_of(&cap, &people, eras.len()),
         &river,
         &eras,
@@ -530,49 +545,49 @@ fn a_displaced_people_rolls_downhill_and_the_cascade_is_recorded() {
     assert!(c.alive_at_now > 0, "the cascade emptied the world: {c:?}");
 }
 
-/// A saturating world: a tiny habitable cluster (cell 0 and its direct
+/// A saturating world: a tiny habitable cluster (vertex 0 and its direct
 /// neighbours) that genesis fills completely, surrounded by permanently
 /// uninhabitable land. Once the cluster is full there is nowhere vacant, so
-/// when a final era turns cell 0 hostile its community cannot migrate to
+/// when a final era turns vertex 0 hostile its community cannot migrate to
 /// vacant land at all. Two eras: a long warm span that lets the cluster
-/// saturate and stabilise, then a hostile span that evicts cell 0 with no
+/// saturate and stabilise, then a hostile span that evicts vertex 0 with no
 /// vacant refuge anywhere. Capacity is uniform across the cluster, so there
 /// is nothing to covet either — the trapped community has no way out.
 #[allow(clippy::type_complexity)]
 fn saturating_fixture() -> (
     Geosphere,
-    Vec<CellMap<f64>>,
-    CellMap<f64>,
+    Vec<VertexMap<f64>>,
+    VertexMap<f64>,
     Vec<EraClimate>,
-    CellMap<bool>,
+    VertexMap<bool>,
 ) {
-    let geo = Geosphere::new(1); // 42 cells
-    let mut hab: BTreeSet<CellId> = BTreeSet::new();
-    hab.insert(CellId(0));
-    for &n in geo.neighbors(CellId(0)) {
+    let geo = Geosphere::new(1); // 42 vertices
+    let mut hab: BTreeSet<Vertex> = BTreeSet::new();
+    hab.insert(Vertex(0));
+    for &n in geo.neighbors(Vertex(0)) {
         hab.insert(n);
     }
     // Uniform capacity across the cluster; the rest of the world is worthless
     // AND uninhabitable in every era, so the cluster is the whole playfield.
-    let refugia = CellMap::from_fn(&geo, |_| false);
-    let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+    let refugia = VertexMap::from_fn(&geo, |_| false);
+    let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
     // HOSTILITY IS NOW CAPACITY (The Tense, step 4). Warm: the whole cluster
-    // feeds people. Hostile: cell 0's capacity goes to zero while the rest of
+    // feeds people. Hostile: vertex 0's capacity goes to zero while the rest of
     // the cluster stays alive AND occupied — so its community is squeezed out
     // with no vacant refuge anywhere, which is the trap this fixture exists to
     // set. The mask is uniformly permissive and binds nothing.
-    let capacity_at = |cell_zero_alive: bool| {
-        CellMap::from_fn(&geo, |c| {
-            // Outside the cluster is dead in every era; cell 0 additionally
+    let capacity_at = |vertex_zero_alive: bool| {
+        VertexMap::from_fn(&geo, |c| {
+            // Outside the cluster is dead in every era; vertex 0 additionally
             // dies in the hostile one, which is the squeeze this fixture sets.
-            let alive = hab.contains(&c) && (c.0 != 0 || cell_zero_alive);
+            let alive = hab.contains(&c) && (c.0 != 0 || vertex_zero_alive);
             if alive { 100.0 } else { 0.0 }
         })
     };
     let era = |day: f64| EraClimate {
         day,
-        ice: CellMap::from_fn(&geo, |_| false),
-        habitable: CellMap::from_fn(&geo, |_| true),
+        ice: VertexMap::from_fn(&geo, |_| false),
+        habitable: VertexMap::from_fn(&geo, |_| true),
         sea_level: e(0.0),
         ice_fraction: 0.0,
     };
@@ -583,7 +598,7 @@ fn saturating_fixture() -> (
 }
 
 #[test]
-fn a_hostile_cell_in_a_full_world_starves_instead_of_cascading() {
+fn a_hostile_vertex_in_a_full_world_starves_instead_of_cascading() {
     let (geo, cap, river, eras, refugia) = saturating_fixture();
     let people = peoples();
     let cfg = BakeConfig {
@@ -596,6 +611,7 @@ fn a_hostile_cell_in_a_full_world_starves_instead_of_cascading() {
     let h = bake(
         Seed(42),
         &geo,
+        &biome_map(&geo),
         &caps_per_era(&cap, &people),
         &river,
         &eras,
@@ -625,6 +641,7 @@ fn a_hostile_cell_in_a_full_world_starves_instead_of_cascading() {
     let h2 = bake(
         Seed(42),
         &geo,
+        &biome_map(&geo),
         &caps_per_era(&cap, &people),
         &river,
         &eras,
@@ -640,11 +657,11 @@ fn a_hostile_cell_in_a_full_world_starves_instead_of_cascading() {
     );
 }
 
-/// A **value-flat** world: every cell carries the same capacity and every cell
+/// A **value-flat** world: every vertex carries the same capacity and every vertex
 /// is habitable in the single era. Two properties make it the exact negative
 /// control the subordination trigger needs (spec §4.1):
 ///
-/// - **No cell is ever worth more than its neighbour**, so the shipped covet
+/// - **No vertex is ever worth more than its neighbour**, so the shipped covet
 ///   test (`eff_capacity(target) > eff_capacity(raider)`) is false *everywhere,
 ///   always*. Eviction is impossible by construction, not by luck of the seed.
 /// - **Nobody is ever crowded and nobody is ever evicted**: capacity 120 sits
@@ -661,19 +678,19 @@ fn a_hostile_cell_in_a_full_world_starves_instead_of_cascading() {
 /// people are the prize, and it is milked where it stands.
 fn value_flat_fixture() -> (
     Geosphere,
-    CellMap<f64>,
-    CellMap<f64>,
+    VertexMap<f64>,
+    VertexMap<f64>,
     Vec<EraClimate>,
-    CellMap<bool>,
+    VertexMap<bool>,
 ) {
-    let geo = Geosphere::new(1); // 42 cells
-    let capacity = CellMap::from_fn(&geo, |_| 120.0);
-    let river_prox = CellMap::from_fn(&geo, |_| 0.0);
-    let refugia = CellMap::from_fn(&geo, |_| false);
+    let geo = Geosphere::new(1); // 42 vertices
+    let capacity = VertexMap::from_fn(&geo, |_| 120.0);
+    let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+    let refugia = VertexMap::from_fn(&geo, |_| false);
     let era = EraClimate {
         day: 0.0,
-        ice: CellMap::from_fn(&geo, |_| false),
-        habitable: CellMap::from_fn(&geo, |_| true),
+        ice: VertexMap::from_fn(&geo, |_| false),
+        habitable: VertexMap::from_fn(&geo, |_| true),
         sea_level: e(0.0),
         ice_fraction: 0.0,
     };
@@ -683,7 +700,7 @@ fn value_flat_fixture() -> (
 #[test]
 fn a_strong_community_subordinates_a_productive_neighbour_it_would_not_evict() {
     // The Tithe's founding claim: asset mobility decides how a raid ends
-    // (spec §4.1). The prize the shipped rule knows is IMMOBILE — the cell —
+    // (spec §4.1). The prize the shipped rule knows is IMMOBILE — the vertex —
     // so a raid can only evict, and a neighbour whose land is no better is
     // ignored outright (`t_val <= raider_val { continue }`). The prize this
     // task adds is MOBILE — the people and their product — takeable
@@ -761,7 +778,7 @@ fn value_flat_history_with(
 }
 
 /// [`value_flat_history_with`] over an arbitrary seed. The fixture's own
-/// construction is seed-INDEPENDENT — 42 cells, uniform capacity, one era —
+/// construction is seed-INDEPENDENT — 42 vertices, uniform capacity, one era —
 /// so the seed enters only through `bake`, which is what makes a seed band
 /// affordable here: the whole 1..=100 sweep the concealment test runs costs
 /// well under a second.
@@ -782,6 +799,7 @@ fn value_flat_history_seeded_with(
     bake(
         Seed(seed),
         &geo,
+        &biome_map(&geo),
         &caps_of(&cap, &people, eras.len()),
         &river,
         &eras,
@@ -1027,7 +1045,7 @@ fn concealment_moves_what_a_patron_collects_and_under_the_setpoint_it_moves_it_d
 fn ocean_sunders_and_a_lane_leapfrogs() {
     use hornvale_worldgen::history_bake::{BakeConfig, History, bake, census};
     let geo = Geosphere::new(1);
-    let ring2 = |seed: CellId| {
+    let ring2 = |seed: Vertex| {
         let mut s = BTreeSet::new();
         s.insert(seed);
         for &n in geo.neighbors(seed) {
@@ -1040,30 +1058,30 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
         }
         s
     };
-    let a = ring2(CellId(0));
+    let a = ring2(Vertex(0));
     let b_seed = geo
-        .cells()
+        .vertices()
         .filter(|c| !a.contains(c))
-        .max_by_key(|&c| geo.hops_between(CellId(0), c, 16).unwrap_or(0))
+        .max_by_key(|&c| geo.hops_between(Vertex(0), c, 16).unwrap_or(0))
         .unwrap();
-    let b: BTreeSet<CellId> = ring2(b_seed).difference(&a).copied().collect();
+    let b: BTreeSet<Vertex> = ring2(b_seed).difference(&a).copied().collect();
     assert!(
         a.is_disjoint(&b) && b.len() >= 3,
         "islands must be disjoint & non-trivial"
     );
 
     let build_graph = |lane: bool| {
-        let mut g = ConnectionGraph::new(geo.cell_count());
-        for cell in geo.cells() {
-            for &n in geo.neighbors(cell) {
-                if n.0 <= cell.0 {
+        let mut g = ConnectionGraph::new(geo.vertex_count());
+        for vertex in geo.vertices() {
+            for &n in geo.neighbors(vertex) {
+                if n.0 <= vertex.0 {
                     continue;
                 }
-                let same =
-                    (a.contains(&cell) && a.contains(&n)) || (b.contains(&cell) && b.contains(&n));
+                let same = (a.contains(&vertex) && a.contains(&n))
+                    || (b.contains(&vertex) && b.contains(&n));
                 if same {
                     g.add_edge(
-                        cell,
+                        vertex,
                         Edge {
                             to: n,
                             kind: EdgeKind::Adjacency,
@@ -1091,15 +1109,15 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
         "islands must be sundered"
     );
 
-    let refugia = CellMap::from_fn(&geo, |c| b.contains(&c));
-    let river = CellMap::from_fn(&geo, |_| 0.0);
+    let refugia = VertexMap::from_fn(&geo, |c| b.contains(&c));
+    let river = VertexMap::from_fn(&geo, |_| 0.0);
     // HOSTILITY IS CAPACITY (The Tense, step 4): island A feeds people in warm
     // eras, island B in glacial ones, and the other is dead. Same disjoint
     // oscillation the mask used to express, and the same 120-vs-60 gradient —
     // what is under test here is whether an unbridged ocean can be CROSSED, and
     // that is a property of the graph, which this leaves untouched.
     let capacity_at = |glacial: bool| {
-        CellMap::from_fn(&geo, |c| match (a.contains(&c), b.contains(&c), glacial) {
+        VertexMap::from_fn(&geo, |c| match (a.contains(&c), b.contains(&c), glacial) {
             (true, _, false) => 120.0,
             (_, true, true) => 60.0,
             _ => 0.0,
@@ -1107,13 +1125,13 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
     };
     let era = |day: f64, glacial: bool| EraClimate {
         day,
-        ice: CellMap::from_fn(&geo, |_| false),
-        habitable: CellMap::from_fn(&geo, |_| true),
+        ice: VertexMap::from_fn(&geo, |_| false),
+        habitable: VertexMap::from_fn(&geo, |_| true),
         sea_level: e(0.0),
         ice_fraction: if glacial { 0.6 } else { 0.0 },
     };
     let eras: Vec<EraClimate> = (0..8).map(|i| era(i as f64 * 250.0, i % 2 == 1)).collect();
-    let capacity: Vec<CellMap<f64>> = (0..8).map(|i| capacity_at(i % 2 == 1)).collect();
+    let capacity: Vec<VertexMap<f64>> = (0..8).map(|i| capacity_at(i % 2 == 1)).collect();
     let cfg = BakeConfig::default_millennia();
     let people = vec![KindId("goblin")];
     let on_b = |h: &History| h.records.iter().any(|r| b.contains(&r.core.site));
@@ -1122,6 +1140,7 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
     let no_lane = bake(
         Seed(7),
         &geo,
+        &biome_map(&geo),
         &caps_per_era(&capacity, &people),
         &river,
         &eras,
@@ -1141,6 +1160,7 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
     let lane = bake(
         Seed(7),
         &geo,
+        &biome_map(&geo),
         &caps_per_era(&capacity, &people),
         &river,
         &eras,

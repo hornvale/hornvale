@@ -1499,12 +1499,73 @@ pub fn tongue_morphology_of(
         hornvale_language::morph_depths(&world.seed, species);
     let (evidential, class) =
         hornvale_language::morph_forms(&world.seed, fam_label, &proto_ph, &cascade, &ph);
+    // The Inquest: the personal-pronoun inventory, drawn off the SAME
+    // (family, proto phonology, cascade, daughter phonology) tuple the
+    // evidential and class markers are, so a family's pronouns are cognate
+    // exactly the way the rest of its inherited vocabulary is. This is what
+    // makes the pronoun feature real for production callers rather than
+    // test-only: `realize_tongue_deep` reads the inventory off this bundle,
+    // and every window that speaks a tongue assembles it here.
+    let pronouns =
+        hornvale_language::pronoun_forms(&world.seed, fam_label, &proto_ph, &cascade, &ph);
     Ok(hornvale_language::TongueMorphology {
         evidential_depth,
         noun_class_depth,
         class_position,
         evidential,
         class,
+        pronouns,
+    })
+}
+
+/// The species' paradigm bundle: the drawn Number/Tense/Polarity depths and
+/// attachment sides ([`hornvale_language::paradigm::paradigm_depths`]) plus
+/// the family's tense and polarity marker forms, evolved into this species'
+/// own phonology via its own cascade — the paradigm sibling of
+/// [`tongue_morphology_of`], and derived exactly the way that function
+/// derives its morphology bundle (resolve the family's shared proto
+/// phonology, or fall back to this species' own phonology for a singleton
+/// family; route the cascade through [`crate::cascade_of`]), nothing
+/// persisted.
+///
+/// This is what makes tense and polarity real for production callers rather
+/// than test-only: [`hornvale_language::realize_tongue_deep`] takes a
+/// [`hornvale_language::TongueParadigm`] in parameter position 4, and until
+/// this existed the only way to obtain one was to build it by hand in a test.
+/// A window that speaks a tongue assembles it here, beside its morphology.
+/// type-audit: bare-ok(identifier-text: species)
+pub fn tongue_paradigm_of(
+    world: &World,
+    species: &str,
+) -> Result<hornvale_language::TongueParadigm, BuildError> {
+    let wc = WorldComponents::assemble()?;
+    let ph = crate::language_of_in(world, &wc, species);
+    let name = crate::resolve_kind(&wc, species)?;
+    let family = *wc
+        .family_of
+        .get(&KindId(name))
+        .expect("every kind has a family row (integrity-checked)");
+    let (fam_label, proto_ph) = match wc.family_proto.get(&KindId(family)) {
+        Some(_) => (family, crate::proto_phonology_of_in(world, &wc, family)),
+        None => (name, ph.clone()),
+    };
+    // Routed through cascade_of for the same reason tongue_morphology_of
+    // routes through it: this fn returns a Result, so the swap is trivial,
+    // and the two bundles must evolve their markers down the SAME cascade or
+    // a tongue's tense marker would not be cognate with its evidential one.
+    let cascade = crate::cascade_of(world, name)?;
+    let depths = hornvale_language::paradigm::paradigm_depths(&world.seed, species);
+    let (tense, polarity) = hornvale_language::paradigm::paradigm_forms(
+        &world.seed,
+        fam_label,
+        &proto_ph,
+        &cascade,
+        &ph,
+    );
+    Ok(hornvale_language::TongueParadigm {
+        depths,
+        tense,
+        polarity,
     })
 }
 
@@ -1671,7 +1732,7 @@ const CRISIS_MISS_RUN: usize = 2;
 pub fn observations_from(
     world: &World,
     species: &str,
-    at: hornvale_astronomy::StdDays,
+    at: hornvale_astronomy::StdInstant,
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &hornvale_climate::GeneratedClimate,
 ) -> Result<Observations, BuildError> {
@@ -1682,7 +1743,7 @@ pub fn observations_from(
         ));
     };
     let params = account_params_from(world, species, terrain, climate)?;
-    let from = hornvale_astronomy::StdDays::new(0.0).expect("0.0 is always a valid StdDays");
+    let from = hornvale_astronomy::StdInstant::new(0.0).expect("0.0 is always a valid StdInstant");
 
     let events = hornvale_astronomy::eclipse_events(sky.system(), sky.calendar(), from, at)
         .into_iter()
@@ -1836,7 +1897,7 @@ fn class_days(observations: &Observations, key: (usize, u8)) -> Vec<f64> {
 pub fn ladder_from(
     world: &World,
     species: &str,
-    at: hornvale_astronomy::StdDays,
+    at: hornvale_astronomy::StdInstant,
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &hornvale_climate::GeneratedClimate,
 ) -> Result<(LadderRung, Option<f64>), BuildError> {
@@ -1891,7 +1952,7 @@ pub fn ladder_from(
 pub fn crisis_from(
     world: &World,
     species: &str,
-    at: hornvale_astronomy::StdDays,
+    at: hornvale_astronomy::StdInstant,
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &hornvale_climate::GeneratedClimate,
 ) -> Result<Option<PredictionCrisis>, BuildError> {

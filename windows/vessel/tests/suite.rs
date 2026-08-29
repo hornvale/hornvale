@@ -21,16 +21,28 @@ mod common;
 mod action_module;
 #[path = "suite/action_mood.rs"]
 mod action_mood;
+#[path = "suite/affordance.rs"]
+mod affordance;
+#[path = "suite/ask_verb.rs"]
+mod ask_verb;
 #[path = "suite/body_fields.rs"]
 mod body_fields;
 #[path = "suite/body_mass.rs"]
 mod body_mass;
+#[path = "suite/clock_lattice.rs"]
+mod clock_lattice;
+#[path = "suite/coercion_calibration.rs"]
+mod coercion_calibration;
 #[path = "suite/controller_swap.rs"]
 mod controller_swap;
 #[path = "suite/course_properties.rs"]
 mod course_properties;
 #[path = "suite/display_handle.rs"]
 mod display_handle;
+#[path = "suite/doctrine.rs"]
+mod doctrine;
+#[path = "suite/felt_state_concepts.rs"]
+mod felt_state_concepts;
 #[path = "suite/gate_table.rs"]
 mod gate_table;
 #[path = "suite/lantern_fabric.rs"]
@@ -47,26 +59,38 @@ mod lantern_seam;
 mod ledger_query_equivalence;
 #[path = "suite/liveness_genesis.rs"]
 mod liveness_genesis;
+#[path = "suite/object_property_concepts.rs"]
+mod object_property_concepts;
 #[path = "suite/one_roster.rs"]
 mod one_roster;
 #[path = "suite/ooc_namespace.rs"]
 mod ooc_namespace;
 #[path = "suite/ooc_objective.rs"]
 mod ooc_objective;
+#[path = "suite/overrides.rs"]
+mod overrides;
+#[path = "suite/passage.rs"]
+mod passage;
 #[path = "suite/player_acts_commit.rs"]
 mod player_acts_commit;
 #[path = "suite/possess_target.rs"]
 mod possess_target;
+#[path = "suite/possession_facts.rs"]
+mod possession_facts;
 #[path = "suite/possession_moves.rs"]
 mod possession_moves;
 #[path = "suite/session.rs"]
 mod session;
 #[path = "suite/session_snapshot.rs"]
 mod session_snapshot;
+#[path = "suite/stance.rs"]
+mod stance;
 #[path = "suite/submerged.rs"]
 mod submerged;
 #[path = "suite/submerged_before_arm.rs"]
 mod submerged_before_arm;
+#[path = "suite/testimony.rs"]
+mod testimony;
 #[path = "suite/the_blocking.rs"]
 mod the_blocking;
 #[path = "suite/the_first_mark.rs"]

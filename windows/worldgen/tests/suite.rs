@@ -171,6 +171,8 @@ mod solitary_tongue;
 mod species_worlds;
 #[path = "suite/stope_variety_probe.rs"]
 mod stope_variety_probe;
+#[path = "suite/subterranean_energy_probe.rs"]
+mod subterranean_energy_probe;
 #[path = "suite/tense_shadow.rs"]
 mod tense_shadow;
 #[path = "suite/termination_probe.rs"]
@@ -199,6 +201,8 @@ mod underworld_conditions_probe;
 mod underworld_ladder_probe;
 #[path = "suite/underworld_lithology_probe.rs"]
 mod underworld_lithology_probe;
+#[path = "suite/underworld_per_rung_switch.rs"]
+mod underworld_per_rung_switch;
 #[path = "suite/underworld_separation.rs"]
 mod underworld_separation;
 #[path = "suite/underworld_water_table_probe.rs"]

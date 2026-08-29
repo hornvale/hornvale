@@ -14,7 +14,7 @@
 //! substitutable, not a one-impl abstraction. Both take an optional
 //! [`crate::room::RoomMeshMemo`] a memo-aware `SearchSpace` (see
 //! [`SearchSpace::successors_memo`]) can consult instead of recomputing
-//! [`crate::room::RoomAddr::neighbors`] on every expansion — a DELIBERATE,
+//! [`crate::room::Facet::neighbors`] on every expansion — a DELIBERATE,
 //! REVERSIBLE narrowing of "knows nothing of 'time' or 'GOAP'" above: `Solver`
 //! and `successors_memo` are still generic over any `SearchSpace`, but the
 //! memo parameter's TYPE is the one concrete cross-call cache the kernel has
@@ -47,11 +47,11 @@ pub trait SearchSpace {
     /// [`RoomMeshMemo`] a memo-aware space may consult/fill instead of
     /// recomputing (the-waymark, Task 6). The default simply ignores `memo`
     /// and delegates to `successors` — every `SearchSpace` impl that has no
-    /// use for the memo (a `CellId`/`AnchorId` state, or a `RoomAddr` state
+    /// use for the memo (a `Vertex`/`AnchorId` state, or a `Facet` state
     /// with no session memo in scope) is unaffected and needs no change.
-    /// A space that DOES want the memo (e.g. a `RoomAddr` state whose
-    /// `successors` calls `RoomAddr::neighbors`) overrides this to call
-    /// [`crate::room::RoomAddr::neighbors_memo`] instead when `memo` is
+    /// A space that DOES want the memo (e.g. a `Facet` state whose
+    /// `successors` calls `Facet::neighbors`) overrides this to call
+    /// [`crate::room::Facet::neighbors_memo`] instead when `memo` is
     /// `Some`, while leaving every other edge-cost/avoid-set rule in
     /// `successors` untouched — the memo boundary is the raw neighbor
     /// lookup ALONE, never the successor list a caller-specific cost

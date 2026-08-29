@@ -7,19 +7,19 @@ Every registered concept is carried across three correspondence ledgers — **le
 ## Backlog (the negative space)
 
 ```text
-Unnamed (lexeme gap):      abyssal, abyssal-plain, alpine, bait-ball, barley, bathypelagic, black-dragon-kind, blue-giant, boreal-stand, bugbear-kind, burn, carrion-crawler-kind, chart, closed-canopy, cold, cold-upwelling, coral-head, coral-reef, crevasse-field, damp-hollow, desert, desert-dwarf-kind, desert-elf-kind, dire-wolf-kind, drow-kind, eclipse, epipelagic, erg, felsenmeer, fire-scrub, fish-shoal, forest-gap, frost-heave, gallery-forest, giant-constrictor-snake-kind, giant-crocodile-kind, giant-elk-kind, giant-goat-kind, giant-hyena-kind, giant-octopus-kind, giant-scorpion-kind, giant-squid-kind, gnoll-kind, goblin-kind, god, grass-sward, gully-dwarf-kind, hadal-trench, hamada, hearth, heat, help, high-elf-kind, hill-dwarf-kind, hobgoblin-kind, holdfast-tangle, home, human-kind, hydrothermal-vent, ice, ice-lead, identify, kelp-canopy, kelp-forest, killer-whale-kind, know, kobold-kind, lens, liana-forest, lightless-water, look, marine-snow, melt-pond, mesopelagic, millet, mossy-deadfall, muskeg, nodule-field, old-growth, open-blue, orange-dwarf, orange-giant, otyugh-kind, owlbear-kind, plankton-bloom, playa, pressure-ridge, provoke, rafted-floe, rain, read, recount, red-dragon-kind, red-dwarf, red-giant, reef-rubble, reef-shark-kind, reg, rhinoceros-kind, rice, rust-monster-kind, sargassum-drift, savanna, scattering-layer, sclerophyll-scrub, scoured-ice, sea-elf-kind, sea-ice, sense, shrieker-kind, shrubland, smoker-field, snow, snow-elf-kind, snowfield, soothe, spirit, spur-and-groove, staghorn-stand, sun-like-star, survey, taiga, temperate-forest, temperate-grassland, temperate-rainforest, thorn-scrub, tide, treant-kind, trench-floor, trench-wall, tropical-rainforest, tropical-seasonal-forest, tuber, tubeworm-thicket, tundra, twig-blight-kind, twilight-water, upwelling, urchin-barren, vent-plume, vine, wait, wheat, white-dragon-kind, white-dwarf, wind-scour, wood-elf-kind, wooded-grassland, woolly-mammoth-kind, write, xorn-kind, yellow-dwarf, yellow-white-dwarf
-Unperceived (percept gap): abyssal, abyssal-plain, alpine, bait-ball, barley, bathypelagic, black-dragon-kind, blood, blue, blue-giant, bone, boreal-stand, brown, bugbear-kind, burn, carrion-crawler-kind, chart, child, closed-canopy, coast, cold-upwelling, coral-head, coral-reef, crevasse-field, damp-hollow, dark, day, desert, desert-dwarf-kind, desert-elf-kind, die, dire-wolf-kind, drink, drow-kind, earth, east, eat, epipelagic, erg, eye, felsenmeer, fire, fire-scrub, fish-shoal, foot, ford, forest-gap, frost-heave, gallery-forest, giant-constrictor-snake-kind, giant-crocodile-kind, giant-elk-kind, giant-goat-kind, giant-hyena-kind, giant-octopus-kind, giant-scorpion-kind, giant-squid-kind, gloom, gnoll-kind, goblin-kind, god, grass-sward, great, green, gully-dwarf-kind, hadal-trench, hamada, hand, hearth, help, high, high-elf-kind, hill, hill-dwarf-kind, hobgoblin-kind, holdfast-tangle, home, human-kind, hydrothermal-vent, ice, ice-lead, identify, island, kelp-canopy, kelp-forest, killer-whale-kind, know, kobold-kind, lake, lens, liana-forest, light, lightless-water, little, look, low, many, marine-snow, marsh, melt-pond, mesopelagic, millet, mossy-deadfall, mountain, mouth, move, muskeg, name, new, night, nodule-field, north, north-east, north-west, old, old-growth, one, open-blue, orange-dwarf, orange-giant, otyugh-kind, over, owlbear-kind, parent, person, plankton-bloom, playa, pressure-ridge, provoke, rafted-floe, read, recount, red, red-dragon-kind, red-dwarf, red-giant, reef-rubble, reef-shark-kind, reg, rest, rhinoceros-kind, rice, river, rust-monster-kind, sargassum-drift, savanna, scattering-layer, sclerophyll-scrub, scoured-ice, sea, sea-elf-kind, sea-ice, sense, shadow, shrieker-kind, shrubland, sibling, sleep, smoker-field, snow-elf-kind, snowfield, soothe, south, south-east, south-west, spirit, spring, spur-and-groove, staghorn-stand, starlit, stone, sun-like-star, survey, taiga, temperate-forest, temperate-grassland, temperate-rainforest, thorn-scrub, treant-kind, tree, trench-floor, trench-wall, tropical-rainforest, tropical-seasonal-forest, tuber, tubeworm-thicket, tundra, twig-blight-kind, twilight-water, two, under, upwelling, urchin-barren, valley, vent-plume, vine, wait, water, west, wheat, white-dragon-kind, white-dwarf, wind-scour, wood-elf-kind, wooded-grassland, woolly-mammoth-kind, write, xorn-kind, yellow, yellow-dwarf, yellow-white-dwarf
+Unnamed (lexeme gap):      abyssal, abyssal-plain, affords-passage, alpine, bait-ball, barley, bathypelagic, black-dragon-kind, blue-giant, boreal-stand, bugbear-kind, burn, carrion-crawler-kind, chart, closed-canopy, cold, cold-upwelling, content, coral-head, coral-reef, crevasse-field, damp-hollow, desert, desert-dwarf-kind, desert-elf-kind, dire-wolf-kind, drow-kind, eager, eclipse, encloses, epipelagic, erg, felsenmeer, fire-scrub, fish-shoal, forest-gap, frost-heave, frustrated, gallery-forest, giant-constrictor-snake-kind, giant-crocodile-kind, giant-elk-kind, giant-goat-kind, giant-hyena-kind, giant-octopus-kind, giant-scorpion-kind, giant-squid-kind, gnoll-kind, goblin-kind, god, grass-sward, gully-dwarf-kind, hadal-trench, hamada, hearth, heat, help, helpless, high-elf-kind, hill-dwarf-kind, hobgoblin-kind, holdfast-tangle, holds-liquid, home, human-kind, hydrothermal-vent, ice, ice-lead, identify, kelp-canopy, kelp-forest, killer-whale-kind, know, kobold-kind, lens, liana-forest, lightless-water, look, lost, marine-snow, melt-pond, mesopelagic, millet, mossy-deadfall, muskeg, nodule-field, old-growth, open-blue, orange-dwarf, orange-giant, otyugh-kind, owlbear-kind, plankton-bloom, playa, pressure-ridge, provoke, radiates-heat, rafted-floe, rain, read, recount, red-dragon-kind, red-dwarf, red-giant, reef-rubble, reef-shark-kind, reg, rhinoceros-kind, rice, rust-monster-kind, sargassum-drift, savanna, scattering-layer, sclerophyll-scrub, scoured-ice, sea-elf-kind, sea-ice, searching, sense, shrieker-kind, shrubland, smoker-field, snow, snow-elf-kind, snowfield, soothe, spirit, spur-and-groove, staghorn-stand, sun-like-star, supports-rest, survey, taiga, temperate-forest, temperate-grassland, temperate-rainforest, thorn-scrub, tide, treant-kind, trench-floor, trench-wall, tropical-rainforest, tropical-seasonal-forest, tuber, tubeworm-thicket, tundra, twig-blight-kind, twilight-water, upwelling, urchin-barren, vent-plume, vine, wait, wheat, white-dragon-kind, white-dwarf, wind-scour, wood-elf-kind, wooded-grassland, woolly-mammoth-kind, write, xorn-kind, yellow-dwarf, yellow-white-dwarf
+Unperceived (percept gap): abyssal, abyssal-plain, affords-passage, alpine, bait-ball, barley, bathypelagic, black-dragon-kind, blood, blue, blue-giant, bone, boreal-stand, brown, bugbear-kind, burn, carrion-crawler-kind, chart, child, closed-canopy, coast, cold-upwelling, content, coral-head, coral-reef, crevasse-field, damp-hollow, dark, day, desert, desert-dwarf-kind, desert-elf-kind, die, dire-wolf-kind, drink, drow-kind, eager, earth, east, eat, encloses, epipelagic, erg, eye, felsenmeer, fire, fire-scrub, fish-shoal, foot, ford, forest-gap, frost-heave, frustrated, gallery-forest, giant-constrictor-snake-kind, giant-crocodile-kind, giant-elk-kind, giant-goat-kind, giant-hyena-kind, giant-octopus-kind, giant-scorpion-kind, giant-squid-kind, gloom, gnoll-kind, goblin-kind, god, grass-sward, great, green, gully-dwarf-kind, hadal-trench, hamada, hand, hearth, help, helpless, high, high-elf-kind, hill, hill-dwarf-kind, hobgoblin-kind, holdfast-tangle, holds-liquid, home, human-kind, hydrothermal-vent, ice, ice-lead, identify, island, kelp-canopy, kelp-forest, kill, killer-whale-kind, know, kobold-kind, lake, lens, liana-forest, light, lightless-water, little, look, lost, low, many, marine-snow, marsh, melt-pond, mesopelagic, millet, mossy-deadfall, mountain, mouth, move, muskeg, name, new, night, nodule-field, north, north-east, north-west, old, old-growth, one, open-blue, orange-dwarf, orange-giant, otyugh-kind, over, owlbear-kind, parent, person, plankton-bloom, playa, pressure-ridge, provoke, radiates-heat, rafted-floe, read, recount, red, red-dragon-kind, red-dwarf, red-giant, reef-rubble, reef-shark-kind, reg, rest, rhinoceros-kind, rice, river, rust-monster-kind, sargassum-drift, savanna, scattering-layer, sclerophyll-scrub, scoured-ice, sea, sea-elf-kind, sea-ice, searching, sense, shadow, shrieker-kind, shrubland, sibling, sleep, smoker-field, snow-elf-kind, snowfield, soothe, south, south-east, south-west, spirit, spring, spur-and-groove, staghorn-stand, starlit, stone, sun-like-star, supports-rest, survey, taiga, temperate-forest, temperate-grassland, temperate-rainforest, think, thorn-scrub, treant-kind, tree, trench-floor, trench-wall, tropical-rainforest, tropical-seasonal-forest, tuber, tubeworm-thicket, tundra, twig-blight-kind, twilight-water, two, under, upwelling, urchin-barren, valley, vent-plume, vine, wait, water, west, wheat, white-dragon-kind, white-dwarf, wind-scour, wood-elf-kind, wooded-grassland, woolly-mammoth-kind, write, xorn-kind, yellow, yellow-dwarf, yellow-white-dwarf
 Orphan phenomena (emitted, no concept names): heliacal-rising, heliacal-setting, seasonal-cycle, wandering-star
 Orphan species (simulated, no concept names): none
 Orphan acts (performed, no concept names): none
 Orphan bearings (traversable, no concept names): none
 Prose vocabulary (player-facing words, no concept names): UNAUDITED — the locale relief descriptors, the sky and hydrology prose, and the affect labels are authored English with no concept behind them. Auditing them needs a design line between a nameable thing and mere texture, which no campaign has drawn yet.
-Uncognized (cognition, all pending): 219 concepts [wave-cognition]
+Uncognized (cognition, all pending): 232 concepts [wave-cognition]
 
-Trial balance (per ledger: covered + voids = 221 concepts):
-  lexeme:    covered 68  unnamed 9  gap 137  imperceptible 7
-  percept:   covered 10  gap 195  imperceptible 16
-  cognition: covered 2  uncognized 219
+Trial balance (per ledger: covered + voids = 234 concepts):
+  lexeme:    covered 70  unnamed 9  gap 148  imperceptible 7
+  percept:   covered 10  gap 208  imperceptible 16
+  cognition: covered 2  uncognized 232
 ```
 
 ## Matrix
@@ -28,6 +28,7 @@ Trial balance (per ledger: covered + voids = 221 concepts):
 |---|---|---|---|
 | `abyssal` | Gap | Gap | pending(wave-cognition) |
 | `abyssal-plain` | Gap | Gap | pending(wave-cognition) |
+| `affords-passage` | Gap | Gap | pending(wave-cognition) |
 | `alpine` | Gap | Gap | pending(wave-cognition) |
 | `bait-ball` | Gap | Gap | pending(wave-cognition) |
 | `barley` | Gap | Gap | pending(wave-cognition) |
@@ -48,6 +49,7 @@ Trial balance (per ledger: covered + voids = 221 concepts):
 | `coast` | Expected | Gap | pending(wave-cognition) |
 | `cold` | Gap | `cold` | handle |
 | `cold-upwelling` | Gap | Gap | pending(wave-cognition) |
+| `content` | Gap | Gap | pending(wave-cognition) |
 | `coral-head` | Gap | Gap | pending(wave-cognition) |
 | `coral-reef` | Gap | Gap | pending(wave-cognition) |
 | `crevasse-field` | Gap | Gap | pending(wave-cognition) |
@@ -61,10 +63,12 @@ Trial balance (per ledger: covered + voids = 221 concepts):
 | `dire-wolf-kind` | Gap | Gap | pending(wave-cognition) |
 | `drink` | Expected | Gap | pending(wave-cognition) |
 | `drow-kind` | Gap | Gap | pending(wave-cognition) |
+| `eager` | Gap | Gap | pending(wave-cognition) |
 | `earth` | Expected | Gap | pending(wave-cognition) |
 | `east` | Expected | Gap | pending(wave-cognition) |
 | `eat` | Expected | Gap | pending(wave-cognition) |
 | `eclipse` | Gap | `eclipse` | pending(wave-cognition) |
+| `encloses` | Gap | Gap | pending(wave-cognition) |
 | `epipelagic` | Gap | Gap | pending(wave-cognition) |
 | `erg` | Gap | Gap | pending(wave-cognition) |
 | `eye` | Expected | Gap | pending(wave-cognition) |
@@ -76,6 +80,7 @@ Trial balance (per ledger: covered + voids = 221 concepts):
 | `ford` | Expected | Gap | pending(wave-cognition) |
 | `forest-gap` | Gap | Gap | pending(wave-cognition) |
 | `frost-heave` | Gap | Gap | pending(wave-cognition) |
+| `frustrated` | Gap | Gap | pending(wave-cognition) |
 | `gallery-forest` | Gap | Gap | pending(wave-cognition) |
 | `giant-constrictor-snake-kind` | Gap | Gap | pending(wave-cognition) |
 | `giant-crocodile-kind` | Gap | Gap | pending(wave-cognition) |
@@ -99,12 +104,14 @@ Trial balance (per ledger: covered + voids = 221 concepts):
 | `hearth` | Gap | Gap | pending(wave-cognition) |
 | `heat` | Gap | `heat` | handle |
 | `help` | Imperceptible | Imperceptible | pending(wave-cognition) |
+| `helpless` | Gap | Gap | pending(wave-cognition) |
 | `high` | Expected | Gap | pending(wave-cognition) |
 | `high-elf-kind` | Gap | Gap | pending(wave-cognition) |
 | `hill` | Expected | Gap | pending(wave-cognition) |
 | `hill-dwarf-kind` | Gap | Gap | pending(wave-cognition) |
 | `hobgoblin-kind` | Gap | Gap | pending(wave-cognition) |
 | `holdfast-tangle` | Gap | Gap | pending(wave-cognition) |
+| `holds-liquid` | Gap | Gap | pending(wave-cognition) |
 | `home` | Gap | Gap | pending(wave-cognition) |
 | `human-kind` | Gap | Gap | pending(wave-cognition) |
 | `hydrothermal-vent` | Gap | Gap | pending(wave-cognition) |
@@ -114,6 +121,7 @@ Trial balance (per ledger: covered + voids = 221 concepts):
 | `island` | Expected | Gap | pending(wave-cognition) |
 | `kelp-canopy` | Gap | Gap | pending(wave-cognition) |
 | `kelp-forest` | Gap | Gap | pending(wave-cognition) |
+| `kill` | Expected | Gap | pending(wave-cognition) |
 | `killer-whale-kind` | Gap | Gap | pending(wave-cognition) |
 | `know` | Gap | Gap | pending(wave-cognition) |
 | `kobold-kind` | Gap | Gap | pending(wave-cognition) |
@@ -124,6 +132,7 @@ Trial balance (per ledger: covered + voids = 221 concepts):
 | `lightless-water` | Gap | Gap | pending(wave-cognition) |
 | `little` | Expected | Gap | pending(wave-cognition) |
 | `look` | Gap | Gap | pending(wave-cognition) |
+| `lost` | Gap | Gap | pending(wave-cognition) |
 | `low` | Expected | Gap | pending(wave-cognition) |
 | `many` | Expected | Gap | pending(wave-cognition) |
 | `marine-snow` | Gap | Gap | pending(wave-cognition) |
@@ -159,6 +168,7 @@ Trial balance (per ledger: covered + voids = 221 concepts):
 | `playa` | Gap | Gap | pending(wave-cognition) |
 | `pressure-ridge` | Gap | Gap | pending(wave-cognition) |
 | `provoke` | Imperceptible | Imperceptible | pending(wave-cognition) |
+| `radiates-heat` | Gap | Gap | pending(wave-cognition) |
 | `rafted-floe` | Gap | Gap | pending(wave-cognition) |
 | `rain` | Gap | `rain` | pending(wave-cognition) |
 | `read` | Gap | Gap | pending(wave-cognition) |
@@ -183,6 +193,7 @@ Trial balance (per ledger: covered + voids = 221 concepts):
 | `sea` | Expected | Gap | pending(wave-cognition) |
 | `sea-elf-kind` | Gap | Gap | pending(wave-cognition) |
 | `sea-ice` | Gap | Gap | pending(wave-cognition) |
+| `searching` | Gap | Gap | pending(wave-cognition) |
 | `sense` | Gap | Gap | pending(wave-cognition) |
 | `shadow` | Expected | Gap | pending(wave-cognition) |
 | `shrieker-kind` | Gap | Gap | pending(wave-cognition) |
@@ -206,11 +217,13 @@ Trial balance (per ledger: covered + voids = 221 concepts):
 | `stone` | Expected | Gap | pending(wave-cognition) |
 | `sun` | Expected | `celestial-body` | pending(wave-cognition) |
 | `sun-like-star` | Unnamed | Imperceptible | pending(wave-cognition) |
+| `supports-rest` | Gap | Gap | pending(wave-cognition) |
 | `survey` | Imperceptible | Imperceptible | pending(wave-cognition) |
 | `taiga` | Gap | Gap | pending(wave-cognition) |
 | `temperate-forest` | Gap | Gap | pending(wave-cognition) |
 | `temperate-grassland` | Gap | Gap | pending(wave-cognition) |
 | `temperate-rainforest` | Gap | Gap | pending(wave-cognition) |
+| `think` | Expected | Gap | pending(wave-cognition) |
 | `thorn-scrub` | Gap | Gap | pending(wave-cognition) |
 | `tide` | Gap | `tide` | pending(wave-cognition) |
 | `treant-kind` | Gap | Gap | pending(wave-cognition) |
