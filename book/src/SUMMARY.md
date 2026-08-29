@@ -421,6 +421,7 @@
 - [The Stile](./chronicle/the-stile.md)
 - [The Latch](./chronicle/the-latch.md)
 - [The Precedence](./chronicle/the-precedence.md)
+- [The Gallery](./chronicle/the-gallery.md)
 
 # Appendix: The Frontier
 

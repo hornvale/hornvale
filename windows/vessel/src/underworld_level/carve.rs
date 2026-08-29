@@ -10,6 +10,7 @@ use std::collections::BTreeMap;
 use hornvale_kernel::Stream;
 
 use crate::lattice::{Cell, Rect};
+use crate::underworld_level::CellGrid;
 use crate::underworld_level::LevelCellKind;
 use crate::underworld_level::region::cut;
 
@@ -48,7 +49,7 @@ pub(super) fn carve(
     algorithm: Algorithm,
     rect: Rect,
     stream: &mut Stream,
-    cells: &mut BTreeMap<Cell, LevelCellKind>,
+    cells: &mut CellGrid,
 ) -> u32 {
     match algorithm {
         Algorithm::CellularCave => carve_cellular_cave(rect, stream, cells),
@@ -61,11 +62,7 @@ pub(super) fn carve(
 const CA_FILL_PROB: f64 = 0.45;
 const CA_ITERATIONS: u32 = 4;
 
-fn carve_cellular_cave(
-    rect: Rect,
-    stream: &mut Stream,
-    cells: &mut BTreeMap<Cell, LevelCellKind>,
-) -> u32 {
+fn carve_cellular_cave(rect: Rect, stream: &mut Stream, cells: &mut CellGrid) -> u32 {
     let mut dof = 0u32;
     let mut alive: BTreeMap<Cell, bool> = BTreeMap::new();
     for x in rect.x..(rect.x + rect.w) {
@@ -90,7 +87,7 @@ fn carve_cellular_cave(
     }
     for (cell, is_floor) in alive {
         if is_floor {
-            cells.insert(cell, LevelCellKind::Floor);
+            cells.set(cell, LevelCellKind::Floor);
         }
     }
     connect_components_within(rect, cells);
@@ -102,7 +99,7 @@ fn carve_cellular_cave(
 /// reusing the exact nearest-pair-corridor primitives `mod.rs` already
 /// uses for sibling-leaf connections (Task 9) — the same operation
 /// (join two disconnected walkable regions) at a different scope.
-fn connect_components_within(rect: Rect, cells: &mut BTreeMap<Cell, LevelCellKind>) {
+fn connect_components_within(rect: Rect, cells: &mut CellGrid) {
     loop {
         let components = find_components(rect, cells);
         if components.len() <= 1 {
@@ -118,7 +115,7 @@ fn connect_components_within(rect: Rect, cells: &mut BTreeMap<Cell, LevelCellKin
 /// Every connected component (4-directional adjacency) of `Floor` cells
 /// within `rect`, via breadth-first flood-fill. `BTreeSet`/`VecDeque`
 /// only, no `HashSet` (workspace-wide determinism rule).
-fn find_components(rect: Rect, cells: &BTreeMap<Cell, LevelCellKind>) -> Vec<Vec<Cell>> {
+fn find_components(rect: Rect, cells: &CellGrid) -> Vec<Vec<Cell>> {
     use std::collections::{BTreeSet, VecDeque};
 
     let mut visited: BTreeSet<Cell> = BTreeSet::new();
@@ -126,7 +123,7 @@ fn find_components(rect: Rect, cells: &BTreeMap<Cell, LevelCellKind>) -> Vec<Vec
     for x in rect.x..(rect.x + rect.w) {
         for y in rect.y..(rect.y + rect.h) {
             let cell = Cell(x, y);
-            if visited.contains(&cell) || cells.get(&cell) != Some(&LevelCellKind::Floor) {
+            if visited.contains(&cell) || cells.get(cell) != Some(LevelCellKind::Floor) {
                 continue;
             }
             let mut component = Vec::new();
@@ -138,7 +135,7 @@ fn find_components(rect: Rect, cells: &BTreeMap<Cell, LevelCellKind>) -> Vec<Vec
                 for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
                     let next = Cell(cx + dx, cy + dy);
                     if rect.contains(next)
-                        && cells.get(&next) == Some(&LevelCellKind::Floor)
+                        && cells.get(next) == Some(LevelCellKind::Floor)
                         && visited.insert(next)
                     {
                         queue.push_back(next);
@@ -169,11 +166,7 @@ fn neighbor_alive_count(alive: &BTreeMap<Cell, bool>, x: i32, y: i32) -> u32 {
 const TUNNEL_STEPS: u32 = 30;
 const TUNNEL_MAX_RUN: u64 = 3;
 
-fn carve_tunneler(
-    rect: Rect,
-    stream: &mut Stream,
-    cells: &mut BTreeMap<Cell, LevelCellKind>,
-) -> u32 {
+fn carve_tunneler(rect: Rect, stream: &mut Stream, cells: &mut CellGrid) -> u32 {
     let interior = rect.inset(1);
     if interior.w < 1 || interior.h < 1 {
         // Degenerate rect (too small to have an interior once inset) — draw
@@ -186,7 +179,7 @@ fn carve_tunneler(
     let mut x = interior.x + (stream.next_u64() % interior.w.max(1) as u64) as i32;
     let mut y = interior.y + interior.h / 2;
     dof += 1;
-    cells.insert(Cell(x, y), LevelCellKind::Floor);
+    cells.set(Cell(x, y), LevelCellKind::Floor);
     for _ in 0..TUNNEL_STEPS {
         let heading = stream.next_u64();
         let run = 1 + (stream.next_u64() % TUNNEL_MAX_RUN) as i32;
@@ -200,13 +193,13 @@ fn carve_tunneler(
         for _ in 0..run {
             x = (x + dx).clamp(interior.x, interior.x + interior.w - 1);
             y = (y + dy).clamp(interior.y, interior.y + interior.h - 1);
-            cells.insert(Cell(x, y), LevelCellKind::Floor);
+            cells.set(Cell(x, y), LevelCellKind::Floor);
             let widened = if dx != 0 {
                 Cell(x, (y + 1).min(interior.y + interior.h - 1))
             } else {
                 Cell((x + 1).min(interior.x + interior.w - 1), y)
             };
-            cells.insert(widened, LevelCellKind::Floor);
+            cells.set(widened, LevelCellKind::Floor);
         }
     }
     dof
@@ -215,7 +208,7 @@ fn carve_tunneler(
 fn carve_partitioned_rooms(
     rect: Rect,
     stream: &mut Stream,
-    cells: &mut BTreeMap<Cell, LevelCellKind>,
+    cells: &mut CellGrid,
     min_room_span: i32,
     max_room_depth: u32,
 ) -> u32 {
@@ -233,7 +226,7 @@ fn carve_partitioned_rooms(
     for room in &rooms {
         for x in room.x..(room.x + room.w) {
             for y in room.y..(room.y + room.h) {
-                cells.insert(Cell(x, y), LevelCellKind::Floor);
+                cells.set(Cell(x, y), LevelCellKind::Floor);
             }
         }
     }
@@ -268,7 +261,7 @@ fn subdivide_for_rooms(
     }
 }
 
-fn connect_centers(a: Rect, b: Rect, cells: &mut BTreeMap<Cell, LevelCellKind>) {
+fn connect_centers(a: Rect, b: Rect, cells: &mut CellGrid) {
     let a_center = Cell(a.x + a.w / 2, a.y + a.h / 2);
     let b_center = Cell(b.x + b.w / 2, b.y + b.h / 2);
     super::connect_cells(a_center, b_center, cells);
@@ -278,7 +271,6 @@ fn connect_centers(a: Rect, b: Rect, cells: &mut BTreeMap<Cell, LevelCellKind>) 
 mod tests {
     use super::*;
     use hornvale_kernel::Seed;
-    use std::collections::BTreeMap;
 
     const RECT: Rect = Rect {
         x: 0,
@@ -287,10 +279,10 @@ mod tests {
         h: 14,
     };
 
-    fn floor_count(cells: &BTreeMap<Cell, LevelCellKind>) -> usize {
+    fn floor_count(cells: &CellGrid) -> usize {
         cells
-            .values()
-            .filter(|k| **k == LevelCellKind::Floor)
+            .iter()
+            .filter(|(_, k)| *k == LevelCellKind::Floor)
             .count()
     }
 
@@ -320,7 +312,7 @@ mod tests {
             Algorithm::RoomsAndCorridors,
         ] {
             let mut stream = stream_for(algorithm, Seed(3));
-            let mut cells = BTreeMap::new();
+            let mut cells = CellGrid::new(RECT, LevelCellKind::Wall);
             carve(algorithm, RECT, &mut stream, &mut cells);
             assert!(
                 floor_count(&cells) > 0,
@@ -339,8 +331,8 @@ mod tests {
         ] {
             let mut stream_a = stream_for(algorithm, Seed(11));
             let mut stream_b = stream_for(algorithm, Seed(11));
-            let mut a = BTreeMap::new();
-            let mut b = BTreeMap::new();
+            let mut a = CellGrid::new(RECT, LevelCellKind::Wall);
+            let mut b = CellGrid::new(RECT, LevelCellKind::Wall);
             carve(algorithm, RECT, &mut stream_a, &mut a);
             carve(algorithm, RECT, &mut stream_b, &mut b);
             assert_eq!(a, b, "{algorithm:?} was not deterministic");
@@ -349,6 +341,20 @@ mod tests {
 
     #[test]
     fn carving_never_touches_outside_the_rect() {
+        // A dense `CellGrid` is total over its own extent, so unlike the old
+        // `BTreeMap` (which only ever held keys `carve` explicitly wrote), a
+        // grid sized exactly to `RECT` could never observe an escape — every
+        // cell it can address is already inside `RECT` by construction.
+        // Back it with a larger extent than `RECT`, all `Wall`, so a write
+        // outside `RECT` (but still inside the grid) is observable as a
+        // surviving non-`Wall` cell.
+        let margin = 5;
+        let backing = Rect {
+            x: RECT.x - margin,
+            y: RECT.y - margin,
+            w: RECT.w + 2 * margin,
+            h: RECT.h + 2 * margin,
+        };
         for algorithm in [
             Algorithm::CellularCave,
             Algorithm::Tunneler,
@@ -356,16 +362,20 @@ mod tests {
             Algorithm::RoomsAndCorridors,
         ] {
             let mut stream = stream_for(algorithm, Seed(5));
-            let mut cells = BTreeMap::new();
+            let mut cells = CellGrid::new(backing, LevelCellKind::Wall);
             carve(algorithm, RECT, &mut stream, &mut cells);
-            for cell in cells.keys() {
-                assert!(
-                    cell.0 >= RECT.x
-                        && cell.0 < RECT.x + RECT.w
-                        && cell.1 >= RECT.y
-                        && cell.1 < RECT.y + RECT.h,
-                    "{algorithm:?}: cell {cell:?} escaped its own leaf rect"
-                );
+            for x in backing.x..(backing.x + backing.w) {
+                for y in backing.y..(backing.y + backing.h) {
+                    let cell = Cell(x, y);
+                    if RECT.contains(cell) {
+                        continue;
+                    }
+                    assert_eq!(
+                        cells.get(cell),
+                        Some(LevelCellKind::Wall),
+                        "{algorithm:?}: cell {cell:?} escaped its own leaf rect"
+                    );
+                }
             }
         }
     }
@@ -376,8 +386,8 @@ mod tests {
         // stream threaded across two carve calls (as the real caller does)
         // must NOT produce identical content twice.
         let mut stream = stream_for(Algorithm::CellularCave, Seed(9));
-        let mut first = BTreeMap::new();
-        let mut second = BTreeMap::new();
+        let mut first = CellGrid::new(RECT, LevelCellKind::Wall);
+        let mut second = CellGrid::new(RECT, LevelCellKind::Wall);
         carve(Algorithm::CellularCave, RECT, &mut stream, &mut first);
         carve(Algorithm::CellularCave, RECT, &mut stream, &mut second);
         assert_ne!(
@@ -390,20 +400,20 @@ mod tests {
     /// tests below: from an arbitrary floor cell, every other floor cell
     /// produced by `carve_fn` must be reachable via 4-directional adjacency.
     fn assert_internally_connected(
-        carve_fn: impl Fn(Rect, &mut Stream, &mut BTreeMap<Cell, LevelCellKind>) -> u32,
+        carve_fn: impl Fn(Rect, &mut Stream, &mut CellGrid) -> u32,
         label: hornvale_kernel::seed::StreamLabel<'_>,
         seed_value: u64,
     ) {
         use std::collections::{BTreeSet, VecDeque};
 
         let mut stream = Seed(seed_value).derive(label).stream();
-        let mut cells = BTreeMap::new();
+        let mut cells = CellGrid::new(RECT, LevelCellKind::Wall);
         carve_fn(RECT, &mut stream, &mut cells);
 
         let floor: BTreeSet<Cell> = cells
             .iter()
-            .filter(|(_, k)| **k == LevelCellKind::Floor)
-            .map(|(&c, _)| c)
+            .filter(|(_, k)| *k == LevelCellKind::Floor)
+            .map(|(c, _)| c)
             .collect();
         let Some(&start) = floor.iter().next() else {
             return;

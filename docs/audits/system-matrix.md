@@ -11,7 +11,7 @@ mistake.
 
 | Corpus | present | refused | deferred | absent | inapplicable | Report |
 |---|---|---|---|---|---|---|
-| `wolverson-2021` | 24 | 5 | 28 | 12 | 5 | [system-coverage-wolverson-2021.md](./system-coverage-wolverson-2021.md) |
+| `wolverson-2021` | 26 | 5 | 26 | 12 | 5 | [system-coverage-wolverson-2021.md](./system-coverage-wolverson-2021.md) |
 
 ## The surplus read
 
@@ -23,9 +23,9 @@ domains land (spec §6).
 
 **Declared limitation:** subsystem granularity is coarse, and a domain cited
 by a single chapter reads as fully covered here. `windows/vessel` is the
-most-cited subsystem across every corpus above, at 10 anchor(s) — it does
+most-cited subsystem across every corpus above, at 12 anchor(s) — it does
 NOT appear in the surplus list below, and reads as fully covered. It is not:
-10 anchors are not 10 anchors' worth of the crate's actual surface, and this
+12 anchors are not 12 anchors' worth of the crate's actual surface, and this
 instrument does not measure that surface at all. This read shows the
 instrument's own bias in its own output; it does not correct for it.
 

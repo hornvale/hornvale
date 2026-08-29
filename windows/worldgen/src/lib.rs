@@ -1358,7 +1358,20 @@ pub fn axis_supply_with(weights: &[f64], per_axis: &[(hornvale_kernel::ResourceA
 ///
 /// Shared by [`per_species_suitability`] and [`per_species_capacity`] so the two
 /// cannot drift apart on the one rule they must agree about.
-fn tolerance_liebig(cn: &hornvale_species::ConditionNiche, s: &Substrate, floor_buf: f64) -> f64 {
+///
+/// **`pub` since The Gallery, Task 11** — the underworld's per-point fit is
+/// exactly this function scored against one chamber's own [`Substrate`],
+/// which is what lets `windows/vessel/src/underground.rs`'s `inhabitant_fit`
+/// ask "how well does this niche fit THIS chamber" without a second copy of
+/// the Liebig-minimum rule. No second scorer: a chamber-level fit and a
+/// world-genesis fit must agree about what "fits" means, so they share this
+/// one function rather than each authoring their own.
+/// type-audit: bare-ok(ratio: floor_buf), bare-ok(ratio: return)
+pub fn tolerance_liebig(
+    cn: &hornvale_species::ConditionNiche,
+    s: &Substrate,
+    floor_buf: f64,
+) -> f64 {
     // Elevation first, because it is the only axis that can undercut the
     // others, and when it does it is already the answer.
     //

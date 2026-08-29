@@ -56,7 +56,9 @@ pub fn marks_of(session: &Session<'_>) -> Vec<PlanMark> {
         .spatial
     {
         SpatialChannel::Chamber { plan } => plan.marks,
-        SpatialChannel::Walk { .. } => panic!("expected the chamber band"),
+        SpatialChannel::Walk { .. } | SpatialChannel::Underground { .. } => {
+            panic!("expected the chamber band")
+        }
     }
 }
 

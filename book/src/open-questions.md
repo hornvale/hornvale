@@ -1984,6 +1984,30 @@ mapping sends its verb unconditionally, and an invalid move is answered with a
 sentence. A consumer's requirement for a channel should be checked before the
 channel is designed.
 
+**Re-scored by [The Gallery](./chronicle/the-gallery.md) (2026-08-29): the
+exact gap The Quire named — a wire that cannot distinguish two states except
+by an unparseable word in the prose — is closed for one of the two states it
+named, by giving the state its own wire value rather than a better parser.**
+`SpatialChannel` gains `Underground`, carrying its own schema
+(`vessel/level/v1`); the pane now emits `band: "underground"` and the `map`
+verb draws the same level, with a test (`the_pane_and_the_verb_agree_
+underground`) asserting they cannot drift apart. The document no longer
+"correctly describes less than a consumer needs" for this state — a consumer
+reading the tag alone now knows what Quire's consumer could only have
+guessed from prose. **`submerged` is deliberately left exactly as Quire
+found it** — still folded into `walk`, still distinguishable only by prose
+— because the water column has no lattice for a pane to draw yet; the
+frontier row this campaign moved is narrowed rather than closed, and says so
+itself. One new limitation surfaced in the same campaign's own closing
+audit, of the *other* kind on this ledger — not a wire ambiguity but a
+picture that can silently run off its own edge: the pane anchors a
+generated level's own corner to a fixed-width plate with no camera-follow,
+so a rung wider than that plate (every rung past the first) can walk the
+player's own marker off the visible screen. Recorded as its own frontier row
+rather than left for a future campaign to re-discover the way this ledger's
+own Risk section had to name it before any
+code existed.
+
 One older row recurs and one instrument for it becomes mechanizable. The
 recurrence: the outdoor chart was geometrically wrong — the sim's own render of
 the identical thirty-one cells is five dense rows and the client drew nine
