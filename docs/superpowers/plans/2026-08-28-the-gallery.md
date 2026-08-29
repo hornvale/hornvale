@@ -725,10 +725,24 @@ descent is about 1.2 KB.
 Each step ORs `shadowcast_with(...)` (Task 2) into the current rung's bitset, at
 `Session::sight_reach()`.
 
-`sight_reach` must also become the source of `chamber_sources`' torch radius,
+`sight_reach` must also become the source of `chamber_sources`' TORCH radius,
 which today hardcodes `radius: SIGHT_RADIUS` separately from the shadowcaster's
 own constant — two places holding one number, and neither one a place a lantern
 could plug into.
+
+**`chamber_sources` has THREE `radius: SIGHT_RADIUS` sites and only ONE is
+yours.** Verified against the code before dispatch:
+
+| line | source | whose reach |
+|---|---|---|
+| `session.rs:4100` | the implicit torch, at the possession's own cell | **the body's — this is the seam** |
+| `session.rs:4120` | the hearth | the fire's |
+| `session.rs:4128` | each doorway | the opening's, carrying daylight |
+
+They are textually identical and semantically different. **Change 4100 only.**
+Routing the other two through the body's reach would mean picking up a lantern
+brightens every hearth and every doorway in the building, which is not what
+carrying a lamp does.
 
 - [ ] **Step 4: Pin the lifetime, in both directions**
 
