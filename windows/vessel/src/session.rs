@@ -123,9 +123,10 @@ const SESSION_CONTROL: [&str; 3] = ["release", "quit", "exit"];
 /// a verb listed in one place and missing from the other, never a verb
 /// missing from both — and it is why `clear_is_refused_while_asleep` exists
 /// beside `warm_is_refused_while_asleep` rather than in place of it.
-const IN_CHARACTER_VERBS: [&str; 22] = [
-    "ask", "back", "clear", "climb", "consult", "delve", "dive", "down", "enter", "examine", "go",
-    "knows", "look", "map", "needs", "out", "sleep", "surface", "up", "wait", "warm", "write",
+const IN_CHARACTER_VERBS: [&str; 24] = [
+    "ask", "back", "clear", "climb", "close", "consult", "delve", "dive", "down", "enter",
+    "examine", "go", "knows", "look", "map", "needs", "open", "out", "sleep", "surface", "up",
+    "wait", "warm", "write",
 ];
 
 /// The provenance a walk-band step commits under (The Deed, Task 7).
@@ -428,6 +429,9 @@ verbs:
                    in' goes deeper and 'out' leaves
   out              step back out of doors
   examine <thing>  anything look or the floor plan names
+  open <thing>     open what has a lid, indoors; a locked one wants a key
+                   you are already carrying
+  close <thing>    shut it again; what was inside goes out of sight
   warm             warm yourself at a hearth, where one burns
   back             retrace your last step, out of doors
   wait [N]         let N days pass overhead (default 1); the world moves too
@@ -2408,6 +2412,208 @@ impl<'w> Session<'w> {
         Turn::Out("You warm yourself at the fire.".to_string())
     }
 
+    /// The [`Facet`] of the chamber the possession is standing in — the ROOM
+    /// key a thing promoted here is lineage-keyed on, and `None` out of doors.
+    ///
+    /// **Not [`Self::position`], and the difference is an entity-id
+    /// collision.** `position()` is the outdoor LOCALE facet and does not move
+    /// while descending into a structure — every chamber of one structure
+    /// shares it, which is exactly why `offered_to_observer`'s knowledge gate
+    /// can never fail indoors. Keying a thing on it would give the strongbox
+    /// of a structure's third chamber and the strongbox of its fourth the
+    /// SAME `EntityId`: `role_for` returns `Role::Store` for chamber index 2
+    /// and for every index past it, so a four-chamber dwelling composes two
+    /// strongboxes and two keys, in two different rooms, that
+    /// `thing::thing_id` could not tell apart. `Structure::chambers` is a
+    /// `Vec<Facet>` — a chamber IS a facet, drawn from the locale's own seed
+    /// under `room/chambers/v1` and asserted distinct by
+    /// `structure::tests::chambers_are_distinct` — so the right key was
+    /// already in hand and needed only to be reached for.
+    ///
+    /// The per-room census that licenses `ordinal: 0`
+    /// (`interior::pattern::tests::no_production_room_composes_two_anchors_of_
+    /// one_kind`) is a statement about ONE composed interior, so it says
+    /// nothing about this hazard; the two guards are complementary and neither
+    /// substitutes for the other.
+    fn chamber_facet_here(&self) -> Option<Facet> {
+        let inside = self.inside.as_ref()?;
+        Some(inside.structure.chambers[inside.at].clone())
+    }
+
+    /// Whether the container of `kind` in `room` stands open as of now.
+    ///
+    /// **This is where a container's absent-fact default is authored, and it
+    /// is authored HERE rather than in [`crate::thing::is_open`] on purpose.**
+    /// `is_open` returns `Option<bool>` because an absent [`crate::thing::
+    /// OPENNESS`] fact means "whatever the seed drew" (spec §3.3), never
+    /// "shut" — collapsing the `None` inside that fold would state that every
+    /// untouched door in the world is closed, and its own doc forbids exactly
+    /// that. A cave mouth's draw is `hornvale_worldgen::barrier_of`, which
+    /// `passage::effective_state` falls back to. **No generator draws an
+    /// openness for a container**, so the container's fallback is an authored
+    /// constant, and it is `false`: a strongbox is a banded chest whose own
+    /// `detail` line already says "its lid seated flush".
+    ///
+    /// The two fallbacks therefore live in the two readers, in the shape §3.7
+    /// pins — `effective_state` for the passage angle, this for the container
+    /// angle — over one shared fold.
+    fn container_is_open(&self, room: &Facet, kind: hornvale_kernel::KindId) -> bool {
+        crate::thing::thing_id(room, kind.0, 0)
+            .ok()
+            .and_then(|id| crate::thing::is_open(&self.ledger, id, self.day))
+            .unwrap_or(false)
+    }
+
+    /// Whether the driven body is carrying anything that carries `property`.
+    ///
+    /// **The first precondition in Hornvale that reads a SECOND object** (spec
+    /// §3.8). Custody is a [`crate::thing::LOCATED_IN`] fact whose object is
+    /// the body itself, so this is `held_by` over the body's entity, each held
+    /// thing's kind read back off its own `instance-of`, and the property
+    /// table asked about that label.
+    ///
+    /// **Still M+N.** The lock declares what it requires (a property) and the
+    /// key declares what it carries (the same property, on its own row in
+    /// `object_registry`), and neither names the other: nothing here mentions
+    /// `strongbox` or `key`, and a second lockable kind or a second portable
+    /// kind arrives with no edit to this function or to the dispatcher.
+    fn carrying_something_that(&self, property: crate::affordance::ObjectProperty) -> bool {
+        crate::thing::held_by(&self.ledger, self.agent_entity(), self.day)
+            .into_iter()
+            .filter_map(|thing| self.ledger.kind_of(thing))
+            .any(|label| crate::affordance::label_carries(label, property))
+    }
+
+    /// `open <thing>` and `close <thing>` — The Chattel's headline verbs
+    /// (Task 11, spec §3.7/§3.8), and the first pair in this file to commit a
+    /// fact about a thing that is not the body.
+    ///
+    /// # One handler, both directions
+    ///
+    /// The two verbs differ in one boolean: which way the [`crate::thing::
+    /// OPENNESS`] fact points, and which sentences say so. Splitting them
+    /// would be two functions whose lock check, band guard, noun resolution
+    /// and promotion could each drift, and the drift that matters is
+    /// silent — a `close` that forgot the offer query would shut a thing the
+    /// grammar never gave a lid.
+    ///
+    /// # What it consults, in order, and why that order
+    ///
+    /// 1. **A named object.** Bare `open` is a hint, not a refusal: the player
+    ///    typed a real verb (`examine`'s own bare arm sets the precedent).
+    /// 2. **A chamber.** Only a chamber composes an [`crate::interior::
+    ///    Interior`], so only a chamber holds anything with a lid.
+    /// 3. **The noun, against this chamber's own anchors**, through
+    ///    `chamber_prose::noun` — the SAME matcher [`Self::examine_chamber`]
+    ///    uses, so a word that examines here also opens here or is refused
+    ///    with the same sentence.
+    /// 4. **The derived offer**, `offered_to_observer(...)`. Not
+    ///    `object_registry` directly and never an `AnchorKind` literal: a new
+    ///    thing-kind carrying `Openable` becomes openable with no edit here
+    ///    (acceptance 7), and the knowledge gate stands in front of this verb
+    ///    exactly as it stands in front of `warm` and `examine`.
+    /// 5. **The lock**, and only for `open`. `Lockable` extends `open`'s
+    ///    precondition with a read of the body's custody
+    ///    ([`Self::carrying_something_that`]); `close` is unlocked in both
+    ///    senses — you may always shut a lid you could open, and requiring the
+    ///    key to close would mean a player could open a chest, drop the key in
+    ///    it and be unable to shut it.
+    /// 6. **The no-op**, before the write. A second `open` on an open thing
+    ///    reports the state and commits nothing, which is `clear`'s own
+    ///    behaviour at an already-open mouth and is what keeps
+    ///    `thing::set_openness`'s across-days `instance-of` duplication
+    ///    unreachable through the verb.
+    ///
+    /// # What it does NOT do
+    ///
+    /// **It does not open a passage, and `open` at a barred cave mouth
+    /// refuses.** `clear` is that act and Task 8 already folded it through
+    /// this very predicate, so the two angles share a FOLD (spec §3.7's
+    /// deliverable) without sharing a verb. Merging them is a real question
+    /// and a bigger one than this task: `clear`'s prose is about rubble
+    /// ("only a thin fall gives"), its refusals are seeded barrier states
+    /// rather than properties, and a passage has no `Interior` to resolve a
+    /// noun against. Whoever takes it up should read `clear_response` first.
+    fn open_or_close(&mut self, rest: &str, open: bool) -> Turn {
+        let wanted = rest.trim().to_lowercase();
+        if wanted.is_empty() {
+            return Turn::Out(
+                if open {
+                    OPEN_WHAT_HINT
+                } else {
+                    CLOSE_WHAT_HINT
+                }
+                .to_string(),
+            );
+        }
+        let (Some(interior), Some(room)) =
+            (self.chamber_interior_here(), self.chamber_facet_here())
+        else {
+            return Turn::Out(NOTHING_HERE_OPENS_REFUSAL.to_string());
+        };
+        let Some(id) = interior.ids().into_iter().find(|&id| {
+            crate::chamber_prose::noun(interior.anchor(id).kind)
+                .is_some_and(|n| n.to_lowercase() == wanted)
+        }) else {
+            return Turn::Out(format!("You see no {} here.", rest.trim()));
+        };
+
+        let thing_kind = crate::affordance::thing_kind_of(interior.anchor(id).kind);
+        let offer =
+            crate::affordance::offered_to_observer(thing_kind, self.driven_body(), &self.knowledge);
+        let verb = if open {
+            crate::affordance::OfferedVerb::Open
+        } else {
+            crate::affordance::OfferedVerb::Close
+        };
+        if !offer.contains(&verb) {
+            return Turn::Out(format!(
+                "The {} does not {}.",
+                crate::chamber_prose::without_article(
+                    crate::chamber_prose::noun(interior.anchor(id).kind)
+                        .expect("a noun matched above")
+                ),
+                verb.word()
+            ));
+        }
+
+        if open
+            && crate::affordance::carries(thing_kind, crate::affordance::ObjectProperty::Lockable)
+            && !self.carrying_something_that(crate::affordance::ObjectProperty::Portable)
+        {
+            return Turn::Out(LOCKED_WITHOUT_A_KEY_REFUSAL.to_string());
+        }
+
+        let bare = crate::chamber_prose::without_article(
+            crate::chamber_prose::noun(interior.anchor(id).kind).expect("a noun matched above"),
+        );
+        if self.container_is_open(&room, thing_kind) == open {
+            return Turn::Out(format!(
+                "The {bare} is already {}.",
+                if open { "open" } else { "shut" }
+            ));
+        }
+
+        crate::thing::set_openness(
+            &mut self.ledger,
+            &self.registry,
+            &room,
+            thing_kind.0,
+            0,
+            open,
+            self.day,
+        )
+        .expect("a chamber facet packs, and OPENNESS/instance-of are registered by Session::start");
+
+        if !open {
+            return Turn::Out(format!("You close the {bare}."));
+        }
+        match crate::chamber_prose::contents_of(&interior, id) {
+            None => Turn::Out(format!("You open the {bare}. It is empty.")),
+            Some(listed) => Turn::Out(format!("You open the {bare}. Within it: {listed}.")),
+        }
+    }
+
     /// The out-of-character namespace's own dispatch: every verb reachable
     /// behind a leading `!` (The Deed, spec §2.1/§3.2).
     ///
@@ -2722,6 +2928,21 @@ impl<'w> Session<'w> {
                 // those four from minting. See `Self::warm`'s own doc for
                 // why it needs no `Action` variant either.
                 "warm" => self.warm(),
+                // The two verbs The Chattel adds (Task 11, spec §3.7/§3.8).
+                // Unlike `warm` just above they COMMIT — an `openness` fact
+                // about a promoted thing — which is why `open`/`close` are
+                // the second and third entries in `IN_CHARACTER_VERBS` that
+                // write to the ledger at all, and why each carries its own
+                // `<verb>_is_refused_while_asleep` test rather than trusting
+                // the roster-agreement check (which cannot see a verb missing
+                // from both rosters — The Latch shipped `clear` that way).
+                //
+                // Free, like `warm`: `clock::base_ticks` prices no lid, and
+                // minting a cost dial here is the "new cost model" spec §3.4
+                // forbids. One handler for both directions, for the reason
+                // `thing::set_openness`'s doc gives about its own halves.
+                "open" => self.open_or_close(rest, true),
+                "close" => self.open_or_close(rest, false),
                 // THE FOUR VERTICAL BAND CHANGES, AND THE ONE THING THEY DO
                 // NOT DO (fix round 1). Each is an in-character act — the gate
                 // above stands in front of all four — and each still charges
@@ -4865,6 +5086,7 @@ impl<'w> Session<'w> {
         if let Some(interior) = self.chamber_interior_here() {
             for id in interior.ids() {
                 let kind = interior.anchor(id).kind;
+                let thing_kind_here = crate::affordance::thing_kind_of(kind);
                 if crate::chamber_prose::noun(kind).is_some_and(|n| n.to_lowercase() == wanted) {
                     // The Offer, Task 7 (spec §3.5/§4): routed through the
                     // derived offer query, not the anchor's bare kind, so
@@ -4907,7 +5129,16 @@ impl<'w> Session<'w> {
                     // its authored `detail` line — see `examine_detail`'s
                     // own doc for the property gate and the mutation it
                     // guards against.
-                    return crate::chamber_prose::examine_detail(&interior, id);
+                    // The Chattel, Task 11: the "or transparent" arm of the
+                    // interactive-fiction rule goes live. `examine_detail`
+                    // holds no ledger and no day, so the openness fold is
+                    // asked HERE and handed in — see its doc for the two-arm
+                    // rule and for why a container nobody has touched reads
+                    // shut. Ignored for a kind carrying no `Openable`.
+                    let opened = self
+                        .chamber_facet_here()
+                        .is_some_and(|room| self.container_is_open(&room, thing_kind_here));
+                    return crate::chamber_prose::examine_detail(&interior, id, opened);
                 }
             }
         }
@@ -6603,6 +6834,40 @@ const ALREADY_BELOW_CLEAR_REFUSAL: &str =
 /// type-audit: bare-ok(prose)
 const NO_CAVE_MOUTH_TO_CLEAR_REFUSAL: &str = "There is no cave mouth here to clear.";
 
+/// What `open`/`close` say when the player named nothing. A hint rather than
+/// a parse error, the shape `examine`'s own bare arm already uses: the player
+/// typed a real verb and left out its object, which is a different mistake
+/// from typing a word that is not a verb.
+/// type-audit: bare-ok(prose)
+const OPEN_WHAT_HINT: &str = "Open what?";
+
+/// [`OPEN_WHAT_HINT`]'s other half.
+/// type-audit: bare-ok(prose)
+const CLOSE_WHAT_HINT: &str = "Close what?";
+
+/// `open`/`close`'s refusal outside a chamber.
+///
+/// **One string for out of doors, underwater and underground, and that is
+/// deliberate rather than lazy.** The only things in this world with a lid
+/// are anchors of a chamber's interior; nowhere else composes an `Interior`
+/// at all, so "there is nothing here that opens" is the same true sentence in
+/// all three bands. It is NOT true of a barred cave mouth, which does open —
+/// but `clear` is that act and this task did not merge the two (see
+/// [`Session::open_or_close`]'s doc for what that would take).
+/// type-audit: bare-ok(prose)
+const NOTHING_HERE_OPENS_REFUSAL: &str = "There is nothing here that opens.";
+
+/// `open`'s refusal at a lockable thing with no key in custody — the arc's
+/// own acceptance test, spoken (spec §3.8, acceptance 2).
+///
+/// It names the lock and the want, never the KIND of thing that would satisfy
+/// it: the lock declares what it requires and the key declares what it
+/// carries, and neither names the other (M+N). A sentence saying "you need
+/// the iron key" would put the naming back.
+/// type-audit: bare-ok(prose)
+const LOCKED_WITHOUT_A_KEY_REFUSAL: &str =
+    "It is locked, and you are carrying nothing that would open it.";
+
 /// The fixed half of the one passage outcome that is not a fixed string:
 /// [`Session::delve_at`]'s success line, completed with [`stratum_word`] for
 /// the entrance chamber's rock.
@@ -7118,6 +7383,434 @@ mod tests {
                 .any(|f| f.subject == UNRELATED_OPENABLE),
             "the control fact must still be in the ledger, or the check above \
              is passing on an empty population rather than a filtered one"
+        );
+    }
+
+    // --- The Chattel, Task 11: `open` and `close` (spec §3.7/§3.8) ---
+
+    /// A body asleep cannot open anything. The body-state gate stands in
+    /// front of every in-character verb, and a verb absent from
+    /// [`IN_CHARACTER_VERBS`] silently bypasses it — the blind zone
+    /// `every_bare_verb_help_lists_is_classified` cannot see, because a verb
+    /// in NEITHER roster satisfies both of its directions by its absence.
+    /// The Latch shipped `clear` exactly that way, and `open` is in the same
+    /// consequential class: it WRITES to the ledger.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: remove `"open"` from
+    /// [`IN_CHARACTER_VERBS`] (and its `HELP` line, so the roster-agreement
+    /// test stays green and this test is the only thing objecting) — exactly
+    /// the state The Latch shipped in. The verb keeps working and the
+    /// dispatch is unchanged. Confirmed 2026-08-29, unfiltered over the whole
+    /// crate (`cargo nextest run -p hornvale-vessel --no-fail-fast`, `847
+    /// tests run: 845 passed, 2 failed`) — BEHAVIOURALLY, not on a compile
+    /// error: the dispatch ran `open_or_close` unrefused and answered from
+    /// inside the handler.
+    ///
+    /// ```text
+    /// assertion `left == right` failed
+    ///   left: "Open what?"
+    ///  right: "You cannot — you are asleep."
+    /// ```
+    ///
+    /// The second failure in that run was
+    /// `h2_no_shipped_verb_can_end_a_possession_by_death` (`left: 35 right:
+    /// 36`), which is a roster-SIZE witness rather than a behavioural one and
+    /// is named here so the "2 failed" is accounted for rather than left to
+    /// look like this test firing twice.
+    #[test]
+    fn open_is_refused_while_asleep() {
+        assert_eq!(
+            asleep_then(crate::affordance::OfferedVerb::Open.word()),
+            BODY_ASLEEP_REFUSAL
+        );
+    }
+
+    /// Same, for `close`. Written as its own test rather than a loop over the
+    /// two words: the point of the pair is that EACH verb has its own
+    /// behavioural witness, and a loop would let one mutation redden a test
+    /// whose name blames the other.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: remove `"close"` from
+    /// [`IN_CHARACTER_VERBS`] and its `HELP` line. Confirmed 2026-08-29,
+    /// unfiltered (`847 tests run: 845 passed, 2 failed` — the second is the
+    /// same roster-size witness the test above names):
+    ///
+    /// ```text
+    /// assertion `left == right` failed
+    ///   left: "Close what?"
+    ///  right: "You cannot — you are asleep."
+    /// ```
+    #[test]
+    fn close_is_refused_while_asleep() {
+        assert_eq!(
+            asleep_then(crate::affordance::OfferedVerb::Close.word()),
+            BODY_ASLEEP_REFUSAL
+        );
+    }
+
+    /// What the body-state gate says, as one constant, so the two tests above
+    /// and the sanity checks in [`asleep_then`] cannot drift into two
+    /// spellings of one refusal.
+    const BODY_ASLEEP_REFUSAL: &str = "You cannot — you are asleep.";
+
+    /// Put a fresh seed-42 possession to sleep and hand it `line`, returning
+    /// what it answered — the shape `warm_is_refused_while_asleep` and
+    /// `clear_is_refused_while_asleep` each write out inline, factored so a
+    /// third and fourth copy do not accumulate.
+    ///
+    /// The two sanity checks are load-bearing and are why this is not merely
+    /// two lines: without the first, a `sleep` that stopped being a verb
+    /// would make every caller assert against a body that never went under;
+    /// without the second, a change to what `sleep` does to `wake_at` would
+    /// do the same more quietly.
+    fn asleep_then(line: &str) -> String {
+        let world = seam_world();
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+        let slept = match session.handle("sleep") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("sleep must not release: {t}"),
+        };
+        assert!(
+            !slept.starts_with("No verb"),
+            "`sleep` must be a verb for this to mean anything: {slept}"
+        );
+        assert_eq!(
+            session.body_state(),
+            BodyState::Asleep,
+            "sanity check: asleep alone must gate as asleep"
+        );
+        match session.handle(line) {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("`{line}` must not release: {t}"),
+        }
+    }
+
+    /// `open`/`close` dispatch for real, against a real chamber anchor, and
+    /// are refused by the DERIVED offer rather than by a kind literal — an
+    /// alcove is a recess, and a recess has no lid.
+    ///
+    /// **This is the end-to-end witness the pair otherwise lacks, and the
+    /// reason it names an alcove rather than a strongbox is measured, not
+    /// chosen** — see `a_lockable_thing_opens_only_with_the_key_in_custody`
+    /// for the measurement. What it proves is the whole dispatch path: the
+    /// arm in `Session::handle`, the band guard, the noun resolution against
+    /// this chamber's own anchors, and `offered_to_observer`'s verdict.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: make `open_or_close` skip the offer
+    /// check — `if !offer.contains(&verb)` -> `if false && !offer.contains(
+    /// &verb)` (kept as an `&&` so `verb` stays bound and the red is
+    /// behavioural rather than an unused-variable compile error). Confirmed
+    /// 2026-08-29, unfiltered (`847 tests run: 846 passed, 1 failed` — this
+    /// one and nothing else):
+    ///
+    /// ```text
+    /// assertion `left == right` failed
+    ///   left: "You open the alcove. Within it: a hearth."
+    ///  right: "The alcove does not open."
+    /// ```
+    ///
+    /// The `left` side is worth reading twice: without the offer gate the
+    /// verb does not merely answer wrongly, it COMMITS an openness fact about
+    /// a recess in a wall and then reports its contents — which is why the
+    /// ledger assertion below is part of this test rather than a separate
+    /// one.
+    #[test]
+    fn a_kind_with_no_lid_is_refused_by_the_offer_not_by_a_kind_literal() {
+        let world = world_at(13).expect("seed 13 builds");
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 13 possesses");
+        session.handle("enter");
+        session.handle("enter further in");
+        let interior = session
+            .chamber_interior_here()
+            .expect("still indoors after stepping further in");
+        let alcove = interior
+            .ids()
+            .into_iter()
+            .find(|&a| crate::chamber_prose::noun(interior.anchor(a).kind) == Some("an alcove"))
+            .expect(
+                "precondition: seed 13's second chamber is the hearthroom, which draws an alcove",
+            );
+        let kind = crate::affordance::thing_kind_of(interior.anchor(alcove).kind);
+        assert!(
+            crate::affordance::carries(kind, crate::affordance::ObjectProperty::Encloses),
+            "precondition: the alcove must ENCLOSE, or this test could not \
+             tell 'no lid' apart from 'not a container'"
+        );
+        assert!(
+            !crate::affordance::carries(kind, crate::affordance::ObjectProperty::Openable),
+            "precondition: the alcove must carry no Openable"
+        );
+
+        let refused = match session.handle("open an alcove") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("open must not release: {t}"),
+        };
+        assert_eq!(refused, "The alcove does not open.");
+        let refused = match session.handle("close an alcove") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("close must not release: {t}"),
+        };
+        assert_eq!(refused, "The alcove does not close.");
+        assert!(
+            session.ledger.find(crate::thing::OPENNESS).next().is_none(),
+            "a refused open must commit nothing: the offer stands in front of \
+             the act, not inside it"
+        );
+    }
+
+    /// The two arms that need no container at all: a bare `open` is a HINT
+    /// (the player typed a real verb and left out its object), and out of
+    /// doors there is nothing with a lid.
+    #[test]
+    fn open_and_close_hint_when_bare_and_refuse_out_of_doors() {
+        let world = seam_world();
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+        assert!(
+            session.inside.is_none(),
+            "sanity check: a fresh possession starts out of doors"
+        );
+        let say = |s: &mut Session<'_>, line: &str| match s.handle(line) {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("`{line}` must not release: {t}"),
+        };
+        assert_eq!(say(&mut session, "open"), OPEN_WHAT_HINT);
+        assert_eq!(say(&mut session, "close"), CLOSE_WHAT_HINT);
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            NOTHING_HERE_OPENS_REFUSAL
+        );
+        assert_eq!(
+            say(&mut session, "close a strongbox"),
+            NOTHING_HERE_OPENS_REFUSAL
+        );
+    }
+
+    /// A lockable thing refuses without the key and yields with it — the
+    /// arc's own acceptance test (spec §6.2), and the first precondition in
+    /// Hornvale that reads a SECOND object.
+    ///
+    /// # Why this drives the precondition rather than the sentence
+    ///
+    /// **No `Session` in any world can stand in front of a strongbox today,
+    /// and that is a MEASUREMENT rather than an assumption.** `the-strongbox`
+    /// carries `needs_populous: true` (The Blocking: "a hamlet has nothing
+    /// worth locking up"), which reads
+    /// `Brief::is_populous` — `peak_population > hornvale_history::flesh::
+    /// HAMLET_POPULATION_CEILING`, i.e. > 150. Probed on this tree:
+    ///
+    /// ```text
+    /// seed 42: ceiling=150 occupations=1240 alive=389 populous_alive=0 max_alive_peak=84
+    /// seed 13: ceiling=150 occupations=1094 alive=305 populous_alive=0 max_alive_peak=87
+    /// seed  1: ceiling=150 occupations=1163 alive=310 populous_alive=0 max_alive_peak=85
+    /// ```
+    ///
+    /// — not one living occupation in three whole worlds clears the ceiling,
+    /// and a 48-seed sweep of the flagship a possession actually starts at
+    /// found `populous=true` zero times. So the joined refusal string
+    /// [`LOCKED_WITHOUT_A_KEY_REFUSAL`] is unreachable through
+    /// `Session::handle`, for a reason that predates this task and is
+    /// recorded in the task report as the campaign's own open question.
+    ///
+    /// What IS reachable, and what this therefore drives, is both halves the
+    /// lock joins, each against real state:
+    ///
+    /// 1. **The lock's declaration** — `strongbox` carries `Lockable` and the
+    ///    alcove does not, read from `object_registry` through the same
+    ///    `carries` query `open_or_close` calls.
+    /// 2. **The custody read** — [`Session::carrying_something_that`] over a
+    ///    real session's real ledger: false before, true after a REAL
+    ///    promotion of a key into the body's hands, and false again once the
+    ///    key is put down in a room. The third assertion is the one that
+    ///    makes this a fold rather than a search: `query_by_object` still
+    ///    finds the superseded fact, and only `location_of`'s latest-posting
+    ///    re-ask drops it.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST — the property is *that custody is
+    /// consulted*: in [`crate::thing::held_by`], drop the second filter, i.e.
+    /// `.filter(|&thing| location_of(ledger, thing, day) ==
+    /// Some(Value::Entity(holder)))` -> `.filter(|&thing| { let _ = thing;
+    /// true })`. Every candidate the O-index ever saw is then held forever,
+    /// so a key put back down still opens the lock. Confirmed 2026-08-29,
+    /// unfiltered (`847 tests run: 845 passed, 2 failed` — this test and
+    /// `thing::a_holder_holds_what_was_last_put_in_it_and_nothing_it_has_
+    /// given_up`, which is the same property asserted one layer down):
+    ///
+    /// ```text
+    /// thread 'session::tests::a_lockable_thing_opens_only_with_the_key_in_custody'
+    /// panicked at windows/vessel/src/session.rs:
+    /// a key put back down is no longer carried — custody is a FOLD over the
+    /// latest posting, not a search for any posting ever made
+    /// ```
+    #[test]
+    fn a_lockable_thing_opens_only_with_the_key_in_custody() {
+        use crate::affordance::{ObjectProperty, carries, thing_kind_of};
+        let strongbox = thing_kind_of(crate::interior::AnchorKind::Strongbox);
+        assert!(
+            carries(strongbox, ObjectProperty::Lockable),
+            "the lock must declare what it requires"
+        );
+        assert!(
+            !carries(
+                thing_kind_of(crate::interior::AnchorKind::Alcove),
+                ObjectProperty::Lockable
+            ),
+            "a kind with no lock must not declare one, or the gate is universal"
+        );
+
+        let world = seam_world();
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+        let body = session.agent_entity();
+        let day = session.day;
+        assert!(
+            !session.carrying_something_that(ObjectProperty::Portable),
+            "a freshly possessed body carries nothing"
+        );
+
+        // A REAL promotion, in a real room, of the kind `object_registry`
+        // marks Portable — never an invented EntityId, which would prove the
+        // fold reads a value this test chose rather than one the ledger minted.
+        let elsewhere = Facet {
+            face: 0,
+            path: vec![1],
+        };
+        let key = crate::thing::promote(
+            &mut session.ledger,
+            &session.registry,
+            &elsewhere,
+            thing_kind_of(crate::interior::AnchorKind::Key).0,
+            0,
+            day,
+        )
+        .expect("a shallow facet packs");
+        session
+            .ledger
+            .commit(
+                crate::thing::located_in_holder_fact(key, body, day),
+                &session.registry,
+            )
+            .expect("LOCATED_IN is registered by Session::start and is non-functional");
+        assert!(
+            session.carrying_something_that(ObjectProperty::Portable),
+            "a key placed in the body's own hands must be in its custody"
+        );
+
+        // Put it down again, a day later. The putting-IN fact is still in the
+        // ledger forever; only the latest posting decides.
+        let later = WorldTime::from_ticks(day.ticks() + 1);
+        session
+            .ledger
+            .commit(
+                crate::thing::located_in_room_fact(key, &elsewhere, later)
+                    .expect("a shallow facet packs"),
+                &session.registry,
+            )
+            .expect("LOCATED_IN is registered and non-functional");
+        session.day = later;
+        assert!(
+            !session.carrying_something_that(ObjectProperty::Portable),
+            "a key put back down is no longer carried — custody is a FOLD \
+             over the latest posting, not a search for any posting ever made"
+        );
+    }
+
+    /// Opening is durable for the session, and closing undoes it — the
+    /// re-closability decision 0367 deferred, now shipped (spec §3.7,
+    /// acceptance 3).
+    ///
+    /// **Driven through the real writer and the real fold**,
+    /// [`crate::thing::set_openness`] and [`Session::container_is_open`], on
+    /// a live session's own ledger and registry — the same pair
+    /// `Session::open_or_close` calls, one frame in. It is written this way
+    /// for the reason
+    /// `a_lockable_thing_opens_only_with_the_key_in_custody` measures: no
+    /// world composes a strongbox into a chamber a possession can stand in,
+    /// so `handle("open a strongbox")` cannot reach the writer.
+    ///
+    /// Four states, not two, and the third is the deliverable: 0367's latch
+    /// was MONOTONE — it short-circuited on any clearing fact ever committed
+    /// — so under that rule the `close` below could not have lowered
+    /// anything and the fourth state would be unreachable.
+    ///
+    /// The FIRST assertion is the other half: a container nobody has touched
+    /// reads shut. That is an authored default living in
+    /// `Session::container_is_open`, not in `thing::is_open` (whose `None`
+    /// means "whatever the seed drew"), and nothing else in the tree pins it.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST — the property is *that the latest
+    /// posting wins, not the first*: in
+    /// `crate::thing::latest_object_at_or_before`, invert the fold's
+    /// comparison, `best.is_none_or(|(seen, _)| seen <= d)` ->
+    /// `best.is_none_or(|(seen, _)| seen >= d)`. The first posting then wins
+    /// and the chest never closes. Confirmed 2026-08-29, unfiltered:
+    ///
+    /// ```text
+    /// assertion `left == right` failed: after setting open=false the fold
+    /// must report false
+    ///   left: true
+    ///  right: false
+    /// ```
+    ///
+    /// **That run failed SIX tests, not one, and the blast radius is the
+    /// honest shape of this evidence rather than a footnote.**
+    /// `latest_object_at_or_before` is the one fold `location_of` and
+    /// `is_open` are both made of, so the same mutation also reddened
+    /// `thing::tests::a_thing_put_back_is_still_here`,
+    /// `thing::tests::location_is_read_as_of_the_day_asked_about`,
+    /// `thing::tests::openness_is_absent_until_a_fact_says_otherwise`,
+    /// `passage::a_cave_mouth_closed_after_it_was_opened_bars_again` and this
+    /// task's own `thing::a_holder_holds_what_was_last_put_in_it_...`. A
+    /// mutation this broadly caught proves the fold is held; what it does NOT
+    /// prove on its own is that anything holds `open`/`close` SPECIFICALLY,
+    /// which is what the four-state sequence below is for and what the three
+    /// narrower mutations above establish.
+    #[test]
+    fn a_container_opens_closes_and_re_opens() {
+        let world = seam_world();
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+        let room = Facet {
+            face: 0,
+            path: vec![2],
+        };
+        let kind = crate::affordance::thing_kind_of(crate::interior::AnchorKind::Strongbox);
+
+        assert!(
+            !session.container_is_open(&room, kind),
+            "a container nobody has touched reads shut — no generator draws \
+             an openness for one, so the fallback is authored at the reader"
+        );
+
+        let mut at = session.day;
+        for (open, expect) in [(true, true), (false, false), (true, true)] {
+            at = WorldTime::from_ticks(at.ticks() + 1);
+            crate::thing::set_openness(
+                &mut session.ledger,
+                &session.registry,
+                &room,
+                kind.0,
+                0,
+                open,
+                at,
+            )
+            .expect("a shallow facet packs, and the predicates are registered");
+            session.day = at;
+            assert_eq!(
+                session.container_is_open(&room, kind),
+                expect,
+                "after setting open={open} the fold must report {expect}"
+            );
+        }
+
+        // TIME-CORRECT, not a flag: the day before anything happened still
+        // reads shut, however many postings came later.
+        session.day = WorldTime::from_ticks(at.ticks() - 4);
+        assert!(
+            !session.container_is_open(&room, kind),
+            "a fold evaluated at an earlier instant must not see later postings"
         );
     }
 
@@ -8364,7 +9057,12 @@ mod tests {
         assert_ne!(reply, format!("You see no {noun} here."));
         assert_eq!(
             reply,
-            crate::chamber_prose::examine_detail(&interior, id),
+            // `false` is the right expectation and not a guess: nothing in
+            // this test opens anything, and `container_is_open`'s authored
+            // default for a container with no `openness` fact is shut. It is
+            // also inert for the anchor this fixture reaches — the threshold
+            // chamber's first nouned anchor, which carries no `Openable`.
+            crate::chamber_prose::examine_detail(&interior, id, false),
             "examine_chamber's anchor reply must equal chamber_prose's own \
              examine_detail — the pin this task's re-point must not move"
         );
@@ -12293,7 +12991,7 @@ mod tests {
     /// state that plainly rather than let the roster count imply
     /// otherwise.** Every verb here runs against a session that has just
     /// been `!possess`ed, and a possessed body is exactly what
-    /// `gated_by_the_body` refuses in front of: all 22
+    /// `gated_by_the_body` refuses in front of: all 24
     /// [`IN_CHARACTER_VERBS`] are turned away by the body-state gate BEFORE
     /// their handlers run, so only the 3 [`SESSION_CONTROL`] verbs and the
     /// 9 Group-A operator instruments below reach any dispatch arm at all.
@@ -12311,7 +13009,11 @@ mod tests {
     /// `gated_by_the_body`'s own logic is untouched by either addition).
     /// The Gallery's Task 5 added two more gated verbs still, `down`/`up`,
     /// re-derived the identical way: 20→22 and 32→34, the 12 ungated verbs
-    /// again untouched.
+    /// again untouched. The Chattel's Task 11 added `open`/`close` — both
+    /// gated, both in-character — re-derived the same way once more: 22→24
+    /// and 34→36, and the 12 ungated verbs untouched for the fourth time,
+    /// since `gated_by_the_body`'s own logic is unchanged by an entry in the
+    /// roster it reads.
     ///
     /// **So this is a weak tripwire, not the tripwire that turns red the
     /// day mortality ships.** If a death terminator ever arrives through an
@@ -12324,13 +13026,13 @@ mod tests {
     ///
     /// The stated denominator (spec §7's own requirement): the full shipped
     /// verb roster this file itself classifies is the SUM of three groups —
-    /// [`IN_CHARACTER_VERBS`] (22, since The Offer's Task 5 added `warm`,
-    /// The Latch's fix wave added `clear`, and The Gallery's Task 5 added
-    /// `down`/`up`),
+    /// [`IN_CHARACTER_VERBS`] (24, since The Offer's Task 5 added `warm`,
+    /// The Latch's fix wave added `clear`, The Gallery's Task 5 added
+    /// `down`/`up`, and The Chattel's Task 11 added `open`/`close`),
     /// [`SESSION_CONTROL`] (3: `release`/`quit`/`exit`), and the nine
     /// out-of-character-ONLY operator instruments `handle_ooc`'s Group A
     /// dispatches (`why`/`npcs`/`help`/`eyes`/`whoami`/`provoke`/`soothe`/
-    /// `possess`/`unpossess`) — **34** total. Group B's six `!`-twins
+    /// `possess`/`unpossess`) — **36** total. Group B's six `!`-twins
     /// (`!map`/`!examine`/`!needs`/`!wait`/`!look`/`!knows`) are deliberately
     /// NOT counted a second time — [`HELP`]'s own text calls them "the
     /// out-of-character halves" of verbs already among the 22: the same verb
@@ -12347,7 +13049,7 @@ mod tests {
     /// argument to make it succeed: since no dispatch arm anywhere
     /// constructs the string `"died"` regardless of input, a bare
     /// invocation already covers the whole surface this loop can reach —
-    /// which, per the paragraph above, is the 12 ungated verbs, not the 32
+    /// which, per the paragraph above, is the 12 ungated verbs, not the 36
     /// the roster names.
     #[test]
     fn h2_no_shipped_verb_can_end_a_possession_by_death() {
@@ -12370,11 +13072,11 @@ mod tests {
             .collect();
         assert_eq!(
             roster.len(),
-            34,
-            "the stated denominator: 22 IN_CHARACTER_VERBS + 3 SESSION_CONTROL \
+            36,
+            "the stated denominator: 24 IN_CHARACTER_VERBS + 3 SESSION_CONTROL \
              + 9 Group-A operator instruments the OOC namespace alone \
              dispatches. This pins the ROSTER's size, NOT the exercised \
-             population: under a possessed body the gate refuses all 22 \
+             population: under a possessed body the gate refuses all 24 \
              in-character verbs, so 12 reach a dispatch arm — see this \
              test's doc comment"
         );

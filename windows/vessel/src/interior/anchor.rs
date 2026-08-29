@@ -105,6 +105,16 @@ anchor_kinds! {
     Anvil,
     /// An altar, and the basin beside it is the washing the rite asks for first.
     Altar,
+    // --- appended by The Chattel (Task 11), for the CONTAINER half ---
+    //
+    // The first anchor kind authored to be CONTAINED rather than to contain or
+    // to stand beside: `the-key-in-the-strongbox` attaches it
+    // `Attach::Within(Strongbox)`. Until it existed the grammar's only `within`
+    // relation anywhere was `{(Alcove, Hearth)}` — a full census over all 60
+    // production gate combinations — so `Openable` had nothing to reveal and
+    // `Lockable` nothing to lock (spec §3.8).
+    /// A small key, kept where a place keeps what it locks up.
+    Key,
 }
 
 /// One anchor: what it is, and the anchor it lies strictly within, if any.

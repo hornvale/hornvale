@@ -105,10 +105,12 @@ fn every_property_table_key_is_a_real_thing_kind() {
 /// as two green results.
 #[test]
 fn the_correspondence_checks_are_not_vacuous() {
-    // Fourteen is now a claim about the ENUM, not about a list in this file:
+    // Fifteen is a claim about the ENUM, not about a list in this file:
     // `AnchorKind::ALL` is generated from the declaration, so an appended
-    // variant reddens here on the run that first compiles it.
-    assert_eq!(EVERY_ANCHOR_KIND.len(), 14);
+    // variant reddens here on the run that first compiles it — which is
+    // exactly what it did for The Chattel's Task 11 `Key`, reporting
+    // `left: 15 right: 14` on the run that first compiled the variant.
+    assert_eq!(EVERY_ANCHOR_KIND.len(), 15);
     assert!(
         object_registry().ids().count() >= 9,
         "object_registry lost rows; the key check above sweeps whatever is left"

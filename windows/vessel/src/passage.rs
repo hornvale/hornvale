@@ -138,7 +138,17 @@ pub fn cave_mouth_id(addr: &ChamberAddr) -> EntityId {
 /// would be two functions whose promotion halves could drift; a caller that
 /// promoted and forgot to commit, or committed against an id it derived
 /// itself, would produce a ledger that reads correctly to its own author and
-/// to nothing else. `Session::clear_passage_at` is the production caller and
+/// to nothing else.
+///
+/// **The body of it moved to [`crate::thing::set_openness_role`] in Task 11,
+/// and the move is the §3.7 claim made mechanical.** A cave mouth and a
+/// strongbox are "the same mechanism seen from three angles"; before the move
+/// they were two promote-and-commit pairs that happened to agree, and the
+/// container half was about to become a third. What stays here is the one
+/// thing that is genuinely the passage's own — the ROLE spelling for a
+/// [`ChamberAddr`], which [`crate::thing::thing_role`] cannot produce. The
+/// caveats below are unchanged in substance because the code they describe is
+/// the same code, one call deeper. `Session::clear_passage_at` is the production caller and
 /// the tests use the same door.
 ///
 /// **Idempotent WITHIN A DAY, and only within one** (fix round 1, m4).
@@ -168,10 +178,15 @@ pub fn set_openness(
     open: bool,
     day: WorldTime,
 ) -> Result<EntityId, crate::thing::ThingError> {
-    let id =
-        crate::thing::promote_role(ledger, registry, &cave_mouth_role(addr), CAVE_MOUTH, 0, day)?;
-    ledger.commit(crate::thing::openness_fact(id, open, day), registry)?;
-    Ok(id)
+    crate::thing::set_openness_role(
+        ledger,
+        registry,
+        &cave_mouth_role(addr),
+        CAVE_MOUTH,
+        0,
+        open,
+        day,
+    )
 }
 
 /// The barrier state at `addr` as of `day`: [`BarrierState::Open`] if the

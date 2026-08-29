@@ -141,7 +141,7 @@ pub struct Pattern {
 ///
 /// Sized near its intended scale deliberately, all the same: growth is cheap
 /// today and will not stay cheap.
-pub const INVENTORY: [Pattern; 14] = [
+pub const INVENTORY: [Pattern; 15] = [
     // --- built, drawn at BOTH bands ---
     Pattern {
         name: "the-ground",
@@ -323,6 +323,43 @@ pub const INVENTORY: [Pattern; 14] = [
         roles: &[Role::Shrine],
         at_locale: false,
         needs_populous: false,
+    },
+    // --- The Chattel (Task 11): the first authored CONTENTS ---
+    //
+    // Appended, and appended AFTER `the-strongbox`, which is the only position
+    // the admissibility walk permits: `draw` admits a pattern only once its
+    // `requires` kind is present, so a key placed before the strongbox that
+    // holds it would be silently dropped from every composition.
+    //
+    // Its whole reason for existing is that nothing was ever inside anything.
+    // The grammar's only `within` relation anywhere was `{(Alcove, Hearth)}`
+    // (a census over all 60 production gate combinations, The Offer's Task 6,
+    // re-measured on this tree by
+    // `the_grammar_puts_exactly_these_things_inside_other_things` — which
+    // reported exactly that pair the moment before this entry was written).
+    // So `Openable` had nothing to reveal and `Lockable` nothing to lock, and
+    // `open`/`close` would have shipped reporting nothing forever (spec §3.8).
+    //
+    // `at_locale: false` is load-bearing rather than copied: a locale-band
+    // pattern feeds `warmth_at`, which feeds a creature's thermal drive, which
+    // is committed history — appending one there is an EPOCH (see
+    // [`Pattern::at_locale`] and `the_locale_band_draws_exactly_what_it_drew`).
+    // A chamber-only append moves no saved world.
+    //
+    // `needs_populous: true` states the gate the strongbox already implies,
+    // rather than relying on `requires` to carry it: the two travel together
+    // ("a hamlet has nothing worth locking up"), and a reader who later
+    // relaxes the strongbox's own scale gate should have to see this one too.
+    Pattern {
+        name: "the-key-in-the-strongbox",
+        kind: AnchorKind::Key,
+        attach: Attach::Within(AnchorKind::Strongbox),
+        requires: Some(AnchorKind::Strongbox),
+        needs_cold: false,
+        built: true,
+        roles: &[Role::Store],
+        at_locale: false,
+        needs_populous: true,
     },
 ];
 
@@ -770,6 +807,88 @@ mod tests {
             "the census no longer sweeps every production gate combination"
         );
         assert_eq!(combinations, 60, "the census swept {combinations}, not 60");
+    }
+
+    /// **What the grammar ever puts INSIDE anything** — The Offer's Task 6
+    /// census re-run as a permanent test, over the same 60 production gate
+    /// combinations `no_production_room_composes_two_anchors_of_one_kind`
+    /// sweeps.
+    ///
+    /// It exists because the campaign's container half is only as real as
+    /// this set is non-empty in the right place. The Offer measured the
+    /// answer as `{(Alcove, Hearth)}` — a fire in a recess, and **nothing
+    /// anywhere inside a strongbox**, which is why The Chattel's spec §3.8
+    /// says outright that "contents must be authored, because nothing is ever
+    /// inside anything today": `Openable`/`Lockable` would have had nothing
+    /// to reveal and `open` would have reported nothing, forever, exactly as
+    /// `Encloses` nearly did one campaign earlier.
+    ///
+    /// So this is an ANTI-VACUITY check, not a freeze for its own sake. A
+    /// pattern authored with `Attach::Within` that no production combination
+    /// selects would leave the feature reporting nothing while looking
+    /// authored; the pair has to show up HERE, in a composition the gates
+    /// actually produce, or it is not in the world.
+    ///
+    /// Frozen as an exact set, so a future `Attach::Within` addition is a
+    /// deliberate edit here rather than a silent widening — the same
+    /// discipline `the_locale_band_draws_exactly_what_it_drew` carries one
+    /// band over.
+    #[test]
+    fn the_grammar_puts_exactly_these_things_inside_other_things() {
+        let mut combinations = 0usize;
+        let mut pairs: std::collections::BTreeSet<(AnchorKind, AnchorKind)> =
+            std::collections::BTreeSet::new();
+
+        let mut census = |selected: Vec<&'static Pattern>| {
+            combinations += 1;
+            let interior: Interior = compose(&selected);
+            for id in interior.ids() {
+                if let Some(container) = interior.anchor(id).within {
+                    pairs.insert((interior.anchor(container).kind, interior.anchor(id).kind));
+                }
+            }
+        };
+
+        for (built, cold) in [(true, true), (true, false), (false, true), (false, false)] {
+            census(selection(built, cold));
+        }
+        for role in EVERY_ROLE {
+            for built in [true, false] {
+                for cold in [true, false] {
+                    for populous in [true, false] {
+                        census(selection_for(*role, built, cold, populous));
+                    }
+                }
+            }
+        }
+
+        // The same accounting the sibling census carries, and for the same
+        // reason: a dropped loop would otherwise satisfy the set assertion
+        // below by measuring less.
+        assert_eq!(
+            combinations,
+            4 + EVERY_ROLE.len() * 8,
+            "the census no longer sweeps every production gate combination"
+        );
+        assert_eq!(combinations, 60, "the census swept {combinations}, not 60");
+
+        let expected: std::collections::BTreeSet<(AnchorKind, AnchorKind)> = [
+            // The Offer's Task 6 finding, unchanged: a fire within an alcove.
+            (AnchorKind::Alcove, AnchorKind::Hearth),
+            // The Chattel's Task 11 addition, and the whole point of it: a
+            // production room that actually holds something inside a
+            // container `open` can open.
+            (AnchorKind::Strongbox, AnchorKind::Key),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(
+            pairs, expected,
+            "the set of (container, contained) pairs any production gate \
+             combination composes has moved. An addition here is what makes \
+             the container half of The Chattel non-vacuous; a REMOVAL takes \
+             it back to reporting nothing"
+        );
     }
 
     #[test]

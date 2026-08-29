@@ -2464,12 +2464,14 @@ hornvale-vessel::hornvale_vessel$chamber_prose::tests::a_chamber_never_speaks_of
 hornvale-vessel::hornvale_vessel$chamber_prose::tests::a_non_enclosing_anchor_never_reports_contents_even_if_something_sits_within_it
 hornvale-vessel::hornvale_vessel$chamber_prose::tests::an_empty_chamber_still_reads_as_a_place
 hornvale-vessel::hornvale_vessel$chamber_prose::tests::an_empty_strongbox_reports_no_contents
+hornvale-vessel::hornvale_vessel$chamber_prose::tests::an_open_container_reveals_its_contents_and_a_shut_one_does_not
 hornvale-vessel::hornvale_vessel$chamber_prose::tests::every_branch_ends_in_a_period_with_no_empty_clause
 hornvale-vessel::hornvale_vessel$chamber_prose::tests::every_kind_has_a_detail
 hornvale-vessel::hornvale_vessel$chamber_prose::tests::every_noun_the_plans_legend_names_has_a_detail
 hornvale-vessel::hornvale_vessel$chamber_prose::tests::examining_an_alcove_names_the_hearth_within_it
 hornvale-vessel::hornvale_vessel$chamber_prose::tests::no_detail_speaks_of_terrain
 hornvale-vessel::hornvale_vessel$chamber_prose::tests::prose_is_a_pure_function_of_the_interior_and_brief
+hornvale-vessel::hornvale_vessel$chamber_prose::tests::the_articles_this_module_authors_are_the_two_it_strips
 hornvale-vessel::hornvale_vessel$chamber_prose::tests::the_brief_changes_the_word_for_the_place
 hornvale-vessel::hornvale_vessel$chamber_prose::tests::the_enclosed_anchor_does_not_report_its_own_container
 hornvale-vessel::hornvale_vessel$chamber_prose::tests::the_real_locale_grammar_composes_a_hearth_within_an_alcove_and_examine_names_it
@@ -2532,8 +2534,10 @@ hornvale-vessel::hornvale_vessel$interior::pattern::tests::a_permitted_interior_
 hornvale-vessel::hornvale_vessel$interior::pattern::tests::composition_is_not_degenerate
 hornvale-vessel::hornvale_vessel$interior::pattern::tests::every_role_composes_something_the_validator_accepts
 hornvale-vessel::hornvale_vessel$interior::pattern::tests::no_pattern_the_locale_band_declines_can_reach_it_by_any_route
+hornvale-vessel::hornvale_vessel$interior::pattern::tests::no_production_room_composes_two_anchors_of_one_kind
 hornvale-vessel::hornvale_vessel$interior::pattern::tests::only_the_hearthroom_can_hold_a_fire_and_no_rule_says_so
 hornvale-vessel::hornvale_vessel$interior::pattern::tests::selection_is_derived_from_conditions_not_authored_per_culture
+hornvale-vessel::hornvale_vessel$interior::pattern::tests::the_grammar_puts_exactly_these_things_inside_other_things
 hornvale-vessel::hornvale_vessel$interior::pattern::tests::the_intended_chain_is_the_deep_one
 hornvale-vessel::hornvale_vessel$interior::pattern::tests::the_locale_band_draws_exactly_what_it_drew
 hornvale-vessel::hornvale_vessel$interior::pattern::tests::the_role_is_derived_from_depth_and_then_from_the_brief
@@ -2954,6 +2958,7 @@ hornvale-vessel::suite$the_blocking::a_locale_composition_is_untouched_by_the_ro
 hornvale-vessel::suite$the_blocking::a_role_admits_a_different_composition_not_a_bigger_one
 hornvale-vessel::suite$the_blocking::the_role_table_reads_a_different_room_for_every_role
 hornvale-vessel::suite$the_first_mark::the_two_grievance_npc_copies_agree
+hornvale-vessel::suite$thing::a_holder_holds_what_was_last_put_in_it_and_nothing_it_has_given_up
 hornvale-vessel::suite$thing::a_room_offers_again_what_was_brought_back
 hornvale-vessel::suite$thing::a_room_stops_offering_what_was_carried_out_of_it
 hornvale-vessel::suite$underworld_level_generation::a_real_descent_is_deterministic_connected_and_renders

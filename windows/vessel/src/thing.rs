@@ -427,6 +427,68 @@ pub fn openness_fact(thing: EntityId, open: bool, day: WorldTime) -> Fact {
     }
 }
 
+/// Record that the thing of `kind` in `facet` was opened (`open == true`) or
+/// closed, on `day` — promoting it first, so the thing exists in the ledger
+/// with its `instance-of` kind and not merely as an id some fold derives.
+///
+/// **The one writer, in both directions, for both angles of §3.7's "same
+/// mechanism seen from three angles".** [`crate::passage::set_openness`] is
+/// the cave mouth's entry point and calls [`set_openness_role`] — this
+/// function's own body, minus the room-keyed spelling — so a passage and a
+/// container are opened by one promote-and-commit pair rather than two that
+/// agree. A second copy could reuse the entity and forget the fact, or
+/// promote against an id it derived itself, and nothing in either caller's
+/// tests would see it: the ledger would read correctly to its own author and
+/// to nothing else.
+///
+/// **Idempotent within a day and not across days**, exactly as
+/// `passage::set_openness`'s own doc records: [`promote`]'s idempotence is
+/// `Ledger::commit`'s dedup of an IDENTICAL fact and [`Fact`] compares its
+/// `day`, so two calls on different days leave one entity and two
+/// `instance-of` facts saying the same thing twice. `Session::open_or_close`
+/// refuses a no-op ("it is already open") before reaching here, so the
+/// redundant pair is not reachable through the verb; the caveat is recorded
+/// because a future caller that does not check first would accumulate one
+/// per call.
+/// type-audit: bare-ok(identifier-text: kind), bare-ok(count: ordinal), bare-ok(flag: open)
+pub fn set_openness(
+    ledger: &mut Ledger,
+    registry: &ConceptRegistry,
+    facet: &Facet,
+    kind: &str,
+    ordinal: u16,
+    open: bool,
+    day: WorldTime,
+) -> Result<EntityId, ThingError> {
+    set_openness_role(
+        ledger,
+        registry,
+        &thing_role(facet, kind)?,
+        kind,
+        ordinal,
+        open,
+        day,
+    )
+}
+
+/// [`set_openness`] for a thing whose role leg is already spelled —
+/// `pub(crate)` for the reason [`id_for_role`]'s doc gives, and reached by
+/// `passage.rs`, whose address is a `ChamberAddr` rather than a [`Facet`].
+/// type-audit: bare-ok(identifier-text: role), bare-ok(identifier-text: kind), bare-ok(count: ordinal), bare-ok(flag: open)
+pub(crate) fn set_openness_role(
+    ledger: &mut Ledger,
+    registry: &ConceptRegistry,
+    role: &str,
+    kind: &str,
+    ordinal: u16,
+    open: bool,
+    day: WorldTime,
+) -> Result<EntityId, ThingError> {
+    let id = promote_role(ledger, registry, role, kind, ordinal, day)?;
+    ledger.commit(openness_fact(id, open, day), registry)?;
+    Ok(id)
+}
+
 /// The last object committed for (`subject`, `predicate`) **at or before**
 /// `day` — the one fold both [`location_of`] and [`is_open`] are made of.
 ///
@@ -516,6 +578,46 @@ pub fn room_of(ledger: &Ledger, thing: EntityId, day: WorldTime) -> Option<Strin
             _ => return None,
         }
     }
+}
+
+/// Every thing whose location is `holder` itself as of `day` — what a chest
+/// contains, and (from Task 12) what a body carries.
+///
+/// **The O-shaped question, and the only one in this module that is.** Every
+/// other fold here starts from a thing and asks where it is; this starts from
+/// a place and asks what is in it, which the flat ledger could not answer at
+/// all before `Ledger::query_by_object`'s OSP index. It is `O(log n + k)` in
+/// the number of facts naming this holder, not a scan.
+///
+/// **Two filters, and the second is the one that makes it a fold rather than
+/// a search.** `query_by_object` finds every fact that ever named `holder`,
+/// including one a later fact superseded — a key put into a chest and taken
+/// out again still has its putting-in fact forever. So each candidate is
+/// re-asked through [`location_of`], whose answer is the LATEST posting at or
+/// before `day`, and kept only if that answer is still this holder. Trusting
+/// the O-index alone would report everything ever placed here, which is a
+/// different question and a wrong one.
+///
+/// Deduplicated by construction: the result is collected through a
+/// [`std::collections::BTreeSet`], so a thing placed here twice appears once,
+/// in `EntityId` order — deterministic, and never ledger order, which would
+/// make the answer depend on how the history happened to be written.
+///
+/// DIRECT containment only, never [`room_of`]'s transitive reading: a key in
+/// a chest in a room is *in the chest*, and a caller asking what a room holds
+/// wants the chest, not its contents spilled onto the floor. That is the same
+/// asymmetry [`is_latent`] states from the other side.
+pub fn held_by(ledger: &Ledger, holder: EntityId, day: WorldTime) -> Vec<EntityId> {
+    let candidates: std::collections::BTreeSet<EntityId> = ledger
+        .query_by_object(&Value::Entity(holder))
+        .filter(|fact| fact.predicate == LOCATED_IN)
+        .filter(|fact| fact.day.is_some_and(|d| d <= day))
+        .map(|fact| fact.subject)
+        .collect();
+    candidates
+        .into_iter()
+        .filter(|&thing| location_of(ledger, thing, day) == Some(Value::Entity(holder)))
+        .collect()
 }
 
 /// Whether `thing` was open as of `day`, or `None` if no [`OPENNESS`] fact

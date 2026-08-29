@@ -25,6 +25,7 @@ pub(crate) fn noun(kind: AnchorKind) -> Option<&'static str> {
         AnchorKind::Loom => Some("a loom"),
         AnchorKind::Anvil => Some("an anvil"),
         AnchorKind::Altar => Some("an altar"),
+        AnchorKind::Key => Some("a key"),
     }
 }
 
@@ -70,6 +71,7 @@ pub(crate) fn detail(kind: AnchorKind) -> &'static str {
         }
         AnchorKind::Anvil => "A block of iron on a sunk stump, bright where the work lands.",
         AnchorKind::Altar => "A low stone table, worn hollow at the centre and darkly stained.",
+        AnchorKind::Key => "A short shank of worked iron, its ward cut in a single stepped notch.",
     }
 }
 
@@ -85,42 +87,114 @@ fn nouns_within(interior: &Interior, id: AnchorId) -> Vec<&'static str> {
         .collect()
 }
 
+/// A [`noun`] with its indefinite article taken off — `"a strongbox"` becomes
+/// `"strongbox"`, so a caller can say `the {bare}` about a thing the player
+/// has just named.
+///
+/// **Article surgery, kept to one function and to the two articles this
+/// module actually authors.** Every string [`noun`] returns begins `"a "` or
+/// `"an "`; nothing here is a mass noun, a plural or a proper name, so a
+/// general article model would be machinery for cases that do not exist.
+/// `the_articles_this_module_authors_are_the_two_it_strips` asserts that over
+/// [`AnchorKind::ALL`], which is generated from the enum's own declaration —
+/// so a future kind whose noun starts some other way reddens rather than
+/// being silently returned whole.
+///
+/// It returns the input UNCHANGED when neither article is present, rather
+/// than panicking: a wrong article in a sentence is a cosmetic defect and a
+/// panic mid-verb is not, and the test above is what actually holds the
+/// invariant.
+pub(crate) fn without_article(noun: &str) -> &str {
+    noun.strip_prefix("an ")
+        .or_else(|| noun.strip_prefix("a "))
+        .unwrap_or(noun)
+}
+
+/// What lies directly within `id`, as one prose fragment, or `None` when
+/// nothing does — the listing half of [`examine_detail`], factored out
+/// because `open`'s own reply names the same contents in the same words.
+///
+/// One formatter, not two: an `open` that spelled its list differently from
+/// `examine`'s would describe one chest two ways in consecutive turns, and
+/// nothing but a reader's eye would object.
+pub(crate) fn contents_of(interior: &Interior, id: AnchorId) -> Option<String> {
+    let contents = nouns_within(interior, id);
+    let (last, rest) = contents.split_last()?;
+    Some(if rest.is_empty() {
+        (*last).to_string()
+    } else {
+        format!("{} and {}", rest.join(", "), last)
+    })
+}
+
 /// `examine`'s answer for the anchor `id` (The Offer, Task 6, spec §3.6,
 /// amended): [`detail`]'s sentence, plus what lies within it when `kind`
 /// carries [`crate::affordance::ObjectProperty::Encloses`] — the
 /// interactive-fiction rule that contents show when a container is open or
-/// transparent. IV.a has no closed state to gate on (there is no way to
-/// close anything), so every `Encloses` carrier reveals unconditionally;
-/// what stays silent is a carrier with nothing `within` it, never the
-/// property itself.
+/// transparent.
+///
+/// # `opened` is the "or transparent" half, and it went live in Task 11
+///
+/// This doc used to end: *"IV.a has no closed state to gate on (there is no
+/// way to close anything), so every `Encloses` carrier reveals
+/// unconditionally."* That was exact when written and stopped being true the
+/// moment `Openable`, `openness` and the `open`/`close` verbs shipped. The
+/// rule the paragraph already cited has two arms and only one of them was
+/// implemented; the other is now:
+///
+/// ```text
+///   reveal contents  <=>  carries Encloses
+///                    AND  (does NOT carry Openable  OR  opened)
+/// ```
+///
+/// An `alcove` carries `Encloses` and not `Openable` — a recess has no lid —
+/// so it is the *transparent* arm and still reveals unconditionally. A
+/// `strongbox` carries both, so it is the *open* arm and keeps its key out of
+/// sight until someone opens it. Both are pinned:
+/// `an_open_container_reveals_its_contents_and_a_shut_one_does_not`.
+///
+/// **`opened` is the CALLER's answer, and the caller is where the ledger
+/// is.** This function holds no `Ledger`, no day and no room, so it cannot
+/// fold `thing::is_open` itself; `Session::examine_chamber` does that and
+/// hands the boolean in. The value is IGNORED for a kind that carries no
+/// `Openable`, which is why an interior-only test may pass either.
+///
+/// **What `false` means for a container nobody has touched.** [`OPENNESS`]'s
+/// absence means "whatever the seed drew"
+/// (`crate::thing::OPENNESS`), and no generator draws an openness for a
+/// container — unlike a cave mouth, whose fallback is `barrier_of`. So the
+/// authored default lives at the reader, in `Session::container_is_open`, and
+/// it is *shut*: a chest standing in a room a player has never entered is
+/// closed, which is what a banded chest with "its lid seated flush" already
+/// says in its own [`detail`] line.
 ///
 /// **Gated on `Encloses`, not merely on `within` being non-empty.** An
 /// anchor kind that does not advertise `encloses` must stay silent even if
 /// something happened to sit `within` it — otherwise this would degrade
 /// into "reveal whatever `Interior` composed" rather than "reveal what the
-/// property promises". Nothing in today's grammar ever attaches anything
-/// within a non-`Encloses` kind (the only authored `Attach::Within` in the
-/// whole pattern inventory is the fire within the alcove), so this gate is
-/// unreachable from production data — exactly why
+/// property promises". The grammar now attaches things within two kinds
+/// (`the-fire` within an alcove, `the-key-in-the-strongbox` within a
+/// strongbox) and both carry `Encloses`, so this gate is still unreachable
+/// from production data — exactly why
 /// `a_non_enclosing_anchor_never_reports_contents_even_if_something_sits_
 /// within_it` below builds one by hand.
-pub(crate) fn examine_detail(interior: &Interior, id: AnchorId) -> String {
+/// type-audit: bare-ok(flag: opened)
+pub(crate) fn examine_detail(interior: &Interior, id: AnchorId, opened: bool) -> String {
     let kind = interior.anchor(id).kind;
+    let thing_kind = crate::affordance::thing_kind_of(kind);
     let base = detail(kind);
-    if !crate::affordance::encloses(crate::affordance::thing_kind_of(kind)) {
+    if !crate::affordance::encloses(thing_kind) {
         return base.to_string();
     }
-    let contents = nouns_within(interior, id);
-    if contents.is_empty() {
+    if crate::affordance::carries(thing_kind, crate::affordance::ObjectProperty::Openable)
+        && !opened
+    {
         return base.to_string();
     }
-    let (last, rest) = contents.split_last().expect("checked non-empty above");
-    let listed = if rest.is_empty() {
-        (*last).to_string()
-    } else {
-        format!("{} and {}", rest.join(", "), last)
-    };
-    format!("{base} Within it: {listed}.")
+    match contents_of(interior, id) {
+        None => base.to_string(),
+        Some(listed) => format!("{base} Within it: {listed}."),
+    }
 }
 
 /// What a closer look at a drawn WALL gives you.
@@ -263,13 +337,15 @@ mod tests {
             assert!(d.ends_with('.'), "{kind:?}: a detail is a sentence: {d:?}");
             assert!(!d.trim().is_empty(), "{kind:?}: an empty detail");
         }
-        // Ground has no noun and every other kind does, so fourteen kinds must
-        // yield thirteen nouns. The roster can no longer go short, so what this
+        // Ground has no noun and every other kind does, so fifteen kinds must
+        // yield fourteen nouns. The roster can no longer go short, so what this
         // now catches is the other direction: an APPENDED variant reddens here
-        // rather than sliding through `noun`'s new arm unremarked.
+        // rather than sliding through `noun`'s new arm unremarked — which is
+        // exactly what it did for The Chattel's Task 11 `Key`, going red at 13
+        // against 14 on the run that first compiled the variant.
         assert_eq!(
             EVERY_KIND.iter().filter(|&&k| noun(k).is_some()).count(),
-            13,
+            14,
             "the kind list has drifted from `noun`'s own match"
         );
     }
@@ -424,7 +500,10 @@ mod tests {
         let alcove = i.push(AnchorKind::Alcove, None);
         i.push(AnchorKind::Hearth, Some(alcove));
 
-        let text = examine_detail(&i, alcove);
+        // An alcove carries no `Openable`, so the flag is ignored — see
+        // `examine_detail`'s two-arm rule. `false` is passed to make that
+        // explicit: a recess has no lid to be shut.
+        let text = examine_detail(&i, alcove, false);
         assert!(
             text.starts_with(detail(AnchorKind::Alcove)),
             "the base detail must survive: {text:?}"
@@ -445,17 +524,32 @@ mod tests {
         let hearth = i.push(AnchorKind::Hearth, Some(alcove));
 
         assert_eq!(
-            examine_detail(&i, hearth),
+            examine_detail(&i, hearth, false),
             detail(AnchorKind::Hearth),
             "a hearth does not carry `encloses`, so examining it must be unchanged"
         );
     }
 
-    /// The live silent case: `Strongbox` carries `encloses` (`affordance::
-    /// object_registry`) but the grammar never places anything within one —
-    /// `the-strongbox` is `Attach::Beside(Vessel)`, a sibling, never a
-    /// container (Task 6 investigation, confirmed structurally and by
-    /// census). Examining it must not fabricate contents.
+    /// An `Encloses` carrier with nothing inside it stays silent — for want
+    /// of CONTENTS, never for want of the property.
+    ///
+    /// **This test's stated premise was falsified by the campaign that
+    /// wrote it, and the correction is louder than a quiet edit because a
+    /// reader reasons FROM a premise.** It read: *"the grammar never places
+    /// anything within one — `the-strongbox` is `Attach::Beside(Vessel)`, a
+    /// sibling, never a container (Task 6 investigation, confirmed
+    /// structurally and by census)."* True when written and the reason
+    /// spec §3.8 demanded contents be authored; Task 11 authored
+    /// `the-key-in-the-strongbox`, so a production strongbox now holds a key
+    /// and `the_grammar_puts_exactly_these_things_inside_other_things` reports
+    /// `{(Alcove, Hearth), (Strongbox, Key)}`. What the test CHECKS is
+    /// unchanged and still worth checking — the fixture below is empty by
+    /// construction, whatever the grammar does elsewhere.
+    ///
+    /// It passes `opened = true` deliberately: with `false` the `Openable`
+    /// arm would return the base sentence before the emptiness check ever
+    /// ran, and the test would pass without exercising what it names. Open
+    /// and empty is the state that actually discriminates.
     ///
     /// Mutation this must catch: report every OTHER anchor in the interior
     /// instead of consulting `within` (the mutation named in the task
@@ -469,10 +563,91 @@ mod tests {
         i.push(AnchorKind::Vessel, None); // a sibling, not a contained anchor
 
         assert_eq!(
-            examine_detail(&i, strongbox),
+            examine_detail(&i, strongbox, true),
             detail(AnchorKind::Strongbox),
             "an anchor with nothing `within` it must not fabricate contents"
         );
+    }
+
+    /// The `Openable` arm of the interactive-fiction rule, both directions:
+    /// a shut chest keeps its contents out of sight and an open one shows
+    /// them, while an `Encloses` carrier with no lid (`Alcove`) is unaffected
+    /// by the flag entirely.
+    ///
+    /// **The third assertion is what stops this being a test of one boolean.**
+    /// Without it, an implementation that gated EVERY `Encloses` carrier on
+    /// `opened` would pass the first two — and it would silently shut the
+    /// alcove, hiding the one `within` relation the grammar had before this
+    /// campaign.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: drop the `Openable` clause from
+    /// `examine_detail`'s second gate, i.e. `if carries(thing_kind,
+    /// Openable) && !opened` -> `if false && !opened`. Confirmed 2026-08-29,
+    /// unfiltered over the whole crate (`cargo nextest run -p hornvale-vessel
+    /// --no-fail-fast`, `847 tests run: 846 passed, 1 failed` — this one and
+    /// nothing else, which is what says the gate is held HERE rather than
+    /// incidentally by some transcript golden):
+    ///
+    /// ```text
+    /// assertion `left == right` failed: a shut chest must not name what is
+    /// inside it
+    ///   left: "A banded chest, low and heavier than it looks, its lid seated
+    ///          flush. Within it: a key."
+    ///  right: "A banded chest, low and heavier than it looks, its lid seated
+    ///          flush."
+    /// ```
+    #[test]
+    fn an_open_container_reveals_its_contents_and_a_shut_one_does_not() {
+        let mut i = Interior::new();
+        let strongbox = i.push(AnchorKind::Strongbox, None);
+        i.push(AnchorKind::Key, Some(strongbox));
+
+        assert_eq!(
+            examine_detail(&i, strongbox, false),
+            detail(AnchorKind::Strongbox),
+            "a shut chest must not name what is inside it"
+        );
+        assert!(
+            examine_detail(&i, strongbox, true).contains("a key"),
+            "an open chest must name what is inside it: {:?}",
+            examine_detail(&i, strongbox, true)
+        );
+
+        let mut a = Interior::new();
+        let alcove = a.push(AnchorKind::Alcove, None);
+        a.push(AnchorKind::Hearth, Some(alcove));
+        assert_eq!(
+            examine_detail(&a, alcove, false),
+            examine_detail(&a, alcove, true),
+            "an Encloses carrier with no lid must ignore `opened` — a recess \
+             is transparent, and gating it would hide the grammar's oldest \
+             within-relation"
+        );
+    }
+
+    /// Every noun this module authors opens with one of the two articles
+    /// [`without_article`] strips, so `the {bare}` is well-formed for every
+    /// anchor kind rather than for the ones someone happened to check.
+    ///
+    /// Swept over [`AnchorKind::ALL`], which is generated from the enum's own
+    /// declaration — so an appended variant is swept on the run that first
+    /// compiles it, rather than needing a roster edit nobody would remember.
+    #[test]
+    fn the_articles_this_module_authors_are_the_two_it_strips() {
+        for &kind in AnchorKind::ALL {
+            let Some(n) = noun(kind) else { continue };
+            assert!(
+                n.starts_with("a ") || n.starts_with("an "),
+                "{kind:?}'s noun {n:?} carries neither article without_article \
+                 knows, so `the {}` would read wrong",
+                without_article(n)
+            );
+            assert_ne!(
+                without_article(n),
+                n,
+                "{kind:?}'s noun {n:?} lost no article"
+            );
+        }
     }
 
     /// Direction 3 of the task brief: a NON-enclosing anchor must report
@@ -496,7 +671,7 @@ mod tests {
         i.push(AnchorKind::Hearth, Some(bed));
 
         assert_eq!(
-            examine_detail(&i, bed),
+            examine_detail(&i, bed, false),
             detail(AnchorKind::Bed),
             "a non-enclosing kind must stay silent about what sits `within` it"
         );
@@ -539,7 +714,7 @@ mod tests {
             .find(|&id| interior.anchor(id).kind == AnchorKind::Alcove)
             .expect("built && cold draws an alcove — the-fire's own precondition");
 
-        let text = examine_detail(&interior, alcove);
+        let text = examine_detail(&interior, alcove, false);
         assert!(
             text.contains("a hearth"),
             "the real grammar's only within-relation must be named: {text:?}"

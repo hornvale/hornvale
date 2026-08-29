@@ -50,9 +50,16 @@ pub enum ObjectProperty {
     /// An anchor that reveals what lies `within` it on examine — the
     /// interactive-fiction rule (spec §3.6, amended): contents show when a
     /// container is open or transparent. Both `Strongbox` and `Alcove`
-    /// carry it; IV.a has no closed/open state to gate on, so every
-    /// carrier reveals unconditionally — a carrier with nothing `within`
-    /// it stays silent for want of contents, not for want of the property.
+    /// carry it. A carrier with nothing `within` it stays silent for want of
+    /// contents, not for want of the property.
+    ///
+    /// **The "or transparent" half went live in Task 11, and this doc used to
+    /// say the opposite.** It read: *"IV.a has no closed/open state to gate
+    /// on, so every carrier reveals unconditionally."* True then; there is a
+    /// state now. `chamber_prose::examine_detail` gates a carrier that ALSO
+    /// carries [`ObjectProperty::Openable`] on its `openness` fold, and leaves
+    /// a carrier without one (the alcove — a recess has no lid) revealing
+    /// unconditionally, which is what the two-arm rule always said.
     Encloses,
     /// An anchor that emits warmth, read via `warmth_at`'s graph-distance
     /// decay — gates `warm` (spec §3.3: a new verb).
@@ -171,6 +178,7 @@ pub fn thing_kind_of(kind: AnchorKind) -> KindId {
         AnchorKind::Loom => KindId("loom"),
         AnchorKind::Anvil => KindId("anvil"),
         AnchorKind::Altar => KindId("altar"),
+        AnchorKind::Key => KindId("key"),
     }
 }
 
@@ -240,12 +248,19 @@ pub fn thing_kind_of(kind: AnchorKind) -> KindId {
 ///   `Encloses` for containment that is semantic (a strongbox keeps
 ///   things) rather than merely spatial (an alcove is a recess in a wall).
 ///   The Offer's Task 6 measured the consequence — the grammar's only
-///   `within` relation anywhere is `{(Hearth, Alcove)}` (a full census over
+///   `within` relation anywhere was `{(Hearth, Alcove)}` (a full census over
 ///   all 60 production gate combinations) — and that line put the property
-///   on the one anchor (`strongbox`) that never holds anything, so the
+///   on the one anchor (`strongbox`) that never held anything, so the
 ///   feature would have reported nothing, forever. The interactive-fiction
 ///   rule that replaced it (contents show when a container is open or
 ///   transparent, Inform/TADS's own convention) marks BOTH.
+///   **The strongbox holds something now** (The Chattel, Task 11): the
+///   authored `the-key-in-the-strongbox` pattern makes the census read
+///   `{(Alcove, Hearth), (Strongbox, Key)}`, and
+///   `interior::pattern::tests::the_grammar_puts_exactly_these_things_
+///   inside_other_things` is that measurement made permanent. The tenses
+///   above are past on purpose: the sentence is a record of why the line
+///   moved, not a live claim about today's grammar.
 /// - `warmth_at` (`interior/field.rs`) sums only over anchors whose
 ///   `kind == AnchorKind::Hearth`; no other kind ever contributes to the
 ///   warmth field, so `RadiatesHeat` has exactly one mechanically-supported
@@ -321,9 +336,44 @@ pub fn object_registry() -> ComponentStore<KindId, ObjectTraits> {
 /// reads bare-`pub` items, same reason `chamber_prose::noun`/`detail` carry
 /// none.)
 pub(crate) fn encloses(kind: KindId) -> bool {
+    carries(kind, ObjectProperty::Encloses)
+}
+
+/// Whether `kind` carries `property` — [`encloses`] generalised, because The
+/// Chattel's Task 11 needs the same question asked of three properties rather
+/// than one, and three near-identical wrappers is the duplicated-table shape
+/// decision 0261 warns about.
+///
+/// `encloses` is kept as its own name rather than folded in: it is the
+/// vocabulary `chamber_prose` reads, and its doc carries the interactive-
+/// fiction rule that gates it. It now routes through here, so there is one
+/// registry read and not two that agree.
+pub(crate) fn carries(kind: KindId, property: ObjectProperty) -> bool {
     object_registry()
         .get(&kind)
-        .is_some_and(|traits| traits.properties.contains(&ObjectProperty::Encloses))
+        .is_some_and(|traits| traits.properties.contains(&property))
+}
+
+/// Whether the kind spelled `label` carries `property`.
+///
+/// **The label-keyed door into the property table, and it exists because the
+/// LEDGER speaks labels.** A promoted thing's kind reaches a reader as
+/// `Ledger::kind_of`'s `&str` — an `instance-of` object, a `Value::Text` —
+/// and [`KindId`] wraps a `&'static str`, so a runtime string cannot be
+/// turned into one without leaking it. Scanning the registry for a matching
+/// spelling is the honest conversion: it answers `false` for a label no row
+/// carries, which is the same "absent = no property" convention
+/// [`object_registry`]'s own doc states.
+///
+/// The one caller today is `open`'s lock precondition, which asks whether
+/// anything in a body's custody carries [`ObjectProperty::Portable`] — the
+/// first question in Hornvale asked of a thing the ledger knows about rather
+/// than of an anchor the grammar just drew.
+/// type-audit: bare-ok(identifier-text: label)
+pub(crate) fn label_carries(label: &str, property: ObjectProperty) -> bool {
+    object_registry()
+        .iter()
+        .any(|(kind, traits)| kind.0 == label && traits.properties.contains(&property))
 }
 
 /// A verb an object may advertise to a body — the counterpart to
@@ -347,6 +397,18 @@ pub enum OfferedVerb {
     Examine,
     /// Warm oneself at a heat source — gates on `RadiatesHeat`.
     Warm,
+    /// Open a thing that has a closed state — gates on `Openable` (The
+    /// Chattel, spec §3.7/§3.8).
+    Open,
+    /// Close it again — gates on `Openable` too, and the shared requirement
+    /// is the point rather than a shortcut. Spec §3.7's deliverable is that
+    /// re-closing exists at all: decision 0367 deferred a closing act because
+    /// "doors, lids, and containers … are the same mechanism seen from three
+    /// angles", and a `Closeable` property distinct from `Openable` would be
+    /// a fourth vocabulary item no verb needs and would let a kind declare a
+    /// lid it can open and not shut. Spec §3.8 bounds the property vocabulary
+    /// at three additions; this is the reading that stays inside it.
+    Close,
 }
 
 impl OfferedVerb {
@@ -367,6 +429,8 @@ impl OfferedVerb {
             OfferedVerb::Enter,
             OfferedVerb::Examine,
             OfferedVerb::Warm,
+            OfferedVerb::Open,
+            OfferedVerb::Close,
         ]
     }
 
@@ -402,6 +466,8 @@ impl OfferedVerb {
             OfferedVerb::Enter => "enter",
             OfferedVerb::Examine => "examine",
             OfferedVerb::Warm => "warm",
+            OfferedVerb::Open => "open",
+            OfferedVerb::Close => "close",
         }
     }
 }
@@ -425,6 +491,13 @@ fn required_properties(v: OfferedVerb) -> BTreeSet<ObjectProperty> {
         OfferedVerb::Enter => [ObjectProperty::AffordsPassage].into_iter().collect(),
         OfferedVerb::Examine => BTreeSet::new(),
         OfferedVerb::Warm => [ObjectProperty::RadiatesHeat].into_iter().collect(),
+        // `Lockable` is deliberately NOT required here, and the omission is
+        // the design rather than a gap. A lock is a precondition on the ACT
+        // — it reads the body's custody, which is not a property of the
+        // object at all — so requiring it would say "only lockable things
+        // open", inverting the meaning. `lockable_kinds_are_also_openable`
+        // holds the one direction that IS a property relation.
+        OfferedVerb::Open | OfferedVerb::Close => [ObjectProperty::Openable].into_iter().collect(),
     }
 }
 

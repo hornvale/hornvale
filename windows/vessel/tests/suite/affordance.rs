@@ -1554,6 +1554,14 @@ fn no_hardcoded_anchor_kind_gates_warm() {
 /// can no longer be shortened without deleting the variant). **Exactly one
 /// test failed, this one.**
 ///
+/// (Those two figures are the annotation as it stood when that run was
+/// taken. It is 15 now — Task 11 appended `AnchorKind::Key` — so the same
+/// mutation today is 15 to 14. The transcript below is left verbatim rather
+/// than renumbered: it is a record of a run, and a run that was not re-taken
+/// must not be made to look as though it had been. What the guard CAUGHT is
+/// re-witnessed independently anyway — the append itself reddened this test
+/// before the row was added, and that red is pasted in the Task 11 report.)
+///
 /// **The `41 tests run: 40 passed, 1 failed` figure this paragraph used to
 /// cite was a `-E 'test(affordance)'` selection** — the claim it supported
 /// was true and the evidence pasted under it could not establish it, since a
@@ -1575,8 +1583,8 @@ fn no_hardcoded_anchor_kind_gates_warm() {
 /// slip: the shortened list is now the TABLE, which is `left`.
 #[test]
 fn the_re_key_preserves_every_anchor_kinds_offer() {
-    use OfferedVerb::{Drink, Enter, Examine, Sleep, Warm};
-    let expected: [(AnchorKind, &[OfferedVerb]); 14] = [
+    use OfferedVerb::{Close, Drink, Enter, Examine, Open, Sleep, Warm};
+    let expected: [(AnchorKind, &[OfferedVerb]); 15] = [
         (AnchorKind::Hearth, &[Examine, Warm]),
         (AnchorKind::Threshold, &[Enter, Examine]),
         (AnchorKind::Bed, &[Sleep, Examine]),
@@ -1587,14 +1595,32 @@ fn the_re_key_preserves_every_anchor_kinds_offer() {
         (AnchorKind::Ground, &[Examine]),
         // Encloses gates no OfferedVerb (it is read by `examine`'s prose,
         // not by the offer query), so an enclosing kind offers Examine and
-        // nothing more — and so does a strongbox, whose Openable/Lockable
-        // wait on the verbs Tasks 10-11 ship.
+        // nothing more.
         (AnchorKind::Alcove, &[Examine]),
-        (AnchorKind::Strongbox, &[Examine]),
+        // THE STRONGBOX'S ROW MOVED, AND THAT IS THE TASK-11 DELIVERABLE
+        // ARRIVING AT THE FROZEN TABLE. `Openable` gated no verb until Task
+        // 11 shipped `open`/`close`; the property was granted in Task 7 and
+        // the row's own comment said the verbs were still to come. They came.
+        // Nothing in `object_registry` changed to produce this — a new
+        // `OfferedVerb` with `Openable` in its `required_properties` reaches
+        // every carrier through the subset filter alone, which is acceptance
+        // clause 7's second direction ("a new verb appears on every
+        // qualifying thing with no kind edit") observed rather than argued.
+        // `Lockable` still gates nothing here and must not: a lock is a
+        // precondition on the ACT, read against the body's custody, and this
+        // query has no body's custody in it.
+        (AnchorKind::Strongbox, &[Examine, Open, Close]),
         (AnchorKind::HighSeat, &[Examine]),
         (AnchorKind::Loom, &[Examine]),
         (AnchorKind::Anvil, &[Examine]),
         (AnchorKind::Altar, &[Examine]),
+        // The Chattel, Task 11's appended variant. A key carries `Portable`
+        // alone, and `Portable` gates `take`/`drop` — verbs Task 12 ships —
+        // so today it offers only the universal `Examine`. That is a real
+        // row rather than a placeholder: it is what makes the appended
+        // variant's offer FROZEN, so Task 12's addition has to move this
+        // line deliberately.
+        (AnchorKind::Key, &[Examine]),
     ];
     // Task 9: the two rosters agree, in both directions and in order. A
     // variant dropped from either enumeration reddens here rather than

@@ -28,7 +28,8 @@ use hornvale_kernel::{ConceptRegistry, Facet, Ledger, WorldTime};
 use hornvale_vessel::interior::{AnchorId, AnchorKind, Interior, interior_of};
 use hornvale_vessel::liveness::Terrain;
 use hornvale_vessel::thing::{
-    LOCATED_IN, LOCATED_IN_DOC, is_latent, located_in_room_fact, thing_id,
+    LOCATED_IN, LOCATED_IN_DOC, held_by, is_latent, located_in_holder_fact, located_in_room_fact,
+    promote, thing_id,
 };
 
 /// A terrain that is built and cold everywhere — the same four-method
@@ -260,5 +261,99 @@ fn a_room_offers_again_what_was_brought_back() {
         interior.ids().len(),
         "a jar set back down is on offer again: the fold is keyed on WHERE \
          the thing is, never on whether anything has ever happened to it"
+    );
+}
+
+// --- The Chattel, Task 11: the custody fold ---------------------------
+
+/// What a holder holds, over the PUBLIC surface — the O-shaped question
+/// `thing::held_by` answers and the one every other fold in that module
+/// answers backwards.
+///
+/// **Three states, and the middle one is what separates a fold from a
+/// search.** A thing put into a holder is held; a thing put somewhere else
+/// afterwards is not, even though `Ledger::query_by_object` still finds the
+/// putting-in fact and always will (the ledger is append-only); and a thing
+/// nobody ever placed is not held by anyone. An implementation that trusted
+/// the O-index alone passes the first and third and fails the second, which
+/// is why the second exists.
+///
+/// It also pins the answer's ORDER: `EntityId` order, from the `BTreeSet` the
+/// fold collects through, never ledger order — a caller that rendered "you
+/// are carrying …" would otherwise print a list whose sequence depended on
+/// how the history happened to be written.
+///
+/// MUTATION THIS MUST FAIL AGAINST: in `thing::held_by`, drop the
+/// latest-posting re-ask — `.filter(|&thing| location_of(ledger, thing, day)
+/// == Some(Value::Entity(holder)))` -> `.filter(|&thing| { let _ = thing;
+/// true })`. Confirmed 2026-08-29, unfiltered over the whole crate (`847
+/// tests run: 845 passed, 2 failed` — this test and
+/// `session::tests::a_lockable_thing_opens_only_with_the_key_in_custody`,
+/// which is the same property asserted one layer up):
+///
+/// ```text
+/// assertion `left == right` failed: the chest holds what was LAST put in it:
+/// `given_up`'s putting-in fact is still in the ledger and must not count,
+/// and `untouched` (EntityId(621894274334195712)) was never placed at all
+///   left: [EntityId(3811067634696519680), EntityId(3811067634696519681)]
+///  right: [EntityId(3811067634696519680)]
+/// ```
+#[test]
+fn a_holder_holds_what_was_last_put_in_it_and_nothing_it_has_given_up() {
+    let mut registry = ConceptRegistry::default();
+    registry
+        .register_predicate(LOCATED_IN, false, LOCATED_IN_DOC)
+        .expect("a fresh registry accepts located-in");
+    registry
+        .register_predicate(hornvale_kernel::INSTANCE_OF, false, "the kind of a thing")
+        .expect("a fresh registry accepts instance-of");
+    let mut ledger = Ledger::default();
+
+    let room = Facet {
+        face: 0,
+        path: vec![1],
+    };
+    let chest = promote(&mut ledger, &registry, &room, "strongbox", 0, at(1.0))
+        .expect("a shallow facet packs");
+    let kept =
+        promote(&mut ledger, &registry, &room, "key", 0, at(1.0)).expect("a shallow facet packs");
+    let given_up =
+        promote(&mut ledger, &registry, &room, "key", 1, at(1.0)).expect("a shallow facet packs");
+    let untouched = thing_id(&room, "log", 0).expect("a shallow facet packs");
+
+    for thing in [kept, given_up] {
+        ledger
+            .commit(located_in_holder_fact(thing, chest, at(2.0)), &registry)
+            .expect("located-in is registered and non-functional");
+    }
+    // ...and one of them comes back out, into the room.
+    ledger
+        .commit(
+            located_in_room_fact(given_up, &room, at(3.0)).expect("a shallow facet packs"),
+            &registry,
+        )
+        .expect("located-in is registered and non-functional");
+
+    assert_eq!(
+        held_by(&ledger, chest, at(4.0)),
+        vec![kept],
+        "the chest holds what was LAST put in it: `given_up`'s putting-in \
+         fact is still in the ledger and must not count, and `untouched` \
+         ({untouched:?}) was never placed at all"
+    );
+    assert_eq!(
+        held_by(&ledger, chest, at(2.5)),
+        {
+            let mut both = vec![kept, given_up];
+            both.sort();
+            both
+        },
+        "as of an instant BEFORE the thing came back out, it was still held \
+         — the fold is evaluated at the day asked about, never at the end of \
+         history"
+    );
+    assert!(
+        held_by(&ledger, untouched, at(4.0)).is_empty(),
+        "a thing nobody ever placed anything in holds nothing"
     );
 }
