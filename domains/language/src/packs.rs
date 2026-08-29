@@ -142,6 +142,20 @@ pub const OLD: &str = "old";
 /// (`cli/tests/suite/sentence_corpus.rs`'s `ladder_construction`, `"r005"`
 /// arm) the same way `r003`'s witness records `old` standing in for the
 /// unregistered `long`, and `r006`'s records `kill` for `strike`.
+///
+/// **Its registry KIND is a second, quieter compromise, recorded here so it
+/// is not rediscovered.** `under` is a `ConceptKind::Quality` — the same
+/// kind [`OLD`] carries, and [`OLD`] is the crate's only
+/// `Valence::Property` predicate. An adposition is not a quality, and in a
+/// registry designed around this crate's needs it would carry a kind of its
+/// own; it carries `Quality` because the no-new-concept constraint above
+/// forced the choice to be made from the kinds `universal_stratum` already
+/// had, and `Quality` was the nearest. **Nothing checks kind against
+/// valence.** The only thing separating a locative relation from a property
+/// word in this crate is `clause::PREDICATE_VALENCE`'s two rows, so a
+/// reader who infers valence from `ConceptKind` will infer it wrongly for
+/// exactly this concept. A campaign free to move `world-seed-42.json` could
+/// register an adposition kind and delete this paragraph.
 /// type-audit: bare-ok(identifier-text)
 pub const UNDER: &str = "under";
 

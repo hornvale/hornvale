@@ -158,6 +158,32 @@ pub enum Subject {
     Clause(Box<Clause>),
 }
 
+impl Subject {
+    /// The grammatical [`Person`] this subject agrees at.
+    ///
+    /// **A `Name` and a `Clause` are THIRD person, and that is a fact about
+    /// language rather than a fallback.** A proper name, a noun phrase and a
+    /// nominalized proposition are all things spoken ABOUT — none of them is
+    /// the speaker or the addressee, which is the whole content of
+    /// [`Person`]'s own definition ("who the referent is relative to the
+    /// speech act"). So this is not "third person is the default when we
+    /// cannot tell"; there is nothing to tell. Writing it as a named method
+    /// with this doc, rather than a bare `_ => Person::Third` at each of the
+    /// two call sites in [`realize_common_with_subject`], is what keeps a
+    /// later reader from repairing a "missing case" that is not missing.
+    ///
+    /// **A `Pronoun` carries its person and nothing else carries a
+    /// number** — the number is the clause's own [`Clause::number`], per
+    /// [`Person`]'s doc. This method answers only the person half.
+    #[must_use]
+    pub fn person(&self) -> Person {
+        match self {
+            Subject::Pronoun(person) => *person,
+            Subject::Name(_) | Subject::Clause(_) => Person::Third,
+        }
+    }
+}
+
 /// What an adjunct's role is bound to. Deliberately small: these are the
 /// argument shapes the ledger's own `Value` already carries, minus the ones
 /// no construction needs yet. A new variant is added when a role needs it,
@@ -422,11 +448,13 @@ pub enum Part {
     Complement,
     /// The clause's own predicate, resolved through the realizing
     /// vocabulary and **not inflected** — unlike [`Part::Verb`], a property
-    /// word (or, for a later locative valence, an adposition) takes no
-    /// tense, number or polarity. Deliberately general: [`Valence::Property`]
-    /// and a future [`Valence`] for locative predication both need exactly
-    /// this slot, differing only in the object slot, so it is written once
-    /// here rather than as two parts with identical behaviour.
+    /// word or a locative adposition takes no tense, number or polarity.
+    /// Deliberately general: [`Valence::Property`] and [`Valence::Locative`]
+    /// both need exactly this slot, differing only in the object slot, so it
+    /// is written once here rather than as two parts with identical
+    /// behaviour. **Both readers exist now** — this doc reserved the slot
+    /// for a locative valence before there was one, and The Rail's Task 5
+    /// built it, so the generality is a fact rather than a forecast.
     PredicateWord,
     /// The adjunct tail: inline adjuncts first (a `' '` before the first,
     /// `", "` between the rest), then each trailing adjunct after `"; "`.
@@ -436,41 +464,221 @@ pub enum Part {
 }
 
 /// One row of [`COPULA_PARADIGM`]: a Common surface form paired with the
-/// three features it realizes forward and recovers backward.
+/// four features it realizes forward and (as far as the surface allows)
+/// recovers backward.
 /// type-audit: bare-ok(prose: CopulaRow)
-pub type CopulaRow = (&'static str, Tense, Number, Polarity);
+pub type CopulaRow = (&'static str, Tense, Number, Polarity, Person);
 
-/// Common's copula paradigm: `{Present, Past} × {Sg, Pl} × {Pos, Neg}` →
-/// surface form. **One table, read in both directions** — [`realize_common`]
-/// looks a row up by its features, and [`parse_common_with_tail`] searches a
-/// sentence for any row's form and reads the features off it. That is the
-/// same "bidirectional by construction" discipline [`common_constructions`]
-/// states for the clause skeleton, applied one level down: a copula form
-/// cannot be realizable but unrecognizable, or the reverse.
+/// Common's copula paradigm: `{Present, Past} × {Sg, Pl} × {Pos, Neg} ×
+/// {First, Second, Third}` → surface form. **One table, read in both
+/// directions** — [`realize_common`] looks a row up by its features, and
+/// [`parse_common_with_tail`] searches a sentence for any row's form and
+/// reads the features off it. That is the same "bidirectional by
+/// construction" discipline [`common_constructions`] states for the clause
+/// skeleton, applied one level down: a copula form cannot be realizable but
+/// unrecognizable, or the reverse.
 ///
 /// Negation is **appended to the copula** rather than given a slot of its
 /// own; see [`Part::Copula`] for why there is no `Part::Negator`.
+///
+/// **Person arrived with The Rail (`r011`), and it cost this table its
+/// injectivity.** Keyed by number alone, all eight rows spelled eight
+/// distinct words, so a form named exactly one row and the backward read was
+/// a function. English does not spell person that finely: `are` covers 2sg,
+/// 1pl, 2pl and 3pl, and `were` covers the same four, so 24 rows now spell
+/// **ten** forms. The forward direction is unharmed — every
+/// `(tense, number, polarity, person)` still has exactly one surface, which
+/// is all [`copula_surface`] ever asks. The backward direction is what
+/// changed, and the change is smaller than it looks: see
+/// [`verb_group_forms`] for why no row here has to be nominated "canonical",
+/// and [`parse_clause_body`] for the signal that actually recovers person.
+///
+/// **`am` is the only genuinely new WORD**; every other row is a
+/// redistribution of forms the table already carried. That is worth knowing
+/// before assuming a widened key widened the parser's search space in
+/// proportion: the copula search went from 8 candidate strings to 10.
 /// type-audit: bare-ok(prose: COPULA_PARADIGM)
 pub const COPULA_PARADIGM: &[CopulaRow] = &[
-    ("is", Tense::Present, Number::Sg, Polarity::Pos),
-    ("are", Tense::Present, Number::Pl, Polarity::Pos),
-    ("was", Tense::Past, Number::Sg, Polarity::Pos),
-    ("were", Tense::Past, Number::Pl, Polarity::Pos),
-    ("is not", Tense::Present, Number::Sg, Polarity::Neg),
-    ("are not", Tense::Present, Number::Pl, Polarity::Neg),
-    ("was not", Tense::Past, Number::Sg, Polarity::Neg),
-    ("were not", Tense::Past, Number::Pl, Polarity::Neg),
+    // Present positive. `am` is first person singular and nothing else —
+    // the one row in this table English spells uniquely.
+    (
+        "am",
+        Tense::Present,
+        Number::Sg,
+        Polarity::Pos,
+        Person::First,
+    ),
+    (
+        "are",
+        Tense::Present,
+        Number::Sg,
+        Polarity::Pos,
+        Person::Second,
+    ),
+    (
+        "is",
+        Tense::Present,
+        Number::Sg,
+        Polarity::Pos,
+        Person::Third,
+    ),
+    (
+        "are",
+        Tense::Present,
+        Number::Pl,
+        Polarity::Pos,
+        Person::First,
+    ),
+    (
+        "are",
+        Tense::Present,
+        Number::Pl,
+        Polarity::Pos,
+        Person::Second,
+    ),
+    (
+        "are",
+        Tense::Present,
+        Number::Pl,
+        Polarity::Pos,
+        Person::Third,
+    ),
+    // Past positive. `was` is 1sg AND 3sg — English neutralizes person in
+    // the singular past, but not across the 2sg row, which takes `were`.
+    ("was", Tense::Past, Number::Sg, Polarity::Pos, Person::First),
+    (
+        "were",
+        Tense::Past,
+        Number::Sg,
+        Polarity::Pos,
+        Person::Second,
+    ),
+    ("was", Tense::Past, Number::Sg, Polarity::Pos, Person::Third),
+    (
+        "were",
+        Tense::Past,
+        Number::Pl,
+        Polarity::Pos,
+        Person::First,
+    ),
+    (
+        "were",
+        Tense::Past,
+        Number::Pl,
+        Polarity::Pos,
+        Person::Second,
+    ),
+    (
+        "were",
+        Tense::Past,
+        Number::Pl,
+        Polarity::Pos,
+        Person::Third,
+    ),
+    // Present negative: the positive form with `not` appended, throughout.
+    (
+        "am not",
+        Tense::Present,
+        Number::Sg,
+        Polarity::Neg,
+        Person::First,
+    ),
+    (
+        "are not",
+        Tense::Present,
+        Number::Sg,
+        Polarity::Neg,
+        Person::Second,
+    ),
+    (
+        "is not",
+        Tense::Present,
+        Number::Sg,
+        Polarity::Neg,
+        Person::Third,
+    ),
+    (
+        "are not",
+        Tense::Present,
+        Number::Pl,
+        Polarity::Neg,
+        Person::First,
+    ),
+    (
+        "are not",
+        Tense::Present,
+        Number::Pl,
+        Polarity::Neg,
+        Person::Second,
+    ),
+    (
+        "are not",
+        Tense::Present,
+        Number::Pl,
+        Polarity::Neg,
+        Person::Third,
+    ),
+    // Past negative: likewise.
+    (
+        "was not",
+        Tense::Past,
+        Number::Sg,
+        Polarity::Neg,
+        Person::First,
+    ),
+    (
+        "were not",
+        Tense::Past,
+        Number::Sg,
+        Polarity::Neg,
+        Person::Second,
+    ),
+    (
+        "was not",
+        Tense::Past,
+        Number::Sg,
+        Polarity::Neg,
+        Person::Third,
+    ),
+    (
+        "were not",
+        Tense::Past,
+        Number::Pl,
+        Polarity::Neg,
+        Person::First,
+    ),
+    (
+        "were not",
+        Tense::Past,
+        Number::Pl,
+        Polarity::Neg,
+        Person::Second,
+    ),
+    (
+        "were not",
+        Tense::Past,
+        Number::Pl,
+        Polarity::Neg,
+        Person::Third,
+    ),
 ];
 
 /// The copula slot's surface for one clause's features — the forward read of
-/// [`COPULA_PARADIGM`]. Panics only if the table is missing a row, which the
-/// `copula_paradigm_is_total` test makes impossible.
-fn copula_surface(tense: Tense, number: Number, polarity: Polarity) -> &'static str {
+/// [`COPULA_PARADIGM`], and the direction the widened key left **total**.
+/// Panics only if the table is missing a row, which the
+/// `the_copula_paradigm_is_total_forward_and_syncretic_backward` test makes
+/// impossible.
+fn copula_surface(
+    tense: Tense,
+    number: Number,
+    polarity: Polarity,
+    person: Person,
+) -> &'static str {
     COPULA_PARADIGM
         .iter()
-        .find(|(_, t, n, p)| *t == tense && *n == number && *p == polarity)
-        .map(|(form, _, _, _)| *form)
-        .expect("the copula paradigm is total over tense x number x polarity")
+        .find(|(_, t, n, p, pe)| *t == tense && *n == number && *p == polarity && *pe == person)
+        .map(|(form, _, _, _, _)| *form)
+        .expect("the copula paradigm is total over tense x number x polarity x person")
 }
 
 /// Which slot a pronoun stands in, and therefore which case Common inflects
@@ -511,25 +719,36 @@ pub type PronounRow = (&'static str, Person, Number, PronounCase);
 /// English; it is the property the round trip needs, and
 /// `nominative_forms_determine_person` pins it against the table.
 ///
-/// **Two roughnesses, both deliberate and both asserted by tests** so they
-/// arrive as visible facts rather than surprises, the same posture
-/// [`VERB_PARADIGM`]'s `eated` takes:
+/// **Two roughnesses were recorded here. The Rail (`r011`) fixed one and
+/// left the other, and the split is the interesting part:**
 ///
-/// 1. **Common has no person agreement.** [`COPULA_PARADIGM`] and
-///    [`VERB_PARADIGM`] are keyed by number only, so a first-person subject
-///    in the positive present surfaces third-person agreement (*"I knows
-///    them"*). Adding a person axis to both tables is a real widening that
-///    also changes the parse-side search, and it buys nothing the corpus
-///    needs: the campaign's own line is *"I did not know them"*, and English
-///    negation is periphrastic, so the number-blind row is already right.
-/// 2. **Third-person singular is `they`/`them`, not `it`.** Spec §4.5 fixes
-///    this: nothing in the ledger assigns gender or animacy to a clause, so
-///    Common has one third-person singular and it is the animate-neutral
-///    one. The cost is that an inanimate re-mention reads *"they is a
-///    planet"* — a genuinely awkward line, and exactly the "controlled
-///    register with slightly awkward phrasing" §4.5 names as the accepted
-///    trade. It reaches no committed artifact: no volume the book renders
-///    ever re-mentions a subject.
+/// 1. **Common had no person agreement — FIXED.** This entry used to read
+///    that [`COPULA_PARADIGM`] and [`VERB_PARADIGM`] were "keyed by number
+///    only, so a first-person subject in the positive present surfaces
+///    third-person agreement (*"I knows them"*)", and argued the widening
+///    bought nothing the merchant corpus needed. The ladder's `r011`
+///    (*"I am a merchant. You are a guard."*) is what it bought: both
+///    tables are keyed by [`Person`] now, and
+///    `common_agrees_for_person_in_the_verb_and_the_copula` asserts the
+///    fix. The prediction that it "also changes the parse-side search" was
+///    right — see [`verb_group_forms`] and [`parse_clause_body`] for how,
+///    and for why person is recovered from the SUBJECT rather than from the
+///    verb group that can no longer state it.
+/// 2. **Third-person singular is `they`/`them`, not `it` — UNCHANGED, and
+///    not by omission.** Spec §4.5 fixes this: nothing in the ledger
+///    assigns gender or animacy to a clause, so Common has one third-person
+///    singular and it is the animate-neutral one. The cost is that an
+///    inanimate re-mention reads *"they is a planet"* — a genuinely
+///    awkward line, and exactly the "controlled register with slightly
+///    awkward phrasing" §4.5 names as the accepted trade. Person agreement
+///    does not touch it: agreement is keyed on FEATURES, and third-person
+///    singular's bundle takes `is`. Real English gives singular *they*
+///    plural agreement, which would make the copula depend on the subject's
+///    chosen FORM rather than its features — a different mechanism, and one
+///    no campaign has built. See
+///    `commons_one_third_person_singular_is_the_animate_neutral_one`. It
+///    reaches no committed artifact: no volume the book renders ever
+///    re-mentions a subject.
 ///
 /// type-audit: bare-ok(prose: PRONOUN_PARADIGM)
 pub const PRONOUN_PARADIGM: &[PronounRow] = &[
@@ -581,8 +800,8 @@ pub fn nominative_person(text: &str) -> Option<Person> {
 }
 
 /// One row of [`VERB_PARADIGM`]: a prefix and a suffix that wrap a verb
-/// **stem**, paired with the three features the resulting group realizes
-/// forward and recovers backward.
+/// **stem**, paired with the four features the resulting group realizes
+/// forward and (as far as the surface allows) recovers backward.
 ///
 /// A pair rather than a single form because a lexical verb's surface is
 /// stem-dependent, which is the one way this table differs from
@@ -592,13 +811,14 @@ pub fn nominative_person(text: &str) -> Option<Person> {
 /// PREFIX and leave the stem bare — which is also why negation needs no
 /// `Part::Negator` here any more than it did for the copula.
 /// type-audit: bare-ok(prose: VerbRow)
-pub type VerbRow = (&'static str, &'static str, Tense, Number, Polarity);
+pub type VerbRow = (&'static str, &'static str, Tense, Number, Polarity, Person);
 
-/// Common's lexical-verb paradigm: `{Present, Past} × {Sg, Pl} × {Pos, Neg}`
-/// → the affixes wrapping a verb stem. **One table, read in both
-/// directions**, exactly as [`COPULA_PARADIGM`] is — [`realize_common`]
-/// looks a row up by its features, and [`parse_common_with_tail`] generates
-/// every row's surface for every construction's stem and searches for one.
+/// Common's lexical-verb paradigm: `{Present, Past} × {Sg, Pl} × {Pos, Neg}
+/// × {First, Second, Third}` → the affixes wrapping a verb stem. **One
+/// table, read in both directions**, exactly as [`COPULA_PARADIGM`] is —
+/// [`realize_common`] looks a row up by its features, and
+/// [`parse_common_with_tail`] generates every row's surface for every
+/// construction's stem and searches for one.
 ///
 /// **Past tense is the naive regular rule (append `ed`), and third-person
 /// singular present the naive `s`** — the same deliberate naivety
@@ -611,33 +831,248 @@ pub type VerbRow = (&'static str, &'static str, Tense, Number, Polarity);
 /// silent correction. Note the corpus's own line is unaffected: negation is
 /// periphrastic, so *"did not know"* is already right.
 ///
-/// **Not injective, unlike the copula's.** The past neutralizes number in
-/// both polarities (`killed`, `did not kill`), so eight rows yield six
-/// forms. The parse direction therefore recovers a candidate SET of numbers
-/// from the verb group and lets the object's own plural decide — see
-/// [`parse_common_with_tail`].
+/// **Widening the key by [`Person`] (The Rail, `r011`) added no form at
+/// all**, unlike [`COPULA_PARADIGM`], which gained `am`. English inflects a
+/// lexical verb for person in exactly one row — third-person singular
+/// present — and the number-only table already spelled that row's `s`; all
+/// person did was stop the OTHER two singular rows from borrowing it. So
+/// 24 rows spell the same **six** forms the old 8 did, and
+/// `verb_paradigm_is_total_and_syncretic_beyond_the_third_singular` asserts
+/// that count directly.
+///
+/// **Far less injective than it was, and in a second dimension.** The past
+/// already neutralized number in both polarities (`killed`, `did not
+/// kill`); it now neutralizes person as well, and the present positive
+/// neutralizes both across the five non-3sg rows that share a bare stem.
+/// The parse direction recovers **person from the subject** and then uses
+/// it to narrow a candidate SET of numbers, which the object's own plural
+/// finally decides — see [`parse_clause_body`].
 /// type-audit: bare-ok(prose: VERB_PARADIGM)
 pub const VERB_PARADIGM: &[VerbRow] = &[
-    ("", "s", Tense::Present, Number::Sg, Polarity::Pos),
-    ("", "", Tense::Present, Number::Pl, Polarity::Pos),
-    ("", "ed", Tense::Past, Number::Sg, Polarity::Pos),
-    ("", "ed", Tense::Past, Number::Pl, Polarity::Pos),
-    ("does not ", "", Tense::Present, Number::Sg, Polarity::Neg),
-    ("do not ", "", Tense::Present, Number::Pl, Polarity::Neg),
-    ("did not ", "", Tense::Past, Number::Sg, Polarity::Neg),
-    ("did not ", "", Tense::Past, Number::Pl, Polarity::Neg),
+    // Present positive: the naive third-person-singular `s`, and a bare
+    // stem in every other row. THIS ROW IS THE TASK: keyed by number
+    // alone, `Sg` took the `s` for all three persons, so *"I eats the
+    // bread"* was what Common said. Person splits the singular, and only
+    // the third-person row keeps the suffix.
+    (
+        "",
+        "",
+        Tense::Present,
+        Number::Sg,
+        Polarity::Pos,
+        Person::First,
+    ),
+    (
+        "",
+        "",
+        Tense::Present,
+        Number::Sg,
+        Polarity::Pos,
+        Person::Second,
+    ),
+    (
+        "",
+        "s",
+        Tense::Present,
+        Number::Sg,
+        Polarity::Pos,
+        Person::Third,
+    ),
+    (
+        "",
+        "",
+        Tense::Present,
+        Number::Pl,
+        Polarity::Pos,
+        Person::First,
+    ),
+    (
+        "",
+        "",
+        Tense::Present,
+        Number::Pl,
+        Polarity::Pos,
+        Person::Second,
+    ),
+    (
+        "",
+        "",
+        Tense::Present,
+        Number::Pl,
+        Polarity::Pos,
+        Person::Third,
+    ),
+    // Past positive: `ed` throughout. English neutralizes person AND
+    // number in the regular past, so these six rows spell one form.
+    (
+        "",
+        "ed",
+        Tense::Past,
+        Number::Sg,
+        Polarity::Pos,
+        Person::First,
+    ),
+    (
+        "",
+        "ed",
+        Tense::Past,
+        Number::Sg,
+        Polarity::Pos,
+        Person::Second,
+    ),
+    (
+        "",
+        "ed",
+        Tense::Past,
+        Number::Sg,
+        Polarity::Pos,
+        Person::Third,
+    ),
+    (
+        "",
+        "ed",
+        Tense::Past,
+        Number::Pl,
+        Polarity::Pos,
+        Person::First,
+    ),
+    (
+        "",
+        "ed",
+        Tense::Past,
+        Number::Pl,
+        Polarity::Pos,
+        Person::Second,
+    ),
+    (
+        "",
+        "ed",
+        Tense::Past,
+        Number::Pl,
+        Polarity::Pos,
+        Person::Third,
+    ),
+    // Present negative: periphrastic, so the person distinction lands on
+    // the AUXILIARY (`does`/`do`) rather than on the stem — which is why
+    // the campaign's own corpus line *"I did not know them"* was already
+    // right under the number-only key, and *"I does not know"* was not.
+    (
+        "do not ",
+        "",
+        Tense::Present,
+        Number::Sg,
+        Polarity::Neg,
+        Person::First,
+    ),
+    (
+        "do not ",
+        "",
+        Tense::Present,
+        Number::Sg,
+        Polarity::Neg,
+        Person::Second,
+    ),
+    (
+        "does not ",
+        "",
+        Tense::Present,
+        Number::Sg,
+        Polarity::Neg,
+        Person::Third,
+    ),
+    (
+        "do not ",
+        "",
+        Tense::Present,
+        Number::Pl,
+        Polarity::Neg,
+        Person::First,
+    ),
+    (
+        "do not ",
+        "",
+        Tense::Present,
+        Number::Pl,
+        Polarity::Neg,
+        Person::Second,
+    ),
+    (
+        "do not ",
+        "",
+        Tense::Present,
+        Number::Pl,
+        Polarity::Neg,
+        Person::Third,
+    ),
+    // Past negative: `did not` throughout, neutralizing both features
+    // exactly as the positive past does.
+    (
+        "did not ",
+        "",
+        Tense::Past,
+        Number::Sg,
+        Polarity::Neg,
+        Person::First,
+    ),
+    (
+        "did not ",
+        "",
+        Tense::Past,
+        Number::Sg,
+        Polarity::Neg,
+        Person::Second,
+    ),
+    (
+        "did not ",
+        "",
+        Tense::Past,
+        Number::Sg,
+        Polarity::Neg,
+        Person::Third,
+    ),
+    (
+        "did not ",
+        "",
+        Tense::Past,
+        Number::Pl,
+        Polarity::Neg,
+        Person::First,
+    ),
+    (
+        "did not ",
+        "",
+        Tense::Past,
+        Number::Pl,
+        Polarity::Neg,
+        Person::Second,
+    ),
+    (
+        "did not ",
+        "",
+        Tense::Past,
+        Number::Pl,
+        Polarity::Neg,
+        Person::Third,
+    ),
 ];
 
 /// The verb slot's surface for one stem and one clause's features — the
-/// forward read of [`VERB_PARADIGM`]. Panics only if the table is missing a
-/// row, which the `verb_paradigm_is_total_and_syncretic_in_the_past` test
+/// forward read of [`VERB_PARADIGM`], and the direction the widened key left
+/// **total**. Panics only if the table is missing a row, which the
+/// `verb_paradigm_is_total_and_syncretic_beyond_the_third_singular` test
 /// makes impossible.
-fn verb_surface(stem: &str, tense: Tense, number: Number, polarity: Polarity) -> String {
+fn verb_surface(
+    stem: &str,
+    tense: Tense,
+    number: Number,
+    polarity: Polarity,
+    person: Person,
+) -> String {
     let (prefix, suffix) = VERB_PARADIGM
         .iter()
-        .find(|(_, _, t, n, p)| *t == tense && *n == number && *p == polarity)
-        .map(|(prefix, suffix, _, _, _)| (*prefix, *suffix))
-        .expect("the verb paradigm is total over tense x number x polarity");
+        .find(|(_, _, t, n, p, pe)| *t == tense && *n == number && *p == polarity && *pe == person)
+        .map(|(prefix, suffix, _, _, _, _)| (*prefix, *suffix))
+        .expect("the verb paradigm is total over tense x number x polarity x person");
     format!("{prefix}{stem}{suffix}")
 }
 
@@ -708,9 +1143,11 @@ pub enum Valence {
     /// determiner/complement slots [`Valence::Nominal`] uses. Common
     /// expresses the property itself through [`Part::PredicateWord`], a
     /// clause's own predicate rendered uninflected through the realizing
-    /// vocabulary — the same slot a later campaign's locative valence is
-    /// expected to reuse for its adposition, the two differing only in the
-    /// object slot.
+    /// vocabulary — the same slot [`Valence::Locative`] reuses for its
+    /// adposition, the two differing only in the object slot. (That reuse
+    /// was a forecast when this doc was written and is now the built case:
+    /// The Rail's Task 5 added the locative valence against this very
+    /// slot.)
     ///
     /// **This is the honest fix for the m02 trap** (The Mortise): rendering
     /// *"The road is long"* through [`Valence::Nominal`] produces *"the road
@@ -827,6 +1264,18 @@ impl Valence {
 /// the rung's own *"The road is long"* — `long` is not registered in
 /// `packs::universal_stratum`, and this campaign registers no new concept
 /// (see [`crate::packs::OLD`]'s own doc). Covers `r003` alone.
+///
+/// [`UNDER`] (The Rail, Task 5) is the row that closes the [`Valence`]
+/// taxonomy at five: the first and only [`Valence::Locative`] predicate,
+/// realizing *"the merchant is under the tree"* for rung `r005`. It shares
+/// [`Part::PredicateWord`] with [`OLD`] and differs only in binding an
+/// object (the located thing), which is the whole distinction between the
+/// two valences. **Its registry kind is a compromise, and a visible one:**
+/// `under` is a `ConceptKind::Quality`, the same kind `old` carries,
+/// because this campaign registers no new concept and `Quality` was the
+/// nearest existing kind for an adposition — see [`crate::packs::UNDER`]'s
+/// own doc. Nothing checks kind against valence; this table is the only
+/// thing separating a locative relation from a property word.
 const PREDICATE_VALENCE: &[(&str, Valence)] = &[
     (IS_A, Valence::Nominal),
     (EAT, Valence::Transitive),
@@ -1012,20 +1461,41 @@ pub fn common_constructions() -> &'static [Construction] {
 /// candidate (unreachable today, and returning an empty list rather than
 /// panicking keeps the parser's failure a [`ParseError`] rather than a
 /// crash).
+///
+/// **One entry per ROW, not per distinct form — so no row is nominated
+/// "canonical" and none has to be.** The widened key (The Rail, `r011`)
+/// makes both tables non-injective: `are` names four copula rows and a bare
+/// verb stem names five. The obvious repair would be to collapse them here
+/// and pick a canonical [`Person`] for each form, which is a rule made by
+/// table ORDERING — an implicit decision, and exactly the kind that rots
+/// when a row is later inserted. This function refuses to make it. It emits
+/// every row, and [`parse_clause_body`] narrows the resulting candidate set
+/// using a signal the verb group does not carry: **the subject's own
+/// surface**, which spells person unambiguously
+/// ([`nominative_person`] over [`PRONOUN_PARADIGM`]'s nominatives, or
+/// [`Subject::person`]'s third person for a name).
+///
+/// So person is not LOST by the backward read; it is recovered from a
+/// different part of the sentence than the part that realized it. That is
+/// the same division of labour this walk already used for `killed`, whose
+/// number the verb group cannot state and the object's plural decides — see
+/// [`VERB_PARADIGM`]'s own doc.
 fn verb_group_forms(
     construction: &Construction,
     vocab: &CommonVocabulary,
-) -> Vec<(String, Tense, Number, Polarity)> {
+) -> Vec<(String, Tense, Number, Polarity, Person)> {
     if construction.parts.contains(&Part::Copula) {
         COPULA_PARADIGM
             .iter()
-            .map(|(form, t, n, p)| ((*form).to_string(), *t, *n, *p))
+            .map(|(form, t, n, p, pe)| ((*form).to_string(), *t, *n, *p, *pe))
             .collect()
     } else if construction.parts.contains(&Part::Verb) {
         let stem = vocab.word_for(construction.predicate);
         VERB_PARADIGM
             .iter()
-            .map(|(prefix, suffix, t, n, p)| (format!("{prefix}{stem}{suffix}"), *t, *n, *p))
+            .map(|(prefix, suffix, t, n, p, pe)| {
+                (format!("{prefix}{stem}{suffix}"), *t, *n, *p, *pe)
+            })
             .collect()
     } else {
         Vec::new()
@@ -1180,7 +1650,17 @@ fn realize_common_with_subject(
                 out.push_str(&text);
             }
             Part::Copula => {
-                out.push_str(copula_surface(spec.tense, spec.number, spec.polarity));
+                // The person comes from the SUBJECT (`Subject::person`),
+                // which is the only place a clause states one — `Clause` has
+                // no person field of its own, and deliberately: person is a
+                // property of the referent in the subject slot, not of the
+                // proposition.
+                out.push_str(copula_surface(
+                    spec.tense,
+                    spec.number,
+                    spec.polarity,
+                    spec.subject.person(),
+                ));
             }
             // The clause's own predicate, through the same vocabulary the
             // complement goes through: Common resolves a concept id, it
@@ -1190,6 +1670,7 @@ fn realize_common_with_subject(
                 spec.tense,
                 spec.number,
                 spec.polarity,
+                spec.subject.person(),
             )),
             // The clause's own predicate again, through the same
             // vocabulary lookup `Part::Verb` uses — but **not inflected**:
@@ -1703,9 +2184,18 @@ pub fn parse_common_with_tail(
 ///
 /// 1. **The verb group itself.** `numbers` is the same candidate set
 ///    [`parse_clause_body`]'s non-embedded path already computes (every
-///    `Number` a matched form is consistent with) — present tense is
-///    injective (`"knows"` vs `"know"`), so this alone already resolves it
-///    for a present-tense matrix clause.
+///    `Number` a matched form is consistent with, **after** the person
+///    narrowing that path applies) — the present tense is injective on
+///    number *in the third person* (`"knows"` vs `"know"`), so this alone
+///    resolves a present-tense matrix clause whose subject is a name or
+///    `"they"`.
+///
+///    **That injectivity used to be unconditional and is now person-
+///    relative** (The Rail, `r011`). Under the number-only key, `"know"`
+///    named the plural and nothing else. It now names 1sg, 2sg, 1pl, 2pl
+///    and 3pl, so the third-person filter is what restores the singleton —
+///    and a first- or second-person subject falls through to signal 2,
+///    where `"I"`/`"we"` resolve and `"you"` does not.
 /// 2. **The subject's own pronoun row.** [`PRONOUN_PARADIGM`]'s nominative
 ///    forms are not uniformly ambiguous: `"I"`/`"we"` name exactly one
 ///    `Number` each (English spells first person differently by number),
@@ -1791,11 +2281,21 @@ fn parse_clause_body(
     // This is where the construction table's "bidirectional by construction"
     // promise is actually cashed: the predicate comes back from the row that
     // matched, never from an assumption about which construction this was.
-    let mut hits: Vec<(usize, String, &'static str, Tense, Number, Polarity)> = Vec::new();
+    let mut hits: Vec<(usize, String, &'static str, Tense, Number, Polarity, Person)> = Vec::new();
     for construction in common_constructions() {
-        for (form, tense, number, polarity) in verb_group_forms(construction, &ctx.vocabulary) {
+        for (form, tense, number, polarity, person) in
+            verb_group_forms(construction, &ctx.vocabulary)
+        {
             if let Some(at) = body.find(&format!(" {form} ")) {
-                hits.push((at, form, construction.predicate, tense, number, polarity));
+                hits.push((
+                    at,
+                    form,
+                    construction.predicate,
+                    tense,
+                    number,
+                    polarity,
+                    person,
+                ));
             }
         }
     }
@@ -1812,19 +2312,15 @@ fn parse_clause_body(
             .then_with(|| b.1.len().cmp(&a.1.len()))
             .then_with(|| a.2.cmp(b.2))
     });
-    let Some((at, form, predicate, tense, _, polarity)) = hits.first().cloned() else {
+    // `tense` and `polarity` are read off the winning row and are safe to
+    // take from it alone: no form in either table spans two tenses or two
+    // polarities, which `no_verb_group_form_spans_two_tenses_or_polarities`
+    // asserts against the tables rather than leaving to inspection. `number`
+    // and `person` are NOT safe to take that way, and both are dropped here
+    // (`_`) and recovered below from signals that do determine them.
+    let Some((at, form, predicate, tense, _, polarity, _)) = hits.first().cloned() else {
         return Err(ParseError::NoVerbGroup);
     };
-    // Number is the one feature a verb group may leave underdetermined:
-    // `VERB_PARADIGM` is syncretic in the past (`killed` is both), so the
-    // winning form can name more than one row. Carry every candidate and let
-    // the object's own plural decide below — the copula is suppletive, so
-    // for a classification this list is always a singleton.
-    let numbers: Vec<Number> = hits
-        .iter()
-        .filter(|h| h.0 == at && h.1 == form && h.2 == predicate)
-        .map(|h| h.4)
-        .collect();
     // The needle was `" {form} "`, so the remainder starts one space past the
     // form, which itself started one space past `at`.
     let (subject_text, rest) = (&body[..at], &body[at + form.len() + 2..]);
@@ -1838,6 +2334,33 @@ fn parse_clause_body(
         Some(person) => Subject::Pronoun(person),
         None => Subject::Name(subject_text.to_string()),
     };
+    // **Person is recovered from the SUBJECT, then used to narrow the verb
+    // group** — the ordering matters, which is why the subject is bound
+    // above rather than after the number search it now feeds.
+    //
+    // Since The Rail widened both paradigms by [`Person`], a verb-group form
+    // can name several rows differing in person as well as in number (`are`
+    // names four copula rows; a bare stem names five verb rows). The subject
+    // states person unambiguously — Common's nominative pronouns are
+    // pairwise distinguishing on person, and anything that is not one of
+    // them is a `Subject::Name`, which is third person by
+    // [`Subject::person`] — so intersecting on it discards the rows that
+    // cannot belong to THIS sentence before number is ever asked about.
+    //
+    // The intersection can come back EMPTY, and that is a real verdict
+    // rather than a case to paper over: it means the text disagrees with
+    // itself about agreement (*"I are a planet."*), which no realization
+    // produces. An empty `numbers` admits no complement candidate below, so
+    // the walk reports the `UnknownComplement` it already had for text it
+    // cannot invert — no new failure shape, and
+    // `an_agreement_violating_sentence_does_not_parse` pins it so the
+    // narrowing is observable rather than a guard nothing exercises.
+    let person = subject.person();
+    let numbers: Vec<Number> = hits
+        .iter()
+        .filter(|h| h.0 == at && h.1 == form && h.2 == predicate && h.6 == person)
+        .map(|h| h.4)
+        .collect();
     // Determiner.
     let (definiteness, after_det) = if let Some(r) = rest.strip_prefix("the ") {
         (Definiteness::Def, r)
@@ -2023,29 +2546,85 @@ mod tests {
         );
     }
 
-    /// `copula_surface` panics on a missing row, so the table's totality over
-    /// `tense x number x polarity` is what makes that panic unreachable. It
-    /// is asserted rather than assumed because the paradigm is a `const`
-    /// slice, not a match — the compiler cannot check its exhaustiveness the
-    /// way it checked `Frame`'s.
+    /// **The syncretism, and exactly what it costs the backward read.**
+    ///
+    /// This test replaces `copula_paradigm_is_total_and_unambiguous`, whose
+    /// name stated a fact that stopped being true when The Rail widened the
+    /// key by [`Person`] (`r011`). That test asserted `forms.len() ==
+    /// COPULA_PARADIGM.len()` — eight rows, eight distinct words, a table
+    /// that was a bijection. English spells `are` for 2sg, 1pl, 2pl and
+    /// 3pl, and `were` for the same four, so 24 rows now spell ten forms
+    /// and the bijection is gone in one direction only.
+    ///
+    /// The FORWARD direction stays total: every `(tense, number, polarity,
+    /// person)` has exactly one surface, which is the property that keeps
+    /// [`copula_surface`]'s `expect` unreachable and is the only thing
+    /// [`realize_common`] asks of the table. It is asserted rather than
+    /// assumed because the paradigm is a `const` slice, not a match — the
+    /// compiler cannot check its exhaustiveness the way it checked
+    /// `Frame`'s.
+    ///
+    /// The BACKWARD direction cannot recover person from `are`. That loss
+    /// is PINNED here by naming the four rows that share the form, rather
+    /// than papered over — the same posture the round-trip property takes
+    /// toward adjuncts and toward `evidential`. It is not, however, a loss
+    /// the PARSER suffers: person is recovered from the subject's own
+    /// surface instead (see [`verb_group_forms`] for why no row here is
+    /// nominated canonical). A future campaign that made the copula itself
+    /// carry person — subject agreement on a suffix, say — would land here
+    /// as a red test.
     #[test]
-    fn copula_paradigm_is_total_and_unambiguous() {
-        let mut forms: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
+    fn the_copula_paradigm_is_total_forward_and_syncretic_backward() {
+        // Forward totality: every combination has exactly one form, and
+        // `copula_surface` panics if the table is missing a row.
         let mut combinations = 0usize;
         for tense in [Tense::Present, Tense::Past] {
             for number in [Number::Sg, Number::Pl] {
                 for polarity in [Polarity::Pos, Polarity::Neg] {
-                    forms.insert(copula_surface(tense, number, polarity));
-                    combinations += 1;
+                    for person in Person::ALL {
+                        let _ = copula_surface(tense, number, polarity, person);
+                        combinations += 1;
+                    }
                 }
             }
         }
-        assert_eq!(combinations, 8);
-        // Distinct forms: a repeated one would make the parse direction
-        // ambiguous, which is the failure this table's bidirectionality
-        // exists to prevent.
-        assert_eq!(forms.len(), COPULA_PARADIGM.len());
-        assert_eq!(COPULA_PARADIGM.len(), 8);
+        assert_eq!(combinations, 24);
+        assert_eq!(COPULA_PARADIGM.len(), 24);
+        // Backward loss, stated by name: these four rows share one surface.
+        let shared: Vec<&'static str> = [
+            (Number::Sg, Person::Second),
+            (Number::Pl, Person::First),
+            (Number::Pl, Person::Second),
+            (Number::Pl, Person::Third),
+        ]
+        .iter()
+        .map(|(n, p)| copula_surface(Tense::Present, *n, Polarity::Pos, *p))
+        .collect();
+        assert!(
+            shared.iter().all(|f| *f == "are"),
+            "the present positive syncretism is exactly these four rows: {shared:?}"
+        );
+        // The past does the same, on the same four rows.
+        let past: Vec<&'static str> = [
+            (Number::Sg, Person::Second),
+            (Number::Pl, Person::First),
+            (Number::Pl, Person::Second),
+            (Number::Pl, Person::Third),
+        ]
+        .iter()
+        .map(|(n, p)| copula_surface(Tense::Past, *n, Polarity::Pos, *p))
+        .collect();
+        assert!(
+            past.iter().all(|f| *f == "were"),
+            "the past positive syncretism is the same four rows: {past:?}"
+        );
+        // Ten distinct forms across 24 rows — the exact size of the parse
+        // direction's candidate string set, and one more than the eight the
+        // number-only table carried (`am` is the only new WORD).
+        let forms: std::collections::BTreeSet<&str> =
+            COPULA_PARADIGM.iter().map(|(f, _, _, _, _)| *f).collect();
+        assert_eq!(forms.len(), 10, "{forms:?}");
+        assert!(forms.contains("am"));
     }
 
     /// The campaign's motivating defect: a settlement whose people left six
@@ -3079,35 +3658,144 @@ mod tests {
         let _ = common_role_surface(&adjunct, &vocab);
     }
 
-    /// [`VERB_PARADIGM`]'s totality, and the one place it is deliberately
-    /// NOT injective. `copula_paradigm_is_total_and_unambiguous` asserts
-    /// eight distinct forms; this table has eight rows and only **six**
-    /// distinct forms, because English lexical verbs neutralize number in
-    /// the past (`was`/`were` vs. a single `killed`). That is a fact about
-    /// the target language, not a hole — and it is why the parse direction
-    /// carries a candidate SET of numbers and lets the object's own surface
-    /// break the tie.
+    /// [`VERB_PARADIGM`]'s totality, and the places it is deliberately NOT
+    /// injective.
+    ///
+    /// **The headline is that widening by [`Person`] added no form.** 24
+    /// rows spell the same **six** words the number-only table's eight did,
+    /// because English inflects a lexical verb for person in exactly one
+    /// row (third-person singular present) and that row's `s` was already
+    /// in the table — person only stopped 1sg and 2sg from borrowing it.
+    /// Contrast [`COPULA_PARADIGM`], which is suppletive and gained `am`.
+    /// This is worth asserting rather than reasoning about, because it is
+    /// the fact that bounds how much the parse direction's search grew.
+    ///
+    /// The syncretism itself is now two-dimensional: the past neutralizes
+    /// both number and person (one `killed`, one `did not kill`), and the
+    /// present positive neutralizes both across the five non-3sg rows that
+    /// share a bare stem. That is a fact about the target language, not a
+    /// hole — and it is why the parse direction narrows by the subject's
+    /// person first and then lets the object's own surface break the
+    /// remaining number tie.
     #[test]
-    fn verb_paradigm_is_total_and_syncretic_in_the_past() {
+    fn verb_paradigm_is_total_and_syncretic_beyond_the_third_singular() {
         let mut forms: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
         let mut combinations = 0usize;
         for tense in [Tense::Present, Tense::Past] {
             for number in [Number::Sg, Number::Pl] {
                 for polarity in [Polarity::Pos, Polarity::Neg] {
-                    forms.insert(verb_surface(KILL, tense, number, polarity));
-                    combinations += 1;
+                    for person in Person::ALL {
+                        forms.insert(verb_surface(KILL, tense, number, polarity, person));
+                        combinations += 1;
+                    }
                 }
             }
         }
-        assert_eq!(combinations, 8);
-        assert_eq!(VERB_PARADIGM.len(), 8);
+        assert_eq!(combinations, 24);
+        assert_eq!(VERB_PARADIGM.len(), 24);
         assert_eq!(
             forms.len(),
             6,
-            "the past neutralizes number in both polarities: {forms:?}"
+            "person added no form: the `s` row was already here, and the \
+             past and the bare present stem neutralize both features: {forms:?}"
         );
         assert!(forms.contains("killed"));
         assert!(forms.contains("did not kill"));
+        // The one row person actually splits, in both polarities.
+        assert_eq!(
+            verb_surface(
+                KILL,
+                Tense::Present,
+                Number::Sg,
+                Polarity::Pos,
+                Person::Third
+            ),
+            "kills"
+        );
+        assert_eq!(
+            verb_surface(
+                KILL,
+                Tense::Present,
+                Number::Sg,
+                Polarity::Pos,
+                Person::First
+            ),
+            "kill"
+        );
+        assert_eq!(
+            verb_surface(
+                KILL,
+                Tense::Present,
+                Number::Sg,
+                Polarity::Neg,
+                Person::Third
+            ),
+            "does not kill"
+        );
+        assert_eq!(
+            verb_surface(
+                KILL,
+                Tense::Present,
+                Number::Sg,
+                Polarity::Neg,
+                Person::First
+            ),
+            "do not kill"
+        );
+    }
+
+    /// No verb-group form spans two tenses or two polarities — the property
+    /// [`parse_clause_body`] relies on when it reads `tense` and `polarity`
+    /// straight off the single winning row while dropping that row's
+    /// `number` and `person`.
+    ///
+    /// **Asserted against the tables rather than left to inspection**,
+    /// because the widened key made both tables far less injective and the
+    /// old reasoning ("eight distinct copula forms") no longer carries it.
+    /// If a future row made `were` a present form somewhere, the parser
+    /// would silently return the wrong tense; this reddens instead.
+    #[test]
+    fn no_verb_group_form_spans_two_tenses_or_polarities() {
+        let mut seen: std::collections::BTreeMap<String, (Tense, Polarity)> =
+            std::collections::BTreeMap::new();
+        for (form, t, _, p, _) in COPULA_PARADIGM {
+            let entry = seen.entry((*form).to_string()).or_insert((*t, *p));
+            assert_eq!(*entry, (*t, *p), "copula form {form:?} spans two rows");
+        }
+        // Lexical verbs are stem-dependent, so the property is checked on a
+        // realized stem the same way the parser generates candidates.
+        let vocab = CommonVocabulary::default();
+        let stem = vocab.word_for(KILL);
+        let mut verbs: std::collections::BTreeMap<String, (Tense, Polarity)> =
+            std::collections::BTreeMap::new();
+        for (prefix, suffix, t, _, p, _) in VERB_PARADIGM {
+            let form = format!("{prefix}{stem}{suffix}");
+            let entry = verbs.entry(form.clone()).or_insert((*t, *p));
+            assert_eq!(*entry, (*t, *p), "verb form {form:?} spans two rows");
+        }
+    }
+
+    /// [`Valence::binds_object`], asserted DIRECTLY over all five variants.
+    ///
+    /// **Written because the `Locative` arm was correct and completely
+    /// unobservable.** Both call sites in `grammar.rs` are unreachable for
+    /// `Locative` (`tongue_verb` gaps on it first), and no test asked the
+    /// method anything, so moving `Locative` into the `false` arm left the
+    /// entire suite green. That is a vacuous guard. Covering all five
+    /// variants rather than only the one that was unobservable keeps the
+    /// next variant-shaped edit — there cannot be one, per the closed
+    /// taxonomy, but the arms can still be rewritten — from re-opening the
+    /// same hole somewhere else in the match.
+    #[test]
+    fn every_valence_states_whether_it_binds_an_object() {
+        assert!(Valence::Nominal.binds_object());
+        assert!(Valence::Transitive.binds_object());
+        assert!(!Valence::Intransitive.binds_object());
+        assert!(!Valence::Property.binds_object());
+        // The locative binds the LOCATED THING — the whole difference
+        // between it and `Property`, which shares its `Part::PredicateWord`
+        // slot and differs only here.
+        assert!(Valence::Locative.binds_object());
     }
 
     /// The construction table realizes forward and parses backward, and
@@ -3453,6 +4141,52 @@ mod tests {
         assert_eq!(nominative_person("them"), None);
     }
 
+    /// The person narrowing in [`parse_clause_body`], made observable.
+    ///
+    /// **Written so the narrowing is not a vacuous guard.** Since The Rail
+    /// widened both paradigms by [`Person`], the parse intersects the verb
+    /// group's candidate rows with the person it read off the SUBJECT. Every
+    /// sentence Common realizes agrees by construction, so on realizer
+    /// output that intersection never discards the right answer and its
+    /// effect is invisible — exactly the shape of a check nothing exercises.
+    /// This test hands it text no realization produces.
+    ///
+    /// *"I are a planet."* is a real English sentence shape with a real
+    /// agreement violation: `are` names four copula rows and not one of them
+    /// is first-person singular, so the intersection is empty, no complement
+    /// candidate is admitted, and the walk reports the
+    /// [`ParseError::UnknownComplement`] it already had for text it cannot
+    /// invert. **No new failure shape was added** — that was a design
+    /// constraint, not an accident.
+    ///
+    /// The positive control sits beside it: the same sentence with the
+    /// agreeing copula parses, so the refusal above is attributable to
+    /// person and not to the fixture.
+    #[test]
+    fn an_agreement_violating_sentence_does_not_parse() {
+        let mut complements = std::collections::BTreeSet::new();
+        complements.insert("planet".to_string());
+        let ctx = ParseContext {
+            complements,
+            vocabulary: CommonVocabulary::default(),
+        };
+        assert!(
+            parse_common("I are a planet.", &ctx).is_err(),
+            "no copula row is first-person singular `are`"
+        );
+        // Positive control: the agreeing form parses, and recovers the
+        // person from the SUBJECT rather than from the copula.
+        let parsed = parse_common("I am a planet.", &ctx).expect("`am` agrees with `I`");
+        assert_eq!(parsed.subject, Subject::Pronoun(Person::First));
+        assert_eq!(parsed.number, Number::Sg);
+        // And the syncretic form is recovered at its own four rows: `are`
+        // with a second-person subject is 2sg here, decided by the object's
+        // own singular surface.
+        let you = parse_common("you are a planet.", &ctx).expect("`are` agrees with `you`");
+        assert_eq!(you.subject, Subject::Pronoun(Person::Second));
+        assert_eq!(you.number, Number::Sg);
+    }
+
     /// The campaign's own corpus line, in Common: *"I didn't know her"*
     /// realizes as *"I did not know them"* — a first-person subject pronoun
     /// and a third-person object pronoun in one clause, which is the pair
@@ -3491,16 +4225,25 @@ mod tests {
         assert_eq!(realize_common(&plural, &vocab), "we did not kill them.");
     }
 
-    /// The two roughnesses [`PRONOUN_PARADIGM`]'s doc names, asserted so they
-    /// are visible facts rather than surprises — the same posture
-    /// `a_transitive_verb_inflects_for_tense_number_and_polarity` takes with
-    /// `eated`. An irregular fix to either arrives as a red test rather than
-    /// a silent correction.
+    /// **The first of the two roughnesses [`PRONOUN_PARADIGM`]'s doc named,
+    /// now fixed** — this test is the positive half of the split, and it
+    /// asserts the fix rather than the roughness.
+    ///
+    /// `common_has_no_person_agreement_and_one_third_person_singular`
+    /// pinned *"I eats the bread"* so that an agreement fix would "arrive
+    /// as a red test rather than a silent correction". The Rail's `r011`
+    /// fired it deliberately: [`VERB_PARADIGM`] and [`COPULA_PARADIGM`] are
+    /// keyed by [`Person`] now, so a first-person subject takes a bare stem
+    /// and the copula is suppletive across all three persons.
+    ///
+    /// **Only the FIRST half of that test stopped being true.** The second
+    /// half — *"they is a planet"* — is unchanged and has its own test
+    /// below; see it for why that is a fact about the pronoun inventory
+    /// rather than about agreement.
     #[test]
-    fn common_has_no_person_agreement_and_one_third_person_singular() {
+    fn common_agrees_for_person_in_the_verb_and_the_copula() {
         let vocab = CommonVocabulary::default();
-        // 1. No person agreement: the verb paradigm is keyed by NUMBER, so a
-        //    first-person subject takes the third-person singular present.
+        // The line the old test pinned as a roughness, now correct.
         let eats = Clause {
             predicate: EAT.to_string(),
             subject: Subject::Pronoun(Person::First),
@@ -3512,10 +4255,75 @@ mod tests {
             polarity: Polarity::Pos,
             adjuncts: Vec::new(),
         };
-        assert_eq!(realize_common(&eats, &vocab), "I eats the bread.");
-        // 2. One third person singular, and it is the animate-neutral one
-        //    (spec 4.5: nothing in the ledger assigns gender or animacy to a
-        //    clause). An inanimate re-mention therefore reads awkwardly.
+        assert_eq!(realize_common(&eats, &vocab), "I eat the bread.");
+        let second = Clause {
+            subject: Subject::Pronoun(Person::Second),
+            ..eats.clone()
+        };
+        assert_eq!(realize_common(&second, &vocab), "you eat the bread.");
+        // Third-person singular keeps the `s` — the one row English
+        // inflects a lexical verb for person in.
+        let third = Clause {
+            subject: Subject::Pronoun(Person::Third),
+            ..eats.clone()
+        };
+        assert_eq!(realize_common(&third, &vocab), "they eats the bread.");
+        // A NAME is third person (`Subject::person`), so nothing about a
+        // named subject's surface moved.
+        let named = Clause {
+            subject: Subject::Name("Vebe".to_string()),
+            ..eats.clone()
+        };
+        assert_eq!(realize_common(&named, &vocab), "Vebe eats the bread.");
+        // The copula is suppletive, so all three persons differ in the
+        // singular present — this is the rung's own pair of sentences.
+        let am = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Pronoun(Person::First),
+            object: Argument::Concept("merchant".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(realize_common(&am, &vocab), "I am a merchant.");
+        let are = Clause {
+            subject: Subject::Pronoun(Person::Second),
+            object: Argument::Concept("guard".to_string()),
+            ..am.clone()
+        };
+        assert_eq!(realize_common(&are, &vocab), "you are a guard.");
+    }
+
+    /// **The second roughness, unchanged and deliberately so.**
+    ///
+    /// This is the surviving half of
+    /// `common_has_no_person_agreement_and_one_third_person_singular`,
+    /// asserting the identical string it always did. The Rail's `r011` gave
+    /// Common person agreement and did NOT change this line, which is worth
+    /// stating loudly because an earlier draft of the campaign's spec
+    /// claimed the surface would become *"they are a planet"*. That was
+    /// wrong twice over: it credited this campaign with a fix it does not
+    /// make, and it described a mechanism the design does not have.
+    ///
+    /// **Agreement is keyed on FEATURES.** The subject here is third person
+    /// at [`Number::Sg`], and that feature bundle's copula row is `is`. The
+    /// awkwardness comes from the pronoun INVENTORY, not from agreement:
+    /// Common spells 3sg `they` because nothing in the ledger assigns
+    /// gender or animacy (spec §4.5), so there is one third-person singular
+    /// and it is the animate-neutral one. Real English gives singular
+    /// *they* plural agreement, which would make the copula depend on the
+    /// subject's chosen FORM rather than on its features — a different
+    /// mechanism, and not one this campaign builds. Deferred, with that
+    /// reason.
+    ///
+    /// It reaches no committed artifact: no volume the book renders ever
+    /// re-mentions a subject.
+    #[test]
+    fn commons_one_third_person_singular_is_the_animate_neutral_one() {
+        let vocab = CommonVocabulary::default();
         let remention = Clause {
             predicate: IS_A.to_string(),
             subject: Subject::Pronoun(Person::Third),
@@ -3643,9 +4451,36 @@ mod tests {
             Subject::Name("Aoth".into()),
             Subject::Name("MacTavish".into()), // mixed-case: interior capital
             Subject::Name("The Vavako".into()), // multi-word
-            // Third person: its number is the clause's own, so this one
-            // subject covers "they"/"they" across the Sg and Pl legs of the
+            // **All three persons, WIDENED by The Rail (`r011`) rather than
+            // left at third alone.** A pronoun's number is the clause's
+            // own, so each of these covers its Sg and Pl legs from the
             // enumeration below rather than needing two entries.
+            //
+            // The widening is the point. Person agreement made both
+            // paradigms non-injective — `are` names four copula rows — so
+            // the honest question is whether a round trip through Common
+            // survives that. Narrowing the enumeration back to the third
+            // person would have HIDDEN the loss rather than handled it, and
+            // this property test exists precisely because a generator that
+            // never emits the exposing value proves nothing (the Concordance
+            // lesson, cited in the comment below).
+            //
+            // **It survives, and that is a finding worth stating: person is
+            // not lost, it is carried by a different part of the
+            // sentence.** The verb group cannot state which of four rows
+            // `are` came from, but the SUBJECT can — Common's nominative
+            // pronouns are pairwise distinguishing on person
+            // (`nominative_forms_determine_person`), so the parse recovers
+            // person from the subject text and then uses it to narrow the
+            // verb group's candidate numbers. See `verb_group_forms` for
+            // why that means no paradigm row has to be nominated canonical.
+            // The equality below is therefore asserted at FULL width for
+            // person, unlike `adjuncts` (cleared, recognizing roles is a
+            // later campaign) and `evidential` (defaulted, Common has no
+            // evidential surface) — the two losses this property really
+            // does carry.
+            Subject::Pronoun(Person::First),
+            Subject::Pronoun(Person::Second),
             Subject::Pronoun(Person::Third),
         ];
         // Concept IDS, not words — the realizer resolves each through the

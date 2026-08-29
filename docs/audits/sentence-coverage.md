@@ -58,6 +58,7 @@ Whether a corpus states what the grammar must **parse** (a player line) or **pro
 | named-entity-list | 1 | no |
 | negation | 2 | yes |
 | past-tense | 7 | yes |
+| person-deixis | 0 | yes |
 | polar-question | 2 | no |
 | pronoun-reference | 4 | yes |
 | property-predication | 0 | yes |
@@ -81,7 +82,7 @@ How many demands each entry is SHORT. Distance 0 is the covered set above. **Dis
 - Total entries: 139
 - Direction: 68 parse / 71 produce (see the breakdown above)
 - Covered: 0 of 139 (see below for why zero is expected)
-- Demand instances met: 214 of 1128 (19.0%)
+- Demand instances met: 258 of 1128 (22.9%)
 
 The resolver above DOES run over this corpus — `entry_covered` is generic over `Entry` and `read_declared` produces one for every flood-watch line, the same shape it produces for the-merchant. What it reports is zero, and that is a fact about the corpus's density, not an unwritten resolver: 1128 demand instances across 139 entries is roughly 8 per entry, and `entry_covered`'s ALL-of-its-demands rule fails an entry the moment ANY one of its several tokens is uncovered — which is every entry, for as long as any handful of the corpus's vocabulary stays unimplemented. A zero that never moves is uninformative on its own, which is exactly why the demand-instance statistic above exists beside it (see the-merchant's own line and `demand_instance_coverage_matches_the_campaigns_prediction`'s doc; also `sentences/README.md`, "Frozen is not the same as measured"). What ties this corpus to the grammar's delivered capability otherwise is the vocabulary cross-check below: 147 of its 149 distinct demand tokens name a rung on the ladder.
 
@@ -89,7 +90,7 @@ The resolver above DOES run over this corpus — `entry_covered` is generic over
 
 - Total rungs: 214
 - Direction: 214 produce (see the breakdown above)
-- Covered: 8
+- Covered: 10
 - Frontier: 16
 
 `the-ladder.corpus.json` is frozen (The Rail): its rung count is pinned by `LADDER_ENTRIES`, the same mechanism `MERCHANT_ENTRIES`/`FLOOD_WATCH_ENTRIES` pin the two dialogue corpora's. `cli/tests/suite/sentence_corpus.rs` also asserts structural properties directly over the ladder's `presupposes` graph (acyclic, ids unique, no token introduced twice, exactly two roots) — the count assertion alone would not catch a corrupted graph that kept the same entry count. See the vocabulary cross-check below.
@@ -101,14 +102,14 @@ A rung is on the frontier when every demand it makes, other than its own `introd
 | id | introduces | text | unblocks |
 |---|---|---|---|
 | r004 | attributive-adjective | The long road runs to the shrine. | 0 |
-| r007 | definiteness | A stranger waits at the gate. The stranger is a soldier. | 0 |
-| r011 | person-deixis | I am a merchant. You are a guard. | 1 |
+| r007 | definiteness | A stranger waits at the gate. The stranger is a soldier. | 1 |
 | r028 | noun-class | The hound is not a person. | 0 |
 | r044 | comparative | The reeve is older than the warden. | 0 |
 | r048 | spatial-adverbial | The guard struck her in the marketplace. | 0 |
 | r051 | present-progressive | The reeve is questioning the merchant now. | 0 |
 | r055 | perfect-aspect | The guard has fled. | 0 |
 | r061 | inchoative | The crowd began to shout. | 0 |
+| r068 | imperative | Open the cart. | 0 |
 | r072 | ability-modal | He can read a seal. | 1 |
 | r083 | polar-question | Are you a merchant? | 0 |
 | r109 | particle-verb | The reeve wrote down the guard's answer. | 0 |

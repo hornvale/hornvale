@@ -200,6 +200,10 @@ const IMPLEMENTED_DEMANDS: &[&str] = &[
     "property-predication",
     // The Rail, Task 5 — the last of the three valence-family tasks.
     "locative-predication",
+    // The Rail, Task 6 — not a valence at all: a widened KEY on the two
+    // paradigms, and Common's first syncretism. See
+    // `domains/language/src/clause.rs`'s `COPULA_PARADIGM`.
+    "person-deixis",
 ];
 
 /// Whether a corpus entry states what the grammar must **parse** (a player
@@ -1873,7 +1877,7 @@ fn realize_merchant(id: &str, vocab: &CommonVocabulary) -> String {
 /// mechanical half `IMPLEMENTED_DEMANDS` has never had.
 const MERCHANT_WITNESS: &[(&str, &str)] = &[
     ("m05", "Nwamvam killed a person."),
-    ("m06", "I does not know they killed them."),
+    ("m06", "I do not know they killed them."),
     ("m07", "they killed them killed me and knowed me."),
     ("m09", "I thinked they killed them."),
     ("m10", "I did not know them."),
@@ -2002,9 +2006,11 @@ const LADDER_WITNESS: &[(&str, &str)] = &[
     ("r003", "the road is old."),
     ("r005", "the merchant is under the tree."),
     ("r006", "a guard kills a woman."),
+    ("r011", "I am a merchant and you are a guard."),
     ("r013", "the guard does not sleep."),
     ("r014", "the guard sleeped."),
     ("r015", "the guard did not sleep."),
+    ("r190", "you killed them."),
 ];
 
 /// The [`MerchantConstruction`] this campaign builds for a covered ladder
@@ -2097,6 +2103,53 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
             polarity: Polarity::Pos,
             adjuncts: Vec::new(),
         }),
+        // "I am a merchant. You are a guard." Two roughnesses, both in the
+        // JOINER rather than in the grammar this rung is about.
+        //
+        // The rung's text is two SENTENCES; the witness is one
+        // `Coordination`, so the period between them realizes as `and`.
+        // That is a substitution of the same kind the four earlier rungs
+        // record, and it is the honest one available: `LADDER_WITNESS` is a
+        // table of one surface per rung, and Common has no construction for
+        // "a sequence of independent sentences" — a text-level object, not
+        // a clause-level one, and nothing in this campaign's scope. The two
+        // clauses themselves realize DIRECTLY, with no substituted concept:
+        // `merchant` and `guard` are exactly the rung's own nouns.
+        //
+        // **This is the pair the whole task exists for.** `I am` and `you
+        // are` are two different rows of `COPULA_PARADIGM`'s singular
+        // present, and before Task 6 both spelled `is` — the rung was
+        // unrealizable in the only sense that matters, since Common could
+        // not tell the speaker from the addressee. Note also that `you are`
+        // is one of the four rows that share `are`: the surface here cannot
+        // state its own person, and the parse direction recovers it from
+        // the pronoun instead.
+        "r011" => MerchantConstruction::Coordination(Coordination {
+            clauses: vec![
+                Clause {
+                    predicate: IS_A.to_string(),
+                    subject: Subject::Pronoun(Person::First),
+                    object: Argument::Concept("merchant".to_string()),
+                    number: Number::Sg,
+                    definiteness: Definiteness::Indef,
+                    evidential: Evidential::Witnessed,
+                    tense: Tense::Present,
+                    polarity: Polarity::Pos,
+                    adjuncts: Vec::new(),
+                },
+                Clause {
+                    predicate: IS_A.to_string(),
+                    subject: Subject::Pronoun(Person::Second),
+                    object: Argument::Concept("guard".to_string()),
+                    number: Number::Sg,
+                    definiteness: Definiteness::Indef,
+                    evidential: Evidential::Witnessed,
+                    tense: Tense::Present,
+                    polarity: Polarity::Pos,
+                    adjuncts: Vec::new(),
+                },
+            ],
+        }),
         // "The guard does not sleep." Direct: standard negation is
         // periphrastic in Common, so the stem stays bare and the corpus's
         // own text is exactly what realizes.
@@ -2154,6 +2207,40 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
             polarity: Polarity::Neg,
             adjuncts: Vec::new(),
         }),
+        // "You killed her." **THE SECOND RUNG THIS TASK COVERS, AND IT IS A
+        // REUSE/CONTROL RUNG** — `introduces: null`, presupposing r006
+        // (transitive-frame), r011 (person-deixis) and r014 (past-tense).
+        // Its own corpus note calls it "the accusation" and explains why it
+        // is deliberately NOT a token: accusation is a speech ACT, not a
+        // grammatical category, and minting an `accusation-frame` token
+        // would have been exactly the backlog-shaped label the ladder is
+        // built to avoid. "The grammar's part of an accusation is three
+        // rungs it already has; the rest is the world."
+        //
+        // So it becomes covered the moment `person-deixis` lands, the same
+        // mechanical way r015 rode along behind `intransitive-frame` in
+        // Task 2 — and unlike Task 2's case, this one WAS predicted, because
+        // r015 taught the campaign to look for it.
+        //
+        // Substituted twice, both times for the same reason the earlier
+        // rungs are: `strike` is unregistered so `kill` stands in (r006's
+        // own substitution, reused here), and Common has one third-person
+        // singular pronoun and it is the animate-neutral `them`, so `her`
+        // surfaces as `them` (spec §4.5, and see
+        // `commons_one_third_person_singular_is_the_animate_neutral_one`).
+        // The GRAMMAR this rung is a control for — a second-person agent in
+        // a past transitive — realizes directly and needs no substitution.
+        "r190" => MerchantConstruction::Clause(Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Pronoun(Person::Second),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        }),
         other => panic!("no ladder construction for rung {other:?}"),
     }
 }
@@ -2200,6 +2287,24 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
 /// itself is not otherwise close to buildable (it still needs
 /// `present-progressive`, a token this campaign does not add). Net frontier
 /// size: 16 → 16, but the membership moved by one in each direction.
+///
+/// **Task 6 (`person-deixis`) covers TWO more rungs, `r011` and `r190`, and
+/// this is the first task whose second rung was PREDICTED rather than
+/// discovered.** `r011` is the token's own rung; `r190` is a reuse/control
+/// rung (`introduces: null`) presupposing `r006`, `r011` and `r014`, so it
+/// falls out mechanically the moment `person-deixis` lands — the same shape
+/// `r015` took behind `intransitive-frame` in Task 2, except that Task 2
+/// undercounted and this task did not, because `r015` had already taught
+/// the campaign to look two hops out. Covered: 8 → 10.
+///
+/// The FRONTIER is 16 → 16 again, and again the count hides a swap:
+/// `r011` drops off (now covered) and **`r068` joins** — *"Open the
+/// cart."*, whose two presuppositions are exactly `r006` and `r011`, both
+/// now covered, even though `r068` itself still needs `imperative`, a token
+/// this campaign does not add. Note what the count alone would have said
+/// here: nothing. Two of this campaign's scoring tasks moved the frontier's
+/// membership without moving its size, which is the argument for asserting
+/// the ordered VECTOR rather than the length.
 #[test]
 fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
     let entries = read_derived(&repo_root().join("sentences/the-ladder.corpus.json"));
@@ -2211,14 +2316,14 @@ fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
     assert_eq!(
         covered,
         vec![
-            "r001", "r002", "r003", "r005", "r006", "r013", "r014", "r015"
+            "r001", "r002", "r003", "r005", "r006", "r011", "r013", "r014", "r015", "r190"
         ],
         "the ladder's covered set"
     );
     assert_eq!(
         ladder_frontier(&entries),
         vec![
-            "r004", "r007", "r011", "r028", "r044", "r048", "r051", "r055", "r061", "r072", "r083",
+            "r004", "r007", "r028", "r044", "r048", "r051", "r055", "r061", "r068", "r072", "r083",
             "r109", "r113", "r114", "r117", "r171",
         ],
         "the ladder's frontier"
@@ -2245,12 +2350,30 @@ fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
 /// untouched by either of the last two tasks: neither `property-predication`
 /// nor `locative-predication` demands anything in
 /// `the-merchant.corpus.json`, so both merchant numbers hold still.
+///
+/// **Task 6 (`person-deixis`) is where the blind zone this statistic was
+/// built for opens widest.** It meets **44** more demand instances
+/// (214 -> 258 of 1128) — nearly three times Task 5's 16, and by far the
+/// largest single-task move this campaign has made — while
+/// `the-flood-watch`'s covered-ENTRY count sits at 0 of 139 for the fourth
+/// consecutive task. A dialogue corpus is thick with first- and
+/// second-person reference, so `person-deixis` is a common token there in a
+/// way `locative-predication` was not; the headline count cannot see any of
+/// it, because coverage is conjunctive and those entries each still demand
+/// something else. Merchant is untouched again: `person-deixis` is not one
+/// of its demand tokens, so it holds at 19 of 30 and 5 of 12.
+///
+/// **One merchant SURFACE did move, and it is not a coverage change.**
+/// [`MERCHANT_WITNESS`]'s m06 was `"I does not know they killed them."` and
+/// is now `"I do not know they killed them."` — the *"I eats the bread"*
+/// roughness, showing up in the merchant corpus and fixed by the same
+/// widened key. The covered SET and both counts are unchanged.
 #[test]
 fn demand_instance_coverage_matches_the_campaigns_prediction() {
     let merchant = read_declared(&repo_root().join("sentences/the-merchant.corpus.json"));
     assert_eq!(demand_instance_coverage(&merchant), (19, 30));
     let flood = read_declared(&repo_root().join("sentences/the-flood-watch.corpus.json"));
-    assert_eq!(demand_instance_coverage(&flood), (214, 1128));
+    assert_eq!(demand_instance_coverage(&flood), (258, 1128));
 }
 
 /// Every ladder rung scored covered realizes in Common, exactly as
