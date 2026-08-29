@@ -3891,3 +3891,7 @@ measured here.
 | 2026-08-29T10:56:03Z | sluice:clients | 523.736 | 9499.103 | 89.157 | 18.31 | 0 | 416432745 |  | lefford | 40 |
 | 2026-08-29T13:00:44Z | gate-commit | 77.254 | 404.320 | 49.002 | 5.87 | 0 | b6a996828 | campaign/the-chattel | MacBookPro | 10 |
 | 2026-08-29T13:01:55Z | rebaseline | 63.214 | 272.931 | 13.464 | 4.53 | 0 | 385431014 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T13:24:08Z | gate-commit | 27.859 | 59.342 | 27.092 | 3.10 | 0 | 18b590148 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T13:25:18Z | rebaseline | 62.612 | 273.061 | 14.308 | 4.59 | 0 | 18b590148 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T13:28:00Z | gate-commit | 54.203 | 278.114 | 37.852 | 5.83 | 0 | 18b590148 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T13:29:00Z | gate-commit | 21.036 | 50.470 | 13.208 | 3.03 | 0 | 18b590148 | campaign/the-chattel | MacBookPro | 10 |
