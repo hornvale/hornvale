@@ -1,0 +1,868 @@
+{
+  "name": "the-ladder",
+  "status": "DRAFT — not reviewed, not frozen, no entry count asserted anywhere. The `.DRAFT` suffix is load-bearing: `sentences/README.md` requires a corpus be frozen before any score is taken against it, and nothing about this file has been frozen. REVISED 2026-08-28 against `the-flood-watch.corpus.json` (The Stile) and RENUMBERED — see `renumbering`, which states why that renumbering was the last free one.",
+  "provenance": "Drafted by Claude (Opus) on 2026-08-27 on `main`, at Nathan's instruction, as the successor to `the-merchant.corpus.json` — which is nearly exhausted as a scoping instrument at 12 entries. The ORDERING is drawn from linguistic typology and graded-language pedagogy, deliberately NOT from Hornvale's backlog: a corpus authored from our own feature list can only tell us what we already believe. Sources leaned on, each named at the rung that uses it: Greenberg (1963, 1978) on word-order and numeral universals; Keenan & Comrie (1977) Noun Phrase Accessibility Hierarchy; Silverstein (1976) animacy hierarchy; Comrie (1976 aspect, 1985 tense, 1986 conditionals, 1989 causatives, 1998 relative clauses); Dahl (1979 negation, 1985 TMA); Bybee, Perkins & Pagliuca (1994) grammaticalization paths; Haspelmath (1994 participles, 1997 indefinite pronouns, 1997 space-to-time, 2007 coordination); Aikhenvald (2004 evidentiality, 2010 imperatives); Cristofaro (2003) subordination; Givón (1980) binding hierarchy; Noonan (1985) complementation; Stassen (1985 comparison, 1997 intransitive predication, 2000 AND/WITH languages); Hengeveld (1992) non-verbal predication; Diessel (1999) demonstratives; Kortmann (1997) adverbial subordinators; Miestamo (2005) standard negation; Nichols (1988) possession splits; Heine (1997) possession; Keenan & Dryer (2007) passives; Lambrecht (1994) information structure; König (1991) focus particles; Ultan (1978) interrogatives; Dryer (1992 branching direction, WALS 87 and 116); Bobaljik (2012) comparative containment; Horn (1989) negation and scales; Klima (1964) and Ladusaw (1979) polarity; Kiparsky & Kiparsky (1970) factivity; Güldemann (2008) quotative indexes; DeLancey (1997) mirativity; Faller (2002) evidential scope. Pedagogical sequencing follows the CEFR A1–C1 progression as graded courses actually realize it, and the reuse/control rungs follow Pimsleur's deliberate recombination principle. REVISION, 2026-08-28 (The Stile): the draft was cross-checked against `the-flood-watch.corpus.json`, 139 utterances of investigative dialogue authored INDEPENDENTLY by the project owner and frozen before this revision existed. That corpus needed 149 demand tokens, of which 56 the draft did not name. 54 of those are absorbed here as rungs; two are refused with a reason (see `production_axis`). Six further tokens are minted by this revision from what the cross-check exposed rather than from what the corpus asked for — `attributive-adjective`, `identity-predication`, `postnominal-modifier`, `habitual-past`, `fragment-answer`, `non-restrictive-relative` — and four new reuse/control rungs record compositions the corpus exhibits. Sources added at those rungs: Higgins (1979) and Mikkelsen (2005) on copular clause types; Longobardi (1994) on names and kin terms; Dixon (1982) and Croft (1991) on property words and markedness; Huddleston & Pullum (2002) on postpositive modification and supplements; Potts (2005) and Cinque (2008) on non-restrictive relatives; Merchant (2001, 2004) on ellipsis and stranding; Sag (1976), Hankamer & Sag (1976), Lobeck (1995) and Depiante (2000) on the ellipsis and anaphora family; Huang (1982, 1984), Rizzi (1990), Ross (1967) and Chomsky (1977) on extraction; Pesetsky (1987) on D-linking; Gunlogson (2003) on rising declaratives; Holmberg (2016) on answering strategies; Schegloff, Jefferson & Sacks (1977), Purver (2004) and Ginzburg & Cooper (2004) on repair and clarification; Clark & Wilkes-Gibbs (1986) on collaborative reference; Sadock (1971) and Han (2002) on rhetorical questions; Zanuttini & Portner (2003) and Michaelis (2001) on exclamatives; van der Auwera (1998) and Löbner (1989) on phasal adverbs; van der Auwera & Plungian (1998) on the modality map; von Fintel (1992) on exceptives; Thompson & Mulac (1991) and Rohdenburg (1996) on complementizer omission; Stowell (1981) and Williams (1983) on small clauses; Sportiche (1988) and Bobaljik (2003) on quantifier float; Corbett (1991) and Bodine (1975) on gender and singular `they`; Siewierska (2004) and Malamud (2012) on impersonals; Bauer (2009) on compounding; Dehé et al. (2002) and Los et al. (2012) on particle verbs; Nunberg, Sag & Wasow (1994) on idioms; Glucksberg (2001) and Lakoff & Johnson (1980) on metaphor; Grice (1975), Levinson (2000), Sperber & Wilson (1981) and Clark & Gerrig (1984, 1990) on implicature, irony and quotation; Stalnaker (1978) and Farkas & Bruce (2010) on common ground and commitment; Sacks, Schegloff & Jefferson (1974) and Chafe (1994) on turns; Coulmas (1981) on routine formulae; Quine (1940) on use and mention; Kennedy (1999) and Rett (2008) on gradability; Baker (1978) and Jackendoff (1977) on `one`-anaphora; Asher (1993) on abstract-object anaphora; Haegeman (1990) on register-conditioned subject drop; Potsdam (1998) on imperative subjects; Riemsdijk (1978) on preposition stranding; Schachter & Shopen (2007) on parts of speech; Dahl & Koptjevskaja-Tamm (2001) on kinship.",
+  "shape_notes": "DEVIATES from `the-merchant.corpus.json` in three ways, each deliberate. (1) NO `demands` FIELD. A rung declares `introduces` — exactly one new token, or `null` — and `presupposes` — the ids it depends on. Its CUMULATIVE demand set is DERIVED by transitive closure and is never hand-written. This is the whole point of the structure: hand-labelling is the known failure mode, and at only 12 entries the merchant corpus already has entries whose hand-written tokens under-describe them. A rung must not be able to under-describe itself. (2) NO `speaker` FIELD. A rung is a probe, not a turn in a dialogue; the register is intrigue throughout, but attributing each line to a named speaker would be decoration. (3) It is a DAG, not a line. A linear ladder would falsely imply capability is a prefix, and it is not — this project shipped embedded clauses before `wh-question` exists. Both (1) and (2) needed a resolver schema change when this note was first written: `cli/tests/suite/sentence_corpus.rs`'s `Entry` struct required `speaker` and `demands` on every corpus and would have failed to deserialize this file as written. THAT SCHEMA CHANGE SHIPPED (decisions 0386/0387): `Entry.speaker` is now `Option<String>`, and a corpus either DECLARES its demands (the two dialogue corpora, via `read_declared`) or DERIVES them by transitive closure (this ladder, via a second reader, `read_derived`) — never both. This file deserializes and resolves as written; nothing about its shape is still waiting on review. A FOURTH THING, ADDED BY THE REVISION: THE LADDER IS ORDERED BY DEPENDENCY, NEVER BY DEMAND WEIGHT. `conversational-implicature` is wanted twenty-five times by the flood-watch corpus and sits near the bottom here, because what it needs is near the bottom; `proper-name` is wanted twenty-three times and sits near the top for the same reason. Re-ordering a ladder to front-load what a corpus asks for most would fold two instruments into one and destroy the only thing this file measures. Computing a BUILD ORDER from a ladder and a corpus together is a perfectly good thing to want, and it is CODE — a resolver's job — not data (decision 0011, studies are data and metrics are code).",
+  "reading_it": "The deliverable is a FRONTIER, not a score. A rung whose entire derived demand set is covered but which is not itself covered is on the build-next list. Rungs with `introduces: null` are reuse/control rungs: they add no new demand, only a new configuration of earlier ones. If a control stops resolving while every one of its dependencies still resolves, something regressed — a free tripwire, at the cost of one line of data. Rungs whose `note` says DELIBERATELY OUT OF REACH are candidates for the third verdict `sentences/README.md` reserves — declared-out-of-scope-with-a-reason — not for the build-next list. A ladder with no such rungs would only map our own ambitions. A TOKEN THIS LADDER CARRIES THAT NO CORPUS EXERCISES IS NOT A DEFECT. 52 of this file's introduced tokens go unexercised by the flood-watch corpus and none was deleted (46 was the figure for the 150-rung draft; this file is now 214 rungs, and 52 is re-derived against it): five scenes of one register cannot indict a rung, and several of the unexercised ones are rungs this ladder declares out of reach on purpose. The count is worth recording at each cross-check; the tokens are not worth pruning.",
+  "renumbering": "THIS RENUMBERING WAS THE LAST FREE ONE. IDS ARE APPEND-ONLY FROM THE FREEZE ONWARD. The draft's ids were assigned before any evidence existed about what belonged between them, and the flood-watch cross-check added 64 rungs whose dependencies place them throughout the file rather than at its end. Reassigning ids to reflect dependency order was free exactly once, because at that time nothing had ever been measured against this file and no artifact cited a rung id: `sentences/README.md` forbids a score against a `.DRAFT`, and no test asserted an entry count for it. THAT REASON HAS SINCE GONE FALSE, THOUGH THE CONCLUSION HAS NOT: three committed tests now cite specific rung ids by name (`r001`, `r004`, `r183`, in `cli/tests/suite/sentence_corpus.rs`), and doc comments elsewhere cite several more (`r002`, `r003`, `r095`, `r181`, `r191`). A renumbering today would silently break every one of those citations, because rung ids are opaque strings a rename does not type-check against. The last free renumbering already happened, in the past tense, precisely because the file was uncited at the moment it was performed — not because it remains uncited now. It will not be free again. FROM THE FREEZE ONWARD, A NEW RUNG IS APPENDED AT THE END AND KEEPS ITS DEPENDENCY EDGES — the file is a DAG, so a rung's position in the list carries no meaning its `presupposes` does not already carry, and reading order is recoverable by a topological sort at any time. Never renumber to put a rung in its `natural` place. THE DISCIPLINE IS BORROWED, AND THE ARGUMENT FOR IT IS WORTH READING WHERE IT IS MADE: `EPOCH_COHORTS` in `domains/language/src/accession.rs` groups concepts by the generation they joined the registry in, precisely so that a new concept lands strictly last — the one position that provably displaces nothing — and its header says `Never edit an existing cohort`. That module also records a WITHDRAWN exception, kept because the withdrawal is the lesson: for two days a campaign was permitted to re-found the first cohort under a condition that seemed to make the churn free, and the permission had to spend twenty lines forbidding the reading it invited. `A rule that needs a second rule to stop it from swallowing the first is not a scoped exception; it is the first rule repealed with extra steps.` This paragraph is written to need no second rule: after the freeze, append.",
+  "production_axis": "THE LADDER IS A PRODUCTION INSTRUMENT. IT DOES NOT MEASURE PARSE ROBUSTNESS, AND TWO OF THE FLOOD-WATCH CORPUS'S MINTED TOKENS ARE REFUSED HERE FOR THAT REASON RATHER THAN OVERLOOKED. `unpunctuated-input` appears on all 68 of that corpus's player lines and `contraction-elision` on twelve of them; both are properties of the INPUT SURFACE — lowercase, no terminal punctuation, apostrophes dropped — and neither names anything a generator can produce or fail to produce. Every text on this ladder is well-formed prose, which is not an oversight either: a ladder rung's job is to state a capability the grammar must reach, and `can survive a malformed input` is a different axis measured by a different instrument. The flood-watch corpus measures it, with a per-entry `direction` field that splits `parse` from `produce`; this file has no such field and should not grow one. Each instrument does one job. THE CONSEQUENCE IS THAT A CROSS-CHECK AGAINST THAT CORPUS CANNOT REACH 149 OF 149 AND SHOULD NOT TRY: 147 of its tokens exist here, and the remaining two are declared, not missing. Anyone reporting the coverage number owes the reader that sentence with it.",
+  "entries": [
+
+    { "id": "r001", "text": "The woman is a merchant.",
+      "introduces": "classify", "presupposes": [],
+      "note": "Nominal predication. Stassen (1997) treats nominal, adjectival, locational and verbal predication as the four intransitive predication strategies; every language has some way of doing the first, and it is what `domains/language` already realizes through the fact-shaped `Clause`. The ladder's other root." },
+
+    { "id": "r002", "text": "The guard sleeps.",
+      "introduces": "intransitive-frame", "presupposes": [],
+      "note": "Verbal predication, one argument. Deliberately NOT dependent on r001: nominal and verbal predication are separate strategies (Stassen 1997), not stages of one, and a language can be rich in one and poor in the other. The ladder's second root, which is why this file is a DAG from its first two lines." },
+
+    { "id": "r003", "text": "The road is long.",
+      "introduces": "property-predication", "presupposes": ["r001"],
+      "note": "Adjectival predication. Dixon (1982, 2004) isolates a small set of property concepts — dimension, age, value, colour — that form the semantic core of the adjective class wherever there is one; where a language has no adjectives it recruits nouns or verbs, which is why this presupposes the nominal strategy rather than standing alone." },
+
+    { "id": "r004", "text": "The long road runs to the shrine.",
+      "introduces": "attributive-adjective", "presupposes": ["r003"],
+      "note": "AN UNMARKED CASE THE DRAFT SKIPPED, and the clearest instance of a shape the flood-watch cross-check exposed repeatedly. The draft introduced predicative property words at r003 and then USED attributive ones without ever introducing them — `the oldest man` at r045, `a guilty man` at r130. Dixon (1982) and Croft (1991) both treat modification as the PROTOTYPICAL function of a property word and predication as the derived one, so the draft had the markedness the wrong way round. Dryer (WALS 87) makes adjective-noun order one of the best-attested word-order correlations, which is the pedagogical half." },
+
+    { "id": "r005", "text": "The merchant is at the gate.",
+      "introduces": "locative-predication", "presupposes": ["r001"],
+      "note": "Freeze (1992) argues that locative, existential and possessive predication share one underlying construction across a wide typological range. That is why this rung, r019 and r104 sit on the same branch: they are three faces of one thing in a large number of languages, and a tongue that gets one may get all three cheaply." },
+
+    { "id": "r006", "text": "A guard strikes a woman.",
+      "introduces": "transitive-frame", "presupposes": ["r002"],
+      "note": "Two arguments, and the point at which the language must distinguish A from P. Comrie (1978) and Dixon (1979) frame the whole alignment typology on how S, A and P are grouped; no language leaves them entirely undifferentiated. Merchant corpus token." },
+
+    { "id": "r007", "text": "A stranger waits at the gate. The stranger is a soldier.",
+      "introduces": "definiteness", "presupposes": ["r001", "r002"],
+      "note": "First-mention indefinite, second-mention definite — the discourse basis of the category (Chafe 1976; Lambrecht 1994). Two sentences on purpose: definiteness is not visible inside one clause. Note that Greenberg (1978) derives definite articles FROM demonstratives, so r018's dependency on this rung inverts the diachrony; that inversion is a pedagogical judgement call, stated here so it is not mistaken for an attested implication." },
+
+    { "id": "r008", "text": "Tobb keeps the gate.",
+      "introduces": "proper-name", "presupposes": ["r007"],
+      "note": "THE MOST SURPRISING GAP THE CROSS-CHECK FOUND: twenty-three instances in the flood-watch corpus against no rung at all, because the draft reached for the marked case — r017, a coordinated list — and never named the unmarked one. Silverstein's (1976) referential hierarchy puts proper names above common nouns, inherently definite and inherently specific, and Longobardi (1994) argues English names raise to D, which is why they take no article. A ladder that can only produce names three at a time cannot say who did it." },
+
+    { "id": "r009", "text": "The salt-seller is Gilda.",
+      "introduces": "identity-predication", "presupposes": ["r001", "r008"],
+      "note": "Higgins (1979) separates PREDICATIONAL copular clauses — `the woman is a merchant`, which is r001 — from SPECIFICATIONAL and IDENTITY ones, where both terms refer and the clause asserts they pick out the same individual; Mikkelsen (2005) shows the types differ in subject properties, tag agreement and question formation, so one token cannot cover both. Added because the flood-watch corpus's `then it wasnt jarrow on the bank` had no home: it was annotated `cleft-focus` for want of this rung, and the annotator flagged the uncertainty. See r039." },
+
+    { "id": "r010", "text": "The guards keep the gate.",
+      "introduces": "number-marking", "presupposes": ["r002", "r007"],
+      "note": "Greenberg's Universals 34 and 35: no language has a trial without a dual, or a dual without a plural, and the singular is the unmarked member of every number system. Plural is therefore the first and only number distinction a ladder needs before it can go anywhere else." },
+
+    { "id": "r011", "text": "I am a merchant. You are a guard.",
+      "introduces": "person-deixis", "presupposes": ["r001"],
+      "note": "Speech-act participants. Greenberg's Universal 42: all languages have pronominal categories involving at least three persons and two numbers. Silverstein (1976) puts 1st and 2nd person at the very top of the animacy hierarchy, above third-person pronouns and proper names — which is the reason this rung precedes r012 rather than following it." },
+
+    { "id": "r012", "text": "The reeve questions her.",
+      "introduces": "pronoun-reference", "presupposes": ["r006", "r007", "r011"],
+      "note": "Third-person anaphoric re-mention — a genuinely harder problem than r011, because the referent must be recovered from discourse rather than from the speech situation. Silverstein's hierarchy again: third person sits below the speech-act participants, and differential marking splits there in language after language. Merchant corpus token." },
+
+    { "id": "r013", "text": "The guard does not sleep.",
+      "introduces": "negation", "presupposes": ["r002"],
+      "note": "Standard negation, in Miestamo's (2005) sense: the negation of a declarative main clause with a verbal predicate. Dahl (1979) and Miestamo both find symmetric negation — a bare marker added, nothing else disturbed — the commoner and structurally simpler type, so that is what this rung asks for. Nominal negation frequently uses a different construction; that is r028's business. Merchant corpus token." },
+
+    { "id": "r014", "text": "The guard slept.",
+      "introduces": "past-tense", "presupposes": ["r002"],
+      "note": "Dahl (1985) finds a past or perfective the most widely grammaticalized tense-aspect category in his sample; Bybee, Perkins & Pagliuca (1994) trace the path resultative > perfect > perfective/simple past. A language that grammaticalizes exactly one tense distinction usually grammaticalizes this one. Merchant corpus token." },
+
+    { "id": "r015", "text": "The guard did not sleep.",
+      "introduces": null, "presupposes": ["r013", "r014"],
+      "note": "REUSE/CONTROL RUNG. No new demand — negation and past tense, composed. Many languages neutralize tense distinctions under negation (Miestamo 2005 calls this asymmetric negation), so composition is a real question, not a formality. If this stops resolving while r013 and r014 both resolve, the two categories do not compose and something regressed." },
+
+    { "id": "r016", "text": "The merchant and the guard keep the gate.",
+      "introduces": "coordination", "presupposes": ["r007", "r010"],
+      "note": "NP conjunction. Haspelmath (2007) and Stassen (2000) both show that NP coordination and clause coordination are frequently marked by different items — Stassen's AND-languages vs WITH-languages split turns on exactly this — so r123 is a separate token rather than a second use of this one. That is a considered distinction, not a synonym fork. Merchant corpus token." },
+
+    { "id": "r017", "text": "Stewie, Frank, and Doug keep the gate.",
+      "introduces": "named-entity-list", "presupposes": ["r016", "r008"],
+      "note": "A coordinated list of proper names, with the asyndeton/polysyndeton alternation English uses (comma, comma, and). Distinct from bare r016 because a list of three or more forces the language to choose where the connective goes; Haspelmath (2007) surveys the strategies. Merchant corpus token. REVISED AT THE RENUMBERING: it now presupposes r008, which the draft did not carry at all — the marked case was on the ladder and the unmarked one was not." },
+
+    { "id": "r018", "text": "This road leads to the shrine.",
+      "introduces": "demonstrative-deixis", "presupposes": ["r007"],
+      "note": "Diessel (1999): a two-term proximal/distal contrast is the minimal attested demonstrative system; three-term systems add either a medial or an addressee-anchored term. The dependency on r007 is pedagogical, and the diachrony runs the other way (Greenberg 1978) — see r007's note." },
+
+    { "id": "r019", "text": "The merchant's cart stands in the square.",
+      "introduces": "possession-alienable", "presupposes": ["r007"],
+      "note": "Adnominal possession of a transferable object. Nichols (1988) and Chappell & McGregor (1996): where a language splits possession, the alienable construction is the general/default one and the inalienable one is the restricted class, so the ladder takes the general one first." },
+
+    { "id": "r020", "text": "Gilda's brother keeps the shrine.",
+      "introduces": "possession-inalienable", "presupposes": ["r019"],
+      "note": "The split itself. Nichols (1988): where a possession split exists, kin terms and body parts fall on the inalienable side with near-exceptionless regularity. A language with only one possession construction has the r019 one; the split is an added distinction, never a replacement." },
+
+    { "id": "r021", "text": "His cart is not hers.",
+      "introduces": "possessive-pronoun", "presupposes": ["r020", "r012"],
+      "note": "The draft's possession rungs realize the possessor as a full noun phrase and never as a pronoun, and the two are morphologically distinct in most languages — Nichols (1988) and Heine (1997) both find pronominal possession the more conservative, more often affixal half of a possession system. The dependent/independent split (`his` against `hers`) is a second demand that English happens to fuse into one paradigm. Eight instances in the flood-watch corpus." },
+
+    { "id": "r022", "text": "Three guards keep the gate.",
+      "introduces": "numeral-quantification", "presupposes": ["r010"],
+      "note": "Greenberg (1978) on numeral systems and Hurford (1987): low numerals are lexical primitives and higher ones are arithmetically composed from them, so a ladder needs the low ones and nothing else. Depends on r010 because numeral modification interacts with number marking — many languages suppress the plural under a numeral." },
+
+    { "id": "r023", "text": "He was the third man through the gate.",
+      "introduces": "ordinal", "presupposes": ["r022"],
+      "note": "Greenberg's (1978) numeral universals derive ordinals from cardinals, with the low ordinals — `first`, `second` — suppletive far more often than the high ones, which makes the dependency on r022 an implication rather than a preference. Six instances in the flood-watch corpus, none of which the cardinal token reaches." },
+
+    { "id": "r024", "text": "Every merchant pays the gate toll.",
+      "introduces": "quantifier", "presupposes": ["r010"],
+      "note": "Universal quantification over a set. Keenan & Stavi (1986) on determiner denotations; Bach et al. (1995) show the strategies vary enormously (determiner quantification vs adverbial vs verbal), but some expression of the universal/existential pair is very near universal." },
+
+    { "id": "r025", "text": "One of the witnesses lies.",
+      "introduces": "partitive", "presupposes": ["r022", "r024"],
+      "note": "Selecting a subset from a specified set. Koptjevskaja-Tamm (2001) separates true partitives (from a definite set) from pseudo-partitives (a quantity of a mass); this rung is the former, which presupposes the definite plural r010 supplies. The intrigue register uses this constantly: the accusation that names no one." },
+
+    { "id": "r026", "text": "The guards were all at the gate.",
+      "introduces": "floating-quantifier", "presupposes": ["r024", "r010"],
+      "note": "A quantifier stranded away from the phrase it quantifies. Sportiche (1988) took exactly this construction as evidence that subjects originate lower than they surface; Bobaljik (2003) surveys the alternatives. Whichever analysis is right the generator's problem is the same: the quantifier and its restrictor are not adjacent, so a rule that attaches quantifiers to noun phrases cannot produce it." },
+
+    { "id": "r027", "text": "The merchant sells salt.",
+      "introduces": "mass-count", "presupposes": ["r010"],
+      "note": "JUDGEMENT CALL, and a candidate for out-of-scope rather than not-yet. The mass/count distinction is not a grammatical universal: Chierchia (1998) and the classifier-language literature describe systems where all nouns behave as mass and a numeral classifier does the individuating work. If Hornvale's tongues draw classifier morphology, this rung may be correctly unreachable for those tongues rather than unbuilt." },
+
+    { "id": "r028", "text": "The hound is not a person.",
+      "introduces": "noun-class", "presupposes": ["r001", "r013"],
+      "note": "Animacy as a grammatical category. Silverstein (1976) and Aissen (2003) show animacy and definiteness scales jointly govern differential object marking and agreement across unrelated families. `domains/language`'s `NounClass` is already derived from world-state, so this rung has a named counterpart in code — which makes it a good early probe of whether that derivation reaches the grammar. Also probes NON-verbal negation, which frequently uses a different construction from r013's standard negation (Miestamo 2005)." },
+
+    { "id": "r029", "text": "Guards lie.",
+      "introduces": "generic-reference", "presupposes": ["r010"],
+      "note": "Reference to a kind rather than to individuals (Carlson 1977; Dahl 1975). Often expressed by exactly the same form as the bare indefinite plural, which means this rung may resolve for free the moment r010 does — and that is precisely what makes it worth a rung: it costs one line to find out." },
+
+    { "id": "r030", "text": "Someone waits in the storeroom.",
+      "introduces": "indefinite-pronoun", "presupposes": ["r012"],
+      "note": "Haspelmath's (1997) implicational map for indefinite pronouns orders the functions specific-known < specific-unknown < irrealis non-specific < question < conditional < indirect negation < direct negation < comparative < free choice, and a language's indefinite series always covers a CONNECTED region of that map. Specific-unknown is the entry point and this rung uses it; r031 uses the far end." },
+
+    { "id": "r031", "text": "Nobody saw the guard.",
+      "introduces": "negative-indefinite", "presupposes": ["r030", "r013", "r014"],
+      "note": "The direct-negation end of Haspelmath's (1997) map — the same series stretched to its far pole, or a separate series if the language does not stretch that far. Also where negative concord vs a single negative marker becomes visible, which is a well-known areal split within Europe alone." },
+
+    { "id": "r032", "text": "You cannot see the gate from the shrine.",
+      "introduces": "impersonal-pronoun", "presupposes": ["r012", "r029"],
+      "note": "A person-marked pronoun used non-referentially. Siewierska (2004) surveys impersonal uses of every person; Malamud (2012) shows impersonal `you` is not simply generic — it invites the hearer to occupy the position. It depends on r029 because the reading is generic and on r012 because the FORM is deictic, and the demand is precisely that those two disagree." },
+
+    { "id": "r033", "text": "Somebody left their lantern at the sluice.",
+      "introduces": "epicene-pronoun", "presupposes": ["r012", "r030"],
+      "note": "Number-neutral `they` for a single referent whose identity, and usually gender, is unknown. Corbett (1991) shows gender resolution under uncertainty is a grammatical problem rather than a stylistic one, and Bodine (1975) documents that English singular `they` long predates the prescription against it. An investigative register needs it constantly, because not knowing who is the whole situation." },
+
+    { "id": "r034", "text": "Mother was at the shrine.",
+      "introduces": "kin-term-as-name", "presupposes": ["r008", "r020"],
+      "note": "A determinerless kin term in an argument position, behaving as a name rather than as a common noun. Longobardi (1994) treats exactly this class as the second case of N-to-D raising in English alongside proper names; Dahl & Koptjevskaja-Tamm (2001) show kinship vocabulary is the most reliable host of inalienable possession, which is why both dependencies are real rather than decorative." },
+
+    { "id": "r035", "text": "The gate toll is collected at the sluice house.",
+      "introduces": "nominal-compound", "presupposes": ["r007"],
+      "note": "A noun-noun compound. Bauer (2009) surveys compounding as one of the most widely attested word-formation processes, its head position following the language's other branching directions. Placed early despite being a lexical rather than a syntactic demand, because a world with its own vocabulary produces these constantly — thirteen instances in the flood-watch corpus — and a generator with no compounding rule must lexicalize each one by hand." },
+
+    { "id": "r036", "text": "Someone tall waited at the gate.",
+      "introduces": "postnominal-modifier", "presupposes": ["r004", "r030"],
+      "note": "THE ANNOTATOR'S FIRST UNCERTAINTY, RESOLVED IN FAVOUR OF A TOKEN. `Something long` puts the modifier after the head, which English otherwise forbids; Huddleston & Pullum (2002) call this postpositive modification and note the indefinite pronoun series is its main trigger, with Haspelmath (1997) showing that series is a closed grammaticalized class language after language. The uncertainty was whether the demand is a word-order fact or a lexical one. It is BOTH — an ordering rule conditioned by a lexical class — and that is exactly why neither r004 nor r003 reaches it: a generator that knows adjectives precede nouns will produce `long something` here and be wrong every time." },
+
+    { "id": "r037", "text": "The man at the gate is a salt-seller.",
+      "introduces": "pp-modifier", "presupposes": ["r005", "r007"],
+      "note": "Attributive modification by a prepositional phrase, distinct from the locative PREDICATION at r005 — the same phrase in the same shape, differing only in whether it is the clause's predicate or sits inside a noun phrase. Dryer (1992) treats noun-before-PP as one of the branching-direction correlations that tracks verb-object order, so the two are related without being one demand. Fourteen instances in the flood-watch corpus." },
+
+    { "id": "r038", "text": "The man carrying the lantern is the warden.",
+      "introduces": "participial-modifier", "presupposes": ["r004", "r006"],
+      "note": "A non-finite verb form modifying a noun phrase. Haspelmath (1994) surveys participles as a category defined by exactly this double life — verbal in its argument structure, adjectival in its position — which is why it depends on both r004 and r006 rather than on either alone." },
+
+    { "id": "r039", "text": "The man on the bank was not Tobb.",
+      "introduces": null, "presupposes": ["r009", "r013", "r037"],
+      "note": "REUSE/CONTROL RUNG, AND THE ANNOTATOR'S FOURTH UNCERTAINTY LEFT OPEN ON PURPOSE. The flood-watch corpus's `then it wasnt jarrow on the bank` was annotated `cleft-focus`, with a note saying it might instead be a plain negated classification with a heavy afterthought and that nothing in the corpus discriminates the readings. Minting a token would be minting on an unresolved analysis. What the ladder can do honestly is supply r009 — the rung the non-cleft reading needed and did not have — and make the composition a control. If a later scene discriminates the readings, a token can be appended then." },
+
+    { "id": "r040", "text": "Gilda, the salt-seller, is dead.",
+      "introduces": "apposition", "presupposes": ["r001", "r007"],
+      "note": "Naming a referent and its role in one NP. Related to r001 but structurally different: the classification is nominal-internal rather than predicated, so a language can do one without the other. The investigation register leans on this hard — it is how a report introduces someone the hearer does not know." },
+
+    { "id": "r041", "text": "Reeve, the gate stands open.",
+      "introduces": "vocative", "presupposes": ["r007"],
+      "note": "Blake (2001) puts vocative outside the core case hierarchy entirely — it is not an argument of anything. Graded courses teach it in the first hour because it opens an exchange, which is the pedagogical half of this rung's placement; the typological half is that it is structurally cheap precisely because it is unintegrated." },
+
+    { "id": "r042", "text": "The guard cut himself.",
+      "introduces": "reflexive", "presupposes": ["r006", "r012", "r014"],
+      "note": "Coreference between the two arguments of a transitive. Faltz (1985) and Geniušienė (1987) find reflexive marking either verbal or nominal; Haspelmath (2008) shows reflexive and reciprocal markers are often the same item, which is why r043 depends on this rung rather than sitting beside it." },
+
+    { "id": "r043", "text": "The two guards accused each other.",
+      "introduces": "reciprocal", "presupposes": ["r042", "r022"],
+      "note": "Reciprocal marking. Nedjalkov (2007) surveys the polysemy with reflexives that makes this the natural next step from r042; the numeral dependency is because a reciprocal needs a plural or dual antecedent to be interpretable at all." },
+
+    { "id": "r044", "text": "The reeve is older than the warden.",
+      "introduces": "comparative", "presupposes": ["r003"],
+      "note": "Stassen (1985) classifies comparatives as locational, exceed, conjoined or particle types; all four predicate a property of two participants, which is why this presupposes r003 and not r006. There is no attested language that compares without a property concept to compare on." },
+
+    { "id": "r045", "text": "Tobb is the oldest man in the Low Quarter.",
+      "introduces": "superlative", "presupposes": ["r044", "r024"],
+      "note": "Bobaljik's (2012) Containment Hypothesis is the sharpest generalization on this ladder: the superlative morphologically CONTAINS the comparative, with no attested counterexample of a language whose superlative is built on the positive while its comparative is suppletive. That makes this dependency an implication rather than a preference." },
+
+    { "id": "r046", "text": "The warden is as old as the reeve.",
+      "introduces": "equative", "presupposes": ["r044"],
+      "note": "JUDGEMENT CALL on ordering. Haspelmath & Buchholz (1998) find equative constructions more heterogeneous and less often grammaticalized than comparatives, and Henkelmann (2006) confirms the pattern more widely — but that is a frequency observation, not an implicational universal, so the dependency here is a bet rather than a claim." },
+
+    { "id": "r047", "text": "Careful is better than honest.",
+      "introduces": "adjective-as-argument", "presupposes": ["r003", "r044"],
+      "note": "A bare property word in a referring position. Croft (1991) makes markedness a function of the mismatch between a word class and the propositional act it performs: a property word predicating is unmarked, a property word REFERRING is marked and takes extra morphology in most languages (`carefulness`). English allows the bare form, and that is the demand. One instance in the flood-watch corpus, unreachable from every other token in either corpus, which is the whole argument for naming it." },
+
+    { "id": "r048", "text": "The guard struck her in the marketplace.",
+      "introduces": "spatial-adverbial", "presupposes": ["r006", "r014"],
+      "note": "A locative adjunct on an event, as distinct from r005's locative PREDICATE. Talmy (1985, 2000) on how languages distribute path and location between verb and satellite; the distinction matters here because a verb-framed and a satellite-framed tongue will realize this rung very differently." },
+
+    { "id": "r049", "text": "Everything was fine until last night.",
+      "introduces": "temporal-adverbial", "presupposes": ["r014", "r048"],
+      "note": "Merchant corpus entry m02, verbatim. The dependency on r048 is DIACHRONIC, from Haspelmath's (1997) `From Space to Time`: temporal adverbials and adpositions are overwhelmingly derived from spatial ones, in a direction that is near-exceptionless and effectively never reversed. Stated openly because there is no SYNCHRONIC requirement that a language have spatial adjuncts before temporal ones — this is an ordering claim about how the category arises, and it is the kind of claim a reviewer should be able to reject on its own terms. Merchant corpus token." },
+
+    { "id": "r050", "text": "He answered slowly.",
+      "introduces": "manner-adverb", "presupposes": ["r002", "r004"],
+      "note": "AN UNMARKED CASE THE DRAFT SKIPPED, the same shape as r008 and r004. The draft carried the clausal manner adjunct at r130 — `as a guilty man speaks` — and no rung at all for the one-word version. Schachter & Shopen (2007) note that a distinct adverb class is among the least universal parts of speech: many languages use the adjective unchanged, or a converb, which is why this depends on r004 rather than standing free." },
+
+    { "id": "r051", "text": "The reeve is questioning the merchant now.",
+      "introduces": "present-progressive", "presupposes": ["r006", "r005"],
+      "note": "Bybee, Perkins & Pagliuca (1994) trace progressives overwhelmingly to locative sources — `be at doing`, `be in doing` — which is why this presupposes r005 rather than r014. The path progressive > imperfective > present is one of the best-attested grammaticalization clines on record." },
+
+    { "id": "r052", "text": "The guard was watching the gate when the bells rang.",
+      "introduces": "past-progressive", "presupposes": ["r051", "r014"],
+      "note": "The draft's progressive rung is present-tense throughout, which silently made the progressive a present-tense category. Comrie (1976) treats progressive as an aspect that composes with tense and Dahl (1985) finds languages whose progressive is available in one tense and not another, so the composition is a real question in exactly the way r015 is." },
+
+    { "id": "r053", "text": "The merchant opens his stall at dawn.",
+      "introduces": "habitual-aspect", "presupposes": ["r051", "r049"],
+      "note": "Comrie (1976) subdivides imperfective into habitual and continuous, making this a SIBLING of r051 under one head rather than a step beyond it; the dependency records that the imperfective distinction must exist at all, not that progressive is prior. Dahl (1985) finds habituals grammaticalized far less often than progressives, which is the pedagogical half." },
+
+    { "id": "r054", "text": "He used to keep the gate.",
+      "introduces": "habitual-past", "presupposes": ["r053", "r014"],
+      "note": "MINTED HERE RATHER THAN IN THE CORPUS, AND THE ANNOTATOR'S SECOND UNCERTAINTY IS WHY. `used to walk out with` was annotated `habitual-aspect` + `past-tense` by composition, with a note saying the two-token reading might be coarse. It is. Comrie (1976, §3.1) uses English `used to` as his central example of a form dedicated to habituality, and it has no present counterpart — the composition a generator would actually perform, taking the present habitual `keeps` into the past, yields `kept`, which is a simple past and not a habitual at all. Bybee, Perkins & Pagliuca (1994) find past-restricted habitual grams common cross-linguistically. A dedicated form the composition cannot reach is a DEMAND, not a configuration, so this is a token rung and not a control one." },
+
+    { "id": "r055", "text": "The guard has fled.",
+      "introduces": "perfect-aspect", "presupposes": ["r014"],
+      "note": "ORDERING INVERTS THE DIACHRONY, deliberately. Bybee et al. (1994) put the perfect BEFORE the simple past on the resultative > perfect > past cline, so a language reaches the past THROUGH the perfect. But a graded course teaches the simple past first, because the perfect's current-relevance semantics is the harder thing to state, and Hornvale already has past tense. Flagged so this is not read as an attested implication." },
+
+    { "id": "r056", "text": "The bells had rung before he reached the gate.",
+      "introduces": "pluperfect", "presupposes": ["r055", "r014"],
+      "note": "Comrie (1985) classes the pluperfect as ABSOLUTE-RELATIVE tense: a reference point located relative to the moment of speech, and an event located relative to that. Dahl (1985) finds PLUPERFECT a distinct gram type in his sample rather than a transparent composition. The flood-watch corpus's one instance is independent — `The bell had gone` — and not the embedded effect r179 already covers, which is why it needs this rung and not that one." },
+
+    { "id": "r057", "text": "He has been waiting at the gate since the bells.",
+      "introduces": "perfect-progressive", "presupposes": ["r055", "r051"],
+      "note": "Two aspects stacked. Comrie (1976) notes aspect combinations are constrained rather than free — languages with both a perfect and a progressive frequently cannot compose them — so this is the same kind of rung as r015, except that English's composition is itself a distinct form and therefore introduces a token." },
+
+    { "id": "r058", "text": "The gate is still barred.",
+      "introduces": "phasal-adverb", "presupposes": ["r049", "r055"],
+      "note": "`still`, `already`, `yet`, `no longer`. Van der Auwera (1998) analyses these as a closed four-square defined by a phase transition and a polarity, and Löbner (1989) shows each asserts a state while presupposing its opposite at an earlier or later time. That presupposition is the demand: a generator that treats `still` as an intensifier will use it where nothing has changed." },
+
+    { "id": "r059", "text": "The reeve will hang him.",
+      "introduces": "future-reference", "presupposes": ["r006", "r012"],
+      "note": "Bybee et al. (1994): futures arise from movement (`go`), obligation (`shall`) and desire (`want`) sources, and are grammaticalized as bare inflections far less often than pasts are. Dahl (1985) finds many languages with no dedicated future at all, expressing it with modality or bare present — so this rung sits later than its apparent simplicity suggests." },
+
+    { "id": "r060", "text": "Her father died long ago, before the wall went up.",
+      "introduces": "remote-past", "presupposes": ["r014", "r049"],
+      "note": "CANDIDATE FOR OUT-OF-SCOPE. Comrie (1985) describes metrical/graded tense systems — hodiernal, hesternal, remote — attested in Bantu, Amazonian and Australian families and absent from most of Europe. If Hornvale's tongues draw a shallow tense system this rung is correctly unreachable for them, and that is a finding about the tongue, not a gap in the grammar." },
+
+    { "id": "r061", "text": "The crowd began to shout.",
+      "introduces": "inchoative", "presupposes": ["r014"],
+      "note": "A phasal complement. Cristofaro's (2003) subordination hierarchy puts phasal relations (`begin`, `stop`, `continue`) at the MOST tightly integrated end — typically deranked, non-finite, sometimes a single verb — which is exactly why they come before the loosely-integrated utterance complements at r140 and not after. This is the ladder's clearest use of the deranking hierarchy." },
+
+    { "id": "r062", "text": "The bells stopped ringing.",
+      "introduces": "cessative", "presupposes": ["r061"],
+      "note": "The other end of the same phasal set. Grouped with r061 by Cristofaro (2003); separated into its own rung because the cessative frequently carries negation or a distinct auxiliary where the inchoative does not." },
+
+    { "id": "r063", "text": "He knocked three times.",
+      "introduces": "iterative", "presupposes": ["r022", "r014"],
+      "note": "Bounded repetition of an event, as against r053's habitual. Comrie (1976) separates iterative from habitual on exactly this: an iterative counts occasions within one situation, a habitual characterizes a period. The numeral dependency is what makes the count visible." },
+
+    { "id": "r064", "text": "She waited at the gate for an hour.",
+      "introduces": "duration-adverbial", "presupposes": ["r049", "r022"],
+      "note": "A temporal EXTENT rather than a temporal LOCATION — the `for an hour` / `in an hour` contrast that Vendler (1957) and Dowty (1979) use to diagnose telicity. This narrows r049's general token rather than replacing it, which is why it presupposes it." },
+
+    { "id": "r065", "text": "He came to the stall three times that week.",
+      "introduces": null, "presupposes": ["r053", "r063", "r049"],
+      "note": "REUSE/CONTROL RUNG. Frequency is habitual aspect, iterative counting and temporal location composed — no new demand. Worth a control because the three interact: a language that marks habituality on the verb may block a numeral count of occasions, and this rung is where that would show." },
+
+    { "id": "r066", "text": "After that, he went to the shrine.",
+      "introduces": "sequence-adverbial", "presupposes": ["r049", "r055"],
+      "note": "Anaphoric temporal ordering — `after that` locates the event relative to a previously established reference time, which is Reichenbach's (1947) R point made explicit. Depends on r055 because relative time reference is what the perfect already forced the grammar to represent. The investigation register runs on this: a testimony is a sequence." },
+
+    { "id": "r067", "text": "She was not in the marketplace last night.",
+      "introduces": null, "presupposes": ["r049", "r048", "r013", "r014"],
+      "note": "REUSE/CONTROL RUNG — the alibi. Negation, past, a spatial adjunct and a temporal adjunct, all composed, no new demand. This is the single most load-bearing sentence shape in an investigation and it introduces nothing at all, which is exactly the point of having control rungs: the interesting utterances are usually recombinations." },
+
+    { "id": "r068", "text": "Open the cart.",
+      "introduces": "imperative", "presupposes": ["r006", "r011"],
+      "note": "Aikhenvald (2010): the second-person singular imperative is the least marked member of every attested imperative paradigm, and is very often the bare verb stem — the one place a language most reliably shows its root form. Depends on r011 because an imperative is addressed, whether or not the addressee is expressed." },
+
+    { "id": "r069", "text": "You tell the reeve, then.",
+      "introduces": "overt-subject-imperative", "presupposes": ["r068"],
+      "note": "An imperative with an overt, contrastive subject. Potsdam (1998) shows the English imperative subject is a real subject rather than a vocative — it binds reflexives and licenses tags — and Aikhenvald (2010) surveys how widely imperative paradigms diverge from declarative ones. The demand is the contrast: an overt subject here always singles someone out, which is why it cannot be produced by simply failing to delete one." },
+
+    { "id": "r070", "text": "Do not touch the body.",
+      "introduces": "prohibitive", "presupposes": ["r068", "r013"],
+      "note": "NOT simply r068 plus r013, which is why it is a token and not a control rung. van der Auwera (2006) and van der Auwera & Lejeune (WALS 71) find that a large share of languages use a DEDICATED prohibitive marker, or a non-imperative verb form under negation, rather than negating the imperative — so composition here genuinely fails in many grammars." },
+
+    { "id": "r071", "text": "Let us hear the guard first.",
+      "introduces": "hortative", "presupposes": ["r068", "r010"],
+      "note": "First-person-plural directive. Aikhenvald (2010) treats non-second-person imperatives as a graded periphery around the canonical second-person core: where a language has any of them it has the second-person one, but not conversely." },
+
+    { "id": "r072", "text": "He can read a seal.",
+      "introduces": "ability-modal", "presupposes": ["r006"],
+      "note": "Bybee, Perkins & Pagliuca (1994): AGENT-ORIENTED modality — ability, obligation, desire — grammaticalizes before epistemic modality, and epistemic senses are historically DERIVED from agent-oriented ones. This is one of the most robust grammaticalization paths on record and it is what orders the entire r072–r077 chain." },
+
+    { "id": "r073", "text": "You must answer the reeve.",
+      "introduces": "deontic-obligation", "presupposes": ["r072"],
+      "note": "Agent-oriented obligation, the second member of Bybee et al.'s cluster and the one that most often later supplies the epistemic necessity at r077." },
+
+    { "id": "r074", "text": "You may leave the city at dawn.",
+      "introduces": "deontic-permission", "presupposes": ["r073"],
+      "note": "van der Auwera & Plungian's (1998) modality map places permission adjacent to possibility and obligation, with permission commonly derived from ability or from a negated obligation. The dependency on r073 rather than r072 follows the negated-obligation route; the other route would justify a dependency on r072 instead, and this is a judgement call between two attested paths." },
+
+    { "id": "r075", "text": "He wants the seal.",
+      "introduces": "desiderative", "presupposes": ["r006", "r072"],
+      "note": "The third of Bybee et al.'s agent-oriented set. Kept as a simple transitive object here rather than a clausal complement on purpose: the desiderative COMPLEMENT (`wants to leave`) is a subordination demand and belongs at r128, not here." },
+
+    { "id": "r076", "text": "Perhaps the guard lied.",
+      "introduces": "epistemic-hedge", "presupposes": ["r072", "r014"],
+      "note": "The first epistemic rung, and deliberately the least grammaticalized expression of it — an adverbial particle. Bybee et al. (1994): epistemic modality derives from agent-oriented modality, so this depends on r072. Distinct from r077, which is the STRENGTHENING direction; this one weakens a claim. Not a synonym: a hedge lowers commitment, an inferential raises it on indirect grounds. Merchant corpus token." },
+
+    { "id": "r077", "text": "He must be lying.",
+      "introduces": "epistemic-necessity", "presupposes": ["r076", "r073"],
+      "note": "Inferential `must` — the same word doing deontic duty at r073, which is the classic polysemy Bybee et al. explain by their path and which many languages do NOT share. Depending on both r073 and r076 encodes that: this rung needs the modal and the epistemic dimension, and whether one lexeme carries both is the language's business." },
+
+    { "id": "r078", "text": "He will not answer the reeve.",
+      "introduces": "volitional-modal", "presupposes": ["r075", "r013"],
+      "note": "`won't` as REFUSAL rather than as future or as inability. Van der Auwera & Plungian's (1998) modality map keeps participant-internal ability and participant-internal volition on separate paths, and Bybee, Perkins & Pagliuca (1994) trace the desire source separately from the ability source. Placed after r077 so as not to interrupt the r072–r077 chain, which is an attested cline this token is not on. The flood-watch corpus turns on the ability/volition contrast twice — `wouldn't, or couldn't?` — which is the pair a single modal token cannot express." },
+
+    { "id": "r079", "text": "May the gods keep her.",
+      "introduces": "optative", "presupposes": ["r071", "r076"],
+      "note": "A wish with no addressee obligation. Grouped with the directive moods by Aikhenvald (2010) and Palmer (2001) but distinguished by having no target to comply; formally it very often recruits the hortative or subjunctive form, hence the r071 dependency." },
+
+    { "id": "r080", "text": "The guard is a priest!",
+      "introduces": "mirative", "presupposes": ["r076"],
+      "note": "CANDIDATE FOR OUT-OF-SCOPE. DeLancey (1997, 2012) argues mirativity — the grammatical marking of information as new or unexpected to the speaker — is a category in its own right in Tibeto-Burman, Turkish and elsewhere; Hill (2012) disputes that it is ever independent of evidentiality. A contested category is a legitimate ladder rung precisely because the contest is about whether it exists, and Hornvale may reasonably decline it." },
+
+    { "id": "r081", "text": "Keep your voice down, or the reeve will hear you.",
+      "introduces": "apprehensive", "presupposes": ["r070", "r075"],
+      "note": "Apprehensive/timitive mood — marking an undesirable possibility the addressee should avert. Lichtenberk (1995) documents it as a grammaticalized category in Oceanic; Vuillermet (2018) surveys it more widely. English has no dedicated form and must periphrase, which is why the rung's text uses a coordinate warning: the demand is real, the English is a workaround, and a reader should notice that." },
+
+    { "id": "r082", "text": "You must not leave the city.",
+      "introduces": "modal-negation-scope", "presupposes": ["r073", "r013"],
+      "note": "Whether negation scopes OVER the modal (`need not go` — no obligation) or UNDER it (`must not go` — obligation not to). Horn (1989) and de Haan (1997) show languages differ systematically in which readings the syntax makes available, and English itself distributes the two readings across different modals with no visible logic. A genuine demand, not a composition." },
+
+    { "id": "r083", "text": "Are you a merchant?",
+      "introduces": "polar-question", "presupposes": ["r001"],
+      "note": "Ultan (1978) and Dryer (WALS 116) find every language has both polar and content questions, but polar questions are very commonly signalled by intonation alone with no segmental marking at all — the cheapest interrogative available, which is why it precedes r085. Merchant corpus token." },
+
+    { "id": "r084", "text": "He was at the gate all night?",
+      "introduces": "declarative-question", "presupposes": ["r083"],
+      "note": "A bare declarative doing question work: no inversion, no auxiliary, no interrogative particle. Dryer (WALS 116) finds intonation-only polar questions a common strategy and the ONLY strategy in a fair number of languages, so this is not an English quirk; Gunlogson (2003) shows the rising declarative is not synonymous with the inverted question — it commits the speaker in a way the inverted form does not. For a text interface this is the hard rung in the block, because intonation is exactly what a typed line does not carry." },
+
+    { "id": "r085", "text": "Who keeps the gate?",
+      "introduces": "wh-question", "presupposes": ["r083", "r006"],
+      "note": "A content question requires a dedicated interrogative word, so it cannot be done by intonation. Deliberately a SUBJECT question: subject questions require no fronting or inversion in most systems, making them the least marked content question. Merchant corpus token." },
+
+    { "id": "r086", "text": "Whom did the reeve question?",
+      "introduces": "wh-fronting", "presupposes": ["r085", "r012"],
+      "note": "NOT a synonym for r085. Dryer (WALS 93) splits languages into initial-interrogative-phrase and in-situ types, and an object question is exactly where they diverge — the subject question at r085 looks identical in both. Pienemann's Processability Theory sequences canonical order < adverb fronting < inversion for learners, which puts this squarely after r085 on the pedagogical side too." },
+
+    { "id": "r087", "text": "Why did he go to the shrine?",
+      "introduces": "adjunct-wh-question", "presupposes": ["r085", "r048"],
+      "note": "A content question over a non-subcategorized position. Huang (1982) established the argument/adjunct asymmetry — adjunct extraction is MORE constrained than argument extraction, not less — and Rizzi (1990) derives it; Ultan (1978) surveys the interrogative inventories themselves. The draft had only argument questions, and the flood-watch corpus needed twelve adjunct ones, which makes this the largest single question-side gap." },
+
+    { "id": "r088", "text": "Which gate did he use?",
+      "introduces": "wh-determiner-phrase", "presupposes": ["r085", "r007"],
+      "note": "A wh-determiner composed with a nominal restrictor. Pesetsky (1987) shows `which`-phrases are D-LINKED: they presuppose a contextually given set, and they behave differently from bare wh-words under superiority and inside islands. The presupposition is the demand — asking `which bell` commits the speaker to there being more than one — and it is not available from r085 alone." },
+
+    { "id": "r089", "text": "How late did the bells ring?",
+      "introduces": "degree-question", "presupposes": ["r085", "r044"],
+      "note": "A question over the degree of a gradable predicate. Kennedy (1999) makes gradability a property of the predicate's scale structure rather than of the question, which is why this depends on r044: a grammar with no way to compare degrees has no scale to question. Rett (2008) separates degree questions from the exclamatives that share their form, which is why r149 sits much further down." },
+
+    { "id": "r090", "text": "Did he come by the gate or over the wall?",
+      "introduces": "alternative-question", "presupposes": ["r083", "r016"],
+      "note": "An interrogative with a disjoined set of answers. Formally a polar question over a coordination in many languages; in others a distinct construction with its own particle. The intrigue register uses it as a trap — it presupposes he came." },
+
+    { "id": "r091", "text": "You saw her, didn't you?",
+      "introduces": "tag-question", "presupposes": ["r083", "r012"],
+      "note": "A biased polar question. Languages split sharply between invariant tags (`n'est-ce pas`, `nicht wahr`) and the English-style agreeing tag that copies the auxiliary, polarity and subject of the host clause — the latter is typologically unusual and expensive." },
+
+    { "id": "r092", "text": "The reeve did what?",
+      "introduces": "echo-question", "presupposes": ["r085"],
+      "note": "In-situ interrogative with echo/incredulity force, at a different illocutionary level from r085 — it questions the utterance rather than the world. Even obligatory-fronting languages allow the in-situ echo, which makes it a good probe of whether the grammar separates the two levels." },
+
+    { "id": "r093", "text": "Carrying it how?",
+      "introduces": "clarification-request", "presupposes": ["r092", "r087"],
+      "note": "A turn whose function is to demand specification of the previous one rather than to advance the exchange. Schegloff, Jefferson & Sacks (1977) place it in the repair system as OTHER-INITIATED repair; Purver (2004) and Ginzburg & Cooper (2004) show the forms are highly elliptical and their interpretation depends wholly on the previous turn, which is why it depends on r092. Thirteen instances in the flood-watch corpus, in both directions — the second most common minted discourse demand." },
+
+    { "id": "r094", "text": "Who would carry a lantern to the sluice at that hour?",
+      "introduces": "rhetorical-question", "presupposes": ["r083", "r085"],
+      "note": "An interrogative that is not a request for information. Sadock (1971) gives the diagnostics — the `after all` test — and Han (2002) analyses the form as denoting an assertion of the opposite polarity. Worth naming for a reason the flood-watch corpus demonstrates rather than states: one of its rhetorical questions is ANSWERED LITERALLY, and the reply only lands because the answerer declined the rhetorical reading. A parser that resolved rhetorical force automatically would make that move impossible to type." },
+
+    { "id": "r095", "text": "Didn't anyone see this?",
+      "introduces": "negative-question", "presupposes": ["r083", "r013"],
+      "note": "Where answer systems visibly diverge. Holmberg (2016) and Sadock & Zwicky (1985) distinguish polarity-based answering (`yes` = positive proposition) from truth-based answering (`yes` = I agree with you), and the two give OPPOSITE answers to a negative question — the well-known Japanese/English mismatch. Also carries the positive-bias implicature the register needs." },
+
+    { "id": "r096", "text": "Yes. He was there.",
+      "introduces": "answer-particle", "presupposes": ["r083"],
+      "note": "Dryer (WALS 140) finds a substantial minority of languages have no answer particles at all and answer polar questions by echoing the verb. A grammar that can ask a question but not answer it in one word is a real and common state, so this is its own rung." },
+
+    { "id": "r097", "text": "Did he see her? He did.",
+      "introduces": "echo-answer", "presupposes": ["r096"],
+      "note": "Answering by repeating the question's verb rather than with a particle. Holmberg (2016) makes this a genuine typological parameter — particle languages, verb-echo languages, and languages with both — and shows the echo strategy interacts with polarity in ways `yes` does not. A grammar with only r096 can answer but cannot answer emphatically or contradict a negative question." },
+
+    { "id": "r098", "text": "Who?",
+      "introduces": "reference-failure", "presupposes": ["r093", "r012"],
+      "note": "Detecting that an anaphor in the interlocutor's utterance has no resolvable antecedent, and signalling it. Clark & Wilkes-Gibbs (1986) make reference a collaborative achievement rather than a unilateral act, so failing at it is a normal move rather than an error state. NOT a question about identity: the demand is that the grammar notices its own resolution failed and says so, which makes this the one rung on the ladder where the interesting behaviour is a FAILURE being reported rather than a form being produced." },
+
+    { "id": "r099", "text": "Only the guard was in the storeroom.",
+      "introduces": "focus-particle", "presupposes": ["r024"],
+      "note": "König (1991), `The Meaning of Focus Particles`: restrictive (`only`) and additive (`also`) particles form a small, cross-linguistically stable class whose semantics is quantification over alternatives — which is why this presupposes r024 rather than the information-structure rungs. Scalar particles presuppose additive ones, giving r100." },
+
+    { "id": "r100", "text": "Even the reeve believed him.",
+      "introduces": "scalar-focus", "presupposes": ["r099", "r014"],
+      "note": "König (1991): scalar particles (`even`) are the marked subclass of additive particles, adding an ordering over the alternative set. The implication runs one way — a language with scalar particles has additive ones." },
+
+    { "id": "r101", "text": "That knife, I had seen before.",
+      "introduces": "topicalization", "presupposes": ["r007", "r014"],
+      "note": "Lambrecht (1994) on topic-comment articulation; Li & Thompson (1976) on topic-prominent vs subject-prominent languages, where the difference is precisely whether this construction is marked or basic. A rung whose difficulty depends entirely on which type the tongue is." },
+
+    { "id": "r102", "text": "The guard I believe; the merchant I do not.",
+      "introduces": "contrastive-topic", "presupposes": ["r101", "r013"],
+      "note": "Two topics set against each other, which Büring (2003) argues requires a richer information structure than plain topicalization — a topic plus an implicit question under discussion. Also the register's characteristic move: the witness sorted into believed and not." },
+
+    { "id": "r103", "text": "He did see her.",
+      "introduces": "emphatic-affirmation", "presupposes": ["r096", "r013"],
+      "note": "Verum focus — asserting the polarity itself rather than the content. Höhle (1992) named the phenomenon; the reason it presupposes r013 is that emphatic affirmation and negation frequently share a syntactic slot, and English's do-support serves both." },
+
+    { "id": "r104", "text": "There is a body in the marketplace.",
+      "introduces": "existential", "presupposes": ["r005", "r007"],
+      "note": "Freeze (1992): existential, locative and possessive predication are one construction with different arguments fronted, across a wide typological range — hence the r005 dependency. The definiteness effect (existentials resist definite pivots) is why r007 is also needed: the constraint cannot be stated without the category. Merchant corpus token." },
+
+    { "id": "r105", "text": "Last night, there was a death in the marketplace.",
+      "introduces": null, "presupposes": ["r104", "r049", "r014"],
+      "note": "REUSE/CONTROL RUNG — merchant corpus entry m04, verbatim. Existential, past tense and a fronted temporal adverbial, composed. It is the sentence that opens the whole investigation and it introduces nothing new; that it needs three earlier rungs and no fourth is the finding." },
+
+    { "id": "r106", "text": "The merchant gave the guard a seal.",
+      "introduces": "ditransitive-frame", "presupposes": ["r006", "r007"],
+      "note": "Malchukov, Haspelmath & Comrie (2010) classify ditransitive alignment as indirective, secundative or neutral by how T and P are grouped — the same logic as r006's S/A/P alignment applied one argument up. Three-argument predicates are a genuine step beyond two, not a variant of them." },
+
+    { "id": "r107", "text": "She spoke to the reeve.",
+      "introduces": "oblique-argument", "presupposes": ["r106"],
+      "note": "An argument marked by adposition or oblique case rather than by core alignment. Blake's (2001) case hierarchy — nominative < accusative/ergative < genitive < dative < locative < ablative/instrumental < others — makes the obliques the lower reaches, which is why they follow the core frames." },
+
+    { "id": "r108", "text": "Which gate did he come through?",
+      "introduces": "preposition-stranding", "presupposes": ["r107", "r086"],
+      "note": "A preposition left behind by extraction. Typologically rare and largely confined to Germanic — Riemsdijk (1978) is the classic treatment and Merchant (2001) turns the pattern into a diagnostic for ellipsis sites — so a Hornvale tongue that could not do this would be in respectable company. The alternative, pied-piping the preposition along, is a separate form the generator must also hold, which is what makes this a choice rather than a default." },
+
+    { "id": "r109", "text": "The reeve wrote down the guard's answer.",
+      "introduces": "particle-verb", "presupposes": ["r006", "r014"],
+      "note": "A verb-plus-particle unit whose meaning is not the sum of its parts and whose object may sit on either side of the particle. Dehé et al. (2002) collect the Germanic literature; Los et al. (2012) trace the English construction's history from a separable prefix. The demand is twofold — a lexicon entry spanning two words, and a placement rule applied after it — and seven instances in the flood-watch corpus arrive with no rung at all in the draft." },
+
+    { "id": "r110", "text": "He cut the rope with a knife.",
+      "introduces": "instrumental-adjunct", "presupposes": ["r107"],
+      "note": "Blake (2001)'s hierarchy again; the instrumental sits below the dative. Also the entry point to Stassen's (2000) WITH-family of syncretisms, which r112 depends on." },
+
+    { "id": "r111", "text": "He bought the seal for his brother.",
+      "introduces": "benefactive", "presupposes": ["r107"],
+      "note": "Kittilä & Zúñiga (2010) on benefactive/malefactive marking; frequently syncretic with the dative or the purposive, occasionally with a dedicated applicative. Sibling to r110 rather than a step past it — both hang off r107." },
+
+    { "id": "r112", "text": "She came to the gate with her brother.",
+      "introduces": "comitative", "presupposes": ["r110", "r016"],
+      "note": "Stassen's (2000) AND-languages vs WITH-languages: a large share of the world's languages express NP coordination with the comitative marker, so r016 and this rung are the same morpheme in those tongues and different morphemes in others. Depending on both is how the rung asks which kind Hornvale drew." },
+
+    { "id": "r113", "text": "The merchant fears the reeve.",
+      "introduces": "experiencer-subject", "presupposes": ["r006"],
+      "note": "A psych predicate. Bossong (1998) and Haspelmath (2001) document the dative-experiencer construction as a major areal feature — the experiencer coded as a non-subject, with the stimulus as subject. A language may have no experiencer SUBJECT at all, which is what makes this a demand rather than a lexical matter." },
+
+    { "id": "r114", "text": "The woman was killed.",
+      "introduces": "passive-agentless", "presupposes": ["r006", "r014"],
+      "note": "Keenan & Dryer (2007): the basic passive is a personal passive of a transitive, and agentless passives are MORE widespread than agentful ones — some languages have only the agentless kind. That implication is what orders this before r115 rather than the reverse. Structurally central to the register: the passive is how a report withholds a name." },
+
+    { "id": "r115", "text": "The woman was killed by a guard.",
+      "introduces": "passive-with-agent", "presupposes": ["r114", "r107"],
+      "note": "Restoring the demoted agent as an oblique. Keenan & Dryer (2007): a language with agentful passives has agentless ones, not conversely. The r107 dependency is because the agent phrase IS an oblique." },
+
+    { "id": "r116", "text": "The guard struck out at the crowd.",
+      "introduces": "antipassive", "presupposes": ["r114"],
+      "note": "CANDIDATE FOR OUT-OF-SCOPE. Polinsky (WALS 108) finds antipassives clustered in ergative languages, where they do the work the passive does in accusative ones. If Hornvale's tongues draw accusative alignment, this rung is correctly unreachable for them — and if a tongue draws ergative alignment, it becomes reachable and interesting. A rung whose verdict is a property of the drawn typology rather than of the codebase." },
+
+    { "id": "r117", "text": "The reeve made the guard confess.",
+      "introduces": "causative", "presupposes": ["r006", "r014"],
+      "note": "Comrie's (1989) causative continuum runs lexical > morphological > analytic, and the causee's coding follows the case hierarchy Subject > Direct Object > Indirect Object > Oblique — take the highest slot the base verb leaves free. Two named generalizations for the price of one rung, and both make predictions about how a tongue realizes this." },
+
+    { "id": "r118", "text": "The warden let him go.",
+      "introduces": "permissive-causative", "presupposes": ["r117", "r074"],
+      "note": "Non-coercive causation. Shibatani (1976) and Kulikov (2001) separate factitive from permissive causation, with many languages marking them distinctly and many not; the r074 dependency is because permission is the modal notion the construction encodes." },
+
+    { "id": "r119", "text": "He beat the man senseless.",
+      "introduces": "resultative", "presupposes": ["r117", "r003"],
+      "note": "A secondary predicate naming the state that results. Washio (1997) and Beavers (2008): strong resultatives of this kind are typologically RARE, largely confined to Germanic, and most languages require the result to be lexically entailed by the verb. A good example of a construction English makes look easy and almost nothing else does." },
+
+    { "id": "r120", "text": "The reeve wanted the gate shut.",
+      "introduces": "small-clause-complement", "presupposes": ["r119", "r006"],
+      "note": "A subjectful predication as a verb's complement, with no finite verb of its own. Stowell (1981) argued these are clauses; Williams (1983) argued they are not, and the debate has not closed — which is a good reason for the ladder to name the demand and stay out of the analysis. The generator's problem is the same under either treatment: the object of the matrix verb is the SUBJECT of the embedded predicate." },
+
+    { "id": "r121", "text": "The guard kept his own counsel.",
+      "introduces": "idiom", "presupposes": ["r006", "r007"],
+      "note": "A lexicalized figurative expression. Nunberg, Sag & Wasow (1994) show idioms are not one class — some are decomposable and take internal modification, some are frozen — so the demand on a generator is a lexicon of multi-word entries each with its own syntax, not a phrasebook. Five instances in the flood-watch corpus, one of them with a substituted argument, which is precisely the decomposable case." },
+
+    { "id": "r122", "text": "The Low Quarter is nothing but elbows.",
+      "introduces": "metaphor", "presupposes": ["r121", "r001"],
+      "note": "A figure composed on the spot rather than retrieved. Glucksberg (2001) treats novel metaphor as class-inclusion assertion, which is why this depends on r001 and not only on r121; Lakoff & Johnson (1980) supply the conceptual mappings a generator would have to draw from. DELIBERATELY placed after r121: an idiom lexicon is a far smaller ask and does not reach this at all." },
+
+    { "id": "r123", "text": "The guard drew his knife and the woman ran.",
+      "introduces": "clause-coordination", "presupposes": ["r016", "r014"],
+      "note": "NOT a second use of r016. Haspelmath (2007) and Stassen (2000) both document that clause and NP coordination are frequently marked by different items, and Stassen's WITH-languages coordinate NPs by a means that cannot coordinate clauses at all. Separating the tokens is what lets the corpus record a tongue that has one and not the other." },
+
+    { "id": "r124", "text": "Either the guard is lying or the merchant is.",
+      "introduces": "disjunction", "presupposes": ["r123"],
+      "note": "Mauri (2008) finds disjunctive markers are borrowed far more often than conjunctive ones and are more often absent or periphrastic — evidence that disjunction is the marked member of the pair. The register needs it: a deduction is a disjunction being narrowed." },
+
+    { "id": "r125", "text": "He was at the gate, but he saw nothing.",
+      "introduces": "adversative-coordination", "presupposes": ["r123"],
+      "note": "Mauri (2008) again: adversative markers are the least stable of the three coordination relations and very often derive from other sources (temporal, negative, or a discourse particle). Sibling to r124 under r123." },
+
+    { "id": "r126", "text": "When the bells rang, the guard left the gate.",
+      "introduces": "subordination-temporal", "presupposes": ["r123", "r049"],
+      "note": "Kortmann (1997) shows adverbial subordinators are diachronically and semantically anchored in the TEMPORAL domain, from which causal, conditional and concessive uses develop by well-attested extension. That makes this the root of the whole r126–r134 adverbial-subordination branch, and the ordering there is an attested cline rather than a preference." },
+
+    { "id": "r127", "text": "He left because the bells rang.",
+      "introduces": "subordination-causal", "presupposes": ["r126"],
+      "note": "Kortmann (1997): causal subordinators very commonly derive from temporal ones — English `since` and `as` carry both senses simultaneously, which is the extension caught mid-act. The dependency direction is the attested one." },
+
+    { "id": "r128", "text": "He went to the shrine to find her brother.",
+      "introduces": "subordination-purpose", "presupposes": ["r127", "r075"],
+      "note": "Cristofaro (2003) places purpose clauses among the more tightly integrated (deranked) adverbial clauses, and Schmidtke-Bode (2009) surveys the same. Depends on r075 because purpose is desire projected onto an event — the semantic content the construction encodes." },
+
+    { "id": "r129", "text": "He answered, though he was afraid.",
+      "introduces": "subordination-concessive", "presupposes": ["r127", "r125"],
+      "note": "Kortmann (1997) finds concessive subordinators the LATEST-developing and least frequent adverbial category, built from causal, conditional or adversative sources — hence both dependencies. König (1988) on the concessive's semantic complexity: it asserts both clauses and denies a normally-expected incompatibility." },
+
+    { "id": "r130", "text": "He spoke as a guilty man speaks.",
+      "introduces": "subordination-manner", "presupposes": ["r126"],
+      "note": "Manner clauses. Often the same subordinator as the temporal (`as`), which is why this hangs directly off r126; Kortmann (1997) records the syncretism as widespread." },
+
+    { "id": "r131", "text": "If the guard lied, the reeve will know.",
+      "introduces": "conditional-real", "presupposes": ["r126"],
+      "note": "The base of Comrie's (1986) and Traugott et al.'s (1986) HYPOTHETICALITY CONTINUUM: reality conditionals < hypothetical < counterfactual, with each step more marked than the last and no attested language having the marked end without the unmarked. This is the single most useful ordering claim in this section, and r131–r134 are its steps." },
+
+    { "id": "r132", "text": "If he had a seal, he could pass the gate.",
+      "introduces": "conditional-hypothetical", "presupposes": ["r131", "r072"],
+      "note": "Comrie's continuum, second step. Depends on r072 because the apodosis of a hypothetical is characteristically modal." },
+
+    { "id": "r133", "text": "If she had stayed home, she would be alive.",
+      "introduces": "conditional-counterfactual", "presupposes": ["r132", "r014"],
+      "note": "The far end of Comrie's (1986) continuum. Structurally the hardest: counterfactuality is very often signalled by a TENSE MISMATCH — a past form doing modal work — rather than by a dedicated marker (Iatridou 2000 on the `exclusion feature` of fake past). A graded course reaches this last, and so does this ladder's conditional branch." },
+
+    { "id": "r134", "text": "Even if he confesses, the warden will not free him.",
+      "introduces": "concessive-conditional", "presupposes": ["r133", "r129"],
+      "note": "Haspelmath & König (1998) classify concessive conditionals as scalar, alternative or universal; all three combine the conditional and concessive semantics, so both dependencies are real. The last and most marked member of the whole adverbial branch." },
+
+    { "id": "r135", "text": "He will not pass unless the warden signs the seal.",
+      "introduces": "negative-conditional", "presupposes": ["r131", "r013"],
+      "note": "An `unless` clause. Von Fintel (1992) analyses it as an EXCEPTIVE rather than as the negation of `if`, and the two come apart exactly where they are most often confused. Comrie (1986) puts conditional marking among the more heterogeneous constructions cross-linguistically, so a language with r131 is not guaranteed this one. Placed after r134 so as not to interrupt the r131–r134 cline, which this token is not a step on." },
+
+    { "id": "r136", "text": "The more he talks, the less I believe him.",
+      "introduces": "correlative", "presupposes": ["r131", "r044"],
+      "note": "A comparative correlative — two clauses covarying, with no ordinary subordinator. Den Dikken (2005) and Culicover & Jackendoff (1999) treat it as a construction that resists compositional analysis; it is typologically restricted and structurally sui generis, which makes it a good stress test rather than a routine rung." },
+
+    { "id": "r137", "text": "He was so afraid that he could not speak.",
+      "introduces": "degree-result", "presupposes": ["r119", "r126"],
+      "note": "A degree expression with a result clause. Combines the resultative semantics of r119 with clausal subordination; Meier (2003) on result clauses and their modal flavour. Frequent in testimony, where a degree is offered as the explanation for a failure to act." },
+
+    { "id": "r138", "text": "He knows more than he admits.",
+      "introduces": "comparative-clause", "presupposes": ["r044", "r123"],
+      "note": "A CLAUSAL standard of comparison, as against r044's phrasal one. Stassen (1985) notes that clausal standards are the marked option and that many languages permit only a phrasal standard — a real implication, not a preference. Also the register's core move: the deduction that a witness is holding something back." },
+
+    { "id": "r139", "text": "If she did not see him, she cannot name him.",
+      "introduces": null, "presupposes": ["r131", "r013", "r012", "r072"],
+      "note": "REUSE/CONTROL RUNG. Conditional, negation, third-person anaphora and an ability modal, composed. No new demand. The whole shape of a deduction, assembled entirely from rungs already on the ladder — and worth a tripwire because negation INSIDE a conditional protasis is where many grammars behave irregularly." },
+
+    { "id": "r140", "text": "I know that the guard lied.",
+      "introduces": "embedded-clause", "presupposes": ["r123"],
+      "note": "A finite complement clause. Givón's (1980) binding hierarchy and Cristofaro's (2003) deranking hierarchy both order complements by how tightly the main predicate binds them: phasal (r061/r062) most tightly, then manipulation and perception, with COGNITION and UTTERANCE complements loosest and most sentence-like. That is why the phasal rungs came thirty rungs earlier and this one sits here. Merchant corpus token." },
+
+    { "id": "r141", "text": "He said he was at the gate all night.",
+      "introduces": "zero-complementizer", "presupposes": ["r140"],
+      "note": "A complement clause with no overt complementizer. Thompson & Mulac (1991) show the omission is conditioned — by matrix verb, subject person and complexity — rather than free, and Rohdenburg (1996) generalizes it as the complexity principle: the more processing pressure, the more explicit the form. So the demand is not `may drop that` but a choice with a rule behind it. Twelve instances in the flood-watch corpus, which carries both strategies for one construction in two different mouths." },
+
+    { "id": "r142", "text": "He said that he was at the gate.",
+      "introduces": "complement-utterance", "presupposes": ["r140"],
+      "note": "Noonan (1985) treats utterance predicates as the loosest complement type, taking the most fully finite complement available. This is the base of the whole reported-speech branch at r177ff." },
+
+    { "id": "r143", "text": "He said that he was at the gate. He said he was at the gate.",
+      "introduces": null, "presupposes": ["r141", "r142"],
+      "note": "REUSE/CONTROL RUNG. One construction, both strategies, side by side; no new demand. The flood-watch corpus carries this same pair in two mouths and preserved it rather than normalizing it. The ladder's version makes the alternation a tripwire, because a generator that has collapsed to a single strategy will still resolve r141 and r142 separately and look healthy." },
+
+    { "id": "r144", "text": "I saw him leave the marketplace.",
+      "introduces": "complement-perception", "presupposes": ["r140", "r051"],
+      "note": "Perception complements are characteristically DERANKED — non-finite, participial, or a small clause (Cristofaro 2003; Dik & Hengeveld 1991 on the several readings a perception complement can carry). The r051 dependency is because the complement is aspectually ongoing." },
+
+    { "id": "r145", "text": "He wants to speak to the reeve.",
+      "introduces": "infinitival-complement", "presupposes": ["r140", "r075"],
+      "note": "Subject control: the infinitive's understood subject is the matrix subject. Givón's (1980) binding hierarchy puts equi-subject complements at the tight end of the scale, more integrated than the object-control cases at r146 and far more integrated than a finite complement; Noonan (1985) makes the same cut in his complement-type survey. Distinct from r146, which the draft had and which is the object-control half." },
+
+    { "id": "r146", "text": "The reeve ordered him to open the cart.",
+      "introduces": "complement-manipulation", "presupposes": ["r117", "r140"],
+      "note": "Manipulative predicates. Givón (1980): the more the main verb manipulates the complement's subject, the more tightly bound the complement — so these sit between the phasal and utterance ends. The r117 dependency records that manipulation is causation with a linguistic instrument." },
+
+    { "id": "r147", "text": "He regrets that he spoke.",
+      "introduces": "factive-complement", "presupposes": ["r140"],
+      "note": "Kiparsky & Kiparsky (1970) on factivity: the complement of a factive predicate is presupposed true and survives negation of the main clause — `he does not regret that he spoke` still commits the speaker to his having spoken. That survival-under-negation is the demand, and it is a semantic one the syntax must not destroy." },
+
+    { "id": "r148", "text": "I don't know why he killed her.",
+      "introduces": "indirect-question", "presupposes": ["r140", "r085"],
+      "note": "Merchant corpus entry m06, verbatim. An embedded content question needs both complementation and the interrogative word inventory, and many languages use a distinct complementizer or word order for the embedded case. The merchant corpus tags this entry `negation + embedded-clause + pronoun-reference + epistemic-hedge` and never names the embedded INTERROGATIVE at all — one of the hand-labelling under-descriptions this ladder's derived-demand structure exists to prevent." },
+
+    { "id": "r149", "text": "You would be surprised how much a gate-guard hears.",
+      "introduces": "exclamative", "presupposes": ["r080", "r148"],
+      "note": "An exclamative complement, which ASSERTS a degree where r089 asks for one. Zanuttini & Portner (2003) derive the type from factivity plus scalar widening, which is why it depends on r080 — the speaker's surprise is presupposed rather than stated — and on r148 for the embedded wh-clause whose shape it borrows. Michaelis (2001) surveys the wider construction family." },
+
+    { "id": "r150", "text": "Where do you think he was that night?",
+      "introduces": "long-distance-extraction", "presupposes": ["r148", "r086"],
+      "note": "A wh-phrase questioned out of an embedded clause across a matrix verb. Ross (1967) mapped the islands that block it and Chomsky (1977) argued the legal cases proceed successive-cyclically; either way the demand is that a generator can move a constituent an unbounded distance and a parser can undo it. DELIBERATELY after r148: a grammar that cannot embed a question at all cannot extract from one." },
+
+    { "id": "r151", "text": "The killing of the woman is the reeve's business.",
+      "introduces": "nominalization", "presupposes": ["r140"],
+      "note": "Comrie & Thompson (1985): action nominals are the commonest derived nominal type, and Koptjevskaja-Tamm (1993) shows the argument-marking strategies inside them follow a small typology. A clause turned into an argument — which is the same job r140 does by subordination, done morphologically instead, and languages differ in which they prefer." },
+
+    { "id": "r152", "text": "The man who found her is a salt-seller.",
+      "introduces": "relative-clause-subject", "presupposes": ["r007", "r140"],
+      "note": "Keenan & Comrie's (1977) NOUN PHRASE ACCESSIBILITY HIERARCHY — subject > direct object > indirect object > oblique > genitive > object of comparison — is the sharpest implicational universal available for this ladder: if a language can relativize ANY position it can relativize the subject, and any language relativizing a position can relativize every position above it. r152–r156 are that hierarchy, in order, and the implications run strictly downward." },
+
+    { "id": "r153", "text": "The woman the guard killed had no name here.",
+      "introduces": "relative-clause-object", "presupposes": ["r152"],
+      "note": "NPAH position two. A language relativizing direct objects also relativizes subjects (Keenan & Comrie 1977), never the reverse." },
+
+    { "id": "r154", "text": "The gate she came through was barred.",
+      "introduces": "relative-clause-oblique", "presupposes": ["r153", "r107"],
+      "note": "NPAH position four (indirect object collapsed in for a language with no distinct one). The cut-off point for a great many languages, which is why the rungs below this are increasingly plausible stopping places rather than gaps." },
+
+    { "id": "r155", "text": "The man whose cart was searched will not speak.",
+      "introduces": "relative-clause-genitive", "presupposes": ["r154", "r019"],
+      "note": "NPAH position five. Keenan & Comrie (1977) find many languages that relativize obliques cannot relativize genitives, so this is a REASONABLE stopping point and a candidate for out-of-scope with a reason rather than a build-next item." },
+
+    { "id": "r156", "text": "There is one man in this city he fears more than the reeve.",
+      "introduces": "relative-clause-object-of-comparison", "presupposes": ["r155", "r044"],
+      "note": "DELIBERATELY OUT OF REACH. The bottom of the NPAH: relatively few languages in Keenan & Comrie's sample relativize the object of comparison at all, and it is the position most often requiring a resumptive strategy. A ladder that stopped before this would not know where its own ceiling was." },
+
+    { "id": "r157", "text": "There's a man in the Low Quarter that nobody knows what his name is.",
+      "introduces": "resumptive-pronoun", "presupposes": ["r154", "r012"],
+      "note": "The sentence is deliberately colloquial rather than edited English, because that is where English resumptives actually live. Keenan & Comrie (1977): the LOW positions of the accessibility hierarchy are relativized by a resumptive-pronoun strategy in language after language — so a tongue may reach r154 or r155 only by this route, and the strategy is the thing to build rather than the position." },
+
+    { "id": "r158", "text": "The seal he carried was broken.",
+      "introduces": "zero-relativizer", "presupposes": ["r153"],
+      "note": "A relative clause with no relativizer. Keenan & Comrie (1977) treat the GAP strategy as distinct from the relative-pronoun strategy, and their hierarchy predicts the constraint English shows: the bare gap is available for objects and obliques but not for subjects. That is why this depends on r153 and not on r152 — the subject case is where the strategy is UNAVAILABLE, not where it begins. Five instances in the flood-watch corpus." },
+
+    { "id": "r159", "text": "It is the first thing he has given me that I can check.",
+      "introduces": null, "presupposes": ["r158", "r152", "r023"],
+      "note": "REUSE/CONTROL RUNG, AND THE ANNOTATOR'S THIRD UNCERTAINTY RESOLVED. Two relative clauses stacked on one head, the first of them with no relativizer. The question was whether stacking is its own demand. It is not: it is a CONFIGURATION of demands the ladder already carries, which is exactly what a control rung is for — and the ladder gains a free tripwire instead of a token that would have to be defined by an arrangement rather than by a capability. If this stops resolving while every dependency still resolves, modifier recursion on a single head has broken." },
+
+    { "id": "r160", "text": "Whoever opened the cart left the seal broken.",
+      "introduces": "headless-relative", "presupposes": ["r152"],
+      "note": "A relative with no head noun. Caponigro (2003) and Citko (2004) on free relatives; typologically these often use a distinct pronoun series from headed relatives, so the construction is not simply r152 with a deletion. The register's use is exact: naming an act whose agent is unknown." },
+
+    { "id": "r161", "text": "The reeve, who had questioned him twice, said nothing.",
+      "introduces": "non-restrictive-relative", "presupposes": ["r152"],
+      "note": "A SKIPPED CONSTRUCTION, found by asking what the corpus's `detached-relative` could possibly depend on. Every relative rung the draft carried is restrictive. Potts (2005) shows supplements contribute NOT-AT-ISSUE content — they cannot be denied by a plain `no`, and they project out of questions and conditionals — so this is a semantic demand and not a punctuation convention; Huddleston & Pullum (2002) and Cinque (2008) both keep the two types structurally apart." },
+
+    { "id": "r162", "text": "He came back by the sluice road. Which is the long way.",
+      "introduces": "detached-relative", "presupposes": ["r161"],
+      "note": "A supplementary relative punctuated as its own sentence, its head in the previous one — or, at the flood-watch corpus's s3-u13, in the OTHER SPEAKER's previous turn, where the accusation is delivered entirely by the attachment and nothing is asserted. Potts (2005) already gives the semantics; what this rung adds is that the attachment site can be outside the sentence and outside the speaker, which no rung above it permits." },
+
+    { "id": "r163", "text": "There is only one way to reach the shrine.",
+      "introduces": "infinitival-relative", "presupposes": ["r152", "r145"],
+      "note": "A non-finite clause modifying a noun. Comrie (1998) argues non-finite relativization is a strategy in its own right rather than a reduction of the finite one, and that it interacts with the accessibility hierarchy differently. Distinct from the ladder's infinitival PURPOSE adjunct at r128, which modifies a clause rather than a noun." },
+
+    { "id": "r164", "text": "It was the guard who struck her.",
+      "introduces": "cleft-focus", "presupposes": ["r152", "r101"],
+      "note": "A biclausal focus device, presupposing BOTH relativization and an information-structural focus/topic distinction — which is why every graded course reaches it late and why this rung sits where it does rather than beside r099. Lambrecht (2001) on cleft typology; many languages have no cleft and use morphological focus instead." },
+
+    { "id": "r165", "text": "Nobody will say who let him through the gate.",
+      "introduces": null, "presupposes": ["r031", "r160", "r059"],
+      "note": "REUSE/CONTROL RUNG. A negative indefinite subject, a future, and an embedded headless interrogative — composed, no new demand. The tripwire is that a negative indefinite in subject position frequently interacts with the embedded clause's polarity, and if that composition breaks it breaks silently." },
+
+    { "id": "r166", "text": "The reeve questioned the guard, and the warden the merchant.",
+      "introduces": "ellipsis", "presupposes": ["r123"],
+      "note": "THE GENERAL TOKEN, REVISED AT THE RENUMBERING. The draft's rung was a fragment answer and called it `ellipsis`, which is the under-description the flood-watch corpus then inherited: it used `ellipsis` in the general sense of any material recoverable from context, forty-one times, with the specific kinds hidden inside it. The general demand is that material present in the syntax may go unpronounced when it is recoverable. Ross (1970) showed the direction of GAPPING correlates with basic word order, one of the older word-order universals still standing, which is why gapping and not a fragment is now the example; the fragment answer is split out to r167 and the narrower kinds follow it." },
+
+    { "id": "r167", "text": "Who was at the gate? Stewie and Frank.",
+      "introduces": "fragment-answer", "presupposes": ["r166", "r096"],
+      "note": "A SPLIT OFF r166, and the draft's original rung text. Merchant (2004) treats fragment answers as ellipsis under a focus condition, LICENSED BY A QUESTION — the property that separates them from every other kind below, and the property the flood-watch corpus's s3-u19 note says would have been wrong to assume there. A grammar that can only elide under a question antecedent can answer but cannot speak in fragments unprompted." },
+
+    { "id": "r168", "text": "Saw nothing. Heard nothing.",
+      "introduces": "subject-ellipsis", "presupposes": ["r166"],
+      "note": "A dropped subject recoverable from context, in a language that otherwise requires one. Huang (1984) separates radical topic-drop languages from agreement-licensed pro-drop; Haegeman (1990) documents the English REGISTER case — diary and note style — which is what a terse witness sounds like. The demand is register-conditioned omission, not a pro-drop parameter, and eight instances in the flood-watch corpus arrive with no such rung in the draft." },
+
+    { "id": "r169", "text": "The merchant paid the toll. The guard did not.",
+      "introduces": "vp-ellipsis", "presupposes": ["r166", "r072"],
+      "note": "A verb phrase elided under a stranded auxiliary. Sag (1976) and Hankamer & Sag (1976) class it as SURFACE anaphora, requiring a linguistic antecedent of the right shape — unlike the deep anaphora at r170 — and Lobeck (1995) makes the licensing head the reason it is largely confined to languages with auxiliaries. That last point is the dependency on r072: the modal is the stranding site." },
+
+    { "id": "r170", "text": "I asked him where he had been. He did not say.",
+      "introduces": "null-complement-anaphora", "presupposes": ["r166", "r140"],
+      "note": "A complement omitted entirely with the verb present, distinct from pronominalizing it. Hankamer & Sag (1976) class it as DEEP anaphora — it needs no linguistic antecedent and can be resolved from the situation — and Depiante (2000) shows it is lexically governed: individual verbs allow it and their near-synonyms do not. It is therefore a lexical demand wearing a syntactic shape, which is why it does not fall out of r169." },
+
+    { "id": "r171", "text": "A dead woman in the marketplace, and the gate open all night.",
+      "introduces": "verbless-clause", "presupposes": ["r001", "r003"],
+      "note": "A predication with no finite verb anywhere, NOT recoverable from a preceding question — so not answer ellipsis, and DELIBERATELY not placed under r166. Stassen (1997) and Hengeveld (1992) both treat zero-copula predication as a strategy in its own right, the ordinary present-tense form in a great many languages, rather than as something deleted. Twenty-eight instances in the flood-watch corpus, the largest minted count after the input-surface tokens: fragmentary dialogue is built out of these, and filing them under ellipsis would repeat the under-description this revision exists to undo." },
+
+    { "id": "r172", "text": "The guard lied, and so did the merchant.",
+      "introduces": "so-inversion", "presupposes": ["r169", "r086"],
+      "note": "`so` plus do-support plus subject-auxiliary inversion, standing in for a whole verb phrase. It depends on r169 for the anaphora and on r086 for the inversion, which is the only other place on this ladder an auxiliary moves — a clean illustration of why this file is a DAG rather than a line: two unrelated branches meet at one rung." },
+
+    { "id": "r173", "text": "That is not what he told me.",
+      "introduces": "discourse-anaphora", "presupposes": ["r012", "r140"],
+      "note": "Anaphora to a PROPOSITION rather than to an entity — `that` picking up a preceding clause. Asher (1993) on abstract-object anaphora; a different resolution problem from r012's entity anaphora, because the antecedent is not an NP anywhere in the discourse." },
+
+    { "id": "r174", "text": "The reeve wanted a witness. The warden found one.",
+      "introduces": "one-anaphora", "presupposes": ["r173", "r030"],
+      "note": "The nominal pro-form `one` standing for an earlier noun phrase. Baker (1978) and Jackendoff (1977) used its antecedent possibilities as the classic argument for an intermediate nominal constituent — `one` replaces the noun together with its complements but not its determiner — so the demand is that the generator has that constituent available to point at." },
+
+    { "id": "r175", "text": "Was he at the gate? I did not think so.",
+      "introduces": "propositional-anaphora", "presupposes": ["r173", "r166"],
+      "note": "`so` as a pro-form for a whole proposition. Asher (1993) treats abstract-object anaphora as a different resolution problem from entity anaphora, which is already why r173 exists; what this adds is a dedicated pro-FORM rather than a demonstrative, and its commonest English environment is under a neg-raising verb (Horn 1989), where a negation in the matrix is understood in the complement." },
+
+    { "id": "r176", "text": "Alone on the shrine road, newly taught the gate's working, and carrying something long.",
+      "introduces": null, "presupposes": ["r171", "r038", "r037", "r040"],
+      "note": "REUSE/CONTROL RUNG. Three predicates stacked over an unstated subject with no finite verb anywhere. No new demand: r171 supplies the missing verb, r038 and r037 the stacking, r040 the juxtaposition. The flood-watch corpus's s3-u19 has this shape and delivers an accusation without ever asserting one, which is a fact about the register rather than about the grammar. It is worth a tripwire because each dependency can resolve alone while the stack does not." },
+
+    { "id": "r177", "text": "The merchant said, 'I was in my stall all night.'",
+      "introduces": "direct-quotation", "presupposes": ["r142"],
+      "note": "Güldemann (2008), `Quotative Indexes in African Languages`, documents direct quotation as the diachronic SOURCE of indirect reported speech and of a great deal else besides — complementizers, evidentials, purpose markers. Direct precedes indirect on that path, which orders this before r178." },
+
+    { "id": "r178", "text": "He said he had been in his stall all night.",
+      "introduces": "reported-speech", "presupposes": ["r177", "r012"],
+      "note": "Indirect speech, with the deictic shift direct quotation does not require: person and tense recentred on the REPORTING speaker. That shift is the demand — Coulmas (1986) and Güldemann (2008) both note languages that have no indirect strategy at all and quote everything directly." },
+
+    { "id": "r179", "text": "She told the reeve that she had not seen him that night.",
+      "introduces": "sequence-of-tense", "presupposes": ["r178", "r055"],
+      "note": "CANDIDATE FOR OUT-OF-SCOPE. Consecutio temporum is a LANGUAGE-PARTICULAR rule, not a universal: Comrie (1986) and Ogihara (1996) describe languages (Japanese, Russian, Hebrew) that keep the original tense of the reported utterance unchanged. Declining this rung is a legitimate typological choice for a tongue, not a gap." },
+
+    { "id": "r180", "text": "I saw it myself — the guard struck her.",
+      "introduces": "evidential-witness", "presupposes": ["r076", "r014"],
+      "note": "Aikhenvald (2004): the minimal attested evidential system is a two-term firsthand/non-firsthand split, and a direct/witnessed term is present in EVERY system that grammaticalizes evidentiality at all. That makes this the entry point of the whole evidential branch. `domains/language`'s `Evidential::Witnessed` already exists, so this rung has a named counterpart in code." },
+
+    { "id": "r181", "text": "They say the guard was paid.",
+      "introduces": "evidential-hearsay", "presupposes": ["r180", "r178"],
+      "note": "Aikhenvald (2004): the reported/hearsay value is the single most widespread evidential meaning in the world's languages, and it is what a two-term system's non-firsthand member usually covers. Depends on r178 because reportative evidentials very commonly grammaticalize OUT of a `say` verb (Güldemann 2008). The register's whole substance is hearsay." },
+
+    { "id": "r182", "text": "He must have come over the wall — the gate was barred all night.",
+      "introduces": "evidential-inference", "presupposes": ["r181", "r077"],
+      "note": "Aikhenvald (2004) places inferred/assumed values in three-term and larger systems (her types B and C), rarely in two-term ones — so this follows r181 by an attested implication. `domains/language` defines `Evidential::Inferred` and its own doc comment calls it floor-unreachable, no readout path constructing it: a rung with an exact, already-documented counterpart in the codebase's gap list." },
+
+    { "id": "r183", "text": "Who says the guard was paid?",
+      "introduces": "evidential-scope", "presupposes": ["r181", "r095"],
+      "note": "DELIBERATELY OUT OF REACH. Faller (2002) on Cuzco Quechua uses questionability as the diagnostic for whether an evidential is propositional (part of what is asserted, hence questionable and deniable) or illocutionary (a modifier of the speech act, hence neither). Getting this right requires the grammar to have a position on the semantics/pragmatics boundary, which is a research question, not a feature." },
+
+    { "id": "r184", "text": "Frank told me that Stewie heard it from the gate-guard.",
+      "introduces": "attribution-chain", "presupposes": ["r181"],
+      "note": "DELIBERATELY OUT OF REACH — probably. Nested reported speech where each layer keeps its OWN evidential source, so the utterance carries a chain of custody rather than a single origin. Aikhenvald (2004) discusses evidentials under evidentials; the constructions are attested but the bookkeeping is severe. This is exactly the shape an investigation's testimony takes, which makes it the most valuable out-of-reach rung on the ladder." },
+
+    { "id": "r185", "text": "Somebody said — I don't know who — that she owed money in the Low Quarter.",
+      "introduces": null, "presupposes": ["r030", "r181", "r076"],
+      "note": "REUSE/CONTROL RUNG. An indefinite source, a hearsay evidential and a hedge, composed. No new demand. A tripwire on whether an unspecified source survives the reportative construction, which is a place a grammar can quietly require a named speaker." },
+
+    { "id": "r186", "text": "Those were his words, not mine.",
+      "introduces": "metalinguistic-reference", "presupposes": ["r177", "r021"],
+      "note": "Talking about the FORM of an utterance — whose words they were, how it was phrased — rather than about its content. The use/mention distinction is Quine's (1940); Clark & Gerrig (1990) analyse quotation as DEMONSTRATION, which is the version a generator needs, because a demonstrated utterance has to be reproduced accurately enough to be recognized as the one being demonstrated. Ten instances in the flood-watch corpus, in a register where who said what is the whole subject." },
+
+    { "id": "r187", "text": "The guard and the merchant cannot both be telling the truth.",
+      "introduces": "contradiction-assertion", "presupposes": ["r184", "r013"],
+      "note": "Asserting that two ATTRIBUTED propositions cannot both hold — a claim about the account set, not about the world. Stalnaker (1978) supplies the common ground this operates on and Farkas & Bruce (2010) model the commitment sets it compares. It depends on r184 because the demand is only interesting once propositions are tagged with who said them; without that it is ordinary negation." },
+
+    { "id": "r188", "text": "I said that. I should not have.",
+      "introduces": "retraction", "presupposes": ["r178", "r013"],
+      "note": "A speaker withdrawing or downgrading their own earlier assertion. Schegloff, Jefferson & Sacks (1977) put self-repair at the head of the repair preference ordering — speakers overwhelmingly correct themselves rather than being corrected — and Farkas & Bruce (2010) model the commitment-set update it performs. A world whose characters can only add to the record cannot have one change its mind." },
+
+    { "id": "r189", "text": "I never said that.",
+      "introduces": "negative-temporal-adverbial", "presupposes": ["r013", "r049", "r178"],
+      "note": "`Never` is a negative TEMPORAL indefinite, and Haspelmath (1997) includes the temporal series in the same implicational map as the pronominal one at r030/r031 — the functions and the connectedness constraint carry over. Distinct from r013 (which negates a proposition) and from r031 (which negates a participant); this negates every occasion. The denial is the register's most-used single sentence." },
+
+    { "id": "r190", "text": "You killed her.",
+      "introduces": null, "presupposes": ["r006", "r011", "r014"],
+      "note": "REUSE/CONTROL RUNG — the accusation. A transitive, a second-person agent and past tense, composed. Deliberately NOT a token: accusation is a speech ACT, not a grammatical category, and inventing an `accusation-frame` token would have been exactly the kind of backlog-shaped label this corpus is built to avoid. The grammar's part of an accusation is three rungs it already has; the rest is the world." },
+
+    { "id": "r191", "text": "He says he never said that.",
+      "introduces": null, "presupposes": ["r189", "r181", "r178"],
+      "note": "REUSE/CONTROL RUNG. A denial reported at one remove — negation inside a reported clause with a present-tense reporting frame. No new demand, and a sharp tripwire: this is where sequence-of-tense (r179), deictic shift (r178) and negation scope can each silently break without any of their own rungs failing." },
+
+    { "id": "r192", "text": "Would the reeve hear a word from me?",
+      "introduces": "politeness-register", "presupposes": ["r068", "r011"],
+      "note": "Brown & Levinson (1987): negative politeness realized as indirectness — questioning the addressee's ability or willingness instead of issuing the directive — is very widely attested, though how far it grammaticalizes varies enormously. The r068 dependency is because the underlying act is still a directive." },
+
+    { "id": "r193", "text": "My lord warden, the cart is searched.",
+      "introduces": "honorific-address", "presupposes": ["r192", "r041"],
+      "note": "Grammaticalized honorific systems (Japanese, Korean, Javanese, Thai) are areally clustered rather than universal; Agha (1994) and Shibatani (2006) survey the range from a T/V pronoun split to full referent and addressee honorifics. `domains/language` has a `register.rs`, so this is nearer than its position suggests — worth checking rather than assuming." },
+
+    { "id": "r194", "text": "Could you tell me where she was last night?",
+      "introduces": "indirect-request", "presupposes": ["r192", "r083", "r148"],
+      "note": "A conventionalized indirect speech act: syntactically a polar question about ability, illocutionarily a request, with an embedded interrogative as its object. Searle (1975) on indirect speech acts; the conventionalization is language-specific and does not translate, which is what makes it a demand rather than a pragmatic afterthought." },
+
+    { "id": "r195", "text": "I would rather not say.",
+      "introduces": null, "presupposes": ["r192", "r076", "r013"],
+      "note": "REUSE/CONTROL RUNG. Politeness, a hedge and negation, composed into a refusal that names no reason. No new demand — and it is the single most useful thing an evasive witness can say, which is the point: the register's best lines are recombinations of rungs the ladder already has." },
+
+    { "id": "r196", "text": "How's it going?",
+      "introduces": "greeting-formula", "presupposes": ["r011", "r083"],
+      "note": "Merchant corpus entry m01, verbatim, and the corpus's own first line. Graded courses open with formulae precisely because they are learned WHOLE, before any grammar that could generate them — Pawley & Syder (1983) on formulaic sequences and native-like selection. A rung that may be satisfiable by a lookup table, which is worth knowing explicitly: the merchant corpus tags m01 `wh-question`, and that hand-label under-describes it in one direction and over-describes it in another." },
+
+    { "id": "r197", "text": "I am sorry for your loss.",
+      "introduces": "condolence-formula", "presupposes": ["r196"],
+      "note": "A fixed sympathy expression, sibling to r196. Coulmas (1981) treats routine formulae as a class defined by their situational anchoring rather than their form — the words are selected, not composed — and the situations are language-specific, which is the part a generated tongue would have to draw. The demand is a formula inventory keyed to occasions, of which greeting is only the most obvious occasion." },
+
+    { "id": "r198", "text": "So the guard was there after all.",
+      "introduces": "discourse-connective", "presupposes": ["r127", "r125"],
+      "note": "A connective operating BETWEEN utterances rather than within a sentence — Schiffrin (1987) on discourse markers, Blakemore (1987) on procedural meaning. Depends on r127 and r125 because discourse connectives overwhelmingly derive from clause-level causal and adversative subordinators, drifting outward as their scope widens." },
+
+    { "id": "r199", "text": "The gate was barred. I barred it myself, at the tenth hour. Nobody passed.",
+      "introduces": "multi-sentence-turn", "presupposes": ["r198"],
+      "note": "A turn that is more than one sentence. Named because Hornvale's grammar produces CLAUSES and most of the flood-watch corpus's NPC lines are paragraphs — thirty-eight of them, the largest minted count outside the input surface. Sacks, Schegloff & Jefferson (1974) make the turn-constructional unit rather than the sentence the unit of conversation, and one turn may hold several; Chafe (1994) arrives at the same place from intonation units. The demand is planning ACROSS sentence boundaries: what to make definite, what to pronominalize, and where to stop." },
+
+    { "id": "r200", "text": "Stewie, Frank, and Doug were all there when it happened.",
+      "introduces": "witness-set", "presupposes": ["r017", "r022", "r126", "r014"],
+      "note": "The merchant corpus's own token, and the least standard one on this ladder — it names a DISCOURSE demand rather than a construction: a plural set of named individuals anchored to an event, such that the set can later be quantified over, subtracted from, or asked about. Kept rather than renamed, because forking it into something more orthodox would break comparability with the merchant corpus for no gain. Merchant corpus token." },
+
+    { "id": "r201", "text": "Did anyone else see this?",
+      "introduces": null, "presupposes": ["r200", "r095", "r030"],
+      "note": "REUSE/CONTROL RUNG — merchant corpus entry m11, verbatim. A witness set, a polar question and an indefinite pronoun with `else` subtracting the already-named members. No new demand. The merchant corpus tags it `polar-question + witness-set` and never accounts for `anyone else` at all — the second of the hand-labelling under-descriptions this structure exists to prevent." },
+
+    { "id": "r202", "text": "Nobody said anything at all.",
+      "introduces": "negative-polarity-item", "presupposes": ["r013", "r030", "r083"],
+      "note": "Items licensed only in negative or interrogative environments. Klima (1964) established the class, Ladusaw (1979) reduced the licensing condition to downward entailment, and Horn (1989) situates it in the wider scalar picture — which is why the dependency includes r083 and not only r013: the question is a licensor too, and a generator that keys `any` to negation alone will produce the wrong form in half its questions. Haspelmath's (1997) indefinite pronoun map makes the same environments a cross-linguistic template." },
+
+    { "id": "r203", "text": "I didn't steal it — I took what was owed me.",
+      "introduces": "metalinguistic-negation", "presupposes": ["r013", "r177"],
+      "note": "DELIBERATELY OUT OF REACH. Horn (1989): metalinguistic negation objects to the APTNESS of a previous utterance — its word choice, register, or implicature — rather than to its truth, and is diagnosed by its failure to license negative polarity items. It requires the grammar to negate a token of speech rather than a proposition, which is a different object entirely." },
+
+    { "id": "r204", "text": "Some of the guards were paid.",
+      "introduces": "scalar-implicature", "presupposes": ["r025", "r099"],
+      "note": "DELIBERATELY OUT OF REACH, and arguably out of scope for a grammar-shaped resolver altogether. The demand is that `some` conveys `not all` — Grice (1975), Horn (1972) on quantity scales. Nothing in the syntax carries it; it is derived by reasoning about what the speaker did not say. A resolver that scored this as covered would be claiming a pragmatic inference engine." },
+
+    { "id": "r205", "text": "He was at the gate. I did not say he stayed there.",
+      "introduces": "conversational-implicature", "presupposes": ["r204", "r198"],
+      "note": "Meaning carried by what is deliberately NOT said, including a speaker pre-empting or cancelling an inference. Grice (1975) is the origin and Levinson (2000) the systematic treatment; r204 is the one sub-case the draft already had, which is why it sits below. Twenty-five instances make this the most common minted demand in the flood-watch corpus, which is unsurprising in a register where nobody says the accusation out loud." },
+
+    { "id": "r206", "text": "You think a great deal, for a man who was not there.",
+      "introduces": "irony", "presupposes": ["r205"],
+      "note": "An utterance whose intended force INVERTS its literal content. KEPT AS A SEPARATE TOKEN despite being perfectly collinear with r205 in the flood-watch corpus — all eight of its sites carry both. The collinearity is a PREDICTION rather than a coincidence: Grice (1975) derives irony as a flouting of the maxim of Quality, making it a species of implicature, so containment is what the theory says should happen; Sperber & Wilson (1981) and Clark & Gerrig (1984) disagree about the mechanism — echoic mention against pretense — and agree about the containment. What irony adds is a production demand implicature alone has not got: the generator must choose a form whose literal content is the OPPOSITE of what it means, where implicature by omission only requires it to leave something out. Five scenes of one register cannot separate the two; the ladder records the dependency instead of the correlation." },
+
+    { "id": "r207", "text": "He had been at the gate all night. Had he? Then why the mud on his boots?",
+      "introduces": "free-indirect-discourse", "presupposes": ["r178", "r101"],
+      "note": "DELIBERATELY OUT OF REACH. Free indirect discourse mixes the reporting and reported deictic centres — the tense and person of indirect speech, the expressive syntax of direct — and has no dedicated morphology in any language this ladder's sources describe. It is a literary register, which makes it a genuinely interesting thing for a text-observed sim to want and a genuinely bad thing to promise." },
+
+    { "id": "r208", "text": "He met the guard and left.",
+      "introduces": "switch-reference", "presupposes": ["r123", "r012"],
+      "note": "DELIBERATELY OUT OF REACH — and the sentence is the rung's whole argument. In English it is AMBIGUOUS about who left; in a switch-reference language it cannot be, because the clause linker marks whether the next subject is the same as this one. Jacobsen (1967), Haiman & Munro (1983): the system is areally clustered in North America, New Guinea and Australia and absent from Indo-European. No plain English sentence can EXHIBIT the demand — only fail to meet it, which is why this rung's text is ambiguous rather than clever." },
+
+    { "id": "r209", "text": "He said that he had taken the seal.",
+      "introduces": "logophoric-pronoun", "presupposes": ["r178", "r012"],
+      "note": "DELIBERATELY OUT OF REACH, same shape as r208: the English is ambiguous about whether the second `he` is the sayer, and a logophoric system makes it unambiguous with a dedicated pronoun series. Hagège (1974) coined the term; Clements (1975) on Ewe is the standard description. West African areal feature, and precisely what a testimony-heavy register would want." },
+
+    { "id": "r210", "text": "The reeve told the guard that his brother had lied.",
+      "introduces": "obviation", "presupposes": ["r012", "r019"],
+      "note": "DELIBERATELY OUT OF REACH. Whose brother? An obviative system (Algonquian) ranks two third persons by discourse prominence — proximate and obviative — and marks the possessor accordingly, so the ambiguity does not arise. Aissen (1997) on obviation and topicality. Third of three rungs whose English text is ambiguous BY DESIGN, and reading them together is the cheapest available demonstration that the resolver is scoring grammar and not English." },
+
+    { "id": "r211", "text": "Why did you hide the knife?",
+      "introduces": "presupposition-accommodation", "presupposes": ["r085", "r147"],
+      "note": "DELIBERATELY OUT OF REACH. The loaded question: answering it at all concedes that the knife was hidden. Lewis (1979) on accommodation, Stalnaker (1974) on the common ground. It requires the grammar to model what the HEARER already believes and what an answer would add to it — a conversational state, not a construction. Also the single most characteristic move in an interrogation scene, which is why it is on the ladder despite being out of reach." },
+
+    { "id": "r212", "text": "I was with her all evening.",
+      "introduces": "deliberate-ambiguity", "presupposes": ["r173", "r181"],
+      "note": "DELIBERATELY OUT OF REACH, and a candidate for permanent out-of-scope rather than not-yet. The demand is a lie that is literally true: an utterance constructed so that two hearers take it two different ways, with the speaker intending both. It requires modelling two hearers' inferences and choosing a form that separates them. Judgement call, not a typological claim — and the deception properly belongs to a character rather than to the grammar, which is where this project has already put that kind of thing." },
+
+    { "id": "r213", "text": "Nine for the gate, and nine for the wall, and one for the reeve who counted them all.",
+      "introduces": "verse-constraint", "presupposes": ["r017", "r022"],
+      "note": "DELIBERATELY OUT OF REACH, but the ONLY out-of-reach rung on this ladder that is expensive rather than impossible. Metre and rhyme constrain the PHONOLOGY of a generated utterance, and Hornvale already generates a phonology per tongue — so a rhyming couplet in an invented language is technically reachable and would cost a search over the lexicon under a prosodic filter. Fabb (1997) on generative metrics. Worth flagging as reachable-but-declined rather than lumping it with the other rungs marked DELIBERATELY OUT OF REACH." },
+
+    { "id": "r214", "text": "I swear by the shrine that I did not touch her.",
+      "introduces": "performative", "presupposes": ["r177", "r073"],
+      "note": "DELIBERATELY OUT OF REACH, and the most interesting one here. Austin (1962): a performative utterance CHANGES THE WORLD by being uttered — the swearing is the act, not a report of it. Hornvale's clauses are already fact-shaped, which means a sim that took this rung seriously would have an utterance commit a fact to the ledger, and the felicity conditions on the oath would become world-state. That is a design question the ladder is deliberately ending on rather than answering." }
+
+  ]
+}

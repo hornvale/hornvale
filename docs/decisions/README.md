@@ -244,3 +244,6 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0328](0328-embedding-nests-one-level-a-cap-on-demonstrated-depth.md) | Embedding nests one level — a cap on demonstrated depth, not a safety belt | Accepted |
 | [0329](0329-subordination-strategy-and-conjunction-are-drawn-per-tongue.md) | Subordination strategy and conjunction are drawn per tongue, not assumed | Accepted |
 | [0330](0330-the-corpus-score-is-demonstrated-not-declared.md) | The corpus score is demonstrated, not declared | Accepted |
+| [0386](0386-a-corpus-declares-its-demands-or-derives-them-never-both.md) | A corpus declares its demands or derives them, never both | Accepted |
+| [0387](0387-an-absent-direction-is-unknown-never-inferred.md) | Coverage is reported per direction, and an absent direction is unknown | Accepted |
+| [0388](0388-the-ladder-is-a-production-instrument-and-parse-robustness-is-a-separate-axis.md) | The ladder is a production instrument; parse-robustness is a separate axis | Accepted |
