@@ -174,8 +174,25 @@ instrument for a campaign that is *not* finished.
      commit's subject (stripping a `merge(...): ` prefix defensively if
      you added one anyway, so it can never double).
    - It can sit on **any commit in the range** (`origin/main..REF`), not
-     necessarily the last one, and a later commit does not displace it —
-     `git log` reads newest-first and the newest non-empty trailer wins.
+     necessarily the last one. A later commit *without* a trailer does not
+     displace it — which is the whole gain over the old tip-subject rule. A
+     later commit *with* one **does**: `git log` reads newest-first and the
+     newest non-empty trailer wins. (This bullet used to assert both halves at
+     once — "a later commit does not displace it, and the newest wins" — which
+     is self-contradictory and reads as reassurance.)
+   - **Nothing refuses a WRONG headline, only a missing or placeholder one**,
+     and the subject it writes is permanent: `tools/census/history.sh` loads
+     it as a census `epoch_label`. So a stray `Sluice-Headline:` on an early
+     fix commit becomes main's subject unless a later commit overrides it —
+     The Governor nearly landed under one of its own Task 9 fix commits'
+     trailers. **Before submitting a merge, run the helper and read what it
+     returns**, rather than trusting that the last trailer you wrote is the
+     one it finds:
+
+     ```bash
+     . scripts/sluice-headline.sh
+     sluice_headline_of "$PWD" origin/main HEAD
+     ```
    - It **must be in that commit message's last paragraph**. This reads
      git's own trailer parser, which only ever looks at the final block:
 

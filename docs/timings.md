@@ -3974,3 +3974,5 @@ measured here.
 | 2026-08-29T14:23:47Z | sluice:gate | 505.752 | 14387.322 | 526.810 | 29.49 | 0 | b8b4b2301 |  | lefford | 40 |
 | 2026-08-29T14:32:43Z | sluice:clients | 535.266 | 9688.309 | 118.598 | 18.32 | 0 | 4e1cbccc1 |  | lefford | 40 |
 | 2026-08-29T15:10:08Z | gate-commit | 122.487 | 598.164 | 104.532 | 5.74 | 0 | 1b9e9fc31 | campaign/the-errata | MacBookPro | 10 |
+| 2026-08-29T15:18:42Z | rebaseline | 101.434 | 276.772 | 12.759 | 2.85 | 0 | 14587acf1 | campaign/the-errata | MacBookPro | 10 |
+| 2026-08-29T15:19:47Z | gate-commit | 29.535 | 54.290 | 13.788 | 2.30 | 0 | 14587acf1 | campaign/the-errata | MacBookPro | 10 |
