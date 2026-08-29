@@ -149,6 +149,24 @@
 -- both tails moved inward this time, the opposite pairing from The
 -- Radiation's and The Underworld's; the diagnosis at
 -- calibration.rs::name_transparency_is_measured_and_pinned covers it.)
+-- (Resync 2026-08-28, The Precedence: the census refresh at 27a2da724760
+-- (goldens committed on lefford as 32fa5fb73, 0063/0079) moved LANGUAGE AND
+-- NAMING columns only — nothing the campaign itself touched. FIVE literals
+-- below drifted: the mean name-collision-rate, both name-length means, the
+-- name-transparency mean, and the census-of-the-meeting name-length SMD; all
+-- re-synced to calibration.rs's own re-pin in the same commit, and
+-- calibration.rs stays primary. No count pin moved — zero/nonzero/absent
+-- stays 0/1000/0, present stays 999/980/1000 — and no guarded claim moved:
+-- `transparency_min` and `transparency_max` are BOTH unmoved at 0.28464419
+-- and 0.98653199, so neither the risen-floor nor the ceiling-toward-1.0
+-- watch fires, and the SMD keeps its sign at ~8x inside the ±0.2 bound.
+-- THIS FILE EARNED ITS KEEP ON `kobold_len_mean`: the Rust name-length pin is
+-- a two-arm loop with goblin first, so the failing run named goblin ONLY, and
+-- the kobold half would have cost a second full suite to discover. Reading
+-- both off the fixture in one duckdb pass cost nothing. Three more masked
+-- pins — hobgoblin, bugbear and kobold homophony — sit in
+-- branches_family_calibration.rs, which this file does not translate at all;
+-- a green census-check is still NECESSARY AND NOT SUFFICIENT.)
 --
 -- ONE THING THIS FILE CANNOT SEE, worth stating where a reader meets these
 -- pins: `census-check` covers only SQL-expressible pins over `the-census`. At
@@ -649,7 +667,11 @@ checks AS (
   -- 0/1000/0. 0.5190630355569993 -> 0.5190331163569993, reverting exactly
   -- to the prior regen's figure. Resynced FROM calibration.rs, which stays
   -- primary.
-         collision_mean, 0.5190331163569993, abs(collision_mean - 0.5190331163569993) < 1e-6 FROM agg
+  -- The Precedence resync (2026-08-28, canonical census on lefford at
+  -- 27a2da724760, goldens 32fa5fb73): zero/nonzero/absent unmoved at
+  -- 0/1000/0. 0.5190331163569993 -> 0.5190307067169994. Resynced FROM
+  -- calibration.rs, which stays primary.
+         collision_mean, 0.5190307067169994, abs(collision_mean - 0.5190307067169994) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 771 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 766 -> 767.
@@ -698,7 +720,10 @@ checks AS (
   -- The Sources' third census resync (2026-08-28, canonical census on
   -- lefford at 83fcd1689, goldens 6455f51ce): 8.520497665465461 ->
   -- 8.522649181881878, reverting exactly to the prior regen's figure.
-         goblin_len_mean, 8.522649181881878, abs(goblin_len_mean - 8.522649181881878) < 1e-6 FROM agg
+  -- The Precedence resync (2026-08-28, canonical census on lefford at
+  -- 27a2da724760, goldens 32fa5fb73): present unmoved at 999;
+  -- 8.522649181881878 -> 8.522193159259256.
+         goblin_len_mean, 8.522193159259256, abs(goblin_len_mean - 8.522193159259256) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 772 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 762 -> 760.
@@ -753,7 +778,12 @@ checks AS (
   -- The Sources' third census resync (2026-08-28, canonical census on
   -- lefford at 83fcd1689, goldens 6455f51ce): 6.866580815408162 ->
   -- 6.864935456632652, reverting exactly to the prior regen's figure.
-         kobold_len_mean, 6.864935456632652, abs(kobold_len_mean - 6.864935456632652) < 1e-6 FROM agg
+  -- The Precedence resync (2026-08-28, canonical census on lefford at
+  -- 27a2da724760, goldens 32fa5fb73): present unmoved at 980;
+  -- 6.864935456632652 -> 6.864892034999999. This is the half of the
+  -- name-length re-pin the Rust loop MASKS — goblin is its first arm — so it
+  -- is exactly the kind of pin this second path exists to keep honest.
+         kobold_len_mean, 6.864892034999999, abs(kobold_len_mean - 6.864892034999999) < 1e-6 FROM agg
   UNION ALL
   SELECT 'mean goblin hue-depth (calibration.rs::goblin_hue_depth_exceeds_kobold_hue_depth)',
          goblin_hue_mean, 4.0, abs(goblin_hue_mean - 4.0) < 1e-6 FROM agg
@@ -972,7 +1002,11 @@ checks AS (
   -- The Sources' third census resync (2026-08-28, canonical census on
   -- lefford at 83fcd1689, goldens 6455f51ce): 0.713871805500002 ->
   -- 0.7140890114700017, reverting exactly to the prior regen's figure.
-         transparency_mean, 0.7140890114700017, abs(transparency_mean - 0.7140890114700017) < 1e-6 FROM agg
+  -- The Precedence resync (2026-08-28, canonical census on lefford at
+  -- 27a2da724760, goldens 32fa5fb73): present/absent unmoved at 1000/0 and
+  -- the min/max spread pins below are unmoved.
+  -- 0.7140890114700017 -> 0.7138510124600014. Still emphatically not 1.0.
+         transparency_mean, 0.7138510124600014, abs(transparency_mean - 0.7138510124600014) < 1e-6 FROM agg
   UNION ALL
   -- The min and max are the SPREAD pins the deferred note asked for. A floor
   -- of 0.154 against a ceiling of 1.0 is what proves the 0.816 mean describes
@@ -1137,8 +1171,12 @@ checks AS (
   -- -0.004779612149911376 -> -0.016164814210766883 (both solo builds' names
   -- redrawn alike in structure; still ~12x inside the ±0.2 sampling-theory
   -- bound).
-         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), -0.025108472368594453,
-         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - -0.025_108_472_368_594_453) < 1e-6
+  -- The Precedence resync (2026-08-28, canonical census on lefford at
+  -- 27a2da724760, goldens 32fa5fb73): -0.025108472368594453 ->
+  -- -0.025280277786945245 (no sign flip; still ~8x inside the ±0.2
+  -- sampling-theory bound).
+         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), -0.025280277786945245,
+         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - -0.025_280_277_786_945_245) < 1e-6
     FROM namelen_stats
 )
 SELECT pin, computed, pinned, ok FROM checks ORDER BY pin;

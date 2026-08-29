@@ -69,6 +69,8 @@ mod ooc_namespace;
 mod ooc_objective;
 #[path = "suite/overrides.rs"]
 mod overrides;
+#[path = "suite/passage.rs"]
+mod passage;
 #[path = "suite/player_acts_commit.rs"]
 mod player_acts_commit;
 #[path = "suite/possess_target.rs"]

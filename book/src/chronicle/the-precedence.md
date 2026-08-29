@@ -125,25 +125,81 @@ felt-state traces bit-for-bit identical. The whole design stands on creatures
 not watching each other, and that is now a fact with a test attached rather than
 an assumption with a comment attached.
 
-## The shape of the error, three more times
+## The retype, and what it cost to find out it was innocent
 
-The campaign's own working produced the same failure it had just diagnosed,
-three times, and all three are recorded because the pattern is worth more than
-the fix.
+The defect this campaign began as was a layer that counted days in floating
+point while the world advanced in whole ticks. A previous campaign tried to
+fix it, watched the ordering invariant break, and stopped — reasonably, on the
+evidence it had.
 
-Each time, a claim about the code was made from recollection rather than by
-reading the code: a defect reported in a draft that had never been written to
-disk; a prediction of what a search command would print, which was wrong because
-the searched string also appears in prose; a list attributed to a source comment
-that has never contained it. None caused damage. Two were caught by the agents
-carrying out the work, which noticed that the instruction did not match the
-file and said so instead of following it.
+With the ordering fixed, the same attempt was reproduced deliberately as a
+throwaway: retype the one field, leave its three siblings alone, run
+everything, then delete all of it. The invariant came back green. The retype
+had never been the problem. Its only real effect was a golden test moving by a
+single tick — or so two campaigns believed, because the assertion that
+compares those values panics on the first mismatch and neither had ever seen
+past it. The golden actually moves on 66 of 80 rows.
 
-The diagnosed defect was a tolerance sized for the wrong quantity — a check
-that looked correct and answered a neighbouring question. So were all three of
-these. It is the same error at a different altitude, and the campaign that
-found it in the code was committing it in its own prose while doing so.
+The retype then landed properly: every *instant* in the walk became an exact
+tick count, and every dimensionless *ratio* stayed a float, with the crossing
+into the continuous drives named at the integral's own edge. Thirty sites; no
+durations, because every duration in that file turned out to be either a
+transient difference of two instants or a module constant. The charge that
+starts all of this — a creature paying for its action — is now integer
+addition with no conversion in either direction.
 
-*Stage 1 of three. The retype that this defect was blocking — the layer's
-fractional days, which turn out to have been innocent of the inversion they
-were blamed for — follows in stages 2 and 3.*
+## A choice about where a number gets rounded
+
+Removing the last float exposed a decision that had been made implicitly for
+as long as the code existed.
+
+A creature that holds waits for a closed-form interval, and that interval is
+exactly `N + 2/3` ticks — not by accident, but because the drive parameters
+are authored round numbers. Under the old scheme the clock stayed real and
+only the emitted fact was rounded. Under the new one, every jump snaps to the
+lattice as it happens.
+
+The difference is not precision. It is *placement*, and it is worth a full
+tick every three jumps, always in the same direction: rounding two-thirds up
+never averages out against anything. The staircase in that golden — nothing,
+then one tick, then two — is `k − round(2k/3)` made visible.
+
+It was accepted deliberately. The lattice is the domain; a time that is not on
+it is not representable, and keeping a real clock beside an integer one to
+avoid the rounding would reintroduce the very thing the campaign existed to
+remove. The cost is bounded rather than eternal — the walk's clock is reseeded
+from the tick's own start each time, so the bias resets rather than
+compounding over a world's life — and it is recorded as its own entry rather
+than absorbed into a test update. That is the whole difference between
+accepting a cost and not noticing one.
+
+## The error the campaign kept making
+
+The defect at the centre of this campaign was a check that looked correct and
+answered a neighbouring question: a tolerance that named sub-tick imprecision
+while bounding nothing of the kind.
+
+The campaign committed that same error six times in its own working. A claim
+about a file that was true of a discarded draft. A predicted search result
+that was wrong because the searched word also appears in prose. A comparison
+key that omitted the two fields carrying the very thing it was built to
+detect. Twice, an assertion about which of two quantities a name referred
+to — once inside the sentence warning against exactly that. And a branch
+condition written to catch a surprise that was, in fact, a certainty of the
+arithmetic: two expressions that disagree in the last bit for 56.7% of their
+inputs.
+
+Five of the six were caught by the agents carrying out the work, each because
+it checked a claim rather than following it.
+
+There was one more, in the code rather than the prose around it. Four folds
+were rewritten to use genesis as their identity instead of a numeric zero,
+and the comments explained this by citing the principle that instants are
+signed and a zero was never the right identity for one. Genesis *is* zero. The
+change preserved behaviour exactly, which was correct; the explanation
+described a fix that had not been made. A future reader would have believed
+the negative case was handled.
+
+*The tolerance that started all this was wrong the same way: a real principle,
+correctly stated, attached to a change that did not enact it.*
+

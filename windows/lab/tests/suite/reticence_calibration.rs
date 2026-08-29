@@ -340,7 +340,8 @@ fn h3_refusal_is_selective_not_global() {
 /// the switch, while the stickiness measured above is about the sim never
 /// producing it unprompted. Neither is an impossibility proof.
 /// `IN_CHARACTER_VERBS` (`session.rs`) is a closed, exhaustive
-/// 19-verb roster (The Offer added `warm`, still no drink/eat/relief verb);
+/// 20-verb roster (The Offer added `warm` and The Latch added `clear`;
+/// neither resolves a drive, and there is still no drink/eat/relief verb);
 /// the driven body's own
 /// passive `!wait` walk discards every fact it would otherwise commit
 /// (`_driven_facts` is unconditionally dropped, `session.rs:4090` and the

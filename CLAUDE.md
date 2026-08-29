@@ -63,11 +63,17 @@ editing:
   explicitly not coverage audit: same 0095 discipline, different job,
   different output type.
 - `sentences/` — the third sibling, founded by The Interlinear: frozen,
-  provenance-stamped corpora of dialogue for `domains/language`, measuring
-  whether today's grammar can produce or parse a demand a real utterance
-  makes. Same data/code split as `tropes/`/`systems/` (decision 0011) — the
-  corpus is data, the resolver lives in `domains/language` and its tests —
-  and the same freeze-before-measurement discipline (decision 0016).
+  provenance-stamped corpora for `domains/language`, measuring whether
+  today's grammar can produce or parse a demand a real utterance makes. It
+  holds **two kinds of corpus, not one**: recorded or authored *dialogue*
+  (`the-merchant`, `the-flood-watch`), and a typology-ordered *capability
+  ladder* of graded rungs (`the-ladder`, an unfrozen `.DRAFT`) which is not
+  dialogue at all. A corpus **declares** its demands or **derives** them
+  by transitive closure, never both (decision 0386). Same data/code split as
+  `tropes/`/`systems/` (decision 0011) — the corpus is data, the resolver is
+  `cli/tests/suite/sentence_corpus.rs` and nothing in `domains/language`
+  reads a corpus file — and the same freeze-before-measurement discipline
+  (decision 0016).
 - `docs/` and `book/src/frontier/` — the knowledge-architecture discipline.
 
 `make doctor` prints the live self-map — layering, gate targets, artifact

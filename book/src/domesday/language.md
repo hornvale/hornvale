@@ -278,7 +278,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 9 | 16 | 30 | 140 | 21.611 |
+| 0 | 9 | 17 | 30 | 140 | 21.704 |
 
 ### `homophony-count-goblin`
 
@@ -288,7 +288,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 1 | 4 | 8 | 55 | 5.884 |
+| 0 | 1 | 4 | 8 | 55 | 5.919 |
 
 ### `homophony-count-hobgoblin`
 
@@ -298,7 +298,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0 | 4 | 8 | 53 | 6.071 |
+| 0 | 1 | 4 | 8 | 53 | 6.101 |
 
 ### `homophony-count-kobold`
 
@@ -308,7 +308,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0 | 4 | 9 | 81 | 6.326 |
+| 0 | 0 | 4 | 9 | 81 | 6.36 |
 
 ### `homophony-merger-share-bugbear`
 
@@ -324,7 +324,7 @@ n = 999 present, 1 absent (of 1000 worlds)
 
 Fraction of goblin colliding surface forms that are MERGERS (colliding roots carry ≥2 distinct proto-forms — the cascade or nativization made the collision after the proto) rather than draw-collisions (one shared proto); Absent if goblin has no collision (an undefined ratio, never reported as 0)
 
-n = 785 present, 215 absent (of 1000 worlds)
+n = 787 present, 213 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
@@ -334,7 +334,7 @@ n = 785 present, 215 absent (of 1000 worlds)
 
 Fraction of hobgoblin colliding surface forms that are MERGERS (≥2 distinct proto-forms) rather than draw-collisions; Absent if hobgoblin has no collision
 
-n = 749 present, 251 absent (of 1000 worlds)
+n = 751 present, 249 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
@@ -580,12 +580,12 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `homophony-merger-share-goblin`
 
-- **D2**: min == median == max == 1 across 785 worlds
+- **D2**: min == median == max == 1 across 787 worlds
 - **D4**: median 1 equals the min (1 .. 1)
 
 ### `homophony-merger-share-hobgoblin`
 
-- **D2**: min == median == max == 1 across 749 worlds
+- **D2**: min == median == max == 1 across 751 worlds
 - **D4**: median 1 equals the min (1 .. 1)
 
 ### `homophony-merger-share-kobold`
