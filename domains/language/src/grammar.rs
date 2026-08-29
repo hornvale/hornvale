@@ -647,6 +647,37 @@ fn tongue_verb(
                      no ordering slot carries the property word"
                 .to_string(),
         }),
+        // Locative predication GAPS for a DIFFERENT reason than `Property`
+        // does, even though `Valence::binds_object` says it binds a real
+        // object: the missing seat is not the object, it is the adposition
+        // itself. `binds_object` being true means `realize_tongue_with_
+        // subject` orders a real `o` token (the located thing, lexicalized
+        // through this tongue's own lexicon exactly as `Nominal`'s object
+        // is) -- but the s/v/o triad still has only ONE verb-slot seat, and
+        // this valence needs two words there: the tense-carrying copula
+        // AND the relation word (`under`, `at`, `in`, ...). Filling that one
+        // seat with the copula alone (the way `Nominal` does) would render
+        // "Subject Copula Object." -- a complete-LOOKING sentence with the
+        // relation silently missing, exactly the plausible-but-wrong
+        // surface spec §4's render-fully-or-gap law exists to keep out of a
+        // rendered artifact (the same finding this campaign's Task 4 made
+        // for `Property`, on review). So this gaps too, with a distinct
+        // reason naming the actual missing seat rather than reusing
+        // `Property`'s.
+        //
+        // Building the tongue half for real needs the same fourth ordering
+        // slot `Property`'s own comment above describes -- once it exists,
+        // this arm returns `Ok(Some(..))` for the copula exactly as
+        // `Nominal` does today, and the new slot carries the lexicalized
+        // relation word alongside the object `realize_tongue_with_subject`
+        // already orders. Until then: gap, not partial render.
+        // `a_tongue_gaps_a_locative_predication` pins this.
+        Valence::Locative => Err(TongueGap {
+            concept: clause.predicate.clone(),
+            reason: "no tongue construction for locative predication yet -- \
+                     no ordering slot carries the adposition"
+                .to_string(),
+        }),
     }
 }
 
@@ -736,6 +767,12 @@ fn realize_tongue_with_subject(
     // clause MEANS, not about what `tongue_verb` currently builds -- so a
     // future campaign that flips that arm to `Ok` inherits a correct gate
     // rather than having to rediscover it.
+    //
+    // `Locative` never reaches this exclusion at all -- `binds_object` says
+    // `true` for it, so `o` below is always `Some` in principle -- but
+    // `tongue_verb`'s own `Locative` arm gaps first for an unrelated reason
+    // (no ordering slot carries the adposition), so this line is equally
+    // unreachable for it today, just not via this exclusion.
     let o = valence.binds_object().then_some(complement.as_str());
     // Order the present constituents; an absent verb (a zero-copula tongue
     // predicating nominally) simply drops out, exactly as an elided subject
@@ -1341,6 +1378,11 @@ fn realize_tongue_deep_with_subject(
     // about what `tongue_verb` currently builds, so a future campaign that
     // flips that arm to `Ok` inherits a correct gate rather than having to
     // rediscover it.
+    //
+    // `Locative` binds an object (`binds_object` is `true`) but is equally
+    // unreachable here today, for the unrelated reason `tongue_verb`'s own
+    // `Locative` arm documents: it gaps before this line runs because no
+    // ordering slot carries the adposition, not because it binds no object.
     let o_tok = valence
         .binds_object()
         .then(|| (Role::Complement, complement.roman.clone()));
@@ -1540,7 +1582,7 @@ mod tests {
     use crate::etymology::CascadeRegime;
     use crate::lexicon::{ExposureClass, LexEntry, build_lexicon};
     use crate::naming::render_views;
-    use crate::packs::{EAT, KILL, KNOW, OLD, SLEEP};
+    use crate::packs::{EAT, KILL, KNOW, OLD, SLEEP, UNDER};
     use crate::phonology::{Envelope, ExoticSeg, draw_phonology};
     use hornvale_kernel::Seed;
     use hornvale_kernel::world::IS_A;
@@ -3974,6 +4016,56 @@ mod tests {
             gap.reason,
             "no tongue construction for property predication yet -- no ordering \
              slot carries the property word"
+        );
+    }
+
+    /// **`realize_tongue` on a locative clause GAPS too, for a DIFFERENT
+    /// reason than the property one does** (The Rail, Task 5). `Valence::
+    /// Locative::binds_object` is `true` — unlike `Property`, this valence
+    /// does bind a real object, and a lexicon carrying a word for it (`tree`,
+    /// below) lets `resolve_argument` succeed rather than gapping first. The
+    /// missing thing is not the object; it is a SECOND verb-slot seat for the
+    /// adposition (`under`) alongside the tense-carrying copula, and today's
+    /// s/v/o triad has only one. Filling that one seat with the copula alone
+    /// (the way `Nominal` does) would render "Nwamvam is [tree]." — a
+    /// complete-looking sentence with the relation silently missing, the
+    /// exact plausible-but-wrong surface spec §4's render-fully-or-gap law
+    /// exists to keep out. A lexicon that DOES carry a word for `under` is
+    /// used deliberately, the same proof-of-a-real-gap shape
+    /// `a_tongue_gaps_a_property_predication` uses for `old`: the gap fires
+    /// even though the word exists, because the missing thing is an ordering
+    /// slot, not a lexicon entry.
+    #[test]
+    fn a_tongue_gaps_a_locative_predication() {
+        let lex = tiny_lexicon_with(&[
+            (UNDER, ExposureClass::Steeped),
+            ("tree", ExposureClass::Steeped),
+        ]);
+        let clause = Clause {
+            predicate: UNDER.to_string(),
+            subject: Subject::Name("Nwamvam".to_string()),
+            object: Argument::Concept("tree".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: vec![],
+        };
+        let grammar = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: Some("gha".to_string()),
+            copula_segments: None,
+            articles: false,
+            subordinator: None,
+            conjunction: None,
+        };
+        let gap = realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap_err();
+        assert_eq!(gap.concept, UNDER);
+        assert_eq!(
+            gap.reason,
+            "no tongue construction for locative predication yet -- no ordering \
+             slot carries the adposition"
         );
     }
 

@@ -120,6 +120,31 @@ pub const SLEEP: &str = "sleep";
 /// type-audit: bare-ok(identifier-text)
 pub const OLD: &str = "old";
 
+/// The `under` concept's id.
+///
+/// Named for the same reason [`EAT`], [`KILL`], [`KNOW`], [`THINK`],
+/// [`SLEEP`] and [`OLD`] are: the pack row that REGISTERS the concept and
+/// the `clause::PREDICATE_VALENCE` row that REALIZES it must not drift
+/// apart.
+///
+/// **It adds no pack entry, the same way [`SLEEP`]'s and [`OLD`]'s docs
+/// explain for themselves.** `under` has been in [`universal_stratum`]
+/// since long before this campaign (`ConceptKind::Quality`, doc "beneath;
+/// below"), so this constant names an existing registration rather than
+/// creating one.
+///
+/// **It stands in for the rung's own `at`.** `r005`'s authored text is
+/// *"The merchant is at the gate."*, and neither `at` nor `gate` is a
+/// registered concept anywhere in this crate — registering either would
+/// move `world-seed-42.json`, a byte-golden `make rebaseline` cannot write,
+/// and Task 0 established that this campaign registers no concept. `under`
+/// and `tree` are the substitution, recorded again at their witness
+/// (`cli/tests/suite/sentence_corpus.rs`'s `ladder_construction`, `"r005"`
+/// arm) the same way `r003`'s witness records `old` standing in for the
+/// unregistered `long`, and `r006`'s records `kill` for `strike`.
+/// type-audit: bare-ok(identifier-text)
+pub const UNDER: &str = "under";
+
 /// One entry in a vocabulary pack: a concept id, its broad category, a doc,
 /// and its rank on whichever acquisition ladder it belongs to (0 for
 /// entries outside any ladder — always in the lexicon once the pack is

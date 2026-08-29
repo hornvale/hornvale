@@ -58,7 +58,17 @@
 //! Common-only, the same posture `epistemic-hedge` takes — a tongue GAPS on
 //! a property clause rather than rendering one, per `realize_tongue`'s own
 //! render-fully-or-gap law (spec §4), pinned by
-//! `grammar.rs::a_tongue_gaps_a_property_predication`).
+//! `grammar.rs::a_tongue_gaps_a_property_predication`);
+//! `clause.rs::a_locative_predication_places_its_subject` (`locative-
+//! predication`, The Rail, Task 5, closing `Valence` at five variants —
+//! Common-only, the same posture `property-predication` takes: a locative
+//! BINDS an object, unlike a property predication, but the tongue path still
+//! GAPS, for a different reason — the s/v/o triad has only one verb-slot
+//! seat, and this valence needs two words there (the tense-carrying copula
+//! and the adposition), so filling it with the copula alone would render a
+//! plausible surface with the relation silently missing, per spec §4's
+//! render-fully-or-gap law, pinned by
+//! `grammar.rs::a_tongue_gaps_a_locative_predication`).
 //!
 //! **The score was zero once, and the positive control that answered that is
 //! still here on purpose.** A measurement whose only possible answer is zero
@@ -90,7 +100,7 @@
 
 use hornvale_kernel::ConceptRegistry;
 use hornvale_kernel::world::IS_A;
-use hornvale_language::packs::{KILL, KNOW, OLD, SLEEP, THINK};
+use hornvale_language::packs::{KILL, KNOW, OLD, SLEEP, THINK, UNDER};
 use hornvale_language::{
     Argument, Clause, CommonVocabulary, Coordination, Definiteness, Evidential, Number, Person,
     Polarity, Subject, Tense, realize_common, realize_common_coordination,
@@ -188,6 +198,8 @@ const IMPLEMENTED_DEMANDS: &[&str] = &[
     "intransitive-frame",
     // The Rail, Task 4 — the m02 trap's honest fix.
     "property-predication",
+    // The Rail, Task 5 — the last of the three valence-family tasks.
+    "locative-predication",
 ];
 
 /// Whether a corpus entry states what the grammar must **parse** (a player
@@ -1988,6 +2000,7 @@ const LADDER_WITNESS: &[(&str, &str)] = &[
     ("r001", "the woman is a merchant."),
     ("r002", "the guard sleeps."),
     ("r003", "the road is old."),
+    ("r005", "the merchant is under the tree."),
     ("r006", "a guard kills a woman."),
     ("r013", "the guard does not sleep."),
     ("r014", "the guard sleeped."),
@@ -2041,6 +2054,27 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
             object: Argument::Absent,
             number: Number::Sg,
             definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        }),
+        // "The merchant is at the gate." Substituted: neither `at` nor
+        // `gate` is a registered concept anywhere in this crate (`grep -rn
+        // 'concept: "at"\|concept: "gate"' domains/` returns nothing) and
+        // the only `Valence::Locative` predicate with a `PREDICATE_VALENCE`
+        // row is `under` — so the witness substitutes `under`/`tree`, the
+        // same shape `r003`'s witness takes for `old`/`long` and `r006`'s
+        // takes for `kill`/`strike`. The object slot is
+        // `Argument::Concept("tree")`: unlike a property predication, a
+        // locative predication binds a second participant (see
+        // `Valence::Locative`'s own doc).
+        "r005" => MerchantConstruction::Clause(Clause {
+            predicate: UNDER.to_string(),
+            subject: Subject::Name("the merchant".to_string()),
+            object: Argument::Concept("tree".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
             evidential: Evidential::Witnessed,
             tense: Tense::Present,
             polarity: Polarity::Pos,
@@ -2152,6 +2186,20 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
 /// campaign does not add: `attributive-adjective`, `comparative`,
 /// `verbless-clause`). Net: 14 → 16, a finding read off the resolver, not
 /// asserted from a hand count.
+///
+/// **Task 5 (`locative-predication`) covers exactly one more rung, `r005`
+/// alone, as its own task brief predicted** — the covered set moves from
+/// seven to eight, matching the 7→8 the brief names, and the same posture
+/// `property-predication` took: no reuse/control rung rides along. The
+/// FRONTIER count also matches the brief's prediction (16), **but the SET
+/// is not the same 16 with `r005` merely swapped for nothing** — a finding
+/// the brief's headline number does not show. `r005` drops off (now
+/// covered), and `r051` joins: its own two non-introduced demands
+/// (`transitive-frame` from `r006`, `locative-predication` from `r005`,
+/// both transitively closed) are now both covered, even though `r051`
+/// itself is not otherwise close to buildable (it still needs
+/// `present-progressive`, a token this campaign does not add). Net frontier
+/// size: 16 → 16, but the membership moved by one in each direction.
 #[test]
 fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
     let entries = read_derived(&repo_root().join("sentences/the-ladder.corpus.json"));
@@ -2162,13 +2210,15 @@ fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
         .collect();
     assert_eq!(
         covered,
-        vec!["r001", "r002", "r003", "r006", "r013", "r014", "r015"],
+        vec![
+            "r001", "r002", "r003", "r005", "r006", "r013", "r014", "r015"
+        ],
         "the ladder's covered set"
     );
     assert_eq!(
         ladder_frontier(&entries),
         vec![
-            "r004", "r005", "r007", "r011", "r028", "r044", "r048", "r055", "r061", "r072", "r083",
+            "r004", "r007", "r011", "r028", "r044", "r048", "r051", "r055", "r061", "r072", "r083",
             "r109", "r113", "r114", "r117", "r171",
         ],
         "the ladder's frontier"
@@ -2189,15 +2239,18 @@ fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
 /// while the covered-ENTRY count for `the-flood-watch` stays at 0 of 139 —
 /// the same conjunctive-coverage lesson Task 2 established, read again off a
 /// different token. A statistic that reads a null there is not wrong; it is
-/// unable to see. Merchant is untouched: `property-predication` demands
-/// nothing in `the-merchant.corpus.json`, so both merchant numbers hold
-/// still.
+/// unable to see. Task 5 (`locative-predication`) meets 16 more still (198
+/// -> 214 of 1128), the covered-ENTRY count still 0 of 139, and the covered
+/// count matches the brief's own expected-values table exactly. Merchant is
+/// untouched by either of the last two tasks: neither `property-predication`
+/// nor `locative-predication` demands anything in
+/// `the-merchant.corpus.json`, so both merchant numbers hold still.
 #[test]
 fn demand_instance_coverage_matches_the_campaigns_prediction() {
     let merchant = read_declared(&repo_root().join("sentences/the-merchant.corpus.json"));
     assert_eq!(demand_instance_coverage(&merchant), (19, 30));
     let flood = read_declared(&repo_root().join("sentences/the-flood-watch.corpus.json"));
-    assert_eq!(demand_instance_coverage(&flood), (198, 1128));
+    assert_eq!(demand_instance_coverage(&flood), (214, 1128));
 }
 
 /// Every ladder rung scored covered realizes in Common, exactly as
@@ -2211,16 +2264,17 @@ fn demand_instance_coverage_matches_the_campaigns_prediction() {
 /// `ladder_construction` can build), and that construction realizes
 /// deterministically rather than panicking. It does **not** prove the
 /// surface says what the rung's own `text` says — [`ladder_construction`]
-/// is hand-built, the same posture [`merchant_construction`] takes, and two
-/// of this campaign's five new witnesses substitute a registered concept
-/// (`kill` for the unregistered `strike`, `r006`) or a naive-paradigm
-/// surface (`sleeped` for "slept", `r014`) for what the rung's authored
-/// English literally reads; the other three (`r002`, `r013`, `r015`)
+/// is hand-built, the same posture [`merchant_construction`] takes, and
+/// **four** of this campaign's witnesses substitute a registered concept
+/// for an unregistered one the rung's own text names — `old` for `long`
+/// (`r003`), `under`/`tree` for `at`/`gate` (`r005`), `kill` for `strike`
+/// (`r006`) — or a naive-paradigm surface for an irregular one — `sleeped`
+/// for "slept" (`r014`); the other four (`r001`, `r002`, `r013`, `r015`)
 /// realize directly. **Do not "fix" this by comparing the surface to
 /// `text`** — every witness here is lowercase (`"the guard sleeps."`)
 /// against corpus text that is capitalized (`"The guard sleeps."`), so that
-/// comparison would fail all SIX rows on case alone, substitution or not,
-/// before the two real substitutions ever entered into it. What actually
+/// comparison would fail all EIGHT rows on case alone, substitution or not,
+/// before the four real substitutions ever entered into it. What actually
 /// carries the honesty about each deviation is the comment on the
 /// corresponding [`ladder_construction`] arm, a social discipline the same
 /// module doc above already names for `IMPLEMENTED_DEMANDS` itself: "worse

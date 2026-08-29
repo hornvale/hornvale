@@ -13,7 +13,7 @@
 
 use crate::common_vocab::CommonVocabulary;
 use crate::morphology::Evidential;
-use crate::packs::{EAT, KILL, KNOW, OLD, SLEEP, THINK};
+use crate::packs::{EAT, KILL, KNOW, OLD, SLEEP, THINK, UNDER};
 use hornvale_kernel::world::IS_A;
 use std::sync::OnceLock;
 
@@ -720,6 +720,29 @@ pub enum Valence {
     /// asserts what the sentence actually means instead, so `Definiteness`
     /// gains no third value.
     Property,
+    /// A subject, a located thing, and the relation between them: *X is
+    /// under Y*. Stassen (1997)'s LOCATIONAL intransitive predication
+    /// strategy — Freeze (1992) argues that locative, existential and
+    /// possessive predication share one underlying construction across a
+    /// wide typological range. Common expresses the relation itself
+    /// (`under`, `at`, `in`, …) through [`Part::PredicateWord`], the exact
+    /// slot [`Valence::Property`]'s doc already reserved for a later
+    /// locative valence's adposition, differing from `Property` only in
+    /// that the object slot is filled: a locative binds a second
+    /// participant (the located thing), a property does not.
+    ///
+    /// **Freeze's claim is about the CONSTRUCTION, not about this ladder's
+    /// edges, and taking the citation at face value overstates what this
+    /// valence unlocks.** Spec §1.2 found that the ladder's `presupposes`
+    /// graph does not follow Freeze's grouping: `r019` (adnominal
+    /// possession) presupposes only `r007` (definiteness), never `r005`
+    /// (this valence's own rung), and `r007` gates both `r005` and `r019`
+    /// independently rather than either gating the other. The three
+    /// constructions may share deep structure in the typological
+    /// literature; the ladder's pedagogical ordering does not encode that
+    /// relationship, and this variant grants no dispensation for `r019` or
+    /// `r104` (the existential rung) on its own.
+    Locative,
 }
 
 impl Valence {
@@ -730,15 +753,15 @@ impl Valence {
     /// — an intransitive clause has one argument by definition, and a
     /// property predication relates a subject to a state, never to a second
     /// participant (see each variant's own doc) — so both answer `false`
-    /// here; `Nominal` and `Transitive` both bind a real object and answer
-    /// `true`. `grammar.rs`'s tongue realizers (both the floor and the deep
-    /// one) consult this to decide whether the object-slot ordering token
-    /// is present at all, rather than each restating
+    /// here; `Nominal`, `Transitive` and `Locative` all bind a real object
+    /// and answer `true` — a locative binds the located thing, which is the
+    /// whole difference between it and `Property`. `grammar.rs`'s tongue
+    /// realizers (both the floor and the deep one) consult this to decide
+    /// whether the object-slot ordering token is present at all, rather
+    /// than each restating
     /// `valence != Valence::Intransitive && valence != Valence::Property`
     /// — the same fact stated three times (twice in `grammar.rs`, once in
-    /// prose here) before this method existed, and a fact a later
-    /// campaign's locative valence would otherwise have had to get right in
-    /// three places rather than one.
+    /// prose here) before this method existed.
     ///
     /// **States only whether an object is bound, never how a tongue orders
     /// or renders one.** A tongue's own construction for a valence that
@@ -746,11 +769,13 @@ impl Valence {
     /// path gaps today rather than ordering anything (see
     /// `grammar.rs::tongue_verb`) — and this method makes no claim about
     /// that; it is a fact about what the clause MEANS, not about what any
-    /// realizer currently builds.
+    /// realizer currently builds. `Valence::Locative` binds an object AND
+    /// still gaps on the tongue side today, for a different reason: see its
+    /// own arm in `grammar.rs::tongue_verb`.
     #[must_use]
     pub(crate) fn binds_object(self) -> bool {
         match self {
-            Valence::Nominal | Valence::Transitive => true,
+            Valence::Nominal | Valence::Transitive | Valence::Locative => true,
             Valence::Intransitive | Valence::Property => false,
         }
     }
@@ -810,6 +835,7 @@ const PREDICATE_VALENCE: &[(&str, Valence)] = &[
     (THINK, Valence::Transitive),
     (SLEEP, Valence::Intransitive),
     (OLD, Valence::Property),
+    (UNDER, Valence::Locative),
 ];
 
 /// The valence of `predicate`, or `None` when no realizer covers it.
@@ -928,6 +954,24 @@ pub fn common_constructions() -> &'static [Construction] {
         Part::ModifierTail,
         Part::Literal("."),
     ];
+    // A copula, the relation itself (`Part::PredicateWord`, the same slot
+    // `PROPERTY` uses), and — unlike `PROPERTY` — a determiner and a
+    // complement: a locative has a located thing where a property
+    // predication has nothing. `CLASSIFY`'s `Determiner`/`Complement` pair,
+    // with `Part::PredicateWord` inserted between the copula and the
+    // determiner where the adposition sits.
+    const LOCATIVE: &[Part] = &[
+        Part::Subject,
+        Part::Literal(" "),
+        Part::Copula,
+        Part::Literal(" "),
+        Part::PredicateWord,
+        Part::Literal(" "),
+        Part::Determiner,
+        Part::Complement,
+        Part::ModifierTail,
+        Part::Literal("."),
+    ];
     // Built once and leaked into a `static` so the signature stays
     // `&'static [Construction]` — `parse_common_with_tail` walks this on
     // every parse and callers hold no allocation. The same `OnceLock`
@@ -944,6 +988,7 @@ pub fn common_constructions() -> &'static [Construction] {
                     Valence::Transitive => TRANSITIVE,
                     Valence::Intransitive => INTRANSITIVE,
                     Valence::Property => PROPERTY,
+                    Valence::Locative => LOCATIVE,
                 },
             })
             .collect()
@@ -2365,6 +2410,24 @@ mod tests {
                         construction.predicate
                     );
                 }
+                // A locative predication is copular, like `Nominal` — but
+                // unlike `Property`, it binds a second participant: both
+                // `Part::Determiner` and `Part::Complement` are present, for
+                // the located thing, alongside `Part::PredicateWord` for
+                // the relation itself.
+                Valence::Locative => {
+                    assert!(
+                        construction.parts.contains(&Part::Copula)
+                            && !construction.parts.contains(&Part::Verb)
+                            && construction.parts.contains(&Part::PredicateWord)
+                            && construction.parts.contains(&Part::Determiner)
+                            && construction.parts.contains(&Part::Complement),
+                        "a locative predication fills the verb slot with a copula and the \
+                         predicate slot with the relation, and binds both a determiner and a \
+                         complement: {:?}",
+                        construction.predicate
+                    );
+                }
             }
         }
         // And the other direction: nothing in the inventory is unreachable
@@ -2373,7 +2436,7 @@ mod tests {
         // in one realizer and not the other.
         assert_eq!(
             inv.len(),
-            [IS_A, EAT, KILL, KNOW, THINK, SLEEP, OLD]
+            [IS_A, EAT, KILL, KNOW, THINK, SLEEP, OLD, UNDER]
                 .iter()
                 .filter(|p| predicate_valence(p).is_some())
                 .count(),
@@ -2396,6 +2459,9 @@ mod tests {
         // `old` (The Rail, Task 4) is the first row at `Valence::Property`,
         // the m02 trap's honest fix.
         assert_eq!(predicate_valence(OLD), Some(Valence::Property));
+        // `under` (The Rail, Task 5) is the first row at `Valence::Locative`,
+        // and the last valence this campaign adds.
+        assert_eq!(predicate_valence(UNDER), Some(Valence::Locative));
         assert_eq!(predicate_valence("dwells-in"), None);
     }
 
@@ -2607,6 +2673,124 @@ mod tests {
             .expect("the tie-break always favors is-a, so this resolves rather than fails");
         assert_eq!(misparsed.predicate, IS_A);
         assert_eq!(misparsed.object, Argument::Concept("old".to_string()));
+    }
+
+    /// Locative predication: a copula, an adposition, and a located complement.
+    ///
+    /// **The adposition is the PREDICATE**, rendered through
+    /// [`Part::PredicateWord`] — the same slot Task 4's property valence uses,
+    /// because a property word and an adposition are both the predicate
+    /// surfacing uninflected. So `at`, `in` and `under` are three rows sharing
+    /// one part list, never three constructions: the same "a second verb is one
+    /// row" promise `common_constructions` makes, applied one slot over.
+    ///
+    /// **The rung's own text is *"The merchant is at the gate."*; `at` and
+    /// `gate` are not registered anywhere in this crate** (Task 0 established
+    /// this campaign registers no concept), so the witness substitutes `under`
+    /// and `tree` — both already in [`universal_stratum`](crate::packs::universal_stratum)
+    /// — the same substitution shape `r003`'s witness takes for `old`/`long`
+    /// and `r006`'s takes for `kill`/`strike`.
+    #[test]
+    fn a_locative_predication_places_its_subject() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: UNDER.to_string(),
+            subject: Subject::Name("the merchant".to_string()),
+            object: Argument::Concept("tree".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(
+            realize_common(&clause, &vocab),
+            "the merchant is under the tree."
+        );
+    }
+
+    /// **A locative predication cannot be recovered by `parse_common` either,
+    /// and this is a STATED LOSS for the same reason [`Valence::Property`]'s
+    /// is** (spec §4 freezes parsing coverage). The shape of the failure is
+    /// SHARPER than `Property`'s, not merely a repeat of it, because the
+    /// determiner-strip step is what breaks it rather than the complement
+    /// lookup:
+    ///
+    /// 1. **The realistic case fails structurally, regardless of what is
+    ///    registered.** `parse_clause_body`'s copula search finds `" is "`
+    ///    and (per the same tie-break `Property`'s test documents) always
+    ///    prefers `IS_A`'s `CLASSIFY` construction, since `"is-a" < "under"`
+    ///    lexicographically. `CLASSIFY`'s own downstream walk then tries to
+    ///    strip a determiner (`"the "`/`"a "`/`"an "`) off whatever follows
+    ///    the copula — but here that is the adposition (`"under the tree"`),
+    ///    which starts with none of the three, so the strip fails, falls back
+    ///    to `Definiteness::Indef` and leaves the whole remainder as
+    ///    `after_det`. No registered complement's surface is a PREFIX of
+    ///    `"under the tree"` (they would have to spell `"under…"`), so the
+    ///    walk reports [`ParseError::UnknownComplement`] whether or not
+    ///    `tree` itself is registered — unlike `Property`, where the same
+    ///    failure required `old` to be UNregistered.
+    /// 2. **The informative case still misparses, the same way `Property`'s
+    ///    does, when the adposition itself is what gets registered.** If
+    ///    `under` is added to the `ParseContext`'s complement set, its own
+    ///    surface (`"under"`) IS a prefix of the remainder, so the walk
+    ///    matches it as the complement of an `IS_A` classification —
+    ///    `"the merchant is-a under"` — rather than reporting failure.
+    ///
+    /// Pinned by value, exactly as `a_property_predication_is_not_recovered_
+    /// by_parsing` pins its own two outcomes, so the misparse hazard is
+    /// recorded rather than rediscovered by whoever builds `r005`'s parse
+    /// direction.
+    #[test]
+    fn a_locative_predication_is_not_recovered_by_parsing() {
+        // The realistic case: `tree` is registered (it is a real concept
+        // elsewhere in the world), `under` is not — and the walk fails
+        // anyway, because the adposition sits where the determiner-strip
+        // looks, not because no complement matches.
+        assert!(matches!(
+            parse_common("the merchant is under the tree.", &ctx(&["tree"])),
+            Err(ParseError::UnknownComplement { after }) if after == "under the tree"
+        ));
+        // The informative case: register the adposition itself, and the
+        // walk does not fail — it silently returns the WRONG clause, a
+        // classification whose object is the adposition. Pinned, not
+        // endorsed.
+        let misparsed = parse_common("the merchant is under the tree.", &ctx(&["tree", "under"]))
+            .expect("the tie-break always favors is-a, so this resolves rather than fails");
+        assert_eq!(misparsed.predicate, IS_A);
+        assert_eq!(misparsed.object, Argument::Concept("under".to_string()));
+    }
+
+    /// `Valence` is CLOSED at Stassen (1997)'s four intransitive predication
+    /// strategies plus the transitive frame, and this is where that claim is
+    /// mechanical rather than prose.
+    ///
+    /// **Exhaustive match, not a count.** A count passes whatever five variants
+    /// exist; this fails to COMPILE when a sixth is added, which is the point.
+    /// Decision 0326 says a campaign adding a variant per predicate has rebuilt
+    /// `Frame` and should stop — a sixth variant here is that campaign meeting
+    /// a wall it has to argue past deliberately.
+    #[test]
+    fn the_valence_taxonomy_is_closed_at_five() {
+        fn strategy(v: Valence) -> &'static str {
+            match v {
+                Valence::Nominal => "nominal",       // Stassen: nominal
+                Valence::Property => "property",     // Stassen: adjectival
+                Valence::Locative => "locative",     // Stassen: locational
+                Valence::Intransitive => "verbal",   // Stassen: verbal
+                Valence::Transitive => "transitive", // the one two-argument frame
+            }
+        }
+        let all = [
+            Valence::Nominal,
+            Valence::Property,
+            Valence::Locative,
+            Valence::Intransitive,
+            Valence::Transitive,
+        ];
+        let named: std::collections::BTreeSet<&str> = all.iter().map(|v| strategy(*v)).collect();
+        assert_eq!(named.len(), 5, "five distinct strategies");
     }
 
     /// The one-row promise, exercised. [`KILL`] was added to

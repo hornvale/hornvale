@@ -3789,3 +3789,5 @@ measured here.
 | 2026-08-29T01:26:32Z | rebaseline | 82.080 | 271.134 | 11.467 | 3.44 | 0 | 6970e1813 | campaign/the-rail | MacBookPro | 10 |
 | 2026-08-29T01:29:38Z | rebaseline | 64.519 | 272.359 | 12.333 | 4.41 | 0 | 6970e1813 | campaign/the-rail | MacBookPro | 10 |
 | 2026-08-29T01:30:16Z | gate-commit | 31.783 | 86.545 | 25.380 | 3.52 | 0 | 6970e1813 | campaign/the-rail | MacBookPro | 10 |
+| 2026-08-29T01:30:51Z | gate-commit | 23.401 | 52.221 | 13.128 | 2.79 | 0 | 6970e1813 | campaign/the-rail | MacBookPro | 10 |
+| 2026-08-29T01:58:46Z | rebaseline | 71.459 | 270.551 | 12.775 | 3.96 | 0 | 094516690 | campaign/the-rail | MacBookPro | 10 |
