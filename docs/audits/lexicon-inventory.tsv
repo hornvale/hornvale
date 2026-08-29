@@ -101,13 +101,13 @@ windows/vessel/src/light.rs	150
 windows/vessel/src/liveness.rs	12
 windows/vessel/src/plan.rs	150
 windows/vessel/src/purview.rs	39
-windows/vessel/src/session.rs	189
+windows/vessel/src/session.rs	230
 windows/vessel/src/snapshot.rs	3
 windows/vessel/src/streams.rs	6
-windows/vessel/src/underground.rs	21
+windows/vessel/src/underground.rs	39
 windows/vessel/src/underworld_level/carve.rs	143
 windows/vessel/src/underworld_level/dense.rs	58
-windows/vessel/src/underworld_level/mod.rs	198
+windows/vessel/src/underworld_level/mod.rs	215
 windows/vessel/src/underworld_level/region.rs	2
 windows/vessel/tests/common/mod.rs	1
 windows/vessel/tests/suite/lantern_fabric.rs	2

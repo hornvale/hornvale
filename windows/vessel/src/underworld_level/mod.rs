@@ -33,6 +33,44 @@ pub enum LevelCellKind {
     StairsUp,
 }
 
+/// How a body may move through one cell (The Gallery, Task 4; spec §3.2
+/// part 3) — movement is a MODE, not a boolean. `Swim` and `Fly` are
+/// reserved: a sequel's capability model (amphibious, or a carried/worn
+/// item) is what will make them reachable, and nothing returns them yet.
+/// The same seam shape spec §3.4 names for reach ("one named function
+/// answers 'how', rather than a constant or a boolean re-derived at every
+/// call site").
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MovementMode {
+    /// Ordinary footing — dry floor, or a rung connection.
+    Walk,
+    /// Standing water, crossable on foot (spec §3.2 part 1: wet cells are
+    /// walkable, you wade).
+    Wade,
+    /// Reserved for a sequel: swimming as a travel mode.
+    #[allow(dead_code)]
+    Swim,
+    /// Reserved for a sequel: flight as a travel mode.
+    #[allow(dead_code)]
+    Fly,
+}
+
+/// How a body may move through `kind`, or `None` if it may not move through
+/// it at all — the one predicate every lateral mover asks, rather than
+/// comparing against `LevelCellKind::Wall` directly (the rule
+/// `CellKind::passable`'s own doc states: a rule written against the
+/// variant breaks the day a new impassable kind arrives; a rule written
+/// against the predicate survives it).
+pub fn movement_mode(kind: LevelCellKind) -> Option<MovementMode> {
+    match kind {
+        LevelCellKind::Floor | LevelCellKind::StairsDown | LevelCellKind::StairsUp => {
+            Some(MovementMode::Walk)
+        }
+        LevelCellKind::Flooded => Some(MovementMode::Wade),
+        LevelCellKind::Wall => None,
+    }
+}
+
 /// A generated underworld level: one rung of one cave system, under one
 /// surface cell. Never serialized — re-derive it from the same inputs
 /// rather than storing it (decision 0069).
@@ -287,12 +325,29 @@ pub fn generate_level(extent: Rect, seed: Seed) -> Level {
     )
 }
 
-/// As `generate_level_with_origin`, additionally carving a flooded basin
-/// when `is_sump` says this chamber is phreatic. Reuses
-/// `hornvale_worldgen::chamber::is_sump` directly — a chamber's depth is a
-/// single scalar (spec §4.4), so this answers a per-chamber question, not
-/// a per-cell one, and the basin is the first leaf in generation order
-/// rather than a further seeded choice.
+/// As `generate_level_with_origin`, additionally flooding every UNWORKED
+/// leaf's `Floor` cells when `depth_m`/`water_table_m` says this level sits
+/// in the phreatic zone (The Gallery, Task 4; spec §3.2's water rule,
+/// rewritten at the Task 0 stop).
+///
+/// **Wetness keys on `LeafStyle.worked`, not on `origin`.** The rule is:
+/// wet is common and correct (a worked leaf is drained — cut and kept dry
+/// by whoever built it — a natural leaf is wet), and it applies per LEAF,
+/// not per chamber. `origin`'s own `is_sump` short-circuit
+/// (`hornvale_worldgen::chamber::is_sump` returns `false` for
+/// `ChamberOrigin::Made` unconditionally) never actually reaches a leaf's
+/// dryness under this rule, because the shipped path
+/// (`Underground::enter`) only ever produces `Found` — so this reads
+/// `hornvale_terrain::is_phreatic` directly, the physical half of
+/// `is_sump`'s own definition, and lets each leaf's own `worked` flag (not
+/// the chamber-wide origin) decide whether IT floods.
+///
+/// **The alignment this depends on**: `generate_level_with_origin` builds
+/// `leaf_styles` in one pass over `region::leaves(&tree)`, pushing one
+/// style per leaf in the same order — so `level.leaf_styles[i]` is always
+/// `leaves()[i]`'s own style, and re-deriving the tree here (rather than
+/// threading it through, `FRAME`-tier re-derivation being exactly what
+/// decision 0069 calls for) is safe to zip against it.
 /// type-audit: bare-ok(diagnostic-value: depth_m), bare-ok(diagnostic-value: water_table_m), bare-ok(ratio: inherited_worked_bias)
 #[allow(clippy::too_many_arguments)]
 pub fn generate_level_with_water(
@@ -313,28 +368,32 @@ pub fn generate_level_with_water(
         inherited_worked_bias,
         seed,
     );
-    if hornvale_worldgen::chamber::is_sump(origin, depth_m, water_table_m)
-        && let Some(basin) = region_first_leaf_rect(extent, seed)
-    {
-        for x in basin.x..(basin.x + basin.w) {
-            for y in basin.y..(basin.y + basin.h) {
-                let cell = Cell(x, y);
-                if level.cells.get(cell) == Some(LevelCellKind::Floor) {
-                    level.cells.set(cell, LevelCellKind::Flooded);
+    if hornvale_terrain::is_phreatic(depth_m, water_table_m) {
+        let (tree, _dof) = region::build_region(extent, seed);
+        let leaves = region::leaves(&tree);
+        debug_assert_eq!(
+            leaves.len(),
+            level.leaf_styles.len(),
+            "leaves() and leaf_styles must stay index-aligned"
+        );
+        for (rect, style) in leaves.iter().zip(level.leaf_styles.iter()) {
+            if style.worked {
+                // Drained by whoever cut it — the same reading `is_sump`
+                // already gives `ChamberOrigin::Made`, now applied per leaf
+                // rather than per chamber.
+                continue;
+            }
+            for x in rect.x..(rect.x + rect.w) {
+                for y in rect.y..(rect.y + rect.h) {
+                    let cell = Cell(x, y);
+                    if level.cells.get(cell) == Some(LevelCellKind::Floor) {
+                        level.cells.set(cell, LevelCellKind::Flooded);
+                    }
                 }
             }
         }
     }
     level
-}
-
-/// The same partition tree `generate_level_with_origin` already built,
-/// re-derived (not stored) so the flooding pass can find "the first leaf"
-/// without threading the tree itself through every function above it —
-/// `FRAME`-tier re-derivation is exactly what decision 0069 calls for.
-fn region_first_leaf_rect(extent: Rect, seed: Seed) -> Option<Rect> {
-    let (tree, _dof) = region::build_region(extent, seed);
-    region::leaves(&tree).into_iter().next()
 }
 
 /// The realized worked-fraction of a level's leaves — Task 6's own
@@ -517,6 +576,31 @@ mod tests {
     use hornvale_worldgen::character::Character;
     use std::collections::BTreeMap;
 
+    /// The movement-mode seam (The Gallery, Task 4; spec §3.2 part 3),
+    /// pinned kind by kind: `Wall` is the one impassable kind, `Flooded`
+    /// wades rather than refuses (part 1's own rule), and both `Floor` and
+    /// a rung connection walk.
+    #[test]
+    fn movement_mode_answers_one_mode_per_passable_kind() {
+        assert_eq!(
+            movement_mode(LevelCellKind::Floor),
+            Some(MovementMode::Walk)
+        );
+        assert_eq!(
+            movement_mode(LevelCellKind::StairsDown),
+            Some(MovementMode::Walk)
+        );
+        assert_eq!(
+            movement_mode(LevelCellKind::StairsUp),
+            Some(MovementMode::Walk)
+        );
+        assert_eq!(
+            movement_mode(LevelCellKind::Flooded),
+            Some(MovementMode::Wade)
+        );
+        assert_eq!(movement_mode(LevelCellKind::Wall), None);
+    }
+
     #[test]
     fn generation_is_deterministic() {
         let extent = Rect {
@@ -635,8 +719,17 @@ mod tests {
         assert_eq!(origin, ChamberOrigin::Found);
     }
 
+    /// The Gallery, Task 4: superseded `a_sump_gets_a_flooded_region_a_made_
+    /// chamber_never_does`, whose "a Made chamber is drained regardless of
+    /// the water table" assertion encoded the OLD rule — flooding gated on
+    /// `origin` through `is_sump` — that spec §3.2's rewrite retires.
+    /// Wetness now keys on each leaf's own `LeafStyle.worked`, so this
+    /// asserts the new invariant directly against the leaves themselves
+    /// rather than against `origin`: under a phreatic column, a worked leaf
+    /// stays fully drained and at least one natural leaf floods; above the
+    /// water table, nothing floods regardless of the worked/natural mix.
     #[test]
-    fn a_sump_gets_a_flooded_region_a_made_chamber_never_does() {
+    fn a_phreatic_level_floods_its_natural_leaves_and_drains_its_worked_ones() {
         use hornvale_terrain::CaveKind;
         use hornvale_worldgen::chamber::ChamberOrigin;
 
@@ -657,24 +750,31 @@ mod tests {
             NEUTRAL_WORKED_BIAS,
             Seed(2),
         );
-        assert!(
-            sump.cells.iter().any(|(_, k)| k == LevelCellKind::Flooded),
-            "a phreatic Found chamber must carve a flooded region"
+        let (tree, _dof) = region::build_region(extent, Seed(2));
+        let leaves = region::leaves(&tree);
+        assert_eq!(
+            leaves.len(),
+            sump.leaf_styles.len(),
+            "leaves() and leaf_styles must stay index-aligned"
         );
-
-        let made = generate_level_with_water(
-            extent,
-            CaveKind::Karst,
-            ChamberOrigin::Made,
-            Character::WildCave,
-            100.0,
-            10.0,
-            NEUTRAL_WORKED_BIAS,
-            Seed(2),
-        );
+        let mut any_natural_leaf_flooded = false;
+        for (rect, style) in leaves.iter().zip(sump.leaf_styles.iter()) {
+            let leaf_has_flood = (rect.x..(rect.x + rect.w)).any(|x| {
+                (rect.y..(rect.y + rect.h))
+                    .any(|y| sump.cells.get(Cell(x, y)) == Some(LevelCellKind::Flooded))
+            });
+            if style.worked {
+                assert!(
+                    !leaf_has_flood,
+                    "a worked leaf must stay drained even under a phreatic water table"
+                );
+            } else if leaf_has_flood {
+                any_natural_leaf_flooded = true;
+            }
+        }
         assert!(
-            made.cells.iter().all(|(_, k)| k != LevelCellKind::Flooded),
-            "a Made chamber is drained regardless of the water table (is_sump's own rule)"
+            any_natural_leaf_flooded,
+            "a phreatic Found chamber must carve at least one flooded natural leaf"
         );
 
         let dry = generate_level_with_water(
@@ -690,6 +790,79 @@ mod tests {
         assert!(
             dry.cells.iter().all(|(_, k)| k != LevelCellKind::Flooded),
             "a vadose Found chamber (above the water table) stays dry"
+        );
+    }
+
+    /// spec §3.2 part 2's own regression: wetness keys on `LeafStyle.worked`,
+    /// so a heavily-worked character's descent must come out substantially
+    /// drier than a natural-cave character's, on the SAME seed and the SAME
+    /// depth/water-table inputs — the only thing that differs between the
+    /// two runs is how many leaves read as worked. Asserts the DIRECTION
+    /// and a MARGIN, not a fixed percentage: the percentage is a
+    /// calibration this task does not own.
+    ///
+    /// claim: rate(seed: 0..30) — a mean-flooded-fraction comparison across
+    /// a 30-seed sweep, not a per-seed-without-exception invariant.
+    #[test]
+    fn a_drow_tier_descent_comes_out_substantially_drier_than_a_wild_cave_one() {
+        use hornvale_kernel::Band;
+        use hornvale_terrain::CaveKind;
+        use hornvale_worldgen::chamber::ChamberOrigin;
+
+        let rungs = [Band::Undercroft, Band::Shallows, Band::Deeps];
+        let origins = [ChamberOrigin::Found; 3];
+        // Every rung phreatic (a deep column against a shallow table), so
+        // any dryness difference between the two runs comes only from the
+        // worked/natural mix a character selects, not from whether the
+        // column is wet at all.
+        let depths_m = [500.0, 500.0, 500.0];
+        let water_table_m = 10.0;
+
+        fn flooded_fraction(levels: &[Level]) -> f64 {
+            let total: usize = levels.iter().map(|l| l.cells.iter().count()).sum();
+            let flooded: usize = levels
+                .iter()
+                .map(|l| {
+                    l.cells
+                        .iter()
+                        .filter(|(_, k)| *k == LevelCellKind::Flooded)
+                        .count()
+                })
+                .sum();
+            flooded as f64 / total.max(1) as f64
+        }
+
+        const TRIALS: u64 = 30;
+        let mut drow_total = 0.0;
+        let mut wild_total = 0.0;
+        for s in 0..TRIALS {
+            let drow = generate_descent_for_character(
+                &rungs,
+                CaveKind::Karst,
+                &origins,
+                &depths_m,
+                water_table_m,
+                Character::DrowTier,
+                Seed(s),
+            );
+            let wild = generate_descent_for_character(
+                &rungs,
+                CaveKind::Karst,
+                &origins,
+                &depths_m,
+                water_table_m,
+                Character::WildCave,
+                Seed(s),
+            );
+            drow_total += flooded_fraction(&drow);
+            wild_total += flooded_fraction(&wild);
+        }
+        let drow_mean = drow_total / TRIALS as f64;
+        let wild_mean = wild_total / TRIALS as f64;
+        assert!(
+            drow_mean < wild_mean - 0.05,
+            "a drow-tier descent must come out substantially drier than a \
+             wild-cave one: drow={drow_mean:.3}, wild={wild_mean:.3}"
         );
     }
 

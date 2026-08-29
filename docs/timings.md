@@ -3781,3 +3781,6 @@ measured here.
 | 2026-08-29T03:05:14Z | gate-commit | 74.471 | 142.036 | 24.721 | 2.24 | 0 | effa0a809 | campaign/the-gallery | ambrose | 12 |
 | 2026-08-29T03:06:31Z | gate-commit | 63.933 | 52.998 | 21.493 | 1.17 | 0 | effa0a809 | campaign/the-gallery | ambrose | 12 |
 | 2026-08-29T03:08:49Z | gate-commit | 66.493 | 52.678 | 22.011 | 1.12 | 0 | effa0a809 | campaign/the-gallery | ambrose | 12 |
+| 2026-08-29T03:33:35Z | gate-commit | 57.654 | 78.210 | 18.152 | 1.67 | 0 | e1681668d | campaign/the-gallery | ambrose | 12 |
+| 2026-08-29T03:34:52Z | gate-commit | 55.221 | 66.525 | 18.487 | 1.54 | 0 | e1681668d | campaign/the-gallery | ambrose | 12 |
+| 2026-08-29T03:36:10Z | gate-commit | 50.304 | 39.055 | 12.846 | 1.03 | 0 | e1681668d | campaign/the-gallery | ambrose | 12 |

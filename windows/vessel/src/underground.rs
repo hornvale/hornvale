@@ -13,9 +13,23 @@
 //! is either.
 
 use hornvale_kernel::{Band, Seed};
+use hornvale_locale::Compass;
 
 use crate::lattice::Cell;
 use crate::underworld_level::{Level, LevelCellKind, generate_descent_for_character};
+
+/// Underground's own diagonal refusal (The Gallery, Task 4) — the same
+/// geometry `INDOOR_DIAGONAL_REFUSAL` states one band over
+/// (`session.rs`): [`crate::session::cell_delta`] is orthogonal only, so a
+/// diagonal step through the corner where two walls meet is not a way
+/// through rock either.
+const UNDERGROUND_DIAGONAL_REFUSAL: &str =
+    "There is no slipping through a corner down here either; try north, south, east or west.";
+
+/// The physical reason a rock cell refuses a lateral step underground.
+/// Names no verb and no movement mode — a parse complaint this is not.
+const UNDERGROUND_ROCK_REFUSAL: &str =
+    "Solid rock closes off the way; there is no path through it.";
 
 /// Every habitation rung the delve ladder names, [`Band::Surface`]
 /// excluded — the same filter
@@ -177,6 +191,72 @@ impl Underground {
     pub(crate) fn rung_band(&self) -> Band {
         habitation_rungs()[self.rung]
     }
+
+    /// A compass step underground: one cell, in the bearing named (The
+    /// Gallery, Task 4).
+    ///
+    /// **The reversal `UNDERGROUND_LATERAL_REFUSAL` (`session.rs`) owed the
+    /// moment this task landed.** That constant's own doc said "there is
+    /// nowhere down here for a bearing to mean" — true only while the cave
+    /// lattice reached no further than its entrance chamber; Task 3 gave it
+    /// a whole generated level, which is what this method walks.
+    ///
+    /// Follows the indoor compass step's own precedent
+    /// (`Session::step`, `session.rs:3413`) rule for rule:
+    ///
+    /// 1. **A diagonal is refused** ([`UNDERGROUND_DIAGONAL_REFUSAL`])
+    ///    before anything is looked up — [`crate::session::cell_delta`] is
+    ///    orthogonal only.
+    /// 2. **An impassable target is refused with a physical reason**
+    ///    ([`UNDERGROUND_ROCK_REFUSAL`]), asked through
+    ///    [`crate::underworld_level::movement_mode`] rather than compared
+    ///    against `LevelCellKind::Wall` directly — the same rule
+    ///    `CellKind::passable`'s own doc gives, so the refusal survives the
+    ///    day a new impassable kind arrives.
+    /// 3. **Otherwise the cell moves.** `self.rung` is never read or
+    ///    written here — metaplan §1b.6's law, lateral movement never
+    ///    changes band, so the possession's walk-band `position` is
+    ///    likewise untouched. A stairs cell is a distinguishable outcome
+    ///    ([`StepOutcome::NeedsStairs`]) rather than a plain `Moved`: the
+    ///    possession now stands there, but crossing BETWEEN rungs is
+    ///    Task 5's stairs verb, not a compass bearing.
+    pub(crate) fn step(&mut self, dir: Compass) -> StepOutcome {
+        let Some(delta) = crate::session::cell_delta(dir) else {
+            return StepOutcome::Blocked(UNDERGROUND_DIAGONAL_REFUSAL);
+        };
+        let target = Cell(self.cell.0 + delta.0, self.cell.1 + delta.1);
+        let kind = self.descent[self.rung].cells.get(target);
+        if kind
+            .and_then(crate::underworld_level::movement_mode)
+            .is_none()
+        {
+            return StepOutcome::Blocked(UNDERGROUND_ROCK_REFUSAL);
+        }
+        self.cell = target;
+        if matches!(
+            kind,
+            Some(LevelCellKind::StairsDown) | Some(LevelCellKind::StairsUp)
+        ) {
+            StepOutcome::NeedsStairs
+        } else {
+            StepOutcome::Moved
+        }
+    }
+}
+
+/// The outcome of one lateral compass step underground (The Gallery, Task
+/// 4; spec §3.2).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum StepOutcome {
+    /// The possession moved one cell.
+    Moved,
+    /// The step was refused, with the physical reason why — never a parse
+    /// complaint and never a sentence naming a verb or a movement mode.
+    Blocked(&'static str),
+    /// The step landed on a stairs cell. Moving BETWEEN rungs needs the
+    /// stairs verb (Task 5), not another compass bearing, so this is kept
+    /// distinct from a plain [`StepOutcome::Moved`].
+    NeedsStairs,
 }
 
 #[cfg(test)]

@@ -291,13 +291,16 @@ const INDOOR_DIAGONAL_REFUSAL: &str =
 /// that text died with the constant, so only the water's own reason remains.)
 const SUBMERGED_LATERAL_REFUSAL: &str = "Not while you are under. Surface first, then swim.";
 
-/// What lateral movement says while underground (The Deep Realm). The cave
-/// lattice this campaign ships has no walkable interior — only the entrance
-/// chamber is reachable — so a compass step from it is refused for the same
-/// reason a step from a water stratum is: there is nowhere down here for a
-/// bearing to mean. Diegetic, not a parse error, matching
-/// [`SUBMERGED_LATERAL_REFUSAL`]'s own reasoning one realm over.
-const UNDERGROUND_LATERAL_REFUSAL: &str = "Not down here. Climb out first, then walk.";
+/// What `back` says underground (The Gallery, Task 4). `go` is reversed —
+/// `UNDERGROUND_LATERAL_REFUSAL` claimed "there is nowhere down here for a
+/// bearing to mean", which Task 3's real generated level made false, and
+/// Task 4 deletes the constant along with that claim. `back` is NOT
+/// reversed, for the same reason it stays refused indoors after The
+/// Blocking's own reversal of `go`: this campaign built intra-level
+/// GEOMETRY, not a retraceable trail, so there is nothing for `back` to
+/// retrace in either band.
+const UNDERGROUND_BACK_REFUSAL: &str =
+    "There is no trail to retrace down here; walk it again, cell by cell.";
 
 /// `climb`'s refusal from any rung but the entrance (The Gallery, Task 3):
 /// there is no one-step way out of a multi-rung descent, only the stairs
@@ -2572,12 +2575,14 @@ impl<'w> Session<'w> {
                 "go" if self.submerged.is_some() => {
                     Turn::Out(SUBMERGED_LATERAL_REFUSAL.to_string())
                 }
-                // The chamber lattice, likewise: this campaign ships only the
-                // entrance address, no walkable interior, so a bearing from it
-                // has nowhere to mean either (The Deep Realm, Task 5).
-                "go" if self.underground.is_some() => {
-                    Turn::Out(UNDERGROUND_LATERAL_REFUSAL.to_string())
-                }
+                // The cave level, by contrast, IS reversed (The Gallery, Task
+                // 4): Task 3 gave it real cells to walk, which is what makes
+                // `UNDERGROUND_LATERAL_REFUSAL`'s own claim false.
+                // `step_underground` is `Self::step`'s reversal one band
+                // over, following the same three rules its own doc names —
+                // a diagonal refused before any lookup, passability asked as
+                // a predicate, and lateral movement that never changes band.
+                "go" if self.underground.is_some() => self.step_underground(rest),
                 "go" => self.go(rest),
                 // Band-aware, for the same reason `look` is: the outdoor path resolves
                 // against the LOCALE's two grains, which know nothing of what stands
@@ -2611,7 +2616,7 @@ impl<'w> Session<'w> {
                     Turn::Out(SUBMERGED_LATERAL_REFUSAL.to_string())
                 }
                 "back" if self.underground.is_some() => {
-                    Turn::Out(UNDERGROUND_LATERAL_REFUSAL.to_string())
+                    Turn::Out(UNDERGROUND_BACK_REFUSAL.to_string())
                 }
                 "back" => self.back(),
                 "wait" => self.wait(rest, Perceiving::Body),
@@ -2692,7 +2697,7 @@ impl<'w> Session<'w> {
                     Turn::Out(SUBMERGED_LATERAL_REFUSAL.to_string())
                 }
                 other if self.underground.is_some() && parse_compass(other).is_some() => {
-                    Turn::Out(UNDERGROUND_LATERAL_REFUSAL.to_string())
+                    self.step_underground(other)
                 }
                 other if parse_compass(other).is_some() => self.go(other),
                 other => Turn::Out(format!("No verb '{other}' ('!help' lists them).")),
@@ -2985,6 +2990,66 @@ impl<'w> Session<'w> {
         match self.describe_here() {
             Ok(d) => Turn::Out(format!("You climb back into the light.\n{d}")),
             other => self.out(other),
+        }
+    }
+
+    /// A compass step UNDERGROUND: one cell of the current rung's real
+    /// generated level (The Gallery, Task 4).
+    ///
+    /// The geometry itself — diagonal refusal, the passability predicate,
+    /// and the law that lateral movement never changes band (metaplan
+    /// §1b.6) — lives entirely in [`crate::underground::Underground::step`];
+    /// this wrapper only parses the bearing and narrates the outcome, the
+    /// same division `Self::step` (the indoor precedent, `session.rs:3413`)
+    /// draws between its own geometry and this method's `go`/bare-compass
+    /// callers.
+    ///
+    /// **Part 1 of spec §3.2's water rule reads here, not in the geometry.**
+    /// `Flooded` is passable (you wade), so the narration — not the
+    /// refusal — is where "wet" becomes visible: the verb is `wade` when
+    /// [`crate::underworld_level::movement_mode`] answers `Wade` for the
+    /// cell just entered, `step` otherwise. Querying the mode is part 3 of
+    /// the same rule: one seam answers "how", asked here rather than a
+    /// boolean re-derived from the cell kind directly.
+    fn step_underground(&mut self, dir: &str) -> Turn {
+        let Some(wanted) = parse_compass(dir) else {
+            return Turn::Out(format!("Go where? '{dir}' is no direction I know."));
+        };
+        let Some(ug) = self.underground.as_mut() else {
+            // Unreachable through `handle` (every call site guards on
+            // `self.underground.is_some()` first), the same shape `step`'s
+            // own unreachable guard takes one band over.
+            return Turn::Out("error: no cave floor to step across: not below".to_string());
+        };
+        match ug.step(wanted) {
+            crate::underground::StepOutcome::Blocked(reason) => Turn::Out(reason.to_string()),
+            crate::underground::StepOutcome::Moved => {
+                let ug = self.underground.as_ref().expect("just stepped");
+                let kind = ug
+                    .level()
+                    .cells
+                    .get(ug.cell)
+                    .expect("the possession's own cell is always in the level's extent");
+                let mode = crate::underworld_level::movement_mode(kind)
+                    .expect("a cell just stepped onto is passable");
+                let verb = match mode {
+                    crate::underworld_level::MovementMode::Wade => "wade",
+                    _ => "step",
+                };
+                Turn::Out(format!("You {verb} {}.", bearing_word(wanted)))
+            }
+            crate::underground::StepOutcome::NeedsStairs => {
+                let ug = self.underground.as_ref().expect("just stepped");
+                let word = match ug.level().cells.get(ug.cell) {
+                    Some(crate::underworld_level::LevelCellKind::StairsDown) => "down",
+                    Some(crate::underworld_level::LevelCellKind::StairsUp) => "up",
+                    _ => "on",
+                };
+                Turn::Out(format!(
+                    "You step {}, onto a stairway leading {word}.",
+                    bearing_word(wanted)
+                ))
+            }
         }
     }
 
@@ -5975,7 +6040,12 @@ const COMPASS_SQUARE: [Compass; 4] = [Compass::N, Compass::E, Compass::S, Compas
 /// `None` for the diagonals is the honest answer, not an omission:
 /// [`crate::lattice::HEADINGS`] is orthogonal because a diagonal step through the
 /// corner where two walls meet is not a way through a building.
-fn cell_delta(c: Compass) -> Option<(i32, i32)> {
+///
+/// **`pub(crate)`, not private (The Gallery, Task 4):**
+/// [`crate::underground::Underground::step`] reuses this exact table rather
+/// than a second copy of it — a diagonal is a diagonal whether the walls
+/// around it are built or natural rock.
+pub(crate) fn cell_delta(c: Compass) -> Option<(i32, i32)> {
     match c {
         Compass::N => Some((0, -1)),
         Compass::E => Some((1, 0)),
@@ -8738,13 +8808,17 @@ mod tests {
         );
     }
 
-    /// Lateral movement is refused while underground, and says so
-    /// diegetically — mirroring `SUBMERGED_LATERAL_REFUSAL`'s own guard one
-    /// realm over. Exercised directly against a hand-picked open cave
-    /// (`delve_at`) rather than a walk, for the same reason
+    /// `back` alone is still refused while underground (The Gallery, Task
+    /// 4 narrows what was `lateral_movement_is_refused_underground`):
+    /// `go`/a bare compass token are reversed now that a cave level has real
+    /// geometry to step through, but `back` is not, for the same reason it
+    /// stays refused indoors after The Blocking's own reversal of `go` —
+    /// this campaign built intra-level GEOMETRY, not a retraceable trail.
+    /// Exercised directly against a hand-picked open cave (`delve_at`)
+    /// rather than a walk, for the same reason
     /// `delve_has_three_distinguishable_outcomes` is.
     #[test]
-    fn lateral_movement_is_refused_underground() {
+    fn back_is_still_refused_underground() {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         let terrain = session
@@ -8758,15 +8832,132 @@ mod tests {
             session.underground.is_some(),
             "the fixture must have descended"
         );
-        for line in ["go n", "back", "n"] {
+        let out = match session.handle("back") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("back must not release"),
+        };
+        assert!(!out.contains("No verb"), "{out}");
+        assert!(
+            out.contains("no trail to retrace"),
+            "back must refuse underground with its own reason: {out}"
+        );
+    }
+
+    /// The Gallery, Task 4's headline: a compass step underground moves the
+    /// possession one cell, the same shape `handle`'s given test template
+    /// specifies. Tries every orthogonal bearing from the entrance cell
+    /// rather than a fixed one — Task 3's own connectivity invariant
+    /// guarantees at least one is walkable from any standable cell, but not
+    /// which one, so trying all four is what makes this robust against a
+    /// terrain epoch that moves the entrance cell's local shape.
+    #[test]
+    fn a_compass_step_underground_moves_one_cell() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+
+        let before = session.underground.as_ref().expect("descended").cell;
+        // Try each bearing until one is not rock; at least one must be,
+        // because the possession was placed on a cell of a connected level.
+        let moved = ["n", "s", "e", "w"].iter().any(|d| {
+            session.handle(&format!("go {d}"));
+            session.underground.as_ref().expect("still below").cell != before
+        });
+        assert!(
+            moved,
+            "at least one bearing from a standable cell must be walkable"
+        );
+    }
+
+    /// Rock refuses a lateral step with a PHYSICAL reason: not a parse
+    /// complaint, and not a sentence naming a verb or a movement mode.
+    /// Exercised at the `Underground::step` seam directly rather than
+    /// through `Session::handle` — the entrance cell's own neighbours are
+    /// generated content, not guaranteed to include a rock face, so this
+    /// scans the level for a standable cell known to sit beside `Wall`
+    /// before stepping toward it, the same scanning discipline
+    /// `find_open_cave_vertex`'s own doc argues for over a hand-picked
+    /// coordinate.
+    #[test]
+    fn rock_refuses_a_step_with_a_physical_reason() {
+        let world = seam_world();
+        let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        let mut ug = crate::underground::Underground::enter(&terrain, vertex, cave, world.seed);
+        let level = ug.level().clone();
+        let mut rock_adjacent = None;
+        'search: for (cell, kind) in level.cells.iter() {
+            if !matches!(
+                kind,
+                crate::underworld_level::LevelCellKind::Floor
+                    | crate::underworld_level::LevelCellKind::Flooded
+            ) {
+                continue;
+            }
+            for wanted in [Compass::N, Compass::E, Compass::S, Compass::W] {
+                let delta = cell_delta(wanted).expect("orthogonal");
+                let neighbour = crate::lattice::Cell(cell.0 + delta.0, cell.1 + delta.1);
+                if level.cells.get(neighbour) == Some(crate::underworld_level::LevelCellKind::Wall)
+                {
+                    rock_adjacent = Some((cell, wanted));
+                    break 'search;
+                }
+            }
+        }
+        let (cell, wanted) =
+            rock_adjacent.expect("a generated level has at least one standable cell beside rock");
+        ug.cell = cell;
+        match ug.step(wanted) {
+            crate::underground::StepOutcome::Blocked(reason) => {
+                let lower = reason.to_lowercase();
+                assert!(!lower.contains("verb"), "not a parse complaint: {reason}");
+                assert!(!lower.contains("mode"), "must not name a mode: {reason}");
+                assert!(!lower.contains("wade"), "must not name a mode: {reason}");
+                assert!(!lower.contains("walk"), "must not name a mode: {reason}");
+            }
+            other => panic!("expected a Blocked outcome, got {other:?}"),
+        }
+    }
+
+    /// `UNDERGROUND_LATERAL_REFUSAL`'s own doc said "there is nowhere down
+    /// here for a bearing to mean" — false the moment Task 3 gave the cave
+    /// real cells to walk. The Gallery, Task 4 deletes the constant
+    /// outright; this pins that its text is truly gone from a walking
+    /// session's output, not merely unreachable from one call site.
+    #[test]
+    fn the_lateral_refusal_is_gone() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        assert!(
+            session.underground.is_some(),
+            "the fixture must have descended"
+        );
+        for line in ["go n", "go s", "go e", "go w", "n", "s", "e", "w", "back"] {
             let out = match session.handle(line) {
                 Turn::Out(t) => t,
                 Turn::Released(_) => panic!("{line} must not release"),
             };
-            assert!(!out.contains("No verb"), "{line}: {out}");
             assert!(
-                out.contains("Climb out first"),
-                "{line} must refuse underground with the underground reason: {out}"
+                !out.contains("Not down here") && !out.contains("Climb out first"),
+                "{line}: the retired underground lateral refusal must never print: {out}"
             );
         }
     }
