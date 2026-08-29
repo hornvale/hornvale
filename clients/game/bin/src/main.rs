@@ -9,7 +9,7 @@
 
 use hornvale_game::driver::Driver;
 use hornvale_game::overture::genesis::{self, Gesture, Keys, Screen};
-use hornvale_game::overture::{Frame, SkyView, View};
+use hornvale_game::overture::{AtlasView, Frame, SkyView, View};
 use hornvale_game::{boot, input, term};
 use hornvale_game_core::{CommandLine, MIN_HEIGHT, MIN_WIDTH};
 use hornvale_kernel::Seed;
@@ -102,18 +102,19 @@ fn run(args: &[String]) -> Result<(), String> {
 
 /// The views the overture cycles, in cycle order.
 ///
-/// **`sky` is the first, and that is the honest state rather than a stub.**
+/// **`sky` then `atlas`, and that is the honest state rather than a stub.**
 /// Task 3 settles the `View` contract; Tasks 4-7 write the four views
-/// (`sky`, `atlas`, `almanac`, `tongue`) and each adds one line here. With
-/// only `sky` registered the frame shows its header, its rules, a live
-/// progress substrate, and the night sky over what is otherwise still an
-/// unmarked middle — which is what the client genuinely knows right now, and
-/// is strictly more than the blank terminal that stood here before. Nothing
-/// else changes when the next view lands: the frame skips what cannot speak,
-/// so a roster of one behaves correctly from the first rung
-/// (`hornvale_game::overture`).
+/// (`sky`, `atlas`, `almanac`, `tongue`) and each adds one line here. `sky`
+/// speaks from the first rung; `atlas` (Task 5) cannot speak until terrain
+/// exists (`BuildDepth::Terrain`) and is skipped by the frame before then —
+/// so with only these two registered, the cycle shows the night sky alone at
+/// `Astronomy` and both views once terrain lands, which is what the client
+/// genuinely knows at each point, and is strictly more than the blank
+/// terminal that stood here before. Nothing else changes when the next view
+/// lands: the frame skips what cannot speak, so a roster of two behaves
+/// correctly from the first rung (`hornvale_game::overture`).
 fn views() -> Vec<Box<dyn View>> {
-    vec![Box::new(SkyView)]
+    vec![Box::new(SkyView), Box::new(AtlasView::default())]
 }
 
 /// [`Screen`] over the real terminal.
