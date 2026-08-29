@@ -166,6 +166,20 @@ authored input — it says nothing about whether that input is still true.**
   rediscovered the way the campaign's own spec had to name it as a Risk
   before any code existed.
 
+## The branch never absorbed main until close
+
+`make sluice-status` carries no `campaign/the-gallery` row before this
+task's own stage-gate submission at close — no stage gate was ever
+submitted at the Task 6 boundary the plan's own pre-flight scan (F2) called
+for, despite `main` moving repeatedly during this campaign's twelve tasks
+(other campaigns landed throughout). The eventual stage gate reported
+clean (`main unchanged`, all four phases green) — this campaign's own
+branch happened not to collide — but that is not evidence the missed
+cadence was safe to skip; it is the same "absence of damage is not evidence
+of safety" lesson The Sources' retrospective already recorded from its own
+55-commit-late absorption. Submit `make sluice-stage` at every plan-stage
+boundary a future campaign of this size crosses, not only once at the end.
+
 ## Do differently next time
 
 Read a brief's cited production function's actual signature and current
