@@ -275,8 +275,13 @@ impl Underground {
             );
         // Task 6's fog-of-war: one all-unseen bitset per rung, sized to
         // that rung's own extent (deeper rungs are wider — see
-        // `generate_level_extent`). Nothing is marked yet; the first mark
-        // comes from the session's first successful step.
+        // `generate_level_extent`). `Underground::enter` itself marks
+        // nothing — the CALLER does: `Session::delve_at` marks the
+        // entrance's own surroundings immediately after this constructor
+        // returns (Fix round 1, spec §3.5 amended by commit f6051a9c3:
+        // every arrival marks, not just a lateral step), so by the time a
+        // live session sees this descent, rung 0 already remembers
+        // something.
         let seen = descent
             .iter()
             .map(|level| SeenBits::new(level.extent))
