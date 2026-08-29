@@ -299,6 +299,12 @@ const SUBMERGED_LATERAL_REFUSAL: &str = "Not while you are under. Surface first,
 /// [`SUBMERGED_LATERAL_REFUSAL`]'s own reasoning one realm over.
 const UNDERGROUND_LATERAL_REFUSAL: &str = "Not down here. Climb out first, then walk.";
 
+/// `climb`'s refusal from any rung but the entrance (The Gallery, Task 3):
+/// there is no one-step way out of a multi-rung descent, only the stairs
+/// up (Task 5).
+const CLIMB_FROM_DEPTH_REFUSAL: &str =
+    "You are too far down to climb straight out; find the stairs up.";
+
 /// The player-authored disposition-shift predicate (The First Mark): the
 /// first fact the possessing player, not a world system, ever commits.
 /// type-audit: bare-ok(identifier-text)
@@ -746,17 +752,20 @@ pub struct Session<'w> {
     /// The depth band, mirroring `inside`: a second way of being somewhere
     /// other than out of doors at ground level.
     submerged: Option<hornvale_climate::Stratum>,
-    /// The chamber the possession has descended into within the cave lattice
-    /// beneath this vertex, if any (The Deep Realm, Task 5). `None` is the
-    /// surface. Mirrors `submerged`: the whole resolved value is carried
-    /// rather than just an address, so `climb` and a later `look` never need
-    /// to re-derive it (`chamber_at` is pure and would return the same
-    /// content either way, but there is nothing to gain by re-deriving what
-    /// is already in hand). This campaign's lattice has only the entrance
-    /// address reachable from the vessel seam — no deeper descent verb
-    /// exists yet — so this is always the entrance chamber (`band = 0,
-    /// branch = 0, floor = 0`) when `Some`.
-    underground: Option<hornvale_worldgen::chamber::Chamber>,
+    /// The possession's position within a generated underworld descent, if
+    /// any (The Deep Realm, Task 5; made a real place by The Gallery, Task
+    /// 3). `None` is the surface. Mirrors `submerged`: the whole resolved
+    /// value is carried rather than just an address, so `climb` and a later
+    /// `look` never need to re-derive it.
+    ///
+    /// **Before this task this was a single entrance
+    /// `hornvale_worldgen::chamber::Chamber` — a bucket, not a place.** It
+    /// is now a [`crate::underground::Underground`]: a whole descent
+    /// (`Vec<Level>`, one per habitation rung) plus which rung and which
+    /// cell of it the possession stands on. `delve_at` builds it once,
+    /// through [`crate::underground::Underground::enter`]; nothing here
+    /// re-derives it.
+    underground: Option<crate::underground::Underground>,
     /// The session-lived geometry memo (the-waymark fix round, Finding 2):
     /// `RoomMeshMemo` is fixed for this session's whole lifetime (`neighbors`
     /// is world-independent; `corner_weights` is fixed once `ctx`'s
@@ -2929,7 +2938,19 @@ impl<'w> Session<'w> {
                     .to_string(),
             ),
             Some(chamber) => {
-                self.underground = Some(chamber);
+                // The Gallery, Task 3: the entrance chamber above only
+                // gates whether this cave mouth leads anywhere at all (the
+                // sealed refusal above) — it is not itself where the
+                // possession stands. `Underground::enter` builds the real
+                // descent and places the possession on the entrance rung's
+                // first standable cell, from the SAME terrain handle and
+                // vertex the sealed-check above already resolved.
+                self.underground = Some(crate::underground::Underground::enter(
+                    terrain,
+                    vertex,
+                    cave,
+                    self.world.seed,
+                ));
                 Turn::Out(format!(
                     "You worm down into the dark. The rock here is {}.",
                     stratum_word(chamber.stratum)
@@ -2939,15 +2960,28 @@ impl<'w> Session<'w> {
     }
 
     /// Return to the surface from the chamber lattice — `delve`'s inverse,
-    /// mirroring `surface`. This campaign's lattice reaches only the
-    /// entrance address, so unlike `surface` there is no intermediate layer
-    /// to rise through: any descent climbs out in one step.
+    /// mirroring `surface`.
+    ///
+    /// **Only clears `underground` from the entrance rung (The Gallery,
+    /// Task 3).** Before this task the lattice reached only the entrance
+    /// address, so any descent climbed out in one step; now a descent has
+    /// several rungs, and stairs (Task 5) are the only way down or up
+    /// between them. Climbing from a deeper rung refuses and says to take
+    /// the stairs up — this task's own scope stops at that refusal; the
+    /// stairs verb it names is Task 5's.
     fn climb(&mut self) -> Turn {
-        if self.underground.take().is_none() {
-            return Turn::Out(
-                "You are not underground; there is nothing to climb out of.".to_string(),
-            );
+        match &self.underground {
+            None => {
+                return Turn::Out(
+                    "You are not underground; there is nothing to climb out of.".to_string(),
+                );
+            }
+            Some(ug) if ug.rung != 0 => {
+                return Turn::Out(CLIMB_FROM_DEPTH_REFUSAL.to_string());
+            }
+            Some(_) => {}
         }
+        self.underground = None;
         match self.describe_here() {
             Ok(d) => Turn::Out(format!("You climb back into the light.\n{d}")),
             other => self.out(other),
@@ -3018,19 +3052,28 @@ impl<'w> Session<'w> {
 
     /// The chamber rendering while underground (The Deep Realm, Task 5) —
     /// deliberately minimal, in `describe_chamber_here`'s spirit one realm
-    /// over: this campaign ships no interior lattice for a cave the way a
-    /// structure has one, only the entrance address, so there is no floor
-    /// plan or anchor catalogue to draw from. Read straight off
-    /// `self.underground` rather than re-deriving through `chamber_at` —
-    /// re-deriving would be pure and would agree, but there is nothing to
-    /// gain by paying for it a second time.
+    /// over: no floor plan or anchor catalogue is drawn, only the footing
+    /// underfoot. Read straight off `self.underground`'s own generated
+    /// level rather than re-deriving anything — the level is already in
+    /// hand, and there is nothing to gain by paying for a second lookup.
+    ///
+    /// **The Gallery, Task 3: reads the generated level's own cell, not a
+    /// stratigraphic `stratum` word.** Before this task `self.underground`
+    /// carried the entrance chamber's rock stratum (e.g. "sandstone");
+    /// that chamber is now consulted only to gate whether the cave mouth
+    /// leads anywhere at all (`delve_at`'s sealed check), and a descent's
+    /// rungs are not stratum-addressed the way that single entrance bucket
+    /// was. `underground_footing_word` reports the one thing the real
+    /// generated level actually says about the cell the possession stands
+    /// on: whether it is dry or `Flooded`.
     fn describe_underground_here(&self) -> String {
-        let chamber = self
+        let ug = self
             .underground
+            .as_ref()
             .expect("guarded by self.underground.is_some() at the call site");
         format!(
             "[underground]\nThe rock here is {}. Ways on: out.",
-            stratum_word(chamber.stratum)
+            underground_footing_word(ug)
         )
     }
 
@@ -3038,17 +3081,21 @@ impl<'w> Session<'w> {
     /// cannot see the forest from inside the rock — resolving an underground
     /// `examine` against the surface locale's nouns is the defect this fixes
     /// (The Handle, Task 4).
+    ///
+    /// See [`Self::describe_underground_here`]'s doc for why this reads the
+    /// cell's footing rather than a stratum word (The Gallery, Task 3).
     fn underground_nouns(&self) -> Vec<crate::focalize::Noun> {
-        let chamber = self
+        let ug = self
             .underground
+            .as_ref()
             .expect("guarded by self.underground.is_some() at the call site");
-        let stratum = stratum_word(chamber.stratum);
+        let footing = underground_footing_word(ug);
         vec![
-            crate::focalize::Noun::new("the rock", "rock", &format!("The rock here is {stratum}.")),
+            crate::focalize::Noun::new("the rock", "rock", &format!("The rock here is {footing}.")),
             crate::focalize::Noun::new(
-                stratum,
-                stratum,
-                &format!("{stratum} — the rock of this chamber."),
+                footing,
+                footing,
+                &format!("{footing} rock — the footing of this passage."),
             ),
         ]
     }
@@ -5795,6 +5842,26 @@ fn stratum_word(s: hornvale_climate::Stratum) -> &'static str {
         Stratum::Basement => "the basement rock",
         Stratum::Roots => "the roots of the world",
         Stratum::Underneath => "the underneath",
+    }
+}
+
+/// The reader-facing word for the footing under the possession's feet
+/// underground (The Gallery, Task 3) — whether `ug`'s current cell is
+/// `Flooded` or dry `Floor`. `describe_underground_here` and
+/// `underground_nouns` share this rather than each reading `ug.level()`
+/// and matching on the cell kind separately.
+///
+/// Matches on anything other than `Flooded` as dry rather than listing
+/// `Floor` alone: `Underground::enter`'s own invariant guarantees the
+/// possession's cell is `Floor` or `Flooded` at the moment a descent
+/// begins, and a later task's stairs (Task 5) or fog (Task 6) adding a
+/// third live kind at this position should read as dry footing, not panic
+/// a description verb that has nothing to do with either.
+/// type-audit: bare-ok(prose: return)
+fn underground_footing_word(ug: &crate::underground::Underground) -> &'static str {
+    match ug.level().cells.get(ug.cell) {
+        Some(crate::underworld_level::LevelCellKind::Flooded) => "flooded",
+        _ => "dry",
     }
 }
 
@@ -8806,6 +8873,33 @@ mod tests {
         assert!(
             !reply.starts_with("You see no"),
             "the underworld names rock and then refuses it: {reply}"
+        );
+    }
+
+    /// The Gallery, Task 3: `delve` no longer sets a bucket — it stands the
+    /// possession on a real cell of a real generated level.
+    #[test]
+    fn delve_places_the_possession_on_a_real_cell_of_a_generated_level() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+
+        let ug = session.underground.as_ref().expect("a resolved descent");
+        assert!(!ug.descent.is_empty(), "a descent has at least one rung");
+        assert_eq!(ug.rung, 0, "you enter at the top rung");
+        assert!(
+            matches!(
+                ug.level().cells.get(ug.cell),
+                Some(crate::underworld_level::LevelCellKind::Floor)
+                    | Some(crate::underworld_level::LevelCellKind::Flooded)
+            ),
+            "the possession stands on a standable cell, not inside rock"
         );
     }
 
