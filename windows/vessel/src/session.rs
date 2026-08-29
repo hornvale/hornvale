@@ -123,9 +123,9 @@ const SESSION_CONTROL: [&str; 3] = ["release", "quit", "exit"];
 /// a verb listed in one place and missing from the other, never a verb
 /// missing from both — and it is why `clear_is_refused_while_asleep` exists
 /// beside `warm_is_refused_while_asleep` rather than in place of it.
-const IN_CHARACTER_VERBS: [&str; 20] = [
-    "ask", "back", "clear", "climb", "consult", "delve", "dive", "enter", "examine", "go", "knows",
-    "look", "map", "needs", "out", "sleep", "surface", "wait", "warm", "write",
+const IN_CHARACTER_VERBS: [&str; 22] = [
+    "ask", "back", "clear", "climb", "consult", "delve", "dive", "down", "enter", "examine", "go",
+    "knows", "look", "map", "needs", "out", "sleep", "surface", "up", "wait", "warm", "write",
 ];
 
 /// The provenance a walk-band step commits under (The Deed, Task 7).
@@ -410,6 +410,9 @@ verbs:
   delve            descend into the cave here, if the rock admits
                    one; 'climb' comes back
   climb            return to the surface from underground
+  down             descend a rung by the stairs underfoot, if there is one;
+                   'up' comes back
+  up               ascend a rung by the stairs underfoot, if there is one
   clear            clear the way down at a barred cave mouth; only a thin
                    fall of rubble gives, and once cleared it stays cleared
   enter [way]      step inside what is built here; once inside, 'enter further
@@ -2659,6 +2662,17 @@ impl<'w> Session<'w> {
                 "surface" => self.surface(),
                 "delve" => self.delve(),
                 "climb" => self.climb(),
+                // The Gallery, Task 5: unlike the four vertical band changes
+                // just above, a stairs move BETWEEN RUNGS charges — it
+                // reuses the very `Action::MoveWithin` dial
+                // `step_underground` already prices one lateral cell with,
+                // rather than inventing a new one (spec §3.4 forbids that).
+                // One flight of stairs is the same scale of act as one cell,
+                // not a whole band's worth of descent the way `dive`/`delve`
+                // are, which is what makes reusing that dial the right call
+                // rather than the free ride the four above get.
+                "down" => self.take_stairs(true),
+                "up" => self.take_stairs(false),
                 // The Latch, Task 5: the act that clears a barred passage.
                 // Gated by the same band guards `delve` carries just above
                 // (`clear_passage`'s own doc explains why), so it is dispatched
@@ -3085,6 +3099,85 @@ impl<'w> Session<'w> {
                 ))
             }
         }
+    }
+
+    /// Moving between rungs by way of the stairs (The Gallery, Task 5) — the
+    /// verb-level wrapper around
+    /// [`crate::underground::Underground::peek_stairs`]/
+    /// [`crate::underground::Underground::take_stairs`], one level up the
+    /// same way [`Self::step_underground`] wraps
+    /// [`crate::underground::Underground::peek`]/
+    /// [`crate::underground::Underground::commit_step`].
+    ///
+    /// **New verbs, not a re-point of `delve`/`climb`.** Both already carry
+    /// an established meaning at this band boundary — `delve` opens a
+    /// descent from the surface, `climb` closes one back to it, with its own
+    /// pinned refusals ("You are already below; 'climb' brings you back up
+    /// first." — [`Self::delve`]; [`CLIMB_FROM_DEPTH_REFUSAL`], which
+    /// already tells the player to "find the stairs up", naming a DIFFERENT
+    /// mechanism rather than itself). Re-pointing either would mean
+    /// rewriting both of those pinned sentences into stairs-aware dispatch
+    /// for no evidence they need to move; two new verbs cost one
+    /// [`IN_CHARACTER_VERBS`] array-length bump and two `HELP` lines
+    /// instead, with neither existing verb's behaviour touched. See this
+    /// task's own report for the fuller argument.
+    ///
+    /// **The direction is checked against the current cell BEFORE
+    /// `peek_stairs` is ever asked**, because `peek_stairs` itself is
+    /// direction-agnostic (it reads whichever kind the current cell already
+    /// is) — asking it while standing on the WRONG kind of stairs would
+    /// silently take a player the opposite way from the word they typed.
+    /// Refusing here, with a physical reason naming neither verb, is what
+    /// keeps `down` always meaning down.
+    ///
+    /// **Charges exactly the way [`Self::step_underground`] does, and in the
+    /// same order**: `peek_stairs` validates that the move can succeed and
+    /// returns WITHOUT moving, `charge_within_room` runs next, and only once
+    /// that succeeds does
+    /// [`crate::underground::Underground::take_stairs`] itself move the
+    /// possession — so a refused clock, or a structurally-impossible move
+    /// (the descent's own deepest rung has no further rung to land on),
+    /// never moves the possession and never spends a tick. One flight of
+    /// stairs is priced the same as one lateral cell
+    /// (`Action::MoveWithin(AnchorId(0))`, the same dial
+    /// `charge_within_room` already charges) rather than a new cost model —
+    /// spec §3.4 forbids minting one, and nothing here does.
+    fn take_stairs(&mut self, want_down: bool) -> Turn {
+        let Some(ug) = self.underground.as_ref() else {
+            return Turn::Out("You are not underground; there are no stairs to take.".to_string());
+        };
+        let wanted_kind = if want_down {
+            crate::underworld_level::LevelCellKind::StairsDown
+        } else {
+            crate::underworld_level::LevelCellKind::StairsUp
+        };
+        if ug.level().cells.get(ug.cell) != Some(wanted_kind) {
+            return Turn::Out(if want_down {
+                "There is no stairway down from here.".to_string()
+            } else {
+                "There is no stairway up from here.".to_string()
+            });
+        }
+        if let Err(reason) = ug.peek_stairs() {
+            return Turn::Out(reason.to_string());
+        }
+        // The charge runs BEFORE the move lands, the same order
+        // `step_underground`'s own `charge_within_room` call keeps: a
+        // refused clock must not move the possession.
+        if let Err(e) = self.charge_within_room() {
+            return Turn::Out(e);
+        }
+        let ug = self
+            .underground
+            .as_mut()
+            .expect("checked Some above; charge_within_room never touches underground");
+        ug.take_stairs()
+            .expect("peek_stairs just confirmed this succeeds");
+        let word = if want_down { "down" } else { "up" };
+        Turn::Out(format!(
+            "You take the stairs {word}.\n{}",
+            self.describe_underground_here()
+        ))
     }
 
     /// Clear the barred passage at the cave mouth here (The Latch, Task 5) —
@@ -9153,6 +9246,273 @@ mod tests {
         );
     }
 
+    /// The property that matters (The Gallery, Task 5's own brief):
+    /// descending from rung `n` and climbing back arrives on rung `n` —
+    /// not necessarily the same CELL, since `place_connections` sites the
+    /// down-stairs and the up-stairs independently (first leaf vs last
+    /// leaf), so this asserts on the RUNG alone, never the cell.
+    ///
+    /// Reaching a stairs cell by walking is impractical from a test — the
+    /// same reason `delve_at` exists as a seam
+    /// (`underground_ways_on_agrees_with_the_levels_real_neighbours` above
+    /// already uses it the same way): this scans the entrance rung's own
+    /// level for its one `StairsDown` cell and places the possession there
+    /// directly.
+    #[test]
+    fn stairs_connect_adjacent_rungs_in_both_directions() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        assert!(
+            session.underground.is_some(),
+            "the fixture must have descended"
+        );
+        assert_eq!(
+            session.underground.as_ref().expect("descended").rung,
+            0,
+            "sanity check: `enter` always starts a descent at rung 0"
+        );
+
+        let down_cell = {
+            let ug = session.underground.as_ref().expect("descended");
+            ug.level()
+                .cells
+                .iter()
+                .find(|(_, k)| *k == crate::underworld_level::LevelCellKind::StairsDown)
+                .map(|(c, _)| c)
+                .expect("every rung has exactly one StairsDown cell")
+        };
+        session.underground.as_mut().expect("descended").cell = down_cell;
+
+        let down_out = match session.handle("down") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("down must not release"),
+        };
+        assert_eq!(
+            session.underground.as_ref().expect("still below").rung,
+            1,
+            "descending from rung 0 must land on rung 1: {down_out}"
+        );
+
+        // Round trip: `up` from here must arrive back on rung 0 — the
+        // possession already stands on rung 1's own `StairsUp` cell
+        // (`Underground::peek_stairs`'s own landing rule), so no further
+        // scan or placement is needed before taking the stairs back up.
+        let up_out = match session.handle("up") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("up must not release"),
+        };
+        assert_eq!(
+            session.underground.as_ref().expect("still below").rung,
+            0,
+            "ascending back must land on rung 0: {up_out}"
+        );
+    }
+
+    /// The direction is checked against the CURRENT cell, not merely
+    /// "is this any stairs cell" — typing `up` while standing on a
+    /// `StairsDown` cell must refuse rather than silently taking the
+    /// possession down (`Self::take_stairs`'s own doc explains why: asking
+    /// `peek_stairs` with no direction check first would do exactly that,
+    /// since it reads whichever kind the current cell already is).
+    #[test]
+    fn down_refuses_on_an_up_stairs_cell_and_vice_versa() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        let down_cell = {
+            let ug = session.underground.as_ref().expect("descended");
+            ug.level()
+                .cells
+                .iter()
+                .find(|(_, k)| *k == crate::underworld_level::LevelCellKind::StairsDown)
+                .map(|(c, _)| c)
+                .expect("every rung has exactly one StairsDown cell")
+        };
+        session.underground.as_mut().expect("descended").cell = down_cell;
+        let before = session.underground.as_ref().expect("descended").rung;
+
+        let out = match session.handle("up") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("up must not release"),
+        };
+        assert_eq!(
+            session.underground.as_ref().expect("still below").rung,
+            before,
+            "`up` on a StairsDown cell must not move the possession: {out}"
+        );
+        assert!(
+            out.to_lowercase().contains("no stairway up"),
+            "the refusal must name the physical mismatch: {out}"
+        );
+    }
+
+    /// The descent's own deepest rung still carries a `StairsDown` cell
+    /// (`place_connections` never special-cases the last rung), but nothing
+    /// generated lies beneath it — `Underground::peek_stairs`'s own
+    /// boundary check. Reached here by forcing `rung` to the bottom rather
+    /// than walking a full descent down: this task's own scope is the
+    /// stairs verb, not a fifth end-to-end walk of the ladder.
+    #[test]
+    fn the_deepest_rungs_stairs_down_refuses_without_moving() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        let bottom = session
+            .underground
+            .as_ref()
+            .expect("descended")
+            .descent
+            .len()
+            - 1;
+        let down_cell = {
+            let ug = session.underground.as_mut().expect("descended");
+            ug.rung = bottom;
+            ug.level()
+                .cells
+                .iter()
+                .find(|(_, k)| *k == crate::underworld_level::LevelCellKind::StairsDown)
+                .map(|(c, _)| c)
+                .expect("every rung, the last included, has exactly one StairsDown cell")
+        };
+        session.underground.as_mut().expect("descended").cell = down_cell;
+        let before = session.day;
+
+        let out = match session.handle("down") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("down must not release"),
+        };
+        assert_eq!(
+            session.underground.as_ref().expect("still below").rung,
+            bottom,
+            "the deepest rung's own down-stairs must not move the possession: {out}"
+        );
+        assert_eq!(
+            session.day, before,
+            "a refused stairs move must not spend a tick: {out}"
+        );
+        assert!(
+            !out.to_lowercase().contains("verb"),
+            "not a parse complaint: {out}"
+        );
+    }
+
+    /// A stairs move charges time, the same dial `an_underground_step_
+    /// advances_the_clock` (just below) already pins for a lateral cell —
+    /// one flight of stairs is priced the same scale of act as one cell,
+    /// not the free ride `dive`/`surface`/`delve`/`climb` get for a whole
+    /// band's worth of vertical movement.
+    #[test]
+    fn taking_the_stairs_advances_the_clock() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        let down_cell = {
+            let ug = session.underground.as_ref().expect("descended");
+            ug.level()
+                .cells
+                .iter()
+                .find(|(_, k)| *k == crate::underworld_level::LevelCellKind::StairsDown)
+                .map(|(c, _)| c)
+                .expect("every rung has exactly one StairsDown cell")
+        };
+        session.underground.as_mut().expect("descended").cell = down_cell;
+        let before = session.day;
+
+        let out = match session.handle("down") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("down must not release"),
+        };
+        assert!(
+            session.day > before,
+            "taking the stairs must advance the clock: before={before:?}, \
+             after={:?}, out={out}",
+            session.day
+        );
+    }
+
+    /// `down` is gated by the body like every other in-character verb (spec
+    /// §2.1/§3.2) — the behavioural half of the three-roster proof
+    /// (`every_bare_verb_help_lists_is_classified` catches a roster drift
+    /// structurally; this drives an actual sleeping body at `down` and
+    /// checks the refusal itself). Copied from `warm_is_refused_while_
+    /// asleep`, the pattern that pin names: The Latch shipped a verb
+    /// (`clear`) that was in NEITHER `IN_CHARACTER_VERBS` nor `HELP`, which
+    /// satisfies every STRUCTURAL agreement check in both directions
+    /// (absence agrees with absence) — only a live sleeping body at the verb
+    /// itself catches that shape of drift.
+    #[test]
+    fn down_is_refused_while_asleep() {
+        let world = seam_world();
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+        let slept = match session.handle("sleep") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("sleep must not release: {t}"),
+        };
+        assert!(
+            !slept.starts_with("No verb"),
+            "`sleep` must be a verb for this test to mean anything: {slept}"
+        );
+        assert_eq!(
+            session.body_state(),
+            BodyState::Asleep,
+            "sanity check: asleep alone must gate as asleep"
+        );
+        let out = match session.handle("down") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("down must not release: {t}"),
+        };
+        assert_eq!(out, "You cannot — you are asleep.");
+    }
+
+    /// `up`'s own half of the same proof `down_is_refused_while_asleep`
+    /// carries — both verbs were added together, so both get the
+    /// behavioural check, not just the one this doc happened to name first.
+    #[test]
+    fn up_is_refused_while_asleep() {
+        let world = seam_world();
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+        let slept = match session.handle("sleep") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("sleep must not release: {t}"),
+        };
+        assert!(
+            !slept.starts_with("No verb"),
+            "`sleep` must be a verb for this test to mean anything: {slept}"
+        );
+        let out = match session.handle("up") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("up must not release: {t}"),
+        };
+        assert_eq!(out, "You cannot — you are asleep.");
+    }
+
     /// Fix round 1, finding 2: an underground step must advance the clock,
     /// the same way an indoor cell step does (`charge_within_room`) —
     /// without this, walking underground costs no time at all, and the
@@ -10128,11 +10488,11 @@ mod tests {
     /// that fact today regardless of what a player types. The conclusion
     /// rests on that; the loop below corroborates it over a roster.
     ///
-    /// **WHAT THIS FIXTURE ACTUALLY EXERCISES IS 12 OF THE 32, NOT 32 —
+    /// **WHAT THIS FIXTURE ACTUALLY EXERCISES IS 12 OF THE 34, NOT 34 —
     /// state that plainly rather than let the roster count imply
     /// otherwise.** Every verb here runs against a session that has just
     /// been `!possess`ed, and a possessed body is exactly what
-    /// `gated_by_the_body` refuses in front of: all 20
+    /// `gated_by_the_body` refuses in front of: all 22
     /// [`IN_CHARACTER_VERBS`] are turned away by the body-state gate BEFORE
     /// their handlers run, so only the 3 [`SESSION_CONTROL`] verbs and the
     /// 9 Group-A operator instruments below reach any dispatch arm at all.
@@ -10148,6 +10508,9 @@ mod tests {
     /// from that measurement — same 12 ungated verbs, two more gated ones,
     /// 18→19→20 and 30→31→32 — rather than re-run, since
     /// `gated_by_the_body`'s own logic is untouched by either addition).
+    /// The Gallery's Task 5 added two more gated verbs still, `down`/`up`,
+    /// re-derived the identical way: 20→22 and 32→34, the 12 ungated verbs
+    /// again untouched.
     ///
     /// **So this is a weak tripwire, not the tripwire that turns red the
     /// day mortality ships.** If a death terminator ever arrives through an
@@ -10160,15 +10523,16 @@ mod tests {
     ///
     /// The stated denominator (spec §7's own requirement): the full shipped
     /// verb roster this file itself classifies is the SUM of three groups —
-    /// [`IN_CHARACTER_VERBS`] (20, since The Offer's Task 5 added `warm` and
-    /// The Latch's fix wave added `clear`),
+    /// [`IN_CHARACTER_VERBS`] (22, since The Offer's Task 5 added `warm`,
+    /// The Latch's fix wave added `clear`, and The Gallery's Task 5 added
+    /// `down`/`up`),
     /// [`SESSION_CONTROL`] (3: `release`/`quit`/`exit`), and the nine
     /// out-of-character-ONLY operator instruments `handle_ooc`'s Group A
     /// dispatches (`why`/`npcs`/`help`/`eyes`/`whoami`/`provoke`/`soothe`/
-    /// `possess`/`unpossess`) — **32** total. Group B's six `!`-twins
+    /// `possess`/`unpossess`) — **34** total. Group B's six `!`-twins
     /// (`!map`/`!examine`/`!needs`/`!wait`/`!look`/`!knows`) are deliberately
     /// NOT counted a second time — [`HELP`]'s own text calls them "the
-    /// out-of-character halves" of verbs already among the 20: the same verb
+    /// out-of-character halves" of verbs already among the 22: the same verb
     /// under the other mood, not a distinct one.
     ///
     /// Each verb runs against its OWN fresh, freshly-possessed session
@@ -10205,11 +10569,11 @@ mod tests {
             .collect();
         assert_eq!(
             roster.len(),
-            32,
-            "the stated denominator: 20 IN_CHARACTER_VERBS + 3 SESSION_CONTROL \
+            34,
+            "the stated denominator: 22 IN_CHARACTER_VERBS + 3 SESSION_CONTROL \
              + 9 Group-A operator instruments the OOC namespace alone \
              dispatches. This pins the ROSTER's size, NOT the exercised \
-             population: under a possessed body the gate refuses all 20 \
+             population: under a possessed body the gate refuses all 22 \
              in-character verbs, so 12 reach a dispatch arm — see this \
              test's doc comment"
         );

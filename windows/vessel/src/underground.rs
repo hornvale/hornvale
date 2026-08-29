@@ -31,6 +31,25 @@ const UNDERGROUND_DIAGONAL_REFUSAL: &str =
 const UNDERGROUND_ROCK_REFUSAL: &str =
     "Solid rock closes off the way; there is no path through it.";
 
+/// The physical reason [`Underground::peek_stairs`] refuses when the
+/// current cell is not a stairs cell at all (The Gallery, Task 5). Never
+/// surfaced through `Session::take_stairs` in practice — that caller checks
+/// the current cell's kind against the direction it wants before ever
+/// asking `peek_stairs`, and refuses with a direction-specific sentence of
+/// its own instead — but `peek_stairs`/`take_stairs` are real seams a test,
+/// or a future caller with no direction preference, can reach directly.
+const NOT_ON_STAIRS_REFUSAL: &str = "There is no stairway underfoot to take.";
+
+/// The physical reason the descent's own deepest rung refuses a `StairsDown`
+/// (The Gallery, Task 5). `place_connections`
+/// (`windows/vessel/src/underworld_level/mod.rs`) cuts a `StairsDown` cell
+/// into every rung unconditionally — the bottom rung included — but the
+/// generated descent itself stops at the last rung [`Underground::enter`]
+/// built, so that rung's own down-stairs lead to a rung nothing has
+/// generated yet.
+const STAIRS_LEAD_NOWHERE_REFUSAL: &str =
+    "The stairs continue down into unbroken dark, but nothing has delved that far yet.";
+
 /// Every habitation rung the delve ladder names, [`Band::Surface`]
 /// excluded — the same filter
 /// `windows/vessel/tests/suite/underworld_level_generation.rs`'s
@@ -280,6 +299,102 @@ impl Underground {
         } else {
             StepOutcome::Moved
         }
+    }
+
+    /// Where taking the stairs at the possession's CURRENT cell would lead,
+    /// without moving there (The Gallery, Task 5) — the same peek/commit
+    /// split [`Underground::peek`]/[`Underground::commit_step`] already draw
+    /// one rung over, so a caller can charge a cost before the move lands and
+    /// never move the possession on a refused clock.
+    ///
+    /// **The direction is read off the CURRENT cell's own kind, never a
+    /// parameter**: a `StairsDown` cell means descend, a `StairsUp` cell
+    /// means ascend, anything else refuses. A caller that wants a SPECIFIC
+    /// direction (the `down`/`up` verbs, `session.rs`) checks the current
+    /// cell's kind against the one it wants BEFORE ever calling this — this
+    /// method alone cannot refuse "wrong direction", only "no direction at
+    /// all" or "no destination for the direction there is".
+    ///
+    /// **The landing cell is the connecting stairway's own cell on the far
+    /// side, never a fresh scan for "somewhere standable"**: descending from
+    /// rung `n` lands on rung `n + 1`'s own `StairsUp` cell, and ascending
+    /// from rung `n` lands on rung `n - 1`'s own `StairsDown` cell — the same
+    /// physical stairway, named from its other end. Both are guaranteed to
+    /// exist by the generator's own invariant — every rung has exactly one
+    /// `StairsDown` cell, and every rung but the first has exactly one
+    /// `StairsUp` cell (`place_connections`' `has_up = i > 0`;
+    /// `windows/vessel/src/underworld_level/mod.rs`), asserted across 200
+    /// seeds by that module's own `stairs_down_and_stairs_up_never_share_a_
+    /// cell` — so descending always has somewhere to land on any rung but
+    /// the last, and ascending always has somewhere to land on any rung but
+    /// the first (which has no `StairsUp` cell to be standing on in the
+    /// first place, so that arm is never reached from rung `0`).
+    ///
+    /// Refuses when the current cell is not a stairs cell at all
+    /// ([`NOT_ON_STAIRS_REFUSAL`]), or when the current cell is a
+    /// `StairsDown` on the descent's own deepest rung — the one rung
+    /// `place_connections` still cuts a down-stairs into (it never
+    /// special-cases the last rung) even though [`Underground::enter`]
+    /// generated nothing beneath it ([`STAIRS_LEAD_NOWHERE_REFUSAL`]).
+    pub(crate) fn peek_stairs(&self) -> Result<(usize, Cell), &'static str> {
+        match self.descent[self.rung].cells.get(self.cell) {
+            Some(LevelCellKind::StairsDown) => {
+                let next = self.rung + 1;
+                if next >= self.descent.len() {
+                    return Err(STAIRS_LEAD_NOWHERE_REFUSAL);
+                }
+                let landing = self.descent[next]
+                    .cells
+                    .iter()
+                    .find(|(_, k)| matches!(k, LevelCellKind::StairsUp))
+                    .map(|(c, _)| c)
+                    .expect(
+                        "every rung but the first has a StairsUp cell \
+                         (place_connections' has_up = i > 0), and `next` \
+                         is never 0",
+                    );
+                Ok((next, landing))
+            }
+            Some(LevelCellKind::StairsUp) => {
+                let next = self.rung.checked_sub(1).expect(
+                    "a StairsUp cell only exists at rung > 0 \
+                     (place_connections' has_up = i > 0), so its own rung \
+                     always has a predecessor",
+                );
+                let landing = self.descent[next]
+                    .cells
+                    .iter()
+                    .find(|(_, k)| matches!(k, LevelCellKind::StairsDown))
+                    .map(|(c, _)| c)
+                    .expect(
+                        "every rung has a StairsDown cell — place_connections \
+                         cuts one unconditionally, the last rung included",
+                    );
+                Ok((next, landing))
+            }
+            _ => Err(NOT_ON_STAIRS_REFUSAL),
+        }
+    }
+
+    /// Take the stairs at the possession's current cell (The Gallery, Task
+    /// 5): commit a move [`Underground::peek_stairs`] already validated,
+    /// moving the possession to the destination rung and cell and returning
+    /// the new rung's own [`Band`] (`habitation_rungs()[rung]`, the same
+    /// index [`Underground::rung_band`] reads).
+    ///
+    /// `None` on any of [`Underground::peek_stairs`]'s own refusals — never
+    /// itself moves the possession on a call that would have refused, which
+    /// is what makes it safe for a caller that does not need to charge
+    /// anything (this module's own tests are exactly that caller) to call
+    /// directly, and safe for a caller that DOES need to charge
+    /// (`Session::take_stairs`, `session.rs`) to call only after peeking and
+    /// charging first — the same division [`Underground::step`] and
+    /// [`Underground::peek`]/[`Underground::commit_step`] already draw.
+    pub(crate) fn take_stairs(&mut self) -> Option<Band> {
+        let (next, landing) = self.peek_stairs().ok()?;
+        self.rung = next;
+        self.cell = landing;
+        Some(habitation_rungs()[self.rung])
     }
 }
 

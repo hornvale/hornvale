@@ -101,10 +101,10 @@ windows/vessel/src/light.rs	150
 windows/vessel/src/liveness.rs	12
 windows/vessel/src/plan.rs	150
 windows/vessel/src/purview.rs	39
-windows/vessel/src/session.rs	268
+windows/vessel/src/session.rs	315
 windows/vessel/src/snapshot.rs	3
 windows/vessel/src/streams.rs	6
-windows/vessel/src/underground.rs	42
+windows/vessel/src/underground.rs	77
 windows/vessel/src/underworld_level/carve.rs	143
 windows/vessel/src/underworld_level/dense.rs	58
 windows/vessel/src/underworld_level/mod.rs	215
