@@ -156,13 +156,14 @@ make doctor        # the repo self-map — run this first in a fresh session
 #
 # A MERGE RUNS ONE MORE PHASE THAN A STAGE GATE AGAIN (decision 0426,
 # 2026-08-28). `heavy` is back on `scripts/sluice-run.sh`'s MERGE list, last,
-# after The Governor cut the tier 3.45x (1551.631 s -> 449.219 s nextest wall,
-# 118 -> 63 tests, 10 -> 0 failures on lefford, measured at `da03b576a`). The
-# roster is **64** now, not 63: that campaign's final review restored
+# after The Governor cut the tier 3.52x (1551.631 s -> 440.269 s nextest wall,
+# 118 -> 64 tests, 10 -> 0 failures on lefford, measured at `e76ea0497`). The
+# roster is 64: that campaign's final review restored
 # `occupancy_readout_is_current` to `heavy:` (decision 0086's third amendment),
-# so the 449.219 s figure is a dated measurement of the 63-test roster and the
-# tier's wall is due a re-measure. A merge goes from ~1129.5 s to ~1604.5 s
-# (+42%) — the mean of the four 2026-08-28 four-phase merges plus ~475 s, both
+# and a re-measure against the full 64-test roster confirmed the restoration
+# cost nothing — the restored test slotted under the tier's existing pole and
+# the wall moved down, not up. A merge goes from ~1129.5 s to ~1595.3 s
+# (+41%) — the mean of the four 2026-08-28 four-phase merges plus ~465.8 s, both
 # derived in decision 0426 and not restated in a second form here; a
 # prose-only candidate still pays none of it. `seam-guard`
 # stays off both. THE STAGE LIST IS UNTOUCHED, and deliberately: heavy compares
@@ -553,7 +554,7 @@ cargo run --manifest-path tools/seam-guard/Cargo.toml -- run <seam> <file>  # na
 # now runs only when a human types `make seam-guard` — there is no schedule,
 # no gate, and no phase behind it. **This is now true of seam-guard ALONE**:
 # decision 0426 put the heavy tier back on the merge phase list once The
-# Governor had cut it 3.45x, and declined to do the same for seam-guard, whose cost is
+# Governor had cut it 3.52x, and declined to do the same for seam-guard, whose cost is
 # a full scoped test run per call site and whose guarantee moves at campaign
 # cadence. Do not read the two as still sharing a fate.
 #

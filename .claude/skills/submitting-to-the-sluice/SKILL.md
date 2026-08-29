@@ -54,7 +54,7 @@ The history, because it is the reason to distrust a remembered phase list: the
 table once said a merge runs "all six, `heavy` last"; decision 0148 made that
 false by shrinking the merge list down to the stage list; this paragraph then
 said flatly that "`heavy` is not a chamber phase at all", which decision 0426
-made false again after The Governor cut the tier 3.45x. `seam-guard` is the one
+made false again after The Governor cut the tier 3.52x. `seam-guard` is the one
 that is genuinely not a chamber phase — it runs only from `make seam-guard`.
 
 **`heavy` is a merge phase and NOT a stage-gate phase, and that asymmetry is

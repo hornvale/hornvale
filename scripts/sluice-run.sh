@@ -342,11 +342,11 @@ lane_sets_file="${HV_SLUICE_LANE_SETS:-$repo_root/scripts/lane-sets.tsv}"
 # 2026-08-28), AND `seam-guard` IS NOT BACK AT ALL. Decision 0148 took both off
 # the merge list on 2026-08-19 because together they were 80.5% of a 3704 s
 # six-phase merge; on that evidence it was right, and its measurement is not
-# disputed. What changed is the tier: The Governor cut it 3.45x (1551.631 s ->
-# 449.219 s nextest wall, 118 -> 63 tests, 10 -> 0 failures, lefford,
-# 2f8faf243 -> da03b576a; the roster is 64 after that campaign's final review
-# restored one test, so the wall figure is dated), so `heavy` is now ~30% of a
-# would-be ~1604.5 s merge rather than 53% of a 3704 s one.
+# disputed. What changed is the tier: The Governor cut it 3.52x (1551.631 s ->
+# 440.269 s nextest wall, 118 -> 64 tests, 10 -> 0 failures, lefford,
+# 2f8faf243 -> e76ea0497; that campaign's final review restored one test and a
+# re-measure confirmed it cost nothing), so `heavy` is now ~29% of a
+# ~1595.3 s merge rather than 53% of a 3704 s one.
 #
 # THE TWO LISTS DIVERGE AGAIN, AND THAT IS A RESTORATION, NOT NEW SCOPE.
 # `heavy` has NEVER been a stage-gate phase: at 3163ceb2c^ (0148's parent) the

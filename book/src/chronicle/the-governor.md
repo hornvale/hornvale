@@ -6,11 +6,14 @@ allowed to run, and stops it running away.*
 The heavy tier is the set of tests too expensive to run on every commit —
 live-worldgen batteries that build dozens of worlds each and measure something
 about them. At the start of this campaign it ran 118 tests in 1,551 seconds and
-ten of them were red. At the end it runs 64 tests in about 449 seconds and
-none of them are red. (The measured run was 63 tests in 449.219 seconds; the
-campaign's final review restored one more, which passed at 408 seconds on its
-own in an earlier run of the same tier. What it adds to a parallel wall whose
-pole sets the pace is not that number, and is not yet measured.)
+ten of them were red. At the end it runs 64 tests in about 440 seconds and
+none of them are red. (The campaign's final review found that one of the
+demotions — a byte-golden change-detector with no other automated witness —
+had been wrongly judged, and restored it to the tier. A re-measure against the
+full 64-test roster confirmed the restoration cost nothing: the restored test
+ran 372.760 seconds standalone, under the tier's own 411.270-second pole, so
+it slotted in under the existing pole and the wall moved down, not up. That
+was measured, not assumed, and it is the last thing the campaign learned.)
 
 **Neither number was the problem.** The problem was that nothing ran the tier.
 
@@ -46,16 +49,17 @@ a projection.
 ## What the levers were worth
 
 ```
-                     BEFORE (2f8faf243)   AFTER (da03b576a)
-nextest wall           1551.631 s           449.219 s       3.45x
-tests                  118                   63*
+                     BEFORE (2f8faf243)   AFTER (e76ea0497)
+nextest wall           1551.631 s           440.269 s       3.52x
+tests                  118                   64
 failures                10                    0
-cpu_ratio               13.88                20.87
+cpu_ratio               13.88                22.00
 ```
 
-*\* The roster is 64 after the final review restored a byte-golden drift check
-that had been demoted; the run above measured the tier as it stood at that
-commit.*
+*The final review restored a byte-golden drift check that had been wrongly
+demoted; the run above is the re-measurement against the full 64-test roster,
+and it superseded an intermediate 63-test run (449.219 s, 3.45x, at
+`da03b576a`).*
 
 One lever was rejected before anything was built. Four probe binaries each
 declare the same twelve-seed panel and build the same twelve worlds
@@ -137,7 +141,10 @@ generated path, so nothing else in the tree ever looks at it. The demotion
 would have left a committed artifact with no automated witness of any kind,
 which was noticed at the time, recorded honestly as a cost, and accepted. On
 the final read it was not an acceptable cost, and the verdict rather than the
-cost note is what changed.
+cost note is what changed. What the restoration would cost the tier's wall was
+not assumed either: a re-measurement at the full 64-test roster found the
+restored test ran under the tier's existing pole, so it added nothing to the
+wall the tier had already earned.
 
 The keep rate across the three populations ran 17%, 48%, then 90%. The last is
 exactly the shape of an adjudication that has stopped pushing, so it was

@@ -471,7 +471,7 @@ esac
 case "$merge_list" in
     *seam-guard*) bad "seam-guard is back in the merge list; 0148 took it off and 0426 deliberately did not put it back" ;;
     *heavy*)      ok "heavy runs on a merge (decision 0426) and seam-guard does not" ;;
-    *)            bad "heavy is missing from the merge list; decision 0426 put it back after The Governor cut the tier 3.45x" ;;
+    *)            bad "heavy is missing from the merge list; decision 0426 put it back after The Governor cut the tier 3.52x" ;;
 esac
 # THE TWO LISTS DIVERGE BY EXACTLY `heavy`, AND THAT IS ASSERTED RATHER THAN
 # ALLOWED. 0148 made them identical; 0426 put `heavy` back on the merge list

@@ -7,11 +7,11 @@
 [0133](0133-nontrivial-checks-run-in-one-serial-lane.md),
 [0139](0139-main-advances-only-through-the-lock.md)
 
-In the context of a heavy tier that has cost 3.45x less since The Governor cut
+In the context of a heavy tier that has cost 3.52x less since The Governor cut
 it, and that spent nine days red because nothing dispatched it, we decided that
 **`heavy` returns to the chamber's MERGE phase list — `artifacts outboard gate
 clients heavy`, and the stage list is left alone** — accepting that a merge
-grows from ~1129.5 s to ~1604.5 s (+42%) on the one strictly serial box, paid
+grows from ~1129.5 s to ~1595.3 s (+41%) on the one strictly serial box, paid
 by every campaign in the queue behind it.
 
 `seam-guard` does **not** come back, and 0148's other two rulings — the `probe:`
@@ -23,39 +23,44 @@ amends exactly one clause of one ruling.
 Two heavy runs on lefford, before and after this campaign's cost work:
 
 ```text
-                       BEFORE (2f8faf243)   AFTER (da03b576a)
-nextest wall             1551.631 s           449.219 s      3.45x
-timed.sh wall            1622.132 s           499.572 s
-tests                      118                  63
+                       BEFORE (2f8faf243)   AFTER (e76ea0497)
+nextest wall             1551.631 s           440.269 s      3.52x
+timed.sh wall            1622.132 s           491.310 s
+tests                      118                  64
 FAILURES                    10                   0
-cpu_ratio                   13.88                20.87
+cpu_ratio                   13.88                22.00
 ```
 
 Provenance: `/tmp/hornvale-heavy/runs.tsv` and the `heavy-*.log` files under
 `/tmp/hornvale-heavy/` on lefford; the BEFORE run is
-`heavy-20260828T145124Z-548769.log`. The AFTER run is the first green heavy run
-since 2026-08-16; its `timed.sh` row is in `docs/timings.md`.
+`heavy-20260828T145124Z-548769.log`, the AFTER run is
+`heavy-20260829T015058Z-1061040.log`; its `timed.sh` row is in
+`docs/timings.md`.
 
-**The roster is 64, not the 63 the AFTER column measured.** The Governor's
-final whole-branch review restored `occupancy_readout::occupancy_readout_is_current`
-to `heavy:` (decision [0086](0086-the-heavy-tier-runs-on-the-canonical-box.md)'s
-third amendment: `occupancy.csv` is under no drift check, so that test is the
-artifact's only automated witness). Every wall figure in this record therefore
-describes the 63-test roster as it stood at `da03b576a`. The restored test
-measured 408.440 s standalone in the `1710e2f11` run, but the tier is
-parallel and its pole is what sets the wall, so what it adds to 449.219 s is
-not that number and is not yet measured. If the next run moves the wall
-materially, the arithmetic below is what has to be redone.
+**This AFTER run is against the full 64-test roster, and supersedes an earlier
+one.** The Governor's final whole-branch review restored
+`occupancy_readout::occupancy_readout_is_current` to `heavy:` (decision
+[0086](0086-the-heavy-tier-runs-on-the-canonical-box.md)'s third amendment:
+`occupancy.csv` is under no drift check, so that test is the artifact's only
+automated witness), which changed the roster from 63 to 64 tests. An
+intermediate run at `da03b576a` — 449.219 s nextest / 499.572 s timed.sh,
+63 tests, 3.45x — measured the roster before that restoration and was
+recorded as a dated figure pending a re-measure. It is superseded by the row
+above, re-measured rather than estimated. **The restoration cost nothing**:
+the restored test ran 372.760 s standalone (completing 62nd of 64) against a
+tier pole of 411.270 s
+(`non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders`),
+so it slotted under the existing pole and the wall moved down, not up.
 
 A four-phase merge on the queue currently costs **1129.526 s**, and that is
 the only place this record derives it. Summing the `sluice:*` rows in
 `docs/timings.md` for the four consecutive merges of 2026-08-28 gives 1129.954,
 1014.162, 1227.633 and 1146.355 s, whose mean is 1129.526; the queue's own
-recent totals run 1021–1236 s. Adding a ~475 s `heavy` phase (its basis is
-under "What this costs") takes a merge to **1604.5 s, +42%**. (An earlier
+recent totals run 1021–1236 s. Adding a ~465.8 s `heavy` phase (its basis is
+under "What this costs") takes a merge to **1595.3 s, +41%**. (An earlier
 draft of this record said "about 1100 s" and "roughly 1550 s" — 1550 is
 1100 + 449, which mixes the tier's *nextest* wall into the one place this
-record otherwise uses the 475 s midpoint. Both halves of that were wrong by a
+record otherwise uses the midpoint. Both halves of that were wrong by a
 little, in the same direction, and the campaign's own remedy applies: state a
 derived quantity once, next to its inputs.)
 
@@ -64,8 +69,8 @@ derived quantity once, next to its inputs.)
 **80.5%** of a 3704 s six-phase merge. On that evidence removing them was
 plainly right, and the four-phase merges that immediately followed (630.7,
 640.2, 634.5 s) confirmed it. The ratio has since moved by a factor 0148 had no
-way to anticipate: `heavy` is now **~30%** of the 1604.5 s merge derived
-above (475/1604.5 = 29.6%), not 53% of a 3704 s one. Nothing in 0148's reasoning was careless; its input
+way to anticipate: `heavy` is now **~29%** of the 1595.3 s merge derived
+above (465.8/1595.3 = 29.2%), not 53% of a 3704 s one. Nothing in 0148's reasoning was careless; its input
 changed.
 
 ## What removing the dispatcher actually cost
@@ -101,9 +106,9 @@ mis-attribute.** It is an author/inheritor asymmetry, not a cost problem.
 
 | form | what it fixes | why not |
 |---|---|---|
-| **every merge** | the asymmetry, universally | ~+41% per non-prose landing, ~45 h/month of the serial box — **chosen** |
+| **every merge** | the asymmetry, universally | ~+41% per non-prose landing, ~44 h/month of the serial box — **chosen** |
 | stage gate | the asymmetry, for campaigns that submit one | opt-in, so the failure being fixed is "nobody ran it" — and it would red predictably on the census fixture (below) |
-| conditional on a world-code predicate | the asymmetry, where the predicate fires | a new mechanism blind in the silent direction; the ~9.8 h/month it saves is real, and is not the reason it loses |
+| conditional on a world-code predicate | the asymmetry, where the predicate fires | a new mechanism blind in the silent direction; the ~9.6 h/month it saves is real, and is not the reason it loses |
 | scheduled | nothing at merge time | `scripts/scheduled/` was written and **never installed**; standing guidance already forbids closing a campaign on "the nightly was empty" |
 
 **The conditional form was the serious rival. It is NOT answered by
@@ -134,14 +139,14 @@ spans **11.327 days**. Every per-month figure in it is therefore low by
 
 ```text
   form                                        first draft   corrected, per 30-day month
-  chosen (128 non-prose landings)              ~9 h/month     ~45 h/month
-  conditional (100 landings)                   ~7 h/month     ~35 h/month
-  saving forgone by declining conditional      ~2 h/month     ~9.8 h/month
+  chosen (128 non-prose landings)              ~9 h/month     ~44 h/month
+  conditional (100 landings)                   ~7 h/month     ~34 h/month
+  saving forgone by declining conditional      ~2 h/month     ~9.6 h/month
 ```
 
 **The saving being declined is roughly the size the first draft claimed for the
 whole cost of the option being chosen.** A reader comparing 2 against 9 reaches
-the opposite intuition from one comparing 10 against 45. This is recorded
+the opposite intuition from one comparing 10 against 44. This is recorded
 rather than silently corrected because it is a recurring failure mode in this
 project — a real command, correctly run, answering a narrower question than the
 claim attached to it — and because the correction changes which argument
@@ -154,7 +159,7 @@ only tempo actually measured, so it is the one used; a quieter month costs
 proportionally less.
 
 **So the decision does not rest on cost, and must not be read as if it does.**
-Roughly 9.8 h/month of serial-box time is a real saving to forgo. What survives
+Roughly 9.6 h/month of serial-box time is a real saving to forgo. What survives
 the correction untouched is a **correctness** argument, and it is the one doing
 the work:
 
@@ -166,7 +171,7 @@ layering diagram would exempt exactly the changes most able to break the tier,
 and nothing would say so. That is a silent-direction failure in a new
 mechanism, introduced to fix a campaign whose whole subject is silent gaps
 accruing where nothing reports them. **The trade this decision actually makes
-is ~9.8 h/month of the one serial box in exchange for not building a predicate
+is ~9.6 h/month of the one serial box in exchange for not building a predicate
 that can be wrong without saying so** — a defensible trade, and a much narrower
 one than the first draft described.
 
@@ -200,7 +205,7 @@ committed fixtures by exact equality — its own panic message reads "worldgen
 changed but the census fixture was not regenerated". The census is refreshed
 **once per campaign, at the pre-merge close**. So a campaign that moves any
 census metric would red that test on *every* stage gate from its first moved
-value until close: ~475 s of the one serial box each time, for a reason that is
+value until close: ~465.8 s of the one serial box each time, for a reason that is
 expected, benign, and not fixable at that moment. **A gate that reds
 predictably for a known-benign reason trains people to ignore it — which is
 exactly the disease this decision was written to cure.** Shipping the cure and
@@ -215,7 +220,7 @@ goes — the two lists differ again, by exactly `heavy`. That identity was a
 consequence in 0148, not its design ("differ only in the push" is a claim about
 the *object gated*, the real merge product, and that is unchanged). And a
 campaign can now pass every stage gate and still meet a heavy failure at merge.
-The cost of that is bounded and self-attributing: one merge attempt, ~1604.5 s,
+The cost of that is bounded and self-attributing: one merge attempt, ~1595.3 s,
 main untouched, the queue row `held` with the failing phase named, and
 `make heavy-remote REF=<sha>` available to anyone who wants the answer sooner.
 `scripts/test-sluice.sh` asserts the divergence is exactly `heavy` — "stage plus
@@ -247,7 +252,7 @@ reader would otherwise reconstruct wrongly.
 
 1. **`threads-required = 30` on a 40-core box.** The `# class: sized-sweep`
    table in `.config/nextest.toml` reserves 30 of 40 slots, so its three
-   members cannot co-schedule with each other (30 + 30 > 40). The 449.219 s run
+   members cannot co-schedule with each other (30 + 30 > 40). The 440.269 s run
    does not expose that cost — it is inside the number — and it has not been
    measured beyond it. If the sized-sweep membership grows, this is the first
    place the tier's wall time will move non-linearly.
@@ -273,23 +278,23 @@ reader would otherwise reconstruct wrongly.
 
 ## What this costs, stated rather than implied
 
-Every non-prose **landing** pays **~475 s** more on a strictly serial box. That
-is the midpoint of the tier's own 449.219 s nextest wall and the 499.572 s
+Every non-prose **landing** pays **~465.8 s** more on a strictly serial box. That
+is the midpoint of the tier's own 440.269 s nextest wall and the 491.310 s
 `timed.sh` wall that includes its build — the chamber reaches `heavy` with a
 tree the `gate` phase has already warmed, so its true marginal cost lies
 between the two. The cost falls on bystanders in the queue, not only on the
 campaign that caused it.
 
 At the tempo measured over 2026-08-17..28 — 159 landings in 11.327 days, 128 of
-them non-prose — that is roughly **45 h/month** of serial-box time, against
-~35 h/month under the conditional form that was declined, so the saving forgone
-is about **9.8 h/month**. Stage gates contribute **nothing** to these figures and
+them non-prose — that is roughly **44 h/month** of serial-box time, against
+~34 h/month under the conditional form that was declined, so the saving forgone
+is about **9.6 h/month**. Stage gates contribute **nothing** to these figures and
 correctly so: they never land, and `heavy` is deliberately not one of their
 phases.
 
 0133's accepted cost — "a stage gate queuing behind an hour of heavy or census
 work is an accepted cost, not a bug" — is what absorbs this; submission is
-asynchronous, so the wait costs queue position, not attention. But 45 h/month
+asynchronous, so the wait costs queue position, not attention. But 44 h/month
 is a standing commitment on a box that also serves stage gates, censuses and
 by-hand heavy runs, and it is stated here at its true size precisely because
 the first draft of this record stated it at a fifth of that.
@@ -324,10 +329,9 @@ back is one subtree of two; the other is named as an open cost in 0086's first
 amendment and stays open.
 
 **A red heavy tier now holds the box.** That is the point, and it is only
-tolerable because the tier is green: 63/63 at `da03b576a`, the first green run
-since 2026-08-16 (63 being the roster as it stood at that SHA — see the note
-under the measurement table; the test restored since had itself passed, at
-408.440 s, in the `1710e2f11` run). A tier gated from a red base would blame each landing for its
+tolerable because the tier is green: 64/64 at `e76ea0497`, the first green run
+against the full roster (see the note under the measurement table for the
+intermediate 63/63 run at `da03b576a` it supersedes). A tier gated from a red base would blame each landing for its
 predecessor's failure — precisely the mis-attribution this decision exists to
 end. **The window is the argument as much as the arithmetic is**: a green tier
 can be gated where a red one cannot, and nothing keeps it green except gating
@@ -342,7 +346,7 @@ committed baseline is a claim with a date and membership does not decay), so a
 single admitted test may cost minutes. If the tier drifts back toward 1500 s
 this decision's arithmetic inverts and 0148's holds again.
 
-*And ~9.8 h/month of the one serial box is a real thing to decline.* The
+*And ~9.6 h/month of the one serial box is a real thing to decline.* The
 conditional form is not free of merit; it is rejected because its predicate
 would be blind in a silent direction, not because its saving is small. If
 someone later builds a predicate that keys on the tier's own harness as well as

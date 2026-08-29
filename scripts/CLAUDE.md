@@ -136,11 +136,11 @@ exactly that reason: it names the claim, not the deleted machinery.
   (`sluice-run.sh`, below). **It is a phase of a MERGE and not of a stage gate
   (decision 0426).** That is the pre-0148 arrangement restored: 0148 took it
   off the merge list, where it had lived, and it has never been on the stage
-  list at all. The Governor then cut the tier 3.45x (1551.631 s -> 449.219 s
-  nextest wall, 118 -> 63 tests, 10 -> 0 failures, measured at `da03b576a`;
-  that campaign's final review then restored one test, so the roster is **64**
-  and the wall is due a re-measure), which is what makes it affordable at
-  ~30% of a ~1604.5 s merge — both figures derived once in decision 0426 and
+  list at all. The Governor then cut the tier 3.52x (1551.631 s -> 440.269 s
+  nextest wall, 118 -> 64 tests, 10 -> 0 failures, measured at `e76ea0497`;
+  that campaign's final review restored one test and a re-measure confirmed it
+  cost nothing), which is what makes it affordable at
+  ~29% of a ~1595.3 s merge — both figures derived once in decision 0426 and
   not restated in a second form here. It stays off the stage list because
   `census_fixtures_match_a_probe_of_live_seeds` compares a live probe against
   committed census fixtures refreshed once per campaign at pre-merge close, so
@@ -207,7 +207,7 @@ the exact SHA it tested.
   it ever reaches main. A STAGE GATE RUNS THE SAME LIST MINUS `heavy`.
   **The merge list lost `seam-guard` and `heavy` on 2026-08-19 (decision 0148)
   and got `heavy` back on 2026-08-28 (decision 0426)**, after The Governor cut
-  the tier 3.45x. `seam-guard` keeps its `campaign`-rung row and its own entry
+  the tier 3.52x. `seam-guard` keeps its `campaign`-rung row and its own entry
   point (`make seam-guard`), and that is still the ONLY thing that runs it —
   nothing does so automatically. `heavy` keeps `make heavy-remote
   REF=<full-sha>` as a by-hand entry point, and that is still the only way to

@@ -38,8 +38,8 @@
 # `heavy` MOVED FROM THE `campaign` RUNG TO THE `merge` RUNG (decision 0426,
 # The Governor, 2026-08-28). 0148 put it on `campaign` when it came off the
 # chamber's phase list, which was the honest rung for a set nothing dispatched
-# automatically. The Governor cut the tier 3.45x (1551.631 s -> 449.219 s
-# nextest wall, 118 -> 63 tests, 10 -> 0 failures) and 0426 put it back on
+# automatically. The Governor cut the tier 3.52x (1551.631 s -> 440.269 s
+# nextest wall, 118 -> 64 tests, 10 -> 0 failures) and 0426 put it back on
 # sluice-run.sh's MERGE list -- and deliberately not on the stage list, where
 # its live-vs-committed census-fixture check would red predictably for the
 # whole middle of any world-touching campaign. `merge`, not `stage`, is
