@@ -7,10 +7,15 @@
 //! bound by the workspace's no-new-crates rule (decision 0055) — one new
 //! dependency (crossterm) is enough for this campaign.
 
+use hornvale_game::cache::{Cache, GenesisPins};
 use hornvale_game::driver::Driver;
-use hornvale_game::{input, term};
+use hornvale_game::overture::genesis::{self, Gesture, Keys, Screen};
+use hornvale_game::overture::{AlmanacView, AtlasView, Frame, SkyView, TongueView, View};
+use hornvale_game::{boot, input, state_dir, term};
 use hornvale_game_core::{CommandLine, MIN_HEIGHT, MIN_WIDTH};
+use hornvale_kernel::Seed;
 use hornvale_vessel::PossessTarget;
+use hornvale_worldgen::{BuildDepth, RungArtifacts};
 
 const USAGE: &str = "usage: hornvale-game --seed <N> [--target flagship|most-populous-settlement]";
 
@@ -49,17 +54,171 @@ fn run(args: &[String]) -> Result<(), String> {
         .map_err(|e| format!("--seed must be a u64: {e}"))?;
     let target = parse_target(args)?;
 
-    let mut driver = Driver::start(seed, target).map_err(|e| e.to_string())?;
-
-    // The terminal is opened only once genesis and the possession have
-    // already succeeded — a failure above prints a normal error to a normal
-    // shell rather than needing the raw-mode screen restored first.
+    // The terminal opens BEFORE genesis (The Overture, Task 1): every
+    // later view needs the screen live from the first frame, not blank
+    // until genesis finishes. That inversion means a genesis or possession
+    // failure below now happens with the terminal already in raw mode on
+    // the alternate screen, so `boot::start_and_report` explicitly
+    // restores it before this function's `?` ever hands the error back to
+    // `main`'s `eprintln!` — see that module's doc for why this is a
+    // tested seam rather than a hope resting on `Term`'s `Drop` backstop.
     let term = term::Term::open().map_err(|e| e.to_string())?;
+
+    // THE OVERTURE (Task 3, ruling R5). Genesis runs on a worker thread and
+    // this thread draws around it — see `overture::genesis`'s module doc for
+    // why a thread, what the observer clones and what that costs (measured:
+    // 21.9-24.5 ms, under 1% of the build), and which phase cannot move off
+    // this thread and why. Both fallible steps go through
+    // `boot::start_and_report`, so the restore-before-report ordering Task 1
+    // established covers the frame's own failures too, not just the driver's.
+    let mut frame = Frame::new(views()).titled(format!("seed {seed}"));
+    // Task 8: the world cache. `clients/game/bin` has exactly one genesis
+    // entry point (this function), always under the default sky/terrain/
+    // settlement pins — see `GenesisPins::default_request`'s own doc.
+    let pins = GenesisPins::default_request();
+    // Best effort by design, same as `save_timings` below: a missing or
+    // unwritable state directory must cost this run its cache and nothing
+    // else (`state_dir`'s own module doc).
+    let cache_dir = state_dir::state_path(hornvale_game::cache::CACHE_DIR_NAME);
+    let mut driver = boot::start_and_report(&term, || -> Result<Driver, String> {
+        let cached = cache_dir
+            .as_deref()
+            .and_then(|dir| Cache::load_if_valid(dir, Seed(seed), &pins));
+        let world = if let Some(world) = cached {
+            // A CACHE HIT HAS NO RUNGS. `build_world_observed` never runs, so
+            // nothing drives `Frame::observe` on its own — the observer
+            // callback only ever fires from inside a real build. The chosen
+            // answer (see `cache.rs`'s module doc / the task report for the
+            // full reasoning): one `Full`-rung observe with the loaded
+            // world, drawn once, before the frame freezes for
+            // `WorldContext::build` below. `RungArtifacts::none()` because
+            // this world was never sculpted THIS process — decision 0092
+            // bans a second `terrain_of`/`climate_from` construction site,
+            // and `Driver::start_from_world` is already the one place that
+            // re-derives terrain. Every shipped view degrades honestly
+            // without artifacts (`AtlasView` draws a blank panel rather than
+            // panicking, `TongueView`/`WastelandComponent` return `None` via
+            // `artifacts.terrain?`/`artifacts.climate?` — all three are
+            // exercised directly with `RungArtifacts::none()` at `Full` by
+            // their own existing tests), so this is safe, if visibly less
+            // complete than a fresh build's atlas.
+            let (w, h) = terminal_size().map_err(|e| e.to_string())?;
+            frame.resize(w, h);
+            frame.observe(BuildDepth::Full, &world, RungArtifacts::none());
+            TermScreen(&term)
+                .draw(&frame.compose())
+                .map_err(|e| e.to_string())?;
+            world
+        } else {
+            let progress = genesis::spawn(Seed(seed));
+            let world = genesis::run(
+                &mut frame,
+                &progress,
+                &TermScreen(&term),
+                &mut CrosstermKeys,
+            )
+            .map_err(|e| e.to_string())?;
+            if let Some(dir) = cache_dir.as_deref() {
+                let _ = Cache::write(dir, &pins, &world);
+            }
+            world
+        };
+        // `start_from_world`, not `start`: the world (freshly built, or just
+        // loaded from the cache) is handed straight over rather than built
+        // again.
+        let driver = Driver::start_from_world(world, target)
+            .map_err(|e: hornvale_game::driver::DriverError| e.to_string())?;
+        // The post-genesis phase reports through no rung, so its own owner
+        // closes it (see `Frame::finish_phase`). Closing it HERE, after
+        // `start_from_world` returns, is what makes `living` measurable at
+        // all — on BOTH paths: a cache hit still pays `WorldContext::build`'s
+        // ~870 ms in full (spec §6/§7: this cache never caches `WorldContext`
+        // itself).
+        frame.finish_phase(genesis::POST_GENESIS_PHASE);
+        Ok(driver)
+    })?;
+    // Best effort by design: a missing or unwritable state directory must cost
+    // the next run its bar and nothing else (see `state_dir`'s module doc).
+    let _ = frame.save_timings();
+
     let outcome = play(&mut driver, &term);
     // Explicit drop before reporting any error: whatever `play` returns, the
     // user's terminal must be sane before they read the message.
     drop(term);
     outcome.map_err(|e| e.to_string())
+}
+
+/// The views the overture cycles, in cycle order.
+///
+/// **`sky`, `atlas`, `almanac`, then `tongue` — one line added per task, and
+/// nothing else changed.** Task 3 settles the `View` contract; Tasks 4-7
+/// write the four views (`sky`, `atlas`, `almanac`, `tongue`) and each adds
+/// one line here. `sky` speaks from the first rung; `atlas` (Task 5) cannot
+/// speak until terrain exists (`BuildDepth::Terrain`); `almanac` (Task 6)
+/// speaks from the first rung too (its own `OrbitComponent` needs nothing
+/// deeper), and grows its own content internally as later rungs land,
+/// through the component registry rather than through anything visible
+/// here. `tongue` (Task 7) speaks only once the ledger has actually
+/// committed a settlement's species — `BuildDepth::Full`, the ladder's last
+/// rung, not `Settlements` as originally sketched (see `overture::tongue`'s
+/// module doc for why). The frame skips what cannot speak, so a roster of
+/// four behaves correctly from the first rung the same way a roster of two
+/// did (`hornvale_game::overture`).
+fn views() -> Vec<Box<dyn View>> {
+    vec![
+        Box::new(SkyView),
+        Box::new(AtlasView::default()),
+        Box::new(AlmanacView),
+        Box::new(TongueView),
+    ]
+}
+
+/// [`Screen`] over the real terminal.
+///
+/// A newtype rather than an `impl` on `Term` itself, because the trait belongs
+/// to the overture and `term.rs` should not have to know it exists — the same
+/// direction of dependency `boot::TermHandle` takes.
+struct TermScreen<'a>(&'a term::Term);
+
+impl Screen for TermScreen<'_> {
+    fn size(&self) -> std::io::Result<(u16, u16)> {
+        terminal_size()
+    }
+
+    fn draw(&self, grid: &hornvale_game_core::Grid) -> std::io::Result<()> {
+        // No cursor during the overture: there is nothing to type at yet, and a
+        // parked block cursor on a chrome cell reads as an input prompt.
+        self.0.draw(grid, None)
+    }
+}
+
+/// [`Keys`] over crossterm's event queue.
+///
+/// Maps only what the overture understands. `space` cycles; a resize is
+/// forwarded so the frame can re-lay its chrome; everything else is
+/// [`Gesture::Ignored`], because the world does not exist yet and there is
+/// nothing else to ask it. Release is deliberately NOT handled here: the
+/// signal handler (`term::watch_signals`) already owns interruption, and a
+/// half-built world has no session to release.
+struct CrosstermKeys;
+
+impl Keys for CrosstermKeys {
+    fn next(&mut self, timeout: std::time::Duration) -> std::io::Result<Option<Gesture>> {
+        use crossterm::event::{Event, KeyCode, KeyEventKind, poll, read};
+        if !poll(timeout)? {
+            return Ok(None);
+        }
+        Ok(Some(match read()? {
+            // `Press` only: a terminal reporting key-release events would
+            // otherwise cycle twice per keystroke.
+            Event::Key(key) if key.kind == KeyEventKind::Press => match key.code {
+                KeyCode::Char(' ') => Gesture::Cycle,
+                _ => Gesture::Ignored,
+            },
+            Event::Resize(_, _) => Gesture::Resize,
+            _ => Gesture::Ignored,
+        }))
+    }
 }
 
 /// The terminal's current size, clamped up to the monochrome floor
