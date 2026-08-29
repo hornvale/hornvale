@@ -1730,6 +1730,24 @@ fn emit_parts(
             // property of what the object slot holds. A CLAUSE is skipped
             // for the same reason: "*I do not know a he killed her*" is
             // what NOT suppressing it produces (spec §4.2).
+            //
+            // **`Argument::Absent` is DELIBERATELY not in this list, and the
+            // omission is load-bearing — do not "complete" it** (The Rail,
+            // Task 2, deferred minor #5, recorded here because the ledger
+            // that held the ruling dies with its worktree). Adding `Absent`
+            // would make the neighbouring claim locally true and the test
+            // that holds it VACUOUS. `INTRANSITIVE`'s part list carries no
+            // `Part::Determiner` at all, so this arm is unreachable for an
+            // intransitive clause as composed today; leaving the guard
+            // silent on `Absent` means a construction that WRONGLY grew a
+            // `Part::Determiner` emits "the guard sleeps the ." and
+            // `an_intransitive_clause_surfaces_its_predicate_as_a_verb_with_no_complement`
+            // fails. Close the guard and the same wrong construction emits
+            // "the guard sleeps." and the test passes. The claim "nothing
+            // ever reads it" is therefore held by the composition and
+            // WITNESSED by that test — which is strictly more than a local
+            // skip would give, and is why the trade is stated here rather
+            // than taken.
             Part::Determiner
                 if matches!(spec.object, Argument::Pronoun(_) | Argument::Clause(_)) => {}
             Part::Determiner => match (spec.definiteness, spec.number) {
@@ -3274,6 +3292,15 @@ mod tests {
     /// **The object slot holds [`Argument::Absent`]**, which is not an argument
     /// at all — see its own doc. The construction's part list simply has no
     /// `Part::Complement` and no `Part::Determiner`, so nothing ever reads it.
+    ///
+    /// **That claim is a COMPOSITION fact, and this test is what witnesses
+    /// it** — `realize_common`'s `Part::Determiner` skip guard names
+    /// `Pronoun` and `Clause` and deliberately does *not* name `Absent`
+    /// (see the comment there). Because it does not, a construction that
+    /// wrongly grew a `Part::Determiner` would emit `"the guard sleeps the ."`
+    /// and redden the first assertion below. Closing that guard would make
+    /// the paragraph above locally true and this test unable to fail — the
+    /// exact well-intentioned tidy-up the guard's comment refuses.
     #[test]
     fn an_intransitive_clause_surfaces_its_predicate_as_a_verb_with_no_complement() {
         let vocab = CommonVocabulary::default();

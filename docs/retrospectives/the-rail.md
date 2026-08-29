@@ -87,6 +87,38 @@ sympathetically costs a fix round; a worry checked costs one command. Two of
 the three were settled by reading code the worry was about, and the third by
 reading the kernel primitive underneath it.
 
+## Seven incomplete corrections — the class the table above hides
+
+The table above is organized by **who authored the defect**, and that grouping
+merges two classes needing different remedies. "Every substantive defect
+originated in controller text" is a seventh repetition of a finding six
+campaigns already recorded. The other class is rarer and is the one worth
+carrying forward: **seven times this campaign, a correction introduced a fresh
+error** — usually a claim rewritten in one place whose twin somewhere else was
+left standing. The controlling session's ledger kept a running tally and it
+reached seven; each is reconstructed here with the mechanism, because a count
+without mechanisms is not actionable.
+
+| # | the correction | what it left behind |
+| --- | --- | --- |
+| 1 | spec §1.1's coverage paragraph, correcting the 9/22 preregistration | credited the fifteen control rungs for a count they had no part in |
+| 2 | spec §1.1 again, correcting draft one | asserted the opposite — that none of the fifteen is ever covered. Same buggy script behind both |
+| 3 | Task 4's fix round for a stale-backing-list finding | rewrote the `grammar.rs` note when behaviour changed and left its twin in `sentence_corpus.rs` stale — **the same blast-radius shape as the finding it was fixing**, inside the round fixing it |
+| 4 | Task 4 landing `r003` | left a neighbouring substitution count stale; the Task 5 implementer found and fixed it unprompted |
+| 5 | the commit fixing plan row 10's unrunnable commands | dropped a `t` from five redirect paths — see the paragraph above |
+| 6 | Task 5's fix for two stale forward references to the locative valence | a **third** one survived at `clause.rs:1677`, in the realizer arm that implements it, and was fixed only in Task 8 |
+| 7 | correcting the 9/22 expectation in the plan's table and in the spec | left it in the DoD's own verification step, where it sat for eight tasks — a reader of that step alone would have scored a matching run as a MISS |
+
+Rows 1, 2 and 5 already have their paragraphs above; rows 3, 4, 6 and 7 are
+recorded here for the first time. Note their shape: **four of the seven are a
+correction that fixed every instance it looked at and none it did not**, and
+in two of those (3 and 6) the instance it missed was of the *same class* the
+correction was about. Writing a fix *feels* like the careful act, and nobody
+audits the audit.
+
+The operational remedy is in "Do differently next time" below, and it is one
+sentence long.
+
 ## Five implementer overrides, every one correct
 
 Each was reported as a deviation rather than either obeyed silently or
@@ -212,8 +244,31 @@ Open, not scoped here:
   broke five verification paths and would have read green forever. A
   correction is unaudited text; a correction *to a command* is unaudited text
   that looks executable.
+- **When you change a claim, grep the CLAIM, not the file.** The operational
+  remedy for the seven above, generalized by the controlling session from Task
+  4's finding and passed into Task 5's dispatch. A claim lives wherever it was
+  ever written down, and the file you are editing is only the copy you
+  happened to notice; the twin is found by searching for the assertion —
+  a distinctive phrase, a number, a token name — never by re-reading the
+  edit's own neighbourhood. Six of the seven would have died to one `git grep`.
 - **Name the campaign's own failure shape in each dispatch.** Two data points
   now: the grep-count trap was named and was caught with both numbers
   reported; the verification-claim hazard was named in a predecessor's later
   dispatches and an implementer caught itself. Not yet a practice — two
   instances — but it costs a sentence to keep testing.
+- **A carried-findings list reads as a checklist, and a checklist is a poor
+  instrument for "do not do this anywhere."** Task 9 carried a four-item list
+  of one pattern — silent degradation, where a realizer strips or appends
+  around a surface it has not checked. The task fixed all four and, **in the
+  same commit, one function away, wrote a fifth**: the new
+  `realize_tongue_polar_question` strips a trailing `.` only *if* present and
+  then appends `?` to whatever remains. The reviewer's diagnosis is the part
+  worth keeping, and it was passed on as a diagnosis rather than a scolding:
+  *fixing four listed instances of a pattern while writing a fifth suggests
+  the items were pattern-matched rather than the principle internalized.*
+  Every campaign in this repo carries deferred minors forward through
+  dispatches, and this is the first measurement of that mechanism's blind
+  spot — it arrived with a same-commit counterexample, which is as clean as
+  the evidence for a process claim ever gets. The cheap remedy is to state the
+  **principle** at the head of a carried list and ask for it to be applied to
+  the code the task is about to write, not only to the sites named.

@@ -2698,6 +2698,15 @@ fn sentence_coverage_report() {
         .iter()
         .filter(|e| entry_covered(e))
         .count();
+    // Gates the three hand-authored "why zero is expected" passages below, the
+    // same way `m08_covered` gates the m08 honesty paragraph, and for the same
+    // reason: each is prose ABOUT a computed number, so a future coverage
+    // change that moves the-flood-watch off zero must not leave static text
+    // explaining a zero the tables around it no longer report. The m08
+    // paragraph was gated by The Rail's Task 9 review and these three were
+    // not, which left one instance of the class guarded and three unguarded in
+    // the same function.
+    let flood_watch_zero = flood_watch_covered == 0;
 
     let (merchant_demand_met, merchant_demand_total) = demand_instance_coverage(&merchant.entries);
     let (flood_watch_demand_met, flood_watch_demand_total) =
@@ -2726,20 +2735,29 @@ fn sentence_coverage_report() {
          over `Entry`, and `read_declared` already produces `the-flood-watch`'s \
          `Entry`s the same shape `the-merchant`'s are, so nothing stops the \
          resolver from running over it; `the-ladder`'s own resolver and \
-         frontier are new as of The Rail (Task 1). `the-flood-watch`'s \
-         entry-level score is **zero**, and that is not a missing resolver: \
-         it is what a dense, conjunctive corpus scores under a construction \
-         inventory this small. Its {} demand instances average roughly \
-         8 per entry, so `entry_covered`'s ALL-of-its-demands rule fails \
-         every single entry for as long as any handful of tokens stays \
-         uncovered — a true reading of a real corpus, and an uninformative \
-         one on its own (see this file's module doc and \
-         `sentences/README.md`, \"Frozen is not the same as measured\"). \
-         What the report gives it instead of a headline entry count is a \
-         direction breakdown, the demand-instance statistic below (which \
-         complements, never replaces, an entry-level score, and is the one \
-         that actually moves), and a vocabulary cross-check against the \
-         ladder.\n\n\
+         frontier are new as of The Rail (Task 1).",
+        ladder.entries.len(),
+    ));
+    if flood_watch_zero {
+        out.push_str(&format!(
+            " `the-flood-watch`'s \
+             entry-level score is **zero**, and that is not a missing resolver: \
+             it is what a dense, conjunctive corpus scores under a construction \
+             inventory this small. Its {flood_watch_demand_total} demand instances average roughly \
+             8 per entry, so `entry_covered`'s ALL-of-its-demands rule fails \
+             every single entry for as long as any handful of tokens stays \
+             uncovered — a true reading of a real corpus, and an uninformative \
+             one on its own (see this file's module doc and \
+             `sentences/README.md`, \"Frozen is not the same as measured\"). \
+             What the report gives it instead of a headline entry count is a \
+             direction breakdown, the demand-instance statistic below (which \
+             complements, never replaces, an entry-level score, and is the one \
+             that actually moves), and a vocabulary cross-check against the \
+             ladder."
+        ));
+    }
+    out.push_str(
+        "\n\n\
          A demand is `covered` only if the grammar implements a \
          construction for it, and an entry is covered only if EVERY demand \
          it makes is. The Interlinear left one token covered (`classify`, \
@@ -2759,9 +2777,7 @@ fn sentence_coverage_report() {
          campaign can implement several tokens, move few or no entries to \
          covered, and still move several MORE entries from two missing \
          demands to one — progress the headline number cannot express.\n\n",
-        ladder.entries.len(),
-        flood_watch_demand_total,
-    ));
+    );
 
     out.push_str("## Direction breakdown\n\n");
     out.push_str(
@@ -2798,9 +2814,9 @@ fn sentence_coverage_report() {
          land in `unknown` — that is **correct, not a gap**: the corpus \
          carries a `speaker` field (`\"player\"`/`\"merchant\"`) that looks \
          like a plausible stand-in, and spec §2.3 forbids inferring \
-         direction from it. `the-flood-watch` states a direction on every \
+             direction from it. `the-flood-watch` states a direction on every \
          entry ({} player lines, {} NPC lines). `the-ladder` declares \
-         itself a production instrument in its own `production_axis` \
+             itself a production instrument in its own `production_axis` \
          block, so every rung is prose the grammar must generate, never \
          player input it must parse.\n\n",
         merchant_directions.unknown, flood_watch_directions.parse, flood_watch_directions.produce,
@@ -2924,36 +2940,42 @@ fn sentence_coverage_report() {
         flood_watch_directions.parse, flood_watch_directions.produce,
     ));
     out.push_str(&format!(
-        "- Covered: {flood_watch_covered} of {} (see below for why zero is expected)\n",
+        "- Covered: {flood_watch_covered} of {}",
         flood_watch.entries.len(),
     ));
+    if flood_watch_zero {
+        out.push_str(" (see below for why zero is expected)");
+    }
+    out.push('\n');
     out.push_str(&format!(
         "- Demand instances met: {flood_watch_demand_met} of {flood_watch_demand_total} \
          ({:.1}%)\n\n",
         100.0 * flood_watch_demand_met as f64 / flood_watch_demand_total as f64,
     ));
-    out.push_str(&format!(
-        "The resolver above DOES run over this corpus — `entry_covered` is \
-         generic over `Entry` and `read_declared` produces one for every \
-         flood-watch line, the same shape it produces for the-merchant. \
-         What it reports is zero, and that is a fact about the corpus's \
-         density, not an unwritten resolver: {flood_watch_demand_total} \
-         demand instances across {} entries is roughly 8 per entry, and \
-         `entry_covered`'s ALL-of-its-demands rule fails an entry the \
-         moment ANY one of its several tokens is uncovered — which is every \
-         entry, for as long as any handful of the corpus's vocabulary stays \
-         unimplemented. A zero that never moves is uninformative on its \
-         own, which is exactly why the demand-instance statistic above \
-         exists beside it (see the-merchant's own line and \
-         `demand_instance_coverage_matches_the_campaigns_prediction`'s \
-         doc; also `sentences/README.md`, \"Frozen is not the same as \
-         measured\"). What ties this corpus to the grammar's delivered \
-         capability otherwise is the vocabulary cross-check below: {} of \
-         its {} distinct demand tokens name a rung on the ladder.\n\n",
-        flood_watch.entries.len(),
-        flood_watch_tokens.len() - flood_watch_absent.len(),
-        flood_watch_tokens.len(),
-    ));
+    if flood_watch_zero {
+        out.push_str(&format!(
+            "The resolver above DOES run over this corpus — `entry_covered` is \
+             generic over `Entry` and `read_declared` produces one for every \
+             flood-watch line, the same shape it produces for the-merchant. \
+             What it reports is zero, and that is a fact about the corpus's \
+             density, not an unwritten resolver: {flood_watch_demand_total} \
+             demand instances across {} entries is roughly 8 per entry, and \
+             `entry_covered`'s ALL-of-its-demands rule fails an entry the \
+             moment ANY one of its several tokens is uncovered — which is every \
+             entry, for as long as any handful of the corpus's vocabulary stays \
+             unimplemented. A zero that never moves is uninformative on its \
+             own, which is exactly why the demand-instance statistic above \
+             exists beside it (see the-merchant's own line and \
+             `demand_instance_coverage_matches_the_campaigns_prediction`'s \
+             doc; also `sentences/README.md`, \"Frozen is not the same as \
+             measured\"). What ties this corpus to the grammar's delivered \
+             capability otherwise is the vocabulary cross-check below: {} of \
+             its {} distinct demand tokens name a rung on the ladder.\n\n",
+            flood_watch.entries.len(),
+            flood_watch_tokens.len() - flood_watch_absent.len(),
+            flood_watch_tokens.len(),
+        ));
+    }
 
     out.push_str("## the-ladder\n\n");
     out.push_str(&format!("- Total rungs: {}\n", ladder.entries.len()));
@@ -2978,7 +3000,7 @@ fn sentence_coverage_report() {
     out.push_str("### Frontier: the build-next list\n\n");
     out.push_str(
         "A rung is on the frontier when every demand it makes, other than \
-         its own `introduces` token, is already covered — nothing stands \
+             its own `introduces` token, is already covered — nothing stands \
          between it and being built, whether or not it looks cheap. \
          `unblocks` is the number of OTHER rungs that would become covered \
          as a side effect of building this one alone — computed by \

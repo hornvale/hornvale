@@ -4227,7 +4227,12 @@ mod tests {
     /// `unmarked_morphology()`/`paradigm: None` bundle draws no marker at
     /// all, so the deep surface must equal the floor surface exactly, the
     /// same shallow-identity assertion `shallow_identity_holds_with_
-    /// nonempty_adjuncts` makes for the transitive/nominal path.
+    /// nonempty_adjuncts` makes for the transitive/nominal path. The deep
+    /// assertion below is written against the **literal** `expected`, not
+    /// against the floor realizer's `out`: a `deep == out` assertion is an
+    /// oracle only for as long as `out == expected` still runs ahead of it,
+    /// and anchoring both to the literal makes the deep half immune to what
+    /// happens to its neighbour.
     #[test]
     fn a_tongue_orders_an_intransitive_clause_with_no_object_slot() {
         let lex = intransitive_lexicon();
@@ -4277,8 +4282,17 @@ mod tests {
                     Orthography::Digraph,
                 )
                 .unwrap();
+                // Anchored to the LITERAL, not to `out`, and deliberately
+                // so: `assert_eq!(deep, out)` is a real oracle only while
+                // `assert_eq!(out, expected)` above still runs first in this
+                // same loop body. Reorder or delete that one and a bare
+                // `deep == out` degrades silently into a cross-implementation
+                // comparison that passes whenever BOTH realizers are wrong
+                // the same way. Comparing against `expected` says the same
+                // thing about the deep realizer and cannot be weakened by
+                // anything that happens to its neighbour.
                 assert_eq!(
-                    deep, out,
+                    deep, expected,
                     "the deep realizer's own object-slot ordering (a \
                      separate match, over (Role, String) pairs) must drop \
                      the object exactly as the floor realizer's does: \

@@ -7,8 +7,12 @@ choices; this directory captures what the work taught about the working.
 
 ## Conventions
 
-- One file per campaign, named after its slug: `campaign-<slug>.md`
-  (matching the chronicle entry's naming).
+- One file per campaign, named after its slug: `<slug>.md` — bare, exactly
+  matching the chronicle entry's filename (`the-rail.md`, `the-latch.md`).
+  Not `campaign-<slug>.md`, which this line specified for a long time and no
+  file has ever followed. The thirteen `campaign-<N>.md` files below are the
+  numbered campaigns that predate campaign names entirely; they are history,
+  not a pattern to extend.
 - **One page maximum.** If it wants more, the surplus is probably a
   decision record or a spec correction, not retrospective prose.
 - Process, not product: what the campaign shipped belongs in the
