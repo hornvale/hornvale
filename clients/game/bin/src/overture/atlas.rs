@@ -31,27 +31,48 @@
 //! (`crate::plate`'s module doc), and [`super::Frame::observe`] renders every
 //! speaking view at every rung it can speak at — so an atlas built at
 //! `Terrain`, `Settlements` and `Full` without a memo would pay that cost
-//! three times per startup for a mesh that never changes underneath it (the
-//! build sculpts terrain ONCE and threads the same value through every later
-//! rung, `windows/worldgen/src/lib.rs`'s own "Sculpt the terrain ONCE here and
-//! KEEP it" comment on `build_to`).
+//! three times per startup.
+//!
+//! **`windows/worldgen/src/lib.rs`'s own "Sculpt the terrain ONCE here and
+//! KEEP it" comment on `build_to` is a claim about VALUE identity (the
+//! content is byte-identical to a `terrain_of` re-derivation), not about
+//! ADDRESS identity — and this module's doc used to conflate the two.**
+//! `build_world_observed`'s real observer calls, measured directly by
+//! [`tests::the_real_build_observer_reports_how_often_terrain_actually_moves`],
+//! show the `Terrain`-rung call receiving the "terrain" stage's own local
+//! (`lib.rs:8031`), and the `Settlements`/`Full`-rung calls both receiving a
+//! DIFFERENT, shared address — the "climate+settlements" stage
+//! (`lib.rs:8098`) takes that original local BY MOVE and returns it inside a
+//! tuple, and a move through a closure return does not preserve a stack
+//! address. So one real session sees exactly **two** distinct addresses
+//! across the three observer calls, not one: the memo this view keeps
+//! rebuilds ONCE partway through a session (`Terrain` → `Settlements`), then
+//! is reused unchanged for `Full`. The saving is real (one `NearestVertexIndex`
+//! build avoided at `Full`, not the two the original wording implied), and
+//! nothing renders wrong either way — see the next paragraph.
 //!
 //! **The memo is keyed on the `GeneratedTerrain` reference's own address**,
-//! not on the world's seed or on nothing at all. `artifacts.terrain` is a
-//! borrow of the SAME value across every rung of one build (the build never
-//! rebuilds it), so two renders that are handed the identical reference are,
-//! by construction, looking at the identical mesh — reusing the memo for them
-//! is exactly the case `render`'s own doc calls "a memo, not a licence": the
-//! two calls return the same grid because nothing that could change the
-//! answer changed. A render handed a DIFFERENT terrain reference (a fresh
-//! build — a new game, or, in a test, a second world entirely) rebuilds
-//! rather than silently reusing a stale index for the wrong mesh. Keying on
-//! the world's seed instead was considered and rejected: it would be correct
-//! for this campaign's own worlds (one seed, one set of pins, one build) but
-//! would silently misbehave the day two DIFFERENT `GeneratedTerrain`s ever
-//! shared a seed (a dev tool rebuilding the same seed under different pins,
-//! say) — identity of the actual value handed in is the only key that cannot
-//! go stale under a hypothetical it does not need to rule out.
+//! not on the world's seed or on nothing at all. This key is honest about
+//! what it can and cannot promise: it never serves a stale index for the
+//! wrong mesh (an address mismatch always rebuilds, including the
+//! mid-session rebuild measured above), so a render handed a DIFFERENT
+//! terrain reference — whether that is a genuinely different build (a new
+//! game, or a second world in a test) or, as measured, the SAME build's
+//! value having moved under it — safely rebuilds rather than guessing. That
+//! safety does not depend on `build_to` ever achieving true address
+//! stability; it depends only on "same address implies same content", which
+//! The Single Sculpt's value-identity guarantee upholds regardless of how
+//! many times the value itself is relocated. Keying on the world's seed
+//! instead was considered and rejected: it would be correct for this
+//! campaign's own worlds (one seed, one set of pins, one build) but would
+//! silently misbehave the day two DIFFERENT `GeneratedTerrain`s ever shared a
+//! seed (a dev tool rebuilding the same seed under different pins, say) —
+//! identity of the actual value handed in is the only key that cannot go
+//! stale under a hypothetical it does not need to rule out. A
+//! content-derived key (e.g. `geo.vertex_count()` plus some cheap hash) was
+//! also considered and rejected as strictly worse here: it would need to be
+//! computed on every call to decide whether to rebuild, which is exactly the
+//! per-call cost this memo exists to avoid paying.
 //!
 //! # The discovery decision: every placed settlement is visible
 //!
@@ -67,7 +88,7 @@
 //! would be contract rule 2's failure in the opposite direction — a
 //! placeholder standing in for something that *does* exist. This is the
 //! controller's own reading and is deliberately made structural rather than
-//! left implicit: [`settlements_of`] and [`discovered_of`] are two separate,
+//! left implicit: [`plate::settlements_of`] and [`discovered_of`] are two separate,
 //! narrow functions, and the test module asserts the resulting behaviour
 //! (settlements appear once placed) rather than merely exercising the code
 //! path.
@@ -77,14 +98,27 @@
 //! `Driver::start_from_world` builds its own cave roster with a full scan of
 //! every mesh vertex (`(0..geo.vertex_count())...filter(|&c|
 //! terrain.cave_at(c).is_some())`, `driver.rs`), because a possessed agent can
-//! eventually explore into one. The overture atlas has no possession and no
-//! walk band — it is a pre-game overview of what genesis placed on the
-//! surface — and an undiscovered cave is not a fact about the SURFACE the
-//! way a settlement is; it is a fact about what is buried under it, which
-//! this view has no more business showing unprompted than a real atlas shows
-//! the inside of an unopened cave system. The task brief's own tests do not
-//! ask for one either. So [`AtlasView::render`] passes an empty cave roster
-//! and pays no per-render mesh scan for a feature this view does not draw.
+//! eventually explore into one. `AtlasView::render` passes an empty cave
+//! roster instead and pays no per-render mesh scan for a feature this view
+//! does not draw.
+//!
+//! **The reason is a genre convention, not a discovery argument** (fix
+//! round 1: the previous wording here leaned on "an undiscovered cave is
+//! buried, not on the surface" — the same player's-eye discovery framing the
+//! settlement decision one paragraph above this deliberately overrides. The
+//! two cannot both stand in one document: if discovery does not gate what
+//! this view shows, it cannot be the reason a cave is withheld either.) The
+//! actual reason is simpler and does not depend on discovery at all: a
+//! printed atlas draws coastlines, mountains and towns, never the inside of
+//! an unopened cave system — that is a fact about what an ATLAS is, not
+//! about what the viewer has or has not encountered. This view follows that
+//! convention.
+//!
+//! **This is a real, deliberate narrowing of spec §4's literal wording**
+//! ("settlements and caves appearing as placed"), not an oversight — worth
+//! carrying into the campaign chronicle as a named omission rather than
+//! rediscovering it later as a missing feature. The task brief's own tests
+//! do not ask for a cave glyph either.
 //!
 //! # The window: the whole globe, not a scrolled fragment
 //!
@@ -112,7 +146,7 @@
 use std::collections::BTreeSet;
 
 use hornvale_game_core::Grid;
-use hornvale_kernel::{Geosphere, NearestVertexIndex, Value, Vertex, World};
+use hornvale_kernel::{Geosphere, NearestVertexIndex, Vertex, World};
 use hornvale_worldgen::{BuildDepth, RungArtifacts};
 
 use crate::discovery::{Discovered, FeatureId};
@@ -143,42 +177,6 @@ fn fit_depth(w: u16, h: u16) -> u32 {
         depth += 1;
     }
     depth
-}
-
-/// Every placed settlement's nearest terrain vertex — the same read
-/// `Driver::start_from_world` performs (`driver.rs:690-710`), reused here
-/// rather than re-derived by a second copy of the idiom: `IS_SETTLEMENT`'s
-/// subject plus its committed `LATITUDE`/`LONGITUDE`, resolved to a
-/// [`Vertex`] through [`NearestVertexIndex::nearest`]. A settlement missing
-/// either coordinate fact is skipped rather than guessed at — matching
-/// `sky::stars_of`'s own rule for a fact set genesis always commits together
-/// but a hand-built world might not.
-fn settlements_of(
-    world: &World,
-    geo: &Geosphere,
-    nearest: &NearestVertexIndex,
-) -> BTreeSet<Vertex> {
-    world
-        .ledger
-        .find(hornvale_settlement::IS_SETTLEMENT)
-        .filter_map(|fact| {
-            let lat = match world
-                .ledger
-                .value_of(fact.subject, hornvale_settlement::LATITUDE)
-            {
-                Some(Value::Number(n)) => *n,
-                _ => return None,
-            };
-            let lon = match world
-                .ledger
-                .value_of(fact.subject, hornvale_settlement::LONGITUDE)
-            {
-                Some(Value::Number(n)) => *n,
-                _ => return None,
-            };
-            Some(nearest.nearest(geo, lat, lon))
-        })
-        .collect()
 }
 
 /// Every entry of `settlements`, marked discovered — see the module doc's
@@ -282,7 +280,7 @@ impl View for AtlasView {
             origin_row: 0,
         };
 
-        let settlements = settlements_of(world, geo, nearest);
+        let settlements = plate::settlements_of(world, geo, nearest);
         let discovered = discovered_of(&settlements);
         // No caves — see the module doc's "Caves: skipped, deliberately"
         // section.
@@ -311,7 +309,8 @@ mod tests {
     use hornvale_kernel::Seed;
     use hornvale_terrain::TerrainPins;
     use hornvale_worldgen::{
-        BuildArtifacts, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
+        BuildArtifacts, SettlementPins, SkyChoice, WorldComponents, build_world_observed,
+        build_world_to_with_artifacts,
     };
     use std::sync::OnceLock;
 
@@ -533,6 +532,90 @@ mod tests {
             next_w > u32::from(w) || next_h > u32::from(h),
             "fit_depth({w}, {h}) = {depth} is not maximal: rung {} ({next_w}x{next_h}) also fits",
             depth + 1
+        );
+    }
+
+    #[test]
+    fn the_real_build_observer_reports_how_often_terrain_actually_moves() {
+        // Important 1 (fix round 1): the module doc used to assert, as fact,
+        // that the build "sculpts terrain ONCE and threads the SAME
+        // `GeneratedTerrain` value through every rung" — a claim about
+        // ADDRESS STABILITY that neither `the_memo_rebuilds_for_a_different_
+        // terrain_reference` (two unrelated builds) nor
+        // `render_is_pure_given_the_same_terrain_reference` (one cached
+        // artifact rendered twice) actually exercises. This test drives the
+        // REAL observer (`build_world_observed`) across one genuine build and
+        // records the address `RungArtifacts::terrain` carries at each rung
+        // that has one, establishing the count rather than asserting it.
+        let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+        let mut addresses: Vec<(BuildDepth, usize)> = Vec::new();
+        let mut observer = |rung: BuildDepth, _world: &World, artifacts: RungArtifacts<'_>| {
+            if let Some(terrain) = artifacts.terrain {
+                addresses.push((rung, std::ptr::from_ref(terrain) as usize));
+            }
+        };
+        build_world_observed(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &TerrainPins::default(),
+            &SettlementPins::default(),
+            &wc,
+            BuildDepth::Full,
+            &mut observer,
+        )
+        .expect("seed 42 builds");
+
+        // Terrain, Settlements, Full each carry `Some` terrain — three
+        // addresses recorded, in rung order.
+        assert_eq!(
+            addresses.iter().map(|(r, _)| *r).collect::<Vec<_>>(),
+            vec![
+                BuildDepth::Terrain,
+                BuildDepth::Settlements,
+                BuildDepth::Full
+            ]
+        );
+
+        let distinct: std::collections::BTreeSet<usize> =
+            addresses.iter().map(|(_, a)| *a).collect();
+        eprintln!(
+            "terrain addresses across rungs: {:?} ({} distinct)",
+            addresses,
+            distinct.len()
+        );
+
+        // MEASURED (see the task report for the printed addresses): the
+        // `Terrain`-rung observer fires against the stage's original local
+        // (`windows/worldgen/src/lib.rs:8031`); the `Settlements`/`Full`-rung
+        // observers fire against the REBOUND local from the
+        // "climate+settlements" stage's tuple destructure
+        // (`:8098`), which moved the original through a closure return. A
+        // move through a closure return does not preserve a stack address,
+        // so this asserts exactly two distinct addresses: one for `Terrain`
+        // alone, a second shared by `Settlements` and `Full` (unchanged
+        // between those two — no further rebinding happens after :8098).
+        // If a future refactor of `build_to` changes this, this test's
+        // failure is the signal to re-word `atlas.rs`'s module doc again,
+        // not to "fix" the test back to matching stale prose.
+        assert_eq!(
+            distinct.len(),
+            2,
+            "expected exactly one rebuild (Terrain's own address, then one shared \
+             by Settlements and Full); got {} distinct addresses: {addresses:?}",
+            distinct.len()
+        );
+        assert_eq!(
+            addresses[1].1, addresses[2].1,
+            "Settlements and Full disagreed on terrain's address, but nothing \
+             rebinds `terrain` between those two observer calls in build_to"
+        );
+        assert_ne!(
+            addresses[0].1, addresses[1].1,
+            "Terrain's own address matched the post-rebind address; if a future \
+             build_to refactor makes this true, AtlasView's memo would then \
+             rebuild only once per build rather than twice — update the module \
+             doc's rebuild-count claim to match, do not just relax this assertion"
         );
     }
 }

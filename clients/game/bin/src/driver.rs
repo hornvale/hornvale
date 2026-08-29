@@ -77,7 +77,7 @@ use crate::mercator::{self, Frame};
 use crate::plate::{self, BAND_B_RUNG, GLOBE_RUNG, Window};
 use hornvale_astronomy::SkyPins;
 use hornvale_game_core::{CandidateSource, Cursor, Focus};
-use hornvale_kernel::{FacetId, NearestVertexIndex, Seed, Value, Vertex, World};
+use hornvale_kernel::{FacetId, NearestVertexIndex, Seed, Vertex, World};
 use hornvale_language::{MorphOptions, Phonology};
 use hornvale_terrain::GeneratedTerrain;
 use hornvale_terrain::TerrainPins;
@@ -687,27 +687,10 @@ impl Driver {
         // already exercises dev-only; this is the shipped-path use of it.
         // Ground truth, never gated — [`plate::draw_with`] is where
         // `discovered` decides whether a member of this set is ever drawn.
-        let settlements: BTreeSet<Vertex> = world_ref
-            .ledger
-            .find(hornvale_settlement::IS_SETTLEMENT)
-            .filter_map(|fact| {
-                let lat = match world_ref
-                    .ledger
-                    .value_of(fact.subject, hornvale_settlement::LATITUDE)
-                {
-                    Some(Value::Number(n)) => *n,
-                    _ => return None,
-                };
-                let lon = match world_ref
-                    .ledger
-                    .value_of(fact.subject, hornvale_settlement::LONGITUDE)
-                {
-                    Some(Value::Number(n)) => *n,
-                    _ => return None,
-                };
-                Some(nearest.nearest(&geo, lat, lon))
-            })
-            .collect();
+        // `plate::settlements_of` (fix round 1, R10, The Overture Task 5):
+        // this used to be inlined here; it is now the one shared copy the
+        // overture's `atlas` view calls too.
+        let settlements: BTreeSet<Vertex> = plate::settlements_of(world_ref, &geo, &nearest);
 
         // The cave roster, scanned once. `cave_at` is a pure read of the
         // vertex's own stratigraphic column, so this is a scan of the mesh
