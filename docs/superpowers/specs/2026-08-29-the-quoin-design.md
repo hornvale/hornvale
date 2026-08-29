@@ -330,6 +330,38 @@ correct outcome of building foundational rungs, and a shrinking frontier would
 mean the campaign built leaves. This is a preregistered *direction*, and it is
 the one criterion whose sign is asserted rather than its magnitude.
 
+> **AMENDED 2026-08-29, after Task 0 measured it — the paragraph above is kept
+> as authored because the way it failed is the finding.**
+>
+> **PREREG-3 binds at the CUMULATIVE endpoint only. Per-step frontier
+> movement is reported, never asserted.**
+>
+> Task 0 measured a per-step frontier *shrink*, 20 → 19, at
+> `verbless-clause`, and correctly flagged it. The flag was right and the
+> criterion was wrong. Covering **any** frontier rung whose `unblocks` is 0
+> removes a frontier member and adds nothing, mechanically — and **18 of the
+> 20 baseline frontier rungs have `unblocks: 0`** (read off the committed
+> audit's own frontier table). So the per-step form of this criterion fires
+> on almost any leaf rung and distinguishes nothing.
+>
+> The sharpest evidence that it does not discriminate: `wh-question`
+> (`r085`) is also `unblocks: 0`. The per-step test would have fired
+> identically on the rung §1.1 *rejected*, which means it could not have
+> told the chosen set from the rejected one — the exact judgement it was
+> written to support.
+>
+> **The residual risk this amendment accepts, stated because the weaker
+> criterion is now the only one:** a campaign could build five leaves and
+> still pass cumulatively, because one strong rung's opening can carry the
+> net. Here `definiteness` alone moves the frontier 19 → 34. That is why the
+> chronicle reports the **per-rung `unblocks` figure** beside the count
+> (PREREG-4's discipline extended): the count is the criterion, the
+> `unblocks` column is what makes it readable.
+>
+> Nothing else in §4 changes. This is an amendment to a spec Nathan approved
+> at G3, made by the controller during execution and surfaced at G6 rather
+> than applied silently.
+
 **PREREG-4.** Per-rung, the report's produce-side demand-instance count is the
 figure quoted in the chronicle. Total demand is reported beside it and never
 alone — §1.1's whole argument is that the composite hides a direction split.
