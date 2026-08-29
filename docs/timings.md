@@ -3800,3 +3800,6 @@ measured here.
 | 2026-08-29T04:56:31Z | gate-commit | 11.941 | 13.053 | 1.644 | 1.23 | 0 | bbf63cdd9 | campaign/the-gallery | ambrose | 12 |
 | 2026-08-29T04:57:46Z | gate-commit | 62.694 | 136.144 | 20.403 | 2.50 | 0 | bbf63cdd9 | campaign/the-gallery | ambrose | 12 |
 | 2026-08-29T04:59:16Z | gate-commit | 50.044 | 39.150 | 12.875 | 1.04 | 0 | bbf63cdd9 | campaign/the-gallery | ambrose | 12 |
+| 2026-08-29T05:01:42Z | gate-commit | 55.037 | 38.511 | 13.317 | 0.94 | 0 | bbf63cdd9 | campaign/the-gallery | ambrose | 12 |
+| 2026-08-29T05:09:13Z | gate-commit | 61.644 | 98.861 | 20.343 | 1.93 | 0 | f6051a9c3 | campaign/the-gallery | ambrose | 12 |
+| 2026-08-29T05:10:10Z | gate-commit | 49.991 | 38.739 | 12.935 | 1.03 | 0 | f6051a9c3 | campaign/the-gallery | ambrose | 12 |

@@ -2970,6 +2970,11 @@ impl<'w> Session<'w> {
                     cave,
                     self.world.seed,
                 ));
+                // Fix round 1: every ARRIVAL marks, not just a lateral step
+                // (spec §3.5, amended in commit f6051a9c3) — the entrance
+                // cell is the first of the three landing paths, and the one
+                // a player sees before ever taking a single step.
+                self.mark_underground_seen();
                 Turn::Out(format!(
                     "You worm down into the dark. The rock here is {}.",
                     stratum_word(chamber.stratum)
@@ -3110,22 +3115,33 @@ impl<'w> Session<'w> {
     }
 
     /// Fold the current cell's shadowcast into the current rung's own
-    /// remembered set (The Gallery, Task 6; spec §3.5: "a step ORs its
-    /// shadowcast into the bitset for the rung it happened on"). Called only
-    /// from [`Self::step_underground`], after [`crate::underground::
-    /// Underground::commit_step`] has already moved the possession — never
-    /// before, and never for a refused or blocked step, so what gets
-    /// remembered is always somewhere the possession genuinely stood.
+    /// remembered set (The Gallery, Task 6; spec §3.5, amended in Fix round
+    /// 1 by commit f6051a9c3: "every arrival marks", not merely a lateral
+    /// step). Called from all three ways a possession comes to occupy an
+    /// underground cell, each AFTER the possession has actually landed
+    /// there — never before, and never for a refused or blocked move, so
+    /// what gets remembered is always somewhere the possession genuinely
+    /// stood:
+    ///
+    /// - [`Self::delve_at`], right after `self.underground` is built, for
+    ///   the entrance cell.
+    /// - [`Self::step_underground`], after [`crate::underground::
+    ///   Underground::commit_step`] has moved the possession one cell.
+    /// - [`Self::take_stairs`], after [`crate::underground::Underground::
+    ///   take_stairs`] has landed the possession on the connecting rung.
+    ///
+    /// **One shared call rather than three copies of the same logic** — Fix
+    /// round 1's own instruction, and the reason a fourth arrival path
+    /// (should one ever exist) only has one call site to remember to add.
     ///
     /// **The reach comes from [`Self::sight_reach`], never a literal** —
     /// the same seam `chamber_sources`'s implicit-torch source reads
-    /// through, so a future carried-light model changes both call sites by
+    /// through, so a future carried-light model changes every call site by
     /// changing one function.
     ///
-    /// A no-op if the possession is not underground. Nothing else calls
-    /// this today, but a private helper that assumes its own caller's
-    /// precondition instead of checking it is a private helper waiting to
-    /// be misused by the next one.
+    /// A no-op if the possession is not underground. A private helper that
+    /// assumes its own caller's precondition instead of checking it is a
+    /// private helper waiting to be misused by the next one.
     fn mark_underground_seen(&mut self) {
         let reach = self.sight_reach();
         let Some(ug) = self.underground.as_ref() else {
@@ -3224,6 +3240,12 @@ impl<'w> Session<'w> {
             .expect("checked Some above; charge_within_room never touches underground");
         ug.take_stairs()
             .expect("peek_stairs just confirmed this succeeds");
+        // Fix round 1: the stairs are the second of the three arrival paths
+        // that mark fog (spec §3.5, amended in commit f6051a9c3) — a rung
+        // entered and left entirely by stairs must still remember the
+        // landing's own surroundings, not just whatever a lateral step
+        // happened to add.
+        self.mark_underground_seen();
         let word = if want_down { "down" } else { "up" };
         Turn::Out(format!(
             "You take the stairs {word}.\n{}",
@@ -9477,6 +9499,83 @@ mod tests {
         );
     }
 
+    /// Fix round 1's first covering test: `delve_at` itself is one of the
+    /// three arrival paths that marks fog (spec §3.5, amended by commit
+    /// f6051a9c3 — "every arrival marks", not merely a lateral step). This
+    /// is the test that failed before the fix: taking no step at all, the
+    /// entrance cell's own surroundings must already be remembered the
+    /// instant the descent is built.
+    #[test]
+    fn delving_marks_the_arrival_cell_without_a_step() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        let ug = session
+            .underground
+            .as_ref()
+            .expect("the fixture must have descended");
+        assert!(
+            ug.seen[ug.rung].saw(ug.cell),
+            "the entrance cell itself must be remembered immediately after \
+             delve_at, before any step is ever taken"
+        );
+    }
+
+    /// Fix round 1's second covering test: `take_stairs`' own landing is
+    /// the second of the three arrival paths (spec §3.5, amended by commit
+    /// f6051a9c3). Descend to a fresh rung by the stairs alone — no lateral
+    /// step on the new rung at all — and the landing cell must already be
+    /// remembered there.
+    #[test]
+    fn taking_stairs_marks_the_landing_without_a_step() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        assert!(
+            session.underground.is_some(),
+            "the fixture must have descended"
+        );
+
+        // Reaching the StairsDown cell by walking is impractical from a
+        // test — the same reason
+        // `stairs_connect_adjacent_rungs_in_both_directions` places it
+        // directly.
+        let down_cell = {
+            let ug = session.underground.as_ref().expect("descended");
+            ug.level()
+                .cells
+                .iter()
+                .find(|(_, k)| *k == crate::underworld_level::LevelCellKind::StairsDown)
+                .map(|(c, _)| c)
+                .expect("every rung has exactly one StairsDown cell")
+        };
+        session.underground.as_mut().expect("descended").cell = down_cell;
+
+        match session.handle("down") {
+            Turn::Out(_) => {}
+            Turn::Released(_) => panic!("down must not release"),
+        }
+        let ug = session.underground.as_ref().expect("still below");
+        assert_eq!(ug.rung, 1, "descending from rung 0 must land on rung 1");
+        assert!(
+            ug.seen[ug.rung].saw(ug.cell),
+            "the landing cell on rung 1 must be remembered immediately after \
+             taking the stairs down, before any lateral step there"
+        );
+    }
+
     /// Every cell of `ug.rung`'s own remembered set — a `BTreeSet` snapshot
     /// taken by scanning the level, used only by this task's own fog tests
     /// to compare "before" against "after" with an ordinary set-comparison
@@ -9546,6 +9645,72 @@ mod tests {
         );
     }
 
+    /// A shortest path of bearings from `from` to some passable cell whose
+    /// Chebyshev distance from `from` is strictly greater than
+    /// `min_chebyshev` — used by this task's own fog tests to reach a cell
+    /// genuinely OUTSIDE a given reach, rather than one that merely happens
+    /// to be a single lateral step away (which Fix round 1 made ambiguous:
+    /// after commit f6051a9c3, `delve_at` itself marks everything within
+    /// `sight_reach()` of the entrance, so a nearby cell cannot distinguish
+    /// "still remembered from before" from "freshly visible from here").
+    /// Every non-Surface rung is at least 40x24 (`generate_level_extent`),
+    /// and Task 9's own connectivity invariant
+    /// (`every_walkable_cell_is_reachable_from_every_other`) guarantees a
+    /// path exists to any passable cell, so a cell beyond `min_chebyshev`
+    /// is always reachable from an interior point this many cells wide.
+    fn path_beyond_reach(
+        level: &crate::underworld_level::Level,
+        from: crate::lattice::Cell,
+        min_chebyshev: i32,
+    ) -> Vec<Compass> {
+        use std::collections::{BTreeMap, BTreeSet, VecDeque};
+        let mut visited: BTreeSet<crate::lattice::Cell> = BTreeSet::new();
+        let mut parent: BTreeMap<crate::lattice::Cell, (crate::lattice::Cell, Compass)> =
+            BTreeMap::new();
+        let mut queue = VecDeque::new();
+        queue.push_back(from);
+        visited.insert(from);
+        let mut target = None;
+        while let Some(cur) = queue.pop_front() {
+            let dist = (cur.0 - from.0).abs().max((cur.1 - from.1).abs());
+            if dist > min_chebyshev {
+                target = Some(cur);
+                break;
+            }
+            for d in [Compass::N, Compass::E, Compass::S, Compass::W] {
+                let delta = cell_delta(d).expect("orthogonal");
+                let next = crate::lattice::Cell(cur.0 + delta.0, cur.1 + delta.1);
+                if visited.contains(&next) {
+                    continue;
+                }
+                if level
+                    .cells
+                    .get(next)
+                    .and_then(crate::underworld_level::movement_mode)
+                    .is_none()
+                {
+                    continue;
+                }
+                visited.insert(next);
+                parent.insert(next, (cur, d));
+                queue.push_back(next);
+            }
+        }
+        let target = target.expect(
+            "a level at least 40x24 must have a passable cell beyond min_chebyshev \
+             reachable from an interior point (Task 9's connectivity invariant)",
+        );
+        let mut path = Vec::new();
+        let mut cur = target;
+        while cur != from {
+            let (prev, d) = parent[&cur];
+            path.push(d);
+            cur = prev;
+        }
+        path.reverse();
+        path
+    }
+
     /// The Gallery, Task 6, Step 4's `fog_survives_moving_between_rungs_
     /// and_dies_on_climbing_out`: spec acceptance criterion 5, in both
     /// directions. Descend, walk to accumulate seen cells on rung 0, take
@@ -9553,6 +9718,16 @@ mod tests {
     /// hold what was walked. Then climb out and delve again: the fresh
     /// descent's rung 0 must remember nothing, because fog is session-lived
     /// (spec §3.5), not derived from `(seed, address)`.
+    ///
+    /// **Fix round 1 (commit f6051a9c3) walks to a cell OUTSIDE
+    /// `sight_reach()` of the entrance**, not merely one lateral step away.
+    /// Before this fix `delve_at` marked nothing, so any walked-to cell was
+    /// a valid witness; now `delve_at` itself marks the entrance's own
+    /// surroundings, so a fresh descent legitimately remembers a NEARBY
+    /// cell again — that is correct behaviour, not a lifetime leak. Only a
+    /// cell beyond the fresh entrance's own reach can distinguish "the old
+    /// descent's fog leaked through" from "the new descent can see this
+    /// far on its own".
     #[test]
     fn fog_survives_moving_between_rungs_and_dies_on_climbing_out() {
         let world = seam_world();
@@ -9569,24 +9744,38 @@ mod tests {
             "the fixture must have descended"
         );
 
-        // Walk until at least one bearing actually moves the possession, so
-        // there is a marked cell to look for later — the same "try every
-        // bearing" discipline `a_compass_step_underground_moves_one_cell`
-        // uses, since which bearing is walkable depends on generated
-        // content.
-        let before_cell = session.underground.as_ref().expect("descended").cell;
-        let moved = ["n", "s", "e", "w"].iter().any(|d| {
-            session.handle(&format!("go {d}"));
-            session.underground.as_ref().expect("still below").cell != before_cell
-        });
+        let entrance_cell = session.underground.as_ref().expect("descended").cell;
+        let level = session
+            .underground
+            .as_ref()
+            .expect("descended")
+            .level()
+            .clone();
+        let path = path_beyond_reach(&level, entrance_cell, SIGHT_RADIUS);
         assert!(
-            moved,
-            "at least one bearing from the entrance cell must be walkable"
+            !path.is_empty(),
+            "the entrance cell itself must already be beyond its own reach \
+             from itself, which is impossible — path must be non-empty"
         );
-        let walked_cell = session.underground.as_ref().expect("still below").cell;
+        for bearing in &path {
+            let letter = bearing_letter(*bearing).to_lowercase();
+            match session.handle(&format!("go {letter}")) {
+                Turn::Out(_) => {}
+                Turn::Released(_) => panic!("go {letter} must not release"),
+            }
+        }
+        let remote_cell = session.underground.as_ref().expect("still below").cell;
+        let dist = (remote_cell.0 - entrance_cell.0)
+            .abs()
+            .max((remote_cell.1 - entrance_cell.1).abs());
         assert!(
-            session.underground.as_ref().expect("still below").seen[0].saw(walked_cell),
-            "the cell just walked to must be marked seen on rung 0"
+            dist > SIGHT_RADIUS,
+            "the walked-to cell must be strictly beyond sight_reach() of the \
+             entrance: distance {dist}, SIGHT_RADIUS {SIGHT_RADIUS}"
+        );
+        assert!(
+            session.underground.as_ref().expect("still below").seen[0].saw(remote_cell),
+            "the remote cell just walked to must be marked seen on rung 0"
         );
 
         // Place the possession on the entrance rung's own StairsDown cell —
@@ -9623,15 +9812,17 @@ mod tests {
             "ascending back must land on rung 0"
         );
         assert!(
-            session.underground.as_ref().expect("still below").seen[0].saw(walked_cell),
+            session.underground.as_ref().expect("still below").seen[0].saw(remote_cell),
             "rung 0's remembered set must survive a round trip through rung 1"
         );
 
         // Climb out (rung is 0, so `climb` succeeds) and delve the SAME cave
         // again: `Underground::enter` re-derives an identical descent from
         // the same seed/vertex/cave (nothing here consumes any per-session
-        // state), so `walked_cell` names the same physical cell in the new
-        // descent — but the new descent's own `seen` starts all-unseen.
+        // state), so `remote_cell` names the same physical cell in the new
+        // descent — but the new descent's own `seen` starts all-unseen
+        // except for what `delve_at`'s OWN arrival mark reaches, which
+        // `remote_cell` is, by construction, outside of.
         match session.handle("climb") {
             Turn::Out(_) => {}
             Turn::Released(_) => panic!("climb must not release"),
@@ -9646,9 +9837,10 @@ mod tests {
             "the fixture must have descended again"
         );
         assert!(
-            !session.underground.as_ref().expect("descended again").seen[0].saw(walked_cell),
-            "fog is session-lived: a fresh descent must remember nothing, \
-             even at a cell the previous descent had marked"
+            !session.underground.as_ref().expect("descended again").seen[0].saw(remote_cell),
+            "fog is session-lived: a fresh descent must remember nothing \
+             beyond its own entrance's reach, even at a cell the previous \
+             descent had marked"
         );
     }
 
