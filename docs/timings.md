@@ -3766,3 +3766,13 @@ measured here.
 | 2026-08-28T20:37:10Z | sluice:outboard | 41.061 | 25.222 | 38.856 | 1.56 | 0 | 6e7e9fe35 |  | lefford | 40 |
 | 2026-08-28T20:44:38Z | sluice:gate | 447.773 | 13018.949 | 409.363 | 29.99 | 0 | 957994933 |  | lefford | 40 |
 | 2026-08-28T20:53:34Z | sluice:clients | 535.338 | 9403.388 | 93.765 | 17.74 | 0 | 7576c92aa |  | lefford | 40 |
+| 2026-08-28T22:44:15Z | prewarm | 464.825 | 1755.617 | 106.198 | 4.01 | 0 | 0bdc53cc2 | campaign/the-legend | ambrose | 12 |
+| 2026-08-29T00:55:20Z | gate-commit | 127.743 | 109.678 | 31.115 | 1.10 | 0 | 516783398 | campaign/the-legend | ambrose | 12 |
+| 2026-08-29T00:57:26Z | gate-commit | 107.816 | 53.800 | 22.352 | 0.71 | 0 | 516783398 | campaign/the-legend | ambrose | 12 |
+| 2026-08-29T01:01:06Z | gate-commit | 112.539 | 54.668 | 24.028 | 0.70 | 0 | 516783398 | campaign/the-legend | ambrose | 12 |
+| 2026-08-29T01:04:50Z | gate-commit | 116.983 | 61.583 | 27.464 | 0.76 | 0 | 516783398 | campaign/the-legend | ambrose | 12 |
+| 2026-08-29T01:07:15Z | gate-commit | 114.320 | 62.353 | 27.885 | 0.79 | 0 | 80dbd5e09 | campaign/the-legend | ambrose | 12 |
+| 2026-08-29T01:13:31Z | gate-commit | 124.303 | 59.117 | 27.433 | 0.70 | 0 | 199d39cc1 | campaign/the-legend | ambrose | 12 |
+| 2026-08-29T01:19:24Z | rebaseline | 151.501 | 280.246 | 15.741 | 1.95 | 0 | e61a994b0 | campaign/the-legend | ambrose | 12 |
+| 2026-08-29T01:21:55Z | gate-commit | 115.420 | 62.704 | 27.418 | 0.78 | 0 | e61a994b0 | campaign/the-legend | ambrose | 12 |
+| 2026-08-29T01:23:26Z | gate-commit | 88.357 | 55.823 | 25.806 | 0.92 | 0 | e61a994b0 | campaign/the-legend | ambrose | 12 |
