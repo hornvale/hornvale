@@ -1203,6 +1203,19 @@ Task 5 took `IN_CHARACTER_VERBS` to 22. It is non-assertive prose and fails no
 gate, which is exactly why it rots — fix it here rather than leaving a wrong
 number in a file the next reader will trust.
 
+`clients/game/bin/src/driver.rs:55` (module doc) still says the scene "is
+re-derived with `self.session.purview(0)`". Task 10 made that false — the scene
+is a cached read refreshed once per turn. The conclusion the paragraph draws
+(resolver and picture "cannot disagree") is still true, but now for a different
+reason: a shared cache rather than two independent deterministic calls. Fix the
+reason, keep the conclusion.
+
+**Grep for the words the STALE prose uses, not the words you would use.** Task
+10's own sweep searched `per keypress|per redraw|every keypress|every redraw`
+and missed this line because it says "re-derived". That is the documented
+failure mode of the grep-the-crate remedy, and it is why this sweep is a task
+step rather than a habit.
+
 - [ ] **Step 4: Chronicle and retrospective**
 
 The chronicle is written at the book's altitude — technical, comprehensible
