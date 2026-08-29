@@ -154,17 +154,72 @@ false the moment there is.
 Stairs move between rungs. `LevelCellKind::StairsDown` / `StairsUp` already
 exist and `place_connections` already emits them.
 
-**Flooded cells are an open question this campaign must answer, not assume.**
+**Flooded cells route into the `submerged` band — measured, not assumed.**
 The generator's own connectivity checks treat `Floor | Flooded` alike
 (`mod.rs:218`, `:402`, `:1162`), so a level's reachability is computed *through*
-water today. But the session has a `submerged` band with its own verbs
-(`dive`/`surface`) and its own refusal. Three candidate rules — walk through
-flooded cells as if floor; refuse them with a physical reason; or route them
-into the `submerged` band — differ in what they imply about rung 2 above,
-which is *mostly* water. §7's acceptance test requires the campaign to state
-which and pin it; the plan's first task measures how much of a real descent is
-flooded before the rule is chosen, because a rule that makes the deepest rungs
-unreachable is a different campaign from one that does not.
+water today. The session already has a `submerged` band with its own verbs
+(`dive`/`surface`) and its own refusal, and this is the rule the measurement
+below selects.
+
+**The measurement (Task 0).** Three candidate rules — walk through flooded
+cells as if floor ("wading"); refuse them with a physical reason
+("impassable"); or route them into the `submerged` band — differ in what they
+imply about rung 2, which the spec originally worried was *mostly* water.
+`windows/vessel/tests/suite/underworld_level_generation.rs`'s
+`measure_flooded_cell_reachability_across_the_descent` swept 60 real seeds
+(1..60, all 60 yielded a measurable descent — no skips) through the shipped
+entry point (`underworld_level::generate_descent_for_character`), reaching a
+cave-bearing vertex the way `session.rs`'s private `find_open_cave_vertex`
+does (entrance chamber realized AND seeded barrier `Open`) and deriving every
+rung's depth and the vertex's water table exactly as production does
+(`windows/worldgen/src/lib.rs:3259-3267`: `terrain.geothermal_gradient_at`,
+`terrain.material_at(vertex).porosity`,
+`hornvale_terrain::water_table_depth_m`, `hornvale_terrain::
+rung_evaluation_depth_m` per rung, `cave.kind` for the cave kind) — never an
+invented depth or water table, since flooding is decided by depth against the
+table and a fictional input would measure nothing about the world.
+
+Per rung, averaged over the 60 seeds:
+
+| rung | avg cells | avg walkable | avg flooded | flooded % | reach % (Flooded impassable) | reach % (Flooded passable) | onward stairs reachable % |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Undercroft | 1144.0 | 737.9 | 432.8 | 58.7 | 40.1 | 100.0 | 100.0* |
+| Shallows | 1344.0 | 770.9 | 555.9 | 72.1 | 37.7 | 100.0 | 78.3 |
+| Deeps | 1560.0 | 849.8 | 588.3 | 69.2 | 38.8 | 100.0 | 66.7 |
+| Underdeep | 1792.0 | 972.2 | 713.3 | 73.4 | 34.8 | 100.0 | 71.7 |
+| Nadir | 2040.0 | 1080.2 | 726.4 | 67.2 | 38.4 | 100.0 | 60.0 |
+
+(\* Rung 0 has no `StairsUp` — its entry cell IS its own `StairsDown`, so its
+"onward stairs reachable" figure is tautologically 100% by construction, not
+a substantive reading; the signal lives in the four deeper rungs, F3 of the
+plan's pre-flight scan.) Across all five rungs jointly, only **21/60 seeds
+(35.0%)** have every rung's onward stairs reachable from its entry when
+`Flooded` is impassable, and "reach % (Flooded passable)" is **100.0% at
+every rung** — the partition tree connects every leaf and flooding only ever
+fills a whole leaf, never severs the tree, so plain connectivity is never
+actually at risk under wading.
+
+**The rule, from the decision table §7 requires this campaign to commit to:**
+- Impassable needs ≥95% of seeds fully reachable; this measurement gives
+  35.0%, so impassable is rejected outright — a rule that strands two-thirds
+  of seeds is not "simplest and costs nothing", it is broken.
+- Wading (walkable) is the fallback when flooding merely strands a material
+  fraction of seeds while the world stays substantially dry elsewhere. That
+  is not what was measured: **58.7%-73.4% of a rung's walkable area is
+  `Flooded`, at every rung including the shallowest (Undercroft) — not just
+  the deep ones, and with no meaningful gradient by depth.** The spec's
+  original concern was that rung 2 specifically reads as mostly water; the
+  measurement shows every rung does, uniformly. Treating that as ordinary
+  floor would make wading the DEFAULT mode of underworld travel at every
+  depth rather than an occasional hazard, which is indistinguishable from the
+  underworld simply being submerged throughout — exactly the third branch's
+  trigger condition, not the second's.
+- **Chosen: flooded cells route into the `submerged` band**, with its own
+  `dive`/`surface` verbs and its own refusal, rather than being walked
+  through or walled off. This is the expensive branch the plan named in
+  advance as the one "that may push Task 11 out of the campaign"; Tasks 4 and
+  11 must budget for it on that basis, not on the cheaper wading assumption
+  the spec's first draft left open.
 
 ### 3.3 Sight
 

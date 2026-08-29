@@ -27,12 +27,20 @@
 
 use std::collections::{BTreeSet, VecDeque};
 
+use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Band, Seed, Vertex};
-use hornvale_terrain::{Cave, CaveKind, GeothermalGradient, StratigraphicColumn};
-use hornvale_vessel::{Cell, Level, LevelCellKind, generate_descent};
+use hornvale_terrain::{Cave, CaveKind, GeothermalGradient, StratigraphicColumn, TerrainPins};
+use hornvale_vessel::{
+    Cell, Level, LevelCellKind, generate_descent, generate_descent_for_character,
+};
 use hornvale_worldgen::chamber::{
     BRANCHES_PER_SYSTEM, Chamber, ChamberAddr, ChamberOrigin, ChamberOverrides, chamber_at,
     chamber_exists,
+};
+use hornvale_worldgen::character::Character;
+use hornvale_worldgen::{
+    BarrierPins, BarrierState, BuildDepth, SettlementPins, SkyChoice, WorldComponents, barrier_of,
+    build_world_to_with_artifacts,
 };
 
 /// The column every fixture below is built against — the same 401 m-cover
@@ -311,5 +319,308 @@ fn a_second_seed_produces_a_different_shape() {
     assert_ne!(
         a[0].cells, b[0].cells,
         "two different seeds must not coincidentally produce the same level"
+    );
+}
+
+// --- Task 0 (the flooded-cell rule, spec §3.2): measurement, not shipped
+// behaviour. Everything below this line reports; it asserts nothing about
+// the fraction flooded or the fraction reachable — see the probe's own doc
+// comment for the posture and why.
+
+/// The chamber-entrance address `windows/vessel/src/session.rs`'s private
+/// `cave_entrance_addr` also builds (branch 0, level 0, `Undercroft`).
+/// Duplicated here rather than called: that helper (and
+/// `find_open_cave_vertex` below it) live inside a `#[cfg(test)] mod tests`
+/// block in `session.rs`'s own crate, unreachable from this integration
+/// binary, which compiles as a separate crate.
+fn probe_cave_entrance_addr(vertex: Vertex) -> ChamberAddr {
+    ChamberAddr {
+        vertex,
+        band: Band::Undercroft,
+        branch: 0,
+        level: 0,
+    }
+}
+
+/// Reproduces `windows/vessel/src/session.rs`'s private `find_open_cave_vertex`:
+/// the first non-ocean, cave-bearing vertex whose entrance chamber resolves
+/// (`chamber_at` is `Some`) AND whose seeded barrier is `BarrierState::Open`.
+/// Returns `None` rather than panicking — unlike the original, this is swept
+/// across many seeds and a seed with no such vertex is skipped, not fatal.
+fn probe_find_open_cave_vertex(
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    seed: Seed,
+) -> Option<(Vertex, Cave)> {
+    let overrides = ChamberOverrides::new();
+    let pins = BarrierPins::default();
+    terrain.geosphere().vertices().find_map(|vertex| {
+        if terrain.is_ocean(vertex) {
+            return None;
+        }
+        let cave = terrain.cave_at(vertex)?;
+        let gradient = terrain.geothermal_gradient_at(vertex);
+        let column = terrain.column_at(vertex);
+        let addr = probe_cave_entrance_addr(vertex);
+        let realized = chamber_at(seed, &cave, gradient, &column, addr, &overrides).is_some();
+        let open =
+            barrier_of(seed, addr.vertex, addr.band, addr.branch, &pins) == BarrierState::Open;
+        (realized && open).then_some((vertex, cave))
+    })
+}
+
+/// Every `Floor`/`StairsDown`/`StairsUp` cell of `level` — `standable_cells`
+/// minus every `Flooded` one, i.e. the passable set under this probe's
+/// "`Flooded` is impassable" treatment, compared against `standable_cells`'s
+/// own "`Flooded` is passable" treatment.
+fn dry_standable_cells(level: &Level) -> BTreeSet<Cell> {
+    level
+        .cells
+        .iter()
+        .filter(|(_, k)| {
+            matches!(
+                k,
+                LevelCellKind::Floor | LevelCellKind::StairsDown | LevelCellKind::StairsUp
+            )
+        })
+        .map(|(&c, _)| c)
+        .collect()
+}
+
+/// The cell holding `kind`, if any — `place_connections` places at most one
+/// `StairsDown` and at most one `StairsUp` per level.
+fn find_cell_of_kind(level: &Level, kind: LevelCellKind) -> Option<Cell> {
+    level
+        .cells
+        .iter()
+        .find(|(_, k)| **k == kind)
+        .map(|(&c, _)| c)
+}
+
+/// Flood-fills `passable` from `start` (4-directional adjacency), returning
+/// every cell reached including `start` itself — empty if `start` is not
+/// itself a member of `passable`.
+fn flood_fill(start: Cell, passable: &BTreeSet<Cell>) -> BTreeSet<Cell> {
+    let mut seen = BTreeSet::new();
+    if !passable.contains(&start) {
+        return seen;
+    }
+    let mut queue = VecDeque::new();
+    seen.insert(start);
+    queue.push_back(start);
+    while let Some(Cell(x, y)) = queue.pop_front() {
+        for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+            let next = Cell(x + dx, y + dy);
+            if passable.contains(&next) && seen.insert(next) {
+                queue.push_back(next);
+            }
+        }
+    }
+    seen
+}
+
+/// Task 0's own probe: how much of a real descent is under water, and can a
+/// descending player still get through it.
+///
+/// **REPORTED, never asserted** (spec §3.2) — the posture
+/// `windows/worldgen/tests/suite/deep_realm_rehome.rs` states explicitly at
+/// its own head: whichever way the numbers land is the finding this test
+/// exists to produce. The only assertion below guards against a silently
+/// vacuous sweep (too few seeds contributed a real measurement), never
+/// against a particular flooded fraction or reachable fraction.
+///
+/// **The descent's inputs are the production ones, and this is the whole
+/// validity of the measurement** — copied verbatim from
+/// `windows/worldgen/src/lib.rs:3259-3267` (gradient / porosity /
+/// `water_table_depth_m` / per-rung `rung_evaluation_depth_m`), with
+/// `cave.kind` rather than a hardcoded `CaveKind`. Flooding is decided by
+/// depth against the water table, so an invented depth or water table would
+/// measure a fiction, not the world.
+///
+/// Every rung uses `ChamberOrigin::Found`: `is_sump` (the flooding gate
+/// `generate_level_with_water` consults) treats `ChamberOrigin::Made` as
+/// always-drained, but nothing in the shipped path ever constructs a
+/// `ChamberOverrides` that would produce `Made` (see `is_sump`'s own doc
+/// comment) — every chamber a player can reach resolves `Found` today, so
+/// that is what this probe measures too.
+///
+/// **Entry cells** (F3 in the plan's pre-flight scan): rung 0 has no
+/// `StairsUp` (`place_connections` emits one only when `has_up` is true), so
+/// its entry is its own `StairsDown` cell — the same coordinate `delve` will
+/// place the possession on, since the entrance IS where a descending player
+/// stands. Every deeper rung's entry is its `StairsUp` cell.
+#[test]
+fn measure_flooded_cell_reachability_across_the_descent() {
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+    let habitation_rungs: Vec<Band> = hornvale_terrain::rungs()
+        .iter()
+        .copied()
+        .filter(|&r| r != Band::Surface)
+        .collect();
+    let rung_count = habitation_rungs.len();
+
+    let mut total_cells_sum = vec![0usize; rung_count];
+    let mut walkable_cells_sum = vec![0usize; rung_count];
+    let mut flooded_cells_sum = vec![0usize; rung_count];
+    let mut reach_impassable_frac_sum = vec![0.0f64; rung_count];
+    let mut reach_passable_frac_sum = vec![0.0f64; rung_count];
+    let mut down_reachable_impassable_count = vec![0usize; rung_count];
+
+    let mut seeds_measured = 0usize;
+    let mut seeds_fully_reachable_impassable = 0usize;
+
+    // Sweep seeds until at least 60 have contributed a real measurement (the
+    // brief's "at least 50", with headroom for a seed whose terrain has no
+    // open, unbarred cave mouth at all), or the search runs out of budget.
+    let mut seed_val = 1u64;
+    while seeds_measured < 60 && seed_val <= 500 {
+        let seed = Seed(seed_val);
+        seed_val += 1;
+
+        let Ok(artifacts) = build_world_to_with_artifacts(
+            seed,
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &TerrainPins::default(),
+            &SettlementPins::default(),
+            &wc,
+            BuildDepth::Terrain,
+        ) else {
+            continue;
+        };
+        let Some(terrain) = artifacts.terrain.as_ref() else {
+            continue;
+        };
+        let Some((vertex, cave)) = probe_find_open_cave_vertex(terrain, seed) else {
+            continue;
+        };
+
+        // The production recipe, verbatim (windows/worldgen/src/lib.rs:3259-3267).
+        let gradient = terrain.geothermal_gradient_at(vertex);
+        let porosity = terrain.material_at(vertex).porosity;
+        let height_asl_m = terrain
+            .elevation_at(vertex)
+            .above(terrain.sea_level())
+            .get();
+        let water_table_m = hornvale_terrain::water_table_depth_m(
+            terrain.drainage_at(vertex),
+            porosity,
+            height_asl_m,
+        );
+        let depths_m: Vec<f64> = habitation_rungs
+            .iter()
+            .map(|&rung| {
+                hornvale_terrain::rung_evaluation_depth_m(rung, gradient, cave.depth_reach_m)
+                    .expect("every non-Surface rung has an evaluation depth")
+            })
+            .collect();
+        let origins = vec![ChamberOrigin::Found; rung_count];
+
+        let levels = generate_descent_for_character(
+            &habitation_rungs,
+            cave.kind,
+            &origins,
+            &depths_m,
+            water_table_m,
+            Character::WildCave,
+            seed,
+        );
+
+        seeds_measured += 1;
+        let mut seed_fully_reachable = true;
+        for (i, level) in levels.iter().enumerate() {
+            let total_cells = level.cells.len();
+            let standable = standable_cells(level);
+            let dry = dry_standable_cells(level);
+            let flooded_cells = standable.len() - dry.len();
+
+            let entry = if i == 0 {
+                find_cell_of_kind(level, LevelCellKind::StairsDown)
+            } else {
+                find_cell_of_kind(level, LevelCellKind::StairsUp)
+            };
+            let down = find_cell_of_kind(level, LevelCellKind::StairsDown);
+
+            let (reach_impassable_frac, down_reachable) = match entry {
+                Some(entry_cell) => {
+                    let reached = flood_fill(entry_cell, &dry);
+                    let frac = if standable.is_empty() {
+                        0.0
+                    } else {
+                        reached.len() as f64 / standable.len() as f64
+                    };
+                    let down_ok = down.is_none_or(|d| reached.contains(&d));
+                    (frac, down_ok)
+                }
+                None => (0.0, false),
+            };
+            let reach_passable_frac = match entry {
+                Some(entry_cell) => {
+                    let reached = flood_fill(entry_cell, &standable);
+                    if standable.is_empty() {
+                        0.0
+                    } else {
+                        reached.len() as f64 / standable.len() as f64
+                    }
+                }
+                None => 0.0,
+            };
+
+            total_cells_sum[i] += total_cells;
+            walkable_cells_sum[i] += standable.len();
+            flooded_cells_sum[i] += flooded_cells;
+            reach_impassable_frac_sum[i] += reach_impassable_frac;
+            reach_passable_frac_sum[i] += reach_passable_frac;
+            if down_reachable {
+                down_reachable_impassable_count[i] += 1;
+            } else {
+                seed_fully_reachable = false;
+            }
+        }
+        if seed_fully_reachable {
+            seeds_fully_reachable_impassable += 1;
+        }
+    }
+
+    assert!(
+        seeds_measured >= 50,
+        "only {seeds_measured} of {} attempted seeds produced a measurable descent \
+         (an open, unbarred cave mouth) — widen the seed sweep; this guards the \
+         sweep against being silently vacuous, not any flooded or reachable fraction",
+        seed_val - 1
+    );
+
+    println!(
+        "=== Task 0: flooded-cell reachability across the descent ({seeds_measured} seeds, seeds 1..{} scanned) ===",
+        seed_val - 1
+    );
+    println!(
+        "{:<12}{:>10}{:>10}{:>10}{:>9}{:>16}{:>15}{:>10}",
+        "rung", "cells", "walk", "flood", "flood%", "reach%imp", "reach%pass", "down_ok%"
+    );
+    let n = seeds_measured as f64;
+    for (i, &rung) in habitation_rungs.iter().enumerate() {
+        let avg_total = total_cells_sum[i] as f64 / n;
+        let avg_walk = walkable_cells_sum[i] as f64 / n;
+        let avg_flood = flooded_cells_sum[i] as f64 / n;
+        let flood_pct = 100.0 * avg_flood / avg_walk.max(1.0);
+        let reach_impassable_pct = 100.0 * reach_impassable_frac_sum[i] / n;
+        let reach_passable_pct = 100.0 * reach_passable_frac_sum[i] / n;
+        let down_ok_pct = 100.0 * down_reachable_impassable_count[i] as f64 / n;
+        println!(
+            "{:<12}{:>10.1}{:>10.1}{:>10.1}{:>9.1}{:>16.1}{:>15.1}{:>10.1}",
+            format!("{rung:?}"),
+            avg_total,
+            avg_walk,
+            avg_flood,
+            flood_pct,
+            reach_impassable_pct,
+            reach_passable_pct,
+            down_ok_pct
+        );
+    }
+    let seeds_pct = 100.0 * seeds_fully_reachable_impassable as f64 / n;
+    println!(
+        "seeds with EVERY rung's onward stairs reachable from its entry when Flooded is \
+         impassable: {seeds_fully_reachable_impassable}/{seeds_measured} ({seeds_pct:.1}%)"
     );
 }
