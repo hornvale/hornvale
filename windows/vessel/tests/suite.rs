@@ -101,6 +101,8 @@ mod the_handle;
 mod the_lintel;
 #[path = "suite/the_purview.rs"]
 mod the_purview;
+#[path = "suite/thing.rs"]
+mod thing;
 #[path = "suite/tick_commit_budget.rs"]
 mod tick_commit_budget;
 #[path = "suite/underworld_level_generation.rs"]

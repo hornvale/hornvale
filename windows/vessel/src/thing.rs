@@ -479,6 +479,100 @@ pub fn is_open(ledger: &Ledger, thing: EntityId, day: WorldTime) -> Option<bool>
     }
 }
 
+/// Whether the thing of `kind` and `ordinal` belonging to `facet` **is still
+/// where the grammar puts it**, as of `day` — the campaign's first NEGATIVE
+/// fold, and HALF of the latency rule.
+///
+/// # This answers one conjunct of two, and the other one is the caller's
+///
+/// Spec §3.4 states latency as a conjunction:
+///
+/// ```text
+///   latent(facet, kind, n)  ==  the grammar offers it        <- THE CALLER'S HALF
+///                           AND no committed located-in fact places
+///                               thing_id(facet, kind, n) anywhere but this
+///                               room                          <- THIS FUNCTION
+/// ```
+///
+/// **Nothing in this signature can evaluate the first conjunct.** "Does the
+/// grammar offer a strongbox here" is answered only by
+/// [`crate::interior::interior_of`] or `chamber_interior_of`, both of which
+/// need a `&dyn Terrain`; this function holds no terrain, no seed and no
+/// world. Widening the signature to take one was considered and rejected:
+/// the caller **already** holds the [`crate::interior::Interior`], because
+/// enumerating it is where the offer list comes from in the first place. So
+/// the shape the design describes — and the shape that makes the cost below
+/// the right cost — is *enumerate the interior, then ask this per slot*:
+///
+/// ```text
+///   for id in interior.ids() {
+///       let kind = kind_of(interior.anchor(id).kind);      // the grammar's half
+///       if is_latent(ledger, &room, kind, 0, day)? { offer(id) }
+///   }
+/// ```
+///
+/// A caller that skips the enumeration and asks this alone gets `true` for a
+/// kind the room never offered, which is not a bug in this fold — it is the
+/// missing conjunct.
+///
+/// # "Anywhere but this room", not "has ever been touched"
+///
+/// A thing that was **promoted and put back** is still here, and so is a
+/// thing that was promoted and never moved at all. Only a [`LOCATED_IN`]
+/// fact naming somewhere ELSE takes it out of the room's offer list.
+/// Answering "does any fact about it exist" instead would make every
+/// promoted fixture vanish from its own room the instant a player opened it,
+/// and it would pass a test that only ever carries things away —
+/// `a_thing_put_back_is_still_here` and
+/// `a_promoted_thing_that_never_moved_is_still_here` exist to separate the
+/// two implementations.
+///
+/// # It reads the DIRECT location, never [`room_of`]
+///
+/// A key dropped into a chest that stands in this room is *in the room* by
+/// [`room_of`]'s transitive reading, and is NOT latent here: it is in the
+/// chest, and a room that went on offering it loose on the floor would be
+/// showing the same key twice. So the comparison is against
+/// [`location_of`]'s own answer — the thing's own [`LOCATED_IN`] posting —
+/// and a [`Value::Entity`] holder of any sort ends latency. A malformed
+/// location (neither a room key nor a holder) ends it too: a fact placing
+/// the thing somewhere unreadable is still a fact that it was moved, and
+/// re-offering it would mint a second copy.
+///
+/// # Cost
+///
+/// One SPO-indexed lookup per slot per room entry — `Ledger::facts_of` is
+/// `O(log n + k)` in `k`, the number of `located-in` facts about *this one
+/// thing*, which is 0 for every untouched slot. Nothing here walks world
+/// history and nothing costs per fact in the ledger, which is the shape
+/// Task 1 measured the design against. The id is derived *before* the read
+/// ([`thing_id`] consults no ledger), which is what makes it a lookup rather
+/// than a search.
+///
+/// Both [`Facet::pack`] calls behind it are fallible past `MAX_DEPTH`, so a
+/// room too deep to pack is refused rather than unwrapped — the same
+/// contract [`thing_id`] and [`room_key`] already carry.
+/// type-audit: bare-ok(identifier-text: kind), bare-ok(count: ordinal), bare-ok(flag: return)
+pub fn is_latent(
+    ledger: &Ledger,
+    facet: &Facet,
+    kind: &str,
+    ordinal: u16,
+    day: WorldTime,
+) -> Result<bool, FacetError> {
+    let thing = thing_id(facet, kind, ordinal)?;
+    let here = room_key(facet)?;
+    Ok(match location_of(ledger, thing, day) {
+        // Nothing ever placed it: the untouched slot, and the common case.
+        None => true,
+        // Placed, and placed HERE — promoted and put back, or promoted and
+        // never moved.
+        Some(Value::Text(room)) => room == here,
+        // Another room, a holder, or a malformed location: gone from here.
+        Some(_) => false,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1165,6 +1259,387 @@ mod tests {
             OPENNESS, "openness",
             "OPENNESS's spelling is a SAVE-FORMAT CONTRACT on the same terms \
              as LOCATED_IN's."
+        );
+    }
+
+    // ---- latency: the negative fold (Task 6) ----------------------------
+    //
+    // Every test below places things through `located_in_room_fact` /
+    // `located_in_holder_fact`, never by hand-formatting a room key: the
+    // encoder is the one `is_latent` compares against, and a test that spelled
+    // its own would be asserting agreement with itself.
+
+    /// A thing carried away is NOT offered again where it came from — the
+    /// negative fold, across two entries into the same room.
+    ///
+    /// The first assertion is the positive control and it is load-bearing:
+    /// without it, a body of `Ok(false)` would satisfy the second assertion
+    /// alone, and "the location check is consulted at all" would be unpinned
+    /// in the direction that matters.
+    ///
+    /// TWO MUTATIONS, ONE PER ASSERTION, because no single one reaches both
+    /// halves of a positive control plus its negative case.
+    ///
+    /// 1. `Some(Value::Text(room)) => room == here` to `... room != here` in
+    ///    `is_latent` — the SENSE of the one comparison the whole negative
+    ///    fold is made of. It reds the second assertion (5 tests red in all,
+    ///    the sense being load-bearing nearly everywhere):
+    ///
+    /// ```text
+    /// thread 'thing::tests::a_thing_carried_away_is_not_re_offered_where_it_came_from'
+    ///   panicked at windows/vessel/src/thing.rs:1326:9:
+    /// a strongbox committed into another room must stop being offered in the
+    /// room it came from
+    /// ```
+    ///
+    /// 2. `None => true` to `None => false` — the whole read collapsed to
+    ///    "nothing is ever offered", which is what a body of `Ok(false)`
+    ///    would amount to. It reds the FIRST assertion (6 tests red in all):
+    ///
+    /// ```text
+    /// thread 'thing::tests::a_thing_carried_away_is_not_re_offered_where_it_came_from'
+    ///   panicked at windows/vessel/src/thing.rs:1313:9:
+    /// a room with no facts about its strongbox must still offer it — this is
+    /// the state every room starts in
+    /// ```
+    #[test]
+    fn a_thing_carried_away_is_not_re_offered_where_it_came_from() {
+        let reg = play_registry();
+        let mut ledger = Ledger::default();
+        let here = facet(3, &[1, 2]);
+        let elsewhere = facet(3, &[1, 3]);
+        let strongbox = thing_id(&here, "strongbox", 0).unwrap();
+
+        assert!(
+            is_latent(&ledger, &here, "strongbox", 0, at(5.0)).unwrap(),
+            "a room with no facts about its strongbox must still offer it — \
+             this is the state every room starts in"
+        );
+
+        ledger
+            .commit(
+                located_in_room_fact(strongbox, &elsewhere, at(3.0)).unwrap(),
+                &reg,
+            )
+            .unwrap();
+
+        assert!(
+            !is_latent(&ledger, &here, "strongbox", 0, at(5.0)).unwrap(),
+            "a strongbox committed into another room must stop being offered \
+             in the room it came from"
+        );
+    }
+
+    /// A thing promoted and PUT BACK is still offered here.
+    ///
+    /// This is the case an implementation keyed on "has any `located-in`
+    /// fact" gets wrong, and it is why this test stands beside
+    /// `a_thing_carried_away_is_not_re_offered_where_it_came_from` rather
+    /// than instead of it: a suite that only ever carries things away cannot
+    /// distinguish the two readings.
+    ///
+    /// The middle assertion — not latent between the taking and the return —
+    /// is what keeps the last one from being read as "the fold never fires".
+    ///
+    /// MUTATION THIS FAILS AGAINST: `Some(Value::Text(room)) => room == here`
+    /// to `Some(Value::Text(_)) => false`, i.e. exactly the "any location
+    /// fact means gone" reading. It reds two tests in the whole vessel crate
+    /// — this one's last assertion and its behavioural twin
+    /// `suite::thing::a_room_offers_again_what_was_brought_back` — and leaves
+    /// the carried-away test above green, which is the discrimination this
+    /// test exists for:
+    ///
+    /// ```text
+    /// thread 'thing::tests::a_thing_put_back_is_still_here' panicked at
+    ///   windows/vessel/src/thing.rs:1384:9:
+    /// a thing put back in the room it came from is HERE — an implementation
+    /// keyed on "has any located-in fact" reads this as gone
+    /// ```
+    #[test]
+    fn a_thing_put_back_is_still_here() {
+        let reg = play_registry();
+        let mut ledger = Ledger::default();
+        let here = facet(3, &[1, 2]);
+        let elsewhere = facet(3, &[1, 3]);
+        let strongbox = thing_id(&here, "strongbox", 0).unwrap();
+
+        ledger
+            .commit(
+                located_in_room_fact(strongbox, &elsewhere, at(3.0)).unwrap(),
+                &reg,
+            )
+            .unwrap();
+        assert!(
+            !is_latent(&ledger, &here, "strongbox", 0, at(3.5)).unwrap(),
+            "while it is away it is away"
+        );
+
+        ledger
+            .commit(
+                located_in_room_fact(strongbox, &here, at(4.0)).unwrap(),
+                &reg,
+            )
+            .unwrap();
+
+        assert!(
+            is_latent(&ledger, &here, "strongbox", 0, at(5.0)).unwrap(),
+            "a thing put back in the room it came from is HERE — an \
+             implementation keyed on \"has any located-in fact\" reads this \
+             as gone"
+        );
+    }
+
+    /// A thing PROMOTED and never moved is still here.
+    ///
+    /// Promotion writes an `instance-of` fact and no location at all (spec
+    /// §3.4's phase 4), so this is the second way a thing acquires facts
+    /// without leaving: opening a chest must not make the chest disappear
+    /// from the room it stands in.
+    ///
+    /// MUTATION THIS FAILS AGAINST: `None => true` to `None => false` in
+    /// `is_latent` (6 tests red in all):
+    ///
+    /// ```text
+    /// thread 'thing::tests::a_promoted_thing_that_never_moved_is_still_here'
+    ///   panicked at windows/vessel/src/thing.rs:1429:9:
+    /// promotion is not departure: a chest opened in place is still in the room
+    /// ```
+    ///
+    /// **NO MUTATION REDS THIS TEST ALONE, and that is worth stating rather
+    /// than papering over with a mutation chosen for its blast radius.** The
+    /// promoted-but-unmoved thing reaches `is_latent`'s `None` arm, the same
+    /// arm the carried-away test's positive control reaches, so every
+    /// mutation that kills one kills both. (`LOCATED_IN` to `INSTANCE_OF`
+    /// inside `location_of` also reds it — along with twelve other tests,
+    /// because it is a mutation of the SHARED fold and says nothing about
+    /// this function.) What this test holds that no other does is a claim
+    /// spanning two functions: that [`promote`] writes no location at all,
+    /// so promotion cannot take a thing out of its own room. Task 12 is what
+    /// makes that falsifiable — a `take` verb that promoted and placed in one
+    /// step would red here — which is exactly when a standing assertion is
+    /// worth more than a mutation score today.
+    #[test]
+    fn a_promoted_thing_that_never_moved_is_still_here() {
+        let reg = play_registry();
+        let mut ledger = Ledger::default();
+        let here = facet(3, &[1, 2]);
+
+        promote(&mut ledger, &reg, &here, "strongbox", 0, at(3.0)).unwrap();
+
+        assert!(
+            is_latent(&ledger, &here, "strongbox", 0, at(5.0)).unwrap(),
+            "promotion is not departure: a chest opened in place is still in \
+             the room"
+        );
+    }
+
+    /// Latency is read AS OF the day asked about, like every other fold here:
+    /// at an instant before the carrying fact, the thing is still offered.
+    ///
+    /// This pins that `is_latent`'s own `day` argument reaches the fold —
+    /// which `location_is_read_as_of_the_day_asked_about` cannot, because it
+    /// calls `location_of` directly and never passes through this function's
+    /// argument list.
+    ///
+    /// MUTATION THIS FAILS AGAINST: `location_of(ledger, thing, day)` to
+    /// `location_of(ledger, thing, WorldTime::from_ticks(i64::MAX))` — "where
+    /// is it NOW", the read a caller not thinking about replay would write,
+    /// and the one that severs this function's `day` argument. It reds
+    /// exactly two tests in the vessel crate, this one's FIRST assertion and
+    /// the corresponding as-of-day assertion in
+    /// `suite::thing::a_room_offers_again_what_was_brought_back`; every other
+    /// latency test asks about a day at or after the last fact it committed,
+    /// so a read from the far future agrees with them:
+    ///
+    /// ```text
+    /// thread 'thing::tests::latency_is_time_correct' panicked at
+    ///   windows/vessel/src/thing.rs:1479:9:
+    /// a replayed day 4 must not see a move that happens on day 6
+    /// ```
+    ///
+    /// Substituting `from_ticks(0)` instead — the other end of the same
+    /// severing — reds seven, because it makes everything latent forever. It
+    /// is the less useful of the two for exactly that reason: a mutation that
+    /// reds half the file locates nothing.
+    #[test]
+    fn latency_is_time_correct() {
+        let reg = play_registry();
+        let mut ledger = Ledger::default();
+        let here = facet(3, &[1, 2]);
+        let elsewhere = facet(3, &[1, 3]);
+        let strongbox = thing_id(&here, "strongbox", 0).unwrap();
+
+        ledger
+            .commit(
+                located_in_room_fact(strongbox, &elsewhere, at(6.0)).unwrap(),
+                &reg,
+            )
+            .unwrap();
+
+        assert!(
+            is_latent(&ledger, &here, "strongbox", 0, at(4.0)).unwrap(),
+            "a replayed day 4 must not see a move that happens on day 6"
+        );
+        assert!(
+            !is_latent(&ledger, &here, "strongbox", 0, at(6.0)).unwrap(),
+            "on the day of the move and after it, the room must stop \
+             offering it"
+        );
+    }
+
+    /// Latency is keyed on the WHOLE lineage — the room, the kind and the
+    /// ordinal — because that is what `thing_id` derives from. Carrying one
+    /// room's strongbox away must not empty the slot beside it, nor the same
+    /// slot in the next room.
+    ///
+    /// The last assertion is the one worth stating twice: `elsewhere`'s own
+    /// strongbox is a DIFFERENT entity from the one now standing in
+    /// `elsewhere`, so a room does not stop offering its strongbox because
+    /// someone carried another room's strongbox in.
+    ///
+    /// MUTATION THIS FAILS AGAINST: `thing_id(facet, kind, ordinal)` to
+    /// `thing_id(facet, kind, 0)`, which drops the ordinal leg — the same
+    /// class of severed argument `promotes_ordinal_reaches_the_id_it_returns`
+    /// pins for `promote`. It reds this test and NOTHING ELSE in the vessel
+    /// crate, because no other latency test uses a nonzero ordinal:
+    ///
+    /// ```text
+    /// thread 'thing::tests::latency_is_keyed_on_the_whole_lineage' panicked
+    ///   at windows/vessel/src/thing.rs:1530:9:
+    /// the SECOND strongbox of this room is a different thing and is still here
+    /// ```
+    #[test]
+    fn latency_is_keyed_on_the_whole_lineage() {
+        let reg = play_registry();
+        let mut ledger = Ledger::default();
+        let here = facet(3, &[1, 2]);
+        let elsewhere = facet(3, &[1, 3]);
+        let strongbox = thing_id(&here, "strongbox", 0).unwrap();
+
+        ledger
+            .commit(
+                located_in_room_fact(strongbox, &elsewhere, at(3.0)).unwrap(),
+                &reg,
+            )
+            .unwrap();
+
+        assert!(
+            is_latent(&ledger, &here, "key", 0, at(5.0)).unwrap(),
+            "carrying the strongbox off says nothing about the key"
+        );
+        assert!(
+            is_latent(&ledger, &here, "strongbox", 1, at(5.0)).unwrap(),
+            "the SECOND strongbox of this room is a different thing and is \
+             still here"
+        );
+        assert!(
+            is_latent(&ledger, &elsewhere, "strongbox", 0, at(5.0)).unwrap(),
+            "the room the strongbox was carried INTO still offers its own \
+             latent strongbox: two rooms' strongboxes are two entities"
+        );
+    }
+
+    /// A thing put INSIDE a container standing in this room is no longer
+    /// loose here — the reason `is_latent` compares [`location_of`]'s answer
+    /// and never [`room_of`]'s.
+    ///
+    /// The first assertion is the trap stated outright: `room_of` resolves
+    /// the key transitively to this very room, so an implementation that
+    /// asked "is it in this room" instead of "is it AT this room" would call
+    /// the key latent and the room would offer it loose on the floor while
+    /// it sits in the chest — one key rendered twice.
+    ///
+    /// MUTATION THIS FAILS AGAINST: `location_of(ledger, thing, day)` to
+    /// `room_of(ledger, thing, day).map(Value::Text)`, the transitive
+    /// reading. It reds two tests in the vessel crate: this one, and
+    /// `a_malformed_location_still_ends_latency` — which is the same arm seen
+    /// from its other input, since `room_of` answers `None` for a malformed
+    /// location too. Every latency test that places things DIRECTLY in rooms
+    /// stays green, which is why neither of those two could be dropped in
+    /// favour of the other:
+    ///
+    /// ```text
+    /// thread 'thing::tests::a_thing_inside_a_container_here_is_not_loose_here'
+    ///   panicked at windows/vessel/src/thing.rs:1588:9:
+    /// a key in the chest is not a key on the floor — offering it again would
+    /// render one key twice
+    /// ```
+    #[test]
+    fn a_thing_inside_a_container_here_is_not_loose_here() {
+        let reg = play_registry();
+        let mut ledger = Ledger::default();
+        let here = facet(3, &[1, 2]);
+        let key = thing_id(&here, "key", 0).unwrap();
+        let chest = thing_id(&here, "strongbox", 0).unwrap();
+
+        ledger
+            .commit(located_in_room_fact(chest, &here, at(1.0)).unwrap(), &reg)
+            .unwrap();
+        ledger
+            .commit(located_in_holder_fact(key, chest, at(1.0)), &reg)
+            .unwrap();
+
+        assert_eq!(
+            room_of(&ledger, key, at(5.0)),
+            Some(room_key(&here).unwrap()),
+            "the transitive read DOES place the key in this room — which is \
+             exactly why latency must not be asked through it"
+        );
+        assert!(
+            !is_latent(&ledger, &here, "key", 0, at(5.0)).unwrap(),
+            "a key in the chest is not a key on the floor — offering it \
+             again would render one key twice"
+        );
+    }
+
+    /// A malformed location ends latency rather than being ignored. Nothing
+    /// in the tree commits one today; the arm exists so that a fact placing a
+    /// thing somewhere unreadable is still read as "it was moved", never as
+    /// "no location at all" — the latter would re-offer the thing and mint a
+    /// second copy of it.
+    ///
+    /// MUTATION THIS FAILS AGAINST: `Some(_) => false` to `Some(_) => true`,
+    /// which reds exactly this test and the container test above — the arm's
+    /// two inputs. Keeping both is what makes the pair informative: the day
+    /// `Value::Entity` is given its own branch (Task 12's hand, say), this
+    /// one still holds the malformed case alone:
+    ///
+    /// ```text
+    /// thread 'thing::tests::a_malformed_location_still_ends_latency' panicked
+    ///   at windows/vessel/src/thing.rs:1624:9:
+    /// an unreadable location is still a location: re-offering the thing
+    /// would mint a second copy of it
+    /// ```
+    #[test]
+    fn a_malformed_location_still_ends_latency() {
+        let reg = play_registry();
+        let mut ledger = Ledger::default();
+        let here = facet(3, &[1, 2]);
+        let strongbox = thing_id(&here, "strongbox", 0).unwrap();
+
+        ledger
+            .commit(located_fact(strongbox, Value::Number(7.0), at(1.0)), &reg)
+            .unwrap();
+
+        assert!(
+            !is_latent(&ledger, &here, "strongbox", 0, at(5.0)).unwrap(),
+            "an unreadable location is still a location: re-offering the \
+             thing would mint a second copy of it"
+        );
+    }
+
+    /// A room too deep to pack is REFUSED, not unwrapped — the same contract
+    /// `thing_id` and `room_key` already carry, and the reason `is_latent`
+    /// returns a `Result` rather than a bare `bool`. Both of its `pack` calls
+    /// are fallible and either would do; the point is that neither panics.
+    #[test]
+    fn latency_in_a_room_that_does_not_pack_is_refused() {
+        let ledger = Ledger::default();
+        let too_deep = facet(3, &[1u8; 64]);
+
+        assert_eq!(
+            is_latent(&ledger, &too_deep, "strongbox", 0, at(5.0)),
+            Err(FacetError::DepthExceedsCap)
         );
     }
 }
