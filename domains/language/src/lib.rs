@@ -1148,6 +1148,14 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "The Inquest: which side of the marked word the Polarity affix binds",
         ),
         (
+            "language/<species>/grammar/depth/person",
+            "The Rail (Task 7): the species' drawn Person (subject-agreement) grammaticalization depth (None/Particle/Affix), independent of number/tense/polarity — a tongue's own take on how deeply it grammaticalizes person, distinct from Common's fixed rules",
+        ),
+        (
+            "language/<species>/grammar/person-position",
+            "The Rail (Task 7): which side of the marked word the Person affix binds",
+        ),
+        (
             "language/family/<family>/morph/evidential/<value>",
             "C7: the family's one-syllable evidential-marker proto-form for <value> (witnessed/taught/inferred), drawn once per family and evolved per daughter via its own cascade — the cognate law",
         ),

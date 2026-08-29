@@ -30,12 +30,18 @@ pub struct ParadigmDepths {
     pub tense_depth: MorphDepth,
     /// How deeply Polarity (Positive/Negative) grammaticalizes.
     pub polarity_depth: MorphDepth,
+    /// How deeply Person (subject agreement) grammaticalizes (The Rail,
+    /// Task 7).
+    pub person_depth: MorphDepth,
     /// Which side of the marked word the Number affix binds.
     pub number_position: ClassPosition,
     /// Which side of the marked word the Tense affix binds.
     pub tense_position: ClassPosition,
     /// Which side of the marked word the Polarity affix binds.
     pub polarity_position: ClassPosition,
+    /// Which side of the marked word the Person affix binds (The Rail,
+    /// Task 7).
+    pub person_position: ClassPosition,
 }
 
 /// Preregistered Number-depth weights over `[None, Particle, Affix]` —
@@ -70,6 +76,34 @@ const TENSE_DEPTH_WEIGHTS: [f64; 3] = [25.0, 25.0, 50.0];
 /// axis.
 const POLARITY_DEPTH_WEIGHTS: [f64; 3] = [10.0, 50.0, 40.0];
 
+/// Preregistered Person-depth weights over `[None, Particle, Affix]` (The
+/// Rail, Task 7) — a tongue's own drawn take on how deeply subject
+/// agreement grammaticalizes, independent of Number/Tense/Polarity and of
+/// Common's fixed agreement rules ([`crate::morphology`]'s epistemic axes
+/// and this file's siblings all draw their own weights the same way).
+///
+/// **The claim: verbal person agreement is very widely attested, and where
+/// it is marked at all it is overwhelmingly affixal rather than a free
+/// particle.** Siewierska, *Person* (Cambridge, 2004), surveys person
+/// marking cross-linguistically and finds bound (affixal or clitic) subject
+/// marking on the verb far outstripping free-standing person particles as
+/// the exponent of agreement; Dryer's WALS chapter 102, "Verbal Person
+/// Marking" (in Dryer & Haspelmath, eds., *WALS Online*), finds that only a
+/// small minority of the sampled languages mark no person on the verb at
+/// all, with the remainder overwhelmingly bound rather than free.
+///
+/// Both numbers are picked from that claim rather than the reverse. `None`
+/// (15) is smaller than Number's (30) and Tense's (25) — "very widely
+/// attested" places Person's absence rate below its paradigm siblings —
+/// but not as small as Polarity's (10), because standard negation is
+/// attested as *essentially universal* while person agreement is only
+/// *very widely* attested, a weaker claim. Between the two marked buckets,
+/// `Affix` (75) so far outweighs `Particle` (10) that Affix accounts for
+/// 75/85 ≈ 88% of the marked mass — a sharper affixal skew than Number's
+/// 50/70 ≈ 71% or Tense's 50/75 ≈ 67% — which is the "overwhelmingly"
+/// half of the claim.
+const PERSON_DEPTH_WEIGHTS: [f64; 3] = [15.0, 10.0, 75.0];
+
 /// The percentage chance (out of 100) the Number affix binds as a suffix
 /// rather than a prefix.
 const NUMBER_POSITION_SUFFIX_CHANCE: u32 = 70;
@@ -84,6 +118,25 @@ const TENSE_POSITION_SUFFIX_CHANCE: u32 = 65;
 /// is BEFORE the verb it negates, not after it.
 const POLARITY_POSITION_SUFFIX_CHANCE: u32 = 40;
 
+/// The percentage chance (out of 100) the Person affix binds as a suffix
+/// rather than a prefix (The Rail, Task 7) — below 50, like Polarity's (40)
+/// but for a distinct typological reason specific to agreement morphology.
+///
+/// Bybee, Perkins & Pagliuca, "On the Asymmetries in the Affixation of
+/// Grammatical Material" (in Croft, Denning & Kemmer, eds., *Studies in
+/// Typology and Diachrony*, 1990), find that grammatical morphemes overall
+/// show a strong cross-linguistic preference for suffixing over prefixing
+/// — the preference this file's Number (70) and Tense (65) weights already
+/// encode — but that person/subject-agreement morphology is the one
+/// category that departs furthest from that general suffixing preference,
+/// prefixing far more readily than tense-aspect or number marking does.
+/// 45 encodes a near-even split with only a mild residual prefix lean,
+/// deliberately closer to 50 than Polarity's 40: the source pulls person
+/// away from the suffixing norm on typological grounds distinct from
+/// Polarity's own reason (pre-verbal negative-particle placement), not
+/// toward the same extreme.
+const PERSON_POSITION_SUFFIX_CHANCE: u32 = 45;
+
 /// The `weighted_index` bucket order both depth axes share: 0 = `None`,
 /// 1 = `Particle`, 2 = `Affix` (matching
 /// [`crate::morphology`]'s own `depth_from_bucket` convention).
@@ -95,21 +148,24 @@ fn depth_from_bucket(bucket: usize) -> MorphDepth {
     }
 }
 
-/// Draw `species`' Number/Tense/Polarity grammaticalization depths and
-/// attachment sides — six permanent streams:
+/// Draw `species`' Number/Tense/Polarity/Person grammaticalization depths
+/// and attachment sides — eight permanent streams:
 /// `language/<species>/grammar/depth/number`,
 /// `language/<species>/grammar/depth/tense`,
 /// `language/<species>/grammar/depth/polarity`,
+/// `language/<species>/grammar/depth/person`,
 /// `language/<species>/grammar/number-position`,
 /// `language/<species>/grammar/tense-position`,
-/// `language/<species>/grammar/polarity-position`. Drawn, independent of
+/// `language/<species>/grammar/polarity-position`,
+/// `language/<species>/grammar/person-position`. Drawn, independent of
 /// evidentiality/noun-class (never shares a stream or a weight table with
 /// [`crate::morphology::morph_depths`]).
 ///
 /// **Every axis derives its OWN stream by label path** (spec §3.4 of The
-/// Inquest): the polarity legs added here consume nothing from the number
-/// or tense streams, so adding them perturbs no existing consumption order
-/// and moves no already-generated world's bytes.
+/// Inquest): the polarity legs added at The Inquest, and the person legs
+/// added here (The Rail, Task 7), consume nothing from the number, tense
+/// or polarity streams, so adding them perturbs no existing consumption
+/// order and moves no already-generated world's bytes.
 /// type-audit: bare-ok(identifier-text)
 pub fn paradigm_depths(seed: &Seed, species: &str) -> ParadigmDepths {
     let mut number_stream = seed
@@ -151,6 +207,19 @@ pub fn paradigm_depths(seed: &Seed, species: &str) -> ParadigmDepths {
             .expect("POLARITY_DEPTH_WEIGHTS is fixed and positive"),
     );
 
+    let mut person_stream = seed
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::GRAMMAR)
+        .derive(streams::DEPTH)
+        .derive(streams::PERSON)
+        .stream();
+    let person_depth = depth_from_bucket(
+        person_stream
+            .weighted_index(&PERSON_DEPTH_WEIGHTS)
+            .expect("PERSON_DEPTH_WEIGHTS is fixed and positive"),
+    );
+
     let mut number_pos_stream = seed
         .derive(streams::ROOT)
         .derive(StreamLabel::dynamic(species))
@@ -188,13 +257,27 @@ pub fn paradigm_depths(seed: &Seed, species: &str) -> ParadigmDepths {
             ClassPosition::Prefix
         };
 
+    let mut person_pos_stream = seed
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::GRAMMAR)
+        .derive(streams::PERSON_POSITION)
+        .stream();
+    let person_position = if person_pos_stream.range_u32(1, 100) <= PERSON_POSITION_SUFFIX_CHANCE {
+        ClassPosition::Suffix
+    } else {
+        ClassPosition::Prefix
+    };
+
     ParadigmDepths {
         number_depth,
         tense_depth,
         polarity_depth,
+        person_depth,
         number_position,
         tense_position,
         polarity_position,
+        person_position,
     }
 }
 
@@ -499,6 +582,73 @@ mod tests {
             saw_polarity_none && saw_polarity_particle && saw_polarity_affix,
             "every polarity bucket must be reachable, `None` included"
         );
+    }
+
+    /// claim: reachability(seed: 0..200) — forall MorphDepth variant, exists
+    /// seed (The Rail, Task 7, same shape as
+    /// [`paradigm_depths_covers_all_three_buckets_across_many_seeds`] above
+    /// and numeracy.rs's own sibling).
+    ///
+    /// The person axis is drawn, and every bucket is reachable. A separate
+    /// test rather than folded into the sweep above, so a person-only
+    /// regression is legible on its own rather than buried in an assertion
+    /// that also covers number/polarity.
+    #[test]
+    fn person_depth_is_drawn_and_every_bucket_is_reachable() {
+        let mut saw_none = false;
+        let mut saw_particle = false;
+        let mut saw_affix = false;
+        for i in 0..200u64 {
+            let d = paradigm_depths(&Seed(i), "test");
+            match d.person_depth {
+                MorphDepth::None => saw_none = true,
+                MorphDepth::Particle => saw_particle = true,
+                MorphDepth::Affix => saw_affix = true,
+            }
+        }
+        assert!(
+            saw_none && saw_particle && saw_affix,
+            "every person-depth bucket must be reachable"
+        );
+    }
+
+    /// **Pin isolation: the person legs consume nothing from an existing
+    /// stream.** Every axis in this file derives its own stream by label
+    /// path, which is what makes adding one additive rather than a
+    /// save-format break (this file's own `paradigm_depths` doc). The proof
+    /// is that number, tense and polarity draw the SAME values before and
+    /// after this campaign for the same seed and species.
+    ///
+    /// The values below are the exact `paradigm_depths(&Seed(42), species)`
+    /// output recorded from a throwaway probe run BEFORE the person legs
+    /// existed (The Rail, Task 7 report carries the raw run) — hard-coded
+    /// here rather than read back from the post-change run, which would
+    /// make this assert its own output.
+    #[test]
+    fn adding_the_person_axis_moves_no_existing_paradigm_draw() {
+        let goblin = paradigm_depths(&Seed(42), "goblin");
+        assert_eq!(goblin.number_depth, MorphDepth::Affix);
+        assert_eq!(goblin.tense_depth, MorphDepth::Particle);
+        assert_eq!(goblin.polarity_depth, MorphDepth::Affix);
+        assert_eq!(goblin.number_position, ClassPosition::Suffix);
+        assert_eq!(goblin.tense_position, ClassPosition::Suffix);
+        assert_eq!(goblin.polarity_position, ClassPosition::Prefix);
+
+        let kobold = paradigm_depths(&Seed(42), "kobold");
+        assert_eq!(kobold.number_depth, MorphDepth::None);
+        assert_eq!(kobold.tense_depth, MorphDepth::Affix);
+        assert_eq!(kobold.polarity_depth, MorphDepth::Affix);
+        assert_eq!(kobold.number_position, ClassPosition::Suffix);
+        assert_eq!(kobold.tense_position, ClassPosition::Suffix);
+        assert_eq!(kobold.polarity_position, ClassPosition::Suffix);
+
+        let draconic = paradigm_depths(&Seed(42), "draconic");
+        assert_eq!(draconic.number_depth, MorphDepth::Particle);
+        assert_eq!(draconic.tense_depth, MorphDepth::None);
+        assert_eq!(draconic.polarity_depth, MorphDepth::Particle);
+        assert_eq!(draconic.number_position, ClassPosition::Prefix);
+        assert_eq!(draconic.tense_position, ClassPosition::Suffix);
+        assert_eq!(draconic.polarity_position, ClassPosition::Prefix);
     }
 
     use crate::etymology::{Cascade, RuleKind, SoundRule};

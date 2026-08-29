@@ -186,3 +186,13 @@ pub const POLARITY: StreamLabel<'static> = StreamLabel::from_static("polarity");
 /// Polarity-marker position draw, under grammar.
 /// type-audit: bare-ok(identifier-text: return)
 pub const POLARITY_POSITION: StreamLabel<'static> = StreamLabel::from_static("polarity-position");
+/// Person-marking (subject agreement) depth draw, under grammar/depth (The
+/// Rail, Task 7). A permanent seed-derivation label: renaming it would
+/// silently corrupt every world's drawn person-agreement depth; deliberate
+/// regeneration uses an epoch suffix, never a rename.
+/// type-audit: bare-ok(identifier-text: return)
+pub const PERSON: StreamLabel<'static> = StreamLabel::from_static("person");
+/// Person-marker position draw, under grammar (The Rail, Task 7). A
+/// permanent seed-derivation label, on the same footing as [`PERSON`].
+/// type-audit: bare-ok(identifier-text: return)
+pub const PERSON_POSITION: StreamLabel<'static> = StreamLabel::from_static("person-position");
