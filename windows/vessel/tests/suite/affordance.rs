@@ -14,9 +14,15 @@
 //!   `affordance.rs` left it green. Fixed by adding
 //!   [`hornvale_vessel::affordance::offered`] — the real subset query,
 //!   factored out of `offered_by` so a test can hand it a constructed
-//!   `ObjectTraits` the registry itself cannot produce (every registered
-//!   kind carries exactly one property, which cannot distinguish subset
-//!   from equality) — and rewriting the test to call it.
+//!   `ObjectTraits` the registry itself could not produce at the time
+//!   (every registered kind then carried exactly one property, which cannot
+//!   distinguish subset from equality) — and rewriting the test to call it.
+//!   **The parenthesis is history, not present tense, since The Chattel's
+//!   Task 7**: `strongbox` now carries three properties, so the registry can
+//!   discriminate the two on its own — see
+//!   `a_registered_multi_property_kind_discriminates_subset_from_equality`,
+//!   and `extra_properties_expand_the_offer_never_withdraw_it`'s doc for why
+//!   the constructed traits stay anyway.
 //! - `no_verb_by_object_table_exists`'s string scan looked for the literal
 //!   substring `"=> OfferedVerb::"`, which a real hardcoded table would
 //!   never contain: `offered_by` returns a `BTreeSet<OfferedVerb>`, so any
@@ -30,11 +36,11 @@
 
 use std::collections::BTreeSet;
 
-use hornvale_kernel::{ConditionResponse, EntityId, Facet, ResourceVector};
+use hornvale_kernel::{ConditionResponse, EntityId, Facet, KindId, ResourceVector};
 use hornvale_vessel::Knowledge;
 use hornvale_vessel::affordance::{
     ObjectProperty, ObjectTraits, OfferedVerb, object_registry, offered, offered_by, offered_to,
-    offered_to_observer,
+    offered_to_observer, thing_kind_of,
 };
 use hornvale_vessel::body::Body;
 use hornvale_vessel::clock::{REFERENCE_MASS_KG, mass_for_species};
@@ -43,12 +49,24 @@ use hornvale_vessel::liveness::ThreatNiche;
 
 /// Acceptance test (1): a new OBJECT kind ships with properties only — no
 /// dispatcher change — and the right verbs appear on it.
+///
+/// **What it still catches after Task 7's re-key** (the write-up spec §7's
+/// Task 3 demands, kept beside the test rather than in a report that dies
+/// with the campaign): the query is now keyed on thing-kind, so this reads
+/// `offered_by(thing_kind_of(AnchorKind::Pool))` and covers one more link
+/// than it used to — a `pool` row that loses `HoldsLiquid`, a
+/// `required_properties(Drink)` that stops requiring it, a subset filter
+/// broken to return everything or nothing, AND a `thing_kind_of` arm that
+/// carries `Pool` to a kind with no liquid. It does NOT catch a mapping that
+/// sends `Pool` to `vessel`, because `vessel` also holds liquid; that is
+/// `the_re_key_preserves_every_anchor_kinds_offer`'s job, and the reason
+/// this file needs that test at all.
 #[test]
 fn a_kind_gains_every_verb_its_properties_satisfy_with_no_dispatcher_edit() {
     // Pool carries HoldsLiquid; nothing anywhere names "pool" and "drink"
     // together. The verb arrives because the property matches.
-    assert!(offered_by(AnchorKind::Pool).contains(&OfferedVerb::Drink));
-    assert!(!offered_by(AnchorKind::Bed).contains(&OfferedVerb::Drink));
+    assert!(offered_by(thing_kind_of(AnchorKind::Pool)).contains(&OfferedVerb::Drink));
+    assert!(!offered_by(thing_kind_of(AnchorKind::Bed)).contains(&OfferedVerb::Drink));
 }
 
 /// Acceptance test (2), the multi-carrier half: `HoldsLiquid` is the one
@@ -65,11 +83,19 @@ fn a_kind_gains_every_verb_its_properties_satisfy_with_no_dispatcher_edit() {
 /// `warm_appears_on_hearth_with_no_object_table_edit`. This test's own job
 /// is narrower and still real: proving `offered_by` does not special-case
 /// any one carrier of a shared property.
+///
+/// **What it still catches after Task 7's re-key**: everything it caught
+/// before, over the same two carriers (`pool`/`vessel`), now discovered as
+/// [`KindId`]s from the re-keyed registry rather than as `AnchorKind`s. The
+/// discovery is still from the registry, never a hand-written pair, so a
+/// carrier added or removed changes what this sweeps. The `>= 2` guard is
+/// what keeps it from going vacuous if the shared property ever loses a
+/// carrier.
 #[test]
 fn every_kind_carrying_a_shared_property_is_offered_the_verb_it_gates() {
     let want = BTreeSet::from([ObjectProperty::HoldsLiquid]);
     let reg = object_registry();
-    let carriers: BTreeSet<AnchorKind> = reg
+    let carriers: BTreeSet<KindId> = reg
         .iter()
         .filter(|(_, t)| want.is_subset(&t.properties))
         .map(|(k, _)| *k)
@@ -102,10 +128,20 @@ fn every_kind_carrying_a_shared_property_is_offered_the_verb_it_gates() {
 /// still offered (`{HoldsLiquid} ⊆ {HoldsLiquid, Encloses}`); under
 /// equality it would not be (`{HoldsLiquid} ≠ {HoldsLiquid, Encloses}`), so
 /// this is now a datum the subset-vs-equality distinction actually moves.
-/// No registered kind could do this job: every one of `object_registry`'s
-/// six carriers holds exactly one property today, so subset and equality
-/// agree on all of them — this test has to reach for constructed traits
-/// precisely because the registry can't discriminate the two.
+///
+/// **The sentence that used to close this doc is now FALSE, and is corrected
+/// rather than deleted (Task 7).** It read: *"No registered kind could do
+/// this job: every one of `object_registry`'s six carriers holds exactly one
+/// property today, so subset and equality agree on all of them."* That was
+/// true of The Offer's table and stopped being true the moment Task 7 gave
+/// `strongbox` three properties (`Encloses`+`Openable`+`Lockable`) — a
+/// registered kind can now discriminate subset from equality, and
+/// `a_registered_multi_property_kind_discriminates_subset_from_equality`
+/// below asserts exactly that against the live registry. This test keeps its
+/// constructed traits anyway: it must stay falsifiable if some later
+/// campaign flattens the registry back to one property per kind, and a test
+/// whose discriminating power depends on an authored table is one authoring
+/// decision away from proving nothing.
 #[test]
 fn extra_properties_expand_the_offer_never_withdraw_it() {
     let mut traits = ObjectTraits::default();
@@ -147,8 +183,8 @@ fn subset_and_equality_genuinely_disagree_on_the_constructed_traits() {
 /// still falls out of the subset query.
 #[test]
 fn warm_appears_on_hearth_with_no_object_table_edit() {
-    assert!(offered_by(AnchorKind::Hearth).contains(&OfferedVerb::Warm));
-    assert!(!offered_by(AnchorKind::Bed).contains(&OfferedVerb::Warm));
+    assert!(offered_by(thing_kind_of(AnchorKind::Hearth)).contains(&OfferedVerb::Warm));
+    assert!(!offered_by(thing_kind_of(AnchorKind::Bed)).contains(&OfferedVerb::Warm));
 }
 
 /// `Examine` requires the empty property set (spec §3.3: universal), and the
@@ -160,8 +196,8 @@ fn warm_appears_on_hearth_with_no_object_table_edit() {
 /// relation rather than from iterating only over registered kinds.
 #[test]
 fn examine_is_universal_even_for_a_kind_with_no_registered_properties() {
-    assert!(!object_registry().contains(&AnchorKind::Screen));
-    let offered = offered_by(AnchorKind::Screen);
+    assert!(!object_registry().contains(&thing_kind_of(AnchorKind::Screen)));
+    let offered = offered_by(thing_kind_of(AnchorKind::Screen));
     assert!(offered.contains(&OfferedVerb::Examine));
     assert_eq!(
         offered.len(),
@@ -401,8 +437,8 @@ fn the_same_object_offers_differently_to_different_bodies() {
     let large = body_with_mass("woolly-mammoth", large_mass);
 
     assert_ne!(
-        offered_to(AnchorKind::Bed, &small),
-        offered_to(AnchorKind::Bed, &large),
+        offered_to(thing_kind_of(AnchorKind::Bed), &small),
+        offered_to(thing_kind_of(AnchorKind::Bed), &large),
         "supports-rest is not body-relative: the offer is identical for \
          bodies of very different mass, so §3.4 is unexercised"
     );
@@ -440,8 +476,8 @@ fn body_relativity_never_withdraws_an_existing_capability() {
         ),
     ];
 
-    let mut kinds: Vec<AnchorKind> = object_registry().iter().map(|(k, _)| *k).collect();
-    kinds.push(AnchorKind::Screen);
+    let mut kinds: Vec<KindId> = object_registry().iter().map(|(k, _)| *k).collect();
+    kinds.push(thing_kind_of(AnchorKind::Screen));
 
     for kind in kinds {
         let baseline = offered_by(kind);
@@ -505,7 +541,7 @@ fn an_encountered_object_offers_its_verbs() {
     )]));
     assert_eq!(
         offered_to_observer(AnchorKind::Hearth, &body, &known),
-        offered_to(AnchorKind::Hearth, &body),
+        offered_to(thing_kind_of(AnchorKind::Hearth), &body),
         "knowledge of an encountered room must withdraw nothing"
     );
 }
@@ -639,4 +675,235 @@ fn no_hardcoded_anchor_kind_gates_warm() {
          reintroducing the per-kind coupling spec 3.2 forbids: {:?}",
         std::str::from_utf8(body).unwrap_or("<non-utf8>")
     );
+}
+
+// --- The Chattel, Task 7: the re-key from AnchorKind to KindId ----------
+
+/// **The guard the re-key itself needed, and the one The Offer's suite could
+/// not provide.** Every test above reads the table through
+/// `thing_kind_of`, so a mapping arm that sends an anchor kind to the WRONG
+/// thing-kind is invisible to all of them whenever the wrong kind happens to
+/// carry the right property — `Pool -> KindId("vessel")` passes
+/// `a_kind_gains_every_verb_its_properties_satisfy_with_no_dispatcher_edit`
+/// unchanged, because a vessel holds liquid too. This freezes the whole
+/// fourteen-row answer instead: what verb set each `AnchorKind` offers,
+/// which is exactly what The Offer's table produced before the re-key and
+/// what spec §3.6 requires the re-key to preserve.
+///
+/// It is a frozen expectation, not a derivation — deriving it from
+/// `object_registry` would re-use the machinery under test and assert
+/// nothing. Moving a row here is therefore a deliberate act, the same
+/// discipline a byte-golden carries.
+///
+/// MUTATION THIS MUST FAIL AGAINST: point `thing_kind_of`'s `Pool` arm at
+/// `KindId("bed")` — a mapping error that keeps every property real. Red
+/// observed:
+///
+/// ```text
+/// thread 'affordance::the_re_key_preserves_every_anchor_kinds_offer' panicked at
+/// windows/vessel/tests/suite/affordance.rs:728:9:
+/// assertion `left == right` failed: Pool (KindId("bed")) offers {Sleep, Examine},
+/// but the pre-re-key table offered {Drink, Examine}
+///   left: {Sleep, Examine}
+///  right: {Drink, Examine}
+/// ```
+///
+/// That run reddened THREE tests, not one — this,
+/// `the_anchor_to_thing_kind_mapping_is_injective`, and
+/// `a_kind_gains_every_verb_its_properties_satisfy_with_no_dispatcher_edit`
+/// — which is stated rather than trimmed because it is the honest shape of
+/// the evidence: this mutation is caught several ways over. The mutation
+/// that isolates THIS test is `Log -> KindId("ground")`'s sibling in the
+/// other direction — see the injectivity test's own doc for the pair that
+/// separates the two.
+#[test]
+fn the_re_key_preserves_every_anchor_kinds_offer() {
+    use OfferedVerb::{Drink, Enter, Examine, Sleep, Warm};
+    let expected: [(AnchorKind, &[OfferedVerb]); 14] = [
+        (AnchorKind::Hearth, &[Examine, Warm]),
+        (AnchorKind::Threshold, &[Enter, Examine]),
+        (AnchorKind::Bed, &[Sleep, Examine]),
+        (AnchorKind::Vessel, &[Drink, Examine]),
+        (AnchorKind::Screen, &[Examine]),
+        (AnchorKind::Pool, &[Drink, Examine]),
+        (AnchorKind::Log, &[Examine]),
+        (AnchorKind::Ground, &[Examine]),
+        // Encloses gates no OfferedVerb (it is read by `examine`'s prose,
+        // not by the offer query), so an enclosing kind offers Examine and
+        // nothing more — and so does a strongbox, whose Openable/Lockable
+        // wait on the verbs Tasks 10-11 ship.
+        (AnchorKind::Alcove, &[Examine]),
+        (AnchorKind::Strongbox, &[Examine]),
+        (AnchorKind::HighSeat, &[Examine]),
+        (AnchorKind::Loom, &[Examine]),
+        (AnchorKind::Anvil, &[Examine]),
+        (AnchorKind::Altar, &[Examine]),
+    ];
+    for (kind, want) in expected {
+        let want: BTreeSet<OfferedVerb> = want.iter().copied().collect();
+        let got = offered_by(thing_kind_of(kind));
+        assert_eq!(
+            got,
+            want,
+            "{kind:?} ({:?}) offers {got:?}, but the pre-re-key table offered {want:?}",
+            thing_kind_of(kind)
+        );
+    }
+}
+
+/// Every `AnchorKind` maps to a DISTINCT thing-kind. Not a law forever — two
+/// anchor kinds could honestly be one thing some day — but it is the
+/// property that makes the frozen table above a preservation claim rather
+/// than a coincidence: if two anchor kinds collapsed onto one key they would
+/// silently share one property set, which is the two-lifecycle-stage
+/// disagreement spec §3.6 re-keys to prevent, arriving from the other
+/// direction.
+///
+/// MUTATION THIS MUST FAIL AGAINST: point `thing_kind_of`'s `Log` arm at
+/// `KindId("ground")` (both carry no property, so
+/// `the_re_key_preserves_every_anchor_kinds_offer` stays green — the two
+/// tests genuinely cover different failures, confirmed: the run below failed
+/// exactly one test, `21 passed; 1 failed`). Red observed:
+///
+/// ```text
+/// test affordance::the_anchor_to_thing_kind_mapping_is_injective ... FAILED
+/// thread 'affordance::the_anchor_to_thing_kind_mapping_is_injective' panicked at
+/// windows/vessel/tests/suite/affordance.rs:776:9:
+/// two anchor kinds map to KindId("ground"): 7 kinds for 14 variants
+/// ```
+///
+/// (`7`, not `13`: the count is how many DISTINCT keys had been accepted
+/// when the collision was hit, and `Log` is the seventh variant swept — the
+/// message reports progress, not a total.)
+#[test]
+fn the_anchor_to_thing_kind_mapping_is_injective() {
+    let all = [
+        AnchorKind::Hearth,
+        AnchorKind::Threshold,
+        AnchorKind::Bed,
+        AnchorKind::Vessel,
+        AnchorKind::Screen,
+        AnchorKind::Pool,
+        AnchorKind::Log,
+        AnchorKind::Ground,
+        AnchorKind::Alcove,
+        AnchorKind::Strongbox,
+        AnchorKind::HighSeat,
+        AnchorKind::Loom,
+        AnchorKind::Anvil,
+        AnchorKind::Altar,
+    ];
+    let mut seen: BTreeSet<KindId> = BTreeSet::new();
+    for kind in all {
+        let id = thing_kind_of(kind);
+        assert!(
+            seen.insert(id),
+            "two anchor kinds map to {id:?}: {} kinds for {} variants",
+            seen.len(),
+            all.len()
+        );
+    }
+}
+
+/// `thing_kind_of` must stay exhaustive with **no wildcard arm** — a `_ =>`
+/// would compile, change no behaviour today, and silently absorb the next
+/// appended `AnchorKind` variant into whatever default it named, inheriting
+/// that thing-kind's properties. No behavioural test can see that: the
+/// mapping is total for all fourteen variants either way, so totality is
+/// only observable in the SOURCE until the day someone appends a variant,
+/// which is precisely too late.
+///
+/// A structural scan, in the style of `no_verb_by_object_table_exists` and
+/// `no_hardcoded_anchor_kind_gates_warm` above, with the same disclosure:
+/// it reads exactly the block `block_body_after` isolates, for exactly the
+/// literal text `_ =>`. A wildcard spelled `other =>` or `kind @ _ =>` is
+/// not seen; neither is one in a different function. The synthetic positive
+/// control below shows the scanner can fire at all.
+///
+/// MUTATION THIS MUST FAIL AGAINST — and this one is the real evidence,
+/// because it is run against PRODUCTION source rather than a synthetic
+/// string: replace `thing_kind_of`'s `AnchorKind::Altar => KindId("altar")`
+/// arm with `_ => KindId("altar")`. It compiles, changes no behaviour, and
+/// no other test in the file notices (`21 passed; 1 failed`). Red observed:
+///
+/// ```text
+/// test affordance::thing_kind_of_has_no_wildcard_arm ... FAILED
+/// thread 'affordance::thing_kind_of_has_no_wildcard_arm' panicked at
+/// windows/vessel/tests/suite/affordance.rs:807:5:
+/// thing_kind_of has a wildcard arm: an appended AnchorKind variant would fall
+/// through it instead of failing to compile, and inherit a thing-kind's
+/// properties silently: "{\n    match kind {\n        AnchorKind::Hearth => ...
+/// ```
+#[test]
+fn thing_kind_of_has_no_wildcard_arm() {
+    let src = include_str!("../../src/affordance.rs");
+    let body = block_body_after(
+        src.as_bytes(),
+        b"pub fn thing_kind_of(kind: AnchorKind) -> KindId",
+    )
+    .expect("affordance.rs must define pub fn thing_kind_of(kind: AnchorKind) -> KindId");
+    assert!(
+        find_bytes(body, b"_ =>").is_none(),
+        "thing_kind_of has a wildcard arm: an appended AnchorKind variant \
+         would fall through it instead of failing to compile, and inherit a \
+         thing-kind's properties silently: {:?}",
+        std::str::from_utf8(body).unwrap_or("<non-utf8>")
+    );
+}
+
+/// Positive control for the scan above: the forbidden shape must actually be
+/// caught, or `thing_kind_of_has_no_wildcard_arm`'s green is worth nothing.
+#[test]
+fn the_wildcard_scan_catches_a_wildcard_arm() {
+    let src = b"pub fn thing_kind_of(kind: AnchorKind) -> KindId {\n    \
+                 match kind {\n        \
+                 AnchorKind::Bed => KindId(\"bed\"),\n        \
+                 _ => KindId(\"ground\"),\n    \
+                 }\n\
+                 }";
+    let body = block_body_after(src, b"pub fn thing_kind_of(kind: AnchorKind) -> KindId")
+        .expect("the control must parse");
+    assert!(
+        find_bytes(body, b"_ =>").is_some(),
+        "positive control: a wildcard arm must be caught"
+    );
+}
+
+/// The registry can now discriminate a subset filter from an equality check
+/// on its OWN rows, which it could not before Task 7 — `strongbox` carries
+/// three properties (`Encloses`, `Openable`, `Lockable`), so a `required`
+/// set of one is a strict subset of it. This is the corrected half of
+/// `extra_properties_expand_the_offer_never_withdraw_it`'s doc comment,
+/// asserted rather than merely stated.
+///
+/// The multi-property carrier is discovered from the registry, not named:
+/// the point is that SOME registered kind has this shape, and hard-coding
+/// `strongbox` would turn a property of the table into a fact about one row.
+#[test]
+fn a_registered_multi_property_kind_discriminates_subset_from_equality() {
+    let reg = object_registry();
+    let multi: Vec<(KindId, BTreeSet<ObjectProperty>)> = reg
+        .iter()
+        .filter(|(_, t)| t.properties.len() >= 2)
+        .map(|(k, t)| (*k, t.properties.clone()))
+        .collect();
+    assert!(
+        !multi.is_empty(),
+        "no registered kind carries two or more properties, so the registry \
+         cannot tell a subset filter from an equality check — \
+         extra_properties_expand_the_offer_never_withdraw_it's constructed \
+         traits are the only discriminating datum left, and this test's own \
+         doc comment must be corrected rather than the test deleted"
+    );
+    for (kind, properties) in multi {
+        let one: BTreeSet<ObjectProperty> = properties.iter().copied().take(1).collect();
+        assert!(
+            one.is_subset(&properties),
+            "{kind:?}: a single property must be a subset of its own row"
+        );
+        assert_ne!(
+            one, properties,
+            "{kind:?}: subset and equality must genuinely disagree on this row"
+        );
+    }
 }

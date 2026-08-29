@@ -567,6 +567,16 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "threshold",
         "vessel",
     ],
+    // Epoch 17 — The Chattel, Task 7: the three object properties spec §3.8
+    // adds to `ObjectProperty`, each earned by a verb this campaign ships
+    // (`portable` by take/drop, `openable` by open/close, `lockable` by the
+    // open that needs a key in custody). A NEW cohort rather than five more
+    // names inside epoch 15's object-property cohort: an earlier cohort is a
+    // save-format contract, and editing one re-sorts every concept that
+    // already has an assignment — this module's absolute rule, and the one
+    // The Offer and The Mortise's colliding epoch 14 was resolved by
+    // obeying.
+    &["lockable", "openable", "portable"],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or

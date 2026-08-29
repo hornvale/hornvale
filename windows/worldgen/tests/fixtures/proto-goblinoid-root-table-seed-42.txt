@@ -107,6 +107,7 @@ liana-forest: Neene /neene/
 light: Noaqaa /noaqaa/
 lightless-water: Pao /pao/
 little: Neodoe /neodoe/
+lockable: Nanee /nanee/
 log: None /none/
 look: Gogo /gogo/
 loom: Kooneo /kooneo/
@@ -135,6 +136,7 @@ old: Gea /gea/
 old-growth: To /to/
 one: Daaga /daaga/
 open-blue: Noote /noote/
+openable: Ganoa /ganoa/
 otyugh-kind: Naoko /naoko/
 over: Naenae /naenae/
 owlbear-kind: Too /too/
@@ -143,6 +145,7 @@ person: Neepo /neepo/
 plankton-bloom: Notee /notee/
 playa: Qena /qena/
 pool: Nakao /nakao/
+portable: Paa /paa/
 pressure-ridge: Nootaa /nootaa/
 radiates-heat: Poe /poe/
 rafted-floe: Qoe /qoe/

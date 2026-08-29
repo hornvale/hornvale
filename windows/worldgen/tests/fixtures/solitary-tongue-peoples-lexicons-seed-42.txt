@@ -114,6 +114,7 @@ liana-forest: gap (experiential): goblin has no exposure to 'liana-forest'
 light: root Noataa /noataa/
 lightless-water: gap (experiential): goblin has no exposure to 'lightless-water'
 little: root Neodoe /neodoe/
+lockable: gap (experiential): goblin has no exposure to 'lockable'
 log: gap (experiential): goblin has no exposure to 'log'
 look: gap (experiential): goblin has no exposure to 'look'
 loom: gap (experiential): goblin has no exposure to 'loom'
@@ -142,6 +143,7 @@ old: root Bea /bea/
 old-growth: root To /to/
 one: root Daaba /daaba/
 open-blue: gap (experiential): goblin has no exposure to 'open-blue'
+openable: gap (experiential): goblin has no exposure to 'openable'
 orange-dwarf: gap (unnameable): no culture here has encountered the main sequence
 orange-giant: gap (unnameable): no culture here has encountered the main sequence
 otyugh-kind: gap (experiential): goblin has no exposure to 'otyugh-kind'
@@ -152,6 +154,7 @@ person: root Neebo /neebo/
 plankton-bloom: gap (experiential): goblin has no exposure to 'plankton-bloom'
 playa: gap (experiential): goblin has no exposure to 'playa'
 pool: gap (experiential): goblin has no exposure to 'pool'
+portable: gap (experiential): goblin has no exposure to 'portable'
 pressure-ridge: gap (experiential): goblin has no exposure to 'pressure-ridge'
 provoke: gap (extradiegetic): provoke is an operator instrument; it has no referent in the world
 radiates-heat: gap (experiential): goblin has no exposure to 'radiates-heat'
@@ -367,6 +370,7 @@ liana-forest: gap (experiential): hobgoblin has no exposure to 'liana-forest'
 light: root Noaqaa /noaqaa/
 lightless-water: gap (experiential): hobgoblin has no exposure to 'lightless-water'
 little: root Neoboe /neoboe/
+lockable: gap (experiential): hobgoblin has no exposure to 'lockable'
 log: gap (experiential): hobgoblin has no exposure to 'log'
 look: gap (experiential): hobgoblin has no exposure to 'look'
 loom: gap (experiential): hobgoblin has no exposure to 'loom'
@@ -395,6 +399,7 @@ old: root Gea /gea/
 old-growth: root To /to/
 one: root Baaga /baaga/
 open-blue: gap (experiential): hobgoblin has no exposure to 'open-blue'
+openable: gap (experiential): hobgoblin has no exposure to 'openable'
 orange-dwarf: gap (unnameable): no culture here has encountered the main sequence
 orange-giant: gap (unnameable): no culture here has encountered the main sequence
 otyugh-kind: gap (experiential): hobgoblin has no exposure to 'otyugh-kind'
@@ -405,6 +410,7 @@ person: root Neebo /neebo/
 plankton-bloom: gap (experiential): hobgoblin has no exposure to 'plankton-bloom'
 playa: gap (experiential): hobgoblin has no exposure to 'playa'
 pool: gap (experiential): hobgoblin has no exposure to 'pool'
+portable: gap (experiential): hobgoblin has no exposure to 'portable'
 pressure-ridge: gap (experiential): hobgoblin has no exposure to 'pressure-ridge'
 provoke: gap (extradiegetic): provoke is an operator instrument; it has no referent in the world
 radiates-heat: gap (experiential): hobgoblin has no exposure to 'radiates-heat'
@@ -620,6 +626,7 @@ liana-forest: root Doodo /doodo/
 light: root Doaqaa /doaqaa/
 lightless-water: gap (experiential): bugbear has no exposure to 'lightless-water'
 little: root Doodoo /doodoo/
+lockable: gap (experiential): bugbear has no exposure to 'lockable'
 log: gap (experiential): bugbear has no exposure to 'log'
 look: gap (experiential): bugbear has no exposure to 'look'
 loom: gap (experiential): bugbear has no exposure to 'loom'
@@ -648,6 +655,7 @@ old: root Goa /goa/
 old-growth: root Do /do/
 one: root Daaga /daaga/
 open-blue: gap (experiential): bugbear has no exposure to 'open-blue'
+openable: gap (experiential): bugbear has no exposure to 'openable'
 orange-dwarf: gap (unnameable): no culture here has encountered the main sequence
 orange-giant: gap (unnameable): no culture here has encountered the main sequence
 otyugh-kind: gap (experiential): bugbear has no exposure to 'otyugh-kind'
@@ -658,6 +666,7 @@ person: root Doobo /doobo/
 plankton-bloom: gap (experiential): bugbear has no exposure to 'plankton-bloom'
 playa: gap (experiential): bugbear has no exposure to 'playa'
 pool: gap (experiential): bugbear has no exposure to 'pool'
+portable: gap (experiential): bugbear has no exposure to 'portable'
 pressure-ridge: gap (experiential): bugbear has no exposure to 'pressure-ridge'
 provoke: gap (extradiegetic): provoke is an operator instrument; it has no referent in the world
 radiates-heat: gap (experiential): bugbear has no exposure to 'radiates-heat'
@@ -873,6 +882,7 @@ liana-forest: gap (experiential): kobold has no exposure to 'liana-forest'
 light: root Rooxa /rooxa/
 lightless-water: gap (experiential): kobold has no exposure to 'lightless-water'
 little: root Roaroaroa /roaroaroa/
+lockable: gap (experiential): kobold has no exposure to 'lockable'
 log: gap (experiential): kobold has no exposure to 'log'
 look: gap (experiential): kobold has no exposure to 'look'
 loom: gap (experiential): kobold has no exposure to 'loom'
@@ -901,6 +911,7 @@ old: root Xaroroo /xaroroo/
 old-growth: root Xaoraa /xaoraa/
 one: root Raaxoa /raaxoa/
 open-blue: gap (experiential): kobold has no exposure to 'open-blue'
+openable: gap (experiential): kobold has no exposure to 'openable'
 orange-dwarf: gap (unnameable): no culture here has encountered the main sequence
 orange-giant: gap (unnameable): no culture here has encountered the main sequence
 otyugh-kind: gap (experiential): kobold has no exposure to 'otyugh-kind'
@@ -911,6 +922,7 @@ person: root Raara /raara/
 plankton-bloom: gap (experiential): kobold has no exposure to 'plankton-bloom'
 playa: gap (experiential): kobold has no exposure to 'playa'
 pool: gap (experiential): kobold has no exposure to 'pool'
+portable: gap (experiential): kobold has no exposure to 'portable'
 pressure-ridge: gap (experiential): kobold has no exposure to 'pressure-ridge'
 provoke: gap (extradiegetic): provoke is an operator instrument; it has no referent in the world
 radiates-heat: gap (experiential): kobold has no exposure to 'radiates-heat'
@@ -1126,6 +1138,7 @@ liana-forest: gap (experiential): gnoll has no exposure to 'liana-forest'
 light: root Dshozmoax /dʃozmoax/
 lightless-water: gap (experiential): gnoll has no exposure to 'lightless-water'
 little: root Dsax /dsax/
+lockable: gap (experiential): gnoll has no exposure to 'lockable'
 log: gap (experiential): gnoll has no exposure to 'log'
 look: gap (experiential): gnoll has no exposure to 'look'
 loom: gap (experiential): gnoll has no exposure to 'loom'
@@ -1154,6 +1167,7 @@ old: root Sngoav /sŋoav/
 old-growth: gap (experiential): gnoll has no exposure to 'old-growth'
 one: root Dzhoapzhaap /dʒoapʒaap/
 open-blue: gap (experiential): gnoll has no exposure to 'open-blue'
+openable: gap (experiential): gnoll has no exposure to 'openable'
 orange-dwarf: gap (unnameable): no culture here has encountered the main sequence
 orange-giant: gap (unnameable): no culture here has encountered the main sequence
 otyugh-kind: gap (experiential): gnoll has no exposure to 'otyugh-kind'
@@ -1164,6 +1178,7 @@ person: root Shmaappsox /ʃmaappsox/
 plankton-bloom: gap (experiential): gnoll has no exposure to 'plankton-bloom'
 playa: gap (experiential): gnoll has no exposure to 'playa'
 pool: gap (experiential): gnoll has no exposure to 'pool'
+portable: gap (experiential): gnoll has no exposure to 'portable'
 pressure-ridge: gap (experiential): gnoll has no exposure to 'pressure-ridge'
 provoke: gap (extradiegetic): provoke is an operator instrument; it has no referent in the world
 radiates-heat: gap (experiential): gnoll has no exposure to 'radiates-heat'
@@ -1379,6 +1394,7 @@ liana-forest: gap (experiential): human has no exposure to 'liana-forest'
 light: root Raapvea /raapvea/
 lightless-water: gap (experiential): human has no exposure to 'lightless-water'
 little: root Foo /foo/
+lockable: gap (experiential): human has no exposure to 'lockable'
 log: gap (experiential): human has no exposure to 'log'
 look: gap (experiential): human has no exposure to 'look'
 loom: gap (experiential): human has no exposure to 'loom'
@@ -1407,6 +1423,7 @@ old: root Xatva /xatva/
 old-growth: root Xoaro /xoaro/
 one: root Reerea /reerea/
 open-blue: gap (experiential): human has no exposure to 'open-blue'
+openable: gap (experiential): human has no exposure to 'openable'
 orange-dwarf: gap (unnameable): no culture here has encountered the main sequence
 orange-giant: gap (unnameable): no culture here has encountered the main sequence
 otyugh-kind: gap (experiential): human has no exposure to 'otyugh-kind'
@@ -1417,6 +1434,7 @@ person: root Roro /roro/
 plankton-bloom: gap (experiential): human has no exposure to 'plankton-bloom'
 playa: gap (experiential): human has no exposure to 'playa'
 pool: gap (experiential): human has no exposure to 'pool'
+portable: gap (experiential): human has no exposure to 'portable'
 pressure-ridge: gap (experiential): human has no exposure to 'pressure-ridge'
 provoke: gap (extradiegetic): provoke is an operator instrument; it has no referent in the world
 radiates-heat: gap (experiential): human has no exposure to 'radiates-heat'
@@ -1632,6 +1650,7 @@ liana-forest: gap (experiential): desert-dwarf has no exposure to 'liana-forest'
 light: root Pangas /paŋas/
 lightless-water: gap (experiential): desert-dwarf has no exposure to 'lightless-water'
 little: root Danag /danag/
+lockable: gap (experiential): desert-dwarf has no exposure to 'lockable'
 log: gap (experiential): desert-dwarf has no exposure to 'log'
 look: gap (experiential): desert-dwarf has no exposure to 'look'
 loom: gap (experiential): desert-dwarf has no exposure to 'loom'
@@ -1660,6 +1679,7 @@ old: root Nasap /nasap/
 old-growth: root Dajad /dajad/
 one: root Dashad /daʃad/
 open-blue: gap (experiential): desert-dwarf has no exposure to 'open-blue'
+openable: gap (experiential): desert-dwarf has no exposure to 'openable'
 orange-dwarf: gap (unnameable): no culture here has encountered the main sequence
 orange-giant: gap (unnameable): no culture here has encountered the main sequence
 otyugh-kind: gap (experiential): desert-dwarf has no exposure to 'otyugh-kind'
@@ -1670,6 +1690,7 @@ person: root Vadav /vadav/
 plankton-bloom: gap (experiential): desert-dwarf has no exposure to 'plankton-bloom'
 playa: gap (experiential): desert-dwarf has no exposure to 'playa'
 pool: gap (experiential): desert-dwarf has no exposure to 'pool'
+portable: gap (experiential): desert-dwarf has no exposure to 'portable'
 pressure-ridge: gap (experiential): desert-dwarf has no exposure to 'pressure-ridge'
 provoke: gap (extradiegetic): provoke is an operator instrument; it has no referent in the world
 radiates-heat: gap (experiential): desert-dwarf has no exposure to 'radiates-heat'
@@ -1885,6 +1906,7 @@ liana-forest: gap (experiential): gully-dwarf has no exposure to 'liana-forest'
 light: root Bangat /baŋat/
 lightless-water: gap (experiential): gully-dwarf has no exposure to 'lightless-water'
 little: root Banag /banag/
+lockable: gap (experiential): gully-dwarf has no exposure to 'lockable'
 log: gap (experiential): gully-dwarf has no exposure to 'log'
 look: gap (experiential): gully-dwarf has no exposure to 'look'
 loom: gap (experiential): gully-dwarf has no exposure to 'loom'
@@ -1913,6 +1935,7 @@ old: root Natab /natab/
 old-growth: root Najat /najat/
 one: root Bashat /baʃat/
 open-blue: gap (experiential): gully-dwarf has no exposure to 'open-blue'
+openable: gap (experiential): gully-dwarf has no exposure to 'openable'
 orange-dwarf: gap (unnameable): no culture here has encountered the main sequence
 orange-giant: gap (unnameable): no culture here has encountered the main sequence
 otyugh-kind: gap (experiential): gully-dwarf has no exposure to 'otyugh-kind'
@@ -1923,6 +1946,7 @@ person: root Banab /banab/
 plankton-bloom: gap (experiential): gully-dwarf has no exposure to 'plankton-bloom'
 playa: gap (experiential): gully-dwarf has no exposure to 'playa'
 pool: gap (experiential): gully-dwarf has no exposure to 'pool'
+portable: gap (experiential): gully-dwarf has no exposure to 'portable'
 pressure-ridge: gap (experiential): gully-dwarf has no exposure to 'pressure-ridge'
 provoke: gap (extradiegetic): provoke is an operator instrument; it has no referent in the world
 radiates-heat: gap (experiential): gully-dwarf has no exposure to 'radiates-heat'
@@ -2138,6 +2162,7 @@ liana-forest: gap (experiential): hill-dwarf has no exposure to 'liana-forest'
 light: root Bangas /baŋas/
 lightless-water: gap (experiential): hill-dwarf has no exposure to 'lightless-water'
 little: root Bamag /bamag/
+lockable: gap (experiential): hill-dwarf has no exposure to 'lockable'
 log: gap (experiential): hill-dwarf has no exposure to 'log'
 look: gap (experiential): hill-dwarf has no exposure to 'look'
 loom: gap (experiential): hill-dwarf has no exposure to 'loom'
@@ -2166,6 +2191,7 @@ old: root Masab /masab/
 old-growth: root Sajat /sajat/
 one: root Bashat /baʃat/
 open-blue: gap (experiential): hill-dwarf has no exposure to 'open-blue'
+openable: gap (experiential): hill-dwarf has no exposure to 'openable'
 orange-dwarf: gap (unnameable): no culture here has encountered the main sequence
 orange-giant: gap (unnameable): no culture here has encountered the main sequence
 otyugh-kind: gap (experiential): hill-dwarf has no exposure to 'otyugh-kind'
@@ -2176,6 +2202,7 @@ person: root Vasav /vasav/
 plankton-bloom: gap (experiential): hill-dwarf has no exposure to 'plankton-bloom'
 playa: gap (experiential): hill-dwarf has no exposure to 'playa'
 pool: gap (experiential): hill-dwarf has no exposure to 'pool'
+portable: gap (experiential): hill-dwarf has no exposure to 'portable'
 pressure-ridge: gap (experiential): hill-dwarf has no exposure to 'pressure-ridge'
 provoke: gap (extradiegetic): provoke is an operator instrument; it has no referent in the world
 radiates-heat: gap (experiential): hill-dwarf has no exposure to 'radiates-heat'

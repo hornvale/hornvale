@@ -121,6 +121,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `light` | the color term for white/light hues | Dod | /dod/ | Dem | Dem → no change → Dod |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): black-dragon has no exposure to 'lightless-water' |
 | `little` | small in size or extent | Gaagdaod | /gaagdaod/ | Kaángmáón | Kaángmáón → no change → Gaagdaod |
+| `lockable` | a thing whose opening needs the key that matches it | — | — | — | gap (experiential): black-dragon has no exposure to 'lockable' |
 | `log` | a length of felled, unworked timber | — | — | — | gap (experiential): black-dragon has no exposure to 'log' |
 | `look` | to visually attend to something, near or far — `look`, `examine` | — | — | — | gap (experiential): black-dragon has no exposure to 'look' |
 | `loom` | a frame for weaving thread into cloth | — | — | — | gap (experiential): black-dragon has no exposure to 'loom' |
@@ -149,6 +150,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): black-dragon has no exposure to 'old-growth' |
 | `one` | the cardinal number 1 | Goaddoad | /goaddoad/ | Kóamméám | Kóamméám → no change → Goaddoad |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): black-dragon has no exposure to 'open-blue' |
+| `openable` | a thing that can be opened and closed again | — | — | — | gap (experiential): black-dragon has no exposure to 'openable' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): black-dragon has no exposure to 'otyugh-kind' |
@@ -159,6 +161,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): black-dragon has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): black-dragon has no exposure to 'playa' |
 | `pool` | a small standing body of water | — | — | — | gap (experiential): black-dragon has no exposure to 'pool' |
+| `portable` | a thing small enough for a body to carry | — | — | — | gap (experiential): black-dragon has no exposure to 'portable' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): black-dragon has no exposure to 'pressure-ridge' |
 | `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `radiates-heat` | an anchor that emits warmth | — | — | — | gap (experiential): black-dragon has no exposure to 'radiates-heat' |
@@ -375,6 +378,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `light` | the color term for white/light hues | Doaqaa | /doaqaa/ | Noaqaa | Noaqaa → no change → Doaqaa |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): bugbear has no exposure to 'lightless-water' |
 | `little` | small in size or extent | Doodoo | /doodoo/ | Neodoe | Neodoe → no change → Doodoo |
+| `lockable` | a thing whose opening needs the key that matches it | — | — | — | gap (experiential): bugbear has no exposure to 'lockable' |
 | `log` | a length of felled, unworked timber | — | — | — | gap (experiential): bugbear has no exposure to 'log' |
 | `look` | to visually attend to something, near or far — `look`, `examine` | — | — | — | gap (experiential): bugbear has no exposure to 'look' |
 | `loom` | a frame for weaving thread into cloth | — | — | — | gap (experiential): bugbear has no exposure to 'loom' |
@@ -403,6 +407,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | Do | /do/ | To | To → lenition → Do |
 | `one` | the cardinal number 1 | Daaga | /daaga/ | Daaga | Daaga → no change → Daaga |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): bugbear has no exposure to 'open-blue' |
+| `openable` | a thing that can be opened and closed again | — | — | — | gap (experiential): bugbear has no exposure to 'openable' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): bugbear has no exposure to 'otyugh-kind' |
@@ -413,6 +418,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): bugbear has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): bugbear has no exposure to 'playa' |
 | `pool` | a small standing body of water | — | — | — | gap (experiential): bugbear has no exposure to 'pool' |
+| `portable` | a thing small enough for a body to carry | — | — | — | gap (experiential): bugbear has no exposure to 'portable' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): bugbear has no exposure to 'pressure-ridge' |
 | `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `radiates-heat` | an anchor that emits warmth | — | — | — | gap (experiential): bugbear has no exposure to 'radiates-heat' |
@@ -629,6 +635,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `light` | the color term for white/light hues | Pangas | /paŋas/ | Bangas | Bangas → no change → Pangas |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'lightless-water' |
 | `little` | small in size or extent | Danag | /danag/ | Danag | Danag → no change → Danag |
+| `lockable` | a thing whose opening needs the key that matches it | — | — | — | gap (experiential): desert-dwarf has no exposure to 'lockable' |
 | `log` | a length of felled, unworked timber | — | — | — | gap (experiential): desert-dwarf has no exposure to 'log' |
 | `look` | to visually attend to something, near or far — `look`, `examine` | — | — | — | gap (experiential): desert-dwarf has no exposure to 'look' |
 | `loom` | a frame for weaving thread into cloth | — | — | — | gap (experiential): desert-dwarf has no exposure to 'loom' |
@@ -657,6 +664,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | Dajad | /dajad/ | Zajat | Zajat → lenition → Dajad |
 | `one` | the cardinal number 1 | Dashad | /daʃad/ | Dashat | Dashat → lenition → Dashad |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'open-blue' |
+| `openable` | a thing that can be opened and closed again | — | — | — | gap (experiential): desert-dwarf has no exposure to 'openable' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): desert-dwarf has no exposure to 'otyugh-kind' |
@@ -667,6 +675,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'playa' |
 | `pool` | a small standing body of water | — | — | — | gap (experiential): desert-dwarf has no exposure to 'pool' |
+| `portable` | a thing small enough for a body to carry | — | — | — | gap (experiential): desert-dwarf has no exposure to 'portable' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'pressure-ridge' |
 | `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `radiates-heat` | an anchor that emits warmth | — | — | — | gap (experiential): desert-dwarf has no exposure to 'radiates-heat' |
@@ -883,6 +892,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `light` | the color term for white/light hues | Ṅaoṅ | /ŋaoŋ/ | Ngaong | Ngaong → no change → Ṅaoṅ |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): desert-elf has no exposure to 'lightless-water' |
 | `little` | small in size or extent | Ṅoaṅ | /ŋoaŋ/ | Ngoang | Ngoang → no change → Ṅoaṅ |
+| `lockable` | a thing whose opening needs the key that matches it | — | — | — | gap (experiential): desert-elf has no exposure to 'lockable' |
 | `log` | a length of felled, unworked timber | — | — | — | gap (experiential): desert-elf has no exposure to 'log' |
 | `look` | to visually attend to something, near or far — `look`, `examine` | — | — | — | gap (experiential): desert-elf has no exposure to 'look' |
 | `loom` | a frame for weaving thread into cloth | — | — | — | gap (experiential): desert-elf has no exposure to 'loom' |
@@ -911,6 +921,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): desert-elf has no exposure to 'old-growth' |
 | `one` | the cardinal number 1 | Ṅauṅ | /ŋauŋ/ | Ngaung | Ngaung → no change → Ṅauṅ |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): desert-elf has no exposure to 'open-blue' |
+| `openable` | a thing that can be opened and closed again | — | — | — | gap (experiential): desert-elf has no exposure to 'openable' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): desert-elf has no exposure to 'otyugh-kind' |
@@ -921,6 +932,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): desert-elf has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): desert-elf has no exposure to 'playa' |
 | `pool` | a small standing body of water | — | — | — | gap (experiential): desert-elf has no exposure to 'pool' |
+| `portable` | a thing small enough for a body to carry | — | — | — | gap (experiential): desert-elf has no exposure to 'portable' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): desert-elf has no exposure to 'pressure-ridge' |
 | `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `radiates-heat` | an anchor that emits warmth | — | — | — | gap (experiential): desert-elf has no exposure to 'radiates-heat' |
@@ -1137,6 +1149,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `light` | the color term for white/light hues | Gao | /gao/ | Ngaong | Ngaong → finalloss → Gao |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): drow has no exposure to 'lightless-water' |
 | `little` | small in size or extent | Goa | /goa/ | Ngoang | Ngoang → finalloss → Goa |
+| `lockable` | a thing whose opening needs the key that matches it | — | — | — | gap (experiential): drow has no exposure to 'lockable' |
 | `log` | a length of felled, unworked timber | — | — | — | gap (experiential): drow has no exposure to 'log' |
 | `look` | to visually attend to something, near or far — `look`, `examine` | — | — | — | gap (experiential): drow has no exposure to 'look' |
 | `loom` | a frame for weaving thread into cloth | — | — | — | gap (experiential): drow has no exposure to 'loom' |
@@ -1165,6 +1178,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | Pogsro | /pogsro/ | Pongsrung | Pongsrung → finalloss → Pogsro |
 | `one` | the cardinal number 1 | Gao | /gao/ | Ngaung | Ngaung → finalloss → Gao |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): drow has no exposure to 'open-blue' |
+| `openable` | a thing that can be opened and closed again | — | — | — | gap (experiential): drow has no exposure to 'openable' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): drow has no exposure to 'otyugh-kind' |
@@ -1175,6 +1189,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): drow has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): drow has no exposure to 'playa' |
 | `pool` | a small standing body of water | — | — | — | gap (experiential): drow has no exposure to 'pool' |
+| `portable` | a thing small enough for a body to carry | — | — | — | gap (experiential): drow has no exposure to 'portable' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): drow has no exposure to 'pressure-ridge' |
 | `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `radiates-heat` | an anchor that emits warmth | — | — | — | gap (experiential): drow has no exposure to 'radiates-heat' |
@@ -1391,6 +1406,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `light` | the color term for white/light hues | Dshozmoax | /dʃozmoax/ | Dshozmoax | Dshozmoax → no change → Dshozmoax |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): gnoll has no exposure to 'lightless-water' |
 | `little` | small in size or extent | Dsax | /dsax/ | Tsax | Tsax → lenition → Dsax |
+| `lockable` | a thing whose opening needs the key that matches it | — | — | — | gap (experiential): gnoll has no exposure to 'lockable' |
 | `log` | a length of felled, unworked timber | — | — | — | gap (experiential): gnoll has no exposure to 'log' |
 | `look` | to visually attend to something, near or far — `look`, `examine` | — | — | — | gap (experiential): gnoll has no exposure to 'look' |
 | `loom` | a frame for weaving thread into cloth | — | — | — | gap (experiential): gnoll has no exposure to 'loom' |
@@ -1419,6 +1435,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): gnoll has no exposure to 'old-growth' |
 | `one` | the cardinal number 1 | Dzhoapzhaap | /dʒoapʒaap/ | Dzhoapzhaaf | Dzhoapzhaaf → fortition → Dzhoapzhaap |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): gnoll has no exposure to 'open-blue' |
+| `openable` | a thing that can be opened and closed again | — | — | — | gap (experiential): gnoll has no exposure to 'openable' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): gnoll has no exposure to 'otyugh-kind' |
@@ -1429,6 +1446,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): gnoll has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): gnoll has no exposure to 'playa' |
 | `pool` | a small standing body of water | — | — | — | gap (experiential): gnoll has no exposure to 'pool' |
+| `portable` | a thing small enough for a body to carry | — | — | — | gap (experiential): gnoll has no exposure to 'portable' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): gnoll has no exposure to 'pressure-ridge' |
 | `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `radiates-heat` | an anchor that emits warmth | — | — | — | gap (experiential): gnoll has no exposure to 'radiates-heat' |
@@ -1645,6 +1663,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `light` | the color term for white/light hues | Noataa | /noataa/ | Noaqaa | Noaqaa → no change → Noataa |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): goblin has no exposure to 'lightless-water' |
 | `little` | small in size or extent | Neodoe | /neodoe/ | Neodoe | Neodoe → no change → Neodoe |
+| `lockable` | a thing whose opening needs the key that matches it | — | — | — | gap (experiential): goblin has no exposure to 'lockable' |
 | `log` | a length of felled, unworked timber | — | — | — | gap (experiential): goblin has no exposure to 'log' |
 | `look` | to visually attend to something, near or far — `look`, `examine` | — | — | — | gap (experiential): goblin has no exposure to 'look' |
 | `loom` | a frame for weaving thread into cloth | — | — | — | gap (experiential): goblin has no exposure to 'loom' |
@@ -1673,6 +1692,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | To | /to/ | To | To → no change → To |
 | `one` | the cardinal number 1 | Daaba | /daaba/ | Daaga | Daaga → no change → Daaba |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): goblin has no exposure to 'open-blue' |
+| `openable` | a thing that can be opened and closed again | — | — | — | gap (experiential): goblin has no exposure to 'openable' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): goblin has no exposure to 'otyugh-kind' |
@@ -1683,6 +1703,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): goblin has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): goblin has no exposure to 'playa' |
 | `pool` | a small standing body of water | — | — | — | gap (experiential): goblin has no exposure to 'pool' |
+| `portable` | a thing small enough for a body to carry | — | — | — | gap (experiential): goblin has no exposure to 'portable' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): goblin has no exposure to 'pressure-ridge' |
 | `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `radiates-heat` | an anchor that emits warmth | — | — | — | gap (experiential): goblin has no exposure to 'radiates-heat' |
@@ -1899,6 +1920,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `light` | the color term for white/light hues | Bangat | /baŋat/ | Bangas | Bangas → no change → Bangat |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'lightless-water' |
 | `little` | small in size or extent | Banag | /banag/ | Danag | Danag → no change → Banag |
+| `lockable` | a thing whose opening needs the key that matches it | — | — | — | gap (experiential): gully-dwarf has no exposure to 'lockable' |
 | `log` | a length of felled, unworked timber | — | — | — | gap (experiential): gully-dwarf has no exposure to 'log' |
 | `look` | to visually attend to something, near or far — `look`, `examine` | — | — | — | gap (experiential): gully-dwarf has no exposure to 'look' |
 | `loom` | a frame for weaving thread into cloth | — | — | — | gap (experiential): gully-dwarf has no exposure to 'loom' |
@@ -1927,6 +1949,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | Najat | /najat/ | Zajat | Zajat → no change → Najat |
 | `one` | the cardinal number 1 | Bashat | /baʃat/ | Dashat | Dashat → no change → Bashat |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'open-blue' |
+| `openable` | a thing that can be opened and closed again | — | — | — | gap (experiential): gully-dwarf has no exposure to 'openable' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): gully-dwarf has no exposure to 'otyugh-kind' |
@@ -1937,6 +1960,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'playa' |
 | `pool` | a small standing body of water | — | — | — | gap (experiential): gully-dwarf has no exposure to 'pool' |
+| `portable` | a thing small enough for a body to carry | — | — | — | gap (experiential): gully-dwarf has no exposure to 'portable' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'pressure-ridge' |
 | `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `radiates-heat` | an anchor that emits warmth | — | — | — | gap (experiential): gully-dwarf has no exposure to 'radiates-heat' |
@@ -2153,6 +2177,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `light` | the color term for white/light hues | Maom | /maom/ | Ngaong | Ngaong → no change → Maom |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): high-elf has no exposure to 'lightless-water' |
 | `little` | small in size or extent | Moam | /moam/ | Ngoang | Ngoang → no change → Moam |
+| `lockable` | a thing whose opening needs the key that matches it | — | — | — | gap (experiential): high-elf has no exposure to 'lockable' |
 | `log` | a length of felled, unworked timber | — | — | — | gap (experiential): high-elf has no exposure to 'log' |
 | `look` | to visually attend to something, near or far — `look`, `examine` | — | — | — | gap (experiential): high-elf has no exposure to 'look' |
 | `loom` | a frame for weaving thread into cloth | — | — | — | gap (experiential): high-elf has no exposure to 'loom' |
@@ -2181,6 +2206,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): high-elf has no exposure to 'old-growth' |
 | `one` | the cardinal number 1 | Maom | /maom/ | Ngaung | Ngaung → no change → Maom |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): high-elf has no exposure to 'open-blue' |
+| `openable` | a thing that can be opened and closed again | — | — | — | gap (experiential): high-elf has no exposure to 'openable' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): high-elf has no exposure to 'otyugh-kind' |
@@ -2191,6 +2217,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): high-elf has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): high-elf has no exposure to 'playa' |
 | `pool` | a small standing body of water | — | — | — | gap (experiential): high-elf has no exposure to 'pool' |
+| `portable` | a thing small enough for a body to carry | — | — | — | gap (experiential): high-elf has no exposure to 'portable' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): high-elf has no exposure to 'pressure-ridge' |
 | `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `radiates-heat` | an anchor that emits warmth | — | — | — | gap (experiential): high-elf has no exposure to 'radiates-heat' |
@@ -2407,6 +2434,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `light` | the color term for white/light hues | Bangas | /baŋas/ | Bangas | Bangas → no change → Bangas |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'lightless-water' |
 | `little` | small in size or extent | Bamag | /bamag/ | Danag | Danag → no change → Bamag |
+| `lockable` | a thing whose opening needs the key that matches it | — | — | — | gap (experiential): hill-dwarf has no exposure to 'lockable' |
 | `log` | a length of felled, unworked timber | — | — | — | gap (experiential): hill-dwarf has no exposure to 'log' |
 | `look` | to visually attend to something, near or far — `look`, `examine` | — | — | — | gap (experiential): hill-dwarf has no exposure to 'look' |
 | `loom` | a frame for weaving thread into cloth | — | — | — | gap (experiential): hill-dwarf has no exposure to 'loom' |
@@ -2435,6 +2463,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | Sajat | /sajat/ | Zajat | Zajat → no change → Sajat |
 | `one` | the cardinal number 1 | Bashat | /baʃat/ | Dashat | Dashat → no change → Bashat |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'open-blue' |
+| `openable` | a thing that can be opened and closed again | — | — | — | gap (experiential): hill-dwarf has no exposure to 'openable' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): hill-dwarf has no exposure to 'otyugh-kind' |
@@ -2445,6 +2474,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'playa' |
 | `pool` | a small standing body of water | — | — | — | gap (experiential): hill-dwarf has no exposure to 'pool' |
+| `portable` | a thing small enough for a body to carry | — | — | — | gap (experiential): hill-dwarf has no exposure to 'portable' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'pressure-ridge' |
 | `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `radiates-heat` | an anchor that emits warmth | — | — | — | gap (experiential): hill-dwarf has no exposure to 'radiates-heat' |
@@ -2661,6 +2691,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `light` | the color term for white/light hues | Noaqaa | /noaqaa/ | Noaqaa | Noaqaa → no change → Noaqaa |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): hobgoblin has no exposure to 'lightless-water' |
 | `little` | small in size or extent | Neoboe | /neoboe/ | Neodoe | Neodoe → no change → Neoboe |
+| `lockable` | a thing whose opening needs the key that matches it | — | — | — | gap (experiential): hobgoblin has no exposure to 'lockable' |
 | `log` | a length of felled, unworked timber | — | — | — | gap (experiential): hobgoblin has no exposure to 'log' |
 | `look` | to visually attend to something, near or far — `look`, `examine` | — | — | — | gap (experiential): hobgoblin has no exposure to 'look' |
 | `loom` | a frame for weaving thread into cloth | — | — | — | gap (experiential): hobgoblin has no exposure to 'loom' |
@@ -2689,6 +2720,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | To | /to/ | To | To → no change → To |
 | `one` | the cardinal number 1 | Baaga | /baaga/ | Daaga | Daaga → no change → Baaga |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): hobgoblin has no exposure to 'open-blue' |
+| `openable` | a thing that can be opened and closed again | — | — | — | gap (experiential): hobgoblin has no exposure to 'openable' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): hobgoblin has no exposure to 'otyugh-kind' |
@@ -2699,6 +2731,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): hobgoblin has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): hobgoblin has no exposure to 'playa' |
 | `pool` | a small standing body of water | — | — | — | gap (experiential): hobgoblin has no exposure to 'pool' |
+| `portable` | a thing small enough for a body to carry | — | — | — | gap (experiential): hobgoblin has no exposure to 'portable' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): hobgoblin has no exposure to 'pressure-ridge' |
 | `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `radiates-heat` | an anchor that emits warmth | — | — | — | gap (experiential): hobgoblin has no exposure to 'radiates-heat' |
@@ -2915,6 +2948,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `light` | the color term for white/light hues | Raapvea | /raapvea/ | Raapvea | Raapvea → no change → Raapvea |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): human has no exposure to 'lightless-water' |
 | `little` | small in size or extent | Foo | /foo/ | Gfoo | Gfoo → clustersimplify → Foo |
+| `lockable` | a thing whose opening needs the key that matches it | — | — | — | gap (experiential): human has no exposure to 'lockable' |
 | `log` | a length of felled, unworked timber | — | — | — | gap (experiential): human has no exposure to 'log' |
 | `look` | to visually attend to something, near or far — `look`, `examine` | — | — | — | gap (experiential): human has no exposure to 'look' |
 | `loom` | a frame for weaving thread into cloth | — | — | — | gap (experiential): human has no exposure to 'loom' |
@@ -2943,6 +2977,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | Xoaro | /xoaro/ | Pxoaro | Pxoaro → clustersimplify → Xoaro |
 | `one` | the cardinal number 1 | Reerea | /reerea/ | Reerea | Reerea → no change → Reerea |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): human has no exposure to 'open-blue' |
+| `openable` | a thing that can be opened and closed again | — | — | — | gap (experiential): human has no exposure to 'openable' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): human has no exposure to 'otyugh-kind' |
@@ -2953,6 +2988,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): human has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): human has no exposure to 'playa' |
 | `pool` | a small standing body of water | — | — | — | gap (experiential): human has no exposure to 'pool' |
+| `portable` | a thing small enough for a body to carry | — | — | — | gap (experiential): human has no exposure to 'portable' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): human has no exposure to 'pressure-ridge' |
 | `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `radiates-heat` | an anchor that emits warmth | — | — | — | gap (experiential): human has no exposure to 'radiates-heat' |
@@ -3169,6 +3205,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `light` | the color term for white/light hues | Rooxa | /rooxa/ | Rooxa | Rooxa → no change → Rooxa |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): kobold has no exposure to 'lightless-water' |
 | `little` | small in size or extent | Roaroaroa | /roaroaroa/ | Roaroaroa | Roaroaroa → no change → Roaroaroa |
+| `lockable` | a thing whose opening needs the key that matches it | — | — | — | gap (experiential): kobold has no exposure to 'lockable' |
 | `log` | a length of felled, unworked timber | — | — | — | gap (experiential): kobold has no exposure to 'log' |
 | `look` | to visually attend to something, near or far — `look`, `examine` | — | — | — | gap (experiential): kobold has no exposure to 'look' |
 | `loom` | a frame for weaving thread into cloth | — | — | — | gap (experiential): kobold has no exposure to 'loom' |
@@ -3197,6 +3234,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | Xaoraa | /xaoraa/ | Xaoraa | Xaoraa → no change → Xaoraa |
 | `one` | the cardinal number 1 | Raaxoa | /raaxoa/ | Raaxoa | Raaxoa → no change → Raaxoa |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): kobold has no exposure to 'open-blue' |
+| `openable` | a thing that can be opened and closed again | — | — | — | gap (experiential): kobold has no exposure to 'openable' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): kobold has no exposure to 'otyugh-kind' |
@@ -3207,6 +3245,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): kobold has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): kobold has no exposure to 'playa' |
 | `pool` | a small standing body of water | — | — | — | gap (experiential): kobold has no exposure to 'pool' |
+| `portable` | a thing small enough for a body to carry | — | — | — | gap (experiential): kobold has no exposure to 'portable' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): kobold has no exposure to 'pressure-ridge' |
 | `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `radiates-heat` | an anchor that emits warmth | — | — | — | gap (experiential): kobold has no exposure to 'radiates-heat' |
@@ -3423,6 +3462,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `light` | the color term for white/light hues | Dod | /dod/ | Dem | Dem → no change → Dod |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): red-dragon has no exposure to 'lightless-water' |
 | `little` | small in size or extent | Kaaddaod | /kaaddaod/ | Kaángmáón | Kaángmáón → no change → Kaaddaod |
+| `lockable` | a thing whose opening needs the key that matches it | — | — | — | gap (experiential): red-dragon has no exposure to 'lockable' |
 | `log` | a length of felled, unworked timber | — | — | — | gap (experiential): red-dragon has no exposure to 'log' |
 | `look` | to visually attend to something, near or far — `look`, `examine` | — | — | — | gap (experiential): red-dragon has no exposure to 'look' |
 | `loom` | a frame for weaving thread into cloth | — | — | — | gap (experiential): red-dragon has no exposure to 'loom' |
@@ -3451,6 +3491,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): red-dragon has no exposure to 'old-growth' |
 | `one` | the cardinal number 1 | Koaddoad | /koaddoad/ | Kóamméám | Kóamméám → no change → Koaddoad |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): red-dragon has no exposure to 'open-blue' |
+| `openable` | a thing that can be opened and closed again | — | — | — | gap (experiential): red-dragon has no exposure to 'openable' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): red-dragon has no exposure to 'otyugh-kind' |
@@ -3461,6 +3502,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): red-dragon has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): red-dragon has no exposure to 'playa' |
 | `pool` | a small standing body of water | — | — | — | gap (experiential): red-dragon has no exposure to 'pool' |
+| `portable` | a thing small enough for a body to carry | — | — | — | gap (experiential): red-dragon has no exposure to 'portable' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): red-dragon has no exposure to 'pressure-ridge' |
 | `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `radiates-heat` | an anchor that emits warmth | — | — | — | gap (experiential): red-dragon has no exposure to 'radiates-heat' |
@@ -3677,6 +3719,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `light` | the color term for white/light hues | Naun | /naun/ | Ngaong | Ngaong → vowelshift → Naun |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): sea-elf has no exposure to 'lightless-water' |
 | `little` | small in size or extent | Nuan | /nuan/ | Ngoang | Ngoang → vowelshift → Nuan |
+| `lockable` | a thing whose opening needs the key that matches it | — | — | — | gap (experiential): sea-elf has no exposure to 'lockable' |
 | `log` | a length of felled, unworked timber | — | — | — | gap (experiential): sea-elf has no exposure to 'log' |
 | `look` | to visually attend to something, near or far — `look`, `examine` | — | — | — | gap (experiential): sea-elf has no exposure to 'look' |
 | `loom` | a frame for weaving thread into cloth | — | — | — | gap (experiential): sea-elf has no exposure to 'loom' |
@@ -3705,6 +3748,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): sea-elf has no exposure to 'old-growth' |
 | `one` | the cardinal number 1 | Naun | /naun/ | Ngaung | Ngaung → no change → Naun |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): sea-elf has no exposure to 'open-blue' |
+| `openable` | a thing that can be opened and closed again | — | — | — | gap (experiential): sea-elf has no exposure to 'openable' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): sea-elf has no exposure to 'otyugh-kind' |
@@ -3715,6 +3759,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | Sraun | /sraun/ | Sraung | Sraung → no change → Sraun |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): sea-elf has no exposure to 'playa' |
 | `pool` | a small standing body of water | — | — | — | gap (experiential): sea-elf has no exposure to 'pool' |
+| `portable` | a thing small enough for a body to carry | — | — | — | gap (experiential): sea-elf has no exposure to 'portable' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): sea-elf has no exposure to 'pressure-ridge' |
 | `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `radiates-heat` | an anchor that emits warmth | — | — | — | gap (experiential): sea-elf has no exposure to 'radiates-heat' |
@@ -3931,6 +3976,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `light` | the color term for white/light hues | Ṅaoṅ | /ŋaoŋ/ | Ngaong | Ngaong → no change → Ṅaoṅ |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): snow-elf has no exposure to 'lightless-water' |
 | `little` | small in size or extent | Ṅoaṅ | /ŋoaŋ/ | Ngoang | Ngoang → no change → Ṅoaṅ |
+| `lockable` | a thing whose opening needs the key that matches it | — | — | — | gap (experiential): snow-elf has no exposure to 'lockable' |
 | `log` | a length of felled, unworked timber | — | — | — | gap (experiential): snow-elf has no exposure to 'log' |
 | `look` | to visually attend to something, near or far — `look`, `examine` | — | — | — | gap (experiential): snow-elf has no exposure to 'look' |
 | `loom` | a frame for weaving thread into cloth | — | — | — | gap (experiential): snow-elf has no exposure to 'loom' |
@@ -3959,6 +4005,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): snow-elf has no exposure to 'old-growth' |
 | `one` | the cardinal number 1 | Ṅaoṅ | /ŋaoŋ/ | Ngaung | Ngaung → no change → Ṅaoṅ |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): snow-elf has no exposure to 'open-blue' |
+| `openable` | a thing that can be opened and closed again | — | — | — | gap (experiential): snow-elf has no exposure to 'openable' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): snow-elf has no exposure to 'otyugh-kind' |
@@ -3969,6 +4016,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): snow-elf has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): snow-elf has no exposure to 'playa' |
 | `pool` | a small standing body of water | — | — | — | gap (experiential): snow-elf has no exposure to 'pool' |
+| `portable` | a thing small enough for a body to carry | — | — | — | gap (experiential): snow-elf has no exposure to 'portable' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): snow-elf has no exposure to 'pressure-ridge' |
 | `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `radiates-heat` | an anchor that emits warmth | — | — | — | gap (experiential): snow-elf has no exposure to 'radiates-heat' |
@@ -4185,6 +4233,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `light` | the color term for white/light hues | Don | /don/ | Dem | Dem → no change → Don |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): white-dragon has no exposure to 'lightless-water' |
 | `little` | small in size or extent | Kaangnaon | /kaaŋnaon/ | Kaángmáón | Kaángmáón → no change → Kaangnaon |
+| `lockable` | a thing whose opening needs the key that matches it | — | — | — | gap (experiential): white-dragon has no exposure to 'lockable' |
 | `log` | a length of felled, unworked timber | — | — | — | gap (experiential): white-dragon has no exposure to 'log' |
 | `look` | to visually attend to something, near or far — `look`, `examine` | — | — | — | gap (experiential): white-dragon has no exposure to 'look' |
 | `loom` | a frame for weaving thread into cloth | — | — | — | gap (experiential): white-dragon has no exposure to 'loom' |
@@ -4213,6 +4262,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): white-dragon has no exposure to 'old-growth' |
 | `one` | the cardinal number 1 | Koannoan | /koannoan/ | Kóamméám | Kóamméám → no change → Koannoan |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): white-dragon has no exposure to 'open-blue' |
+| `openable` | a thing that can be opened and closed again | — | — | — | gap (experiential): white-dragon has no exposure to 'openable' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): white-dragon has no exposure to 'otyugh-kind' |
@@ -4223,6 +4273,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): white-dragon has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): white-dragon has no exposure to 'playa' |
 | `pool` | a small standing body of water | — | — | — | gap (experiential): white-dragon has no exposure to 'pool' |
+| `portable` | a thing small enough for a body to carry | — | — | — | gap (experiential): white-dragon has no exposure to 'portable' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): white-dragon has no exposure to 'pressure-ridge' |
 | `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `radiates-heat` | an anchor that emits warmth | — | — | — | gap (experiential): white-dragon has no exposure to 'radiates-heat' |
@@ -4439,6 +4490,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `light` | the color term for white/light hues | Ṅau | /ŋau/ | Ngaong | Ngaong → finalloss → vowelshift → Ṅau |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): wood-elf has no exposure to 'lightless-water' |
 | `little` | small in size or extent | Ṅua | /ŋua/ | Ngoang | Ngoang → finalloss → vowelshift → Ṅua |
+| `lockable` | a thing whose opening needs the key that matches it | — | — | — | gap (experiential): wood-elf has no exposure to 'lockable' |
 | `log` | a length of felled, unworked timber | — | — | — | gap (experiential): wood-elf has no exposure to 'log' |
 | `look` | to visually attend to something, near or far — `look`, `examine` | — | — | — | gap (experiential): wood-elf has no exposure to 'look' |
 | `loom` | a frame for weaving thread into cloth | — | — | — | gap (experiential): wood-elf has no exposure to 'loom' |
@@ -4467,6 +4519,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | Tuṅsdu | /tuŋsdu/ | Pongsrung | Pongsrung → finalloss → vowelshift → Tuṅsdu |
 | `one` | the cardinal number 1 | Ṅau | /ŋau/ | Ngaung | Ngaung → finalloss → Ṅau |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): wood-elf has no exposure to 'open-blue' |
+| `openable` | a thing that can be opened and closed again | — | — | — | gap (experiential): wood-elf has no exposure to 'openable' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): wood-elf has no exposure to 'otyugh-kind' |
@@ -4477,6 +4530,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): wood-elf has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): wood-elf has no exposure to 'playa' |
 | `pool` | a small standing body of water | — | — | — | gap (experiential): wood-elf has no exposure to 'pool' |
+| `portable` | a thing small enough for a body to carry | — | — | — | gap (experiential): wood-elf has no exposure to 'portable' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): wood-elf has no exposure to 'pressure-ridge' |
 | `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `radiates-heat` | an anchor that emits warmth | — | — | — | gap (experiential): wood-elf has no exposure to 'radiates-heat' |

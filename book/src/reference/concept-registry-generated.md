@@ -269,6 +269,7 @@
 | `light` | language | quality | the color term for white/light hues |
 | `lightless-water` | climate | substance | Water below all light. |
 | `little` | language | quality | small in size or extent |
+| `lockable` | language | quality | a thing whose opening needs the key that matches it |
 | `log` | thing | object | a length of felled, unworked timber |
 | `look` | language | act | to visually attend to something, near or far — `look`, `examine` |
 | `loom` | thing | object | a frame for weaving thread into cloth |
@@ -297,6 +298,7 @@
 | `old-growth` | climate | substance | Mature forest, closed above and open beneath. |
 | `one` | language | quality | the cardinal number 1 |
 | `open-blue` | climate | substance | Open sunlit water, far from any shore. |
+| `openable` | language | quality | a thing that can be opened and closed again |
 | `orange-dwarf` | astronomy | celestial | a cooler, dimmer main-sequence star |
 | `orange-giant` | astronomy | celestial | a cooling star swollen off the main sequence |
 | `otyugh-kind` | species | living | an otyugh |
@@ -307,6 +309,7 @@
 | `plankton-bloom` | climate | substance | Water thick with plankton. |
 | `playa` | climate | substance | A dry lake bed of salt and cracked clay. |
 | `pool` | thing | object | a small standing body of water |
+| `portable` | language | quality | a thing small enough for a body to carry |
 | `pressure-ridge` | climate | substance | Sea ice buckled into a ridge. |
 | `provoke` | language | act | to make someone hostile by an act the simulation itself did not choose — `!provoke` |
 | `radiates-heat` | language | quality | an anchor that emits warmth |

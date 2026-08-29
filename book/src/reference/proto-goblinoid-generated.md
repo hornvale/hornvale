@@ -144,6 +144,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `light` | the color term for white/light hues | *Noaqaa | /noaqaa/ |
 | `lightless-water` | Water below all light. | *Pao | /pao/ |
 | `little` | small in size or extent | *Neodoe | /neodoe/ |
+| `lockable` | a thing whose opening needs the key that matches it | *Nanee | /nanee/ |
 | `log` | a length of felled, unworked timber | *None | /none/ |
 | `look` | to visually attend to something, near or far — `look`, `examine` | *Gogo | /gogo/ |
 | `loom` | a frame for weaving thread into cloth | *Kooneo | /kooneo/ |
@@ -172,6 +173,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `old-growth` | Mature forest, closed above and open beneath. | *To | /to/ |
 | `one` | the cardinal number 1 | *Daaga | /daaga/ |
 | `open-blue` | Open sunlit water, far from any shore. | *Noote | /noote/ |
+| `openable` | a thing that can be opened and closed again | *Ganoa | /ganoa/ |
 | `otyugh-kind` | an otyugh | *Naoko | /naoko/ |
 | `over` | above; atop | *Naenae | /naenae/ |
 | `owlbear-kind` | an owlbear | *Too | /too/ |
@@ -180,6 +182,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `plankton-bloom` | Water thick with plankton. | *Notee | /notee/ |
 | `playa` | A dry lake bed of salt and cracked clay. | *Qena | /qena/ |
 | `pool` | a small standing body of water | *Nakao | /nakao/ |
+| `portable` | a thing small enough for a body to carry | *Paa | /paa/ |
 | `pressure-ridge` | Sea ice buckled into a ridge. | *Nootaa | /nootaa/ |
 | `radiates-heat` | an anchor that emits warmth | *Poe | /poe/ |
 | `rafted-floe` | Ice floes driven over one another. | *Qoe | /qoe/ |

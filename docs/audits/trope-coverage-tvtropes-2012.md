@@ -490,7 +490,7 @@ missing 1 bundles, so no single row makes anything stageable on its own.
 
 ## Supply
 
-352 registered tokens no situation in this corpus requires.
+355 registered tokens no situation in this corpus requires.
 
 **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires
 *and no readout consumes*; the second half is not implemented. So this list
@@ -610,6 +610,7 @@ missing half before this list can serve it.
 - `concept:light` (language)
 - `concept:lightless-water` (climate)
 - `concept:little` (language)
+- `concept:lockable` (language)
 - `concept:log` (thing)
 - `concept:look` (language)
 - `concept:loom` (thing)
@@ -637,6 +638,7 @@ missing half before this list can serve it.
 - `concept:old-growth` (climate)
 - `concept:one` (language)
 - `concept:open-blue` (climate)
+- `concept:openable` (language)
 - `concept:orange-dwarf` (astronomy)
 - `concept:orange-giant` (astronomy)
 - `concept:otyugh-kind` (species)
@@ -645,6 +647,7 @@ missing half before this list can serve it.
 - `concept:plankton-bloom` (climate)
 - `concept:playa` (climate)
 - `concept:pool` (thing)
+- `concept:portable` (language)
 - `concept:pressure-ridge` (climate)
 - `concept:provoke` (language)
 - `concept:radiates-heat` (language)

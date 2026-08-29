@@ -107,7 +107,7 @@ fn nouns_within(interior: &Interior, id: AnchorId) -> Vec<&'static str> {
 pub(crate) fn examine_detail(interior: &Interior, id: AnchorId) -> String {
     let kind = interior.anchor(id).kind;
     let base = detail(kind);
-    if !crate::affordance::encloses(kind) {
+    if !crate::affordance::encloses(crate::affordance::thing_kind_of(kind)) {
         return base.to_string();
     }
     let contents = nouns_within(interior, id);
@@ -495,7 +495,7 @@ mod tests {
     #[test]
     fn a_non_enclosing_anchor_never_reports_contents_even_if_something_sits_within_it() {
         assert!(
-            !crate::affordance::encloses(AnchorKind::Bed),
+            !crate::affordance::encloses(crate::affordance::thing_kind_of(AnchorKind::Bed)),
             "precondition: Bed must not carry Encloses, or this test proves nothing"
         );
         let mut i = Interior::new();

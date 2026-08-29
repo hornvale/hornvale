@@ -75,13 +75,17 @@ pub enum ConceptKind {
     /// **This says nothing about whether a body may carry the thing**, and
     /// reading it that way gives the wrong answer for most of today's
     /// roster: of the fifteen kinds `domains/thing` registers under
-    /// `Object`, only `key` is `ThingTraits::portable` — a `vessel` and a
-    /// `threshold` are both `Object` and neither is. Whether an individual
-    /// kind can be picked up is `ThingTraits::portable`
-    /// (`domains/thing`), a per-kind fact this kind-level tag does not
-    /// encode. The same one-directional caveat [`ConceptKind::Act`] carries,
-    /// for the same reason: a kind tag this coarse invites a reader to
-    /// over-read it.
+    /// `Object`, only `key` carries `ObjectProperty::Portable` — a `vessel`
+    /// and a `threshold` are both `Object` and neither does. Whether an
+    /// individual kind can be picked up is `ObjectProperty::Portable` in
+    /// `windows/vessel`'s `object_registry` (The Chattel, spec §3.6/§3.8), a
+    /// per-kind fact this kind-level tag does not encode. **This paragraph
+    /// used to cite `ThingTraits::portable` (`domains/thing`), which no
+    /// longer exists**: that field was a second `KindId`-keyed answer to the
+    /// same question and was deleted when the property table re-keyed to
+    /// `KindId`. The same one-directional caveat [`ConceptKind::Act`]
+    /// carries, for the same reason: a kind tag this coarse invites a reader
+    /// to over-read it.
     Object,
 }
 

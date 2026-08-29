@@ -3,11 +3,20 @@
 //! A thing-kind is a row in [`thing_registry`] — the same shape as
 //! `hornvale_terrain::MaterialTraits` ("thin and honest": a kind with no
 //! biosphere row carries only what a shipped verb reads). `ThingTraits`
-//! carries just two facts today: whether a body may carry the kind, and the
-//! label prose uses to name it. The *property* vocabulary (`Openable`,
-//! `Lockable`, `AffordsPassage`, …) stays in `windows/vessel`'s
-//! `ObjectTraits` until a later task in this campaign re-keys that table from
-//! `AnchorKind` to [`KindId`] and merges it with this one — see spec §3.5.
+//! carries exactly one fact today: the label prose uses to name the kind.
+//!
+//! **The property vocabulary lives in `windows/vessel`'s `ObjectTraits`, and
+//! this crate deliberately holds no second copy of any of it (Task 7, spec
+//! §3.6).** Task 2 gave `ThingTraits` a `portable: bool` keyed on
+//! [`KindId`]; Task 7 re-keyed `ObjectTraits` to [`KindId`] as well and added
+//! `ObjectProperty::Portable`, at which point the two were two
+//! [`KindId`]-keyed tables answering one question — the disagreement §3.6
+//! re-keys to prevent, minted by the task meant to prevent it. So the field
+//! was deleted, not kept: `ObjectProperty::Portable` is the single source of
+//! truth for whether a body may carry a kind, sitting beside `Openable` and
+//! `Lockable` where the verb dispatcher already reads. Nothing consumed the
+//! field (no access to it existed outside this file), so the deletion moved
+//! the fact without changing it.
 //!
 //! THIS DOMAIN DRAWS NOTHING, on the `hornvale_alchemy` model: there is no
 //! `streams.rs`, no `StreamLabel`, and no `Seed` parameter anywhere in it.
@@ -27,14 +36,12 @@ use hornvale_kernel::{
     RegistryError, Void,
 };
 
-/// Object-kind traits: whether a body may carry the kind, and the label
-/// prose uses to name it. Thin and honest (spec §3.5) — no property lives
-/// here; see the module doc for where those stay until they join.
-/// type-audit: bare-ok(flag: portable), bare-ok(identifier-text: display)
+/// Object-kind traits: the label prose uses to name the kind. Thin and
+/// honest (spec §3.5) — no property lives here; see the module doc for why
+/// `portable` was deleted rather than kept beside `ObjectProperty::Portable`.
+/// type-audit: bare-ok(identifier-text: display)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ThingTraits {
-    /// Whether a body may take and carry the kind.
-    pub portable: bool,
     /// The label prose uses to name the kind.
     pub display: &'static str,
 }
@@ -68,124 +75,49 @@ pub const THING_KINDS: &[&str] = &[
     "vessel",
 ];
 
-/// The canonical thing-kind registry. Only `key` is portable today; the rest
-/// are fixtures a body may use in place but never carry — including
-/// `cave-mouth` and `strongbox`, whose `Openable`/`Lockable` properties
-/// arrive when `ObjectTraits` joins this table (spec §3.5, §3.8).
+/// The canonical thing-kind registry: one row per [`THING_KINDS`] label,
+/// carrying the display name and nothing else. Which kinds are portable,
+/// openable or lockable is `windows/vessel`'s `object_registry`
+/// (`ObjectProperty::{Portable, Openable, Lockable}`, spec §3.6/§3.8) — one
+/// table, not two.
 pub fn thing_registry() -> ComponentStore<KindId, ThingTraits> {
     [
-        (
-            KindId("alcove"),
-            ThingTraits {
-                portable: false,
-                display: "alcove",
-            },
-        ),
-        (
-            KindId("altar"),
-            ThingTraits {
-                portable: false,
-                display: "altar",
-            },
-        ),
-        (
-            KindId("anvil"),
-            ThingTraits {
-                portable: false,
-                display: "anvil",
-            },
-        ),
-        (
-            KindId("bed"),
-            ThingTraits {
-                portable: false,
-                display: "bed",
-            },
-        ),
+        (KindId("alcove"), ThingTraits { display: "alcove" }),
+        (KindId("altar"), ThingTraits { display: "altar" }),
+        (KindId("anvil"), ThingTraits { display: "anvil" }),
+        (KindId("bed"), ThingTraits { display: "bed" }),
         (
             KindId("cave-mouth"),
             ThingTraits {
-                portable: false,
                 display: "cave mouth",
             },
         ),
-        (
-            KindId("ground"),
-            ThingTraits {
-                portable: false,
-                display: "ground",
-            },
-        ),
-        (
-            KindId("hearth"),
-            ThingTraits {
-                portable: false,
-                display: "hearth",
-            },
-        ),
+        (KindId("ground"), ThingTraits { display: "ground" }),
+        (KindId("hearth"), ThingTraits { display: "hearth" }),
         (
             KindId("high-seat"),
             ThingTraits {
-                portable: false,
                 display: "high seat",
             },
         ),
-        (
-            KindId("key"),
-            ThingTraits {
-                portable: true,
-                display: "key",
-            },
-        ),
-        (
-            KindId("log"),
-            ThingTraits {
-                portable: false,
-                display: "log",
-            },
-        ),
-        (
-            KindId("loom"),
-            ThingTraits {
-                portable: false,
-                display: "loom",
-            },
-        ),
-        (
-            KindId("pool"),
-            ThingTraits {
-                portable: false,
-                display: "pool",
-            },
-        ),
-        (
-            KindId("screen"),
-            ThingTraits {
-                portable: false,
-                display: "screen",
-            },
-        ),
+        (KindId("key"), ThingTraits { display: "key" }),
+        (KindId("log"), ThingTraits { display: "log" }),
+        (KindId("loom"), ThingTraits { display: "loom" }),
+        (KindId("pool"), ThingTraits { display: "pool" }),
+        (KindId("screen"), ThingTraits { display: "screen" }),
         (
             KindId("strongbox"),
             ThingTraits {
-                portable: false,
                 display: "strongbox",
             },
         ),
         (
             KindId("threshold"),
             ThingTraits {
-                portable: false,
                 display: "threshold",
             },
         ),
-        (
-            KindId("vessel"),
-            ThingTraits {
-                portable: false,
-                display: "vessel",
-            },
-        ),
+        (KindId("vessel"), ThingTraits { display: "vessel" }),
     ]
     .into_iter()
     .collect()

@@ -143,6 +143,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `light` | the color term for white/light hues | *Bangas | /baŋas/ |
 | `lightless-water` | Water below all light. | *Xavab | /xavab/ |
 | `little` | small in size or extent | *Danag | /danag/ |
+| `lockable` | a thing whose opening needs the key that matches it | *Shazax | /ʃazax/ |
 | `log` | a length of felled, unworked timber | *Tadat | /tadat/ |
 | `look` | to visually attend to something, near or far — `look`, `examine` | *Qashad | /qaʃad/ |
 | `loom` | a frame for weaving thread into cloth | *Xazab | /xazab/ |
@@ -171,6 +172,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `old-growth` | Mature forest, closed above and open beneath. | *Zajat | /zajat/ |
 | `one` | the cardinal number 1 | *Dashat | /daʃat/ |
 | `open-blue` | Open sunlit water, far from any shore. | *Xanax | /xanax/ |
+| `openable` | a thing that can be opened and closed again | *Ngatang | /ŋataŋ/ |
 | `otyugh-kind` | an otyugh | *Vaxab | /vaxab/ |
 | `over` | above; atop | *Jabang | /jabaŋ/ |
 | `owlbear-kind` | an owlbear | *Vagat | /vagat/ |
@@ -179,6 +181,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `plankton-bloom` | Water thick with plankton. | *Xabash | /xabaʃ/ |
 | `playa` | A dry lake bed of salt and cracked clay. | *Jajav | /jajav/ |
 | `pool` | a small standing body of water | *Zaqaz | /zaqaz/ |
+| `portable` | a thing small enough for a body to carry | *Jaqan | /jaqan/ |
 | `pressure-ridge` | Sea ice buckled into a ridge. | *Nanat | /nanat/ |
 | `radiates-heat` | an anchor that emits warmth | *Tashab | /taʃab/ |
 | `rafted-floe` | Ice floes driven over one another. | *Xaxab | /xaxab/ |

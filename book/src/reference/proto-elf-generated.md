@@ -145,6 +145,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `light` | the color term for white/light hues | *Ngaong | /ŋaoŋ/ |
 | `lightless-water` | Water below all light. | *Ngangngung | /ŋaŋŋuŋ/ |
 | `little` | small in size or extent | *Ngoang | /ŋoaŋ/ |
+| `lockable` | a thing whose opening needs the key that matches it | *Doeng | /doeŋ/ |
 | `log` | a length of felled, unworked timber | *Goongngoeng | /gooŋŋoeŋ/ |
 | `look` | to visually attend to something, near or far — `look`, `examine` | *Nguengngaong | /ŋueŋŋaoŋ/ |
 | `loom` | a frame for weaving thread into cloth | *Beangtang | /beaŋtaŋ/ |
@@ -173,6 +174,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `old-growth` | Mature forest, closed above and open beneath. | *Pongsrung | /poŋsruŋ/ |
 | `one` | the cardinal number 1 | *Ngaung | /ŋauŋ/ |
 | `open-blue` | Open sunlit water, far from any shore. | *Ngangdeng | /ŋaŋdeŋ/ |
+| `openable` | a thing that can be opened and closed again | *Dung | /duŋ/ |
 | `otyugh-kind` | an otyugh | *Shrang | /ʃraŋ/ |
 | `over` | above; atop | *Zhrengsrung | /ʒreŋsruŋ/ |
 | `owlbear-kind` | an owlbear | *Srueng | /srueŋ/ |
@@ -181,6 +183,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `plankton-bloom` | Water thick with plankton. | *Sraung | /srauŋ/ |
 | `playa` | A dry lake bed of salt and cracked clay. | *Ngenggung | /ŋeŋguŋ/ |
 | `pool` | a small standing body of water | *Zrengzhrong | /zreŋʒroŋ/ |
+| `portable` | a thing small enough for a body to carry | *Ngeung | /ŋeuŋ/ |
 | `pressure-ridge` | Sea ice buckled into a ridge. | *Srong | /sroŋ/ |
 | `radiates-heat` | an anchor that emits warmth | *Dangzrung | /daŋzruŋ/ |
 | `rafted-floe` | Ice floes driven over one another. | *Duong | /duoŋ/ |
