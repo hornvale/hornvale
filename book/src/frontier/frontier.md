@@ -81,6 +81,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [Chokepoints — the bridge is the degenerate case](#chokepoints--the-bridge-is-the-degenerate-case)
   - [The far field is low-rank — multipole summaries and one-way aggregation](#the-far-field-is-low-rank--multipole-summaries-and-one-way-aggregation)
   - [The instrument turned inward — the project as its own subject](#the-instrument-turned-inward--the-project-as-its-own-subject)
+  - [A pattern language for traversal, not furnishing](#a-pattern-language-for-traversal-not-furnishing)
   - [Intellectual lineage](#intellectual-lineage)
 
 ---
@@ -5375,6 +5376,75 @@ produces unusualness only sometimes.* A world can be different without being
 strange, and an instrument that ranks by extremity cannot see the difference.
 That constrains every later rung on this list which proposes to find defects
 by looking for outliers. The shape index remains unbuilt.
+
+## A pattern language for traversal, not furnishing
+
+The Hearth shipped a pattern language for what is *in* a room. Its patterns are
+stated as **relations** — `attach`, `requires` — never as stamped geometry,
+because a catalogue of authored rooms is a lookup table and a language is a set
+of composition rules. That distinction is the whole of
+[CLIENT-language-not-catalogue](./idea-registry.md), and it was argued out
+before the first anchor was placed.
+
+The observation this section records is that the same grammar answers a second
+question, orthogonal to the first: not *what is in this place* but **how do you
+move through it**. A multi-floor stretch of underworld whose structure is a
+dependency graph — a gate here, a valve there, a key that opens the gate, a
+side passage that pays for the detour, and something at the end that holds its
+ground — is `requires` pointed at traversal instead of furniture.
+
+Very little of it needs inventing:
+
+- **`requires` already exists** and already composes. The Hearth's placement
+  rules are a dependency graph; nothing about the edge cares whether the thing
+  it gates is a hearth or a passage.
+- **A durable gate already exists.** The Latch shipped a precondition that
+  survives being satisfied — a cleared passage stays clear — which is a valve
+  in everything but name.
+- **A key is already spec'd.** The Bridle's acceptance test has read *a key
+  says unlock-me-with-this, and no verb×object table exists anywhere* since the
+  metaplan; The Chattel is building the object identity that carries it.
+- **The scaffold was written for this.** The Adit's partition tree uses
+  deliberately generic names — region, leaf — and its metaplan said unification
+  with the building embedder waits until *a second concrete instance exists to
+  generalize from*. This is that instance.
+
+### The boss is a hoarder, and ecology places it
+
+The tempting reading of "something at the end" is a boss fight, and that
+reading is both blocked and wrong. Blocked, because decision 0070 forbids any
+stored mutable health value and orders combat after a vitality model that does
+not exist. Wrong, because the interesting version was never a fight.
+
+The dominant creature in a domain is **the most potent thing that domain's
+energy can support, sitting on what it has accumulated.** Every term is a
+query over shipped fields: `potency` is a derived scalar per species (decision
+0064), carrying capacity and niche fit already decide who can live where, and
+the underworld's chemotrophic energy field already says what a buried place can
+feed. Hoarding wants objects, which is The Chattel's.
+
+Read that way, decision 0070 is not a constraint on the idea at all. It governs
+how an encounter is *resolved* — no damage model, no counter — and says
+nothing about a creature holding a place. An earlier draft of the registry row
+cited it as a blocker and thereby mis-scoped the whole design.
+
+And the ecological reading is the *stronger* one, not a concession. A boss room
+placed by an author is a catalogue entry. A creature that dominates a place
+because it is the only thing that place can feed is a gate that **falls out of
+the world's own energy budget** — nobody sited it, and it moves when the
+world's productivity does. That is the difference the pattern-language
+discipline exists to protect, arriving one layer down from where The Hearth
+found it.
+
+### The line this must not cross
+
+`CLIENT-derived-builders` names the thing that stays refused: stamping authored
+map sections, and a chain of builders expressing designer intent. A chain of
+**derivations** is admissible where a chain of authored stamps is not. A
+traversal grammar is on the right side of that line only for as long as its
+gates are derived — from ecology, from hydrology, from what a people cut — and
+not hand-placed. `MAP-underworld-vaults` is the authored-content sibling and is
+deliberately separable: that is content, this is structure.
 
 ## Intellectual lineage
 

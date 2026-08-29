@@ -27,6 +27,8 @@ mod cave_kind_correspondence;
 mod census_duration;
 #[path = "suite/claim_shape.rs"]
 mod claim_shape;
+#[path = "suite/client_band_coverage.rs"]
+mod client_band_coverage;
 #[path = "suite/common_is_total.rs"]
 mod common_is_total;
 #[path = "suite/correspondence.rs"]

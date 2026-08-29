@@ -6,6 +6,7 @@ pub mod cell;
 pub mod chart;
 pub mod endpaper;
 pub mod entry;
+pub mod level;
 pub mod lexicon;
 pub mod plan;
 pub mod schema;
