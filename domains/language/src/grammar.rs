@@ -614,28 +614,39 @@ fn tongue_verb(
         // tongue with a drawn constituent order places a verb with no
         // object) is Task 3's business, not this function's.
         Valence::Intransitive => Ok(Some(resolve_concept_marked(&clause.predicate, lexicon)?)),
-        // Property predication is copular, the same as `Nominal`: the verb
-        // slot takes the tongue's own drawn copula (or nothing, for a
-        // zero-copula tongue), never the lexicalized predicate.
+        // Property predication GAPS, and this is spec §4's law applied
+        // rather than an oversight: "Renders fully or gaps entirely -- a
+        // gap on the object, on the VERB, or on any adjunct concept fails
+        // the whole clause" (see this function's own caller,
+        // `realize_tongue`, whose doc states it). No tongue construction has
+        // a slot for the property word at all: Common's
+        // `Part::PredicateWord` renders the clause's own predicate, but the
+        // tongue path's constituent ordering carries only
+        // subject/verb/object, and filling the verb slot with the drawn
+        // copula (the way `Valence::Nominal` does) would leave the property
+        // itself with nowhere to go. Returning `Ok` with just the copula
+        // would render *something* -- "Subject Copula." -- and that
+        // something is exactly the failure mode this campaign keeps
+        // finding: a PLAUSIBLE surface, a complete-looking zero-property
+        // utterance, that is silently wrong rather than visibly absent. So
+        // this gaps instead, with a recountable reason, the same as any
+        // other unbuilt tongue construction.
         //
-        // **STATED LOSS, not silently incomplete: a tongue has no slot for
-        // the property word at all yet.** Common's `Part::PredicateWord`
-        // renders the clause's own predicate; the tongue path has no
-        // analogue — `realize_tongue`'s constituent ordering carries only
-        // subject/verb/object, and this arm fills only the verb (copula)
-        // slot. The consequence is real: `realize_tongue` on a
-        // `Valence::Property` clause today produces "Subject Copula.", the
-        // property word DROPPED, not merely unlexicalized. This is
-        // acceptable for The Rail (the ladder rung this campaign measures
-        // against realizes through Common, never a tongue — see
-        // `cli/tests/suite/sentence_corpus.rs`'s module doc,
-        // `property-predication`'s entry), but it is a real gap for whoever
-        // builds a tongue-side property construction, so it is named here
-        // rather than left to be discovered as a silent hole.
-        Valence::Property => Ok(grammar.copula.as_ref().map(|roman| Marked {
-            segments: grammar.copula_segments.clone(),
-            roman: roman.clone(),
-        })),
+        // Building the tongue half for real needs a fourth ordering slot
+        // (today's `s`/`v`/`o` triad has no seat for a bare predicate word
+        // alongside a filled copula) in both `realize_tongue_with_subject`
+        // and `realize_tongue_deep_with_subject`, plus lexicalizing
+        // `clause.predicate` through `lexicon` the way `Valence::Transitive`
+        // already does here -- at which point this arm returns `Ok(Some(..))`
+        // for the copula exactly as it does today, and a second slot carries
+        // the lexicalized property word. Until then: gap, not partial
+        // render. `a_tongue_gaps_a_property_predication` pins this.
+        Valence::Property => Err(TongueGap {
+            concept: clause.predicate.clone(),
+            reason: "no tongue construction for property predication yet -- \
+                     no ordering slot carries the property word"
+                .to_string(),
+        }),
     }
 }
 
@@ -714,6 +725,15 @@ fn realize_tongue_with_subject(
     // even where the resolved text happens to be empty (a gap-free absent
     // argument never reaches this function to begin with, since
     // `resolve_argument` already errored on any real gap upstream).
+    //
+    // **Currently unreachable for `Property` specifically, and kept anyway.**
+    // `tongue_verb`'s `Property` arm gaps before this line is ever reached
+    // (the `?` on `verb` above returns first), so this exclusion has no
+    // live caller today. It stays correct for the day a tongue-side
+    // property construction ships and that arm starts returning `Ok` --
+    // the object slot must still drop out then, exactly as it does for
+    // `Intransitive` now, so the gate is written in advance rather than
+    // left to be re-discovered.
     let o = (valence != Valence::Intransitive && valence != Valence::Property)
         .then_some(complement.as_str());
     // Order the present constituents; an absent verb (a zero-copula tongue
@@ -1311,6 +1331,12 @@ fn realize_tongue_deep_with_subject(
     // `resolve_argument` already errored on any real gap upstream). Named
     // here rather than inlined at each arm, since every arm needs the same
     // `Option`-wrapped token.
+    //
+    // **Currently unreachable for `Property` specifically, the same way its
+    // floor-realizer twin is** (`tongue_verb`'s `Property` arm gaps at the
+    // `?` on `verb`, ~line 1190, before this line ever runs) -- kept for the
+    // day a tongue-side property construction ships and starts returning
+    // `Ok`.
     let o_tok = (valence != Valence::Intransitive && valence != Valence::Property)
         .then(|| (Role::Complement, complement.roman.clone()));
     let mut ordered: Vec<(Role, String)> = match grammar.order {
@@ -3896,18 +3922,27 @@ mod tests {
         }
     }
 
-    /// **A stated loss, pinned rather than left to be discovered fresh
-    /// (The Rail, Task 4).** A tongue has no slot for the property word at
-    /// all yet — `tongue_verb`'s `Valence::Property` arm fills only the
-    /// copula, and no ordering slot carries `clause.predicate` the way
-    /// Common's `Part::PredicateWord` does — so `realize_tongue` on a
-    /// property clause drops the property entirely, producing bare
-    /// "Subject Copula.". Registering `old` in the lexicon changes nothing:
-    /// the gap is architectural (no slot), not lexical (no word), which this
-    /// test proves by using a lexicon that DOES carry the word and still
-    /// getting the same bare surface.
+    /// **`realize_tongue` on a property clause GAPS, and this is spec §4's
+    /// law applied, not a stated loss** (The Rail, Task 4, review round 1).
+    /// A first draft of this test proved a tongue drops the property word
+    /// entirely and called that acceptable; it is not, because "Renders
+    /// fully or gaps entirely -- a gap on the object, on the VERB, or on any
+    /// adjunct concept fails the whole clause" is `realize_tongue`'s own
+    /// documented law, and a bare "Subject Copula." is a plausible,
+    /// complete-*looking* zero-property utterance -- silently wrong rather
+    /// than visibly absent, exactly the failure class this campaign keeps
+    /// finding. `tongue_verb`'s `Property` arm now returns a `TongueGap`
+    /// instead of `Ok`, so this asserts the specific gap rather than a
+    /// surface. A lexicon that DOES carry a word for `old` is used
+    /// deliberately, the same way `a_tongue_gaps_when_it_has_no_word_for_
+    /// the_verb` (below) proves its own gap is REAL by using a lexicon that
+    /// does NOT: here the point is the opposite proof -- the gap fires even
+    /// when the word exists, because the missing thing is an ordering slot,
+    /// not a lexicon entry. If a future campaign builds that slot, this
+    /// test reds and is the signal to replace it with a real surface
+    /// assertion.
     #[test]
-    fn a_tongue_drops_the_property_word_a_stated_loss() {
+    fn a_tongue_gaps_a_property_predication() {
         let lex = tiny_lexicon_with(&[(OLD, ExposureClass::Steeped)]);
         let clause = Clause {
             predicate: OLD.to_string(),
@@ -3928,17 +3963,12 @@ mod tests {
             subordinator: None,
             conjunction: None,
         };
-        let out = realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap();
+        let gap = realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap_err();
+        assert_eq!(gap.concept, OLD);
         assert_eq!(
-            out, "Nwamvam gha.",
-            "the property word is dropped entirely, not merely unlexicalized: {out}"
-        );
-        let (word, _) = root_of(&lex, OLD);
-        assert!(
-            !out.contains(&word),
-            "the lexicon DOES carry a word for `old` ({word:?}), so its absence from \
-             the surface proves the gap is architectural (no ordering slot), not \
-             lexical (no word): {out}"
+            gap.reason,
+            "no tongue construction for property predication yet -- no ordering \
+             slot carries the property word"
         );
     }
 
