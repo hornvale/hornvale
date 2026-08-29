@@ -1009,6 +1009,17 @@ SHA, never a branch name, and wait for the verdict before starting Task 7.
 - Consumes: `THING_KINDS`, `thing_registry` (Task 2).
 - Produces: `ObjectTraits` keyed by `KindId`; `ObjectProperty::{Portable,
   Openable, Lockable}`; a total `AnchorKind -> KindId` mapping.
+- **Also DELETES `ThingTraits.portable`** (`domains/thing/src/lib.rs:35-40`),
+  and the reason is this task's own Step 1 argument turned on itself. Task 2
+  gave `ThingTraits` a `portable: bool` keyed by `KindId` in
+  `thing_registry()`; this task adds `ObjectProperty::Portable` to a table it
+  re-keys to `KindId`. That is two `KindId`-keyed tables answering "is this
+  portable" — the exact two-source-of-truth shape Step 1 exists to prevent,
+  created by the task meant to prevent it. Nothing reads the field (`git grep`
+  for the field access outside `domains/thing/src/lib.rs` is empty, and
+  `display` is equally unconsumed), so deleting it is free and leaving it is
+  not. If a domain-side consumer turns up that this check could not see,
+  report it rather than choosing quietly.
 
 - [ ] **Step 1: Understand why this is one table and not two**
 
@@ -1057,7 +1068,43 @@ cargo nextest run -p hornvale-vessel -E 'test(affordance)' > /tmp/hv-t7.log 2>&1
 grep -E 'FAILED|panicked|Summary' /tmp/hv-t7.log
 ```
 
-Then `make rebaseline`, drift check, `cargo fmt`, `git commit -F`, `git push`.
+**CORRECTED BEFORE DISPATCH — this step used to end "then `make rebaseline`,
+drift check, `cargo fmt`, commit, push", and NEITHER of those two checks can
+see the thing this task actually breaks.** Adding three properties moves
+`cli/tests/fixtures/world-seed-42.json`, the keystone byte-golden, by a chain
+of three verified links:
+
+1. `windows/vessel/tests/suite/object_property_concepts.rs:38-44` requires
+   every `ObjectProperty::all()` variant to have a registered concept, so the
+   three new variants force three rows in `domains/language/src/packs.rs`
+   (roster at `:885-892`) and `accession.rs`.
+2. Property concept names are IN that golden — `supports-rest` and
+   `radiates-heat` each appear twice in it today.
+3. `grep -c seed_42_world_json_matches_the_committed_fixture
+   docs/timings/subfloor-roster.tsv` is **0**, so `make gate-commit` never runs
+   the golden's guard; and `cli/tests/fixtures/` is deliberately not declared
+   in `docs/generated-paths.txt`, so `git diff --exit-code` is silent on it.
+
+So the literal old step yields a green gate, a clean drift check, and a stale
+golden that reds in the chamber ~1200 s later. `make rebaseline` does not write
+that file. Do this instead:
+
+```bash
+make rebaseline                     # the ordinary artifacts, including the two the plan lists
+make rebaseline-goldens             # REBASELINE=1 -- the ONLY writer of the keystone golden
+cargo nextest run -p hornvale -E 'test(lens_purity)' > /tmp/hv-golden.log 2>&1; echo "exit=$?"
+git diff --stat -- cli/tests/fixtures/world-seed-42.json
+```
+
+That third line is the guard `gate-commit` does not run, so run it by hand.
+
+**READ that diff rather than accepting it.** Expected: exactly the three new
+property concepts added, nothing removed, no existing entry changed — the same
+shape Task 3 established when it moved this golden for the thing-kinds. Any
+other movement means generation changed, and that is a STOP rather than a
+rebaseline.
+
+Then `cargo fmt`, `git commit -F`, `git push`.
 
 ---
 
