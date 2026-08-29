@@ -3846,3 +3846,4 @@ measured here.
 | 2026-08-29T09:59:25Z | gate-commit | 50.951 | 38.679 | 12.988 | 1.01 | 0 | 66886efda | campaign/the-gallery | ambrose | 12 |
 | 2026-08-29T10:00:19Z | rebaseline | 50.793 | 237.310 | 8.393 | 4.84 | 0 | 66886efda | campaign/the-gallery | ambrose | 12 |
 | 2026-08-29T10:06:56Z | gate-commit | 60.992 | 38.447 | 13.188 | 0.85 | 0 | 66886efda | campaign/the-gallery | ambrose | 12 |
+| 2026-08-29T10:38:46Z | sluice:artifacts | 100.505 | 822.805 | 34.674 | 8.53 | 0 | 7d5d6e4d7 |  | lefford | 40 |
