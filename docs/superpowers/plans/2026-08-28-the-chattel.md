@@ -744,7 +744,23 @@ if one did.
 - Consumes: `thing_id`, `promote` (Task 4).
 - Produces:
   - `pub const LOCATED_IN: &str = "located-in";`
-  - `pub fn located_fact(thing: EntityId, location: Value, day: WorldTime) -> Fact`
+  - **AMENDED AFTER TASK 5 SHIPPED.** `located_fact` is PRIVATE. Its review
+    found the crate carrying three room-key spellings — `agent-at`'s (a private
+    packed-`FacetId` encoder), `passage-cleared`'s (public and frozen), and
+    `located-in`'s (none at all: the caller handed in an already-encoded
+    `Value`). A public constructor taking a pre-encoded location is what made a
+    second room spelling reachable, so the shipped surface is two typed
+    constructors and one owned encoder:
+      - `pub fn room_key(room: &Facet) -> Result<String, FacetError>` — the ONE
+        room spelling. `liveness::room_to_text` is now a thin `.expect`-ing
+        adapter over it, and `examples/fold_depth_sweep.rs` no longer
+        hand-duplicates it. The shared half is the fallible one: a panicking
+        core cannot be widened into a fallible wrapper, only the reverse.
+      - `pub fn located_in_room_fact(thing: EntityId, room: &Facet, day: WorldTime) -> Result<Fact, FacetError>`
+      - `pub fn located_in_holder_fact(thing: EntityId, holder: EntityId, day: WorldTime) -> Fact`
+    Also public: `LOCATED_IN_DOC` and `OPENNESS_DOC`, because `PredicateDef`
+    compares its `doc` field and a divergent registration is a
+    `ConflictingDefinition` behind an `.expect`.
     — the parameter was named `place` in this plan's first draft, which
     collides with `Fact`'s own `place` field. They are different types and only
     one is right: `Fact.place` is `Option<EntityId>` ("the entity where this
@@ -896,7 +912,11 @@ room it is in.
 **Files:**
 - Modify: `windows/vessel/src/thing.rs`
 - Test: `windows/vessel/src/thing.rs`'s `mod tests`, and
-  `windows/vessel/tests/suite/thing.rs` for the two-entry behavioural case
+  `windows/vessel/tests/suite/thing.rs` for the two-entry behavioural case —
+  **which does not exist yet.** Creating it is not enough: add `mod thing;` to
+  `windows/vessel/tests/suite.rs` (the list is alphabetical; `mod
+  tick_commit_budget;` is at :105). A file dropped into `tests/suite/` with no
+  `mod` line compiles to nothing and reds nothing — it is silently not run.
 
 **Interfaces:**
 - Consumes: `thing_id` (Task 4), `location_of` (Task 5).
@@ -905,10 +925,27 @@ room it is in.
 - [ ] **Step 1: Write the rule down before writing the code**
 
 ```
-  latent(facet, kind, n)  ==  the grammar offers it
+  latent(facet, kind, n)  ==  the grammar offers it          <- THE CALLER'S HALF
                           AND no committed located-in fact places
                               thing_id(facet, kind, n) anywhere but this room
+                                                              <- is_latent's half
 ```
+
+**CORRECTED BEFORE DISPATCH — the rule is a conjunction and the signature
+below can only evaluate one half of it.** Nothing in `is_latent(ledger, facet,
+kind, ordinal, day)` can answer "does the grammar offer it": the only way to
+learn what a room offers is `interior_of(room: &Facet, terrain: &dyn Terrain)`
+(`windows/vessel/src/interior/derive.rs:20`) or `chamber_interior_of` (`:54`),
+and `is_latent` holds no `Terrain`, no seed and no world.
+
+**`is_latent` implements the SECOND conjunct only — the negative fold — and
+its doc must say the grammar conjunct belongs to the caller.** Do not widen
+the signature to take a `Terrain` to satisfy a sentence in this plan: the
+caller already holds the `Interior`, because that is where the offer list
+comes from, and "enumerate the interior, then ask per slot whether this one is
+still here" is the shape the design describes and the shape that makes Task
+1's measured cost (one indexed lookup per slot) the right cost. Name the
+function for what it answers.
 
 The id is derivable *before* the ledger read, which is what makes this one
 indexed lookup per slot rather than a search. Task 1 measured the cost; if it
