@@ -355,9 +355,27 @@ The campaign's load-bearing unit. One function, called by the scene builder
 **Interfaces:**
 - Consumes: `hornvale_terrain::WaterKind`.
 - Produces: `pub fn elevation_band(elevation_m: f64, sea_level_m: f64) -> u8`
-  (0..=4, ascending); `pub const ELEVATION_LEGEND: [&str; 5]`;
-  `pub fn water_class(kind: WaterKind) -> u8`;
-  `pub const WATER_LEGEND: [&str; 4]`.
+  (0..=4, ascending); `pub const ELEVATION_LEGEND: [&str; 5]`.
+  **NO water function and NO water legend** — see the note below.
+
+**WATER IS ALREADY CLASSIFIED — do not write a second one.** An earlier
+draft of this task specified `water_class()` and `WATER_LEGEND`. Both were
+defects:
+
+- `WaterKind::index()` (`domains/terrain/src/water.rs:37`) already returns the
+  stable index, with a doc comment explaining it uses an explicit `match`
+  precisely so reordering can never silently change a committed index.
+- `WaterKind::LEGEND` (line 26) is already documented as *"the self-describing
+  legend for scene emission"*.
+- `windows/scene/src/region.rs` ALREADY emits both — `water.push(terrain
+  .water_kind_at(t_vertex).index())` at line 417, `WaterKind::LEGEND` at 481.
+- And the draft's `WATER_LEGEND` **disagreed** with the canonical one on two
+  of four names (`"salt basin"` vs `"salt-basin"`, `"dry"` vs `"dry-land"`).
+
+A campaign whose thesis is *one classification, never a second
+implementation* must not ship a divergent duplicate of a classification that
+already exists. `classify.rs` carries the ELEVATION half only, because that
+is the half nothing defines yet.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -365,7 +383,7 @@ The campaign's load-bearing unit. One function, called by the scene builder
 // windows/scene/tests/suite/classify.rs
 // FLAT import, not `hornvale_scene::classify::...` — the crate glob-
 // re-exports its private modules, and its existing tests import this way.
-use hornvale_scene::{ELEVATION_LEGEND, WATER_LEGEND, elevation_band, water_class};
+use hornvale_scene::{ELEVATION_LEGEND, elevation_band};
 use hornvale_terrain::WaterKind;
 
 #[test]
@@ -417,21 +435,6 @@ fn sea_level_is_the_datum_not_the_number_zero() {
     }
 }
 
-#[test]
-fn every_water_kind_has_a_distinct_class_and_a_legend_entry() {
-    let kinds = [
-        WaterKind::Ocean,
-        WaterKind::SaltBasin,
-        WaterKind::River,
-        WaterKind::DryLand,
-    ];
-    let classes: std::collections::BTreeSet<u8> =
-        kinds.iter().copied().map(water_class).collect();
-    assert_eq!(classes.len(), kinds.len(), "two water kinds collapsed to one class");
-    for c in classes {
-        assert!((c as usize) < WATER_LEGEND.len());
-    }
-}
 ```
 
 - [ ] **Step 2: Capture a BEHAVIOURAL red, not a compile error**
@@ -492,22 +495,6 @@ pub fn elevation_band(elevation_m: f64, sea_level_m: f64) -> u8 {
     band
 }
 
-/// The four water classes, in [`WATER_LEGEND`] order.
-pub const WATER_LEGEND: [&str; 4] = ["ocean", "salt basin", "river", "dry"];
-
-/// Which [`WATER_LEGEND`] class a [`hornvale_terrain::WaterKind`] is.
-///
-/// NOMINAL, not ordinal — "river" is not more or less than "ocean" — so
-/// under decision NNNN this rides colour, and only the ocean/dry split
-/// (a boundary the reader must trust) reaches a glyph.
-pub fn water_class(kind: hornvale_terrain::WaterKind) -> u8 {
-    match kind {
-        hornvale_terrain::WaterKind::Ocean => 0,
-        hornvale_terrain::WaterKind::SaltBasin => 1,
-        hornvale_terrain::WaterKind::River => 2,
-        hornvale_terrain::WaterKind::DryLand => 3,
-    }
-}
 ```
 
 **Do not tune `BAND_FLOORS_M` to make a picture you like.** If Task 5's
@@ -738,7 +725,10 @@ register rows — that would put a client concern in `windows/`.
 - Test: `clients/game/bin/tests/plate_vocabulary.rs`
 
 **Interfaces:**
-- Consumes: `hornvale_scene::classify::{elevation_band, water_class}`,
+- Consumes: `hornvale_scene::elevation_band` (flat re-export) and, for
+  water, `terrain.water_kind_at(vertex).index()` + `WaterKind::LEGEND`
+  DIRECTLY — the canonical pair `region.rs` itself uses. There is no
+  `water_class`.
   Task 1's `binding_of`.
 - Produces: `TileTerrain` gains `pub band: u8` and `pub water: u8`;
   `pub ocean: bool` is RETAINED — the strip's invariant depends on it.
