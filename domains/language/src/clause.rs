@@ -1967,10 +1967,30 @@ pub fn realize_common_coordination(coord: &Coordination, vocab: &CommonVocabular
 /// *"is the road old?"*, *"is the merchant under the tree?"* — with no
 /// literal added, removed, or respaced. Doing it by index rather than by
 /// rebuilding a list means a construction that later grows a part between
-/// its subject and its copula still inverts the two the caller asked for.
+/// its subject and its copula still gets those two SLOTS exchanged
+/// correctly — [`Part::Subject`]'s new position still holds the copula, and
+/// [`Part::Copula`]'s new position still holds the subject. **That is
+/// narrower than "the resulting surface is correct."** Nothing here or in
+/// [`realize_common_polar_question`] asserts anything about what an
+/// intervening part *between* the two swapped slots would do to the
+/// emitted text once inverted — no construction has one today, so the case
+/// is untested, not verified safe (T9 review, carried from Task 8).
 ///
 /// The terminal literal is rewritten rather than appended to, for the same
 /// reason: `"."` is a part this table emits, and a question replaces it.
+///
+/// **Panics, loudly, if the last part is not `Literal(".")`** — every one of
+/// `common_constructions`' five part lists ends in exactly that literal
+/// today, so the swap above never actually reaches a construction where it
+/// would not, but this function used to degrade SILENTLY there instead: an
+/// `if let ... && *last == Literal(".")` that simply left a non-`"."`
+/// terminal untouched, so a future copular construction ending in anything
+/// else would realize a question with a full stop still on it — the exact
+/// "plausible garbage" class this operator refuses a lexical verb to avoid
+/// (see this function's own caller's doc), just reached by a different door.
+/// Unreachable today; reachable the moment a construction is added whose
+/// terminal literal is not `"."`, and this panic is what makes that reachable
+/// case loud instead of silently wrong (T9 review, carried from Task 8).
 fn invert_for_question(parts: &[Part]) -> Vec<Part> {
     let subject_at = parts
         .iter()
@@ -1982,10 +2002,13 @@ fn invert_for_question(parts: &[Part]) -> Vec<Part> {
         .expect("checked by the caller before this is called");
     let mut inverted = parts.to_vec();
     inverted.swap(subject_at, copula_at);
-    if let Some(last) = inverted.last_mut()
-        && *last == Part::Literal(".")
-    {
-        *last = Part::Literal("?");
+    match inverted.last_mut() {
+        Some(last @ Part::Literal(".")) => *last = Part::Literal("?"),
+        other => panic!(
+            "a polar-question construction's terminal part must be \
+             Literal(\".\"), so this operator has something to rewrite into \
+             \"?\"; found {other:?} instead"
+        ),
     }
     inverted
 }

@@ -3,18 +3,22 @@
 //! Mortise — subordination strategy (Task 5: whether an embedded clause is
 //! marked with a complementizer, and its drawn form) and coordination
 //! strategy (Task 6: whether coordinated clauses are joined with a
-//! conjunction, and its drawn form). This is the floor slice of LANG-40's
+//! conjunction, and its drawn form), and — since The Rail, Task 9 —
+//! interrogative strategy (whether a polar question is marked with a free
+//! particle, and its drawn form, or by transcription convention for a
+//! tongue that draws none). This is the floor slice of LANG-40's
 //! grammaticalization-depth vector — C7 (the morphology campaign) extends
 //! [`TongueGrammar`], never replaces it.
 //!
 //! Word order is historically **contingent**, not derivable from a
 //! species' psychology or subsistence pattern (spec §3): deriving it from
 //! existing culture vectors would be astrology shipped as science, so
-//! these parameters are DRAWN from five permanent stream labels
+//! these parameters are DRAWN from six permanent stream labels
 //! (`language/<species>/grammar/constituent-order`,
 //! `language/<species>/grammar/copula`, `language/<species>/grammar/articles`,
 //! `language/<species>/grammar/subordinator`,
-//! `language/<species>/grammar/conjunction`)
+//! `language/<species>/grammar/conjunction`,
+//! `language/<species>/grammar/interrogative`)
 //! — build-state (decision 0058): drawn at composition/render time, never
 //! serialized, so adding them is byte-identical to every existing world.
 //!
@@ -31,7 +35,13 @@
 //! the identical way again (spec §4.10): a hardcoded "and" would make
 //! every tongue coordinate like English, and a tongue that draws none
 //! coordinates by bare juxtaposition — also a legitimate grammar, not a
-//! gap.
+//! gap. A drawn interrogative particle's form is filled the identical way a
+//! third time (The Rail, Task 9): a tongue that draws none questions by
+//! INTONATION — the commonest strategy cross-linguistically (Ultan 1978;
+//! Dryer, WALS 116) — and a text renderer cannot show intonation, so such a
+//! tongue's polar question is its declarative surface plus `?`, a
+//! TRANSCRIPTION CONVENTION rather than a grammatical marker (see
+//! [`realize_tongue_polar_question`]'s own doc).
 //!
 //! **A vocabulary word costs zero stream labels; a function word costs
 //! one.** A word is a `dynamic(concept)` value on the existing
@@ -137,6 +147,21 @@ pub struct TongueGrammar {
     /// identical reason: a free word that never hosts an affix layer, so no
     /// parallel `_segments` field.
     pub conjunction: Option<String>,
+    /// The overt interrogative particle's roman form for tongues that mark a
+    /// polar question with a free particle word — drawn from the tongue's
+    /// own phonology, never authored — or `None` for a tongue that questions
+    /// by INTONATION alone: the commonest strategy cross-linguistically
+    /// (Ultan 1978; Dryer, WALS 116), a legitimate drawn value and not a
+    /// degenerate one (The Rail, Task 9). A text renderer cannot show
+    /// intonation, so [`realize_tongue_polar_question`] falls back to a
+    /// TRANSCRIPTION CONVENTION for such a tongue — its declarative surface
+    /// plus `?` — never a grammatical marker; see that function's own doc
+    /// and the idea-registry row
+    /// `LANG-prosody-needs-a-stated-transcription-convention`. On the
+    /// identical shape [`Self::subordinator`] and [`Self::conjunction`]
+    /// carry and for the identical reason: a free word that never hosts an
+    /// affix layer, so no parallel `_segments` field.
+    pub interrogative: Option<String>,
 }
 
 /// The `range_u32(1, 100)` roll boundaries for [`ConstituentOrder`]
@@ -209,12 +234,28 @@ fn draw_conjunction_form(stream: &mut Stream, namer: &Namer, orth: Orthography) 
     render_views_with(&segments, orth).roman
 }
 
-/// Draw `species`' tongue grammar from the five permanent grammar streams
+/// Draw the overt interrogative particle's one-syllable roman form from
+/// `namer`'s phonology, consuming `stream` — the same stream the presence
+/// roll already drew from, so presence and form share the one permanent
+/// `.../grammar/interrogative` stream (The Rail, Task 9). Uses the exact
+/// syllable-fill mechanism [`draw_copula_form`]/[`draw_subordinator_form`]/
+/// [`draw_conjunction_form`] use. Only the roman form is returned, on the
+/// identical reasoning those two functions state: an interrogative particle
+/// is a free word that never hosts an affix layer, so it needs no parallel
+/// segments to join at.
+fn draw_interrogative_form(stream: &mut Stream, namer: &Namer, orth: Orthography) -> String {
+    let syllables = namer.draw_syllables(stream, 1, 1, false);
+    let segments = segments_of(&syllables);
+    render_views_with(&segments, orth).roman
+}
+
+/// Draw `species`' tongue grammar from the six permanent grammar streams
 /// (`language/<species>/grammar/…`): constituent order, copula presence
 /// (and drawn form), article presence, subordination strategy
-/// (complementizer presence and drawn form, or bare parataxis), and
+/// (complementizer presence and drawn form, or bare parataxis),
 /// coordination strategy (conjunction presence and drawn form, or bare
-/// juxtaposition).
+/// juxtaposition), and interrogative strategy (particle presence and drawn
+/// form, or intonation-only questioning marked by transcription convention).
 /// type-audit: bare-ok(identifier-text)
 pub fn tongue_grammar(seed: &Seed, species: &str, ph: &Phonology) -> TongueGrammar {
     let namer = Namer::new(seed, species, ph);
@@ -289,6 +330,29 @@ pub fn tongue_grammar(seed: &Seed, species: &str, ph: &Phonology) -> TongueGramm
         None
     };
 
+    let mut interrogative_stream = seed
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::GRAMMAR)
+        .derive(streams::INTERROGATIVE)
+        .stream();
+    // Skewed toward NO particle, unlike the subordinator/conjunction axes'
+    // even 50/50 split: those two cite no literature-backed skew (spec
+    // §4.6, §4.10), but this one has one — intonation-only polar
+    // questioning is the cross-linguistic MAJORITY strategy (Ultan 1978;
+    // Dryer, WALS 116) — so the roll favors `None`, on the identical
+    // authored-typology footing [`order_from_roll`]'s own comment states
+    // for [`ConstituentOrder`].
+    let interrogative = if interrogative_stream.range_u32(1, 100) <= 40 {
+        Some(draw_interrogative_form(
+            &mut interrogative_stream,
+            &namer,
+            ph.orthography,
+        ))
+    } else {
+        None
+    };
+
     TongueGrammar {
         order,
         copula,
@@ -296,6 +360,7 @@ pub fn tongue_grammar(seed: &Seed, species: &str, ph: &Phonology) -> TongueGramm
         articles,
         subordinator,
         conjunction,
+        interrogative,
     }
 }
 
@@ -887,6 +952,75 @@ pub fn realize_tongue_coordination(
         )?);
     }
     Ok(join_coordinated(texts, grammar.conjunction.as_deref()))
+}
+
+/// Realize a [`Clause`] as a tongue's own polar question (The Rail, Task 9,
+/// spec §4, LANG-40) — the tongue-side counterpart to
+/// [`crate::clause::realize_common_polar_question`], and a different
+/// OPERATOR from it, not a port. Common inverts its one auxiliary (the
+/// copula) because English marks a polar question by INVERSION; a tongue
+/// marks one by a free PARTICLE, or by no grammatical marker at all
+/// (spec §4, LANG-40's floor slice), so this function never moves a
+/// constituent — it appends to the tongue's own already-realized
+/// declarative surface.
+///
+/// **A tongue that drew an interrogative particle
+/// ([`TongueGrammar::interrogative`]) prefixes it to the declarative**, on
+/// the identical boundary-marking convention [`mark_embedded_clause`] uses
+/// for the subordinator — *"zil the Vavako are goblins?"* A clause-initial
+/// particle is one of the attested cross-linguistic positions (Dryer, WALS
+/// 92); no position axis is drawn (this campaign spends exactly one stream
+/// label per typological fact, on [`streams::INTERROGATIVE`]'s own doc), so
+/// the realizer fixes one position rather than adding a second draw for it.
+///
+/// **A tongue that drew none questions by INTONATION** — the commonest
+/// strategy cross-linguistically (Ultan 1978; Dryer, WALS 116), the
+/// majority case this axis's own skewed draw reflects, not the degenerate
+/// one — **and a text renderer cannot show intonation**, so its polar
+/// question is its declarative surface with the terminal `.` replaced by
+/// `?`: a TRANSCRIPTION CONVENTION, not a grammatical marker. Spec §3.6:
+/// [`crate::phonology::Phonology::orthography`] is a stated VIEW of a
+/// tongue, and punctuation is how writing encodes prosody — so
+/// transcription may express this contrast (the model DRAWS whether a
+/// polar question exists) while it may not manufacture one the model does
+/// not draw (contrastive focus, say). See the idea-registry row
+/// `LANG-prosody-needs-a-stated-transcription-convention`; this does **not**
+/// close the question of real alphabets and writing systems, stated future
+/// work of its own.
+///
+/// **No lexical-verb refusal, unlike Common's.** Common's own polar-question
+/// operator panics on a construction whose verb slot is
+/// [`Part::Verb`](crate::clause::Part::Verb)
+/// (its own doc: English inverts only an auxiliary, and the copula is the
+/// only one Common has). Neither strategy here moves a constituent — a
+/// particle prefixes the whole clause, and the transcription convention
+/// only rewrites the terminal punctuation — so nothing here depends on
+/// which valence filled the verb slot, and a lexical-verb clause questions
+/// exactly as readily as a nominal one.
+///
+/// **Takes the already-assembled declarative text, never rebuilds it** — a
+/// single call to [`realize_tongue`], transformed, is what keeps this
+/// surface and the declarative one from silently drifting apart, the same
+/// discipline [`mark_embedded_clause`]'s own doc states for the identical
+/// reason.
+///
+/// Renders fully or gaps entirely (spec §4): any gap [`realize_tongue`]
+/// itself raises for `clause` propagates unchanged.
+/// type-audit: bare-ok(prose)
+pub fn realize_tongue_polar_question(
+    clause: &Clause,
+    grammar: &TongueGrammar,
+    lexicon: &Lexicon,
+    pronouns: &BTreeMap<&'static str, MorphForm>,
+) -> Result<String, TongueGap> {
+    let mut declarative = realize_tongue(clause, grammar, lexicon, pronouns)?;
+    if declarative.ends_with('.') {
+        declarative.pop();
+    }
+    Ok(match &grammar.interrogative {
+        Some(particle) => format!("{particle} {declarative}?"),
+        None => format!("{declarative}?"),
+    })
 }
 
 /// A word mid-assembly: its segments when known (so a further affix layer
@@ -1848,6 +1982,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         assert_eq!(
             realize_tongue(&clause, &svo, &lex, &no_pronouns()).unwrap(),
@@ -1860,6 +1995,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         assert_eq!(
             realize_tongue(&clause, &sov, &lex, &no_pronouns()).unwrap(),
@@ -1872,10 +2008,118 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         assert_eq!(
             realize_tongue(&clause, &zero_copula, &lex, &no_pronouns()).unwrap(),
             format!("Vavako {word}.")
+        );
+    }
+
+    /// A tongue that drew an interrogative particle marks its polar
+    /// questions with it (The Rail, Task 9): the particle prefixes the
+    /// clause's own declarative surface, and the declarative constituents
+    /// (word choice, word order) are otherwise unchanged.
+    #[test]
+    fn a_tongue_with_an_interrogative_particle_marks_a_polar_question() {
+        let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
+        let word = match lex.entry("goblin-kind").unwrap() {
+            LexEntry::Root { views, .. } => views.roman.clone(),
+            other => panic!("goblin-kind should be a root, got {other:?}"),
+        };
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Concept("goblin-kind".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: vec![],
+        };
+        let grammar = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: Some("gha".into()),
+            copula_segments: None,
+            articles: false,
+            subordinator: None,
+            conjunction: None,
+            interrogative: Some("zil".into()),
+        };
+        let declarative = realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap();
+        assert_eq!(declarative, format!("Vavako gha {word}."));
+        let question =
+            realize_tongue_polar_question(&clause, &grammar, &lex, &no_pronouns()).unwrap();
+        assert_eq!(
+            question,
+            format!("zil Vavako gha {word}?"),
+            "the particle prefixes the SAME constituents the declarative \
+             already ordered, with `.` replaced by `?`"
+        );
+    }
+
+    /// **A tongue that drew NO particle questions by intonation, and a text
+    /// renderer cannot show intonation.** Its polar question is its
+    /// declarative surface plus `?` — a TRANSCRIPTION CONVENTION, not a
+    /// grammatical marker, and the distinction is the whole finding (The
+    /// Rail, Task 9).
+    ///
+    /// [`crate::phonology::Phonology::orthography`] is a stated VIEW of a
+    /// tongue, and punctuation is how writing encodes prosody, so a
+    /// transcription convention for interrogative is legitimate where one
+    /// for contrastive focus would not be: transcription can express any
+    /// contrast the model DRAWS and cannot manufacture one it does not.
+    /// Intonation-only questioning is the commonest strategy
+    /// cross-linguistically (Ultan 1978; Dryer, WALS 116), so this is the
+    /// majority case, not the degenerate one.
+    ///
+    /// See the idea-registry row
+    /// `LANG-prosody-needs-a-stated-transcription-convention`. **It does
+    /// not close the question of real alphabets and writing systems**,
+    /// which is stated future work of its own.
+    ///
+    /// **Asserted against a declarative COMPUTED here, never a hard-coded
+    /// string** — the whole claim is that the interrogative surface EQUALS
+    /// the declarative plus `?`, so computing the declarative and comparing
+    /// is the assertion; a literal expected string would let the two drift
+    /// apart silently.
+    #[test]
+    fn a_tongue_with_no_interrogative_particle_questions_by_transcription() {
+        let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Concept("goblin-kind".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: vec![],
+        };
+        let grammar = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: Some("gha".into()),
+            copula_segments: None,
+            articles: false,
+            subordinator: None,
+            conjunction: None,
+            interrogative: None,
+        };
+        let declarative = realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap();
+        assert!(
+            declarative.ends_with('.'),
+            "fixture sanity: every tongue declarative ends in a full stop"
+        );
+        let expected = format!("{}?", &declarative[..declarative.len() - 1]);
+        let question =
+            realize_tongue_polar_question(&clause, &grammar, &lex, &no_pronouns()).unwrap();
+        assert_eq!(
+            question, expected,
+            "an intonation-only tongue's polar question is its declarative \
+             surface, computed above, with the terminal `.` replaced by `?` \
+             — never a hard-coded string"
         );
     }
 
@@ -1900,6 +2144,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         let gap = realize_tongue(&clause, &g, &lex, &no_pronouns()).unwrap_err();
         assert_eq!(gap.concept, "planet");
@@ -1949,6 +2194,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         let gap = realize_tongue(&clause, &g, &lex, &no_pronouns()).unwrap_err();
         assert_eq!(gap.concept, "blue");
@@ -1996,6 +2242,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         let out =
             realize_tongue(&clause, &g, &lex, &no_pronouns()).expect("both concepts are known");
@@ -2036,6 +2283,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         let gap = realize_tongue(&clause, &g, &lex, &no_pronouns()).unwrap_err();
         assert_eq!(gap.concept, "yellow-white-dwarf");
@@ -2083,6 +2331,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         let _ = realize_tongue(&clause, &g, &lex, &no_pronouns());
     }
@@ -2124,6 +2373,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         let shallow = TongueMorphology {
             pronouns: drawn_pronouns(),
@@ -2224,6 +2474,7 @@ mod tests {
                 articles: false,
                 subordinator: None,
                 conjunction: None,
+                interrogative: None,
             };
             assert_eq!(
                 realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap(),
@@ -2434,6 +2685,7 @@ mod tests {
             articles: grammar.articles,
             subordinator: grammar.subordinator.clone(),
             conjunction: grammar.conjunction.clone(),
+            interrogative: None,
         };
         let expected_enclitic = affix(
             &complement_segments,
@@ -2664,6 +2916,7 @@ mod tests {
             articles: grammar.articles,
             subordinator: grammar.subordinator.clone(),
             conjunction: grammar.conjunction.clone(),
+            interrogative: None,
         };
         let expected_enclitic = affix(
             &complement_segments,
@@ -2711,6 +2964,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         let (affix_paradigm, _, past_roman) =
             tense_paradigm(&ph, MorphDepth::Affix, ClassPosition::Suffix);
@@ -2927,6 +3181,7 @@ mod tests {
             articles: grammar.articles,
             subordinator: grammar.subordinator.clone(),
             conjunction: grammar.conjunction.clone(),
+            interrogative: None,
         };
         let expected_enclitic = affix(
             &complement_segments,
@@ -2972,6 +3227,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         let (affix_paradigm, _, neg_roman) =
             polarity_paradigm(&ph, MorphDepth::Affix, ClassPosition::Suffix);
@@ -3088,6 +3344,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         }
     }
 
@@ -3398,6 +3655,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         let clause = Clause {
             predicate: IS_A.to_string(),
@@ -3557,6 +3815,7 @@ mod tests {
             articles: false,
             subordinator: subordinator.map(str::to_string),
             conjunction: None,
+            interrogative: None,
         }
     }
 
@@ -3884,6 +4143,7 @@ mod tests {
                     articles: false,
                     subordinator: None,
                     conjunction: None,
+                    interrogative: None,
                 };
                 let out = realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap();
                 assert_eq!(out, expected, "order {order:?} copula {copula:?}");
@@ -3938,6 +4198,7 @@ mod tests {
                     articles: false,
                     subordinator: None,
                     conjunction: None,
+                    interrogative: None,
                 };
                 let out = realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap();
                 assert_eq!(out, expected, "order {order:?} copula {copula:?}");
@@ -4013,6 +4274,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         let gap = realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap_err();
         assert_eq!(gap.concept, OLD);
@@ -4063,6 +4325,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         let gap = realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap_err();
         assert_eq!(gap.concept, UNDER);
@@ -4132,6 +4395,7 @@ mod tests {
                 articles: false,
                 subordinator: None,
                 conjunction: None,
+                interrogative: None,
             };
             let past = realize_tongue_deep(
                 &transitive_clause(Tense::Past),
@@ -4202,6 +4466,7 @@ mod tests {
                     articles: false,
                     subordinator: None,
                     conjunction: None,
+                    interrogative: None,
                 };
                 for tense in [Tense::Present, Tense::Past] {
                     let clause = transitive_clause(tense);
@@ -4272,6 +4537,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: conjunction.map(str::to_string),
+            interrogative: None,
         }
     }
 

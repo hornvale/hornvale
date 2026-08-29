@@ -2501,7 +2501,13 @@ fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
 /// The complementary statistic, over every (entry, demand) pair rather than
 /// over entries. **It complements the headline count and never replaces
 /// it** — decision 0016 binds the merchant corpus's scoring METHOD as well
-/// as its text, and `5 of 12` is comparable across four campaigns.
+/// as its text, so the entry-level count is comparable across campaigns:
+/// `5 of 12` held from The Mortise through The Rail's Task 7, and The
+/// Rail's `polar-question` (Task 8) moved it to the CURRENT `6 of 12` (see
+/// [`MERCHANT_COVERED`]) — not restated here as a bare number, because a
+/// citation beside a table that computes its own count is exactly the
+/// prose-beside-a-computed-number rot this campaign keeps finding (T9
+/// review, carried from Task 8).
 ///
 /// Its reason for existing is the blind zone measured at spec time: this
 /// campaign's Task 2 moves `the-flood-watch` from 0 of 139 covered ENTRIES
@@ -2677,6 +2683,16 @@ fn sentence_coverage_report() {
 
     let covered = merchant.entries.iter().filter(|e| entry_covered(e)).count();
     let not_yet = merchant.entries.len() - covered;
+    // Gates the m08 honesty paragraph below (T9 review, carried from Task
+    // 8): that paragraph is hand-authored prose about ONE entry, unlike the
+    // computed tables around it, so a future coverage change that moves m08
+    // back to "not yet" (or a corpus edit that removes it) must not leave
+    // static prose asserting a status the computed table no longer shows.
+    let m08_covered = merchant
+        .entries
+        .iter()
+        .find(|e| e.id == "m08")
+        .is_some_and(entry_covered);
     let flood_watch_covered = flood_watch
         .entries
         .iter()
@@ -2799,31 +2815,39 @@ fn sentence_coverage_report() {
         100.0 * merchant_demand_met as f64 / merchant_demand_total as f64,
     ));
 
-    out.push_str(
-        "**Two honesty limits on the entry-level count, both about `m08` \
-         (*\"Did you know the woman?\"*), which The Rail's `polar-question` \
-         moved to covered.**\n\n\
-         1. **Its demand tokens under-describe it.** `m08` declares \
-         `polar-question` + `past-tense`, and both are built — but the \
-         sentence needs a third capability neither token names. English \
-         asks a LEXICAL verb with periphrastic *do*-support, not by \
-         inversion (*\"Knew you the woman?\"* is not Common), and the \
-         realizer refuses a lexical-verb construction outright rather than \
-         emitting it. The witness therefore substitutes a past copula polar \
-         question, *\"were you a merchant?\"*, which exercises exactly the \
-         two tokens the entry declares. This is the third entry of twelve \
-         whose hand-labelled tokens under-describe it (after `m10`, \
-         lexical, and `m02`, adjectival predication) — which is what a \
-         frozen corpus is FOR: no care at labelling time would have caught \
-         it, and resolving against a real grammar did.\n\
-         2. **It is a `parse`-side line scored on a `produce`-side \
-         capability.** `m08`'s speaker is the player, so the grammar's job \
-         with it is to READ it; `realize_common_polar_question` only \
-         WRITES. The corpus states no `direction` on any entry and spec \
-         §2.3 forbids inferring one from `speaker`, so the resolver scores \
-         it covered on production — the scoring method behaving exactly as \
-         specified, and a real limit on what \"6 of 12\" means.\n\n",
-    );
+    // Hand-authored prose about ONE entry (m08), unlike the computed tables
+    // around it — gated on `m08_covered` so a future coverage change
+    // (Task 9 review finding, carried from Task 8) cannot leave this
+    // paragraph asserting a status the computed count above no longer
+    // shows. `m08_covered` is itself computed from `entry_covered`, the
+    // same resolver the table above uses, so the gate cannot drift from it.
+    if m08_covered {
+        out.push_str(
+            "**Two honesty limits on the entry-level count, both about `m08` \
+             (*\"Did you know the woman?\"*), which The Rail's `polar-question` \
+             moved to covered.**\n\n\
+             1. **Its demand tokens under-describe it.** `m08` declares \
+             `polar-question` + `past-tense`, and both are built — but the \
+             sentence needs a third capability neither token names. English \
+             asks a LEXICAL verb with periphrastic *do*-support, not by \
+             inversion (*\"Knew you the woman?\"* is not Common), and the \
+             realizer refuses a lexical-verb construction outright rather than \
+             emitting it. The witness therefore substitutes a past copula polar \
+             question, *\"were you a merchant?\"*, which exercises exactly the \
+             two tokens the entry declares. This is the third entry of twelve \
+             whose hand-labelled tokens under-describe it (after `m10`, \
+             lexical, and `m02`, adjectival predication) — which is what a \
+             frozen corpus is FOR: no care at labelling time would have caught \
+             it, and resolving against a real grammar did.\n\
+             2. **It is a `parse`-side line scored on a `produce`-side \
+             capability.** `m08`'s speaker is the player, so the grammar's job \
+             with it is to READ it; `realize_common_polar_question` only \
+             WRITES. The corpus states no `direction` on any entry and spec \
+             §2.3 forbids inferring one from `speaker`, so the resolver scores \
+             it covered on production — the scoring method behaving exactly as \
+             specified, and a real limit on what \"6 of 12\" means.\n\n",
+        );
+    }
 
     out.push_str("### Per-entry\n\n");
     out.push_str("| id | speaker | text | demands | status |\n");
