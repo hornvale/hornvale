@@ -3980,3 +3980,4 @@ measured here.
 | 2026-08-29T15:34:22Z | gate-commit | 20.730 | 50.582 | 12.945 | 3.06 | 0 | d59c7526b | campaign/the-errata | MacBookPro | 10 |
 | 2026-08-29T15:36:56Z | sluice:artifacts | 69.793 | 634.950 | 21.890 | 9.41 | 0 | 410a2cd10 |  | lefford | 40 |
 | 2026-08-29T15:37:37Z | sluice:outboard | 40.824 | 25.454 | 39.109 | 1.58 | 0 | 201463eb3 |  | lefford | 40 |
+| 2026-08-29T15:45:19Z | sluice:gate | 460.823 | 13494.370 | 422.082 | 30.20 | 0 | 24ce47001 |  | lefford | 40 |
