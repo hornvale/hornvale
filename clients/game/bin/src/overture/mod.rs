@@ -34,13 +34,16 @@
 //! rule 2 demands: pressing `space` can never land on an empty region, because
 //! there is no rung at which a speaking view has no grid.
 
+pub mod almanac;
 pub mod atlas;
+pub mod component;
 pub mod genesis;
 pub mod progress;
 pub mod sky;
 pub mod timings;
 pub mod view;
 
+pub use almanac::AlmanacView;
 pub use atlas::AtlasView;
 pub use progress::{BuildState, Phase, progress_line};
 pub use sky::SkyView;

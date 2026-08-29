@@ -24,6 +24,7 @@ clients/game/bin/src/driver.rs	36
 clients/game/bin/src/input.rs	1
 clients/game/bin/src/main.rs	1
 clients/game/bin/src/mercator.rs	5
+clients/game/bin/src/overture/almanac.rs	2
 clients/game/bin/src/overture/atlas.rs	1
 clients/game/bin/src/overture/genesis.rs	6
 clients/game/bin/src/overture/mod.rs	9

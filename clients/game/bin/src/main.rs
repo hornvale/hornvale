@@ -9,7 +9,7 @@
 
 use hornvale_game::driver::Driver;
 use hornvale_game::overture::genesis::{self, Gesture, Keys, Screen};
-use hornvale_game::overture::{AtlasView, Frame, SkyView, View};
+use hornvale_game::overture::{AlmanacView, AtlasView, Frame, SkyView, View};
 use hornvale_game::{boot, input, term};
 use hornvale_game_core::{CommandLine, MIN_HEIGHT, MIN_WIDTH};
 use hornvale_kernel::Seed;
@@ -102,19 +102,22 @@ fn run(args: &[String]) -> Result<(), String> {
 
 /// The views the overture cycles, in cycle order.
 ///
-/// **`sky` then `atlas`, and that is the honest state rather than a stub.**
-/// Task 3 settles the `View` contract; Tasks 4-7 write the four views
-/// (`sky`, `atlas`, `almanac`, `tongue`) and each adds one line here. `sky`
-/// speaks from the first rung; `atlas` (Task 5) cannot speak until terrain
-/// exists (`BuildDepth::Terrain`) and is skipped by the frame before then —
-/// so with only these two registered, the cycle shows the night sky alone at
-/// `Astronomy` and both views once terrain lands, which is what the client
-/// genuinely knows at each point, and is strictly more than the blank
-/// terminal that stood here before. Nothing else changes when the next view
-/// lands: the frame skips what cannot speak, so a roster of two behaves
-/// correctly from the first rung (`hornvale_game::overture`).
+/// **`sky`, `atlas`, then `almanac` — one line added per task, and nothing
+/// else changed.** Task 3 settles the `View` contract; Tasks 4-7 write the
+/// four views (`sky`, `atlas`, `almanac`, `tongue`) and each adds one line
+/// here. `sky` speaks from the first rung; `atlas` (Task 5) cannot speak
+/// until terrain exists (`BuildDepth::Terrain`); `almanac` (Task 6) speaks
+/// from the first rung too (its own `OrbitComponent` needs nothing deeper),
+/// and grows its own content internally as later rungs land, through the
+/// component registry rather than through anything visible here. The frame
+/// skips what cannot speak, so a roster of three behaves correctly from the
+/// first rung the same way a roster of two did (`hornvale_game::overture`).
 fn views() -> Vec<Box<dyn View>> {
-    vec![Box::new(SkyView), Box::new(AtlasView::default())]
+    vec![
+        Box::new(SkyView),
+        Box::new(AtlasView::default()),
+        Box::new(AlmanacView),
+    ]
 }
 
 /// [`Screen`] over the real terminal.
