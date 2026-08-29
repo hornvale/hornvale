@@ -3423,20 +3423,43 @@ impl<'w> Session<'w> {
     ///
     /// See [`Self::describe_underground_here`]'s doc for why this reads the
     /// cell's footing rather than a stratum word (The Gallery, Task 3).
+    ///
+    /// **Gains a third entry for the chamber's derived resident (Fix round
+    /// 1, spec §3.6/§4.1.2).** Task 11 drew the resident on the pane
+    /// (`Self::underground_level`) but left this catalog untouched, which is
+    /// exactly the "prose contradicting behaviour a player can observe in
+    /// one turn" shape this campaign's Task 4 already fixed once for
+    /// `look`/`go`: a creature on the plate that `examine` calls nonexistent
+    /// teaches a player the game is lying, with no way to tell which half.
+    /// [`Self::underground_resident`] is the one predicate both this method
+    /// and the pane read, so an unlit-but-remembered resident is absent from
+    /// BOTH or neither — never examinable without being drawn, and never
+    /// drawn without being examinable.
     fn underground_nouns(&self) -> Vec<crate::focalize::Noun> {
         let ug = self
             .underground
             .as_ref()
             .expect("guarded by self.underground.is_some() at the call site");
         let footing = underground_footing_word(ug);
-        vec![
+        let mut nouns = vec![
             crate::focalize::Noun::new("the rock", "rock", &format!("The rock here is {footing}.")),
             crate::focalize::Noun::new(
                 footing,
                 footing,
                 &format!("{footing} rock — the footing of this passage."),
             ),
-        ]
+        ];
+        if let Some((kind, source, _cell)) = self.underground_resident(ug) {
+            nouns.push(
+                crate::focalize::Noun::new(
+                    kind.0,
+                    kind.0,
+                    &crate::underground::inhabitant_datum(kind, source),
+                )
+                .with_kind(crate::focalize::NounKind::Creature),
+            );
+        }
+        nouns
     }
 
     /// `examine <noun>` UNDERGROUND: the band's own catalog only — never the
@@ -4314,6 +4337,53 @@ impl<'w> Session<'w> {
         ))
     }
 
+    /// The chamber's derived resident, if it is visible RIGHT NOW — present
+    /// (`crate::underground::chamber_resident`, spec §3.6) AND standing on
+    /// a cell the CURRENT shadowcast actually lights
+    /// (`crate::underground::resident_cell`), never merely remembered.
+    ///
+    /// **The single source both [`Self::underground_level`] (the pane's own
+    /// mark) and [`Self::underground_nouns`] (`examine`'s own catalog)
+    /// read** (Fix round 1) — a creature the pane draws that `examine` says
+    /// does not exist is this campaign's signature defect shape (Task 4 hit
+    /// the identical thing for `look`/`go`), and the fix is not "teach
+    /// `examine` the same rule," which two independent copies of a fog rule
+    /// will eventually disagree about, but "give both callers one rule to
+    /// read." Recomputing the shadowcast here rather than threading it in
+    /// from a caller matches this module's own existing precedent
+    /// ([`Self::mark_underground_seen`] and [`Self::underground_level`]
+    /// already each compute it independently); a third independent
+    /// computation of the SAME shadowcast predicate is consistent with that
+    /// shape, while a third independent computation of the RESIDENT
+    /// visibility rule is exactly what this method exists to prevent.
+    fn underground_resident(
+        &self,
+        ug: &crate::underground::Underground,
+    ) -> Option<(
+        hornvale_kernel::KindId,
+        hornvale_worldgen::energy::EnergySource,
+        crate::lattice::Cell,
+    )> {
+        let terrain = self.wctx.terrain.as_ref()?;
+        let climate = self.wctx.climate.as_ref()?;
+        let (kind, source) = crate::underground::chamber_resident(ug, terrain, climate)?;
+        let level = ug.level();
+        let cell = crate::underground::resident_cell(level)?;
+        let lit = crate::lattice::shadowcast_with(
+            |c| {
+                level
+                    .cells
+                    .get(c)
+                    .and_then(crate::underworld_level::movement_mode)
+                    .is_some()
+            },
+            |c| level.extent.contains(c),
+            ug.cell,
+            self.sight_reach(),
+        );
+        lit.contains(&cell).then_some((kind, source, cell))
+    }
+
     /// The underground band's own floor plan (The Gallery, Task 7; spec §4)
     /// — [`Self::chamber_plan`] one band down, minus the colour seam: a
     /// level carries an explicit visibility STATE per cell, never a shade
@@ -4356,18 +4426,12 @@ impl<'w> Session<'w> {
         );
         // The Gallery, Task 11 (spec §3.6): who lives here is derived from
         // THIS chamber's own substrate and energy, never a spawn table and
-        // never the surface roster — `crate::underground::chamber_resident`
-        // is the whole derivation. A resident's cell is fixed by the
-        // level's own geometry (`resident_cell`), never by the possession's
-        // position, so it is drawn only when THAT cell is genuinely lit —
-        // the same "entities enter at `lit`, never merely `remembered`"
-        // rule the chamber band's own marks already follow (spec §4.1.2).
-        if let (Some(terrain), Some(climate)) =
-            (self.wctx.terrain.as_ref(), self.wctx.climate.as_ref())
-            && let Some((kind, source)) = crate::underground::chamber_resident(ug, terrain, climate)
-            && let Some(cell) = crate::underground::resident_cell(level)
-            && lit.contains(&cell)
-        {
+        // never the surface roster. Fix round 1: this reads
+        // `Self::underground_resident` rather than re-deriving the
+        // present/lit test inline, so the pane's own mark and `examine`'s
+        // catalog (`Self::underground_nouns`) cannot independently drift on
+        // which cell counts as lit.
+        if let Some((kind, source, cell)) = self.underground_resident(ug) {
             marks.push(crate::plan::PlanMark {
                 x: cell.0,
                 y: cell.1,
@@ -10495,6 +10559,183 @@ mod tests {
         assert!(
             has_resident_mark(&session),
             "the mark must reappear once its cell is lit again"
+        );
+    }
+
+    /// Fix round 1 (spec §3.6/§4.1.2): the pane and `examine` must AGREE
+    /// about the chamber's derived resident — a creature the plate draws
+    /// that `examine` calls nonexistent is this campaign's signature defect
+    /// shape (Task 4 fixed the identical thing for `look`/`go`). Standing on
+    /// the resident's own (lit) cell, the pane's `marks` carries it AND
+    /// `examine <its noun>` answers about it, with the SAME text
+    /// (`crate::underground::inhabitant_datum`) the mark's own `datum`
+    /// carries — one noun, one datum, the same discipline
+    /// `a_noun_at_both_grains_resolves_to_one_datum` already pins one band
+    /// up.
+    #[test]
+    fn a_creature_underground_is_examinable_exactly_when_the_pane_draws_it() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let climate = session
+            .wctx
+            .climate
+            .clone()
+            .expect("seed 42 builds climate");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+
+        let (kind, _source) = {
+            let ug = session.underground.as_ref().expect("descended");
+            crate::underground::chamber_resident(ug, &terrain, &climate).unwrap_or_else(|| {
+                panic!(
+                    "the fixture's entrance chamber must support a resident for this                      test to exercise anything"
+                )
+            })
+        };
+        let resident_cell = {
+            let ug = session.underground.as_ref().expect("descended");
+            crate::underground::resident_cell(ug.level())
+                .expect("Task 9's connectivity invariant guarantees a standable cell")
+        };
+
+        session.underground.as_mut().expect("descended").cell = resident_cell;
+        session.mark_underground_seen();
+
+        let snap = session.snapshot().expect("a descended session snapshots");
+        let mark_datum = match snap.spatial {
+            crate::snapshot::SpatialChannel::Underground { level } => level
+                .marks
+                .iter()
+                .find(|m| m.noun == kind.0)
+                .unwrap_or_else(|| {
+                    panic!(
+                        "the pane must draw {} while standing on its own cell",
+                        kind.0
+                    )
+                })
+                .datum
+                .clone(),
+            other => panic!("expected the underground band, got {other:?}"),
+        };
+
+        let examine_reply = session.examine_underground(kind.0);
+        assert_ne!(
+            examine_reply,
+            format!("You see no {} here.", kind.0),
+            "examine must not deny a creature the SAME turn's pane draws it"
+        );
+        assert_eq!(
+            examine_reply, mark_datum,
+            "the mark's own datum and examine's reply must be the SAME text —              one noun, one datum, across the pane and the prose"
+        );
+    }
+
+    /// The negative half of the agreement above: where the resident is NOT
+    /// drawn (its cell merely remembered, not lit), `examine` must still
+    /// refuse it — otherwise the fog `underground_level` correctly respects
+    /// on the pane would leak straight through `examine`, which the
+    /// coordinator's own fix-round note calls a worse bug than the one this
+    /// round fixes. A test that only checked the positive half would pass on
+    /// a chamber that happens to hold nobody at all; this one is only
+    /// meaningful because the fixture DOES have a resident, pinned by the
+    /// same panic-if-absent guard the positive test uses.
+    #[test]
+    fn an_unlit_resident_stays_unexaminable() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let climate = session
+            .wctx
+            .climate
+            .clone()
+            .expect("seed 42 builds climate");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+
+        let (kind, _source) = {
+            let ug = session.underground.as_ref().expect("descended");
+            crate::underground::chamber_resident(ug, &terrain, &climate).unwrap_or_else(|| {
+                panic!(
+                    "the fixture's entrance chamber must support a resident for this                      test to exercise anything"
+                )
+            })
+        };
+        let resident_cell = {
+            let ug = session.underground.as_ref().expect("descended");
+            crate::underground::resident_cell(ug.level())
+                .expect("Task 9's connectivity invariant guarantees a standable cell")
+        };
+        let reach = session.sight_reach();
+
+        // Fold the shadowcast from the resident's own cell first, so it is
+        // genuinely SEEN (remembered), then walk far enough away — by BFS,
+        // the same technique
+        // `a_creature_underground_is_drawn_only_while_lit` uses — that it is
+        // no longer LIT. Remembered-but-unlit is the one state that could
+        // leak through a naive `examine` fix.
+        session.underground.as_mut().expect("descended").cell = resident_cell;
+        session.mark_underground_seen();
+
+        let far_cell = {
+            let ug = session.underground.as_ref().expect("descended");
+            let level = ug.level();
+            let mut visited = std::collections::BTreeSet::new();
+            let mut queue = std::collections::VecDeque::new();
+            visited.insert(resident_cell);
+            queue.push_back(resident_cell);
+            let mut found = None;
+            while let Some(cur) = queue.pop_front() {
+                let dist = (cur.0 - resident_cell.0)
+                    .abs()
+                    .max((cur.1 - resident_cell.1).abs());
+                if dist > reach {
+                    found = Some(cur);
+                    break;
+                }
+                for (dx, dy) in [(0, 1), (0, -1), (1, 0), (-1, 0)] {
+                    let next = crate::lattice::Cell(cur.0 + dx, cur.1 + dy);
+                    if visited.insert(next)
+                        && level
+                            .cells
+                            .get(next)
+                            .and_then(crate::underworld_level::movement_mode)
+                            .is_some()
+                    {
+                        queue.push_back(next);
+                    }
+                }
+            }
+            found.expect(
+                "Task 9's connectivity invariant: every level is connected well beyond                  `reach` cells from any of its own standable cells",
+            )
+        };
+        session.underground.as_mut().expect("descended").cell = far_cell;
+
+        let snap = session.snapshot().expect("a descended session snapshots");
+        let still_drawn = match snap.spatial {
+            crate::snapshot::SpatialChannel::Underground { level } => {
+                level.marks.iter().any(|m| m.noun == kind.0)
+            }
+            other => panic!("expected the underground band, got {other:?}"),
+        };
+        assert!(
+            !still_drawn,
+            "sanity check: the pane must not draw a merely-remembered resident"
+        );
+
+        assert_eq!(
+            session.examine_underground(kind.0),
+            format!("You see no {} here.", kind.0),
+            "a remembered-but-unlit resident must stay unexaminable, exactly as              it stays undrawn — the fog must not leak through examine"
         );
     }
 
