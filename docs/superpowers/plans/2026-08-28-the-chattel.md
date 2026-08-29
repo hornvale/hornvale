@@ -642,8 +642,33 @@ mod tests {
 }
 ```
 
-**The third test's body is deliberately not written here, and no stand-in name
-appears in its place.** This plan does not know which fixture helper
+**RESOLVED AT PRE-DISPATCH — there is no helper, and the idiom is inline
+construction.** `windows/vessel/tests/suite/passage.rs:207-211` is the sibling
+module's own pattern, and it is the one to copy:
+
+```rust
+let mut reg = ConceptRegistry::default();
+reg.register_predicate(PASSAGE_CLEARED, false, "t").unwrap();
+let mut ledger = Ledger::default();
+let who = ledger.mint_entity(hornvale_kernel::test_lineage(0));
+```
+
+**Two things that will otherwise cost you a debugging cycle**, both verified:
+
+1. **`ConceptRegistry::default()` is EMPTY.** It derives `Default` over
+   `BTreeMap`s, so it pre-registers nothing — not even the kernel-core
+   predicates. `KERNEL_CORE_PREDICATES` exists for a single-writer *check*, not
+   for registration. So `promote` commits an `INSTANCE_OF` fact that a default
+   registry will REJECT until the test registers that predicate itself, exactly
+   as `passage.rs` registers `PASSAGE_CLEARED`.
+2. `FacetError` is exported from the kernel root (`kernel/src/lib.rs:72`), and
+   `Facet`'s `face`/`path` fields are `pub`, so the test's `facet()` helper
+   needs no accessor.
+
+Declare the module as `pub mod thing;` beside `pub mod passage;`
+(`windows/vessel/src/lib.rs:27`).
+
+**The original note stands for the rest:** This plan does not know which fixture helper
 `windows/vessel` exposes for a bare ledger plus registry, and **naming a
 helper that does not exist is the single most common defect in this project's
 plan text** — The Latch's first pre-flight defect was exactly that
