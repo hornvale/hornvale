@@ -192,14 +192,38 @@ impl Underground {
         habitation_rungs()[self.rung]
     }
 
-    /// A compass step underground: one cell, in the bearing named (The
-    /// Gallery, Task 4).
+    /// A compass step underground: one cell, in the bearing named — the
+    /// interface [`Underground::peek`] + [`Underground::commit_step`] split
+    /// apart in Fix round 1 so a charging caller could run a cost check
+    /// between them, recombined here as the uncharged convenience form.
+    ///
+    /// **Unused in production as of Fix round 1** —
+    /// `Session::step_underground` calls `peek`/`commit_step` directly so it
+    /// can charge in between, so nothing non-test calls this all-in-one
+    /// form. Kept because it is this task's own documented produced
+    /// interface (`Underground::step(&mut self, dir: Compass) ->
+    /// StepOutcome`) and because it is the natural shape for a caller that
+    /// does not need to charge anything — this crate's own low-level rock-
+    /// refusal test (`session.rs`) is exactly that caller. The same
+    /// "documented interface, no live production caller yet" shape
+    /// `Underground::seed` and `Underground::rung_band` already carry.
+    #[allow(dead_code)]
+    pub(crate) fn step(&mut self, dir: Compass) -> StepOutcome {
+        match self.peek(dir) {
+            Err(reason) => StepOutcome::Blocked(reason),
+            Ok(target) => self.commit_step(target),
+        }
+    }
+
+    /// The would-be destination of a compass step underground, WITHOUT
+    /// moving there (The Gallery, Task 4; reshaped in Fix round 1).
     ///
     /// **The reversal `UNDERGROUND_LATERAL_REFUSAL` (`session.rs`) owed the
     /// moment this task landed.** That constant's own doc said "there is
     /// nowhere down here for a bearing to mean" — true only while the cave
     /// lattice reached no further than its entrance chamber; Task 3 gave it
-    /// a whole generated level, which is what this method walks.
+    /// a whole generated level, which is what this method (with
+    /// [`Underground::commit_step`]) walks.
     ///
     /// Follows the indoor compass step's own precedent
     /// (`Session::step`, `session.rs:3413`) rule for rule:
@@ -213,16 +237,21 @@ impl Underground {
     ///    against `LevelCellKind::Wall` directly — the same rule
     ///    `CellKind::passable`'s own doc gives, so the refusal survives the
     ///    day a new impassable kind arrives.
-    /// 3. **Otherwise the cell moves.** `self.rung` is never read or
-    ///    written here — metaplan §1b.6's law, lateral movement never
-    ///    changes band, so the possession's walk-band `position` is
-    ///    likewise untouched. A stairs cell is a distinguishable outcome
-    ///    ([`StepOutcome::NeedsStairs`]) rather than a plain `Moved`: the
-    ///    possession now stands there, but crossing BETWEEN rungs is
-    ///    Task 5's stairs verb, not a compass bearing.
-    pub(crate) fn step(&mut self, dir: Compass) -> StepOutcome {
+    ///
+    /// **Split from a single all-in-one `step` (Fix round 1, review finding
+    /// 2) so a caller can charge a cost BEFORE the move lands**, the same
+    /// order the indoor compass step's own precedent uses (diagonal
+    /// refused, then impassable refused, then `charge_within_room`, then —
+    /// only once that succeeds — the cell mutates). The original
+    /// all-in-one `step` moved the possession as part of computing its
+    /// outcome, so a caller could only charge AFTER the move had already
+    /// landed — silently making an underground step free and letting the
+    /// possession move on a refused clock besides. `Session::
+    /// step_underground` is the one caller: it calls this, charges, and
+    /// only then calls [`Underground::commit_step`].
+    pub(crate) fn peek(&self, dir: Compass) -> Result<Cell, &'static str> {
         let Some(delta) = crate::session::cell_delta(dir) else {
-            return StepOutcome::Blocked(UNDERGROUND_DIAGONAL_REFUSAL);
+            return Err(UNDERGROUND_DIAGONAL_REFUSAL);
         };
         let target = Cell(self.cell.0 + delta.0, self.cell.1 + delta.1);
         let kind = self.descent[self.rung].cells.get(target);
@@ -230,8 +259,18 @@ impl Underground {
             .and_then(crate::underworld_level::movement_mode)
             .is_none()
         {
-            return StepOutcome::Blocked(UNDERGROUND_ROCK_REFUSAL);
+            return Err(UNDERGROUND_ROCK_REFUSAL);
         }
+        Ok(target)
+    }
+
+    /// Commit a step already validated by [`Underground::peek`]: moves the
+    /// possession to `target` (already known passable) and reports whether
+    /// it landed on a stairs cell. Never itself refuses — `peek` is the only
+    /// gate — which is what makes it safe to call only after a charge has
+    /// already succeeded.
+    pub(crate) fn commit_step(&mut self, target: Cell) -> StepOutcome {
+        let kind = self.descent[self.rung].cells.get(target);
         self.cell = target;
         if matches!(
             kind,

@@ -2998,11 +2998,24 @@ impl<'w> Session<'w> {
     ///
     /// The geometry itself — diagonal refusal, the passability predicate,
     /// and the law that lateral movement never changes band (metaplan
-    /// §1b.6) — lives entirely in [`crate::underground::Underground::step`];
-    /// this wrapper only parses the bearing and narrates the outcome, the
-    /// same division `Self::step` (the indoor precedent, `session.rs:3413`)
-    /// draws between its own geometry and this method's `go`/bare-compass
+    /// §1b.6) — lives entirely in [`crate::underground::Underground::peek`]/
+    /// [`crate::underground::Underground::commit_step`]; this wrapper parses
+    /// the bearing, charges the move, and narrates the outcome, the same
+    /// division `Self::step` (the indoor precedent, `session.rs:3413`) draws
+    /// between its own geometry and this method's `go`/bare-compass
     /// callers.
+    ///
+    /// **Fix round 1 (review finding 2): charges exactly the way the indoor
+    /// step does, and in the same order.** `Self::step`'s own precedent
+    /// calls `charge_within_room` AFTER confirming the target is passable
+    /// but BEFORE mutating `inside.cell`, so a refused clock (a body too
+    /// spent to move) leaves the possession exactly where it stood and
+    /// reports the charge's own error as the turn's output. This mirrors
+    /// that: `peek` validates and returns the target WITHOUT moving,
+    /// `charge_within_room` runs next, and only once that succeeds does
+    /// `commit_step` move the possession. No new cost model — the same
+    /// `Action::MoveWithin(AnchorId(0))` dial the indoor step already
+    /// charges, reused rather than invented.
     ///
     /// **Part 1 of spec §3.2's water rule reads here, not in the geometry.**
     /// `Flooded` is passable (you wade), so the narration — not the
@@ -3015,14 +3028,35 @@ impl<'w> Session<'w> {
         let Some(wanted) = parse_compass(dir) else {
             return Turn::Out(format!("Go where? '{dir}' is no direction I know."));
         };
-        let Some(ug) = self.underground.as_mut() else {
+        let Some(ug) = self.underground.as_ref() else {
             // Unreachable through `handle` (every call site guards on
             // `self.underground.is_some()` first), the same shape `step`'s
             // own unreachable guard takes one band over.
             return Turn::Out("error: no cave floor to step across: not below".to_string());
         };
-        match ug.step(wanted) {
-            crate::underground::StepOutcome::Blocked(reason) => Turn::Out(reason.to_string()),
+        let target = match ug.peek(wanted) {
+            Err(reason) => return Turn::Out(reason.to_string()),
+            Ok(target) => target,
+        };
+        // The charge runs BEFORE the move lands (review finding 2): a
+        // refused clock must not move the possession, the same order
+        // `Self::step`'s own `charge_within_room` call keeps indoors.
+        if let Err(e) = self.charge_within_room() {
+            return Turn::Out(e);
+        }
+        let ug = self
+            .underground
+            .as_mut()
+            .expect("checked Some above; nothing between then and now clears it");
+        match ug.commit_step(target) {
+            crate::underground::StepOutcome::Blocked(reason) => {
+                // Unreachable: `commit_step` only ever runs on a target
+                // `peek` already validated, and never itself refuses. Kept
+                // as a real arm (not `unreachable!()`) so a future change to
+                // `commit_step` fails loudly with a message rather than a
+                // panic with no context.
+                Turn::Out(reason.to_string())
+            }
             crate::underground::StepOutcome::Moved => {
                 let ug = self.underground.as_ref().expect("just stepped");
                 let kind = ug
@@ -3137,9 +3171,52 @@ impl<'w> Session<'w> {
             .as_ref()
             .expect("guarded by self.underground.is_some() at the call site");
         format!(
-            "[underground]\nThe rock here is {}. Ways on: out.",
-            underground_footing_word(ug)
+            "[underground]\nThe rock here is {}. {}",
+            underground_footing_word(ug),
+            self.underground_ways_from_cell()
         )
+    }
+
+    /// The underworld's own "ways on" report (Fix round 1, review finding
+    /// 1): the passable orthogonal neighbours of the cell stood on, in the
+    /// same bearing vocabulary `Self::ways_from_cell` (indoors) already
+    /// uses, plus `out` whenever the current rung is the entrance rung —
+    /// `climb`'s own guard is `ug.rung != 0`, not "stood on the entrance
+    /// cell", so `out` is a way on from anywhere on rung 0, not only the
+    /// cell `Underground::enter` placed the possession on.
+    ///
+    /// **Before this fix the sentence was a fixed `"Ways on: out."`**
+    /// regardless of what `go` could actually do from here — true only
+    /// while `go` refused every lateral bearing (Task 3); Task 4 made `go`
+    /// walk the level, which made the fixed sentence a one-turn observable
+    /// contradiction the moment it landed (`look` says the only way on is
+    /// out, `go n` immediately proves that false).
+    fn underground_ways_from_cell(&self) -> String {
+        let Some(ug) = self.underground.as_ref() else {
+            return String::new();
+        };
+        let mut open = Vec::new();
+        if ug.rung == 0 {
+            open.push("out".to_string());
+        }
+        for wanted in COMPASS_SQUARE {
+            let delta = cell_delta(wanted).expect("COMPASS_SQUARE is orthogonal");
+            let target = crate::lattice::Cell(ug.cell.0 + delta.0, ug.cell.1 + delta.1);
+            if ug
+                .level()
+                .cells
+                .get(target)
+                .and_then(crate::underworld_level::movement_mode)
+                .is_some()
+            {
+                open.push(bearing_letter(wanted));
+            }
+        }
+        if open.is_empty() {
+            "No way on.".to_string()
+        } else {
+            format!("Ways on: {}.", open.join(", "))
+        }
     }
 
     /// The underworld's examinable catalog. The band has its own because you
@@ -3220,9 +3297,13 @@ impl<'w> Session<'w> {
         // laterals do not reach a submerged room at all. Claiming "no
         // direction here is closed" there would be false the instant the
         // player tried one, which is exactly the class of defect decision
-        // 0141 exists to remove. `Ways on: surface.` mirrors
-        // `describe_underground_here`'s `Ways on: out.` — the one way on this
-        // band actually leads anywhere.
+        // 0141 exists to remove. `Ways on: surface.` is fixed for the same
+        // reason `describe_underground_here`'s report used to be, before Fix
+        // round 1 gave it real geometry to report on: the submerged band
+        // has no lateral mesh at all, so `surface` really is the one way on
+        // this band actually leads anywhere. Underground no longer shares
+        // that excuse — it has real cells now, and `underground_ways_from_
+        // cell` reports them.
         let closing = if self.submerged.is_some() {
             "Ways on: surface.".to_string()
         } else {
@@ -8960,6 +9041,153 @@ mod tests {
                 "{line}: the retired underground lateral refusal must never print: {out}"
             );
         }
+    }
+
+    /// Fix round 1, finding 1: `look`'s underground "Ways on" must agree
+    /// with the level's own real passable neighbours, in BOTH directions —
+    /// a way that exists is listed, and a way that does not is absent — the
+    /// agreement shape a one-directional check cannot catch (The Latch's own
+    /// retrospective). Before this fix the sentence was a fixed `"Ways on:
+    /// out."` regardless of the level, so a bare "some bearing is listed"
+    /// check would have passed against the old, wrong text too; this test
+    /// picks a cell with a KNOWN mixed neighbourhood (at least one open
+    /// bearing and at least one blocked one) so both directions are
+    /// actually exercised rather than a degenerate all-open or all-blocked
+    /// cell.
+    #[test]
+    fn underground_ways_on_agrees_with_the_levels_real_neighbours() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        let ug = crate::underground::Underground::enter(&terrain, vertex, cave, world.seed);
+        let level = ug.level().clone();
+
+        let mut mixed = None;
+        let mut open_wanted = None;
+        let mut blocked_wanted = None;
+        'search: for (cell, kind) in level.cells.iter() {
+            if crate::underworld_level::movement_mode(kind).is_none() {
+                continue;
+            }
+            let mut open = None;
+            let mut blocked = None;
+            for wanted in [Compass::N, Compass::E, Compass::S, Compass::W] {
+                let delta = cell_delta(wanted).expect("orthogonal");
+                let neighbour = crate::lattice::Cell(cell.0 + delta.0, cell.1 + delta.1);
+                match level
+                    .cells
+                    .get(neighbour)
+                    .and_then(crate::underworld_level::movement_mode)
+                {
+                    Some(_) => open = open.or(Some(wanted)),
+                    None => blocked = blocked.or(Some(wanted)),
+                }
+            }
+            if let (Some(o), Some(b)) = (open, blocked) {
+                mixed = Some(cell);
+                open_wanted = Some(o);
+                blocked_wanted = Some(b);
+                break 'search;
+            }
+        }
+        let cell = mixed.expect(
+            "a generated level has a cell with both an open and a blocked orthogonal bearing",
+        );
+        let open_wanted = open_wanted.expect("set alongside mixed");
+        let blocked_wanted = blocked_wanted.expect("set alongside mixed");
+
+        let mut expected: Vec<String> = vec!["out".to_string()]; // rung 0
+        for wanted in [Compass::N, Compass::E, Compass::S, Compass::W] {
+            let delta = cell_delta(wanted).expect("orthogonal");
+            let neighbour = crate::lattice::Cell(cell.0 + delta.0, cell.1 + delta.1);
+            if level
+                .cells
+                .get(neighbour)
+                .and_then(crate::underworld_level::movement_mode)
+                .is_some()
+            {
+                expected.push(bearing_letter(wanted));
+            }
+        }
+
+        session.underground = Some(ug);
+        session.underground.as_mut().expect("just set").cell = cell;
+
+        let out = match session.handle("look") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("look must not release"),
+        };
+        let marker = "Ways on: ";
+        let start = out
+            .find(marker)
+            .unwrap_or_else(|| panic!("no {marker:?} substring in {out:?}"));
+        let ways_body = &out[start + marker.len()..];
+        let ways_body = ways_body.trim_end_matches('\n');
+        let ways_body = ways_body.strip_suffix('.').unwrap_or(ways_body);
+        let listed: Vec<String> = ways_body.split(", ").map(|part| part.to_string()).collect();
+        let ways_line = format!("{marker}{ways_body}.");
+
+        // Direction 1: a way that EXISTS is listed.
+        assert!(
+            listed.contains(&bearing_letter(open_wanted)),
+            "an open bearing {open_wanted:?} must be listed: {ways_line:?}"
+        );
+        // Direction 2: a way that does NOT exist is absent.
+        assert!(
+            !listed.contains(&bearing_letter(blocked_wanted)),
+            "a blocked bearing {blocked_wanted:?} must not be listed: {ways_line:?}"
+        );
+        // And the full set, both ways: nothing extra, nothing missing.
+        let mut listed_sorted = listed.clone();
+        listed_sorted.sort();
+        let mut expected_sorted = expected.clone();
+        expected_sorted.sort();
+        assert_eq!(
+            listed_sorted, expected_sorted,
+            "ways-on must match the level's real neighbours exactly: {ways_line:?}"
+        );
+    }
+
+    /// Fix round 1, finding 2: an underground step must advance the clock,
+    /// the same way an indoor cell step does (`charge_within_room`) —
+    /// without this, walking underground costs no time at all, and the
+    /// world's own clock (`WorldTime`) stands still while the possession
+    /// crosses a cave.
+    #[test]
+    fn an_underground_step_advances_the_clock() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        assert!(
+            session.underground.is_some(),
+            "the fixture must have descended"
+        );
+        let before = session.day;
+        let moved = ["n", "s", "e", "w"].iter().any(|d| {
+            let cell_before = session.underground.as_ref().expect("descended").cell;
+            session.handle(&format!("go {d}"));
+            session.underground.as_ref().expect("still below").cell != cell_before
+        });
+        assert!(
+            moved,
+            "at least one bearing must be walkable to exercise the charge"
+        );
+        assert!(
+            session.day > before,
+            "an underground step must advance the clock: before={before:?}, after={:?}",
+            session.day
+        );
     }
 
     /// The snapshot's spatial channel and the `map` verb must answer the
