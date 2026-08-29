@@ -2453,7 +2453,7 @@ hornvale-topology::suite$route::least_cost_reports_the_correct_total_cost_along_
 hornvale-topology::suite$route::least_cost_returns_none_when_the_budget_is_too_small
 hornvale-topology::suite$route::least_cost_skips_impassable_vertices_marked_with_u64_max
 hornvale-vessel::hornvale_vessel$affordance::tests::both_strongbox_and_alcove_carry_encloses
-hornvale-vessel::hornvale_vessel$affordance::tests::each_property_is_carried_by_at_least_one_anchor_kind
+hornvale-vessel::hornvale_vessel$affordance::tests::each_property_is_carried_by_at_least_one_thing_kind
 hornvale-vessel::hornvale_vessel$affordance::tests::only_supports_rest_is_body_relative_in_iv_a
 hornvale-vessel::hornvale_vessel$affordance::tests::the_certain_carriers_named_by_the_spec_carry_their_property
 hornvale-vessel::hornvale_vessel$brief::tests::from_parts_assigns_the_occupation_axes_and_flags
