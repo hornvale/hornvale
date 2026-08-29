@@ -125,7 +125,7 @@ fn render_debug(level: &Level) -> String {
     for y in level.extent.y..(level.extent.y + level.extent.h) {
         for x in level.extent.x..(level.extent.x + level.extent.w) {
             let cell = Cell(x, y);
-            let glyph = match level.cells.get(&cell) {
+            let glyph = match level.cells.get(cell) {
                 Some(LevelCellKind::Floor) => '.',
                 Some(LevelCellKind::Wall) | None => '#',
                 Some(LevelCellKind::Flooded) => '~',
@@ -149,7 +149,7 @@ fn walkable_cells(level: &Level) -> BTreeSet<Cell> {
         .cells
         .iter()
         .filter(|(_, k)| matches!(k, LevelCellKind::Floor | LevelCellKind::Flooded))
-        .map(|(&c, _)| c)
+        .map(|(c, _)| c)
         .collect()
 }
 
@@ -178,7 +178,7 @@ fn standable_cells(level: &Level) -> BTreeSet<Cell> {
                     | LevelCellKind::StairsUp
             )
         })
-        .map(|(&c, _)| c)
+        .map(|(c, _)| c)
         .collect()
 }
 
@@ -382,18 +382,14 @@ fn dry_standable_cells(level: &Level) -> BTreeSet<Cell> {
                 LevelCellKind::Floor | LevelCellKind::StairsDown | LevelCellKind::StairsUp
             )
         })
-        .map(|(&c, _)| c)
+        .map(|(c, _)| c)
         .collect()
 }
 
 /// The cell holding `kind`, if any — `place_connections` places at most one
 /// `StairsDown` and at most one `StairsUp` per level.
 fn find_cell_of_kind(level: &Level, kind: LevelCellKind) -> Option<Cell> {
-    level
-        .cells
-        .iter()
-        .find(|(_, k)| **k == kind)
-        .map(|(&c, _)| c)
+    level.cells.iter().find(|(_, k)| *k == kind).map(|(c, _)| c)
 }
 
 /// Flood-fills `passable` from `start` (4-directional adjacency), returning
@@ -528,7 +524,7 @@ fn measure_flooded_cell_reachability_across_the_descent() {
         seeds_measured += 1;
         let mut seed_fully_reachable = true;
         for (i, level) in levels.iter().enumerate() {
-            let total_cells = level.cells.len();
+            let total_cells = (level.extent.w as usize) * (level.extent.h as usize);
             let standable = standable_cells(level);
             let dry = dry_standable_cells(level);
             let flooded_cells = standable.len() - dry.len();

@@ -7,16 +7,16 @@
 //! system. `FRAME`-tier under decision 0069, same as `crate::lattice`:
 //! derived fresh from a `Seed` on every call, nothing serialized.
 
-use std::collections::BTreeMap;
-
 use hornvale_kernel::Seed;
 
 use crate::lattice::{Cell, Rect};
 
 mod carve;
+mod dense;
 mod region;
 
 pub use carve::Algorithm;
+pub use dense::CellGrid;
 
 /// A cell's role within a generated underworld level.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -43,7 +43,7 @@ pub struct Level {
     pub extent: Rect,
     /// Every cell of `extent`, with its kind. Total: every cell of the
     /// extent appears exactly once.
-    pub cells: BTreeMap<Cell, LevelCellKind>,
+    pub cells: CellGrid,
     /// How many independent seeded choices generation made. Reported, not
     /// recomputed, mirroring `lattice::Lattice::dof`.
     pub dof: u32,
@@ -162,12 +162,7 @@ pub fn generate_level_with_origin(
     seed: Seed,
 ) -> Level {
     let (tree, mut dof) = region::build_region(extent, seed);
-    let mut cells = BTreeMap::new();
-    for x in extent.x..(extent.x + extent.w) {
-        for y in extent.y..(extent.y + extent.h) {
-            cells.insert(Cell(x, y), LevelCellKind::Wall);
-        }
-    }
+    let mut cells = CellGrid::new(extent, LevelCellKind::Wall);
     let mut style_stream = seed.derive(crate::streams::UNDERWORLD_LEVEL_STYLE).stream();
     let mut cellular_stream = seed
         .derive(crate::streams::UNDERWORLD_LEVEL_CELLULAR)
@@ -207,14 +202,14 @@ pub fn generate_level_with_origin(
 
 /// Every `Floor`/`Flooded` cell within `region`'s own leaf rects (not the
 /// whole level) — the candidate endpoints a connector can anchor to.
-fn walkable_cells_in(region: &region::Region, cells: &BTreeMap<Cell, LevelCellKind>) -> Vec<Cell> {
+fn walkable_cells_in(region: &region::Region, cells: &CellGrid) -> Vec<Cell> {
     let mut out = Vec::new();
     for rect in region::leaves(region) {
         for x in rect.x..(rect.x + rect.w) {
             for y in rect.y..(rect.y + rect.h) {
                 let cell = Cell(x, y);
                 if matches!(
-                    cells.get(&cell),
+                    cells.get(cell),
                     Some(LevelCellKind::Floor) | Some(LevelCellKind::Flooded)
                 ) {
                     out.push(cell);
@@ -245,12 +240,12 @@ fn nearest_pair(a: &[Cell], b: &[Cell]) -> Option<(Cell, Cell)> {
 /// cells — the same shape `carve::connect_centers` already uses for
 /// within-leaf room connections, generalized to take endpoints directly
 /// rather than deriving them from room rects.
-fn connect_cells(a: Cell, b: Cell, cells: &mut BTreeMap<Cell, LevelCellKind>) {
+fn connect_cells(a: Cell, b: Cell, cells: &mut CellGrid) {
     for x in a.0.min(b.0)..=a.0.max(b.0) {
-        cells.insert(Cell(x, a.1), LevelCellKind::Floor);
+        cells.set(Cell(x, a.1), LevelCellKind::Floor);
     }
     for y in a.1.min(b.1)..=a.1.max(b.1) {
-        cells.insert(Cell(b.0, y), LevelCellKind::Floor);
+        cells.set(Cell(b.0, y), LevelCellKind::Floor);
     }
 }
 
@@ -262,7 +257,7 @@ fn connect_cells(a: Cell, b: Cell, cells: &mut BTreeMap<Cell, LevelCellKind>) {
 /// in this task's own header: `region::cut` leaves a permanent wall gap
 /// between siblings, and nothing else in this module ever carves through
 /// it.
-fn connect_split_boundaries(region: &region::Region, cells: &mut BTreeMap<Cell, LevelCellKind>) {
+fn connect_split_boundaries(region: &region::Region, cells: &mut CellGrid) {
     if let region::Region::Split(a, b) = region {
         connect_split_boundaries(a, cells);
         connect_split_boundaries(b, cells);
@@ -324,8 +319,8 @@ pub fn generate_level_with_water(
         for x in basin.x..(basin.x + basin.w) {
             for y in basin.y..(basin.y + basin.h) {
                 let cell = Cell(x, y);
-                if level.cells.get(&cell) == Some(&LevelCellKind::Floor) {
-                    level.cells.insert(cell, LevelCellKind::Flooded);
+                if level.cells.get(cell) == Some(LevelCellKind::Floor) {
+                    level.cells.set(cell, LevelCellKind::Flooded);
                 }
             }
         }
@@ -380,13 +375,13 @@ fn place_connections(level: &mut Level, extent: Rect, has_up: bool, seed: Seed) 
     if let Some(&first) = leaf_rects.first()
         && let Some(cell) = first_walkable_cell(level, first)
     {
-        level.cells.insert(cell, LevelCellKind::StairsDown);
+        level.cells.set(cell, LevelCellKind::StairsDown);
     }
     if has_up
         && let Some(&last) = leaf_rects.last()
         && let Some(cell) = first_walkable_cell(level, last)
     {
-        level.cells.insert(cell, LevelCellKind::StairsUp);
+        level.cells.set(cell, LevelCellKind::StairsUp);
     }
 }
 
@@ -398,7 +393,7 @@ fn first_walkable_cell(level: &Level, rect: Rect) -> Option<Cell> {
         for y in rect.y..(rect.y + rect.h) {
             let cell = Cell(x, y);
             if matches!(
-                level.cells.get(&cell),
+                level.cells.get(cell),
                 Some(LevelCellKind::Floor) | Some(LevelCellKind::Flooded)
             ) {
                 return Some(cell);
@@ -520,6 +515,7 @@ pub fn generate_descent_for_character(
 mod tests {
     use super::*;
     use hornvale_worldgen::character::Character;
+    use std::collections::BTreeMap;
 
     #[test]
     fn generation_is_deterministic() {
@@ -546,13 +542,13 @@ mod tests {
         for x in extent.x..(extent.x + extent.w) {
             for y in extent.y..(extent.y + extent.h) {
                 assert!(
-                    level.cells.contains_key(&Cell(x, y)),
+                    level.cells.get(Cell(x, y)).is_some(),
                     "cell ({x}, {y}) missing from a total level"
                 );
             }
         }
         assert_eq!(
-            level.cells.len(),
+            level.cells.iter().count(),
             (extent.w * extent.h) as usize,
             "no cell outside the extent"
         );
@@ -662,7 +658,7 @@ mod tests {
             Seed(2),
         );
         assert!(
-            sump.cells.values().any(|k| *k == LevelCellKind::Flooded),
+            sump.cells.iter().any(|(_, k)| k == LevelCellKind::Flooded),
             "a phreatic Found chamber must carve a flooded region"
         );
 
@@ -677,7 +673,7 @@ mod tests {
             Seed(2),
         );
         assert!(
-            made.cells.values().all(|k| *k != LevelCellKind::Flooded),
+            made.cells.iter().all(|(_, k)| k != LevelCellKind::Flooded),
             "a Made chamber is drained regardless of the water table (is_sump's own rule)"
         );
 
@@ -692,7 +688,7 @@ mod tests {
             Seed(2),
         );
         assert!(
-            dry.cells.values().all(|k| *k != LevelCellKind::Flooded),
+            dry.cells.iter().all(|(_, k)| k != LevelCellKind::Flooded),
             "a vadose Found chamber (above the water table) stays dry"
         );
     }
@@ -781,9 +777,12 @@ mod tests {
         for (i, level) in levels.iter().enumerate() {
             let has_down = level
                 .cells
-                .values()
-                .any(|k| *k == LevelCellKind::StairsDown);
-            let has_up = level.cells.values().any(|k| *k == LevelCellKind::StairsUp);
+                .iter()
+                .any(|(_, k)| k == LevelCellKind::StairsDown);
+            let has_up = level
+                .cells
+                .iter()
+                .any(|(_, k)| k == LevelCellKind::StairsUp);
             assert!(has_down, "level {i} is missing its stairs down");
             if i == 0 {
                 assert!(
@@ -863,14 +862,14 @@ mod tests {
                 let down_cells: Vec<Cell> = level
                     .cells
                     .iter()
-                    .filter(|(_, k)| **k == LevelCellKind::StairsDown)
-                    .map(|(c, _)| *c)
+                    .filter(|(_, k)| *k == LevelCellKind::StairsDown)
+                    .map(|(c, _)| c)
                     .collect();
                 let up_cells: Vec<Cell> = level
                     .cells
                     .iter()
-                    .filter(|(_, k)| **k == LevelCellKind::StairsUp)
-                    .map(|(c, _)| *c)
+                    .filter(|(_, k)| *k == LevelCellKind::StairsUp)
+                    .map(|(c, _)| c)
                     .collect();
                 assert_eq!(
                     down_cells.len(),
@@ -1070,7 +1069,7 @@ mod tests {
                                         | LevelCellKind::StairsUp
                                 )
                             })
-                            .map(|(&c, _)| c)
+                            .map(|(c, _)| c)
                             .collect();
                         assert!(
                             !standable.is_empty(),
@@ -1160,7 +1159,7 @@ mod tests {
                         .cells
                         .iter()
                         .filter(|(_, k)| matches!(k, LevelCellKind::Floor | LevelCellKind::Flooded))
-                        .map(|(&c, _)| c)
+                        .map(|(c, _)| c)
                         .collect();
                     let Some(&start) = walkable.iter().next() else {
                         continue; // a degenerate all-wall level has nothing to check

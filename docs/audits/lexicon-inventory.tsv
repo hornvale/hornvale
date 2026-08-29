@@ -104,8 +104,9 @@ windows/vessel/src/purview.rs	39
 windows/vessel/src/session.rs	171
 windows/vessel/src/snapshot.rs	3
 windows/vessel/src/streams.rs	6
-windows/vessel/src/underworld_level/carve.rs	134
-windows/vessel/src/underworld_level/mod.rs	202
+windows/vessel/src/underworld_level/carve.rs	143
+windows/vessel/src/underworld_level/dense.rs	58
+windows/vessel/src/underworld_level/mod.rs	198
 windows/vessel/src/underworld_level/region.rs	2
 windows/vessel/tests/common/mod.rs	1
 windows/vessel/tests/suite/lantern_fabric.rs	2
@@ -118,7 +119,7 @@ windows/vessel/tests/suite/player_acts_commit.rs	1
 windows/vessel/tests/suite/session.rs	2
 windows/vessel/tests/suite/session_snapshot.rs	8
 windows/vessel/tests/suite/the_blocking.rs	13
-windows/vessel/tests/suite/underworld_level_generation.rs	102
+windows/vessel/tests/suite/underworld_level_generation.rs	101
 windows/vessel/tests/suite/world_context.rs	2
 windows/worldgen/src/chamber.rs	2
 windows/worldgen/src/disposition.rs	3
