@@ -20,7 +20,7 @@
 # had already removed `heavy` from both chamber phase lists when this file was
 # written, so dropping it here could never fire; decision 0426 (2026-08-28) put
 # it back, and this skip is now the reason a prose-only candidate does not pay
-# the ~475 s the tier costs. `seam-guard` remains off the phase lists entirely,
+# the ~465.8 s the tier costs (derived once, next to its inputs, in 0426). `seam-guard` remains off the phase lists entirely,
 # so its entry in the drop list is still inert — kept deliberately, because a
 # drop list that fails toward running LESS is the wrong direction to prune.
 #
