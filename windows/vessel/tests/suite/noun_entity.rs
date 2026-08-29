@@ -7,16 +7,38 @@
 //! an id the test invented.
 //!
 //! **The catalog here is built by the test, and that is a finding about the
-//! seam rather than a convenience.** No production site builds a `Noun` for a
-//! chamber anchor today: `focalize::TemplateFocalizer::render` catalogs
-//! walk-band content (biome, regime, village, sky), `Session::
-//! underground_nouns` catalogs rock, footing and a derived resident, and
-//! `Session::lens_nouns` unions in chart-legend marks — none of the three
-//! holds a `Facet` and a thing-kind at the moment it constructs an entry, and
-//! none of them promotes anything. So there is no production caller of
-//! `with_entity` to test yet; wiring one is the later tasks' work (the verbs
-//! that act on a resolved thing, and the wire). What this file pins is that
-//! the field carries a **real** identity when a site does claim one, so the
+//! seam rather than a convenience.** No production site claims an entity
+//! today. Four construct a `Noun`: `focalize::TemplateFocalizer::render`
+//! catalogs walk-band content (biome, regime, village, sky), `Session::
+//! underground_nouns` catalogs rock, footing and a derived resident,
+//! `Session::lens_nouns` unions in chart-legend marks, and `Session::examine`
+//! builds a throwaway `Noun` for the sole purpose of running `matches`
+//! against a chart-legend entry before returning `e.datum.clone()` — the
+//! name → string dead end this campaign exists to close, in one line.
+//!
+//! **The blocker is semantic, not structural, and the difference decides
+//! where the later tasks should look.** The plumbing is already there: a
+//! `Vantage`'s `locale` carries `face: u8` and `path: Vec<u8>`, which are
+//! exactly `Facet`'s two public fields, and `Session::position` returns a
+//! `Facet` outright; `Session::underground_resident` already yields the same
+//! `hornvale_kernel::KindId` `affordance::thing_kind_of` returns, and the
+//! resident branch already passes `kind.0` into `Noun::new`. What is missing
+//! is a **promotion**. `thing::promote` has zero production callers
+//! workspace-wide — every call is in `thing.rs`'s own tests, and
+//! `passage.rs` calls `promote_role` instead — so no production site holds a
+//! *minted* entity to claim, and deriving one from `thing_id` at a catalog
+//! site would assert an identity the ledger never committed: exactly the
+//! placeholder `Noun.entity`'s own doc says not to invent.
+//!
+//! So wiring the first production caller of `with_entity` is the later
+//! tasks' work (the verbs that act on a resolved thing, and the wire), and
+//! it needs a promotion at a catalog site rather than a signature or
+//! plumbing change. The nearest thing in the tree to a real name → entity
+//! lookup is `Session::examine_chamber`, which builds no `Noun` at all: it
+//! resolves a typed word against a live `AnchorKind` through
+//! `chamber_prose::noun`. That is the shape a resolved thing wants, missing
+//! only a minted identity to answer with. What this file pins is that the
+//! field carries a **real** identity when a site does claim one, so the
 //! caller that arrives has something true to inherit.
 //!
 //! The kind spelling is `affordance::thing_kind_of`'s — the same public
@@ -38,7 +60,7 @@ fn at(days: f64) -> WorldTime {
 /// campaign the catalog yielded a `datum` and stopped, which is the whole of
 /// the "no name -> entity lookup" gap The Offer named.
 ///
-/// The third assertion is the one that makes the claim's *negative* half
+/// The `assert_ne!` is the one that makes the claim's *negative* half
 /// visible. Two rooms' water jars carry the **same** display, the same datum
 /// and the same words — a resolver that answers with strings cannot tell them
 /// apart, and would report success either way. Only the entity separates
@@ -46,10 +68,21 @@ fn at(days: f64) -> WorldTime {
 /// statement "this lookup reaches identity" rather than "this lookup reaches
 /// text".
 ///
+/// The `assert_eq!` on `(display, datum, words)` immediately before it is a
+/// guard on this test's OWN FIXTURE, not a probe of the system, and no change
+/// to `src/` can make it fail: both `Noun`s are built from byte-identical
+/// literals a few lines above and `Noun::new` is pure over its arguments, so
+/// no production mutation can separate them. It earns its place by making the
+/// `assert_ne!` mean something — without it a difference in the strings could
+/// be carrying the inequality — and not by testing anything.
+///
 /// MUTATION THIS MUST FAIL AGAINST: make `with_entity` discard its argument
 /// (`self.entity = Some(entity)` -> `self`). The first assertion goes red on
-/// `None`, and the third goes red too, because two discarded arguments are
-/// equal.
+/// `None` and the test panics there, so that is the whole of the observed
+/// failure: one failure at the first `assert_eq!`. The `assert_ne!` would
+/// also be false under this mutation (two discarded arguments are equal) but
+/// is never reached, and claiming both go red would be describing evidence
+/// the run does not produce.
 #[test]
 fn a_typed_word_resolves_to_a_things_entity() {
     let mut registry = ConceptRegistry::default();
