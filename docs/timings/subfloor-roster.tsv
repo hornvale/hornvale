@@ -2954,6 +2954,8 @@ hornvale-vessel::suite$the_blocking::a_locale_composition_is_untouched_by_the_ro
 hornvale-vessel::suite$the_blocking::a_role_admits_a_different_composition_not_a_bigger_one
 hornvale-vessel::suite$the_blocking::the_role_table_reads_a_different_room_for_every_role
 hornvale-vessel::suite$the_first_mark::the_two_grievance_npc_copies_agree
+hornvale-vessel::suite$thing::a_room_offers_again_what_was_brought_back
+hornvale-vessel::suite$thing::a_room_stops_offering_what_was_carried_out_of_it
 hornvale-vessel::suite$underworld_level_generation::a_real_descent_is_deterministic_connected_and_renders
 hornvale-vessel::suite$underworld_level_generation::a_second_seed_produces_a_different_shape
 hornvale-worldgen::hornvale_worldgen$alchemy::tests::coal_burns_and_granite_does_not
