@@ -344,7 +344,11 @@ The campaign's load-bearing unit. One function, called by the scene builder
 
 **Files:**
 - Create: `windows/scene/src/classify.rs`
-- Modify: `windows/scene/src/lib.rs` (add `pub mod classify;`)
+- Modify: `windows/scene/src/lib.rs` — add `mod classify;` followed by
+  `pub use classify::*;`. **NOT `pub mod`.** This crate declares every
+  module privately and glob-re-exports it (`mod region; pub use region::*;`
+  at lib.rs:18-19), so its public surface is FLAT. Following the wrong
+  convention here makes the test's import path wrong too.
 - Test: `windows/scene/tests/suite/classify.rs`, registered in
   `windows/scene/tests/suite.rs`
 
@@ -359,9 +363,9 @@ The campaign's load-bearing unit. One function, called by the scene builder
 
 ```rust
 // windows/scene/tests/suite/classify.rs
-use hornvale_scene::classify::{
-    ELEVATION_LEGEND, WATER_LEGEND, elevation_band, water_class,
-};
+// FLAT import, not `hornvale_scene::classify::...` — the crate glob-
+// re-exports its private modules, and its existing tests import this way.
+use hornvale_scene::{ELEVATION_LEGEND, WATER_LEGEND, elevation_band, water_class};
 use hornvale_terrain::WaterKind;
 
 #[test]
@@ -553,7 +557,7 @@ key order and is contract, so never reorder and never insert before an
 existing field:
 
 ```rust
-    /// Elevation band per node — [`crate::classify::elevation_band`]'s rung,
+    /// Elevation band per node — [`crate::elevation_band`]'s rung,
     /// BESIDE the raw metres rather than instead of them. A tile client wants
     /// the float for shading even once the band exists (The Legend spec §3.1).
     pub elevation_band: Vec<u8>,
