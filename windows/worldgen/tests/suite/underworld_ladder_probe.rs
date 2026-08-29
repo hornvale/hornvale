@@ -148,7 +148,7 @@ fn pct(sorted: &[f64], q: f64) -> f64 {
 /// vertices, expressed as ΔT above the surface datum. The input to spec §4.1's
 /// rung table; not a gate on any value.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: how hot a cave gets (depth x gradient distribution table); run by hand (The Underworld, Task 1, answered its question; demoted by The Governor 2026-08-28)"]
 fn how_hot_is_a_cave() {
     // The sanctioned test-fixture posture (decision 0092), copied from
     // `deep_realm_substrate.rs::measure_one` — seven arguments including the
@@ -333,7 +333,7 @@ const CANDIDATE_EDGES_K: [f64; 14] = [
 /// cost of it not being a measured quantity). See
 /// `domains/terrain/src/delve.rs`'s constants for each decision in full.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: how lumpy the delta-T distribution is (rung-boundary stability survey); run by hand (The Underworld, Task 1/1b, answered its question; demoted by The Governor 2026-08-28)"]
 fn how_lumpy_is_the_delta_t_distribution() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     for seed_value in SEEDS {

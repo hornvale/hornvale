@@ -1074,7 +1074,7 @@ fn the_two_p2_rosters_partition_the_family_exactly_once() {
 /// quantifier the prediction was frozen with. Not `forall-seed`: a kind may
 /// honestly place nothing on one globe and still be a live competitor.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: whether each elf changes the committed ledger; run by hand (The Radiation, P1-prime, answered its question; demoted by The Governor 2026-08-28)"]
 fn each_elf_changes_the_committed_ledger() {
     let shipped: Vec<WorldRead> = SEEDS.iter().map(|&s| read_world(s, Arm::Shipped)).collect();
 
@@ -1277,7 +1277,7 @@ const P2_FALSIFICATION_DIAGNOSIS: &str = "the stronghold share was flat or \
 /// failure mode on a majority of seeds) — a per-elf majority over seeds, frozen
 /// at that quantifier in the spec before any row was authored.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: whether each elf concentrates in its authored stronghold biomes; RED as of 2026-08-28 — a closed, preregistered finding (The Radiation P2), CONFIRMED for the five elves this test covers, never ran under any gate at the time it was demoted (the heavy tier was off-gate then; decision 0426, landing in this same branch, put it back on every merge), so demoting it did not hide a live red from any gate; run by hand; demoted by The Governor"]
 fn each_elf_concentrates_in_its_authored_stronghold_biomes() {
     let falsified = p2_falsified_among(&P2_ON_AXIS);
     assert!(

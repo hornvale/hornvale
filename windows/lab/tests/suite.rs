@@ -9,13 +9,14 @@
 //! `tests/suite/`). This collapses 29 separate integration-test
 //! binaries into 1.
 //!
-//! `tests/seed_sweep/` is a shared helper module declared once here
-//! (ordinary module resolution, since this file sits directly in
-//! `tests/`, sibling to `seed_sweep/`) and reached from `the_fare_calibration`
-//! and `the_mire_calibration` via `use crate::seed_sweep;` rather than
-//! their own `mod seed_sweep;`.
-
-mod seed_sweep;
+//! The shared `seed_sweep` helper `the_fare_calibration` and
+//! `the_mire_calibration` use for their own preregistered sweeps now lives
+//! in `hornvale_worldgen::seed_sweep` (The Governor, Task 9; moved out of a
+//! `windows/lab`-only `tests/seed_sweep/` module so `windows/worldgen` and
+//! `windows/hearsay` panel tests could reach it too — see that module's own
+//! doc comment for why `hornvale-worldgen` was the chosen host). Both
+//! callers `use hornvale_worldgen::seed_sweep;` directly; there is nothing
+//! left to declare here.
 
 #[path = "suite/affect_trace_golden.rs"]
 mod affect_trace_golden;

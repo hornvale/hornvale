@@ -201,7 +201,7 @@ fn rung_rank(rung: Band) -> Option<u8> {
 /// — how deep into the fixed chamber lattice a cave's depth budget reaches,
 /// under the band gate and under the delve gate, on the same worlds.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: how far down the lattice a cave reaches (band vs. rung comparison); run by hand (The Underworld, Task 2, answered its question; demoted by The Governor 2026-08-28)"]
 fn how_far_down_the_lattice_does_a_cave_reach() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     for seed_value in SEEDS {

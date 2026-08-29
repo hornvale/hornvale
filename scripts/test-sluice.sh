@@ -446,7 +446,7 @@ else
     bad "the refused adjudication rewrote the baseline"
 fi
 
-echo "== phases: what the chamber ACTUALLY runs (decision 0148)"
+echo "== phases: what the chamber ACTUALLY runs (decisions 0148, 0426)"
 # THE CASE ABOVE TESTS THE FUNCTION AGAINST A LITERAL, WHICH IS NOT THE SAME AS
 # TESTING THE CHAMBER. Nothing asserted what sluice-run.sh actually sets, so the
 # phase list could change without a single test noticing — the exact
@@ -454,20 +454,42 @@ echo "== phases: what the chamber ACTUALLY runs (decision 0148)"
 # Read from the script rather than restated here, so this cannot drift from it.
 merge_list="$(sed -n 's/^merge_phases="\(.*\)"$/\1/p' "$repo_root/scripts/sluice-run.sh")"
 stage_list="$(sed -n 's/^stage_phases="\(.*\)"$/\1/p' "$repo_root/scripts/sluice-run.sh")"
-if [ "$merge_list" = "artifacts outboard gate clients" ]; then
+if [ "$merge_list" = "artifacts outboard gate clients heavy" ]; then
     ok "a merge runs exactly: $merge_list"
 else
-    bad "merge_phases is '$merge_list' — decision 0148 fixed it at 'artifacts outboard gate clients'"
+    bad "merge_phases is '$merge_list' — decision 0426 fixed it at 'artifacts outboard gate clients heavy'"
 fi
+# `heavy` LAST is load-bearing, not cosmetic: it is the most expensive phase,
+# so running it before a cheap phase that would have gone red wastes the one
+# serial box. Asserted separately from the equality above so a reorder that
+# still contains the right five names cannot pass as "the list is right".
 case "$merge_list" in
-    *seam-guard*) bad "seam-guard is back in the merge list; 0148 took it off and nothing has superseded that" ;;
-    *heavy*)      bad "heavy is back in the merge list; 0148 took it off and nothing has superseded that" ;;
-    *)            ok "neither seam-guard nor heavy runs on a merge" ;;
+    *heavy) ok "heavy runs last" ;;
+    *)      bad "heavy is not the last phase of a merge — see sluice-run.sh's own ordering comment" ;;
 esac
-if [ "$merge_list" = "$stage_list" ]; then
-    ok "a merge and a stage gate run the same phases, differing only in the push"
+# seam-guard stays off (0148, undisturbed by 0426); heavy came BACK on (0426).
+case "$merge_list" in
+    *seam-guard*) bad "seam-guard is back in the merge list; 0148 took it off and 0426 deliberately did not put it back" ;;
+    *heavy*)      ok "heavy runs on a merge (decision 0426) and seam-guard does not" ;;
+    *)            bad "heavy is missing from the merge list; decision 0426 put it back after The Governor cut the tier 3.52x" ;;
+esac
+# THE TWO LISTS DIVERGE BY EXACTLY `heavy`, AND THAT IS ASSERTED RATHER THAN
+# ALLOWED. 0148 made them identical; 0426 put `heavy` back on the merge list
+# ONLY, restoring the pre-0148 arrangement (at 3163ceb2c^ the stage list was
+# already `artifacts outboard gate clients` — `heavy` has never been a
+# stage-gate phase). The reason is specific: heavy's
+# `census_fixtures_match_a_probe_of_live_seeds` compares a live probe against
+# committed census fixtures that are refreshed once per campaign at pre-merge
+# close, so on a stage gate it would red predictably and benignly for the
+# whole middle of any world-touching campaign.
+# Checked as "stage plus heavy equals merge" rather than as two literals, so a
+# future change to the shared four is not required to touch this line twice.
+if [ "$stage_list heavy" = "$merge_list" ]; then
+    ok "a stage gate runs the merge's phases minus heavy: $stage_list"
+elif [ "$merge_list" = "$stage_list" ]; then
+    bad "merge and stage are identical ('$merge_list') — 0426 puts heavy on the merge list ONLY; if a stage gate should run it, the census-fixture red argued in sluice-run.sh must be answered first"
 else
-    bad "merge ('$merge_list') and stage ('$stage_list') diverged — 0148 made them identical; if that is deliberate, update this test and say why"
+    bad "merge ('$merge_list') and stage ('$stage_list') differ by something other than a trailing 'heavy'; if that is deliberate, update this test and say why"
 fi
 
 echo "== phases: MUTATION — an allowlist without its exclusions would skip heavy for a generated artifact"

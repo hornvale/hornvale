@@ -1052,7 +1052,7 @@ fn tercile_cuts(sorted: &[usize]) -> Option<(usize, usize)> {
 /// tables and asserts only substrate controls. A falsified prediction is a
 /// finding here.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the Undertow's preregistered readout over a seed panel; RED as of 2026-08-28 — the shared BASELINE_ENDINGS_12/FOREIGN_12/MUTUALLY_EXCLUSIVE_12 pins have drifted again since The Underworld changed settlement placement, and The Undertow's question is closed; run by hand; demoted by The Governor"]
 fn the_undertow_readout_over_a_seed_panel() {
     let components = hornvale_worldgen::WorldComponents::assemble().expect("components assemble");
     let mut rows: Vec<SeedRow> = Vec::new();

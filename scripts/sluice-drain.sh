@@ -115,13 +115,13 @@ run_one() {
     # branch queues behind a job that already finished.
     if [ "$RC" = "0" ] && [ "$KIND" = "stage" ]; then
         (cd "$repo_root" && bash scripts/sluice-queue.sh set-state "$ID" reported \
-            "all four stage phases rc=0 in ${ELAPSED}s; main unchanged at ${AFTER}.")
+            "all stage phases rc=0 in ${ELAPSED}s; main unchanged at ${AFTER}.")
     elif [ "$RC" = "0" ] && [ "$KIND" = "census" ]; then
         (cd "$repo_root" && bash scripts/sluice-queue.sh set-state "$ID" reported \
             "census rc=0 in ${ELAPSED}s; main unchanged at ${AFTER}. Goldens delivered on a census/* branch — see the run log for the branch name and the make sluice line.")
     elif [ "$RC" = "0" ]; then
         (cd "$repo_root" && bash scripts/sluice-queue.sh set-state "$ID" landed \
-            "four phases rc=0 in ${ELAPSED}s; main ${BEFORE}..${AFTER}.")
+            "all merge phases rc=0 in ${ELAPSED}s; main ${BEFORE}..${AFTER}.")
     else
         (cd "$repo_root" && bash scripts/sluice-queue.sh set-state "$ID" held \
             "CHAMBER RED rc=$RC after ${ELAPSED}s; main ${BEFORE}..${AFTER}. Log: ${LOG} — attribution pending.")

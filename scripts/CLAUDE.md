@@ -130,13 +130,22 @@ exactly that reason: it names the claim, not the deleted machinery.
   earlier notes cite) — on a set that fires at every plan-stage boundary, so
   it moved to its own `campaign`-rung set instead.
 - `gate-full-heavy.sh` — the cost-tagged `heavy:` `#[ignore]`d tier that
-  `gate-commit` and the stage gate's own suite both defer (see
+  `gate-commit` and the `gate` set's own suite both defer (see
   `cli/tests/suite/heavy_tier.rs`). Runs as the `heavy` set — either standalone via
-  `make heavy-remote REF=<sha>`, or as the LAST of the merge queue's chamber
-  phases (`sluice-run.sh`, below), which is what `gate-campaign` used to
-  dispatch it. It is deliberately not a stage-gate phase: at a measured mean
-  1678 s it is 47% of the merge set's ~3602 s, which is a merge-frequency
-  cost, not a plan-stage-boundary one. **Takes the shared box claim** (decisions 0086/0133) — here,
+  `make heavy-remote REF=<sha>`, or as the LAST of the chamber's phases
+  (`sluice-run.sh`, below). **It is a phase of a MERGE and not of a stage gate
+  (decision 0426).** That is the pre-0148 arrangement restored: 0148 took it
+  off the merge list, where it had lived, and it has never been on the stage
+  list at all. The Governor then cut the tier 3.52x (1551.631 s -> 440.269 s
+  nextest wall, 118 -> 64 tests, 10 -> 0 failures, measured at `e76ea0497`;
+  that campaign's final review restored one test and a re-measure confirmed it
+  cost nothing), which is what makes it affordable at
+  ~29% of a ~1595.3 s merge — both figures derived once in decision 0426 and
+  not restated in a second form here. It stays off the stage list because
+  `census_fixtures_match_a_probe_of_live_seeds` compares a live probe against
+  committed census fixtures refreshed once per campaign at pre-merge close, so
+  a stage gate would red predictably for the whole middle of any
+  world-touching campaign. **Takes the shared box claim** (decisions 0086/0133) — here,
   at the seam, rather than only in a wrapper, because a wrapper cannot guard
   a direct invocation of the script. Where there is no `flock` (macOS ships
   none) it proceeds unserialised with a note rather than failing.
@@ -145,13 +154,17 @@ exactly that reason: it names the claim, not the deleted machinery.
   pushed ref in a scratch worktree; `status` asks who holds the box and is
   legal from any machine — but it reads the claim in the **local** `/tmp`, so
   from the Mac it always says "no". Use **`make heavy-status`** to ask the
-  canonical box instead; that is almost always the question you mean. Carries the canonical-host guard, because the tier
-  **authors committed artifacts**: `the-history` (`cli/tests/suite/history_battery.rs`),
-  `the-sounding` (`windows/chronicle/tests/suite/sounding_sweep.rs`), and
-  `occupancy.csv` (`windows/worldgen/tests/suite/occupancy_readout.rs`) — plus
+  canonical box instead; that is almost always the question you mean. Carries
+  the canonical-host guard, because the tier **authors a committed artifact**:
+  `the-history` (`cli/tests/suite/history_battery.rs`) — plus
   `census_fixtures_match_a_probe_of_live_seeds`, which compares a live probe
-  against lefford-authored fixtures. Review and commit those artifacts **on
-  the canonical box**. Dispatch from the Mac with `make heavy-remote REF=<sha>`.
+  against lefford-authored fixtures. **This bullet used to name three
+  writers**; The Governor (2026-08-28) demoted `sounding_sweep` out of the
+  tier, and `occupancy_readout_is_current` only ever *compared* against
+  `occupancy.csv` — its writer, `regenerate_occupancy_readout`, was never
+  `heavy:` at all, so counting it here was wrong rather than merely stale.
+  Review and commit the artifact **on the canonical box**. Dispatch from the
+  Mac with `make heavy-remote REF=<sha>`.
 - `test-heavy-lock.sh` — proves the claim EXCLUDES (second acquirer refused
   while held; a normal exit and a `-9` both release), not merely that a lock
   file exists. Skips where there is no `flock`.
@@ -189,13 +202,18 @@ the exact SHA it tested.
   0081/0086/0133), so the queue pays for one job, not the six separate
   dispatches a campaign gate used to cost (67% of the lane's first 27.4 h of
   wall time was queue wait for exactly that reason). Merges the candidate,
-  then runs `artifacts outboard gate clients` against the real merge commit
-  before pushing it, so a broken interaction with main is caught before it
-  ever reaches main. **That list lost `seam-guard` and `heavy` on 2026-08-19
-  (decision 0148)**: both keep their `campaign`-rung rows and their own entry
-  points (`make seam-guard`, `make heavy-remote REF=<full-sha>`), and those
-  are now the ONLY things that run them — nothing does so automatically. The
-  merge product is still gated as itself, by four phases rather than six.
+  then runs `artifacts outboard gate clients heavy` against the real merge
+  commit before pushing it, so a broken interaction with main is caught before
+  it ever reaches main. A STAGE GATE RUNS THE SAME LIST MINUS `heavy`.
+  **The merge list lost `seam-guard` and `heavy` on 2026-08-19 (decision 0148)
+  and got `heavy` back on 2026-08-28 (decision 0426)**, after The Governor cut
+  the tier 3.52x. `seam-guard` keeps its `campaign`-rung row and its own entry
+  point (`make seam-guard`), and that is still the ONLY thing that runs it —
+  nothing does so automatically. `heavy` keeps `make heavy-remote
+  REF=<full-sha>` as a by-hand entry point, and that is still the only way to
+  run the tier at a plan-stage boundary, but the chamber now dispatches it on
+  every non-prose merge candidate. The merge product is gated as itself, by
+  five phases.
   (`census` refuses as a chamber phase for an unrelated reason: it
   unconditionally clobbers the shared claim on exit.) A `kind=stage` run is the same code with one
   branch turned the other way at the push step: it merges, runs the
