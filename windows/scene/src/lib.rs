@@ -15,6 +15,9 @@ use hornvale_kernel::{NearestVertexIndex, Seed, VertexMap, World, WorldTime};
 use hornvale_terrain::GeneratedTerrain;
 use serde::Serialize;
 
+mod classify;
+pub use classify::*;
+
 mod region;
 pub use region::*;
 

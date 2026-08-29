@@ -16,6 +16,8 @@
 
 mod common;
 
+#[path = "suite/classify.rs"]
+mod classify;
 #[path = "suite/golden.rs"]
 mod golden;
 #[path = "suite/illumination_hypotheses.rs"]
