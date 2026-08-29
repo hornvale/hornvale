@@ -53,6 +53,15 @@ impl Terrain for ColdBuilt {
 }
 
 /// The stand-in thing-kind spelling for an anchor kind — see the module doc.
+/// **Why this must not ship as the real mapping, which Task 7 owns.** It is
+/// injective today, so a non-injective replacement would red this file rather
+/// than pass quietly — but `thing_role` makes the kind string an input to a
+/// derived `EntityId` and its own doc calls that a save-format contract,
+/// while `#[derive(Debug)]` output is not one: a variant rename would
+/// silently renumber every thing in every saved world. This stand-in also
+/// exercises 7 of 14 `AnchorKind` variants (built + cold, locale band only),
+/// so it cannot witness a mapping that is partial over the chamber-band
+/// seven.
 fn kind_name(kind: AnchorKind) -> String {
     format!("{kind:?}").to_lowercase()
 }

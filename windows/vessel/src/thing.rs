@@ -515,6 +515,15 @@ pub fn is_open(ledger: &Ledger, thing: EntityId, day: WorldTime) -> Option<bool>
 /// kind the room never offered, which is not a bug in this fold — it is the
 /// missing conjunct.
 ///
+/// **The `0` in that sketch is licensed by a measurement, not by taste.**
+/// Every production room composes at most one anchor of any kind, so the
+/// ordinal is always 0 — and that invariant is held by
+/// `no_production_room_composes_two_anchors_of_one_kind`
+/// (`crate::interior::pattern`'s `mod tests`), whose doc explains that a red
+/// there means two things in one room now derive the SAME entity id, and
+/// says to return to the spec rather than choose an ordering rule in a task.
+/// Copy the pointer along with the sketch.
+///
 /// # "Anywhere but this room", not "has ever been touched"
 ///
 /// A thing that was **promoted and put back** is still here, and so is a
@@ -539,19 +548,51 @@ pub fn is_open(ledger: &Ledger, thing: EntityId, day: WorldTime) -> Option<bool>
 /// the thing somewhere unreadable is still a fact that it was moved, and
 /// re-offering it would mint a second copy.
 ///
+/// **That argument is asymmetric, and the gap is worth stating before Task
+/// 12 inherits it.** The grammar ALSO expresses containment — `the-fire` is
+/// `Attach::Within(AnchorKind::Alcove)` and `compose` sets `Anchor.within`
+/// from it — and `offers_of` correctly offers both the alcove and the hearth
+/// within it. But this fold suppresses a thing whose containment is stated
+/// in the LEDGER, so committing a holder fact that merely restates what the
+/// grammar already says would stop the room offering an anchor the grammar
+/// still places there. Nothing commits such a fact and Task 7 gives
+/// `Portable` to the key rather than the hearth, so no wrong answer is
+/// reachable today; a verb that records grammar-implied containment would
+/// make one reachable.
+///
 /// # Cost
 ///
-/// One SPO-indexed lookup per slot per room entry — `Ledger::facts_of` is
-/// `O(log n + k)` in `k`, the number of `located-in` facts about *this one
-/// thing*, which is 0 for every untouched slot. Nothing here walks world
-/// history and nothing costs per fact in the ledger, which is the shape
-/// Task 1 measured the design against. The id is derived *before* the read
-/// ([`thing_id`] consults no ledger), which is what makes it a lookup rather
-/// than a search.
+/// **On an INDEXED ledger:** one SPO-indexed lookup per slot per room entry
+/// — `Ledger::facts_of` is `O(log n + k)` in `k`, the number of `located-in`
+/// facts about *this one thing*, which is 0 for every untouched slot. The id
+/// is derived *before* the read ([`thing_id`] consults no ledger), which is
+/// what makes it a lookup rather than a search. This is the path Task 1
+/// measured at ~90 ns, on a ledger obtained through `into_played_world` —
+/// that is, after commits.
 ///
-/// Both [`Facet::pack`] calls behind it are fallible past `MAX_DEPTH`, so a
-/// room too deep to pack is refused rather than unwrapped — the same
-/// contract [`thing_id`] and [`room_key`] already carry.
+/// **On an UNINDEXED one it is a whole-ledger scan, and this paragraph said
+/// otherwise.** It read "nothing costs per fact in the ledger", which is
+/// false in a state a live session can actually be in. `Ledger::facts_of`
+/// takes `&self` and therefore *cannot* build the index; `index` is
+/// `#[serde(skip)]` and is built only by the three `&mut self` paths
+/// (`mint_entity`, `reuse_or_mint_entity`, `commit`), so a freshly
+/// deserialized ledger falls through to `naive_facts_of` — a filter over
+/// every fact it holds. The kernel documents this state outright in
+/// `index_is_absent_until_first_use_then_complete`.
+///
+/// **The forward consequence belongs to Task 12, not here:** a `possess
+/// --world` session that renders a room before committing anything pays 2-7
+/// whole-ledger scans per entry rather than 2-7 lookups, and Task 1's own
+/// played session held 22,880 facts. Nothing in this fold is wrong and there
+/// is no live caller yet; what was wrong was a doc stating an absolute for
+/// the half of the state space it had measured.
+///
+/// Both [`Facet::pack`] calls behind it are fallible, so an unpackable room
+/// is refused rather than unwrapped — the same contract [`thing_id`] and
+/// [`room_key`] already carry. `pack` has TWO failure modes, not the one
+/// `latency_in_a_room_that_does_not_pack_is_refused` exercises:
+/// `DepthExceedsCap` past `MAX_DEPTH`, and `Invalid` for a `face >= 20` or a
+/// path digit `>= 4`.
 /// type-audit: bare-ok(identifier-text: kind), bare-ok(count: ordinal), bare-ok(flag: return)
 pub fn is_latent(
     ledger: &Ledger,

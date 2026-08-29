@@ -368,6 +368,17 @@ impl Ledger {
     /// `positions_for_subject_predicate` yields object-key order, not
     /// position order, so the sort is load-bearing: commit order is the
     /// contract every caller of `facts_about`/`find` already relies on.
+    ///
+    /// **`O(log n + k)` is the INDEXED path, and this method cannot reach the
+    /// other one.** It takes `&self`, so it can never build the index; when
+    /// `index` is `None` it falls through to [`Self::naive_facts_of`], which
+    /// filters every fact the ledger holds. Since `index` is
+    /// `#[serde(skip)]` and only the `&mut self` paths (`mint_entity`,
+    /// `reuse_or_mint_entity`, `commit`) build it, a freshly deserialized
+    /// ledger pays that scan on every query until something commits — see
+    /// `index_is_absent_until_first_use_then_complete`. Callers that query a
+    /// loaded world before writing to it should know they are on the linear
+    /// path.
     /// type-audit: bare-ok(identifier-text)
     pub fn facts_of(&self, subject: EntityId, predicate: &str) -> impl Iterator<Item = &Fact> {
         let positions = match &self.index {
