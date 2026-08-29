@@ -4042,3 +4042,7 @@ measured here.
 | 2026-08-29T17:31:06Z | rebaseline | 53.353 | 273.815 | 13.107 | 5.38 | 0 | 2d42da477 | campaign/the-chattel | MacBookPro | 10 |
 | 2026-08-29T17:31:57Z | gate-commit | 24.634 | 63.030 | 13.468 | 3.11 | 0 | 2d42da477 | campaign/the-chattel | MacBookPro | 10 |
 | 2026-08-29T17:32:46Z | gate-commit | 21.347 | 50.781 | 12.923 | 2.98 | 0 | 2d42da477 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T21:19:10Z | gate-commit | 7.295 | 8.757 | 5.096 | 1.90 | 0 | 39815fa12 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T21:20:03Z | gate-commit | 41.671 | 114.403 | 21.434 | 3.26 | 0 | 39815fa12 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T21:21:03Z | rebaseline | 56.124 | 276.481 | 13.850 | 5.17 | 0 | 39815fa12 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T21:21:54Z | gate-commit | 21.673 | 51.304 | 13.482 | 2.99 | 0 | 39815fa12 | campaign/the-chattel | MacBookPro | 10 |
