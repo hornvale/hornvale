@@ -1996,16 +1996,16 @@ underground`) asserting they cannot drift apart. The document no longer
 reading the tag alone now knows what Quire's consumer could only have
 guessed from prose. **`submerged` is deliberately left exactly as Quire
 found it** — still folded into `walk`, still distinguishable only by prose
-— because the water column has no lattice for a pane to draw yet; the row
-this campaign moved is `CLIENT-band-fold`, narrowed rather than closed, and
-the registry says so. One new limitation surfaced in the same campaign's own
-closing audit, of the *other* kind on this ledger — not a wire ambiguity but
-a picture that can silently run off its own edge: the pane anchors a
+— because the water column has no lattice for a pane to draw yet; the
+frontier row this campaign moved is narrowed rather than closed, and says so
+itself. One new limitation surfaced in the same campaign's own closing
+audit, of the *other* kind on this ledger — not a wire ambiguity but a
+picture that can silently run off its own edge: the pane anchors a
 generated level's own corner to a fixed-width plate with no camera-follow,
 so a rung wider than that plate (every rung past the first) can walk the
-player's own marker off the visible screen. Registered as
-`MAP-underworld-viewport` rather than left for a future campaign to
-re-discover the way this ledger's own Risk section had to name it before any
+player's own marker off the visible screen. Recorded as its own frontier row
+rather than left for a future campaign to re-discover the way this ledger's
+own Risk section had to name it before any
 code existed.
 
 One older row recurs and one instrument for it becomes mechanizable. The
