@@ -1238,7 +1238,6 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neit
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_clamps_a_value_outside_the_census_range
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_is_zero_at_the_extremes_and_half_at_the_median
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::the_log_guard_holds_for_a_real_extreme_holding_world
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::too_few_present_values_is_excluded_with_its_reason
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_count_panics_loudly_on_an_unknown_metric_rather_than_reporting_all_absent
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_values_are_counted_not_skipped
@@ -1299,7 +1298,6 @@ hornvale-lab::hornvale_lab$domesday::render::tests::a_detector_that_fired_nothin
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_page_carries_the_generated_header_and_only_computed_numbers
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_with_no_metrics_renders_the_no_metrics_notice_verbatim
 hornvale-lab::hornvale_lab$domesday::render::tests::a_flag_metric_always_renders_both_true_and_false_rows
-hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two
 hornvale-lab::hornvale_lab$domesday::render::tests::a_novel_detector_name_reaches_the_rendered_index
 hornvale-lab::hornvale_lab$domesday::render::tests::a_removed_parenthetical_directly_before_a_period_does_not_leave_a_dangling_space
 hornvale-lab::hornvale_lab$domesday::render::tests::an_ellipsis_survives_the_space_dot_space_cleanup_untouched
@@ -1552,10 +1550,6 @@ hornvale-lab::suite$preregistration_guard::the_census_cost_ignore_is_sanctioned
 hornvale-lab::suite$reticence_calibration::h4_positive_control_the_divergence_detector_can_fire
 hornvale-lab::suite$rung_selection::insolation_is_determined_by_zone_position_alone
 hornvale-lab::suite$rung_selection::the_astronomy_driver_metrics_are_registered_and_vary
-hornvale-lab::suite$seed_sweep::a_worker_panic_propagates_and_an_empty_sweep_is_empty
-hornvale-lab::suite$seed_sweep::every_worker_count_agrees_with_the_serial_sweep
-hornvale-lab::suite$seed_sweep::map_seeds_returns_results_in_seed_order
-hornvale-lab::suite$seed_sweep::the_thread_override_refuses_zero_and_nonsense
 hornvale-lab::suite$the_fare_calibration::transform::difficult_terrain_doubles_flat_ground
 hornvale-lab::suite$the_fare_calibration::transform::dry_ground_pays_nothing
 hornvale-lab::suite$the_fare_calibration::transform::no_factor_in_the_unit_interval_yields_an_impassable_cost
@@ -3179,6 +3173,10 @@ hornvale-worldgen::hornvale_worldgen$schedule::tests::a_dependency_violating_ord
 hornvale-worldgen::hornvale_worldgen$schedule::tests::derived_schedule_is_pinned
 hornvale-worldgen::hornvale_worldgen$schedule::tests::genesis_declarations_pass_the_single_writer_check
 hornvale-worldgen::hornvale_worldgen$schedule::tests::hand_order_is_a_valid_topological_sort_of_the_declarations
+hornvale-worldgen::hornvale_worldgen$seed_sweep::tests::a_worker_panic_propagates_and_an_empty_sweep_is_empty
+hornvale-worldgen::hornvale_worldgen$seed_sweep::tests::every_worker_count_agrees_with_the_serial_sweep
+hornvale-worldgen::hornvale_worldgen$seed_sweep::tests::map_seeds_returns_results_in_seed_order
+hornvale-worldgen::hornvale_worldgen$seed_sweep::tests::the_thread_override_refuses_zero_and_nonsense
 hornvale-worldgen::hornvale_worldgen$settlement_pins::tests::default_pins_pin_nothing
 hornvale-worldgen::hornvale_worldgen$settlement_pins::tests::species_pin_round_trips_through_parse_pin
 hornvale-worldgen::hornvale_worldgen$settlement_pins::tests::unknown_keys_are_user_facing_errors
@@ -3551,10 +3549,14 @@ hornvale::suite$generated_paths::no_claude_md_restates_the_declared_path_list
 hornvale::suite$generated_paths::no_generated_artifact_is_routed_through_a_regenerating_merge_driver
 hornvale::suite$generated_paths::the_declared_list_is_not_empty
 hornvale::suite$generated_paths::the_root_guide_names_the_declared_path_list
+hornvale::suite$heavy_tier::every_whole_runner_test_is_front_loaded
 hornvale::suite$heavy_tier::heavy_tier_reason_strings_are_canonical
+hornvale::suite$heavy_tier::override_table_end_stops_at_the_next_profile_section_not_just_eof
 hornvale::suite$heavy_tier::the_canonical_heavy_reason_states_no_duration
+hornvale::suite$heavy_tier::the_heavy_roster_is_exactly_this_fixture
 hornvale::suite$heavy_tier::the_serialization_pin_names_exactly_the_batteries_that_scatter_their_sweeps
 hornvale::suite$heavy_tier::the_serialization_pin_names_exactly_the_wall_clock_budget_tests_marked_co_schedule_sensitive
+hornvale::suite$heavy_tier::the_sized_sweep_pin_names_exactly_the_batteries_marked_for_a_bounded_panel
 hornvale::suite$heavy_tier::the_untokenised_ignore_reasons_are_exactly_this_roster
 hornvale::suite$history_render::a_burned_goblin_clearing_shows_its_doll
 hornvale::suite$history_render::a_climate_departure_still_reads_as_one_when_a_war_happened_elsewhere
