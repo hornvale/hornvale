@@ -1515,26 +1515,31 @@ impl<'w> Session<'w> {
             })
             .collect();
 
-        // The band the possession is in decides the channel. `inside` is the
-        // same discriminator `handle`'s `map` arm uses, so pane and verb can
-        // never disagree about which band is current — and that is the whole
-        // reason this matches on `inside` alone rather than on the three
-        // "not out of doors" states the session now carries (`inside`,
-        // `submerged`, `underground`). `map`'s arms guard on `inside` too, so
-        // the other two fall through to the surface chart in the verb and
-        // must fall through here identically or the pane would start showing
-        // something the verb refuses to. Adding a band to the session without
-        // deciding what the pane shows there is the failure this comment
-        // exists to catch: see `SpatialChannel`'s doc.
-        let spatial = match self.inside.as_ref() {
-            Some(inside) => SpatialChannel::Chamber {
+        // The band the possession is in decides the channel. `inside` and
+        // `underground` each get their own arm; `submerged` is the one
+        // remaining state that still falls through to the surface chart,
+        // exactly as the `map` VERB's own arms do (they guard on `inside`
+        // alone, so a submerged `map` draws the surface chart too — pane and
+        // verb must keep agreeing there, or the pane would start showing
+        // something the verb refuses to). Adding a band to the session
+        // without deciding what the pane shows there is the failure this
+        // comment exists to catch: see `SpatialChannel`'s own doc, which
+        // also records why `underground` is no longer one of the ones that
+        // folds (The Gallery, Task 7).
+        let spatial = if let Some(inside) = self.inside.as_ref() {
+            SpatialChannel::Chamber {
                 plan: self.chamber_plan(inside, marks, &self.eyes)?,
-            },
+            }
+        } else if let Some(ug) = self.underground.as_ref() {
+            SpatialChannel::Underground {
+                level: Box::new(self.underground_level(ug, marks)),
+            }
+        } else {
             // `purview(0)` is the same call `map` makes out of doors, at the
             // same zoom, so the pane shows what the verb would have shown.
-            None => SpatialChannel::Walk {
+            SpatialChannel::Walk {
                 chart: Box::new(self.purview(0)?),
-            },
+            }
         };
 
         Ok(SessionSnapshot {
@@ -4281,6 +4286,48 @@ impl<'w> Session<'w> {
             marks,
             shading.as_ref(),
         ))
+    }
+
+    /// The underground band's own floor plan (The Gallery, Task 7; spec §4)
+    /// — [`Self::chamber_plan`] one band down, minus the colour seam: a
+    /// level carries an explicit visibility STATE per cell, never a shade
+    /// (spec §4.1), so there is no `Shading` to resolve and no observer to
+    /// ask for.
+    ///
+    /// The shadowcast computed here is the SAME predicate
+    /// [`Self::mark_underground_seen`] folds into `ug.seen` on every
+    /// arrival: this method never mutates that bitset, only reads it (via
+    /// [`crate::underground::SeenBits::saw`]), so a cell this call marks
+    /// `"lit"` is always already `"remembered"` too by the time this runs —
+    /// nothing here can show the possession a cell its own arrival did not
+    /// already commit to memory.
+    fn underground_level(
+        &self,
+        ug: &crate::underground::Underground,
+        marks: Vec<crate::plan::PlanMark>,
+    ) -> crate::level_doc::SessionLevel {
+        let level = ug.level();
+        let lit = crate::lattice::shadowcast_with(
+            |cell| {
+                level
+                    .cells
+                    .get(cell)
+                    .and_then(crate::underworld_level::movement_mode)
+                    .is_some()
+            },
+            |cell| level.extent.contains(cell),
+            ug.cell,
+            self.sight_reach(),
+        );
+        crate::level_doc::level_of(
+            level,
+            ug.rung_band(),
+            ug.depths_m[ug.rung],
+            ug.cell,
+            &lit,
+            |c| ug.seen[ug.rung].saw(c),
+            marks,
+        )
     }
 
     /// The drawn floor plan, in the chamber block's own shape: a bracketed
@@ -8969,10 +9016,16 @@ mod tests {
     /// workspace, outside this crate's reach to import from) detects a
     /// successful delve by matching this EXACT literal prefix — including
     /// the trailing period — against the turn's own narration text via
-    /// `str::starts_with`. It is the ONLY signal available to it:
-    /// `Spatial` deliberately folds underground into `Walk`
-    /// (`the_underground_band_folds_into_walk_as_map_does`, this module),
-    /// so there is no typed alternative to read instead.
+    /// `str::starts_with`. As of this test's writing that was the ONLY
+    /// signal available to it: `Spatial` folded underground into `Walk`, so
+    /// there was no typed alternative to read instead. **The Gallery, Task 7
+    /// changed the sim-side half of that**: the pane now carries its own
+    /// `band: "underground"` with `vessel/level/v1`
+    /// (`the_underground_pane_reads_band_underground`, this module) rather
+    /// than folding. `clients/game` itself has not been re-pointed at it
+    /// yet — that is Task 9's job — so `DELVE_SUCCESS_PREFIX`'s narration
+    /// scan remains the client's actual, live cave-discovery signal until
+    /// then, and this tripwire's own job is unchanged.
     ///
     /// The nearest existing coverage before this test
     /// (`underground_examine_answers_for_the_rock_it_names`, below) only
@@ -10035,8 +10088,149 @@ mod tests {
         );
     }
 
-    /// The snapshot's spatial channel and the `map` verb must answer the
-    /// SAME band question, including in a band neither was written against.
+    /// The Gallery, Task 7's own headline assertion (spec §4, §6 acceptance
+    /// 3): the pane answers `band: "underground"` the moment the possession
+    /// descends, carrying `vessel/level/v1` rather than folding into the
+    /// walk-band chart. See `SpatialChannel`'s own doc and
+    /// `the_underground_band_folds_into_walk_as_map_does` (below) for the
+    /// history this replaces.
+    #[test]
+    fn the_underground_pane_reads_band_underground() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        let snap = session.snapshot().expect("a descended session snapshots");
+        let json = crate::snapshot_json(&snap);
+        assert!(
+            json.contains(r#""band":"underground""#),
+            "the pane must read `underground` immediately after a descent: {json:.200}"
+        );
+    }
+
+    /// Spec §4.1.1: the document carries only cells the possession has
+    /// seen, so on the very first turn after descending — before a single
+    /// lateral step — the level document's own cell count must be strictly
+    /// less than the rung's full extent area. A dense, TOTAL grid (as
+    /// `vessel/plan/v1`'s `cells` is) could never satisfy this: it always
+    /// carries exactly `w * h` entries, seen or not.
+    #[test]
+    fn a_never_seen_cell_is_absent_from_the_document() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        let snap = session.snapshot().expect("a descended session snapshots");
+        let level = match &snap.spatial {
+            crate::snapshot::SpatialChannel::Underground { level } => level,
+            other => panic!("expected the underground band, got {other:?}"),
+        };
+        let area = (level.extent.w * level.extent.h) as usize;
+        assert!(
+            level.cells.len() < area,
+            "a freshly-entered level must not carry every cell of its extent: \
+             {} of {area} cells present",
+            level.cells.len()
+        );
+    }
+
+    /// Spec §4.1, §4.1.2: `here`, `lit` and `remembered` must all be
+    /// reachable in one document, distinguished by the `state` field alone —
+    /// never by colour. Walking far enough from the entrance that it falls
+    /// outside the current shadowcast is what manufactures the third state:
+    /// the entrance is marked the instant `delve_at` lands
+    /// (`Session::mark_underground_seen`'s "every arrival marks" rule), so
+    /// once the possession is more than `sight_reach()` Chebyshev cells away
+    /// from it, the entrance is guaranteed `remembered`, not `lit` —
+    /// [`crate::lattice::shadowcast_with`] cannot light a cell farther than
+    /// the radius it was given, regardless of the level's own geometry.
+    #[test]
+    fn the_three_visibility_states_are_distinguishable_without_colour() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        let start = session.underground.as_ref().expect("descended").cell;
+        let reach = session.sight_reach();
+
+        // Rather than walking there through `handle("go ...")` — which risks
+        // an unlucky maze shape sending a fixed-priority walk back and forth
+        // near the entrance instead of away from it — find a reachable cell
+        // more than `reach` Chebyshev cells from the entrance by breadth-
+        // first search over the level's own walkable graph, then place the
+        // possession there directly and fold its shadowcast the same way a
+        // real arrival would (`Session::mark_underground_seen`). Every
+        // generated level is connected well beyond `reach` cells from its
+        // own entrance (Task 9's connectivity invariant), so the search
+        // always finds one.
+        let far_cell = {
+            let ug = session.underground.as_ref().expect("descended");
+            let level = ug.level();
+            let mut visited = std::collections::BTreeSet::new();
+            let mut queue = std::collections::VecDeque::new();
+            visited.insert(start);
+            queue.push_back(start);
+            let mut found = None;
+            while let Some(cur) = queue.pop_front() {
+                let dist = (cur.0 - start.0).abs().max((cur.1 - start.1).abs());
+                if dist > reach {
+                    found = Some(cur);
+                    break;
+                }
+                for (dx, dy) in [(0, 1), (0, -1), (1, 0), (-1, 0)] {
+                    let next = crate::lattice::Cell(cur.0 + dx, cur.1 + dy);
+                    if visited.insert(next)
+                        && level
+                            .cells
+                            .get(next)
+                            .and_then(crate::underworld_level::movement_mode)
+                            .is_some()
+                    {
+                        queue.push_back(next);
+                    }
+                }
+            }
+            found.expect(
+                "a generated level is connected well beyond sight_reach() from \
+                 its own entrance (Task 9's connectivity invariant)",
+            )
+        };
+        session.underground.as_mut().expect("descended").cell = far_cell;
+        session.mark_underground_seen();
+
+        let snap = session.snapshot().expect("a descended session snapshots");
+        let json = crate::snapshot_json(&snap);
+        for needle in [
+            r#""state":"here""#,
+            r#""state":"lit""#,
+            r#""state":"remembered""#,
+        ] {
+            assert!(json.contains(needle), "missing {needle} in {json}");
+        }
+        assert!(
+            !json.contains("\"color\"") && !json.contains("\"colour\""),
+            "the level document must distinguish visibility by state alone, \
+             never by colour: {json}"
+        );
+    }
+
+    /// The snapshot's spatial channel and the `map` verb, underground —
+    /// **not a fold any more, and this test's own job narrowed with it.**
     ///
     /// Found at The Panes' merge, not during either campaign: The Deep Realm
     /// added `underground` while The Panes added the spatial channel, in
@@ -10044,16 +10238,24 @@ mod tests {
     /// touched different lines of the same file. `SpatialChannel` enumerates
     /// bands; The Deep Realm added one; neither campaign's chronicle mentions
     /// the other's surface. That is precisely the semantic collision
-    /// `make preflight` says it cannot score.
+    /// `make preflight` says it cannot score. This test's original body
+    /// asserted a FOLD — the pane and the `map` verb both answering `walk`
+    /// underground — under the argument that whichever answer the sim
+    /// settles on, one change must move both, so a silent fold could never
+    /// hide behind a passing test.
     ///
-    /// What it asserts is a FOLD, not a correctness claim. Standing in a cave
-    /// chamber, the pane shows a chart of the country overhead — which is
-    /// odd, and is exactly what the `map` verb already does in the same
-    /// state, because both guard on `inside` alone. So the invariant worth
-    /// pinning is not "the pane is right here" but "the pane and the verb
-    /// cannot drift apart here": whichever answer the sim settles on, one
-    /// change must move both. Without this, adding a fourth band would fold
-    /// silently into `walk` and no test would notice.
+    /// **The Gallery, Task 7 answers the underground half of that question,
+    /// and spec §5 ("the fold, retired") names the disposition explicitly:
+    /// `the_underground_band_folds_into_walk_as_map_does` is "replaced, not
+    /// deleted."** The pane now emits its own `band: "underground"` carrying
+    /// `vessel/level/v1` — see `the_underground_pane_reads_band_underground`,
+    /// which is that replacement for the PANE half. The `map` VERB's own
+    /// underground arm is a separate, later addition (Task 8), so for as
+    /// long as it takes that task to land, the pane and the verb answer this
+    /// one question differently ON PURPOSE: this is now the test that pins
+    /// the verb's own half has not silently moved WITH the pane, which is
+    /// exactly the drift `SpatialChannel`'s own doc warns a reader to check
+    /// for before trusting the two still agree.
     #[test]
     fn the_underground_band_folds_into_walk_as_map_does() {
         let world = seam_world();
@@ -10070,31 +10272,35 @@ mod tests {
             "the fixture must have descended"
         );
 
-        // The pane: `walk`, carrying a chart rather than a plan.
+        // The pane: its own `underground` band (Task 7), carrying a level
+        // rather than a chart or a plan.
         let snap = session.snapshot().expect("a descended session snapshots");
         match &snap.spatial {
-            crate::snapshot::SpatialChannel::Walk { .. } => {}
-            crate::snapshot::SpatialChannel::Chamber { .. } => panic!(
-                "the underground band emitted `chamber` — if that is now intended, \
-                 `SpatialChannel`'s doc and the `map` verb's band arms must change WITH it"
+            crate::snapshot::SpatialChannel::Underground { .. } => {}
+            other => panic!(
+                "the underground band no longer answers `walk` — Task 7 gave it \
+                 `band: \"underground\"` — if that changed again, `SpatialChannel`'s \
+                 own doc and this test must change WITH it: {other:?}"
             ),
         }
         let json = crate::snapshot_json(&snap);
         assert!(
-            json.contains(r#""band":"walk""#),
-            "the wire tag must read `walk` underground: {json:.120}"
+            json.contains(r#""band":"underground""#),
+            "the wire tag must read `underground`: {json:.120}"
         );
 
-        // The verb, in the same state: the surface chart, not a plan and not
-        // a refusal. `plan_here` prints a legend; `map`'s chart prints a lens
-        // header — so the two are told apart by content, not by length.
+        // The verb, in the same state: STILL the surface chart, not a plan
+        // and not a refusal — Task 8's own job, not landed here.
+        // `plan_here` prints a legend; `map`'s chart prints a lens header —
+        // so the two are told apart by content, not by length.
         let out = match session.handle("map") {
             Turn::Out(t) => t,
             Turn::Released(_) => panic!("map must not release"),
         };
         assert!(
             out.contains("[lens:"),
-            "map underground must draw the walk-band chart, as the pane does: {out}"
+            "map underground must still draw the walk-band chart until Task 8 \
+             lands its own arm: {out}"
         );
         assert!(
             !out.contains(INDOOR_CHART_REFUSAL),
@@ -10231,7 +10437,9 @@ mod tests {
             .spatial
         {
             SpatialChannel::Chamber { plan } => plan.marks,
-            SpatialChannel::Walk { .. } => panic!("expected the chamber band"),
+            SpatialChannel::Walk { .. } | SpatialChannel::Underground { .. } => {
+                panic!("expected the chamber band")
+            }
         }
     }
 

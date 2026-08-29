@@ -115,15 +115,13 @@ impl SeenBits {
     /// same tolerance [`crate::underworld_level::CellGrid::get`] gives an
     /// out-of-bounds read, rather than a panic.
     ///
-    /// **Unused in production as of Task 6** — this task's own tests are
-    /// the only caller so far. The brief's own interface list names it as
-    /// part of this task's produced surface regardless; a future pane
-    /// (Task 7) is what reads it to decide "terrain only" vs "lit" per
-    /// cell (spec §4.1.2). The same "documented interface, no live
-    /// production caller yet" shape `Underground::seed` and
-    /// `Underground::rung_band` already carry.
+    /// **Live in production since Task 7.** `Session::underground_level`
+    /// (`session.rs`) reads this once per cell of the rung's own extent,
+    /// through the closure it hands to [`crate::level_doc::level_of`], to
+    /// decide `remembered` (seen, not currently lit) from `never-seen`
+    /// (omitted from the document entirely — spec §4.1.1) for every cell
+    /// the current shadowcast does not itself light.
     /// type-audit: bare-ok(flag: return)
-    #[allow(dead_code)]
     pub fn saw(&self, c: Cell) -> bool {
         match self.index_of(c) {
             Some(bit) => self.bits[bit / 64] & (1u64 << (bit % 64)) != 0,
@@ -193,6 +191,20 @@ pub(crate) struct Underground {
     /// [`Underground::enter`], and discarded along with the rest of this
     /// struct the moment the possession climbs out.
     pub(crate) seen: Vec<SeenBits>,
+    /// One evaluation depth in metres per element of `descent`, same
+    /// indexing: `depths_m[i]` is `descent[i]`'s own
+    /// `hornvale_terrain::rung_evaluation_depth_m` result, exactly as
+    /// [`Underground::enter`] computed it to build that rung.
+    ///
+    /// **Kept alongside `descent` since Task 7**, rather than recomputed at
+    /// snapshot time: the depth is a function of the entrance vertex's own
+    /// geothermal gradient and the cave's `depth_reach_m`, and by the time a
+    /// snapshot reads it the possession has walked away from that vertex —
+    /// recomputing would mean carrying both inputs forward as a second copy
+    /// of exactly what this vector already holds. `Session::
+    /// underground_level` reads `depths_m[rung]` to fill
+    /// `SessionLevel::depth_m`.
+    pub(crate) depths_m: Vec<f64>,
 }
 
 impl Underground {
@@ -292,6 +304,7 @@ impl Underground {
             cell,
             seed,
             seen,
+            depths_m,
         }
     }
 
@@ -303,11 +316,14 @@ impl Underground {
     /// Which band `self.rung` names — `habitation_rungs()[rung]`, the same
     /// index [`Underground::enter`] built `descent` against.
     ///
-    /// **Unused within this task.** Naming the current rung is Task 4's
-    /// job (narrating movement between rungs) and Task 7's (the pane); this
-    /// task ships no verb that reads it. Built now because the brief's own
-    /// interface list names it as this task's produced surface.
-    #[allow(dead_code)]
+    /// **Live in production since Task 7**: `Session::underground_level`
+    /// reads it to fill `SessionLevel::rung`, hand-mapped to a wire string
+    /// through `level_doc`'s own `band_wire_name` rather than serialized
+    /// from this `Band`'s `Debug` text — the same reason `plan::entry_for`
+    /// hand-maps `CellKind` instead of deriving its wire string, since a
+    /// wire value is a contract and `Debug` output is not one (`Nadir` was
+    /// `Sunless` until The Stope renamed it, with no wire consumer to
+    /// notice either way).
     pub(crate) fn rung_band(&self) -> Band {
         habitation_rungs()[self.rung]
     }

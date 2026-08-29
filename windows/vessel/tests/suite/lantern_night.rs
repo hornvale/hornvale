@@ -51,7 +51,7 @@ fn chamber_plan_at_seed(seed: u64) -> Option<SessionPlan> {
     session.handle("enter");
     match session.snapshot().ok()?.spatial {
         SpatialChannel::Chamber { plan } => Some(plan),
-        SpatialChannel::Walk { .. } => None,
+        SpatialChannel::Walk { .. } | SpatialChannel::Underground { .. } => None,
     }
 }
 

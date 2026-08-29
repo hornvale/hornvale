@@ -59,7 +59,7 @@ fn chamber_plan_at_seed(seed: u64) -> SessionPlan {
     let snap = session.snapshot().expect("a live session snapshots");
     match snap.spatial {
         SpatialChannel::Chamber { plan } => plan,
-        SpatialChannel::Walk { .. } => {
+        SpatialChannel::Walk { .. } | SpatialChannel::Underground { .. } => {
             panic!("seed {seed}: `enter` did not put the possession inside a building")
         }
     }
