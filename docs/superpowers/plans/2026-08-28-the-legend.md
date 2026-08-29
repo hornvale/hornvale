@@ -573,16 +573,31 @@ and extend the struct's `type-audit:` tag with
 
 `cargo test -p hornvale-scene --test suite -- golden > /tmp/hv.log 2>&1`
 
-- **Fails because the fixture gained two KEYS and no existing value changed**
-  -> expected and correct. Rebaseline with `make rebaseline-goldens`, then
-  `git diff` the fixture and confirm by eye that every pre-existing key holds
-  its previous value.
+**FIRST, know which pin is which.** `windows/scene/tests/suite/golden.rs`
+holds THREE independent byte pins, and only one of them is yours:
+
+| test | pins | your business? |
+|---|---|---|
+| `region_v1_bytes_are_pinned` (line 142) | `scene/tiles-region/v1` | **YES — this is the one you are changing** |
+| `v1_bytes_are_pinned` (line 31) | `scene/tiles/v1` | **NO — this is the epoch pin** |
+| `projected_v1_bytes_are_pinned` (line 67) | the projected composed shape | NO |
+
+**`make rebaseline-goldens` REBASELINES ALL THREE AT ONCE** — it runs
+`REBASELINE=1 ... -p hornvale-scene --test suite -- golden`, which matches
+every one of them. So running it blind would silently accept an epoch-level
+change as if it were yours. Read the failures BEFORE rebaselining:
+
+- **Only `region_v1_bytes_are_pinned` failed, because the fixture gained two
+  KEYS and no existing value changed** -> expected and correct. NOW run
+  `make rebaseline-goldens`, then `git diff` the fixture and confirm by eye
+  that every pre-existing key holds its previous value.
 - **Any pre-existing value changed** -> STOP. That is not additive. Do NOT
   rebaseline. You have found either a reordering or a classifier computing
   something different from the raw field. Report it.
-- **`scene/tiles/v1`'s own byte pin moved** (as distinct from
-  `tiles-region`) -> STOP and escalate. Its test calls it "the epoch decision
-  point" and this task has no business moving it.
+- **`v1_bytes_are_pinned` or `projected_v1_bytes_are_pinned` failed** -> STOP
+  and escalate. Do **NOT** run `make rebaseline-goldens`, which would accept
+  them along with yours. `scene/tiles/v1`'s test calls itself "the epoch
+  decision point" and this task has no business moving it.
 
 - [ ] **Step 4: Prove `elevation_m` is untouched**
 
