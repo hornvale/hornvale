@@ -223,7 +223,7 @@ turn up there.
 | `what_the_bake_founded_per_people` | `underworld_capacity_probe` | 43.850 | PASS | **DEMOTE** | The Underworld Task 8, the surface-density half of spec §4.2.1/§4.6's re-key acceptance criteria. The file is NOT zero-assertion (its sibling `where_underworld_communities_found_and_what_they_cut` carries two real existence guards), but this test itself asserts nothing — it prints per-people occupation counts and a distinct-site count and nothing checks them. It exists to be read by a human alongside its sibling below, not to fail on its own; a red is only a build panic, carrying no content-specific signal. Report branch: the number is meant to be eyeballed against the acceptance criterion, not gated. |
 | `a_pinned_surface_people_builds_the_same_world` | `underworld_capacity_probe` | 103.264 | PASS | **DEMOTE** | The Underworld Task 8, the surface-invariance control for the realm re-key (spec §4.6): a pinned-surface-only world must build byte-for-byte the same before and after the re-key. The file is NOT zero-assertion (see the row above), but this test itself carries no assertion by design — its own doc says it "prints rather than asserts against a committed literal: the number it produces is compared against the same command run on the parent commit, which is a comparison a literal in this file could not make honestly." That is a deliberate report instrument (diff two runs by hand across a commit boundary), not a standing gate. |
 | `where_underworld_communities_found_and_what_they_cut` | `underworld_capacity_probe` | 51.812 | PASS | **KEEP** | The Underworld Task 8, sibling to the two DEMOTE rows above but carrying two real existence assertions: `underworld_records > 0` ("the seating has zeroed a people out of the world") and `made > 0` ("spec §4.2.1 clause 2's producer is not producing" — the `Made`-chamber drainage-rule production path). Both are genuine "did a shipped mechanism stop firing" catches, distinct from the file's other two tests, which print only. |
-| `occupancy_readout_is_current` | `occupancy_readout` | 408.440 | PASS | **DEMOTE** | The Vacancy T3 / The Radiation. A byte-golden drift check (`rendered == committed` against `fixtures/occupancy.csv`) whose own failure message is the canonical report-branch instruction: "if this is intended, rewrite the fixture in the SAME commit as the change that drifted it." This is the same shape as the hearsay artifact's `BASELINE_*`-family findings — a live-worldgen-derived committed artifact that legitimately drifts with any world-shape change and is meant to be re-baselined, not investigated as a regression per se. |
+| `occupancy_readout_is_current` | `occupancy_readout` | 408.440 | PASS | **KEEP** (flipped from DEMOTE on the campaign's final whole-branch review) | The Vacancy T3 / The Radiation. **It pins a committed byte golden that no other automated path in the tree observes, and it is a change-detector, not a report.** The DEMOTE verdict this row replaces rested on the failure message ("if this is intended, rewrite the fixture in the SAME commit as the change that drifted it") reading as §3.1's report branch. That argument proves too much: `fixture_staleness::census_fixtures_match_a_probe_of_live_seeds` reads identically — a live re-render compared against a committed golden, re-baselined when a world-shape change moves it — and is KEPT in Task 4c, and decision 0426 builds a whole section on the value of keeping exactly that kind of comparison automatic. The discriminator is the one the Mire row below already draws for this population: a **report** pins a historical *number* someone measured once and is symmetric around it; this is an exact `assert_eq!` of a freshly rendered CSV against the committed bytes, which is the same instrument shape as a golden, and the file's own regenerator calls it **"the gate"** in its own comment. **The decisive consequence, checked rather than argued:** `windows/worldgen/tests/fixtures/occupancy.csv` is **not** declared in `docs/generated-paths.txt` (verified: zero hits), so unlike `sample-biographies.txt` it sits under no drift check at all — this test is its *only* automated witness, and demoting it left the artifact with nothing watching it. That was named as a cost in decision 0086's second amendment and accepted; on review it is not an acceptable one, and the verdict rather than the cost note is what changes. |
 | `full_pin_product_is_enumerated` | `pin_enumeration` | 8.521 | PASS | **KEEP** | Exhaustive micro-enumeration of the 48-point discrete pin-space product (sky × rotation × neighbor × supercontinent) at seed 42. Every `Ok` build is asserted byte-deterministic (rebuilt and compared via `to_json()`), and every combo is asserted to resolve to `Ok` or a typed `Err`, never a panic. This is a genuine, general-purpose determinism/robustness witness over the whole discrete pin space — a red means either a panic in genesis or a non-deterministic build for some pin combination, both real regressions. The built/refused split itself is deliberately NOT asserted (reported only), which is exactly the report/witness line drawn correctly within one test. |
 | `every_kind_below_its_floor_is_elevation_bound_on_all_land` | `delver_bind_audit` | 64.405 | PASS | **KEEP** | The Delvers, condition-axis bind theorem, direction 1. Asserts an exact mathematical consequence of `ConditionResponse::eval`'s formula (devotion below the sovereignty floor ⇒ elevation is the Liebig minimum on `share == 1.0` exactly, not approximately) for every settling kind whose authored devotion sits below its floor. A red means the tolerance model's formula changed in a way that breaks a provable closed form — "the roster's whole authoring premise is void," per the assertion's own message — a real regression in production code (`tolerance_liebig`/`ConditionResponse::eval`), not a moved report number. |
 | `a_kind_above_its_floor_lets_a_climate_axis_bind` | `delver_bind_audit` | 52.098 | PASS | **KEEP** | Sibling discrimination control to the row above: kobold (devotion above its floor) must NOT be elevation-bound on ≥99% of land, or "this probe cannot discriminate and every elevation result it reports is worthless." Same shape as `delver_distinctness`'s identity/discrimination pair above — needed to prove the closed-form theorem's KEEP sibling is testing something real rather than trivially true. |
@@ -259,7 +259,12 @@ turn up there.
 
 ## Summary
 
-- **KEEP: 31** — 2780.224 s. Nine carry a proven theorem, mirror-proof, or
+- **KEEP: 32** — 3188.664 s (31 at adjudication time, 2780.224 s, plus
+  `occupancy_readout::occupancy_readout_is_current`, 408.440 s, flipped from
+  DEMOTE to KEEP on the campaign's final whole-branch review — see its row for
+  why, and note that the flip changes nothing about the tier's
+  committed-artifact *writer* count, because that test only ever compares and
+  never writes). Nine carry a proven theorem, mirror-proof, or
   bit-identity invariant (`is_the_underworld_still_smaller_than_the_surface`,
   `exactly_the_subterranean_roster_moves`, `what_does_a_chamber_read`,
   `how_far_does_the_dryness_gain_reach`, `the_drift_reachability_baseline`,
@@ -302,8 +307,9 @@ turn up there.
   (`where_underworld_communities_found_and_what_they_cut`). And a fixed-bug
   regression pair closes the list (`a_vents_marine_forage_is_flat_again` /
   `a_vent_is_chemosynthetically_productive_and_not_by_a_literal`).
-- **DEMOTE: 33** — 4015.542 s. Every DEMOTE row names the campaign whose
-  question the test answered.
+- **DEMOTE: 32** — 3607.102 s (33 at adjudication time, 4015.542 s, less
+  `occupancy_readout_is_current`'s 408.440 s, flipped to KEEP as above). Every
+  DEMOTE row names the campaign whose question the test answered.
 
   **Six qualify for spec §3.2's automatic zero-assertion path**, all
   confirmed file-wide, not body-scoped:
@@ -336,14 +342,14 @@ turn up there.
   already-re-derived-once shape Task 4a used to demote the hearsay
   `BASELINE_*` family.
 
-  **1 of the 33 is currently `FAIL`**
+  **1 of the 32 is currently `FAIL`**
   (`radiation_readout::each_elf_concentrates_in_its_authored_stronghold_biomes`,
   verified against `task-4b-results.txt`, sourced from the canonical-box
   heavy run at commit `1710e2f11`) — a preregistered, closed finding (The
   Radiation P2) that never ran under any gate (heavy tier, off-gate by
   design), so demoting it changes cost accounting only, not gate coverage;
   its row states the reason independent of its current pass/fail state. The
-  other 32 DEMOTE rows currently `PASS`.
+  other 31 DEMOTE rows currently `PASS`.
 - **UNDECIDED: 1** — 8.583 s
   (`termination_probe::could_nadir_be_split_into_a_sixth_rung`). The
   specific question that would settle it is stated in its row: whether a
@@ -541,3 +547,29 @@ zero-assertion count is six, unchanged, and this task's scan agrees with it.**
 No fixture was regenerated and no test file, `#[ignore]` string, or code was
 modified to produce this table — this task is the adjudication only; Task 5
 acts on the DEMOTE rows.
+
+---
+
+## Project-wide totals
+
+Stated once, here, next to the three section summaries it sums — never
+restated in a second form elsewhere in this artifact.
+
+| section | KEEP | DEMOTE | UNDECIDED | population |
+|---|---|---|---|---|
+| 4a — `windows/hearsay` | 4 | 19 | 0 | 23 |
+| 4b — `windows/worldgen` | 32 | 32 | 1 | 65 |
+| 4c — everything else | 27 | 3 | 0 | 30 |
+| **total** | **63** | **54** | **1** | **118** |
+
+An UNDECIDED verdict leaves the tag alone, so the surviving `heavy:` roster
+is `KEEP + UNDECIDED` = **64**, which is exactly the line count of
+`cli/tests/fixtures/heavy-roster.txt` and the number of
+`#[ignore = "heavy:` sites in the tree. The demoted 54 join the existing
+`probe:` class, which stands at **97** sites afterwards.
+
+Both 4b figures and the totals row reflect the campaign's final whole-branch
+review flipping `occupancy_readout::occupancy_readout_is_current` from DEMOTE
+back to KEEP (its row, above, says why). At adjudication time the numbers
+were 62 / 55 / 1, and prose written before that review — including this
+campaign's spec, chronicle and retrospective as first drafted — carried them.

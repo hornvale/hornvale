@@ -11,8 +11,8 @@ In the context of a heavy tier that has cost 3.45x less since The Governor cut
 it, and that spent nine days red because nothing dispatched it, we decided that
 **`heavy` returns to the chamber's MERGE phase list — `artifacts outboard gate
 clients heavy`, and the stage list is left alone** — accepting that a merge
-grows from ~1100 s to ~1550 s (+41%) on the one strictly serial box, paid by
-every campaign in the queue behind it.
+grows from ~1129.5 s to ~1604.5 s (+42%) on the one strictly serial box, paid
+by every campaign in the queue behind it.
 
 `seam-guard` does **not** come back, and 0148's other two rulings — the `probe:`
 token class and the three batteries moved into it — stand untouched. This
@@ -34,21 +34,38 @@ cpu_ratio                   13.88                20.87
 Provenance: `/tmp/hornvale-heavy/runs.tsv` and the `heavy-*.log` files under
 `/tmp/hornvale-heavy/` on lefford; the BEFORE run is
 `heavy-20260828T145124Z-548769.log`. The AFTER run is the first green heavy run
-since 2026-08-16.
+since 2026-08-16; its `timed.sh` row is in `docs/timings.md`.
 
-A four-phase merge on the queue currently costs about 1100 s. Summing the
-`sluice:*` rows in `docs/timings.md` for the four consecutive merges of
-2026-08-28 gives 1129.954, 1014.162, 1227.633 and 1146.355 s; the queue's own
+**The roster is 64, not the 63 the AFTER column measured.** The Governor's
+final whole-branch review restored `occupancy_readout::occupancy_readout_is_current`
+to `heavy:` (decision [0086](0086-the-heavy-tier-runs-on-the-canonical-box.md)'s
+third amendment: `occupancy.csv` is under no drift check, so that test is the
+artifact's only automated witness). Every wall figure in this record therefore
+describes the 63-test roster as it stood at `da03b576a`. The restored test
+measured 408.440 s standalone in the `1710e2f11` run, but the tier is
+parallel and its pole is what sets the wall, so what it adds to 449.219 s is
+not that number and is not yet measured. If the next run moves the wall
+materially, the arithmetic below is what has to be redone.
+
+A four-phase merge on the queue currently costs **1129.526 s**, and that is
+the only place this record derives it. Summing the `sluice:*` rows in
+`docs/timings.md` for the four consecutive merges of 2026-08-28 gives 1129.954,
+1014.162, 1227.633 and 1146.355 s, whose mean is 1129.526; the queue's own
 recent totals run 1021–1236 s. Adding a ~475 s `heavy` phase (its basis is
-under "What this costs") takes a merge to roughly 1550 s.
+under "What this costs") takes a merge to **1604.5 s, +42%**. (An earlier
+draft of this record said "about 1100 s" and "roughly 1550 s" — 1550 is
+1100 + 449, which mixes the tier's *nextest* wall into the one place this
+record otherwise uses the 475 s midpoint. Both halves of that were wrong by a
+little, in the same direction, and the campaign's own remedy applies: state a
+derived quantity once, next to its inputs.)
 
 **This is the fact 0148 could not have had.** 0148 measured `heavy` at a
 1965.0 s mean over 21 chamber runs and `seam-guard` at 1017.5 s, together
 **80.5%** of a 3704 s six-phase merge. On that evidence removing them was
 plainly right, and the four-phase merges that immediately followed (630.7,
 640.2, 634.5 s) confirmed it. The ratio has since moved by a factor 0148 had no
-way to anticipate: `heavy` is now **~29%** of a would-be 1550 s merge, not
-53% of a 3704 s one. Nothing in 0148's reasoning was careless; its input
+way to anticipate: `heavy` is now **~30%** of the 1604.5 s merge derived
+above (475/1604.5 = 29.6%), not 53% of a 3704 s one. Nothing in 0148's reasoning was careless; its input
 changed.
 
 ## What removing the dispatcher actually cost
@@ -141,7 +158,7 @@ Roughly 9.8 h/month of serial-box time is a real saving to forgo. What survives
 the correction untouched is a **correctness** argument, and it is the one doing
 the work:
 
-**Seven of the 63 `heavy:` tests live in `cli/tests/suite/`**, and the tier's
+**Seven of the 64 `heavy:` tests live in `cli/tests/suite/`**, and the tier's
 harness — `.config/nextest.toml`'s serialization and sized-sweep pins,
 `scripts/gate-full-heavy.sh`, `cli/tests/fixtures/heavy-roster.txt` — is
 outside `kernel/domains/windows` entirely. A predicate written from the
@@ -198,7 +215,7 @@ goes — the two lists differ again, by exactly `heavy`. That identity was a
 consequence in 0148, not its design ("differ only in the push" is a claim about
 the *object gated*, the real merge product, and that is unchanged). And a
 campaign can now pass every stage gate and still meet a heavy failure at merge.
-The cost of that is bounded and self-attributing: one merge attempt, ~1550 s,
+The cost of that is bounded and self-attributing: one merge attempt, ~1604.5 s,
 main untouched, the queue row `held` with the failing phase named, and
 `make heavy-remote REF=<sha>` available to anyone who wants the answer sooner.
 `scripts/test-sluice.sh` asserts the divergence is exactly `heavy` — "stage plus
@@ -292,9 +309,25 @@ reference so there is no self-ratifying loop, its preregistered floors assert
 landing, and auto-commit is the established `authors=yes` contract every other
 authoring phase already runs under.
 
+**And the other half of that same subtree, said plainly rather than left for a
+reader to infer.** `book/src/laboratory/generated/the-sounding/` (three tracked
+files, including the `sample-biographies.txt` decision 0087 deliberately kept
+under the strict drift check) sits under the *same* declared path,
+`book/src/laboratory/`, and its only producer —
+`sounding_sweep::run_the_sounding_and_write_the_report` — was demoted out of
+`heavy:` by this same campaign. So the check over that half is now vacuous for
+exactly the reason it was vacuous over `the-history/` before this decision, and
+restoring `heavy` does not restore it: the demoted test is hand-run only, and
+`scripts/regenerate-artifacts.sh` still does not write `the-sounding`. Same
+declared directory, same argument, opposite direction. What this decision buys
+back is one subtree of two; the other is named as an open cost in 0086's first
+amendment and stays open.
+
 **A red heavy tier now holds the box.** That is the point, and it is only
 tolerable because the tier is green: 63/63 at `da03b576a`, the first green run
-since 2026-08-16. A tier gated from a red base would blame each landing for its
+since 2026-08-16 (63 being the roster as it stood at that SHA — see the note
+under the measurement table; the test restored since had itself passed, at
+408.440 s, in the `1710e2f11` run). A tier gated from a red base would blame each landing for its
 predecessor's failure — precisely the mis-attribution this decision exists to
 end. **The window is the argument as much as the arithmetic is**: a green tier
 can be gated where a red one cannot, and nothing keeps it green except gating

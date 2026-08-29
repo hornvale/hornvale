@@ -43,6 +43,7 @@ windows/worldgen/tests/suite/delver_readout.rs::the_supply_term_is_near_kind_ind
 windows/worldgen/tests/suite/drift_reach_probe.rs::the_drift_reachability_baseline
 windows/worldgen/tests/suite/history_tithe.rs::the_cascade_distribution_is_adjudicated
 windows/worldgen/tests/suite/history_tumult.rs::cascade_sizes_are_measured_and_the_shape_adjudicated
+windows/worldgen/tests/suite/occupancy_readout.rs::occupancy_readout_is_current
 windows/worldgen/tests/suite/pin_enumeration.rs::full_pin_product_is_enumerated
 windows/worldgen/tests/suite/radiation_language.rs::divergence_is_real_across_all_six_elf_daughters
 windows/worldgen/tests/suite/radiation_language.rs::monophyly_elf_holds_over_the_seed_panel

@@ -93,9 +93,11 @@
 //! `"num-cpus"` — checked by its own two-directional guard,
 //! `the_sized_sweep_pin_names_exactly_the_batteries_marked_for_a_bounded_panel`.
 //!
-//! **This class starts empty, and its guard says why that is acceptable
-//! here and would not be for the two above** — see that guard's own doc
-//! comment rather than duplicating the reasoning in two places.
+//! **This class started empty, and its guard says why that was acceptable
+//! here and would not have been for the two above** — see that guard's own
+//! doc comment rather than duplicating the reasoning in two places. Task 9
+//! then filled it: the table pins three names today, and the guard carries
+//! the same non-emptiness assert as the other two.
 //!
 //! **The detector-fragility residual named two sections up applied to THIS
 //! class too, and Task 9 resolved it by moving the helper rather than by
@@ -238,9 +240,10 @@ const FROZEN_HEAVY_ROSTER: &str = include_str!("../fixtures/heavy-roster.txt");
 /// line whose `fn` follows on the VERY NEXT line — the same single-line,
 /// no-intervening-attribute shape [`internally_parallel_heavy_tests`]
 /// already assumes for this tag. Verified by hand against every one of the
-/// 63 `heavy:` sites in the tree while writing the fixture this checks
-/// against: all 63 are single-line reasons with no attribute between
-/// `#[ignore = "..."]` and their `fn`.
+/// `heavy:` sites in the tree while writing the fixture this checks against
+/// (63 at that moment; 64 since the campaign's final review restored
+/// `occupancy_readout_is_current`): all are single-line reasons with no
+/// attribute between `#[ignore = "..."]` and their `fn`.
 fn heavy_tagged_tests() -> Vec<String> {
     let root = repo_root();
     let mut sources = Vec::new();
@@ -1039,11 +1042,16 @@ fn budget_filter_names() -> Vec<String> {
 /// The sized-sweep class's pinned roster (The Governor, Task 8) — a bounded
 /// `threads-required` integer rather than the whole-runner string, so this
 /// is the one caller of [`pinned_filter_names_for_class`] passing
-/// [`ThreadsRequiredKind::Bounded`]. Empty on the tree this task lands on
-/// (`.config/nextest.toml`'s table pins `filter = 'none()'`, deliberately —
-/// see that table's comment and
+/// [`ThreadsRequiredKind::Bounded`]. It was empty on the tree Task 8 landed
+/// on — `.config/nextest.toml`'s table pinned `filter = 'none()'`,
+/// deliberately — and Task 9 then gave it its three members
+/// (`the_blast_radius_readout`,
+/// `is_the_raid_proxy_ambiguous_or_is_its_population_stale`,
+/// `zero_dispersion_collapses_between_settlement_variance`). The roster of
+/// record is that table, never this comment; see
 /// [`the_sized_sweep_pin_names_exactly_the_batteries_marked_for_a_bounded_panel`]'s
-/// doc comment for why an empty roster is the correct state here today).
+/// doc comment for why an empty roster was the correct state then and is not
+/// now.
 fn sized_filter_names() -> Vec<String> {
     pinned_filter_names_for_class("sized-sweep", ThreadsRequiredKind::Bounded)
 }
@@ -1326,7 +1334,8 @@ fn the_serialization_pin_names_exactly_the_wall_clock_budget_tests_marked_co_sch
 /// have failed the guard on arrival, before there was anything to guard —
 /// the exact trap that task's brief warned against. Task 9 landed the
 /// class's first real member (`warren_readout.rs::the_blast_radius_readout`,
-/// this campaign's own pole test), so "empty" stopped being this class's
+/// this campaign's own pole test, and two more after it), so "empty" stopped
+/// being this class's
 /// correct, default state, and the belt is added now exactly as that
 /// earlier version of this comment said a future editor should.
 ///

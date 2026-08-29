@@ -7,8 +7,8 @@ is in [the chronicle](../../book/src/chronicle/the-governor.md).
 
 ## The headline: correcting is the least-audited act in the workflow
 
-Six defects this campaign were introduced **by corrections fixing defects**,
-and the mechanism is specific rather than general carelessness:
+**Seven** defects this campaign were introduced **by corrections fixing
+defects**, and the mechanism is specific rather than general carelessness:
 
 > **A correction tends to add a justifying restatement beside the number it
 > repairs, which doubles the surface that can drift.**
@@ -38,6 +38,19 @@ The chain, in order:
    than derived and wrong by a rounding. The repair for *that* stated the same
    ratio in two forms in one sentence, which disagreed.
 
+**Seven, derived here rather than asserted, because this section's own remedy
+demands it** — and because the first draft of this paragraph said *six*, which
+is the same defect one layer up. Only a step whose defect was *introduced by a
+repair* counts; the value that started each chain was an ordinary original
+defect. Item 1 contributes **three** (the chain has four wrong values —
+3, 2, 5, "at least 9" — of which 3 was the original, so 2, 5 and "at least 9"
+are correction-introduced). Item 2 contributes **one** (the "two" that fixed
+the stale "three" and hardened the category error; "three" was original).
+Item 3 contributes **three of its four** (the vacuous `--since` denominator
+was the original defect; the wrong row count, the borrowed ratio and the
+two-forms-in-one-sentence disagreement each arrived in a repair).
+3 + 1 + 3 = **7**.
+
 Two things came out of it that are worth carrying:
 
 **The structural remedy beats the arithmetic one.** Changing `60.9` to `60`
@@ -60,6 +73,19 @@ pattern propagates.
 A ratified decision record is the worst place for this to land, since
 append-only makes the repair cost an amendment forever. 0426 was still
 unmerged, so it could be edited directly. That was luck, not process.
+
+## Naming a cost honestly is not the same as judging it correctly
+
+The adjudication demoted `occupancy_readout_is_current`, then wrote down, at
+length and in a ratified decision's amendment, that doing so left a committed
+fixture with **no automated witness at all**. The cost was found, stated
+precisely, and accepted — and the accepting was wrong; the final whole-branch
+review reversed the verdict, not the cost note. The disclosure was doing the
+work of a decision. It reads as diligence, which is exactly why nothing in
+three subsequent reviews stopped on it: a paragraph that already concedes the
+downside looks like the concession has been priced. **When a verdict's own
+justification has to name a cost that large, that is evidence against the
+verdict, not evidence that it was reached carefully.**
 
 ## Bisecting this repository needs `--first-parent`
 
@@ -127,7 +153,7 @@ fact a manifest already held.
   was never needed. Found by an implementer checking the manifest and
   confirming with a scratch compile rather than taking the table's word.
 - A conditional gating predicate keyed on the layering would have exempted
-  exactly the changes most able to break the tier: seven of the 63 heavy tests
+  exactly the changes most able to break the tier: seven of the 64 heavy tests
   live in the crate holding the tier's own harness, and the harness sits
   outside the world-generating layers entirely.
 

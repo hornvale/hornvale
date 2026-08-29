@@ -137,8 +137,11 @@ exactly that reason: it names the claim, not the deleted machinery.
   (decision 0426).** That is the pre-0148 arrangement restored: 0148 took it
   off the merge list, where it had lived, and it has never been on the stage
   list at all. The Governor then cut the tier 3.45x (1551.631 s -> 449.219 s
-  nextest wall, 118 -> 63 tests, 10 -> 0 failures), which is what makes it
-  affordable at ~29% of a ~1550 s merge. It stays off the stage list because
+  nextest wall, 118 -> 63 tests, 10 -> 0 failures, measured at `da03b576a`;
+  that campaign's final review then restored one test, so the roster is **64**
+  and the wall is due a re-measure), which is what makes it affordable at
+  ~30% of a ~1604.5 s merge — both figures derived once in decision 0426 and
+  not restated in a second form here. It stays off the stage list because
   `census_fixtures_match_a_probe_of_live_seeds` compares a live probe against
   committed census fixtures refreshed once per campaign at pre-merge close, so
   a stage gate would red predictably for the whole middle of any

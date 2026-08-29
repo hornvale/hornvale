@@ -177,16 +177,17 @@ tests by `println!` count and file-wide-verified only the top three, so a
 zero-assertion test with few prints could never enter the candidate set; the
 claim was tier-wide and the evidence covered a ranked prefix. (3) An
 exhaustive file-wide scan gave five. (4) An adjudicating agent, warned that
-the number had been wrong twice, counted exhaustively and applied the wrong
-PREDICATE -- it scored tests with no assertions in a file that has some,
-which is a different unit, and reported "at least nine". (5) Six is the
+the number had been wrong twice, counted exhaustively but scored the wrong
+UNIT -- tests with no assertions of their own inside files that have some,
+which is a different population than "files with no assertions anywhere" --
+and reported "at least nine". (5) Six is the
 current answer: five, plus `delver_depth_probe.rs`, which the exhaustive scan
 missed because that scan's regex counted `panic!` as an assertion. It is not
 one -- this section's own definition of the class says these tests fail only
 through a build precondition, and a `_ => panic!(...)` arm is exactly that.
 **Each correction fixed the previous error's mechanism and introduced a new
-one at a different layer** -- scope, then sampling, then unit, then
-predicate. The filter authorises a demotion with NO adjudication, so it is
+one at a different layer** -- scope, then sampling, then predicate, then
+unit. The filter authorises a demotion with NO adjudication, so it is
 the one place in this spec where being approximately right is not good
 enough.)*
 
@@ -511,21 +512,23 @@ writes a committed artifact
 against lefford-authored fixtures
 (`fixture_staleness::census_fixtures_match_a_probe_of_live_seeds`). This
 paragraph originally argued from a count of three writers plus one
-comparator (four); this campaign's own Stage 3/Task 5 demoted two of those
-three writers out of the `heavy:` tier —
+comparator (four). Two things reduced it. Stage 3/Task 5 demoted
 `sounding_sweep::run_the_sounding_and_write_the_report` (a real writer, of
-`the-sounding/`) and `occupancy_readout::occupancy_readout_is_current` (never
-actually a writer — it only ever *compared* against `occupancy.csv`; that
-file's writer, `regenerate_occupancy_readout`, was never `heavy:` at all, so
-counting it here was always wrong, not merely stale — see decision 0086's
-amendments). The corrected count is two tests, not three or four. **Both
-numbers in this section's original text are now stale against the
-post-demotion tier and are corrected here rather than merely flagged:** the
-argument is about two tests, not the 63 the `heavy:` tier now holds (was 118
+`the-sounding/`) out of the `heavy:` tier; and
+`occupancy_readout::occupancy_readout_is_current` was never a writer at all —
+it only ever *compared* against `occupancy.csv`, whose writer,
+`regenerate_occupancy_readout`, was never `heavy:` — so counting it here was
+wrong rather than merely stale. (That test itself is still in the tier: the
+campaign's final review restored its `heavy:` tag, since `occupancy.csv` is
+under no drift check and it is the artifact's only automated witness. See
+decision 0086's three amendments.) The corrected count is two tests, not three
+or four. **Both numbers in this section's original text are now stale against
+the post-demotion tier and are corrected here rather than merely flagged:** the
+argument is about two tests, not the 64 the `heavy:` tier now holds (was 118
 when this section was drafted), and decision 0090 (The Pyx) measured a
 40-world, all-metric probe **byte-identical between x86_64/Linux and
 aarch64/Darwin** after libm landed. If that holds for this tier's pins, the
-other 61 could run on the Mac, concurrently with the queue, never taking the
+other 62 could run on the Mac, concurrently with the queue, never taking the
 serial mutex — which would make C nearly free.
 
 **This is exactly the shape of an inherited constraint that ages into an

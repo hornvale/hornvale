@@ -1275,7 +1275,7 @@ const P2_FALSIFICATION_DIAGNOSIS: &str = "the stronghold share was flat or \
 /// failure mode on a majority of seeds) — a per-elf majority over seeds, frozen
 /// at that quantifier in the spec before any row was authored.
 #[test]
-#[ignore = "probe: whether each elf concentrates in its authored stronghold biomes; RED as of 2026-08-28 — a closed, preregistered finding (The Radiation P2), CONFIRMED for the five elves this test covers, never ran under any gate (heavy tier is off-gate by design), so demoting it does not hide a live red from the gate; run by hand; demoted by The Governor"]
+#[ignore = "probe: whether each elf concentrates in its authored stronghold biomes; RED as of 2026-08-28 — a closed, preregistered finding (The Radiation P2), CONFIRMED for the five elves this test covers, never ran under any gate at the time it was demoted (the heavy tier was off-gate then; decision 0426, landing in this same branch, put it back on every merge), so demoting it did not hide a live red from any gate; run by hand; demoted by The Governor"]
 fn each_elf_concentrates_in_its_authored_stronghold_biomes() {
     let falsified = p2_falsified_among(&P2_ON_AXIS);
     assert!(

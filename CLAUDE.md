@@ -91,9 +91,11 @@ merge queue, the heavy tier, and censuses — runs on
 behind one strictly serial claim (below). The heavy tier is an *authoring*
 path, not merely an expensive one — **one** of its tests writes a committed
 artifact (`history_battery::history_gates_full_world_and_cross_seed`, writing
-`book/src/laboratory/generated/the-history/`; The Governor demoted the
-tier's other two artifact-adjacent tests, 2026-08-28 — see decision 0086's
-amendments for the corrected count) and one compares a live probe against
+`book/src/laboratory/generated/the-history/`; the count read three until The
+Governor, 2026-08-28, which demoted `sounding_sweep` out of the tier and
+found that the third, `occupancy_readout_is_current`, only ever COMPARED
+against its fixture and was never a writer at all — see decision 0086's three
+amendments) and one compares a live probe against
 lefford-authored census fixtures — so `heavy-run.sh` carries the same
 canonical-host guard a census does. Dispatch it from the Mac with
 `make heavy-remote REF=<full-sha>` (a SHA, not a branch name).
@@ -155,8 +157,14 @@ make doctor        # the repo self-map — run this first in a fresh session
 # A MERGE RUNS ONE MORE PHASE THAN A STAGE GATE AGAIN (decision 0426,
 # 2026-08-28). `heavy` is back on `scripts/sluice-run.sh`'s MERGE list, last,
 # after The Governor cut the tier 3.45x (1551.631 s -> 449.219 s nextest wall,
-# 118 -> 63 tests, 10 -> 0 failures on lefford). A merge goes from ~1100 s to
-# ~1550 s (+41%); a prose-only candidate still pays none of it. `seam-guard`
+# 118 -> 63 tests, 10 -> 0 failures on lefford, measured at `da03b576a`). The
+# roster is **64** now, not 63: that campaign's final review restored
+# `occupancy_readout_is_current` to `heavy:` (decision 0086's third amendment),
+# so the 449.219 s figure is a dated measurement of the 63-test roster and the
+# tier's wall is due a re-measure. A merge goes from ~1129.5 s to ~1604.5 s
+# (+42%) — the mean of the four 2026-08-28 four-phase merges plus ~475 s, both
+# derived in decision 0426 and not restated in a second form here; a
+# prose-only candidate still pays none of it. `seam-guard`
 # stays off both. THE STAGE LIST IS UNTOUCHED, and deliberately: heavy compares
 # a live probe against the COMMITTED census fixtures, which are refreshed once
 # per campaign at pre-merge close, so on a stage gate it would red predictably

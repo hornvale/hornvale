@@ -6,11 +6,15 @@
 # expensive, it is an AUTHORING path: one of its tests writes a committed
 # artifact —
 #   cli/tests/suite/history_battery.rs -> book/src/laboratory/generated/the-history/
-# (two other tests were demoted out of the heavy tier by The Governor,
-# 2026-08-28: sounding_sweep, which wrote book/src/laboratory/generated/the-sounding/
-# and is now hand-runnable only, and occupancy_readout_is_current, which only
-# ever COMPARED against tests/fixtures/occupancy.csv and never wrote it — that
-# file's writer, regenerate_occupancy_readout, was never heavy: to begin with)
+# (the count used to be three. sounding_sweep, which wrote
+# book/src/laboratory/generated/the-sounding/, was demoted out of the tier by
+# The Governor, 2026-08-28, and is hand-runnable only now. The third,
+# occupancy_readout_is_current, never belonged in the count at all: it only
+# ever COMPARED against tests/fixtures/occupancy.csv, and that file's writer,
+# regenerate_occupancy_readout, was never heavy: to begin with. It IS still in
+# the tier — the same campaign's final review restored its heavy: tag, since
+# occupancy.csv is under no drift check and it is the artifact's only
+# automated witness. See decision 0086's amendments.)
 # — and census_fixtures_match_a_probe_of_live_seeds compares a LIVE probe
 # against lefford-authored census fixtures. 0063 measured that two boxes
 # disagree by one unit on ~0.1% of discrete-count metrics, decided in the

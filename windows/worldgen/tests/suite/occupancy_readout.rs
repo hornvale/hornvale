@@ -213,7 +213,21 @@ fn render_occupancy_readout(seeds: RangeInclusive<u64>) -> String {
 }
 
 #[test]
-#[ignore = "probe: byte-golden drift check of the committed occupancy fixture; run by hand (The Vacancy T3 / The Radiation answered its question; demoted by The Governor 2026-08-28)"]
+// RESTORED TO `heavy:` BY THE GOVERNOR'S FINAL REVIEW (2026-08-28), reversing
+// its own adjudication. The DEMOTE verdict read this test's failure message
+// ("rewrite the fixture in the SAME commit as the change that drifted it") as
+// the report branch. That reasoning proves too much: it applies word for word
+// to `fixture_staleness::census_fixtures_match_a_probe_of_live_seeds`, which
+// was KEPT and which decision 0426 builds a section on. This is not a pinned
+// historical number — it is an exact `assert_eq!` of a live render against a
+// committed byte golden, the same change-detector shape, and the sibling
+// regenerator below calls it "the gate" in its own words. Decisive:
+// `windows/worldgen/tests/fixtures/occupancy.csv` is NOT declared in
+// `docs/generated-paths.txt`, so this test is the only automated path in the
+// tree that ever observes that artifact at all. See
+// `docs/audits/heavy-tier-adjudication.md` (its row, flipped to KEEP) and
+// decision 0086's third amendment.
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn occupancy_readout_is_current() {
     let rendered = render_occupancy_readout(1..=30);
     let committed = include_str!("../fixtures/occupancy.csv");

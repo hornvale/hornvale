@@ -218,3 +218,33 @@ nobody runs that comparison automatically any more; catching drift in
 `occupancy_readout_is_current` by hand. Named here so the cost is visible,
 not silent, the same standard the first amendment applied to
 `sample-biographies.txt`.
+
+## Amendment (2026-08-28, The Governor, final whole-branch review)
+
+**The amendment immediately above named a cost and accepted it; on review the
+cost is not acceptable, so the underlying verdict was reversed instead.** The
+ruling above and the corrected writer count are both untouched — this changes
+only which tests carry a `heavy:` tag, not what the canonical-host guard is
+for.
+
+`occupancy_readout::occupancy_readout_is_current` is **restored to `heavy:`**.
+The Governor's adjudication had demoted it on the strength of its failure
+message reading as the report branch ("rewrite the fixture in the SAME commit
+as the change that drifted it"), but that argument applies word for word to
+`fixture_staleness::census_fixtures_match_a_probe_of_live_seeds`, which the
+same adjudication KEPT and which
+[0426](0426-the-heavy-tier-is-a-phase-of-the-queue-again.md) builds a section
+on. It is an exact `assert_eq!` of a live render against a committed byte
+golden — a change detector, not a pinned historical number — and, as the
+paragraph above established, `windows/worldgen/tests/fixtures/occupancy.csv`
+is under no drift check at all, so it was the artifact's only automated
+witness of any kind. `docs/audits/heavy-tier-adjudication.md` carries the
+flipped row and the corrected totals.
+
+**The count of tests that write committed artifacts is still one**, exactly as
+the previous amendment derived it, and for exactly the reason that amendment
+gave: the restored test only ever *compares*; the writer in that file,
+`regenerate_occupancy_readout`, was never `heavy:` and still is not. The
+`sample-biographies.txt` orphaning named in the first amendment is unaffected
+and remains open — `sounding_sweep::run_the_sounding_and_write_the_report`
+stays demoted.

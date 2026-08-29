@@ -344,8 +344,9 @@ lane_sets_file="${HV_SLUICE_LANE_SETS:-$repo_root/scripts/lane-sets.tsv}"
 # six-phase merge; on that evidence it was right, and its measurement is not
 # disputed. What changed is the tier: The Governor cut it 3.45x (1551.631 s ->
 # 449.219 s nextest wall, 118 -> 63 tests, 10 -> 0 failures, lefford,
-# 2f8faf243 -> da03b576a), so `heavy` is now ~29% of a would-be ~1550 s merge
-# rather than 53% of a 3704 s one.
+# 2f8faf243 -> da03b576a; the roster is 64 after that campaign's final review
+# restored one test, so the wall figure is dated), so `heavy` is now ~30% of a
+# would-be ~1604.5 s merge rather than 53% of a 3704 s one.
 #
 # THE TWO LISTS DIVERGE AGAIN, AND THAT IS A RESTORATION, NOT NEW SCOPE.
 # `heavy` has NEVER been a stage-gate phase: at 3163ceb2c^ (0148's parent) the
@@ -376,8 +377,8 @@ lane_sets_file="${HV_SLUICE_LANE_SETS:-$repo_root/scripts/lane-sets.tsv}"
 # eeaa011fd), pass every gate it was asked to pass, and leave the tier red for
 # the NEXT campaign to inherit and mis-attribute.
 #
-# WHAT IT COSTS, STATED PLAINLY. A four-phase merge is ~1100 s; five is
-# ~1550 s (+41%) on the one strictly serial box, paid by every campaign in the
+# WHAT IT COSTS, STATED PLAINLY. A four-phase merge is ~1129.5 s; five is
+# ~1604.5 s (+42%) on the one strictly serial box, paid by every campaign in the
 # queue behind it — about +45 h/month at the landing tempo measured over
 # 2026-08-17..28 (128 non-prose landings in 11.327 days). A prose-only candidate pays none of it: see the
 # sluice-phases.sh block below, which already drops `heavy`. Full reasoning,

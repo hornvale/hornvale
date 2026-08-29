@@ -6,8 +6,11 @@ allowed to run, and stops it running away.*
 The heavy tier is the set of tests too expensive to run on every commit —
 live-worldgen batteries that build dozens of worlds each and measure something
 about them. At the start of this campaign it ran 118 tests in 1,551 seconds and
-ten of them were red. At the end it runs 63 tests in 449 seconds and none of
-them are red.
+ten of them were red. At the end it runs 64 tests in about 449 seconds and
+none of them are red. (The measured run was 63 tests in 449.219 seconds; the
+campaign's final review restored one more, which passed at 408 seconds on its
+own in an earlier run of the same tier. What it adds to a parallel wall whose
+pole sets the pace is not that number, and is not yet measured.)
 
 **Neither number was the problem.** The problem was that nothing ran the tier.
 
@@ -45,10 +48,14 @@ a projection.
 ```
                      BEFORE (2f8faf243)   AFTER (da03b576a)
 nextest wall           1551.631 s           449.219 s       3.45x
-tests                  118                   63
+tests                  118                   63*
 failures                10                    0
 cpu_ratio               13.88                20.87
 ```
+
+*\* The roster is 64 after the final review restored a byte-golden drift check
+that had been demoted; the run above measured the tier as it stood at that
+commit.*
 
 One lever was rejected before anything was built. Four probe binaries each
 declare the same twelve-seed panel and build the same twelve worlds
@@ -101,7 +108,7 @@ the rule was an adjudication, applied per test, with a stated question:
 
 **The burden was placed on keeping**, deliberately: the tier's failure mode had
 been silent accumulation, and a rule whose default is *keep* reproduces it.
-Verdicts: 62 keep, 55 demote, one undecided, every one written down with its
+Verdicts: 63 keep, 54 demote, one undecided, every one written down with its
 reason in a committed table — the kept half being the part a future reader
 actually needs, because keeping is the silent choice.
 
@@ -114,6 +121,23 @@ tag, and says why that is acceptable: nine of them do. And no fixture was
 regenerated to make a demoted test green, because demotion and repair are
 different acts and mixing them would let a real regression leave the tier under
 cover of a cost campaign.
+
+**One verdict was reversed after all three populations were closed**, and the
+shape of the mistake is worth more than the count it moves.
+`occupancy_readout_is_current` was demoted because its failure message says
+to rewrite the fixture — the report branch, in the test's own words. But that
+reasoning proves too much: the census-fixture comparison that this campaign
+kept, and that the gating decision leans on, reads exactly the same way. The
+demotion had answered a question about the *message* when the question was
+about the *instrument*. It is an exact byte comparison of a freshly rendered
+CSV against a committed one — a change detector, not a pinned number — and
+its own regenerator calls it "the gate". The decisive fact was structural
+rather than interpretive: the fixture it compares against is not a declared
+generated path, so nothing else in the tree ever looks at it. The demotion
+would have left a committed artifact with no automated witness of any kind,
+which was noticed at the time, recorded honestly as a cost, and accepted. On
+the final read it was not an acceptable cost, and the verdict rather than the
+cost note is what changed.
 
 The keep rate across the three populations ran 17%, 48%, then 90%. The last is
 exactly the shape of an adjudication that has stopped pushing, so it was
@@ -237,7 +261,7 @@ amount of making the tier cheap fixes it.
 ## What it costs to close the joint
 
 Decision 0426 puts the tier back on the merge phase list, last, and only there.
-A merge goes from about 1,100 seconds to about 1,550 — roughly 475 seconds more
+A merge goes from about 1,130 seconds to about 1,605 — roughly 475 seconds more
 per landing that is not pure prose, on the one strictly serial box, which at the
 tempo actually measured is on the order of forty-five hours a month. That number
 is stated at its true size because the first draft of the record stated it at a
@@ -245,7 +269,7 @@ fifth of that, having divided a twelve-day sample by two months.
 
 The cost is not what carries the decision. A predicate that ran the tier only
 when a change reaches world-generating code would save roughly a fifth of that,
-and was the serious rival — but seven of the 63 surviving tests live in the
+and was the serious rival — but seven of the 64 surviving tests live in the
 crate that holds the tier's own harness, and the harness itself sits outside the
 world-generating layers entirely. A predicate written from the layering diagram
 would exempt exactly the changes most able to break the tier, and nothing would
@@ -286,10 +310,10 @@ with nothing remarking on it, and the argument this campaign makes about an
 unpriced tag applies there word for word.
 
 The larger open question is whether the tier needs the canonical box at all. The
-host guard protects two tests out of 63. Cross-platform byte-identity has
+host guard protects two tests out of 64. Cross-platform byte-identity has
 already been measured once — forty worlds, every metric, identical between the
 two architectures in use — and if that holds for this tier's pins, the other
-sixty-one could run anywhere, concurrently, never taking the serial claim. That
+sixty-two could run anywhere, concurrently, never taking the serial claim. That
 would make the gating decision nearly free. It is the shape of an inherited
 constraint that ages into an apparent requirement after its producer is removed,
 and it deserves its own probe rather than an assumption.

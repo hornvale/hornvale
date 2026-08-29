@@ -570,9 +570,11 @@ fn the_collapsed_cv_ratio_arms_are_pinned_as_witnesses() {
             "the {name} cv_ratio moved to {got:.4}, outside the pinned witness {want} \
              +/- 0.0005. This is NOT a number to update — re-read whether the arms have \
              SEPARATED again (which would restore the readout) or drifted together \
-             further, then re-state this witness, both #[ignore] reasons above, their \
-             roster entry in cli/tests/heavy_tier.rs and the \
-             BIO-gause-distinctness-vacuous registry row in the SAME commit."
+             further, then re-state this witness, both #[ignore] reasons above and \
+             the BIO-gause-distinctness-vacuous registry row in the SAME commit. \
+             There is no roster entry to restate: The Governor demoted both tests \
+             to probe:, and cli/tests/fixtures/heavy-roster.txt lists heavy: tests \
+             only."
         );
     }
 }
