@@ -72,7 +72,8 @@ mid-campaign and is not a reason to stop.
 
 **A prose-only candidate skips `heavy` (and `clients`).** `scripts/sluice-phases.sh`
 drops them when every changed path is hand-written prose, so a docs-only merge
-does not pay the tier's ~475 s.
+does not pay the tier's ~465.8 s (decision 0426 derives that figure next to its
+inputs; nothing else restates it).
 
 **Why this matters when choosing between them.** From 0148 until 0426 the
 difference was the push and nothing else, and this paragraph said so. Since

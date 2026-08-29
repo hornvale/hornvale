@@ -268,11 +268,13 @@ amount of making the tier cheap fixes it.
 ## What it costs to close the joint
 
 Decision 0426 puts the tier back on the merge phase list, last, and only there.
-A merge goes from about 1,130 seconds to about 1,605 — roughly 475 seconds more
+A merge goes from about 1,130 seconds to about 1,595 — roughly 466 seconds more
 per landing that is not pure prose, on the one strictly serial box, which at the
-tempo actually measured is on the order of forty-five hours a month. That number
-is stated at its true size because the first draft of the record stated it at a
-fifth of that, having divided a twelve-day sample by two months.
+tempo actually measured is on the order of forty-four hours a month. Those
+figures are derived once, next to their inputs, in decision 0426, and are not
+re-derived here. The monthly one is stated at its true size because the first
+draft of the record stated it at a fifth of that, having divided a twelve-day
+sample by two months.
 
 The cost is not what carries the decision. A predicate that ran the tier only
 when a change reaches world-generating code would save roughly a fifth of that,
@@ -306,7 +308,7 @@ a line charges every subsequent merge for the test it admits.
 
 Three residuals ship knowingly. The sized-sweep class reserves thirty of forty
 slots, so its three members cannot co-schedule with each other; that cost is
-inside the 449-second measurement rather than separated from it. The repair to
+inside the 440-second measurement rather than separated from it. The repair to
 the lost-timings-rows defect cannot be exercised before it merges, because the
 dispatcher runs the canonical checkout's copy of its own script — which is
 main's — so a fix riding on a branch never runs; the first real test of it is the
