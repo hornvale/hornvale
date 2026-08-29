@@ -2933,12 +2933,10 @@ impl<'w> Session<'w> {
     /// EITHER outcome this comment tracks goes missing.
     fn delve(&mut self) -> Turn {
         if self.inside.is_some() {
-            return Turn::Out("There is no rock to delve into in here.".to_string());
+            return Turn::Out(NO_ROCK_INSIDE_REFUSAL.to_string());
         }
         if self.underground.is_some() {
-            return Turn::Out(
-                "You are already below; 'climb' brings you back up first.".to_string(),
-            );
+            return Turn::Out(ALREADY_BELOW_DELVE_REFUSAL.to_string());
         }
         self.delve_column(self.chamber_column_here())
     }
@@ -2958,7 +2956,7 @@ impl<'w> Session<'w> {
         column: Option<(hornvale_kernel::Vertex, hornvale_terrain::Cave)>,
     ) -> Turn {
         let Some((vertex, cave)) = column else {
-            return Turn::Out("There is no cave here to delve into.".to_string());
+            return Turn::Out(NO_CAVE_TO_DELVE_REFUSAL.to_string());
         };
         self.delve_at(vertex, cave)
     }
@@ -2990,7 +2988,7 @@ impl<'w> Session<'w> {
         // `chamber_column_here` already resolved the cave through, so no
         // second, independently-chosen lookup is introduced here.
         let Some(terrain) = self.wctx.terrain.as_ref() else {
-            return Turn::Out("There is no cave here to delve into.".to_string());
+            return Turn::Out(NO_CAVE_TO_DELVE_REFUSAL.to_string());
         };
         // The Latch: a barred passage refuses descent even where the lattice
         // realizes a chamber. This is the first precondition in the tree that
@@ -3037,7 +3035,7 @@ impl<'w> Session<'w> {
                 // a player sees before ever taking a single step.
                 self.mark_underground_seen();
                 Turn::Out(format!(
-                    "You worm down into the dark. The rock here is {}.",
+                    "{DESCENT_PREFIX} {}.",
                     stratum_word(chamber.stratum)
                 ))
             }
@@ -3321,12 +3319,10 @@ impl<'w> Session<'w> {
     /// the same two facts about where a body is standing.
     fn clear_passage(&mut self) -> Turn {
         if self.inside.is_some() {
-            return Turn::Out("There is nothing to clear from in here.".to_string());
+            return Turn::Out(NOTHING_TO_CLEAR_INSIDE_REFUSAL.to_string());
         }
         if self.underground.is_some() {
-            return Turn::Out(
-                "You are already below; there is nothing left to clear from down here.".to_string(),
-            );
+            return Turn::Out(ALREADY_BELOW_CLEAR_REFUSAL.to_string());
         }
         self.clear_passage_column(self.chamber_column_here())
     }
@@ -3340,7 +3336,7 @@ impl<'w> Session<'w> {
         column: Option<(hornvale_kernel::Vertex, hornvale_terrain::Cave)>,
     ) -> Turn {
         let Some((vertex, _cave)) = column else {
-            return Turn::Out("There is no cave mouth here to clear.".to_string());
+            return Turn::Out(NO_CAVE_MOUTH_TO_CLEAR_REFUSAL.to_string());
         };
         self.clear_passage_at(vertex)
     }
@@ -3367,11 +3363,21 @@ impl<'w> Session<'w> {
     /// strongbox already uses. So the body that did the clearing is no longer
     /// recorded anywhere by this act. That is a real loss of information and
     /// it is deliberate: The Latch's own fold never consulted the subject
-    /// ("any body's clearing fact opens the passage for everyone"), so the
-    /// subject was write-only, and a predicate about a thing whose subject is
-    /// a different thing is precisely what joining the object model removes.
-    /// Whoever wants "who opened this" back wants an agentive predicate, not
-    /// this one's subject slot.
+    /// ("any body's clearing fact opens the passage for everyone"), so
+    /// nothing INTERPRETED the subject and no assertion HELD it, and a
+    /// predicate about a thing whose subject is a different thing is
+    /// precisely what joining the object model removes. Whoever wants "who
+    /// opened this" back wants an agentive predicate, not this one's subject
+    /// slot.
+    ///
+    /// **"Write-only" is what this paragraph said first, and it overstated
+    /// the case** (fix round 1, m1). `windows/historiography::recount`
+    /// iterates `Ledger::facts_about` with no predicate filter, and
+    /// `cli/src/repl.rs`'s `why <id>` calls it, so a pre-flip `possess --out`
+    /// world reloaded into `repl` DID render the clearing against the body
+    /// that did it, under the predicate's registered doc. Unread by any
+    /// interpreter is not the same as unreadable by any reader, and the fold
+    /// claim — the one that licenses the loss — is the former.
     fn clear_passage_at(&mut self, vertex: hornvale_kernel::Vertex) -> Turn {
         let addr = cave_entrance_addr(vertex);
         let barrier = crate::passage::effective_state(
@@ -6512,13 +6518,15 @@ fn cave_entrance_addr(vertex: hornvale_kernel::Vertex) -> hornvale_worldgen::cha
 /// rung 0, *"the void exists and is unreachable"*.
 ///
 /// **A const rather than an inline literal, and the promotion is the point.**
-/// It is the fifth string in the vocabulary [`barred_refusal`] and
+/// It is the ninth string in the vocabulary [`barred_refusal`] and
 /// [`clear_response`] between them own, and the one a reader is most likely
 /// to collide with by accident, because it is the only one that is about
 /// stone the way three of `barred_refusal`'s arms are and is written a whole
 /// function away from them. `every_passage_outcome_reads_distinctly` sweeps
-/// all nine strings pairwise, which it could not do while this one was
-/// spelled inside a `match` arm.
+/// all sixteen of the two verbs' strings pairwise, which it could not do
+/// while this one was spelled inside a `match` arm — and fix round 1 promoted
+/// the other seven for the same reason, after the review showed a collision
+/// between two of them passing the whole vessel suite.
 ///
 /// Unreachable since The Drift deleted the existence coin
 /// (`delve_has_three_distinguishable_outcomes`'s doc records the measurement:
@@ -6527,6 +6535,68 @@ fn cave_entrance_addr(vertex: hornvale_kernel::Vertex) -> hornvale_worldgen::cha
 /// type-audit: bare-ok(prose)
 const UNREALIZED_CHAMBER_REFUSAL: &str =
     "The cave mouth is here, but the rock beyond is sealed; there is no way down.";
+
+/// The seven strings the two passage verbs say OUTSIDE the barrier tables —
+/// the footing refusals a body gets for standing in the wrong place, plus the
+/// line a descent that succeeds actually prints.
+///
+/// **Consts rather than inline literals, and fix round 1's review is the
+/// reason.** `every_passage_outcome_reads_distinctly` shipped sweeping nine
+/// strings while the two verbs could say sixteen, and the review demonstrated
+/// what the gap cost: making `clear_passage_column`'s no-cave refusal
+/// byte-identical to `delve_column`'s left the whole vessel suite green. A
+/// sweep widened over hand-COPIED literals would have stayed green against
+/// that same edit, because the copy and the call site are two objects and
+/// only one of them moved. The sweep reads these, production reads these, so
+/// there is one object and a collision is reachable.
+///
+/// `delve`'s refusal for a body that is indoors: there is rock under a
+/// chamber, but not a cave mouth you can reach from inside one.
+/// type-audit: bare-ok(prose)
+const NO_ROCK_INSIDE_REFUSAL: &str = "There is no rock to delve into in here.";
+
+/// `delve`'s refusal for a body already underground — it names the verb that
+/// undoes the state rather than merely saying no.
+/// type-audit: bare-ok(prose)
+const ALREADY_BELOW_DELVE_REFUSAL: &str =
+    "You are already below; 'climb' brings you back up first.";
+
+/// `delve`'s refusal where the terrain places no cave at all — the outcome
+/// [`barred_refusal`]'s doc argues every OTHER refusal must be distinguishable
+/// from. Said at two sites ([`Session::delve_column`] with no cave, and
+/// [`Session::delve_at`] with no terrain handle at all): one string, because
+/// both are the same fact about the world from the player's side.
+/// type-audit: bare-ok(prose)
+const NO_CAVE_TO_DELVE_REFUSAL: &str = "There is no cave here to delve into.";
+
+/// `clear`'s refusal for a body that is indoors — [`Session::clear_passage`]
+/// shares `delve`'s footing but not its prose, which is the thing the sweep
+/// below exists to keep true.
+/// type-audit: bare-ok(prose)
+const NOTHING_TO_CLEAR_INSIDE_REFUSAL: &str = "There is nothing to clear from in here.";
+
+/// `clear`'s refusal for a body already underground.
+/// type-audit: bare-ok(prose)
+const ALREADY_BELOW_CLEAR_REFUSAL: &str =
+    "You are already below; there is nothing left to clear from down here.";
+
+/// `clear`'s refusal where the terrain places no cave mouth at all.
+/// type-audit: bare-ok(prose)
+const NO_CAVE_MOUTH_TO_CLEAR_REFUSAL: &str = "There is no cave mouth here to clear.";
+
+/// The fixed half of the one passage outcome that is not a fixed string:
+/// [`Session::delve_at`]'s success line, completed with [`stratum_word`] for
+/// the entrance chamber's rock.
+///
+/// **Split at the format hole deliberately.** The sweep needs an object it can
+/// compare, and the whole rendered line is not one — it is eleven lines, one
+/// per [`hornvale_climate::Stratum`]. What decides this outcome's
+/// distinctness from the other fifteen is the prefix, which no other outcome
+/// shares any word of, so the prefix is what is pinned and the sweep says so
+/// rather than quietly comparing one arbitrary filling as though it were the
+/// whole.
+/// type-audit: bare-ok(prose)
+const DESCENT_PREFIX: &str = "You worm down into the dark. The rock here is";
 
 /// The refusal a barred passage gives, naming WHICH barrier turned the body
 /// back — a refusal that named no reason would be indistinguishable from the
@@ -6922,6 +6992,44 @@ mod tests {
     ///
     /// — the dispatch ran `clear_passage` unrefused and answered from inside
     /// the handler. Restored, and re-run on a fresh binary: green.
+    ///
+    /// **The ledger assertion names its SUBJECT** (fix round 1, m5). It
+    /// shipped as "no OPENNESS fact exists anywhere in this ledger", which is
+    /// a true statement about a session today and a fragile one: Task 11's
+    /// `open`/`close` writes `openness` in a session, and this test would then
+    /// have reddened for a reason with nothing to do with the sleep gate. It
+    /// now checks the only population a `clear` could touch — cave mouths —
+    /// and commits an unrelated `openness` fact first, so the narrowing is
+    /// demonstrated rather than asserted: the old assertion fires on that
+    /// control, the new one does not. Confirmed 2026-08-29 by re-inserting
+    /// the shipped form beside the new one:
+    ///
+    /// ```text
+    /// thread 'session::tests::clear_is_refused_while_asleep' panicked at
+    /// windows/vessel/src/session.rs: a refused `clear` must commit nothing:
+    /// the gate stands in front of the act, not inside it
+    /// ```
+    ///
+    /// Removed again, and the subject-named pair re-run green.
+    ///
+    /// **The refusal string is the mutation witness; the ledger assertion is
+    /// a standing invariant.** Seed 42's flagship vertex bears no cave, so an
+    /// ungated `clear` refuses with `NO_CAVE_MOUTH_TO_CLEAR_REFUSAL` and
+    /// writes nothing either — which is exactly what the red above shows.
+    /// That is stated plainly rather than left for a reader to discover: the
+    /// ledger half cannot be reddened by the mutation this test names, and a
+    /// check whose strength is overstated is the shape fix round 1 found twice
+    /// in this file.
+    /// The subject of `clear_is_refused_while_asleep`'s control fact — an
+    /// entity that is deliberately not a cave mouth and not anything else the
+    /// session mints, so an `openness` fact about it can only have come from
+    /// that test.
+    const UNRELATED_OPENABLE: hornvale_kernel::EntityId =
+        hornvale_kernel::EntityId(match std::num::NonZeroU64::new(0x00C0_FFEE) {
+            Some(n) => n,
+            None => unreachable!(),
+        });
+
     #[test]
     fn clear_is_refused_while_asleep() {
         let world = seam_world();
@@ -6940,18 +7048,57 @@ mod tests {
             BodyState::Asleep,
             "sanity check: asleep alone must gate as asleep"
         );
+        // A POSITIVE CONTROL for the subject-named assertion below: an
+        // openness fact about something that is not a cave mouth. The
+        // assertion this test used to carry ("no thing anywhere was opened")
+        // fires on this; the one it carries now must not.
+        session
+            .ledger
+            .commit(
+                crate::thing::openness_fact(UNRELATED_OPENABLE, true, session.day),
+                &session.registry,
+            )
+            .expect("OPENNESS is registered by Session::start and is non-functional");
+
         let cleared = match session.handle("clear") {
             Turn::Out(t) => t,
             Turn::Released(t) => panic!("clear must not release: {t}"),
         };
         assert_eq!(cleared, "You cannot — you are asleep.");
+
+        // NAME THE SUBJECT (fix round 1, m5). This assertion first read "no
+        // OPENNESS fact exists anywhere", which is true today only because
+        // nothing else in a session writes one — Task 11's `open`/`close`
+        // will, and this test would then have gone red for a reason with
+        // nothing to do with the sleep gate. The only subject a `clear` can
+        // ever open is a CAVE MOUTH, so that is the population checked, and
+        // the control fact above proves the filter discriminates rather than
+        // passing because the ledger happens to be bare.
+        let cave_mouths: std::collections::BTreeSet<hornvale_kernel::EntityId> = session
+            .ledger
+            .find(hornvale_kernel::INSTANCE_OF)
+            .filter(|f| f.object == Value::Text(crate::passage::CAVE_MOUTH.to_string()))
+            .map(|f| f.subject)
+            .collect();
+        let opened: Vec<hornvale_kernel::EntityId> = session
+            .ledger
+            .find(crate::thing::OPENNESS)
+            .map(|f| f.subject)
+            .filter(|subject| cave_mouths.contains(subject))
+            .collect();
         assert!(
-            !session
+            cave_mouths.is_empty() && opened.is_empty(),
+            "a refused `clear` must neither promote a cave mouth nor open \
+             one — the gate stands in front of the act, not inside it: \
+             promoted {cave_mouths:?}, opened {opened:?}"
+        );
+        assert!(
+            session
                 .ledger
-                .iter()
-                .any(|f| f.predicate == crate::thing::OPENNESS),
-            "a refused `clear` must commit nothing: the gate stands in front \
-             of the act, not inside it"
+                .find(crate::thing::OPENNESS)
+                .any(|f| f.subject == UNRELATED_OPENABLE),
+            "the control fact must still be in the ledger, or the check above \
+             is passing on an empty population rather than a filtered one"
         );
     }
 
@@ -8818,7 +8965,7 @@ mod tests {
             })
     }
 
-    /// **The nine strings the two passage verbs can say must be pairwise
+    /// **The sixteen strings the two passage verbs can say must be pairwise
     /// distinct.** A refusal that reads like another refusal is a refusal that
     /// tells the player nothing — `barred_refusal`'s own doc gives that
     /// argument for one pair of them ("a refusal that named no reason would be
@@ -8832,54 +8979,83 @@ mod tests {
     /// the four refusal strings pairwise distinct once"; nothing in this crate
     /// did that — `delve_has_three_distinguishable_outcomes` compares three
     /// whole TURN OUTPUTS for one barrier state, and the two `clear` tests
-    /// each assert on a substring. So this is written rather than extended,
+    /// each assert on a substring. So this was written rather than extended,
     /// which is worth recording because a check believed to exist is weaker
     /// than one known not to: nobody re-derives it.
     ///
-    /// **Nine, not four, and the fifth is why the sweep is over functions
-    /// rather than a hand-listed set.** `barred_refusal` and `clear_response`
-    /// each answer four `BarrierState`s; [`UNREALIZED_CHAMBER_REFUSAL`] is the
-    /// ninth, and it is the one that was written a whole function away from
-    /// the others and is *about stone* the way three of `barred_refusal`'s
-    /// arms are. It was an inline literal in a `match` arm until this task —
-    /// unreachable for any assertion to name — which is exactly how a
-    /// collision with it would have gone unnoticed.
+    /// **IT THEN SHIPPED SWEEPING NINE OF THE SIXTEEN AND CLAIMING ALL OF
+    /// THEM, WHICH IS THE SAME LESSON ONE TURN LATER.** Task 8's own first
+    /// line here read "the nine strings the two passage verbs can say";
+    /// grepping the two verbs finds sixteen. Fix round 1's review DEMONSTRATED
+    /// the cost instead of asserting it: making `clear_passage_column`'s
+    /// no-cave refusal byte-identical to `delve_column`'s left all 831 vessel
+    /// tests green — and `barred_refusal`'s doc argues distinctness
+    /// specifically against the no-cave refusal, so the single string that
+    /// argument names by hand was the one string the sweep did not hold. The
+    /// seven that were missing are both verbs' three footing refusals and the
+    /// descent line.
     ///
-    /// The two `BarrierState` sweeps come from
-    /// [`hornvale_worldgen::BarrierState`]'s own four variants written out
-    /// here; the enum is not `all()`-bearing, so a fifth variant would not
-    /// automatically appear. That is stated rather than hidden: a new variant
-    /// reddens `barred_refusal`'s and `clear_response`'s non-exhaustive
-    /// `match`es at compile time, which is the compiler doing the
-    /// enumeration this test cannot.
+    /// **The sweep reads the production sites, not copies of them**, which is
+    /// why those seven are consts ([`NO_ROCK_INSIDE_REFUSAL`] and its
+    /// neighbours) rather than literals re-typed into this test. A widened
+    /// sweep over hand-copied literals would have stayed green against the
+    /// very collision that exposed the gap: the copy and the call site are two
+    /// objects, and only one of them moves.
     ///
-    /// MUTATION this must fail against: in `clear_response`, give the `Open`
-    /// arm `barred_refusal`'s `Open` text ("The way down is open.") — the most
-    /// plausible real collision, since the two tables mirror each other's
-    /// shape by design and that pair is the only one whose meanings are
-    /// genuinely close.
+    /// **Fifteen exact strings and one PREFIX, which is all the sixteenth can
+    /// honestly contribute.** `delve_at`'s success line carries a format hole
+    /// filled by [`stratum_word`], so it is not one string but eleven.
+    /// [`DESCENT_PREFIX`] — its fixed half — is what this sweep holds, plus a
+    /// `starts_with` check below that no other outcome begins with it; the two
+    /// together imply every filling is distinct from every other outcome.
+    /// Sweeping all eleven fillings instead was rejected deliberately: it
+    /// would redden this test the day two STRATA came to share a word, which
+    /// is a different table doing a different job, and a passage test that
+    /// fails for a stratigraphy reason is the failure mode fix round 1's own
+    /// m5 finding names.
     ///
-    /// Confirmed 2026-08-29 (abridged — the panic prints all nine strings):
+    /// **Sixteen, and the enumeration is by hand for the two tables and by
+    /// const for the rest.** `barred_refusal` and `clear_response` each answer
+    /// four [`hornvale_worldgen::BarrierState`]s, written out here because the
+    /// enum is not `all()`-bearing; a fifth variant would not automatically
+    /// appear, but it would redden both `match`es at compile time, which is
+    /// the compiler doing the enumeration this test cannot.
+    /// [`UNREALIZED_CHAMBER_REFUSAL`] is the ninth and was an inline `match`
+    /// arm until Task 8 — unreachable for any assertion to name, which is
+    /// exactly how a collision with it would have gone unnoticed.
+    ///
+    /// MUTATION this must fail against (fix round 1, reproducing the review's
+    /// own collision): give [`NO_CAVE_MOUTH_TO_CLEAR_REFUSAL`] the text of
+    /// [`NO_CAVE_TO_DELVE_REFUSAL`], so `clear` and `delve` refuse a
+    /// cave-less vertex in identical words. Confirmed 2026-08-29:
     ///
     /// ```text
     /// assertion `left == right` failed: two passage outcomes read
-    /// identically — a player cannot tell them apart. All nine: [
-    ///     ... ,
-    ///     "The way down is open.",
-    ///     "The way down is open.",
-    ///     "The cave mouth is here, but the rock beyond is sealed; there is
-    ///      no way down.",
+    /// identically — a player cannot tell them apart. All sixteen: [
+    ///     ...,
+    ///     "There is no cave here to delve into.",
+    ///     ...,
+    ///     "There is no cave here to delve into.",
+    ///     ...,
     /// ]
-    ///   left: 8
-    ///  right: 9
+    ///   left: 15
+    ///  right: 16
     /// ```
     ///
+    /// The earlier, narrower mutation is kept as a second witness because it
+    /// exercises the two TABLES rather than the consts: in `clear_response`,
+    /// give the `Open` arm `barred_refusal`'s `Open` text ("The way down is
+    /// open.") — the most plausible real collision, since the two tables
+    /// mirror each other's shape by design and that pair is the only one whose
+    /// meanings are genuinely close. Confirmed 2026-08-29 the same way, `left:
+    /// 15  right: 16`.
+    ///
     /// **The duplicate is printed, which is the reason the message carries
-    /// the whole list rather than just the counts.** `8 != 9` alone names no
+    /// the whole list rather than just the counts.** `15 != 16` alone names no
     /// culprit, and a reader who has to go re-derive which two collided is a
     /// reader who will not.
     ///
-    /// A genuine behavioural red, not a compile error; restored and re-run
+    /// Genuine behavioural reds, not compile errors; restored and re-run
     /// on a fresh binary, green.
     #[test]
     fn every_passage_outcome_reads_distinctly() {
@@ -8895,10 +9071,19 @@ mod tests {
             said.push(clear_response(state));
         }
         said.push(UNREALIZED_CHAMBER_REFUSAL.to_string());
+        // The seven the sweep did not hold until fix round 1 — both verbs'
+        // footing refusals, and the fixed half of the descent line.
+        said.push(NO_ROCK_INSIDE_REFUSAL.to_string());
+        said.push(ALREADY_BELOW_DELVE_REFUSAL.to_string());
+        said.push(NO_CAVE_TO_DELVE_REFUSAL.to_string());
+        said.push(NOTHING_TO_CLEAR_INSIDE_REFUSAL.to_string());
+        said.push(ALREADY_BELOW_CLEAR_REFUSAL.to_string());
+        said.push(NO_CAVE_MOUTH_TO_CLEAR_REFUSAL.to_string());
+        said.push(DESCENT_PREFIX.to_string());
 
         assert_eq!(
             said.len(),
-            9,
+            16,
             "non-vacuous guard: the sweep must actually collect every string \
              the two verbs can say, or the uniqueness check below passes by \
              comparing nothing"
@@ -8908,16 +9093,31 @@ mod tests {
             unique.len(),
             said.len(),
             "two passage outcomes read identically — a player cannot tell \
-             them apart. All nine: {said:#?}"
+             them apart. All sixteen: {said:#?}"
         );
 
         // Every one must also NAME something. An empty or whitespace-only
-        // refusal is trivially distinct from the other eight and tells a
+        // refusal is trivially distinct from the other fifteen and tells a
         // player nothing at all, so uniqueness alone would not catch it.
         for line in &said {
             assert!(
                 line.len() > 20,
                 "a passage outcome must say something: {line:?}"
+            );
+        }
+
+        // The sixteenth is a PREFIX, so exact-string uniqueness above says
+        // nothing about the eleven lines it actually renders into. This is
+        // what carries the gap: no other outcome may BEGIN with it, or some
+        // stratum filling could read as that outcome plus a trailing phrase.
+        for line in &said {
+            if line == DESCENT_PREFIX {
+                continue;
+            }
+            assert!(
+                !line.starts_with(DESCENT_PREFIX),
+                "a passage outcome begins with the descent line's fixed half, \
+                 so some stratum filling of it reads as this outcome: {line:?}"
             );
         }
     }

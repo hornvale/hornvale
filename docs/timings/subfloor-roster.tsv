@@ -2817,6 +2817,7 @@ hornvale-vessel::hornvale_vessel$session::tests::a_costly_truth_names_its_residu
 hornvale-vessel::hornvale_vessel$session::tests::a_deliberate_lie_carries_the_claim_and_never_the_truth
 hornvale-vessel::hornvale_vessel$session::tests::advanced_by_checks_the_increment_and_the_sum_separately
 hornvale-vessel::hornvale_vessel$session::tests::every_bare_verb_help_lists_is_classified
+hornvale-vessel::hornvale_vessel$session::tests::every_passage_outcome_reads_distinctly
 hornvale-vessel::hornvale_vessel$session::tests::further_in_is_the_deeper_aperture_and_stops_at_the_last_chamber
 hornvale-vessel::hornvale_vessel$session::tests::help_names_warm_with_the_offer_modules_own_word_and_carrier
 hornvale-vessel::hornvale_vessel$session::tests::neighbours_reads_the_link_graph_in_both_directions
@@ -2924,9 +2925,13 @@ hornvale-vessel::suite$lantern_light::light_reaches_exactly_what_sight_reaches
 hornvale-vessel::suite$lantern_light::the_falloff_ratio_between_two_cells_is_inverse_square
 hornvale-vessel::suite$ledger_query_equivalence::facts_of_selects_what_find_and_filter_selected
 hornvale-vessel::suite$object_property_concepts::every_object_property_has_exactly_one_registered_concept
-hornvale-vessel::suite$passage::a_clearing_fact_does_not_open_the_passage_before_it_happened
+hornvale-vessel::suite$passage::a_cave_mouth_closed_after_it_was_opened_bars_again
+hornvale-vessel::suite$passage::a_closed_cave_mouth_falls_back_to_the_barrier_the_seed_drew
 hornvale-vessel::suite$passage::addr_key_distinguishes_every_field
-hornvale-vessel::suite$passage::addr_key_spelling_is_the_permanent_on_disk_key
+hornvale-vessel::suite$passage::an_opening_fact_does_not_open_the_passage_before_it_happened
+hornvale-vessel::suite$passage::cave_mouth_id_derives_the_entity_promotion_mints
+hornvale-vessel::suite$passage::promoting_a_cave_mouth_on_a_second_day_repeats_its_instance_of
+hornvale-vessel::suite$passage::the_cave_mouth_role_spelling_is_the_permanent_lineage_key
 hornvale-vessel::suite$possess_target::the_default_target_is_the_flagship
 hornvale-vessel::suite$session_snapshot::the_fixture_is_taken_at_the_transcript_s_own_day
 hornvale-vessel::suite$stance::an_unoffended_host_is_forthcoming_whatever_its_prior

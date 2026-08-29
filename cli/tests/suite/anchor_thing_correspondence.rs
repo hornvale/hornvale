@@ -125,3 +125,58 @@ fn the_correspondence_checks_are_not_vacuous() {
          absent, or those reds are not reproducible"
     );
 }
+/// **The fourth spelling of `cave-mouth`, and the agreement its own doc
+/// claims (fix round 1, m3).** `hornvale_vessel::passage::CAVE_MOUTH` says it
+/// is "the label `THING_KINDS` carries and `object_registry` gives `Openable`
+/// and `AffordsPassage`" — three tables, three separate `"cave-mouth"`
+/// literals, and until this test nothing held any two of them together. The
+/// const's NARROW claim was guarded (the lineage role and the `instance-of`
+/// object are one spelling because both read the const); the CROSS-TABLE
+/// claim in the same sentence was not.
+///
+/// **Here rather than in `windows/vessel` for the reason this file's own
+/// header gives**: the assertion needs `hornvale_thing::THING_KINDS`, and
+/// `windows/vessel` deliberately carries no `hornvale-thing` dependency.
+/// A cave mouth is also the second row (with `key`) that has no `AnchorKind`
+/// behind it, so `every_anchor_kind_has_a_thing_kind_counterpart` above
+/// cannot reach it from the other direction either.
+///
+/// MUTATION THIS MUST FAIL AGAINST: rename ONE side of the agreement — spell
+/// `passage::CAVE_MOUTH` `"cave_mouth"`, leaving `THING_KINDS` and
+/// `object_registry` on the hyphen. Neither test above objects (both read the
+/// registry's own key, which did not move). Red observed 2026-08-29:
+///
+/// ```text
+/// thread 'anchor_thing_correspondence::the_cave_mouth_kind_is_one_label_in_every_table_that_names_it'
+/// panicked at cli/tests/suite/anchor_thing_correspondence.rs:
+/// passage::CAVE_MOUTH is "cave_mouth", which hornvale_thing::THING_KINDS does
+/// not carry — the const's doc claims it is the label that roster carries
+/// ```
+#[test]
+fn the_cave_mouth_kind_is_one_label_in_every_table_that_names_it() {
+    use hornvale_kernel::KindId;
+    use hornvale_vessel::affordance::ObjectProperty;
+    use hornvale_vessel::passage::CAVE_MOUTH;
+
+    assert!(
+        hornvale_thing::THING_KINDS.contains(&CAVE_MOUTH),
+        "passage::CAVE_MOUTH is {CAVE_MOUTH:?}, which hornvale_thing::THING_KINDS \
+         does not carry — the const's doc claims it is the label that roster \
+         carries"
+    );
+
+    let registry = object_registry();
+    let traits = registry.get(&KindId(CAVE_MOUTH)).unwrap_or_else(|| {
+        panic!(
+            "object_registry carries no row for {CAVE_MOUTH:?} — the const's doc \
+             claims that table gives it Openable and AffordsPassage"
+        )
+    });
+    for wanted in [ObjectProperty::Openable, ObjectProperty::AffordsPassage] {
+        assert!(
+            traits.properties.contains(&wanted),
+            "object_registry's {CAVE_MOUTH:?} row lacks {wanted:?}, which \
+             passage::CAVE_MOUTH's doc says it gives"
+        );
+    }
+}

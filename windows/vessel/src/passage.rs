@@ -141,10 +141,25 @@ pub fn cave_mouth_id(addr: &ChamberAddr) -> EntityId {
 /// to nothing else. `Session::clear_passage_at` is the production caller and
 /// the tests use the same door.
 ///
-/// Idempotent in the sense [`crate::thing::promote`] is: promoting twice
-/// yields one entity and one `instance-of` fact. The `openness` fact is
-/// deliberately NOT idempotent across days — that is what makes the fold
-/// as-of-day rather than a flag.
+/// **Idempotent WITHIN A DAY, and only within one** (fix round 1, m4).
+/// [`crate::thing::promote`]'s idempotence is `Ledger::commit`'s dedup of an
+/// IDENTICAL fact, and [`hornvale_kernel::Fact`] derives `PartialEq` over all
+/// six fields including `day` — so two calls on the same day yield one entity
+/// and one `instance-of` fact, and two calls on DIFFERENT days yield one
+/// entity and TWO `instance-of` facts, saying the same thing twice. The
+/// `openness` fact is deliberately not idempotent across days either, and
+/// that half is the point: it is what makes [`effective_state`] an as-of-day
+/// fold rather than a flag.
+///
+/// **Harmless here, load-bearing for the verbs that come next.**
+/// `Session::clear_passage_at` is the only production caller and it writes
+/// only for `Thin`, so a second `clear` sees `Open` and writes nothing at
+/// all; the two-facts case is unreachable through the verb. A general
+/// `open`/`close` pair calling this repeatedly across days would accumulate
+/// one redundant `instance-of` per call. Pinned by
+/// `promoting_a_cave_mouth_on_a_second_day_repeats_its_instance_of`
+/// (`tests/suite/passage.rs`) so the caveat is a measured fact rather than a
+/// warning that rots.
 /// type-audit: bare-ok(flag: open)
 pub fn set_openness(
     ledger: &mut Ledger,

@@ -157,6 +157,16 @@ fn addr_key_distinguishes_every_field() {
 /// "deliberate regeneration uses an epoch suffix, never a rename"), and the
 /// choice should be made deliberately rather than discovered by a player.
 ///
+/// **THE FIXTURE'S FOUR FIELDS ARE PAIRWISE DISTINCT ON PURPOSE (fix round
+/// 1, m2).** It inherited `branch: 0, level: 0` from The Latch, and two
+/// equal fields make a literal blind to the one mutation that reorders them:
+/// transposing `branch` and `level` in `addr_key`'s format string left all
+/// 831 vessel tests green, and `addr_key_distinguishes_every_field` cannot
+/// see it either — injectivity survives any permutation of the fields, which
+/// is precisely the blind zone this test exists to cover. With `branch: 2,
+/// level: 5` the transposition moves the literal, so the pair of tests now
+/// covers renaming AND reordering between them.
+///
 /// MUTATION this must fail against: rename `Band::Undercroft` (any variant
 /// reachable from a cave entrance address will do). Confirmed 2026-08-29 by
 /// the cheaper equivalent that perturbs the same output — swapping
@@ -170,22 +180,35 @@ fn addr_key_distinguishes_every_field() {
 ///  right: "thing@passage/7/Undercroft/0/0/cave-mouth"
 /// ```
 ///
-/// A genuine behavioural red, not a compile error; restored and re-run green.
+/// SECOND MUTATION, the one the old fixture could not see: transpose
+/// `branch` and `level` in `addr_key`'s argument list. Confirmed 2026-08-29
+/// against the new fixture:
+///
+/// ```text
+/// assertion `left == right` failed: the cave mouth's lineage role changed
+/// spelling — this is a save-format contract; see the doc comment
+///   left: "thing@passage/7/Undercroft/5/2/cave-mouth"
+///  right: "thing@passage/7/Undercroft/2/5/cave-mouth"
+/// ```
+///
+/// Genuine behavioural reds, not compile errors; restored and re-run green.
 #[test]
 fn the_cave_mouth_role_spelling_is_the_permanent_lineage_key() {
     use hornvale_kernel::{Band, Vertex};
     use hornvale_vessel::passage::cave_mouth_role;
     use hornvale_worldgen::chamber::ChamberAddr;
 
+    // Four distinct field values: see the doc above — equal fields cannot
+    // witness a transposition.
     let addr = ChamberAddr {
         vertex: Vertex(7),
         band: Band::Undercroft,
-        branch: 0,
-        level: 0,
+        branch: 2,
+        level: 5,
     };
     assert_eq!(
         cave_mouth_role(&addr),
-        "thing@passage/7/Undercroft/0/0/cave-mouth",
+        "thing@passage/7/Undercroft/2/5/cave-mouth",
         "the cave mouth's lineage role changed spelling — this is a \
          save-format contract; see the doc comment"
     );
@@ -453,5 +476,61 @@ fn an_opening_fact_does_not_open_the_passage_before_it_happened() {
         after,
         BarrierState::Open,
         "a passage opened on day 5 must be open on day 9"
+    );
+}
+/// `set_openness`'s idempotence is `Ledger::commit`'s dedup of an identical
+/// fact, and `Fact` derives `PartialEq` over `day` too — so it holds WITHIN a
+/// day and not across one (fix round 1, m4). Two calls on different days
+/// leave one entity and TWO `instance-of` facts saying the same thing.
+///
+/// **Pinned rather than merely documented because Task 11's `open`/`close`
+/// is the caller that meets it.** `clear` cannot reach this shape (it writes
+/// only for `Thin`, and a second `clear` sees `Open` and writes nothing), so
+/// nothing in the crate would notice the day the caveat stopped being true —
+/// in either direction. Reading `2` here is the current, deliberate
+/// behaviour; a future dedup that made promotion day-independent should
+/// change this number on purpose, not discover it.
+#[test]
+fn promoting_a_cave_mouth_on_a_second_day_repeats_its_instance_of() {
+    use hornvale_kernel::{Band, ConceptRegistry, INSTANCE_OF, Ledger, Vertex, WorldTime};
+    use hornvale_vessel::passage::set_openness;
+    use hornvale_vessel::thing::{OPENNESS, OPENNESS_DOC};
+    use hornvale_worldgen::chamber::ChamberAddr;
+
+    let addr = ChamberAddr {
+        vertex: Vertex(3),
+        band: Band::Undercroft,
+        branch: 0,
+        level: 0,
+    };
+    let mut reg = ConceptRegistry::default();
+    reg.register_predicate(INSTANCE_OF, false, "t")
+        .expect("instance-of registers");
+    reg.register_predicate(OPENNESS, false, OPENNESS_DOC)
+        .expect("openness registers");
+    let mut ledger = Ledger::default();
+
+    let day3 = WorldTime::from_std_days(3.0).expect("3 days is in range");
+    let day6 = WorldTime::from_std_days(6.0).expect("6 days is in range");
+    let first = set_openness(&mut ledger, &reg, &addr, true, day3).expect("the mouth opens");
+    let same_day = set_openness(&mut ledger, &reg, &addr, true, day3).expect("the mouth opens");
+    assert_eq!(
+        ledger.find(INSTANCE_OF).count(),
+        1,
+        "within one day the promotion is idempotent: the second commit is the \
+         identical fact and dedups"
+    );
+
+    let later = set_openness(&mut ledger, &reg, &addr, true, day6).expect("the mouth opens");
+    assert_eq!(
+        ledger.find(INSTANCE_OF).count(),
+        2,
+        "across days it is NOT: `day` is one of the fields `Fact` compares, so \
+         the second promotion is a different fact and commits"
+    );
+    assert_eq!(
+        (first, same_day),
+        (later, later),
+        "one address is one entity on every day; only the FACT count moves"
     );
 }

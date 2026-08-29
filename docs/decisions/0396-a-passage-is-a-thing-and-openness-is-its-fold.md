@@ -99,10 +99,22 @@ loads.
   clearing body as its subject and the address as its object; the subject is
   now the cave mouth itself. That is a real loss of information and it is
   deliberate: 0366's fold never consulted the subject ("any body's clearing
-  fact opens the passage for everyone"), so the field was write-only, and a
-  predicate about a thing whose subject is a *different* thing is exactly what
-  joining the object model removes. Whoever wants "who opened this" back wants
-  an agentive predicate, not this one's subject slot.
+  fact opens the passage for everyone"), so nothing *interpreted* the field
+  and no assertion in the tree *held* it, and a predicate about a thing whose
+  subject is a *different* thing is exactly what joining the object model
+  removes. Whoever wants "who opened this" back wants an agentive predicate,
+  not this one's subject slot.
+  - **This paragraph said "the field was write-only" when it was ratified, and
+    that was stronger than the evidence** (fix round 1, m1). The subject was
+    unreadable by nothing: `windows/historiography`'s `recount` iterates
+    `Ledger::facts_about(entity)` with NO predicate filter — domain-agnostic
+    by construction, which `windows/CLAUDE.md` states as a feature — and
+    `cli/src/repl.rs`'s `why <id>` calls it, so a pre-flip `possess --out`
+    world reloaded into `repl` rendered the clearing under `passage-cleared`'s
+    registered doc, against the clearing body. The correction is to the
+    premise only; the conclusion above does not move, and "nothing interpreted
+    it and no assertion held it" is the true and sufficient statement of what
+    is being given up.
 - **`cave-mouth` now carries `AffordsPassage` as well as `Openable`** (spec
   §3.7). Chamber entry is gated on the cave mouth's own fold, which is the
   routing the property was waiting for — but no production caller holds a
