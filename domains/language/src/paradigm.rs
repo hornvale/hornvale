@@ -92,17 +92,30 @@ const POLARITY_DEPTH_WEIGHTS: [f64; 3] = [10.0, 50.0, 40.0];
 /// small minority of the sampled languages mark no person on the verb at
 /// all, with the remainder overwhelmingly bound rather than free.
 ///
-/// Both numbers are picked from that claim rather than the reverse. `None`
-/// (15) is smaller than Number's (30) and Tense's (25) — "very widely
-/// attested" places Person's absence rate below its paradigm siblings —
-/// but not as small as Polarity's (10), because standard negation is
-/// attested as *essentially universal* while person agreement is only
-/// *very widely* attested, a weaker claim. Between the two marked buckets,
-/// `Affix` (75) so far outweighs `Particle` (10) that Affix accounts for
-/// 75/85 ≈ 88% of the marked mass — a sharper affixal skew than Number's
-/// 50/70 ≈ 71% or Tense's 50/75 ≈ 67% — which is the "overwhelmingly"
-/// half of the claim.
-const PERSON_DEPTH_WEIGHTS: [f64; 3] = [15.0, 10.0, 75.0];
+/// `None` (15) is smaller than Number's (30) and Tense's (25) — "very
+/// widely attested" places Person's absence rate below its paradigm
+/// siblings — but not as small as Polarity's (10), because standard
+/// negation is attested as *essentially universal* while person agreement
+/// is only *very widely* attested, a weaker claim. `Affix` (70) so far
+/// outweighs `Particle` (15) that Affix accounts for 70/85 ≈ 82% of the
+/// marked mass — a sharper affixal skew than Number's 50/70 ≈ 71% or
+/// Tense's 50/75 ≈ 67% — the "overwhelmingly" half of the claim.
+///
+/// **`None` and `Particle` are tied at 15, deliberately, rather than one
+/// set below the other.** The cited sources support person agreement being
+/// widely attested (constraining `None`) and, where present, overwhelmingly
+/// bound (constraining `Affix`'s dominance over `Particle`); neither source
+/// is cited here for a claim about whether a free-standing person
+/// *particle* is itself more or less common than *no* person marking at
+/// all, which is a third, independent comparison the two source claims do
+/// not jointly entail. An earlier draft set `Particle` below `None`
+/// (10 vs. 15) as an arithmetic byproduct of enforcing the other two
+/// relationships with a fixed 100-point budget, not from any claim this
+/// doc could cite for that specific ordering — exactly the "decorated
+/// after the fact" shape this file's own weight-choice discipline exists to
+/// catch. The tie removes the unsupported ordering without inventing a
+/// citation for it.
+const PERSON_DEPTH_WEIGHTS: [f64; 3] = [15.0, 15.0, 70.0];
 
 /// The percentage chance (out of 100) the Number affix binds as a suffix
 /// rather than a prefix.
@@ -119,22 +132,34 @@ const TENSE_POSITION_SUFFIX_CHANCE: u32 = 65;
 const POLARITY_POSITION_SUFFIX_CHANCE: u32 = 40;
 
 /// The percentage chance (out of 100) the Person affix binds as a suffix
-/// rather than a prefix (The Rail, Task 7) — below 50, like Polarity's (40)
-/// but for a distinct typological reason specific to agreement morphology.
+/// rather than a prefix (The Rail, Task 7) — below 50, like Polarity's (40),
+/// but for a distinct typological reason specific to agreement morphology,
+/// and by a MILDER margin than Polarity's, not a sharper one.
 ///
 /// Bybee, Perkins & Pagliuca, "On the Asymmetries in the Affixation of
 /// Grammatical Material" (in Croft, Denning & Kemmer, eds., *Studies in
 /// Typology and Diachrony*, 1990), find that grammatical morphemes overall
 /// show a strong cross-linguistic preference for suffixing over prefixing
 /// — the preference this file's Number (70) and Tense (65) weights already
-/// encode — but that person/subject-agreement morphology is the one
-/// category that departs furthest from that general suffixing preference,
-/// prefixing far more readily than tense-aspect or number marking does.
-/// 45 encodes a near-even split with only a mild residual prefix lean,
-/// deliberately closer to 50 than Polarity's 40: the source pulls person
-/// away from the suffixing norm on typological grounds distinct from
-/// Polarity's own reason (pre-verbal negative-particle placement), not
-/// toward the same extreme.
+/// encode — but that person/subject-agreement morphology departs from
+/// that general suffixing preference more than tense-aspect or number
+/// marking does, leaning closer to an even split between the two sides.
+/// The source is cited for THAT comparison only — person vs. Number/Tense
+/// — and is not cited for, and does not speak to, how large that
+/// departure is relative to Polarity's own.
+///
+/// 45 encodes exactly the cited comparison: closer to an even split than
+/// Number's 70 or Tense's 65, i.e. a real departure from the general
+/// suffixing preference. It is deliberately a MILDER prefix lean than
+/// Polarity's 40, not a stronger one: Polarity's number rests on its own,
+/// unrelated, negation-specific reason (pre-verbal negative-particle
+/// placement) that this source neither supports nor contradicts, so this
+/// doc makes no claim ranking person's departure against Polarity's. An
+/// earlier draft's doc claimed person "departs furthest" and prefixes "far
+/// more readily" than every other axis here, including Polarity — a
+/// superlative the cited source never makes and that 45 (milder than
+/// Polarity's 40) does not itself support; the claim is tempered to what
+/// the source and the number actually agree on.
 const PERSON_POSITION_SUFFIX_CHANCE: u32 = 45;
 
 /// The `weighted_index` bucket order both depth axes share: 0 = `None`,
