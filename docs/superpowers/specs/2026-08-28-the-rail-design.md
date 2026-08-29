@@ -7,6 +7,10 @@
 The Stile (one resolver, three corpora), and this campaign's own freeze commit
 `c88a61a58`
 **Date:** 2026-08-28
+**Status:** COMPLETE — merged as The Rail. Corrected three times by its own
+implementation (§1.1's coverage counts, §3.2's property valence, §3.4's
+canonical row); each correction is recorded in place with its cause rather
+than presented as a third version.
 
 The Stile seated the rungs. A rail is what you actually climb — and what tells
 you which rung is next.
