@@ -125,8 +125,9 @@ const HINT_JOIN_COLUMNS: &str = "  ";
 ///   spaces, and every column of leading indent, exactly as the sim sent
 ///   it. This is the half decision 0291 settles. The sim emits
 ///   pre-formatted pictures on the very same prose channel it emits
-///   narration on (the walk-band chart, the chamber plan), and the wire
-///   carries no marker saying which a given line is. This function used to
+///   narration on (the walk-band chart, the chamber plan, the underground
+///   level), and the wire carries no marker saying which a given line is.
+///   This function used to
 ///   split every line on [`str::split_whitespace`] and rejoin on a single
 ///   space, which collapsed every run of spaces and left-flushed each
 ///   chart row into a picture of a different place.

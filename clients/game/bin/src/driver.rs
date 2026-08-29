@@ -52,8 +52,13 @@
 //! ([`hornvale_kernel::FacetId::unpack`]) to a real
 //! [`hornvale_kernel::Facet`], whose [`hornvale_kernel::Facet::coord`] feeds
 //! the same `NearestVertexIndex` lookup already used for the observer. The
-//! scene is re-derived with `self.session.purview(0)` — the identical call
-//! `Session::snapshot` itself makes for the walk band.
+//! scene is [`Driver::walk_band_scene`]'s cached packet, refreshed once per
+//! turn rather than re-derived with `self.session.purview(0)` on every
+//! redraw (The Gallery, Task 10 round 2) — the same underlying `purview(0)`
+//! call `Session::snapshot` itself makes for the walk band. The resolver and
+//! the picture still cannot disagree, now because both read the one shared
+//! cache rather than because two independently-called derivations happened
+//! to agree.
 //!
 //! **This used to route through `hornvale_game_core::chart::cell_at`**, the
 //! `core` chart's own polar box lookup, matched back to the real scene by
@@ -115,12 +120,26 @@ const UNNAMED_TERRAIN: &str = "unnamed terrain";
 /// caves) — never on any refusal (a sealed cave, no cave at all, already
 /// underground, or already inside a structure each print their own
 /// distinct refusal text). This is the only signal that exists for cave
-/// discovery: the wire's own `band` tag deliberately folds underground
-/// into `"walk"` (see that module's own test,
-/// `the_underground_band_folds_into_walk_as_map_does`), so there is no
-/// typed alternative to reading the turn's own narration — the same
-/// category of read `Driver` already does everywhere else (the strip, the
-/// snapshot text itself), never a fabricated string.
+/// discovery.
+///
+/// **This paragraph used to claim the wire's own `band` tag "deliberately
+/// folds underground into `\"walk\"`", citing a test named
+/// `the_underground_band_folds_into_walk_as_map_does`. That has been false
+/// since The Gallery's Task 7**, which gave the pane its own `band:
+/// "underground"` tag (`vessel/level/v1`) — the cited test was renamed to
+/// `the_pane_and_the_verb_agree_underground` at Task 8's landing, once the
+/// `map` verb caught up to the same distinction (see
+/// `hornvale_game_core::snapshot`'s own module doc for the full history).
+/// The band tag distinguishing `underground` from `walk` does not make it a
+/// typed alternative here, though: what this constant answers is not "which
+/// band is the possession on" (that question has its own typed field now)
+/// but "did a delve **succeed this turn**" — a one-shot EVENT, not a
+/// standing STATE. Standing underground on the turn after a successful
+/// delve reads identically to standing underground ten turns later on the
+/// band tag alone; only the turn's own narration says which turn the
+/// transition happened on. So there is still no typed alternative to
+/// reading it — the same category of read `Driver` already does everywhere
+/// else (the strip, the snapshot text itself), never a fabricated string.
 ///
 /// **Guarded on the sim's own side, not just here.**
 /// `windows/vessel/src/session.rs`'s
@@ -234,6 +253,31 @@ pub struct Driver {
     /// Opens `true`: the session begins on the walk band, and `start`'s own
     /// `refresh()` corrects it before any caller sees it.
     on_walk_band: bool,
+    /// The live walk-band perception packet, cached alongside
+    /// [`Self::on_walk_band`] and invalidated at exactly the same point
+    /// (Task 10 round 2; The Gallery).
+    ///
+    /// **Why this one too, once `on_walk_band` already exists.** Round 1
+    /// (The Quadrat's F11) retired the per-redraw `Snapshot::parse` this
+    /// method's callers used to pay, but left the per-redraw
+    /// `Session::purview(0)` call standing — and measurement showed THAT
+    /// call, not the parse, is the dominant cost of a walk-band redraw
+    /// (`walk_band_scene`'s own doc has the numbers). `purview` is a pure
+    /// read (`&self`, no mutation) over session state — position,
+    /// knowledge, eyes, day — that changes only when a turn does, by the
+    /// same argument `on_walk_band`'s own doc already makes for the band
+    /// question. So it is cached the same way: computed once per turn in
+    /// [`Self::refresh`], read (never recomputed) by every call site that
+    /// used to call `purview` itself.
+    ///
+    /// **The whole `Option`, not just the `Some` case.** Off the walk band
+    /// this is `None` by construction of the fill step in `refresh` (the
+    /// same band test `on_walk_band` already answers), so a reader here —
+    /// [`Self::walk_band_scene`] — makes no decision the cache has not
+    /// already made; it never re-asks "is this the walk band" the way a
+    /// half-cached design (Some-only, with `None` re-derived per read)
+    /// would have to.
+    walk_scene: Option<hornvale_scene::SurroundsScene>,
     /// Which pane keys currently drive — the walk view's movement keys, the
     /// command line, or the map cursor. Startup is [`Focus::Walk`] (arrow
     /// keys move immediately); replaces The Portolan part I's `Mode {
@@ -772,6 +816,7 @@ impl Driver {
             cycle: None,
             noun_prompt: None,
             on_walk_band: true,
+            walk_scene: None,
         };
         driver.refresh();
         Ok(driver)
@@ -2201,11 +2246,16 @@ impl Driver {
         if !self.at_walk_band_rung() {
             return None;
         }
-        // The real scene, re-derived with the SAME call `Session::snapshot`
-        // itself makes for the walk band (`purview(0)`, `windows/vessel/src/
-        // session.rs`'s own comment on that call site) — and the same one
-        // the draw path flattens, so the resolver and the picture cannot
-        // disagree about which facets exist either.
+        // The real scene — the SAME cached `Self::walk_scene` packet
+        // `compose_perception_layer` draws from (both read it through
+        // `Self::walk_band_scene`), derived once per turn by the same call
+        // `Session::snapshot` itself makes for the walk band (`purview(0)`,
+        // `windows/vessel/src/session.rs`'s own comment on that call site).
+        // Sharing the one cached value, rather than each independently
+        // re-deriving it, is what keeps the resolver and the picture from
+        // disagreeing about which facets exist (The Gallery, Task 10 round
+        // 2 — previously true only because both calls were deterministic
+        // and made within the same redraw; now true by construction).
         let scene = self.walk_band_scene()?;
         let perceived = perceived_facets(&scene);
         let (plate_w, plate_h) = self.active_plate_dims();
@@ -2239,19 +2289,42 @@ impl Driver {
     /// The live walk-band perception packet, or `None` when the possession
     /// is not on the walk band at all.
     ///
-    /// **The band is read off the SNAPSHOT, not off `purview`'s success.**
+    /// **Round 1 (The Gallery, Task 10; The Quadrat's F11) retired the
+    /// per-redraw `Snapshot::parse` this method's callers used to pay,
+    /// reading [`Self::on_walk_band`] instead of the snapshot's own
+    /// `spatial` tag.** That measured a real but modest win (~5%), because
+    /// the parse was never the dominant cost: `Session::purview(0)` was, and
+    /// round 1 left it standing here, called fresh on every redraw.
+    ///
+    /// **Round 2 caches the packet itself, in [`Self::walk_scene`], for the
+    /// identical argument `on_walk_band`'s own doc already makes for the
+    /// band question.** `purview` is a pure read (`&self`, no mutation) over
+    /// session state — position, knowledge, eyes, day — that changes only
+    /// when a turn does; a keypress that is only typing changes none of
+    /// them. [`Self::refresh`] is the one choke point that already
+    /// recomputes `on_walk_band` from that same fact once per turn, so it is
+    /// where `walk_scene` is recomputed too. This method is now a plain
+    /// accessor: it makes no decision the cache has not already made,
+    /// including the `None` case for a non-walk band, which `refresh` sets
+    /// explicitly rather than leaving this method to re-derive it.
+    ///
+    /// **Why `on_walk_band`, not `purview`'s own success, decided the band
+    /// (still true, now decided once per turn instead of once per read).**
     /// `Session::purview(0)` charts the session's walk-band position and
     /// succeeds indoors too — it is the surface around the structure you are
-    /// standing in — so using it as the band test would draw a perception
-    /// overlay of outdoor facets over a chamber-band spread. The snapshot's
-    /// own `spatial` tag is the wire's answer to "which band is this", and
-    /// it is the one the rest of this module already asks.
+    /// standing in — so using it as the band test would cache a perception
+    /// overlay of outdoor facets for a chamber-band spread. It stays correct
+    /// with three bands: `on_walk_band` is `Walk`-or-not, and underground is
+    /// not walk, the same distinction the retired (round 1) match made
+    /// explicit in its `Chamber | Underground => None` arm.
+    ///
+    /// **Whether the underground band ever gets its own perception overlay
+    /// is still an open question, unresolved by either round** — the
+    /// original match's own comment raised it and this doc carries the
+    /// pointer forward rather than letting the question disappear with the
+    /// arm that used to name it.
     fn walk_band_scene(&self) -> Option<hornvale_scene::SurroundsScene> {
-        let snap = hornvale_game_core::Snapshot::parse(&self.cached).ok()?;
-        match snap.spatial {
-            hornvale_game_core::Spatial::Walk { .. } => self.session.purview(0).ok(),
-            hornvale_game_core::Spatial::Chamber { .. } => None,
-        }
+        self.walk_scene.clone()
     }
 
     /// Compose the band-B perception overlay onto an already-drawn plate —
@@ -2461,6 +2534,21 @@ impl Driver {
             // failure the previous value stands, the same posture the scope
             // above takes: a dead session is not a band change.
             self.on_walk_band = matches!(snap.spatial, hornvale_game_core::Spatial::Walk { .. });
+            // The walk-band perception packet itself, cached alongside the
+            // band question and invalidated at the same point (see
+            // `Self::walk_scene`'s own doc for why: round 1 of this fix
+            // cached the band and left `purview(0)` itself standing as a
+            // per-redraw cost, and measurement showed `purview` -- not the
+            // parse -- was the dominant one). `purview` is a pure read over
+            // session state that changes only on a turn, so it is safe to
+            // pay here, once, rather than at every caller. On a parse
+            // failure the previous packet stands too, for the identical
+            // reason `on_walk_band` does.
+            self.walk_scene = if self.on_walk_band {
+                self.session.purview(0).ok()
+            } else {
+                None
+            };
         }
         self.update_discovery();
         self.follow_the_walker();
@@ -4382,6 +4470,73 @@ mod portolan_tests {
     // every facet's absolute coordinate exactly; the sweep measures the
     // shortcut, not the contract. The campaign asserted otherwise in six
     // documents and it was corrected at close.
+
+    /// `walk_band_scene` (and so `compose_perception_layer`, its only
+    /// caller off the resolver path) answers off [`Driver::on_walk_band`],
+    /// never a fresh `Snapshot::parse(&self.cached)` (The Gallery, Task 10
+    /// round 1; The Quadrat's F11 measured the parse-and-`purview` shape at
+    /// 24x a bare redraw, size-independent, on **every** keypress including
+    /// plain typing).
+    ///
+    /// **The check corrupts `cached` rather than counting parses**, because
+    /// a counter would need its own seam and this property is more direct:
+    /// if the method still consulted `self.cached`'s own `spatial` tag, a
+    /// cache that cannot parse as JSON would read as "not walk band" and
+    /// `walk_band_scene` would go `None` even though the driver's own
+    /// `on_walk_band` (set by the last real `refresh()`) says the possession
+    /// is standing on the walk band right now. Answering `Some` here is
+    /// only possible if the parse is genuinely gone from this path.
+    ///
+    /// **A weaker property than the one below, kept because it guards a
+    /// different regression.** Round 2 (below) proves `purview(0)` itself is
+    /// no longer called per read; this proves `self.cached` specifically is
+    /// no longer consulted per read. Since `walk_band_scene` now touches
+    /// neither, both hold — but a future edit could reintroduce a parse of
+    /// `self.cached` without reintroducing a fresh `purview` call (or vice
+    /// versa), so both stay.
+    #[test]
+    fn composing_the_perception_layer_does_not_parse_the_snapshot() {
+        let mut d = test_driver();
+        assert!(
+            d.on_walk_band,
+            "seed 42's flagship opens on the walk band, per Driver::start's own doc"
+        );
+        d.cached = "not valid snapshot json".to_string();
+        assert!(
+            d.walk_band_scene().is_some(),
+            "walk_band_scene must answer from the cache, not a parse of \
+             the (here, corrupted) cached snapshot"
+        );
+    }
+
+    /// **Round 2** (The Gallery, Task 10 round 2): `walk_band_scene` answers
+    /// off the CACHED [`Driver::walk_scene`], never a fresh
+    /// `Session::purview(0)` call — the cost round 1 left standing, and
+    /// measurement showed it was the dominant one (`walk_scene`'s own doc
+    /// has the numbers).
+    ///
+    /// **The check poisons the cache to a value a live `purview(0)` call
+    /// would never produce here**, the same technique the property above
+    /// uses one field over: the possession is genuinely on the walk band
+    /// (`on_walk_band` is `true`, unchanged), so a fresh `purview(0)` call
+    /// would answer `Some`. Forcing `walk_scene` to `None` and then seeing
+    /// `walk_band_scene()` answer `None` too is only possible if the method
+    /// is reading the cache rather than recomputing.
+    #[test]
+    fn walk_band_scene_reads_the_cached_packet_not_a_fresh_purview_call() {
+        let mut d = test_driver();
+        assert!(
+            d.on_walk_band,
+            "seed 42's flagship opens on the walk band, per Driver::start's own doc"
+        );
+        d.walk_scene = None;
+        assert!(
+            d.walk_band_scene().is_none(),
+            "walk_band_scene must answer from the cached walk_scene, not a fresh \
+             purview(0) call (which would answer Some here, since the possession \
+             really is on the walk band)"
+        );
+    }
 
     /// Every facet of the walk-band packet lands on the tile that HOLDS its
     /// own facet — checked against the projection's own INVERSE rather than

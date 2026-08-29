@@ -422,6 +422,7 @@
 - [The Latch](./chronicle/the-latch.md)
 - [The Precedence](./chronicle/the-precedence.md)
 - [The Governor](./chronicle/the-governor.md)
+- [The Gallery](./chronicle/the-gallery.md)
 
 # Appendix: The Frontier
 

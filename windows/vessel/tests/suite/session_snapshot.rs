@@ -433,7 +433,7 @@ fn out_of_doors_the_spatial_channel_is_the_walk_band_chart() {
                 "a chart with no cells shows nothing"
             );
         }
-        SpatialChannel::Chamber { .. } => {
+        SpatialChannel::Chamber { .. } | SpatialChannel::Underground { .. } => {
             panic!("the possession opens out of doors, not inside a building")
         }
     }
@@ -454,7 +454,9 @@ fn inside_a_building_the_spatial_channel_is_the_chamber_plan() {
                 "the emitted grid must stay total"
             );
         }
-        SpatialChannel::Walk { .. } => panic!("`enter` puts the possession inside"),
+        SpatialChannel::Walk { .. } | SpatialChannel::Underground { .. } => {
+            panic!("`enter` puts the possession inside")
+        }
     }
 }
 

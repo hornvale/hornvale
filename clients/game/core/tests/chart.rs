@@ -5,7 +5,9 @@ const FIXTURE: &str = include_str!("fixtures/session-seed-42-turn-0.json");
 fn walk_chart() -> hornvale_game_core::Chart {
     match Snapshot::parse(FIXTURE).unwrap().spatial {
         Spatial::Walk { chart } => chart,
-        Spatial::Chamber { .. } => panic!("fixture must be a walk-band turn"),
+        Spatial::Chamber { .. } | Spatial::Underground { .. } => {
+            panic!("fixture must be a walk-band turn")
+        }
     }
 }
 
