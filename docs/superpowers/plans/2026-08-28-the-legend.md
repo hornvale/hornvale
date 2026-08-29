@@ -690,7 +690,39 @@ mockup: the judgment is "tellable apart at a glance in an 80x24 terminal".
 - Modify: `docs/generated-paths.txt`, `scripts/regenerate-artifacts.sh`
 
 **Interfaces:**
-- Consumes: Task 1's `REGISTER`, Task 3's legends.
+- Consumes: Task 1's `REGISTER` (`hornvale_game_core::register`), and
+  `hornvale_scene::{relief_band, RELIEF_LEGEND}`.
+
+**Two numbers changed under you, and the sheet is where they show.** Ruling X
+re-pointed this campaign at the pre-existing `relief_band`, so:
+
+- **The elevation ladder has SIX bands, not five** — `RELIEF_LEGEND` is
+  `["abyss", "shelf", "lowland", "upland", "highland", "alpine"]`. Two of
+  them (`abyss`, `shelf`) are BELOW sea level, which the earlier five-band
+  design collapsed. A sheet drawn for five bands is drawn for a ladder that
+  no longer exists.
+- **The impedance ladder spans SEVEN integer values into FIVE glyphs.**
+  `relief_band` returns `0..=5`, so `impedance_glyph`'s
+  `relief + 0.5*canopy + 0.5*roughness` ranges over `[0, 6]`, and the match's
+  catch-all `_ => 'A'` absorbs both 5 and 6. The top glyph is doubly
+  overloaded. Show that on the sheet rather than hiding it — whether `A`
+  covering two bands is legible is exactly the kind of question the sheet
+  exists to answer.
+
+**The candidates are yours to propose, and that is deliberate.** This plan
+does not enumerate candidate ladders, because a plan author choosing marks
+from outside the code has been strictly worse than an implementer choosing
+them from inside it, every time this project has tried. What the plan fixes
+is the PROPERTY every candidate must satisfy:
+
+1. ordinal — ink weight ascends with the band, readable with no legend;
+2. disjoint from every character `REGISTER` already claims (query
+   `binding_of`, do not eyeball it), and disjoint from the impedance ladder
+   `_ . : ^ A`, which is a DIFFERENT quantity (spec §2.2);
+3. distinguishable at 80x24 in monochrome, which is the whole point.
+
+Propose at least three elevation candidates meeting those, render them all,
+and say in your report which you would pick and why.
 
 - [ ] **Step 1: Write the example**
 
@@ -725,8 +757,15 @@ than a hoped-for one (The Stope, Task 2b).
 
 - [ ] **Step 3: Wire it into regeneration**
 
-Add to `scripts/regenerate-artifacts.sh` in the clients section, following
-the surrounding style. **The `>` REDIRECT writes the file, not the command**
+Add to `scripts/regenerate-artifacts.sh` in the clients block (near the
+`clients/game/core/tests/fixtures/` spawns, around line 878), following the
+surrounding style — `spawn <command> > <path>`.
+
+**`clients/game` is OUTSIDE the cargo workspace**, so the script's `run`
+helper (which shells out to a workspace `cargo run -p ...`) cannot reach it.
+Use the same subshell-`cd` form the script already uses for the other
+out-of-workspace client, `clients/atlas` (line 748):
+`(cd "$repo_root/clients/atlas" && deno task build)`. **The `>` REDIRECT writes the file, not the command**
 — a bare `cargo run` regenerates nothing, and the drift check then reports an
 empty diff that reads as "no drift".
 
