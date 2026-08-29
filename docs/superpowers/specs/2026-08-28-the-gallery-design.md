@@ -199,27 +199,74 @@ every rung** — the partition tree connects every leaf and flooding only ever
 fills a whole leaf, never severs the tree, so plain connectivity is never
 actually at risk under wading.
 
-**The rule, from the decision table §7 requires this campaign to commit to:**
-- Impassable needs ≥95% of seeds fully reachable; this measurement gives
-  35.0%, so impassable is rejected outright — a rule that strands two-thirds
-  of seeds is not "simplest and costs nothing", it is broken.
-- Wading (walkable) is the fallback when flooding merely strands a material
-  fraction of seeds while the world stays substantially dry elsewhere. That
-  is not what was measured: **58.7%-73.4% of a rung's walkable area is
-  `Flooded`, at every rung including the shallowest (Undercroft) — not just
-  the deep ones, and with no meaningful gradient by depth.** The spec's
-  original concern was that rung 2 specifically reads as mostly water; the
-  measurement shows every rung does, uniformly. Treating that as ordinary
-  floor would make wading the DEFAULT mode of underworld travel at every
-  depth rather than an occasional hazard, which is indistinguishable from the
-  underworld simply being submerged throughout — exactly the third branch's
-  trigger condition, not the second's.
-- **Chosen: flooded cells route into the `submerged` band**, with its own
-  `dive`/`surface` verbs and its own refusal, rather than being walked
-  through or walled off. This is the expensive branch the plan named in
-  advance as the one "that may push Task 11 out of the campaign"; Tasks 4 and
-  11 must budget for it on that basis, not on the cheaper wading assumption
-  the spec's first draft left open.
+**The rule (Nathan, at the Task 0 stop). The measurement was right and its
+conclusion was wrong, because "wet" and "drowned" are two categories and the
+code has one.**
+
+The probe's own `reach % (Flooded passable)` column is 100.0 at every rung:
+flooding fills whole partition-tree leaves and never severs the tree. So water
+was never a connectivity problem. What made it look like one was a rule choice
+that could not survive its own destination — see the rejected branch below.
+
+**Wet is common and correct.** A cave with water in it and air above it is a
+damp underworld, which is what `domains/terrain/src/water_table.rs` was
+deliberately calibrated for: it carries a measured drowned-share, a named
+`UNDERWORLD_DRYNESS_GAIN`, and states that `DRAWDOWN_SCALE_M` "sets the
+absolute depth of every table, and therefore which delve rungs can ever be
+dry." The measured 58.7%–73.4% is that calibration showing through, not a
+defect. **Wet cells are walkable — you wade.**
+
+**Drowned is rare and is a different thing.** A chamber filled floor to
+ceiling, with no air, is not a wet room: it is not enterable sideways at all.
+It is dived into from the rung above. Target: **under 5% of rungs.**
+
+**Wetness keys on `LeafStyle.worked`, a field that already exists and already
+varies.** `worked` means "this leaf reads as worked stone rather than natural
+void", and it is already drawn per leaf from `ChamberOrigin` and `Character`
+and compounded down the descent by inertia (DrowTier 0.85, WildCave 0.5,
+FungalGardens 0.35). `is_sump` *already* returns `false` for
+`ChamberOrigin::Made` with the comment "Drained by whoever cut it" — the model
+already believes worked space is drained; it simply never gets to apply the
+rule, because the shipped path only ever produces `Found`. Keying on `worked`
+makes it live per leaf: **a worked leaf is drained, a natural leaf is wet.** A
+drow-tier descent comes out dungeon-dry, a wild cave comes out wet, a fungal
+garden wetter still — from a dial already turning. `leaf_styles` is index-
+aligned with `region::leaves(&tree)` (both built in one pass), so the flooding
+pass reads its own leaf's `worked` without re-deriving anything.
+
+**Movement is a MODE, not a boolean.** One named seam answers "how can this
+body move through this cell", returning `Walk` or `Wade` today, with `Swim`
+and `Fly` as the variants it will return later (Nathan: *"swimming should be
+just another mode of travel, as flight might be in some levels"*). This is the
+same shape as §3.4's reach seam, and it is why drowned rungs and flight will
+not each need a special case bolted on.
+
+**REJECTED — routing flooded cells into the `submerged` band.** Task 0's
+implementer selected this and it is self-defeating: the `submerged` band has
+no geometry. `session.rs:2563` refuses `go` there because "it has no lattice
+to step across, so a bearing under water still has nowhere to go (The
+Column)." Routing 58.7%–73.4% of every rung there would make it *unwalkable* —
+behaviourally identical to the impassable rule the same measurement had just
+rejected at 35.0% reachability, but with a band transition and more machinery
+to arrive at it. The branch label matched the situation; the destination band
+could not do the job. **Recorded rather than quietly replaced, because the
+reasoning error is reusable: a rule that names a mechanism must be checked
+against what that mechanism can currently do, not against what its name
+suggests.**
+
+Note what this does NOT rescue: diving into a drowned rung *from above* is
+vertical, and `dive`/`surface` are vertical, so the missing lateral geometry
+does not block that. The rejected rule failed on lateral movement
+specifically.
+
+**Deliberately deferred to a sequel, with the seam built here.** Drowned rungs,
+dive-entry from the rung above, and swimming as a travel mode are designed
+above and **not implemented in this campaign**: they need a capability model
+(amphibious, or a carried/worn item) that does not exist, and The Chattel is
+building the object model that would carry it right now. Building a second one
+in parallel is the failure this defers. What ships here is wading, the
+`worked`-keyed wetness, and the mode seam — after which the sequel is a new
+variant on an existing enum rather than a new concept.
 
 ### 3.3 Sight
 

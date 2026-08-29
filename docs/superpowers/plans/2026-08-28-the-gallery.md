@@ -477,9 +477,37 @@ tail -20 /tmp/hv-t4.log
 Delete `UNDERGROUND_LATERAL_REFUSAL` and its `"go" if self.underground.is_some()`
 arm. Route a compass step to `Underground::step`.
 
-Apply **Task 0's chosen flooded-cell rule here**. This is the only place that
-rule is expressed; do not scatter it across the movement, sight and rendering
-paths.
+**The water rule is spec 3.2, as rewritten at the Task 0 stop — read it, do not
+infer it from Task 0's commit message.** Three parts, and this is the only
+place any of them is expressed; do not scatter them across the movement, sight
+and rendering paths.
+
+1. **Wet cells are walkable — you wade.** `Flooded` is passable. The probe's
+   own `reach % (Flooded passable)` column is 100.0 at every rung, so this
+   keeps every level connected.
+
+2. **Wetness keys on `LeafStyle.worked`.** A worked leaf is drained; a natural
+   leaf is wet. `leaf_styles` is index-aligned with `region::leaves(&tree)`
+   (both built in one pass), so the flooding pass in
+   `generate_level_with_water` reads its own leaf's `worked` — it does not
+   re-derive the tree for it. This makes a drow-tier descent dungeon-dry and a
+   wild cave wet, from a dial that is already turning.
+
+3. **Movement is a mode, not a boolean.** One named seam answers "how can this
+   body move through this cell", returning `Walk` or `Wade` today, with `Swim`
+   and `Fly` reserved as variants it will return later. Same shape as Task 6's
+   reach seam.
+
+**Not in this task:** drowned rungs, dive-entry from above, and swimming.
+They are designed in spec 3.2 and deferred — they need a capability model that
+does not exist, and The Chattel is building the object model that would carry
+it. The mode enum reserves their variants; nothing returns them yet.
+
+**Add a regression test for part 2**, since it is the part with a number
+behind it: a descent generated with a heavily-worked character must come out
+substantially drier than one generated with a natural-cave character, on the
+same seed. Assert the DIRECTION and a margin, not a fixed percentage — the
+percentage is a calibration this task does not own.
 
 - [ ] **Step 4: Run and watch pass**
 
