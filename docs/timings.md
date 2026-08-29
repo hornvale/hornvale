@@ -4027,3 +4027,4 @@ measured here.
 | 2026-08-29T15:45:19Z | sluice:gate | 460.823 | 13494.370 | 422.082 | 30.20 | 0 | 24ce47001 |  | lefford | 40 |
 | 2026-08-29T15:53:58Z | sluice:clients | 519.061 | 9529.005 | 94.156 | 18.54 | 0 | 24a2aee7f |  | lefford | 40 |
 | 2026-08-29T21:13:49Z | gate-commit | 150.799 | 826.784 | 66.076 | 5.92 | 0 | 0216dc303 | the-overture | MacBookPro | 10 |
+| 2026-08-29T21:16:36Z | rebaseline | 128.720 | 273.924 | 12.527 | 2.23 | 0 | ccb7cf0c2 | the-overture | MacBookPro | 10 |

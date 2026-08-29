@@ -4300,3 +4300,44 @@ chaos-eviction schedule whose most aggressive form gives the least signal,
 because it replaces the state immediately after every step it is meant to
 stress. Both were green. Both were pinning nothing. Neither would have been
 found by reviewing the tests against their specification.
+
+### A third look at cost, and it found a distribution rather than a pathology (2026-08-29)
+
+[The Overture](./chronicle/the-overture.md) is a client campaign and **no bet
+in the map above moved** — it resolves no open question about the world, and
+nothing it built crosses the determinism boundary. It contributes one thing to
+the accounting immediately above, and only because that accounting counts
+occasions rather than results.
+
+The section before this one observes that cost is scored "when a campaign
+chooses to look", and that on the two occasions anyone had, each found a
+quadratic nobody predicted. This is a third occasion, and it found neither a
+quadratic nor anything else pathological — it found a **distribution**, which
+is a different kind of answer and worth distinguishing from a clean bill of
+health:
+
+```
+  settlements               1840 ms    60.2%
+  WorldContext::build        830 ms    27.2%   (demography report: 480 ms)
+  terrain (genesis)          202 ms     6.6%
+  deep time                  181 ms     5.9%
+  astronomy                    0.4 ms   0.01%
+  ------------------------------------------
+  total                     3054 ms
+```
+
+Two items are **76%** of world generation. The 480 ms demography report is the
+largest single item in the build that has never been profiled by anyone — this
+campaign measured it and deliberately did not touch it. So the base rate the
+paragraph above reports is unchanged in the direction that matters: three
+campaigns have looked at cost, two found an unpredicted quadratic, and the
+third found a concentration it did not investigate. Nothing here is a
+counterexample to "a poor base rate for an unwatched dimension"; it is one more
+observation that the dimension is unwatched.
+
+The measurement is also a reminder of what *this* chapter's floor asks for.
+These figures are five agreeing runs on one machine on one day, and they are
+already load-bearing for a shipped design decision — a progress substrate
+refuses to draw a global percentage *because* one phase is 60% of the whole. A
+number with that much weight on it should be re-measured by whoever next
+depends on it, not inherited.

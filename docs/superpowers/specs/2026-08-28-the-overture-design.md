@@ -1,8 +1,17 @@
 # The Overture — the wait made worth having
 
 **Branch:** `campaign/the-overture`, from `origin/main` @ `2f8faf243` ·
-**Decision block:** 0357–0366 · **Drafted:** 2026-08-28 ·
-**Status:** G3 package pending.
+**Decision block:** **0436–0445** · **Drafted:** 2026-08-28 ·
+**Status:** merged.
+
+> **The block below was renumbered at close, and the header above is the
+> correct one.** This spec was drafted claiming **0357–0366**, a range that
+> was never reserved — it was the next free number on the `main` this branch
+> left. By the time the campaign closed, `the-upkeep` held 0356–0365 and
+> `the-latch` held 0366–0375, and `docs/decisions/0366-…` existed on `main`.
+> `make decision-block NAME=the-overture` returned **0436–0445**. §12 below is
+> left in its drafted form as the record of what the spec proposed; the
+> records that actually shipped are 0436–0444 and are listed there.
 
 *An overture is not the delay before the opera. It is the first part of it.*
 
@@ -222,7 +231,24 @@ A row with a number is worth several without.
 4. **The observer callback is the only sim-side change.** Everything else is
    `clients/` and docs.
 
-## 12. Decisions to promote (0357–0366)
+## 12. Decisions to promote (drafted as 0357–0366; **shipped as 0436–0444**)
+
+The six below are what the spec proposed. Nine records shipped: the six,
+renumbered in order, plus three rulings that only became decision-worthy
+once the code existed — the terminal opening before genesis with the build
+on a worker (**0441**), the observer handing borrows so that a crossing
+observer clones at its own call site (**0442**), and a view's `&mut self`
+being a memo rather than a licence (**0443**).
+
+| drafted | shipped |
+| --- | --- |
+| 0357 | [0436](../../decisions/0436-the-startup-is-a-frame-with-pluggable-views-not-a-screen.md) |
+| 0358 | [0437](../../decisions/0437-a-view-shows-what-exists-and-one-that-cannot-speak-is-skipped.md) |
+| 0359 | [0438](../../decisions/0438-progress-is-named-by-phase-there-is-no-global-percentage.md) |
+| 0360 | [0439](../../decisions/0439-an-estimate-is-the-previous-runs-own-measurement-never-a-model.md) |
+| 0361 | [0440](../../decisions/0440-a-cached-worlds-validity-is-seed-and-pins-the-label-diff-and-a-prefix-tripwire.md) |
+| 0362 | [0444](../../decisions/0444-the-build-clock-and-the-world-clock-are-different-instruments.md) |
+
 
 - **0357** — the startup is a frame with pluggable views, not a screen.
 - **0358** — a view shows what exists and never a placeholder for what does not.

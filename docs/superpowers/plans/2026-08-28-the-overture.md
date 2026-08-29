@@ -66,7 +66,7 @@ look weaker than the truth.
 - Produces: a `run` in which `Term::open()` precedes `Driver::start`, and a
   documented error path that restores the terminal before printing.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```rust
 #[test]
@@ -94,15 +94,15 @@ fn a_failing_genesis_still_leaves_the_terminal_restored() {
 **Adapt to the real API rather than inventing one to match the sketch.** If no
 seed fails genesis, inject the failure at the seam instead and say so.
 
-- [ ] **Step 2: Run to verify it fails.** Expected: FAIL, the seam does not exist.
+- [x] **Step 2: Run to verify it fails.** Expected: FAIL, the seam does not exist.
 
-- [ ] **Step 3: Implement.** `Term::open()` moves ahead of `Driver::start`; the
+- [x] **Step 3: Implement.** `Term::open()` moves ahead of `Driver::start`; the
   error path restores before printing. Keep `Drop for Term`'s restore as the
   backstop it already is — this adds an explicit path, it does not replace it.
 
-- [ ] **Step 4: Run to verify it passes.**
+- [x] **Step 4: Run to verify it passes.**
 
-- [ ] **Step 5: `cargo fmt --all`, `make gate-commit`, commit.**
+- [x] **Step 5: `cargo fmt --all`, `make gate-commit`, commit.**
 
 ---
 
@@ -121,7 +121,7 @@ seed fails genesis, inject the failure at the seam instead and say so.
   `build_world_to`, `build_world_from_components` must not change for callers who
   do not want an observer; add the observing variant beside them.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```rust
 #[test]
@@ -162,18 +162,18 @@ fn an_observed_build_is_byte_identical_to_an_unobserved_one() {
 
 `world.ledger.len()` may not be the right accessor — check and use the real one.
 
-- [ ] **Step 2: Run to verify both fail.** Expected: FAIL, `build_world_observed`
+- [x] **Step 2: Run to verify both fail.** Expected: FAIL, `build_world_observed`
   does not exist.
 
-- [ ] **Step 3: Implement.** The three boundaries already exist as early returns;
+- [x] **Step 3: Implement.** The three boundaries already exist as early returns;
   the `Full` case falls through to the end. Fire the callback at each.
   **`type-audit:` tags are required here** — `windows/` IS scanned.
 
-- [ ] **Step 4: Run to verify they pass**, then run the whole worldgen suite
+- [x] **Step 4: Run to verify they pass**, then run the whole worldgen suite
   once and grep it. **Mutation-prove:** drop one callback site and confirm the
   order test dies.
 
-- [ ] **Step 5: `cargo fmt --all`, `make gate-commit`, commit.**
+- [x] **Step 5: `cargo fmt --all`, `make gate-commit`, commit.**
 
 ---
 
@@ -211,7 +211,7 @@ world and a pacing hint, and must:**
 2. show what EXISTS, never a placeholder for what does not yet;
 3. fill the time it is given without implying a total it cannot know.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```rust
 #[test]
@@ -253,16 +253,16 @@ fn space_cycles_only_among_views_that_can_speak() {
 }
 ```
 
-- [ ] **Step 2: Run to verify they fail.**
+- [x] **Step 2: Run to verify they fail.**
 
-- [ ] **Step 3: Implement** the trait, the frame, the progress substrate and the
+- [x] **Step 3: Implement** the trait, the frame, the progress substrate and the
   cycle. The per-phase bar reads the previous run's timings **from disk**; a
   first-ever run shows names and a fact count and **no bar**, which is the honest
   state (spec §2).
 
-- [ ] **Step 4: Run to verify they pass.**
+- [x] **Step 4: Run to verify they pass.**
 
-- [ ] **Step 5: `cargo fmt --all`, `make gate-commit`, commit.**
+- [x] **Step 5: `cargo fmt --all`, `make gate-commit`, commit.**
 
 ---
 
@@ -282,7 +282,7 @@ fn space_cycles_only_among_views_that_can_speak() {
 **Why this view is first: its data is complete at 0.4 ms.** It opens *complete*
 where every other view opens empty.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```rust
 #[test]
@@ -310,7 +310,7 @@ fn a_star_lands_where_its_own_coordinates_put_it() {
 }
 ```
 
-- [ ] **Step 2–5:** fail, implement, pass, gate, commit. **Mutation-prove** the
+- [x] **Step 2–5:** fail, implement, pass, gate, commit. **Mutation-prove** the
   placement: perturb `right_ascension` in the projection and confirm a test dies.
 
 ---
@@ -325,7 +325,7 @@ fn a_star_lands_where_its_own_coordinates_put_it() {
 - Consumes: `plate::draw_terrain_layer` / `draw_feature_layer` and `TileCache`
   from The Quadrat — **the renderer already exists; do not write a second one.**
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```rust
 #[test]
@@ -349,7 +349,7 @@ fn settlements_appear_in_the_atlas_only_once_placed() {
 }
 ```
 
-- [ ] **Step 2–5:** fail, implement, pass, gate, commit.
+- [x] **Step 2–5:** fail, implement, pass, gate, commit.
 
 ---
 
@@ -364,7 +364,7 @@ fn settlements_appear_in_the_atlas_only_once_placed() {
   and is skipped until that rung lands. This is spec §3's component level, and it
   is what lets the almanac grow without a redesign.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```rust
 #[test]
@@ -393,7 +393,7 @@ fn what_is_strange_names_only_what_is_true_of_this_world() {
 }
 ```
 
-- [ ] **Step 2–5:** fail, implement, pass, gate, commit.
+- [x] **Step 2–5:** fail, implement, pass, gate, commit.
 
 ---
 
@@ -419,7 +419,7 @@ territory**, not a wiring job.
 - `hornvale_worldgen::{language_of_in (:5359), morph_options (:6979)}` — the
   driver already calls these for name resolution; read `driver.rs`'s use of them.
 
-- [ ] **Step 0 (BLOCKING): prove the assembly path exists.**
+- [x] **Step 0 (BLOCKING): prove the assembly path exists.**
 
 Write a throwaway probe that, for seed 42's flagship settlement, obtains a
 `TongueGrammar`, a `Lexicon` and the pronoun map and realizes **one** clause both
@@ -430,7 +430,7 @@ ways. Run it.
   path, do not fall back to Common-only prose, and do not widen a language API
   to make it work. The view is worth having only if the world can actually speak.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```rust
 #[test]
@@ -451,7 +451,7 @@ fn the_tongue_is_silent_before_there_are_peoples() {
 }
 ```
 
-- [ ] **Step 2–5:** fail, implement, pass, gate, commit. **A `TongueGap` is a
+- [x] **Step 2–5:** fail, implement, pass, gate, commit. **A `TongueGap` is a
   legitimate outcome** — the view says so honestly rather than falling back.
 
 ---
@@ -468,7 +468,7 @@ fn the_tongue_is_silent_before_there_are_peoples() {
 - `cli::streams::{stamp (:143), what_moved (:156), reload_notice (:173)}` —
   **already written and tested; do not reimplement.**
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```rust
 #[test]
@@ -501,24 +501,24 @@ fn the_prefix_tripwire_catches_a_change_no_label_records() {
 }
 ```
 
-- [ ] **Step 2: Run to verify they fail.**
+- [x] **Step 2: Run to verify they fail.**
 
-- [ ] **Step 3: Implement** the three layers in order — cheapest refusal first.
+- [x] **Step 3: Implement** the three layers in order — cheapest refusal first.
 
-- [ ] **Step 4: MEASURE H2.** Time a cached start against a generated one,
+- [x] **Step 4: MEASURE H2.** Time a cached start against a generated one,
   `--release`, load checked first.
   - **under 1 s** → H2 supported; state the number.
   - **1 s or more** → **H2 IS NULL.** Report it plainly, retune nothing, and say
     whether the cache is worth its complexity. The spec preregistered this.
 
-- [ ] **Step 5: DISPOSE H3.** Mutate a genesis constant **without** bumping a
+- [x] **Step 5: DISPOSE H3.** Mutate a genesis constant **without** bumping a
   label and confirm the tripwire reddens.
   - **It reddens** → H3 supported.
   - **It does not** → **H3 IS NULL, and that is a real possibility the spec
     names.** The honest report is that layers 1–2 are the whole protocol and the
     tripwire is theatre. Do not strengthen the tripwire to rescue it.
 
-- [ ] **Step 6: `cargo fmt --all`, `make gate-commit`, commit.**
+- [x] **Step 6: `cargo fmt --all`, `make gate-commit`, commit.**
 
 ---
 
@@ -527,7 +527,7 @@ fn the_prefix_tripwire_catches_a_change_no_label_records() {
 **Definition of Done for every merged plan (CLAUDE.md Process, decisions 0013,
 0020) — not optional.**
 
-- [ ] **Step 1: `make rebaseline`, then `git status` IMMEDIATELY** (see the OOM
+- [x] **Step 1: `make rebaseline`, then `git status` IMMEDIATELY** (see the OOM
   hazard in Global Constraints), then the drift check:
 
 ```bash
@@ -539,28 +539,28 @@ EXPECTED (type-audit drifts on any `pub` boundary change; the decision index
 drifts when a decision lands). **Anything under `book/src/domesday/`,
 `book/src/gallery/` or an almanac moving → STOP.** That is a determinism finding.
 
-- [ ] **Step 2: Decision records 0357–0366**, per spec §12. Derive the real list
+- [x] **Step 2: Decision records 0357–0366**, per spec §12. Derive the real list
   from what shipped — several rulings may be decision-worthy and some of §12's
   wording may no longer match. Read two recent records in `docs/decisions/` for
   the house format first.
 
-- [ ] **Step 3: Chronicle** `book/src/chronicle/the-overture.md`, wired into
+- [x] **Step 3: Chronicle** `book/src/chronicle/the-overture.md`, wired into
   `book/src/SUMMARY.md`. **Lead with what was measured, not predicted.** If H2 or
   H3 came back null, that is the headline.
 
-- [ ] **Step 4: Retrospective** `docs/retrospectives/the-overture.md` — process
+- [x] **Step 4: Retrospective** `docs/retrospectives/the-overture.md` — process
   lessons, not product.
 
-- [ ] **Step 5: Registry** — flip `CLIENT-startup-is-silent` and repoint it; add
+- [x] **Step 5: Registry** — flip `CLIENT-startup-is-silent` and repoint it; add
   rows for the held items **each carrying its measurement** (chronicle view;
   cache `GeneratedTerrain` 199 ms; cache the demography report 480 ms; the living
   world view; music and literature as **view slots**). A row with a number is
   worth several without.
 
-- [ ] **Step 6: Freshness sweep + Confidence Gradient.** **Grep
+- [x] **Step 6: Freshness sweep + Confidence Gradient.** **Grep
   `book/src/open-questions.md` for this campaign's domains before concluding no
   bet moved** — that is the named common mistake, and the previous campaign made
   it and had to correct itself.
 
-- [ ] **Step 7: `make gate-commit`, commit.** Do NOT submit to the merge queue —
+- [x] **Step 7: `make gate-commit`, commit.** Do NOT submit to the merge queue —
   that is the controller's.
