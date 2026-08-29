@@ -172,9 +172,9 @@ fifth strategy would need Stassen to be wrong; a fifth *predicate* is a row.
 The part lists, in the notation `common_constructions` already uses:
 
 ```
-  PROPERTY   [Subject, " ", Copula, " ",                    Complement, Tail, "."]
-  LOCATIVE   [Subject, " ", Copula, " ", Adposition, " ", Det, Complement, Tail, "."]
-  INTRANS    [Subject, " ", Verb,                                       Tail, "."]
+  PROPERTY   [Subject, " ", Copula, " ", PredicateWord,                       Tail, "."]
+  LOCATIVE   [Subject, " ", Copula, " ", PredicateWord, " ", Det, Complement, Tail, "."]
+  INTRANS    [Subject, " ", Verb,                                             Tail, "."]
 ```
 
 `PROPERTY` is `CLASSIFY` with `Part::Determiner` removed. That is the honest
@@ -185,11 +185,24 @@ it produced the right string by asserting *road is-a long*; a property valence
 produces the same string by asserting property predication, which is what the
 sentence means.
 
-`Part::Adposition` is new and is filled from the predicate the way `Part::Verb`
-is, so `at`/`in`/`on` are rows sharing one part list rather than one
+`Part::PredicateWord` is new and is filled from the predicate the way
+`Part::Verb` is, but uninflected — a property word and an adposition take no
+tense, number or polarity. **One part serves both**, because the difference
+between a property predication and a locative is the OBJECT slot, not the
+predicate slot: a property binds `Argument::Absent` (the ledger would commit
+*road old* as `Flag(true)`, objectless — the same fact-shape argument
+`Argument::Absent` was introduced under), a locative binds the located thing.
+So `at`/`in`/`under` are rows sharing one part list rather than one
 construction each. Both directions still read one table: `verb_group_forms`
 keys off `Part::Copula` vs `Part::Verb`, and every part list here carries
 exactly one of them.
+
+**An earlier draft of this section gave the property valence a
+`Part::Complement` and no predicate slot**, which meant the clause had to
+carry the property word in the object slot as well as the predicate — the
+right string produced by stating the same word twice. That is the m02 trap in
+a new costume, and it was caught while verifying Task 4's brief against the
+code rather than by re-reading this document.
 
 ### 3.3 The absent object
 
