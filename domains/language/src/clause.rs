@@ -3172,7 +3172,8 @@ mod tests {
     /// `adjunct.argument` and never reads `adjunct.role` at all
     /// (`realize_adjuncts`'s own doc, `grammar.rs`). An absent argument
     /// left the tongue path with no concept to resolve — a live, unforced
-    /// defect (`grammar.rs`'s `a_tongue_realizes_a_temporal_adjuncts_concept…`
+    /// defect (`grammar.rs`'s
+    /// `a_tongue_realizes_a_temporal_adjuncts_concept_the_same_shape_as_any_other_role`
     /// pins the corrected, working shape; see its doc for the defect this
     /// replaced), not merely the stated Common-only gap this crate already
     /// accepts for `UNDER`'s own relation word.

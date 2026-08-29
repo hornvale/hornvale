@@ -112,28 +112,33 @@
 //! role NAMES the temporal concept itself (`NIGHT`) rather than a relation
 //! word applied to a variable complement** — the opposite asymmetry from
 //! `UNDER`'s arm, which is the relation applied to a variable complement.
-//! `Argument::Absent` is what the object slot carries because the role
-//! already encodes what would otherwise be the complement, and the arm
-//! supplies the literal `"at"` rather than looking it up, because `at` is
-//! not itself a registered concept. The two arms differ structurally, not
-//! merely in their literal adposition, so Step 3's "generalise only if two
-//! callers now exist" test is failed on purpose — see `packs::NIGHT`'s doc
-//! and `common_role_surface`'s `NIGHT` arm for the full account. **A
-//! tongue test is again named, not stated absent, and this time the
-//! finding is worse than `spatial-adverbial`'s**:
-//! `grammar.rs::a_tongue_stray_spaces_a_temporal_adjunct_whose_role_carries_no_argument`
-//! pins that `realize_adjuncts` calls `resolve_argument` for every adjunct
-//! unconditionally, including one whose argument is `Absent` — a live path
-//! nothing exercised before this task, since `Absent` previously only ever
-//! reached the OBJECT slot, gated out before rendering. The concept id
-//! never appears (there is none to resolve: the role itself carries it,
-//! and nothing routes a role into a tongue), and the render neither errors
-//! nor renders cleanly — it succeeds with a stray trailing space before the
-//! final period. **Common-only, the same posture `epistemic-hedge` and
-//! `spatial-adverbial` take**, but total rather than partial: no tongue
-//! construction states the temporal relation OR the temporal concept,
-//! where `spatial-adverbial`'s tongue gap left the location concept
-//! rendering correctly and only the relation word missing.
+//! The literal `"at"` is supplied by the arm rather than looked up,
+//! because `at` is not itself a registered concept. The two arms differ
+//! structurally, not merely in their literal adposition, so Step 3's
+//! "generalise only if two callers now exist" test is failed on purpose —
+//! see `packs::NIGHT`'s doc and `common_role_surface`'s `NIGHT` arm for
+//! the full account, including a review-round correction to the
+//! adjunct's `argument` field (it carries `Argument::Concept(NIGHT)`, not
+//! `Argument::Absent`: the role alone is enough for Common, which never
+//! reads `adjunct.argument` on this arm, but a TONGUE resolves only
+//! `adjunct.argument` and never `adjunct.role`, so an empty argument had
+//! left the tongue path with nothing to render at all — an unforced defect
+//! since corrected, not a property of the design the role-naming decision
+//! required). **A tongue test is again named, not stated absent**:
+//! `grammar.rs::a_tongue_realizes_a_temporal_adjuncts_concept_the_same_shape_as_any_other_role`
+//! shows the tongue path renders the temporal concept's own word — the
+//! same shape `a_tongue_realizes_an_adjunct_whose_concept_it_knows`
+//! pins for `star-class` and `spatial-adverbial`'s own tongue test pins
+//! for the location concept — because `realize_adjuncts` resolves only an
+//! adjunct's argument and never reads its role, so this needed no new
+//! tongue code once the argument carried the concept. **The relation
+//! itself stays Common-only, the same posture `epistemic-hedge` and
+//! `spatial-adverbial` take**: no tongue construction states *when* the
+//! temporal concept sits relative to the event (only that it is present),
+//! because nothing routes `common_role_surface`'s `"at"` into a tongue at
+//! all — the same LESSER gap `spatial-adverbial` already established
+//! (the concept renders; only the relation word is missing), stated
+//! explicitly rather than left silent.
 //!
 //! **`temporal-adverbial` also covers a second rung, `r067`
 //! (`introduces: null`) — a reuse/control rung, not coverage debt.** Its

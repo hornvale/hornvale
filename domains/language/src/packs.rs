@@ -166,8 +166,8 @@ pub const UNDER: &str = "under";
 /// concept and the site that REALIZES it must not drift apart. Unlike the
 /// others, the realizing site here is not a `clause::PREDICATE_VALENCE`
 /// row — `night` is never a clause's own predicate — it is
-/// `clause::common_role_surface`'s `(NIGHT, Argument::Absent)` arm, r049's
-/// `temporal-adverbial`.
+/// `clause::common_role_surface`'s `(NIGHT, Argument::Concept(id))` arm,
+/// r049's `temporal-adverbial`.
 ///
 /// **It adds no pack entry.** `night` has been in [`universal_stratum`]
 /// since long before this campaign (`ConceptKind::Celestial`, doc "the dark
