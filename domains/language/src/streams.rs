@@ -186,3 +186,30 @@ pub const POLARITY: StreamLabel<'static> = StreamLabel::from_static("polarity");
 /// Polarity-marker position draw, under grammar.
 /// type-audit: bare-ok(identifier-text: return)
 pub const POLARITY_POSITION: StreamLabel<'static> = StreamLabel::from_static("polarity-position");
+/// Person-marking (subject agreement) depth draw, under grammar/depth (The
+/// Rail, Task 7). A permanent seed-derivation label: renaming it would
+/// silently corrupt every world's drawn person-agreement depth; deliberate
+/// regeneration uses an epoch suffix, never a rename.
+/// type-audit: bare-ok(identifier-text: return)
+pub const PERSON: StreamLabel<'static> = StreamLabel::from_static("person");
+/// Person-marker position draw, under grammar (The Rail, Task 7). A
+/// permanent seed-derivation label, on the same footing as [`PERSON`].
+/// type-audit: bare-ok(identifier-text: return)
+pub const PERSON_POSITION: StreamLabel<'static> = StreamLabel::from_static("person-position");
+/// Interrogative-particle presence/form draw, under grammar (The Rail, Task
+/// 9): whether a tongue marks a polar question with an overt free particle,
+/// and — when it does — the particle's own drawn form, on the copula's
+/// exact pattern (one stream, presence and form together). A tongue that
+/// draws no particle questions by INTONATION — the commonest strategy
+/// cross-linguistically (Ultan 1978; Dryer, WALS 116) — which a text
+/// renderer cannot show, so it questions by transcription convention
+/// instead: its declarative surface plus `?` (spec §3.6,
+/// [`crate::typology::Orthography`] via [`crate::phonology::Phonology::orthography`]
+/// is a stated VIEW of a tongue, and punctuation is how writing encodes
+/// prosody). That is a legitimate drawn grammar, not a gap — the same
+/// argument [`SUBORDINATOR`]'s and [`CONJUNCTION`]'s docs make for their own
+/// axes. A permanent seed-derivation label: renaming it would silently
+/// corrupt every world's drawn interrogative-particle presence and form;
+/// deliberate regeneration uses an epoch suffix, never a rename.
+/// type-audit: bare-ok(identifier-text: return)
+pub const INTERROGATIVE: StreamLabel<'static> = StreamLabel::from_static("interrogative");
