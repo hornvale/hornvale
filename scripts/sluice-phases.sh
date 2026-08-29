@@ -16,6 +16,14 @@
 # 3561 s, of which 3124 s (88%) went to three phases that cannot observe a
 # prose change. Meanwhile an 82-commit campaign waited behind it.
 #
+# THE `heavy` DROP IS LIVE AGAIN, AND WAS INERT FOR NINE DAYS. Decision 0148
+# had already removed `heavy` from both chamber phase lists when this file was
+# written, so dropping it here could never fire; decision 0426 (2026-08-28) put
+# it back, and this skip is now the reason a prose-only candidate does not pay
+# the ~465.8 s the tier costs (derived once, next to its inputs, in 0426). `seam-guard` remains off the phase lists entirely,
+# so its entry in the drop list is still inert — kept deliberately, because a
+# drop list that fails toward running LESS is the wrong direction to prune.
+#
 # WHICH THREE, AND WHY THEY ARE SAFE TO SKIP. `seam-guard` neutralises
 # FUNCTIONS and runs scoped test suites — prose has no seams. `clients` builds
 # and checks the wasm and Deno trees under clients/, which no allowlisted path

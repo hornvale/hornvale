@@ -536,7 +536,7 @@ fn shallower_rungs_are_cooler_than_the_deepest() {
 /// shipped constant is the one the frozen criterion picks) — the calibration
 /// behind `SEEPAGE_REACH_M`, over the three preregistered seeds.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: how far seepage reaches (SEEPAGE_REACH_M calibration re-check); run by hand (The Underworld, Task 3, answered its question; demoted by The Governor 2026-08-28)"]
 fn how_far_does_the_seepage_reach() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     // Pool the three seeds' VADOSE vertices: the criterion is about the shape of

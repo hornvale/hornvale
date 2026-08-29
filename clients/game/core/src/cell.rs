@@ -235,6 +235,12 @@ pub enum Source {
     /// **Deliberately not [`Source::Chrome`]**: the plate is world-derived
     /// data, and `Chrome` means declared-inert.
     World,
+    /// The underground band's cave level (`vessel/level/v1`, drawn by
+    /// `level.rs`) — The Gallery, Task 9. A third plate-drawing channel
+    /// alongside [`Source::Chart`] and [`Source::Plan`], for the same
+    /// reason those two are distinct: `Spatial::Underground` traces to its
+    /// own field on `Snapshot::spatial`, not to either existing band.
+    Level,
 }
 
 /// One character cell. A tile is a drop-in replacement for exactly one of

@@ -121,3 +121,130 @@ probes lefford-authored fixtures, and must run on the canonical box. The
 prompted the campaign, and nobody has measured a gate on an idle lefford, so
 the comparison that would settle it does not exist. Recorded here rather than
 left to imply a benefit that has not been demonstrated.
+
+## Amendment (2026-08-28, The Governor)
+
+Additive correction of a factual premise; the ruling above is unchanged.
+
+The ruling's own text (above) counted three tests writing committed
+artifacts: `cli/tests/history_battery.rs`, `windows/chronicle/tests/
+sounding_sweep.rs`, and `windows/worldgen/tests/occupancy_readout.rs`. The
+Governor's heavy-tier adjudication (`docs/audits/heavy-tier-adjudication.md`)
+demoted `sounding_sweep::run_the_sounding_and_write_the_report` out of the
+`heavy:` tier: its preregistered coupling-exponent hypotheses are printed to
+`book/src/laboratory/generated/the-sounding/`, never asserted, the same
+"report" shape as the campaign's other demotions. **The count of tests that
+write committed artifacts is now two, not three**, and the guard's other
+justification — `census_fixtures_match_a_probe_of_live_seeds` comparing a
+live probe against lefford-authored fixtures — is untouched.
+
+**A real cost this demotion carries, named rather than left silent.**
+`scripts/regenerate-artifacts.sh` does not write `the-sounding`; the demoted
+test was the tree's only producer of it, including
+`book/src/laboratory/generated/the-sounding/sample-biographies.txt` (148 KB,
+byte-deterministic), which [0087](0087-a-benchmarks-timings-are-a-record-not-a-golden.md)
+*deliberately* kept under the strict drift check when it excluded
+`rows.csv`/`summary.md`'s timing columns, specifically because it is "the
+file that would catch a real regression in what The Sounding computes."
+`book/src/laboratory/` remains declared in `docs/generated-paths.txt` and
+`sample-biographies.txt` remains under its drift check, but nothing in any
+automated path (`make rebaseline`, a stage gate, a merge) regenerates it any
+longer — the test that did so is now `run by hand` only. The file is not
+excluded from the check; it is orphaned from the thing that would keep it
+current. This does not weaken the drift check's honesty (a stale committed
+file still diffs against a fresh run and fails), but it does mean nobody
+notices unless someone runs `sounding_sweep::run_the_sounding_and_write_the_report`
+by hand and diffs the result.
+
+## Amendment (2026-08-28, The Governor, fix round 1)
+
+Additive correction of a factual premise **in the amendment immediately
+above, not in the original ruling**, which the previous amendment already
+left unchanged and this one leaves unchanged too.
+
+**The previous amendment's corrected count — two — was itself wrong. It
+should have been one.** That amendment reasoned at the *file* level
+(`windows/worldgen/tests/occupancy_readout.rs` is a file the original ruling
+named as a writer) rather than checking, per test, which function in that
+file actually carries the `heavy:` tag and which function performs the
+filesystem write. They are not the same function:
+
+- `occupancy_readout::occupancy_readout_is_current` is the one `heavy:`-tagged
+  test in that file (the one The Governor demoted). It only ever **compares**
+  a freshly rendered readout against the committed `tests/fixtures/
+  occupancy.csv`, byte for byte (`assert_eq!(rendered, committed, …)`). It
+  never writes anything.
+- `occupancy_readout::regenerate_occupancy_readout`, the actual writer
+  (`std::fs::write(FIXTURE_PATH, &body)`), carries its own `#[ignore]` reason
+  and was **never** `heavy:` — its preceding comment says so outright:
+  "Deliberately NOT a `heavy:` reason. The heavy tier is what `make gate-full`
+  runs, and this test WRITES the fixture — running it there would have CI
+  silently rewrite the artifact the drift check above exists to check."
+
+So `occupancy.csv` never belonged in either amendment's writer count. Verified
+directly rather than re-trusting the previous count: every file that still
+carries a surviving `heavy:` tag after this campaign's demotions was
+enumerated and grepped for a filesystem write inside its `heavy:`-tagged
+test bodies. Exactly one write to a committed path was found —
+`history_battery::history_gates_full_world_and_cross_seed`'s
+`std::fs::write` calls into `book/src/laboratory/generated/the-history/`.
+Every other write found in the tier's surviving tests (in
+`underworld_per_rung_switch.rs`, `anomaly_holdout.rs`, and
+`windows/lab/src/runner.rs`'s test module) either lives in a non-`heavy:`
+sibling function or writes to a scratch/temp directory the test itself
+cleans up, never a committed path.
+
+**The corrected count: one test writes a committed artifact
+(`history_battery::history_gates_full_world_and_cross_seed`, writing
+`book/src/laboratory/generated/the-history/`), and one compares a live probe
+against lefford-authored fixtures
+(`fixture_staleness::census_fixtures_match_a_probe_of_live_seeds`, per the
+original ruling, untouched by any of this).** The guard's justification is
+otherwise exactly as the ruling above states it.
+
+**A second orphaning, the same shape as the first amendment's, recorded
+here because it was named at length for `sample-biographies.txt` and not for
+its twin.** `windows/worldgen/tests/fixtures/occupancy.csv` is **not**
+declared in `docs/generated-paths.txt` — it was never part of the drift-check
+regime `sample-biographies.txt` sits under — but `occupancy_readout_is_current`
+was nonetheless its only *automated* witness: the one test in the tree that
+ever compared the committed fixture against a live re-render and could fail
+if the two disagreed. Demoting it out of `heavy:` does not change what
+verdict was correct (the adjudication table's DEMOTE stands — the test's own
+failure message already reads as the report-branch instruction "rewrite the
+fixture in the SAME commit as the change that drifted it"), but it does mean
+nobody runs that comparison automatically any more; catching drift in
+`occupancy.csv` now depends entirely on a human remembering to run
+`occupancy_readout_is_current` by hand. Named here so the cost is visible,
+not silent, the same standard the first amendment applied to
+`sample-biographies.txt`.
+
+## Amendment (2026-08-28, The Governor, final whole-branch review)
+
+**The amendment immediately above named a cost and accepted it; on review the
+cost is not acceptable, so the underlying verdict was reversed instead.** The
+ruling above and the corrected writer count are both untouched — this changes
+only which tests carry a `heavy:` tag, not what the canonical-host guard is
+for.
+
+`occupancy_readout::occupancy_readout_is_current` is **restored to `heavy:`**.
+The Governor's adjudication had demoted it on the strength of its failure
+message reading as the report branch ("rewrite the fixture in the SAME commit
+as the change that drifted it"), but that argument applies word for word to
+`fixture_staleness::census_fixtures_match_a_probe_of_live_seeds`, which the
+same adjudication KEPT and which
+[0426](0426-the-heavy-tier-is-a-phase-of-the-queue-again.md) builds a section
+on. It is an exact `assert_eq!` of a live render against a committed byte
+golden — a change detector, not a pinned historical number — and, as the
+paragraph above established, `windows/worldgen/tests/fixtures/occupancy.csv`
+is under no drift check at all, so it was the artifact's only automated
+witness of any kind. `docs/audits/heavy-tier-adjudication.md` carries the
+flipped row and the corrected totals.
+
+**The count of tests that write committed artifacts is still one**, exactly as
+the previous amendment derived it, and for exactly the reason that amendment
+gave: the restored test only ever *compares*; the writer in that file,
+`regenerate_occupancy_readout`, was never `heavy:` and still is not. The
+`sample-biographies.txt` orphaning named in the first amendment is unaffected
+and remains open — `sounding_sweep::run_the_sounding_and_write_the_report`
+stays demoted.

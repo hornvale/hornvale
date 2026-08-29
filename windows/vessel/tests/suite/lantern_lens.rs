@@ -74,7 +74,7 @@ fn chamber_plan_with_lens(seed: u64, lens: Lens) -> SessionPlan {
         .spatial
     {
         SpatialChannel::Chamber { plan } => plan,
-        SpatialChannel::Walk { .. } => {
+        SpatialChannel::Walk { .. } | SpatialChannel::Underground { .. } => {
             panic!("seed {seed}: `enter` did not put the possession inside a building")
         }
     }

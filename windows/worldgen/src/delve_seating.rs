@@ -496,11 +496,24 @@ pub fn seating_for(
 ///
 /// **The vacuity argument that used to stand here is now HALF FALSE, and the
 /// half that fell is the measurement.** `delve_at` still enters at a hardcoded
-/// `band: 0` (`Undercroft`), `describe_underground_here` still renders
-/// `"Ways on: out."`, the only other underground verb is still `climb`, and
-/// [`crate::chamber::passages_from`] still has no production caller — so a
-/// player still reaches exactly one chamber per column and it is always the
-/// shallowest rung. All of that is unchanged.
+/// `band: 0` (`Undercroft`) and [`crate::chamber::passages_from`] still has
+/// no production caller — those are unchanged. **Two of this paragraph's own
+/// clauses are not**: The Gallery gave `describe_underground_here` a real
+/// ways-on report over the level's own neighbours (it no longer renders a
+/// fixed `"Ways on: out."`) and added `down`/`up` beside `climb`, so a player
+/// now walks and climbs through a whole generated descent. Neither change
+/// reaches this disclosure, because the two systems never touch: The
+/// Gallery's movement is over `underworld_level::Level`'s cells, never over
+/// [`Chamber`]/[`ChamberOverrides`], and `delve_at` still calls
+/// [`crate::chamber::chamber_at`] exactly once, at the entrance, with an
+/// empty override map (`windows/vessel/src/session.rs`'s own Gallery-era
+/// comment there: the chamber it resolves "only gates whether this cave
+/// mouth leads anywhere at all… it is not itself where the possession
+/// stands"). So the conclusion survives on its own terms: a player still
+/// never resolves a `Made` chamber through this path, and it is still always
+/// the shallowest rung *of this system* — the cave the player now walks
+/// through has depth, but this settled-chamber machinery still is not
+/// wired to it.
 ///
 /// What has changed is the number the argument rested on. Task 8 measured that
 /// **every** settled underworld column in the campaign's three seeds seated at

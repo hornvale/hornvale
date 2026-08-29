@@ -83,7 +83,7 @@ fn mean_sd(xs: &[f64]) -> (f64, f64) {
 /// claim: structural(seed: panel) — false-positive seed-loop flag; the loop
 /// binds a census-panel prefix, not a search over seeds.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: preregistration/viability probe informing the crossing-penalty freeze; run by hand (Myth campaign 7, The Cupel, Task 0, answered its question; demoted by The Governor 2026-08-28)"]
 fn cupel_substrate_probe() {
     let components = hornvale_worldgen::WorldComponents::assemble().expect("components assemble");
     let mut skipped: Vec<u64> = Vec::new();

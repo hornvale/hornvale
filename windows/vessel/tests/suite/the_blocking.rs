@@ -316,7 +316,9 @@ fn every_noun_the_plan_depicts_is_examinable() {
         .spatial
     {
         SpatialChannel::Chamber { plan } => plan.marks,
-        SpatialChannel::Walk { .. } => panic!("`enter` puts the possession inside"),
+        SpatialChannel::Walk { .. } | SpatialChannel::Underground { .. } => {
+            panic!("`enter` puts the possession inside")
+        }
     };
     assert!(
         !marks.is_empty(),

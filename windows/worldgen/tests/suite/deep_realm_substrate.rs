@@ -212,7 +212,7 @@ fn measure_one(seed: Seed) -> SeedReport {
 /// per seed (audit note: coincidental duplicate name with worldgen's
 /// hollow_readout.rs::report_cave_substrate, a different test)
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: cave-substrate band coverage over the realm; run by hand (The Deep Realm/The Hollow, Task 0, answered its question; demoted by The Governor 2026-08-28)"]
 fn report_cave_substrate() {
     let mut per_seed: Vec<SeedReport> = Vec::new();
     for seed in SEEDS {
@@ -850,7 +850,7 @@ fn measure_t8(seed: Seed) -> T8SeedReport {
 /// with harness-sanity guard assertions per the module's own "a harness
 /// that measures nothing" doc
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the H2 depth-weld and reachability coverage report; run by hand (The Deep Realm, Task 8, answered its question; demoted by The Governor 2026-08-28)"]
 fn report_h2_depth_weld_and_reachability() {
     let mut per_seed: Vec<T8SeedReport> = Vec::new();
     for seed in SEEDS {

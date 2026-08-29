@@ -95,7 +95,7 @@ commit — and `main` is no exception. Two shapes this has actually taken:
 asserts the string is exactly:
 
 ```
-heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)
+heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)
 ```
 
 A bespoke reason naming its own cost — which is what
@@ -103,6 +103,15 @@ A bespoke reason naming its own cost — which is what
 The canonical string satisfies both guards, so use it unchanged on every
 `heavy:`-tagged battery. Guessing cost The Fare a full gate cycle across four
 batteries that each had a sensible, descriptive, rejected reason.
+
+**This block quoted a THIRD wrong string until The Errata, and the wrong one
+sat where a reader copies from.** It read "... deferred from the commit gate to
+**make gate-campaign** (decision 0132)" — a target that is now a refusing
+signpost, and a string the guard's verbatim `assert_eq!` rejects. The quote
+above is now lifted from the `CANONICAL` constant itself rather than retyped.
+The stakes moved while the quote rotted: decision 0426 put `heavy` back on the
+chamber's merge phase list, so this guard runs on every landing, and a tag
+written from the old quote reddens a merge rather than a hand-run tier.
 
 The string used to say "(minutes)" and "make gate-full" — both wrong, since
 the retired-target name predated decision 0132's rename and the duration was

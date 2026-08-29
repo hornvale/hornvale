@@ -72,7 +72,7 @@ fn pct(sorted: &[f64], q: f64) -> f64 {
 /// occupied vertices, for seeds 42 / 7 / 1234. Ruling 2: this is a decision
 /// instrument, not a pass/fail gate on a chosen cut point.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the ore-separation branch-table verdict; run by hand (The Winze Task 1 / The Sources Task 1 answered its question; demoted by The Governor 2026-08-28)"]
 fn ore_separation_probe() {
     for seed_value in SEEDS {
         let seed = Seed(seed_value);

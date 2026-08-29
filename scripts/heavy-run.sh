@@ -3,11 +3,18 @@
 # platform for the artifacts it authors (The Siding; decisions 0063/0079/0081).
 #
 # Why the heavy tier carries a canonical-host guard at all. It is not merely
-# expensive, it is an AUTHORING path: three of its tests write committed
-# artifacts —
-#   cli/tests/suite/history_battery.rs        -> book/src/laboratory/generated/the-history/
-#   windows/chronicle/.../sounding_sweep -> book/src/laboratory/generated/the-sounding/
-#   windows/worldgen/.../occupancy_readout -> tests/fixtures/occupancy.csv
+# expensive, it is an AUTHORING path: one of its tests writes a committed
+# artifact —
+#   cli/tests/suite/history_battery.rs -> book/src/laboratory/generated/the-history/
+# (the count used to be three. sounding_sweep, which wrote
+# book/src/laboratory/generated/the-sounding/, was demoted out of the tier by
+# The Governor, 2026-08-28, and is hand-runnable only now. The third,
+# occupancy_readout_is_current, never belonged in the count at all: it only
+# ever COMPARED against tests/fixtures/occupancy.csv, and that file's writer,
+# regenerate_occupancy_readout, was never heavy: to begin with. It IS still in
+# the tier — the same campaign's final review restored its heavy: tag, since
+# occupancy.csv is under no drift check and it is the artifact's only
+# automated witness. See decision 0086's amendments.)
 # — and census_fixtures_match_a_probe_of_live_seeds compares a LIVE probe
 # against lefford-authored census fixtures. 0063 measured that two boxes
 # disagree by one unit on ~0.1% of discrete-count metrics, decided in the
@@ -180,9 +187,71 @@ export HV_CENSUS_LOCK_HELD=$$
 # that dies cannot leave the ledger silent about it.
 trap 'code=$?; rm -f "$claim_path"; echo "heavy-run: finished at $(date -Is) rc=$code"; record_outcome "$code"' EXIT
 
-bash scripts/timed.sh heavy -- bash scripts/gate-full-heavy.sh
+# `|| tier_rc=$?`, not a bare call: `timed.sh` appends its row to the ledger
+# UNCONDITIONALLY, before returning the tier's own exit code, so a failing
+# heavy run still needs the mirror step below to run. Under this script's
+# `set -e` a bare failing call would jump straight to the EXIT trap and skip
+# both the mirror and the review message that follow — which is fine for the
+# review message (nothing to review on the artifact paths from a failed run)
+# but would ALSO have silently dropped an already-written row on a run that
+# did fail, and the outcome ledger `record_outcome` writes records failures
+# on purpose. The captured code is returned explicitly at the end of this
+# script so the caller still sees it.
+tier_rc=0
+bash scripts/timed.sh heavy -- bash scripts/gate-full-heavy.sh || tier_rc=$?
+
+# THE TIMINGS-ROW MIRROR (Task 7, The Governor spec §4/Step 5). `timed.sh`
+# resolves its ledger via `git rev-parse --show-toplevel`, which under
+# HV_HEAVY_REF is `$run_root` — the scratch worktree this whole block has been
+# operating in — not `$repo_root`, the persistent canonical checkout. So the
+# row just written above landed in `$run_root/docs/timings.md`, a file
+# nothing ever commits, and the NEXT invocation's `git checkout --force` /
+# `git reset --hard` (above) discards it before this box is claimed again.
+#
+# CONFIRMED, not guessed: docs/timings.md carries no `heavy` row after
+# 2026-08-05 — the day the worktree-reuse guard above was fixed and
+# HV_HEAVY_REF dispatch (the only path `make heavy-remote` takes) started
+# working reliably — while the outcome ledger this script's own EXIT trap
+# writes (a fixed host path under $HV_HEAVY_LOG_DIR, unaffected by which
+# worktree ran) recorded five further runs. `census-run.sh` shares this exact
+# shape (an HV_CENSUS_REF scratch worktree, the same `timed.sh census -- …`
+# call) and does NOT lose its rows, but only because a SEPARATE script,
+# `sluice-census.sh`, stages `git add -u` before delivering the census
+# goldens — sweeping the worktree's modified docs/timings.md along as a side
+# effect of committing something else entirely. Heavy has no such delivery
+# script and was never meant to grow one here (decision 0063/0079 keeps the
+# authored artifacts a human reviews and commits by hand on this box) — so
+# the row is mirrored directly into the canonical checkout's tracked
+# docs/timings.md instead, appending the one line `timed.sh` just wrote.
+#
+# NEVER pushed automatically. docs/timings.md is not drift-checked and never
+# gates the build (timed.sh's own header), so mirroring it here is safe, but
+# an unreviewed direct write to main's history is still not this script's
+# call to make — decision 0139 puts that through the chamber. A human reviews
+# and commits the mirrored row on lefford, the same as the artifacts below.
+if [ "$run_root" != "$repo_root" ]; then
+    scratch_ledger="$run_root/docs/timings.md"
+    canonical_ledger="$repo_root/docs/timings.md"
+    if [ -f "$scratch_ledger" ] && [ -f "$canonical_ledger" ]; then
+        tail -n 1 "$scratch_ledger" >> "$canonical_ledger"
+        echo "heavy-run: mirrored the timings row into $canonical_ledger — review and commit it too." >&2
+    else
+        echo "heavy-run: WARNING — could not mirror the timings row (missing $scratch_ledger or $canonical_ledger)." >&2
+    fi
+fi
 
 echo "heavy-run: heavy tier finished. Review and commit the artifacts HERE —" >&2
 echo "heavy-run: this box authors them (decisions 0063/0079):" >&2
 git -C "$run_root" diff --stat book/src/laboratory/generated \
     windows/worldgen/tests/fixtures/occupancy.csv >&2 || true
+
+# `(exit "$tier_rc")`, not a bare `exit "$tier_rc"`: an explicit `exit` as the
+# script's last statement makes shellcheck's reachability analysis stop
+# crediting the EXIT trap above (line 184) with invoking `record_outcome` —
+# a false positive (SC2329, "this function is never invoked") verified by
+# bisection: adding nothing but a bare trailing `exit 0` to the unmodified
+# script reproduces it, and this subshell form does not. Its own exit status
+# becomes the script's, by falling off the end normally, exactly as the
+# pre-existing `|| true` on the diff above already relied on for the success
+# case.
+(exit "$tier_rc")

@@ -685,7 +685,7 @@ fn show_hist<K: std::fmt::Debug + Ord>(hist: &BTreeMap<K, usize>) -> String {
 /// `PANEL`; reports H1–H4 and the §6.6 null against their decision tables and
 /// asserts only substrate controls. A falsified prediction is a finding here.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the Parley's preregistered readout over a seed panel; RED as of 2026-08-28 — this is the origin of the BASELINE_ENDINGS_12/FOREIGN_12/MUTUALLY_EXCLUSIVE_12 pins, which have drifted again since The Underworld changed settlement placement; The Parley's question is closed; run by hand; demoted by The Governor"]
 fn the_parley_readout_over_a_seed_panel() {
     let components = hornvale_worldgen::WorldComponents::assemble().expect("components assemble");
     let mut rows: Vec<SeedRow> = Vec::new();

@@ -175,8 +175,8 @@ fn blit(src: &Grid, dst: &mut Grid, origin: (u16, u16)) {
 /// position (see [`crate::entry::draw`]), `Some` only when `focus` is
 /// [`crate::Focus::Cli`]. See the module doc for the column and row
 /// layout. The plate dispatches on [`Spatial`]: the walk-band chart
-/// outdoors, the chamber-band floor plan indoors — the register switches
-/// picture, never prose. `strip` is the map strip's text (see `strip.rs`),
+/// outdoors, the chamber-band floor plan indoors, the underground-band
+/// level below both — the register switches picture, never prose. `strip` is the map strip's text (see `strip.rs`),
 /// `None` unless the map is focused — either way the row beneath the plate
 /// is reserved (see the module doc). `strip_offset` is the character
 /// offset [`crate::strip::draw`] starts at (F3 — see that function's own
@@ -196,17 +196,19 @@ fn blit(src: &Grid, dst: &mut Grid, origin: (u16, u16)) {
 /// `world_plate`, when `Some`, is an already-rendered whole-world Mercator
 /// plate (The Portolan part II, `bin`'s own `plate::draw` -- `core` carries
 /// no hornvale crate, so it cannot draw the plate itself) drawn into the
-/// plate region INSTEAD OF the walk-band chart or the chamber-band floor
-/// plan: the world view is a lens over whichever band the character
-/// occupies, not a new band, so the character's own position in the
-/// snapshot is untouched either way. `None` draws the band's own plate
-/// exactly as before this parameter existed.
+/// plate region INSTEAD OF the walk-band chart, the chamber-band floor
+/// plan, or the underground-band level: the world view is a lens over
+/// whichever band the character occupies, not a new band, so the
+/// character's own position in the snapshot is untouched either way.
+/// `None` draws the band's own plate exactly as before this parameter
+/// existed.
 ///
 /// **A SUPPLIED PLATE WIDENS THE PANE, IN EVERY FOCUS (The Quadrat, Task
 /// 9).** Whenever `world_plate` is `Some`, the plate region claims
 /// [`world_plate_width`] columns rather than the fixed [`PLATE_WIDTH`];
 /// `None` keeps [`PLATE_WIDTH`] unchanged, which is the chamber band's
-/// floor plan and the walk band's own chart.
+/// floor plan, the walk band's own chart, and the underground band's level
+/// alike.
 ///
 /// The rule used to carry a second clause — [`crate::Focus::Map`] had to
 /// be focused too (The Portolan part II, Task 3a) — and that clause is
@@ -255,6 +257,7 @@ pub fn compose(
         None => match &snapshot.spatial {
             Spatial::Walk { chart } => crate::chart::draw(chart, &mut plate, (0, 0)),
             Spatial::Chamber { plan } => crate::plan::draw(plan, &mut plate, (0, 0)),
+            Spatial::Underground { level } => crate::level::draw(level, &mut plate, (0, 0)),
         },
     }
     blit(&plate, &mut page, (0, 0));

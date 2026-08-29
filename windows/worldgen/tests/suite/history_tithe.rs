@@ -908,7 +908,7 @@ fn the_cascade_distribution_is_adjudicated() {
 /// patron people over SHAPE_SAMPLE, asserting only the whole-roster rank
 /// correlation against the roster's own noise bar
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: whether the tribute-strategy family stays various across the roster; run by hand (The Tithe / The Underworld section 8.0 answered its question; demoted by The Governor 2026-08-28)"]
 fn the_strategy_family_is_various() {
     let wc = WorldComponents::assemble().expect("registries");
     // Standing-relation ages, in standard days, grouped by the patron's people.
