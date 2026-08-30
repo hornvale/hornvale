@@ -11,6 +11,8 @@
 
 #[path = "suite/accession.rs"]
 mod accession;
+#[path = "suite/anchor_thing_correspondence.rs"]
+mod anchor_thing_correspondence;
 #[path = "suite/architecture.rs"]
 mod architecture;
 #[path = "suite/attest.rs"]

@@ -2810,6 +2810,38 @@ places*, and a place nobody can reach is a weaker candidate than one they can.
   headline is *the player now writes to the ledger* looks from outside like it
   should have moved this row, and decision 0030's sweep is answered by a
   statement either way.
+  **Promotion-on-touch is BUILT, by [The Chattel](./chronicle/the-chattel.md)
+  (2026-08-30), and the paragraph above calling it "exactly as unbuilt as they
+  were" is superseded rather than merely dated.** The mechanism is the one this
+  row names and not a cousin of it: an anchor is a derived region of a room
+  that stays free until something touches it, at which point it *promotes* to a
+  ledger entity whose identity was already a pure function of `(room facet,
+  kind, ordinal)` — so the object could be named, compared and matched before
+  any fact about it existed, and only a change pays. The delta store this row
+  says promotion implies is the ledger itself: what a thing IS, where it is,
+  whether it is open and whether it is locked are all folds over dated facts,
+  read at the instant asked about (decisions 0396, 0399). The prior is
+  untouched by an untouched room — a chamber's interior is still a pure
+  function of its address and the seed, and a room nobody enters still commits
+  nothing.
+
+  **The number, and the status is deliberately left where it is.** A play that
+  drives every promoting verb at every noun through seed 1's whole structure
+  reaches 4 rooms offering **16 latent slots** and promotes **3** of them —
+  the door key, the chest, and the chest's own key — so 13 of 16 slots stay
+  free through a deliberately exhaustive session, and a normal one touches
+  fewer. Across the full production gate space, Task 1's census of all 60
+  combinations found a composed interior offers between 2 and 7 anchors,
+  median 2.5, and the latency read that decides "is this slot still free"
+  costs ~90 ns against a 22,880-fact played ledger. So the write half now
+  exists and is cheap, and the ratio it runs at is the one this row hoped for.
+  **A witness firing is not a witness changing status:** this bet's score is
+  Nathan's to move, and the two things that would move it are not settled by
+  the above. Objects are the *first* thing promotion-on-touch has been built
+  for and the easiest — a kind roster is authored, so a promoted thing cannot
+  contradict a prior it was never drawn from. The row's own sharp claim is
+  about a *lazily generated* detail contradicting its own statistical prior,
+  and nothing here tests that, because nothing here promotes a drawn quantity.
 - **Coarse constrains fine.** The design principle — a `ConstantSun` and a
   generated star system are both valid; higher fidelity refines and never
   contradicts lower — *shipped*, and holds from astronomy through religion's

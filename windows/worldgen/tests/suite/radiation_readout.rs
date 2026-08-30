@@ -368,6 +368,7 @@ fn components(arm: Arm) -> WorldComponents {
                 deity,
                 culture,
                 material,
+                thing,
                 habitat_realm,
                 biome_affinity,
             } = wc;
@@ -383,6 +384,7 @@ fn components(arm: Arm) -> WorldComponents {
                 deity,
                 culture,
                 material,
+                thing,
                 without(&habitat_realm, kind),
                 without(&biome_affinity, kind),
             )

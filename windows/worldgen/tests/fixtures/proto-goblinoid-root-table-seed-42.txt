@@ -1,10 +1,14 @@
 abyssal: Gaokoe /gaokoe/
 abyssal-plain: Nodo /nodo/
 affords-passage: Nenea /nenea/
+alcove: Da /da/
 alpine: Ne /ne/
+altar: Neqeo /neqeo/
+anvil: Naedaa /naedaa/
 bait-ball: Dee /dee/
 barley: Nadae /nadae/
 bathypelagic: Neogeo /neogeo/
+bed: Koaqo /koaqo/
 black-dragon-kind: Negoo /negoo/
 blood: Tae /tae/
 blue: Ta /ta/
@@ -14,6 +18,7 @@ brown: Paane /paane/
 bugbear-kind: Deetee /deetee/
 burn: Pa /pa/
 carrion-crawler-kind: Tapo /tapo/
+cave-mouth: Kenee /kenee/
 chart: Nodoe /nodoe/
 child: Doena /doena/
 closed-canopy: Noapa /noapa/
@@ -68,6 +73,7 @@ god: Ge /ge/
 grass-sward: Nage /nage/
 great: Nadee /nadee/
 green: Neo /neo/
+ground: Kaane /kaane/
 gully-dwarf-kind: Kao /kao/
 hadal-trench: Naone /naone/
 hamada: Neto /neto/
@@ -77,6 +83,7 @@ heat: Taa /taa/
 helpless: Neda /neda/
 high: Neapoa /neapoa/
 high-elf-kind: Doe /doe/
+high-seat: Qoano /qoano/
 hill: Noono /noono/
 hill-dwarf-kind: Goonea /goonea/
 hobgoblin-kind: Dae /dae/
@@ -90,6 +97,7 @@ ice-lead: Keeqe /keeqe/
 island: Gope /gope/
 kelp-canopy: Pano /pano/
 kelp-forest: Naa /naa/
+key: Noopo /noopo/
 kill: Dapo /dapo/
 killer-whale-kind: Gaqo /gaqo/
 know: Naena /naena/
@@ -99,7 +107,10 @@ liana-forest: Neene /neene/
 light: Noaqaa /noaqaa/
 lightless-water: Pao /pao/
 little: Neodoe /neodoe/
+lockable: Nanee /nanee/
+log: None /none/
 look: Gogo /gogo/
+loom: Kooneo /kooneo/
 lost: Nona /nona/
 low: Keono /keono/
 many: Naona /naona/
@@ -125,6 +136,7 @@ old: Gea /gea/
 old-growth: To /to/
 one: Daaga /daaga/
 open-blue: Noote /noote/
+openable: Ganoa /ganoa/
 otyugh-kind: Naoko /naoko/
 over: Naenae /naenae/
 owlbear-kind: Too /too/
@@ -132,6 +144,8 @@ parent: Noa /noa/
 person: Neepo /neepo/
 plankton-bloom: Notee /notee/
 playa: Qena /qena/
+pool: Nakao /nakao/
+portable: Paa /paa/
 pressure-ridge: Nootaa /nootaa/
 radiates-heat: Poe /poe/
 rafted-floe: Qoe /qoe/
@@ -152,6 +166,7 @@ savanna: Ga /ga/
 scattering-layer: Geanoa /geanoa/
 sclerophyll-scrub: Netao /netao/
 scoured-ice: Do /do/
+screen: Geana /geana/
 sea: Qae /qae/
 sea-elf-kind: Pe /pe/
 sea-ice: Qoono /qoono/
@@ -176,6 +191,7 @@ staghorn-stand: Nono /nono/
 star: Peanoo /peanoo/
 starlit: Tane /tane/
 stone: Peotea /peotea/
+strongbox: Qonoa /qonoa/
 sun: Pago /pago/
 supports-rest: Geno /geno/
 taiga: Qe /qe/
@@ -184,6 +200,7 @@ temperate-grassland: Noo /noo/
 temperate-rainforest: Daenao /daenao/
 think: Peo /peo/
 thorn-scrub: Nako /nako/
+threshold: Teane /teane/
 tide: Nea /nea/
 treant-kind: Nana /nana/
 tree: Nena /nena/
@@ -202,6 +219,7 @@ upwelling: Toepa /toepa/
 urchin-barren: Noqea /noqea/
 valley: Ganee /ganee/
 vent-plume: Naga /naga/
+vessel: Keato /keato/
 vine: Nenoo /nenoo/
 wait: Qaate /qaate/
 water: Qa /qa/

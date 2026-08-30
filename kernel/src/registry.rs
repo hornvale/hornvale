@@ -62,6 +62,31 @@ pub enum ConceptKind {
     /// not a property it *has*, and the vessel window's affect circumplex
     /// (`AffectLabel`) reconciles against exactly this class.
     Affect,
+    /// A discrete, countable thing a scene is furnished or anchored with —
+    /// an alcove, an anvil, a key — sized to sit *within* a place rather
+    /// than to be a landform or region in its own right. Distinct from
+    /// [`ConceptKind::Terrain`], which names a landform at the scale of the
+    /// world's surface (a mountain, a river), and from
+    /// [`ConceptKind::Substance`], which is stuff an object may be made
+    /// *of* but is not itself a countable thing: `key` is one object among
+    /// many, not a material or a place. `domains/thing` registers every
+    /// thing-kind under this variant.
+    ///
+    /// **This says nothing about whether a body may carry the thing**, and
+    /// reading it that way gives the wrong answer for most of today's
+    /// roster: of the fifteen kinds `domains/thing` registers under
+    /// `Object`, only `key` carries `ObjectProperty::Portable` — a `vessel`
+    /// and a `threshold` are both `Object` and neither does. Whether an
+    /// individual kind can be picked up is `ObjectProperty::Portable` in
+    /// `windows/vessel`'s `object_registry` (The Chattel, spec §3.6/§3.8), a
+    /// per-kind fact this kind-level tag does not encode. **This paragraph
+    /// used to cite `ThingTraits::portable` (`domains/thing`), which no
+    /// longer exists**: that field was a second `KindId`-keyed answer to the
+    /// same question and was deleted when the property table re-keyed to
+    /// `KindId`. The same one-directional caveat [`ConceptKind::Act`]
+    /// carries, for the same reason: a kind tag this coarse invites a reader
+    /// to over-read it.
+    Object,
 }
 
 /// Definition of a named concept: the word-level vocabulary entry
