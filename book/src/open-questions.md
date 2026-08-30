@@ -4300,3 +4300,83 @@ chaos-eviction schedule whose most aggressive form gives the least signal,
 because it replaces the state immediately after every step it is meant to
 stress. Both were green. Both were pinning nothing. Neither would have been
 found by reviewing the tests against their specification.
+
+### A branch table is not a discriminating test (2026-08-30)
+
+[The Winze](./chronicle/the-winze.md) staked a bet this chapter does not carry
+— nothing in the list above is about subsurface residue, memory decay, or a
+survivorship shape — and it belongs here anyway, because it ran a
+self-scorable measurement twice into the wall this chapter keeps rebuilding:
+**an instrument that reports a verdict it cannot support.**
+
+The measurement was frozen before the code and reads like rigour. Three
+outcomes were enumerated: the two depth distributions are indistinguishable and
+the mechanism is decoration; they separate with overlap and the claim holds;
+they separate perfectly and the hazard has become the depth threshold the
+design replaced. The result landed on the middle branch, nothing was tuned, and
+the campaign could have stopped there.
+
+**It could not have told that pass from a much weaker one.** *Delvings that
+broke through sit at their own maximum without anything selecting on depth* and
+*breaking through is a tenure lottery and depth is a bystander* produce
+**identical pooled distributions**. Breached tenure runs at a median of 17.5
+epochs against 3.0, so the weak reading was live and large, and the statistic
+that separates them — conditioning on tenure, under which the separation
+attenuates from AUC 0.8654 to 0.7599 and *survives*, holding direction in every
+stratum — appears nowhere in the frozen criterion. It reached the measurement
+through a dispatch that happened to name the property. Had it collapsed, the
+criterion as written would have reported support.
+
+The chapter's preamble already holds that the only thing distinguishing a check
+that fires from one that does not is making it fail on command. This is the
+same floor one level up: **a branch table over outcomes is not a discriminating
+test, and both look like rigour.** A criterion is finished when, for the outcome
+that would count as support, it names the rival explanation and the statistic
+that tells them apart.
+
+**And the second instance is worse, because it precedes the data entirely.**
+The mechanism is a per-increment chance of breaking through, and the design
+never said what an increment is. Every other rate in the settlement bake is per
+epoch, which is the obvious reading. Under it, breaking through and the ordinary
+endings are competing risks in time: with constant per-epoch rates `p` and `q`,
+the probability that an ending at epoch `t` was a breach is `p/(p+q)`,
+independent of `t`. The two groups share a tenure distribution exactly, depth
+accrues with tenure, and the preregistered null fires **as a theorem** — on a
+mechanism never given a chance to produce the effect. Clocked per metre cut it
+works, and nothing reads a depth. **When a preregistered comparison is between
+two sub-populations of one process, the clock the process runs on can decide the
+answer before any data exists**, and a clock that makes the null a theorem is
+not a modelling choice but a way of not running the experiment.
+
+**What this does to the chapter's own accounting.** Self-scorability has been
+carried here as a property of a claim, then sharpened into a property of a
+statistic. It is narrower still: it is a property of a statistic *plus the
+alternatives it can exclude*. Every bet in the sections above that names a
+success criterion should be read as scoring the outcome, not the mechanism,
+unless something in it says which rival readings a pass rules out.
+
+### A third channel now carries unrest into settlement siting (2026-08-30)
+
+The entry above records a campaign whose instrument confirmed an effect and
+could not find its cause: settlements over-occupy high-unrest ground (×1.572,
+×2.578, ×5.395 up the unrest deciles), and severing **both** modelled channels
+through which unrest reaches siting did not flatten the gradient. Its honest
+scope clause is *unattributed by this instrument on this roster*, and the
+strongest thing said about it was that neither modelled channel carries the
+effect.
+
+There are three channels now. A mining camp is founded by scoring candidate
+sites on mineral prospectivity, and prospectivity is
+`0.6·setting + 0.3·unrest + 0.1·metamorphic_grade` — so a working is sited
+partly *because* the ground is tectonically violent, and the coupling is direct
+rather than incidental.
+
+It is far too small to be the missing cause. Pooled over twelve seeds the world
+carries 196 mines against 9,394 agrarian settlements, 2.0% of occupations, which
+cannot produce a fivefold excess in the top unrest decile. **The finding is not
+that the puzzle is solved; it is that the ablation's denominator moved.** A
+future disambiguating arm must sever three channels rather than two, and one of
+the three did not exist when the arm was designed. This chapter's own warning
+about ablations applies with the sign reversed: an ablation on a channel almost
+nobody reads is a null with no power, and an ablation that misses a channel
+entirely is a null with a hole in it.

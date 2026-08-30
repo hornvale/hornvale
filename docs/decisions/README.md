@@ -247,3 +247,5 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0386](0386-a-corpus-declares-its-demands-or-derives-them-never-both.md) | A corpus declares its demands or derives them, never both | Accepted |
 | [0387](0387-an-absent-direction-is-unknown-never-inferred.md) | Coverage is reported per direction, and an absent direction is unknown | Accepted |
 | [0388](0388-the-ladder-is-a-production-instrument-and-parse-robustness-is-a-separate-axis.md) | The ladder is a production instrument; parse-robustness is a separate axis | Accepted |
+| [0466](0466-authored-evidence-is-read-through-its-own-schema.md) | Authored evidence is read through its own schema, not the live registry | Accepted |
+| [0467](0467-a-frozen-criterion-must-discriminate-against-rival-explanations-of-a-pass.md) | A frozen criterion must discriminate against the rival explanations of a pass | Accepted |
