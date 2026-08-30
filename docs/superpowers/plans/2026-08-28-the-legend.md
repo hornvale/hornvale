@@ -809,6 +809,35 @@ git commit -m "feat(legend): the specimen sheet, rendered where the glyphs ship"
 
 ---
 
+### Nathan's glyph assignments — binding on Tasks 6, 7 and 9
+
+Decided 2026-08-30, against the tier spike's real render. These are choices,
+not derivations; do not re-derive them from the specimen sheet.
+
+- **`*` = cave mouth** (moving off `o`, which it holds today at
+  `plate.rs:204`).
+- **`o` / `O` = city markers**, lowercase and capital by settlement size.
+  This is also the replacement Ruling L required when the settlement glyph
+  moved off `#` — `#` stays WALL alone, in all three renderers.
+- **`*` is therefore NOT available to the elevation ladder.** Task 5
+  recommended `stipple` = `` ` `` `,` `;` `*` `%`; its highland mark must be
+  re-picked. A shifted stipple is the cheapest fix; the sheet's other
+  candidates offered `{` and `)` at that rung. Task 6 chooses and says why.
+- **Creature initials are WALK BAND AND FLOOR PLAN ONLY. The world map keeps
+  its generic `&` for agents** (`plate.rs`'s `AGENT_GLYPH`). The creature
+  rule claims every letter, so `o` = city would otherwise collide with `o` =
+  owlbear under decision 0389. Resolving it by LAYER rather than by character
+  keeps both, and matches where the coverage audit already draws the line:
+  item 2.1 is `absent` because the WALK band draws `+` for "terrain and marks
+  alike", while item 2.5 scores the MAP's `&` as `present`.
+
+Deferred to a later campaign, confirmed by Nathan: a per-rung POI budget and
+salience threshold. The tier spike showed cave mouths crowding every
+coastline — an invitation everywhere is an invitation nowhere — but fixing it
+is not this campaign's job.
+
+---
+
 ### Collision resolutions — binding on Tasks 6 through 10
 
 The pre-flight scan found that the register's guard would fire on three
@@ -1107,7 +1136,11 @@ seed, with no flag that changes it."*
 **Files:**
 - Modify: `clients/game/core/src/lexicon.rs` (the derivation)
 - Modify: `clients/game/core/src/chart.rs`, `clients/game/core/src/plan.rs`
-- Modify: `clients/game/bin/src/plate.rs` (`mark_glyph` at 668)
+- **NOT `clients/game/bin/src/plate.rs`.** An earlier draft had this task
+  rewire `mark_glyph` (line 668) to noun initials. **That is reversed** — the
+  world map keeps its generic `&` for agents so `o`/`O` can be city markers.
+  See "Nathan's glyph assignments" above. Touching `mark_glyph` here is a
+  defect, not an improvement.
 - Test: `clients/game/core/tests/lexicon.rs`
 
 **Interfaces:**
