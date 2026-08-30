@@ -204,7 +204,9 @@
 //! disagreement). None is carried forward from a prior regen and none is a
 //! bound widened to fit.
 use hornvale_culture::{BiomeClass, subsistence};
-use hornvale_lab::{MetricValue, RunResult, canonical_row, load_rows, load_study, run};
+use hornvale_lab::{
+    MetricValue, RunResult, canonical_row, load_authored, load_rows, load_study, run,
+};
 use std::path::Path;
 use std::sync::LazyLock;
 
@@ -216,10 +218,16 @@ use std::sync::LazyLock;
 /// census off every local `cargo test`; before this the suite recomputed it
 /// behind a `LazyLock` (TOOL-7). Init panics on a load error (a test-setup
 /// failure, not a calibration).
-fn load_census(study_path: &str, rows_path: &str) -> RunResult {
+fn load_census(study_path: &str, fixture_dir: &str) -> RunResult {
     let study = load_study(Path::new(study_path)).expect("load study");
-    let csv = std::fs::read_to_string(rows_path).expect("read census fixture");
-    load_rows(&study, &csv).expect("reconstruct census from fixture")
+    // AS AUTHORED, through the fixture's own `schema.json` — not through the
+    // live registry. A committed census is a historical measurement record,
+    // and registering a metric must not make it unreadable; see
+    // `hornvale_lab::authored` for the three-valued verdict this takes.
+    let (result, age) = load_authored(&study, Path::new(fixture_dir), fixture_dir)
+        .expect("reconstruct census from its committed fixture");
+    age.announce(fixture_dir);
+    result
 }
 
 /// The 1,000-seed canonical census, loaded ONCE and shared by every
@@ -227,7 +235,7 @@ fn load_census(study_path: &str, rows_path: &str) -> RunResult {
 static DRIFT: LazyLock<RunResult> = LazyLock::new(|| {
     load_census(
         "../../studies/the-census.study.json",
-        "../../book/src/laboratory/generated/the-census/rows.csv",
+        "../../book/src/laboratory/generated/the-census",
     )
 });
 
@@ -237,7 +245,7 @@ static DRIFT: LazyLock<RunResult> = LazyLock::new(|| {
 static MEETING: LazyLock<RunResult> = LazyLock::new(|| {
     load_census(
         "../../studies/census-of-the-meeting.study.json",
-        "../../book/src/laboratory/generated/census-of-the-meeting/rows.csv",
+        "../../book/src/laboratory/generated/census-of-the-meeting",
     )
 });
 

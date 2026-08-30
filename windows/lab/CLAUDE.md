@@ -83,15 +83,55 @@ surface. Two consequences when editing it:
 Adding one `Metric` to `registry()` has three consequences, in increasing
 order of what they cost you.
 
-**1. It reddens every census-reading calibration test** until the fixtures are
-refreshed on the canonical host at the campaign's close. They all carry the
-identical panic — `rows.csv header does not match study '<X>' schema`
-(`runner.rs`) — so a failure of a *different* shape is a real finding, not
-this. Two things make it bite:
+**1. IT NO LONGER REDDENS EVERY CENSUS-READING CALIBRATION TEST, AND THIS
+ITEM USED TO SAY THE OPPOSITE (The Winze, Task 7b-pre).** It read: "It reddens
+every census-reading calibration test until the fixtures are refreshed on the
+canonical host at the campaign's close. They all carry the identical panic —
+`rows.csv header does not match study '<X>' schema` (`runner.rs`)". That was
+an accurate description of a **defect**, not of a design: registering a metric
+made every committed fixture in the repository unreadable, which deadlocked
+against the fact that the fixtures can only be re-authored on the canonical
+box at a pushed SHA. The Granary broke that deadlock by bypassing the commit
+hook for one commit (`a7cd7fc5e`, 2026-08-24); The Winze fixed the cause
+instead.
+
+**The fixtures are self-describing now.** Every generated study directory
+carries a `schema.json` beside its `rows.csv`, and
+`hornvale_lab::load_authored` (`windows/lab/src/authored.rs`) reads the pair —
+resolving each column BY NAME against the registry and parsing at that
+column's position in the FIXTURE's own header. The verdict is three-valued,
+the same ratchet shape as `tropes check` and seam-guard:
+
+| verdict | condition | result |
+| --- | --- | --- |
+| CURRENT | fixture columns == live study columns | green, silent |
+| PREDATES | live has columns the fixture lacks; every shared column resolves with an unchanged kind and unchanged relative order | **green, printed loudly**, naming the columns |
+| DIVERGED | a fixture column is gone from the registry, a shared column's kind changed, or the shared columns are reordered | **red** — re-author the fixture |
+
+PREDATES is green because a purely additive registry change cannot invalidate
+a past measurement; it prints on **every** read so nobody mistakes silence for
+currency. `load_authored`'s module docs name both directions of the subset
+check on purpose — a one-directional check reads as total to the next reader.
+
+**Two kinds of reader stay STRICT, deliberately.**
+`hornvale_lab::load_rows` still requires an exact header match, because
+"is this fixture current?" is a real question with a right answer:
+`census_fixture_matches_live_run`, `branches_fixture_matches_live_run`,
+`gathering_fixture_matches_live_run` and `fixture_staleness` all compare a
+fixture against a live run and must not tolerate a shifted schema (all four
+are `#[ignore]`d). `hornvale lab diff` keeps the strict reader for the same
+reason — it diffs a fresh run against a previous one for the study *as it is
+now*.
+
+**What a metric registration still costs you here:** the fixtures are still
+STALE until refreshed, and the sentinel and the tripwire still say so — but
+they now fail at their **own** comparison (a metric's VALUE moved) with their
+own message, rather than dying earlier at a schema parse that masked whatever
+they were actually measuring. A schema-shaped failure is now a real finding.
 
 - **The fixtures are per-study, and more than one study is involved.** A
-  refresh that covers only `the-census` can leave a binary red on
-  `census-of-the-meeting`. Re-derive which binary reads which study with a
+  refresh that covers only `the-census` can leave a binary reading stale rows
+  for `census-of-the-meeting`. Re-derive which binary reads which study with a
   grep over `windows/lab/tests/suite/*calibration*.rs` (test-binary
   consolidation moved every top-level `tests/*.rs` file one directory
   deeper) — **do not trust a mapping written in a doc, including this one.**
@@ -99,11 +139,14 @@ this. Two things make it bite:
   `census-of-the-meeting`; today that binary reads `the-census` and the other
   two read both. It moved without anyone noticing, because nothing checks
   prose.
-- **Establish the exact count at the campaign's FIRST task** and carry it into
-  every review brief. Reviewers otherwise read a wall of reds as their own
-  breakage. Do not carry the *number* forward between campaigns either: it was
-  34 when first measured (2026-08-02) and the three binaries hold 46 `#[test]`s
-  now.
+- **A bullet that used to sit here is GONE, and here is why** — "Establish the
+  exact count [of reddened tests] at the campaign's FIRST task and carry it
+  into every review brief. Reviewers otherwise read a wall of reds as their
+  own breakage. It was 34 when first measured (2026-08-02) and the three
+  binaries hold 46 `#[test]`s now." There is no wall of reds to count any
+  more, so the count is not a number to establish; it is zero by
+  construction. If you ever DO see a schema-shaped red, do not reach for this
+  advice — it is a DIVERGED verdict and a real finding.
 
 **2. Nine studies declare `"metrics": "all"`, and there is no way to opt out.**
 `study.rs` resolves `MetricSelection::All(_) => Ok(reg)` — the entire registry,
@@ -125,6 +168,15 @@ and staled The Gnomon's injection fixtures under
 `scripts/gnomon-injection.sh`'s header) and therefore covered by no drift check
 and untouched by `make rebaseline`. Nothing caught it except their reader test
 going red in a full stage-gate run — after the census refresh had already run.
+
+**That last sentence no longer describes what happens, and the replacement is
+QUIETER, not louder.** `anomaly_injection` reads the arms as authored now, so
+a newly registered metric leaves it GREEN and prints a PREDATES line naming
+the column instead of reddening. The arms are still stale, still owed a
+re-authoring on the canonical box, and still covered by no drift check — the
+one signal that used to shout about it is now a line of stdout that nextest
+shows only on failure or under `--success-output`. The check below is
+therefore MORE load-bearing than it was, not less.
 
 So the check before you register: `grep -rl 'rows.csv\|schema.json'
 windows/lab/tests/fixtures/` and ask which of those have their own host-pinned

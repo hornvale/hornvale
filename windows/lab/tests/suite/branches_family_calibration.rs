@@ -7,7 +7,8 @@
 //! retired study/fixture pair; ADR 0016 pins are unchanged (same seeds,
 //! same values — Task 4's equivalence check proved the columns identical).
 use hornvale_lab::{
-    MetricValue, RunResult, canonical_row, load_rows, load_study, record_failure, run,
+    MetricValue, RunResult, canonical_row, load_authored, load_rows, load_study, record_failure,
+    run,
 };
 use std::path::Path;
 use std::sync::LazyLock;
@@ -24,9 +25,14 @@ use std::sync::LazyLock;
 static BRANCHES: LazyLock<RunResult> = LazyLock::new(|| {
     let study = load_study(Path::new("../../studies/the-census.study.json"))
         .expect("load the-census study");
-    let csv = std::fs::read_to_string("../../book/src/laboratory/generated/the-census/rows.csv")
-        .expect("read the-census fixture");
-    load_rows(&study, &csv).expect("reconstruct the-census from fixture")
+    // AS AUTHORED (`hornvale_lab::authored`): the committed census is read
+    // through its own `schema.json`, so a later metric registration cannot
+    // make this frozen evidence unreadable.
+    let dir = "../../book/src/laboratory/generated/the-census";
+    let (result, age) = load_authored(&study, Path::new(dir), dir)
+        .expect("reconstruct the-census from its committed fixture");
+    age.announce(dir);
+    result
 });
 
 /// Guard — ignored by default because it pays the full live sweep: the

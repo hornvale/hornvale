@@ -1630,6 +1630,17 @@ fn cmd_lab_diff(args: &[String]) -> Result<(), String> {
 /// spec §2): load the study and its committed `rows.csv`, reconstruct the
 /// run, and print the manifest (marked `"backfilled": true`) on stdout —
 /// the caller redirects it into the study's generated directory, once.
+///
+/// The reconstruction reads the fixture AS AUTHORED
+/// (`hornvale_lab::load_authored`), through the `schema.json` already sitting
+/// beside the rows, rather than through the live study. That is what this
+/// command is FOR: it re-derives each column's per-metric FIELDS (`doc`,
+/// `domain`, `role`, buckets) from today's registry while leaving the COLUMN
+/// SET exactly as the committed rows have it. Reading through the live study
+/// instead made the whole regeneration script abort the moment anybody
+/// registered a metric — the rows.csv predated it, `load_rows` requires an
+/// exact header match, and every step after this one (the Domesday survey,
+/// the anomaly report) was skipped as collateral.
 fn cmd_lab_backfill_schema(args: &[String]) -> Result<(), String> {
     let (Some(study_path), Some(csv_path)) = (args.get(2), args.get(3)) else {
         return Err(format!(
@@ -1640,7 +1651,16 @@ fn cmd_lab_backfill_schema(args: &[String]) -> Result<(), String> {
     let study =
         hornvale_lab::load_study(std::path::Path::new(study_path)).map_err(|e| e.to_string())?;
     let csv = std::fs::read_to_string(csv_path).map_err(|e| format!("read {csv_path}: {e}"))?;
-    let result = hornvale_lab::load_rows(&study, &csv).map_err(|e| e.to_string())?;
+    let dir = std::path::Path::new(csv_path)
+        .parent()
+        .ok_or_else(|| format!("{csv_path} has no parent directory"))?;
+    let (result, age) =
+        hornvale_lab::load_authored(&study, dir, &study.name).map_err(|e| e.to_string())?;
+    // On stderr, never stdout: stdout is the manifest the caller redirects
+    // into schema.json, and a notice mixed into it would corrupt the artifact.
+    if let Some(line) = age.message(&study.name) {
+        eprintln!("{line}");
+    }
     print!("{}", hornvale_lab::render_schema(&result, &csv, true));
     Ok(())
 }

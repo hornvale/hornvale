@@ -12,7 +12,9 @@
 //! points directly to build its own world state, once per test — the
 //! sanctioned test-fixture posture the weir's spec carves out.
 #![allow(clippy::disallowed_methods)]
-use hornvale_lab::{MetricValue, RunResult, canonical_row, load_rows, load_study, run};
+use hornvale_lab::{
+    MetricValue, RunResult, canonical_row, load_authored, load_rows, load_study, run,
+};
 use std::path::Path;
 use std::sync::LazyLock;
 
@@ -25,6 +27,9 @@ use std::sync::LazyLock;
 const STUDY_PATH: &str = "../../studies/the-census.study.json";
 /// The committed, CI-drift-checked census rows this file loads from.
 const ROWS_PATH: &str = "../../book/src/laboratory/generated/the-census/rows.csv";
+/// The same fixture as a DIRECTORY, so it can be read as authored — through
+/// its own `schema.json` rather than the live registry.
+const FIXTURE_DIR: &str = "../../book/src/laboratory/generated/the-census";
 
 /// The 200-seed gradient census, loaded ONCE from its committed `rows.csv`
 /// fixture and shared by every calibration in this file (mirrors
@@ -36,8 +41,10 @@ const ROWS_PATH: &str = "../../book/src/laboratory/generated/the-census/rows.csv
 /// failure, not a calibration).
 static GATHERING: LazyLock<RunResult> = LazyLock::new(|| {
     let study = load_study(Path::new(STUDY_PATH)).expect("load census-of-the-gathering study");
-    let csv = std::fs::read_to_string(ROWS_PATH).expect("read census-of-the-gathering fixture");
-    load_rows(&study, &csv).expect("reconstruct census-of-the-gathering from fixture")
+    let (result, age) = load_authored(&study, Path::new(FIXTURE_DIR), FIXTURE_DIR)
+        .expect("reconstruct the census from its committed fixture");
+    age.announce(FIXTURE_DIR);
+    result
 });
 
 /// Guard — ignored by default because it pays the full sweep (~2 min

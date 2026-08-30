@@ -354,7 +354,7 @@ pub fn write_csv(result: &RunResult, out_root: &Path) -> std::io::Result<PathBuf
 /// Split CSV text into records of fields, honoring RFC 4180 quoting: a `"`
 /// opens a quoted field in which commas and newlines are literal and a doubled
 /// `""` is an escaped quote. The inverse of [`render_csv`]'s field encoding.
-fn parse_csv_records(csv: &str) -> Vec<Vec<String>> {
+pub(crate) fn parse_csv_records(csv: &str) -> Vec<Vec<String>> {
     let mut records = Vec::new();
     let mut record: Vec<String> = Vec::new();
     let mut field = String::new();
@@ -399,7 +399,7 @@ fn parse_csv_records(csv: &str) -> Vec<Vec<String>> {
 /// kind. An empty field is `Absent`; otherwise Categorical → Text, Flag → Flag,
 /// Numeric → Number. Lossless because the *kind* comes from the study schema,
 /// never guessed from the field's shape.
-fn value_from_field(field: &str, kind: &SummaryKind) -> Result<MetricValue, StudyError> {
+pub(crate) fn value_from_field(field: &str, kind: &SummaryKind) -> Result<MetricValue, StudyError> {
     if field.is_empty() {
         return Ok(MetricValue::Absent);
     }

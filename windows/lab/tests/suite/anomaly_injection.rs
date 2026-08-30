@@ -213,13 +213,24 @@ fn the_fixture_columns_match_the_census() {
 fn every_injection_moved_the_world_and_the_baselines_did_not() {
     let study = hornvale_lab::load_study(Path::new("../../studies/gnomon-injection.study.json"))
         .expect("the injection study loads");
-    let base_csv = std::fs::read_to_string(fixtures().join("baseline-a/rows.csv"))
-        .expect("baseline-a rows.csv is committed");
+    let base = fixtures().join("baseline-a");
 
     for name in arm_names("injection") {
-        let csv = std::fs::read_to_string(fixtures().join(&name).join("rows.csv"))
-            .expect("arm rows.csv is committed");
-        let report = hornvale_lab::render_diff(&study, &base_csv, &csv).expect("diff renders");
+        // AS AUTHORED, through each arm's own committed `schema.json`
+        // (`hornvale_lab::authored`) — never through the live registry. These
+        // arms are authored evidence: `scripts/gnomon-injection.sh` can only
+        // re-author them on the canonical box at a checked-out SHA, so reading
+        // them through a registry that keeps growing would make every past
+        // injection unreadable the moment anybody registers a metric.
+        let (report, age) = hornvale_lab::render_authored_diff(
+            &study,
+            &base,
+            "baseline-a",
+            &fixtures().join(&name),
+            &name,
+        )
+        .expect("diff renders");
+        age.announce(&format!("injection fixtures ({name} vs baseline-a)"));
         assert!(
             !report.contains("No metric moved."),
             "injection {name} moved NOTHING — it is VOID and cannot contribute to \
@@ -240,9 +251,14 @@ fn every_injection_moved_the_world_and_the_baselines_did_not() {
         .into_iter()
         .filter(|n| n != "baseline-a")
     {
-        let csv = std::fs::read_to_string(fixtures().join(&name).join("rows.csv"))
-            .expect("arm rows.csv is committed");
-        let report = hornvale_lab::render_diff(&study, &base_csv, &csv).expect("diff renders");
+        let (report, _) = hornvale_lab::render_authored_diff(
+            &study,
+            &base,
+            "baseline-a",
+            &fixtures().join(&name),
+            &name,
+        )
+        .expect("diff renders");
         assert!(
             report.contains("No metric moved."),
             "{name} is an UNPERTURBED rerun of baseline-a and must be identical to \
