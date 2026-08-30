@@ -26,7 +26,7 @@ Whether a corpus states what the grammar must **parse** (a player line) or **pro
 - Covered: 8
 - Not yet: 4
 - Demand instances met: 25 of 30 (83.3%)
-- Demand instances met, by direction: `unknown` 25 of 30 — `the-merchant` states no `direction` key on any entry (spec §2.3), so every demand instance lands in `unknown`; a produce/parse split is not meaningful for this corpus and none is reported (Task 6b).
+- Demand instances met, by direction: `unknown` 25 of 30 — `the-merchant` states no `direction` key on any entry (spec §2.3), so every demand instance lands in `unknown`; a produce/parse split is not meaningful for this corpus and none is reported. **This direction split — here and in the-flood-watch section below — was computed at Task 6b (The Quoin), after all five implementation tasks and after Task 6's own reconciliation: the campaign's preregistration (PREREG-4) named a produce-side demand-instance figure the instrument, as built through Task 6, could not produce. It was not part of the original resolver, and no figure computed by any earlier task moved when it was added — see `demand_instance_coverage_by_direction`'s own doc comment for the full account.**
 
 **Two honesty limits on the entry-level count, both about `m08` (*"Did you know the woman?"*), which The Rail's `polar-question` moved to covered.**
 
@@ -92,8 +92,8 @@ How many demands each entry is SHORT. Distance 0 is the covered set above. **Dis
 - Direction: 68 parse / 71 produce (see the breakdown above)
 - Covered: 0 of 139 (see below for why zero is expected)
 - Demand instances met (composite — **mixes `parse` and `produce` entries together**; read the produce-side line below for PREREG-4's own figure): 393 of 1128 (34.8%)
-- Demand instances met, produce-side only (PREREG-4's figure — NPC lines the grammar must generate): 203 of 638 (31.8%)
-- Demand instances met, parse-side only (player lines the grammar must read): 190 of 490 (38.8%)
+- Demand instances met, produce-side only (PREREG-4's figure — NPC lines the grammar must generate; computed at Task 6b, after the campaign's implementation work — see the-merchant section above for why): 203 of 638 (31.8%)
+- Demand instances met, parse-side only (player lines the grammar must read; same Task 6b timing as the produce-side line above): 190 of 490 (38.8%)
 
 The resolver above DOES run over this corpus — `entry_covered` is generic over `Entry` and `read_declared` produces one for every flood-watch line, the same shape it produces for the-merchant. What it reports is zero, and that is a fact about the corpus's density, not an unwritten resolver: 1128 demand instances across 139 entries is roughly 8 per entry, and `entry_covered`'s ALL-of-its-demands rule fails an entry the moment ANY one of its several tokens is uncovered — which is every entry, for as long as any handful of the corpus's vocabulary stays unimplemented. A zero that never moves is uninformative on its own, which is exactly why the demand-instance statistic above exists beside it (see the-merchant's own line and `demand_instance_coverage_matches_the_campaigns_prediction`'s doc; also `sentences/README.md`, "Frozen is not the same as measured"). What ties this corpus to the grammar's delivered capability otherwise is the vocabulary cross-check below: 147 of its 149 distinct demand tokens name a rung on the ladder.
 

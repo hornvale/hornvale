@@ -3935,7 +3935,15 @@ fn sentence_coverage_report() {
          `the-merchant` states no `direction` key on any entry (spec \
          §2.3), so every demand instance lands in `unknown`; a \
          produce/parse split is not meaningful for this corpus and none is \
-         reported (Task 6b).\n\n",
+         reported. **This direction split — here and in the-flood-watch \
+         section below — was computed at Task 6b (The Quoin), after all \
+         five implementation tasks and after Task 6's own reconciliation: \
+         the campaign's preregistration (PREREG-4) named a produce-side \
+         demand-instance figure the instrument, as built through Task 6, \
+         could not produce. It was not part of the original resolver, and \
+         no figure computed by any earlier task moved when it was added — \
+         see `demand_instance_coverage_by_direction`'s own doc comment for \
+         the full account.**\n\n",
         merchant_demand_split.unknown.0, merchant_demand_split.unknown.1,
     ));
 
@@ -4064,7 +4072,9 @@ fn sentence_coverage_report() {
     ));
     out.push_str(&format!(
         "- Demand instances met, produce-side only (PREREG-4's figure — \
-         NPC lines the grammar must generate): {} of {} ({:.1}%)\n",
+         NPC lines the grammar must generate; computed at Task 6b, after \
+         the campaign's implementation work — see the-merchant section \
+         above for why): {} of {} ({:.1}%)\n",
         flood_watch_demand_split.produce.0,
         flood_watch_demand_split.produce.1,
         100.0 * flood_watch_demand_split.produce.0 as f64
@@ -4072,7 +4082,8 @@ fn sentence_coverage_report() {
     ));
     out.push_str(&format!(
         "- Demand instances met, parse-side only (player lines the grammar \
-         must read): {} of {} ({:.1}%)\n\n",
+         must read; same Task 6b timing as the produce-side line above): \
+         {} of {} ({:.1}%)\n\n",
         flood_watch_demand_split.parse.0,
         flood_watch_demand_split.parse.1,
         100.0 * flood_watch_demand_split.parse.0 as f64 / flood_watch_demand_split.parse.1 as f64,
