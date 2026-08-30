@@ -2524,6 +2524,97 @@ fn demand_instance_coverage(entries: &[Entry]) -> (usize, usize) {
     (met, total)
 }
 
+// ---------------------------------------------------------------------
+// Task 6b (The Quoin): the produce-side split PREREG-4 actually names
+// ---------------------------------------------------------------------
+
+/// [`demand_instance_coverage`]'s `(met, total)` pair, tallied per
+/// [`Direction`] rather than over a whole corpus — the same move
+/// [`direction_counts`] makes over entries, taken one level down to demand
+/// instances. `parse`/`produce`/`unknown` are each their own `(met,
+/// total)` pair, exactly as `demand_instance_coverage` returns for a whole
+/// corpus, so a caller reads a bucket the identical way it reads the
+/// composite.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct DemandInstancesByDirection {
+    /// `(met, total)` over demand instances on entries whose
+    /// [`Entry::direction`] is [`Direction::Parse`].
+    parse: (usize, usize),
+    /// `(met, total)` over demand instances on entries whose
+    /// [`Entry::direction`] is [`Direction::Produce`].
+    produce: (usize, usize),
+    /// `(met, total)` over demand instances on entries whose
+    /// [`Entry::direction`] is `None` — the corpus states nothing, and
+    /// nothing here guesses one (spec §2.3, the same restraint
+    /// [`direction_counts`] documents).
+    unknown: (usize, usize),
+}
+
+/// Tally [`demand_instance_coverage`] per [`Direction`] in one pass over
+/// `entries`. The three buckets always sum to
+/// [`demand_instance_coverage`]'s own composite `(met, total)` — pinned by
+/// [`demand_instance_coverage_by_direction_is_pinned`] — because every
+/// `(entry, demand)` pair this function counts lands in exactly one
+/// bucket, the same partition [`direction_counts`] makes over entries.
+///
+/// # Built after unblinding — Task 6b (The Quoin), and why that is legitimate here
+///
+/// PREREG-4 requires the campaign's report to state the **produce-side**
+/// demand-instance count, with the composite total quoted beside it, never
+/// alone. But at Task 0's derivation, and at every one of the five
+/// implementation tasks' measurements since, no function in this file
+/// filtered a demand-instance count by [`Direction`] at all:
+/// [`demand_instance_coverage`] sums the whole entry slice with no
+/// direction filter, and [`direction_counts`] tallies ENTRIES by
+/// direction, never demand INSTANCES. Task 6's reconciliation found this
+/// gap and reported it as an open finding rather than closing it (see
+/// [`demand_instance_coverage_matches_the_campaigns_prediction`]'s own
+/// doc, finding 4) — the resolver, as built through Task 6, genuinely
+/// could not state the figure its own preregistration named.
+///
+/// This function is that gap closed, deliberately as its own task (Task
+/// 6b) rather than folded into Task 6's reconciliation, so it can be
+/// reviewed in isolation. **It is legitimate to write measurement code
+/// after the measurement here only because PREREG-4 is a REPORTING rule,
+/// not a prediction under test.** Every other preregistered figure in this
+/// campaign (PREREG-2's five-token findings table, PREREG-3's frontier
+/// binding) named a VALUE the implementation was predicted to produce, and
+/// changing the code that computes one of those after seeing the result
+/// would rescue or falsify a prediction — exactly what preregistration
+/// exists to prevent. PREREG-4 names no predicted value at all; it names a
+/// quantity the report must be ABLE TO STATE. Building the function that
+/// states it moves nothing already measured (the composite figures this
+/// file already asserts are unchanged — see the pinning test's own sum
+/// check) and predicts nothing new; it only adds a second lens onto a
+/// number that already existed. A reader must not infer from this
+/// function's existence that the split was available at Task 0's
+/// derivation, at any of the five implementation tasks' measurements, or
+/// at Task 6's reconciliation — it was not, and Task 6's own doc records
+/// that gap explicitly. It exists starting Task 6b, and not before.
+fn demand_instance_coverage_by_direction(entries: &[Entry]) -> DemandInstancesByDirection {
+    let mut parse = (0usize, 0usize);
+    let mut produce = (0usize, 0usize);
+    let mut unknown = (0usize, 0usize);
+    for entry in entries {
+        let bucket = match entry.direction {
+            Some(Direction::Parse) => &mut parse,
+            Some(Direction::Produce) => &mut produce,
+            None => &mut unknown,
+        };
+        for demand in &entry.demands {
+            bucket.1 += 1;
+            if demand_covered(demand) {
+                bucket.0 += 1;
+            }
+        }
+    }
+    DemandInstancesByDirection {
+        parse,
+        produce,
+        unknown,
+    }
+}
+
 /// The Common surface each covered LADDER rung actually realizes.
 /// [`MERCHANT_WITNESS`]'s twin, read by
 /// [`every_covered_ladder_rung_realizes_in_common`]. One row per covered
@@ -3272,6 +3363,17 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
 ///    the produce-side count PREREG-4 actually binds on has never been
 ///    computed by any task in this campaign.
 ///
+///    **Addendum, Task 6b: the gap this finding names is now closed.**
+///    [`demand_instance_coverage_by_direction`] computes exactly the
+///    filtered function this paragraph describes as missing, and
+///    [`demand_instance_coverage_by_direction_is_pinned`] pins the result:
+///    the-flood-watch's produce-side figure is **203 of 638 (31.8%)**,
+///    parse-side **190 of 490 (38.8%)**, summing to the same 393 of 1128
+///    this paragraph already reports. This addendum records that the gap
+///    was closed one task later than the reconciliation that found it —
+///    it does not rewrite the finding above, which is an accurate account
+///    of what Task 6 itself could report.
+///
 /// **One honesty point about all four hits above.** Every task in this
 /// campaign matched its preregistered row on first run, and no figure was
 /// ever revised to match after the fact (spec PREREG-2's "three hits and
@@ -3465,6 +3567,97 @@ fn demand_instance_coverage_matches_the_campaigns_prediction() {
     assert_eq!(demand_instance_coverage(&flood), (393, 1128));
 }
 
+/// The produce/parse/unknown split of the composite demand-instance figures
+/// [`demand_instance_coverage_matches_the_campaigns_prediction`] pins —
+/// PREREG-4's own figure, pinned the same ratchet way, so a future change
+/// to `demand_covered` or either frozen corpus that moves the split cannot
+/// drift silently past this test.
+///
+/// **This is a Task 6b pin, not a Task 0 prediction.** Every other
+/// assertion in this file that cites "the campaign's prediction" checks a
+/// value Task 0 derived BEFORE the implementation that would move it, by
+/// running this same resolver against a scratch edit and reverting it.
+/// This test has no such derivation to check against:
+/// [`demand_instance_coverage_by_direction`] did not exist at Task 0, or at
+/// any of the five implementation tasks, or at Task 6's reconciliation —
+/// see that function's own doc for why building it now, after the
+/// campaign's work landed, does not compromise the preregistration PREREG-4
+/// governs. What this test pins is simply the CURRENT measured split, the
+/// same way a golden fixture pins a current byte-for-byte result: a moved
+/// number here is a finding to report, not a violated prediction.
+///
+/// **Two composite-conservation checks matter more than the literal
+/// numbers.** Each corpus's `parse + produce + unknown` must sum to
+/// exactly what [`demand_instance_coverage`] already reports for that
+/// corpus — the same `(393, 1128)`/`(25, 30)`
+/// [`demand_instance_coverage_matches_the_campaigns_prediction`] pins — so
+/// this test can never silently disagree with the composite it splits.
+///
+/// **the-merchant's split is entirely `unknown`, and that is correct, not
+/// a gap.** [`merchant_entries_resolve_as_direction_unknown`] pins that
+/// every merchant ENTRY resolves direction-unknown (spec §2.3: never
+/// inferred from `speaker`); this test pins the same fact one level down,
+/// over demand INSTANCES rather than entries — `parse: (0, 0)`,
+/// `produce: (0, 0)`, all 25 of 30 met instances landing in `unknown`. A
+/// produce/parse split is not meaningful for a corpus that states no
+/// direction at all, so this test reports `unknown` honestly rather than
+/// inventing one, exactly as this task's own brief requires.
+#[test]
+fn demand_instance_coverage_by_direction_is_pinned() {
+    let merchant = read_declared(&repo_root().join("sentences/the-merchant.corpus.json"));
+    let merchant_split = demand_instance_coverage_by_direction(&merchant);
+    assert_eq!(
+        merchant_split,
+        DemandInstancesByDirection {
+            parse: (0, 0),
+            produce: (0, 0),
+            unknown: (25, 30),
+        },
+        "the-merchant's demand-instance direction split moved. The corpus \
+         states no `direction` key at all (spec §2.3), so every demand \
+         instance must land in `unknown` — a nonzero parse or produce count \
+         here means something is inferring direction from `speaker` or \
+         another field, which `merchant_entries_resolve_as_direction_unknown` \
+         already forbids at the entry level."
+    );
+    assert_eq!(
+        (
+            merchant_split.parse.0 + merchant_split.produce.0 + merchant_split.unknown.0,
+            merchant_split.parse.1 + merchant_split.produce.1 + merchant_split.unknown.1,
+        ),
+        demand_instance_coverage(&merchant),
+        "the-merchant's direction split does not sum to the composite \
+         demand_instance_coverage figure — the partition is supposed to be \
+         exhaustive over every (entry, demand) pair."
+    );
+
+    let flood = read_declared(&repo_root().join("sentences/the-flood-watch.corpus.json"));
+    let flood_split = demand_instance_coverage_by_direction(&flood);
+    assert_eq!(
+        flood_split,
+        DemandInstancesByDirection {
+            parse: (190, 490),
+            produce: (203, 638),
+            unknown: (0, 0),
+        },
+        "the-flood-watch's demand-instance direction split moved. This is \
+         PREREG-4's own figure — the produce-side count the campaign's \
+         preregistration required the report to state, with the total \
+         quoted beside it. `the-flood-watch` states a direction on every \
+         entry, so `unknown` must stay (0, 0)."
+    );
+    assert_eq!(
+        (
+            flood_split.parse.0 + flood_split.produce.0 + flood_split.unknown.0,
+            flood_split.parse.1 + flood_split.produce.1 + flood_split.unknown.1,
+        ),
+        demand_instance_coverage(&flood),
+        "the-flood-watch's direction split does not sum to the composite \
+         demand_instance_coverage figure (393, 1128) — the partition is \
+         supposed to be exhaustive over every (entry, demand) pair."
+    );
+}
+
 /// Every ladder rung scored covered realizes in Common, exactly as
 /// [`every_covered_entry_realizes_in_common`] demands of the merchant
 /// corpus.
@@ -3609,6 +3802,13 @@ fn sentence_coverage_report() {
     let (merchant_demand_met, merchant_demand_total) = demand_instance_coverage(&merchant.entries);
     let (flood_watch_demand_met, flood_watch_demand_total) =
         demand_instance_coverage(&flood_watch.entries);
+    // Task 6b (The Quoin): PREREG-4's produce-side split, built after
+    // unblinding — see `demand_instance_coverage_by_direction`'s own doc
+    // for why that is legitimate for a reporting rule rather than a
+    // prediction. Read alongside the composite lines above/below, never
+    // in place of them.
+    let merchant_demand_split = demand_instance_coverage_by_direction(&merchant.entries);
+    let flood_watch_demand_split = demand_instance_coverage_by_direction(&flood_watch.entries);
 
     let ladder_covered = ladder.entries.iter().filter(|e| entry_covered(e)).count();
     let ladder_frontier_ids = ladder_frontier(&ladder.entries);
@@ -3727,8 +3927,16 @@ fn sentence_coverage_report() {
     out.push_str(&format!("- Covered: {covered}\n"));
     out.push_str(&format!("- Not yet: {not_yet}\n"));
     out.push_str(&format!(
-        "- Demand instances met: {merchant_demand_met} of {merchant_demand_total} ({:.1}%)\n\n",
+        "- Demand instances met: {merchant_demand_met} of {merchant_demand_total} ({:.1}%)\n",
         100.0 * merchant_demand_met as f64 / merchant_demand_total as f64,
+    ));
+    out.push_str(&format!(
+        "- Demand instances met, by direction: `unknown` {} of {} — \
+         `the-merchant` states no `direction` key on any entry (spec \
+         §2.3), so every demand instance lands in `unknown`; a \
+         produce/parse split is not meaningful for this corpus and none is \
+         reported (Task 6b).\n\n",
+        merchant_demand_split.unknown.0, merchant_demand_split.unknown.1,
     ));
 
     // Hand-authored prose about ONE entry (m08), unlike the computed tables
@@ -3848,9 +4056,26 @@ fn sentence_coverage_report() {
     }
     out.push('\n');
     out.push_str(&format!(
-        "- Demand instances met: {flood_watch_demand_met} of {flood_watch_demand_total} \
-         ({:.1}%)\n\n",
+        "- Demand instances met (composite — **mixes `parse` and `produce` \
+         entries together**; read the produce-side line below for \
+         PREREG-4's own figure): {flood_watch_demand_met} of \
+         {flood_watch_demand_total} ({:.1}%)\n",
         100.0 * flood_watch_demand_met as f64 / flood_watch_demand_total as f64,
+    ));
+    out.push_str(&format!(
+        "- Demand instances met, produce-side only (PREREG-4's figure — \
+         NPC lines the grammar must generate): {} of {} ({:.1}%)\n",
+        flood_watch_demand_split.produce.0,
+        flood_watch_demand_split.produce.1,
+        100.0 * flood_watch_demand_split.produce.0 as f64
+            / flood_watch_demand_split.produce.1 as f64,
+    ));
+    out.push_str(&format!(
+        "- Demand instances met, parse-side only (player lines the grammar \
+         must read): {} of {} ({:.1}%)\n\n",
+        flood_watch_demand_split.parse.0,
+        flood_watch_demand_split.parse.1,
+        100.0 * flood_watch_demand_split.parse.0 as f64 / flood_watch_demand_split.parse.1 as f64,
     ));
     if flood_watch_zero {
         out.push_str(&format!(
