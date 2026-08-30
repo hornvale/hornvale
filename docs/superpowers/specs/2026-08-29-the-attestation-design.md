@@ -75,7 +75,7 @@ deletes. And `scripts/sluice-drain.sh` composes the queue note as
 and was therefore a true statement for a four-phase run and a five-phase run
 alike.
 
-### 1.3 A declared generated path's drift check is vacuous for any file its author does not write
+### 1.3 A declared path's writer check is evaluated at the wrong granularity
 
 `docs/generated-paths.txt` declares ten paths. The drift check is
 `git diff --exit-code` over them, run after `make rebaseline`.
@@ -170,8 +170,30 @@ Three assertions, each with its direction stated in its own doc comment:
 1. **Every declared path names an author.** Blind to a generated path nobody
    declared.
 2. **Every tracked file under a declared path is written by the author it
-   names.** This is §1.3's positive control, mechanised: mark, run the author,
-   compare. Blind to a file written by an author it does not name.
+   names** — and this REPLACES A PROXY rather than adding a check, which was
+   discovered while planning and is a correction to this section's first draft.
+
+   `cli/tests/suite/generated_paths.rs:243` already asserts "every declared path
+   is one `regenerate-artifacts.sh` writes", and `docs/generated-paths.txt`'s own
+   header already states that criterion correctly. The check is real and the
+   criterion is right. **Its implementation matches the declared path as a
+   literal substring of the script**, so `book/src/laboratory/` satisfies it
+   because the string occurs somewhere in the script — while 814 files beneath
+   it are never written by it. The criterion is about files; the granularity is
+   the directory.
+
+   The test's own header already names this blindness, in the other direction
+   (a path written through a shell variable would read as undeclared). This is
+   the same weakness read the other way, and it fails *unsafe*: a false negative,
+   not the false positive that header anticipated.
+
+   **Where the measurement runs.** Not in a unit test — the positive control
+   costs a full regeneration (measured 128.720 s). It runs in the chamber's
+   **`artifacts` phase, which already executes the author**, so capturing which
+   declared files that run wrote is a byproduct of work already paid for. The
+   result lands in the ledger; §5's reader diffs it. The static test keeps the
+   substring proxy but applies it **per declared author** rather than assuming
+   `rebaseline`.
 3. **A path with no author is a declaration error.** Not a tolerated case, not a
    waiver — a declared generated path that nothing generates is a false claim
    about the repository, and the fix is to stop declaring it.
