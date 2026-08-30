@@ -4149,3 +4149,4 @@ measured here.
 | 2026-08-30T16:35:33Z | sluice:clients | 536.141 | 9717.426 | 123.684 | 18.36 | 0 | 3588e1a39 |  | lefford | 40 |
 | 2026-08-30T16:43:14Z | sluice:heavy | 461.171 | 9652.581 | 153.445 | 21.26 | 0 | e3513454d |  | lefford | 40 |
 | 2026-08-30T17:29:53Z | gate-commit | 93.003 | 64.191 | 33.392 | 1.05 | 0 | cd6547134 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T17:31:33Z | gate-commit | 82.556 | 53.987 | 26.731 | 0.98 | 0 | cd6547134 | campaign/the-lodestar | ambrose | 12 |
