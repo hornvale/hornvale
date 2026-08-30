@@ -468,8 +468,49 @@ mechanically narrows what the drift check covers.
   remove the declaration entirely, or keep it and accept the check is partial.
   **Do not choose.** The plan does not get to assume this answer.
 
-- [ ] **Step 3: Implement the decision**, whatever it is, and make the check
-  enforce it so the same drift cannot re-accrete.
+- [ ] **Step 3: Implement the decision. NATHAN HAS RULED: DECLARE THE ABSENCE.**
+
+  He chose a fourth option over the plan's three, and it is the repo's own
+  idiom rather than a new invention — the same ratchet shape as type-audit's
+  `waiver(<reason>)`, seam-guard's `expect(survives: <why>)` and `tropes
+  check`. Two halves:
+
+  **(a) Every declared path names its TRUE author.** The single
+  `book/src/laboratory/` row declaring `artifacts` is wrong for 814 of its 825
+  files, in two different ways that must stop reading alike: 684 have a real
+  roster author that is not the declared one (682 `census`, 2 `heavy`), and
+  130 have none at all. Split rows so each declares what actually writes it.
+
+  **(b) A path nothing writes gets `none(<reason>)`, not deletion.** The
+  absence becomes a declared, reviewable fact instead of an untracked hole.
+  **A reasonless `none` is a PARSE ERROR**, exactly as it is for seam-guard —
+  a one-directional acknowledgement with no reason rots, and the reason is the
+  whole value of the row.
+
+  **Two invariants this must satisfy, and they are the acceptance criteria:**
+
+  1. **No coverage loss.** The union of declared paths after the change must
+     cover every file it covered before. Prove it by listing tracked files
+     under the old declarations and under the new ones and diffing the sets —
+     do not eyeball it. A file silently dropping out of coverage is the exact
+     defect this campaign removes.
+  2. **No file covered by a row whose author is wrong for it.** A row's author
+     must be true for every file the row covers, or the row is too coarse and
+     needs splitting further.
+
+  **Granularity is yours to determine from the data, and report.** Directory
+  granularity where a directory has one author is the obvious shape, but the
+  17 hand-written prose files sitting directly under `book/src/laboratory/`
+  (not in `generated/`) do not form a directory and need a judgment. Say what
+  you chose and why.
+
+  **Keep `census-of-skies` distinct in its reason string.** Its author was
+  DELETED (wired into `.github/workflows/ci.yml` at `7b7bec3ef`, removed with
+  the workflow by decision 0125); the other eight frozen studies never had
+  one. Same `none(...)` value, materially different reason, and the reason is
+  the part a future reader acts on.
+
+  Then make the checks enforce all of it, so this cannot re-accrete.
 
 - [ ] **Step 4: `make gate-commit`, commit, push.**
 
