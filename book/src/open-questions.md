@@ -2100,6 +2100,30 @@ rather than left for a future campaign to re-discover the way this ledger's
 own Risk section had to name it before any
 code existed.
 
+**Amended by [The Lodestar](./chronicle/the-lodestar.md) (2026-08-30), and
+the amendment is this ledger's own subject turned on the campaign that
+thought it had settled it.** The paragraph above was true of the TAG and
+false of the RENDER. The wire carried the underground band's creature in
+`SessionLevel::marks`; the terminal client had no marks-drawing pass at
+all, having been written one task before the derivation that fills them and
+never reopened. So "a consumer reading the tag alone now knows what Quire's
+consumer could only have guessed" described a consumer that was throwing
+the payload away. Twelve per-task reviews each passed; a whole-branch review
+run after the merge found it in the first pass, because the gap lived
+between two tasks and belonged to neither.
+
+Worse for the claim, and better for the ledger: **there are two client band
+mirrors and the campaign updated one.** `clients/vessel` still declares its
+spatial union as walk-or-chamber and goes blank underground, silently,
+with its own gate green throughout — and the workspace tripwire built during
+that campaign to catch exactly this is hardcoded to the other client's test
+directory. The wire fix was real and the consumer-side gap simply moved down
+a level, which is the shape this row has now taken twice: **a channel
+correctly describing what a consumer does not read is indistinguishable, from
+the channel's side, from one that describes too little.** Recorded as
+`CLIENT-second-band-mirror`. The Lodestar fixes the first mirror and leaves
+the second registered rather than half-fixed.
+
 One older row recurs and one instrument for it becomes mechanizable. The
 recurrence: the outdoor chart was geometrically wrong — the sim's own render of
 the identical thirty-one cells is five dense rows and the client drew nine
