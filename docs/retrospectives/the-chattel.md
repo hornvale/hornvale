@@ -195,9 +195,12 @@ correctly and then still finding the narrower-question failure one layer up.
    `#D-t13-1`) were "carried to followups", which is per-worktree scratch that
    dies with the campaign. A deferral belongs in the idea registry, a decision
    record, or a doc comment on the code it defers.
-4. **Stage-gate verdicts belong in the ledger.** One stage gate's submission is
-   recorded; its result is not, anywhere. A submission without a recorded
-   verdict is the same shape as a ruling without a commit.
+4. **Stage-gate verdicts belong in the ledger.** Three stage gates ran and
+   came back green. The ledger records **one submission and no verdict at
+   all** — the other two appear nowhere, and the one that does appear stops at
+   its queue id. A submission without a recorded verdict is the same shape as a
+   ruling without a commit, and an unrecorded green is why this retrospective
+   had to take the count from outside the ledger.
 5. **Do not quote the 43:68 split without its denominators.** See §2.
 
 ---
