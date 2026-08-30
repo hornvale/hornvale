@@ -497,9 +497,19 @@ Expected drift, landing in the same commit as its cause:
   the new `ConceptKind` variant and any new stream labels.
 - `book/src/gallery/possession-*.md` — the transcripts contain `examine`
   output, and the noun catalog changes.
-- `clients/game/core/tests/fixtures/session-seed-42-*.json` — the wire gains
-  `NounEntry.affordances` (The Offer's §5.1: `#[serde(default)]`, additive, no
-  version bump) and carried things.
+- `clients/game/core/tests/fixtures/session-seed-42-*.json` — carried things.
+  **This bullet forecast that the wire would also gain `NounEntry.affordances`
+  (The Offer's §5.1: `#[serde(default)]`, additive, no version bump). It did
+  not: the field was REFUSED, by `#D-t13-1` in §9.1, on a measurement rather
+  than on budget.** `Session::snapshot` builds the noun catalog from the
+  WALK-band vantage, so no chamber anchor reaches `narration.nouns` at all —
+  an `affordances` field added today would serialize `[]` for every entry of
+  every snapshot in every world. `windows/vessel/src/snapshot.rs`'s
+  `NounEntry` doc carries the mechanism, the two-fixture measurement, and the
+  named prerequisite (`CLIENT-noun-catalog-is-walk-band-only`); §9.1 records
+  the ruling. Corrected here rather than only there because **§8 is the
+  section a reader reaches first**, and a forecast left standing beside a
+  refusal recorded later reads as the campaign's plan of record.
 
 The drift check reads its path list from `docs/generated-paths.txt` and
 nothing runs it for you.
@@ -516,8 +526,10 @@ wherever a future reader would need the reasoning.
 
 ### 9.1 The `#D-*` rulings
 
-Nineteen, all resolved under autopilot gate G5 except `#D-t12-2`, which was
-Nathan's.
+Eighteen, all resolved under autopilot gate G5 except `#D-t12-2`, which was
+Nathan's. (This read "Nineteen" until The Gleaning counted the table: there
+are eighteen rows below and the campaign's scratch held exactly eighteen
+distinct `#D-*` ids.)
 
 | ID | Ruling | Outcome |
 |---|---|---|
@@ -608,6 +620,15 @@ ones that are durable knowledge rather than campaign trivia:
 
 ### 9.3 Measurements this campaign owns
 
+**Four of the bullets below were added after the merge, by The Gleaning, and
+are marked `[recovered]`.** They were established during execution, recorded
+only in `.superpowers/sdd/`, and had no committed home anywhere when that
+worktree was swept — which is the same failure `PROC-evidence-dies-with-the-
+scratch` names and §4.2 of the retrospective repeats. Amending a merged
+campaign's spec is the legitimate move here precisely because a spec is a
+campaign's record and a decision record is not: nothing about these numbers
+changes a ruling, so none of them belongs in `docs/decisions/`.
+
 - **The gate census (Task 1, §3.2).** All 60 production combinations —
   `selection(built, cold)` ×4 plus `selection_for(role, built, cold,
   populous)` over 7 roles × 2×2×2. **Zero duplicate anchor kinds in every
@@ -622,6 +643,20 @@ ones that are durable knowledge rather than campaign trivia:
   busiest single-entity posting list. Played ledger: **22,880 facts**. This
   corrected *neither* of decision 0366's adjectives — never "a scan", never
   "free".
+  - `[recovered]` **The denominators, without which the figure is not a
+    quantity.** "The busiest single-entity posting list" is **60 facts**,
+    drawn from **105** `agent-at` facts total across **7** bodies. 90 ns is
+    the cost of folding 60 postings, not of folding 22,880 — the ledger total
+    is the scale the *index* saves you from, not the scale the read pays. A
+    later reader who reuses the number against a longer session needs the 60,
+    and it is the half that was lost.
+  - `[recovered]` **The recipe, so the number is reproducible rather than
+    merely cited.** Seed 42; `Session::start` with default `PossessOpts`; ten
+    `wait 50` steps interleaved with `look` (500 simulated days);
+    `into_played_world`; then 200,000 calls to `latest_value_of` in
+    `--release`. Nothing in the tree runs this — the harness was scratch and
+    was deleted — so treat it as a claim with a date, and re-derive rather
+    than re-cite if the posting lists have moved.
 - **Reachability (Task 11 / decision 0398).** 48-seed sweep through the
   shipped CLI: `with_strongbox=8 with_key=8 played_LOCKED=8`, seeds 1, 4, 8,
   13, 14, 17, 23, 34; `got_indoors=48` in both arms. Flipping the two literals
@@ -629,6 +664,38 @@ ones that are durable knowledge rather than campaign trivia:
 - **Latency, played (Task 14).** Seed 1's structure offers **16 latent slots
   across 4 rooms**; a play driving every promoting verb at every noun promotes
   **3** — the door key, the chest, and the chest's key.
+- `[recovered]` **Concept registration is additive (Task 3, §3.5) — proven by
+  a shared-column diff, not asserted.** Registering 15 concepts at genesis
+  moved the keystone golden `cli/tests/fixtures/world-seed-42.json` from
+  **234 to 249** registry entries: **15 added, 0 removed, 0 existing entries
+  changed**, with the `ledger` section **byte-identical** (90 insertions and
+  0 deletions across the whole file). The naming-pipeline artifacts moved the
+  same way — `solitary-tongue-peoples-lexicons-seed-42.txt` +135/−0,
+  `proto-goblinoid-root-table-seed-42.txt` +15/−0 — and trope Supply went
+  331→346 and 337→352. **The conclusion is the part worth keeping: 15 new
+  concepts entering the naming pipeline did not move any world's language.**
+  Had they, this would have been an epoch event rather than a task — a
+  registration that renumbers or re-draws is a save-format change, and the
+  zero-deletion column diff is what distinguishes the two. The method
+  generalises: prove additivity by diffing the SHARED columns, never by
+  reading the totals.
+- `[recovered]` **A 0.018 s recursive grep over the whole tree was explicable,
+  not broken.** A search that returned in 18 ms across the repository looked
+  like a null produced by a failed traversal. It was not: `grep` in this
+  harness is a shell function wrapping `ugrep --ignore-files`, so it honours
+  `.gitignore` and never descends `target/`. The *lesson* — run a positive
+  control before believing a null — is already in the retrospective; the
+  *mechanism* is recorded here because without it the next reader re-derives
+  the same suspicion from the same timing.
+- `[recovered]` **`Focalized`'s derived `PartialEq` has zero consumers
+  workspace-wide.** Established by removing the derive and compiling
+  `--all-targets --keep-going`, where the only resulting error was a single
+  `Noun`-equality assertion — i.e. nothing compares two `Focalized` values
+  anywhere. **The method is the reusable half, and it is why this is recorded
+  as a measurement rather than an observation:** `--keep-going` is what makes
+  the error list an enumeration instead of a floor, since a `cargo check` that
+  stops at the first error has enumerated nothing. The derive was left in
+  place; the finding is that it is unwitnessed, not that it is wrong.
 
 ### 9.4 Acceptance, as measured
 

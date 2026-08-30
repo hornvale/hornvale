@@ -4283,6 +4283,9 @@ measured here.
 | 2026-08-30T17:38:17Z | sluice:gate | 534.758 | 15312.723 | 561.790 | 29.69 | 0 | cc5f358ed |  | lefford | 40 |
 | 2026-08-30T17:47:18Z | sluice:clients | 540.788 | 9865.650 | 123.608 | 18.47 | 0 | b971fc920 |  | lefford | 40 |
 | 2026-08-30T17:54:57Z | sluice:heavy | 459.246 | 9626.625 | 168.308 | 21.33 | 0 | 2a118829d |  | lefford | 40 |
+| 2026-08-30T18:35:45Z | gate-commit | 114.750 | 345.959 | 81.563 | 3.73 | 0 | 1c9d4e2ce | campaign/the-gleaning | MacBookPro | 10 |
+| 2026-08-30T18:37:09Z | rebaseline | 78.876 | 279.198 | 15.548 | 3.74 | 0 | 1c9d4e2ce | campaign/the-gleaning | MacBookPro | 10 |
+| 2026-08-30T18:38:17Z | gate-commit | 21.999 | 52.363 | 13.868 | 3.01 | 0 | 1c9d4e2ce | campaign/the-gleaning | MacBookPro | 10 |
 | 2026-08-30T17:29:53Z | gate-commit | 93.003 | 64.191 | 33.392 | 1.05 | 0 | cd6547134 | campaign/the-lodestar | ambrose | 12 |
 | 2026-08-30T17:31:33Z | gate-commit | 82.556 | 53.987 | 26.731 | 0.98 | 0 | cd6547134 | campaign/the-lodestar | ambrose | 12 |
 | 2026-08-30T17:34:38Z | gate-commit | 86.487 | 54.501 | 26.862 | 0.94 | 0 | 51f7a5953 | campaign/the-lodestar | ambrose | 12 |
@@ -4303,3 +4306,5 @@ measured here.
 | 2026-08-30T18:58:48Z | sluice:gate | 480.086 | 14222.320 | 441.391 | 30.54 | 0 | 2cb8861f2 |  | lefford | 40 |
 | 2026-08-30T19:07:26Z | sluice:clients | 517.326 | 9655.083 | 125.237 | 18.91 | 0 | 0c97db183 |  | lefford | 40 |
 | 2026-08-30T19:15:01Z | sluice:heavy | 455.207 | 9646.261 | 151.344 | 21.52 | 0 | 357aa4e95 |  | lefford | 40 |
+| 2026-08-30T18:40:15Z | gate-commit | 40.536 | 123.010 | 33.053 | 3.85 | 0 | d86d0e4ab | campaign/the-gleaning | MacBookPro | 10 |
+| 2026-08-30T18:41:13Z | rebaseline | 57.423 | 273.565 | 14.542 | 5.02 | 0 | d86d0e4ab | campaign/the-gleaning | MacBookPro | 10 |

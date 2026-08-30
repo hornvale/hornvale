@@ -6,9 +6,14 @@
 # that never author a roster of their own -- see `subfloor_path`'s
 # doc in windows/lab/src/timings.rs for the full reasoning.
 # The commit gate (`make gate-commit`) runs exactly these.
-# Rewritten by every GREEN `make gate-stage`; a red run leaves it alone.
+# Rewritten by the chamber's `gate` phase on every GREEN chamber job (a
+# stage gate or a merge, `scripts/sluice-run.sh`); a red run leaves it
+# alone, because a red run's `run.json` is truncated and a roster taken
+# from one would silently DROP tests from the commit gate. `make
+# gate-stage` used to be named here and is a refusing signpost now
+# (decisions 0132, 0139) -- submit `make sluice-stage BRANCH=... REF=...`.
 # A test absent from this file is NOT in the commit gate — see the
-# spec's exclude-unknown rule. It enters on the next green stage gate.
+# spec's exclude-unknown rule. It enters on the next green chamber job.
 hornvale-alchemy::hornvale_alchemy$production::tests::admission_includes_the_max_boundary
 hornvale-alchemy::hornvale_alchemy$production::tests::admission_includes_the_min_boundary
 hornvale-alchemy::hornvale_alchemy$production::tests::admission_requires_every_requirement
@@ -2799,6 +2804,7 @@ hornvale-vessel::hornvale_vessel$liveness::tests::shared_belief_is_a_noop_when_a
 hornvale-vessel::hornvale_vessel$liveness::tests::shared_belief_is_order_independent
 hornvale-vessel::hornvale_vessel$liveness::tests::social_proposal_and_serviceability_are_the_home_step
 hornvale-vessel::hornvale_vessel$liveness::tests::soft_maslow_severe_cold_beats_mild_thirst_but_dying_of_thirst_beats_any_cold
+hornvale-vessel::hornvale_vessel$liveness::tests::the_agent_at_predicate_spelling_is_a_permanent_on_disk_key
 hornvale-vessel::hornvale_vessel$liveness::tests::the_fatigue_drive_rests_in_place_wherever_the_creature_is
 hornvale-vessel::hornvale_vessel$liveness::tests::the_herd_bolts_borrowed_alarm_makes_a_calm_creature_flee_then_settle
 hornvale-vessel::hornvale_vessel$liveness::tests::the_hoisted_walk_emits_exactly_what_the_loop_emitted
