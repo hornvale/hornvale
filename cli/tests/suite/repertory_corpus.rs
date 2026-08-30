@@ -242,6 +242,62 @@ fn evaluate(scene: &Scene) -> Result<(), String> {
     Ok(())
 }
 
+/// A scene's standing. Five-valued for the reason `tropes check`, seam-guard
+/// and the type audit's `waiver(...)` are: a binary gate over a growing
+/// roster goes red on day one and stays red, which trains everyone to ignore
+/// it.
+///
+/// Spec section 9's PARTIAL is deliberately absent. [`evaluate`] stops at the
+/// first failing beat, so nothing here can distinguish "the scene never
+/// started" from "the scene ran and beat 4 failed" — and a variant no code
+/// can produce is the same defect this whole family exists to avoid. Add it
+/// with the code that can tell the two apart.
+#[derive(Debug, PartialEq, Eq)]
+enum Verdict {
+    /// The scene does not play; the string names the first failing beat.
+    Absent(String),
+    /// Every beat holds against the scene's witness.
+    Authored,
+    /// A known-absent scene, declared WITH a reason. Green, printed loudly.
+    Declared,
+    /// Declared absent, but it now passes — delete the declaration. This is
+    /// what keeps a declaration honest: a one-directional acknowledgement can
+    /// only ever be satisfied, so it rots; this one fails the moment the
+    /// scene starts working.
+    StaleDecl,
+}
+
+impl Verdict {
+    /// The verdict's name, as the floor table spells it.
+    fn name(&self) -> &'static str {
+        match self {
+            Verdict::Absent(_) => "ABSENT",
+            Verdict::Authored => "AUTHORED",
+            Verdict::Declared => "DECLARED",
+            Verdict::StaleDecl => "STALE-DECL",
+        }
+    }
+}
+
+/// Resolve one scene to its verdict by running it.
+fn verdict_of(scene: &Scene) -> Verdict {
+    match (evaluate(scene), scene.declared.is_some()) {
+        (Ok(()), false) => Verdict::Authored,
+        (Ok(()), true) => Verdict::StaleDecl,
+        (Err(beat), false) => Verdict::Absent(beat),
+        (Err(_), true) => Verdict::Declared,
+    }
+}
+
+/// Each scene's floor. A scene may not fall below its floor without a
+/// deliberate edit here in the same commit.
+const FLOORS: &[(&str, &str)] = &[
+    ("walk-changes-the-room", "AUTHORED"),
+    ("waiting-moves-the-day", "AUTHORED"),
+    ("waiting-does-not-move-the-body", "AUTHORED"),
+    ("co-location-is-observable", "AUTHORED"),
+];
+
 /// The founding corpus's frozen scene count. Changing this number is the
 /// deliberate act; changing the corpus without it is the drift (decision
 /// 0016).
@@ -342,4 +398,35 @@ fn a_beat_whose_assertion_does_not_hold_names_that_beat() {
         }],
     };
     assert_eq!(evaluate(&scene), Err("b-impossible".to_string()));
+}
+
+/// claim: structural(corpus scenes) — false-positive seed-loop flag
+/// (decision 0093): this iterates the committed corpus's scenes, not seeds.
+#[test]
+fn no_scene_has_fallen_below_its_recorded_floor() {
+    for scene in load("the-founding.scene.json") {
+        let floor = FLOORS
+            .iter()
+            .find(|(id, _)| *id == scene.id)
+            .unwrap_or_else(|| {
+                panic!(
+                    "scene `{}` has no floor. Every scene needs one in the \
+                     same commit that adds it, or the ratchet has a hole \
+                     exactly the shape of the newest scene.",
+                    scene.id
+                )
+            })
+            .1;
+        let got = verdict_of(&scene);
+        assert_eq!(
+            got.name(),
+            floor,
+            "scene `{}` is {} but its floor is {}. A scene may not regress \
+             without a recorded reason: if this drop is deliberate, change \
+             the floor in the same commit and say why in the message.",
+            scene.id,
+            got.name(),
+            floor
+        );
+    }
 }
