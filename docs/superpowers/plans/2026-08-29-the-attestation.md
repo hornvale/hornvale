@@ -243,6 +243,15 @@ fn the_phase_lists_and_the_roster_rungs_agree_both_ways() {
   nothing and the task is not done. Restore each file with
   `git checkout -- <file>` and confirm `git status` is clean before continuing.
 
+- [ ] **Step 3b: Prove the silent breakage, then fix it.** Before repairing
+  `scripts/scheduled/nightly-drift.sh`, demonstrate the failure it would have
+  had: with the two-column file in place and the script unrepaired, show that
+  its `git diff --exit-code` construction exits 0 while a real drift exists.
+  **Paste that output.** Then add `cut -f1` and show the same probe now
+  detects the drift. This is the campaign's thesis executed on the campaign's
+  own migration, and it is the one step of this task that cannot be replaced
+  by reading.
+
 - [ ] **Step 4: Run the set once and inspect it**
 
 ```bash
@@ -258,14 +267,31 @@ Expected: every check in the file passes, including the pre-existing ones.
 
 ### Task 3: Every declared generated path names its author
 
-**Files:**
-- Modify: `docs/generated-paths.txt`
-- Modify: `cli/tests/suite/generated_paths.rs`
+**Files — EIGHT, not two. The plan said two and was wrong; I named every
+reader before dispatching and this is the corrected list.**
+- Modify: `docs/generated-paths.txt` — gains the column
+- Modify: `cli/tests/suite/generated_paths.rs` — the parser
+- Modify: `scripts/scheduled/nightly-drift.sh:82` — **a real parser that
+  word-splits the file**
+- Modify the drift command in each of the five guides that show it:
+  `CLAUDE.md:636`, `cli/CLAUDE.md:174`, `scripts/CLAUDE.md:54`,
+  `windows/CLAUDE.md:129`, `domains/terrain/CLAUDE.md:50`
+- Modify: `docs/generated-path-authors.md:17` — Task 1's own file shows the
+  one-column loop too
+
+**THE BREAKAGE WOULD BE SILENT, AND THAT IS WHY THIS LIST EXISTS.**
+`nightly-drift.sh` builds `git diff --exit-code -- $paths` by word-splitting.
+With a second column it passes `artifacts` and `heavy` as pathspecs matching
+nothing — and `git diff --exit-code` over a pathspec that matches nothing
+**exits 0**. The nightly drift check would report "no drift" forever, with no
+error anywhere. That is this campaign's own thesis, and adding the column
+without this list would have created a fresh instance of it.
 
 **Interfaces:**
 - Produces: `fn declared() -> Vec<(String, String)>` — `(path, author)`,
-  replacing the existing `declared_paths() -> Vec<String>`. Update the existing
-  tests that call it.
+  replacing the existing `declared_paths() -> Vec<String>`. Update every
+  existing test in that file which calls it.
+- Every shell reader takes the path from field 1: `cut -f1`.
 
 - [ ] **Step 0 (BLOCKING): find each author's writing site.** The static check
   needs, per author, the source file that writes its paths. `rebaseline` is
