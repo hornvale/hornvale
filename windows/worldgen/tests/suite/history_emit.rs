@@ -831,8 +831,18 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
     // in the loop above are load-bearing rather than vacuous — recovered by
     // accident again, not by hunting for it. Post-unblinding re-measure,
     // declared per decision 0016.
+    //
+    // THE WINZE T2b re-reading (spec amendment E, 2026-08-29): 1 -> 2 over
+    // 7513 compared pairs (down from 7848, because the panel's occupation
+    // count falls with the mines that displace farms). Thirteenth reading, and
+    // it STILL has never held a value twice running:
+    // 1 -> 0 -> 2 -> 0 -> 1 -> 0 -> 1 -> 2 -> 0 -> 1 -> 0 -> 1 -> 2. The
+    // standing reading is unchanged — a coincidence of which occupation chains
+    // a world grows, never a property of `layer_key` — and at 2 ties the
+    // per-tie assertions above stay load-bearing. Post-unblinding re-measure,
+    // declared per decision 0016.
     assert_eq!(
-        ties, 1,
+        ties, 2,
         "measured {ties} tying pairs on the live corpus over {pairs} compared pairs; a \
          different count means the key's tie conditions changed"
     );
@@ -1131,9 +1141,18 @@ fn the_material_fourth_key_barely_moves_the_stratigraphy() {
     // distinguish them (decision 0097). The witness stays load-bearing rather
     // than vacuous at this reading, which is again where it happened to land
     // and not something this task went looking for.
+    //
+    // THE WINZE T2b re-pin (spec amendment E, 2026-08-29): [0, 1, 0] ->
+    // [0, 0, 1], total 1 -> 1. Eighth reading. The moved seed is 1000 this
+    // time and seed 7 fell to zero, which is the first time the nonzero
+    // reading has sat anywhere but seed 7 — worth recording precisely because
+    // the prior entry offered "seed 7 carries most of the mines" as the
+    // explanation, and one ring-scan later the same explanation would have
+    // predicted the wrong seed. It was a coincidence then too. Three seeds
+    // cannot distinguish these readings (decision 0097).
     assert_eq!(
         measured,
-        vec![(42u64, 0usize), (7, 1), (1000, 0)],
+        vec![(42u64, 0usize), (7, 0), (1000, 1)],
         "the per-seed order-change counts moved"
     );
 }

@@ -11102,7 +11102,16 @@ mod tests {
         // sequentially, and this count read 498 under it — a 16-name move on
         // a world with one mine in it, which is the measurement that sent the
         // draw onto its own leg.
-        assert_eq!(count("name-gloss"), 514);
+        //
+        // THE WINZE T2b (spec amendment E): 514 -> 515. The working scan now
+        // walks outward to `WORKING_REACH` rings instead of the parent's direct
+        // neighbours, so seed 42 carries 16 mines rather than 1 and 1,212
+        // occupations rather than 1,240. A one-name move on a change that
+        // re-sites fifteen settlements, which is the same "own keyed leg"
+        // property holding: the draw is still keyed on the parent's
+        // (vertex, band, year), so a world moves where a working is founded and
+        // nowhere else.
+        assert_eq!(count("name-gloss"), 515);
     }
 
     #[test]

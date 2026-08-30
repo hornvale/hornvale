@@ -11382,9 +11382,13 @@ mod tests {
         // goblin's syllable templates on the SAME site pool The Underworld's placement
         // left; still inside the 2-3 target, the row's actual claim. Re-pinned from the
         // merged run.
+        //
+        // THE WINZE T2b re-pin: 2.391304347826087 -> 2.5. The ring scan changes
+        // WHERE workings are founded, so seed 42's site pool moves and with it
+        // which goblin names are drawn. Still inside the 2-3 target.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.391304347826087)
+            MetricValue::Number(2.5)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -11607,9 +11611,16 @@ mod tests {
         // and so kobold's named-site pool. Corroborated: the canonical census
         // refreshed at this branch's tip (`c54fb62c9`) reads name-syllables-kobold
         // = 2.5414013 on its own seed-42 row.
+        //
+        // THE WINZE T2b re-pin: 2.5414012738853504 -> 2.5067567567567566. Spec
+        // amendment E's working ring scan reseats seed 42's settlements again
+        // and with them kobold's named-site pool. Nothing in this campaign
+        // touches phonology, wear or the namer. NOT corroborated against a
+        // census: this campaign's refresh happens once, at pre-merge close, and
+        // has not been run.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.5414012738853504)
+            MetricValue::Number(2.5067567567567566)
         );
     }
 
@@ -11845,7 +11856,13 @@ mod tests {
         // changes WHICH names read as transparent. Corroborated: the canonical census
         // refreshed at this branch's tip (`c54fb62c9`) reads name-transparency =
         // 0.61953728 on its own seed-42 row.
-        assert_eq!(share, 0.6195372750642674, "seed 42 transparency drifted");
+        //
+        // THE WINZE T2b re-pin: 0.6195372750642674 -> 0.6102564102564103. Same
+        // cause as the syllable pin above — the ring scan reseats seed 42's site
+        // pool, changing which names read as transparent. NOT corroborated
+        // against a census: this campaign's refresh happens once, at pre-merge
+        // close, and has not been run.
+        assert_eq!(share, 0.6102564102564103, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -15139,9 +15156,27 @@ mod tests {
         // pass's warning still stands unaddressed, and the witness is
         // load-bearing alone (no same-seed second species). **THE SUBJECT
         // MOVED AGAIN**, and the SPECIES with it: hobgoblin -> kobold.
-        let view = FullView::build(Seed(137), &SkyPins::default()).unwrap();
-        let lexicon = lex(&view, "kobold").expect("kobolds hold a lexicon");
-        let steeped = independently_steeped_concepts(&view, "kobold").expect("kobold is placed");
+        //
+        // **THE WINZE T2b re-witness (spec amendment E): seed 137/kobold ->
+        // seed 42/bugbear.** The working ring scan re-places every world a
+        // seventh time and (137, kobold) lost a staple band with it. Re-swept
+        // `0..150` with `sweep_for_the_independent_reading_witness` above,
+        // `--ignored --release` (516.37 s), the fifth pass to use the shipped
+        // method. **FOUR qualifying pairs — (42, bugbear), (111, hobgoblin),
+        // (117, wood-elf) and (125, hill-dwarf) — so the count reads
+        // 3 -> 4 -> 7 -> 11 -> 3 -> 15 -> 9 -> 5 -> 10 -> 2 -> 2 -> 2 -> 2 ->
+        // 4.** THE FOUR-PASS RUN AT n = 2 ENDS, and the tenth pass's warning —
+        // that this test was one world away from having no witness at all —
+        // eases for the first time since it was written. It is not withdrawn:
+        // the mechanism it named (a steeper latitude gradient narrows the
+        // staple range one people's territory covers) is still unaddressed,
+        // and n has been under 5 for five consecutive passes. The witness is
+        // still load-bearing alone — no same-seed second species — and **THE
+        // SUBJECT MOVED AGAIN**, species with it: kobold -> bugbear, onto the
+        // flagship seed.
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let lexicon = lex(&view, "bugbear").expect("bugbears hold a lexicon");
+        let steeped = independently_steeped_concepts(&view, "bugbear").expect("bugbear is placed");
         for staple in STAPLE_CONCEPTS {
             // The sweep's own criterion, asserted rather than assumed: this
             // test bites only where WORLDGEN steeps the staple, and a lexicon
@@ -15156,7 +15191,7 @@ mod tests {
                 // "seed 26 hobgoblins" through two witness moves before The
                 // Winze, and a failure message that names the wrong world
                 // sends its reader to the wrong place.
-                "seed 137 kobolds must root {staple} for this test to bite"
+                "seed 42 bugbears must root {staple} for this test to bite"
             );
             assert!(
                 steeped.contains(staple),

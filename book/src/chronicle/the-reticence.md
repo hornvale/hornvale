@@ -126,10 +126,16 @@ is also in play?
 The measured answer is no, and the reason is more interesting than the
 answer. A host's testimony is about whichever drive is currently winning
 arbitration, and its willingness is read from how often *that* drive has
-been overridden. Across a preregistered sweep of seventy observable points
-in six sessions, that count was zero at every single point — so all three
-doctrines agreed at every point, unconditionally, and the sweep measured
-zero divergences.
+been overridden. Across a preregistered sweep of seventy-one observable
+points in six sessions, that count was zero at every single point — so all
+three doctrines agreed at every point, unconditionally, and the sweep
+measured zero divergences.
+
+(The Reticence itself read *seventy*. The denominator is a property of the
+worlds the sweep walks, so it moves whenever settlement history does — The
+Winze's mining camps moved it by one. The null it reports has not moved, and
+the assertion in `reticence_calibration.rs` is re-pinned in the commit that
+moves it, never the other way round.)
 
 The tempting explanation is that the two quantities are disjoint by
 construction: a drive is never recorded as overridden on the very tick it

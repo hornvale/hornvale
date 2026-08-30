@@ -328,6 +328,73 @@ const DAUGHTER_PROB: f64 = 0.06;
 /// percentage points, because almost nothing lives between them.
 /// type-audit: bare-ok(ratio)
 pub const ORE_CUT: f64 = 0.24;
+/// How many rings outward from its parent a working may be founded — the
+/// **supply bound** (The Winze, spec amendment E). A working is not sited by
+/// its own neighbourhood the way a farm daughter is; it is sited by where the
+/// ore is, so its search radius is set by the thing it is searching for. This
+/// is what stops that search from running to the horizon. `pub` for the same
+/// reason [`ORE_CUT`] is: the gate that holds the bound
+/// (`windows/worldgen/tests/suite/mines_exist.rs`) expresses itself against
+/// the number the siting used rather than a second copy of it.
+///
+/// **The reach is what gates a working now, and that is the whole of this
+/// amendment's cost.** Under a one-hop scan, "is there ore next door" did
+/// nearly all the gating — 4 of seed 42's 466 daughter throws had any
+/// workable-ore candidate at all — and the draw was almost decoration. Widen
+/// the scan and that filter dissolves: an *unbounded* ring scan finds ore for
+/// 96% of throws, leaving only `draw < prospectivity` (on a site chosen
+/// **because** it clears [`ORE_CUT`], so firing about half the time) between
+/// an expansion and a mine. Measured, uncapped, on the panel:
+///
+/// ```text
+///                        seed 42   seed 7   seed 1234    pooled
+///   mines                    118       74           8       200
+///   occupations              881      456         891      2228
+///   mine share             13.4%    16.2%        0.9%      9.0%
+///   founding ring: median      5        4         3.5
+///                     max     38       22          14
+/// ```
+///
+/// That is a **different world, not a corrected one**, and the mechanism is
+/// visible in the numbers: a working founded on an ore belt is itself
+/// surrounded by ore, so its own daughters are workings, and the settlement
+/// network migrates onto plate-boundary land — which is where capacity is
+/// low. The pooled occupation count falls 2,799 → 2,228, **-20.4%**. The
+/// agrarian objective is the dominant one and Task 1's finding is that it is
+/// *right* to be (spec §B.2); a working must be a specialisation on top of the
+/// settlement pattern, never a second siting objective that re-sites it.
+///
+/// **THREE INDEPENDENT BOUNDS, AND `3` IS INSIDE ALL OF THEM.**
+///
+/// 1. **Supply, physically.** One hop is ~110 km — this repo's own figure
+///    (`domains/terrain/src/channel.rs`, on the Earth-scale reading; no planet
+///    radius exists in the codebase, so it is the best statement available).
+///    Three rings is ~330 km of supply line, which is already the outer edge
+///    of what §B.3's phrase *"from a parent that supplies it"* can mean. This
+///    is a ceiling, never a target.
+/// 2. **The network, measured.** At reach 3 the pooled occupation count is
+///    2,782 against the one-hop world's 2,799 — **-0.6%**, against the
+///    uncapped scan's -20.4%. The settlement pattern is unmoved; the workings
+///    sit on top of it.
+/// 3. **The objective.** Reach 1 is the state this amendment overturns (one
+///    mine in 1,240 settlements on seed 42). Reach 2 does not move it (three
+///    in 1,230, one in 410). Reach 3 is the first reach at which a player
+///    meets the feature at all.
+///
+/// **Bound 3 is post-unblinding and is recorded as such**, the way spec §E.3
+/// records the amendment itself. The amendment exists *because* the count was
+/// too low to mean anything, so a reach chosen without reference to whether
+/// the feature is present would be answering a different question. What it is
+/// not is a reach tuned to the preregistered acceptance range: at 3 the panel
+/// reads 16 / 19 / 4 mines, which straddles spec §5.1's `6-40` row rather than
+/// sitting inside it, and no reach was tried for its count after this one.
+///
+/// **Nothing else about the working moved with it** (spec §E.5): [`ORE_CUT`]
+/// is untouched, the rate is still the site's own prospectivity, and
+/// [`crate::streams::SETTLEMENT_WORKING`] keeps its key and its epoch — a ring
+/// scan changes which vertex is *chosen*, never how the draw is *derived*.
+/// type-audit: bare-ok(count)
+pub const WORKING_REACH: u32 = 3;
 /// Metres of working **one person at the Neolithic horizon** drives in one
 /// epoch (The Winze, spec §4.2). A working's advance each epoch is
 /// `population × tech_weight(tech) × this`, and the depth on the record is
@@ -359,9 +426,25 @@ pub const ORE_CUT: f64 = 0.24;
 /// distribution is a spike. It was fixed BEFORE Task 4's hazard exists,
 /// against the tenure and population distributions seed 42 already had —
 /// median tenure 50 years (2 epochs), p90 400 years, median peak population
-/// 14, maximum 84. Measured on the panel after it landed: 16 workings spread
-/// over 8.6 m to 3,632.5 m with no pile-up at either end
-/// (`windows/worldgen/tests/suite/delve_depth.rs` prints the roster).
+/// 14, maximum 84.
+///
+/// **RE-MEASURED AFTER THE RING SCAN, WHICH MOVED THE POPULATION IT DESCRIBES**
+/// (spec amendment E; see [`WORKING_REACH`]). Task 3 read 16 workings over
+/// 8.6 m to 3,632.5 m; the panel now carries 39 over **6.0 m to 3,343.3 m**
+/// (`windows/worldgen/tests/suite/delve_depth.rs` prints the roster). The
+/// constant is unchanged and wanted no second look: nothing about it is
+/// calibrated to the count, and the range is if anything wider in relative
+/// terms.
+///
+/// **What the wider population exposes is a mass point at the floor, and it is
+/// arithmetic rather than saturation.** 15 of the 39 sit on exactly 6.0, 9.0
+/// or 12.0 m — the three values a working that dies in its founding epoch can
+/// take, `DAUGHTER_POP × tech_weight × this` = `8 × {1.5, 2.25, 3.0} × 0.5`.
+/// The other 24 spread from 25.8 m to 3,343.3 m with nothing piling up. So the
+/// distribution spec §5.2 asks about is a floor spike plus a long tail, not a
+/// spike alone — which is the shape a per-epoch accrual over a tenure
+/// distribution with a median of two epochs *should* have, and it is Task 5's
+/// to reckon with rather than this constant's to remove.
 /// type-audit: bare-ok(diagnostic-value)
 const DELVE_M_PER_PERSON_EPOCH: f64 = 0.5;
 /// How much a unit of stored wealth is worth as raiding strength, relative to
@@ -1664,6 +1747,64 @@ impl<'a> Bake<'a> {
             });
             Some(candidates[0])
         })
+    }
+
+    /// The site a **working** would be founded on from `from`: the nearest
+    /// vacant, ore-bearing place within [`WORKING_REACH`] rings of the parent,
+    /// and the richest ore in that ring (The Winze, spec §B.3 as amended by
+    /// §E.2). `None` if nothing inside the bound clears [`ORE_CUT`].
+    ///
+    /// **A ring scan, because the objective sets the radius.** A farm daughter
+    /// spreads to the next field and the next field is next, so one hop is the
+    /// right radius for it. A working is founded *because of where the ore is*,
+    /// so its search radius belongs to the ore rather than to the parent's
+    /// doorstep — which is what the two objectives were sharing when they
+    /// shared a candidate set. [`Bake::best_home`] and [`Bake::nearest_dest`]
+    /// already resolve a destination this way; a working is closer in kind to
+    /// a relocation than to a daughter, because in both a people moves to
+    /// reach something specific rather than spilling into adjacent room.
+    ///
+    /// **Nearest-first, not best-in-range.** The walk stops at the first ring
+    /// that holds anything workable, so a parent works the nearest ore it can
+    /// rather than the richest ore it can see. That is the supply relation
+    /// again — [`WORKING_REACH`] is a bound on how far a parent may reach, not
+    /// a radius it is entitled to search exhaustively — and it is the same
+    /// stopping rule the file's other two nearest-first searches use.
+    ///
+    /// **At `WORKING_REACH == 1` this is byte-identical to the pre-amendment
+    /// one-hop scan**, which is what makes the widening a generalisation
+    /// rather than a rewrite: ring 1 *is* `traversable_neighbors(from)`, the
+    /// filters are the same two, and the comparator is the same. Measured:
+    /// building the panel at reach 1 reproduces Task 2's worlds exactly
+    /// (1 / 13 / 2 mines over 1,240 / 661 / 898 occupations).
+    ///
+    /// Tie-broken by lowest `Vertex` under `f64::total_cmp`, total and
+    /// deterministic, and [`Bake::nearest_ring`] hands each ring over in
+    /// ascending `Vertex` order, so neither discovery order nor edge insertion
+    /// order can reach the result.
+    fn working_site(&self, era: &EraClimate, from: Vertex, pidx: usize) -> Option<Vertex> {
+        let mut ring_no: u32 = 0;
+        self.nearest_ring(from, |ring| {
+            ring_no += 1;
+            if ring_no > WORKING_REACH {
+                // Past the supply bound. `Some(None)` stops the walk with a
+                // verdict of "nothing"; a bare `None` would keep widening.
+                return Some(None);
+            }
+            ring.iter()
+                .copied()
+                .filter(|&n| self.vacant_for(era, n, pidx))
+                .filter(|&n| *self.prospectivity.get(n) >= ORE_CUT)
+                .max_by(|a, b| {
+                    let pa = *self.prospectivity.get(*a);
+                    let pb = *self.prospectivity.get(*b);
+                    // Higher prospectivity wins; among equal, lower Vertex wins
+                    // (treated as "greater" for `max_by`).
+                    pa.total_cmp(&pb).then(b.cmp(a))
+                })
+                .map(Some)
+        })
+        .flatten()
     }
 
     /// The best home a homeless people can take from `from` — spec §4.3's
@@ -3763,42 +3904,41 @@ impl<'a> Bake<'a> {
             // occupied set toward fresh water. `RIVER_SITE_WEIGHT` tunes how
             // hard river proximity outbids raw capacity here. Tie-broken by
             // lowest Vertex — total & deterministic (`f64::total_cmp`).
-            let candidates: Vec<Vertex> = traversable_neighbors(self.cur(), site)
+            let dest = traversable_neighbors(self.cur(), site)
                 .into_iter()
                 .filter(|&n| self.vacant_for(era, n, dpidx))
-                .collect();
-            let dest = candidates.iter().copied().max_by(|a, b| {
-                let sa = self.caps_now()[dpidx].at(*a) * river_factor(*self.river_prox.get(*a));
-                let sb = self.caps_now()[dpidx].at(*b) * river_factor(*self.river_prox.get(*b));
-                // Higher score wins; among equal score, lower Vertex wins
-                // (treated as "greater" for `max_by`).
-                sa.total_cmp(&sb).then(b.cmp(a))
-            });
-            // THE SECOND OBJECTIVE (The Winze, spec §B.3). The same expansion,
-            // scored the other way: a WORKING goes to the richest ore among
-            // the same candidates, on `prospectivity` alone — no capacity, no
-            // river term. That single-objective scoring is the point. A mining
-            // camp is a daughter founded on ore rather than on fertility, from
-            // a parent that supplies it, which is what a mining camp is; the
-            // reclassification design this replaced could not work because the
-            // agrarian objective had already put every settlement where ore is
-            // not (spec §B.2, measured by Task 1).
-            //
-            // Filtered at [`ORE_CUT`] first, and that filter is doing two jobs.
-            // It is the honest one — you do not found a working where there is
-            // nothing to work — and it is also what keeps the tie-break out of
-            // the siting: unfiltered, this `max_by`'s argmax is tied on ~a
-            // third of candidate sets and `b.cmp(a)` would silently be the
-            // rule. See `ORE_CUT`'s own doc for the measurement.
-            let working_dest = candidates
-                .iter()
-                .copied()
-                .filter(|&n| *self.prospectivity.get(n) >= ORE_CUT)
                 .max_by(|a, b| {
-                    let pa = *self.prospectivity.get(*a);
-                    let pb = *self.prospectivity.get(*b);
-                    pa.total_cmp(&pb).then(b.cmp(a))
+                    let sa = self.caps_now()[dpidx].at(*a) * river_factor(*self.river_prox.get(*a));
+                    let sb = self.caps_now()[dpidx].at(*b) * river_factor(*self.river_prox.get(*b));
+                    // Higher score wins; among equal score, lower Vertex wins
+                    // (treated as "greater" for `max_by`).
+                    sa.total_cmp(&sb).then(b.cmp(a))
                 });
+            // THE SECOND OBJECTIVE (The Winze, spec §B.3). The same expansion,
+            // scored the other way: a WORKING goes to the nearest workable ore
+            // within the parent's supply reach, on `prospectivity` alone — no
+            // capacity, no river term. That single-objective scoring is the
+            // point. A mining camp is a daughter founded on ore rather than on
+            // fertility, from a parent that supplies it, which is what a mining
+            // camp is; the reclassification design this replaced could not work
+            // because the agrarian objective had already put every settlement
+            // where ore is not (spec §B.2, measured by Task 1).
+            //
+            // **The two objectives no longer share a candidate set** (spec
+            // §E.2). The agrarian scan above still ranks the parent's direct
+            // neighbours and nothing about it moved; the working scan walks
+            // outward to [`WORKING_REACH`], because a working is sited by where
+            // the ore is and its radius belongs to what it is looking for. See
+            // [`Bake::working_site`] for the walk and `WORKING_REACH` for why
+            // it is bounded at all.
+            //
+            // The [`ORE_CUT`] filter is doing two jobs in there. It is the
+            // honest one — you do not found a working where there is nothing to
+            // work — and it is also what keeps the tie-break out of the siting:
+            // unfiltered, the argmax is tied on ~a third of candidate sets and
+            // the `Vertex` tie-break would silently be the rule. See
+            // `ORE_CUT`'s own doc for the measurement.
+            let working_dest = self.working_site(era, site, dpidx);
             // Is this expansion a working? A rate, and the rate is the ore
             // itself: `prospectivity` is documented by its own author as a
             // probability ("here it is a probability" —
@@ -4119,6 +4259,125 @@ mod tests {
     use hornvale_culture::BiomeClass;
     use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
     use std::cmp::Ordering;
+
+    /// **The supply bound, asserted in the unit the siting actually works in**
+    /// (The Winze, spec §E.2). [`Bake::working_site`] walks the era graph
+    /// outward and must stop at [`WORKING_REACH`] rings: ore one ring further
+    /// out is not a site a parent may found a working on.
+    ///
+    /// Asserted here rather than over a built world's ledger because the bound
+    /// is a property of the ERA GRAPH, and the graph is not a subgraph of the
+    /// geosphere adjacency — a `WaterRoute` edge crosses up to twenty vertices
+    /// of ocean in one hop (`graph_derive::add_water_routes`), so a ledger read
+    /// measures a different distance than the walk did. See
+    /// `windows/worldgen/tests/suite/mines_exist.rs` for the consequence that
+    /// IS observable from a world.
+    ///
+    /// Both directions, and the fixture asserts its own preconditions so the
+    /// test cannot pass by quantifying over nothing: a vertex must exist at
+    /// exactly `WORKING_REACH` rings and at exactly `WORKING_REACH + 1`.
+    #[test]
+    fn working_site_never_reaches_past_the_supply_bound() {
+        use hornvale_kernel::ReferenceElevation;
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
+        let caps = caps_from_fn(&geo, |_| 100.0);
+        let era = EraClimate {
+            day: 0.0,
+            ice: VertexMap::from_fn(&geo, |_| false),
+            habitable: VertexMap::from_fn(&geo, |_| true),
+            sea_level: ReferenceElevation::new(0.0).unwrap(),
+            ice_fraction: 0.0,
+        };
+        let from = Vertex(0);
+
+        // Ring membership over the SAME graph the walk uses, computed here by
+        // hand so the fixture does not borrow the code under test to build its
+        // own expectation.
+        let mut depth_of: BTreeMap<Vertex, u32> = BTreeMap::new();
+        depth_of.insert(from, 0);
+        let mut frontier = vec![from];
+        let mut depth = 0;
+        while !frontier.is_empty() {
+            depth += 1;
+            let mut next = Vec::new();
+            for c in frontier {
+                for n in traversable_neighbors(&graphs[0], c) {
+                    if let std::collections::btree_map::Entry::Vacant(e) = depth_of.entry(n) {
+                        e.insert(depth);
+                        next.push(n);
+                    }
+                }
+            }
+            frontier = next;
+        }
+        let at = |d: u32| -> Vertex {
+            depth_of
+                .iter()
+                .find(|&(_, &dd)| dd == d)
+                .map(|(&v, _)| v)
+                .unwrap_or_else(|| panic!("the fixture globe has no vertex at ring {d}"))
+        };
+        let inside = at(WORKING_REACH);
+        let outside = at(WORKING_REACH + 1);
+
+        // One ore-bearing vertex at a time, so the answer names the ring.
+        let ore_at = |v: Vertex| VertexMap::from_fn(&geo, |x| if x == v { 1.0 } else { 0.0 });
+        let run = |field: &VertexMap<f64>| {
+            let bake = Bake {
+                geo: fixture_geo(),
+                biomes: grassland_biomes(),
+                graphs: &graphs,
+                cur_graph: 0,
+                caps_by_era: &caps,
+                peoples: all_settlers(),
+                river_prox: &river_prox,
+                prospectivity: field,
+                refugia: &refugia,
+                seed: Seed(1),
+                disposition: no_disposition(),
+                disposition_spread: no_spread(),
+                in_group_radius: no_radius(),
+                time_horizon: strips_to_the_floor(),
+                seating: surface_seating(),
+                records: Vec::new(),
+                communities: Vec::new(),
+                node_index: BTreeMap::new(),
+                next_id: 1,
+                stream: Seed(1).derive(hornvale_history::streams::BAKE).stream(),
+                tribute: BTreeMap::new(),
+                epoch_growth: Vec::new(),
+                tally: BakeCensus::default(),
+            };
+            bake.working_site(&era, from, 0)
+        };
+
+        assert_eq!(
+            run(&ore_at(inside)),
+            Some(inside),
+            "ore at exactly WORKING_REACH ({WORKING_REACH}) rings must be \
+             workable — otherwise the bound is off by one in the tight direction \
+             and the ring scan is narrower than it claims."
+        );
+        assert_eq!(
+            run(&ore_at(outside)),
+            None,
+            "ore at WORKING_REACH + 1 ({}) rings was chosen as a working site. \
+             The walk is not stopping at the supply bound, and spec §B.3's \
+             \"from a parent that supplies it\" has nothing holding it.",
+            WORKING_REACH + 1,
+        );
+        // The negative arm must fail for the RIGHT reason: with no ore
+        // anywhere the answer is also `None`, so without this the assertion
+        // above would pass on a `working_site` that never returns anything.
+        assert_eq!(
+            run(&VertexMap::from_fn(&geo, |_| 0.0)),
+            None,
+            "a barren globe must yield no working site"
+        );
+    }
 
     #[test]
     fn traversable_neighbors_excludes_ocean_includes_lanes() {

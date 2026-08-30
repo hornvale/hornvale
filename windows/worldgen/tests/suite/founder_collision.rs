@@ -102,6 +102,26 @@
 //! exactly these counts", which is what it asserts, and not as "no other seed
 //! in 0–2999 drops a founder", which it does not.
 //!
+//! **THE WINZE T2b PAID FOR ONE, AND COMMITTED THE HARNESS SO THE NEXT
+//! CAMPAIGN NEED NOT RECONSTRUCT IT.** Spec amendment E's working ring scan
+//! re-placed every settlement a SEVENTH time; a fresh full 0–2999 sweep
+//! (1129.93 s, ten threads, dev profile at `opt-level = 2`) found
+//! `[1162, 2655]`, one drop each, and cleared `[1057, 2852]` entirely. **The
+//! rate is unmoved at 2 in 3000** — the observed series is now
+//! 2 → 6 → 2 → 3 → 6 → 2 → 2 → 2, and this is the first epoch in the file's
+//! history where it did NOT move. That fits the header's own reading rather
+//! than straining it: seed 42's occupation count moved 1,240 → 1,212, a 2.3%
+//! fall against the 24% and 32% swings that accompanied every previous rate
+//! change, so the ground under the key barely shifted and neither did the
+//! residual. **Read the rate, never the membership** — no seed has ever
+//! survived two consecutive sweeps except 1892, and its run is long over.
+//!
+//! The sweep is `the_shipped_handles_full_sweep_writes_its_positive_set` at
+//! the bottom of this file. Every previous re-pin above came from a sweep run
+//! by hand outside the repository and recorded only in prose, which is why
+//! this paragraph's predecessors twice had to say the completeness claim was
+//! inherited rather than measured.
+//!
 //! **The Granary asked whether the tail can retire, and the answer is NO —
 //! measured, not argued (Task 6, 2026-08-24).** T4's day-grain founding stamps
 //! were the hypothesis: if the raided founding and its same-year successor
@@ -127,8 +147,8 @@
 //! 1. **liveness** — the seeds that used to die build to `Full` depth, which is
 //!    the depth the panic used to fire at;
 //! 2. **the size of the cut** — how many founders each seed loses, so a later
-//!    change that silently alters promotion coverage reddens here. Seventeen
-//!    of the nineteen rows now read **zero**, and they are the campaign's
+//!    change that silently alters promotion coverage reddens here. Nineteen
+//!    of the twenty-one rows now read **zero**, and they are the campaign's
 //!    headline: they
 //!    are seeds that used to lose a founder and no longer do, so a regression
 //!    that reintroduces the collisions is visible rather than silent;
@@ -140,7 +160,7 @@
 //! before the widening. It is here so that a future absorption that re-exposes
 //! it is visible rather than surprising.
 //!
-//! Cost: nineteen `BuildDepth::Settlements` builds and two `Full` builds, ~2 s
+//! Cost: twenty-one `BuildDepth::Settlements` builds and two `Full` builds, ~2 s
 //! each on an optimized dev profile — cheap enough for the commit gate, which
 //! is where a liveness guard belongs.
 //!
@@ -207,7 +227,10 @@ fn build(seed: u64, depth: BuildDepth) -> hornvale_kernel::World {
 /// test.
 #[test]
 fn a_colliding_seed_builds_to_full_depth_instead_of_panicking() {
-    for seed in [1057u64, 2852] {
+    // THE WINZE T2b: [1057, 2852] -> [1162, 2655]. Seventh placement epoch,
+    // whole set cleared, fresh 0-2999 sweep, rate unmoved at 2 in 3000. See
+    // `a_dropped_founder_is_not_backfilled` for the sweep and its harness.
+    for seed in [1162u64, 2655] {
         let w = build(seed, BuildDepth::Full);
         let people = w.ledger.find("is-person").count();
         assert!(
@@ -261,26 +284,25 @@ fn a_colliding_seed_builds_to_full_depth_instead_of_panicking() {
 /// 2871 all clear — including 1892, whose four-epoch survival this file has
 /// been narrating since The Glasshouse — and 2208 is the only newcomer. Every
 /// cleared seed is kept as a zero row by the standing convention, so the table
-/// is nineteen rows now, of which two are the live positive set and seventeen
-/// are the record of what five epochs cleared.
+/// is twenty-one rows now, of which two are the live positive set and nineteen
+/// are the record of what seven epochs cleared.
 ///
-/// **The sweep predates Task 9's genus repair; the ROWS were re-verified and
-/// the SWEEP was not.** Every value below is green on this tree, re-run
-/// 2026-08-18, so each named seed's drop count is exact post-repair. The
-/// sentence "2208 and 2465 are the whole of the current positive set over seeds
-/// 0–2999" rests on the pre-repair sweep and has **not** been re-established:
-/// the repair re-placed every world, and a fresh sweep is a 744 s job nobody
-/// has paid for since. A seed outside these nineteen may now drop a founder
-/// without anything here noticing. That is a gap in coverage, not a suspected
-/// defect, and it is written down rather than left implicit — a completeness
-/// claim inherited across an epoch it was not re-run under is exactly the
-/// shape this campaign spent itself finding.
+/// **THE COMPLETENESS GAP IS CLOSED (The Winze T2b).** The two paragraphs
+/// above recorded, twice, that "these are the whole of the positive set over
+/// 0–2999" was inherited from a sweep run before an epoch rather than measured
+/// after one. A fresh full sweep now runs from inside this file
+/// (`the_shipped_handles_full_sweep_writes_its_positive_set`, 1129.93 s, ten
+/// threads) and was run on this tree: `[1162, 2655]`, one drop each, and the
+/// completeness claim below is that sweep's own output rather than an
+/// inheritance. It will lapse again at the next settlement-replacing epoch,
+/// which is what the `#[ignore]`d harness is for.
 ///
-/// claim: structural(seed: [20, 42, 238, 514, 1412, 1439, 1505, 1738, 1741,
-/// 1866, 1892, 2031, 2078, 2208, 2465, 2634, 2793, 2871, 2898]) — nineteen
-/// named worlds with pinned per-seed values. Not a sweep and not a search: the enumeration is the whole of a
-/// completed 0–2999 sweep's positive set plus two controls and every
-/// superseded row, so nothing here scans for an instance.
+/// claim: structural(seed: [20, 42, 238, 514, 1057, 1162, 1412, 1439, 1505,
+/// 1738, 1741, 1866, 1892, 2031, 2078, 2634, 2655, 2793, 2852, 2871, 2898]) —
+/// twenty-one named worlds with pinned per-seed values. Not a sweep and not a
+/// search: the enumeration is the whole of a completed 0–2999 sweep's positive
+/// set plus two controls and every superseded row, so nothing here scans for
+/// an instance.
 #[test]
 fn the_dropped_founders_are_pinned_per_seed() {
     // (seed, founders dropped). 42 and 2793 are the long-standing controls;
@@ -292,7 +314,7 @@ fn the_dropped_founders_are_pinned_per_seed() {
     // re-established since Task 9's genus repair re-placed every world — see
     // this test's own docs. The rows below are exact; "no other seed in
     // 0-2999 drops a founder" is not currently checked by anything.
-    let expected: [(u64, usize); 19] = [
+    let expected: [(u64, usize); 21] = [
         (20, 0),
         (42, 0),
         (238, 0),
@@ -306,8 +328,14 @@ fn the_dropped_founders_are_pinned_per_seed() {
         (1892, 0),
         (2031, 0),
         (2078, 0),
-        (1057, 1),
-        (2852, 1),
+        // Cleared by The Winze T2b's ring scan, and kept at zero for the
+        // reason the module header gives: a seed that used to lose a founder
+        // and no longer does makes a regression visible rather than silent.
+        (1057, 0),
+        (2852, 0),
+        // The Winze T2b's fresh 0-2999 sweep. One drop each; rate 2 in 3000.
+        (1162, 1),
+        (2655, 1),
         (2634, 0),
         (2793, 0),
         (2871, 0),
@@ -408,34 +436,53 @@ fn the_dropped_founders_are_pinned_per_seed() {
 /// and 2465's holds 18. 2465 is taken because it is the SURVIVOR of the two —
 /// the one seed carried over from the previous positive set — so this pin
 /// changes as little as the measurement permits. 2208 is held in reserve.
+///
+/// **BOTH POSITIVES NOW, NOT ONE (The Winze T2b).** Spec amendment E's working
+/// ring scan re-placed every settlement a seventh time and cleared the whole
+/// `[1057, 2852]` set; a fresh 0–2999 sweep — run from
+/// `the_shipped_handles_full_sweep_writes_its_positive_set`, committed at the
+/// bottom of this file precisely so the next campaign does not have to
+/// reconstruct it — found `[1162, 2655]`, one drop each. The rate holds at 2 in
+/// 3000. Neither survives from the previous set, so there is no continuity
+/// argument to make for picking one, and the "which seed" question disappears
+/// if the test simply takes both: the `available > 1` premise is asserted per
+/// seed rather than chosen for, which is strictly more coverage for one extra
+/// ~3 s build.
+///
+/// claim: structural(seed: [1162, 2655]) — two named worlds, built once each.
+/// No search: the seeds are the whole of a completed 0-2999 sweep's positive
+/// set, not something this test scans for.
 #[test]
 fn a_dropped_founder_is_not_backfilled() {
-    let w = build(1057, BuildDepth::Settlements);
-    let occs = occupation_records(&w);
-    let cast = select_founders(&occs);
-    let dropped = cast
-        .unremembered
-        .first()
-        .expect("seed 1057 drops exactly one founder");
-    let people = dropped.people;
-    let promoted = cast
-        .remembered
-        .iter()
-        .filter(|f| f.people == people)
-        .count();
-    let available = occs.iter().filter(|o| o.core.people == people).count();
-    assert!(
-        available > 1,
-        "seed 1057's {people:?} must hold more than one occupation \
-         ({available}), or there is nothing a backfill could have reached for"
-    );
-    assert_eq!(
-        promoted,
-        available.min(MEMORY_DEPTH) - 1,
-        "the drop must leave {people:?} one short of what it could have \
-         remembered ({available} available, cap {MEMORY_DEPTH}), not backfilled \
-         to it"
-    );
+    for seed in [1162u64, 2655] {
+        let w = build(seed, BuildDepth::Settlements);
+        let occs = occupation_records(&w);
+        let cast = select_founders(&occs);
+        let dropped = cast
+            .unremembered
+            .first()
+            .unwrap_or_else(|| panic!("seed {seed} drops exactly one founder"));
+        let people = dropped.people;
+        let promoted = cast
+            .remembered
+            .iter()
+            .filter(|f| f.people == people)
+            .count();
+        let available = occs.iter().filter(|o| o.core.people == people).count();
+        println!("seed {seed}: {people:?} holds {available} occupations, {promoted} promoted");
+        assert!(
+            available > 1,
+            "seed {seed}'s {people:?} must hold more than one occupation \
+             ({available}), or there is nothing a backfill could have reached for"
+        );
+        assert_eq!(
+            promoted,
+            available.min(MEMORY_DEPTH) - 1,
+            "the drop must leave {people:?} one short of what it could have \
+             remembered ({available} available, cap {MEMORY_DEPTH}), not backfilled \
+             to it"
+        );
+    }
 }
 
 /// **The Granary, Task 6: can the discrimination tail retire?** The shipped
@@ -563,6 +610,68 @@ fn granary_tail_less_sweep_writes_its_counts() {
     );
     println!("{report}");
     let path = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("tail-sweep-results.txt");
+    std::fs::write(&path, &report).expect("write sweep results");
+    println!("written to {}", path.display());
+}
+
+/// **The shipped handle's own full sweep**, which this file's header has said
+/// twice that it lacked: *"what has not been re-established post-repair is the
+/// completeness claim … because that needs a fresh full sweep and this wave did
+/// not pay for one."* Every re-pin of the positive set above came from a sweep
+/// run **outside** this file, by hand, and recorded only in prose — so the next
+/// campaign to re-place settlements had nothing to run and had to reconstruct
+/// the harness. This is that harness, committed.
+///
+/// It differs from `granary_tail_less_sweep_writes_its_counts` above in the one
+/// way that matters: that one measures a *candidate* key that was rejected,
+/// this one measures the key that actually ships, through `select_founders`
+/// itself rather than through a re-implementation of it.
+///
+/// claim: structural() — a measurement harness, not an assertion battery:
+/// everything it learns lands in prose and in the pinned table above, never in
+/// an assertion here.
+#[test]
+#[ignore = "the full 0-2999 sweep costs ~800 s wall on ten threads -- offline \
+           measurement, run it after any change that re-places settlements, \
+           never in the normal test run"]
+fn the_shipped_handles_full_sweep_writes_its_positive_set() {
+    const SEEDS: u64 = 3000;
+    const THREADS: usize = 10;
+
+    let next = std::sync::atomic::AtomicU64::new(0);
+    let lost: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let positives: std::sync::Mutex<Vec<(u64, usize)>> = std::sync::Mutex::default();
+
+    std::thread::scope(|scope| {
+        for _ in 0..THREADS {
+            scope.spawn(|| {
+                loop {
+                    let seed = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    if seed >= SEEDS {
+                        break;
+                    }
+                    let w = build(seed, BuildDepth::Settlements);
+                    let drops = select_founders(&occupation_records(&w)).unremembered.len();
+                    if drops > 0 {
+                        lost.fetch_add(drops as u64, std::sync::atomic::Ordering::Relaxed);
+                        positives.lock().unwrap().push((seed, drops));
+                    }
+                }
+            });
+        }
+    });
+
+    let mut positives = positives.into_inner().unwrap();
+    positives.sort_unstable();
+    let report = format!(
+        "shipped-handle sweep (seeds 0-{}, BuildDepth::Settlements, default \
+         pins): {} colliding worlds, {} founders dropped, positives {positives:?}\n",
+        SEEDS - 1,
+        positives.len(),
+        lost.load(std::sync::atomic::Ordering::Relaxed),
+    );
+    println!("{report}");
+    let path = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("shipped-sweep-results.txt");
     std::fs::write(&path, &report).expect("write sweep results");
     println!("written to {}", path.display());
 }
