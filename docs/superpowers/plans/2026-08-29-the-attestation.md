@@ -73,7 +73,7 @@ Overriding this plan and saying so is expected behaviour, not an escalation.
 
 ---
 
-### Task 1: Classify the 585 unaccounted files (settles H1)
+### Task 1: Classify the unaccounted files (settles H1) — COMPLETE: 132, not 585
 
 No production code. This task produces the fact every later task depends on, and
 the spec explicitly refuses to assume it.
@@ -118,14 +118,16 @@ patching.
   last kind: narrative voice, no generated-file banner, not rewritten by the
   run. Do not classify by filename — open the file, or find the writer.
 
-- [ ] **Step 3: Write `docs/audits/generated-path-authors.md`** — one row per
+- [ ] **Step 3: Write `docs/generated-path-authors.md`** — one row per
   declared path, giving total tracked, written-by-rebaseline, and the author of
   the remainder. Where a single declared path holds files with **different**
   authors, say so explicitly: that is the finding, and it decides whether an
   author column can be per-path at all.
 
-- [ ] **Step 4: Report H1.** The spec predicts the 585 fall into a small number
-  of authors. **If they fall into many, or into "no author" in bulk, STOP and
+- [ ] **Step 4: Report H1.** The spec predicts the unaccounted files fall into
+  a small number of authors. **Task 1 measured 132, not the spec's 585** — the
+  spec's arithmetic missed a second census-gated directory of 455 files. Tasks
+  3 and 5 use 132. **If they fall into many, or into "no author" in bulk, STOP and
   re-present** — that is the preregistered null, and it turns Task 5 from a
   tidy-up into a scope question for Nathan.
 

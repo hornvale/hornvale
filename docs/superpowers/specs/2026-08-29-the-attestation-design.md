@@ -104,9 +104,21 @@ the other 843 the check compares a file against itself and reports "no drift",
 which reads as "current" and means only "the author I ran did not move it".
 
 Of `book/src/laboratory/`'s 825 files, **229 are census output** — legitimately
-authored by a different, deliberately-excluded path. That leaves **585 whose
-author is not yet established**, and establishing them is Task 1 rather than an
-assumption of this spec. A sample already shows at least two distinct kinds
+authored by a different, deliberately-excluded path.
+
+**That subtraction was WRONG, and Task 1 corrected it — this paragraph is the
+corrected version.** It originally read "that leaves 585 whose author is not yet
+established". It does not. `book/src/laboratory/generated/census-of-the-meeting/`
+holds a further **455** files gated behind the *same* census conditional as
+`the-census/`, on the adjacent lines of the same block, and the arithmetic
+subtracted only the first of the two. The script's own comment names them
+together. So the real residual is **132**, not 585 — 130 under
+`book/src/laboratory/` and 2 elsewhere.
+
+The error is worth leaving visible rather than silently overwriting: the spec
+asserted a number derived from a script it had already read, and the check that
+caught it was an implementer re-deriving it rather than any reviewer re-reading
+it. A sample already shows at least two distinct kinds
 among them: `generated/the-history/` is authored by the **heavy tier**, and
 `census-of-coasts-ii.md` is a **hand-written prose chapter** that no generator
 has ever produced and that should probably not be declared at all — checked, not
@@ -184,7 +196,7 @@ a person would have to run to make that file current. A column naming the
 *script* would put the census files and the ordinary ones under one value and
 lose exactly the distinction the campaign exists to draw.
 
-(This also makes the 585 subtraction in §1.3 sound: a plain `make rebaseline`
+(This also makes §1.3's subtraction sound: a plain `make rebaseline`
 leaves `HV_CENSUS` unset, printed `censuses SKIPPED` on the measured run,
 and therefore wrote none of the 229 census-named files. The 11 it did write
 under `book/src/laboratory/` are disjoint from them.)
@@ -304,15 +316,19 @@ this section carries into the plan rather than settling here.
 | the roster's `rung` column can express both lists | **verified** — read at spec time | `scripts/lane-sets.tsv` |
 | `lane_sets.rs` does not check list-vs-rung agreement | **verified** — read at spec time | the file's own header |
 | `make rebaseline` writes 98 of 941 declared files | **verified** — measured | marker + mtime, 2026-08-29 |
-| the 585 unaccounted files resolve into a small number of authors | **hypothesis (H1)** | Task 1 classifies every one |
+| the unaccounted files resolve into a small number of authors | **H1 — CONFIRMED, headline count corrected** | Task 1: 132 (not 585), resolving into four authors |
 | ~~deriving the phase lists in dash costs nothing measurable~~ | **WITHDRAWN before test** — derivation loses phase order, which is load-bearing | measured at plan time: roster and phase order are transposed |
 | the reader finds at least one absence nobody knew about | **hypothesis (H3)** | run it against the committed ledger |
 
 ## 8. Preregistered measurement
 
-- **H1** — the 585 fall into few authors. **Null is a result:** if they fall
-  into many, or into "no author" in bulk, then §4's assertion 3 is a much larger
-  deletion than this spec assumes and the campaign should stop and re-present.
+- **H1 — CONFIRMED, and its headline count falsified in the same breath.** The
+  residual is **132**, not the 585 this spec asserted, and those 132 resolve
+  into four authors: heavy-active (2), heavy-demoted-to-manual (3), frozen
+  one-off study runs (110), and hand-written prose (17). The prediction that
+  they fall into few authors held. The number attached to it did not, and the
+  distinction matters: a hypothesis can be confirmed by a measurement that also
+  refutes the figure used to motivate it.
 - **H2 is withdrawn, not tested.** It asked whether derivation was fast enough,
   which was the wrong question: derivation is wrong at any speed, because the
   roster does not encode phase order and the order is load-bearing. The
