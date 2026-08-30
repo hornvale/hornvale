@@ -131,6 +131,45 @@ of `.superpowers/sdd/progress.md` and stops applying to the new path.
 which remains correct for the up-to-3.4 MB of regenerable diffs that stay
 there. Only its stated *rationale* narrows.
 
+## 4a. TWO ledgers, two owners — found at plan time, and it reshapes §3
+
+The plan-writing pass established something this spec did not know: there are
+**two** ledgers, with different owners and different editability.
+
+```
+  decision-ledger.md   rulings, Q entries, ideonomy passes
+                       defined by .claude/skills/campaign-autopilot/ -- IN THIS REPO
+
+  progress.md          task state, fix rounds, deferred minors, parked findings
+                       defined by the VENDORED superpowers plugin at
+                       ~/.claude/plugins/cache/.../superpowers/6.3.0/ -- NOT in this repo
+```
+
+**A campaign cannot change where the plugin writes**, and a local edit to a
+versioned plugin path would be overwritten by the next plugin update. So §11's
+"update `subagent-driven-development`'s workspace resolution" is not a task
+this repository can perform, and the material lost in The Attestation — the
+deferred minors and parked findings — lived in exactly that file.
+
+**The resolution is better than the original framing, and does not involve
+mirroring.** Copying from scratch to durable at intervals would reintroduce the
+manual copy this whole campaign exists to remove.
+
+Instead: **the committed ledger is the PRIMARY home for the durable kinds, from
+the start.** Rulings, deferred minors and parked findings are written to
+`docs/superpowers/ledgers/<slug>.md` when they occur, by the controller, per
+the in-repo skills that this campaign *can* edit (`campaign-autopilot`,
+`closing-a-campaign`, `dispatching-hornvale-subagents`).
+
+The plugin's `progress.md` keeps its own separate job — resume-after-
+compaction and task state — and stays scratch. That is correct rather than a
+compromise: **its purpose does not need to survive worktree recycling**, because
+a recycled worktree means the campaign is over, and its task-completion lines
+are recoverable from `git log` regardless.
+
+So nothing is mirrored and nothing is copied. Two artifacts, two jobs, one of
+them durable.
+
 ## 5. The check, and what it cannot see
 
 A ledger nobody writes is worse than one that dies, because it looks like a
@@ -214,7 +253,9 @@ three-valued honesty `tropes check` and type-audit's `waiver(...)` carry.
    the campaign uses its own deliverable from task 1 onward.
 2. Supersede the hook comment and `CLAUDE.md`'s sentence, visibly.
 3. The ratchet check, with its exemption mechanism and its stated blindness.
-4. Update `closing-a-campaign` and `subagent-driven-development`'s workspace
-   resolution to write the ledger to the committed path.
+4. Update the IN-REPO skills (`campaign-autopilot`, `closing-a-campaign`,
+   `dispatching-hornvale-subagents`) so the durable kinds are written to the
+   committed ledger when they occur. The vendored plugin is not editable and
+   is not touched — see §4a.
 5. H1: recycle a worktree mid-campaign and read the ledger back.
 6. Artifacts, book, chronicle, retrospective, decisions, registry.
