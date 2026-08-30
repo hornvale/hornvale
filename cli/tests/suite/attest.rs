@@ -6,13 +6,25 @@
 //!
 //! # DIRECTION EACH CHECK ENFORCES
 //!
-//! - `a_job_missing_an_owed_phase_is_reported` — owed-but-absent: a job
-//!   whose rows never carry a phase the roster's `stage` rung owes it.
+//! - `a_job_missing_an_unconditionally_owed_phase_is_reported` —
+//!   owed-but-absent: a job whose rows never carry a phase with no
+//!   legitimate reason to be missing.
 //! - `a_job_carrying_an_unowed_phase_is_reported` — present-but-unowed, the
 //!   MIRROR direction. Together these are the both-directions pair The
 //!   Attestation's own thesis requires (§1.1): a reader that only reported
 //!   absences would be exactly the one-sided check this campaign exists to
 //!   correct, committed by the campaign's own instrument.
+//! - `a_job_missing_only_a_conditionally_droppable_phase_is_undetermined_not_owed_but_absent`
+//!   — THE REGRESSION TEST FOR A CRITICAL FOUND BY REVIEW. An earlier
+//!   version of this reader treated every stage-rung phase as
+//!   unconditionally owed and reported five real, prose-only-narrowed
+//!   chamber jobs as confident "owed but absent: clients" false positives
+//!   on its first run against the committed ledger —
+//!   `scripts/sluice-phases.sh` legitimately drops `clients` (and `heavy`,
+//!   and `seam-guard`) when every changed path is hand-written prose, and
+//!   the ledger alone cannot tell that apart from a real defect. This test
+//!   reproduces the exact false-positive shape and asserts the fix: such a
+//!   job is `undetermined`, never `owed_but_absent`.
 //! - `an_author_with_no_canonical_row_is_reported_*` — a declared roster
 //!   author with no `sluice:<author>` row anywhere in the ledger is
 //!   reported, alongside the most recent BARE `<author>` row if one exists
@@ -51,10 +63,50 @@ fn row(when: &str, label: &str) -> String {
 }
 
 #[test]
-fn a_job_missing_an_owed_phase_is_reported() {
-    // A stage job's rows stop after `gate` — no `sluice:clients` row at
-    // all, the exact shape found five times in the real committed ledger
-    // (2026-08-23 x3, 2026-08-24, 2026-08-28).
+fn a_job_missing_an_unconditionally_owed_phase_is_reported() {
+    // `outboard` has no legitimate reason to be missing -- it is not in
+    // CONDITIONALLY_DROPPABLE, unlike `clients` (see the regression test
+    // below). A job whose rows stop after `artifacts` and jump to `gate`
+    // has no excuse for the gap.
+    let timings = format!(
+        "{}{}{}",
+        row("2026-08-01T00:00:00Z", "sluice:artifacts"),
+        row("2026-08-01T00:02:00Z", "sluice:gate"),
+        row("2026-08-01T00:03:00Z", "sluice:clients"),
+    );
+    let declared = "book/src/gallery/\tartifacts\n";
+    let report = attest_report(&timings, ROSTER, declared);
+
+    assert_eq!(report.owed_but_absent.len(), 1);
+    assert_eq!(
+        report.owed_but_absent[0].phases,
+        vec!["outboard".to_string()]
+    );
+    assert_eq!(report.owed_but_absent[0].started_at, "2026-08-01T00:00:00Z");
+    assert_eq!(report.owed_but_absent[0].ended_at, "2026-08-01T00:03:00Z");
+    assert!(
+        report.present_but_unowed.is_empty(),
+        "a missing phase must not also read as an unowed one"
+    );
+    assert!(
+        report.undetermined.is_empty(),
+        "a genuinely-owed absence must not also read as merely undetermined \
+         when the conditionally-droppable phase is itself present: got {:?}",
+        report.undetermined
+    );
+}
+
+#[test]
+fn a_job_missing_only_a_conditionally_droppable_phase_is_undetermined_not_owed_but_absent() {
+    // THE CRITICAL, REPRODUCED. A job's rows stop after `gate` -- no
+    // `sluice:clients` row at all -- the EXACT shape found five times in
+    // the real committed ledger (2026-08-23 x3, 2026-08-24, 2026-08-28).
+    // All five were confirmed prose-only candidates by the reviewer
+    // (`scripts/sluice-phases.sh` dropped `clients` deliberately; `rc=0`,
+    // empty `phase_failed`, "PROSE-ONLY candidate ... phases now: artifacts
+    // outboard gate" in each job's own log) -- not defects. The ledger
+    // alone cannot distinguish this from a real absence, so the honest
+    // claim is `undetermined`, never a confident `owed_but_absent`.
     let timings = format!(
         "{}{}{}",
         row("2026-08-01T00:00:00Z", "sluice:artifacts"),
@@ -64,17 +116,35 @@ fn a_job_missing_an_owed_phase_is_reported() {
     let declared = "book/src/gallery/\tartifacts\n";
     let report = attest_report(&timings, ROSTER, declared);
 
+    assert!(
+        report.owed_but_absent.is_empty(),
+        "a conditionally-droppable phase's absence must never be reported as a \
+         confident owed-but-absent defect: got {:?}",
+        report.owed_but_absent
+    );
+    assert_eq!(report.undetermined.len(), 1);
+    assert_eq!(report.undetermined[0].phases, vec!["clients".to_string()]);
+    assert_eq!(report.undetermined[0].started_at, "2026-08-01T00:00:00Z");
+    assert_eq!(report.undetermined[0].ended_at, "2026-08-01T00:02:00Z");
+    assert!(render_report(&report).contains("Undetermined"));
+}
+
+#[test]
+fn a_job_can_be_both_owed_but_absent_and_undetermined_at_once() {
+    // The two categories are computed independently, so a thoroughly broken
+    // job (missing BOTH an unconditional and a conditional phase) must
+    // report both, not just the more severe one.
+    let timings = row("2026-08-01T00:00:00Z", "sluice:artifacts");
+    let declared = "book/src/gallery/\tartifacts\n";
+    let report = attest_report(&timings, ROSTER, declared);
+
     assert_eq!(report.owed_but_absent.len(), 1);
     assert_eq!(
         report.owed_but_absent[0].phases,
-        vec!["clients".to_string()]
+        vec!["gate".to_string(), "outboard".to_string()]
     );
-    assert_eq!(report.owed_but_absent[0].started_at, "2026-08-01T00:00:00Z");
-    assert_eq!(report.owed_but_absent[0].ended_at, "2026-08-01T00:02:00Z");
-    assert!(
-        report.present_but_unowed.is_empty(),
-        "a missing phase must not also read as an unowed one"
-    );
+    assert_eq!(report.undetermined.len(), 1);
+    assert_eq!(report.undetermined[0].phases, vec!["clients".to_string()]);
 }
 
 #[test]

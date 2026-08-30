@@ -55,18 +55,68 @@
 //!    `sluice:seam-guard` rows are real examples of this, predating that
 //!    split; they are not evidence of a defect at the time they were
 //!    written.
+//! 4. **A CRITICAL FOUND BY REVIEW, FIXED HERE: `stage`-rung membership is
+//!    NOT the whole owed set, because the chamber narrows it per candidate.**
+//!    `scripts/sluice-phases.sh` drops `clients` (and `heavy`, and
+//!    `seam-guard`) from a job's phase list when every changed path is
+//!    hand-written prose (`docs/**`, `book/src/chronicle/**`,
+//!    `book/src/frontier/**`, `book/src/open-questions.md`,
+//!    `book/src/SUMMARY.md`) — a real, deliberate optimisation
+//!    (`sluice-phases.sh`'s own header measures 88% of a merge's wall time
+//!    going to three phases a prose change cannot observe). An earlier
+//!    version of this reader treated `clients` as unconditionally owed by
+//!    every stage-rung job and reported five real, prose-only-narrowed jobs
+//!    as "owed but absent" on its first run against the committed ledger —
+//!    confirmed false positives (`rc=0`, empty `phase_failed`, the literal
+//!    `PROSE-ONLY candidate … phases now: artifacts outboard gate` line in
+//!    each job's own log) and exactly the defect this campaign exists to
+//!    remove, committed by the instrument built to detect it.
+//!
+//!    **This cannot be reproduced faithfully from the ledger alone, and this
+//!    reader does not try.** Telling a legitimate prose-only narrowing apart
+//!    from a real defect requires knowing which paths the candidate touched,
+//!    which requires the git history around the commit that triggered the
+//!    job — information no `docs/timings.md` row carries. Two independent
+//!    reasons rule out reconstructing it from the ledger's own `commit`
+//!    column, not just cost: first, [`attest_report`] is deliberately pure
+//!    (no filesystem, no git, no clock — the whole point is that every test
+//!    is a string literal); second, even with git access the ledger's
+//!    `commit` column names the tree AT EACH PHASE'S OWN EXECUTION, and
+//!    blind spot 2 above already establishes that a job's rows do not
+//!    reliably share one commit (`artifacts` regenerates and commits
+//!    mid-job) — so there is no single, trustworthy "the commit this job
+//!    tested" to diff against its parent even in principle.
+//!
+//!    So `clients` is downgraded from unconditionally owed to
+//!    **conditionally owed**: [`CONDITIONALLY_DROPPABLE`] names it (plus
+//!    `heavy` and `seam-guard`, mirrored from `sluice-phases.sh`'s own
+//!    `grep -vxE 'seam-guard|clients|heavy'`, for documentation fidelity,
+//!    even though the other two never reach this list in practice — `heavy`
+//!    is already excluded from the stage-rung owed set by blind spot 1, and
+//!    `seam-guard` was never stage/merge-rung to begin with). A job missing
+//!    a conditionally-owed phase is reported in
+//!    [`Report::undetermined`], honestly, as **"cannot verify from the
+//!    ledger alone whether this is a legitimate prose-only narrowing or a
+//!    real absence"** — never folded into `owed_but_absent`, which is now
+//!    reserved for phases with no legitimate reason to be missing.
 //!
 //! # The two checks, and why they are not the same shape
 //!
-//! **Job/phase coverage** (`owed_but_absent` / `present_but_unowed`) reads
-//! only `timings` and `roster`; `declared` plays no part. It diffs, per job,
-//! the roster's `stage`-rung set names (always owed, in both stage and merge
-//! jobs) against the phases the job's own rows actually carry — in both
-//! directions, so a phase silently dropped and a phase nothing rostered
-//! surface the same way. This is the direction pair the campaign's own
-//! thesis requires: a reader reporting only absences would be exactly the
-//! one-sided check `cli/tests/suite/lane_sets.rs` was found lacking (The
-//! Attestation, §1.1).
+//! **Job/phase coverage** (`owed_but_absent` / `present_but_unowed` /
+//! `undetermined`) reads only `timings` and `roster`; `declared` plays no
+//! part. The owed set is derived from TWO sources, not one, and the second
+//! is conditional (blind spot 4 above): the roster's `stage`-rung set names,
+//! MINUS [`CONDITIONALLY_DROPPABLE`] (currently just `clients`, since
+//! `heavy` and `seam-guard` are already out of the stage set for other
+//! reasons) is **unconditionally owed** and diffed against the job's phases
+//! in both directions — a phase silently dropped and a phase nothing
+//! rostered surface the same way, the direction pair the campaign's own
+//! thesis requires (a reader reporting only absences would be exactly the
+//! one-sided check `cli/tests/suite/lane_sets.rs` was found lacking, The
+//! Attestation §1.1). `CONDITIONALLY_DROPPABLE`'s own stage-rung members are
+//! **conditionally owed**: missing from a job, they are reported as
+//! `undetermined`, not `owed_but_absent` — a claim this reader can actually
+//! stand behind, rather than a confident one it cannot.
 //!
 //! **Author freshness** (`absent_authors`) reads `declared` and `timings`;
 //! `roster` plays no part beyond having already named the three values
@@ -234,6 +284,18 @@ fn group_jobs(rows: &[TimingRow]) -> Vec<Vec<usize>> {
     jobs
 }
 
+/// The phases `scripts/sluice-phases.sh` drops from a job's phase list when
+/// every changed path in the candidate is hand-written prose — mirrored,
+/// for documentation fidelity, from that script's own
+/// `grep -vxE 'seam-guard|clients|heavy'`. See the module doc's blind spot
+/// 4 for why this reader cannot decide, from `timings`/`roster` alone,
+/// whether a missing member of this set is a legitimate prose-only
+/// narrowing or a real absence — only `clients` currently matters to that
+/// decision (it is the only member that is also `stage`-rung; `heavy` and
+/// `seam-guard` are excluded from the per-job owed set for the separate
+/// reasons blind spots 1 and (implicitly) the merge-only rung already give).
+const CONDITIONALLY_DROPPABLE: &[&str] = &["seam-guard", "clients", "heavy"];
+
 /// A declared path's author, per `docs/generated-paths.txt` (Task 5, The
 /// Attestation): either a roster set name, or a declared absence carrying
 /// its reason.
@@ -290,8 +352,8 @@ fn parse_declared(text: &str) -> Vec<(String, DeclaredAuthor)> {
 }
 
 /// One job's phase-coverage anomaly: which phases were missing (an
-/// `owed_but_absent` entry) or present without being owed (a
-/// `present_but_unowed` entry), and when that job ran.
+/// `owed_but_absent` or `undetermined` entry) or present without being
+/// owed (a `present_but_unowed` entry), and when that job ran.
 /// type-audit: bare-ok(identifier-text: started_at), bare-ok(identifier-text: ended_at), bare-ok(identifier-text: phases)
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct JobFinding {
@@ -300,8 +362,8 @@ pub struct JobFinding {
     /// The `when (UTC)` of the job's last ledger row. Equal to
     /// `started_at` for a one-phase job.
     pub ended_at: String,
-    /// The phase names implicated — missing for `owed_but_absent`, observed
-    /// without being owed for `present_but_unowed`.
+    /// The phase names implicated — missing for `owed_but_absent` and
+    /// `undetermined`, observed without being owed for `present_but_unowed`.
     pub phases: Vec<String>,
 }
 
@@ -329,10 +391,18 @@ pub struct AuthorAbsence {
 /// type-audit: bare-ok(count: declared_none_count)
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Report {
-    /// Jobs missing a phase the roster's `stage` rung owes them.
+    /// Jobs missing a phase that is **unconditionally** owed — a stage-rung
+    /// phase with no legitimate reason to be missing (the roster's `stage`
+    /// set, minus [`CONDITIONALLY_DROPPABLE`]).
     pub owed_but_absent: Vec<JobFinding>,
     /// Jobs carrying a phase no rung implies they should run.
     pub present_but_unowed: Vec<JobFinding>,
+    /// Jobs missing a **conditionally** owed phase (currently just
+    /// `clients`) — this reader cannot tell, from `timings` and `roster`
+    /// alone, whether that absence is a legitimate prose-only narrowing
+    /// (`scripts/sluice-phases.sh`) or a real defect, so it makes no claim
+    /// either way. See the module doc's blind spot 4.
+    pub undetermined: Vec<JobFinding>,
     /// Declared roster authors with no `sluice:<author>` row anywhere in the
     /// ledger.
     pub absent_authors: Vec<AuthorAbsence>,
@@ -352,12 +422,25 @@ pub fn attest_report(timings: &str, roster: &str, declared: &str) -> Report {
     let roster_rows = parse_roster(roster);
     let stage = stage_phase_names(&roster_rows);
     let merge = merge_phase_names(&roster_rows);
+    // `clients` is the only member of CONDITIONALLY_DROPPABLE that is also
+    // stage-rung; `heavy` and `seam-guard` are already outside `stage` for
+    // the separate reasons the module doc's blind spots 1 and 3 give, so
+    // subtracting the whole set is equivalent to subtracting `clients` alone
+    // against today's roster but stays correct if that ever changes.
+    let conditionally_owed: BTreeSet<String> = stage
+        .iter()
+        .filter(|p| CONDITIONALLY_DROPPABLE.contains(&p.as_str()))
+        .cloned()
+        .collect();
+    let unconditionally_owed: BTreeSet<String> =
+        stage.difference(&conditionally_owed).cloned().collect();
 
     let rows = parse_timings(timings);
     let jobs = group_jobs(&rows);
 
     let mut owed_but_absent = Vec::new();
     let mut present_but_unowed = Vec::new();
+    let mut undetermined = Vec::new();
 
     for job in &jobs {
         let phases: BTreeSet<String> = job
@@ -375,12 +458,21 @@ pub fn attest_report(timings: &str, roster: &str, declared: &str) -> Report {
             .when
             .clone();
 
-        let missing: Vec<String> = stage.difference(&phases).cloned().collect();
+        let missing: Vec<String> = unconditionally_owed.difference(&phases).cloned().collect();
         if !missing.is_empty() {
             owed_but_absent.push(JobFinding {
                 started_at: started_at.clone(),
                 ended_at: ended_at.clone(),
                 phases: missing,
+            });
+        }
+
+        let undecided: Vec<String> = conditionally_owed.difference(&phases).cloned().collect();
+        if !undecided.is_empty() {
+            undetermined.push(JobFinding {
+                started_at: started_at.clone(),
+                ended_at: ended_at.clone(),
+                phases: undecided,
             });
         }
 
@@ -428,6 +520,7 @@ pub fn attest_report(timings: &str, roster: &str, declared: &str) -> Report {
     Report {
         owed_but_absent,
         present_but_unowed,
+        undetermined,
         absent_authors,
         declared_none_count,
     }
@@ -443,9 +536,10 @@ pub fn render_report(report: &Report) -> String {
 
     if report.owed_but_absent.is_empty()
         && report.present_but_unowed.is_empty()
+        && report.undetermined.is_empty()
         && report.absent_authors.is_empty()
     {
-        out.push_str("No anomalies: every job's rows cover its owed phases, no job carries an unowed phase, and every declared roster author has a canonical `sluice:<author>` row.\n");
+        out.push_str("No anomalies: every job's rows cover its unconditionally owed phases, no job carries an unowed phase, every conditionally owed phase that is missing is accounted for, and every declared roster author has a canonical `sluice:<author>` row.\n");
     }
 
     if !report.owed_but_absent.is_empty() {
@@ -453,6 +547,22 @@ pub fn render_report(report: &Report) -> String {
         for f in &report.owed_but_absent {
             out.push_str(&format!(
                 "- job {}..{}: missing {}\n",
+                f.started_at,
+                f.ended_at,
+                f.phases.join(", ")
+            ));
+        }
+        out.push('\n');
+    }
+
+    if !report.undetermined.is_empty() {
+        out.push_str(
+            "## Undetermined (cannot verify from the ledger alone)\n\n\
+A missing phase here may be a legitimate prose-only narrowing (scripts/sluice-phases.sh) or a real absence -- telling them apart needs the candidate's touched paths, which this reader does not have.\n\n",
+        );
+        for f in &report.undetermined {
+            out.push_str(&format!(
+                "- job {}..{}: missing {} (conditionally owed)\n",
                 f.started_at,
                 f.ended_at,
                 f.phases.join(", ")
