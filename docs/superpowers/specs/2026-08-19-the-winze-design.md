@@ -781,3 +781,68 @@ the gallery rather than settled permanently here.
 
 **Not a defect, and specifically not this campaign's defect to fix.** If the
 lane geometry is wrong, it is wrong for daughters, raids and tribute first.
+
+## E.8 The hazard's CLOCK decides whether §5.2 can be measured at all
+
+Task 4's finding, and the campaign's most consequential one. §4.3 says *"each
+increment of delving carries a small probability of breaching"* and never says
+what an increment is. The plan offered "uniform per increment" and the obvious
+reading of the bake's own idiom is **per epoch** — every other rate in
+`history_bake.rs` is per epoch.
+
+**Per epoch would have produced §5.2's null by construction, and Task 5 would
+have published it as a discovery.**
+
+Breach and the ordinary ends are competing risks in time. With a constant
+per-epoch breach probability `p` and a constant per-epoch ordinary-end
+probability `q`, the time to *any* end is geometric in `(p + q)`, and given an
+end at epoch `t`, the probability it was a breach is `p / (p + q)` —
+**independent of `t`**. The two groups therefore share a tenure distribution;
+depth accrues with tenure; so the two groups share a depth distribution,
+exactly. §5.2's first branch — *"breached and ordinary distributions are
+indistinguishable → the survivorship claim is FALSE and the mechanism is
+decoration"* — would have fired with mathematical certainty, on a mechanism
+that had never been given a chance to produce the effect.
+
+**Clocked per metre, the effect is real and nothing selects on depth.**
+
+```
+P(breach this epoch) = 1 - exp(-metres_cut_this_epoch / BREACH_FREE_PATH_M)
+```
+
+Integrated over a working's life this is `1 - exp(-depth / 3000)` — an
+exponential in *depth* — while the rule evaluated at any one epoch reads only
+**metres cut that epoch**, a local quantity. Two workings cutting 100 m this
+epoch face the identical hazard whether one stands at 50 m and the other at
+3,000 m. Depth appears nowhere in the rule, and the survivorship shape is
+therefore an output, exactly as §4.3 requires.
+
+**Why this is not the threshold design in disguise**, since it is the nearest
+this campaign has come to it: a threshold *places* wounds at depth — depth is
+the cause. Here digging is the cause and depth and breach are both its
+consequences, which is precisely Nathan's inversion of 2026-08-19 (*"a place is
+deep because a wound stopped the digging there"*). The correlation between
+depth and breach is the mechanism working, not a rule reading a depth.
+
+Measured, pooled over E.4.2's extended panel: breached median **569.1 m**
+against ordinary **31.1 m**, with overlap in both directions — 18 of 26
+breaches fall below the deepest ordinary end, and 56 of 96 ordinary ends above
+the shallowest breach. That is §5.2's *"breached are deeper, with overlap"*
+branch, and the overlap is what distinguishes it from the third branch's
+warning that perfect separation would indicate a threshold in disguise.
+
+**The constant is read off terrain, not chosen.**
+`BREACH_FREE_PATH_M = 3000.0` is `hornvale_terrain::cave_depth::CAVE_REACH_CEILING_M`
+— the declared depth of the world's void-bearing crust. The claim it encodes:
+*a working that cuts through the entire void-bearing column has, on average,
+found something.* Survival across that whole window is `1/e ≈ 37%`; an
+ordinary-depth working is under 1%. Written as a literal rather than a
+reference, following `ORE_CUT`'s idiom, so that a terrain recalibration cannot
+silently re-roll every world's history.
+
+**The general lesson, which outlives this campaign:** when a preregistered
+comparison is between two sub-populations of one process, *the clock the
+process runs on can determine the answer before any data exists*. Ask what
+distribution the mechanism implies under each candidate clock, and if one of
+them makes the preregistered null a theorem, that clock is not a modelling
+choice — it is a way of not running the experiment.
