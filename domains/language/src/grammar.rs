@@ -4536,6 +4536,62 @@ mod tests {
         );
     }
 
+    /// **The Quoin, Task 3, `verbless-clause` (r171) — a FINDING, not a
+    /// build.** A zero-copula tongue already predicates with no verb at all
+    /// for `Valence::Nominal`, and needed no new code: `tongue_verb`'s
+    /// `Nominal` arm has read `grammar.copula.as_ref().map(...)` since
+    /// before this campaign, so `copula: None` was already `Ok(None)`
+    /// there, and `realize_tongue_with_subject` already orders an absent
+    /// verb by simply not placing one (see `realize_tongue_orders_and_
+    /// copula`'s own `zero_copula` case, unchanged by this task). This test
+    /// states that explicitly, for `r171`'s own record, rather than leaving
+    /// it an unremarked side effect of an older task.
+    ///
+    /// **This is NOT the tongue path for `r171`'s own witness.** The witness
+    /// this campaign builds (`ladder_construction`'s `"r171"` arm, in
+    /// `cli/tests/suite/sentence_corpus.rs`) predicates at `Valence::
+    /// Locative` (`UNDER`), and the tongue path GAPS there regardless of
+    /// whether a copula is drawn — `a_tongue_gaps_a_locative_predication`
+    /// already pins that, for the unrelated "only one verb-slot seat"
+    /// reason `tongue_verb`'s own `Locative` arm documents. So
+    /// `verbless-clause` is Common-only for the construction its own
+    /// witness exercises (spec's Common-only posture, the same one
+    /// `property-predication` and `locative-predication` already take) —
+    /// not because zero-copula predication itself is unavailable to a
+    /// tongue; it plainly is, for `Nominal`, and always has been.
+    #[test]
+    fn a_zero_copula_tongue_already_predicates_without_a_verb() {
+        let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
+        let word = match lex.entry("goblin-kind").unwrap() {
+            LexEntry::Root { views, .. } => views.roman.clone(),
+            other => panic!("goblin-kind should be a root, got {other:?}"),
+        };
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Concept("goblin-kind".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: vec![],
+        };
+        let zero_copula = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: None,
+            copula_segments: None,
+            articles: false,
+            subordinator: None,
+            conjunction: None,
+            interrogative: None,
+        };
+        assert_eq!(
+            realize_tongue(&clause, &zero_copula, &lex, &no_pronouns()).unwrap(),
+            format!("Vavako {word}.")
+        );
+    }
+
     /// The verb lexicalizes through the tongue's OWN lexicon, and gaps the
     /// whole clause when that people has no word for the act (spec §4:
     /// render fully or gap entirely). The object is known here, so a partial

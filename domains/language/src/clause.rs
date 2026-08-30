@@ -1110,6 +1110,18 @@ fn verb_surface(
 /// `know` are one `Transitive` between them, adding no variant. If a future
 /// campaign finds itself adding a variant per predicate, it has rebuilt
 /// `Frame` and should stop.
+///
+/// **The Quoin's `verbless-clause` (r171) pressed on this closure directly,
+/// and did not need a sixth variant.** Zero-copula predication looks at
+/// first glance like a new argument structure, but it isn't one — it
+/// removes the copula from whichever of [`Valence::Nominal`],
+/// [`Valence::Property`] or [`Valence::Locative`] a predicate already has,
+/// which is a fact about the SURFACE, not about what the predicate relates.
+/// [`realize_common_verbless`] reads this enum exactly as [`realize_common`]
+/// does (through [`common_constructions`]) and only then strips the copula
+/// from the part list it gets back — a transformation over a clause's own
+/// construction, the same shape [`realize_common_polar_question`] already
+/// has for force, one axis over.
 /// type-audit: bare-ok(identifier-text)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Valence {
@@ -1366,6 +1378,16 @@ pub struct Construction {
 /// break the render, not recompile cleanly and panic on every gallery page;
 /// `EAT` lives in this crate's `packs.rs` because that is what registers the
 /// concept.
+///
+/// **A predicate gets exactly ONE row here, still — a verbless reading is
+/// COMPUTED from it, never a second row.** [`realize_common_verbless`]
+/// (The Quoin, Task 3) looks a predicate's construction up through this same
+/// function and then strips its copula out at call time; it does not add a
+/// `(predicate, "verbless")` entry to this table, which would be exactly the
+/// re-keying decision 0326 already refused for `know`. So a predicate that
+/// gains a verbless reading gains no second row and no second `Valence` —
+/// the transformation lives beside [`realize_common_polar_question`]'s own
+/// force operator, not here.
 /// type-audit: bare-ok(identifier-text)
 pub fn common_constructions() -> &'static [Construction] {
     const CLASSIFY: &[Part] = &[
@@ -1470,6 +1492,19 @@ pub fn common_constructions() -> &'static [Construction] {
 /// candidate (unreachable today, and returning an empty list rather than
 /// panicking keeps the parser's failure a [`ParseError`] rather than a
 /// crash).
+///
+/// **Still unreachable after The Quoin's `verbless-clause` (r171), and for a
+/// load-bearing reason rather than an oversight.** [`realize_common_verbless`]
+/// renders a surface with neither [`Part::Copula`] nor [`Part::Verb`], but
+/// it does so by transforming a construction's parts at CALL TIME — it never
+/// adds that stripped part list to [`common_constructions`]'s own inventory,
+/// which is exactly what this function walks. So a verbless surface
+/// contributes no candidate here either way, which is *why* parsing one
+/// fails closed with [`ParseError::NoVerbGroup`] rather than misparsing:
+/// there is no row anywhere for the search to find a partial match against.
+/// If a future campaign ever puts a verbless construction INTO the
+/// inventory this function reads, this `else` arm becomes reachable for the
+/// first time and stops being an unexercised branch.
 ///
 /// **One entry per ROW, not per distinct form — so no row is nominated
 /// "canonical" and none has to be.** The widened key (The Rail, `r011`)
@@ -2081,6 +2116,102 @@ pub fn realize_common_polar_question(clause: &Clause, vocab: &CommonVocabulary) 
         vocab,
         true,
     )
+}
+
+/// The part list [`realize_common_verbless`] renders through: a
+/// copula-bearing construction's own parts with [`Part::Copula`] — and the
+/// [`Part::Literal`]`(" ")` immediately before it — removed.
+///
+/// **A transformation over a clause's own construction, not a table row —
+/// the same shape [`invert_for_question`] already has for polar force,
+/// applied to a different axis.** [`Valence`] stays closed at five (Global
+/// Constraint 1, decision 0326): a verbless clause reuses whichever part
+/// list [`common_constructions`] already selected for the clause's own
+/// predicate rather than adding a sixth valence or re-keying
+/// [`PREDICATE_VALENCE`] on `(predicate, shape)` — refused for `know` by
+/// decision 0326, for the identical reason it is refused here.
+///
+/// **General over every copula-bearing valence, not written for one, and
+/// that generality is what keeps this an honest reading of Stassen
+/// (1997)/Hengeveld (1992) rather than a contradiction of it.** Zero-copula
+/// predication is a strategy in its own right, not "the nominal
+/// construction with its copula deleted" (r171's own corpus note is
+/// explicit that it is deliberately not filed under answer ellipsis, r166)
+/// — so this function does not hand-write a `Nominal`-only part list; it
+/// strips the copula from whichever of `CLASSIFY`, `PROPERTY` or `LOCATIVE`
+/// the predicate's own [`Valence`] selected, the same way
+/// [`invert_for_question`] inverts whichever copula-bearing construction it
+/// is handed rather than one hardcoded shape.
+///
+/// Panics if `parts` carries no [`Part::Copula`] — checked by the caller
+/// ([`realize_common_verbless`]) before this runs.
+fn strip_copula(parts: &[Part]) -> Vec<Part> {
+    let copula_at = parts
+        .iter()
+        .position(|p| *p == Part::Copula)
+        .expect("checked by the caller before this is called");
+    let mut stripped = parts.to_vec();
+    stripped.remove(copula_at);
+    // Every copula-bearing construction places a `Part::Literal(" ")`
+    // immediately before the copula (see `common_constructions`) — removed
+    // here too, so the surface has no doubled space where the copula stood.
+    if copula_at > 0 {
+        stripped.remove(copula_at - 1);
+    }
+    stripped
+}
+
+/// Realize a [`Clause`] as a Common **verbless clause** — *"the person under
+/// the tree."* — zero-copula predication (r171, `verbless-clause`), by
+/// stripping the copula out of its own construction rather than by spelling
+/// a second surface.
+///
+/// **A different STRATEGY for the same proposition, not a different
+/// proposition** — the same move [`realize_common_polar_question`]'s own
+/// doc makes for force, one axis over: that function's clause is the same
+/// proposition asked instead of asserted; this one's is the same
+/// proposition predicated with no finite verb instead of with one. Neither
+/// needs a new field on [`Clause`] or a new [`Valence`] variant, for the
+/// same reason: both are facts about HOW a predication surfaces, not about
+/// what it relates.
+///
+/// # A construction with no copula is REFUSED, loudly
+///
+/// `TRANSITIVE` and `INTRANSITIVE` carry [`Part::Verb`], never
+/// [`Part::Copula`] — their predicate IS the verb, so there is no copula to
+/// elide and no zero-copula reading of *"the guard sleeps"* that is not
+/// simply a different clause. Common has no periphrastic stand-in for a
+/// lexical verb the way English `do`-support fills one for
+/// [`realize_common_polar_question`]'s own refused case, so this function
+/// panics rather than silently doing nothing, the same fail-fast posture
+/// every refusal in this module takes for an authoring hole rather than a
+/// fact about the world.
+///
+/// # The parse direction is a stated loss
+///
+/// A verbless surface has neither a copula form nor a lexical-verb form
+/// anywhere in it, so [`parse_clause_body`]'s verb-group search returns no
+/// hit at all and reports [`ParseError::NoVerbGroup`], regardless of what a
+/// [`ParseContext`] registers — sharper than [`Valence::Locative`]'s own
+/// parse loss, which still depends on registration. See
+/// `a_verbless_clause_is_not_recovered_by_parsing` for the pin. This
+/// campaign is production-side only (spec §1.1); the loss is stated, not
+/// fixed.
+///
+/// Panics if `clause.predicate` names no construction, or if the
+/// construction it names has no [`Part::Copula`].
+/// type-audit: bare-ok(prose)
+pub fn realize_common_verbless(clause: &Clause, vocab: &CommonVocabulary) -> String {
+    let construction = common_construction_for(clause);
+    assert!(
+        construction.parts.contains(&Part::Copula),
+        "Common's verbless strategy elides a copula, and predicate {:?} has \
+         a lexical verb instead: a transitive or intransitive frame's \
+         predicate IS its verb, so there is no copula there to omit and no \
+         zero-copula reading of it",
+        clause.predicate
+    );
+    emit_parts(&strip_copula(construction.parts), clause, vocab, true)
 }
 
 /// Render a small cardinal number as an English word (`0` through `12`);
@@ -3684,6 +3815,66 @@ mod tests {
             .expect("the tie-break always favors is-a, so this resolves rather than fails");
         assert_eq!(misparsed.predicate, IS_A);
         assert_eq!(misparsed.object, Argument::Concept("under".to_string()));
+    }
+
+    /// r171 `verbless-clause`: predication with no finite verb anywhere.
+    /// Stassen (1997) and Hengeveld (1992) treat zero-copula predication as
+    /// a strategy in its own right — the ordinary present-tense form in a
+    /// great many languages — rather than as a copula deleted from
+    /// somewhere else, and the rung is DELIBERATELY not filed under answer
+    /// ellipsis (r166). So this is its own part list, not `CLASSIFY` with
+    /// `Part::Copula` removed.
+    ///
+    /// **Substitution:** the rung's text is *"A dead woman in the
+    /// marketplace, and the gate open all night."*; `dead`, `woman`,
+    /// `marketplace` and `gate` are registered nowhere. `person` and `tree`
+    /// stand in, keeping the one thing the token names — a predication with
+    /// no verb.
+    #[test]
+    fn a_verbless_clause_predicates_without_a_verb() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: UNDER.to_string(),
+            subject: Subject::Name("the person".to_string()),
+            object: Argument::Concept("tree".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(
+            realize_common_verbless(&clause, &vocab),
+            "the person under the tree."
+        );
+    }
+
+    /// **A verbless clause cannot be recovered by `parse_common` either, and
+    /// the loss is SHARPER than either `Property`'s or `Locative`'s own,
+    /// not merely a repeat of one of them.** Both of those failures still
+    /// depend on what is registered (an unregistered `old`/`under` causes
+    /// one branch of the misparse; registering it causes the other). Here
+    /// neither branch is reachable at all: a verbless surface contains no
+    /// copula form and no lexical-verb form anywhere in it — `verb_group_
+    /// forms` only ever contributes candidates for a construction carrying
+    /// `Part::Copula` or `Part::Verb` (see its own doc), and `realize_
+    /// common_verbless`'s surface carries neither — so `parse_clause_body`'s
+    /// search finds no hit at all, REGARDLESS of what `ParseContext`
+    /// registers. Pinned by value, the same discipline `a_locative_
+    /// predication_is_not_recovered_by_parsing` uses for its own two
+    /// outcomes, so the hazard is recorded rather than rediscovered by
+    /// whoever builds this rung's parse direction (spec §1.1: this campaign
+    /// is production-side).
+    #[test]
+    fn a_verbless_clause_is_not_recovered_by_parsing() {
+        assert_eq!(
+            parse_common(
+                "the person under the tree.",
+                &ctx(&["tree", "under", "person"])
+            ),
+            Err(ParseError::NoVerbGroup)
+        );
     }
 
     /// `Valence` is CLOSED at Stassen (1997)'s four intransitive predication

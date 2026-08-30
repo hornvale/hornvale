@@ -4046,3 +4046,5 @@ measured here.
 | 2026-08-29T23:45:33Z | gate-commit | 23.556 | 51.468 | 13.600 | 2.76 | 0 | 77dc20617 | campaign/the-quoin | MacBookPro | 10 |
 | 2026-08-29T23:53:00Z | gate-commit | 31.643 | 66.016 | 26.648 | 2.93 | 0 | 70c0638f5 | campaign/the-quoin | MacBookPro | 10 |
 | 2026-08-29T23:54:58Z | gate-commit | 23.977 | 51.651 | 13.397 | 2.71 | 0 | 70c0638f5 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T00:12:02Z | gate-commit | 38.163 | 29.508 | 4.540 | 0.89 | 0 | 31795593e | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T00:13:25Z | gate-commit | 55.559 | 72.447 | 25.359 | 1.76 | 0 | 31795593e | campaign/the-quoin | MacBookPro | 10 |

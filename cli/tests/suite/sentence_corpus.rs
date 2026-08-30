@@ -147,6 +147,44 @@
 //! findings table records for `existential`/`r105`); it introduces no new
 //! grammar of its own.
 //!
+//! `clause.rs::a_verbless_clause_predicates_without_a_verb` (`verbless-
+//! clause`, The Quoin, Task 3 — zero-copula predication as a strategy in
+//! its own right, Stassen (1997)/Hengeveld (1992), not answer ellipsis
+//! (`r166`) and not "the nominal construction with its copula deleted").
+//! `realize_common_verbless` strips the copula out of whichever
+//! copula-bearing valence the clause's own predicate already has
+//! (`common_construction_for`, the same lookup `realize_common_polar_
+//! question` uses) rather than adding a sixth `Valence` or re-keying
+//! `PREDICATE_VALENCE` on `(predicate, shape)` — refused for `know` by
+//! decision 0326, for the identical reason. **The parse direction is a
+//! STATED loss, pinned by value**:
+//! `clause.rs::a_verbless_clause_is_not_recovered_by_parsing` — a verbless
+//! surface has no copula and no lexical verb anywhere in it, so
+//! `parse_clause_body`'s verb-group search finds no candidate at all and
+//! reports `ParseError::NoVerbGroup` regardless of what is registered,
+//! sharper than `locative-predication`'s own parse loss, which still
+//! depends on registration. **The tongue side needed no new code, and that
+//! is a finding, not a build**: a zero-copula tongue already predicates
+//! with no verb for `Valence::Nominal` — pre-existing behaviour, now
+//! stated explicitly by
+//! `grammar.rs::a_zero_copula_tongue_already_predicates_without_a_verb`.
+//! `r171`'s own witness predicates at `Valence::Locative` instead, which
+//! still GAPS on the tongue side for the unrelated reason
+//! `locative-predication`'s own gap already pins
+//! (`grammar.rs::a_tongue_gaps_a_locative_predication`, The Rail, Task 5)
+//! — so `verbless-clause` is Common-only for the construction its own
+//! witness exercises, not because zero-copula predication is unavailable
+//! to a tongue in general. **This token moves neither corpus's headline
+//! count**: the-merchant stays 7 of 12 (no merchant entry demands
+//! `verbless-clause`) and the-ladder's frontier SHRINKS by one (`r171`
+//! itself was a frontier member with `unblocks: 0`) rather than growing —
+//! see [`the_ladder_score_and_frontier_match_the_campaigns_prediction`]'s
+//! own doc for why that shrink is the preregistered outcome, not a
+//! regression. It moves the-flood-watch's demand-instance count by
+//! exactly 28 (312 → 340 of 1128), matching `r171`'s own corpus note
+//! ("Twenty-eight instances in the flood-watch corpus") and Task 0's
+//! preregistered row.
+//!
 //! **The merchant corpus moves for the first time in four campaigns with
 //! that last token, and the entry it moves is the one to read carefully.**
 //! `polar-question` covers `m08`, taking the-merchant from 5 of 12 to
@@ -192,7 +230,7 @@ use hornvale_language::packs::{KILL, KNOW, NIGHT, OLD, SLEEP, THINK, UNDER};
 use hornvale_language::{
     Adjunct, Argument, Clause, CommonVocabulary, Coordination, Definiteness, Evidential, Number,
     Person, Polarity, Subject, Tense, realize_common, realize_common_coordination,
-    realize_common_polar_question,
+    realize_common_polar_question, realize_common_verbless,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -301,6 +339,7 @@ const IMPLEMENTED_DEMANDS: &[&str] = &[
     // The Quoin.
     "spatial-adverbial",
     "temporal-adverbial",
+    "verbless-clause",
 ];
 
 /// Whether a corpus entry states what the grammar must **parse** (a player
@@ -1873,6 +1912,16 @@ fn removing_a_rungs_introduces_token_makes_the_cross_check_notice() {
 /// `m08` or `r083` a declarative `Clause` stand-in would let the witness
 /// attest to `polar-question` while never once inverting anything, which is
 /// the identical failure this enum was introduced to prevent.
+///
+/// **The Quoin's Task 3 adds a fourth shape, on the same principle applied
+/// to a different axis.** `PolarQuestion` is the same proposition under a
+/// different FORCE; a verbless clause is the same proposition under a
+/// different STRATEGY — realized through [`realize_common_verbless`], which
+/// strips the copula out of the clause's own construction rather than
+/// inverting it. Handing `r171` a declarative `Clause` stand-in would let
+/// the witness attest to `verbless-clause` while realizing straight through
+/// [`realize_common`], copula and all — the identical failure this enum
+/// exists to prevent, one shape over.
 enum MerchantConstruction {
     /// A single clause, realized through [`realize_common`].
     Clause(Clause),
@@ -1885,6 +1934,13 @@ enum MerchantConstruction {
     /// under a different force — see that function's own doc for why force
     /// is an operator and never a field.
     PolarQuestion(Clause),
+    /// A single clause predicated with no finite verb, realized through
+    /// [`realize_common_verbless`]. It carries a bare [`Clause`] and no
+    /// wrapper type, for the same reason [`MerchantConstruction::
+    /// PolarQuestion`] does not: a verbless clause is the same proposition
+    /// under a different STRATEGY, never a different proposition — see that
+    /// function's own doc.
+    Verbless(Clause),
 }
 
 /// The [`MerchantConstruction`] this campaign builds for a covered merchant
@@ -2121,6 +2177,7 @@ fn realize_construction(construction: MerchantConstruction, vocab: &CommonVocabu
         MerchantConstruction::PolarQuestion(clause) => {
             realize_common_polar_question(&clause, vocab)
         }
+        MerchantConstruction::Verbless(clause) => realize_common_verbless(&clause, vocab),
     }
 }
 
@@ -2271,6 +2328,7 @@ const LADDER_WITNESS: &[(&str, &str)] = &[
     ("r049", "the person sleeped at night."),
     ("r067", "the person did not sleep under the tree, at night."),
     ("r083", "are you a merchant?"),
+    ("r171", "the person under the tree."),
     ("r190", "you killed them."),
 ];
 
@@ -2582,6 +2640,31 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
             polarity: Polarity::Pos,
             adjuncts: Vec::new(),
         }),
+        // "A dead woman in the marketplace, and the gate open all night."
+        // `dead`, `woman`, `marketplace` and `gate` are registered nowhere;
+        // `person` and `tree` stand in, keeping the one thing the token
+        // names — a predication with no verb. Substituted the same way
+        // `r005`'s own locative witness is (`under`/`tree` for `at`/`gate`),
+        // because a verbless clause built at `Valence::Locative` is the
+        // cheapest witness for the same reason `r005` chose it: `UNDER` is
+        // this crate's only Locative-valence predicate.
+        //
+        // It is a `Verbless`, not a `Clause`: a declarative stand-in would
+        // realize straight through `realize_common` — copula and all — and
+        // attest to `verbless-clause` without ever eliding one, the same
+        // "Clause-shaped stand-in" failure `MerchantConstruction`'s own doc
+        // forbids two shapes over.
+        "r171" => MerchantConstruction::Verbless(Clause {
+            predicate: UNDER.to_string(),
+            subject: Subject::Name("the person".to_string()),
+            object: Argument::Concept("tree".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        }),
         // "You killed her." **THE SECOND RUNG THIS TASK COVERS, AND IT IS A
         // REUSE/CONTROL RUNG** — `introduces: null`, presupposing r006
         // (transitive-frame), r011 (person-deixis) and r014 (past-tense).
@@ -2722,6 +2805,26 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
 /// `remote-past`, a token this campaign does not add. `r067` does **not**
 /// join the frontier at any point — by the time all four of its
 /// presuppositions are met, it is already covered, not merely unblocked.
+///
+/// **The Quoin, Task 3 (`verbless-clause`) covers exactly one more rung,
+/// `r171` alone, matching Task 0's preregistered row exactly: 14 → 15, no
+/// reuse/control rung riding along** — nothing else in the ladder
+/// presupposes `verbless-clause` alone the way earlier tasks' second rungs
+/// did. **The FRONTIER SHRINKS, 20 → 19, and that is the preregistered
+/// outcome, not a regression.** `r171` was itself a frontier member before
+/// this task (its own two non-introduced demands, `classify` and
+/// `property-predication`, were already covered) with `unblocks: 0` — its
+/// only dependent, `r176`, still needs three further tokens this campaign
+/// does not add (`attributive-adjective`, `comparative`, `definiteness`),
+/// none of which becomes covered here. So covering `r171` drops it off the
+/// frontier (now covered) and opens nothing behind it: no rung joins to
+/// compensate, which is exactly what Task 0's findings table predicted for
+/// a frontier rung whose `unblocks` count is zero (18 of the 20 baseline
+/// frontier rungs share that property; `wh-question`/`r085`, the rung this
+/// campaign rejected in favour of `r171`, would have shrunk the frontier
+/// identically). Per the controller ruling recorded in Task 0's findings,
+/// PREREG-3 binds at the campaign's five-token cumulative endpoint only —
+/// this single-step shrink is reported, not treated as a failure.
 #[test]
 fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
     let entries = read_derived(&repo_root().join("sentences/the-ladder.corpus.json"));
@@ -2734,7 +2837,7 @@ fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
         covered,
         vec![
             "r001", "r002", "r003", "r005", "r006", "r011", "r013", "r014", "r015", "r048", "r049",
-            "r067", "r083", "r190"
+            "r067", "r083", "r171", "r190"
         ],
         "the ladder's covered set"
     );
@@ -2742,7 +2845,7 @@ fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
         ladder_frontier(&entries),
         vec![
             "r004", "r007", "r028", "r044", "r051", "r055", "r060", "r061", "r068", "r072", "r084",
-            "r085", "r095", "r096", "r109", "r113", "r114", "r117", "r171", "r196",
+            "r085", "r095", "r096", "r109", "r113", "r114", "r117", "r196",
         ],
         "the ladder's frontier"
     );
@@ -2832,12 +2935,24 @@ fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
 /// the-flood-watch meets 22 more instances (290 → 312 of 1128), matching
 /// Task 0's preregistered row exactly, with its covered-ENTRY count still
 /// 0 of 139.
+///
+/// **The Quoin, Task 3 (`verbless-clause`) moves only the-flood-watch,
+/// matching Task 0's preregistered row exactly: 312 → 340 of 1128, +28.**
+/// the-merchant is untouched — no merchant entry demands `verbless-clause`,
+/// so it holds at 24 of 30 and 7 of 12. the-flood-watch's move is exactly
+/// `r171`'s own corpus note: *"Twenty-eight instances in the flood-watch
+/// corpus, the largest minted count after the input-surface tokens:
+/// fragmentary dialogue is built out of these"* — with its covered-ENTRY
+/// count still 0 of 139, the same conjunctive-coverage blindness every
+/// earlier task's paragraph here describes: a fragment entry needing
+/// `verbless-clause` almost always needs at least one other still-missing
+/// token too.
 #[test]
 fn demand_instance_coverage_matches_the_campaigns_prediction() {
     let merchant = read_declared(&repo_root().join("sentences/the-merchant.corpus.json"));
     assert_eq!(demand_instance_coverage(&merchant), (24, 30));
     let flood = read_declared(&repo_root().join("sentences/the-flood-watch.corpus.json"));
-    assert_eq!(demand_instance_coverage(&flood), (312, 1128));
+    assert_eq!(demand_instance_coverage(&flood), (340, 1128));
 }
 
 /// Every ladder rung scored covered realizes in Common, exactly as
