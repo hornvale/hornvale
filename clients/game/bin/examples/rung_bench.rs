@@ -171,7 +171,6 @@ fn main() {
             &empty,
             &empty,
             &[],
-            &[],
             &undiscovered,
         );
         draws.push(t0.elapsed().as_secs_f64() * 1000.0);
@@ -202,7 +201,6 @@ fn main() {
             &empty_settlements,
             &empty,
             &empty,
-            &[],
             &[],
             &undiscovered,
         );
@@ -317,7 +315,6 @@ fn main() {
             &caves,
             &empty,
             &[],
-            &[],
             &undiscovered,
         );
         feature_none.push(t0.elapsed().as_secs_f64() * 1000.0);
@@ -332,7 +329,6 @@ fn main() {
             &empty_settlements,
             &caves,
             &empty,
-            &[],
             &[],
             &all_found,
         );

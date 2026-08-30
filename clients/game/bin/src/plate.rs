@@ -340,10 +340,17 @@ pub const VOLCANO_GLYPH: char = '!';
 /// [`draw_feature_layer`]'s own doc on why a waterfall has no discovery
 /// identity to gate on. `pub` for the same integration-test reason
 /// [`VOLCANO_GLYPH`] is.
+///
+/// **A third landform, a river delta, was drawn here through fix round 1
+/// and was removed outright**: its glyph (`:`) collided with the sim's own
+/// impedance ladder (`windows/scene/src/surrounds_ascii.rs`, band 3), which
+/// cannot move (it is pinned to the sim by
+/// `the_shape_matches_the_sims_own_ascii_render`), and unlike `^` a delta
+/// and moderately rough going are unrelated referents that cannot share a
+/// binding. See `clients/game/core/src/register.rs`'s own `REGISTER` doc
+/// for the fuller rationale, including the tier spike's own finding that a
+/// third point marker read as noise rather than invitation.
 pub const WATERFALL_GLYPH: char = '|';
-/// The glyph for a river delta (Task 7). See [`WATERFALL_GLYPH`] for why
-/// this is also drawn unconditionally and also `pub`.
-pub const DELTA_GLYPH: char = ':';
 
 /// The colour claim for a discovered settlement — a warm tint distinct from
 /// both terrain colours, so a settlement reads as a different SUBSTANCE
@@ -366,9 +373,6 @@ const VOLCANO_COLOR: [u8; 3] = [220, 70, 30];
 /// [`RIVER_COLOR`], so a knickpoint reads as a distinct substance on the
 /// same channel rather than a re-tinted river cell.
 const WATERFALL_COLOR: [u8; 3] = [190, 230, 245];
-/// The colour claim for a river delta — a sediment tint, distinct from both
-/// [`RIVER_COLOR`] and the dry-land relief bands either side of it.
-const DELTA_COLOR: [u8; 3] = [195, 165, 100];
 
 /// The top fraction of settlements IN FRAME, by population, that draw
 /// [`SETTLEMENT_MAJOR_GLYPH`] rather than [`SETTLEMENT_MINOR_GLYPH`] (Task
@@ -438,7 +442,6 @@ pub fn draw(
     caves: &BTreeSet<Vertex>,
     volcanoes: &BTreeSet<Vertex>,
     waterfalls: &[Vertex],
-    deltas: &[Vertex],
     discovered: &Discovered,
 ) -> Grid {
     draw_with(
@@ -454,7 +457,6 @@ pub fn draw(
         caves,
         volcanoes,
         waterfalls,
-        deltas,
         discovered,
     )
 }
@@ -560,7 +562,7 @@ pub(crate) fn colour_allowed() -> bool {
 /// glyph at its own cell (§A3: a point site "is not in the terrain render
 /// at all," unlike a terrain-borne landmark, which draws regardless of
 /// discovery).
-#[allow(clippy::too_many_arguments)] // `index` (fix round 1: build-once-pass-in, per Nathan's ruling) pushed this to 8; Task 5's `settlements`/`discovered` push it to 10; Task 7's `volcanoes`/`waterfalls`/`deltas` push it to 13 — mirroring `hornvale_game_core::render_with`'s own allow
+#[allow(clippy::too_many_arguments)] // `index` (fix round 1: build-once-pass-in, per Nathan's ruling) pushed this to 8; Task 5's `settlements`/`discovered` push it to 10; Task 7's `volcanoes`/`waterfalls` push it to 12 — mirroring `hornvale_game_core::render_with`'s own allow
 pub fn draw_with(
     terrain: &GeneratedTerrain,
     geo: &Geosphere,
@@ -574,7 +576,6 @@ pub fn draw_with(
     caves: &BTreeSet<Vertex>,
     volcanoes: &BTreeSet<Vertex>,
     waterfalls: &[Vertex],
-    deltas: &[Vertex],
     discovered: &Discovered,
 ) -> Grid {
     // One memo for the whole plate — see this function's own doc for why
@@ -591,7 +592,6 @@ pub fn draw_with(
         caves,
         volcanoes,
         waterfalls,
-        deltas,
         discovered,
     );
     grid
@@ -774,44 +774,45 @@ fn project_onto_screen(
 ///
 /// **Draw precedence, low to high (a later kind wins a shared cell), and
 /// where it comes from (Task 7 pre-dispatch ruling AA):**
-/// waterfalls, then deltas, then volcanoes, then caves, then settlements.
-/// Caves-then-settlements is unchanged from Task 5 (`if/else` precedence
-/// carried forward as draw order). Waterfalls and deltas are new to this
-/// layer and carry no [`FeatureClass`] of their own (`GeneratedTerrain`
-/// tracks them as bare vertices, not individuated features), so they take
-/// the LOWEST rank among the new additions — a documented placement, not
-/// a derivation. Volcano is the one new kind that IS a landscape feature
-/// (`FeatureClass::Volcano`), and Nathan's ruling is explicit: use the
-/// EXISTING salience ordering rather than invent a second one.
-/// `FeatureClass::salience` puts `Volcano` at 0 — the single most specific
-/// class the landscape system has — so it sits directly below the two
-/// point-site kinds this layer already drew, ahead of the two landform
-/// kinds that have no salience of their own to consult. Real collisions
-/// between any two of these five kinds are rare in practice (measured:
-/// none in the seed 42 windows this task's own tests exercise), so this
-/// order is a documented tie-break for the case, not a load-bearing
-/// gameplay rule.
+/// waterfalls, then volcanoes, then caves, then settlements. (A river
+/// delta briefly sat between waterfalls and volcanoes here; fix round 1
+/// removed the feature outright — see [`WATERFALL_GLYPH`]'s own doc — so
+/// this order no longer names it.) Caves-then-settlements is unchanged
+/// from Task 5 (`if/else` precedence carried forward as draw order).
+/// Waterfall is new to this layer and carries no [`FeatureClass`] of its
+/// own (`GeneratedTerrain` tracks it as bare vertices, not an individuated
+/// feature), so it takes the LOWEST rank among the new additions — a
+/// documented placement, not a derivation. Volcano is the one new kind
+/// that IS a landscape feature (`FeatureClass::Volcano`), and Nathan's
+/// ruling is explicit: use the EXISTING salience ordering rather than
+/// invent a second one. `FeatureClass::salience` puts `Volcano` at 0 — the
+/// single most specific class the landscape system has — so it sits
+/// directly below the two point-site kinds this layer already drew, ahead
+/// of the landform kind that has no salience of its own to consult. Real
+/// collisions between any two of these four kinds are rare in practice
+/// (measured: none in the seed 42 windows this task's own tests exercise),
+/// so this order is a documented tie-break for the case, not a
+/// load-bearing gameplay rule.
 ///
-/// **Volcanoes are discovery-gated; waterfalls and deltas are not, and
-/// that split is deliberate, not an oversight.** A volcano is an EXTENT
-/// feature in `hornvale_terrain::landscape` — `FeatureClass::Volcano`,
-/// already wrapped as [`crate::discovery::FeatureId::Extent`] — so the
-/// SAME discovery mechanism that already fires when a possession walks
-/// onto any vertex of any landscape feature's extent
+/// **Volcanoes are discovery-gated; a waterfall is not, and that split is
+/// deliberate, not an oversight.** A volcano is an EXTENT feature in
+/// `hornvale_terrain::landscape` — `FeatureClass::Volcano`, already
+/// wrapped as [`crate::discovery::FeatureId::Extent`] — so the SAME
+/// discovery mechanism that already fires when a possession walks onto
+/// any vertex of any landscape feature's extent
 /// (`Driver::update_discovery`'s `for id in self.index.at(vertex)` loop,
 /// already shipped, untouched by this task) already records a volcano the
 /// instant its slopes are walked. This layer only had to start reading
-/// that existing fact to draw it. Waterfalls and deltas are bare
-/// `Vertex`es `GeneratedTerrain` reports (`waterfalls()`/`deltas()`) —
-/// the landscape feature system does not carry an identity for either,
-/// and the task's own interface note forbids minting a new feature enum
-/// to give them one. Rather than invent that identity, they draw as
-/// GROUND TRUTH, unconditionally — the same epistemic status the relief
-/// and water ladders already have (a river or a mountain range is never
-/// gated on "has this been discovered", so a knickpoint or a river mouth
-/// on that same channel is not either). This is a judgement call flagged
-/// for review, not a claim that the design space has only one right
-/// answer here.
+/// that existing fact to draw it. A waterfall is a bare `Vertex`
+/// `GeneratedTerrain` reports (`waterfalls()`) — the landscape feature
+/// system does not carry an identity for it, and the task's own interface
+/// note forbids minting a new feature enum to give it one. Rather than
+/// invent that identity, it draws as GROUND TRUTH, unconditionally — the
+/// same epistemic status the relief and water ladders already have (a
+/// river or a mountain range is never gated on "has this been
+/// discovered", so a knickpoint on that same channel is not either). This
+/// is a judgement call flagged for review, not a claim that the design
+/// space has only one right answer here.
 ///
 /// **`pub` rather than `pub(crate)` for the same reason
 /// [`terrain_at_tile`] is** (Task 3): `examples/rung_bench.rs` is a separate
@@ -830,7 +831,6 @@ pub fn draw_feature_layer(
     caves: &BTreeSet<Vertex>,
     volcanoes: &BTreeSet<Vertex>,
     waterfalls: &[Vertex],
-    deltas: &[Vertex],
     discovered: &Discovered,
 ) {
     let width = u32::from(dst.width());
@@ -861,10 +861,9 @@ pub fn draw_feature_layer(
         .map(|&(vertex, _)| vertex)
         .collect();
 
-    // `gate`: `None` draws unconditionally (ground truth — waterfalls and
-    // deltas); `Some(id)` draws only when `discovered` already carries
-    // `id` (a point site or an extent feature — caves, settlements,
-    // volcanoes).
+    // `gate`: `None` draws unconditionally (ground truth — waterfalls);
+    // `Some(id)` draws only when `discovered` already carries `id` (a
+    // point site or an extent feature — caves, settlements, volcanoes).
     let place =
         |vertex: Vertex, gate: Option<FeatureId>, glyph: char, color: [u8; 3], grid: &mut Grid| {
             if let Some(id) = gate
@@ -889,9 +888,6 @@ pub fn draw_feature_layer(
 
     for &vertex in waterfalls {
         place(vertex, None, WATERFALL_GLYPH, WATERFALL_COLOR, dst);
-    }
-    for &vertex in deltas {
-        place(vertex, None, DELTA_GLYPH, DELTA_COLOR, dst);
     }
     for &vertex in volcanoes {
         let id = FeatureId::Extent(LandscapeFeatureId {
@@ -1556,7 +1552,6 @@ mod tests {
             &BTreeSet::new(),
             &BTreeSet::new(),
             &[],
-            &[],
             &Discovered::default(),
         );
         let narrow = draw_with(
@@ -1571,7 +1566,6 @@ mod tests {
             &BTreeMap::new(),
             &BTreeSet::new(),
             &BTreeSet::new(),
-            &[],
             &[],
             &Discovered::default(),
         );
@@ -1653,7 +1647,6 @@ mod tests {
             &both_settlements,
             &both_caves,
             &BTreeSet::new(),
-            &[],
             &[],
             &discovered,
         );
@@ -1739,7 +1732,6 @@ mod tests {
             &caves,
             &BTreeSet::new(),
             &[],
-            &[],
             &discovered,
         );
 
@@ -1776,7 +1768,6 @@ mod tests {
             &empty_settlements,
             &BTreeSet::new(), // no caves: this test's subject is terrain/colour
             &BTreeSet::new(),
-            &[],
             &[],
             &empty_discovered,
         );
@@ -1819,7 +1810,6 @@ mod tests {
             &BTreeSet::new(), // no caves: this test's subject is terrain/colour
             &BTreeSet::new(),
             &[],
-            &[],
             &empty_discovered,
         );
         let mono = draw_with(
@@ -1834,7 +1824,6 @@ mod tests {
             &empty_settlements,
             &BTreeSet::new(), // no caves: this test's subject is terrain/colour
             &BTreeSet::new(),
-            &[],
             &[],
             &empty_discovered,
         );
@@ -2215,7 +2204,6 @@ mod tests {
             &caves,
             &BTreeSet::new(),
             &[],
-            &[],
             &undiscovered,
         );
         assert_ne!(
@@ -2238,7 +2226,6 @@ mod tests {
             &settlements,
             &caves,
             &BTreeSet::new(),
-            &[],
             &[],
             &discovered,
         );
@@ -2329,7 +2316,6 @@ mod tests {
             &caves,
             &BTreeSet::new(),
             &[],
-            &[],
             &discovered,
         );
         assert_ne!(
@@ -2398,7 +2384,6 @@ mod tests {
                 &cave_roster,
                 &BTreeSet::new(),
                 &[],
-                &[],
                 &Discovered::default(),
             );
             assert_eq!(
@@ -2418,7 +2403,6 @@ mod tests {
                 &empty_settlements,
                 &cave_roster,
                 &BTreeSet::new(),
-                &[],
                 &[],
                 &discovered,
             );
@@ -2441,7 +2425,6 @@ mod tests {
                 &empty_caves,
                 &BTreeSet::new(),
                 &[],
-                &[],
                 &Discovered::default(),
             );
             assert_eq!(
@@ -2461,7 +2444,6 @@ mod tests {
                 &settlement_roster,
                 &empty_caves,
                 &BTreeSet::new(),
-                &[],
                 &[],
                 &discovered,
             );
@@ -2506,7 +2488,6 @@ mod tests {
             &caves,
             &BTreeSet::new(),
             &[],
-            &[],
             &discovered,
         );
 
@@ -2525,7 +2506,6 @@ mod tests {
             &settlements,
             &caves,
             &BTreeSet::new(),
-            &[],
             &[],
             &discovered,
         );

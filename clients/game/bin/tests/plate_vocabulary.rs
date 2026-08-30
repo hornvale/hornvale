@@ -79,7 +79,6 @@ fn seed_42_terrain_layer() -> Grid {
         &BTreeSet::new(),
         &BTreeSet::new(),
         &[],
-        &[],
         &Default::default(),
     )
 }
@@ -151,10 +150,10 @@ fn the_ocean_land_boundary_still_agrees_with_the_terrain() {
 /// the shipped ladder (`GLOBE_RUNG..=BAND_B_RUNG`), when `draw` renders a
 /// small `w`x`h` window centred there. `draw` is handed the window and the
 /// screen column/row to check, and supplies its own rosters/discovery
-/// gate — kept generic over a closure because the three landform kinds
+/// gate — kept generic over a closure because the two landform kinds
 /// below take different roster TYPES (a volcano is discovery-gated through
-/// `BTreeSet<Vertex>`; a waterfall/delta draws unconditionally from a bare
-/// slice), so one shared roster shape would not fit all three.
+/// `BTreeSet<Vertex>`; a waterfall draws unconditionally from a bare
+/// slice), so one shared roster shape would not fit both.
 ///
 /// A vertex above the projection's polar clamp at a given rung is SKIPPED
 /// at that rung, not treated as absent — the loop still tries every other
@@ -201,12 +200,23 @@ fn drawn_at_some_shipped_rung(
 /// glyph appears somewhere across the shipped rungs. A landform seed 42
 /// does NOT have is SKIPPED, not failed — this is a reachability guard on
 /// what exists, not an assertion that every world has every landform.
+///
+/// **Fix round 1 dropped the third landform (river delta) outright** —
+/// its glyph collided with the sim's own impedance ladder, and unlike
+/// highland/impedance-4 a delta has no shared concept to merge with; see
+/// `clients/game/core/src/register.rs`'s own `REGISTER` doc. Two landforms
+/// remain: volcano and waterfall. `checked` guards the SKIP-not-fail
+/// discipline from decaying into a vacuous pass — a future world (or a
+/// pin change) that happened to have neither would otherwise let this
+/// test exit green having asserted nothing at all, which is exactly the
+/// silent-pass shape the reachability guard exists to rule out.
 #[test]
 fn seed_42_draws_at_least_one_of_each_landform_it_actually_has() {
     let (terrain, geo) = test_world();
     let index = NearestVertexIndex::new(&geo);
     let f = mercator::frame_for(false);
     let (w, h) = (32u16, 16u16);
+    let mut checked = 0u32;
 
     // Volcanoes are assembled at the composition root
     // (`hornvale_worldgen::gazetteer_features`), not by `domains/terrain`
@@ -219,6 +229,7 @@ fn seed_42_draws_at_least_one_of_each_landform_it_actually_has() {
         .map(|feat| feat.anchor);
 
     if let Some(site) = volcano_anchor {
+        checked += 1;
         let volcanoes: BTreeSet<Vertex> = std::iter::once(site).collect();
         let mut discovered = Discovered::default();
         discovered.record(FeatureId::Extent(hornvale_terrain::landscape::FeatureId {
@@ -240,7 +251,6 @@ fn seed_42_draws_at_least_one_of_each_landform_it_actually_has() {
                     &BTreeSet::new(),
                     &volcanoes,
                     &[],
-                    &[],
                     &discovered,
                 )
             });
@@ -251,6 +261,7 @@ fn seed_42_draws_at_least_one_of_each_landform_it_actually_has() {
     }
 
     if let Some(&site) = terrain.waterfalls().first() {
+        checked += 1;
         let waterfalls = [site];
         let found = drawn_at_some_shipped_rung(
             &geo,
@@ -273,7 +284,6 @@ fn seed_42_draws_at_least_one_of_each_landform_it_actually_has() {
                     &BTreeSet::new(),
                     &BTreeSet::new(),
                     &waterfalls,
-                    &[],
                     &Discovered::default(),
                 )
             },
@@ -284,30 +294,9 @@ fn seed_42_draws_at_least_one_of_each_landform_it_actually_has() {
         );
     }
 
-    if let Some(&site) = terrain.deltas().first() {
-        let deltas = [site];
-        let found =
-            drawn_at_some_shipped_rung(&geo, &f, w, h, site, plate::DELTA_GLYPH, |win, _, _| {
-                plate::draw_with(
-                    &terrain,
-                    &geo,
-                    &index,
-                    &f,
-                    win,
-                    w,
-                    h,
-                    false,
-                    &BTreeMap::new(),
-                    &BTreeSet::new(),
-                    &BTreeSet::new(),
-                    &[],
-                    &deltas,
-                    &Discovered::default(),
-                )
-            });
-        assert!(
-            found,
-            "seed 42 has a delta at {site:?} but its glyph never appeared at any shipped rung"
-        );
-    }
+    assert!(
+        checked > 0,
+        "neither landform this test knows about (volcano, waterfall) is present on seed 42 — \
+         a SKIP-not-fail guard with nothing left to skip is a vacuous pass, not a green result"
+    );
 }

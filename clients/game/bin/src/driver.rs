@@ -368,9 +368,6 @@ pub struct Driver {
     /// this roster carries no discovery gate, unlike `caves`/`settlements`/
     /// `volcanoes`.
     waterfalls: Vec<Vertex>,
-    /// Every river-delta vertex `GeneratedTerrain::deltas()` reports (Task
-    /// 7). See [`Self::waterfalls`] for why this is also ungated.
-    deltas: Vec<Vertex>,
     /// Every walk-band room the possession has stood in this session
     /// (spec Amendment 1 §A4a: "where have I been"). Never consulted by
     /// [`Self::discovered`] and never consults it — see `discovery`'s
@@ -755,19 +752,19 @@ impl Driver {
             .map(|f| f.anchor)
             .collect();
 
-        // The waterfall and delta rosters (Task 7): bare vertices
-        // `GeneratedTerrain` already computed at genesis
-        // (`waterfalls()`/`deltas()`, both sorted ascending `Vertex` by
-        // their own doc), read once here for the same reason the cave
-        // roster is — `plate::draw_feature_layer` projects sites, it does
-        // not scan for them. Neither carries a `FeatureClass` (the
-        // landscape feature system does not individuate them, and this
-        // task's own interface note forbids minting one to give them one),
-        // so they draw UNCONDITIONALLY as ground truth — see that
+        // The waterfall roster (Task 7): bare vertices `GeneratedTerrain`
+        // already computed at genesis (`waterfalls()`, sorted ascending
+        // `Vertex` by its own doc), read once here for the same reason the
+        // cave roster is — `plate::draw_feature_layer` projects sites, it
+        // does not scan for them. It carries no `FeatureClass` (the
+        // landscape feature system does not individuate it, and this
+        // task's own interface note forbids minting one to give it one),
+        // so it draws UNCONDITIONALLY as ground truth — see that
         // function's own doc for why that split from the volcano roster
-        // above is deliberate.
+        // above is deliberate. (A river-delta roster stood here too,
+        // through fix round 1; the feature was removed outright — see
+        // `plate::WATERFALL_GLYPH`'s own doc for why.)
         let waterfalls: Vec<Vertex> = terrain.waterfalls().to_vec();
-        let deltas: Vec<Vertex> = terrain.deltas().to_vec();
 
         // The Portolan part II: the projection's central line is derived
         // from the world's own physics (spec §3.1), not assumed —
@@ -835,7 +832,6 @@ impl Driver {
             caves,
             volcanoes,
             waterfalls,
-            deltas,
             visited: Visited::default(),
             discovered: Discovered::default(),
             plate_height: FLOOR_PLATE_CONTENT_HEIGHT,
@@ -1041,7 +1037,6 @@ impl Driver {
             &self.caves,
             &self.volcanoes,
             &self.waterfalls,
-            &self.deltas,
             &self.discovered,
         )
     }
@@ -1157,7 +1152,6 @@ impl Driver {
             &self.caves,
             &self.volcanoes,
             &self.waterfalls,
-            &self.deltas,
             &self.discovered,
         );
         // LAYER THREE, band B only (The Quadrat, Task 6): the observer's own

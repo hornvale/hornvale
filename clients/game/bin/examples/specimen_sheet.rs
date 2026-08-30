@@ -82,10 +82,24 @@ struct Candidate {
 /// Three proposals, deliberately different strategies rather than three
 /// minor variations on one idea — see the task report for which one this
 /// sheet's own rendering recommends.
+///
+/// **Two glyphs touched up, fix round 1.** `stipple`'s highland slot was
+/// originally `'*'` and `rule`'s alpine slot was originally `'|'` — neither
+/// is the SHIPPED elevation ladder (Task 6 re-picked highland to `'^'`
+/// before anything landed; `stipple`'s literal six-glyph array was never
+/// what shipped), so touching either changes no already-decided outcome.
+/// But both since became genuinely claimed by Task 7's landform work
+/// (`'*'` cave mouth, `'|'` waterfall — see `register.rs`), and this
+/// sheet's own point is to test a candidate for disjointness against the
+/// live register: a REJECTED candidate's illustrative glyph coinciding
+/// with an unrelated later feature is exactly the kind of collision the
+/// property check exists to catch, so re-picking here (to `'#'`/`'\\'`)
+/// rather than silencing the check is the same move Task 6 already made
+/// once for the ladder that actually shipped.
 const CANDIDATES: [Candidate; 3] = [
     Candidate {
         name: "stipple",
-        glyphs: [' ', '`', ',', ';', '*', '%'],
+        glyphs: [' ', '`', ',', ';', '#', '%'],
         rationale: "punctuation-mark ink density: literally nothing at the \
                     trench floor, rising through single light marks to the \
                     densest ASCII punctuation at the peak.",
@@ -99,7 +113,7 @@ const CANDIDATES: [Candidate; 3] = [
     },
     Candidate {
         name: "rule",
-        glyphs: [' ', '-', '/', '?', ')', '|'],
+        glyphs: [' ', '-', '/', '?', ')', '\\'],
         rationale: "a control set at roughly the same nominal weight as \
                     `stipple`'s low end but a different shape family \
                     throughout, to see whether shape family or density is \
@@ -214,12 +228,24 @@ fn main() {
             c.name
         );
         for &g in &c.glyphs {
-            assert!(
-                binding_of(g).is_none(),
-                "{}: glyph {g:?} already claimed by REGISTER ({:?})",
-                c.name,
-                binding_of(g)
-            );
+            // Fix round 1: this sheet's own precondition ("no candidate
+            // collides with the register") was correct only while nothing
+            // was claimed. Task 6 ADOPTED the winning `stipple` candidate
+            // into `REGISTER` under `Population::Elevation`, so a candidate
+            // glyph landing on an Elevation row is the selection having
+            // worked, not a collision — the disjointness that actually
+            // matters is against a DIFFERENT population (a settlement, a
+            // cave mouth, a landform, …), which this ladder was never
+            // proposing to be.
+            if let Some(b) = binding_of(g) {
+                assert_eq!(
+                    b.population,
+                    Population::Elevation,
+                    "{}: glyph {g:?} already claimed by REGISTER for a different population ({:?})",
+                    c.name,
+                    b
+                );
+            }
             assert!(
                 !IMPEDANCE_GLYPHS.contains(&g),
                 "{}: glyph {g:?} collides with the impedance ladder",
@@ -342,24 +368,38 @@ fn main() {
         collisions.join(", ")
     ));
 
-    lines.push(String::new());
-
     lines.push(format!(
         "REGISTER LEGEND (hornvale_game_core::register::REGISTER, {} rows)",
         REGISTER.len()
     ));
+    // Fix round 1: REGISTER grew from 11 rows (this sheet's original
+    // budget) to 16 across Tasks 6-7, and one row per line no longer fits
+    // the fixed 24-line floor — this is the exact maintenance the HEIGHT
+    // assertion below exists to force ("this file's fixed layout needs
+    // updating alongside whatever grew or shrank"). Packed several
+    // `glyph:means` entries per line instead, greedily wrapped at the
+    // WIDTH floor, rather than widening the sheet past the terminal size
+    // it is built to demonstrate. `population` is dropped from the
+    // printed line (it was never load-bearing for a reader matching a
+    // glyph to its meaning) to keep entries short enough to pack.
+    let mut register_line = String::new();
     for b in REGISTER {
-        lines.push(format!(
-            "{}  {:<10}{}",
-            b.glyph,
-            format!("{:?}", b.population),
-            b.means
-        ));
+        let entry = format!("{}:{}", b.glyph, b.means);
+        let candidate = if register_line.is_empty() {
+            entry.clone()
+        } else {
+            format!("{register_line}  {entry}")
+        };
+        if visible_width(&candidate) > WIDTH {
+            lines.push(std::mem::take(&mut register_line));
+            register_line = entry;
+        } else {
+            register_line = candidate;
+        }
     }
-    // Silence the otherwise-unused `Population` import outside the format
-    // string above; keeping the type named (not just `Debug`-derived
-    // through `b.population`) documents which type this legend prints.
-    let _: Option<Population> = None;
+    if !register_line.is_empty() {
+        lines.push(register_line);
+    }
 
     lines.push(
         "generated by clients/game/bin/examples/specimen_sheet.rs -- see task-5 report".to_string(),

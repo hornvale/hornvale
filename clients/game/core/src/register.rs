@@ -26,9 +26,11 @@ pub enum Population {
     Creature,
     /// A point site on the world map: a discovered settlement or cave
     /// mouth, or a landform (Task 7 widens this from "settlement, cave
-    /// mouth" — a volcano, waterfall or river delta is the same kind of
-    /// referent, a fixed point worth marking, whether or not it happens to
-    /// be discovery-gated).
+    /// mouth" — a volcano or waterfall is the same kind of referent, a
+    /// fixed point worth marking, whether or not it happens to be
+    /// discovery-gated). A river delta was a third landform here briefly
+    /// and was removed in fix round 1 — see [`REGISTER`]'s own doc on the
+    /// `:` collision that forced it out.
     PointSite,
     /// Interface furniture that is not part of the world.
     Chrome,
@@ -146,12 +148,25 @@ pub const REGISTER: &[Binding] = &[
         means: "major settlement",
     },
     // Landforms (Task 7): a volcano is discovery-gated like a settlement or
-    // cave; a waterfall and a river delta draw unconditionally, ground
-    // truth like the relief/water ladders above — see
+    // cave; a waterfall draws unconditionally, ground truth like the
+    // relief/water ladders above — see
     // `hornvale_game::plate::draw_feature_layer`'s own doc for why that
-    // split is deliberate. All three are still `PointSite`s here: this
-    // table classifies WHAT a glyph refers to, not whether it happens to be
+    // split is deliberate. Both are still `PointSite`s here: this table
+    // classifies WHAT a glyph refers to, not whether it happens to be
     // gated.
+    //
+    // **A river delta was a third landform here, and fix round 1 removed
+    // it outright** rather than re-picking its glyph: `:` collided with
+    // `windows/scene/src/surrounds_ascii.rs`'s impedance band 3, and that
+    // ladder cannot move (`the_shape_matches_the_sims_own_ascii_render`
+    // pins it to the sim). Unlike `^` (globe-scale highland and walk-scale
+    // steep going are genuinely the same concept at two scales, so sharing
+    // one glyph is a merge, not a collision), a river delta and moderately
+    // rough going are unrelated referents that cannot share a binding. The
+    // campaign's own tier spike also measured that a third point-marker
+    // kind read as noise rather than invitation — dropping the least
+    // evocative of the three landforms serves the map's stated purpose,
+    // not just the collision.
     Binding {
         glyph: '!',
         population: Population::PointSite,
@@ -161,11 +176,6 @@ pub const REGISTER: &[Binding] = &[
         glyph: '|',
         population: Population::PointSite,
         means: "waterfall",
-    },
-    Binding {
-        glyph: ':',
-        population: Population::PointSite,
-        means: "river delta",
     },
 ];
 
